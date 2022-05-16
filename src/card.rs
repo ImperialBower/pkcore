@@ -149,6 +149,10 @@ impl Card {
     pub fn as_u32(&self) -> u32 {
         self.0
     }
+
+    fn is_blank(&self) -> bool {
+        self.0 == Card::BLANK_NUMBER
+    }
 }
 
 /// Filters u32 so that only valid Cactus Kev Card values are set.
@@ -292,6 +296,12 @@ mod card_tests {
             Card::ACE_SPADES_NUMBER,
             Card(Card::ACE_SPADES_NUMBER).as_u32()
         );
+    }
+
+    #[test]
+    fn is_blank() {
+        assert!(Card::BLANK.is_blank());
+        assert!(!Card::TREY_CLUBS.is_blank());
     }
 
     //region from u32
