@@ -1,6 +1,6 @@
+use crate::PKError;
 use std::str::FromStr;
 use strum::EnumIter;
-use crate::PKError;
 
 #[derive(Clone, Copy, Debug, EnumIter, Eq, Hash, PartialEq)]
 pub enum Rank {
@@ -21,10 +21,12 @@ pub enum Rank {
 }
 
 impl Rank {
+    #[must_use]
     pub fn bits(self) -> u32 {
         1 << (16 + self.number())
     }
 
+    #[must_use]
     pub fn number(self) -> u32 {
         match self {
             Rank::ACE => 12,
@@ -43,6 +45,7 @@ impl Rank {
         }
     }
 
+    #[must_use]
     pub fn prime(self) -> u32 {
         match self {
             Rank::ACE => 41,
@@ -62,6 +65,7 @@ impl Rank {
         }
     }
 
+    #[must_use]
     pub fn shift8(self) -> u32 {
         self.number() << 8
     }
@@ -94,11 +98,9 @@ impl FromStr for Rank {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s: Vec<char> = s.trim().chars().collect();
         match s.len() {
-            1 => {
-                match s.first() {
-                    Some(c) => Ok(Rank::from(*c)),
-                    None => Err(PKError::Fubar),
-                }
+            1 => match s.first() {
+                Some(c) => Ok(Rank::from(*c)),
+                None => Err(PKError::Fubar),
             },
             _ => Err(PKError::InvalidIndex),
         }
@@ -161,5 +163,3 @@ mod rank_tests {
         assert_eq!(expected, Rank::from_str(s).unwrap());
     }
 }
-
-
