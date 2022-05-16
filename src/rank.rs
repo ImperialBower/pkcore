@@ -1,6 +1,6 @@
 use crate::PKError;
 use std::str::FromStr;
-use strum::EnumIter;
+use strum::EnumIter; // TODO Early
 
 #[derive(Clone, Copy, Debug, EnumIter, Eq, Hash, PartialEq)]
 pub enum Rank {
@@ -21,11 +21,13 @@ pub enum Rank {
 }
 
 impl Rank {
+    // TODO early
     #[must_use]
     pub fn bits(self) -> u32 {
         1 << (16 + self.number())
     }
 
+    // TODO early
     #[must_use]
     pub fn number(self) -> u32 {
         match self {
@@ -45,6 +47,7 @@ impl Rank {
         }
     }
 
+    // TODO early
     #[must_use]
     pub fn prime(self) -> u32 {
         match self {
@@ -65,6 +68,7 @@ impl Rank {
         }
     }
 
+    // TODO early
     #[must_use]
     pub fn shift8(self) -> u32 {
         self.number() << 8
@@ -100,6 +104,7 @@ impl FromStr for Rank {
         match s.len() {
             1 => match s.first() {
                 Some(c) => Ok(Rank::from(*c)),
+                // No idea how to reach this.
                 None => Err(PKError::Fubar),
             },
             _ => Err(PKError::InvalidIndex),
@@ -160,8 +165,8 @@ mod rank_tests {
     #[case("3", Rank::THREE)]
     #[case("2", Rank::TWO)]
     #[case("_", Rank::BLANK)]
-    fn from_str(#[case] s: &str, #[case] expected: Rank) {
-        assert_eq!(expected, Rank::from_str(s).unwrap());
+    fn from_str(#[case] input: &str, #[case] expected: Rank) {
+        assert_eq!(expected, Rank::from_str(input).unwrap());
     }
 
     #[test]

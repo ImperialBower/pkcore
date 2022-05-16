@@ -1,6 +1,6 @@
 #![warn(clippy::pedantic)]
 
-pub mod poker_card;
+pub mod card;
 pub mod rank;
 pub mod suit;
 

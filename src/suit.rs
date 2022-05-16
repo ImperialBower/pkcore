@@ -1,4 +1,6 @@
-use strum::EnumIter;
+use crate::PKError;
+use std::str::FromStr;
+use strum::EnumIter; // TODO Early
 
 #[derive(Clone, Copy, Debug, EnumIter, Eq, Hash, PartialEq)]
 pub enum Suit {
@@ -10,6 +12,7 @@ pub enum Suit {
 }
 
 impl Suit {
+    // TODO early
     #[must_use]
     pub fn binary_signature(&self) -> u32 {
         match self {
@@ -34,7 +37,23 @@ impl From<char> for Suit {
     }
 }
 
+impl FromStr for Suit {
+    type Err = PKError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s: Vec<char> = s.trim().chars().collect();
+        match s.len() {
+            1 => match s.first() {
+                Some(c) => Ok(Suit::from(*c)),
+                None => Err(PKError::Fubar),
+            },
+            _ => Err(PKError::InvalidIndex),
+        }
+    }
+}
+
 #[cfg(test)]
+#[allow(non_snake_case)]
 mod card_suit_tests {
     use super::*;
     use rstest::rstest;
@@ -69,5 +88,35 @@ mod card_suit_tests {
     #[case('F', Suit::BLANK)]
     fn from(#[case] input: char, #[case] expected: Suit) {
         assert_eq!(expected, Suit::from(input));
+    }
+
+    #[rstest]
+    #[case("♠", Suit::SPADES)]
+    #[case("♤", Suit::SPADES)]
+    #[case("S", Suit::SPADES)]
+    #[case("s", Suit::SPADES)]
+    #[case("♥", Suit::HEARTS)]
+    #[case("♡", Suit::HEARTS)]
+    #[case("H", Suit::HEARTS)]
+    #[case("h", Suit::HEARTS)]
+    #[case("♦", Suit::DIAMONDS)]
+    #[case("♢", Suit::DIAMONDS)]
+    #[case("D", Suit::DIAMONDS)]
+    #[case("d", Suit::DIAMONDS)]
+    #[case("♣", Suit::CLUBS)]
+    #[case("♧", Suit::CLUBS)]
+    #[case("C", Suit::CLUBS)]
+    #[case("c", Suit::CLUBS)]
+    #[case("F", Suit::BLANK)]
+    #[case("_", Suit::BLANK)]
+    fn from_str(#[case] input: &str, #[case] expected: Suit) {
+        assert_eq!(expected, Suit::from_str(input).unwrap());
+    }
+
+    #[test]
+    fn from_str__invalid() {
+        assert_eq!(PKError::InvalidIndex, Suit::from_str("").unwrap_err());
+        assert_eq!(PKError::InvalidIndex, Suit::from_str(" ").unwrap_err());
+        assert_eq!(PKError::InvalidIndex, Suit::from_str("AK").unwrap_err());
     }
 }
