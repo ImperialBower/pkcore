@@ -1,0 +1,20 @@
+[package]
+name = "pkcore"
+version = "0.0.1"
+edition = "2021"
+authors = ["gaoler <gaoler@electronicpanopticon.com>"]
+license = "GPL-3.0-or-later"
+repository = "https://github.com/ContractBridge/pkcore.git"
+homepage = "https://github.com/ContractBridge/pkcore"
+exclude = [".github/workflows/*", "examples/*", ".gitignore", "Cargo.lock"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+log = "0.4"
+serde = { version = "1.0.136", features = ["derive"] }
+strum = { version = "0.24", features = ["derive"] }
+
+[dev-dependencies]
+clap = { version = "3.1.12", features = ["derive", "unicode"] }
+rstest = "0.13.0"
