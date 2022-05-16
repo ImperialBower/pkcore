@@ -133,7 +133,7 @@ impl Card {
     pub const TREY_CLUBS: Card = Card(Card::TREY_CLUBS_NUMBER);
     pub const DEUCE_CLUBS: Card = Card(Card::DEUCE_CLUBS_NUMBER);
     pub const BLANK: Card = Card(Card::BLANK_NUMBER);
-    
+
     // #[must_use]
     // pub fn new(rank: CardRank, suit: CardSuit) -> Card {
     //     Card::
@@ -273,7 +273,10 @@ mod card_tests {
 
     #[test]
     fn as_u32() {
-        assert_eq!(Card::ACE_SPADES_NUMBER, Card(Card::ACE_SPADES_NUMBER).as_u32());
+        assert_eq!(
+            Card::ACE_SPADES_NUMBER,
+            Card(Card::ACE_SPADES_NUMBER).as_u32()
+        );
     }
 
     #[rstest]
