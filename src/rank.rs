@@ -108,6 +108,7 @@ impl FromStr for Rank {
 }
 
 #[cfg(test)]
+#[allow(non_snake_case)]
 mod rank_tests {
     use super::*;
     use rstest::rstest;
@@ -161,5 +162,12 @@ mod rank_tests {
     #[case("_", Rank::BLANK)]
     fn from_str(#[case] s: &str, #[case] expected: Rank) {
         assert_eq!(expected, Rank::from_str(s).unwrap());
+    }
+
+    #[test]
+    fn from_str__invalid() {
+        assert_eq!(PKError::InvalidIndex, Rank::from_str("").unwrap_err());
+        assert_eq!(PKError::InvalidIndex, Rank::from_str(" ").unwrap_err());
+        assert_eq!(PKError::InvalidIndex, Rank::from_str("AK").unwrap_err());
     }
 }
