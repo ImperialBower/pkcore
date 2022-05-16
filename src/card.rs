@@ -3,6 +3,8 @@
 
 use crate::rank::Rank;
 use crate::suit::Suit;
+use crate::PKError;
+use std::str::FromStr;
 
 /// A `Card` is a u32 representation of a variant of Cactus Kev's binary
 /// representation of a poker card as designed for rapid hand evaluation as
@@ -26,6 +28,18 @@ pub struct Card(u32);
 // pub struct PokerCard(#[serde(deserialize_with = "deserialize_card_index")] u32);
 //
 impl Card {
+    //region binary filters
+    pub const RANK_FLAG_FILTER: u32 = 0x1FFF_0000; // 536805376 aka 0b00011111_11111111_00000000_00000000
+    pub const RANK_FLAG_SHIFT: u32 = 16;
+    pub const RANK_PRIME_FILTER: u32 = 0b0011_1111;
+
+    /// Binary filter for `CardNumber` `Suit` flags.
+    /// 00000000 00000000 11110000 00000000
+    pub const SUIT_FILTER: u32 = 0xF000; // 61440 aka 0b11110000_00000000
+    pub const SUIT_SHORT_MASK: u32 = 0b1111;
+    pub const SUIT_SHIFT: u32 = 12;
+    //endregion
+
     //region cardnumbers
     /// TODO: is this the best place for these constants?
     pub const ACE_SPADES_NUMBER: u32 = 268_471_337;
@@ -150,7 +164,36 @@ impl Card {
         self.0
     }
 
-    fn is_blank(&self) -> bool {
+    #[must_use]
+    pub fn get_rank(&self) -> Rank {
+        match self.get_rank_bit() {
+            4096 => Rank::ACE,
+            2048 => Rank::KING,
+            1024 => Rank::QUEEN,
+            512 => Rank::JACK,
+            256 => Rank::TEN,
+            128 => Rank::NINE,
+            64 => Rank::EIGHT,
+            32 => Rank::SEVEN,
+            16 => Rank::SIX,
+            8 => Rank::FIVE,
+            4 => Rank::FOUR,
+            2 => Rank::THREE,
+            1 => Rank::TWO,
+            _ => Rank::BLANK,
+        }
+    }
+
+    fn get_rank_bit(self) -> u32 {
+        self.get_rank_flag() >> Card::RANK_FLAG_SHIFT
+    }
+
+    fn get_rank_flag(self) -> u32 {
+        self.as_u32() & Card::RANK_FLAG_FILTER
+    }
+
+    #[must_use]
+    pub fn is_blank(&self) -> bool {
         self.0 == Card::BLANK_NUMBER
     }
 }
@@ -214,6 +257,23 @@ impl From<u32> for Card {
             _ => Card::BLANK_NUMBER,
         };
         Card(ckc_number)
+    }
+}
+
+impl FromStr for Card {
+    type Err = PKError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut chars = s.trim().chars();
+        let rank: Rank = match chars.next() {
+            None => return Err(PKError::InvalidIndex),
+            Some(r) => Rank::from(r),
+        };
+        let suit: Suit = match chars.next() {
+            None => return Err(PKError::InvalidIndex),
+            Some(s) => Suit::from(s),
+        };
+        Ok(Card::new(rank, suit))
     }
 }
 
@@ -299,6 +359,36 @@ mod card_tests {
     }
 
     #[test]
+    fn get_rank_flag() {
+        let card = Card::ACE_CLUBS;
+        assert_eq!(0b00010000_00000000_00000000_00000000, card.get_rank_flag());
+        let card = Card::KING_DIAMONDS;
+        assert_eq!(0b00001000_00000000_00000000_00000000, card.get_rank_flag());
+        let card = Card::QUEEN_SPADES;
+        assert_eq!(0b00000100_00000000_00000000_00000000, card.get_rank_flag());
+        let card = Card::JACK_HEARTS;
+        assert_eq!(0b00000010_00000000_00000000_00000000, card.get_rank_flag());
+        let card = Card::TEN_SPADES;
+        assert_eq!(0b00000001_00000000_00000000_00000000, card.get_rank_flag());
+        let card = Card::NINE_HEARTS;
+        assert_eq!(0b00000000_10000000_00000000_00000000, card.get_rank_flag());
+        let card = Card::EIGHT_DIAMONDS;
+        assert_eq!(0b00000000_01000000_00000000_00000000, card.get_rank_flag());
+        let card = Card::SEVEN_CLUBS;
+        assert_eq!(0b00000000_00100000_00000000_00000000, card.get_rank_flag());
+        let card = Card::SIX_SPADES;
+        assert_eq!(0b00000000_00010000_00000000_00000000, card.get_rank_flag());
+        let card = Card::FIVE_HEARTS;
+        assert_eq!(0b00000000_00001000_00000000_00000000, card.get_rank_flag());
+        let card = Card::FOUR_DIAMONDS;
+        assert_eq!(0b00000000_00000100_00000000_00000000, card.get_rank_flag());
+        let card = Card::TREY_CLUBS;
+        assert_eq!(0b00000000_00000010_00000000_00000000, card.get_rank_flag());
+        let card = Card::DEUCE_SPADES;
+        assert_eq!(0b00000000_00000001_00000000_00000000, card.get_rank_flag());
+    }
+
+    #[test]
     fn is_blank() {
         assert!(Card::BLANK.is_blank());
         assert!(!Card::TREY_CLUBS.is_blank());
@@ -362,4 +452,11 @@ mod card_tests {
         assert_eq!(Card::from(input), expected);
     }
     //endregion
+
+    #[test]
+    fn from_str() {
+        assert_eq!(Card::ACE_HEARTS, Card::from_str("AH").unwrap());
+        assert_eq!(Card::KING_DIAMONDS, Card::from_str("  K♢   ").unwrap());
+        assert_eq!(PKError::InvalidIndex, Card::from_str("  ").unwrap_err());
+    }
 }
