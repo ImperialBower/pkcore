@@ -1,6 +1,9 @@
 // use serde::ser::{Serialize, Serializer};
 // use serde::Deserialize;
 
+use crate::rank::Rank;
+use crate::suit::Suit;
+
 /// A `Card` is a u32 representation of a variant of Cactus Kev's binary
 /// representation of a poker card as designed for rapid hand evaluation as
 /// documented [here](https://suffe.cool/poker/evaluator.html).
@@ -24,6 +27,7 @@ pub struct Card(u32);
 //
 impl Card {
     //region cardnumbers
+    /// TODO: is this the best place for these constants?
     pub const ACE_SPADES_NUMBER: u32 = 268_471_337;
     pub const KING_SPADES_NUMBER: u32 = 134_253_349;
     pub const QUEEN_SPADES_NUMBER: u32 = 67_144_223;
@@ -133,11 +137,12 @@ impl Card {
     pub const TREY_CLUBS: Card = Card(Card::TREY_CLUBS_NUMBER);
     pub const DEUCE_CLUBS: Card = Card(Card::DEUCE_CLUBS_NUMBER);
     pub const BLANK: Card = Card(Card::BLANK_NUMBER);
+    //endregion
 
-    // #[must_use]
-    // pub fn new(rank: CardRank, suit: CardSuit) -> Card {
-    //     Card::
-    // }
+    #[must_use]
+    pub fn new(rank: Rank, suit: Suit) -> Self {
+        Self::from(rank.bits() | rank.prime() | rank.shift8() | suit.binary_signature())
+    }
 
     /// Returns the Cactus Kev Card u32 number of the `Card`.
     #[must_use]
@@ -214,6 +219,7 @@ mod card_tests {
     use super::*;
     use rstest::rstest;
 
+    //region card_consts tests
     #[rstest]
     #[case(Card::ACE_SPADES, Card(Card::ACE_SPADES_NUMBER))]
     #[case(Card::KING_SPADES, Card(Card::KING_SPADES_NUMBER))]
@@ -270,6 +276,15 @@ mod card_tests {
     fn card_consts(#[case] expected: Card, #[case] actual: Card) {
         assert_eq!(expected, actual);
     }
+    //endregion tests
+
+    #[test]
+    fn new() {
+        assert_eq!(Card::TREY_CLUBS, Card::new(Rank::THREE, Suit::CLUBS));
+        assert_eq!(Card::BLANK, Card::new(Rank::BLANK, Suit::CLUBS));
+        assert_eq!(Card::BLANK, Card::new(Rank::THREE, Suit::BLANK));
+        assert_eq!(Card::BLANK, Card::new(Rank::BLANK, Suit::BLANK));
+    }
 
     #[test]
     fn as_u32() {
@@ -279,6 +294,7 @@ mod card_tests {
         );
     }
 
+    //region from u32
     #[rstest]
     #[case(Card::ACE_SPADES_NUMBER, Card(Card::ACE_SPADES_NUMBER))]
     #[case(Card::KING_SPADES_NUMBER, Card(Card::KING_SPADES_NUMBER))]
@@ -335,4 +351,5 @@ mod card_tests {
     fn from(#[case] input: u32, #[case] expected: Card) {
         assert_eq!(Card::from(input), expected);
     }
+    //endregion
 }
