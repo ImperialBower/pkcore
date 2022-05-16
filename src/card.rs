@@ -78,6 +78,61 @@ impl Card {
     pub const DEUCE_CLUBS_NUMBER: u32 = 69_634;
     pub const BLANK_NUMBER: u32 = 0;
     //endregion
+
+    //region cards
+    pub const ACE_SPADES: Card = Card(Card::ACE_SPADES_NUMBER);
+    pub const KING_SPADES: Card = Card(Card::KING_SPADES_NUMBER);
+    pub const QUEEN_SPADES: Card = Card(Card::QUEEN_SPADES_NUMBER);
+    pub const JACK_SPADES: Card = Card(Card::JACK_SPADES_NUMBER);
+    pub const TEN_SPADES: Card = Card(Card::TEN_SPADES_NUMBER);
+    pub const NINE_SPADES: Card = Card(Card::NINE_SPADES_NUMBER);
+    pub const EIGHT_SPADES: Card = Card(Card::EIGHT_SPADES_NUMBER);
+    pub const SEVEN_SPADES: Card = Card(Card::SEVEN_SPADES_NUMBER);
+    pub const SIX_SPADES: Card = Card(Card::SIX_SPADES_NUMBER);
+    pub const FIVE_SPADES: Card = Card(Card::FIVE_SPADES_NUMBER);
+    pub const FOUR_SPADES: Card = Card(Card::FOUR_SPADES_NUMBER);
+    pub const TREY_SPADES: Card = Card(Card::TREY_SPADES_NUMBER);
+    pub const DEUCE_SPADES: Card = Card(Card::DEUCE_SPADES_NUMBER);
+    pub const ACE_HEARTS: Card = Card(Card::ACE_HEARTS_NUMBER);
+    pub const KING_HEARTS: Card = Card(Card::KING_HEARTS_NUMBER);
+    pub const QUEEN_HEARTS: Card = Card(Card::QUEEN_HEARTS_NUMBER);
+    pub const JACK_HEARTS: Card = Card(Card::JACK_HEARTS_NUMBER);
+    pub const TEN_HEARTS: Card = Card(Card::TEN_HEARTS_NUMBER);
+    pub const NINE_HEARTS: Card = Card(Card::NINE_HEARTS_NUMBER);
+    pub const EIGHT_HEARTS: Card = Card(Card::EIGHT_HEARTS_NUMBER);
+    pub const SEVEN_HEARTS: Card = Card(Card::SEVEN_HEARTS_NUMBER);
+    pub const SIX_HEARTS: Card = Card(Card::SIX_HEARTS_NUMBER);
+    pub const FIVE_HEARTS: Card = Card(Card::FIVE_HEARTS_NUMBER);
+    pub const FOUR_HEARTS: Card = Card(Card::FOUR_HEARTS_NUMBER);
+    pub const TREY_HEARTS: Card = Card(Card::TREY_HEARTS_NUMBER);
+    pub const DEUCE_HEARTS: Card = Card(Card::DEUCE_HEARTS_NUMBER);
+    pub const ACE_DIAMONDS: Card = Card(Card::ACE_DIAMONDS_NUMBER);
+    pub const KING_DIAMONDS: Card = Card(Card::KING_DIAMONDS_NUMBER);
+    pub const QUEEN_DIAMONDS: Card = Card(Card::QUEEN_DIAMONDS_NUMBER);
+    pub const JACK_DIAMONDS: Card = Card(Card::JACK_DIAMONDS_NUMBER);
+    pub const TEN_DIAMONDS: Card = Card(Card::TEN_DIAMONDS_NUMBER);
+    pub const NINE_DIAMONDS: Card = Card(Card::NINE_DIAMONDS_NUMBER);
+    pub const EIGHT_DIAMONDS: Card = Card(Card::EIGHT_DIAMONDS_NUMBER);
+    pub const SEVEN_DIAMONDS: Card = Card(Card::SEVEN_DIAMONDS_NUMBER);
+    pub const SIX_DIAMONDS: Card = Card(Card::SIX_DIAMONDS_NUMBER);
+    pub const FIVE_DIAMONDS: Card = Card(Card::FIVE_DIAMONDS_NUMBER);
+    pub const FOUR_DIAMONDS: Card = Card(Card::FOUR_DIAMONDS_NUMBER);
+    pub const TREY_DIAMONDS: Card = Card(Card::TREY_DIAMONDS_NUMBER);
+    pub const DEUCE_DIAMONDS: Card = Card(Card::DEUCE_DIAMONDS_NUMBER);
+    pub const ACE_CLUBS: Card = Card(Card::ACE_CLUBS_NUMBER);
+    pub const KING_CLUBS: Card = Card(Card::KING_CLUBS_NUMBER);
+    pub const QUEEN_CLUBS: Card = Card(Card::QUEEN_CLUBS_NUMBER);
+    pub const JACK_CLUBS: Card = Card(Card::JACK_CLUBS_NUMBER);
+    pub const TEN_CLUBS: Card = Card(Card::TEN_CLUBS_NUMBER);
+    pub const NINE_CLUBS: Card = Card(Card::NINE_CLUBS_NUMBER);
+    pub const EIGHT_CLUBS: Card = Card(Card::EIGHT_CLUBS_NUMBER);
+    pub const SEVEN_CLUBS: Card = Card(Card::SEVEN_CLUBS_NUMBER);
+    pub const SIX_CLUBS: Card = Card(Card::SIX_CLUBS_NUMBER);
+    pub const FIVE_CLUBS: Card = Card(Card::FIVE_CLUBS_NUMBER);
+    pub const FOUR_CLUBS: Card = Card(Card::FOUR_CLUBS_NUMBER);
+    pub const TREY_CLUBS: Card = Card(Card::TREY_CLUBS_NUMBER);
+    pub const DEUCE_CLUBS: Card = Card(Card::DEUCE_CLUBS_NUMBER);
+    pub const BLANK: Card = Card(Card::BLANK_NUMBER);
     
     // #[must_use]
     // pub fn new(rank: CardRank, suit: CardSuit) -> Card {
@@ -158,6 +213,63 @@ impl From<u32> for Card {
 mod card_tests {
     use super::*;
     use rstest::rstest;
+
+    #[rstest]
+    #[case(Card::ACE_SPADES, Card(Card::ACE_SPADES_NUMBER))]
+    #[case(Card::KING_SPADES, Card(Card::KING_SPADES_NUMBER))]
+    #[case(Card::QUEEN_SPADES, Card(Card::QUEEN_SPADES_NUMBER))]
+    #[case(Card::JACK_SPADES, Card(Card::JACK_SPADES_NUMBER))]
+    #[case(Card::TEN_SPADES, Card(Card::TEN_SPADES_NUMBER))]
+    #[case(Card::NINE_SPADES, Card(Card::NINE_SPADES_NUMBER))]
+    #[case(Card::EIGHT_SPADES, Card(Card::EIGHT_SPADES_NUMBER))]
+    #[case(Card::SEVEN_SPADES, Card(Card::SEVEN_SPADES_NUMBER))]
+    #[case(Card::SIX_SPADES, Card(Card::SIX_SPADES_NUMBER))]
+    #[case(Card::FIVE_SPADES, Card(Card::FIVE_SPADES_NUMBER))]
+    #[case(Card::FOUR_SPADES, Card(Card::FOUR_SPADES_NUMBER))]
+    #[case(Card::TREY_SPADES, Card(Card::TREY_SPADES_NUMBER))]
+    #[case(Card::DEUCE_SPADES, Card(Card::DEUCE_SPADES_NUMBER))]
+    #[case(Card::ACE_HEARTS, Card(Card::ACE_HEARTS_NUMBER))]
+    #[case(Card::KING_HEARTS, Card(Card::KING_HEARTS_NUMBER))]
+    #[case(Card::QUEEN_HEARTS, Card(Card::QUEEN_HEARTS_NUMBER))]
+    #[case(Card::JACK_HEARTS, Card(Card::JACK_HEARTS_NUMBER))]
+    #[case(Card::TEN_HEARTS, Card(Card::TEN_HEARTS_NUMBER))]
+    #[case(Card::NINE_HEARTS, Card(Card::NINE_HEARTS_NUMBER))]
+    #[case(Card::EIGHT_HEARTS, Card(Card::EIGHT_HEARTS_NUMBER))]
+    #[case(Card::SEVEN_HEARTS, Card(Card::SEVEN_HEARTS_NUMBER))]
+    #[case(Card::SIX_HEARTS, Card(Card::SIX_HEARTS_NUMBER))]
+    #[case(Card::FIVE_HEARTS, Card(Card::FIVE_HEARTS_NUMBER))]
+    #[case(Card::FOUR_HEARTS, Card(Card::FOUR_HEARTS_NUMBER))]
+    #[case(Card::TREY_HEARTS, Card(Card::TREY_HEARTS_NUMBER))]
+    #[case(Card::DEUCE_HEARTS, Card(Card::DEUCE_HEARTS_NUMBER))]
+    #[case(Card::ACE_DIAMONDS, Card(Card::ACE_DIAMONDS_NUMBER))]
+    #[case(Card::KING_DIAMONDS, Card(Card::KING_DIAMONDS_NUMBER))]
+    #[case(Card::QUEEN_DIAMONDS, Card(Card::QUEEN_DIAMONDS_NUMBER))]
+    #[case(Card::JACK_DIAMONDS, Card(Card::JACK_DIAMONDS_NUMBER))]
+    #[case(Card::TEN_DIAMONDS, Card(Card::TEN_DIAMONDS_NUMBER))]
+    #[case(Card::NINE_DIAMONDS, Card(Card::NINE_DIAMONDS_NUMBER))]
+    #[case(Card::EIGHT_DIAMONDS, Card(Card::EIGHT_DIAMONDS_NUMBER))]
+    #[case(Card::SEVEN_DIAMONDS, Card(Card::SEVEN_DIAMONDS_NUMBER))]
+    #[case(Card::SIX_DIAMONDS, Card(Card::SIX_DIAMONDS_NUMBER))]
+    #[case(Card::FIVE_DIAMONDS, Card(Card::FIVE_DIAMONDS_NUMBER))]
+    #[case(Card::FOUR_DIAMONDS, Card(Card::FOUR_DIAMONDS_NUMBER))]
+    #[case(Card::TREY_DIAMONDS, Card(Card::TREY_DIAMONDS_NUMBER))]
+    #[case(Card::DEUCE_DIAMONDS, Card(Card::DEUCE_DIAMONDS_NUMBER))]
+    #[case(Card::ACE_CLUBS, Card(Card::ACE_CLUBS_NUMBER))]
+    #[case(Card::KING_CLUBS, Card(Card::KING_CLUBS_NUMBER))]
+    #[case(Card::QUEEN_CLUBS, Card(Card::QUEEN_CLUBS_NUMBER))]
+    #[case(Card::JACK_CLUBS, Card(Card::JACK_CLUBS_NUMBER))]
+    #[case(Card::TEN_CLUBS, Card(Card::TEN_CLUBS_NUMBER))]
+    #[case(Card::NINE_CLUBS, Card(Card::NINE_CLUBS_NUMBER))]
+    #[case(Card::EIGHT_CLUBS, Card(Card::EIGHT_CLUBS_NUMBER))]
+    #[case(Card::SEVEN_CLUBS, Card(Card::SEVEN_CLUBS_NUMBER))]
+    #[case(Card::SIX_CLUBS, Card(Card::SIX_CLUBS_NUMBER))]
+    #[case(Card::FIVE_CLUBS, Card(Card::FIVE_CLUBS_NUMBER))]
+    #[case(Card::FOUR_CLUBS, Card(Card::FOUR_CLUBS_NUMBER))]
+    #[case(Card::TREY_CLUBS, Card(Card::TREY_CLUBS_NUMBER))]
+    #[case(Card::DEUCE_CLUBS, Card(Card::DEUCE_CLUBS_NUMBER))]
+    fn card_consts(#[case] expected: Card, #[case] actual: Card) {
+        assert_eq!(expected, actual);
+    }
 
     #[test]
     fn as_u32() {
