@@ -1,8 +1,9 @@
 use crate::PKError;
 use std::str::FromStr;
-use strum::EnumIter; // TODO Early
+use strum::{EnumCount, IntoEnumIterator};
+use strum::EnumIter;
 
-#[derive(Clone, Copy, Debug, EnumIter, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, EnumCount, EnumIter, Eq, Hash, PartialEq)]
 pub enum Rank {
     ACE = 14,
     KING = 13,
@@ -21,13 +22,11 @@ pub enum Rank {
 }
 
 impl Rank {
-    // TODO early
     #[must_use]
     pub fn bits(self) -> u32 {
         1 << (16 + self.number())
     }
 
-    // TODO early
     #[must_use]
     pub fn number(self) -> u32 {
         match self {
@@ -117,6 +116,15 @@ impl FromStr for Rank {
 mod rank_tests {
     use super::*;
     use rstest::rstest;
+
+    // #[test]
+    // fn number() {
+    //     let mut i = Rank::COUNT - 2;
+    //     for rank in Rank::iter() {
+    //         assert_eq!(i, rank.number() as usize);
+    //         i = i - 1;
+    //     }
+    // }
 
     #[rstest]
     #[case('A', Rank::ACE)]

@@ -30,9 +30,13 @@
         * ::from<u32> (filter)
             * #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
             * Talk about brute force testing philosophy.
+            * Add Rank.number(), .bits(), .prime(), and .shift8(). 
+              * strum::EnumIter && tests
         * card_consts
         * ::new
         * .is_blank()
+        * .from_str()
+          * Boundary conditions tests.
         * Detour on Testing as the Hero's Journey
             * tell the story
             * scannable
