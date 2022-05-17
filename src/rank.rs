@@ -15,8 +15,8 @@ pub enum Rank {
     SIX = 6,
     FIVE = 5,
     FOUR = 4,
-    THREE = 3,
-    TWO = 2,
+    TREY = 3,
+    DEUCE = 2,
     BLANK = 0,
 }
 
@@ -42,7 +42,7 @@ impl Rank {
             Rank::SIX => 4,
             Rank::FIVE => 3,
             Rank::FOUR => 2,
-            Rank::THREE => 1,
+            Rank::TREY => 1,
             _ => 0,
         }
     }
@@ -62,8 +62,8 @@ impl Rank {
             Rank::SIX => 11,
             Rank::FIVE => 7,
             Rank::FOUR => 5,
-            Rank::THREE => 3,
-            Rank::TWO => 2,
+            Rank::TREY => 3,
+            Rank::DEUCE => 2,
             Rank::BLANK => 0,
         }
     }
@@ -89,8 +89,8 @@ impl From<char> for Rank {
             '6' => Rank::SIX,
             '5' => Rank::FIVE,
             '4' => Rank::FOUR,
-            '3' => Rank::THREE,
-            '2' => Rank::TWO,
+            '3' => Rank::TREY,
+            '2' => Rank::DEUCE,
             _ => Rank::BLANK,
         }
     }
@@ -136,8 +136,8 @@ mod rank_tests {
     #[case('6', Rank::SIX)]
     #[case('5', Rank::FIVE)]
     #[case('4', Rank::FOUR)]
-    #[case('3', Rank::THREE)]
-    #[case('2', Rank::TWO)]
+    #[case('3', Rank::TREY)]
+    #[case('2', Rank::DEUCE)]
     #[case('_', Rank::BLANK)]
     #[case(' ', Rank::BLANK)]
     fn from(#[case] input: char, #[case] expected: Rank) {
@@ -162,8 +162,8 @@ mod rank_tests {
     #[case("6", Rank::SIX)]
     #[case("5", Rank::FIVE)]
     #[case("4", Rank::FOUR)]
-    #[case("3", Rank::THREE)]
-    #[case("2", Rank::TWO)]
+    #[case("3", Rank::TREY)]
+    #[case("2", Rank::DEUCE)]
     #[case("_", Rank::BLANK)]
     fn from_str(#[case] input: &str, #[case] expected: Rank) {
         assert_eq!(expected, Rank::from_str(input).unwrap());

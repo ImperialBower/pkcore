@@ -121,8 +121,8 @@ impl Card {
             16 => Rank::SIX,
             8 => Rank::FIVE,
             4 => Rank::FOUR,
-            2 => Rank::THREE,
-            1 => Rank::TWO,
+            2 => Rank::TREY,
+            1 => Rank::DEUCE,
             _ => Rank::BLANK,
         }
     }
@@ -287,9 +287,9 @@ mod card_tests {
 
     #[test]
     fn new() {
-        assert_eq!(Card::TREY_CLUBS, Card::new(Rank::THREE, Suit::CLUBS));
+        assert_eq!(Card::TREY_CLUBS, Card::new(Rank::TREY, Suit::CLUBS));
         assert_eq!(Card::BLANK, Card::new(Rank::BLANK, Suit::CLUBS));
-        assert_eq!(Card::BLANK, Card::new(Rank::THREE, Suit::BLANK));
+        assert_eq!(Card::BLANK, Card::new(Rank::TREY, Suit::BLANK));
         assert_eq!(Card::BLANK, Card::new(Rank::BLANK, Suit::BLANK));
     }
 
@@ -299,33 +299,46 @@ mod card_tests {
     }
 
     #[test]
-    fn get_rank_flag() {
+    fn get_rank() {
         let card = Card::ACE_CLUBS;
         assert_eq!(0b00010000_00000000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(Rank::ACE, card.get_rank());
         let card = Card::KING_DIAMONDS;
         assert_eq!(0b00001000_00000000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(Rank::KING, card.get_rank());
         let card = Card::QUEEN_SPADES;
         assert_eq!(0b00000100_00000000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(Rank::QUEEN, card.get_rank());
         let card = Card::JACK_HEARTS;
         assert_eq!(0b00000010_00000000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(Rank::JACK, card.get_rank());
         let card = Card::TEN_SPADES;
         assert_eq!(0b00000001_00000000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(Rank::TEN, card.get_rank());
         let card = Card::NINE_HEARTS;
         assert_eq!(0b00000000_10000000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(Rank::NINE, card.get_rank());
         let card = Card::EIGHT_DIAMONDS;
         assert_eq!(0b00000000_01000000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(Rank::EIGHT, card.get_rank());
         let card = Card::SEVEN_CLUBS;
         assert_eq!(0b00000000_00100000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(Rank::SEVEN, card.get_rank());
         let card = Card::SIX_SPADES;
         assert_eq!(0b00000000_00010000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(Rank::SIX, card.get_rank());
         let card = Card::FIVE_HEARTS;
         assert_eq!(0b00000000_00001000_00000000_00000000, card.get_rank_flag());
+        assert_eq!(Rank::FIVE, card.get_rank());
         let card = Card::FOUR_DIAMONDS;
         assert_eq!(0b00000000_00000100_00000000_00000000, card.get_rank_flag());
+        assert_eq!(Rank::FOUR, card.get_rank());
         let card = Card::TREY_CLUBS;
         assert_eq!(0b00000000_00000010_00000000_00000000, card.get_rank_flag());
+        assert_eq!(Rank::TREY, card.get_rank());
         let card = Card::DEUCE_SPADES;
         assert_eq!(0b00000000_00000001_00000000_00000000, card.get_rank_flag());
+        assert_eq!(Rank::DEUCE, card.get_rank());
     }
 
     #[test]
@@ -401,7 +414,7 @@ mod card_tests {
     }
 }
 
-//region cardnumbers
+//region card numbers
 const ACE_SPADES_NUMBER: u32 = 268_471_337;
 const KING_SPADES_NUMBER: u32 = 134_253_349;
 const QUEEN_SPADES_NUMBER: u32 = 67_144_223;

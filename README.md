@@ -33,6 +33,7 @@
         * card_consts
         * ::new
         * .is_blank()
-* Detour on Testing as the Hero's Journey
-    * tell the story
-    * scannable
+        * Detour on Testing as the Hero's Journey
+            * tell the story
+            * scannable
+        * Move card numbers and make private
