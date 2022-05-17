@@ -41,3 +41,8 @@
             * tell the story
             * scannable
         * Move card numbers and make private
+        * .to_string() which means doing it for Rank and Suit.
+    * Rank
+      * .to_string() thus .to_char()
+    * Suit
+        * .to_string() thus .to_char() 

@@ -1,6 +1,7 @@
 use crate::PKError;
+use std::fmt;
 use std::str::FromStr;
-use strum::{EnumCount};
+use strum::EnumCount;
 use strum::EnumIter;
 
 #[derive(Clone, Copy, Debug, EnumCount, EnumIter, Eq, Hash, PartialEq)]
@@ -46,7 +47,6 @@ impl Rank {
         }
     }
 
-    // TODO early
     #[must_use]
     pub fn prime(self) -> u32 {
         match self {
@@ -67,10 +67,36 @@ impl Rank {
         }
     }
 
-    // TODO early
     #[must_use]
     pub fn shift8(self) -> u32 {
         self.number() << 8
+    }
+
+    #[must_use]
+    pub fn to_char(self) -> char {
+        // TODO NOTE: I wonder if there is a better way to go back and forth from chars?
+        match self {
+            Rank::ACE => 'A',
+            Rank::KING => 'K',
+            Rank::QUEEN => 'Q',
+            Rank::JACK => 'J',
+            Rank::TEN => 'T',
+            Rank::NINE => '9',
+            Rank::EIGHT => '8',
+            Rank::SEVEN => '7',
+            Rank::SIX => '6',
+            Rank::FIVE => '5',
+            Rank::FOUR => '4',
+            Rank::TREY => '3',
+            Rank::DEUCE => '2',
+            Rank::BLANK => '_',
+        }
+    }
+}
+
+impl fmt::Display for Rank {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_char())
     }
 }
 
@@ -117,7 +143,7 @@ mod rank_tests {
     use super::*;
     use elr_primes::Primes;
     use rstest::rstest;
-    use strum::{IntoEnumIterator};
+    use strum::IntoEnumIterator;
 
     /// Yes, this is an overly fancy tests, but it was fun to write
     /// and it shows off the strum functionality for the enums, which
@@ -146,6 +172,26 @@ mod rank_tests {
             // https://crates.io/crates/elr_primes#user-content-examples
             assert_eq!(i.next().unwrap().prime(), *p as u32);
         }
+    }
+
+    #[rstest]
+    #[case("A", Rank::ACE)]
+    #[case("K", Rank::KING)]
+    #[case("Q", Rank::QUEEN)]
+    #[case("J", Rank::JACK)]
+    #[case("T", Rank::TEN)]
+    #[case("9", Rank::NINE)]
+    #[case("8", Rank::EIGHT)]
+    #[case("7", Rank::SEVEN)]
+    #[case("6", Rank::SIX)]
+    #[case("5", Rank::FIVE)]
+    #[case("4", Rank::FOUR)]
+    #[case("3", Rank::TREY)]
+    #[case("2", Rank::DEUCE)]
+    #[case("_", Rank::BLANK)]
+    fn display(#[case] expected: String, #[case] input: Rank) {
+        // NOTE: This test is a twofer, handing both display and to_char()
+        assert_eq!(expected, input.to_string());
     }
 
     #[rstest]
