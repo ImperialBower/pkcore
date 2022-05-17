@@ -1,6 +1,6 @@
 use crate::PKError;
 use std::str::FromStr;
-use strum::{EnumCount, IntoEnumIterator};
+use strum::{EnumCount};
 use strum::EnumIter;
 
 #[derive(Clone, Copy, Debug, EnumCount, EnumIter, Eq, Hash, PartialEq)]
@@ -115,16 +115,38 @@ impl FromStr for Rank {
 #[allow(non_snake_case)]
 mod rank_tests {
     use super::*;
+    use elr_primes::Primes;
     use rstest::rstest;
+    use strum::{IntoEnumIterator};
 
-    // #[test]
-    // fn number() {
-    //     let mut i = Rank::COUNT - 2;
-    //     for rank in Rank::iter() {
-    //         assert_eq!(i, rank.number() as usize);
-    //         i = i - 1;
-    //     }
-    // }
+    /// Yes, this is an overly fancy tests, but it was fun to write
+    /// and it shows off the strum functionality for the enums, which
+    /// will be handy later.
+    ///
+    /// For me, the truth is that I try to have fun with my tests.
+    /// They're the place where I try to really put my code through
+    /// trials by fire, and stretch out my skills.
+    #[test]
+    fn number() {
+        let mut i = Rank::COUNT;
+        for rank in Rank::iter() {
+            i = i - 1;
+            match rank {
+                Rank::BLANK => assert_eq!(i, rank.number() as usize),
+                _ => assert_eq!(i - 1, rank.number() as usize),
+            }
+        }
+    }
+
+    #[test]
+    fn primes() {
+        let mut i = Rank::iter();
+        for p in Primes::new(42).primes().rev() {
+            // NOTE: Go through the process of discovering how to work this.
+            // https://crates.io/crates/elr_primes#user-content-examples
+            assert_eq!(i.next().unwrap().prime(), *p as u32);
+        }
+    }
 
     #[rstest]
     #[case('A', Rank::ACE)]
