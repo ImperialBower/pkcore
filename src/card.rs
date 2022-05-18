@@ -23,7 +23,7 @@ use std::str::FromStr;
 /// b = bit turned on depending on rank of card
 /// m = Flags reserved for multiples of the same rank. Stripped for evals.
 /// ```
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct Card(u32);
 // #[derive(Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 // pub struct PokerCard(#[serde(deserialize_with = "deserialize_card_index")] u32);

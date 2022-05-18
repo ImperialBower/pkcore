@@ -3,6 +3,7 @@
 pub mod card;
 pub mod rank;
 pub mod suit;
+pub mod cards;
 
 #[derive(Debug, PartialEq)]
 pub enum PKError {

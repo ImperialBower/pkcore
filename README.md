@@ -46,3 +46,6 @@
         * .to_string() thus .to_char() 
     * Card
       * .to_string()
+    * Cards
+      * .len() .is_empty()
+      * .insert and .iter()
