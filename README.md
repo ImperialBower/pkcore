@@ -47,5 +47,9 @@
     * Card
       * .to_string()
     * Cards
+      * indexmap::IndexSet 
+      * indexmap::set::Iter
       * .len() .is_empty()
       * .insert and .iter()
+      * .to_string()
+      * .sort() (adding Ord)
