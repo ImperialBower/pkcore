@@ -53,3 +53,5 @@
       * .insert and .iter()
       * .to_string()
       * .sort() (adding Ord)
+    * REFACTORING
+      * CardNumber enum
