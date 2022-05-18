@@ -4,6 +4,7 @@
 use crate::rank::Rank;
 use crate::suit::Suit;
 use crate::PKError;
+use std::fmt;
 use std::str::FromStr;
 
 /// A `Card` is a u32 representation of a variant of Cactus Kev's binary
@@ -35,9 +36,9 @@ impl Card {
 
     /// Binary filter for `CardNumber` `Suit` flags.
     /// 00000000 00000000 11110000 00000000
-    pub const SUIT_FILTER: u32 = 0xF000; // 61440 aka 0b11110000_00000000
+    pub const SUIT_FLAG_FILTER: u32 = 0xF000; // 61440 aka 0b11110000_00000000
     pub const SUIT_SHORT_MASK: u32 = 0b1111;
-    pub const SUIT_SHIFT: u32 = 12;
+    pub const SUIT_FLAG_SHIFT: u32 = 12;
     //endregion
 
     //region cards
@@ -108,6 +109,15 @@ impl Card {
     }
 
     #[must_use]
+    pub fn get_letter_index(&self) -> String {
+        format!(
+            "{}{}",
+            self.get_rank().to_char(),
+            self.get_suit().to_char_letter()
+        )
+    }
+
+    #[must_use]
     pub fn get_rank(&self) -> Rank {
         match self.get_rank_bit() {
             4096 => Rank::ACE,
@@ -136,8 +146,38 @@ impl Card {
     }
 
     #[must_use]
+    pub fn get_suit(&self) -> Suit {
+        match self.get_suit_bit() {
+            8 => Suit::SPADES,
+            4 => Suit::HEARTS,
+            2 => Suit::DIAMONDS,
+            1 => Suit::CLUBS,
+            _ => Suit::BLANK,
+        }
+    }
+
+    fn get_suit_bit(self) -> u32 {
+        self.get_suit_flag() >> Card::SUIT_FLAG_SHIFT
+    }
+
+    fn get_suit_flag(self) -> u32 {
+        self.as_u32() & Card::SUIT_FLAG_FILTER
+    }
+
+    #[must_use]
     pub fn is_blank(&self) -> bool {
         self.0 == BLANK_NUMBER
+    }
+}
+
+impl fmt::Display for Card {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}{}",
+            self.get_rank().to_char(),
+            self.get_suit().to_char_symbol()
+        )
     }
 }
 
@@ -345,6 +385,18 @@ mod card_tests {
     fn is_blank() {
         assert!(Card::BLANK.is_blank());
         assert!(!Card::TREY_CLUBS.is_blank());
+    }
+
+    // NOTE: for this tests I am not being nearly as comprehensive because
+    // I trust the work my earlier work did covering the Rank and Suit.
+    // Hub and spoke testing philosophy.
+    #[test]
+    fn display() {
+        assert_eq!("A♠", Card::ACE_SPADES.to_string());
+        assert_eq!("A♥", Card::ACE_HEARTS.to_string());
+        assert_eq!("A♦", Card::ACE_DIAMONDS.to_string());
+        assert_eq!("A♣", Card::ACE_CLUBS.to_string());
+        assert_eq!("__", Card::BLANK.to_string());
     }
 
     //region from u32

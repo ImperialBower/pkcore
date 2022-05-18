@@ -2,8 +2,6 @@
 
 ## Outline
 
-# PK Book
-
 * Got rust?
     * Cargo clippy
     * Cargo fmt
@@ -46,3 +44,5 @@
       * .to_string() thus .to_char()
     * Suit
         * .to_string() thus .to_char() 
+    * Card
+      * .to_string()

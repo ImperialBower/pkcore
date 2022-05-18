@@ -216,7 +216,7 @@ mod rank_tests {
     #[case('2', Rank::DEUCE)]
     #[case('_', Rank::BLANK)]
     #[case(' ', Rank::BLANK)]
-    fn from(#[case] input: char, #[case] expected: Rank) {
+    fn from__char(#[case] input: char, #[case] expected: Rank) {
         assert_eq!(expected, Rank::from(input));
     }
 

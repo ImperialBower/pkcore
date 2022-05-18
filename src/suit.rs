@@ -1,4 +1,5 @@
 use crate::PKError;
+use std::fmt;
 use std::str::FromStr;
 use strum::EnumIter; // TODO Early
 
@@ -12,7 +13,6 @@ pub enum Suit {
 }
 
 impl Suit {
-    // TODO early
     #[must_use]
     pub fn binary_signature(&self) -> u32 {
         match self {
@@ -22,6 +22,34 @@ impl Suit {
             Suit::CLUBS => 0x1000,
             Suit::BLANK => 0,
         }
+    }
+
+    #[must_use]
+    pub fn to_char_letter(self) -> char {
+        match self {
+            Suit::SPADES => 'S',
+            Suit::HEARTS => 'H',
+            Suit::DIAMONDS => 'D',
+            Suit::CLUBS => 'C',
+            Suit::BLANK => '_',
+        }
+    }
+
+    #[must_use]
+    pub fn to_char_symbol(self) -> char {
+        match self {
+            Suit::SPADES => '♠',
+            Suit::HEARTS => '♥',
+            Suit::DIAMONDS => '♦',
+            Suit::CLUBS => '♣',
+            Suit::BLANK => '_',
+        }
+    }
+}
+
+impl fmt::Display for Suit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_char_symbol())
     }
 }
 
@@ -67,6 +95,24 @@ mod card_suit_tests {
         assert_eq!(0, Suit::BLANK.binary_signature());
     }
 
+    #[test]
+    fn to_char_letter() {
+        assert_eq!('S', Suit::SPADES.to_char_letter());
+        assert_eq!('H', Suit::HEARTS.to_char_letter());
+        assert_eq!('D', Suit::DIAMONDS.to_char_letter());
+        assert_eq!('C', Suit::CLUBS.to_char_letter());
+        assert_eq!('_', Suit::BLANK.to_char_letter());
+    }
+
+    #[test]
+    fn display() {
+        assert_eq!("♠", Suit::SPADES.to_string());
+        assert_eq!("♥", Suit::HEARTS.to_string());
+        assert_eq!("♦", Suit::DIAMONDS.to_string());
+        assert_eq!("♣", Suit::CLUBS.to_string());
+        assert_eq!("_", Suit::BLANK.to_string());
+    }
+
     #[rstest]
     #[case('♠', Suit::SPADES)]
     #[case('♤', Suit::SPADES)]
@@ -86,7 +132,7 @@ mod card_suit_tests {
     #[case('c', Suit::CLUBS)]
     #[case(' ', Suit::BLANK)]
     #[case('F', Suit::BLANK)]
-    fn from(#[case] input: char, #[case] expected: Suit) {
+    fn from__char(#[case] input: char, #[case] expected: Suit) {
         assert_eq!(expected, Suit::from(input));
     }
 
