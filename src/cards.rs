@@ -1,8 +1,8 @@
+use crate::card::Card;
+use indexmap::set::Iter;
+use indexmap::IndexSet;
 use std::fmt;
 use std::fmt::Formatter;
-use indexmap::IndexSet;
-use indexmap::set::Iter;
-use crate::card::Card;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Cards(IndexSet<Card>);

@@ -47,7 +47,7 @@
     * Card
       * .to_string()
     * Cards
-      * indexmap::IndexSet 
+      * [indexmap::IndexSet](https://github.com/bluss/indexmap) 
       * indexmap::set::Iter
       * .len() .is_empty()
       * .insert and .iter()

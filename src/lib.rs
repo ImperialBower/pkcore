@@ -1,9 +1,9 @@
 #![warn(clippy::pedantic)]
 
 pub mod card;
+pub mod cards;
 pub mod rank;
 pub mod suit;
-pub mod cards;
 
 #[derive(Debug, PartialEq)]
 pub enum PKError {
