@@ -53,6 +53,13 @@
       * .insert and .iter()
       * .to_string()
       * .sort() (adding Ord)
-    * REFACTORING
-      * CardNumber enum
+    * Card
+      * .bit_string() -- Talk about expressive logging.
+    * REFACTORING I don't expect you to copy out every part of the test code, although you are more than happy to. Think of this as a cooking show where I, your humble host, does most of the boring parts off camera so that you don't get bored. Voila! Losts of tests refactored!
+        * CardNumber enum
       * into()
+      * rstests: Consolidating  tests 
+        * The problem is that they aren't really testing for value Just number not number to actual card
+    * Five INTRODUCING CACTUS KEV
+      * Get Five eval to return HandRank Number
+    

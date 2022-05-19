@@ -60,7 +60,7 @@ impl TryFrom<u32> for CardNumber {
     type Error = PKError;
 
     fn try_from(value: u32) -> Result<Self, Self::Error> {
-        return match value {
+        match value {
             268_471_337 => Ok(CardNumber::AceSpades),
             134_253_349 => Ok(CardNumber::KingSpades),
             67_144_223 => Ok(CardNumber::QueenSpades),
@@ -118,24 +118,6 @@ impl TryFrom<u32> for CardNumber {
             69_634 => Ok(CardNumber::DeuceClubs),
 
             _ => Err(PKError::InvalidCardNumber),
-        };
+        }
     }
-}
-
-#[cfg(test)]
-#[allow(non_snake_case)]
-mod card_tests {
-    use super::*;
-
-    // #[test]
-    // fn try_from__u32() {
-    //     let zero = 0u32;
-    //     let zero_enum: Result<CardNumber, PKError> = zero.try_into();
-    //
-    //     // assert_eq!()
-    //     let r = match zero_enum {
-    //         Ok(u) => u,
-    //         _ => 0,
-    //     }
-    // }
 }

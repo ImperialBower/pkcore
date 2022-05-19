@@ -4,6 +4,8 @@ use std::str::FromStr;
 use strum::EnumCount;
 use strum::EnumIter;
 
+/// TODO THEME I am an artist, and I paint with code. The pallet I am using to paint is the domain
+/// of the area I am coding for, in this case the traditional 52 card French Deck.
 #[derive(Clone, Copy, Debug, EnumCount, EnumIter, Eq, Hash, PartialEq)]
 pub enum Rank {
     ACE = 14,

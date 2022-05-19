@@ -174,7 +174,7 @@ impl Card {
 
     #[must_use]
     pub fn is_blank(&self) -> bool {
-        self.0 == BLANK_NUMBER
+        self.0 == Card::BLANK_NUMBER
     }
 }
 
@@ -223,65 +223,6 @@ mod card_tests {
     use super::*;
     use rstest::rstest;
 
-    //region card_consts tests
-    #[rstest]
-    #[case(Card::ACE_SPADES, Card(CardNumber::AceSpades as u32))]
-    #[case(Card::KING_SPADES, Card(KING_SPADES_NUMBER))] // TODO Continue refactoring
-    #[case(Card::QUEEN_SPADES, Card(QUEEN_SPADES_NUMBER))]
-    #[case(Card::JACK_SPADES, Card(JACK_SPADES_NUMBER))]
-    #[case(Card::TEN_SPADES, Card(TEN_SPADES_NUMBER))]
-    #[case(Card::NINE_SPADES, Card(NINE_SPADES_NUMBER))]
-    #[case(Card::EIGHT_SPADES, Card(EIGHT_SPADES_NUMBER))]
-    #[case(Card::SEVEN_SPADES, Card(SEVEN_SPADES_NUMBER))]
-    #[case(Card::SIX_SPADES, Card(SIX_SPADES_NUMBER))]
-    #[case(Card::FIVE_SPADES, Card(FIVE_SPADES_NUMBER))]
-    #[case(Card::FOUR_SPADES, Card(FOUR_SPADES_NUMBER))]
-    #[case(Card::TREY_SPADES, Card(TREY_SPADES_NUMBER))]
-    #[case(Card::DEUCE_SPADES, Card(DEUCE_SPADES_NUMBER))]
-    #[case(Card::ACE_HEARTS, Card(ACE_HEARTS_NUMBER))]
-    #[case(Card::KING_HEARTS, Card(KING_HEARTS_NUMBER))]
-    #[case(Card::QUEEN_HEARTS, Card(QUEEN_HEARTS_NUMBER))]
-    #[case(Card::JACK_HEARTS, Card(JACK_HEARTS_NUMBER))]
-    #[case(Card::TEN_HEARTS, Card(TEN_HEARTS_NUMBER))]
-    #[case(Card::NINE_HEARTS, Card(NINE_HEARTS_NUMBER))]
-    #[case(Card::EIGHT_HEARTS, Card(EIGHT_HEARTS_NUMBER))]
-    #[case(Card::SEVEN_HEARTS, Card(SEVEN_HEARTS_NUMBER))]
-    #[case(Card::SIX_HEARTS, Card(SIX_HEARTS_NUMBER))]
-    #[case(Card::FIVE_HEARTS, Card(FIVE_HEARTS_NUMBER))]
-    #[case(Card::FOUR_HEARTS, Card(FOUR_HEARTS_NUMBER))]
-    #[case(Card::TREY_HEARTS, Card(TREY_HEARTS_NUMBER))]
-    #[case(Card::DEUCE_HEARTS, Card(DEUCE_HEARTS_NUMBER))]
-    #[case(Card::ACE_DIAMONDS, Card(ACE_DIAMONDS_NUMBER))]
-    #[case(Card::KING_DIAMONDS, Card(KING_DIAMONDS_NUMBER))]
-    #[case(Card::QUEEN_DIAMONDS, Card(QUEEN_DIAMONDS_NUMBER))]
-    #[case(Card::JACK_DIAMONDS, Card(JACK_DIAMONDS_NUMBER))]
-    #[case(Card::TEN_DIAMONDS, Card(TEN_DIAMONDS_NUMBER))]
-    #[case(Card::NINE_DIAMONDS, Card(NINE_DIAMONDS_NUMBER))]
-    #[case(Card::EIGHT_DIAMONDS, Card(EIGHT_DIAMONDS_NUMBER))]
-    #[case(Card::SEVEN_DIAMONDS, Card(SEVEN_DIAMONDS_NUMBER))]
-    #[case(Card::SIX_DIAMONDS, Card(SIX_DIAMONDS_NUMBER))]
-    #[case(Card::FIVE_DIAMONDS, Card(FIVE_DIAMONDS_NUMBER))]
-    #[case(Card::FOUR_DIAMONDS, Card(FOUR_DIAMONDS_NUMBER))]
-    #[case(Card::TREY_DIAMONDS, Card(TREY_DIAMONDS_NUMBER))]
-    #[case(Card::DEUCE_DIAMONDS, Card(DEUCE_DIAMONDS_NUMBER))]
-    #[case(Card::ACE_CLUBS, Card(ACE_CLUBS_NUMBER))]
-    #[case(Card::KING_CLUBS, Card(KING_CLUBS_NUMBER))]
-    #[case(Card::QUEEN_CLUBS, Card(QUEEN_CLUBS_NUMBER))]
-    #[case(Card::JACK_CLUBS, Card(JACK_CLUBS_NUMBER))]
-    #[case(Card::TEN_CLUBS, Card(TEN_CLUBS_NUMBER))]
-    #[case(Card::NINE_CLUBS, Card(NINE_CLUBS_NUMBER))]
-    #[case(Card::EIGHT_CLUBS, Card(EIGHT_CLUBS_NUMBER))]
-    #[case(Card::SEVEN_CLUBS, Card(SEVEN_CLUBS_NUMBER))]
-    #[case(Card::SIX_CLUBS, Card(SIX_CLUBS_NUMBER))]
-    #[case(Card::FIVE_CLUBS, Card(FIVE_CLUBS_NUMBER))]
-    #[case(Card::FOUR_CLUBS, Card(FOUR_CLUBS_NUMBER))]
-    #[case(Card::TREY_CLUBS, Card(TREY_CLUBS_NUMBER))]
-    #[case(Card::DEUCE_CLUBS, Card(DEUCE_CLUBS_NUMBER))]
-    fn card_consts(#[case] expected: Card, #[case] actual: Card) {
-        assert_eq!(expected, actual);
-    }
-    //endregion tests
-
     #[test]
     fn new() {
         assert_eq!(Card::TREY_CLUBS, Card::new(Rank::TREY, Suit::CLUBS));
@@ -292,7 +233,7 @@ mod card_tests {
 
     #[test]
     fn as_u32() {
-        assert_eq!(ACE_SPADES_NUMBER, Card(ACE_SPADES_NUMBER).as_u32());
+        assert_eq!(CardNumber::AceSpades as u32, Card::ACE_SPADES.as_u32());
     }
 
     #[test]
@@ -356,64 +297,73 @@ mod card_tests {
         assert_eq!("__", Card::BLANK.to_string());
     }
 
-    //region from u32
+    //region card_consts tests
+    /// REFACTORING NOTES
+    /// https://github.com/ContractBridge/pkcore/commit/c3b1a7a425b1ef0394c3719ae34156e685397965
+    /// Original version doesn't test for value, just for internal logic
+    /// The goal of testing is to validate how the code is expected to act
+    /// and insulate us from breaking things when we change the code later on.
+    ///
+    /// Fail to validate value: change one u32 for a CardNumber and the test should fail.
+    /// MORAL: Test for value!
     #[rstest]
-    #[case(ACE_SPADES_NUMBER, Card(ACE_SPADES_NUMBER))]
-    #[case(KING_SPADES_NUMBER, Card(KING_SPADES_NUMBER))]
-    #[case(QUEEN_SPADES_NUMBER, Card(QUEEN_SPADES_NUMBER))]
-    #[case(JACK_SPADES_NUMBER, Card(JACK_SPADES_NUMBER))]
-    #[case(TEN_SPADES_NUMBER, Card(TEN_SPADES_NUMBER))]
-    #[case(NINE_SPADES_NUMBER, Card(NINE_SPADES_NUMBER))]
-    #[case(EIGHT_SPADES_NUMBER, Card(EIGHT_SPADES_NUMBER))]
-    #[case(SEVEN_SPADES_NUMBER, Card(SEVEN_SPADES_NUMBER))]
-    #[case(SIX_SPADES_NUMBER, Card(SIX_SPADES_NUMBER))]
-    #[case(FIVE_SPADES_NUMBER, Card(FIVE_SPADES_NUMBER))]
-    #[case(FOUR_SPADES_NUMBER, Card(FOUR_SPADES_NUMBER))]
-    #[case(TREY_SPADES_NUMBER, Card(TREY_SPADES_NUMBER))]
-    #[case(DEUCE_SPADES_NUMBER, Card(DEUCE_SPADES_NUMBER))]
-    #[case(ACE_HEARTS_NUMBER, Card(ACE_HEARTS_NUMBER))]
-    #[case(KING_HEARTS_NUMBER, Card(KING_HEARTS_NUMBER))]
-    #[case(QUEEN_HEARTS_NUMBER, Card(QUEEN_HEARTS_NUMBER))]
-    #[case(JACK_HEARTS_NUMBER, Card(JACK_HEARTS_NUMBER))]
-    #[case(TEN_HEARTS_NUMBER, Card(TEN_HEARTS_NUMBER))]
-    #[case(NINE_HEARTS_NUMBER, Card(NINE_HEARTS_NUMBER))]
-    #[case(EIGHT_HEARTS_NUMBER, Card(EIGHT_HEARTS_NUMBER))]
-    #[case(SEVEN_HEARTS_NUMBER, Card(SEVEN_HEARTS_NUMBER))]
-    #[case(SIX_HEARTS_NUMBER, Card(SIX_HEARTS_NUMBER))]
-    #[case(FIVE_HEARTS_NUMBER, Card(FIVE_HEARTS_NUMBER))]
-    #[case(FOUR_HEARTS_NUMBER, Card(FOUR_HEARTS_NUMBER))]
-    #[case(TREY_HEARTS_NUMBER, Card(TREY_HEARTS_NUMBER))]
-    #[case(DEUCE_HEARTS_NUMBER, Card(DEUCE_HEARTS_NUMBER))]
-    #[case(ACE_DIAMONDS_NUMBER, Card(ACE_DIAMONDS_NUMBER))]
-    #[case(KING_DIAMONDS_NUMBER, Card(KING_DIAMONDS_NUMBER))]
-    #[case(QUEEN_DIAMONDS_NUMBER, Card(QUEEN_DIAMONDS_NUMBER))]
-    #[case(JACK_DIAMONDS_NUMBER, Card(JACK_DIAMONDS_NUMBER))]
-    #[case(TEN_DIAMONDS_NUMBER, Card(TEN_DIAMONDS_NUMBER))]
-    #[case(NINE_DIAMONDS_NUMBER, Card(NINE_DIAMONDS_NUMBER))]
-    #[case(EIGHT_DIAMONDS_NUMBER, Card(EIGHT_DIAMONDS_NUMBER))]
-    #[case(SEVEN_DIAMONDS_NUMBER, Card(SEVEN_DIAMONDS_NUMBER))]
-    #[case(SIX_DIAMONDS_NUMBER, Card(SIX_DIAMONDS_NUMBER))]
-    #[case(FIVE_DIAMONDS_NUMBER, Card(FIVE_DIAMONDS_NUMBER))]
-    #[case(FOUR_DIAMONDS_NUMBER, Card(FOUR_DIAMONDS_NUMBER))]
-    #[case(TREY_DIAMONDS_NUMBER, Card(TREY_DIAMONDS_NUMBER))]
-    #[case(DEUCE_DIAMONDS_NUMBER, Card(DEUCE_DIAMONDS_NUMBER))]
-    #[case(ACE_CLUBS_NUMBER, Card(ACE_CLUBS_NUMBER))]
-    #[case(KING_CLUBS_NUMBER, Card(KING_CLUBS_NUMBER))]
-    #[case(QUEEN_CLUBS_NUMBER, Card(QUEEN_CLUBS_NUMBER))]
-    #[case(JACK_CLUBS_NUMBER, Card(JACK_CLUBS_NUMBER))]
-    #[case(TEN_CLUBS_NUMBER, Card(TEN_CLUBS_NUMBER))]
-    #[case(NINE_CLUBS_NUMBER, Card(NINE_CLUBS_NUMBER))]
-    #[case(EIGHT_CLUBS_NUMBER, Card(EIGHT_CLUBS_NUMBER))]
-    #[case(SEVEN_CLUBS_NUMBER, Card(SEVEN_CLUBS_NUMBER))]
-    #[case(SIX_CLUBS_NUMBER, Card(SIX_CLUBS_NUMBER))]
-    #[case(FIVE_CLUBS_NUMBER, Card(FIVE_CLUBS_NUMBER))]
-    #[case(FOUR_CLUBS_NUMBER, Card(FOUR_CLUBS_NUMBER))]
-    #[case(TREY_CLUBS_NUMBER, Card(TREY_CLUBS_NUMBER))]
-    #[case(DEUCE_CLUBS_NUMBER, Card(DEUCE_CLUBS_NUMBER))]
-    fn from(#[case] input: u32, #[case] expected: Card) {
-        assert_eq!(Card::from(input), expected);
+    #[case(Card::from(CardNumber::AceSpades as u32), "A♠")]
+    #[case(Card::from(CardNumber::KingSpades as u32), "K♠")] // TODO Continue refactoring
+    #[case(Card::from(CardNumber::QueenSpades as u32), "Q♠")]
+    #[case(Card::from(CardNumber::JackSpades as u32), "J♠")]
+    #[case(Card::from(CardNumber::TenSpades as u32), "T♠")]
+    #[case(Card::from(CardNumber::NineSpades as u32), "9♠")]
+    #[case(Card::from(CardNumber::EightSpades as u32), "8♠")]
+    #[case(Card::from(CardNumber::SevenSpades as u32), "7♠")]
+    #[case(Card::from(CardNumber::SixSpades as u32), "6♠")]
+    #[case(Card::from(CardNumber::FiveSpades as u32) , "5♠")]
+    #[case(Card::from(CardNumber::FourSpades as u32) , "4♠")]
+    #[case(Card::from(CardNumber::TreySpades as u32) , "3♠")]
+    #[case(Card::from(CardNumber::DeuceSpades as u32) , "2♠")]
+    #[case(Card::from(CardNumber::AceHearts as u32) , "A♥")]
+    #[case(Card::from(CardNumber::KingHearts as u32) , "K♥")]
+    #[case(Card::from(CardNumber::QueenHearts as u32) , "Q♥")]
+    #[case(Card::from(CardNumber::JackHearts as u32) , "J♥")]
+    #[case(Card::from(CardNumber::TenHearts as u32) , "T♥")]
+    #[case(Card::from(CardNumber::NineHearts as u32) , "9♥")]
+    #[case(Card::from(CardNumber::EightHearts as u32) , "8♥")]
+    #[case(Card::from(CardNumber::SevenHearts as u32) , "7♥")]
+    #[case(Card::from(CardNumber::SixHearts as u32) , "6♥")]
+    #[case(Card::from(CardNumber::FiveHearts as u32) , "5♥")]
+    #[case(Card::from(CardNumber::FourHearts as u32) , "4♥")]
+    #[case(Card::from(CardNumber::TreyHearts as u32) , "3♥")]
+    #[case(Card::from(CardNumber::DeuceHearts as u32) , "2♥")]
+    #[case(Card::from(CardNumber::AceDiamonds as u32) , "A♦")]
+    #[case(Card::from(CardNumber::KingDiamonds as u32) , "K♦")]
+    #[case(Card::from(CardNumber::QueenDiamonds as u32) , "Q♦")]
+    #[case(Card::from(CardNumber::JackDiamonds as u32) , "J♦")]
+    #[case(Card::from(CardNumber::TenDiamonds as u32) , "T♦")]
+    #[case(Card::from(CardNumber::NineDiamonds as u32) , "9♦")]
+    #[case(Card::from(CardNumber::EightDiamonds as u32) , "8♦")]
+    #[case(Card::from(CardNumber::SevenDiamonds as u32) , "7♦")]
+    #[case(Card::from(CardNumber::SixDiamonds as u32) , "6♦")]
+    #[case(Card::from(CardNumber::FiveDiamonds as u32) , "5♦")]
+    #[case(Card::from(CardNumber::FourDiamonds as u32) , "4♦")]
+    #[case(Card::from(CardNumber::TreyDiamonds as u32) , "3♦")]
+    #[case(Card::from(CardNumber::DeuceDiamonds as u32) , "2♦")]
+    #[case(Card::from(CardNumber::AceClubs as u32) , "A♣")]
+    #[case(Card::from(CardNumber::KingClubs as u32) , "K♣")]
+    #[case(Card::from(CardNumber::QueenClubs as u32) , "Q♣")]
+    #[case(Card::from(CardNumber::JackClubs as u32) , "J♣")]
+    #[case(Card::from(CardNumber::TenClubs as u32) , "T♣")]
+    #[case(Card::from(CardNumber::NineClubs as u32) , "9♣")]
+    #[case(Card::from(CardNumber::EightClubs as u32) , "8♣")]
+    #[case(Card::from(CardNumber::SevenClubs as u32) , "7♣")]
+    #[case(Card::from(CardNumber::SixClubs as u32) , "6♣")]
+    #[case(Card::from(CardNumber::FiveClubs as u32) , "5♣")]
+    #[case(Card::from(CardNumber::FourClubs as u32) , "4♣")]
+    #[case(Card::from(CardNumber::TreyClubs as u32) , "3♣")]
+    #[case(Card::from(CardNumber::DeuceClubs as u32) , "2♣")]
+    #[case(Card::default(), "__")]
+    fn from__u32(#[case] actual: Card, #[case] expected: &str) {
+        assert_eq!(actual.to_string(), expected);
     }
-    //endregion
+    //endregion tests
 
     #[test]
     fn from_str() {
@@ -422,59 +372,3 @@ mod card_tests {
         assert_eq!(PKError::InvalidIndex, Card::from_str("  ").unwrap_err());
     }
 }
-
-//region card numbers
-const ACE_SPADES_NUMBER: u32 = 268_471_337;
-const KING_SPADES_NUMBER: u32 = 134_253_349;
-const QUEEN_SPADES_NUMBER: u32 = 67_144_223;
-const JACK_SPADES_NUMBER: u32 = 33_589_533;
-const TEN_SPADES_NUMBER: u32 = 16_812_055;
-const NINE_SPADES_NUMBER: u32 = 8_423_187;
-const EIGHT_SPADES_NUMBER: u32 = 4_228_625;
-const SEVEN_SPADES_NUMBER: u32 = 2_131_213;
-const SIX_SPADES_NUMBER: u32 = 1_082_379;
-const FIVE_SPADES_NUMBER: u32 = 557_831;
-const FOUR_SPADES_NUMBER: u32 = 295_429;
-const TREY_SPADES_NUMBER: u32 = 164_099;
-const DEUCE_SPADES_NUMBER: u32 = 98_306;
-const ACE_HEARTS_NUMBER: u32 = 268_454_953;
-const KING_HEARTS_NUMBER: u32 = 134_236_965;
-const QUEEN_HEARTS_NUMBER: u32 = 67_127_839;
-const JACK_HEARTS_NUMBER: u32 = 33_573_149;
-const TEN_HEARTS_NUMBER: u32 = 16_795_671;
-const NINE_HEARTS_NUMBER: u32 = 8_406_803;
-const EIGHT_HEARTS_NUMBER: u32 = 4_212_241;
-const SEVEN_HEARTS_NUMBER: u32 = 2_114_829;
-const SIX_HEARTS_NUMBER: u32 = 1_065_995;
-const FIVE_HEARTS_NUMBER: u32 = 541_447;
-const FOUR_HEARTS_NUMBER: u32 = 279_045;
-const TREY_HEARTS_NUMBER: u32 = 147_715;
-const DEUCE_HEARTS_NUMBER: u32 = 81_922;
-const ACE_DIAMONDS_NUMBER: u32 = 268_446_761;
-const KING_DIAMONDS_NUMBER: u32 = 134_228_773;
-const QUEEN_DIAMONDS_NUMBER: u32 = 67_119_647;
-const JACK_DIAMONDS_NUMBER: u32 = 33_564_957;
-const TEN_DIAMONDS_NUMBER: u32 = 16_787_479;
-const NINE_DIAMONDS_NUMBER: u32 = 8_398_611;
-const EIGHT_DIAMONDS_NUMBER: u32 = 4_204_049;
-const SEVEN_DIAMONDS_NUMBER: u32 = 2_106_637;
-const SIX_DIAMONDS_NUMBER: u32 = 1_057_803;
-const FIVE_DIAMONDS_NUMBER: u32 = 533_255;
-const FOUR_DIAMONDS_NUMBER: u32 = 270_853;
-const TREY_DIAMONDS_NUMBER: u32 = 139_523;
-const DEUCE_DIAMONDS_NUMBER: u32 = 73_730;
-const ACE_CLUBS_NUMBER: u32 = 268_442_665;
-const KING_CLUBS_NUMBER: u32 = 134_224_677;
-const QUEEN_CLUBS_NUMBER: u32 = 67_115_551;
-const JACK_CLUBS_NUMBER: u32 = 33_560_861;
-const TEN_CLUBS_NUMBER: u32 = 16_783_383;
-const NINE_CLUBS_NUMBER: u32 = 8_394_515;
-const EIGHT_CLUBS_NUMBER: u32 = 4_199_953;
-const SEVEN_CLUBS_NUMBER: u32 = 2_102_541;
-const SIX_CLUBS_NUMBER: u32 = 1_053_707;
-const FIVE_CLUBS_NUMBER: u32 = 529_159;
-const FOUR_CLUBS_NUMBER: u32 = 266_757;
-const TREY_CLUBS_NUMBER: u32 = 135_427;
-const DEUCE_CLUBS_NUMBER: u32 = 69_634;
-const BLANK_NUMBER: u32 = 0;
-//endregion
