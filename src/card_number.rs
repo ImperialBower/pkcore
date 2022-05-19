@@ -1,3 +1,5 @@
+use crate::PKError;
+
 #[repr(u32)]
 pub enum CardNumber {
     AceSpades = 268_471_337,
@@ -52,5 +54,88 @@ pub enum CardNumber {
     FourClubs = 266_757,
     TreyClubs = 135_427,
     DeuceClubs = 69_634,
-    Blank = 0,
+}
+
+impl TryFrom<u32> for CardNumber {
+    type Error = PKError;
+
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        return match value {
+            268_471_337 => Ok(CardNumber::AceSpades),
+            134_253_349 => Ok(CardNumber::KingSpades),
+            67_144_223 => Ok(CardNumber::QueenSpades),
+            33_589_533 => Ok(CardNumber::JackSpades),
+            16_812_055 => Ok(CardNumber::TenSpades),
+            8_423_187 => Ok(CardNumber::NineSpades),
+            4_228_625 => Ok(CardNumber::EightSpades),
+            2_131_213 => Ok(CardNumber::SevenSpades),
+            1_082_379 => Ok(CardNumber::SixSpades),
+            557_831 => Ok(CardNumber::FiveSpades),
+            295_429 => Ok(CardNumber::FourSpades),
+            164_099 => Ok(CardNumber::TreySpades),
+            98_306 => Ok(CardNumber::DeuceSpades),
+
+            268_454_953 => Ok(CardNumber::AceHearts),
+            134_236_965 => Ok(CardNumber::KingHearts),
+            67_127_839 => Ok(CardNumber::QueenHearts),
+            33_573_149 => Ok(CardNumber::JackHearts),
+            16_795_671 => Ok(CardNumber::TenHearts),
+            8_406_803 => Ok(CardNumber::NineHearts),
+            4_212_241 => Ok(CardNumber::EightHearts),
+            2_114_829 => Ok(CardNumber::SevenHearts),
+            1_065_995 => Ok(CardNumber::SixHearts),
+            541_447 => Ok(CardNumber::FiveHearts),
+            279_045 => Ok(CardNumber::FourHearts),
+            147_715 => Ok(CardNumber::TreyHearts),
+            81_922 => Ok(CardNumber::DeuceHearts),
+
+            268_446_761 => Ok(CardNumber::AceDiamonds),
+            134_228_773 => Ok(CardNumber::KingDiamonds),
+            67_119_647 => Ok(CardNumber::QueenDiamonds),
+            33_564_957 => Ok(CardNumber::JackDiamonds),
+            16_787_479 => Ok(CardNumber::TenDiamonds),
+            8_398_611 => Ok(CardNumber::NineDiamonds),
+            4_204_049 => Ok(CardNumber::EightDiamonds),
+            2_106_637 => Ok(CardNumber::SevenDiamonds),
+            1_057_803 => Ok(CardNumber::SixDiamonds),
+            533_255 => Ok(CardNumber::FiveDiamonds),
+            270_853 => Ok(CardNumber::FourDiamonds),
+            139_523 => Ok(CardNumber::TreyDiamonds),
+            73_730 => Ok(CardNumber::DeuceDiamonds),
+
+            268_442_665 => Ok(CardNumber::AceClubs),
+            134_224_677 => Ok(CardNumber::KingClubs),
+            67_115_551 => Ok(CardNumber::QueenClubs),
+            33_560_861 => Ok(CardNumber::JackClubs),
+            16_783_383 => Ok(CardNumber::TenClubs),
+            8_394_515 => Ok(CardNumber::NineClubs),
+            4_199_953 => Ok(CardNumber::EightClubs),
+            2_102_541 => Ok(CardNumber::SevenClubs),
+            1_053_707 => Ok(CardNumber::SixClubs),
+            529_159 => Ok(CardNumber::FiveClubs),
+            266_757 => Ok(CardNumber::FourClubs),
+            135_427 => Ok(CardNumber::TreyClubs),
+            69_634 => Ok(CardNumber::DeuceClubs),
+
+            _ => Err(PKError::InvalidCardNumber),
+        };
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod card_tests {
+    use super::*;
+
+    // #[test]
+    // fn try_from__u32() {
+    //     let zero = 0u32;
+    //     let zero_enum: Result<CardNumber, PKError> = zero.try_into();
+    //
+    //     // assert_eq!()
+    //     let r = match zero_enum {
+    //         Ok(u) => u,
+    //         _ => 0,
+    //     }
+    // }
 }

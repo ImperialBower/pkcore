@@ -55,3 +55,4 @@
       * .sort() (adding Ord)
     * REFACTORING
       * CardNumber enum
+      * into()

@@ -40,6 +40,8 @@ impl Card {
     pub const SUIT_FLAG_FILTER: u32 = 0xF000; // 61440 aka 0b11110000_00000000
     pub const SUIT_SHORT_MASK: u32 = 0b1111;
     pub const SUIT_FLAG_SHIFT: u32 = 12;
+
+    const BLANK_NUMBER: u32 = 0;
     //endregion
 
     //region cards
@@ -95,7 +97,7 @@ impl Card {
     pub const FOUR_CLUBS: Card = Card(CardNumber::FourClubs as u32);
     pub const TREY_CLUBS: Card = Card(CardNumber::TreyClubs as u32);
     pub const DEUCE_CLUBS: Card = Card(CardNumber::DeuceClubs as u32);
-    pub const BLANK: Card = Card(CardNumber::Blank as u32);
+    pub const BLANK: Card = Card(Card::BLANK_NUMBER);
     //endregion
 
     #[must_use]
@@ -107,6 +109,11 @@ impl Card {
     #[must_use]
     pub fn as_u32(&self) -> u32 {
         self.0
+    }
+
+    #[must_use]
+    pub fn bit_string(&self) -> String {
+        String::new()
     }
 
     #[must_use]
@@ -185,62 +192,11 @@ impl fmt::Display for Card {
 /// Filters u32 so that only valid Cactus Kev Card values are set.
 impl From<u32> for Card {
     fn from(ckc_number: u32) -> Self {
-        let ckc_number = match ckc_number {
-            ACE_SPADES_NUMBER
-            | KING_SPADES_NUMBER
-            | QUEEN_SPADES_NUMBER
-            | JACK_SPADES_NUMBER
-            | TEN_SPADES_NUMBER
-            | NINE_SPADES_NUMBER
-            | EIGHT_SPADES_NUMBER
-            | SEVEN_SPADES_NUMBER
-            | SIX_SPADES_NUMBER
-            | FIVE_SPADES_NUMBER
-            | FOUR_SPADES_NUMBER
-            | TREY_SPADES_NUMBER
-            | DEUCE_SPADES_NUMBER
-            | ACE_HEARTS_NUMBER
-            | KING_HEARTS_NUMBER
-            | QUEEN_HEARTS_NUMBER
-            | JACK_HEARTS_NUMBER
-            | TEN_HEARTS_NUMBER
-            | NINE_HEARTS_NUMBER
-            | EIGHT_HEARTS_NUMBER
-            | SEVEN_HEARTS_NUMBER
-            | SIX_HEARTS_NUMBER
-            | FIVE_HEARTS_NUMBER
-            | FOUR_HEARTS_NUMBER
-            | TREY_HEARTS_NUMBER
-            | DEUCE_HEARTS_NUMBER
-            | ACE_DIAMONDS_NUMBER
-            | KING_DIAMONDS_NUMBER
-            | QUEEN_DIAMONDS_NUMBER
-            | JACK_DIAMONDS_NUMBER
-            | TEN_DIAMONDS_NUMBER
-            | NINE_DIAMONDS_NUMBER
-            | EIGHT_DIAMONDS_NUMBER
-            | SEVEN_DIAMONDS_NUMBER
-            | SIX_DIAMONDS_NUMBER
-            | FIVE_DIAMONDS_NUMBER
-            | FOUR_DIAMONDS_NUMBER
-            | TREY_DIAMONDS_NUMBER
-            | DEUCE_DIAMONDS_NUMBER
-            | ACE_CLUBS_NUMBER
-            | KING_CLUBS_NUMBER
-            | QUEEN_CLUBS_NUMBER
-            | JACK_CLUBS_NUMBER
-            | TEN_CLUBS_NUMBER
-            | NINE_CLUBS_NUMBER
-            | EIGHT_CLUBS_NUMBER
-            | SEVEN_CLUBS_NUMBER
-            | SIX_CLUBS_NUMBER
-            | FIVE_CLUBS_NUMBER
-            | FOUR_CLUBS_NUMBER
-            | TREY_CLUBS_NUMBER
-            | DEUCE_CLUBS_NUMBER => ckc_number,
-            _ => BLANK_NUMBER,
-        };
-        Card(ckc_number)
+        let r: Result<CardNumber, PKError> = ckc_number.try_into();
+        match r {
+            Ok(u) => Card(u as u32),
+            _ => Card::BLANK,
+        }
     }
 }
 
@@ -269,8 +225,8 @@ mod card_tests {
 
     //region card_consts tests
     #[rstest]
-    #[case(Card::ACE_SPADES, Card(ACE_SPADES_NUMBER))]
-    #[case(Card::KING_SPADES, Card(KING_SPADES_NUMBER))]
+    #[case(Card::ACE_SPADES, Card(CardNumber::AceSpades as u32))]
+    #[case(Card::KING_SPADES, Card(KING_SPADES_NUMBER))] // TODO Continue refactoring
     #[case(Card::QUEEN_SPADES, Card(QUEEN_SPADES_NUMBER))]
     #[case(Card::JACK_SPADES, Card(JACK_SPADES_NUMBER))]
     #[case(Card::TEN_SPADES, Card(TEN_SPADES_NUMBER))]

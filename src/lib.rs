@@ -14,6 +14,7 @@ pub enum PKError {
     Incomplete,
     InvalidBinaryFormat,
     InvalidCard,
+    InvalidCardNumber,
     InvalidCardCount,
     InvalidIndex,
     NotEnoughCards,
