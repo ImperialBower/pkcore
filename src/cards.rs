@@ -3,6 +3,8 @@ use indexmap::set::Iter;
 use indexmap::IndexSet;
 use std::fmt;
 use std::fmt::Formatter;
+use std::str::FromStr;
+use crate::PKError;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Cards(IndexSet<Card>);
@@ -57,6 +59,26 @@ impl fmt::Display for Cards {
     }
 }
 
+impl FromStr for Cards {
+    type Err = PKError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut cards = Cards::default();
+        for s in s.trim().split_whitespace() {
+            let c = Card::from_str(s)?;
+            if c.is_blank() {
+                return Err(PKError::InvalidIndex);
+            }
+            cards.insert(c);
+        };
+        if cards.is_empty() {
+            Err(PKError::InvalidIndex)
+        } else {
+            Ok(cards)
+        }
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod card_tests {
@@ -107,6 +129,16 @@ mod card_tests {
     #[test]
     fn display() {
         assert_eq!("5♣ 4♣ 3♣ 2♣ A♣", wheel().to_string());
+    }
+
+    #[test]
+    fn from_str() {
+        assert_eq!(wheel(), Cards::from_str("5♣ 4♣ 3♣ 2♣ A♣").unwrap());
+    }
+
+    #[test]
+    fn from_str__invalid() {
+        assert!(Cards::from_str("5♣ 4♣ 3A 2♣ A♣").is_err());
     }
 
     fn wheel() -> Cards {

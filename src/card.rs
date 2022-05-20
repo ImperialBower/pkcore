@@ -126,9 +126,10 @@ impl Card {
                 bit_string.push(' ');
             }
         }
-        match with_guide {
-            true => format!("{}\n{}", Card::GUIDE, bit_string),
-            false => bit_string,
+        if with_guide {
+            format!("{}\n{}", Card::GUIDE, bit_string)
+        } else {
+            bit_string
         }
     }
 

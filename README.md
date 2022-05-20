@@ -61,6 +61,10 @@
       * rstests: Consolidating  tests 
         * The problem is that they aren't really testing for value Just number not number to actual card
     * Five INTRODUCING CACTUS KEV
+    * Cards
+      * implement FromStr so can be used by arrays like Five.
+    * Five
+      * now implement FromStr leveraging Cards.from_str()
       * Get Five eval to return HandRank Number
       * From array
     

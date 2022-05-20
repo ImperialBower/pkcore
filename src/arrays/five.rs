@@ -1,4 +1,6 @@
+use std::str::FromStr;
 use crate::card::Card;
+use crate::PKError;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Five([Card; 5]);
@@ -12,6 +14,14 @@ impl From<[Card; 5]> for Five {
         Five(array)
     }
 }
+
+// impl FromStr for Five {
+//     type Err = PKError;
+//
+//     fn from_str(s: &str) -> Result<Self, Self::Err> {
+//         let five =
+//     }
+// }
 
 #[cfg(test)]
 #[allow(non_snake_case)]
