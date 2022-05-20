@@ -50,8 +50,14 @@ impl Five {
     }
 
     #[must_use]
-    pub fn hand_rank_value(&self) -> u16 {
-        0
+    pub fn rank(&self) -> u16 {
+        let i = self.or_rank_bits() as usize;
+        let rank: u16 = if self.is_flush() {
+            crate::lookups::flushes::FLUSHES[i]
+        } else {
+            0
+        };
+        rank
     }
 
     #[must_use]
@@ -148,6 +154,11 @@ mod arrays_five_tests {
             "00000000000000001000100000000001",
             format!("{:032b}", and_bits)
         );
+    }
+
+    #[test]
+    fn rank() {
+        assert_eq!(1, Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap().rank());
     }
 
     #[test]

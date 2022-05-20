@@ -73,4 +73,6 @@
           * .or_rank_bits()
           * .and_bits()
           * .is_flush()
+          * .rank()
+            * flushes
     
