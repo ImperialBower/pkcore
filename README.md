@@ -66,5 +66,4 @@
     * Five
       * now implement FromStr leveraging Cards.from_str()
       * Get Five eval to return HandRank Number
-      * From array
     
