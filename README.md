@@ -66,5 +66,9 @@
       * need get_index() to do Five.from_str()
     * Five
       * now implement FromStr leveraging Cards.from_str()
+      * .to_arr()
       * Get Five eval to return HandRank Number
+        * .hand_rank_value()
+          * .or_bits()
+          * .or_rank_bits()
     

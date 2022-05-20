@@ -1,10 +1,10 @@
 use crate::card::Card;
+use crate::PKError;
 use indexmap::set::Iter;
 use indexmap::IndexSet;
 use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
-use crate::PKError;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Cards(IndexSet<Card>);
@@ -75,7 +75,7 @@ impl FromStr for Cards {
                 return Err(PKError::InvalidIndex);
             }
             cards.insert(c);
-        };
+        }
         if cards.is_empty() {
             Err(PKError::InvalidIndex)
         } else {
