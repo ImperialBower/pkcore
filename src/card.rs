@@ -98,6 +98,8 @@ impl Card {
     pub const TREY_CLUBS: Card = Card(CardNumber::TreyClubs as u32);
     pub const DEUCE_CLUBS: Card = Card(CardNumber::DeuceClubs as u32);
     pub const BLANK: Card = Card(Card::BLANK_NUMBER);
+
+    const GUIDE: &'static str = "xxxbbbbb bbbbbbbb SHDCrrrr xxpppppp";
     //endregion
 
     #[must_use]
@@ -112,8 +114,22 @@ impl Card {
     }
 
     #[must_use]
-    pub fn bit_string(&self) -> String {
-        String::new()
+    pub fn bit_string(&self, with_guide: bool) -> String {
+        let b = format!("{:b}", self.0);
+        let mut bit_string = String::with_capacity(35);
+        bit_string.push('0');
+        bit_string.push('0');
+        bit_string.push('0');
+        for (i, c) in b.chars().enumerate() {
+            bit_string.push(c);
+            if i % 8 == 4 && i % 32 != 28 {
+                bit_string.push(' ');
+            }
+        }
+        match with_guide {
+            true => format!("{}\n{}", Card::GUIDE, bit_string),
+            false => bit_string,
+        }
     }
 
     #[must_use]
@@ -234,6 +250,18 @@ mod card_tests {
     #[test]
     fn as_u32() {
         assert_eq!(CardNumber::AceSpades as u32, Card::ACE_SPADES.as_u32());
+    }
+
+    #[test]
+    fn bit_string() {
+        assert_eq!(
+            "00010000 00000000 10001100 00101001",
+            Card::ACE_SPADES.bit_string(false)
+        );
+        assert_eq!(
+            "xxxbbbbb bbbbbbbb SHDCrrrr xxpppppp\n00010000 00000000 10001100 00101001",
+            Card::ACE_SPADES.bit_string(true)
+        );
     }
 
     #[test]

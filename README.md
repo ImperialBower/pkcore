@@ -62,4 +62,5 @@
         * The problem is that they aren't really testing for value Just number not number to actual card
     * Five INTRODUCING CACTUS KEV
       * Get Five eval to return HandRank Number
+      * From array
     

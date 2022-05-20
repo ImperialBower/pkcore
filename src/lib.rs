@@ -1,13 +1,13 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::unreadable_literal)]
 
+pub mod arrays;
 pub mod card;
 mod card_number;
 pub mod cards;
 mod lookups;
 pub mod rank;
 pub mod suit;
-pub mod arrays;
 
 #[derive(Debug, PartialEq)]
 pub enum PKError {
