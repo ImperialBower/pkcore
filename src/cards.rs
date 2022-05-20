@@ -10,6 +10,11 @@ use crate::PKError;
 pub struct Cards(IndexSet<Card>);
 
 impl Cards {
+    #[must_use]
+    pub fn get_index(&self, index: usize) -> Option<&Card> {
+        self.0.get_index(index)
+    }
+
     /// Allows you to insert a `PlayingCard` provided it isn't blank.
     pub fn insert(&mut self, card: Card) -> bool {
         if card.is_blank() {
@@ -83,6 +88,18 @@ impl FromStr for Cards {
 #[allow(non_snake_case)]
 mod card_tests {
     use super::*;
+
+    #[test]
+    fn get_index() {
+        let cards = wheel();
+
+        assert_eq!(cards.get_index(0).unwrap(), &Card::from_str("5c").unwrap());
+        assert_eq!(cards.get_index(1).unwrap(), &Card::from_str("4c").unwrap());
+        assert_eq!(cards.get_index(2).unwrap(), &Card::from_str("3c").unwrap());
+        assert_eq!(cards.get_index(3).unwrap(), &Card::from_str("2c").unwrap());
+        assert_eq!(cards.get_index(4).unwrap(), &Card::from_str("ac").unwrap());
+        assert!(cards.get_index(5).is_none());
+    }
 
     #[test]
     fn insert() {

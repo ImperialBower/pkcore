@@ -63,6 +63,7 @@
     * Five INTRODUCING CACTUS KEV
     * Cards
       * implement FromStr so can be used by arrays like Five.
+      * need get_index() to do Five.from_str()
     * Five
       * now implement FromStr leveraging Cards.from_str()
       * Get Five eval to return HandRank Number
