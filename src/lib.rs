@@ -1,4 +1,5 @@
 #![warn(clippy::pedantic)]
+#![allow(clippy::unreadable_literal)]
 
 pub mod card;
 mod card_number;
