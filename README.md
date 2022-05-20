@@ -71,4 +71,6 @@
         * .hand_rank_value()
           * .or_bits()
           * .or_rank_bits()
+          * .and_bits()
+          * .is_flush()
     

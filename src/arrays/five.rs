@@ -41,8 +41,22 @@ impl Five {
     //endregion
 
     #[must_use]
+    fn and_bits(&self) -> u32 {
+        self.first().as_u32()
+            & self.second().as_u32()
+            & self.third().as_u32()
+            & self.forth().as_u32()
+            & self.fifth().as_u32()
+    }
+
+    #[must_use]
     pub fn hand_rank_value(&self) -> u16 {
         0
+    }
+
+    #[must_use]
+    pub fn is_flush(&self) -> bool {
+        (self.and_bits() & Card::SUIT_FLAG_FILTER) != 0
     }
 
     #[must_use]
@@ -89,6 +103,7 @@ impl FromStr for Five {
 #[allow(non_snake_case)]
 mod arrays_five_tests {
     use super::*;
+    use crate::card_number::CardNumber;
 
     const ROYAL_FLUSH: [Card; 5] = [
         Card::ACE_DIAMONDS,
@@ -101,6 +116,44 @@ mod arrays_five_tests {
     #[test]
     fn to_arr() {
         assert_eq!(ROYAL_FLUSH, Five(ROYAL_FLUSH).to_arr());
+    }
+
+    #[test]
+    fn and_bits() {
+        let hand = Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
+
+        let and_bits = hand.and_bits();
+
+        assert_eq!(
+            "00010000000000001000110000101001",
+            format!("{:032b}", hand.first().as_u32())
+        );
+        assert_eq!(
+            "00001000000000001000101100100101",
+            format!("{:032b}", hand.second().as_u32())
+        );
+        assert_eq!(
+            "00000100000000001000101000011111",
+            format!("{:032b}", hand.third().as_u32())
+        );
+        assert_eq!(
+            "00000010000000001000100100011101",
+            format!("{:032b}", hand.forth().as_u32())
+        );
+        assert_eq!(
+            "00000001000000001000100000010111",
+            format!("{:032b}", hand.fifth().as_u32())
+        );
+        assert_eq!(
+            "00000000000000001000100000000001",
+            format!("{:032b}", and_bits)
+        );
+    }
+
+    #[test]
+    fn is_flush() {
+        assert!(Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap().is_flush());
+        assert!(!Five::from_str("A♠ K♥ Q♠ J♠ T♠").unwrap().is_flush());
     }
 
     #[test]
