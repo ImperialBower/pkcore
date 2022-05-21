@@ -163,7 +163,6 @@ impl FromStr for Five {
 #[allow(non_snake_case)]
 mod arrays_five_tests {
     use super::*;
-    use crate::card_number::CardNumber;
 
     const ROYAL_FLUSH: [Card; 5] = [
         Card::ACE_DIAMONDS,
@@ -213,6 +212,7 @@ mod arrays_five_tests {
     #[test]
     fn rank() {
         assert_eq!(1, Five::from(ROYAL_FLUSH).rank());
+        assert_eq!(1603, Five::from_str("J♣ T♣ 9♣ 8♠ 7♣").unwrap().rank());
     }
 
     #[test]

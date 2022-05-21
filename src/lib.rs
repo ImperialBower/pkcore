@@ -5,6 +5,7 @@ pub mod arrays;
 pub mod card;
 mod card_number;
 pub mod cards;
+pub mod hand_rank;
 mod lookups;
 pub mod rank;
 pub mod suit;

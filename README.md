@@ -3,7 +3,7 @@
 ## Outline
 
 * Got rust?
-    * Cargo clippy
+    * Cargo clippy BEAST MODE
     * Cargo fmt
 * [Setup wasm](https://rustwasm.github.io/docs/book/game-of-life/setup.html).
 * Create pkcore lib
@@ -68,7 +68,7 @@
       * now implement FromStr leveraging Cards.from_str()
       * .to_arr()
       * Get Five eval to return HandRank Number
-        * .hand_rank_value()
+        * .rank()
           * .or_bits()
           * .or_rank_bits()
           * .and_bits()
@@ -85,4 +85,21 @@
                   * refactoring from ckc (compare)
     * Cards
       * REFACTORING: Clippy found call to `str::trim` before `str::split_whitespace` cards.rs:72:20
+    * Five
+      * rank() basic tests
+    * INTRODUCING HandRank struct
+      * type aliases (HandRankValue, CactusKev)
+        * CLIPPY: HandRankValue clippy::module_name_repetitions
+      * hand_rank module (talk about separating files as old habit)
+      * HandRankName
+          * about strum::EnumIter;
+          * refactoring HandRank.determine_name() to HandRankName::from (small test range... ranges of testing)
+      * HandRankClass
+          * refactoring HandRank.determine_class() to HandRankClass::from
+          * AUDIBLE (waiting for HandRank MEGA TEST to capture all) (AUDIBLE = change from standard flow)
     
+
+## LATER
+
+* improved hand hash https://github.com/HenryRLee/PokerHandEvaluator/blob/master/Documentation/Algorithm.md
+  * split flushes out to only focus on rank brilliant
