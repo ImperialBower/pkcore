@@ -114,6 +114,11 @@
       * Hand HandRanker BIG CAHUNA TEST
         * using //region 
         * REFACTORING HandRankName  HandRankClass to Name and Class
+      * Six
+        * Before we get started lets update the repl so that we get more feedback
+        * Five.display
+          * Cards::from(Card)
+          * Cards::from(Five)
     
 
 ## LATER

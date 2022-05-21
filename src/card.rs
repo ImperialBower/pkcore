@@ -4,7 +4,7 @@
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::suit::Suit;
-use crate::PKError;
+use crate::{PKError, SOK};
 use std::fmt;
 use std::str::FromStr;
 
@@ -236,6 +236,12 @@ impl FromStr for Card {
             Some(s) => Suit::from(s),
         };
         Ok(Card::new(rank, suit))
+    }
+}
+
+impl SOK for Card {
+    fn salright(&self) -> bool {
+        self.0 != Card::BLANK_NUMBER
     }
 }
 

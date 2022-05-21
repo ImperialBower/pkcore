@@ -1,5 +1,5 @@
 use crate::card::Card;
-use crate::PKError;
+use crate::{PKError, SOK};
 use indexmap::set::Iter;
 use indexmap::IndexSet;
 use std::fmt;
@@ -80,6 +80,21 @@ impl FromStr for Cards {
             Err(PKError::InvalidIndex)
         } else {
             Ok(cards)
+        }
+    }
+}
+
+impl TryFrom<Card> for Cards {
+    type Error = PKError;
+
+    fn try_from(card: Card) -> Result<Self, Self::Error> {
+        match card.salright() {
+            true => {
+                let mut cards = Cards::default();
+                cards.insert(card);
+                Ok(cards)
+            },
+            false => Err(PKError::BlankCard),
         }
     }
 }
