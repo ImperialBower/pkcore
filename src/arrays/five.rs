@@ -1,3 +1,4 @@
+use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::hand_rank::HandRankValue;
@@ -42,21 +43,6 @@ impl Five {
     }
 
     //endregion
-
-    #[must_use]
-    pub fn rank(&self) -> HandRankValue {
-        let i = self.or_rank_bits() as usize;
-        let rank: u16 = if self.is_flush() {
-            crate::lookups::flushes::FLUSHES[i]
-        } else {
-            let unique = Five::unique_rank(i);
-            match unique {
-                0 => self.not_unique(),
-                _ => unique,
-            }
-        };
-        rank
-    }
 
     #[must_use]
     pub fn is_flush(&self) -> bool {
@@ -160,6 +146,22 @@ impl FromStr for Five {
     }
 }
 
+impl HandRanker for Five {
+    fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
+        let i = self.or_rank_bits() as usize;
+        let rank: u16 = if self.is_flush() {
+            crate::lookups::flushes::FLUSHES[i]
+        } else {
+            let unique = Five::unique_rank(i);
+            match unique {
+                0 => self.not_unique(),
+                _ => unique,
+            }
+        };
+        (rank, *self)
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod arrays_five_tests {
@@ -212,8 +214,11 @@ mod arrays_five_tests {
 
     #[test]
     fn rank() {
-        assert_eq!(1, Five::from(ROYAL_FLUSH).rank());
-        assert_eq!(1603, Five::from_str("J♣ T♣ 9♣ 8♠ 7♣").unwrap().rank());
+        assert_eq!(1, Five::from(ROYAL_FLUSH).hand_rank_value());
+        assert_eq!(
+            1603,
+            Five::from_str("J♣ T♣ 9♣ 8♠ 7♣").unwrap().hand_rank_value()
+        );
     }
 
     #[test]

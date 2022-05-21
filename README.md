@@ -109,6 +109,7 @@
           * HARDENING (over thinking? Maybe)
         * TRAIT: SOK
         * arrays::HandRanker
+          * remove Five::rank() replace with HandRanker
     
 
 ## LATER
