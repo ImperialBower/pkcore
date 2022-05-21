@@ -107,7 +107,7 @@
           * git muscle memory get into the habit of knowing the commands
         * REFACTORING name and class no longer public (remove need for ckc.is_a_valid_hand_rank())
           * HARDENING (over thinking? Maybe)
-        * TRAIT: SOK
+        * TRAIT: SOK - I find boring names hard to remember
         * arrays::HandRanker
           * remove Five::rank() replace with HandRanker
           * REFACTOR: remove validated methods from Trait

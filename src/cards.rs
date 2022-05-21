@@ -1,3 +1,4 @@
+use crate::arrays::five::Five;
 use crate::card::Card;
 use crate::{PKError, SOK};
 use indexmap::set::Iter;
@@ -88,14 +89,28 @@ impl TryFrom<Card> for Cards {
     type Error = PKError;
 
     fn try_from(card: Card) -> Result<Self, Self::Error> {
-        match card.salright() {
-            true => {
-                let mut cards = Cards::default();
-                cards.insert(card);
-                Ok(cards)
-            },
-            false => Err(PKError::BlankCard),
+        if card.salright() {
+            let mut cards = Cards::default();
+            cards.insert(card);
+            Ok(cards)
+        } else {
+            Err(PKError::BlankCard)
         }
+    }
+}
+
+impl TryFrom<Five> for Cards {
+    type Error = PKError;
+
+    fn try_from(five: Five) -> Result<Self, Self::Error> {
+        let mut cards = Cards::default();
+
+        for card in five.to_arr() {
+            if !cards.insert(card) {
+                return Err(PKError::BlankCard)
+            }
+        }
+        Ok(cards)
     }
 }
 
@@ -171,6 +186,18 @@ mod card_tests {
     #[test]
     fn from_str__invalid() {
         assert!(Cards::from_str("5♣ 4♣ 3A 2♣ A♣").is_err());
+    }
+
+    #[test]
+    fn try_from__card() {
+        assert!(Cards::try_from(Card::FOUR_DIAMONDS).is_ok());
+        assert!(Cards::try_from(Card::BLANK).is_err());
+    }
+
+    #[test]
+    fn try_from__five() {
+        assert!(Cards::try_from(Five::from_str("AD KD QD JD TD").unwrap()).is_ok());
+        assert!(Cards::try_from(Five::default()).is_err());
     }
 
     fn wheel() -> Cards {

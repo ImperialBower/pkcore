@@ -260,7 +260,7 @@ mod arrays_five_tests {
     fn from_str() {
         assert_eq!(
             Five::from(ROYAL_FLUSH),
-            Five::from_str(" AD    KD QD   JD TD").unwrap()
+            Five::from_str("AD KD QD JD TD").unwrap()
         );
         assert!(Five::from_str("AD KD QD JD").is_err());
         assert_eq!(PKError::InvalidIndex, Five::from_str("").unwrap_err());
