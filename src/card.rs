@@ -170,6 +170,10 @@ impl Card {
         self.as_u32() & Card::RANK_FLAG_FILTER
     }
 
+    fn get_rank_prime(&self) -> u32 {
+        self.as_u32() & Card::RANK_PRIME_FILTER
+    }
+
     #[must_use]
     pub fn get_suit(&self) -> Suit {
         match self.get_suit_bit() {

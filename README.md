@@ -75,4 +75,7 @@
           * .is_flush()
           * .rank()
             * flushes
+            * unique
+            * the rest
+              * .multiply_primes()
     
