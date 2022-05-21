@@ -119,6 +119,7 @@
         * Five.display
           * Cards::from(Card)
           * Cards::from(Five)
+        * examples/repl.rs Update to use Cards
     
 
 ## LATER

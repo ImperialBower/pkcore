@@ -105,9 +105,10 @@ impl TryFrom<Five> for Cards {
     fn try_from(five: Five) -> Result<Self, Self::Error> {
         let mut cards = Cards::default();
 
+        // TODO RF - Has to be a better way
         for card in five.to_arr() {
             if !cards.insert(card) {
-                return Err(PKError::BlankCard)
+                return Err(PKError::BlankCard);
             }
         }
         Ok(cards)
