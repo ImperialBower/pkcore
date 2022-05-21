@@ -170,7 +170,8 @@ impl Card {
         self.as_u32() & Card::RANK_FLAG_FILTER
     }
 
-    fn get_rank_prime(&self) -> u32 {
+    #[must_use]
+    pub fn get_rank_prime(&self) -> u32 {
         self.as_u32() & Card::RANK_PRIME_FILTER
     }
 

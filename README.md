@@ -79,4 +79,8 @@
             * the rest
               * .multiply_primes()
                 * Card.get_prime() (Add to get_rank tests)
+              * REFACTORING: Section for pub fn then private fn
+              * not_unique()
+                * find_in_products()
+                  * refactoring from ckc (compare)
     

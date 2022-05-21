@@ -43,15 +43,6 @@ impl Five {
     //endregion
 
     #[must_use]
-    fn and_bits(&self) -> u32 {
-        self.first().as_u32()
-            & self.second().as_u32()
-            & self.third().as_u32()
-            & self.forth().as_u32()
-            & self.fifth().as_u32()
-    }
-
-    #[must_use]
     pub fn rank(&self) -> u16 {
         let i = self.or_rank_bits() as usize;
         let rank: u16 = if self.is_flush() {
@@ -71,6 +62,54 @@ impl Five {
         (self.and_bits() & Card::SUIT_FLAG_FILTER) != 0
     }
 
+    //region private functions
+
+    #[must_use]
+    fn and_bits(&self) -> u32 {
+        self.first().as_u32()
+            & self.second().as_u32()
+            & self.third().as_u32()
+            & self.forth().as_u32()
+            & self.fifth().as_u32()
+    }
+
+    #[must_use]
+    #[allow(clippy::comparison_chain)]
+    fn find_in_products(&self) -> usize {
+        let key = self.multiply_primes();
+
+        let mut low = 0;
+        let mut high = 4887;
+        let mut mid;
+
+        while low <= high {
+            mid = (high + low) >> 1; // divide by two
+
+            let product = crate::lookups::products::PRODUCTS[mid] as usize;
+            if key < product {
+                high = mid - 1;
+            } else if key > product {
+                low = mid + 1;
+            } else {
+                return mid;
+            }
+        }
+        0
+    }
+
+    #[must_use]
+    fn multiply_primes(&self) -> usize {
+        (self.first().get_rank_prime()
+            * self.second().get_rank_prime()
+            * self.third().get_rank_prime()
+            * self.forth().get_rank_prime()
+            * self.fifth().get_rank_prime()) as usize
+    }
+
+    fn not_unique(&self) -> u16 {
+        crate::lookups::values::VALUES[self.find_in_products()]
+    }
+
     #[must_use]
     fn or_bits(&self) -> u32 {
         self.first().as_u32()
@@ -81,7 +120,7 @@ impl Five {
     }
 
     #[must_use]
-    pub fn or_rank_bits(&self) -> u32 {
+    fn or_rank_bits(&self) -> u32 {
         self.or_bits() >> Card::RANK_FLAG_SHIFT
     }
 
@@ -92,6 +131,7 @@ impl Five {
         }
         crate::lookups::unique5::UNIQUE_5[index]
     }
+    //endregion
 }
 
 impl From<[Card; 5]> for Five {
