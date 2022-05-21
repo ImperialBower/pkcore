@@ -78,4 +78,5 @@
             * unique
             * the rest
               * .multiply_primes()
+                * Card.get_prime() (Add to get_rank tests)
     
