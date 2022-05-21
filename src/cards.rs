@@ -69,7 +69,7 @@ impl FromStr for Cards {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut cards = Cards::default();
-        for s in s.trim().split_whitespace() {
+        for s in s.split_whitespace() {
             let c = Card::from_str(s)?;
             if c.is_blank() {
                 return Err(PKError::InvalidIndex);

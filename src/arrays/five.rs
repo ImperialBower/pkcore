@@ -50,7 +50,7 @@ impl Five {
         } else {
             let unique = Five::unique_rank(i);
             match unique {
-                // 0 => self.not_unique(),
+                0 => self.not_unique(),
                 _ => unique,
             }
         };
@@ -212,7 +212,7 @@ mod arrays_five_tests {
 
     #[test]
     fn rank() {
-        assert_eq!(1, Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap().rank());
+        assert_eq!(1, Five::from(ROYAL_FLUSH).rank());
     }
 
     #[test]

@@ -83,4 +83,6 @@
               * not_unique()
                 * find_in_products()
                   * refactoring from ckc (compare)
+    * Cards
+      * REFACTORING: Clippy found call to `str::trim` before `str::split_whitespace` cards.rs:72:20
     
