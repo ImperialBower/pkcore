@@ -120,6 +120,7 @@
           * Cards::from(Card)
           * Cards::from(Five)
         * examples/repl.rs Update to use Cards
+        * Cards.draw() reqs Cards.deck()
     
 
 ## LATER

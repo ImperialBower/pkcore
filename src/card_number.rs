@@ -1,5 +1,7 @@
 use crate::PKError;
+use strum::EnumIter;
 
+#[derive(Clone, Copy, Debug, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[repr(u32)]
 pub enum CardNumber {
     AceSpades = 268_471_337,

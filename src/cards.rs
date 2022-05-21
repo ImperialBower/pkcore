@@ -12,6 +12,11 @@ pub struct Cards(IndexSet<Card>);
 
 impl Cards {
     #[must_use]
+    pub fn deck() -> Cards {
+        Cards::default()
+    }
+
+    #[must_use]
     pub fn get_index(&self, index: usize) -> Option<&Card> {
         self.0.get_index(index)
     }

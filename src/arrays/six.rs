@@ -13,4 +13,48 @@ impl Six {
         [0, 2, 3, 4, 5],
         [1, 2, 3, 4, 5],
     ];
+
+    //region accessors
+    #[must_use]
+    pub fn first(&self) -> Card {
+        self.0[0]
+    }
+
+    #[must_use]
+    pub fn second(&self) -> Card {
+        self.0[1]
+    }
+
+    #[must_use]
+    pub fn third(&self) -> Card {
+        self.0[2]
+    }
+
+    #[must_use]
+    pub fn forth(&self) -> Card {
+        self.0[3]
+    }
+
+    #[must_use]
+    pub fn fifth(&self) -> Card {
+        self.0[4]
+    }
+
+    #[must_use]
+    pub fn sixth(&self) -> Card {
+        self.0[5]
+    }
+
+    #[must_use]
+    pub fn to_arr(&self) -> [Card; 6] {
+        self.0
+    }
+
+    //endregion
+}
+
+impl From<[Card; 6]> for Six {
+    fn from(array: [Card; 6]) -> Self {
+        Six(array)
+    }
 }
