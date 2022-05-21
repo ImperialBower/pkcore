@@ -1,4 +1,5 @@
 use crate::hand_rank::HandRankValue;
+use crate::SOK;
 use strum::EnumIter;
 
 /// `HandRankClass` represents the more specific type of the five card `PokerHand`.
@@ -638,5 +639,23 @@ impl From<HandRankValue> for HandRankClass {
             7459..=7462 => HandRankClass::SevenHigh,
             _ => HandRankClass::Invalid,
         }
+    }
+}
+
+impl SOK for HandRankClass {
+    fn salright(&self) -> bool {
+        self != &HandRankClass::Invalid
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod hand_rank__name_tests {
+    use super::*;
+
+    #[test]
+    fn salright() {
+        assert!(HandRankClass::AcesOverQueens.salright());
+        assert!(!HandRankClass::Invalid.salright());
     }
 }

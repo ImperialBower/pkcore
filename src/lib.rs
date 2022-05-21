@@ -25,6 +25,11 @@ pub enum PKError {
     TooManyCards,
 }
 
+// https://en.wikipedia.org/wiki/Se%C3%B1or_Wences#Catchphrases
+pub trait SOK {
+    fn salright(&self) -> bool;
+}
+
 #[cfg(test)]
 mod tests {
     #[test]

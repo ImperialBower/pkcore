@@ -1,4 +1,5 @@
 use crate::hand_rank::HandRankValue;
+use crate::SOK;
 use strum::EnumIter;
 
 /// `HandRankName` represents the
@@ -41,6 +42,12 @@ impl Default for HandRankName {
     }
 }
 
+impl SOK for HandRankName {
+    fn salright(&self) -> bool {
+        self != &HandRankName::Invalid
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod hand_rank__name_tests {
@@ -51,5 +58,11 @@ mod hand_rank__name_tests {
         assert_eq!(HandRankName::from(10), HandRankName::StraightFlush);
         assert_eq!(HandRankName::from(190), HandRankName::FullHouse);
         assert_eq!(HandRankName::from(9999), HandRankName::Invalid);
+    }
+
+    #[test]
+    fn salright() {
+        assert!(HandRankName::StraightFlush.salright());
+        assert!(!HandRankName::Invalid.salright());
     }
 }

@@ -12,7 +12,8 @@
     * lib:PKError
     * create enum
     * ::from(char)
-        * Tests using [rstest](https://crates.io/crates/rstest)
+      * Testing: TELL THE HEROES STORY
+        * Tests using [rstest](https://crates.io/crates/rstest) BRUTE FORCE
     * ::from_str()
         * test neg scenarios #[allow(non_snake_case)]
 * Suit
@@ -100,7 +101,14 @@
           * AUDIBLE (waiting for HandRank MEGA TEST to capture all) (AUDIBLE = change from standard flow)
       * REFACTORING: impl Default to derive
       * HandRank::from(HandRankValue)
-      * 
+        * Favor traits over functions
+        * PROCESS NOTE::: Step by step
+          * why I do small commits
+          * git muscle memory get into the habit of knowing the commands
+        * REFACTORING name and class no longer public (remove need for ckc.is_a_valid_hand_rank())
+          * HARDENING (over thinking? Maybe)
+        * TRAIT: SOK
+        * arrays::HandRanker
     
 
 ## LATER
