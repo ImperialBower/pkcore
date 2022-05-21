@@ -1,9 +1,9 @@
-use crate::hand_rank::hand_rank_class::HandRankClass;
-use crate::hand_rank::hand_rank_name::HandRankName;
+use crate::hand_rank::class::Class;
+use crate::hand_rank::name::Name;
 use crate::SOK;
 
-mod hand_rank_class;
-mod hand_rank_name;
+pub mod class;
+pub mod name;
 
 /// `HandRankValue` is the integer representing the `HandRank` for a particular five card
 /// `PokerHand`. This value is used to compare one hand against the other, the lower the value,
@@ -20,8 +20,8 @@ pub const NO_HAND_RANK_VALUE: HandRankValue = 0;
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct HandRank {
     value: HandRankValue,
-    name: HandRankName,
-    class: HandRankClass,
+    name: Name,
+    class: Class,
 }
 
 impl HandRank {
@@ -31,12 +31,12 @@ impl HandRank {
     }
 
     #[must_use]
-    pub fn name(&self) -> HandRankName {
+    pub fn name(&self) -> Name {
         self.name
     }
 
     #[must_use]
-    pub fn class(&self) -> HandRankClass {
+    pub fn class(&self) -> Class {
         self.class
     }
 }
@@ -45,8 +45,8 @@ impl From<HandRankValue> for HandRank {
     fn from(value: HandRankValue) -> Self {
         let hr = HandRank {
             value,
-            name: HandRankName::from(value),
-            class: HandRankClass::from(value),
+            name: Name::from(value),
+            class: Class::from(value),
         };
 
         if !hr.salright() {
@@ -73,8 +73,8 @@ mod hand_rank_tests {
         let default = HandRank::default();
 
         assert_eq!(default.value, 0);
-        assert_eq!(default.name, HandRankName::Invalid);
-        assert_eq!(default.class, HandRankClass::Invalid);
+        assert_eq!(default.name, Name::Invalid);
+        assert_eq!(default.class, Class::Invalid);
     }
 
     #[test]

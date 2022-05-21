@@ -110,6 +110,10 @@
         * TRAIT: SOK
         * arrays::HandRanker
           * remove Five::rank() replace with HandRanker
+          * REFACTOR: remove validated methods from Trait
+      * Hand HandRanker BIG CAHUNA TEST
+        * using //region 
+        * REFACTORING HandRankName  HandRankClass to Name and Class
     
 
 ## LATER
