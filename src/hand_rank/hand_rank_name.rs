@@ -35,6 +35,12 @@ impl From<HandRankValue> for HandRankName {
     }
 }
 
+impl Default for HandRankName {
+    fn default() -> Self {
+        HandRankName::Invalid
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod hand_rank__name_tests {

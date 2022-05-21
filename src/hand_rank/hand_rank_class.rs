@@ -317,6 +317,12 @@ pub enum HandRankClass {
     Invalid,
 }
 
+impl Default for HandRankClass {
+    fn default() -> Self {
+        HandRankClass::Invalid
+    }
+}
+
 impl From<HandRankValue> for HandRankClass {
     fn from(hrv: HandRankValue) -> Self {
         match hrv {

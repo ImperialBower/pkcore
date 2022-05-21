@@ -2,6 +2,7 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::PKError;
 use std::str::FromStr;
+use crate::hand_rank::HandRankValue;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Five([Card; 5]);
@@ -43,7 +44,7 @@ impl Five {
     //endregion
 
     #[must_use]
-    pub fn rank(&self) -> u16 {
+    pub fn rank(&self) -> HandRankValue {
         let i = self.or_rank_bits() as usize;
         let rank: u16 = if self.is_flush() {
             crate::lookups::flushes::FLUSHES[i]
@@ -125,9 +126,9 @@ impl Five {
     }
 
     #[allow(clippy::cast_possible_truncation)]
-    fn unique_rank(index: usize) -> u16 {
+    fn unique_rank(index: usize) -> HandRankValue {
         if index > Five::POSSIBLE_COMBINATIONS {
-            return Card::BLANK_NUMBER as u16;
+            return Card::BLANK_NUMBER as HandRankValue;
         }
         crate::lookups::unique5::UNIQUE_5[index]
     }

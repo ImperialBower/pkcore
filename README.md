@@ -97,6 +97,9 @@
       * HandRankClass
           * refactoring HandRank.determine_class() to HandRankClass::from
           * AUDIBLE (waiting for HandRank MEGA TEST to capture all) (AUDIBLE = change from standard flow)
+      * REFACTORING: impl Default to derive
+      * HandRank::from(HandRankValue)
+      * 
     
 
 ## LATER
