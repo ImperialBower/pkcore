@@ -41,7 +41,7 @@ impl Card {
     pub const SUIT_SHORT_MASK: u32 = 0b1111;
     pub const SUIT_FLAG_SHIFT: u32 = 12;
 
-    const BLANK_NUMBER: u32 = 0;
+    pub(crate) const BLANK_NUMBER: u32 = 0;
     //endregion
 
     //region cards

@@ -7,6 +7,8 @@ use std::str::FromStr;
 pub struct Five([Card; 5]);
 
 impl Five {
+    pub const POSSIBLE_COMBINATIONS: usize = 7937;
+
     //region accessors
     #[must_use]
     pub fn first(&self) -> Card {
@@ -55,7 +57,11 @@ impl Five {
         let rank: u16 = if self.is_flush() {
             crate::lookups::flushes::FLUSHES[i]
         } else {
-            0
+            let unique = Five::unique_rank(i);
+            match unique {
+                // 0 => self.not_unique(),
+                _ => unique,
+            }
         };
         rank
     }
@@ -77,6 +83,14 @@ impl Five {
     #[must_use]
     pub fn or_rank_bits(&self) -> u32 {
         self.or_bits() >> Card::RANK_FLAG_SHIFT
+    }
+
+    #[allow(clippy::cast_possible_truncation)]
+    fn unique_rank(index: usize) -> u16 {
+        if index > Five::POSSIBLE_COMBINATIONS {
+            return Card::BLANK_NUMBER as u16;
+        }
+        crate::lookups::unique5::UNIQUE_5[index]
     }
 }
 
@@ -176,6 +190,16 @@ mod arrays_five_tests {
         assert_eq!(8, or.trailing_zeros());
         assert_eq!(19, or.leading_zeros());
         assert_eq!(or, 7936);
+    }
+
+    #[test]
+    fn unique_rank() {
+        let ace_high_straight = Five::from_str("K♠ A♠ Q♥ T♠ J♠").unwrap().or_rank_bits() as usize;
+        let wheel_straight = Five::from_str("A♠ 5♠ 2♠ 4♠ 3♥").unwrap().or_rank_bits() as usize;
+
+        // Flushes rank between 1600 and 1609
+        assert_eq!(1600, Five::unique_rank(ace_high_straight));
+        assert_eq!(1609, Five::unique_rank(wheel_straight));
     }
 
     #[test]
