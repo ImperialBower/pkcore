@@ -323,6 +323,7 @@ impl Default for HandRankClass {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 impl From<HandRankValue> for HandRankClass {
     fn from(hrv: HandRankValue) -> Self {
         match hrv {

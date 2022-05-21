@@ -1,8 +1,8 @@
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::hand_rank::HandRankValue;
 use crate::PKError;
 use std::str::FromStr;
-use crate::hand_rank::HandRankValue;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Five([Card; 5]);

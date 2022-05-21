@@ -96,6 +96,7 @@
           * refactoring HandRank.determine_name() to HandRankName::from (small test range... ranges of testing)
       * HandRankClass
           * refactoring HandRank.determine_class() to HandRankClass::from
+            * CLIPPY #[warn(clippy::too_many_lines)]"
           * AUDIBLE (waiting for HandRank MEGA TEST to capture all) (AUDIBLE = change from standard flow)
       * REFACTORING: impl Default to derive
       * HandRank::from(HandRankValue)
