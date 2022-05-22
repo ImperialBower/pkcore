@@ -1,5 +1,7 @@
 use clap::Parser;
+use pkcore::arrays::five::Five;
 use pkcore::cards::Cards;
+use pkcore::PKError;
 use std::str::FromStr;
 
 /// ```
@@ -15,7 +17,7 @@ struct Args {
     #[clap(short = 'c', long)]
     card: String,
 }
-fn main() {
+fn main() -> Result<(), PKError> {
     let now = std::time::Instant::now();
 
     let args = Args::parse();
@@ -25,10 +27,12 @@ fn main() {
     let cards = Cards::from_str(index).unwrap();
 
     match cards.len() {
-        // 5 => println!("{}", Five::),
+        5 => println!("{}", Five::try_from(cards)?),
         _ => println!("{}", cards), // https://stackoverflow.com/a/23977218/1245251
     };
 
     let elapsed = now.elapsed();
     println!("Elapsed: {:.2?}", elapsed);
+
+    Ok(())
 }

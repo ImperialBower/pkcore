@@ -186,9 +186,14 @@
           * Add match for five
             * impl TryFrom<Cards> for Five
               * REFACTOR: move match from from_str to TryFrom
-            
       * NEEDED: to_string() for Five, Six and Seven
         * impl Display for Five
+          * 5 => println!("{}", Five::try_from(cards)?), 
+            * update main to return error
+              * update sig to fn main() -> Result<(), PKError> {
+                * must return Ok(())
+                * Verify `❯ cargo run --example repl -- -c "AS KS QS JS TS"`
+
 
 ## LATER
 
