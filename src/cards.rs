@@ -43,7 +43,6 @@ impl Cards {
         } else {
             Ok(Cards(self.0.drain(l - number..l).collect()))
         }
-
     }
 
     #[must_use]
@@ -194,6 +193,17 @@ mod card_tests {
         assert_eq!(drawn.len(), 2);
         assert_eq!(deck.len(), 50);
         assert_eq!("3♣ 2♣", drawn.to_string());
+    }
+
+    #[test]
+    fn draw_from_the_bottom__too_many() {
+        let mut deck = Cards::deck();
+
+        let drawn = deck.draw_from_the_bottom(53);
+
+        assert!(drawn.is_err());
+        assert_eq!(PKError::NotEnoughCards, drawn.unwrap_err());
+        assert_eq!(deck.len(), 52);
     }
 
     #[test]
