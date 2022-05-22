@@ -20,8 +20,14 @@ fn main() {
 
     let args = Args::parse();
 
-    // https://stackoverflow.com/a/23977218/1245251
-    println!("{}", Cards::from_str(&*args.card).unwrap());
+    let index = &*args.card;
+
+    let cards = Cards::from_str(index).unwrap();
+
+    match cards.len() {
+        // 5 => println!("{}", Five::),
+        _ => println!("{}", cards), // https://stackoverflow.com/a/23977218/1245251
+    };
 
     let elapsed = now.elapsed();
     println!("Elapsed: {:.2?}", elapsed);

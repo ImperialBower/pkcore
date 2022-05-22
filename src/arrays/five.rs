@@ -3,6 +3,8 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::hand_rank::HandRankValue;
 use crate::PKError;
+use std::fmt;
+use std::fmt::Formatter;
 use std::str::FromStr;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -121,6 +123,19 @@ impl Five {
     //endregion
 }
 
+impl fmt::Display for Five {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let s = self
+            .to_arr()
+            .iter()
+            .map(Card::to_string)
+            .collect::<Vec<String>>()
+            .join(" ");
+
+        write!(f, "{}", s)
+    }
+}
+
 impl From<[Card; 5]> for Five {
     fn from(array: [Card; 5]) -> Self {
         Five(array)
@@ -131,18 +146,8 @@ impl FromStr for Five {
     type Err = PKError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let five_cards = Cards::from_str(s)?;
-        match five_cards.len() {
-            0..=4 => Err(PKError::NotEnoughCards),
-            5 => Ok(Five::from([
-                *five_cards.get_index(0).unwrap(),
-                *five_cards.get_index(1).unwrap(),
-                *five_cards.get_index(2).unwrap(),
-                *five_cards.get_index(3).unwrap(),
-                *five_cards.get_index(4).unwrap(),
-            ])),
-            _ => Err(PKError::TooManyCards),
-        }
+        // let five_cards = Cards::from_str(s)?;
+        Five::try_from(Cards::from_str(s)?)
     }
 }
 
@@ -175,6 +180,24 @@ impl HandRanker for Five {
     fn sort_in_place(&mut self) {
         self.0.sort_unstable();
         self.0.reverse();
+    }
+}
+
+impl TryFrom<Cards> for Five {
+    type Error = PKError;
+
+    fn try_from(cards: Cards) -> Result<Self, Self::Error> {
+        match cards.len() {
+            0..=4 => Err(PKError::NotEnoughCards),
+            5 => Ok(Five::from([
+                *cards.get_index(0).unwrap(),
+                *cards.get_index(1).unwrap(),
+                *cards.get_index(2).unwrap(),
+                *cards.get_index(3).unwrap(),
+                *cards.get_index(4).unwrap(),
+            ])),
+            _ => Err(PKError::TooManyCards),
+        }
     }
 }
 
@@ -229,6 +252,11 @@ mod arrays_five_tests {
             "00000000000000001000100000000001",
             format!("{:032b}", and_bits)
         );
+    }
+
+    #[test]
+    fn display() {
+        assert_eq!("A♦ K♦ Q♦ J♦ T♦", Five(ROYAL_FLUSH).to_string());
     }
 
     #[test]

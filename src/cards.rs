@@ -136,6 +136,7 @@ impl TryFrom<Card> for Cards {
 impl TryFrom<Five> for Cards {
     type Error = PKError;
 
+    /// The contract for arrays is that they have to not be blank.
     fn try_from(five: Five) -> Result<Self, Self::Error> {
         let mut cards = Cards::default();
 

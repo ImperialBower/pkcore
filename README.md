@@ -171,6 +171,24 @@
           * Why AD 6S 4S AS 5D 3C 2S?
           * paste over test from Six (which will fail for Seven)
           * get rid of not yet implemented error
+          * make green
+          * Clippy
+      * TODO: No assessors besides .to_arr() do I really need the others?
+    * UPDATE repl
+      * Print out HandRank info for best hand if five or more cards.
+        * Update to look at Cards length and usher to the right struct
+        * NOTE on driving through repl instead of tests
+          * move index out to variable. (Why is it called index?)
+            * check in repl again
+          * let cards = Cards::from_str(index).unwrap();
+            * check in repl again
+          * Add match for default _
+          * Add match for five
+            * impl TryFrom<Cards> for Five
+              * REFACTOR: move match from from_str to TryFrom
+            
+      * NEEDED: to_string() for Five, Six and Seven
+        * impl Display for Five
 
 ## LATER
 
