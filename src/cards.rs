@@ -9,7 +9,7 @@ use std::fmt::Formatter;
 use std::str::FromStr;
 use strum::IntoEnumIterator;
 
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Cards(IndexSet<Card>);
 
 impl Cards {

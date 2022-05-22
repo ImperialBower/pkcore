@@ -78,10 +78,10 @@ impl HandRanker for Seven {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod arrays_seven_tests {
-    use std::str::FromStr;
+    use super::*;
     use crate::hand_rank::class::Class;
     use crate::hand_rank::name::Name;
-    use super::*;
+    use std::str::FromStr;
 
     const CARDS: [Card; 7] = [
         Card::ACE_DIAMONDS,

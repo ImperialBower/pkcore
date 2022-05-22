@@ -127,9 +127,9 @@ impl HandRanker for Six {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod arrays_six_tests {
+    use super::*;
     use crate::hand_rank::class::Class;
     use crate::hand_rank::name::Name;
-    use super::*;
 
     const CARDS: [Card; 6] = [
         Card::ACE_DIAMONDS,
@@ -180,6 +180,9 @@ mod arrays_six_tests {
 
     #[test]
     fn sort() {
-        assert_eq!(Six::from_str("Ad 6d 5D 4D 3D 2d").unwrap(), Six::from(CARDS).sort());
+        assert_eq!(
+            Six::from_str("Ad 6d 5D 4D 3D 2d").unwrap(),
+            Six::from(CARDS).sort()
+        );
     }
 }

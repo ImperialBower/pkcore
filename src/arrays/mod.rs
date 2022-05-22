@@ -2,8 +2,8 @@ use crate::arrays::five::Five;
 use crate::hand_rank::{HandRank, HandRankValue};
 
 pub mod five;
-pub mod six;
 pub mod seven;
+pub mod six;
 
 /// The `HandRanker` trait is designed to return a `HandRank` for a collection five or more cards.
 pub trait HandRanker {
@@ -27,6 +27,7 @@ pub trait HandRanker {
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five);
 
     // TODO ¿Is there a way to do this directly from the trait?
+    #[must_use]
     fn sort(&self) -> Self;
 
     fn sort_in_place(&mut self);

@@ -10,7 +10,7 @@ mod lookups;
 pub mod rank;
 pub mod suit;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum PKError {
     BlankCard,
     DuplicateCard,
