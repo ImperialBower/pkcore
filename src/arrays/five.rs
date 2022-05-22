@@ -147,6 +147,10 @@ impl FromStr for Five {
 }
 
 impl HandRanker for Five {
+    fn five_from_permutation(&self, _permutation: [usize; 5]) -> Five {
+        todo!() // More like todont!()
+    }
+
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
         let i = self.or_rank_bits() as usize;
         let rank: u16 = if self.is_flush() {
@@ -159,6 +163,18 @@ impl HandRanker for Five {
             }
         };
         (rank, *self)
+    }
+
+    // TODO: wheels Ace should be at end
+    fn sort(&self) -> Self {
+        let mut array = *self;
+        array.sort_in_place();
+        array
+    }
+
+    fn sort_in_place(&mut self) {
+        self.0.sort_unstable();
+        self.0.reverse();
     }
 }
 
@@ -2080,7 +2096,7 @@ mod arrays_five_tests {
     #[case("7D 6D 5♥ 3D 2D", 7460, Name::HighCard, Class::SevenHigh)]
     #[case("7D 6D 4♥ 3D 2D", 7461, Name::HighCard, Class::SevenHigh)]
     #[case("7D 5D 4♥ 3D 2D", 7462, Name::HighCard, Class::SevenHigh)]
-    fn hand_rank_value(
+    fn hand_rank(
         #[case] index: &'static str,
         #[case] expected_value: HandRankValue,
         #[case] expected_name: Name,

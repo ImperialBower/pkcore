@@ -6,6 +6,18 @@
     * Cargo clippy BEAST MODE
     * Cargo fmt
 * [Setup wasm](https://rustwasm.github.io/docs/book/game-of-life/setup.html).
+* Why Rust?
+  * Inverting the curve
+  * Rust TDD loop
+    * define
+    * create fn sig returning default value
+    * create failing test valid on expected value
+    * Make test green
+    * any more boundary conditions?
+    * refactor
+    * draw negative boundary refactor to Result for overdraw
+* Letting the IDE do a lot of the work (Mad Dog Murdock)
+  * Compare CLion to VSCode 
 * Create pkcore lib
     * Set #![warn(clippy::pedantic)]
 * Rank
@@ -117,22 +129,48 @@
       * Hand HandRanker BIG KAHUNA TEST
         * using //region 
         * REFACTORING HandRankName  HandRankClass to Name and Class
-      * Six
-        * Before we get started lets update the repl so that we get more feedback
-        * Five.display
-          * Cards::from(Card)
-          * Cards::from(Five)
-        * examples/repl.rs Update to use Cards
-        * Cards.draw() reqs Cards.deck()
-          * Rust TDD loop
-            * define 
-            * create fn sig returning default value
-            * create failing test valid on expected value
-            * Make test green
-            * any more boundary conditions?
-            * refactor
-              * draw negative boundary refactor to Result for overdraw
-    
+    * Six
+      * Before we get started lets update the repl so that we get more feedback
+      * Five.display
+        * Cards::from(Card)
+        * Cards::from(Five)
+      * examples/repl.rs Update to use Cards
+      * Cards.draw() reqs Cards.deck()
+      * .hand_rank()
+        * Let IDE drive with the TODO
+          * yay todo!()
+          * Understand the dynamics of teams, bend to the norms. Different people react differently to code styles. It's OK Be cool 
+        * adding .five_from_permutation to HandRanker
+          * Adding to trait because I know I will need it for Seven as well. NOTE: This is not strict TDD.
+          * REFACTORING: Originally a separate trait Permutator in ckc-rs. Decided to consolidate make cleaner.
+          * REFACTORING: Move to Trait
+        * Five.sort() no method named `sort` found for struct `Five` in the current scope
+          * Adding to HandRanker trait
+          * Later refactoring to handle less then five cards (Another trait?)
+        * And we're green!!!
+        * More tests
+          * REFACTORING: Adding HandRanker.hand_rank_and_hand() to trait
+          * Fleshing out
+          * Deliberate using different forms of index strings
+            * Be careful with your patterns and assumptions. TDD can be a self-fulfilling prophecy divorced from reality
+      * .sort()
+    * TODO: Note on Five.sort() for wheels Ace on top
+      * ASIDE: I am fiercely pro TODOs. Many people hate them. That's OK. However, this is my kingdom and I rule it with an iron fist! When you write your book, you too can be Absolute Ruler of your one person empire (Unless you have an editor 😉).
+    * Seven
+      * Seven holdem boards etc
+      * BONUS CREDIT:
+        * OK, if you are seriously hard core and want to go for bonus points (awarded via my GFY Cryptocurrency guaranteed to be worthless!!!) Try coding Seven yourself.
+          * What are its reqs? What's different about Six and Seven?
+      * .from(array)
+      * Drive from implementing HandRanker
+        * .five_from_permutation()
+          * Get not yet implemented error
+          * Fix error
+          * make green
+        * .hand_rank_value_and_hand()
+          * Why AD 6S 4S AS 5D 3C 2S?
+          * paste over test from Six (which will fail for Seven)
+          * get rid of not yet implemented error
 
 ## LATER
 

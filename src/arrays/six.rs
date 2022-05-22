@@ -1,5 +1,8 @@
+use crate::arrays::five::Five;
+use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
 use crate::PKError;
 use std::str::FromStr;
 
@@ -8,7 +11,7 @@ pub struct Six([Card; 6]);
 
 impl Six {
     /// permutations to evaluate all 6 card combinations.
-    pub const FIVE_CARD_PERMUTATIONS: [[u8; 5]; 6] = [
+    pub const FIVE_CARD_PERMUTATIONS: [[usize; 5]; 6] = [
         [0, 1, 2, 3, 4],
         [0, 1, 2, 3, 5],
         [0, 1, 2, 4, 5],
@@ -82,12 +85,53 @@ impl FromStr for Six {
     }
 }
 
+impl HandRanker for Six {
+    fn five_from_permutation(&self, permutation: [usize; 5]) -> Five {
+        Five::from([
+            self.0[permutation[0]],
+            self.0[permutation[1]],
+            self.0[permutation[2]],
+            self.0[permutation[3]],
+            self.0[permutation[4]],
+        ])
+    }
+
+    fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
+        let mut best_hrv: HandRankValue = NO_HAND_RANK_VALUE;
+        let mut best_hand = Five::default();
+
+        for perm in Six::FIVE_CARD_PERMUTATIONS {
+            let hand = self.five_from_permutation(perm);
+            let hrv = hand.hand_rank_value();
+            if (best_hrv == 0) || hrv != 0 && hrv < best_hrv {
+                best_hrv = hrv;
+                best_hand = hand;
+            }
+        }
+
+        (best_hrv, best_hand.sort())
+    }
+
+    fn sort(&self) -> Self {
+        let mut array = *self;
+        array.sort_in_place();
+        array
+    }
+
+    fn sort_in_place(&mut self) {
+        self.0.sort_unstable();
+        self.0.reverse();
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod arrays_six_tests {
+    use crate::hand_rank::class::Class;
+    use crate::hand_rank::name::Name;
     use super::*;
 
-    const WHEEL: [Card; 6] = [
+    const CARDS: [Card; 6] = [
         Card::ACE_DIAMONDS,
         Card::DEUCE_DIAMONDS,
         Card::TREY_DIAMONDS,
@@ -98,14 +142,14 @@ mod arrays_six_tests {
 
     #[test]
     fn from__array() {
-        assert_eq!(Six::from(WHEEL).to_arr(), WHEEL);
+        assert_eq!(Six::from(CARDS).0, CARDS);
     }
 
     #[test]
     fn from_str() {
         assert_eq!(
             Six::from_str("AD 2D 3D 4D 5d 6d").unwrap(),
-            Six::from(WHEEL)
+            Six::from(CARDS)
         );
         assert_eq!(
             Six::from_str("AD 2D 3D 4D 5d").unwrap_err(),
@@ -115,5 +159,27 @@ mod arrays_six_tests {
             Six::from_str("AD 2D 3D 4D 5d 6d 7d").unwrap_err(),
             PKError::TooManyCards
         );
+    }
+
+    #[test]
+    fn five_from_permutation() {
+        assert_eq!(
+            Five::from_str("AD 2D 3D 4D 5d").unwrap(),
+            Six::from(CARDS).five_from_permutation(Six::FIVE_CARD_PERMUTATIONS[0])
+        );
+    }
+
+    #[test]
+    fn hand_rank() {
+        let (hr, best) = Six::from(CARDS).hand_rank_and_hand();
+        assert_eq!(9, hr.value());
+        assert_eq!(Class::SixHighStraightFlush, hr.class());
+        assert_eq!(Name::StraightFlush, hr.name());
+        assert_eq!(Five::from_str("6d 5D 4D 3D 2d").unwrap(), best);
+    }
+
+    #[test]
+    fn sort() {
+        assert_eq!(Six::from_str("Ad 6d 5D 4D 3D 2d").unwrap(), Six::from(CARDS).sort());
     }
 }
