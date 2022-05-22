@@ -14,6 +14,9 @@
     * ::from(char)
       * Testing: TELL THE HEROES STORY
         * Tests using [rstest](https://crates.io/crates/rstest) BRUTE FORCE
+        * Readability of tests names (short, matching, clear)
+        * Hub and spoke... take your time on the core.
+        * Negative boundary conditions
     * ::from_str()
         * test neg scenarios #[allow(non_snake_case)]
 * Suit
