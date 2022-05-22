@@ -111,7 +111,7 @@
         * arrays::HandRanker
           * remove Five::rank() replace with HandRanker
           * REFACTOR: remove validated methods from Trait
-      * Hand HandRanker BIG CAHUNA TEST
+      * Hand HandRanker BIG KAHUNA TEST
         * using //region 
         * REFACTORING HandRankName  HandRankClass to Name and Class
       * Six
@@ -121,6 +121,14 @@
           * Cards::from(Five)
         * examples/repl.rs Update to use Cards
         * Cards.draw() reqs Cards.deck()
+          * Rust TDD loop
+            * define 
+            * create fn sig returning default value
+            * create failing test valid on expected value
+            * Make test green
+            * any more boundary conditions?
+            * refactor
+              * draw negative boundary refactor to Result for overdraw
     
 
 ## LATER

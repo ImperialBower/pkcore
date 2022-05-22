@@ -1,11 +1,13 @@
 use crate::arrays::five::Five;
 use crate::card::Card;
+use crate::card_number::CardNumber;
 use crate::{PKError, SOK};
 use indexmap::set::Iter;
 use indexmap::IndexSet;
 use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
+use strum::IntoEnumIterator;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Cards(IndexSet<Card>);
@@ -13,7 +15,35 @@ pub struct Cards(IndexSet<Card>);
 impl Cards {
     #[must_use]
     pub fn deck() -> Cards {
-        Cards::default()
+        let mut cards = Cards::default();
+        for card_number in CardNumber::iter() {
+            cards.insert(Card::from(card_number as u32));
+        }
+        cards
+    }
+
+    /// # Errors
+    ///
+    /// Returns `PKError::NotEnoughCards` if not enough cards are available.
+    pub fn draw(&mut self, number: usize) -> Result<Self, PKError> {
+        if number > self.len() {
+            Err(PKError::NotEnoughCards)
+        } else {
+            Ok(Cards(self.0.drain(0..number).collect()))
+        }
+    }
+
+    /// # Errors
+    ///
+    /// Returns `PKError::NotEnoughCards` if not enough cards are available.
+    pub fn draw_from_the_bottom(&mut self, number: usize) -> Result<Self, PKError> {
+        let l = self.len();
+        if number > l {
+            Err(PKError::NotEnoughCards)
+        } else {
+            Ok(Cards(self.0.drain(l - number..l).collect()))
+        }
+
     }
 
     #[must_use]
@@ -124,6 +154,47 @@ impl TryFrom<Five> for Cards {
 #[allow(non_snake_case)]
 mod card_tests {
     use super::*;
+
+    #[test]
+    fn deck() {
+        let deck = Cards::deck();
+
+        assert_eq!(deck.len(), 52);
+        assert_eq!(deck.to_string(), "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣");
+    }
+
+    #[test]
+    fn draw() {
+        let mut deck = Cards::deck();
+
+        let drawn = deck.draw(5).unwrap();
+
+        assert_eq!(drawn.len(), 5);
+        assert_eq!(deck.len(), 47);
+        assert_eq!("A♠ K♠ Q♠ J♠ T♠", drawn.to_string());
+    }
+
+    #[test]
+    fn draw__too_many() {
+        let mut deck = Cards::deck();
+
+        let drawn = deck.draw(53);
+
+        assert!(drawn.is_err());
+        assert_eq!(PKError::NotEnoughCards, drawn.unwrap_err());
+        assert_eq!(deck.len(), 52);
+    }
+
+    #[test]
+    fn draw_from_the_bottom() {
+        let mut deck = Cards::deck();
+
+        let drawn = deck.draw_from_the_bottom(2).unwrap();
+
+        assert_eq!(drawn.len(), 2);
+        assert_eq!(deck.len(), 50);
+        assert_eq!("3♣ 2♣", drawn.to_string());
+    }
 
     #[test]
     fn get_index() {

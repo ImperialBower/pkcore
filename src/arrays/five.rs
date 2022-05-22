@@ -264,6 +264,8 @@ mod arrays_five_tests {
         );
         assert!(Five::from_str("AD KD QD JD").is_err());
         assert_eq!(PKError::InvalidIndex, Five::from_str("").unwrap_err());
+        assert_eq!(PKError::InvalidIndex, Five::from_str(" ").unwrap_err());
+        assert_eq!(PKError::InvalidIndex, Five::from_str(" __ ").unwrap_err());
         assert_eq!(PKError::NotEnoughCards, Five::from_str("AC").unwrap_err());
         assert!(Five::from_str("AD KD QD JD TD 9D").is_err());
         assert_eq!(
