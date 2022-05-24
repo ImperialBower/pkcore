@@ -1,3 +1,5 @@
+use std::fmt;
+use std::fmt::Formatter;
 use crate::arrays::five::Five;
 use crate::arrays::HandRanker;
 use crate::card::Card;
@@ -57,6 +59,19 @@ impl Six {
     }
 
     //endregion
+}
+
+impl fmt::Display for Six {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let s = self
+            .to_arr()
+            .iter()
+            .map(Card::to_string)
+            .collect::<Vec<String>>()
+            .join(" ");
+
+        write!(f, "{}", s)
+    }
 }
 
 impl From<[Card; 6]> for Six {

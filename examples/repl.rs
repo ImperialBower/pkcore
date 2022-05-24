@@ -3,6 +3,7 @@ use pkcore::arrays::five::Five;
 use pkcore::cards::Cards;
 use pkcore::PKError;
 use std::str::FromStr;
+use pkcore::arrays::six::Six;
 
 /// ```
 /// ❯ cargo run --example repl -- -c "AS KS QS JS TS"
@@ -28,6 +29,7 @@ fn main() -> Result<(), PKError> {
 
     match cards.len() {
         5 => println!("Five: {}", Five::try_from(cards)?),
+        6 => println!("Six: {}", Six::try_from(cards)?),
         _ => println!("{}", cards), // https://stackoverflow.com/a/23977218/1245251
     };
 
