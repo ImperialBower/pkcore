@@ -69,19 +69,7 @@ impl FromStr for Six {
     type Err = PKError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let six_cards = Cards::from_str(s)?;
-        match six_cards.len() {
-            0..=5 => Err(PKError::NotEnoughCards),
-            6 => Ok(Six::from([
-                *six_cards.get_index(0).unwrap(),
-                *six_cards.get_index(1).unwrap(),
-                *six_cards.get_index(2).unwrap(),
-                *six_cards.get_index(3).unwrap(),
-                *six_cards.get_index(4).unwrap(),
-                *six_cards.get_index(5).unwrap(),
-            ])),
-            _ => Err(PKError::TooManyCards),
-        }
+        Six::try_from(Cards::from_str(s)?)
     }
 }
 
@@ -121,6 +109,25 @@ impl HandRanker for Six {
     fn sort_in_place(&mut self) {
         self.0.sort_unstable();
         self.0.reverse();
+    }
+}
+
+impl TryFrom<Cards> for Six {
+    type Error = PKError;
+
+    fn try_from(cards: Cards) -> Result<Self, Self::Error> {
+        match cards.len() {
+            0..=5 => Err(PKError::NotEnoughCards),
+            6 => Ok(Six::from([
+                *cards.get_index(0).unwrap(),
+                *cards.get_index(1).unwrap(),
+                *cards.get_index(2).unwrap(),
+                *cards.get_index(3).unwrap(),
+                *cards.get_index(4).unwrap(),
+                *cards.get_index(5).unwrap(),
+            ])),
+            _ => Err(PKError::TooManyCards),
+        }
     }
 }
 

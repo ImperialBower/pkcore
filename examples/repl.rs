@@ -27,7 +27,7 @@ fn main() -> Result<(), PKError> {
     let cards = Cards::from_str(index).unwrap();
 
     match cards.len() {
-        5 => println!("{}", Five::try_from(cards)?),
+        5 => println!("Five: {}", Five::try_from(cards)?),
         _ => println!("{}", cards), // https://stackoverflow.com/a/23977218/1245251
     };
 

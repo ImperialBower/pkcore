@@ -193,6 +193,7 @@
               * update sig to fn main() -> Result<(), PKError> {
                 * must return Ok(())
                 * Verify `❯ cargo run --example repl -- -c "AS KS QS JS TS"`
+          * 6 => the same
 
 
 ## LATER

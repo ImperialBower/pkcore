@@ -146,7 +146,6 @@ impl FromStr for Five {
     type Err = PKError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        // let five_cards = Cards::from_str(s)?;
         Five::try_from(Cards::from_str(s)?)
     }
 }
