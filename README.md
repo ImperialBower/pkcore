@@ -1,5 +1,10 @@
 # pkcore
 
+## Value Stories
+
+* I want a tool that will help me get better at GTO style poker playing. 
+* I want a library that can be reused for poker applications.
+
 ## Outline
 
 * Got rust?
@@ -194,6 +199,10 @@
                 * must return Ok(())
                 * Verify `❯ cargo run --example repl -- -c "AS KS QS JS TS"`
           * 6 => println!("Six: {}", Six::try_from(cards)?),
+            * impl Display for Six
+          * 7 
+            * .to_arr()
+            * .display()
 
 
 ## LATER

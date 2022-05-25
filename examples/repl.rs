@@ -1,9 +1,10 @@
 use clap::Parser;
 use pkcore::arrays::five::Five;
+use pkcore::arrays::seven::Seven;
+use pkcore::arrays::six::Six;
 use pkcore::cards::Cards;
 use pkcore::PKError;
 use std::str::FromStr;
-use pkcore::arrays::six::Six;
 
 /// ```
 /// ❯ cargo run --example repl -- -c "AS KS QS JS TS"
@@ -27,9 +28,12 @@ fn main() -> Result<(), PKError> {
 
     let cards = Cards::from_str(index).unwrap();
 
+    // TODO NOTE: This incarnation eats errors in card indexes
+    // For example: `❯ cargo run --example repl -- -c "AS KS QS JS TS 9S 9s"`
     match cards.len() {
         5 => println!("Five: {}", Five::try_from(cards)?),
         6 => println!("Six: {}", Six::try_from(cards)?),
+        7 => println!("Seven: {}", Seven::try_from(cards)?),
         _ => println!("{}", cards), // https://stackoverflow.com/a/23977218/1245251
     };
 

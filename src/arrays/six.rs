@@ -1,11 +1,11 @@
-use std::fmt;
-use std::fmt::Formatter;
 use crate::arrays::five::Five;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
 use crate::PKError;
+use std::fmt;
+use std::fmt::Formatter;
 use std::str::FromStr;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -161,6 +161,11 @@ mod arrays_six_tests {
         Card::FIVE_DIAMONDS,
         Card::SIX_DIAMONDS,
     ];
+
+    #[test]
+    fn display() {
+        assert_eq!("A♦ 2♦ 3♦ 4♦ 5♦ 6♦", Six(CARDS).to_string());
+    }
 
     #[test]
     fn from__array() {
