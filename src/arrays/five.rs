@@ -12,6 +12,9 @@ pub struct Five([Card; 5]);
 
 impl Five {
     pub const POSSIBLE_COMBINATIONS: usize = 7937;
+    /// The number of leading and trailing zeroes from the `Five.or_rank_bits()` of a straight
+    /// if it's not a wheel (5♥ 4♥ 3♥ 2♠ A♠).
+    pub const STRAIGHT_PADDING: u32 = 27;
 
     //region accessors
     #[must_use]
@@ -49,6 +52,12 @@ impl Five {
     #[must_use]
     pub fn is_flush(&self) -> bool {
         (self.and_bits() & Card::SUIT_FLAG_FILTER) != 0
+    }
+
+    #[must_use]
+    pub fn is_straight(&self) -> bool {
+        let rank_bits = self.or_rank_bits();
+        (rank_bits.trailing_zeros() + rank_bits.leading_zeros()) == Five::STRAIGHT_PADDING
     }
 
     //region private functions
@@ -222,6 +231,17 @@ mod arrays_five_tests {
     }
 
     #[test]
+    fn is_flush() {
+        assert!(Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap().is_flush());
+        assert!(!Five::from_str("A♠ K♥ Q♠ J♠ T♠").unwrap().is_flush());
+    }
+
+    #[test]
+    fn is_straight() {
+        assert!(Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap().is_straight());
+    }
+
+    #[test]
     fn and_bits() {
         let hand = Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
 
@@ -265,12 +285,6 @@ mod arrays_five_tests {
             1603,
             Five::from_str("J♣ T♣ 9♣ 8♠ 7♣").unwrap().hand_rank_value()
         );
-    }
-
-    #[test]
-    fn is_flush() {
-        assert!(Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap().is_flush());
-        assert!(!Five::from_str("A♠ K♥ Q♠ J♠ T♠").unwrap().is_flush());
     }
 
     #[test]

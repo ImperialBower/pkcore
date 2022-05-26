@@ -134,6 +134,10 @@
       * Hand HandRanker BIG KAHUNA TEST
         * using //region 
         * REFACTORING HandRankName  HandRankClass to Name and Class
+    * DETOUR: Generating lookup tables
+      * Is Straight Flush?
+        * Is Straight?
+          * WHEEL???!!!!
     * Six
       * Before we get started lets update the repl so that we get more feedback
       * Five.display
@@ -203,9 +207,15 @@
           * 7 
             * .to_arr()
             * .display()
+      * Display HandRank
 
 
 ## LATER
 
 * improved hand hash https://github.com/HenryRLee/PokerHandEvaluator/blob/master/Documentation/Algorithm.md
   * split flushes out to only focus on rank brilliant
+
+## Resources
+
+* [Are we game yet?](https://arewegameyet.rs/)
+* [Are we GUI Yet?](https://www.areweguiyet.com/)
