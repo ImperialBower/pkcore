@@ -62,6 +62,11 @@ impl Five {
             || rank_bits == Five::WHEEL_OR_BITS
     }
 
+    #[must_use]
+    pub fn is_straight_flush(&self) -> bool {
+        self.is_straight() && self.is_flush()
+    }
+
     //region private functions
 
     #[must_use]
@@ -240,16 +245,58 @@ mod arrays_five_tests {
 
     #[test]
     fn is_straight() {
-        assert!(Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap().is_straight());
-        assert!(Five::from_str("9♠ K♠ Q♠ J♠ T♠").unwrap().is_straight());
-        assert!(Five::from_str("9♠ 8♠ Q♠ J♠ T♠").unwrap().is_straight());
-        assert!(Five::from_str("9♠ 8♠ 7♠ J♠ T♠").unwrap().is_straight());
-        assert!(Five::from_str("9♠ 8♠ 7♠ 6♠ T♠").unwrap().is_straight());
-        assert!(Five::from_str("9♠ 8♠ 7♠ 6♠ 5♠").unwrap().is_straight());
-        assert!(Five::from_str("4♠ 8♠ 7♠ 6♠ 5♠").unwrap().is_straight());
-        assert!(Five::from_str("4♠ 3♠ 7♠ 6♠ 5♠").unwrap().is_straight());
-        assert!(Five::from_str("4♠ 3♠ 2♠ 6♠ 5♠").unwrap().is_straight());
-        assert!(Five::from_str("4♠ 3♠ 2♠ A♠ 5♠").unwrap().is_straight());
+        assert!(Five::from_str("A♠ K♦ Q♠ J♥ T♠").unwrap().is_straight());
+        assert!(Five::from_str("9♠ K♠ Q♦ J♠ T♥").unwrap().is_straight());
+        assert!(Five::from_str("9♥ 8♠ Q♠ J♦ T♠").unwrap().is_straight());
+        assert!(Five::from_str("9♠ 8♥ 7♠ J♠ T♦").unwrap().is_straight());
+        assert!(Five::from_str("9♦ 8♠ 7♥ 6♠ T♠").unwrap().is_straight());
+        assert!(Five::from_str("9♠ 8♦ 7♠ 6♥ 5♠").unwrap().is_straight());
+        assert!(Five::from_str("4♠ 8♠ 7♦ 6♠ 5♥").unwrap().is_straight());
+        assert!(Five::from_str("4♥ 3♠ 7♠ 6♦ 5♠").unwrap().is_straight());
+        assert!(Five::from_str("4♠ 3♥ 2♠ 6♠ 5♦").unwrap().is_straight());
+        assert!(Five::from_str("4♦ 3♠ 2♥ A♠ 5♠").unwrap().is_straight());
+        assert!(!Five::from_str("4♦ 3♠ 9♥ A♠ 5♠").unwrap().is_straight());
+        assert!(!Five::from_str("4♦ 3♠ 2♥ 8♠ 5♠").unwrap().is_straight());
+    }
+
+    #[test]
+    fn is_straight_flush() {
+        assert!(Five::from_str("A♠ K♠ Q♠ J♠ T♠")
+            .unwrap()
+            .is_straight_flush());
+        assert!(Five::from_str("9♠ K♠ Q♠ J♠ T♠")
+            .unwrap()
+            .is_straight_flush());
+        assert!(Five::from_str("9♠ 8♠ Q♠ J♠ T♠")
+            .unwrap()
+            .is_straight_flush());
+        assert!(Five::from_str("9♠ 8♠ 7♠ J♠ T♠")
+            .unwrap()
+            .is_straight_flush());
+        assert!(Five::from_str("9♠ 8♠ 7♠ 6♠ T♠")
+            .unwrap()
+            .is_straight_flush());
+        assert!(Five::from_str("9♠ 8♠ 7♠ 6♠ 5♠")
+            .unwrap()
+            .is_straight_flush());
+        assert!(Five::from_str("4♠ 8♠ 7♠ 6♠ 5♠")
+            .unwrap()
+            .is_straight_flush());
+        assert!(Five::from_str("4♠ 3♠ 7♠ 6♠ 5♠")
+            .unwrap()
+            .is_straight_flush());
+        assert!(Five::from_str("4♠ 3♠ 2♠ 6♠ 5♠")
+            .unwrap()
+            .is_straight_flush());
+        assert!(Five::from_str("4♠ 3♠ 2♠ A♠ 5♠")
+            .unwrap()
+            .is_straight_flush());
+        assert!(!Five::from_str("4♠ 3♥ 2♠ A♠ 5♠")
+            .unwrap()
+            .is_straight_flush());
+        assert!(!Five::from_str("4♠ 3♠ 2♠ A♠ 5♥")
+            .unwrap()
+            .is_straight_flush());
     }
 
     #[test]

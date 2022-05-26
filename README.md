@@ -139,6 +139,8 @@
         * Is Straight?
           * Let's add tests for all types of straights
             * WHEEL???!!!!
+        * Already have .is_flush()
+        * .is_straight_flush()
     * Six
       * Before we get started lets update the repl so that we get more feedback
       * Five.display
