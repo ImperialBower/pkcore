@@ -7,6 +7,7 @@ use indexmap::IndexSet;
 use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
+use itertools::{Combinations, Itertools};
 use strum::IntoEnumIterator;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -20,6 +21,10 @@ impl Cards {
             cards.insert(Card::from(card_number as u32));
         }
         cards
+    }
+
+    pub fn combinations(&self, k: usize) -> Combinations<indexmap::set::IntoIter<Card>> {
+        self.0.clone().into_iter().combinations(k)
     }
 
     /// # Errors
@@ -99,6 +104,20 @@ impl fmt::Display for Cards {
     }
 }
 
+impl From<Vec<Card>> for Cards {
+    fn from(v: Vec<Card>) -> Self {
+        let filtered = v.iter().filter_map(|c| {
+            let pc = *c;
+            if pc.is_blank() {
+                None
+            } else {
+                Some(pc)
+            }
+        });
+        Cards(filtered.collect())
+    }
+}
+
 impl FromStr for Cards {
     type Err = PKError;
 
@@ -161,6 +180,12 @@ mod card_tests {
 
         assert_eq!(deck.len(), 52);
         assert_eq!(deck.to_string(), "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣");
+    }
+
+    #[test]
+    fn combinations() {
+        assert_eq!(1_326, Cards::deck().combinations(2).count());
+        assert_eq!(2_598_960, Cards::deck().combinations(5).count());
     }
 
     #[test]

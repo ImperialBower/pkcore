@@ -141,6 +141,10 @@
             * WHEEL???!!!!
         * Already have .is_flush()
         * .is_straight_flush()
+        * INTRODUCING: IterTools
+          * Cards.combinations()
+          * Cards::from<Vec<Card>>
+          * Five::try_from<Vec<Card>>
     * Six
       * Before we get started lets update the repl so that we get more feedback
       * Five.display

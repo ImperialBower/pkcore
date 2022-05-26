@@ -216,6 +216,14 @@ impl TryFrom<Cards> for Five {
     }
 }
 
+impl TryFrom<Vec<Card>> for Five {
+    type Error = PKError;
+
+    fn try_from(vec: Vec<Card>) -> Result<Self, Self::Error> {
+        Five::try_from(Cards::from(vec))
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod arrays_five_tests {
