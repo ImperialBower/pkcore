@@ -15,6 +15,7 @@ impl Five {
     /// The number of leading and trailing zeroes from the `Five.or_rank_bits()` of a straight
     /// if it's not a wheel (5♥ 4♥ 3♥ 2♠ A♠).
     pub const STRAIGHT_PADDING: u32 = 27;
+    pub const WHEEL_OR_BITS: u32 = 0b0001000000001111;
 
     //region accessors
     #[must_use]
@@ -57,7 +58,8 @@ impl Five {
     #[must_use]
     pub fn is_straight(&self) -> bool {
         let rank_bits = self.or_rank_bits();
-        (rank_bits.trailing_zeros() + rank_bits.leading_zeros()) == Five::STRAIGHT_PADDING
+        ((rank_bits.trailing_zeros() + rank_bits.leading_zeros()) == Five::STRAIGHT_PADDING)
+            || rank_bits == Five::WHEEL_OR_BITS
     }
 
     //region private functions
