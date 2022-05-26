@@ -137,7 +137,8 @@
     * DETOUR: Generating lookup tables
       * Is Straight Flush?
         * Is Straight?
-          * WHEEL???!!!!
+          * Let's add tests for all types of straights
+            * WHEEL???!!!!
     * Six
       * Before we get started lets update the repl so that we get more feedback
       * Five.display
