@@ -67,6 +67,11 @@ impl Five {
         self.is_straight() && self.is_flush()
     }
 
+    #[must_use]
+    pub fn is_wheel(&self) -> bool {
+        self.or_rank_bits() == Five::WHEEL_OR_BITS
+    }
+
     //region private functions
 
     #[must_use]
@@ -167,8 +172,9 @@ impl FromStr for Five {
 }
 
 impl HandRanker for Five {
+    /// This isn't used for `Five` since there is only one permutation.
     fn five_from_permutation(&self, _permutation: [usize; 5]) -> Five {
-        todo!() // More like todont!()
+        *self
     }
 
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
@@ -182,7 +188,7 @@ impl HandRanker for Five {
                 _ => unique,
             }
         };
-        (rank, *self)
+        (rank, self.sort())
     }
 
     // TODO: wheels Ace should be at end
@@ -194,6 +200,19 @@ impl HandRanker for Five {
 
     fn sort_in_place(&mut self) {
         self.0.sort_unstable();
+        if self.is_wheel() {
+            // Wheel after sort: 2♠ 3♠ 4♠ 5♥ A♠
+            // Put the last card Ace into the first slot so that when the hand is reversed it will
+            // be last
+            let wheel = [
+                self.fifth(),
+                self.first(),
+                self.second(),
+                self.third(),
+                self.forth(),
+            ];
+            self.0 = wheel;
+        }
         self.0.reverse();
     }
 }
@@ -308,6 +327,12 @@ mod arrays_five_tests {
     }
 
     #[test]
+    fn is_wheel() {
+        assert!(Five::from_str("4♠ 3♠ 2♠ A♠ 5♥").unwrap().is_wheel());
+        assert!(!Five::from_str("4♠ 3♠ 9♠ A♠ 5♥").unwrap().is_wheel());
+    }
+
+    #[test]
     fn and_bits() {
         let hand = Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
 
@@ -394,6 +419,21 @@ mod arrays_five_tests {
         assert_eq!(
             PKError::TooManyCards,
             Five::from_str("AD KD QD JD TD 9D").unwrap_err()
+        );
+    }
+
+    #[test]
+    fn sort() {
+        assert_eq!(
+            "A♠ K♠ Q♠ J♠ T♠",
+            Five::from_str("K♠ A♠  Q♠  T♠ J♠")
+                .unwrap()
+                .sort()
+                .to_string()
+        );
+        assert_eq!(
+            "5♠ 4♠ 3♠ 2♠ A♠",
+            Five::from_str("A♠ 5♠ 4♠ 3♠ 2♠").unwrap().sort().to_string()
         );
     }
 

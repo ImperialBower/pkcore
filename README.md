@@ -1,4 +1,4 @@
-# pkcore
+# pkcore AKA Rust for Imposters
 
 ## Value Stories
 
@@ -8,8 +8,10 @@
 ## Outline
 
 * Got rust?
-    * Cargo clippy BEAST MODE
-    * Cargo fmt
+  * Cargo, your new best friend
+  * Cargo clippy BEAST MODE
+  * Cargo fmt
+    * STORY TIME: Why I love clean code. (Migraines)
 * [Setup wasm](https://rustwasm.github.io/docs/book/game-of-life/setup.html).
 * Why Rust?
   * Inverting the curve
@@ -191,7 +193,7 @@
           * make green
           * Clippy
       * TODO: No assessors besides .to_arr() do I really need the others?
-    * UPDATE repl
+    * UPDATE repl to handle multiple card lengths
       * Print out HandRank info for best hand if five or more cards.
         * Update to look at Cards length and usher to the right struct
         * NOTE on driving through repl instead of tests
@@ -215,7 +217,12 @@
           * 7 
             * .to_arr()
             * .display()
-      * Display HandRank
+    * UPDATE REPL: Display HandRank
+      * show() - Handle generic input for function
+      * DEFECT: Make sure it sorts the best hand
+        * Five.is_wheel()
+        * Make sure it sorts wheels correctly
+
 
 
 ## LATER

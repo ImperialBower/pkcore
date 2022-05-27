@@ -4,10 +4,10 @@ use crate::card_number::CardNumber;
 use crate::{PKError, SOK};
 use indexmap::set::Iter;
 use indexmap::IndexSet;
+use itertools::{Combinations, Itertools};
 use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
-use itertools::{Combinations, Itertools};
 use strum::IntoEnumIterator;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

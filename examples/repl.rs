@@ -2,6 +2,7 @@ use clap::Parser;
 use pkcore::arrays::five::Five;
 use pkcore::arrays::seven::Seven;
 use pkcore::arrays::six::Six;
+use pkcore::arrays::HandRanker;
 use pkcore::cards::Cards;
 use pkcore::PKError;
 use std::str::FromStr;
@@ -31,9 +32,9 @@ fn main() -> Result<(), PKError> {
     // TODO NOTE: This incarnation eats errors in card indexes
     // For example: `❯ cargo run --example repl -- -c "AS KS QS JS TS 9S 9s"`
     match cards.len() {
-        5 => println!("Five: {}", Five::try_from(cards)?),
-        6 => println!("Six: {}", Six::try_from(cards)?),
-        7 => println!("Seven: {}", Seven::try_from(cards)?),
+        5 => show(Five::try_from(cards)?),
+        6 => show(Six::try_from(cards)?),
+        7 => show(Seven::try_from(cards)?),
         _ => println!("{}", cards), // https://stackoverflow.com/a/23977218/1245251
     };
 
@@ -41,4 +42,18 @@ fn main() -> Result<(), PKError> {
     println!("Elapsed: {:.2?}", elapsed);
 
     Ok(())
+}
+
+// https://stackoverflow.com/questions/51247690/how-can-i-define-a-function-with-a-parameter-that-can-be-multiple-kinds-of-trait
+fn show<T>(cards: T)
+where
+    T: HandRanker,
+{
+    let (hand_rank, hand) = cards.hand_rank_and_hand();
+    println!(
+        "BEST HAND: {} - {}: {:?}",
+        hand.to_string(),
+        hand_rank.value(),
+        hand_rank.class()
+    );
 }
