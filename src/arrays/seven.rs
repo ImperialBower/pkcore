@@ -184,7 +184,10 @@ mod arrays_seven_tests {
 
     #[test]
     fn try_from__cards() {
-        assert_eq!(Seven::try_from(Cards::from_str("A♦ 6♠ 4♠ A♠ 5♦ 3♣ 2♠").unwrap()).unwrap(), Seven(CARDS));
+        assert_eq!(
+            Seven::try_from(Cards::from_str("A♦ 6♠ 4♠ A♠ 5♦ 3♣ 2♠").unwrap()).unwrap(),
+            Seven(CARDS)
+        );
     }
 
     #[test]

@@ -2261,7 +2261,10 @@ mod arrays_five_tests {
 
     #[test]
     fn try_from__cards() {
-        assert_eq!(Five::try_from(Cards::from_str("A♦ K♦ Q♦ J♦ T♦").unwrap()).unwrap(), Five(ROYAL_FLUSH));
+        assert_eq!(
+            Five::try_from(Cards::from_str("A♦ K♦ Q♦ J♦ T♦").unwrap()).unwrap(),
+            Five(ROYAL_FLUSH)
+        );
     }
 
     #[test]

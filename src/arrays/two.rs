@@ -69,10 +69,7 @@ mod arrays_two_tests {
     /// Straight Flushes,
     /// Mike Caro
     /// <https://www.amazon.com/gp/product/B00KJMP6B2/ref=dbs_a_def_rwt_hsch_vapi_tkin_p1_i0 />
-    const BIG_SLICK: [Card; 2] = [
-        Card::ACE_DIAMONDS,
-        Card::KING_HEARTS,
-    ];
+    const BIG_SLICK: [Card; 2] = [Card::ACE_DIAMONDS, Card::KING_HEARTS];
 
     /// We've reached the point where it starts to get boring. Trust me, boring is good
     /// when you're coding. You want to get to the point where the result of your coding

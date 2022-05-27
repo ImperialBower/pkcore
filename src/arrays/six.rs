@@ -215,7 +215,10 @@ mod arrays_six_tests {
 
     #[test]
     fn try_from__cards() {
-        assert_eq!(Six::try_from(Cards::from_str("A♦ 2♦ 3♦ 4♦ 5♦ 6♦").unwrap()).unwrap(), Six(CARDS));
+        assert_eq!(
+            Six::try_from(Cards::from_str("A♦ 2♦ 3♦ 4♦ 5♦ 6♦").unwrap()).unwrap(),
+            Six(CARDS)
+        );
     }
 
     #[test]
