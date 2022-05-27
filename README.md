@@ -145,6 +145,7 @@
           * Cards.combinations()
           * Cards::from<Vec<Card>>
           * Five::try_from<Vec<Card>>
+          * TEACHABLE: let rust show you what to return
     * Six
       * Before we get started lets update the repl so that we get more feedback
       * Five.display
