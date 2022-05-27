@@ -89,6 +89,7 @@
         * implement FromStr so can be used by arrays like Five.
         * need get_index() to do Five.from_str()
       * Five
+        * impl TryFrom<Cards>
         * now implement FromStr leveraging Cards.from_str()
         * .to_arr()
         * Get Five eval to return HandRank Number
@@ -107,6 +108,7 @@
                 * not_unique()
                   * find_in_products()
                     * refactoring from ckc (compare)
+        * POSSIBLE DEFECT: Cards in different orders aren't equal
       * Cards
         * REFACTORING: Clippy found call to `str::trim` before `str::split_whitespace` cards.rs:72:20
       * Five
@@ -151,6 +153,7 @@
             * TEACHABLE: let rust show you what to return
       * Six
         * Before we get started lets update the repl so that we get more feedback
+        * impl TryFrom<Cards>
         * Five.display
           * Cards::from(Card)
           * Cards::from(Five)
@@ -182,6 +185,7 @@
           * OK, if you are seriously hard core and want to go for bonus points (awarded via my GFY Cryptocurrency guaranteed to be worthless!!!) Try coding Seven yourself.
             * What are its reqs? What's different about Six and Seven?
         * .from(array)
+        * impl TryFrom<Cards>
         * Drive from implementing HandRanker
           * .five_from_permutation()
             * Get not yet implemented error
@@ -226,7 +230,15 @@
         * UPDATE: Make it display the original cards
           * Add Display to function's trait requirements
       * FEATURE COMPLETE!!!!
+* ASIDE: Code Coverage
+  * Through Clion
+  * gcov etc...
 * EPIC: GAME PLAY - Hold'Em play out hand
+  * Two
+    * Assessors
+    * ::from_str()
+      * TryFrom<Cards>
+        * From<[Card; 2]>
 
 
 
@@ -239,3 +251,4 @@
 
 * [Are we game yet?](https://arewegameyet.rs/)
 * [Are we GUI Yet?](https://www.areweguiyet.com/)
+* [Mike Caro's Website](https://www.poker1.com/)

@@ -4,6 +4,7 @@ use crate::hand_rank::{HandRank, HandRankValue};
 pub mod five;
 pub mod seven;
 pub mod six;
+pub mod two;
 
 /// The `HandRanker` trait is designed to return a `HandRank` for a collection five or more cards.
 pub trait HandRanker {

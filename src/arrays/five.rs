@@ -191,7 +191,6 @@ impl HandRanker for Five {
         (rank, self.sort())
     }
 
-    // TODO: wheels Ace should be at end
     fn sort(&self) -> Self {
         let mut array = *self;
         array.sort_in_place();
@@ -437,7 +436,7 @@ mod arrays_five_tests {
         );
     }
 
-    //region
+    //region Brute Force HandRank tests
     #[rustfmt::skip]
     #[rstest]
     #[case("A♠ K♠ Q♠ J♠ T♠", 1, Name::StraightFlush, Class::RoyalFlush)]
@@ -2259,4 +2258,25 @@ mod arrays_five_tests {
         assert_eq!(expected_class, hand_rank.class());
     }
     //endregion
+
+    #[test]
+    fn try_from__cards() {
+        assert_eq!(Five::try_from(Cards::from_str("A♦ K♦ Q♦ J♦ T♦").unwrap()).unwrap(), Five(ROYAL_FLUSH));
+    }
+
+    #[test]
+    fn try_from__cards__not_enough() {
+        let sut = Five::try_from(Cards::from_str("A♦ K♦ Q♦ J♦").unwrap());
+
+        assert!(sut.is_err());
+        assert_eq!(sut.unwrap_err(), PKError::NotEnoughCards);
+    }
+
+    #[test]
+    fn try_from__cards__too_many() {
+        let sut = Five::try_from(Cards::from_str("A♦ K♦ Q♦ J♦ T♦ 9♦").unwrap());
+
+        assert!(sut.is_err());
+        assert_eq!(sut.unwrap_err(), PKError::TooManyCards);
+    }
 }

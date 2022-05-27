@@ -181,4 +181,25 @@ mod arrays_seven_tests {
         assert_eq!(Name::Straight, hr.name());
         assert_eq!(Five::from_str("6S 5D 4S 3C 2S").unwrap(), best);
     }
+
+    #[test]
+    fn try_from__cards() {
+        assert_eq!(Seven::try_from(Cards::from_str("A♦ 6♠ 4♠ A♠ 5♦ 3♣ 2♠").unwrap()).unwrap(), Seven(CARDS));
+    }
+
+    #[test]
+    fn try_from__cards__not_enough() {
+        let sut = Seven::try_from(Cards::from_str("A♦ K♦ Q♦ J♦").unwrap());
+
+        assert!(sut.is_err());
+        assert_eq!(sut.unwrap_err(), PKError::NotEnoughCards);
+    }
+
+    #[test]
+    fn try_from__cards__too_many() {
+        let sut = Seven::try_from(Cards::from_str("A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦").unwrap());
+
+        assert!(sut.is_err());
+        assert_eq!(sut.unwrap_err(), PKError::TooManyCards);
+    }
 }

@@ -212,4 +212,25 @@ mod arrays_six_tests {
             Six::from(CARDS).sort()
         );
     }
+
+    #[test]
+    fn try_from__cards() {
+        assert_eq!(Six::try_from(Cards::from_str("A♦ 2♦ 3♦ 4♦ 5♦ 6♦").unwrap()).unwrap(), Six(CARDS));
+    }
+
+    #[test]
+    fn try_from__cards__not_enough() {
+        let sut = Six::try_from(Cards::from_str("A♦ K♦ Q♦ J♦").unwrap());
+
+        assert!(sut.is_err());
+        assert_eq!(sut.unwrap_err(), PKError::NotEnoughCards);
+    }
+
+    #[test]
+    fn try_from__cards__too_many() {
+        let sut = Six::try_from(Cards::from_str("A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦").unwrap());
+
+        assert!(sut.is_err());
+        assert_eq!(sut.unwrap_err(), PKError::TooManyCards);
+    }
 }
