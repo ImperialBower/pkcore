@@ -222,6 +222,10 @@
       * DEFECT: Make sure it sorts the best hand
         * Five.is_wheel()
         * Make sure it sorts wheels correctly
+      * UPDATE: Make it display the original cards
+        * Add Display to function's trait requirements
+    * FEATURE COMPLETE!!!!
+* GAME PLAY - Hold'Em play out hand
 
 
 

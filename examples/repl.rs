@@ -5,6 +5,7 @@ use pkcore::arrays::six::Six;
 use pkcore::arrays::HandRanker;
 use pkcore::cards::Cards;
 use pkcore::PKError;
+use std::fmt::Display;
 use std::str::FromStr;
 
 /// ```
@@ -27,7 +28,7 @@ fn main() -> Result<(), PKError> {
 
     let index = &*args.card;
 
-    let cards = Cards::from_str(index).unwrap();
+    let cards = Cards::from_str(index)?;
 
     // TODO NOTE: This incarnation eats errors in card indexes
     // For example: `❯ cargo run --example repl -- -c "AS KS QS JS TS 9S 9s"`
@@ -47,11 +48,12 @@ fn main() -> Result<(), PKError> {
 // https://stackoverflow.com/questions/51247690/how-can-i-define-a-function-with-a-parameter-that-can-be-multiple-kinds-of-trait
 fn show<T>(cards: T)
 where
-    T: HandRanker,
+    T: Display + HandRanker,
 {
     let (hand_rank, hand) = cards.hand_rank_and_hand();
     println!(
-        "BEST HAND: {} - {}: {:?}",
+        "CARDS: {} - BEST HAND: {} - {}: {:?}",
+        cards.to_string(),
         hand.to_string(),
         hand_rank.value(),
         hand_rank.class()
