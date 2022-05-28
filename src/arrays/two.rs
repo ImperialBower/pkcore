@@ -1,6 +1,6 @@
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::PKError;
+use crate::{PKError, SOK};
 use std::str::FromStr;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -16,8 +16,8 @@ impl Two {
     /// * NBCs: Negative Boundary Conditions
     ///   * Must be unique
     /// What are my b
-    #[must_use]
     pub fn new(first: Card, second: Card) -> Result<Two, PKError> {
+
         Ok(Two::from([first, second]))
     }
 
@@ -68,6 +68,12 @@ impl TryFrom<Cards> for Two {
     }
 }
 
+impl SOK for Two {
+    fn salright(&self) -> bool {
+        (self.first().salright() && self.second().salright()) && (self.first() != self.second())
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod arrays_two_tests {
@@ -115,9 +121,10 @@ mod arrays_two_tests {
     /// Still, our Happy bath test doesn't compile because we are comparing a struct to a Result. We
     /// need to unwrap our new call in our HP test so that it passes.
     ///
+    /// Now, let's pass in two of the same card and make sure it returns an error.
     #[test]
     fn new__not_unique() {
-        assert!()
+        assert!(Two::new(Card::KING_HEARTS, Card::KING_HEARTS).is_err());
     }
 
     #[test]
@@ -170,5 +177,18 @@ mod arrays_two_tests {
 
         assert!(sut.is_err());
         assert_eq!(sut.unwrap_err(), PKError::TooManyCards);
+    }
+
+    /// DRIVE:
+    /// * First HP test
+    /// * Then passing in one blank should return false.
+    ///   * `(self.first().salright() && self.second().salright()) && (self.first() != self.second())`
+    #[test]
+    fn sok() {
+        assert!(Two::from(BIG_SLICK).salright());
+        assert!(!Two::from([Card::BLANK, Card::DEUCE_SPADES]).salright());
+        assert!(!Two::from([Card::DEUCE_SPADES, Card::BLANK]).salright());
+        assert!(!Two::from([Card::BLANK, Card::BLANK]).salright());
+        assert!(!Two::from([Card::DEUCE_SPADES, Card::DEUCE_SPADES]).salright());
     }
 }

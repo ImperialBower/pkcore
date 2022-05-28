@@ -247,6 +247,11 @@
     * Introducing play/hands
       * TryFrom<Cards>
       * Two::new(card, card)
+        * HP
+        * Must be unique
+          * RF: Returns result
+          * Implements SOK to test for uniqueness
+            * Drive through SOK
 
 
 
