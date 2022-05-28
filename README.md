@@ -245,15 +245,16 @@
     * Display dealt and board
       * Have main return Result<(), PKError>
     * Introducing play/hands
-      * TryFrom<Cards>
-      * Two::new(card, card)
-        * HP
-        * Must be unique
-          * RF: Returns result
-          * Implements SOK to test for uniqueness
-            * Drive through SOK
-        * First card needs to be higher than second.
-          * Add to happy path test
+      * Hands::try_from(Cards)
+        * Two::new(card, card)
+          * HP
+          * Must be unique
+            * RF: Returns result
+            * Implements SOK to test for uniqueness
+              * Drive through SOK
+          * First card needs to be higher than second.
+            * Add to happy path test
+      * Hands::from_str()
 
 
 

@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use crate::arrays::two::Two;
 use crate::cards::Cards;
 use crate::PKError;
@@ -16,6 +17,14 @@ impl Hands {
 
     pub fn push(&mut self, two: Two) {
         self.0.push(two);
+    }
+}
+
+impl FromStr for Hands {
+    type Err = PKError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Hands::try_from(Cards::from_str(s)?)
     }
 }
 
@@ -48,6 +57,16 @@ mod play_cards_tests {
     use super::*;
     use crate::card::Card;
     use std::str::FromStr;
+
+    #[test]
+    fn from_str() {
+        let expected = Hands(vec![
+            Two::new(Card::SIX_SPADES, Card::SIX_HEARTS).unwrap(),
+            Two::new(Card::FIVE_DIAMONDS, Card::FIVE_CLUBS).unwrap(),
+        ]);
+
+        assert_eq!(Hands::from_str("6♥ 6♠ 5♦ 5♣").unwrap(), expected);
+    }
 
     #[test]
     fn try_from__cards() {
