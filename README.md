@@ -59,6 +59,7 @@
           * .is_blank()
           * .from_str()
             * Boundary conditions tests.
+            * THE WONDERFUL ? operator
           * Detour on Testing as the Hero's Journey
               * tell the story
               * scannable

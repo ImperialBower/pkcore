@@ -1,7 +1,7 @@
-use std::str::FromStr;
 use clap::Parser;
 use pkcore::cards::Cards;
 use pkcore::PKError;
+use std::str::FromStr;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -19,6 +19,8 @@ fn main() -> Result<(), PKError> {
 
     let cards_dealt = Cards::from_str(&*args.dealt)?;
     let cards_board = Cards::from_str(&*args.board)?;
+
+    println!("DEALT: {} BOARD: {}", cards_dealt, cards_board);
 
     Ok(())
 }
