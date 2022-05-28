@@ -38,6 +38,14 @@ impl Cards {
         }
     }
 
+    pub fn draw_one(&mut self) -> Option<Card> {
+        let cards = self.draw(1);
+        match cards {
+            Ok(mut c) => Some(c.0.pop()?),
+            Err(_) => None,
+        }
+    }
+
     /// # Errors
     ///
     /// Returns `PKError::NotEnoughCards` if not enough cards are available.
@@ -230,6 +238,18 @@ mod card_tests {
         assert!(drawn.is_err());
         assert_eq!(PKError::NotEnoughCards, drawn.unwrap_err());
         assert_eq!(deck.len(), 52);
+    }
+
+    #[test]
+    fn draw_one() {
+        let mut cards = Cards::default();
+        cards.insert(Card::ACE_HEARTS);
+
+        let card = cards.draw_one();
+
+        assert!(cards.is_empty());
+        assert!(card.is_some());
+        assert_eq!(card.unwrap(), Card::ACE_HEARTS);
     }
 
     #[test]

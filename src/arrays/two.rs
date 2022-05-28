@@ -15,10 +15,16 @@ impl Two {
     /// * Happy path test
     /// * NBCs: Negative Boundary Conditions
     ///   * Must be unique
-    /// What are my b
+    /// What are my boundary conditions
+    ///
+    /// # Errors
+    /// Returns `PKError::InvalidCard` if not salright.
     pub fn new(first: Card, second: Card) -> Result<Two, PKError> {
         let mut two = Two::from([first, second]);
         if two.salright() {
+            if second > first {
+                two = Two([second, first]);
+            }
             Ok(two)
         } else {
             Err(PKError::InvalidCard)
@@ -114,6 +120,11 @@ mod arrays_two_tests {
             Two::new(Card::ACE_DIAMONDS, Card::KING_HEARTS).unwrap(),
             Two::from(BIG_SLICK)
         );
+        assert_eq!(
+            Two::new(Card::KING_HEARTS, Card::ACE_DIAMONDS).unwrap(),
+            Two::from(BIG_SLICK)
+        );
+
     }
 
     /// The first thing with notice with this NBC is that we need it to return a result for us to
@@ -134,6 +145,8 @@ mod arrays_two_tests {
     fn new__not_unique() {
         assert!(Two::new(Card::KING_HEARTS, Card::KING_HEARTS).is_err());
     }
+
+
 
     #[test]
     fn to_array() {

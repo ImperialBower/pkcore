@@ -4,7 +4,7 @@ use crate::PKError;
 
 /// To start with I am only focusing on supporting a single round of play.
 ///
-/// let mut v = Vec::with_capacity(10);
+/// `let mut v = Vec::with_capacity(10);`
 #[derive(Clone, Debug, PartialEq)]
 pub struct Hands(Vec<Two>);
 
@@ -12,6 +12,10 @@ impl Hands {
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Hands {
         Hands(Vec::with_capacity(capacity))
+    }
+
+    pub fn push(&mut self, two: Two) {
+        self.0.push(two);
     }
 }
 
@@ -23,8 +27,9 @@ impl Hands {
 //
 //         if cards.len() % 2 = 0 {
 //             let num_of_players = cards.len() / 2;
-//             let mute hands = Hands::with_capacity(num_of_players);
+//             let mut hands = Hands::with_capacity(num_of_players);
 //
+//             // hands.push(Two::new(cards.draw(1)?, cards.draw(1)?))
 //
 //         } else {
 //             Err(PKError::InvalidCardCount)
