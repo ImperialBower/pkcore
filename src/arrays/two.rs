@@ -29,7 +29,6 @@ impl Two {
         } else {
             Err(PKError::InvalidCard)
         }
-
     }
 
     //region accessors
@@ -124,7 +123,6 @@ mod arrays_two_tests {
             Two::new(Card::KING_HEARTS, Card::ACE_DIAMONDS).unwrap(),
             Two::from(BIG_SLICK)
         );
-
     }
 
     /// The first thing with notice with this NBC is that we need it to return a result for us to
@@ -145,8 +143,6 @@ mod arrays_two_tests {
     fn new__not_unique() {
         assert!(Two::new(Card::KING_HEARTS, Card::KING_HEARTS).is_err());
     }
-
-
 
     #[test]
     fn to_array() {
