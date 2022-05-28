@@ -17,8 +17,13 @@ impl Two {
     ///   * Must be unique
     /// What are my b
     pub fn new(first: Card, second: Card) -> Result<Two, PKError> {
+        let mut two = Two::from([first, second]);
+        if two.salright() {
+            Ok(two)
+        } else {
+            Err(PKError::InvalidCard)
+        }
 
-        Ok(Two::from([first, second]))
     }
 
     //region accessors
@@ -122,6 +127,9 @@ mod arrays_two_tests {
     /// need to unwrap our new call in our HP test so that it passes.
     ///
     /// Now, let's pass in two of the same card and make sure it returns an error.
+    ///
+    /// Once we've implemented Two::SOK we can use it in our new function to verify that the `Cards`
+    /// are ok.
     #[test]
     fn new__not_unique() {
         assert!(Two::new(Card::KING_HEARTS, Card::KING_HEARTS).is_err());
