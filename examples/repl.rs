@@ -26,9 +26,7 @@ fn main() -> Result<(), PKError> {
 
     let args = Args::parse();
 
-    let index = &*args.card;
-
-    let cards = Cards::from_str(index)?;
+    let cards = Cards::from_str(&*args.card)?;
 
     // TODO NOTE: This incarnation eats errors in card indexes
     // For example: `❯ cargo run --example repl -- -c "AS KS QS JS TS 9S 9s"`

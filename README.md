@@ -239,6 +239,10 @@
     * ::from_str()
       * TryFrom<Cards>
         * From<[Card; 2]>
+  * Introducing example/calc
+    * Clap Args: dealt, board
+    * Display dealt and board
+      * Have main return Result<(), PKError>
 
 
 
