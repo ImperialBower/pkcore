@@ -7,9 +7,9 @@ pub mod card_number;
 pub mod cards;
 pub mod hand_rank;
 mod lookups;
+pub mod play;
 pub mod rank;
 pub mod suit;
-pub mod play;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum PKError {

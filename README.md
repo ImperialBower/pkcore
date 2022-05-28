@@ -246,6 +246,7 @@
       * Have main return Result<(), PKError>
     * Introducing play/hands
       * TryFrom<Cards>
+      * Two::new(card, card)
 
 
 

@@ -7,6 +7,20 @@ use std::str::FromStr;
 pub struct Two([Card; 2]);
 
 impl Two {
+    /// Requirement:
+    /// * must be unique
+    /// * first should be above second
+    ///
+    /// Walk it:
+    /// * Happy path test
+    /// * NBCs: Negative Boundary Conditions
+    ///   * Must be unique
+    /// What are my b
+    #[must_use]
+    pub fn new(first: Card, second: Card) -> Result<Two, PKError> {
+        Ok(Two::from([first, second]))
+    }
+
     //region accessors
     #[must_use]
     pub fn first(&self) -> Card {
@@ -80,6 +94,31 @@ mod arrays_two_tests {
     /// Mike Caro
     /// <https://www.amazon.com/gp/product/B00KJMP6B2/ref=dbs_a_def_rwt_hsch_vapi_tkin_p1_i0 />
     const BIG_SLICK: [Card; 2] = [Card::ACE_DIAMONDS, Card::KING_HEARTS];
+
+    /// The test fn with the exact same name as the function it's testing is my Happy Path
+    /// tests. It should just work simple
+    #[test]
+    fn new() {
+        assert_eq!(
+            Two::new(Card::ACE_DIAMONDS, Card::KING_HEARTS).unwrap(),
+            Two::from(BIG_SLICK)
+        );
+    }
+
+    /// The first thing with notice with this NBC is that we need it to return a result for us to
+    /// verify the integrity of the function call. We need to change the fn's sig to
+    /// `Result<Two, PKError>`.
+    ///
+    /// This immediately breaks the build, so we fix the build by changing the return function
+    /// of new to `Ok(Two::from([first, second]))`.
+    ///
+    /// Still, our Happy bath test doesn't compile because we are comparing a struct to a Result. We
+    /// need to unwrap our new call in our HP test so that it passes.
+    ///
+    #[test]
+    fn new__not_unique() {
+        assert!()
+    }
 
     #[test]
     fn to_array() {
