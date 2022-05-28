@@ -244,6 +244,8 @@
     * Clap Args: dealt, board
     * Display dealt and board
       * Have main return Result<(), PKError>
+    * Introducing play/hands
+      * TryFrom<Cards>
 
 
 
