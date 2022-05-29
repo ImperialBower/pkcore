@@ -1,8 +1,8 @@
-use std::fmt;
-use std::fmt::{Display, Formatter};
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::{PKError, SOK};
+use std::fmt;
+use std::fmt::{Display, Formatter};
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Three([Card; 3]);

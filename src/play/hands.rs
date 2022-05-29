@@ -8,7 +8,7 @@ use std::str::FromStr;
 /// To start with I am only focusing on supporting a single round of play.
 ///
 /// `let mut v = Vec::with_capacity(10);`
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Hands(Vec<Two>);
 
 impl Hands {

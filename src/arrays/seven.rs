@@ -71,7 +71,7 @@ impl FromStr for Seven {
 impl HandRanker for Seven {
     /// TODO RF: How do I distill this down to the trait?
     ///
-    /// One of the things that I love about JetBrains products is that they show me code duplication
+    /// One of the things that I love about `JetBrains` products is that they show me code duplication
     /// in my projects. As the code for your system grows, code duplication is one of the clearest
     /// signs that it is becoming more and more unmanageable.
     fn five_from_permutation(&self, permutation: [usize; 5]) -> Five {
