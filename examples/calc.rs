@@ -13,7 +13,7 @@ struct Args {
     board: String,
 }
 
-/// cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠" THE HAND
+/// cargo run --example calc -- -d `6♠ 6♥ 5♦ 5♣` -b "9♣ 6♦ 5♥ 5♠ 8♠" THE HAND
 fn main() -> Result<(), PKError> {
     let args = Args::parse();
 
