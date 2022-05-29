@@ -6,6 +6,11 @@ pub mod seven;
 pub mod six;
 pub mod two;
 
+/// TODO: How can we make this work?
+pub trait Arrayable<T> {
+    fn to_array(&self) -> T;
+}
+
 /// The `HandRanker` trait is designed to return a `HandRank` for a collection five or more cards.
 pub trait HandRanker {
     fn hand_rank(&self) -> HandRank {

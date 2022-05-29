@@ -4,7 +4,7 @@ use crate::cards::Cards;
 use crate::hand_rank::HandRankValue;
 use crate::PKError;
 use std::fmt;
-use std::fmt::Formatter;
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -48,6 +48,10 @@ impl Five {
         self.0
     }
 
+    #[must_use]
+    pub fn to_vec(&self) -> Vec<Card> {
+        self.0.to_vec()
+    }
     //endregion
 
     #[must_use]
@@ -144,16 +148,9 @@ impl Five {
     //endregion
 }
 
-impl fmt::Display for Five {
+impl Display for Five {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let s = self
-            .to_arr()
-            .iter()
-            .map(Card::to_string)
-            .collect::<Vec<String>>()
-            .join(" ");
-
-        write!(f, "{}", s)
+        write!(f, "{}", Cards::from(self.to_vec()))
     }
 }
 

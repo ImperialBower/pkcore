@@ -41,18 +41,16 @@ impl Seven {
     pub fn to_arr(&self) -> [Card; 7] {
         self.0
     }
+
+    #[must_use]
+    pub fn to_vec(&self) -> Vec<Card> {
+        self.0.to_vec()
+    }
 }
 
 impl fmt::Display for Seven {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let s = self
-            .to_arr()
-            .iter()
-            .map(Card::to_string)
-            .collect::<Vec<String>>()
-            .join(" ");
-
-        write!(f, "{}", s)
+        write!(f, "{}", Cards::from(self.to_vec()))
     }
 }
 

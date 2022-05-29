@@ -260,6 +260,9 @@
             * .to_string()
               * .to_vec()
               * REFACTOR: use Cards to display instead of code duplication
+                * Also refactor for other array types
+                  * .to_vec()
+                  * I LOVE DELETING CODE
 
 
 
