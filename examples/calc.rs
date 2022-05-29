@@ -1,5 +1,6 @@
 use clap::Parser;
 use pkcore::cards::Cards;
+use pkcore::play::hands::Hands;
 use pkcore::PKError;
 use std::str::FromStr;
 
@@ -13,14 +14,22 @@ struct Args {
     board: String,
 }
 
+/// The goal of calc isn't to run a full simulation of play at a holdem poker table. It's
+/// to provide a quick tool that can calculate odds and outs for a specific combination of hands.
+///
+/// NOTE ON PERSPECTIVE (double dummy)
+///
+/// We are taking the all knowing view of play, granted to us by modern poker TV shows, pioneered
+/// by [Henry Orenstein](https://www.usbets.com/remembering-poker-pioneer-henry-orenstein/).
+///
 /// cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠" THE HAND
 fn main() -> Result<(), PKError> {
     let args = Args::parse();
 
-    let cards_dealt = Cards::from_str(&*args.dealt)?;
+    let hands = Hands::from_str(&*args.dealt)?;
     let cards_board = Cards::from_str(&*args.board)?;
 
-    println!("DEALT: {} BOARD: {}", cards_dealt, cards_board);
+    println!("DEALT: {} BOARD: {}", hands, cards_board);
 
     Ok(())
 }

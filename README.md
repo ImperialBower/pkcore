@@ -244,7 +244,7 @@
     * Clap Args: dealt, board
     * Display dealt and board
       * Have main return Result<(), PKError>
-    * Introducing play/hands
+    * Introducing play::hands::Hands
       * Hands::try_from(Cards)
         * Two::new(card, card)
           * HP
@@ -254,7 +254,12 @@
               * Drive through SOK
           * First card needs to be higher than second.
             * Add to happy path test
-      * Hands::from_str()
+        * Hands::from_str()
+        * Hands::to_string()
+          * Two
+            * .to_string()
+              * .to_vec()
+              * REFACTOR: use Cards to display instead of code duplication
 
 
 

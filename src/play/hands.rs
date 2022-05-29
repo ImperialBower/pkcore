@@ -1,12 +1,14 @@
-use std::str::FromStr;
 use crate::arrays::two::Two;
 use crate::cards::Cards;
 use crate::PKError;
+use itertools::Itertools;
+use std::fmt;
+use std::str::FromStr;
 
 /// To start with I am only focusing on supporting a single round of play.
 ///
 /// `let mut v = Vec::with_capacity(10);`
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Hands(Vec<Two>);
 
 impl Hands {
@@ -17,6 +19,13 @@ impl Hands {
 
     pub fn push(&mut self, two: Two) {
         self.0.push(two);
+    }
+}
+
+impl fmt::Display for Hands {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let joined = Itertools::join(&mut self.0.iter(), ", ");
+        write!(f, "[{}]", joined)
     }
 }
 
@@ -57,6 +66,14 @@ mod play_cards_tests {
     use super::*;
     use crate::card::Card;
     use std::str::FromStr;
+
+    #[test]
+    fn display() {
+        assert_eq!(
+            "[6♠ 6♥, 5♦ 5♣]",
+            Hands::from_str("6♥ 6♠ 5♦ 5♣").unwrap().to_string()
+        );
+    }
 
     #[test]
     fn from_str() {

@@ -1,6 +1,7 @@
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::{PKError, SOK};
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -46,7 +47,18 @@ impl Two {
     pub fn to_arr(&self) -> [Card; 2] {
         self.0
     }
+
+    #[must_use]
+    pub fn to_vec(&self) -> Vec<Card> {
+        self.0.to_vec()
+    }
     //endregion
+}
+
+impl Display for Two {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", Cards::from(self.to_vec()))
+    }
 }
 
 impl From<[Card; 2]> for Two {
@@ -147,6 +159,11 @@ mod arrays_two_tests {
     #[test]
     fn to_array() {
         assert_eq!(BIG_SLICK, Two::from(BIG_SLICK).to_arr());
+    }
+
+    #[test]
+    fn display() {
+        assert_eq!("A♦ K♥", Two::from(BIG_SLICK).to_string());
     }
 
     /// We've reached the point where it starts to get boring. Trust me, boring is good
