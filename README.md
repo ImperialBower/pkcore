@@ -274,7 +274,8 @@
             * impl SOK for Three
             * impl TryFrom<Cards> for Three
             * impl Display for Three
-          * 
+          * INTRODUCING: Board
+            * The power of `pub` on struct fields.
 
 
 
