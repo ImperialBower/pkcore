@@ -4,6 +4,7 @@ use crate::hand_rank::{HandRank, HandRankValue};
 pub mod five;
 pub mod seven;
 pub mod six;
+pub mod three;
 pub mod two;
 
 /// TODO: How can we make this work?

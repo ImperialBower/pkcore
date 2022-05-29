@@ -263,6 +263,17 @@
                 * Also refactor for other array types
                   * .to_vec()
                   * I LOVE DELETING CODE
+      * THE FLOP
+        * Show HandRank for each player. 
+        * INTRODUCING: Game
+          * Flop: arrays::three::Three
+            * DO IT! 
+            * NOTE ON READABILITY: I deal with a lot of code. I want to scan it 
+              * CODE SPEED READING
+            * From<[Card; 3]>
+            * impl SOK for Three
+            * impl TryFrom<Cards> for Three
+            * impl Display for Three
 
 
 

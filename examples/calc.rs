@@ -22,6 +22,15 @@ struct Args {
 /// We are taking the all knowing view of play, granted to us by modern poker TV shows, pioneered
 /// by [Henry Orenstein](https://www.usbets.com/remembering-poker-pioneer-henry-orenstein/).
 ///
+/// ## Step One
+///
+/// We want to be able to take the cards dealt, and display them representing the hole cards
+/// for each of the players.
+///
+/// ## Step Two
+///
+/// Show me who has the best hand at the flop
+///
 /// cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠" THE HAND
 fn main() -> Result<(), PKError> {
     let args = Args::parse();

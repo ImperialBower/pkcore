@@ -75,6 +75,12 @@ impl FromStr for Two {
     }
 }
 
+impl SOK for Two {
+    fn salright(&self) -> bool {
+        (self.first().salright() && self.second().salright()) && (self.first() != self.second())
+    }
+}
+
 impl TryFrom<Cards> for Two {
     type Error = PKError;
 
@@ -87,12 +93,6 @@ impl TryFrom<Cards> for Two {
             ])),
             _ => Err(PKError::TooManyCards),
         }
-    }
-}
-
-impl SOK for Two {
-    fn salright(&self) -> bool {
-        (self.first().salright() && self.second().salright()) && (self.first() != self.second())
     }
 }
 
@@ -189,6 +189,19 @@ mod arrays_two_tests {
         );
     }
 
+    /// DRIVE:
+    /// * First HP test
+    /// * Then passing in one blank should return false.
+    ///   * `(self.first().salright() && self.second().salright()) && (self.first() != self.second())`
+    #[test]
+    fn sok() {
+        assert!(Two::from(BIG_SLICK).salright());
+        assert!(!Two::from([Card::BLANK, Card::DEUCE_SPADES]).salright());
+        assert!(!Two::from([Card::DEUCE_SPADES, Card::BLANK]).salright());
+        assert!(!Two::from([Card::BLANK, Card::BLANK]).salright());
+        assert!(!Two::from([Card::DEUCE_SPADES, Card::DEUCE_SPADES]).salright());
+    }
+
     #[test]
     fn try_from__cards() {
         assert_eq!(
@@ -211,18 +224,5 @@ mod arrays_two_tests {
 
         assert!(sut.is_err());
         assert_eq!(sut.unwrap_err(), PKError::TooManyCards);
-    }
-
-    /// DRIVE:
-    /// * First HP test
-    /// * Then passing in one blank should return false.
-    ///   * `(self.first().salright() && self.second().salright()) && (self.first() != self.second())`
-    #[test]
-    fn sok() {
-        assert!(Two::from(BIG_SLICK).salright());
-        assert!(!Two::from([Card::BLANK, Card::DEUCE_SPADES]).salright());
-        assert!(!Two::from([Card::DEUCE_SPADES, Card::BLANK]).salright());
-        assert!(!Two::from([Card::BLANK, Card::BLANK]).salright());
-        assert!(!Two::from([Card::DEUCE_SPADES, Card::DEUCE_SPADES]).salright());
     }
 }
