@@ -1,5 +1,6 @@
 use clap::Parser;
 use pkcore::play::board::Board;
+use pkcore::play::game::Game;
 use pkcore::play::hands::Hands;
 use pkcore::PKError;
 use std::str::FromStr;
@@ -35,11 +36,12 @@ struct Args {
 fn main() -> Result<(), PKError> {
     let args = Args::parse();
 
-    let hands = Hands::from_str(&*args.dealt)?;
-    let cards_board = Board::from_str(&*args.board)?;
+    let game = Game::new(
+        Hands::from_str(&*args.dealt)?,
+        Board::from_str(&*args.board)?,
+    );
 
-    println!("DEALT: {}", hands);
-    println!("BOARD: {}", cards_board);
+    println!("{}", game);
 
     Ok(())
 }

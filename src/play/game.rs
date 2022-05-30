@@ -18,7 +18,7 @@ impl Game {
 
 impl Display for Game {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "DEALT: {} BOARD: {}", self.hands, self.board)
+        write!(f, "DEALT: {} {}", self.hands, self.board)
     }
 }
 
@@ -52,7 +52,7 @@ mod play_game_tests {
         let (_, _, game) = state();
 
         assert_eq!(
-            "DEALT: [6♠ 6♥, 5♦ 5♣] BOARD: FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: 8♠",
+            "DEALT: [6♠ 6♥, 5♦ 5♣] FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: 8♠",
             game.to_string()
         );
     }
