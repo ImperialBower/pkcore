@@ -295,9 +295,13 @@
               * TEST REFACTORING: `fn state() -> (Hands, Board, Game) {`
             * `DEALT: [6♠ 6♥, 5♦ 5♣] FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: 8♠`
     * PHASE TWO: Calc the Flop
-      * Display best hand
-      * Display winning percentages
-      * Display outs
+      * THE PLAN:
+        * Display HandRank for each hand
+        * Display winning percentages
+        * Display outs
+      * PHASE 2.1: Display HandRank for each hand
+        * Five::from_2and3()
+        * calc: iterate through each player's hand and show it's `HandRank`. 
 
 
 

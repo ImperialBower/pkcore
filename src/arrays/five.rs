@@ -1,3 +1,5 @@
+use crate::arrays::three::Three;
+use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
@@ -20,6 +22,17 @@ impl Five {
     /// if it's not a wheel (5♥ 4♥ 3♥ 2♠ A♠).
     pub const STRAIGHT_PADDING: u32 = 27;
     pub const WHEEL_OR_BITS: u32 = 0b0001000000001111;
+
+    #[must_use]
+    pub fn from_2and3(hole_cards: Two, flop: Three) -> Five {
+        Five([
+            hole_cards.first(),
+            hole_cards.second(),
+            flop.first(),
+            flop.second(),
+            flop.third(),
+        ])
+    }
 
     //region accessors
     #[must_use]
@@ -258,6 +271,18 @@ mod arrays_five_tests {
         Card::JACK_DIAMONDS,
         Card::TEN_DIAMONDS,
     ];
+
+    #[test]
+    fn from_2and3() {
+        assert_eq!(
+            Five::from_2and3(
+                Two::from([Card::QUEEN_DIAMONDS, Card::TEN_DIAMONDS]),
+                Three::from([Card::ACE_DIAMONDS, Card::KING_DIAMONDS, Card::JACK_DIAMONDS])
+            )
+            .sort(),
+            Five::from(ROYAL_FLUSH)
+        );
+    }
 
     #[test]
     fn to_arr() {
