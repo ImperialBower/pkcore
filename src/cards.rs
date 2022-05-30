@@ -10,6 +10,11 @@ use std::fmt::Formatter;
 use std::str::FromStr;
 use strum::IntoEnumIterator;
 
+/// What are the contracts for Cards?
+///
+/// 1. Cards should be saved in order.
+/// 2. Cards should be unique.
+/// 3. Cards should be legitimate cards. (No blanks)
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Cards(IndexSet<Card>);
 
@@ -112,6 +117,12 @@ impl fmt::Display for Cards {
     }
 }
 
+impl From<Five> for Cards {
+    fn from(five: Five) -> Self {
+        Cards::from(five.to_vec())
+    }
+}
+
 impl From<Vec<Card>> for Cards {
     fn from(v: Vec<Card>) -> Self {
         let filtered = v.iter().filter_map(|c| {
@@ -160,22 +171,23 @@ impl TryFrom<Card> for Cards {
     }
 }
 
-impl TryFrom<Five> for Cards {
-    type Error = PKError;
-
-    /// The contract for arrays is that they have to not be blank.
-    fn try_from(five: Five) -> Result<Self, Self::Error> {
-        let mut cards = Cards::default();
-
-        // TODO RF - Has to be a better way
-        for card in five.to_arr() {
-            if !cards.insert(card) {
-                return Err(PKError::BlankCard);
-            }
-        }
-        Ok(cards)
-    }
-}
+/// Is this overthinking?
+// impl TryFrom<Five> for Cards {
+//     type Error = PKError;
+//
+//     /// The contract for arrays is that they have to not be blank.
+//     fn try_from(five: Five) -> Result<Self, Self::Error> {
+//         let mut cards = Cards::default();
+//
+//         // TODO RF - Has to be a better way
+//         for card in five.to_arr() {
+//             if !cards.insert(card) {
+//                 return Err(PKError::BlankCard);
+//             }
+//         }
+//         Ok(cards)
+//     }
+// }
 
 #[cfg(test)]
 #[allow(non_snake_case)]
@@ -312,6 +324,15 @@ mod card_tests {
     }
 
     #[test]
+    fn from__five() {
+        assert_eq!(
+            5,
+            Cards::from(Five::from_str("AD KD QD JD TD").unwrap()).len()
+        );
+        assert_eq!(0, Cards::from(Five::default()).len());
+    }
+
+    #[test]
     fn from_str() {
         assert_eq!(wheel(), Cards::from_str("5♣ 4♣ 3♣ 2♣ A♣").unwrap());
     }
@@ -325,12 +346,6 @@ mod card_tests {
     fn try_from__card() {
         assert!(Cards::try_from(Card::FOUR_DIAMONDS).is_ok());
         assert!(Cards::try_from(Card::BLANK).is_err());
-    }
-
-    #[test]
-    fn try_from__five() {
-        assert!(Cards::try_from(Five::from_str("AD KD QD JD TD").unwrap()).is_ok());
-        assert!(Cards::try_from(Five::default()).is_err());
     }
 
     fn wheel() -> Cards {
