@@ -7,6 +7,10 @@ use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
+/// The most important type in the library. `Five` `Cards` is the core of the game.
+/// It's the best five cards that determine who wins.
+///
+/// IDEA: The hub and spoke.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Five([Card; 5]);
 

@@ -43,11 +43,10 @@ impl Cards {
         }
     }
 
-    pub fn draw_one(&mut self) -> Option<Card> {
-        let cards = self.draw(1);
-        match cards {
-            Ok(mut c) => Some(c.0.pop()?),
-            Err(_) => None,
+    pub fn draw_one(&mut self) -> Result<Card, PKError> {
+        match self.0.shift_remove_index(0) {
+            Some(card) => Ok(card),
+            None => Err(PKError::NotEnoughCards)
         }
     }
 
@@ -90,6 +89,11 @@ impl Cards {
     #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    #[must_use]
+    pub fn deal_from_the_bottom(&mut self) -> Option<Card> {
+        self.0.pop()
     }
 
     #[must_use]
@@ -260,7 +264,7 @@ mod card_tests {
         let card = cards.draw_one();
 
         assert!(cards.is_empty());
-        assert!(card.is_some());
+        assert!(card.is_ok());
         assert_eq!(card.unwrap(), Card::ACE_HEARTS);
     }
 

@@ -2,6 +2,7 @@ use crate::arrays::three::Three;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::PKError;
+use std::fmt::{Display, Formatter};
 
 /// A `Board` is a type that represents a single instance of the face up `Cards`
 /// of one `Game` of `Texas hold 'em`.
@@ -19,6 +20,16 @@ impl Board {
     }
 }
 
+impl Display for Board {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "FLOP: {}, TURN: {}, RIVER: {}",
+            self.flop, self.turn, self.river
+        )
+    }
+}
+
 impl TryFrom<Cards> for Board {
     type Error = PKError;
 
@@ -30,9 +41,73 @@ impl TryFrom<Cards> for Board {
                 turn: Card::default(),
                 river: Card::default(),
             }),
-            4 => Ok(Board::default()),
+            4 => {
+                let mut cards = cards;
+                Ok(Board {
+                    flop: Three::try_from(cards.draw(3)?)?,
+                    turn: cards.draw_one()?,
+                    river: Default::default(),
+                })
+            },
             5 => Ok(Board::default()),
             _ => Err(PKError::TooManyCards),
         }
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod play_board_tests {
+    use super::*;
+    use std::str::FromStr;
+
+    const THE_BOARD: [Card; 5] = [
+        Card::NINE_CLUBS,
+        Card::SIX_DIAMONDS,
+        Card::FIVE_HEARTS,
+        Card::FIVE_SPADES,
+        Card::EIGHT_SPADES,
+    ];
+
+    #[test]
+    fn display() {
+        assert_eq!(
+            "FLOP: __ __ __, TURN: __, RIVER: __",
+            Board::default().to_string()
+        );
+        assert_eq!(
+            "FLOP: 9♣ 6♦ 5♥, TURN: __, RIVER: __",
+            Board::try_from(Cards::from(vec![
+                Card::NINE_CLUBS,
+                Card::SIX_DIAMONDS,
+                Card::FIVE_HEARTS
+            ])).unwrap().to_string()
+        );
+
+        assert_eq!(
+            "FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: __",
+            Board::try_from(Cards::from(vec![
+                Card::NINE_CLUBS,
+                Card::SIX_DIAMONDS,
+                Card::FIVE_HEARTS,
+                Card::FIVE_SPADES,
+            ])).unwrap().to_string()
+        );
+    }
+
+    #[test]
+    fn try_from__cards__not_enough() {
+        assert_eq!(
+            PKError::NotEnoughCards,
+            Board::try_from(Cards::from_str("AS KS").unwrap()).unwrap_err()
+        );
+    }
+
+    #[test]
+    fn try_from__cards__too_many() {
+        assert_eq!(
+            PKError::TooManyCards,
+            Board::try_from(Cards::from_str("AS KS QS JS TS 9S").unwrap()).unwrap_err()
+        );
     }
 }

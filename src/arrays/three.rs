@@ -38,7 +38,7 @@ impl Three {
 
 impl Display for Three {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", Cards::from(self.to_vec()))
+        write!(f, "{} {} {}", self.first(), self.second(), self.third())
     }
 }
 

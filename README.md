@@ -276,6 +276,16 @@
             * impl Display for Three
           * INTRODUCING: Board
             * The power of `pub` on struct fields.
+            * TryFrom<Cards> for Board
+              * too few
+              * too many
+              * three cards
+                * display
+                  * Default: "FLOP: __ __ __, TURN: __, RIVER: __" 
+                  * THE BOARD from THE HAND
+              * four cards
+                * getting clunky
+                * REFACTOR: Cards.draw_one from Option to Result
 
 
 
