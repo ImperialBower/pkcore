@@ -302,6 +302,8 @@
       * PHASE 2.1: Display HandRank for each hand
         * Five::from_2and3()
         * calc: iterate through each player's hand and show it's `HandRank`. 
+          * REFACTOR: Make `Game` struct fields public.
+          * Hands.iter()
 
 
 

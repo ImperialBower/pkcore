@@ -3,6 +3,7 @@ use crate::cards::Cards;
 use crate::PKError;
 use itertools::Itertools;
 use std::fmt;
+use std::slice::Iter;
 use std::str::FromStr;
 
 /// To start with I am only focusing on supporting a single round of play.
@@ -15,6 +16,10 @@ impl Hands {
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Hands {
         Hands(Vec::with_capacity(capacity))
+    }
+
+    pub fn iter(&self) -> Iter<'_, Two> {
+        self.0.iter()
     }
 
     pub fn push(&mut self, two: Two) {

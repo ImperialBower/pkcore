@@ -5,8 +5,8 @@ use std::fmt::{Display, Formatter};
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Game {
-    hands: Hands,
-    board: Board,
+    pub hands: Hands,
+    pub board: Board,
 }
 
 impl Game {

@@ -43,5 +43,10 @@ fn main() -> Result<(), PKError> {
 
     println!("{}", game);
 
+    /// Phase 2.1
+    // for (i, hole_cards) in game.hands.iter().enumerate() {
+    //     println!("Player #{}", i, )
+    // }
+
     Ok(())
 }
