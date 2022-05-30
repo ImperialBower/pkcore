@@ -15,6 +15,7 @@
 * [Setup wasm](https://rustwasm.github.io/docs/book/game-of-life/setup.html).
 * Why Rust?
   * Inverting the curve
+  * THE BIG IDEA: Better to eliminate a problem than to solve it.
   * Rust TDD loop
     * define
     * create fn sig returning default value
@@ -289,9 +290,14 @@
               * five cards
             * FromStr for Board
           * Update calc to display Hands and Board
-          * REFACTOR: Game{Hands, Board}
-          * Game.to_string()
-            * TEST REFACTORING: `fn state() -> (Hands, Board, Game) {`
+            * REFACTOR: Game{Hands, Board}
+            * Game.to_string()
+              * TEST REFACTORING: `fn state() -> (Hands, Board, Game) {`
+            * `DEALT: [6♠ 6♥, 5♦ 5♣] FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: 8♠`
+    * PHASE TWO: Calc the Flop
+      * Display best hand
+      * Display winning percentages
+      * Display outs
 
 
 
