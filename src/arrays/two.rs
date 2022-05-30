@@ -1,6 +1,7 @@
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::{PKError, SOK};
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -46,7 +47,18 @@ impl Two {
     pub fn to_arr(&self) -> [Card; 2] {
         self.0
     }
+
+    #[must_use]
+    pub fn to_vec(&self) -> Vec<Card> {
+        self.0.to_vec()
+    }
     //endregion
+}
+
+impl Display for Two {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", Cards::from(self.to_vec()))
+    }
 }
 
 impl From<[Card; 2]> for Two {
@@ -63,6 +75,12 @@ impl FromStr for Two {
     }
 }
 
+impl SOK for Two {
+    fn salright(&self) -> bool {
+        (self.first().salright() && self.second().salright()) && (self.first() != self.second())
+    }
+}
+
 impl TryFrom<Cards> for Two {
     type Error = PKError;
 
@@ -75,12 +93,6 @@ impl TryFrom<Cards> for Two {
             ])),
             _ => Err(PKError::TooManyCards),
         }
-    }
-}
-
-impl SOK for Two {
-    fn salright(&self) -> bool {
-        (self.first().salright() && self.second().salright()) && (self.first() != self.second())
     }
 }
 
@@ -149,6 +161,11 @@ mod arrays_two_tests {
         assert_eq!(BIG_SLICK, Two::from(BIG_SLICK).to_arr());
     }
 
+    #[test]
+    fn display() {
+        assert_eq!("A♦ K♥", Two::from(BIG_SLICK).to_string());
+    }
+
     /// We've reached the point where it starts to get boring. Trust me, boring is good
     /// when you're coding. You want to get to the point where the result of your coding
     /// is interesting, not the work of actually doing the code. It should be relaxing,
@@ -170,6 +187,19 @@ mod arrays_two_tests {
             PKError::TooManyCards,
             Two::from_str("AD KD QD").unwrap_err()
         );
+    }
+
+    /// DRIVE:
+    /// * First HP test
+    /// * Then passing in one blank should return false.
+    ///   * `(self.first().salright() && self.second().salright()) && (self.first() != self.second())`
+    #[test]
+    fn sok() {
+        assert!(Two::from(BIG_SLICK).salright());
+        assert!(!Two::from([Card::BLANK, Card::DEUCE_SPADES]).salright());
+        assert!(!Two::from([Card::DEUCE_SPADES, Card::BLANK]).salright());
+        assert!(!Two::from([Card::BLANK, Card::BLANK]).salright());
+        assert!(!Two::from([Card::DEUCE_SPADES, Card::DEUCE_SPADES]).salright());
     }
 
     #[test]
@@ -194,18 +224,5 @@ mod arrays_two_tests {
 
         assert!(sut.is_err());
         assert_eq!(sut.unwrap_err(), PKError::TooManyCards);
-    }
-
-    /// DRIVE:
-    /// * First HP test
-    /// * Then passing in one blank should return false.
-    ///   * `(self.first().salright() && self.second().salright()) && (self.first() != self.second())`
-    #[test]
-    fn sok() {
-        assert!(Two::from(BIG_SLICK).salright());
-        assert!(!Two::from([Card::BLANK, Card::DEUCE_SPADES]).salright());
-        assert!(!Two::from([Card::DEUCE_SPADES, Card::BLANK]).salright());
-        assert!(!Two::from([Card::BLANK, Card::BLANK]).salright());
-        assert!(!Two::from([Card::DEUCE_SPADES, Card::DEUCE_SPADES]).salright());
     }
 }

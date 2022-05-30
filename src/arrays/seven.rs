@@ -41,18 +41,16 @@ impl Seven {
     pub fn to_arr(&self) -> [Card; 7] {
         self.0
     }
+
+    #[must_use]
+    pub fn to_vec(&self) -> Vec<Card> {
+        self.0.to_vec()
+    }
 }
 
 impl fmt::Display for Seven {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let s = self
-            .to_arr()
-            .iter()
-            .map(Card::to_string)
-            .collect::<Vec<String>>()
-            .join(" ");
-
-        write!(f, "{}", s)
+        write!(f, "{}", Cards::from(self.to_vec()))
     }
 }
 
@@ -71,6 +69,11 @@ impl FromStr for Seven {
 }
 
 impl HandRanker for Seven {
+    /// TODO RF: How do I distill this down to the trait?
+    ///
+    /// One of the things that I love about `JetBrains` products is that they show me code duplication
+    /// in my projects. As the code for your system grows, code duplication is one of the clearest
+    /// signs that it is becoming more and more unmanageable.
     fn five_from_permutation(&self, permutation: [usize; 5]) -> Five {
         Five::from([
             self.0[permutation[0]],

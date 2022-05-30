@@ -244,7 +244,7 @@
     * Clap Args: dealt, board
     * Display dealt and board
       * Have main return Result<(), PKError>
-    * Introducing play/hands
+    * Introducing play::hands::Hands
       * Hands::try_from(Cards)
         * Two::new(card, card)
           * HP
@@ -254,7 +254,28 @@
               * Drive through SOK
           * First card needs to be higher than second.
             * Add to happy path test
-      * Hands::from_str()
+        * Hands::from_str()
+        * Hands::to_string()
+          * Two
+            * .to_string()
+              * .to_vec()
+              * REFACTOR: use Cards to display instead of code duplication
+                * Also refactor for other array types
+                  * .to_vec()
+                  * I LOVE DELETING CODE
+      * THE FLOP
+        * Show HandRank for each player. 
+        * INTRODUCING: Game
+          * Flop: arrays::three::Three
+            * DO IT! 
+            * NOTE ON READABILITY: I deal with a lot of code. I want to scan it 
+              * CODE SPEED READING
+            * From<[Card; 3]>
+            * impl SOK for Three
+            * impl TryFrom<Cards> for Three
+            * impl Display for Three
+          * INTRODUCING: Board
+            * The power of `pub` on struct fields.
 
 
 
