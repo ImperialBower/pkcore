@@ -43,10 +43,12 @@ impl Cards {
         }
     }
 
+    /// # Errors
+    /// Returns `PKError::NotEnoughCards` if there are no more cards left.
     pub fn draw_one(&mut self) -> Result<Card, PKError> {
         match self.0.shift_remove_index(0) {
             Some(card) => Ok(card),
-            None => Err(PKError::NotEnoughCards)
+            None => Err(PKError::NotEnoughCards),
         }
     }
 

@@ -1,5 +1,5 @@
 use clap::Parser;
-use pkcore::cards::Cards;
+use pkcore::play::board::Board;
 use pkcore::play::hands::Hands;
 use pkcore::PKError;
 use std::str::FromStr;
@@ -36,9 +36,10 @@ fn main() -> Result<(), PKError> {
     let args = Args::parse();
 
     let hands = Hands::from_str(&*args.dealt)?;
-    let cards_board = Cards::from_str(&*args.board)?;
+    let cards_board = Board::from_str(&*args.board)?;
 
-    println!("DEALT: {} BOARD: {}", hands, cards_board);
+    println!("DEALT: {}", hands);
+    println!("BOARD: {}", cards_board);
 
     Ok(())
 }

@@ -286,6 +286,10 @@
               * four cards
                 * getting clunky
                 * REFACTOR: Cards.draw_one from Option to Result
+              * five cards
+            * FromStr for Board
+          * Update calc to display Hands and Board
+          * REFACTOR: Game{Hands, Board}
 
 
 

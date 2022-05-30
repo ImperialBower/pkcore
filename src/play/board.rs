@@ -3,6 +3,7 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::PKError;
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 
 /// A `Board` is a type that represents a single instance of the face up `Cards`
 /// of one `Game` of `Texas hold 'em`.
@@ -30,10 +31,19 @@ impl Display for Board {
     }
 }
 
+impl FromStr for Board {
+    type Err = PKError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Board::try_from(Cards::from_str(s)?)
+    }
+}
+
 impl TryFrom<Cards> for Board {
     type Error = PKError;
 
     fn try_from(cards: Cards) -> Result<Self, Self::Error> {
+        // TODO RF? Clunky
         match cards.len() {
             0..=2 => Err(PKError::NotEnoughCards),
             3 => Ok(Board {
@@ -46,10 +56,17 @@ impl TryFrom<Cards> for Board {
                 Ok(Board {
                     flop: Three::try_from(cards.draw(3)?)?,
                     turn: cards.draw_one()?,
-                    river: Default::default(),
+                    river: Card::default(),
                 })
-            },
-            5 => Ok(Board::default()),
+            }
+            5 => {
+                let mut cards = cards;
+                Ok(Board {
+                    flop: Three::try_from(cards.draw(3)?)?,
+                    turn: cards.draw_one()?,
+                    river: cards.draw_one()?,
+                })
+            }
             _ => Err(PKError::TooManyCards),
         }
     }
@@ -61,29 +78,34 @@ mod play_board_tests {
     use super::*;
     use std::str::FromStr;
 
-    const THE_BOARD: [Card; 5] = [
-        Card::NINE_CLUBS,
-        Card::SIX_DIAMONDS,
-        Card::FIVE_HEARTS,
-        Card::FIVE_SPADES,
-        Card::EIGHT_SPADES,
-    ];
-
     #[test]
     fn display() {
         assert_eq!(
             "FLOP: __ __ __, TURN: __, RIVER: __",
             Board::default().to_string()
         );
+    }
+
+    #[test]
+    fn from_str() {
+        assert_eq!(
+            "FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: 8♠",
+            Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap().to_string()
+        )
+    }
+
+    #[test]
+    fn try_from() {
         assert_eq!(
             "FLOP: 9♣ 6♦ 5♥, TURN: __, RIVER: __",
             Board::try_from(Cards::from(vec![
                 Card::NINE_CLUBS,
                 Card::SIX_DIAMONDS,
                 Card::FIVE_HEARTS
-            ])).unwrap().to_string()
+            ]))
+            .unwrap()
+            .to_string()
         );
-
         assert_eq!(
             "FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: __",
             Board::try_from(Cards::from(vec![
@@ -91,7 +113,21 @@ mod play_board_tests {
                 Card::SIX_DIAMONDS,
                 Card::FIVE_HEARTS,
                 Card::FIVE_SPADES,
-            ])).unwrap().to_string()
+            ]))
+            .unwrap()
+            .to_string()
+        );
+        assert_eq!(
+            "FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: 8♠",
+            Board::try_from(Cards::from(vec![
+                Card::NINE_CLUBS,
+                Card::SIX_DIAMONDS,
+                Card::FIVE_HEARTS,
+                Card::FIVE_SPADES,
+                Card::EIGHT_SPADES,
+            ]))
+            .unwrap()
+            .to_string()
         );
     }
 
