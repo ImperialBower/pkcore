@@ -270,10 +270,10 @@
             * DO IT! 
             * NOTE ON READABILITY: I deal with a lot of code. I want to scan it 
               * CODE SPEED READING
-            * From<[Card; 3]>
-            * impl SOK for Three
-            * impl TryFrom<Cards> for Three
-            * impl Display for Three
+            * `From<[Card; 3]>`
+            * `impl SOK for Three`
+            * `impl TryFrom<Cards> for Three`
+            * `impl Display for Three`
           * INTRODUCING: Board
             * The power of `pub` on struct fields.
             * TryFrom<Cards> for Board
@@ -290,6 +290,8 @@
             * FromStr for Board
           * Update calc to display Hands and Board
           * REFACTOR: Game{Hands, Board}
+          * Game.to_string()
+            * TEST REFACTORING: `fn state() -> (Hands, Board, Game) {`
 
 
 
