@@ -3,8 +3,8 @@ use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::hand_rank::HandRankValue;
-use crate::PKError;
+use crate::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
+use crate::{PKError, SOK};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -192,17 +192,21 @@ impl HandRanker for Five {
     }
 
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
-        let i = self.or_rank_bits() as usize;
-        let rank: u16 = if self.is_flush() {
-            crate::lookups::flushes::FLUSHES[i]
+        if self.salright() {
+            let i = self.or_rank_bits() as usize;
+            let rank: u16 = if self.is_flush() {
+                crate::lookups::flushes::FLUSHES[i]
+            } else {
+                let unique = Five::unique_rank(i);
+                match unique {
+                    0 => self.not_unique(),
+                    _ => unique,
+                }
+            };
+            (rank, self.sort())
         } else {
-            let unique = Five::unique_rank(i);
-            match unique {
-                0 => self.not_unique(),
-                _ => unique,
-            }
-        };
-        (rank, self.sort())
+            (NO_HAND_RANK_VALUE, Five::default())
+        }
     }
 
     fn sort(&self) -> Self {
@@ -227,6 +231,12 @@ impl HandRanker for Five {
             self.0 = wheel;
         }
         self.0.reverse();
+    }
+}
+
+impl SOK for Five {
+    fn salright(&self) -> bool {
+        !self.0.contains(&Card::BLANK)
     }
 }
 
@@ -460,6 +470,11 @@ mod arrays_five_tests {
             "5♠ 4♠ 3♠ 2♠ A♠",
             Five::from_str("A♠ 5♠ 4♠ 3♠ 2♠").unwrap().sort().to_string()
         );
+    }
+
+    #[test]
+    fn hand_rank__default() {
+        assert_eq!(0, Five::default().hand_rank().value());
     }
 
     //region Brute Force HandRank tests

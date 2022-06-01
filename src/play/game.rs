@@ -20,14 +20,24 @@ impl Game {
     }
 
     #[must_use]
-    pub fn hand_rank_at_flop(&self, hand: usize) -> HandRank {
-        let hand = self.hands.get(hand);
+    pub fn five_at_flop(&self, index: usize) -> Five {
+        let hand = self.hands.get(index);
         if hand.salright() {
-            Five::from_2and3(hand, self.board.flop).hand_rank()
+            Five::from_2and3(hand, self.board.flop)
         } else {
-            HandRank::default()
+            Five::default()
         }
     }
+    //
+    // #[must_use]
+    // pub fn hand_rank_at_flop(&self, hand: usize) -> HandRank {
+    //     let hand = self.hands.get(hand);
+    //     if hand.salright() {
+    //         Five::from_2and3(hand, self.board.flop).hand_rank()
+    //     } else {
+    //         HandRank::default()
+    //     }
+    // }
 }
 
 impl Display for Game {
@@ -62,11 +72,12 @@ mod play_game_tests {
     }
 
     #[test]
-    fn hand_rank_at_flop() {
+    fn five_at_flop() {
         let game = state();
 
-        assert_eq!(2185, game.hand_rank_at_flop(0).value());
-        assert_eq!(2251, game.hand_rank_at_flop(1).value());
+        assert_eq!(2185, game.five_at_flop(0).hand_rank().value());
+        assert_eq!(2251, game.five_at_flop(1).hand_rank().value());
+        assert_eq!(0, game.five_at_flop(2).hand_rank().value());
     }
 
     #[test]
