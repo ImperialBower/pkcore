@@ -304,7 +304,7 @@
         * calc: iterate through each player's hand and show it's `HandRank`. 
           * REFACTOR: Make `Game` struct fields public.
           * Hands.iter()
-          * Game._hand_rank_at_flop()
+          * Game.hand_rank_at_flop()
             * Hands.get()
 
 
