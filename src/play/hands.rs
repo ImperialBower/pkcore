@@ -87,11 +87,16 @@ mod play_hands_tests {
 
         assert_eq!(
             the_hand.get(0),
-            Two::new(Card::SIX_SPADES, Card::SIX_HEARTS).unwrap()
+            Two::from([Card::SIX_SPADES, Card::SIX_HEARTS])
         );
         assert_eq!(
             the_hand.get(1),
-            Two::new(Card::FIVE_DIAMONDS, Card::FIVE_CLUBS).unwrap()
+            Two::from([Card::FIVE_DIAMONDS, Card::FIVE_CLUBS])
+        );
+        // Check it again to make sure that the underlying vec is undamaged.
+        assert_eq!(
+            the_hand.get(1),
+            Two::from([Card::FIVE_DIAMONDS, Card::FIVE_CLUBS])
         );
         assert_eq!(the_hand.0.len(), 2);
         assert_eq!(the_hand.get(2), Two::default());
