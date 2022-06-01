@@ -304,6 +304,8 @@
         * calc: iterate through each player's hand and show it's `HandRank`. 
           * REFACTOR: Make `Game` struct fields public.
           * Hands.iter()
+          * Game._hand_rank_at_flop()
+            * Hands.get()
 
 
 
@@ -314,6 +316,9 @@
 
 ## Resources
 
-* [Are we game yet?](https://arewegameyet.rs/)
-* [Are we GUI Yet?](https://www.areweguiyet.com/)
-* [Mike Caro's Website](https://www.poker1.com/)
+* Poker
+  * [Mike Caro's Website](https://www.poker1.com/)
+* Rust
+  * [Are we game yet?](https://arewegameyet.rs/)
+  * [Are we GUI Yet?](https://www.areweguiyet.com/)
+  * [Yew](https://yew.rs/)

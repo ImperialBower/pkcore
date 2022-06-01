@@ -18,6 +18,15 @@ impl Hands {
         Hands(Vec::with_capacity(capacity))
     }
 
+    /// For our get we're going to return a blank `Hand` if the index passed in is too high.
+    #[must_use]
+    pub fn get(&self, index: usize) -> Two {
+        match self.0.get(index) {
+            Some(hand) => *hand,
+            None => Two::default(),
+        }
+    }
+
     pub fn iter(&self) -> Iter<'_, Two> {
         self.0.iter()
     }
@@ -67,10 +76,26 @@ impl TryFrom<Cards> for Hands {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod play_cards_tests {
+mod play_hands_tests {
     use super::*;
     use crate::card::Card;
     use std::str::FromStr;
+
+    #[test]
+    fn get() {
+        let the_hand = Hands::from_str("6♥ 6♠ 5♦ 5♣").unwrap();
+
+        assert_eq!(
+            the_hand.get(0),
+            Two::new(Card::SIX_SPADES, Card::SIX_HEARTS).unwrap()
+        );
+        assert_eq!(
+            the_hand.get(1),
+            Two::new(Card::FIVE_DIAMONDS, Card::FIVE_CLUBS).unwrap()
+        );
+        assert_eq!(the_hand.0.len(), 2);
+        assert_eq!(the_hand.get(2), Two::default());
+    }
 
     #[test]
     fn display() {
