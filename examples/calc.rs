@@ -4,6 +4,7 @@ use pkcore::play::game::Game;
 use pkcore::play::hands::Hands;
 use pkcore::PKError;
 use std::str::FromStr;
+use pkcore::arrays::HandRanker;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -32,7 +33,7 @@ struct Args {
 ///
 /// Show me who has the best hand at the flop
 ///
-/// cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠" THE HAND
+/// cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠" --- THE HAND
 fn main() -> Result<(), PKError> {
     let args = Args::parse();
 
@@ -45,7 +46,7 @@ fn main() -> Result<(), PKError> {
 
     // Phase 2.1
     for (i, hole_cards) in game.hands.iter().enumerate() {
-        println!("Player #{} {}", i + 1, hole_cards);
+        println!("Player #{} {} - {}", i + 1, hole_cards, game.five_at_flop(i).hand_rank());
     }
 
     Ok(())

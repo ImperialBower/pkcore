@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use crate::hand_rank::class::Class;
 use crate::hand_rank::name::Name;
 use crate::SOK;
@@ -38,6 +39,12 @@ impl HandRank {
     #[must_use]
     pub fn class(&self) -> Class {
         self.class
+    }
+}
+
+impl Display for HandRank {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {:?}", self.value, self.class)
     }
 }
 

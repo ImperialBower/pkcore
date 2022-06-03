@@ -1,6 +1,4 @@
 use crate::arrays::five::Five;
-use crate::arrays::HandRanker;
-use crate::hand_rank::HandRank;
 use crate::play::board::Board;
 use crate::play::hands::Hands;
 use crate::SOK;
@@ -51,6 +49,7 @@ impl Display for Game {
 mod play_game_tests {
     use super::*;
     use std::str::FromStr;
+    use crate::arrays::HandRanker;
 
     fn state() -> Game {
         let hands = Hands::from_str("6♠ 6♥ 5♦ 5♣").unwrap();
