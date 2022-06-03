@@ -1,10 +1,10 @@
 use clap::Parser;
+use pkcore::arrays::HandRanker;
 use pkcore::play::board::Board;
 use pkcore::play::game::Game;
 use pkcore::play::hands::Hands;
 use pkcore::PKError;
 use std::str::FromStr;
-use pkcore::arrays::HandRanker;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -46,7 +46,12 @@ fn main() -> Result<(), PKError> {
 
     // Phase 2.1
     for (i, hole_cards) in game.hands.iter().enumerate() {
-        println!("Player #{} {} - {}", i + 1, hole_cards, game.five_at_flop(i).hand_rank());
+        println!(
+            "Player #{} {} - {}",
+            i + 1,
+            hole_cards,
+            game.five_at_flop(i).hand_rank()
+        );
     }
 
     Ok(())

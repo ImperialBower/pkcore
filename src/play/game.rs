@@ -48,8 +48,8 @@ impl Display for Game {
 #[allow(non_snake_case)]
 mod play_game_tests {
     use super::*;
-    use std::str::FromStr;
     use crate::arrays::HandRanker;
+    use std::str::FromStr;
 
     fn state() -> Game {
         let hands = Hands::from_str("6♠ 6♥ 5♦ 5♣").unwrap();

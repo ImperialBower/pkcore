@@ -1,7 +1,7 @@
-use std::fmt::{Display, Formatter};
 use crate::hand_rank::class::Class;
 use crate::hand_rank::name::Name;
 use crate::SOK;
+use std::fmt::{Display, Formatter};
 
 pub mod class;
 pub mod name;
