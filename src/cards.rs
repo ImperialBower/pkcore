@@ -308,6 +308,11 @@ mod card_tests {
         assert_eq!(5, wheel().len());
     }
 
+    // #[test]
+    // fn sort_by_frequency() {
+    //     assert_eq!("A♣ 5♣ 4♣ 3♣ 2♣", wheel().sort().to_string());
+    // }
+
     #[test]
     fn sort() {
         assert_eq!("A♣ 5♣ 4♣ 3♣ 2♣", wheel().sort().to_string());

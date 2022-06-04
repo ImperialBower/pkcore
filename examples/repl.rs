@@ -7,6 +7,7 @@ use pkcore::cards::Cards;
 use pkcore::PKError;
 use std::fmt::Display;
 use std::str::FromStr;
+use itertools::Itertools;
 
 /// ```
 /// ❯ cargo run --example repl -- -c "AS KS QS JS TS"
@@ -56,4 +57,8 @@ where
         hand_rank.value(),
         hand_rank.class()
     );
+
+    let sorts = hand.iter().counts_by(|card| card.get_rank());
+
+    println!("{:?}", sorts);
 }

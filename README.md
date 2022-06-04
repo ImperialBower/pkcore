@@ -308,6 +308,8 @@
             * Hands.get()
             * DEFECT: HandRank for Five::default()
               * impl SOK for Five
+        * DEFECT DETOUR: Sort Five by card frequency
+          * .map_by_rank()
       * PHASE 2.2: Display winning percentages 
         * Introducing [Win Counter](https://github.com/ContractBridge/wincounter)
 

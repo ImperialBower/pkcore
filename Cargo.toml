@@ -12,7 +12,7 @@ exclude = [".github/workflows/*", "examples/*", ".gitignore", "Cargo.lock"]
 
 [dependencies]
 indexmap = "1.8.1"
-itertools = "0.10.2"
+itertools = "0.10.3"
 log = "0.4"
 serde = { version = "1.0.136", features = ["derive"] }
 strum = { version = "0.24", features = ["derive"] }

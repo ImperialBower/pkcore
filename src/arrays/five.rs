@@ -7,6 +7,7 @@ use crate::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
 use crate::{PKError, SOK};
 use std::fmt;
 use std::fmt::{Display, Formatter};
+use std::slice::Iter;
 use std::str::FromStr;
 
 /// The most important type in the library. `Five` `Cards` is the core of the game.
@@ -58,6 +59,10 @@ impl Five {
     #[must_use]
     pub fn fifth(&self) -> Card {
         self.0[4]
+    }
+
+    pub fn iter(&self) -> Iter<'_, Card> {
+        self.0.iter()
     }
 
     #[must_use]

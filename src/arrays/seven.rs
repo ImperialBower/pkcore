@@ -101,11 +101,14 @@ impl HandRanker for Seven {
     }
 
     fn sort(&self) -> Self {
-        todo!()
+        let mut array = *self;
+        array.sort_in_place();
+        array
     }
 
     fn sort_in_place(&mut self) {
-        todo!()
+        self.0.sort_unstable();
+        self.0.reverse();
     }
 }
 
