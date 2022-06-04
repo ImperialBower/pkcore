@@ -1,4 +1,5 @@
 use clap::Parser;
+use itertools::Itertools;
 use pkcore::arrays::five::Five;
 use pkcore::arrays::seven::Seven;
 use pkcore::arrays::six::Six;
@@ -7,7 +8,6 @@ use pkcore::cards::Cards;
 use pkcore::PKError;
 use std::fmt::Display;
 use std::str::FromStr;
-use itertools::Itertools;
 
 /// ```
 /// ❯ cargo run --example repl -- -c "AS KS QS JS TS"

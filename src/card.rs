@@ -41,6 +41,11 @@ impl Card {
     pub const SUIT_SHORT_MASK: u32 = 0b1111;
     pub const SUIT_FLAG_SHIFT: u32 = 12;
 
+    /// Frequency Weight masks
+    pub const FREQUENCY_PAIRED_MASK: u32 = 0b0010_0000_0000_0000_0000_0000_0000_0000;
+    pub const FREQUENCY_TRIPPED_MASK: u32 = 0b0100_0000_0000_0000_0000_0000_0000_0000;
+    pub const FREQUENCY_QUADED_MASK: u32 = 0b1000_0000_0000_0000_0000_0000_0000_0000;
+
     pub(crate) const BLANK_NUMBER: u32 = 0;
     //endregion
 
@@ -131,6 +136,24 @@ impl Card {
         } else {
             bit_string
         }
+    }
+
+    /// Returns a new version of `Card` with the paired frequency bit set.
+    #[must_use]
+    pub fn frequency_paired(&self) -> Card {
+        Card(self.0 | Card::FREQUENCY_PAIRED_MASK)
+    }
+
+    /// Returns a new version of `Card` with the tripped frequency bit set.
+    #[must_use]
+    pub fn frequency_tripped(&self) -> Card {
+        Card(self.0 | Card::FREQUENCY_TRIPPED_MASK)
+    }
+
+    /// Returns a new version of `Card` with the quaded frequency bit set.
+    #[must_use]
+    pub fn frequency_quaded(&self) -> Card {
+        Card(self.0 | Card::FREQUENCY_QUADED_MASK)
     }
 
     #[must_use]
@@ -277,6 +300,54 @@ mod card_tests {
     }
 
     #[test]
+    fn frequency_paired() {
+        let weighted = Card::TREY_CLUBS.frequency_paired();
+
+        assert_eq!(Card::FREQUENCY_PAIRED_MASK, weighted.as_u32() & Card::FREQUENCY_PAIRED_MASK);
+        assert_eq!(
+            0b00000000_00000010_00000000_00000000,
+            weighted.get_rank_flag()
+        );
+        assert_eq!(
+            0b00000000_00000000_00010000_00000000,
+            weighted.get_suit_flag()
+        );
+        assert_eq!("3♣", weighted.to_string());
+    }
+
+    #[test]
+    fn frequency_tripped() {
+        let weighted = Card::TREY_DIAMONDS.frequency_tripped();
+
+        assert_eq!(Card::FREQUENCY_TRIPPED_MASK, weighted.as_u32() & Card::FREQUENCY_TRIPPED_MASK);
+        assert_eq!(
+            0b00000000_00000010_00000000_00000000,
+            weighted.get_rank_flag()
+        );
+        assert_eq!(
+            0b00000000_00000000_00100000_00000000,
+            weighted.get_suit_flag()
+        );
+        assert_eq!("3♦", weighted.to_string());
+    }
+
+    #[test]
+    fn frequency_quaded() {
+        let weighted = Card::TREY_HEARTS.frequency_quaded();
+
+        assert_eq!(Card::FREQUENCY_QUADED_MASK, weighted.as_u32() & Card::FREQUENCY_QUADED_MASK);
+        assert_eq!(
+            0b00000000_00000010_00000000_00000000,
+            weighted.get_rank_flag()
+        );
+        assert_eq!(
+            0b00000000_00000000_01000000_00000000,
+            weighted.get_suit_flag()
+        );
+        assert_eq!("3♥", weighted.to_string());
+    }
+
+    #[test]
     fn get_rank() {
         let card = Card::ACE_CLUBS;
         assert_eq!(0b00010000_00000000_00000000_00000000, card.get_rank_flag());
@@ -330,6 +401,25 @@ mod card_tests {
         assert_eq!(0b00000000_00000001_00000000_00000000, card.get_rank_flag());
         assert_eq!(Rank::DEUCE, card.get_rank());
         assert_eq!(Rank::DEUCE.prime(), card.get_rank_prime());
+    }
+
+    #[test]
+    fn get_rank_flag__frequency_weighted() {
+        let card = Card::TREY_CLUBS;
+
+        let weighted = card.frequency_paired();
+
+        println!("{:#032b}", weighted.get_rank_flag());
+        println!("{:#032b}", card.get_rank_flag());
+        assert_eq!(
+            0b00000000_00000010_00000000_00000000,
+            weighted.get_rank_flag()
+        );
+        assert_eq!(
+            0b00000000_00000010_00000000_00000000,
+            weighted.get_rank_flag()
+        );
+        assert_eq!("3♣", weighted.to_string());
     }
 
     #[test]
