@@ -313,6 +313,9 @@
             * Card frequency flags
               * Card.frequency_paired()
               * Card.frequency_tripped()
+            * Cards.map_by_rank()
+              * impl indexmap::set::IntoIter for Cards (needs to be indexmap::set::IntoIter not std::vec::IntoIter)
+                * impl From<Vec<&Card>> for Cards
       * PHASE 2.2: Display winning percentages 
         * Introducing [Win Counter](https://github.com/ContractBridge/wincounter)
 

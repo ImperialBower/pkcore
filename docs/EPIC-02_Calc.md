@@ -75,3 +75,47 @@ Command:
 
 
 ## Calculating Odds at Flop
+
+## PHASE 2.1/DEFECT DETOUR
+
+We want to display the five card hand with the winning parts first.
+For that we'll need to add frequency bits to the hand and then map them.
+
+### Cards.map_by_rank()
+
+```
+fn map_by_rank(&self) -> HashMap<Rank, Cards> {
+    let mut mappie: HashMap<Rank, Cards> = HashMap::new();
+    for rank in Rank::iter() {
+        let pile: Vec<Card> = self.iter().map(|c| *c).filter(|card| card.get_rank() == rank).collect();
+        mappie.insert(rank, Cards::from(pile));
+    }
+    mappie
+}
+```
+
+This generates the following clippy warning:
+
+```
+warning: you are using an explicit closure for copying elements
+   --> src/cards.rs:120:35
+    |
+120 |             let pile: Vec<Card> = self.iter().map(|c| *c).filter(|card| card.get_rank() == rank).collect();
+    |                                   ^^^^^^^^^^^^^^^^^^^^^^^ help: consider calling the dedicated `copied` method: `self.iter().copied()`
+    |
+    = note: `#[warn(clippy::map_clone)]` on by default
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#map_clone
+```
+
+Don't you love Rust? This fixes it, just like the compiler said:
+
+```
+fn map_by_rank(&self) -> HashMap<Rank, Cards> {
+    let mut mappie: HashMap<Rank, Cards> = HashMap::new();
+    for rank in Rank::iter() {
+        let pile: Vec<Card> = self.iter().copied().filter(|card| card.get_rank() == rank).collect();
+        mappie.insert(rank, Cards::from(pile));
+    }
+    mappie
+}
+```

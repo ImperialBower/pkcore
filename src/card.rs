@@ -151,6 +151,8 @@ impl Card {
     }
 
     /// Returns a new version of `Card` with the quaded frequency bit set.
+    ///
+    /// Quaded??!!
     #[must_use]
     pub fn frequency_quaded(&self) -> Card {
         Card(self.0 | Card::FREQUENCY_QUADED_MASK)
@@ -303,7 +305,10 @@ mod card_tests {
     fn frequency_paired() {
         let weighted = Card::TREY_CLUBS.frequency_paired();
 
-        assert_eq!(Card::FREQUENCY_PAIRED_MASK, weighted.as_u32() & Card::FREQUENCY_PAIRED_MASK);
+        assert_eq!(
+            Card::FREQUENCY_PAIRED_MASK,
+            weighted.as_u32() & Card::FREQUENCY_PAIRED_MASK
+        );
         assert_eq!(
             0b00000000_00000010_00000000_00000000,
             weighted.get_rank_flag()
@@ -319,7 +324,10 @@ mod card_tests {
     fn frequency_tripped() {
         let weighted = Card::TREY_DIAMONDS.frequency_tripped();
 
-        assert_eq!(Card::FREQUENCY_TRIPPED_MASK, weighted.as_u32() & Card::FREQUENCY_TRIPPED_MASK);
+        assert_eq!(
+            Card::FREQUENCY_TRIPPED_MASK,
+            weighted.as_u32() & Card::FREQUENCY_TRIPPED_MASK
+        );
         assert_eq!(
             0b00000000_00000010_00000000_00000000,
             weighted.get_rank_flag()
@@ -335,7 +343,10 @@ mod card_tests {
     fn frequency_quaded() {
         let weighted = Card::TREY_HEARTS.frequency_quaded();
 
-        assert_eq!(Card::FREQUENCY_QUADED_MASK, weighted.as_u32() & Card::FREQUENCY_QUADED_MASK);
+        assert_eq!(
+            Card::FREQUENCY_QUADED_MASK,
+            weighted.as_u32() & Card::FREQUENCY_QUADED_MASK
+        );
         assert_eq!(
             0b00000000_00000010_00000000_00000000,
             weighted.get_rank_flag()

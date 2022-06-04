@@ -1,10 +1,12 @@
 use crate::arrays::five::Five;
 use crate::card::Card;
 use crate::card_number::CardNumber;
+use crate::rank::Rank;
 use crate::{PKError, SOK};
 use indexmap::set::Iter;
 use indexmap::IndexSet;
 use itertools::{Combinations, Itertools};
+use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
@@ -109,6 +111,23 @@ impl Cards {
         self.0.sort();
         self.0.reverse();
     }
+
+    //region private functions
+
+    fn map_by_rank(&self) -> HashMap<Rank, Cards> {
+        let mut mappie: HashMap<Rank, Cards> = HashMap::new();
+        for rank in Rank::iter() {
+            let pile: Vec<Card> = self.iter().copied().filter(|card| card.get_rank() == rank).collect();
+            mappie.insert(rank, Cards::from(pile));
+        }
+        mappie
+    }
+
+    // pub fn frequency_weight(&self) -> Cards {
+    //
+    // }
+
+    //endregion
 }
 
 impl fmt::Display for Cards {
@@ -143,6 +162,21 @@ impl From<Vec<Card>> for Cards {
     }
 }
 
+impl From<Vec<&Card>> for Cards {
+    fn from(v: Vec<&Card>) -> Self {
+        // TODO RF: Hack :-P
+        let filtered = v.iter().filter_map(|c| {
+            let pc = **c;
+            if pc.is_blank() {
+                None
+            } else {
+                Some(pc)
+            }
+        });
+        Cards(filtered.collect())
+    }
+}
+
 impl FromStr for Cards {
     type Err = PKError;
 
@@ -160,6 +194,15 @@ impl FromStr for Cards {
         } else {
             Ok(cards)
         }
+    }
+}
+
+impl IntoIterator for Cards {
+    type Item = Card;
+    type IntoIter = indexmap::set::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
@@ -327,7 +370,23 @@ mod card_tests {
         assert_eq!("A♣ 5♣ 4♣ 3♣ 2♣", wheel.to_string());
     }
 
-    // Traits
+    //region private function tests
+
+    #[test]
+    fn map_by_rank() {
+        let cards = Cards::from_str("A♠ T♠ 9♠ 8♠ T♥").unwrap();
+
+        let mappie = cards.map_by_rank();
+
+        assert_eq!(2, mappie.get(&Rank::TEN).unwrap().len());
+        assert_eq!(1, mappie.get(&Rank::ACE).unwrap().len());
+        assert_eq!(1, mappie.get(&Rank::NINE).unwrap().len());
+        assert_eq!(1, mappie.get(&Rank::EIGHT).unwrap().len());
+    }
+
+    //endregion
+
+    //region trait tests
 
     #[test]
     fn display() {
@@ -370,4 +429,5 @@ mod card_tests {
 
         cards
     }
+    //endregion
 }
