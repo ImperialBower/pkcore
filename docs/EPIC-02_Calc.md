@@ -119,3 +119,21 @@ fn map_by_rank(&self) -> HashMap<Rank, Cards> {
     mappie
 }
 ```
+
+### Cards.flag_
+
+Now we are entering into some dark magic coding. It's hacky and clunky, but for
+now, I really don't care. I just want to see a hand sorted with the winning
+cards first.
+
+#### REFACTOR: Delete is_flagged_ methods and just use .is_flagged()
+
+One of the things that I tend to do when I code is overthink things. I code
+like a Java developer. I add accessors to everything. This refactoring is 
+me getting sick of my own code. ENOUGH! Just have a simple fn that tells you
+if a mask is there and be done with it. 
+
+One could make a further refactoring argument that this is just insulating
+devs from basic bitwise operations, and I'm fine with that. I really don't want 
+have to code `(self.as_u32() & 0bYADAYADA) == 0bYADAYADA` over and over again.
+Thus `Card.is_flagged() it is.`

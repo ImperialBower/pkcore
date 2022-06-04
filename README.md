@@ -316,6 +316,9 @@
             * Cards.map_by_rank()
               * impl indexmap::set::IntoIter for Cards (needs to be indexmap::set::IntoIter not std::vec::IntoIter)
                 * impl From<Vec<&Card>> for Cards
+              * Card.is_flagged_ ... (Used to filter cards)
+                * REFACTOR: Card.is_flagged()
+                  * REFACTOR: Delete is_flagged_ methods and just use .is_flagged()
       * PHASE 2.2: Display winning percentages 
         * Introducing [Win Counter](https://github.com/ContractBridge/wincounter)
 

@@ -117,10 +117,18 @@ impl Cards {
     fn map_by_rank(&self) -> HashMap<Rank, Cards> {
         let mut mappie: HashMap<Rank, Cards> = HashMap::new();
         for rank in Rank::iter() {
-            let pile: Vec<Card> = self.iter().copied().filter(|card| card.get_rank() == rank).collect();
+            let pile: Vec<Card> = self
+                .iter()
+                .copied()
+                .filter(|card| card.get_rank() == rank)
+                .collect();
             mappie.insert(rank, Cards::from(pile));
         }
         mappie
+    }
+
+    fn flag_paired(&self) -> Cards {
+        Cards::from(self.iter().map(Card::frequency_paired).collect::<Vec<_>>())
     }
 
     // pub fn frequency_weight(&self) -> Cards {

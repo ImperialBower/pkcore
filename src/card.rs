@@ -138,6 +138,8 @@ impl Card {
         }
     }
 
+    //region frequency methods
+
     /// Returns a new version of `Card` with the paired frequency bit set.
     #[must_use]
     pub fn frequency_paired(&self) -> Card {
@@ -157,6 +159,8 @@ impl Card {
     pub fn frequency_quaded(&self) -> Card {
         Card(self.0 | Card::FREQUENCY_QUADED_MASK)
     }
+
+    //endregion
 
     #[must_use]
     pub fn get_letter_index(&self) -> String {
@@ -222,6 +226,11 @@ impl Card {
     #[must_use]
     pub fn is_blank(&self) -> bool {
         self.0 == Card::BLANK_NUMBER
+    }
+
+    #[must_use]
+    pub fn is_flagged(&self, flag: u32) -> bool {
+        (self.as_u32() & flag) == flag
     }
 }
 
@@ -305,10 +314,7 @@ mod card_tests {
     fn frequency_paired() {
         let weighted = Card::TREY_CLUBS.frequency_paired();
 
-        assert_eq!(
-            Card::FREQUENCY_PAIRED_MASK,
-            weighted.as_u32() & Card::FREQUENCY_PAIRED_MASK
-        );
+        assert!(weighted.is_flagged(Card::FREQUENCY_PAIRED_MASK));
         assert_eq!(
             0b00000000_00000010_00000000_00000000,
             weighted.get_rank_flag()
@@ -324,10 +330,7 @@ mod card_tests {
     fn frequency_tripped() {
         let weighted = Card::TREY_DIAMONDS.frequency_tripped();
 
-        assert_eq!(
-            Card::FREQUENCY_TRIPPED_MASK,
-            weighted.as_u32() & Card::FREQUENCY_TRIPPED_MASK
-        );
+        assert!(weighted.is_flagged(Card::FREQUENCY_TRIPPED_MASK));
         assert_eq!(
             0b00000000_00000010_00000000_00000000,
             weighted.get_rank_flag()
@@ -343,10 +346,7 @@ mod card_tests {
     fn frequency_quaded() {
         let weighted = Card::TREY_HEARTS.frequency_quaded();
 
-        assert_eq!(
-            Card::FREQUENCY_QUADED_MASK,
-            weighted.as_u32() & Card::FREQUENCY_QUADED_MASK
-        );
+        assert!(weighted.is_flagged(Card::FREQUENCY_QUADED_MASK));
         assert_eq!(
             0b00000000_00000010_00000000_00000000,
             weighted.get_rank_flag()
