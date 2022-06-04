@@ -114,6 +114,21 @@ impl Cards {
 
     //region private functions
 
+    /// Sets the card's paired bit to true for all cards in the collection.
+    fn flag_paired(&self) -> Cards {
+        Cards::from(self.iter().map(Card::frequency_paired).collect::<Vec<_>>())
+    }
+
+    /// Sets the card's tripped bit to true for all cards in the collection.
+    fn flag_tripped(&self) -> Cards {
+        Cards::from(self.iter().map(Card::frequency_tripped).collect::<Vec<_>>())
+    }
+
+    /// Sets the card's quaded bit to true for all cards in the collection.
+    fn flag_quaded(&self) -> Cards {
+        Cards::from(self.iter().map(Card::frequency_quaded).collect::<Vec<_>>())
+    }
+
     fn map_by_rank(&self) -> HashMap<Rank, Cards> {
         let mut mappie: HashMap<Rank, Cards> = HashMap::new();
         for rank in Rank::iter() {
@@ -125,10 +140,6 @@ impl Cards {
             mappie.insert(rank, Cards::from(pile));
         }
         mappie
-    }
-
-    fn flag_paired(&self) -> Cards {
-        Cards::from(self.iter().map(Card::frequency_paired).collect::<Vec<_>>())
     }
 
     // pub fn frequency_weight(&self) -> Cards {
@@ -379,6 +390,63 @@ mod card_tests {
     }
 
     //region private function tests
+
+    #[test]
+    fn flag_paired() {
+        let mut cards = Cards::from_str("T♠ T♥").unwrap().flag_paired();
+
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_PAIRED_MASK));
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_PAIRED_MASK));
+        assert!(!Cards::from_str("T♠")
+            .unwrap()
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_PAIRED_MASK));
+    }
+
+    #[test]
+    fn flag_tripped() {
+        let mut cards = Cards::from_str("T♠ T♥ T♦").unwrap().flag_tripped();
+
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+        assert!(!Cards::from_str("T♠")
+            .unwrap()
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+    }
+
+    #[test]
+    fn flag_quaded() {
+        let mut cards = Cards::from_str("T♠ T♥ T♦ T♣").unwrap().flag_quaded();
+
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_QUADED_MASK));
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_QUADED_MASK));
+        assert!(!Cards::from_str("T♠")
+            .unwrap()
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_QUADED_MASK));
+    }
 
     #[test]
     fn map_by_rank() {

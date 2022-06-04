@@ -137,3 +137,14 @@ One could make a further refactoring argument that this is just insulating
 devs from basic bitwise operations, and I'm fine with that. I really don't want 
 have to code `(self.as_u32() & 0bYADAYADA) == 0bYADAYADA` over and over again.
 Thus `Card.is_flagged() it is.`
+
+##### Moral
+
+This is why tech leads and program managers are so important to a project. Coders
+like me can fall down deep rabbit holes trying to bend code to our will, with 
+no perspective on if anyone actually gives a fuck. Yes, it would be nice to have
+`Feature X` but it would be even nicer to still be in business in a month so that
+we can all get paid. When I code for myself I let myself fall into
+Wonderland, but when on the clock, you rarely have the luxury. Things 
+can always be better, faster, prettier, cooler. Push comes to shove, users rarely
+care. They just want it to work. 

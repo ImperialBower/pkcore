@@ -337,3 +337,4 @@
   * [Are we game yet?](https://arewegameyet.rs/)
   * [Are we GUI Yet?](https://www.areweguiyet.com/)
   * [Yew](https://yew.rs/)
+  * [Flowistry: Information Flow for Rust](https://github.com/willcrichton/flowistry)
