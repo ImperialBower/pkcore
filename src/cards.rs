@@ -90,7 +90,7 @@ impl Cards {
     /// driving me out of that place._
     pub fn dump(&self) {
         for card in self.iter() {
-            println!("{} {}\n", card.bit_string(true), card.to_string());
+            println!("{} {}\n", card.bit_string(true), card);
         }
     }
 
@@ -123,15 +123,13 @@ impl Cards {
         let mut cards = Cards::default();
         for rank in mappy.keys() {
             match mappy.get(rank) {
-                None => {},
-                Some(c) => {
-                    match c.len() {
-                        0..=1 => {} ,
-                        2 => cards.add(&c.flag_paired()),
-                        3 => cards.add(&c.flag_tripped()),
-                        _ => cards.add(&c.flag_quaded()),
-                    }
-                }
+                None => {}
+                Some(c) => match c.len() {
+                    0..=1 => {}
+                    2 => cards.add(&c.flag_paired()),
+                    3 => cards.add(&c.flag_tripped()),
+                    _ => cards.add(&c.flag_quaded()),
+                },
             }
         }
         cards
@@ -472,11 +470,26 @@ mod card_tests {
         cards.dump();
         println!("{:?}", cards);
 
-        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_TRIPPED_MASK));
-        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_TRIPPED_MASK));
-        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_TRIPPED_MASK));
-        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_PAIRED_MASK));
-        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_PAIRED_MASK));
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_PAIRED_MASK));
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_PAIRED_MASK));
     }
 
     #[test]

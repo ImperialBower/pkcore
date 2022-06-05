@@ -123,9 +123,9 @@ impl Card {
         let b = format!("{:b}", self.0);
         let mut bit_string = String::with_capacity(35);
         // if b.len() < 32 {
-            bit_string.push('0');
-            bit_string.push('0');
-            bit_string.push('0');
+        bit_string.push('0');
+        bit_string.push('0');
+        bit_string.push('0');
         // }
         for (i, c) in b.chars().enumerate() {
             bit_string.push(c);
