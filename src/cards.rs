@@ -30,6 +30,12 @@ impl Cards {
         cards
     }
 
+    pub fn add(&mut self, cards: &Cards) {
+        for card in cards.iter() {
+            self.insert(*card);
+        }
+    }
+
     pub fn combinations(&self, k: usize) -> Combinations<indexmap::set::IntoIter<Card>> {
         self.0.clone().into_iter().combinations(k)
     }
@@ -64,6 +70,65 @@ impl Cards {
         } else {
             Ok(Cards(self.0.drain(l - number..l).collect()))
         }
+    }
+
+    /// One of the big problems with our Card data type is that it's just a binary number
+    /// so it's hard to figure out what's going on with it. To help deal with this I try to
+    /// add some methods just to help out with debugging.
+    ///
+    /// Later on, we might be able to use this for logging as a part of a larger system. Right now
+    /// we're using println!, which is in itself a kind of technical debt. Usually, when I reach
+    /// a point in a library where I think it's about ready to integrate into the larger crate
+    /// community, I will search these out and replace them with actually log statements. For now
+    /// though, I don't want to deal with it. Do what you can. Take your time. Perfection is a goal;
+    /// never a reality.
+    pub fn dump(&self) {
+        for card in self.iter() {
+            println!("{} {}\n", card.bit_string(true), card.to_string());
+        }
+    }
+
+    /// Sets the card's paired bit to true for all cards in the collection.
+    #[must_use]
+    pub fn flag_paired(&self) -> Cards {
+        Cards::from(self.iter().map(Card::frequency_paired).collect::<Vec<_>>())
+    }
+
+    /// Sets the card's tripped bit to true for all cards in the collection.
+    #[must_use]
+    pub fn flag_tripped(&self) -> Cards {
+        Cards::from(self.iter().map(Card::frequency_tripped).collect::<Vec<_>>())
+    }
+
+    /// Sets the card's quaded bit to true for all cards in the collection.
+    #[must_use]
+    pub fn flag_quaded(&self) -> Cards {
+        Cards::from(self.iter().map(Card::frequency_quaded).collect::<Vec<_>>())
+    }
+
+    /// This function is most likely going to be a shit show. I could just cast everything over
+    /// to my [cardpack.rs](https://github.com/ContractBridge/cardpack.rs) library where this is
+    /// [already solved](https://github.com/ContractBridge/cardpack.rs/blob/main/src/cards/pile.rs#L448),
+    /// but I'm trying to keep this library as dependency clean as possible. Plus, how can I
+    /// refactor something if I just pass the work onto a library where that won't work?
+    #[must_use]
+    pub fn frequency_weighted(&self) -> Cards {
+        let mappy = self.map_by_rank();
+        let mut cards = Cards::default();
+        for rank in mappy.keys() {
+            match mappy.get(rank) {
+                None => {},
+                Some(c) => {
+                    match c.len() {
+                        0..=1 => {} ,
+                        2 => cards.add(&c.flag_paired()),
+                        3 => cards.add(&c.flag_tripped()),
+                        _ => cards.add(&c.flag_quaded()),
+                    }
+                }
+            }
+        }
+        cards
     }
 
     #[must_use]
@@ -114,35 +179,20 @@ impl Cards {
 
     //region private functions
 
-    /// Sets the card's paired bit to true for all cards in the collection.
-    fn flag_paired(&self) -> Cards {
-        Cards::from(self.iter().map(Card::frequency_paired).collect::<Vec<_>>())
-    }
-
-    /// Sets the card's tripped bit to true for all cards in the collection.
-    fn flag_tripped(&self) -> Cards {
-        Cards::from(self.iter().map(Card::frequency_tripped).collect::<Vec<_>>())
-    }
-
-    /// Sets the card's quaded bit to true for all cards in the collection.
-    fn flag_quaded(&self) -> Cards {
-        Cards::from(self.iter().map(Card::frequency_quaded).collect::<Vec<_>>())
-    }
-
     fn map_by_rank(&self) -> HashMap<Rank, Cards> {
-        /// Why is this variable called mappy? Now that is a long and winding tale.
-        /// Many, many years ago, when I was in middle schoole in AF, me and my friends would
-        /// Play D&D, eat Georgio's pizza, and play video games at an ice cream show. The two
-        /// games they had were [Mr. Do!](https://en.wikipedia.org/wiki/Mr._Do!) and
-        /// [Mappy](https://en.wikipedia.org/wiki/Mappy). In honor of this nostalgia I try to
-        /// name any private variables of hashmaps after the mouse plagued police cat. _Aside:
-        /// Everytime [Wil Wheaton posts about his Mr. Do! machine](https://wilwheaton.net/2019/02/)
-        /// I let out a [Sheldonesque WHEATON!!!!](https://www.youtube.com/watch?v=bUWXjs2jPQI)
-        /// inside._
-        ///
-        /// BTW, if you are ever in the sunset district of SF, checkout Georgio's for dinner and
-        /// then stop by Toy Boat ice cream for dessert. No, they're not the shop with the
-        /// video games, which closed a while ago, but they are great.
+        // Why is this variable called mappy? Now that is a long and winding tale.
+        // Many, many years ago, when I was in middle schoole in AF, me and my friends would
+        // Play D&D, eat Georgio's pizza, and play video games at an ice cream show. The two
+        // games they had were [Mr. Do!](https://en.wikipedia.org/wiki/Mr._Do!) and
+        // [Mappy](https://en.wikipedia.org/wiki/Mappy). In honor of this nostalgia I try to
+        // name any private variables of hashmaps after the mouse plagued police cat. _Aside:
+        // Everytime [Wil Wheaton posts about his Mr. Do! machine](https://wilwheaton.net/2019/02/)
+        // I let out a [Sheldonesque WHEATON!!!!](https://www.youtube.com/watch?v=bUWXjs2jPQI)
+        // inside._
+        //
+        // BTW, if you are ever in the sunset district of SF, checkout Georgio's for dinner and
+        // then stop by Toy Boat ice cream for dessert. No, they're not the shop with the
+        // video games, which closed a while ago, but they are great.
         let mut mappy: HashMap<Rank, Cards> = HashMap::new();
         for rank in Rank::iter() {
             let pile: Vec<Card> = self
@@ -153,19 +203,6 @@ impl Cards {
             mappy.insert(rank, Cards::from(pile));
         }
         mappy
-    }
-
-    /// This function is most likely going to be a shit show. I could just cast everything over
-    /// to my [cardpack.rs](https://github.com/ContractBridge/cardpack.rs) library where this is
-    /// [already solved](https://github.com/ContractBridge/cardpack.rs/blob/main/src/cards/pile.rs#L448),
-    /// but I'm trying to keep this library as dependency clean as possible. Plus, how can I
-    /// refactor something if I just pass the work onto a library where that won't work?
-    pub fn frequency_weighted(&self) -> Cards {
-        let mappy = self.map_by_rank();
-        for rank in mappy.keys() {
-            let cards = mappy.get(rank).unwrap();
-        }
-        Cards::default()
     }
 
     //endregion
@@ -293,6 +330,15 @@ mod card_tests {
     }
 
     #[test]
+    fn add() {
+        let mut pile = Cards::from_str("5♣ 4♣").unwrap();
+
+        pile.add(&Cards::from_str("3♣ 2♣ A♣").unwrap());
+
+        assert_eq!(Cards::from_str("5♣ 4♣ 3♣ 2♣ A♣").unwrap(), pile);
+    }
+
+    #[test]
     fn combinations() {
         assert_eq!(1_326, Cards::deck().combinations(2).count());
         assert_eq!(2_598_960, Cards::deck().combinations(5).count());
@@ -355,6 +401,79 @@ mod card_tests {
     }
 
     #[test]
+    fn flag_paired() {
+        let mut cards = Cards::from_str("T♠ T♥").unwrap().flag_paired();
+
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_PAIRED_MASK));
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_PAIRED_MASK));
+        assert!(!Cards::from_str("T♠")
+            .unwrap()
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_PAIRED_MASK));
+    }
+
+    #[test]
+    fn flag_tripped() {
+        let mut cards = Cards::from_str("T♠ T♥ T♦").unwrap().flag_tripped();
+
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+        assert!(!Cards::from_str("T♠")
+            .unwrap()
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+    }
+
+    #[test]
+    fn flag_quaded() {
+        let mut cards = Cards::from_str("T♠ T♥ T♦ T♣").unwrap().flag_quaded();
+
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_QUADED_MASK));
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_QUADED_MASK));
+        assert!(!Cards::from_str("T♠")
+            .unwrap()
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_QUADED_MASK));
+    }
+
+    #[test]
+    fn frequency_weighted() {
+        let cards = Cards::from_str("T♠ T♥ T♦ 9♠ 9♥").unwrap();
+        cards.dump();
+        println!("{:?}", cards);
+        let mut cards = cards.frequency_weighted();
+        cards.dump();
+        println!("{:?}", cards);
+
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_PAIRED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_PAIRED_MASK));
+    }
+
+    #[test]
     fn get_index() {
         let cards = wheel();
 
@@ -412,63 +531,6 @@ mod card_tests {
     }
 
     //region private function tests
-
-    #[test]
-    fn flag_paired() {
-        let mut cards = Cards::from_str("T♠ T♥").unwrap().flag_paired();
-
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_PAIRED_MASK));
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_PAIRED_MASK));
-        assert!(!Cards::from_str("T♠")
-            .unwrap()
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_PAIRED_MASK));
-    }
-
-    #[test]
-    fn flag_tripped() {
-        let mut cards = Cards::from_str("T♠ T♥ T♦").unwrap().flag_tripped();
-
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
-        assert!(!Cards::from_str("T♠")
-            .unwrap()
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
-    }
-
-    #[test]
-    fn flag_quaded() {
-        let mut cards = Cards::from_str("T♠ T♥ T♦ T♣").unwrap().flag_quaded();
-
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_QUADED_MASK));
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_QUADED_MASK));
-        assert!(!Cards::from_str("T♠")
-            .unwrap()
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_QUADED_MASK));
-    }
 
     #[test]
     fn map_by_rank() {

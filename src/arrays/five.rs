@@ -482,6 +482,17 @@ mod arrays_five_tests {
         assert_eq!(0, Five::default().hand_rank().value());
     }
 
+    #[test]
+    fn hand_rank__frequency_weighted() {
+        let mut cards = Cards::from_str("A♠").unwrap();
+        cards.add(&Cards::from_str("T♠ Q♥ Q♠ T♥").unwrap().flag_paired());
+
+        let hand = Five::try_from(cards).unwrap();
+
+        assert_eq!(2732, hand.hand_rank().value());
+        assert_eq!("Q♠ Q♥ T♠ T♥ A♠", hand.sort().to_string());
+    }
+
     //region Brute Force HandRank tests
     #[rustfmt::skip]
     #[rstest]

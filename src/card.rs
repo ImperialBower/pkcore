@@ -104,7 +104,7 @@ impl Card {
     pub const DEUCE_CLUBS: Card = Card(CardNumber::DeuceClubs as u32);
     pub const BLANK: Card = Card(Card::BLANK_NUMBER);
 
-    const GUIDE: &'static str = "xxxbbbbb bbbbbbbb SHDCrrrr xxpppppp";
+    const GUIDE: &'static str = "xxxAKQJT 98765432 SHDCrrrr xxpppppp";
     //endregion
 
     #[must_use]
@@ -122,9 +122,11 @@ impl Card {
     pub fn bit_string(&self, with_guide: bool) -> String {
         let b = format!("{:b}", self.0);
         let mut bit_string = String::with_capacity(35);
-        bit_string.push('0');
-        bit_string.push('0');
-        bit_string.push('0');
+        // if b.len() < 32 {
+            bit_string.push('0');
+            bit_string.push('0');
+            bit_string.push('0');
+        // }
         for (i, c) in b.chars().enumerate() {
             bit_string.push(c);
             if i % 8 == 4 && i % 32 != 28 {

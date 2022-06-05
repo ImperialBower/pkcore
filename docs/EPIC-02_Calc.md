@@ -151,4 +151,5 @@ care. They just want it to work.
 
 ###### Aside
 
-My favorite example of this was when I was going with 
+My favorite example of this was when I was going with some of my coworkers to
+lunch and one of the starts screaming (Brandon Zeeb and Weibe story at Ford)

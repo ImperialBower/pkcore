@@ -321,6 +321,10 @@
                   * REFACTOR: Delete is_flagged_ methods and just use .is_flagged()
           * Cards.flag_
           * Cards.frequency_weighted()
+            * Cards.add()
+              * Five test effect of adding weighted values on CKC eval
+                * Cards.dump()  debugging helper
+                  * DEFECT FOUND: Issue with Card.bit_string()
       * PHASE 2.2: Display winning percentages 
         * Introducing [Win Counter](https://github.com/ContractBridge/wincounter)
 
