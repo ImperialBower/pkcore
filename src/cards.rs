@@ -82,6 +82,12 @@ impl Cards {
     /// community, I will search these out and replace them with actually log statements. For now
     /// though, I don't want to deal with it. Do what you can. Take your time. Perfection is a goal;
     /// never a reality.
+    ///
+    /// ASIDE: One of the best compliments I ever got from another developer was from the person
+    /// I dislike more than any other in my career. _There was this one guy at a startup who tried
+    /// to forge commands as if he was me from our servers to try to get me fired because I had
+    /// the audacity to call him on his bullshit, but to be honest, he was doing me a favot by
+    /// driving me out of that place._
     pub fn dump(&self) {
         for card in self.iter() {
             println!("{} {}\n", card.bit_string(true), card.to_string());
