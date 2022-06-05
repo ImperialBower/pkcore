@@ -325,6 +325,8 @@
               * Five test effect of adding weighted values on CKC eval
                 * Cards.dump()  debugging helper
                   * DEFECT FOUND: Issue with Card.bit_string()
+          * CLOSE IT OUT
+            * Five #[test] sort__pair()
       * PHASE 2.2: Display winning percentages 
         * Introducing [Win Counter](https://github.com/ContractBridge/wincounter)
 

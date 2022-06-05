@@ -221,11 +221,12 @@ impl HandRanker for Five {
     }
 
     fn sort_in_place(&mut self) {
-        self.0.sort_unstable();
         if self.is_wheel() {
             // Wheel after sort: 2♠ 3♠ 4♠ 5♥ A♠
             // Put the last card Ace into the first slot so that when the hand is reversed it will
-            // be last
+            // be last.
+            // // TODO RF: MEGA Hack :-P
+            self.0.sort_unstable();
             let wheel = [
                 self.fifth(),
                 self.first(),
@@ -234,6 +235,13 @@ impl HandRanker for Five {
                 self.forth(),
             ];
             self.0 = wheel;
+        } else {
+            // TODO RF: Hack :-P
+            self.0 = Five::try_from(Cards::from(*self).frequency_weighted())
+                .unwrap()
+                .to_arr();
+            self.0.sort_unstable();
+            // NOTE: I don't trust this code. When offered a mint, accept it. Write more tests.
         }
         self.0.reverse();
     }
@@ -471,6 +479,74 @@ mod arrays_five_tests {
                 .sort()
                 .to_string()
         );
+    }
+
+    #[test]
+    fn sort__pair() {
+        assert_eq!(
+            "9♠ 9♥ K♠ Q♠ T♠",
+            Five::from_str("K♠ 9♠ 9♥ T♠ Q♠").unwrap().sort().to_string()
+        );
+        assert_eq!(
+            "J♠ J♥ K♠ Q♠ T♠",
+            Five::from_str("K♠ J♠ J♥ T♠ Q♠").unwrap().sort().to_string()
+        );
+        assert_eq!(
+            "A♠ A♥ K♠ Q♠ T♠",
+            Five::from_str("K♠ A♠ A♥ T♠ Q♠").unwrap().sort().to_string()
+        );
+    }
+
+    #[test]
+    fn sort__trips() {
+        assert_eq!(
+            "9♠ 9♥ 9♦ K♠ T♠",
+            Five::from_str("T♠ 9♦ 9♥ K♠ 9♠").unwrap().sort().to_string()
+        );
+        assert_eq!(
+            "J♠ J♥ J♦ Q♠ T♠",
+            Five::from_str("J♦ J♥ T♠ J♠ Q♠").unwrap().sort().to_string()
+        );
+        assert_eq!(
+            "A♠ A♥ A♣ K♠ T♠",
+            Five::from_str("T♠ A♣ A♥ K♠ A♠").unwrap().sort().to_string()
+        );
+    }
+
+    #[test]
+    fn sort__full_house() {
+        assert_eq!(
+            "9♠ 9♥ 9♦ T♠ T♣",
+            Five::from_str("T♣ 9♦ 9♥ T♠ 9♠").unwrap().sort().to_string()
+        );
+        assert_eq!(
+            "J♠ J♥ J♦ T♠ T♦",
+            Five::from_str("J♦ J♥ T♦ J♠ T♠").unwrap().sort().to_string()
+        );
+        assert_eq!(
+            "A♠ A♥ A♣ T♠ T♥",
+            Five::from_str("T♥ A♣ A♥ T♠ A♠").unwrap().sort().to_string()
+        );
+    }
+
+    #[test]
+    fn sort__quads() {
+        assert_eq!(
+            "9♠ 9♥ 9♦ 9♣ T♠",
+            Five::from_str("T♠ 9♦ 9♥ 9♣ 9♠").unwrap().sort().to_string()
+        );
+        assert_eq!(
+            "J♠ J♥ J♦ J♣ Q♣",
+            Five::from_str("J♦ J♥ J♣ J♠ Q♣").unwrap().sort().to_string()
+        );
+        assert_eq!(
+            "A♠ A♥ A♦ A♣ T♠",
+            Five::from_str("T♠ A♣ A♥ A♦ A♠").unwrap().sort().to_string()
+        );
+    }
+
+    #[test]
+    fn sort__wheel() {
         assert_eq!(
             "5♠ 4♠ 3♠ 2♠ A♠",
             Five::from_str("A♠ 5♠ 4♠ 3♠ 2♠").unwrap().sort().to_string()

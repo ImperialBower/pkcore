@@ -119,6 +119,9 @@ impl Cards {
     /// refactor something if I just pass the work onto a library where that won't work?
     ///
     /// DEFECT: In git history original version fucks up on non weighted cards.
+    ///
+    /// The only time this is really needed is to display `Five` so that it sorts based on the
+    /// `HandRank`.
     #[must_use]
     pub fn frequency_weighted(&self) -> Cards {
         let mappy = self.map_by_rank();

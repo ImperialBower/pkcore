@@ -27,6 +27,9 @@ pub enum PKError {
 }
 
 // https://en.wikipedia.org/wiki/Se%C3%B1or_Wences#Catchphrases
+/// The more I think about this, the more I feel like this is me avoiding the best practice
+/// of returning `Result` and `Option`. I'm worried about speed, but that's probably Knuth's
+/// dreaded [premature optimization](http://wiki.c2.com/?PrematureOptimization).
 pub trait SOK {
     fn salright(&self) -> bool;
 }

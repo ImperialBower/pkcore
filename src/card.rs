@@ -122,6 +122,8 @@ impl Card {
     #[must_use]
     pub fn bit_string(&self) -> String {
         let b = format!("{:b}", self.0);
+        // OK, let's take a moment to really stan on the rust std libraries. The fmt
+        // [Fill/Alignment](https://doc.rust-lang.org/std/fmt/#fillalignment) is FIRE!
         let b = format!("{:0>32}", b);
         let mut bit_string = String::with_capacity(34);
 
