@@ -319,6 +319,8 @@
               * Card.is_flagged_ ... (Used to filter cards)
                 * REFACTOR: Card.is_flagged()
                   * REFACTOR: Delete is_flagged_ methods and just use .is_flagged()
+          * Cards.flag_
+          * Cards.frequency_weighted()
       * PHASE 2.2: Display winning percentages 
         * Introducing [Win Counter](https://github.com/ContractBridge/wincounter)
 

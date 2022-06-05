@@ -130,21 +130,43 @@ impl Cards {
     }
 
     fn map_by_rank(&self) -> HashMap<Rank, Cards> {
-        let mut mappie: HashMap<Rank, Cards> = HashMap::new();
+        /// Why is this variable called mappy? Now that is a long and winding tale.
+        /// Many, many years ago, when I was in middle schoole in AF, me and my friends would
+        /// Play D&D, eat Georgio's pizza, and play video games at an ice cream show. The two
+        /// games they had were [Mr. Do!](https://en.wikipedia.org/wiki/Mr._Do!) and
+        /// [Mappy](https://en.wikipedia.org/wiki/Mappy). In honor of this nostalgia I try to
+        /// name any private variables of hashmaps after the mouse plagued police cat. _Aside:
+        /// Everytime [Wil Wheaton posts about his Mr. Do! machine](https://wilwheaton.net/2019/02/)
+        /// I let out a [Sheldonesque WHEATON!!!!](https://www.youtube.com/watch?v=bUWXjs2jPQI)
+        /// inside._
+        ///
+        /// BTW, if you are ever in the sunset district of SF, checkout Georgio's for dinner and
+        /// then stop by Toy Boat ice cream for dessert. No, they're not the shop with the
+        /// video games, which closed a while ago, but they are great.
+        let mut mappy: HashMap<Rank, Cards> = HashMap::new();
         for rank in Rank::iter() {
             let pile: Vec<Card> = self
                 .iter()
                 .copied()
                 .filter(|card| card.get_rank() == rank)
                 .collect();
-            mappie.insert(rank, Cards::from(pile));
+            mappy.insert(rank, Cards::from(pile));
         }
-        mappie
+        mappy
     }
 
-    // pub fn frequency_weight(&self) -> Cards {
-    //
-    // }
+    /// This function is most likely going to be a shit show. I could just cast everything over
+    /// to my [cardpack.rs](https://github.com/ContractBridge/cardpack.rs) library where this is
+    /// [already solved](https://github.com/ContractBridge/cardpack.rs/blob/main/src/cards/pile.rs#L448),
+    /// but I'm trying to keep this library as dependency clean as possible. Plus, how can I
+    /// refactor something if I just pass the work onto a library where that won't work?
+    pub fn frequency_weighted(&self) -> Cards {
+        let mappy = self.map_by_rank();
+        for rank in mappy.keys() {
+            let cards = mappy.get(rank).unwrap();
+        }
+        Cards::default()
+    }
 
     //endregion
 }
