@@ -148,3 +148,7 @@ we can all get paid. When I code for myself I let myself fall into
 Wonderland, but when on the clock, you rarely have the luxury. Things 
 can always be better, faster, prettier, cooler. Push comes to shove, users rarely
 care. They just want it to work. 
+
+###### Aside
+
+My favorite example of this was when I was going with 
