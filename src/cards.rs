@@ -90,7 +90,7 @@ impl Cards {
     /// driving me out of that place._
     pub fn dump(&self) {
         for card in self.iter() {
-            println!("{} {}\n", card.bit_string(true), card);
+            println!("{} {}\n", card.bit_string_guided(), card);
         }
     }
 

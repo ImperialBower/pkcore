@@ -104,7 +104,7 @@ impl Card {
     pub const DEUCE_CLUBS: Card = Card(CardNumber::DeuceClubs as u32);
     pub const BLANK: Card = Card(Card::BLANK_NUMBER);
 
-    const GUIDE: &'static str = "xxxAKQJT 98765432 SHDCrrrr xxpppppp";
+    const GUIDE: &'static str = "xxxAKQJT 98765432 ♠♥♦♣rrrr xxpppppp";
     //endregion
 
     #[must_use]
@@ -119,25 +119,25 @@ impl Card {
     }
 
     #[must_use]
-    pub fn bit_string(&self, with_guide: bool) -> String {
+    pub fn bit_string(&self) -> String {
         let b = format!("{:b}", self.0);
-        let mut bit_string = String::with_capacity(35);
-        // if b.len() < 32 {
-        bit_string.push('0');
-        bit_string.push('0');
-        bit_string.push('0');
-        // }
+        let b = format!("{:0>32}", b);
+        let mut bit_string = String::with_capacity(34);
+
         for (i, c) in b.chars().enumerate() {
             bit_string.push(c);
-            if i % 8 == 4 && i % 32 != 28 {
+            if i % 8 == 7 && i % 31 != 0 {
                 bit_string.push(' ');
             }
         }
-        if with_guide {
-            format!("{}\n{}", Card::GUIDE, bit_string)
-        } else {
-            bit_string
-        }
+        bit_string
+    }
+
+    /// This code is doing too much. I need to Uncle Bob it. Aside on why I am giving up
+    /// that phrase.
+    #[must_use]
+    pub fn bit_string_guided(&self) -> String {
+        format!("{}\n{}", Card::GUIDE, self.bit_string())
     }
 
     //region frequency methods
@@ -301,14 +301,28 @@ mod card_tests {
     }
 
     #[test]
+    fn binary_string() {
+        let expected = "00000001 00000000 10001000 00010111";
+        let card = Card::from_str("T♠").unwrap();
+
+        println!("{:b}", card.as_u32());
+
+        assert_eq!(expected, card.bit_string());
+    }
+
+    #[test]
     fn bit_string() {
         assert_eq!(
             "00010000 00000000 10001100 00101001",
-            Card::ACE_SPADES.bit_string(false)
+            Card::ACE_SPADES.bit_string()
         );
+    }
+
+    #[test]
+    fn bit_string_guided() {
         assert_eq!(
-            "xxxbbbbb bbbbbbbb SHDCrrrr xxpppppp\n00010000 00000000 10001100 00101001",
-            Card::ACE_SPADES.bit_string(true)
+            "xxxAKQJT 98765432 ♠♥♦♣rrrr xxpppppp\n00010000 00000000 10001100 00101001",
+            Card::ACE_SPADES.bit_string_guided()
         );
     }
 
