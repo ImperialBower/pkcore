@@ -117,6 +117,8 @@ impl Cards {
     /// [already solved](https://github.com/ContractBridge/cardpack.rs/blob/main/src/cards/pile.rs#L448),
     /// but I'm trying to keep this library as dependency clean as possible. Plus, how can I
     /// refactor something if I just pass the work onto a library where that won't work?
+    ///
+    /// DEFECT: In git history original version fucks up on non weighted cards.
     #[must_use]
     pub fn frequency_weighted(&self) -> Cards {
         let mappy = self.map_by_rank();
@@ -125,14 +127,15 @@ impl Cards {
             match mappy.get(rank) {
                 None => {}
                 Some(c) => match c.len() {
-                    0..=1 => {}
+                    0 => {}
+                    1 => cards.add(c),
                     2 => cards.add(&c.flag_paired()),
                     3 => cards.add(&c.flag_tripped()),
                     _ => cards.add(&c.flag_quaded()),
                 },
             }
         }
-        cards
+        cards.sort()
     }
 
     #[must_use]
@@ -302,24 +305,6 @@ impl TryFrom<Card> for Cards {
     }
 }
 
-/// Is this overthinking?
-// impl TryFrom<Five> for Cards {
-//     type Error = PKError;
-//
-//     /// The contract for arrays is that they have to not be blank.
-//     fn try_from(five: Five) -> Result<Self, Self::Error> {
-//         let mut cards = Cards::default();
-//
-//         // TODO RF - Has to be a better way
-//         for card in five.to_arr() {
-//             if !cards.insert(card) {
-//                 return Err(PKError::BlankCard);
-//             }
-//         }
-//         Ok(cards)
-//     }
-// }
-
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod card_tests {
@@ -464,11 +449,8 @@ mod card_tests {
     #[test]
     fn frequency_weighted() {
         let cards = Cards::from_str("T♠ T♥ T♦ 9♠ 9♥").unwrap();
-        cards.dump();
-        println!("{:?}", cards);
+
         let mut cards = cards.frequency_weighted();
-        cards.dump();
-        println!("{:?}", cards);
 
         assert!(cards
             .draw_one()
@@ -490,6 +472,32 @@ mod card_tests {
             .draw_one()
             .unwrap()
             .is_flagged(Card::FREQUENCY_PAIRED_MASK));
+    }
+
+    #[test]
+    fn frequency_weighted_quads() {
+        let cards = Cards::from_str("T♠ T♥ T♦ T♣ 9♥").unwrap();
+
+        let mut cards = cards.frequency_weighted();
+
+        assert_eq!(5, cards.len());
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_QUADED_MASK));
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_QUADED_MASK));
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_QUADED_MASK));
+        assert!(cards
+            .draw_one()
+            .unwrap()
+            .is_flagged(Card::FREQUENCY_QUADED_MASK));
+        assert!(!cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_MASK));
     }
 
     #[test]
