@@ -14,6 +14,7 @@ exclude = [".github/workflows/*", "examples/*", ".gitignore", "Cargo.lock"]
 indexmap = "1.8.1"
 itertools = "0.10.3"
 log = "0.4"
+rand = "0.8.5"
 serde = { version = "1.0.136", features = ["derive"] }
 strum = { version = "0.24", features = ["derive"] }
 wincounter = "0.1.1"

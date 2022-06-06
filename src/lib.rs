@@ -10,6 +10,7 @@ mod lookups;
 pub mod play;
 pub mod rank;
 pub mod suit;
+pub mod util;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum PKError {

@@ -30,6 +30,19 @@ impl Cards {
         cards
     }
 
+    /// TODO RF: :-P
+    #[must_use]
+    pub fn deck_minus(cards: &Cards) -> Cards {
+        let mut minus = Cards::default();
+        let deck = Cards::deck();
+        for card in deck.iter() {
+            if cards.get(card).is_none() {
+                minus.insert(*card);
+            }
+        }
+        minus
+    }
+
     pub fn add(&mut self, cards: &Cards) {
         for card in cards.iter() {
             self.insert(*card);
@@ -139,6 +152,11 @@ impl Cards {
             }
         }
         cards.sort()
+    }
+
+    #[must_use]
+    pub fn get(&self, card: &Card) -> Option<&Card> {
+        self.0.get(card)
     }
 
     #[must_use]
@@ -319,6 +337,15 @@ mod card_tests {
 
         assert_eq!(deck.len(), 52);
         assert_eq!(deck.to_string(), "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣");
+    }
+
+    #[test]
+    fn deck_minus() {
+        let cards = Cards::from_str("Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣").unwrap();
+
+        let minus = Cards::deck_minus(&cards);
+
+        assert_eq!("A♠ K♠", minus.to_string());
     }
 
     #[test]
@@ -504,14 +531,22 @@ mod card_tests {
     }
 
     #[test]
+    fn get() {
+        let cards = wheel();
+
+        assert_eq!(cards.get(&Card::FIVE_CLUBS).unwrap(), &Card::FIVE_CLUBS);
+        assert!(cards.get(&Card::FIVE_DIAMONDS).is_none());
+    }
+
+    #[test]
     fn get_index() {
         let cards = wheel();
 
-        assert_eq!(cards.get_index(0).unwrap(), &Card::from_str("5c").unwrap());
-        assert_eq!(cards.get_index(1).unwrap(), &Card::from_str("4c").unwrap());
-        assert_eq!(cards.get_index(2).unwrap(), &Card::from_str("3c").unwrap());
-        assert_eq!(cards.get_index(3).unwrap(), &Card::from_str("2c").unwrap());
-        assert_eq!(cards.get_index(4).unwrap(), &Card::from_str("ac").unwrap());
+        assert_eq!(cards.get_index(0).unwrap(), &Card::FIVE_CLUBS);
+        assert_eq!(cards.get_index(1).unwrap(), &Card::FOUR_CLUBS);
+        assert_eq!(cards.get_index(2).unwrap(), &Card::TREY_CLUBS);
+        assert_eq!(cards.get_index(3).unwrap(), &Card::DEUCE_CLUBS);
+        assert_eq!(cards.get_index(4).unwrap(), &Card::ACE_CLUBS);
         assert!(cards.get_index(5).is_none());
     }
 

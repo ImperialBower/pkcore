@@ -329,6 +329,12 @@
             * Five #[test] sort__pair()
       * PHASE 2.2: Display winning percentages 
         * Introducing [Win Counter](https://github.com/ContractBridge/wincounter)
+        * Three all possible at flop
+          * Cards.deck_minus()
+            * Cards.get()
+              * Cards.shuffle() - Want this to harden the unit tests for deck_minus()
+                * util::RandomOrdering
+                  * Add [rand crate](https://crates.io/crates/rand)
 
 
 
