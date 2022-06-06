@@ -2,6 +2,7 @@ use crate::arrays::five::Five;
 use crate::card::Card;
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
+use crate::util::random_ordering::RandomOrdering;
 use crate::{PKError, SOK};
 use indexmap::set::Iter;
 use indexmap::IndexSet;
@@ -21,6 +22,8 @@ use strum::IntoEnumIterator;
 pub struct Cards(IndexSet<Card>);
 
 impl Cards {
+    const NUMBER_OF_SHUFFLES: u8 = 5;
+
     #[must_use]
     pub fn deck() -> Cards {
         let mut cards = Cards::default();
@@ -194,6 +197,20 @@ impl Cards {
     }
 
     #[must_use]
+    pub fn shuffle(&self) -> Cards {
+        let mut shuffled = self.clone();
+        shuffled.shuffle_in_place();
+        shuffled
+    }
+
+    pub fn shuffle_in_place(&mut self) {
+        for _ in 0..Cards::NUMBER_OF_SHUFFLES {
+            self.0
+                .sort_by(|_, _| rand::random::<RandomOrdering>().into());
+        }
+    }
+
+    #[must_use]
     pub fn sort(&self) -> Cards {
         let mut c = self.clone();
         c.sort_in_place();
@@ -341,7 +358,7 @@ mod card_tests {
 
     #[test]
     fn deck_minus() {
-        let cards = Cards::from_str("Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣").unwrap();
+        let cards = Cards::from_str("Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣").unwrap().shuffle();
 
         let minus = Cards::deck_minus(&cards);
 
