@@ -1,7 +1,7 @@
 use crate::arrays::five::Five;
 use crate::play::board::Board;
 use crate::play::hands::Hands;
-use crate::SOK;
+use crate::PKError;
 use std::fmt::{Display, Formatter};
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
@@ -17,25 +17,15 @@ impl Game {
         Game { hands, board }
     }
 
-    #[must_use]
-    pub fn five_at_flop(&self, index: usize) -> Five {
-        let hand = self.hands.get(index);
-        if hand.salright() {
-            Five::from_2and3(hand, self.board.flop)
-        } else {
-            Five::default()
+    /// # Errors
+    ///
+    /// Returns `PKError::Fubar` if invalid index is passed in.
+    pub fn five_at_flop(&self, index: usize) -> Result<Five, PKError> {
+        match self.hands.get(index) {
+            None => Err(PKError::Fubar),
+            Some(two) => Ok(Five::from_2and3(*two, self.board.flop)),
         }
     }
-    //
-    // #[must_use]
-    // pub fn hand_rank_at_flop(&self, hand: usize) -> HandRank {
-    //     let hand = self.hands.get(hand);
-    //     if hand.salright() {
-    //         Five::from_2and3(hand, self.board.flop).hand_rank()
-    //     } else {
-    //         HandRank::default()
-    //     }
-    // }
 }
 
 impl Display for Game {
@@ -74,9 +64,9 @@ mod play_game_tests {
     fn five_at_flop() {
         let game = state();
 
-        assert_eq!(2185, game.five_at_flop(0).hand_rank().value());
-        assert_eq!(2251, game.five_at_flop(1).hand_rank().value());
-        assert_eq!(0, game.five_at_flop(2).hand_rank().value());
+        assert_eq!(2185, game.five_at_flop(0).unwrap().hand_rank().value());
+        assert_eq!(2251, game.five_at_flop(1).unwrap().hand_rank().value());
+        assert!(game.five_at_flop(2).is_err());
     }
 
     #[test]

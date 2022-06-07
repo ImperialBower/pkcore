@@ -335,6 +335,8 @@
               * Cards.shuffle() - Want this to harden the unit tests for deck_minus()
                 * util::RandomOrdering
                   * Add [rand crate](https://crates.io/crates/rand)
+          * REFACTOR: Hands.get() top return Option
+            * REFACTOR: Game.five_at_flop() to return Result<Five, PKError>
 
 
 

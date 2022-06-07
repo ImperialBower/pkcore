@@ -20,11 +20,8 @@ impl Hands {
 
     /// For our get we're going to return a blank `Hand` if the index passed in is too high.
     #[must_use]
-    pub fn get(&self, index: usize) -> Two {
-        match self.0.get(index) {
-            Some(hand) => *hand,
-            None => Two::default(),
-        }
+    pub fn get(&self, index: usize) -> Option<&Two> {
+        self.0.get(index)
     }
 
     pub fn iter(&self) -> Iter<'_, Two> {
@@ -86,20 +83,20 @@ mod play_hands_tests {
         let the_hand = Hands::from_str("6♥ 6♠ 5♦ 5♣").unwrap();
 
         assert_eq!(
-            the_hand.get(0),
+            *the_hand.get(0).unwrap(),
             Two::from([Card::SIX_SPADES, Card::SIX_HEARTS])
         );
         assert_eq!(
-            the_hand.get(1),
+            *the_hand.get(1).unwrap(),
             Two::from([Card::FIVE_DIAMONDS, Card::FIVE_CLUBS])
         );
         // Check it again to make sure that the underlying vec is undamaged.
         assert_eq!(
-            the_hand.get(1),
+            *the_hand.get(1).unwrap(),
             Two::from([Card::FIVE_DIAMONDS, Card::FIVE_CLUBS])
         );
         assert_eq!(the_hand.0.len(), 2);
-        assert_eq!(the_hand.get(2), Two::default());
+        assert!(the_hand.get(2).is_none());
     }
 
     #[test]

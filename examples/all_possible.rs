@@ -5,7 +5,7 @@ use pkcore::cards::Cards;
 /// TODO: Filtering for specific hand types is very slow. There must be a better way??!!!
 /// Hint, there is: `BitCard` is coming.
 fn main() {
-    let deck = Cards::deck();
+    let deck = Cards::deck().shuffle();
 
     let straight_flushes: Vec<Vec<Card>> = deck
         .combinations(5)

@@ -50,7 +50,7 @@ fn main() -> Result<(), PKError> {
             "Player #{} {} - {}",
             i + 1,
             hole_cards,
-            game.five_at_flop(i).hand_rank()
+            game.five_at_flop(i)?.hand_rank()
         );
     }
 
