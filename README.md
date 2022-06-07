@@ -328,6 +328,12 @@
           * CLOSE IT OUT
             * Five #[test] sort__pair()
       * PHASE 2.2: Display winning percentages 
+        * THE PLAN:
+          * Determine all cards in hands and on board at flop.
+          * Get every remaining combination of turn and river cards.
+          * Get HandRank for each hand against possible board.
+          * Add up winning hand
+          * Determine the percentages
         * Introducing [Win Counter](https://github.com/ContractBridge/wincounter)
         * Three all possible at flop
           * Cards.deck_minus()
