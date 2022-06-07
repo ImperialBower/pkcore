@@ -348,9 +348,9 @@
             * impl Calc for Card, Two, Three, Five, Six, Seven, Hands
           * REFACTOR: rename to Pile
           * REFACTOR: add .to_vec to trait
-            * Delete Cards::from<Five>
+            * Delete Cards::from<Five> - No longer needed
             * I really love this refactor. It simplifies all the communication between card collections.
-            * 
+        * Game.remaining_cards_at_flop()
 
 
 

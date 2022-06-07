@@ -1,7 +1,7 @@
 use crate::arrays::five::Five;
 use crate::play::board::Board;
 use crate::play::hands::Hands;
-use crate::PKError;
+use crate::{Cards, PKError, Pile};
 use std::fmt::{Display, Formatter};
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
@@ -25,6 +25,13 @@ impl Game {
             None => Err(PKError::Fubar),
             Some(two) => Ok(Five::from_2and3(*two, self.board.flop)),
         }
+    }
+
+    #[must_use]
+    pub fn remaining_cards_at_flop(&self) -> Cards {
+        let mut cards = self.hands.cards();
+        cards.add(&self.board.flop.cards());
+        Cards::deck_minus(&cards)
     }
 }
 
@@ -67,6 +74,14 @@ mod play_game_tests {
         assert_eq!(2185, game.five_at_flop(0).unwrap().hand_rank().value());
         assert_eq!(2251, game.five_at_flop(1).unwrap().hand_rank().value());
         assert!(game.five_at_flop(2).is_err());
+    }
+
+    #[test]
+    fn remaining_cards_at_flop() {
+        assert_eq!(
+            state().remaining_cards_at_flop().to_string(),
+            "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 4♣ 3♣ 2♣"
+        );
     }
 
     #[test]
