@@ -337,6 +337,13 @@
                   * Add [rand crate](https://crates.io/crates/rand)
           * REFACTOR: Hands.get() top return Option
             * REFACTOR: Game.five_at_flop() to return Result<Five, PKError>
+        * Calc trait - Don't think that I like that name, but it will do for now.
+          * .cards()
+            * impl Calc for Card, Two, Three, Five, Six, Seven, Hands
+          * REFACTOR: rename to Pile
+          * REFACTOR: add .vec to trait
+            * Delete Cards::from<Five>
+            * I really love this refactor. It simplifies all the communication between card collections.
 
 
 

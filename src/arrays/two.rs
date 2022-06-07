@@ -1,6 +1,6 @@
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{PKError, SOK};
+use crate::{PKError, Pile, SOK};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
@@ -47,17 +47,12 @@ impl Two {
     pub fn to_arr(&self) -> [Card; 2] {
         self.0
     }
-
-    #[must_use]
-    pub fn to_vec(&self) -> Vec<Card> {
-        self.0.to_vec()
-    }
     //endregion
 }
 
 impl Display for Two {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", Cards::from(self.to_vec()))
+        write!(f, "{}", self.cards())
     }
 }
 
@@ -72,6 +67,12 @@ impl FromStr for Two {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Two::try_from(Cards::from_str(s)?)
+    }
+}
+
+impl Pile for Two {
+    fn vec(&self) -> Vec<Card> {
+        self.0.to_vec()
     }
 }
 
@@ -187,6 +188,11 @@ mod arrays_two_tests {
             PKError::TooManyCards,
             Two::from_str("AD KD QD").unwrap_err()
         );
+    }
+
+    #[test]
+    fn cards() {
+        assert_eq!("A♦ K♥", Two::from(BIG_SLICK).cards().to_string());
     }
 
     /// DRIVE:

@@ -1,4 +1,3 @@
-use crate::arrays::five::Five;
 use crate::card::Card;
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
@@ -262,12 +261,6 @@ impl fmt::Display for Cards {
             .join(" ");
 
         write!(f, "{}", s)
-    }
-}
-
-impl From<Five> for Cards {
-    fn from(five: Five) -> Self {
-        Cards::from(five.to_vec())
     }
 }
 
@@ -633,15 +626,6 @@ mod card_tests {
     #[test]
     fn display() {
         assert_eq!("5♣ 4♣ 3♣ 2♣ A♣", wheel().to_string());
-    }
-
-    #[test]
-    fn from__five() {
-        assert_eq!(
-            5,
-            Cards::from(Five::from_str("AD KD QD JD TD").unwrap()).len()
-        );
-        assert_eq!(0, Cards::from(Five::default()).len());
     }
 
     #[test]

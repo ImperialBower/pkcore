@@ -1,6 +1,6 @@
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{PKError, SOK};
+use crate::{PKError, Pile, SOK};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
@@ -28,11 +28,6 @@ impl Three {
     pub fn to_arr(&self) -> [Card; 3] {
         self.0
     }
-
-    #[must_use]
-    pub fn to_vec(&self) -> Vec<Card> {
-        self.0.to_vec()
-    }
     //endregion
 }
 
@@ -45,6 +40,12 @@ impl Display for Three {
 impl From<[Card; 3]> for Three {
     fn from(array: [Card; 3]) -> Self {
         Three(array)
+    }
+}
+
+impl Pile for Three {
+    fn vec(&self) -> Vec<Card> {
+        self.0.to_vec()
     }
 }
 
@@ -91,6 +92,11 @@ mod arrays_three_tests {
     #[test]
     fn from__array() {
         assert_eq!(Three(THE_FLOP), Three::from(THE_FLOP));
+    }
+
+    #[test]
+    fn cards() {
+        assert_eq!("9♣ 6♦ 5♥", Three(THE_FLOP).cards().to_string());
     }
 
     /// NOTE: These tests will quickly become out of hand if applied to the larger arrays.

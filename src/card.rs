@@ -4,7 +4,7 @@
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::suit::Suit;
-use crate::{PKError, SOK};
+use crate::{PKError, Pile, SOK};
 use std::fmt;
 use std::str::FromStr;
 
@@ -278,6 +278,12 @@ impl FromStr for Card {
     }
 }
 
+impl Pile for Card {
+    fn vec(&self) -> Vec<Card> {
+        vec![*self]
+    }
+}
+
 impl SOK for Card {
     fn salright(&self) -> bool {
         self.0 != Card::BLANK_NUMBER
@@ -456,6 +462,11 @@ mod card_tests {
     fn is_blank() {
         assert!(Card::BLANK.is_blank());
         assert!(!Card::TREY_CLUBS.is_blank());
+    }
+
+    #[test]
+    fn cards() {
+        assert_eq!("3♣", Card::TREY_CLUBS.cards().to_string());
     }
 
     // NOTE: for this tests I am not being nearly as comprehensive because

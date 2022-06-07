@@ -3,7 +3,7 @@ use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
-use crate::PKError;
+use crate::{PKError, Pile};
 use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
@@ -41,16 +41,11 @@ impl Seven {
     pub fn to_arr(&self) -> [Card; 7] {
         self.0
     }
-
-    #[must_use]
-    pub fn to_vec(&self) -> Vec<Card> {
-        self.0.to_vec()
-    }
 }
 
 impl fmt::Display for Seven {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", Cards::from(self.to_vec()))
+        write!(f, "{}", self.cards())
     }
 }
 
@@ -109,6 +104,12 @@ impl HandRanker for Seven {
     fn sort_in_place(&mut self) {
         self.0.sort_unstable();
         self.0.reverse();
+    }
+}
+
+impl Pile for Seven {
+    fn vec(&self) -> Vec<Card> {
+        self.0.to_vec()
     }
 }
 
@@ -186,6 +187,14 @@ mod arrays_seven_tests {
         assert_eq!(Class::SixHighStraight, hr.class());
         assert_eq!(Name::Straight, hr.name());
         assert_eq!(Five::from_str("6S 5D 4S 3C 2S").unwrap(), best);
+    }
+
+    #[test]
+    fn cards() {
+        assert_eq!(
+            "A♦ 6♠ 4♠ A♠ 5♦ 3♣ 2♠",
+            Seven::from(CARDS).cards().to_string()
+        );
     }
 
     #[test]

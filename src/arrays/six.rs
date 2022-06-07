@@ -3,7 +3,7 @@ use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
-use crate::PKError;
+use crate::{PKError, Pile};
 use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
@@ -57,17 +57,12 @@ impl Six {
     pub fn to_arr(&self) -> [Card; 6] {
         self.0
     }
-
-    #[must_use]
-    pub fn to_vec(&self) -> Vec<Card> {
-        self.0.to_vec()
-    }
     //endregion
 }
 
 impl fmt::Display for Six {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", Cards::from(self.to_vec()))
+        write!(f, "{}", self.cards())
     }
 }
 
@@ -121,6 +116,12 @@ impl HandRanker for Six {
     fn sort_in_place(&mut self) {
         self.0.sort_unstable();
         self.0.reverse();
+    }
+}
+
+impl Pile for Six {
+    fn vec(&self) -> Vec<Card> {
+        self.0.to_vec()
     }
 }
 
@@ -208,6 +209,11 @@ mod arrays_six_tests {
             Six::from_str("Ad 6d 5D 4D 3D 2d").unwrap(),
             Six::from(CARDS).sort()
         );
+    }
+
+    #[test]
+    fn cards() {
+        assert_eq!("A♦ 2♦ 3♦ 4♦ 5♦ 6♦", Six::from(CARDS).cards().to_string());
     }
 
     #[test]

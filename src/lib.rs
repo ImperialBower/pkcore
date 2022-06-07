@@ -1,6 +1,9 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::unreadable_literal)]
 
+use crate::card::Card;
+use crate::cards::Cards;
+
 pub mod arrays;
 pub mod card;
 pub mod card_number;
@@ -25,6 +28,14 @@ pub enum PKError {
     InvalidIndex,
     NotEnoughCards,
     TooManyCards,
+}
+
+pub trait Pile {
+    fn cards(&self) -> Cards {
+        Cards::from(self.vec())
+    }
+
+    fn vec(&self) -> Vec<Card>;
 }
 
 // https://en.wikipedia.org/wiki/Se%C3%B1or_Wences#Catchphrases

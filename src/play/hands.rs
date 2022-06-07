@@ -1,6 +1,6 @@
 use crate::arrays::two::Two;
 use crate::cards::Cards;
-use crate::PKError;
+use crate::{Card, PKError, Pile};
 use itertools::Itertools;
 use std::fmt;
 use std::slice::Iter;
@@ -30,6 +30,17 @@ impl Hands {
 
     pub fn push(&mut self, two: Two) {
         self.0.push(two);
+    }
+}
+
+impl Pile for Hands {
+    fn vec(&self) -> Vec<Card> {
+        let mut v: Vec<Card> = Vec::default();
+        for two in &self.0 {
+            v.push(two.first());
+            v.push(two.second());
+        }
+        v
     }
 }
 
@@ -97,6 +108,14 @@ mod play_hands_tests {
         );
         assert_eq!(the_hand.0.len(), 2);
         assert!(the_hand.get(2).is_none());
+    }
+
+    #[test]
+    fn cards() {
+        assert_eq!(
+            "6♠ 6♥ 5♦ 5♣",
+            Hands::from_str("6♥ 6♠ 5♦ 5♣").unwrap().cards().to_string()
+        );
     }
 
     #[test]

@@ -4,7 +4,7 @@ use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
-use crate::{PKError, SOK};
+use crate::{PKError, Pile, SOK};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::slice::Iter;
@@ -68,11 +68,6 @@ impl Five {
     #[must_use]
     pub fn to_arr(&self) -> [Card; 5] {
         self.0
-    }
-
-    #[must_use]
-    pub fn to_vec(&self) -> Vec<Card> {
-        self.0.to_vec()
     }
     //endregion
 
@@ -172,7 +167,7 @@ impl Five {
 
 impl Display for Five {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", Cards::from(self.to_vec()))
+        write!(f, "{}", self.cards())
     }
 }
 
@@ -237,13 +232,19 @@ impl HandRanker for Five {
             self.0 = wheel;
         } else {
             // TODO RF: Hack :-P
-            self.0 = Five::try_from(Cards::from(*self).frequency_weighted())
+            self.0 = Five::try_from(self.cards().frequency_weighted())
                 .unwrap()
                 .to_arr();
             self.0.sort_unstable();
             // NOTE: I don't trust this code. When offered a mint, accept it. Write more tests.
         }
         self.0.reverse();
+    }
+}
+
+impl Pile for Five {
+    fn vec(&self) -> Vec<Card> {
+        self.0.to_vec()
     }
 }
 
@@ -2391,6 +2392,14 @@ mod arrays_five_tests {
         assert_eq!(expected_class, hand_rank.class());
     }
     //endregion
+
+    #[test]
+    fn cards() {
+        assert_eq!(
+            "A♦ K♦ Q♦ J♦ T♦",
+            Five::from(ROYAL_FLUSH).cards().to_string()
+        );
+    }
 
     #[test]
     fn try_from__cards() {
