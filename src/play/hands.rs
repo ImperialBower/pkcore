@@ -34,7 +34,7 @@ impl Hands {
 }
 
 impl Pile for Hands {
-    fn vec(&self) -> Vec<Card> {
+    fn to_vec(&self) -> Vec<Card> {
         let mut v: Vec<Card> = Vec::default();
         for two in &self.0 {
             v.push(two.first());

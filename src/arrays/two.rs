@@ -71,7 +71,7 @@ impl FromStr for Two {
 }
 
 impl Pile for Two {
-    fn vec(&self) -> Vec<Card> {
+    fn to_vec(&self) -> Vec<Card> {
         self.0.to_vec()
     }
 }

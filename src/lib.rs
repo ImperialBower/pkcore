@@ -32,10 +32,10 @@ pub enum PKError {
 
 pub trait Pile {
     fn cards(&self) -> Cards {
-        Cards::from(self.vec())
+        Cards::from(self.to_vec())
     }
 
-    fn vec(&self) -> Vec<Card>;
+    fn to_vec(&self) -> Vec<Card>;
 }
 
 // https://en.wikipedia.org/wiki/Se%C3%B1or_Wences#Catchphrases

@@ -279,7 +279,7 @@ impl FromStr for Card {
 }
 
 impl Pile for Card {
-    fn vec(&self) -> Vec<Card> {
+    fn to_vec(&self) -> Vec<Card> {
         vec![*self]
     }
 }

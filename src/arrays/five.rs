@@ -243,7 +243,7 @@ impl HandRanker for Five {
 }
 
 impl Pile for Five {
-    fn vec(&self) -> Vec<Card> {
+    fn to_vec(&self) -> Vec<Card> {
         self.0.to_vec()
     }
 }

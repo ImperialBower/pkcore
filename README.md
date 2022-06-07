@@ -341,9 +341,10 @@
           * .cards()
             * impl Calc for Card, Two, Three, Five, Six, Seven, Hands
           * REFACTOR: rename to Pile
-          * REFACTOR: add .vec to trait
+          * REFACTOR: add .to_vec to trait
             * Delete Cards::from<Five>
             * I really love this refactor. It simplifies all the communication between card collections.
+            * 
 
 
 
