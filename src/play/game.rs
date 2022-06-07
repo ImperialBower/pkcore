@@ -5,6 +5,27 @@ use crate::{Cards, PKError, Pile};
 use std::fmt::{Display, Formatter};
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
+///
+/// ## PHASE 2.2: Display winning percentages
+/// This is a big feature for me, and one that I've been struggling over for a while.
+/// I originally completed this feature in
+/// [Fudd](https://github.com/ContractBridge/fudd/blob/main/src/games/holdem/table.rs#L284),
+/// but I found the solution convoluted, and impossible to extend.
+///
+/// I think the reason this is because I coded it backwards. I started with the most complex type,
+/// the `Table`, and tried to drill down into the situations, instead of building things from
+/// the bottom up.
+///
+/// A HUGE plus was when I can upon the idea for `WinCounter`. Obsessing over a way to deal with
+/// counting wins against all possible combinations, I stumbled upon the idea of simply using
+/// bitwise operations. If more than one player wins for a specific card combination, just set the
+/// flag for each of them. That way I can have as many possible combination of winners as I need.
+///
+/// If I haven't said if before, I really love bitwise operations. I've been in love with them
+/// since I first saw them used in PHP code for my first programming gig at the now defunct
+/// [XOOM.com](https://en.wikipedia.org/wiki/Xoom_(web_hosting)), most famous for hosting
+/// [Mahir Çağrı](https://en.wikipedia.org/wiki/Mahir_%C3%87a%C4%9Fr%C4%B1)'s website.
+/// _[I KISS YOU!](https://web.archive.org/web/20050206024432/http://www.ikissyou.org/indeks2.html)_
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Game {
     pub hands: Hands,
@@ -78,6 +99,7 @@ mod play_game_tests {
 
     #[test]
     fn remaining_cards_at_flop() {
+        // Crude but effective. https://www.youtube.com/watch?v=UKkjknFwPac
         assert_eq!(
             state().remaining_cards_at_flop().to_string(),
             "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 4♣ 3♣ 2♣"
