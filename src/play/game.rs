@@ -1,8 +1,10 @@
 use crate::arrays::five::Five;
 use crate::play::board::Board;
 use crate::play::hands::Hands;
-use crate::{Cards, PKError, Pile};
+use crate::{Cards, PKError, Pile, Card};
 use std::fmt::{Display, Formatter};
+use crate::arrays::seven::Seven;
+use crate::arrays::two::Two;
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -38,6 +40,9 @@ impl Game {
         Game { hands, board }
     }
 
+    /// Returns the `Five` `Card` hand combining the hole cards from the passed in index
+    /// combined with the `Three` Cards on the flop.
+    ///
     /// # Errors
     ///
     /// Returns `PKError::Fubar` if invalid index is passed in.
@@ -46,6 +51,31 @@ impl Game {
             None => Err(PKError::Fubar),
             Some(two) => Ok(Five::from_2and3(*two, self.board.flop)),
         }
+    }
+
+    ///
+    pub fn play_out_flop(&self) {
+        for case in self.remaining_cards_at_flop().combinations(2) {
+            for player in self.hands.iter() {
+                let seven = self.case_seven(player, &case).unwrap();
+            }
+        }
+    }
+
+    /// I have coined the term `case` for a specific instance of analysis when iterating through
+    /// all possible combinations of hands for a specific game of poker. For instance: Given
+    /// `THE HAND` between Daniel Nergeanu and Gus Hansen, where Daniel held `6♠ 6♥` and Gus held
+    ///  `5♦ 5♣`, with the flop of `9♣ 6♦ 5♥`
+    fn case_seven(&self, player: &Two, case: &Vec<Card>) -> Result<Seven, PKError> {
+        Ok(Seven::from([
+            player.first(),
+            player.second(),
+            self.board.flop.first(),
+            self.board.flop.second(),
+            self.board.flop.third(),
+            *case.get(0).ok_or(PKError::InvalidCard)?,
+            *case.get(1).ok_or(PKError::InvalidCard)?
+        ]))
     }
 
     #[must_use]

@@ -351,6 +351,8 @@
             * Delete Cards::from<Five> - No longer needed
             * I really love this refactor. It simplifies all the communication between card collections.
         * Game.remaining_cards_at_flop()
+          * Game.play_out_flop()
+            * Game.case_seven()
 
 
 
@@ -368,3 +370,4 @@
   * [Are we GUI Yet?](https://www.areweguiyet.com/)
   * [Yew](https://yew.rs/)
   * [Flowistry: Information Flow for Rust](https://github.com/willcrichton/flowistry)
+  * [Rust Is Hard, Or: The Misery of Mainstream Programming](https://hirrolot.github.io/posts/rust-is-hard-or-the-misery-of-mainstream-programming.html)

@@ -54,5 +54,7 @@ fn main() -> Result<(), PKError> {
         );
     }
 
+    game.play_out_flop();
+
     Ok(())
 }
