@@ -64,10 +64,7 @@ impl Game {
         }
     }
 
-    /// I have coined the term `case` for a specific instance of analysis when iterating through
-    /// all possible combinations of hands for a specific game of poker. For instance: Given
-    /// `THE HAND` between Daniel Nergeanu and Gus Hansen, where Daniel held `6♠ 6♥` and Gus held
-    ///  `5♦ 5♣`, with the flop of `9♣ 6♦ 5♥`
+    /// See `Case` for a breakdown of the term `Case`.
     fn case_seven(&self, player: Two, case: &[Card]) -> Result<Seven, PKError> {
         Ok(Seven::from([
             player.first(),

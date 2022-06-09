@@ -34,6 +34,7 @@ pub trait HandRanker {
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five);
 
     // TODO ¿Is there a way to do this directly from the trait?
+    // I really am not sure if this belongs here. ¯\_(ツ)_/¯
     #[must_use]
     fn sort(&self) -> Self;
 

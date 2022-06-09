@@ -355,6 +355,11 @@
             * Game.case_seven()
               * HandRank Case
                 * impl Ord for HandRank
+                * Case
+                  * ::new(hand_rank: HandRank, hand: Five)
+                  * impl From<Five> for Case
+                  * impl PartialEq for Case 
+                    * impl Hash for Case
 
 
 
