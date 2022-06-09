@@ -353,6 +353,8 @@
         * Game.remaining_cards_at_flop()
           * Game.play_out_flop()
             * Game.case_seven()
+              * HandRank Case
+                * impl Ord for HandRank
 
 
 

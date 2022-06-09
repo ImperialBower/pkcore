@@ -1,10 +1,10 @@
 use crate::arrays::five::Five;
-use crate::play::board::Board;
-use crate::play::hands::Hands;
-use crate::{Cards, PKError, Pile, Card};
-use std::fmt::{Display, Formatter};
 use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
+use crate::play::board::Board;
+use crate::play::hands::Hands;
+use crate::{Card, Cards, PKError, Pile};
+use std::fmt::{Display, Formatter};
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -53,11 +53,13 @@ impl Game {
         }
     }
 
+    /// # Panics
     ///
+    /// Shouldn't be possible, knock on wood.
     pub fn play_out_flop(&self) {
         for case in self.remaining_cards_at_flop().combinations(2) {
             for player in self.hands.iter() {
-                let seven = self.case_seven(player, &case).unwrap();
+                let seven = self.case_seven(*player, &case).unwrap();
             }
         }
     }
@@ -66,7 +68,7 @@ impl Game {
     /// all possible combinations of hands for a specific game of poker. For instance: Given
     /// `THE HAND` between Daniel Nergeanu and Gus Hansen, where Daniel held `6♠ 6♥` and Gus held
     ///  `5♦ 5♣`, with the flop of `9♣ 6♦ 5♥`
-    fn case_seven(&self, player: &Two, case: &Vec<Card>) -> Result<Seven, PKError> {
+    fn case_seven(&self, player: Two, case: &[Card]) -> Result<Seven, PKError> {
         Ok(Seven::from([
             player.first(),
             player.second(),
@@ -74,7 +76,7 @@ impl Game {
             self.board.flop.second(),
             self.board.flop.third(),
             *case.get(0).ok_or(PKError::InvalidCard)?,
-            *case.get(1).ok_or(PKError::InvalidCard)?
+            *case.get(1).ok_or(PKError::InvalidCard)?,
         ]))
     }
 

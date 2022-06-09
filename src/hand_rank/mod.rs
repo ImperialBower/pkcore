@@ -1,8 +1,10 @@
 use crate::hand_rank::class::Class;
 use crate::hand_rank::name::Name;
 use crate::SOK;
+use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 
+pub mod case;
 pub mod class;
 pub mod name;
 
@@ -64,6 +66,32 @@ impl From<HandRankValue> for HandRank {
     }
 }
 
+/// The lower the `HandRankValue` the higher the value of the `HandRank`, unless it's invalid.
+#[allow(clippy::if_same_then_else)]
+impl Ord for HandRank {
+    fn cmp(&self, other: &HandRank) -> Ordering {
+        if !self.salright() && !other.salright() {
+            Ordering::Equal
+        } else if !self.salright() {
+            Ordering::Less
+        } else if !other.salright() {
+            Ordering::Greater
+        } else if self.value < other.value {
+            Ordering::Greater
+        } else if self.value > other.value {
+            Ordering::Less
+        } else {
+            Ordering::Equal
+        }
+    }
+}
+
+impl PartialOrd<Self> for HandRank {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl SOK for HandRank {
     fn salright(&self) -> bool {
         self.name.salright() && self.class.salright()
@@ -90,5 +118,13 @@ mod hand_rank_tests {
         assert!(HandRank::from(7462).salright());
         assert!(!HandRank::from(0).salright());
         assert!(!HandRank::from(7463).salright());
+    }
+
+    #[test]
+    fn ord() {
+        assert!(HandRank::from(1) > HandRank::from(2));
+        assert!(HandRank::from(2000) < HandRank::from(2));
+        assert!(HandRank::from(0) < HandRank::from(2));
+        assert_eq!(HandRank::from(2), HandRank::from(2));
     }
 }
