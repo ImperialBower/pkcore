@@ -37,6 +37,7 @@ impl From<Five> for Case {
     }
 }
 
+/// [Implementing Hash](https://doc.rust-lang.org/std/hash/trait.Hash.html#implementing-hash)
 impl Hash for Case {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.hand_rank.hash(state);
@@ -65,5 +66,24 @@ mod hand_rank_case_tests {
         let case = Case::from(hand);
 
         assert_eq!(case.hand, hand.sort());
+        assert_eq!(case.hand_rank, hand.hand_rank());
+    }
+
+    #[test]
+    fn eq() {
+        assert_eq!(
+            Case::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap()),
+            Case::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap())
+        )
+    }
+
+    #[test]
+    fn sort() {
+        let case0 = Case::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
+        let case1 = Case::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap());
+        let case2 = Case::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap());
+        let v = vec![case0, case1, case2];
+
+
     }
 }
