@@ -59,14 +59,23 @@ impl Game {
     /// of those places. I need this to be clear. I need it to be flexible. I need it to be
     /// extendable.
     ///
+    /// ## The Play Out Saga
+    ///
+    /// * Play out at flop
+    /// * Play out at turn
+    /// * Play out at river
+    /// * DUN DUN DUNNNNNNNNNN - The reckoning: Play out preflop.
+    ///
     /// # Panics
     ///
     /// Shouldn't be possible, knock on wood.
     pub fn play_out_flop(&self) {
         for case in self.remaining_cards_at_flop().combinations(2) {
-            for player in self.hands.iter() {
-                let _seven = self.case_seven(*player, &case).unwrap();
+            for (i, player) in self.hands.iter().enumerate() {
+                let seven = self.case_seven(*player, &case).unwrap();
+                println!("Player {}: {}", i + 1, seven);
             }
+            println!();
         }
     }
 

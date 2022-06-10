@@ -351,7 +351,7 @@
             * Delete Cards::from<Five> - No longer needed
             * I really love this refactor. It simplifies all the communication between card collections.
         * Game.remaining_cards_at_flop()
-          * Game.play_out_flop()
+          * Game.play_out_flop() INTRODUCING PLAY OUT!!! WOOOOO!!!!!
             * Game.case_seven()
               * HandRank Case
                 * impl Ord for HandRank
