@@ -360,6 +360,8 @@
                   * impl From<Five> for Case
                   * impl PartialEq for Case 
                     * impl Hash for Case
+                  * impl From<Seven> for Case - Why did I do Five first??!!
+                  * impl Display for Case
 
 
 

@@ -61,10 +61,27 @@ impl Game {
     ///
     /// ## The Play Out Saga
     ///
-    /// * Play out at flop
-    /// * Play out at turn
-    /// * Play out at river
-    /// * DUN DUN DUNNNNNNNNNN - The reckoning: Play out preflop.
+    /// * Book 1: Play out at flop
+    /// * Book 2: Play out at turn
+    /// * Book 3: Play out at river
+    /// * Book 4: DUN DUN DUNNNNNNNNNN - The reckoning: Play out preflop.
+    ///
+    /// ### Book 1
+    ///
+    /// One of the things that I watch out for is if I start feeling the need to add a lot of print
+    /// statements to my code to keep track of what it's doing.
+    ///
+    /// Introducing a Big Idea: Observability.
+    ///
+    /// Now for me as a software developer, I want to master the craft of making my code as
+    /// observable as possible. Observability comes from the mathematical principal. From Wikipedia:
+    ///
+    ///     Observability is a measure of how well internal states of a system can be inferred from knowledge of its external outputs. In control theory, the observability and controllability of a linear system are mathematical duals. The concept of observability was introduced by the Hungarian-American engineer Rudolf E. Kálmán for linear dynamic systems. A dynamical system designed to estimate the state of a system from measurements of the outputs is called a state observer or simply an observer for that system.
+    ///
+    /// I'm a huge fan of those in the DevOps movement who have been pioneering the Observability
+    /// movement in software development.
+    ///
+    /// ### Big Idea: Controllability
     ///
     /// # Panics
     ///

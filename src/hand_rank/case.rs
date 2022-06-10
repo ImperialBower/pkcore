@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::HandRanker;
@@ -11,6 +12,15 @@ use std::hash::{Hash, Hasher};
 /// giving Daniel quads, and then `5♠` on the river giving Gus quads as well. Quads over quads.
 /// Another case was what actually happened: `5♠` and then `8♠` giving Daniel a full house,
 /// and Gus quads.
+///
+/// `Case` is an example of a utilitarian data struct. It's a simple immutable collection of state,
+/// that doesn't need to worry it's pretty little bites about anything but keeping my code clean.
+/// I really don't want to pollute my code with tons of functions that return tuples of information
+/// willy nilly.
+///
+/// Now, there is a downside to this way of coding. It locks me in to structures that as I build
+/// my library make the code harder and harder to untangle. If done wrong, I could tie my code into
+/// knots. Let's see how it goes.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Case {
     pub hand_rank: HandRank,
@@ -21,6 +31,12 @@ impl Case {
     #[must_use]
     pub fn new(hand_rank: HandRank, hand: Five) -> Self {
         Case { hand_rank, hand }
+    }
+}
+
+impl Display for Case {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} - {}", self.hand, self.hand_rank)
     }
 }
 
