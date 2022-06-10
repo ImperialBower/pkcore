@@ -1,11 +1,12 @@
-use std::hash::{Hash, Hasher};
 use crate::arrays::five::Five;
+use crate::arrays::seven::Seven;
 use crate::arrays::HandRanker;
 use crate::hand_rank::HandRank;
+use std::hash::{Hash, Hasher};
 
 /// `Case` is a term I coined for a specific instance of analysis when iterating through
 /// all possible combinations of hands for a specific game of poker. For instance: Given
-/// `THE HAND` between Daniel Nergeanu and Gus Hansen, where Daniel held `6♠ 6♥` and Gus held
+/// `THE HAND` between Daniel Negreanu and Gus Hansen, where Daniel held `6♠ 6♥` and Gus held
 /// `5♦ 5♣`, with the flop of `9♣ 6♦ 5♥`, one possible `Case` would be `6♣` on the turn,
 /// giving Daniel quads, and then `5♠` on the river giving Gus quads as well. Quads over quads.
 /// Another case was what actually happened: `5♠` and then `8♠` giving Daniel a full house,
@@ -19,10 +20,7 @@ pub struct Case {
 impl Case {
     #[must_use]
     pub fn new(hand_rank: HandRank, hand: Five) -> Self {
-        Case {
-            hand_rank,
-            hand,
-        }
+        Case { hand_rank, hand }
     }
 }
 
@@ -30,10 +28,15 @@ impl From<Five> for Case {
     fn from(five: Five) -> Self {
         let (hand_rank, hand) = five.hand_rank_and_hand();
 
-        Case {
-            hand_rank,
-            hand,
-        }
+        Case { hand_rank, hand }
+    }
+}
+
+impl From<Seven> for Case {
+    fn from(seven: Seven) -> Self {
+        let (hand_rank, hand) = seven.hand_rank_and_hand();
+
+        Case { hand_rank, hand }
     }
 }
 
@@ -55,9 +58,11 @@ impl Eq for Case {}
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod hand_rank_case_tests {
-    use std::str::FromStr;
-    use crate::arrays::HandRanker;
     use super::*;
+    use crate::arrays::HandRanker;
+    use crate::hand_rank::class::Class;
+    use crate::hand_rank::name::Name;
+    use std::str::FromStr;
 
     #[test]
     fn from__five() {
@@ -67,6 +72,20 @@ mod hand_rank_case_tests {
 
         assert_eq!(case.hand, hand.sort());
         assert_eq!(case.hand_rank, hand.hand_rank());
+    }
+
+    #[test]
+    fn from__seven() {
+        let seven = Seven::from_str("6♠ 6♥ 9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
+        let expected_hand = Five::from_str("6♠ 6♥ 6♦ 5♠ 5♥").unwrap().sort();
+
+        let case = Case::from(seven);
+
+        assert_eq!(case.hand, expected_hand);
+        assert_eq!(case.hand_rank, seven.hand_rank());
+        assert_eq!(case.hand_rank.value, 271);
+        assert_eq!(case.hand_rank.name, Name::FullHouse);
+        assert_eq!(case.hand_rank.class, Class::SixesOverFives);
     }
 
     #[test]
@@ -83,7 +102,5 @@ mod hand_rank_case_tests {
         let case1 = Case::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap());
         let case2 = Case::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap());
         let v = vec![case0, case1, case2];
-
-
     }
 }

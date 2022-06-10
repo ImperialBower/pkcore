@@ -101,7 +101,7 @@ impl Cards {
     /// ASIDE: One of the best compliments I ever got from another developer was from the person
     /// I dislike more than any other in my career. _There was this one guy at a startup who tried
     /// to forge commands as if he was me from our servers to try to get me fired because I had
-    /// the audacity to call him on his bullshit, but to be honest, he was doing me a favot by
+    /// the audacity to call him on his bullshit, but to be honest, he was doing me a favor by
     /// driving me out of that place._
     pub fn dump(&self) {
         for card in self.iter() {
@@ -225,7 +225,7 @@ impl Cards {
 
     fn map_by_rank(&self) -> HashMap<Rank, Cards> {
         // Why is this variable called mappy? Now that is a long and winding tale.
-        // Many, many years ago, when I was in middle schoole in AF, me and my friends would
+        // Many, many years ago, when I was in middle school in SF, me and my friends would
         // Play D&D, eat Georgio's pizza, and play video games at an ice cream show. The two
         // games they had were [Mr. Do!](https://en.wikipedia.org/wiki/Mr._Do!) and
         // [Mappy](https://en.wikipedia.org/wiki/Mappy). In honor of this nostalgia I try to
@@ -611,12 +611,12 @@ mod card_tests {
     fn map_by_rank() {
         let cards = Cards::from_str("A♠ T♠ 9♠ 8♠ T♥").unwrap();
 
-        let mappie = cards.map_by_rank();
+        let mappy = cards.map_by_rank();
 
-        assert_eq!(2, mappie.get(&Rank::TEN).unwrap().len());
-        assert_eq!(1, mappie.get(&Rank::ACE).unwrap().len());
-        assert_eq!(1, mappie.get(&Rank::NINE).unwrap().len());
-        assert_eq!(1, mappie.get(&Rank::EIGHT).unwrap().len());
+        assert_eq!(2, mappy.get(&Rank::TEN).unwrap().len());
+        assert_eq!(1, mappy.get(&Rank::ACE).unwrap().len());
+        assert_eq!(1, mappy.get(&Rank::NINE).unwrap().len());
+        assert_eq!(1, mappy.get(&Rank::EIGHT).unwrap().len());
     }
 
     //endregion

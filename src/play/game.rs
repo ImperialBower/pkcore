@@ -53,13 +53,19 @@ impl Game {
         }
     }
 
+    /// There is a point in your code where you reach the crux of the system you are trying to
+    /// build. Where all of the thin slices start to come together and you can feel your program
+    /// leveling up. For me with this journey the idea of playing out the probabilities is one
+    /// of those places. I need this to be clear. I need it to be flexible. I need it to be
+    /// extendable.
+    ///
     /// # Panics
     ///
     /// Shouldn't be possible, knock on wood.
     pub fn play_out_flop(&self) {
         for case in self.remaining_cards_at_flop().combinations(2) {
             for player in self.hands.iter() {
-                let seven = self.case_seven(*player, &case).unwrap();
+                let _seven = self.case_seven(*player, &case).unwrap();
             }
         }
     }
