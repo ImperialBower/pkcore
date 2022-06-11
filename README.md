@@ -362,6 +362,9 @@
                     * impl Hash for Case
                   * impl From<Seven> for Case - Why did I do Five first??!!
                   * impl Display for Case
+                  * introducing Logging!
+                    * [log crate](https://crates.io/crates/log)
+                    * [env_logger](https://crates.io/crates/env_logger)
 
 
 

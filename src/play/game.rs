@@ -5,6 +5,7 @@ use crate::hand_rank::case::Case;
 use crate::play::board::Board;
 use crate::play::hands::Hands;
 use crate::{Card, Cards, PKError, Pile};
+use log::trace;
 use std::fmt::{Display, Formatter};
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
@@ -88,13 +89,13 @@ impl Game {
     ///
     /// Shouldn't be possible, knock on wood.
     pub fn play_out_flop(&self) {
-        for case in self.remaining_cards_at_flop().combinations(2) {
+        for (j, case) in self.remaining_cards_at_flop().combinations(2).enumerate() {
+            trace!("{} --------", j);
             for (i, player) in self.hands.iter().enumerate() {
                 let seven = self.case_seven(*player, &case).unwrap();
                 let calc = Case::from(seven);
-                println!("Player {}: {}", i + 1, calc);
+                trace!("Player {}: {}", i + 1, calc);
             }
-            println!();
         }
     }
 
