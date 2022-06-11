@@ -1,8 +1,8 @@
-use std::fmt::{Display, Formatter};
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::HandRanker;
 use crate::hand_rank::HandRank;
+use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 
 /// `Case` is a term I coined for a specific instance of analysis when iterating through
@@ -48,6 +48,12 @@ impl From<Five> for Case {
     }
 }
 
+/// FROM PLOF 1.1: Case Display and starting on observability
+/// commit 2c73e2722ebcdf4dfc3afad5857f8fb87458b985
+///
+/// I don't like this as the entry point for a specific case. It destroys
+/// the structure for the case, specifically what's the hole cards, what's the flop
+/// and what's the instance. 
 impl From<Seven> for Case {
     fn from(seven: Seven) -> Self {
         let (hand_rank, hand) = seven.hand_rank_and_hand();

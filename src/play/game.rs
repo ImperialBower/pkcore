@@ -1,6 +1,7 @@
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
+use crate::hand_rank::case::Case;
 use crate::play::board::Board;
 use crate::play::hands::Hands;
 use crate::{Card, Cards, PKError, Pile};
@@ -76,7 +77,7 @@ impl Game {
     /// Now for me as a software developer, I want to master the craft of making my code as
     /// observable as possible. Observability comes from the mathematical principal. From Wikipedia:
     ///
-    ///     Observability is a measure of how well internal states of a system can be inferred from knowledge of its external outputs. In control theory, the observability and controllability of a linear system are mathematical duals. The concept of observability was introduced by the Hungarian-American engineer Rudolf E. Kálmán for linear dynamic systems. A dynamical system designed to estimate the state of a system from measurements of the outputs is called a state observer or simply an observer for that system.
+    /// Observability is a measure of how well internal states of a system can be inferred from knowledge of its external outputs. In control theory, the observability and controllability of a linear system are mathematical duals. The concept of observability was introduced by the Hungarian-American engineer Rudolf E. Kálmán for linear dynamic systems. A dynamical system designed to estimate the state of a system from measurements of the outputs is called a state observer or simply an observer for that system.
     ///
     /// I'm a huge fan of those in the DevOps movement who have been pioneering the Observability
     /// movement in software development.
@@ -90,7 +91,8 @@ impl Game {
         for case in self.remaining_cards_at_flop().combinations(2) {
             for (i, player) in self.hands.iter().enumerate() {
                 let seven = self.case_seven(*player, &case).unwrap();
-                println!("Player {}: {}", i + 1, seven);
+                let calc = Case::from(seven);
+                println!("Player {}: {}", i + 1, calc);
             }
             println!();
         }
