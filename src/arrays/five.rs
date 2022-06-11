@@ -482,6 +482,24 @@ mod arrays_five_tests {
         );
     }
 
+    /// let straight = Case::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
+    /// let royal_flush_spades = Case::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap());
+    /// let royal_flush_hearts = Case::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap());
+    #[test]
+    fn sort__vector_of_fives() {
+        let straight = Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap().sort();
+        let royal_flush_spades = Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap().sort();
+        let royal_flush_hearts = Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap().sort();
+        let mut v = vec![straight, royal_flush_spades, royal_flush_hearts];
+        let expected = vec![straight, royal_flush_hearts, royal_flush_spades];
+
+        v.sort();
+
+        println!("{:?} - {:?}", expected, v);
+
+        assert_eq!(expected, v);
+    }
+
     #[test]
     fn sort__pair() {
         assert_eq!(

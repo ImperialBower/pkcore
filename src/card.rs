@@ -555,4 +555,16 @@ mod card_tests {
         assert_eq!(Card::KING_DIAMONDS, Card::from_str("  K♢   ").unwrap());
         assert_eq!(PKError::InvalidIndex, Card::from_str("  ").unwrap_err());
     }
+
+    /// By default, cards will sort themselves from lowest, to highest, which means
+    /// that A♠ A♣ K♠ will sort to K♠ A♣ A♠
+    #[test]
+    fn sort() {
+        let mut v = vec![Card::ACE_SPADES, Card::ACE_CLUBS, Card::KING_SPADES];
+
+        v.sort();
+
+        assert_eq!(v, vec![Card::KING_SPADES, Card::ACE_CLUBS, Card::ACE_SPADES]);
+    }
+
 }

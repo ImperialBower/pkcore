@@ -83,7 +83,20 @@ impl Game {
     /// I'm a huge fan of those in the `DevOps` movement who have been pioneering the Observability
     /// movement in software development.
     ///
-    /// ### Big Idea: Controllability
+    /// ### ~~Big Idea: Controllability~~
+    ///
+    /// ### Dimensions
+    ///
+    /// What are the different ways that we can view the information on the flop?
+    ///
+    /// * Board texture
+    /// * Per player
+    ///   * Counts of Hand Class
+    ///   * Chances of winning
+    ///
+    /// ###
+    /// It would be nice if I could plug an analysis type into the iterator to give me flexibility
+    /// on what I do with the information from the cases.
     ///
     /// # Panics
     ///

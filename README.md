@@ -351,7 +351,7 @@
             * Delete Cards::from<Five> - No longer needed
             * I really love this refactor. It simplifies all the communication between card collections.
         * Game.remaining_cards_at_flop()
-          * Game.play_out_flop() INTRODUCING PLAY OUT!!! WOOOOO!!!!!
+          * Game.play_out_flop() INTRODUCING PLAY OUT!!! WOOOOO!!!!! TPOS 1.1
             * Game.case_seven()
               * HandRank Case
                 * impl Ord for HandRank
@@ -365,7 +365,10 @@
                   * introducing Logging!
                     * [log crate](https://crates.io/crates/log)
                     * [env_logger](https://crates.io/crates/env_logger)
+                  * .sort()
+                    * verify that Vec<Card> sorts as desired
                   * Now let's crunch some Wins
+                  * TPOS 1.2: PlayOut Trait
 
 
 

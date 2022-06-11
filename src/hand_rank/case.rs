@@ -21,7 +21,34 @@ use std::hash::{Hash, Hasher};
 /// Now, there is a downside to this way of coding. It locks me in to structures that as I build
 /// my library make the code harder and harder to untangle. If done wrong, I could tie my code into
 /// knots. Let's see how it goes.
-#[derive(Clone, Copy, Debug, Default)]
+///
+/// ## Sorting
+///
+/// We want to validate that `Case` is primarily sorting on `HandRank` and then
+/// subsequently sorting on the cards itself. This test validates by
+/// creating two royal flushes, one of spades, and one of hearts. In the vector,
+/// the hearts is first, but in the sort we want to make sure that it can tell the
+/// difference. We've also added a simple ace high straight to throw into the mix.
+///
+/// We know that `Cards` sort
+///
+/// Let's try sorting it:
+/// ```
+/// use std::str::FromStr;
+/// use pkcore::hand_rank::case::Case;
+/// use pkcore::arrays::five::Five;
+///
+/// let straight = Case::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
+/// let royal_flush_spades = Case::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap());
+/// let royal_flush_hearts = Case::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap());
+/// let mut v = vec![straight, royal_flush_hearts, royal_flush_spades];
+///
+/// v.sort();
+///
+/// assert_eq!(v, vec![straight, royal_flush_hearts, royal_flush_spades]);
+/// ```
+///
+#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd)]
 pub struct Case {
     pub hand_rank: HandRank,
     pub hand: Five,
@@ -118,11 +145,49 @@ mod hand_rank_case_tests {
         )
     }
 
+    /// This is to validate that `Case` is primarily sorting on `HandRank` and then
+    /// subsequently sorting on the cards itself. This test validates by
+    /// creating two royal flushes, one of spades, and one of hearts. In the vector,
+    /// the hearts is first, but in the sort we want to make sure that it can tell the
+    /// difference. We've also added a simple ace high straight to throw into the mix.
+    ///
+    /// Let's try sorting it:
+    /// ```
+    /// use std::str::FromStr;
+    /// use pkcore::hand_rank::case::Case;
+    /// use pkcore::arrays::five::Five;
+    ///
+    /// let straight = Case::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
+    /// let royal_flush_spades = Case::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap());
+    /// let royal_flush_hearts = Case::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap());
+    /// let mut v = vec![straight, royal_flush_hearts, royal_flush_spades];
+    ///
+    /// v.sort();
+    ///
+    /// // So why is it that when it sorts, the ace high straight is first, and the
+    /// // space straight flush is last?
+    /// assert_eq!(v, vec![royal_flush_spades, royal_flush_hearts, straight]);
+    /// ```
+    ///
+    /// ```
+    /// fn main() {
+    ///     let mut v = vec![1, 3, 2];
+    ///
+    ///     v.sort();
+    ///
+    ///     assert_eq!(v, vec![1, 2, 3]);
+    /// }
+    ///
     #[test]
     fn sort() {
-        let case0 = Case::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
-        let case1 = Case::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap());
-        let case2 = Case::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap());
-        let v = vec![case0, case1, case2];
+        let straight = Case::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
+        let royal_flush_spades = Case::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap());
+        let royal_flush_hearts = Case::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap());
+        let mut v = vec![straight, royal_flush_hearts, royal_flush_spades];
+
+        v.sort();
+        v.reverse();
+
+        assert_eq!(v, vec![royal_flush_spades, royal_flush_hearts, straight]);
     }
 }
