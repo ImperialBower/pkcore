@@ -53,7 +53,7 @@ impl From<Five> for Case {
 ///
 /// I don't like this as the entry point for a specific case. It destroys
 /// the structure for the case, specifically what's the hole cards, what's the flop
-/// and what's the instance. 
+/// and what's the instance.
 impl From<Seven> for Case {
     fn from(seven: Seven) -> Self {
         let (hand_rank, hand) = seven.hand_rank_and_hand();

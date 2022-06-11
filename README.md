@@ -365,6 +365,7 @@
                   * introducing Logging!
                     * [log crate](https://crates.io/crates/log)
                     * [env_logger](https://crates.io/crates/env_logger)
+                  * Now let's crunch some Wins
 
 
 

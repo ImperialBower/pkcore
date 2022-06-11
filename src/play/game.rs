@@ -80,7 +80,7 @@ impl Game {
     ///
     /// Observability is a measure of how well internal states of a system can be inferred from knowledge of its external outputs. In control theory, the observability and controllability of a linear system are mathematical duals. The concept of observability was introduced by the Hungarian-American engineer Rudolf E. Kálmán for linear dynamic systems. A dynamical system designed to estimate the state of a system from measurements of the outputs is called a state observer or simply an observer for that system.
     ///
-    /// I'm a huge fan of those in the DevOps movement who have been pioneering the Observability
+    /// I'm a huge fan of those in the `DevOps` movement who have been pioneering the Observability
     /// movement in software development.
     ///
     /// ### Big Idea: Controllability
@@ -90,12 +90,19 @@ impl Game {
     /// Shouldn't be possible, knock on wood.
     pub fn play_out_flop(&self) {
         for (j, case) in self.remaining_cards_at_flop().combinations(2).enumerate() {
-            trace!("{} --------", j);
+            trace!(
+                "{}: FLOP: {} TURN: {} RIVER: {} -------",
+                j,
+                self.board.flop,
+                case.get(0).unwrap(),
+                case.get(1).unwrap()
+            );
             for (i, player) in self.hands.iter().enumerate() {
                 let seven = self.case_seven(*player, &case).unwrap();
                 let calc = Case::from(seven);
-                trace!("Player {}: {}", i + 1, calc);
+                trace!("Player {} {}: {}", i + 1, *player, calc);
             }
+            trace!("");
         }
     }
 
