@@ -94,7 +94,7 @@ impl Game {
     ///   * Counts of Hand Class
     ///   * Chances of winning
     ///
-    /// ###
+    /// ### PlayOut Trait Idea
     /// It would be nice if I could plug an analysis type into the iterator to give me flexibility
     /// on what I do with the information from the cases.
     ///

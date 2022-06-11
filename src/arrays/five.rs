@@ -482,20 +482,30 @@ mod arrays_five_tests {
         );
     }
 
-    /// let straight = Case::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
-    /// let royal_flush_spades = Case::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap());
-    /// let royal_flush_hearts = Case::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap());
+    /// The default sort for a `Five` is going to be based on pure `Card` values, which is
+    /// in turn from the CKC number of the `Card`. CKC numbers have the highest bits set to
+    /// `Rank` and the next set to `Suit`, so, since all three of the `Fives` in the vector
+    /// have the same `Rank`s, so, on a reverse sort, the straight is going to sort higher
+    /// than the heart royal flush simply because the straight has a K♠, while the heart flush
+    /// has a K♥.
+    ///
+    /// This is different than a `Case` sort because it has a `HandRank` first in its struct, before
+    /// the `Five` hand field, so in rust, a struct will by default always sort on the first field
+    /// in the struct, before it starts sorting on the next fields in order.
+    ///
     #[test]
     fn sort__vector_of_fives() {
         let straight = Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap().sort();
         let royal_flush_spades = Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap().sort();
         let royal_flush_hearts = Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap().sort();
         let mut v = vec![straight, royal_flush_spades, royal_flush_hearts];
-        let expected = vec![straight, royal_flush_hearts, royal_flush_spades];
+        let expected = vec![royal_flush_spades, straight, royal_flush_hearts];
 
         v.sort();
+        v.reverse();
 
-        println!("{:?} - {:?}", expected, v);
+        println!("{} - {} - {}", v.get(0).unwrap(), v.get(1).unwrap(), v.get(2).unwrap());
+        println!("{} - {} - {}", expected.get(0).unwrap(), expected.get(1).unwrap(), expected.get(2).unwrap());
 
         assert_eq!(expected, v);
     }

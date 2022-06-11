@@ -367,6 +367,8 @@
                     * [env_logger](https://crates.io/crates/env_logger)
                   * .sort()
                     * verify that Vec<Card> sorts as desired
+                    * verify that Vec<Five> sorts as desired
+                      * sort__vector_of_fives()
                   * Now let's crunch some Wins
                   * TPOS 1.2: PlayOut Trait
 

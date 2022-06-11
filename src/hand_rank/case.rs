@@ -30,7 +30,33 @@ use std::hash::{Hash, Hasher};
 /// the hearts is first, but in the sort we want to make sure that it can tell the
 /// difference. We've also added a simple ace high straight to throw into the mix.
 ///
-/// We know that `Cards` sort
+/// We know that a `Card` will sort based purely on the value of the u32 Cactus Kev value (CKC) inside
+/// single field the tuple struct. Since CKC numbers have their highest bits set to Rank and their
+/// next set to Suit, a sorted Card vector would look like this:
+///
+/// ```
+/// use pkcore::card::Card;
+///
+/// let mut v = vec![Card::ACE_HEARTS, Card::ACE_SPADES, Card::KING_SPADES];
+///
+/// v.sort();
+/// v.reverse(); // Reverse it so we see the highest card first.
+///
+/// // A♠ A♥ K♠
+/// assert_eq!(v, vec![Card::ACE_SPADES, Card::ACE_HEARTS, Card::KING_SPADES]);
+/// ```
+///
+/// Now, we might expect cards to sort Suit before Rank, as in `A♠ K♠ A♥`, but that entirely
+/// depends on the perspective of how we are viewing the `Cards`. For now, we're going to let the
+/// Card sort do its thing based on pure CKC numbers, and let `Five` handle those special cases where
+/// we would expect the ace and the end when the hand is a wheel.
+///
+/// ASIDE: In the game of bridge, one traditionally sorts `Suit` first, and to handle that I
+/// created my [cardpack.rs crate](https://crates.io/crates/cardpack) which provides additional
+/// flexibility by how you can sort cards. Since it is doing a lot of things that we don't need,
+/// and besides, I wanted to do everything from scratch for this work, we're doing everything
+/// internally, and adding additional functionality directly to the library as our requirements
+/// demand.
 ///
 /// Let's try sorting it:
 /// ```
@@ -48,6 +74,124 @@ use std::hash::{Hash, Hasher};
 /// assert_eq!(v, vec![straight, royal_flush_hearts, royal_flush_spades]);
 /// ```
 ///
+/// Now at first, this would seem backwards. Doesn't a spades royal flush come before a simple
+/// straight? In terms of one hand beating another, this is true; but remember, sorts work from
+/// lowest to highest:
+///
+/// ```
+/// fn main() {
+///     let mut v = vec![1, 3, 2];
+///
+///     v.sort();
+///
+///     assert_eq!(v, vec![1, 2, 3]);
+/// }
+/// ```
+/// [Rust Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=f5952c6d45ba4bcc43c44699856fb7c6)
+///
+/// Since the primary struct inside Case is HandRank, and it classifies a royal flush `HandRankValue`
+/// of 1 as the highest possible number, basically reversing the order of integers for the field, \
+/// by a default sort, a royal flush would come after a straight even though the primary field
+/// for the `HandRank` is a lower integer.
+///
+/// OK, now, I realize that this might sound like
+/// [Peanuts parents talking](https://www.youtube.com/watch?v=ss2hULhXf04), and I will confess
+/// that this is a [fair cop](https://dictionary.cambridge.org/us/dictionary/english/it-s-a-fair-cop),
+/// one will find as a software developer, that it's these sort of annoying little details that will
+/// occupy a significant portion of your time.
+///
+/// So, that means to get the highest Case in front, we need to reverse the sort:
+///
+/// ```
+/// use std::str::FromStr;
+/// use pkcore::hand_rank::case::Case;
+/// use pkcore::arrays::five::Five;
+///
+/// let straight = Case::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
+/// let royal_flush_spades = Case::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap());
+/// let royal_flush_hearts = Case::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap());
+/// let mut v = vec![royal_flush_spades, royal_flush_hearts, straight];
+///
+/// v.sort();
+/// v.reverse();
+///
+/// assert_eq!(v, vec![royal_flush_spades, royal_flush_hearts, straight]);
+/// ```
+///
+/// Note, that this is in contrast to if we sorted a vector or pure `Five` hands. without the
+/// `HandRank` field proceeding it in the `Case` struct:
+///
+/// ```
+/// use pkcore::arrays::five::Five;
+/// use std::str::FromStr;
+/// use pkcore::arrays::HandRanker;
+///
+/// let straight = Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap().sort();
+/// let royal_flush_spades = Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap().sort();
+/// let royal_flush_hearts = Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap().sort();
+/// let mut v = vec![straight, royal_flush_spades, royal_flush_hearts];
+/// let expected = vec![royal_flush_spades, straight, royal_flush_hearts];
+///
+/// v.sort();
+/// v.reverse();
+///
+/// assert_eq!(expected, v);
+/// ```
+///
+/// OK, I think I've driven this point sufficiently into the ditch at this point, so lets move on to some
+/// actual value. I just wanted to give you a feel for how much much of the artistry of coding is
+/// an obsessive focus on annoying little details that will make you scream if you're not used to
+/// it.
+///
+/// My favorite book that delves in this subject is Robert Bringhurst's wonderful
+/// [The Elements of Typographic Style](https://en.wikipedia.org/wiki/The_Elements_of_Typographic_Style).
+/// The big idea that he talks about that had a profound impact on me, is that
+/// _“Typography exists to honor content.”_ It doesn't exist to show off the typography... it exists
+/// to as clearly as possible to show off the substance expressed in the words.
+///
+/// This way of thinking is essential in programming. We don't code to show off how brilliant
+/// out code is. No one besides other programmers really cares how totally complicated and brilliant
+/// your programming is. The priorities for a programmer should be the following:
+///
+/// * How clearly does it express domain information to the user?
+/// * How easy is it for future developers to maintain?
+/// * How flexible is it for use in building more complex systems?
+///
+/// Unfortunately, it's been my experience that most software code reviews spend most of the
+/// time arguing over issues that have nothing to do with this. Teams of developers will burn
+/// through millions of dollars happily debating for loops over iterators as their company drives
+/// off a financial cliff.
+///
+/// This is why it's so important to remove these factors as much as possible from the table. As I
+/// like to say, _"it's always better to remove a problem than to solve it."_ Why spend
+/// endless hours wasting someone else's money debating holy wars such as
+/// [tabs vs. spaces](https://www.youtube.com/watch?v=SsoOG6ZeyUI) when I can have a linter such
+/// as [Clippy](https://github.com/rust-lang/rust-clippy) solve it automatically for me? If you want
+/// to argue over it, take your coworkers down to a bar and have at it. Nobody paying for this shit
+/// gives a flying fuck.
+///
+/// PRO TIP: Set up linters and have them enforced in your CI server before you do any real work.
+/// I have spent weeks doing this after the fact because people didn't start out right. Trust me,
+/// if they're arguing with you that they don't have time, they are short sighted dweebs. One of
+/// the clearest signs on Robert Burton's classic adage _Penny wise and pound foolish_ are people
+/// who say things like, _"we don't have time to test our software..."_ and _"we will deal with
+/// making our code cleaner after we launch..."_ or _"why should I write tests... I know what my
+/// code does..."_ trust me... **TRUST ME**... this always... **ALWAYS** bites you
+/// in the ass. If the culture where you are working is infested with these sorts of asshats,
+/// and they refuse to do anything about it, my advice for you is to
+/// [run](https://www.youtube.com/watch?v=YzXvAxp-X5Q), don't walk your ass out of there.
+///
+/// Luckily for us, the rust community is made up of the polar opposites of asshats. _What's
+/// the opposite of an asshat? A headhat?_ Rust provides linting and formatting right out of the
+/// box so we don't have to debate, or really even think that much about it. You see, as the
+/// founder of the `Dumb Coding` movement, I want to spend as little time as possible thinking
+/// about shit. As the great Larry Wall said, _"We will encourage you to develop the three
+/// great virtues of a programmer: [laziness, impatience, and hubris](https://wiki.c2.com/?LazinessImpatienceHubris)."_
+///
+/// At its core, craft is about knowing how to do things right. Yes, it's a pain having to always
+/// wear safety goggles when using a power saw to cut wood, but anyone with half a brain who enjoys
+/// seeing knows that you'd be an idiot not to. Know your craft, and anytime you are going against
+/// the traditional rules you have learned, have a damn good reason.
 #[derive(Clone, Copy, Debug, Default, Ord, PartialOrd)]
 pub struct Case {
     pub hand_rank: HandRank,
@@ -150,34 +294,6 @@ mod hand_rank_case_tests {
     /// creating two royal flushes, one of spades, and one of hearts. In the vector,
     /// the hearts is first, but in the sort we want to make sure that it can tell the
     /// difference. We've also added a simple ace high straight to throw into the mix.
-    ///
-    /// Let's try sorting it:
-    /// ```
-    /// use std::str::FromStr;
-    /// use pkcore::hand_rank::case::Case;
-    /// use pkcore::arrays::five::Five;
-    ///
-    /// let straight = Case::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
-    /// let royal_flush_spades = Case::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap());
-    /// let royal_flush_hearts = Case::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap());
-    /// let mut v = vec![straight, royal_flush_hearts, royal_flush_spades];
-    ///
-    /// v.sort();
-    ///
-    /// // So why is it that when it sorts, the ace high straight is first, and the
-    /// // space straight flush is last?
-    /// assert_eq!(v, vec![royal_flush_spades, royal_flush_hearts, straight]);
-    /// ```
-    ///
-    /// ```
-    /// fn main() {
-    ///     let mut v = vec![1, 3, 2];
-    ///
-    ///     v.sort();
-    ///
-    ///     assert_eq!(v, vec![1, 2, 3]);
-    /// }
-    ///
     #[test]
     fn sort() {
         let straight = Case::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
