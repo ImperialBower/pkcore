@@ -126,7 +126,7 @@ impl Game {
     where
         T: PlayOut,
     {
-        po.play_out_flop(self.hands.clone(), self.board.flop);
+        po.play_out_flop(&self.hands, self.board.flop);
     }
 
     /// REFACTORING: OK, we're moving this over to Hands for greater flexibility. Now that we've are

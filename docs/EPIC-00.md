@@ -36,8 +36,23 @@ know if I forgot something, making sure that I won't push out something that
 will truly screw things up. Truly great programmers never make mistakes and are 
 always infallible. They work for places that pay millions of dollars and never
 ever ever do things like enable coups or create automated surveillance states. 
-You will meet this people all the time. Alas, we are mearly 
-imposters, and so we rely on our tools to have our backs. Enjoy the freedom
-of not being perfect in every way. Being Superman means that you are constantly
-having to save the world. As imposters, we can go out and do things like walk 
-our dogs and hug people we love. 
+You will meet these people all the time. Alas, we are merely imposters, and so we
+rely on our tools and craft to have our backs. Enjoy the freedom of not being 
+perfect in every way. Being Superman means that you have to deal with the pain 
+in the ass of being constantly asked to save the world. As imposters, we can 
+go out and do things like walk our dogs, take naps and hug the ones we love. 
+
+_Memento mori._
+
+## Warning
+
+I am the lover of strange writings. I was raised by a single, lesbian opera 
+singer who's favorite author is Gertrude Stein. Zippy the Pinhead, Quasi at the 
+Quackadero, Weirdo, Neat Stuff, American Flagg, Charles Bukowski, Armistead 
+Maupin, Hunter S. Thompson, Gracie Allen, The Residents, John Waters, 
+Malcolm X and Lenny Bruce are the perspectives that speak to me most. I have 
+always been an outsider, and treasure that perspective. 
+
+Consider yourself warned ;-)
+
+

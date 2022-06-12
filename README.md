@@ -384,6 +384,11 @@
                       * There are few greater highs for me then deleting code after a refactoring. Deleting code is the highest calling of a programmer. Learn to treasure these moments. This is the way.
                         * Deleting Game.case_seven()
                     * REFACTORING: Introducing the analysis module
+                      * REFACTORING: Adding combinations_after() and  enumerate_after() to Pile.
+                      * REFACTORING: PlayOut.play_out_flop() Hands just needs a reference.
+                      * RF: Hands.realize_case_at_flop()
+                      * Three::from_str()
+                      * DEFECT ALERT: The Five stored in case is frequency rated for sorting so doesn't match a raw Five, even though they are the same hand. We need to strip those flags before storing them in case. 
 
 
 

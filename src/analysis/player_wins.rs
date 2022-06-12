@@ -5,7 +5,7 @@ use crate::arrays::two::Two;
 use crate::hand_rank::case::Case;
 use crate::play::hands::Hands;
 use crate::{Card, PKError, Pile};
-use log::trace;
+use log::{debug, trace};
 use wincounter::Wins;
 
 #[derive(Clone, Debug, Default)]
@@ -14,7 +14,10 @@ pub struct PlayerWins {
 }
 
 impl PlayerWins {
-    fn seven_at_flop(player: Two, flop: Three, case: &[Card]) -> Result<Seven, PKError> {
+    /// # Errors
+    ///
+    /// `PKError::InvalidCard` if the case slice contains an invalid card.
+    pub fn seven_at_flop(player: Two, flop: Three, case: &[Card]) -> Result<Seven, PKError> {
         Ok(Seven::from([
             player.first(),
             player.second(),
@@ -27,13 +30,19 @@ impl PlayerWins {
     }
 }
 
+/// For now we are going to work through our analysis needs from here. As the sophistication of our
+/// system increases the harder it will be to move forward.
+///
+/// The plan:
+/// * Loop through every possible combination of turn and river cards.
+///   * Eval the case for every player
+///   * Generate a `wincounter::Count` for every case
+///
+///
 impl PlayOut for PlayerWins {
-    fn play_out_flop(&mut self, hands: Hands, flop: Three) {
-        for (j, case) in hands
-            .remaining_after(&flop.cards())
-            .combinations(2)
-            .enumerate()
-        {
+    fn play_out_flop(&mut self, hands: &Hands, flop: Three) {
+        debug!("Playing out {} FLOP: {}", hands, flop);
+        for (j, case) in hands.enumerate_after(2, &flop.cards()) {
             trace!(
                 "{}: FLOP: {} TURN: {} RIVER: {} -------",
                 j,

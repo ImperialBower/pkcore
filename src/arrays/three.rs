@@ -3,6 +3,7 @@ use crate::cards::Cards;
 use crate::{PKError, Pile, SOK};
 use std::fmt;
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Three([Card; 3]);
@@ -40,6 +41,14 @@ impl Display for Three {
 impl From<[Card; 3]> for Three {
     fn from(array: [Card; 3]) -> Self {
         Three(array)
+    }
+}
+
+impl FromStr for Three {
+    type Err = PKError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Three::try_from(Cards::from_str(s)?)
     }
 }
 
@@ -92,6 +101,23 @@ mod arrays_three_tests {
     #[test]
     fn from__array() {
         assert_eq!(Three(THE_FLOP), Three::from(THE_FLOP));
+    }
+
+    #[test]
+    fn from_str() {
+        assert_eq!(Three::from(THE_FLOP), Three::from_str("9♣ 6♦ 5♥").unwrap());
+        assert_eq!(PKError::InvalidIndex, Three::from_str("").unwrap_err());
+        assert_eq!(PKError::InvalidIndex, Three::from_str(" ").unwrap_err());
+        assert_eq!(PKError::InvalidIndex, Three::from_str(" __ ").unwrap_err());
+        assert_eq!(
+            PKError::NotEnoughCards,
+            Three::from_str("AC 2D").unwrap_err()
+        );
+        assert!(Three::from_str("AD KD QD JD TD 9D").is_err());
+        assert_eq!(
+            PKError::TooManyCards,
+            Three::from_str("AD KD QD JD").unwrap_err()
+        );
     }
 
     #[test]

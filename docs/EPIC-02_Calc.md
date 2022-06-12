@@ -72,9 +72,10 @@ Command:
 ❯ cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"
 ```
 
-
-
 ## Calculating Odds at Flop
+
+Staring into the abyss. One of my gifts as a developer is a more than healthy
+paranoia. Dysfunction breeds dysfunction. THE POINT??!!
 
 ## PHASE 2.1/DEFECT DETOUR
 
@@ -153,3 +154,4 @@ care. They just want it to work.
 
 My favorite example of this was when I was going with some of my coworkers to
 lunch and one of the starts screaming (Brandon Zeeb and Weibe story at Ford)
+
