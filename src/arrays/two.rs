@@ -71,6 +71,10 @@ impl FromStr for Two {
 }
 
 impl Pile for Two {
+    fn clean(&self) -> Self {
+        todo!()
+    }
+
     fn to_vec(&self) -> Vec<Card> {
         self.0.to_vec()
     }

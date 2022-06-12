@@ -53,6 +53,10 @@ impl FromStr for Three {
 }
 
 impl Pile for Three {
+    fn clean(&self) -> Self {
+        todo!()
+    }
+
     fn to_vec(&self) -> Vec<Card> {
         self.0.to_vec()
     }

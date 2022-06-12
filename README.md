@@ -388,7 +388,10 @@
                       * REFACTORING: PlayOut.play_out_flop() Hands just needs a reference.
                       * RF: Hands.realize_case_at_flop()
                       * Three::from_str()
-                      * DEFECT ALERT: The Five stored in case is frequency rated for sorting so doesn't match a raw Five, even though they are the same hand. We need to strip those flags before storing them in case. 
+                      * DEFECT ALERT: The Five stored in case is frequency rated for sorting so doesn't match a raw Five, even though they are the same hand. We need to strip those flags before storing them in case.
+                        * Adding .clean() to Pile trait.
+                          * The beautiful todo!() macro 
+                            * Implement for Card
 
 
 

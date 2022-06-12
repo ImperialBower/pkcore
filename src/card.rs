@@ -279,6 +279,10 @@ impl FromStr for Card {
 }
 
 impl Pile for Card {
+    fn clean(&self) -> Self {
+        todo!()
+    }
+
     fn to_vec(&self) -> Vec<Card> {
         vec![*self]
     }

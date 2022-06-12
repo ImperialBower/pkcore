@@ -97,6 +97,10 @@ impl Hands {
 }
 
 impl Pile for Hands {
+    fn clean(&self) -> Self {
+        todo!()
+    }
+
     fn to_vec(&self) -> Vec<Card> {
         let mut v: Vec<Card> = Vec::default();
         for two in &self.0 {

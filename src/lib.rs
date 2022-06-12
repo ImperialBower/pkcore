@@ -39,6 +39,9 @@ pub trait Pile {
         Cards::from(self.to_vec())
     }
 
+    /// Will this work? Can I create a self referential clean? Only one want to find out...
+    fn clean(&self) -> Self;
+
     /// If I can move logic to a trait that can be automatically reusable by other implementations
     /// that I do it. A strict TDD person could argue that you shouldn't do this unless you have
     /// a need for more than one use case that demands it. As an anti-fundamentalist, when I see
