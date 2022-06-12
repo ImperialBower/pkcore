@@ -202,12 +202,13 @@ mod play_hands_tests {
 
         let cases = the_hand.realize_case_at_flop(flop, case_985);
 
-        println!("{}", cases.get(0).unwrap());
-        println!("{}", Five::from_str("6♠ 6♥ 6♦ 6♣ 9♣").unwrap());
-
         assert_eq!(
             cases.get(0).unwrap().hand,
             Five::from_str("6♠ 6♥ 6♦ 6♣ 9♣").unwrap()
+        );
+        assert_eq!(
+            cases.get(1).unwrap().hand,
+            Five::from_str("5♥ 5♦ 5♣ 6♦ 6♣").unwrap()
         );
     }
 
