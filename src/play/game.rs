@@ -7,7 +7,7 @@ use crate::play::hands::Hands;
 use crate::{Card, Cards, PKError, Pile};
 use log::trace;
 use std::fmt::{Display, Formatter};
-use crate::play::PlayOut;
+use crate::play::{PlayerWins, PlayOut};
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -99,28 +99,21 @@ impl Game {
     /// It would be nice if I could plug an analysis type into the iterator to give me flexibility
     /// on what I do with the information from the cases.
     ///
+    /// # BOOM!!!
+    ///
+    /// We've moved all this logic over to the PlayerWins struct implementing our super amazing
+    /// PlayOut trait plugin. Now we can inject different types of analysis depending on our needs.
+    /// TBH, this is HAF.
+    ///
     /// # Panics
     ///
     /// Shouldn't be possible, knock on wood.
     pub fn play_out_flop(&self) {
-        for (j, case) in self.remaining_cards_at_flop().combinations(2).enumerate() {
-            trace!(
-                "{}: FLOP: {} TURN: {} RIVER: {} -------",
-                j,
-                self.board.flop,
-                case.get(0).unwrap(),
-                case.get(1).unwrap()
-            );
-            for (i, player) in self.hands.iter().enumerate() {
-                let seven = self.case_seven(*player, &case).unwrap();
-                let calc = Case::from(seven);
-                trace!("Player {} {}: {}", i + 1, *player, calc);
-            }
-            trace!("");
-        }
+        let mut wins = PlayerWins::default();
+        self.pof::<PlayerWins>(&mut wins);
     }
 
-    /// Could this actually work? It's trying to do stuff like this that I really start fealing
+    /// Could this actually work? It's trying to do stuff like this that I really start feeling
     /// like an imposter.
     pub fn pof<T>(&self, po: &mut T) where T: PlayOut {
         po.play_out_flop(self.hands.clone(), self.board.flop);
