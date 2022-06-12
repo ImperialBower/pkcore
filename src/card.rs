@@ -46,6 +46,7 @@ impl Card {
     pub const FREQUENCY_TRIPPED_MASK: u32 = 0b0100_0000_0000_0000_0000_0000_0000_0000;
     pub const FREQUENCY_QUADED_MASK: u32 = 0b1000_0000_0000_0000_0000_0000_0000_0000;
     pub const FREQUENCY_MASK: u32 = 0b1110_0000_0000_0000_0000_0000_0000_0000;
+    pub const FREQUENCY_MASK_FILTER: u32 = 0b0001_1111_1111_1111_1111_1111_1111_1111;
 
     pub(crate) const BLANK_NUMBER: u32 = 0;
     //endregion
@@ -280,7 +281,7 @@ impl FromStr for Card {
 
 impl Pile for Card {
     fn clean(&self) -> Self {
-        todo!()
+        Card(self.0 & Card::FREQUENCY_MASK_FILTER)
     }
 
     fn to_vec(&self) -> Vec<Card> {
@@ -471,6 +472,13 @@ mod card_tests {
     #[test]
     fn cards() {
         assert_eq!("3♣", Card::TREY_CLUBS.cards().to_string());
+    }
+
+    #[test]
+    fn clean() {
+        assert_eq!(Card::TREY_CLUBS, Card::TREY_CLUBS.frequency_paired().clean());
+        assert_eq!(Card::TREY_CLUBS, Card::TREY_CLUBS.frequency_tripped().clean());
+        assert_eq!(Card::TREY_CLUBS, Card::TREY_CLUBS.frequency_quaded().clean());
     }
 
     // NOTE: for this tests I am not being nearly as comprehensive because
