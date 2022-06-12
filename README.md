@@ -374,6 +374,12 @@
                     * REFACTORING: Game.remaining_cards_at_flop() to Hands.remaining_after()
                       * REFACTORING: Sick question? Can I add remaining() and remaining_after to the Pile struct? 
                         * The answer is yes :-)
+                    * WE ARE STILL RED??!! Let's implement PlayerWins
+                      * OK, we got it to build. 
+                      * VERY IMPORTANT DANGER DANGER WILL ROBINSON
+                        * Commit before you do a major, structural refactoring!!! 
+                          * For now, we will have a private pof generic injection for game. Later on we may want to get fancier. 
+                          * NOTE: for now, I am playing without a unit test net. I am using the flow of the repl guide me. Later on, when I am done I will harden the code with tests, but for now we freefall. Weeeee!!!! 
 
 
 
