@@ -35,6 +35,12 @@ pub trait Pile {
         Cards::from(self.to_vec())
     }
 
+    fn remaining_after(&self, cards: &Cards) -> Cards {
+        let mut held = self.cards();
+        held.add(cards);
+        Cards::deck_minus(&held)
+    }
+
     fn to_vec(&self) -> Vec<Card>;
 }
 

@@ -119,6 +119,16 @@ mod play_hands_tests {
     }
 
     #[test]
+    fn remaining_after() {
+        let hands = Hands::from_str("6♠ 6♥ 5♦ 5♣").unwrap();
+        let flop = Cards::from_str("9♣ 6♦ 5♥").unwrap();
+
+        let remaining = hands.remaining_after(&flop);
+
+        assert_eq!(remaining.to_string(), "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 4♣ 3♣ 2♣");
+    }
+
+    #[test]
     fn display() {
         assert_eq!(
             "[6♠ 6♥, 5♦ 5♣]",

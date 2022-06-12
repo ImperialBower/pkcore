@@ -370,7 +370,10 @@
                     * verify that Vec<Five> sorts as desired
                       * sort__vector_of_fives()
                   * Now let's crunch some Wins
-                  * TPOS 1.2: PlayOut Trait
+                  * TPOS 1.2: PlayOut Trait (_wild hare_)
+                    * REFACTORING: Game.remaining_cards_at_flop() to Hands.remaining_after()
+                      * REFACTORING: Sick question? Can I add remaining() and remaining_after to the Pile struct? 
+                        * The answer is yes :-)
 
 
 

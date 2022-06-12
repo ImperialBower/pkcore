@@ -7,6 +7,7 @@ use crate::play::hands::Hands;
 use crate::{Card, Cards, PKError, Pile};
 use log::trace;
 use std::fmt::{Display, Formatter};
+use crate::play::PlayOut;
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -119,6 +120,12 @@ impl Game {
         }
     }
 
+    /// Could this actually work? It's trying to do stuff like this that I really start fealing
+    /// like an imposter.
+    pub fn pof<T>(&self, po: &mut T) where T: PlayOut {
+        po.play_out_flop(self.hands.clone(), self.board.flop);
+    }
+
     /// See `Case` for a breakdown of the term `Case`.
     fn case_seven(&self, player: Two, case: &[Card]) -> Result<Seven, PKError> {
         Ok(Seven::from([
@@ -132,6 +139,12 @@ impl Game {
         ]))
     }
 
+    /// REFACTORING: OK, we're moving this over to Hands for greater flexibility. Now that we've are
+    /// trying out the `PlayOut` generic trait we need to be able to determine how many `Cards` are
+    /// remaining at a specific point in the hand. This method locks it into the flop, and we
+    /// really don't need that.
+    ///
+    /// TODO: deprecate
     #[must_use]
     pub fn remaining_cards_at_flop(&self) -> Cards {
         let mut cards = self.hands.cards();
@@ -152,8 +165,9 @@ mod play_game_tests {
     use super::*;
     use crate::arrays::HandRanker;
     use std::str::FromStr;
+    use crate::play::PlayerWins;
 
-    fn state() -> Game {
+    fn the_hand() -> Game {
         let hands = Hands::from_str("6♠ 6♥ 5♦ 5♣").unwrap();
         let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
 
@@ -167,14 +181,14 @@ mod play_game_tests {
 
     #[test]
     fn new() {
-        let game = state();
+        let game = the_hand();
 
         assert_eq!(game, Game::new(game.hands.clone(), game.board));
     }
 
     #[test]
     fn five_at_flop() {
-        let game = state();
+        let game = the_hand();
 
         assert_eq!(2185, game.five_at_flop(0).unwrap().hand_rank().value());
         assert_eq!(2251, game.five_at_flop(1).unwrap().hand_rank().value());
@@ -185,14 +199,23 @@ mod play_game_tests {
     fn remaining_cards_at_flop() {
         // Crude but effective. https://www.youtube.com/watch?v=UKkjknFwPac
         assert_eq!(
-            state().remaining_cards_at_flop().to_string(),
+            the_hand().remaining_cards_at_flop().to_string(),
             "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 4♣ 3♣ 2♣"
         );
     }
 
     #[test]
+    fn pof() {
+        let mut wins = PlayerWins::default();
+        let game = the_hand();
+
+        game.pof::<PlayerWins>(&mut wins);
+
+    }
+
+    #[test]
     fn display() {
-        let game = state();
+        let game = the_hand();
 
         assert_eq!(
             "DEALT: [6♠ 6♥, 5♦ 5♣] FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: 8♠",
