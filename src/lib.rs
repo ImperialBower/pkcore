@@ -4,6 +4,7 @@
 use crate::card::Card;
 use crate::cards::Cards;
 
+pub mod analysis;
 pub mod arrays;
 pub mod card;
 pub mod card_number;

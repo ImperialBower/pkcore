@@ -1,7 +1,8 @@
+use crate::analysis::player_wins::PlayerWins;
+use crate::analysis::PlayOut;
 use crate::arrays::five::Five;
 use crate::play::board::Board;
 use crate::play::hands::Hands;
-use crate::play::{PlayOut, PlayerWins};
 use crate::{Cards, PKError, Pile};
 use std::fmt::{Display, Formatter};
 
@@ -153,7 +154,6 @@ impl Display for Game {
 mod play_game_tests {
     use super::*;
     use crate::arrays::HandRanker;
-    use crate::play::PlayerWins;
     use std::str::FromStr;
 
     fn the_hand() -> Game {

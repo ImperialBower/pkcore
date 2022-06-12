@@ -383,7 +383,7 @@
                     * OK, now let's clippy this MFer.
                       * There are few greater highs for me then deleting code after a refactoring. Deleting code is the highest calling of a programmer. Learn to treasure these moments. This is the way.
                         * Deleting Game.case_seven()
-                        * 
+                    * REFACTORING: Introducing the analysis module
 
 
 
