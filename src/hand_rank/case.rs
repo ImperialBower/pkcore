@@ -79,17 +79,15 @@ use std::hash::{Hash, Hasher};
 /// lowest to highest:
 ///
 /// ```
-/// fn main() {
-///     let mut v = vec![1, 3, 2];
+/// let mut v = vec![1, 3, 2];
 ///
-///     v.sort();
+/// v.sort();
 ///
-///     assert_eq!(v, vec![1, 2, 3]);
-/// }
+/// assert_eq!(v, vec![1, 2, 3]);
 /// ```
 /// [Rust Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=f5952c6d45ba4bcc43c44699856fb7c6)
 ///
-/// Since the primary struct inside Case is HandRank, and it classifies a royal flush `HandRankValue`
+/// Since the primary struct inside Case is `HandRank`, and it classifies a royal flush `HandRankValue`
 /// of 1 as the highest possible number, basically reversing the order of integers for the field, \
 /// by a default sort, a royal flush would come after a straight even though the primary field
 /// for the `HandRank` is a lower integer.

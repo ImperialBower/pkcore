@@ -379,7 +379,11 @@
                       * VERY IMPORTANT DANGER DANGER WILL ROBINSON
                         * Commit before you do a major, structural refactoring!!! 
                           * For now, we will have a private pof generic injection for game. Later on we may want to get fancier. 
-                          * NOTE: for now, I am playing without a unit test net. I am using the flow of the repl guide me. Later on, when I am done I will harden the code with tests, but for now we freefall. Weeeee!!!! 
+                          * NOTE: for now, I am playing without a unit test net. I am using the flow of the repl guide me. Later on, when I am done I will harden the code with tests, but for now we freefall. Weeeee!!!!
+                    * OK, now let's clippy this MFer.
+                      * There are few greater highs for me then deleting code after a refactoring. Deleting code is the highest calling of a programmer. Learn to treasure these moments. This is the way.
+                        * Deleting Game.case_seven()
+                        * 
 
 
 

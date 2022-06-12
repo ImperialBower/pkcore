@@ -564,7 +564,9 @@ mod card_tests {
 
         v.sort();
 
-        assert_eq!(v, vec![Card::KING_SPADES, Card::ACE_CLUBS, Card::ACE_SPADES]);
+        assert_eq!(
+            v,
+            vec![Card::KING_SPADES, Card::ACE_CLUBS, Card::ACE_SPADES]
+        );
     }
-
 }

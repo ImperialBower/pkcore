@@ -504,8 +504,18 @@ mod arrays_five_tests {
         v.sort();
         v.reverse();
 
-        println!("{} - {} - {}", v.get(0).unwrap(), v.get(1).unwrap(), v.get(2).unwrap());
-        println!("{} - {} - {}", expected.get(0).unwrap(), expected.get(1).unwrap(), expected.get(2).unwrap());
+        println!(
+            "{} - {} - {}",
+            v.get(0).unwrap(),
+            v.get(1).unwrap(),
+            v.get(2).unwrap()
+        );
+        println!(
+            "{} - {} - {}",
+            expected.get(0).unwrap(),
+            expected.get(1).unwrap(),
+            expected.get(2).unwrap()
+        );
 
         assert_eq!(expected, v);
     }

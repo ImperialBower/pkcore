@@ -1,13 +1,9 @@
 use crate::arrays::five::Five;
-use crate::arrays::seven::Seven;
-use crate::arrays::two::Two;
-use crate::hand_rank::case::Case;
 use crate::play::board::Board;
 use crate::play::hands::Hands;
-use crate::{Card, Cards, PKError, Pile};
-use log::trace;
+use crate::play::{PlayOut, PlayerWins};
+use crate::{Cards, PKError, Pile};
 use std::fmt::{Display, Formatter};
-use crate::play::{PlayerWins, PlayOut};
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -95,15 +91,25 @@ impl Game {
     ///   * Counts of Hand Class
     ///   * Chances of winning
     ///
-    /// ### PlayOut Trait Idea
+    /// ### `PlayOut` Trait Idea
     /// It would be nice if I could plug an analysis type into the iterator to give me flexibility
     /// on what I do with the information from the cases.
     ///
-    /// # BOOM!!!
+    /// # BOOM!!! post `PlayOut`
     ///
-    /// We've moved all this logic over to the PlayerWins struct implementing our super amazing
-    /// PlayOut trait plugin. Now we can inject different types of analysis depending on our needs.
+    /// We've moved all this logic over to the `PlayerWins` struct implementing our super amazing
+    /// `PlayOut` trait plugin. Now we can inject different types of analysis depending on our needs.
     /// TBH, this is HAF.
+    ///
+    /// I'll be honest with you. I'm really proud of myself for this refactoring. This is above and
+    /// beyond anything I did in the original fudd spike.
+    ///
+    /// Being able to pull off these optimizations largely depends on the clock. As a hack imposter
+    /// you have to watch out if you have the time to spend on these quests for aesthetic beauty.
+    /// Luckily for us, this work is all about self expression. as Joseph Campbell said,
+    /// _"Find a place inside where there's joy, and the joy will burn out the pain."_ For me, this
+    /// is one of those places. I can't control the world, but I can control the universe that is
+    /// my art.
     ///
     /// # Panics
     ///
@@ -115,21 +121,11 @@ impl Game {
 
     /// Could this actually work? It's trying to do stuff like this that I really start feeling
     /// like an imposter.
-    pub fn pof<T>(&self, po: &mut T) where T: PlayOut {
+    pub fn pof<T>(&self, po: &mut T)
+    where
+        T: PlayOut,
+    {
         po.play_out_flop(self.hands.clone(), self.board.flop);
-    }
-
-    /// See `Case` for a breakdown of the term `Case`.
-    fn case_seven(&self, player: Two, case: &[Card]) -> Result<Seven, PKError> {
-        Ok(Seven::from([
-            player.first(),
-            player.second(),
-            self.board.flop.first(),
-            self.board.flop.second(),
-            self.board.flop.third(),
-            *case.get(0).ok_or(PKError::InvalidCard)?,
-            *case.get(1).ok_or(PKError::InvalidCard)?,
-        ]))
     }
 
     /// REFACTORING: OK, we're moving this over to Hands for greater flexibility. Now that we've are
@@ -157,8 +153,8 @@ impl Display for Game {
 mod play_game_tests {
     use super::*;
     use crate::arrays::HandRanker;
-    use std::str::FromStr;
     use crate::play::PlayerWins;
+    use std::str::FromStr;
 
     fn the_hand() -> Game {
         let hands = Hands::from_str("6♠ 6♥ 5♦ 5♣").unwrap();
@@ -197,13 +193,17 @@ mod play_game_tests {
         );
     }
 
+    /// I really like this test, even though it asserts nothing. It's just making sure that we
+    /// really can inject a `PlayOut` struct and that the code will play nice. Maybe that's the
+    /// imposter in me that I want to leave it in. The old java hacker in me would never leave this
+    /// in that kind of codebase, but for now, I will let this sign of my lack of experience stay.
+    /// After all, it's just a test. It's not like it's production code.
     #[test]
     fn pof() {
         let mut wins = PlayerWins::default();
         let game = the_hand();
 
         game.pof::<PlayerWins>(&mut wins);
-
     }
 
     #[test]
