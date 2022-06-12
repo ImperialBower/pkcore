@@ -40,6 +40,9 @@ pub trait Pile {
     }
 
     /// Will this work? Can I create a self referential clean? Only one want to find out...
+    ///
+    /// *NARRATOR:* _The answer is yes._
+    #[must_use]
     fn clean(&self) -> Self;
 
     /// If I can move logic to a trait that can be automatically reusable by other implementations

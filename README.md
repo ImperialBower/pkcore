@@ -393,7 +393,9 @@
                           * The beautiful todo!() macro 
                             * Implement for Card
                               * Card::FREQUENCY_MASK_FILTER
-
+                            * Five.clean()
+                              * Add `assert_eq!(hand.sort().clean(), five);` to Five hand_rank mega test
+                              * Added .clean() to Seven.hand_rank_value_and_hand() hand return
 
 
 ## LATER

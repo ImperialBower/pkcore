@@ -476,9 +476,19 @@ mod card_tests {
 
     #[test]
     fn clean() {
-        assert_eq!(Card::TREY_CLUBS, Card::TREY_CLUBS.frequency_paired().clean());
-        assert_eq!(Card::TREY_CLUBS, Card::TREY_CLUBS.frequency_tripped().clean());
-        assert_eq!(Card::TREY_CLUBS, Card::TREY_CLUBS.frequency_quaded().clean());
+        assert_eq!(
+            Card::TREY_CLUBS,
+            Card::TREY_CLUBS.frequency_paired().clean()
+        );
+        assert_eq!(
+            Card::TREY_CLUBS,
+            Card::TREY_CLUBS.frequency_tripped().clean()
+        );
+        assert_eq!(
+            Card::TREY_CLUBS,
+            Card::TREY_CLUBS.frequency_quaded().clean()
+        );
+        assert_eq!(Card::TREY_CLUBS, Card::TREY_CLUBS.clean());
     }
 
     // NOTE: for this tests I am not being nearly as comprehensive because

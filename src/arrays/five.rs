@@ -203,7 +203,7 @@ impl HandRanker for Five {
                     _ => unique,
                 }
             };
-            (rank, self.sort())
+            (rank, self.sort().clean())
         } else {
             (NO_HAND_RANK_VALUE, Five::default())
         }
@@ -244,7 +244,13 @@ impl HandRanker for Five {
 
 impl Pile for Five {
     fn clean(&self) -> Self {
-        todo!()
+        Five([
+            self.first().clean(),
+            self.second().clean(),
+            self.third().clean(),
+            self.forth().clean(),
+            self.fifth().clean(),
+        ])
     }
 
     fn to_vec(&self) -> Vec<Card> {
@@ -2427,8 +2433,9 @@ mod arrays_five_tests {
         let hand = Five::from_str(index).unwrap();
 
         // let hand_rank_value = hand.hand_rank_value();
-        let hand_rank = hand.hand_rank();
+        let (hand_rank, five) = hand.hand_rank_and_hand();
 
+        assert_eq!(hand.sort().clean(), five);
         assert_eq!(expected_value, hand_rank.value());
         assert_eq!(expected_name, hand_rank.name());
         assert_eq!(expected_class, hand_rank.class());
@@ -2441,6 +2448,28 @@ mod arrays_five_tests {
             "A♦ K♦ Q♦ J♦ T♦",
             Five::from(ROYAL_FLUSH).cards().to_string()
         );
+    }
+
+    #[test]
+    fn clean() {
+        let full_house = Five::from([
+            Card::FIVE_SPADES,
+            Card::SIX_DIAMONDS,
+            Card::FIVE_HEARTS,
+            Card::SIX_SPADES,
+            Card::SIX_CLUBS,
+        ]);
+        let full_house_sorted = Five::from([
+            Card::SIX_SPADES,
+            Card::SIX_DIAMONDS,
+            Card::SIX_CLUBS,
+            Card::FIVE_SPADES,
+            Card::FIVE_HEARTS,
+        ]);
+
+        let clean_full_house = full_house.sort().clean();
+
+        assert_eq!(full_house_sorted, clean_full_house);
     }
 
     #[test]

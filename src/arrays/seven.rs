@@ -92,7 +92,7 @@ impl HandRanker for Seven {
             }
         }
 
-        (best_hrv, best_hand.sort())
+        (best_hrv, best_hand.sort().clean())
     }
 
     fn sort(&self) -> Self {

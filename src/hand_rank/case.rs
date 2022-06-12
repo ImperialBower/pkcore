@@ -253,6 +253,7 @@ mod hand_rank_case_tests {
     use crate::arrays::HandRanker;
     use crate::hand_rank::class::Class;
     use crate::hand_rank::name::Name;
+    use crate::Pile;
     use std::str::FromStr;
 
     #[test]
@@ -268,7 +269,7 @@ mod hand_rank_case_tests {
     #[test]
     fn from__seven() {
         let seven = Seven::from_str("6♠ 6♥ 9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
-        let expected_hand = Five::from_str("6♠ 6♥ 6♦ 5♠ 5♥").unwrap().sort();
+        let expected_hand = Five::from_str("6♠ 6♥ 6♦ 5♠ 5♥").unwrap().sort().clean();
 
         let case = Case::from(seven);
 
