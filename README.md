@@ -396,6 +396,7 @@
                             * Five.clean()
                               * Add `assert_eq!(hand.sort().clean(), five);` to Five hand_rank mega test
                               * Added .clean() to Seven.hand_rank_value_and_hand() hand return
+                              * Removed unneeded .strip() and .clean() from hand_rank_case_tests::from__seven() test
 
 
 ## LATER
