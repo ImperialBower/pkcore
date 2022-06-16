@@ -111,10 +111,6 @@ impl Game {
     /// _"Find a place inside where there's joy, and the joy will burn out the pain."_ For me, this
     /// is one of those places. I can't control the world, but I can control the universe that is
     /// my art.
-    ///
-    /// # Panics
-    ///
-    /// Shouldn't be possible, knock on wood.
     pub fn play_out_flop(&self) {
         let mut wins = PlayerWins::default();
         self.pof::<PlayerWins>(&mut wins);
