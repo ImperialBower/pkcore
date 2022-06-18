@@ -7,6 +7,7 @@ use crate::play::hands::Hands;
 use crate::{Card, PKError, Pile};
 use log::{debug, trace};
 use wincounter::Wins;
+use crate::hand_rank::HandRank;
 
 #[derive(Clone, Debug, Default)]
 pub struct PlayerWins {
@@ -38,11 +39,13 @@ impl PlayerWins {
 ///   * Eval the case for every player
 ///   * Generate a `wincounter::Count` for every case
 ///
-///
+/// NOTE TO SELF: Add performance testing to check weight of raw logging calls.
 impl PlayOut for PlayerWins {
     fn play_out_flop(&mut self, hands: &Hands, flop: Three) {
         debug!("Playing out {} FLOP: {}", hands, flop);
+
         for (j, case) in hands.enumerate_after(2, &flop.cards()) {
+
             trace!(
                 "{}: FLOP: {} TURN: {} RIVER: {} -------",
                 j,
@@ -50,6 +53,9 @@ impl PlayOut for PlayerWins {
                 case.get(0).unwrap(),
                 case.get(1).unwrap()
             );
+
+            let best = HandRank::default();
+
             for (i, player) in hands.iter().enumerate() {
                 let seven = PlayerWins::seven_at_flop(*player, flop, &case).unwrap();
                 let calc = Case::from(seven);
