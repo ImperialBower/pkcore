@@ -1,4 +1,5 @@
 use crate::hand_rank::eval::Eval;
+use std::slice::Iter;
 
 /// # Analysis Saga: Step 2
 ///
@@ -68,6 +69,10 @@ impl CaseEval {
         self.0.is_empty()
     }
 
+    pub fn iter(&self) -> Iter<'_, Eval> {
+        self.0.iter()
+    }
+
     #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
@@ -75,6 +80,11 @@ impl CaseEval {
 
     pub fn push(&mut self, eval: Eval) {
         self.0.push(eval);
+    }
+
+    #[must_use]
+    pub fn to_vec(&self) -> Vec<Eval> {
+        self.0.clone()
     }
 }
 
@@ -132,5 +142,21 @@ mod hand_rank__case_eval_tests {
         sut.push(TestData::gus_eval_at_flop());
 
         assert_eq!(expected, sut);
+    }
+
+    #[test]
+    fn to_vec() {
+        let expected = vec![
+            TestData::daniel_eval_at_flop(),
+            TestData::gus_eval_at_flop(),
+        ];
+
+        let actual = CaseEval(vec![
+            TestData::daniel_eval_at_flop(),
+            TestData::gus_eval_at_flop(),
+        ])
+        .to_vec();
+
+        assert_eq!(expected, actual);
     }
 }
