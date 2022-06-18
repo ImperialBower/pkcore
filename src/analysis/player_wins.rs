@@ -40,6 +40,24 @@ impl PlayerWins {
 ///   * Generate a `wincounter::Count` for every case
 ///
 /// NOTE TO SELF: Add performance testing to check weight of raw logging calls.
+///
+/// [commit](https://github.com/ContractBridge/pkcore/commit/80fdf1f4a5951c21e255aaa8be25c85f368d4ffa)
+///
+/// ## Thoughts
+///
+/// I've hit a wall. Even though I've done this before I feel like I'm starting over from scratch.
+/// When I describe what programming is to people who don't do it for a living, I like to
+/// tell them that it's like banging your head against the wall until you pass out, or
+/// your head breaks through the wall. If you have a breakthrough, it's like a gambler's high
+///
+/// My goal right now is just go get this to work in its simplest form. Just do the
+/// calculation and then refactor it into something flexible. I'm not test driving
+/// right now. I'm spiking. I'm trying to flesh out how I will resolve this problem
+/// before I take my discoveries and forge it into functioning, tested code.
+///
+/// I use the example command line programs as my playground. Rust is wonderful in letting
+/// me use examples to play with ideas. I haven't seen a language that lets you do this
+/// so easily.
 impl PlayOut for PlayerWins {
     fn play_out_flop(&mut self, hands: &Hands, flop: Three) {
         debug!("Playing out {} FLOP: {}", hands, flop);
