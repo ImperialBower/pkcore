@@ -63,6 +63,16 @@ impl CaseEval {
         self.0.get(index)
     }
 
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
     pub fn push(&mut self, eval: Eval) {
         self.0.push(eval);
     }
@@ -84,6 +94,29 @@ mod hand_rank__case_eval_tests {
         assert_eq!(sut.get(0).unwrap(), &TestData::daniel_eval_at_flop());
         assert_eq!(sut.get(1).unwrap(), &TestData::gus_eval_at_flop());
         assert!(sut.get(2).is_none());
+    }
+
+    #[test]
+    fn is_empty() {
+        assert!(CaseEval::default().is_empty());
+        assert!(!CaseEval(vec![
+            TestData::daniel_eval_at_flop(),
+            TestData::gus_eval_at_flop(),
+        ])
+        .is_empty());
+    }
+
+    #[test]
+    fn len() {
+        assert_eq!(0, CaseEval::default().len());
+        assert_eq!(
+            2,
+            CaseEval(vec![
+                TestData::daniel_eval_at_flop(),
+                TestData::gus_eval_at_flop(),
+            ])
+            .len()
+        );
     }
 
     // cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"
