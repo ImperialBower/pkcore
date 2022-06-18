@@ -58,6 +58,11 @@ use crate::hand_rank::eval::Eval;
 pub struct CaseEval(Vec<Eval>);
 
 impl CaseEval {
+    #[must_use]
+    pub fn get(&self, index: usize) -> Option<&Eval> {
+        self.0.get(index)
+    }
+
     pub fn push(&mut self, eval: Eval) {
         self.0.push(eval);
     }
@@ -67,8 +72,19 @@ impl CaseEval {
 #[allow(non_snake_case)]
 mod hand_rank__case_eval_tests {
     use super::*;
-    use crate::arrays::two::Two;
     use crate::util::data::TestData;
+
+    #[test]
+    fn get() {
+        let sut = CaseEval(vec![
+            TestData::daniel_eval_at_flop(),
+            TestData::gus_eval_at_flop(),
+        ]);
+
+        assert_eq!(sut.get(0).unwrap(), &TestData::daniel_eval_at_flop());
+        assert_eq!(sut.get(1).unwrap(), &TestData::gus_eval_at_flop());
+        assert!(sut.get(2).is_none());
+    }
 
     // cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"
     #[test]
