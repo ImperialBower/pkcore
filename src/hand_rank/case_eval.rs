@@ -1,5 +1,6 @@
 use crate::hand_rank::eval::Eval;
 use std::slice::Iter;
+use crate::hand_rank::HandRank;
 
 /// # Analysis Saga: Step 2
 ///
@@ -86,6 +87,23 @@ impl CaseEval {
     pub fn to_vec(&self) -> Vec<Eval> {
         self.0.clone()
     }
+
+    #[must_use]
+    pub fn win_count(&self) -> wincounter::Count {
+        todo!()
+    }
+
+    /// Returns the top `HandRank` for this specific `CaseEval`.
+    #[must_use]
+    pub fn winning_hand_rank(&self) -> HandRank {
+        let mut winning_rank = HandRank::default();
+        for eval in &self.0 {
+            if eval.hand_rank > winning_rank {
+                winning_rank = eval.hand_rank;
+            }
+        }
+        winning_rank
+    }
 }
 
 #[cfg(test)]
@@ -156,6 +174,18 @@ mod hand_rank__case_eval_tests {
             TestData::gus_eval_at_flop(),
         ])
         .to_vec();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn winning_hand_rank() {
+        let expected = TestData::daniel_eval_at_flop().hand_rank;
+
+        let actual = CaseEval(vec![
+            TestData::daniel_eval_at_flop(),
+            TestData::gus_eval_at_flop(),
+        ]).winning_hand_rank();
 
         assert_eq!(expected, actual);
     }
