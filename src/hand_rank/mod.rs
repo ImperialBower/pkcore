@@ -4,8 +4,9 @@ use crate::SOK;
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 
-pub mod case;
+pub mod case_eval;
 pub mod class;
+pub mod eval;
 pub mod name;
 
 /// `HandRankValue` is the integer representing the `HandRank` for a particular five card

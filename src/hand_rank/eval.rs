@@ -5,15 +5,17 @@ use crate::hand_rank::HandRank;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 
-/// `Case` is a term I coined for a specific instance of analysis when iterating through
+/// # Analysis Saga: Step 1
+///
+/// `Eval` is a term I coined for a specific instance of analysis when iterating through
 /// all possible combinations of hands for a specific game of poker. For instance: Given
 /// `THE HAND` between Daniel Negreanu and Gus Hansen, where Daniel held `6♠ 6♥` and Gus held
-/// `5♦ 5♣`, with the flop of `9♣ 6♦ 5♥`, one possible `Case` would be `6♣` on the turn,
+/// `5♦ 5♣`, with the flop of `9♣ 6♦ 5♥`, one possible `Eval` would be `6♣` on the turn,
 /// giving Daniel quads, and then `5♠` on the river giving Gus quads as well. Quads over quads.
 /// Another case was what actually happened: `5♠` and then `8♠` giving Daniel a full house,
 /// and Gus quads.
 ///
-/// `Case` is an example of a utilitarian data struct. It's a simple immutable collection of state,
+/// `Eval` is an example of a utilitarian data struct. It's a simple immutable collection of state,
 /// that doesn't need to worry it's pretty little bites about anything but keeping my code clean.
 /// I really don't want to pollute my code with tons of functions that return tuples of information
 /// willy nilly.
@@ -24,7 +26,7 @@ use std::hash::{Hash, Hasher};
 ///
 /// ## Sorting
 ///
-/// We want to validate that `Case` is primarily sorting on `HandRank` and then
+/// We want to validate that `Eval` is primarily sorting on `HandRank` and then
 /// subsequently sorting on the cards itself. This test validates by
 /// creating two royal flushes, one of spades, and one of hearts. In the vector,
 /// the hearts is first, but in the sort we want to make sure that it can tell the
@@ -61,12 +63,12 @@ use std::hash::{Hash, Hasher};
 /// Let's try sorting it:
 /// ```
 /// use std::str::FromStr;
-/// use pkcore::hand_rank::case::Case;
+/// use pkcore::hand_rank::eval::Eval;
 /// use pkcore::arrays::five::Five;
 ///
-/// let straight = Case::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
-/// let royal_flush_spades = Case::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap());
-/// let royal_flush_hearts = Case::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap());
+/// let straight = Eval::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
+/// let royal_flush_spades = Eval::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap());
+/// let royal_flush_hearts = Eval::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap());
 /// let mut v = vec![straight, royal_flush_hearts, royal_flush_spades];
 ///
 /// v.sort();
@@ -87,7 +89,7 @@ use std::hash::{Hash, Hasher};
 /// ```
 /// [Rust Playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=f5952c6d45ba4bcc43c44699856fb7c6)
 ///
-/// Since the primary struct inside Case is `HandRank`, and it classifies a royal flush `HandRankValue`
+/// Since the primary struct inside Eval is `HandRank`, and it classifies a royal flush `HandRankValue`
 /// of 1 as the highest possible number, basically reversing the order of integers for the field, \
 /// by a default sort, a royal flush would come after a straight even though the primary field
 /// for the `HandRank` is a lower integer.
@@ -98,16 +100,16 @@ use std::hash::{Hash, Hasher};
 /// one will find as a software developer, that it's these sort of annoying little details that will
 /// occupy a significant portion of your time.
 ///
-/// So, that means to get the highest Case in front, we need to reverse the sort:
+/// So, that means to get the highest Eval in front, we need to reverse the sort:
 ///
 /// ```
 /// use std::str::FromStr;
-/// use pkcore::hand_rank::case::Case;
+/// use pkcore::hand_rank::eval::Eval;
 /// use pkcore::arrays::five::Five;
 ///
-/// let straight = Case::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
-/// let royal_flush_spades = Case::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap());
-/// let royal_flush_hearts = Case::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap());
+/// let straight = Eval::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
+/// let royal_flush_spades = Eval::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap());
+/// let royal_flush_hearts = Eval::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap());
 /// let mut v = vec![royal_flush_spades, royal_flush_hearts, straight];
 ///
 /// v.sort();
@@ -117,7 +119,7 @@ use std::hash::{Hash, Hasher};
 /// ```
 ///
 /// Note, that this is in contrast to if we sorted a vector or pure `Five` hands. without the
-/// `HandRank` field proceeding it in the `Case` struct:
+/// `HandRank` field proceeding it in the `Eval` struct:
 ///
 /// ```
 /// use pkcore::arrays::five::Five;
@@ -148,7 +150,7 @@ use std::hash::{Hash, Hasher};
 /// to as clearly as possible to show off the substance expressed in the words.
 ///
 /// This way of thinking is essential in programming. We don't code to show off how brilliant
-/// out code is. No one besides other programmers really cares how totally complicated and brilliant
+/// our code is. No one besides other programmers really cares how totally complicated and brilliant
 /// your programming is. The priorities for a programmer should be the following:
 ///
 /// * How clearly does it express domain information to the user?
@@ -191,64 +193,64 @@ use std::hash::{Hash, Hasher};
 /// seeing knows that you'd be an idiot not to. Know your craft, and anytime you are going against
 /// the traditional rules you have learned, have a damn good reason.
 #[derive(Clone, Copy, Debug, Default, Ord, PartialOrd)]
-pub struct Case {
+pub struct Eval {
     pub hand_rank: HandRank,
     pub hand: Five,
 }
 
-impl Case {
+impl Eval {
     #[must_use]
     pub fn new(hand_rank: HandRank, hand: Five) -> Self {
-        Case { hand_rank, hand }
+        Eval { hand_rank, hand }
     }
 }
 
-impl Display for Case {
+impl Display for Eval {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} - {}", self.hand, self.hand_rank)
     }
 }
 
-impl From<Five> for Case {
+impl From<Five> for Eval {
     fn from(five: Five) -> Self {
         let (hand_rank, hand) = five.hand_rank_and_hand();
 
-        Case { hand_rank, hand }
+        Eval { hand_rank, hand }
     }
 }
 
-/// FROM PLOF 1.1: Case Display and starting on observability
+/// FROM PLOF 1.1: Eval Display and starting on observability
 /// commit 2c73e2722ebcdf4dfc3afad5857f8fb87458b985
 ///
 /// I don't like this as the entry point for a specific case. It destroys
 /// the structure for the case, specifically what's the hole cards, what's the flop
 /// and what's the instance.
-impl From<Seven> for Case {
+impl From<Seven> for Eval {
     fn from(seven: Seven) -> Self {
         let (hand_rank, hand) = seven.hand_rank_and_hand();
 
-        Case { hand_rank, hand }
+        Eval { hand_rank, hand }
     }
 }
 
 /// [Implementing Hash](https://doc.rust-lang.org/std/hash/trait.Hash.html#implementing-hash)
-impl Hash for Case {
+impl Hash for Eval {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.hand_rank.hash(state);
         self.hand.hash(state);
     }
 }
 
-impl PartialEq for Case {
+impl PartialEq for Eval {
     fn eq(&self, other: &Self) -> bool {
         self.hand_rank == other.hand_rank
     }
 }
-impl Eq for Case {}
+impl Eq for Eval {}
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod hand_rank_case_tests {
+mod hand_rank_eval_tests {
     use super::*;
     use crate::arrays::HandRanker;
     use crate::hand_rank::class::Class;
@@ -259,10 +261,11 @@ mod hand_rank_case_tests {
     fn from__five() {
         let hand = Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap();
 
-        let case = Case::from(hand);
+        let eval = Eval::from(hand);
 
-        assert_eq!(case.hand, hand.sort());
-        assert_eq!(case.hand_rank, hand.hand_rank());
+        assert_eq!(eval.hand, hand.sort());
+        assert_eq!(eval.hand_rank, hand.hand_rank());
+        assert_eq!(eval.hand_rank.class, Class::RoyalFlush);
     }
 
     #[test]
@@ -270,33 +273,33 @@ mod hand_rank_case_tests {
         let seven = Seven::from_str("6♠ 6♥ 9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
         let expected_hand = Five::from_str("6♠ 6♥ 6♦ 5♠ 5♥").unwrap();
 
-        let case = Case::from(seven);
+        let eval = Eval::from(seven);
 
-        assert_eq!(case.hand, expected_hand);
-        assert_eq!(case.hand_rank, seven.hand_rank());
-        assert_eq!(case.hand_rank.value, 271);
-        assert_eq!(case.hand_rank.name, Name::FullHouse);
-        assert_eq!(case.hand_rank.class, Class::SixesOverFives);
+        assert_eq!(eval.hand, expected_hand);
+        assert_eq!(eval.hand_rank, seven.hand_rank());
+        assert_eq!(eval.hand_rank.value, 271);
+        assert_eq!(eval.hand_rank.name, Name::FullHouse);
+        assert_eq!(eval.hand_rank.class, Class::SixesOverFives);
     }
 
     #[test]
     fn eq() {
         assert_eq!(
-            Case::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap()),
-            Case::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap())
+            Eval::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap()),
+            Eval::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap())
         )
     }
 
-    /// This is to validate that `Case` is primarily sorting on `HandRank` and then
+    /// This is to validate that `Eval` is primarily sorting on `HandRank` and then
     /// subsequently sorting on the cards itself. This test validates by
     /// creating two royal flushes, one of spades, and one of hearts. In the vector,
     /// the hearts is first, but in the sort we want to make sure that it can tell the
     /// difference. We've also added a simple ace high straight to throw into the mix.
     #[test]
     fn sort() {
-        let straight = Case::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
-        let royal_flush_spades = Case::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap());
-        let royal_flush_hearts = Case::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap());
+        let straight = Eval::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
+        let royal_flush_spades = Eval::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap());
+        let royal_flush_hearts = Eval::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap());
         let mut v = vec![straight, royal_flush_hearts, royal_flush_spades];
 
         v.sort();

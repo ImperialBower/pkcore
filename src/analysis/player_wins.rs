@@ -2,12 +2,12 @@ use crate::analysis::PlayOut;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
-use crate::hand_rank::case::Case;
+use crate::hand_rank::eval::Eval;
+use crate::hand_rank::HandRank;
 use crate::play::hands::Hands;
 use crate::{Card, PKError, Pile};
 use log::{debug, trace};
 use wincounter::Wins;
-use crate::hand_rank::HandRank;
 
 #[derive(Clone, Debug, Default)]
 pub struct PlayerWins {
@@ -63,7 +63,6 @@ impl PlayOut for PlayerWins {
         debug!("Playing out {} FLOP: {}", hands, flop);
 
         for (j, case) in hands.enumerate_after(2, &flop.cards()) {
-
             trace!(
                 "{}: FLOP: {} TURN: {} RIVER: {} -------",
                 j,
@@ -72,11 +71,16 @@ impl PlayOut for PlayerWins {
                 case.get(1).unwrap()
             );
 
-            let best = HandRank::default();
+            let mut best = HandRank::default();
 
             for (i, player) in hands.iter().enumerate() {
                 let seven = PlayerWins::seven_at_flop(*player, flop, &case).unwrap();
-                let calc = Case::from(seven);
+                let calc = Eval::from(seven);
+
+                if calc.hand_rank > best {
+                    best = calc.hand_rank;
+                }
+
                 trace!("Player {} {}: {}", i + 1, *player, calc);
             }
             trace!("");

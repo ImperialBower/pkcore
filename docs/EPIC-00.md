@@ -55,4 +55,15 @@ always been an outsider, and treasure that perspective.
 
 Consider yourself warned ;-)
 
+## Test Driving, Thin Slicing, and My Chunnel Approach 
 
+Domain Driven Design, the sweet spot between TDD and Architecture.
+
+Perspective: [Why user stories and the thin slice are a lie…](https://hurlbert.medium.com/why-user-stories-and-the-thin-slice-are-a-lie-a3c393bde81#:~:text=In%20Agile%20there%20is%20lore,and%20implement%20the%20user%20story.)
+
+The structure
+
+* Core domain definitions
+  * Hardened core API
+    * Architecture defining system communication and interfaces
+      * Display... i.e. applications

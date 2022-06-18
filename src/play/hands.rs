@@ -2,7 +2,7 @@ use crate::analysis::player_wins::PlayerWins;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::cards::Cards;
-use crate::hand_rank::case::Case;
+use crate::hand_rank::eval::Eval;
 use crate::{Card, PKError, Pile};
 use itertools::Itertools;
 use log::error;
@@ -80,11 +80,11 @@ impl Hands {
     /// If you're system is trying to tell you something, make sure it can.
     ///
     #[must_use]
-    pub fn realize_case_at_flop(&self, flop: Three, case: &[Card]) -> Vec<Case> {
-        let mut cases: Vec<Case> = Vec::default();
+    pub fn realize_case_at_flop(&self, flop: Three, case: &[Card]) -> Vec<Eval> {
+        let mut cases: Vec<Eval> = Vec::default();
         for hand in self.iter() {
             match PlayerWins::seven_at_flop(*hand, flop, case) {
-                Ok(seven) => cases.push(Case::from(seven)),
+                Ok(seven) => cases.push(Eval::from(seven)),
                 Err(e) => error!(
                     "{:?} from realize_case_at_flop({}, {}, {:?})",
                     e, self, flop, case
@@ -93,6 +93,27 @@ impl Hands {
         }
 
         cases
+    }
+}
+
+impl fmt::Display for Hands {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let joined = Itertools::join(&mut self.0.iter(), ", ");
+        write!(f, "[{}]", joined)
+    }
+}
+
+impl From<Vec<Two>> for Hands {
+    fn from(v: Vec<Two>) -> Self {
+        Hands(v)
+    }
+}
+
+impl FromStr for Hands {
+    type Err = PKError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Hands::try_from(Cards::from_str(s)?)
     }
 }
 
@@ -108,21 +129,6 @@ impl Pile for Hands {
             v.push(two.second());
         }
         v
-    }
-}
-
-impl fmt::Display for Hands {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let joined = Itertools::join(&mut self.0.iter(), ", ");
-        write!(f, "[{}]", joined)
-    }
-}
-
-impl FromStr for Hands {
-    type Err = PKError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Hands::try_from(Cards::from_str(s)?)
     }
 }
 
@@ -155,15 +161,12 @@ mod play_hands_tests {
     use super::*;
     use crate::arrays::five::Five;
     use crate::card::Card;
+    use crate::util::data::TestData;
     use std::str::FromStr;
-
-    fn the_hand() -> Hands {
-        Hands::from_str("6♥ 6♠ 5♦ 5♣").unwrap()
-    }
 
     #[test]
     fn get() {
-        let the_hand = the_hand();
+        let the_hand = TestData::the_hand_hole_cards();
 
         assert_eq!(
             *the_hand.get(0).unwrap(),
@@ -194,13 +197,10 @@ mod play_hands_tests {
     //
     #[test]
     fn realize_case_at_flop() {
-        let the_hand = the_hand();
-        let flop = Three::from_str("9♣ 6♦ 5♥").unwrap();
-        // Refers to the 985 case iteration of THE HAND at the flop.
-        // RUST_LOG=trace cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"
-        let case_985 = &[Card::SIX_CLUBS, Card::TREY_CLUBS];
+        let the_hand = TestData::the_hand_hole_cards();
+        let flop = TestData::the_flop();
 
-        let cases = the_hand.realize_case_at_flop(flop, case_985);
+        let cases = the_hand.realize_case_at_flop(flop, &TestData::case_985());
 
         assert_eq!(
             cases.get(0).unwrap().hand,
@@ -222,10 +222,8 @@ mod play_hands_tests {
 
     #[test]
     fn remaining_after() {
-        let hands = Hands::from_str("6♠ 6♥ 5♦ 5♣").unwrap();
-        let flop = Cards::from_str("9♣ 6♦ 5♥").unwrap();
-
-        let remaining = hands.remaining_after(&flop);
+        let remaining =
+            TestData::the_hand_hole_cards().remaining_after(&TestData::the_flop().cards());
 
         assert_eq!(remaining.to_string(), "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 4♣ 3♣ 2♣");
     }
@@ -239,22 +237,26 @@ mod play_hands_tests {
     }
 
     #[test]
+    fn from__vec_two() {
+        let v = vec![Two::HAND_6S_6H, Two::HAND_5D_5C];
+        let expected = Hands(v.clone());
+
+        let actual = Hands::from(v);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
     fn from_str() {
-        let expected = Hands(vec![
-            Two::new(Card::SIX_SPADES, Card::SIX_HEARTS).unwrap(),
-            Two::new(Card::FIVE_DIAMONDS, Card::FIVE_CLUBS).unwrap(),
-        ]);
+        let expected = TestData::the_hand_hole_cards();
 
         assert_eq!(Hands::from_str("6♥ 6♠ 5♦ 5♣").unwrap(), expected);
     }
 
     #[test]
     fn try_from__cards() {
-        let cards = Cards::from_str("6♥ 6♠ 5♦ 5♣").unwrap();
-        let expected = Hands(vec![
-            Two::new(Card::SIX_SPADES, Card::SIX_HEARTS).unwrap(),
-            Two::new(Card::FIVE_DIAMONDS, Card::FIVE_CLUBS).unwrap(),
-        ]);
+        let cards = TestData::the_hand_hole_cards().cards();
+        let expected = TestData::the_hand_hole_cards();
 
         let hands = Hands::try_from(cards).unwrap();
 

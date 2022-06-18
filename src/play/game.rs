@@ -194,6 +194,8 @@ mod play_game_tests {
     /// imposter in me that I want to leave it in. The old java hacker in me would never leave this
     /// in that kind of codebase, but for now, I will let this sign of my lack of experience stay.
     /// After all, it's just a test. It's not like it's production code.
+    ///
+    /// Now that I think about it, this would be better as a doc test.
     #[test]
     fn pof() {
         let mut wins = PlayerWins::default();

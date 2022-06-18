@@ -8,6 +8,72 @@ use std::str::FromStr;
 pub struct Two([Card; 2]);
 
 impl Two {
+    // region hand constants
+
+    // region pairs
+    pub const HAND_AS_AH: Two = Two([Card::ACE_SPADES, Card::ACE_HEARTS]);
+    pub const HAND_AS_AD: Two = Two([Card::ACE_SPADES, Card::ACE_DIAMONDS]);
+    pub const HAND_AS_AC: Two = Two([Card::ACE_SPADES, Card::ACE_CLUBS]);
+    pub const HAND_AH_AD: Two = Two([Card::ACE_HEARTS, Card::ACE_DIAMONDS]);
+    pub const HAND_AH_AC: Two = Two([Card::ACE_HEARTS, Card::ACE_CLUBS]);
+    pub const HAND_AD_AC: Two = Two([Card::ACE_DIAMONDS, Card::ACE_CLUBS]);
+    pub const AA: [Two; 6] = [
+        Two::HAND_AS_AH,
+        Two::HAND_AS_AD,
+        Two::HAND_AS_AC,
+        Two::HAND_AH_AD,
+        Two::HAND_AH_AC,
+        Two::HAND_AD_AC,
+    ];
+
+    /// I'm starting off just creating `The Hands`. Later on, I want to have constants for
+    /// [every possible](https://en.wikipedia.org/wiki/Texas_hold_%27em_starting_hands#:~:text=There%20are%201326%20distinct%20possible,in%20value%20before%20the%20flop.)
+    /// `Two` hand, aka hold'em hole cards, as well as every possible type of hands, such as
+    /// ace king(AK), ace king suited(AKs), ace king offsuit(AKo).
+    ///
+    /// Decided to start on fleshing out the pocket pair constants, both individual hands,
+    /// and their collections by type, aka the six types of pocket aces (A♠ A♥, A♠ A♦, A♠ A♣, A♥ A♦,
+    /// A♥ A♣, A♦ A♣). Since I did "the hands" I figured I should do all the cards for those types
+    /// of pairs. Some times I get ahead of myself. Since I'm here, I might as well get started on
+    /// it.
+    ///
+    /// `NOTE_TO_SELF`: Probably better to not write it out this way. Leave all the constants for a
+    /// later fast forward.
+
+    pub const HAND_6S_6H: Two = Two([Card::SIX_SPADES, Card::SIX_HEARTS]);
+    pub const HAND_6S_6D: Two = Two([Card::SIX_SPADES, Card::SIX_DIAMONDS]);
+    pub const HAND_6S_6C: Two = Two([Card::SIX_SPADES, Card::SIX_CLUBS]);
+    pub const HAND_6H_6D: Two = Two([Card::SIX_HEARTS, Card::SIX_DIAMONDS]);
+    pub const HAND_6H_6C: Two = Two([Card::SIX_HEARTS, Card::SIX_CLUBS]);
+    pub const HAND_6D_6C: Two = Two([Card::SIX_DIAMONDS, Card::SIX_CLUBS]);
+    pub const SIXES: [Two; 6] = [
+        Two::HAND_6S_6H,
+        Two::HAND_6S_6D,
+        Two::HAND_6S_6C,
+        Two::HAND_6H_6D,
+        Two::HAND_6H_6C,
+        Two::HAND_6D_6C,
+    ];
+
+    pub const HAND_5S_5H: Two = Two([Card::FIVE_SPADES, Card::FIVE_HEARTS]);
+    pub const HAND_5S_5D: Two = Two([Card::FIVE_SPADES, Card::FIVE_DIAMONDS]);
+    pub const HAND_5S_5C: Two = Two([Card::FIVE_SPADES, Card::FIVE_CLUBS]);
+    pub const HAND_5H_5D: Two = Two([Card::FIVE_HEARTS, Card::FIVE_DIAMONDS]);
+    pub const HAND_5H_5C: Two = Two([Card::FIVE_HEARTS, Card::FIVE_CLUBS]);
+    pub const HAND_5D_5C: Two = Two([Card::FIVE_DIAMONDS, Card::FIVE_CLUBS]);
+    pub const FIVES: [Two; 6] = [
+        Two::HAND_5S_5H,
+        Two::HAND_5S_5D,
+        Two::HAND_5S_5C,
+        Two::HAND_5H_5D,
+        Two::HAND_5H_5C,
+        Two::HAND_5D_5C,
+    ];
+
+    // endregion
+
+    // endregion
+
     /// Requirement:
     /// * must be unique
     /// * first should be above second

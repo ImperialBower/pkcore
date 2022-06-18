@@ -353,15 +353,15 @@
         * Game.remaining_cards_at_flop()
           * Game.play_out_flop() INTRODUCING PLAY OUT!!! WOOOOO!!!!! TPOS 1.1
             * Game.case_seven()
-              * HandRank Case
+              * HandRank Eval
                 * impl Ord for HandRank
-                * Case
+                * STEP 1: Eval
                   * ::new(hand_rank: HandRank, hand: Five)
-                  * impl From<Five> for Case
-                  * impl PartialEq for Case 
-                    * impl Hash for Case
-                  * impl From<Seven> for Case - Why did I do Five first??!!
-                  * impl Display for Case
+                  * impl From<Five> for Eval
+                  * impl PartialEq for Eval 
+                    * impl Hash for Eval
+                  * impl From<Seven> for Eval - Why did I do Five first??!!
+                  * impl Display for Eval
                   * introducing Logging!
                     * [log crate](https://crates.io/crates/log)
                     * [env_logger](https://crates.io/crates/env_logger)
@@ -397,6 +397,12 @@
                               * Add `assert_eq!(hand.sort().clean(), five);` to Five hand_rank mega test
                               * Added .clean() to Seven.hand_rank_value_and_hand() hand return
                               * Removed unneeded .strip() and .clean() from hand_rank_case_tests::from__seven() test
+                * STEP 2: CaseEval
+                  * .push()
+                  * INTRODUCING: pub(crate) TestData mod
+                    * Hands::from(Vec<Two>)
+                    * Refactoring Hands test data to use TestData.
+                    * Adding constants to Two
 
 
 ## LATER
