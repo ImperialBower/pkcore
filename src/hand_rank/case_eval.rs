@@ -175,6 +175,7 @@ impl CaseEval {
     ///
     /// *WARNING:* There are few things more dangerous than a false positive test.
     ///
+    ///
     /// ## Test #2: TAKE TWO
     ///
     /// Shuffle up the order a little bit and let's see what happens:
@@ -232,9 +233,58 @@ impl CaseEval {
     /// _[Link to very offensive Mike `The Mouth` Matusow](https://www.youtube.com/watch?v=5sLRilvzCz0)
     /// video where he goofs on blockers._
     ///
-    /// Let's map them out as constants in `Two`:
+    /// Let's map them out as constants in `Two`: _SEE CONSTANTS SECTION IN TWO_
     ///
-    /// _SEE CONSTANTS SECTION IN TWO_
+    /// ## Test #3: A TIE
+    ///
+    /// Let's up the stakes with our code, and add to the complexity. Up till now we've been testing
+    /// for one hand being the winner, but the whole point of the wincounter code was to support
+    /// ties. While it's impossible for there to be a tie with trips, it is possible for more than
+    /// one person to have a nut straight at the flop.
+    ///
+    /// Let's write a test where the second and third hands each have 87, one player holding `8♠ 7♠`,
+    /// the other holding `8♥ 7♦`.
+    ///
+    /// For this, `.win_count()` should return a value of `0b0000_0110`, indicating that for this
+    /// `Case` the second and third hands are the best.
+    ///
+    /// ```
+    /// use pkcore::arrays::five::Five;
+    /// use pkcore::arrays::two::Two;
+    /// use pkcore::hand_rank::case_eval::CaseEval;
+    /// use pkcore::hand_rank::eval::Eval;
+    /// use pkcore::util::data::TestData;
+    /// use pkcore::util::wincounter::Win;
+    ///
+    /// let expected = 0b0000_0110;
+    ///
+    /// let the_nuts = Eval::from(Five::from_2and3(Two::HAND_8S_7S, TestData::the_flop()));
+    /// let also_the_nuts = Eval::from(Five::from_2and3(Two::HAND_8H_7D, TestData::the_flop()));
+    ///
+    /// let actual = CaseEval::from(vec![
+    ///     TestData::daniel_eval_at_flop(),
+    ///     the_nuts,
+    ///     also_the_nuts,
+    ///     TestData::gus_eval_at_flop(),
+    /// ]).win_count();
+    ///
+    /// assert_eq!(expected, actual);
+    /// ```
+    ///
+    /// The problem is, that for us to get this test to pass, we're going to need to upgrade
+    /// wincounter so that it can do some bitwise magic combining `Win::SECOND` and `Win::THIRD`
+    /// into a single `Count` unsigned integer.
+    ///
+    /// I'll be honest with you; I love bitwise operations. I'm hoping that by the end of this book
+    /// you will see what a valuable tool it can be in your utility belt. When dealing with embedded
+    /// development, understanding it is essential. And let's be real, there are few things cooler
+    /// then embedded development. It's hard to go back to writing web forms after you've coded for
+    /// a car, or a plane, or a little board that films your cat climbing on your kitchen counter
+    /// when they think that no one is around. _Go give the people @
+    /// [adafruit](https://www.adafruit.com/) and [Make magazine](https://makezine.com/) a visit,
+    /// if you haven't already. They do cool stuff._
+    ///
+    /// While embedded rust is still in its infancy compared to C or C++, it's only a matter of time...
     ///
     #[must_use]
     pub fn win_count(&self) -> Count {

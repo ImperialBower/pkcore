@@ -54,7 +54,6 @@ impl Two {
     ///
     /// `NOTE_TO_SELF`: Probably better to not write it out this way. Leave all the constants for a
     /// later fast forward.
-
     pub const HAND_6S_6H: Two = Two([Card::SIX_SPADES, Card::SIX_HEARTS]);
     pub const HAND_6S_6D: Two = Two([Card::SIX_SPADES, Card::SIX_DIAMONDS]);
     pub const HAND_6S_6C: Two = Two([Card::SIX_SPADES, Card::SIX_CLUBS]);
