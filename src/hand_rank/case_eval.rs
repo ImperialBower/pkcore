@@ -124,6 +124,52 @@ impl CaseEval {
     /// little slower, but it's worth it.
     ///
     /// Let's write failing test #2.
+    ///
+    /// ## Test #2:
+    ///
+    /// For this one we're going to add what they call in poker as the nuts.
+    ///
+    /// > A common and certainly apocryphal folk etymology is that the term originated from the historical poker games in the colonial west of America, where if a player bet everything he possessed, he would place the nuts of his wagon wheels on the table to ensure that, should he lose, he would be unable to flee and would have to make good on the bet. Since it would be expected that a player would only make such a bet when he had the best possible hand, the folk lore says that this is how the best possible hand came to be known as the nuts. It is also rumored _[by whom?]_ that these historical games were played only in the winter, and therefore, the nuts that were placed on the table were "stone cold", hence coining the term "stone-cold-nuts". -- [Wikipedia](https://en.wikipedia.org/wiki/Nut_hand#Origins)
+    ///
+    /// Now, for _the hand_, Daniel has flopped what is called _the third nuts_, meaning that
+    /// as of the flop in play he has the third best possible hand of three sixes (6♠ 6♥ 6♦ 9♣ 8♠).
+    /// There are only two hands that would be better than him at the flop. REMEMBER...
+    /// as Daniel learned in _the hand_, just because you have the best hand at the flop
+    /// doesn't mean that you will have the best hand at the river, or even that you have
+    /// the best chances of winning.
+    ///
+    /// Here are the two hands that would be better than three sixes:
+    /// * The Nuts: `Nine High Straight (9♣ 8♠ 7♠ 6♦ 5♥)`
+    /// * 2nd Nuts: `Three Nines (9♠ 9♥ 9♣ 6♦ 5♥)`
+    ///
+    /// Let's add them as hands for evaluation at make a more complicated failing test:
+    ///
+    /// ```
+    /// use pkcore::arrays::five::Five;
+    /// use pkcore::arrays::two::Two;
+    /// use pkcore::hand_rank::case_eval::CaseEval;
+    /// use pkcore::hand_rank::eval::Eval;
+    /// use pkcore::util::data::TestData;
+    /// use pkcore::util::wincounter::Win;
+    ///
+    /// let expected = Win::FIRST;
+    ///
+    /// let the_nuts = Eval::from(Five::from_2and3(Two::HAND_8S_7S, TestData::the_flop()));
+    /// let the_2nd_nuts = Eval::from(Five::from_2and3(Two::HAND_9S_9H, TestData::the_flop()));
+    ///
+    /// let actual = CaseEval::from(vec![
+    ///     the_nuts,
+    ///     the_2nd_nuts,
+    ///     TestData::daniel_eval_at_flop(),
+    ///     TestData::gus_eval_at_flop(),
+    /// ]).win_count();
+    ///
+    /// assert_eq!(expected, actual);
+    /// ```
+    ///
+    /// *FRACK!* Our test passed. It wasn't supposed to pass. Hopefully, it's pretty easy to spot
+    /// the flaw in my logic. Win count returns a binary number representing 
+    ///
     #[must_use]
     pub fn win_count(&self) -> Count {
         Win::FIRST

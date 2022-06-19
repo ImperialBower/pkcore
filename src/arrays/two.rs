@@ -87,6 +87,12 @@ impl Two {
 
     // endregion
 
+    // region connectors
+
+    pub const HAND_8S_7S: Two = Two([Card::EIGHT_SPADES, Card::SEVEN_SPADES]);
+
+    // end region
+
     // endregion
 
     /// Requirement:
