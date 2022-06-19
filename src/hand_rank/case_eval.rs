@@ -234,6 +234,7 @@ impl CaseEval {
     ///
     /// Let's map them out as constants in `Two`:
     ///
+    /// _SEE CONSTANTS SECTION IN TWO_
     ///
     #[must_use]
     pub fn win_count(&self) -> Count {

@@ -90,7 +90,67 @@ impl Two {
     // region connectors
 
     /// These constants are getting out of hand. I know that the utility if having these arrays
-    /// of
+    /// of...
+    ///
+    /// Let's write a test to verify that our 87 Two arrays are correct. The big idea behind these
+    /// tests is that if each array constant contains a unique collection of cards. There are a lot
+    /// of [interesting ways](https://stackoverflow.com/questions/46766560/how-to-check-if-there-are-duplicates-in-a-slice)
+    /// to test for this. Personally, I'm thinking to just collect all the values in a `HashSet` and
+    /// validate that its length is correct. A `HashSet` only has one of each value, so if you pass
+    /// in more than one of them, the second will be ignored. For instance:
+    ///
+    /// ```
+    /// use std::collections::HashSet;
+    ///
+    /// let some_values = [1, 2, 3, -1, 1];
+    /// let hash: HashSet<isize> = some_values.into_iter().collect();
+    ///
+    /// // While there are four hands in that array, the first and forth
+    /// // values are identical, so when we pass them into the `HashSet` \
+    /// // it should contain only the unique values:
+    ///
+    /// assert_eq!(4, hash.len());
+    /// ```
+    /// [Rust playground](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=867fa1c34dfa9ba46560eaeef8f68a7f)
+    ///
+    /// Now, let's try it with our 87 constants:
+    /// ```
+    /// use std::collections::HashSet;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let suited: HashSet<Two> = Two::EIGHT_SEVEN_SUITED.into_iter().collect();
+    /// let offsuit: HashSet<Two> = Two::EIGHT_SEVEN_OFFSUIT.into_iter().collect();
+    ///
+    /// assert_eq!(4, suited.len());
+    /// assert_eq!(12, offsuit.len());
+    /// ```
+    ///
+    /// This seems pretty straightforward. Just for kicks, let's try
+    /// [`oli_obk`'s hardcore solution](https://stackoverflow.com/a/46766782/1245251):
+    ///
+    /// ```
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// assert!(!(1..Two::EIGHT_SEVEN_SUITED.len())
+    ///   .any(|i| Two::EIGHT_SEVEN_SUITED[i..]
+    ///     .contains(&Two::EIGHT_SEVEN_SUITED[i - 1])));
+    ///
+    /// assert!(!(1..Two::EIGHT_SEVEN_OFFSUIT.len())
+    ///   .any(|i| Two::EIGHT_SEVEN_OFFSUIT[i..]
+    ///     .contains(&Two::EIGHT_SEVEN_OFFSUIT[i - 1])));
+    /// ```
+    ///
+    /// OK, I have to admit, that that looks pretty bad-assed, and I'm betting that many of my
+    /// programmer friends would look at my code and marvel at my functional foo.
+    ///
+    /// Here's the thing thought... nobody gives a shit. When I'm looking through your code, trying
+    /// to figure out what it does, don't make me think. For me, the first test is easier to figure
+    /// out. The second makes me scratch my head. Maybe I'm just not that bright, but if you've been
+    /// paying attention, you knew that already.
+    ///
+    /// Later on, I'm anticipating the need for a struct that's a `HashSet` of `Two` hands so that
+    /// we have an easy way to filter out duplicates when doing hand range calculations. For now,
+    /// this should do the trick, and make my point.
     pub const HAND_8S_7S: Two = Two([Card::EIGHT_SPADES, Card::SEVEN_SPADES]);
     pub const HAND_8H_7H: Two = Two([Card::EIGHT_HEARTS, Card::SEVEN_HEARTS]);
     pub const HAND_8D_7D: Two = Two([Card::EIGHT_DIAMONDS, Card::SEVEN_DIAMONDS]);
@@ -233,7 +293,17 @@ impl TryFrom<Cards> for Two {
 #[allow(non_snake_case)]
 mod arrays_two_tests {
     use super::*;
+    use std::collections::HashSet;
     use std::str::FromStr;
+
+    #[test]
+    fn constants__87() {
+        let suited: HashSet<Two> = Two::EIGHT_SEVEN_SUITED.into_iter().collect();
+        let offsuit: HashSet<Two> = Two::EIGHT_SEVEN_OFFSUIT.into_iter().collect();
+
+        assert_eq!(4, suited.len());
+        assert_eq!(12, offsuit.len());
+    }
 
     /// <https://groups.google.com/g/rec.gambling.poker/c/KZNAicdopK8?hl=en&pli=1#720c87127510688b />
     ///
