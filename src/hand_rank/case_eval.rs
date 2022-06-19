@@ -1,6 +1,7 @@
 use crate::hand_rank::eval::Eval;
-use std::slice::Iter;
 use crate::hand_rank::HandRank;
+use crate::util::wincounter::Count;
+use std::slice::Iter;
 
 /// # Analysis Saga: Step 2
 ///
@@ -89,7 +90,7 @@ impl CaseEval {
     }
 
     #[must_use]
-    pub fn win_count(&self) -> wincounter::Count {
+    pub fn win_count(&self) -> Count {
         todo!()
     }
 
@@ -185,7 +186,8 @@ mod hand_rank__case_eval_tests {
         let actual = CaseEval(vec![
             TestData::daniel_eval_at_flop(),
             TestData::gus_eval_at_flop(),
-        ]).winning_hand_rank();
+        ])
+        .winning_hand_rank();
 
         assert_eq!(expected, actual);
     }

@@ -335,6 +335,7 @@
           * Add up winning hand
           * Determine the percentages
         * Introducing [Win Counter](https://github.com/ContractBridge/wincounter)
+          * AUDIBLE: moved crate code to util::wincounter for now for easy updating.
         * Three all possible at flop
           * Cards.deck_minus()
             * Cards.get()
@@ -403,6 +404,7 @@
                     * Hands::from(Vec<Two>)
                     * Refactoring Hands test data to use TestData.
                     * Adding constants to Two
+                  * Added util::wincounter from crate for easier updating
 
 
 ## LATER

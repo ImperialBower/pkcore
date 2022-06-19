@@ -5,9 +5,9 @@ use crate::arrays::two::Two;
 use crate::hand_rank::eval::Eval;
 use crate::hand_rank::HandRank;
 use crate::play::hands::Hands;
+use crate::util::wincounter::Wins;
 use crate::{Card, PKError, Pile};
 use log::{debug, trace};
-use wincounter::Wins;
 
 #[derive(Clone, Debug, Default)]
 pub struct PlayerWins {

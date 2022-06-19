@@ -17,7 +17,7 @@ log = "0.4.17"
 rand = "0.8.5"
 serde = { version = "1.0.136", features = ["derive"] }
 strum = { version = "0.24", features = ["derive"] }
-wincounter = "0.1.1"
+# wincounter = "0.1.1"
 
 [dev-dependencies]
 clap = { version = "3.1.12", features = ["derive", "unicode"] }
