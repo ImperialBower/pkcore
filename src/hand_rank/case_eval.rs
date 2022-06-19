@@ -112,6 +112,7 @@ impl CaseEval {
 mod hand_rank__case_eval_tests {
     use super::*;
     use crate::util::data::TestData;
+    use crate::util::wincounter::Win;
 
     #[test]
     fn get() {
@@ -175,6 +176,18 @@ mod hand_rank__case_eval_tests {
             TestData::gus_eval_at_flop(),
         ])
         .to_vec();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn win_count__the_hand() {
+        let expected = Win::FIRST;
+
+        let actual = CaseEval(vec![
+            TestData::daniel_eval_at_flop(),
+            TestData::gus_eval_at_flop(),
+        ]).win_count();
 
         assert_eq!(expected, actual);
     }

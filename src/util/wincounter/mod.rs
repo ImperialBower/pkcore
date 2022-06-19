@@ -4,6 +4,11 @@ use crate::util::wincounter::result::HeadsUp;
 
 pub mod result;
 
+/// I've moved wincounter into the library so that I can make updates to the library
+/// as a part of this work. The plan is to later on move the updated module back to
+/// its own crate.
+///
+/// When I originally wrote the crate I was just focused on heads up play.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Wins(Vec<Count>);
 

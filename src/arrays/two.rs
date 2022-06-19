@@ -26,6 +26,21 @@ impl Two {
         Two::HAND_AD_AC,
     ];
 
+    pub const HAND_9S_9H: Two = Two([Card::NINE_SPADES, Card::NINE_HEARTS]);
+    pub const HAND_9S_9D: Two = Two([Card::NINE_SPADES, Card::NINE_DIAMONDS]);
+    pub const HAND_9S_9C: Two = Two([Card::NINE_SPADES, Card::NINE_CLUBS]);
+    pub const HAND_9H_9D: Two = Two([Card::NINE_HEARTS, Card::NINE_DIAMONDS]);
+    pub const HAND_9H_9C: Two = Two([Card::NINE_HEARTS, Card::NINE_CLUBS]);
+    pub const HAND_9D_9C: Two = Two([Card::NINE_DIAMONDS, Card::NINE_CLUBS]);
+    pub const NINES: [Two; 6] = [
+        Two::HAND_9S_9H,
+        Two::HAND_9S_9D,
+        Two::HAND_9S_9C,
+        Two::HAND_9H_9D,
+        Two::HAND_9H_9C,
+        Two::HAND_9D_9C,
+    ];
+
     /// I'm starting off just creating `The Hands`. Later on, I want to have constants for
     /// [every possible](https://en.wikipedia.org/wiki/Texas_hold_%27em_starting_hands#:~:text=There%20are%201326%20distinct%20possible,in%20value%20before%20the%20flop.)
     /// `Two` hand, aka hold'em hole cards, as well as every possible type of hands, such as
