@@ -27,7 +27,7 @@ use crate::Card;
 #[allow(dead_code)]
 pub enum TestData {}
 
-#[allow(dead_code)]
+#[allow(dead_code, clippy::module_name_repetitions)]
 impl TestData {
     /// The 985th case at the flop when running `The Hand`:
     /// `RUST_LOG=trace cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"`

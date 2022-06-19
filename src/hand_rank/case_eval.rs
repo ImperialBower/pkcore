@@ -167,9 +167,41 @@ impl CaseEval {
     /// assert_eq!(expected, actual);
     /// ```
     ///
-    /// *FRACK!* Our test passed. It wasn't supposed to pass. Hopefully, it's pretty easy to spot
-    /// the flaw in my logic. Win count returns a binary number representing 
+    /// *FRACK!* Our test passed. It wasn't supposed to pass.
     ///
+    /// Hopefully, it's pretty easy to spot the flaw in my logic. Win count returns a binary number
+    /// with a bit flag set to true for every position that has the best hand. In both of our test
+    /// the first hand in the vector is the best hand.
+    ///
+    /// *WARNING:* There are few things more dangerous than a false positive test.
+    ///
+    /// Shuffle up the order a little bit and let's see what happens:
+    ///
+    /// ```
+    /// use pkcore::arrays::five::Five;
+    /// use pkcore::arrays::two::Two;
+    /// use pkcore::hand_rank::case_eval::CaseEval;
+    /// use pkcore::hand_rank::eval::Eval;
+    /// use pkcore::util::data::TestData;
+    /// use pkcore::util::wincounter::Win;
+    ///
+    /// let expected = Win::THIRD;
+    ///
+    /// let the_nuts = Eval::from(Five::from_2and3(Two::HAND_8S_7S, TestData::the_flop()));
+    /// let the_2nd_nuts = Eval::from(Five::from_2and3(Two::HAND_9S_9H, TestData::the_flop()));
+    ///
+    /// let actual = CaseEval::from(vec![
+    ///     TestData::daniel_eval_at_flop(),
+    ///     the_2nd_nuts,
+    ///     the_nuts,
+    ///     TestData::gus_eval_at_flop(),
+    /// ]).win_count();
+    ///
+    /// assert_eq!(expected, actual);
+    /// ```
+    ///
+    /// Much better. We have made it red.
+    /// 
     #[must_use]
     pub fn win_count(&self) -> Count {
         Win::FIRST
