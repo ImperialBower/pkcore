@@ -210,15 +210,38 @@ impl CaseEval {
     /// * Enumerate through every hand
     /// * Set the flag if that position in the vector has that `HandRank`.
     ///
+    /// ## Test #2: TAKE TWO GREEN
+    ///
+    /// Now that we've gotten the test to pass, we can add a more complex test. What happens when
+    /// more than one person wins. For instance, while it is impossible for more than one player
+    /// to have three nines, sixes, or fives, it is possible for more than one person to flop a
+    /// straight because there are many combinations of `87`. How many?
+    ///
+    /// There are four possible hands of suited connectors: `8♠ 7♠, 8♥ 7♥, 8♦ 7♦, 8♣ 7♣`.
+    /// Twelve possible offsuit 87s: `8♠ 7♥, 8♠ 7♦, 8♠ 7♣, 8♥ 7♠, 8♥ 7♦, 8♥ 7♣, 8♦ 7♠, 8♦ 7♥, 8♥ 7♣,
+    /// 8♣ 7♠, 8♣ 7♥, 8♣ 7♦`. That makes for 16 possible nut straight hands that are better than
+    /// either Daniel's or Gus' hands, or three nines for that matter.
+    ///
+    /// While from a programming perspective this may seem like a tedious exercise, from a poker
+    /// theory perspective it's important to understand how many possible hands are out there
+    /// that can beat you, and what combinations are removed by what you are holding, aka
+    /// [blockers](https://twitter.com/RossFrieser/status/1209900972023132160).
+    ///
+    /// There are some very good poker players who feel that the GTO way of playing is overthinking
+    /// things.
+    /// _[Link to very offensive Mike `The Mouth` Matusow](https://www.youtube.com/watch?v=5sLRilvzCz0)
+    /// video where he goofs on blockers._
+    ///
+    /// Let's map them out as constants in `Two`:
+    ///
+    ///
     #[must_use]
     pub fn win_count(&self) -> Count {
         let mut count = Count::default();
         let best = self.winning_hand_rank();
-        println!("{:?}", self);
         for (i, eval) in self.iter().enumerate() {
             if eval.hand_rank == best {
-                println!(">>> {} - {}", eval, i);
-                count = Win::from_index(i)
+                count = Win::from_index(i);
             }
         }
         count

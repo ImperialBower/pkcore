@@ -24,10 +24,10 @@ use crate::Card;
 /// * [`SubstratumNode`](https://github.com/robmoorman/SubstratumNode)
 /// * [MASQ-Project/Node](https://github.com/MASQ-Project/Node)
 ///
-#[allow(dead_code)]
+#[allow(dead_code, clippy::module_name_repetitions)]
 pub enum TestData {}
 
-#[allow(dead_code, clippy::module_name_repetitions)]
+#[allow(dead_code)]
 impl TestData {
     /// The 985th case at the flop when running `The Hand`:
     /// `RUST_LOG=trace cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"`
@@ -46,19 +46,23 @@ impl TestData {
         Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS])
     }
 
+    #[must_use]
     pub fn daniel_eval_at_flop() -> Eval {
         Eval::from(TestData::daniel_hand_at_flop())
     }
 
+    #[must_use]
     pub fn daniel_hand_at_flop() -> Five {
         Five::from_2and3(Two::HAND_6S_6H, TestData::the_flop())
     }
 
     /// DEFECT: Wrong hand.
+    #[must_use]
     pub fn gus_eval_at_flop() -> Eval {
-        Eval::from(TestData::daniel_hand_at_flop())
+        Eval::from(TestData::gus_hand_at_flop())
     }
 
+    #[must_use]
     pub fn gus_hand_at_flop() -> Five {
         Five::from_2and3(Two::HAND_5D_5C, TestData::the_flop())
     }

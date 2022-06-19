@@ -277,7 +277,7 @@ impl Win {
     pub const FIFTEENTH: Count = 0b100_0000_0000_0000;
     pub const SIXTEENTH: Count = 0b1000_0000_0000_0000;
 
-    /// CaseEval win count Test #2: TAKE TWO detour.
+    /// `CaseEval` win count Test #2: TAKE TWO detour.
     ///
     /// Our heroic system has been sidelined. Our heroes need a way to translate a zero based
     /// index position of a vector into a bit flag representation of that index. So, in other words,
@@ -372,7 +372,7 @@ impl Win {
             13 => Win::FOURTEENTH,
             14 => Win::FIFTEENTH,
             15 => Win::SIXTEENTH,
-            _ => Count::default()
+            _ => Count::default(),
         }
     }
 }

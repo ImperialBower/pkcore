@@ -89,7 +89,48 @@ impl Two {
 
     // region connectors
 
+    /// These constants are getting out of hand. I know that the utility if having these arrays
+    /// of
     pub const HAND_8S_7S: Two = Two([Card::EIGHT_SPADES, Card::SEVEN_SPADES]);
+    pub const HAND_8H_7H: Two = Two([Card::EIGHT_HEARTS, Card::SEVEN_HEARTS]);
+    pub const HAND_8D_7D: Two = Two([Card::EIGHT_DIAMONDS, Card::SEVEN_DIAMONDS]);
+    pub const HAND_8C_7C: Two = Two([Card::EIGHT_CLUBS, Card::SEVEN_CLUBS]);
+    pub const EIGHT_SEVEN_SUITED: [Two; 4] = [
+        Two::HAND_8S_7S,
+        Two::HAND_8H_7H,
+        Two::HAND_8D_7D,
+        Two::HAND_8C_7C,
+    ];
+
+    pub const HAND_8S_7H: Two = Two([Card::EIGHT_SPADES, Card::SEVEN_HEARTS]);
+    pub const HAND_8S_7D: Two = Two([Card::EIGHT_SPADES, Card::SEVEN_DIAMONDS]);
+    pub const HAND_8S_7C: Two = Two([Card::EIGHT_SPADES, Card::SEVEN_CLUBS]);
+
+    pub const HAND_8H_7S: Two = Two([Card::EIGHT_HEARTS, Card::SEVEN_SPADES]);
+    pub const HAND_8H_7D: Two = Two([Card::EIGHT_HEARTS, Card::SEVEN_DIAMONDS]);
+    pub const HAND_8H_7C: Two = Two([Card::EIGHT_HEARTS, Card::SEVEN_CLUBS]);
+
+    pub const HAND_8D_7S: Two = Two([Card::EIGHT_DIAMONDS, Card::SEVEN_SPADES]);
+    pub const HAND_8D_7H: Two = Two([Card::EIGHT_DIAMONDS, Card::SEVEN_HEARTS]);
+    pub const HAND_8D_7C: Two = Two([Card::EIGHT_DIAMONDS, Card::SEVEN_CLUBS]);
+
+    pub const HAND_8C_7S: Two = Two([Card::EIGHT_CLUBS, Card::SEVEN_SPADES]);
+    pub const HAND_8C_7H: Two = Two([Card::EIGHT_CLUBS, Card::SEVEN_HEARTS]);
+    pub const HAND_8C_7D: Two = Two([Card::EIGHT_CLUBS, Card::SEVEN_DIAMONDS]);
+    pub const EIGHT_SEVEN_OFFSUIT: [Two; 12] = [
+        Two::HAND_8S_7H,
+        Two::HAND_8S_7D,
+        Two::HAND_8S_7C,
+        Two::HAND_8H_7S,
+        Two::HAND_8H_7D,
+        Two::HAND_8H_7C,
+        Two::HAND_8D_7S,
+        Two::HAND_8D_7H,
+        Two::HAND_8D_7C,
+        Two::HAND_8C_7S,
+        Two::HAND_8C_7H,
+        Two::HAND_8C_7D,
+    ];
 
     // end region
 
