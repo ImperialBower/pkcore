@@ -286,6 +286,39 @@ impl CaseEval {
     ///
     /// While embedded rust is still in its infancy compared to C or C++, it's only a matter of time...
     ///
+    /// ### Test #3: Post green MORE TESTS!!!
+    ///
+    /// OK, now that we are green with ties, let's up the stakes and add another test just to make
+    /// sure. How about we take the last test, and shuffle up the order to make sure it's doing
+    /// things right.
+    ///
+    /// Yes, yes, I know... I write too many tests. It's my weakness...
+    ///
+    /// ```
+    /// use pkcore::arrays::five::Five;
+    /// use pkcore::arrays::two::Two;
+    /// use pkcore::hand_rank::case_eval::CaseEval;
+    /// use pkcore::hand_rank::eval::Eval;
+    /// use pkcore::util::data::TestData;
+    /// use pkcore::util::wincounter::Win;
+    ///
+    /// let expected = 0b0000_1001;
+    ///
+    /// let the_nuts = Eval::from(Five::from_2and3(Two::HAND_8S_7S, TestData::the_flop()));
+    /// let also_the_nuts = Eval::from(Five::from_2and3(Two::HAND_8H_7D, TestData::the_flop()));
+    ///
+    /// let actual = CaseEval::from(vec![
+    ///     the_nuts,
+    ///     TestData::daniel_eval_at_flop(),
+    ///     TestData::gus_eval_at_flop(),
+    ///     also_the_nuts,
+    /// ]).win_count();
+    ///
+    /// assert_eq!(expected, actual);
+    /// ```
+    ///
+    /// That's enough. I'm declaring victory. Time to move on to displaying winning percentages.
+    ///
     #[must_use]
     pub fn win_count(&self) -> Count {
         let mut count = Count::default();
