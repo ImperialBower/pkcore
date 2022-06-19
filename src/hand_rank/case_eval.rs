@@ -239,8 +239,8 @@ impl CaseEval {
     ///
     /// Let's up the stakes with our code, and add to the complexity. Up till now we've been testing
     /// for one hand being the winner, but the whole point of the wincounter code was to support
-    /// ties. While it's impossible for there to be a tie with trips, it is possible for more than
-    /// one person to have a nut straight at the flop.
+    /// ties. While it's impossible for there to be a tie with trips on this board, it is possible
+    /// for more than one person to have a nut straight at the flop.
     ///
     /// Let's write a test where the second and third hands each have 87, one player holding `8♠ 7♠`,
     /// the other holding `8♥ 7♦`.
