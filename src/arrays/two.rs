@@ -192,6 +192,53 @@ impl Two {
         Two::HAND_8C_7D,
     ];
 
+    /// Now that we've got 87 suited and offsuit arrays, let's create a constant that throws them
+    /// all together. I'm seriously thinking about giving nicknames for these constants just for
+    /// fun. This is probably the side of my programming personality that frustrates my colleagues
+    /// the most. I play by vaudeville rules. If you can make a joke, you need to make a joke. Don't
+    /// hate the player... hate the game.
+    ///
+    /// There are two common nicknames for 87 hands: RPM after 78 rpm records, and Crosby after
+    /// [Sidney Crosby](https://en.wikipedia.org/wiki/Sidney_Crosby), the hockey player with the
+    /// Pittsburgh Penguins. Personally, I'm really tempted to name the constant `CROSBY`, but I
+    /// can hear RJ screaming in my ear, rightfully calling me out for my stupid variable names.
+    /// While I reserve the right to call my applications whatever cool name strikes my fancy, when
+    /// it comes to variable names, he's got a point. I've gone back and looked at my code and
+    /// completely forgotten why I named something what I did, and had to spend time backtracing
+    /// my stupid steps. One time, I pushed out to prod an untested release that broke the site,
+    /// and caused my stupid variable names to be dumped out all over the page for every user to
+    /// see. Lesson learned: don't be a smart ass... at least not when you're getting paid. Let's
+    /// admit defeat and name our constant `EIGHT_SEVEN`.
+    ///
+    /// _One thing I really like about `IntelliJ`'s rust support is how it instantly highlights my
+    /// code in red when I create an array with the wrong number of entries. I wonder if I open
+    /// source this code, and you submit a PR if we can get you a free copy of `CLion`?_
+    ///
+    /// `TODO:` Eventually, when I'm working on the game play for this library, I want to add a
+    /// feature that will let the tool describe the players hands by their nicknames, the way the
+    /// great [Mike Sexton](https://en.wikipedia.org/wiki/Mike_Sexton) when he was announcing for
+    /// the World Poker Tour. His announcing, with Vince Van Patten, is one of the main reasons I
+    /// fell in love with poker. [One of the greats.](https://www.youtube.com/watch?v=zMNMJnMJhJA)
+    ///
+    pub const EIGHT_SEVEN: [Two; 16] = [
+        Two::HAND_8S_7S,
+        Two::HAND_8H_7H,
+        Two::HAND_8D_7D,
+        Two::HAND_8C_7C,
+        Two::HAND_8S_7H,
+        Two::HAND_8S_7D,
+        Two::HAND_8S_7C,
+        Two::HAND_8H_7S,
+        Two::HAND_8H_7D,
+        Two::HAND_8H_7C,
+        Two::HAND_8D_7S,
+        Two::HAND_8D_7H,
+        Two::HAND_8D_7C,
+        Two::HAND_8C_7S,
+        Two::HAND_8C_7H,
+        Two::HAND_8C_7D,
+    ];
+
     // end region
 
     // endregion
@@ -300,9 +347,11 @@ mod arrays_two_tests {
     fn constants__87() {
         let suited: HashSet<Two> = Two::EIGHT_SEVEN_SUITED.into_iter().collect();
         let offsuit: HashSet<Two> = Two::EIGHT_SEVEN_OFFSUIT.into_iter().collect();
+        let all: HashSet<Two> = Two::EIGHT_SEVEN.into_iter().collect();
 
         assert_eq!(4, suited.len());
         assert_eq!(12, offsuit.len());
+        assert_eq!(16, all.len());
     }
 
     /// <https://groups.google.com/g/rec.gambling.poker/c/KZNAicdopK8?hl=en&pli=1#720c87127510688b />
