@@ -209,6 +209,7 @@ mod tests__wins {
     }
 }
 
+// TODO RF: Refactor this as a `struct Count(u16)`.
 pub type Count = u16;
 
 pub trait Result {
@@ -335,6 +336,14 @@ impl Win {
     ///
     /// * Positive: unsigned integer between 0 and 15.
     /// * Negative: unsigned integer greater than 15.
+    ///
+    /// I'll be honest with you. This wincounter library isn't wowing me. My desire to avoid
+    /// the hassle of wrapping an u16 `Count` in a struct is making me bend over backwards to
+    /// deal with the fact that I can't write methods against `Count` because it isn't a struct
+    /// or an enum. I feel a major refactoring coming on for this code. I'll hold off for now,
+    /// but it's in my backlog.
+    ///
+    /// Adding a technical debt not to my code as a reminder.
     #[must_use]
     pub fn from_index(i: usize) -> Count {
         match i {
