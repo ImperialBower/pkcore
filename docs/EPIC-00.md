@@ -53,6 +53,18 @@ Maupin, Hunter S. Thompson, Gracie Allen, The Residents, John Waters,
 Malcolm X and Lenny Bruce are the perspectives that speak to me most. I have 
 always been an outsider, and treasure that perspective. 
 
+Also, when you pair with me, I will curse. I will say shit, and fuck, and fart, 
+and if you are offended by these things, let me know. Personally, given we live
+in a world where one of the political parties is openly condemning my mom's 
+lifestyle, and kids being gunned down in their classrooms is the norm, I could
+give a flying fuck about your delicate sensibilities. I have zero tollerance
+for racism, sexism, misogyny, and prejudice toward people just trying to live the
+most authentic version of their lives. If you have a problem with that, talk to
+someone about how uncomfortable you get when you see two people of the same sex
+holding hands, or why it offends you to have people of different races being
+happy and living their lives. You may discover something very interesting about
+yourself. *INSERT PROMO CODE FOR BETTER HEALTH HERE*
+
 Consider yourself warned ;-)
 
 ## Test Driving, Thin Slicing, and My Chunnel Approach 

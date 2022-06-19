@@ -405,6 +405,8 @@
                     * Refactoring Hands test data to use TestData.
                     * Adding constants to Two
                   * Added util::wincounter from crate for easier updating
+                  * CaseEval.win_count()
+                    * Win::from(index)
 
 
 ## LATER

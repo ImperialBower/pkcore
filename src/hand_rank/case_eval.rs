@@ -1,6 +1,6 @@
 use crate::hand_rank::eval::Eval;
 use crate::hand_rank::HandRank;
-use crate::util::wincounter::{Count, Win};
+use crate::util::wincounter::Count;
 use std::slice::Iter;
 
 /// # Analysis Saga: Step 2
@@ -175,6 +175,8 @@ impl CaseEval {
     ///
     /// *WARNING:* There are few things more dangerous than a false positive test.
     ///
+    /// ## Test #2: TAKE TWO
+    ///
     /// Shuffle up the order a little bit and let's see what happens:
     ///
     /// ```
@@ -201,10 +203,23 @@ impl CaseEval {
     /// ```
     ///
     /// Much better. We have made it red.
-    /// 
+    ///
+    /// Now we need to code some actual logic. Here's the game plan:
+    ///
+    /// * Determine the best `HandRank`.
+    /// * Enumerate through every hand
+    /// * Set the flag if that position in the vector has that `HandRank`.
+    ///
     #[must_use]
     pub fn win_count(&self) -> Count {
-        Win::FIRST
+        let mut count = Count::default();
+        let best = self.winning_hand_rank();
+        for (i, eval) in self.iter().enumerate() {
+            if eval.hand_rank == best {
+
+            }
+        }
+        count
     }
 
     /// Returns the top `HandRank` for this specific `CaseEval`.
