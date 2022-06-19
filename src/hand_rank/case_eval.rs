@@ -1,6 +1,6 @@
 use crate::hand_rank::eval::Eval;
 use crate::hand_rank::HandRank;
-use crate::util::wincounter::Count;
+use crate::util::wincounter::{Count, Win};
 use std::slice::Iter;
 
 /// # Analysis Saga: Step 2
@@ -89,9 +89,17 @@ impl CaseEval {
         self.0.clone()
     }
 
+    /// Pure TDD would have me make our first test green by simply having it return
+    /// `Win::FIRST`. Write a failing test. Make it pass. Write another failing test
+    /// building on the functionality you've already written. Make it pass. And so on...
+    /// and so on... and so on...OK, let's do it!
+    ///
+    /// This will be good for me. I've been getting sloppy lately... trusting my instincts.
+    /// We're at the point in our journey where if we get this right, our system is going
+    /// to level up.
     #[must_use]
     pub fn win_count(&self) -> Count {
-        todo!()
+        Win::FIRST
     }
 
     /// Returns the top `HandRank` for this specific `CaseEval`.
@@ -187,7 +195,8 @@ mod hand_rank__case_eval_tests {
         let actual = CaseEval(vec![
             TestData::daniel_eval_at_flop(),
             TestData::gus_eval_at_flop(),
-        ]).win_count();
+        ])
+        .win_count();
 
         assert_eq!(expected, actual);
     }
