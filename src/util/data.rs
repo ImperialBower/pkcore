@@ -25,7 +25,7 @@ use crate::Card;
 /// * [MASQ-Project/Node](https://github.com/MASQ-Project/Node)
 ///
 #[allow(dead_code)]
-pub(crate) enum TestData {}
+pub enum TestData {}
 
 #[allow(dead_code)]
 impl TestData {

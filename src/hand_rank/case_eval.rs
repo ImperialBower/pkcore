@@ -97,6 +97,33 @@ impl CaseEval {
     /// This will be good for me. I've been getting sloppy lately... trusting my instincts.
     /// We're at the point in our journey where if we get this right, our system is going
     /// to level up.
+    ///
+    /// Let's have some fun. Let's make these
+    /// [doc tests](https://doc.rust-lang.org/rustdoc/write-documentation/documentation-tests.html).
+    ///
+    /// ## Test #1:
+    ///
+    /// ```
+    /// use pkcore::hand_rank::case_eval::CaseEval;
+    /// use pkcore::util::data::TestData;
+    /// use pkcore::util::wincounter::Win;
+    ///
+    /// let expected = Win::FIRST;
+    ///
+    /// let actual = CaseEval::from(vec![
+    ///     TestData::daniel_eval_at_flop(),
+    ///     TestData::gus_eval_at_flop(),
+    /// ]).win_count();
+    ///
+    /// assert_eq!(expected, actual);
+    /// ```
+    ///
+    /// This makes it a lot easier for me to write this book, however, the downside
+    /// is that the tests are a lot more verbose, and slower to run. Documentation
+    /// tests are one of the reasons why I love rust so much. This will make my work a
+    /// little slower, but it's worth it.
+    ///
+    /// Let's write failing test #2.
     #[must_use]
     pub fn win_count(&self) -> Count {
         Win::FIRST
@@ -112,6 +139,12 @@ impl CaseEval {
             }
         }
         winning_rank
+    }
+}
+
+impl From<Vec<Eval>> for CaseEval {
+    fn from(v: Vec<Eval>) -> Self {
+        CaseEval(v)
     }
 }
 
