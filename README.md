@@ -409,6 +409,8 @@
                     * Win::from(index)
                     * TODO RF: Refactor `Count` as a `struct Count(u16)`.
                     * DEFECT ALERT: Copied the wrong function in the test data.
+                    * Test #3: A TIE
+                      * Win::or()
 
 
 ## LATER

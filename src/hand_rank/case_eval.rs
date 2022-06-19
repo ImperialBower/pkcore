@@ -292,7 +292,7 @@ impl CaseEval {
         let best = self.winning_hand_rank();
         for (i, eval) in self.iter().enumerate() {
             if eval.hand_rank == best {
-                count = Win::from_index(i);
+                count = Win::or(count, Win::from_index(i));
             }
         }
         count

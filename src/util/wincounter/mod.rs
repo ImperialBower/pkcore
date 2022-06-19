@@ -375,6 +375,17 @@ impl Win {
             _ => Count::default(),
         }
     }
+
+    /// This is probably a needless function, and a pair partner stronger than the voice in my head
+    /// would probably just tell me to do a simple OR operation. The truth is, that I have to
+    /// duckduckgo these bitwise operators every time I start to use them, so this is a way for me
+    /// to separate out the logic, write some tests to make sure I'm getting it right, and move on
+    /// comfortable with the knowledge that I am doing what I set out to do. Don't be too hard on
+    /// yourself for writing stupid code. Be hard on yourself for writing untested code.
+    #[must_use]
+    pub fn or(a: Count, b: Count) -> Count {
+        a | b
+    }
 }
 
 #[cfg(test)]
@@ -401,6 +412,11 @@ mod util__wincounter__win_tests {
         assert_eq!(Win::FIFTEENTH, Win::from_index(14));
         assert_eq!(Win::SIXTEENTH, Win::from_index(15));
         assert_eq!(Count::default(), Win::from_index(16));
+    }
+
+    #[test]
+    fn or() {
+        assert_eq!(0b0000_0110, Win::or(Win::SECOND, Win::THIRD));
     }
 }
 
