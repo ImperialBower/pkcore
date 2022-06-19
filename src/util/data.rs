@@ -54,6 +54,7 @@ impl TestData {
         Five::from_2and3(Two::HAND_6S_6H, TestData::the_flop())
     }
 
+    /// DEFECT: Wrong hand.
     pub fn gus_eval_at_flop() -> Eval {
         Eval::from(TestData::daniel_hand_at_flop())
     }

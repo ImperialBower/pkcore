@@ -344,6 +344,15 @@ impl Win {
     /// but it's in my backlog.
     ///
     /// Adding a technical debt not to my code as a reminder.
+    ///
+    /// *NOTE:* This isn't the first time I've had to do this sort of refactoring. The initial
+    /// version of the `Card` struct was a
+    /// [simple type alias](https://github.com/ContractBridge/ckc-rs/blob/5f301f182eb579c9f8df4e243b6ebecd310b1b24/src/lib.rs#L33).
+    /// For the instance in this book, I decided to write it as a struct to make the code cleaner
+    /// and easier to manage. It's only a matter of time before I do the same thing to
+    /// `wincounter::Count`. Not doing things right in order to save you some time will always
+    /// end up taking more time in the long run. Count on it.
+    ///
     #[must_use]
     pub fn from_index(i: usize) -> Count {
         match i {

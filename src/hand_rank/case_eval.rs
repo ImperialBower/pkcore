@@ -1,6 +1,6 @@
 use crate::hand_rank::eval::Eval;
 use crate::hand_rank::HandRank;
-use crate::util::wincounter::Count;
+use crate::util::wincounter::{Count, Win};
 use std::slice::Iter;
 
 /// # Analysis Saga: Step 2
@@ -214,9 +214,11 @@ impl CaseEval {
     pub fn win_count(&self) -> Count {
         let mut count = Count::default();
         let best = self.winning_hand_rank();
+        println!("{:?}", self);
         for (i, eval) in self.iter().enumerate() {
             if eval.hand_rank == best {
-
+                println!(">>> {} - {}", eval, i);
+                count = Win::from_index(i)
             }
         }
         count

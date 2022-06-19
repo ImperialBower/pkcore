@@ -407,6 +407,8 @@
                   * Added util::wincounter from crate for easier updating
                   * CaseEval.win_count()
                     * Win::from(index)
+                    * TODO RF: Refactor `Count` as a `struct Count(u16)`.
+                    * DEFECT ALERT: Copied the wrong function in the test data.
 
 
 ## LATER
