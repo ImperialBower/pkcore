@@ -411,6 +411,7 @@
                     * DEFECT ALERT: Copied the wrong function in the test data.
                     * Test #3: A TIE
                       * Win::or()
+                * STEP 3: CaseEvals
 
 
 ## LATER

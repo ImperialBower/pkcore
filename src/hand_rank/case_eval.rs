@@ -98,8 +98,43 @@ impl CaseEval {
     /// We're at the point in our journey where if we get this right, our system is going
     /// to level up.
     ///
+    /// One thing you'll notice about this section is that I am writing a lot of tests, with a lot
+    /// of setup. This is because this code feels like the center of the axel; the most important
+    /// thing to get right. If we can do this seed right, then like a flower, all of our
+    /// functionality will flow out of it. Brilliant systems flow from simple foundations. Google
+    /// had [`MapReduce`](https://en.wikipedia.org/wiki/MapReduce)...
+    /// Facebook had the [Social Graph](https://en.wikipedia.org/wiki/Social_graph)... Microsoft had
+    /// lawyers...
+    ///
+    /// > OK, that was a cheap shot. I wouldn't have a career in software if it wasn't for Microsoft
+    /// > at their cheap PCs back in the 90s. I owe a lot to Microsoft, and the friends I have who
+    /// > work there say it's a great company. I taught myself `Perl` and web programming on a Windows 3.11 machine.
+    /// > while working as a walking messenger in downtown San Francisco making $7/hour.
+    /// >
+    /// > Their recent moves regarding
+    /// > [employee relations](https://blogs.microsoft.com/on-the-issues/2022/06/02/employee-organizing-engagement-labor-economy/) make
+    /// > them head and shoulders above other companies. Still, I had to take the shot, and let's be
+    /// > real, Bill Gates' vision in seeing the power of licensing was pure brilliance, right up
+    /// > there with George Lucas
+    /// > [telling 20th Century Fox](https://blog.ipleaders.in/george-lucas-make-fortune-star-wars/),
+    /// > _"hey, you don't have to pay me anything more than my $150,000 salary for Star Wars. Just
+    /// > let me have the rights to the merchandising. I mean, hey... that can't be worth much...
+    /// > right?"_ $12 billion dollars later...
+    ///
     /// Let's have some fun. Let's make these
     /// [doc tests](https://doc.rust-lang.org/rustdoc/write-documentation/documentation-tests.html).
+    ///
+    /// *ASIDE:* At an [Elixir](https://en.wikipedia.org/wiki/Elixir_(programming_language)) meetup,
+    /// I met someone who sold his open source startup twice. TWICE!!! They built this company,
+    /// sold it to one of their closed source commercial competitors, forked the codebase, built
+    /// up another client base, and then sold it again. Talk about power moves. I've been in this
+    /// game for a quarter of a century and I haven't don't shit in comparison. Talk about
+    /// imposters. _TBH, finding out that I'm going to be a grandfather in a few months makes
+    /// everything else pale in comparison._
+    ///
+    /// MORAL: Life is a crap shoot. Place yourself in places where you can hit it big. Don't
+    /// assume your going to make it. Enjoy the ride, have fun, and work with other people who
+    /// know how to have fun. Worst case scenario, you have a great life.
     ///
     /// ## Test #1:
     ///
@@ -354,6 +389,8 @@ impl From<Vec<Eval>> for CaseEval {
 #[allow(non_snake_case)]
 mod hand_rank__case_eval_tests {
     use super::*;
+    use crate::arrays::five::Five;
+    use crate::arrays::two::Two;
     use crate::util::data::TestData;
     use crate::util::wincounter::Win;
 
@@ -430,6 +467,78 @@ mod hand_rank__case_eval_tests {
         let actual = CaseEval(vec![
             TestData::daniel_eval_at_flop(),
             TestData::gus_eval_at_flop(),
+        ])
+        .win_count();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn win_count__the_hand_with_the_nuts() {
+        let expected = Win::FIRST;
+
+        let the_nuts = Eval::from(Five::from_2and3(Two::HAND_8S_7S, TestData::the_flop()));
+        let the_2nd_nuts = Eval::from(Five::from_2and3(Two::HAND_9S_9H, TestData::the_flop()));
+
+        let actual = CaseEval::from(vec![
+            the_nuts,
+            the_2nd_nuts,
+            TestData::daniel_eval_at_flop(),
+            TestData::gus_eval_at_flop(),
+        ])
+        .win_count();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn win_count__the_hand_with_the_nuts_shuffled() {
+        let expected = Win::FORTH;
+
+        let the_nuts = Eval::from(Five::from_2and3(Two::HAND_8S_7S, TestData::the_flop()));
+        let the_2nd_nuts = Eval::from(Five::from_2and3(Two::HAND_9S_9H, TestData::the_flop()));
+
+        let actual = CaseEval::from(vec![
+            TestData::daniel_eval_at_flop(),
+            the_2nd_nuts,
+            TestData::gus_eval_at_flop(),
+            the_nuts,
+        ])
+        .win_count();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn win_count__tie() {
+        let expected = 0b0000_0110;
+
+        let the_nuts = Eval::from(Five::from_2and3(Two::HAND_8S_7S, TestData::the_flop()));
+        let also_the_nuts = Eval::from(Five::from_2and3(Two::HAND_8H_7D, TestData::the_flop()));
+
+        let actual = CaseEval::from(vec![
+            TestData::daniel_eval_at_flop(),
+            the_nuts,
+            also_the_nuts,
+            TestData::gus_eval_at_flop(),
+        ])
+        .win_count();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn win_count__tie_different_order() {
+        let expected = 0b0000_1001;
+
+        let the_nuts = Eval::from(Five::from_2and3(Two::HAND_8S_7S, TestData::the_flop()));
+        let also_the_nuts = Eval::from(Five::from_2and3(Two::HAND_8H_7D, TestData::the_flop()));
+
+        let actual = CaseEval::from(vec![
+            the_nuts,
+            TestData::daniel_eval_at_flop(),
+            TestData::gus_eval_at_flop(),
+            also_the_nuts,
         ])
         .win_count();
 

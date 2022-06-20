@@ -58,6 +58,13 @@ impl PlayerWins {
 /// I use the example command line programs as my playground. Rust is wonderful in letting
 /// me use examples to play with ideas. I haven't seen a language that lets you do this
 /// so easily.
+///
+/// ## STEP 3: `CaseEvals`
+///
+/// *AND WE'RE BACK!*
+///
+/// OK, we've finished coding `Eval`, and `CaseEval`. Now let's use this
+///
 impl PlayOut for PlayerWins {
     fn play_out_flop(&mut self, hands: &Hands, flop: Three) {
         debug!("Playing out {} FLOP: {}", hands, flop);

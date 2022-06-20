@@ -5,6 +5,7 @@ use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 
 pub mod case_eval;
+pub mod case_evals;
 pub mod class;
 pub mod eval;
 pub mod name;
