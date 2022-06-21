@@ -1,4 +1,5 @@
 use crate::arrays::three::Three;
+use crate::hand_rank::case_evals::CaseEvals;
 use crate::play::hands::Hands;
 
 pub mod player_wins;
@@ -7,4 +8,6 @@ pub mod player_wins;
 #[allow(clippy::module_name_repetitions)]
 pub trait PlayOut {
     fn play_out_flop(&mut self, hands: &Hands, flop: Three);
+
+    fn case_evals_flop(&self, hands: &Hands, flop: Three) -> CaseEvals;
 }

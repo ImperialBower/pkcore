@@ -2,8 +2,9 @@ use crate::analysis::PlayOut;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
+use crate::hand_rank::case_eval::CaseEval;
+use crate::hand_rank::case_evals::CaseEvals;
 use crate::hand_rank::eval::Eval;
-use crate::hand_rank::HandRank;
 use crate::play::hands::Hands;
 use crate::util::wincounter::Wins;
 use crate::{Card, PKError, Pile};
@@ -63,11 +64,27 @@ impl PlayerWins {
 ///
 /// *AND WE'RE BACK!*
 ///
-/// OK, we've finished coding `Eval`, and `CaseEval`. Now let's use this
+/// OK, we've finished coding `Eval`, and `CaseEval`. Now let's use our `PlayerWins` plugin
+/// to work through the final steps.
+///
+/// For the record, I am not test driving this out. I'm going to let the `calc` command line
+/// repl let me get feedback, and when we're in a good place, as in I can compare my results
+/// to what we can find out through other sources, I will lock things down with tests.
+///
+/// There is no one right way to do things. At some point you need to trust your craft, and
+/// know when to cute bait and regroup when you drive yourself into a ditch.
+///
+/// Right now, we're in the
 ///
 impl PlayOut for PlayerWins {
     fn play_out_flop(&mut self, hands: &Hands, flop: Three) {
         debug!("Playing out {} FLOP: {}", hands, flop);
+
+        let _case_evals = self.case_evals_flop(hands, flop);
+    }
+
+    fn case_evals_flop(&self, hands: &Hands, flop: Three) -> CaseEvals {
+        let mut case_evals = CaseEvals::default();
 
         for (j, case) in hands.enumerate_after(2, &flop.cards()) {
             trace!(
@@ -78,19 +95,20 @@ impl PlayOut for PlayerWins {
                 case.get(1).unwrap()
             );
 
-            let mut best = HandRank::default();
+            let mut case_eval = CaseEval::default();
 
             for (i, player) in hands.iter().enumerate() {
                 let seven = PlayerWins::seven_at_flop(*player, flop, &case).unwrap();
-                let calc = Eval::from(seven);
+                let eval = Eval::from(seven);
 
-                if calc.hand_rank > best {
-                    best = calc.hand_rank;
-                }
+                case_eval.push(Eval::from(seven));
 
-                trace!("Player {} {}: {}", i + 1, *player, calc);
+                trace!("Player {} {}: {}", i + 1, *player, eval);
             }
+            case_evals.push(case_eval);
+
             trace!("");
         }
+        case_evals
     }
 }
