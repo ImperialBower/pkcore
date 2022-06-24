@@ -442,6 +442,7 @@ mod arrays_two_tests {
 
     #[test]
     fn cards() {
+        assert_eq!(0, Two::default().cards().len());
         assert_eq!("A♦ K♥", Two::from(BIG_SLICK).cards().to_string());
     }
 

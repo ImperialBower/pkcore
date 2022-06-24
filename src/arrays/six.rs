@@ -217,6 +217,7 @@ mod arrays_six_tests {
 
     #[test]
     fn cards() {
+        assert_eq!(0, Six::default().cards().len());
         assert_eq!("A♦ 2♦ 3♦ 4♦ 5♦ 6♦", Six::from(CARDS).cards().to_string());
     }
 

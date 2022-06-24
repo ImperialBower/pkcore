@@ -195,6 +195,7 @@ mod arrays_seven_tests {
 
     #[test]
     fn cards() {
+        assert_eq!(0, Seven::default().cards().len());
         assert_eq!(
             "A♦ 6♠ 4♠ A♠ 5♦ 3♣ 2♠",
             Seven::from(CARDS).cards().to_string()

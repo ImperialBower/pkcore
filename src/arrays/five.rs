@@ -2444,6 +2444,7 @@ mod arrays_five_tests {
 
     #[test]
     fn cards() {
+        assert_eq!(0, Five::default().cards().len());
         assert_eq!(
             "A♦ K♦ Q♦ J♦ T♦",
             Five::from(ROYAL_FLUSH).cards().to_string()

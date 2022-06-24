@@ -471,6 +471,7 @@ mod card_tests {
 
     #[test]
     fn cards() {
+        assert_eq!(0, Card::default().cards().len());
         assert_eq!("3♣", Card::TREY_CLUBS.cards().to_string());
     }
 

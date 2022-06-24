@@ -126,6 +126,7 @@ mod arrays_three_tests {
 
     #[test]
     fn cards() {
+        assert_eq!(0, Three::default().cards().len());
         assert_eq!("9♣ 6♦ 5♥", Three(THE_FLOP).cards().to_string());
     }
 

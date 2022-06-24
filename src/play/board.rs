@@ -1,7 +1,7 @@
 use crate::arrays::three::Three;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::PKError;
+use crate::{PKError, Pile};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
@@ -36,6 +36,20 @@ impl FromStr for Board {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Board::try_from(Cards::from_str(s)?)
+    }
+}
+
+impl Pile for Board {
+    fn clean(&self) -> Self {
+        todo!()
+    }
+
+    fn to_vec(&self) -> Vec<Card> {
+        let mut v: Vec<Card> = Vec::default();
+        v.append(&mut self.flop.clone().to_vec());
+        v.push(self.turn);
+        v.push(self.river);
+        v
     }
 }
 

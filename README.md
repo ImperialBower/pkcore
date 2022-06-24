@@ -412,6 +412,8 @@
                     * Test #3: A TIE
                       * Win::or()
                 * STEP 3: CaseEvals
+                  * examples/calc command() function to display command
+                  * impl Pile for Board
 
 
 ## LATER
@@ -429,3 +431,4 @@
   * [Yew](https://yew.rs/)
   * [Flowistry: Information Flow for Rust](https://github.com/willcrichton/flowistry)
   * [Rust Is Hard, Or: The Misery of Mainstream Programming](https://hirrolot.github.io/posts/rust-is-hard-or-the-misery-of-mainstream-programming.html)
+  * [Rust: Your code can be perfect](https://www.youtube.com/watch?v=IA4q0lzmyfM)

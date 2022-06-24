@@ -3,7 +3,7 @@ use pkcore::arrays::HandRanker;
 use pkcore::play::board::Board;
 use pkcore::play::game::Game;
 use pkcore::play::hands::Hands;
-use pkcore::PKError;
+use pkcore::{PKError, Pile};
 use std::str::FromStr;
 
 #[derive(Parser, Debug)]
@@ -37,7 +37,8 @@ struct Args {
 /// `❯ cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"`
 ///
 /// To add logging:
-/// `❯ RUST_LOG=trace cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"`
+/// RUST_LOG=trace cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"
+/// RUST_LOG=trace cargo run --example calc -- -d  "5♠ 5♦ 9♠ 9♥ K♣ T♦" -b "5♣ 9♦ T♥ T♣ Q♦"
 fn main() -> Result<(), PKError> {
     env_logger::init();
 
@@ -62,5 +63,15 @@ fn main() -> Result<(), PKError> {
 
     game.play_out_flop();
 
+    println!("{}", command(game));
+
     Ok(())
+}
+
+fn command(game: Game) -> String {
+    format!(
+        "cargo run --example calc -- -d  \"{}\" -b \"{}\"",
+        game.hands.cards(),
+        game.board.cards()
+    )
 }

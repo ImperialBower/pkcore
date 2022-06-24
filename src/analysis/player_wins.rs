@@ -80,7 +80,13 @@ impl PlayOut for PlayerWins {
     fn play_out_flop(&mut self, hands: &Hands, flop: Three) {
         debug!("Playing out {} FLOP: {}", hands, flop);
 
-        let _case_evals = self.case_evals_flop(hands, flop);
+        let case_evals = self.case_evals_flop(hands, flop);
+
+        for case_eval in case_evals.iter() {
+            self.wins.add_win(case_eval.win_count());
+        }
+
+        println!("{:?}", self.wins);
     }
 
     fn case_evals_flop(&self, hands: &Hands, flop: Three) -> CaseEvals {
