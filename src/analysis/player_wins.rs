@@ -87,6 +87,9 @@ impl PlayOut for PlayerWins {
         }
 
         println!("{:?}", self.wins);
+
+
+
     }
 
     fn case_evals_flop(&self, hands: &Hands, flop: Three) -> CaseEvals {

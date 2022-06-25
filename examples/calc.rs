@@ -40,6 +40,7 @@ struct Args {
 /// RUST_LOG=trace cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"
 /// RUST_LOG=trace cargo run --example calc -- -d  "5♠ 5♦ 9♠ 9♥ K♣ T♦" -b "5♣ 9♦ T♥ T♣ Q♦"
 fn main() -> Result<(), PKError> {
+    let now = std::time::Instant::now();
     env_logger::init();
 
     let args = Args::parse();
@@ -64,6 +65,8 @@ fn main() -> Result<(), PKError> {
     game.play_out_flop();
 
     println!("{}", command(game));
+
+    println!("Elapsed: {:.2?}", now.elapsed());
 
     Ok(())
 }
