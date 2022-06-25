@@ -69,14 +69,17 @@ pub trait Pile {
     ///
     /// **Breakdown strict TDD**
     fn combinations_after(&self, k: usize, cards: &Cards) -> Combinations<IntoIter<Card>> {
+        log::debug!("Pile.combinations_after(k: {} cards: {})", k, cards);
         self.remaining_after(cards).combinations(k)
     }
 
     fn enumerate_after(&self, k: usize, cards: &Cards) -> Enumerate<Combinations<IntoIter<Card>>> {
+        log::debug!("Pile.enumerate_after(k: {} cards: {})", k, cards);
         self.remaining_after(cards).combinations(k).enumerate()
     }
 
     fn remaining_after(&self, cards: &Cards) -> Cards {
+        log::debug!("Pile.remaining_after(cards: {})", cards);
         let mut held = self.cards();
         held.add(cards);
         Cards::deck_minus(&held)

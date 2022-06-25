@@ -5,6 +5,8 @@ use pkcore::play::game::Game;
 use pkcore::play::hands::Hands;
 use pkcore::{PKError, Pile};
 use std::str::FromStr;
+use pkcore::analysis::player_wins::PlayerWins;
+use pkcore::analysis::PlayOut;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -62,7 +64,12 @@ fn main() -> Result<(), PKError> {
         );
     }
 
-    game.play_out_flop();
+    let mut wins = PlayerWins::default();
+    game.pof::<PlayerWins>(&mut wins);
+
+    // game.play_out_flop();
+
+    wins.play_out_flop(&game.hands, game.board.flop);
 
     println!("{}", command(game));
 

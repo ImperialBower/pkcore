@@ -8,7 +8,7 @@ use crate::hand_rank::eval::Eval;
 use crate::play::hands::Hands;
 use crate::util::wincounter::Wins;
 use crate::{Card, PKError, Pile};
-use log::{debug, trace};
+use log::{debug, info};
 
 #[derive(Clone, Debug, Default)]
 pub struct PlayerWins {
@@ -74,11 +74,27 @@ impl PlayerWins {
 /// There is no one right way to do things. At some point you need to trust your craft, and
 /// know when to cute bait and regroup when you drive yourself into a ditch.
 ///
-/// Right now, we're in the
+/// ### Step 3.1: Slow
+///
+/// I'm feeling like my logic is too slow, and I don't have enough feel for my code flow.
+/// In these moments I want my code to be able to tell its story. There are a number of different
+/// ways to do that. Testing is the primary way for me. The command line repls are another, allowing
+/// me to kick the tires and verify that they are working.
+///
+/// However, there comes a point where your system starts to have a gravity of its own. A connection
+/// of parts that work together. There is a beauty in these moments. The problem is, that it
+/// becomes harder and hard to get a feel for how your code works. In military theory, it's called
+/// [situational awareness](https://en.wikipedia.org/wiki/Situation_awareness).
+/// The DevOps vanguard calls it [observability](https://en.wikipedia.org/wiki/Observability),
+/// from the terms root's in mathematical control theory.
+///
+/// It is at this point in my coding adventures that I start feeling the need for logging.
+///
+/// I use the debug level of logging to tell me the outline version of my story.
 ///
 impl PlayOut for PlayerWins {
     fn play_out_flop(&mut self, hands: &Hands, flop: Three) {
-        debug!("Playing out {} FLOP: {}", hands, flop);
+        info!("PlayerWins.play_out_flop(hands: {} flop: {})", hands, flop);
 
         let case_evals = self.case_evals_flop(hands, flop);
 
@@ -86,17 +102,19 @@ impl PlayOut for PlayerWins {
             self.wins.add_win(case_eval.win_count());
         }
 
-        println!("{:?}", self.wins);
+        // println!("{:?}", self.wins);
 
 
 
     }
 
     fn case_evals_flop(&self, hands: &Hands, flop: Three) -> CaseEvals {
+        debug!("PlayerWins.case_evals_flop(hands: {} flop: {})", hands, flop);
+
         let mut case_evals = CaseEvals::default();
 
         for (j, case) in hands.enumerate_after(2, &flop.cards()) {
-            trace!(
+            debug!(
                 "{}: FLOP: {} TURN: {} RIVER: {} -------",
                 j,
                 flop,
@@ -110,13 +128,13 @@ impl PlayOut for PlayerWins {
                 let seven = PlayerWins::seven_at_flop(*player, flop, &case).unwrap();
                 let eval = Eval::from(seven);
 
-                case_eval.push(Eval::from(seven));
+                case_eval.push(eval);
 
-                trace!("Player {} {}: {}", i + 1, *player, eval);
+                debug!("Player {} {}: {}", i + 1, *player, eval);
             }
             case_evals.push(case_eval);
 
-            trace!("");
+            debug!("");
         }
         case_evals
     }

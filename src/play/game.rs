@@ -118,7 +118,7 @@ impl Game {
 
     /// Could this actually work? It's trying to do stuff like this that I really start feeling
     /// like an imposter.
-    fn pof<T>(&self, po: &mut T)
+    pub fn pof<T>(&self, po: &mut T)
     where
         T: PlayOut,
     {
