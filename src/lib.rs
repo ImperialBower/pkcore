@@ -19,6 +19,12 @@ pub mod rank;
 pub mod suit;
 pub mod util;
 
+// region CONSTANTS
+
+pub const UNIQUE_5_CARD_HANDS: usize = 2_598_960;
+
+// endregion
+
 #[derive(Debug, Eq, PartialEq)]
 pub enum PKError {
     BlankCard,
