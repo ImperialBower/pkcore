@@ -75,7 +75,7 @@ impl fmt::Display for HeadsUp {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod tests__result {
+mod util__wincounter__heads_up__tests {
     use super::*;
 
     // "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠" HSP THE hand Negreanu/Hansen

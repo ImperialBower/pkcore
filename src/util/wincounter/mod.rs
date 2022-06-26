@@ -1,8 +1,8 @@
 #![warn(clippy::pedantic)]
 
-use crate::util::wincounter::result::HeadsUp;
+use crate::util::wincounter::heads_up::HeadsUp;
 
-pub mod result;
+pub mod heads_up;
 
 /// I've moved wincounter into the library so that I can make updates to the library
 /// as a part of this work. The plan is to later on move the updated module back to
