@@ -1,25 +1,25 @@
-use crate::util::wincounter::Count;
+use crate::util::wincounter::PlayerFlag;
 
 #[derive(Debug)]
 pub struct Win;
 
 impl Win {
-    pub const FIRST: Count = 0b0000_0001;
-    pub const SECOND: Count = 0b0000_0010;
-    pub const THIRD: Count = 0b0000_0100;
-    pub const FORTH: Count = 0b0000_1000;
-    pub const FIFTH: Count = 0b0001_0000;
-    pub const SIXTH: Count = 0b0010_0000;
-    pub const SEVENTH: Count = 0b0100_0000;
-    pub const EIGHT: Count = 0b1000_0000;
-    pub const NINTH: Count = 0b1_0000_0000;
-    pub const TENTH: Count = 0b10_0000_0000;
-    pub const ELEVENTH: Count = 0b100_0000_0000;
-    pub const TWELFTH: Count = 0b1000_0000_0000;
-    pub const THIRTEENTH: Count = 0b1_0000_0000_0000;
-    pub const FOURTEENTH: Count = 0b10_0000_0000_0000;
-    pub const FIFTEENTH: Count = 0b100_0000_0000_0000;
-    pub const SIXTEENTH: Count = 0b1000_0000_0000_0000;
+    pub const FIRST: PlayerFlag = 0b0000_0001;
+    pub const SECOND: PlayerFlag = 0b0000_0010;
+    pub const THIRD: PlayerFlag = 0b0000_0100;
+    pub const FORTH: PlayerFlag = 0b0000_1000;
+    pub const FIFTH: PlayerFlag = 0b0001_0000;
+    pub const SIXTH: PlayerFlag = 0b0010_0000;
+    pub const SEVENTH: PlayerFlag = 0b0100_0000;
+    pub const EIGHT: PlayerFlag = 0b1000_0000;
+    pub const NINTH: PlayerFlag = 0b1_0000_0000;
+    pub const TENTH: PlayerFlag = 0b10_0000_0000;
+    pub const ELEVENTH: PlayerFlag = 0b100_0000_0000;
+    pub const TWELFTH: PlayerFlag = 0b1000_0000_0000;
+    pub const THIRTEENTH: PlayerFlag = 0b1_0000_0000_0000;
+    pub const FOURTEENTH: PlayerFlag = 0b10_0000_0000_0000;
+    pub const FIFTEENTH: PlayerFlag = 0b100_0000_0000_0000;
+    pub const SIXTEENTH: PlayerFlag = 0b1000_0000_0000_0000;
 
     /// `CaseEval` win count Test #2: TAKE TWO detour.
     ///
@@ -51,14 +51,14 @@ impl Win {
     /// Me, I'm going to code a good ol' fashioned match statement:
     ///
     /// ```
-    /// use pkcore::util::wincounter::Count;
+    /// use pkcore::util::wincounter::PlayerFlag;
     /// use pkcore::util::wincounter::win::Win;
-    /// fn from_index(i: usize) -> Count {
+    /// fn from_index(i: usize) -> PlayerFlag {
     ///     match i {
     ///         0 => Win::FIRST,
     ///         1 => Win::SECOND,
     ///         2 => Win::THIRD,
-    ///         _ => Count::default()
+    ///         _ => PlayerFlag::default()
     ///     }
     /// }
     /// assert_eq!(Win::FIRST, from_index(0));
@@ -99,7 +99,7 @@ impl Win {
     /// end up taking more time in the long run. Count on it.
     ///
     #[must_use]
-    pub fn from_index(i: usize) -> Count {
+    pub fn from_index(i: usize) -> PlayerFlag {
         match i {
             0 => Win::FIRST,
             1 => Win::SECOND,
@@ -117,7 +117,30 @@ impl Win {
             13 => Win::FOURTEENTH,
             14 => Win::FIFTEENTH,
             15 => Win::SIXTEENTH,
-            _ => Count::default(),
+            _ => PlayerFlag::default(),
+        }
+    }
+
+    #[must_use]
+    pub fn to_index(player_flag: PlayerFlag) -> usize {
+        match player_flag {
+            Win::FIRST => 0,
+            Win::SECOND => 1,
+            Win::THIRD => 2,
+            Win::FORTH => 3,
+            Win::FIFTH => 4,
+            Win::SIXTH => 5,
+            Win::SEVENTH => 6,
+            Win::EIGHT => 7,
+            Win::NINTH => 8,
+            Win::TENTH => 9,
+            Win::ELEVENTH => 10,
+            Win::TWELFTH => 11,
+            Win::THIRTEENTH => 12,
+            Win::FOURTEENTH => 13,
+            Win::FIFTEENTH => 14,
+            Win::SIXTEENTH => 15,
+            _ => 0,
         }
     }
 
@@ -128,7 +151,7 @@ impl Win {
     /// comfortable with the knowledge that I am doing what I set out to do. Don't be too hard on
     /// yourself for writing stupid code. Be hard on yourself for writing untested code.
     #[must_use]
-    pub fn or(a: Count, b: Count) -> Count {
+    pub fn or(a: PlayerFlag, b: PlayerFlag) -> PlayerFlag {
         a | b
     }
 }
@@ -156,7 +179,7 @@ mod util__wincounter__win__tests {
         assert_eq!(Win::FOURTEENTH, Win::from_index(13));
         assert_eq!(Win::FIFTEENTH, Win::from_index(14));
         assert_eq!(Win::SIXTEENTH, Win::from_index(15));
-        assert_eq!(Count::default(), Win::from_index(16));
+        assert_eq!(PlayerFlag::default(), Win::from_index(16));
     }
 
     #[test]

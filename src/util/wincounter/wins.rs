@@ -1,6 +1,6 @@
 use crate::util::wincounter::heads_up::HeadsUp;
 use crate::util::wincounter::win::Win;
-use crate::util::wincounter::{Count, Result};
+use crate::util::wincounter::{PlayerFlag, Result};
 
 /// I've moved wincounter into the library so that I can make updates to the library
 /// as a part of this work. The plan is to later on move the updated module back to
@@ -8,15 +8,15 @@ use crate::util::wincounter::{Count, Result};
 ///
 /// When I originally wrote the crate I was just focused on heads up play.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct Wins(Vec<Count>);
+pub struct Wins(Vec<PlayerFlag>);
 
 impl Wins {
-    pub fn add_win(&mut self, count: Count) {
+    pub fn add(&mut self, count: PlayerFlag) {
         self.0.push(count);
     }
 
     /// Adds a count x number of times. Primarily used for testing.
-    pub fn add_x(&mut self, count: Count, x: usize) {
+    pub fn add_x(&mut self, count: PlayerFlag, x: usize) {
         for _ in 0..x {
             self.0.push(count);
         }
@@ -39,7 +39,7 @@ impl Wins {
     }
 
     #[must_use]
-    pub fn get(&self) -> &Vec<Count> {
+    pub fn get(&self) -> &Vec<PlayerFlag> {
         &self.0
     }
 
@@ -53,9 +53,11 @@ impl Wins {
         self.0.len()
     }
 
+    /// Returns the cumulative wins for a specific `PlayerFlag`, and their number
+    /// of ties.
     #[must_use]
-    pub fn wins_for(&self, result: Count) -> (usize, usize) {
-        let wins: Vec<Count> = self
+    pub fn wins_for(&self, result: PlayerFlag) -> (usize, usize) {
+        let wins: Vec<PlayerFlag> = self
             .0
             .clone()
             .into_iter()
@@ -98,8 +100,8 @@ impl Wins {
     }
 }
 
-impl From<Vec<Count>> for Wins {
-    fn from(counts: Vec<Count>) -> Self {
+impl From<Vec<PlayerFlag>> for Wins {
+    fn from(counts: Vec<PlayerFlag>) -> Self {
         Wins(counts)
     }
 }
@@ -132,24 +134,39 @@ mod util__wincounter__wins__tests {
     }
 
     #[test]
-    fn add_win() {
+    fn add() {
         let mut counter = Wins::default();
 
         counter.add_win_first();
         counter.add_win_second();
         counter.add_win_first();
         counter.add_win_third();
-        counter.add_win(Win::FIRST | Win::SECOND);
-        counter.add_win(Win::FIFTH);
+        counter.add(Win::FIRST | Win::SECOND);
+        counter.add(Win::FIFTH);
 
         assert_eq!(6, counter.len())
+    }
+
+    #[test]
+    fn add_x() {
+        let mut wins = Wins::default();
+
+        wins.add_x(Win::FIRST, 1_365_284); // Daniel Wins
+        wins.add_x(Win::SECOND, 314_904); // Gus Wins
+        wins.add_x(Win::FIRST | Win::SECOND, 32116); // Ties
+
+        // Since the result returned is a tuple containing the number of wins, including
+        // ties, followed by just the ties, we need to add the two numbers together.
+        assert_eq!((1_365_284 + 32116, 32116), wins.wins_for(Win::FIRST));
+        assert_eq!((314_904 + 32116, 32116), wins.wins_for(Win::SECOND));
+        assert_eq!((32116, 32116), wins.wins_for(Win::FIRST | Win::SECOND));
     }
 
     #[test]
     fn is_empty() {
         let mut counter = Wins::default();
 
-        counter.add_win(Win::FIRST);
+        counter.add(Win::FIRST);
 
         assert!(!counter.is_empty());
         assert!(Wins::default().is_empty());
@@ -159,10 +176,10 @@ mod util__wincounter__wins__tests {
     fn len() {
         let mut counter = Wins::default();
 
-        counter.add_win(Win::FIRST);
-        counter.add_win(Win::FIRST);
-        counter.add_win(Win::FIRST);
-        counter.add_win(Win::FIRST);
+        counter.add(Win::FIRST);
+        counter.add(Win::FIRST);
+        counter.add(Win::FIRST);
+        counter.add(Win::FIRST);
 
         assert_eq!(4, counter.len());
         assert_eq!(0, Wins::default().len());
@@ -173,11 +190,11 @@ mod util__wincounter__wins__tests {
         let mut counter = Wins::default();
 
         counter.add_win_first();
-        counter.add_win(Win::FIRST | Win::SECOND);
+        counter.add(Win::FIRST | Win::SECOND);
         counter.add_win_third();
         counter.add_win_third();
         counter.add_win_third();
-        counter.add_win(Win::FORTH);
+        counter.add(Win::FORTH);
 
         assert_eq!((2, 1), counter.wins_for(Win::FIRST));
         assert_eq!((1, 1), counter.wins_for(Win::SECOND));

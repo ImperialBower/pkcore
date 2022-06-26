@@ -1,7 +1,7 @@
 use crate::hand_rank::eval::Eval;
 use crate::hand_rank::HandRank;
 use crate::util::wincounter::win::Win;
-use crate::util::wincounter::Count;
+use crate::util::wincounter::PlayerFlag;
 use std::slice::Iter;
 
 /// # Analysis Saga: Step 2
@@ -356,8 +356,8 @@ impl CaseEval {
     /// That's enough. I'm declaring victory. Time to move on to displaying winning percentages.
     ///
     #[must_use]
-    pub fn win_count(&self) -> Count {
-        let mut count = Count::default();
+    pub fn win_count(&self) -> PlayerFlag {
+        let mut count = PlayerFlag::default();
         let best = self.winning_hand_rank();
         for (i, eval) in self.iter().enumerate() {
             if eval.hand_rank == best {

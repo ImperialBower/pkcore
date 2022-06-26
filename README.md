@@ -417,6 +417,7 @@
                   * deprecate Game .play_out_flop() .pof() & .remaining_cards_at_flop()
                 * Step 4: Results 
                   * REFACTORING: util::Util::calculate_percentage() 
+                  * TestData::wins_the_hand()
 
 
 ## LATER

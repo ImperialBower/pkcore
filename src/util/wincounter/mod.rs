@@ -4,22 +4,22 @@ pub mod win;
 pub mod wins;
 
 // TODO RF: Refactor this as a `struct Count(u16)`.
-pub type Count = u16;
+pub type PlayerFlag = u16;
 
 pub trait Result {
     #[must_use]
     fn is_tie(&self) -> bool;
 
     #[must_use]
-    fn win_for(&self, count: Count) -> bool;
+    fn win_for(&self, count: PlayerFlag) -> bool;
 }
 
-impl Result for Count {
+impl Result for PlayerFlag {
     fn is_tie(&self) -> bool {
         self.count_ones() > 1
     }
 
-    fn win_for(&self, count: Count) -> bool {
+    fn win_for(&self, count: PlayerFlag) -> bool {
         self & count == count
     }
 }

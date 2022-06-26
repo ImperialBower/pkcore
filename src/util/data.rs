@@ -3,6 +3,8 @@ use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::hand_rank::eval::Eval;
 use crate::play::hands::Hands;
+use crate::util::wincounter::win::Win;
+use crate::util::wincounter::wins::Wins;
 use crate::Card;
 
 /// I am a classicist when it comes to testing. Martin Fowler, in his essay
@@ -56,7 +58,7 @@ impl TestData {
         Five::from_2and3(Two::HAND_6S_6H, TestData::the_flop())
     }
 
-    /// DEFECT: Wrong hand.
+    /// DEFECT: Wrong hand. FIXED
     #[must_use]
     pub fn gus_eval_at_flop() -> Eval {
         Eval::from(TestData::gus_hand_at_flop())
@@ -65,5 +67,16 @@ impl TestData {
     #[must_use]
     pub fn gus_hand_at_flop() -> Five {
         Five::from_2and3(Two::HAND_5D_5C, TestData::the_flop())
+    }
+
+    #[must_use]
+    pub fn wins_the_hand() -> Wins {
+        let mut wins = Wins::default();
+
+        wins.add_x(Win::FIRST, 1_365_284); // Daniel Wins
+        wins.add_x(Win::SECOND, 314_904); // Gus Wins
+        wins.add_x(Win::FIRST | Win::SECOND, 32116); // Ties
+
+        wins
     }
 }
