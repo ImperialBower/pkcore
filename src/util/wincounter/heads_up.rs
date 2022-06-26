@@ -1,4 +1,4 @@
-use crate::util::wincounter::calculate_percentage;
+use crate::util::Util;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -23,27 +23,27 @@ impl HeadsUp {
 
     #[must_use]
     pub fn percentage_first(&self) -> f32 {
-        calculate_percentage(self.first_wins, self.total())
+        Util::calculate_percentage(self.first_wins, self.total())
     }
 
     #[must_use]
     pub fn percentage_first_cumulative(&self) -> f32 {
-        calculate_percentage(self.first_wins + self.ties, self.total())
+        Util::calculate_percentage(self.first_wins + self.ties, self.total())
     }
 
     #[must_use]
     pub fn percentage_second(&self) -> f32 {
-        calculate_percentage(self.second_wins, self.total())
+        Util::calculate_percentage(self.second_wins, self.total())
     }
 
     #[must_use]
     pub fn percentage_second_cumulative(&self) -> f32 {
-        calculate_percentage(self.second_wins + self.ties, self.total())
+        Util::calculate_percentage(self.second_wins + self.ties, self.total())
     }
 
     #[must_use]
     pub fn percentage_ties(&self) -> f32 {
-        calculate_percentage(self.ties, self.total())
+        Util::calculate_percentage(self.ties, self.total())
     }
 
     #[must_use]

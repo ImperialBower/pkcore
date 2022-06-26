@@ -1,6 +1,7 @@
 use crate::hand_rank::eval::Eval;
 use crate::hand_rank::HandRank;
-use crate::util::wincounter::{Count, Win};
+use crate::util::wincounter::win::Win;
+use crate::util::wincounter::Count;
 use std::slice::Iter;
 
 /// # Analysis Saga: Step 2
@@ -141,7 +142,7 @@ impl CaseEval {
     /// ```
     /// use pkcore::hand_rank::case_eval::CaseEval;
     /// use pkcore::util::data::TestData;
-    /// use pkcore::util::wincounter::Win;
+    /// use pkcore::util::wincounter::win::Win;
     ///
     /// let expected = Win::FIRST;
     ///
@@ -185,7 +186,7 @@ impl CaseEval {
     /// use pkcore::hand_rank::case_eval::CaseEval;
     /// use pkcore::hand_rank::eval::Eval;
     /// use pkcore::util::data::TestData;
-    /// use pkcore::util::wincounter::Win;
+    /// use pkcore::util::wincounter::win::Win;
     ///
     /// let expected = Win::FIRST;
     ///
@@ -221,7 +222,7 @@ impl CaseEval {
     /// use pkcore::hand_rank::case_eval::CaseEval;
     /// use pkcore::hand_rank::eval::Eval;
     /// use pkcore::util::data::TestData;
-    /// use pkcore::util::wincounter::Win;
+    /// use pkcore::util::wincounter::win::Win;
     ///
     /// let expected = Win::THIRD;
     ///
@@ -289,7 +290,7 @@ impl CaseEval {
     /// use pkcore::hand_rank::case_eval::CaseEval;
     /// use pkcore::hand_rank::eval::Eval;
     /// use pkcore::util::data::TestData;
-    /// use pkcore::util::wincounter::Win;
+    /// use pkcore::util::wincounter::win::Win;
     ///
     /// let expected = 0b0000_0110;
     ///
@@ -335,7 +336,7 @@ impl CaseEval {
     /// use pkcore::hand_rank::case_eval::CaseEval;
     /// use pkcore::hand_rank::eval::Eval;
     /// use pkcore::util::data::TestData;
-    /// use pkcore::util::wincounter::Win;
+    /// use pkcore::util::wincounter::win::Win;
     ///
     /// let expected = 0b0000_1001;
     ///
@@ -392,7 +393,7 @@ mod hand_rank__case_eval_tests {
     use crate::arrays::five::Five;
     use crate::arrays::two::Two;
     use crate::util::data::TestData;
-    use crate::util::wincounter::Win;
+    use crate::util::wincounter::win::Win;
 
     #[test]
     fn get() {

@@ -6,7 +6,7 @@ use crate::hand_rank::case_eval::CaseEval;
 use crate::hand_rank::case_evals::CaseEvals;
 use crate::hand_rank::eval::Eval;
 use crate::play::hands::Hands;
-use crate::util::wincounter::Wins;
+use crate::util::wincounter::wins::Wins;
 use crate::{Card, PKError, Pile};
 use log::{debug, info};
 
