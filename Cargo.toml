@@ -1,6 +1,6 @@
 [package]
 name = "pkcore"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 authors = ["gaoler <gaoler@electronicpanopticon.com>"]
 license = "GPL-3.0-or-later"
@@ -11,16 +11,16 @@ exclude = [".github/workflows/*", "examples/*", ".gitignore", "Cargo.lock"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-indexmap = "1.8.1"
+indexmap = "1.9.1"
 itertools = "0.10.3"
 log = "0.4.17"
 rand = "0.8.5"
 serde = { version = "1.0.136", features = ["derive"] }
-strum = { version = "0.24", features = ["derive"] }
+strum = { version = "0.24.1", features = ["derive"] }
 # wincounter = "0.1.1"
 
 [dev-dependencies]
-clap = { version = "3.1.12", features = ["derive", "unicode"] }
+clap = { version = "3.2.6", features = ["derive", "unicode"] }
 elr_primes = "0.1.2"
 env_logger = "0.9.0"
 rstest = "0.13.0"
