@@ -41,6 +41,15 @@ struct Args {
 /// To add logging:
 /// RUST_LOG=trace cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"
 /// RUST_LOG=trace cargo run --example calc -- -d  "5♠ 5♦ 9♠ 9♥ K♣ T♦" -b "5♣ 9♦ T♥ T♣ Q♦"
+///
+/// ## Step Three
+///
+/// Show me the winning percentages for each hand.
+///
+/// At this point I am starting to feel the strain on my system from my main method
+/// trying to do too much. This is when I try to build code that will take the load
+/// off and make things easier to maintain and build upon.
+///
 fn main() -> Result<(), PKError> {
     let now = std::time::Instant::now();
     env_logger::init();
@@ -67,6 +76,12 @@ fn main() -> Result<(), PKError> {
     let mut pw = PlayerWins::default();
 
     pw.play_out_flop(&game.hands, game.board.flop);
+
+    for (i, _) in game.hands.iter().enumerate() {
+        let (wins, ties) = pw.wins.percentage_for_player(i);
+
+        println!("Player #{} {:.2}% / {:.2}%", i + 1, wins, ties);
+    }
 
     println!("{}", command(game));
 

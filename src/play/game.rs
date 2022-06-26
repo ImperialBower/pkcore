@@ -1,5 +1,3 @@
-use crate::analysis::player_wins::PlayerWins;
-use crate::analysis::PlayOut;
 use crate::arrays::five::Five;
 use crate::play::board::Board;
 use crate::play::hands::Hands;
@@ -111,35 +109,83 @@ impl Game {
     /// _"Find a place inside where there's joy, and the joy will burn out the pain."_ For me, this
     /// is one of those places. I can't control the world, but I can control the universe that is
     /// my art.
-    #[deprecated(since = "0.0.2", note = "Use PlayerWins directly")]
-    pub fn play_out_flop(&self) {
-        let mut wins = PlayerWins::default();
-        self.pof::<PlayerWins>(&mut wins);
-    }
+    // #[deprecated(since = "0.0.2", note = "Use PlayerWins directly")]
+    // pub fn play_out_flop(&self) {
+    //     let mut wins = PlayerWins::default();
+    //     self.pof::<PlayerWins>(&mut wins);
+    // }
 
     /// Could this actually work? It's trying to do stuff like this that I really start feeling
     /// like an imposter.
     ///
-    /// ```
-    /// use pkcore::analysis::player_wins::PlayerWins;
-    /// use pkcore::play::game::Game;
-    /// let game = Game::default();
-    /// let mut wins = PlayerWins::default();
-    /// game.pof::<PlayerWins>(&mut wins);
-    /// ```
-    #[deprecated(since = "0.0.2", note = "Use PlayerWins directly")]
-    pub fn pof<T>(&self, po: &mut T)
-    where
-        T: PlayOut,
-    {
-        po.play_out_flop(&self.hands, self.board.flop);
-    }
+    /// # CLEANUP REFACTORING
+    ///
+    /// One of the hardest things for me to do as a developer has been deleting code that I'm really
+    /// proud of. You work so hard on something, and you're so excited to see it work, that the
+    /// thought of deleting it cuts deep.
+    ///
+    /// One of the most impressive things that I witnessed later in life was pairing with a coder
+    /// that deleted his code without giving it a second thought. Brian Balser
+    ///
+    /// > If you here require a practical rule of me, I will present you with this: ‘Whenever you feel an impulse to perpetrate a piece of exceptionally fine writing, obey it—whole-heartedly—and delete it before sending your manuscript to press. Murder your darlings. -- Arthur Quiller-Couch
+    ///
+    /// [Who Really Said You Should “Kill Your Darlings”?](https://slate.com/culture/2013/10/kill-your-darlings-writing-advice-what-writer-really-said-to-murder-your-babies.html)
+    ///
+    /// While this code is cool, it's functionality is flawed. I don't need a plugin system here.
+    /// I just need state that I pass on to a logic process that gives me the information I need.
+    /// Eventually, I can see the utility of a library that has the ability to plug in different
+    /// types of poker games, and that will be a fun exploration for later adventures. But, for now,
+    /// we are going to focus on one game, and get that locked down. Then, we can start to isolate
+    /// the places where it would be cool to swap out different business logic under the hood.
+    ///
+    /// For example: For [Omaha](https://en.wikipedia.org/wiki/Omaha_hold_%27em), the hands would
+    /// need to have four cards instead of two. For the
+    /// eval functions would need to cycle through all the possible combinations of hands at every
+    /// street, knowing that the hand must always include just two of the four cards that the player
+    /// is holding.
+    ///
+    /// Then there's Omaha [hi-low split](https://en.wikipedia.org/wiki/High-low_split)-8 or better,
+    /// where there would need to be two hand ranks, one for the high card, and one for the low, if
+    /// on is possible.
+    ///
+    /// There, when we start to add the perspective of betting into our system, we will need to be
+    /// able to support constraints such as limit, pot limit, no limit, and different ante
+    /// structures.
+    ///
+    /// This all feels exciting to me, and I need to resist the urge to get ahead of myself and code
+    /// it too soon. Right now we are crafting a core set of functionality for one game. Once we have
+    /// that under our belt, we can move on.
+    ///
+    /// ## Back to the darlings murder
+    ///
+    /// One of the things that really encourages me about this deletion refactoring is that I am
+    /// not happy with how tightly coupled the code was becoming. This is the Java/Spring
+    /// developer in me always doing dependency injections and wiring things together in complex
+    /// dependency graphs that I started to call spring hell back when I coded in Java full time.
+    ///
+    /// One thing I really respect about C programmers is that they code functions that just do
+    /// something. They're not spending a lot of time building wheels within wheels within wheels.
+    /// Granted, this leads to the kind of applications that drive me crazy, where their builds are
+    /// long involved magic spells consolidating stuff that quickly breaks as things change, but a
+    /// lot of these feelings come from my lack of understanding of the intricacies of lower level
+    /// system programming. Their tools have been around longer, have done more things, and there
+    /// are many more of them. I will need to spend a lot more time working in their world to have
+    /// an opinion that isn't completely marred by my own ignorance. Hopefully, I respect them, and
+    /// appreciate their foundational efforts too much to completely mess up my perspective.
+    ///
+    ///
+    // #[deprecated(since = "0.0.2", note = "Use PlayerWins directly")]
+    // pub fn pof<T>(&self, po: &mut T)
+    // where
+    //     T: PlayOut,
+    // {
+    //     po.play_out_flop(&self.hands, self.board.flop);
+    // }
 
     /// REFACTORING: OK, we're moving this over to Hands for greater flexibility. Now that we've are
     /// trying out the `PlayOut` generic trait we need to be able to determine how many `Cards` are
     /// remaining at a specific point in the hand. This method locks it into the flop, and we
     /// really don't need that.
-    #[deprecated(since = "0.0.2", note = "")]
     #[must_use]
     pub fn remaining_cards_at_flop(&self) -> Cards {
         let mut cards = self.hands.cards();
@@ -205,13 +251,13 @@ mod play_game_tests {
     /// After all, it's just a test. It's not like it's production code.
     ///
     /// Now that I think about it, this would be better as a doc test.
-    #[test]
-    fn pof() {
-        let mut wins = PlayerWins::default();
-        let game = the_hand();
-
-        game.pof::<PlayerWins>(&mut wins);
-    }
+    // #[test]
+    // fn pof() {
+    //     let mut wins = PlayerWins::default();
+    //     let game = the_hand();
+    //
+    //     game.pof::<PlayerWins>(&mut wins);
+    // }
 
     #[test]
     fn display() {

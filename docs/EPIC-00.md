@@ -44,6 +44,26 @@ go out and do things like walk our dogs, take naps and hug the ones we love.
 
 _Memento mori._
 
+### Time Pressure
+
+One of the things that you are going to hit upon over the course of your 
+adventures in software development is time pressure. The best insurance policy
+you can take out against being crushed under the weight of this pressure are
+the techniques that give you fast, independent feedback. The systems we are
+building today are massively complex, and honestly beyond the understanding
+of the people building the system or selling it. Our brains simply aren't
+designed to hold it, and without a direct connection to our senses, we are 
+blind, deaf, and dumb as to what's going on inside it. This is where your craft
+is so essential. A solid foundation of tests. Tools that help you keep your 
+code clean. CI servers that alert you the moment somebody tries to commit
+something that will break your system. Logging systems that allow you to 
+explore the state of your system in aggregate. 
+
+People will tell you to worry about these things later. Worry about them now. 
+Start with a strong foundation. Take the time while you have it. Don't be the 
+person kicking themselves later for not doing the things that you know you 
+should have. 
+
 ## Perspectives
 
 In any sort of analysis of a state in flux, it is important to understand the

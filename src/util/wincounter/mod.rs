@@ -66,11 +66,26 @@ impl Wins {
         (wins.len(), wins.into_iter().filter(Result::is_tie).count())
     }
 
+    /// Pass in a zero based player index and the function will return the
+    /// win alone percentage of the player, as well as the number of times
+    /// the player tied for first.
+    #[must_use]
+    pub fn percentage_for_player(&self, index: usize) -> (f32, f32) {
+        let total = self.len();
+        let (wins, ties) = self.wins_for(Win::from_index(index));
+        let pure_wins = wins - ties;
+
+        (
+            Wins::percent_calculator(pure_wins, total),
+            Wins::percent_calculator(ties, total),
+        )
+    }
+
     /// Forgiving percentage calculator. It will return zero if you try
     /// to divide by zero.
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
-    pub fn percent(number: usize, total: usize) -> f32 {
+    pub fn percent_calculator(number: usize, total: usize) -> f32 {
         match total {
             0 => 0_f32,
             _ => ((number as f32 * 100.0) / total as f32) as f32,
@@ -173,22 +188,22 @@ mod tests__wins {
     }
 
     #[test]
-    fn percent() {
-        let percentage = Wins::percent(48, 2_598_960);
+    fn percent_calculator() {
+        let percentage = Wins::percent_calculator(48, 2_598_960);
 
         assert_eq!("0.00185%", format!("{:.5}%", percentage));
     }
 
     #[test]
-    fn percent__zero_numerator() {
-        let percentage = Wins::percent(0, 2_598_960);
+    fn percent_calculator__zero_numerator() {
+        let percentage = Wins::percent_calculator(0, 2_598_960);
 
         assert_eq!("0.00000%", format!("{:.5}%", percentage));
     }
 
     #[test]
-    fn percent__zero_denominator() {
-        let percentage = Wins::percent(48, 0);
+    fn percent_calculator__zero_denominator() {
+        let percentage = Wins::percent_calculator(48, 0);
 
         assert_eq!("0.00000%", format!("{:.5}%", percentage));
     }
