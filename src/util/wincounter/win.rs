@@ -121,29 +121,6 @@ impl Win {
         }
     }
 
-    #[must_use]
-    pub fn to_index(player_flag: PlayerFlag) -> usize {
-        match player_flag {
-            Win::FIRST => 0,
-            Win::SECOND => 1,
-            Win::THIRD => 2,
-            Win::FORTH => 3,
-            Win::FIFTH => 4,
-            Win::SIXTH => 5,
-            Win::SEVENTH => 6,
-            Win::EIGHT => 7,
-            Win::NINTH => 8,
-            Win::TENTH => 9,
-            Win::ELEVENTH => 10,
-            Win::TWELFTH => 11,
-            Win::THIRTEENTH => 12,
-            Win::FOURTEENTH => 13,
-            Win::FIFTEENTH => 14,
-            Win::SIXTEENTH => 15,
-            _ => 0,
-        }
-    }
-
     /// This is probably a needless function, and a pair partner stronger than the voice in my head
     /// would probably just tell me to do a simple OR operation. The truth is, that I have to
     /// duckduckgo these bitwise operators every time I start to use them, so this is a way for me
