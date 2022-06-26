@@ -85,12 +85,20 @@ impl PlayerWins {
 /// of parts that work together. There is a beauty in these moments. The problem is, that it
 /// becomes harder and hard to get a feel for how your code works. In military theory, it's called
 /// [situational awareness](https://en.wikipedia.org/wiki/Situation_awareness).
-/// The DevOps vanguard calls it [observability](https://en.wikipedia.org/wiki/Observability),
+/// The `DevOps` vanguard calls it [observability](https://en.wikipedia.org/wiki/Observability),
 /// from the terms root's in mathematical control theory.
 ///
 /// It is at this point in my coding adventures that I start feeling the need for logging.
 ///
 /// I use the debug level of logging to tell me the outline version of my story.
+///
+/// #### Reflection
+///
+/// I'm starting to feel like this code is too smart for its own good. I don't feel like the program
+/// flow justifies this level of abstraction. Questions:
+///
+/// * Do I need the `PlayOut` trait?
+/// * Wouldn't it be better to just have a `Game` struct that simply collects the state of the Hand
 ///
 impl PlayOut for PlayerWins {
     fn play_out_flop(&mut self, hands: &Hands, flop: Three) {
@@ -103,13 +111,22 @@ impl PlayOut for PlayerWins {
         }
 
         // println!("{:?}", self.wins);
-
-
-
     }
 
+    /// # The script
+    ///
+    /// * init `CaseEvals`
+    /// * enumerate through possible cards at turn and river
+    ///   * init `CaseEval`
+    ///   * enumerate through held hands
+    ///     * get `seven_at_flop`
+    ///     * `Eval::from(seven)`
+    ///     * push onto `CaseEval`
     fn case_evals_flop(&self, hands: &Hands, flop: Three) -> CaseEvals {
-        debug!("PlayerWins.case_evals_flop(hands: {} flop: {})", hands, flop);
+        debug!(
+            "PlayerWins.case_evals_flop(hands: {} flop: {})",
+            hands, flop
+        );
 
         let mut case_evals = CaseEvals::default();
 

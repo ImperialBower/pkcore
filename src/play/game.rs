@@ -129,8 +129,7 @@ impl Game {
     /// trying out the `PlayOut` generic trait we need to be able to determine how many `Cards` are
     /// remaining at a specific point in the hand. This method locks it into the flop, and we
     /// really don't need that.
-    ///
-    /// TODO: deprecate
+    #[deprecated(since = "0.0.2", note = "")]
     #[must_use]
     pub fn remaining_cards_at_flop(&self) -> Cards {
         let mut cards = self.hands.cards();

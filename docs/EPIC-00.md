@@ -44,6 +44,150 @@ go out and do things like walk our dogs, take naps and hug the ones we love.
 
 _Memento mori._
 
+## Perspectives
+
+In any sort of analysis of a state in flux, it is important to understand the
+different perspectives that the system offers to view, interact with, and 
+analize. We are starting from the landscape of Texas Hold'Em Poker. We are not,
+as of yet, worrying about bets or stack size; simply focusing on the odds of
+winning in pure, card based terms. Later on, we will want to add that to our
+system's domain map, but before that, we need to lock down our ability to 
+analyze a hand in pure terms. 
+
+Now, what does that mean? What are the perspectives that a Texas Hold'Em can 
+have in pure, probability terms?
+
+### Booth View
+
+One of the big revolutions that came about in terms of how the game of poker was
+perceived by the public was brought about by the genius of 
+[Henry Orenstein](https://www.usbets.com/remembering-poker-pioneer-henry-orenstein/).
+He came up with the bright idea of making it possible for spectators of poker 
+games to see what they players hands were, using cameras built into the tables.
+
+This is the first perspective that we are going to code towards. 
+
+#### Aside
+
+Another way of thinking of perspectives is what is called in user-centered 
+design and marketing as a
+[Persona](https://en.wikipedia.org/wiki/Persona_(user_experience). I find these
+sorts of organizational tools in organized, corporate settings as useful; but 
+this is not a book based on that context. I am not writing to make you be a 
+better team player, able to create synergy between various knowledge silos in a
+way to maximize customer value. I am writing about how I code, and how I think.
+
+My brain naturally revolts internally against efforts of collective group think,
+designed to make us work together in lock step. That's my day job. I like 
+languages, and keeping my brain flexible. This is not user centered design. The
+only user of this system right now is me, and hopefully, later on the users will
+include you, as you play around with the code I am writing. 
+
+We are not building a product. We are not moulding our system to maximize profit. 
+We are building a digital representation of an intellectual domain. What we are
+creating is a layer below the work of marketing, and product owners, and venture
+capitalists, who filter everything they do through the dust colored glasses of
+money.
+
+Yes, yes... I know this is a harsh collection of words. I really appreciate 
+the people for the companies I work with who do these jobs. They are essential
+when working in our neoliberal dystopia. We get paid to sell things, and
+every dimension of our work needs to be focused on that principal. However, 
+IMNSHO, there is a gravity to that dimension, which, when introduced too early,
+warps a domain in ways that restrict its flexibility for later innovation.
+
+You will hear things like:
+
+* I'm not paying testing. I'm paying for a working system.
+* We don't need to worry about performance now. We can focus on that after we have a functioning product. 
+* Why are you spending so much time gold plating this product? We need this out the door NOW!
+
+These opinions have more and more merit, the farther you get away from the core
+center of a system's domain. However, as I've said before, I am not a test 
+driven developer. I am a domain driven developer that is test obsessed. I focus
+first on creating a set of code that as best as I can, reflects the texture of a
+domain. Once I feel like I have that, THEN I start worrying about leveraging it
+for customer facing applications. 
+
+Google was build on the foundations of a paper written at Stanford. Facebook 
+was build on the backs of a bunch of horny Harvard students trying to create 
+better ways to creep on unsuspecting women. 
+
+Your domain is the seed. Your product is the flower. Focus on the seed, and you
+will have a garden full of flowers. _Note, these opinions are heretical in my
+chosen profession. We are driven by entitled type-A sociopathic con artists
+enabled by our particularly tulipian form of capitalism. Don't hate the player,
+hate the game. Know that truly great things aren't built from greed, but from
+passion, and love, and a desire to bring a little beauty to the world._
+
+Now, granted, this domain we are splashing around with is professional gambling, 
+one of the most toxic environments in the world. We acknowledge that. Maybe I am 
+a bad person for it, but I love playing poker. I want to build tools that will
+help me be a better poker player. Maybe I will make some money from this... maybe
+not. In any event, I will have had fun doing it, and let's just see where this 
+leads us. 
+
+The thing that really worries me, is that I may just enjoy coding about poker
+more than I do playing it. Yes, our of the true joys in my life has been those
+moments when a player throws their hand at me in disgust because they had a bad
+read on my playing style. Those memories are sweet, but fleeting. Writing has
+the potential to last longer, AND, if done well, provide more of those wonderful,
+fleeting moments. 
+
+### Player View
+
+Our second targetted perspective is from that of the player. This is where
+we know only a single hand. How to we build a system that can offer insights 
+from this view? What are the key differences from the Booth View? 
+
+First off, we need to acknowledge that this view isn't really possible until
+we feel we've locked down a good first pass at the Booth View. It will give us
+the foundation to start to add more possibilities to the game play.
+
+Modern players call this Game Theory Optimal, or GTO for short. This is where
+you don't just focus on trying to guess what single hand your opponents have, 
+but a range of possible hands, and what they dictate in terms of optimal play
+from a probability perspetive. 
+
+Think of it as opening up the Multiverse of Madness from Doctor Strange. You
+aren't playing one hand against one player. You are playing against every 
+possible hand that player has, trying to figure out from a probability
+perspective, what is the most rational decision to play. 
+
+The way you avoid being swallowed by the madness is to have mental muscles that
+help you remove possibilities. We want our software to be a study aid that 
+will help you be better and flexing those muscles. For this we will introduce 
+ranges of hands, and add methods of quickly eliminating possibilities, and 
+distilling things down. 
+
+This is where we introduce our first
+[domain-specific language](https://en.wikipedia.org/wiki/Domain-specific_language).
+We want to be able to type in things like `AJo+` and have our tool offer up
+information about the possibilities that those dimensions offer for our
+opponents. Now `AJo+` will translate to a non-pocket pair if Ace and Jack of
+any suit or better where the two cards are not of the same suit; aka `AJ AQ AK`.
+`A9s+` would be Ace and Nine or better where the two cards are of the same suit, 
+and `AT+` means Ace and Ten or better where the two cards can be of any suit, the
+same or not.
+
+### Spectator View
+
+This is where you are in the crowd, and don't know what any of the players are
+holding. 
+
+While Henry Orenstein's innovations where amazing for the game, we did lose a 
+fascinating perspective of the game. If you have a PokerGo subscription, you
+can watch a young Phil Hellmuth joining the TV booth at the WSOP to talk about
+the play of the great Stu Ungar at the final table where he didn't know what
+the players were holding at all. 
+
+This perspective requires that we zoom our system landscape's lens out to 
+have data about stack sizes, and blinds, and bet sizes. Professional poker 
+players know a tremendous amount about what is going on in a card game 
+without seeing the cards at all. Is it possible for us to create tools that will
+help us get better at those skills? It is very possible, that this perspective
+is beyond our grasp, but I at least what to acknowldge that it is possible. 
+
 ## Warning
 
 I am the lover of strange writings. I was raised by a single, lesbian opera 

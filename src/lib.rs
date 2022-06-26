@@ -78,6 +78,11 @@ pub trait Pile {
         self.remaining_after(cards).combinations(k).enumerate()
     }
 
+    fn remaining(&self) -> Cards {
+        log::debug!("Pile.remaining()");
+        Cards::deck_minus(&self.cards())
+    }
+
     fn remaining_after(&self, cards: &Cards) -> Cards {
         log::debug!("Pile.remaining_after(cards: {})", cards);
         let mut held = self.cards();
