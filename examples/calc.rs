@@ -64,12 +64,9 @@ fn main() -> Result<(), PKError> {
         );
     }
 
-    let mut wins = PlayerWins::default();
-    game.pof::<PlayerWins>(&mut wins);
+    let mut pw = PlayerWins::default();
 
-    // game.play_out_flop();
-
-    wins.play_out_flop(&game.hands, game.board.flop);
+    pw.play_out_flop(&game.hands, game.board.flop);
 
     println!("{}", command(game));
 

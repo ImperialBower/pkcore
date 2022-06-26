@@ -414,6 +414,7 @@
                 * STEP 3: CaseEvals
                   * examples/calc command() function to display command
                   * impl Pile for Board
+                  * deprecate Game .play_out_flop() .pof() & .remaining_cards_at_flop()
 
 
 ## LATER

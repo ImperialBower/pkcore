@@ -111,6 +111,7 @@ impl Game {
     /// _"Find a place inside where there's joy, and the joy will burn out the pain."_ For me, this
     /// is one of those places. I can't control the world, but I can control the universe that is
     /// my art.
+    #[deprecated(since = "0.0.2", note = "Use PlayerWins directly")]
     pub fn play_out_flop(&self) {
         let mut wins = PlayerWins::default();
         self.pof::<PlayerWins>(&mut wins);
@@ -118,6 +119,15 @@ impl Game {
 
     /// Could this actually work? It's trying to do stuff like this that I really start feeling
     /// like an imposter.
+    ///
+    /// ```
+    /// use pkcore::analysis::player_wins::PlayerWins;
+    /// use pkcore::play::game::Game;
+    /// let game = Game::default();
+    /// let mut wins = PlayerWins::default();
+    /// game.pof::<PlayerWins>(&mut wins);
+    /// ```
+    #[deprecated(since = "0.0.2", note = "Use PlayerWins directly")]
     pub fn pof<T>(&self, po: &mut T)
     where
         T: PlayOut,
