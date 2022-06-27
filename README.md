@@ -424,6 +424,7 @@
                   * REFACTORING: .wins_total() to use .wins_and_ties()
                   * .wins_and_ties_percentages()
                     * removed Wins::percent_calculator() since dupe of Util::calculate_percentage()
+                    * Fixed Results::from_wins() to include case_count and player_count.
 
 
 ## LATER

@@ -1,5 +1,6 @@
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
+use crate::util::Util;
 
 /// # PHASE 2.2/Step 4: Results
 ///
@@ -57,13 +58,52 @@ impl Results {
     ///
     /// For now, I'm going to table this test. Let's get the code so that it works with The Hand
     /// before we get fancy.
+    ///
+    /// ## Clippy to the rescue!
+    ///
+    /// Initially, I had this function as:
+    ///
+    /// ```
+    /// use pkcore::util::wincounter::results::Results;
+    /// use pkcore::util::wincounter::wins::Wins;
+    ///
+    /// pub fn from_wins(wins: &Wins, player_count: usize) -> Results {
+    ///     let mut results = Results::default();
+    ///     results.case_count = wins.len();
+    ///     results.player_count = player_count;
+    ///     // ...
+    ///     results
+    /// }
+    /// ```
+    ///
+    /// Clippy came back with this wonderful refactoring:
+    ///
+    /// ```
+    /// use pkcore::util::wincounter::results::Results;
+    /// use pkcore::util::wincounter::wins::Wins;
+    /// pub fn from_wins(wins: &Wins, player_count: usize) -> Results {
+    ///     let mut results = Results {
+    ///         case_count: wins.len(),
+    ///         player_count,
+    ///         ..Default::default()
+    ///     };
+    ///     // ...
+    ///     results
+    /// }
+    /// ```
     #[must_use]
     pub fn from_wins(wins: &Wins, player_count: usize) -> Results {
-        let mut results = Results::default();
+        let mut results = Results {
+            case_count: wins.len(),
+            player_count,
+            ..Default::default()
+        };
+
         for i in 0..player_count {
             let (total_wins, ties) = wins.wins_for(Win::from_index(i));
             results.v.push((total_wins - ties, ties));
         }
+
         results
     }
 
@@ -75,12 +115,15 @@ impl Results {
         }
     }
 
-    // #[must_use]
-    // pub fn wins_and_ties_percentages(&self, player_index: usize) -> (f32, f32) {
-    //     let (wins, ties) = self.wins_and_ties(player_index);
-    //
-    //
-    // }
+    #[must_use]
+    pub fn wins_and_ties_percentages(&self, player_index: usize) -> (f32, f32) {
+        let (wins, ties) = self.wins_and_ties(player_index);
+        println!("{}. {}", wins, ties);
+        (
+            Util::calculate_percentage(wins, self.case_count),
+            Util::calculate_percentage(ties, self.case_count),
+        )
+    }
 
     #[must_use]
     pub fn wins_total(&self, player_index: usize) -> usize {
@@ -111,6 +154,16 @@ mod util__wincounter__results__tests {
         assert_eq!((314_904, 32_116), results.wins_and_ties(1));
         assert_eq!((0, 0), results.wins_and_ties(2));
         assert_eq!((0, 0), results.wins_and_ties(3));
+    }
+
+    #[test]
+    fn wins_and_ties_percentages() {
+        let results = Results::from_wins(&TestData::wins_the_hand(), 2);
+
+        assert_eq!((79.73374, 1.8756015), results.wins_and_ties_percentages(0));
+        assert_eq!((18.39066, 1.8756015), results.wins_and_ties_percentages(1));
+        assert_eq!((0.0, 0.0), results.wins_and_ties_percentages(2));
+        assert_eq!((0.0, 0.0), results.wins_and_ties_percentages(3));
     }
 
     #[test]
