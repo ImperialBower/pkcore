@@ -3,7 +3,18 @@ pub mod results;
 pub mod win;
 pub mod wins;
 
-// TODO RF: Refactor this as a `struct Count(u16)`.
+/// This modules started out as its own crate born out of my need to calculate win percentages
+/// that included ties. One thing I noticed on the `Poker` TV shows that showed winning percentages
+/// was that they didn't include ties in the results they displayed on the screen. While that is
+/// fine, I want to be able to show both types of results if I want to. This module is designed to
+/// allow me to do that if I want.
+///
+/// For now I am going to include it in this library so that I can easily update it and not worry
+/// about publishing updates and keeping things in sync. At some point, I may decided to return it
+/// back to the fold. I see it as having its own utility outside of this work, and generally like to
+/// keep my libraries independent for flexibility. That's just how I roll.
+/// 
+// TODO RF: Refactor this as a `struct PlayerFlag(u16)`.
 pub type PlayerFlag = u16;
 
 pub trait Result {
