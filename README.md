@@ -418,6 +418,12 @@
                 * Step 4: Results 
                   * REFACTORING: util::Util::calculate_percentage() 
                   * TestData::wins_the_hand()
+                  * REFACTORING: Results struct to include case and player count.
+                  * .wins_total()
+                  * .wins_and_ties()
+                  * REFACTORING: .wins_total() to use .wins_and_ties()
+                  * .wins_and_ties_percentages()
+                    * removed Wins::percent_calculator() since dupe of Util::calculate_percentage()
 
 
 ## LATER

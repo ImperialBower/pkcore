@@ -75,7 +75,7 @@ impl TestData {
 
         wins.add_x(Win::FIRST, 1_365_284); // Daniel Wins
         wins.add_x(Win::SECOND, 314_904); // Gus Wins
-        wins.add_x(Win::FIRST | Win::SECOND, 32116); // Ties
+        wins.add_x(Win::FIRST | Win::SECOND, 32_116); // Ties
 
         wins
     }

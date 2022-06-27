@@ -13,7 +13,7 @@ pub mod wins;
 /// about publishing updates and keeping things in sync. At some point, I may decided to return it
 /// back to the fold. I see it as having its own utility outside of this work, and generally like to
 /// keep my libraries independent for flexibility. That's just how I roll.
-/// 
+///
 // TODO RF: Refactor this as a `struct PlayerFlag(u16)`.
 pub type PlayerFlag = u16;
 

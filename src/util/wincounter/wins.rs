@@ -1,6 +1,7 @@
 use crate::util::wincounter::heads_up::HeadsUp;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::{PlayerFlag, Result};
+use crate::util::Util;
 
 /// I've moved wincounter into the library so that I can make updates to the library
 /// as a part of this work. The plan is to later on move the updated module back to
@@ -76,21 +77,21 @@ impl Wins {
         let pure_wins = wins - ties;
 
         (
-            Wins::percent_calculator(pure_wins, total),
-            Wins::percent_calculator(ties, total),
+            Util::calculate_percentage(pure_wins, total),
+            Util::calculate_percentage(ties, total),
         )
     }
 
     /// Forgiving percentage calculator. It will return zero if you try
     /// to divide by zero.
-    #[must_use]
-    #[allow(clippy::cast_precision_loss)]
-    pub fn percent_calculator(number: usize, total: usize) -> f32 {
-        match total {
-            0 => 0_f32,
-            _ => ((number as f32 * 100.0) / total as f32) as f32,
-        }
-    }
+    // #[must_use]
+    // #[allow(clippy::cast_precision_loss)]
+    // pub fn percent_calculator(number: usize, total: usize) -> f32 {
+    //     match total {
+    //         0 => 0_f32,
+    //         _ => ((number as f32 * 100.0) / total as f32) as f32,
+    //     }
+    // }
 
     #[must_use]
     pub fn results_heads_up(&self) -> HeadsUp {
@@ -200,27 +201,6 @@ mod util__wincounter__wins__tests {
         assert_eq!((1, 1), counter.wins_for(Win::SECOND));
         assert_eq!((3, 0), counter.wins_for(Win::THIRD));
         assert_eq!((1, 0), counter.wins_for(Win::FORTH));
-    }
-
-    #[test]
-    fn percent_calculator() {
-        let percentage = Wins::percent_calculator(48, 2_598_960);
-
-        assert_eq!("0.00185%", format!("{:.5}%", percentage));
-    }
-
-    #[test]
-    fn percent_calculator__zero_numerator() {
-        let percentage = Wins::percent_calculator(0, 2_598_960);
-
-        assert_eq!("0.00000%", format!("{:.5}%", percentage));
-    }
-
-    #[test]
-    fn percent_calculator__zero_denominator() {
-        let percentage = Wins::percent_calculator(48, 0);
-
-        assert_eq!("0.00000%", format!("{:.5}%", percentage));
     }
 
     #[test]
