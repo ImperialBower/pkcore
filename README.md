@@ -450,3 +450,11 @@
   * articles
     * [Rust Is Hard, Or: The Misery of Mainstream Programming](https://hirrolot.github.io/posts/rust-is-hard-or-the-misery-of-mainstream-programming.html)
     * [Rust: Your code can be perfect](https://www.youtube.com/watch?v=IA4q0lzmyfM)
+  * videos
+    * [Poker Out Loud](https://solveforwhy.io/categories/poker-out-loud)
+      * [Poker Our Loud Academy demo](https://www.youtube.com/watch?v=NpSDXJsej-o&t=634s)
+* Video
+  * [Cloudinary's image overlay feature](https://cloudinary.com/documentation/video_manipulation_and_delivery#adding_image_overlays)
+  * [Programmatically add 100s of image overlays on video clip](https://stackoverflow.com/questions/18750525/programatically-add-100s-of-image-overlays-on-video-clip)
+  * open source
+    * [How to Add Graphics and Overlays to Live Video With Open Broadcaster (OBS)](https://photography.tutsplus.com/tutorials/how-to-add-custom-graphics-obs-studio--cms-35066)
