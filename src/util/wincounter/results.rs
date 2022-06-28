@@ -1,6 +1,7 @@
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::util::Util;
+use std::fmt::{Display, Formatter};
 
 /// # PHASE 2.2/Step 4: Results
 ///
@@ -93,7 +94,7 @@ impl Results {
     /// ```
     #[must_use]
     pub fn from_wins(wins: &Wins, player_count: usize) -> Results {
-        let mut results = Results {
+        let mut results = Self {
             case_count: wins.len(),
             player_count,
             ..Default::default()
@@ -107,6 +108,23 @@ impl Results {
         results
     }
 
+    /// This function is there to make it easy to create text based displays of a player's chances
+    /// of winning at a particular point. It will be the foundation of the `Results` display trait
+    /// implementation.
+    #[must_use]
+    pub fn player_to_string(&self, player_index: usize) -> String {
+        let (wins, ties) = self.wins_and_ties(player_index);
+        let (win_percentage, tie_percentage) = self.wins_and_ties_percentages(player_index);
+        format!(
+            "Player #{} {:.2}% / {:.2}% ({}/{})",
+            player_index + 1,
+            win_percentage,
+            tie_percentage,
+            wins,
+            ties
+        )
+    }
+
     #[must_use]
     pub fn wins_and_ties(&self, player_index: usize) -> (usize, usize) {
         match self.v.get(player_index) {
@@ -118,7 +136,6 @@ impl Results {
     #[must_use]
     pub fn wins_and_ties_percentages(&self, player_index: usize) -> (f32, f32) {
         let (wins, ties) = self.wins_and_ties(player_index);
-        println!("{}. {}", wins, ties);
         (
             Util::calculate_percentage(wins, self.case_count),
             Util::calculate_percentage(ties, self.case_count),
@@ -129,6 +146,26 @@ impl Results {
     pub fn wins_total(&self, player_index: usize) -> usize {
         let (wins, ties) = self.wins_and_ties(player_index);
         wins + ties
+    }
+
+    #[must_use]
+    pub fn wins_total_percentage(&self, player_index: usize) -> f32 {
+        let (wins, ties) = self.wins_and_ties(player_index);
+        Util::calculate_percentage(wins + ties, self.case_count)
+    }
+}
+
+/// Right now I am irritated that it ends with a new line, but I don't really want to deal with it
+/// tight now. I've done this before in other languages, but I don't honestly remember how. I am
+/// 56 years old. The brain cells are dying fast. R.I.P. 🪦
+///
+/// TODO TD: Trim final new line.
+impl Display for Results {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        for i in 0..self.v.len() {
+            writeln!(f, "{}", self.player_to_string(i))?;
+        }
+        Ok(())
     }
 }
 
@@ -144,6 +181,21 @@ mod util__wincounter__results__tests {
 
         assert_eq!(&(1_365_284, 32_116), results.v.get(0).unwrap());
         assert_eq!(&(314_904, 32_116), results.v.get(1).unwrap());
+    }
+
+    #[test]
+    fn player_to_string() {
+        let results = Results::from_wins(&TestData::wins_the_hand(), 2);
+
+        assert_eq!(
+            "Player #1 79.73% / 1.88% (1365284/32116)",
+            results.player_to_string(0)
+        );
+        assert_eq!(
+            "Player #2 18.39% / 1.88% (314904/32116)",
+            results.player_to_string(1)
+        );
+        assert_eq!("Player #3 0.00% / 0.00% (0/0)", results.player_to_string(2));
     }
 
     #[test]
@@ -174,6 +226,32 @@ mod util__wincounter__results__tests {
         assert_eq!(347_020, results.wins_total(1));
         assert_eq!(0, results.wins_total(2));
         assert_eq!(0, results.wins_total(3));
+    }
+
+    #[test]
+    fn wins_total_percentage() {
+        let results = Results::from_wins(&TestData::wins_the_hand(), 2);
+
+        assert_eq!(81.60934, results.wins_total_percentage(0));
+        assert_eq!(20.266262, results.wins_total_percentage(1));
+        assert_eq!(0.0, results.wins_total_percentage(2));
+        assert_eq!(0.0, results.wins_total_percentage(3));
+    }
+
+    /// I like to organize my tests to match the order they fall in the source. I generally
+    /// structure them as:
+    ///
+    /// * [Associated function "constructors"](https://rust-unofficial.github.io/patterns/idioms/ctor.html)
+    /// * functions on self
+    /// * static functions
+    /// * trait implementations
+    #[test]
+    fn display() {
+        let results = Results::from_wins(&TestData::wins_the_hand(), 2);
+        assert_eq!(
+            "Player #1 79.73% / 1.88% (1365284/32116)\nPlayer #2 18.39% / 1.88% (314904/32116)\n",
+            results.to_string()
+        );
     }
 }
 

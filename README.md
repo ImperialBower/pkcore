@@ -425,6 +425,9 @@
                   * .wins_and_ties_percentages()
                     * removed Wins::percent_calculator() since dupe of Util::calculate_percentage()
                     * Fixed Results::from_wins() to include case_count and player_count.
+                  * .wins_total_percentage()
+                  * .player_to_string()
+                  * impl Display
 
 
 ## LATER
@@ -437,9 +440,13 @@
 * Poker
   * [Mike Caro's Website](https://www.poker1.com/)
 * Rust
+  * [The Rust Programming Language](https://doc.rust-lang.org/stable/book/)
+  * [Rust Design Patterns](https://rust-unofficial.github.io/patterns/intro.html) 
   * [Are we game yet?](https://arewegameyet.rs/)
   * [Are we GUI Yet?](https://www.areweguiyet.com/)
-  * [Yew](https://yew.rs/)
-  * [Flowistry: Information Flow for Rust](https://github.com/willcrichton/flowistry)
-  * [Rust Is Hard, Or: The Misery of Mainstream Programming](https://hirrolot.github.io/posts/rust-is-hard-or-the-misery-of-mainstream-programming.html)
-  * [Rust: Your code can be perfect](https://www.youtube.com/watch?v=IA4q0lzmyfM)
+  * frameworks
+    * [Yew](https://yew.rs/)
+    * [Flowistry: Information Flow for Rust](https://github.com/willcrichton/flowistry)
+  * articles
+    * [Rust Is Hard, Or: The Misery of Mainstream Programming](https://hirrolot.github.io/posts/rust-is-hard-or-the-misery-of-mainstream-programming.html)
+    * [Rust: Your code can be perfect](https://www.youtube.com/watch?v=IA4q0lzmyfM)

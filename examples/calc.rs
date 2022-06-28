@@ -5,6 +5,8 @@ use pkcore::arrays::HandRanker;
 use pkcore::play::board::Board;
 use pkcore::play::game::Game;
 use pkcore::play::hands::Hands;
+use pkcore::util::data::TestData;
+use pkcore::util::wincounter::results::Results;
 use pkcore::{PKError, Pile};
 use std::str::FromStr;
 
@@ -84,6 +86,9 @@ fn main() -> Result<(), PKError> {
     }
 
     println!("{}", command(game));
+
+    let results = Results::from_wins(&TestData::wins_the_hand(), 2);
+    println!("{}", results);
 
     println!("Elapsed: {:.2?}", now.elapsed());
 
