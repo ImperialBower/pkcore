@@ -46,11 +46,23 @@ struct Args {
 ///
 /// ## Step Three
 ///
-/// Show me the winning percentages for each hand.
+/// Show me the winning percentages for each hand at the flop.
 ///
 /// At this point I am starting to feel the strain on my system from my main method
 /// trying to do too much. This is when I try to build code that will take the load
 /// off and make things easier to maintain and build upon.
+///
+/// ## Step Four - Calc Structure
+///
+/// We're reaching the point in our code where the repl is doing to much...maintaining too
+/// much state. Our `Game` struct was designed to simply hold all the cards that were needed
+/// for the game.
+///
+/// For now, I want to get all the ducks in a row. Two things that I am missing:
+/// * An ordered list of the possible hands at the flop.
+/// * A collection of all types of possible hands for a player at the flop.
+///
+///
 ///
 fn main() -> Result<(), PKError> {
     let now = std::time::Instant::now();

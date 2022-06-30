@@ -250,7 +250,7 @@ impl Eq for Eval {}
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod hand_rank_eval_tests {
+mod hand_rank__eval_tests {
     use super::*;
     use crate::arrays::HandRanker;
     use crate::hand_rank::class::Class;

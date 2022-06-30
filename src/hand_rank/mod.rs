@@ -9,6 +9,7 @@ pub mod case_evals;
 pub mod class;
 pub mod eval;
 pub mod name;
+pub mod the_nuts;
 
 /// `HandRankValue` is the integer representing the `HandRank` for a particular five card
 /// `PokerHand`. This value is used to compare one hand against the other, the lower the value,

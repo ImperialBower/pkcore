@@ -8,9 +8,9 @@ use crate::{PKError, Pile, SOK};
 use std::fmt;
 use std::str::FromStr;
 
-/// A `Card` is a u32 representation of a variant of Cactus Kev's binary
-/// representation of a poker card as designed for rapid hand evaluation as
-/// documented [here](https://suffe.cool/poker/evaluator.html).
+/// A `Card` is a [`Newtype`](https://rust-unofficial.github.io/patterns/patterns/behavioural/newtype.html)
+/// u32 representation of a variant of Cactus Kev's binary representation of a poker card as
+/// designed for rapid hand evaluation as documented [here](https://suffe.cool/poker/evaluator.html).
 ///
 /// The variation being that the `Suit` bits order is inverted for easier sorting.
 /// ```txt
