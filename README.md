@@ -435,8 +435,9 @@
                 * .sort()
                   * Two KT constants (for The Fold)
                 * REFACTOR: renamed to Hands to HoleCards
-                * HoleCards.into_fives(three: Three) -> Vec<Five>
-                * 
+                * HoleCards.three_into_fives(&self, three: Three) -> Vec<Five>
+                * HoleCards.three_into_evals(&self, three: Three) -> Vec<Eval>
+                  * impl From<&Five> for Eval
 
 
 ## LATER

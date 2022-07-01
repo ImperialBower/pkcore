@@ -219,6 +219,12 @@ impl From<Five> for Eval {
     }
 }
 
+impl From<&Five> for Eval {
+    fn from(five: &Five) -> Self {
+        Eval::from(*five)
+    }
+}
+
 /// FROM PLOF 1.1: Eval Display and starting on observability
 /// commit 2c73e2722ebcdf4dfc3afad5857f8fb87458b985
 ///

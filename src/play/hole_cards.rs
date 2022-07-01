@@ -52,6 +52,13 @@ impl HoleCards {
         self.0.get(index)
     }
 
+    /// The next logical extension is to have the struct transform all the hole cards into a
+    /// vector of `Evals`.
+    #[must_use]
+    pub fn three_into_evals(&self, three: Three) -> Vec<Eval> {
+        self.three_into_fives(three).iter().map(Eval::from).collect()
+    }
+
     /// Returns all the five card hands from a collection of hole cars.
     ///
     /// One of the reasons that I love these types of methods is that it helps me build up my
@@ -61,7 +68,7 @@ impl HoleCards {
     ///
     /// This came surprisingly easy.
     #[must_use]
-    pub fn into_fives(&self, three: Three) -> Vec<Five> {
+    pub fn three_into_fives(&self, three: Three) -> Vec<Five> {
         self.iter()
             .map(|two| Five::from_2and3(*two, three))
             .collect()
@@ -225,14 +232,29 @@ mod play__hold_cards_tests {
     }
 
     #[test]
-    fn into_fives() {
+    fn three_into_evals() {
+        let the_fold_hands = TestData::hole_cards_the_fold();
+        let the_flop = Three::from([Card::FIVE_CLUBS, Card::NINE_DIAMONDS, Card::TEN_HEARTS]);
+        let antonius = Eval::from(Five::from_2and3(Two::HAND_5S_5D, the_flop));
+        let phil = Eval::from(Five::from_2and3(Two::HAND_KC_TD, the_flop));
+        let daniel = Eval::from(Five::from_2and3(Two::HAND_9S_9H, the_flop));
+
+        let hands = the_fold_hands.three_into_evals(the_flop);
+
+        assert_eq!(&antonius, hands.get(0).unwrap());
+        assert_eq!(&phil, hands.get(1).unwrap());
+        assert_eq!(&daniel, hands.get(2).unwrap());
+    }
+
+    #[test]
+    fn three_into_fives() {
         let the_fold_hands = TestData::hole_cards_the_fold();
         let the_flop = Three::from([Card::FIVE_CLUBS, Card::NINE_DIAMONDS, Card::TEN_HEARTS]);
         let antonius = Five::from_2and3(Two::HAND_5S_5D, the_flop);
         let phil = Five::from_2and3(Two::HAND_KC_TD, the_flop);
         let daniel = Five::from_2and3(Two::HAND_9S_9H, the_flop);
 
-        let hands = the_fold_hands.into_fives(the_flop);
+        let hands = the_fold_hands.three_into_fives(the_flop);
 
         assert_eq!(&antonius, hands.get(0).unwrap());
         assert_eq!(&phil, hands.get(1).unwrap());
