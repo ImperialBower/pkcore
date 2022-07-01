@@ -1,4 +1,5 @@
 use crate::analysis::player_wins::PlayerWins;
+use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::cards::Cards;
@@ -9,7 +10,6 @@ use log::error;
 use std::fmt;
 use std::slice::Iter;
 use std::str::FromStr;
-use crate::arrays::five::Five;
 
 /// To start with I am only focusing on supporting a single round of play.
 ///
@@ -62,7 +62,9 @@ impl HoleCards {
     /// This came surprisingly easy.
     #[must_use]
     pub fn into_fives(&self, three: Three) -> Vec<Five> {
-        self.iter().map(|two| Five::from_2and3(*two, three)).collect()
+        self.iter()
+            .map(|two| Five::from_2and3(*two, three))
+            .collect()
     }
 
     pub fn iter(&self) -> Iter<'_, Two> {
@@ -268,7 +270,10 @@ mod play__hold_cards_tests {
     fn cards() {
         assert_eq!(
             "6♠ 6♥ 5♦ 5♣",
-            HoleCards::from_str("6♥ 6♠ 5♦ 5♣").unwrap().cards().to_string()
+            HoleCards::from_str("6♥ 6♠ 5♦ 5♣")
+                .unwrap()
+                .cards()
+                .to_string()
         );
     }
 

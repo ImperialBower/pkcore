@@ -38,7 +38,6 @@ mod hand_rank__the_nuts_tests {
     #[test]
     fn sort() {
         // 5♠ 5♦ 9♠ 9♥ K♣ T♦ - 5♣ 9♦ T♥ T♣ Q♦
-
     }
 
     #[test]
