@@ -12,6 +12,14 @@ pub struct TheNuts(Vec<Eval>);
 
 impl TheNuts {
     #[must_use]
+    pub fn sort(&self) -> TheNuts {
+        let mut v = self.to_vec();
+        v.sort();
+        v.reverse();
+        TheNuts(v)
+    }
+
+    #[must_use]
     pub fn to_vec(&self) -> Vec<Eval> {
         self.0.clone()
     }
@@ -35,12 +43,19 @@ mod hand_rank__the_nuts_tests {
     use super::*;
     use crate::arrays::three::Three;
     use crate::arrays::two::Two;
+    use crate::hand_rank::class::Class;
     use crate::util::data::TestData;
     use crate::Card;
 
     #[test]
     fn sort() {
-        // 5♠ 5♦ 9♠ 9♥ K♣ T♦ - 5♣ 9♦ T♥ T♣ Q♦
+        let the_nuts = TheNuts::from(TestData::fives_the_fold());
+
+        let sorted = the_nuts.sort();
+
+        assert_eq!(Class::ThreeNines, sorted.0.get(0).unwrap().hand_rank.class);
+        assert_eq!(Class::ThreeFives, sorted.0.get(1).unwrap().hand_rank.class);
+        assert_eq!(Class::PairOfTens, sorted.0.get(2).unwrap().hand_rank.class);
     }
 
     #[test]

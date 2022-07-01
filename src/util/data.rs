@@ -39,6 +39,11 @@ impl TestData {
         [Card::SIX_CLUBS, Card::TREY_CLUBS]
     }
 
+    /// # The Fold
+    ///
+    /// 5♠ 5♦ 9♠ 9♥ K♣ T♦ - 5♣ 9♦ T♥ T♣ Q♦
+    /// HSP S09E13 Antonius, Negreanu, Ivey
+    ///     <https://www.pokernews.com/news/2022/05/phil-ivey-negreanu-high-stakes-poker-41207.htm/>
     #[must_use]
     pub fn evals_the_fold() -> Vec<Eval> {
         let the_fold_hands = TestData::hole_cards_the_fold();
