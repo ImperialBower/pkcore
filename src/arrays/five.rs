@@ -4,7 +4,7 @@ use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
-use crate::{PKError, Pile, SOK};
+use crate::{PKError, Pile, SOK, TheNuts};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::slice::Iter;
@@ -251,6 +251,10 @@ impl Pile for Five {
             self.forth().clean(),
             self.fifth().clean(),
         ])
+    }
+
+    fn the_nuts(&self) -> TheNuts {
+        todo!()
     }
 
     fn to_vec(&self) -> Vec<Card> {

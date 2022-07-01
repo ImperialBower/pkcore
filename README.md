@@ -439,6 +439,7 @@
                   * HoleCards.three_into_evals(&self, three: Three) -> Vec<Eval>
                     * impl From<&Five> for Eval
                   * TestData::evals_the_fold()
+              * Pile.the_nuts()
 
 
 ## LATER

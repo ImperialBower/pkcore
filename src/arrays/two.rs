@@ -1,6 +1,6 @@
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{PKError, Pile, SOK};
+use crate::{PKError, Pile, SOK, TheNuts};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
@@ -364,6 +364,10 @@ impl FromStr for Two {
 
 impl Pile for Two {
     fn clean(&self) -> Self {
+        todo!()
+    }
+
+    fn the_nuts(&self) -> TheNuts {
         todo!()
     }
 

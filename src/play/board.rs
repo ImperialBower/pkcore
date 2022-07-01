@@ -1,7 +1,7 @@
 use crate::arrays::three::Three;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{PKError, Pile};
+use crate::{PKError, Pile, TheNuts};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
@@ -41,6 +41,10 @@ impl FromStr for Board {
 
 impl Pile for Board {
     fn clean(&self) -> Self {
+        todo!()
+    }
+
+    fn the_nuts(&self) -> TheNuts {
         todo!()
     }
 

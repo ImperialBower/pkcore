@@ -12,6 +12,10 @@ pub struct TheNuts(Vec<Eval>);
 
 impl TheNuts {
     #[must_use]
+    pub fn get(&self, i: usize) -> Option<&Eval> {
+        self.0.get(i)
+    }
+    #[must_use]
     pub fn sort(&self) -> TheNuts {
         let mut v = self.to_vec();
         v.sort();

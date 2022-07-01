@@ -4,7 +4,7 @@
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::suit::Suit;
-use crate::{PKError, Pile, SOK};
+use crate::{PKError, Pile, SOK, TheNuts};
 use std::fmt;
 use std::str::FromStr;
 
@@ -282,6 +282,10 @@ impl FromStr for Card {
 impl Pile for Card {
     fn clean(&self) -> Self {
         Card(self.0 & Card::FREQUENCY_MASK_FILTER)
+    }
+
+    fn the_nuts(&self) -> TheNuts {
+        todo!()
     }
 
     fn to_vec(&self) -> Vec<Card> {

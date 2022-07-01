@@ -1,6 +1,6 @@
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{PKError, Pile, SOK};
+use crate::{PKError, Pile, SOK, TheNuts};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -54,7 +54,17 @@ impl FromStr for Three {
 
 impl Pile for Three {
     fn clean(&self) -> Self {
-        todo!()
+        Three([self.first().clean(), self.second().clean(), self.third().clean()])
+    }
+
+    fn the_nuts(&self) -> TheNuts {
+        if !self.salright() {
+            return TheNuts::default();
+        }
+
+
+
+        TheNuts::default()
     }
 
     fn to_vec(&self) -> Vec<Card> {
@@ -93,6 +103,8 @@ mod arrays_three_tests {
     use super::*;
     use crate::cards::Cards;
     use std::str::FromStr;
+    use crate::hand_rank::class::Class;
+    use crate::hand_rank::eval::Eval;
 
     /// <https://www.youtube.com/watch?v=vjM60lqRhPg />
     const THE_FLOP: [Card; 3] = [Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS];
@@ -128,6 +140,24 @@ mod arrays_three_tests {
     fn cards() {
         assert_eq!(0, Three::default().cards().len());
         assert_eq!("9♣ 6♦ 5♥", Three(THE_FLOP).cards().to_string());
+    }
+
+    #[test]
+    fn the_nuts() {
+        let three = Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
+
+        let the_nuts = three.the_nuts();
+
+        assert_eq!(Class::NineHighStraight, the_nuts.get(0).unwrap().hand_rank.class());
+    }
+
+    #[test]
+    fn the_nuts__blank() {
+        let three = Three::from([Card::BLANK, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
+
+        let the_nuts = three.the_nuts();
+
+        assert_eq!(TheNuts::default(), the_nuts);
     }
 
     /// NOTE: These tests will quickly become out of hand if applied to the larger arrays.

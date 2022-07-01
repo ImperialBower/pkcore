@@ -6,6 +6,7 @@ use crate::cards::Cards;
 use indexmap::set::IntoIter;
 use itertools::Combinations;
 use std::iter::Enumerate;
+use crate::hand_rank::the_nuts::TheNuts;
 
 pub mod analysis;
 pub mod arrays;
@@ -89,6 +90,8 @@ pub trait Pile {
         held.add(cards);
         Cards::deck_minus(&held)
     }
+
+    fn the_nuts(&self) -> TheNuts;
 
     fn to_vec(&self) -> Vec<Card>;
 }

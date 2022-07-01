@@ -4,7 +4,7 @@ use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::cards::Cards;
 use crate::hand_rank::eval::Eval;
-use crate::{Card, PKError, Pile};
+use crate::{Card, PKError, Pile, TheNuts};
 use itertools::Itertools;
 use log::error;
 use std::fmt;
@@ -168,6 +168,10 @@ impl FromStr for HoleCards {
 
 impl Pile for HoleCards {
     fn clean(&self) -> Self {
+        todo!()
+    }
+
+    fn the_nuts(&self) -> TheNuts {
         todo!()
     }
 
