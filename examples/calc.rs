@@ -4,7 +4,7 @@ use pkcore::analysis::PlayOut;
 use pkcore::arrays::HandRanker;
 use pkcore::play::board::Board;
 use pkcore::play::game::Game;
-use pkcore::play::hands::Hands;
+use pkcore::play::hole_cards::HoleCards;
 use pkcore::util::data::TestData;
 use pkcore::util::wincounter::results::Results;
 use pkcore::{PKError, Pile};
@@ -42,6 +42,8 @@ struct Args {
 ///
 /// To add logging:
 /// RUST_LOG=trace cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"
+///
+/// What about calling this hand The Fold?
 /// RUST_LOG=trace cargo run --example calc -- -d  "5♠ 5♦ 9♠ 9♥ K♣ T♦" -b "5♣ 9♦ T♥ T♣ Q♦"
 ///
 /// ## Step Three
@@ -71,7 +73,7 @@ fn main() -> Result<(), PKError> {
     let args = Args::parse();
 
     let game = Game::new(
-        Hands::from_str(&*args.dealt)?,
+        HoleCards::from_str(&*args.dealt)?,
         Board::from_str(&*args.board)?,
     );
 

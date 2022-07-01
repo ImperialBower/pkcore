@@ -432,6 +432,11 @@
               * TheNuts(Vec<Eval>)
                 * impl From<Vec<Eval>> for TheNuts
                 * .to_vec()
+                * .sort()
+                  * Two KT constants (for The Fold)
+                * REFACTOR: renamed to Hands to HoleCards
+                * HoleCards.into_fives(three: Three) -> Vec<Five>
+                * 
 
 
 ## LATER

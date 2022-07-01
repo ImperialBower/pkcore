@@ -2,7 +2,7 @@ use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::hand_rank::eval::Eval;
-use crate::play::hands::Hands;
+use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::Card;
@@ -26,6 +26,7 @@ use crate::Card;
 /// * [`SubstratumNode`](https://github.com/robmoorman/SubstratumNode)
 /// * [MASQ-Project/Node](https://github.com/MASQ-Project/Node)
 ///
+///
 #[allow(dead_code, clippy::module_name_repetitions)]
 pub enum TestData {}
 
@@ -38,9 +39,16 @@ impl TestData {
         [Card::SIX_CLUBS, Card::TREY_CLUBS]
     }
 
+    /// I am deliberately keeping these hands out of order, to facilitate sorting tests
+    /// later on.
     #[must_use]
-    pub fn the_hand_hole_cards() -> Hands {
-        Hands::from(vec![Two::HAND_6S_6H, Two::HAND_5D_5C])
+    pub fn hole_cards_the_fold() -> HoleCards {
+        HoleCards::from(vec![Two::HAND_5S_5D, Two::HAND_KC_TD, Two::HAND_9S_9H])
+    }
+
+    #[must_use]
+    pub fn hole_cards_the_hand() -> HoleCards {
+        HoleCards::from(vec![Two::HAND_6S_6H, Two::HAND_5D_5C])
     }
 
     #[must_use]

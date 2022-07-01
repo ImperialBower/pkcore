@@ -1,6 +1,6 @@
 use crate::arrays::five::Five;
 use crate::play::board::Board;
-use crate::play::hands::Hands;
+use crate::play::hole_cards::HoleCards;
 use crate::{Cards, PKError, Pile};
 use std::fmt::{Display, Formatter};
 
@@ -28,13 +28,13 @@ use std::fmt::{Display, Formatter};
 /// _[I KISS YOU!](https://web.archive.org/web/20050206024432/http://www.ikissyou.org/indeks2.html)_
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Game {
-    pub hands: Hands,
+    pub hands: HoleCards,
     pub board: Board,
 }
 
 impl Game {
     #[must_use]
-    pub fn new(hands: Hands, board: Board) -> Self {
+    pub fn new(hands: HoleCards, board: Board) -> Self {
         Game { hands, board }
     }
 
@@ -208,7 +208,7 @@ mod play_game_tests {
     use std::str::FromStr;
 
     fn the_hand() -> Game {
-        let hands = Hands::from_str("6♠ 6♥ 5♦ 5♣").unwrap();
+        let hands = HoleCards::from_str("6♠ 6♥ 5♦ 5♣").unwrap();
         let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
 
         let game = Game {

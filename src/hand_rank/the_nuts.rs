@@ -1,3 +1,4 @@
+use crate::arrays::five::Five;
 use crate::hand_rank::eval::Eval;
 
 /// The immediate need for this class is so that we can have an easy way to hold and sort the
@@ -16,6 +17,12 @@ impl TheNuts {
     }
 }
 
+impl From<Vec<Five>> for TheNuts {
+    fn from(_: Vec<Five>) -> Self {
+        todo!()
+    }
+}
+
 impl From<Vec<Eval>> for TheNuts {
     fn from(v: Vec<Eval>) -> Self {
         TheNuts(v)
@@ -27,6 +34,12 @@ impl From<Vec<Eval>> for TheNuts {
 mod hand_rank__the_nuts_tests {
     use super::*;
     use crate::util::data::TestData;
+
+    #[test]
+    fn sort() {
+        // 5♠ 5♦ 9♠ 9♥ K♣ T♦ - 5♣ 9♦ T♥ T♣ Q♦
+
+    }
 
     #[test]
     fn to_vec() {

@@ -164,15 +164,12 @@ impl Two {
     pub const HAND_8S_7H: Two = Two([Card::EIGHT_SPADES, Card::SEVEN_HEARTS]);
     pub const HAND_8S_7D: Two = Two([Card::EIGHT_SPADES, Card::SEVEN_DIAMONDS]);
     pub const HAND_8S_7C: Two = Two([Card::EIGHT_SPADES, Card::SEVEN_CLUBS]);
-
     pub const HAND_8H_7S: Two = Two([Card::EIGHT_HEARTS, Card::SEVEN_SPADES]);
     pub const HAND_8H_7D: Two = Two([Card::EIGHT_HEARTS, Card::SEVEN_DIAMONDS]);
     pub const HAND_8H_7C: Two = Two([Card::EIGHT_HEARTS, Card::SEVEN_CLUBS]);
-
     pub const HAND_8D_7S: Two = Two([Card::EIGHT_DIAMONDS, Card::SEVEN_SPADES]);
     pub const HAND_8D_7H: Two = Two([Card::EIGHT_DIAMONDS, Card::SEVEN_HEARTS]);
     pub const HAND_8D_7C: Two = Two([Card::EIGHT_DIAMONDS, Card::SEVEN_CLUBS]);
-
     pub const HAND_8C_7S: Two = Two([Card::EIGHT_CLUBS, Card::SEVEN_SPADES]);
     pub const HAND_8C_7H: Two = Two([Card::EIGHT_CLUBS, Card::SEVEN_HEARTS]);
     pub const HAND_8C_7D: Two = Two([Card::EIGHT_CLUBS, Card::SEVEN_DIAMONDS]);
@@ -238,7 +235,68 @@ impl Two {
         Two::HAND_8C_7D,
     ];
 
-    // end region
+    // endregion
+
+    // region unconnected
+
+    pub const HAND_KS_TS: Two = Two([Card::KING_SPADES, Card::TEN_SPADES]);
+    pub const HAND_KH_TH: Two = Two([Card::KING_HEARTS, Card::TEN_HEARTS]);
+    pub const HAND_KD_TD: Two = Two([Card::KING_DIAMONDS, Card::TEN_DIAMONDS]);
+    pub const HAND_KC_TC: Two = Two([Card::KING_CLUBS, Card::TEN_CLUBS]);
+    pub const KING_TEN_SUITED: [Two; 4] = [
+        Two::HAND_KS_TS,
+        Two::HAND_KH_TH,
+        Two::HAND_KD_TD,
+        Two::HAND_KC_TC,
+    ];
+
+    pub const HAND_KS_TH: Two = Two([Card::KING_SPADES, Card::TEN_HEARTS]);
+    pub const HAND_KS_TD: Two = Two([Card::KING_SPADES, Card::TEN_DIAMONDS]);
+    pub const HAND_KS_TC: Two = Two([Card::KING_SPADES, Card::TEN_CLUBS]);
+    pub const HAND_KH_TS: Two = Two([Card::KING_HEARTS, Card::TEN_SPADES]);
+    pub const HAND_KH_TD: Two = Two([Card::KING_HEARTS, Card::TEN_DIAMONDS]);
+    pub const HAND_KH_TC: Two = Two([Card::KING_HEARTS, Card::TEN_CLUBS]);
+    pub const HAND_KD_TS: Two = Two([Card::KING_DIAMONDS, Card::TEN_SPADES]);
+    pub const HAND_KD_TH: Two = Two([Card::KING_DIAMONDS, Card::TEN_HEARTS]);
+    pub const HAND_KD_TC: Two = Two([Card::KING_DIAMONDS, Card::TEN_CLUBS]);
+    pub const HAND_KC_TS: Two = Two([Card::KING_CLUBS, Card::TEN_SPADES]);
+    pub const HAND_KC_TH: Two = Two([Card::KING_CLUBS, Card::TEN_HEARTS]);
+    pub const HAND_KC_TD: Two = Two([Card::KING_CLUBS, Card::TEN_DIAMONDS]);
+    pub const KING_TEN_OFFSUIT: [Two; 12] = [
+        Two::HAND_KS_TH,
+        Two::HAND_KS_TD,
+        Two::HAND_KS_TC,
+        Two::HAND_KH_TS,
+        Two::HAND_KH_TD,
+        Two::HAND_KH_TC,
+        Two::HAND_KD_TS,
+        Two::HAND_KD_TH,
+        Two::HAND_KD_TC,
+        Two::HAND_KC_TS,
+        Two::HAND_KC_TH,
+        Two::HAND_KC_TD,
+    ];
+
+    pub const KING_TEN: [Two; 16] = [
+        Two::HAND_KS_TS,
+        Two::HAND_KH_TH,
+        Two::HAND_KD_TD,
+        Two::HAND_KC_TC,
+        Two::HAND_KS_TH,
+        Two::HAND_KS_TD,
+        Two::HAND_KS_TC,
+        Two::HAND_KH_TS,
+        Two::HAND_KH_TD,
+        Two::HAND_KH_TC,
+        Two::HAND_KD_TS,
+        Two::HAND_KD_TH,
+        Two::HAND_KD_TC,
+        Two::HAND_KC_TS,
+        Two::HAND_KC_TH,
+        Two::HAND_KC_TD,
+    ];
+
+    // endregion
 
     // endregion
 

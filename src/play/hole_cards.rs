@@ -9,23 +9,60 @@ use log::error;
 use std::fmt;
 use std::slice::Iter;
 use std::str::FromStr;
+use crate::arrays::five::Five;
 
 /// To start with I am only focusing on supporting a single round of play.
 ///
 /// `let mut v = Vec::with_capacity(10);`
+///
+/// # REFACTOR
+///
+/// Decided to rename this struct as `HoleCards`. Hands is too generic a name for it.
+/// A `Hand` can be what you are holding, as well as the final best collection of five cards
+/// combining what's in your hand as well as what's on the board.
+///
+/// Later on, when we start dealing with games like [Omaha](https://en.wikipedia.org/wiki/Omaha_hold_%27em)
+/// we're going to need to do some refactoring for these types into generics so that we can support
+/// a number of different games. This is something we are saving for later. You don't want to
+/// go crazy with the design of your library. Let its design flow from the use cases you implement.
+/// That way you avoid tying yourself into a programmatic pretzel.
+///
+/// This is one of the main reasons I like focusing on the core domain library for a system first.
+/// You will often encounter code where the classes don't have logical names, or they're too vague.
+/// You can see the seams of the work where they had to make major last minute renovations of the
+/// code where it starts to strain against the new demands put upon it. This is always a risk, but
+/// it is greatly reduced if you don't subject it to demands outside its core functionality.
+///
+/// Right now, I can code, get what I want, see that it's starting to get out of hand, and make
+/// major refactorings without having to worry about breaking external systems that are dependent
+/// on it. Later on, we will need to be much more careful. Enjoy your isolation while you can. It
+/// is fleeting.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct Hands(Vec<Two>);
+pub struct HoleCards(Vec<Two>);
 
-impl Hands {
+impl HoleCards {
     #[must_use]
-    pub fn with_capacity(capacity: usize) -> Hands {
-        Hands(Vec::with_capacity(capacity))
+    pub fn with_capacity(capacity: usize) -> HoleCards {
+        HoleCards(Vec::with_capacity(capacity))
     }
 
     /// For our get we're going to return a blank `Hand` if the index passed in is too high.
     #[must_use]
     pub fn get(&self, index: usize) -> Option<&Two> {
         self.0.get(index)
+    }
+
+    /// Returns all the five card hands from a collection of hole cars.
+    ///
+    /// One of the reasons that I love these types of methods is that it helps me build up my
+    /// muscles for mapping iterators into other collections. As a long time procedural hack going way back
+    /// it was a serious 🤯 when I learned about functional programming. It still doesn't come
+    /// naturally to me yet, but I always try to force myself to code this way.
+    ///
+    /// This came surprisingly easy.
+    #[must_use]
+    pub fn into_fives(&self, three: Three) -> Vec<Five> {
+        self.iter().map(|two| Five::from_2and3(*two, three)).collect()
     }
 
     pub fn iter(&self) -> Iter<'_, Two> {
@@ -96,28 +133,28 @@ impl Hands {
     }
 }
 
-impl fmt::Display for Hands {
+impl fmt::Display for HoleCards {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let joined = Itertools::join(&mut self.0.iter(), ", ");
         write!(f, "[{}]", joined)
     }
 }
 
-impl From<Vec<Two>> for Hands {
+impl From<Vec<Two>> for HoleCards {
     fn from(v: Vec<Two>) -> Self {
-        Hands(v)
+        HoleCards(v)
     }
 }
 
-impl FromStr for Hands {
+impl FromStr for HoleCards {
     type Err = PKError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Hands::try_from(Cards::from_str(s)?)
+        HoleCards::try_from(Cards::from_str(s)?)
     }
 }
 
-impl Pile for Hands {
+impl Pile for HoleCards {
     fn clean(&self) -> Self {
         todo!()
     }
@@ -132,7 +169,7 @@ impl Pile for Hands {
     }
 }
 
-impl TryFrom<Cards> for Hands {
+impl TryFrom<Cards> for HoleCards {
     type Error = PKError;
 
     fn try_from(cards: Cards) -> Result<Self, Self::Error> {
@@ -140,7 +177,7 @@ impl TryFrom<Cards> for Hands {
 
         if cards.len() % 2 == 0 {
             let num_of_players = cards.len() / 2;
-            let mut hands = Hands::with_capacity(num_of_players);
+            let mut hands = HoleCards::with_capacity(num_of_players);
 
             for _ in 0..num_of_players {
                 hands.push(Two::new(
@@ -157,7 +194,7 @@ impl TryFrom<Cards> for Hands {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod play_hands_tests {
+mod play__hold_cards_tests {
     use super::*;
     use crate::arrays::five::Five;
     use crate::card::Card;
@@ -166,7 +203,7 @@ mod play_hands_tests {
 
     #[test]
     fn get() {
-        let the_hand = TestData::the_hand_hole_cards();
+        let the_hand = TestData::hole_cards_the_hand();
 
         assert_eq!(
             *the_hand.get(0).unwrap(),
@@ -185,6 +222,21 @@ mod play_hands_tests {
         assert!(the_hand.get(2).is_none());
     }
 
+    #[test]
+    fn into_fives() {
+        let the_fold_hands = TestData::hole_cards_the_fold();
+        let the_flop = Three::from([Card::FIVE_CLUBS, Card::NINE_DIAMONDS, Card::TEN_HEARTS]);
+        let antonius = Five::from_2and3(Two::HAND_5S_5D, the_flop);
+        let phil = Five::from_2and3(Two::HAND_KC_TD, the_flop);
+        let daniel = Five::from_2and3(Two::HAND_9S_9H, the_flop);
+
+        let hands = the_fold_hands.into_fives(the_flop);
+
+        assert_eq!(&antonius, hands.get(0).unwrap());
+        assert_eq!(&phil, hands.get(1).unwrap());
+        assert_eq!(&daniel, hands.get(2).unwrap());
+    }
+
     // State prior to adding Card.clean() ability to strip away frequency flags
     // ```
     // 6♠ 6♥ 6♦ 6♣ 9♣ - 112: FourSixes
@@ -197,7 +249,7 @@ mod play_hands_tests {
     //
     #[test]
     fn realize_case_at_flop() {
-        let the_hand = TestData::the_hand_hole_cards();
+        let the_hand = TestData::hole_cards_the_hand();
         let flop = TestData::the_flop();
 
         let cases = the_hand.realize_case_at_flop(flop, &TestData::case_985());
@@ -216,14 +268,14 @@ mod play_hands_tests {
     fn cards() {
         assert_eq!(
             "6♠ 6♥ 5♦ 5♣",
-            Hands::from_str("6♥ 6♠ 5♦ 5♣").unwrap().cards().to_string()
+            HoleCards::from_str("6♥ 6♠ 5♦ 5♣").unwrap().cards().to_string()
         );
     }
 
     #[test]
     fn remaining_after() {
         let remaining =
-            TestData::the_hand_hole_cards().remaining_after(&TestData::the_flop().cards());
+            TestData::hole_cards_the_hand().remaining_after(&TestData::the_flop().cards());
 
         assert_eq!(remaining.to_string(), "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 4♣ 3♣ 2♣");
     }
@@ -232,33 +284,33 @@ mod play_hands_tests {
     fn display() {
         assert_eq!(
             "[6♠ 6♥, 5♦ 5♣]",
-            Hands::from_str("6♥ 6♠ 5♦ 5♣").unwrap().to_string()
+            HoleCards::from_str("6♥ 6♠ 5♦ 5♣").unwrap().to_string()
         );
     }
 
     #[test]
     fn from__vec_two() {
         let v = vec![Two::HAND_6S_6H, Two::HAND_5D_5C];
-        let expected = Hands(v.clone());
+        let expected = HoleCards(v.clone());
 
-        let actual = Hands::from(v);
+        let actual = HoleCards::from(v);
 
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn from_str() {
-        let expected = TestData::the_hand_hole_cards();
+        let expected = TestData::hole_cards_the_hand();
 
-        assert_eq!(Hands::from_str("6♥ 6♠ 5♦ 5♣").unwrap(), expected);
+        assert_eq!(HoleCards::from_str("6♥ 6♠ 5♦ 5♣").unwrap(), expected);
     }
 
     #[test]
     fn try_from__cards() {
-        let cards = TestData::the_hand_hole_cards().cards();
-        let expected = TestData::the_hand_hole_cards();
+        let cards = TestData::hole_cards_the_hand().cards();
+        let expected = TestData::hole_cards_the_hand();
 
-        let hands = Hands::try_from(cards).unwrap();
+        let hands = HoleCards::try_from(cards).unwrap();
 
         assert_eq!(hands, expected);
     }

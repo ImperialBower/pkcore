@@ -5,7 +5,7 @@ use crate::arrays::two::Two;
 use crate::hand_rank::case_eval::CaseEval;
 use crate::hand_rank::case_evals::CaseEvals;
 use crate::hand_rank::eval::Eval;
-use crate::play::hands::Hands;
+use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::wins::Wins;
 use crate::{Card, PKError, Pile};
 use log::{debug, info};
@@ -101,7 +101,7 @@ impl PlayerWins {
 /// * Wouldn't it be better to just have a `Game` struct that simply collects the state of the Hand
 ///
 impl PlayOut for PlayerWins {
-    fn play_out_flop(&mut self, hands: &Hands, flop: Three) {
+    fn play_out_flop(&mut self, hands: &HoleCards, flop: Three) {
         info!("PlayerWins.play_out_flop(hands: {} flop: {})", hands, flop);
 
         let case_evals = self.case_evals_flop(hands, flop);
@@ -122,7 +122,7 @@ impl PlayOut for PlayerWins {
     ///     * get `seven_at_flop`
     ///     * `Eval::from(seven)`
     ///     * push onto `CaseEval`
-    fn case_evals_flop(&self, hands: &Hands, flop: Three) -> CaseEvals {
+    fn case_evals_flop(&self, hands: &HoleCards, flop: Three) -> CaseEvals {
         debug!(
             "PlayerWins.case_evals_flop(hands: {} flop: {})",
             hands, flop
