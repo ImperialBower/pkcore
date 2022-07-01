@@ -39,6 +39,20 @@ impl TestData {
         [Card::SIX_CLUBS, Card::TREY_CLUBS]
     }
 
+    #[must_use]
+    pub fn evals_the_fold() -> Vec<Eval> {
+        let the_fold_hands = TestData::hole_cards_the_fold();
+        let the_flop = Three::from([Card::FIVE_CLUBS, Card::NINE_DIAMONDS, Card::TEN_HEARTS]);
+        the_fold_hands.three_into_evals(the_flop)
+    }
+
+    #[must_use]
+    pub fn fives_the_fold() -> Vec<Five> {
+        let the_fold_hands = TestData::hole_cards_the_fold();
+        let the_flop = Three::from([Card::FIVE_CLUBS, Card::NINE_DIAMONDS, Card::TEN_HEARTS]);
+        the_fold_hands.three_into_fives(the_flop)
+    }
+
     /// I am deliberately keeping these hands out of order, to facilitate sorting tests
     /// later on.
     #[must_use]

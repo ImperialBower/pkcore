@@ -56,7 +56,10 @@ impl HoleCards {
     /// vector of `Evals`.
     #[must_use]
     pub fn three_into_evals(&self, three: Three) -> Vec<Eval> {
-        self.three_into_fives(three).iter().map(Eval::from).collect()
+        self.three_into_fives(three)
+            .iter()
+            .map(Eval::from)
+            .collect()
     }
 
     /// Returns all the five card hands from a collection of hole cars.

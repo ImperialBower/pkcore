@@ -17,15 +17,15 @@ impl TheNuts {
     }
 }
 
-impl From<Vec<Five>> for TheNuts {
-    fn from(_: Vec<Five>) -> Self {
-        todo!()
-    }
-}
-
 impl From<Vec<Eval>> for TheNuts {
     fn from(v: Vec<Eval>) -> Self {
         TheNuts(v)
+    }
+}
+
+impl From<Vec<Five>> for TheNuts {
+    fn from(v: Vec<Five>) -> Self {
+        TheNuts(v.iter().map(Eval::from).collect())
     }
 }
 
@@ -33,7 +33,10 @@ impl From<Vec<Eval>> for TheNuts {
 #[allow(non_snake_case)]
 mod hand_rank__the_nuts_tests {
     use super::*;
+    use crate::arrays::three::Three;
+    use crate::arrays::two::Two;
     use crate::util::data::TestData;
+    use crate::Card;
 
     #[test]
     fn sort() {
@@ -59,5 +62,19 @@ mod hand_rank__the_nuts_tests {
         let the_nuts = TheNuts::from(v.clone());
 
         assert_eq!(v, the_nuts.0.to_vec());
+    }
+
+    #[test]
+    fn from__five() {
+        let the_flop = Three::from([Card::FIVE_CLUBS, Card::NINE_DIAMONDS, Card::TEN_HEARTS]);
+        let antonius = Eval::from(Five::from_2and3(Two::HAND_5S_5D, the_flop));
+        let phil = Eval::from(Five::from_2and3(Two::HAND_KC_TD, the_flop));
+        let daniel = Eval::from(Five::from_2and3(Two::HAND_9S_9H, the_flop));
+
+        let the_nuts = TheNuts::from(TestData::fives_the_fold());
+
+        assert_eq!(antonius, *the_nuts.to_vec().get(0).unwrap());
+        assert_eq!(phil, *the_nuts.to_vec().get(1).unwrap());
+        assert_eq!(daniel, *the_nuts.to_vec().get(2).unwrap());
     }
 }
