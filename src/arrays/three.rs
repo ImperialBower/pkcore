@@ -62,6 +62,9 @@ impl Pile for Three {
             return TheNuts::default();
         }
 
+        for (i, v) in self.remaining().combinations(2).enumerate() {
+
+        }
 
 
         TheNuts::default()

@@ -440,6 +440,7 @@
                     * impl From<&Five> for Eval
                   * TestData::evals_the_fold()
               * Pile.the_nuts()
+                * impl From<Vec<Card>> for Two
 
 
 ## LATER

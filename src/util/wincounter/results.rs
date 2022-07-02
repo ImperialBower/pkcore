@@ -7,7 +7,7 @@ use std::fmt::{Display, Formatter};
 ///
 /// Results is a utility state class designed to make it as easy as possible to get and display
 /// winning and tie percentages for any game.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Results {
     pub case_count: usize,
     pub player_count: usize,

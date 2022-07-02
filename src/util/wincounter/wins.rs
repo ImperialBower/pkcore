@@ -8,7 +8,7 @@ use crate::util::Util;
 /// its own crate.
 ///
 /// When I originally wrote the crate I was just focused on heads up play.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Wins(Vec<PlayerFlag>);
 
 impl Wins {

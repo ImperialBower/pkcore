@@ -354,6 +354,29 @@ impl From<[Card; 2]> for Two {
     }
 }
 
+/// This is me being lazy. A virtue for Perl programmers, but not necessarily for Rust ones. I
+/// trust the code that is inputting this in. If it chokes, it will return a struct with two blank
+/// cards. That's fine. The analysis is designed to return blank if it doesn't work. I don't need
+/// to harden this because the risk is low. _DUCKS_
+impl From<Vec<Card>> for Two {
+    fn from(v: Vec<Card>) -> Self {
+        match v.len() {
+            2 => {
+                let one = match v.get(0) {
+                    Some(m) => *m,
+                    None => Card::BLANK,
+                };
+                let two = match v.get(1) {
+                    Some(m) => *m,
+                    None => Card::BLANK,
+                };
+                Two([one, two])
+            },
+            _ => Two::default()
+        }
+    }
+}
+
 impl FromStr for Two {
     type Err = PKError;
 
@@ -486,6 +509,15 @@ mod arrays_two_tests {
     #[test]
     fn from__array() {
         assert_eq!(Two(BIG_SLICK), Two::from(BIG_SLICK));
+    }
+
+    #[test]
+    fn from__vec() {
+        assert_eq!(Two(BIG_SLICK), Two::from(vec![Card::ACE_DIAMONDS, Card::KING_HEARTS]));
+        assert_eq!(Two::default(), Two::from(vec![Card::BLANK, Card::BLANK]));
+        assert_eq!(Two::default(), Two::from(vec![Card::ACE_HEARTS]));
+        assert_eq!(Two::default(), Two::from(vec![Card::ACE_HEARTS, Card::SEVEN_HEARTS, Card::SEVEN_DIAMONDS]));
+        assert!(!Two::from(vec![Card::BLANK, Card::BLANK]).salright());
     }
 
     #[test]
