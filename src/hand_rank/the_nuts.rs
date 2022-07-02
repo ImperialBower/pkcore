@@ -7,6 +7,31 @@ use crate::hand_rank::eval::Eval;
 /// hands at the flop or turn, we can just call that method.
 ///
 /// See `CaseEval` for the etymology being the phrase the nuts.
+///
+/// # REFACTOR
+///
+/// OK, we've hit a snag. There's not one Eval for the nuts with any given flop. For instance, there
+/// are 16 variations:
+/// 
+/// * 9♣ 8♠ 7♠ 6♦ 5♥ - 1605: NineHighStraight
+/// * 9♣ 8♠ 7♥ 6♦ 5♥ - 1605: NineHighStraight
+/// * 9♣ 8♠ 7♦ 6♦ 5♥ - 1605: NineHighStraight
+/// * 9♣ 8♠ 7♣ 6♦ 5♥ - 1605: NineHighStraight
+/// * 9♣ 8♥ 7♠ 6♦ 5♥ - 1605: NineHighStraight
+/// * 9♣ 8♥ 7♥ 6♦ 5♥ - 1605: NineHighStraight
+/// * 9♣ 8♥ 7♦ 6♦ 5♥ - 1605: NineHighStraight
+/// * 9♣ 8♥ 7♣ 6♦ 5♥ - 1605: NineHighStraight
+/// * 9♣ 8♦ 7♠ 6♦ 5♥ - 1605: NineHighStraight
+/// * 9♣ 8♦ 7♥ 6♦ 5♥ - 1605: NineHighStraight
+/// * 9♣ 8♦ 7♦ 6♦ 5♥ - 1605: NineHighStraight
+/// * 9♣ 8♦ 7♣ 6♦ 5♥ - 1605: NineHighStraight
+/// * 9♣ 8♣ 7♠ 6♦ 5♥ - 1605: NineHighStraight
+/// * 9♣ 8♣ 7♥ 6♦ 5♥ - 1605: NineHighStraight
+/// * 9♣ 8♣ 7♦ 6♦ 5♥ - 1605: NineHighStraight
+/// * 9♣ 8♣ 7♣ 6♦ 5♥ - 1605: NineHighStraight
+///
+/// We're either going to have to find a better data structure, or distill our vector down to only
+/// one entry for each `HandRank`.
 #[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct TheNuts(Vec<Eval>);
 
@@ -15,12 +40,18 @@ impl TheNuts {
     pub fn get(&self, i: usize) -> Option<&Eval> {
         self.0.get(i)
     }
+
     #[must_use]
     pub fn sort(&self) -> TheNuts {
         let mut v = self.to_vec();
         v.sort();
         v.reverse();
         TheNuts(v)
+    }
+
+    pub fn sort_in_place(&mut self) {
+        self.0.sort();
+        self.0.reverse();
     }
 
     #[must_use]

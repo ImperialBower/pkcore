@@ -355,7 +355,7 @@ impl From<[Card; 2]> for Two {
 }
 
 /// This is me being lazy. A virtue for Perl programmers, but not necessarily for Rust ones. I
-/// trust the code that is inputting this in. If it chokes, it will return a struct with two blank
+/// trust the code that is using this. If it chokes, it will return a default struct with two blank
 /// cards. That's fine. The analysis is designed to return blank if it doesn't work. I don't need
 /// to harden this because the risk is low. _DUCKS_
 impl From<Vec<Card>> for Two {
