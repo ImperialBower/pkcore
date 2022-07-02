@@ -1,5 +1,63 @@
+use std::collections::HashMap;
 use crate::arrays::five::Five;
 use crate::hand_rank::eval::Eval;
+use crate::hand_rank::HandRank;
+
+/// So, I'm going to need to refactor `TheNuts`. Here's what I'm thinking:
+///
+/// ```
+/// use std::collections::HashMap;
+/// use pkcore::hand_rank::eval::Eval;
+/// use pkcore::hand_rank::HandRank;
+///
+/// pub struct TheNuts(HashMap<HandRank, Vec<Eval>>);
+/// ```
+///
+/// A collection containing all the possible `Evals` for a specific `HandRank`. The problem is,
+/// a vector can have dupes. What about something like this:
+///
+/// ```
+///
+/// use std::collections::{HashMap, HashSet};
+/// use pkcore::hand_rank::eval::Eval;
+/// use pkcore::hand_rank::HandRank;
+///
+/// pub struct TheNuts(HashMap<HandRank, HashSet<Eval>>);
+/// ```
+///
+/// One potential problem with that though is that an Eval with the exact same hand, but with the
+/// cards in different order, could be seen as a different eval. This problem stems from the hand
+/// element in the `Eval` struct. Two different orders of the same hand are not seen as equal:
+///
+/// ```
+/// use pkcore::card::Card;
+///
+/// let royal_flush_1 = [
+///     Card::ACE_DIAMONDS,
+///     Card::KING_DIAMONDS,
+///     Card::QUEEN_DIAMONDS,
+///     Card::JACK_DIAMONDS,
+///     Card::TEN_DIAMONDS,
+/// ];
+///
+/// let royal_flush_2 = [
+///     Card::KING_DIAMONDS,
+///     Card::ACE_DIAMONDS,
+///     Card::QUEEN_DIAMONDS,
+///     Card::JACK_DIAMONDS,
+///     Card::TEN_DIAMONDS,
+/// ];
+///
+/// assert_ne!(royal_flush_1, royal_flush_2)
+/// ```
+///
+/// Evan though these are exactly the same hands, from a pure data representation, the cards are in
+/// a different order, so they are different. What we need, is a way to override equal for `Five`
+/// and `Eval`.
+///
+/// Let's try test-driving this through `Five` and then see if there's a way for it to cascade down
+/// to `Pile` so that it can apply to any collection of cards.
+pub struct Nutty(HashMap<HandRank, Vec<Eval>>);
 
 /// The immediate need for this class is so that we can have an easy way to hold and sort the
 /// hands possible at a particular point in a game, usually the flop. I'm thinking that we can

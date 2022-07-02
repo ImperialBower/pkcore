@@ -14,7 +14,7 @@ use std::str::FromStr;
 /// It's the best five cards that determine who wins.
 ///
 /// IDEA: The hub and spoke.
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialOrd)]
 pub struct Five([Card; 5]);
 
 impl Five {
@@ -239,6 +239,18 @@ impl HandRanker for Five {
             // NOTE: I don't trust this code. When offered a mint, accept it. Write more tests.
         }
         self.0.reverse();
+    }
+}
+
+impl PartialEq for Five {
+    fn eq(&self, other: &Self) -> bool {
+        let mut a = self.0;
+        a.sort();
+
+        let mut b = other.0;
+        b.sort();
+
+        a == b
     }
 }
 
@@ -480,7 +492,7 @@ mod arrays_five_tests {
     }
 
     #[test]
-    fn sort() {
+    fn hand_ranker__sort() {
         assert_eq!(
             "A♠ K♠ Q♠ J♠ T♠",
             Five::from_str("K♠ A♠  Q♠  T♠ J♠")
@@ -502,7 +514,7 @@ mod arrays_five_tests {
     /// in the struct, before it starts sorting on the next fields in order.
     ///
     #[test]
-    fn sort__vector_of_fives() {
+    fn hand_ranker__sort__vector_of_fives() {
         let straight = Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap().sort();
         let royal_flush_spades = Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap().sort();
         let royal_flush_hearts = Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap().sort();
@@ -529,7 +541,7 @@ mod arrays_five_tests {
     }
 
     #[test]
-    fn sort__pair() {
+    fn hand_ranker__sort__pair() {
         assert_eq!(
             "9♠ 9♥ K♠ Q♠ T♠",
             Five::from_str("K♠ 9♠ 9♥ T♠ Q♠").unwrap().sort().to_string()
@@ -545,7 +557,7 @@ mod arrays_five_tests {
     }
 
     #[test]
-    fn sort__trips() {
+    fn hand_ranker__sort__trips() {
         assert_eq!(
             "9♠ 9♥ 9♦ K♠ T♠",
             Five::from_str("T♠ 9♦ 9♥ K♠ 9♠").unwrap().sort().to_string()
@@ -561,7 +573,7 @@ mod arrays_five_tests {
     }
 
     #[test]
-    fn sort__full_house() {
+    fn hand_ranker__sort__full_house() {
         assert_eq!(
             "9♠ 9♥ 9♦ T♠ T♣",
             Five::from_str("T♣ 9♦ 9♥ T♠ 9♠").unwrap().sort().to_string()
@@ -577,7 +589,7 @@ mod arrays_five_tests {
     }
 
     #[test]
-    fn sort__quads() {
+    fn hand_ranker__sort__quads() {
         assert_eq!(
             "9♠ 9♥ 9♦ 9♣ T♠",
             Five::from_str("T♠ 9♦ 9♥ 9♣ 9♠").unwrap().sort().to_string()
@@ -593,7 +605,7 @@ mod arrays_five_tests {
     }
 
     #[test]
-    fn sort__wheel() {
+    fn hand_ranker__sort__wheel() {
         assert_eq!(
             "5♠ 4♠ 3♠ 2♠ A♠",
             Five::from_str("A♠ 5♠ 4♠ 3♠ 2♠").unwrap().sort().to_string()
@@ -601,12 +613,12 @@ mod arrays_five_tests {
     }
 
     #[test]
-    fn hand_rank__default() {
+    fn hand_ranker__hand_rank__default() {
         assert_eq!(0, Five::default().hand_rank().value());
     }
 
     #[test]
-    fn hand_rank__frequency_weighted() {
+    fn hand_ranker__hand_rank__frequency_weighted() {
         let mut cards = Cards::from_str("A♠").unwrap();
         cards.add(&Cards::from_str("T♠ Q♥ Q♠ T♥").unwrap().flag_paired());
 
@@ -2422,7 +2434,7 @@ mod arrays_five_tests {
     #[case("7D 6D 5♥ 3D 2D", 7460, Name::HighCard, Class::SevenHigh)]
     #[case("7D 6D 4♥ 3D 2D", 7461, Name::HighCard, Class::SevenHigh)]
     #[case("7D 5D 4♥ 3D 2D", 7462, Name::HighCard, Class::SevenHigh)]
-    fn hand_rank(
+    fn hand_ranker__hand_rank(
         #[case] index: &'static str,
         #[case] expected_value: HandRankValue,
         #[case] expected_name: Name,
@@ -2441,7 +2453,29 @@ mod arrays_five_tests {
     //endregion
 
     #[test]
-    fn cards() {
+    fn partial_eq__eq() {
+        let royal_flush_1 = Five::from([
+            Card::ACE_DIAMONDS,
+            Card::KING_DIAMONDS,
+            Card::QUEEN_DIAMONDS,
+            Card::JACK_DIAMONDS,
+            Card::TEN_DIAMONDS,
+        ]);
+
+        let royal_flush_2 = Five::from([
+            Card::KING_DIAMONDS,
+            Card::ACE_DIAMONDS,
+            Card::QUEEN_DIAMONDS,
+            Card::JACK_DIAMONDS,
+            Card::TEN_DIAMONDS,
+        ]);
+
+        assert_eq!(royal_flush_1, royal_flush_2);
+        // assert_eq!(hash(royal_flush_1, &mut ()), hash(royal_flush_2));
+    }
+
+    #[test]
+    fn pile__cards() {
         assert_eq!(0, Five::default().cards().len());
         assert_eq!(
             "A♦ K♦ Q♦ J♦ T♦",
@@ -2450,7 +2484,7 @@ mod arrays_five_tests {
     }
 
     #[test]
-    fn clean() {
+    fn pile__clean() {
         let full_house = Five::from([
             Card::FIVE_SPADES,
             Card::SIX_DIAMONDS,

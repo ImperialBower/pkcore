@@ -2,7 +2,7 @@ use crate::card::Card;
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::util::random_ordering::RandomOrdering;
-use crate::{PKError, Pile, TheNuts, SOK};
+use crate::{PKError, Pile, TheNuts};
 use indexmap::set::Iter;
 use indexmap::IndexSet;
 use itertools::{Combinations, Itertools};

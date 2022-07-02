@@ -42,7 +42,7 @@ pub enum PKError {
 }
 
 pub trait Pile {
-    /// This code is cribbed from [oli_obk](https://stackoverflow.com/a/46766782/1245251).
+    /// This code is cribbed from [`oli_obk`](https://stackoverflow.com/a/46766782/1245251).
     fn are_unique(&self) -> bool {
         let v = self.to_vec();
         !(1..v.len()).any(|i| v[i..].contains(&v[i - 1]))

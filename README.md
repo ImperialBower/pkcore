@@ -442,9 +442,10 @@
               * Pile.the_nuts()
                 * impl From<Vec<Card>> for Two
                 * REFACTORING to HashMap
-                * SIDETRACK: impl Pile for Cards
-                  * Pile.contains_blank() as replacement for SOK trait
-                  * REFACTORING: Pile.is_dealt() to replace SOK.salright()
+                  * SIDETRACK: impl Pile for Cards
+                    * Pile.contains_blank() as replacement for SOK trait
+                    * REFACTORING: Pile.is_dealt() to replace SOK.salright()
+                  * Five overriding `Eq`
 
 ## LATER
 
