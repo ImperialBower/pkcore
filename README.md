@@ -469,6 +469,12 @@
   * videos
     * [Poker Out Loud](https://solveforwhy.io/categories/poker-out-loud)
       * [Poker Our Loud Academy demo](https://www.youtube.com/watch?v=NpSDXJsej-o&t=634s)
+  * mobile
+    * android
+      * [Building pure Rust apps for Android](https://blog.traverseresearch.nl/building-pure-rust-apps-for-android-d1e388b431b8)
+      * [Building and Deploying a Rust library on iOS](https://mozilla.github.io/firefox-browser-architecture/experiments/2017-09-06-rust-on-ios.html)
+      * [Building and Deploying a Rust library on Android](https://mozilla.github.io/firefox-browser-architecture/experiments/2017-09-21-rust-on-android.html)
+      * [Running Rust on Android](https://blog.svgames.pl/article/running-rust-on-android)
 * Video
   * [Cloudinary's image overlay feature](https://cloudinary.com/documentation/video_manipulation_and_delivery#adding_image_overlays)
   * [Programmatically add 100s of image overlays on video clip](https://stackoverflow.com/questions/18750525/programatically-add-100s-of-image-overlays-on-video-clip)
