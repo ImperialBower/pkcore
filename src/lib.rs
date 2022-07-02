@@ -42,6 +42,12 @@ pub enum PKError {
 }
 
 pub trait Pile {
+    /// This code is cribbed from [oli_obk](https://stackoverflow.com/a/46766782/1245251).
+    fn are_unique(&self) -> bool {
+        let v = self.to_vec();
+        !(1..v.len()).any(|i| v[i..].contains(&v[i - 1]))
+    }
+
     fn cards(&self) -> Cards {
         Cards::from(self.to_vec())
     }
@@ -85,6 +91,12 @@ pub trait Pile {
     fn enumerate_after(&self, k: usize, cards: &Cards) -> Enumerate<Combinations<IntoIter<Card>>> {
         log::debug!("Pile.enumerate_after(k: {} cards: {})", k, cards);
         self.remaining_after(cards).combinations(k).enumerate()
+    }
+
+    /// This feels like the best name for this functionality. If a `Pile` doesn't contain
+    /// a blank card, and all of the cards are unique, that it has been dealt.
+    fn is_dealt(&self) -> bool {
+        self.are_unique() && !self.contains_blank()
     }
 
     fn remaining(&self) -> Cards {

@@ -152,13 +152,19 @@ mod arrays_three_tests {
     }
 
     #[test]
-    fn cards() {
+    fn pile__are_unique() {
+        assert!(Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]).are_unique());
+        assert!(!Three::from([Card::NINE_CLUBS, Card::NINE_CLUBS, Card::FIVE_HEARTS]).are_unique());
+    }
+
+    #[test]
+    fn pile__cards() {
         assert_eq!(0, Three::default().cards().len());
         assert_eq!("9♣ 6♦ 5♥", Three(THE_FLOP).cards().to_string());
     }
 
     #[test]
-    fn the_nuts() {
+    fn pile__the_nuts() {
         let three = Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
 
         let the_nuts = three.the_nuts();
@@ -176,7 +182,7 @@ mod arrays_three_tests {
     }
 
     #[test]
-    fn the_nuts__blank() {
+    fn pile__the_nuts__blank() {
         let three = Three::from([Card::BLANK, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
 
         let the_nuts = three.the_nuts();
@@ -187,12 +193,12 @@ mod arrays_three_tests {
     /// NOTE: These tests will quickly become out of hand if applied to the larger arrays.
     #[test]
     fn sok() {
-        assert!(Three::from(THE_FLOP).salright());
-        assert!(!Three::from([Card::BLANK, Card::DEUCE_SPADES, Card::SIX_DIAMONDS]).salright());
-        assert!(!Three::from([Card::DEUCE_SPADES, Card::BLANK, Card::SIX_DIAMONDS]).salright());
-        assert!(!Three::from([Card::BLANK, Card::BLANK, Card::BLANK]).salright());
+        assert!(Three::from(THE_FLOP).is_dealt());
+        assert!(!Three::from([Card::BLANK, Card::DEUCE_SPADES, Card::SIX_DIAMONDS]).is_dealt());
+        assert!(!Three::from([Card::DEUCE_SPADES, Card::BLANK, Card::SIX_DIAMONDS]).is_dealt());
+        assert!(!Three::from([Card::BLANK, Card::BLANK, Card::BLANK]).is_dealt());
         assert!(
-            !Three::from([Card::DEUCE_SPADES, Card::DEUCE_SPADES, Card::SIX_DIAMONDS]).salright()
+            !Three::from([Card::DEUCE_SPADES, Card::DEUCE_SPADES, Card::SIX_DIAMONDS]).is_dealt()
         );
     }
 

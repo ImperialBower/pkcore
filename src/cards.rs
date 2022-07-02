@@ -323,6 +323,11 @@ impl IntoIterator for Cards {
 }
 
 impl Pile for Cards {
+    /// `IndexSet` types can't have dupes.
+    fn are_unique(&self) -> bool {
+        true
+    }
+
     fn clean(&self) -> Self {
         todo!()
     }
@@ -674,6 +679,11 @@ mod card_tests {
     #[test]
     fn from_str__invalid() {
         assert!(Cards::from_str("5♣ 4♣ 3A 2♣ A♣").is_err());
+    }
+
+    #[test]
+    fn pile__are_unique() {
+
     }
 
     #[test]
