@@ -1,5 +1,11 @@
 # Glossary
 
+## Sections
+
+* 🛤🚆💥 - train wreck
+
+## Terms
+
 * The flop
 * Hand range
 * Heads up
