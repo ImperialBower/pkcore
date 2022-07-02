@@ -3,6 +3,44 @@ use crate::arrays::five::Five;
 use crate::hand_rank::eval::Eval;
 use crate::hand_rank::HandRank;
 
+pub struct Nutty(HashMap<HandRank, Vec<Eval>>);
+
+/// The immediate need for this class is so that we can have an easy way to hold and sort the
+/// hands possible at a particular point in a game, usually the flop. I'm thinking that we can
+/// return this object as a part of our Pile trait, so that if we want to get all the possible
+/// hands at the flop or turn, we can just call that method.
+///
+/// See `CaseEval` for the etymology being the phrase the nuts.
+///
+/// # REFACTOR
+///
+/// OK, we've hit a snag. There's not one Eval for the nuts with any given flop. For instance, there
+/// are 16 variations:
+///
+/// * 9♣ 8♠ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♠ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♠ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♠ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♥ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♥ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♥ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♥ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♦ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♦ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♦ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♦ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♣ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♣ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♣ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♣ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
+///
+/// We're either going to have to find a better data structure, or distill our vector down to only
+/// one entry for each `HandRank`.
+///
+/// Sigh... this is one of the harder things about programming. You've gotten all your nice little
+/// programmatic 🦆🦆🦆🦆🦆 in a row only to discover that it just doesn't work. Hours and hours
+/// of testing all needing to be redone. Time to light a match, and watch it burn.
+///
 /// So, I'm going to need to refactor `TheNuts`. Here's what I'm thinking:
 ///
 /// ```
@@ -57,43 +95,52 @@ use crate::hand_rank::HandRank;
 ///
 /// Let's try test-driving this through `Five` and then see if there's a way for it to cascade down
 /// to `Pile` so that it can apply to any collection of cards.
-pub struct Nutty(HashMap<HandRank, Vec<Eval>>);
-
-/// The immediate need for this class is so that we can have an easy way to hold and sort the
-/// hands possible at a particular point in a game, usually the flop. I'm thinking that we can
-/// return this object as a part of our Pile trait, so that if we want to get all the possible
-/// hands at the flop or turn, we can just call that method.
 ///
-/// See `CaseEval` for the etymology being the phrase the nuts.
+/// So, we've figured out a way to implement an equality test for `Five` that ignores card order:
 ///
-/// # REFACTOR
+/// ```
+/// use pkcore::arrays::five::Five;
+/// use pkcore::card::Card;
+/// fn eq(a: Five, b: Five) -> bool {
+///     let mut a = a.to_arr();
+///     a.sort();
 ///
-/// OK, we've hit a snag. There's not one Eval for the nuts with any given flop. For instance, there
-/// are 16 variations:
+///     let mut b = b.to_arr();
+///     b.sort();
 ///
-/// * 9♣ 8♠ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♠ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♠ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♠ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♥ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♥ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♥ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♥ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♦ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♦ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♦ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♦ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♣ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♣ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♣ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♣ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
+///     a == b
+/// }
 ///
-/// We're either going to have to find a better data structure, or distill our vector down to only
-/// one entry for each `HandRank`.
+/// let royal_flush_1 = Five::from([
+///     Card::ACE_DIAMONDS,
+///     Card::KING_DIAMONDS,
+///     Card::QUEEN_DIAMONDS,
+///     Card::JACK_DIAMONDS,
+///     Card::TEN_DIAMONDS,
+/// ]);
 ///
-/// Sigh... this is one of the harder things about programming. You've gotten all your nice little
-/// programmatic 🦆🦆🦆🦆🦆 in a row only to discover that it just doesn't work. Hours and hours
-/// of testing all needing to be redone. Time to light a match, and watch it burn.
+/// let royal_flush_2 = Five::from([
+///     Card::KING_DIAMONDS,
+///     Card::ACE_DIAMONDS,
+///     Card::QUEEN_DIAMONDS,
+///     Card::JACK_DIAMONDS,
+///     Card::TEN_DIAMONDS,
+/// ]);
+///
+/// assert!(eq(royal_flush_1, royal_flush_2));
+/// ```
+///
+/// The problem with using this functionality for a manual implementation of the `PartialEq` trait
+/// is that clippy complains "you are deriving `Hash` but have implemented `PartialEq` explicitly".
+///
+/// This feels like we're falling down a rabbit's hole. I really don't want to be overriding the
+/// default implementations of PartialEq and Hash if I don't really have to, especially for a
+/// fundamental data type like `Five`. It's designed to be simple and fast.
+///
+/// I can think of three ways of dealing with this edge case:
+///
+/// 1. Ignoring it until it because a real issue.
+/// 2. Forcing a sort everytime you instantiate a `HandRank` struct.
 #[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct TheNuts(Vec<Eval>);
 
