@@ -444,6 +444,7 @@
                 * REFACTORING to HashMap
                 * SIDETRACK: impl Pile for Cards
                   * Pile.contains_blank() as replacement for SOK trait
+                  * REFACTORING: Pile.is_dealt() to replace SOK.salright()
 
 ## LATER
 

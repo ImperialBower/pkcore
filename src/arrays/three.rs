@@ -3,7 +3,7 @@ use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{PKError, Pile, TheNuts, SOK};
+use crate::{PKError, Pile, TheNuts};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -65,7 +65,7 @@ impl Pile for Three {
     }
 
     fn the_nuts(&self) -> TheNuts {
-        if !self.salright() {
+        if !self.is_dealt() {
             return TheNuts::default();
         }
 
@@ -85,15 +85,6 @@ impl Pile for Three {
 
     fn to_vec(&self) -> Vec<Card> {
         self.0.to_vec()
-    }
-}
-
-impl SOK for Three {
-    fn salright(&self) -> bool {
-        (self.first().salright() && self.second().salright() && self.third().salright())
-            && (self.first() != self.second())
-            && (self.first() != self.third())
-            && (self.second() != self.third())
     }
 }
 
@@ -192,7 +183,7 @@ mod arrays_three_tests {
 
     /// NOTE: These tests will quickly become out of hand if applied to the larger arrays.
     #[test]
-    fn sok() {
+    fn pile__is_dealt() {
         assert!(Three::from(THE_FLOP).is_dealt());
         assert!(!Three::from([Card::BLANK, Card::DEUCE_SPADES, Card::SIX_DIAMONDS]).is_dealt());
         assert!(!Three::from([Card::DEUCE_SPADES, Card::BLANK, Card::SIX_DIAMONDS]).is_dealt());

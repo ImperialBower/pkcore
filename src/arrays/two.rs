@@ -1,6 +1,6 @@
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{PKError, Pile, TheNuts, SOK};
+use crate::{PKError, Pile, TheNuts};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
@@ -329,7 +329,7 @@ impl Two {
     /// Returns `PKError::InvalidCard` if not salright.
     pub fn new(first: Card, second: Card) -> Result<Two, PKError> {
         let mut two = Two::from([first, second]);
-        if two.salright() {
+        if two.is_dealt() {
             if second > first {
                 two = Two([second, first]);
             }
@@ -411,12 +411,6 @@ impl Pile for Two {
 
     fn to_vec(&self) -> Vec<Card> {
         self.0.to_vec()
-    }
-}
-
-impl SOK for Two {
-    fn salright(&self) -> bool {
-        (self.first().salright() && self.second().salright()) && (self.first() != self.second())
     }
 }
 
@@ -542,7 +536,7 @@ mod arrays_two_tests {
                 Card::SEVEN_DIAMONDS
             ])
         );
-        assert!(!Two::from(vec![Card::BLANK, Card::BLANK]).salright());
+        assert!(!Two::from(vec![Card::BLANK, Card::BLANK]).is_dealt());
     }
 
     #[test]
@@ -571,11 +565,11 @@ mod arrays_two_tests {
     ///   * `(self.first().salright() && self.second().salright()) && (self.first() != self.second())`
     #[test]
     fn sok() {
-        assert!(Two::from(BIG_SLICK).salright());
-        assert!(!Two::from([Card::BLANK, Card::DEUCE_SPADES]).salright());
-        assert!(!Two::from([Card::DEUCE_SPADES, Card::BLANK]).salright());
-        assert!(!Two::from([Card::BLANK, Card::BLANK]).salright());
-        assert!(!Two::from([Card::DEUCE_SPADES, Card::DEUCE_SPADES]).salright());
+        assert!(Two::from(BIG_SLICK).is_dealt());
+        assert!(!Two::from([Card::BLANK, Card::DEUCE_SPADES]).is_dealt());
+        assert!(!Two::from([Card::DEUCE_SPADES, Card::BLANK]).is_dealt());
+        assert!(!Two::from([Card::BLANK, Card::BLANK]).is_dealt());
+        assert!(!Two::from([Card::DEUCE_SPADES, Card::DEUCE_SPADES]).is_dealt());
     }
 
     #[test]

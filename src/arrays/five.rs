@@ -4,7 +4,7 @@ use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
-use crate::{PKError, Pile, TheNuts, SOK};
+use crate::{PKError, Pile, TheNuts};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::slice::Iter;
@@ -192,7 +192,7 @@ impl HandRanker for Five {
     }
 
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
-        if self.salright() {
+        if self.is_dealt() {
             let i = self.or_rank_bits() as usize;
             let rank: u16 = if self.is_flush() {
                 crate::lookups::flushes::FLUSHES[i]
@@ -259,12 +259,6 @@ impl Pile for Five {
 
     fn to_vec(&self) -> Vec<Card> {
         self.0.to_vec()
-    }
-}
-
-impl SOK for Five {
-    fn salright(&self) -> bool {
-        !self.0.contains(&Card::BLANK)
     }
 }
 

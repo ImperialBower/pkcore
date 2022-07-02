@@ -332,6 +332,12 @@ impl Pile for Cards {
         todo!()
     }
 
+    /// `Cards` always filters out blank cards, and inherently enforces uniqueness, so this should
+    /// always be true.
+    fn is_dealt(&self) -> bool {
+        true
+    }
+
     fn the_nuts(&self) -> TheNuts {
         todo!()
     }
@@ -369,7 +375,7 @@ impl TryFrom<Card> for Cards {
     type Error = PKError;
 
     fn try_from(card: Card) -> Result<Self, Self::Error> {
-        if card.salright() {
+        if card.is_dealt() {
             let mut cards = Cards::default();
             cards.insert(card);
             Ok(cards)

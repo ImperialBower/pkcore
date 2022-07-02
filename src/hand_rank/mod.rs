@@ -1,8 +1,8 @@
 use crate::hand_rank::class::Class;
 use crate::hand_rank::name::Name;
-use crate::SOK;
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
+use crate::SOK;
 
 pub mod case_eval;
 pub mod case_evals;

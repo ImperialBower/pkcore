@@ -4,7 +4,7 @@
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::suit::Suit;
-use crate::{PKError, Pile, TheNuts, SOK};
+use crate::{PKError, Pile, TheNuts};
 use std::fmt;
 use std::str::FromStr;
 
@@ -289,12 +289,6 @@ impl Pile for Card {
 
     fn to_vec(&self) -> Vec<Card> {
         vec![*self]
-    }
-}
-
-impl SOK for Card {
-    fn salright(&self) -> bool {
-        self.0 != Card::BLANK_NUMBER
     }
 }
 
