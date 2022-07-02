@@ -32,6 +32,10 @@ use crate::hand_rank::eval::Eval;
 ///
 /// We're either going to have to find a better data structure, or distill our vector down to only
 /// one entry for each `HandRank`.
+///
+/// Sigh... this is one of the harder things about programming. You've gotten all your nice little
+/// programmatic 🦆🦆🦆🦆🦆 in a row only to discover that it just doesn't work. Hours and hours
+/// of testing all needing to be redone. Time to light a match, and watch it burn.
 #[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct TheNuts(Vec<Eval>);
 
