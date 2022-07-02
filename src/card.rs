@@ -230,11 +230,6 @@ impl Card {
     }
 
     #[must_use]
-    pub fn is_blank(&self) -> bool {
-        self.0 == Card::BLANK_NUMBER
-    }
-
-    #[must_use]
     pub fn is_flagged(&self, flag: u32) -> bool {
         (self.as_u32() & flag) == flag
     }
@@ -282,6 +277,10 @@ impl FromStr for Card {
 impl Pile for Card {
     fn clean(&self) -> Self {
         Card(self.0 & Card::FREQUENCY_MASK_FILTER)
+    }
+
+    fn contains_blank(&self) -> bool {
+        self.0 == Card::BLANK_NUMBER
     }
 
     fn the_nuts(&self) -> TheNuts {
@@ -468,15 +467,15 @@ mod card_tests {
     }
 
     #[test]
-    fn is_blank() {
-        assert!(Card::BLANK.is_blank());
-        assert!(!Card::TREY_CLUBS.is_blank());
+    fn pile__cards() {
+        assert_eq!(0, Card::default().cards().len());
+        assert_eq!("3♣", Card::TREY_CLUBS.cards().to_string());
     }
 
     #[test]
-    fn cards() {
-        assert_eq!(0, Card::default().cards().len());
-        assert_eq!("3♣", Card::TREY_CLUBS.cards().to_string());
+    fn pile__contains_blank() {
+        assert!(Card::BLANK.contains_blank());
+        assert!(!Card::TREY_CLUBS.contains_blank());
     }
 
     #[test]

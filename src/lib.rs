@@ -78,6 +78,10 @@ pub trait Pile {
         self.to_vec().contains(card)
     }
 
+    fn contains_blank(&self) -> bool {
+        self.contains(&Card::BLANK)
+    }
+
     fn enumerate_after(&self, k: usize, cards: &Cards) -> Enumerate<Combinations<IntoIter<Card>>> {
         log::debug!("Pile.enumerate_after(k: {} cards: {})", k, cards);
         self.remaining_after(cards).combinations(k).enumerate()

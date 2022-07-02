@@ -443,6 +443,7 @@
                 * impl From<Vec<Card>> for Two
                 * REFACTORING to HashMap
                 * SIDETRACK: impl Pile for Cards
+                  * Pile.contains_blank() as replacement for SOK trait
 
 ## LATER
 

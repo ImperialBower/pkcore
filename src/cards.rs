@@ -168,7 +168,7 @@ impl Cards {
 
     /// Allows you to insert a `PlayingCard` provided it isn't blank.
     pub fn insert(&mut self, card: Card) -> bool {
-        if card.is_blank() {
+        if card.contains_blank() {
             false
         } else {
             self.0.insert(card)
@@ -268,7 +268,7 @@ impl From<Vec<Card>> for Cards {
     fn from(v: Vec<Card>) -> Self {
         let filtered = v.iter().filter_map(|c| {
             let pc = *c;
-            if pc.is_blank() {
+            if pc.contains_blank() {
                 None
             } else {
                 Some(pc)
@@ -283,7 +283,7 @@ impl From<Vec<&Card>> for Cards {
         // TODO RF: Hack :-P
         let filtered = v.iter().filter_map(|c| {
             let pc = **c;
-            if pc.is_blank() {
+            if pc.contains_blank() {
                 None
             } else {
                 Some(pc)
@@ -300,7 +300,7 @@ impl FromStr for Cards {
         let mut cards = Cards::default();
         for s in s.split_whitespace() {
             let c = Card::from_str(s)?;
-            if c.is_blank() {
+            if c.contains_blank() {
                 return Err(PKError::InvalidIndex);
             }
             cards.insert(c);

@@ -26,6 +26,21 @@ impl Two {
         Two::HAND_AD_AC,
     ];
 
+    pub const HAND_KS_KH: Two = Two([Card::KING_SPADES, Card::KING_HEARTS]);
+    pub const HAND_KS_KD: Two = Two([Card::KING_SPADES, Card::KING_DIAMONDS]);
+    pub const HAND_KS_KC: Two = Two([Card::KING_SPADES, Card::KING_CLUBS]);
+    pub const HAND_KH_KD: Two = Two([Card::KING_HEARTS, Card::KING_DIAMONDS]);
+    pub const HAND_KH_KC: Two = Two([Card::KING_HEARTS, Card::KING_CLUBS]);
+    pub const HAND_KD_KC: Two = Two([Card::KING_DIAMONDS, Card::KING_CLUBS]);
+    pub const KK: [Two; 6] = [
+        Two::HAND_KS_KH,
+        Two::HAND_KS_KD,
+        Two::HAND_KS_KC,
+        Two::HAND_KH_KD,
+        Two::HAND_KH_KC,
+        Two::HAND_KD_KC,
+    ];
+
     pub const HAND_9S_9H: Two = Two([Card::NINE_SPADES, Card::NINE_HEARTS]);
     pub const HAND_9S_9D: Two = Two([Card::NINE_SPADES, Card::NINE_DIAMONDS]);
     pub const HAND_9S_9C: Two = Two([Card::NINE_SPADES, Card::NINE_CLUBS]);
