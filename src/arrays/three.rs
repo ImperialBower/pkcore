@@ -1,12 +1,12 @@
+use crate::arrays::five::Five;
+use crate::arrays::two::Two;
+use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{PKError, Pile, SOK, TheNuts};
+use crate::{PKError, Pile, TheNuts, SOK};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use crate::arrays::five::Five;
-use crate::arrays::HandRanker;
-use crate::arrays::two::Two;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Three([Card; 3]);
@@ -57,7 +57,11 @@ impl FromStr for Three {
 
 impl Pile for Three {
     fn clean(&self) -> Self {
-        Three([self.first().clean(), self.second().clean(), self.third().clean()])
+        Three([
+            self.first().clean(),
+            self.second().clean(),
+            self.third().clean(),
+        ])
     }
 
     fn the_nuts(&self) -> TheNuts {
@@ -67,7 +71,7 @@ impl Pile for Three {
 
         let mut hands: Vec<Five> = Vec::default();
 
-        for v in self.remaining().combinations(2){
+        for v in self.remaining().combinations(2) {
             let two = Two::from(v);
             let hand = Five::from_2and3(two, *self);
             // println!("> {}", hand);
@@ -114,8 +118,8 @@ impl TryFrom<Cards> for Three {
 mod arrays_three_tests {
     use super::*;
     use crate::cards::Cards;
-    use std::str::FromStr;
     use crate::hand_rank::class::Class;
+    use std::str::FromStr;
 
     /// <https://www.youtube.com/watch?v=vjM60lqRhPg />
     const THE_FLOP: [Card; 3] = [Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS];
@@ -163,7 +167,10 @@ mod arrays_three_tests {
         //     println!("{}", e);
         // }
 
-        assert_eq!(Class::NineHighStraight, the_nuts.get(0).unwrap().hand_rank.class());
+        assert_eq!(
+            Class::NineHighStraight,
+            the_nuts.get(0).unwrap().hand_rank.class()
+        );
         assert_eq!(3058, the_nuts.get(3).unwrap().hand_rank.value());
         assert_eq!(3058, the_nuts.get(5).unwrap().hand_rank.value());
     }

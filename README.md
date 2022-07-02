@@ -441,8 +441,8 @@
                   * TestData::evals_the_fold()
               * Pile.the_nuts()
                 * impl From<Vec<Card>> for Two
-                * REFACTORING to 
-
+                * REFACTORING to HashMap
+                * SIDETRACK: impl Pile for Cards
 
 ## LATER
 

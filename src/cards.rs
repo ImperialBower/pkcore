@@ -2,7 +2,7 @@ use crate::card::Card;
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::util::random_ordering::RandomOrdering;
-use crate::{PKError, SOK};
+use crate::{PKError, Pile, TheNuts, SOK};
 use indexmap::set::Iter;
 use indexmap::IndexSet;
 use itertools::{Combinations, Itertools};
@@ -322,6 +322,44 @@ impl IntoIterator for Cards {
     }
 }
 
+impl Pile for Cards {
+    fn clean(&self) -> Self {
+        todo!()
+    }
+
+    fn the_nuts(&self) -> TheNuts {
+        todo!()
+    }
+
+    /// The idea to implement the `Pile` trait came to me when I was looking through the code for
+    /// my old [Fudd spike](https://github.com/ContractBridge/fudd/blob/c4172eaac0f3821e9c144562ca912c8c185b7522/src/types/arrays/mod.rs#L39).
+    ///
+    /// The `Vectorable` trait is the ancestor to `Pile`. I love having the ability to consolidate
+    /// functionality into a common trait. If I can turn a structure into a vector in the trait, I
+    /// can do all sorts of communal things to the collections of `Cards`.
+    ///
+    /// This feels like a nice refactoring opportunity. It will allow me to remove the
+    /// ridiculous SOK trait.
+    ///
+    /// I love how easily this flowed for me. You can tell a library is starting to come together
+    /// when you begin to use it in more and more complex ways and it just flows naturally, like
+    /// water. _I call this the water principal._ Later on, I learned that Bruce Lee talked about
+    /// something similar in his craft:
+    ///
+    /// > Be like water making its way through cracks. Do not be assertive, but adjust to the object, and you shall find a way around or through it. If nothing within you stays rigid, outward things will disclose themselves.
+    ///
+    /// > Empty your mind, be formless. Shapeless, like water. If you put water into a cup, it becomes the cup. You put water into a bottle and it becomes the bottle. You put it in a teapot, it becomes the teapot. Now, water can flow or it can crash. Be water, my friend.
+    ///
+    /// One of my primary goal as a software developer is for my code to flow as easily as
+    /// possible for users and maintainers. One of the biggest problem I have in software is where
+    /// their build instructions are these insane Rube Goldburgesque machinations. Make your code flow.
+    /// *BOOP!* There it goes. [Push button, baby.](https://www.youtube.com/watch?v=En3-GWOUCcI)
+    /// _Be water, my friend._
+    fn to_vec(&self) -> Vec<Card> {
+        self.clone().into_iter().collect()
+    }
+}
+
 impl TryFrom<Card> for Cards {
     type Error = PKError;
 
@@ -636,6 +674,29 @@ mod card_tests {
     #[test]
     fn from_str__invalid() {
         assert!(Cards::from_str("5♣ 4♣ 3A 2♣ A♣").is_err());
+    }
+
+    #[test]
+    fn pile__contains() {
+        let wheel_flush = Cards::from_str("5♣ 4♣ 3♣ 2♣ A♣").unwrap();
+
+        assert!(wheel_flush.contains(&Card::FIVE_CLUBS));
+        assert!(!wheel_flush.contains(&Card::SIX_CLUBS));
+    }
+
+    #[test]
+    fn pile__to_vec() {
+        let expected: Vec<Card> = vec![
+            Card::FIVE_CLUBS,
+            Card::FOUR_CLUBS,
+            Card::TREY_CLUBS,
+            Card::DEUCE_CLUBS,
+            Card::ACE_CLUBS,
+        ];
+
+        let actual = Cards::from_str("5♣ 4♣ 3♣ 2♣ A♣").unwrap().to_vec();
+
+        assert_eq!(expected, actual);
     }
 
     #[test]

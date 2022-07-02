@@ -1,6 +1,6 @@
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{PKError, Pile, SOK, TheNuts};
+use crate::{PKError, Pile, TheNuts, SOK};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
@@ -371,8 +371,8 @@ impl From<Vec<Card>> for Two {
                     None => Card::BLANK,
                 };
                 Two([one, two])
-            },
-            _ => Two::default()
+            }
+            _ => Two::default(),
         }
     }
 }
@@ -513,10 +513,20 @@ mod arrays_two_tests {
 
     #[test]
     fn from__vec() {
-        assert_eq!(Two(BIG_SLICK), Two::from(vec![Card::ACE_DIAMONDS, Card::KING_HEARTS]));
+        assert_eq!(
+            Two(BIG_SLICK),
+            Two::from(vec![Card::ACE_DIAMONDS, Card::KING_HEARTS])
+        );
         assert_eq!(Two::default(), Two::from(vec![Card::BLANK, Card::BLANK]));
         assert_eq!(Two::default(), Two::from(vec![Card::ACE_HEARTS]));
-        assert_eq!(Two::default(), Two::from(vec![Card::ACE_HEARTS, Card::SEVEN_HEARTS, Card::SEVEN_DIAMONDS]));
+        assert_eq!(
+            Two::default(),
+            Two::from(vec![
+                Card::ACE_HEARTS,
+                Card::SEVEN_HEARTS,
+                Card::SEVEN_DIAMONDS
+            ])
+        );
         assert!(!Two::from(vec![Card::BLANK, Card::BLANK]).salright());
     }
 

@@ -4,7 +4,7 @@ use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
-use crate::{PKError, Pile, SOK, TheNuts};
+use crate::{PKError, Pile, TheNuts, SOK};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::slice::Iter;

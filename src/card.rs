@@ -4,7 +4,7 @@
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::suit::Suit;
-use crate::{PKError, Pile, SOK, TheNuts};
+use crate::{PKError, Pile, TheNuts, SOK};
 use std::fmt;
 use std::str::FromStr;
 

@@ -3,10 +3,10 @@
 
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::hand_rank::the_nuts::TheNuts;
 use indexmap::set::IntoIter;
 use itertools::Combinations;
 use std::iter::Enumerate;
-use crate::hand_rank::the_nuts::TheNuts;
 
 pub mod analysis;
 pub mod arrays;
@@ -72,6 +72,10 @@ pub trait Pile {
     fn combinations_after(&self, k: usize, cards: &Cards) -> Combinations<IntoIter<Card>> {
         log::debug!("Pile.combinations_after(k: {} cards: {})", k, cards);
         self.remaining_after(cards).combinations(k)
+    }
+
+    fn contains(&self, card: &Card) -> bool {
+        self.to_vec().contains(card)
     }
 
     fn enumerate_after(&self, k: usize, cards: &Cards) -> Enumerate<Combinations<IntoIter<Card>>> {
