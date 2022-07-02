@@ -13,22 +13,22 @@ use crate::hand_rank::eval::Eval;
 /// OK, we've hit a snag. There's not one Eval for the nuts with any given flop. For instance, there
 /// are 16 variations:
 ///
-/// * 9♣ 8♠ 7♠ 6♦ 5♥ - 1605: NineHighStraight
-/// * 9♣ 8♠ 7♥ 6♦ 5♥ - 1605: NineHighStraight
-/// * 9♣ 8♠ 7♦ 6♦ 5♥ - 1605: NineHighStraight
-/// * 9♣ 8♠ 7♣ 6♦ 5♥ - 1605: NineHighStraight
-/// * 9♣ 8♥ 7♠ 6♦ 5♥ - 1605: NineHighStraight
-/// * 9♣ 8♥ 7♥ 6♦ 5♥ - 1605: NineHighStraight
-/// * 9♣ 8♥ 7♦ 6♦ 5♥ - 1605: NineHighStraight
-/// * 9♣ 8♥ 7♣ 6♦ 5♥ - 1605: NineHighStraight
-/// * 9♣ 8♦ 7♠ 6♦ 5♥ - 1605: NineHighStraight
-/// * 9♣ 8♦ 7♥ 6♦ 5♥ - 1605: NineHighStraight
-/// * 9♣ 8♦ 7♦ 6♦ 5♥ - 1605: NineHighStraight
-/// * 9♣ 8♦ 7♣ 6♦ 5♥ - 1605: NineHighStraight
-/// * 9♣ 8♣ 7♠ 6♦ 5♥ - 1605: NineHighStraight
-/// * 9♣ 8♣ 7♥ 6♦ 5♥ - 1605: NineHighStraight
-/// * 9♣ 8♣ 7♦ 6♦ 5♥ - 1605: NineHighStraight
-/// * 9♣ 8♣ 7♣ 6♦ 5♥ - 1605: NineHighStraight
+/// * 9♣ 8♠ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♠ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♠ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♠ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♥ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♥ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♥ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♥ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♦ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♦ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♦ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♦ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♣ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♣ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♣ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
+/// * 9♣ 8♣ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
 ///
 /// We're either going to have to find a better data structure, or distill our vector down to only
 /// one entry for each `HandRank`.
