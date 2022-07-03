@@ -3,7 +3,20 @@ use crate::arrays::five::Five;
 use crate::hand_rank::eval::Eval;
 use crate::hand_rank::HandRank;
 
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Nutty(HashMap<HandRank, Vec<Eval>>);
+
+impl Nutty {
+    /// This is going to be a lot more complicated than with our original stab at this problem.
+    /// We need a way to return a vector made up of one `Eval` for each HandRank, sorted by order
+    /// of strength. If only we had a data structure to easily do that.
+    ///
+    /// Turns out we already do, with the code we wrote to do the refactoring.
+    #[must_use]
+    pub fn get(&self, _i: usize) -> Option<&Eval> {
+        todo!()
+    }
+}
 
 /// The immediate need for this class is so that we can have an easy way to hold and sort the
 /// hands possible at a particular point in a game, usually the flop. I'm thinking that we can
@@ -219,6 +232,59 @@ pub struct Nutty(HashMap<HandRank, Vec<Eval>>);
 /// the same team, but we are not doing the same work. I've helped made the works of Beethoven and
 /// Musgrave come to life. I've also helped turn engineer's designs into functioning cars. How cool is
 /// that?
+///
+/// ## OK, back to the hellfactoring...
+///
+/// How do we want to do this? I can see two ways:
+///
+/// 1. Throw it all away and start over.
+/// 2. Create a temporary struct with a different name, AB the functionality over from what we've done so far, and then swap them out when we're done.
+///
+/// A lot of the programmers I really respect would do plan 1. Me, I tend to do plan #2. I do love
+/// my training wheels. Feel free to try out Plan #1 for yourself. Me... it's Sunday. I'm tired of being
+/// in the red for over two days. #2 it is.
+///
+/// Here's the plan: We're going to create a temporary struct with our target structure and walk
+/// through the functionality from our soon to be mothballed struct.
+///
+/// ```
+/// use std::collections::HashMap;
+/// use pkcore::hand_rank::eval::Eval;
+/// use pkcore::hand_rank::HandRank;
+///
+/// #[derive(Clone, Debug, Default, Eq, PartialEq)]
+/// pub struct Nutty(HashMap<HandRank, Vec<Eval>>);
+/// ```
+///
+/// One big problem is that the dynamics of a `HashMap` are radically different than a `Vec`. Can
+/// you think of what the biggest difference is?
+///
+/// A `Vec` is ordered. A `HashMap` isn't. This is going to be a little bit of a hassle for us.
+/// Luckily, the vast majority of the work is done with the calculation of the structure. Once it's
+/// set up, we can just grab what we need and be done with it. What are the possible use cases?
+/// Here's what I can think of:
+///
+/// # Give a list of representative vector of `Evals`; one representing each possible `HandRank`.
+///
+/// Here's how this could look for `The Hand`:
+///
+/// ```
+/// // 9♣ 8♠ 7♠ 6♦ 5♥ HandRank { value: 1605, name: Straight, class: NineHighStraight }
+/// // 9♠ 9♥ 9♣ 6♦ 5♥ HandRank { value: 1996, name: ThreeOfAKind, class: ThreeNines }
+/// // 6♠ 6♥ 6♦ 9♣ 5♥ HandRank { value: 2185, name: ThreeOfAKind, class: ThreeSixes }
+/// // 5♠ 5♥ 5♦ 9♣ 6♦ HandRank { value: 2251, name: ThreeOfAKind, class: ThreeFives }
+/// // 9♠ 9♣ 6♠ 6♦ 5♥ HandRank { value: 3047, name: TwoPair, class: NinesAndSixes }
+/// // ...
+/// ```
+///
+/// Return a probability distribution for every type of possible `HandRank`s.
+///
+/// Finally, return an integer indicating where a specific player's hand is in relationship to the
+/// nuts. So, for Daniel's hand of `9♠ 9♥ 9♣ 6♦ 5♥`, it would return three, since he has the third
+/// nuts, as they say; over a nine high straight and three nines.
+///
+///
+///
 #[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct TheNuts(Vec<Eval>);
 

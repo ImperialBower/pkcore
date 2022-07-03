@@ -452,6 +452,8 @@
                     * impl BitAnd for Bard
                     * BitXor, BitAndAssign, BitOrAssign, BitXorAssign
                     * DOUBLE SIDETRACK: Added bitwise todo!s to Cards.
+                * Nutty.get()
+                  * Evals
 
 ## LATER
 
