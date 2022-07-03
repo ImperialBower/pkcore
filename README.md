@@ -451,6 +451,7 @@
                     * impl BitOr for Bard
                     * impl BitAnd for Bard
                     * BitXor, BitAndAssign, BitOrAssign, BitXorAssign
+                    * DOUBLE SIDETRACK: Added bitwise todo!s to Cards.
 
 ## LATER
 

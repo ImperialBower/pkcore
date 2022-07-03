@@ -171,7 +171,7 @@ pub struct Nutty(HashMap<HandRank, Vec<Eval>>);
 ///
 /// Back in the 90s I just
 /// happened to recognize him from his website while walking from a temp agency interview. Now,
-/// you can go to MeetUps, learn stuff, and make friends along the way. Those friends will be the
+/// you can go to meetups, learn stuff, and make friends along the way. Those friends will be the
 /// most important connections in your career.
 ///
 /// I can't underestimate how important it is to bring joy to your work. When I got a job working
@@ -192,6 +192,10 @@ pub struct Nutty(HashMap<HandRank, Vec<Eval>>);
 /// goal.
 ///
 /// ![BELIEVE](https://awfulannouncing.com/wp-content/uploads/sites/94/2021/08/lasso_ep6.jpeg)
+///
+/// One of my biggest regrets is that, as an introvert, I tend to forget to let the people who
+/// really made a difference in my life know. They're in my heart, but that's no enough. Take the
+/// time.
 ///
 /// I remember talking to my Uncle Leon over a decade after the
 /// [Challenger disaster](https://en.wikipedia.org/wiki/Space_Shuttle_Challenger_disaster). He

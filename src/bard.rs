@@ -1,4 +1,4 @@
-use std::ops::{BitAnd, BitOr, BitXor};
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 
 /// A `Bard` is a binary representation of one or more `Cards` contained in a single unsigned
 /// integer. Each bit flag represents one card. Since each flag is a different card, you can
@@ -44,7 +44,7 @@ use std::ops::{BitAnd, BitOr, BitXor};
 /// this by simply implementing the specific [ops traits](https://doc.rust-lang.org/std/ops/#traits)
 /// your require.
 ///
-/// Let's try it for [BitOr](https://doc.rust-lang.org/std/ops/trait.BitOr.html).
+/// Let's try it for [`BitOr`](https://doc.rust-lang.org/std/ops/trait.BitOr.html).
 ///
 /// ```
 /// use std::ops::BitOr;
@@ -72,7 +72,7 @@ use std::ops::{BitAnd, BitOr, BitXor};
 /// ```
 /// [play.rust-lang.org](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=c6e4e46e2d793157fb8c940a9376cdb0)
 ///
-/// OK, now let's do it for [BitAnd](https://doc.rust-lang.org/std/ops/trait.BitAnd.html). For this,
+/// OK, now let's do it for [`BitAnd`](https://doc.rust-lang.org/std/ops/trait.BitAnd.html). For this,
 /// we're going to need to be able to extract an individual card from a consolidated `Bard`
 /// with more than one card flag set.
 ///
@@ -112,8 +112,25 @@ use std::ops::{BitAnd, BitOr, BitXor};
 /// ```
 /// [play.rust-lang.org](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=bc792635d7ddad4e0803fef959b4e76c)
 ///
-/// Let's do the rest.
-
+/// Let's do the rest. `^` [`BitXor`](https://doc.rust-lang.org/std/ops/trait.BitXor.html),
+/// `&=` [`BitAndAssign`](https://doc.rust-lang.org/std/ops/trait.BitAndAssign.html),
+/// `|=` [`BitOrAssign`](https://doc.rust-lang.org/std/ops/trait.BitOrAssign.html), and
+/// `^=` [`BitXorAssign`](https://doc.rust-lang.org/std/ops/trait.BitXorAssign.html).
+///
+/// OK, this is hot. Being able to craft a custom struct that can do binary combinations is
+/// cool as heck. This gives me a crazy idea. What if we added this functionality to our `Cards`
+/// struct? Than we could simply combine collections of cards through simple bitwise operations.
+/// Wicked!
+///
+/// I'm fact I'm going to add their impls and leave them as `todo!()` macros as a reminder. I love
+/// that rust has this functionality. Built in technical debt tracker. If you use one of `JetBrains`'
+/// IDEs, they come with a tab that shows you all of your todos. No need to set up a board somewhere
+/// so that managers can justify their existence by nagging you, and complaining about it in their
+/// secret star chamber meetings.
+///
+/// BTW, I can't believe that I still haven't fixed that three test. I am deliberately keeping the
+/// test failing as a reminder of what my priorities are. Yes, this has been fun, but as they say,
+/// ABC... always be closing. Luckily, I want a cup of coffee, and coffee is for closers.
 #[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Bard(u64);
 
@@ -249,6 +266,12 @@ impl BitAnd for Bard {
     }
 }
 
+impl BitAndAssign for Bard {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0);
+    }
+}
+
 impl BitOr for Bard {
     type Output = Self;
 
@@ -257,11 +280,23 @@ impl BitOr for Bard {
     }
 }
 
+impl BitOrAssign for Bard {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0);
+    }
+}
+
 impl BitXor for Bard {
     type Output = Self;
 
     fn bitxor(self, rhs: Self) -> Self::Output {
         Self(self.0 ^ rhs.0)
+    }
+}
+
+impl BitXorAssign for Bard {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0);
     }
 }
 
@@ -280,6 +315,14 @@ mod bard_tests {
     }
 
     #[test]
+    fn bit_and_assign() {
+        let mut bard = Bard::ACE_SPADES | Bard::ACE_HEARTS;
+        bard &= Bard::ACE_SPADES;
+
+        assert_eq!(Bard::ACE_SPADES, bard);
+    }
+
+    #[test]
     fn bit_or() {
         let raw_as: u64 = 0b1000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000;
         let raw_ah: u64 = 0b0000_0000_0000_0100_0000_0000_0000_0000_0000_0000_0000_0000_0000;
@@ -291,9 +334,37 @@ mod bard_tests {
     }
 
     #[test]
+    fn bit_or_assign() {
+        let mut bard = Bard::ACE_SPADES;
+        let expected = Bard::ACE_SPADES | Bard::ACE_HEARTS;
+
+        bard |= Bard::ACE_HEARTS;
+
+        assert_eq!(expected, bard);
+    }
+
+    #[test]
     fn bit_xor() {
         assert_eq!(Bard::ACE_SPADES ^ Bard::ACE_HEARTS, Bard::ACE_SPADES | Bard::ACE_HEARTS);
         assert_eq!(Bard::ACE_SPADES ^ Bard::ACE_SPADES, Bard::BLANK);
         assert_eq!(Bard::BLANK ^ Bard::BLANK, Bard::BLANK);
+    }
+
+    #[test]
+    fn bit_xor_assign() {
+        let mut bard = Bard::ACE_SPADES;
+
+        bard ^= Bard::ACE_HEARTS;
+
+        assert_eq!(Bard::ACE_SPADES | Bard::ACE_HEARTS, bard);
+    }
+
+    #[test]
+    fn bit_xor_assign__blank() {
+        let mut bard = Bard::ACE_SPADES;
+
+        bard ^= Bard::ACE_SPADES;
+
+        assert_eq!(Bard::BLANK, bard);
     }
 }

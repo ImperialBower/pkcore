@@ -9,6 +9,7 @@ use itertools::{Combinations, Itertools};
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Formatter;
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::str::FromStr;
 use strum::IntoEnumIterator;
 
@@ -250,6 +251,48 @@ impl Cards {
     }
 
     //endregion
+}
+
+impl BitAnd for Cards {
+    type Output = Self;
+
+    fn bitand(self, _rhs: Self) -> Self::Output {
+        todo!()
+    }
+}
+
+impl BitAndAssign for Cards {
+    fn bitand_assign(&mut self, _rhs: Self) {
+        todo!()
+    }
+}
+
+impl BitOr for Cards {
+    type Output = Self;
+
+    fn bitor(self, _rhs: Self) -> Self::Output {
+        todo!()
+    }
+}
+
+impl BitOrAssign for Cards {
+    fn bitor_assign(&mut self, _rhs: Self) {
+        todo!()
+    }
+}
+
+impl BitXor for Cards {
+    type Output = Self;
+
+    fn bitxor(self, _rhs: Self) -> Self::Output {
+        todo!()
+    }
+}
+
+impl BitXorAssign for Cards {
+    fn bitxor_assign(&mut self, _rhs: Self) {
+        todo!()
+    }
 }
 
 impl fmt::Display for Cards {
