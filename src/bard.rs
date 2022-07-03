@@ -1,4 +1,4 @@
-use std::ops::BitOr;
+use std::ops::{BitAnd, BitOr};
 
 /// A `Bard` is a binary representation of one or more `Cards` contained in a single unsigned
 /// integer. Each bit flag represents one card. Since each flag is a different card, you can
@@ -111,6 +111,9 @@ use std::ops::BitOr;
 /// assert_eq!(Bard::SIX_CLUBS & big_slick, Bard::BLANK);
 /// ```
 /// [play.rust-lang.org](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=bc792635d7ddad4e0803fef959b4e76c)
+///
+/// Let's do the rest.
+
 #[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Bard(u64);
 
@@ -238,6 +241,14 @@ impl Bard {
     // endregion
 }
 
+impl BitAnd for Bard {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Bard(self.0 & rhs.0)
+    }
+}
+
 impl BitOr for Bard {
     type Output = Self;
 
@@ -250,6 +261,15 @@ impl BitOr for Bard {
 #[allow(non_snake_case)]
 mod bard_tests {
     use super::*;
+
+    #[test]
+    fn bit_and() {
+        let big_slick = Bard(Bard::ACE_SPADES.0 | Bard::ACE_HEARTS.0);
+
+        assert_eq!(Bard::ACE_SPADES & big_slick, Bard::ACE_SPADES);
+        assert_eq!(Bard::ACE_HEARTS & big_slick, Bard::ACE_HEARTS);
+        assert_eq!(Bard::SIX_CLUBS & big_slick, Bard::BLANK);
+    }
 
     #[test]
     fn bit_or() {

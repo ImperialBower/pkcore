@@ -183,6 +183,38 @@ pub struct Nutty(HashMap<HandRank, Vec<Eval>>);
 /// back to this dynamic. Look for it... avoid it if you can... don't let it become you if you
 /// can't. You can't help it if others need to be miserable. Protect yourself. Take the time. Enjoy
 /// life.
+///
+/// Positive energy... being present... embracing challenges... these skills are way more important
+/// than any individual tech foo. When I interview people, this is what I look for. I can
+/// teach someone how to use almost any technology. I can't teach them how to be present. This is
+/// one of the main reasons so many tech initiatives fail. Nietzschean will to power only gets you
+/// so far. Eventually, you're going to need a team, working together, all striving for the same
+/// goal.
+///
+/// ![BELIEVE](https://awfulannouncing.com/wp-content/uploads/sites/94/2021/08/lasso_ep6.jpeg)
+///
+/// I remember talking to my Uncle Leon over a decade after the
+/// [Challenger disaster](https://en.wikipedia.org/wiki/Space_Shuttle_Challenger_disaster). He
+/// followed in my grandfather Joe's footsteps, who was one of the
+/// engineers for the first moon landing.
+///
+/// We were sitting around my grandmother's death bed, taking turns reading to her from the Bible,
+/// and watching DVDs from his favorite show, Stargate SG-1. I asked him how things were at NASA.
+/// His reply chilled me to the bone:
+///
+/// "NASA is dead. They've replaced the engineering managers with bean counters. They only care
+/// about hitting their budget targets."
+///
+/// A lot of my imposter syndrome stems from being Joe's grandson. He put a man on the moon with a
+/// fucking slide rule, and that after being taught all twelve grades of his primary education from
+/// a one room school room. _This is when my grandmother Hazel would send me to my room for cursing._
+///
+/// This is why I will never call myself an engineer. My grandfather was an engineer. My dad was an
+/// engineer. My uncle Leon was an engineer. I'm a programmer. I'm a software developer. It's like
+/// the difference between a person who plays the bassoon and someone who makes them. We're all on
+/// the same team, but we are not doing the same work. I've helped made the works of Beethoven and
+/// Musgrave come to life. I've also helped turn engineer's designs into functioning cars. How cool is
+/// that?
 #[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct TheNuts(Vec<Eval>);
 
