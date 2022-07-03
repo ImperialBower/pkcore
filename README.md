@@ -450,6 +450,7 @@
                   * SIDETRACK: Bard
                     * impl BitOr for Bard
                     * impl BitAnd for Bard
+                    * BitXor, BitAndAssign, BitOrAssign, BitXorAssign
 
 ## LATER
 

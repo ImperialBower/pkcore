@@ -1,4 +1,4 @@
-use std::ops::{BitAnd, BitOr};
+use std::ops::{BitAnd, BitOr, BitXor};
 
 /// A `Bard` is a binary representation of one or more `Cards` contained in a single unsigned
 /// integer. Each bit flag represents one card. Since each flag is a different card, you can
@@ -257,6 +257,14 @@ impl BitOr for Bard {
     }
 }
 
+impl BitXor for Bard {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod bard_tests {
@@ -280,5 +288,12 @@ mod bard_tests {
         let actual = Bard::ACE_SPADES | Bard::ACE_HEARTS;
 
         assert_eq!(raw_aa, actual.0);
+    }
+
+    #[test]
+    fn bit_xor() {
+        assert_eq!(Bard::ACE_SPADES ^ Bard::ACE_HEARTS, Bard::ACE_SPADES | Bard::ACE_HEARTS);
+        assert_eq!(Bard::ACE_SPADES ^ Bard::ACE_SPADES, Bard::BLANK);
+        assert_eq!(Bard::BLANK ^ Bard::BLANK, Bard::BLANK);
     }
 }
