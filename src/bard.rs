@@ -45,6 +45,72 @@ use std::ops::BitOr;
 /// your require.
 ///
 /// Let's try it for [BitOr](https://doc.rust-lang.org/std/ops/trait.BitOr.html).
+///
+/// ```
+/// use std::ops::BitOr;
+/// #[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
+/// struct Bard(u64);
+/// impl Bard {
+///     pub const ACE_SPADES: Bard = Bard(0b1000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+///     pub const ACE_HEARTS: Bard = Bard(0b0000_0000_0000_0100_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+/// }
+/// impl BitOr for Bard {
+///     type Output = Self;
+///
+///     fn bitor(self, rhs: Self) -> Self::Output {
+///         Bard(self.0 | rhs.0)
+///     }
+/// }
+///
+/// let raw_as: u64 = 0b1000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000;
+/// let raw_ah: u64 = 0b0000_0000_0000_0100_0000_0000_0000_0000_0000_0000_0000_0000_0000;
+/// let raw_aa = raw_as | raw_ah;
+///
+/// let actual = Bard::ACE_SPADES | Bard::ACE_HEARTS;
+///
+/// assert_eq!(raw_aa, actual.0);
+/// ```
+/// [play.rust-lang.org](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=c6e4e46e2d793157fb8c940a9376cdb0)
+///
+/// OK, now let's do it for [BitAnd](https://doc.rust-lang.org/std/ops/trait.BitAnd.html). For this,
+/// we're going to need to be able to extract an individual card from a consolidated `Bard`
+/// with more than one card flag set.
+///
+/// ```
+/// use std::ops::BitAnd;
+/// #[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
+/// struct Bard(u64);
+/// impl Bard {
+///     pub const ACE_SPADES: Bard = Bard(0b1000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+///     pub const ACE_HEARTS: Bard = Bard(0b0000_0000_0000_0100_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+///     pub const SIX_CLUBS:  Bard = Bard(0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0001_0000);
+///     pub const BLANK:      Bard = Bard(0);
+/// }
+///
+/// impl BitAnd for Bard {
+///     type Output = Self;
+///
+///     fn bitand(self, rhs: Self) -> Self::Output {
+///         Bard(self.0 & rhs.0)
+///     }
+/// }
+///
+/// let big_slick = Bard(Bard::ACE_SPADES.0 | Bard::ACE_HEARTS.0);
+///
+/// assert_eq!(Bard::ACE_SPADES & big_slick, Bard::ACE_SPADES);
+/// assert_eq!(Bard::ACE_HEARTS & big_slick, Bard::ACE_HEARTS);
+/// // Make sure that nothing slips through by accident
+/// // It's always a good idea when writing tests to check the negative boundary conditions of the
+/// // test. This is something that you can easily go overboard with, since it's impossible to prove
+/// // a negative. Still, you don't want to perform some basic sanity checks. While computers are
+/// // logical machines, programmers have no such constraints.
+/// //
+/// // If the `Bard` that is being `BitAnd`ed with our pair of aces, isn't one of those `Bard` flags
+/// // the resulting `Bard` should be `Bard::BLANK`. That's what this negative boundary condition
+/// // test validates:
+/// assert_eq!(Bard::SIX_CLUBS & big_slick, Bard::BLANK);
+/// ```
+/// [play.rust-lang.org](https://play.rust-lang.org/?version=stable&mode=debug&edition=2021&gist=bc792635d7ddad4e0803fef959b4e76c)
 #[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Bard(u64);
 

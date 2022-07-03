@@ -160,6 +160,29 @@ pub struct Nutty(HashMap<HandRank, Vec<Eval>>);
 /// wise sage [Gold Five](https://www.youtube.com/watch?v=2kObBphkNiU) counselling me,
 /// _"Stay on target! STAY ON TARGET!!!"_
 ///
+/// I will confess, that I love bitwise operations. I still remember the first time I saw them
+/// in code when I was working for my first professional programming gig, at the now defunct
+/// [XOOM.com](https://en.wikipedia.org/wiki/Xoom_(web_hosting)) startup. I was looking through
+/// some of their php code and they had a bunch of constants that were made up of a bunch of zeros and ones .
+/// I had no idea
+/// how the code worked. Luckily, [Jeff Glover](https://jeffglover.com/) took the time to show me.
+/// I hope that you are as lucky as I was in having a mentor like Jeff. He's an amazing developer,
+/// and designer, and most importantly... he is always having a good time doing it.
+///
+/// Back in the 90s I just
+/// happened to recognize him from his website while walking from a temp agency interview. Now,
+/// you can go to MeetUps, learn stuff, and make friends along the way. Those friends will be the
+/// most important connections in your career.
+///
+/// I can't underestimate how important it is to bring joy to your work. When I got a job working
+/// for a very very large financial institution, I noticed how downtrodden everyone seemed to be who
+/// worked there. I resolved that, no matter what, I was going to have a good time. I am not going
+/// to let anyone's negative energy bring me down. This was the best resolution I ever made
+/// in my career. So many managers confuse abuse with leadership. They're idiots. All they
+/// accomplish is to incentivize concealment and sloth. Most organizational dysfunction can be traced
+/// back to this dynamic. Look for it... avoid it if you can... don't let it become you if you
+/// can't. You can't help it if others need to be miserable. Protect yourself. Take the time. Enjoy
+/// life.
 #[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct TheNuts(Vec<Eval>);
 

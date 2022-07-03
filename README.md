@@ -449,6 +449,7 @@
                     * CANCELLED: This experiment failed.
                   * SIDETRACK: Bard
                     * impl BitOr for Bard
+                    * impl BitAnd for Bard
 
 ## LATER
 
