@@ -446,6 +446,9 @@
                     * Pile.contains_blank() as replacement for SOK trait
                     * REFACTORING: Pile.is_dealt() to replace SOK.salright()
                   * Five overriding `Eq`
+                    * CANCELLED: This experiment failed.
+                  * SIDETRACK: Bard
+                    * impl BitOr for Bard
 
 ## LATER
 

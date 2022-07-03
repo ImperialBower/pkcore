@@ -134,13 +134,32 @@ pub struct Nutty(HashMap<HandRank, Vec<Eval>>);
 /// is that clippy complains "you are deriving `Hash` but have implemented `PartialEq` explicitly".
 ///
 /// This feels like we're falling down a rabbit's hole. I really don't want to be overriding the
-/// default implementations of PartialEq and Hash if I don't really have to, especially for a
+/// default implementations of `PartialEq` and `Hash` if I don't really have to, especially for a
 /// fundamental data type like `Five`. It's designed to be simple and fast.
 ///
 /// I can think of three ways of dealing with this edge case:
 ///
 /// 1. Ignoring it until it because a real issue.
 /// 2. Forcing a sort everytime you instantiate a `HandRank` struct.
+/// 3. `Bard`!!!
+///
+/// What's a `Bard` you ask? Let's go over to that file and find out.
+///
+/// OK, now that you're back, I've come to the conclusion that I am once again overthinking the
+/// problem. One of the really great things about pair programming, is that you always have someone
+/// there calling you on your bullshit. _Do we really need that?_ _What exactly is the point?_ _Does
+/// this have anything to do with the story we're working on?_
+///
+/// When I am flying solo, like right now, I will often take some wild detours exploring strange
+/// corners, and enjoy what I might find a long the way. When I started on `Fudd` this was one of
+/// the fun things about working on it. Just playing with the code. Seeing what I could do with it.
+///
+/// The two things that are really holding me back are I want to create a tight library that others,
+/// including me, can use to crete cool shit, and that voice in the back of my head warning me that
+/// you, gentle reader, will be suffering through my ramblings. For this role, I always have that
+/// wise sage [Gold Five](https://www.youtube.com/watch?v=2kObBphkNiU) counselling me,
+/// _"Stay on target! STAY ON TARGET!!!"_
+///
 #[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct TheNuts(Vec<Eval>);
 
