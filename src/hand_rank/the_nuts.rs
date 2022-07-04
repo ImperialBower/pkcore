@@ -251,7 +251,7 @@ use std::collections::HashMap;
 /// set up, we can just grab what we need and be done with it. What are the possible use cases?
 /// Here's what I can think of:
 ///
-/// # Give a list of representative vector of `Evals`; one representing each possible `HandRank`.
+/// 1. Give a list of representative vector of `Evals`; one representing each possible `HandRank`.
 ///
 /// Here's how this could look for `The Hand`:
 ///
@@ -264,15 +264,15 @@ use std::collections::HashMap;
 /// ...
 /// ```
 ///
-/// Return a probability distribution for every type of possible `HandRank`s.
+/// 2. Return a probability distribution for every type of possible `HandRank`s.
 ///
-/// Finally, return an integer indicating where a specific player's hand is in relationship to the
+/// 3. Finally, return an integer indicating where a specific player's hand is in relationship to the
 /// nuts. So, for Daniel's hand of `9♠ 9♥ 9♣ 6♦ 5♥`, it would return three, since he has the third
 /// nuts, as they say; over a nine high straight and three nines.
 ///
 ///
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct TheNuts(HashMap<HandRank, Vec<Eval>>);
+pub struct TheNuts(HashMap<HandRank, Vec<Five>>);
 
 impl TheNuts {
     /// This is going to be a lot more complicated than with our original stab at this problem.

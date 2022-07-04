@@ -9,6 +9,7 @@ use itertools::{Combinations, Itertools};
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Formatter;
+use std::iter::Map;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::str::FromStr;
 use strum::IntoEnumIterator;
@@ -44,12 +45,6 @@ impl Cards {
             }
         }
         minus
-    }
-
-    pub fn add(&mut self, cards: &Cards) {
-        for card in cards.iter() {
-            self.insert(*card);
-        }
     }
 
     pub fn combinations(&self, k: usize) -> Combinations<indexmap::set::IntoIter<Card>> {
@@ -147,10 +142,10 @@ impl Cards {
                 None => {}
                 Some(c) => match c.len() {
                     0 => {}
-                    1 => cards.add(c),
-                    2 => cards.add(&c.flag_paired()),
-                    3 => cards.add(&c.flag_tripped()),
-                    _ => cards.add(&c.flag_quaded()),
+                    1 => cards.insert_all(c),
+                    2 => cards.insert_all(&c.flag_paired()),
+                    3 => cards.insert_all(&c.flag_tripped()),
+                    _ => cards.insert_all(&c.flag_quaded()),
                 },
             }
         }
@@ -173,6 +168,12 @@ impl Cards {
             false
         } else {
             self.0.insert(card)
+        }
+    }
+
+    pub fn insert_all(&mut self, cards: &Cards) {
+        for card in cards.iter() {
+            self.insert(*card);
         }
     }
 
@@ -451,15 +452,6 @@ mod card_tests {
     }
 
     #[test]
-    fn add() {
-        let mut pile = Cards::from_str("5♣ 4♣").unwrap();
-
-        pile.add(&Cards::from_str("3♣ 2♣ A♣").unwrap());
-
-        assert_eq!(Cards::from_str("5♣ 4♣ 3♣ 2♣ A♣").unwrap(), pile);
-    }
-
-    #[test]
     fn combinations() {
         assert_eq!(1_326, Cards::deck().combinations(2).count());
         assert_eq!(2_598_960, Cards::deck().combinations(5).count());
@@ -664,6 +656,15 @@ mod card_tests {
         assert_eq!(&Card::ACE_HEARTS, i.next().unwrap());
         assert_eq!(&Card::KING_HEARTS, i.next().unwrap());
         assert!(i.next().is_none());
+    }
+
+    #[test]
+    fn insert_all() {
+        let mut pile = Cards::from_str("5♣ 4♣").unwrap();
+
+        pile.insert_all(&Cards::from_str("3♣ 2♣ A♣").unwrap());
+
+        assert_eq!(Cards::from_str("5♣ 4♣ 3♣ 2♣ A♣").unwrap(), pile);
     }
 
     #[test]

@@ -109,7 +109,7 @@ pub trait Pile {
     fn remaining_after(&self, cards: &Cards) -> Cards {
         log::debug!("Pile.remaining_after(cards: {})", cards);
         let mut held = self.cards();
-        held.add(cards);
+        held.insert_all(cards);
         Cards::deck_minus(&held)
     }
 

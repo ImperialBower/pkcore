@@ -608,7 +608,7 @@ mod arrays_five_tests {
     #[test]
     fn hand_ranker__hand_rank__frequency_weighted() {
         let mut cards = Cards::from_str("A♠").unwrap();
-        cards.add(&Cards::from_str("T♠ Q♥ Q♠ T♥").unwrap().flag_paired());
+        cards.insert_all(&Cards::from_str("T♠ Q♥ Q♠ T♥").unwrap().flag_paired());
 
         let hand = Five::try_from(cards).unwrap();
 

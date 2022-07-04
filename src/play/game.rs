@@ -189,7 +189,7 @@ impl Game {
     #[must_use]
     pub fn remaining_cards_at_flop(&self) -> Cards {
         let mut cards = self.hands.cards();
-        cards.add(&self.board.flop.cards());
+        cards.insert_all(&self.board.flop.cards());
         Cards::deck_minus(&cards)
     }
 }
