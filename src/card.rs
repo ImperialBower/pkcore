@@ -4,7 +4,7 @@
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::suit::Suit;
-use crate::{PKError, Pile, TheNuts};
+use crate::{Evals, PKError, Pile};
 use std::fmt;
 use std::str::FromStr;
 
@@ -283,7 +283,7 @@ impl Pile for Card {
         self.0 == Card::BLANK_NUMBER
     }
 
-    fn the_nuts(&self) -> TheNuts {
+    fn the_nuts(&self) -> Evals {
         todo!()
     }
 

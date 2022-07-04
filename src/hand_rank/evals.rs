@@ -1,0 +1,99 @@
+use crate::arrays::five::Five;
+use crate::hand_rank::eval::Eval;
+
+#[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
+pub struct Evals(Vec<Eval>);
+
+impl Evals {
+    #[must_use]
+    pub fn get(&self, i: usize) -> Option<&Eval> {
+        self.0.get(i)
+    }
+
+    #[must_use]
+    pub fn sort(&self) -> Evals {
+        let mut v = self.to_vec();
+        v.sort();
+        v.reverse();
+        Evals(v)
+    }
+
+    pub fn sort_in_place(&mut self) {
+        self.0.sort();
+        self.0.reverse();
+    }
+
+    #[must_use]
+    pub fn to_vec(&self) -> Vec<Eval> {
+        self.0.clone()
+    }
+}
+
+impl From<Vec<Eval>> for Evals {
+    fn from(v: Vec<Eval>) -> Self {
+        Evals(v)
+    }
+}
+
+impl From<Vec<Five>> for Evals {
+    fn from(v: Vec<Five>) -> Self {
+        Evals(v.iter().map(Eval::from).collect())
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod hand_rank__evals_tests {
+    use super::*;
+    use crate::arrays::three::Three;
+    use crate::arrays::two::Two;
+    use crate::hand_rank::class::Class;
+    use crate::util::data::TestData;
+    use crate::Card;
+
+    #[test]
+    fn sort() {
+        let the_nuts = Evals::from(TestData::fives_the_fold());
+
+        let sorted = the_nuts.sort();
+
+        assert_eq!(Class::ThreeNines, sorted.0.get(0).unwrap().hand_rank.class);
+        assert_eq!(Class::ThreeFives, sorted.0.get(1).unwrap().hand_rank.class);
+        assert_eq!(Class::PairOfTens, sorted.0.get(2).unwrap().hand_rank.class);
+    }
+
+    #[test]
+    fn to_vec() {
+        let daniel = TestData::daniel_eval_at_flop();
+        let gus = TestData::gus_eval_at_flop();
+        let v = vec![daniel, gus];
+        let the_nuts = Evals::from(v.clone());
+
+        assert_eq!(v, the_nuts.to_vec());
+    }
+
+    #[test]
+    fn from__eval() {
+        let daniel = TestData::daniel_eval_at_flop();
+        let gus = TestData::gus_eval_at_flop();
+        let v = vec![daniel, gus];
+
+        let the_nuts = Evals::from(v.clone());
+
+        assert_eq!(v, the_nuts.0.to_vec());
+    }
+
+    #[test]
+    fn from__five() {
+        let the_flop = Three::from([Card::FIVE_CLUBS, Card::NINE_DIAMONDS, Card::TEN_HEARTS]);
+        let antonius = Eval::from(Five::from_2and3(Two::HAND_5S_5D, the_flop));
+        let phil = Eval::from(Five::from_2and3(Two::HAND_KC_TD, the_flop));
+        let daniel = Eval::from(Five::from_2and3(Two::HAND_9S_9H, the_flop));
+
+        let the_nuts = Evals::from(TestData::fives_the_fold());
+
+        assert_eq!(antonius, *the_nuts.to_vec().get(0).unwrap());
+        assert_eq!(phil, *the_nuts.to_vec().get(1).unwrap());
+        assert_eq!(daniel, *the_nuts.to_vec().get(2).unwrap());
+    }
+}

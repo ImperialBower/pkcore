@@ -3,7 +3,8 @@ use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{PKError, Pile, TheNuts};
+use crate::hand_rank::evals::Evals;
+use crate::{PKError, Pile};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -64,9 +65,9 @@ impl Pile for Three {
         ])
     }
 
-    fn the_nuts(&self) -> TheNuts {
+    fn the_nuts(&self) -> Evals {
         if !self.is_dealt() {
-            return TheNuts::default();
+            return Evals::default();
         }
 
         let mut hands: Vec<Five> = Vec::default();
@@ -78,9 +79,9 @@ impl Pile for Three {
             hands.push(hand);
         }
 
-        let mut the_nuts = TheNuts::from(hands);
-        the_nuts.sort_in_place();
-        the_nuts
+        let mut evals = Evals::from(hands);
+        evals.sort_in_place();
+        evals
     }
 
     fn to_vec(&self) -> Vec<Card> {
@@ -144,7 +145,9 @@ mod arrays_three_tests {
 
     #[test]
     fn pile__are_unique() {
-        assert!(Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]).are_unique());
+        assert!(
+            Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]).are_unique()
+        );
         assert!(!Three::from([Card::NINE_CLUBS, Card::NINE_CLUBS, Card::FIVE_HEARTS]).are_unique());
     }
 
@@ -178,7 +181,7 @@ mod arrays_three_tests {
 
         let the_nuts = three.the_nuts();
 
-        assert_eq!(TheNuts::default(), the_nuts);
+        assert_eq!(Evals::default(), the_nuts);
     }
 
     /// NOTE: These tests will quickly become out of hand if applied to the larger arrays.

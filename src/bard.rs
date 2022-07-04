@@ -345,7 +345,10 @@ mod bard_tests {
 
     #[test]
     fn bit_xor() {
-        assert_eq!(Bard::ACE_SPADES ^ Bard::ACE_HEARTS, Bard::ACE_SPADES | Bard::ACE_HEARTS);
+        assert_eq!(
+            Bard::ACE_SPADES ^ Bard::ACE_HEARTS,
+            Bard::ACE_SPADES | Bard::ACE_HEARTS
+        );
         assert_eq!(Bard::ACE_SPADES ^ Bard::ACE_SPADES, Bard::BLANK);
         assert_eq!(Bard::BLANK ^ Bard::BLANK, Bard::BLANK);
     }

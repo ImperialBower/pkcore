@@ -1,22 +1,7 @@
-use std::collections::HashMap;
 use crate::arrays::five::Five;
 use crate::hand_rank::eval::Eval;
 use crate::hand_rank::HandRank;
-
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct Nutty(HashMap<HandRank, Vec<Eval>>);
-
-impl Nutty {
-    /// This is going to be a lot more complicated than with our original stab at this problem.
-    /// We need a way to return a vector made up of one `Eval` for each HandRank, sorted by order
-    /// of strength. If only we had a data structure to easily do that.
-    ///
-    /// Turns out we already do, with the code we wrote to do the refactoring.
-    #[must_use]
-    pub fn get(&self, _i: usize) -> Option<&Eval> {
-        todo!()
-    }
-}
+use std::collections::HashMap;
 
 /// The immediate need for this class is so that we can have an easy way to hold and sort the
 /// hands possible at a particular point in a game, usually the flop. I'm thinking that we can
@@ -284,100 +269,18 @@ impl Nutty {
 /// nuts, as they say; over a nine high straight and three nines.
 ///
 ///
-///
-#[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
-pub struct TheNuts(Vec<Eval>);
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct TheNuts(HashMap<HandRank, Vec<Eval>>);
 
 impl TheNuts {
+    /// This is going to be a lot more complicated than with our original stab at this problem.
+    /// We need a way to return a vector made up of one `Eval` for each `HandRank`, sorted by order
+    /// of strength. If only we had a data structure to easily do that.
+    ///
+    /// Turns out we already do, with the code we are replacing with our refactoring. And just like
+    /// that, `TheNuts` becomes `Evals`. `TheNuts` is dead. Long live `TheNuts`.
     #[must_use]
-    pub fn get(&self, i: usize) -> Option<&Eval> {
-        self.0.get(i)
-    }
-
-    #[must_use]
-    pub fn sort(&self) -> TheNuts {
-        let mut v = self.to_vec();
-        v.sort();
-        v.reverse();
-        TheNuts(v)
-    }
-
-    pub fn sort_in_place(&mut self) {
-        self.0.sort();
-        self.0.reverse();
-    }
-
-    #[must_use]
-    pub fn to_vec(&self) -> Vec<Eval> {
-        self.0.clone()
-    }
-}
-
-impl From<Vec<Eval>> for TheNuts {
-    fn from(v: Vec<Eval>) -> Self {
-        TheNuts(v)
-    }
-}
-
-impl From<Vec<Five>> for TheNuts {
-    fn from(v: Vec<Five>) -> Self {
-        TheNuts(v.iter().map(Eval::from).collect())
-    }
-}
-
-#[cfg(test)]
-#[allow(non_snake_case)]
-mod hand_rank__the_nuts_tests {
-    use super::*;
-    use crate::arrays::three::Three;
-    use crate::arrays::two::Two;
-    use crate::hand_rank::class::Class;
-    use crate::util::data::TestData;
-    use crate::Card;
-
-    #[test]
-    fn sort() {
-        let the_nuts = TheNuts::from(TestData::fives_the_fold());
-
-        let sorted = the_nuts.sort();
-
-        assert_eq!(Class::ThreeNines, sorted.0.get(0).unwrap().hand_rank.class);
-        assert_eq!(Class::ThreeFives, sorted.0.get(1).unwrap().hand_rank.class);
-        assert_eq!(Class::PairOfTens, sorted.0.get(2).unwrap().hand_rank.class);
-    }
-
-    #[test]
-    fn to_vec() {
-        let daniel = TestData::daniel_eval_at_flop();
-        let gus = TestData::gus_eval_at_flop();
-        let v = vec![daniel, gus];
-        let the_nuts = TheNuts::from(v.clone());
-
-        assert_eq!(v, the_nuts.to_vec());
-    }
-
-    #[test]
-    fn from__eval() {
-        let daniel = TestData::daniel_eval_at_flop();
-        let gus = TestData::gus_eval_at_flop();
-        let v = vec![daniel, gus];
-
-        let the_nuts = TheNuts::from(v.clone());
-
-        assert_eq!(v, the_nuts.0.to_vec());
-    }
-
-    #[test]
-    fn from__five() {
-        let the_flop = Three::from([Card::FIVE_CLUBS, Card::NINE_DIAMONDS, Card::TEN_HEARTS]);
-        let antonius = Eval::from(Five::from_2and3(Two::HAND_5S_5D, the_flop));
-        let phil = Eval::from(Five::from_2and3(Two::HAND_KC_TD, the_flop));
-        let daniel = Eval::from(Five::from_2and3(Two::HAND_9S_9H, the_flop));
-
-        let the_nuts = TheNuts::from(TestData::fives_the_fold());
-
-        assert_eq!(antonius, *the_nuts.to_vec().get(0).unwrap());
-        assert_eq!(phil, *the_nuts.to_vec().get(1).unwrap());
-        assert_eq!(daniel, *the_nuts.to_vec().get(2).unwrap());
+    pub fn get(&self, _i: usize) -> Option<&Eval> {
+        todo!()
     }
 }

@@ -3,6 +3,7 @@
 
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::hand_rank::evals::Evals;
 use crate::hand_rank::the_nuts::TheNuts;
 use indexmap::set::IntoIter;
 use itertools::Combinations;
@@ -10,6 +11,7 @@ use std::iter::Enumerate;
 
 pub mod analysis;
 pub mod arrays;
+pub mod bard;
 pub mod card;
 pub mod card_number;
 pub mod cards;
@@ -19,7 +21,6 @@ pub mod play;
 pub mod rank;
 pub mod suit;
 pub mod util;
-pub mod bard;
 
 // region CONSTANTS
 
@@ -112,7 +113,7 @@ pub trait Pile {
         Cards::deck_minus(&held)
     }
 
-    fn the_nuts(&self) -> TheNuts;
+    fn the_nuts(&self) -> Evals;
 
     fn to_vec(&self) -> Vec<Card>;
 }
