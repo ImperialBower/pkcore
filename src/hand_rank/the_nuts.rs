@@ -15,22 +15,24 @@ use std::collections::HashMap;
 /// OK, we've hit a snag. There's not one Eval for the nuts with any given flop. For instance, there
 /// are 16 variations:
 ///
-/// * 9♣ 8♠ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♠ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♠ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♠ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♥ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♥ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♥ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♥ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♦ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♦ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♦ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♦ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♣ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♣ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♣ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
-/// * 9♣ 8♣ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
+/// ```txt
+/// 9♣ 8♠ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
+/// 9♣ 8♠ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
+/// 9♣ 8♠ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
+/// 9♣ 8♠ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
+/// 9♣ 8♥ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
+/// 9♣ 8♥ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
+/// 9♣ 8♥ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
+/// 9♣ 8♥ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
+/// 9♣ 8♦ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
+/// 9♣ 8♦ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
+/// 9♣ 8♦ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
+/// 9♣ 8♦ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
+/// 9♣ 8♣ 7♠ 6♦ 5♥ - 1605: `NineHighStraight`
+/// 9♣ 8♣ 7♥ 6♦ 5♥ - 1605: `NineHighStraight`
+/// 9♣ 8♣ 7♦ 6♦ 5♥ - 1605: `NineHighStraight`
+/// 9♣ 8♣ 7♣ 6♦ 5♥ - 1605: `NineHighStraight`
+/// ```
 ///
 /// We're either going to have to find a better data structure, or distill our vector down to only
 /// one entry for each `HandRank`.
@@ -253,13 +255,13 @@ use std::collections::HashMap;
 ///
 /// Here's how this could look for `The Hand`:
 ///
-/// ```
-/// // 9♣ 8♠ 7♠ 6♦ 5♥ HandRank { value: 1605, name: Straight, class: NineHighStraight }
-/// // 9♠ 9♥ 9♣ 6♦ 5♥ HandRank { value: 1996, name: ThreeOfAKind, class: ThreeNines }
-/// // 6♠ 6♥ 6♦ 9♣ 5♥ HandRank { value: 2185, name: ThreeOfAKind, class: ThreeSixes }
-/// // 5♠ 5♥ 5♦ 9♣ 6♦ HandRank { value: 2251, name: ThreeOfAKind, class: ThreeFives }
-/// // 9♠ 9♣ 6♠ 6♦ 5♥ HandRank { value: 3047, name: TwoPair, class: NinesAndSixes }
-/// // ...
+/// ```txt
+/// 9♣ 8♠ 7♠ 6♦ 5♥ HandRank { value: 1605, name: Straight, class: NineHighStraight }
+/// 9♠ 9♥ 9♣ 6♦ 5♥ HandRank { value: 1996, name: ThreeOfAKind, class: ThreeNines }
+/// 6♠ 6♥ 6♦ 9♣ 5♥ HandRank { value: 2185, name: ThreeOfAKind, class: ThreeSixes }
+/// 5♠ 5♥ 5♦ 9♣ 6♦ HandRank { value: 2251, name: ThreeOfAKind, class: ThreeFives }
+/// 9♠ 9♣ 6♠ 6♦ 5♥ HandRank { value: 3047, name: TwoPair, class: NinesAndSixes }
+/// ...
 /// ```
 ///
 /// Return a probability distribution for every type of possible `HandRank`s.
