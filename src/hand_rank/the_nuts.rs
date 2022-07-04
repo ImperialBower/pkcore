@@ -270,6 +270,126 @@ use std::collections::HashMap;
 /// nuts. So, for Daniel's hand of `9♠ 9♥ 9♣ 6♦ 5♥`, it would return three, since he has the third
 /// nuts, as they say; over a nine high straight and three nines.
 ///
+/// ## Redux
+///
+/// I'm thinking that I'm getting this wrong. When I hit a wall, I walk away from the problem and
+/// let my subconscious work on it for a while. Everything I have done up till now has felt like a
+/// hack. The initial version of how I wrote this worked surprisingly well... it was just clunky as
+/// frack. Here's how it looked:
+///
+/// ```
+/// use std::collections::HashSet;
+/// use pkcore::arrays::five::Five;
+/// use pkcore::arrays::HandRanker;
+/// use pkcore::arrays::three::Three;
+/// use pkcore::arrays::two::Two;
+/// use pkcore::card::Card;
+/// use pkcore::hand_rank::class::Class;
+/// use pkcore::hand_rank::eval::Eval;
+/// use pkcore::Pile;
+///
+/// #[derive(Clone, Debug, Default, Eq, PartialEq)]
+/// pub struct EvalsPerClass(Vec<Eval>, HashSet<Class>);
+///
+/// impl EvalsPerClass {
+///     pub fn push(&mut self, evaluated_hand: Eval) {
+///         if self.1.insert(evaluated_hand.hand_rank.class) {
+///             self.0.push(evaluated_hand);
+///         }
+///     }
+///
+///     #[must_use]
+///     pub fn sort(&self) -> EvalsPerClass {
+///         let mut cards = self.clone();
+///         cards.sort_in_place();
+///         cards
+///     }
+///
+///     pub fn sort_in_place(&mut self) {
+///         self.0.sort_unstable();
+///         self.0.reverse();
+///     }
+///
+///     #[must_use]
+///     pub fn to_vec(&self) -> &Vec<Eval> {
+///         &self.0
+///     }
+/// }
+///
+/// fn main() {
+///     let three = Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
+///     let mut evals = EvalsPerClass::default();
+///
+///     for v in three.remaining().combinations(2) {
+///         let hand = Five::from_2and3(Two::from(v), three);
+///         evals.push(hand.eval());
+///     }
+///     evals.sort_in_place();
+///
+///     for eval in evals.to_vec().iter() {
+///         println!("{}", eval);
+///     }
+/// }
+/// ```
+///
+/// This would produce this:
+///
+/// ```txt
+/// 9♣ 8♠ 7♠ 6♦ 5♥ - 1605: NineHighStraight
+/// 9♠ 9♥ 9♣ 6♦ 5♥ - 1996: ThreeNines
+/// 6♠ 6♥ 6♦ 9♣ 5♥ - 2185: ThreeSixes
+/// 5♠ 5♥ 5♦ 9♣ 6♦ - 2251: ThreeFives
+/// 9♠ 9♣ 6♠ 6♦ 5♥ - 3047: NinesAndSixes
+/// 9♠ 9♣ 5♠ 5♥ 6♦ - 3058: NinesAndFives
+/// 6♠ 6♦ 5♠ 5♥ 9♣ - 3221: SixesAndFives
+/// A♠ A♥ 9♣ 6♦ 5♥ - 3501: PairOfAces
+/// K♠ K♥ 9♣ 6♦ 5♥ - 3721: PairOfKings
+/// Q♠ Q♥ 9♣ 6♦ 5♥ - 3941: PairOfQueens
+/// J♠ J♥ 9♣ 6♦ 5♥ - 4161: PairOfJacks
+/// T♠ T♥ 9♣ 6♦ 5♥ - 4381: PairOfTens
+/// 9♠ 9♣ A♠ 6♦ 5♥ - 4471: PairOfNines
+/// 8♠ 8♥ 9♣ 6♦ 5♥ - 4836: PairOfEights
+/// 7♠ 7♥ 9♣ 6♦ 5♥ - 5056: PairOfSevens
+/// 6♠ 6♦ A♠ 9♣ 5♥ - 5122: PairOfSixes
+/// 5♠ 5♥ A♠ 9♣ 6♦ - 5342: PairOfFives
+/// 4♠ 4♥ 9♣ 6♦ 5♥ - 5720: PairOfFours
+/// 3♠ 3♥ 9♣ 6♦ 5♥ - 5940: PairOfTreys
+/// 2♠ 2♥ 9♣ 6♦ 5♥ - 6160: PairOfDeuces
+/// A♠ K♠ 9♣ 6♦ 5♥ - 6305: AceHigh
+/// K♠ Q♠ 9♣ 6♦ 5♥ - 6753: KingHigh
+/// Q♠ J♠ 9♣ 6♦ 5♥ - 7046: QueenHigh
+/// J♠ T♠ 9♣ 6♦ 5♥ - 7227: JackHigh
+/// T♠ 9♣ 8♠ 6♦ 5♥ - 7346: TenHigh
+/// 9♣ 8♠ 6♦ 5♥ 4♠ - 7420: NineHigh
+/// ```
+///
+/// Just what we wanted. TBH, I think that this is good enough for now. We don't need every possible
+/// hand for each possible Eval... yet. Later on
+/// I can see the desire for a probability breakdown of each `HandRank` for a given card
+/// distribution. Let's cross that bridge when we come to it. `TheNuts` is just a simple structure
+/// that can list the possible hands, best to worst. Later on, we can do something fancier, for
+/// instance:
+///
+/// ```
+/// use std::collections::{BTreeMap, HashSet};
+/// use pkcore::arrays::five::Five;
+/// use pkcore::hand_rank::HandRank;
+///
+/// #[derive(Clone, Debug, Default, Eq, PartialEq)]
+/// pub struct Evals(BTreeMap<HandRank, HashSet<Five>>);
+/// ```
+///
+/// This would store a sorted collection of `HandRank`s and every possible hand for each one. From
+/// there we can calculate the probability of each HandRank. Let's put that in our backlog and be
+/// done with it.
+///
+/// # ABC
+///
+/// Let's close this failing test. Enough already. Always be closing!
+///
+/// Of course, I would change the contract for the Pile trait to return Evals instead of our `Eval`
+/// vector.
+///
 ///
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct TheNuts(HashMap<HandRank, Vec<Five>>);

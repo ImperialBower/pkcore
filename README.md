@@ -454,6 +454,9 @@
                     * DOUBLE SIDETRACK: Added bitwise todo!s to Cards.
                 * Nutty.get()
                   * Evals
+                  * examples/evals_per_class.rs
+                    * HandRanker.eval()
+                    * EvalsPerClass in TheNuts' rustdoc
 
 ## LATER
 

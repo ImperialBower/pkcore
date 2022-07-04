@@ -24,11 +24,15 @@ pub const NO_HAND_RANK_VALUE: HandRankValue = 0;
 /// `HandRank` represents the value of a specific 5 card hand of poker. The lower the
 /// `HandRankValue` the better the hand. When a `HandRank` is instantiated it can only
 /// have a specific matching `HandRankName` and `HandRankValue`.
+///
+/// # REFACTORING
+///
+/// Remove assessors; make fields public.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct HandRank {
-    value: HandRankValue,
-    name: Name,
-    class: Class,
+    pub value: HandRankValue,
+    pub name: Name,
+    pub class: Class,
 }
 
 impl HandRank {

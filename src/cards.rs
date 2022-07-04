@@ -9,7 +9,6 @@ use itertools::{Combinations, Itertools};
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Formatter;
-use std::iter::Map;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::str::FromStr;
 use strum::IntoEnumIterator;
