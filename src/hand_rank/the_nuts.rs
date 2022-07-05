@@ -428,6 +428,7 @@ impl TheNuts {
 #[allow(non_snake_case)]
 mod hand_rank__the_nuts_tests {
     use super::*;
+    use crate::arrays::five::Five;
     use crate::arrays::three::Three;
     use crate::arrays::two::Two;
     use crate::arrays::HandRanker;
