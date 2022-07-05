@@ -1,8 +1,9 @@
-use crate::arrays::five::Five;
+use crate::hand_rank::class::Class;
 use crate::hand_rank::eval::Eval;
-use crate::hand_rank::HandRank;
-use std::collections::HashMap;
+use crate::Evals;
+use std::collections::HashSet;
 
+#[allow(clippy::needless_doctest_main)]
 /// The immediate need for this class is so that we can have an easy way to hold and sort the
 /// hands possible at a particular point in a game, usually the flop. I'm thinking that we can
 /// return this object as a part of our Pile trait, so that if we want to get all the possible
@@ -240,7 +241,7 @@ use std::collections::HashMap;
 /// use pkcore::hand_rank::HandRank;
 ///
 /// #[derive(Clone, Debug, Default, Eq, PartialEq)]
-/// pub struct Nutty(HashMap<HandRank, Vec<Eval>>);
+/// pub struct TheNuts(HashMap<HandRank, Vec<Eval>>);
 /// ```
 ///
 /// One big problem is that the dynamics of a `HashMap` are radically different than a `Vec`. Can
@@ -289,9 +290,9 @@ use std::collections::HashMap;
 /// use pkcore::Pile;
 ///
 /// #[derive(Clone, Debug, Default, Eq, PartialEq)]
-/// pub struct EvalsPerClass(Vec<Eval>, HashSet<Class>);
+/// pub struct TheNuts(Vec<Eval>, HashSet<Class>);
 ///
-/// impl EvalsPerClass {
+/// impl TheNuts {
 ///     pub fn push(&mut self, evaluated_hand: Eval) {
 ///         if self.1.insert(evaluated_hand.hand_rank.class) {
 ///             self.0.push(evaluated_hand);
@@ -299,7 +300,7 @@ use std::collections::HashMap;
 ///     }
 ///
 ///     #[must_use]
-///     pub fn sort(&self) -> EvalsPerClass {
+///     pub fn sort(&self) -> TheNuts {
 ///         let mut cards = self.clone();
 ///         cards.sort_in_place();
 ///         cards
@@ -318,7 +319,7 @@ use std::collections::HashMap;
 ///
 /// fn main() {
 ///     let three = Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
-///     let mut evals = EvalsPerClass::default();
+///     let mut evals = TheNuts::default();
 ///
 ///     for v in three.remaining().combinations(2) {
 ///         let hand = Five::from_2and3(Two::from(v), three);
@@ -380,7 +381,7 @@ use std::collections::HashMap;
 /// ```
 ///
 /// This would store a sorted collection of `HandRank`s and every possible hand for each one. From
-/// there we can calculate the probability of each HandRank. Let's put that in our backlog and be
+/// there we can calculate the probability of each `HandRank`. Let's put that in our backlog and be
 /// done with it.
 ///
 /// # ABC
@@ -390,19 +391,66 @@ use std::collections::HashMap;
 /// Of course, I would change the contract for the Pile trait to return Evals instead of our `Eval`
 /// vector.
 ///
-///
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct TheNuts(HashMap<HandRank, Vec<Five>>);
+pub struct TheNuts(Vec<Eval>, HashSet<Class>);
 
 impl TheNuts {
-    /// This is going to be a lot more complicated than with our original stab at this problem.
-    /// We need a way to return a vector made up of one `Eval` for each `HandRank`, sorted by order
-    /// of strength. If only we had a data structure to easily do that.
-    ///
-    /// Turns out we already do, with the code we are replacing with our refactoring. And just like
-    /// that, `TheNuts` becomes `Evals`. `TheNuts` is dead. Long live `TheNuts`.
+    pub fn push(&mut self, evaluated_hand: Eval) {
+        if self.1.insert(evaluated_hand.hand_rank.class) {
+            self.0.push(evaluated_hand);
+        }
+    }
+
     #[must_use]
-    pub fn get(&self, _i: usize) -> Option<&Eval> {
-        todo!()
+    pub fn sort(&self) -> TheNuts {
+        let mut cards = self.clone();
+        cards.sort_in_place();
+        cards
+    }
+
+    pub fn sort_in_place(&mut self) {
+        self.0.sort_unstable();
+        self.0.reverse();
+    }
+
+    #[must_use]
+    pub fn to_vec(&self) -> &Vec<Eval> {
+        &self.0
+    }
+
+    #[must_use]
+    pub fn to_evals(&self) -> Evals {
+        Evals::from(self.0.clone())
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod hand_rank__the_nuts_tests {
+    use super::*;
+    use crate::arrays::three::Three;
+    use crate::arrays::two::Two;
+    use crate::arrays::HandRanker;
+    use crate::{Card, Pile};
+
+    #[test]
+    fn to_evals() {
+        let three = Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
+        let mut the_nuts = TheNuts::default();
+        for v in three.remaining().combinations(2) {
+            let hand = Five::from_2and3(Two::from(v), three);
+            the_nuts.push(hand.eval());
+        }
+        the_nuts.sort_in_place();
+
+        let evals = the_nuts.to_evals();
+
+        assert_eq!(26, evals.len());
+        assert_eq!(1605, evals.get(0).unwrap().hand_rank.value());
+        assert_eq!(1996, evals.get(1).unwrap().hand_rank.value());
+        assert_eq!(2251, evals.get(3).unwrap().hand_rank.value());
+        assert_eq!(3058, evals.get(5).unwrap().hand_rank.value());
+        assert_eq!(7420, evals.get(25).unwrap().hand_rank.value());
+        assert!(evals.get(26).is_none());
     }
 }

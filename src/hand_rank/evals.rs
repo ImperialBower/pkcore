@@ -11,6 +11,16 @@ impl Evals {
     }
 
     #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    #[must_use]
     pub fn sort(&self) -> Evals {
         let mut v = self.to_vec();
         v.sort();

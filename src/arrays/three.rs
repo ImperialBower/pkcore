@@ -4,7 +4,7 @@ use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::hand_rank::evals::Evals;
-use crate::{PKError, Pile};
+use crate::{PKError, Pile, TheNuts};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -70,18 +70,15 @@ impl Pile for Three {
             return Evals::default();
         }
 
-        let mut hands: Vec<Five> = Vec::default();
+        let mut the_nuts = TheNuts::default();
 
         for v in self.remaining().combinations(2) {
-            let two = Two::from(v);
-            let hand = Five::from_2and3(two, *self);
-            // println!("> {}", hand);
-            hands.push(hand);
+            let hand = Five::from_2and3(Two::from(v), *self);
+            the_nuts.push(hand.eval());
         }
+        the_nuts.sort_in_place();
 
-        let mut evals = Evals::from(hands);
-        evals.sort_in_place();
-        evals
+        the_nuts.to_evals()
     }
 
     fn to_vec(&self) -> Vec<Card> {
@@ -171,7 +168,7 @@ mod arrays_three_tests {
             Class::NineHighStraight,
             the_nuts.get(0).unwrap().hand_rank.class()
         );
-        assert_eq!(3058, the_nuts.get(3).unwrap().hand_rank.value());
+        assert_eq!(2251, the_nuts.get(3).unwrap().hand_rank.value());
         assert_eq!(3058, the_nuts.get(5).unwrap().hand_rank.value());
     }
 
