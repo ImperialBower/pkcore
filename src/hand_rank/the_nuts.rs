@@ -437,14 +437,8 @@ mod hand_rank__the_nuts_tests {
     #[test]
     fn to_evals() {
         let three = Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
-        let mut the_nuts = TheNuts::default();
-        for v in three.remaining().combinations(2) {
-            let hand = Five::from_2and3(Two::from(v), three);
-            the_nuts.push(hand.eval());
-        }
-        the_nuts.sort_in_place();
 
-        let evals = the_nuts.to_evals();
+        let evals = three.possible_evals();
 
         assert_eq!(26, evals.len());
         assert_eq!(1605, evals.get(0).unwrap().hand_rank.value());

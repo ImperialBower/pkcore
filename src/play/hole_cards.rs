@@ -171,7 +171,7 @@ impl Pile for HoleCards {
         todo!()
     }
 
-    fn the_nuts(&self) -> Evals {
+    fn possible_evals(&self) -> Evals {
         todo!()
     }
 

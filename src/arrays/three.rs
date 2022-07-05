@@ -65,7 +65,7 @@ impl Pile for Three {
         ])
     }
 
-    fn the_nuts(&self) -> Evals {
+    fn possible_evals(&self) -> Evals {
         if !self.is_dealt() {
             return Evals::default();
         }
@@ -158,7 +158,7 @@ mod arrays_three_tests {
     fn pile__the_nuts() {
         let three = Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
 
-        let the_nuts = three.the_nuts();
+        let the_nuts = three.possible_evals();
 
         // for e in the_nuts.to_vec().iter() {
         //     println!("{}", e);
@@ -176,7 +176,7 @@ mod arrays_three_tests {
     fn pile__the_nuts__blank() {
         let three = Three::from([Card::BLANK, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
 
-        let the_nuts = three.the_nuts();
+        let the_nuts = three.possible_evals();
 
         assert_eq!(Evals::default(), the_nuts);
     }
