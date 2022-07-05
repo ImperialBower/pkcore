@@ -65,7 +65,7 @@ impl Pile for Three {
         ])
     }
 
-    fn the_nuts(&self) -> Evals {
+    fn possible_evals(&self) -> Evals {
         if !self.is_dealt() {
             return Evals::default();
         }
@@ -107,7 +107,6 @@ impl TryFrom<Cards> for Three {
 mod arrays_three_tests {
     use super::*;
     use crate::cards::Cards;
-    use crate::hand_rank::class::Class;
     use std::str::FromStr;
 
     /// <https://www.youtube.com/watch?v=vjM60lqRhPg />
@@ -155,28 +154,25 @@ mod arrays_three_tests {
     }
 
     #[test]
-    fn pile__the_nuts() {
+    fn possible_evals() {
         let three = Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
 
-        let the_nuts = three.the_nuts();
+        let evals = three.possible_evals();
 
-        // for e in the_nuts.to_vec().iter() {
-        //     println!("{}", e);
-        // }
-
-        assert_eq!(
-            Class::NineHighStraight,
-            the_nuts.get(0).unwrap().hand_rank.class()
-        );
-        assert_eq!(2251, the_nuts.get(3).unwrap().hand_rank.value());
-        assert_eq!(3058, the_nuts.get(5).unwrap().hand_rank.value());
+        assert_eq!(26, evals.len());
+        assert_eq!(1605, evals.get(0).unwrap().hand_rank.value());
+        assert_eq!(1996, evals.get(1).unwrap().hand_rank.value());
+        assert_eq!(2251, evals.get(3).unwrap().hand_rank.value());
+        assert_eq!(3058, evals.get(5).unwrap().hand_rank.value());
+        assert_eq!(7420, evals.get(25).unwrap().hand_rank.value());
+        assert!(evals.get(26).is_none());
     }
 
     #[test]
     fn pile__the_nuts__blank() {
         let three = Three::from([Card::BLANK, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
 
-        let the_nuts = three.the_nuts();
+        let the_nuts = three.possible_evals();
 
         assert_eq!(Evals::default(), the_nuts);
     }
