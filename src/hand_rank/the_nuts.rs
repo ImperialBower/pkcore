@@ -388,9 +388,7 @@ use std::collections::HashSet;
 ///
 /// Let's close this failing test. Enough already. Always be closing!
 ///
-/// Of course, I would change the contract for the Pile trait to return Evals instead of our `Eval`
-/// vector.
-///
+/// WOOOO!!!! Finally finished the first pass of this thing.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct TheNuts(Vec<Eval>, HashSet<Class>);
 
