@@ -426,26 +426,4 @@ impl TheNuts {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod hand_rank__the_nuts_tests {
-    use super::*;
-    use crate::arrays::five::Five;
-    use crate::arrays::three::Three;
-    use crate::arrays::two::Two;
-    use crate::arrays::HandRanker;
-    use crate::{Card, Pile};
-
-    #[test]
-    fn to_evals() {
-        let three = Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
-
-        let evals = three.possible_evals();
-
-        assert_eq!(26, evals.len());
-        assert_eq!(1605, evals.get(0).unwrap().hand_rank.value());
-        assert_eq!(1996, evals.get(1).unwrap().hand_rank.value());
-        assert_eq!(2251, evals.get(3).unwrap().hand_rank.value());
-        assert_eq!(3058, evals.get(5).unwrap().hand_rank.value());
-        assert_eq!(7420, evals.get(25).unwrap().hand_rank.value());
-        assert!(evals.get(26).is_none());
-    }
-}
+mod hand_rank__the_nuts_tests {}

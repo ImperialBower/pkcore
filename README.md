@@ -459,6 +459,7 @@
                     * EvalsPerClass in TheNuts' rustdoc
                 * REFACTOR: Pile.the_nuts() to .possible_evals()
               * Done!
+                * REFACTOR: Moved possible_evals() test from TheNuts to Three
 
 ## LATER
 
