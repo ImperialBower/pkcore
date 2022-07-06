@@ -389,6 +389,10 @@ use std::collections::HashSet;
 /// Let's close this failing test. Enough already. Always be closing!
 ///
 /// WOOOO!!!! Finally finished the first pass of this thing.
+///
+/// # Added implementation to `Two`.
+///
+///
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct TheNuts(Vec<Eval>, HashSet<Class>);
 

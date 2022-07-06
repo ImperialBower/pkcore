@@ -1,11 +1,16 @@
 # EPIC 00
 
+## Reading material
+
+
+
 ## Themes
 
 ### Perspective
 
 * The Booth - God Mode
 * Player
+* Spectator - sees only what everybody sees.
 
 ### Your Tools
 
@@ -17,6 +22,9 @@
 The command line is your first, and most important tool as a programmer. It has
 been my constant companion over the course of my career. There are many command
 lines. This one is mine. _examples_ ...
+
+##### rustup
+
 
 
 ## The Crazy
@@ -221,7 +229,7 @@ Also, when you pair with me, I will curse. I will say shit, and fuck, and fart,
 and if you are offended by these things, let me know. Personally, given we live
 in a world where one of the political parties is openly condemning my mom's 
 lifestyle, and kids being gunned down in their classrooms is the norm, I could
-give a flying fuck about your delicate sensibilities. I have zero tollerance
+give a flying fuck about your delicate sensibilities. I have zero tolerance
 for racism, sexism, misogyny, and prejudice toward people just trying to live the
 most authentic version of their lives. If you have a problem with that, talk to
 someone about how uncomfortable you get when you see two people of the same sex

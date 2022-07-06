@@ -460,6 +460,8 @@
                 * REFACTOR: Pile.the_nuts() to .possible_evals()
               * Done!
                 * REFACTOR: Moved possible_evals() test from TheNuts to Three
+            * Two: .possible_evals()
+              * impl From<Vec<Card>> for Three
 
 ## LATER
 
@@ -486,6 +488,7 @@
   * videos
     * [Poker Out Loud](https://solveforwhy.io/categories/poker-out-loud)
       * [Poker Our Loud Academy demo](https://www.youtube.com/watch?v=NpSDXJsej-o&t=634s)
+      * [Great rant on stack sizes in 2022 WSOP](https://www.youtube.com/watch?v=a8801jTxt4Y&t=820s)
   * mobile
     * android
       * [Building pure Rust apps for Android](https://blog.traverseresearch.nl/building-pure-rust-apps-for-android-d1e388b431b8)

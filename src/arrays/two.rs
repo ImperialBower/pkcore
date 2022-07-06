@@ -1,6 +1,9 @@
+use crate::arrays::five::Five;
+use crate::arrays::three::Three;
+use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{Evals, PKError, Pile};
+use crate::{Evals, PKError, Pile, TheNuts};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
@@ -402,11 +405,70 @@ impl FromStr for Two {
 
 impl Pile for Two {
     fn clean(&self) -> Self {
-        todo!()
+        Two([self.first().clean(), self.second().clean()])
     }
 
+    /// When I look at the traits I've coded, they don't feel particularly rusty to me. One of my
+    /// long term goals is to get better at idiomatic rust coding. Since I spent more time coding
+    /// in Java than any other language, I can always see traces of it in how I code. It's why I
+    /// am drawn to languages like Go and Rust. I love how they throw away the crutches I've grown
+    /// use to in the Object Oriented world.
+    ///
+    /// Let's get down to it.
+    ///
+    /// I spent a little bit of time spiking out ways to remove duplication in the code. Something
+    /// like:
+    ///
+    /// ```
+    /// use pkcore::arrays::five::Five;
+    /// use pkcore::arrays::HandRanker;
+    /// use pkcore::arrays::three::Three;
+    /// use pkcore::arrays::two::Two;
+    /// use pkcore::cards::Cards;
+    /// use pkcore::hand_rank::evals::Evals;
+    /// use pkcore::hand_rank::the_nuts::TheNuts;
+    /// pub trait Pile {
+    ///     fn number_of_permutations(&self) -> usize;
+    ///
+    ///     fn remaining(&self) -> Cards;
+    ///
+    ///     fn possible_evals(&self) -> Evals {
+    ///         let mut the_nuts = TheNuts::default();
+    ///
+    ///         for v in self.remaining().combinations(self.number_of_permutations()) {
+    ///             let hand = Five::from_2and3(Two::from(v), Three::default());
+    ///             // Should be something like. IDK  ¯\_(ツ)_/¯
+    ///             // let hand = Five::from_2and3(Two::from(v), *self);
+    ///             the_nuts.push(hand.eval());
+    ///         }
+    ///         the_nuts.sort_in_place();
+    ///
+    ///         the_nuts.to_evals()
+    ///    }
+    /// }
+    /// ```
+    ///
+    /// Then I could reuse the `possible_evals()` code everywhere, instead of rewriting it for every
+    /// implementation, with most of the code duplicated.  The problem is, that this code is very
+    /// specific to the texture of `Three` and `Two`, with the `Two` coming from permutations. For
+    /// my `Two.possible_evals()` I'm going to need the opposite, since I only know two cards.
+    /// I am going to need to come up with something smarter than that.
+    ///
+    /// Let's hold off on that for now, and get some passing tests written for Two first.
     fn possible_evals(&self) -> Evals {
-        todo!()
+        if !self.is_dealt() {
+            return Evals::default();
+        }
+
+        let mut the_nuts = TheNuts::default();
+
+        for v in self.remaining().combinations(3) {
+            let hand = Five::from_2and3(*self, Three::from(v));
+            the_nuts.push(hand.eval());
+        }
+        the_nuts.sort_in_place();
+
+        the_nuts.to_evals()
     }
 
     fn to_vec(&self) -> Vec<Card> {
@@ -554,7 +616,32 @@ mod arrays_two_tests {
     }
 
     #[test]
-    fn cards() {
+    fn pile__possible_evals() {
+        let two = Two::from([Card::SIX_SPADES, Card::SIX_HEARTS]);
+
+        let evals = two.possible_evals();
+
+        // One of the things I like to do when I'm working through one of these tests is to
+        // temporarily dump out the values that I am testing. When I'm done with the green,
+        // I can just delete the lines.
+        //
+        // While they are useful, you always want to leave a clean report when you're tests are
+        // running somewhere else. Nobody likes discovering a [messy campsite](https://www.stepsize.com/blog/how-to-be-an-effective-boy-girl-scout-engineer).
+        // for eval in evals.to_vec().iter() {
+        //     println!("{}", eval);
+        // }
+
+        assert_eq!(39, evals.len());
+        assert_eq!(107, evals.get(0).unwrap().hand_rank.value());
+        assert_eq!(174, evals.get(1).unwrap().hand_rank.value());
+        assert_eq!(198, evals.get(3).unwrap().hand_rank.value());
+        assert_eq!(222, evals.get(5).unwrap().hand_rank.value());
+        assert_eq!(5086, evals.get(38).unwrap().hand_rank.value());
+        assert!(evals.get(39).is_none());
+    }
+
+    #[test]
+    fn pile__cards() {
         assert_eq!(0, Two::default().cards().len());
         assert_eq!("A♦ K♥", Two::from(BIG_SLICK).cards().to_string());
     }

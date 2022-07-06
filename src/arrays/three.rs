@@ -48,6 +48,36 @@ impl From<[Card; 3]> for Three {
     }
 }
 
+impl From<Vec<Card>> for Three {
+    /// While this is not the most elegant solution to me, I do love it's straight-forward
+    /// simplicity. _Ship it!_
+    fn from(v: Vec<Card>) -> Self {
+        match v.len() {
+            3 => {
+                let one = match v.get(0) {
+                    Some(m) => *m,
+                    None => Card::BLANK,
+                };
+                let two = match v.get(1) {
+                    Some(m) => *m,
+                    None => Card::BLANK,
+                };
+                let three = match v.get(2) {
+                    Some(m) => *m,
+                    None => Card::BLANK,
+                };
+                let three = Three([one, two, three]);
+                if three.is_dealt() {
+                    three
+                } else {
+                    Three::default()
+                }
+            }
+            _ => Three::default(),
+        }
+    }
+}
+
 impl FromStr for Three {
     type Err = PKError;
 
@@ -123,6 +153,62 @@ mod arrays_three_tests {
     }
 
     #[test]
+    fn from__vec() {
+        assert_eq!(
+            Three(THE_FLOP),
+            Three::from(vec![
+                Card::NINE_CLUBS,
+                Card::SIX_DIAMONDS,
+                Card::FIVE_HEARTS
+            ])
+        );
+        // It should return default if any Let's do all the permutations, just to be sure.
+        //
+        // This is good that we did, because our initial version of our missed the cases where
+        // if any card is blank, than they all need to be blank. I'm worried that this is getting
+        // to be a very heavy operation for an internal call.
+        assert_eq!(
+            Three::default(),
+            Three::from(vec![Card::BLANK, Card::BLANK, Card::BLANK])
+        );
+        assert_eq!(
+            Three::default(),
+            Three::from(vec![Card::BLANK, Card::ACE_HEARTS, Card::BLANK])
+        );
+        assert_eq!(
+            Three::default(),
+            Three::from(vec![Card::BLANK, Card::BLANK, Card::ACE_HEARTS])
+        );
+        assert_eq!(
+            Three::default(),
+            Three::from(vec![Card::BLANK, Card::ACE_HEARTS, Card::SEVEN_HEARTS])
+        );
+        assert_eq!(
+            Three::default(),
+            Three::from(vec![Card::ACE_HEARTS, Card::BLANK, Card::SEVEN_HEARTS])
+        );
+        assert_eq!(
+            Three::default(),
+            Three::from(vec![Card::ACE_HEARTS, Card::SEVEN_HEARTS, Card::BLANK])
+        );
+        assert_eq!(Three::default(), Three::from(vec![Card::ACE_HEARTS]));
+        assert_eq!(
+            Three::default(),
+            Three::from(vec![Card::ACE_HEARTS, Card::SEVEN_HEARTS])
+        );
+        assert_eq!(
+            Two::default(),
+            Two::from(vec![
+                Card::ACE_HEARTS,
+                Card::SEVEN_HEARTS,
+                Card::SEVEN_DIAMONDS,
+                Card::SIX_DIAMONDS,
+            ])
+        );
+        assert!(!Three::from(vec![Card::BLANK, Card::BLANK, Card::BLANK]).is_dealt());
+    }
+
+    #[test]
     fn from_str() {
         assert_eq!(Three::from(THE_FLOP), Three::from_str("9♣ 6♦ 5♥").unwrap());
         assert_eq!(PKError::InvalidIndex, Three::from_str("").unwrap_err());
@@ -154,7 +240,7 @@ mod arrays_three_tests {
     }
 
     #[test]
-    fn possible_evals() {
+    fn pile__possible_evals() {
         let three = Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
 
         let evals = three.possible_evals();
