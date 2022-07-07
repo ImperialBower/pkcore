@@ -462,6 +462,9 @@
                 * REFACTOR: Moved possible_evals() test from TheNuts to Three
             * Two: .possible_evals()
               * impl From<Vec<Card>> for Three
+    * PHASE THREE: Calc the Turn
+      * examples.calc add display of the nuts at flop.
+        * REFACTOR: move the_hand() from game tests to `TestData`.
 
 ## LATER
 

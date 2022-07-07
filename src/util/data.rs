@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
@@ -6,6 +7,8 @@ use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::Card;
+use crate::play::board::Board;
+use crate::play::game::Game;
 
 /// I am a classicist when it comes to testing. Martin Fowler, in his essay
 /// [Mocks Aren't Stubs](https://martinfowler.com/articles/mocksArentStubs.html)
@@ -32,6 +35,19 @@ pub enum TestData {}
 
 #[allow(dead_code)]
 impl TestData {
+
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn the_hand() -> Game {
+        let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
+
+        Game {
+            hands: TestData::hole_cards_the_hand(),
+            board,
+        }
+    }
+
+
     /// The 985th case at the flop when running `The Hand`:
     /// `RUST_LOG=trace cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"`
     #[must_use]

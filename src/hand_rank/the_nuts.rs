@@ -392,7 +392,10 @@ use std::collections::HashSet;
 ///
 /// # Added implementation to `Two`.
 ///
+/// ## Ideas
 ///
+/// This could be the start of functionality that stores and analyses game textures. How much do
+/// the possible hands that the hero would have compare to the villains? etc...
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct TheNuts(Vec<Eval>, HashSet<Class>);
 

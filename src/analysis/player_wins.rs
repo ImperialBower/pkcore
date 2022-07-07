@@ -113,6 +113,10 @@ impl PlayOut for PlayerWins {
         // println!("{:?}", self.wins);
     }
 
+    fn play_out_turn(&mut self, hands: &HoleCards, flop: Three, turn: Card) {
+        todo!()
+    }
+
     /// # The script
     ///
     /// * init `CaseEvals`
@@ -154,5 +158,9 @@ impl PlayOut for PlayerWins {
             debug!("");
         }
         case_evals
+    }
+
+    fn case_evals_turn(&self, hands: &HoleCards, flop: Three, turn: Card) -> CaseEvals {
+        todo!()
     }
 }

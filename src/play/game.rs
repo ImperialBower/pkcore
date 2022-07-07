@@ -192,6 +192,14 @@ impl Game {
         cards.insert_all(&self.board.flop.cards());
         Cards::deck_minus(&cards)
     }
+
+    #[must_use]
+    pub fn remaining_cards_at_turn(&self) -> Cards {
+        let mut cards = self.hands.cards();
+        cards.insert_all(&self.board.flop.cards());
+        cards.insert(self.board.turn);
+        Cards::deck_minus(&cards)
+    }
 }
 
 impl Display for Game {
@@ -202,33 +210,34 @@ impl Display for Game {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod play_game_tests {
+mod play__game_tests {
     use super::*;
     use crate::arrays::HandRanker;
     use std::str::FromStr;
+    use crate::util::data::TestData;
 
-    fn the_hand() -> Game {
-        let hands = HoleCards::from_str("6♠ 6♥ 5♦ 5♣").unwrap();
-        let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
-
-        let game = Game {
-            hands: hands.clone(),
-            board,
-        };
-
-        game
-    }
+    // fn the_hand() -> Game {
+    //     let hands = HoleCards::from_str("6♠ 6♥ 5♦ 5♣").unwrap();
+    //     let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
+    //
+    //     let game = Game {
+    //         hands: hands.clone(),
+    //         board,
+    //     };
+    //
+    //     game
+    // }
 
     #[test]
     fn new() {
-        let game = the_hand();
+        let game = TestData::the_hand();
 
         assert_eq!(game, Game::new(game.hands.clone(), game.board));
     }
 
     #[test]
     fn five_at_flop() {
-        let game = the_hand();
+        let game = TestData::the_hand();
 
         assert_eq!(2185, game.five_at_flop(0).unwrap().hand_rank().value());
         assert_eq!(2251, game.five_at_flop(1).unwrap().hand_rank().value());
@@ -239,8 +248,17 @@ mod play_game_tests {
     fn remaining_cards_at_flop() {
         // Crude but effective. https://www.youtube.com/watch?v=UKkjknFwPac
         assert_eq!(
-            the_hand().remaining_cards_at_flop().to_string(),
+            TestData::the_hand().remaining_cards_at_flop().to_string(),
             "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 4♣ 3♣ 2♣"
+        );
+    }
+
+    #[test]
+    fn remaining_cards_at_turn() {
+        // Crude but effective. https://www.youtube.com/watch?v=UKkjknFwPac
+        assert_eq!(
+            TestData::the_hand().remaining_cards_at_turn().to_string(),
+            "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 4♣ 3♣ 2♣"
         );
     }
 
@@ -261,11 +279,9 @@ mod play_game_tests {
 
     #[test]
     fn display() {
-        let game = the_hand();
-
         assert_eq!(
             "DEALT: [6♠ 6♥, 5♦ 5♣] FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: 8♠",
-            game.to_string()
+            TestData::the_hand().to_string()
         );
     }
 }

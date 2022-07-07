@@ -9,6 +9,7 @@ use pkcore::util::data::TestData;
 use pkcore::util::wincounter::results::Results;
 use pkcore::{PKError, Pile};
 use std::str::FromStr;
+use pkcore::arrays::three::Three;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -89,6 +90,8 @@ fn main() -> Result<(), PKError> {
         );
     }
 
+    println!();
+
     let mut pw = PlayerWins::default();
 
     pw.play_out_flop(&game.hands, game.board.flop);
@@ -99,10 +102,14 @@ fn main() -> Result<(), PKError> {
         println!("Player #{} {:.2}% / {:.2}%", i + 1, wins, ties);
     }
 
+    println!();
+
+    display_evals_at_flop(game.board.flop);
+
     println!("{}", command(game));
 
-    let results = Results::from_wins(&TestData::wins_the_hand(), 2);
-    println!("{}", results);
+    // let results = Results::from_wins(&TestData::wins_the_hand(), 2);
+    // println!("{}", results);
 
     println!("Elapsed: {:.2?}", now.elapsed());
 
@@ -115,4 +122,14 @@ fn command(game: Game) -> String {
         game.hands.cards(),
         game.board.cards()
     )
+}
+
+fn display_evals_at_flop(flop: Three) {
+    let mut evals = flop.possible_evals();
+    evals.sort_in_place();
+
+    println!("The nuts:");
+    for (i, eval) in evals.to_vec().iter().enumerate() {
+        println!("     #{}: {}", i + 1, eval);
+    }
 }

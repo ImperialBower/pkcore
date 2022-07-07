@@ -72,7 +72,7 @@ Command:
 ❯ cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"
 ```
 
-## Calculating Odds at Flop
+## PHASE 2: Calculating Odds at Flop
 
 Staring into the abyss. One of my gifts as a developer is a more than healthy
 paranoia. Dysfunction breeds dysfunction. THE POINT??!!
@@ -164,4 +164,11 @@ The breakdown:
     * CaseEvals(Vec<CaseEval>)
       * Chances
 
-An `Eval` is 
+An `Eval` is ...
+
+## Phase 3: Odds at Turn
+
+This is going to be a easier than for the flop, since there are many fewer
+possible outcomes, but more importantly, because we've done most of the hard
+work all ready. 
+
