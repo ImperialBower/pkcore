@@ -1,7 +1,7 @@
 use crate::arrays::five::Five;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
-use crate::{Cards, PKError, Pile};
+use crate::{Cards, PKError, Pile, Evals};
 use std::fmt::{Display, Formatter};
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
@@ -49,6 +49,11 @@ impl Game {
             None => Err(PKError::Fubar),
             Some(two) => Ok(Five::from_2and3(*two, self.board.flop)),
         }
+    }
+
+    #[must_use]
+    pub fn possible_evals_at_flop(&self) -> Evals {
+        self.board.flop.possible_evals()
     }
 
     /// There is a point in your code where you reach the crux of the system you are trying to
@@ -242,6 +247,18 @@ mod play__game_tests {
         assert_eq!(2185, game.five_at_flop(0).unwrap().hand_rank().value());
         assert_eq!(2251, game.five_at_flop(1).unwrap().hand_rank().value());
         assert!(game.five_at_flop(2).is_err());
+    }
+
+    #[test]
+    fn possible_evals_at_flop() {
+        let game = TestData::the_hand();
+
+        let evals = game.possible_evals_at_flop();
+
+        assert_eq!(26, evals.len());
+        assert_eq!(1605, evals.get(0).unwrap().hand_rank.value());
+        assert_eq!(7420, evals.get(25).unwrap().hand_rank.value());
+        assert!(evals.get(26).is_none());
     }
 
     #[test]
