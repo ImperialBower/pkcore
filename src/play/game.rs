@@ -1,11 +1,11 @@
 use crate::arrays::five::Five;
+use crate::arrays::four::Four;
+use crate::arrays::seven::Seven;
+use crate::arrays::HandRanker;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
-use crate::{Cards, Evals, PKError, Pile, TheNuts, Card};
+use crate::{Card, Cards, Evals, PKError, Pile, TheNuts};
 use std::fmt::{Display, Formatter};
-use crate::arrays::four::Four;
-use crate::arrays::HandRanker;
-use crate::arrays::seven::Seven;
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -71,13 +71,12 @@ impl Game {
         let board = self.flop_and_turn();
 
         for v in self.remaining_cards_at_turn().combinations(3) {
-            match Game::flop_get_seven(board, v) {
-                Ok(seven) => {
-                    the_nuts.push(seven.eval())
-                }
-                Err(_) => {}
+            if let Ok(seven) = Game::flop_get_seven(board, &v) {
+                the_nuts.push(seven.eval());
             }
         }
+
+        the_nuts.sort_in_place();
 
         the_nuts.to_evals()
     }
@@ -91,7 +90,7 @@ impl Game {
         ])
     }
 
-    fn flop_get_seven(board: Four, three: Vec<Card>) -> Result<Seven, PKError> {
+    fn flop_get_seven(board: Four, three: &[Card]) -> Result<Seven, PKError> {
         Ok(Seven::from([
             board.first(),
             board.second(),
@@ -337,7 +336,7 @@ mod play__game_tests {
     #[test]
     fn flop_get_seven() {
         let board = TestData::the_hand().flop_and_turn();
-        let v = vec![Card::EIGHT_SPADES, Card::FIVE_DIAMONDS,Card::FIVE_CLUBS];
+        let v = vec![Card::EIGHT_SPADES, Card::FIVE_DIAMONDS, Card::FIVE_CLUBS];
         let expected = Seven::from([
             Card::NINE_CLUBS,
             Card::SIX_DIAMONDS,
@@ -348,7 +347,7 @@ mod play__game_tests {
             Card::FIVE_CLUBS,
         ]);
 
-        let actual = Game::flop_get_seven(board, v);
+        let actual = Game::flop_get_seven(board, &v);
 
         assert_eq!(expected, actual.unwrap());
     }
@@ -438,16 +437,37 @@ mod play__game_tests {
     /// are a fraud. Lying to yourself and others is easy. Honesty, while hard, gets shit done.
     ///
     /// Let's code!
+    ///
+    /// # Closing
+    ///
+    /// OK, now that we've got this to work, I'm noticing that the tests take a very long time.
+    /// This is not an analysis point that we really care about. What we need is a report of the
+    /// winning percentages for each hand. We did learn a lot, and from it we could potentially
+    /// have discovered an defect with how we're calculating the nuts at the flop.
+    ///
+    /// We've been reporting the nuts at the flop based upon combinations based upon the two cards
+    /// yet to be drawn; the turn, and the river. What if we should be calculating it based upon
+    /// those cards as well as the two potential cards that might be held by each player. So,
+    /// something like: `FLOP: 9♣ 6♦ 5♥ TURN: __, RIVER: __, PLAYER: __ __`.
+    ///
+    /// This would translate to evaluation the best possible hand for every combination of four
+    /// cards, plus the cards on the flop.
+    ///
+    /// While this test is now passing, I am going to flag it as ignore, since it is so heavy.
+    /// Our nut calculation, if we implemented the fix we documented above would be even
+    /// heavier.
     #[test]
+    #[ignore]
     fn possible_evals_at_turn() {
         let game = TestData::the_hand();
 
         let evals = game.possible_evals_at_turn();
 
-        assert_eq!(26, evals.len());
-        assert_eq!(1605, evals.get(0).unwrap().hand_rank.value());
-        assert_eq!(7420, evals.get(25).unwrap().hand_rank.value());
-        assert!(evals.get(26).is_none());
+        assert_eq!(62, evals.len());
+        assert_eq!(78, evals.get(0).unwrap().hand_rank.value());
+        assert_eq!(286, evals.get(25).unwrap().hand_rank.value());
+        assert_eq!(5306, evals.get(61).unwrap().hand_rank.value());
+        assert!(evals.get(63).is_none());
         assert_eq!(Evals::default(), Game::default().possible_evals_at_turn());
     }
 

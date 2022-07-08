@@ -3,6 +3,7 @@ use pkcore::analysis::player_wins::PlayerWins;
 use pkcore::analysis::PlayOut;
 use pkcore::arrays::three::Three;
 use pkcore::arrays::HandRanker;
+use pkcore::hand_rank::evals::Evals;
 use pkcore::play::board::Board;
 use pkcore::play::game::Game;
 use pkcore::play::hole_cards::HoleCards;
@@ -10,7 +11,6 @@ use pkcore::util::data::TestData;
 use pkcore::util::wincounter::results::Results;
 use pkcore::{PKError, Pile};
 use std::str::FromStr;
-use pkcore::hand_rank::evals::Evals;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -104,10 +104,14 @@ fn main() -> Result<(), PKError> {
     }
 
     println!();
-
-    println!("The Nuts:");
+    println!("The Nuts @ Flop:");
     display_evals_at_flop(game.board.flop);
 
+    println!();
+    println!("The Nuts @ Turn:");
+    display_evals(game.possible_evals_at_turn());
+
+    println!();
     println!("{}", command(game));
 
     // let results = Results::from_wins(&TestData::wins_the_hand(), 2);
