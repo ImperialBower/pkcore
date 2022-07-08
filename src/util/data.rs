@@ -1,14 +1,14 @@
-use std::str::FromStr;
 use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::hand_rank::eval::Eval;
+use crate::play::board::Board;
+use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::Card;
-use crate::play::board::Board;
-use crate::play::game::Game;
+use std::str::FromStr;
 
 /// I am a classicist when it comes to testing. Martin Fowler, in his essay
 /// [Mocks Aren't Stubs](https://martinfowler.com/articles/mocksArentStubs.html)
@@ -35,7 +35,6 @@ pub enum TestData {}
 
 #[allow(dead_code)]
 impl TestData {
-
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn the_hand() -> Game {

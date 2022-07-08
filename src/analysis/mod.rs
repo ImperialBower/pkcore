@@ -1,7 +1,7 @@
 use crate::arrays::three::Three;
-use crate::Card;
 use crate::hand_rank::case_evals::CaseEvals;
 use crate::play::hole_cards::HoleCards;
+use crate::Card;
 
 pub mod player_wins;
 

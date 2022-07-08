@@ -465,6 +465,9 @@
     * PHASE THREE: Calc the Turn
       * examples.calc add display of the nuts at flop.
         * REFACTOR: move the_hand() from game tests to `TestData`. (Note the clippy warning from the refactoring. Nice catch 📎!)
+      * Game.possible_evals_at_flop()
+      * Game.possible_evals_at_turn()
+        * !.is_dealt()
 
 ## LATER
 

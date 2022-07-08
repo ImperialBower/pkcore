@@ -1,7 +1,7 @@
 use crate::arrays::five::Five;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
-use crate::{Cards, PKError, Pile, Evals};
+use crate::{Cards, Evals, PKError, Pile, TheNuts};
 use std::fmt::{Display, Formatter};
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
@@ -54,6 +54,22 @@ impl Game {
     #[must_use]
     pub fn possible_evals_at_flop(&self) -> Evals {
         self.board.flop.possible_evals()
+    }
+
+    /// I don't think I am doing this right. The nuts at the turn shouldn't have any idea what the
+    /// cards being held are. Could it  be that I did the flop wrong too? Lemme think about this.
+    #[must_use]
+    pub fn possible_evals_at_turn(&self) -> Evals {
+        if !self.board.flop.is_dealt() || !self.board.turn.is_dealt() {
+            return Evals::default();
+        }
+        let mut the_nuts = TheNuts::default();
+
+        for card in self.remaining_cards_at_turn() {
+            // let six
+        }
+
+        the_nuts.to_evals()
     }
 
     /// There is a point in your code where you reach the crux of the system you are trying to
@@ -218,8 +234,8 @@ impl Display for Game {
 mod play__game_tests {
     use super::*;
     use crate::arrays::HandRanker;
-    use std::str::FromStr;
     use crate::util::data::TestData;
+    use std::str::FromStr;
 
     // fn the_hand() -> Game {
     //     let hands = HoleCards::from_str("6♠ 6♥ 5♦ 5♣").unwrap();
@@ -259,6 +275,92 @@ mod play__game_tests {
         assert_eq!(1605, evals.get(0).unwrap().hand_rank.value());
         assert_eq!(7420, evals.get(25).unwrap().hand_rank.value());
         assert!(evals.get(26).is_none());
+        assert_eq!(Evals::default(), Game::default().possible_evals_at_flop());
+    }
+
+    /// TBH, we could do more with the negative tests. We'll add it as something to watch for
+    /// when we cover test coverage more.
+    ///
+    /// Aside: One call out that one could make would be that we should have been running coverage
+    /// reports right from the beginning. This is absolutely valid. The longer you wait to add
+    /// coverage reports, the more of a hassle it will be, not just for all the potential technical
+    /// debt you might be piling up, but also for the political attacks you can open yourself up to.
+    ///
+    /// Professional programming is a very political environment, and managers are always looking
+    /// for easy ways to blame and control developers under them as a way to justify their
+    /// existence. Code coverage reports are one of the easiest ways to do this. They require almost
+    /// no thinking, and give an easy metric that they can show to their bosses as a way to prove
+    /// that they are doing a good job. The problem is, that they can be very deceptive and easily
+    /// gamed.
+    ///
+    /// ## Story Time
+    ///
+    /// Once, when I was working for a very large institution I noticed something strange about all
+    /// of the unit tests that existed for one of the most critical codebases in the company.
+    /// This code literally is responsible for a significant amount of what makes the
+    /// ⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛REDACTED⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛ work. The tests did a whole lot of setup, and then just
+    /// did a simple null check at the end.
+    ///
+    /// Turns out that all the managers met once a month to review the code coverage reports for
+    /// their departments. They would broadcast out stat reports that showed their coverage levels
+    /// and targets, and their bonuses were pegged to it.
+    ///
+    /// The problem was that the software engineers were being evaluated by those numbers too, and
+    /// so, rather than doing substantial tests, they took the path of doing the simplest thing
+    /// to get the numbers as high as possible. They were gaming the system. Any system that makes
+    /// money can and will be gamed. Know it.
+    ///
+    /// So one day, being an idiot, I gave a presentation documenting what was happening to the
+    /// managers. I highlighted the code in a way to show how they were gaming the system. There
+    /// was a universal look of dread in the room. Their key metric for code quality was worthless.
+    /// Their management efforts had wasted 10s of millions of shareholder value, and, since this
+    /// codebase were on the center of the entire companies workflow, placed their
+    /// entire enterprise at risk.
+    ///
+    /// They thanked me for my efforts, and proceeded to do absolutely nothing knowing that to do
+    /// something would have potentially destroyed all of their careers. Soon, I was transferred
+    /// to another group.
+    ///
+    /// This is why you will see the phrase _the unexamined test is not worth running_, paraphrasing
+    /// [Socrates'](https://en.wikipedia.org/wiki/The_unexamined_life_is_not_worth_living)
+    /// ὁ δὲ ἀνεξέταστος βίος οὐ βιωτὸς ἀνθρώπῳ from Plato's Apology.
+    ///
+    /// No, I don't know ancient Greek. One of the essential skills of the imposter is being able to
+    /// ~~Gopher~~ ~~Yahoo!~~ ~~HotBot~~ ~~Ask Jeeves~~ ~~Google~~ Duck Duck Go things to make
+    /// yourself look smart 😉
+    ///
+    /// Moral:
+    ///
+    /// _The closer to the hub, the more you need to harden your system's testing. Metrics don't
+    /// have perspective; people do._
+    ///
+    /// TODO: Add more coverage for negative boundary conditions.
+    ///
+    /// ## Meanwhile, back at the ranch
+    ///
+    /// We're going to start off with clearly failing values from our earlier possible_evals_at_flop()
+    /// test, then code the solution, and finally make the tests green. For complex state tests
+    /// like this, where there isn't a known target to validate, I will let a test's intermediate
+    /// failure point me to the correct result. I can compare the results to what I know should be
+    /// correct, and then adjust my tests accordingly. Some may see this as cheating. I see it as
+    /// using my brain. The goal is well tested, functioning code; not doing things the one true
+    /// way. There's a whole industry of people who know better than you telling you how you are
+    /// fucking up and that everything will be better when you follow their blueprint for success.
+    /// My general rule of thumb is: if someone has the answer for every possible situation, they
+    /// are a fraud. Lying to yourself and others is easy. Honesty, while hard, gets shit done.
+    ///
+    /// Let's code!
+    #[test]
+    fn possible_evals_at_turn() {
+        let game = TestData::the_hand();
+
+        let evals = game.possible_evals_at_turn();
+
+        assert_eq!(26, evals.len());
+        assert_eq!(1605, evals.get(0).unwrap().hand_rank.value());
+        assert_eq!(7420, evals.get(25).unwrap().hand_rank.value());
+        assert!(evals.get(26).is_none());
+        assert_eq!(Evals::default(), Game::default().possible_evals_at_turn());
     }
 
     #[test]
