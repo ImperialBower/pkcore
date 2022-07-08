@@ -134,9 +134,10 @@ impl TryFrom<Cards> for Three {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod arrays_three_tests {
+mod arrays__three_tests {
     use super::*;
     use crate::cards::Cards;
+    use crate::util::data::TestData;
     use std::str::FromStr;
 
     /// <https://www.youtube.com/watch?v=vjM60lqRhPg />
@@ -252,6 +253,14 @@ mod arrays_three_tests {
         assert_eq!(3058, evals.get(5).unwrap().hand_rank.value());
         assert_eq!(7420, evals.get(25).unwrap().hand_rank.value());
         assert!(evals.get(26).is_none());
+    }
+
+    #[test]
+    fn pile__remaining() {
+        assert_eq!(
+            TestData::the_hand().board.flop.remaining().to_string(),
+            "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣"
+        );
     }
 
     #[test]

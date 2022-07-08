@@ -493,7 +493,7 @@ impl TryFrom<Cards> for Two {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod arrays_two_tests {
+mod arrays__two_tests {
     use super::*;
     use std::collections::HashSet;
     use std::str::FromStr;

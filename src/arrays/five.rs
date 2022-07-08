@@ -290,7 +290,7 @@ impl TryFrom<Vec<Card>> for Five {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod arrays_five_tests {
+mod arrays__five_tests {
     use super::*;
     use crate::hand_rank::class::Class;
     use crate::hand_rank::name::Name;

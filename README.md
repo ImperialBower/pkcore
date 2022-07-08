@@ -468,6 +468,10 @@
       * Game.possible_evals_at_flop()
       * Game.possible_evals_at_turn()
         * !.is_dealt()
+        * Four
+          * impl From<Vec<Card>> for Four
+          * impl Pile for Four
+      * Game.flop_and_turn()
 
 ## LATER
 

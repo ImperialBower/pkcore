@@ -10,6 +10,7 @@ use pkcore::util::data::TestData;
 use pkcore::util::wincounter::results::Results;
 use pkcore::{PKError, Pile};
 use std::str::FromStr;
+use pkcore::hand_rank::evals::Evals;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -104,6 +105,7 @@ fn main() -> Result<(), PKError> {
 
     println!();
 
+    println!("The Nuts:");
     display_evals_at_flop(game.board.flop);
 
     println!("{}", command(game));
@@ -128,7 +130,12 @@ fn display_evals_at_flop(flop: Three) {
     let mut evals = flop.possible_evals();
     evals.sort_in_place();
 
-    println!("The nuts:");
+    display_evals(evals);
+}
+
+fn display_evals(mut evals: Evals) {
+    evals.sort_in_place();
+
     for (i, eval) in evals.to_vec().iter().enumerate() {
         println!("     #{}: {}", i + 1, eval);
     }

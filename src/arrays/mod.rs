@@ -3,6 +3,7 @@ use crate::hand_rank::eval::Eval;
 use crate::hand_rank::{HandRank, HandRankValue};
 
 pub mod five;
+pub mod four;
 pub mod seven;
 pub mod six;
 pub mod three;

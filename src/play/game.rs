@@ -1,8 +1,11 @@
 use crate::arrays::five::Five;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
-use crate::{Cards, Evals, PKError, Pile, TheNuts};
+use crate::{Cards, Evals, PKError, Pile, TheNuts, Card};
 use std::fmt::{Display, Formatter};
+use crate::arrays::four::Four;
+use crate::arrays::HandRanker;
+use crate::arrays::seven::Seven;
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -65,11 +68,39 @@ impl Game {
         }
         let mut the_nuts = TheNuts::default();
 
-        for card in self.remaining_cards_at_turn() {
-            // let six
+        let board = self.flop_and_turn();
+
+        for v in self.remaining_cards_at_turn().combinations(3) {
+            match Game::flop_get_seven(board, v) {
+                Ok(seven) => {
+                    the_nuts.push(seven.eval())
+                }
+                Err(_) => {}
+            }
         }
 
         the_nuts.to_evals()
+    }
+
+    fn flop_and_turn(&self) -> Four {
+        Four::from([
+            self.board.flop.first(),
+            self.board.flop.second(),
+            self.board.flop.third(),
+            self.board.turn,
+        ])
+    }
+
+    fn flop_get_seven(board: Four, three: Vec<Card>) -> Result<Seven, PKError> {
+        Ok(Seven::from([
+            board.first(),
+            board.second(),
+            board.third(),
+            board.forth(),
+            *three.get(0).ok_or(PKError::InvalidCard)?,
+            *three.get(1).ok_or(PKError::InvalidCard)?,
+            *three.get(2).ok_or(PKError::InvalidCard)?,
+        ]))
     }
 
     /// There is a point in your code where you reach the crux of the system you are trying to
@@ -207,17 +238,42 @@ impl Game {
     /// trying out the `PlayOut` generic trait we need to be able to determine how many `Cards` are
     /// remaining at a specific point in the hand. This method locks it into the flop, and we
     /// really don't need that.
-    #[must_use]
-    pub fn remaining_cards_at_flop(&self) -> Cards {
-        let mut cards = self.hands.cards();
-        cards.insert_all(&self.board.flop.cards());
-        Cards::deck_minus(&cards)
-    }
+    ///
+    /// BUG FIX:
+    ///
+    /// I am not realizing that the original version of this code was flawed, and in truth,
+    /// pointless.
+    ///
+    /// ```txt
+    /// #[must_use]
+    /// pub fn remaining_cards_at_flop(&self) -> Cards {
+    ///     let mut cards = self.hands.cards();
+    ///     cards.insert_all(&self.board.flop.cards());
+    ///     Cards::deck_minus(&cards)
+    /// }
+    /// ```
+    /// We were stripping away the cards in the hands that the players held. However, when
+    /// calculating the nuts, we don't consider that. Those cards are part of the possible cards
+    /// that we should use in determining what hands are possible.
+    ///
+    /// Since `Three` implements the `Pile` trait, we can get the remaining cards simply by calling
+    /// `Three.board.flop.remaining()`.
+    ///
+    /// This is an area that could be interesting later on when we start to explore blockers
+    /// and range odds. If you hold certain cards, you can tell when certain hands aren't as
+    /// possible for your opponents. But, for now, we are getting ahead of ourselves.
+    // pub fn remaining_cards_at_flop(&self) -> Cards {
+    //     let mut cards = self.hands.cards();
+    //     cards.insert_all(&self.board.flop.cards());
+    //     Cards::deck_minus(&cards)
+    // }
 
+    /// I am going to make this a private function for now. I just need it for
+    /// `possible_evals_at_turn()`.
     #[must_use]
-    pub fn remaining_cards_at_turn(&self) -> Cards {
-        let mut cards = self.hands.cards();
-        cards.insert_all(&self.board.flop.cards());
+    fn remaining_cards_at_turn(&self) -> Cards {
+        let mut cards = self.board.flop.cards();
+        // cards.insert_all(&self.board.flop.cards());
         cards.insert(self.board.turn);
         Cards::deck_minus(&cards)
     }
@@ -263,6 +319,38 @@ mod play__game_tests {
         assert_eq!(2185, game.five_at_flop(0).unwrap().hand_rank().value());
         assert_eq!(2251, game.five_at_flop(1).unwrap().hand_rank().value());
         assert!(game.five_at_flop(2).is_err());
+    }
+
+    #[test]
+    fn flop_and_turn() {
+        let game = TestData::the_hand();
+        let expected = Four::from([
+            Card::NINE_CLUBS,
+            Card::SIX_DIAMONDS,
+            Card::FIVE_HEARTS,
+            Card::FIVE_SPADES,
+        ]);
+
+        assert_eq!(expected, game.flop_and_turn());
+    }
+
+    #[test]
+    fn flop_get_seven() {
+        let board = TestData::the_hand().flop_and_turn();
+        let v = vec![Card::EIGHT_SPADES, Card::FIVE_DIAMONDS,Card::FIVE_CLUBS];
+        let expected = Seven::from([
+            Card::NINE_CLUBS,
+            Card::SIX_DIAMONDS,
+            Card::FIVE_HEARTS,
+            Card::FIVE_SPADES,
+            Card::EIGHT_SPADES,
+            Card::FIVE_DIAMONDS,
+            Card::FIVE_CLUBS,
+        ]);
+
+        let actual = Game::flop_get_seven(board, v);
+
+        assert_eq!(expected, actual.unwrap());
     }
 
     #[test]
@@ -363,21 +451,23 @@ mod play__game_tests {
         assert_eq!(Evals::default(), Game::default().possible_evals_at_turn());
     }
 
-    #[test]
-    fn remaining_cards_at_flop() {
-        // Crude but effective. https://www.youtube.com/watch?v=UKkjknFwPac
-        assert_eq!(
-            TestData::the_hand().remaining_cards_at_flop().to_string(),
-            "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 4♣ 3♣ 2♣"
-        );
-    }
+    // Removed since not needed.
+    //
+    // #[test]
+    // fn remaining_cards_at_flop() {
+    //     // Crude but effective. https://www.youtube.com/watch?v=UKkjknFwPac
+    //     assert_eq!(
+    //         TestData::the_hand().remaining_cards_at_flop().to_string(),
+    //         "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣"
+    //     );
+    // }
 
     #[test]
     fn remaining_cards_at_turn() {
         // Crude but effective. https://www.youtube.com/watch?v=UKkjknFwPac
         assert_eq!(
             TestData::the_hand().remaining_cards_at_turn().to_string(),
-            "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 4♣ 3♣ 2♣"
+            "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣"
         );
     }
 

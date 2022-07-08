@@ -143,7 +143,7 @@ impl TryFrom<Cards> for Seven {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod arrays_seven_tests {
+mod arrays__seven_tests {
     use super::*;
     use crate::hand_rank::class::Class;
     use crate::hand_rank::name::Name;
