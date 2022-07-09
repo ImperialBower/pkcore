@@ -632,11 +632,11 @@ mod arrays__two_tests {
         // }
 
         assert_eq!(39, evals.len());
-        assert_eq!(107, evals.get(0).unwrap().hand_rank.value());
-        assert_eq!(174, evals.get(1).unwrap().hand_rank.value());
-        assert_eq!(198, evals.get(3).unwrap().hand_rank.value());
-        assert_eq!(222, evals.get(5).unwrap().hand_rank.value());
-        assert_eq!(5086, evals.get(38).unwrap().hand_rank.value());
+        assert_eq!(107, evals.get(0).unwrap().hand_rank.value);
+        assert_eq!(174, evals.get(1).unwrap().hand_rank.value);
+        assert_eq!(198, evals.get(3).unwrap().hand_rank.value);
+        assert_eq!(222, evals.get(5).unwrap().hand_rank.value);
+        assert_eq!(5086, evals.get(38).unwrap().hand_rank.value);
         assert!(evals.get(39).is_none());
     }
 

@@ -235,9 +235,9 @@ mod arrays__seven_tests {
     #[test]
     fn hand_rank() {
         let (hr, best) = Seven::from(CARDS).hand_rank_and_hand();
-        assert_eq!(1608, hr.value());
-        assert_eq!(Class::SixHighStraight, hr.class());
-        assert_eq!(Name::Straight, hr.name());
+        assert_eq!(1608, hr.value);
+        assert_eq!(Class::SixHighStraight, hr.class);
+        assert_eq!(Name::Straight, hr.name);
         assert_eq!(Five::from_str("6S 5D 4S 3C 2S").unwrap(), best);
     }
 

@@ -77,8 +77,18 @@ impl HoleCards {
             .collect()
     }
 
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     pub fn iter(&self) -> Iter<'_, Two> {
         self.0.iter()
+    }
+
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.0.len()
     }
 
     pub fn push(&mut self, two: Two) {

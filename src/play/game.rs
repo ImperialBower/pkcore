@@ -1,7 +1,11 @@
+use crate::analysis::player_wins::PlayerWins;
+use crate::analysis::PlayOut;
 use crate::arrays::five::Five;
 use crate::arrays::four::Four;
 use crate::arrays::seven::Seven;
+use crate::arrays::six::Six;
 use crate::arrays::HandRanker;
+use crate::hand_rank::eval::Eval;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
 use crate::{Card, Cards, Evals, PKError, Pile, TheNuts};
@@ -47,11 +51,37 @@ impl Game {
     /// # Errors
     ///
     /// Returns `PKError::Fubar` if invalid index is passed in.
-    pub fn five_at_flop(&self, index: usize) -> Result<Five, PKError> {
+    pub fn eval_at_flop(&self, index: usize) -> Result<Eval, PKError> {
         match self.hands.get(index) {
             None => Err(PKError::Fubar),
-            Some(two) => Ok(Five::from_2and3(*two, self.board.flop)),
+            Some(two) => Ok(Five::from_2and3(*two, self.board.flop).eval()),
         }
+    }
+
+    pub fn eval_at_turn(&self, index: usize) -> Result<Eval, PKError> {
+        match self.hands.get(index) {
+            None => Err(PKError::Fubar),
+            Some(two) => Ok(Six::from_2and3and1(*two, self.board.flop, self.board.turn).eval()),
+        }
+    }
+
+    pub fn eval_at_flop_str(&self, index: usize) -> Result<String, PKError> {
+        match self.eval_at_flop(index) {
+            Err(e) => Err(e),
+            Ok(eval) => Ok(format!("{} ({})", eval.hand, eval.hand_rank)),
+        }
+    }
+
+    pub fn player_wins_at_flop(&self) -> PlayerWins {
+        let mut pw = PlayerWins::default();
+        pw.play_out_flop(&self.hands, self.board.flop);
+        pw
+    }
+
+    pub fn player_wins_at_turn(&self) -> PlayerWins {
+        let mut pw = PlayerWins::default();
+        pw.play_out_turn(&self.hands, self.board.flop, self.board.turn);
+        pw
     }
 
     #[must_use]
@@ -315,9 +345,9 @@ mod play__game_tests {
     fn five_at_flop() {
         let game = TestData::the_hand();
 
-        assert_eq!(2185, game.five_at_flop(0).unwrap().hand_rank().value());
-        assert_eq!(2251, game.five_at_flop(1).unwrap().hand_rank().value());
-        assert!(game.five_at_flop(2).is_err());
+        assert_eq!(2185, game.eval_at_flop(0).unwrap().hand_rank.value);
+        assert_eq!(2251, game.eval_at_flop(1).unwrap().hand_rank.value);
+        assert!(game.eval_at_flop(2).is_err());
     }
 
     #[test]
@@ -359,8 +389,8 @@ mod play__game_tests {
         let evals = game.possible_evals_at_flop();
 
         assert_eq!(26, evals.len());
-        assert_eq!(1605, evals.get(0).unwrap().hand_rank.value());
-        assert_eq!(7420, evals.get(25).unwrap().hand_rank.value());
+        assert_eq!(1605, evals.get(0).unwrap().hand_rank.value);
+        assert_eq!(7420, evals.get(25).unwrap().hand_rank.value);
         assert!(evals.get(26).is_none());
         assert_eq!(Evals::default(), Game::default().possible_evals_at_flop());
     }
@@ -477,9 +507,9 @@ mod play__game_tests {
         let evals = game.possible_evals_at_turn();
 
         assert_eq!(62, evals.len());
-        assert_eq!(78, evals.get(0).unwrap().hand_rank.value());
-        assert_eq!(286, evals.get(25).unwrap().hand_rank.value());
-        assert_eq!(5306, evals.get(61).unwrap().hand_rank.value());
+        assert_eq!(78, evals.get(0).unwrap().hand_rank.value);
+        assert_eq!(286, evals.get(25).unwrap().hand_rank.value);
+        assert_eq!(5306, evals.get(61).unwrap().hand_rank.value);
         assert!(evals.get(63).is_none());
         assert_eq!(Evals::default(), Game::default().possible_evals_at_turn());
     }

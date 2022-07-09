@@ -116,12 +116,8 @@ impl Results {
         let (wins, ties) = self.wins_and_ties(player_index);
         let (win_percentage, tie_percentage) = self.wins_and_ties_percentages(player_index);
         format!(
-            "Player #{} {:.2}% / {:.2}% ({}/{})",
-            player_index + 1,
-            win_percentage,
-            tie_percentage,
-            wins,
-            ties
+            "{:.2}% / {:.2}% ({}/{})",
+            win_percentage, tie_percentage, wins, ties
         )
     }
 
@@ -163,7 +159,7 @@ impl Results {
 impl Display for Results {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for i in 0..self.v.len() {
-            writeln!(f, "{}", self.player_to_string(i))?;
+            writeln!(f, "Player #{} {}", i + 1, self.player_to_string(i))?;
         }
         Ok(())
     }
@@ -188,14 +184,11 @@ mod util__wincounter__results__tests {
         let results = Results::from_wins(&TestData::wins_the_hand(), 2);
 
         assert_eq!(
-            "Player #1 79.73% / 1.88% (1365284/32116)",
+            "79.73% / 1.88% (1365284/32116)",
             results.player_to_string(0)
         );
-        assert_eq!(
-            "Player #2 18.39% / 1.88% (314904/32116)",
-            results.player_to_string(1)
-        );
-        assert_eq!("Player #3 0.00% / 0.00% (0/0)", results.player_to_string(2));
+        assert_eq!("18.39% / 1.88% (314904/32116)", results.player_to_string(1));
+        assert_eq!("0.00% / 0.00% (0/0)", results.player_to_string(2));
     }
 
     #[test]

@@ -54,8 +54,8 @@ where
         "CARDS: {} - BEST HAND: {} - {}: {:?}",
         cards.to_string(),
         hand.to_string(),
-        hand_rank.value(),
-        hand_rank.class()
+        hand_rank.value,
+        hand_rank.class,
     );
 
     let sorts = hand.iter().counts_by(|card| card.get_rank());

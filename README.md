@@ -476,7 +476,8 @@
       * REFACTORING: Move PlayerWins::seven_at_flop() to Seven::from_case_at_flop()
       * Seven::from_case_at_turn()
       * PlayerWins.case_evals_turn()
-      * 
+        * Calc.display_odds()
+        * Game.five_at_turn()
 
 ## LATER
 

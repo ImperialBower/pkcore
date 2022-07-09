@@ -247,11 +247,11 @@ mod arrays__three_tests {
         let evals = three.possible_evals();
 
         assert_eq!(26, evals.len());
-        assert_eq!(1605, evals.get(0).unwrap().hand_rank.value());
-        assert_eq!(1996, evals.get(1).unwrap().hand_rank.value());
-        assert_eq!(2251, evals.get(3).unwrap().hand_rank.value());
-        assert_eq!(3058, evals.get(5).unwrap().hand_rank.value());
-        assert_eq!(7420, evals.get(25).unwrap().hand_rank.value());
+        assert_eq!(1605, evals.get(0).unwrap().hand_rank.value);
+        assert_eq!(1996, evals.get(1).unwrap().hand_rank.value);
+        assert_eq!(2251, evals.get(3).unwrap().hand_rank.value);
+        assert_eq!(3058, evals.get(5).unwrap().hand_rank.value);
+        assert_eq!(7420, evals.get(25).unwrap().hand_rank.value);
         assert!(evals.get(26).is_none());
     }
 

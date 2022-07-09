@@ -35,26 +35,9 @@ pub struct HandRank {
     pub class: Class,
 }
 
-impl HandRank {
-    #[must_use]
-    pub fn value(&self) -> HandRankValue {
-        self.value
-    }
-
-    #[must_use]
-    pub fn name(&self) -> Name {
-        self.name
-    }
-
-    #[must_use]
-    pub fn class(&self) -> Class {
-        self.class
-    }
-}
-
 impl Display for HandRank {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {:?}", self.value, self.class)
+        write!(f, "{}-{:?}", self.value, self.class)
     }
 }
 

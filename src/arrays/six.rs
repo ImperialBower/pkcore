@@ -1,4 +1,6 @@
 use crate::arrays::five::Five;
+use crate::arrays::three::Three;
+use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
@@ -21,6 +23,18 @@ impl Six {
         [0, 2, 3, 4, 5],
         [1, 2, 3, 4, 5],
     ];
+
+    #[must_use]
+    pub fn from_2and3and1(hole_cards: Two, flop: Three, turn: Card) -> Six {
+        Six([
+            hole_cards.first(),
+            hole_cards.second(),
+            flop.first(),
+            flop.second(),
+            flop.third(),
+            turn,
+        ])
+    }
 
     //region accessors
     #[must_use]
@@ -205,9 +219,9 @@ mod arrays__six_tests {
     #[test]
     fn hand_rank() {
         let (hr, best) = Six::from(CARDS).hand_rank_and_hand();
-        assert_eq!(9, hr.value());
-        assert_eq!(Class::SixHighStraightFlush, hr.class());
-        assert_eq!(Name::StraightFlush, hr.name());
+        assert_eq!(9, hr.value);
+        assert_eq!(Class::SixHighStraightFlush, hr.class);
+        assert_eq!(Name::StraightFlush, hr.name);
         assert_eq!(Five::from_str("6d 5D 4D 3D 2d").unwrap(), best);
     }
 

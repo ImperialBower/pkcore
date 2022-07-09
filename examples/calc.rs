@@ -81,41 +81,14 @@ fn main() -> Result<(), PKError> {
 
     println!("{}", game);
 
-    // Phase 2.1
-    for (i, hole_cards) in game.hands.iter().enumerate() {
-        println!(
-            "Player #{} {} - {}",
-            i + 1,
-            hole_cards,
-            game.five_at_flop(i)?.hand_rank()
-        );
-    }
+    display_odds_at_flop(&game)?;
 
-    println!();
-
-    let mut pw = PlayerWins::default();
-
-    pw.play_out_flop(&game.hands, game.board.flop);
-
-    for (i, _) in game.hands.iter().enumerate() {
-        let (wins, ties) = pw.wins.percentage_for_player(i);
-
-        println!("Player #{} {:.2}% / {:.2}%", i + 1, wins, ties);
-    }
-
-    println!();
-    println!("The Nuts @ Flop:");
     display_evals_at_flop(game.board.flop);
 
-    println!();
-    println!("The Nuts @ Turn:");
-    display_evals(game.possible_evals_at_turn());
+    display_odds_at_turn(&game)?;
 
     println!();
     println!("{}", command(game));
-
-    // let results = Results::from_wins(&TestData::wins_the_hand(), 2);
-    // println!("{}", results);
 
     println!("Elapsed: {:.2?}", now.elapsed());
 
@@ -131,16 +104,62 @@ fn command(game: Game) -> String {
 }
 
 fn display_evals_at_flop(flop: Three) {
+    println!();
+    println!("The Nuts @ Flop:");
     let mut evals = flop.possible_evals();
     evals.sort_in_place();
-
     display_evals(evals);
+}
+
+fn _display_evals_at_turn(game: Game) {
+    println!();
+    println!("The Nuts @ Turn:");
+    display_evals(game.possible_evals_at_turn());
 }
 
 fn display_evals(mut evals: Evals) {
     evals.sort_in_place();
 
     for (i, eval) in evals.to_vec().iter().enumerate() {
-        println!("     #{}: {}", i + 1, eval);
+        println!("  #{}: {}", i + 1, eval);
     }
+}
+
+fn display_odds_at_flop(game: &Game) -> Result<(), PKError> {
+    let pw = game.player_wins_at_flop();
+
+    let results = Results::from_wins(&pw.wins, game.hands.len());
+
+    println!();
+    println!("Odds at the Flop:");
+    display_odds(&game, &results)?;
+
+    Ok(())
+}
+
+fn display_odds_at_turn(game: &Game) -> Result<(), PKError> {
+    let pw = game.player_wins_at_turn();
+
+    let results = Results::from_wins(&pw.wins, game.hands.len());
+
+    println!();
+    println!("Odds at the Turn:");
+
+    display_odds(&game, &results)?;
+
+    Ok(())
+}
+
+fn display_odds(game: &Game, results: &Results) -> Result<(), PKError> {
+    for (i, hole_cards) in game.hands.iter().enumerate() {
+        println!(
+            "  Player #{} [{}] {} - {}",
+            i + 1,
+            hole_cards,
+            results.player_to_string(i),
+            game.eval_at_flop_str(i)?
+        );
+    }
+
+    Ok(())
 }

@@ -602,7 +602,7 @@ mod arrays__five_tests {
 
     #[test]
     fn hand_ranker__hand_rank__default() {
-        assert_eq!(0, Five::default().hand_rank().value());
+        assert_eq!(0, Five::default().hand_rank().value);
     }
 
     #[test]
@@ -612,7 +612,7 @@ mod arrays__five_tests {
 
         let hand = Five::try_from(cards).unwrap();
 
-        assert_eq!(2732, hand.hand_rank().value());
+        assert_eq!(2732, hand.hand_rank().value);
         assert_eq!("Q♠ Q♥ T♠ T♥ A♠", hand.sort().to_string());
     }
 
@@ -2434,9 +2434,9 @@ mod arrays__five_tests {
         let (hand_rank, five) = hand.hand_rank_and_hand();
 
         assert_eq!(hand.sort().clean(), five);
-        assert_eq!(expected_value, hand_rank.value());
-        assert_eq!(expected_name, hand_rank.name());
-        assert_eq!(expected_class, hand_rank.class());
+        assert_eq!(expected_value, hand_rank.value);
+        assert_eq!(expected_name, hand_rank.name);
+        assert_eq!(expected_class, hand_rank.class);
     }
     //endregion
 
