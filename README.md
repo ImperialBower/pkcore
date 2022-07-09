@@ -479,7 +479,8 @@
         * Calc.display_odds()
         * Game.five_at_turn()
       * PHASE 3.1: Outs
-        * Refactor possible_evals to evals
+        * REFACTOR: possible_evals to evals
+        * REFACTOR: Game.evals_at_turn() to .the_nuts_at_turn()
 
 ## LATER
 

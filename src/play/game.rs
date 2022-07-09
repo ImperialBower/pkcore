@@ -110,9 +110,9 @@ impl Game {
     /// I don't think I am doing this right. The nuts at the turn shouldn't have any idea what the
     /// cards being held are. Could it  be that I did the flop wrong too? Lemme think about this.
     #[must_use]
-    pub fn evals_at_turn(&self) -> Evals {
+    pub fn the_nuts_at_turn(&self) -> TheNuts {
         if !self.board.flop.is_dealt() || !self.board.turn.is_dealt() {
-            return Evals::default();
+            return TheNuts::default();
         }
         let mut the_nuts = TheNuts::default();
 
@@ -126,7 +126,7 @@ impl Game {
 
         the_nuts.sort_in_place();
 
-        the_nuts.to_evals()
+        the_nuts
     }
 
     fn flop_and_turn(&self) -> Four {
@@ -505,29 +505,18 @@ mod play__game_tests {
     /// You may think you know how things work, but there will always be surprises.
     #[test]
     #[ignore]
-    fn evals_at_turn() {
+    fn the_nuts_at_turn() {
         let game = TestData::the_hand();
 
-        let evals = game.evals_at_turn();
+        let evals = game.the_nuts_at_turn().to_evals();
 
         assert_eq!(62, evals.len());
         assert_eq!(78, evals.get(0).unwrap().hand_rank.value);
         assert_eq!(286, evals.get(25).unwrap().hand_rank.value);
         assert_eq!(5306, evals.get(61).unwrap().hand_rank.value);
         assert!(evals.get(63).is_none());
-        assert_eq!(Evals::default(), Game::default().evals_at_turn());
+        assert_eq!(Evals::default(), Game::default().the_nuts_at_turn().to_evals());
     }
-
-    // Removed since not needed.
-    //
-    // #[test]
-    // fn remaining_cards_at_flop() {
-    //     // Crude but effective. https://www.youtube.com/watch?v=UKkjknFwPac
-    //     assert_eq!(
-    //         TestData::the_hand().remaining_cards_at_flop().to_string(),
-    //         "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣"
-    //     );
-    // }
 
     #[test]
     fn remaining_cards_at_turn() {

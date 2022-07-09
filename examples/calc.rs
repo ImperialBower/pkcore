@@ -110,7 +110,7 @@ fn display_evals_at_flop(flop: Three) {
 fn _display_evals_at_turn(game: Game) {
     println!();
     println!("The Nuts @ Turn:");
-    display_evals(game.evals_at_turn());
+    display_evals(game.the_nuts_at_turn().to_evals());
 }
 
 fn display_evals(mut evals: Evals) {
