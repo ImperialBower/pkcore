@@ -1,9 +1,9 @@
+use crate::analysis::evals::Evals;
 use crate::arrays::five::Five;
 use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::hand_rank::evals::Evals;
 use crate::{PKError, Pile, TheNuts};
 use std::fmt;
 use std::fmt::{Display, Formatter};

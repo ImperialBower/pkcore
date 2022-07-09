@@ -1,5 +1,5 @@
-use crate::hand_rank::class::Class;
-use crate::hand_rank::eval::Eval;
+use crate::analysis::class::Class;
+use crate::analysis::eval::Eval;
 use crate::Evals;
 use std::collections::HashSet;
 
@@ -46,8 +46,8 @@ use std::collections::HashSet;
 ///
 /// ```
 /// use std::collections::HashMap;
-/// use pkcore::hand_rank::eval::Eval;
-/// use pkcore::hand_rank::hand_rank::HandRank;
+/// use pkcore::analysis::eval::Eval;
+/// use pkcore::analysis::hand_rank::HandRank;
 ///
 /// pub struct TheNuts(HashMap<HandRank, Vec<Eval>>);
 /// ```
@@ -58,8 +58,8 @@ use std::collections::HashSet;
 /// ```
 ///
 /// use std::collections::{HashMap, HashSet};
-/// use pkcore::hand_rank::eval::Eval;
-/// use pkcore::hand_rank::hand_rank::HandRank;
+/// use pkcore::analysis::eval::Eval;
+/// use pkcore::analysis::hand_rank::HandRank;
 ///
 /// pub struct TheNuts(HashMap<HandRank, HashSet<Eval>>);
 /// ```
@@ -237,8 +237,8 @@ use std::collections::HashSet;
 ///
 /// ```
 /// use std::collections::HashMap;
-/// use pkcore::hand_rank::eval::Eval;
-/// use pkcore::hand_rank::hand_rank::HandRank;
+/// use pkcore::analysis::eval::Eval;
+/// use pkcore::analysis::hand_rank::HandRank;
 ///
 /// #[derive(Clone, Debug, Default, Eq, PartialEq)]
 /// pub struct TheNuts(HashMap<HandRank, Vec<Eval>>);
@@ -285,8 +285,8 @@ use std::collections::HashSet;
 /// use pkcore::arrays::three::Three;
 /// use pkcore::arrays::two::Two;
 /// use pkcore::card::Card;
-/// use pkcore::hand_rank::class::Class;
-/// use pkcore::hand_rank::eval::Eval;
+/// use pkcore::analysis::class::Class;
+/// use pkcore::analysis::eval::Eval;
 /// use pkcore::Pile;
 ///
 /// #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -374,7 +374,7 @@ use std::collections::HashSet;
 /// ```
 /// use std::collections::{BTreeMap, HashSet};
 /// use pkcore::arrays::five::Five;
-/// use pkcore::hand_rank::hand_rank::HandRank;
+/// use pkcore::analysis::hand_rank::HandRank;
 ///
 /// #[derive(Clone, Debug, Default, Eq, PartialEq)]
 /// pub struct Evals(BTreeMap<HandRank, HashSet<Five>>);

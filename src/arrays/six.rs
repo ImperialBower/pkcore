@@ -1,10 +1,10 @@
+use crate::analysis::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
 use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::hand_rank::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
 use crate::{Evals, PKError, Pile};
 use std::fmt;
 use std::fmt::Formatter;
@@ -170,8 +170,8 @@ impl TryFrom<Cards> for Six {
 #[allow(non_snake_case)]
 mod arrays__six_tests {
     use super::*;
-    use crate::hand_rank::class::Class;
-    use crate::hand_rank::name::Name;
+    use crate::analysis::class::Class;
+    use crate::analysis::name::Name;
 
     const CARDS: [Card; 6] = [
         Card::ACE_DIAMONDS,

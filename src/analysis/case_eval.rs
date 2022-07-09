@@ -1,5 +1,5 @@
-use crate::hand_rank::eval::Eval;
-use crate::hand_rank::hand_rank::HandRank;
+use crate::analysis::eval::Eval;
+use crate::analysis::hand_rank::HandRank;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::PlayerFlag;
 use std::slice::Iter;
@@ -140,7 +140,7 @@ impl CaseEval {
     /// ## Test #1:
     ///
     /// ```
-    /// use pkcore::hand_rank::case_eval::CaseEval;
+    /// use pkcore::analysis::case_eval::CaseEval;
     /// use pkcore::util::data::TestData;
     /// use pkcore::util::wincounter::win::Win;
     ///
@@ -183,8 +183,8 @@ impl CaseEval {
     /// ```
     /// use pkcore::arrays::five::Five;
     /// use pkcore::arrays::two::Two;
-    /// use pkcore::hand_rank::case_eval::CaseEval;
-    /// use pkcore::hand_rank::eval::Eval;
+    /// use pkcore::analysis::case_eval::CaseEval;
+    /// use pkcore::analysis::eval::Eval;
     /// use pkcore::util::data::TestData;
     /// use pkcore::util::wincounter::win::Win;
     ///
@@ -219,8 +219,8 @@ impl CaseEval {
     /// ```
     /// use pkcore::arrays::five::Five;
     /// use pkcore::arrays::two::Two;
-    /// use pkcore::hand_rank::case_eval::CaseEval;
-    /// use pkcore::hand_rank::eval::Eval;
+    /// use pkcore::analysis::case_eval::CaseEval;
+    /// use pkcore::analysis::eval::Eval;
     /// use pkcore::util::data::TestData;
     /// use pkcore::util::wincounter::win::Win;
     ///
@@ -287,8 +287,8 @@ impl CaseEval {
     /// ```
     /// use pkcore::arrays::five::Five;
     /// use pkcore::arrays::two::Two;
-    /// use pkcore::hand_rank::case_eval::CaseEval;
-    /// use pkcore::hand_rank::eval::Eval;
+    /// use pkcore::analysis::case_eval::CaseEval;
+    /// use pkcore::analysis::eval::Eval;
     /// use pkcore::util::data::TestData;
     /// use pkcore::util::wincounter::win::Win;
     ///
@@ -333,8 +333,8 @@ impl CaseEval {
     /// ```
     /// use pkcore::arrays::five::Five;
     /// use pkcore::arrays::two::Two;
-    /// use pkcore::hand_rank::case_eval::CaseEval;
-    /// use pkcore::hand_rank::eval::Eval;
+    /// use pkcore::analysis::case_eval::CaseEval;
+    /// use pkcore::analysis::eval::Eval;
     /// use pkcore::util::data::TestData;
     /// use pkcore::util::wincounter::win::Win;
     ///

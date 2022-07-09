@@ -1,4 +1,4 @@
-use crate::hand_rank::case_eval::CaseEval;
+use crate::analysis::case_eval::CaseEval;
 use std::slice::Iter;
 
 /// Now that we have validated that we can handle a single case, aka one possible result from

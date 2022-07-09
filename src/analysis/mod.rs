@@ -1,9 +1,17 @@
 use crate::arrays::three::Three;
-use crate::hand_rank::case_evals::CaseEvals;
 use crate::play::hole_cards::HoleCards;
 use crate::Card;
+use case_evals::CaseEvals;
 
+pub mod case_eval;
+pub mod case_evals;
+pub mod class;
+pub mod eval;
+pub mod evals;
+pub mod hand_rank;
+pub mod name;
 pub mod player_wins;
+pub mod the_nuts;
 
 /// The start of an analysis plugin system.
 #[allow(clippy::module_name_repetitions)]

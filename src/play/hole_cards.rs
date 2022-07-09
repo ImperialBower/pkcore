@@ -1,9 +1,9 @@
+use crate::analysis::eval::Eval;
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::cards::Cards;
-use crate::hand_rank::eval::Eval;
 use crate::{Card, Evals, PKError, Pile};
 use itertools::Itertools;
 use log::error;

@@ -1,6 +1,6 @@
 use clap::Parser;
+use pkcore::analysis::evals::Evals;
 use pkcore::arrays::three::Three;
-use pkcore::hand_rank::evals::Evals;
 use pkcore::play::board::Board;
 use pkcore::play::game::Game;
 use pkcore::play::hole_cards::HoleCards;

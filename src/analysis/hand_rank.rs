@@ -1,5 +1,5 @@
-use crate::hand_rank::class::Class;
-use crate::hand_rank::name::Name;
+use crate::analysis::class::Class;
+use crate::analysis::name::Name;
 use crate::SOK;
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};

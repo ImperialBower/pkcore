@@ -1,7 +1,7 @@
+use crate::analysis::hand_rank::HandRank;
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::HandRanker;
-use crate::hand_rank::hand_rank::HandRank;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 
@@ -63,7 +63,7 @@ use std::hash::{Hash, Hasher};
 /// Let's try sorting it:
 /// ```
 /// use std::str::FromStr;
-/// use pkcore::hand_rank::eval::Eval;
+/// use pkcore::analysis::eval::Eval;
 /// use pkcore::arrays::five::Five;
 ///
 /// let straight = Eval::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
@@ -104,7 +104,7 @@ use std::hash::{Hash, Hasher};
 ///
 /// ```
 /// use std::str::FromStr;
-/// use pkcore::hand_rank::eval::Eval;
+/// use pkcore::analysis::eval::Eval;
 /// use pkcore::arrays::five::Five;
 ///
 /// let straight = Eval::from(Five::from_str("Q♠ A♥ T♠ K♠ J♠").unwrap());
@@ -258,9 +258,9 @@ impl Eq for Eval {}
 #[allow(non_snake_case)]
 mod hand_rank__eval_tests {
     use super::*;
+    use crate::analysis::class::Class;
+    use crate::analysis::name::Name;
     use crate::arrays::HandRanker;
-    use crate::hand_rank::class::Class;
-    use crate::hand_rank::name::Name;
     use std::str::FromStr;
 
     #[test]

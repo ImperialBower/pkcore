@@ -1,3 +1,4 @@
+use crate::analysis::eval::Eval;
 use crate::analysis::player_wins::PlayerWins;
 use crate::analysis::PlayOut;
 use crate::arrays::five::Five;
@@ -5,7 +6,6 @@ use crate::arrays::four::Four;
 use crate::arrays::seven::Seven;
 use crate::arrays::six::Six;
 use crate::arrays::HandRanker;
-use crate::hand_rank::eval::Eval;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
 use crate::{Card, Cards, Evals, PKError, Pile, TheNuts};

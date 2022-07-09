@@ -1,10 +1,10 @@
+use crate::analysis::case_eval::CaseEval;
+use crate::analysis::case_evals::CaseEvals;
+use crate::analysis::eval::Eval;
 use crate::analysis::PlayOut;
 use crate::arrays::four::Four;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
-use crate::hand_rank::case_eval::CaseEval;
-use crate::hand_rank::case_evals::CaseEvals;
-use crate::hand_rank::eval::Eval;
 use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::wins::Wins;
 use crate::{Card, Pile};

@@ -1,9 +1,9 @@
+use crate::analysis::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::hand_rank::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
 use crate::{Evals, PKError, Pile};
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -292,8 +292,8 @@ impl TryFrom<Vec<Card>> for Five {
 #[allow(non_snake_case)]
 mod arrays__five_tests {
     use super::*;
-    use crate::hand_rank::class::Class;
-    use crate::hand_rank::name::Name;
+    use crate::analysis::class::Class;
+    use crate::analysis::name::Name;
     use rstest::rstest;
 
     const ROYAL_FLUSH: [Card; 5] = [

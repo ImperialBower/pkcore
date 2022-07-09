@@ -1,5 +1,5 @@
+use crate::analysis::eval::Eval;
 use crate::arrays::five::Five;
-use crate::hand_rank::eval::Eval;
 
 #[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Evals(Vec<Eval>);
@@ -55,9 +55,9 @@ impl From<Vec<Five>> for Evals {
 #[allow(non_snake_case)]
 mod hand_rank__evals_tests {
     use super::*;
+    use crate::analysis::class::Class;
     use crate::arrays::three::Three;
     use crate::arrays::two::Two;
-    use crate::hand_rank::class::Class;
     use crate::util::data::TestData;
     use crate::Card;
 

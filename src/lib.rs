@@ -3,8 +3,8 @@
 
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::hand_rank::evals::Evals;
-use crate::hand_rank::the_nuts::TheNuts;
+use analysis::evals::Evals;
+use analysis::the_nuts::TheNuts;
 use indexmap::set::IntoIter;
 use itertools::Combinations;
 use std::iter::Enumerate;

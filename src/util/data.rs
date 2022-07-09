@@ -1,7 +1,7 @@
+use crate::analysis::eval::Eval;
 use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
-use crate::hand_rank::eval::Eval;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;

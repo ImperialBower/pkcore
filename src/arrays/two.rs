@@ -425,8 +425,8 @@ impl Pile for Two {
     /// use pkcore::arrays::three::Three;
     /// use pkcore::arrays::two::Two;
     /// use pkcore::cards::Cards;
-    /// use pkcore::hand_rank::evals::Evals;
-    /// use pkcore::hand_rank::the_nuts::TheNuts;
+    /// use pkcore::analysis::evals::Evals;
+    /// use pkcore::analysis::the_nuts::TheNuts;
     /// pub trait Pile {
     ///     fn number_of_permutations(&self) -> usize;
     ///

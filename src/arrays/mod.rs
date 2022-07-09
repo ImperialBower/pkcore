@@ -1,6 +1,6 @@
+use crate::analysis::eval::Eval;
+use crate::analysis::hand_rank::{HandRank, HandRankValue};
 use crate::arrays::five::Five;
-use crate::hand_rank::eval::Eval;
-use crate::hand_rank::hand_rank::{HandRank, HandRankValue};
 
 pub mod five;
 pub mod four;
