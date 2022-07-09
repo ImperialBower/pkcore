@@ -1,16 +1,12 @@
+use std::str::FromStr;
 use clap::Parser;
-use pkcore::analysis::player_wins::PlayerWins;
-use pkcore::analysis::PlayOut;
 use pkcore::arrays::three::Three;
-use pkcore::arrays::HandRanker;
 use pkcore::hand_rank::evals::Evals;
 use pkcore::play::board::Board;
 use pkcore::play::game::Game;
 use pkcore::play::hole_cards::HoleCards;
-use pkcore::util::data::TestData;
 use pkcore::util::wincounter::results::Results;
 use pkcore::{PKError, Pile};
-use std::str::FromStr;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]

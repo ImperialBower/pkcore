@@ -58,6 +58,9 @@ impl Game {
         }
     }
 
+    /// # Errors
+    ///
+    /// Throws `PKError::Fubar` if invalid index
     pub fn eval_at_turn(&self, index: usize) -> Result<Eval, PKError> {
         match self.hands.get(index) {
             None => Err(PKError::Fubar),
@@ -65,6 +68,9 @@ impl Game {
         }
     }
 
+    /// # Errors
+    ///
+    /// Throws `PKError::Fubar` if invalid index
     pub fn eval_at_flop_str(&self, index: usize) -> Result<String, PKError> {
         match self.eval_at_flop(index) {
             Err(e) => Err(e),
@@ -72,12 +78,14 @@ impl Game {
         }
     }
 
+    #[must_use]
     pub fn player_wins_at_flop(&self) -> PlayerWins {
         let mut pw = PlayerWins::default();
         pw.play_out_flop(&self.hands, self.board.flop);
         pw
     }
 
+    #[must_use]
     pub fn player_wins_at_turn(&self) -> PlayerWins {
         let mut pw = PlayerWins::default();
         pw.play_out_turn(&self.hands, self.board.flop, self.board.turn);
@@ -318,9 +326,7 @@ impl Display for Game {
 #[allow(non_snake_case)]
 mod play__game_tests {
     use super::*;
-    use crate::arrays::HandRanker;
     use crate::util::data::TestData;
-    use std::str::FromStr;
 
     // fn the_hand() -> Game {
     //     let hands = HoleCards::from_str("6♠ 6♥ 5♦ 5♣").unwrap();
