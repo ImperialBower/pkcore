@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use clap::Parser;
 use pkcore::arrays::three::Three;
 use pkcore::hand_rank::evals::Evals;
@@ -7,6 +6,7 @@ use pkcore::play::game::Game;
 use pkcore::play::hole_cards::HoleCards;
 use pkcore::util::wincounter::results::Results;
 use pkcore::{PKError, Pile};
+use std::str::FromStr;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -127,8 +127,16 @@ fn display_odds_at_flop(game: &Game) -> Result<(), PKError> {
     let results = Results::from_wins(&pw.wins, game.hands.len());
 
     println!();
-    println!("Odds at the Flop:");
-    display_odds(&game, &results)?;
+    println!("The Flop: {}", game.board.flop);
+    for (i, hole_cards) in game.hands.iter().enumerate() {
+        println!(
+            "  Player #{} [{}] {} - {}",
+            i + 1,
+            hole_cards,
+            results.player_to_string(i),
+            game.eval_at_flop_str(i)?
+        );
+    }
 
     Ok(())
 }
@@ -139,21 +147,15 @@ fn display_odds_at_turn(game: &Game) -> Result<(), PKError> {
     let results = Results::from_wins(&pw.wins, game.hands.len());
 
     println!();
-    println!("Odds at the Turn:");
+    println!("The Turn: {}", game.board.turn);
 
-    display_odds(&game, &results)?;
-
-    Ok(())
-}
-
-fn display_odds(game: &Game, results: &Results) -> Result<(), PKError> {
     for (i, hole_cards) in game.hands.iter().enumerate() {
         println!(
             "  Player #{} [{}] {} - {}",
             i + 1,
             hole_cards,
             results.player_to_string(i),
-            game.eval_at_flop_str(i)?
+            game.eval_at_turn_str(i)?
         );
     }
 

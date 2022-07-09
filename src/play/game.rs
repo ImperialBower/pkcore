@@ -78,6 +78,16 @@ impl Game {
         }
     }
 
+    /// # Errors
+    ///
+    /// Throws `PKError::Fubar` if invalid index
+    pub fn eval_at_turn_str(&self, index: usize) -> Result<String, PKError> {
+        match self.eval_at_turn(index) {
+            Err(e) => Err(e),
+            Ok(eval) => Ok(format!("{} ({})", eval.hand, eval.hand_rank)),
+        }
+    }
+
     #[must_use]
     pub fn player_wins_at_flop(&self) -> PlayerWins {
         let mut pw = PlayerWins::default();
