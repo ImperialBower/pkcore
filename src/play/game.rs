@@ -515,7 +515,10 @@ mod play__game_tests {
         assert_eq!(286, evals.get(25).unwrap().hand_rank.value);
         assert_eq!(5306, evals.get(61).unwrap().hand_rank.value);
         assert!(evals.get(63).is_none());
-        assert_eq!(Evals::default(), Game::default().the_nuts_at_turn().to_evals());
+        assert_eq!(
+            Evals::default(),
+            Game::default().the_nuts_at_turn().to_evals()
+        );
     }
 
     #[test]
