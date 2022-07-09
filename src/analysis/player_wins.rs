@@ -1,13 +1,13 @@
 use crate::analysis::PlayOut;
+use crate::arrays::four::Four;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
-use crate::arrays::two::Two;
 use crate::hand_rank::case_eval::CaseEval;
 use crate::hand_rank::case_evals::CaseEvals;
 use crate::hand_rank::eval::Eval;
 use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::wins::Wins;
-use crate::{Card, PKError, Pile};
+use crate::{Card, Pile};
 use log::{debug, info};
 
 #[derive(Clone, Debug, Default)]
@@ -16,20 +16,20 @@ pub struct PlayerWins {
 }
 
 impl PlayerWins {
-    /// # Errors
-    ///
-    /// `PKError::InvalidCard` if the case slice contains an invalid card.
-    pub fn seven_at_flop(player: Two, flop: Three, case: &[Card]) -> Result<Seven, PKError> {
-        Ok(Seven::from([
-            player.first(),
-            player.second(),
-            flop.first(),
-            flop.second(),
-            flop.third(),
-            *case.get(0).ok_or(PKError::InvalidCard)?,
-            *case.get(1).ok_or(PKError::InvalidCard)?,
-        ]))
-    }
+    // /// # Errors
+    // ///
+    // /// `PKError::InvalidCard` if the case slice contains an invalid card.
+    // pub fn seven_at_flop(player: Two, flop: Three, case: &[Card]) -> Result<Seven, PKError> {
+    //     Ok(Seven::from([
+    //         player.first(),
+    //         player.second(),
+    //         flop.first(),
+    //         flop.second(),
+    //         flop.third(),
+    //         *case.get(0).ok_or(PKError::InvalidCard)?,
+    //         *case.get(1).ok_or(PKError::InvalidCard)?,
+    //     ]))
+    // }
 }
 
 /// For now we are going to work through our analysis needs from here. As the sophistication of our
@@ -146,7 +146,7 @@ impl PlayOut for PlayerWins {
             let mut case_eval = CaseEval::default();
 
             for (i, player) in hands.iter().enumerate() {
-                let seven = PlayerWins::seven_at_flop(*player, flop, &case).unwrap();
+                let seven = Seven::from_case_at_flop(*player, flop, &case).unwrap();
                 let eval = Eval::from(seven);
 
                 case_eval.push(eval);
@@ -160,7 +160,31 @@ impl PlayOut for PlayerWins {
         case_evals
     }
 
+    /// As you code in a language, you start to gain a muscle memory for the patterns
+    /// that data textures bring out. At first it feels strange, but then `iter()` and
+    /// `enumerate()` start to feel like old friends. It's hard at first, and you
+    /// feel like you're just banging your head against the wall. Then, all of a sudden,
+    /// you're head breaks through, and things just make sense.
+    ///
+    /// For me at least, as a programmer, you start to chase that high. It's like a
+    /// gambler's high... but instead of losing all your money, and having Tony Soprano's
+    /// capos chasing after you with baseball bats, you have a cool application to play
+    /// with.
     fn case_evals_turn(&self, hands: &HoleCards, flop: Three, turn: Card) -> CaseEvals {
+        debug!(
+            "PlayerWins.case_evals_turn(hands: {} flop: {} turn: {})",
+            hands, flop, turn
+        );
+
+        let mut case_evals = CaseEvals::default();
+
+        for (j, case) in Four::from_turn(flop, turn).remaining().iter().enumerate() {
+            debug!(
+                "{}: FLOP: {} TURN: {} RIVER: {} -------",
+                j, flop, turn, case
+            );
+        }
+
         todo!()
     }
 }

@@ -472,6 +472,8 @@
           * impl From<Vec<Card>> for Four
           * impl Pile for Four
       * Game.flop_and_turn()
+      * Four::from_turn()
+      * REFACTORING: Move PlayerWins::seven_at_flop() to Seven::from_case_at_flop()
 
 ## LATER
 

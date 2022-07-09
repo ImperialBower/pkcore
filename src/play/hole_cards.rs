@@ -1,5 +1,5 @@
-use crate::analysis::player_wins::PlayerWins;
 use crate::arrays::five::Five;
+use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::cards::Cards;
@@ -132,7 +132,7 @@ impl HoleCards {
     pub fn realize_case_at_flop(&self, flop: Three, case: &[Card]) -> Vec<Eval> {
         let mut cases: Vec<Eval> = Vec::default();
         for hand in self.iter() {
-            match PlayerWins::seven_at_flop(*hand, flop, case) {
+            match Seven::from_case_at_flop(*hand, flop, case) {
                 Ok(seven) => cases.push(Eval::from(seven)),
                 Err(e) => error!(
                     "{:?} from realize_case_at_flop({}, {}, {:?})",

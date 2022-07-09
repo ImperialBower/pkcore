@@ -456,6 +456,19 @@ mod play__game_tests {
     /// While this test is now passing, I am going to flag it as ignore, since it is so heavy.
     /// Our nut calculation, if we implemented the fix we documented above would be even
     /// heavier.
+    ///
+    /// ## Aside
+    ///
+    /// This makes me think that there are two perspectives for the nuts. The nuts on the flop;
+    /// such as when someone says, I flopped the nuts, vs. the possible nuts on the flop. Just
+    /// because you have flopped the nuts doesn't mean that it will remain the nuts. This is
+    /// especially true when you're playing games like Omaha where you have so much variance.
+    /// I am actually really excited to have discovered this perspective from working through
+    /// the code. I hear pros talking about it, but I didn't really notice the distinction
+    /// until now.
+    ///
+    /// This is one of the things that you really need to understand about developing systems.
+    /// You may think you know how things work, but there will always be surprises.
     #[test]
     #[ignore]
     fn possible_evals_at_turn() {

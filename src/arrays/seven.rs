@@ -1,4 +1,6 @@
 use crate::arrays::five::Five;
+use crate::arrays::three::Three;
+use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
@@ -36,6 +38,25 @@ impl Seven {
         [1, 3, 4, 5, 6],
         [2, 3, 4, 5, 6],
     ];
+
+    /// Refactored this from `PlayerWins::seven_at_flop()`. It feels better to me to have the
+    /// functions that generate structs be in the impl for the struct they're generating. (What's
+    /// the rusty term for this?)
+    ///
+    /// # Errors
+    ///
+    /// `PKError::InvalidCard` if the case slice contains an invalid card.
+    pub fn from_case_at_flop(player: Two, flop: Three, case: &[Card]) -> Result<Seven, PKError> {
+        Ok(Seven::from([
+            player.first(),
+            player.second(),
+            flop.first(),
+            flop.second(),
+            flop.third(),
+            *case.get(0).ok_or(PKError::InvalidCard)?,
+            *case.get(1).ok_or(PKError::InvalidCard)?,
+        ]))
+    }
 
     #[must_use]
     pub fn to_arr(&self) -> [Card; 7] {

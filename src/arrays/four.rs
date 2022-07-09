@@ -1,3 +1,4 @@
+use crate::arrays::three::Three;
 use crate::{Card, Evals, Pile};
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -11,6 +12,11 @@ use std::fmt::{Display, Formatter};
 pub struct Four([Card; 4]);
 
 impl Four {
+    #[must_use]
+    pub fn from_turn(flop: Three, turn: Card) -> Four {
+        Four([flop.first(), flop.second(), flop.third(), turn])
+    }
+
     //region accessors
     #[must_use]
     pub fn first(&self) -> Card {
