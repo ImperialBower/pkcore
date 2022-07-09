@@ -455,7 +455,7 @@ impl Pile for Two {
     /// I am going to need to come up with something smarter than that.
     ///
     /// Let's hold off on that for now, and get some passing tests written for Two first.
-    fn possible_evals(&self) -> Evals {
+    fn evals(&self) -> Evals {
         if !self.is_dealt() {
             return Evals::default();
         }
@@ -616,10 +616,10 @@ mod arrays__two_tests {
     }
 
     #[test]
-    fn pile__possible_evals() {
+    fn pile__evals() {
         let two = Two::from([Card::SIX_SPADES, Card::SIX_HEARTS]);
 
-        let evals = two.possible_evals();
+        let evals = two.evals();
 
         // One of the things I like to do when I'm working through one of these tests is to
         // temporarily dump out the values that I am testing. When I'm done with the green,

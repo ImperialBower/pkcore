@@ -381,7 +381,7 @@ impl Pile for Cards {
         true
     }
 
-    fn possible_evals(&self) -> Evals {
+    fn evals(&self) -> Evals {
         todo!()
     }
 

@@ -478,6 +478,8 @@
       * PlayerWins.case_evals_turn()
         * Calc.display_odds()
         * Game.five_at_turn()
+      * PHASE 3.1: Outs
+        * Refactor possible_evals to evals
 
 ## LATER
 

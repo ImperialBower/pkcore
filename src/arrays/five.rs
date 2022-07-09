@@ -253,7 +253,7 @@ impl Pile for Five {
         ])
     }
 
-    fn possible_evals(&self) -> Evals {
+    fn evals(&self) -> Evals {
         todo!()
     }
 

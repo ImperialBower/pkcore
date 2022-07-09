@@ -102,7 +102,7 @@ fn command(game: Game) -> String {
 fn display_evals_at_flop(flop: Three) {
     println!();
     println!("The Nuts @ Flop:");
-    let mut evals = flop.possible_evals();
+    let mut evals = flop.evals();
     evals.sort_in_place();
     display_evals(evals);
 }
@@ -110,7 +110,7 @@ fn display_evals_at_flop(flop: Three) {
 fn _display_evals_at_turn(game: Game) {
     println!();
     println!("The Nuts @ Turn:");
-    display_evals(game.possible_evals_at_turn());
+    display_evals(game.evals_at_turn());
 }
 
 fn display_evals(mut evals: Evals) {

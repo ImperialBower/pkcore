@@ -156,7 +156,7 @@ impl Pile for Seven {
         todo!()
     }
 
-    fn possible_evals(&self) -> Evals {
+    fn evals(&self) -> Evals {
         todo!()
     }
 

@@ -113,7 +113,7 @@ pub trait Pile {
         Cards::deck_minus(&held)
     }
 
-    fn possible_evals(&self) -> Evals;
+    fn evals(&self) -> Evals;
 
     fn to_vec(&self) -> Vec<Card>;
 }

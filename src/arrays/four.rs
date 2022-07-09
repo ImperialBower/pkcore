@@ -107,7 +107,7 @@ impl Pile for Four {
         ])
     }
 
-    fn possible_evals(&self) -> Evals {
+    fn evals(&self) -> Evals {
         todo!()
     }
 

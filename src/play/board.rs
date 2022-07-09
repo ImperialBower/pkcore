@@ -44,7 +44,7 @@ impl Pile for Board {
         todo!()
     }
 
-    fn possible_evals(&self) -> Evals {
+    fn evals(&self) -> Evals {
         todo!()
     }
 

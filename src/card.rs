@@ -283,7 +283,7 @@ impl Pile for Card {
         self.0 == Card::BLANK_NUMBER
     }
 
-    fn possible_evals(&self) -> Evals {
+    fn evals(&self) -> Evals {
         todo!()
     }
 
