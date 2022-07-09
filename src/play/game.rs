@@ -328,18 +328,6 @@ mod play__game_tests {
     use super::*;
     use crate::util::data::TestData;
 
-    // fn the_hand() -> Game {
-    //     let hands = HoleCards::from_str("6♠ 6♥ 5♦ 5♣").unwrap();
-    //     let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
-    //
-    //     let game = Game {
-    //         hands: hands.clone(),
-    //         board,
-    //     };
-    //
-    //     game
-    // }
-
     #[test]
     fn new() {
         let game = TestData::the_hand();
