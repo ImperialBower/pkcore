@@ -16,6 +16,9 @@ struct Args {
 
     #[clap(short = 'b', long)]
     board: String,
+
+    #[clap(short = 'n', long)]
+    nuts: bool,
 }
 
 /// The goal of calc isn't to run a full simulation of play at a holdem poker table. It's
@@ -62,7 +65,17 @@ struct Args {
 /// * An ordered list of the possible hands at the flop.
 /// * A collection of all types of possible hands for a player at the flop.
 ///
+/// ## PHASE 3.1: Outs
 ///
+/// Now that we have the win percentages displayed at the flop, we need to add the icing on the cake:
+/// player outs. One of the clearest ways to display the meaning behind the odds is to show the
+/// cards that the player behind on the hand would need in order to win.
+///
+/// Since our calc example is starting to take on a lot of business logic, this may be a good time
+/// to do some refactoring and move it into dedicated structs.
+///
+/// Calculating win percentages and outs should be part of the same iteration through the possible
+/// cases. This is
 ///
 fn main() -> Result<(), PKError> {
     let now = std::time::Instant::now();
@@ -79,7 +92,9 @@ fn main() -> Result<(), PKError> {
 
     display_odds_at_flop(&game)?;
 
-    display_evals_at_flop(game.board.flop);
+    if args.nuts {
+        display_evals_at_flop(game.board.flop);
+    }
 
     display_odds_at_turn(&game)?;
 
