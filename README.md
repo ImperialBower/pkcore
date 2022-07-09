@@ -474,6 +474,9 @@
       * Game.flop_and_turn()
       * Four::from_turn()
       * REFACTORING: Move PlayerWins::seven_at_flop() to Seven::from_case_at_flop()
+      * Seven::from_case_at_turn()
+      * PlayerWins.case_evals_turn()
+      * 
 
 ## LATER
 

@@ -39,9 +39,16 @@ impl Seven {
         [2, 3, 4, 5, 6],
     ];
 
-    /// Refactored this from `PlayerWins::seven_at_flop()`. It feels better to me to have the
+    /// # REFACTORING:
+    /// Moved this from `PlayerWins::seven_at_flop()`. It feels better to me to have the
     /// functions that generate structs be in the impl for the struct they're generating. (What's
     /// the rusty term for this?)
+    ///
+    /// The argument for this refactoring is that it's one thing to have a private utility function do
+    /// something to assist your business logic, but if you need it in multiple places, you want to
+    /// anchor it to it's subject. It's creating a `Seven`. It's being called in more than one place.
+    /// That's the best home for it. That way you don't need to trace it to figure out where it came
+    /// from. It generates a `Seven`. It's in `Seven`. Don't make me think.
     ///
     /// # Errors
     ///
@@ -56,6 +63,22 @@ impl Seven {
             *case.get(0).ok_or(PKError::InvalidCard)?,
             *case.get(1).ok_or(PKError::InvalidCard)?,
         ]))
+    }
+
+    /// I don't need to return a `Result` here, since I'm not passing in a vector. While on the one
+    /// hand, I don't like that I have different types of signatures in the `from_case_at`
+    /// functions, when there's no point, there's no point.
+    #[must_use]
+    pub fn from_case_at_turn(player: Two, flop: Three, turn: Card, case: Card) -> Seven {
+        Seven::from([
+            player.first(),
+            player.second(),
+            flop.first(),
+            flop.second(),
+            flop.third(),
+            turn,
+            case,
+        ])
     }
 
     #[must_use]

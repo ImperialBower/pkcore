@@ -183,6 +183,20 @@ impl PlayOut for PlayerWins {
                 "{}: FLOP: {} TURN: {} RIVER: {} -------",
                 j, flop, turn, case
             );
+
+            let mut case_eval = CaseEval::default();
+
+            for (i, player) in hands.iter().enumerate() {
+                let seven = Seven::from_case_at_turn(*player, flop, turn, *case);
+                let eval = Eval::from(seven);
+
+                case_eval.push(eval);
+
+                debug!("Player {} {}: {}", i + 1, *player, eval);
+            }
+            case_evals.push(case_eval);
+
+            debug!("");
         }
 
         todo!()
