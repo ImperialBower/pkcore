@@ -47,7 +47,7 @@ use std::collections::HashSet;
 /// ```
 /// use std::collections::HashMap;
 /// use pkcore::hand_rank::eval::Eval;
-/// use pkcore::hand_rank::HandRank;
+/// use pkcore::hand_rank::hand_rank::HandRank;
 ///
 /// pub struct TheNuts(HashMap<HandRank, Vec<Eval>>);
 /// ```
@@ -59,7 +59,7 @@ use std::collections::HashSet;
 ///
 /// use std::collections::{HashMap, HashSet};
 /// use pkcore::hand_rank::eval::Eval;
-/// use pkcore::hand_rank::HandRank;
+/// use pkcore::hand_rank::hand_rank::HandRank;
 ///
 /// pub struct TheNuts(HashMap<HandRank, HashSet<Eval>>);
 /// ```
@@ -238,7 +238,7 @@ use std::collections::HashSet;
 /// ```
 /// use std::collections::HashMap;
 /// use pkcore::hand_rank::eval::Eval;
-/// use pkcore::hand_rank::HandRank;
+/// use pkcore::hand_rank::hand_rank::HandRank;
 ///
 /// #[derive(Clone, Debug, Default, Eq, PartialEq)]
 /// pub struct TheNuts(HashMap<HandRank, Vec<Eval>>);
@@ -374,7 +374,7 @@ use std::collections::HashSet;
 /// ```
 /// use std::collections::{BTreeMap, HashSet};
 /// use pkcore::arrays::five::Five;
-/// use pkcore::hand_rank::HandRank;
+/// use pkcore::hand_rank::hand_rank::HandRank;
 ///
 /// #[derive(Clone, Debug, Default, Eq, PartialEq)]
 /// pub struct Evals(BTreeMap<HandRank, HashSet<Five>>);

@@ -75,7 +75,15 @@ struct Args {
 /// to do some refactoring and move it into dedicated structs.
 ///
 /// Calculating win percentages and outs should be part of the same iteration through the possible
-/// cases. This is
+/// cases. I'm feeling the need to break this problem down with a spike in our example hear and
+/// see where it leads us.
+///
+/// The structure that I am thinking to hold each of the player's outs is simple:
+///
+/// ```
+/// #[derive(Clone, Debug, Default, Eq, PartialEq)]
+/// pub struct Outs(Vec<Cards>);
+/// ```
 ///
 fn main() -> Result<(), PKError> {
     let now = std::time::Instant::now();

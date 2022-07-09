@@ -1,5 +1,5 @@
 use crate::hand_rank::eval::Eval;
-use crate::hand_rank::HandRank;
+use crate::hand_rank::hand_rank::HandRank;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::PlayerFlag;
 use std::slice::Iter;

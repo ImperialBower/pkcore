@@ -1,7 +1,7 @@
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::HandRanker;
-use crate::hand_rank::HandRank;
+use crate::hand_rank::hand_rank::HandRank;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 

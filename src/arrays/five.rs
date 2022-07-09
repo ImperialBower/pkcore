@@ -3,7 +3,7 @@ use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
+use crate::hand_rank::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
 use crate::{Evals, PKError, Pile};
 use std::fmt;
 use std::fmt::{Display, Formatter};

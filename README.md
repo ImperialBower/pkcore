@@ -481,6 +481,8 @@
       * PHASE 3.1: Outs
         * REFACTOR: possible_evals to evals
         * REFACTOR: Game.evals_at_turn() to .the_nuts_at_turn()
+        * REFACTOR: HandRank struct to own mod
+        * REFACTOR: All hand_rank mods to analysis
 
 ## LATER
 

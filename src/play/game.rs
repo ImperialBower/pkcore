@@ -109,6 +109,9 @@ impl Game {
 
     /// I don't think I am doing this right. The nuts at the turn shouldn't have any idea what the
     /// cards being held are. Could it  be that I did the flop wrong too? Lemme think about this.
+    ///
+    /// It could be that there is simply no point for this function. What's important at the turn
+    /// is odds and outs.
     #[must_use]
     pub fn the_nuts_at_turn(&self) -> TheNuts {
         if !self.board.flop.is_dealt() || !self.board.turn.is_dealt() {

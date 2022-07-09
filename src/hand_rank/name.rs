@@ -1,4 +1,4 @@
-use crate::hand_rank::HandRankValue;
+use crate::hand_rank::hand_rank::HandRankValue;
 use crate::SOK;
 use strum::EnumIter;
 
