@@ -8,6 +8,7 @@ use crate::arrays::six::Six;
 use crate::arrays::HandRanker;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
+use crate::util::wincounter::results::Results;
 use crate::{Card, Cards, Evals, PKError, Pile, TheNuts};
 use std::fmt::{Display, Formatter};
 
@@ -43,6 +44,56 @@ impl Game {
     #[must_use]
     pub fn new(hands: HoleCards, board: Board) -> Self {
         Game { hands, board }
+    }
+
+    /// Originally part of our calc example program. When my examples have functionality
+    /// that I want to use in other places, I move it into the lib. I can definitely
+    /// see a later refactoring where we move the display functionality to its own home.
+    ///
+    /// # Errors
+    ///
+    /// Throws `PKError::Fubar` if there is an invalid index.
+    pub fn display_odds_at_flop(&self) -> Result<(), PKError> {
+        let pw = self.player_wins_at_flop();
+        let results = Results::from_wins(&pw.wins, self.hands.len());
+
+        println!();
+        println!("The Flop: {}", self.board.flop);
+        for (i, hole_cards) in self.hands.iter().enumerate() {
+            println!(
+                "  Player #{} [{}] {} - {}",
+                i + 1,
+                hole_cards,
+                results.player_to_string(i),
+                self.eval_at_flop_str(i)?
+            );
+        }
+
+        Ok(())
+    }
+
+    /// # Errors
+    ///
+    /// Throws `PKError::Fubar` if there is an invalid index.
+    pub fn display_odds_at_turn(&self) -> Result<(), PKError> {
+        let pw = self.player_wins_at_turn();
+
+        let results = Results::from_wins(&pw.wins, self.hands.len());
+
+        println!();
+        println!("The Turn: {}", self.board.turn);
+
+        for (i, hole_cards) in self.hands.iter().enumerate() {
+            println!(
+                "  Player #{} [{}] {} - {}",
+                i + 1,
+                hole_cards,
+                results.player_to_string(i),
+                self.eval_at_turn_str(i)?
+            );
+        }
+
+        Ok(())
     }
 
     /// Returns the `Five` `Card` hand combining the hole cards from the passed in index

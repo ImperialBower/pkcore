@@ -4,7 +4,6 @@ use pkcore::arrays::three::Three;
 use pkcore::play::board::Board;
 use pkcore::play::game::Game;
 use pkcore::play::hole_cards::HoleCards;
-use pkcore::util::wincounter::results::Results;
 use pkcore::{PKError, Pile};
 use std::str::FromStr;
 
@@ -98,13 +97,13 @@ fn main() -> Result<(), PKError> {
 
     println!("{}", game);
 
-    display_odds_at_flop(&game)?;
+    game.display_odds_at_flop()?;
 
     if args.nuts {
         display_evals_at_flop(game.board.flop);
     }
 
-    display_odds_at_turn(&game)?;
+    game.display_odds_at_turn()?;
 
     println!();
     println!("{}", command(game));
@@ -142,45 +141,4 @@ fn display_evals(mut evals: Evals) {
     for (i, eval) in evals.to_vec().iter().enumerate() {
         println!("  #{}: {}", i + 1, eval);
     }
-}
-
-fn display_odds_at_flop(game: &Game) -> Result<(), PKError> {
-    let pw = game.player_wins_at_flop();
-
-    let results = Results::from_wins(&pw.wins, game.hands.len());
-
-    println!();
-    println!("The Flop: {}", game.board.flop);
-    for (i, hole_cards) in game.hands.iter().enumerate() {
-        println!(
-            "  Player #{} [{}] {} - {}",
-            i + 1,
-            hole_cards,
-            results.player_to_string(i),
-            game.eval_at_flop_str(i)?
-        );
-    }
-
-    Ok(())
-}
-
-fn display_odds_at_turn(game: &Game) -> Result<(), PKError> {
-    let pw = game.player_wins_at_turn();
-
-    let results = Results::from_wins(&pw.wins, game.hands.len());
-
-    println!();
-    println!("The Turn: {}", game.board.turn);
-
-    for (i, hole_cards) in game.hands.iter().enumerate() {
-        println!(
-            "  Player #{} [{}] {} - {}",
-            i + 1,
-            hole_cards,
-            results.player_to_string(i),
-            game.eval_at_turn_str(i)?
-        );
-    }
-
-    Ok(())
 }

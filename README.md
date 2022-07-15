@@ -483,6 +483,8 @@
         * REFACTOR: Game.evals_at_turn() to .the_nuts_at_turn()
         * REFACTOR: HandRank struct to own mod
         * REFACTOR: All hand_rank mods to analysis
+        * SPIKE: examples/outs.rs
+          * REFACTOR: Move display odds methods to Game
 
 ## LATER
 
