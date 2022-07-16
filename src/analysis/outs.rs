@@ -207,6 +207,33 @@ impl Outs {
         longest
     }
 
+    /// Returns the player id that has the most outs.
+    ///
+    /// While I am worried that this code is getting heavy, since it is only
+    /// going to be used after the flop, the amount of calculations shouldn't
+    /// be too much. I know I will have much bigger fish to fry, and I want
+    /// to close on this card. It's turning out to be harder than I thought
+    /// it would be.
+    ///
+    /// The truth is, that coding is always going to have tension between the
+    /// desire to do things perfectly, and the need to get things done. A big
+    /// part of the craft is having a sense for when to refactor and optimize
+    /// and when to just get shit done. Sometimes you leave behind technical
+    /// debt... sometimes nobody gives a fuck but you. Pick your battles; learn
+    /// from your mistakes; forgive yourself. You have this brain for a reason.
+    /// Coders who only write perfect code are coders who never launch.
+    #[must_use]
+    pub fn longest_player(&self) -> usize {
+        let mut player = 0_usize;
+        for key in self.0.keys() {
+            let len = self.len_for_player(*key);
+            if len > player {
+                player = *key;
+            }
+        }
+        player
+    }
+
     pub fn touch(&mut self, player: usize) -> bool {
         if self.0.get(&player).is_none() {
             self.0.insert(player, Cards::default());
@@ -276,6 +303,18 @@ mod analysis__outs_tests {
         outs.add(2, Card::SEVEN_DIAMONDS);
 
         assert_eq!(4, outs.len_longest());
+    }
+
+    #[test]
+    fn longest_player() {
+        let mut outs = Outs::default();
+        outs.add(1, Card::TEN_HEARTS);
+        outs.add(1, Card::SEVEN_DIAMONDS);
+        outs.add(2, Card::SIX_CLUBS);
+        outs.add(2, Card::SEVEN_SPADES);
+        outs.add(2, Card::NINE_HEARTS);
+
+        assert_eq!(2, outs.longest_player());
     }
 
     #[test]

@@ -492,6 +492,7 @@
           * REFACTORING
         * Outs.len_for_player()
         * Outs.len_longest()
+        * Outs.longest_player()
 
 ## LATER
 
@@ -507,6 +508,7 @@
   * [Rust Design Patterns](https://rust-unofficial.github.io/patterns/intro.html) 
   * [Are we game yet?](https://arewegameyet.rs/)
   * [Are we GUI Yet?](https://www.areweguiyet.com/)
+  * [rustlings](https://github.com/rust-lang/rustlings)
   * frameworks
     * [Yew](https://yew.rs/)
     * [Flowistry: Information Flow for Rust](https://github.com/willcrichton/flowistry)
