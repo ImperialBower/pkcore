@@ -22,6 +22,13 @@ impl PlayerWins {
         pw.play_out_flop(hands, flop);
         pw
     }
+
+    #[must_use]
+    pub fn at_turn(hands: &HoleCards, flop: Three, turn: Card) -> Self {
+        let mut pw = PlayerWins::default();
+        pw.play_out_turn(hands, flop, turn);
+        pw
+    }
 }
 
 /// For now we are going to work through our analysis needs from here. As the sophistication of our

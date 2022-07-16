@@ -1,6 +1,5 @@
 use crate::analysis::eval::Eval;
 use crate::analysis::player_wins::PlayerWins;
-use crate::analysis::PlayOut;
 use crate::arrays::five::Five;
 use crate::arrays::four::Four;
 use crate::arrays::seven::Seven;
@@ -80,8 +79,7 @@ impl Game {
     ///
     /// Throws `PKError::Fubar` if there is an invalid index.
     pub fn display_odds_at_turn(&self) -> Result<(), PKError> {
-        let pw = self.player_wins_at_turn();
-
+        let pw = PlayerWins::at_turn(&self.hands, self.board.flop, self.board.turn);
         let results = Results::from_wins(&pw.wins, self.hands.len());
 
         println!();
@@ -141,13 +139,6 @@ impl Game {
             Err(e) => Err(e),
             Ok(eval) => Ok(format!("{} ({})", eval.hand, eval.hand_rank)),
         }
-    }
-
-    #[must_use]
-    pub fn player_wins_at_turn(&self) -> PlayerWins {
-        let mut pw = PlayerWins::default();
-        pw.play_out_turn(&self.hands, self.board.flop, self.board.turn);
-        pw
     }
 
     #[must_use]

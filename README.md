@@ -486,6 +486,7 @@
         * SPIKE: examples/outs.rs
           * REFACTOR: Move display odds methods to Game
           * REFACTOR: Move Game.player_wins_at_flop() to PlayerWins::at_flop()
+          * REFACTOR: Move Game.player_wins_at_turn() to PlayerWins::at_turn()
 
 ## LATER
 
