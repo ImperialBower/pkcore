@@ -192,6 +192,7 @@ impl Game {
         ]))
     }
 
+    // region DEAD
     /// There is a point in your code where you reach the crux of the system you are trying to
     /// build. Where all of the thin slices start to come together and you can feel your program
     /// leveling up. For me with this journey the idea of playing out the probabilities is one
@@ -356,6 +357,7 @@ impl Game {
     //     cards.insert_all(&self.board.flop.cards());
     //     Cards::deck_minus(&cards)
     // }
+    // endregion
 
     /// I am going to make this a private function for now. I just need it for
     /// `possible_evals_at_turn()`.
