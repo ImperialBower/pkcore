@@ -182,6 +182,14 @@ impl Outs {
         self.0.get(&player)
     }
 
+    /// OK, this is why you don't code after doing a shot of Jäger. This code
+    /// is virtually pointless, but I want it. I just know I need it. I can hear
+    /// R.J. telling me to move on.
+    #[must_use]
+    pub fn is_longest(&self, player: usize) -> bool {
+        false
+    }
+
     #[must_use]
     pub fn iter(&self) -> indexmap::map::Iter<'_, usize, Cards> {
         self.0.iter()
