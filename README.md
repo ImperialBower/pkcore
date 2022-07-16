@@ -490,6 +490,7 @@
         * Outs.touch()
         * Outs.add()
           * REFACTORING
+        * Outs.len_for_player()
 
 ## LATER
 
