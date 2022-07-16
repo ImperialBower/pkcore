@@ -152,8 +152,8 @@ impl Outs {
     /// [Objective-C](https://en.wikipedia.org/wiki/Objective-C)
     /// programming language. In your code, you would constantly see calls to libraries with the
     /// prefix NS. This always seemed strange to me. Turns out, it's from the work done at Jobs'
-    /// company [NeXTSTEP](https://en.wikipedia.org/wiki/NeXTSTEP), which was acquired by Apple in
-    /// 1996. It always seemed strange to be that he insisted on Apple acquiring back NeXTSTEP when
+    /// company [`NeXTSTEP`](https://en.wikipedia.org/wiki/NeXTSTEP), which was acquired by Apple in
+    /// 1996. It always seemed strange to be that he insisted on Apple acquiring back `NeXTSTEP` when
     /// he returned to Apple.
     ///
     /// Turns out that one of the core reasons for the Apple's success was what I call the most
@@ -164,7 +164,7 @@ impl Outs {
     ///
     /// Objective-C is what allowed Apple developers to innovate so fast. It was the jump start that
     /// allowed Apple to quickly innovate. Now, when I code in Swift, it makes me sad how much
-    /// slower XCode is from my days coding in Objective-C. I understand why they created Swift,
+    /// slower `XCode` is from my days coding in Objective-C. I understand why they created Swift,
     /// but they gave up a lot when they moved to it.
     ///
     /// # Panics
