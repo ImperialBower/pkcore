@@ -491,6 +491,7 @@
         * Outs.add()
           * REFACTORING
         * Outs.len_for_player()
+        * Outs.len_longest()
 
 ## LATER
 
