@@ -529,3 +529,8 @@
   * [Programmatically add 100s of image overlays on video clip](https://stackoverflow.com/questions/18750525/programatically-add-100s-of-image-overlays-on-video-clip)
   * open source
     * [How to Add Graphics and Overlays to Live Video With Open Broadcaster (OBS)](https://photography.tutsplus.com/tutorials/how-to-add-custom-graphics-obs-studio--cms-35066)
+
+## Potential Libraries
+
+* [mycelium-bitfield](https://crates.io/crates/mycelium-bitfield)
+* [modular-bitfield](https://crates.io/crates/modular-bitfield)

@@ -195,6 +195,18 @@ impl Outs {
         }
     }
 
+    #[must_use]
+    pub fn len_longest(&self) -> usize {
+        let mut longest = 0_usize;
+        for key in self.0.keys() {
+            let len = self.len_for_player(*key);
+            if len > longest {
+                longest = len;
+            }
+        }
+        longest
+    }
+
     pub fn touch(&mut self, player: usize) -> bool {
         if self.0.get(&player).is_none() {
             self.0.insert(player, Cards::default());
@@ -252,6 +264,18 @@ mod analysis__outs_tests {
         assert_eq!(2, outs.len_for_player(1));
         assert_eq!(1, outs.len_for_player(2));
         assert_eq!(0, outs.len_for_player(3));
+    }
+
+    #[test]
+    fn len_longest() {
+        let mut outs = Outs::default();
+        outs.add(1, Card::SIX_CLUBS);
+        outs.add(1, Card::SEVEN_SPADES);
+        outs.add(1, Card::NINE_HEARTS);
+        outs.add(1, Card::TEN_HEARTS);
+        outs.add(2, Card::SEVEN_DIAMONDS);
+
+        assert_eq!(4, outs.len_longest());
     }
 
     #[test]
