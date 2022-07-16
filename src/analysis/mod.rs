@@ -10,6 +10,7 @@ pub mod eval;
 pub mod evals;
 pub mod hand_rank;
 pub mod name;
+pub mod outs;
 pub mod player_wins;
 pub mod the_nuts;
 

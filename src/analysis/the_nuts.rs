@@ -431,4 +431,4 @@ impl TheNuts {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod hand_rank__the_nuts_tests {}
+mod analysis__the_nuts_tests {}
