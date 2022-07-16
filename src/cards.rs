@@ -210,6 +210,39 @@ impl Cards {
         }
     }
 
+    /// We have uncovered a defect with out sort function. Ideally, it should sort with a higher
+    /// weight given to `Suit` rather than `Rank` so that when I pass in `6♣ 7♠ 7♦ 8♦` and call
+    /// `sort()` it should return `7♠ 8♦ 7♦ 6♣` since spades come before diamonds. Instead we get
+    /// `8♦ 7♠ 7♦ 6♣`.
+    ///
+    /// This is because our modified Cactus Kev `Card` binary format places the `Rank` bit flag
+    /// higher than the `Suit` flag. Remember how our Card bits are set:
+    ///
+    /// ```txt
+    /// +--------+--------+--------+--------+
+    /// |mmmbbbbb|bbbbbbbb|SHDCrrrr|xxpppppp|
+    /// +--------+--------+--------+--------+
+    ///
+    /// p = prime number of rank (deuce=2,trey=3,four=5,...,ace=41)
+    /// r = rank of card (deuce=0,trey=1,four=2,five=3,...,ace=12)
+    /// SHDC = suit of card (bit turned on based on suit of card)
+    /// b = bit turned on depending on rank of card
+    /// m = Flags reserved for multiples of the same rank. Stripped for evals.
+    /// ```
+    ///
+    /// In order for us to get the sort we want, we would have to arrange them thus:
+    ///
+    /// ```txt
+    /// +--------+--------+--------+--------+
+    /// |mmmSHDCb|bbbbbbbb|bbbbrrrr|xxpppppp|
+    /// +--------+--------+--------+--------+
+    /// ```
+    ///
+    /// This would be a major refactoring; one that we're not prepared to do right now. TBH.
+    /// I question if we will ever need to do this. For now, I'm going to mark the issue with
+    /// a technical debt TODO, add a test that I annotate as ignore, and call it a day.
+    ///
+    /// TODO TD: Update `Card` so that sort is `Suit` weighted first.
     #[must_use]
     pub fn sort(&self) -> Cards {
         let mut c = self.clone();
@@ -686,6 +719,14 @@ mod card_tests {
     #[test]
     fn sort() {
         assert_eq!("A♣ 5♣ 4♣ 3♣ 2♣", wheel().sort().to_string());
+    }
+
+    #[test]
+    #[ignore]
+    fn sort__suit_weighted() {
+        let cards = Cards::from_str("6♣ 7♠ 7♦ 8♦").unwrap().sort();
+
+        assert_eq!("7♠ 8♦ 7♦ 6♣", cards.to_string());
     }
 
     #[test]

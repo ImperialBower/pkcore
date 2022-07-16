@@ -55,9 +55,46 @@ impl Outs {
         self.0.get_mut(&player).unwrap().insert(card);
     }
 
+    /// *FRACK*
+    ///
+    /// Writing tests for this method has uncovered a defect with `Cards.sort()`.
+    ///
+    /// ```
+    /// use pkcore::analysis::outs::Outs;
+    /// use pkcore::card::Card;
+    ///
+    /// let mut outs = Outs::default();
+    /// outs.add(1, Card::SIX_CLUBS);
+    /// outs.add(1, Card::SEVEN_SPADES);
+    /// outs.add(1, Card::SEVEN_DIAMONDS);
+    /// outs.add(1, Card::EIGHT_DIAMONDS);
+    ///
+    /// assert_eq!("8♦ 7♠ 7♦ 6♣", outs.get(1).unwrap().sort().to_string());
+    /// ```
+    ///
+    /// This sort result is `Rank` weighted. Ideally, we'd like this to be `Suit`
+    /// weighted, followed by `Rank`. This would create a result from the test of `7♠ 8♦ 7♦ 6♣`.
+    /// For now we're going to mark this as a `todo` in `Cards` and add a test that we ignore for
+    /// now. This is one of those nice to haves right now.
+    ///
+    /// # Panics
+    ///
+    /// Shouldn't be possible 🤞
+    pub fn append(&mut self, other: &Outs) {
+        for (player, cards) in other.iter() {
+            self.touch(*player);
+            self.0.get_mut(player).unwrap().insert_all(cards);
+        }
+    }
+
     #[must_use]
     pub fn get(&self, player: usize) -> Option<&Cards> {
         self.0.get(&player)
+    }
+
+    #[must_use]
+    pub fn iter(&self) -> indexmap::map::Iter<'_, usize, Cards> {
+        self.0.iter()
     }
 
     pub fn touch(&mut self, player: usize) -> bool {
@@ -90,6 +127,21 @@ mod analysis__outs_tests {
 
         assert_eq!("6♣ 7♠", outs.get(1).unwrap().to_string());
         assert_eq!("7♠ 6♣", outs.get(1).unwrap().sort().to_string());
+    }
+
+    #[test]
+    fn append() {
+        let mut outs1 = Outs::default();
+        let mut outs2 = Outs::default();
+        outs1.add(1, Card::SIX_CLUBS);
+        outs1.add(1, Card::SEVEN_SPADES);
+        outs2.add(1, Card::SEVEN_DIAMONDS);
+        outs2.add(1, Card::EIGHT_DIAMONDS);
+
+        outs1.append(&outs2);
+
+        assert_eq!("6♣ 7♠ 7♦ 8♦", outs1.get(1).unwrap().to_string());
+        assert_eq!("8♦ 7♠ 7♦ 6♣", outs1.get(1).unwrap().sort().to_string());
     }
 
     #[test]
