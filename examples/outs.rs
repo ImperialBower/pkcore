@@ -6,7 +6,7 @@ fn main() -> Result<(), PKError> {
 
     println!("{}", game);
 
-    // display_odds_at_flop(&game)?;
+    game.display_odds_at_flop()?;
 
     Ok(())
 }

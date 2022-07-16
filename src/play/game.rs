@@ -50,11 +50,15 @@ impl Game {
     /// that I want to use in other places, I move it into the lib. I can definitely
     /// see a later refactoring where we move the display functionality to its own home.
     ///
+    /// # The Flow
+    ///
+    /// * `PlayerWins.at_flop()`
+    ///
     /// # Errors
     ///
     /// Throws `PKError::Fubar` if there is an invalid index.
     pub fn display_odds_at_flop(&self) -> Result<(), PKError> {
-        let pw = self.player_wins_at_flop();
+        let pw = PlayerWins::at_flop(&self.hands, self.board.flop);
         let results = Results::from_wins(&pw.wins, self.hands.len());
 
         println!();
@@ -102,8 +106,8 @@ impl Game {
     /// # Errors
     ///
     /// Returns `PKError::Fubar` if invalid index is passed in.
-    pub fn eval_at_flop(&self, index: usize) -> Result<Eval, PKError> {
-        match self.hands.get(index) {
+    pub fn eval_at_flop(&self, i: usize) -> Result<Eval, PKError> {
+        match self.hands.get(i) {
             None => Err(PKError::Fubar),
             Some(two) => Ok(Five::from_2and3(*two, self.board.flop).eval()),
         }
@@ -112,8 +116,8 @@ impl Game {
     /// # Errors
     ///
     /// Throws `PKError::Fubar` if invalid index
-    pub fn eval_at_turn(&self, index: usize) -> Result<Eval, PKError> {
-        match self.hands.get(index) {
+    pub fn eval_at_turn(&self, i: usize) -> Result<Eval, PKError> {
+        match self.hands.get(i) {
             None => Err(PKError::Fubar),
             Some(two) => Ok(Six::from_2and3and1(*two, self.board.flop, self.board.turn).eval()),
         }
@@ -137,13 +141,6 @@ impl Game {
             Err(e) => Err(e),
             Ok(eval) => Ok(format!("{} ({})", eval.hand, eval.hand_rank)),
         }
-    }
-
-    #[must_use]
-    pub fn player_wins_at_flop(&self) -> PlayerWins {
-        let mut pw = PlayerWins::default();
-        pw.play_out_flop(&self.hands, self.board.flop);
-        pw
     }
 
     #[must_use]

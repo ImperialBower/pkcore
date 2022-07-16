@@ -16,20 +16,12 @@ pub struct PlayerWins {
 }
 
 impl PlayerWins {
-    // /// # Errors
-    // ///
-    // /// `PKError::InvalidCard` if the case slice contains an invalid card.
-    // pub fn seven_at_flop(player: Two, flop: Three, case: &[Card]) -> Result<Seven, PKError> {
-    //     Ok(Seven::from([
-    //         player.first(),
-    //         player.second(),
-    //         flop.first(),
-    //         flop.second(),
-    //         flop.third(),
-    //         *case.get(0).ok_or(PKError::InvalidCard)?,
-    //         *case.get(1).ok_or(PKError::InvalidCard)?,
-    //     ]))
-    // }
+    #[must_use]
+    pub fn at_flop(hands: &HoleCards, flop: Three) -> Self {
+        let mut pw = PlayerWins::default();
+        pw.play_out_flop(hands, flop);
+        pw
+    }
 }
 
 /// For now we are going to work through our analysis needs from here. As the sophistication of our

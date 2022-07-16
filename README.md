@@ -485,6 +485,7 @@
         * REFACTOR: All hand_rank mods to analysis
         * SPIKE: examples/outs.rs
           * REFACTOR: Move display odds methods to Game
+          * REFACTOR: Move Game.player_wins_at_flop() to PlayerWins::at_flop()
 
 ## LATER
 

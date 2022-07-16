@@ -48,8 +48,8 @@ impl HoleCards {
 
     /// For our get we're going to return a blank `Hand` if the index passed in is too high.
     #[must_use]
-    pub fn get(&self, index: usize) -> Option<&Two> {
-        self.0.get(index)
+    pub fn get(&self, i: usize) -> Option<&Two> {
+        self.0.get(i)
     }
 
     /// The next logical extension is to have the struct transform all the hole cards into a
