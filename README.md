@@ -489,6 +489,7 @@
           * REFACTOR: Move Game.player_wins_at_turn() to PlayerWins::at_turn()
         * Outs.touch()
         * Outs.add()
+          * REFACTORING
 
 ## LATER
 

@@ -34,17 +34,25 @@ impl Outs {
     ///
     /// Then, on a lark I tried removing the `&mut`s all together, and what do you know, it worked.
     /// This is why we write unit tests. The rust compiler, no matter how good it is, can only show
-    /// us so much.
+    /// us so much. This gives us this:
+    ///
+    /// ```txt
+    /// pub fn add(&mut self, player: usize, card: Card) {
+    ///     self.touch(player);
+    ///     let set = self.0.get_mut(&player).unwrap();
+    ///     set.insert(card);
+    /// }
+    /// ```
+    ///
+    /// Let's try one last little change. Do we really need to set the set variable
+    /// before we call insert? Turns out the answer is no.
     ///
     /// # Panics
     ///
     /// Shouldn't be possible 🤞
     pub fn add(&mut self, player: usize, card: Card) {
         self.touch(player);
-
-        let set = self.0.get_mut(&player).unwrap();
-
-        set.insert(card);
+        self.0.get_mut(&player).unwrap().insert(card);
     }
 
     #[must_use]
