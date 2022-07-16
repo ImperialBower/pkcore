@@ -77,6 +77,96 @@ impl Outs {
     /// For now we're going to mark this as a `todo` in `Cards` and add a test that we ignore for
     /// now. This is one of those nice to haves right now.
     ///
+    /// This is why, when you're writing your tests, that you don't want to always do the same thing over
+    /// and over again. Right now, we're a bit guilty of that with our `TestData` struct. Later on,
+    /// I would like to level it up a bit by having it be able to load serialized data from a file
+    /// so that we can add more scenarios.
+    ///
+    /// Many years ago I wrote a library in Java that I called `Faker` in Java for a company I was
+    /// working for. It could instantiate state from CSV files and build relationships between
+    /// dynamic entities. It allowed me to quickly create complex relationships, that I could place
+    /// in front of Spring MVC controllers via a @Fake annotation, allowing me to stand up web
+    /// services for front end devs before the back end devs had finished writing them. I was really
+    /// proud of this work.
+    ///
+    /// Alas, this library died when I left the company, because I am sure that the people I worked
+    /// under didn't take a minute to understand what I was doing, and only really cared about
+    /// protecting their IP. If the company I worked for had had a rational open source policy,
+    /// instead of one driven by ol' timey lawyers, the code would have been able to be shared,
+    /// which would have made it much more visible to the company's devs, allowed for other's to
+    /// contribute to the code globally, and been free advertisement to the kind of cool work
+    /// that the company does. This is the power of the commons. As the Belters say in The Expanse:
+    ///
+    /// > The more you share the more your bowl will be plentiful.
+    ///
+    /// I wish more companies took the time to have a rational open source policy, allowing
+    /// themselves to leverage its power. Unfortunately, most people are binary thinkers. They see
+    /// everything in terms of black and white. Yes, you're here to make money, but sometimes the
+    /// best way to earn a profit is to give something away.
+    ///
+    /// Anywho, the plan is to do this for our library. Part of the reason for this is that I want
+    /// to create a fundamental way for this library to serialize state into text files, so that I
+    /// can quickly generate hand calculations. For now, this is one of those features in the
+    /// backlog.
+    ///
+    /// I think of this as making my data plastic. I use the original term for the word, as opposed
+    /// to the modern, [life killing family of chemicals](https://education.nationalgeographic.org/resource/great-pacific-garbage-patch)
+    /// that we generally think of today when we hear the word.
+    /// [Plastic](https://www.etymonline.com/word/plastic) comes
+    /// from the Latin word _plasticus_, which in turn comes from the Greek word _plastikos_,
+    /// meaning _capable of being molded into various forms_.
+    ///
+    /// I want my data to be plastic. When I write libraries, I want the domain entities is wrangles
+    /// to be able to be twisted and turned into many shapes. I want to be able to easily save them
+    /// to files, and write them to databases, and when I look at that raw data, I want to be able
+    /// to easily understand what it is. Making my code plastic, is for me the highest state of
+    /// quality. While it may constantly change its state, it never loses its core identity. I don't
+    /// know how people in the future will use this code, so I want to make it as flexible as
+    /// possible, and learn from how people stress it beyond its limits so that I can make it
+    /// stronger later on.
+    ///
+    /// Most coders and product people see this as _gold plating_. Just give me what my requirements
+    /// are and don't worry about making it flexible. If I had listen to this advice, many of the
+    /// projects I had worked on would never had made it to launch. The truth is, that people don't
+    /// really know what they want until they see it. If Steve Jobs had given consumers what they
+    /// wanted, Apple wouldn't exist as a company. You will find as a developer that product owners
+    /// change their minds on a dime with no consideration for your time or efforts. They always
+    /// think they know better and see your work as trivial efforts manifesting their majestic
+    /// will-to-power genius. Fuck your kids... fuck your life... I need you working 80 weeks
+    /// because you didn't psychically read my mind when I asked you for X when I really wanted Y.
+    /// This is why they pay me the big bucks. Because I am an inflated ego masquerading as an
+    /// innovative genius, with my world shattering powerpoint skills causing VCs the world over
+    /// to line up to give me all of their money. The bottom of startup ocean is littered with the
+    /// wrecks of these fools.
+    ///
+    /// Define what your core domain is, make their libraries plastic, and you can mold them into
+    /// whatever shapes you need. I wish for you experiences where you work with people strong
+    /// enough to trust you to do this. I test my code. I harden my domain. I write things that
+    /// empower creators. This is how I code when I am coding as my best self. It has always been
+    /// the source of my greatest wins, and has rarely been understood by anyone I worked with. Part
+    /// of the reason for this book is to get these ideas down.
+    ///
+    /// ## A little story...
+    ///
+    /// For many, many years when you wrote apps for the iPhone, you would do so in the
+    /// [Objective-C](https://en.wikipedia.org/wiki/Objective-C)
+    /// programming language. In your code, you would constantly see calls to libraries with the
+    /// prefix NS. This always seemed strange to me. Turns out, it's from the work done at Jobs'
+    /// company [NeXTSTEP](https://en.wikipedia.org/wiki/NeXTSTEP), which was acquired by Apple in
+    /// 1996. It always seemed strange to be that he insisted on Apple acquiring back NeXTSTEP when
+    /// he returned to Apple.
+    ///
+    /// Turns out that one of the core reasons for the Apple's success was what I call the most
+    /// beautiful hack in programming. While Sun Microsystems was creating an object-oriented
+    /// version of the C programming language that was bloated and slow, Tom Love and Brad Cox
+    /// were creating a small, tiny extension to C that achieved the same goal, while being tiny
+    /// and fast.
+    ///
+    /// Objective-C is what allowed Apple developers to innovate so fast. It was the jump start that
+    /// allowed Apple to quickly innovate. Now, when I code in Swift, it makes me sad how much
+    /// slower XCode is from my days coding in Objective-C. I understand why they created Swift,
+    /// but they gave up a lot when they moved to it.
+    ///
     /// # Panics
     ///
     /// Shouldn't be possible 🤞
