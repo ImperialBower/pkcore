@@ -493,6 +493,7 @@
         * Outs.len_for_player()
         * Outs.len_longest()
         * Outs.longest_player()
+        * Outs.add_from_player_flag()
 
 ## LATER
 

@@ -1,5 +1,6 @@
 use crate::{Card, Cards};
 use indexmap::IndexMap;
+use crate::util::wincounter::PlayerFlag;
 
 /// This is old `Fudd` code.
 #[derive(Clone, Debug)]
@@ -53,6 +54,12 @@ impl Outs {
     pub fn add(&mut self, player: usize, card: Card) {
         self.touch(player);
         self.0.get_mut(&player).unwrap().insert(card);
+    }
+
+    /// Our goal of this method is to add the Card for every player bit flag that is set.
+    /// We are going to test drive through this method
+    pub fn add_from_player_flag(&mut self, flag: PlayerFlag, card: Card) {
+
     }
 
     /// *FRACK*
@@ -261,6 +268,7 @@ impl Default for Outs {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod analysis__outs_tests {
+    use crate::util::wincounter::win::Win;
     use super::*;
 
     #[test]
@@ -269,6 +277,17 @@ mod analysis__outs_tests {
 
         outs.add(1, Card::SIX_CLUBS);
         outs.add(1, Card::SEVEN_SPADES);
+
+        assert_eq!("6♣ 7♠", outs.get(1).unwrap().to_string());
+        assert_eq!("7♠ 6♣", outs.get(1).unwrap().sort().to_string());
+    }
+
+    #[test]
+    fn add_from_player_flag() {
+        let mut outs = Outs::default();
+
+        outs.add_from_player_flag(Win::FIRST, Card::SIX_CLUBS);
+        outs.add_from_player_flag(Win::FIRST, Card::SEVEN_SPADES);
 
         assert_eq!("6♣ 7♠", outs.get(1).unwrap().to_string());
         assert_eq!("7♠ 6♣", outs.get(1).unwrap().sort().to_string());
