@@ -187,7 +187,7 @@ impl Outs {
     /// R.J. telling me to move on.
     #[must_use]
     pub fn is_longest(&self, player: usize) -> bool {
-        false
+        self.longest_player() == player
     }
 
     #[must_use]
@@ -287,6 +287,17 @@ mod analysis__outs_tests {
 
         assert_eq!("6♣ 7♠ 7♦ 8♦", outs1.get(1).unwrap().to_string());
         assert_eq!("8♦ 7♠ 7♦ 6♣", outs1.get(1).unwrap().sort().to_string());
+    }
+
+    #[test]
+    fn is_longest() {
+        let mut outs = Outs::default();
+        outs.add(1, Card::SIX_CLUBS);
+        outs.add(1, Card::SEVEN_SPADES);
+        outs.add(2, Card::SEVEN_DIAMONDS);
+
+        assert!(outs.is_longest(1));
+        assert!(!outs.is_longest(2));
     }
 
     #[test]
