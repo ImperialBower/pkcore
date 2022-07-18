@@ -14,7 +14,10 @@ pub mod wins;
 /// back to the fold. I see it as having its own utility outside of this work, and generally like to
 /// keep my libraries independent for flexibility. That's just how I roll.
 ///
-// TODO RF: Refactor this as a `struct PlayerFlag(u16)`.
+/// TODO RF: Refactor this as a `struct PlayerFlag(u16)`.
+///
+/// In retrospect, I should never do these fracking type aliases. I always
+/// regret it. Just wrap it,
 pub type PlayerFlag = u16;
 
 pub trait Result {
