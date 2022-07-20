@@ -504,6 +504,8 @@
 
 * Poker
   * [Mike Caro's Website](https://www.poker1.com/)
+  * GTO
+    * [Minimum Defense Frequency vs Pot Odds](https://upswingpoker.com/minimum-defense-frequency-vs-pot-odds/)
 * Rust
   * [The Rust Programming Language](https://doc.rust-lang.org/stable/book/)
   * [Rust Design Patterns](https://rust-unofficial.github.io/patterns/intro.html) 

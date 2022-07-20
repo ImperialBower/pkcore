@@ -1,6 +1,7 @@
+use crate::util::wincounter::win::Win;
+use crate::util::wincounter::PlayerFlag;
 use crate::{Card, Cards};
 use indexmap::IndexMap;
-use crate::util::wincounter::PlayerFlag;
 
 /// This is old `Fudd` code.
 #[derive(Clone, Debug)]
@@ -56,10 +57,33 @@ impl Outs {
         self.0.get_mut(&player).unwrap().insert(card);
     }
 
-    /// Our goal of this method is to add the Card for every player bit flag that is set.
-    /// We are going to test drive through this method
+    /// Our goal of this method is to add the `Card` for every player bit flag that is set.
+    /// We are going to test drive through this method.
+    ///
+    /// The big idea is that we have a `PlayerFlag` that we need to check if the first bit is
+    /// set and then do a shift right on the value and see if the flag is set for the player.
+    /// Something like:
+    ///
+    /// ```
+    /// use pkcore::util::wincounter::PlayerFlag;
+    /// use pkcore::util::wincounter::win::Win;
+    ///
+    /// let mut i: PlayerFlag = 0b0000_0000_0000_0101;
+    ///
+    /// for _ in 1..8 {
+    ///     let is_set = i & Win::FIRST == Win::FIRST;
+    ///     i = i >> 1;
+    /// }
+    /// ```
     pub fn add_from_player_flag(&mut self, flag: PlayerFlag, card: Card) {
-
+        let mut bite = flag;
+        for player in 1..11 {
+            if bite & Win::FIRST == Win::FIRST {
+                self.add(player, card);
+                // CLIPPY CORRECTION OF: bite = bite >> 1;
+                bite >>= 1;
+            }
+        }
     }
 
     /// *FRACK*
@@ -268,8 +292,8 @@ impl Default for Outs {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod analysis__outs_tests {
-    use crate::util::wincounter::win::Win;
     use super::*;
+    use crate::util::wincounter::win::Win;
 
     #[test]
     fn add() {
