@@ -78,11 +78,12 @@ impl Outs {
     pub fn add_from_player_flag(&mut self, flag: PlayerFlag, card: Card) {
         let mut bite = flag;
         for player in 1..11 {
-            if bite & Win::FIRST == Win::FIRST {
+            let is_set = bite & Win::FIRST == Win::FIRST;
+            if is_set {
                 self.add(player, card);
-                // CLIPPY CORRECTION OF: bite = bite >> 1;
-                bite >>= 1;
             }
+            // CLIPPY CORRECTION OF: bite = bite >> 1;
+            bite >>= 1;
         }
     }
 
@@ -314,7 +315,20 @@ mod analysis__outs_tests {
         outs.add_from_player_flag(Win::FIRST, Card::SEVEN_SPADES);
 
         assert_eq!("6♣ 7♠", outs.get(1).unwrap().to_string());
-        assert_eq!("7♠ 6♣", outs.get(1).unwrap().sort().to_string());
+    }
+
+    #[test]
+    fn add_from_player_flag__1_and_3() {
+        let mut outs = Outs::default();
+
+        outs.add_from_player_flag(Win::THIRD, Card::SIX_CLUBS);
+        outs.add_from_player_flag(Win::THIRD, Card::SEVEN_SPADES);
+        outs.add_from_player_flag(Win::FIRST, Card::ACE_SPADES);
+
+        assert_eq!("A♠", outs.get(1).unwrap().to_string());
+        assert!(outs.get(2).is_none());
+        assert!(outs.get(4).is_none());
+        assert_eq!("6♣ 7♠", outs.get(3).unwrap().to_string());
     }
 
     #[test]
