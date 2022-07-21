@@ -1,6 +1,4 @@
 use clap::Parser;
-use pkcore::analysis::evals::Evals;
-use pkcore::arrays::three::Three;
 use pkcore::play::board::Board;
 use pkcore::play::game::Game;
 use pkcore::play::hole_cards::HoleCards;
@@ -100,10 +98,15 @@ fn main() -> Result<(), PKError> {
     game.display_odds_at_flop()?;
 
     if args.nuts {
-        display_evals_at_flop(game.board.flop);
+        game.display_evals_at_flop();
     }
 
     game.display_odds_at_turn()?;
+
+    // too slow
+    // if args.nuts {
+    //     game.display_evals_at_turn();
+    // }
 
     println!();
     println!("{}", command(game));
@@ -119,26 +122,4 @@ fn command(game: Game) -> String {
         game.hands.cards(),
         game.board.cards()
     )
-}
-
-fn display_evals_at_flop(flop: Three) {
-    println!();
-    println!("The Nuts @ Flop:");
-    let mut evals = flop.evals();
-    evals.sort_in_place();
-    display_evals(evals);
-}
-
-fn _display_evals_at_turn(game: Game) {
-    println!();
-    println!("The Nuts @ Turn:");
-    display_evals(game.the_nuts_at_turn().to_evals());
-}
-
-fn display_evals(mut evals: Evals) {
-    evals.sort_in_place();
-
-    for (i, eval) in evals.to_vec().iter().enumerate() {
-        println!("  #{}: {}", i + 1, eval);
-    }
 }

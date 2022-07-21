@@ -2,6 +2,7 @@ use crate::analysis::eval::Eval;
 use crate::analysis::hand_rank::HandRank;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::PlayerFlag;
+use crate::Cards;
 use std::slice::Iter;
 
 /// # Analysis Saga: Step 2
@@ -59,9 +60,14 @@ use std::slice::Iter;
 ///
 /// TODO: Section on defect vectors
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct CaseEval(Vec<Eval>);
+pub struct CaseEval(Vec<Eval>, Cards);
 
 impl CaseEval {
+    #[must_use]
+    pub fn new(case: Cards) -> CaseEval {
+        CaseEval(Vec::default(), case)
+    }
+
     #[must_use]
     pub fn get(&self, index: usize) -> Option<&Eval> {
         self.0.get(index)
@@ -382,7 +388,7 @@ impl CaseEval {
 
 impl From<Vec<Eval>> for CaseEval {
     fn from(v: Vec<Eval>) -> Self {
-        CaseEval(v)
+        CaseEval(v, Cards::default())
     }
 }
 
@@ -397,10 +403,13 @@ mod hand_rank__case_eval_tests {
 
     #[test]
     fn get() {
-        let sut = CaseEval(vec![
-            TestData::daniel_eval_at_flop(),
-            TestData::gus_eval_at_flop(),
-        ]);
+        let sut = CaseEval(
+            vec![
+                TestData::daniel_eval_at_flop(),
+                TestData::gus_eval_at_flop(),
+            ],
+            Cards::default(),
+        );
 
         assert_eq!(sut.get(0).unwrap(), &TestData::daniel_eval_at_flop());
         assert_eq!(sut.get(1).unwrap(), &TestData::gus_eval_at_flop());
@@ -410,10 +419,13 @@ mod hand_rank__case_eval_tests {
     #[test]
     fn is_empty() {
         assert!(CaseEval::default().is_empty());
-        assert!(!CaseEval(vec![
-            TestData::daniel_eval_at_flop(),
-            TestData::gus_eval_at_flop(),
-        ])
+        assert!(!CaseEval(
+            vec![
+                TestData::daniel_eval_at_flop(),
+                TestData::gus_eval_at_flop(),
+            ],
+            Cards::default()
+        )
         .is_empty());
     }
 
@@ -422,10 +434,13 @@ mod hand_rank__case_eval_tests {
         assert_eq!(0, CaseEval::default().len());
         assert_eq!(
             2,
-            CaseEval(vec![
-                TestData::daniel_eval_at_flop(),
-                TestData::gus_eval_at_flop(),
-            ])
+            CaseEval(
+                vec![
+                    TestData::daniel_eval_at_flop(),
+                    TestData::gus_eval_at_flop(),
+                ],
+                Cards::default()
+            )
             .len()
         );
     }
@@ -434,10 +449,13 @@ mod hand_rank__case_eval_tests {
     #[test]
     fn push() {
         let mut sut = CaseEval::default();
-        let expected = CaseEval(vec![
-            TestData::daniel_eval_at_flop(),
-            TestData::gus_eval_at_flop(),
-        ]);
+        let expected = CaseEval(
+            vec![
+                TestData::daniel_eval_at_flop(),
+                TestData::gus_eval_at_flop(),
+            ],
+            Cards::default(),
+        );
 
         sut.push(TestData::daniel_eval_at_flop());
         sut.push(TestData::gus_eval_at_flop());
@@ -452,10 +470,13 @@ mod hand_rank__case_eval_tests {
             TestData::gus_eval_at_flop(),
         ];
 
-        let actual = CaseEval(vec![
-            TestData::daniel_eval_at_flop(),
-            TestData::gus_eval_at_flop(),
-        ])
+        let actual = CaseEval(
+            vec![
+                TestData::daniel_eval_at_flop(),
+                TestData::gus_eval_at_flop(),
+            ],
+            Cards::default(),
+        )
         .to_vec();
 
         assert_eq!(expected, actual);
@@ -465,10 +486,13 @@ mod hand_rank__case_eval_tests {
     fn win_count__the_hand() {
         let expected = Win::FIRST;
 
-        let actual = CaseEval(vec![
-            TestData::daniel_eval_at_flop(),
-            TestData::gus_eval_at_flop(),
-        ])
+        let actual = CaseEval(
+            vec![
+                TestData::daniel_eval_at_flop(),
+                TestData::gus_eval_at_flop(),
+            ],
+            Cards::default(),
+        )
         .win_count();
 
         assert_eq!(expected, actual);
@@ -550,10 +574,13 @@ mod hand_rank__case_eval_tests {
     fn winning_hand_rank() {
         let expected = TestData::daniel_eval_at_flop().hand_rank;
 
-        let actual = CaseEval(vec![
-            TestData::daniel_eval_at_flop(),
-            TestData::gus_eval_at_flop(),
-        ])
+        let actual = CaseEval(
+            vec![
+                TestData::daniel_eval_at_flop(),
+                TestData::gus_eval_at_flop(),
+            ],
+            Cards::default(),
+        )
         .winning_hand_rank();
 
         assert_eq!(expected, actual);

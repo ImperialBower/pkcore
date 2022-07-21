@@ -45,6 +45,29 @@ impl Game {
         Game { hands, board }
     }
 
+    fn display_evals(mut evals: Evals) {
+        evals.sort_in_place();
+
+        for (i, eval) in evals.to_vec().iter().enumerate() {
+            println!("  #{}: {}", i + 1, eval);
+        }
+    }
+
+    pub fn display_evals_at_flop(&self) {
+        println!();
+        println!("The Nuts @ Flop:");
+        let mut evals = self.board.flop.evals();
+        evals.sort_in_place();
+        Game::display_evals(evals);
+    }
+
+    /// This function is insanely slow.
+    pub fn display_evals_at_turn(&self) {
+        println!();
+        println!("The Nuts @ Turn:");
+        Game::display_evals(self.the_nuts_at_turn().to_evals());
+    }
+
     /// Originally part of our calc example program. When my examples have functionality
     /// that I want to use in other places, I move it into the lib. I can definitely
     /// see a later refactoring where we move the display functionality to its own home.

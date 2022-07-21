@@ -1,5 +1,6 @@
 use crate::analysis::eval::Eval;
 use crate::arrays::five::Five;
+use std::fmt::{Display, Formatter};
 
 #[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Evals(Vec<Eval>);
@@ -36,6 +37,12 @@ impl Evals {
     #[must_use]
     pub fn to_vec(&self) -> Vec<Eval> {
         self.0.clone()
+    }
+}
+
+impl Display for Evals {
+    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
     }
 }
 
