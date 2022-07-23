@@ -2,7 +2,7 @@ use crate::analysis::eval::Eval;
 use crate::analysis::hand_rank::HandRank;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::PlayerFlag;
-use crate::Cards;
+use crate::{Card, Cards, Pile};
 use std::slice::Iter;
 
 /// # Analysis Saga: Step 2
@@ -59,6 +59,11 @@ use std::slice::Iter;
 ///
 ///
 /// TODO: Section on defect vectors
+///
+/// ## Version 2 : Adding case
+///
+/// In order to have a way to consolidate the outs for a specific hand, we're adding a
+/// `Cards` struct to give a common context behind the specific `Case`.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CaseEval(Vec<Eval>, Cards);
 
@@ -66,6 +71,45 @@ impl CaseEval {
     #[must_use]
     pub fn new(case: Cards) -> CaseEval {
         CaseEval(Vec::default(), case)
+    }
+
+    /// OK, this feels a bit hacky to me, but TBH I'm a hack and I want a simple
+    /// way to get one `Card` when I am determining `Outs` on the flop. I know
+    /// that the `Cards` struct doesn't let you insert `Card::BLANK` `Cards`, so
+    /// rather than dealing with `Option` or `Result` I can just return a blank card
+    /// when there's nothing there.
+    #[must_use]
+    pub fn card(&self) -> Card {
+        match self.1.cards().draw_one() {
+            Ok(card) => card,
+            Err(_) => Card::BLANK,
+        }
+    }
+
+    /// The first test we're going to do is an easy one. By default, does our struct
+    /// return `None` when we ask for its `Cards`?
+    ///
+    /// ```
+    /// use pkcore::analysis::case_eval::CaseEval;
+    /// assert!(CaseEval::default().cards().is_none());
+    /// ```
+    #[must_use]
+    pub fn cards(&self) -> Option<Cards> {
+        if self.1.is_empty() {
+            None
+        } else {
+            Some(self.1.clone())
+        }
+    }
+
+    #[must_use]
+    pub fn cards_is_empty(&self) -> bool {
+        self.1.is_empty()
+    }
+
+    #[must_use]
+    pub fn cards_len(&self) -> usize {
+        self.1.len()
     }
 
     #[must_use]
@@ -400,6 +444,26 @@ mod hand_rank__case_eval_tests {
     use crate::arrays::two::Two;
     use crate::util::data::TestData;
     use crate::util::wincounter::win::Win;
+    use std::str::FromStr;
+
+    #[test]
+    fn card() {
+        let card = Cards::from_str("8♠").unwrap();
+
+        assert_eq!(Card::EIGHT_SPADES, CaseEval::new(card).card());
+        assert_eq!(Card::BLANK, CaseEval::default().card());
+    }
+
+    #[test]
+    fn cards() {
+        let cards = Cards::from_str("5♠ 8♠").unwrap();
+
+        let mut case_eval = CaseEval::new(cards);
+        case_eval.push(TestData::daniel_eval_at_flop());
+        case_eval.push(TestData::gus_eval_at_flop());
+
+        assert!(CaseEval::default().cards().is_none());
+    }
 
     #[test]
     fn get() {

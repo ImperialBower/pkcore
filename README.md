@@ -495,6 +495,9 @@
         * Outs.longest_player()
         * Outs.add_from_player_flag()
         * CaseEval adding case Cards field
+          * .cards()
+          * .card()
+          * .cards_is_empty() & .cards_len()
 
 ## LATER
 
