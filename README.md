@@ -498,6 +498,9 @@
           * .cards()
           * .card()
           * .cards_is_empty() & .cards_len()
+        * Outs.add_from_case_eval()
+        * Game.case_eval_at_turn()
+          * Cards::from<&Card>
 
 ## LATER
 

@@ -6,6 +6,18 @@
 
 ## Themes
 
+## Ways to read
+
+I've written this book so that you can approach it in a number of ways. It seems
+like most programming books these days are designed to be interactive, because
+that's a great way to learn stuff. The problem with this is that you need to
+be sitting in front of a computer while you read the book.
+
+However, I want to create something that can be enjoyed in a number of ways.
+
+* Interactively, so that you can build up some Rust muscle memory.
+* Casually, so that you can get the experience of something just watching me code; sort of like a book version of a Twitch stream.
+
 ### Perspective
 
 * The Booth - God Mode

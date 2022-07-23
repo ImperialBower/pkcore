@@ -64,6 +64,15 @@ use std::slice::Iter;
 ///
 /// In order to have a way to consolidate the outs for a specific hand, we're adding a
 /// `Cards` struct to give a common context behind the specific `Case`.
+///
+/// ### Done
+///
+/// Now comes the hard part. We've got the `Outs` `Card` for each `CaseEval`, now we have to
+/// turn that into a functioning outs...
+///
+/// Actually, it's not as hard as it looks. We already have `Outs.add_from_player_flag()`, which
+/// has all of the core logic we need. How about we add an `Outs.add_from_case_eval()` and
+/// call it a day?
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CaseEval(Vec<Eval>, Cards);
 

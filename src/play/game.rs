@@ -10,6 +10,7 @@ use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::results::Results;
 use crate::{Card, Cards, Evals, PKError, Pile, TheNuts};
 use std::fmt::{Display, Formatter};
+use crate::analysis::case_eval::CaseEval;
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -45,12 +46,15 @@ impl Game {
         Game { hands, board }
     }
 
-    fn display_evals(mut evals: Evals) {
-        evals.sort_in_place();
-
-        for (i, eval) in evals.to_vec().iter().enumerate() {
-            println!("  #{}: {}", i + 1, eval);
-        }
+    /// This is really a sort of utility method so that I can quickly
+    /// generate a specific `CaseEval` at the turn.
+    ///
+    /// The hardest part about writing the method is going to be generating
+    /// a good test expected value. Within our domain, our state transformations are now
+    /// getting fairly complicated. Well, let's see how it goes...
+    #[must_use]
+    pub fn case_eval_at_turn(&self, card: Card) -> CaseEval {
+        todo!()
     }
 
     pub fn display_evals_at_flop(&self) {
@@ -192,6 +196,15 @@ impl Game {
         the_nuts.sort_in_place();
 
         the_nuts
+    }
+
+    // region Private Methods
+    fn display_evals(mut evals: Evals) {
+        evals.sort_in_place();
+
+        for (i, eval) in evals.to_vec().iter().enumerate() {
+            println!("  #{}: {}", i + 1, eval);
+        }
     }
 
     fn flop_and_turn(&self) -> Four {
@@ -391,6 +404,8 @@ impl Game {
         cards.insert(self.board.turn);
         Cards::deck_minus(&cards)
     }
+
+    // endregion
 }
 
 impl Display for Game {
@@ -402,6 +417,7 @@ impl Display for Game {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod play__game_tests {
+    use std::str::FromStr;
     use super::*;
     use crate::util::data::TestData;
 
@@ -410,6 +426,18 @@ mod play__game_tests {
         let game = TestData::the_hand();
 
         assert_eq!(game, Game::new(game.hands.clone(), game.board));
+    }
+
+    #[test]
+    fn case_eval_at_turn() {
+        let game = Game {
+            hands: TestData::hole_cards_the_hand(),
+            board: Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap(),
+        };
+
+        let actual = game.case_eval_at_turn(Card::SIX_CLUBS);
+
+        
     }
 
     #[test]

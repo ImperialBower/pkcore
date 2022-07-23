@@ -340,6 +340,26 @@ impl fmt::Display for Cards {
     }
 }
 
+impl From<&Card> for Cards {
+    /// Turns out we already have a `TryFrom<Card>` implemented, but I want something similar.
+    /// This will give us the contract that if it's blank it won't be inserted, which is fine.
+    /// I can see wanted to do both versions of the functionality.
+    ///
+    /// When I am coding in rust, I do feel the constant tension between my desire to make things
+    /// just flow as easily as possible in the short term, and wanting to code things the right,
+    /// "rusty" way.
+    ///
+    /// My general rule is to follow Socrates' maxim: _the unexamined life is not worth living._
+    /// Know why you are doing anything. Following rules blindly makes you a tool. If you can't
+    /// answer questions like: _why did you code it this way?_ and _what's the purpose of this
+    /// test?_ you need to take a step back
+    fn from(card: &Card) -> Self {
+        let mut cards = Cards::default();
+        cards.insert(*card);
+        cards
+    }
+}
+
 impl From<Vec<Card>> for Cards {
     fn from(v: Vec<Card>) -> Self {
         let filtered = v.iter().filter_map(|c| {
@@ -759,6 +779,12 @@ mod card_tests {
     #[test]
     fn display() {
         assert_eq!("5♣ 4♣ 3♣ 2♣ A♣", wheel().to_string());
+    }
+
+    #[test]
+    fn from__card() {
+        assert_eq!(Cards::from_str("3♣").unwrap(), Cards::from(&Card::TREY_CLUBS));
+        assert_eq!(Cards::default(), Cards::from(&Card::BLANK));
     }
 
     #[test]

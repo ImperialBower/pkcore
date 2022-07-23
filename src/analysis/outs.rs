@@ -2,6 +2,7 @@ use crate::util::wincounter::win::Win;
 use crate::util::wincounter::PlayerFlag;
 use crate::{Card, Cards};
 use indexmap::IndexMap;
+use crate::analysis::case_eval::CaseEval;
 
 /// This is old `Fudd` code.
 #[derive(Clone, Debug)]
@@ -55,6 +56,10 @@ impl Outs {
     pub fn add(&mut self, player: usize, card: Card) {
         self.touch(player);
         self.0.get_mut(&player).unwrap().insert(card);
+    }
+
+    pub fn add_from_case_eval(&mut self, case_eval: CaseEval) {
+        self.add_from_player_flag(case_eval.win_count(), case_eval.card())
     }
 
     /// Our goal of this method is to add the `Card` for every player bit flag that is set.
