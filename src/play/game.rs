@@ -48,52 +48,7 @@ impl Game {
         Game { hands, board }
     }
 
-    /// This is really a sort of utility method so that I can quickly
-    /// generate a specific `CaseEval` at the turn.
-    ///
-    /// The hardest part about writing the method is going to be generating
-    /// a good test expected value. Within our domain, our state transformations are now
-    /// getting fairly complicated. Well, let's see how it goes...
-    #[must_use]
-    pub fn case_eval_at_turn(&self, card: &Card) -> CaseEval {
-        let mut case_eval = CaseEval::new(Cards::from(card));
-        for (i, player) in self.hands.iter().enumerate() {
-            let seven = Seven::from_case_at_turn(*player, self.board.flop, self.board.turn, *card);
-            let eval = Eval::from(seven);
-
-            case_eval.push(eval);
-
-            debug!("Player {} {}: {}", i + 1, *player, eval);
-        }
-        case_eval
-    }
-
-    #[must_use]
-    pub fn case_evals_turn(&self) -> CaseEvals {
-        debug!(
-            "PlayerWins.case_evals_turn(hands: {} flop: {} turn: {})",
-            self.hands, self.board.flop, self.board.turn
-        );
-
-        let mut case_evals = CaseEvals::default();
-
-        case_evals
-    }
-
-    pub fn display_evals_at_flop(&self) {
-        println!();
-        println!("The Nuts @ Flop:");
-        let mut evals = self.board.flop.evals();
-        evals.sort_in_place();
-        Game::display_evals(evals);
-    }
-
-    /// This function is insanely slow.
-    pub fn display_evals_at_turn(&self) {
-        println!();
-        println!("The Nuts @ Turn:");
-        Game::display_evals(self.the_nuts_at_turn().to_evals());
-    }
+    // region flop
 
     /// Originally part of our calc example program. When my examples have functionality
     /// that I want to use in other places, I move it into the lib. I can definitely
@@ -106,7 +61,7 @@ impl Game {
     /// # Errors
     ///
     /// Throws `PKError::Fubar` if there is an invalid index.
-    pub fn display_odds_at_flop(&self) -> Result<(), PKError> {
+    pub fn flop_display_odds(&self) -> Result<(), PKError> {
         let pw = PlayerWins::at_flop(&self.hands, self.board.flop);
         let results = Results::from_wins(&pw.wins, self.hands.len());
 
@@ -118,17 +73,98 @@ impl Game {
                 i + 1,
                 hole_cards,
                 results.player_to_string(i),
-                self.eval_at_flop_str(i)?
+                self.flop_eval_for_player_str(i)?
             );
         }
 
         Ok(())
     }
 
+
+    pub fn flop_display_the_nuts(&self) {
+        println!();
+        println!("The Nuts @ Flop:");
+        let mut evals = self.board.flop.evals();
+        evals.sort_in_place();
+        Game::display_evals(evals);
+    }
+
+    /// Returns the `Five` `Card` hand combining the hole cards from the passed in index
+    /// combined with the `Three` Cards on the flop.
+    ///
+    /// # Errors
+    ///
+    /// Returns `PKError::Fubar` if invalid index is passed in.
+    pub fn flop_eval_for_player(&self, i: usize) -> Result<Eval, PKError> {
+        match self.hands.get(i) {
+            None => Err(PKError::Fubar),
+            Some(two) => Ok(Five::from_2and3(*two, self.board.flop).eval()),
+        }
+    }
+
+    /// # Errors
+    ///
+    /// Throws `PKError::Fubar` if invalid index
+    pub fn flop_eval_for_player_str(&self, index: usize) -> Result<String, PKError> {
+        match self.flop_eval_for_player(index) {
+            Err(e) => Err(e),
+            Ok(eval) => Ok(format!("{} ({})", eval.hand, eval.hand_rank)),
+        }
+    }
+
+    #[must_use]
+    pub fn flop_evals(&self) -> Evals {
+        self.board.flop.evals()
+    }
+
+    // endregion
+
+    // region turn
+
+    /// This is really a sort of utility method so that I can quickly
+    /// generate a specific `CaseEval` at the turn.
+    ///
+    /// The hardest part about writing the method is going to be generating
+    /// a good test expected value. Within our domain, our state transformations are now
+    /// getting fairly complicated. Well, let's see how it goes...
+    #[must_use]
+    pub fn turn_case_eval(&self, card: &Card) -> CaseEval {
+        let mut case_eval = CaseEval::new(Cards::from(card));
+        for (i, player) in self.hands.iter().enumerate() {
+            let seven = Seven::from_case_at_turn(*player, self.board.flop, self.board.turn, *card);
+            let eval = Eval::from(seven);
+
+            case_eval.push(eval);
+
+            debug!("Player {} {}: {}", i + 1, *player, eval);
+        }
+        case_eval
+    }
+
+    /// Returns all the possible `CaseEvals` for the `Game` at the turn.
+    #[must_use]
+    pub fn turn_case_evals(&self) -> CaseEvals {
+        debug!(
+            "PlayerWins.case_evals_turn(hands: {} flop: {} turn: {})",
+            self.hands, self.board.flop, self.board.turn
+        );
+
+        let mut case_evals = CaseEvals::default();
+
+        case_evals
+    }
+
+    /// This function is insanely slow.
+    pub fn turn_display_evals(&self) {
+        println!();
+        println!("The Nuts @ Turn:");
+        Game::display_evals(self.turn_the_nuts().to_evals());
+    }
+
     /// # Errors
     ///
     /// Throws `PKError::Fubar` if there is an invalid index.
-    pub fn display_odds_at_turn(&self) -> Result<(), PKError> {
+    pub fn turn_display_odds(&self) -> Result<(), PKError> {
         let pw = PlayerWins::at_turn(&self.hands, self.board.flop, self.board.turn);
         let results = Results::from_wins(&pw.wins, self.hands.len());
 
@@ -141,30 +177,17 @@ impl Game {
                 i + 1,
                 hole_cards,
                 results.player_to_string(i),
-                self.eval_at_turn_str(i)?
+                self.turn_eval_for_player_str(i)?
             );
         }
 
         Ok(())
     }
 
-    /// Returns the `Five` `Card` hand combining the hole cards from the passed in index
-    /// combined with the `Three` Cards on the flop.
-    ///
-    /// # Errors
-    ///
-    /// Returns `PKError::Fubar` if invalid index is passed in.
-    pub fn eval_at_flop(&self, i: usize) -> Result<Eval, PKError> {
-        match self.hands.get(i) {
-            None => Err(PKError::Fubar),
-            Some(two) => Ok(Five::from_2and3(*two, self.board.flop).eval()),
-        }
-    }
-
     /// # Errors
     ///
     /// Throws `PKError::Fubar` if invalid index
-    pub fn eval_at_turn(&self, i: usize) -> Result<Eval, PKError> {
+    pub fn turn_eval_for_player(&self, i: usize) -> Result<Eval, PKError> {
         match self.hands.get(i) {
             None => Err(PKError::Fubar),
             Some(two) => Ok(Six::from_2and3and1(*two, self.board.flop, self.board.turn).eval()),
@@ -174,26 +197,11 @@ impl Game {
     /// # Errors
     ///
     /// Throws `PKError::Fubar` if invalid index
-    pub fn eval_at_flop_str(&self, index: usize) -> Result<String, PKError> {
-        match self.eval_at_flop(index) {
+    pub fn turn_eval_for_player_str(&self, index: usize) -> Result<String, PKError> {
+        match self.turn_eval_for_player(index) {
             Err(e) => Err(e),
             Ok(eval) => Ok(format!("{} ({})", eval.hand, eval.hand_rank)),
         }
-    }
-
-    /// # Errors
-    ///
-    /// Throws `PKError::Fubar` if invalid index
-    pub fn eval_at_turn_str(&self, index: usize) -> Result<String, PKError> {
-        match self.eval_at_turn(index) {
-            Err(e) => Err(e),
-            Ok(eval) => Ok(format!("{} ({})", eval.hand, eval.hand_rank)),
-        }
-    }
-
-    #[must_use]
-    pub fn evals_at_flop(&self) -> Evals {
-        self.board.flop.evals()
     }
 
     /// I don't think I am doing this right. The nuts at the turn shouldn't have any idea what the
@@ -202,7 +210,7 @@ impl Game {
     /// It could be that there is simply no point for this function. What's important at the turn
     /// is odds and outs.
     #[must_use]
-    pub fn the_nuts_at_turn(&self) -> TheNuts {
+    pub fn turn_the_nuts(&self) -> TheNuts {
         if !self.board.flop.is_dealt() || !self.board.turn.is_dealt() {
             return TheNuts::default();
         }
@@ -220,6 +228,7 @@ impl Game {
 
         the_nuts
     }
+    // endregion
 
     // region Private Methods
     fn display_evals(mut evals: Evals) {
@@ -459,7 +468,7 @@ mod play__game_tests {
             board: Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap(),
         };
 
-        let actual = game.case_eval_at_turn(&Card::SIX_CLUBS);
+        let actual = game.turn_case_eval(&Card::SIX_CLUBS);
 
         assert_eq!(Win::FIRST, actual.win_count());
         assert_eq!(Card::SIX_CLUBS, actual.card());
@@ -469,9 +478,9 @@ mod play__game_tests {
     fn five_at_flop() {
         let game = TestData::the_hand();
 
-        assert_eq!(2185, game.eval_at_flop(0).unwrap().hand_rank.value);
-        assert_eq!(2251, game.eval_at_flop(1).unwrap().hand_rank.value);
-        assert!(game.eval_at_flop(2).is_err());
+        assert_eq!(2185, game.flop_eval_for_player(0).unwrap().hand_rank.value);
+        assert_eq!(2251, game.flop_eval_for_player(1).unwrap().hand_rank.value);
+        assert!(game.flop_eval_for_player(2).is_err());
     }
 
     #[test]
@@ -510,13 +519,13 @@ mod play__game_tests {
     fn evals_at_flop() {
         let game = TestData::the_hand();
 
-        let evals = game.evals_at_flop();
+        let evals = game.flop_evals();
 
         assert_eq!(26, evals.len());
         assert_eq!(1605, evals.get(0).unwrap().hand_rank.value);
         assert_eq!(7420, evals.get(25).unwrap().hand_rank.value);
         assert!(evals.get(26).is_none());
-        assert_eq!(Evals::default(), Game::default().evals_at_flop());
+        assert_eq!(Evals::default(), Game::default().flop_evals());
     }
 
     /// TBH, we could do more with the negative tests. We'll add it as something to watch for
@@ -628,7 +637,7 @@ mod play__game_tests {
     fn the_nuts_at_turn() {
         let game = TestData::the_hand();
 
-        let evals = game.the_nuts_at_turn().to_evals();
+        let evals = game.turn_the_nuts().to_evals();
 
         assert_eq!(62, evals.len());
         assert_eq!(78, evals.get(0).unwrap().hand_rank.value);
@@ -637,7 +646,7 @@ mod play__game_tests {
         assert!(evals.get(63).is_none());
         assert_eq!(
             Evals::default(),
-            Game::default().the_nuts_at_turn().to_evals()
+            Game::default().turn_the_nuts().to_evals()
         );
     }
 

@@ -95,13 +95,13 @@ fn main() -> Result<(), PKError> {
 
     println!("{}", game);
 
-    game.display_odds_at_flop()?;
+    game.flop_display_odds()?;
 
     if args.nuts {
-        game.display_evals_at_flop();
+        game.flop_display_the_nuts();
     }
 
-    game.display_odds_at_turn()?;
+    game.turn_display_odds()?;
 
     // too slow
     // if args.nuts {
