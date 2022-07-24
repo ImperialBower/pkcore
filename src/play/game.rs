@@ -10,7 +10,9 @@ use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::results::Results;
 use crate::{Card, Cards, Evals, PKError, Pile, TheNuts};
 use std::fmt::{Display, Formatter};
+use log::debug;
 use crate::analysis::case_eval::CaseEval;
+use crate::analysis::case_evals::CaseEvals;
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -53,8 +55,29 @@ impl Game {
     /// a good test expected value. Within our domain, our state transformations are now
     /// getting fairly complicated. Well, let's see how it goes...
     #[must_use]
-    pub fn case_eval_at_turn(&self, card: Card) -> CaseEval {
-        todo!()
+    pub fn case_eval_at_turn(&self, card: &Card) -> CaseEval {
+        let mut case_eval = CaseEval::new(Cards::from(card));
+        for (i, player) in self.hands.iter().enumerate() {
+            let seven = Seven::from_case_at_turn(*player, self.board.flop, self.board.turn, *card);
+            let eval = Eval::from(seven);
+
+            case_eval.push(eval);
+
+            debug!("Player {} {}: {}", i + 1, *player, eval);
+        }
+        case_eval
+    }
+
+    #[must_use]
+    pub fn case_evals_turn(&self) -> CaseEvals {
+        debug!(
+            "PlayerWins.case_evals_turn(hands: {} flop: {} turn: {})",
+            self.hands, self.board.flop, self.board.turn
+        );
+
+        let mut case_evals = CaseEvals::default();
+
+        case_evals
     }
 
     pub fn display_evals_at_flop(&self) {
@@ -420,6 +443,7 @@ mod play__game_tests {
     use std::str::FromStr;
     use super::*;
     use crate::util::data::TestData;
+    use crate::util::wincounter::win::Win;
 
     #[test]
     fn new() {
@@ -435,9 +459,10 @@ mod play__game_tests {
             board: Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap(),
         };
 
-        let actual = game.case_eval_at_turn(Card::SIX_CLUBS);
+        let actual = game.case_eval_at_turn(&Card::SIX_CLUBS);
 
-        
+        assert_eq!(Win::FIRST, actual.win_count());
+        assert_eq!(Card::SIX_CLUBS, actual.card());
     }
 
     #[test]

@@ -501,6 +501,7 @@
         * Outs.add_from_case_eval()
         * Game.case_eval_at_turn()
           * Cards::from<&Card>
+          * REFACTORING: Game.case_evals_at_turn() moved from PlayerWins. 
 
 ## LATER
 
