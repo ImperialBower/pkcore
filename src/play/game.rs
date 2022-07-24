@@ -80,7 +80,17 @@ impl Game {
         Ok(())
     }
 
-
+    /// One of the things that I have discovered working through this logic the second time
+    /// is that there are two perspectives on "the nuts":
+    ///
+    /// The *at the time* flop perspective, which only deals with the three community cards on the
+    /// board plus any two hole cards that a player might hand. I'm going to call this the
+    /// *now* perspective, as in _the nuts, as of now._
+    ///
+    /// The *what might be* river perspective, where you can into account not just any two
+    /// cars that a player might have, as well as the cards that might come down at the turn
+    /// and river. This perspective has a lot more possibilities. I'm going to call this the
+    /// *future* perspective.  
     pub fn flop_display_the_nuts(&self) {
         println!();
         println!("The Nuts @ Flop:");
