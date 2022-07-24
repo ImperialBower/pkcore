@@ -1,3 +1,5 @@
+use crate::analysis::case_eval::CaseEval;
+use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
 use crate::analysis::player_wins::PlayerWins;
 use crate::arrays::five::Five;
@@ -9,10 +11,8 @@ use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::results::Results;
 use crate::{Card, Cards, Evals, PKError, Pile, TheNuts};
-use std::fmt::{Display, Formatter};
 use log::debug;
-use crate::analysis::case_eval::CaseEval;
-use crate::analysis::case_evals::CaseEvals;
+use std::fmt::{Display, Formatter};
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -46,38 +46,6 @@ impl Game {
     #[must_use]
     pub fn new(hands: HoleCards, board: Board) -> Self {
         Game { hands, board }
-    }
-
-    /// This is really a sort of utility method so that I can quickly
-    /// generate a specific `CaseEval` at the turn.
-    ///
-    /// The hardest part about writing the method is going to be generating
-    /// a good test expected value. Within our domain, our state transformations are now
-    /// getting fairly complicated. Well, let's see how it goes...
-    #[must_use]
-    pub fn case_eval_at_turn(&self, card: &Card) -> CaseEval {
-        let mut case_eval = CaseEval::new(Cards::from(card));
-        for (i, player) in self.hands.iter().enumerate() {
-            let seven = Seven::from_case_at_turn(*player, self.board.flop, self.board.turn, *card);
-            let eval = Eval::from(seven);
-
-            case_eval.push(eval);
-
-            debug!("Player {} {}: {}", i + 1, *player, eval);
-        }
-        case_eval
-    }
-
-    #[must_use]
-    pub fn case_evals_turn(&self) -> CaseEvals {
-        debug!(
-            "PlayerWins.case_evals_turn(hands: {} flop: {} turn: {})",
-            self.hands, self.board.flop, self.board.turn
-        );
-
-        let mut case_evals = CaseEvals::default();
-
-        case_evals
     }
 
     pub fn display_evals_at_flop(&self) {
@@ -219,6 +187,53 @@ impl Game {
         the_nuts.sort_in_place();
 
         the_nuts
+    }
+
+    /// This is really a sort of utility method so that I can quickly
+    /// generate a specific `CaseEval` at the turn.
+    ///
+    /// The hardest part about writing the method is going to be generating
+    /// a good test expected value. Within our domain, our state transformations are now
+    /// getting fairly complicated. Well, let's see how it goes...
+    #[must_use]
+    pub fn turn_case_eval(&self, card: &Card) -> CaseEval {
+        let mut case_eval = CaseEval::new(Cards::from(card));
+        for (i, player) in self.hands.iter().enumerate() {
+            let seven = Seven::from_case_at_turn(*player, self.board.flop, self.board.turn, *card);
+            let eval = Eval::from(seven);
+
+            case_eval.push(eval);
+
+            debug!("Player {} {}: {}", i + 1, *player, eval);
+        }
+        case_eval
+    }
+
+    /// I'm feeling the need to refactor away all of the `PlayerWins` struct.
+    #[must_use]
+    pub fn turn_case_evals(&self) -> CaseEvals {
+        debug!(
+            "Game.case_evals_turn(hands: {} flop: {} turn: {})",
+            self.hands, self.board.flop, self.board.turn
+        );
+
+        let mut case_evals = CaseEvals::default();
+
+        for (j, case) in Four::from_turn(self.board.flop, self.board.turn)
+            .remaining()
+            .iter()
+            .enumerate()
+        {
+            debug!(
+                "{}: FLOP: {} TURN: {} RIVER: {} -------",
+                j, self.board.flop, self.board.turn, case
+            );
+
+            case_evals.push(self.turn_case_eval(&case));
+
+            debug!("");
+        }
+        case_evals
     }
 
     // region Private Methods
@@ -440,10 +455,10 @@ impl Display for Game {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod play__game_tests {
-    use std::str::FromStr;
     use super::*;
     use crate::util::data::TestData;
     use crate::util::wincounter::win::Win;
+    use std::str::FromStr;
 
     #[test]
     fn new() {
@@ -459,7 +474,7 @@ mod play__game_tests {
             board: Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap(),
         };
 
-        let actual = game.case_eval_at_turn(&Card::SIX_CLUBS);
+        let actual = game.turn_case_eval(&Card::SIX_CLUBS);
 
         assert_eq!(Win::FIRST, actual.win_count());
         assert_eq!(Card::SIX_CLUBS, actual.card());

@@ -783,7 +783,10 @@ mod card_tests {
 
     #[test]
     fn from__card() {
-        assert_eq!(Cards::from_str("3♣").unwrap(), Cards::from(&Card::TREY_CLUBS));
+        assert_eq!(
+            Cards::from_str("3♣").unwrap(),
+            Cards::from(&Card::TREY_CLUBS)
+        );
         assert_eq!(Cards::default(), Cards::from(&Card::BLANK));
     }
 
