@@ -1,3 +1,5 @@
+use crate::analysis::case_eval::CaseEval;
+use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
 use crate::analysis::player_wins::PlayerWins;
 use crate::arrays::five::Five;
@@ -9,10 +11,8 @@ use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::results::Results;
 use crate::{Card, Cards, Evals, PKError, Pile, TheNuts};
-use std::fmt::{Display, Formatter};
 use log::debug;
-use crate::analysis::case_eval::CaseEval;
-use crate::analysis::case_evals::CaseEvals;
+use std::fmt::{Display, Formatter};
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -90,7 +90,7 @@ impl Game {
     /// The *what might be* river perspective, where you can into account not just any two
     /// cars that a player might have, as well as the cards that might come down at the turn
     /// and river. This perspective has a lot more possibilities. I'm going to call this the
-    /// *future* perspective.  
+    /// *future* perspective.
     pub fn flop_display_the_nuts(&self) {
         println!();
         println!("The Nuts @ Flop:");

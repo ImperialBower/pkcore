@@ -1,8 +1,8 @@
+use crate::analysis::case_eval::CaseEval;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::PlayerFlag;
 use crate::{Card, Cards};
 use indexmap::IndexMap;
-use crate::analysis::case_eval::CaseEval;
 
 /// This is old `Fudd` code.
 #[derive(Clone, Debug)]
