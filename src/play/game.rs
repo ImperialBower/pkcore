@@ -459,10 +459,10 @@ impl Display for Game {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod play__game_tests {
-    use std::str::FromStr;
     use super::*;
     use crate::util::data::TestData;
     use crate::util::wincounter::win::Win;
+    use std::str::FromStr;
 
     #[test]
     fn new() {
@@ -654,10 +654,7 @@ mod play__game_tests {
         assert_eq!(286, evals.get(25).unwrap().hand_rank.value);
         assert_eq!(5306, evals.get(61).unwrap().hand_rank.value);
         assert!(evals.get(63).is_none());
-        assert_eq!(
-            Evals::default(),
-            Game::default().turn_the_nuts().to_evals()
-        );
+        assert_eq!(Evals::default(), Game::default().turn_the_nuts().to_evals());
     }
 
     #[test]
