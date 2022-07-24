@@ -501,11 +501,10 @@
         * Outs.add_from_case_eval()
         * Game.case_eval_at_turn()
           * Cards::from<&Card>
-          * REFACTORING: Game.case_evals_at_turn() moved from PlayerWins. 
-          * REFACTORING: All Game methods to phase (flop, turn, river) first naming
           * REFACTORING: Game.case_evals_at_turn() moved from PlayerWins.case_evals_flop()
             * REFACTORING: Game.turn_case_evals() & Game.turn_case_eval()
-          * REFACTORING: Game.wins_
+          * REFACTORING: All Game methods to phase (flop, turn, river) first naming
+          * REFACTORING: Game turn and flop wins
 
 ## LATER
 

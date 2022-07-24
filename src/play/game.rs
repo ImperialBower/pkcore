@@ -13,6 +13,7 @@ use crate::util::wincounter::results::Results;
 use crate::{Card, Cards, Evals, PKError, Pile, TheNuts};
 use log::debug;
 use std::fmt::{Display, Formatter};
+use crate::util::wincounter::wins::Wins;
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -78,6 +79,11 @@ impl Game {
         }
 
         Ok(())
+    }
+
+    #[must_use]
+    pub fn flop_wins(&self) -> Wins {
+        todo!()
     }
 
     /// One of the things that I have discovered working through this logic the second time
@@ -237,6 +243,16 @@ impl Game {
         the_nuts.sort_in_place();
 
         the_nuts
+    }
+
+    /// Now that I've embarked down this refactoring path, I'm thinking that it would be
+    /// cool to add a mechanism to cache our analysis. I can really see `CaseEvals` as a
+    /// dataset that could be very useful later on. Are there common textures that can be
+    /// compared? What are the characteristics of various types of flops? How can these be
+    /// visualized?
+    #[must_use]
+    pub fn turn_wins(&self) -> Wins {
+        todo!()
     }
     // endregion
 

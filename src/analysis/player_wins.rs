@@ -16,6 +16,7 @@ pub struct PlayerWins {
 }
 
 impl PlayerWins {
+    #[deprecated(since = "0.0.3", note = "Use Game directly")]
     #[must_use]
     pub fn at_flop(hands: &HoleCards, flop: Three) -> Self {
         let mut pw = PlayerWins::default();
@@ -23,6 +24,7 @@ impl PlayerWins {
         pw
     }
 
+    #[deprecated(since = "0.0.3", note = "Use Game directly")]
     #[must_use]
     pub fn at_turn(hands: &HoleCards, flop: Three, turn: Card) -> Self {
         let mut pw = PlayerWins::default();
@@ -99,6 +101,14 @@ impl PlayerWins {
 /// * Do I need the `PlayOut` trait?
 /// * Wouldn't it be better to just have a `Game` struct that simply collects the state of the Hand
 ///
+/// #### Resolution
+///
+/// I've resolved to eliminate this struct altogether. While I was really excited about
+/// learning how to create injectable logic based on traits, it really overcomplicates
+/// things here. I can envision using this technique for things like alternative formes
+/// of display, or a way to abstract things to allow for alternative types of poker
+/// games, such as high/lo or `Razz`. For now, we'll hang this tool up in our workshop
+/// until we really need it.
 impl PlayOut for PlayerWins {
     fn play_out_flop(&mut self, hands: &HoleCards, flop: Three) {
         info!("PlayerWins.play_out_flop(hands: {} flop: {})", hands, flop);
