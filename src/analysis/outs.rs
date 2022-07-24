@@ -58,8 +58,8 @@ impl Outs {
         self.0.get_mut(&player).unwrap().insert(card);
     }
 
-    pub fn add_from_case_eval(&mut self, case_eval: CaseEval) {
-        self.add_from_player_flag(case_eval.win_count(), case_eval.card())
+    pub fn add_from_case_eval(&mut self, case_eval: &CaseEval) {
+        self.add_from_player_flag(case_eval.win_count(), case_eval.card());
     }
 
     /// Our goal of this method is to add the `Card` for every player bit flag that is set.

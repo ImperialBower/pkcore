@@ -7,9 +7,10 @@ be solved. You don't need to do integration testing if you properly unit test
 your code. 
 
 Managers love these people. They provide magic beans that wash away all the 
-flaws that those pesky developers keep adding to their magic castles of 
-profitability that they see floating by them in the sky. The Germans have a 
-wonderful term for it: Luftschlösser... castles in the sky.
+flaws that those pesky developers keep adding to their magic dreams of 
+profitability that they see floating by in the sky. The Germans have a 
+wonderful term for it: [Luftschlösser](https://en.wiktionary.org/wiki/Luftschloss)... 
+castles in the sky.
 
 When I was starting out 24 years ago, Java was one of those answers. Luckily 
 for me, my first gig as a professional programmer was for a company that had a
@@ -29,7 +30,8 @@ and their Parachat application.
 
 ...
 
-I remember the day standing on Montgomery St. in front of XOOM's headquarters.
+I remember the day [on Montgomery St.](https://www.google.com/maps/place/Mcmxli/@37.7923436,-122.4027037,3a,75y,147.49h,93.4t/data=!3m6!1e1!3m4!1sgE8EbEADuogtdYugFXAoZA!2e0!7i16384!8i8192!4m13!1m7!3m6!1s0x808580f51956531b:0xf2cc9e9b9bc109f5!2sMontgomery+St,+San+Francisco,+CA!3b1!8m2!3d37.7973093!4d-122.4036994!3m4!1s0x8085808a19e2e29f:0x5472cfcef0ed8c9e!8m2!3d37.7921796!4d-122.4025152) 
+in front of XOOM's headquarters. 
 [Helmut Hissen](https://www.linkedin.com/in/helmuthissen/) was standing there
 and I decided to strike up a conversation with him. He was the CTO of Paralogic.
 Him, and his partner [Vijay Vaidyanathan](https://www.linkedin.com/in/vvaidy/) 
@@ -81,6 +83,20 @@ I saw Java as a hedge against the coming storm. Turns out it was. Fast forward a
 few years, and I was scrambling for a job along with just about every other 
 developer in the Bay Area, and soon I was flying to Ohio to work for half of 
 what I was making before, doing web training material for medical professionals
-working on hernia operations. _The horror... the horror.._
+working on hernia operations. _The horror... the horror..._
 
-Helmut showed me the path.  
+Helmut showed me the path. The things that you create out of a sense of joy
+will always light the way for you. Work is going to be hard... it's going to 
+suck. You will be struggling against a seemingly constant steam of bs. The vast
+majority of it will be people trying to deal with their own fears by displacing
+it onto others. _How can I maintain my power within the company? Who do I need
+to blame for my team's failures? How can I show people that I am a leader?_
+
+The antidote to this is not letting their shit rub off on you. Find your purpose. 
+Find your joy. Go towards people and places that see your light and positive
+energy not as a threat, but as something that they want to share and build on. 
+Just because everyone else is a miserable fuck, doesn't mean that you need to 
+be. Find your joy. Dance with it.
+
+Technology is made up of tools. Different people like different tools. Know
+*the imperative* behind your tools, and choose accordingly. 

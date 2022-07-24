@@ -10,10 +10,10 @@ use crate::arrays::HandRanker;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::results::Results;
+use crate::util::wincounter::wins::Wins;
 use crate::{Card, Cards, Evals, PKError, Pile, TheNuts};
 use log::debug;
 use std::fmt::{Display, Formatter};
-use crate::util::wincounter::wins::Wins;
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -137,6 +137,20 @@ impl Game {
 
     // region turn
 
+    /// Function that does the work. I can see this returning outs as well.
+    ///
+    /// Let's finish this up for the flop and then package it all up nice and neat in
+    /// a struct, shall we?
+    ///
+    /// TODO: Write some fucking tests.
+    #[must_use]
+    pub fn turn_calculations(&self) -> (CaseEvals, Wins, Results) {
+        let case_evals = self.turn_case_evals();
+        let wins = case_evals.wins();
+        let results = Results::from_wins(&wins, self.hands.len());
+        (case_evals, wins, results)
+    }
+
     /// This is really a sort of utility method so that I can quickly
     /// generate a specific `CaseEval` at the turn.
     ///
@@ -167,6 +181,19 @@ impl Game {
 
         let mut case_evals = CaseEvals::default();
 
+        for (j, case) in Four::from_turn(self.board.flop, self.board.turn)
+            .remaining()
+            .iter()
+            .enumerate()
+        {
+            debug!(
+                "{}: FLOP: {} TURN: {} RIVER: {} -------",
+                j, self.board.flop, self.board.turn, case
+            );
+
+            case_evals.push(self.turn_case_eval(case));
+        }
+
         case_evals
     }
 
@@ -181,8 +208,7 @@ impl Game {
     ///
     /// Throws `PKError::Fubar` if there is an invalid index.
     pub fn turn_display_odds(&self) -> Result<(), PKError> {
-        let pw = PlayerWins::at_turn(&self.hands, self.board.flop, self.board.turn);
-        let results = Results::from_wins(&pw.wins, self.hands.len());
+        let (_, _, results) = self.turn_calculations();
 
         println!();
         println!("The Turn: {}", self.board.turn);
@@ -199,6 +225,20 @@ impl Game {
 
         Ok(())
     }
+
+    /// Now that I've embarked down this refactoring path, I'm thinking that it would be
+    /// cool to add a mechanism to cache our analysis. I can really see `CaseEvals` as a
+    /// dataset that could be very useful later on. Are there common textures that can be
+    /// compared? What are the characteristics of various types of flops? How can these be
+    /// visualized?
+    ///
+    /// # Refactoring.
+    ///
+    /// Moved this to CaseEvals.wins(). Turns out we don't need it.
+    // #[must_use]
+    // pub fn wins(&self) -> Wins {
+    //     todo!()
+    // }
 
     /// # Errors
     ///
@@ -245,15 +285,6 @@ impl Game {
         the_nuts
     }
 
-    /// Now that I've embarked down this refactoring path, I'm thinking that it would be
-    /// cool to add a mechanism to cache our analysis. I can really see `CaseEvals` as a
-    /// dataset that could be very useful later on. Are there common textures that can be
-    /// compared? What are the characteristics of various types of flops? How can these be
-    /// visualized?
-    #[must_use]
-    pub fn turn_wins(&self) -> Wins {
-        todo!()
-    }
     // endregion
 
     // region Private Methods

@@ -1,4 +1,5 @@
 use crate::analysis::case_eval::CaseEval;
+use crate::util::wincounter::wins::Wins;
 use std::slice::Iter;
 
 /// Now that we have validated that we can handle a single case, aka one possible result from
@@ -32,5 +33,21 @@ impl CaseEvals {
 
     pub fn push(&mut self, case_eval: CaseEval) {
         self.0.push(case_eval);
+    }
+
+    /// Not sure why I didn't think of this before. The big disadvantage of this style
+    /// of coding over pair programming is that right now you, dear reader, are just a
+    /// figment of my imagination. In a real pairing situation, you would be sitting next
+    /// to me telling me when I am overthinking things. This is why I blame you for your
+    /// lack of corporealness. JK JK.
+    #[must_use]
+    pub fn wins(&self) -> Wins {
+        let mut wins = Wins::default();
+
+        for case_eval in self.iter() {
+            wins.add(case_eval.win_count());
+        }
+
+        wins
     }
 }

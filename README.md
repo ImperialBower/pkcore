@@ -505,6 +505,8 @@
             * REFACTORING: Game.turn_case_evals() & Game.turn_case_eval()
           * REFACTORING: All Game methods to phase (flop, turn, river) first naming
           * REFACTORING: Game turn and flop wins
+            * CaseEvals.wins()
+          * Game.turn_calculations()
 
 ## LATER
 
