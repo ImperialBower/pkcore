@@ -1,7 +1,6 @@
 use crate::analysis::case_eval::CaseEval;
 use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
-use crate::analysis::player_wins::PlayerWins;
 use crate::arrays::five::Five;
 use crate::arrays::four::Four;
 use crate::arrays::seven::Seven;
@@ -51,6 +50,58 @@ impl Game {
 
     // region flop
 
+    #[must_use]
+    pub fn flop_calculations(&self) -> (CaseEvals, Wins, Results) {
+        let case_evals = self.flop_case_evals();
+        let wins = case_evals.wins();
+        let results = Results::from_wins(&wins, self.hands.len());
+        (case_evals, wins, results)
+    }
+
+    /// # Panics
+    ///
+    /// AHHHH!!!! Run away!!!!!!
+    #[must_use]
+    pub fn flop_case_eval(&self, case: &[Card]) -> CaseEval {
+        let mut case_eval = CaseEval::default();
+        for (i, player) in self.hands.iter().enumerate() {
+            let seven = Seven::from_case_at_flop(*player, self.board.flop, case).unwrap();
+            let eval = Eval::from(seven);
+
+            case_eval.push(eval);
+
+            debug!("Player {} {}: {}", i + 1, *player, eval);
+        }
+        case_eval
+    }
+
+    /// # Panics
+    ///
+    /// AHHHH!!!! Run for your lives!!!!!!
+    #[must_use]
+    pub fn flop_case_evals(&self) -> CaseEvals {
+        debug!(
+            "Game.flop_case_evals(hands: {} flop: {})",
+            self.hands, self.board.flop
+        );
+
+        let mut case_evals = CaseEvals::default();
+
+        for (j, case) in self.hands.enumerate_after(2, &self.board.flop.cards()) {
+            debug!(
+                "{}: FLOP: {} TURN: {} RIVER: {} -------",
+                j,
+                self.board.flop,
+                case.get(0).unwrap(),
+                case.get(1).unwrap()
+            );
+
+            case_evals.push(self.flop_case_eval(&case));
+        }
+
+        case_evals
+    }
+
     /// Originally part of our calc example program. When my examples have functionality
     /// that I want to use in other places, I move it into the lib. I can definitely
     /// see a later refactoring where we move the display functionality to its own home.
@@ -63,8 +114,7 @@ impl Game {
     ///
     /// Throws `PKError::Fubar` if there is an invalid index.
     pub fn flop_display_odds(&self) -> Result<(), PKError> {
-        let pw = PlayerWins::at_flop(&self.hands, self.board.flop);
-        let results = Results::from_wins(&pw.wins, self.hands.len());
+        let (_, _, results) = self.flop_calculations();
 
         println!();
         println!("The Flop: {}", self.board.flop);
@@ -79,11 +129,6 @@ impl Game {
         }
 
         Ok(())
-    }
-
-    #[must_use]
-    pub fn flop_wins(&self) -> Wins {
-        todo!()
     }
 
     /// One of the things that I have discovered working through this logic the second time
@@ -158,10 +203,10 @@ impl Game {
     /// a good test expected value. Within our domain, our state transformations are now
     /// getting fairly complicated. Well, let's see how it goes...
     #[must_use]
-    pub fn turn_case_eval(&self, card: &Card) -> CaseEval {
-        let mut case_eval = CaseEval::new(Cards::from(card));
+    pub fn turn_case_eval(&self, case: &Card) -> CaseEval {
+        let mut case_eval = CaseEval::new(Cards::from(case));
         for (i, player) in self.hands.iter().enumerate() {
-            let seven = Seven::from_case_at_turn(*player, self.board.flop, self.board.turn, *card);
+            let seven = Seven::from_case_at_turn(*player, self.board.flop, self.board.turn, *case);
             let eval = Eval::from(seven);
 
             case_eval.push(eval);

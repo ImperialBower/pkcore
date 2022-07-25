@@ -507,6 +507,7 @@
           * REFACTORING: Game turn and flop wins
             * CaseEvals.wins()
           * Game.turn_calculations()
+          * Game.flop_calculations()
 
 ## LATER
 
