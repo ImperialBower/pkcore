@@ -253,19 +253,21 @@ impl Game {
     ///
     /// Throws `PKError::Fubar` if there is an invalid index.
     pub fn turn_display_odds(&self) -> Result<(), PKError> {
-        let (_, _, results) = self.turn_calculations();
+        if self.board.turn.is_dealt() {
+            let (_, _, results) = self.turn_calculations();
 
-        println!();
-        println!("The Turn: {}", self.board.turn);
+            println!();
+            println!("The Turn: {}", self.board.turn);
 
-        for (i, hole_cards) in self.hands.iter().enumerate() {
-            println!(
-                "  Player #{} [{}] {} - {}",
-                i + 1,
-                hole_cards,
-                results.player_to_string(i),
-                self.turn_eval_for_player_str(i)?
-            );
+            for (i, hole_cards) in self.hands.iter().enumerate() {
+                println!(
+                    "  Player #{} [{}] {} - {}",
+                    i + 1,
+                    hole_cards,
+                    results.player_to_string(i),
+                    self.turn_eval_for_player_str(i)?
+                );
+            }
         }
 
         Ok(())

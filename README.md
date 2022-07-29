@@ -508,6 +508,7 @@
             * CaseEvals.wins()
           * Game.turn_calculations()
           * Game.flop_calculations()
+        * Game.turn_display_odds() check that turn is dealt
 
 ## LATER
 
