@@ -153,6 +153,9 @@ impl HoleCards {
 
         cases
     }
+
+    // #[must_use]
+    // pub fn river_case_eval(&self, )
 }
 
 impl fmt::Display for HoleCards {

@@ -220,7 +220,7 @@ impl Game {
         Game { hands, board }
     }
 
-    // region flop
+    // region The Flop
 
     #[must_use]
     pub fn flop_calculations(&self) -> (CaseEvals, Wins, Results) {
@@ -352,7 +352,7 @@ impl Game {
 
     // endregion
 
-    // region turn
+    // region The Turn
 
     /// Function that does the work. I can see this returning outs as well.
     ///
@@ -610,6 +610,8 @@ impl Game {
 
     // endregion
 
+    // region The River
+
     // region Private Methods
     fn display_evals(mut evals: Evals) {
         evals.sort_in_place();
@@ -639,8 +641,6 @@ impl Game {
             *three.get(2).ok_or(PKError::InvalidCard)?,
         ]))
     }
-
-    // region DEAD
 
     // endregion
 }

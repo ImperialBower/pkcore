@@ -514,6 +514,9 @@
             * RESOLUTION: Game.turn_remaining()
             * REFACTORING: Game.turn_cards()
         * REFACTORING: Change to take in reference: Outs::from(&case_evals)
+        * FINISHED Outs!
+    * PHASE FOUR: The River
+      * impl From<Board> for Five
 
 ## LATER
 

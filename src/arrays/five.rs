@@ -4,6 +4,7 @@ use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::play::board::Board;
 use crate::{Evals, PKError, Pile};
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -177,6 +178,18 @@ impl From<[Card; 5]> for Five {
     }
 }
 
+impl From<Board> for Five {
+    fn from(board: Board) -> Self {
+        Five([
+            board.flop.first(),
+            board.flop.second(),
+            board.flop.third(),
+            board.turn,
+            board.river,
+        ])
+    }
+}
+
 impl FromStr for Five {
     type Err = PKError;
 
@@ -294,6 +307,7 @@ mod arrays__five_tests {
     use super::*;
     use crate::analysis::class::Class;
     use crate::analysis::name::Name;
+    use crate::util::data::TestData;
     use rstest::rstest;
 
     const ROYAL_FLUSH: [Card; 5] = [
@@ -459,6 +473,15 @@ mod arrays__five_tests {
     #[test]
     fn from__array() {
         assert_eq!(Five::from(ROYAL_FLUSH), Five(ROYAL_FLUSH));
+    }
+
+    #[test]
+    fn from__board() {
+        let board = TestData::the_hand().board;
+
+        let five = Five::from(board);
+
+        assert_eq!(board.cards().to_string(), five.to_string());
     }
 
     #[test]
