@@ -612,6 +612,23 @@ impl Game {
 
     // region The River
 
+    /// This is basically passing on the savings from the method that's already in
+    /// `HoleCards`. For the test, I've added a much more complicated example.
+    ///
+    /// # Errors
+    ///
+    /// Throws `PKError::Incomplete` if the board is not complete.
+    pub fn river_case_eval(&self) -> Result<CaseEval, PKError> {
+        if !self.board.flop.is_dealt()
+            || !self.board.turn.is_dealt()
+            || !self.board.river.is_dealt()
+        {
+            return Err(PKError::Incomplete);
+        }
+
+        Ok(self.hands.river_case_eval(&self.board))
+    }
+
     /// # PHASE FOUR
     ///
     /// Now we need to display the results at The River. So, what's the plan?
@@ -739,6 +756,7 @@ impl Display for Game {
 #[allow(non_snake_case)]
 mod play__game_tests {
     use super::*;
+    use crate::analysis::class::Class;
     use crate::util::data::TestData;
     use crate::util::wincounter::win::Win;
     use std::str::FromStr;
@@ -950,6 +968,23 @@ mod play__game_tests {
             TestData::the_hand().turn_remaining_board().to_string(),
             "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣"
         );
+    }
+
+    #[test]
+    fn river_case_eval() {
+        let the_board = TestData::the_board();
+
+        let case_eval = the_board.river_case_eval().unwrap();
+
+        assert_eq!(47, case_eval.winning_hand_rank().value);
+        assert_eq!(
+            Win::FIRST | Win::SECOND | Win::THIRD | Win::FORTH,
+            case_eval.win_count()
+        );
+        assert_eq!(Class::FourJacks, case_eval.get(0).unwrap().hand_rank.class);
+        assert_eq!(Class::FourJacks, case_eval.get(1).unwrap().hand_rank.class);
+        assert_eq!(Class::FourJacks, case_eval.get(2).unwrap().hand_rank.class);
+        assert_eq!(Class::FourJacks, case_eval.get(3).unwrap().hand_rank.class);
     }
 
     /// I really like this test, even though it asserts nothing. It's just making sure that we

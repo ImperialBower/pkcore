@@ -46,6 +46,21 @@ impl TestData {
         }
     }
 
+    /// Based on HSP S04E08 Harman/Safai but with the river bringing quads
+    /// `cargo run --example calc -- -d "A♣ Q♠ T♦ T♣ 6♦ 4♦ 2♥ 2♦" -b "J♦ J♠ J♥ A♥ J♣"`
+    #[must_use]
+    #[allow(clippy::missing_panics_doc)]
+    pub fn the_board() -> Game {
+        let hands = HoleCards::from(vec![
+            Two::HAND_AC_QS,
+            Two::HAND_TD_TC,
+            Two::HAND_6D_4D,
+            Two::HAND_2H_2D,
+        ]);
+        let board = Board::from_str("J♦ J♠ J♥ A♥ J♣").unwrap();
+        Game { hands, board }
+    }
+
     /// The 985th case at the flop when running `The Hand`:
     /// `RUST_LOG=trace cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"`
     #[must_use]

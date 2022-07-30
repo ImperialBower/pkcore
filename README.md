@@ -526,6 +526,7 @@
           * CaseEval.winner()
             * REFACTORING to return PlayerFlag instead of a single winning index.
             * ERROR: Inverting winner call to use existing code
+          * Game.river_case_eval()
 
 ## LATER
 

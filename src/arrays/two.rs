@@ -44,6 +44,8 @@ impl Two {
         Two::HAND_KD_KC,
     ];
 
+    pub const HAND_TD_TC: Two = Two([Card::TEN_DIAMONDS, Card::TEN_CLUBS]);
+
     pub const HAND_9S_9H: Two = Two([Card::NINE_SPADES, Card::NINE_HEARTS]);
     pub const HAND_9S_9D: Two = Two([Card::NINE_SPADES, Card::NINE_DIAMONDS]);
     pub const HAND_9S_9C: Two = Two([Card::NINE_SPADES, Card::NINE_CLUBS]);
@@ -101,6 +103,8 @@ impl Two {
         Two::HAND_5H_5C,
         Two::HAND_5D_5C,
     ];
+
+    pub const HAND_2H_2D: Two = Two([Card::DEUCE_HEARTS, Card::DEUCE_DIAMONDS]);
 
     // endregion
 
@@ -257,6 +261,8 @@ impl Two {
 
     // region unconnected
 
+    pub const HAND_AC_QS: Two = Two([Card::ACE_CLUBS, Card::QUEEN_SPADES]);
+
     pub const HAND_KS_TS: Two = Two([Card::KING_SPADES, Card::TEN_SPADES]);
     pub const HAND_KH_TH: Two = Two([Card::KING_HEARTS, Card::TEN_HEARTS]);
     pub const HAND_KD_TD: Two = Two([Card::KING_DIAMONDS, Card::TEN_DIAMONDS]);
@@ -313,6 +319,8 @@ impl Two {
         Two::HAND_KC_TH,
         Two::HAND_KC_TD,
     ];
+
+    pub const HAND_6D_4D: Two = Two([Card::SIX_DIAMONDS, Card::FOUR_DIAMONDS]);
 
     // endregion
 
