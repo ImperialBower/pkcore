@@ -226,11 +226,7 @@ impl Game {
 
         let mut case_evals = CaseEvals::default();
 
-        for (j, case) in Four::from_turn(self.board.flop, self.board.turn)
-            .remaining()
-            .iter()
-            .enumerate()
-        {
+        for (j, case) in self.turn_remaining().iter().enumerate() {
             debug!(
                 "{}: FLOP: {} TURN: {} RIVER: {} -------",
                 j, self.board.flop, self.board.turn, case
@@ -240,6 +236,12 @@ impl Game {
         }
 
         case_evals
+    }
+
+    fn turn_remaining(&self) -> Cards {
+        let mut cards = Four::from_turn(self.board.flop, self.board.turn).cards();
+        cards.insert_all(&self.hands.cards());
+        Cards::deck_minus(&cards)
     }
 
     /// This function is insanely slow.
@@ -285,7 +287,44 @@ impl Game {
     /// and why I am so fascinated with working in spaces like automotive. It's hard to go back to
     /// validating the same web form fields after you've tested your code in an actual car.
     ///
-    /// TODO TD: Resolve this.
+    /// TODONE TD: Resolve this.
+    ///
+    /// ## Defect update
+    ///
+    /// We've found the defect. When we fold our `CaseEvals` for `TheHand` into the `Outs` struct,
+    /// the outs for Gus Hansen include cards that are in Daniel Negreanu's hand, which means
+    /// that the cards that are being used for the run through only contain those on the board.
+    ///
+    /// *THIS IS WHY WE WRITE TESTS.* At first when I was writing the test for Outs, I figured
+    /// _what's the point of writing a test for Gus' outs, since we already know that they are every
+    /// other possible card?_ Assuming you know what you're code is doing is how you get fucked
+    /// later on. You're not as smart as you think you are. Take the small amount of time to write
+    /// the fracking test.
+    ///
+    /// First thing we're going to do is update our Outs test so that it fails:
+    ///
+    /// ```
+    /// use pkcore::analysis::outs::Outs;
+    /// use pkcore::util::data::TestData;
+    /// let case_evals = TestData::the_hand().turn_case_evals();
+    ///
+    /// let outs = Outs::from(case_evals);
+    ///
+    /// assert_eq!("6♣", outs.get(1).unwrap().to_string());
+    /// assert_eq!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 4♣ 3♣ 2♣", outs.get(2).unwrap().to_string());
+    /// ```
+    ///
+    /// While this test is failing in our `Outs` struct's tests, the defect is actually in our
+    /// `Game` struct, since it's generating the `CaseEvals`. This is actually a fuck up by me.
+    /// If I had written better tests under `Game` I would have caught this defect before I
+    /// got to trying to determine the `Outs` for a `Board`.
+    ///
+    /// BTW, this explains the discrepancy in our displayed odds with `Fudd`, since the number
+    /// of cards used to do the calculations are different, thus skewing the number of cases.
+    ///
+    /// Unfortunately, this is going to be harder than... *CANCEL THAT*, it's not actually that
+    /// hard. Just added `.turn_remaining()` and used that, so we are done. _[I love it when a
+    /// plan comes together!](https://www.youtube.com/watch?v=NsUFBm1uENs)_
     ///
     /// # Errors
     ///

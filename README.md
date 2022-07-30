@@ -510,7 +510,8 @@
           * Game.flop_calculations()
         * Game.turn_display_odds() check that turn is dealt
           * DEFECT: discrepancy with fudd
-          * REFACTORING: Updated Results.player_to_string()
+            * REFACTORING: Updated Results.player_to_string()
+            * RESOLUTION: Game.turn_remaining()
 
 ## LATER
 
