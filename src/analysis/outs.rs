@@ -296,8 +296,8 @@ impl Default for Outs {
     }
 }
 
-impl From<CaseEvals> for Outs {
-    fn from(case_evals: CaseEvals) -> Self {
+impl From<&CaseEvals> for Outs {
+    fn from(case_evals: &CaseEvals) -> Self {
         let mut outs = Outs::default();
         for case_eval in case_evals.iter() {
             outs.add_from_case_eval(case_eval);
@@ -425,7 +425,7 @@ mod analysis__outs_tests {
     fn from__case_evals() {
         let case_evals = TestData::the_hand().turn_case_evals();
 
-        let outs = Outs::from(case_evals);
+        let outs = Outs::from(&case_evals);
 
         assert_eq!("6♣", outs.get(1).unwrap().to_string());
         assert_eq!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 4♣ 3♣ 2♣", outs.get(2).unwrap().to_string());

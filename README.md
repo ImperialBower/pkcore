@@ -513,6 +513,7 @@
             * REFACTORING: Updated Results.player_to_string()
             * RESOLUTION: Game.turn_remaining()
             * REFACTORING: Game.turn_cards()
+        * REFACTORING: Change to take in reference: Outs::from(&case_evals)
 
 ## LATER
 

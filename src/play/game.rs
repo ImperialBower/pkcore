@@ -1,6 +1,7 @@
 use crate::analysis::case_eval::CaseEval;
 use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
+use crate::analysis::outs::Outs;
 use crate::arrays::five::Five;
 use crate::arrays::four::Four;
 use crate::arrays::seven::Seven;
@@ -360,11 +361,12 @@ impl Game {
     ///
     /// TODO: Write some fucking tests.
     #[must_use]
-    pub fn turn_calculations(&self) -> (CaseEvals, Wins, Results) {
+    pub fn turn_calculations(&self) -> (CaseEvals, Wins, Results, Outs) {
         let case_evals = self.turn_case_evals();
         let wins = case_evals.wins();
         let results = Results::from_wins(&wins, self.hands.len());
-        (case_evals, wins, results)
+        let outs = Outs::from(&case_evals);
+        (case_evals, wins, results, outs)
     }
 
     /// This is really a sort of utility method so that I can quickly
@@ -494,7 +496,7 @@ impl Game {
     /// use pkcore::util::data::TestData;
     /// let case_evals = TestData::the_hand().turn_case_evals();
     ///
-    /// let outs = Outs::from(case_evals);
+    /// let outs = Outs::from(&case_evals);
     ///
     /// assert_eq!("6♣", outs.get(1).unwrap().to_string());
     /// assert_eq!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 4♣ 3♣ 2♣", outs.get(2).unwrap().to_string());
@@ -517,19 +519,30 @@ impl Game {
     /// Throws `PKError::Fubar` if there is an invalid index.
     pub fn turn_display_odds(&self) -> Result<(), PKError> {
         if self.board.turn.is_dealt() {
-            let (_, _, results) = self.turn_calculations();
+            let (_, _, results, outs) = self.turn_calculations();
+
+            let winning_player = outs.longest_player();
 
             println!();
             println!("The Turn: {}", self.board.turn);
 
             for (i, hole_cards) in self.hands.iter().enumerate() {
+                let player_id = i + 1;
                 println!(
-                    "  Player #{} [{}] {} - {}",
-                    i + 1,
+                    "  Player #{} [{}] {}",
+                    player_id,
                     hole_cards,
-                    results.player_to_string(i),
-                    self.turn_eval_for_player_str(i)?
+                    results.player_to_string(i)
                 );
+                println!("    HAND: {}", self.turn_eval_for_player_str(i)?);
+                if player_id != winning_player {
+                    match outs.get(player_id) {
+                        None => {}
+                        Some(cards) => {
+                            println!("    OUTS: {}", cards);
+                        }
+                    }
+                }
             }
         }
 
