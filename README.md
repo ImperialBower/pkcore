@@ -512,6 +512,7 @@
           * DEFECT: discrepancy with fudd
             * REFACTORING: Updated Results.player_to_string()
             * RESOLUTION: Game.turn_remaining()
+            * REFACTORING: Game.turn_cards()
 
 ## LATER
 
