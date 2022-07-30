@@ -516,7 +516,13 @@
         * REFACTORING: Change to take in reference: Outs::from(&case_evals)
         * FINISHED Outs!
     * PHASE FOUR: The River
-      * impl From<Board> for Five
+      * TAKE 1: impl From<Board> for Five NOT NEEDED
+      * TAKE 2: Seven::from_case_at_river() ABORT!
+      * TAKE 3: HoleCards.river_case_eval()
+        * Seven.from_case_and_board()
+          * Meditation: Pass primitives by reference or by value?
+            * TODO: Align around passing by reference or value for primitives.
+          * 
 
 ## LATER
 

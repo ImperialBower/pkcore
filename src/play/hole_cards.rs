@@ -1,9 +1,12 @@
+use crate::analysis::case_eval::CaseEval;
 use crate::analysis::eval::Eval;
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
+use crate::arrays::HandRanker;
 use crate::cards::Cards;
+use crate::play::board::Board;
 use crate::{Card, Evals, PKError, Pile};
 use itertools::Itertools;
 use log::error;
@@ -154,8 +157,14 @@ impl HoleCards {
         cases
     }
 
-    // #[must_use]
-    // pub fn river_case_eval(&self, )
+    #[must_use]
+    pub fn river_case_eval(&self, board: &Board) -> CaseEval {
+        let mut case_eval = CaseEval::default();
+        for hand in self.iter() {
+            case_eval.push(Seven::from_case_and_board(hand, board).eval());
+        }
+        case_eval
+    }
 }
 
 impl fmt::Display for HoleCards {
@@ -225,6 +234,7 @@ impl TryFrom<Cards> for HoleCards {
 #[allow(non_snake_case)]
 mod play__hold_cards_tests {
     use super::*;
+    use crate::analysis::class::Class;
     use crate::arrays::five::Five;
     use crate::card::Card;
     use crate::util::data::TestData;
@@ -305,6 +315,20 @@ mod play__hold_cards_tests {
         assert_eq!(
             cases.get(1).unwrap().hand,
             Five::from_str("5♥ 5♦ 5♣ 6♦ 6♣").unwrap()
+        );
+    }
+
+    #[test]
+    fn river_case_eval() {
+        let the_hand = TestData::the_hand();
+
+        let case_eval = the_hand.hands.river_case_eval(&the_hand.board);
+
+        assert_eq!(124, case_eval.winning_hand_rank().value);
+        assert_eq!(Class::FourFives, case_eval.get(1).unwrap().hand_rank.class);
+        assert_eq!(
+            Class::SixesOverFives,
+            case_eval.get(0).unwrap().hand_rank.class
         );
     }
 

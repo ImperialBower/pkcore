@@ -5,6 +5,7 @@ use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::play::board::Board;
 use crate::{Evals, PKError, Pile};
 use std::fmt;
 use std::fmt::Formatter;
@@ -79,6 +80,18 @@ impl Seven {
             turn,
             case,
         ])
+    }
+
+    /// I'm torn if I should be passing these values by reference or by
+    /// value. All of the times implement the `Copy` trait, so either way
+    /// will work. For now I am going to add a todo as a cleanup task for
+    /// later on. I don't feel like there is a right answer, but it's annoying
+    /// that it's different in different places.
+    ///
+    /// TODO: Align around passing by reference or value for primitives.
+    #[must_use]
+    pub fn from_case_and_board(player: &Two, board: &Board) -> Seven {
+        Seven::from_case_at_turn(*player, board.flop, board.turn, board.river)
     }
 
     #[must_use]
@@ -191,6 +204,7 @@ mod arrays__seven_tests {
     use super::*;
     use crate::analysis::class::Class;
     use crate::analysis::name::Name;
+    use crate::util::data::TestData;
     use std::str::FromStr;
 
     const CARDS: [Card; 7] = [
@@ -202,6 +216,13 @@ mod arrays__seven_tests {
         Card::TREY_CLUBS,
         Card::DEUCE_SPADES,
     ];
+
+    #[test]
+    fn from_case_and_board() {
+        let seven = Seven::from_case_and_board(&Two::HAND_6S_6H, &TestData::the_hand().board);
+
+        assert_eq!("6♠ 6♥ 9♣ 6♦ 5♥ 5♠ 8♠", seven.to_string());
+    }
 
     #[test]
     fn display() {

@@ -612,6 +612,67 @@ impl Game {
 
     // region The River
 
+    /// # PHASE FOUR
+    ///
+    /// Now we need to display the results at The River. So, what's the plan?
+    ///
+    /// As the game gets closer and closer to the end, the number of possibilities narrows. In a
+    /// heads up hand pre flop, there are over a million possible outcomes. At the flop,
+    /// there are a little under a thousand. At the turn, there are 44. At the river, there's one...
+    /// one `CaseEval`.
+    ///
+    /// So, we need to generate a single `CaseEval`, and then display it to the user. Let's map out
+    /// the steps:
+    ///
+    /// * impl From<Board> for Five
+    ///
+    /// I did this before I started writing down this plan. As soon as I finished writing this
+    /// I realized that I didn't need this conversion. What I really needed was to get this into
+    /// a `Seven` array struct, since from there it can generate the `Eval` from the `Cards`. I'm
+    /// not going to delete it, since it's just a simple conversion, and it's got good test
+    /// coverage. Maybe it will find a functional home some day. The purist wouldn't like keeping
+    /// code that I don't see an immediate need for, but I'm not a purist.
+    ///
+    /// Let's start over.
+    ///
+    /// Seven already has `from_case` methods for the flop and the turn, so what we need is one
+    /// for the river:
+    ///
+    /// * `Seven::from_case_at_river()`
+    ///
+    /// OK... can you spot why this is stupid? As soon as I started writing out this method I
+    /// realized why. Here's the fictional method that I will not be including in this code:
+    ///
+    /// ```
+    /// use pkcore::arrays::seven::Seven;
+    /// use pkcore::arrays::three::Three;
+    /// use pkcore::arrays::two::Two;
+    /// use pkcore::card::Card;
+    /// fn from_case_at_river (player: Two, flop: Three, turn: Card, river: Card) -> Seven {
+    ///     Seven::from([
+    ///         player.first(),
+    ///         player.second(),
+    ///         flop.first(),
+    ///         flop.second(),
+    ///         flop.third(),
+    ///         turn,
+    ///         river,
+    ///     ])
+    /// }
+    /// ```
+    ///
+    /// 10 points if you figure it out.
+    ///
+    /// *ANSWER:* It's the same fracking method signature as `Seven::from_case_at_turn()` 🤦.
+    ///
+    /// So... take three on _The Plan_:
+    ///
+    /// * `HoleCards.river_case_eval(&self, board: Board) -> CaseEval`
+    /// * `Game.river_display_results(&self)`
+    ///
+    /// I've decided that I do want a `Seven.from_case_and_board` just to make things easier for me
+    pub fn river_display_results(&self) {}
+
     // region Private Methods
     fn display_evals(mut evals: Evals) {
         evals.sort_in_place();
