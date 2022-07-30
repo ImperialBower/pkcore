@@ -702,15 +702,25 @@ impl Game {
     ///
     ///
     pub fn river_display_results(&self) {
-        if !self.board.flop.is_dealt()
-            || !self.board.turn.is_dealt()
-            || !self.board.river.is_dealt()
-        {
-            return;
-        }
+        match self.river_case_eval() {
+            Err(_) => {}
+            Ok(case_eval) => {
+                println!();
+                println!("The River: {}", self.board.river);
 
-        println!();
-        println!("The River: {}", self.board.river);
+                let winning_hand_rank = case_eval.winning_hand_rank();
+
+                println!(" Winning Hand: {}", winning_hand_rank);
+
+                for (i, eval) in case_eval.iter().enumerate() {
+                    if eval.hand_rank == winning_hand_rank {
+                        println!("   Player #{}: {} WINS!", i + 1, eval);
+                    } else {
+                        println!("   Player #{}: {}", i + 1, eval);
+                    }
+                }
+            }
+        }
     }
 
     // region Private Methods
