@@ -111,6 +111,10 @@ impl Results {
     /// This function is there to make it easy to create text based displays of a player's chances
     /// of winning at a particular point. It will be the foundation of the `Results` display trait
     /// implementation.
+    ///
+    /// REFACTORING: I refactored this so that it would be easier to compare my results
+    /// to what I am getting from `Fudd`, which shows a simple one decimal place win percentage:
+    /// (`97.7%`).
     #[must_use]
     pub fn player_to_string(&self, player_index: usize) -> String {
         let (wins, ties) = self.wins_and_ties(player_index);
