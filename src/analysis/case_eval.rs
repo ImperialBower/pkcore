@@ -437,6 +437,70 @@ impl CaseEval {
         }
         winning_rank
     }
+
+    /// This is a refactoring of the original `.winning_hand_rank()`.
+    /// I want this method to return not just the winning `HandRank`,
+    /// but also the index of the player who won.
+    ///
+    /// # REFACTORING
+    ///
+    /// As soon as I got the test for this to pass, I realized that there
+    /// was a serious problem with this method. Can you catch it?
+    ///
+    /// 10 points if you figured out that the current instance of this
+    /// method assumes that there is only one winner. Luckily, we've
+    /// already dealt with this before with our `.win_count()` method. *GAHH!!!
+    /// I hate the name of that method and the name of the value it returns:
+    /// `PlayerFlag`.
+    ///
+    /// To test out with a more complicated use case that would involve a four way
+    /// tie, I'm going to use an alternative reality version of the hand that
+    /// was played on High Stakes Poker season 4 episode 8, featuring
+    /// Jennifer Harman and Bob Safai, where if a J♣ had come on the river it would have
+    /// resulted in a four-way tie. Here's the original `Game`:
+    /// `cargo run --example calc -- -d "A♣ Q♠ T♦ T♣ 6♦ 4♦ 2♥ 2♦" -b "J♦ J♠ J♥ A♥ 3♦"`
+    ///
+    /// To test our code, we're going to change the board just a little:
+    /// `cargo run --example calc -- -d "A♣ Q♠ T♦ T♣ 6♦ 4♦ 2♥ 2♦" -b "J♦ J♠ J♥ A♥ J♣"`
+    ///
+    /// With this board, every player plays the board, although technically, player #1 could
+    /// play the A♣ in their hand instead of the one on the board, but it wouldn't make any
+    /// difference. For our library, it doesn't matter. One of the next level things that I want
+    /// to work on later in this library is for the library to be able to distill down hand
+    /// comparisons to their base equivalent values.
+    ///
+    /// For example: If I hold A♣ Q♠ and my opponent holds T♦ T♣, from an analysis point of view,
+    /// that is the same as if I held A♥ Q♦. and they held T♠ T♥. My ace dominates their ten of the
+    /// same suit, so that there is no way that they will beat me with a flush on the suit that
+    /// matches my ace. Mathematically, A♣ Q♠ vs. T♦ T♣ is the same as A♥ Q♦ vs. T♠ T♥. I would like
+    /// for this library to b able to take that into account when we get down to hand range
+    /// analysis.
+    ///
+    /// ## ERROR
+    ///
+    /// Turns out that my original idea for this method is fatally flawed.
+    /// ```txt
+    /// pub fn winner(&self) -> (PlayerFlag, HandRank) {
+    ///     let mut winning_rank = HandRank::default();
+    ///     let mut player_flag = PlayerFlag::default();
+    ///     for (i, eval) in self.0.iter().enumerate() {
+    ///         if eval.hand_rank >= winning_rank {
+    ///             player_flag = Win::or(player_flag, Win::from_index(i));
+    ///             winning_rank = eval.hand_rank;
+    ///         }
+    ///     }
+    ///     (player_flag, winning_rank)
+    /// }
+    /// ```
+    /// It can't be greater than or equal to. It has to only set the flag
+    /// if the hand is the best hand, since as we loop through the evals
+    /// the best hand is going to change as we discover better examples. This will
+    /// require to passes, so we will just invert the calls, rolling back our
+    /// old code to our original methods and then passing both back here.
+    #[must_use]
+    pub fn winner(&self) -> (PlayerFlag, HandRank) {
+        (self.win_count(), self.winning_hand_rank())
+    }
 }
 
 impl From<Vec<Eval>> for CaseEval {
@@ -657,5 +721,22 @@ mod hand_rank__case_eval_tests {
         .winning_hand_rank();
 
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn winner() {
+        let expected_hand_rank = TestData::daniel_eval_at_flop().hand_rank;
+
+        let (player_flag, actual_hand_rank) = CaseEval(
+            vec![
+                TestData::daniel_eval_at_flop(),
+                TestData::gus_eval_at_flop(),
+            ],
+            Cards::default(),
+        )
+        .winner();
+
+        assert_eq!(Win::FIRST, player_flag);
+        assert_eq!(expected_hand_rank, actual_hand_rank);
     }
 }

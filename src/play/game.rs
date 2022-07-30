@@ -671,7 +671,30 @@ impl Game {
     /// * `Game.river_display_results(&self)`
     ///
     /// I've decided that I do want a `Seven.from_case_and_board` just to make things easier for me
-    pub fn river_display_results(&self) {}
+    ///
+    /// ...
+    ///
+    /// I've decided that I am going to power through this display function until it looks good,
+    /// and then add some TD to look at possibly refactoring this around a common display method.
+    ///
+    /// TBH, I will probably default on that debt simply because the calc example is not designed
+    /// to be the final word on this code. These display methods are there as a way to visually
+    /// see the library doing its thing. If/when we leverage this for a web app, or a web service, or
+    /// a mobile something or another, we will need to create whole new forms of display that have
+    /// nothing to do with just printing things out via standard out.
+    ///
+    ///
+    pub fn river_display_results(&self) {
+        if !self.board.flop.is_dealt()
+            || !self.board.turn.is_dealt()
+            || !self.board.river.is_dealt()
+        {
+            return;
+        }
+
+        println!();
+        println!("The River: {}", self.board.river);
+    }
 
     // region Private Methods
     fn display_evals(mut evals: Evals) {
