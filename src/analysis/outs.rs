@@ -1,4 +1,5 @@
 use crate::analysis::case_eval::CaseEval;
+use crate::analysis::case_evals::CaseEvals;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::PlayerFlag;
 use crate::{Card, Cards};
@@ -295,10 +296,21 @@ impl Default for Outs {
     }
 }
 
+impl From<CaseEvals> for Outs {
+    fn from(case_evals: CaseEvals) -> Self {
+        let mut outs = Outs::default();
+        for case_eval in case_evals.iter() {
+            outs.add_from_case_eval(case_eval);
+        }
+        outs
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod analysis__outs_tests {
     use super::*;
+    use crate::util::data::TestData;
     use crate::util::wincounter::win::Win;
 
     #[test]
@@ -407,5 +419,14 @@ mod analysis__outs_tests {
         assert!(touched);
         assert_eq!(Cards::default(), *outs.get(1).unwrap());
         assert!(outs.get(2).is_none());
+    }
+
+    #[test]
+    fn from__case_evals() {
+        let case_evals = TestData::the_hand().turn_case_evals();
+
+        let outs = Outs::from(case_evals);
+
+        assert_eq!("6♣", outs.get(1).unwrap().to_string());
     }
 }

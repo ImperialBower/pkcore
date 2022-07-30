@@ -509,6 +509,8 @@
           * Game.turn_calculations()
           * Game.flop_calculations()
         * Game.turn_display_odds() check that turn is dealt
+          * DEFECT: discrepancy with fudd
+          * REFACTORING: Updated Results.player_to_string()
 
 ## LATER
 
@@ -550,6 +552,8 @@
   * [Programmatically add 100s of image overlays on video clip](https://stackoverflow.com/questions/18750525/programatically-add-100s-of-image-overlays-on-video-clip)
   * open source
     * [How to Add Graphics and Overlays to Live Video With Open Broadcaster (OBS)](https://photography.tutsplus.com/tutorials/how-to-add-custom-graphics-obs-studio--cms-35066)
+* Programming
+  * [The Grug Brained Developer](https://grugbrain.dev/)
 
 ## Potential Libraries
 

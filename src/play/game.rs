@@ -249,6 +249,44 @@ impl Game {
         Game::display_evals(self.turn_the_nuts().to_evals());
     }
 
+    /// # Potential Defect
+    ///
+    /// We're seeing different results here than from `Fudd` at the turn.
+    ///
+    /// Fudd has it at:
+    /// ```txt
+    /// The Turn: 5♠
+    /// Chances of winning:
+    /// Seat 0: 2.3% - Outs: 6♣
+    /// Seat 1: 97.7%
+    /// ```
+    ///
+    /// Ours has it at:
+    ///
+    /// ```txt
+    /// The Turn: 5♠
+    ///   Player #1 [6♠ 6♥] 2.1% (2.08%/0.00%) [1/0] - 6♠ 6♥ 6♦ 5♠ 5♥ (271-SixesOverFives)
+    ///   Player #2 [5♦ 5♣] 97.9% (97.92%/0.00%) [47/0] - 5♠ 5♥ 5♦ 5♣ 9♣ (124-FourFives)
+    /// ```
+    ///
+    /// Luckily it's a discrepancy on the turn where there aren't as many possibilities.
+    /// They both have it as a one outer, so it's clearly an issue with how we're
+    /// doing the math. There's just as much a chance that it's an issue with `Fudd`.
+    ///
+    /// Right now we want to close on displaying the outs, so we'll add this to our
+    /// technical debt dumpster heap.
+    ///
+    /// One of the arts in development is managing potential defects. As your feedback
+    /// loops get better turned, the volume of potential issues ramps up. Prioritizing the queue
+    /// can get to be a real pain if you're not careful. The need for caution and careful
+    /// planning goes up when you're working in the embedded world where your ability to update
+    /// things can be limited or require a recall. The ability to remediate physical defects in
+    /// manufacturing via software updates is one of the most badass forms of software development,
+    /// and why I am so fascinated with working in spaces like automotive. It's hard to go back to
+    /// validating the same web form fields after you've tested your code in an actual car.
+    ///
+    /// TODO TD: Resolve this.
+    ///
     /// # Errors
     ///
     /// Throws `PKError::Fubar` if there is an invalid index.

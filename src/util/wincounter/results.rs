@@ -115,10 +115,15 @@ impl Results {
     pub fn player_to_string(&self, player_index: usize) -> String {
         let (wins, ties) = self.wins_and_ties(player_index);
         let (win_percentage, tie_percentage) = self.wins_and_ties_percentages(player_index);
-        format!(
-            "{:.2}% / {:.2}% ({}/{})",
-            win_percentage, tie_percentage, wins, ties
-        )
+        let percentage = win_percentage + tie_percentage;
+        if percentage == 0.00 {
+            "0.00%".to_string()
+        } else {
+            format!(
+                "{:.1}% ({:.2}%/{:.2}%) [{}/{}]",
+                percentage, win_percentage, tie_percentage, wins, ties
+            )
+        }
     }
 
     #[must_use]
@@ -184,11 +189,14 @@ mod util__wincounter__results__tests {
         let results = Results::from_wins(&TestData::wins_the_hand(), 2);
 
         assert_eq!(
-            "79.73% / 1.88% (1365284/32116)",
+            "81.6% (79.73%/1.88%) [1365284/32116]",
             results.player_to_string(0)
         );
-        assert_eq!("18.39% / 1.88% (314904/32116)", results.player_to_string(1));
-        assert_eq!("0.00% / 0.00% (0/0)", results.player_to_string(2));
+        assert_eq!(
+            "20.3% (18.39%/1.88%) [314904/32116]",
+            results.player_to_string(1)
+        );
+        assert_eq!("0.00%", results.player_to_string(2));
     }
 
     #[test]
@@ -242,7 +250,7 @@ mod util__wincounter__results__tests {
     fn display() {
         let results = Results::from_wins(&TestData::wins_the_hand(), 2);
         assert_eq!(
-            "Player #1 79.73% / 1.88% (1365284/32116)\nPlayer #2 18.39% / 1.88% (314904/32116)\n",
+            "Player #1 81.6% (79.73%/1.88%) [1365284/32116]\nPlayer #2 20.3% (18.39%/1.88%) [314904/32116]\n",
             results.to_string()
         );
     }
