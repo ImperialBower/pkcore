@@ -700,6 +700,36 @@ impl Game {
     /// a mobile something or another, we will need to create whole new forms of display that have
     /// nothing to do with just printing things out via standard out.
     ///
+    /// ## In Closing
+    ///
+    /// And thus we close the chapter on Phase Four.
+    ///
+    /// Now, we're at a crossroads. Phase Five is preflop odds. The weight of the calculations
+    /// heads up increases from 990 calculations to 1,712,204 from a total of 2,598,960 different
+    /// hands.
+    ///
+    /// What really complicates things is that in hold'em we're not just comparing all possible five
+    /// card combos, but in reality all possible seven card combinations, since each player's hand
+    /// needs to be evaluated based on the seven possible cards that can be in play; the two they're
+    /// holding as well as all five possible hands on the board. That results in 136,383,520
+    /// different possible hands.
+    ///
+    /// Remembering back to when we implemented the `HandRanker` struct for `Seven` that for each
+    /// set of seven cards, there are 21 different possible hands that need to be compared. That
+    /// comes to 2,864,053,920 different calculations. _NOTE TO SELF: check your math, Einstein._
+    ///
+    /// Turns out, that I already did a preliminary version of the work for `Fudd`. Heads up, using
+    /// a brute force approach, the calculation took around 16 minutes. This is when I came up with
+    /// the idea for the `Bard` struct. With it, I could precalculate the `Seven` `Card` evaluation
+    /// and store the best result in a `Bard`, and store the results in a csv cache.
+    ///
+    /// There is a slight catch with this cache... it takes around three hours to generate, ten
+    /// minutes to read into memory, and 4.6GBs of hard drive space. This is as far as I got
+    /// the first time around, and even this is too much. But I do have an idea...
+    ///
+    /// 1. Build the `Bard` seven card evaluation csv cache.
+    /// 2. Stand up a database backed microservice that stands up the cache, and then stores the results any time it gets a request it hasn't seen before.
+    ///
     ///
     pub fn river_display_results(&self) {
         match self.river_case_eval() {

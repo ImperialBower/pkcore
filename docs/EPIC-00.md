@@ -2,7 +2,27 @@
 
 ## Reading material
 
+## Notes on the Imposter
 
+The truth is that no one is as hard on us as ourselves, and the smarter you are,
+the more brutal you can be with yourself. This is why so many idiots are in 
+management. 
+
+In the grand arena of life we are always really competing with ourselves, and
+no matter how good we do, we could always do better. This is why unless you
+learn from your mistakes, you will never achieve mastery of anything.
+
+This is not entirely true. There are people who are gifted with a natural
+mastery. People like the Chess world champion
+[José Raúl Capablanca](https://en.wikipedia.org/wiki/Jos%C3%A9_Ra%C3%BAl_Capablanca),
+who beat his father the first time he played chess. He was four years old. I
+am not one of those people, and to be honest, the skills of the prodigy do
+little good in the are of software, because the whole point of the things we 
+build is for them to be included in other, more complex systems. The human brain
+is a wonderfully brilliant machine. The computer can count to one really really
+fast. It's just not that bright. 
+
+Thus, we must learn from our mistakes if we are going to improve. 
 
 ## Themes
 
