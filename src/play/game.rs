@@ -350,6 +350,11 @@ impl Game {
         self.board.flop.evals()
     }
 
+    #[must_use]
+    pub fn flop_remaining(&self) -> Cards {
+        todo!()
+    }
+
     // endregion
 
     // region The Turn
@@ -730,6 +735,15 @@ impl Game {
     /// 1. Build the `Bard` seven card evaluation csv cache.
     /// 2. Stand up a database backed microservice that stands up the cache, and then stores the results any time it gets a request it hasn't seen before.
     ///
+    /// However, before we dive into that party, I would like to do some refactoring. One of them
+    /// fairly straight forward, and one of them world changing.
+    ///
+    /// The first one is to update the `.turn_case_evals()` method to be multithreaded. Right now
+    /// it takes calc almost three seconds to run, which is way to slow for me. Before I do that,
+    /// I want to see if I can get any more juice out of the existing code.
+    ///
+    ///
+    ///
     ///
     pub fn river_display_results(&self) {
         match self.river_case_eval() {
@@ -863,7 +877,7 @@ mod play__game_tests {
     }
 
     #[test]
-    fn evals_at_flop() {
+    fn flop_evals() {
         let game = TestData::the_hand();
 
         let evals = game.flop_evals();
@@ -873,6 +887,14 @@ mod play__game_tests {
         assert_eq!(7420, evals.get(25).unwrap().hand_rank.value);
         assert!(evals.get(26).is_none());
         assert_eq!(Evals::default(), Game::default().flop_evals());
+    }
+
+    #[test]
+    fn flop_remaining() {
+        assert_eq!(
+            "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣",
+            TestData::the_hand().flop_remaining().to_string()
+        )
     }
 
     /// TBH, we could do more with the negative tests. We'll add it as something to watch for
@@ -981,8 +1003,8 @@ mod play__game_tests {
     /// You may think you know how things work, but there will always be surprises.
     #[test]
     #[ignore]
-    fn the_nuts_at_turn() {
-        let game = TestData::the_hand();
+    fn turn_the_nuts() {
+        let game = Testtodo!()Data::the_hand();
 
         let evals = game.turn_the_nuts().to_evals();
 
@@ -1005,8 +1027,8 @@ mod play__game_tests {
     fn turn_remaining_board() {
         // Crude but effective. https://www.youtube.com/watch?v=UKkjknFwPac
         assert_eq!(
-            TestData::the_hand().turn_remaining_board().to_string(),
-            "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣"
+            "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣",
+            TestData::the_hand().turn_remaining_board().to_string()
         );
     }
 
