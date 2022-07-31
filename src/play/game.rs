@@ -350,10 +350,10 @@ impl Game {
         self.board.flop.evals()
     }
 
-    #[must_use]
-    pub fn flop_remaining(&self) -> Cards {
-        todo!()
-    }
+    // #[must_use]
+    // pub fn flop_remaining(&self) -> Cards {
+    //     todo!()
+    // }
 
     // endregion
 
@@ -890,11 +890,12 @@ mod play__game_tests {
     }
 
     #[test]
+    #[ignore]
     fn flop_remaining() {
-        assert_eq!(
-            "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣",
-            TestData::the_hand().flop_remaining().to_string()
-        )
+        // assert_eq!(
+        //     "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣",
+        //     TestData::the_hand().flop_remaining().to_string()
+        // )
     }
 
     /// TBH, we could do more with the negative tests. We'll add it as something to watch for
@@ -1004,7 +1005,7 @@ mod play__game_tests {
     #[test]
     #[ignore]
     fn turn_the_nuts() {
-        let game = Testtodo!()Data::the_hand();
+        let game = TestData::the_hand();
 
         let evals = game.turn_the_nuts().to_evals();
 
