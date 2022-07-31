@@ -1,5 +1,6 @@
 use crate::analysis::case_eval::CaseEval;
 use crate::util::wincounter::wins::Wins;
+use log::info;
 use std::slice::Iter;
 
 /// Now that we have validated that we can handle a single case, aka one possible result from
@@ -42,6 +43,7 @@ impl CaseEvals {
     /// lack of corporealness. JK JK.
     #[must_use]
     pub fn wins(&self) -> Wins {
+        info!("CaseEvals.wins()");
         let mut wins = Wins::default();
 
         for case_eval in self.iter() {

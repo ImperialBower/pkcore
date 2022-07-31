@@ -89,6 +89,10 @@ impl HoleCards {
         self.0.iter()
     }
 
+    // pub fn par_iter(&self) -> rayon::vec::IntoIter<Two> {
+    //     self.0.into_par_iter()
+    // }
+
     #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()

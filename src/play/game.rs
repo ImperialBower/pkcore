@@ -12,7 +12,7 @@ use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::results::Results;
 use crate::util::wincounter::wins::Wins;
 use crate::{Card, Cards, Evals, PKError, Pile, TheNuts};
-use log::debug;
+use log::{debug, info};
 use std::fmt::{Display, Formatter};
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
@@ -252,7 +252,7 @@ impl Game {
     /// AHHHH!!!! Run for your lives!!!!!!
     #[must_use]
     pub fn flop_case_evals(&self) -> CaseEvals {
-        debug!(
+        info!(
             "Game.flop_case_evals(hands: {} flop: {})",
             self.hands, self.board.flop
         );
@@ -270,6 +270,8 @@ impl Game {
 
             case_evals.push(self.flop_case_eval(&case));
         }
+
+        info!("Game.flop_case_evals() DONE");
 
         case_evals
     }
