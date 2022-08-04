@@ -215,6 +215,63 @@ impl Two {
     /// Later on, I'm anticipating the need for a struct that's a `HashSet` of `Two` hands so that
     /// we have an easy way to filter out duplicates when doing hand range calculations. For now,
     /// this should do the trick, and make my point.
+    pub const HAND_AS_KS: Two = Two([Card::ACE_SPADES, Card::KING_SPADES]);
+    pub const HAND_AH_KH: Two = Two([Card::ACE_HEARTS, Card::KING_HEARTS]);
+    pub const HAND_AD_KD: Two = Two([Card::ACE_DIAMONDS, Card::KING_DIAMONDS]);
+    pub const HAND_AC_KC: Two = Two([Card::ACE_CLUBS, Card::KING_CLUBS]);
+    pub const ACE_KING_SUITED: [Two; 4] = [
+        Two::HAND_AS_KS,
+        Two::HAND_AH_KH,
+        Two::HAND_AD_KD,
+        Two::HAND_AC_KC,
+    ];
+
+    pub const HAND_AS_KH: Two = Two([Card::ACE_SPADES, Card::KING_HEARTS]);
+    pub const HAND_AS_KD: Two = Two([Card::ACE_SPADES, Card::KING_DIAMONDS]);
+    pub const HAND_AS_KC: Two = Two([Card::ACE_SPADES, Card::KING_CLUBS]);
+    pub const HAND_AH_KS: Two = Two([Card::ACE_HEARTS, Card::KING_SPADES]);
+    pub const HAND_AH_KD: Two = Two([Card::ACE_HEARTS, Card::KING_DIAMONDS]);
+    pub const HAND_AH_KC: Two = Two([Card::ACE_HEARTS, Card::KING_CLUBS]);
+    pub const HAND_AD_KS: Two = Two([Card::ACE_DIAMONDS, Card::KING_SPADES]);
+    pub const HAND_AD_KH: Two = Two([Card::ACE_DIAMONDS, Card::KING_HEARTS]);
+    pub const HAND_AD_KC: Two = Two([Card::ACE_DIAMONDS, Card::KING_CLUBS]);
+    pub const HAND_AC_KS: Two = Two([Card::ACE_CLUBS, Card::KING_SPADES]);
+    pub const HAND_AC_KH: Two = Two([Card::ACE_CLUBS, Card::KING_HEARTS]);
+    pub const HAND_AC_KD: Two = Two([Card::ACE_CLUBS, Card::KING_DIAMONDS]);
+    pub const ACE_KING_OFFSUIT: [Two; 12] = [
+        Two::HAND_AS_KH,
+        Two::HAND_AS_KD,
+        Two::HAND_AS_KC,
+        Two::HAND_AH_KS,
+        Two::HAND_AH_KD,
+        Two::HAND_AH_KC,
+        Two::HAND_AD_KS,
+        Two::HAND_AD_KH,
+        Two::HAND_AD_KC,
+        Two::HAND_AC_KS,
+        Two::HAND_AC_KH,
+        Two::HAND_AC_KD,
+    ];
+
+    pub const ACE_KING: [Two; 16] = [
+        Two::HAND_AS_KS,
+        Two::HAND_AH_KH,
+        Two::HAND_AD_KD,
+        Two::HAND_AC_KC,
+        Two::HAND_AS_KH,
+        Two::HAND_AS_KD,
+        Two::HAND_AS_KC,
+        Two::HAND_AH_KS,
+        Two::HAND_AH_KD,
+        Two::HAND_AH_KC,
+        Two::HAND_AD_KS,
+        Two::HAND_AD_KH,
+        Two::HAND_AD_KC,
+        Two::HAND_AC_KS,
+        Two::HAND_AC_KH,
+        Two::HAND_AC_KD,
+    ];
+
     pub const HAND_8S_7S: Two = Two([Card::EIGHT_SPADES, Card::SEVEN_SPADES]);
     pub const HAND_8H_7H: Two = Two([Card::EIGHT_HEARTS, Card::SEVEN_HEARTS]);
     pub const HAND_8D_7D: Two = Two([Card::EIGHT_DIAMONDS, Card::SEVEN_DIAMONDS]);
@@ -361,6 +418,63 @@ impl Two {
         Two::HAND_KC_TS,
         Two::HAND_KC_TH,
         Two::HAND_KC_TD,
+    ];
+
+    pub const HAND_8S_6S: Two = Two([Card::EIGHT_SPADES, Card::SIX_SPADES]);
+    pub const HAND_8H_6H: Two = Two([Card::EIGHT_HEARTS, Card::SIX_HEARTS]);
+    pub const HAND_8D_6D: Two = Two([Card::EIGHT_DIAMONDS, Card::SIX_DIAMONDS]);
+    pub const HAND_8C_6C: Two = Two([Card::EIGHT_CLUBS, Card::SIX_CLUBS]);
+    pub const EIGHT_SIX_SUITED: [Two; 4] = [
+        Two::HAND_8S_6S,
+        Two::HAND_8H_6H,
+        Two::HAND_8D_6D,
+        Two::HAND_8C_6C,
+    ];
+
+    pub const HAND_8S_6H: Two = Two([Card::EIGHT_SPADES, Card::SIX_HEARTS]);
+    pub const HAND_8S_6D: Two = Two([Card::EIGHT_SPADES, Card::SIX_DIAMONDS]);
+    pub const HAND_8S_6C: Two = Two([Card::EIGHT_SPADES, Card::SIX_CLUBS]);
+    pub const HAND_8H_6S: Two = Two([Card::EIGHT_HEARTS, Card::SIX_SPADES]);
+    pub const HAND_8H_6D: Two = Two([Card::EIGHT_HEARTS, Card::SIX_DIAMONDS]);
+    pub const HAND_8H_6C: Two = Two([Card::EIGHT_HEARTS, Card::SIX_CLUBS]);
+    pub const HAND_8D_6S: Two = Two([Card::EIGHT_DIAMONDS, Card::SIX_SPADES]);
+    pub const HAND_8D_6H: Two = Two([Card::EIGHT_DIAMONDS, Card::SIX_HEARTS]);
+    pub const HAND_8D_6C: Two = Two([Card::EIGHT_DIAMONDS, Card::SIX_CLUBS]);
+    pub const HAND_8C_6S: Two = Two([Card::EIGHT_CLUBS, Card::SIX_SPADES]);
+    pub const HAND_8C_6H: Two = Two([Card::EIGHT_CLUBS, Card::SIX_HEARTS]);
+    pub const HAND_8C_6D: Two = Two([Card::EIGHT_CLUBS, Card::SIX_DIAMONDS]);
+    pub const EIGHT_SIX_OFFSUIT: [Two; 12] = [
+        Two::HAND_8S_6H,
+        Two::HAND_8S_6D,
+        Two::HAND_8S_6C,
+        Two::HAND_8H_6S,
+        Two::HAND_8H_6D,
+        Two::HAND_8H_6C,
+        Two::HAND_8D_6S,
+        Two::HAND_8D_6H,
+        Two::HAND_8D_6C,
+        Two::HAND_8C_6S,
+        Two::HAND_8C_6H,
+        Two::HAND_8C_6D,
+    ];
+
+    pub const EIGHT_SIX: [Two; 16] = [
+        Two::HAND_8S_6S,
+        Two::HAND_8H_6H,
+        Two::HAND_8D_6D,
+        Two::HAND_8C_6C,
+        Two::HAND_8S_6H,
+        Two::HAND_8S_6D,
+        Two::HAND_8S_6C,
+        Two::HAND_8H_6S,
+        Two::HAND_8H_6D,
+        Two::HAND_8H_6C,
+        Two::HAND_8D_6S,
+        Two::HAND_8D_6H,
+        Two::HAND_8D_6C,
+        Two::HAND_8C_6S,
+        Two::HAND_8C_6H,
+        Two::HAND_8C_6D,
     ];
 
     pub const HAND_6D_4D: Two = Two([Card::SIX_DIAMONDS, Card::FOUR_DIAMONDS]);

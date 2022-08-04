@@ -82,6 +82,9 @@ struct Args {
 /// pub struct Outs(Vec<Cards>);
 /// ```
 ///
+/// `cargo run --example calc -- -d "A♠ K♥ 8♦ 6♣" -b "A♣ 8♥ 7♥ 9♠ 5♠" -n`
+///
+///
 fn main() -> Result<(), PKError> {
     let now = std::time::Instant::now();
     env_logger::init();
