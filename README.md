@@ -527,6 +527,7 @@
             * REFACTORING to return PlayerFlag instead of a single winning index.
             * ERROR: Inverting winner call to use existing code
           * Game.river_case_eval()
+    * DEFECT: Outs displayed wrong: `cargo run --example calc -- -d "A♠ K♥ 8♦ 6♣" -b "A♣ 8♥ 7♥ 9♠ 5♠" -n`
 
 ## LATER
 

@@ -816,6 +816,7 @@ mod play__game_tests {
     use crate::util::data::TestData;
     use crate::util::wincounter::win::Win;
     use std::str::FromStr;
+    use crate::arrays::two::Two;
 
     #[test]
     fn new() {
@@ -1073,5 +1074,29 @@ mod play__game_tests {
             "DEALT: [6♠ 6♥, 5♦ 5♣] FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: 8♠",
             TestData::the_hand().to_string()
         );
+    }
+
+    /// This test comes out of an issue discovered by running the cards from this
+    /// [tweet](https://twitter.com/ElieNYC/status/1555121459386728448) by Elie Mystal.
+    ///
+    /// > The only thing I regret so far is my decision to go all in with A-K on a flop of A-8-6. My man called with 8-7 and… runner-runner 9-5 is something that I could have avoided if I had been nicer to Jesus that one time. :)
+    #[test]
+    fn outs_defect() {
+        let hands = HoleCards::from(vec![
+            Two::HAND_AS_KH,
+            Two::HAND_8D_6C,
+        ]);
+        let board = Board::from_str("A♣ 8♥ 7♥ 9♠ 5♠").unwrap();
+        let game = Game::new(hands, board);
+        let (_, _, results, outs) = game.turn_calculations();
+
+        let player1_outs = outs.get(1).unwrap();
+        let player2_outs = outs.get(2).unwrap();
+
+        println!("{}", player1_outs);
+        println!("{}", player2_outs);
+
+
+
     }
 }
