@@ -268,13 +268,19 @@ impl Outs {
     /// debt... sometimes nobody gives a fuck but you. Pick your battles; learn
     /// from your mistakes; forgive yourself. You have this brain for a reason.
     /// Coders who only write perfect code are coders who never launch.
+    ///
+    /// ## DEFECT: Outs displayed wrong
+    ///
+    /// This code is trash, and needed tests.
     #[must_use]
     pub fn longest_player(&self) -> usize {
         let mut player = 0_usize;
+        let mut top_len = 0_usize;
         for key in self.0.keys() {
             let len = self.len_for_player(*key);
-            if len > player {
+            if len > top_len {
                 player = *key;
+                top_len = len;
             }
         }
         player
