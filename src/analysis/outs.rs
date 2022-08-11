@@ -316,8 +316,13 @@ impl From<&CaseEvals> for Outs {
 #[allow(non_snake_case)]
 mod analysis__outs_tests {
     use super::*;
+    use crate::arrays::two::Two;
+    use crate::play::board::Board;
+    use crate::play::game::Game;
+    use crate::play::hole_cards::HoleCards;
     use crate::util::data::TestData;
     use crate::util::wincounter::win::Win;
+    use std::str::FromStr;
 
     #[test]
     fn add() {
@@ -435,5 +440,41 @@ mod analysis__outs_tests {
 
         assert_eq!("6♣", outs.get(1).unwrap().to_string());
         assert_eq!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 4♣ 3♣ 2♣", outs.get(2).unwrap().to_string());
+    }
+
+    #[test]
+    fn from__case_evals__mystal_defect_1() {
+        let game = Game::new(
+            HoleCards::from(vec![Two::HAND_AS_KH, Two::HAND_8D_6C]),
+            Board::from_str("A♣ 8♥ 7♥ 9♠ 5♠").unwrap(),
+        );
+
+        let outs = Outs::from(&game.turn_case_evals());
+
+        assert_eq!(1, outs.longest_player());
+        assert_eq!(31, outs.get(1).unwrap().len());
+        assert_eq!(13, outs.get(2).unwrap().len());
+        assert_eq!(
+            "T♠ 8♠ 6♠ 5♠ T♥ 6♥ 5♥ T♦ 6♦ 5♦ T♣ 8♣ 5♣",
+            outs.get(2).unwrap().to_string()
+        );
+    }
+
+    #[test]
+    fn from__case_evals__mystal_defect_2() {
+        let game = Game::new(
+            HoleCards::from(vec![Two::HAND_8D_6C, Two::HAND_AS_KH]),
+            Board::from_str("A♣ 8♥ 7♥ 9♠ 5♠").unwrap(),
+        );
+
+        let outs = Outs::from(&game.turn_case_evals());
+
+        assert_eq!(2, outs.longest_player());
+        assert_eq!(13, outs.get(1).unwrap().len());
+        assert_eq!(31, outs.get(2).unwrap().len());
+        assert_eq!(
+            "T♠ 8♠ 6♠ 5♠ T♥ 6♥ 5♥ T♦ 6♦ 5♦ T♣ 8♣ 5♣",
+            outs.get(1).unwrap().to_string()
+        );
     }
 }
