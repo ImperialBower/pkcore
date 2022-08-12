@@ -272,6 +272,35 @@ impl Outs {
     /// ## DEFECT: Outs displayed wrong
     ///
     /// This code is trash, and needed tests.
+    ///
+    /// ### Defect Resolved
+    ///
+    /// There was some really illogical logic in the original version of this code, which has been
+    /// resolved. But...
+    ///
+    /// There is still a big problem with this code. 10 points if you can spot it...
+    /// .
+    /// .
+    /// .
+    /// .
+    /// .
+    /// .
+    /// .
+    /// .
+    /// .
+    /// .
+    /// *ANSWER:* There can be more than on player who has the most outs. This code doesn't deal
+    /// with ties. This data dimension has been one of the biggest challenges in the early stages
+    /// of this library.
+    ///
+    /// You will find in your coding adventures that outliers like this will eat up a
+    /// disproportionate amount of your time. Treat these problems as a gift. Yes, it's a
+    /// pain in the ass, but the people using your shit don't give a flying fuck about your
+    /// pain, and TBH, these are some of the most interesting coding problems you will find.
+    /// Your systems need to be smooth as silk, and your domain will work overtime and on weekends
+    /// to thwart that goal. Don't let it win. Most shitty user experiences can be traced back
+    /// to a groups unwillingness to take the time to make things smooth. Take the time. Be better
+    /// that these schlubs.
     #[must_use]
     pub fn longest_player(&self) -> usize {
         let mut player = 0_usize;
