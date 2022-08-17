@@ -447,9 +447,9 @@ impl TheNuts {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod analysis__the_nuts_tests {
-    use std::str::FromStr;
-    use crate::arrays::five::Five;
     use super::*;
+    use crate::arrays::five::Five;
+    use std::str::FromStr;
 
     fn test_data() -> TheNuts {
         let mut the_nuts = TheNuts::default();
@@ -469,7 +469,10 @@ mod analysis__the_nuts_tests {
         let the_nuts = test_data();
 
         assert_eq!(Class::RoyalFlush, the_nuts.get(0).unwrap().hand_rank.class);
-        assert_eq!(Class::AceHighStraight, the_nuts.get(1).unwrap().hand_rank.class);
+        assert_eq!(
+            Class::AceHighStraight,
+            the_nuts.get(1).unwrap().hand_rank.class
+        );
         assert!(the_nuts.get(0).is_some());
         assert!(the_nuts.get(1).is_some());
         assert!(the_nuts.get(2).is_none());

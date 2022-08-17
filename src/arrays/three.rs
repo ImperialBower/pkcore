@@ -137,8 +137,8 @@ mod arrays__three_tests {
     use super::*;
     use crate::cards::Cards;
     use crate::util::data::TestData;
-    use std::str::FromStr;
     use crate::Evals;
+    use std::str::FromStr;
 
     /// <https://www.youtube.com/watch?v=vjM60lqRhPg />
     const THE_FLOP: [Card; 3] = [Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS];
@@ -284,7 +284,7 @@ mod arrays__three_tests {
     }
 
     #[test]
-        fn pile__evals__blank() {
+    fn pile__evals__blank() {
         let three = Three::from([Card::BLANK, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
 
         let evals = three.the_nuts().to_evals();
