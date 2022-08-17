@@ -138,6 +138,7 @@ mod arrays__three_tests {
     use crate::cards::Cards;
     use crate::util::data::TestData;
     use std::str::FromStr;
+    use crate::Evals;
 
     /// <https://www.youtube.com/watch?v=vjM60lqRhPg />
     const THE_FLOP: [Card; 3] = [Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS];
@@ -269,6 +270,26 @@ mod arrays__three_tests {
         let the_nuts = three.the_nuts();
 
         assert_eq!(TheNuts::default(), the_nuts);
+    }
+
+    #[test]
+    fn pile__the_nuts__the_hand() {
+        let three = Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
+
+        let the_nuts = three.the_nuts();
+        let evals = the_nuts.to_evals();
+
+        assert_eq!(26, evals.len());
+        // assert_eq!(TheNuts::default(), the_nuts);
+    }
+
+    #[test]
+        fn pile__evals__blank() {
+        let three = Three::from([Card::BLANK, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
+
+        let evals = three.the_nuts().to_evals();
+
+        assert_eq!(Evals::default(), evals);
     }
 
     /// NOTE: These tests will quickly become out of hand if applied to the larger arrays.

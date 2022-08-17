@@ -400,6 +400,16 @@ use std::collections::HashSet;
 pub struct TheNuts(Vec<Eval>, HashSet<Class>);
 
 impl TheNuts {
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
     pub fn push(&mut self, evaluated_hand: Eval) {
         if self.1.insert(evaluated_hand.hand_rank.class) {
             self.0.push(evaluated_hand);
@@ -431,4 +441,41 @@ impl TheNuts {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod analysis__the_nuts_tests {}
+mod analysis__the_nuts_tests {
+    use std::str::FromStr;
+    use crate::arrays::five::Five;
+    use super::*;
+
+    fn test_data() -> TheNuts {
+        let mut the_nuts = TheNuts::default();
+        let straight = Eval::from(Five::from_str("Q♣ A♦ T♣ K♦ J♣").unwrap());
+        let royal_flush_spades = Eval::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap());
+        let royal_flush_hearts = Eval::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap());
+        the_nuts.push(straight);
+        the_nuts.push(royal_flush_hearts);
+        the_nuts.push(royal_flush_spades);
+        the_nuts.sort_in_place();
+
+        the_nuts
+    }
+
+    #[test]
+    fn is_empty() {
+        assert!(!test_data().is_empty());
+    }
+
+    #[test]
+    fn is_empty__default() {
+        assert!(TheNuts::default().is_empty());
+    }
+
+    #[test]
+    fn len() {
+        assert_eq!(2, test_data().len());
+    }
+
+    #[test]
+    fn len__default() {
+        assert_eq!(0, TheNuts::default().len());
+    }
+}
