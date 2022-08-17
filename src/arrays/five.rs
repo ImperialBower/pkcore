@@ -5,7 +5,7 @@ use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::play::board::Board;
-use crate::{Evals, PKError, Pile};
+use crate::{PKError, Pile, TheNuts};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::slice::Iter;
@@ -266,7 +266,7 @@ impl Pile for Five {
         ])
     }
 
-    fn evals(&self) -> Evals {
+    fn the_nuts(&self) -> TheNuts {
         todo!()
     }
 

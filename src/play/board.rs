@@ -1,7 +1,7 @@
 use crate::arrays::three::Three;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{Evals, PKError, Pile};
+use crate::{PKError, Pile, TheNuts};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
@@ -44,7 +44,7 @@ impl Pile for Board {
         todo!()
     }
 
-    fn evals(&self) -> Evals {
+    fn the_nuts(&self) -> TheNuts {
         todo!()
     }
 

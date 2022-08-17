@@ -1,5 +1,5 @@
 use crate::arrays::three::Three;
-use crate::{Card, Evals, Pile};
+use crate::{Card, Pile, TheNuts};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
@@ -107,7 +107,7 @@ impl Pile for Four {
         ])
     }
 
-    fn evals(&self) -> Evals {
+    fn the_nuts(&self) -> TheNuts {
         todo!()
     }
 

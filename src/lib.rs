@@ -112,7 +112,11 @@ pub trait Pile {
         Cards::deck_minus(&held)
     }
 
-    fn evals(&self) -> Evals;
+    fn the_nuts(&self) -> TheNuts;
+
+    fn evals(&self) -> Evals {
+        self.the_nuts().to_evals()
+    }
 
     fn to_vec(&self) -> Vec<Card>;
 }

@@ -14,6 +14,8 @@ use crate::util::wincounter::wins::Wins;
 use crate::{Card, Cards, Evals, PKError, Pile, TheNuts};
 use log::{debug, info};
 use std::fmt::{Display, Formatter};
+use std::sync::mpsc;
+use std::thread;
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -319,9 +321,9 @@ impl Game {
     pub fn flop_display_the_nuts(&self) {
         println!();
         println!("The Nuts @ Flop:");
-        let mut evals = self.board.flop.evals();
-        evals.sort_in_place();
-        Game::display_evals(evals);
+        // let mut evals = self.board.flop.evals();
+        // evals.sort_in_place();
+        Game::display_evals(self.board.flop.evals());
     }
 
     /// Returns the `Five` `Card` hand combining the hole cards from the passed in index
@@ -435,7 +437,7 @@ impl Game {
     /// I am going to make this a private function for now. I just need it for
     /// `possible_evals_at_turn()`.
     #[must_use]
-    fn turn_remaining_board(&self) -> Cards {
+    pub fn turn_remaining_board(&self) -> Cards {
         Cards::deck_minus(&self.turn_cards())
     }
 
@@ -595,20 +597,68 @@ impl Game {
     ///
     /// It could be that there is simply no point for this function. What's important at the turn
     /// is odds and outs.
+    ///
+    /// # Refactor
+    ///
+    /// I want to try to use concurrency to speed up the code we've written so far. The long term
+    /// goal is to take on pre-flop odds, which require a massive amounts of time. Right now
+    /// the code executed in `calc` feels sluggish.
+    ///
+    /// TBH, using `calc` as our method of getting a feel for our code's performance is going
+    /// to hit a wall. Eventually, we're going to want to write some real performance tests.
+    ///
+    /// OK, after the first refactoring, we've got the execution time of this method down
+    /// from 19 seconds to 4. This, just by executing `Seven.eval()` in its own thread.
+    ///
+    /// The only problem is, that the test is floppy, with the test line
+    /// `assert_eq!(5306, evals.get(61).unwrap().hand_rank.value);` not always returning
+    /// the same result. This is an issue that needs to be tracked down.
+    ///
+    /// # Panics
+    ///
+    /// Hard to imaging when this would panic from a case iterator.
     #[must_use]
     pub fn turn_the_nuts(&self) -> TheNuts {
         if !self.board.flop.is_dealt() || !self.board.turn.is_dealt() {
             return TheNuts::default();
         }
-        let mut the_nuts = TheNuts::default();
 
+        let mut the_nuts = TheNuts::default();
         let board = self.flop_and_turn();
+
+        // let combos = self.turn_remaining_board().combinations(3);
+        // let chunks = combos.chunks(5);
+        let (sender, receiver) = mpsc::channel();
+
+        // for chunk in &chunks {
+        //     for v in chunk {
+        //         if let Ok(seven) = Game::flop_get_seven(board, &v) {
+        //             let sender = sender.clone();
+        //
+        //             thread::spawn(move || {
+        //                 sender.send(seven.eval()).unwrap();
+        //             });
+        //         }
+        //     }
+        // }
 
         for v in self.turn_remaining_board().combinations(3) {
             if let Ok(seven) = Game::flop_get_seven(board, &v) {
-                the_nuts.push(seven.eval());
+                let sender = sender.clone();
+                thread::spawn(move || {
+                    sender.send(seven.eval()).unwrap();
+                });
             }
         }
+
+        drop(sender);
+
+        for received in receiver {
+            the_nuts.push(received);
+        }
+
+        // This had no effect on the floppiness of the ignored test.
+        // thread::sleep(Duration::from_millis(1000));
 
         the_nuts.sort_in_place();
 
@@ -769,6 +819,8 @@ impl Game {
         }
     }
 
+    // endregion
+
     // region Private Methods
     fn display_evals(mut evals: Evals) {
         evals.sort_in_place();
@@ -778,7 +830,8 @@ impl Game {
         }
     }
 
-    fn flop_and_turn(&self) -> Four {
+    #[must_use]
+    pub fn flop_and_turn(&self) -> Four {
         Four::from([
             self.board.flop.first(),
             self.board.flop.second(),
@@ -787,7 +840,10 @@ impl Game {
         ])
     }
 
-    fn flop_get_seven(board: Four, three: &[Card]) -> Result<Seven, PKError> {
+    /// # Errors
+    ///
+    /// Returns `PKError::InvalidCard` if unable to get `Card` from array.
+    pub fn flop_get_seven(board: Four, three: &[Card]) -> Result<Seven, PKError> {
         Ok(Seven::from([
             board.first(),
             board.second(),

@@ -7,7 +7,7 @@ use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::cards::Cards;
 use crate::play::board::Board;
-use crate::{Card, Evals, PKError, Pile};
+use crate::{Card, PKError, Pile, TheNuts};
 use itertools::Itertools;
 use log::error;
 use std::fmt;
@@ -197,7 +197,7 @@ impl Pile for HoleCards {
         todo!()
     }
 
-    fn evals(&self) -> Evals {
+    fn the_nuts(&self) -> TheNuts {
         todo!()
     }
 

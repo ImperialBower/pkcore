@@ -528,6 +528,11 @@
             * ERROR: Inverting winner call to use existing code
           * Game.river_case_eval()
     * DEFECT: Outs displayed wrong: `cargo run --example calc -- -d "A♠ K♥ 8♦ 6♣" -b "A♣ 8♥ 7♥ 9♠ 5♠" -n`
+      * FIXED
+    * TODO TD: Write real performance tests.
+    * PHASE FIVE: Concurrency
+      * REFACTOR: Turn 
+        * REFACTOR: Add .the_nuts() to Pile trait and have .evals()lk use it to return evals.
 
 ## LATER
 

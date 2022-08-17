@@ -1,4 +1,3 @@
-use crate::analysis::evals::Evals;
 use crate::arrays::five::Five;
 use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
@@ -95,9 +94,9 @@ impl Pile for Three {
         ])
     }
 
-    fn evals(&self) -> Evals {
+    fn the_nuts(&self) -> TheNuts {
         if !self.is_dealt() {
-            return Evals::default();
+            return TheNuts::default();
         }
 
         let mut the_nuts = TheNuts::default();
@@ -108,7 +107,7 @@ impl Pile for Three {
         }
         the_nuts.sort_in_place();
 
-        the_nuts.to_evals()
+        the_nuts
     }
 
     fn to_vec(&self) -> Vec<Card> {
@@ -267,9 +266,9 @@ mod arrays__three_tests {
     fn pile__the_nuts__blank() {
         let three = Three::from([Card::BLANK, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]);
 
-        let the_nuts = three.evals();
+        let the_nuts = three.the_nuts();
 
-        assert_eq!(Evals::default(), the_nuts);
+        assert_eq!(TheNuts::default(), the_nuts);
     }
 
     /// NOTE: These tests will quickly become out of hand if applied to the larger arrays.

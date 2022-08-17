@@ -1,5 +1,7 @@
 # Ramblings
 
+## My dev hardware
+
 This is why I have a 13" M1 and my System76 linux tank. The M1 is going to be a major defect vector for a long time. I am still stepping on landmines after a year.
 BUT, as I sit here outside a cafe in Burbank, I am grateful AF for how portable this M1 is.
 One of my power moves back in my startup days was to spell out my hardware demands in my contract before I would sign. Two machines, top of the line Mac and a boss-ass Linux box. Your odds of getting that before you sign are less than 1%. Before, closer to 90%.
@@ -13,3 +15,27 @@ The reason that they don’t like to have you work on machines that match what y
 This tree keeps dropping little flowers on my laptop’s keyboard as I type. This is one of those perfect moments that Spalding Gray talked about.
 
 ![Perfect Moment](files/perfect_moment.jpg)
+
+## Leet Dev Image Hacks
+
+Here's a dev hack that you can use if you're trying to emote a certain amount of
+h4ck3r l33tness to your game: develop using hard core old school tools such as
+VI or Emacs... or even extra double hardcode, 
+[Emacs evil mode](https://www.emacswiki.org/emacs/Evil), which is Emacs with
+VI commands. Being able to develop without the training wheels tha a hard core
+IDE like IntelliJ has to offer will set you apart from the vast majority of 
+developers out there, including me. PLUS, being able to wage endless pointless
+verbal wars over the superiority of VI over Emacs is an essential skill within
+just about any development shop. Personally, anyone who starts coding strainght
+from either of these environments earns my mad respect. They've clearly done
+the work.
+
+__Aside:__ 
+
+One of the developers that I have such respect for is Kristen
+
+One of the ways that Kirsten 
+
+
+One of the ways that you can walk into any new development with a certain armor
+of 

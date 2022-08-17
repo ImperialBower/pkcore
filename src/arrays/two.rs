@@ -3,7 +3,7 @@ use crate::arrays::three::Three;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{Evals, PKError, Pile, TheNuts};
+use crate::{PKError, Pile, TheNuts};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
@@ -620,9 +620,9 @@ impl Pile for Two {
     /// I am going to need to come up with something smarter than that.
     ///
     /// Let's hold off on that for now, and get some passing tests written for Two first.
-    fn evals(&self) -> Evals {
+    fn the_nuts(&self) -> TheNuts {
         if !self.is_dealt() {
-            return Evals::default();
+            return TheNuts::default();
         }
 
         let mut the_nuts = TheNuts::default();
@@ -633,7 +633,7 @@ impl Pile for Two {
         }
         the_nuts.sort_in_place();
 
-        the_nuts.to_evals()
+        the_nuts
     }
 
     fn to_vec(&self) -> Vec<Card> {

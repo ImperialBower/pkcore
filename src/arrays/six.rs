@@ -5,7 +5,7 @@ use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{Evals, PKError, Pile};
+use crate::{PKError, Pile, TheNuts};
 use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
@@ -138,7 +138,7 @@ impl Pile for Six {
         todo!()
     }
 
-    fn evals(&self) -> Evals {
+    fn the_nuts(&self) -> TheNuts {
         todo!()
     }
 

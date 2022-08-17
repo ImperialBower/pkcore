@@ -2,7 +2,7 @@ use crate::card::Card;
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::util::random_ordering::RandomOrdering;
-use crate::{Evals, PKError, Pile};
+use crate::{PKError, Pile, TheNuts};
 use indexmap::set::Iter;
 use indexmap::IndexSet;
 use itertools::{Combinations, Itertools};
@@ -434,7 +434,7 @@ impl Pile for Cards {
         true
     }
 
-    fn evals(&self) -> Evals {
+    fn the_nuts(&self) -> TheNuts {
         todo!()
     }
 
