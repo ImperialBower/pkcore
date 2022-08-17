@@ -401,6 +401,11 @@ pub struct TheNuts(Vec<Eval>, HashSet<Class>);
 
 impl TheNuts {
     #[must_use]
+    pub fn get(&self, i: usize) -> Option<&Eval> {
+        self.0.get(i)
+    }
+
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -457,6 +462,17 @@ mod analysis__the_nuts_tests {
         the_nuts.sort_in_place();
 
         the_nuts
+    }
+
+    #[test]
+    fn get() {
+        let the_nuts = test_data();
+
+        assert_eq!(Class::RoyalFlush, the_nuts.get(0).unwrap().hand_rank.class);
+        assert_eq!(Class::AceHighStraight, the_nuts.get(1).unwrap().hand_rank.class);
+        assert!(the_nuts.get(0).is_some());
+        assert!(the_nuts.get(1).is_some());
+        assert!(the_nuts.get(2).is_none());
     }
 
     #[test]
