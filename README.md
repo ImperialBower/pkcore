@@ -536,6 +536,9 @@
         * HARDENING: Pile trait .the_nuts() tests for arrays
           * HARDENING: Added getters to TheNuts against underlying evals array.
             * TheNuts.get()
+      * REFACTOR: play/stages
+        * Flop
+          * .gen_case_evals()
 
 ## LATER
 
@@ -548,6 +551,11 @@
   * [Mike Caro's Website](https://www.poker1.com/)
   * GTO
     * [Minimum Defense Frequency vs Pot Odds](https://upswingpoker.com/minimum-defense-frequency-vs-pot-odds/)
+  * Terms
+    * [The Nuts](https://en.wikipedia.org/wiki/Nut_hand)
+      * 888poker > [What is Nuts in Poker?](https://www.888poker.com/magazine/poker-terms/nuts)
+      * GetMega > [Nuts in Poker](https://www.getmega.com/cards/poker/terms/nuts-in-poker/)
+    * 888poker > [What is Texture in Poker?](https://www.888poker.com/magazine/poker-terms/texture)
 * Rust
   * [The Rust Programming Language](https://doc.rust-lang.org/stable/book/)
   * [Rust Design Patterns](https://rust-unofficial.github.io/patterns/intro.html) 
