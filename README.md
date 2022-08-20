@@ -535,6 +535,7 @@
         * REFACTOR: Add .the_nuts() to Pile trait and have .evals() use it to return evals.
         * HARDENING: Pile trait .the_nuts() tests for arrays
           * HARDENING: Added getters to TheNuts against underlying evals array.
+            * TheNuts.get()
 
 ## LATER
 
