@@ -26,6 +26,11 @@ Thus, we must learn from our mistakes if we are going to improve.
 
 ## Themes
 
+### Creating a Safe Place
+
+CI tools, tests, give yourself a safe place to fail and learn.
+
+
 ## Ways to read
 
 I've written this book so that you can approach it in a number of ways. It seems
