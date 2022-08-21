@@ -558,6 +558,7 @@
                   * REFACTORING: rstest for blank tests
                   * REFACTORING PART DEUX: Mega Consolidation
                     * first add error param to existing three cases 
+                    * add remaining as failures (Don't change error case)
 
 ## LATER
 

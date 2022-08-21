@@ -998,7 +998,14 @@ mod arrays__two_tests {
     ///
     /// But that isn't enough. If we add a second parameter to the expected state passed
     /// into the test, we could consolidate all of the tests into a single function.
+    ///
+    /// First we added the second parameter to the test, and make sure that our existing
+    /// cases still pass... then we add the test of the casses, first making them fail,
+    /// than making them pass.
     #[rstest]
+    #[case(Vec::new(), PKError::BlankCard)]
+    #[case(vec![Card::KING_SPADES], PKError::BlankCard)]
+    #[case(vec![Card::KING_SPADES, Card::KING_HEARTS, Card::KING_DIAMONDS], PKError::BlankCard)]
     #[case(vec![Card::BLANK, Card::KING_HEARTS], PKError::BlankCard)]
     #[case(vec![Card::KING_HEARTS, Card::BLANK], PKError::BlankCard)]
     #[case(vec![Card::BLANK, Card::BLANK], PKError::BlankCard)]
