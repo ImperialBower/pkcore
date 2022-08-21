@@ -1003,9 +1003,9 @@ mod arrays__two_tests {
     /// cases still pass... then we add the test of the casses, first making them fail,
     /// than making them pass.
     #[rstest]
-    #[case(Vec::new(), PKError::BlankCard)]
-    #[case(vec![Card::KING_SPADES], PKError::BlankCard)]
-    #[case(vec![Card::KING_SPADES, Card::KING_HEARTS, Card::KING_DIAMONDS], PKError::BlankCard)]
+    #[case(Vec::new(), PKError::NotEnoughCards)]
+    #[case(vec![Card::KING_SPADES], PKError::NotEnoughCards)]
+    #[case(vec![Card::KING_SPADES, Card::KING_HEARTS, Card::KING_DIAMONDS], PKError::TooManyCards)]
     #[case(vec![Card::BLANK, Card::KING_HEARTS], PKError::BlankCard)]
     #[case(vec![Card::KING_HEARTS, Card::BLANK], PKError::BlankCard)]
     #[case(vec![Card::BLANK, Card::BLANK], PKError::BlankCard)]
@@ -1013,6 +1013,6 @@ mod arrays__two_tests {
         let slice: &[Card] = v.as_slice();
 
         assert!(Two::try_from(slice).is_err());
-        assert_eq!(PKError::BlankCard, Two::try_from(slice).unwrap_err());
+        assert_eq!(err, Two::try_from(slice).unwrap_err());
     }
 }
