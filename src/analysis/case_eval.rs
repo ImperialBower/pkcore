@@ -4,6 +4,8 @@ use crate::util::wincounter::win::Win;
 use crate::util::wincounter::PlayerFlag;
 use crate::{Card, Cards, Pile};
 use std::slice::Iter;
+use crate::arrays::three::Three;
+use crate::play::hole_cards::HoleCards;
 
 /// # Analysis Saga: Step 2
 ///
@@ -78,8 +80,39 @@ pub struct CaseEval(Vec<Eval>, Cards);
 
 impl CaseEval {
     #[must_use]
-    pub fn new(case: Cards) -> CaseEval {
+    pub fn new(case: Cards) -> Self {
         CaseEval(Vec::default(), case)
+    }
+
+    /// I am calling this method `from_holdem_at_flop()` just on the outside chance
+    /// that we get beyond Texas Hold'em in this library.
+    ///
+    /// One refactoring that I might want to do later is change the type for the case
+    /// parameter into `Two`. My long term thinking is that I want to support calculations
+    /// based on hand ranges (possible hands that an opponent might be playing) and
+    /// so I could envision in the future a call from CaseEvals iterating over a
+    /// vector of possible hands. Something to add a refactoring tag to...
+    ///
+    /// TODO RF: Change case parameter to `Two` to facilitate range calculations.
+    ///
+    /// OK, now, onto the coding...
+    ///
+    /// We already have code that does the work for us, but what we don't have are clear
+    /// tests that cover all of the boundaries, both negative and positive for the function.
+    ///
+    /// Looking at the original version of the function in `Game`, I see what we have
+    /// a raw unwrap in the code, which strikes me now as a really bad idea. You will
+    /// find that code that felt wonderful when you wrote it quickly grows stale over
+    /// time. That's OK. _What's not OK is not writing some GD tests._
+    ///
+    /// Since I didn't bother to do this with the original code, I am now forced to harden
+    /// the method with tests.
+    ///
+    #[must_use]
+    pub fn from_holdem_at_flop(board: Three, case: &[Card], hands: HoleCards) -> Self {
+        let mut case_eval = CaseEval::default();
+
+        case_eval
     }
 
     /// OK, this feels a bit hacky to me, but TBH I'm a hack and I want a simple

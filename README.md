@@ -539,6 +539,15 @@
       * REFACTOR: play/stages
         * Flop
           * .gen_case_evals()
+          * CaseEval
+            * .from_holdem_at_flop()
+              * impl TryFrom<&[Card]> for Two
+                * REFACTORING: impl TryFrom<Cards> for Two
+                * Tests - Negative Boundary Conditions:
+                  * test: .try_from__card_slice__empty_slice()
+                  * test: .try_from__card_slice__one_card()
+                  * test: .try_from__card_slice__three_cards()
+                  * 
 
 ## LATER
 

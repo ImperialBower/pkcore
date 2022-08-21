@@ -648,8 +648,23 @@ impl TryFrom<Cards> for Two {
         match cards.len() {
             0..=1 => Err(PKError::NotEnoughCards),
             2 => Ok(Two::from([
-                *cards.get_index(0).unwrap(),
-                *cards.get_index(1).unwrap(),
+                *cards.get_index(0).ok_or(PKError::InvalidCard)?,
+                *cards.get_index(1).ok_or(PKError::InvalidCard)?,
+            ])),
+            _ => Err(PKError::TooManyCards),
+        }
+    }
+}
+
+impl TryFrom<&[Card]> for Two {
+    type Error = PKError;
+
+    fn try_from(slice: &[Card]) -> Result<Self, Self::Error> {
+        match slice.len() {
+            0..=1 => Err(PKError::NotEnoughCards),
+            2 => Ok(Two::from([
+                *slice.get(0).ok_or(PKError::InvalidCard)?,
+                *slice.get(1).ok_or(PKError::InvalidCard)?,
             ])),
             _ => Err(PKError::TooManyCards),
         }
@@ -847,4 +862,41 @@ mod arrays__two_tests {
         assert!(sut.is_err());
         assert_eq!(sut.unwrap_err(), PKError::TooManyCards);
     }
+
+    #[test]
+    fn try_from__card_slice__empty_slice() {
+        let binding = Vec::new();
+        let slice: &[Card] = binding.as_slice();
+
+        assert!(Two::try_from(slice).is_err());
+        assert_eq!(PKError::NotEnoughCards, Two::try_from(slice).unwrap_err());
+    }
+
+    #[test]
+    fn try_from__card_slice__one_card() {
+        let v = vec![Card::KING_SPADES];
+        let slice: &[Card] = v.as_slice();
+
+        assert!(Two::try_from(slice).is_err());
+        assert_eq!(PKError::NotEnoughCards, Two::try_from(slice).unwrap_err());
+    }
+
+    /// I honestly feel really good about these hardening tests. Mastering negative
+    /// flows for a language, especially rust, can be a real challenge. I'm not
+    /// claiming to be a master, but I am feeling more comfortable about leveraging
+    /// the `Option` and `Result` return types. The
+    /// [Question Mark operator](https://doc.rust-lang.org/rust-by-example/std/result/question_mark.html)
+    /// is really cool, and makes the whole thing a lot easier, especially when you
+    /// are chaining results.
+    ///
+    #[test]
+    fn try_from__card_slice__three_cards() {
+        let v = vec![Card::KING_SPADES, Card::KING_HEARTS, Card::KING_DIAMONDS];
+        let slice: &[Card] = v.as_slice();
+
+        assert!(Two::try_from(slice).is_err());
+        assert_eq!(PKError::TooManyCards, Two::try_from(slice).unwrap_err());
+    }
+
+
 }
