@@ -164,7 +164,7 @@ impl PlayOut for PlayerWins {
             let mut case_eval = CaseEval::default();
 
             for (i, player) in hands.iter().enumerate() {
-                let seven = Seven::from_case_at_flop(*player, flop, &case).unwrap();
+                let seven = Seven::from_case_at_flop_old(*player, flop, &case).unwrap();
                 let eval = Eval::from(seven);
 
                 case_eval.push(eval);

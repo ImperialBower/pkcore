@@ -1,10 +1,12 @@
 use crate::analysis::eval::Eval;
 use crate::analysis::hand_rank::HandRank;
+use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
+use crate::arrays::two::Two;
 use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::PlayerFlag;
-use crate::{Card, Cards, Pile};
+use crate::{Card, Cards, PKError, Pile};
 use std::slice::Iter;
 
 /// # Analysis Saga: Step 2
@@ -109,10 +111,16 @@ impl CaseEval {
     /// the method with tests.
     ///
     #[must_use]
-    pub fn from_holdem_at_flop(board: Three, case: &[Card], hands: HoleCards) -> Self {
+    pub fn from_holdem_at_flop(board: Three, case: Two, hands: HoleCards) -> Result<Self, PKError> {
         let mut case_eval = CaseEval::default();
 
-        case_eval
+        for player in hands.iter() {
+            let seven = Seven::from_case_at_flop(*player, board, case)?;
+            let eval = Eval::from(seven);
+            case_eval.push(eval);
+        }
+
+        Ok(case_eval)
     }
 
     /// OK, this feels a bit hacky to me, but TBH I'm a hack and I want a simple
@@ -551,6 +559,22 @@ mod hand_rank__case_eval_tests {
     use crate::util::data::TestData;
     use crate::util::wincounter::win::Win;
     use std::str::FromStr;
+
+    /// This is our first happy path test of the function. It works simple enough, but, if I am
+    /// being honest, the logic around `Wins` is feeling really clunky to me, like it's doing too
+    /// much. I will need to revisit this later on.
+    ///
+    /// TODO TD: Examine win count for possible refactoring opportunities.
+    #[test]
+    fn from_holdem_at_flop__happy__the_hand() {
+        let game = TestData::the_hand();
+        let case = Two::from(vec![Card::FIVE_SPADES, Card::EIGHT_SPADES]);
+
+        let sut = CaseEval::from_holdem_at_flop(game.board.flop, case, game.hands);
+
+        assert!(sut.is_ok());
+        assert_eq!(Win::SECOND, sut.unwrap().win_count());
+    }
 
     #[test]
     fn card() {

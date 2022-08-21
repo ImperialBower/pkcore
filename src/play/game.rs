@@ -239,7 +239,7 @@ impl Game {
     pub fn flop_case_eval(&self, case: &[Card]) -> CaseEval {
         let mut case_eval = CaseEval::default();
         for (i, player) in self.hands.iter().enumerate() {
-            let seven = Seven::from_case_at_flop(*player, self.board.flop, case).unwrap();
+            let seven = Seven::from_case_at_flop_old(*player, self.board.flop, case).unwrap();
             let eval = Eval::from(seven);
 
             case_eval.push(eval);

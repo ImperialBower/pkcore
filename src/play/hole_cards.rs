@@ -149,7 +149,7 @@ impl HoleCards {
     pub fn realize_case_at_flop(&self, flop: Three, case: &[Card]) -> Vec<Eval> {
         let mut cases: Vec<Eval> = Vec::default();
         for hand in self.iter() {
-            match Seven::from_case_at_flop(*hand, flop, case) {
+            match Seven::from_case_at_flop_old(*hand, flop, case) {
                 Ok(seven) => cases.push(Eval::from(seven)),
                 Err(e) => error!(
                     "{:?} from realize_case_at_flop({}, {}, {:?})",

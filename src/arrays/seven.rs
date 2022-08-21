@@ -54,7 +54,11 @@ impl Seven {
     /// # Errors
     ///
     /// `PKError::InvalidCard` if the case slice contains an invalid card.
-    pub fn from_case_at_flop(player: Two, flop: Three, case: &[Card]) -> Result<Seven, PKError> {
+    pub fn from_case_at_flop_old(
+        player: Two,
+        flop: Three,
+        case: &[Card],
+    ) -> Result<Seven, PKError> {
         Ok(Seven::from([
             player.first(),
             player.second(),
@@ -63,6 +67,18 @@ impl Seven {
             flop.third(),
             *case.get(0).ok_or(PKError::InvalidCard)?,
             *case.get(1).ok_or(PKError::InvalidCard)?,
+        ]))
+    }
+
+    pub fn from_case_at_flop(player: Two, flop: Three, case: Two) -> Result<Seven, PKError> {
+        Ok(Seven::from([
+            player.first(),
+            player.second(),
+            flop.first(),
+            flop.second(),
+            flop.third(),
+            case.first(),
+            case.second(),
         ]))
     }
 

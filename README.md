@@ -560,7 +560,9 @@
                     * first add error param to existing three cases 
                     * add remaining as failures (Don't change error case)
                     * Make em pass
-                    * cleanup
+                    * the cleanup
+              * REFACTOR: sig to return Result
+              * First test: happy path using The Hand
 
 ## LATER
 
