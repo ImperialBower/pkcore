@@ -114,6 +114,13 @@ impl Card {
         Self::from(rank.bits() | rank.prime() | rank.shift8() | suit.binary_signature())
     }
 
+    pub fn filter(card: Card) -> Result<Self, PKError> {
+        match card {
+            Card::BLANK => Err(PKError::BlankCard),
+            _ => Ok(card),
+        }
+    }
+
     /// Returns the Cactus Kev Card u32 number of the `Card`.
     #[must_use]
     pub fn as_u32(&self) -> u32 {
@@ -292,6 +299,22 @@ impl Pile for Card {
     }
 }
 
+/// This is a method that returns an error if the passed in `Card` is blank.
+/// It's used for other structs that are strictly instantiating from `Card` collections
+/// and want an easy way to throw an error if the `Card` is blank.
+///
+/// RETIRED. This method generates an error.
+// impl TryFrom<Card> for Card {
+//     type Error = PKError;
+//
+//     fn try_from(card: Card) -> Result<Self, Self::Error> {
+//         match card {
+//             Card::BLANK => Err(PKError::BlankCard),
+//             _ => Ok(card),
+//         }
+//     }
+// }
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod card_tests {
@@ -304,6 +327,12 @@ mod card_tests {
         assert_eq!(Card::BLANK, Card::new(Rank::BLANK, Suit::CLUBS));
         assert_eq!(Card::BLANK, Card::new(Rank::TREY, Suit::BLANK));
         assert_eq!(Card::BLANK, Card::new(Rank::BLANK, Suit::BLANK));
+    }
+
+    #[test]
+    fn filter() {
+        assert!(Card::filter(Card::BLANK).is_err());
+        assert!(Card::filter(Card::ACE_CLUBS).is_ok());
     }
 
     #[test]
@@ -588,5 +617,13 @@ mod card_tests {
             v,
             vec![Card::KING_SPADES, Card::ACE_CLUBS, Card::ACE_SPADES]
         );
+    }
+
+
+    #[test]
+    #[ignore]
+    fn try_from__card() {
+        assert!(Card::try_from(Card::BLANK).is_err());
+        assert!(Card::try_from(Card::ACE_CLUBS).is_ok());
     }
 }

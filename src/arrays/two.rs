@@ -898,5 +898,64 @@ mod arrays__two_tests {
         assert_eq!(PKError::TooManyCards, Two::try_from(slice).unwrap_err());
     }
 
+    /// OK, now we're onto something this test isn't doing what I want it to.
+    /// I want `*slice.get(0).ok_or(PKError::InvalidCard)?` to return an error
+    /// when a blank card is passed in. Truth is
+    /// ```
+    /// use pkcore::card::Card;
+    ///
+    /// let v = vec![Card::BLANK, Card::KING_HEARTS];
+    /// let slice: &[Card] = v.as_slice();
+    ///
+    ///
+    /// ```
+    /// I wanted the slice getter to return an error if the Card is blank.
+    /// Problem is that `Card::BLANK` is a valid `Card`. This gives me an evil
+    /// idea: `impl TryFrom<Card> for Card`. I am not above writing evils code 😈.
+    ///
+    /// Here's the idea:
+    ///
+    /// ```txt
+    /// impl TryFrom<Card> for Card {
+    ///     type Error = PKError;
+    ///
+    ///     fn try_from(card: Card) -> Result<Self, Self::Error> {
+    ///         match card {
+    ///             Card::BLANK => Err(PKError::BlankCard),
+    ///             _ => Ok(card),
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// This is a method that returns an error if the passed in `Card` is blank.
+    /// It's used for other structs that are strictly instantiating from `Card` collections
+    /// and want an easy way to throw an error if the `Card` is blank.
+    ///
+    /// Unfortunately, my evil plans have been foiled by the rust compiler.
+    ///
+    /// ```txt
+    /// error[E0119]: conflicting implementations of trait `std::convert::TryFrom<card::Card>` for type `card::Card`
+    ///    --> src/card.rs:298:1
+    ///     |
+    /// 298 | impl TryFrom<Card> for Card {
+    ///     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ///     |
+    ///     = note: conflicting implementation in crate `core`:
+    ///             - impl<T, U> TryFrom<U> for T
+    ///               where U: Into<T>;
+    /// ```
+    ///
+    /// _DAMN YOU RUST!!!!!_
+    ///
+    /// We're going to need another way to do this. I'm thinking something like
+    /// `Card::filter()`.
+    #[test]
+    fn try_from__card_slice__first_card_blank() {
+        let v = vec![Card::BLANK, Card::KING_HEARTS];
+        let slice: &[Card] = v.as_slice();
 
+        // assert!(Two::try_from(slice).is_err());
+        // assert_eq!(PKError::TooManyCards, Two::try_from(slice).unwrap_err());
+    }
 }

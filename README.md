@@ -544,10 +544,14 @@
               * impl TryFrom<&[Card]> for Two
                 * REFACTORING: impl TryFrom<Cards> for Two
                 * Tests - Negative Boundary Conditions:
-                  * test: .try_from__card_slice__empty_slice()
-                  * test: .try_from__card_slice__one_card()
-                  * test: .try_from__card_slice__three_cards()
-                  * 
+                  * .try_from__card_slice__empty_slice()
+                  * .try_from__card_slice__one_card()
+                  * .try_from__card_slice__three_cards()
+                  * .try_from__card_slice__first_card_blank()
+                    * BAD PASS!!! 😱
+                    * impl TryFrom<Card> for Card
+                      * FAIL
+                    * TAKE TWO: Card::filter()
 
 ## LATER
 
