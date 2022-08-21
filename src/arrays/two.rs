@@ -864,23 +864,23 @@ mod arrays__two_tests {
         assert_eq!(sut.unwrap_err(), PKError::TooManyCards);
     }
 
-    #[test]
-    fn try_from__card_slice__empty_slice() {
-        let binding = Vec::new();
-        let slice: &[Card] = binding.as_slice();
+    // #[test]
+    // fn try_from__card_slice__empty_slice() {
+    //     let binding = Vec::new();
+    //     let slice: &[Card] = binding.as_slice();
+    //
+    //     assert!(Two::try_from(slice).is_err());
+    //     assert_eq!(PKError::NotEnoughCards, Two::try_from(slice).unwrap_err());
+    // }
 
-        assert!(Two::try_from(slice).is_err());
-        assert_eq!(PKError::NotEnoughCards, Two::try_from(slice).unwrap_err());
-    }
-
-    #[test]
-    fn try_from__card_slice__one_card() {
-        let v = vec![Card::KING_SPADES];
-        let slice: &[Card] = v.as_slice();
-
-        assert!(Two::try_from(slice).is_err());
-        assert_eq!(PKError::NotEnoughCards, Two::try_from(slice).unwrap_err());
-    }
+    // #[test]
+    // fn try_from__card_slice__one_card() {
+    //     let v = vec![Card::KING_SPADES];
+    //     let slice: &[Card] = v.as_slice();
+    //
+    //     assert!(Two::try_from(slice).is_err());
+    //     assert_eq!(PKError::NotEnoughCards, Two::try_from(slice).unwrap_err());
+    // }
 
     /// I honestly feel really good about these hardening tests. Mastering negative
     /// flows for a language, especially rust, can be a real challenge. I'm not
@@ -890,14 +890,14 @@ mod arrays__two_tests {
     /// is really cool, and makes the whole thing a lot easier, especially when you
     /// are chaining results.
     ///
-    #[test]
-    fn try_from__card_slice__three_cards() {
-        let v = vec![Card::KING_SPADES, Card::KING_HEARTS, Card::KING_DIAMONDS];
-        let slice: &[Card] = v.as_slice();
-
-        assert!(Two::try_from(slice).is_err());
-        assert_eq!(PKError::TooManyCards, Two::try_from(slice).unwrap_err());
-    }
+    // #[test]
+    // fn try_from__card_slice__three_cards() {
+    //     let v = vec![Card::KING_SPADES, Card::KING_HEARTS, Card::KING_DIAMONDS];
+    //     let slice: &[Card] = v.as_slice();
+    //
+    //     assert!(Two::try_from(slice).is_err());
+    //     assert_eq!(PKError::TooManyCards, Two::try_from(slice).unwrap_err());
+    // }
 
     /// OK, now we're onto something this test isn't doing what I want it to.
     /// I want `*slice.get(0).ok_or(PKError::InvalidCard)?` to return an error
@@ -1001,7 +1001,7 @@ mod arrays__two_tests {
     ///
     /// First we added the second parameter to the test, and make sure that our existing
     /// cases still pass... then we add the test of the casses, first making them fail,
-    /// than making them pass.
+    /// then making them pass.
     #[rstest]
     #[case(Vec::new(), PKError::NotEnoughCards)]
     #[case(vec![Card::KING_SPADES], PKError::NotEnoughCards)]
