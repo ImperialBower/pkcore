@@ -981,9 +981,32 @@ mod arrays__two_tests {
     /// Card::filter(*slice.get(0).ok_or(PKError::InvalidCard)?)?,
     /// Card::filter(*slice.get(1).ok_or(PKError::InvalidCard)?)?,
     /// ```
+    ///
+    /// Now we can just power through the other two scenarios.
     #[test]
     fn try_from__card_slice__first_card_blank() {
         let v = vec![Card::BLANK, Card::KING_HEARTS];
+        let slice: &[Card] = v.as_slice();
+
+        assert!(Two::try_from(slice).is_err());
+        assert_eq!(PKError::BlankCard, Two::try_from(slice).unwrap_err());
+    }
+
+    #[test]
+    fn try_from__card_slice__second_card_blank() {
+        let v = vec![Card::KING_HEARTS, Card::BLANK];
+        let slice: &[Card] = v.as_slice();
+
+        assert!(Two::try_from(slice).is_err());
+        assert_eq!(PKError::BlankCard, Two::try_from(slice).unwrap_err());
+    }
+
+    /// This test really should be the same flow of `try_from__card_slice__first_card_blank()`,
+    /// but I don't like thinking I know the code too much. Better to just take
+    /// the minute and write the silly test.
+    #[test]
+    fn try_from__card_slice__both_cards_blank() {
+        let v = vec![Card::BLANK, Card::BLANK];
         let slice: &[Card] = v.as_slice();
 
         assert!(Two::try_from(slice).is_err());
