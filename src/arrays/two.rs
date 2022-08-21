@@ -663,8 +663,8 @@ impl TryFrom<&[Card]> for Two {
         match slice.len() {
             0..=1 => Err(PKError::NotEnoughCards),
             2 => Ok(Two::from([
-                *slice.get(0).ok_or(PKError::InvalidCard)?,
-                *slice.get(1).ok_or(PKError::InvalidCard)?,
+                Card::filter(*slice.get(0).ok_or(PKError::InvalidCard)?)?,
+                Card::filter(*slice.get(1).ok_or(PKError::InvalidCard)?)?,
             ])),
             _ => Err(PKError::TooManyCards),
         }
@@ -950,12 +950,43 @@ mod arrays__two_tests {
     ///
     /// We're going to need another way to do this. I'm thinking something like
     /// `Card::filter()`.
+    ///
+    /// DONE.
+    ///
+    /// Now, let's update `Two` to use the filter.
+    ///
+    /// The big idea is that before we had:
+    ///
+    /// ```txt
+    /// impl TryFrom<&[Card]> for Two {
+    ///     type Error = PKError;
+    ///
+    ///     fn try_from(slice: &[Card]) -> Result<Self, Self::Error> {
+    ///         match slice.len() {
+    ///             0..=1 => Err(PKError::NotEnoughCards),
+    ///             2 => Ok(Two::from([
+    ///                 *slice.get(0).ok_or(PKError::InvalidCard)?,
+    ///                 *slice.get(1).ok_or(PKError::InvalidCard)?,
+    ///             ])),
+    ///             _ => Err(PKError::TooManyCards),
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// We only have to change the two lines of the match where the
+    /// slice is of the correct length:
+    ///
+    /// ```txt
+    /// Card::filter(*slice.get(0).ok_or(PKError::InvalidCard)?)?,
+    /// Card::filter(*slice.get(1).ok_or(PKError::InvalidCard)?)?,
+    /// ```
     #[test]
     fn try_from__card_slice__first_card_blank() {
         let v = vec![Card::BLANK, Card::KING_HEARTS];
         let slice: &[Card] = v.as_slice();
 
-        // assert!(Two::try_from(slice).is_err());
-        // assert_eq!(PKError::TooManyCards, Two::try_from(slice).unwrap_err());
+        assert!(Two::try_from(slice).is_err());
+        assert_eq!(PKError::BlankCard, Two::try_from(slice).unwrap_err());
     }
 }

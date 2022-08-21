@@ -552,6 +552,7 @@
                     * impl TryFrom<Card> for Card
                       * FAIL
                     * TAKE TWO: Card::filter()
+                    * PASS!
 
 ## LATER
 
