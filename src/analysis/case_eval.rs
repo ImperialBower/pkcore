@@ -1,11 +1,11 @@
 use crate::analysis::eval::Eval;
 use crate::analysis::hand_rank::HandRank;
+use crate::arrays::three::Three;
+use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::PlayerFlag;
 use crate::{Card, Cards, Pile};
 use std::slice::Iter;
-use crate::arrays::three::Three;
-use crate::play::hole_cards::HoleCards;
 
 /// # Analysis Saga: Step 2
 ///

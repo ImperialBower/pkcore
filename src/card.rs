@@ -619,7 +619,6 @@ mod card_tests {
         );
     }
 
-
     #[test]
     #[ignore]
     fn try_from__card() {

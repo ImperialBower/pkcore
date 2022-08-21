@@ -675,6 +675,7 @@ impl TryFrom<&[Card]> for Two {
 #[allow(non_snake_case)]
 mod arrays__two_tests {
     use super::*;
+    use rstest::rstest;
     use std::collections::HashSet;
     use std::str::FromStr;
 
@@ -983,30 +984,25 @@ mod arrays__two_tests {
     /// ```
     ///
     /// Now we can just power through the other two scenarios.
-    #[test]
-    fn try_from__card_slice__first_card_blank() {
-        let v = vec![Card::BLANK, Card::KING_HEARTS];
-        let slice: &[Card] = v.as_slice();
-
-        assert!(Two::try_from(slice).is_err());
-        assert_eq!(PKError::BlankCard, Two::try_from(slice).unwrap_err());
-    }
-
-    #[test]
-    fn try_from__card_slice__second_card_blank() {
-        let v = vec![Card::KING_HEARTS, Card::BLANK];
-        let slice: &[Card] = v.as_slice();
-
-        assert!(Two::try_from(slice).is_err());
-        assert_eq!(PKError::BlankCard, Two::try_from(slice).unwrap_err());
-    }
-
+    ///
+    /// ## Old blank card tests consolidated
+    ///
     /// This test really should be the same flow of `try_from__card_slice__first_card_blank()`,
     /// but I don't like thinking I know the code too much. Better to just take
     /// the minute and write the silly test.
-    #[test]
-    fn try_from__card_slice__both_cards_blank() {
-        let v = vec![Card::BLANK, Card::BLANK];
+    ///
+    /// This gives me an idea for a refactoring. 💡 Since 3/4ths of the
+    /// test code is the same, Let's use rstest to turn this into a single test!
+    ///
+    /// ## REFACTORING PART DEUX
+    ///
+    /// But that isn't enough. If we add a second parameter to the expected state passed
+    /// into the test, we could consolidate all of the tests into a single function.
+    #[rstest]
+    #[case(vec![Card::BLANK, Card::KING_HEARTS], PKError::BlankCard)]
+    #[case(vec![Card::KING_HEARTS, Card::BLANK], PKError::BlankCard)]
+    #[case(vec![Card::BLANK, Card::BLANK], PKError::BlankCard)]
+    fn try_from__card_slice__blank(#[case] v: Vec<Card>, #[case] err: PKError) {
         let slice: &[Card] = v.as_slice();
 
         assert!(Two::try_from(slice).is_err());

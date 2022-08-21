@@ -555,6 +555,9 @@
                     * PASS!
                   * .try_from__card_slice__second_card_blank()
                   * .try_from__card_slice__both_cards_blank()
+                  * REFACTORING: rstest for blank tests
+                  * REFACTORING PART DEUX: Mega Consolidation
+                    * first add error param to existing three cases 
 
 ## LATER
 
