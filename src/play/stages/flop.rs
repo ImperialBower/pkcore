@@ -136,9 +136,21 @@ use crate::util::wincounter::wins::Wins;
 ///   #1: Q♣ J♣ T♣ 9♣ 8♣ - 3-QueenHighStraightFlush
 ///   #2: A♣ K♣ Q♣ T♣ 8♣ - 332-AceHighFlush
 ///   #3: K♣ Q♣ J♣ T♣ 8♣ - 816-KingHighFlush
+///   #4: Q♣ J♣ T♣ 8♣ 7♣ - 1151-QueenHighFlush
+///   #5: Q♣ J♠ T♣ 9♠ 8♣ - 1602-QueenHighStraight
 /// ```
 ///
+/// ### Pause
 ///
+/// I'm seeing a potential issue with the current code generating `TheNuts`. I want to do
+/// some manual calculations to make sure that the results are correct.
+///
+/// ```txt
+/// FLOP: Q♣ T♣ 8♣
+///                J♣ 9♣ - QueenHighStraightFlush
+/// ```txt
+///
+/// This is "The Absolute Nuts™". I can't believe that there aren't any other
 #[derive(Clone, Debug, Default)]
 pub struct Flop {
     pub board: Three,
