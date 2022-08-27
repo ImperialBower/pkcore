@@ -1,6 +1,8 @@
 use crate::analysis::case_evals::CaseEvals;
 use crate::arrays::three::Three;
 use crate::play::hole_cards::HoleCards;
+use crate::util::wincounter::results::Results;
+use crate::util::wincounter::wins::Wins;
 
 /// I'm feeling the need to refactor our `Game` struct. As we get deeper into
 /// the analysis phase of our library, each stage of a hand will need to have
@@ -196,17 +198,35 @@ pub struct FlopEvaluator {
     pub board: Three,
     pub hands: HoleCards,
     pub case_evals: CaseEvals,
+    pub wins: Wins,
+    pub results: Results,
 }
 
 impl FlopEvaluator {
     #[must_use]
     pub fn new(board: Three, hands: HoleCards) -> FlopEvaluator {
         let case_evals = CaseEvals::from_holdem_at_flop(board, &hands);
+        let wins = case_evals.wins();
+        let results = Results::from_wins(&wins, hands.len());
+
         FlopEvaluator {
             board,
             hands,
             case_evals,
+            wins,
+            results,
         }
+    }
+}
+
+impl std::fmt::Display for FlopEvaluator {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut v = Vec::new();
+        v.push(format!("The Flop: {}", self.board));
+
+
+
+        write!(f, "{}", v.join("\n"))
     }
 }
 

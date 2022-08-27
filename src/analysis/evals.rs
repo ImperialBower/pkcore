@@ -1,6 +1,5 @@
 use crate::analysis::eval::Eval;
 use crate::arrays::five::Five;
-use std::fmt::{Display, Formatter};
 
 /// # The Nuts
 ///
@@ -56,8 +55,8 @@ impl Evals {
     }
 }
 
-impl Display for Evals {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+impl std::fmt::Display for Evals {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let evals = self.sort();
         let mut v = Vec::new();
 

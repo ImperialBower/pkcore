@@ -101,7 +101,6 @@ fn main() -> Result<(), PKError> {
     game.flop_display_odds()?;
 
     if args.nuts {
-        // game.flop_display_the_nuts();
         println!();
         println!("The Nuts @ Flop:");
         println!("{}", game.board.flop.evals());
