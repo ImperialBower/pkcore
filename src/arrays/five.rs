@@ -244,10 +244,12 @@ impl HandRanker for Five {
             ];
             self.0 = wheel;
         } else {
+            let five = match Five::try_from(self.cards().frequency_weighted()) {
+                Ok(f) => f.to_arr(),
+                Err(e) => self.0,
+            };
             // TODO RF: Hack :-P
-            self.0 = Five::try_from(self.cards().frequency_weighted())
-                .unwrap()
-                .to_arr();
+            self.0 = five;
             self.0.sort_unstable();
             // NOTE: I don't trust this code. When offered a mint, accept it. Write more tests.
         }

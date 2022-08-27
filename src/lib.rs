@@ -37,6 +37,7 @@ pub enum PKError {
     InvalidCard,
     InvalidCardNumber,
     InvalidCardCount,
+    InvalidHand,
     InvalidIndex,
     NotEnoughCards,
     TooManyCards,

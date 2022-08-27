@@ -770,7 +770,10 @@ mod arrays__two_tests {
 
     #[test]
     fn display() {
-        assert_eq!("A♦ __", Two::from([Card::ACE_DIAMONDS, Card::BLANK]).to_string());
+        assert_eq!(
+            "A♦ __",
+            Two::from([Card::ACE_DIAMONDS, Card::BLANK]).to_string()
+        );
         assert_eq!("A♦ K♥", Two::from(BIG_SLICK).to_string());
     }
 

@@ -111,15 +111,23 @@ impl CaseEval {
     /// the method with tests.
     ///
     pub fn from_holdem_at_flop(board: Three, case: Two, hands: HoleCards) -> Result<Self, PKError> {
-        let mut case_eval = CaseEval::default();
+        match board.is_dealt() && case.is_dealt() {
+            true => {
+                let mut case_eval = CaseEval::default();
 
-        for player in hands.iter() {
-            let seven = Seven::from_case_at_flop(*player, board, case)?;
-            let eval = Eval::from(seven);
-            case_eval.push(eval);
+                for player in hands.iter() {
+                    if !player.is_dealt() {
+                        return Err(PKError::InvalidHand);
+                    }
+                    let seven = Seven::from_case_at_flop(*player, board, case)?;
+                    let eval = Eval::from(seven);
+                    case_eval.push(eval);
+                }
+
+                Ok(case_eval)
+            }
+            false => Err(PKError::BlankCard),
         }
-
-        Ok(case_eval)
     }
 
     /// OK, this feels a bit hacky to me, but TBH I'm a hack and I want a simple
@@ -577,7 +585,11 @@ mod hand_rank__case_eval_tests {
 
     #[test]
     fn from_holdem_at_flop__happy__tie() {
-        let board = Three::from(vec![Card::NINE_CLUBS, Card::EIGHT_DIAMONDS, Card::SEVEN_CLUBS]);
+        let board = Three::from(vec![
+            Card::NINE_CLUBS,
+            Card::EIGHT_DIAMONDS,
+            Card::SEVEN_CLUBS,
+        ]);
         let hole_cards = HoleCards::from(vec![Two::HAND_JC_TD, Two::HAND_QH_6H, Two::HAND_JS_TC]);
         let case = Two::HAND_QH_6H;
 
@@ -585,6 +597,54 @@ mod hand_rank__case_eval_tests {
 
         assert!(sut.is_ok());
         assert_eq!(Win::FIRST | Win::THIRD, sut.unwrap().win_count());
+    }
+
+    #[test]
+    fn from_holdem_at_flop__blank_card_in_flop() {
+        let board = Three::from(vec![Card::NINE_CLUBS, Card::EIGHT_DIAMONDS, Card::BLANK]);
+        let hole_cards = HoleCards::from(vec![Two::HAND_JC_TD, Two::HAND_QH_6H, Two::HAND_JS_TC]);
+        let case = Two::HAND_QH_6H;
+
+        let sut = CaseEval::from_holdem_at_flop(board, case, hole_cards);
+
+        assert!(!sut.is_ok());
+        assert_eq!(PKError::BlankCard, sut.unwrap_err());
+    }
+
+    #[test]
+    fn from_holdem_at_flop__blank_card_in_case() {
+        let board = Three::from(vec![
+            Card::NINE_CLUBS,
+            Card::EIGHT_DIAMONDS,
+            Card::SEVEN_DIAMONDS,
+        ]);
+        let hole_cards = HoleCards::from(vec![Two::HAND_JC_TD, Two::HAND_QH_6H, Two::HAND_JS_TC]);
+        let case = Two::from([Card::ACE_DIAMONDS, Card::BLANK]);
+
+        let sut = CaseEval::from_holdem_at_flop(board, case, hole_cards);
+
+        assert!(!sut.is_ok());
+        assert_eq!(PKError::BlankCard, sut.unwrap_err());
+    }
+
+    #[test]
+    fn from_holdem_at_flop__blank_card_in_hand() {
+        let board = Three::from(vec![
+            Card::NINE_CLUBS,
+            Card::EIGHT_DIAMONDS,
+            Card::SEVEN_CLUBS,
+        ]);
+        let hole_cards = HoleCards::from(vec![
+            Two::HAND_JC_TD,
+            Two::from([Card::QUEEN_HEARTS, Card::BLANK]),
+            Two::HAND_JS_TC,
+        ]);
+        let case = Two::HAND_QH_6H;
+
+        let sut = CaseEval::from_holdem_at_flop(board, case, hole_cards);
+
+        assert!(!sut.is_ok());
+        assert_eq!(PKError::InvalidHand, sut.unwrap_err());
     }
 
     #[test]
