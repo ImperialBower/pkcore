@@ -537,7 +537,7 @@
           * HARDENING: Added getters to TheNuts against underlying evals array.
             * TheNuts.get()
       * REFACTOR: play/stages
-        * Flop
+        * Flop (renamed FlopEvaluator)
           * .gen_case_evals()
           * CaseEval
             * .from_holdem_at_flop()
@@ -568,7 +568,9 @@
           * CaseEvals
             * Two::from_from<Vec<Card>>
             * REFACTORING: Deleted Game.flop_case_eval() and flop_case_evals() moved to own structs
-            * 
+          * REFACTOR: Renamed FlopEvaluator
+          * REFACTOR: Eliminate Game.flop_display_the_nuts() move to Evals.display() 
+          * REFACTOR: Eliminate Game.display_evals()
 
 ## LATER
 

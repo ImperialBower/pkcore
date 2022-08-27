@@ -2,6 +2,22 @@ use crate::analysis::eval::Eval;
 use crate::arrays::five::Five;
 use std::fmt::{Display, Formatter};
 
+/// # The Nuts
+///
+/// Originally, the code to display values like the nuts was in the `Game` struct. The problem was
+/// that in reality, it's just a specific type of `Evals` collection.
+///
+/// One of the things that I have discovered working through this logic the second time
+/// is that there are two perspectives on "the nuts":
+///
+/// The *at the time* flop perspective, which only deals with the three community cards on the
+/// board plus any two hole cards that a player might hand. I'm going to call this the
+/// *now* perspective, as in _the nuts, as of now._
+///
+/// The *what might be* river perspective, where you can into account not just any two
+/// cars that a player might have, as well as the cards that might come down at the turn
+/// and river. This perspective has a lot more possibilities. I'm going to call this the
+/// *future* perspective.
 #[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Evals(Vec<Eval>);
 
@@ -41,8 +57,15 @@ impl Evals {
 }
 
 impl Display for Evals {
-    fn fmt(&self, _f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let evals = self.sort();
+        let mut v = Vec::new();
+
+        for (i, eval) in evals.0.iter().enumerate() {
+            v.push(format!("  #{}: {}", i + 1, eval));
+        }
+
+        write!(f, "{}", v.join("\n"))
     }
 }
 

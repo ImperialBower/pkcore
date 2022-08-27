@@ -210,6 +210,12 @@ use std::thread;
 ///     Cards::deck_minus(&cards)
 /// }
 /// ```
+///
+/// # Refactoring to game state analysis structs
+///
+/// I'm feeling like this struct is getting too bloated with analysis, and it's getting
+/// hard to refactor things. The idea here is to move each phase of the game over to
+/// their own struct where we can optimize the code through things like concurrency.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Game {
     pub hands: HoleCards,
@@ -259,25 +265,6 @@ impl Game {
         }
 
         Ok(())
-    }
-
-    /// One of the things that I have discovered working through this logic the second time
-    /// is that there are two perspectives on "the nuts":
-    ///
-    /// The *at the time* flop perspective, which only deals with the three community cards on the
-    /// board plus any two hole cards that a player might hand. I'm going to call this the
-    /// *now* perspective, as in _the nuts, as of now._
-    ///
-    /// The *what might be* river perspective, where you can into account not just any two
-    /// cars that a player might have, as well as the cards that might come down at the turn
-    /// and river. This perspective has a lot more possibilities. I'm going to call this the
-    /// *future* perspective.
-    pub fn flop_display_the_nuts(&self) {
-        println!();
-        println!("The Nuts @ Flop:");
-        // let mut evals = self.board.flop.evals();
-        // evals.sort_in_place();
-        Game::display_evals(self.board.flop.evals());
     }
 
     /// Returns the `Five` `Card` hand combining the hole cards from the passed in index
@@ -399,7 +386,8 @@ impl Game {
     pub fn turn_display_evals(&self) {
         println!();
         println!("The Nuts @ Turn:");
-        Game::display_evals(self.turn_the_nuts().to_evals());
+        println!("{}", self.turn_the_nuts().to_evals());
+        // Game::display_evals(self.turn_the_nuts().to_evals());
     }
 
     /// # Potential Defect
@@ -776,14 +764,6 @@ impl Game {
     // endregion
 
     // region Private Methods
-    fn display_evals(mut evals: Evals) {
-        evals.sort_in_place();
-
-        for (i, eval) in evals.to_vec().iter().enumerate() {
-            println!("  #{}: {}", i + 1, eval);
-        }
-    }
-
     #[must_use]
     pub fn flop_and_turn(&self) -> Four {
         Four::from([

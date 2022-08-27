@@ -212,9 +212,4 @@ impl FlopEvaluator {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod play__stages__flop_tests {
-    use super::*;
-
-    #[test]
-    fn case_evals() {}
-}
+mod play__stages__flop_tests {}

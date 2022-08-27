@@ -879,15 +879,6 @@ mod arrays__two_tests {
     }
 
     #[test]
-    fn try_from__vec() {
-        let two = Two::from(vec![Card::SIX_HEARTS, Card::SIX_SPADES]);
-        assert_eq!(
-            "6♠ 6♥",
-            Two::from(vec![Card::SIX_HEARTS, Card::SIX_SPADES]).to_string()
-        );
-    }
-
-    #[test]
     fn try_from__cards() {
         assert_eq!(
             Two::try_from(Cards::from_str("A♦ K♥").unwrap()).unwrap(),
