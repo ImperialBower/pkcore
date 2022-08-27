@@ -1,5 +1,10 @@
 use crate::analysis::case_eval::CaseEval;
+use crate::analysis::name::Name::Pair;
+use crate::arrays::three::Three;
+use crate::arrays::two::Two;
+use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::wins::Wins;
+use crate::Pile;
 use log::info;
 use std::slice::Iter;
 
@@ -18,6 +23,16 @@ use std::slice::Iter;
 pub struct CaseEvals(Vec<CaseEval>);
 
 impl CaseEvals {
+    fn from_holdem_at_flop(board: Three, hands: HoleCards) -> CaseEvals {
+        let mut case_evals = CaseEvals::default();
+
+        for v in hands.combinations_after(2, &board.cards()) {
+            let case = Two::from(v);
+        }
+
+        case_evals
+    }
+
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()

@@ -564,6 +564,9 @@
               * REFACTOR: sig to return Result
               * First test: happy path using The Hand
               * BUGFIX: Two::display() for blank cards
+              * Finished tests with negative boundary conditions
+          * CaseEvals
+            * Two::from_from<Vec<Card>>
 
 ## LATER
 

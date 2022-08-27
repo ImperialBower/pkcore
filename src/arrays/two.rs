@@ -544,7 +544,11 @@ impl Display for Two {
 
 impl From<[Card; 2]> for Two {
     fn from(array: [Card; 2]) -> Self {
-        Two(array)
+        if array[1] > array[0] {
+            Two([array[1], array[0]])
+        } else {
+            Two([array[0], array[1]])
+        }
     }
 }
 
@@ -552,6 +556,9 @@ impl From<[Card; 2]> for Two {
 /// trust the code that is using this. If it chokes, it will return a default struct with two blank
 /// cards. That's fine. The analysis is designed to return blank if it doesn't work. I don't need
 /// to harden this because the risk is low. _DUCKS_
+///
+/// TODO RF: The sorting wanted for these traits is starting to feel too complicated. Oh well...
+/// Maybe some day we can figure out how to simplify.
 impl From<Vec<Card>> for Two {
     fn from(v: Vec<Card>) -> Self {
         match v.len() {
@@ -564,7 +571,7 @@ impl From<Vec<Card>> for Two {
                     Some(m) => *m,
                     None => Card::BLANK,
                 };
-                Two([one, two])
+                Two::from([one, two])
             }
             _ => Two::default(),
         }
@@ -673,10 +680,10 @@ impl TryFrom<&[Card]> for Two {
     fn try_from(slice: &[Card]) -> Result<Self, Self::Error> {
         match slice.len() {
             0..=1 => Err(PKError::NotEnoughCards),
-            2 => Ok(Two::from([
+            2 => Two::new(
                 Card::filter(*slice.get(0).ok_or(PKError::InvalidCard)?)?,
                 Card::filter(*slice.get(1).ok_or(PKError::InvalidCard)?)?,
-            ])),
+            ),
             _ => Err(PKError::TooManyCards),
         }
     }
@@ -733,6 +740,10 @@ mod arrays__two_tests {
         assert_eq!(
             Two::new(Card::KING_HEARTS, Card::ACE_DIAMONDS).unwrap(),
             Two::from(BIG_SLICK)
+        );
+        assert_eq!(
+            Two::new(Card::SIX_HEARTS, Card::SIX_SPADES).unwrap(),
+            Two::from([Card::SIX_SPADES, Card::SIX_HEARTS])
         );
     }
 
@@ -791,6 +802,10 @@ mod arrays__two_tests {
         assert_eq!(
             Two(BIG_SLICK),
             Two::from(vec![Card::ACE_DIAMONDS, Card::KING_HEARTS])
+        );
+        assert_eq!(
+            Two::HAND_6S_6H,
+            Two::from(vec![Card::SIX_HEARTS, Card::SIX_SPADES])
         );
         assert_eq!(Two::default(), Two::from(vec![Card::BLANK, Card::BLANK]));
         assert_eq!(Two::default(), Two::from(vec![Card::ACE_HEARTS]));
@@ -861,6 +876,15 @@ mod arrays__two_tests {
         assert!(!Two::from([Card::DEUCE_SPADES, Card::BLANK]).is_dealt());
         assert!(!Two::from([Card::BLANK, Card::BLANK]).is_dealt());
         assert!(!Two::from([Card::DEUCE_SPADES, Card::DEUCE_SPADES]).is_dealt());
+    }
+
+    #[test]
+    fn try_from__vec() {
+        let two = Two::from(vec![Card::SIX_HEARTS, Card::SIX_SPADES]);
+        assert_eq!(
+            "6♠ 6♥",
+            Two::from(vec![Card::SIX_HEARTS, Card::SIX_SPADES]).to_string()
+        );
     }
 
     #[test]
