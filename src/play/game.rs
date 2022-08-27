@@ -226,7 +226,6 @@ impl Game {
 
     #[must_use]
     pub fn flop_calculations(&self) -> (CaseEvals, Wins, Results) {
-        // let case_evals = self.flop_case_evals();
         let case_evals = CaseEvals::from_holdem_at_flop(self.board.flop, &self.hands);
         let wins = case_evals.wins();
         let results = Results::from_wins(&wins, self.hands.len());
