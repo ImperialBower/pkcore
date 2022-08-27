@@ -70,6 +70,9 @@ impl Seven {
         ]))
     }
 
+    /// # Errors
+    ///
+    /// Returns a `PKError` if any of the passed in values don't contain valid cards.
     pub fn from_case_at_flop(player: Two, flop: Three, case: Two) -> Result<Seven, PKError> {
         Ok(Seven::from([
             player.first(),

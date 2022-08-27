@@ -114,6 +114,9 @@ impl Card {
         Self::from(rank.bits() | rank.prime() | rank.shift8() | suit.binary_signature())
     }
 
+    /// # Errors
+    ///
+    /// Returns `PKError::BlankCard` if the `Card` is blank.
     pub fn filter(card: Card) -> Result<Self, PKError> {
         match card {
             Card::BLANK => Err(PKError::BlankCard),

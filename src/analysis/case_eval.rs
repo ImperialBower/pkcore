@@ -92,7 +92,7 @@ impl CaseEval {
     /// One refactoring that I might want to do later is change the type for the case
     /// parameter into `Two`. My long term thinking is that I want to support calculations
     /// based on hand ranges (possible hands that an opponent might be playing) and
-    /// so I could envision in the future a call from CaseEvals iterating over a
+    /// so I could envision in the future a call from `CaseEvals` iterating over a
     /// vector of possible hands. Something to add a refactoring tag to...
     ///
     /// TODO RF: Change case parameter to `Two` to facilitate range calculations.
@@ -110,23 +110,29 @@ impl CaseEval {
     /// Since I didn't bother to do this with the original code, I am now forced to harden
     /// the method with tests.
     ///
-    pub fn from_holdem_at_flop(board: Three, case: Two, hands: HoleCards) -> Result<Self, PKError> {
-        match board.is_dealt() && case.is_dealt() {
-            true => {
-                let mut case_eval = CaseEval::default();
+    /// # Errors
+    ///
+    /// Returns a `PKError` if any of the cards is invalid.
+    pub fn from_holdem_at_flop(
+        board: Three,
+        case: Two,
+        hands: &HoleCards,
+    ) -> Result<Self, PKError> {
+        if board.is_dealt() && case.is_dealt() {
+            let mut case_eval = CaseEval::default();
 
-                for player in hands.iter() {
-                    if !player.is_dealt() {
-                        return Err(PKError::InvalidHand);
-                    }
-                    let seven = Seven::from_case_at_flop(*player, board, case)?;
-                    let eval = Eval::from(seven);
-                    case_eval.push(eval);
+            for player in hands.iter() {
+                if !player.is_dealt() {
+                    return Err(PKError::InvalidHand);
                 }
-
-                Ok(case_eval)
+                let seven = Seven::from_case_at_flop(*player, board, case)?;
+                let eval = Eval::from(seven);
+                case_eval.push(eval);
             }
-            false => Err(PKError::BlankCard),
+
+            Ok(case_eval)
+        } else {
+            Err(PKError::BlankCard)
         }
     }
 
@@ -577,7 +583,7 @@ mod hand_rank__case_eval_tests {
         let game = TestData::the_hand();
         let case = Two::HAND_8S_5S;
 
-        let sut = CaseEval::from_holdem_at_flop(game.board.flop, case, game.hands);
+        let sut = CaseEval::from_holdem_at_flop(game.board.flop, case, &game.hands);
 
         assert!(sut.is_ok());
         assert_eq!(Win::SECOND, sut.unwrap().win_count());
@@ -593,7 +599,7 @@ mod hand_rank__case_eval_tests {
         let hole_cards = HoleCards::from(vec![Two::HAND_JC_TD, Two::HAND_QH_6H, Two::HAND_JS_TC]);
         let case = Two::HAND_QH_6H;
 
-        let sut = CaseEval::from_holdem_at_flop(board, case, hole_cards);
+        let sut = CaseEval::from_holdem_at_flop(board, case, &hole_cards);
 
         assert!(sut.is_ok());
         assert_eq!(Win::FIRST | Win::THIRD, sut.unwrap().win_count());
@@ -605,7 +611,7 @@ mod hand_rank__case_eval_tests {
         let hole_cards = HoleCards::from(vec![Two::HAND_JC_TD, Two::HAND_QH_6H, Two::HAND_JS_TC]);
         let case = Two::HAND_QH_6H;
 
-        let sut = CaseEval::from_holdem_at_flop(board, case, hole_cards);
+        let sut = CaseEval::from_holdem_at_flop(board, case, &hole_cards);
 
         assert!(!sut.is_ok());
         assert_eq!(PKError::BlankCard, sut.unwrap_err());
@@ -621,7 +627,7 @@ mod hand_rank__case_eval_tests {
         let hole_cards = HoleCards::from(vec![Two::HAND_JC_TD, Two::HAND_QH_6H, Two::HAND_JS_TC]);
         let case = Two::from([Card::ACE_DIAMONDS, Card::BLANK]);
 
-        let sut = CaseEval::from_holdem_at_flop(board, case, hole_cards);
+        let sut = CaseEval::from_holdem_at_flop(board, case, &hole_cards);
 
         assert!(!sut.is_ok());
         assert_eq!(PKError::BlankCard, sut.unwrap_err());
@@ -641,7 +647,7 @@ mod hand_rank__case_eval_tests {
         ]);
         let case = Two::HAND_QH_6H;
 
-        let sut = CaseEval::from_holdem_at_flop(board, case, hole_cards);
+        let sut = CaseEval::from_holdem_at_flop(board, case, &hole_cards);
 
         assert!(!sut.is_ok());
         assert_eq!(PKError::InvalidHand, sut.unwrap_err());

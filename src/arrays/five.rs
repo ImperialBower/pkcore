@@ -246,7 +246,7 @@ impl HandRanker for Five {
         } else {
             let five = match Five::try_from(self.cards().frequency_weighted()) {
                 Ok(f) => f.to_arr(),
-                Err(e) => self.0,
+                Err(_) => self.0,
             };
             // TODO RF: Hack :-P
             self.0 = five;

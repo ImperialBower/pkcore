@@ -567,6 +567,8 @@
               * Finished tests with negative boundary conditions
           * CaseEvals
             * Two::from_from<Vec<Card>>
+            * REFACTORING: Deleted Game.flop_case_eval() and flop_case_evals() moved to own structs
+            * 
 
 ## LATER
 

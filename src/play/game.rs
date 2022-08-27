@@ -12,7 +12,7 @@ use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::results::Results;
 use crate::util::wincounter::wins::Wins;
 use crate::{Card, Cards, Evals, PKError, Pile, TheNuts};
-use log::{debug, info};
+use log::debug;
 use std::fmt::{Display, Formatter};
 use std::sync::mpsc;
 use std::thread;
@@ -226,56 +226,11 @@ impl Game {
 
     #[must_use]
     pub fn flop_calculations(&self) -> (CaseEvals, Wins, Results) {
-        let case_evals = self.flop_case_evals();
+        // let case_evals = self.flop_case_evals();
+        let case_evals = CaseEvals::from_holdem_at_flop(self.board.flop, &self.hands);
         let wins = case_evals.wins();
         let results = Results::from_wins(&wins, self.hands.len());
         (case_evals, wins, results)
-    }
-
-    /// # Panics
-    ///
-    /// AHHHH!!!! Run away!!!!!!
-    #[must_use]
-    pub fn flop_case_eval(&self, case: &[Card]) -> CaseEval {
-        let mut case_eval = CaseEval::default();
-        for (i, player) in self.hands.iter().enumerate() {
-            let seven = Seven::from_case_at_flop_old(*player, self.board.flop, case).unwrap();
-            let eval = Eval::from(seven);
-
-            case_eval.push(eval);
-
-            debug!("Player {} {}: {}", i + 1, *player, eval);
-        }
-        case_eval
-    }
-
-    /// # Panics
-    ///
-    /// AHHHH!!!! Run for your lives!!!!!!
-    #[must_use]
-    pub fn flop_case_evals(&self) -> CaseEvals {
-        info!(
-            "Game.flop_case_evals(hands: {} flop: {})",
-            self.hands, self.board.flop
-        );
-
-        let mut case_evals = CaseEvals::default();
-
-        for (j, case) in self.hands.enumerate_after(2, &self.board.flop.cards()) {
-            debug!(
-                "{}: FLOP: {} TURN: {} RIVER: {} -------",
-                j,
-                self.board.flop,
-                case.get(0).unwrap(),
-                case.get(1).unwrap()
-            );
-
-            case_evals.push(self.flop_case_eval(&case));
-        }
-
-        info!("Game.flop_case_evals() DONE");
-
-        case_evals
     }
 
     /// Originally part of our calc example program. When my examples have functionality
