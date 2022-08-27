@@ -272,6 +272,11 @@ impl Two {
         Two::HAND_AC_KD,
     ];
 
+    pub const HAND_JS_TH: Two = Two([Card::JACK_SPADES, Card::TEN_HEARTS]);
+    pub const HAND_JS_TD: Two = Two([Card::JACK_SPADES, Card::TEN_DIAMONDS]);
+    pub const HAND_JS_TC: Two = Two([Card::JACK_SPADES, Card::TEN_CLUBS]);
+    pub const HAND_JC_TD: Two = Two([Card::JACK_CLUBS, Card::TEN_DIAMONDS]);
+
     pub const HAND_8S_7S: Two = Two([Card::EIGHT_SPADES, Card::SEVEN_SPADES]);
     pub const HAND_8H_7H: Two = Two([Card::EIGHT_HEARTS, Card::SEVEN_HEARTS]);
     pub const HAND_8D_7D: Two = Two([Card::EIGHT_DIAMONDS, Card::SEVEN_DIAMONDS]);
@@ -420,6 +425,10 @@ impl Two {
         Two::HAND_KC_TD,
     ];
 
+    pub const HAND_QH_6H: Two = Two([Card::QUEEN_HEARTS, Card::SIX_HEARTS]);
+
+    pub const HAND_TH_6S: Two = Two([Card::TEN_HEARTS, Card::SEVEN_SPADES]);
+
     pub const HAND_8S_6S: Two = Two([Card::EIGHT_SPADES, Card::SIX_SPADES]);
     pub const HAND_8H_6H: Two = Two([Card::EIGHT_HEARTS, Card::SIX_HEARTS]);
     pub const HAND_8D_6D: Two = Two([Card::EIGHT_DIAMONDS, Card::SIX_DIAMONDS]);
@@ -476,6 +485,8 @@ impl Two {
         Two::HAND_8C_6H,
         Two::HAND_8C_6D,
     ];
+
+    pub const HAND_8S_5S: Two = Two([Card::EIGHT_SPADES, Card::FIVE_SPADES]);
 
     pub const HAND_6D_4D: Two = Two([Card::SIX_DIAMONDS, Card::FOUR_DIAMONDS]);
 

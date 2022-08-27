@@ -110,7 +110,6 @@ impl CaseEval {
     /// Since I didn't bother to do this with the original code, I am now forced to harden
     /// the method with tests.
     ///
-    #[must_use]
     pub fn from_holdem_at_flop(board: Three, case: Two, hands: HoleCards) -> Result<Self, PKError> {
         let mut case_eval = CaseEval::default();
 
@@ -568,12 +567,24 @@ mod hand_rank__case_eval_tests {
     #[test]
     fn from_holdem_at_flop__happy__the_hand() {
         let game = TestData::the_hand();
-        let case = Two::from(vec![Card::FIVE_SPADES, Card::EIGHT_SPADES]);
+        let case = Two::HAND_8S_5S;
 
         let sut = CaseEval::from_holdem_at_flop(game.board.flop, case, game.hands);
 
         assert!(sut.is_ok());
         assert_eq!(Win::SECOND, sut.unwrap().win_count());
+    }
+
+    #[test]
+    fn from_holdem_at_flop__happy__tie() {
+        let board = Three::from(vec![Card::NINE_CLUBS, Card::EIGHT_DIAMONDS, Card::SEVEN_CLUBS]);
+        let hole_cards = HoleCards::from(vec![Two::HAND_JC_TD, Two::HAND_QH_6H, Two::HAND_JS_TC]);
+        let case = Two::HAND_QH_6H;
+
+        let sut = CaseEval::from_holdem_at_flop(board, case, hole_cards);
+
+        assert!(sut.is_ok());
+        assert_eq!(Win::FIRST | Win::THIRD, sut.unwrap().win_count());
     }
 
     #[test]
