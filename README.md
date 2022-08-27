@@ -563,6 +563,7 @@
                     * the cleanup
               * REFACTOR: sig to return Result
               * First test: happy path using The Hand
+              * BUGFIX: Two::display() for blank cards
 
 ## LATER
 

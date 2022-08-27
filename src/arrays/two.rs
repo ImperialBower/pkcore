@@ -538,7 +538,7 @@ impl Two {
 
 impl Display for Two {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.cards())
+        write!(f, "{} {}", self.first(), self.second())
     }
 }
 
@@ -761,7 +761,16 @@ mod arrays__two_tests {
     }
 
     #[test]
+    fn default() {
+        let sut = Two::from([Card::BLANK, Card::BLANK]);
+
+        assert!(!sut.is_dealt());
+        assert_eq!("__ __", Two::from([Card::BLANK, Card::BLANK]).to_string());
+    }
+
+    #[test]
     fn display() {
+        assert_eq!("A♦ __", Two::from([Card::ACE_DIAMONDS, Card::BLANK]).to_string());
         assert_eq!("A♦ K♥", Two::from(BIG_SLICK).to_string());
     }
 
