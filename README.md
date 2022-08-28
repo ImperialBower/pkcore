@@ -572,6 +572,8 @@
           * REFACTOR: Eliminate Game.flop_display_the_nuts() move to Evals.display() 
           * REFACTOR: Eliminate Game.display_evals()
           * Added test for CaseEvals::new()
+          * impl TryFrom<Game> for FlopEval
+            * Added PKError::NotDealt
 
 ## LATER
 

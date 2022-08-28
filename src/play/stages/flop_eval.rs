@@ -7,7 +7,7 @@ use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::results::Results;
 use crate::util::wincounter::wins::Wins;
-use crate::PKError;
+use crate::{PKError, Pile};
 
 /// I'm feeling the need to refactor our `Game` struct. As we get deeper into
 /// the analysis phase of our library, each stage of a hand will need to have
@@ -249,8 +249,12 @@ impl std::fmt::Display for FlopEval {
 impl TryFrom<Game> for FlopEval {
     type Error = PKError;
 
-    fn try_from(value: Game) -> Result<Self, Self::Error> {
-        todo!()
+    fn try_from(game: Game) -> Result<Self, Self::Error> {
+        if !game.board.flop.is_dealt() || game.hands.is_empty() {
+            Err(PKError::NotDealt)
+        } else {
+            Ok(FlopEval::new(game.board.flop, game.hands))
+        }
     }
 }
 
@@ -266,11 +270,51 @@ mod play__stages__flop_eval_tests {
 
         let sut = FlopEval::new(game.board.flop, game.hands);
 
-        assert_eq!(990, sut.case_evals.len());
-        assert_eq!(&(931, 16), sut.results.v.get(0).unwrap());
-        assert_eq!(&(43, 16), sut.results.v.get(1).unwrap());
+        validate_the_hand(sut);
     }
 
     #[test]
     fn eval_for_hand() {}
+
+    #[test]
+    fn try_from__game() {
+        let sut = FlopEval::try_from(TestData::the_hand());
+
+        assert!(sut.is_ok());
+        validate_the_hand(sut.unwrap());
+    }
+
+    #[test]
+    fn try_from__game__board_not_dealt() {
+        let game = TestData::the_hand();
+        let game = Game {
+            hands: game.hands,
+            board: Default::default(),
+        };
+
+        let sut = FlopEval::try_from(game);
+
+        assert!(sut.is_err());
+        assert_eq!(PKError::NotDealt, sut.unwrap_err());
+    }
+
+    #[test]
+    fn try_from__game__hands_not_dealt() {
+        let game = TestData::the_hand();
+        let game = Game {
+            hands: HoleCards::default(),
+            board: game.board,
+        };
+
+        let sut = FlopEval::try_from(game);
+
+        assert!(sut.is_err());
+        assert_eq!(PKError::NotDealt, sut.unwrap_err());
+    }
+
+    fn validate_the_hand(sut: FlopEval) {
+        assert_eq!(990, sut.case_evals.len());
+        assert_eq!(&(931, 16), sut.results.v.get(0).unwrap());
+        assert_eq!(&(43, 16), sut.results.v.get(1).unwrap());
+    }
 }

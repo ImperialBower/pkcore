@@ -39,6 +39,7 @@ pub enum PKError {
     InvalidCardCount,
     InvalidHand,
     InvalidIndex,
+    NotDealt,
     NotEnoughCards,
     TooManyCards,
 }
