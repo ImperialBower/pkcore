@@ -1,8 +1,13 @@
 use crate::analysis::case_evals::CaseEvals;
+use crate::analysis::eval::Eval;
+use crate::arrays::five::Five;
 use crate::arrays::three::Three;
+use crate::arrays::HandRanker;
+use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::results::Results;
 use crate::util::wincounter::wins::Wins;
+use crate::PKError;
 
 /// I'm feeling the need to refactor our `Game` struct. As we get deeper into
 /// the analysis phase of our library, each stage of a hand will need to have
@@ -194,7 +199,7 @@ use crate::util::wincounter::wins::Wins;
 /// ```
 ///
 #[derive(Clone, Debug, Default)]
-pub struct FlopEvaluator {
+pub struct FlopEval {
     pub board: Three,
     pub hands: HoleCards,
     pub case_evals: CaseEvals,
@@ -202,14 +207,14 @@ pub struct FlopEvaluator {
     pub results: Results,
 }
 
-impl FlopEvaluator {
+impl FlopEval {
     #[must_use]
-    pub fn new(board: Three, hands: HoleCards) -> FlopEvaluator {
+    pub fn new(board: Three, hands: HoleCards) -> FlopEval {
         let case_evals = CaseEvals::from_holdem_at_flop(board, &hands);
         let wins = case_evals.wins();
         let results = Results::from_wins(&wins, hands.len());
 
-        FlopEvaluator {
+        FlopEval {
             board,
             hands,
             case_evals,
@@ -217,19 +222,55 @@ impl FlopEvaluator {
             results,
         }
     }
+
+    /// Returns the `Five` `Card` hand combining the hole cards from the passed in index
+    /// combined with the `Three` Cards on the flop.
+    ///
+    /// # Errors
+    ///
+    /// Returns `PKError::Fubar` if invalid index is passed in.
+    pub fn eval_for_hand(&self, i: usize) -> Result<Eval, PKError> {
+        match self.hands.get(i) {
+            None => Err(PKError::Fubar),
+            Some(two) => Ok(Five::from_2and3(*two, self.board).eval()),
+        }
+    }
 }
 
-impl std::fmt::Display for FlopEvaluator {
+impl std::fmt::Display for FlopEval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut v = Vec::new();
         v.push(format!("The Flop: {}", self.board));
-
-
 
         write!(f, "{}", v.join("\n"))
     }
 }
 
+impl TryFrom<Game> for FlopEval {
+    type Error = PKError;
+
+    fn try_from(value: Game) -> Result<Self, Self::Error> {
+        todo!()
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod play__stages__flop_tests {}
+mod play__stages__flop_eval_tests {
+    use super::*;
+    use crate::util::data::TestData;
+
+    #[test]
+    fn new() {
+        let game = TestData::the_hand();
+
+        let sut = FlopEval::new(game.board.flop, game.hands);
+
+        assert_eq!(990, sut.case_evals.len());
+        assert_eq!(&(931, 16), sut.results.v.get(0).unwrap());
+        assert_eq!(&(43, 16), sut.results.v.get(1).unwrap());
+    }
+
+    #[test]
+    fn eval_for_hand() {}
+}

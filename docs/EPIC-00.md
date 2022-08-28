@@ -30,6 +30,21 @@ Thus, we must learn from our mistakes if we are going to improve.
 
 CI tools, tests, give yourself a safe place to fail and learn.
 
+### Beware those with The Answer
+
+You will meet many people in your journey through life that will offer you
+The Answer. They will tell you the right way to do things. That however you
+are doing things, you are doing them wrong. These people are lauded... 
+celebrated... held up as geniuses... innovators in their
+fields, and many people will be drawn to them because they're looking for
+The Answer, and are frustrated by how complicated everything is. I understand 
+the attraction. Life would be so much easier if I had The Answer;
+if I could just do this one thing and all of my problems would vanish. 
+
+Unfortunately, I see this for what it is. I have a word for people who have
+The Answer: failures. You see, you become a failure the the moment you stop
+doubting. Long before the crashes. Long before the debt. The moment you decided
+that you knew everything... that's the true moment you failed. 
 
 ## Ways to read
 

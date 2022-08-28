@@ -71,3 +71,22 @@ impl CaseEvals {
         wins
     }
 }
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod analysis___case_evals_tests {
+    use super::*;
+    use crate::util::data::TestData;
+
+    #[test]
+    fn new() {
+        let game = TestData::the_hand();
+
+        let sut = CaseEvals::from_holdem_at_flop(game.board.flop, &game.hands);
+
+        assert_eq!(990, sut.len()); // Heads up at the flop there are 990 possible "runouts" for the cards in play.
+    }
+
+    #[test]
+    fn eval_for_hand() {}
+}
