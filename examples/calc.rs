@@ -4,6 +4,7 @@ use pkcore::play::game::Game;
 use pkcore::play::hole_cards::HoleCards;
 use pkcore::{PKError, Pile};
 use std::str::FromStr;
+use pkcore::play::stages::flop_eval::FlopEval;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -99,6 +100,9 @@ fn main() -> Result<(), PKError> {
     println!("{}", game);
 
     game.flop_display_odds()?;
+
+    let flop_eval = FlopEval::try_from(game.clone()).unwrap();
+    println!("{}", flop_eval);
 
     if args.nuts {
         println!();

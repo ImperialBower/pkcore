@@ -242,6 +242,14 @@ impl std::fmt::Display for FlopEval {
         let mut v = Vec::new();
         v.push(format!("The Flop: {}", self.board));
 
+        for (i, hole_cards) in self.hands.iter().enumerate() {
+            println!(
+                "  Hand #{} [{}]",
+                i + 1,
+                hole_cards,
+            );
+        }
+
         write!(f, "{}", v.join("\n"))
     }
 }
@@ -312,9 +320,13 @@ mod play__stages__flop_eval_tests {
         assert_eq!(PKError::NotDealt, sut.unwrap_err());
     }
 
+    /// 990 possible runouts.
+    /// Daniel wins 931 times.
+    /// Gus wins 43 times.
+    /// They tie 16 times.
     fn validate_the_hand(sut: FlopEval) {
         assert_eq!(990, sut.case_evals.len());
-        assert_eq!(&(931, 16), sut.results.v.get(0).unwrap());
+        assert_eq!(&(931, 16), sut.results.v.get(0).unwrap()); // D
         assert_eq!(&(43, 16), sut.results.v.get(1).unwrap());
     }
 }
