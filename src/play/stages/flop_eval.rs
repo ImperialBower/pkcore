@@ -313,7 +313,6 @@ mod play__stages__flop_eval_tests {
     fn eval_for_player() {
         let game = FlopEval::try_from(TestData::the_hand()).unwrap();
 
-
         assert_eq!(2185, game.eval_for_player(0).unwrap().hand_rank.value);
         assert_eq!(2251, game.eval_for_player(1).unwrap().hand_rank.value);
         assert!(game.eval_for_player(2).is_err());

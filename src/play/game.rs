@@ -2,7 +2,6 @@ use crate::analysis::case_eval::CaseEval;
 use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
 use crate::analysis::outs::Outs;
-use crate::arrays::five::Five;
 use crate::arrays::four::Four;
 use crate::arrays::seven::Seven;
 use crate::arrays::six::Six;
@@ -237,6 +236,13 @@ impl Game {
     ///
     /// TODO: Write some fucking tests.
     #[must_use]
+    pub fn turn_calculations(&self) -> (CaseEvals, Wins, Results, Outs) {
+        let case_evals = self.turn_case_evals();
+        let wins = case_evals.wins();
+        let results = Results::from_wins(&wins, self.hands.len());
+        let outs = Outs::from(&case_evals);
+        (case_evals, wins, results, outs)
+    }
 
     /// This is really a sort of utility method so that I can quickly
     /// generate a specific `CaseEval` at the turn.
