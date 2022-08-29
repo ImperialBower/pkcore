@@ -574,6 +574,8 @@
           * Added test for CaseEvals::new()
           * impl TryFrom<Game> for FlopEval
             * Added PKError::NotDealt
+          * Removed dupe of eval_for_player: eval_for_hand
+          * Finished Display
 
 ## LATER
 

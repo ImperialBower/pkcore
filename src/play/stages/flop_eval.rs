@@ -226,28 +226,53 @@ impl FlopEval {
     /// Returns the `Five` `Card` hand combining the hole cards from the passed in index
     /// combined with the `Three` Cards on the flop.
     ///
+    /// TODO RF: Make into a trait.
+    ///
     /// # Errors
     ///
     /// Returns `PKError::Fubar` if invalid index is passed in.
-    pub fn eval_for_hand(&self, i: usize) -> Result<Eval, PKError> {
+    pub fn eval_for_player(&self, i: usize) -> Result<Eval, PKError> {
         match self.hands.get(i) {
             None => Err(PKError::Fubar),
             Some(two) => Ok(Five::from_2and3(*two, self.board).eval()),
         }
     }
+
+    /// # Errors
+    ///
+    /// Throws `PKError::Fubar` if invalid index
+    pub fn eval_for_player_str(&self, index: usize) -> Result<String, PKError> {
+        match self.eval_for_player(index) {
+            Err(e) => Err(e),
+            Ok(eval) => Ok(format!("{} ({})", eval.hand, eval.hand_rank)),
+        }
+    }
 }
 
+/// Originally part of our calc example program. When my examples have functionality
+/// that I want to use in other places, I move it into the lib. I can definitely
+/// see a later refactoring where we move the display functionality to its own home.
+///
+/// Then moved to the `Game` struct, and now moved to here to clean up the code.
 impl std::fmt::Display for FlopEval {
+    /// TODO: Even spacing for each result string.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut v = Vec::new();
         v.push(format!("The Flop: {}", self.board));
 
         for (i, hole_cards) in self.hands.iter().enumerate() {
-            println!(
-                "  Hand #{} [{}]",
+            let eval = match self.eval_for_player_str(i) {
+                Ok(e) => e,
+                Err(_) => String::new(),
+            };
+
+            v.push(format!(
+                "  Player #{} [{}] {}",
                 i + 1,
                 hole_cards,
-            );
+                self.results.player_to_string(i)
+            ));
+            v.push(format!("     {}", eval));
         }
 
         write!(f, "{}", v.join("\n"))
@@ -283,6 +308,16 @@ mod play__stages__flop_eval_tests {
 
     #[test]
     fn eval_for_hand() {}
+
+    #[test]
+    fn eval_for_player() {
+        let game = FlopEval::try_from(TestData::the_hand()).unwrap();
+
+
+        assert_eq!(2185, game.eval_for_player(0).unwrap().hand_rank.value);
+        assert_eq!(2251, game.eval_for_player(1).unwrap().hand_rank.value);
+        assert!(game.eval_for_player(2).is_err());
+    }
 
     #[test]
     fn try_from__game() {

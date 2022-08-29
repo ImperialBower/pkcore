@@ -11,7 +11,7 @@ use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::results::Results;
 use crate::util::wincounter::wins::Wins;
-use crate::{Card, Cards, Evals, PKError, Pile, TheNuts};
+use crate::{Card, Cards, PKError, Pile, TheNuts};
 use log::debug;
 use std::fmt::{Display, Formatter};
 use std::sync::mpsc;
@@ -230,43 +230,6 @@ impl Game {
 
     // region The Flop
 
-    #[must_use]
-    pub fn flop_calculations(&self) -> (CaseEvals, Wins, Results) {
-        let case_evals = CaseEvals::from_holdem_at_flop(self.board.flop, &self.hands);
-        let wins = case_evals.wins();
-        let results = Results::from_wins(&wins, self.hands.len());
-        (case_evals, wins, results)
-    }
-
-    /// Originally part of our calc example program. When my examples have functionality
-    /// that I want to use in other places, I move it into the lib. I can definitely
-    /// see a later refactoring where we move the display functionality to its own home.
-    ///
-    /// # The Flow
-    ///
-    /// * `PlayerWins.at_flop()`
-    ///
-    /// # Errors
-    ///
-    /// Throws `PKError::Fubar` if there is an invalid index.
-    pub fn flop_display_odds(&self) -> Result<(), PKError> {
-        let (_, _, results) = self.flop_calculations();
-
-        println!();
-        println!("The Flop: {}", self.board.flop);
-        for (i, hole_cards) in self.hands.iter().enumerate() {
-            println!(
-                "  Player #{} [{}] {} - {}",
-                i + 1,
-                hole_cards,
-                results.player_to_string(i),
-                self.flop_eval_for_player_str(i)?
-            );
-        }
-
-        Ok(())
-    }
-
     /// Returns the `Five` `Card` hand combining the hole cards from the passed in index
     /// combined with the `Three` Cards on the flop.
     ///
@@ -278,21 +241,6 @@ impl Game {
             None => Err(PKError::Fubar),
             Some(two) => Ok(Five::from_2and3(*two, self.board.flop).eval()),
         }
-    }
-
-    /// # Errors
-    ///
-    /// Throws `PKError::Fubar` if invalid index
-    pub fn flop_eval_for_player_str(&self, index: usize) -> Result<String, PKError> {
-        match self.flop_eval_for_player(index) {
-            Err(e) => Err(e),
-            Ok(eval) => Ok(format!("{} ({})", eval.hand, eval.hand_rank)),
-        }
-    }
-
-    #[must_use]
-    pub fn flop_evals(&self) -> Evals {
-        self.board.flop.evals()
     }
 
     // #[must_use]
@@ -806,6 +754,7 @@ mod play__game_tests {
     use crate::arrays::two::Two;
     use crate::util::data::TestData;
     use crate::util::wincounter::win::Win;
+    use crate::Evals;
     use std::str::FromStr;
 
     #[test]
@@ -826,15 +775,6 @@ mod play__game_tests {
 
         assert_eq!(Win::FIRST, actual.win_count());
         assert_eq!(Card::SIX_CLUBS, actual.card());
-    }
-
-    #[test]
-    fn five_at_flop() {
-        let game = TestData::the_hand();
-
-        assert_eq!(2185, game.flop_eval_for_player(0).unwrap().hand_rank.value);
-        assert_eq!(2251, game.flop_eval_for_player(1).unwrap().hand_rank.value);
-        assert!(game.flop_eval_for_player(2).is_err());
     }
 
     #[test]
@@ -867,19 +807,6 @@ mod play__game_tests {
         let actual = Game::flop_get_seven(board, &v);
 
         assert_eq!(expected, actual.unwrap());
-    }
-
-    #[test]
-    fn flop_evals() {
-        let game = TestData::the_hand();
-
-        let evals = game.flop_evals();
-
-        assert_eq!(26, evals.len());
-        assert_eq!(1605, evals.get(0).unwrap().hand_rank.value);
-        assert_eq!(7420, evals.get(25).unwrap().hand_rank.value);
-        assert!(evals.get(26).is_none());
-        assert_eq!(Evals::default(), Game::default().flop_evals());
     }
 
     #[test]
