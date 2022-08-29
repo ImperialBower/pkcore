@@ -576,6 +576,7 @@
             * Added PKError::NotDealt
           * Removed dupe of eval_for_player: eval_for_hand
           * Finished Display
+        * TurnEval
 
 ## LATER
 

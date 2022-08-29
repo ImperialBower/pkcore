@@ -228,28 +228,6 @@ impl Game {
         Game { hands, board }
     }
 
-    // region The Flop
-
-    /// Returns the `Five` `Card` hand combining the hole cards from the passed in index
-    /// combined with the `Three` Cards on the flop.
-    ///
-    /// # Errors
-    ///
-    /// Returns `PKError::Fubar` if invalid index is passed in.
-    pub fn flop_eval_for_player(&self, i: usize) -> Result<Eval, PKError> {
-        match self.hands.get(i) {
-            None => Err(PKError::Fubar),
-            Some(two) => Ok(Five::from_2and3(*two, self.board.flop).eval()),
-        }
-    }
-
-    // #[must_use]
-    // pub fn flop_remaining(&self) -> Cards {
-    //     todo!()
-    // }
-
-    // endregion
-
     // region The Turn
 
     /// Function that does the work. I can see this returning outs as well.
@@ -259,13 +237,6 @@ impl Game {
     ///
     /// TODO: Write some fucking tests.
     #[must_use]
-    pub fn turn_calculations(&self) -> (CaseEvals, Wins, Results, Outs) {
-        let case_evals = self.turn_case_evals();
-        let wins = case_evals.wins();
-        let results = Results::from_wins(&wins, self.hands.len());
-        let outs = Outs::from(&case_evals);
-        (case_evals, wins, results, outs)
-    }
 
     /// This is really a sort of utility method so that I can quickly
     /// generate a specific `CaseEval` at the turn.
