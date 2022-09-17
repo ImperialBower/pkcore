@@ -9,11 +9,16 @@ use std::time::Duration;
 fn main() {
     let game = TestData::the_hand();
 
-    println!("TAKE 1: {:.2?}", take1(&game));
-    println!("TAKE 2: {:.2?}", take2(&game));
+    let (nuts1, duration1) = take1(&game);
+    let (nuts2, duration2) = take2(&game);
+
+    println!("TAKE 1: {:.2?}", duration1);
+    println!("{}", nuts1.to_evals());
+    println!("TAKE 2: {:.2?}", duration2);
+    println!("{}", nuts2.to_evals());
 }
 
-fn take1(game: &Game) -> Duration {
+fn take1(game: &Game) -> (TheNuts, Duration) {
     let now = std::time::Instant::now();
 
     let mut the_nuts = TheNuts::default();
@@ -27,10 +32,10 @@ fn take1(game: &Game) -> Duration {
 
     the_nuts.sort_in_place();
 
-    now.elapsed()
+    (the_nuts, now.elapsed())
 }
 
-fn take2(game: &Game) -> Duration {
+fn take2(game: &Game) -> (TheNuts, Duration) {
     let now = std::time::Instant::now();
 
     let mut the_nuts = TheNuts::default();
@@ -55,5 +60,5 @@ fn take2(game: &Game) -> Duration {
 
     the_nuts.sort_in_place();
 
-    now.elapsed()
+    (the_nuts, now.elapsed())
 }
