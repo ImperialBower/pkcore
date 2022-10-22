@@ -14,8 +14,11 @@ pub struct TwoBy2 {
 }
 
 impl TwoBy2 {
+    /// # Errors
+    ///
+    /// Throws a `PKError::NotDealt` error if the hand isn't complete.
     pub fn new(first: Two, second: Two) -> Result<TwoBy2, PKError> {
-        if first.is_dealt() || second.is_dealt() {
+        if first.is_dealt() && second.is_dealt() {
             Ok(TwoBy2 { first, second })
         } else {
             Err(PKError::NotDealt)
@@ -38,5 +41,15 @@ mod arrays__matchups__two_by_2_tests {
         let actual = TwoBy2::new(Two::HAND_9H_9D, Two::HAND_JS_TH);
 
         assert_eq!(expected, actual.unwrap());
+    }
+
+    #[test]
+    fn new__hands_not_dealt() {
+        let actual = TwoBy2::new(Two::HAND_9H_9D, Two::default());
+
+        assert!(actual.is_err());
+        assert_eq!(PKError::NotDealt, actual.unwrap_err());
+        assert!(TwoBy2::new(Two::default(), Two::HAND_9H_9D).is_err());
+        assert!(TwoBy2::new(Two::default(), Two::default()).is_err());
     }
 }
