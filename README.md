@@ -580,6 +580,10 @@
       * Preflop
         * TwoBy2
           * new
+          * Two sorting
+            * custom ord
+              * impl From<Two> for Bard
+                * trait Pile to_bard()
 
 ## LATER
 

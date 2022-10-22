@@ -18,10 +18,12 @@ impl TwoBy2 {
     ///
     /// Throws a `PKError::NotDealt` error if the hand isn't complete.
     pub fn new(first: Two, second: Two) -> Result<TwoBy2, PKError> {
-        if first.is_dealt() && second.is_dealt() {
-            Ok(TwoBy2 { first, second })
-        } else {
+        if !first.is_dealt() || !second.is_dealt() {
             Err(PKError::NotDealt)
+        } else if second > first {
+            Ok(TwoBy2 { second, first })
+        } else {
+            Ok(TwoBy2 { first, second })
         }
     }
 }

@@ -8,6 +8,7 @@ use analysis::the_nuts::TheNuts;
 use indexmap::set::IntoIter;
 use itertools::Combinations;
 use std::iter::Enumerate;
+use crate::bard::Bard;
 
 pub mod analysis;
 pub mod arrays;
@@ -118,6 +119,29 @@ pub trait Pile {
 
     fn evals(&self) -> Evals {
         self.the_nuts().to_evals()
+    }
+
+    /// This trait method started of with a simple need: __I want to be able to test equality of two
+    /// hands no matter what the order.__ Our Bard type is perfectly suited for this task, since it
+    /// represents any collection of cards and is completely oblivious of sorting order. It is an
+    /// absolute representation of the value of a collection of cards.
+    ///
+    /// Now the easiest way to do this would to simply create a trait inside Bard that converts a
+    /// `Two` array into a Bard. There is something very attractive about this approach, since
+    /// it is simple and it is guaranteed to be fast. (Before we could do this, we needed to
+    /// implement the trait `impl From<Card> for Bard`.
+    ///
+    /// ```
+    /// use pkcore::arrays::two::Two;
+    /// use pkcore::bard::Bard;
+    ///
+    /// fn to_bard(two: Two) -> Bard {
+    ///     Bard::from(two.first()) | Bard::from(two.second())
+    /// }
+    /// ```
+    ///
+    fn to_bard(&self) -> Bard {
+        todo!()
     }
 
     fn to_vec(&self) -> Vec<Card>;

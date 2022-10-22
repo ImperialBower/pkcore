@@ -7,6 +7,8 @@ use crate::{PKError, Pile, TheNuts};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
+/// TODO: Be sure to write comparing the type textures of this array type and the tuple struct
+/// version from `Hand` in the pokerhand crate.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Two([Card; 2]);
 
@@ -659,6 +661,15 @@ impl Pile for Two {
     }
 }
 
+// impl Eq for Two {}
+//
+// impl PartialEq<Self> for Two {
+//     /// [Hand-Implementing PartialEq, Eq, Hash, PartialOrd and Ord in Rust](https://www.philipdaniels.com/blog/2019/rust-equality-and-ordering/)
+//     fn eq(&self, other: &Self) -> bool {
+//         todo!()
+//     }
+// }
+
 impl TryFrom<Cards> for Two {
     type Error = PKError;
 
@@ -1052,5 +1063,11 @@ mod arrays__two_tests {
 
         assert!(Two::try_from(slice).is_err());
         assert_eq!(err, Two::try_from(slice).unwrap_err());
+    }
+
+    #[test]
+    fn sort() {
+        assert!(Two::HAND_5D_5C > Two::HAND_2H_2D);
+        assert!(Two::HAND_AH_KD > Two([Card::ACE_SPADES, Card::QUEEN_CLUBS]));
     }
 }
