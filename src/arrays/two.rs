@@ -1103,7 +1103,6 @@ mod arrays__two_tests {
     /// * Implement `PartialOrd` and `Ord`
     ///   * Implement `From<Two>` for `Bard`.
     #[test]
-    #[ignore]
     fn sort() {
         assert!(Two::HAND_5S_5H > Two::HAND_2H_2D);
         assert!(Two::HAND_AH_KD > Two([Card::ACE_SPADES, Card::QUEEN_CLUBS]));
