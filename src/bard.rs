@@ -164,6 +164,9 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 /// we design it to accommodate that?
 ///
 /// MORAL: Remember what your types are for. Make them do that and nothing more.
+///
+/// DAMNIT: This is where my excessive desire for aesthetic beauty gets the better of me. I want
+/// them to sort
 #[derive(Clone, Copy, Debug, Default, Hash, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Bard(u64);
 
