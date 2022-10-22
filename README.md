@@ -589,6 +589,10 @@
 ## Resources
 
 * Poker
+  * [Cactus Kev's Poker Hand Evaluator](https://suffe.cool/poker/evaluator.html) 
+    * Paul Senzee
+      * [Some Perfect Hash](https://senzee.blogspot.com/2006/06/some-perfect-hash.html)
+      * [7](https://senzee.blogspot.com/2007/01/7.html)
   * [Mike Caro's Website](https://www.poker1.com/)
   * GTO
     * [Minimum Defense Frequency vs Pot Odds](https://upswingpoker.com/minimum-defense-frequency-vs-pot-odds/)
@@ -597,6 +601,8 @@
       * 888poker > [What is Nuts in Poker?](https://www.888poker.com/magazine/poker-terms/nuts)
       * GetMega > [Nuts in Poker](https://www.getmega.com/cards/poker/terms/nuts-in-poker/)
     * 888poker > [What is Texture in Poker?](https://www.888poker.com/magazine/poker-terms/texture)
+  * Code
+    * [emathis11/XPokerEval](https://github.com/emathis11/XPokerEval) - Collection of poker evaluators.
 * Rust
   * [The Rust Programming Language](https://doc.rust-lang.org/stable/book/)
   * [Rust Design Patterns](https://rust-unofficial.github.io/patterns/intro.html) 
