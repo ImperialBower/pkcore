@@ -1,4 +1,6 @@
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
+use crate::arrays::two::Two;
+use crate::Card;
 
 /// A `Bard` is a binary representation of one or more `Cards` contained in a single unsigned
 /// integer. Each bit flag represents one card. Since each flag is a different card, you can
@@ -300,10 +302,86 @@ impl BitXorAssign for Bard {
     }
 }
 
+impl From<Card> for Bard {
+    fn from(card: Card) -> Self {
+        match card {
+            Card::ACE_SPADES => Bard::ACE_SPADES,
+            Card::KING_SPADES => Bard::KING_SPADES,
+            Card::QUEEN_SPADES => Bard::QUEEN_SPADES,
+            Card::JACK_SPADES => Bard::JACK_SPADES,
+            Card::TEN_SPADES => Bard::TEN_SPADES,
+            Card::NINE_SPADES => Bard::NINE_SPADES,
+            Card::EIGHT_SPADES => Bard::EIGHT_SPADES,
+            Card::SEVEN_SPADES => Bard::SEVEN_SPADES,
+            Card::SIX_SPADES => Bard::SIX_SPADES,
+            Card::FIVE_SPADES => Bard::FIVE_SPADES,
+            Card::FOUR_SPADES => Bard::FOUR_SPADES,
+            Card::TREY_SPADES => Bard::TREY_SPADES,
+            Card::DEUCE_SPADES => Bard::DEUCE_SPADES,
+            Card::ACE_HEARTS => Bard::ACE_HEARTS,
+            Card::KING_HEARTS => Bard::KING_HEARTS,
+            Card::QUEEN_HEARTS => Bard::QUEEN_HEARTS,
+            Card::JACK_HEARTS => Bard::JACK_HEARTS,
+            Card::TEN_HEARTS => Bard::TEN_HEARTS,
+            Card::NINE_HEARTS => Bard::NINE_HEARTS,
+            Card::EIGHT_HEARTS => Bard::EIGHT_HEARTS,
+            Card::SEVEN_HEARTS => Bard::SEVEN_HEARTS,
+            Card::SIX_HEARTS => Bard::SIX_HEARTS,
+            Card::FIVE_HEARTS => Bard::FIVE_HEARTS,
+            Card::FOUR_HEARTS => Bard::FOUR_HEARTS,
+            Card::TREY_HEARTS => Bard::TREY_HEARTS,
+            Card::DEUCE_HEARTS => Bard::DEUCE_HEARTS,
+            Card::ACE_DIAMONDS => Bard::ACE_DIAMONDS,
+            Card::KING_DIAMONDS => Bard::KING_DIAMONDS,
+            Card::QUEEN_DIAMONDS => Bard::QUEEN_DIAMONDS,
+            Card::JACK_DIAMONDS => Bard::JACK_DIAMONDS,
+            Card::TEN_DIAMONDS => Bard::TEN_DIAMONDS,
+            Card::NINE_DIAMONDS => Bard::NINE_DIAMONDS,
+            Card::EIGHT_DIAMONDS => Bard::EIGHT_DIAMONDS,
+            Card::SEVEN_DIAMONDS => Bard::SEVEN_DIAMONDS,
+            Card::SIX_DIAMONDS => Bard::SIX_DIAMONDS,
+            Card::FIVE_DIAMONDS => Bard::FIVE_DIAMONDS,
+            Card::FOUR_DIAMONDS => Bard::FOUR_DIAMONDS,
+            Card::TREY_DIAMONDS => Bard::TREY_DIAMONDS,
+            Card::DEUCE_DIAMONDS => Bard::DEUCE_DIAMONDS,
+            Card::ACE_CLUBS => Bard::ACE_CLUBS,
+            Card::KING_CLUBS => Bard::KING_CLUBS,
+            Card::QUEEN_CLUBS => Bard::QUEEN_CLUBS,
+            Card::JACK_CLUBS => Bard::JACK_CLUBS,
+            Card::TEN_CLUBS => Bard::TEN_CLUBS,
+            Card::NINE_CLUBS => Bard::NINE_CLUBS,
+            Card::EIGHT_CLUBS => Bard::EIGHT_CLUBS,
+            Card::SEVEN_CLUBS => Bard::SEVEN_CLUBS,
+            Card::SIX_CLUBS => Bard::SIX_CLUBS,
+            Card::FIVE_CLUBS => Bard::FIVE_CLUBS,
+            Card::FOUR_CLUBS => Bard::FOUR_CLUBS,
+            Card::TREY_CLUBS => Bard::TREY_CLUBS,
+            Card::DEUCE_CLUBS => Bard::DEUCE_CLUBS,
+            _ => Bard::BLANK,
+        }
+    }
+}
+
+impl From<Two> for Bard {
+    fn from(two: Two) -> Self {
+        Bard::from(two.first()) | Bard::from(two.second())
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod bard_tests {
     use super::*;
+
+    #[test]
+    fn from_card() {
+        assert_eq!(Bard::ACE_SPADES , Bard::from(Card::ACE_SPADES));
+    }
+
+    #[test]
+    fn from_two() {
+        assert_eq!(Bard::ACE_SPADES | Bard::ACE_HEARTS, Bard::from(Two::HAND_AS_AH));
+    }
 
     #[test]
     fn bit_and() {
