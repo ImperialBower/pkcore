@@ -1,15 +1,17 @@
+use std::cmp::Ordering;
 use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{PKError, Pile, TheNuts};
+use crate::{PKError, Pile, TheNuts, Bard};
 use std::fmt::{Display, Formatter};
+use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
 /// TODO: Be sure to write comparing the type textures of this array type and the tuple struct
 /// version from `Hand` in the pokerhand crate.
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Two([Card; 2]);
 
 impl Two {
@@ -661,14 +663,45 @@ impl Pile for Two {
     }
 }
 
-// impl Eq for Two {}
-//
-// impl PartialEq<Self> for Two {
-//     /// [Hand-Implementing PartialEq, Eq, Hash, PartialOrd and Ord in Rust](https://www.philipdaniels.com/blog/2019/rust-equality-and-ordering/)
-//     fn eq(&self, other: &Self) -> bool {
-//         todo!()
-//     }
-// }
+impl Hash for Two {
+    /// To be honest, this one scares me. We are basically giving our type the
+    /// contract of a `Set` but with the speed and flexibility of an array of primitive types.
+    /// We will need to watch for any irregularities as we start serializing the product of our
+    /// calculations that depend on this type. This is foundational stuff. Getting it wrong could
+    /// do real damage.
+    ///
+    /// It's OK to mess with the reality of your world, as long as you take the time to back it up
+    /// with good tests.
+    #[inline]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        Bard::from(self).hash(state)
+    }
+}
+
+impl PartialEq<Self> for Two {
+    /// [Hand-Implementing PartialEq, Eq, Hash, PartialOrd and Ord in Rust](https://www.philipdaniels.com/blog/2019/rust-equality-and-ordering/)
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        Bard::from(self) == Bard::from(other)
+    }
+}
+
+impl Eq for Two {}
+
+impl PartialOrd<Self> for Two {
+    /// It turns out that using Bard for this seems to be a dead end, since it doesn't correlate
+    /// the integer value to Card value. Looks like it's back to the drawing board on this one.
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(Bard::from(self).cmp(&Bard::from(other)))
+    }
+}
+
+impl Ord for Two {
+    fn cmp(&self, other: &Self) -> Ordering {
+        Bard::from(self).cmp(&Bard::from(other))
+    }
+}
 
 impl TryFrom<Cards> for Two {
     type Error = PKError;
@@ -1065,9 +1098,13 @@ mod arrays__two_tests {
         assert_eq!(err, Two::try_from(slice).unwrap_err());
     }
 
+    /// In order to make this test past we are going to need to do the following:
+    ///
+    /// * Implement `PartialOrd` and `Ord`
+    ///   * Implement `From<Two>` for `Bard`.
     #[test]
     fn sort() {
-        assert!(Two::HAND_5D_5C > Two::HAND_2H_2D);
+        assert!(Two::HAND_5S_5H > Two::HAND_2H_2D);
         assert!(Two::HAND_AH_KD > Two([Card::ACE_SPADES, Card::QUEEN_CLUBS]));
     }
 }

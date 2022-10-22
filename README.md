@@ -583,7 +583,12 @@
           * Two sorting
             * custom ord
               * impl From<Two> for Bard
+              * impl From<&Two> for Bard
                 * trait Pile to_bard()
+                * REFACTOR: #[inline] [Inlining!!!](https://nnethercote.github.io/perf-book/inlining.html)
+              * impl Hash for Two
+              * DEAD END: Bard a dead end???
+                * Or is it? Do I really care how it sorts it just as long as it does?
 
 ## LATER
 

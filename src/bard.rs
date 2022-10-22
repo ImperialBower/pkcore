@@ -133,7 +133,38 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 /// BTW, I can't believe that I still haven't fixed that three test. I am deliberately keeping the
 /// test failing as a reminder of what my priorities are. Yes, this has been fun, but as they say,
 /// ABC... always be closing. Luckily, I want a cup of coffee, and coffee is for closers.
-#[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
+///
+/// ## Aside / Addendum
+///
+/// Revisiting this type in order to facilitate easy tests for hand equality, I had a pang of regret
+/// that I didn't order the bits so that they were higher based on rank first instead of suit first.
+/// Something like
+///
+/// ```txt
+/// use pkcore::bard::Bard;
+///
+/// pub const ACE_SPADES:     Bard = Bard(0b1000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);///
+/// pub const ACE_HEARTS:     Bard = Bard(0b0100_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+/// ```
+///
+/// instead of
+///
+/// ```txt
+/// use pkcore::bard::Bard;
+///
+/// pub const ACE_SPADES:     Bard = Bard(0b1000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);///
+/// pub const ACE_HEARTS:     Bard = Bard(0b0000_0000_0000_0100_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+/// ```
+///
+/// since then weighted sorts would be easier for these types.
+///
+/// The problem is, that this goes against the imperative of the struct. It's there to be a pure
+/// representation of a collection of one or more cards in its simplest state, no matter what the
+/// order is. We have the Pile trait to deal with sorting. This type isn't about that, so why should
+/// we design it to accommodate that?
+///
+/// MORAL: Remember what your types are for. Make them do that and nothing more.
+#[derive(Clone, Copy, Debug, Default, Hash, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Bard(u64);
 
 #[rustfmt::skip]
@@ -303,6 +334,14 @@ impl BitXorAssign for Bard {
 }
 
 impl From<Card> for Bard {
+    /// For our initial test, we're simply going to validate a single conversion:
+    ///
+    /// ```
+    /// use pkcore::bard::Bard;
+    /// use pkcore::card::Card;
+    ///
+    /// assert_eq!(Bard::ACE_SPADES, Bard::from(Card::ACE_SPADES));
+    /// ```
     fn from(card: Card) -> Self {
         match card {
             Card::ACE_SPADES => Bard::ACE_SPADES,
@@ -359,6 +398,12 @@ impl From<Card> for Bard {
             Card::DEUCE_CLUBS => Bard::DEUCE_CLUBS,
             _ => Bard::BLANK,
         }
+    }
+}
+
+impl From<&Two> for Bard {
+    fn from(two: &Two) -> Self {
+        Bard::from(two.first()) | Bard::from(two.second())
     }
 }
 
