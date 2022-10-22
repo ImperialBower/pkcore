@@ -1,6 +1,7 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::unreadable_literal)]
 
+use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
 use analysis::evals::Evals;
@@ -8,7 +9,6 @@ use analysis::the_nuts::TheNuts;
 use indexmap::set::IntoIter;
 use itertools::Combinations;
 use std::iter::Enumerate;
-use crate::bard::Bard;
 
 pub mod analysis;
 pub mod arrays;

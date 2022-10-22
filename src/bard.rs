@@ -1,6 +1,6 @@
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use crate::arrays::two::Two;
 use crate::Card;
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 
 /// A `Bard` is a binary representation of one or more `Cards` contained in a single unsigned
 /// integer. Each bit flag represents one card. Since each flag is a different card, you can
@@ -375,12 +375,15 @@ mod bard_tests {
 
     #[test]
     fn from_card() {
-        assert_eq!(Bard::ACE_SPADES , Bard::from(Card::ACE_SPADES));
+        assert_eq!(Bard::ACE_SPADES, Bard::from(Card::ACE_SPADES));
     }
 
     #[test]
     fn from_two() {
-        assert_eq!(Bard::ACE_SPADES | Bard::ACE_HEARTS, Bard::from(Two::HAND_AS_AH));
+        assert_eq!(
+            Bard::ACE_SPADES | Bard::ACE_HEARTS,
+            Bard::from(Two::HAND_AS_AH)
+        );
     }
 
     #[test]

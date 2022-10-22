@@ -6,7 +6,10 @@ use crate::Pile;
 ///
 /// ## Take Two: Concurrency with Copy
 ///
-///
+/// I will confess that I am addicted to types in rust that implement the `Copy` trait. There
+/// is so much joy in not having to worry about ownership. Part of me feels that this is a
+/// total cop out. Another part of me thinks that this is smart, since, fundamentally, the
+/// data I am working with is all collections of unsigned integers.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct TwoBy2 {
     pub first: Two,
@@ -21,7 +24,10 @@ impl TwoBy2 {
         if !first.is_dealt() || !second.is_dealt() {
             Err(PKError::NotDealt)
         } else if second > first {
-            Ok(TwoBy2 { second, first })
+            Ok(TwoBy2 {
+                first: second,
+                second: first,
+            })
         } else {
             Ok(TwoBy2 { first, second })
         }
@@ -36,8 +42,8 @@ mod arrays__matchups__two_by_2_tests {
     #[test]
     fn new() {
         let expected = TwoBy2 {
-            first: Two::HAND_9H_9D,
-            second: Two::HAND_JS_TH,
+            first: Two::HAND_JS_TH,
+            second: Two::HAND_9H_9D,
         };
 
         let actual = TwoBy2::new(Two::HAND_9H_9D, Two::HAND_JS_TH);
