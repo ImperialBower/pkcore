@@ -1,10 +1,10 @@
-use std::cmp::Ordering;
 use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{PKError, Pile, TheNuts, Bard};
+use crate::{Bard, PKError, Pile, TheNuts};
+use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
@@ -674,12 +674,12 @@ impl Hash for Two {
     /// with good tests.
     #[inline]
     fn hash<H: Hasher>(&self, state: &mut H) {
-        Bard::from(self).hash(state)
+        Bard::from(self).hash(state);
     }
 }
 
 impl PartialEq<Self> for Two {
-    /// [Hand-Implementing PartialEq, Eq, Hash, PartialOrd and Ord in Rust](https://www.philipdaniels.com/blog/2019/rust-equality-and-ordering/)
+    /// [Hand-Implementing `PartialEq`, `Eq`, `Hash`, `PartialOrd` and `Ord` in Rust](https://www.philipdaniels.com/blog/2019/rust-equality-and-ordering/)
     #[inline]
     fn eq(&self, other: &Self) -> bool {
         Bard::from(self) == Bard::from(other)
