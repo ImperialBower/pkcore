@@ -1,6 +1,6 @@
 use crate::arrays::two::Two;
-use crate::PKError;
 use crate::Pile;
+use crate::{Card, PKError, TheNuts};
 
 /// # PHASE FIVE: Concurrency
 ///
@@ -29,6 +29,25 @@ impl TwoBy2 {
     }
 }
 
+impl Pile for TwoBy2 {
+    fn clean(&self) -> Self {
+        TwoBy2::default()
+    }
+
+    fn the_nuts(&self) -> TheNuts {
+        TheNuts::default()
+    }
+
+    fn to_vec(&self) -> Vec<Card> {
+        vec![
+            self.first.first(),
+            self.first.second(),
+            self.second.first(),
+            self.second.second(),
+        ]
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod arrays__matchups__two_by_2_tests {
@@ -54,5 +73,21 @@ mod arrays__matchups__two_by_2_tests {
         assert_eq!(PKError::NotDealt, actual.unwrap_err());
         assert!(TwoBy2::new(Two::default(), Two::HAND_9H_9D).is_err());
         assert!(TwoBy2::new(Two::default(), Two::default()).is_err());
+    }
+
+    #[test]
+    fn pile__to_vec() {
+        let actual = TwoBy2::new(Two::HAND_JC_4H, Two::HAND_8C_7C)
+            .unwrap()
+            .to_vec();
+
+        let expected = vec![
+            Card::JACK_CLUBS,
+            Card::FOUR_HEARTS,
+            Card::EIGHT_CLUBS,
+            Card::SEVEN_CLUBS,
+        ];
+
+        assert_eq!(expected, actual);
     }
 }

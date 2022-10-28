@@ -431,6 +431,63 @@ impl Two {
 
     pub const HAND_QH_6H: Two = Two([Card::QUEEN_HEARTS, Card::SIX_HEARTS]);
 
+    pub const HAND_JS_4S: Two = Two([Card::JACK_SPADES, Card::FOUR_SPADES]);
+    pub const HAND_JH_4H: Two = Two([Card::JACK_HEARTS, Card::FOUR_HEARTS]);
+    pub const HAND_JD_4D: Two = Two([Card::JACK_DIAMONDS, Card::FOUR_DIAMONDS]);
+    pub const HAND_JC_4C: Two = Two([Card::JACK_CLUBS, Card::FOUR_CLUBS]);
+    pub const JACK_FOUR_SUITED: [Two; 4] = [
+        Two::HAND_JS_4S,
+        Two::HAND_JH_4H,
+        Two::HAND_JD_4D,
+        Two::HAND_JC_4C,
+    ];
+
+    pub const HAND_JS_4H: Two = Two([Card::JACK_SPADES, Card::FOUR_HEARTS]);
+    pub const HAND_JS_4D: Two = Two([Card::JACK_SPADES, Card::FOUR_DIAMONDS]);
+    pub const HAND_JS_4C: Two = Two([Card::JACK_SPADES, Card::FOUR_CLUBS]);
+    pub const HAND_JH_4S: Two = Two([Card::JACK_HEARTS, Card::FOUR_SPADES]);
+    pub const HAND_JH_4D: Two = Two([Card::JACK_HEARTS, Card::FOUR_DIAMONDS]);
+    pub const HAND_JH_4C: Two = Two([Card::JACK_HEARTS, Card::FOUR_CLUBS]);
+    pub const HAND_JD_4S: Two = Two([Card::JACK_DIAMONDS, Card::FOUR_SPADES]);
+    pub const HAND_JD_4H: Two = Two([Card::JACK_DIAMONDS, Card::FOUR_HEARTS]);
+    pub const HAND_JD_4C: Two = Two([Card::JACK_DIAMONDS, Card::FOUR_CLUBS]);
+    pub const HAND_JC_4S: Two = Two([Card::JACK_CLUBS, Card::FOUR_SPADES]);
+    pub const HAND_JC_4H: Two = Two([Card::JACK_CLUBS, Card::FOUR_HEARTS]);
+    pub const HAND_JC_4D: Two = Two([Card::JACK_CLUBS, Card::FOUR_DIAMONDS]);
+    pub const JACK_FOUR_OFFSUIT: [Two; 12] = [
+        Two::HAND_JS_4H,
+        Two::HAND_JS_4D,
+        Two::HAND_JS_4C,
+        Two::HAND_JH_4S,
+        Two::HAND_JH_4D,
+        Two::HAND_JH_4C,
+        Two::HAND_JD_4S,
+        Two::HAND_JD_4H,
+        Two::HAND_JD_4C,
+        Two::HAND_JC_4S,
+        Two::HAND_JC_4H,
+        Two::HAND_JC_4D,
+    ];
+
+    pub const JACK_FOUR: [Two; 16] = [
+        Two::HAND_JS_4S,
+        Two::HAND_JH_4H,
+        Two::HAND_JD_4D,
+        Two::HAND_JC_4C,
+        Two::HAND_JS_4H,
+        Two::HAND_JS_4D,
+        Two::HAND_JS_4C,
+        Two::HAND_JH_4S,
+        Two::HAND_JH_4D,
+        Two::HAND_JH_4C,
+        Two::HAND_JD_4S,
+        Two::HAND_JD_4H,
+        Two::HAND_JD_4C,
+        Two::HAND_JC_4S,
+        Two::HAND_JC_4H,
+        Two::HAND_JC_4D,
+    ];
+
     pub const HAND_TH_6S: Two = Two([Card::TEN_HEARTS, Card::SEVEN_SPADES]);
 
     pub const HAND_8S_6S: Two = Two([Card::EIGHT_SPADES, Card::SIX_SPADES]);
