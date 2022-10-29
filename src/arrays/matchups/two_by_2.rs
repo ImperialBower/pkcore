@@ -35,7 +35,7 @@ impl Pile for TwoBy2 {
     }
 
     fn the_nuts(&self) -> TheNuts {
-        TheNuts::default()
+        todo!()
     }
 
     fn to_vec(&self) -> Vec<Card> {
@@ -89,5 +89,17 @@ mod arrays__matchups__two_by_2_tests {
         ];
 
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn pile__remaining() {
+        let actual = TwoBy2::new(Two::HAND_JC_4H, Two::HAND_8C_7C)
+            .unwrap()
+            .remaining();
+
+        let expected = "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ T♣ 9♣ 6♣ 5♣ 4♣ 3♣ 2♣";
+
+        assert_eq!(48, actual.len());
+        assert_eq!(expected, actual.to_string());
     }
 }
