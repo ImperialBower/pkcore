@@ -90,6 +90,14 @@ impl TryFrom<Cards> for Board {
     }
 }
 
+impl TryFrom<Vec<Card>> for Board {
+    type Error = PKError;
+
+    fn try_from(v: Vec<Card>) -> Result<Self, Self::Error> {
+        Board::try_from(Cards::from(v))
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod play_board_tests {
@@ -113,7 +121,7 @@ mod play_board_tests {
     }
 
     #[test]
-    fn try_from() {
+    fn try_from__cards() {
         assert_eq!(
             "FLOP: 9♣ 6♦ 5♥, TURN: __, RIVER: __",
             Board::try_from(Cards::from(vec![
@@ -162,6 +170,43 @@ mod play_board_tests {
         assert_eq!(
             PKError::TooManyCards,
             Board::try_from(Cards::from_str("AS KS QS JS TS 9S").unwrap()).unwrap_err()
+        );
+    }
+
+    #[test]
+    fn try_from__vec_card() {
+        assert_eq!(
+            "FLOP: 9♣ 6♦ 5♥, TURN: __, RIVER: __",
+            Board::try_from(vec![
+                Card::NINE_CLUBS,
+                Card::SIX_DIAMONDS,
+                Card::FIVE_HEARTS
+            ])
+            .unwrap()
+            .to_string()
+        );
+        assert_eq!(
+            "FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: __",
+            Board::try_from(vec![
+                Card::NINE_CLUBS,
+                Card::SIX_DIAMONDS,
+                Card::FIVE_HEARTS,
+                Card::FIVE_SPADES,
+            ])
+            .unwrap()
+            .to_string()
+        );
+        assert_eq!(
+            "FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: 8♠",
+            Board::try_from(vec![
+                Card::NINE_CLUBS,
+                Card::SIX_DIAMONDS,
+                Card::FIVE_HEARTS,
+                Card::FIVE_SPADES,
+                Card::EIGHT_SPADES,
+            ])
+            .unwrap()
+            .to_string()
         );
     }
 }
