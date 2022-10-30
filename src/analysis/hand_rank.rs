@@ -8,6 +8,8 @@ use std::fmt::{Display, Formatter};
 /// `PokerHand`. This value is used to compare one hand against the other, the lower the value,
 /// the stronger the hand in a traditional, highest to lowest, ranking. A `HandRankValue` can have
 /// only one `HandRankName` and `HandRankClass`.
+///
+/// TODO RF: Make this a regular tuple struct instead of a type alias.
 #[allow(clippy::module_name_repetitions)]
 pub type HandRankValue = u16;
 

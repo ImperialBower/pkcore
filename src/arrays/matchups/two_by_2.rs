@@ -1,14 +1,16 @@
+use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
+use crate::arrays::HandRanker;
+use crate::play::board::Board;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
+use crate::util::wincounter::PlayerFlag;
 use crate::{Card, PKError, TheNuts};
 use crate::{Cards, Pile};
 use itertools::Itertools;
 use log::debug;
 use std::mem;
 use std::sync::mpsc;
-use crate::play::board::Board;
-use crate::util::wincounter::PlayerFlag;
 
 /// # PHASE FIVE: Concurrency
 ///
@@ -181,8 +183,31 @@ impl TwoBy2 {
     /// type is doing, without the need for a lot of custom code.
     ///
     /// ## Back to the second test
+    ///
+    /// A note on the contract for this method. The `HandRanker` trait that `Seven` implements
+    /// returns not only the `HandRankValue` for the hand, but also a `Five` representing the best
+    /// possible hand. We're discarding that because we don't see any use for it. It's good to
+    /// make a note of things like this. Could there be a use for this data? Given the volume
+    /// of evaluations that we will be doing, I don't think so, but you never know.
     pub fn win_for_board(&self, board: &Board) -> PlayerFlag {
-        Win::FIRST
+        let (first_value, _) =
+            Seven::from_case_and_board(&self.first, board).hand_rank_value_and_hand();
+        let (second_value, _) =
+            Seven::from_case_and_board(&self.second, board).hand_rank_value_and_hand();
+
+        /// Now, we're hitting another problem with using a type alias for our `HandRankValue`.
+        /// While we were all fancy with our `HandRank` struct in overriding the sorting for it
+        /// so that the lower the value of `HandRankValue` the greater the value for HandRank,
+        /// making comparisons nice and easy.
+        ///
+        /// For this method, since we only have the `HandRank` we will need to invert the method.
+        /// This isn't a big deal, but it does make me hate my infatuation with type aliases. For
+        /// now we will do that, and make a TODO RF at `HandRankValue`.
+        if first_value < second_value {
+            Win::FIRST
+        } else {
+            Win::SECOND
+        }
     }
 }
 
@@ -208,9 +233,9 @@ impl Pile for TwoBy2 {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod arrays__matchups__two_by_2_tests {
-    use std::str::FromStr;
     use super::*;
     use crate::util::wincounter::win::Win;
+    use std::str::FromStr;
 
     #[test]
     fn new() {
@@ -251,11 +276,9 @@ mod arrays__matchups__two_by_2_tests {
         assert_eq!(expected_wins, actual_wins);
     }
 
-
     #[test]
     fn win_for_board__first_wins() {
-        let hands = TwoBy2::new(Two::HAND_JC_4H, Two::HAND_8C_7C)
-            .unwrap();
+        let hands = TwoBy2::new(Two::HAND_JC_4H, Two::HAND_8C_7C).unwrap();
 
         let board = Board::from_str("A♠ K♠ 2♣ 3♣ T♦").unwrap();
 
@@ -264,8 +287,7 @@ mod arrays__matchups__two_by_2_tests {
 
     #[test]
     fn win_for_board__second_wins() {
-        let hands = TwoBy2::new(Two::HAND_JC_4H, Two::HAND_8C_7C)
-            .unwrap();
+        let hands = TwoBy2::new(Two::HAND_JC_4H, Two::HAND_8C_7C).unwrap();
 
         let board = Board::from_str("A♠ K♠ 2♣ 3♣ T♣").unwrap();
 
