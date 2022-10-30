@@ -214,8 +214,9 @@ impl TwoBy2 {
         let (second_value, _) =
             Seven::from_case_and_board(&self.second, board).hand_rank_value_and_hand();
 
-
-        if first_value < second_value {
+        if first_value == second_value {
+            Win::FIRST | Win::SECOND
+        } else if first_value < second_value {
             Win::FIRST
         } else {
             Win::SECOND
