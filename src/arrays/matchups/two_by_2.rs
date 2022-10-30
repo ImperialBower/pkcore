@@ -205,6 +205,9 @@ impl TwoBy2 {
     /// Now this is weird... we have a false positive. This is a great example of things to watch
     /// out for in our tests. When we copied it over we didn't adjust it to set the expected
     /// result to be a tie. Let's fix that.
+    ///
+    /// That's better. Always make sure it fails before you make it pass. There are few things more
+    /// dangerous to a codebase than a falsely passing test.
     pub fn win_for_board(&self, board: &Board) -> PlayerFlag {
         let (first_value, _) =
             Seven::from_case_and_board(&self.first, board).hand_rank_value_and_hand();
@@ -309,7 +312,7 @@ mod arrays__matchups__two_by_2_tests {
 
         let board = Board::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
 
-        assert_eq!(Win::SECOND, hands.win_for_board(&board));
+        assert_eq!(Win::FIRST | Win::SECOND, hands.win_for_board(&board));
     }
 
     #[test]
