@@ -208,6 +208,32 @@ impl TwoBy2 {
     ///
     /// That's better. Always make sure it fails before you make it pass. There are few things more
     /// dangerous to a codebase than a falsely passing test.
+    ///
+    /// There is one dangerous negative boundary condition for this code:
+    ///
+    /// ```
+    /// use std::str::FromStr;
+    /// use pkcore::arrays::matchups::two_by_2::TwoBy2;
+    /// use pkcore::arrays::two::Two;
+    /// use pkcore::play::board::Board;
+    ///
+    /// let hands = TwoBy2{first: Two::default(), second: Two::HAND_AS_AH};
+    /// let board = Board::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
+    /// ```
+    ///
+    /// Right now `hands.win_for_board(&board)` returns a tie.
+    ///
+    /// ## The Fix
+    ///
+    /// So, do you fix the bizarro edge case and complicate the code, or do we
+    /// ignore it for now and add a technical debt marker into our code?
+    ///
+    /// I'm going for the technical debt route. I'll ignore our failing test for now and add the
+    /// TODO to it.
+    ///
+    /// Before I close out this edge case, I noticed something from `Seven`. When I pass in a
+    /// blank Two struct into `Seven::from_case_and_board()` it doesn't return an eval of 0.
+    /// Let's write a test over in `Seven` to isolate this.
     pub fn win_for_board(&self, board: &Board) -> PlayerFlag {
         let (first_value, _) =
             Seven::from_case_and_board(&self.first, board).hand_rank_value_and_hand();
@@ -314,6 +340,17 @@ mod arrays__matchups__two_by_2_tests {
         let board = Board::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
 
         assert_eq!(Win::FIRST | Win::SECOND, hands.win_for_board(&board));
+    }
+
+    /// TODO TD: This test deals with an edge case where one of the hands is invalid. Since
+    #[test]
+    #[ignore]
+    fn win_for_board__invalid() {
+        let hands = TwoBy2{first: Two::default(), second: Two::HAND_AS_AH};
+
+        let board = Board::from_str("A♠ K♠ Q♠ J♠ 2C").unwrap();
+
+        assert_eq!(Win::NONE, hands.win_for_board(&board));
     }
 
     #[test]

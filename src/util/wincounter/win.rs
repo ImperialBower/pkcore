@@ -4,6 +4,7 @@ use crate::util::wincounter::PlayerFlag;
 pub struct Win;
 
 impl Win {
+    pub const NONE: PlayerFlag = 0b0000_0000;
     pub const FIRST: PlayerFlag = 0b0000_0001;
     pub const SECOND: PlayerFlag = 0b0000_0010;
     pub const THIRD: PlayerFlag = 0b0000_0100;

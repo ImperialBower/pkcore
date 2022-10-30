@@ -594,6 +594,8 @@
             * `impl TryFrom<Vec<Card>> for Board` in order to get the community cards for a specific `Case`.
             * TwoBy2.eval(&self, board: &Board) -> Win
             * REFACTOR: eval to win_for_board()
+            * TwoBy2.win_for_board()
+              * DEFECT: Seven.from_case_and_board() doesn't return a HandRankValue of 0 when a blank card is passed in.
 
 ## LATER
 
