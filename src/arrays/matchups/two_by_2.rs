@@ -234,11 +234,19 @@ impl TwoBy2 {
     /// Before I close out this edge case, I noticed something from `Seven`. When I pass in a
     /// blank Two struct into `Seven::from_case_and_board()` it doesn't return an eval of 0.
     /// Let's write a test over in `Seven` to isolate this.
+    ///
+    /// OK, so we've fixed the Seven issue. Now, I'm feeling stupid. Rather than coding this
+    /// using the `hand_rank_value_and_hand()` method why not just use `hand_rank_and_hand()`
+    /// instead? This does force each permutation to do a little more work, but it is also
+    /// cleaner. Let's try it and see what happens.
+    ///
+    /// TODO POTENTIAL OPTIMIZATION: Use `hand_rank_value_and_hand()` VS `hand_rank_and_hand()`
+    ///
     pub fn win_for_board(&self, board: &Board) -> PlayerFlag {
         let (first_value, _) =
-            Seven::from_case_and_board(&self.first, board).hand_rank_value_and_hand();
+            Seven::from_case_and_board(&self.first, board).hand_rank_and_hand();
         let (second_value, _) =
-            Seven::from_case_and_board(&self.second, board).hand_rank_value_and_hand();
+            Seven::from_case_and_board(&self.second, board).hand_rank_and_hand();
 
         if first_value == second_value {
             Win::FIRST | Win::SECOND

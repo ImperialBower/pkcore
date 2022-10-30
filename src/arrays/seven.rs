@@ -156,6 +156,10 @@ impl HandRanker for Seven {
     }
 
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
+        if !self.is_dealt() {
+            return (HandRankValue::default(), Five::default())
+        }
+
         let mut best_hrv: HandRankValue = NO_HAND_RANK_VALUE;
         let mut best_hand = Five::default();
 
@@ -273,12 +277,22 @@ mod arrays__seven_tests {
     }
 
     #[test]
-    fn hand_rank() {
+    fn hand_ranker__hand_rank_and_hand() {
         let (hr, best) = Seven::from(CARDS).hand_rank_and_hand();
         assert_eq!(1608, hr.value);
         assert_eq!(Class::SixHighStraight, hr.class);
         assert_eq!(Name::Straight, hr.name);
         assert_eq!(Five::from_str("6S 5D 4S 3C 2S").unwrap(), best);
+    }
+
+    #[test]
+    fn hand_ranker__hand_rank_value_and_hand__invalid_two() {
+        let board = Board::from_str("A♠ K♠ Q♠ J♠ 2C").unwrap();
+        let seven = Seven::from_case_and_board(&Two::default(), &board);
+
+        let (hrv, _) = seven.hand_rank_value_and_hand();
+
+        assert_eq!(HandRankValue::default(), hrv);
     }
 
     #[test]
