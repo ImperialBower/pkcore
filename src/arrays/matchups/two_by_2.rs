@@ -5,11 +5,10 @@ use crate::play::board::Board;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::util::wincounter::PlayerFlag;
+use crate::Pile;
 use crate::{Card, PKError, TheNuts};
-use crate::{Cards, Pile};
 use itertools::Itertools;
 use log::debug;
-use std::mem;
 use std::sync::mpsc;
 
 /// # PHASE FIVE: Concurrency
@@ -98,39 +97,67 @@ impl TwoBy2 {
     ///
     /// ## The Plan
     ///
-    /// *
+    /// * `win_from_board()`
+    /// * ...
+    /// * Profit
+    ///
+    /// ## GAHHH!!!
+    ///
+    /// OK this sucks. It's just taking forever, and I have no idea why. I've started off trying to
+    /// do concurrency with by far the most complicated scenario. I am going to need to take a step back.
+    ///
+    /// Clearly, I have no idea what I am doing. Concurrency in Rust has always been a pain in the ass
+    /// for me. I deep dove into it back when I was working on getting my Java certification. __I
+    /// passed. That's right. Java 1.2 certified mother fuckers. Booo ya!__
+    ///
+    /// I am going to spike this shit. Move the problem into some code in the examples, and do
+    /// what I call the programmer's algorithm. The programmer's algorithm is how I describe my
+    /// job to non-programmers. Bassically, it's the following:
+    ///
+    /// * Bang head against the wall.
+    /// * Did your head go through the wall.
+    /// * If no, go back to step 1.
+    /// * If yes, drink!
+    /// * Repeat until you either drink or pass out.
+    /// * When you wake up, go on a long walk and then go back to step one.
+    ///
+    /// This is one of those situations where you hit the wall. Rust is flexible AF when it comes
+    /// to concurrency, and TBH, I really love how they do it, BUT, I don't really understand it
+    ///
+    /// # Errors
+    ///
+    /// Should throw an error if the board is fubar.
     ///
     pub fn to_wins(&self) -> Result<Wins, PKError> {
         let mut wins = Wins::default();
         let remaining = self.remaining();
         let combos = remaining.combinations(5);
-        // let chunks = combos.chunks((TwoBy2::PREFLOP_COMBO_COUNT / TwoBy2::DEFAULT_WORKER_COUNT).max(1));
-        // let (sender, receiver) = mpsc::channel();
-        //
-        // for chunk in &chunks {
-        //     for combo in chunk {
-        //         let sender = sender.clone();
-        //
-        //         let board = Cards::from(combo);
-        //         let (eval1, eval2) = self.best_from_seven(&board);
-        //
-        //         if eval1.rank > eval2.rank {
-        //             sender.send(Win::FIRST);
-        //         } else if eval2.rank > eval1.rank {
-        //             debug!("   Player 2 Wins: {} - {}", board, eval2);
-        //             sender.send(Win::SECOND);
-        //         } else {
-        //             debug!("   Tie: {} - {} / {}", board, eval1, eval2);
-        //             sender.send(Win::FIRST | Win::SECOND);
-        //         }
-        //     }
-        // }
-        //
-        // mem::drop(sender);
-        //
-        // for received in receiver {
-        //     wins.add_win(received);
-        // }
+        let chunks =
+            combos.chunks((TwoBy2::PREFLOP_COMBO_COUNT / TwoBy2::DEFAULT_WORKER_COUNT).max(1));
+        let (sender, receiver) = mpsc::channel();
+
+        println!("+++++");
+
+        for chunk in &chunks {
+            for combo in chunk {
+                let sender = sender.clone();
+
+                let board = Board::try_from(combo)?;
+                debug!("{}", board);
+
+                // let win = self.win_for_board(&board);
+
+                sender
+                    .send(self.win_for_board(&board))
+                    .expect("TODO: panic message");
+            }
+        }
+
+        drop(sender);
+
+        for received in receiver {
+            wins.add(received);
+        }
 
         Ok(wins)
     }
@@ -192,7 +219,7 @@ impl TwoBy2 {
     ///
     /// Now, we're hitting another problem with using a type alias for our `HandRankValue`.
     /// While we were all fancy with our `HandRank` struct in overriding the sorting for it
-    /// so that the lower the value of `HandRankValue` the greater the value for HandRank,
+    /// so that the lower the value of `HandRankValue` the greater the value for `HandRank`,
     /// making comparisons nice and easy.
     ///
     /// For this method, since we only have the `HandRank` we will need to invert the method.
@@ -242,11 +269,20 @@ impl TwoBy2 {
     ///
     /// TODO POTENTIAL OPTIMIZATION: Use `hand_rank_value_and_hand()` VS `hand_rank_and_hand()`
     ///
+    /// Frack it. I'm going back to what was and moving on. ABC: always be closing. I hate how much
+    /// I get caught up in edge cases that take a ton of time and aren't really realistic.
+    ///
+    /// ## Aside
+    ///
+    /// Clippy wants me to use a match instead of if else. Frack that. I'm
+    /// not
+    #[must_use]
+    #[allow(clippy::comparison_chain)]
     pub fn win_for_board(&self, board: &Board) -> PlayerFlag {
         let (first_value, _) =
-            Seven::from_case_and_board(&self.first, board).hand_rank_and_hand();
+            Seven::from_case_and_board(&self.first, board).hand_rank_value_and_hand();
         let (second_value, _) =
-            Seven::from_case_and_board(&self.second, board).hand_rank_and_hand();
+            Seven::from_case_and_board(&self.second, board).hand_rank_value_and_hand();
 
         if first_value == second_value {
             Win::FIRST | Win::SECOND
@@ -308,7 +344,6 @@ mod arrays__matchups__two_by_2_tests {
 
     // J♣ 4♥ 8♣ 7♣, 52.04% (891068), 46.58% (797607), 1.38% (23629)
     #[test]
-    #[ignore]
     fn to_wins() {
         let mut expected_wins = Wins::default();
         expected_wins.add_x(Win::FIRST, 891_068); // Robbi Wins
@@ -354,7 +389,10 @@ mod arrays__matchups__two_by_2_tests {
     #[test]
     #[ignore]
     fn win_for_board__invalid() {
-        let hands = TwoBy2{first: Two::default(), second: Two::HAND_AS_AH};
+        let hands = TwoBy2 {
+            first: Two::default(),
+            second: Two::HAND_AS_AH,
+        };
 
         let board = Board::from_str("A♠ K♠ Q♠ J♠ 2C").unwrap();
 

@@ -597,6 +597,7 @@
             * TwoBy2.win_for_board()
               * DEFECT: Seven.from_case_and_board() doesn't return a HandRankValue of 0 when a blank card is passed in.
                 * isolate test hand_ranker__hand_rank_value_and_hand__invalid_two()
+            * close out .to_wins()
 
 ## LATER
 

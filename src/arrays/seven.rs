@@ -157,7 +157,7 @@ impl HandRanker for Seven {
 
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
         if !self.is_dealt() {
-            return (HandRankValue::default(), Five::default())
+            return (HandRankValue::default(), Five::default());
         }
 
         let mut best_hrv: HandRankValue = NO_HAND_RANK_VALUE;
