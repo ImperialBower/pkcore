@@ -167,6 +167,9 @@ impl TwoBy2 {
     /// Let's test drive this method using Queenbury Rules. We'll
     /// write one failing test for our first scenario, which is
     /// that for a specific board, the first player wins.
+    ///
+    /// OK, so we have our first test passing with the simplest method possible. Now let's
+    /// write one for the second player winning.
     pub fn win_for_board(&self, board: &Board) -> PlayerFlag {
         Win::FIRST
     }
@@ -246,6 +249,16 @@ mod arrays__matchups__two_by_2_tests {
         let board = Board::from_str("A♠ K♠ 2♣ 3♣ T♦").unwrap();
 
         assert_eq!(Win::FIRST, hands.win_for_board(&board));
+    }
+
+    #[test]
+    fn win_for_board__second_wins() {
+        let hands = TwoBy2::new(Two::HAND_JC_4H, Two::HAND_8C_7C)
+            .unwrap();
+
+        let board = Board::from_str("A♠ K♠ 2♣ 3♣ T♣").unwrap();
+
+        assert_eq!(Win::SECOND, hands.win_for_board(&board));
     }
 
     #[test]
