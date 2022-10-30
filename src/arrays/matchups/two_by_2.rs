@@ -7,6 +7,8 @@ use itertools::Itertools;
 use log::debug;
 use std::mem;
 use std::sync::mpsc;
+use crate::play::board::Board;
+use crate::util::wincounter::PlayerFlag;
 
 /// # PHASE FIVE: Concurrency
 ///
@@ -92,6 +94,10 @@ impl TwoBy2 {
     /// Next, we'll need to convert this into a `Win`, which will be passed into our `Wins` type so that once we're done we can calculate the
     /// odds for this hand.
     ///
+    /// ## The Plan
+    ///
+    /// *
+    ///
     pub fn to_wins(&self) -> Result<Wins, PKError> {
         let mut wins = Wins::default();
         let remaining = self.remaining();
@@ -126,6 +132,13 @@ impl TwoBy2 {
 
         Ok(wins)
     }
+
+    /// Let's test drive this method using Queenbury Rules. We'll
+    /// write one failing test for our first scenario, which is
+    /// that for a specific board, the first player wins.
+    pub fn win_for_board(&self, board: &Board) -> PlayerFlag {
+        todo!()
+    }
 }
 
 impl Pile for TwoBy2 {
@@ -150,6 +163,7 @@ impl Pile for TwoBy2 {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod arrays__matchups__two_by_2_tests {
+    use std::str::FromStr;
     use super::*;
     use crate::util::wincounter::win::Win;
 
@@ -190,6 +204,17 @@ mod arrays__matchups__two_by_2_tests {
             .unwrap();
 
         assert_eq!(expected_wins, actual_wins);
+    }
+
+
+    #[test]
+    fn win_for_board__first_wins() {
+        let hands = TwoBy2::new(Two::HAND_JC_4H, Two::HAND_8C_7C)
+            .unwrap();
+
+        let board = Board::from_str("A♠ K♠ 2♣ 3♣ T♦").unwrap();
+
+        assert_eq!(Win::FIRST, hands.win_for_board(&board));
     }
 
     #[test]

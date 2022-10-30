@@ -592,6 +592,8 @@
           * .to_wins()
             * `impl Pile for TwoBy2` to get remaining cards.
             * `impl TryFrom<Vec<Card>> for Board` in order to get the community cards for a specific `Case`.
+            * TwoBy2.eval(&self, board: &Board) -> Win
+            * REFACTOR: eval to win_for_board()
 
 ## LATER
 
