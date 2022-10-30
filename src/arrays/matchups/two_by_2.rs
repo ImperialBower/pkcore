@@ -189,20 +189,29 @@ impl TwoBy2 {
     /// possible hand. We're discarding that because we don't see any use for it. It's good to
     /// make a note of things like this. Could there be a use for this data? Given the volume
     /// of evaluations that we will be doing, I don't think so, but you never know.
+    ///
+    /// Now, we're hitting another problem with using a type alias for our `HandRankValue`.
+    /// While we were all fancy with our `HandRank` struct in overriding the sorting for it
+    /// so that the lower the value of `HandRankValue` the greater the value for HandRank,
+    /// making comparisons nice and easy.
+    ///
+    /// For this method, since we only have the `HandRank` we will need to invert the method.
+    /// This isn't a big deal, but it does make me hate my infatuation with type aliases. For
+    /// now we will do that, and make a TODO RF at `HandRankValue`.
+    ///
+    /// Done. Now let's deal with a tie. The simplest way is for the board to just be a straight
+    /// flush with A♠ K♠ Q♠ J♠ T♠.
+    ///
+    /// Now this is weird... we have a false positive. This is a great example of things to watch
+    /// out for in our tests. When we copied it over we didn't adjust it to set the expected
+    /// result to be a tie. Let's fix that.
     pub fn win_for_board(&self, board: &Board) -> PlayerFlag {
         let (first_value, _) =
             Seven::from_case_and_board(&self.first, board).hand_rank_value_and_hand();
         let (second_value, _) =
             Seven::from_case_and_board(&self.second, board).hand_rank_value_and_hand();
 
-        /// Now, we're hitting another problem with using a type alias for our `HandRankValue`.
-        /// While we were all fancy with our `HandRank` struct in overriding the sorting for it
-        /// so that the lower the value of `HandRankValue` the greater the value for HandRank,
-        /// making comparisons nice and easy.
-        ///
-        /// For this method, since we only have the `HandRank` we will need to invert the method.
-        /// This isn't a big deal, but it does make me hate my infatuation with type aliases. For
-        /// now we will do that, and make a TODO RF at `HandRankValue`.
+
         if first_value < second_value {
             Win::FIRST
         } else {
@@ -290,6 +299,15 @@ mod arrays__matchups__two_by_2_tests {
         let hands = TwoBy2::new(Two::HAND_JC_4H, Two::HAND_8C_7C).unwrap();
 
         let board = Board::from_str("A♠ K♠ 2♣ 3♣ T♣").unwrap();
+
+        assert_eq!(Win::SECOND, hands.win_for_board(&board));
+    }
+
+    #[test]
+    fn win_for_board__tie() {
+        let hands = TwoBy2::new(Two::HAND_JC_4H, Two::HAND_8C_7C).unwrap();
+
+        let board = Board::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
 
         assert_eq!(Win::SECOND, hands.win_for_board(&board));
     }
