@@ -133,6 +133,37 @@ impl TwoBy2 {
         Ok(wins)
     }
 
+    /// To start with, let's map out the boundary conditions.
+    ///
+    /// Positive boundary conditions:
+    ///
+    /// * First player wins
+    /// * Second player wins
+    /// * Tie
+    ///
+    /// What are the negative boundary conditions?
+    ///
+    /// * Board is invalid.
+    /// * Hands are invalid
+    ///   * Not dealt
+    ///   * overlapping cards
+    /// * Overlapping cards between board and hands
+    ///
+    /// This is where a judgement call is in order. Now we can harden the fuck
+    /// out of this code, but honestly, all of this should have been dealt with
+    /// long before we get to here. Our `Cards` class is a set that precludes duplicate
+    /// cards. Our struct already checks to make sure that our cards are actually cards
+    /// with `is_dealt()` from our `Two` struct. We could be super careful and validate
+    /// things again, but that would just clutter up the method with a lot of duplicate
+    /// code. Being careful is one thing, but it's important to do it at the right place
+    /// at the right time so that your code isn't just safe, but also elegant and maintainable.
+    /// This is why, for this moment, I'm going to skip checking for negative boundary conditions.
+    ///
+    /// Having said that, we are always on the lookout for defects in our code, and other tests
+    /// may uncover something, and then we will adjust accordingly. How, when, and where you
+    /// test your code is just as important to your craft as how you code your code itself. I would
+    /// maintain that it's even more important.
+    ///
     /// Let's test drive this method using Queenbury Rules. We'll
     /// write one failing test for our first scenario, which is
     /// that for a specific board, the first player wins.
