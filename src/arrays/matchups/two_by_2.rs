@@ -170,6 +170,17 @@ impl TwoBy2 {
     ///
     /// OK, so we have our first test passing with the simplest method possible. Now let's
     /// write one for the second player winning.
+    ///
+    /// ## ASIDE
+    ///
+    /// I'll be honest with you, returning to this `Win` constants, I really hate them. The fact
+    /// that they aren't just a `Win` struct seems ridiculous to me. I know I've complained about
+    /// them before, but very soon I'm going to need to do a major refactoring of them to clean
+    /// up the code. The big lesson of this is to avoid type aliases unless you have a very good
+    /// reason, and the only reason I can think of is to make it easier to communicate what the
+    /// type is doing, without the need for a lot of custom code.
+    ///
+    /// ## Back to the second test
     pub fn win_for_board(&self, board: &Board) -> PlayerFlag {
         Win::FIRST
     }
