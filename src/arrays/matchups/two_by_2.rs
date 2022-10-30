@@ -168,7 +168,7 @@ impl TwoBy2 {
     /// write one failing test for our first scenario, which is
     /// that for a specific board, the first player wins.
     pub fn win_for_board(&self, board: &Board) -> PlayerFlag {
-        todo!()
+        Win::FIRST
     }
 }
 
