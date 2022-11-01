@@ -1,16 +1,16 @@
-use std::sync::mpsc;
 use itertools::Itertools;
 use log::debug;
-use pkcore::arrays::HandRanker;
+use pkcore::analysis::the_nuts::TheNuts;
 use pkcore::arrays::seven::Seven;
 use pkcore::arrays::two::Two;
-use pkcore::{Pile, PKError};
-use pkcore::analysis::the_nuts::TheNuts;
+use pkcore::arrays::HandRanker;
 use pkcore::card::Card;
 use pkcore::play::board::Board;
-use pkcore::util::wincounter::PlayerFlag;
 use pkcore::util::wincounter::win::Win;
 use pkcore::util::wincounter::wins::Wins;
+use pkcore::util::wincounter::PlayerFlag;
+use pkcore::{PKError, Pile};
+use std::sync::mpsc;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct TwoBy2 {

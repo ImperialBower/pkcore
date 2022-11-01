@@ -1,7 +1,13 @@
+use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
+use crate::arrays::two::Two;
+use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::util::wincounter::win::Win;
+use crate::util::wincounter::PlayerFlag;
 use crate::{PKError, Pile, TheNuts};
+use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
@@ -18,6 +24,20 @@ impl Board {
     #[must_use]
     pub fn new(flop: Three, turn: Card, river: Card) -> Self {
         Board { flop, turn, river }
+    }
+
+    #[must_use]
+    pub fn river_heads_up(&self, first: Two, second: Two) -> PlayerFlag {
+        let (first_value, _) = Seven::from_case_and_board(&first, self).hand_rank_value_and_hand();
+        let (second_value, _) =
+            Seven::from_case_and_board(&second, self).hand_rank_value_and_hand();
+
+        // OK, I will admit it, this is a much cleaner way to write than an if else.
+        match first_value.cmp(&second_value) {
+            Ordering::Greater => Win::SECOND,
+            Ordering::Less => Win::FIRST,
+            Ordering::Equal => Win::FIRST | Win::SECOND,
+        }
     }
 }
 
@@ -103,6 +123,33 @@ impl TryFrom<Vec<Card>> for Board {
 mod play_board_tests {
     use super::*;
     use std::str::FromStr;
+
+    #[test]
+    fn win_for_board__first_wins() {
+        let board = Board::from_str("A♠ K♠ 2♣ 3♣ T♦").unwrap();
+
+        let win = board.river_heads_up(Two::HAND_JC_4H, Two::HAND_8C_7C);
+
+        assert_eq!(Win::FIRST, win);
+    }
+
+    #[test]
+    fn win_for_board__second_wins() {
+        let board = Board::from_str("A♠ K♠ 2♣ 3♣ T♣").unwrap();
+
+        let win = board.river_heads_up(Two::HAND_JC_4H, Two::HAND_8C_7C);
+
+        assert_eq!(Win::SECOND, win);
+    }
+
+    #[test]
+    fn river_heads_up__tie() {
+        let board = Board::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
+
+        let win = board.river_heads_up(Two::HAND_JC_4H, Two::HAND_8C_7C);
+
+        assert_eq!(Win::FIRST | Win::SECOND, win);
+    }
 
     #[test]
     fn display() {
