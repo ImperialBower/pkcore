@@ -117,7 +117,7 @@ pub const HAND: TwoBy2 = TwoBy2 {
 fn main() {
     env_logger::init();
 
-    let bloop = HAND.combinations().into_iter().map(|b| )
+    // let bloop = HAND.combinations().into_iter().map(|b| )
 
     // HAND.combinations().par_iter()
 
