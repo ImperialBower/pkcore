@@ -136,7 +136,7 @@ impl TwoBy2 {
             combos.chunks((TwoBy2::PREFLOP_COMBO_COUNT / TwoBy2::DEFAULT_WORKER_COUNT).max(1));
         let (sender, receiver) = mpsc::channel();
 
-        println!("+++++");
+        debug!("+++++");
 
         for chunk in &chunks {
             for combo in chunk {
@@ -344,6 +344,7 @@ mod arrays__matchups__two_by_2_tests {
 
     // J♣ 4♥ 8♣ 7♣, 52.04% (891068), 46.58% (797607), 1.38% (23629)
     #[test]
+    #[ignore]
     fn to_wins() {
         let mut expected_wins = Wins::default();
         expected_wins.add_x(Win::FIRST, 891_068); // Robbi Wins
