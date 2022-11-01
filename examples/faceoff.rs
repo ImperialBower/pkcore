@@ -1,4 +1,5 @@
-use itertools::Itertools;
+use indexmap::set::IntoIter;
+use itertools::{Combinations, Itertools};
 use log::debug;
 use pkcore::analysis::the_nuts::TheNuts;
 use pkcore::arrays::seven::Seven;
@@ -10,8 +11,19 @@ use pkcore::util::wincounter::win::Win;
 use pkcore::util::wincounter::wins::Wins;
 use pkcore::util::wincounter::PlayerFlag;
 use pkcore::{PKError, Pile};
+use rayon::prelude::*;
 use std::sync::mpsc;
 
+/// We're going to move our current round of headbanging to this example file.
+/// I need a place to spike out this shit, and so here it is. There has to be
+/// cleaner ways of doing this.
+///
+/// The first thing that we'll need to do is get some map
+///
+/// Let's try something different. I'm thinking there must be a way to leverage
+/// [Rayon's](https://github.com/rayon-rs/rayon) superfoo.
+///
+/// RUST_LOG=debug cargo run --example faceoff
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct TwoBy2 {
     pub first: Two,
@@ -21,6 +33,10 @@ pub struct TwoBy2 {
 impl TwoBy2 {
     pub const PREFLOP_COMBO_COUNT: usize = 1_712_304;
     pub const DEFAULT_WORKER_COUNT: usize = 10;
+
+    fn combinations(&self) -> Combinations<IntoIter<Card>> {
+        self.remaining().combinations(5)
+    }
 
     #[allow(clippy::comparison_chain)]
     fn win_for_board(&self, board: &Board) -> PlayerFlag {
@@ -46,7 +62,7 @@ impl TwoBy2 {
         debug!("Remaining: {remaining}");
         let combos = remaining.combinations(5);
         let chunks =
-            combos.chunks((TwoBy2::PREFLOP_COMBO_COUNT / TwoBy2::DEFAULT_WORKER_COUNT).max(1));
+            combos.chunks((TwoBy2::PREFLOP_COMBO_COUNT / TwoBy2::DEFAULT_WORKER_COUNT).max(5));
         let (sender, receiver) = mpsc::channel();
 
         for chunk in &chunks {
@@ -101,7 +117,11 @@ pub const HAND: TwoBy2 = TwoBy2 {
 fn main() {
     env_logger::init();
 
-    let actual_wins = HAND.to_wins().unwrap();
+    let bloop = HAND.combinations().into_iter().map(|b| )
 
-    println!("{:?}", actual_wins);
+    // HAND.combinations().par_iter()
+
+    // let actual_wins = HAND.to_wins().unwrap();
+
+    // println!("{:?}", actual_wins);
 }

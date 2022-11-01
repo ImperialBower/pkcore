@@ -275,7 +275,7 @@ impl TwoBy2 {
     /// ## Aside
     ///
     /// Clippy wants me to use a match instead of if else. Frack that. I'm
-    /// not
+    /// not doing it.
     #[must_use]
     #[allow(clippy::comparison_chain)]
     pub fn win_for_board(&self, board: &Board) -> PlayerFlag {
