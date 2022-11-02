@@ -142,7 +142,7 @@ impl TwoBy2 {
             for combo in chunk {
                 let sender = sender.clone();
 
-                let board = Board::try_from(combo)?;
+                let board = Board::from(combo);
                 debug!("{}", board);
 
                 // let win = self.win_for_board(&board);

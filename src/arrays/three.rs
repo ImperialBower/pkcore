@@ -52,7 +52,8 @@ impl From<Vec<Card>> for Three {
     /// simplicity. _Ship it!_
     fn from(v: Vec<Card>) -> Self {
         match v.len() {
-            3 => {
+            0..=2 => Three::default(),
+            _ => {
                 let one = match v.get(0) {
                     Some(m) => *m,
                     None => Card::BLANK,
@@ -65,14 +66,8 @@ impl From<Vec<Card>> for Three {
                     Some(m) => *m,
                     None => Card::BLANK,
                 };
-                let three = Three([one, two, three]);
-                if three.is_dealt() {
-                    three
-                } else {
-                    Three::default()
-                }
+                Three([one, two, three])
             }
-            _ => Three::default(),
         }
     }
 }
@@ -161,7 +156,7 @@ mod arrays__three_tests {
                 Card::NINE_CLUBS,
                 Card::SIX_DIAMONDS,
                 Card::FIVE_HEARTS
-            ])
+            ]),
         );
         // It should return default if any Let's do all the permutations, just to be sure.
         //
@@ -173,11 +168,11 @@ mod arrays__three_tests {
             Three::from(vec![Card::BLANK, Card::BLANK, Card::BLANK])
         );
         assert_eq!(
-            Three::default(),
+            Three([Card::BLANK, Card::ACE_HEARTS, Card::BLANK]),
             Three::from(vec![Card::BLANK, Card::ACE_HEARTS, Card::BLANK])
         );
         assert_eq!(
-            Three::default(),
+            Three([Card::BLANK, Card::BLANK, Card::ACE_HEARTS]),
             Three::from(vec![Card::BLANK, Card::BLANK, Card::ACE_HEARTS])
         );
         assert_eq!(

@@ -600,6 +600,9 @@
             * close out .to_wins()
             * SPIKE: faceoff example
               * let's try rayon
+              * map this thing
+                * Board.river_heads_up()
+                * impl From<Vec<Card>> for Board 
 
 ## LATER
 

@@ -23,6 +23,12 @@ use std::sync::mpsc;
 /// Let's try something different. I'm thinking there must be a way to leverage
 /// [Rayon's](https://github.com/rayon-rs/rayon) superfoo.
 ///
+/// # The Plan
+///
+/// OK, so here's the plan: we're going to move the win calculation to our `Board` struct,
+/// that way we can map through all the combinations and then collect the results into a vector.
+/// After that, maybe we'll be lucky and can plug in rayon for the win.
+///
 /// RUST_LOG=debug cargo run --example faceoff
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct TwoBy2 {
@@ -69,7 +75,7 @@ impl TwoBy2 {
             for combo in chunk {
                 let sender = sender.clone();
 
-                let board = Board::try_from(combo)?;
+                let board = Board::from(combo);
                 debug!("{}", board);
 
                 // let win = self.win_for_board(&board);

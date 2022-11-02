@@ -51,6 +51,45 @@ impl Display for Board {
     }
 }
 
+impl From<Vec<Card>> for Board {
+    fn from(v: Vec<Card>) -> Self {
+        match v.len() {
+            0..=2 => Board::default(),
+            3 => Board {
+                flop: Three::from(v),
+                turn: Card::default(),
+                river: Card::default(),
+            },
+            4 => {
+                let turn = match v.get(3) {
+                    Some(m) => *m,
+                    None => Card::BLANK,
+                };
+                Board {
+                    flop: Three::from(v),
+                    turn,
+                    river: Card::default(),
+                }
+            },
+            _ => {
+                let turn = match v.get(3) {
+                    Some(m) => *m,
+                    None => Card::BLANK,
+                };
+                let river = match v.get(4) {
+                    Some(m) => *m,
+                    None => Card::BLANK,
+                };
+                Board {
+                    flop: Three::from(v),
+                    turn,
+                    river,
+                }
+            }
+        }
+    }
+}
+
 impl FromStr for Board {
     type Err = PKError;
 
@@ -110,13 +149,13 @@ impl TryFrom<Cards> for Board {
     }
 }
 
-impl TryFrom<Vec<Card>> for Board {
-    type Error = PKError;
-
-    fn try_from(v: Vec<Card>) -> Result<Self, Self::Error> {
-        Board::try_from(Cards::from(v))
-    }
-}
+// impl TryFrom<Vec<Card>> for Board {
+//     type Error = PKError;
+//
+//     fn try_from(v: Vec<Card>) -> Result<Self, Self::Error> {
+//         Board::try_from(Cards::from(v))
+//     }
+// }
 
 #[cfg(test)]
 #[allow(non_snake_case)]
