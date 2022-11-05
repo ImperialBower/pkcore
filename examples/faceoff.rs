@@ -13,6 +13,7 @@ use pkcore::util::wincounter::PlayerFlag;
 use pkcore::{PKError, Pile};
 use rayon::prelude::*;
 use std::sync::mpsc;
+use std::time::Instant;
 
 /// We're going to move our current round of headbanging to this example file.
 /// I need a place to spike out this shit, and so here it is. There has to be
@@ -120,14 +121,36 @@ pub const HAND: TwoBy2 = TwoBy2 {
     second: Two::HAND_8C_7C,
 };
 
-fn main() {
-    env_logger::init();
+fn way1() {
+    let bloop: Vec<PlayerFlag> = HAND
+        .combinations()
+        .into_iter()
+        .map(|v| Board::from(v).river_heads_up(HAND.first, HAND.second))
+        .collect();
+}
 
-    // let bloop = HAND.combinations().into_iter().map(|b| )
+fn way2() {
+    let bloop: Vec<PlayerFlag> = HAND
+        .combinations()
+        .par_bridge()
+        .map(|v| Board::from(v).river_heads_up(HAND.first, HAND.second))
+        .collect();
+}
+
+fn main() {
+    let start = Instant::now();
+    env_logger::init();
+    //
+    // let c: _ = HAND
+    //     .combinations().collect();
+
+    way2();
 
     // HAND.combinations().par_iter()
 
     // let actual_wins = HAND.to_wins().unwrap();
 
     // println!("{:?}", actual_wins);
+
+    println!("Time taken: {:?}", start.elapsed());
 }

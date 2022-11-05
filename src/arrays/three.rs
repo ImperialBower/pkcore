@@ -51,24 +51,19 @@ impl From<Vec<Card>> for Three {
     /// While this is not the most elegant solution to me, I do love it's straight-forward
     /// simplicity. _Ship it!_
     fn from(v: Vec<Card>) -> Self {
-        match v.len() {
-            0..=2 => Three::default(),
-            _ => {
-                let one = match v.get(0) {
-                    Some(m) => *m,
-                    None => Card::BLANK,
-                };
-                let two = match v.get(1) {
-                    Some(m) => *m,
-                    None => Card::BLANK,
-                };
-                let three = match v.get(2) {
-                    Some(m) => *m,
-                    None => Card::BLANK,
-                };
-                Three([one, two, three])
-            }
-        }
+        let one = match v.get(0) {
+            Some(m) => *m,
+            None => Card::BLANK,
+        };
+        let two = match v.get(1) {
+            Some(m) => *m,
+            None => Card::BLANK,
+        };
+        let three = match v.get(2) {
+            Some(m) => *m,
+            None => Card::BLANK,
+        };
+        Three([one, two, three])
     }
 }
 
@@ -176,25 +171,28 @@ mod arrays__three_tests {
             Three::from(vec![Card::BLANK, Card::BLANK, Card::ACE_HEARTS])
         );
         assert_eq!(
-            Three::default(),
+            Three([Card::BLANK, Card::ACE_HEARTS, Card::SEVEN_HEARTS]),
             Three::from(vec![Card::BLANK, Card::ACE_HEARTS, Card::SEVEN_HEARTS])
         );
         assert_eq!(
-            Three::default(),
+            Three([Card::ACE_HEARTS, Card::BLANK, Card::SEVEN_HEARTS]),
             Three::from(vec![Card::ACE_HEARTS, Card::BLANK, Card::SEVEN_HEARTS])
         );
         assert_eq!(
-            Three::default(),
+            Three([Card::ACE_HEARTS, Card::SEVEN_HEARTS, Card::BLANK]),
             Three::from(vec![Card::ACE_HEARTS, Card::SEVEN_HEARTS, Card::BLANK])
         );
-        assert_eq!(Three::default(), Three::from(vec![Card::ACE_HEARTS]));
         assert_eq!(
-            Three::default(),
+            Three([Card::ACE_HEARTS, Card::BLANK, Card::BLANK]),
+            Three::from(vec![Card::ACE_HEARTS])
+        );
+        assert_eq!(
+            Three([Card::ACE_HEARTS, Card::SEVEN_HEARTS, Card::BLANK]),
             Three::from(vec![Card::ACE_HEARTS, Card::SEVEN_HEARTS])
         );
         assert_eq!(
-            Two::default(),
-            Two::from(vec![
+            Three([Card::ACE_HEARTS, Card::SEVEN_HEARTS, Card::SEVEN_DIAMONDS]),
+            Three::from(vec![
                 Card::ACE_HEARTS,
                 Card::SEVEN_HEARTS,
                 Card::SEVEN_DIAMONDS,

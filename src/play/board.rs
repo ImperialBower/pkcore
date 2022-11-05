@@ -7,6 +7,7 @@ use crate::cards::Cards;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::PlayerFlag;
 use crate::{PKError, Pile, TheNuts};
+use log::debug;
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -32,6 +33,8 @@ impl Board {
         let (second_value, _) =
             Seven::from_case_and_board(&second, self).hand_rank_value_and_hand();
 
+        debug!("{self} {first_value} {second_value}");
+
         // OK, I will admit it, this is a much cleaner way to write than an if else.
         match first_value.cmp(&second_value) {
             Ordering::Greater => Win::SECOND,
@@ -52,6 +55,8 @@ impl Display for Board {
 }
 
 impl From<Vec<Card>> for Board {
+    /// So I've changed the contract from `try_from()` to `from()`. Maybe it's lazy coding
+    /// but it's easier for me to just pass the state through and deal with it later.
     fn from(v: Vec<Card>) -> Self {
         match v.len() {
             0..=2 => Board::default(),
@@ -70,7 +75,7 @@ impl From<Vec<Card>> for Board {
                     turn,
                     river: Card::default(),
                 }
-            },
+            }
             _ => {
                 let turn = match v.get(3) {
                     Some(m) => *m,
@@ -263,35 +268,32 @@ mod play_board_tests {
     fn try_from__vec_card() {
         assert_eq!(
             "FLOP: 9♣ 6♦ 5♥, TURN: __, RIVER: __",
-            Board::try_from(vec![
+            Board::from(vec![
                 Card::NINE_CLUBS,
                 Card::SIX_DIAMONDS,
                 Card::FIVE_HEARTS
             ])
-            .unwrap()
             .to_string()
         );
         assert_eq!(
             "FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: __",
-            Board::try_from(vec![
+            Board::from(vec![
                 Card::NINE_CLUBS,
                 Card::SIX_DIAMONDS,
                 Card::FIVE_HEARTS,
                 Card::FIVE_SPADES,
             ])
-            .unwrap()
             .to_string()
         );
         assert_eq!(
             "FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: 8♠",
-            Board::try_from(vec![
+            Board::from(vec![
                 Card::NINE_CLUBS,
                 Card::SIX_DIAMONDS,
                 Card::FIVE_HEARTS,
                 Card::FIVE_SPADES,
                 Card::EIGHT_SPADES,
             ])
-            .unwrap()
             .to_string()
         );
     }
