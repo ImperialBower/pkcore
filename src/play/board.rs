@@ -11,6 +11,7 @@ use log::debug;
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use crate::play::hole_cards::HoleCards;
 
 /// A `Board` is a type that represents a single instance of the face up `Cards`
 /// of one `Game` of `Texas hold 'em`.
@@ -41,6 +42,11 @@ impl Board {
             Ordering::Less => Win::FIRST,
             Ordering::Equal => Win::FIRST | Win::SECOND,
         }
+    }
+
+    #[must_use]
+    pub fn v_river_heads_up(&self, hands: &HoleCards) -> PlayerFlag {
+
     }
 }
 
