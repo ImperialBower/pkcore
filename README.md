@@ -603,6 +603,7 @@
               * map this thing
                 * Board.river_heads_up()
                 * impl From<Vec<Card>> for Board 
+                * THE RAYON EXPLORATION
 
 ## LATER
 
