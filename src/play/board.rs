@@ -11,10 +11,17 @@ use log::debug;
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use crate::analysis::eval::Eval;
 use crate::play::hole_cards::HoleCards;
 
 /// A `Board` is a type that represents a single instance of the face up `Cards`
 /// of one `Game` of `Texas hold 'em`.
+///
+/// # Eval
+///
+/// We're deep in the faceoff spike, trying to folk in concurrency to our library.
+/// We've gotten Board to do a heads up eval. Now, let's do the same thing for a
+/// vector of hands. We'll start by writing a test that
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct Board {
     pub flop: Three,
@@ -26,6 +33,19 @@ impl Board {
     #[must_use]
     pub fn new(flop: Three, turn: Card, river: Card) -> Self {
         Board { flop, turn, river }
+    }
+
+    /// Returns an `Eval` of the best hand of the passed in vector.
+    #[must_use]
+    pub fn best(&self, hands: Vec<Two>) -> Eval {
+        let mut best = Eval::default();
+
+        best
+    }
+
+    #[must_use]
+    pub fn river(&self, hands: Vec<Two>) -> PlayerFlag {
+        todo!()
     }
 
     #[must_use]
@@ -44,10 +64,10 @@ impl Board {
         }
     }
 
-    #[must_use]
-    pub fn v_river_heads_up(&self, hands: &HoleCards) -> PlayerFlag {
-
-    }
+    // #[must_use]
+    // pub fn v_river_heads_up(&self, hands: &HoleCards) -> PlayerFlag {
+    //
+    // }
 }
 
 impl Display for Board {
@@ -175,7 +195,7 @@ mod play_board_tests {
     use std::str::FromStr;
 
     #[test]
-    fn win_for_board__first_wins() {
+    fn river_heads_up__first_wins() {
         let board = Board::from_str("A♠ K♠ 2♣ 3♣ T♦").unwrap();
 
         let win = board.river_heads_up(Two::HAND_JC_4H, Two::HAND_8C_7C);
@@ -184,7 +204,7 @@ mod play_board_tests {
     }
 
     #[test]
-    fn win_for_board__second_wins() {
+    fn river_heads_up__second_wins() {
         let board = Board::from_str("A♠ K♠ 2♣ 3♣ T♣").unwrap();
 
         let win = board.river_heads_up(Two::HAND_JC_4H, Two::HAND_8C_7C);
@@ -200,6 +220,28 @@ mod play_board_tests {
 
         assert_eq!(Win::FIRST | Win::SECOND, win);
     }
+
+    // "FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: 8♠",
+    // Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap().to_string()
+    #[test]
+    fn river__2_players() {
+        let board = Board::from_str("A♠ K♠ 2♣ 3♣ T♦").unwrap();
+
+        let win = board.river(vec![Two::HAND_JC_4H, Two::HAND_8C_7C]);
+
+        assert_eq!(Win::FIRST, win);
+    }
+
+    #[test]
+    #[ignore]
+    fn river__3_players() {
+        let board = Board::from_str("Q♠ J♠ T♣ 8♣ 7♦").unwrap();
+
+        let win = board.river_heads_up(Two::HAND_JC_4H, Two::HAND_8C_7C);
+
+        assert_eq!(Win::FIRST, win);
+    }
+
 
     #[test]
     fn display() {

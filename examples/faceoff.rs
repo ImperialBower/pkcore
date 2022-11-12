@@ -31,6 +31,12 @@ use std::time::Instant;
 /// After that, maybe we'll be lucky and can plug in rayon for the win.
 ///
 /// RUST_LOG=debug cargo run --example faceoff
+///
+/// ## From heads up to v!
+///
+/// I've gotten it to work with rayon with a heads up evaluation. Let's see if we can
+/// bump that up to a vector of two or more hands. (Why not one hand as well, just for kicks)
+///
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct TwoBy2 {
     pub first: Two,
@@ -135,6 +141,10 @@ fn way2() {
         .par_bridge()
         .map(|v| Board::from(v).river_heads_up(HAND.first, HAND.second))
         .collect();
+}
+
+fn way3() {
+
 }
 
 fn main() {

@@ -604,6 +604,8 @@
                 * Board.river_heads_up()
                 * impl From<Vec<Card>> for Board 
                 * THE RAYON EXPLORATION
+                * Board.river()
+                  * Board.best()
 
 ## LATER
 
