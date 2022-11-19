@@ -383,7 +383,7 @@ impl Sevens {
 
 impl From<Vec<Seven>> for Sevens {
     fn from(v: Vec<Seven>) -> Self {
-        Sevens::from(v)
+        Sevens(v)
     }
 }
 
