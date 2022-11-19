@@ -1,10 +1,12 @@
 use crate::analysis::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
+use crate::arrays::seven::Sevens;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::play::board::Board;
+use crate::play::hole_cards::HoleCards;
 use crate::{PKError, Pile, TheNuts};
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -36,7 +38,7 @@ impl Five {
         ])
     }
 
-    //region accessors
+    // region accessors
     #[must_use]
     pub fn first(&self) -> Card {
         self.0[0]
@@ -70,7 +72,7 @@ impl Five {
     pub fn to_arr(&self) -> [Card; 5] {
         self.0
     }
-    //endregion
+    // endregion
 
     #[must_use]
     pub fn is_flush(&self) -> bool {
@@ -94,7 +96,7 @@ impl Five {
         self.or_rank_bits() == Five::WHEEL_OR_BITS
     }
 
-    //region private functions
+    // region private functions
 
     #[must_use]
     fn and_bits(&self) -> u32 {
@@ -163,7 +165,13 @@ impl Five {
         }
         crate::lookups::unique5::UNIQUE_5[index]
     }
-    //endregion
+    // endregion
+
+    // region eval
+    pub fn fan_out(&self, hands: &HoleCards) -> Sevens {
+        todo!()
+    }
+    // endregion
 }
 
 impl Display for Five {

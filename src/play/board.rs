@@ -1,9 +1,11 @@
+use crate::analysis::eval::Eval;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::PlayerFlag;
 use crate::{PKError, Pile, TheNuts};
@@ -11,8 +13,6 @@ use log::debug;
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use crate::analysis::eval::Eval;
-use crate::play::hole_cards::HoleCards;
 
 /// A `Board` is a type that represents a single instance of the face up `Cards`
 /// of one `Game` of `Texas hold 'em`.
@@ -64,10 +64,24 @@ impl Board {
         }
     }
 
-    // #[must_use]
-    // pub fn v_river_heads_up(&self, hands: &HoleCards) -> PlayerFlag {
-    //
-    // }
+    /// I am totally not liking the context for these calls.
+    ///
+    /// # Aside
+    ///
+    /// I've been really scatterbrained lately. There's been a lot of stress at work, and it's
+    /// made it really hard for me to think clearly. I've been staring at this method for what
+    /// feels like a month. As a developer, and as a human, I've never taken enough time time
+    /// on things like health, both physical and mental. Now that I am in my 50s it's really
+    /// starting to show. Take care of yourself. You can't do good work if you can't do good
+    /// to yourself. Many managers are toxic fucks. (That's how they got to be managers.) Pay
+    /// attention to what's happening at certain social media platforms right now. We're witnessing
+    /// it in real time. Learning to detect them before you say yes is a skill I've taken a long
+    /// time to master, based on a lot of hard taught lessons. You may not get as many offers, but
+    /// trust me, that's a good thing.
+    #[must_use]
+    pub fn v_river_heads_up(&self, hands: &HoleCards) -> PlayerFlag {
+        todo!()
+    }
 }
 
 impl Display for Board {
@@ -241,7 +255,6 @@ mod play_board_tests {
 
         assert_eq!(Win::FIRST, win);
     }
-
 
     #[test]
     fn display() {

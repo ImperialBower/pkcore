@@ -126,6 +126,19 @@ impl Seven {
     }
 
     #[must_use]
+    pub fn from_two_five(two: &Two, five: &Five) -> Seven {
+        Seven::from([
+            two.first(),
+            two.second(),
+            five.first(),
+            five.second(),
+            five.third(),
+            five.forth(),
+            five.fifth(),
+        ])
+    }
+
+    #[must_use]
     pub fn to_arr(&self) -> [Card; 7] {
         self.0
     }
@@ -260,6 +273,24 @@ mod arrays__seven_tests {
     }
 
     #[test]
+    fn from_two_five() {
+        let expected = Seven(CARDS);
+
+        let actual = Seven::from_two_five(
+            &Two::from([Card::ACE_DIAMONDS, Card::SIX_SPADES]),
+            &Five::from([
+                Card::FOUR_SPADES,
+                Card::ACE_SPADES,
+                Card::FIVE_DIAMONDS,
+                Card::TREY_CLUBS,
+                Card::DEUCE_SPADES,
+            ]),
+        );
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
     fn display() {
         assert_eq!("A♦ 6♠ 4♠ A♠ 5♦ 3♣ 2♠", Seven(CARDS).to_string());
     }
@@ -338,5 +369,41 @@ mod arrays__seven_tests {
 
         assert!(sut.is_err());
         assert_eq!(sut.unwrap_err(), PKError::TooManyCards);
+    }
+}
+
+/// I need a place to hold the collection of `Seven` cards that come from evaluating a specific
+/// `Eval` scenario. It doesn't need to do much.
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct Sevens(Vec<Seven>);
+
+impl Sevens {
+    pub fn best(&self) {}
+}
+
+impl From<Vec<Seven>> for Sevens {
+    fn from(v: Vec<Seven>) -> Self {
+        Sevens::from(v)
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod arrays__sevens_tests {
+    use std::str::FromStr;
+    use crate::arrays::seven::{Seven, Sevens};
+
+    #[test]
+    fn best() {}
+
+    #[test]
+    fn from__vec_seven() {
+        let first = Seven::from_str("A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦").unwrap();
+        let second =  Seven::from_str("A♣ 6♠ 4♠ A♠ 5♦ 3♣ 2♠").unwrap();
+        let expected = Sevens(vec![first, second]);
+
+        let actual = Sevens::from(vec![first, second]);
+
+        assert_eq!(expected, actual);
     }
 }

@@ -143,9 +143,7 @@ fn way2() {
         .collect();
 }
 
-fn way3() {
-
-}
+fn way3() {}
 
 fn main() {
     let start = Instant::now();

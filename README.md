@@ -606,6 +606,9 @@
                 * THE RAYON EXPLORATION
                 * Board.river()
                   * Board.best()
+                  * Five.fanOut() -> Vec<Seven>
+                    * Seven::from_two_five()
+                    * impl From<Vec<Seven>> for Sevens
 
 ## LATER
 
