@@ -13,6 +13,7 @@ use log::debug;
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use crate::arrays::five::Five;
 
 /// A `Board` is a type that represents a single instance of the face up `Cards`
 /// of one `Game` of `Texas hold 'em`.
@@ -91,6 +92,12 @@ impl Display for Board {
             "FLOP: {}, TURN: {}, RIVER: {}",
             self.flop, self.turn, self.river
         )
+    }
+}
+
+impl From<Five> for Board {
+    fn from(five: Five) -> Self {
+        todo!()
     }
 }
 
@@ -262,6 +269,11 @@ mod play_board_tests {
             "FLOP: __ __ __, TURN: __, RIVER: __",
             Board::default().to_string()
         );
+    }
+
+    #[test]
+    fn from__five() {
+
     }
 
     #[test]

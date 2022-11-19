@@ -36,6 +36,12 @@ pub enum TestData {}
 #[allow(dead_code)]
 impl TestData {
     #[must_use]
+    pub fn the_hand_board_five() -> Five {
+        todo!()
+    }
+
+
+    #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn the_hand() -> Game {
         let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap();

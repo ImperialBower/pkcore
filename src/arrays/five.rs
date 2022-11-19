@@ -1,5 +1,5 @@
 use crate::analysis::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
-use crate::arrays::seven::Sevens;
+use crate::arrays::seven::{Seven, Sevens};
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
@@ -168,8 +168,17 @@ impl Five {
     // endregion
 
     // region eval
+
+    /// Takes in a collection of hole cards and returns a collection of Seven cards, each on
+    /// containing the cards from the Five then each Two.
+    #[must_use]
     pub fn fan_out(&self, hands: &HoleCards) -> Sevens {
-        todo!()
+        Sevens::from(
+            hands
+                .iter()
+                .map(|h| Seven::from_two_five(h, self))
+                .collect::<Vec<Seven>>()
+        )
     }
     // endregion
 }
@@ -443,6 +452,20 @@ mod arrays__five_tests {
             "00000000000000001000100000000001",
             format!("{:032b}", and_bits)
         );
+    }
+
+
+    #[test]
+    fn fan_out() {
+        let five: [Card; 5] = [
+            Card::KING_DIAMONDS,
+            Card::QUEEN_DIAMONDS,
+            Card::TEN_DIAMONDS,
+            Card::NINE_HEARTS,
+            Card::SEVEN_CLUBS,
+        ];
+        let first = Seven::from_str("A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦").unwrap();
+        let second = Seven::from_str("A♣ 6♠ 4♠ A♠ 5♦ 3♣ 2♠").unwrap();
     }
 
     #[test]

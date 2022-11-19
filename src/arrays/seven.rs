@@ -390,8 +390,8 @@ impl From<Vec<Seven>> for Sevens {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod arrays__sevens_tests {
-    use std::str::FromStr;
     use crate::arrays::seven::{Seven, Sevens};
+    use std::str::FromStr;
 
     #[test]
     fn best() {}
@@ -399,7 +399,7 @@ mod arrays__sevens_tests {
     #[test]
     fn from__vec_seven() {
         let first = Seven::from_str("A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦").unwrap();
-        let second =  Seven::from_str("A♣ 6♠ 4♠ A♠ 5♦ 3♣ 2♠").unwrap();
+        let second = Seven::from_str("A♣ 6♠ 4♠ A♠ 5♦ 3♣ 2♠").unwrap();
         let expected = Sevens(vec![first, second]);
 
         let actual = Sevens::from(vec![first, second]);

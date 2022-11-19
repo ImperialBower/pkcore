@@ -609,6 +609,8 @@
                   * Five.fanOut() -> Vec<Seven>
                     * Seven::from_two_five()
                     * impl From<Vec<Seven>> for Sevens
+                    * impl From<Five> for Board ... Want this for refactoring of TestData
+                    * TestData::the_hand_board_five()
 
 ## LATER
 
