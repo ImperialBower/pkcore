@@ -88,6 +88,18 @@ impl Seven {
     /// I don't need to return a `Result` here, since I'm not passing in a vector. While on the one
     /// hand, I don't like that I have different types of signatures in the `from_case_at`
     /// functions, when there's no point, there's no point.
+    ///
+    /// ## 2022/11/19
+    ///
+    /// TODO RF: Method names
+    ///
+    /// I hate these method names. They don't make sense. I know why they were chosen at the
+    /// time based on context, since they were being used to determine odds at various points
+    /// in the game. The problem is, that this context isn't there when you come to these methods
+    /// outside of that use case. A name for a public method shouldn't be based on anything outside
+    /// itself. No one should be scratching their heads over why something is named the way it was.
+    ///
+    /// R.J. Story
     #[must_use]
     pub fn from_case_at_turn(player: Two, flop: Three, turn: Card, case: Card) -> Seven {
         Seven::from([
