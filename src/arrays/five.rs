@@ -456,13 +456,7 @@ mod arrays__five_tests {
 
     #[test]
     fn fan_out() {
-        let five: [Card; 5] = [
-            Card::KING_DIAMONDS,
-            Card::QUEEN_DIAMONDS,
-            Card::TEN_DIAMONDS,
-            Card::NINE_HEARTS,
-            Card::SEVEN_CLUBS,
-        ];
+        let five = TestData::the_hand_board_five();
         let first = Seven::from_str("A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦").unwrap();
         let second = Seven::from_str("A♣ 6♠ 4♠ A♠ 5♦ 3♣ 2♠").unwrap();
     }
