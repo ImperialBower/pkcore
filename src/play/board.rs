@@ -218,6 +218,7 @@ impl TryFrom<Cards> for Board {
 mod play_board_tests {
     use super::*;
     use std::str::FromStr;
+    use crate::util::data::TestData;
 
     #[test]
     fn river_heads_up__first_wins() {
@@ -275,8 +276,22 @@ mod play_board_tests {
         );
     }
 
+    /// Going to finish the basic coverage for these new methods. I didn't feel bad about it because
+    /// i already had the coverage from the other tests to show me the
     #[test]
-    fn from__five() {}
+    fn from__five() {
+        let expected = Board {
+            flop: Three::from([Card::NINE_CLUBS,
+                Card::SIX_DIAMONDS,
+                Card::FIVE_HEARTS]),
+            turn: Card::FIVE_SPADES,
+            river: Card::EIGHT_SPADES
+        };
+
+        let actual = Board::from(TestData::the_hand_board_five());
+
+        assert_eq!(expected, actual);
+    }
 
     #[test]
     fn from_str() {
