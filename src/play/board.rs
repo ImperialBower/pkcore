@@ -1,4 +1,5 @@
 use crate::analysis::eval::Eval;
+use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
@@ -13,7 +14,6 @@ use log::debug;
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use crate::arrays::five::Five;
 
 /// A `Board` is a type that represents a single instance of the face up `Cards`
 /// of one `Game` of `Texas hold 'em`.
@@ -97,7 +97,11 @@ impl Display for Board {
 
 impl From<Five> for Board {
     fn from(five: Five) -> Self {
-        todo!()
+        Board {
+            flop: Three::from([five.first(), five.second(), five.third()]),
+            turn: five.forth(),
+            river: five.fifth(),
+        }
     }
 }
 
@@ -272,9 +276,7 @@ mod play_board_tests {
     }
 
     #[test]
-    fn from__five() {
-
-    }
+    fn from__five() {}
 
     #[test]
     fn from_str() {

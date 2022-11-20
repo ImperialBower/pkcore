@@ -2,6 +2,7 @@ use crate::analysis::eval::Eval;
 use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
+use crate::card_number::CardNumber::SixDiamonds;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
@@ -37,18 +38,26 @@ pub enum TestData {}
 impl TestData {
     #[must_use]
     pub fn the_hand_board_five() -> Five {
-        todo!()
+        Five::from([
+            Card::NINE_CLUBS,
+            Card::SIX_DIAMONDS,
+            Card::FIVE_HEARTS,
+            Card::FIVE_SPADES,
+            Card::EIGHT_SPADES,
+        ])
     }
 
+    #[must_use]
+    pub fn the_hand_board() -> Board {
+        Board::from(TestData::the_hand_board_five())
+    }
 
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn the_hand() -> Game {
-        let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
-
         Game {
             hands: TestData::hole_cards_the_hand(),
-            board,
+            board: TestData::the_hand_board(),
         }
     }
 

@@ -177,7 +177,7 @@ impl Five {
             hands
                 .iter()
                 .map(|h| Seven::from_two_five(h, self))
-                .collect::<Vec<Seven>>()
+                .collect::<Vec<Seven>>(),
         )
     }
     // endregion
@@ -453,7 +453,6 @@ mod arrays__five_tests {
             format!("{:032b}", and_bits)
         );
     }
-
 
     #[test]
     fn fan_out() {
