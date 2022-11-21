@@ -457,6 +457,7 @@ mod arrays__five_tests {
     #[test]
     fn fan_out() {
         let five = TestData::the_hand_board_five();
+        let hole_cards = TestData::hole_cards_the_hand();
         let first = Seven::from_str("A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦").unwrap();
         let second = Seven::from_str("A♣ 6♠ 4♠ A♠ 5♦ 3♣ 2♠").unwrap();
     }
