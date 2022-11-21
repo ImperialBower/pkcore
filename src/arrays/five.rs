@@ -458,8 +458,13 @@ mod arrays__five_tests {
     fn fan_out() {
         let five = TestData::the_hand_board_five();
         let hole_cards = TestData::hole_cards_the_hand();
-        let first = Seven::from_str("A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦").unwrap();
-        let second = Seven::from_str("A♣ 6♠ 4♠ A♠ 5♦ 3♣ 2♠").unwrap();
+        let first = Seven::from_str("6♠ 6♥ 9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
+        let second = Seven::from_str("5♦ 5♣ 9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
+        let expected = vec![first, second];
+
+        let actual = five.fan_out(&hole_cards);
+
+        assert_eq!(expected, actual);
     }
 
     #[test]
