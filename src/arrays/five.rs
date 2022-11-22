@@ -171,6 +171,15 @@ impl Five {
 
     /// Takes in a collection of hole cards and returns a collection of Seven cards, each on
     /// containing the cards from the Five then each Two.
+    ///
+    /// I know there should be a simpler, more "normal" way of programming this, but I
+    /// am trying to force myself in as many languages as possible to code in this style
+    /// so that it feels normal for me to code in this more functional style over the
+    /// ol' timey procedural style of for loops. This was something that Java 8 kinda
+    /// forced me to get into with Streams. (Compare Java, Python, etc on this pattern)
+    ///
+    /// I try to remember patterns of programming over specific language details as much
+    /// as possible. This allows new languages to sink in a lot faster. 
     #[must_use]
     pub fn fan_out(&self, hands: &HoleCards) -> Sevens {
         Sevens::from(
@@ -454,13 +463,14 @@ mod arrays__five_tests {
         );
     }
 
+    /// Holy frack! I can't believe this passed.
     #[test]
     fn fan_out() {
         let five = TestData::the_hand_board_five();
         let hole_cards = TestData::hole_cards_the_hand();
         let first = Seven::from_str("6♠ 6♥ 9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
         let second = Seven::from_str("5♦ 5♣ 9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
-        let expected = vec![first, second];
+        let expected = Sevens::from(vec![first, second]);
 
         let actual = five.fan_out(&hole_cards);
 
