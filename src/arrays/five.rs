@@ -179,7 +179,7 @@ impl Five {
     /// forced me to get into with Streams. (Compare Java, Python, etc on this pattern)
     ///
     /// I try to remember patterns of programming over specific language details as much
-    /// as possible. This allows new languages to sink in a lot faster. 
+    /// as possible. This allows new languages to sink in a lot faster.
     #[must_use]
     pub fn fan_out(&self, hands: &HoleCards) -> Sevens {
         Sevens::from(
