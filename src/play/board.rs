@@ -38,14 +38,15 @@ impl Board {
 
     /// Returns an `Eval` of the best hand of the passed in vector.
     #[must_use]
-    pub fn best(&self, hands: Vec<Two>) -> Eval {
-        let mut best = Eval::default();
-
-        best
+    pub fn best(&self, _hands: &[Two]) -> Eval {
+        // let mut best = Eval::default();
+        //
+        // best
+        Eval::default()
     }
 
     #[must_use]
-    pub fn river(&self, hands: Vec<Two>) -> PlayerFlag {
+    pub fn river(&self, _hands: &[Two]) -> PlayerFlag {
         todo!()
     }
 
@@ -80,7 +81,7 @@ impl Board {
     /// time to master, based on a lot of hard taught lessons. You may not get as many offers, but
     /// trust me, that's a good thing.
     #[must_use]
-    pub fn v_river_heads_up(&self, hands: &HoleCards) -> PlayerFlag {
+    pub fn v_river_heads_up(&self, _hands: &HoleCards) -> PlayerFlag {
         todo!()
     }
 }
