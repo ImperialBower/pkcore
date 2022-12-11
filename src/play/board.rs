@@ -44,8 +44,16 @@ impl Board {
         best
     }
 
+    /// It's been almost two weeks since I've touched this code and my brain is completely
+    /// fried. The deeper you go down the well, the harder it is to find you're way back.
+
     #[must_use]
     pub fn river(&self, hands: Vec<Two>) -> PlayerFlag {
+
+        for (i, hand) in hands.iter().enumerate() {
+
+        }
+
         todo!()
     }
 
