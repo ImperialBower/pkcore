@@ -415,7 +415,7 @@ impl Game {
                     match outs.get(player_id) {
                         None => {}
                         Some(cards) => {
-                            println!("    OUTS: {}", cards);
+                            println!("    OUTS: {cards}");
                         }
                     }
                 }
@@ -673,13 +673,13 @@ impl Game {
 
                 let winning_hand_rank = case_eval.winning_hand_rank();
 
-                println!(" Winning Hand: {}", winning_hand_rank);
+                println!(" Winning Hand: {winning_hand_rank}");
 
                 for (i, eval) in case_eval.iter().enumerate() {
                     if eval.hand_rank == winning_hand_rank {
-                        println!("   Player #{}: {} WINS!", i + 1, eval);
+                        println!("   Player #{}: {eval} WINS!", i + 1);
                     } else {
-                        println!("   Player #{}: {}", i + 1, eval);
+                        println!("   Player #{}: {eval}", i + 1);
                     }
                 }
             }

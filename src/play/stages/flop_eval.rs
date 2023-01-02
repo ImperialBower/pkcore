@@ -272,7 +272,7 @@ impl std::fmt::Display for FlopEval {
                 hole_cards,
                 self.results.player_to_string(i)
             ));
-            v.push(format!("     {}", eval));
+            v.push(format!("     {eval}"));
         }
 
         write!(f, "{}", v.join("\n"))

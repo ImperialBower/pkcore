@@ -100,7 +100,7 @@ impl Cards {
     /// driving me out of that place._
     pub fn dump(&self) {
         for card in self.iter() {
-            println!("{} {}\n", card.bit_string_guided(), card);
+            println!("{} {card}\n", card.bit_string_guided());
         }
     }
 
@@ -336,7 +336,7 @@ impl fmt::Display for Cards {
             .collect::<Vec<String>>()
             .join(" ");
 
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 

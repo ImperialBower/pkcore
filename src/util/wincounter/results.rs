@@ -123,10 +123,7 @@ impl Results {
         if percentage == 0.00 {
             "0.00%".to_string()
         } else {
-            format!(
-                "{:.1}% ({:.2}%/{:.2}%) [{}/{}]",
-                percentage, win_percentage, tie_percentage, wins, ties
-            )
+            format!("{percentage:.1}% ({win_percentage:.2}%/{tie_percentage:.2}%) [{wins}/{ties}]")
         }
     }
 

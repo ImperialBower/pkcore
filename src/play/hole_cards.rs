@@ -174,7 +174,7 @@ impl HoleCards {
 impl fmt::Display for HoleCards {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let joined = Itertools::join(&mut self.0.iter(), ", ");
-        write!(f, "[{}]", joined)
+        write!(f, "[{joined}]")
     }
 }
 
