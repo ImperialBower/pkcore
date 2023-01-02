@@ -1,60 +1,57 @@
 name: CI
-on: [push, pull_request]
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  RUSTFLAGS: -Dwarnings
 
 jobs:
-  check:
-    name: cargo check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo check
-
   test:
-    name: cargo test
+    name: Rust ${{matrix.rust}}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        rust: [beta, stable, 1.56.0]
+        include:
+          - rust: nightly
+            rustflags: --cfg thiserror_nightly_testing
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test --all-features
-
-  fmt:
-    name: cargo fmt
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo fmt
-
-
-  fmt:
-    name: Rustfmt
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+          toolchain: ${{matrix.rust}}
+          components: rust-src
+      - run: cargo test --all
+        env:
+          RUSTFLAGS: ${{matrix.rustflags}} ${{env.RUSTFLAGS}}
 
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@nightly
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: rustup component add clippy
-      - uses: actions-rs/cargo@v1
+          components: clippy, rust-src
+      - run: cargo clippy -- -Dclippy::all -Dclippy::pedantic
+
+  fmt:
+    name: Fmt
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@nightly
         with:
-          command: clippy
-          args: -- -D warnings
+          components: rustfmt, rust-src
+      - run: cargo fmt --all -- --check
