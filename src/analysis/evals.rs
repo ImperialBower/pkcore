@@ -61,7 +61,7 @@ impl std::fmt::Display for Evals {
         let mut v = Vec::new();
 
         for (i, eval) in evals.0.iter().enumerate() {
-            v.push(format!("  #{}: {}", i + 1, eval));
+            v.push(format!("  #{}: {eval}", i + 1));
         }
 
         write!(f, "{}", v.join("\n"))
