@@ -259,7 +259,7 @@ mod play_board_tests {
     fn river__2_players() {
         let board = Board::from_str("A♠ K♠ 2♣ 3♣ T♦").unwrap();
 
-        let win = board.river(&vec![Two::HAND_JC_4H, Two::HAND_8C_7C]);
+        let win = board.river(&git statusgitadsddvec![Two::HAND_JC_4H, Two::HAND_8C_7C]);
 
         assert_eq!(Win::FIRST, win);
     }
