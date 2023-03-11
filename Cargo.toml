@@ -1,6 +1,7 @@
 [package]
 name = "pkcore"
 version = "0.0.4"
+rust-version = "1.63"
 edition = "2021"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
 license = "GPL-3.0-or-later"
