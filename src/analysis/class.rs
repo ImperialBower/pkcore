@@ -4,7 +4,7 @@ use strum::EnumIter;
 
 /// `HandRankClass` represents the more specific type of the five card `PokerHand`.
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Copy, Debug, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Class {
     RoyalFlush,
     KingHighStraightFlush,
@@ -315,13 +315,8 @@ pub enum Class {
     NineHigh,
     EightHigh,
     SevenHigh,
+    #[default]
     Invalid,
-}
-
-impl Default for Class {
-    fn default() -> Self {
-        Class::Invalid
-    }
 }
 
 #[allow(clippy::too_many_lines)]
