@@ -5,7 +5,7 @@ use strum::EnumIter;
 /// `HandRankName` represents the
 /// [traditional name](https://en.wikipedia.org/wiki/List_of_poker_hands) of a five card
 /// `PokerHand`.
-#[derive(Clone, Copy, Debug, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Name {
     StraightFlush,
     FourOfAKind,
@@ -16,6 +16,7 @@ pub enum Name {
     TwoPair,
     Pair,
     HighCard,
+    #[default]
     Invalid,
 }
 
@@ -33,12 +34,6 @@ impl From<HandRankValue> for Name {
             6186..=7462 => Name::HighCard,
             _ => Name::Invalid,
         }
-    }
-}
-
-impl Default for Name {
-    fn default() -> Self {
-        Name::Invalid
     }
 }
 
