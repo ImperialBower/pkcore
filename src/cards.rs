@@ -24,6 +24,7 @@ pub struct Cards(IndexSet<Card>);
 impl Cards {
     const NUMBER_OF_SHUFFLES: u8 = 5;
 
+    /// TODO: macro!
     #[must_use]
     pub fn deck() -> Cards {
         let mut cards = Cards::default();
@@ -36,14 +37,20 @@ impl Cards {
     /// TODO RF: :-P
     #[must_use]
     pub fn deck_minus(cards: &Cards) -> Cards {
-        let mut minus = Cards::default();
-        let deck = Cards::deck();
-        for card in deck.iter() {
-            if cards.get(card).is_none() {
-                minus.insert(*card);
-            }
+
+        let mut minus = Cards::deck();
+        for card in cards.iter() {
+            minus.0.remove(card);
         }
-        minus
+        minus.sort()
+        // let mut minus = Cards::default();
+        // let deck = Cards::deck();
+        // for card in deck.iter() {
+        //     if cards.get(card).is_none() {
+        //         minus.insert(*card);
+        //     }
+        // }
+        // minus
     }
 
     pub fn combinations(&self, k: usize) -> Combinations<indexmap::set::IntoIter<Card>> {

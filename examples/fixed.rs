@@ -1,17 +1,46 @@
 use pkcore::play::game::Game;
 use pkcore::play::stages::flop_eval::FlopEval;
 use pkcore::{PKError, Pile};
+use pkcore::analysis::case_evals::CaseEvals;
+use pkcore::cards::Cards;
 use pkcore::util::data::TestData;
 
+/// cargo run --example fixed
 /// cargo run --example fixed
 ///
 /// # How it works:
 /// FlopEval::try_from(game.clone()) -> CaseEvals::from_holdem_at_flop(board, &hands);
+///
+/// # Deconstructing calculations
+///
+///
 fn main() -> Result<(), PKError> {
     let now = std::time::Instant::now();
     env_logger::init();
 
     let game = TestData::the_hand();
+    let flop_eval = FlopEval::new(game.board.flop, game.hands.clone());
+
+    /// deconstructing `let case_evals = CaseEvals::from_holdem_at_flop(board, &hands);`
+    /// `CaseEvals` is the struct that holds the results of the evaluation.
+    let mut case_evals = CaseEvals::default();
+    let cards_in_hands = game.hands.to_vec();
+
+    // let mut minus = Cards::default();
+    // let deck = Cards::deck();
+    // for card in deck.iter() {
+    //     if cards.get(card).is_none() {
+    //         minus.insert(*card);
+    //     }
+    // }
+    //
+    // let remaining = Cards::deck_minus(&cards_in_hands)
+
+
+    /// First thing we need to do is figure out how many cards are remaining.
+    ///
+
+
 
     println!("{}", game);
 
