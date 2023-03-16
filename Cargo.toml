@@ -13,7 +13,7 @@ exclude = [".github/workflows/*", "examples/*", ".gitignore", "Cargo.lock"]
 
 [dependencies]
 indexmap = { version = "1.9.1", features = ["rayon"] }
-itertools = "0.10.3"
+itertools = "0.10.5"
 log = "0.4.17"
 rand = "0.8.5"
 rayon = "1.7.0"
