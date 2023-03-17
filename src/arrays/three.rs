@@ -258,7 +258,7 @@ mod arrays__three_tests {
     #[test]
     fn pile__remaining() {
         assert_eq!(
-            TestData::the_hand().board.flop.remaining().to_string(),
+            TestData::the_hand().board.flop.remaining().sort().to_string(),
             "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣"
         );
     }

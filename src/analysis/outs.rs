@@ -96,6 +96,7 @@ impl Outs {
     /// *FRACK*
     ///
     /// Writing tests for this method has uncovered a defect with `Cards.sort()`.
+    /// __NOT ANY MORE__
     ///
     /// ```
     /// use pkcore::analysis::outs::Outs;
@@ -107,7 +108,7 @@ impl Outs {
     /// outs.add(1, Card::SEVEN_DIAMONDS);
     /// outs.add(1, Card::EIGHT_DIAMONDS);
     ///
-    /// assert_eq!("8♦ 7♠ 7♦ 6♣", outs.get(1).unwrap().sort().to_string());
+    /// assert_eq!("7♠ 8♦ 7♦ 6♣", outs.get(1).unwrap().sort().to_string());
     /// ```
     ///
     /// This sort result is `Rank` weighted. Ideally, we'd like this to be `Suit`
@@ -204,6 +205,11 @@ impl Outs {
     /// allowed Apple to quickly innovate. Now, when I code in Swift, it makes me sad how much
     /// slower `XCode` is from my days coding in Objective-C. I understand why they created Swift,
     /// but they gave up a lot when they moved to it.
+    ///
+    /// ## UPDATE
+    ///
+    /// OK, so I've fixed the sorting bug through a very hacky hack. Not trying to optimize it
+    /// now, just get to a sound place.
     ///
     /// # Panics
     ///
@@ -400,7 +406,7 @@ mod analysis__outs_tests {
         outs1.append(&outs2);
 
         assert_eq!("6♣ 7♠ 7♦ 8♦", outs1.get(1).unwrap().to_string());
-        assert_eq!("8♦ 7♠ 7♦ 6♣", outs1.get(1).unwrap().sort().to_string());
+        assert_eq!("7♠ 8♦ 7♦ 6♣", outs1.get(1).unwrap().sort().to_string());
     }
 
     #[test]
@@ -468,9 +474,8 @@ mod analysis__outs_tests {
         let outs = Outs::from(&case_evals);
 
         assert_eq!("6♣", outs.get(1).unwrap().to_string());
-        let outs_cards = outs.
-        assert_eq!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 4♣ 3♣ 2♣", outs.get(2).unwrap().to_string());
-        assert_eq!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 4♣ 3♣ 2♣", outs.get(2).unwrap().to_string());
+        let outs_cards = outs.get(2).unwrap().sort();
+        assert_eq!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 4♣ 3♣ 2♣", outs_cards.to_string());
     }
 
     #[test]
@@ -487,7 +492,7 @@ mod analysis__outs_tests {
         assert_eq!(13, outs.get(2).unwrap().len());
         assert_eq!(
             "T♠ 8♠ 6♠ 5♠ T♥ 6♥ 5♥ T♦ 6♦ 5♦ T♣ 8♣ 5♣",
-            outs.get(2).unwrap().to_string()
+            outs.get(2).unwrap().sort().to_string()
         );
     }
 
@@ -505,7 +510,7 @@ mod analysis__outs_tests {
         assert_eq!(31, outs.get(2).unwrap().len());
         assert_eq!(
             "T♠ 8♠ 6♠ 5♠ T♥ 6♥ 5♥ T♦ 6♦ 5♦ T♣ 8♣ 5♣",
-            outs.get(1).unwrap().to_string()
+            outs.get(1).unwrap().sort().to_string()
         );
     }
 }

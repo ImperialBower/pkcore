@@ -2,7 +2,6 @@ use pkcore::play::game::Game;
 use pkcore::play::stages::flop_eval::FlopEval;
 use pkcore::{PKError, Pile};
 use pkcore::analysis::case_evals::CaseEvals;
-use pkcore::cards::Cards;
 use pkcore::util::data::TestData;
 
 /// cargo run --example fixed
@@ -21,8 +20,8 @@ fn main() -> Result<(), PKError> {
     let game = TestData::the_hand();
     let flop_eval = FlopEval::new(game.board.flop, game.hands.clone());
 
-    /// deconstructing `let case_evals = CaseEvals::from_holdem_at_flop(board, &hands);`
-    /// `CaseEvals` is the struct that holds the results of the evaluation.
+    // deconstructing `let case_evals = CaseEvals::from_holdem_at_flop(board, &hands);`
+    // `CaseEvals` is the struct that holds the results of the evaluation.
     let mut case_evals = CaseEvals::default();
     let cards_in_hands = game.hands.to_vec();
 
@@ -37,9 +36,8 @@ fn main() -> Result<(), PKError> {
     // let remaining = Cards::deck_minus(&cards_in_hands)
 
 
-    /// First thing we need to do is figure out how many cards are remaining.
-    ///
-
+    // First thing we need to do is figure out how many cards are remaining.
+    //
 
 
     println!("{}", game);
