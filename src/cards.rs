@@ -1,6 +1,7 @@
 use crate::card::Card;
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
+use crate::suit::Suit;
 use crate::util::random_ordering::RandomOrdering;
 use crate::{PKError, Pile, TheNuts};
 use indexmap::set::Iter;
@@ -12,7 +13,6 @@ use std::fmt::Formatter;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::str::FromStr;
 use strum::IntoEnumIterator;
-use crate::suit::Suit;
 
 /// What are the contracts for Cards?
 ///
@@ -38,7 +38,6 @@ impl Cards {
     /// TODO RF: :-P
     #[must_use]
     pub fn deck_minus(cards: &Cards) -> Cards {
-
         let mut minus = Cards::deck();
         for card in cards.iter() {
             minus.0.remove(card);
@@ -114,7 +113,12 @@ impl Cards {
     }
 
     pub fn filter_by_suit(&self, suit: Suit) -> Self {
-        let filtered: Vec<Card> = self.0.clone().into_iter().filter(|card| card.get_suit() == suit).collect();
+        let filtered: Vec<Card> = self
+            .0
+            .clone()
+            .into_iter()
+            .filter(|card| card.get_suit() == suit)
+            .collect();
         Cards::from(filtered)
     }
 

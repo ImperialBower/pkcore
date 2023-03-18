@@ -1,8 +1,8 @@
+use pkcore::analysis::case_evals::CaseEvals;
 use pkcore::play::game::Game;
 use pkcore::play::stages::flop_eval::FlopEval;
-use pkcore::{PKError, Pile};
-use pkcore::analysis::case_evals::CaseEvals;
 use pkcore::util::data::TestData;
+use pkcore::{PKError, Pile};
 
 /// cargo run --example fixed
 /// cargo run --example fixed
@@ -35,10 +35,8 @@ fn main() -> Result<(), PKError> {
     //
     // let remaining = Cards::deck_minus(&cards_in_hands)
 
-
     // First thing we need to do is figure out how many cards are remaining.
     //
-
 
     println!("{}", game);
 

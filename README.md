@@ -577,6 +577,10 @@
           * Removed dupe of eval_for_player: eval_for_hand
           * Finished Display
         * TurnEval
+      * Deconstructing Calc: DEALING WITH calc PERFORMANCE
+        * Created examples/fixed and examples/long
+          * log is going to work out in minute detail the flop calculations
+          * Added Deck from fudd::types::poker_deck
 
 ## LATER
 

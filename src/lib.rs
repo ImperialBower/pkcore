@@ -17,9 +17,11 @@ pub mod card_number;
 pub mod cards;
 mod lookups;
 pub mod play;
+pub mod deck;
 pub mod rank;
 pub mod suit;
 pub mod util;
+
 
 // region CONSTANTS
 
