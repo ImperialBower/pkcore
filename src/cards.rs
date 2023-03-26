@@ -13,6 +13,7 @@ use std::fmt::Formatter;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::str::FromStr;
 use strum::IntoEnumIterator;
+use crate::deck::{Deck, DECK_ARRAY, POKER_DECK};
 
 /// What are the contracts for Cards?
 ///

@@ -10,7 +10,7 @@ use crate::cards::Cards;
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Deck([Card; 52]);
 
-pub const POKER_DECK: Deck = Deck([
+pub const DECK_ARRAY: [Card; 52] = [
     Card::ACE_SPADES,
     Card::KING_SPADES,
     Card::QUEEN_SPADES,
@@ -63,7 +63,9 @@ pub const POKER_DECK: Deck = Deck([
     Card::FOUR_CLUBS,
     Card::TREY_CLUBS,
     Card::DEUCE_CLUBS,
-]);
+];
+
+pub const POKER_DECK: Deck = Deck(DECK_ARRAY);
 
 impl Deck {
     #[must_use]
