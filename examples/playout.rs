@@ -1,18 +1,16 @@
-use pkcore::arrays::three::Three;
-use pkcore::arrays::two::Two;
-use pkcore::{Pile, PKError};
-use std::str::FromStr;
 use pkcore::analysis::case_eval::CaseEval;
 use pkcore::analysis::case_evals::CaseEvals;
 use pkcore::analysis::eval::Eval;
 use pkcore::arrays::seven::Seven;
+use pkcore::arrays::three::Three;
+use pkcore::arrays::two::Two;
 use pkcore::play::hole_cards::HoleCards;
-use pkcore::play::stages::flop_eval::FlopEval;
-use pkcore::util::wincounter::PlayerFlag;
 use pkcore::util::wincounter::results::Results;
+use pkcore::util::wincounter::PlayerFlag;
+use pkcore::{PKError, Pile};
+use std::str::FromStr;
 
 fn main() -> Result<(), PKError> {
-
     env_logger::init();
 
     as_written().expect("TODO: oops!");
@@ -57,19 +55,6 @@ fn as_written() -> Result<(), PKError> {
         }
         case_evals.push(case_eval);
     }
-
-    let wins = case_evals.wins();
-    let results = Results::from_wins(&wins, hands.len());
-
-    let flop_eval = FlopEval {
-        board: flop,
-        hands,
-        case_evals,
-        wins,
-        results,
-    };
-
-    println!("{flop_eval}");
 
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())

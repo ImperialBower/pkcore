@@ -1,9 +1,9 @@
+use crate::card::Card;
+use crate::cards::Cards;
 use itertools::{Combinations, Itertools};
 use rayon::prelude::*;
 use rayon::slice::Iter;
 use std::array::IntoIter;
-use crate::card::Card;
-use crate::cards::Cards;
 
 /// Represents a Standard52 deck as an immutable array of
 /// Cactus Kev Cards (`PokerCard`).

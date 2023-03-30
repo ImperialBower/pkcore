@@ -14,7 +14,6 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::str::FromStr;
 use strum::IntoEnumIterator;
 
-
 /// What are the contracts for Cards?
 ///
 /// 1. Cards should be saved in order.
