@@ -12,14 +12,14 @@ pub struct CardVec(Vec<Card>);
 pub struct CardISet(IndexSet<Card>);
 
 fn main() -> Result<(), PKError> {
-    let now = std::time::Instant::now();
+    let _now = std::time::Instant::now();
     env_logger::init();
 
     let daniel = Two::HAND_6S_6H;
     let gus = Two::HAND_5D_5C;
-    let hands = vec![daniel, gus];
+    let _hands = vec![daniel, gus];
 
-    let the_flop = Three::from_str("9♣ 6♦ 5♥")?;
+    let _the_flop = Three::from_str("9♣ 6♦ 5♥")?;
 
     Ok(())
 }
