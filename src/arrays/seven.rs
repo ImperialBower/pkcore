@@ -70,6 +70,18 @@ impl Seven {
         ]))
     }
 
+    pub fn from_case_at_deal(player: Two, case: Five) -> Result<Seven, PKError> {
+        Ok(Seven::from([
+            player.first(),
+            player.second(),
+            case.first(),
+            case.second(),
+            case.third(),
+            case.forth(),
+            case.fifth(),
+        ]))
+    }
+
     /// # Errors
     ///
     /// Returns a `PKError` if any of the passed in values don't contain valid cards.

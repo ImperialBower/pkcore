@@ -3,11 +3,13 @@ use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::wins::Wins;
-use crate::Pile;
+use crate::{Pile, PKError};
 use log::info;
 use std::slice::Iter;
 use std::sync::mpsc;
 use std::thread;
+use crate::arrays::five::Five;
+use crate::cards::Cards;
 
 /// Now that we have validated that we can handle a single case, aka one possible result from
 /// a specific collection of hands at the flop, we can assemble them into a collection of
@@ -33,6 +35,38 @@ impl CaseEvals {
             if let Ok(ce) = CaseEval::from_holdem_at_flop(board, case, hands) {
                 case_evals.push(ce);
             }
+        }
+
+        case_evals
+    }
+
+    pub fn from_holdem_at_deal(hands: &HoleCards) -> CaseEvals {
+        let mut case_evals = CaseEvals::default();
+
+        let (tx, rx) = mpsc::channel();
+
+        for (i, v) in hands.enumerate_remaining(5) {
+
+            let tx = tx.clone();
+            let my_hands = hands.clone();
+
+            thread::spawn(move || {
+                let five = Five::try_from(v);
+                match five  {
+                    Ok(case) => {
+                        if let Ok(ce) = CaseEval::from_holdem_at_deal(case, &my_hands) {
+                            tx.send(ce).unwrap();
+                        }
+                    }
+                    Err(_) => (),
+                }
+            });
+        }
+
+        drop(tx);
+
+        for received in rx {
+            case_evals.push(received);
         }
 
         case_evals

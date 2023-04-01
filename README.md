@@ -581,6 +581,8 @@
         * Created examples/fixed and examples/long
           * log is going to work out in minute detail the flop calculations
           * Added Deck from fudd::types::poker_deck
+        * VICTORY!!! CaseEvals::from_holdem_at_flop_mpsc()
+          * finally figured out how to use concurrency to make this faster.
 
 ## LATER
 

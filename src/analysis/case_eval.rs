@@ -8,6 +8,7 @@ use crate::util::wincounter::win::Win;
 use crate::util::wincounter::PlayerFlag;
 use crate::{Card, Cards, PKError, Pile};
 use std::slice::Iter;
+use crate::arrays::five::Five;
 
 /// # Analysis Saga: Step 2
 ///
@@ -126,6 +127,28 @@ impl CaseEval {
                     return Err(PKError::InvalidHand);
                 }
                 let seven = Seven::from_case_at_flop(*player, board, case)?;
+                let eval = Eval::from(seven);
+                case_eval.push(eval);
+            }
+
+            Ok(case_eval)
+        } else {
+            Err(PKError::BlankCard)
+        }
+    }
+
+    pub fn from_holdem_at_deal(
+        case: Five,
+        hands: &HoleCards
+    ) -> Result<Self, PKError> {
+        if case.is_dealt() {
+            let mut case_eval = CaseEval::default();
+
+            for player in hands.iter() {
+                if !player.is_dealt() {
+                    return Err(PKError::InvalidHand);
+                }
+                let seven = Seven::from_case_at_deal(*player, case)?;
                 let eval = Eval::from(seven);
                 case_eval.push(eval);
             }
