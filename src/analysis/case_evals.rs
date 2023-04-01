@@ -42,14 +42,17 @@ impl CaseEvals {
     ///
     /// Calc here takes: `cargo run --example calc -- -d  "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"`
     /// `Elapsed: 633.92ms` compared to the original of `2.48s`
+    ///
+    /// # Panics
+    ///
+    /// Oopsie
     #[must_use]
-    pub fn from_holdem_at_flop_mpsc(board: Three, hands: HoleCards) -> CaseEvals {
+    pub fn from_holdem_at_flop_mpsc(board: Three, hands: &HoleCards) -> CaseEvals {
         let mut case_evals = CaseEvals::default();
 
         let (tx, rx) = mpsc::channel();
 
         for v in hands.combinations_after(2, &board.cards()) {
-
             let tx = tx.clone();
             let my_hands = hands.clone();
 

@@ -6,11 +6,11 @@ use pkcore::arrays::three::Three;
 use pkcore::arrays::two::Two;
 use pkcore::play::hole_cards::HoleCards;
 use pkcore::util::wincounter::results::Results;
+use pkcore::util::wincounter::wins::Wins;
 use pkcore::{PKError, Pile};
 use std::str::FromStr;
 use std::sync::mpsc;
 use std::thread;
-use pkcore::util::wincounter::wins::Wins;
 
 fn main() -> Result<(), PKError> {
     env_logger::init();
@@ -40,8 +40,6 @@ fn as_written() -> Result<(), PKError> {
     // Instantiate the struct to hold the `CaseEvals`.
     let mut case_evals = CaseEvals::default();
 
-
-
     // Utility class to help display win results.
     let _results = Results::default();
 
@@ -51,7 +49,6 @@ fn as_written() -> Result<(), PKError> {
     let combos = hands.combinations_after(2, &flop.cards());
     println!("as_written Elapsed: {:.2?}", now.elapsed());
     for v in combos {
-
         let case = Two::from(v);
 
         let mut case_eval = CaseEval::default();
@@ -108,7 +105,6 @@ fn concurrent() -> Result<(), PKError> {
     let (tx, rx) = mpsc::channel();
 
     for v in combos {
-
         let tx = tx.clone();
         let my_hands = hands.clone();
         thread::spawn(move || {
