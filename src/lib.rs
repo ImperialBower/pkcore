@@ -15,6 +15,7 @@ pub mod bard;
 pub mod card;
 pub mod card_number;
 pub mod cards;
+pub mod deck;
 mod lookups;
 pub mod play;
 pub mod rank;

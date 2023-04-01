@@ -1,6 +1,7 @@
 use crate::card::Card;
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
+use crate::suit::Suit;
 use crate::util::random_ordering::RandomOrdering;
 use crate::{PKError, Pile, TheNuts};
 use indexmap::set::Iter;
@@ -24,6 +25,7 @@ pub struct Cards(IndexSet<Card>);
 impl Cards {
     const NUMBER_OF_SHUFFLES: u8 = 5;
 
+    /// TODO: macro!
     #[must_use]
     pub fn deck() -> Cards {
         let mut cards = Cards::default();
@@ -36,14 +38,20 @@ impl Cards {
     /// TODO RF: :-P
     #[must_use]
     pub fn deck_minus(cards: &Cards) -> Cards {
-        let mut minus = Cards::default();
-        let deck = Cards::deck();
-        for card in deck.iter() {
-            if cards.get(card).is_none() {
-                minus.insert(*card);
-            }
+        let mut minus = Cards::deck();
+        for card in cards.iter() {
+            minus.0.remove(card);
         }
+        // minus.sort()
         minus
+        // let mut minus = Cards::default();
+        // let deck = Cards::deck();
+        // for card in deck.iter() {
+        //     if cards.get(card).is_none() {
+        //         minus.insert(*card);
+        //     }
+        // }
+        // minus
     }
 
     pub fn combinations(&self, k: usize) -> Combinations<indexmap::set::IntoIter<Card>> {
@@ -104,6 +112,17 @@ impl Cards {
         }
     }
 
+    #[must_use]
+    pub fn filter_by_suit(&self, suit: Suit) -> Self {
+        let filtered: Vec<Card> = self
+            .0
+            .clone()
+            .into_iter()
+            .filter(|card| card.get_suit() == suit)
+            .collect();
+        Cards::from(filtered)
+    }
+
     /// Sets the card's paired bit to true for all cards in the collection.
     #[must_use]
     pub fn flag_paired(&self) -> Cards {
@@ -148,7 +167,9 @@ impl Cards {
                 },
             }
         }
-        cards.sort()
+        cards.0.sort();
+        cards.0.reverse();
+        cards
     }
 
     #[must_use]
@@ -251,8 +272,14 @@ impl Cards {
     }
 
     pub fn sort_in_place(&mut self) {
-        self.0.sort();
-        self.0.reverse();
+        let mut sorted = Cards::default();
+        for suit in [Suit::CLUBS, Suit::DIAMONDS, Suit::HEARTS, Suit::SPADES] {
+            let mut s = self.filter_by_suit(suit);
+            s.0.sort();
+            sorted.insert_all(&s);
+        }
+        sorted.0.reverse();
+        self.0 = sorted.0;
     }
 
     //region private functions
@@ -566,6 +593,15 @@ mod card_tests {
     }
 
     #[test]
+    fn filter_by_suit() {
+        let cards = Cards::deck();
+
+        let spades = cards.filter_by_suit(Suit::SPADES);
+
+        assert_eq!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠", spades.to_string());
+    }
+
+    #[test]
     fn flag_paired() {
         let mut cards = Cards::from_str("T♠ T♥").unwrap().flag_paired();
 
@@ -742,7 +778,6 @@ mod card_tests {
     }
 
     #[test]
-    #[ignore]
     fn sort__suit_weighted() {
         let cards = Cards::from_str("6♣ 7♠ 7♦ 8♦").unwrap().sort();
 
