@@ -6,6 +6,8 @@ use crate::util::wincounter::wins::Wins;
 use crate::Pile;
 use log::info;
 use std::slice::Iter;
+use std::sync::mpsc;
+use std::thread;
 
 /// Now that we have validated that we can handle a single case, aka one possible result from
 /// a specific collection of hands at the flop, we can assemble them into a collection of
@@ -31,6 +33,38 @@ impl CaseEvals {
             if let Ok(ce) = CaseEval::from_holdem_at_flop(board, case, hands) {
                 case_evals.push(ce);
             }
+        }
+
+        case_evals
+    }
+
+    /// Experimental concurrent version of this calculation.
+    ///
+    /// Calc here takes: `cargo run --example calc -- -d  "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"`
+    /// `Elapsed: 633.92ms` compared to the original of `2.48s`
+    #[must_use]
+    pub fn from_holdem_at_flop_mpsc(board: Three, hands: HoleCards) -> CaseEvals {
+        let mut case_evals = CaseEvals::default();
+
+        let (tx, rx) = mpsc::channel();
+
+        for v in hands.combinations_after(2, &board.cards()) {
+
+            let tx = tx.clone();
+            let my_hands = hands.clone();
+
+            thread::spawn(move || {
+                let case = Two::from(v);
+                if let Ok(ce) = CaseEval::from_holdem_at_flop(board, case, &my_hands) {
+                    tx.send(ce).unwrap();
+                }
+            });
+        }
+
+        drop(tx);
+
+        for received in rx {
+            case_evals.push(received);
         }
 
         case_evals

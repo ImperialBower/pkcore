@@ -110,11 +110,12 @@ fn concurrent() -> Result<(), PKError> {
     for v in combos {
 
         let tx = tx.clone();
+        let my_hands = hands.clone();
         thread::spawn(move || {
             let case = Two::from(v);
 
             let mut case_eval = CaseEval::default();
-            for player in hands.iter() {
+            for player in my_hands.iter() {
                 let seven = Seven::from_case_at_flop(*player, flop, case).unwrap();
                 let eval = Eval::from(seven);
                 case_eval.push(eval);

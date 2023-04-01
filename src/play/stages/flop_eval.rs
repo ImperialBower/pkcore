@@ -210,7 +210,7 @@ pub struct FlopEval {
 impl FlopEval {
     #[must_use]
     pub fn new(board: Three, hands: HoleCards) -> FlopEval {
-        let case_evals = CaseEvals::from_holdem_at_flop(board, &hands);
+        let case_evals = CaseEvals::from_holdem_at_flop_mpsc(board, hands.clone());
         let wins = case_evals.wins();
         let results = Results::from_wins(&wins, hands.len());
 
