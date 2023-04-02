@@ -137,6 +137,9 @@ impl CaseEval {
         }
     }
 
+    /// # Errors
+    ///
+    /// ¯\_ (ツ)_/¯
     pub fn from_holdem_at_deal(
         case: Five,
         hands: &HoleCards

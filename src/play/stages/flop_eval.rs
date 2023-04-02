@@ -354,6 +354,15 @@ mod play__stages__flop_eval_tests {
         assert_eq!(PKError::NotDealt, sut.unwrap_err());
     }
 
+    #[test]
+    fn iterations_heads_up() {
+        let game = TestData::the_hand();
+
+        let combos = game.hands.enumerate_after(2, &game.board.cards());
+
+        assert_eq!(combos.count(), 903);
+    }
+
     /// 990 possible runouts.
     /// Daniel wins 931 times.
     /// Gus wins 43 times.

@@ -583,6 +583,7 @@
           * Added Deck from fudd::types::poker_deck
         * VICTORY!!! CaseEvals::from_holdem_at_flop_mpsc()
           * finally figured out how to use concurrency to make this faster.
+    * PHASE SIX: Pre flop DUN DUN DUNNNNNNN
 
 ## LATER
 
