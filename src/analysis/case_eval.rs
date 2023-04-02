@@ -1,5 +1,6 @@
 use crate::analysis::eval::Eval;
 use crate::analysis::hand_rank::HandRank;
+use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
@@ -8,7 +9,6 @@ use crate::util::wincounter::win::Win;
 use crate::util::wincounter::PlayerFlag;
 use crate::{Card, Cards, PKError, Pile};
 use std::slice::Iter;
-use crate::arrays::five::Five;
 
 /// # Analysis Saga: Step 2
 ///
@@ -140,10 +140,7 @@ impl CaseEval {
     /// # Errors
     ///
     /// ¯\_ (ツ)_/¯
-    pub fn from_holdem_at_deal(
-        case: Five,
-        hands: &HoleCards
-    ) -> Result<Self, PKError> {
+    pub fn from_holdem_at_deal(case: Five, hands: &HoleCards) -> Result<Self, PKError> {
         if case.is_dealt() {
             let mut case_eval = CaseEval::default();
 

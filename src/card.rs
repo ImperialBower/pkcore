@@ -348,8 +348,6 @@ mod card_tests {
         let expected = "00000001 00000000 10001000 00010111";
         let card = Card::from_str("T♠").unwrap();
 
-        println!("{:b}", card.as_u32());
-
         assert_eq!(expected, card.bit_string());
     }
 
@@ -479,8 +477,6 @@ mod card_tests {
 
         let weighted = card.frequency_paired();
 
-        println!("{:#032b}", weighted.get_rank_flag());
-        println!("{:#032b}", card.get_rank_flag());
         assert_eq!(
             0b00000000_00000010_00000000_00000000,
             weighted.get_rank_flag()

@@ -55,9 +55,9 @@ impl DealEval {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod play__stages__flop_eval_tests {
-    use crate::Pile;
     use super::*;
     use crate::util::data::TestData;
+    use crate::Pile;
 
     #[test]
     fn new() {

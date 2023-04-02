@@ -1,5 +1,6 @@
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use crate::card::Card;
+use crate::cards::Cards;
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 
 /// A `Bard` is a binary representation of one or more `Cards` contained in a single unsigned
 /// integer. Each bit flag represents one card. Since each flag is a different card, you can
@@ -282,6 +283,23 @@ impl Bard {
     // endregion
 
     // endregion
+
+    /// Takes an existing `Bard` and a `Card` and returns a new `Bard` with the `Card` added to it.
+    /// This breaks it down:
+    ///
+    /// ```
+    /// use pkcore::bard::Bard;
+    /// use pkcore::card::Card;
+    ///
+    /// let resulting_bard = Bard::TEN_SPADES.fold_in(Card::TREY_DIAMONDS);
+    /// let expected_bard = Bard::TEN_SPADES | Bard::TREY_DIAMONDS;
+    ///
+    /// assert_eq!(resulting_bard, expected_bard);
+    /// ```
+    #[must_use]
+    pub fn fold_in(self, card: Card) -> Self {
+        self | Bard::from(card)
+    }
 }
 
 impl BitAnd for Bard {
@@ -386,11 +404,50 @@ impl From<Card> for Bard {
     }
 }
 
+impl From<Cards> for Bard {
+    fn from(cards: Cards) -> Self {
+        let mut bard = Bard::default();
+
+        for card in cards {
+            bard = bard.fold_in(card);
+        }
+
+        bard
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod bard_tests {
     use super::*;
+    use crate::cards::Cards;
     use rstest::rstest;
+    use std::str::FromStr;
+
+    /// OK, this is a fun test, but how can me make it smoother?
+    #[test]
+    fn fold_in() {
+        let mut bard = Bard::default();
+
+        for card in Cards::deck() {
+            bard = bard.fold_in(card);
+        }
+
+        assert_eq!(bard, Bard::ALL);
+    }
+
+    // #[test]
+    // fn fold_in__smooth() {
+    //
+    //     let bard: Bard = Cards::deck().iter().map(Bard::fold_in).collect::<Bard>();
+    //
+    //     assert_eq!(bard, Bard::ALL);
+    // }
+
+    #[test]
+    fn default() {
+        assert_eq!(Bard::default(), Bard::BLANK);
+    }
 
     #[test]
     fn bit_and() {
@@ -514,5 +571,15 @@ mod bard_tests {
     #[case(Card::BLANK, Bard::BLANK)]
     fn from__card(#[case] from: Card, #[case] to: Bard) {
         assert_eq!(to, Bard::from(from));
+    }
+
+    #[test]
+    fn from__cards() {
+        let actual = Bard::from(Cards::from_str("T♣ 9♥").unwrap());
+        let expected = Bard::TEN_CLUBS | Bard::NINE_HEARTS;
+
+        assert_eq!(actual, expected);
+        assert_ne!(actual, Bard::TEN_CLUBS | Bard::NINE_HEARTS | Bard::EIGHT_HEARTS);
+        assert_eq!(Bard::from(Cards::deck()), Bard::ALL);
     }
 }

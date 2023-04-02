@@ -70,6 +70,8 @@ impl Seven {
         ]))
     }
 
+    /// # Errors
+    /// ¯\_(ツ)_/¯
     pub fn from_case_at_deal(player: Two, case: Five) -> Result<Seven, PKError> {
         Ok(Seven::from([
             player.first(),
