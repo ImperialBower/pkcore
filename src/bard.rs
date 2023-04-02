@@ -1,4 +1,5 @@
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
+use crate::card::Card;
 
 /// A `Bard` is a binary representation of one or more `Cards` contained in a single unsigned
 /// integer. Each bit flag represents one card. Since each flag is a different card, you can
@@ -131,6 +132,31 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 /// BTW, I can't believe that I still haven't fixed that three test. I am deliberately keeping the
 /// test failing as a reminder of what my priorities are. Yes, this has been fun, but as they say,
 /// ABC... always be closing. Luckily, I want a cup of coffee, and coffee is for closers.
+///
+/// # EPIC 6: Pre flop
+///
+/// Returning to this type now that I want a very easy way to story combinations of cards as single
+/// integers.
+///
+/// The main thing I need to do is to make the type plastic. Plastic is one of my favorite words
+/// to describe what I am trying to do with my code and data. For this I am using the word as
+/// an adjective
+///
+/// ```txt
+/// plastic (plăs′tĭk) - adjective
+/// 1. Capable of being shaped or formed: synonym: malleable.
+/// 2. Relating to or dealing with shaping or modeling.
+/// 3. Having the qualities of sculpture; well-formed.
+///
+/// --- The American Heritage® Dictionary of the English Language, 5th Edition.
+/// ```
+///
+/// I am using the `Card` and `Cards` types to represent state in the library. This type is perfect
+/// for doing quick calculations of hands. Now I need a way to easily store the analysis. So, let's
+/// start and `impl From<Card> into Bard.`
+///
+/// One of the things that I have noticed about myself over the years, is that I find comfort in
+/// repetitive tasks, such as writing out all of the test scenarios for converting a `Card` to a `Bard`.
 #[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Bard(u64);
 
@@ -300,10 +326,71 @@ impl BitXorAssign for Bard {
     }
 }
 
+impl From<Card> for Bard {
+    fn from(card: Card) -> Self {
+        match card {
+            Card::ACE_SPADES => Bard::ACE_SPADES,
+            Card::KING_SPADES => Bard::KING_SPADES,
+            Card::QUEEN_SPADES => Bard::QUEEN_SPADES,
+            Card::JACK_SPADES => Bard::JACK_SPADES,
+            Card::TEN_SPADES => Bard::TEN_SPADES,
+            Card::NINE_SPADES => Bard::NINE_SPADES,
+            Card::EIGHT_SPADES => Bard::EIGHT_SPADES,
+            Card::SEVEN_SPADES => Bard::SEVEN_SPADES,
+            Card::SIX_SPADES => Bard::SIX_SPADES,
+            Card::FIVE_SPADES => Bard::FIVE_SPADES,
+            Card::FOUR_SPADES => Bard::FOUR_SPADES,
+            Card::TREY_SPADES => Bard::TREY_SPADES,
+            Card::DEUCE_SPADES => Bard::DEUCE_SPADES,
+            Card::ACE_HEARTS => Bard::ACE_HEARTS,
+            Card::KING_HEARTS => Bard::KING_HEARTS,
+            Card::QUEEN_HEARTS => Bard::QUEEN_HEARTS,
+            Card::JACK_HEARTS => Bard::JACK_HEARTS,
+            Card::TEN_HEARTS => Bard::TEN_HEARTS,
+            Card::NINE_HEARTS => Bard::NINE_HEARTS,
+            Card::EIGHT_HEARTS => Bard::EIGHT_HEARTS,
+            Card::SEVEN_HEARTS => Bard::SEVEN_HEARTS,
+            Card::SIX_HEARTS => Bard::SIX_HEARTS,
+            Card::FIVE_HEARTS => Bard::FIVE_HEARTS,
+            Card::FOUR_HEARTS => Bard::FOUR_HEARTS,
+            Card::TREY_HEARTS => Bard::TREY_HEARTS,
+            Card::DEUCE_HEARTS => Bard::DEUCE_HEARTS,
+            Card::ACE_DIAMONDS => Bard::ACE_DIAMONDS,
+            Card::KING_DIAMONDS => Bard::KING_DIAMONDS,
+            Card::QUEEN_DIAMONDS => Bard::QUEEN_DIAMONDS,
+            Card::JACK_DIAMONDS => Bard::JACK_DIAMONDS,
+            Card::TEN_DIAMONDS => Bard::TEN_DIAMONDS,
+            Card::NINE_DIAMONDS => Bard::NINE_DIAMONDS,
+            Card::EIGHT_DIAMONDS => Bard::EIGHT_DIAMONDS,
+            Card::SEVEN_DIAMONDS => Bard::SEVEN_DIAMONDS,
+            Card::SIX_DIAMONDS => Bard::SIX_DIAMONDS,
+            Card::FIVE_DIAMONDS => Bard::FIVE_DIAMONDS,
+            Card::FOUR_DIAMONDS => Bard::FOUR_DIAMONDS,
+            Card::TREY_DIAMONDS => Bard::TREY_DIAMONDS,
+            Card::DEUCE_DIAMONDS => Bard::DEUCE_DIAMONDS,
+            Card::ACE_CLUBS => Bard::ACE_CLUBS,
+            Card::KING_CLUBS => Bard::KING_CLUBS,
+            Card::QUEEN_CLUBS => Bard::QUEEN_CLUBS,
+            Card::JACK_CLUBS => Bard::JACK_CLUBS,
+            Card::TEN_CLUBS => Bard::TEN_CLUBS,
+            Card::NINE_CLUBS => Bard::NINE_CLUBS,
+            Card::EIGHT_CLUBS => Bard::EIGHT_CLUBS,
+            Card::SEVEN_CLUBS => Bard::SEVEN_CLUBS,
+            Card::SIX_CLUBS => Bard::SIX_CLUBS,
+            Card::FIVE_CLUBS => Bard::FIVE_CLUBS,
+            Card::FOUR_CLUBS => Bard::FOUR_CLUBS,
+            Card::TREY_CLUBS => Bard::TREY_CLUBS,
+            Card::DEUCE_CLUBS => Bard::DEUCE_CLUBS,
+            _ => Bard::BLANK,
+        }
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod bard_tests {
     use super::*;
+    use rstest::rstest;
 
     #[test]
     fn bit_and() {
@@ -369,5 +456,63 @@ mod bard_tests {
         bard ^= Bard::ACE_SPADES;
 
         assert_eq!(Bard::BLANK, bard);
+    }
+
+    #[rstest]
+    #[case(Card::ACE_SPADES, Bard::ACE_SPADES)]
+    #[case(Card::KING_SPADES, Bard::KING_SPADES)]
+    #[case(Card::QUEEN_SPADES, Bard::QUEEN_SPADES)]
+    #[case(Card::JACK_SPADES, Bard::JACK_SPADES)]
+    #[case(Card::TEN_SPADES, Bard::TEN_SPADES)]
+    #[case(Card::NINE_SPADES, Bard::NINE_SPADES)]
+    #[case(Card::EIGHT_SPADES, Bard::EIGHT_SPADES)]
+    #[case(Card::SEVEN_SPADES, Bard::SEVEN_SPADES)]
+    #[case(Card::SIX_SPADES, Bard::SIX_SPADES)]
+    #[case(Card::FIVE_SPADES, Bard::FIVE_SPADES)]
+    #[case(Card::FOUR_SPADES, Bard::FOUR_SPADES)]
+    #[case(Card::TREY_SPADES, Bard::TREY_SPADES)]
+    #[case(Card::DEUCE_SPADES, Bard::DEUCE_SPADES)]
+    #[case(Card::ACE_HEARTS, Bard::ACE_HEARTS)]
+    #[case(Card::KING_HEARTS, Bard::KING_HEARTS)]
+    #[case(Card::QUEEN_HEARTS, Bard::QUEEN_HEARTS)]
+    #[case(Card::JACK_HEARTS, Bard::JACK_HEARTS)]
+    #[case(Card::TEN_HEARTS, Bard::TEN_HEARTS)]
+    #[case(Card::NINE_HEARTS, Bard::NINE_HEARTS)]
+    #[case(Card::EIGHT_HEARTS, Bard::EIGHT_HEARTS)]
+    #[case(Card::SEVEN_HEARTS, Bard::SEVEN_HEARTS)]
+    #[case(Card::SIX_HEARTS, Bard::SIX_HEARTS)]
+    #[case(Card::FIVE_HEARTS, Bard::FIVE_HEARTS)]
+    #[case(Card::FOUR_HEARTS, Bard::FOUR_HEARTS)]
+    #[case(Card::TREY_HEARTS, Bard::TREY_HEARTS)]
+    #[case(Card::DEUCE_HEARTS, Bard::DEUCE_HEARTS)]
+    #[case(Card::ACE_DIAMONDS, Bard::ACE_DIAMONDS)]
+    #[case(Card::KING_DIAMONDS, Bard::KING_DIAMONDS)]
+    #[case(Card::QUEEN_DIAMONDS, Bard::QUEEN_DIAMONDS)]
+    #[case(Card::JACK_DIAMONDS, Bard::JACK_DIAMONDS)]
+    #[case(Card::TEN_DIAMONDS, Bard::TEN_DIAMONDS)]
+    #[case(Card::NINE_DIAMONDS, Bard::NINE_DIAMONDS)]
+    #[case(Card::EIGHT_DIAMONDS, Bard::EIGHT_DIAMONDS)]
+    #[case(Card::SEVEN_DIAMONDS, Bard::SEVEN_DIAMONDS)]
+    #[case(Card::SIX_DIAMONDS, Bard::SIX_DIAMONDS)]
+    #[case(Card::FIVE_DIAMONDS, Bard::FIVE_DIAMONDS)]
+    #[case(Card::FOUR_DIAMONDS, Bard::FOUR_DIAMONDS)]
+    #[case(Card::TREY_DIAMONDS, Bard::TREY_DIAMONDS)]
+    #[case(Card::DEUCE_DIAMONDS, Bard::DEUCE_DIAMONDS)]
+    #[case(Card::ACE_CLUBS, Bard::ACE_CLUBS)]
+    #[case(Card::KING_CLUBS, Bard::KING_CLUBS)]
+    #[case(Card::QUEEN_CLUBS, Bard::QUEEN_CLUBS)]
+    #[case(Card::JACK_CLUBS, Bard::JACK_CLUBS)]
+    #[case(Card::TEN_CLUBS, Bard::TEN_CLUBS)]
+    #[case(Card::NINE_CLUBS, Bard::NINE_CLUBS)]
+    #[case(Card::EIGHT_CLUBS, Bard::EIGHT_CLUBS)]
+    #[case(Card::SEVEN_CLUBS, Bard::SEVEN_CLUBS)]
+    #[case(Card::SIX_CLUBS, Bard::SIX_CLUBS)]
+    #[case(Card::FIVE_CLUBS, Bard::FIVE_CLUBS)]
+    #[case(Card::FOUR_CLUBS, Bard::FOUR_CLUBS)]
+    #[case(Card::TREY_CLUBS, Bard::TREY_CLUBS)]
+    #[case(Card::DEUCE_CLUBS, Bard::DEUCE_CLUBS)]
+    #[case(Card::BLANK, Bard::BLANK)]
+    fn from__card(#[case] from: Card, #[case] to: Bard) {
+        assert_eq!(to, Bard::from(from));
     }
 }

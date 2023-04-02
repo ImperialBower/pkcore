@@ -13,6 +13,6 @@ going to need several plans:
 1. Store the absolute results in some sort of DB, either flat file or simple text thing.
 2. Some method of distilling down odds based on basic patters, such as two over cards vs pair, etc.
 
-For this we are going to nee
+For this, I'm feeling the need to have a very simple way to store combinations of cards
 
 Preflop is where the petal hits the metal. 

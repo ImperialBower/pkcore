@@ -584,6 +584,7 @@
         * VICTORY!!! CaseEvals::from_holdem_at_flop_mpsc()
           * finally figured out how to use concurrency to make this faster.
     * PHASE SIX: Pre flop DUN DUN DUNNNNNNN
+      * 6.1 - Construct Bards from Card
 
 ## LATER
 
@@ -628,6 +629,8 @@
   * concurrency
     * [Rayon](https://github.com/rayon-rs/rayon)
       * [How Rust makes Rayon's data parallelism magical](https://developers.redhat.com/blog/2021/04/30/how-rust-makes-rayons-data-parallelism-magical#generic_constraints_in_rayon)
+  * DBs
+    * [SurrealDB](https://surrealdb.com/)
 * Video
   * [Cloudinary's image overlay feature](https://cloudinary.com/documentation/video_manipulation_and_delivery#adding_image_overlays)
   * [Programmatically add 100s of image overlays on video clip](https://stackoverflow.com/questions/18750525/programatically-add-100s-of-image-overlays-on-video-clip)
