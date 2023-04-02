@@ -436,13 +436,10 @@ mod bard_tests {
         assert_eq!(bard, Bard::ALL);
     }
 
-    // #[test]
-    // fn fold_in__smooth() {
-    //
-    //     let bard: Bard = Cards::deck().iter().map(Bard::fold_in).collect::<Bard>();
-    //
-    //     assert_eq!(bard, Bard::ALL);
-    // }
+    #[test]
+    fn walk() {
+        let _bard = Bard::ACE_SPADES | Bard::ACE_HEARTS | Bard::ACE_DIAMONDS | Bard::ACE_CLUBS;
+    }
 
     #[test]
     fn default() {
@@ -579,7 +576,10 @@ mod bard_tests {
         let expected = Bard::TEN_CLUBS | Bard::NINE_HEARTS;
 
         assert_eq!(actual, expected);
-        assert_ne!(actual, Bard::TEN_CLUBS | Bard::NINE_HEARTS | Bard::EIGHT_HEARTS);
+        assert_ne!(
+            actual,
+            Bard::TEN_CLUBS | Bard::NINE_HEARTS | Bard::EIGHT_HEARTS
+        );
         assert_eq!(Bard::from(Cards::deck()), Bard::ALL);
     }
 }

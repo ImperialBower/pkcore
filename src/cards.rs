@@ -1,3 +1,4 @@
+use crate::bard::Bard;
 use crate::card::Card;
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
@@ -384,6 +385,12 @@ impl From<&Card> for Cards {
         let mut cards = Cards::default();
         cards.insert(*card);
         cards
+    }
+}
+
+impl From<Bard> for Cards {
+    fn from(_bard: Bard) -> Self {
+        Cards::default()
     }
 }
 
@@ -814,6 +821,11 @@ mod card_tests {
     #[test]
     fn display() {
         assert_eq!("5♣ 4♣ 3♣ 2♣ A♣", wheel().to_string());
+    }
+
+    #[test]
+    fn from__bard() {
+        assert_eq!(Cards::default(), Cards::from(Bard::BLANK));
     }
 
     #[test]
