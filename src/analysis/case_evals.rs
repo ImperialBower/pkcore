@@ -1,4 +1,5 @@
 use crate::analysis::case_eval::CaseEval;
+use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::play::hole_cards::HoleCards;
@@ -33,6 +34,37 @@ impl CaseEvals {
             if let Ok(ce) = CaseEval::from_holdem_at_flop(board, case, hands) {
                 case_evals.push(ce);
             }
+        }
+
+        case_evals
+    }
+
+    /// # Panics
+    /// ¯\_ (ツ)_/¯
+    #[must_use]
+    pub fn from_holdem_at_deal(hands: &HoleCards) -> CaseEvals {
+        let mut case_evals = CaseEvals::default();
+
+        let (tx, rx) = mpsc::channel();
+
+        for v in hands.combinations_remaining(5) {
+            let tx = tx.clone();
+            let my_hands = hands.clone();
+
+            thread::spawn(move || {
+                let five = Five::try_from(v);
+                if let Ok(case) = five {
+                    if let Ok(ce) = CaseEval::from_holdem_at_deal(case, &my_hands) {
+                        tx.send(ce).unwrap();
+                    }
+                }
+            });
+        }
+
+        drop(tx);
+
+        for received in rx {
+            case_evals.push(received);
         }
 
         case_evals

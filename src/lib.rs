@@ -84,6 +84,11 @@ pub trait Pile {
         self.remaining_after(cards).combinations(k)
     }
 
+    fn combinations_remaining(&self, k: usize) -> Combinations<IntoIter<Card>> {
+        log::debug!("Pile.combinations_after(k: {})", k);
+        self.remaining().combinations(k)
+    }
+
     fn contains(&self, card: &Card) -> bool {
         self.to_vec().contains(card)
     }
@@ -95,6 +100,11 @@ pub trait Pile {
     fn enumerate_after(&self, k: usize, cards: &Cards) -> Enumerate<Combinations<IntoIter<Card>>> {
         log::info!("Pile.enumerate_after(k: {} cards: {})", k, cards);
         self.remaining_after(cards).combinations(k).enumerate()
+    }
+
+    fn enumerate_remaining(&self, k: usize) -> Enumerate<Combinations<IntoIter<Card>>> {
+        log::info!("Pile.enumerate_after(k: {})", k);
+        self.combinations_remaining(k).enumerate()
     }
 
     /// This feels like the best name for this functionality. If a `Pile` doesn't contain

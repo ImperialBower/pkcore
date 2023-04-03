@@ -1,5 +1,6 @@
 use crate::analysis::eval::Eval;
 use crate::analysis::hand_rank::HandRank;
+use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
@@ -126,6 +127,28 @@ impl CaseEval {
                     return Err(PKError::InvalidHand);
                 }
                 let seven = Seven::from_case_at_flop(*player, board, case)?;
+                let eval = Eval::from(seven);
+                case_eval.push(eval);
+            }
+
+            Ok(case_eval)
+        } else {
+            Err(PKError::BlankCard)
+        }
+    }
+
+    /// # Errors
+    ///
+    /// ¯\_ (ツ)_/¯
+    pub fn from_holdem_at_deal(case: Five, hands: &HoleCards) -> Result<Self, PKError> {
+        if case.is_dealt() {
+            let mut case_eval = CaseEval::default();
+
+            for player in hands.iter() {
+                if !player.is_dealt() {
+                    return Err(PKError::InvalidHand);
+                }
+                let seven = Seven::from_case_at_deal(*player, case)?;
                 let eval = Eval::from(seven);
                 case_eval.push(eval);
             }
