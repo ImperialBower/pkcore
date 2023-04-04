@@ -32,3 +32,11 @@ a radical form of serialization. `Cards` go in, `Bard` goes out. `Bard` goes in,
 OK, now that we can collapse a collection of Cards into a single `Bard` integer, let's do the reverse,
 deconstructing a binary `Bard` into a `Cards` collection. Note: one bit of information that will be
 lost when going back to `Cards` from a Bard is the order of the `Cards`.
+
+### The return of [bitvec](https://github.com/ferrilab/bitvec).
+
+The bitvec create was something that I had pulled out pretty early on as a way to manage the 
+[bitwise](https://en.wikipedia.org/wiki/Bitwise_operation) operations. I loved the library a lot,
+but had to remove it when the dependencies for the version I was using got pulled from
+[crates.io](https://crates.io/) and the contracts behind the code radically changed going in to 
+version 1. I simply didn't have the time to refactor a spike version of the library that
