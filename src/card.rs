@@ -1,13 +1,13 @@
 // use serde::ser::{Serialize, Serializer};
 // use serde::Deserialize;
 
+use crate::bard::Bard;
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::suit::Suit;
 use crate::{PKError, Pile, TheNuts};
 use std::fmt;
 use std::str::FromStr;
-use crate::bard::Bard;
 
 /// A `Card` is a [`Newtype`](https://rust-unofficial.github.io/patterns/patterns/behavioural/newtype.html)
 /// u32 representation of a variant of Cactus Kev's binary representation of a poker card as
@@ -369,8 +369,8 @@ impl TryFrom<Bard> for Card {
 #[allow(non_snake_case)]
 mod card_tests {
     use super::*;
-    use rstest::rstest;
     use crate::bard::Bard;
+    use rstest::rstest;
 
     #[test]
     fn new() {

@@ -390,17 +390,13 @@ impl From<&Card> for Cards {
 
 impl From<Bard> for Cards {
     fn from(bard: Bard) -> Self {
-
         let mut cards = Cards::default();
 
         for b in Bard::DECK {
             if b & bard == b {
-                let card = Card::try_from(b);
-                match card {
-                    Ok(c) => {
-                        let _ = cards.insert(c);
-                    },
-                    Err(_) => (),
+                let c = Card::try_from(b);
+                if let Ok(c) = c {
+                    let _ = cards.insert(c);
                 };
             }
         }
@@ -840,16 +836,12 @@ mod card_tests {
 
     #[test]
     fn from__bard() {
-        let my_bard = Bard::TEN_SPADES | Bard::TEN_DIAMONDS | Bard::TEN_CLUBS  | Bard::TEN_HEARTS;
-        assert_eq!(Cards::from_str("T♣ T♦ T♥ T♠").unwrap(), Cards::from(my_bard));
+        let my_bard = Bard::TEN_SPADES | Bard::TEN_DIAMONDS | Bard::TEN_CLUBS | Bard::TEN_HEARTS;
+        assert_eq!(
+            Cards::from_str("T♣ T♦ T♥ T♠").unwrap(),
+            Cards::from(my_bard)
+        );
         assert_eq!(Cards::default(), Cards::from(Bard::BLANK));
-
-    }
-
-    #[test]
-    fn from__bard__scratch() {
-        let my_bard = Bard::TEN_SPADES | Bard::TEN_DIAMONDS | Bard::TEN_CLUBS  | Bard::TEN_HEARTS;
-        let cards = Cards::from(my_bard);
     }
 
     #[test]
