@@ -31,6 +31,7 @@ pub const UNIQUE_5_CARD_HANDS: usize = 2_598_960;
 #[derive(Debug, Eq, PartialEq)]
 pub enum PKError {
     BlankCard,
+    CardCast,
     DuplicateCard,
     Fubar,
     Incomplete,

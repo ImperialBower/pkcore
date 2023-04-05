@@ -585,6 +585,8 @@
           * finally figured out how to use concurrency to make this faster.
     * PHASE SIX: Pre flop DUN DUN DUNNNNNNN
       * 6.1 - Construct Bards from Card
+      * 6.2 - Cards from Bard
+        * 6.2.1 - Card try_from Bard 
 
 ## LATER
 
