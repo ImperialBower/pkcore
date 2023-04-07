@@ -389,6 +389,40 @@ impl From<&Card> for Cards {
 }
 
 impl From<Bard> for Cards {
+    /// This method is designed to deserialize a binary `Bard` entity into a `Cards` `IndexSet`
+    /// type. The `Bard` type is a handy way to store a collection of `Card`s in a single
+    /// binary integer, however they have limitations, that `Cards` makes up for.
+    ///
+    /// # VICTORY!!!
+    ///
+    /// Here's how I got it to work.
+    ///
+    /// ## Step 1:
+    ///
+    /// Implement `impl TryFrom<Bard> for Card`. We're using try_from instead of try
+    /// so that we are sure that the `Bard`s we're passing in are single `Bard`s. Since
+    /// that type can store one or more `Card` entities, we want to make sure that we aren't
+    /// losing any information.
+    ///
+    /// ## Step 2:
+    ///
+    /// A long time ago I created a `Bard::DECK` that was an array of the 52 cards in a poker
+    /// deck (the infamous French Deck). We'll loop through every single card `Bard` in the deck and
+    /// see if our passed in Bard contains it. How will we do that.
+    ///
+    /// ## Step 3:
+    ///
+    /// Compare the `Bard` in the deck to our passed in `Bard`. The magic spell
+    /// is a bitwise AND operation. For example, here we have the binary value for the ace of spades
+    /// and after that, the binary value for four aces. We will do an AND operation on it, and the
+    /// result should be that they only flag remaining is the one for the ace of spades, since
+    /// that is the only bit in common between the two integers. This tells us that the value of
+    /// the ace of spaces is in our Bard, and we can pass it on to our Cards instance.
+    ///
+    /// ```
+    /// let ace_of_spades = 0b1000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000;
+    /// let my_hand =       0b1000_0000_0000_0100_0000_0000_0010_0000_0000_0001_0000_0000_0000;
+    /// ```
     fn from(bard: Bard) -> Self {
         let mut cards = Cards::default();
 

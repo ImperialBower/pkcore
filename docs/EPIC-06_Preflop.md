@@ -39,4 +39,11 @@ The bitvec create was something that I had pulled out pretty early on as a way t
 [bitwise](https://en.wikipedia.org/wiki/Bitwise_operation) operations. I loved the library a lot,
 but had to remove it when the dependencies for the version I was using got pulled from
 [crates.io](https://crates.io/) and the contracts behind the code radically changed going in to 
-version 1. I simply didn't have the time to refactor a spike version of the library that
+version 1. I simply didn't have the time to refactor a spike version of the library that suddenly
+didn't work. 
+
+![3dayslater.png](files%2F3dayslater.png)
+
+Fuck it. I got it to work without it. I love this library but it's not what I'm looking for. I
+got it to work via stupider methods #DumbCoder #ThisIsTheWay. See `impl From<Bard> for Cards` 
+for the details. 
