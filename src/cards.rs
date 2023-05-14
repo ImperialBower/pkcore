@@ -399,7 +399,7 @@ impl From<Bard> for Cards {
     ///
     /// ## Step 1:
     ///
-    /// Implement `impl TryFrom<Bard> for Card`. We're using try_from instead of try
+    /// Implement `impl TryFrom<Bard> for Card`. We're using `try_from` instead of try
     /// so that we are sure that the `Bard`s we're passing in are single `Bard`s. Since
     /// that type can store one or more `Card` entities, we want to make sure that we aren't
     /// losing any information.
