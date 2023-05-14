@@ -420,8 +420,8 @@ impl From<Bard> for Cards {
     /// the ace of spaces is in our Bard, and we can pass it on to our Cards instance.
     ///
     /// ```
-    /// let ace_of_spades = 0b1000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000;
-    /// let my_hand =       0b1000_0000_0000_0100_0000_0000_0010_0000_0000_0001_0000_0000_0000;
+    /// let ace_of_spades: i64 = 0b1000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000;
+    /// let my_hand: i64       = 0b1000_0000_0000_0100_0000_0000_0010_0000_0000_0001_0000_0000_0000;
     /// ```
     fn from(bard: Bard) -> Self {
         let mut cards = Cards::default();
