@@ -35,3 +35,5 @@ these words will help you find the error of your ways sooner than I did.
 
 As I've said many times... your code is your hero... your tests are the chronicle of its journey. Forget to
 record it, and their tale will quickly become lost. 
+
+[Theoretical Physicist Brian Greene Explains Time in 5 Levels of Difficulty](https://www.youtube.com/watch?v=TAhbFRMURtg)
