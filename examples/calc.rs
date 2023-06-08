@@ -112,6 +112,7 @@ struct Args {
 /// cargo run --example calc -- -d "J♥ J♣ A♥ 4♥" -b "3♣ 4♠ 4♣ 7♣ 9♠" HSP S09E05 Adelstein/Brunson 2nd
 /// cargo run --example calc -- -d "8♦ 5♦ K♦ J♥ 2♠ 2♥" -b "9♥ 2♦ K♥ 4♥ J♠" HSP S09E05 Tilly/Hultman
 /// cargo run --example calc -- -d "J♥ J♦ A♠ K♦ T♣ 9♣" -b "7♦ K♠ 2♥ 7♣ A♦" HSP S09E05 Liu/Tilly/Menon
+/// cargo run --example calc -- -d "7s 6c js 4d" -b "8h 5h 9d" -- Hand with KDog
 fn main() -> Result<(), PKError> {
     let now = std::time::Instant::now();
     env_logger::init();
