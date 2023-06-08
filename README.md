@@ -645,6 +645,8 @@
     * [How to Add Graphics and Overlays to Live Video With Open Broadcaster (OBS)](https://photography.tutsplus.com/tutorials/how-to-add-custom-graphics-obs-studio--cms-35066)
 * Programming
   * [The Grug Brained Developer](https://grugbrain.dev/)
+  * GUI
+    * [Ratatui](https://github.com/tui-rs-revival/ratatui)
 
 ## Potential Libraries
 
