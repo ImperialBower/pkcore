@@ -639,6 +639,8 @@
       * [How Rust makes Rayon's data parallelism magical](https://developers.redhat.com/blog/2021/04/30/how-rust-makes-rayons-data-parallelism-magical#generic_constraints_in_rayon)
   * DBs
     * [SurrealDB](https://surrealdb.com/)
+  * Code Coverage
+    * [How to do code coverage in Rust](https://blog.rng0.io/how-to-do-code-coverage-in-rust)
 * Video
   * [Cloudinary's image overlay feature](https://cloudinary.com/documentation/video_manipulation_and_delivery#adding_image_overlays)
   * [Programmatically add 100s of image overlays on video clip](https://stackoverflow.com/questions/18750525/programatically-add-100s-of-image-overlays-on-video-clip)
