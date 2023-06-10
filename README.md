@@ -588,6 +588,7 @@
       * 6.1 - Construct Bards from Card
       * 6.2 - Cards from Bard
         * 6.2.1 - Card try_from Bard 
+  * Created [pkterm](https://github.com/ImperialBower/pkterm)
 
 ## LATER
 
