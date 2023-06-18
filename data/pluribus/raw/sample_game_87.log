@@ -1,0 +1,34 @@
+# name/game/hands/seed sample_game_87 ../lib/python-client/acpc_infrastructure/holdem.nolimit.6p.game 10000 87
+#--t_response 600000000
+#--t_hand 600000000
+#--t_per_hand 600000000
+STATE:0:ffr225fr1050ff:JdJh|5c7d|Kc2c|4c9s|Ac8h|6hTs:325|-100|0|0|-225|0:MrPink|Eddie|MrOrange|Bill|MrBlue|Pluribus
+STATE:1:fr225ffcf/cr500f:Ts9s|8sAh|2s5h|4h4s|7h3c|QhTc/6dQd6c:-225|-100|0|325|0|0:Eddie|MrOrange|Bill|MrBlue|Pluribus|MrPink
+STATE:2:ffr210fr1050fr2300r10000c///:AsKd|Jh5h|6c5d|6s5s|KhAc|6d4s/7hAd8c/Th/Ts:50|-100|0|0|50|0:MrOrange|Bill|MrBlue|Pluribus|MrPink|Eddie
+STATE:3:ffffcr350r1400c/cr2550c/cr4500c/cr10000c:AhAc|9hJh|7h6h|5h2c|4h8s|Js5d/Ts8c7d/Td/Ad:10000|-10000|0|0|0|0:Bill|MrBlue|Pluribus|MrPink|Eddie|MrOrange
+STATE:4:r210ffffc/cr680f:As7d|9sAc|AhKs|3c6h|8dJc|5s9c/8c7hKh:-50|-210|260|0|0|0:MrBlue|Pluribus|MrPink|Eddie|MrOrange|Bill
+STATE:5:fffr225fc/cc/cr525f:7d5h|QhKs|Td4d|8hKd|7s6h|Js9d/8d7h6s/3h:-50|-225|0|0|0|275:Pluribus|MrPink|Eddie|MrOrange|Bill|MrBlue
+STATE:6:fr225fffc/cr375f:Tc6s|3h8h|4s5s|AsTs|9s4d|Jh7c/Kd5hAc:-50|-225|0|275|0|0:MrPink|Eddie|MrOrange|Bill|MrBlue|Pluribus
+STATE:7:r225ffffc/cr475f:2s6c|Qh2h|9c9h|AhJc|Js4s|3dAs/9d3hKs:-50|-225|275|0|0|0:Eddie|MrOrange|Bill|MrBlue|Pluribus|MrPink
+STATE:8:fffr222fc/cr372r822f:QhTc|Jc6c|Kc8c|4c7s|7dAc|3sQs/6d9cJd:-50|422|0|0|0|-372:MrOrange|Bill|MrBlue|Pluribus|MrPink|Eddie
+STATE:9:ffffcr350c/cc/cr875f:2h2c|JsKd|5hAd|TdKh|8d3s|Qs3d/9s5dTs/8c:-350|350|0|0|0|0:Bill|MrBlue|Pluribus|MrPink|Eddie|MrOrange
+STATE:10:ffffr300f:KsKc|2d9s|2s5c|3c6c|4h3h|Qd8c:100|-100|0|0|0|0:MrBlue|Pluribus|MrPink|Eddie|MrOrange|Bill
+STATE:11:r200ffcff/cc/cr612f:4c9h|Js7c|Ac5c|4sTc|2d6d|9cJc/Ts4dQs/8s:-50|-100|-200|0|0|350:Pluribus|MrPink|Eddie|MrOrange|Bill|MrBlue
+STATE:12:ffr225ffc/cc/cr600f:Ts3h|5c4s|7dAh|3cTc|Kd5d|6c5h/2h9sJc/Js:-50|-225|0|0|275|0:MrPink|Eddie|MrOrange|Bill|MrBlue|Pluribus
+STATE:13:fffr250fc/cr430f:2s9c|6sAh|Qs9d|Ts3s|7hKd|8cTh/5c5dTc:-50|-250|0|0|0|300:Eddie|MrOrange|Bill|MrBlue|Pluribus|MrPink
+STATE:14:r225fffff:4h9h|8dJs|7c7d|4sKs|4d8h|8c9d:-50|-100|150|0|0|0:MrOrange|Bill|MrBlue|Pluribus|MrPink|Eddie
+STATE:15:fr210r700fffc/cr1325c/cc/r2025r6225f:Kd5c|6s7h|2cKc|QsTs|AdAh|4s7d/4d9s8h/9c/6h:-50|-100|0|-2025|2175|0:Bill|MrBlue|Pluribus|MrPink|Eddie|MrOrange
+STATE:16:fffr250ff:3s6d|3c2h|Kc4h|2dTc|5s9c|Ad8s:-50|-100|0|0|0|150:MrBlue|Pluribus|MrPink|Eddie|MrOrange|Bill
+STATE:17:ffr225ffc/cr475f:6s2c|4h4d|7c4s|8sQc|Ah6h|2hQd/2s7sJc:-50|-225|0|0|275|0:Pluribus|MrPink|Eddie|MrOrange|Bill|MrBlue
+STATE:18:ffr225ffc/cc/cr600f:2c9d|Qc8c|8sKh|6cJd|ThKs|3dAs/6hKc4d/9s:-50|-225|0|0|275|0:MrPink|Eddie|MrOrange|Bill|MrBlue|Pluribus
+STATE:19:fffff:2c4h|9cAd|3sKd|2d8h|8s7c|Td8c:-50|50|0|0|0|0:Eddie|MrOrange|Bill|MrBlue|Pluribus|MrPink
+STATE:20:ffr210cfc/ccr380fc/cr1180c/cc:8d7h|9s8c|Kc2s|5hTc|6h6c|KhQc/3dKs5s/5d/6s:-50|-210|0|0|1440|-1180:MrOrange|Bill|MrBlue|Pluribus|MrPink|Eddie
+STATE:21:fr210ffff:2sQs|5sKc|6d3c|QcJs|JcAd|Qd4h:-50|-100|0|150|0|0:Bill|MrBlue|Pluribus|MrPink|Eddie|MrOrange
+STATE:22:r210fffcc/ccc/ccc/r682fc:Jd7d|QdKh|JhAh|9d3d|9s5s|As6h/7h3s8d/6c/Jc:892|-210|-682|0|0|0:MrBlue|Pluribus|MrPink|Eddie|MrOrange|Bill
+STATE:23:r200ffcff/r500f:8d9h|8cKd|9sAs|Th7c|3h9c|9d7d/KcQh3s:-50|-100|350|0|0|-200:Pluribus|MrPink|Eddie|MrOrange|Bill|MrBlue
+STATE:24:r200fffr1000ff:As5s|7cQh|ThAh|6s2c|8h3h|6c4h:300|-100|-200|0|0|0:MrPink|Eddie|MrOrange|Bill|MrBlue|Pluribus
+STATE:25:fffr250r1150ff:KhQs|8hAs|6cAh|4d5h|Ac6s|KcTs:350|-100|0|0|0|-250:Eddie|MrOrange|Bill|MrBlue|Pluribus|MrPink
+STATE:26:ffffr250c/cr500f:5hKc|5dJs|3cAd|Jc9h|7d2c|5c4s/Qs6d2d:-250|250|0|0|0|0:MrOrange|Bill|MrBlue|Pluribus|MrPink|Eddie
+STATE:27:fffff:8h5c|3hKc|7h6h|8d9s|3cTc|4d7s:-50|50|0|0|0|0:Bill|MrBlue|Pluribus|MrPink|Eddie|MrOrange
+STATE:28:fr200r700fffr2100c/cc/cr3655f:Qd5s|9dTc|3hKh|AhKd|AcAd|4h5d/9cJs9h/8c:-50|-100|0|-2100|2250|0:MrBlue|Pluribus|MrPink|Eddie|MrOrange|Bill
+STATE:29:fr210ffcc/ccc/r525ff:7cAc|Kh9c|8c6d|Jd9d|2cTc|Qh7d/5s5h7h/3s:420|-210|0|-210|0|0:Pluribus|MrPink|Eddie|MrOrange|Bill|MrBlue

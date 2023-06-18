@@ -606,6 +606,9 @@
       * 888poker > [What is Nuts in Poker?](https://www.888poker.com/magazine/poker-terms/nuts)
       * GetMega > [Nuts in Poker](https://www.getmega.com/cards/poker/terms/nuts-in-poker/)
     * 888poker > [What is Texture in Poker?](https://www.888poker.com/magazine/poker-terms/texture)
+  * Pluribus
+    * [Superhuman AI for multiplayer poker](https://www.science.org/doi/10.1126/science.aay2400)
+    * [pluribus-hand-parser](https://github.com/VitamintK/pluribus-hand-parser)
 * Rust
   * [The Rust Programming Language](https://doc.rust-lang.org/stable/book/)
   * [Rust Design Patterns](https://rust-unofficial.github.io/patterns/intro.html) 

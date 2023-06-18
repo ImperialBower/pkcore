@@ -1,0 +1,35 @@
+# name/game/hands/seed sample_game_76 ../lib/python-client/acpc_infrastructure/holdem.nolimit.6p.game 10000 76
+#--t_response 600000000
+#--t_hand 600000000
+#--t_per_hand 600000000
+STATE:0:ffffr300r900f:Jc9d|JhJs|5s3d|5c2d|Qc6h|3s7s:-300|300|0|0|0|0:Budd|ORen|MrOrange|Hattori|MrBlue|Pluribus
+STATE:1:ffr200r720fff:8h2c|2dKs|8d5h|8cQd|TdJc|9cTc:-50|-100|0|0|-200|350:ORen|MrOrange|Hattori|MrBlue|Pluribus|Budd
+STATE:2:ffr225fff:8hKd|2c7s|7h9c|As5h|3d3h|5d6s:-50|-100|0|0|150|0:MrOrange|Hattori|MrBlue|Pluribus|Budd|ORen
+STATE:3:fr225fr700ffr2100f:Ks2c|8s8d|Kd4h|Qd9d|TdJh|8c7c:-50|-100|0|850|0|-700:Hattori|MrBlue|Pluribus|Budd|ORen|MrOrange
+STATE:4:fffr225fc/cr625c/r950c/cc:7cTh|4c5d|Tc9d|4d5s|Ks3c|9h9s/7h4s3d/5h/5c:-50|1000|0|0|0|-950:MrBlue|Pluribus|Budd|ORen|MrOrange|Hattori
+STATE:5:r200fcffc/cr525ff:Ac5s|KdJh|TcAd|8d6s|QhAh|Qd4c/Td6c2d:-50|-200|450|0|-200|0:Pluribus|Budd|ORen|MrOrange|Hattori|MrBlue
+STATE:6:fffr250ff:Td3s|Jd7c|Ac2d|Ks8h|7d3d|KcAs:-50|-100|0|0|0|150:Budd|ORen|MrOrange|Hattori|MrBlue|Pluribus
+STATE:7:ffffr300f:Ad3s|6s2d|Qs8s|2h4d|As6d|Qh2c:100|-100|0|0|0|0:ORen|MrOrange|Hattori|MrBlue|Pluribus|Budd
+STATE:8:fffff:Kd3h|9h9d|QdJc|6dQh|4c9c|3dTc:-50|50|0|0|0|0:MrOrange|Hattori|MrBlue|Pluribus|Budd|ORen
+STATE:9:fffff:6h5d|Qd5h|4dKc|Qc2h|4hJs|7hKs:-50|50|0|0|0|0:Hattori|MrBlue|Pluribus|Budd|ORen|MrOrange
+STATE:10:fffr225r1075ff:JdQs|5h2h|Td8d|9cAh|2dJc|4dAs:325|-100|0|0|0|-225:MrBlue|Pluribus|Budd|ORen|MrOrange|Hattori
+STATE:11:fffff:4sQh|3s2d|2s8d|9cTh|5h9s|8sJh:-50|50|0|0|0|0:Pluribus|Budd|ORen|MrOrange|Hattori|MrBlue
+STATE:12:r200ffffc/cc/r325f:4sTc|5sQs|AcJs|9h7d|7cKd|Jd6h/7h5d8h/2h:-50|250|-200|0|0|0:Budd|ORen|MrOrange|Hattori|MrBlue|Pluribus
+STATE:13:r200fffff:Tc6h|6d5c|Ah2h|Kc9c|ThAc|KhQc:-50|-100|150|0|0|0:ORen|MrOrange|Hattori|MrBlue|Pluribus|Budd
+STATE:14:ffffr250c/r400c/cc/cr1200f:5cJc|8hJd|3h6c|6d5h|5s9d|8c2c/Ac7d5d/8s/3c:-400|400|0|0|0|0:MrOrange|Hattori|MrBlue|Pluribus|Budd|ORen
+STATE:15:fffr244r1200fc/r1800c/cc/cc:JhAd|8d6c|9dAc|JsTc|6s8c|AhQc/KhQs5s/9s/Jc:-1800|-100|0|0|0|1900:Hattori|MrBlue|Pluribus|Budd|ORen|MrOrange
+STATE:16:fffr225ff:Kh7h|2c8h|Ts7d|5s3s|Qd4h|Jd6d:-50|-100|0|0|0|150:MrBlue|Pluribus|Budd|ORen|MrOrange|Hattori
+STATE:17:fffr225ff:8s2c|5d3c|2h8h|Qc9d|Kd5c|Td3d:-50|-100|0|0|0|150:Pluribus|Budd|ORen|MrOrange|Hattori|MrBlue
+STATE:18:ffffr300f:6c6d|9h3d|8d6h|Ts9d|4hTh|5cJh:100|-100|0|0|0|0:Budd|ORen|MrOrange|Hattori|MrBlue|Pluribus
+STATE:19:ffr200ffc/cr425c/cc/r1202r2429f:5d7h|ThKc|Ac8s|Kh4c|JcJs|3d5s/6sTs4s/Qs/Ks:-50|-1202|0|0|1252|0:ORen|MrOrange|Hattori|MrBlue|Pluribus|Budd
+STATE:20:r225fcfff/cr525c/cc/cc:5h7c|Ts3d|QhAh|Kh3c|JhJd|8hJs/7hQd4h/2h/5c:-50|-100|675|0|-525|0:MrOrange|Hattori|MrBlue|Pluribus|Budd|ORen
+STATE:21:r250fffff:4s3d|7h2s|ThAd|6c4c|Kc2d|JdKh:-50|-100|150|0|0|0:Hattori|MrBlue|Pluribus|Budd|ORen|MrOrange
+STATE:22:fffff:6cQd|5dTh|2c3c|8cKh|3d2d|8d4d:-50|50|0|0|0|0:MrBlue|Pluribus|Budd|ORen|MrOrange|Hattori
+STATE:23:fffr225ff:3dJs|9s6d|QdJc|5cKs|9hTc|8d8h:-50|-100|0|0|0|150:Pluribus|Budd|ORen|MrOrange|Hattori|MrBlue
+STATE:24:ffr225ffr1100c/r1725c/cr4350c/cc:9c2s|Ad6d|Kd4c|6hQh|As8s|3dJs/AcAh2c/3s/Qc:-50|-4350|0|0|4400|0:Budd|ORen|MrOrange|Hattori|MrBlue|Pluribus
+STATE:25:r200fffcf/cr324c/cc/cc:8d8h|Jh7c|AsTd|4hJd|Qh2c|4c8s/Ks7hKd/3d/Js:424|-100|-324|0|0|0:ORen|MrOrange|Hattori|MrBlue|Pluribus|Budd
+STATE:26:ffr225ffc/cc/cc/r1725f:5h5d|2d4d|Qs9c|7cTs|KcAs|2hAc/Qh7s6d/Kh/3s:-50|275|0|0|-225|0:MrOrange|Hattori|MrBlue|Pluribus|Budd|ORen
+STATE:27:r200fr612fffr1986r10000c///:Ks4d|Jc9h|KdAs|QdJh|Ad3d|3h8d/2c4cTc/4h/6h:-50|-100|10150|0|-10000|0:Hattori|MrBlue|Pluribus|Budd|ORen|MrOrange
+STATE:28:ffffr300f:Ac2h|5h2d|4s9s|8s7c|3cTd|6c8d:100|-100|0|0|0|0:MrBlue|Pluribus|Budd|ORen|MrOrange|Hattori
+STATE:29:ffr200fff:Ad3c|8s5c|5d6h|8c9s|QsTs|8h6s:-50|-100|0|0|150|0:Pluribus|Budd|ORen|MrOrange|Hattori|MrBlue
+STATE:30:fffff:6s7c|7d9s|7s2d|Kh2h|Kd4h|Jh3h:-50|50|0|0|0|0:Budd|ORen|MrOrange|Hattori|MrBlue|Pluribus
