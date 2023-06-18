@@ -589,6 +589,9 @@
       * 6.2 - Cards from Bard
         * 6.2.1 - Card try_from Bard 
   * Created [pkterm](https://github.com/ImperialBower/pkterm)
+  * EPIC: Bets
+    * Added in sample data from pluribus, etc.
+    * 
 
 ## LATER
 
