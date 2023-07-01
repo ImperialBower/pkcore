@@ -1,0 +1,37 @@
+# name/game/hands/seed sample_game_77 ../lib/python-client/acpc_infrastructure/holdem.nolimit.6p.game 10000 77
+#--t_response 600000000
+#--t_hand 600000000
+#--t_per_hand 600000000
+STATE:0:fffr225r900ff:8d8c|Tc2d|6s2s|2hKd|9d5s|JsKh:325|-100|0|0|0|-225:Budd|ORen|MrOrange|Hattori|MrBlue|Pluribus
+STATE:1:r200ffffr1300f:Kd8c|AsAc|TsAd|KhJh|4d3c|8d2h:-50|250|-200|0|0|0:ORen|MrOrange|Hattori|MrBlue|Pluribus|Budd
+STATE:2:fffff:Js9d|9s7d|6d2d|9cKh|Jd5d|8c6s:-50|50|0|0|0|0:MrOrange|Hattori|MrBlue|Pluribus|Budd|ORen
+STATE:3:fr225ffff:2c8s|3hJs|6sJd|9h9c|Kc7s|Qc3d:-50|-100|0|150|0|0:Hattori|MrBlue|Pluribus|Budd|ORen|MrOrange
+STATE:4:ffr210ffc/cr360f:Kh2d|3c4c|4s5s|7d3h|AsKd|3dQd/8h6sAd:-50|-210|0|0|260|0:MrBlue|Pluribus|Budd|ORen|MrOrange|Hattori
+STATE:5:ffr200ffc/cr650c/cc/r2000c:Qc3s|6h5h|Kc5c|Kd8s|TsAh|KsJd/7hAs9h/7s/9s:-50|-2000|0|0|2050|0:Pluribus|Budd|ORen|MrOrange|Hattori|MrBlue
+STATE:6:r200fffff:2h9h|8d4c|TdQd|2c9s|6d8h|JhTs:-50|-100|150|0|0|0:Budd|ORen|MrOrange|Hattori|MrBlue|Pluribus
+STATE:7:ffffr300c/cc/cc/r750f:6d6c|5dKc|4c3s|7sTc|4h8c|Qh6s/4d8h3d/Qc/Qd:300|-300|0|0|0|0:ORen|MrOrange|Hattori|MrBlue|Pluribus|Budd
+STATE:8:r225r825fffff:8h4d|6s5s|9dQd|AhKd|4s8c|3d7d:-50|-100|-225|375|0|0:MrOrange|Hattori|MrBlue|Pluribus|Budd|ORen
+STATE:9:fffff:6s3c|Ad6c|8d7s|Ac5h|5d2d|As7d:-50|50|0|0|0|0:Hattori|MrBlue|Pluribus|Budd|ORen|MrOrange
+STATE:10:ffr225fcf/cc/r440f:KsTh|3h7c|4d8c|7h5d|5s5h|2hTc/6hJdKd/2c:325|-100|0|0|-225|0:MrBlue|Pluribus|Budd|ORen|MrOrange|Hattori
+STATE:11:fffff:8d6h|4h5h|7hKs|2cTh|6dAs|5dQs:-50|50|0|0|0|0:Pluribus|Budd|ORen|MrOrange|Hattori|MrBlue
+STATE:12:ffr225fff:2s4d|9s3c|8s9d|5s6d|4c2c|5d6s:-50|-100|0|0|150|0:Budd|ORen|MrOrange|Hattori|MrBlue|Pluribus
+STATE:13:ffr287fff:TcKd|7h5c|Jd4h|8s5h|Ks9s|Jc9c:-50|-100|0|0|150|0:ORen|MrOrange|Hattori|MrBlue|Pluribus|Budd
+STATE:14:ffr225fff:2h9d|Th5s|4h7h|6h2c|QcAs|4dKc:-50|-100|0|0|150|0:MrOrange|Hattori|MrBlue|Pluribus|Budd|ORen
+STATE:15:fr225r675fr1675fr10000fc///:JhJd|8d6h|Ts2h|AhKc|AcQc|5d7s/7h4h6c/8s/9c:10775|-100|0|-10000|-675|0:Hattori|MrBlue|Pluribus|Budd|ORen|MrOrange
+STATE:16:r225ffffc/cr400c/cc/r825c:5dAc|7s7h|KsAh|5h9s|8h2d|4hQs/9dTh6c/3s/Ts:-50|875|-825|0|0|0:MrBlue|Pluribus|Budd|ORen|MrOrange|Hattori
+STATE:17:ffffcc/cr200c/cc/r400c:9s9h|3h4h|8dQs|4d6d|6hTd|7dTh/3c5sKd/7c/4s:-400|400|0|0|0|0:Pluribus|Budd|ORen|MrOrange|Hattori|MrBlue
+STATE:18:fffr250fr1075f:Kc3s|6s5s|2sQd|4h9s|Qc5h|6cTc:-50|300|0|0|0|-250:Budd|ORen|MrOrange|Hattori|MrBlue|Pluribus
+STATE:19:ffffr300c/cc/cc/cc:KhJh|3sKd|Ts4d|4s8d|6s3d|8hJd/8s2h6d/4c/5s:-300|300|0|0|0|0:ORen|MrOrange|Hattori|MrBlue|Pluribus|Budd
+STATE:20:fffr287r1100fr2450c/cr3650c/cc/r10000c:QsKs|6c3s|3c7h|TdJh|8h9d|Kd8d/Kc3d6s/Ts/5h:10100|-100|0|0|0|-10000:MrOrange|Hattori|MrBlue|Pluribus|Budd|ORen
+STATE:21:fcr450ffff:KsTh|QdJs|2c4s|2dAs|QhKh|9dQc:-50|-100|0|-100|250|0:Hattori|MrBlue|Pluribus|Budd|ORen|MrOrange
+STATE:22:ffffr300c/r750r2250f:Jc6c|2hJh|Tc7c|3d5c|7d2s|4h3c/5hKh2c:-750|750|0|0|0|0:MrBlue|Pluribus|Budd|ORen|MrOrange|Hattori
+STATE:23:r250fffff:4s3c|6c3d|JhJs|7cQs|8c2d|2h9h:-50|-100|150|0|0|0:Pluribus|Budd|ORen|MrOrange|Hattori|MrBlue
+STATE:24:ffffr300c/cc/r850f:5dAs|2c2s|2d3s|TsQd|6dQc|Qh7s/7cTh8s/Qs:300|-300|0|0|0|0:Budd|ORen|MrOrange|Hattori|MrBlue|Pluribus
+STATE:25:fffr250r1100fc/r2050f:QdAh|JdTd|4s9s|Qh8c|6c5h|3s3d/6dKcTh:1200|-100|0|0|0|-1100:ORen|MrOrange|Hattori|MrBlue|Pluribus|Budd
+STATE:26:ffr225fff:Jh9s|9d3c|8d6h|QdTh|5h5c|4c8c:-50|-100|0|0|150|0:MrOrange|Hattori|MrBlue|Pluribus|Budd|ORen
+STATE:27:fffr240fc/cr415f:Jc2d|6sTs|3c2c|5dQs|8hAc|QdKd/JsQh4c:-50|-240|0|0|0|290:Hattori|MrBlue|Pluribus|Budd|ORen|MrOrange
+STATE:28:fcfffc/cc/cc/cc:Jc5h|5d8s|As4d|2cTc|2sTh|4cTs/3sQcJh/Qs/Ac:-50|-100|0|150|0|0:MrBlue|Pluribus|Budd|ORen|MrOrange|Hattori
+STATE:29:fffff:9s4h|QhJc|3s8s|5c2d|9cJd|7cQs:-50|50|0|0|0|0:Pluribus|Budd|ORen|MrOrange|Hattori|MrBlue
+STATE:30:ffffr300f:QcTc|3cQh|8cTh|9c8h|3d6s|4cKh:100|-100|0|0|0|0:Budd|ORen|MrOrange|Hattori|MrBlue|Pluribus
+STATE:31:fffr250fc/cc/cc/cc:Jc9s|5s5c|3sAd|3c2c|Tc4s|Ac8d/7h8cJh/9c/Qd:-50|-250|0|0|0|300:ORen|MrOrange|Hattori|MrBlue|Pluribus|Budd
+STATE:32:ffr225fcc/ccr475cf/cr1650c/cr5175f:TsAh|JhQd|Ks2h|JsTd|AsAc|5cKd/7sAd6c/8d/3c:-1650|-225|0|0|1875|0:MrOrange|Hattori|MrBlue|Pluribus|Budd|ORen

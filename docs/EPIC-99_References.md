@@ -7,4 +7,4 @@
   * [Daniel Negreanu](https://en.wikipedia.org/wiki/Daniel_Negreanu)
     * [YouTube Channel](https://www.youtube.com/channel/UC0w4AA42ItXQEb9aZld87-w)
   * [Gus Hansen](https://en.wikipedia.org/wiki/Gus_Hansen)
-    * [Every Hand Revealed](https://smile.amazon.com/Every-Hand-Revealed-Gus-Hansen-ebook/dp/B002TWIVQM/ref=sr_1_1?crid=9PS9WWB2QCKP&keywords=Every+Hand+Revealed&qid=1655569183&sprefix=every+hand+revealed+%2Caps%2C124&sr=8-1) 
+    * [Every Hand Revealed](https://smile.amazon.com/Every-Hand-Revealed-Gus-Hansen-ebook/dp/B002TWIVQM/ref=sr_1_1?crid=9PS9WWB2QCKP&keywords=Every+Hand+Revealed&qid=1655569183&sprefix=every+hand+revealed+%2Caps%2C124&sr=8-1)

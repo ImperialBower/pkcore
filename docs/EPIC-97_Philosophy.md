@@ -1,10 +1,10 @@
 # Philosophy
 
-There are many ideas on how to scale large systems. 
+There are many ideas on how to scale large systems.
 
 Scaled Agile
 
-I am a contrarian. I believe that systems grow by empowering their domain. 
+I am a contrarian. I believe that systems grow by empowering their domain.
 
 * What we say (domain)
 * How we say it (messaging)
@@ -16,7 +16,7 @@ Automating the way our brain matches feedback patterns into ideas:
 
 * Design by Contract
   * Swagger
-  * 
+  *
 
 ## Links
 

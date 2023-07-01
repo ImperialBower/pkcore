@@ -1,13 +1,13 @@
 # Preflop
 
-Now that we've gotten some basic concurrency to spead up our odds calculations at the flop, 
-we're ready to start on the hardest calculation: Odds preflop. 
+Now that we've gotten some basic concurrency to spead up our odds calculations at the flop,
+we're ready to start on the hardest calculation: Odds preflop.
 
 Preflop is where the petal hits the metal.
 
 When we were determining the odds at the flop heads up, we were iterating over 903 different unique
 combination of cards that could be dealt. At the deal, that number increases to 1,712,304.
-The effort to determine the exact odds is increasing geometrically. 
+The effort to determine the exact odds is increasing geometrically.
 
 Since these calculations are so heavy, we are going to need a plan. In fact, I'm thinking we're
 going to need several plans:
@@ -33,17 +33,17 @@ OK, now that we can collapse a collection of Cards into a single `Bard` integer,
 deconstructing a binary `Bard` into a `Cards` collection. Note: one bit of information that will be
 lost when going back to `Cards` from a Bard is the order of the `Cards`.
 
-### The return of [bitvec](https://github.com/ferrilab/bitvec).
+### The return of [bitvec](https://github.com/ferrilab/bitvec)
 
-The bitvec create was something that I had pulled out pretty early on as a way to manage the 
+The bitvec create was something that I had pulled out pretty early on as a way to manage the
 [bitwise](https://en.wikipedia.org/wiki/Bitwise_operation) operations. I loved the library a lot,
 but had to remove it when the dependencies for the version I was using got pulled from
-[crates.io](https://crates.io/) and the contracts behind the code radically changed going in to 
+[crates.io](https://crates.io/) and the contracts behind the code radically changed going in to
 version 1. I simply didn't have the time to refactor a spike version of the library that suddenly
-didn't work. 
+didn't work.
 
 ![3dayslater.png](files%2F3dayslater.png)
 
 Fuck it. I got it to work without it. I love this library but it's not what I'm looking for. I
-got it to work via stupider methods #DumbCoder #ThisIsTheWay. See `impl From<Bard> for Cards` 
-for the details. 
+got it to work via stupider methods #DumbCoder #ThisIsTheWay. See `impl From<Bard> for Cards`
+for the details.

@@ -1,0 +1,55 @@
+# name/game/hands/seed sample_game_44 ../lib/python-client/acpc_infrastructure/holdem.nolimit.6p.game 10000 44
+#--t_response 600000000
+#--t_hand 600000000
+#--t_per_hand 600000000
+STATE:0:fffr225fc/cc/r600c/r1537f:8h3d|9cAc|3h4d|5s8c|Kc2s|Ah7c/9sAsQc/5c/6s:-50|650|0|0|0|-600:Eddie|MrBrown|MrBlue|Bill|MrPink|Pluribus
+STATE:1:ffr250fff:4dTc|2d8h|5hAc|3d8c|7cKc|2hJh:-50|-100|0|0|150|0:MrBrown|MrBlue|Bill|MrPink|Pluribus|Eddie
+STATE:2:fffr250fr1100r2300f:6cKh|4h3h|7h9h|6hTs|2d2c|AhKd:-50|-1100|0|0|0|1150:MrBlue|Bill|MrPink|Pluribus|Eddie|MrBrown
+STATE:3:fffr225ff:4hJc|2h5s|As9h|7c8s|5dJs|Td6d:-50|-100|0|0|0|150:Bill|MrPink|Pluribus|Eddie|MrBrown|MrBlue
+STATE:4:fffr287ff:8s9h|Qc3s|6s4s|7sTs|2d9c|3c2c:-50|-100|0|0|0|150:MrPink|Pluribus|Eddie|MrBrown|MrBlue|Bill
+STATE:5:fffr250fc/cc/cc/cc:TdQh|9cAc|4d6c|4c5d|6d5c|AsKc/2h5h6s/3d/6h:-50|-250|0|0|0|300:Pluribus|Eddie|MrBrown|MrBlue|Bill|MrPink
+STATE:6:fffr200ff:Jc4d|5c3s|Js4c|5d9s|5s3d|KcTh:-50|-100|0|0|0|150:Eddie|MrBrown|MrBlue|Bill|MrPink|Pluribus
+STATE:7:r225fffr850ff:KsAh|6s5h|9dQd|5c8s|9h7c|8cTh:325|-100|-225|0|0|0:MrBrown|MrBlue|Bill|MrPink|Pluribus|Eddie
+STATE:8:ffr200fff:Kh6d|3d7c|Jd2c|Kd3c|9h9d|Ad2h:-50|-100|0|0|150|0:MrBlue|Bill|MrPink|Pluribus|Eddie|MrBrown
+STATE:9:fr200ffr850fc/cc/cr2200c/cc:KhQh|Ad6h|5h3h|9d8d|Kd2c|8c2s/TsQd9c/As/Ah:2300|-100|0|-2200|0|0:Bill|MrPink|Pluribus|Eddie|MrBrown|MrBlue
+STATE:10:ffr225ffr975c/r1975f:Ad3c|KsAc|Qd6c|5s7h|Js9s|8h3h/Qs5h2h:-50|1025|0|0|-975|0:MrPink|Pluribus|Eddie|MrBrown|MrBlue|Bill
+STATE:11:fffr250cf/cr850c/cc/cc:6c6s|5c2h|Th9s|7cAd|8d5s|QsTc/6h8c3s/4h/Ts:950|-100|0|0|0|-850:Pluribus|Eddie|MrBrown|MrBlue|Bill|MrPink
+STATE:12:ffr210fcf/cr470f:8sAs|Qs6h|7h2d|8d6c|KdAd|4h6s/TdKc9d:-210|-100|0|0|310|0:Eddie|MrBrown|MrBlue|Bill|MrPink|Pluribus
+STATE:13:fffff:Jc4d|9s5c|3s4h|Js7d|Kd9h|6d7h:-50|50|0|0|0|0:MrBrown|MrBlue|Bill|MrPink|Pluribus|Eddie
+STATE:14:fr250ffff:Ah6s|4h3c|9h3d|5s5d|Td3s|7dQd:-50|-100|0|150|0|0:MrBlue|Bill|MrPink|Pluribus|Eddie|MrBrown
+STATE:15:ffffr300c/r750f:As8h|6c8d|Qd7s|4d3d|Jc9d|Kc2d/TsAcKh:300|-300|0|0|0|0:Bill|MrPink|Pluribus|Eddie|MrBrown|MrBlue
+STATE:16:fffr287r1150fr2425f:AsJc|6c3h|6dKh|5cAh|9h4c|KsKc:-1150|-100|0|0|0|1250:MrPink|Pluribus|Eddie|MrBrown|MrBlue|Bill
+STATE:17:ffr225fff:7cAd|7d3h|8h2c|2h5c|KdQh|6c4s:-50|-100|0|0|150|0:Pluribus|Eddie|MrBrown|MrBlue|Bill|MrPink
+STATE:18:fffff:8h4s|QhQd|JcTh|8c3c|7h2s|Qc8d:-50|50|0|0|0|0:Eddie|MrBrown|MrBlue|Bill|MrPink|Pluribus
+STATE:19:ffr225fff:6c4d|6hQc|2hKd|Th4c|8s7s|Td2s:-50|-100|0|0|150|0:MrBrown|MrBlue|Bill|MrPink|Pluribus|Eddie
+STATE:20:ffr200fff:3cTh|5s2c|8d6c|7dKs|JsQh|Kc9h:-50|-100|0|0|150|0:MrBlue|Bill|MrPink|Pluribus|Eddie|MrBrown
+STATE:21:ffffr300c/cc/r750f:Kd7d|2hAs|9s3h|Qc7c|3sTs|Qd8s/3cKcJc/Ks:300|-300|0|0|0|0:Bill|MrPink|Pluribus|Eddie|MrBrown|MrBlue
+STATE:22:ffr225fff:7hKs|9h7c|4d3d|6hQh|QcJs|3hAs:-50|-100|0|0|150|0:MrPink|Pluribus|Eddie|MrBrown|MrBlue|Bill
+STATE:23:fr225fr700ffc/cr1200c/cr2950c/cc:Kh8c|5c6d|3h8d|TsJs|Kc2c|KsAs/7s5sKd/Jh/Qc:-50|-100|0|-2950|0|3100:Pluribus|Eddie|MrBrown|MrBlue|Bill|MrPink
+STATE:24:fffr200ff:8h3s|6dTh|3h2h|JsQh|Ks5d|JcAc:-50|-100|0|0|0|150:Eddie|MrBrown|MrBlue|Bill|MrPink|Pluribus
+STATE:25:ffr200ffc/cc/cr425f:Kh9c|As3s|3h5s|Th3d|Ac8h|2cJh/8d4c7s/6c:-50|-200|0|0|250|0:MrBrown|MrBlue|Bill|MrPink|Pluribus|Eddie
+STATE:26:ffr200ccc/cccc/cr475ccr1850fff:8d5d|5h8h|7s9s|Qs2h|9c9d|QhTd/4d8sTc/6d:1425|-475|0|0|-475|-475:MrBlue|Bill|MrPink|Pluribus|Eddie|MrBrown
+STATE:27:fr200fffr1050f:ThKd|JhJs|3d3h|AhJc|3s5h|Qs6d:-50|250|0|-200|0|0:Bill|MrPink|Pluribus|Eddie|MrBrown|MrBlue
+STATE:28:fffr250ff:2d5c|Kh2s|3h8d|4c9h|Qh7d|AcKs:-50|-100|0|0|0|150:MrPink|Pluribus|Eddie|MrBrown|MrBlue|Bill
+STATE:29:fr225fffc/cc/cc/r375f:As6h|JcJd|Th3h|2s2c|9dAc|8c5c/7h4d6c/Kh/7d:-50|275|0|-225|0|0:Pluribus|Eddie|MrBrown|MrBlue|Bill|MrPink
+STATE:30:r225r700ffffr2290f:2c8h|5s4c|QhAd|ThJh|5c4h|5dAc:-50|-100|850|-700|0|0:Eddie|MrBrown|MrBlue|Bill|MrPink|Pluribus
+STATE:31:fffr222cc/ccc/ccc/cr721cf:8c7d|9sQd|Ad6h|3cTc|8d9h|JsTd/6d4h7s/6c/Jd:-222|-721|0|0|0|943:MrBrown|MrBlue|Bill|MrPink|Pluribus|Eddie
+STATE:32:r210ffr650ffc/cc/r1100c/cr2275f:8s6h|4sAc|5c5d|6dKh|7d3h|AdKc/7sTsQd/7h/Js:-50|-100|-1100|0|0|1250:MrBlue|Bill|MrPink|Pluribus|Eddie|MrBrown
+STATE:33:fr200fffc/cr335f:3s8h|8c6h|Kc3c|Ad2d|9s5s|9dKs/7sJd3d:-50|-200|0|250|0|0:Bill|MrPink|Pluribus|Eddie|MrBrown|MrBlue
+STATE:34:ffr225ffr1225c/r1850f:Js2d|JdQs|Ad5c|Qh9c|3c3d|8d4d/QdKcJh:-50|1275|0|0|-1225|0:MrPink|Pluribus|Eddie|MrBrown|MrBlue|Bill
+STATE:35:fffr250fc/cc/cc/r1725f:8cJd|8s7d|Ac5s|7hKc|Td2h|9s6s/As3dQh/2d/2c:-50|300|0|0|0|-250:Pluribus|Eddie|MrBrown|MrBlue|Bill|MrPink
+STATE:36:ffffr300f:KsTd|As2d|9h3s|Ts3c|Qh7c|6sKc:100|-100|0|0|0|0:Eddie|MrBrown|MrBlue|Bill|MrPink|Pluribus
+STATE:37:r225ffffc/cc/cc/cc:4dQh|KhJc|AsTh|3h2d|8s6d|5d7d/8c9h2s/9s/7h:-50|-225|275|0|0|0:MrBrown|MrBlue|Bill|MrPink|Pluribus|Eddie
+STATE:38:ffffr300c/r750f:3c6c|9c8d|4cJc|2s7c|6dQc|Qh9s/7hAcKc:300|-300|0|0|0|0:MrBlue|Bill|MrPink|Pluribus|Eddie|MrBrown
+STATE:39:fffr225fc/cc/r575c/r1375c:Jc6h|Kh4s|Ad2h|5h7d|8cQh|8d7h/8hKd5c/6s/Qd:-50|1425|0|0|0|-1375:Bill|MrPink|Pluribus|Eddie|MrBrown|MrBlue
+STATE:40:ffr225cr1300fff:AsKh|9dJs|8h6h|2c5c|AcTd|3c3s:550|-100|0|0|-225|-225:MrPink|Pluribus|Eddie|MrBrown|MrBlue|Bill
+STATE:41:fffr250r1150fc/r2350f:Tc9c|Qd3c|AhTs|8h2s|2d7c|AcJh/2hKs4c:1250|-100|0|0|0|-1150:Pluribus|Eddie|MrBrown|MrBlue|Bill|MrPink
+STATE:42:fr225ffff:Ad6c|Qh3s|5h7s|KhKd|Kc2c|2hKs:-50|-100|0|150|0|0:Eddie|MrBrown|MrBlue|Bill|MrPink|Pluribus
+STATE:43:r225fcffc/ccr950ff:4sKh|7dTd|8d8h|Tc6s|5d4d|QsJc/6hJsQc:-50|-225|-225|0|500|0:MrBrown|MrBlue|Bill|MrPink|Pluribus|Eddie
+STATE:44:fr200ffff:8dTc|Qs4c|3c7d|4sAs|5h9s|Ad6s:-50|-100|0|150|0|0:MrBlue|Bill|MrPink|Pluribus|Eddie|MrBrown
+STATE:45:r225ffffc/cc/r575c/r2175f:Qh5c|QsJs|KcAs|AcTh|QcTs|5d9c/TcTd3c/9h/3d:-50|625|-575|0|0|0:Bill|MrPink|Pluribus|Eddie|MrBrown|MrBlue
+STATE:46:r200fffff:Kc3c|Qc5s|AsKh|Jd2d|JhAd|2h6s:-50|-100|150|0|0|0:MrPink|Pluribus|Eddie|MrBrown|MrBlue|Bill
+STATE:47:ffffr200c/cc/cc/cr600r1200f:Ah7d|4d3d|7hTc|4cAs|6sTh|3h5d/KhJh7s/8c/7c:600|-600|0|0|0|0:Pluribus|Eddie|MrBrown|MrBlue|Bill|MrPink
+STATE:48:fffff:2cKh|5h8d|Ah5s|3c8h|7sQd|4sJd:-50|50|0|0|0|0:Eddie|MrBrown|MrBlue|Bill|MrPink|Pluribus
+STATE:49:ffr200r750ffc/cr1575f:6hQc|2d5s|Th7s|6sKd|4c4d|KcAc/7d3s8s:-50|-100|0|0|-750|900:MrBrown|MrBlue|Bill|MrPink|Pluribus|Eddie
+STATE:50:ffr200cff/r600f:3dKc|2s3c|AcTd|7cQc|8h8d|Kh6h/5c2c7d:-50|-100|0|0|350|-200:MrBlue|Bill|MrPink|Pluribus|Eddie|MrBrown
