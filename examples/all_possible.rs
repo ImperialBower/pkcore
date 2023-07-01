@@ -13,6 +13,6 @@ fn main() {
         .collect();
 
     for v in straight_flushes {
-        println!("{}", Cards::from(v).to_string());
+        println!("{}", Cards::from(v).sort().to_string());
     }
 }
