@@ -9,8 +9,4 @@
 /// Now I am not saying that you have to always meet this standard, just to watch for it. If you suddenly do a significant
 /// change to the functionality of your code and no test fails, try to figure out why.
 
-
-
-fn main() {
-
-}
+fn main() {}

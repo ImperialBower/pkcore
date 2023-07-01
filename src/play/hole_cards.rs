@@ -55,6 +55,22 @@ impl HoleCards {
         self.0.get(i)
     }
 
+    /// This is not the optimal sort for display purposes because A♠ K♦ will sort itself ahead of
+    /// A♥ A♦, because of the A♠.
+    ///
+    /// For now, we don't really care.
+    pub fn sort(&mut self) {
+        self.0.sort();
+        self.0.reverse();
+    }
+
+    #[must_use]
+    pub fn sorted(&self) -> HoleCards {
+        let mut sorted = self.clone();
+        sorted.sort();
+        sorted
+    }
+
     /// The next logical extension is to have the struct transform all the hole cards into a
     /// vector of `Evals`.
     #[must_use]
@@ -242,6 +258,7 @@ mod play__hold_cards_tests {
     use crate::arrays::five::Five;
     use crate::card::Card;
     use crate::util::data::TestData;
+    use rstest::rstest;
     use std::str::FromStr;
 
     #[test]
@@ -263,6 +280,16 @@ mod play__hold_cards_tests {
         );
         assert_eq!(the_hand.0.len(), 2);
         assert!(the_hand.get(2).is_none());
+    }
+
+    #[rstest]
+    #[case(HoleCards(vec![Two::HAND_AS_KH, Two::HAND_AD_AC]), HoleCards(vec![Two::HAND_AS_KH, Two::HAND_AD_AC]))]
+    #[case(HoleCards(vec![Two::HAND_AH_KS, Two::HAND_AS_KH]), HoleCards(vec![Two::HAND_AS_KH, Two::HAND_AH_KS]))]
+    #[case(HoleCards(vec![Two::HAND_TH_TD, Two::HAND_AS_AH]), HoleCards(vec![Two::HAND_AS_AH, Two::HAND_TH_TD]))]
+    #[case(HoleCards(vec![Two::HAND_QD_QC, Two::HAND_QS_QH]), HoleCards(vec![Two::HAND_QS_QH, Two::HAND_QD_QC]))]
+    #[case(HoleCards(vec![Two::HAND_QS_QH, Two::HAND_QD_QC]), HoleCards(vec![Two::HAND_QS_QH, Two::HAND_QD_QC]))]
+    fn sorted(#[case] from: HoleCards, #[case] to: HoleCards) {
+        assert_eq!(from.sorted(), to);
     }
 
     #[test]
