@@ -20,22 +20,21 @@ This tree keeps dropping little flowers on my laptop’s keyboard as I type. Thi
 
 Here's a dev hack that you can use if you're trying to emote a certain amount of
 h4ck3r l33tness to your game: develop using hard core old school tools such as
-VI or Emacs... or even extra double hardcode, 
+VI or Emacs... or even extra double hardcode,
 [Emacs evil mode](https://www.emacswiki.org/emacs/Evil), which is Emacs with
 VI commands. Being able to develop without the training wheels tha a hard core
-IDE like IntelliJ has to offer will set you apart from the vast majority of 
+IDE like IntelliJ has to offer will set you apart from the vast majority of
 developers out there, including me. PLUS, being able to wage endless pointless
 verbal wars over the superiority of VI over Emacs is an essential skill within
 just about any development shop. Personally, anyone who starts coding strainght
 from either of these environments earns my mad respect. They've clearly done
 the work.
 
-__Aside:__ 
+__Aside:__
 
 One of the developers that I have such respect for is Kristen
 
-One of the ways that Kirsten 
-
+One of the ways that Kirsten
 
 One of the ways that you can walk into any new development with a certain armor
-of 
+of

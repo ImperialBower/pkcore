@@ -7,7 +7,7 @@ hands relate to each other in an actual game of Hold'em. For this we will create
 a new example file called calc.
 
 When I was initially driving through this work, long before I thought it would
-be interesting as a book, I created an initial version of calc. Here's how it 
+be interesting as a book, I created an initial version of calc. Here's how it
 turned out:
 
 ```
@@ -130,25 +130,25 @@ cards first.
 #### REFACTOR: Delete is_flagged_ methods and just use .is_flagged()
 
 One of the things that I tend to do when I code is overthink things. I code
-like a Java developer. I add accessors to everything. This refactoring is 
+like a Java developer. I add accessors to everything. This refactoring is
 me getting sick of my own code. ENOUGH! Just have a simple fn that tells you
-if a mask is there and be done with it. 
+if a mask is there and be done with it.
 
 One could make a further refactoring argument that this is just insulating
-devs from basic bitwise operations, and I'm fine with that. I really don't want 
+devs from basic bitwise operations, and I'm fine with that. I really don't want
 have to code `(self.as_u32() & 0bYADAYADA) == 0bYADAYADA` over and over again.
 Thus `Card.is_flagged() it is.`
 
 ##### Moral
 
 This is why tech leads and program managers are so important to a project. Coders
-like me can fall down deep rabbit holes trying to bend code to our will, with 
+like me can fall down deep rabbit holes trying to bend code to our will, with
 no perspective on if anyone actually gives a fuck. Yes, it would be nice to have
 `Feature X` but it would be even nicer to still be in business in a month so that
 we can all get paid. When I code for myself I let myself fall into
-Wonderland, but when on the clock, you rarely have the luxury. Things 
+Wonderland, but when on the clock, you rarely have the luxury. Things
 can always be better, faster, prettier, cooler. Push comes to shove, users rarely
-care. They just want it to work. 
+care. They just want it to work.
 
 ###### Aside
 
@@ -170,5 +170,4 @@ An `Eval` is ...
 
 This is going to be a easier than for the flop, since there are many fewer
 possible outcomes, but more importantly, because we've done most of the hard
-work all ready. 
-
+work all ready.
