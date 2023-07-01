@@ -104,6 +104,36 @@ impl Two {
         Two::HAND_9D_9C,
     ];
 
+    pub const HAND_8S_8H: Two = Two([Card::EIGHT_SPADES, Card::EIGHT_HEARTS]);
+    pub const HAND_8S_8D: Two = Two([Card::EIGHT_SPADES, Card::EIGHT_DIAMONDS]);
+    pub const HAND_8S_8C: Two = Two([Card::EIGHT_SPADES, Card::EIGHT_CLUBS]);
+    pub const HAND_8H_8D: Two = Two([Card::EIGHT_HEARTS, Card::EIGHT_DIAMONDS]);
+    pub const HAND_8H_8C: Two = Two([Card::EIGHT_HEARTS, Card::EIGHT_CLUBS]);
+    pub const HAND_8D_8C: Two = Two([Card::EIGHT_DIAMONDS, Card::EIGHT_CLUBS]);
+    pub const EIGHTS: [Two; 6] = [
+        Two::HAND_8S_8H,
+        Two::HAND_8S_8D,
+        Two::HAND_8S_8C,
+        Two::HAND_8H_8D,
+        Two::HAND_8H_8C,
+        Two::HAND_8D_8C,
+    ];
+
+    pub const HAND_7S_7H: Two = Two([Card::SEVEN_SPADES, Card::SEVEN_HEARTS]);
+    pub const HAND_7S_7D: Two = Two([Card::SEVEN_SPADES, Card::SEVEN_DIAMONDS]);
+    pub const HAND_7S_7C: Two = Two([Card::SEVEN_SPADES, Card::SEVEN_CLUBS]);
+    pub const HAND_7H_7D: Two = Two([Card::SEVEN_HEARTS, Card::SEVEN_DIAMONDS]);
+    pub const HAND_7H_7C: Two = Two([Card::SEVEN_HEARTS, Card::SEVEN_CLUBS]);
+    pub const HAND_7D_7C: Two = Two([Card::SEVEN_DIAMONDS, Card::SEVEN_CLUBS]);
+    pub const SEVENS: [Two; 6] = [
+        Two::HAND_7S_7H,
+        Two::HAND_7S_7D,
+        Two::HAND_7S_7C,
+        Two::HAND_7H_7D,
+        Two::HAND_7H_7C,
+        Two::HAND_7D_7C,
+    ];
+
     /// I'm starting off just creating `The Hands`. Later on, I want to have constants for
     /// [every possible](https://en.wikipedia.org/wiki/Texas_hold_%27em_starting_hands#:~:text=There%20are%201326%20distinct%20possible,in%20value%20before%20the%20flop.)
     /// `Two` hand, aka hold'em hole cards, as well as every possible type of hands, such as
@@ -147,7 +177,50 @@ impl Two {
         Two::HAND_5D_5C,
     ];
 
+    pub const HAND_4S_4H: Two = Two([Card::FOUR_SPADES, Card::FOUR_HEARTS]);
+    pub const HAND_4S_4D: Two = Two([Card::FOUR_SPADES, Card::FOUR_DIAMONDS]);
+    pub const HAND_4S_4C: Two = Two([Card::FOUR_SPADES, Card::FOUR_CLUBS]);
+    pub const HAND_4H_4D: Two = Two([Card::FOUR_HEARTS, Card::FOUR_DIAMONDS]);
+    pub const HAND_4H_4C: Two = Two([Card::FOUR_HEARTS, Card::FOUR_CLUBS]);
+    pub const HAND_4D_4C: Two = Two([Card::FOUR_DIAMONDS, Card::FOUR_CLUBS]);
+    pub const FOURS: [Two; 6] = [
+        Two::HAND_4S_4H,
+        Two::HAND_4S_4D,
+        Two::HAND_4S_4C,
+        Two::HAND_4H_4D,
+        Two::HAND_4H_4C,
+        Two::HAND_4D_4C,
+    ];
+
+    pub const HAND_3S_3H: Two = Two([Card::TREY_SPADES, Card::TREY_HEARTS]);
+    pub const HAND_3S_3D: Two = Two([Card::TREY_SPADES, Card::TREY_DIAMONDS]);
+    pub const HAND_3S_3C: Two = Two([Card::TREY_SPADES, Card::TREY_CLUBS]);
+    pub const HAND_3H_3D: Two = Two([Card::TREY_HEARTS, Card::TREY_DIAMONDS]);
+    pub const HAND_3H_3C: Two = Two([Card::TREY_HEARTS, Card::TREY_CLUBS]);
+    pub const HAND_3D_3C: Two = Two([Card::TREY_DIAMONDS, Card::TREY_CLUBS]);
+    pub const TREYS: [Two; 6] = [
+        Two::HAND_3S_3H,
+        Two::HAND_3S_3D,
+        Two::HAND_3S_3C,
+        Two::HAND_3H_3D,
+        Two::HAND_3H_3C,
+        Two::HAND_3D_3C,
+    ];
+
+    pub const HAND_2S_2H: Two = Two([Card::DEUCE_SPADES, Card::DEUCE_HEARTS]);
+    pub const HAND_2S_2D: Two = Two([Card::DEUCE_SPADES, Card::DEUCE_DIAMONDS]);
+    pub const HAND_2S_2C: Two = Two([Card::DEUCE_SPADES, Card::DEUCE_CLUBS]);
     pub const HAND_2H_2D: Two = Two([Card::DEUCE_HEARTS, Card::DEUCE_DIAMONDS]);
+    pub const HAND_2H_2C: Two = Two([Card::DEUCE_HEARTS, Card::DEUCE_CLUBS]);
+    pub const HAND_2D_2C: Two = Two([Card::DEUCE_DIAMONDS, Card::DEUCE_CLUBS]);
+    pub const DEUCES: [Two; 6] = [
+        Two::HAND_2S_2H,
+        Two::HAND_2S_2D,
+        Two::HAND_2S_2C,
+        Two::HAND_2H_2D,
+        Two::HAND_2H_2C,
+        Two::HAND_2D_2C,
+    ];
 
     // endregion
 
