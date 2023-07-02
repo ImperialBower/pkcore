@@ -65,5 +65,7 @@ The problem is that this would only cover four of the six variations:
     A♦ A♣ vs K♠ K♥
     A♥ A♦ vs K♠ K♣
 
-This is because the suits in each of the hands are only one step removed. Spades to hearts and clubs. Hearts to diamonds
-and spades, etc. We're missing the ones that are one removed: `A♠ A♦ vs K♥ K♣` and `A♥ A♣ vs K♠ K♦`.
+This is because the suits in each of the hands are only one step removed. Spades to Hearts and Clubs. Hearts to Diamonds
+and Spades, etc. We're missing the ones that are one removed: `A♠ A♦ vs K♥ K♣` and `A♥ A♣ vs K♠ K♦`.
+
+This is still pretty good. Question: could we do better? Could we cover all of the possibilities? 

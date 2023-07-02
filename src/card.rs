@@ -587,7 +587,7 @@ mod card_tests {
     /// Fail to validate value: change one u32 for a CardNumber and the test should fail.
     /// MORAL: Test for value!
     #[rstest]
-    #[case(Card::from(CardNumber::AceSpades as u32), "A♠")]  // WORST COMMENT EVER
+    #[case(Card::from(CardNumber::AceSpades as u32), "A♠")] // WORST COMMENT EVER
     #[case(Card::from(CardNumber::KingSpades as u32), "K♠")] // TODO Continue refactoring
     #[case(Card::from(CardNumber::QueenSpades as u32), "Q♠")]
     #[case(Card::from(CardNumber::JackSpades as u32), "J♠")]
