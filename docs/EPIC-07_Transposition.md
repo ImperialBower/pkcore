@@ -50,4 +50,7 @@ calculation of preflop odds for each of the possible suit variations?
     A♦ A♣ vs K♠ K♥
 
 Each of these matchups have the same odds of winning preflop. Is there a way I can do the calculations once, and then 
-apply them to every possible version?
+apply them to every possible variation?
+
+At first I was hoping that simply shifting the suits in one direction four times would do it. A♠ A♥ vs K♦ K♣ would shift
+to A♠ A♣ vs K♥ K♦, etc
