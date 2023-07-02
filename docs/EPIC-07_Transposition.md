@@ -52,5 +52,18 @@ calculation of preflop odds for each of the possible suit variations?
 Each of these matchups have the same odds of winning preflop. Is there a way I can do the calculations once, and then 
 apply them to every possible variation?
 
-At first I was hoping that simply shifting the suits in one direction four times would do it. A♠ A♥ vs K♦ K♣ would shift
-to A♠ A♣ vs K♥ K♦, etc
+At first I was hoping that simply shifting the suits in one direction four times would do it. `A♠ A♥ vs K♦ K♣` would shift
+to `A♠ A♣ vs K♥ K♦`, etc. This assumes a relationship between the suits that is more in tune with card games like Bridge,
+where suits can outrank each other. Spades beats hearts beats diamonds beats Clubs. While this doesn't apply to Poker;
+a Royal Flush with Clubs (`A♣ K♣ Q♣ J♣ T♣`) is just a good as a Royal Flush with Spades (`A♠ K♠ Q♠ J♠ T♠`), by transposing
+the hands of each player three times you can ensure that you cover other hands that would generate the exact same results.
+
+The problem is that this would only cover four of the six variations: 
+
+    A♠ A♥ vs K♦ K♣
+    A♠ A♣ vs K♥ K♦
+    A♦ A♣ vs K♠ K♥
+    A♥ A♦ vs K♠ K♣
+
+This is because the suits in each of the hands are only one step removed. Spades to hearts and clubs. Hearts to diamonds
+and spades, etc. We're missing the ones that are one removed: `A♠ A♦ vs K♥ K♣` and `A♥ A♣ vs K♠ K♦`.

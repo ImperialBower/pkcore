@@ -591,8 +591,8 @@
       * TODO: Store analysis Bard results in memory
   * Created [pkterm](https://github.com/ImperialBower/pkterm)
   * EPIC SEVEN: Transposition
-    * 
-  * EPIC: Bets
+    * Shift Suit trait
+  * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
 
