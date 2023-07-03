@@ -172,6 +172,9 @@ pub trait SuitShift {
 
     #[must_use]
     fn shift_suit_up(&self) -> Self;
+
+    #[must_use]
+    fn opposite(&self) -> Self;
 }
 
 #[cfg(test)]

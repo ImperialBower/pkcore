@@ -5,7 +5,7 @@ use crate::bard::Bard;
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::suit::Suit;
-use crate::{PKError, Pile, TheNuts};
+use crate::{PKError, Pile, SuitShift, TheNuts};
 use std::fmt;
 use std::str::FromStr;
 
@@ -303,6 +303,20 @@ impl Pile for Card {
     }
 }
 
+impl SuitShift for Card {
+    fn shift_suit_down(&self) -> Self {
+        Card::new(self.get_rank(), self.get_suit().shift_suit_down())
+    }
+
+    fn shift_suit_up(&self) -> Self {
+        Card::new(self.get_rank(), self.get_suit().shift_suit_up())
+    }
+
+    fn opposite(&self) -> Self {
+        Card::new(self.get_rank(), self.get_suit().opposite())
+    }
+}
+
 impl TryFrom<Bard> for Card {
     type Error = PKError;
 
@@ -546,6 +560,33 @@ mod card_tests {
     fn pile__contains_blank() {
         assert!(Card::BLANK.contains_blank());
         assert!(!Card::TREY_CLUBS.contains_blank());
+    }
+
+    #[test]
+    fn suit_shift__down() {
+        assert_eq!(Card::ACE_HEARTS, Card::ACE_SPADES.shift_suit_down());
+        assert_eq!(Card::SIX_DIAMONDS, Card::SIX_HEARTS.shift_suit_down());
+        assert_eq!(Card::QUEEN_CLUBS, Card::QUEEN_DIAMONDS.shift_suit_down());
+        assert_eq!(Card::FIVE_SPADES, Card::FIVE_CLUBS.shift_suit_down());
+        assert_eq!(Card::BLANK, Card::BLANK.shift_suit_down());
+    }
+
+    #[test]
+    fn suit_shift__up() {
+        assert_eq!(Card::NINE_SPADES, Card::NINE_HEARTS.shift_suit_up());
+        assert_eq!(Card::EIGHT_HEARTS, Card::EIGHT_DIAMONDS.shift_suit_up());
+        assert_eq!(Card::TEN_DIAMONDS, Card::TEN_CLUBS.shift_suit_up());
+        assert_eq!(Card::DEUCE_CLUBS, Card::DEUCE_SPADES.shift_suit_up());
+        assert_eq!(Card::BLANK, Card::BLANK.shift_suit_up());
+    }
+
+    #[test]
+    fn suit_shift__opposite() {
+        assert_eq!(Card::NINE_CLUBS, Card::NINE_HEARTS.opposite());
+        assert_eq!(Card::EIGHT_SPADES, Card::EIGHT_DIAMONDS.opposite());
+        assert_eq!(Card::TEN_HEARTS, Card::TEN_CLUBS.opposite());
+        assert_eq!(Card::DEUCE_DIAMONDS, Card::DEUCE_SPADES.opposite());
+        assert_eq!(Card::BLANK, Card::BLANK.opposite());
     }
 
     #[test]

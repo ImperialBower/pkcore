@@ -1,4 +1,4 @@
-use crate::PKError;
+use crate::{PKError, SuitShift};
 use std::fmt;
 use std::str::FromStr;
 use strum::EnumIter; // TODO Early
@@ -77,6 +77,32 @@ impl FromStr for Suit {
             },
             _ => Err(PKError::InvalidIndex),
         }
+    }
+}
+
+impl SuitShift for Suit {
+    fn shift_suit_down(&self) -> Self {
+        match self {
+            Suit::SPADES => Suit::HEARTS,
+            Suit::HEARTS => Suit::DIAMONDS,
+            Suit::DIAMONDS => Suit::CLUBS,
+            Suit::CLUBS => Suit::SPADES,
+            Suit::BLANK => Suit::BLANK,
+        }
+    }
+
+    fn shift_suit_up(&self) -> Self {
+        match self {
+            Suit::SPADES => Suit::CLUBS,
+            Suit::HEARTS => Suit::SPADES,
+            Suit::DIAMONDS => Suit::HEARTS,
+            Suit::CLUBS => Suit::DIAMONDS,
+            Suit::BLANK => Suit::BLANK,
+        }
+    }
+
+    fn opposite(&self) -> Self {
+        self.shift_suit_down().shift_suit_down()
     }
 }
 
@@ -164,5 +190,32 @@ mod card_suit_tests {
         assert_eq!(PKError::InvalidIndex, Suit::from_str("").unwrap_err());
         assert_eq!(PKError::InvalidIndex, Suit::from_str(" ").unwrap_err());
         assert_eq!(PKError::InvalidIndex, Suit::from_str("AK").unwrap_err());
+    }
+
+    #[test]
+    fn suit_shift__down() {
+        assert_eq!(Suit::HEARTS, Suit::SPADES.shift_suit_down());
+        assert_eq!(Suit::DIAMONDS, Suit::HEARTS.shift_suit_down());
+        assert_eq!(Suit::CLUBS, Suit::DIAMONDS.shift_suit_down());
+        assert_eq!(Suit::SPADES, Suit::CLUBS.shift_suit_down());
+        assert_eq!(Suit::BLANK, Suit::BLANK.shift_suit_down());
+    }
+
+    #[test]
+    fn suit_shift__up() {
+        assert_eq!(Suit::SPADES, Suit::HEARTS.shift_suit_up());
+        assert_eq!(Suit::HEARTS, Suit::DIAMONDS.shift_suit_up());
+        assert_eq!(Suit::DIAMONDS, Suit::CLUBS.shift_suit_up());
+        assert_eq!(Suit::CLUBS, Suit::SPADES.shift_suit_up());
+        assert_eq!(Suit::BLANK, Suit::BLANK.shift_suit_up());
+    }
+
+    #[test]
+    fn suit_shift__opposite() {
+        assert_eq!(Suit::SPADES, Suit::DIAMONDS.opposite());
+        assert_eq!(Suit::HEARTS, Suit::CLUBS.opposite());
+        assert_eq!(Suit::DIAMONDS, Suit::SPADES.opposite());
+        assert_eq!(Suit::CLUBS, Suit::HEARTS.opposite());
+        assert_eq!(Suit::BLANK, Suit::BLANK.opposite());
     }
 }

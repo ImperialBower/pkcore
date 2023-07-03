@@ -3,7 +3,7 @@ use crate::arrays::three::Three;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{PKError, Pile, TheNuts};
+use crate::{PKError, Pile, SuitShift, TheNuts};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
@@ -607,6 +607,10 @@ impl Two {
         self.0
     }
     //endregion
+
+    pub fn is_suited(&self) -> bool {
+        self.first().get_suit() == self.second().get_suit()
+    }
 }
 
 impl Display for Two {
@@ -732,6 +736,38 @@ impl Pile for Two {
     }
 }
 
+impl SuitShift for Two {
+    fn shift_suit_down(&self) -> Self {
+        match Two::new(
+            self.first().shift_suit_down(),
+            self.second().shift_suit_down(),
+        ) {
+            Ok(two) => two,
+            Err(_) => Two::default(),
+        }
+    }
+
+    fn shift_suit_up(&self) -> Self {
+        match Two::new(
+            self.first().shift_suit_up(),
+            self.second().shift_suit_up(),
+        ) {
+            Ok(two) => two,
+            Err(_) => Two::default(),
+        }
+    }
+
+    fn opposite(&self) -> Self {
+        match Two::new(
+            self.first().opposite(),
+            self.second().opposite(),
+        ) {
+            Ok(two) => two,
+            Err(_) => Two::default(),
+        }
+    }
+}
+
 impl TryFrom<Cards> for Two {
     type Error = PKError;
 
@@ -845,6 +881,14 @@ mod arrays__two_tests {
     }
 
     #[test]
+    fn is_suited() {
+        assert!(Two::HAND_KS_TS.is_suited());
+        assert!(Two::HAND_8S_7S.is_suited());
+        assert!(!Two::HAND_8S_7H.is_suited());
+        assert!(!Two::HAND_AS_AH.is_suited());
+    }
+
+    #[test]
     fn default() {
         let sut = Two::from([Card::BLANK, Card::BLANK]);
 
@@ -936,6 +980,13 @@ mod arrays__two_tests {
     fn pile__cards() {
         assert_eq!(0, Two::default().cards().len());
         assert_eq!("A♦ K♥", Two::from(BIG_SLICK).cards().to_string());
+    }
+
+    #[test]
+    fn suit_shift() {
+        assert_eq!(Two::HAND_AH_AD, Two::HAND_AS_AH.shift_suit_down());
+        assert_eq!(Two::HAND_AS_AC, Two::HAND_AS_AH.shift_suit_up());
+        assert_eq!(Two::HAND_AD_AC, Two::HAND_AS_AH.opposite());
     }
 
     /// DRIVE:

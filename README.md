@@ -592,6 +592,8 @@
   * Created [pkterm](https://github.com/ImperialBower/pkterm)
   * EPIC SEVEN: Transposition
     * Shift Suit trait
+      * `impl SuitShift for Suit`
+      * `impl SuitShift for Card`
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
