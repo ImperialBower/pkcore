@@ -24,7 +24,29 @@ pub mod util;
 
 // region CONSTANTS
 
+/// See Cactus Kev's explanation of [unique vs. distinct](https://suffe.cool/poker/evaluator.html)
+/// Poker hands.
+/// TODO: Write on demand tests (ignore) to validate these numbers against our code.
+pub const UNIQUE_STRAIGHT_FLUSHES: i32 = 40;
+pub const DISTINCT_STRAIGHT_FLUSHES: i32 = 10;
+pub const UNIQUE_FOUR_OF_A_KIND: i32 = 624;
+pub const DISTINCT_FOUR_OF_A_KIND: i32 = 156;
+pub const UNIQUE_FULL_HOUSES: i32 = 3_744;
+pub const DISTINCT_FULL_HOUSES: i32 = 156;
+pub const UNIQUE_FLUSH: i32 = 5_108;
+pub const DISTINCT_FLUSH: i32 = 1_277;
+pub const UNIQUE_STRAIGHT: i32 = 10_200;
+pub const DISTINCT_STRAIGHT: i32 = 10;
+pub const UNIQUE_THREE_OF_A_KIND: i32 = 54912;
+pub const DISTINCT_THREE_OF_A_KIND: i32 = 858;
+pub const UNIQUE_TWO_PAIR: i32 = 123_552;
+pub const DISTINCT_TWO_PAIR: i32 = 858;
+pub const UNIQUE_ONE_PAIR: i32 = 1_098_240;
+pub const DISTINCT_ONE_PAIR: i32 = 2_860;
+pub const UNIQUE_HIGH_CARD: i32 = 1_302_540;
+pub const DISTINCT_HIGH_CARD: i32 = 1_277;
 pub const UNIQUE_5_CARD_HANDS: usize = 2_598_960;
+pub const DISTINCT_5_CARD_HANDS: usize = 7_462;
 
 // endregion
 
@@ -141,6 +163,15 @@ pub trait Pile {
 /// dreaded [premature optimization](http://wiki.c2.com/?PrematureOptimization).
 pub trait SOK {
     fn salright(&self) -> bool;
+}
+
+/// Spades to Hearts to Diamonds to Clubs.
+pub trait SuitShift {
+    #[must_use]
+    fn shift_suit_down(&self) -> Self;
+
+    #[must_use]
+    fn shift_suit_up(&self) -> Self;
 }
 
 #[cfg(test)]

@@ -4,12 +4,18 @@ Right now, we've been able to do some pretty complex analysis of hand comparison
 if you've done it already? We need a way to store our results. For that, we're going to need a database. 
 
 Each calculation is going to take time, but, in poker, unlike games like Bridge and Spades, the suits of the cards
-are equal, so if we do the calculation once, the results will be the same for each other suit. For example:
+are equal, so if we do the calculation once, the results will be the same for each other suit. When Cactus Kev wrote 
+about [his evaluator](https://suffe.cool/poker/evaluator.html) he called the difference unique vs. distinct. For instance,
+while there are 40 unique straight flushes, there are only 10 distinct ones, since a royal flush of all Spades ties
+with a royal flush of Hearts.
 
-With the hand A♠ A♥ vs K♦ K♣, the aces win 81.06% of the time, and the Kings win 18.55% of the time, with 0.38% draws.
-Now if I were to reverse the suits of the cards; make it A♦ A♣ vs K♠ K♥, the results would be the same. It doesn't matter
-what the suits of the cards are, just their value AND if any of the cards in all of the players hands are of the same 
-suit. 
+It gets a little, no, let me lie, it gets a LOT more complicated when we are doing analysis comparing one hand
+against another. For example:
+
+    With the hand A♠ A♥ vs K♦ K♣, the aces win 81.06% of the time, and the Kings win 18.55% of the time, with 0.38% draws.
+    Now if I were to reverse the suits of the cards; make it A♦ A♣ vs K♠ K♥, the results would be the same. It doesn't matter
+    what the suits of the cards are, just their value AND if any of the cards in all of the players hands are of the same 
+    suit. 
 
 ## Covered
 
