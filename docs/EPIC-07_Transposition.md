@@ -111,3 +111,7 @@ In the past I used CSV to store analysis results. This was easy to implement, bu
 contained millions of records, it took a long time to load into memory. Let's see if the embedded 
 DB Sled will work for us. 
 
+#### History: CSV
+
+Before we experiment with Sled for storing results, let's go back in the time machine and see
+how things worked using CSV as our data format. 
