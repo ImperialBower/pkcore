@@ -1,3 +1,4 @@
+use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::card_number::CardNumber;
@@ -14,7 +15,6 @@ use std::fmt::Formatter;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::str::FromStr;
 use strum::IntoEnumIterator;
-use crate::arrays::two::Two;
 
 /// What are the contracts for Cards?
 ///
@@ -54,6 +54,29 @@ impl Cards {
         //     }
         // }
         // minus
+    }
+
+    /// # Errors
+    ///
+    /// Will return `PKError::InvalidCardCount` for an invalid index.
+    pub fn as_twos(&self) -> Result<Vec<Two>, PKError> {
+        if !self.divisible_by(2) {
+            return Err(PKError::InvalidCardCount);
+        }
+        let mut v: Vec<Two> = Vec::new();
+        let mut cards = self.clone();
+        loop {
+            let c1 = cards.draw_one().unwrap();
+
+            if c1.contains_blank() {
+                break;
+            }
+            match Two::new(c1, cards.draw_one().unwrap()) {
+                Ok(two) => v.push(two),
+                Err(err) => return Err(PKError::InvalidCardCount),
+            }
+        }
+        Ok(v)
     }
 
     pub fn combinations(&self, k: usize) -> Combinations<indexmap::set::IntoIter<Card>> {
@@ -202,10 +225,6 @@ impl Cards {
         for card in cards.iter() {
             self.insert(*card);
         }
-    }
-
-    pub fn into_twos(&self) -> Result<Vec<Two>, PKError> {
-        todo!()
     }
 
     #[must_use]

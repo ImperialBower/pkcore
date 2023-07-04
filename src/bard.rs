@@ -81,7 +81,7 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 ///
 /// ```
 /// use std::ops::BitAnd;
-/// #[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
+/// #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 /// struct Bard(u64);
 /// impl Bard {
 ///     pub const ACE_SPADES: Bard = Bard(0b1000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
@@ -159,7 +159,9 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 ///
 /// One of the things that I have noticed about myself over the years, is that I find comfort in
 /// repetitive tasks, such as writing out all of the test scenarios for converting a `Card` to a `Bard`.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(
+    Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
+)]
 pub struct Bard(u64);
 
 #[rustfmt::skip]

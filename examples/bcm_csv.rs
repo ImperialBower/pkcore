@@ -24,7 +24,7 @@ lazy_static! {
 
         for result in rdr.deserialize() {
             let bcm: BinaryCardMap = result.unwrap();
-            m.insert(bcm.bc, SimpleBinaryCardMap::from(bcm));
+            // m.insert(bcm.bc, SimpleBinaryCardMap::from(bcm));
         }
         m
     };
@@ -86,7 +86,7 @@ fn read_input() {
 }
 
 fn work(cards: Cards) {
-    let hands = cards.try_into_twos().unwrap();
+    let hands = cards.as_twos().unwrap();
     let hero = hands.get(0).unwrap();
     let villain = hands.get(1).unwrap();
 
@@ -102,11 +102,10 @@ fn grind(hero: Two, villain: Two, remaining: Cards) -> Wins {
     let combos = remaining.combinations(5);
 
     for combo in combos {
-        let board = Five::from(Cards::from(combo).to_five_array().unwrap());
-        let five = Five::from(board.to_arr());
+        let five = Five::try_from(combo).unwrap();
 
-        let hero7 = Bard::from(Seven::from_case_and_board(&hero, five));
-        let villain7 = Bard::from(Seven::new(villain, five));
+        let hero7 = Seven::from_case_at_deal(hero, five).unwrap().to_bard();
+        let villain7 = Seven::from_case_at_deal(villain, five).unwrap().to_bard();
 
         let hero_rank = BC_RANK.get(&hero7).unwrap();
         let villain_rank = BC_RANK.get(&villain7).unwrap();
