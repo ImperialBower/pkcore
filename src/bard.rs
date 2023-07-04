@@ -440,6 +440,13 @@ mod bard_tests {
     use rstest::rstest;
     use std::str::FromStr;
 
+    #[test]
+    fn const__ranks() {
+        let aces = Cards::from_str("A♠ A♥ A♦ A♣").unwrap();
+
+        assert_eq!(Bard::from(aces), Bard::ACES);
+    }
+
     /// OK, this is a fun test, but how can me make it smoother?
     #[test]
     fn fold_in() {
