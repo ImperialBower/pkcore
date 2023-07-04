@@ -591,8 +591,13 @@
       * TODO: Store analysis Bard results in memory
   * Created [pkterm](https://github.com/ImperialBower/pkterm)
   * EPIC SEVEN: Transposition
-    * 
-  * EPIC: Bets
+    * Shift Suit trait
+      * `impl SuitShift for Suit`
+      * `impl SuitShift for Card`
+      * `impl SuitShift for Two`
+      * HeadsUp
+        * Spike: Storage using [Sled](https://github.com/spacejam/sled/tree/main)
+  * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
 

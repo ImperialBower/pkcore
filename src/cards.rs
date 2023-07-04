@@ -4,7 +4,7 @@ use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::suit::Suit;
 use crate::util::random_ordering::RandomOrdering;
-use crate::{PKError, Pile, TheNuts};
+use crate::{card, PKError, Pile, SuitShift, TheNuts};
 use indexmap::set::Iter;
 use indexmap::IndexSet;
 use itertools::{Combinations, Itertools};
@@ -468,6 +468,12 @@ impl From<Vec<&Card>> for Cards {
     }
 }
 
+impl FromIterator<card::Card> for Cards {
+    fn from_iter<T: IntoIterator<Item = card::Card>>(_: T) -> Self {
+        todo!()
+    }
+}
+
 impl FromStr for Cards {
     type Err = PKError;
 
@@ -543,6 +549,23 @@ impl Pile for Cards {
     /// _Be water, my friend._
     fn to_vec(&self) -> Vec<Card> {
         self.clone().into_iter().collect()
+    }
+}
+
+impl SuitShift for Cards {
+    fn shift_suit_down(&self) -> Self {
+        todo!();
+        // self.into_iter().map(|c| c.shift_suit_down()).collect()
+    }
+
+    fn shift_suit_up(&self) -> Self {
+        todo!();
+        // self.into_iter().map(|c| c.shift_suit_up()).collect()
+    }
+
+    fn opposite(&self) -> Self {
+        todo!();
+        // self.into_iter().map(|c| c.opposite()).collect()
     }
 }
 
@@ -921,6 +944,22 @@ mod card_tests {
         let actual = Cards::from_str("5♣ 4♣ 3♣ 2♣ A♣").unwrap().to_vec();
 
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    #[ignore]
+    fn suit_shift() {
+        let spades_royal_flush = Cards::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
+        let hearts_royal_flush = Cards::from_str("A♥ K♥ Q♥ J♥ T♥").unwrap();
+        let diamonds_royal_flush = Cards::from_str("A♦ K♦ Q♦ J♦ T♦").unwrap();
+        let clubs_royal_flush = Cards::from_str("A♣ K♣ Q♣ J♣ T♣").unwrap();
+
+        assert_eq!(hearts_royal_flush, spades_royal_flush.shift_suit_down());
+        assert_eq!(clubs_royal_flush, spades_royal_flush.shift_suit_up());
+        assert_eq!(diamonds_royal_flush, spades_royal_flush.opposite());
+        assert_eq!(Cards::default(), Cards::default().shift_suit_down());
+        assert_eq!(Cards::default(), Cards::default().shift_suit_up());
+        assert_eq!(Cards::default(), Cards::default().opposite());
     }
 
     #[test]
