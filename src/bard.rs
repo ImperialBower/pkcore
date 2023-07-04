@@ -226,6 +226,7 @@ impl Bard {
     // endregion
 
     //region Ranks
+    // TODO: Make sure to write something about the inability to use the and trait to consts.
     pub const ACES: Bard = Bard(Bard::ACE_SPADES.0 | Bard::ACE_HEARTS.0 | Bard::ACE_DIAMONDS.0 | Bard::ACE_CLUBS.0);
     pub const KINGS: Bard = Bard(Bard::KING_SPADES.0 | Bard::KING_HEARTS.0 | Bard::KING_DIAMONDS.0 | Bard::KING_CLUBS.0);
     pub const QUEENS: Bard = Bard(Bard::QUEEN_SPADES.0 | Bard::QUEEN_HEARTS.0 | Bard::QUEEN_DIAMONDS.0 | Bard::QUEEN_CLUBS.0);

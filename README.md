@@ -594,6 +594,9 @@
     * Shift Suit trait
       * `impl SuitShift for Suit`
       * `impl SuitShift for Card`
+      * `impl SuitShift for Two`
+      * HeadsUp
+        * Spike: Storage using [Sled](https://github.com/spacejam/sled/tree/main)
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
