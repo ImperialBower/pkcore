@@ -11,7 +11,7 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 /// different ways of combining their values for lookup tables, a `Bard` provides one it is just
 /// pure simple data.
 ///
-/// I wrestled for a while in what to call this element. `BitCard`? `BinaryCard`? `BitCards`? I am
+/// I wrestled for a while in what to call this element. `BitCard`? `Bard`? `BitCards`? I am
 /// hesitant in having its name be plural, because I generally associate such elements as collections,
 /// such as an vector or set.
 ///
@@ -21,7 +21,7 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 /// When I originally created this type, I made it a simple type alias:
 ///
 /// ```
-/// pub type BinaryCard = u64;
+/// pub type Bard = u64;
 /// ```
 ///
 /// I've now come to the conclusion that this is more trouble than it's worth.
@@ -33,7 +33,7 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 /// to do bitwise operations, which has available to me automatically with our simple type alias:
 ///
 /// ```
-/// pub type BinaryCard = u64;
+/// pub type Bard = u64;
 /// const ACE_SPADES: u64 = 0b1000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000;
 /// const ACE_HEARTS: u64 = 0b0000_0000_0000_0100_0000_0000_0000_0000_0000_0000_0000_0000_0000;
 /// const AA:         u64 = ACE_SPADES | ACE_HEARTS;
@@ -225,6 +225,22 @@ impl Bard {
     pub const OVERFLOW:       Bard = Bard(0b1111_1111_1111_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
     // endregion
 
+    //region Ranks
+    pub const ACES: Bard = Bard(Bard::ACE_SPADES.0 | Bard::ACE_HEARTS.0 | Bard::ACE_DIAMONDS.0 | Bard::ACE_CLUBS.0);
+    pub const KINGS: Bard = Bard(Bard::KING_SPADES.0 | Bard::KING_HEARTS.0 | Bard::KING_DIAMONDS.0 | Bard::KING_CLUBS.0);
+    pub const QUEENS: Bard = Bard(Bard::QUEEN_SPADES.0 | Bard::QUEEN_HEARTS.0 | Bard::QUEEN_DIAMONDS.0 | Bard::QUEEN_CLUBS.0);
+    pub const JACKS: Bard = Bard(Bard::JACK_SPADES.0 | Bard::JACK_HEARTS.0 | Bard::JACK_DIAMONDS.0 | Bard::JACK_CLUBS.0);
+    pub const TENS: Bard = Bard(Bard::TEN_SPADES.0 | Bard::TEN_HEARTS.0 | Bard::TEN_DIAMONDS.0 | Bard::TEN_CLUBS.0);
+    pub const NINES: Bard = Bard(Bard::NINE_SPADES.0 | Bard::NINE_HEARTS.0 | Bard::NINE_DIAMONDS.0 | Bard::NINE_CLUBS.0);
+    pub const EIGHTS: Bard = Bard(Bard::EIGHT_SPADES.0 | Bard::EIGHT_HEARTS.0 | Bard::EIGHT_DIAMONDS.0 | Bard::EIGHT_CLUBS.0);
+    pub const SEVENS: Bard = Bard(Bard::SEVEN_SPADES.0 | Bard::SEVEN_HEARTS.0 | Bard::SEVEN_DIAMONDS.0 | Bard::SEVEN_CLUBS.0);
+    pub const SIXES: Bard = Bard(Bard::SIX_SPADES.0 | Bard::SIX_HEARTS.0 | Bard::SIX_DIAMONDS.0 | Bard::SIX_CLUBS.0);
+    pub const FIVES: Bard = Bard(Bard::FIVE_SPADES.0 | Bard::FIVE_HEARTS.0 | Bard::FIVE_DIAMONDS.0 | Bard::FIVE_CLUBS.0);
+    pub const FOURS: Bard = Bard(Bard::FOUR_SPADES.0 | Bard::FOUR_HEARTS.0 | Bard::FOUR_DIAMONDS.0 | Bard::FOUR_CLUBS.0);
+    pub const TREYS: Bard = Bard(Bard::TREY_SPADES.0 | Bard::TREY_HEARTS.0 | Bard::TREY_DIAMONDS.0 | Bard::TREY_CLUBS.0);
+    pub const DEUCES: Bard = Bard(Bard::DEUCE_SPADES.0 | Bard::DEUCE_HEARTS.0 | Bard::DEUCE_DIAMONDS.0 | Bard::DEUCE_CLUBS.0);
+    //endregion Ranks
+    
     // region deck
     pub const DECK: [Bard; 52] = [
         Bard::ACE_SPADES,
