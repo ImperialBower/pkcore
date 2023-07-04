@@ -4,6 +4,7 @@ use crate::cards::Cards;
 use crate::{PKError, Pile, TheNuts};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use crate::arrays::five::Five;
 
 /// A `Board` is a type that represents a single instance of the face up `Cards`
 /// of one `Game` of `Texas hold 'em`.
@@ -28,6 +29,18 @@ impl Display for Board {
             "FLOP: {}, TURN: {}, RIVER: {}",
             self.flop, self.turn, self.river
         )
+    }
+}
+
+impl From<Five> for Board {
+    fn from(value: Five) -> Self {
+        Board::from([
+            value.first(),
+            value.second(),
+            value.third(),
+            value.second(),
+            value.third(),
+        ])
     }
 }
 

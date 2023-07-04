@@ -14,6 +14,7 @@ use std::fmt::Formatter;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::str::FromStr;
 use strum::IntoEnumIterator;
+use crate::arrays::two::Two;
 
 /// What are the contracts for Cards?
 ///
@@ -57,6 +58,11 @@ impl Cards {
 
     pub fn combinations(&self, k: usize) -> Combinations<indexmap::set::IntoIter<Card>> {
         self.0.clone().into_iter().combinations(k)
+    }
+
+    #[must_use]
+    pub fn divisible_by(&self, x: usize) -> bool {
+        (self.len() % x) == 0
     }
 
     /// # Errors
@@ -196,6 +202,10 @@ impl Cards {
         for card in cards.iter() {
             self.insert(*card);
         }
+    }
+
+    pub fn into_twos(&self) -> Result<Vec<Two>, PKError> {
+        todo!()
     }
 
     #[must_use]

@@ -314,3 +314,54 @@ mod hand_rank__eval_tests {
         assert_eq!(v, vec![royal_flush_spades, royal_flush_hearts, straight]);
     }
 }
+
+#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd)]
+pub struct SevenEval {
+    pub seven: Seven,
+    pub five: Five,
+    pub hand_rank: HandRank,
+}
+
+impl From<Seven> for SevenEval {
+    fn from(seven: Seven) -> Self {
+        let (hand_rank, five) = seven.hand_rank_and_hand();
+
+        SevenEval {
+            seven,
+            five,
+            hand_rank,
+        }
+    }
+}
+
+/// Equality for Evals is purely factored around the `HandRank`.
+impl PartialEq for SevenEval {
+    fn eq(&self, other: &Self) -> bool {
+        self.hand_rank == other.hand_rank
+    }
+}
+impl Eq for SevenEval {}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod hand_rank__seven_eval_tests {
+    use super::*;
+    use crate::analysis::class::Class;
+    use crate::analysis::name::Name;
+    use std::str::FromStr;
+
+    #[test]
+    fn from__seven() {
+        let seven = Seven::from_str("6♠ 6♥ 9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
+        let expected_five = Five::from_str("6♠ 6♥ 6♦ 5♠ 5♥").unwrap();
+
+        let eval = SevenEval::from(seven);
+
+        assert_eq!(eval.five, expected_five);
+        assert_eq!(eval.seven, seven);
+        assert_eq!(eval.hand_rank, seven.hand_rank());
+        assert_eq!(eval.hand_rank.value, 271);
+        assert_eq!(eval.hand_rank.name, Name::FullHouse);
+        assert_eq!(eval.hand_rank.class, Class::SixesOverFives);
+    }
+}

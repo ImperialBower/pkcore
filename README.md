@@ -597,6 +597,13 @@
       * `impl SuitShift for Two`
       * HeadsUp
         * Spike: Storage using [Sled](https://github.com/spacejam/sled/tree/main)
+          * First relive BCM CSV fun
+            * CSV without Bard. Pure Cards.
+              * `SevenEval`: Need to store Evals with the original `Seven`.
+                * Cards.remaining() (Trying to get only bcm repl example to work here)
+                  * HA!!! Already exists in Pile trait. Wooo!!!!
+                * Cards.into_twos() - Copying over bcrepl functionality
+                  * Cards.divisible_by
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

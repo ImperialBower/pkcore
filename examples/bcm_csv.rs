@@ -1,14 +1,24 @@
+use csv::Reader;
 use lazy_static::lazy_static;
+use pkcore::analysis::hand_rank::HandRankValue;
+use pkcore::arrays::five::Five;
+use pkcore::arrays::seven::Seven;
+use pkcore::arrays::two::Two;
+use pkcore::bard::Bard;
+use pkcore::cards::Cards;
+use pkcore::Pile;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io;
 use std::io::Write;
+use std::str::FromStr;
 use wincounter::{Win, Wins};
 
 lazy_static! {
-    static ref BC_RANK: HashMap<BinaryCard, SimpleBinaryCardMap> = {
+    static ref BC_RANK: HashMap<Bard, SimpleBinaryCardMap> = {
         let mut m = HashMap::new();
-        let file_path = "logs/bcm.csv";
+        let file_path = "generated/bcm.csv";
         let file = File::open(file_path).unwrap();
         let mut rdr = Reader::from_reader(file);
 
@@ -18,6 +28,32 @@ lazy_static! {
         }
         m
     };
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct SimpleBinaryCardMap {
+    pub bc: Bard,
+    pub rank: HandRankValue,
+}
+
+impl SimpleBinaryCardMap {
+    #[must_use]
+    pub fn new(bc: Bard, rank: HandRankValue) -> SimpleBinaryCardMap {
+        SimpleBinaryCardMap { bc, rank }
+    }
+}
+
+impl From<BinaryCardMap> for SimpleBinaryCardMap {
+    fn from(bcm: BinaryCardMap) -> Self {
+        SimpleBinaryCardMap::new(bcm.best, bcm.rank)
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
+pub struct BinaryCardMap {
+    pub bc: Bard,
+    pub best: Bard,
+    pub rank: HandRankValue,
 }
 
 /// cargo run --example bcrepl
@@ -35,7 +71,7 @@ fn read_input() {
         .read_line(&mut input_text)
         .expect("Failed to receive value");
 
-    let cards = PokerCards::try_from(input_text);
+    let cards = Cards::from_str(input_text.as_str());
 
     match cards {
         Ok(c) => {
@@ -49,7 +85,7 @@ fn read_input() {
     }
 }
 
-fn work(cards: PokerCards) {
+fn work(cards: Cards) {
     let hands = cards.try_into_twos().unwrap();
     let hero = hands.get(0).unwrap();
     let villain = hands.get(1).unwrap();
@@ -59,18 +95,18 @@ fn work(cards: PokerCards) {
     println!("{}, {}", cards, results);
 }
 
-fn grind(hero: Two, villain: Two, remaining: PlayingCards) -> Wins {
+fn grind(hero: Two, villain: Two, remaining: Cards) -> Wins {
     let now = std::time::Instant::now();
 
     let mut wins = Wins::default();
     let combos = remaining.combinations(5);
 
     for combo in combos {
-        let board = FiveCard::from(PlayingCards::from(combo).to_five_array().unwrap());
+        let board = Five::from(Cards::from(combo).to_five_array().unwrap());
         let five = Five::from(board.to_arr());
 
-        let hero7 = BinaryCard::from_seven(Seven::new(hero, five));
-        let villain7 = BinaryCard::from_seven(Seven::new(villain, five));
+        let hero7 = Bard::from(Seven::from_case_and_board(&hero, five));
+        let villain7 = Bard::from(Seven::new(villain, five));
 
         let hero_rank = BC_RANK.get(&hero7).unwrap();
         let villain_rank = BC_RANK.get(&villain7).unwrap();

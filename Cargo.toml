@@ -12,17 +12,19 @@ exclude = [".github/workflows/*", "examples/*", ".gitignore", "Cargo.lock"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+csv = "1.2.2"
 indexmap = { version = "2.0.0", features = ["rayon"] }
 itertools = "0.11.0"
+lazy_static = "1.4.0"
 log = "0.4.19"
 rand = "0.8.5"
 rayon = "1.7.0"
 serde = { version = "1.0.164", features = ["derive"] }
 strum = { version = "0.25.0", features = ["derive"] }
-# wincounter = "0.1.1"
 
 [dev-dependencies]
 clap = { version = "4.3.10", features = ["derive", "unicode"] }
 elr_primes = "0.1.2"
 env_logger = "0.10.0"
 rstest = "0.17.0"
+wincounter = "0.1.1"

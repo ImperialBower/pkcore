@@ -9,9 +9,11 @@ pub mod class;
 pub mod eval;
 pub mod evals;
 pub mod hand_rank;
+pub mod matchups;
 pub mod name;
 pub mod outs;
 pub mod player_wins;
+pub mod store;
 pub mod the_nuts;
 
 /// The start of an analysis plugin system.

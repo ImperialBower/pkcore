@@ -115,3 +115,9 @@ DB Sled will work for us.
 
 Before we experiment with Sled for storing results, let's go back in the time machine and see
 how things worked using CSV as our data format. 
+
+* Reflect on CSV
+  * Why I love it
+    * History
+  * Faker library
+
