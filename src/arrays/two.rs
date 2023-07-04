@@ -608,6 +608,7 @@ impl Two {
     }
     //endregion
 
+    #[must_use]
     pub fn is_suited(&self) -> bool {
         self.first().get_suit() == self.second().get_suit()
     }
@@ -748,20 +749,14 @@ impl SuitShift for Two {
     }
 
     fn shift_suit_up(&self) -> Self {
-        match Two::new(
-            self.first().shift_suit_up(),
-            self.second().shift_suit_up(),
-        ) {
+        match Two::new(self.first().shift_suit_up(), self.second().shift_suit_up()) {
             Ok(two) => two,
             Err(_) => Two::default(),
         }
     }
 
     fn opposite(&self) -> Self {
-        match Two::new(
-            self.first().opposite(),
-            self.second().opposite(),
-        ) {
+        match Two::new(self.first().opposite(), self.second().opposite()) {
             Ok(two) => two,
             Err(_) => Two::default(),
         }
