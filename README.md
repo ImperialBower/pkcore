@@ -605,6 +605,7 @@
                 * Cards.into_twos() - Copying over bcrepl functionality
                   * Cards.divisible_by
               * examples/csv_card.rs
+              * Serialize `Card` using symbols
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
