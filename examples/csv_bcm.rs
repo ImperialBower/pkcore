@@ -17,13 +17,13 @@ use wincounter::{Win, Wins};
 
 lazy_static! {
     static ref BC_RANK: HashMap<Bard, SimpleBinaryCardMap> = {
-        let mut m = HashMap::new();
+        let m = HashMap::new();
         let file_path = "generated/bcm.csv";
         let file = File::open(file_path).unwrap();
         let mut rdr = Reader::from_reader(file);
 
         for result in rdr.deserialize() {
-            let bcm: BinaryCardMap = result.unwrap();
+            let _bcm: BinaryCardMap = result.unwrap();
             // m.insert(bcm.bc, SimpleBinaryCardMap::from(bcm));
         }
         m

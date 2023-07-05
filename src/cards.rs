@@ -59,6 +59,10 @@ impl Cards {
     /// # Errors
     ///
     /// Will return `PKError::InvalidCardCount` for an invalid index.
+    ///
+    /// # Panics
+    ///
+    /// If things are really off.
     pub fn as_twos(&self) -> Result<Vec<Two>, PKError> {
         if !self.divisible_by(2) {
             return Err(PKError::InvalidCardCount);

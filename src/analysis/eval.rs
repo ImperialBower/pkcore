@@ -315,6 +315,7 @@ mod hand_rank__eval_tests {
     }
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Copy, Debug, Default, Ord, PartialOrd)]
 pub struct SevenEval {
     pub seven: Seven,
