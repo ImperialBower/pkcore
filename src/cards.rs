@@ -73,7 +73,7 @@ impl Cards {
             }
             match Two::new(c1, cards.draw_one().unwrap()) {
                 Ok(two) => v.push(two),
-                Err(err) => return Err(PKError::InvalidCardCount),
+                Err(err) => return Err(err),
             }
         }
         Ok(v)

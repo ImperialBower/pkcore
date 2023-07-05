@@ -604,6 +604,7 @@
                   * HA!!! Already exists in Pile trait. Wooo!!!!
                 * Cards.into_twos() - Copying over bcrepl functionality
                   * Cards.divisible_by
+              * examples/csv_card.rs
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

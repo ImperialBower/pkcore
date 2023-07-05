@@ -121,3 +121,13 @@ how things worked using CSV as our data format.
     * History
   * Faker library
 
+##### CSV with Cards
+
+First, let's try writing and reading a CSV file that has regular card strings as examples. Something
+like this:
+
+```
+seven, five, hand_rank
+6♠ 6♥ 9♣ 6♦ 5♥ 5♠ 8♠, 6♠ 6♥ 6♦ 5♠ 5♥, 271
+5♦ 5♣ 9♣ 6♦ 5♥ 5♠ 8♠, 5♠ 5♥ 5♦ 5♣ 9♣, 124
+```
