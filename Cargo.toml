@@ -25,9 +25,9 @@ serde_yaml = "0.9.22"
 strum = { version = "0.25.0", features = ["derive"] }
 
 [dev-dependencies]
-clap = { version = "4.3.10", features = ["derive", "unicode"] }
+clap = { version = "4.3.11", features = ["derive", "unicode"] }
 elr_primes = "0.1.2"
 env_logger = "0.10.0"
-rstest = "0.17.0"
+rstest = "0.18.1"
 serde_test = "1.0.166"
 wincounter = "0.1.1"
