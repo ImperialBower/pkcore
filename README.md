@@ -606,6 +606,7 @@
                   * Cards.divisible_by
               * examples/csv_card.rs
               * Serialize `Card` using symbols
+              * analysis/store/heads_up/Row
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
@@ -673,6 +674,13 @@
   * [The Grug Brained Developer](https://grugbrain.dev/)
   * GUI
     * [Ratatui](https://github.com/tui-rs-revival/ratatui)
+
+## Dependencies
+
+* [Serde](https://serde.rs/)
+  * [Serde JSON](https://github.com/serde-rs/json)
+  * [Serde YAML](https://github.com/dtolnay/serde-yaml)
+* [Burnt Sushi CSV](https://github.com/BurntSushi/rust-csv) with Serde support
 
 ## Potential Libraries
 
