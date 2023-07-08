@@ -17,6 +17,13 @@ use pkcore::util::wincounter::heads_up::HeadsUp;
 use pkcore::util::wincounter::win::Win;
 use pkcore::util::wincounter::wins::Wins;
 
+/// cargo run --example bcrepl
+fn main() {
+    loop {
+        read_input();
+    }
+}
+
 lazy_static! {
     static ref BC_RANK: HashMap<Bard, SimpleBinaryCardMap> = {
         let mut m = HashMap::new();
@@ -58,13 +65,6 @@ pub struct BinaryCardMap {
     pub rank: HandRankValue,
 }
 
-/// cargo run --example bcrepl
-fn main() {
-    loop {
-        read_input();
-    }
-}
-
 fn read_input() {
     print!("hole cards> ");
     let _ = io::stdout().flush();
@@ -90,8 +90,18 @@ fn read_input() {
 
 fn work(cards: Cards) -> Result<HeadsUp, PKError> {
     let hands = cards.as_twos()?;
-    let hero = hands.get(0)?;
-    let villain = hands.get(1)?;
+    let hero = match hands.get(0) {
+        None => {
+            return Err(PKError::Fubar)
+        }
+        Some(t) => t,
+    };
+    let villain = match hands.get(1) {
+        None => {
+            return Err(PKError::Fubar)
+        }
+        Some(t) => t,
+    };
 
     let wins = grind(*hero, *villain, cards.remaining());
     Ok(wins.results_heads_up())
@@ -114,11 +124,11 @@ fn grind(hero: Two, villain: Two, remaining: Cards) -> Wins {
         let villain_rank = BC_RANK.get(&villain7).unwrap();
 
         if hero_rank.rank < villain_rank.rank {
-            wins.add_win(Win::FIRST);
+            wins.add(Win::FIRST);
         } else if villain_rank.rank < hero_rank.rank {
-            wins.add_win(Win::SECOND);
+            wins.add(Win::SECOND);
         } else {
-            wins.add_win(Win::FIRST | Win::SECOND);
+            wins.add(Win::FIRST | Win::SECOND);
         }
     }
 
