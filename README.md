@@ -607,6 +607,7 @@
               * examples/csv_card.rs
               * Serialize `Card` using symbols
               * analysis/store/heads_up/Row
+                * DEFECT #BAD_TWOS
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

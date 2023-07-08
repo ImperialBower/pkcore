@@ -70,15 +70,15 @@ impl Cards {
         let mut v: Vec<Two> = Vec::new();
         let mut cards = self.clone();
         loop {
-            let c1 = cards.draw_one().unwrap();
+            let c1 = cards.draw_one()?;
+            let c2 = cards.draw_one()?;
 
-            if c1.contains_blank() {
-                break;
-            }
-            match Two::new(c1, cards.draw_one().unwrap()) {
-                Ok(two) => v.push(two),
-                Err(err) => return Err(err),
-            }
+            let two = Two::new(c1, c2)?;
+            v.push(two);
+            // match Two::new(c1, cards.draw_one().unwrap()) {
+            //     Ok(two) => v.push(two),
+            //     Err(err) => return Err(err),
+            // }
         }
         Ok(v)
     }
@@ -686,6 +686,13 @@ mod card_tests {
         assert!(drawn.is_err());
         assert_eq!(PKError::NotEnoughCards, drawn.unwrap_err());
         assert_eq!(deck.len(), 52);
+    }
+
+    /// DEFECT #BAD_TWOS
+    #[test]
+    fn as_twos() {
+        let cards = Cards::from_str("A♠ A♥ A♦ A♣").unwrap();
+        let twos = cards.as_twos().unwrap();
     }
 
     #[test]

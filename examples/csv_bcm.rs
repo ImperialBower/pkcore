@@ -17,10 +17,41 @@ use pkcore::util::wincounter::heads_up::HeadsUp;
 use pkcore::util::wincounter::win::Win;
 use pkcore::util::wincounter::wins::Wins;
 
-/// cargo run --example bcrepl
+/// cargo run --example csv_bcm
+/// A♠ A♥ A♦ A♣
 fn main() {
     loop {
         read_input();
+    }
+}
+
+fn read_input() {
+    print!("hole cards> ");
+    let _ = io::stdout().flush();
+    let mut input_text = String::new();
+    io::stdin()
+        .read_line(&mut input_text)
+        .expect("Failed to receive value");
+
+    let cards = Cards::from_str(input_text.as_str());
+
+    match cards {
+        Ok(c) => {
+            if c.len() != 4 {
+                println!("Enter 4 cards");
+            } else {
+                println!("{}", c);
+                match work(c.clone()) {
+                    Ok(hup) => {
+                        println!("{}, {}", c, hup);
+                    }
+                    Err(e) => {
+                        println!("{:?}", e);
+                    }
+                }
+            }
+        }
+        Err(_) => println!("Invalid Cards"),
     }
 }
 
@@ -65,30 +96,8 @@ pub struct BinaryCardMap {
     pub rank: HandRankValue,
 }
 
-fn read_input() {
-    print!("hole cards> ");
-    let _ = io::stdout().flush();
-    let mut input_text = String::new();
-    io::stdin()
-        .read_line(&mut input_text)
-        .expect("Failed to receive value");
-
-    let cards = Cards::from_str(input_text.as_str());
-
-    match cards {
-        Ok(c) => {
-            if c.len() != 4 {
-                println!("Enter 4 cards");
-            } else {
-                println!("{c}");
-                work(c);
-            }
-        }
-        Err(_) => println!("Invalid Cards"),
-    }
-}
-
 fn work(cards: Cards) -> Result<HeadsUp, PKError> {
+    println!("{cards}");
     let hands = cards.as_twos()?;
     let hero = match hands.get(0) {
         None => {
