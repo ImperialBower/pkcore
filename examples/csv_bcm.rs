@@ -6,25 +6,27 @@ use pkcore::arrays::seven::Seven;
 use pkcore::arrays::two::Two;
 use pkcore::bard::Bard;
 use pkcore::cards::Cards;
-use pkcore::Pile;
+use pkcore::{Pile, PKError};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io;
 use std::io::Write;
 use std::str::FromStr;
-use wincounter::{Win, Wins};
+use pkcore::util::wincounter::heads_up::HeadsUp;
+use pkcore::util::wincounter::win::Win;
+use pkcore::util::wincounter::wins::Wins;
 
 lazy_static! {
     static ref BC_RANK: HashMap<Bard, SimpleBinaryCardMap> = {
-        let m = HashMap::new();
+        let mut m = HashMap::new();
         let file_path = "generated/bcm.csv";
         let file = File::open(file_path).unwrap();
         let mut rdr = Reader::from_reader(file);
 
         for result in rdr.deserialize() {
-            let _bcm: BinaryCardMap = result.unwrap();
-            // m.insert(bcm.bc, SimpleBinaryCardMap::from(bcm));
+            let bcm: BinaryCardMap = result.unwrap();
+            m.insert(bcm.bc, SimpleBinaryCardMap::from(bcm));
         }
         m
     };
@@ -78,6 +80,7 @@ fn read_input() {
             if c.len() != 4 {
                 println!("Enter 4 cards");
             } else {
+                println!("{c}");
                 work(c);
             }
         }
@@ -85,14 +88,14 @@ fn read_input() {
     }
 }
 
-fn work(cards: Cards) {
-    let hands = cards.as_twos().unwrap();
-    let hero = hands.get(0).unwrap();
-    let villain = hands.get(1).unwrap();
+fn work(cards: Cards) -> Result<HeadsUp, PKError> {
+    let hands = cards.as_twos()?;
+    let hero = hands.get(0)?;
+    let villain = hands.get(1)?;
 
     let wins = grind(*hero, *villain, cards.remaining());
-    let results = wins.results_heads_up();
-    println!("{}, {}", cards, results);
+    Ok(wins.results_heads_up())
+    // println!("{}, {}", cards, results);
 }
 
 fn grind(hero: Two, villain: Two, remaining: Cards) -> Wins {
