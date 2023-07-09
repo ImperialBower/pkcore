@@ -141,6 +141,11 @@ impl PreflopRow {
             None
         }
     }
+
+    #[must_use]
+    pub fn to_index(&self) -> String {
+        HUP::two_to_index(self.higher, self.lower)
+    }
 }
 
 /// I need a way to store heads up calculations locally in memory for now
@@ -156,13 +161,35 @@ pub struct PreflopRowHash(pub HashMap<String, PreflopRow>);
 
 impl PreflopRowHash {
     pub fn add(&mut self, value: PreflopRow) -> Option<PreflopRow> {
-        let key = format!("{} {}", value.higher, value.lower);
+        let key = HUP::two_to_index(value.higher, value.lower);
         self.0.insert(key, value)
     }
 
     #[must_use]
     pub fn contains_key(&self, key: &str) -> bool {
         self.0.contains_key(key)
+    }
+}
+
+/// Empty HUP struct. Using this for utility methods. Hacky, but I am a hack :-P
+
+pub struct HUP;
+
+impl HUP {
+    pub fn two_to_index(a: Two, b: Two) -> String {
+        format!("{} {}", a, b)
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod analysis__store__heads_up__hup_test {
+    use super::*;
+
+    #[test]
+    fn two_to_index() {
+        assert_eq!("5♦ 5♣ 6♠ 6♥", HUP::two_to_index(Two::HAND_5D_5C, Two::HAND_6S_6H));
+        assert_eq!("5♦ 5♣ 6♠ 6♥", HUP::two_to_index(Two::HAND_5D_5C, Two::HAND_6S_6H));
     }
 }
 
@@ -234,5 +261,10 @@ mod analysis__store__heads_up_row_test {
             wins.second_wins
         );
         assert!(row_inverted.get_wins(Two::HAND_AC_KS).is_none());
+    }
+
+    #[test]
+    fn to_index() {
+        assert_eq!("5♦ 5♣ 6♠ 6♥", row().to_index());
     }
 }

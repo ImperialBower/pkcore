@@ -796,6 +796,21 @@ impl TryFrom<&[Card]> for Two {
     }
 }
 
+// impl TryFrom<Vec<Card>> for Two {
+//     type Error = PKError;
+//
+//     fn try_from(v: Vec<Card>) -> Result<Self, Self::Error> {
+//         match v.len() {
+//             0..=1 => Err(PKError::NotEnoughCards),
+//             2 => Two::new(
+//                 Card::filter(v.get(0).ok_or(PKError::InvalidCard)?)?,
+//                 Card::filter(v.get(1).ok_or(PKError::InvalidCard)?)?,
+//             ),
+//             _ => Two::default(),
+//         }
+//     }
+// }
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod arrays__two_tests {
@@ -820,7 +835,7 @@ mod arrays__two_tests {
     /// Scottro --
     ///
     /// Michael Wiesenberg's "Poker Talk," the definitive dictionary of poker
-    /// terminology, which will me updated and re-released by Mike Caro
+    /// terminology, which will be updated and re-released by Mike Caro
     /// University of Poker, Gaming, and Life Strategy (MCU) in a few months,
     /// says this about the term:
     ///
@@ -834,6 +849,9 @@ mod arrays__two_tests {
     /// Straight Flushes,
     /// Mike Caro
     /// <https://www.amazon.com/gp/product/B00KJMP6B2/ref=dbs_a_def_rwt_hsch_vapi_tkin_p1_i0 />
+    ///
+    /// **ASIDE** The book is out as
+    /// [The Official Dictionary of Poker: Second Edition](https://www.amazon.com/Official-Dictionary-Poker-Second-ebook/dp/B00KJMP6B2?ref_=ast_author_mpb)
     const BIG_SLICK: [Card; 2] = [Card::ACE_DIAMONDS, Card::KING_HEARTS];
 
     /// The test fn with the exact same name as the function it's testing is my Happy Path
