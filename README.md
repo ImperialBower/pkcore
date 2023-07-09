@@ -608,6 +608,7 @@
               * Serialize `Card` using symbols
               * analysis/store/heads_up/Row
                 * DEFECT #BAD_TWOS
+                  * Cards.as_twos() fixed
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

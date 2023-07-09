@@ -6,16 +6,16 @@ use pkcore::arrays::seven::Seven;
 use pkcore::arrays::two::Two;
 use pkcore::bard::Bard;
 use pkcore::cards::Cards;
-use pkcore::{Pile, PKError};
+use pkcore::util::wincounter::heads_up::HeadsUp;
+use pkcore::util::wincounter::win::Win;
+use pkcore::util::wincounter::wins::Wins;
+use pkcore::{PKError, Pile};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io;
 use std::io::Write;
 use std::str::FromStr;
-use pkcore::util::wincounter::heads_up::HeadsUp;
-use pkcore::util::wincounter::win::Win;
-use pkcore::util::wincounter::wins::Wins;
 
 /// cargo run --example csv_bcm
 /// A♠ A♥ A♦ A♣
@@ -100,15 +100,11 @@ fn work(cards: Cards) -> Result<HeadsUp, PKError> {
     println!("{cards}");
     let hands = cards.as_twos()?;
     let hero = match hands.get(0) {
-        None => {
-            return Err(PKError::Fubar)
-        }
+        None => return Err(PKError::Fubar),
         Some(t) => t,
     };
     let villain = match hands.get(1) {
-        None => {
-            return Err(PKError::Fubar)
-        }
+        None => return Err(PKError::Fubar),
         Some(t) => t,
     };
 

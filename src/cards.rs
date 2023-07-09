@@ -108,6 +108,16 @@ impl Cards {
     ///     = note: `#[warn(clippy::while_let_loop)]` on by default
     /// ```
     ///
+    /// STEP 4
+    ///
+    /// While I don't think that the clippy suggestion will really work since
+    /// we need to get two `Cards`, not just one. Let's try a refactoring...
+    ///
+    /// BOOM! Ship it.
+    ///
+    /// Turns out that a slight change to the clippy suggestion worked perfectly.
+    /// Clippy is your friend.
+    ///
     /// # Errors
     ///
     /// Will return `PKError::InvalidCardCount` for an invalid index.
@@ -117,16 +127,9 @@ impl Cards {
         }
         let mut v: Vec<Two> = Vec::new();
         let mut cards = self.clone();
-        loop {
-            let c1 = match cards.draw_one() {
-                Ok(card) => card,
-                Err(_) => break,
-            };
-            let c2 = match cards.draw_one() {
-                Ok(card) => card,
-                Err(_) => break,
-            };
-            let two = Two::new(c1, c2)?;
+
+        while let Ok(two_cards) = cards.draw(2) {
+            let two = Two::try_from(two_cards)?;
             v.push(two);
         }
         Ok(v)
