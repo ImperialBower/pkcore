@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 /// is so intensive this is to avoid doing duplicate work.
 ///
 /// "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠" HSP THE hand Negreanu/Hansen
-/// First:  79.73% (1365284) || 79.71% (1364802) // stats from https://tools.timodenk.com/poker-odds-pre-flop
+/// First:  79.73% (1365284) || 79.71% (1364802) // stats from <https://tools.timodenk.com/poker-odds-pre-flop/>
 /// Second: 18.39% (314904)  || 18.39% (314904)
 /// Ties:    1.88% (32116)   ||  1.90% (32598)
 /// Elapsed: 678.51s
