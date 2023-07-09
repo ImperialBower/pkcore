@@ -610,6 +610,8 @@
                 * DEFECT #BAD_TWOS
                   * Cards.as_twos() fixed
                 * headsup::PreflopRowHash
+                * headsup::HUP static trait
+                  * HUP::two_to_index()
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
