@@ -58,7 +58,7 @@ fn read_input() {
 lazy_static! {
     static ref BC_RANK: HashMap<Bard, SimpleBinaryCardMap> = {
         let mut m = HashMap::new();
-        let file_path = "generated/bcm.csv";
+        let file_path = "generated/bcm.original.csv";
         let file = File::open(file_path).unwrap();
         let mut rdr = Reader::from_reader(file);
 

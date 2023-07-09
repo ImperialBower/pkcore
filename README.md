@@ -612,6 +612,9 @@
                 * headsup::PreflopRowHash
                 * headsup::HUP static trait
                   * HUP::two_to_index()
+    * GETTING REAL: 
+      * Generate bcm.csv using Serde `examples/generate_bcm.rs`
+      * analysis::store::bcm::binary_card_map::BCM.
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
@@ -691,3 +694,4 @@
 
 * [mycelium-bitfield](https://crates.io/crates/mycelium-bitfield)
 * [modular-bitfield](https://crates.io/crates/modular-bitfield)
+
