@@ -265,6 +265,7 @@ mod analysis__store__heads_up_row_test {
 
     #[test]
     fn to_index() {
-        assert_eq!("5♦ 5♣ 6♠ 6♥", row().to_index());
+        assert_eq!("6♠ 6♥ 5♦ 5♣", row().to_index());
+        assert_eq!("6♠ 6♥ 5♦ 5♣", row_inverted().to_index());
     }
 }
