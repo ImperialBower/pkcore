@@ -50,7 +50,6 @@ pub const UNIQUE_5_CARD_HANDS: usize = 2_598_960;
 pub const DISTINCT_5_CARD_HANDS: usize = 7_462;
 pub const POSSIBLE_UNIQUE_HOLDEM_HUP_MATCHUPS: usize = 1_624_350;
 
-
 // endregion
 
 #[derive(Debug, Eq, PartialEq)]

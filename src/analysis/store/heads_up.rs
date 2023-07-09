@@ -176,8 +176,9 @@ impl PreflopRowHash {
 pub struct HUP;
 
 impl HUP {
+    #[must_use]
     pub fn two_to_index(a: Two, b: Two) -> String {
-        format!("{} {}", a, b)
+        format!("{a} {b}")
     }
 }
 
@@ -188,8 +189,14 @@ mod analysis__store__heads_up__hup_test {
 
     #[test]
     fn two_to_index() {
-        assert_eq!("5♦ 5♣ 6♠ 6♥", HUP::two_to_index(Two::HAND_5D_5C, Two::HAND_6S_6H));
-        assert_eq!("5♦ 5♣ 6♠ 6♥", HUP::two_to_index(Two::HAND_5D_5C, Two::HAND_6S_6H));
+        assert_eq!(
+            "5♦ 5♣ 6♠ 6♥",
+            HUP::two_to_index(Two::HAND_5D_5C, Two::HAND_6S_6H)
+        );
+        assert_eq!(
+            "5♦ 5♣ 6♠ 6♥",
+            HUP::two_to_index(Two::HAND_5D_5C, Two::HAND_6S_6H)
+        );
     }
 }
 

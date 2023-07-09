@@ -1,6 +1,6 @@
 use pkcore::arrays::two::Two;
 use pkcore::cards::Cards;
-use pkcore::{Pile, PKError};
+use pkcore::{PKError, Pile};
 
 fn main() -> Result<(), PKError> {
     go()
