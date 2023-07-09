@@ -1,6 +1,6 @@
 use pkcore::arrays::two::Two;
 use pkcore::cards::Cards;
-use pkcore::PKError;
+use pkcore::{Pile, PKError};
 
 fn main() -> Result<(), PKError> {
     go()
@@ -71,7 +71,13 @@ fn go() -> Result<(), PKError> {
 
     for (i, v) in deck.combinations(2).enumerate() {
         let hero = Two::try_from(v.as_slice())?;
+
         println!("{} - {hero}", i + 1);
+        let remaining = Cards::deck_minus(&hero.cards());
+        for r in remaining.combinations(2) {
+            let villain = Two::try_from(r.as_slice())?;
+            println!("... {hero} v. {villain}");
+        }
     }
 
     Ok(())
