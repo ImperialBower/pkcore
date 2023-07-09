@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use crate::arrays::two::Two;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Row is a data format designed to store a specific Heads Up preflop analysis. The struct sorts
 /// the hands so that the higher one in sort order is first. Since performing preflop calculations
@@ -142,7 +142,6 @@ impl PreflopRow {
         }
     }
 }
-
 
 /// I need a way to store heads up calculations locally in memory for now
 /// so that I can see if a calculation has already been done. Since the `Twos`
