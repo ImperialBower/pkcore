@@ -1,3 +1,4 @@
+use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::card_number::CardNumber;
@@ -55,8 +56,89 @@ impl Cards {
         // minus
     }
 
+    /// DEFECT bad twos STEP 3
+    ///
+    /// This is how we got it to pass"
+    ///
+    /// ```
+    /// use std::str::FromStr;
+    /// use pkcore::arrays::two::Two;
+    /// use pkcore::cards::Cards;
+    /// use pkcore::PKError;
+    ///
+    /// fn as_twos(cards: Cards) -> Result<Vec<Two>, PKError> {
+    ///     if !cards.divisible_by(2) {
+    ///         return Err(PKError::InvalidCardCount);
+    ///     }
+    ///     let mut v: Vec<Two> = Vec::new();
+    ///     let mut cards = cards.clone();
+    ///     loop {
+    ///         let c1 = match cards.draw_one() {
+    ///             Ok(card) => card,
+    ///             Err(_) => break,
+    ///         };
+    ///         let c2 = match cards.draw_one() {
+    ///             Ok(card) => card,
+    ///             Err(_) => break,
+    ///         };
+    ///         let two = Two::new(c1, c2)?;
+    ///         v.push(two);
+    ///     }
+    ///     Ok(v)
+    /// }
+    ///
+    /// ```
+    /// While this works and makes the test pass, it generates the following
+    /// clippy error:
+    ///
+    /// ```txt
+    /// warning: this loop could be written as a `while let` loop
+    ///    --> src/cards.rs:106:9
+    ///     |
+    /// 106 | /         loop {
+    /// 107 | |             let c1 = match cards.draw_one() {
+    /// 108 | |                 Ok(card) => card,
+    /// 109 | |                 Err(_) => break,
+    /// ...   |
+    /// 116 | |             v.push(two);
+    /// 117 | |         }
+    ///     | |_________^ help: try: `while let Ok(card) = cards.draw_one() { .. }`
+    ///     |
+    ///     = help: for further information visit https://rust-lang.github.io/rust-clippy/master/index.html#while_let_loop
+    ///     = note: `#[warn(clippy::while_let_loop)]` on by default
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Will return `PKError::InvalidCardCount` for an invalid index.
+    pub fn as_twos(&self) -> Result<Vec<Two>, PKError> {
+        if !self.divisible_by(2) {
+            return Err(PKError::InvalidCardCount);
+        }
+        let mut v: Vec<Two> = Vec::new();
+        let mut cards = self.clone();
+        loop {
+            let c1 = match cards.draw_one() {
+                Ok(card) => card,
+                Err(_) => break,
+            };
+            let c2 = match cards.draw_one() {
+                Ok(card) => card,
+                Err(_) => break,
+            };
+            let two = Two::new(c1, c2)?;
+            v.push(two);
+        }
+        Ok(v)
+    }
+
     pub fn combinations(&self, k: usize) -> Combinations<indexmap::set::IntoIter<Card>> {
         self.0.clone().into_iter().combinations(k)
+    }
+
+    #[must_use]
+    pub fn divisible_by(&self, x: usize) -> bool {
+        (self.len() % x) == 0
     }
 
     /// # Errors
@@ -653,6 +735,16 @@ mod card_tests {
         assert!(drawn.is_err());
         assert_eq!(PKError::NotEnoughCards, drawn.unwrap_err());
         assert_eq!(deck.len(), 52);
+    }
+
+    /// DEFECT #BAD_TWOS STEP 2
+    ///
+    /// This is what you get for not testing your code. It's my own damn fault.
+    #[test]
+    fn as_twos() {
+        let cards = Cards::from_str("A♠ A♥ A♦ A♣").unwrap();
+        let twos = cards.as_twos().unwrap();
+        assert_eq!(2, twos.len());
     }
 
     #[test]

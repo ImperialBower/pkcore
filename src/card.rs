@@ -6,6 +6,10 @@ use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::suit::Suit;
 use crate::{PKError, Pile, SuitShift, TheNuts};
+use serde::de::Deserializer;
+
+use serde::ser::{Serialize, Serializer};
+use serde::Deserialize;
 use std::fmt;
 use std::str::FromStr;
 
@@ -25,8 +29,8 @@ use std::str::FromStr;
 /// b = bit turned on depending on rank of card
 /// m = Flags reserved for multiples of the same rank. Stripped for evals.
 /// ```
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Card(u32);
+#[derive(Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct Card(#[serde(deserialize_with = "deserialize_card_index")] u32);
 // #[derive(Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 // pub struct PokerCard(#[serde(deserialize_with = "deserialize_card_index")] u32);
 //
@@ -303,6 +307,27 @@ impl Pile for Card {
     }
 }
 
+impl Serialize for Card {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_newtype_struct("Card", &self.to_string())
+    }
+}
+
+fn deserialize_card_index<'de, D>(deserializer: D) -> Result<u32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let buf = String::deserialize(deserializer)?;
+
+    match Card::from_str(buf.as_str()) {
+        Ok(card) => Ok(card.as_u32()),
+        Err(_) => Ok(0),
+    }
+}
+
 impl SuitShift for Card {
     fn shift_suit_down(&self) -> Self {
         Card::new(self.get_rank(), self.get_suit().shift_suit_down())
@@ -385,6 +410,7 @@ mod card_tests {
     use super::*;
     use crate::bard::Bard;
     use rstest::rstest;
+    use serde_test::{assert_tokens, Token};
 
     #[test]
     fn new() {
@@ -691,6 +717,17 @@ mod card_tests {
         assert_eq!(Card::ACE_HEARTS, Card::from_str("AH").unwrap());
         assert_eq!(Card::KING_DIAMONDS, Card::from_str("  K♢   ").unwrap());
         assert_eq!(PKError::InvalidIndex, Card::from_str("  ").unwrap_err());
+    }
+
+    // https://serde.rs/unit-testing.html
+    #[test]
+    fn serialize() {
+        let card = Card::QUEEN_HEARTS;
+
+        assert_tokens(
+            &card,
+            &[Token::NewtypeStruct { name: "Card" }, Token::Str("Q♥")],
+        );
     }
 
     /// By default, cards will sort themselves from lowest, to highest, which means

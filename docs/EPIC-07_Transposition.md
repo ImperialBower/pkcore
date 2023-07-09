@@ -111,3 +111,23 @@ In the past I used CSV to store analysis results. This was easy to implement, bu
 contained millions of records, it took a long time to load into memory. Let's see if the embedded 
 DB Sled will work for us. 
 
+#### History: CSV
+
+Before we experiment with Sled for storing results, let's go back in the time machine and see
+how things worked using CSV as our data format. 
+
+* Reflect on CSV
+  * Why I love it
+    * History
+  * Faker library
+
+##### CSV with Cards
+
+First, let's try writing and reading a CSV file that has regular card strings as examples. Something
+like this:
+
+```
+seven, five, hand_rank
+6♠ 6♥ 9♣ 6♦ 5♥ 5♠ 8♠, 6♠ 6♥ 6♦ 5♠ 5♥, 271
+5♦ 5♣ 9♣ 6♦ 5♥ 5♠ 8♠, 5♠ 5♥ 5♦ 5♣ 9♣, 124
+```

@@ -597,6 +597,17 @@
       * `impl SuitShift for Two`
       * HeadsUp
         * Spike: Storage using [Sled](https://github.com/spacejam/sled/tree/main)
+          * First relive BCM CSV fun
+            * CSV without Bard. Pure Cards.
+              * `SevenEval`: Need to store Evals with the original `Seven`.
+                * Cards.remaining() (Trying to get only bcm repl example to work here)
+                  * HA!!! Already exists in Pile trait. Wooo!!!!
+                * Cards.into_twos() - Copying over bcrepl functionality
+                  * Cards.divisible_by
+              * examples/csv_card.rs
+              * Serialize `Card` using symbols
+              * analysis/store/heads_up/Row
+                * DEFECT #BAD_TWOS
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
@@ -664,6 +675,13 @@
   * [The Grug Brained Developer](https://grugbrain.dev/)
   * GUI
     * [Ratatui](https://github.com/tui-rs-revival/ratatui)
+
+## Dependencies
+
+* [Serde](https://serde.rs/)
+  * [Serde JSON](https://github.com/serde-rs/json)
+  * [Serde YAML](https://github.com/dtolnay/serde-yaml)
+* [Burnt Sushi CSV](https://github.com/BurntSushi/rust-csv) with Serde support
 
 ## Potential Libraries
 

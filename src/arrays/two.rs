@@ -4,10 +4,13 @@ use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::{PKError, Pile, SuitShift, TheNuts};
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(
+    Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
+)]
 pub struct Two([Card; 2]);
 
 impl Two {

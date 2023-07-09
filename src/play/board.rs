@@ -1,3 +1,4 @@
+use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::card::Card;
 use crate::cards::Cards;
@@ -27,6 +28,16 @@ impl Display for Board {
             f,
             "FLOP: {}, TURN: {}, RIVER: {}",
             self.flop, self.turn, self.river
+        )
+    }
+}
+
+impl From<Five> for Board {
+    fn from(value: Five) -> Self {
+        Board::new(
+            Three::from([value.first(), value.second(), value.third()]),
+            value.forth(),
+            value.fifth(),
         )
     }
 }

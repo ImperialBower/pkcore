@@ -99,7 +99,7 @@ struct Args {
 /// cargo run --example calc -- -d "A♠ J♦ 6♥ 6♣" -b "A♥ 3♠ 6♠ J♠ 5♠" HSP S01E01 Negreanu/Greenstein
 /// cargo run --example calc -- -d "7♣ 6♥ K♣ 2♣ J♦ 9♦" -b "Q♣ 7♥ K♥ 6♣ Q♠" HSP S01E01 Alaei/Negreanu/Harman
 /// cargo run --example calc -- -d "A♠ K♠ A♣ K♥" -b "4♠ 7♠ K♣" HSP S04E09 Hellmuth/Gold
-/// cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠" HSP THE hand Negreanu/Hansen
+/// cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠" HSP THE HAND Negreanu/Hansen
 /// cargo run --example calc -- -d "6♠ 4♠ 8♣ 6♣ A♦ 2♦ K♥ J♣" -b "2♣ 3♦ 3♣ 4♦ 4♣" HSP S06E10 Grospellier/Benyamine
 /// cargo run --example calc -- -d "A♠ K♥ 9♦ 8♥" -b "6♦ 7♥ T♣ 3♥ 5♥" HSP S06E11 Galfond/Negreanu
 /// cargo run --example calc -- -d "7♠ 6♠ Q♠ Q♦" -b "2♠ 7♥ 9♠ T♦ 4♣" HSP S08E07 Bellande Schwimer FIRST RUN
