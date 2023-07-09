@@ -92,13 +92,14 @@ fn main() -> Result<(), PKError> {
 ///     let hero = Two::try_from(v.as_slice())?;
 ///
 ///     println!("{} - {hero}", i + 1);
-///     let remaining = Cards::deck_minus(&hero.cards());
-///     for r in remaining.combinations(2) {
+///     for r in hero.remaining().combinations(2) {
 ///         let villain = Two::try_from(r.as_slice())?;
 ///         println!("... {hero} v. {villain}");
 ///     }
 /// }
 /// ```
+///
+/// That simplifies things a little bit.
 fn go() -> Result<(), PKError> {
     let deck = Cards::deck();
 
