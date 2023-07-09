@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::arrays::two::Two;
 use serde::{Deserialize, Serialize};
 
@@ -139,6 +140,28 @@ impl PreflopRow {
         } else {
             None
         }
+    }
+}
+
+
+/// I need a way to store heads up calculations locally in memory for now
+/// so that I can see if a calculation has already been done. Since the `Twos`
+/// are sorted and the `Cards` in the `Twos` are sorted, we can get rid of a lot of
+/// duplicate calculations.
+///
+/// TODO: Write tests!!!
+#[derive(Clone, Debug, Default)]
+pub struct PreflopRowHash(pub HashMap<String, PreflopRow>);
+
+impl PreflopRowHash {
+    pub fn add(&mut self, value: PreflopRow) -> Option<PreflopRow> {
+        let key = format!("{} {}", value.higher, value.lower);
+        self.0.insert(key, value)
+    }
+
+    #[must_use]
+    pub fn contains_key(&self, key: &str) -> bool {
+        self.0.contains_key(key)
     }
 }
 
