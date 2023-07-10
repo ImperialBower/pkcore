@@ -86,13 +86,27 @@ mod analysis__store__bcm__binary_card_map_tests {
     use std::str::FromStr;
 
     #[test]
-    fn try_from() {
+    fn try_from__five() {
         let five = Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
 
         let sut = BinaryCardMap::try_from(five).unwrap();
 
         assert_eq!(sut.rank, 1);
         assert_eq!(sut.bc, Bard(4_362_862_139_015_168));
+        assert_eq!(sut.best, Bard(4_362_862_139_015_168));
+    }
+
+    #[test]
+    fn try_from__seven() {
+        let seven = Seven::from_str("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠").unwrap();
+        let five = Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
+
+        let sut = BinaryCardMap::try_from(seven).unwrap();
+
+        assert_eq!(sut.rank, 1);
+        assert_eq!(seven.cards(), Cards::from(sut.bc));
+        assert_eq!(five.cards(), Cards::from(sut.best));
+        assert_eq!(sut.bc, Bard(4_468_415_255_281_664));
         assert_eq!(sut.best, Bard(4_362_862_139_015_168));
     }
 
