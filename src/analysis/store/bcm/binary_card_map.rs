@@ -19,10 +19,14 @@ pub struct BinaryCardMap {
 }
 
 impl BinaryCardMap {
+    /// OK, this is the old school way of generating serialized data. Next step
+    /// is to try to do the same with an embedded DB like
+    /// [sled](https://github.com/spacejam/sled).
+    ///
     /// # Errors
     ///
     /// Trips if the Card combinations are off, which shouldn't be possible.
-    pub fn generate(path: &str) -> Result<(), Box<dyn Error>> {
+    pub fn generate_csv(path: &str) -> Result<(), Box<dyn Error>> {
         let mut wtr = WriterBuilder::new().has_headers(true).from_path(path)?;
 
         let deck = Cards::deck();
