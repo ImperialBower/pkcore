@@ -1,10 +1,13 @@
-use std::error::Error;
 use crate::analysis::hand_rank::HandRankValue;
-use crate::bard::Bard;
-use serde::{Deserialize, Serialize};
 use crate::arrays::five::Five;
+use crate::arrays::seven::Seven;
+use crate::arrays::HandRanker;
+use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::{PKError, Pile};
+use serde::{Deserialize, Serialize};
+use std::error::Error;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
 pub struct BinaryCardMap {
@@ -14,13 +17,16 @@ pub struct BinaryCardMap {
 }
 
 impl BinaryCardMap {
+    /// # Errors
+    ///
+    /// Trips if the Card combinations are off, which shouldn't be possible.
     pub fn generate(path: &str) -> Result<(), Box<dyn Error>> {
         let mut wtr = csv::Writer::from_path(path)?;
         let deck = Cards::deck();
 
-        // for b in deck.combinations(5) {
-        //     wtr.serialize(BinaryCardMap::from(b))?;
-        // }
+        for b in deck.combinations(5) {
+            wtr.serialize(BinaryCardMap::try_from(b))?;
+        }
         //
         // for b in deck.combinations(7) {
         //     wtr.serialize(BinaryCardMap::from(b))?;
@@ -32,9 +38,43 @@ impl BinaryCardMap {
     }
 }
 
-impl From<Vec<&Card>> for BinaryCardMap {
-    fn from(v: Vec<&Card>) -> Self {
-        todo!()
+impl TryFrom<Five> for BinaryCardMap {
+    type Error = PKError;
+
+    fn try_from(five: Five) -> Result<Self, Self::Error> {
+        let bard = five.bard();
+        let rank = five.hand_rank().value;
+        let bcm = BinaryCardMap {
+            bc: bard,
+            best: bard,
+            rank,
+        };
+        Ok(bcm)
     }
 }
 
+impl TryFrom<Seven> for BinaryCardMap {
+    type Error = PKError;
+
+    fn try_from(seven: Seven) -> Result<Self, Self::Error> {
+        let (rank, five) = seven.hand_rank_value_and_hand();
+        let bcm = BinaryCardMap {
+            bc: seven.bard(),
+            best: five.bard(),
+            rank,
+        };
+        Ok(bcm)
+    }
+}
+
+impl TryFrom<Vec<Card>> for BinaryCardMap {
+    type Error = PKError;
+
+    fn try_from(v: Vec<Card>) -> Result<Self, Self::Error> {
+        match v.len() {
+            5 => Ok(BinaryCardMap::try_from(Five::try_from(v)?)?),
+            7 => Ok(BinaryCardMap::try_from(Seven::try_from(v)?)?),
+            _ => Ok(BinaryCardMap::default()),
+        }
+    }
+}

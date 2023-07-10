@@ -8,6 +8,7 @@ use analysis::evals::Evals;
 use analysis::the_nuts::TheNuts;
 use indexmap::set::IntoIter;
 use itertools::Combinations;
+use serde::{Deserialize, Serialize};
 use std::iter::Enumerate;
 
 pub mod analysis;
@@ -52,7 +53,7 @@ pub const POSSIBLE_UNIQUE_HOLDEM_HUP_MATCHUPS: usize = 1_624_350;
 
 // endregion
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub enum PKError {
     BlankCard,
     CardCast,
@@ -75,6 +76,10 @@ pub trait Pile {
     fn are_unique(&self) -> bool {
         let v = self.to_vec();
         !(1..v.len()).any(|i| v[i..].contains(&v[i - 1]))
+    }
+
+    fn bard(&self) -> Bard {
+        Bard::from(self.to_vec())
     }
 
     fn cards(&self) -> Cards {

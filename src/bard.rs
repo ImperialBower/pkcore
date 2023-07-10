@@ -436,6 +436,12 @@ impl From<Cards> for Bard {
     }
 }
 
+impl From<Vec<Card>> for Bard {
+    fn from(v: Vec<Card>) -> Self {
+        Bard::from(Cards::from(v))
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod bard_tests {
@@ -608,5 +614,24 @@ mod bard_tests {
             Bard::TEN_CLUBS | Bard::NINE_HEARTS | Bard::EIGHT_HEARTS
         );
         assert_eq!(Bard::from(Cards::deck()), Bard::ALL);
+    }
+
+    #[test]
+    fn from__vec_card() {
+        let v: Vec<Card> = vec![
+            Card::ACE_SPADES,
+            Card::KING_SPADES,
+            Card::QUEEN_SPADES,
+            Card::JACK_SPADES,
+            Card::TEN_SPADES,
+        ];
+        let actual = Bard::from(v);
+        let expected = Bard::ACE_SPADES
+            | Bard::KING_SPADES
+            | Bard::QUEEN_SPADES
+            | Bard::JACK_SPADES
+            | Bard::TEN_SPADES;
+
+        assert_eq!(actual, expected);
     }
 }
