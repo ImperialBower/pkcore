@@ -6,10 +6,13 @@ use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::{PKError, Pile};
+use csv::WriterBuilder;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
+// use std::fmt::Error;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
+#[serde(rename_all = "PascalCase")]
 pub struct BinaryCardMap {
     pub bc: Bard,
     pub best: Bard,
@@ -21,15 +24,20 @@ impl BinaryCardMap {
     ///
     /// Trips if the Card combinations are off, which shouldn't be possible.
     pub fn generate(path: &str) -> Result<(), Box<dyn Error>> {
-        let mut wtr = csv::Writer::from_path(path)?;
+        let mut wtr = WriterBuilder::new().has_headers(true).from_path(path)?;
+
         let deck = Cards::deck();
 
         for b in deck.combinations(5) {
-            wtr.serialize(BinaryCardMap::try_from(b))?;
+            if let Ok(bcm) = BinaryCardMap::try_from(b) {
+                wtr.serialize(bcm)?;
+            }
         }
 
         for b in deck.combinations(7) {
-            wtr.serialize(BinaryCardMap::try_from(b))?;
+            if let Ok(bcm) = BinaryCardMap::try_from(b) {
+                wtr.serialize(bcm)?;
+            }
         }
 
         wtr.flush()?;
