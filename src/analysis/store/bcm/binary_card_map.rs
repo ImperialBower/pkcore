@@ -78,3 +78,28 @@ impl TryFrom<Vec<Card>> for BinaryCardMap {
         }
     }
 }
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod analysis__store__bcm__binary_card_map_tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn try_from() {
+        let five = Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
+
+        let sut = BinaryCardMap::try_from(five).unwrap();
+
+        assert_eq!(sut.rank, 1);
+        assert_eq!(sut.bc, Bard(4_362_862_139_015_168));
+        assert_eq!(sut.best, Bard(4_362_862_139_015_168));
+    }
+
+    #[test]
+    fn from_five__default() {
+        let bcm = BinaryCardMap::try_from(Five::default());
+        assert!(bcm.is_ok());
+        assert_eq!(BinaryCardMap::default(), bcm.unwrap());
+    }
+}

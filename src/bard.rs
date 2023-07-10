@@ -162,7 +162,7 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 #[derive(
     Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
 )]
-pub struct Bard(u64);
+pub struct Bard(pub u64);
 
 #[rustfmt::skip]
 impl Bard {
