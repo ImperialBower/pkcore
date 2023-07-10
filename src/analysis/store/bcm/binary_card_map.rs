@@ -27,10 +27,10 @@ impl BinaryCardMap {
         for b in deck.combinations(5) {
             wtr.serialize(BinaryCardMap::try_from(b))?;
         }
-        //
-        // for b in deck.combinations(7) {
-        //     wtr.serialize(BinaryCardMap::from(b))?;
-        // }
+
+        for b in deck.combinations(7) {
+            wtr.serialize(BinaryCardMap::try_from(b))?;
+        }
 
         wtr.flush()?;
 
@@ -110,6 +110,7 @@ mod analysis__store__bcm__binary_card_map_tests {
         assert_eq!(sut.best, Bard(4_362_862_139_015_168));
     }
 
+    /// This test actually surprises me.
     #[test]
     fn from_five__default() {
         let bcm = BinaryCardMap::try_from(Five::default());
