@@ -1,6 +1,6 @@
 use pkcore::analysis::store::bcm::index_card_map::IndexCardMap;
 
-/// RUST_LOG=trace cargo run --example generate_bcm
+/// RUST_LOG=trace cargo run --example generate_icm
 fn main() {
     let now = std::time::Instant::now();
     env_logger::init();
