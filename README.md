@@ -612,11 +612,15 @@
                 * headsup::PreflopRowHash
                 * headsup::HUP static trait
                   * HUP::two_to_index()
-    * GETTING REAL: 
+                  * ________________________
+    * GETTING REAL: STORAGE
       * Generate bcm.csv using Serde `examples/generate_bcm.rs`
       * analysis::store::bcm::binary_card_map::BCM
         * `impl From<Vev<Card>> for Bard`
       * analysis::store::bcm::index_card_map::ICM
+      * Storing data in the sled embedded database
+        * examples/generate_sled.rs
+      * Storing data in SQLite
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
@@ -697,3 +701,6 @@
 * [mycelium-bitfield](https://crates.io/crates/mycelium-bitfield)
 * [modular-bitfield](https://crates.io/crates/modular-bitfield)
 * [sled](https://github.com/spacejam/sled)
+* SQLite
+  * [rusqlite](https://github.com/rusqlite/rusqlite)
+    * [Rust Cookbook](https://rust-lang-nursery.github.io/rust-cookbook/database/sqlite.html)

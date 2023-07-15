@@ -1,5 +1,7 @@
 use crate::analysis::eval::Eval;
+use crate::analysis::store::bcm::binary_card_map::BinaryCardMap;
 use crate::arrays::five::Five;
+use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::play::board::Board;
@@ -134,5 +136,13 @@ impl TestData {
         wins.add_x(Win::FIRST | Win::SECOND, 32_116); // Ties
 
         wins
+    }
+
+    /// # Panics
+    ///
+    /// ¯\_(ツ)_/¯
+    #[must_use]
+    pub fn spades_royal_flush_bcm() -> BinaryCardMap {
+        BinaryCardMap::try_from(Seven::from_str("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠").unwrap()).unwrap()
     }
 }
