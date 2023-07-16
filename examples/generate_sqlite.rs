@@ -213,6 +213,7 @@ fn _insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> Result<usize> {
 /// Here's a crazy idea... how about before I try to figure out how to extract the result from
 /// sqlite, I make sure that I have a result from sqlite? BRILLIANT!!!
 ///
+///
 /// I must say that it's been a very very long time since I've done some serious SQLunking. For most
 /// of my career mastering SQL was one of the most important skills in the developer's tool belt. I got
 /// my start coding an Access database, than learning about this thing called SQL and betting my
