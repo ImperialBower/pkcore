@@ -26,7 +26,7 @@ fn create_table(conn: &Connection) -> Result<usize> {
     )
 }
 
-fn insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> Result<usize> {
+fn _insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> Result<usize> {
     let mut stmt = conn.prepare("INSERT INTO bcm (bc, best, rank) VALUES (:bc, :best, :rank)")?;
     stmt.execute(named_params! {
     ":bc": bcm.bc.as_u64(),
@@ -212,12 +212,34 @@ fn insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> Result<usize> {
 ///
 /// Here's a crazy idea... how about before I try to figure out how to extract the result from
 /// sqlite, I make sure that I have a result from sqlite? BRILLIANT!!!
-/// 
+///
+/// I must say that it's been a very very long time since I've done some serious SQLunking. For most
+/// of my career mastering SQL was one of the most important skills in the developer's tool belt. I got
+/// my start coding an Access database, than learning about this thing called SQL and betting my
+/// career on Oracle. I even have my name mispelled as an editor or the Manning Book Java Persistence
+/// in Action, which is a book about Object/Relational technologies like
+/// [Hibernate](https://en.wikipedia.org/wiki/Hibernate_(framework)).
+///
+/// I was shocked when I started working for Pillar and the majority of the developers hated libraries
+/// like hibernate, preferring to deal with raw SQL queries. Here I was thinking I was smart by
+/// learning some hot tech only to find out that many perceived it as a crutch> Were they right?
+/// IDK. I found them handy, but they're not a hill worth dying on. Testing... on the other hand...
+///
+/// Fired up Datagrip to see how the queries work by themselves [SCREENSHOT]. Turns out that they work just
+/// fine through a good ol' fashioned SQL terminal. I always make sure that I have some sort of raw
+/// way of trying out what I am doing. Before the tests... before the functions... we play with it.
+///
+/// Running these bad boys through it and they check out:
+///
+/// ```sql
+/// INSERT INTO bcm (bc, best, rank) VALUES (1, 4468415255281664, 4362862139015168);
+/// SELECT bc, best, rank FROM bcm WHERE bc=1;
+/// ```
 fn select_bcm(conn: &Connection, bc: &Bard) -> Result<BinaryCardMap, Error> {
     let mut stmt = conn.prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc?")?;
 
     let mut rows = stmt.query_map(
-        named_params! {":bc": 1},
+        named_params! {":bc": bc.as_u64()},
         |row| {
             println!("{:?}", row);
             // let bc = row.get(0)?;
