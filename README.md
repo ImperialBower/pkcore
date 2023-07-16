@@ -621,6 +621,7 @@
       * Storing data in the sled embedded database
         * examples/generate_sled.rs
       * Storing data in SQLite
+        * impl From<u64> for Bard
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

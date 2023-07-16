@@ -1,6 +1,6 @@
 use pkcore::analysis::store::bcm::binary_card_map::BinaryCardMap;
 use pkcore::util::data::TestData;
-use rusqlite::{named_params, Connection, Result};
+use rusqlite::{named_params, Connection, Result, Error};
 use pkcore::bard::Bard;
 
 fn main() -> Result<()> {
@@ -10,7 +10,7 @@ fn main() -> Result<()> {
 
     create_table(&conn)?;
     // insert_bcm(&conn, &bcm)?;
-    select_bcm(&conn, &bcm.bc);
+    select_bcm(&conn, &bcm.bc)?;
 
     Ok(())
 }
@@ -68,15 +68,174 @@ fn insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> Result<usize> {
 /// up. In a way, as much as I had the AI hype train does feel inevitable. Just note, that this will
 /// only be the case after we've got through another boom/bust cycle ala Web 2.0 crypto and the
 /// dot.bomb bubble that saved me from a life of retail management. Civilizations are the children
-/// of massive amounts of stupidity and waste. That's just how we humans roll. (Can you tell I
-fn select_bcm(conn: &Connection, bc: &Bard) -> Option<()> {
-    let mut stmt = conn.prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc?").ok()?;
+/// of massive amounts of stupidity and waste. That's just how we humans roll. (Can you tell I am
+/// reading [Peter Zeihan](https://www.youtube.com/@ZeihanonGeopolitics) right now.
+///
+/// I've reached at one of my last resorts, which is running
+/// [a query](https://github.com/search?q=named_params%21+rusqlite+select&type=code) against
+/// GitHub for clues from other repositories that are doing selects against rusqlite.
+///
+/// Let's see if this snippet from the
+///
+/// ```
+/// debug!("select from {name}, start:{start}, end:{end}");
+///
+/// let mut stat = self.conn.prepare(sql_tmpl)?;
+/// let rows = stat.query_map(
+///     named_params! {
+///         ":start": start,
+///         ":end": end,
+///     },
+///     |row| {
+///         let detail = VisitDetail {
+///             url: row.get(0)?,
+///             title: row.get(1).unwrap_or_else(|_| "".to_string()),
+///             visit_time: row.get(2)?,
+///             visit_type: row.get(3)?,
+///         };
+///         Ok(detail)
+///         },
+///     )?;
+///
+///     let mut res: Vec<VisitDetail> = Vec::new();
+///     for r in rows {
+///         res.push(r?);
+///     }
+/// ```
+///
+/// BTW, Adding a `From<u64>` trait to `Bard` for easy struct realization.
+///
+/// I was really hoping that this would work for me: `let bc = Bard::from(row.get(0)?);`, but
+/// the `Rust` compiler is a cruel mistress.
+///
+/// ```
+/// error[E0277]: the trait bound `Bard: From<()>` is not satisfied
+///    --> examples/generate_sqlite.rs:114:33
+///     |
+/// 114 |             let bc = Bard::from(row.get(0)?);
+///     |                      ---------- ^^^^^^^^^^^ the trait `From<()>` is not implemented for `Bard`
+///     |                      |
+///     |                      required by a bound introduced by this call
+///     |
+///     = help: the following other types implement trait `From<T>`:
+///               <Bard as From<Card>>
+///               <Bard as From<Cards>>
+///               <Bard as From<Vec<Card>>>
+///               <Bard as From<u64>>
+/// ```
+///
+/// Let's see how this does? It feels like we're getting closer.
+///
+/// ```
+/// fn select_bcm(conn: &Connection, bc: &Bard) -> Result<BinaryCardMap, Error> {
+///     let mut stmt = conn.prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc?")?;
+///
+///     let mut rows = stmt.query_map(
+///         named_params! {":bc": bc.as_u64()},
+///         |row| {
+///             let bc = row.get(0)?;
+///             let best = row.get(1)?;
+///             let rank = row.get(2)?;
+///
+///             let bcm = BinaryCardMap {
+///                 bc: Bard::from(bc),
+///                 best: Bard::from(best),
+///                 rank,
+///             };
+///             Ok(bcm)
+///         },
+///     )?;
+///
+///     let result = rows.next().ok_or(Error::InvalidQuery)?;
+///     let bcm = result?;
+///
+///     Ok(bcm)
+/// }
+/// ```
+///
+/// Let's run it!
+///
+/// ```
+/// error[E0277]: the trait bound `Bard: From<()>` is not satisfied
+///    --> examples/generate_sqlite.rs:195:32
+///     |
+/// 195 |                 bc: Bard::from(bc),
+///     |                     ---------- ^^ the trait `From<()>` is not implemented for `Bard`
+///     |                     |
+///     |                     required by a bound introduced by this call
+///     |
+///     = help: the following other types implement trait `From<T>`:
+///               <Bard as From<Card>>
+///               <Bard as From<Cards>>
+///               <Bard as From<Vec<Card>>>
+///               <Bard as From<u64>>
+/// ```
+///
+/// What the fuckity fuck!!! The same stupid error. This causes me to remember Christoph's first
+/// rule of debugging: The error is probably telling the truth. It's saying there's nothing there.
+/// What if this were true? Let's dump some results and see what's what.
+///
+/// (When I am dumping out variables, this is me at my most masochistic.)
+///
+/// ```
+/// fn select_bcm(conn: &Connection, bc: &Bard) -> Result<BinaryCardMap, Error> {
+///     let mut stmt = conn.prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc?")?;
+///
+///     let mut rows = stmt.query_map(
+///         named_params! {":bc": bc.as_u64()},
+///         |row| {
+///             println!("{:?}", row);
+///             // let bc = row.get(0)?;
+///             // let best = row.get(1)?;
+///             // let rank = row.get(2)?;
+///             //
+///             // let bcm = BinaryCardMap {
+///             //     bc: Bard::from(bc),
+///             //     best: Bard::from(best),
+///             //     rank,
+///             // };
+///             // Ok(bcm)
+///             Ok(BinaryCardMap::default())
+///         },
+///     )?;
+///
+///     let result = rows.next().ok_or(Error::InvalidQuery)?;
+///     let bcm = result?;
+///
+///     Ok(bcm)
+/// }
+/// ```
+///
+/// Well, hello there. This is new.
+///
+/// `Error: SqlInputError { error: Error { code: Unknown, extended_code: 1 }, msg: "near \"?\": syntax error", sql: "SELECT bc, best, rank FROM bcm WHERE bc=:bc?", offset: 43 }`
+///
+/// Here's a crazy idea... how about before I try to figure out how to extract the result from
+/// sqlite, I make sure that I have a result from sqlite? BRILLIANT!!!
+/// 
+fn select_bcm(conn: &Connection, bc: &Bard) -> Result<BinaryCardMap, Error> {
+    let mut stmt = conn.prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc?")?;
 
-    let mut rows = stmt.query(named_params! {":bc": bc.as_u64()}).ok()?;
+    let mut rows = stmt.query_map(
+        named_params! {":bc": 1},
+        |row| {
+            println!("{:?}", row);
+            // let bc = row.get(0)?;
+            // let best = row.get(1)?;
+            // let rank = row.get(2)?;
+            //
+            // let bcm = BinaryCardMap {
+            //     bc: Bard::from(bc),
+            //     best: Bard::from(best),
+            //     rank,
+            // };
+            // Ok(bcm)
+            Ok(BinaryCardMap::default())
+        },
+    )?;
 
-    while let Some(row) = rows.next().ok()? {
-        row.get(0).ok()?;
-        println!("{:?}", row);
-    }
-    None
+    let result = rows.next().ok_or(Error::InvalidQuery)?;
+    let bcm = result?;
+
+    Ok(bcm)
 }

@@ -447,6 +447,12 @@ impl From<Vec<Card>> for Bard {
     }
 }
 
+impl From<u64> for Bard {
+    fn from(value: u64) -> Self {
+        Bard(value)
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod bard_tests {
