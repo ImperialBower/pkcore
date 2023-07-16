@@ -320,6 +320,11 @@ impl Bard {
     pub fn fold_in(self, card: Card) -> Self {
         self | Bard::from(card)
     }
+
+    #[must_use]
+    pub fn as_u64(&self) -> u64 {
+        self.0
+    }
 }
 
 impl BitAnd for Bard {
