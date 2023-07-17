@@ -1,6 +1,6 @@
 use sled::IVec;
 use zerocopy::byteorder::{BigEndian, LittleEndian, U64};
-use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned, U16, U32};
+use zerocopy::{AsBytes, FromBytes, Unaligned};
 //         assert_eq!(sut.rank, 1);
 //         assert_eq!(seven.cards(), Cards::from(sut.bc));
 //         assert_eq!(five.cards(), Cards::from(sut.best));
@@ -8,7 +8,7 @@ use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned, U16, U32};
 //         assert_eq!(sut.best, Bard(4_362_862_139_015_168));
 fn main() -> sled::Result<()> {
     let db = sled::open("generated/sleigh")?;
-    let bcm_tree = db.open_tree(b"bcm")?;
+    let _bcm_tree = db.open_tree(b"bcm")?;
 
     let k = Key {
         bcm: U64::new(4_468_415_255_281_664),
@@ -34,7 +34,7 @@ fn write_to_tree(tree: &sled::Tree, key: &Key, value: &Value) -> sled::Result<Op
     tree.insert(key.as_bytes(), value.as_bytes())
 }
 
-fn read(tree: &sled::Tree, key: &Key) -> sled::Result<Option<IVec>> {
+fn _read(tree: &sled::Tree, key: &Key) -> sled::Result<Option<IVec>> {
     tree.get(key.as_bytes())
 }
 

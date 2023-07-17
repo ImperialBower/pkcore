@@ -77,7 +77,8 @@ fn _insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> Result<usize> {
 /// [a query](https://github.com/search?q=named_params%21+rusqlite+select&type=code) against
 /// GitHub for clues from other repositories that are doing selects against rusqlite.
 ///
-/// Let's see if this snippet from the
+/// Let's see if this snippet from  [1History](https://github.com/1History/1History) does
+/// the trick...
 ///
 /// ```
 /// debug!("select from {name}, start:{start}, end:{end}");
@@ -353,7 +354,14 @@ fn _insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> Result<usize> {
 /// move on to that.
 ///
 /// Oh... actually... there's one thing I want to try out first. I need a way to make sure
+/// that a record is even there. Maybe `Option` is the way to go. Right now I'm just passing
+/// down what comes from rusqlite, but now that I've got the code flow basically figured out,
+/// I should be able to smooth down the edges and design a function contract that communicates
+/// only what the caller needs to know.
 ///
+/// This is going to require a major refactoring. Remember, before you refactor, commit. There's
+/// nothing worst than getting trapped down a deep rabbit hole only to realize that you didn't
+/// commit at a safe place before you fell in.
 fn select_bcm(conn: &Connection, bc: &Bard) -> Result<BinaryCardMap, Error> {
     let mut stmt = conn.prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc")?;
 
