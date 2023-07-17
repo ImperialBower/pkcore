@@ -6,15 +6,23 @@ use rusqlite::{named_params, Connection, Error, Result};
 fn main() -> Result<()> {
     let conn = Connection::open("generated/bcm.db")?;
 
-    let bcm = TestData::spades_royal_flush_bcm();
-
     create_table(&conn)?;
-    // insert_bcm(&conn, &bcm)?;
-    let r = select_bcm(&conn, &bcm.bc)?;
 
-    println!("{:?}", r);
+    doit(&conn, &TestData::spades_royal_flush_bcm());
+    doit(&conn, &TestData::spades_king_high_flush_bcm());
 
     Ok(())
+}
+
+fn doit(conn: &Connection, bcm: &BinaryCardMap) {
+    match select_bcm(&conn, &bcm.bc) {
+        None => {
+            println!("No such thing");
+        }
+        Some(r) => {
+            println!("{:?}", r);
+        }
+    };
 }
 
 fn create_table(conn: &Connection) -> Result<usize> {
@@ -362,24 +370,50 @@ fn _insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> Result<usize> {
 /// This is going to require a major refactoring. Remember, before you refactor, commit. There's
 /// nothing worst than getting trapped down a deep rabbit hole only to realize that you didn't
 /// commit at a safe place before you fell in.
-fn select_bcm(conn: &Connection, bc: &Bard) -> Result<BinaryCardMap, Error> {
-    let mut stmt = conn.prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc")?;
+///
+/// ASIDE: One thing you may be wondering is why I'm not test driving this whole adventure. The truth
+/// is that I don't know how to code sqlite tests that stand up and tear down tables. This is
+/// something I should figure out.
+///
+/// Right now, I'm using the same generated database over and over, and it's a real file. I don't
+/// want to have to commit that to the repo. There has to be a better way. Back in the day I would
+/// create this whole harness integration test thingy that would stand up and tear down databases
+/// with every run. The tests were heavy, and required a running database connection. That was before
+/// I started working with a bunch of
+/// [London school mockists](https://medium.com/@adrianbooth/test-driven-development-wars-detroit-vs-london-classicist-vs-mockist-9956c78ae95f),
+/// I was all about the integration tests. While I am still a classicist when it comes to testing,
+/// (Detroit represent!) I do see the argument that you want your tests as light as possible. It's
+/// tototally over the top batshit crazy to require a database be running to prove out your code,
+/// even if it is one like sqlite.
+///
+/// But, I'm betting that sqlite has an in memory option. This is something to add to the TODO
+/// column of this little adventure. For now, I've got bigger fish to fry.
+///
+/// ...
+///
+/// 'Tis done.
+fn select_bcm(conn: &Connection, bc: &Bard) -> Option<BinaryCardMap> {
+    let mut stmt = conn
+        .prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc")
+        .ok()?;
 
-    let mut rows = stmt.query_map(named_params! {":bc": bc.as_u64()}, |row| {
-        let bc: u64 = row.get(0)?;
-        let best: u64 = row.get(1)?;
-        let rank: u16 = row.get(2)?;
+    let mut rows = stmt
+        .query_map(named_params! {":bc": bc.as_u64()}, |row| {
+            let bc: u64 = row.get(0)?;
+            let best: u64 = row.get(1)?;
+            let rank: u16 = row.get(2)?;
 
-        let bcm = BinaryCardMap {
-            bc: Bard::from(bc),
-            best: Bard::from(best),
-            rank,
-        };
-        Ok(bcm)
-    })?;
+            let bcm = BinaryCardMap {
+                bc: Bard::from(bc),
+                best: Bard::from(best),
+                rank,
+            };
+            Ok(bcm)
+        })
+        .ok()?;
 
-    let result = rows.next().ok_or(Error::InvalidQuery)?;
-    let bcm = result?;
+    let result = rows.next().ok_or(Error::InvalidQuery).ok()?;
+    let bcm = result.ok()?;
 
-    Ok(bcm)
+    Some(bcm)
 }

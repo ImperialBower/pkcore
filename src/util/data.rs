@@ -145,4 +145,12 @@ impl TestData {
     pub fn spades_royal_flush_bcm() -> BinaryCardMap {
         BinaryCardMap::try_from(Seven::from_str("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠").unwrap()).unwrap()
     }
+
+    /// # Panics
+    ///
+    /// ¯\_(ツ)_/¯
+    #[must_use]
+    pub fn spades_king_high_flush_bcm() -> BinaryCardMap {
+        BinaryCardMap::try_from(Seven::from_str("K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠").unwrap()).unwrap()
+    }
 }
