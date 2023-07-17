@@ -10,6 +10,7 @@ use csv::WriterBuilder;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 
+// TODO: Implement display trait.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct BinaryCardMap {

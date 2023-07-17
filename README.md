@@ -622,6 +622,8 @@
         * examples/generate_sled.rs
       * Storing data in SQLite
         * impl From<u64> for Bard
+        * Got bcm storage to work. WOOO!!!!
+        * THE MAIN EVENT: Heads up preflop calc.
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

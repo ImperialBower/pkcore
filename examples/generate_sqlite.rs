@@ -1,7 +1,7 @@
 use pkcore::analysis::store::bcm::binary_card_map::BinaryCardMap;
-use pkcore::util::data::TestData;
-use rusqlite::{named_params, Connection, Result, Error};
 use pkcore::bard::Bard;
+use pkcore::util::data::TestData;
+use rusqlite::{named_params, Connection, Error, Result};
 
 fn main() -> Result<()> {
     let conn = Connection::open("generated/bcm.db")?;
@@ -9,8 +9,10 @@ fn main() -> Result<()> {
     let bcm = TestData::spades_royal_flush_bcm();
 
     create_table(&conn)?;
-    insert_bcm(&conn, &bcm)?;
-    select_bcm(&conn, &bcm.bc)?;
+    // insert_bcm(&conn, &bcm)?;
+    let r = select_bcm(&conn, &bcm.bc)?;
+
+    println!("{:?}", r);
 
     Ok(())
 }
@@ -26,7 +28,7 @@ fn create_table(conn: &Connection) -> Result<usize> {
     )
 }
 
-fn insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> Result<usize> {
+fn _insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> Result<usize> {
     let mut stmt = conn.prepare("INSERT INTO bcm (bc, best, rank) VALUES (:bc, :best, :rank)")?;
     stmt.execute(named_params! {
     ":bc": bcm.bc.as_u64(),
@@ -243,26 +245,130 @@ fn insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> Result<usize> {
 /// ```
 /// Error: SqliteFailure(Error { code: ConstraintViolation, extended_code: 1555 }, Some("UNIQUE constraint failed: bcm.bc"))
 /// ```
+///
+/// So, it's getting in there. Now, how do we get it out?
+///
+/// This is when I look at my select statement again, and I'm like WHAT THE FUCKING FUCK. What's
+/// that question mark doing at the end of the statement???!!!
+///
+/// ```
+/// let mut stmt = conn.prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc?")?;
+/// ```
+///
+/// Remove it and whadayaknow?
+///
+/// ```
+/// {Ok("bc"): (Integer, 4468415255281664), Ok("best"): (Integer, 4362862139015168), Ok("rank"): (Integer, 1)}
+/// ```
+///
+/// Does this mean that we can actually extract the values from the result?
+///
+/// ```
+/// let mut stmt = conn.prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc")?;
+///
+///     let mut rows = stmt.query_map(
+///         named_params! {":bc": bc.as_u64()},
+///         |row| {
+///             let bc = row.get(0)?;
+///             let best = row.get(1)?;
+///             let rank = row.get(2)?;
+///
+///             let bcm = BinaryCardMap {
+///                 bc: Bard::from(bc),
+///                 best: Bard::from(best),
+///                 rank,
+///             };
+///             Ok(bcm)
+///         },
+///     )?;
+///
+///     let result = rows.next().ok_or(Error::InvalidQuery)?;
+///     let bcm = result?;
+///
+///     Ok(bcm)
+/// ```
+///
+/// GAHH!!! The same stupid error!
+///
+/// ```
+/// error[E0277]: the trait bound `Bard: From<()>` is not satisfied
+///    --> examples/generate_sqlite.rs:301:32
+///     |
+/// 301 |                 bc: Bard::from(bc),
+///     |                     ---------- ^^ the trait `From<()>` is not implemented for `Bard`
+///     |                     |
+///     |                     required by a bound introduced by this call
+///     |
+///     = help: the following other types implement trait `From<T>`:
+///               <Bard as From<Card>>
+///               <Bard as From<Cards>>
+///               <Bard as From<Vec<Card>>>
+///               <Bard as From<u64>>
+/// ```
+///
+/// Let's try something... what if we assign types to the vars? After all, how does the lib
+/// know what it's passing in? It's not like there's a chance in heck that this will work,
+/// but it's worth a shot...
+///
+/// ```
+/// let mut stmt = conn.prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc")?;
+///
+///     let mut rows = stmt.query_map(
+///         named_params! {":bc": bc.as_u64()},
+///         |row| {
+///             let bc: u64 = row.get(0)?;
+///             let best: u64 = row.get(1)?;
+///             let rank: u16 = row.get(2)?;
+///
+///             let bcm = BinaryCardMap {
+///                 bc: Bard::from(bc),
+///                 best: Bard::from(best),
+///                 rank,
+///             };
+///             Ok(bcm)
+///         },
+///     )?;
+///
+///     let result = rows.next().ok_or(Error::InvalidQuery)?;
+///     let bcm = result?;
+///
+///     Ok(bcm)
+/// ```
+///
+/// ```
+/// BinaryCardMap { bc: Bard(4468415255281664), best: Bard(4362862139015168), rank: 1 }
+/// ```
+///
+/// WHAT THE??? It worked?!!!
+/// [Sometimes you have to roll the hard six.](https://www.youtube.com/watch?v=Dkc0RZ8Ym1Y)
+///
+/// Ladies and gentlemen, we have ourselves a ballgame.
+///
+/// The thing is, that while I love having the ability to do this with the `BinaryCardMap`,
+/// it's not really the data that I want to store in SQL. The reason is, that this datatype
+/// is designed to accelerate determining the `HandRank` for specific combinations of cards,
+/// specifically, for preflop calculations. Even if it's significantly faster, we're still
+/// doing the calculations millions of times per hand. Where storing values will really come in
+/// handy is for caching preflop results. So let's close this chapter of our adventure, and
+/// move on to that.
+///
+/// Oh... actually... there's one thing I want to try out first. I need a way to make sure
+///
 fn select_bcm(conn: &Connection, bc: &Bard) -> Result<BinaryCardMap, Error> {
-    let mut stmt = conn.prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc?")?;
+    let mut stmt = conn.prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc")?;
 
-    let mut rows = stmt.query_map(
-        named_params! {":bc": bc.as_u64()},
-        |row| {
-            println!("{:?}", row);
-            // let bc = row.get(0)?;
-            // let best = row.get(1)?;
-            // let rank = row.get(2)?;
-            //
-            // let bcm = BinaryCardMap {
-            //     bc: Bard::from(bc),
-            //     best: Bard::from(best),
-            //     rank,
-            // };
-            // Ok(bcm)
-            Ok(BinaryCardMap::default())
-        },
-    )?;
+    let mut rows = stmt.query_map(named_params! {":bc": bc.as_u64()}, |row| {
+        let bc: u64 = row.get(0)?;
+        let best: u64 = row.get(1)?;
+        let rank: u16 = row.get(2)?;
+
+        let bcm = BinaryCardMap {
+            bc: Bard::from(bc),
+            best: Bard::from(best),
+            rank,
+        };
+        Ok(bcm)
+    })?;
 
     let result = rows.next().ok_or(Error::InvalidQuery)?;
     let bcm = result?;

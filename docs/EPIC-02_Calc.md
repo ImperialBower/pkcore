@@ -1,4 +1,4 @@
-# Epic 1: Calc
+# Epic 2: Calc
 
 We are now reaching the next level of complexity with our project. Up till
 now we've been focusing on the value of a poker hand in abstract, divorced from any
