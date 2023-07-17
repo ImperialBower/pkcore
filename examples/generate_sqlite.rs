@@ -9,7 +9,7 @@ fn main() -> Result<()> {
     let bcm = TestData::spades_royal_flush_bcm();
 
     create_table(&conn)?;
-    // insert_bcm(&conn, &bcm)?;
+    insert_bcm(&conn, &bcm)?;
     select_bcm(&conn, &bcm.bc)?;
 
     Ok(())
@@ -26,7 +26,7 @@ fn create_table(conn: &Connection) -> Result<usize> {
     )
 }
 
-fn _insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> Result<usize> {
+fn insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> Result<usize> {
     let mut stmt = conn.prepare("INSERT INTO bcm (bc, best, rank) VALUES (:bc, :best, :rank)")?;
     stmt.execute(named_params! {
     ":bc": bcm.bc.as_u64(),
@@ -217,7 +217,7 @@ fn _insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> Result<usize> {
 /// I must say that it's been a very very long time since I've done some serious SQLunking. For most
 /// of my career mastering SQL was one of the most important skills in the developer's tool belt. I got
 /// my start coding an Access database, than learning about this thing called SQL and betting my
-/// career on Oracle. I even have my name mispelled as an editor or the Manning Book Java Persistence
+/// career on Oracle. I even have my name misspelled as an editor or the Manning Book Java Persistence
 /// in Action, which is a book about Object/Relational technologies like
 /// [Hibernate](https://en.wikipedia.org/wiki/Hibernate_(framework)).
 ///
@@ -235,6 +235,13 @@ fn _insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> Result<usize> {
 /// ```sql
 /// INSERT INTO bcm (bc, best, rank) VALUES (1, 4468415255281664, 4362862139015168);
 /// SELECT bc, best, rank FROM bcm WHERE bc=1;
+/// ```
+///
+/// At first I was thinking that there was a problem with my insert call, but when I run it again
+/// I get this error:
+///
+/// ```
+/// Error: SqliteFailure(Error { code: ConstraintViolation, extended_code: 1555 }, Some("UNIQUE constraint failed: bcm.bc"))
 /// ```
 fn select_bcm(conn: &Connection, bc: &Bard) -> Result<BinaryCardMap, Error> {
     let mut stmt = conn.prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc?")?;
