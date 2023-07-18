@@ -68,7 +68,9 @@ pub enum PKError {
     InvalidIndex,
     NotDealt,
     NotEnoughCards,
+    NotEnoughHands,
     TooManyCards,
+    TooManyHands,
 }
 
 pub trait Pile {

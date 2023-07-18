@@ -626,6 +626,8 @@
           * TODO: rusqlite in memory tests.
         * THE MAIN EVENT: Heads up preflop calc.
           * hupcache example
+          * SortedHeadsUp refactoring. 
+            * PKError::NotEnoughHands
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

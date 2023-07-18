@@ -4,6 +4,7 @@ use crate::arrays::five::Five;
 
 pub mod five;
 pub mod four;
+pub mod matchups;
 pub mod seven;
 pub mod six;
 pub mod three;
