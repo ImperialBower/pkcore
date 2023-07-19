@@ -711,3 +711,4 @@
 * SQLite
   * [rusqlite](https://github.com/rusqlite/rusqlite)
     * [Rust Cookbook](https://rust-lang-nursery.github.io/rust-cookbook/database/sqlite.html)
+    * [In-Memory Databases](https://www.sqlite.org/inmemorydb.html)
