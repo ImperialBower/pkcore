@@ -20,12 +20,15 @@ use std::str::FromStr;
 /// cargo run --example csv_bcm
 /// A♠ A♥ A♦ A♣
 fn main() {
+    env_logger::init();
     loop {
         read_input();
     }
 }
 
 fn read_input() {
+    let now = std::time::Instant::now();
+
     print!("hole cards> ");
     let _ = io::stdout().flush();
     let mut input_text = String::new();
@@ -53,6 +56,7 @@ fn read_input() {
         }
         Err(_) => println!("Invalid Cards"),
     }
+    println!("Elapsed: {:.2?}", now.elapsed());
 }
 
 lazy_static! {

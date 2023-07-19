@@ -56,6 +56,22 @@ impl TryFrom<Vec<Two>> for SortedHeadsUp {
     }
 }
 
+/// TODO do I need this? I'm overthinking and underknowing.
+impl TryFrom<Vec<&Two>> for SortedHeadsUp {
+    type Error = PKError;
+
+    fn try_from(v: Vec<&Two>) -> Result<Self, Self::Error> {
+        match v.len() {
+            0..=1 => Err(PKError::NotEnoughHands),
+            2 => Ok(SortedHeadsUp::new(
+                **v.get(0).ok_or(PKError::InvalidHand)?,
+                **v.get(1).ok_or(PKError::InvalidHand)?,
+            )),
+            _ => Err(PKError::TooManyHands),
+        }
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod arrays__matchups__sorted_heads_up {
