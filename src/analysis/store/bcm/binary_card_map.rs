@@ -162,6 +162,8 @@ impl TryFrom<Vec<Card>> for BinaryCardMap {
 #[allow(non_snake_case)]
 mod analysis__store__bcm__binary_card_map_tests {
     use super::*;
+    use crate::analysis::store::db::sqlite::Connect;
+    use crate::util::data::TestData;
     use std::str::FromStr;
 
     #[test]
@@ -195,5 +197,25 @@ mod analysis__store__bcm__binary_card_map_tests {
         let bcm = BinaryCardMap::try_from(Five::default());
         assert!(bcm.is_ok());
         assert_eq!(BinaryCardMap::default(), bcm.unwrap());
+    }
+
+    /// I'm just going to throw everything into one unit test for now. Yes, I am being lazy,
+    /// but as the Larry Wall, the inventor of Perl says, laziness is a virtue in a programmer.
+    #[test]
+    fn sqlite() {
+        let conn = Connect::in_memory_connection().unwrap().connection;
+        BinaryCardMap::sqlite_create_table(&conn).unwrap();
+        let i =
+            BinaryCardMap::sqlite_insert_bcm(&conn, &TestData::spades_royal_flush_bcm()).unwrap();
+
+        assert!(
+            BinaryCardMap::sqlite_select_bcm(&conn, &TestData::spades_royal_flush_bcm().bc)
+                .is_some()
+        );
+        assert!(BinaryCardMap::sqlite_select_bcm(
+            &conn,
+            &TestData::spades_king_high_flush_bcm().bc
+        )
+        .is_none());
     }
 }
