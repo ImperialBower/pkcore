@@ -628,6 +628,9 @@
           * hupcache example
           * SortedHeadsUp refactoring. 
             * PKError::NotEnoughHands
+            * PKError::TooManyHands
+          * HUPResult
+            * sqlite::Sqlable Trait
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

@@ -1,8 +1,7 @@
 use pkcore::analysis::store::bcm::binary_card_map::BinaryCardMap;
-use pkcore::analysis::store::db::sqlite::Connect;
-use pkcore::bard::Bard;
+use pkcore::analysis::store::db::sqlite::{Connect, Sqlable};
 use pkcore::util::data::TestData;
-use rusqlite::{named_params, Connection, Error, Result};
+use rusqlite::{Connection, Result};
 
 /// [How to get back one row's data in rusqlite?](https://stackoverflow.com/questions/58449840/how-to-get-back-one-rows-data-in-rusqlite#comments-58523070)
 ///
@@ -360,9 +359,9 @@ use rusqlite::{named_params, Connection, Error, Result};
 fn main() -> Result<()> {
     let conn = Connect::in_memory_connection()?;
 
-    BinaryCardMap::sqlite_create_table(&conn.connection)?;
+    BinaryCardMap::create_table(&conn.connection)?;
 
-    match BinaryCardMap::sqlite_insert_bcm(&conn.connection, &TestData::spades_royal_flush_bcm()) {
+    match BinaryCardMap::insert(&conn.connection, &TestData::spades_royal_flush_bcm()) {
         Ok(_) => println!("Record inserted"),
         Err(e) => println!("{e}"),
     }
@@ -374,7 +373,7 @@ fn main() -> Result<()> {
 }
 
 fn doit(conn: &Connection, bcm: &BinaryCardMap) {
-    match BinaryCardMap::sqlite_select_bcm(&conn, &bcm.bc) {
+    match BinaryCardMap::select(&conn, &bcm.bc) {
         None => {
             println!("No such thing");
         }

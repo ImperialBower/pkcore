@@ -65,3 +65,27 @@ impl From<Connection> for Connect {
         Connect { connection }
     }
 }
+
+pub trait Sqlable<T, S> {
+    /// OK, this whole trait slaps! It's nothing substantial, but I love the cleanliness of it,
+    /// and the fact that I can even code it. Don't forget to take the Ws.
+    ///
+    /// # Errors
+    ///
+    /// Throws an error if rusqlite isn't able to create the table.
+    fn create_table(conn: &Connection) -> rusqlite::Result<usize>;
+
+    /// # Errors
+    ///
+    /// Throws an error if rusqlite isn't able to insert the record into the table. Should not
+    /// throw if the record is already there.
+    fn insert(conn: &Connection, record: &T) -> rusqlite::Result<usize>;
+
+    /// # Errors
+    ///
+    /// Throws an error if rusqlite isn't able to insert any record into the table. Should not
+    /// throw if the record is already there.
+    fn insert_many(conn: &Connection, records: Vec<&T>) -> rusqlite::Result<usize>;
+
+    fn select(conn: &Connection, key: &S) -> Option<T>;
+}
