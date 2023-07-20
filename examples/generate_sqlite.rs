@@ -1,49 +1,8 @@
 use pkcore::analysis::store::bcm::binary_card_map::BinaryCardMap;
+use pkcore::analysis::store::db::sqlite::Connect;
 use pkcore::bard::Bard;
 use pkcore::util::data::TestData;
 use rusqlite::{named_params, Connection, Error, Result};
-
-fn main() -> Result<()> {
-    let conn = Connection::open("generated/bcm.db")?;
-
-    create_table(&conn)?;
-
-    doit(&conn, &TestData::spades_royal_flush_bcm());
-    doit(&conn, &TestData::spades_king_high_flush_bcm());
-
-    Ok(())
-}
-
-fn doit(conn: &Connection, bcm: &BinaryCardMap) {
-    match select_bcm(&conn, &bcm.bc) {
-        None => {
-            println!("No such thing");
-        }
-        Some(r) => {
-            println!("{:?}", r);
-        }
-    };
-}
-
-fn create_table(conn: &Connection) -> Result<usize> {
-    conn.execute(
-        "create table if not exists bcm (
-            bc integer primary key,
-            best integer not null,
-            rank integer not null
-         )",
-        [],
-    )
-}
-
-fn _insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> Result<usize> {
-    let mut stmt = conn.prepare("INSERT INTO bcm (bc, best, rank) VALUES (:bc, :best, :rank)")?;
-    stmt.execute(named_params! {
-    ":bc": bcm.bc.as_u64(),
-    ":best": bcm.best.as_u64(),
-    ":rank": u64::from(bcm.rank)
-    })
-}
 
 /// [How to get back one row's data in rusqlite?](https://stackoverflow.com/questions/58449840/how-to-get-back-one-rows-data-in-rusqlite#comments-58523070)
 ///
@@ -392,28 +351,35 @@ fn _insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> Result<usize> {
 /// ...
 ///
 /// 'Tis done.
-fn select_bcm(conn: &Connection, bc: &Bard) -> Option<BinaryCardMap> {
-    let mut stmt = conn
-        .prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc")
-        .ok()?;
+///
+/// Here's the code refactored using our in-memory `Connect` struct. Next step is to translate this
+/// into unit tests.
+///
+/// Honestly, I don't see a database as being a good tool for the binary card lookups compared to
+/// the simple hashing function we are already using.
+fn main() -> Result<()> {
+    let conn = Connect::in_memory_connection()?;
 
-    let mut rows = stmt
-        .query_map(named_params! {":bc": bc.as_u64()}, |row| {
-            let bc: u64 = row.get(0)?;
-            let best: u64 = row.get(1)?;
-            let rank: u16 = row.get(2)?;
+    BinaryCardMap::sqlite_create_table(&conn.connection)?;
 
-            let bcm = BinaryCardMap {
-                bc: Bard::from(bc),
-                best: Bard::from(best),
-                rank,
-            };
-            Ok(bcm)
-        })
-        .ok()?;
+    match BinaryCardMap::sqlite_insert_bcm(&conn.connection, &TestData::spades_royal_flush_bcm()) {
+        Ok(_) => println!("Record inserted"),
+        Err(e) => println!("{e}"),
+    }
 
-    let result = rows.next().ok_or(Error::InvalidQuery).ok()?;
-    let bcm = result.ok()?;
+    doit(&conn.connection, &TestData::spades_royal_flush_bcm());
+    doit(&conn.connection, &TestData::spades_king_high_flush_bcm());
 
-    Some(bcm)
+    Ok(())
+}
+
+fn doit(conn: &Connection, bcm: &BinaryCardMap) {
+    match BinaryCardMap::sqlite_select_bcm(&conn, &bcm.bc) {
+        None => {
+            println!("No such thing");
+        }
+        Some(r) => {
+            println!("{:?}", r);
+        }
+    };
 }

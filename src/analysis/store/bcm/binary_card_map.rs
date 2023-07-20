@@ -7,6 +7,7 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::{PKError, Pile};
 use csv::WriterBuilder;
+use rusqlite::{named_params, Connection};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 
@@ -47,6 +48,72 @@ impl BinaryCardMap {
         wtr.flush()?;
 
         Ok(())
+    }
+
+    /// Now that we got it working with an example, let's codify it inside of our struct. We'll
+    /// use this to write some unit tests validating that our sqlite work. It's always better to
+    /// have your work codified into automated unit tests so that your CI server will scream if
+    /// you start breaking things. _Back in the olden times, we would have these things called
+    /// manual regression tests, where armies of talented QA engineers would painstakingly verify
+    /// that us stupid coders didn't break something with all our messing about. Now, thanks
+    /// to unit testing we get all that for free, and they can focus on exploratory testing, we're
+    /// all the really fun bugs are. If they're busy doing the simple things, they won't have time
+    /// for the really creative destruction that QA engineers excel at. It's taken companies a very
+    /// long time to realize that they just can't hire enough people to test every possible
+    /// combination of things given how complex our systems are growing._
+    ///
+    /// # Errors
+    ///
+    /// Throws an error if rusqlite isn't able to create the table.
+    pub fn sqlite_create_table(conn: &Connection) -> rusqlite::Result<usize> {
+        conn.execute(
+            "create table if not exists bcm (
+            bc integer primary key,
+            best integer not null,
+            rank integer not null
+         )",
+            [],
+        )
+    }
+
+    /// # Errors
+    ///
+    /// Throws an error if rusqlite isn't able to insert the record into the table. Should not
+    /// throw if the record is already there.
+    pub fn sqlite_insert_bcm(conn: &Connection, bcm: &BinaryCardMap) -> rusqlite::Result<usize> {
+        let mut stmt =
+            conn.prepare("INSERT INTO bcm (bc, best, rank) VALUES (:bc, :best, :rank)")?;
+        stmt.execute(named_params! {
+            ":bc": bcm.bc.as_u64(),
+            ":best": bcm.best.as_u64(),
+            ":rank": u64::from(bcm.rank)
+        })
+    }
+
+    pub fn sqlite_select_bcm(conn: &Connection, bc: &Bard) -> Option<BinaryCardMap> {
+        let mut stmt = conn
+            .prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc")
+            .ok()?;
+
+        let mut rows = stmt
+            .query_map(named_params! {":bc": bc.as_u64()}, |row| {
+                let bc: u64 = row.get(0)?;
+                let best: u64 = row.get(1)?;
+                let rank: u16 = row.get(2)?;
+
+                let bcm = BinaryCardMap {
+                    bc: Bard::from(bc),
+                    best: Bard::from(best),
+                    rank,
+                };
+                Ok(bcm)
+            })
+            .ok()?;
+
+        let result = rows.next().ok_or(rusqlite::Error::InvalidQuery).ok()?;
+        let bcm = result.ok()?;
+
+        Some(bcm)
     }
 }
 

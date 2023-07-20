@@ -50,22 +50,18 @@ impl Connect {
     /// Now, I need some `Bard` backed structs that will hold the results of different preflop
     /// calculations. For now I'm going to just include them in this module.
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// ¯\_(ツ)_/¯
-    /// This is for testing anywho. 
-    #[must_use]
-    pub fn in_memory_connection() -> Connect {
-        Connect {
-            connection: Connection::open(":memory:").unwrap()
-        }
+    /// Not sure how it would happen, but it's possible. ¯\_(ツ)_/¯
+    pub fn in_memory_connection() -> rusqlite::Result<Connect> {
+        Ok(Connect {
+            connection: Connection::open(":memory:")?,
+        })
     }
 }
 
 impl From<Connection> for Connect {
     fn from(connection: Connection) -> Self {
-        Connect {
-            connection,
-        }
+        Connect { connection }
     }
 }
