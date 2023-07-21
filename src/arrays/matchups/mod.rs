@@ -1,7 +1,7 @@
 use crate::arrays::two::Two;
+use crate::bard::Bard;
 use crate::PKError;
 use serde::{Deserialize, Serialize};
-use crate::bard::Bard;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]

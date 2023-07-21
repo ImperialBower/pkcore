@@ -1,9 +1,9 @@
+use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::Pile;
 use serde::{Deserialize, Serialize};
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
-use crate::arrays::two::Two;
-use crate::Pile;
 
 /// A `Bard` is a binary representation of one or more `Cards` contained in a single unsigned
 /// integer. Each bit flag represents one card. Since each flag is a different card, you can
