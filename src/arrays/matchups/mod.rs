@@ -2,6 +2,7 @@ use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::PKError;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
@@ -47,6 +48,12 @@ impl SortedHeadsUp {
     }
 }
 
+impl Display for SortedHeadsUp {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} - {}", self.higher, self.lower)
+    }
+}
+
 impl TryFrom<Vec<Two>> for SortedHeadsUp {
     type Error = PKError;
 
@@ -82,6 +89,7 @@ impl TryFrom<Vec<&Two>> for SortedHeadsUp {
 #[allow(non_snake_case)]
 mod arrays__matchups__sorted_heads_up {
     use super::*;
+    use crate::util::data::TestData;
 
     const EXPECTED: SortedHeadsUp = SortedHeadsUp {
         higher: Two::HAND_7D_7C,
@@ -105,6 +113,14 @@ mod arrays__matchups__sorted_heads_up {
         assert!(EXPECTED.contains(&Two::HAND_6S_6H));
         assert!(EXPECTED.contains(&Two::HAND_7D_7C));
         assert!(!EXPECTED.contains(&Two::HAND_7S_7C));
+    }
+
+    #[test]
+    fn display() {
+        assert_eq!(
+            "6♠ 6♥ - 5♦ 5♣",
+            TestData::the_hand_sorted_headsup().to_string()
+        );
     }
 
     #[test]

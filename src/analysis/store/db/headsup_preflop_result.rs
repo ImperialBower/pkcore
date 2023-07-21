@@ -39,6 +39,7 @@ impl Display for HUPResult {
 
 impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
     fn create_table(conn: &Connection) -> rusqlite::Result<usize> {
+        log::debug!("HUPResult::create_table({:?})", conn);
         conn.execute(
             "create table if not exists nlh_headsup_result
             (
@@ -62,6 +63,7 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
     }
 
     fn insert(conn: &Connection, hup: &HUPResult) -> rusqlite::Result<usize> {
+        log::debug!("HUPResult::insert({})", hup);
         let mut stmt = conn.prepare(
             "INSERT INTO nlh_headsup_result \
             (higher, lower, higher_wins, lower_wins, ties) VALUES \
@@ -81,6 +83,7 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
     }
 
     fn select(conn: &Connection, key: &SortedHeadsUp) -> Option<HUPResult> {
+        log::debug!("HUPResult::select({:?})", conn);
         let mut stmt = conn
             .prepare(
                 "SELECT higher_wins, lower_wins, ties \
@@ -89,7 +92,7 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
             .ok()?;
 
         let hb = key.higher().bard();
-        let lb = key.higher().bard();
+        let lb = key.lower().bard();
 
         let hup = stmt
             .query_row(
