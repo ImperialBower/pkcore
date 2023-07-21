@@ -1,5 +1,3 @@
-use csv::Reader;
-use lazy_static::lazy_static;
 use pkcore::analysis::hand_rank::HandRankValue;
 use pkcore::arrays::five::Five;
 use pkcore::arrays::seven::Seven;
@@ -11,8 +9,6 @@ use pkcore::util::wincounter::win::Win;
 use pkcore::util::wincounter::wins::Wins;
 use pkcore::{PKError, Pile};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::fs::File;
 use std::io;
 use std::io::Write;
 use std::str::FromStr;
@@ -58,21 +54,21 @@ fn read_input() {
     }
     println!("Elapsed: {:.2?}", now.elapsed());
 }
-
-lazy_static! {
-    static ref BC_RANK: HashMap<Bard, SimpleBinaryCardMap> = {
-        let mut m = HashMap::new();
-        let file_path = "generated/bcm.original.csv";
-        let file = File::open(file_path).unwrap();
-        let mut rdr = Reader::from_reader(file);
-
-        for result in rdr.deserialize() {
-            let bcm: BinaryCardMap = result.unwrap();
-            m.insert(bcm.bc, SimpleBinaryCardMap::from(bcm));
-        }
-        m
-    };
-}
+//
+// lazy_static! {
+//     static ref BC_RANK: HashMap<Bard, SimpleBinaryCardMap> = {
+//         let mut m = HashMap::new();
+//         let file_path = "generated/bcm.original.csv";
+//         let file = File::open(file_path).unwrap();
+//         let mut rdr = Reader::from_reader(file);
+//
+//         for result in rdr.deserialize() {
+//             let bcm: BinaryCardMap = result.unwrap();
+//             m.insert(bcm.bc, SimpleBinaryCardMap::from(bcm));
+//         }
+//         m
+//     };
+// }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct SimpleBinaryCardMap {
@@ -129,8 +125,8 @@ fn grind(hero: Two, villain: Two, remaining: Cards) -> Wins {
         let hero7 = Seven::from_case_at_deal(hero, five).unwrap().to_bard();
         let villain7 = Seven::from_case_at_deal(villain, five).unwrap().to_bard();
 
-        let hero_rank = BC_RANK.get(&hero7).unwrap();
-        let villain_rank = BC_RANK.get(&villain7).unwrap();
+        let hero_rank = pkcore::BC_RANK.get(&hero7).unwrap();
+        let villain_rank = pkcore::BC_RANK.get(&villain7).unwrap();
 
         if hero_rank.rank < villain_rank.rank {
             wins.add(Win::FIRST);

@@ -12,6 +12,25 @@ use rusqlite::{named_params, Connection};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct SimpleBinaryCardMap {
+    pub bc: Bard,
+    pub rank: HandRankValue,
+}
+
+impl SimpleBinaryCardMap {
+    #[must_use]
+    pub fn new(bc: Bard, rank: HandRankValue) -> SimpleBinaryCardMap {
+        SimpleBinaryCardMap { bc, rank }
+    }
+}
+
+impl From<BinaryCardMap> for SimpleBinaryCardMap {
+    fn from(bcm: BinaryCardMap) -> Self {
+        SimpleBinaryCardMap::new(bcm.best, bcm.rank)
+    }
+}
+
 /// Way of easily storing `Card` `HandRanks` using bitflags.
 ///
 /// ## From inside the struct, now refactored

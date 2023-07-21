@@ -1,6 +1,8 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::unreadable_literal)]
 
+use csv::Reader;
+use lazy_static::lazy_static;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
@@ -9,7 +11,10 @@ use analysis::the_nuts::TheNuts;
 use indexmap::set::IntoIter;
 use itertools::Combinations;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::fs::File;
 use std::iter::Enumerate;
+use crate::analysis::store::bcm::binary_card_map::{BinaryCardMap, SimpleBinaryCardMap};
 
 pub mod analysis;
 pub mod arrays;
@@ -71,6 +76,21 @@ pub enum PKError {
     NotEnoughHands,
     TooManyCards,
     TooManyHands,
+}
+
+lazy_static! {
+    pub static ref BC_RANK: HashMap<Bard, SimpleBinaryCardMap> = {
+        let mut m = HashMap::new();
+        let file_path = "generated/bcm.original.csv";
+        let file = File::open(file_path).unwrap();
+        let mut rdr = Reader::from_reader(file);
+
+        for result in rdr.deserialize() {
+            let bcm: BinaryCardMap = result.unwrap();
+            m.insert(bcm.bc, SimpleBinaryCardMap::from(bcm));
+        }
+        m
+    };
 }
 
 pub trait Pile {

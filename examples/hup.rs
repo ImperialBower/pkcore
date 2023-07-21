@@ -1,6 +1,7 @@
 use pkcore::arrays::two::Two;
 use pkcore::cards::Cards;
 use pkcore::{PKError, Pile};
+use pkcore::arrays::matchups::SortedHeadsUp;
 
 fn main() -> Result<(), PKError> {
     go()
@@ -110,7 +111,10 @@ fn go() -> Result<(), PKError> {
         println!("{} - {hero}", i + 1);
         for r in hero.remaining().combinations(2) {
             let villain = Two::try_from(r.as_slice())?;
-            println!("{count} {i}  {hero} v. {villain}");
+
+            let hup = SortedHeadsUp::new(hero, villain);
+
+            println!("{count} {i}  {hup}");
             count = count + 1;
         }
     }
