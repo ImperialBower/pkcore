@@ -777,10 +777,10 @@ impl TryFrom<Bard> for Two {
     /// sure which `Two`.
     fn try_from(bard: Bard) -> Result<Self, Self::Error> {
         let cards = Cards::from(bard);
-        Ok(Two::new(
+        Two::new(
             *cards.get_index(0).ok_or(PKError::NotEnoughCards)?,
             *cards.get_index(1).ok_or(PKError::NotEnoughCards)?,
-        )?)
+        )
     }
 }
 

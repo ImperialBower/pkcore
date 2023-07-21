@@ -2,6 +2,7 @@ use crate::analysis::store::db::sqlite::Sqlable;
 use crate::arrays::matchups::SortedHeadsUp;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
+use crate::Pile;
 use rusqlite::{named_params, Connection};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
@@ -86,7 +87,34 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
             FROM nlh_headsup_result WHERE higher=:higher and lower=:lower",
             )
             .ok()?;
-        Some(HUPResult::default())
+
+        let hb = key.higher().bard();
+        let lb = key.higher().bard();
+
+        let hup = stmt
+            .query_row(
+                named_params! {
+                    ":higher": hb.as_u64(),
+                    ":lower": lb.as_u64(),
+                },
+                |row| {
+                    let hw = row.get(0)?;
+                    let lw = row.get(1)?;
+                    let ties = row.get(2)?;
+
+                    let r = HUPResult {
+                        higher: hb,
+                        lower: lb,
+                        higher_wins: hw,
+                        lower_wins: lw,
+                        ties,
+                    };
+                    Ok(r)
+                },
+            )
+            .ok()?;
+
+        Some(hup)
     }
 }
 

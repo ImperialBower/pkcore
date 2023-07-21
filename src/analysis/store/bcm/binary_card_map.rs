@@ -154,8 +154,8 @@ impl Sqlable<BinaryCardMap, Bard> for BinaryCardMap {
             .prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc")
             .ok()?;
 
-        let mut rows = stmt
-            .query_map(named_params! {":bc": bc.as_u64()}, |row| {
+        let bcm = stmt
+            .query_row(named_params! {":bc": bc.as_u64()}, |row| {
                 let bc: u64 = row.get(0)?;
                 let best: u64 = row.get(1)?;
                 let rank: u16 = row.get(2)?;
@@ -168,9 +168,6 @@ impl Sqlable<BinaryCardMap, Bard> for BinaryCardMap {
                 Ok(bcm)
             })
             .ok()?;
-
-        let result = rows.next().ok_or(rusqlite::Error::InvalidQuery).ok()?;
-        let bcm = result.ok()?;
 
         Some(bcm)
     }
