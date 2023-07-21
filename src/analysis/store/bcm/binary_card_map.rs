@@ -12,6 +12,10 @@ use rusqlite::{named_params, Connection};
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 
+/// Way of easily storing `Card` `HandRanks` using bitflags.
+///
+/// ## From inside the struct, now refactored
+///
 /// Now that we got it working with an example, let's codify it inside of our struct. We'll
 /// use this to write some unit tests validating that our sqlite work. It's always better to
 /// have your work codified into automated unit tests so that your CI server will scream if

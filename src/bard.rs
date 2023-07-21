@@ -2,6 +2,8 @@ use crate::card::Card;
 use crate::cards::Cards;
 use serde::{Deserialize, Serialize};
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
+use crate::arrays::two::Two;
+use crate::Pile;
 
 /// A `Bard` is a binary representation of one or more `Cards` contained in a single unsigned
 /// integer. Each bit flag represents one card. Since each flag is a different card, you can
@@ -441,6 +443,12 @@ impl From<Cards> for Bard {
     }
 }
 
+impl From<Two> for Bard {
+    fn from(two: Two) -> Self {
+        two.first().bard() | two.second().bard()
+    }
+}
+
 impl From<Vec<Card>> for Bard {
     fn from(v: Vec<Card>) -> Self {
         Bard::from(Cards::from(v))
@@ -616,8 +624,9 @@ mod bard_tests {
 
     #[test]
     fn from__cards() {
-        let actual = Bard::from(Cards::from_str("T♣ 9♥").unwrap());
         let expected = Bard::TEN_CLUBS | Bard::NINE_HEARTS;
+
+        let actual = Bard::from(Cards::from_str("T♣ 9♥").unwrap());
 
         assert_eq!(actual, expected);
         assert_ne!(
@@ -625,6 +634,15 @@ mod bard_tests {
             Bard::TEN_CLUBS | Bard::NINE_HEARTS | Bard::EIGHT_HEARTS
         );
         assert_eq!(Bard::from(Cards::deck()), Bard::ALL);
+    }
+
+    #[test]
+    fn from__two() {
+        let expected = Bard::SEVEN_DIAMONDS | Bard::DEUCE_CLUBS;
+
+        let actual = Bard::from(Two::HAND_7D_2C);
+
+        assert_eq!(actual, expected);
     }
 
     #[test]

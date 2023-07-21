@@ -631,6 +631,8 @@
             * PKError::TooManyHands
           * HUPResult
             * sqlite::Sqlable Trait
+            * SortedHeadsUp::higher_as_bard()
+              * impl From<Two> for Bard
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

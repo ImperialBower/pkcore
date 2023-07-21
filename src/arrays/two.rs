@@ -566,6 +566,8 @@ impl Two {
 
     pub const HAND_6D_4D: Two = Two([Card::SIX_DIAMONDS, Card::FOUR_DIAMONDS]);
 
+    pub const HAND_7D_2C: Two = Two([Card::SEVEN_DIAMONDS, Card::DEUCE_CLUBS]);
+
     // endregion
 
     // endregion

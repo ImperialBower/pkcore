@@ -1,6 +1,7 @@
 use crate::arrays::two::Two;
 use crate::PKError;
 use serde::{Deserialize, Serialize};
+use crate::bard::Bard;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
@@ -33,6 +34,11 @@ impl SortedHeadsUp {
     #[must_use]
     pub fn higher(&self) -> Two {
         self.higher
+    }
+
+    #[must_use]
+    pub fn higher_as_bard(&self) -> Bard {
+        todo!()
     }
 
     #[must_use]
