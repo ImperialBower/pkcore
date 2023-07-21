@@ -2,6 +2,7 @@ use crate::analysis::eval::Eval;
 use crate::analysis::store::bcm::binary_card_map::BinaryCardMap;
 use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::arrays::five::Five;
+use crate::arrays::matchups::SortedHeadsUp;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
@@ -167,5 +168,10 @@ impl TestData {
             lower_wins: 314_904,
             ties: 32_116,
         }
+    }
+
+    #[must_use]
+    pub fn the_hand_sorted_headsup() -> SortedHeadsUp {
+        SortedHeadsUp::new(Two::HAND_6S_6H, Two::HAND_5D_5C)
     }
 }

@@ -2,7 +2,6 @@ use crate::analysis::store::db::sqlite::Sqlable;
 use crate::arrays::matchups::SortedHeadsUp;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
-use crate::PKError;
 use rusqlite::{named_params, Connection};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
@@ -81,7 +80,13 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
     }
 
     fn select(conn: &Connection, key: &SortedHeadsUp) -> Option<HUPResult> {
-        todo!()
+        let mut stmt = conn
+            .prepare(
+                "SELECT higher_wins, lower_wins, ties \
+            FROM nlh_headsup_result WHERE higher=:higher and lower=:lower",
+            )
+            .ok()?;
+        Some(HUPResult::default())
     }
 }
 
@@ -92,9 +97,13 @@ mod analysis__store__db__hupresult_tests {
     use crate::analysis::store::db::sqlite::Connect;
     use crate::util::data::TestData;
 
+    /// I'm test driving this one backwards. I do that some time.
     #[test]
     fn display() {
-        assert_eq!("", TestData::the_hand_as_hup_result().to_string());
+        assert_eq!(
+            "6♠ 6♥ (1365284) 5♦ 5♣ (314904) ties: (32116)",
+            TestData::the_hand_as_hup_result().to_string()
+        );
     }
 
     #[test]
@@ -119,5 +128,17 @@ mod analysis__store__db__hupresult_tests {
         let conn = Connect::in_memory_connection().unwrap().connection;
         HUPResult::create_table(&conn).unwrap();
         assert!(HUPResult::insert(&conn, &TestData::the_hand_as_hup_result()).is_ok())
+    }
+
+    #[test]
+    fn sqlable__select() {
+        let conn = Connect::in_memory_connection().unwrap().connection;
+        HUPResult::create_table(&conn).unwrap();
+        HUPResult::insert(&conn, &TestData::the_hand_as_hup_result()).unwrap();
+
+        let actual = HUPResult::select(&conn, &TestData::the_hand_sorted_headsup());
+
+        assert!(actual.is_some());
+        assert_eq!(TestData::the_hand_as_hup_result(), actual.unwrap());
     }
 }
