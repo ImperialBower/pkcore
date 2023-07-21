@@ -1,8 +1,12 @@
 use crate::analysis::store::db::sqlite::Sqlable;
 use crate::arrays::matchups::SortedHeadsUp;
 use crate::bard::Bard;
-use rusqlite::Connection;
+use rusqlite::{named_params, Connection};
+use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
+#[serde(rename_all = "PascalCase")]
 pub struct HUPResult {
     pub higher: Bard,
     pub lower: Bard,
@@ -12,6 +16,12 @@ pub struct HUPResult {
 }
 
 impl HUPResult {}
+
+impl Display for HUPResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        todo!()
+    }
+}
 
 impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
     fn create_table(conn: &Connection) -> rusqlite::Result<usize> {
@@ -37,11 +47,22 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
         )
     }
 
-    fn insert(conn: &Connection, record: &HUPResult) -> rusqlite::Result<usize> {
-        todo!()
+    fn insert(conn: &Connection, hup: &HUPResult) -> rusqlite::Result<usize> {
+        let mut stmt = conn.prepare(
+            "INSERT INTO nlh_headsup_result \
+            (higher, lower, higher_wins, lower_wins, ties) VALUES \
+            (:higher, :lower, :higher_wins, :lower_wins, :ties)",
+        )?;
+        stmt.execute(named_params! {
+            ":higher": hup.higher.as_u64(),
+            ":lower": hup.lower.as_u64(),
+            ":higher_wins": hup.higher_wins,
+            ":lower_wins": hup.lower_wins,
+            ":ties": hup.ties
+        })
     }
 
-    fn insert_many(conn: &Connection, records: Vec<&HUPResult>) -> rusqlite::Result<usize> {
+    fn insert_many(_conn: &Connection, _records: Vec<&HUPResult>) -> rusqlite::Result<usize> {
         todo!()
     }
 
@@ -55,10 +76,34 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
 mod analysis__store__db__hupresult_tests {
     use super::*;
     use crate::analysis::store::db::sqlite::Connect;
+    use crate::util::data::TestData;
+
+    #[test]
+    fn display() {
+        assert_eq!("", TestData::the_hand_as_hup_result().to_string());
+    }
 
     #[test]
     fn sqlable__create_table() {
         let conn = Connect::in_memory_connection().unwrap().connection;
         assert!(HUPResult::create_table(&conn).is_ok())
+    }
+
+    /// ```
+    /// use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
+    /// use pkcore::bard::Bard;
+    /// HUPResult {
+    ///     higher: Bard::SIX_SPADES | Bard::SIX_HEARTS,
+    ///     lower: Bard::FIVE_DIAMONDS | Bard::FIVE_CLUBS,
+    ///     higher_wins: 1_365_284,
+    ///     lower_wins: 314_904,
+    ///     ties: 32_116,
+    /// };
+    /// ```
+    #[test]
+    fn sqlable__insert() {
+        let conn = Connect::in_memory_connection().unwrap().connection;
+        HUPResult::create_table(&conn).unwrap();
+        assert!(HUPResult::insert(&conn, &TestData::the_hand_as_hup_result()).is_ok())
     }
 }

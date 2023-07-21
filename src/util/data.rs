@@ -1,9 +1,11 @@
 use crate::analysis::eval::Eval;
 use crate::analysis::store::bcm::binary_card_map::BinaryCardMap;
+use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
+use crate::bard::Bard;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
@@ -152,5 +154,18 @@ impl TestData {
     #[must_use]
     pub fn spades_king_high_flush_bcm() -> BinaryCardMap {
         BinaryCardMap::try_from(Seven::from_str("K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠").unwrap()).unwrap()
+    }
+
+    /// This data comes from my old [Fudd hup example](https://github.com/ImperialBower/fudd/blob/main/examples/hup.rs)
+    /// which was painstakingly slow.
+    #[must_use]
+    pub fn the_hand_as_hup_result() -> HUPResult {
+        HUPResult {
+            higher: Bard::SIX_SPADES | Bard::SIX_HEARTS,
+            lower: Bard::FIVE_DIAMONDS | Bard::FIVE_CLUBS,
+            higher_wins: 1_365_284,
+            lower_wins: 314_904,
+            ties: 32_116,
+        }
     }
 }

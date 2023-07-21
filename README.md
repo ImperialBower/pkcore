@@ -633,6 +633,8 @@
             * sqlite::Sqlable Trait
             * SortedHeadsUp::higher_as_bard()
               * impl From<Two> for Bard
+              * TestData::the_hand_as_hup_result()
+              * impl TryFrom<Bard> for Two
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

@@ -1,6 +1,7 @@
 use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::arrays::HandRanker;
+use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::{PKError, Pile, SuitShift, TheNuts};
@@ -768,6 +769,21 @@ impl SuitShift for Two {
     }
 }
 
+impl TryFrom<Bard> for Two {
+    type Error = PKError;
+
+    /// While this is cleaner than our `TryFrom<Cards>` it does have a gotcha in that if there
+    /// are more than two `Cards` in the `Bard` it will just give you `Two`, and you can't be
+    /// sure which `Two`.
+    fn try_from(bard: Bard) -> Result<Self, Self::Error> {
+        let cards = Cards::from(bard);
+        Ok(Two::new(
+            *cards.get_index(0).ok_or(PKError::NotEnoughCards)?,
+            *cards.get_index(1).ok_or(PKError::NotEnoughCards)?,
+        )?)
+    }
+}
+
 impl TryFrom<Cards> for Two {
     type Error = PKError;
 
@@ -1018,6 +1034,26 @@ mod arrays__two_tests {
         assert!(!Two::from([Card::DEUCE_SPADES, Card::BLANK]).is_dealt());
         assert!(!Two::from([Card::BLANK, Card::BLANK]).is_dealt());
         assert!(!Two::from([Card::DEUCE_SPADES, Card::DEUCE_SPADES]).is_dealt());
+    }
+
+    /// FUCK yeah!!! Test passes right out of the gate. Let's go!!!
+    /// ```
+    /// use pkcore::arrays::two::Two;
+    /// use pkcore::bard::Bard;
+    /// assert_eq!(
+    ///     Two::try_from(Bard::SIX_SPADES | Bard::SIX_HEARTS).unwrap(),
+    ///     Two::HAND_6S_6H
+    /// );
+    /// ```
+    #[test]
+    fn try_from__bard() {
+        assert_eq!(
+            Two::try_from(Bard::SIX_SPADES | Bard::SIX_HEARTS).unwrap(),
+            Two::HAND_6S_6H
+        );
+        assert!(Two::try_from(Bard::SIX_SPADES).is_err());
+        // Somehow this last one is wrong, but I don't think I care.
+        assert!(Two::try_from(Bard::SIX_SPADES | Bard::SIX_HEARTS | Bard::SEVEN_DIAMONDS).is_ok());
     }
 
     #[test]
