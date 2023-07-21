@@ -1,6 +1,8 @@
 use crate::analysis::store::db::sqlite::Sqlable;
 use crate::arrays::matchups::SortedHeadsUp;
+use crate::arrays::two::Two;
 use crate::bard::Bard;
+use crate::PKError;
 use rusqlite::{named_params, Connection};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
@@ -19,7 +21,19 @@ impl HUPResult {}
 
 impl Display for HUPResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        let higher_two = match Two::try_from(self.higher) {
+            Ok(t) => t,
+            Err(_) => Two::default(),
+        };
+        let lower_two = match Two::try_from(self.lower) {
+            Ok(t) => t,
+            Err(_) => Two::default(),
+        };
+        write!(
+            f,
+            "{higher_two} ({}) {lower_two} ({}) ties: ({})",
+            self.higher_wins, self.lower_wins, self.ties
+        )
     }
 }
 
