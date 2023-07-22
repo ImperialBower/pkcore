@@ -147,7 +147,7 @@ mod arrays__matchups__sorted_heads_up {
     }
 
     #[test]
-    fn pile() {
+    fn pile__to_vec() {
         assert_eq!(
             EXPECTED.to_vec(),
             vec![
@@ -157,6 +157,13 @@ mod arrays__matchups__sorted_heads_up {
                 Card::SIX_HEARTS
             ]
         );
+    }
+
+    /// I don't believe that I need this test. The foundations are already tested. Still, I like
+    /// doing double checks. Part of me is just like how cool is it that I can even do this?!
+    #[test]
+    fn pile__remaining() {
+        assert_eq!(EXPECTED.remaining().sort().to_string(), "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 6♣ 5♣ 4♣ 3♣ 2♣");
     }
 
     #[test]
