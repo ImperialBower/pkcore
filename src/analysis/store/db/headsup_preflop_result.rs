@@ -2,6 +2,8 @@ use crate::analysis::store::db::sqlite::Sqlable;
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
+use crate::util::wincounter::win::Win;
+use crate::util::wincounter::wins::Wins;
 use crate::Pile;
 use rusqlite::{named_params, Connection};
 use serde::{Deserialize, Serialize};
@@ -17,7 +19,63 @@ pub struct HUPResult {
     pub ties: u64,
 }
 
-impl HUPResult {}
+impl HUPResult {
+    /// `assert_eq!(first_ties, second_ties);`
+    /// This is something I want to get much more into the habit of writing. An assertion that's
+    /// simply a sanity check. There is no way that these two values shouldn't be equal, so,
+    /// just to be safe, let's add an a check here.
+    ///
+    /// I haven't used `.into()` before. It's really cute, but does have a
+    /// [gotcha](https://users.rust-lang.org/t/cant-convert-usize-to-u64/6243/4). I'm not
+    /// worried about it, but let's see a few years from now if my future self is cursing me
+    /// over this.
+    ///
+    /// BOO!!! Doesn't work, and I was all excited it. This is a no go:
+    ///
+    /// ```txt
+    /// HUPResult {
+    ///   higher: Default::default(),
+    ///   lower: Default::default(),
+    ///   higher_wins: first_wins.into(),
+    ///   lower_wins: second_wins.into(),
+    ///   ties: first_ties.into(),
+    /// }
+    /// error[E0277]: the trait bound `u64: From<usize>` is not satisfied
+    ///   --> src/analysis/store/db/headsup_preflop_result.rs:39:37
+    ///    |
+    /// 39 |             higher_wins: first_wins.into(),
+    ///    |                                     ^^^^ the trait `From<usize>` is not implemented for `u64`
+    ///    |
+    ///    = help: the following other types implement trait `From<T>`:
+    ///              <u64 as From<bool>>
+    ///              <u64 as From<char>>
+    ///              <u64 as From<u8>>
+    ///              <u64 as From<u16>>
+    ///              <u64 as From<u32>>
+    ///              <u64 as From<gimli::read::cfi::Pointer>>
+    ///              <u64 as From<NonZeroU64>>
+    ///    = note: required for `usize` to implement `Into<u64>`
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// Casting from usize to u64. I'd be impressed if we got hit with this one.
+    #[must_use]
+    pub fn from_sorted_heads_up(shu: &SortedHeadsUp, wins: &Wins) -> Self {
+        let (first_wins, first_ties) = wins.wins_for(Win::FIRST);
+        let (second_wins, second_ties) = wins.wins_for(Win::SECOND);
+
+        assert_eq!(first_ties, second_ties);
+
+        HUPResult {
+            higher: shu.higher_as_bard(),
+            lower: shu.lower_as_bard(),
+            higher_wins: u64::try_from(first_wins).unwrap(),
+            lower_wins: u64::try_from(second_wins).unwrap(),
+            ties: u64::try_from(first_ties).unwrap(),
+        }
+    }
+}
 
 impl Display for HUPResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

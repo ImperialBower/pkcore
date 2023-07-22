@@ -233,7 +233,9 @@ use pkcore::PKError;
 /// * Store them in our DB.
 /// * Once we verified that our DB plays nice, we can wire in our BC_RANK_HASHMAP megacache and do the real work.
 ///
-///
+/// So much of this is a refactoring of the `HeadsUp` struct work we did before when we were trying
+/// to just get something into CSV. I've been here before, but that's OK, because I'm liking how
+/// the code is flowing out much more now.
 fn go() -> Result<(), PKError> {
     let now = std::time::Instant::now();
 

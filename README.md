@@ -641,6 +641,14 @@
                 * TODO: bcm csv feature flag
             * impl Pile for SortedHeadsUp
             * SortedHeadsUp::all_possible() -> std::collections::HashSet<SortedHeadsUp>
+            * The Blueprint
+              * SortedHeadsUp::wins() returning default for now
+              * TODO: Convert SortedHeadsUp and Wins into a HUPResult.
+              * TODO: Store them in our DB.
+              * TODO: Once we verified that our DB plays nice, we can wire in our BC_RANK_HASHMAP megacache and do the real work.
+            * HUPResult::from_sorted_heads_up(shu: SortedHeadsUp, wins: Wins)
+              * SortedHeadsUp.higher_as_bard()
+              * SortedHeadsUp.lower_as_bard()
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

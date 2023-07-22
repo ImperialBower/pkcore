@@ -3,6 +3,7 @@ use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::util::wincounter::wins::Wins;
 use crate::{PKError, Pile};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -43,12 +44,17 @@ impl SortedHeadsUp {
 
     #[must_use]
     pub fn higher_as_bard(&self) -> Bard {
-        todo!()
+        self.higher.bard()
     }
 
     #[must_use]
     pub fn lower(&self) -> Two {
         self.lower
+    }
+
+    #[must_use]
+    pub fn lower_as_bard(&self) -> Bard {
+        self.lower.bard()
     }
 
     /// This is going to be a heavy calculation.
@@ -89,6 +95,13 @@ impl SortedHeadsUp {
             }
         }
         Ok(hs)
+    }
+
+    /// For now, returning default is all part of the blueprint. Still, let's write a test
+    /// that fails that we can ignore later on when we get everything wired in.
+    #[must_use]
+    pub fn wins(&self) -> Wins {
+        Wins::default()
     }
 }
 
@@ -155,6 +168,7 @@ impl TryFrom<Vec<&Two>> for SortedHeadsUp {
 mod arrays__matchups__sorted_heads_up {
     use super::*;
     use crate::util::data::TestData;
+    use crate::util::wincounter::win::Win;
 
     const EXPECTED: SortedHeadsUp = SortedHeadsUp {
         higher: Two::HAND_7D_7C,
@@ -180,6 +194,58 @@ mod arrays__matchups__sorted_heads_up {
         assert!(!EXPECTED.contains(&Two::HAND_7S_7C));
     }
 
+    /// Wow, this test caused a panic:
+    ///
+    /// ```
+    /// use pkcore::util::data::TestData;
+    /// assert_eq!(TestData::the_hand_sorted_headsup().wins(), TestData::wins_the_hand());
+    /// ```
+    ///
+    /// Let's try it a different way...
+    ///
+    /// ```
+    /// use pkcore::util::data::TestData;
+    /// use pkcore::util::wincounter::win::Win;
+    /// assert_eq!(
+    ///     TestData::the_hand_sorted_headsup().wins().wins_for(Win::FIRST),
+    ///     TestData::wins_the_hand().wins_for(Win::FIRST)
+    /// );
+    /// ```
+    ///
+    /// Let's leave this test to fail for now, just so we don't forget it.
+    #[test]
+    fn wins() {
+        assert_eq!(
+            TestData::the_hand_sorted_headsup()
+                .wins()
+                .wins_for(Win::FIRST),
+            TestData::wins_the_hand().wins_for(Win::FIRST)
+        );
+    }
+
+    /// Here's the original test that panics, just for fun. I love it's error message:
+    ///
+    /// ```txt
+    /// t": "thread 'arrays::matchups::sorted_heads_up::arrays__matchups__sorted_heads_up::wins_panic'
+    /// panicked at 'assertion failed: `(left == right)`\n  left: `Wins([])`,\n right:
+    /// `Wins([1, 1, 1, 1, 1, 1 ...
+    /// ```
+    ///
+    /// for a few million entries. Run it if you want to see it. Let us ignore this test, shall we.
+    /// See `docs/data/stacktrace.txt` for the full error.
+    ///
+    /// In hindsight, maybe deriving Eq, PartialEq on Wins wasn't such a good idea. Let's remove
+    /// them, shall we...? Here';s the test for posterity's sake.
+    ///
+    /// ```txt
+    /// #[test]
+    /// #[ignore]
+    /// fn wins_panic() {
+    ///     assert_eq!(TestData::the_hand_sorted_headsup().wins(), TestData::wins_the_hand());
+    /// }
+    /// ```
+    ///
+    /// Moving on...
     #[test]
     fn display() {
         assert_eq!(
