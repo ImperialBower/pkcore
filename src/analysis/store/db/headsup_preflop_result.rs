@@ -57,6 +57,21 @@ impl HUPResult {
     ///    = note: required for `usize` to implement `Into<u64>`
     /// ```
     ///
+    /// How about we write a doctest to make sure things are working OK?
+    ///
+    /// ```
+    /// use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
+    /// use pkcore::util::data::TestData;
+    ///
+    /// assert_eq!(
+    ///     TestData::the_hand_as_hup_result(),
+    ///     HUPResult::from_sorted_heads_up(
+    ///         &TestData::the_hand_sorted_headsup(),
+    ///         &TestData::wins_the_hand()
+    ///     )
+    /// );
+    /// ```
+    ///
     /// # Panics
     ///
     /// Casting from usize to u64. I'd be impressed if we got hit with this one.
@@ -70,8 +85,8 @@ impl HUPResult {
         HUPResult {
             higher: shu.higher_as_bard(),
             lower: shu.lower_as_bard(),
-            higher_wins: u64::try_from(first_wins).unwrap(),
-            lower_wins: u64::try_from(second_wins).unwrap(),
+            higher_wins: u64::try_from(first_wins - first_ties).unwrap(),
+            lower_wins: u64::try_from(second_wins - second_ties).unwrap(),
             ties: u64::try_from(first_ties).unwrap(),
         }
     }
