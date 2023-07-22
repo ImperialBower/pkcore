@@ -1,14 +1,11 @@
-use pkcore::analysis::hand_rank::HandRankValue;
 use pkcore::arrays::five::Five;
 use pkcore::arrays::seven::Seven;
 use pkcore::arrays::two::Two;
-use pkcore::bard::Bard;
 use pkcore::cards::Cards;
 use pkcore::util::wincounter::heads_up::HeadsUp;
 use pkcore::util::wincounter::win::Win;
 use pkcore::util::wincounter::wins::Wins;
 use pkcore::{PKError, Pile};
-use serde::{Deserialize, Serialize};
 use std::io;
 use std::io::Write;
 use std::str::FromStr;
@@ -54,47 +51,6 @@ fn read_input() {
     }
     println!("Elapsed: {:.2?}", now.elapsed());
 }
-//
-// lazy_static! {
-//     static ref BC_RANK: HashMap<Bard, SimpleBinaryCardMap> = {
-//         let mut m = HashMap::new();
-//         let file_path = "generated/bcm.original.csv";
-//         let file = File::open(file_path).unwrap();
-//         let mut rdr = Reader::from_reader(file);
-//
-//         for result in rdr.deserialize() {
-//             let bcm: BinaryCardMap = result.unwrap();
-//             m.insert(bcm.bc, SimpleBinaryCardMap::from(bcm));
-//         }
-//         m
-//     };
-// }
-
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct SimpleBinaryCardMap {
-    pub bc: Bard,
-    pub rank: HandRankValue,
-}
-
-impl SimpleBinaryCardMap {
-    #[must_use]
-    pub fn new(bc: Bard, rank: HandRankValue) -> SimpleBinaryCardMap {
-        SimpleBinaryCardMap { bc, rank }
-    }
-}
-
-impl From<BinaryCardMap> for SimpleBinaryCardMap {
-    fn from(bcm: BinaryCardMap) -> Self {
-        SimpleBinaryCardMap::new(bcm.best, bcm.rank)
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
-pub struct BinaryCardMap {
-    pub bc: Bard,
-    pub best: Bard,
-    pub rank: HandRankValue,
-}
 
 fn work(cards: Cards) -> Result<HeadsUp, PKError> {
     println!("{cards}");
@@ -125,8 +81,12 @@ fn grind(hero: Two, villain: Two, remaining: Cards) -> Wins {
         let hero7 = Seven::from_case_at_deal(hero, five).unwrap().to_bard();
         let villain7 = Seven::from_case_at_deal(villain, five).unwrap().to_bard();
 
-        let hero_rank = pkcore::BC_RANK.get(&hero7).unwrap();
-        let villain_rank = pkcore::BC_RANK.get(&villain7).unwrap();
+        let hero_rank = pkcore::analysis::store::bcm::binary_card_map::BC_RANK
+            .get(&hero7)
+            .unwrap();
+        let villain_rank = pkcore::analysis::store::bcm::binary_card_map::BC_RANK
+            .get(&villain7)
+            .unwrap();
 
         if hero_rank.rank < villain_rank.rank {
             wins.add(Win::FIRST);

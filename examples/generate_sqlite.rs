@@ -1,4 +1,4 @@
-use pkcore::analysis::store::bcm::binary_card_map::BinaryCardMap;
+use pkcore::analysis::store::bcm::binary_card_map::SevenFiveBCM;
 use pkcore::analysis::store::db::sqlite::{Connect, Sqlable};
 use pkcore::util::data::TestData;
 use rusqlite::{Connection, Result};
@@ -359,9 +359,9 @@ use rusqlite::{Connection, Result};
 fn main() -> Result<()> {
     let conn = Connect::in_memory_connection()?;
 
-    BinaryCardMap::create_table(&conn.connection)?;
+    SevenFiveBCM::create_table(&conn.connection)?;
 
-    match BinaryCardMap::insert(&conn.connection, &TestData::spades_royal_flush_bcm()) {
+    match SevenFiveBCM::insert(&conn.connection, &TestData::spades_royal_flush_bcm()) {
         Ok(_) => println!("Record inserted"),
         Err(e) => println!("{e}"),
     }
@@ -372,8 +372,8 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn doit(conn: &Connection, bcm: &BinaryCardMap) {
-    match BinaryCardMap::select(&conn, &bcm.bc) {
+fn doit(conn: &Connection, bcm: &SevenFiveBCM) {
+    match SevenFiveBCM::select(&conn, &bcm.bc) {
         None => {
             println!("No such thing");
         }

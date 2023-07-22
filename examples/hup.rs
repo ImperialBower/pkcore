@@ -1,7 +1,7 @@
+use pkcore::arrays::matchups::SortedHeadsUp;
 use pkcore::arrays::two::Two;
 use pkcore::cards::Cards;
 use pkcore::{PKError, Pile};
-use pkcore::arrays::matchups::SortedHeadsUp;
 
 fn main() -> Result<(), PKError> {
     go()

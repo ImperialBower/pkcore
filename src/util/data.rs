@@ -1,5 +1,5 @@
 use crate::analysis::eval::Eval;
-use crate::analysis::store::bcm::binary_card_map::BinaryCardMap;
+use crate::analysis::store::bcm::binary_card_map::SevenFiveBCM;
 use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::arrays::five::Five;
 use crate::arrays::matchups::SortedHeadsUp;
@@ -145,16 +145,16 @@ impl TestData {
     ///
     /// ¯\_(ツ)_/¯
     #[must_use]
-    pub fn spades_royal_flush_bcm() -> BinaryCardMap {
-        BinaryCardMap::try_from(Seven::from_str("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠").unwrap()).unwrap()
+    pub fn spades_royal_flush_bcm() -> SevenFiveBCM {
+        SevenFiveBCM::try_from(Seven::from_str("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠").unwrap()).unwrap()
     }
 
     /// # Panics
     ///
     /// ¯\_(ツ)_/¯
     #[must_use]
-    pub fn spades_king_high_flush_bcm() -> BinaryCardMap {
-        BinaryCardMap::try_from(Seven::from_str("K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠").unwrap()).unwrap()
+    pub fn spades_king_high_flush_bcm() -> SevenFiveBCM {
+        SevenFiveBCM::try_from(Seven::from_str("K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠").unwrap()).unwrap()
     }
 
     /// This data comes from my old [Fudd hup example](https://github.com/ImperialBower/fudd/blob/main/examples/hup.rs)
