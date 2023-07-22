@@ -241,8 +241,10 @@ mod analysis__store__db__hupresult_tests {
         HUPResult::insert(&conn, &TestData::the_hand_as_hup_result()).unwrap();
 
         let actual = HUPResult::select(&conn, &TestData::the_hand_sorted_headsup());
+        let nope = HUPResult::select(&conn, &SortedHeadsUp::new(Two::HAND_6S_6H, Two::HAND_5S_5D));
 
         assert!(actual.is_some());
         assert_eq!(TestData::the_hand_as_hup_result(), actual.unwrap());
+        assert!(nope.is_none());
     }
 }

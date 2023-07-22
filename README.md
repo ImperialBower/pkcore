@@ -649,6 +649,7 @@
             * HUPResult::from_sorted_heads_up(shu: SortedHeadsUp, wins: Wins)
               * SortedHeadsUp.higher_as_bard()
               * SortedHeadsUp.lower_as_bard()
+            * 
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

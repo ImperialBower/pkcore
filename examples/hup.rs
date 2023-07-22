@@ -1,3 +1,6 @@
+use rusqlite::Connection;
+use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
+use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use pkcore::PKError;
 
@@ -239,12 +242,22 @@ use pkcore::PKError;
 fn go() -> Result<(), PKError> {
     let now = std::time::Instant::now();
 
+    let connect = Connection::open(":memory:").unwrap();
+    HUPResult::create_table(&connect).expect("TODO: panic message");
+
     let all_possible = SortedHeadsUp::all_possible()?;
 
     for hup in all_possible.iter() {
         println!("{hup}");
+        let wins = hup.wins();
+        let hupr = HUPResult::from_sorted_heads_up(hup, &wins);
+        HUPResult::insert(&connect, &hupr).expect("TODO: panic message");
     }
 
+    // Now let's make sure they're there.
+    for hup in all_possible.iter() {
+        assert!(HUPResult::select(&connect, &hup).is_some());
+    }
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())
 }
