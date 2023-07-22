@@ -1,6 +1,8 @@
+use crate::analysis::the_nuts::TheNuts;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
-use crate::PKError;
+use crate::card::Card;
+use crate::{PKError, Pile};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
@@ -51,6 +53,27 @@ impl SortedHeadsUp {
 impl Display for SortedHeadsUp {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} - {}", self.higher, self.lower)
+    }
+}
+
+impl Pile for SortedHeadsUp {
+    /// Shoot. Forgot about my frequency mask idea. Still has potential, but later.
+    fn clean(&self) -> Self {
+        todo!()
+    }
+
+    /// Implementing this would be interesting. What's the best possible hand from either of these
+    /// two hands?
+    fn the_nuts(&self) -> TheNuts {
+        todo!()
+    }
+
+    /// This is the only one we need to implement for what we want. Maybe this interface is doing
+    /// too much.
+    fn to_vec(&self) -> Vec<Card> {
+        let mut v = self.higher.to_vec();
+        v.extend(self.lower.to_vec());
+        v
     }
 }
 
@@ -120,6 +143,19 @@ mod arrays__matchups__sorted_heads_up {
         assert_eq!(
             "6♠ 6♥ - 5♦ 5♣",
             TestData::the_hand_sorted_headsup().to_string()
+        );
+    }
+
+    #[test]
+    fn pile() {
+        assert_eq!(
+            EXPECTED.to_vec(),
+            vec![
+                Card::SEVEN_DIAMONDS,
+                Card::SEVEN_CLUBS,
+                Card::SIX_SPADES,
+                Card::SIX_HEARTS
+            ]
         );
     }
 

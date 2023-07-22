@@ -17,10 +17,12 @@ use std::error::Error;
 use std::fs::File;
 
 lazy_static! {
+    /// This code is brutal, heavy, and wonderful. It is an optimization that makes things much slower
+    /// in the short term, and MUCH faster in the long term. Eventually, we will want containers that
+    /// have all this stuff loaded for bear. We're not there yet.
     pub static ref BC_RANK: HashMap<Bard, FiveBCM> = {
         let mut m = HashMap::new();
-        let file_path = "generated/bcm.original.csv";
-        let file = File::open(file_path).unwrap();
+        let file = File::open(SevenFiveBCM::get_csv_filepath()).unwrap();
         let mut rdr = Reader::from_reader(file);
 
         for result in rdr.deserialize() {
@@ -130,6 +132,16 @@ pub struct SevenFiveBCM {
 }
 
 impl SevenFiveBCM {
+    pub const DEFAULT_PKCORE_75BCM_CSV_PATH: &str = "generated/bcm.original.csv";
+
+    #[must_use]
+    pub fn get_csv_filepath() -> String {
+        match std::env::var("PKCORE_75BCM_CSV_PATH") {
+            Ok(path) => path,
+            Err(_) => SevenFiveBCM::DEFAULT_PKCORE_75BCM_CSV_PATH.to_string(),
+        }
+    }
+
     /// OK, this is the old school way of generating serialized data. Next step
     /// is to try to do the same with an embedded DB like
     /// [sled](https://github.com/spacejam/sled).
