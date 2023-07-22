@@ -640,6 +640,7 @@
                 * SevenFiveBCM::get_csv_filepath()
                 * TODO: bcm csv feature flag
             * impl Pile for SortedHeadsUp
+            * SortedHeadsUp::all_possible() -> std::collections::HashSet<SortedHeadsUp>
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

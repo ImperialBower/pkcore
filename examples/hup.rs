@@ -1,11 +1,5 @@
-use pkcore::arrays::matchups::SortedHeadsUp;
-use pkcore::arrays::two::Two;
-use pkcore::cards::Cards;
-use pkcore::{PKError, Pile};
-
-fn main() -> Result<(), PKError> {
-    go()
-}
+use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+use pkcore::PKError;
 
 /// **STEP 1**: Generate an iterator with every possible hole cards.
 ///
@@ -163,23 +157,96 @@ fn main() -> Result<(), PKError> {
 /// to do that is with the `Pile` trait, so let's implement it for `SortedHeadsUp`. We're not
 /// going to need all of the things, but `remaining()` and all it entails will come in handy for
 /// this work.
+///
+/// Now I'm trying to figure out how I can codify this logic. Maybe a method in `SortedHeadsUp` that
+/// returns all possible versions.
+///
+/// Interestingly, when you filter the heads up combinations by sorting them and then putting them
+/// in a HashSet you get a smaller number. This isn't surprising, but to me at least, interesting.
+///
+/// ```txt
+/// Raw Combination Count: 1624351
+/// SortedHeadsUp::allpossible() count: 812175
+/// ```
+///
+/// This is all brought to us thanks to that remarkable of techs, the
+/// [hash table](https://en.wikipedia.org/wiki/Hash_table).
+///
+/// OK, now let's destroy what was to create what will be. First, we codify what was for our
+/// narrative...
+///
+/// ```
+/// fn go() -> Result<(), PKError> {
+///     let deck = Cards::deck();
+///
+///     let mut count: u32 = 1;
+///     for (i, v) in deck.combinations(2).enumerate() {
+///         let hero = Two::try_from(v.as_slice())?;
+///
+///         println!("{} - {hero}", i + 1);
+///         for r in hero.remaining().combinations(2) {
+///             let villain = Two::try_from(r.as_slice())?;
+///             println!("{count} {i}  {hero} v. {villain}");
+///             count = count + 1;
+///         }
+///     }
+///
+///     Ok(())
+/// }
+/// ```
+///
+/// Much better:
+///
+/// ```
+/// fn go() -> Result<(), PKError> {
+///     let now = std::time::Instant::now();
+///     let deck = Cards::deck();
+///
+///     let all_possible = SortedHeadsUp::all_possible()?;
+///
+///     for hup in all_possible.iter() {
+///         println!("{hup}");
+///     }
+///
+///     Ok(())
+/// }
+/// ```
+///
+/// Now the scary part. We're going to hit a time wall to drive through our code. Every calculation
+/// is going to take a ton of time, and we can't really verify that it's working until we've loaded
+/// our `BC_RANK_HASHMAP`, which takes a long, 4 geebees worth of time until we've got it in memory.
+/// We're going to have to do it live `docs/files/bill-o-reilly-fuck-it-2746501037.gif`.
+///
+/// In a way this is exciting AND this is why Rust rules. So much of the stop and go pain of this
+/// type of work is removed because the compiler catches things long before we press play.
+///
+/// The way I'm going to do this is by creating the scaffolding before I do the grunt work. This is
+/// the area where system's developers using fuck up. They build things in a linear fashion, based
+/// on "business value" not taking structural considerations into account. It's like putting in
+/// all your kitchen appliances and tiles before you've built your foundation and plumbing.
+/// Software developers are so far behind construction when it comes to building things.
+///
+/// Here's the blueprint:
+///
+/// * SortedHeadsUp::wins() where it just returns defaults.
+/// * Convert SortedHeadsUp and Wins into a HUPResult.
+/// * Store them in our DB.
+/// * Once we verified that our DB plays nice, we can wire in our BC_RANK_HASHMAP megacache and do the real work.
+///
+///
 fn go() -> Result<(), PKError> {
-    let deck = Cards::deck();
+    let now = std::time::Instant::now();
 
-    let mut count: u32 = 1;
-    for (i, v) in deck.combinations(2).enumerate() {
-        let hero = Two::try_from(v.as_slice())?;
+    let all_possible = SortedHeadsUp::all_possible()?;
 
-        println!("{} - {hero}", i + 1);
-        for r in hero.remaining().combinations(2) {
-            let villain = Two::try_from(r.as_slice())?;
-
-            let hup = SortedHeadsUp::new(hero, villain);
-
-            println!("{count} {i}  {hup}");
-            count = count + 1;
-        }
+    for hup in all_possible.iter() {
+        println!("{hup}");
     }
 
+    println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())
+}
+
+fn main() -> Result<(), PKError> {
+    go()
 }

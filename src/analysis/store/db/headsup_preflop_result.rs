@@ -1,5 +1,5 @@
 use crate::analysis::store::db::sqlite::Sqlable;
-use crate::arrays::matchups::SortedHeadsUp;
+use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::Pile;

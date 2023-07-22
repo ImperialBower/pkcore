@@ -20,7 +20,7 @@ lazy_static! {
     /// This code is brutal, heavy, and wonderful. It is an optimization that makes things much slower
     /// in the short term, and MUCH faster in the long term. Eventually, we will want containers that
     /// have all this stuff loaded for bear. We're not there yet.
-    pub static ref BC_RANK: HashMap<Bard, FiveBCM> = {
+    pub static ref BC_RANK_HASHMAP: HashMap<Bard, FiveBCM> = {
         let mut m = HashMap::new();
         let file = File::open(SevenFiveBCM::get_csv_filepath()).unwrap();
         let mut rdr = Reader::from_reader(file);

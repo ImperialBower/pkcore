@@ -2,7 +2,7 @@ use crate::analysis::eval::Eval;
 use crate::analysis::store::bcm::binary_card_map::SevenFiveBCM;
 use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::arrays::five::Five;
-use crate::arrays::matchups::SortedHeadsUp;
+use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
