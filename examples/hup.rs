@@ -232,8 +232,9 @@ use pkcore::PKError;
 /// Here's the blueprint:
 ///
 /// * SortedHeadsUp::wins() where it just returns defaults.
-/// * Convert SortedHeadsUp and Wins into a HUPResult.
+/// * Convert SortedHeadsUp and Wins into a blank HUPResult.
 /// * Store them in our DB.
+///   * FORGOT TO ADD TRANSPOSITION.
 /// * Once we verified that our DB plays nice, we can wire in our BC_RANK_HASHMAP megacache and do the real work.
 ///
 /// So much of this is a refactoring of the `HeadsUp` struct work we did before when we were trying
@@ -247,16 +248,25 @@ fn go() -> Result<(), PKError> {
 
     let all_possible = SortedHeadsUp::all_possible()?;
 
+    let mut count = 0;
+
     for hup in all_possible.iter() {
-        println!("{hup}");
+        count = count + 1;
+        println!("Inserting #{count} {hup}");
         let wins = hup.wins();
         let hupr = HUPResult::from_sorted_heads_up(hup, &wins);
         HUPResult::insert(&connect, &hupr).expect("TODO: panic message");
     }
 
+    count = 0;
     // Now let's make sure they're there.
     for hup in all_possible.iter() {
-        assert!(HUPResult::select(&connect, &hup).is_some());
+        count = count + 1;
+        print!("Validating #{count} {hup}");
+        let r = HUPResult::select(&connect, &hup);
+        assert!(r.is_some());
+        println!(" || {}", r.unwrap().to_string());
+
     }
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())
