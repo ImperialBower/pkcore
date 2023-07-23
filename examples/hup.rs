@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
-use pkcore::PKError;
+use pkcore::{PKError, Shifty};
 use rusqlite::Connection;
 
 /// **STEP 1**: Generate an iterator with every possible hole cards.
@@ -251,6 +251,8 @@ use rusqlite::Connection;
 /// aka calculating the odds. We could probably afford to clean up this code first.
 ///
 /// There... that's a little better.
+///
+/// Let's try to tweak this a little bit.
 fn go() -> Result<(), PKError> {
     let now = std::time::Instant::now();
 
@@ -268,11 +270,11 @@ fn go() -> Result<(), PKError> {
 fn insert(conn: &Connection, all_possible: &HashSet<SortedHeadsUp>) {
     let mut count = 0;
 
-    for hup in all_possible.iter() {
+    for shu in all_possible.iter() {
         count = count + 1;
-        println!("Inserting #{count} {hup}");
-        let wins = hup.wins();
-        let possible_sorts = hup.possible_sorts();
+        println!("Inserting #{count} {shu}");
+        let wins = shu.wins();
+        let possible_sorts = shu.shifts();
 
         for sorted in possible_sorts.iter() {
             if HUPResult::select(&conn, &sorted).is_none() {
@@ -297,6 +299,7 @@ fn validate(conn: &Connection, all_possible: &HashSet<SortedHeadsUp>) {
     }
 }
 
+/// cargo run --example hup
 fn main() -> Result<(), PKError> {
     go()
 }

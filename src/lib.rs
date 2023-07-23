@@ -1,6 +1,8 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::unreadable_literal)]
 
+use std::collections::HashSet;
+use std::hash::Hash;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
@@ -58,7 +60,7 @@ pub const POSSIBLE_UNIQUE_HOLDEM_HUP_MATCHUPS: usize = 1_624_350;
 pub enum PKError {
     BlankCard,
     CardCast,
-    DuplicateCard,
+    Duplicate,
     Fubar,
     Incomplete,
     InvalidBinaryFormat,
@@ -189,6 +191,21 @@ pub trait SuitShift {
 
     #[must_use]
     fn opposite(&self) -> Self;
+}
+
+pub trait Shifty: SuitShift + Copy {
+    #[must_use]
+    fn shifts(&self) -> HashSet<Self> where Self: Sized, Self: std::cmp::Eq, Self: Hash {
+        let mut hs = HashSet::new();
+        let mut shifty = *self;
+        hs.insert(shifty);
+        for _ in 1..=3 {
+            shifty = shifty.shift_suit_up();
+            hs.insert(shifty);
+        }
+
+        hs
+    }
 }
 
 #[cfg(test)]
