@@ -1,8 +1,8 @@
-use rusqlite::Connection;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use pkcore::PKError;
+use rusqlite::Connection;
 
 /// **STEP 1**: Generate an iterator with every possible hole cards.
 ///
@@ -266,7 +266,6 @@ fn go() -> Result<(), PKError> {
         let r = HUPResult::select(&connect, &hup);
         assert!(r.is_some());
         println!(" || {}", r.unwrap().to_string());
-
     }
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())

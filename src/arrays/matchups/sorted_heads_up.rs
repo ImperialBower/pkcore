@@ -4,7 +4,7 @@ use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::util::wincounter::wins::Wins;
-use crate::{PKError, Pile};
+use crate::{PKError, Pile, SuitShift};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
@@ -129,6 +129,22 @@ impl Pile for SortedHeadsUp {
         let mut v = self.higher.to_vec();
         v.extend(self.lower.to_vec());
         v
+    }
+}
+
+impl SuitShift for SortedHeadsUp {
+    /// I'm not convinced that this is going to work, but I want to try.
+    fn shift_suit_down(&self) -> Self {
+        SortedHeadsUp::new(self.higher.shift_suit_down(), self.lower.shift_suit_down())
+    }
+
+    fn shift_suit_up(&self) -> Self {
+        SortedHeadsUp::new(self.higher.shift_suit_up(), self.lower.shift_suit_up())
+    }
+
+    /// I especially don't know about opposite.
+    fn opposite(&self) -> Self {
+        SortedHeadsUp::new(self.higher.opposite(), self.lower.opposite())
     }
 }
 
@@ -272,6 +288,12 @@ mod arrays__matchups__sorted_heads_up {
     #[test]
     fn pile__remaining() {
         assert_eq!(EXPECTED.remaining().sort().to_string(), "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 6♣ 5♣ 4♣ 3♣ 2♣");
+    }
+    
+    #[test]
+    fn suit_shift() {
+        let expected = SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D);
+        assert_eq!(EXPECTED.shift_suit_down(), expected);
     }
 
     #[test]
