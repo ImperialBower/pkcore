@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 
-#[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct SortedHeadsUp {
     higher: Two,
@@ -95,6 +95,19 @@ impl SortedHeadsUp {
             }
         }
         Ok(hs)
+    }
+
+    pub fn possible_sorts(&self) -> HashSet<Self> {
+        let mut v = HashSet::new();
+        let mut shifty = self.clone();
+        v.insert(shifty);
+
+        for i in 1..= 3 {
+            shifty = shifty.shift_suit_up();
+            v.insert(shifty);
+        }
+
+        v
     }
 
     /// For now, returning default is all part of the blueprint. Still, let's write a test
@@ -210,6 +223,18 @@ mod arrays__matchups__sorted_heads_up {
         assert!(!EXPECTED.contains(&Two::HAND_7S_7C));
     }
 
+    /// 7♦ 7♣ - 6♠ 6♥
+    /// 7♠ 7♣ - 6♥ 6♦
+    /// 7♠ 7♥ - 6♦ 6♣
+    /// 7♥ 7♦ - 6♠ 6♣
+    #[test]
+    fn possible_sorts() {
+        let v = EXPECTED.possible_sorts();
+        for shu in v.iter() {
+            println!("{shu}");
+        }
+    }
+
     /// Wow, this test caused a panic:
     ///
     /// ```
@@ -289,12 +314,13 @@ mod arrays__matchups__sorted_heads_up {
     fn pile__remaining() {
         assert_eq!(EXPECTED.remaining().sort().to_string(), "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 6♣ 5♣ 4♣ 3♣ 2♣");
     }
-    
+
     #[test]
     fn suit_shift() {
         let expected = SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D);
         assert_eq!(EXPECTED.shift_suit_down(), expected);
     }
+
 
     #[test]
     fn try_from() {

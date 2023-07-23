@@ -1,6 +1,7 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::unreadable_literal)]
 
+use std::collections::HashSet;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;

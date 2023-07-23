@@ -240,11 +240,16 @@ use rusqlite::Connection;
 /// So much of this is a refactoring of the `HeadsUp` struct work we did before when we were trying
 /// to just get something into CSV. I've been here before, but that's OK, because I'm liking how
 /// the code is flowing out much more now.
+///
+/// **STEP 5a** Transposition
+///
+/// Our next phase is going to slow us down in the short term but speed things up immensely in the
+/// long term.
 fn go() -> Result<(), PKError> {
     let now = std::time::Instant::now();
 
-    let connect = Connection::open(":memory:").unwrap();
-    HUPResult::create_table(&connect).expect("TODO: panic message");
+    let conn = Connection::open(":memory:").unwrap();
+    HUPResult::create_table(&conn).expect("TODO: panic message");
 
     let all_possible = SortedHeadsUp::all_possible()?;
 
@@ -255,7 +260,7 @@ fn go() -> Result<(), PKError> {
         println!("Inserting #{count} {hup}");
         let wins = hup.wins();
         let hupr = HUPResult::from_sorted_heads_up(hup, &wins);
-        HUPResult::insert(&connect, &hupr).expect("TODO: panic message");
+        HUPResult::insert(&conn, &hupr).expect("TODO: panic message");
     }
 
     count = 0;
@@ -263,12 +268,16 @@ fn go() -> Result<(), PKError> {
     for hup in all_possible.iter() {
         count = count + 1;
         print!("Validating #{count} {hup}");
-        let r = HUPResult::select(&connect, &hup);
+        let r = HUPResult::select(&conn, &hup);
         assert!(r.is_some());
         println!(" || {}", r.unwrap().to_string());
     }
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())
+}
+
+fn transpositional_insert(conn: &Connection, shu: &SortedHeadsUp) {
+
 }
 
 fn main() -> Result<(), PKError> {

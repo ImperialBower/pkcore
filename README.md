@@ -686,6 +686,7 @@
       * [tui-rs](https://github.com/fdehau/tui-rs)
         * [Rust and TUI: Building a command-line interface in Rust](https://blog.logrocket.com/rust-and-tui-building-a-command-line-interface-in-rust/)
       * [Crossterm](https://github.com/crossterm-rs/crossterm)
+    * [Creating successful open source projects - with @orhunp - RustShip 1](https://www.youtube.com/watch?v=_xABF_H8b3g)
   * articles
     * [Rust Is Hard, Or: The Misery of Mainstream Programming](https://hirrolot.github.io/posts/rust-is-hard-or-the-misery-of-mainstream-programming.html)
     * [Rust: Your code can be perfect](https://www.youtube.com/watch?v=IA4q0lzmyfM)
