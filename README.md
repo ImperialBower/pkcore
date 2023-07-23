@@ -650,6 +650,7 @@
               * SortedHeadsUp.higher_as_bard()
               * SortedHeadsUp.lower_as_bard()
             * impl SuitShift for SortedHeadsUp
+              * Added transpositions to examples/hup.rs
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

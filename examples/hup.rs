@@ -259,8 +259,16 @@ fn go() -> Result<(), PKError> {
         count = count + 1;
         println!("Inserting #{count} {hup}");
         let wins = hup.wins();
-        let hupr = HUPResult::from_sorted_heads_up(hup, &wins);
-        HUPResult::insert(&conn, &hupr).expect("TODO: panic message");
+        let possible_sorts = hup.possible_sorts();
+
+        for sorted in possible_sorts.iter() {
+            if HUPResult::select(&conn, &sorted).is_none() {
+                let hupr = HUPResult::from_sorted_heads_up(&sorted, &wins);
+                HUPResult::insert(&conn, &hupr).expect("TODO: panic message");
+            } else {
+                println!(">>>>> NO INSERT");
+            }
+        }
     }
 
     count = 0;
@@ -274,10 +282,6 @@ fn go() -> Result<(), PKError> {
     }
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())
-}
-
-fn transpositional_insert(conn: &Connection, shu: &SortedHeadsUp) {
-
 }
 
 fn main() -> Result<(), PKError> {

@@ -97,12 +97,13 @@ impl SortedHeadsUp {
         Ok(hs)
     }
 
+    #[must_use]
     pub fn possible_sorts(&self) -> HashSet<Self> {
         let mut v = HashSet::new();
-        let mut shifty = self.clone();
+        let mut shifty = *self;
         v.insert(shifty);
 
-        for i in 1..= 3 {
+        for _ in 1..=3 {
             shifty = shifty.shift_suit_up();
             v.insert(shifty);
         }
@@ -199,7 +200,7 @@ mod arrays__matchups__sorted_heads_up {
     use crate::util::data::TestData;
     use crate::util::wincounter::win::Win;
 
-    const EXPECTED: SortedHeadsUp = SortedHeadsUp {
+    const HANDS_7D_7C_V_6S_6H: SortedHeadsUp = SortedHeadsUp {
         higher: Two::HAND_7D_7C,
         lower: Two::HAND_6S_6H,
     };
@@ -207,20 +208,20 @@ mod arrays__matchups__sorted_heads_up {
     #[test]
     fn new() {
         assert_eq!(
-            EXPECTED,
+            HANDS_7D_7C_V_6S_6H,
             SortedHeadsUp::new(Two::HAND_6S_6H, Two::HAND_7D_7C)
         );
         assert_eq!(
-            EXPECTED,
+            HANDS_7D_7C_V_6S_6H,
             SortedHeadsUp::new(Two::HAND_7D_7C, Two::HAND_6S_6H)
         );
     }
 
     #[test]
     fn contains() {
-        assert!(EXPECTED.contains(&Two::HAND_6S_6H));
-        assert!(EXPECTED.contains(&Two::HAND_7D_7C));
-        assert!(!EXPECTED.contains(&Two::HAND_7S_7C));
+        assert!(HANDS_7D_7C_V_6S_6H.contains(&Two::HAND_6S_6H));
+        assert!(HANDS_7D_7C_V_6S_6H.contains(&Two::HAND_7D_7C));
+        assert!(!HANDS_7D_7C_V_6S_6H.contains(&Two::HAND_7S_7C));
     }
 
     /// 7♦ 7♣ - 6♠ 6♥
@@ -229,10 +230,15 @@ mod arrays__matchups__sorted_heads_up {
     /// 7♥ 7♦ - 6♠ 6♣
     #[test]
     fn possible_sorts() {
-        let v = EXPECTED.possible_sorts();
-        for shu in v.iter() {
-            println!("{shu}");
-        }
+        let mut expected = HashSet::new();
+        expected.insert(SortedHeadsUp::new(Two::HAND_7D_7C, Two::HAND_6S_6H));
+        expected.insert(SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D));
+        expected.insert(SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C));
+        expected.insert(SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C));
+
+        let actual = HANDS_7D_7C_V_6S_6H.possible_sorts();
+
+        assert_eq!(expected, actual);
     }
 
     /// Wow, this test caused a panic:
@@ -298,7 +304,7 @@ mod arrays__matchups__sorted_heads_up {
     #[test]
     fn pile__to_vec() {
         assert_eq!(
-            EXPECTED.to_vec(),
+            HANDS_7D_7C_V_6S_6H.to_vec(),
             vec![
                 Card::SEVEN_DIAMONDS,
                 Card::SEVEN_CLUBS,
@@ -312,21 +318,20 @@ mod arrays__matchups__sorted_heads_up {
     /// doing double checks. Part of me is just like how cool is it that I can even do this?!
     #[test]
     fn pile__remaining() {
-        assert_eq!(EXPECTED.remaining().sort().to_string(), "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 6♣ 5♣ 4♣ 3♣ 2♣");
+        assert_eq!(HANDS_7D_7C_V_6S_6H.remaining().sort().to_string(), "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 6♣ 5♣ 4♣ 3♣ 2♣");
     }
 
     #[test]
     fn suit_shift() {
         let expected = SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D);
-        assert_eq!(EXPECTED.shift_suit_down(), expected);
+        assert_eq!(HANDS_7D_7C_V_6S_6H.shift_suit_down(), expected);
     }
-
 
     #[test]
     fn try_from() {
         let v = vec![Two::HAND_6S_6H, Two::HAND_7D_7C];
 
-        assert_eq!(EXPECTED, SortedHeadsUp::try_from(v).unwrap());
+        assert_eq!(HANDS_7D_7C_V_6S_6H, SortedHeadsUp::try_from(v).unwrap());
     }
 
     #[test]
