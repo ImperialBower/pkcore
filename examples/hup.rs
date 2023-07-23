@@ -1,9 +1,9 @@
-use std::collections::HashSet;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use pkcore::{PKError, Shifty};
 use rusqlite::Connection;
+use std::collections::HashSet;
 
 /// **STEP 1**: Generate an iterator with every possible hole cards.
 ///
