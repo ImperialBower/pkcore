@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
@@ -245,14 +246,26 @@ use rusqlite::Connection;
 ///
 /// Our next phase is going to slow us down in the short term but speed things up immensely in the
 /// long term.
+///
+/// Well... I think we've taken this about as far as it will go without actually doing the thing...
+/// aka calculating the odds. We could probably afford to clean up this code first.
+///
+/// There... that's a little better.
 fn go() -> Result<(), PKError> {
     let now = std::time::Instant::now();
 
     let conn = Connection::open(":memory:").unwrap();
     HUPResult::create_table(&conn).expect("TODO: panic message");
-
     let all_possible = SortedHeadsUp::all_possible()?;
 
+    insert(&conn, &all_possible);
+    validate(&conn, &all_possible);
+
+    println!("Elapsed: {:.2?}", now.elapsed());
+    Ok(())
+}
+
+fn insert(conn: &Connection, all_possible: &HashSet<SortedHeadsUp>) {
     let mut count = 0;
 
     for hup in all_possible.iter() {
@@ -270,8 +283,10 @@ fn go() -> Result<(), PKError> {
             }
         }
     }
+}
 
-    count = 0;
+fn validate(conn: &Connection, all_possible: &HashSet<SortedHeadsUp>) {
+    let mut count = 0;
     // Now let's make sure they're there.
     for hup in all_possible.iter() {
         count = count + 1;
@@ -280,8 +295,6 @@ fn go() -> Result<(), PKError> {
         assert!(r.is_some());
         println!(" || {}", r.unwrap().to_string());
     }
-    println!("Elapsed: {:.2?}", now.elapsed());
-    Ok(())
 }
 
 fn main() -> Result<(), PKError> {
