@@ -7,7 +7,7 @@ use zerocopy::{AsBytes, FromBytes, Unaligned};
 //         assert_eq!(sut.bc, Bard(4_468_415_255_281_664));
 //         assert_eq!(sut.best, Bard(4_362_862_139_015_168));
 fn main() -> sled::Result<()> {
-    let db = sled::open("generated/sleigh")?;
+    let db = sled::open("../../generated/sleigh")?;
     let _bcm_tree = db.open_tree(b"bcm")?;
 
     let k = Key {

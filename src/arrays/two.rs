@@ -5,14 +5,14 @@ use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::{PKError, Pile, SuitShift, TheNuts};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 #[derive(
-    Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
+    Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
 )]
-pub struct Two([Card; 2]);
+pub struct Two(#[serde(deserialize_with = "deserialize_two_index")] [Card; 2]);
 
 impl Two {
     // region hand constants
@@ -740,6 +740,29 @@ impl Pile for Two {
 
     fn to_vec(&self) -> Vec<Card> {
         self.0.to_vec()
+    }
+}
+
+impl Serialize for Two {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        serializer.serialize_newtype_struct("Two", &self.to_string())
+    }
+}
+
+fn deserialize_two_index<'de, D>(deserializer: D) -> Result<[Card; 2], D::Error>
+    where
+        D: Deserializer<'de>,
+{
+    let buf = String::deserialize(deserializer)?;
+
+    match Two::from_str(buf.as_str()) {
+        Ok(two) => {
+            Ok([two.first(), two.second()])
+        },
+        Err(_) => Ok([Card::BLANK, Card::BLANK]),
     }
 }
 

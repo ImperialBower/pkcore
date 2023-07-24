@@ -8,12 +8,13 @@ use crate::{PKError, Pile, SuitShift, Shifty};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
+use csv::WriterBuilder;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct SortedHeadsUp {
-    higher: Two,
-    lower: Two,
+    pub higher: Two,
+    pub lower: Two,
 }
 
 impl SortedHeadsUp {
@@ -95,6 +96,142 @@ impl SortedHeadsUp {
             }
         }
         Ok(hs)
+    }
+
+    /// I want to be able to generate these values into a CSV file, so that I can use them to
+    /// load into our odds db.
+    ///
+    /// OK, this is insanely easy now that we've mastered the magic spell. Thank you serde!
+    ///
+    /// ```txt
+    /// pub fn generate_csv(path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    ///         let mut wtr = WriterBuilder::new().has_headers(true).from_path(path)?;
+    ///         for shu in SortedHeadsUp::all_possible().iter() {
+    ///             wtr.serialize(shu)?;
+    ///         }
+    ///         wtr.flush()?;
+    ///         Ok(())
+    ///     }
+    /// ```
+    ///
+    /// Except, it doesn't work. :-( All we see is:
+    ///
+    /// ```txt
+    /// Higher,Lower,Higher,Lower,Higher,Lower,Higher,Lower,Higher,Lower,Higher,Lower,Higher,Lower,Higher,Lower,Higher,Lower,Higher,
+    /// ```
+    ///
+    /// I totally deserve this wonderfully condescending reply from
+    /// [Shepmaster](https://stackoverflow.com/users/155423/shepmaster) on stackoverflow
+    /// to the question of
+    /// [How do I convert a HashSet of Strings into a Vector?](https://stackoverflow.com/questions/60893051/how-do-i-convert-a-hashset-of-strings-into-a-vector).
+    ///
+    /// ```txt
+    /// I encourage you to re-read The Rust Programming Language, specifically the chapter on iterators. Next, become familiar with the methods of Iterator.
+    ///
+    /// The normal way I'd expect to see this implemented is to convert the HashSet to an iterator and then collect the iterator to a Vec:
+    ///
+    /// let mut v: Vec<_> = hs.into_iter().collect();
+    /// In this case, I'd prefer to use FromIterator directly (the same trait that powers collect):
+    ///
+    /// let mut v = Vec::from_iter(hs);
+    /// Focusing on your larger problem, use a BTreeSet instead, coupled with What's an idiomatic way to print an iterator separated by spaces in Rust?
+    ///
+    /// use itertools::Itertools; // 0.10.1
+    /// use std::collections::BTreeSet;
+    ///
+    /// fn main() {
+    ///     // Create the set somehow
+    ///     let hs: BTreeSet<_> = ["fee", "fie", "foo", "fum"]
+    ///         .into_iter()
+    ///         .map(String::from)
+    ///         .collect();
+    ///
+    ///     println!("{}", hs.iter().format(", "));
+    /// }
+    /// ```
+    ///
+    /// But, that's not how I learn. I read the manual, try to let it soak into my subconscious, and
+    /// then let failure lock in the learning.
+    ///
+    /// Here's our revision:
+    ///
+    /// ```txt
+    /// pub fn generate_csv(path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    ///         let mut wtr = WriterBuilder::new().has_headers(true).from_path(path)?;
+    ///         let hs = SortedHeadsUp::all_possible()?;
+    ///         let mut v = Vec::from_iter(hs);
+    ///         for shu in v.iter() {
+    ///             wtr.serialize(shu)?;
+    ///         }
+    ///         wtr.flush()?;
+    ///         Ok(())
+    ///     }
+    /// ```
+    ///
+    /// Grrrr....
+    ///
+    /// ```txt
+    /// error[E0277]: the trait bound `PKError: StdError` is not satisfied
+    ///    --> src/arrays/matchups/sorted_heads_up.rs:124:47
+    ///     |
+    /// 124 |         let hs = SortedHeadsUp::all_possible()?;
+    ///     |                                               ^ the trait `StdError` is not implemented for `PKError`
+    ///     |
+    ///     = help: the following other types implement trait `FromResidual<R>`:
+    ///               <std::result::Result<T, F> as FromResidual<Yeet<E>>>
+    ///               <std::result::Result<T, F> as FromResidual<std::result::Result<Infallible, E>>>
+    ///     = note: required for `Box<dyn StdError>` to implement `From<PKError>`
+    ///     = note: required for `std::result::Result<(), Box<dyn StdError>>` to implement `FromResidual<std::result::Result<Infallible, PKError>>`
+    /// ```
+    ///
+    /// I'm working with two kinds of errors: `std::error::Error` and my PKError. So, I will punt
+    /// and unwrap() like the lazy f I am. Really need to figure out a good way to deal with this.
+    /// This would be so easy in Java. :-P
+    ///
+    /// Still, I think we've got it now...
+    ///
+    /// ```txt
+    /// pub fn generate_csv(path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    ///         let mut wtr = WriterBuilder::new().has_headers(true).from_path(path)?;
+    ///         let hs = SortedHeadsUp::all_possible().unwrap();
+    ///         let v = Vec::from_iter(hs);
+    ///         for shu in v.iter() {
+    ///             wtr.serialize(shu)?;
+    ///         }
+    ///         wtr.flush()?;
+    ///         Ok(())
+    ///     }
+    /// ```
+    ///
+    /// FUCK!!!!
+    ///
+    /// ```txt
+    /// thread 'main' panicked at 'TODO: panic message: Error(UnequalLengths { pos: None, expected_len: 2, len: 4 })', examples/generate_all_possible_shu.rs:7:67
+    /// ```
+    ///
+    /// This is the file it generates:
+    ///
+    /// ```txt
+    /// Higher,Lower
+    /// Q♠,9♥,T♠,8♦
+    /// ```
+    ///
+    /// I know the problem. We've been relying on `Card's` custom serializer. We're going to need one
+    /// for `Two`.
+    ///
+    /// Scheiße!!! I was really hoping that this would be easy... but remember the rule:
+    /// **nothing is ever easy** I should bail, but now I'm kinda obsessed.
+    ///
+    /// OK, we've updated Two. Let us see if this cracks the case.
+    pub fn generate_csv(path: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let mut wtr = WriterBuilder::new().has_headers(true).from_path(path)?;
+        let hs = SortedHeadsUp::all_possible().unwrap();
+        let v = Vec::from_iter(hs);
+        for shu in v.iter() {
+            wtr.serialize(shu)?;
+        }
+        wtr.flush()?;
+        Ok(())
     }
 
     /// Returns a `HashSet` of the possible suit shifts. I'm thinking that I want to add this to the
@@ -344,6 +481,8 @@ impl Display for SortedHeadsUp {
     }
 }
 
+
+
 impl Pile for SortedHeadsUp {
     /// Shoot. Forgot about my frequency mask idea. Still has potential, but later.
     fn clean(&self) -> Self {
@@ -382,6 +521,29 @@ impl SuitShift for SortedHeadsUp {
 }
 
 impl Shifty for SortedHeadsUp {}
+
+impl TryFrom<Cards> for SortedHeadsUp {
+    type Error = PKError;
+
+    fn try_from(cards: Cards) -> Result<Self, Self::Error> {
+        match cards.len() {
+            0..=3 => Err(PKError::NotEnoughCards),
+            4 => {
+                let first = Two::new(
+                    *cards.get_index(0).ok_or(PKError::InvalidCard)?,
+                    *cards.get_index(1).ok_or(PKError::InvalidCard)?,
+                )?;
+                let second = Two::new(
+                    *cards.get_index(2).ok_or(PKError::InvalidCard)?,
+                    *cards.get_index(3).ok_or(PKError::InvalidCard)?,
+                )?;
+                Ok(SortedHeadsUp::new(first, second))
+            },
+
+            _ => Err(PKError::TooManyCards),
+        }
+    }
+}
 
 impl TryFrom<Vec<Two>> for SortedHeadsUp {
     type Error = PKError;

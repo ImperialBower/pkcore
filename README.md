@@ -652,7 +652,8 @@
             * impl SuitShift for SortedHeadsUp 
               * SuitShift.shifts()
               * Added transpositions to examples/hup.rs
-            * 
+            * impl FromStr for SortedHeadsUp
+            * SortedHeadsUp::generate_csv()
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
