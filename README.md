@@ -641,6 +641,7 @@
                 * TODO: bcm csv feature flag
             * impl Pile for SortedHeadsUp
             * SortedHeadsUp::all_possible() -> std::collections::HashSet<SortedHeadsUp>
+              * NOTE renamed unique()
             * The Blueprint
               * SortedHeadsUp::wins() returning default for now
               * TODO: Convert SortedHeadsUp and Wins into a HUPResult.

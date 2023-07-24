@@ -86,7 +86,20 @@ impl SortedHeadsUp {
     /// # Errors
     ///
     /// Shrugs.
-    pub fn all_possible() -> Result<HashSet<SortedHeadsUp>, PKError> {
+    pub fn unique() -> Result<HashSet<SortedHeadsUp>, PKError> {
+        let mut hs: HashSet<SortedHeadsUp> = HashSet::new();
+        for v in Cards::deck().combinations(2) {
+            let hero = Two::try_from(v.as_slice())?;
+            for r in hero.remaining().combinations(2) {
+                let villain = Two::try_from(r.as_slice())?;
+                hs.insert(SortedHeadsUp::new(hero, villain));
+            }
+        }
+        Ok(hs)
+    }
+
+    /// Renaming `all_possible()` to `unique()`.
+    pub fn distinct() -> Result<HashSet<SortedHeadsUp>, PKError> {
         let mut hs: HashSet<SortedHeadsUp> = HashSet::new();
         for v in Cards::deck().combinations(2) {
             let hero = Two::try_from(v.as_slice())?;
@@ -223,9 +236,25 @@ impl SortedHeadsUp {
     /// **nothing is ever easy** I should bail, but now I'm kinda obsessed.
     ///
     /// OK, we've updated Two. Let us see if this cracks the case.
+    ///
+    /// Yessir! That did it. Interestingly enough, running the code while at the same time running
+    /// `examples/hup.rs` AND `examples/bcrepl.rs` from both here and `Fudd` caused my `CLion` to
+    /// crash my system, and when I rebooted I needed to reinstall the `JetBrains ToolBox`. Maybe
+    /// don't run these things all at the same time. This did give me an idea...
+    ///
+    /// Thanks to `Shifty`, I don't need to store all of the possible shifts, only the original ones.
+    /// I can remove all the shifts and just run through the ones remaining, doing the shift when
+    /// I perform the preflop calculation. This will leverage the power of
+    /// [Distinct vs Unique](http://suffe.cool/poker/evaluator.html). I only want the Distinct
+    /// entries.
+    ///
+    /// Yes yes yes, I am getting sidetracked, but that's the fun of coding for fun. It's my party,
+    /// and whilst you are invited, I am providing the entertainment.
+    ///
+    /// Let's try it and see.
     pub fn generate_csv(path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let mut wtr = WriterBuilder::new().has_headers(true).from_path(path)?;
-        let hs = SortedHeadsUp::all_possible().unwrap();
+        let hs = SortedHeadsUp::unique().unwrap();
         let v = Vec::from_iter(hs);
         for shu in v.iter() {
             wtr.serialize(shu)?;

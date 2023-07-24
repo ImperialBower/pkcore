@@ -258,7 +258,7 @@ fn go() -> Result<(), PKError> {
 
     let conn = Connection::open(":memory:").unwrap();
     HUPResult::create_table(&conn).expect("TODO: panic message");
-    let all_possible = SortedHeadsUp::all_possible()?;
+    let all_possible = SortedHeadsUp::unique()?;
 
     insert(&conn, &all_possible);
     validate(&conn, &all_possible);
