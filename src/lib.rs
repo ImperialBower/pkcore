@@ -202,10 +202,22 @@ pub trait Shifty: SuitShift + Copy {
         Self: Hash,
     {
         let mut hs = HashSet::new();
-        let mut shifty = *self;
+        let original = *self;
+        let mut shifted = self.clone();
+        // Tbe original version of this section has a flaw. It adds itself back if there is a gap. We
+        // Need to fix that.
+        //
+        // ```
+        // for _ in 1..=3 {
+        //   shifty = shifty.shift_suit_up();
+        //   hs.insert(shifty);
+        // }
+        // ````
         for _ in 1..=3 {
-            shifty = shifty.shift_suit_up();
-            hs.insert(shifty);
+            shifted = shifted.shift_suit_up();
+            if shifted != original {
+                hs.insert(shifted);
+            }
         }
 
         hs

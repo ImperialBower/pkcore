@@ -221,17 +221,17 @@ impl SortedHeadsUp {
     ///
     /// ```txt
     /// pub fn distinct() -> Result<HashSet<SortedHeadsUp>, PKError> {
-    //    let mut unique = SortedHeadsUp::unique()?;
-    //
-    //    let v = Vec::from_iter(unique.clone());
-    //    for shu in &v {
-    //      if unique.contains(shu) {
-    //        shu.remove_shifts(&mut unique)
-    //      }
-    //    }
-    //
-    //    Ok(unique)
-    //  }
+    ///    let mut unique = SortedHeadsUp::unique()?;
+    ///
+    ///    let v = Vec::from_iter(unique.clone());
+    ///    for shu in &v {
+    ///      if unique.contains(shu) {
+    ///        shu.remove_shifts(&mut unique)
+    ///      }
+    ///    }
+    ///
+    ///    Ok(unique)
+    ///  }
     /// ```
     ///
     /// Wow...this brought our distinct results length down to 202,800. This is more of what I
@@ -244,6 +244,62 @@ impl SortedHeadsUp {
     /// should be only one of them.
     ///
     /// Sheit... neither is there.
+    ///
+    /// OK, so after our revision of `other_shifts()` we now have 203,294 distinct matchups. Our
+    /// spot check now passes.
+    ///
+    /// Searching for "[203,294 distinct holdem heads up matchups]" returns
+    /// [this response](https://poker.stackexchange.com/questions/5682/distinct-head-to-head-match-ups-in-holdem)
+    /// on `StackExchange`:
+    ///
+    /// ===
+    /// Note 1 in the article on Hold'em Odds elaborates on this a bit further:
+    ///
+    /// | [Note 1] By removing reflection and applying aggressive search tree pruning, it is possible to reduce the number of unique head-to-head hand combinations from 207,025 to 47,008. Reflection eliminates redundant calculations by observing that given hands h_1 and h_2, if w_1 is the probability of h_1 beating h_2 in a showdown and s is the probability of h_1 splitting the pot with h_2, then the probability w_2 of h_2 beating h_1 is w_2 = 1 - (s + w_1), thus eliminating the need to evaluate h_2 against h_1. Pruning is possible, for example, by observing that Q♥J♥ has the same chance of winning against both 8♦7♣ and 8♦7♠ (but not the same probability as against 8♥7♣ because sharing the heart affects the flush possibilities for each hand).
+    ///
+    /// Your thinking was correct that 169x1225 doesn't make sense. The actual number is less than 169x1225, though not quite as small as 169x169. 169x278 ≈ 47,008.
+    ///
+    /// With two cards there are only two unique 'suits' possible. Hands are either suited or off suited.
+    ///
+    /// Adding two more cards gives more combinations of suits, now we can have the following suit possibilities:
+    ///
+    /// 1. 1111 - suited, suited, same suit
+    /// 2. 1112 - suited, off suit, sharing suit
+    /// 3. 1122 - suited, suited, different suits
+    /// 4. 1123 - suited, off suit, different suits
+    /// 5. 1223 - off suit, off suit, sharing one suit
+    /// 6. 1212 - off suit, off suit, sharing both suits
+    /// 7. 1234 - off suit, off suit, sharing no suits
+    ///
+    /// Due to symmetry 1123 is the same as 2311 is the same as 3211; we ignore all symmetrical possibilities.
+    ///
+    /// This doesn't fully explain the actual number, though it gets you most of the way there and gives a
+    /// mental model of the possible combinations of suits with two hands.
+    /// ===
+    ///
+    /// At least that confirms our number, but it also shows us that this is still too many. I am
+    /// happy with our results given that we have applied no actual math to the problem, but have
+    /// instead focused entirely on simple brute force of the domain.
+    ///
+    /// This does uncover how a major gap in my skills makes the work harder. While it is rare that
+    /// math saves your ass, when it does, it really really saves your ass.
+    ///
+    /// One of my favorite interactions as a developer was listening to an engineer of a major
+    /// automotive manufacturer explain the math behind determining the temperature inside of a
+    /// vehicle. It's a surprisingly difficult problem, since the temperature is based on the ouyside
+    /// of the car, and the sensors are inside the car.
+    ///
+    /// Another instance was when I was testing an early prototype of a vehicle and the gas indicator
+    /// kept jumping wildly up and down. This was because the liquid was sloshing all around as we
+    /// drove and they hadn't finished working out the sensors for it.
+    ///
+    /// Programming on actual things instead of just doing stuff for web pages is a really life
+    /// changing experience. It says a lot about our industry, and our society in general, that while
+    /// the work is much more challenging and generally much more significant, the jobs themselves
+    /// usually pay much less than the lastest silicone valley hype fest for some new way to share
+    /// pictures of your cat on the blockchain.
+    ///
+    /// We're going to need to break down the math. Can you test drive math? Let's find out.
     ///
     /// # Errors
     ///
@@ -325,7 +381,7 @@ impl SortedHeadsUp {
     /// use pkcore::arrays::two::Two;
     ///
     /// let mut hs = SortedHeadsUp::unique().unwrap();
-    /// let shu = HANDS_7D_7C_V_6S_6H;
+    /// let shu = SortedHeadsUp::HANDS_7D_7C_V_6S_6H;
     ///
     /// shu.remove_shifts(&mut hs);
     ///
@@ -1029,6 +1085,32 @@ mod arrays__matchups__sorted_heads_up {
         let actual = HANDS_7D_7C_V_6S_6H.shifts();
 
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn shifty__shifts_gapped() {
+        let first = SortedHeadsUp::new(Two::HAND_7S_7D, Two::HAND_6H_6C);
+        let second = SortedHeadsUp::new(Two::HAND_7H_7C, Two::HAND_6S_6D);
+        let mut expected = HashSet::new();
+        expected.insert(first);
+        expected.insert(second);
+
+        let actual = first.shifts();
+
+        assert_eq!(actual, expected);
+    }
+
+    /// This test failed on the original version of this test.
+    #[test]
+    fn shifty__other_shifts_gapped() {
+        let first = SortedHeadsUp::new(Two::HAND_7S_7D, Two::HAND_6H_6C);
+        let second = SortedHeadsUp::new(Two::HAND_7H_7C, Two::HAND_6S_6D);
+        let mut expected = HashSet::new();
+        expected.insert(second);
+
+        let actual = first.other_shifts();
+
+        assert_eq!(actual, expected);
     }
 
     #[test]
