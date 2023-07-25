@@ -217,27 +217,40 @@ impl SortedHeadsUp {
     ///
     /// Let's add `remove_shifts()`, and test drive it.
     ///
+    /// __...one hour later...__
+    ///
+    /// ```txt
+    /// pub fn distinct() -> Result<HashSet<SortedHeadsUp>, PKError> {
+    //    let mut unique = SortedHeadsUp::unique()?;
+    //
+    //    let v = Vec::from_iter(unique.clone());
+    //    for shu in &v {
+    //      if unique.contains(shu) {
+    //        shu.remove_shifts(&mut unique)
+    //      }
+    //    }
+    //
+    //    Ok(unique)
+    //  }
+    /// ```
+    ///
+    /// Wow...this brought our distinct results length down to 202,800. This is more of what I
+    /// expected.
+    ///
     /// # Errors
     ///
     /// If a deck isn't divisible by 2, which shouldn't happen. Maybe if we add jokers some day.
     pub fn distinct() -> Result<HashSet<SortedHeadsUp>, PKError> {
         let mut unique = SortedHeadsUp::unique()?;
-        let mut distinct: HashSet<SortedHeadsUp> = HashSet::new();
 
         let v = Vec::from_iter(unique.clone());
         for shu in &v {
             if unique.contains(shu) {
-                distinct.insert(*shu);
-                let shifts = shu.shifts();
-                for shiftshu in Vec::from_iter(shifts) {
-                    if unique.contains(shu) {
-                        unique.remove(&shiftshu);
-                    }
-                }
+                shu.remove_shifts(&mut unique);
             }
         }
 
-        Ok(distinct)
+        Ok(unique)
     }
 
     /// This should be interesting. Certainly testable.
@@ -531,7 +544,7 @@ impl SortedHeadsUp {
     /// the drawing board.
     ///
     /// How about we create a trait called `Shifty`, and make `SuitShift` its supertrait? Something like:
-
+    ///
     /// ```txt
     /// use std::collections::HashSet;
     /// use pkcore::SuitShift;
@@ -872,12 +885,17 @@ mod arrays__matchups__sorted_heads_up {
         assert!(!HANDS_7D_7C_V_6S_6H.is_lower(&Two::HAND_7S_7C));
     }
 
-    /// 7♠ 7♣ - 6♥ 6♦
-    /// 7♠ 7♥ - 6♦ 6♣
-    /// 7♥ 7♦ - 6♠ 6♣
-    ///         expected.insert(SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D));
-    //         expected.insert(SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C));
-    //         expected.insert(SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C));
+    /// This test makes no sense...
+    #[test]
+    fn distinct() {
+        let distinct = SortedHeadsUp::distinct().unwrap();
+
+        assert!(distinct.contains(&HANDS_7D_7C_V_6S_6H));
+        assert!(!distinct.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
+        assert!(!distinct.contains(&SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C)));
+        assert!(!distinct.contains(&SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C)));
+    }
+
     #[test]
     fn remove_shifts() {
         let mut hs = SortedHeadsUp::unique().unwrap();
