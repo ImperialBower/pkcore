@@ -237,6 +237,14 @@ impl SortedHeadsUp {
     /// Wow...this brought our distinct results length down to 202,800. This is more of what I
     /// expected.
     ///
+    /// Now... how do we prove it?
+    ///
+    /// Our manual spot check passes now. Our of our four shifts, only one is in the result:
+    /// `7♠ 7♥,6♦ 6♣`. What about our two gapped matchups: `7♠ 7♦,6♥ 6♣` & `7♥ 7♣,6♠ 6♦`? There
+    /// should be only one of them.
+    ///
+    /// Sheit... neither is there.
+    ///
     /// # Errors
     ///
     /// If a deck isn't divisible by 2, which shouldn't happen. Maybe if we add jokers some day.
@@ -1006,10 +1014,10 @@ mod arrays__matchups__sorted_heads_up {
         assert_eq!(expected, actual);
     }
 
-    /// 7♦ 7♣ - 6♠ 6♥
-    /// 7♠ 7♣ - 6♥ 6♦
-    /// 7♠ 7♥ - 6♦ 6♣
-    /// 7♥ 7♦ - 6♠ 6♣
+    /// 7♦ 7♣,6♠ 6♥
+    /// 7♠ 7♣,6♥ 6♦
+    /// 7♠ 7♥,6♦ 6♣
+    /// 7♥ 7♦,6♠ 6♣
     #[test]
     fn shifty__shifts() {
         let mut expected = HashSet::new();
