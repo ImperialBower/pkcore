@@ -1,8 +1,6 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::unreadable_literal)]
 
-use std::collections::HashSet;
-use std::hash::Hash;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
@@ -11,6 +9,8 @@ use analysis::the_nuts::TheNuts;
 use indexmap::set::IntoIter;
 use itertools::Combinations;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::hash::Hash;
 
 use std::iter::Enumerate;
 
@@ -195,15 +195,33 @@ pub trait SuitShift {
 
 pub trait Shifty: SuitShift + Copy {
     #[must_use]
-    fn shifts(&self) -> HashSet<Self> where Self: Sized, Self: std::cmp::Eq, Self: Hash {
+    fn other_shifts(&self) -> HashSet<Self>
+    where
+        Self: Sized,
+        Self: std::cmp::Eq,
+        Self: Hash,
+    {
         let mut hs = HashSet::new();
         let mut shifty = *self;
-        hs.insert(shifty);
         for _ in 1..=3 {
             shifty = shifty.shift_suit_up();
             hs.insert(shifty);
         }
 
+        hs
+    }
+
+    #[must_use]
+    fn shifts(&self) -> HashSet<Self>
+    where
+        Self: Sized,
+        Self: std::cmp::Eq,
+        Self: Hash,
+    {
+        let mut hs = HashSet::new();
+        let shifty = *self;
+        hs.insert(shifty);
+        hs.extend(self.other_shifts());
         hs
     }
 }

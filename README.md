@@ -655,6 +655,7 @@
               * Added transpositions to examples/hup.rs
             * impl FromStr for SortedHeadsUp
             * SortedHeadsUp::generate_csv()
+            * Migrate bcrepl methods to SortedHeadsUp
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

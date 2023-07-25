@@ -4,11 +4,11 @@ use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::util::wincounter::wins::Wins;
-use crate::{PKError, Pile, SuitShift, Shifty};
+use crate::{PKError, Pile, Shifty, SuitShift};
+use csv::WriterBuilder;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
-use csv::WriterBuilder;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
@@ -35,7 +35,17 @@ impl SortedHeadsUp {
 
     #[must_use]
     pub fn contains(&self, two: &Two) -> bool {
-        &self.lower == two || &self.higher == two
+        self.is_higher(two) || self.is_lower(two)
+    }
+
+    #[must_use]
+    pub fn is_higher(&self, two: &Two) -> bool {
+        &self.higher == two
+    }
+
+    #[must_use]
+    pub fn is_lower(&self, two: &Two) -> bool {
+        &self.lower == two
     }
 
     #[must_use]
@@ -98,7 +108,11 @@ impl SortedHeadsUp {
         Ok(hs)
     }
 
-    /// Renaming `all_possible()` to `unique()`.
+    /// Renaming `all_possible()` to `unique()`.#
+    ///
+    /// # Errors
+    ///
+    /// If a deck isn't divisible by 2, which shouldn't happen. Maybe if we add jokers some day.
     pub fn distinct() -> Result<HashSet<SortedHeadsUp>, PKError> {
         let mut hs: HashSet<SortedHeadsUp> = HashSet::new();
         for v in Cards::deck().combinations(2) {
@@ -197,7 +211,7 @@ impl SortedHeadsUp {
     ///     = note: required for `std::result::Result<(), Box<dyn StdError>>` to implement `FromResidual<std::result::Result<Infallible, PKError>>`
     /// ```
     ///
-    /// I'm working with two kinds of errors: `std::error::Error` and my PKError. So, I will punt
+    /// I'm working with two kinds of errors: `std::error::Error` and my `PKError`. So, I will punt
     /// and unwrap() like the lazy f I am. Really need to figure out a good way to deal with this.
     /// This would be so easy in Java. :-P
     ///
@@ -252,11 +266,19 @@ impl SortedHeadsUp {
     /// and whilst you are invited, I am providing the entertainment.
     ///
     /// Let's try it and see.
+    ///
+    /// # Errors
+    ///
+    /// When it can't write to path.
+    ///
+    /// # Panics
+    ///
+    /// When can't write to file system
     pub fn generate_csv(path: &str) -> Result<(), Box<dyn std::error::Error>> {
         let mut wtr = WriterBuilder::new().has_headers(true).from_path(path)?;
         let hs = SortedHeadsUp::unique().unwrap();
         let v = Vec::from_iter(hs);
-        for shu in v.iter() {
+        for shu in &v {
             wtr.serialize(shu)?;
         }
         wtr.flush()?;
@@ -306,7 +328,7 @@ impl SortedHeadsUp {
     /// `Cards` doesn't implement `Copy`, and since it's an `IndexSet`, it isn't going to. Back to
     /// the drawing board.
     ///
-    /// How about we create a trait called Shifty, and make SuitShift its supertrait? Something like:
+    /// How about we create a trait called `Shifty`, and make `SuitShift` its supertrait? Something like:
 
     /// ```txt
     /// use std::collections::HashSet;
@@ -510,8 +532,6 @@ impl Display for SortedHeadsUp {
     }
 }
 
-
-
 impl Pile for SortedHeadsUp {
     /// Shoot. Forgot about my frequency mask idea. Still has potential, but later.
     fn clean(&self) -> Self {
@@ -567,7 +587,7 @@ impl TryFrom<Cards> for SortedHeadsUp {
                     *cards.get_index(3).ok_or(PKError::InvalidCard)?,
                 )?;
                 Ok(SortedHeadsUp::new(first, second))
-            },
+            }
 
             _ => Err(PKError::TooManyCards),
         }
@@ -636,21 +656,18 @@ mod arrays__matchups__sorted_heads_up {
         assert!(!HANDS_7D_7C_V_6S_6H.contains(&Two::HAND_7S_7C));
     }
 
-    /// 7♦ 7♣ - 6♠ 6♥
-    /// 7♠ 7♣ - 6♥ 6♦
-    /// 7♠ 7♥ - 6♦ 6♣
-    /// 7♥ 7♦ - 6♠ 6♣
     #[test]
-    fn possible_sorts() {
-        let mut expected = HashSet::new();
-        expected.insert(SortedHeadsUp::new(Two::HAND_7D_7C, Two::HAND_6S_6H));
-        expected.insert(SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D));
-        expected.insert(SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C));
-        expected.insert(SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C));
+    fn is_higher() {
+        assert!(HANDS_7D_7C_V_6S_6H.is_higher(&Two::HAND_7D_7C));
+        assert!(!HANDS_7D_7C_V_6S_6H.is_higher(&Two::HAND_6S_6H));
+        assert!(!HANDS_7D_7C_V_6S_6H.is_higher(&Two::HAND_7S_7C));
+    }
 
-        let actual = HANDS_7D_7C_V_6S_6H.shifts();
-
-        assert_eq!(expected, actual);
+    #[test]
+    fn is_lower() {
+        assert!(HANDS_7D_7C_V_6S_6H.is_lower(&Two::HAND_6S_6H));
+        assert!(!HANDS_7D_7C_V_6S_6H.is_lower(&Two::HAND_7D_7C));
+        assert!(!HANDS_7D_7C_V_6S_6H.is_lower(&Two::HAND_7S_7C));
     }
 
     /// Wow, this test caused a panic:
@@ -737,6 +754,35 @@ mod arrays__matchups__sorted_heads_up {
     fn suit_shift() {
         let expected = SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D);
         assert_eq!(HANDS_7D_7C_V_6S_6H.shift_suit_down(), expected);
+    }
+
+    #[test]
+    fn shifty__other_shifts() {
+        let mut expected = HashSet::new();
+        expected.insert(SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D));
+        expected.insert(SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C));
+        expected.insert(SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C));
+
+        let actual = HANDS_7D_7C_V_6S_6H.other_shifts();
+
+        assert_eq!(expected, actual);
+    }
+
+    /// 7♦ 7♣ - 6♠ 6♥
+    /// 7♠ 7♣ - 6♥ 6♦
+    /// 7♠ 7♥ - 6♦ 6♣
+    /// 7♥ 7♦ - 6♠ 6♣
+    #[test]
+    fn shifty__shifts() {
+        let mut expected = HashSet::new();
+        expected.insert(SortedHeadsUp::new(Two::HAND_7D_7C, Two::HAND_6S_6H));
+        expected.insert(SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D));
+        expected.insert(SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C));
+        expected.insert(SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C));
+
+        let actual = HANDS_7D_7C_V_6S_6H.shifts();
+
+        assert_eq!(expected, actual);
     }
 
     #[test]
