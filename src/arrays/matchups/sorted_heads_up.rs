@@ -285,26 +285,44 @@ impl SortedHeadsUp {
     /// }
     /// ```
     ///
-    /// Now we've got one assertion, let's write some code...
-    /// let mut unique = SortedHeadsUp::unique()?;
-    //         let mut distinct: HashSet<SortedHeadsUp> = HashSet::new();
-    //
-    //         let v = Vec::from_iter(unique.clone());
-    //         for shu in &v {
-    //             if unique.contains(shu) {
-    //                 distinct.insert(*shu);
-    //                 let shifts = shu.shifts();
-    //                 for shiftshu in Vec::from_iter(shifts) {
-    //                     if unique.contains(shu) {
-    //                         unique.remove(&shiftshu);
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //
-    //         Ok(distinct)
+    /// This makes the test pass:
+    ///
+    /// ```txt
+    ///     pub fn remove_shifts(&self, from: &mut HashSet<SortedHeadsUp>) {
+    ///         for shift in self.other_shifts() {
+    ///             if from.contains(&shift) {
+    ///                 from.remove(&shift);
+    ///             }
+    ///         }
+    ///     }
+    /// ```
+    ///
+    /// Let's add the other two shifts to the test.
+    ///
+    /// ```
+    /// use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let mut hs = SortedHeadsUp::unique().unwrap();
+    /// let shu = HANDS_7D_7C_V_6S_6H;
+    ///
+    /// shu.remove_shifts(&mut hs);
+    ///
+    /// assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
+    /// assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C)));
+    /// assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C)));
+    /// ```
+    ///
+    /// It works. Huzzah!
+    ///
+    /// Now, can we leverage this in refactoring our distinct function? How about we use the exact
+    /// same test against it?
     pub fn remove_shifts(&self, from: &mut HashSet<SortedHeadsUp>) {
-        todo!()
+        for shift in self.other_shifts() {
+            if from.contains(&shift) {
+                from.remove(&shift);
+            }
+        }
     }
 
     /// I want to be able to generate these values into a CSV file, so that I can use them to
@@ -868,6 +886,8 @@ mod arrays__matchups__sorted_heads_up {
         shu.remove_shifts(&mut hs);
 
         assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
+        assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C)));
+        assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C)));
     }
 
     /// Wow, this test caused a panic:

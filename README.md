@@ -660,6 +660,7 @@
             * TODO TD: The great bcrepl fudd investigation.
             * SortedHeadsUp.distinct()
               * SortedHeadsUp.remove_shifts()
+              * Refactoring distinct()
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
