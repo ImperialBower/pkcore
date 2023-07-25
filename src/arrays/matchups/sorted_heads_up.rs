@@ -255,7 +255,7 @@ impl SortedHeadsUp {
     /// ===
     /// Note 1 in the article on Hold'em Odds elaborates on this a bit further:
     ///
-    /// | [Note 1] By removing reflection and applying aggressive search tree pruning, it is possible to reduce the number of unique head-to-head hand combinations from 207,025 to 47,008. Reflection eliminates redundant calculations by observing that given hands h_1 and h_2, if w_1 is the probability of h_1 beating h_2 in a showdown and s is the probability of h_1 splitting the pot with h_2, then the probability w_2 of h_2 beating h_1 is w_2 = 1 - (s + w_1), thus eliminating the need to evaluate h_2 against h_1. Pruning is possible, for example, by observing that Q♥J♥ has the same chance of winning against both 8♦7♣ and 8♦7♠ (but not the same probability as against 8♥7♣ because sharing the heart affects the flush possibilities for each hand).
+    /// | [Note 1] By removing reflection and applying aggressive search tree pruning, it is possible to reduce the number of unique head-to-head hand combinations from 207,025 to 47,008. Reflection eliminates redundant calculations by observing that given hands `h_1` and `h_2`, if `w_1` is the probability of `h_1` beating `h_2` in a showdown and s is the probability of `h_1` splitting the pot with `h_2`, then the probability `w_2` of `h_2` beating `h_1` is `w_2 = 1 - (s + w_1)`, thus eliminating the need to evaluate `h_2` against `h_1`. Pruning is possible, for example, by observing that Q♥J♥ has the same chance of winning against both 8♦7♣ and 8♦7♠ (but not the same probability as against 8♥7♣ because sharing the heart affects the flush possibilities for each hand).
     ///
     /// Your thinking was correct that 169x1225 doesn't make sense. The actual number is less than 169x1225, though not quite as small as 169x169. 169x278 ≈ 47,008.
     ///
@@ -381,7 +381,10 @@ impl SortedHeadsUp {
     /// use pkcore::arrays::two::Two;
     ///
     /// let mut hs = SortedHeadsUp::unique().unwrap();
-    /// let shu = SortedHeadsUp::HANDS_7D_7C_V_6S_6H;
+    /// let shu = SortedHeadsUp {
+    ///   higher: Two::HAND_7D_7C,
+    ///   lower: Two::HAND_6S_6H,
+    /// };
     ///
     /// shu.remove_shifts(&mut hs);
     ///
@@ -950,14 +953,28 @@ mod arrays__matchups__sorted_heads_up {
     }
 
     /// This test makes no sense...
+    ///
+    /// Refactored. Much uglier but more accurate. You don't know which of the shifts will be pulled
+    /// out first, so anyone of them could be the last shu standing.
     #[test]
     fn distinct() {
         let distinct = SortedHeadsUp::distinct().unwrap();
+        let mut holding = HashSet::new();
 
-        assert!(distinct.contains(&HANDS_7D_7C_V_6S_6H));
-        assert!(!distinct.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
-        assert!(!distinct.contains(&SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C)));
-        assert!(!distinct.contains(&SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C)));
+        if distinct.contains(&HANDS_7D_7C_V_6S_6H) {
+            holding.insert(HANDS_7D_7C_V_6S_6H);
+        }
+        if distinct.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)) {
+            holding.insert(SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D));
+        }
+        if distinct.contains(&SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C)) {
+            holding.insert(SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C));
+        }
+        if distinct.contains(&SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C)) {
+            holding.insert(SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C));
+        }
+
+        assert_eq!(holding.len(), 1);
     }
 
     #[test]

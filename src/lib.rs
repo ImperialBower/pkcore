@@ -203,7 +203,7 @@ pub trait Shifty: SuitShift + Copy {
     {
         let mut hs = HashSet::new();
         let original = *self;
-        let mut shifted = self.clone();
+        let mut shifted = *self;
         // Tbe original version of this section has a flaw. It adds itself back if there is a gap. We
         // Need to fix that.
         //
