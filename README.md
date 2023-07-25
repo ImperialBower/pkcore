@@ -656,6 +656,10 @@
             * impl FromStr for SortedHeadsUp
             * SortedHeadsUp::generate_csv()
             * Migrate bcrepl methods to SortedHeadsUp
+            * Shifty shifts and other_shifts
+            * TODO TD: The great bcrepl fudd investigation.
+            * SortedHeadsUp.distinct()
+              * SortedHeadsUp.remove_shifts()
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

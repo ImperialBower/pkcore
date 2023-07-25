@@ -108,21 +108,203 @@ impl SortedHeadsUp {
         Ok(hs)
     }
 
-    /// Renaming `all_possible()` to `unique()`.#
+    /// Renaming `all_possible()` to `unique()`.
+    ///
+    /// OK, we are down the rabbit hole here. I've added `Shifty.other_shifts()` so that I can
+    /// easily create a distinct `HashSet` of possible `SortedHeadsUp`s. I've been obsessed with this
+    /// idea of shifting optimization for a while now, and so I might as well see how it plays out.
+    ///
+    /// This is one of the dangers of programming solo. High risk of driving into a ditch, but also
+    /// you can come up with some really cool scheit.
+    ///
+    /// ## The Big Test
+    ///
+    /// The big test of this function will be if when I distill unique down to distinct and back
+    /// up again, there should be the same collection of unique matchups.
+    ///
+    /// Here's our first stab at a `distinct()` function.
+    ///
+    /// It's a little wheels withing wheels for my taste, but if it works, it will be cool AF. Plus,
+    /// come on, shiftshu is a great name for a variable.
+    ///
+    /// Let's create a variant of `examples/generate_all_possible_shu.rs` for distinct values. For this
+    /// I am going to need to update our `generate_csv` method to be able to pass in collections of
+    /// shus.
+    ///
+    /// Taking bets on what it actually does.
+    ///
+    /// ```
+    /// use std::collections::HashSet;
+    /// use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+    /// use pkcore::{PKError, Shifty};
+    /// pub fn distinct() -> Result<HashSet<SortedHeadsUp>, PKError> {
+    ///   let mut hs = SortedHeadsUp::unique()?;
+    ///
+    ///   let v = Vec::from_iter(hs.clone());
+    ///   for shu in &v {
+    ///     if hs.contains(shu) {
+    ///       let shifts = shu.shifts();
+    ///       for shiftshu in Vec::from_iter(shifts) {
+    ///         if hs.contains(shu) {
+    ///           hs.remove(&shiftshu);
+    ///         }
+    ///       }
+    ///     }
+    ///   }
+    ///
+    ///   Ok(hs)
+    /// }
+    /// ```
+    ///
+    /// And if you bet that it returns a completely empty collection, you would be correct. __Sad
+    /// trombone sound.__
+    ///
+    /// Let us tweak it a little bit... shall we?
+    ///
+    /// For this version I've added `println!("{}", hs.len());` to both versions of the generate
+    /// examples to get a count. Again, place your bets on what the count will be for our distinct
+    /// friend here...
+    ///
+    /// ```
+    /// use std::collections::HashSet;
+    /// use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+    /// use pkcore::{PKError, Shifty};
+    ///
+    /// pub fn distinct() -> Result<HashSet<SortedHeadsUp>, PKError> {
+    ///   let mut unique = SortedHeadsUp::unique()?;
+    ///   let mut distinct: HashSet<SortedHeadsUp> = HashSet::new();
+    ///
+    ///   let v = Vec::from_iter(unique.clone());
+    ///   for shu in &v {
+    ///     if unique.contains(shu) {
+    ///       distinct.insert(*shu);
+    ///       let shifts = shu.shifts();
+    ///       for shiftshu in Vec::from_iter(shifts) {
+    ///         if unique.contains(shu) {
+    ///           unique.remove(&shiftshu);
+    ///         }
+    ///       }
+    ///     }
+    ///   }
+    ///
+    ///   Ok(distinct)
+    /// }
+    /// ```
+    ///
+    /// If you bet 451,524 entries, you would be a winner. The unique version generated 812,175
+    /// matchups, which I find interesting.
+    ///
+    /// Now, for this I am going to do a spot check on our little distinct results here, violating
+    /// my primary rule of doing a manual test over automation. Now, technically it's more of a
+    /// value than a rule, so that gives me a get out of developer jail free card.
+    ///
+    /// Here are the four records I am going to spot check on. If things are working correctly,
+    /// there should only be one of them in the file.
+    ///
+    /// ```csv
+    /// 7♦ 7♣,6♠ 6♥
+    /// 7♠ 7♣,6♥ 6♦
+    /// 7♠ 7♥,6♦ 6♣
+    /// 7♥ 7♦,6♠ 6♣
+    /// ```
+    ///
+    /// Alas, the first two are present. It's closer to what we wanted, but not exactly what we
+    /// wanted. This probably explains why there were a lot more records there then we thought there
+    /// would be.
+    ///
+    /// Let's distill down the problem, and write some unit tests, like we should have right from
+    /// the beginning.
+    ///
+    /// Let's add `remove_shifts()`, and test drive it.
     ///
     /// # Errors
     ///
     /// If a deck isn't divisible by 2, which shouldn't happen. Maybe if we add jokers some day.
     pub fn distinct() -> Result<HashSet<SortedHeadsUp>, PKError> {
-        let mut hs: HashSet<SortedHeadsUp> = HashSet::new();
-        for v in Cards::deck().combinations(2) {
-            let hero = Two::try_from(v.as_slice())?;
-            for r in hero.remaining().combinations(2) {
-                let villain = Two::try_from(r.as_slice())?;
-                hs.insert(SortedHeadsUp::new(hero, villain));
+        let mut unique = SortedHeadsUp::unique()?;
+        let mut distinct: HashSet<SortedHeadsUp> = HashSet::new();
+
+        let v = Vec::from_iter(unique.clone());
+        for shu in &v {
+            if unique.contains(shu) {
+                distinct.insert(*shu);
+                let shifts = shu.shifts();
+                for shiftshu in Vec::from_iter(shifts) {
+                    if unique.contains(shu) {
+                        unique.remove(&shiftshu);
+                    }
+                }
             }
         }
-        Ok(hs)
+
+        Ok(distinct)
+    }
+
+    /// This should be interesting. Certainly testable.
+    ///
+    /// First we start with the bare signature for the function:
+    ///
+    /// ```txt
+    /// pub fn remove_shifts(&self, from: &mut HashSet<SortedHeadsUp>) {
+    ///   todo!()
+    /// }
+    /// ```
+    ///
+    /// A couple things of note. This is a method with side effects. That's something to watch
+    /// out for. When it's the best tool for the job, go right ahead, but just be careful. Also,
+    /// not that we have a &self in the sig, which may, or may not, bite us in the ass. __We shall
+    /// see... 😈__
+    ///
+    /// Here's our sure to fail test after letting the compiler guide us:
+    ///
+    /// ```txt
+    /// #[test]
+    /// fn remove_shifts() {
+    ///     let mut hs = SortedHeadsUp::unique().unwrap();
+    ///     let shu = HANDS_7D_7C_V_6S_6H;
+    ///
+    ///     shu.remove_shifts(&mut hs);
+    /// }
+    /// ```
+    ///
+    /// I'll confess that the line `shu.remove_shifts(&mut hs)` surprised me. I was a tad surprised
+    /// about needing the `&mut` prefix. It's been a long time since I passed in a mutable
+    /// reference.
+    ///
+    /// Let's add a little more heft to the test.
+    ///
+    /// ```txt
+    /// #[test]
+    /// fn remove_shifts() {
+    ///     let mut hs = SortedHeadsUp::unique().unwrap();
+    ///     let shu = HANDS_7D_7C_V_6S_6H;
+    ///
+    ///     shu.remove_shifts(&mut hs);
+    ///
+    ///     assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
+    /// }
+    /// ```
+    ///
+    /// Now we've got one assertion, let's write some code...
+    /// let mut unique = SortedHeadsUp::unique()?;
+    //         let mut distinct: HashSet<SortedHeadsUp> = HashSet::new();
+    //
+    //         let v = Vec::from_iter(unique.clone());
+    //         for shu in &v {
+    //             if unique.contains(shu) {
+    //                 distinct.insert(*shu);
+    //                 let shifts = shu.shifts();
+    //                 for shiftshu in Vec::from_iter(shifts) {
+    //                     if unique.contains(shu) {
+    //                         unique.remove(&shiftshu);
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //
+    //         Ok(distinct)
+    pub fn remove_shifts(&self, from: &mut HashSet<SortedHeadsUp>) {
+        todo!()
     }
 
     /// I want to be able to generate these values into a CSV file, so that I can use them to
@@ -274,10 +456,12 @@ impl SortedHeadsUp {
     /// # Panics
     ///
     /// When can't write to file system
-    pub fn generate_csv(path: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn generate_csv(
+        path: &str,
+        shus: HashSet<SortedHeadsUp>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut wtr = WriterBuilder::new().has_headers(true).from_path(path)?;
-        let hs = SortedHeadsUp::unique().unwrap();
-        let v = Vec::from_iter(hs);
+        let v = Vec::from_iter(shus);
         for shu in &v {
             wtr.serialize(shu)?;
         }
@@ -668,6 +852,22 @@ mod arrays__matchups__sorted_heads_up {
         assert!(HANDS_7D_7C_V_6S_6H.is_lower(&Two::HAND_6S_6H));
         assert!(!HANDS_7D_7C_V_6S_6H.is_lower(&Two::HAND_7D_7C));
         assert!(!HANDS_7D_7C_V_6S_6H.is_lower(&Two::HAND_7S_7C));
+    }
+
+    /// 7♠ 7♣ - 6♥ 6♦
+    /// 7♠ 7♥ - 6♦ 6♣
+    /// 7♥ 7♦ - 6♠ 6♣
+    ///         expected.insert(SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D));
+    //         expected.insert(SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C));
+    //         expected.insert(SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C));
+    #[test]
+    fn remove_shifts() {
+        let mut hs = SortedHeadsUp::unique().unwrap();
+        let shu = HANDS_7D_7C_V_6S_6H;
+
+        shu.remove_shifts(&mut hs);
+
+        assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
     }
 
     /// Wow, this test caused a panic:

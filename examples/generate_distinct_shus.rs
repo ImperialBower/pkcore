@@ -4,9 +4,9 @@ fn main() {
     let now = std::time::Instant::now();
     env_logger::init();
 
-    let hs = SortedHeadsUp::unique().unwrap();
+    let hs = SortedHeadsUp::distinct().unwrap();
     println!("{}", hs.len());
-    SortedHeadsUp::generate_csv("generated/all_possible_shu.csv", hs).expect("TODO: panic message");
+    SortedHeadsUp::generate_csv("generated/distinct_shu.csv", hs).expect("TODO: panic message");
 
     println!("Elapsed: {:.2?}", now.elapsed());
 }
