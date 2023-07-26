@@ -1,6 +1,7 @@
 use csv::Reader;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use std::fs::File;
+use rusqlite::{Connection, Result};
 
 /// Naked
 /// ```
@@ -82,12 +83,20 @@ use std::fs::File;
 /// A♠ K♠ 7♣ 6♣, 60.14% (1029832), 39.42% (674947), 0.44% (7525)
 ///
 /// 3♣ 2♦ 3♦ 2♣, 0.71% (12216), 0.71% (12216), 98.57% (1687872)
-fn main() {
-    let file = File::open("generated/distinct_shu_subset.csv").unwrap();
-    let mut rdr = Reader::from_reader(file);
+fn main() -> Result<()> {
+
+    let conn = Connection::open(":memory:")?;
+    let mut rdr = reader();
 
     for result in rdr.deserialize() {
         let shu: SortedHeadsUp = result.unwrap();
         println!("{}", shu);
     }
+
+    Ok(())
+}
+
+fn reader() -> Reader<File> {
+    let file = File::open("generated/distinct_shu_subset.csv").unwrap();
+    Reader::from_reader(file)
 }
