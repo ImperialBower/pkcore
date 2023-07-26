@@ -1,5 +1,9 @@
+use std::cmp::Ordering;
+use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
 use crate::analysis::store::db::sqlite::Sqlable;
+use crate::arrays::five::Five;
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::util::wincounter::win::Win;
@@ -110,6 +114,66 @@ impl Display for HUPResult {
     }
 }
 
+impl From<SortedHeadsUp> for HUPResult {
+    /// Clippy doesn't like our higher lower section. Normally, this is a
+    /// lint I turn off, but let's do it.
+    ///
+    /// Here's the original:
+    ///
+    /// ```txt
+    /// if high_rank.rank < low_rank.rank {
+    ///   wins.add(Win::FIRST);
+    /// } else if low_rank.rank < high_rank.rank {
+    ///   wins.add(Win::SECOND);
+    /// } else {
+    ///   wins.add(Win::FIRST | Win::SECOND);
+    /// }
+    /// ```
+    ///
+    /// And, of course, I invert the match, which loses me another 10 minutes. Once we close this
+    /// epic, we're going to need to setup an odds service to isolate this into something we can
+    /// just keep running in the background. 
+    fn from(shu: SortedHeadsUp) -> Self {
+        let higher_bard = shu.higher.bard();
+        let lower_bard = shu.lower.bard();
+
+        let mut wins = Wins::default();
+
+        // I honestly love how easy our code makes us do stuff like that. When it flows like
+        // water, you know you're on the right track.
+        for combo in shu.remaining().combinations(5) {
+            let five = Five::try_from(combo).unwrap();
+            let high7 = Seven::from_case_at_deal(shu.higher, five)
+                .unwrap()
+                .to_bard();
+            let low7 = Seven::from_case_at_deal(shu.lower, five).unwrap().to_bard();
+
+            let high_rank = BC_RANK_HASHMAP.get(&high7).unwrap();
+            let low_rank = BC_RANK_HASHMAP.get(&low7).unwrap();
+
+            match high_rank.rank.cmp(&low_rank.rank) {
+                Ordering::Less => wins.add(Win::FIRST),
+                Ordering::Greater => wins.add(Win::SECOND),
+                Ordering::Equal => wins.add(Win::FIRST | Win::SECOND),
+            }
+        }
+
+        let (higher_wins, higher_ties) = wins.wins_for(Win::FIRST);
+        let (lower_wins, lower_ties) = wins.wins_for(Win::SECOND);
+        assert_eq!(higher_ties, lower_ties);
+
+        let ties = u64::try_from(lower_ties).unwrap();
+
+        HUPResult {
+            higher: higher_bard,
+            lower: lower_bard,
+            higher_wins: u64::try_from(higher_wins).unwrap() - ties,
+            lower_wins: u64::try_from(lower_wins).unwrap() - ties,
+            ties: u64::try_from(lower_ties).unwrap(),
+        }
+    }
+}
+
 impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
     fn create_table(conn: &Connection) -> rusqlite::Result<usize> {
         log::debug!("HUPResult::create_table({:?})", conn);
@@ -208,6 +272,40 @@ mod analysis__store__db__hupresult_tests {
             "6♠ 6♥ (1365284) 5♦ 5♣ (314904) ties: (32116)",
             TestData::the_hand_as_hup_result().to_string()
         );
+    }
+
+    /// This is going to be a very very heavy test, since we will need to load our
+    /// 4GB binary bard map cache into memory before we can even do the calculation.
+    /// Once we get it to pass, we can ignore it, and punch it into an example to run.
+    ///
+    /// Fudge! The test fails.
+    ///
+    /// ```txt
+    /// Left:  HUPResult { higher: Bard(8797166764032), lower: Bard(65544), higher_wins: 1397400, lower_wins: 347020, ties: 32116 }
+    /// Right: HUPResult { higher: Bard(8797166764032), lower: Bard(65544), higher_wins: 1365284, lower_wins: 314904, ties: 32116 }
+    /// ```
+    ///
+    /// So, let's see what the difference is.
+    ///
+    /// ```txt
+    /// 1397400 - 1365284 = 32116
+    /// 347020 - 314904 = 32116
+    /// ```
+    ///
+    /// **Smacks forehead.** Our old bcrepl subtracts the ties from the wins entries. That explains
+    /// that. I could try to consolidate the code, but right now I just want to start getting results
+    /// into sqlite.
+    ///
+    /// This time for sure!
+    ///
+    /// Subtracting times from each wins makes the test pass. Now, we're going to lock it in the
+    /// vault with an ignore.
+    #[test]
+    #[ignore]
+    fn from__sorted_heads_up() {
+        let actual = HUPResult::from(TestData::the_hand_sorted_headsup());
+
+        assert_eq!(actual, TestData::the_hand_as_hup_result());
     }
 
     #[test]

@@ -661,6 +661,7 @@
             * SortedHeadsUp.distinct()
               * SortedHeadsUp.remove_shifts()
               * Refactoring distinct()
+            * impl From<SortedHeadsUp> for HUPResult
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

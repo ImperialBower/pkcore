@@ -1,3 +1,7 @@
+use csv::Reader;
+use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+use std::fs::File;
+
 /// Naked
 /// ```
 /// A♠ A♥ 7♦ 7♣, 79.69% (1364608), 20.05% (343300), 0.26% (4396)
@@ -78,4 +82,12 @@
 /// A♠ K♠ 7♣ 6♣, 60.14% (1029832), 39.42% (674947), 0.44% (7525)
 ///
 /// 3♣ 2♦ 3♦ 2♣, 0.71% (12216), 0.71% (12216), 98.57% (1687872)
-fn main() {}
+fn main() {
+    let file = File::open("generated/distinct_shu_subset.csv").unwrap();
+    let mut rdr = Reader::from_reader(file);
+
+    for result in rdr.deserialize() {
+        let shu: SortedHeadsUp = result.unwrap();
+        println!("{}", shu);
+    }
+}
