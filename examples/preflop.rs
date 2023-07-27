@@ -1,7 +1,9 @@
 use csv::Reader;
+use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
-use std::fs::File;
+use pkcore::Shifty;
 use rusqlite::{Connection, Result};
+use std::fs::File;
 
 /// Naked
 /// ```
@@ -12,7 +14,6 @@ use rusqlite::{Connection, Result};
 /// A♠ A♥ 3♦ 3♣, 80.88% (1384984), 18.68% (319884), 0.43% (7436)
 /// A♠ A♥ 2♦ 2♣, 81.30% (1392072), 18.20% (311672), 0.50% (8560)
 /// ```
-
 /// A♠ A♥ A♦ A♣, 2.17% (37210), 2.17% (37210), 95.65% (1637884)
 /// A♠ A♥ K♦ K♣, 81.06% (1388072), 18.55% (317694), 0.38% (6538)
 /// A♠ A♥ K♠ K♣, 81.71% (1399204), 17.82% (305177), 0.46% (7923)
@@ -84,19 +85,39 @@ use rusqlite::{Connection, Result};
 ///
 /// 3♣ 2♦ 3♦ 2♣, 0.71% (12216), 0.71% (12216), 98.57% (1687872)
 fn main() -> Result<()> {
-
     let conn = Connection::open(":memory:")?;
     let mut rdr = reader();
 
-    for result in rdr.deserialize() {
-        let shu: SortedHeadsUp = result.unwrap();
+    for deserialized_shu in rdr.deserialize() {
+        let shu: SortedHeadsUp = deserialized_shu.unwrap();
         println!("{}", shu);
+
+        process(&shu);
     }
 
     Ok(())
 }
 
+fn calc(_shu: &SortedHeadsUp) -> HUPResult {
+    HUPResult::default()
+}
+
+fn process(shu: &SortedHeadsUp) {
+    let hupr = calc(&shu);
+    println!("..... {}", hupr);
+
+    store(shu, &hupr);
+}
+
 fn reader() -> Reader<File> {
     let file = File::open("generated/distinct_shu_subset.csv").unwrap();
     Reader::from_reader(file)
+}
+
+/// OK, it's clear that we've messed up a little bit. We need to get all the shifted results in
+/// the database too, but right now `SortedHeadsUp` implements it, and `HUPResult` doesn't, but `HUPResult`
+/// is the struct that stores the results. We can either hack it in, or implement `SuitShift` and
+/// `Shifty` on `HUPResult`. Let's do it the right way, shall we?
+fn store(shu: &SortedHeadsUp, hupr: &HUPResult) {
+    for s in shu.shifts() {}
 }

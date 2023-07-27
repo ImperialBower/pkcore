@@ -662,6 +662,7 @@
               * SortedHeadsUp.remove_shifts()
               * Refactoring distinct()
             * impl From<SortedHeadsUp> for HUPResult
+            * examples/preflop.rs let's go!
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

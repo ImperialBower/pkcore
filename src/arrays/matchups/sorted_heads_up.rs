@@ -1,3 +1,4 @@
+use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::analysis::the_nuts::TheNuts;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
@@ -873,6 +874,22 @@ impl TryFrom<Cards> for SortedHeadsUp {
 
             _ => Err(PKError::TooManyCards),
         }
+    }
+}
+
+impl TryFrom<&HUPResult> for SortedHeadsUp {
+    type Error = PKError;
+
+    fn try_from(hup: &HUPResult) -> Result<Self, Self::Error> {
+        let higher_two = match Two::try_from(hup.higher) {
+            Ok(t) => t,
+            Err(_) => Two::default(),
+        };
+        let lower_two = match Two::try_from(hup.lower) {
+            Ok(t) => t,
+            Err(_) => Two::default(),
+        };
+        Ok(SortedHeadsUp::new(higher_two, lower_two))
     }
 }
 

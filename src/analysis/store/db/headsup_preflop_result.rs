@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
 use crate::analysis::store::db::sqlite::Sqlable;
 use crate::arrays::five::Five;
@@ -8,9 +7,10 @@ use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
-use crate::Pile;
+use crate::{Pile, PKError, SuitShift};
 use rusqlite::{named_params, Connection};
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
@@ -98,18 +98,23 @@ impl HUPResult {
 
 impl Display for HUPResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let higher_two = match Two::try_from(self.higher) {
-            Ok(t) => t,
-            Err(_) => Two::default(),
+        let sho = match SortedHeadsUp::try_from(self) {
+            Ok(s) => s,
+            Err(_) => SortedHeadsUp::default(),
         };
-        let lower_two = match Two::try_from(self.lower) {
-            Ok(t) => t,
-            Err(_) => Two::default(),
-        };
+
+        // let higher_two = match Two::try_from(self.higher) {
+        //     Ok(t) => t,
+        //     Err(_) => Two::default(),
+        // };
+        // let lower_two = match Two::try_from(self.lower) {
+        //     Ok(t) => t,
+        //     Err(_) => Two::default(),
+        // };
         write!(
             f,
-            "{higher_two} ({}) {lower_two} ({}) ties: ({})",
-            self.higher_wins, self.lower_wins, self.ties
+            "{} ({}) {} ({}) ties: ({})",
+            sho.higher, self.higher_wins, sho.lower, self.lower_wins, self.ties
         )
     }
 }
@@ -255,6 +260,24 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
             .ok()?;
 
         Some(hup)
+    }
+}
+
+impl SuitShift for HUPResult {
+    fn shift_suit_down(&self) -> Self {
+        let shu = match SortedHeadsUp::try_from(self) {
+            Ok(s) => s.shift_suit_down(),
+            Err(_) => SortedHeadsUp::default(),
+        };
+        
+    }
+
+    fn shift_suit_up(&self) -> Self {
+        todo!()
+    }
+
+    fn opposite(&self) -> Self {
+        todo!()
     }
 }
 
