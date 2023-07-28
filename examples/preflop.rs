@@ -1,12 +1,12 @@
 use csv::Reader;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
+use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
-use pkcore::{Shifty};
-use rusqlite::{Connection, Result};
+use pkcore::Shifty;
+use rusqlite::Connection;
 use std::fs::File;
 use std::io;
 use std::io::Write;
-use pkcore::analysis::store::db::sqlite::Sqlable;
 
 /// Naked
 /// ```txt
@@ -94,9 +94,18 @@ use pkcore::analysis::store::db::sqlite::Sqlable;
 /// What's really fun about all this is that we are progressing from simple calculations to actual
 /// functional composition with the domain data. It is becoming, as I like to say, `plastic`. A
 /// material that we can shape with for our own amusement and utility.
+///
+/// ## Insert
+///
+/// OK, so we've got records inserting into an actual sqlite DB. Now, we need to deal with a
+/// logic flow problem in that we aren't checking if the record is already in the db BEFORE
+/// we do the calculations. This is already a really heavy process. We need to save all the
+/// time we can.
+///
+/// `cargo run --example preflop`
 fn main() {
     // TODO TD: There should be an easy way to cast this into our error.
-    let conn = Connection::open(":memory:").unwrap();
+    let conn = Connection::open("generated/hups.db").unwrap();
     HUPResult::create_table(&conn).unwrap();
     let mut rdr = reader();
 
@@ -120,7 +129,7 @@ fn main() {
     // }
 }
 
-fn read_input(conn: &Connection, mut shus: &mut Vec<SortedHeadsUp>) {
+fn read_input(conn: &Connection, shus: &mut Vec<SortedHeadsUp>) {
     let now = std::time::Instant::now();
 
     print!("hole cards> ");

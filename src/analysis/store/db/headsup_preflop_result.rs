@@ -357,7 +357,7 @@ mod analysis__store__db__hupresult_tests {
     #[test]
     #[ignore]
     fn from__sorted_heads_up() {
-        let actual = HUPResult::from(TestData::the_hand_sorted_headsup());
+        let actual = HUPResult::from(&TestData::the_hand_sorted_headsup());
 
         assert_eq!(actual, TestData::the_hand_as_hup_result());
     }
