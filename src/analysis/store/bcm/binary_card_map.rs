@@ -186,6 +186,10 @@ impl Sqlable<SevenFiveBCM, Bard> for SevenFiveBCM {
         )
     }
 
+    fn exists(conn: &Connection, record: &SevenFiveBCM) -> bool {
+        todo!()
+    }
+
     fn insert(conn: &Connection, bcm: &SevenFiveBCM) -> rusqlite::Result<usize> {
         let mut stmt =
             conn.prepare("INSERT INTO bcm (bc, best, rank) VALUES (:bc, :best, :rank)")?;

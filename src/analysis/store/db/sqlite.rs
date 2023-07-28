@@ -75,6 +75,8 @@ pub trait Sqlable<T, S> {
     /// Throws an error if rusqlite isn't able to create the table.
     fn create_table(conn: &Connection) -> rusqlite::Result<usize>;
 
+    fn exists(conn: &Connection, record: &T) -> bool;
+
     /// # Errors
     ///
     /// Throws an error if rusqlite isn't able to insert the record into the table. Should not

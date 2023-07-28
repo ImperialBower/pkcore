@@ -669,6 +669,7 @@
               * preflop - take count
               * impl Shifty for HUPResult {}
               * inserting test
+              * need Sqlable.exists()
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

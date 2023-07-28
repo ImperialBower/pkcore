@@ -203,6 +203,10 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
         )
     }
 
+    fn exists(conn: &Connection, record: &HUPResult) -> bool {
+        todo!()
+    }
+
     fn insert(conn: &Connection, hup: &HUPResult) -> rusqlite::Result<usize> {
         log::debug!("HUPResult::insert({})", hup);
         let mut stmt = conn.prepare(
