@@ -203,8 +203,16 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
         )
     }
 
+    /// This was written to Paul van Dyk's
+    /// [VONYC Sessions #873](https://www.youtube.com/watch?v=9NdjCGH83UI&t=5073s).
+    ///
+    /// TODO: Write about music and mood and pairing.
     fn exists(conn: &Connection, record: &HUPResult) -> bool {
-        todo!()
+        match SortedHeadsUp::try_from(record) {
+            Ok(shu) => HUPResult::select(conn, &shu).is_some(),
+            Err(_) => false,
+        }
+        // let select = HUPResult::select(conn, &SortedHeadsUp::try_from(&record))
     }
 
     fn insert(conn: &Connection, hup: &HUPResult) -> rusqlite::Result<usize> {
@@ -370,6 +378,21 @@ mod analysis__store__db__hupresult_tests {
     fn sqlable__create_table() {
         let conn = Connect::in_memory_connection().unwrap().connection;
         assert!(HUPResult::create_table(&conn).is_ok())
+    }
+
+    #[test]
+    fn sqlable__exists() {
+        // Preamble
+        let conn = Connect::in_memory_connection().unwrap().connection;
+        HUPResult::create_table(&conn).unwrap();
+        let the_hand = TestData::the_hand_as_hup_result();
+
+        // the work
+        let i = HUPResult::insert(&conn, &the_hand).unwrap();
+
+        // the proof
+        assert!(HUPResult::exists(&conn, &the_hand));
+        assert_eq!(i, 1);
     }
 
     /// ```

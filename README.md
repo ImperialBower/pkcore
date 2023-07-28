@@ -670,6 +670,7 @@
               * impl Shifty for HUPResult {}
               * inserting test
               * need Sqlable.exists()
+                * HUPResult::exists()
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
