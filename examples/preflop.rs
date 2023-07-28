@@ -1,19 +1,20 @@
 use csv::Reader;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
-use pkcore::Shifty;
+use pkcore::{Shifty};
 use rusqlite::{Connection, Result};
 use std::fs::File;
+use std::io;
+use std::io::Write;
 
 /// Naked
-/// ```
+/// ```txt
 /// A♠ A♥ 7♦ 7♣, 79.69% (1364608), 20.05% (343300), 0.26% (4396)
 /// A♠ A♥ 6♦ 6♣, 79.66% (1363968), 20.05% (343394), 0.29% (4942)
 /// A♠ A♥ 5♦ 5♣, 80.06% (1370808), 19.60% (335688), 0.34% (5808)
 /// A♠ A♥ 4♦ 4♣, 80.47% (1377896), 19.15% (327870), 0.38% (6538)
 /// A♠ A♥ 3♦ 3♣, 80.88% (1384984), 18.68% (319884), 0.43% (7436)
 /// A♠ A♥ 2♦ 2♣, 81.30% (1392072), 18.20% (311672), 0.50% (8560)
-/// ```
 /// A♠ A♥ A♦ A♣, 2.17% (37210), 2.17% (37210), 95.65% (1637884)
 /// A♠ A♥ K♦ K♣, 81.06% (1388072), 18.55% (317694), 0.38% (6538)
 /// A♠ A♥ K♠ K♣, 81.71% (1399204), 17.82% (305177), 0.46% (7923)
@@ -84,18 +85,62 @@ use std::fs::File;
 /// A♠ K♠ 7♣ 6♣, 60.14% (1029832), 39.42% (674947), 0.44% (7525)
 ///
 /// 3♣ 2♦ 3♦ 2♣, 0.71% (12216), 0.71% (12216), 98.57% (1687872)
-fn main() -> Result<()> {
-    let conn = Connection::open(":memory:")?;
+/// ```
+///
+/// I'm going to add an initial step to this idea, where you input a number for the amount of
+/// matchups you want to calculate. This will give me some control over the work.
+///
+/// What's really fun about all this is that we are progressing from simple calculations to actual
+/// functional composition with the domain data. It is becoming, as I like to say, `plastic`. A
+/// material that we can shape with for our own amusement and utility.
+fn main() {
+    // TODO TD: There should be an easy way to cast this into our error.
+    let conn = Connection::open(":memory:").unwrap();
     let mut rdr = reader();
 
-    for deserialized_shu in rdr.deserialize() {
-        let shu: SortedHeadsUp = deserialized_shu.unwrap();
-        println!("{}", shu);
+    // There ought to be a clean way to do this.
+    // let _shus: Vec<SortedHeadsUp> = rdr.deserialize::<SortedHeadsUp>().into_iter().collect();
 
-        process(&shu);
+    let mut shus: Vec<SortedHeadsUp> = Vec::new();
+    for deserialized_shu in rdr.deserialize::<SortedHeadsUp>() {
+        shus.push(deserialized_shu.unwrap())
     }
 
-    Ok(())
+    loop {
+        read_input(&mut shus);
+    }
+
+    // for deserialized_shu in rdr.deserialize::<SortedHeadsUp>() {
+    //     let shu: SortedHeadsUp = deserialized_shu.unwrap();
+    //     println!("{}", shu);
+    //
+    //     process(&shu);
+    // }
+}
+
+fn read_input(mut shus: &mut Vec<SortedHeadsUp>) {
+    let now = std::time::Instant::now();
+
+    print!("hole cards> ");
+    let _ = io::stdout().flush();
+    let mut input_text = String::new();
+    io::stdin()
+        .read_line(&mut input_text)
+        .expect("Failed to receive value");
+    let trimmed = input_text.trim();
+    let i = match trimmed.parse::<u32>() {
+        Ok(i) => i,
+        Err(..) => 0,
+    };
+
+    println!("Processing {i} hands.");
+
+    for _ in 0..i {
+        let shu = shus.pop().unwrap();
+        println!("{shu}");
+    }
+
+    println!("read_input() time elapsed: {:.2?}", now.elapsed());
 }
 
 fn calc(_shu: &SortedHeadsUp) -> HUPResult {
@@ -110,7 +155,7 @@ fn process(shu: &SortedHeadsUp) {
 }
 
 fn reader() -> Reader<File> {
-    let file = File::open("generated/distinct_shu_subset.csv").unwrap();
+    let file = File::open("generated/distinct_shu.csv").unwrap();
     Reader::from_reader(file)
 }
 

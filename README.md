@@ -663,6 +663,10 @@
               * Refactoring distinct()
             * impl From<SortedHeadsUp> for HUPResult
             * examples/preflop.rs let's go!
+              * impl SuitShift for HUPResult
+                * impl From<HUPResult> for SortedHeadsUp
+                * TODO TD: SuitShift.opposite() don't trust it.
+              * preflop - take count
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

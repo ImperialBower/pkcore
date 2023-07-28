@@ -13,6 +13,7 @@ use std::str::FromStr;
 pub struct Two(#[serde(deserialize_with = "deserialize_two_index")] [Card; 2]);
 
 impl Two {
+    // TODO: Can we do this with a macro?
     // region hand constants
 
     // region pairs

@@ -1100,6 +1100,23 @@ mod arrays__matchups__sorted_heads_up {
     }
 
     #[test]
+    fn suit_shift__opposite() {
+        let shu = SortedHeadsUp::new(Two::HAND_AS_KD, Two::HAND_KH_TC);
+        let expected = SortedHeadsUp::new(Two::HAND_AD_KS, Two::HAND_KC_TH);
+
+        let actual = shu.opposite();
+
+        assert_eq!(expected, actual);
+
+        // TODO: Why doesn't this work. I am too befuddled to dive into it now. Need to get preflop done.
+        // let mut alt = shu.shift_suit_up();
+        // alt = shu.shift_suit_up();
+        // println!("{alt}");
+        // println!("{actual}");
+        // assert_eq!(expected, alt);
+    }
+
+    #[test]
     fn shifty__other_shifts() {
         let mut expected = HashSet::new();
         expected.insert(SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D));

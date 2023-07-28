@@ -3,11 +3,10 @@ use crate::analysis::store::db::sqlite::Sqlable;
 use crate::arrays::five::Five;
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::arrays::seven::Seven;
-use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
-use crate::{Pile, PKError, SuitShift};
+use crate::{Pile, SuitShift};
 use rusqlite::{named_params, Connection};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -265,19 +264,48 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
 
 impl SuitShift for HUPResult {
     fn shift_suit_down(&self) -> Self {
-        let shu = match SortedHeadsUp::try_from(self) {
+        let mut shu = match SortedHeadsUp::try_from(self) {
             Ok(s) => s.shift_suit_down(),
             Err(_) => SortedHeadsUp::default(),
         };
-        
+        shu = shu.shift_suit_down();
+        HUPResult {
+            higher: shu.higher_as_bard(),
+            lower: shu.lower_as_bard(),
+            higher_wins: self.higher_wins,
+            lower_wins: self.lower_wins,
+            ties: self.ties,
+        }
     }
 
     fn shift_suit_up(&self) -> Self {
-        todo!()
+        let mut shu = match SortedHeadsUp::try_from(self) {
+            Ok(s) => s.shift_suit_up(),
+            Err(_) => SortedHeadsUp::default(),
+        };
+        shu = shu.shift_suit_up();
+        HUPResult {
+            higher: shu.higher_as_bard(),
+            lower: shu.lower_as_bard(),
+            higher_wins: self.higher_wins,
+            lower_wins: self.lower_wins,
+            ties: self.ties,
+        }
     }
 
     fn opposite(&self) -> Self {
-        todo!()
+        let mut shu = match SortedHeadsUp::try_from(self) {
+            Ok(s) => s.opposite(),
+            Err(_) => SortedHeadsUp::default(),
+        };
+        shu = shu.opposite();
+        HUPResult {
+            higher: shu.higher_as_bard(),
+            lower: shu.lower_as_bard(),
+            higher_wins: self.higher_wins,
+            lower_wins: self.lower_wins,
+            ties: self.ties,
+        }
     }
 }
 
@@ -286,6 +314,7 @@ impl SuitShift for HUPResult {
 mod analysis__store__db__hupresult_tests {
     use super::*;
     use crate::analysis::store::db::sqlite::Connect;
+    use crate::arrays::two::Two;
     use crate::util::data::TestData;
 
     /// I'm test driving this one backwards. I do that some time.
@@ -367,5 +396,27 @@ mod analysis__store__db__hupresult_tests {
         assert!(actual.is_some());
         assert_eq!(TestData::the_hand_as_hup_result(), actual.unwrap());
         assert!(nope.is_none());
+    }
+
+    #[test]
+    fn suit_shift__shift_suit_down() {
+        let hup = TestData::the_hand_as_hup_result();
+        let mut shifted = hup.shift_suit_down();
+        for _ in 0..3 {
+            shifted = shifted.shift_suit_down();
+        }
+
+        assert_eq!(hup, shifted);
+    }
+
+    #[test]
+    fn suit_shift__shift_suit_up() {
+        let hup = TestData::the_hand_as_hup_result();
+        let mut shifted = hup.shift_suit_up();
+        for _ in 0..3 {
+            shifted = shifted.shift_suit_up();
+        }
+
+        assert_eq!(hup, shifted);
     }
 }

@@ -189,6 +189,8 @@ pub trait SuitShift {
     #[must_use]
     fn shift_suit_up(&self) -> Self;
 
+    /// I don't trust this concept. Up and down are straightforward, but not this
+    /// I need to do a deep dive into unique and distinct patterns.
     #[must_use]
     fn opposite(&self) -> Self;
 }
