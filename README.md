@@ -668,6 +668,7 @@
                 * TODO TD: SuitShift.opposite() don't trust it.
               * preflop - take count
               * impl Shifty for HUPResult {}
+              * inserting test
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

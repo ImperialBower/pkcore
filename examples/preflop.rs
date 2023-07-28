@@ -6,6 +6,7 @@ use rusqlite::{Connection, Result};
 use std::fs::File;
 use std::io;
 use std::io::Write;
+use pkcore::analysis::store::db::sqlite::Sqlable;
 
 /// Naked
 /// ```txt
@@ -96,6 +97,7 @@ use std::io::Write;
 fn main() {
     // TODO TD: There should be an easy way to cast this into our error.
     let conn = Connection::open(":memory:").unwrap();
+    HUPResult::create_table(&conn).unwrap();
     let mut rdr = reader();
 
     // There ought to be a clean way to do this.
@@ -144,8 +146,8 @@ fn read_input(conn: &Connection, mut shus: &mut Vec<SortedHeadsUp>) {
     println!("read_input() time elapsed: {:.2?}", now.elapsed());
 }
 
-fn calc(_shu: &SortedHeadsUp) -> HUPResult {
-    HUPResult::default()
+fn calc(shu: &SortedHeadsUp) -> HUPResult {
+    HUPResult::from(shu)
 }
 
 fn process(conn: &Connection, shu: &SortedHeadsUp) {
@@ -164,9 +166,30 @@ fn reader() -> Reader<File> {
 /// the database too, but right now `SortedHeadsUp` implements it, and `HUPResult` doesn't, but `HUPResult`
 /// is the struct that stores the results. We can either hack it in, or implement `SuitShift` and
 /// `Shifty` on `HUPResult`. Let's do it the right way, shall we?
+///
+/// OK, I'll confess that this makes me very happy:
+///
+/// ```txt
+/// hole cards> 2
+/// Processing 2 hands.
+/// J♠ J♦ - J♥ J♣
+/// ..... __ __ (0) __ __ (0) ties: (0)
+/// >>>>> __ __ (0) __ __ (0) ties: (0) inserted!
+/// A♠ 9♥ - A♦ 9♣
+/// ..... __ __ (0) __ __ (0) ties: (0)
+/// >>>>> __ __ (0) __ __ (0) ties: (0) already exists!
+/// read_input() time elapsed: 1.69s
+/// ```
 fn store(conn: &Connection, hup: &HUPResult) {
     for s in hup.shifts() {
-
-        println!(">>>>> {s}");
+        match HUPResult::select(conn, &SortedHeadsUp::try_from(&s).unwrap()) {
+            None => {
+                HUPResult::insert(conn, hup).unwrap();
+                println!(">>>>> {s} inserted!");
+            }
+            Some(_) => {
+                println!(">>>>> {s} already exists!");
+            }
+        }
     }
 }

@@ -118,7 +118,7 @@ impl Display for HUPResult {
     }
 }
 
-impl From<SortedHeadsUp> for HUPResult {
+impl From<&SortedHeadsUp> for HUPResult {
     /// Clippy doesn't like our higher lower section. Normally, this is a
     /// lint I turn off, but let's do it.
     ///
@@ -137,7 +137,7 @@ impl From<SortedHeadsUp> for HUPResult {
     /// And, of course, I invert the match, which loses me another 10 minutes. Once we close this
     /// epic, we're going to need to setup an odds service to isolate this into something we can
     /// just keep running in the background.
-    fn from(shu: SortedHeadsUp) -> Self {
+    fn from(shu: &SortedHeadsUp) -> Self {
         let higher_bard = shu.higher.bard();
         let lower_bard = shu.lower.bard();
 
