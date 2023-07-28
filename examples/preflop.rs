@@ -120,19 +120,12 @@ fn main() {
     loop {
         read_input(&conn, &mut shus);
     }
-
-    // for deserialized_shu in rdr.deserialize::<SortedHeadsUp>() {
-    //     let shu: SortedHeadsUp = deserialized_shu.unwrap();
-    //     println!("{}", shu);
-    //
-    //     process(&shu);
-    // }
 }
 
 fn read_input(conn: &Connection, shus: &mut Vec<SortedHeadsUp>) {
     let now = std::time::Instant::now();
 
-    print!("hole cards> ");
+    print!("How many runs? ");
     let _ = io::stdout().flush();
     let mut input_text = String::new();
     io::stdin()
@@ -164,6 +157,10 @@ fn calc(shu: &SortedHeadsUp) -> HUPResult {
 ///
 /// And right away we see that we got the Trait's method sig wrong. Needs to be
 /// `fn exists(conn: &Connection, record: &S) -> bool;`
+///
+/// Much better. Let's go!!!!!
+///
+/// Time for an overnight test.
 fn process(conn: &Connection, shu: &SortedHeadsUp) {
     if HUPResult::exists(conn, shu) {
         println!("..... already exists");
