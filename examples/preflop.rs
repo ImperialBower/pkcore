@@ -107,7 +107,7 @@ fn main() {
     }
 
     loop {
-        read_input(&mut shus);
+        read_input(&conn, &mut shus);
     }
 
     // for deserialized_shu in rdr.deserialize::<SortedHeadsUp>() {
@@ -118,7 +118,7 @@ fn main() {
     // }
 }
 
-fn read_input(mut shus: &mut Vec<SortedHeadsUp>) {
+fn read_input(conn: &Connection, mut shus: &mut Vec<SortedHeadsUp>) {
     let now = std::time::Instant::now();
 
     print!("hole cards> ");
@@ -138,6 +138,7 @@ fn read_input(mut shus: &mut Vec<SortedHeadsUp>) {
     for _ in 0..i {
         let shu = shus.pop().unwrap();
         println!("{shu}");
+        process(&conn, &shu);
     }
 
     println!("read_input() time elapsed: {:.2?}", now.elapsed());
@@ -147,11 +148,11 @@ fn calc(_shu: &SortedHeadsUp) -> HUPResult {
     HUPResult::default()
 }
 
-fn process(shu: &SortedHeadsUp) {
+fn process(conn: &Connection, shu: &SortedHeadsUp) {
     let hupr = calc(&shu);
     println!("..... {}", hupr);
 
-    store(shu, &hupr);
+    store(&conn, &hupr);
 }
 
 fn reader() -> Reader<File> {
@@ -163,6 +164,9 @@ fn reader() -> Reader<File> {
 /// the database too, but right now `SortedHeadsUp` implements it, and `HUPResult` doesn't, but `HUPResult`
 /// is the struct that stores the results. We can either hack it in, or implement `SuitShift` and
 /// `Shifty` on `HUPResult`. Let's do it the right way, shall we?
-fn store(shu: &SortedHeadsUp, hupr: &HUPResult) {
-    for s in shu.shifts() {}
+fn store(conn: &Connection, hup: &HUPResult) {
+    for s in hup.shifts() {
+
+        println!(">>>>> {s}");
+    }
 }

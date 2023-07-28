@@ -667,6 +667,7 @@
                 * impl From<HUPResult> for SortedHeadsUp
                 * TODO TD: SuitShift.opposite() don't trust it.
               * preflop - take count
+              * impl Shifty for HUPResult {}
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

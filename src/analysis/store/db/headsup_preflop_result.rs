@@ -6,13 +6,13 @@ use crate::arrays::seven::Seven;
 use crate::bard::Bard;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
-use crate::{Pile, SuitShift};
+use crate::{Pile, Shifty, SuitShift};
 use rusqlite::{named_params, Connection};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct HUPResult {
     pub higher: Bard,
@@ -308,6 +308,8 @@ impl SuitShift for HUPResult {
         }
     }
 }
+
+impl Shifty for HUPResult {}
 
 #[cfg(test)]
 #[allow(non_snake_case)]
