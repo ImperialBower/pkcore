@@ -165,10 +165,14 @@ fn calc(shu: &SortedHeadsUp) -> HUPResult {
 /// And right away we see that we got the Trait's method sig wrong. Needs to be
 /// `fn exists(conn: &Connection, record: &S) -> bool;`
 fn process(conn: &Connection, shu: &SortedHeadsUp) {
-    let hupr = calc(&shu);
-    println!("..... {}", hupr);
+    if HUPResult::exists(conn, shu) {
+        println!("..... already exists");
+    } else {
+        let hupr = calc(&shu);
+        println!("..... {}", hupr);
 
-    store(&conn, &hupr);
+        store(&conn, &hupr);
+    }
 }
 
 fn reader() -> Reader<File> {
