@@ -207,12 +207,10 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
     /// [VONYC Sessions #873](https://www.youtube.com/watch?v=9NdjCGH83UI&t=5073s).
     ///
     /// TODO: Write about music and mood and pairing.
-    fn exists(conn: &Connection, record: &HUPResult) -> bool {
-        match SortedHeadsUp::try_from(record) {
-            Ok(shu) => HUPResult::select(conn, &shu).is_some(),
-            Err(_) => false,
-        }
-        // let select = HUPResult::select(conn, &SortedHeadsUp::try_from(&record))
+    ///
+    /// Oops. Little miss on the sig. Fixed now.
+    fn exists(conn: &Connection, shu: &SortedHeadsUp) -> bool {
+        HUPResult::select(conn, shu).is_some()
     }
 
     fn insert(conn: &Connection, hup: &HUPResult) -> rusqlite::Result<usize> {
@@ -391,7 +389,10 @@ mod analysis__store__db__hupresult_tests {
         let i = HUPResult::insert(&conn, &the_hand).unwrap();
 
         // the proof
-        assert!(HUPResult::exists(&conn, &the_hand));
+        assert!(HUPResult::exists(
+            &conn,
+            &TestData::the_hand_sorted_headsup()
+        ));
         assert_eq!(i, 1);
     }
 

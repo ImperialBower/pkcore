@@ -159,6 +159,11 @@ fn calc(shu: &SortedHeadsUp) -> HUPResult {
     HUPResult::from(shu)
 }
 
+/// Right now we're doing an optimization of this method. We need to be able to check if the record
+/// is already in the database before we do the calculations.
+///
+/// And right away we see that we got the Trait's method sig wrong. Needs to be
+/// `fn exists(conn: &Connection, record: &S) -> bool;`
 fn process(conn: &Connection, shu: &SortedHeadsUp) {
     let hupr = calc(&shu);
     println!("..... {}", hupr);

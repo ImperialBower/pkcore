@@ -186,7 +186,7 @@ impl Sqlable<SevenFiveBCM, Bard> for SevenFiveBCM {
         )
     }
 
-    fn exists(_conn: &Connection, _record: &SevenFiveBCM) -> bool {
+    fn exists(_conn: &Connection, _record: &Bard) -> bool {
         todo!()
     }
 
