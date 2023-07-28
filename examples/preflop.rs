@@ -161,6 +161,13 @@ fn calc(shu: &SortedHeadsUp) -> HUPResult {
 /// Much better. Let's go!!!!!
 ///
 /// Time for an overnight test.
+///
+/// I'm sitting here just watching it load before I go to bed. Not doing anything but enjoying the
+/// fruit of a lot of hard work. It may fail, but if it does, it will be another gift. Five minutes
+/// of just savoring the moment. Enjoy your wins. Take the time to appreciate it. The beast won't
+/// want to. Ignore it. It's been fed. Now we feast.
+///
+/// ... and it works. Good night.
 fn process(conn: &Connection, shu: &SortedHeadsUp) {
     if HUPResult::exists(conn, shu) {
         println!("..... already exists");
