@@ -7,9 +7,11 @@ use crate::bard::Bard;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::{Pile, Shifty, SuitShift};
+use csv::WriterBuilder;
 use rusqlite::{named_params, Connection};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
+use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
@@ -94,12 +96,38 @@ impl HUPResult {
         }
     }
 
+    pub fn generate_csv_from_hash_set(
+        path: &str,
+        hups: HashSet<HUPResult>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        HUPResult::generate_csv_from_vector(path, Vec::from_iter(hups))
+    }
+
+    pub fn generate_csv_from_vector(
+        path: &str,
+        hups: Vec<HUPResult>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut wtr = WriterBuilder::new().has_headers(true).from_path(path)?;
+        for hup in &hups {
+            wtr.serialize(hup)?;
+        }
+        wtr.flush()?;
+        Ok(())
+    }
+
     #[must_use]
     pub fn get_sorted_heads_up(&self) -> Option<SortedHeadsUp> {
         match SortedHeadsUp::try_from(self) {
             Ok(shu) => Some(shu),
             Err(_) => None,
         }
+    }
+
+    pub fn read_db(path: &str) -> rusqlite::Result<Vec<HUPResult>> {
+        let conn = Connection::open(path)?;
+        let hups = HUPResult::select_all(&conn);
+        conn.close().unwrap();
+        Ok(hups)
     }
 }
 
@@ -482,7 +510,8 @@ mod analysis__store__db__hupresult_tests {
     #[test]
     fn sqlable__create_table() {
         let conn = Connect::in_memory_connection().unwrap().connection;
-        assert!(HUPResult::create_table(&conn).is_ok())
+        assert!(HUPResult::create_table(&conn).is_ok());
+        conn.close().unwrap();
     }
 
     #[test]
@@ -501,6 +530,7 @@ mod analysis__store__db__hupresult_tests {
             &TestData::the_hand_sorted_headsup()
         ));
         assert_eq!(i, 1);
+        conn.close().unwrap()
     }
 
     /// ```
@@ -518,7 +548,8 @@ mod analysis__store__db__hupresult_tests {
     fn sqlable__insert() {
         let conn = Connect::in_memory_connection().unwrap().connection;
         HUPResult::create_table(&conn).unwrap();
-        assert!(HUPResult::insert(&conn, &TestData::the_hand_as_hup_result()).is_ok())
+        assert!(HUPResult::insert(&conn, &TestData::the_hand_as_hup_result()).is_ok());
+        conn.close().unwrap();
     }
 
     #[test]
@@ -533,6 +564,7 @@ mod analysis__store__db__hupresult_tests {
         assert!(actual.is_some());
         assert_eq!(TestData::the_hand_as_hup_result(), actual.unwrap());
         assert!(nope.is_none());
+        conn.close().unwrap()
     }
 
     #[test]
@@ -545,6 +577,7 @@ mod analysis__store__db__hupresult_tests {
 
         assert_eq!(actual.len(), 1);
         assert_eq!(&TestData::the_hand_as_hup_result(), actual.get(0).unwrap());
+        conn.close().unwrap()
     }
 
     #[test]

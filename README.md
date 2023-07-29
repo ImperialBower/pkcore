@@ -672,6 +672,9 @@
               * need Sqlable.exists()
                 * HUPResult::exists()
               * Added data/sample_hups.db for testing our HUPResult sql.
+            * HUPResult to csv
+              * hup_dump.rs
+              * HUPResult::read_db
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
