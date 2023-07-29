@@ -1125,6 +1125,7 @@ mod arrays__matchups__sorted_heads_up {
 
         let actual = HANDS_7D_7C_V_6S_6H.other_shifts();
 
+        assert_eq!(3, actual.len());
         assert_eq!(expected, actual);
     }
 
@@ -1142,6 +1143,7 @@ mod arrays__matchups__sorted_heads_up {
 
         let actual = HANDS_7D_7C_V_6S_6H.shifts();
 
+        assert_eq!(4, actual.len());
         assert_eq!(expected, actual);
     }
 

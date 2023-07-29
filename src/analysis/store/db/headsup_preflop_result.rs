@@ -545,7 +545,7 @@ mod analysis__store__db__hupresult_tests {
             println!("{h}");
         }
 
-        let mut hs: std::collections::HashSet<HUPResult>  = HashSet::new();
+        // let mut hs: std::collections::HashSet<HUPResult>  = HashSet::new();
         let original = hup.clone();
         let shifted = hup.clone();
 
