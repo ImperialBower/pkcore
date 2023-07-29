@@ -270,6 +270,67 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
 
         Some(hup)
     }
+
+    /// OK, so these results are completely foobared.
+    ///
+    /// ```txt
+    /// /home/gaoler/.cargo/bin/cargo run --color=always --package pkcore --example hups
+    ///     Finished dev [unoptimized + debuginfo] target(s) in 0.05s
+    ///      Running `target/debug/examples/hups`
+    /// K♠ K♦ (137438955520) __ __ (37210) ties: (37210)
+    /// K♥ 6♦ (268435584) __ __ (1090190) ties: (610489)
+    /// K♥ 6♦ (268435584) 3♣ 2♣ (1090190) ties: (610489)
+    /// A♠ 5♦ (412316860416) __ __ (406764) ties: (1228716)
+    /// Q♦ J♦ (70369012613120) 4♣ 2♣ (1198761) ties: (498275)
+    /// Q♦ J♦ (70369012613120) 4♣ 3♣ (1198761) ties: (498275)
+    /// 9♠ 6♣ (67239936) 4♣ 3♣ (1136466) ties: (393246)
+    /// 8♣ 5♣ (3221225472) __ __ (906176) ties: (729584)
+    /// ...
+    /// ```
+    ///
+    /// Oopsie... forgot that there's an index column.
+    ///
+    /// Much better:
+    ///
+    /// ```txt
+    /// /home/gaoler/.cargo/bin/cargo run --color=always --package pkcore --example hups
+    ///      Finished dev [unoptimized + debuginfo] target(s) in 0.05s
+    ///       Running `target/debug/examples/hups`
+    ///  K♠ K♦ (37210) K♥ K♣ (37210) ties: (1637884)
+    ///  K♥ 6♦ (1090190) 9♣ 4♥ (610489) ties: (11625)
+    ///  K♥ 6♦ (1090190) 9♣ 4♥ (610489) ties: (11625)
+    ///  A♠ 5♦ (406764) A♥ K♥ (1228716) ties: (76824)
+    ///  Q♦ J♦ (1198761) 9♠ 4♥ (498275) ties: (15268)
+    /// ...
+    /// ```
+    fn select_all(conn: &Connection) -> Vec<HUPResult> {
+        log::debug!("HUPResult::select_all({:?})", conn);
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT * FROM nlh_headsup_result",
+            )
+            .ok().unwrap();
+
+        let mut r: Vec<HUPResult> = Vec::new();
+        let mut hups = stmt.query({}).unwrap();
+        while let Some(row) = hups.next().unwrap() {
+            let higher: u64 = row.get(1).unwrap();
+            let lower: u64 = row.get(2).unwrap();
+            let higher_wins: u64 = row.get(3).unwrap();
+            let lower_wins: u64 = row.get(4).unwrap();
+            let ties: u64 = row.get(5).unwrap();
+            let hup = HUPResult {
+                higher: Bard::from(higher),
+                lower: Bard::from(lower),
+                higher_wins,
+                lower_wins,
+                ties,
+            };
+            r.push(hup)
+        }
+        r
+    }
 }
 
 impl SuitShift for HUPResult {
@@ -324,6 +385,7 @@ impl Shifty for HUPResult {}
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod analysis__store__db__hupresult_tests {
+    use std::collections::HashSet;
     use super::*;
     use crate::analysis::store::db::sqlite::Connect;
     use crate::arrays::two::Two;
@@ -429,6 +491,18 @@ mod analysis__store__db__hupresult_tests {
     }
 
     #[test]
+    fn sqlable__select_all() {
+        let conn = Connect::in_memory_connection().unwrap().connection;
+        HUPResult::create_table(&conn).unwrap();
+        HUPResult::insert(&conn, &TestData::the_hand_as_hup_result()).unwrap();
+
+        let actual = HUPResult::select_all(&conn);
+
+        assert_eq!(actual.len(), 1);
+        assert_eq!(&TestData::the_hand_as_hup_result(), actual.get(0).unwrap());
+    }
+
+    #[test]
     fn suit_shift__shift_suit_down() {
         let hup = TestData::the_hand_as_hup_result();
         let mut shifted = hup.shift_suit_down();
@@ -448,5 +522,40 @@ mod analysis__store__db__hupresult_tests {
         }
 
         assert_eq!(hup, shifted);
+    }
+
+    #[test]
+    fn shifty__other_shifts() {
+        let hup = HUPResult {
+            higher: Two::HAND_7D_7C.bard(),
+            lower: Two::HAND_6S_6H.bard(),
+            higher_wins: 1,
+            lower_wins: 2,
+            ties: 3,
+        };
+
+        let others = hup.shifts();
+        for h in others.into_iter() {
+            println!("{h}");
+        }
+
+        let org = SortedHeadsUp::new(Two::HAND_7D_7C, Two::HAND_6S_6H);
+        let others = org.shifts();
+        for h in others.into_iter() {
+            println!("{h}");
+        }
+
+        let mut hs: std::collections::HashSet<HUPResult>  = HashSet::new();
+        let original = hup.clone();
+        let shifted = hup.clone();
+
+        for i in 1..=3 {
+            let shifted = shifted.shift_suit_up();
+            if shifted != original {
+                println!("{i} {shifted} != {hup}");
+            } else {
+                println!("{i} {shifted} == {hup}");
+            }
+        }
     }
 }

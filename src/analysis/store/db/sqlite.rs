@@ -90,4 +90,6 @@ pub trait Sqlable<T, S> {
     fn insert_many(conn: &Connection, records: Vec<&T>) -> rusqlite::Result<usize>;
 
     fn select(conn: &Connection, key: &S) -> Option<T>;
+
+    fn select_all(conn: &Connection) -> Vec<T>;
 }

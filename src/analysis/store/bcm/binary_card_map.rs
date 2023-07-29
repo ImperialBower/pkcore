@@ -226,6 +226,10 @@ impl Sqlable<SevenFiveBCM, Bard> for SevenFiveBCM {
 
         Some(bcm)
     }
+
+    fn select_all(_conn: &Connection) -> Vec<SevenFiveBCM> {
+        todo!()
+    }
 }
 
 impl TryFrom<Five> for SevenFiveBCM {
