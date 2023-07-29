@@ -221,20 +221,30 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
         HUPResult::select(conn, shu).is_some()
     }
 
+    // Refactoring this to only insert if the record isn't already there.
     fn insert(conn: &Connection, hup: &HUPResult) -> rusqlite::Result<usize> {
         log::debug!("HUPResult::insert({})", hup);
-        let mut stmt = conn.prepare(
-            "INSERT INTO nlh_headsup_result \
+
+        let shu = hup
+            .get_sorted_heads_up()
+            .ok_or(rusqlite::Error::ExecuteReturnedResults)?;
+
+        if HUPResult::exists(conn, &shu) {
+            log::debug!("Record {shu} already exists.");
+            Ok(0usize)
+        } else {
+            let mut stmt = conn.prepare(
+                "INSERT INTO nlh_headsup_result \
             (higher, lower, higher_wins, lower_wins, ties) VALUES \
             (:higher, :lower, :higher_wins, :lower_wins, :ties)",
-        )?;
-        stmt.execute(named_params! {
+            )?;
+            stmt.execute(named_params! {
             ":higher": hup.higher.as_u64(),
             ":lower": hup.lower.as_u64(),
             ":higher_wins": hup.higher_wins,
             ":lower_wins": hup.lower_wins,
-            ":ties": hup.ties
-        })
+            ":ties": hup.ties})
+        }
     }
 
     fn insert_many(_conn: &Connection, _records: Vec<&HUPResult>) -> rusqlite::Result<usize> {
