@@ -171,30 +171,11 @@ fn calc(shu: &SortedHeadsUp) -> HUPResult {
 fn process(conn: &Connection, shu: &SortedHeadsUp) {
     if HUPResult::exists(conn, shu) {
         println!("..... already exists");
-        println!("..... checking shifts");
-        insert_shifts(conn, shu);
     } else {
         let hupr = calc(&shu);
         println!("..... {}", hupr);
 
         store(&conn, &hupr);
-    }
-}
-
-/// We've found the bug in our shifts, so now we need to correct our old inserts.
-/// This is to make sure all our shifts are inserted for records already there. This
-/// step won't be necessary when we have things fixed.
-fn insert_shifts(conn: &Connection, shu: &SortedHeadsUp) {
-    let hup = HUPResult::select(conn, shu).unwrap();
-    let others = hup.other_shifts();
-    for hup in others {
-        let shu = hup.get_sorted_heads_up().unwrap();
-        if HUPResult::exists(conn, &shu) {
-            println!(">>>>> {hup} already exists!");
-        } else {
-            HUPResult::insert(conn, &hup).unwrap();
-            println!(">>>>> {hup} inserted!");
-        }
     }
 }
 
@@ -223,14 +204,37 @@ fn reader() -> Reader<File> {
 /// ```
 fn store(conn: &Connection, hup: &HUPResult) {
     for s in hup.shifts() {
-        match HUPResult::select(conn, &SortedHeadsUp::try_from(&s).unwrap()) {
+        // There was a flaw in this earlier which was using
+        // `match HUPResult::select(conn, &shu.get_sorted_heads_up().unwrap()) {`
+        match HUPResult::select(conn, &s.get_sorted_heads_up().unwrap()) {
             None => {
                 HUPResult::insert(conn, hup).unwrap();
-                println!(">>>>> {s} inserted!");
+                println!(">>>>> {s} shift inserted!");
             }
             Some(_) => {
                 println!(">>>>> {s} already exists!");
             }
+        }
+    }
+}
+
+/// We've found the bug in our shifts, so now we need to correct our old inserts.
+/// This is to make sure all our shifts are inserted for records already there. This
+/// step won't be necessary when we have things fixed.
+///
+/// Don't think we need this any more now that we have hup_wash to straighten things out.
+/// Later on we will want to run a test against the unique shu file. When done they should
+/// match.
+fn _insert_shifts(conn: &Connection, shu: &SortedHeadsUp) {
+    let hup = HUPResult::select(conn, shu).unwrap();
+    let others = hup.other_shifts();
+    for hup in others {
+        let newshu = hup.get_sorted_heads_up().unwrap();
+        if HUPResult::exists(conn, &newshu) {
+            println!(">>>>> {hup} as shift already exists!");
+        } else {
+            HUPResult::insert(conn, &hup).unwrap();
+            println!(">>>>> {hup} shift inserted!");
         }
     }
 }

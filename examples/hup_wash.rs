@@ -208,6 +208,16 @@ fn main() {
         println!("{i} {hup}");
     }
 
+    if hs.len() != hups.len() {
+        println!("Washing...");
+        let conn = Connection::open("generated/washed_hups.db").unwrap();
+        HUPResult::create_table(&conn).unwrap();
+
+        for h in hs.clone() {
+            HUPResult::insert(&conn, h).unwrap();
+        }
+    }
+
     assert_eq!(hs.len(), hups.len());
 }
 
