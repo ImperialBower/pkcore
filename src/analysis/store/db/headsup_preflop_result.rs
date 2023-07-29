@@ -335,11 +335,10 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
 
 impl SuitShift for HUPResult {
     fn shift_suit_down(&self) -> Self {
-        let mut shu = match SortedHeadsUp::try_from(self) {
+        let shu = match SortedHeadsUp::try_from(self) {
             Ok(s) => s.shift_suit_down(),
             Err(_) => SortedHeadsUp::default(),
         };
-        shu = shu.shift_suit_down();
         HUPResult {
             higher: shu.higher_as_bard(),
             lower: shu.lower_as_bard(),
@@ -349,12 +348,32 @@ impl SuitShift for HUPResult {
         }
     }
 
+    /// I AM AN IDIOT!
+    ///
+    /// The original version of this function does the SuitShift twice. That's why it isn't
+    /// working correctly.
+    ///
+    /// ```txt
+    /// fn shift_suit_up(&self) -> Self {
+    ///   let mut shu = match SortedHeadsUp::try_from(self) {
+    ///     Ok(s) => s.shift_suit_up(),
+    ///     Err(_) => SortedHeadsUp::default(),
+    ///   };
+    ///   shu = shu.shift_suit_up(); //AHHH!!!!!
+    ///   HUPResult {
+    ///     higher: shu.higher_as_bard(),
+    ///     lower: shu.lower_as_bard(),
+    ///     higher_wins: self.higher_wins,
+    ///     lower_wins: self.lower_wins,
+    ///     ties: self.ties,
+    ///   }
+    /// }
+    /// ```
     fn shift_suit_up(&self) -> Self {
-        let mut shu = match SortedHeadsUp::try_from(self) {
+        let shu = match SortedHeadsUp::try_from(self) {
             Ok(s) => s.shift_suit_up(),
             Err(_) => SortedHeadsUp::default(),
         };
-        shu = shu.shift_suit_up();
         HUPResult {
             higher: shu.higher_as_bard(),
             lower: shu.lower_as_bard(),
@@ -365,11 +384,10 @@ impl SuitShift for HUPResult {
     }
 
     fn opposite(&self) -> Self {
-        let mut shu = match SortedHeadsUp::try_from(self) {
+        let shu = match SortedHeadsUp::try_from(self) {
             Ok(s) => s.opposite(),
             Err(_) => SortedHeadsUp::default(),
         };
-        shu = shu.opposite();
         HUPResult {
             higher: shu.higher_as_bard(),
             lower: shu.lower_as_bard(),
@@ -504,58 +522,80 @@ mod analysis__store__db__hupresult_tests {
 
     #[test]
     fn suit_shift__shift_suit_down() {
-        let hup = TestData::the_hand_as_hup_result();
-        let mut shifted = hup.shift_suit_down();
-        for _ in 0..3 {
-            shifted = shifted.shift_suit_down();
-        }
-
-        assert_eq!(hup, shifted);
+        assert_eq!(hup1().shift_suit_down(), hup2());
     }
 
     #[test]
     fn suit_shift__shift_suit_up() {
-        let hup = TestData::the_hand_as_hup_result();
-        let mut shifted = hup.shift_suit_up();
-        for _ in 0..3 {
-            shifted = shifted.shift_suit_up();
-        }
-
-        assert_eq!(hup, shifted);
+        assert_eq!(hup1().shift_suit_up(), hup4());
     }
 
+    /// These tests are a pain in the ass to setup. Not sure what an easier way to do it is. Slow
+    /// and stupid wins the race I guess.
     #[test]
-    fn shifty__other_shifts() {
-        let hup = HUPResult {
+    fn shifty__shifts() {
+        let actual = hup1().shifts();
+
+        assert!(actual.contains(&hup1()));
+        assert!(actual.contains(&hup3()));
+
+        assert!(actual.contains(&hup2()));
+        assert!(actual.contains(&hup4()));
+        assert_eq!(actual.len(), 4);
+        assert_eq!(hs(), actual);
+    }
+
+    /// Test data
+    fn hup1() -> HUPResult {
+        HUPResult {
             higher: Two::HAND_7D_7C.bard(),
             lower: Two::HAND_6S_6H.bard(),
-            higher_wins: 1,
-            lower_wins: 2,
-            ties: 3,
-        };
-
-        let others = hup.shifts();
-        for h in others.into_iter() {
-            println!("{h}");
+            higher_wins: 1375342,
+            lower_wins: 315362,
+            ties: 21600,
         }
+    }
 
-        let org = SortedHeadsUp::new(Two::HAND_7D_7C, Two::HAND_6S_6H);
-        let others = org.shifts();
-        for h in others.into_iter() {
-            println!("{h}");
+    fn hup2() -> HUPResult {
+        HUPResult {
+            higher: Two::HAND_7S_7C.bard(),
+            lower: Two::HAND_6H_6D.bard(),
+            higher_wins: 1375342,
+            lower_wins: 315362,
+            ties: 21600,
         }
+    }
 
-        // let mut hs: std::collections::HashSet<HUPResult>  = HashSet::new();
-        let original = hup.clone();
-        let shifted = hup.clone();
-
-        for i in 1..=3 {
-            let shifted = shifted.shift_suit_up();
-            if shifted != original {
-                println!("{i} {shifted} != {hup}");
-            } else {
-                println!("{i} {shifted} == {hup}");
-            }
+    fn hup3() -> HUPResult {
+        HUPResult {
+            higher: Two::HAND_7S_7H.bard(),
+            lower: Two::HAND_6D_6C.bard(),
+            higher_wins: 1375342,
+            lower_wins: 315362,
+            ties: 21600,
         }
+    }
+
+    fn hup4() -> HUPResult {
+        HUPResult {
+            higher: Two::HAND_7H_7D.bard(),
+            lower: Two::HAND_6S_6C.bard(),
+            higher_wins: 1375342,
+            lower_wins: 315362,
+            ties: 21600,
+        }
+    }
+
+    fn v() -> Vec<HUPResult> {
+        let v: Vec<HUPResult> = vec![hup1(), hup2(), hup3(), hup4()];
+        v
+    }
+
+    fn hs() -> HashSet<HUPResult> {
+        let mut hs = HashSet::new();
+        for hup in v() {
+            hs.insert(hup);
+        }
+        hs
     }
 }

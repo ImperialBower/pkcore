@@ -202,6 +202,7 @@ pub trait Shifty: SuitShift + Copy {
         Self: Sized,
         Self: std::cmp::Eq,
         Self: Hash,
+        Self: std::fmt::Display,
     {
         let mut hs = HashSet::new();
         let original = *self;
@@ -217,6 +218,7 @@ pub trait Shifty: SuitShift + Copy {
         // ````
         for _ in 1..=3 {
             shifted = shifted.shift_suit_up();
+            println!("{shifted}");
             if shifted != original {
                 hs.insert(shifted);
             }
@@ -231,6 +233,7 @@ pub trait Shifty: SuitShift + Copy {
         Self: Sized,
         Self: std::cmp::Eq,
         Self: Hash,
+        Self: std::fmt::Display,
     {
         let mut hs = HashSet::new();
         let shifty = *self;

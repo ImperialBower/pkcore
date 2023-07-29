@@ -973,6 +973,12 @@ mod arrays__matchups__sorted_heads_up {
     ///
     /// Refactored. Much uglier but more accurate. You don't know which of the shifts will be pulled
     /// out first, so anyone of them could be the last shu standing.
+    ///
+    /// UPDATE: Suddenly this test is causing a core dump (sic) running 1.73.0-nightly. Running it create:
+    ///
+    /// ```txt
+    ///
+    /// ```
     #[test]
     fn distinct() {
         let distinct = SortedHeadsUp::distinct().unwrap();
@@ -1144,6 +1150,10 @@ mod arrays__matchups__sorted_heads_up {
         let actual = HANDS_7D_7C_V_6S_6H.shifts();
 
         assert_eq!(4, actual.len());
+        assert!(actual.contains(&SortedHeadsUp::new(Two::HAND_7D_7C, Two::HAND_6S_6H)));
+        assert!(actual.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
+        assert!(actual.contains(&SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C)));
+        assert!(actual.contains(&SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C)));
         assert_eq!(expected, actual);
     }
 
@@ -1191,5 +1201,10 @@ mod arrays__matchups__sorted_heads_up {
             SortedHeadsUp::try_from(vec![Two::HAND_6S_6H, Two::HAND_7S_7C, Two::HAND_2D_2C])
                 .unwrap_err()
         );
+    }
+
+    #[test]
+    fn try_from__hup_result() {
+
     }
 }
