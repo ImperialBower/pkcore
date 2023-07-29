@@ -1,6 +1,7 @@
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use rusqlite::Connection;
+use std::collections::HashSet;
 
 /// OK, so these results are completely foobared.
 ///
@@ -200,10 +201,14 @@ fn main() {
     let conn = Connection::open("generated/hups.db").unwrap();
     HUPResult::create_table(&conn).unwrap();
 
+    let mut hs = HashSet::new();
     let hups = HUPResult::select_all(&conn);
     for (i, hup) in hups.iter().enumerate() {
+        hs.insert(hup);
         println!("{i} {hup}");
     }
+
+    assert_eq!(hs.len(), hups.len());
 }
 
 // OK, so these results are completely foobared.

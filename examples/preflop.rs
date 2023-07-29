@@ -181,6 +181,9 @@ fn process(conn: &Connection, shu: &SortedHeadsUp) {
     }
 }
 
+/// We've found the bug in our shifts, so now we need to correct our old inserts.
+/// This is to make sure all our shifts are inserted for records already there. This
+/// step won't be necessary when we have things fixed.
 fn insert_shifts(conn: &Connection, shu: &SortedHeadsUp) {
     let hup = HUPResult::select(conn, shu).unwrap();
     let others = hup.other_shifts();

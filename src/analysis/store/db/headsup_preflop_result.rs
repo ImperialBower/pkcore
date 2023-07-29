@@ -416,6 +416,16 @@ mod analysis__store__db__hupresult_tests {
     use crate::util::data::TestData;
     use std::collections::HashSet;
 
+    #[test]
+    fn get_sorted_heads_up() {
+        assert_eq!(
+            TestData::the_hand_sorted_headsup(),
+            TestData::the_hand_as_hup_result()
+                .get_sorted_heads_up()
+                .unwrap()
+        );
+    }
+
     /// I'm test driving this one backwards. I do that some time.
     #[test]
     fn display() {
