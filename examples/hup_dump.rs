@@ -1,4 +1,5 @@
 use clap::Parser;
+use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -16,7 +17,8 @@ fn main() {
     let from = &*args.from;
     let to = &*args.to;
 
-    let hups = read_db("generated/hups.db");
+    let hups = HUPResult::read_db(from).unwrap();
+    HUPResult::generate_csv_from_vector(to, hups).unwrap();
 
     println!("{from} {to}");
 }
