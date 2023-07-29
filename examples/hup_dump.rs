@@ -1,6 +1,6 @@
-use rusqlite::Connection;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
+use rusqlite::Connection;
 
 /// OK, so these results are completely foobared.
 ///
@@ -205,7 +205,6 @@ fn main() {
         println!("{i} {hup}");
     }
 }
-
 
 // OK, so these results are completely foobared.
 
@@ -651,5 +650,3 @@ fn main() {
 // ..... T♣ 5♣ (967473) 9♦ 8♠ (712520) ties: (32311)
 // >>>>> T♥ 5♥ (967473) 9♠ 8♦ (712520) ties: (32311) inserted!
 // >>>>> T♣ 5♣ (967473) 9♦ 8♠ (712520) ties: (32311) already exists!
-
-

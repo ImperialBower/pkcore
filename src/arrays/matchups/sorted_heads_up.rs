@@ -1207,7 +1207,5 @@ mod arrays__matchups__sorted_heads_up {
     }
 
     #[test]
-    fn try_from__hup_result() {
-
-    }
+    fn try_from__hup_result() {}
 }

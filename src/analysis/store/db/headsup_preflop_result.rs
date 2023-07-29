@@ -6,7 +6,7 @@ use crate::arrays::seven::Seven;
 use crate::bard::Bard;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
-use crate::{Pile, PKError, Shifty, SuitShift};
+use crate::{Pile, Shifty, SuitShift};
 use rusqlite::{named_params, Connection};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -94,6 +94,7 @@ impl HUPResult {
         }
     }
 
+    #[must_use]
     pub fn get_sorted_heads_up(&self) -> Option<SortedHeadsUp> {
         match SortedHeadsUp::try_from(self) {
             Ok(shu) => Some(shu),
@@ -314,13 +315,12 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
         log::debug!("HUPResult::select_all({:?})", conn);
 
         let mut stmt = conn
-            .prepare(
-                "SELECT * FROM nlh_headsup_result",
-            )
-            .ok().unwrap();
+            .prepare("SELECT * FROM nlh_headsup_result")
+            .ok()
+            .unwrap();
 
         let mut r: Vec<HUPResult> = Vec::new();
-        let mut hups = stmt.query({}).unwrap();
+        let mut hups = stmt.query(()).unwrap();
         while let Some(row) = hups.next().unwrap() {
             let higher: u64 = row.get(1).unwrap();
             let lower: u64 = row.get(2).unwrap();
@@ -334,7 +334,7 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
                 lower_wins,
                 ties,
             };
-            r.push(hup)
+            r.push(hup);
         }
         r
     }
@@ -357,7 +357,7 @@ impl SuitShift for HUPResult {
 
     /// I AM AN IDIOT!
     ///
-    /// The original version of this function does the SuitShift twice. That's why it isn't
+    /// The original version of this function does the `SuitShift` twice. That's why it isn't
     /// working correctly.
     ///
     /// ```txt
@@ -410,11 +410,11 @@ impl Shifty for HUPResult {}
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod analysis__store__db__hupresult_tests {
-    use std::collections::HashSet;
     use super::*;
     use crate::analysis::store::db::sqlite::Connect;
     use crate::arrays::two::Two;
     use crate::util::data::TestData;
+    use std::collections::HashSet;
 
     /// I'm test driving this one backwards. I do that some time.
     #[test]

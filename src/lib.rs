@@ -218,7 +218,6 @@ pub trait Shifty: SuitShift + Copy {
         // ````
         for _ in 1..=3 {
             shifted = shifted.shift_suit_up();
-            println!("{shifted}");
             if shifted != original {
                 hs.insert(shifted);
             }
