@@ -202,6 +202,11 @@ fn reader() -> Reader<File> {
 /// >>>>> __ __ (0) __ __ (0) ties: (0) already exists!
 /// read_input() time elapsed: 1.69s
 /// ```
+///
+/// UPDATE: We're still seeing some dupes when we run hup_wash. The problem has to be here.
+/// Not sure if it matters right now. Thinking we need to tighten up our insert sql function.
+///
+/// TODO TD DEFECT: Still doing double inserts.
 fn store(conn: &Connection, hup: &HUPResult) {
     for s in hup.shifts() {
         // There was a flaw in this earlier which was using
