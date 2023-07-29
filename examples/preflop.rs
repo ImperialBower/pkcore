@@ -171,11 +171,27 @@ fn calc(shu: &SortedHeadsUp) -> HUPResult {
 fn process(conn: &Connection, shu: &SortedHeadsUp) {
     if HUPResult::exists(conn, shu) {
         println!("..... already exists");
+        println!("..... checking shifts");
+        insert_shifts(conn, shu);
     } else {
         let hupr = calc(&shu);
         println!("..... {}", hupr);
 
         store(&conn, &hupr);
+    }
+}
+
+fn insert_shifts(conn: &Connection, shu: &SortedHeadsUp) {
+    let hup = HUPResult::select(conn, shu).unwrap();
+    let others = hup.other_shifts();
+    for hup in others {
+        let shu = hup.get_sorted_heads_up().unwrap();
+        if HUPResult::exists(conn, &shu) {
+            println!(">>>>> {hup} already exists!");
+        } else {
+            HUPResult::insert(conn, &hup).unwrap();
+            println!(">>>>> {hup} inserted!");
+        }
     }
 }
 

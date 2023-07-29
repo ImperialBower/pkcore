@@ -6,7 +6,7 @@ use crate::arrays::seven::Seven;
 use crate::bard::Bard;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
-use crate::{Pile, Shifty, SuitShift};
+use crate::{Pile, PKError, Shifty, SuitShift};
 use rusqlite::{named_params, Connection};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -91,6 +91,13 @@ impl HUPResult {
             higher_wins: u64::try_from(first_wins - first_ties).unwrap(),
             lower_wins: u64::try_from(second_wins - second_ties).unwrap(),
             ties: u64::try_from(first_ties).unwrap(),
+        }
+    }
+
+    pub fn get_sorted_heads_up(&self) -> Option<SortedHeadsUp> {
+        match SortedHeadsUp::try_from(self) {
+            Ok(shu) => Some(shu),
+            Err(_) => None,
         }
     }
 }

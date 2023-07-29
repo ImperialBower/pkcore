@@ -977,9 +977,12 @@ mod arrays__matchups__sorted_heads_up {
     /// UPDATE: Suddenly this test is causing a core dump (sic) running 1.73.0-nightly. Running it create:
     ///
     /// ```txt
-    ///
+    /// 4♦\n8♣ 6♦ - 6♣ 4♥\n8♦ 6♥ - 6♦ 4♠\nA♥ K♥
     /// ```
+    ///
+    /// I'm going to ignore this test because it causes a wacky dump in `CLion`.
     #[test]
+    #[ignore]
     fn distinct() {
         let distinct = SortedHeadsUp::distinct().unwrap();
         let mut holding = HashSet::new();

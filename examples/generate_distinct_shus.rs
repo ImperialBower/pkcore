@@ -6,7 +6,7 @@ fn main() {
 
     let hs = SortedHeadsUp::distinct().unwrap();
     println!("{}", hs.len());
-    SortedHeadsUp::generate_csv("generated/distinct_shu.csv", hs).expect("TODO: panic message");
+    SortedHeadsUp::generate_csv("generated/distinct_shu2.csv", hs).expect("TODO: panic message");
 
     println!("Elapsed: {:.2?}", now.elapsed());
 }
