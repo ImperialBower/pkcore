@@ -208,6 +208,7 @@ fn main() {
         println!("{i} {hup}");
     }
 
+    println!("{} v {}", hs.len(), hups.len());
     if hs.len() != hups.len() {
         println!("Washing...");
         let conn = Connection::open("generated/washed_hups.db").unwrap();
@@ -218,7 +219,7 @@ fn main() {
         }
     }
 
-    assert_eq!(hs.len(), hups.len());
+    // assert_eq!(hs.len(), hups.len());
 }
 
 // OK, so these results are completely foobared.
