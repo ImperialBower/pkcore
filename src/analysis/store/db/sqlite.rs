@@ -75,6 +75,8 @@ pub trait Sqlable<T, S> {
     /// Throws an error if rusqlite isn't able to create the table.
     fn create_table(conn: &Connection) -> rusqlite::Result<usize>;
 
+    fn exists(conn: &Connection, record: &S) -> bool;
+
     /// # Errors
     ///
     /// Throws an error if rusqlite isn't able to insert the record into the table. Should not
@@ -88,4 +90,6 @@ pub trait Sqlable<T, S> {
     fn insert_many(conn: &Connection, records: Vec<&T>) -> rusqlite::Result<usize>;
 
     fn select(conn: &Connection, key: &S) -> Option<T>;
+
+    fn select_all(conn: &Connection) -> Vec<T>;
 }

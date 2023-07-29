@@ -1,13 +1,21 @@
+use csv::Reader;
+use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
+use pkcore::analysis::store::db::sqlite::Sqlable;
+use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+use pkcore::Shifty;
+use rusqlite::Connection;
+use std::fs::File;
+use std::io;
+use std::io::Write;
+
 /// Naked
-/// ```
-/// A♠ A♥ 7♦ 7♣, 79.69% (1364608), 20.05% (343300), 0.26% (4396) || 79.75% (1365570). 19.99% (342340), 0.26% (4394)
-/// A♠ A♥ 6♦ 6♣, 79.66% (1363968), 20.05% (343394), 0.29% (4942) || 80.16% (1372658),
+/// ```txt
+/// A♠ A♥ 7♦ 7♣, 79.69% (1364608), 20.05% (343300), 0.26% (4396)
+/// A♠ A♥ 6♦ 6♣, 79.66% (1363968), 20.05% (343394), 0.29% (4942)
 /// A♠ A♥ 5♦ 5♣, 80.06% (1370808), 19.60% (335688), 0.34% (5808)
 /// A♠ A♥ 4♦ 4♣, 80.47% (1377896), 19.15% (327870), 0.38% (6538)
 /// A♠ A♥ 3♦ 3♣, 80.88% (1384984), 18.68% (319884), 0.43% (7436)
 /// A♠ A♥ 2♦ 2♣, 81.30% (1392072), 18.20% (311672), 0.50% (8560)
-/// ```
-
 /// A♠ A♥ A♦ A♣, 2.17% (37210), 2.17% (37210), 95.65% (1637884)
 /// A♠ A♥ K♦ K♣, 81.06% (1388072), 18.55% (317694), 0.38% (6538)
 /// A♠ A♥ K♠ K♣, 81.71% (1399204), 17.82% (305177), 0.46% (7923)
@@ -78,4 +86,601 @@
 /// A♠ K♠ 7♣ 6♣, 60.14% (1029832), 39.42% (674947), 0.44% (7525)
 ///
 /// 3♣ 2♦ 3♦ 2♣, 0.71% (12216), 0.71% (12216), 98.57% (1687872)
-fn main() {}
+/// ```
+///
+/// I'm going to add an initial step to this idea, where you input a number for the amount of
+/// matchups you want to calculate. This will give me some control over the work.
+///
+/// What's really fun about all this is that we are progressing from simple calculations to actual
+/// functional composition with the domain data. It is becoming, as I like to say, `plastic`. A
+/// material that we can shape with for our own amusement and utility.
+///
+/// ## Insert
+///
+/// OK, so we've got records inserting into an actual sqlite DB. Now, we need to deal with a
+/// logic flow problem in that we aren't checking if the record is already in the db BEFORE
+/// we do the calculations. This is already a really heavy process. We need to save all the
+/// time we can.
+///
+/// `cargo run --example preflop`
+fn main() {
+    // TODO TD: There should be an easy way to cast this into our error.
+    let conn = Connection::open("generated/hups.db").unwrap();
+    HUPResult::create_table(&conn).unwrap();
+    let mut rdr = reader();
+
+    // There ought to be a clean way to do this.
+    // let _shus: Vec<SortedHeadsUp> = rdr.deserialize::<SortedHeadsUp>().into_iter().collect();
+
+    let mut shus: Vec<SortedHeadsUp> = Vec::new();
+    for deserialized_shu in rdr.deserialize::<SortedHeadsUp>() {
+        shus.push(deserialized_shu.unwrap())
+    }
+
+    loop {
+        read_input(&conn, &mut shus);
+    }
+}
+
+fn read_input(conn: &Connection, shus: &mut Vec<SortedHeadsUp>) {
+    let now = std::time::Instant::now();
+
+    print!("How many runs? ");
+    let _ = io::stdout().flush();
+    let mut input_text = String::new();
+    io::stdin()
+        .read_line(&mut input_text)
+        .expect("Failed to receive value");
+    let trimmed = input_text.trim();
+    let i = match trimmed.parse::<u32>() {
+        Ok(i) => i,
+        Err(..) => 0,
+    };
+
+    println!("Processing {i} hands.");
+
+    for _ in 0..i {
+        let shu = shus.pop().unwrap();
+        println!("{shu}");
+        process(&conn, &shu);
+    }
+
+    println!("read_input() time elapsed: {:.2?}", now.elapsed());
+}
+
+fn calc(shu: &SortedHeadsUp) -> HUPResult {
+    HUPResult::from(shu)
+}
+
+/// Right now we're doing an optimization of this method. We need to be able to check if the record
+/// is already in the database before we do the calculations.
+///
+/// And right away we see that we got the Trait's method sig wrong. Needs to be
+/// `fn exists(conn: &Connection, record: &S) -> bool;`
+///
+/// Much better. Let's go!!!!!
+///
+/// Time for an overnight test.
+///
+/// I'm sitting here just watching it load before I go to bed. Not doing anything but enjoying the
+/// fruit of a lot of hard work. It may fail, but if it does, it will be another gift. Five minutes
+/// of just savoring the moment. Enjoy your wins. Take the time to appreciate it. The beast won't
+/// want to. Ignore it. It's been fed. Now we feast.
+///
+/// ... and it works. Good night.
+fn process(conn: &Connection, shu: &SortedHeadsUp) {
+    if HUPResult::exists(conn, shu) {
+        println!("..... already exists");
+    } else {
+        let hupr = calc(&shu);
+        println!("..... {}", hupr);
+
+        store(&conn, &hupr);
+    }
+}
+
+fn reader() -> Reader<File> {
+    let file = File::open("generated/distinct_shu.csv").unwrap();
+    Reader::from_reader(file)
+}
+
+/// OK, it's clear that we've messed up a little bit. We need to get all the shifted results in
+/// the database too, but right now `SortedHeadsUp` implements it, and `HUPResult` doesn't, but `HUPResult`
+/// is the struct that stores the results. We can either hack it in, or implement `SuitShift` and
+/// `Shifty` on `HUPResult`. Let's do it the right way, shall we?
+///
+/// OK, I'll confess that this makes me very happy:
+///
+/// ```txt
+/// hole cards> 2
+/// Processing 2 hands.
+/// J♠ J♦ - J♥ J♣
+/// ..... __ __ (0) __ __ (0) ties: (0)
+/// >>>>> __ __ (0) __ __ (0) ties: (0) inserted!
+/// A♠ 9♥ - A♦ 9♣
+/// ..... __ __ (0) __ __ (0) ties: (0)
+/// >>>>> __ __ (0) __ __ (0) ties: (0) already exists!
+/// read_input() time elapsed: 1.69s
+/// ```
+fn store(conn: &Connection, hup: &HUPResult) {
+    for s in hup.shifts() {
+        // There was a flaw in this earlier which was using
+        // `match HUPResult::select(conn, &shu.get_sorted_heads_up().unwrap()) {`
+        match HUPResult::select(conn, &s.get_sorted_heads_up().unwrap()) {
+            None => {
+                HUPResult::insert(conn, hup).unwrap();
+                println!(">>>>> {s} shift inserted!");
+            }
+            Some(_) => {
+                println!(">>>>> {s} already exists!");
+            }
+        }
+    }
+}
+
+/// We've found the bug in our shifts, so now we need to correct our old inserts.
+/// This is to make sure all our shifts are inserted for records already there. This
+/// step won't be necessary when we have things fixed.
+///
+/// Don't think we need this any more now that we have hup_wash to straighten things out.
+/// Later on we will want to run a test against the unique shu file. When done they should
+/// match.
+fn _insert_shifts(conn: &Connection, shu: &SortedHeadsUp) {
+    let hup = HUPResult::select(conn, shu).unwrap();
+    let others = hup.other_shifts();
+    for hup in others {
+        let newshu = hup.get_sorted_heads_up().unwrap();
+        if HUPResult::exists(conn, &newshu) {
+            println!(">>>>> {hup} as shift already exists!");
+        } else {
+            HUPResult::insert(conn, &hup).unwrap();
+            println!(">>>>> {hup} shift inserted!");
+        }
+    }
+}
+
+// trial run
+// How many runs? 100
+// Processing 100 hands.
+// K♠ K♦ - K♥ K♣
+// ..... K♠ K♦ (37210) K♥ K♣ (37210) ties: (1637884)
+// >>>>> K♠ K♦ (37210) K♥ K♣ (37210) ties: (1637884) inserted!
+// K♥ 6♦ - 9♣ 4♥
+// ..... K♥ 6♦ (1090190) 9♣ 4♥ (610489) ties: (11625)
+// >>>>> K♥ 6♦ (1090190) 9♣ 4♥ (610489) ties: (11625) inserted!
+// >>>>> K♣ 6♠ (1090190) 9♥ 4♣ (610489) ties: (11625) inserted!
+// A♠ 5♦ - A♥ K♥
+// ..... A♠ 5♦ (406764) A♥ K♥ (1228716) ties: (76824)
+// >>>>> A♦ 5♠ (406764) A♣ K♣ (1228716) ties: (76824) inserted!
+// >>>>> A♠ 5♦ (406764) A♥ K♥ (1228716) ties: (76824) already exists!
+// Q♦ J♦ - 9♠ 4♥
+// ..... Q♦ J♦ (1198761) 9♠ 4♥ (498275) ties: (15268)
+// >>>>> Q♦ J♦ (1198761) 9♠ 4♥ (498275) ties: (15268) inserted!
+// >>>>> Q♠ J♠ (1198761) 9♦ 4♣ (498275) ties: (15268) inserted!
+// 9♠ 6♣ - 6♦ 2♥
+// ..... 9♠ 6♣ (1136466) 6♦ 2♥ (393246) ties: (182592)
+// >>>>> 9♦ 6♥ (1136466) 6♠ 2♣ (393246) ties: (182592) inserted!
+// >>>>> 9♠ 6♣ (1136466) 6♦ 2♥ (393246) ties: (182592) already exists!
+// 8♣ 5♣ - 7♥ 6♥
+// ..... 8♣ 5♣ (906176) 7♥ 6♥ (729584) ties: (76544)
+// >>>>> 8♣ 5♣ (906176) 7♥ 6♥ (729584) ties: (76544) inserted!
+// >>>>> 8♥ 5♥ (906176) 7♣ 6♣ (729584) ties: (76544) inserted!
+// A♣ J♣ - J♠ 4♦
+// ..... A♣ J♣ (1306006) J♠ 4♦ (371480) ties: (34818)
+// >>>>> A♥ J♥ (1306006) J♦ 4♠ (371480) ties: (34818) inserted!
+// >>>>> A♣ J♣ (1306006) J♠ 4♦ (371480) ties: (34818) already exists!
+// 9♥ 8♣ - 8♦ 4♠
+// ..... 9♥ 8♣ (1167973) 8♦ 4♠ (375087) ties: (169244)
+// >>>>> 9♣ 8♥ (1167973) 8♠ 4♦ (375087) ties: (169244) inserted!
+// >>>>> 9♥ 8♣ (1167973) 8♦ 4♠ (375087) ties: (169244) already exists!
+// 9♣ 6♥ - 8♠ 2♦
+// ..... 9♣ 6♥ (1087052) 8♠ 2♦ (571517) ties: (53735)
+// >>>>> 9♥ 6♣ (1087052) 8♦ 2♠ (571517) ties: (53735) inserted!
+// >>>>> 9♣ 6♥ (1087052) 8♠ 2♦ (571517) ties: (53735) already exists!
+// A♣ 6♦ - Q♣ 4♦
+// ..... A♣ 6♦ (1097655) Q♣ 4♦ (605610) ties: (9039)
+// >>>>> A♣ 6♦ (1097655) Q♣ 4♦ (605610) ties: (9039) inserted!
+// >>>>> A♥ 6♠ (1097655) Q♥ 4♠ (605610) ties: (9039) inserted!
+// 8♥ 3♥ - 4♠ 4♦
+// ..... 8♥ 3♥ (565408) 4♠ 4♦ (1112948) ties: (33948)
+// >>>>> 8♥ 3♥ (565408) 4♠ 4♦ (1112948) ties: (33948) inserted!
+// >>>>> 8♣ 3♣ (565408) 4♠ 4♦ (1112948) ties: (33948) inserted!
+// 9♥ 4♦ - 9♣ 7♣
+// ..... 9♥ 4♦ (355331) 9♣ 7♣ (914489) ties: (442484)
+// >>>>> 9♥ 7♥ (355331) 9♣ 4♠ (914489) ties: (442484) inserted!
+// >>>>> 9♥ 4♦ (355331) 9♣ 7♣ (914489) ties: (442484) already exists!
+// A♥ A♦ - T♠ 3♣
+// ..... A♥ A♦ (1482914) T♠ 3♣ (223608) ties: (5782)
+// >>>>> A♠ A♣ (1482914) T♦ 3♥ (223608) ties: (5782) inserted!
+// >>>>> A♥ A♦ (1482914) T♠ 3♣ (223608) ties: (5782) already exists!
+// A♥ A♦ - K♠ 9♣
+// ..... A♥ A♦ (1471755) K♠ 9♣ (235580) ties: (4969)
+// >>>>> A♠ A♣ (1471755) K♦ 9♥ (235580) ties: (4969) inserted!
+// >>>>> A♥ A♦ (1471755) K♠ 9♣ (235580) ties: (4969) already exists!
+// A♦ T♥ - Q♦ 6♣
+// ..... A♦ T♥ (1103562) Q♦ 6♣ (601815) ties: (6927)
+// >>>>> A♦ T♥ (1103562) Q♦ 6♣ (601815) ties: (6927) inserted!
+// >>>>> A♠ T♣ (1103562) Q♠ 6♥ (601815) ties: (6927) inserted!
+// T♠ 2♠ - T♥ 5♣
+// ..... T♠ 2♠ (452579) T♥ 5♣ (544984) ties: (714741)
+// >>>>> T♠ 2♠ (452579) T♥ 5♣ (544984) ties: (714741) inserted!
+// >>>>> T♦ 2♦ (452579) T♣ 5♥ (544984) ties: (714741) inserted!
+// J♣ 8♦ - T♣ 9♦
+// ..... J♣ 8♦ (978884) T♣ 9♦ (709309) ties: (24111)
+// >>>>> J♣ 8♦ (978884) T♣ 9♦ (709309) ties: (24111) inserted!
+// >>>>> J♥ 8♠ (978884) T♥ 9♠ (709309) ties: (24111) inserted!
+// K♠ 2♦ - 9♠ 7♥
+// ..... K♠ 2♦ (943391) 9♠ 7♥ (756364) ties: (12549)
+// >>>>> K♠ 2♦ (943391) 9♠ 7♥ (756364) ties: (12549) inserted!
+// >>>>> K♦ 2♠ (943391) 9♦ 7♣ (756364) ties: (12549) inserted!
+// Q♥ T♦ - 4♦ 2♥
+// ..... Q♥ T♦ (1137685) 4♦ 2♥ (556894) ties: (17725)
+// >>>>> Q♣ T♠ (1137685) 4♠ 2♣ (556894) ties: (17725) inserted!
+// >>>>> Q♥ T♦ (1137685) 4♦ 2♥ (556894) ties: (17725) already exists!
+// A♦ 2♦ - Q♣ 5♥
+// ..... A♦ 2♦ (1068463) Q♣ 5♥ (635502) ties: (8339)
+// >>>>> A♦ 2♦ (1068463) Q♣ 5♥ (635502) ties: (8339) inserted!
+// >>>>> A♠ 2♠ (1068463) Q♥ 5♣ (635502) ties: (8339) inserted!
+// A♦ 8♠ - 6♣ 2♣
+// ..... A♦ 8♠ (1060244) 6♣ 2♣ (644639) ties: (7421)
+// >>>>> A♦ 8♠ (1060244) 6♣ 2♣ (644639) ties: (7421) inserted!
+// >>>>> A♠ 8♦ (1060244) 6♥ 2♥ (644639) ties: (7421) inserted!
+// 8♥ 4♥ - 3♥ 3♦
+// ..... 8♥ 4♥ (825134) 3♥ 3♦ (851518) ties: (35652)
+// >>>>> 8♣ 4♣ (825134) 3♠ 3♣ (851518) ties: (35652) inserted!
+// >>>>> 8♥ 4♥ (825134) 3♥ 3♦ (851518) ties: (35652) already exists!
+// T♠ 3♥ - 9♣ 7♠
+// ..... T♠ 3♥ (940070) 9♣ 7♠ (737424) ties: (34810)
+// >>>>> T♠ 3♥ (940070) 9♣ 7♠ (737424) ties: (34810) inserted!
+// >>>>> T♦ 3♣ (940070) 9♥ 7♦ (737424) ties: (34810) inserted!
+// K♦ 6♣ - K♣ 5♣
+// ..... K♦ 6♣ (675469) K♣ 5♣ (446736) ties: (590099)
+// >>>>> K♦ 6♣ (675469) K♣ 5♣ (446736) ties: (590099) inserted!
+// >>>>> K♠ 6♥ (675469) K♥ 5♥ (446736) ties: (590099) inserted!
+// J♠ T♣ - T♠ 3♥
+// ..... J♠ T♣ (1250719) T♠ 3♥ (366597) ties: (94988)
+// >>>>> J♠ T♣ (1250719) T♠ 3♥ (366597) ties: (94988) inserted!
+// >>>>> J♦ T♥ (1250719) T♦ 3♣ (366597) ties: (94988) inserted!
+// A♠ 5♣ - Q♣ 9♠
+// ..... A♠ 5♣ (987183) Q♣ 9♠ (716153) ties: (8968)
+// >>>>> A♦ 5♥ (987183) Q♥ 9♦ (716153) ties: (8968) inserted!
+// >>>>> A♠ 5♣ (987183) Q♣ 9♠ (716153) ties: (8968) already exists!
+// A♦ 7♦ - Q♥ 9♦
+// ..... A♦ 7♦ (1015715) Q♥ 9♦ (688562) ties: (8027)
+// >>>>> A♠ 7♠ (1015715) Q♣ 9♠ (688562) ties: (8027) inserted!
+// >>>>> A♦ 7♦ (1015715) Q♥ 9♦ (688562) ties: (8027) already exists!
+// A♠ 5♥ - 7♠ 3♥
+// ..... A♠ 5♥ (1106907) 7♠ 3♥ (595469) ties: (9928)
+// >>>>> A♠ 5♥ (1106907) 7♠ 3♥ (595469) ties: (9928) inserted!
+// >>>>> A♦ 5♣ (1106907) 7♦ 3♣ (595469) ties: (9928) inserted!
+// 9♥ 9♣ - 6♠ 6♦
+// ..... 9♥ 9♣ (1373694) 6♠ 6♦ (328898) ties: (9712)
+// >>>>> 9♥ 9♣ (1373694) 6♠ 6♦ (328898) ties: (9712) inserted!
+// 8♥ 4♥ - 6♣ 2♥
+// ..... 8♥ 4♥ (1059467) 6♣ 2♥ (569343) ties: (83494)
+// >>>>> 8♥ 4♥ (1059467) 6♣ 2♥ (569343) ties: (83494) inserted!
+// >>>>> 8♣ 4♣ (1059467) 6♥ 2♣ (569343) ties: (83494) inserted!
+// A♠ A♦ - 4♠ 4♦
+// ..... A♠ A♦ (1399598) 4♠ 4♦ (303864) ties: (8842)
+// >>>>> A♠ A♦ (1399598) 4♠ 4♦ (303864) ties: (8842) inserted!
+// Q♣ 4♥ - 9♣ 6♥
+// ..... Q♣ 4♥ (968766) 9♣ 6♥ (726117) ties: (17421)
+// >>>>> Q♥ 4♣ (968766) 9♥ 6♣ (726117) ties: (17421) inserted!
+// >>>>> Q♣ 4♥ (968766) 9♣ 6♥ (726117) ties: (17421) already exists!
+// K♦ 6♦ - T♠ 5♥
+// ..... K♦ 6♦ (1118226) T♠ 5♥ (583117) ties: (10961)
+// >>>>> K♦ 6♦ (1118226) T♠ 5♥ (583117) ties: (10961) inserted!
+// >>>>> K♠ 6♠ (1118226) T♦ 5♣ (583117) ties: (10961) inserted!
+// A♣ J♦ - K♥ 3♥
+// ..... A♣ J♦ (1038514) K♥ 3♥ (665888) ties: (7902)
+// >>>>> A♥ J♠ (1038514) K♣ 3♣ (665888) ties: (7902) inserted!
+// >>>>> A♣ J♦ (1038514) K♥ 3♥ (665888) ties: (7902) already exists!
+// K♥ 4♠ - J♠ 3♣
+// ..... K♥ 4♠ (1078715) J♠ 3♣ (620573) ties: (13016)
+// >>>>> K♥ 4♠ (1078715) J♠ 3♣ (620573) ties: (13016) inserted!
+// >>>>> K♣ 4♦ (1078715) J♦ 3♥ (620573) ties: (13016) inserted!
+// A♥ J♣ - J♥ 4♥
+// ..... A♥ J♣ (1232835) J♥ 4♥ (442912) ties: (36557)
+// >>>>> A♥ J♣ (1232835) J♥ 4♥ (442912) ties: (36557) inserted!
+// >>>>> A♣ J♥ (1232835) J♣ 4♣ (442912) ties: (36557) inserted!
+// Q♥ T♣ - 5♣ 3♣
+// ..... Q♥ T♣ (1052081) 5♣ 3♣ (643417) ties: (16806)
+// >>>>> Q♥ T♣ (1052081) 5♣ 3♣ (643417) ties: (16806) inserted!
+// >>>>> Q♣ T♥ (1052081) 5♥ 3♥ (643417) ties: (16806) inserted!
+// K♠ J♦ - Q♣ 9♦
+// ..... K♠ J♦ (1092423) Q♣ 9♦ (608301) ties: (11580)
+// >>>>> K♠ J♦ (1092423) Q♣ 9♦ (608301) ties: (11580) inserted!
+// >>>>> K♦ J♠ (1092423) Q♥ 9♠ (608301) ties: (11580) inserted!
+// Q♦ T♠ - 4♥ 2♣
+// ..... Q♦ T♠ (1119737) 4♥ 2♣ (576599) ties: (15968)
+// >>>>> Q♠ T♦ (1119737) 4♣ 2♥ (576599) ties: (15968) inserted!
+// >>>>> Q♦ T♠ (1119737) 4♥ 2♣ (576599) ties: (15968) already exists!
+// K♦ 9♠ - K♣ 8♦
+// ..... K♦ 9♠ (1076054) K♣ 8♦ (380770) ties: (255480)
+// >>>>> K♠ 9♦ (1076054) K♥ 8♠ (380770) ties: (255480) inserted!
+// >>>>> K♦ 9♠ (1076054) K♣ 8♦ (380770) ties: (255480) already exists!
+// K♠ 3♦ - K♦ 3♠
+// ..... K♠ 3♦ (12668) K♦ 3♠ (12668) ties: (1686968)
+// >>>>> K♠ 3♦ (12668) K♦ 3♠ (12668) ties: (1686968) inserted!
+// 9♠ 8♥ - 7♦ 3♣
+// ..... 9♠ 8♥ (1142092) 7♦ 3♣ (520410) ties: (49802)
+// >>>>> 9♦ 8♣ (1142092) 7♠ 3♥ (520410) ties: (49802) inserted!
+// >>>>> 9♠ 8♥ (1142092) 7♦ 3♣ (520410) ties: (49802) already exists!
+// A♦ 3♣ - 7♦ 5♠
+// ..... A♦ 3♣ (985001) 7♦ 5♠ (718299) ties: (9004)
+// >>>>> A♠ 3♥ (985001) 7♠ 5♦ (718299) ties: (9004) inserted!
+// >>>>> A♦ 3♣ (985001) 7♦ 5♠ (718299) ties: (9004) already exists!
+// T♠ 9♠ - T♥ 5♦
+// ..... T♠ 9♠ (1101857) T♥ 5♦ (358881) ties: (251566)
+// >>>>> T♦ 9♦ (1101857) T♣ 5♠ (358881) ties: (251566) inserted!
+// >>>>> T♠ 9♠ (1101857) T♥ 5♦ (358881) ties: (251566) already exists!
+// 9♠ 9♦ - 9♥ 9♣
+// ..... 9♠ 9♦ (37216) 9♥ 9♣ (37216) ties: (1637872)
+// >>>>> 9♠ 9♦ (37216) 9♥ 9♣ (37216) ties: (1637872) inserted!
+// 8♠ 7♣ - 8♥ 6♣
+// ..... 8♠ 7♣ (850670) 8♥ 6♣ (378138) ties: (483496)
+// >>>>> 8♠ 7♣ (850670) 8♥ 6♣ (378138) ties: (483496) inserted!
+// >>>>> 8♦ 7♥ (850670) 8♣ 6♥ (378138) ties: (483496) inserted!
+// 9♣ 6♦ - 7♦ 6♠
+// ..... 9♣ 6♦ (1086470) 7♦ 6♠ (458254) ties: (167580)
+// >>>>> 9♥ 6♠ (1086470) 7♠ 6♦ (458254) ties: (167580) inserted!
+// >>>>> 9♣ 6♦ (1086470) 7♦ 6♠ (458254) ties: (167580) already exists!
+// T♦ 7♥ - 7♦ 5♣
+// ..... T♦ 7♥ (1155769) 7♦ 5♣ (423371) ties: (133164)
+// >>>>> T♦ 7♥ (1155769) 7♦ 5♣ (423371) ties: (133164) inserted!
+// >>>>> T♠ 7♣ (1155769) 7♠ 5♥ (423371) ties: (133164) inserted!
+// A♣ 7♦ - K♥ 7♣
+// ..... A♣ 7♦ (1270525) K♥ 7♣ (390225) ties: (51554)
+// >>>>> A♣ 7♦ (1270525) K♥ 7♣ (390225) ties: (51554) inserted!
+// >>>>> A♥ 7♠ (1270525) K♣ 7♥ (390225) ties: (51554) inserted!
+// T♦ 7♣ - 7♥ 5♦
+// ..... T♦ 7♣ (1155683) 7♥ 5♦ (423576) ties: (133045)
+// >>>>> T♦ 7♣ (1155683) 7♥ 5♦ (423576) ties: (133045) inserted!
+// >>>>> T♠ 7♥ (1155683) 7♣ 5♠ (423576) ties: (133045) inserted!
+// 4♠ 4♦ - 4♥ 4♣
+// ..... 4♠ 4♦ (36730) 4♥ 4♣ (36730) ties: (1638844)
+// >>>>> 4♠ 4♦ (36730) 4♥ 4♣ (36730) ties: (1638844) inserted!
+// K♣ 7♣ - 9♠ 9♦
+// ..... K♣ 7♣ (551326) 9♠ 9♦ (1154670) ties: (6308)
+// >>>>> K♥ 7♥ (551326) 9♠ 9♦ (1154670) ties: (6308) inserted!
+// >>>>> K♣ 7♣ (551326) 9♠ 9♦ (1154670) ties: (6308) already exists!
+// K♣ 8♥ - 4♣ 3♦
+// ..... K♣ 8♥ (1093675) 4♣ 3♦ (605602) ties: (13027)
+// >>>>> K♥ 8♣ (1093675) 4♥ 3♠ (605602) ties: (13027) inserted!
+// >>>>> K♣ 8♥ (1093675) 4♣ 3♦ (605602) ties: (13027) already exists!
+// Q♦ 6♠ - 9♦ 3♦
+// ..... Q♦ 6♠ (1034692) 9♦ 3♦ (660877) ties: (16735)
+// >>>>> Q♠ 6♦ (1034692) 9♠ 3♠ (660877) ties: (16735) inserted!
+// >>>>> Q♦ 6♠ (1034692) 9♦ 3♦ (660877) ties: (16735) already exists!
+// Q♣ 6♥ - 8♥ 6♠
+// ..... Q♣ 6♥ (1151766) 8♥ 6♠ (484997) ties: (75541)
+// >>>>> Q♣ 6♥ (1151766) 8♥ 6♠ (484997) ties: (75541) inserted!
+// >>>>> Q♥ 6♣ (1151766) 8♣ 6♦ (484997) ties: (75541) inserted!
+// A♠ K♣ - 5♠ 4♣
+// ..... A♠ K♣ (1071020) 5♠ 4♣ (631354) ties: (9930)
+// >>>>> A♦ K♥ (1071020) 5♦ 4♥ (631354) ties: (9930) inserted!
+// >>>>> A♠ K♣ (1071020) 5♠ 4♣ (631354) ties: (9930) already exists!
+// A♣ J♦ - K♣ 3♣
+// ..... A♣ J♦ (1063322) K♣ 3♣ (639673) ties: (9309)
+// >>>>> A♣ J♦ (1063322) K♣ 3♣ (639673) ties: (9309) inserted!
+// >>>>> A♥ J♠ (1063322) K♥ 3♥ (639673) ties: (9309) inserted!
+// K♥ K♦ - 9♠ 9♣
+// ..... K♥ K♦ (1369728) 9♠ 9♣ (337204) ties: (5372)
+// >>>>> K♥ K♦ (1369728) 9♠ 9♣ (337204) ties: (5372) inserted!
+// >>>>> K♠ K♣ (1369728) 9♥ 9♦ (337204) ties: (5372) inserted!
+// J♣ 8♠ - 9♥ 7♣
+// ..... J♣ 8♠ (1062837) 9♥ 7♣ (627073) ties: (22394)
+// >>>>> J♣ 8♠ (1062837) 9♥ 7♣ (627073) ties: (22394) inserted!
+// >>>>> J♥ 8♦ (1062837) 9♣ 7♥ (627073) ties: (22394) inserted!
+// J♥ 8♠ - J♣ 4♥
+// ..... J♥ 8♠ (979201) J♣ 4♥ (378671) ties: (354432)
+// >>>>> J♥ 8♠ (979201) J♣ 4♥ (378671) ties: (354432) inserted!
+// >>>>> J♥ 4♣ (979201) J♣ 8♦ (378671) ties: (354432) inserted!
+// Q♥ 6♠ - J♣ 7♦
+// ..... Q♥ 6♠ (1000886) J♣ 7♦ (697475) ties: (13943)
+// >>>>> Q♥ 6♠ (1000886) J♣ 7♦ (697475) ties: (13943) inserted!
+// >>>>> Q♣ 6♦ (1000886) J♥ 7♠ (697475) ties: (13943) inserted!
+// J♦ 7♥ - 8♣ 3♥
+// ..... J♦ 7♥ (1103091) 8♣ 3♥ (585864) ties: (23349)
+// >>>>> J♠ 7♣ (1103091) 8♥ 3♣ (585864) ties: (23349) inserted!
+// >>>>> J♦ 7♥ (1103091) 8♣ 3♥ (585864) ties: (23349) already exists!
+// A♥ 4♦ - 7♣ 6♥
+// ..... A♥ 4♦ (958231) 7♣ 6♥ (746137) ties: (7936)
+// >>>>> A♣ 4♠ (958231) 7♥ 6♣ (746137) ties: (7936) inserted!
+// >>>>> A♥ 4♦ (958231) 7♣ 6♥ (746137) ties: (7936) already exists!
+// A♦ Q♣ - 5♥ 3♥
+// ..... A♦ Q♣ (1013988) 5♥ 3♥ (690040) ties: (8276)
+// >>>>> A♦ Q♣ (1013988) 5♥ 3♥ (690040) ties: (8276) inserted!
+// >>>>> A♠ Q♥ (1013988) 5♣ 3♣ (690040) ties: (8276) inserted!
+// Q♥ 8♠ - 7♥ 5♠
+// ..... Q♥ 8♠ (1095600) 7♥ 5♠ (599235) ties: (17469)
+// >>>>> Q♣ 8♦ (1095600) 7♣ 5♦ (599235) ties: (17469) inserted!
+// >>>>> Q♥ 8♠ (1095600) 7♥ 5♠ (599235) ties: (17469) already exists!
+// A♦ A♣ - K♦ 5♦
+// ..... A♦ A♣ (1441209) K♦ 5♦ (263096) ties: (7999)
+// >>>>> A♦ A♣ (1441209) K♦ 5♦ (263096) ties: (7999) inserted!
+// >>>>> A♠ A♥ (1441209) K♠ 5♠ (263096) ties: (7999) inserted!
+// K♦ 5♥ - J♥ 4♦
+// ..... K♦ 5♥ (1086297) J♥ 4♦ (612503) ties: (13504)
+// >>>>> K♦ 5♥ (1086297) J♥ 4♦ (612503) ties: (13504) inserted!
+// >>>>> K♠ 5♣ (1086297) J♣ 4♠ (612503) ties: (13504) inserted!
+// A♠ T♣ - 5♣ 3♦
+// ..... A♠ T♣ (1098125) 5♣ 3♦ (605435) ties: (8744)
+// >>>>> A♠ T♣ (1098125) 5♣ 3♦ (605435) ties: (8744) inserted!
+// >>>>> A♦ T♥ (1098125) 5♥ 3♠ (605435) ties: (8744) inserted!
+// K♦ 3♦ - Q♣ 5♠
+// ..... K♦ 3♦ (1056764) Q♣ 5♠ (643543) ties: (11997)
+// >>>>> K♦ 3♦ (1056764) Q♣ 5♠ (643543) ties: (11997) inserted!
+// >>>>> K♠ 3♠ (1056764) Q♥ 5♦ (643543) ties: (11997) inserted!
+// A♥ J♠ - T♠ T♥
+// ..... A♥ J♠ (738885) T♠ T♥ (965588) ties: (7831)
+// >>>>> A♥ J♠ (738885) T♠ T♥ (965588) ties: (7831) inserted!
+// >>>>> A♣ J♦ (738885) T♦ T♣ (965588) ties: (7831) inserted!
+// J♥ 3♦ - T♠ 2♥
+// ..... J♥ 3♦ (1085121) T♠ 2♥ (602241) ties: (24942)
+// >>>>> J♥ 3♦ (1085121) T♠ 2♥ (602241) ties: (24942) inserted!
+// >>>>> J♣ 3♠ (1085121) T♦ 2♣ (602241) ties: (24942) inserted!
+// K♥ T♣ - T♥ 4♥
+// ..... K♥ T♣ (1207789) T♥ 4♥ (443668) ties: (60847)
+// >>>>> K♥ T♣ (1207789) T♥ 4♥ (443668) ties: (60847) inserted!
+// >>>>> K♣ T♥ (1207789) T♣ 4♣ (443668) ties: (60847) inserted!
+// T♥ T♣ - 9♠ 9♦
+// ..... T♥ T♣ (1388646) 9♠ 9♦ (316420) ties: (7238)
+// >>>>> T♥ T♣ (1388646) 9♠ 9♦ (316420) ties: (7238) inserted!
+// Q♣ 7♠ - 9♥ 3♦
+// ..... Q♣ 7♠ (1074983) 9♥ 3♦ (622018) ties: (15303)
+// >>>>> Q♥ 7♦ (1074983) 9♣ 3♠ (622018) ties: (15303) inserted!
+// >>>>> Q♣ 7♠ (1074983) 9♥ 3♦ (622018) ties: (15303) already exists!
+// J♥ 7♠ - 8♠ 3♥
+// ..... J♥ 7♠ (1099658) 8♠ 3♥ (587948) ties: (24698)
+// >>>>> J♣ 7♦ (1099658) 8♦ 3♣ (587948) ties: (24698) inserted!
+// >>>>> J♥ 7♠ (1099658) 8♠ 3♥ (587948) ties: (24698) already exists!
+// K♠ 3♥ - J♠ 5♠
+// ..... K♠ 3♥ (964641) J♠ 5♠ (734007) ties: (13656)
+// >>>>> K♠ 3♥ (964641) J♠ 5♠ (734007) ties: (13656) inserted!
+// >>>>> K♦ 3♣ (964641) J♦ 5♦ (734007) ties: (13656) inserted!
+// Q♥ 6♦ - Q♣ 2♠
+// ..... Q♥ 6♦ (712867) Q♣ 2♠ (381863) ties: (617574)
+// >>>>> Q♥ 2♦ (712867) Q♣ 6♠ (381863) ties: (617574) inserted!
+// >>>>> Q♥ 6♦ (712867) Q♣ 2♠ (381863) ties: (617574) already exists!
+// K♣ J♦ - J♥ 3♣
+// ..... K♣ J♦ (1279599) J♥ 3♣ (378072) ties: (54633)
+// >>>>> K♣ J♦ (1279599) J♥ 3♣ (378072) ties: (54633) inserted!
+// >>>>> K♥ J♠ (1279599) J♣ 3♥ (378072) ties: (54633) inserted!
+// Q♦ 5♠ - 5♣ 4♥
+// ..... Q♦ 5♠ (1137331) 5♣ 4♥ (491912) ties: (83061)
+// >>>>> Q♠ 5♦ (1137331) 5♥ 4♣ (491912) ties: (83061) inserted!
+// >>>>> Q♦ 5♠ (1137331) 5♣ 4♥ (491912) ties: (83061) already exists!
+// A♠ 8♦ - J♣ T♠
+// ..... A♠ 8♦ (954608) J♣ T♠ (750853) ties: (6843)
+// >>>>> A♦ 8♠ (954608) J♥ T♦ (750853) ties: (6843) inserted!
+// >>>>> A♠ 8♦ (954608) J♣ T♠ (750853) ties: (6843) already exists!
+// A♥ 8♦ - 9♠ 7♠
+// ..... A♥ 8♦ (970874) 9♠ 7♠ (735176) ties: (6254)
+// >>>>> A♣ 8♠ (970874) 9♦ 7♦ (735176) ties: (6254) inserted!
+// >>>>> A♥ 8♦ (970874) 9♠ 7♠ (735176) ties: (6254) already exists!
+// Q♣ 4♠ - 7♦ 4♥
+// ..... Q♣ 4♠ (1180485) 7♦ 4♥ (462631) ties: (69188)
+// >>>>> Q♥ 4♦ (1180485) 7♠ 4♣ (462631) ties: (69188) inserted!
+// >>>>> Q♣ 4♠ (1180485) 7♦ 4♥ (462631) ties: (69188) already exists!
+// A♠ J♥ - A♦ J♣
+// ..... A♠ J♥ (37212) A♦ J♣ (37212) ties: (1637880)
+// >>>>> A♠ J♥ (37212) A♦ J♣ (37212) ties: (1637880) inserted!
+// 9♣ 2♦ - 3♠ 3♣
+// ..... 9♣ 2♦ (524320) 3♠ 3♣ (1150142) ties: (37842)
+// >>>>> 9♣ 2♦ (524320) 3♠ 3♣ (1150142) ties: (37842) inserted!
+// >>>>> 9♥ 2♠ (524320) 3♥ 3♦ (1150142) ties: (37842) inserted!
+// 9♦ 4♣ - 5♠ 3♣
+// ..... 9♦ 4♣ (998511) 5♠ 3♣ (657814) ties: (55979)
+// >>>>> 9♦ 4♣ (998511) 5♠ 3♣ (657814) ties: (55979) inserted!
+// >>>>> 9♠ 4♥ (998511) 5♦ 3♥ (657814) ties: (55979) inserted!
+// T♦ 8♣ - 7♠ 5♠
+// ..... T♦ 8♣ (1030516) 7♠ 5♠ (650505) ties: (31283)
+// >>>>> T♦ 8♣ (1030516) 7♠ 5♠ (650505) ties: (31283) inserted!
+// >>>>> T♠ 8♥ (1030516) 7♦ 5♦ (650505) ties: (31283) inserted!
+// A♣ 3♣ - 8♥ 7♥
+// ..... A♣ 3♣ (918494) 8♥ 7♥ (785567) ties: (8243)
+// >>>>> A♣ 3♣ (918494) 8♥ 7♥ (785567) ties: (8243) inserted!
+// >>>>> A♥ 3♥ (918494) 8♣ 7♣ (785567) ties: (8243) inserted!
+// K♣ 7♠ - 4♣ 2♣
+// ..... K♣ 7♠ (1064582) 4♣ 2♣ (634350) ties: (13372)
+// >>>>> K♣ 7♠ (1064582) 4♣ 2♣ (634350) ties: (13372) inserted!
+// >>>>> K♥ 7♦ (1064582) 4♥ 2♥ (634350) ties: (13372) inserted!
+// Q♥ Q♣ - 8♠ 7♣
+// ..... Q♥ Q♣ (1403115) 8♠ 7♣ (303362) ties: (5827)
+// >>>>> Q♥ Q♣ (1403115) 8♠ 7♣ (303362) ties: (5827) inserted!
+// >>>>> Q♥ Q♣ (1403115) 8♦ 7♥ (303362) ties: (5827) inserted!
+// K♥ 7♦ - T♥ 9♠
+// ..... K♥ 7♦ (956240) T♥ 9♠ (745283) ties: (10781)
+// >>>>> K♣ 7♠ (956240) T♣ 9♦ (745283) ties: (10781) inserted!
+// >>>>> K♥ 7♦ (956240) T♥ 9♠ (745283) ties: (10781) already exists!
+// Q♦ 9♠ - 9♥ 5♠
+// ..... Q♦ 9♠ (1224999) 9♥ 5♠ (409298) ties: (78007)
+// >>>>> Q♠ 9♦ (1224999) 9♣ 5♦ (409298) ties: (78007) inserted!
+// >>>>> Q♦ 9♠ (1224999) 9♥ 5♠ (409298) ties: (78007) already exists!
+// K♥ 6♣ - J♦ 3♣
+// ..... K♥ 6♣ (1085441) J♦ 3♣ (615082) ties: (11781)
+// >>>>> K♥ 6♣ (1085441) J♦ 3♣ (615082) ties: (11781) inserted!
+// >>>>> K♣ 6♥ (1085441) J♠ 3♥ (615082) ties: (11781) inserted!
+// Q♥ 5♣ - 9♥ 3♥
+// ..... Q♥ 5♣ (1034841) 9♥ 3♥ (659935) ties: (17528)
+// >>>>> Q♣ 5♥ (1034841) 9♣ 3♣ (659935) ties: (17528) inserted!
+// >>>>> Q♥ 5♣ (1034841) 9♥ 3♥ (659935) ties: (17528) already exists!
+// K♥ K♣ - 6♠ 6♦
+// ..... K♥ K♣ (1364648) 6♠ 6♦ (342914) ties: (4742)
+// >>>>> K♥ K♣ (1364648) 6♠ 6♦ (342914) ties: (4742) inserted!
+// T♥ 4♥ - 8♠ 7♥
+// ..... T♥ 4♥ (957190) 8♠ 7♥ (721531) ties: (33583)
+// >>>>> T♣ 4♣ (957190) 8♦ 7♣ (721531) ties: (33583) inserted!
+// >>>>> T♥ 4♥ (957190) 8♠ 7♥ (721531) ties: (33583) already exists!
+// A♠ 5♣ - 8♦ 8♣
+// ..... A♠ 5♣ (514438) 8♦ 8♣ (1191212) ties: (6654)
+// >>>>> A♦ 5♥ (514438) 8♠ 8♥ (1191212) ties: (6654) inserted!
+// >>>>> A♠ 5♣ (514438) 8♦ 8♣ (1191212) ties: (6654) already exists!
+// Q♣ 6♣ - 5♠ 2♦
+// ..... Q♣ 6♣ (1143966) 5♠ 2♦ (551322) ties: (17016)
+// >>>>> Q♣ 6♣ (1143966) 5♠ 2♦ (551322) ties: (17016) inserted!
+// >>>>> Q♥ 6♥ (1143966) 5♦ 2♠ (551322) ties: (17016) inserted!
+// T♣ 7♦ - 9♠ 3♣
+// ..... T♣ 7♦ (1108218) 9♠ 3♣ (569698) ties: (34388)
+// >>>>> T♣ 7♦ (1108218) 9♠ 3♣ (569698) ties: (34388) inserted!
+// >>>>> T♥ 7♠ (1108218) 9♦ 3♥ (569698) ties: (34388) inserted!
+// K♣ J♠ - Q♣ 3♠
+// ..... K♣ J♠ (1136738) Q♣ 3♠ (561955) ties: (13611)
+// >>>>> K♣ J♠ (1136738) Q♣ 3♠ (561955) ties: (13611) inserted!
+// >>>>> K♥ J♦ (1136738) Q♥ 3♦ (561955) ties: (13611) inserted!
+// K♦ 6♦ - 6♥ 3♥
+// ..... K♦ 6♦ (1169807) 6♥ 3♥ (478935) ties: (63562)
+// >>>>> K♠ 6♠ (1169807) 6♣ 3♣ (478935) ties: (63562) inserted!
+// >>>>> K♦ 6♦ (1169807) 6♥ 3♥ (478935) ties: (63562) already exists!
+// read_input() time elapsed: 2412.57s
+// How many runs? 10
+// Processing 10 hands.
+// K♠ 8♦ - 9♣ 8♠
+// ..... K♠ 8♦ (1165842) 9♣ 8♠ (496568) ties: (49894)
+// >>>>> K♦ 8♠ (1165842) 9♥ 8♦ (496568) ties: (49894) inserted!
+// >>>>> K♠ 8♦ (1165842) 9♣ 8♠ (496568) ties: (49894) already exists!
+// Q♥ 2♦ - J♠ 7♠
+// ..... Q♥ 2♦ (915247) J♠ 7♠ (780548) ties: (16509)
+// >>>>> Q♣ 2♠ (915247) J♦ 7♦ (780548) ties: (16509) inserted!
+// >>>>> Q♥ 2♦ (915247) J♠ 7♠ (780548) ties: (16509) already exists!
+// K♥ 9♥ - 5♠ 4♥
+// ..... K♥ 9♥ (1096807) 5♠ 4♥ (602314) ties: (13183)
+// >>>>> K♥ 9♥ (1096807) 5♠ 4♥ (602314) ties: (13183) inserted!
+// >>>>> K♣ 9♣ (1096807) 5♦ 4♣ (602314) ties: (13183) inserted!
+// A♠ 7♥ - T♠ 5♦
+// ..... A♠ 7♥ (1090527) T♠ 5♦ (614366) ties: (7411)
+// >>>>> A♦ 7♣ (1090527) T♦ 5♠ (614366) ties: (7411) inserted!
+// >>>>> A♠ 7♥ (1090527) T♠ 5♦ (614366) ties: (7411) already exists!
+// Q♠ 4♦ - T♥ 7♣
+// ..... Q♠ 4♦ (973068) T♥ 7♣ (724344) ties: (14892)
+// >>>>> Q♦ 4♠ (973068) T♣ 7♥ (724344) ties: (14892) inserted!
+// >>>>> Q♠ 4♦ (973068) T♥ 7♣ (724344) ties: (14892) already exists!
+// Q♥ Q♦ - 3♥ 2♦
+// ..... Q♥ Q♦ (1475262) 3♥ 2♦ (227565) ties: (9477)
+// >>>>> Q♥ Q♦ (1475262) 3♥ 2♦ (227565) ties: (9477) inserted!
+// >>>>> Q♠ Q♣ (1475262) 3♣ 2♠ (227565) ties: (9477) inserted!
+// J♥ 6♣ - 4♥ 2♣
+// ..... J♥ 6♣ (1117344) 4♥ 2♣ (569344) ties: (25616)
+// >>>>> J♣ 6♥ (1117344) 4♣ 2♥ (569344) ties: (25616) inserted!
+// >>>>> J♥ 6♣ (1117344) 4♥ 2♣ (569344) ties: (25616) already exists!
+// Q♥ 6♠ - Q♦ 3♥
+// ..... Q♥ 6♠ (716231) Q♦ 3♥ (373121) ties: (622952)
+// >>>>> Q♠ 3♣ (716231) Q♣ 6♦ (373121) ties: (622952) inserted!
+// >>>>> Q♥ 6♠ (716231) Q♦ 3♥ (373121) ties: (622952) already exists!
+// J♣ 2♥ - 7♥ 2♦
+// ..... J♣ 2♥ (1208911) 7♥ 2♦ (420067) ties: (83326)
+// >>>>> J♣ 2♥ (1208911) 7♥ 2♦ (420067) ties: (83326) inserted!
+// >>>>> J♥ 2♣ (1208911) 7♣ 2♠ (420067) ties: (83326) inserted!
+// 9♣ 3♣ - 4♦ 2♦
+// ..... 9♣ 3♣ (998492) 4♦ 2♦ (663253) ties: (50559)
+// >>>>> 9♣ 3♣ (998492) 4♦ 2♦ (663253) ties: (50559) inserted!
+// >>>>> 9♥ 3♥ (998492) 4♠ 2♠ (663253) ties: (50559) inserted!
+// read_input() time elapsed: 34093.94s
+// How many runs? 1
+// Processing 1 hands.
+// Q♥ 9♠ - T♦ 3♥
+// ..... Q♥ 9♠ (1118467) T♦ 3♥ (577752) ties: (16085)
+// >>>>> Q♣ 9♦ (1118467) T♠ 3♣ (577752) ties: (16085) inserted!
+// >>>>> Q♥ 9♠ (1118467) T♦ 3♥ (577752) ties: (16085) already exists!
+// read_input() time elapsed: 2066.59s

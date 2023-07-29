@@ -635,6 +635,43 @@
               * impl From<Two> for Bard
               * TestData::the_hand_as_hup_result()
               * impl TryFrom<Bard> for Two
+              * REFACTORING: bcm csv storage
+                * SevenFiveBCM::DEFAULT_PKCORE_75BCM_CSV_PATH
+                * SevenFiveBCM::get_csv_filepath()
+                * TODO: bcm csv feature flag
+            * impl Pile for SortedHeadsUp
+            * SortedHeadsUp::all_possible() -> std::collections::HashSet<SortedHeadsUp>
+              * NOTE renamed unique()
+            * The Blueprint
+              * SortedHeadsUp::wins() returning default for now
+              * TODO: Convert SortedHeadsUp and Wins into a HUPResult.
+              * TODO: Store them in our DB.
+              * TODO: Once we verified that our DB plays nice, we can wire in our BC_RANK_HASHMAP megacache and do the real work.
+            * HUPResult::from_sorted_heads_up(shu: SortedHeadsUp, wins: Wins)
+              * SortedHeadsUp.higher_as_bard()
+              * SortedHeadsUp.lower_as_bard()
+            * impl SuitShift for SortedHeadsUp 
+              * SuitShift.shifts()
+              * Added transpositions to examples/hup.rs
+            * impl FromStr for SortedHeadsUp
+            * SortedHeadsUp::generate_csv()
+            * Migrate bcrepl methods to SortedHeadsUp
+            * Shifty shifts and other_shifts
+            * TODO TD: The great bcrepl fudd investigation.
+            * SortedHeadsUp.distinct()
+              * SortedHeadsUp.remove_shifts()
+              * Refactoring distinct()
+            * impl From<SortedHeadsUp> for HUPResult
+            * examples/preflop.rs let's go!
+              * impl SuitShift for HUPResult
+                * impl From<HUPResult> for SortedHeadsUp
+                * TODO TD: SuitShift.opposite() don't trust it.
+              * preflop - take count
+              * impl Shifty for HUPResult {}
+              * inserting test
+              * need Sqlable.exists()
+                * HUPResult::exists()
+              * 
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
@@ -671,6 +708,7 @@
       * [tui-rs](https://github.com/fdehau/tui-rs)
         * [Rust and TUI: Building a command-line interface in Rust](https://blog.logrocket.com/rust-and-tui-building-a-command-line-interface-in-rust/)
       * [Crossterm](https://github.com/crossterm-rs/crossterm)
+    * [Creating successful open source projects - with @orhunp - RustShip 1](https://www.youtube.com/watch?v=_xABF_H8b3g)
   * articles
     * [Rust Is Hard, Or: The Misery of Mainstream Programming](https://hirrolot.github.io/posts/rust-is-hard-or-the-misery-of-mainstream-programming.html)
     * [Rust: Your code can be perfect](https://www.youtube.com/watch?v=IA4q0lzmyfM)

@@ -7,10 +7,52 @@ use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::{PKError, Pile};
+use csv::Reader;
 use csv::WriterBuilder;
+use lazy_static::lazy_static;
 use rusqlite::{named_params, Connection};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::error::Error;
+use std::fs::File;
+
+lazy_static! {
+    /// This code is brutal, heavy, and wonderful. It is an optimization that makes things much slower
+    /// in the short term, and MUCH faster in the long term. Eventually, we will want containers that
+    /// have all this stuff loaded for bear. We're not there yet.
+    ///
+    /// TODO TD: Add logging
+    pub static ref BC_RANK_HASHMAP: HashMap<Bard, FiveBCM> = {
+        let mut m = HashMap::new();
+        let file = File::open(SevenFiveBCM::get_csv_filepath()).unwrap();
+        let mut rdr = Reader::from_reader(file);
+
+        for result in rdr.deserialize() {
+            let bcm: SevenFiveBCM = result.unwrap();
+            m.insert(bcm.bc, FiveBCM::from(bcm));
+        }
+        m
+    };
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct FiveBCM {
+    pub bc: Bard,
+    pub rank: HandRankValue,
+}
+
+impl FiveBCM {
+    #[must_use]
+    pub fn new(bc: Bard, rank: HandRankValue) -> FiveBCM {
+        FiveBCM { bc, rank }
+    }
+}
+
+impl From<SevenFiveBCM> for FiveBCM {
+    fn from(bcm: SevenFiveBCM) -> Self {
+        FiveBCM::new(bcm.best, bcm.rank)
+    }
+}
 
 /// Way of easily storing `Card` `HandRanks` using bitflags.
 ///
@@ -85,14 +127,23 @@ use std::error::Error;
 /// ```
 /// TODO: Implement display trait.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
-#[serde(rename_all = "PascalCase")]
-pub struct BinaryCardMap {
+pub struct SevenFiveBCM {
     pub bc: Bard,
     pub best: Bard,
     pub rank: HandRankValue,
 }
 
-impl BinaryCardMap {
+impl SevenFiveBCM {
+    pub const DEFAULT_PKCORE_75BCM_CSV_PATH: &str = "generated/bcm.original.csv";
+
+    #[must_use]
+    pub fn get_csv_filepath() -> String {
+        match std::env::var("PKCORE_75BCM_CSV_PATH") {
+            Ok(path) => path,
+            Err(_) => SevenFiveBCM::DEFAULT_PKCORE_75BCM_CSV_PATH.to_string(),
+        }
+    }
+
     /// OK, this is the old school way of generating serialized data. Next step
     /// is to try to do the same with an embedded DB like
     /// [sled](https://github.com/spacejam/sled).
@@ -106,13 +157,13 @@ impl BinaryCardMap {
         let deck = Cards::deck();
 
         for b in deck.combinations(5) {
-            if let Ok(bcm) = BinaryCardMap::try_from(b) {
+            if let Ok(bcm) = SevenFiveBCM::try_from(b) {
                 wtr.serialize(bcm)?;
             }
         }
 
         for b in deck.combinations(7) {
-            if let Ok(bcm) = BinaryCardMap::try_from(b) {
+            if let Ok(bcm) = SevenFiveBCM::try_from(b) {
                 wtr.serialize(bcm)?;
             }
         }
@@ -123,7 +174,7 @@ impl BinaryCardMap {
     }
 }
 
-impl Sqlable<BinaryCardMap, Bard> for BinaryCardMap {
+impl Sqlable<SevenFiveBCM, Bard> for SevenFiveBCM {
     fn create_table(conn: &Connection) -> rusqlite::Result<usize> {
         conn.execute(
             "create table if not exists bcm (
@@ -135,7 +186,11 @@ impl Sqlable<BinaryCardMap, Bard> for BinaryCardMap {
         )
     }
 
-    fn insert(conn: &Connection, bcm: &BinaryCardMap) -> rusqlite::Result<usize> {
+    fn exists(_conn: &Connection, _record: &Bard) -> bool {
+        todo!()
+    }
+
+    fn insert(conn: &Connection, bcm: &SevenFiveBCM) -> rusqlite::Result<usize> {
         let mut stmt =
             conn.prepare("INSERT INTO bcm (bc, best, rank) VALUES (:bc, :best, :rank)")?;
         stmt.execute(named_params! {
@@ -145,11 +200,11 @@ impl Sqlable<BinaryCardMap, Bard> for BinaryCardMap {
         })
     }
 
-    fn insert_many(_conn: &Connection, _records: Vec<&BinaryCardMap>) -> rusqlite::Result<usize> {
+    fn insert_many(_conn: &Connection, _records: Vec<&SevenFiveBCM>) -> rusqlite::Result<usize> {
         todo!()
     }
 
-    fn select(conn: &Connection, bc: &Bard) -> Option<BinaryCardMap> {
+    fn select(conn: &Connection, bc: &Bard) -> Option<SevenFiveBCM> {
         let mut stmt = conn
             .prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc")
             .ok()?;
@@ -160,7 +215,7 @@ impl Sqlable<BinaryCardMap, Bard> for BinaryCardMap {
                 let best: u64 = row.get(1)?;
                 let rank: u16 = row.get(2)?;
 
-                let bcm = BinaryCardMap {
+                let bcm = SevenFiveBCM {
                     bc: Bard::from(bc),
                     best: Bard::from(best),
                     rank,
@@ -171,15 +226,19 @@ impl Sqlable<BinaryCardMap, Bard> for BinaryCardMap {
 
         Some(bcm)
     }
+
+    fn select_all(_conn: &Connection) -> Vec<SevenFiveBCM> {
+        todo!()
+    }
 }
 
-impl TryFrom<Five> for BinaryCardMap {
+impl TryFrom<Five> for SevenFiveBCM {
     type Error = PKError;
 
     fn try_from(five: Five) -> Result<Self, Self::Error> {
         let bard = five.bard();
         let rank = five.hand_rank().value;
-        let bcm = BinaryCardMap {
+        let bcm = SevenFiveBCM {
             bc: bard,
             best: bard,
             rank,
@@ -188,12 +247,12 @@ impl TryFrom<Five> for BinaryCardMap {
     }
 }
 
-impl TryFrom<Seven> for BinaryCardMap {
+impl TryFrom<Seven> for SevenFiveBCM {
     type Error = PKError;
 
     fn try_from(seven: Seven) -> Result<Self, Self::Error> {
         let (rank, five) = seven.hand_rank_value_and_hand();
-        let bcm = BinaryCardMap {
+        let bcm = SevenFiveBCM {
             bc: seven.bard(),
             best: five.bard(),
             rank,
@@ -202,14 +261,14 @@ impl TryFrom<Seven> for BinaryCardMap {
     }
 }
 
-impl TryFrom<Vec<Card>> for BinaryCardMap {
+impl TryFrom<Vec<Card>> for SevenFiveBCM {
     type Error = PKError;
 
     fn try_from(v: Vec<Card>) -> Result<Self, Self::Error> {
         match v.len() {
-            5 => Ok(BinaryCardMap::try_from(Five::try_from(v)?)?),
-            7 => Ok(BinaryCardMap::try_from(Seven::try_from(v)?)?),
-            _ => Ok(BinaryCardMap::default()),
+            5 => Ok(SevenFiveBCM::try_from(Five::try_from(v)?)?),
+            7 => Ok(SevenFiveBCM::try_from(Seven::try_from(v)?)?),
+            _ => Ok(SevenFiveBCM::default()),
         }
     }
 }
@@ -226,7 +285,7 @@ mod analysis__store__bcm__binary_card_map_tests {
     fn try_from__five() {
         let five = Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
 
-        let sut = BinaryCardMap::try_from(five).unwrap();
+        let sut = SevenFiveBCM::try_from(five).unwrap();
 
         assert_eq!(sut.rank, 1);
         assert_eq!(sut.bc, Bard(4_362_862_139_015_168));
@@ -238,7 +297,7 @@ mod analysis__store__bcm__binary_card_map_tests {
         let seven = Seven::from_str("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠").unwrap();
         let five = Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
 
-        let sut = BinaryCardMap::try_from(seven).unwrap();
+        let sut = SevenFiveBCM::try_from(seven).unwrap();
 
         assert_eq!(sut.rank, 1);
         assert_eq!(seven.cards(), Cards::from(sut.bc));
@@ -250,9 +309,9 @@ mod analysis__store__bcm__binary_card_map_tests {
     /// This test actually surprises me.
     #[test]
     fn from_five__default() {
-        let bcm = BinaryCardMap::try_from(Five::default());
+        let bcm = SevenFiveBCM::try_from(Five::default());
         assert!(bcm.is_ok());
-        assert_eq!(BinaryCardMap::default(), bcm.unwrap());
+        assert_eq!(SevenFiveBCM::default(), bcm.unwrap());
     }
 
     /// I'm just going to throw everything into one unit test for now. Yes, I am being lazy,
@@ -260,10 +319,10 @@ mod analysis__store__bcm__binary_card_map_tests {
     #[test]
     fn sqlite() {
         let conn = Connect::in_memory_connection().unwrap().connection;
-        BinaryCardMap::create_table(&conn).unwrap();
-        BinaryCardMap::insert(&conn, &TestData::spades_royal_flush_bcm()).unwrap();
+        SevenFiveBCM::create_table(&conn).unwrap();
+        SevenFiveBCM::insert(&conn, &TestData::spades_royal_flush_bcm()).unwrap();
 
-        assert!(BinaryCardMap::select(&conn, &TestData::spades_royal_flush_bcm().bc).is_some());
-        assert!(BinaryCardMap::select(&conn, &TestData::spades_king_high_flush_bcm().bc).is_none());
+        assert!(SevenFiveBCM::select(&conn, &TestData::spades_royal_flush_bcm().bc).is_some());
+        assert!(SevenFiveBCM::select(&conn, &TestData::spades_king_high_flush_bcm().bc).is_none());
     }
 }

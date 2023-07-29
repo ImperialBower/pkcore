@@ -9,6 +9,9 @@ use analysis::the_nuts::TheNuts;
 use indexmap::set::IntoIter;
 use itertools::Combinations;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::hash::Hash;
+
 use std::iter::Enumerate;
 
 pub mod analysis;
@@ -57,7 +60,7 @@ pub const POSSIBLE_UNIQUE_HOLDEM_HUP_MATCHUPS: usize = 1_624_350;
 pub enum PKError {
     BlankCard,
     CardCast,
-    DuplicateCard,
+    Duplicate,
     Fubar,
     Incomplete,
     InvalidBinaryFormat,
@@ -186,8 +189,57 @@ pub trait SuitShift {
     #[must_use]
     fn shift_suit_up(&self) -> Self;
 
+    /// I don't trust this concept. Up and down are straightforward, but not this
+    /// I need to do a deep dive into unique and distinct patterns.
     #[must_use]
     fn opposite(&self) -> Self;
+}
+
+pub trait Shifty: SuitShift + Copy {
+    #[must_use]
+    fn other_shifts(&self) -> HashSet<Self>
+    where
+        Self: Sized,
+        Self: std::cmp::Eq,
+        Self: Hash,
+        Self: std::fmt::Display,
+    {
+        let mut hs = HashSet::new();
+        let original = *self;
+        let mut shifted = *self;
+        // Tbe original version of this section has a flaw. It adds itself back if there is a gap. We
+        // Need to fix that.
+        //
+        // ```
+        // for _ in 1..=3 {
+        //   shifty = shifty.shift_suit_up();
+        //   hs.insert(shifty);
+        // }
+        // ````
+        for _ in 1..=3 {
+            shifted = shifted.shift_suit_up();
+            if shifted != original {
+                hs.insert(shifted);
+            }
+        }
+
+        hs
+    }
+
+    #[must_use]
+    fn shifts(&self) -> HashSet<Self>
+    where
+        Self: Sized,
+        Self: std::cmp::Eq,
+        Self: Hash,
+        Self: std::fmt::Display,
+    {
+        let mut hs = HashSet::new();
+        let shifty = *self;
+        hs.insert(shifty);
+        hs.extend(self.other_shifts());
+        hs
+    }
 }
 
 #[cfg(test)]

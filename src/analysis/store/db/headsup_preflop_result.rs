@@ -1,13 +1,18 @@
+use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
 use crate::analysis::store::db::sqlite::Sqlable;
-use crate::arrays::matchups::SortedHeadsUp;
-use crate::arrays::two::Two;
+use crate::arrays::five::Five;
+use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+use crate::arrays::seven::Seven;
 use crate::bard::Bard;
-use crate::Pile;
+use crate::util::wincounter::win::Win;
+use crate::util::wincounter::wins::Wins;
+use crate::{Pile, Shifty, SuitShift};
 use rusqlite::{named_params, Connection};
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct HUPResult {
     pub higher: Bard,
@@ -17,23 +22,167 @@ pub struct HUPResult {
     pub ties: u64,
 }
 
-impl HUPResult {}
+impl HUPResult {
+    /// `assert_eq!(first_ties, second_ties);`
+    /// This is something I want to get much more into the habit of writing. An assertion that's
+    /// simply a sanity check. There is no way that these two values shouldn't be equal, so,
+    /// just to be safe, let's add an a check here.
+    ///
+    /// I haven't used `.into()` before. It's really cute, but does have a
+    /// [gotcha](https://users.rust-lang.org/t/cant-convert-usize-to-u64/6243/4). I'm not
+    /// worried about it, but let's see a few years from now if my future self is cursing me
+    /// over this.
+    ///
+    /// BOO!!! Doesn't work, and I was all excited it. This is a no go:
+    ///
+    /// ```txt
+    /// HUPResult {
+    ///   higher: Default::default(),
+    ///   lower: Default::default(),
+    ///   higher_wins: first_wins.into(),
+    ///   lower_wins: second_wins.into(),
+    ///   ties: first_ties.into(),
+    /// }
+    /// error[E0277]: the trait bound `u64: From<usize>` is not satisfied
+    ///   --> src/analysis/store/db/headsup_preflop_result.rs:39:37
+    ///    |
+    /// 39 |             higher_wins: first_wins.into(),
+    ///    |                                     ^^^^ the trait `From<usize>` is not implemented for `u64`
+    ///    |
+    ///    = help: the following other types implement trait `From<T>`:
+    ///              <u64 as From<bool>>
+    ///              <u64 as From<char>>
+    ///              <u64 as From<u8>>
+    ///              <u64 as From<u16>>
+    ///              <u64 as From<u32>>
+    ///              <u64 as From<gimli::read::cfi::Pointer>>
+    ///              <u64 as From<NonZeroU64>>
+    ///    = note: required for `usize` to implement `Into<u64>`
+    /// ```
+    ///
+    /// How about we write a doctest to make sure things are working OK?
+    ///
+    /// ```
+    /// use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
+    /// use pkcore::util::data::TestData;
+    ///
+    /// assert_eq!(
+    ///     TestData::the_hand_as_hup_result(),
+    ///     HUPResult::from_sorted_heads_up(
+    ///         &TestData::the_hand_sorted_headsup(),
+    ///         &TestData::wins_the_hand()
+    ///     )
+    /// );
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// Casting from usize to u64. I'd be impressed if we got hit with this one.
+    #[must_use]
+    pub fn from_sorted_heads_up(shu: &SortedHeadsUp, wins: &Wins) -> Self {
+        let (first_wins, first_ties) = wins.wins_for(Win::FIRST);
+        let (second_wins, second_ties) = wins.wins_for(Win::SECOND);
+
+        assert_eq!(first_ties, second_ties);
+
+        HUPResult {
+            higher: shu.higher_as_bard(),
+            lower: shu.lower_as_bard(),
+            higher_wins: u64::try_from(first_wins - first_ties).unwrap(),
+            lower_wins: u64::try_from(second_wins - second_ties).unwrap(),
+            ties: u64::try_from(first_ties).unwrap(),
+        }
+    }
+
+    #[must_use]
+    pub fn get_sorted_heads_up(&self) -> Option<SortedHeadsUp> {
+        match SortedHeadsUp::try_from(self) {
+            Ok(shu) => Some(shu),
+            Err(_) => None,
+        }
+    }
+}
 
 impl Display for HUPResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let higher_two = match Two::try_from(self.higher) {
-            Ok(t) => t,
-            Err(_) => Two::default(),
+        let sho = match SortedHeadsUp::try_from(self) {
+            Ok(s) => s,
+            Err(_) => SortedHeadsUp::default(),
         };
-        let lower_two = match Two::try_from(self.lower) {
-            Ok(t) => t,
-            Err(_) => Two::default(),
-        };
+
+        // let higher_two = match Two::try_from(self.higher) {
+        //     Ok(t) => t,
+        //     Err(_) => Two::default(),
+        // };
+        // let lower_two = match Two::try_from(self.lower) {
+        //     Ok(t) => t,
+        //     Err(_) => Two::default(),
+        // };
         write!(
             f,
-            "{higher_two} ({}) {lower_two} ({}) ties: ({})",
-            self.higher_wins, self.lower_wins, self.ties
+            "{} ({}) {} ({}) ties: ({})",
+            sho.higher, self.higher_wins, sho.lower, self.lower_wins, self.ties
         )
+    }
+}
+
+impl From<&SortedHeadsUp> for HUPResult {
+    /// Clippy doesn't like our higher lower section. Normally, this is a
+    /// lint I turn off, but let's do it.
+    ///
+    /// Here's the original:
+    ///
+    /// ```txt
+    /// if high_rank.rank < low_rank.rank {
+    ///   wins.add(Win::FIRST);
+    /// } else if low_rank.rank < high_rank.rank {
+    ///   wins.add(Win::SECOND);
+    /// } else {
+    ///   wins.add(Win::FIRST | Win::SECOND);
+    /// }
+    /// ```
+    ///
+    /// And, of course, I invert the match, which loses me another 10 minutes. Once we close this
+    /// epic, we're going to need to setup an odds service to isolate this into something we can
+    /// just keep running in the background.
+    fn from(shu: &SortedHeadsUp) -> Self {
+        let higher_bard = shu.higher.bard();
+        let lower_bard = shu.lower.bard();
+
+        let mut wins = Wins::default();
+
+        // I honestly love how easy our code makes us do stuff like that. When it flows like
+        // water, you know you're on the right track.
+        for combo in shu.remaining().combinations(5) {
+            let five = Five::try_from(combo).unwrap();
+            let high7 = Seven::from_case_at_deal(shu.higher, five)
+                .unwrap()
+                .to_bard();
+            let low7 = Seven::from_case_at_deal(shu.lower, five).unwrap().to_bard();
+
+            let high_rank = BC_RANK_HASHMAP.get(&high7).unwrap();
+            let low_rank = BC_RANK_HASHMAP.get(&low7).unwrap();
+
+            match high_rank.rank.cmp(&low_rank.rank) {
+                Ordering::Less => wins.add(Win::FIRST),
+                Ordering::Greater => wins.add(Win::SECOND),
+                Ordering::Equal => wins.add(Win::FIRST | Win::SECOND),
+            }
+        }
+
+        let (higher_wins, higher_ties) = wins.wins_for(Win::FIRST);
+        let (lower_wins, lower_ties) = wins.wins_for(Win::SECOND);
+        assert_eq!(higher_ties, lower_ties);
+
+        let ties = u64::try_from(lower_ties).unwrap();
+
+        HUPResult {
+            higher: higher_bard,
+            lower: lower_bard,
+            higher_wins: u64::try_from(higher_wins).unwrap() - ties,
+            lower_wins: u64::try_from(lower_wins).unwrap() - ties,
+            ties: u64::try_from(lower_ties).unwrap(),
+        }
     }
 }
 
@@ -60,6 +209,16 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
                 on nlh_headsup_result (lower);",
             [],
         )
+    }
+
+    /// This was written to Paul van Dyk's
+    /// [VONYC Sessions #873](https://www.youtube.com/watch?v=9NdjCGH83UI&t=5073s).
+    ///
+    /// TODO: Write about music and mood and pairing.
+    ///
+    /// Oops. Little miss on the sig. Fixed now.
+    fn exists(conn: &Connection, shu: &SortedHeadsUp) -> bool {
+        HUPResult::select(conn, shu).is_some()
     }
 
     fn insert(conn: &Connection, hup: &HUPResult) -> rusqlite::Result<usize> {
@@ -119,14 +278,153 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
 
         Some(hup)
     }
+
+    /// OK, so these results are completely foobared.
+    ///
+    /// ```txt
+    /// /home/gaoler/.cargo/bin/cargo run --color=always --package pkcore --example hups
+    ///     Finished dev [unoptimized + debuginfo] target(s) in 0.05s
+    ///      Running `target/debug/examples/hups`
+    /// K♠ K♦ (137438955520) __ __ (37210) ties: (37210)
+    /// K♥ 6♦ (268435584) __ __ (1090190) ties: (610489)
+    /// K♥ 6♦ (268435584) 3♣ 2♣ (1090190) ties: (610489)
+    /// A♠ 5♦ (412316860416) __ __ (406764) ties: (1228716)
+    /// Q♦ J♦ (70369012613120) 4♣ 2♣ (1198761) ties: (498275)
+    /// Q♦ J♦ (70369012613120) 4♣ 3♣ (1198761) ties: (498275)
+    /// 9♠ 6♣ (67239936) 4♣ 3♣ (1136466) ties: (393246)
+    /// 8♣ 5♣ (3221225472) __ __ (906176) ties: (729584)
+    /// ...
+    /// ```
+    ///
+    /// Oopsie... forgot that there's an index column.
+    ///
+    /// Much better:
+    ///
+    /// ```txt
+    /// /home/gaoler/.cargo/bin/cargo run --color=always --package pkcore --example hups
+    ///      Finished dev [unoptimized + debuginfo] target(s) in 0.05s
+    ///       Running `target/debug/examples/hups`
+    ///  K♠ K♦ (37210) K♥ K♣ (37210) ties: (1637884)
+    ///  K♥ 6♦ (1090190) 9♣ 4♥ (610489) ties: (11625)
+    ///  K♥ 6♦ (1090190) 9♣ 4♥ (610489) ties: (11625)
+    ///  A♠ 5♦ (406764) A♥ K♥ (1228716) ties: (76824)
+    ///  Q♦ J♦ (1198761) 9♠ 4♥ (498275) ties: (15268)
+    /// ...
+    /// ```
+    fn select_all(conn: &Connection) -> Vec<HUPResult> {
+        log::debug!("HUPResult::select_all({:?})", conn);
+
+        let mut stmt = conn
+            .prepare("SELECT * FROM nlh_headsup_result")
+            .ok()
+            .unwrap();
+
+        let mut r: Vec<HUPResult> = Vec::new();
+        let mut hups = stmt.query(()).unwrap();
+        while let Some(row) = hups.next().unwrap() {
+            let higher: u64 = row.get(1).unwrap();
+            let lower: u64 = row.get(2).unwrap();
+            let higher_wins: u64 = row.get(3).unwrap();
+            let lower_wins: u64 = row.get(4).unwrap();
+            let ties: u64 = row.get(5).unwrap();
+            let hup = HUPResult {
+                higher: Bard::from(higher),
+                lower: Bard::from(lower),
+                higher_wins,
+                lower_wins,
+                ties,
+            };
+            r.push(hup);
+        }
+        r
+    }
 }
+
+impl SuitShift for HUPResult {
+    fn shift_suit_down(&self) -> Self {
+        let shu = match SortedHeadsUp::try_from(self) {
+            Ok(s) => s.shift_suit_down(),
+            Err(_) => SortedHeadsUp::default(),
+        };
+        HUPResult {
+            higher: shu.higher_as_bard(),
+            lower: shu.lower_as_bard(),
+            higher_wins: self.higher_wins,
+            lower_wins: self.lower_wins,
+            ties: self.ties,
+        }
+    }
+
+    /// I AM AN IDIOT!
+    ///
+    /// The original version of this function does the `SuitShift` twice. That's why it isn't
+    /// working correctly.
+    ///
+    /// ```txt
+    /// fn shift_suit_up(&self) -> Self {
+    ///   let mut shu = match SortedHeadsUp::try_from(self) {
+    ///     Ok(s) => s.shift_suit_up(),
+    ///     Err(_) => SortedHeadsUp::default(),
+    ///   };
+    ///   shu = shu.shift_suit_up(); //AHHH!!!!!
+    ///   HUPResult {
+    ///     higher: shu.higher_as_bard(),
+    ///     lower: shu.lower_as_bard(),
+    ///     higher_wins: self.higher_wins,
+    ///     lower_wins: self.lower_wins,
+    ///     ties: self.ties,
+    ///   }
+    /// }
+    /// ```
+    fn shift_suit_up(&self) -> Self {
+        let shu = match SortedHeadsUp::try_from(self) {
+            Ok(s) => s.shift_suit_up(),
+            Err(_) => SortedHeadsUp::default(),
+        };
+        HUPResult {
+            higher: shu.higher_as_bard(),
+            lower: shu.lower_as_bard(),
+            higher_wins: self.higher_wins,
+            lower_wins: self.lower_wins,
+            ties: self.ties,
+        }
+    }
+
+    fn opposite(&self) -> Self {
+        let shu = match SortedHeadsUp::try_from(self) {
+            Ok(s) => s.opposite(),
+            Err(_) => SortedHeadsUp::default(),
+        };
+        HUPResult {
+            higher: shu.higher_as_bard(),
+            lower: shu.lower_as_bard(),
+            higher_wins: self.higher_wins,
+            lower_wins: self.lower_wins,
+            ties: self.ties,
+        }
+    }
+}
+
+impl Shifty for HUPResult {}
 
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod analysis__store__db__hupresult_tests {
     use super::*;
     use crate::analysis::store::db::sqlite::Connect;
+    use crate::arrays::two::Two;
     use crate::util::data::TestData;
+    use std::collections::HashSet;
+
+    #[test]
+    fn get_sorted_heads_up() {
+        assert_eq!(
+            TestData::the_hand_sorted_headsup(),
+            TestData::the_hand_as_hup_result()
+                .get_sorted_heads_up()
+                .unwrap()
+        );
+    }
 
     /// I'm test driving this one backwards. I do that some time.
     #[test]
@@ -137,10 +435,62 @@ mod analysis__store__db__hupresult_tests {
         );
     }
 
+    /// This is going to be a very very heavy test, since we will need to load our
+    /// 4GB binary bard map cache into memory before we can even do the calculation.
+    /// Once we get it to pass, we can ignore it, and punch it into an example to run.
+    ///
+    /// Fudge! The test fails.
+    ///
+    /// ```txt
+    /// Left:  HUPResult { higher: Bard(8797166764032), lower: Bard(65544), higher_wins: 1397400, lower_wins: 347020, ties: 32116 }
+    /// Right: HUPResult { higher: Bard(8797166764032), lower: Bard(65544), higher_wins: 1365284, lower_wins: 314904, ties: 32116 }
+    /// ```
+    ///
+    /// So, let's see what the difference is.
+    ///
+    /// ```txt
+    /// 1397400 - 1365284 = 32116
+    /// 347020 - 314904 = 32116
+    /// ```
+    ///
+    /// **Smacks forehead.** Our old bcrepl subtracts the ties from the wins entries. That explains
+    /// that. I could try to consolidate the code, but right now I just want to start getting results
+    /// into sqlite.
+    ///
+    /// This time for sure!
+    ///
+    /// Subtracting times from each wins makes the test pass. Now, we're going to lock it in the
+    /// vault with an ignore.
+    #[test]
+    #[ignore]
+    fn from__sorted_heads_up() {
+        let actual = HUPResult::from(&TestData::the_hand_sorted_headsup());
+
+        assert_eq!(actual, TestData::the_hand_as_hup_result());
+    }
+
     #[test]
     fn sqlable__create_table() {
         let conn = Connect::in_memory_connection().unwrap().connection;
         assert!(HUPResult::create_table(&conn).is_ok())
+    }
+
+    #[test]
+    fn sqlable__exists() {
+        // Preamble
+        let conn = Connect::in_memory_connection().unwrap().connection;
+        HUPResult::create_table(&conn).unwrap();
+        let the_hand = TestData::the_hand_as_hup_result();
+
+        // the work
+        let i = HUPResult::insert(&conn, &the_hand).unwrap();
+
+        // the proof
+        assert!(HUPResult::exists(
+            &conn,
+            &TestData::the_hand_sorted_headsup()
+        ));
+        assert_eq!(i, 1);
     }
 
     /// ```
@@ -168,8 +518,101 @@ mod analysis__store__db__hupresult_tests {
         HUPResult::insert(&conn, &TestData::the_hand_as_hup_result()).unwrap();
 
         let actual = HUPResult::select(&conn, &TestData::the_hand_sorted_headsup());
+        let nope = HUPResult::select(&conn, &SortedHeadsUp::new(Two::HAND_6S_6H, Two::HAND_5S_5D));
 
         assert!(actual.is_some());
         assert_eq!(TestData::the_hand_as_hup_result(), actual.unwrap());
+        assert!(nope.is_none());
+    }
+
+    #[test]
+    fn sqlable__select_all() {
+        let conn = Connect::in_memory_connection().unwrap().connection;
+        HUPResult::create_table(&conn).unwrap();
+        HUPResult::insert(&conn, &TestData::the_hand_as_hup_result()).unwrap();
+
+        let actual = HUPResult::select_all(&conn);
+
+        assert_eq!(actual.len(), 1);
+        assert_eq!(&TestData::the_hand_as_hup_result(), actual.get(0).unwrap());
+    }
+
+    #[test]
+    fn suit_shift__shift_suit_down() {
+        assert_eq!(hup1().shift_suit_down(), hup2());
+    }
+
+    #[test]
+    fn suit_shift__shift_suit_up() {
+        assert_eq!(hup1().shift_suit_up(), hup4());
+    }
+
+    /// These tests are a pain in the ass to setup. Not sure what an easier way to do it is. Slow
+    /// and stupid wins the race I guess.
+    #[test]
+    fn shifty__shifts() {
+        let actual = hup1().shifts();
+
+        assert!(actual.contains(&hup1()));
+        assert!(actual.contains(&hup3()));
+
+        assert!(actual.contains(&hup2()));
+        assert!(actual.contains(&hup4()));
+        assert_eq!(actual.len(), 4);
+        assert_eq!(hs(), actual);
+    }
+
+    /// Test data
+    fn hup1() -> HUPResult {
+        HUPResult {
+            higher: Two::HAND_7D_7C.bard(),
+            lower: Two::HAND_6S_6H.bard(),
+            higher_wins: 1375342,
+            lower_wins: 315362,
+            ties: 21600,
+        }
+    }
+
+    fn hup2() -> HUPResult {
+        HUPResult {
+            higher: Two::HAND_7S_7C.bard(),
+            lower: Two::HAND_6H_6D.bard(),
+            higher_wins: 1375342,
+            lower_wins: 315362,
+            ties: 21600,
+        }
+    }
+
+    fn hup3() -> HUPResult {
+        HUPResult {
+            higher: Two::HAND_7S_7H.bard(),
+            lower: Two::HAND_6D_6C.bard(),
+            higher_wins: 1375342,
+            lower_wins: 315362,
+            ties: 21600,
+        }
+    }
+
+    fn hup4() -> HUPResult {
+        HUPResult {
+            higher: Two::HAND_7H_7D.bard(),
+            lower: Two::HAND_6S_6C.bard(),
+            higher_wins: 1375342,
+            lower_wins: 315362,
+            ties: 21600,
+        }
+    }
+
+    fn v() -> Vec<HUPResult> {
+        let v: Vec<HUPResult> = vec![hup1(), hup2(), hup3(), hup4()];
+        v
+    }
+
+    fn hs() -> HashSet<HUPResult> {
+        let mut hs = HashSet::new();
+        for hup in v() {
+            hs.insert(hup);
+        }
+        hs
     }
 }
