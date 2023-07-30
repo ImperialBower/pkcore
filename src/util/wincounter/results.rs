@@ -179,7 +179,7 @@ mod util__wincounter__results__tests {
 
     #[test]
     fn from_wins() {
-        let results = Results::from_wins(&TestData::wins_the_hand(), 2);
+        let results = Results::from_wins(&TestData::the_hand_as_wins(), 2);
 
         assert_eq!(&(1_365_284, 32_116), results.v.get(0).unwrap());
         assert_eq!(&(314_904, 32_116), results.v.get(1).unwrap());
@@ -187,7 +187,7 @@ mod util__wincounter__results__tests {
 
     #[test]
     fn player_to_string() {
-        let results = Results::from_wins(&TestData::wins_the_hand(), 2);
+        let results = Results::from_wins(&TestData::the_hand_as_wins(), 2);
 
         assert_eq!(
             "81.6% (79.73%/1.88%) [1365284/32116]",
@@ -202,7 +202,7 @@ mod util__wincounter__results__tests {
 
     #[test]
     fn wins_and_ties() {
-        let results = Results::from_wins(&TestData::wins_the_hand(), 2);
+        let results = Results::from_wins(&TestData::the_hand_as_wins(), 2);
 
         assert_eq!((1_365_284, 32_116), results.wins_and_ties(0));
         assert_eq!((314_904, 32_116), results.wins_and_ties(1));
@@ -212,7 +212,7 @@ mod util__wincounter__results__tests {
 
     #[test]
     fn wins_and_ties_percentages() {
-        let results = Results::from_wins(&TestData::wins_the_hand(), 2);
+        let results = Results::from_wins(&TestData::the_hand_as_wins(), 2);
 
         assert_eq!((79.73374, 1.8756015), results.wins_and_ties_percentages(0));
         assert_eq!((18.39066, 1.8756015), results.wins_and_ties_percentages(1));
@@ -222,7 +222,7 @@ mod util__wincounter__results__tests {
 
     #[test]
     fn wins_total() {
-        let results = Results::from_wins(&TestData::wins_the_hand(), 2);
+        let results = Results::from_wins(&TestData::the_hand_as_wins(), 2);
 
         assert_eq!(1_397_400, results.wins_total(0));
         assert_eq!(347_020, results.wins_total(1));
@@ -232,7 +232,7 @@ mod util__wincounter__results__tests {
 
     #[test]
     fn wins_total_percentage() {
-        let results = Results::from_wins(&TestData::wins_the_hand(), 2);
+        let results = Results::from_wins(&TestData::the_hand_as_wins(), 2);
 
         assert_eq!(81.60934, results.wins_total_percentage(0));
         assert_eq!(20.266262, results.wins_total_percentage(1));
@@ -249,7 +249,7 @@ mod util__wincounter__results__tests {
     /// * trait implementations
     #[test]
     fn display() {
-        let results = Results::from_wins(&TestData::wins_the_hand(), 2);
+        let results = Results::from_wins(&TestData::the_hand_as_wins(), 2);
         assert_eq!(
             "Player #1 81.6% (79.73%/1.88%) [1365284/32116]\nPlayer #2 20.3% (18.39%/1.88%) [314904/32116]\n",
             results.to_string()

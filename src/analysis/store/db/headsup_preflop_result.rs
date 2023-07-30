@@ -15,6 +15,7 @@ use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 
+/// TODO TD: Why u64 not usize?
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 #[serde(rename_all = "PascalCase")]
 pub struct HUPResult {
@@ -88,7 +89,7 @@ impl HUPResult {
     ///     TestData::the_hand_as_hup_result(),
     ///     HUPResult::from_sorted_heads_up(
     ///         &TestData::the_hand_sorted_headsup(),
-    ///         &TestData::wins_the_hand()
+    ///         &TestData::the_hand_as_wins()
     ///     )
     /// );
     /// ```

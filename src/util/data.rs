@@ -131,7 +131,7 @@ impl TestData {
     }
 
     #[must_use]
-    pub fn wins_the_hand() -> Wins {
+    pub fn the_hand_as_wins() -> Wins {
         let mut wins = Wins::default();
 
         wins.add_x(Win::FIRST, 1_365_284); // Daniel Wins
@@ -181,5 +181,16 @@ impl TestData {
 mod util__data_tests {
     use super::*;
 
-    fn shu_hup_alignment() {}
+    /// We want to make sure that our test data enforces the correct contract of the structs that
+    /// we are validating with it.
+    #[test]
+    fn shu_hup_alignment() {
+        let hup = TestData::the_hand_as_hup_result();
+        let wins = TestData::the_hand_as_wins();
+        let (first_wins, first_ties) = wins.wins_for(Win::FIRST);
+        let (second_wins, second_ties) = wins.wins_for(Win::SECOND);
+
+        assert_eq!(hup.higher_wins as usize, first_wins - first_ties);
+        assert_eq!(hup.lower_wins as usize, second_wins - second_ties);
+    }
 }

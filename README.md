@@ -675,6 +675,8 @@
             * HUPResult to csv
               * hup_dump.rs
               * HUPResult::read_db
+            * Refactoring impl From<SortedHeadsUp> for HUPResult
+              * TestData shu_hup_alignment() test.
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

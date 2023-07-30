@@ -1060,7 +1060,7 @@ mod arrays__matchups__sorted_heads_up_tests {
     ///
     /// ```
     /// use pkcore::util::data::TestData;
-    /// assert_eq!(TestData::the_hand_sorted_headsup().wins(), TestData::wins_the_hand());
+    /// assert_eq!(TestData::the_hand_sorted_headsup().wins(), TestData::the_hand_as_wins());
     /// ```
     ///
     /// Let's try it a different way...
@@ -1070,7 +1070,7 @@ mod arrays__matchups__sorted_heads_up_tests {
     /// use pkcore::util::wincounter::win::Win;
     /// assert_eq!(
     ///     TestData::the_hand_sorted_headsup().wins().wins_for(Win::FIRST),
-    ///     TestData::wins_the_hand().wins_for(Win::FIRST)
+    ///     TestData::the_hand_as_wins().wins_for(Win::FIRST)
     /// );
     /// ```
     ///
@@ -1097,7 +1097,7 @@ mod arrays__matchups__sorted_heads_up_tests {
     #[test]
     #[ignore]
     fn wins() {
-        let expected = TestData::wins_the_hand();
+        let expected = TestData::the_hand_as_wins();
         let (higher_expected, higher_expected_ties) = expected.wins_for(Win::FIRST);
         let (lower_expected, lower_expected_ties) = expected.wins_for(Win::SECOND);
 

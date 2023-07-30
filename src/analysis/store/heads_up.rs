@@ -207,7 +207,7 @@ mod analysis__store__heads_up_row_test {
     use crate::util::data::TestData;
 
     fn row() -> PreflopRow {
-        let wins = TestData::wins_the_hand().results_heads_up();
+        let wins = TestData::the_hand_as_wins().results_heads_up();
         PreflopRow::new(
             Two::HAND_6S_6H,
             Two::HAND_5D_5C,
@@ -218,7 +218,7 @@ mod analysis__store__heads_up_row_test {
     }
 
     fn row_inverted() -> PreflopRow {
-        let wins = TestData::wins_the_hand().results_heads_up();
+        let wins = TestData::the_hand_as_wins().results_heads_up();
         PreflopRow::new(
             Two::HAND_5D_5C,
             Two::HAND_6S_6H,
@@ -230,7 +230,7 @@ mod analysis__store__heads_up_row_test {
 
     #[test]
     fn new() {
-        let wins = TestData::wins_the_hand().results_heads_up();
+        let wins = TestData::the_hand_as_wins().results_heads_up();
         let row = row();
         let row_inverted = row_inverted();
 
@@ -251,7 +251,7 @@ mod analysis__store__heads_up_row_test {
 
     #[test]
     fn get_wins() {
-        let wins = TestData::wins_the_hand().results_heads_up();
+        let wins = TestData::the_hand_as_wins().results_heads_up();
         let row = row();
         let row_inverted = row_inverted();
 
