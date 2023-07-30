@@ -21,7 +21,8 @@ fn main() {
         process(&conn, &hup);
     }
     validate(&conn, hups_length);
-    HUPResult::generate_csv_from_vector("data/washed_hups.csv", &HUPResult::select_all(&conn)).unwrap();
+    // HUPResult::generate_csv_from_vector("data/washed_hups.csv", &HUPResult::select_all(&conn))
+    //     .unwrap();
     conn.close().unwrap();
 }
 
@@ -29,7 +30,7 @@ fn validate(conn: &Connection, hups_length: usize) {
     let (is, should) = HUPResult::db_count(conn);
     match HUPResult::db_is_valid(conn) {
         true => println!("DB passes internal validation"),
-        false => { let (is, should) = HUPResult::db_count(conn);
+        false => {
             println!("is: {is} - should be: {should}");
         }
     }

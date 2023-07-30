@@ -1,7 +1,7 @@
 use clap::Parser;
-use rusqlite::Connection;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
+use rusqlite::Connection;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]

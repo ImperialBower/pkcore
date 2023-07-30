@@ -273,7 +273,7 @@ fn insert(conn: &Connection, all_possible: &HashSet<SortedHeadsUp>) {
     for shu in all_possible.iter() {
         count = count + 1;
         println!("Inserting #{count} {shu}");
-        let wins = shu.wins();
+        let wins = shu.wins().unwrap();
         let possible_sorts = shu.shifts();
 
         for sorted in possible_sorts.iter() {

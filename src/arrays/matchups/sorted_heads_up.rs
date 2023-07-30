@@ -1,13 +1,18 @@
+use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
 use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::analysis::the_nuts::TheNuts;
+use crate::arrays::five::Five;
+use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::{PKError, Pile, Shifty, SuitShift};
 use csv::WriterBuilder;
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 
@@ -803,9 +808,45 @@ impl SortedHeadsUp {
 
     /// For now, returning default is all part of the blueprint. Still, let's write a test
     /// that fails that we can ignore later on when we get everything wired in.
-    #[must_use]
-    pub fn wins(&self) -> Wins {
-        Wins::default()
+    ///
+    /// Now, let's try refactoring `HUPResult::from(SortedHeadsUp)` to use this method
+    /// to calculate wins. Running a validation test will be slow, but it will be worth it.
+    ///
+    /// TODO: Is there any reason to dive into [`std::sync::atomic::Ordering`](https://doc.rust-lang.org/std/sync/atomic/enum.Ordering.html)?
+    ///
+    /// # Errors
+    ///
+    /// Throws `PKError` when unable to cast cards correctly.
+    pub fn wins(&self) -> Result<Wins, PKError> {
+        let mut wins = Wins::default();
+
+        for combo in self.remaining().combinations(5) {
+            let (high7, low7) = self.sevens(Five::try_from(combo)?)?;
+
+            let high_rank = BC_RANK_HASHMAP
+                .get(&high7.to_bard())
+                .ok_or(PKError::InvalidHand)?;
+            let low_rank = BC_RANK_HASHMAP
+                .get(&low7.to_bard())
+                .ok_or(PKError::InvalidHand)?;
+
+            match high_rank.rank.cmp(&low_rank.rank) {
+                Ordering::Less => wins.add(Win::FIRST),
+                Ordering::Greater => wins.add(Win::SECOND),
+                Ordering::Equal => wins.add(Win::FIRST | Win::SECOND),
+            };
+        }
+
+        Ok(wins)
+    }
+
+    /// # Errors
+    ///
+    /// Throws `PKError` when an invalid cast occurs due to bad `Card` arrays passed in.
+    pub fn sevens(&self, five: Five) -> Result<(Seven, Seven), PKError> {
+        let high7 = Seven::from_case_at_deal(self.higher, five)?;
+        let low7 = Seven::from_case_at_deal(self.lower, five)?;
+        Ok((high7, low7))
     }
 }
 
@@ -1046,6 +1087,7 @@ mod arrays__matchups__sorted_heads_up {
         assert_eq!(
             TestData::the_hand_sorted_headsup()
                 .wins()
+                .unwrap()
                 .wins_for(Win::FIRST),
             TestData::wins_the_hand().wins_for(Win::FIRST)
         );

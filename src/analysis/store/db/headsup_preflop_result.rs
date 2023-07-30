@@ -247,7 +247,7 @@ impl From<&SortedHeadsUp> for HUPResult {
                 Ordering::Less => wins.add(Win::FIRST),
                 Ordering::Greater => wins.add(Win::SECOND),
                 Ordering::Equal => wins.add(Win::FIRST | Win::SECOND),
-            }
+            };
         }
 
         let (higher_wins, higher_ties) = wins.wins_for(Win::FIRST);
