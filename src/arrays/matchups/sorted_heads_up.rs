@@ -967,7 +967,7 @@ impl TryFrom<Vec<&Two>> for SortedHeadsUp {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod arrays__matchups__sorted_heads_up {
+mod arrays__matchups__sorted_heads_up_tests {
     use super::*;
     use crate::util::data::TestData;
     use crate::util::wincounter::win::Win;

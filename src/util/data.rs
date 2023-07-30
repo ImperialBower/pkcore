@@ -175,3 +175,11 @@ impl TestData {
         SortedHeadsUp::new(Two::HAND_6S_6H, Two::HAND_5D_5C)
     }
 }
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod util__data_tests {
+    use super::*;
+
+    fn shu_hup_alignment() {}
+}

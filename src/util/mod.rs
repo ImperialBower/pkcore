@@ -3,6 +3,9 @@ pub mod random_ordering;
 pub mod wincounter;
 
 /// Blank struct that is home to misfit utility functions.
+///
+/// There is a whole school that argues against util functions and modules like
+/// this. Obviously, I am not one of them.
 pub struct Util;
 
 impl Util {
