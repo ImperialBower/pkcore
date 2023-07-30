@@ -904,8 +904,76 @@ mod play__game_tests {
     /// ```txt
     /// 5♠ 5♥ A♠ K♠ T♠ - 5308-PairOfFives
     /// 5♠ 5♥ A♠ K♠ J♠ - 5307-PairOfFives
+    /// 5♠ 5♥ A♠ K♠ Q♠ - 5306-PairOfFives
     /// ```
-    /// These are the same hands. They should have the same ranks.
+    /// These are almost same hands. They should have the same ranks.
+    ///
+    /// ```txt
+    /// 0. 9♠ 9♥ 9♦ 9♣ 6♦ - 78-FourNines
+    /// 1. 6♠ 6♥ 6♦ 6♣ 9♣ - 112-FourSixes
+    /// 2. 5♠ 5♥ 5♦ 5♣ A♠ - 119-FourFives
+    /// 3. A♠ A♥ A♣ 5♠ 5♥ - 175-AcesOverFives
+    /// 4. K♠ K♦ K♣ 5♠ 5♥ - 187-KingsOverFives
+    /// 5. Q♠ Q♥ Q♣ 5♠ 5♥ - 199-QueensOverFives
+    /// 6. J♠ J♥ J♦ 5♠ 5♥ - 211-JacksOverFives
+    /// 7. T♠ T♥ T♦ 5♠ 5♥ - 223-TensOverFives
+    /// 8. 9♠ 9♥ 9♣ 6♦ 6♣ - 234-NinesOverSixes
+    /// 9. 9♥ 9♦ 9♣ 5♠ 5♥ - 235-NinesOverFives
+    /// 10. 8♠ 8♦ 8♣ 5♠ 5♥ - 247-EightsOverFives
+    /// 11. 7♠ 7♥ 7♦ 5♠ 5♥ - 259-SevensOverFives
+    /// 12. 6♥ 6♦ 6♣ 9♠ 9♣ - 268-SixesOverNines
+    /// 13. 6♠ 6♦ 6♣ 5♠ 5♥ - 271-SixesOverFives
+    /// 14. 5♠ 5♥ 5♣ A♠ A♥ - 275-FivesOverAces
+    /// 15. 5♠ 5♥ 5♣ K♠ K♥ - 276-FivesOverKings
+    /// 16. 5♠ 5♥ 5♣ Q♠ Q♥ - 277-FivesOverQueens
+    /// 17. 5♠ 5♥ 5♣ J♠ J♣ - 278-FivesOverJacks
+    /// 18. 5♠ 5♥ 5♣ T♠ T♥ - 279-FivesOverTens
+    /// 19. 5♠ 5♥ 5♦ 9♠ 9♣ - 280-FivesOverNines
+    /// 20. 5♠ 5♥ 5♣ 8♠ 8♣ - 281-FivesOverEights
+    /// 21. 5♠ 5♥ 5♣ 7♠ 7♣ - 282-FivesOverSevens
+    /// 22. 5♠ 5♥ 5♣ 6♠ 6♦ - 283-FivesOverSixes
+    /// 23. 5♠ 5♥ 5♣ 4♥ 4♦ - 284-FivesOverFours
+    /// 24. 5♠ 5♥ 5♣ 3♥ 3♦ - 285-FivesOverTreys
+    /// 25. 5♠ 5♥ 5♣ 2♥ 2♦ - 286-FivesOverDeuces
+    /// 26. 4♠ 4♥ 4♦ 5♠ 5♥ - 296-FoursOverFives
+    /// 27. 3♠ 3♥ 3♣ 5♠ 5♥ - 308-TreysOverFives
+    /// 28. 2♠ 2♥ 2♣ 5♠ 5♥ - 320-DeucesOverFives
+    /// 29. T♠ 9♣ 8♠ 7♠ 6♦ - 1604-TenHighStraight
+    /// 30. 9♣ 8♠ 7♠ 6♦ 5♥ - 1605-NineHighStraight
+    /// 31. 7♠ 6♦ 5♥ 4♠ 3♦ - 1607-SevenHighStraight
+    /// 32. 6♦ 5♥ 4♠ 3♦ 2♠ - 1608-SixHighStraight
+    /// 33. 5♠ 5♥ 5♦ A♠ K♠ - 2204-ThreeFives
+    /// 34. A♠ A♣ 9♠ 9♣ 6♦ - 2518-AcesAndNines
+    /// 35. A♠ A♥ 6♦ 6♣ 9♣ - 2549-AcesAndSixes
+    /// 36. A♠ A♣ 5♠ 5♥ K♠ - 2556-AcesAndFives
+    /// 37. K♠ K♥ 9♠ 9♣ 6♦ - 2639-KingsAndNines
+    /// 38. K♠ K♥ 6♠ 6♦ 9♣ - 2670-KingsAndSixes
+    /// 39. K♠ K♣ 5♠ 5♥ A♠ - 2677-KingsAndFives
+    /// 40. Q♠ Q♦ 9♠ 9♣ 6♦ - 2749-QueensAndNines
+    /// 41. Q♠ Q♣ 6♠ 6♦ 9♣ - 2780-QueensAndSixes
+    /// 42. Q♠ Q♥ 5♠ 5♥ A♠ - 2787-QueensAndFives
+    /// 43. J♠ J♥ 9♠ 9♣ 6♦ - 2848-JacksAndNines
+    /// 44. J♠ J♦ 6♠ 6♦ 9♣ - 2879-JacksAndSixes
+    /// 45. J♠ J♥ 5♠ 5♥ A♠ - 2886-JacksAndFives
+    /// 46. T♠ T♣ 9♠ 9♣ 6♦ - 2936-TensAndNines
+    /// 47. T♠ T♣ 6♠ 6♦ 9♣ - 2967-TensAndSixes
+    /// 48. T♠ T♥ 5♠ 5♥ A♠ - 2974-TensAndFives
+    /// 49. 9♠ 9♣ 8♥ 8♦ 6♦ - 3024-NinesAndEights
+    /// 50. 9♠ 9♣ 7♥ 7♦ 6♦ - 3035-NinesAndSevens
+    /// 51. 9♠ 9♣ 6♠ 6♦ A♠ - 3040-NinesAndSixes
+    /// 52. 9♠ 9♣ 5♠ 5♥ A♠ - 3051-NinesAndFives
+    /// 53. 8♠ 8♦ 6♠ 6♦ 9♣ - 3111-EightsAndSixes
+    /// 54. 8♠ 8♦ 5♠ 5♥ A♠ - 3117-EightsAndFives
+    /// 55. 7♠ 7♣ 6♠ 6♦ 9♣ - 3166-SevensAndSixes
+    /// 56. 7♠ 7♦ 5♠ 5♥ A♠ - 3172-SevensAndFives
+    /// 57. 6♠ 6♦ 5♠ 5♥ A♠ - 3216-SixesAndFives
+    /// 58. 5♠ 5♥ 4♠ 4♣ A♠ - 3260-FivesAndFours
+    /// 59. 5♠ 5♥ 3♠ 3♥ A♠ - 3271-FivesAndTreys
+    /// 60. 5♠ 5♥ 2♠ 2♥ A♠ - 3282-FivesAndDeuces
+    /// 61. 5♠ 5♥ A♠ K♠ Q♠ - 5306-PairOfFives
+    /// ```
+    ///
+    /// Don't have time for this. Putting it back into the vault.
     #[test]
     #[ignore]
     fn turn_the_nuts() {
@@ -913,13 +981,21 @@ mod play__game_tests {
 
         let evals = game.turn_the_nuts().to_evals();
 
-        for eval in evals.to_vec() {
-            println!("{eval}");
+        for (i, eval) in evals.to_vec().iter().enumerate() {
+            println!("{i}. {eval}");
         }
 
         assert_eq!(62, evals.len());
         assert_eq!(78, evals.get(0).unwrap().hand_rank.value);
         assert_eq!(286, evals.get(25).unwrap().hand_rank.value);
+        assert_eq!(3111, evals.get(53).unwrap().hand_rank.value);
+        assert_eq!(3117, evals.get(54).unwrap().hand_rank.value);
+        assert_eq!(3166, evals.get(55).unwrap().hand_rank.value);
+        assert_eq!(3172, evals.get(56).unwrap().hand_rank.value);
+        assert_eq!(3216, evals.get(57).unwrap().hand_rank.value);
+        assert_eq!(3260, evals.get(58).unwrap().hand_rank.value);
+        assert_eq!(3271, evals.get(59).unwrap().hand_rank.value);
+        assert_eq!(3282, evals.get(60).unwrap().hand_rank.value);
         assert_eq!(5306, evals.get(61).unwrap().hand_rank.value);
         assert!(evals.get(63).is_none());
         assert_eq!(Evals::default(), Game::default().turn_the_nuts().to_evals());
