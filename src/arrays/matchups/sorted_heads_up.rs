@@ -1081,16 +1081,35 @@ mod arrays__matchups__sorted_heads_up {
     /// and ignore it for now. We've got bigger fish to fry. __Do vegans get
     /// mad by this phrase? Should it be, we've got bigger blocks of tofu to
     /// fry?__
+    ///
+    /// Now that we're at a point where we can really get down to business,
+    /// let's take the time to make this test really work, so we can rest
+    /// easy and get on with things.
+    ///
+    /// I like this refactoring. SortedHeadsUp owns it's wins and HUPResult passed them into
+    /// something it can store.
+    ///
+    /// This takes five minutes to run. If it fails, I am royally fracked.
+    ///
+    /// Luckily it passed. 🎉
+    ///
+    /// Now, a test of the same data against `impl From<&SortedHeadsUp> for HUPResult`.
     #[test]
     #[ignore]
     fn wins() {
-        assert_eq!(
-            TestData::the_hand_sorted_headsup()
-                .wins()
-                .unwrap()
-                .wins_for(Win::FIRST),
-            TestData::wins_the_hand().wins_for(Win::FIRST)
-        );
+        let expected = TestData::wins_the_hand();
+        let (higher_expected, higher_expected_ties) = expected.wins_for(Win::FIRST);
+        let (lower_expected, lower_expected_ties) = expected.wins_for(Win::SECOND);
+
+        let actual = TestData::the_hand_sorted_headsup().wins().unwrap();
+        let (higher_wins, higher_ties) = actual.wins_for(Win::FIRST);
+        let (lower_wins, lower_ties) = actual.wins_for(Win::SECOND);
+
+        assert_eq!(higher_ties, lower_ties);
+        assert_eq!(higher_expected_ties, lower_expected_ties);
+        assert_eq!(higher_wins, higher_expected);
+        assert_eq!(lower_wins, lower_expected);
+        assert_eq!(higher_ties, higher_expected_ties);
     }
 
     /// Here's the original test that panics, just for fun. I love it's error message:
