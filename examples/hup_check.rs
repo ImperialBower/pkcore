@@ -19,6 +19,7 @@ fn main() {
         process(&conn, &hup);
     }
     validate(&conn, hups_length);
+    conn.close().unwrap();
     // HUPResult::generate_csv_from_vector("valid_hups.csv", &HUPResult::select_all(&conn)).unwrap();
 }
 
