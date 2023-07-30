@@ -1,3 +1,4 @@
 #!/usr/bin/env bash
 
-cargo run --example hup_dump -- -f "../generated/hups.db" -t "../generated/hups.csv"
+#cargo run --example hup_dump -- -f "../generated/hups.db" -t "../generated/hups.csv"
+cargo run --example hup_dump -- -f "../data/sample_hups.db" -t "../generated/hups.csv"

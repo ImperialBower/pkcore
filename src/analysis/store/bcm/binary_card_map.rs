@@ -190,14 +190,15 @@ impl Sqlable<SevenFiveBCM, Bard> for SevenFiveBCM {
         todo!()
     }
 
-    fn insert(conn: &Connection, bcm: &SevenFiveBCM) -> rusqlite::Result<usize> {
+    fn insert(conn: &Connection, bcm: &SevenFiveBCM) -> rusqlite::Result<bool> {
         let mut stmt =
             conn.prepare("INSERT INTO bcm (bc, best, rank) VALUES (:bc, :best, :rank)")?;
         stmt.execute(named_params! {
             ":bc": bcm.bc.as_u64(),
             ":best": bcm.best.as_u64(),
             ":rank": u64::from(bcm.rank)
-        })
+        })?;
+        Ok(true)
     }
 
     fn insert_many(_conn: &Connection, _records: Vec<&SevenFiveBCM>) -> rusqlite::Result<usize> {
