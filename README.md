@@ -677,6 +677,7 @@
               * HUPResult::read_db
             * Refactoring impl From<SortedHeadsUp> for HUPResult
               * TestData shu_hup_alignment() test.
+          * tests directory for heavy tests.
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

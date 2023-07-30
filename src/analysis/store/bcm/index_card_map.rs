@@ -145,8 +145,9 @@ mod analysis__store__bcm__binary_card_map_tests {
     }
 
     /// I don't care about this.
+    ///
+    /// UPDATE: Why am I ignoring this?
     #[test]
-    #[ignore]
     fn from_five__default() {
         let sut = IndexCardMap::try_from(Five::default());
         assert!(sut.is_ok());

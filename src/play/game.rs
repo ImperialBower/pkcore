@@ -786,15 +786,6 @@ mod play__game_tests {
         assert_eq!(expected, actual.unwrap());
     }
 
-    #[test]
-    #[ignore]
-    fn flop_remaining() {
-        // assert_eq!(
-        //     "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣",
-        //     TestData::the_hand().flop_remaining().to_string()
-        // )
-    }
-
     /// TBH, we could do more with the negative tests. We'll add it as something to watch for
     /// when we cover test coverage more.
     ///
@@ -899,12 +890,32 @@ mod play__game_tests {
     ///
     /// This is one of the things that you really need to understand about developing systems.
     /// You may think you know how things work, but there will always be surprises.
+    ///
+    /// Turning off the ignore for this one.
+    ///
+    /// or not...
+    ///
+    /// Left:  5306
+    /// Right: 5308
+    /// Why is this failing in different ways? Sometimes 5306, sometimes 5307 and sometimes 5308.
+    ///
+    /// In doing some cleanup I've come across a regression defect.
+    ///
+    /// ```txt
+    /// 5♠ 5♥ A♠ K♠ T♠ - 5308-PairOfFives
+    /// 5♠ 5♥ A♠ K♠ J♠ - 5307-PairOfFives
+    /// ```
+    /// These are the same hands. They should have the same ranks.
     #[test]
     #[ignore]
     fn turn_the_nuts() {
         let game = TestData::the_hand();
 
         let evals = game.turn_the_nuts().to_evals();
+
+        for eval in evals.to_vec() {
+            println!("{eval}");
+        }
 
         assert_eq!(62, evals.len());
         assert_eq!(78, evals.get(0).unwrap().hand_rank.value);

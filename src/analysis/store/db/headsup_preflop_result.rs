@@ -526,40 +526,6 @@ mod analysis__store__db__hupresult_tests {
         );
     }
 
-    /// This is going to be a very very heavy test, since we will need to load our
-    /// 4GB binary bard map cache into memory before we can even do the calculation.
-    /// Once we get it to pass, we can ignore it, and punch it into an example to run.
-    ///
-    /// Fudge! The test fails.
-    ///
-    /// ```txt
-    /// Left:  HUPResult { higher: Bard(8797166764032), lower: Bard(65544), higher_wins: 1397400, lower_wins: 347020, ties: 32116 }
-    /// Right: HUPResult { higher: Bard(8797166764032), lower: Bard(65544), higher_wins: 1365284, lower_wins: 314904, ties: 32116 }
-    /// ```
-    ///
-    /// So, let's see what the difference is.
-    ///
-    /// ```txt
-    /// 1397400 - 1365284 = 32116
-    /// 347020 - 314904 = 32116
-    /// ```
-    ///
-    /// **Smacks forehead.** Our old bcrepl subtracts the ties from the wins entries. That explains
-    /// that. I could try to consolidate the code, but right now I just want to start getting results
-    /// into sqlite.
-    ///
-    /// This time for sure!
-    ///
-    /// Subtracting times from each wins makes the test pass. Now, we're going to lock it in the
-    /// vault with an ignore.
-    #[test]
-    #[ignore]
-    fn from__sorted_heads_up() {
-        let actual = HUPResult::from(&TestData::the_hand_sorted_headsup());
-
-        assert_eq!(actual, TestData::the_hand_as_hup_result());
-    }
-
     #[test]
     fn sqlable__create_table() {
         let conn = Connect::in_memory_connection().unwrap().connection;
