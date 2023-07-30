@@ -1,8 +1,5 @@
-use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
 use crate::analysis::store::db::sqlite::Sqlable;
-use crate::arrays::five::Five;
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
-use crate::arrays::seven::Seven;
 use crate::bard::Bard;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
@@ -10,7 +7,6 @@ use crate::{PKError, Pile, Shifty, SuitShift};
 use csv::{Reader, WriterBuilder};
 use rusqlite::{named_params, Connection};
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
@@ -226,30 +222,14 @@ impl From<&SortedHeadsUp> for HUPResult {
     /// And, of course, I invert the match, which loses me another 10 minutes. Once we close this
     /// epic, we're going to need to setup an odds service to isolate this into something we can
     /// just keep running in the background.
+    ///
+    /// ## Refactoring Update
+    ///
+    /// I've written `SortedHeadsUp.wins()` and tested it, and what do you know, I already have a
+    /// test here, that's ignored to validate this calculation. So let's refactor this to leverage
+    /// what we've got now.
     fn from(shu: &SortedHeadsUp) -> Self {
-        let higher_bard = shu.higher.bard();
-        let lower_bard = shu.lower.bard();
-
-        let mut wins = Wins::default();
-
-        // I honestly love how easy our code makes us do stuff like that. When it flows like
-        // water, you know you're on the right track.
-        for combo in shu.remaining().combinations(5) {
-            let five = Five::try_from(combo).unwrap();
-            let high7 = Seven::from_case_at_deal(shu.higher, five)
-                .unwrap()
-                .to_bard();
-            let low7 = Seven::from_case_at_deal(shu.lower, five).unwrap().to_bard();
-
-            let high_rank = BC_RANK_HASHMAP.get(&high7).unwrap();
-            let low_rank = BC_RANK_HASHMAP.get(&low7).unwrap();
-
-            match high_rank.rank.cmp(&low_rank.rank) {
-                Ordering::Less => wins.add(Win::FIRST),
-                Ordering::Greater => wins.add(Win::SECOND),
-                Ordering::Equal => wins.add(Win::FIRST | Win::SECOND),
-            };
-        }
+        let wins = shu.wins().unwrap();
 
         let (higher_wins, higher_ties) = wins.wins_for(Win::FIRST);
         let (lower_wins, lower_ties) = wins.wins_for(Win::SECOND);
@@ -258,8 +238,8 @@ impl From<&SortedHeadsUp> for HUPResult {
         let ties = u64::try_from(lower_ties).unwrap();
 
         HUPResult {
-            higher: higher_bard,
-            lower: lower_bard,
+            higher: shu.higher.bard(),
+            lower: shu.lower.bard(),
             higher_wins: u64::try_from(higher_wins).unwrap() - ties,
             lower_wins: u64::try_from(lower_wins).unwrap() - ties,
             ties: u64::try_from(lower_ties).unwrap(),
