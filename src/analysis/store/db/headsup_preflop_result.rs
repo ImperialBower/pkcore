@@ -301,7 +301,9 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
         HUPResult::select(conn, shu).is_some()
     }
 
-    // Refactoring this to only insert if the record isn't already there.
+    /// Refactoring this to only insert if the record isn't already there.
+    ///
+    /// Returns true if the record isn't already there. False if it is.
     fn insert(conn: &Connection, hup: &HUPResult) -> rusqlite::Result<bool> {
         log::debug!("HUPResult::insert({})", hup);
 
@@ -618,7 +620,14 @@ mod analysis__store__db__hupresult_tests {
     fn sqlable__insert() {
         let conn = Connect::in_memory_connection().unwrap().connection;
         HUPResult::create_table(&conn).unwrap();
-        assert!(HUPResult::insert(&conn, &TestData::the_hand_as_hup_result()).is_ok());
+
+        let first_time = HUPResult::insert(&conn, &TestData::the_hand_as_hup_result());
+        let second_time = HUPResult::insert(&conn, &TestData::the_hand_as_hup_result());
+
+        assert!(first_time.is_ok());
+        assert!(first_time.unwrap());
+        assert!(second_time.is_ok());
+        assert!(!second_time.unwrap());
         conn.close().unwrap();
     }
 
