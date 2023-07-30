@@ -7,8 +7,10 @@ use std::io;
 use std::io::Write;
 
 /// I'm thinking that I want to turn this into a test.
+///
+/// `cargo run --example hup_check`
 fn main() {
-    let hups = HUPResult::read_csv("data/valid_hups.csv").unwrap();
+    let hups = HUPResult::read_csv("data/washed_hups.csv").unwrap();
     let hups_length = hups.len();
     let conn = Connect::in_memory_connection().unwrap().connection;
     HUPResult::create_table(&conn).unwrap();
@@ -19,15 +21,15 @@ fn main() {
         process(&conn, &hup);
     }
     validate(&conn, hups_length);
+    HUPResult::generate_csv_from_vector("data/washed_hups.csv", &HUPResult::select_all(&conn)).unwrap();
     conn.close().unwrap();
-    // HUPResult::generate_csv_from_vector("valid_hups.csv", &HUPResult::select_all(&conn)).unwrap();
 }
 
 fn validate(conn: &Connection, hups_length: usize) {
     let (is, should) = HUPResult::db_count(conn);
     match HUPResult::db_is_valid(conn) {
         true => println!("DB passes internal validation"),
-        false => {
+        false => { let (is, should) = HUPResult::db_count(conn);
             println!("is: {is} - should be: {should}");
         }
     }
