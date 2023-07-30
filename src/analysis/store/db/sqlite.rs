@@ -81,7 +81,7 @@ pub trait Sqlable<T, S> {
     ///
     /// Throws an error if rusqlite isn't able to insert the record into the table. Should not
     /// throw if the record is already there.
-    fn insert(conn: &Connection, record: &T) -> rusqlite::Result<usize>;
+    fn insert(conn: &Connection, record: &T) -> rusqlite::Result<bool>;
 
     /// # Errors
     ///

@@ -6,13 +6,14 @@ use crate::arrays::seven::Seven;
 use crate::bard::Bard;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
-use crate::{Pile, Shifty, SuitShift};
-use csv::WriterBuilder;
+use crate::{PKError, Pile, Shifty, SuitShift};
+use csv::{Reader, WriterBuilder};
 use rusqlite::{named_params, Connection};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
+use std::fs::File;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 #[serde(rename_all = "PascalCase")]
@@ -25,6 +26,21 @@ pub struct HUPResult {
 }
 
 impl HUPResult {
+    pub fn db_count(conn: &Connection) -> (usize, usize) {
+        let all = HUPResult::select_all(conn);
+        let len = all.len();
+        let mut hs = HashSet::new();
+        for hup in all {
+            hs.insert(hup);
+        }
+        (len, hs.len())
+    }
+
+    pub fn db_is_valid(conn: &Connection) -> bool {
+        let (v, hs) = HUPResult::db_count(conn);
+        v == hs
+    }
+
     /// `assert_eq!(first_ties, second_ties);`
     /// This is something I want to get much more into the habit of writing. An assertion that's
     /// simply a sanity check. There is no way that these two values shouldn't be equal, so,
@@ -96,19 +112,25 @@ impl HUPResult {
         }
     }
 
+    /// # Errors
+    ///
+    /// Unable to create csv file.
     pub fn generate_csv_from_hash_set(
         path: &str,
         hups: HashSet<HUPResult>,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        HUPResult::generate_csv_from_vector(path, Vec::from_iter(hups))
+        HUPResult::generate_csv_from_vector(path, &Vec::from_iter(hups))
     }
 
+    /// # Errors
+    ///
+    /// Unable to create csv file.
     pub fn generate_csv_from_vector(
         path: &str,
-        hups: Vec<HUPResult>,
+        hups: &[HUPResult],
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut wtr = WriterBuilder::new().has_headers(true).from_path(path)?;
-        for hup in &hups {
+        for hup in hups {
             wtr.serialize(hup)?;
         }
         wtr.flush()?;
@@ -123,11 +145,41 @@ impl HUPResult {
         }
     }
 
+    /// # Errors
+    ///
+    /// Unable to open connection
+    ///
+    /// # Panics
+    ///
+    /// Unable to close connection
     pub fn read_db(path: &str) -> rusqlite::Result<Vec<HUPResult>> {
         let conn = Connection::open(path)?;
         let hups = HUPResult::select_all(&conn);
         conn.close().unwrap();
         Ok(hups)
+    }
+
+    /// # Errors
+    ///
+    /// * Throws `PKError::InvalidBinaryFormat` if the csv file is corrupted.
+    /// * Throws `PKError::Fubar` if unable to open at all.
+    pub fn read_csv(path: &str) -> Result<Vec<HUPResult>, PKError> {
+        match File::open(path) {
+            Ok(file) => {
+                let mut rdr = Reader::from_reader(file);
+                let mut v = Vec::new();
+                for hup in rdr.deserialize::<HUPResult>() {
+                    match hup {
+                        Ok(r) => v.push(r),
+                        Err(_) => {
+                            return Err(PKError::InvalidBinaryFormat);
+                        }
+                    }
+                }
+                Ok(v)
+            }
+            Err(_) => Err(PKError::Fubar),
+        }
     }
 }
 
@@ -249,8 +301,10 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
         HUPResult::select(conn, shu).is_some()
     }
 
-    // Refactoring this to only insert if the record isn't already there.
-    fn insert(conn: &Connection, hup: &HUPResult) -> rusqlite::Result<usize> {
+    /// Refactoring this to only insert if the record isn't already there.
+    ///
+    /// Returns true if the record isn't already there. False if it is.
+    fn insert(conn: &Connection, hup: &HUPResult) -> rusqlite::Result<bool> {
         log::debug!("HUPResult::insert({})", hup);
 
         let shu = hup
@@ -259,7 +313,7 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
 
         if HUPResult::exists(conn, &shu) {
             log::debug!("Record {shu} already exists.");
-            Ok(0usize)
+            Ok(false)
         } else {
             let mut stmt = conn.prepare(
                 "INSERT INTO nlh_headsup_result \
@@ -271,7 +325,8 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
             ":lower": hup.lower.as_u64(),
             ":higher_wins": hup.higher_wins,
             ":lower_wins": hup.lower_wins,
-            ":ties": hup.ties})
+            ":ties": hup.ties})?;
+            Ok(true)
         }
     }
 
@@ -454,6 +509,23 @@ mod analysis__store__db__hupresult_tests {
     use crate::util::data::TestData;
     use std::collections::HashSet;
 
+    const SAMPLE_DB_PATH: &str = "data/sample_hups.db";
+
+    #[test]
+    fn db_count() {
+        let conn = Connection::open(SAMPLE_DB_PATH).unwrap();
+        let (v, hs) = HUPResult::db_count(&conn);
+        assert_eq!(v, hs);
+        conn.close().unwrap();
+    }
+
+    #[test]
+    fn db_is_valid() {
+        let conn = Connection::open(SAMPLE_DB_PATH).unwrap();
+        assert!(HUPResult::db_is_valid(&conn));
+        conn.close().unwrap();
+    }
+
     #[test]
     fn get_sorted_heads_up() {
         assert_eq!(
@@ -522,14 +594,14 @@ mod analysis__store__db__hupresult_tests {
         let the_hand = TestData::the_hand_as_hup_result();
 
         // the work
-        let i = HUPResult::insert(&conn, &the_hand).unwrap();
+        let inserted = HUPResult::insert(&conn, &the_hand).unwrap();
 
         // the proof
         assert!(HUPResult::exists(
             &conn,
             &TestData::the_hand_sorted_headsup()
         ));
-        assert_eq!(i, 1);
+        assert!(inserted);
         conn.close().unwrap()
     }
 
@@ -548,7 +620,14 @@ mod analysis__store__db__hupresult_tests {
     fn sqlable__insert() {
         let conn = Connect::in_memory_connection().unwrap().connection;
         HUPResult::create_table(&conn).unwrap();
-        assert!(HUPResult::insert(&conn, &TestData::the_hand_as_hup_result()).is_ok());
+
+        let first_time = HUPResult::insert(&conn, &TestData::the_hand_as_hup_result());
+        let second_time = HUPResult::insert(&conn, &TestData::the_hand_as_hup_result());
+
+        assert!(first_time.is_ok());
+        assert!(first_time.unwrap());
+        assert!(second_time.is_ok());
+        assert!(!second_time.unwrap());
         conn.close().unwrap();
     }
 

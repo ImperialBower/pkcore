@@ -18,7 +18,7 @@ fn main() {
     let to = &*args.to;
 
     let hups = HUPResult::read_db(from).unwrap();
-    HUPResult::generate_csv_from_vector(to, hups).unwrap();
+    HUPResult::generate_csv_from_vector(to, &hups).unwrap();
 
     println!("{from} {to}");
 }
