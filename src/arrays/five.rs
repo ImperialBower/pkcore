@@ -2494,30 +2494,6 @@ mod arrays__five_tests {
     }
     //endregion
 
-    /// This test is just for an attempted refactoring of `PartialEq` that didn't stick.
-    #[test]
-    #[ignore]
-    fn partial_eq__eq() {
-        let royal_flush_1 = Five::from([
-            Card::ACE_DIAMONDS,
-            Card::KING_DIAMONDS,
-            Card::QUEEN_DIAMONDS,
-            Card::JACK_DIAMONDS,
-            Card::TEN_DIAMONDS,
-        ]);
-
-        let royal_flush_2 = Five::from([
-            Card::KING_DIAMONDS,
-            Card::ACE_DIAMONDS,
-            Card::QUEEN_DIAMONDS,
-            Card::JACK_DIAMONDS,
-            Card::TEN_DIAMONDS,
-        ]);
-
-        assert_eq!(royal_flush_1, royal_flush_2);
-        // assert_eq!(hash(royal_flush_1, &mut ()), hash(royal_flush_2));
-    }
-
     #[test]
     fn pile__cards() {
         assert_eq!(0, Five::default().cards().len());

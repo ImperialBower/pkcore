@@ -814,6 +814,8 @@ impl SortedHeadsUp {
     ///
     /// TODO: Is there any reason to dive into [`std::sync::atomic::Ordering`](https://doc.rust-lang.org/std/sync/atomic/enum.Ordering.html)?
     ///
+    /// Test moved to `tests/heavy_tests.rs`.
+    ///
     /// # Errors
     ///
     /// Throws `PKError` when unable to cast cards correctly.
@@ -970,7 +972,6 @@ impl TryFrom<Vec<&Two>> for SortedHeadsUp {
 mod arrays__matchups__sorted_heads_up_tests {
     use super::*;
     use crate::util::data::TestData;
-    use crate::util::wincounter::win::Win;
 
     const HANDS_7D_7C_V_6S_6H: SortedHeadsUp = SortedHeadsUp {
         higher: Two::HAND_7D_7C,
@@ -1022,8 +1023,10 @@ mod arrays__matchups__sorted_heads_up_tests {
     /// ```
     ///
     /// I'm going to ignore this test because it causes a wacky dump in `CLion`.
+    ///
+    /// This has now stopped dumping on `Build #CL-232.8660.186, built on July 25, 2023`. Removing
+    /// the ignore.
     #[test]
-    #[ignore]
     fn distinct() {
         let distinct = SortedHeadsUp::distinct().unwrap();
         let mut holding = HashSet::new();
@@ -1054,62 +1057,6 @@ mod arrays__matchups__sorted_heads_up_tests {
         assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
         assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C)));
         assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C)));
-    }
-
-    /// Wow, this test caused a panic:
-    ///
-    /// ```
-    /// use pkcore::util::data::TestData;
-    /// assert_eq!(TestData::the_hand_sorted_headsup().wins(), TestData::the_hand_as_wins());
-    /// ```
-    ///
-    /// Let's try it a different way...
-    ///
-    /// ```
-    /// use pkcore::util::data::TestData;
-    /// use pkcore::util::wincounter::win::Win;
-    /// assert_eq!(
-    ///     TestData::the_hand_sorted_headsup().wins().wins_for(Win::FIRST),
-    ///     TestData::the_hand_as_wins().wins_for(Win::FIRST)
-    /// );
-    /// ```
-    ///
-    /// Let's leave this test to fail for now, just so we don't forget it.
-    ///
-    /// I guess we could refactor our HUPResult:from `SortedHeadsUp`, but
-    /// honestly, I don't care right now. Let's flag this as technical debt
-    /// and ignore it for now. We've got bigger fish to fry. __Do vegans get
-    /// mad by this phrase? Should it be, we've got bigger blocks of tofu to
-    /// fry?__
-    ///
-    /// Now that we're at a point where we can really get down to business,
-    /// let's take the time to make this test really work, so we can rest
-    /// easy and get on with things.
-    ///
-    /// I like this refactoring. SortedHeadsUp owns it's wins and HUPResult passed them into
-    /// something it can store.
-    ///
-    /// This takes five minutes to run. If it fails, I am royally fracked.
-    ///
-    /// Luckily it passed. 🎉
-    ///
-    /// Now, a test of the same data against `impl From<&SortedHeadsUp> for HUPResult`.
-    #[test]
-    #[ignore]
-    fn wins() {
-        let expected = TestData::the_hand_as_wins();
-        let (higher_expected, higher_expected_ties) = expected.wins_for(Win::FIRST);
-        let (lower_expected, lower_expected_ties) = expected.wins_for(Win::SECOND);
-
-        let actual = TestData::the_hand_sorted_headsup().wins().unwrap();
-        let (higher_wins, higher_ties) = actual.wins_for(Win::FIRST);
-        let (lower_wins, lower_ties) = actual.wins_for(Win::SECOND);
-
-        assert_eq!(higher_ties, lower_ties);
-        assert_eq!(higher_expected_ties, lower_expected_ties);
-        assert_eq!(higher_wins, higher_expected);
-        assert_eq!(lower_wins, lower_expected);
-        assert_eq!(higher_ties, higher_expected_ties);
     }
 
     /// Here's the original test that panics, just for fun. I love it's error message:
