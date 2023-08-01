@@ -31,6 +31,7 @@ zerocopy = "0.6.1"
 clap = { version = "4.3.11", features = ["derive", "unicode"] }
 elr_primes = "0.1.2"
 env_logger = "0.10.0"
+fudd = "0.1.9"
 rstest = "0.18.1"
 serde_test = "1.0.166"
 #wincounter = "0.1.1"

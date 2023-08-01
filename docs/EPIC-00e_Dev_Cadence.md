@@ -30,7 +30,7 @@ find yourself lost... doomed to roll back your code to the last place you safely
 
 Gentle readers... I am not pulling this advice out of my ass. This advice comes from a place of pain, for I...
 **DUN DUN DUNNNNN** am that fool you recklessly grinded out features with a wonton bravado reserved by only
-the basest of fools. You, too, will someday see yourself as one of those fools, but perhaps... just perhaps,
+the basest of dunces. You, too, will someday see yourself as one of those fools, but perhaps... just perhaps,
 these words will help you find the error of your ways sooner than I did.
 
 As I've said many times... your code is your hero... your tests are the chronicle of its journey. Forget to

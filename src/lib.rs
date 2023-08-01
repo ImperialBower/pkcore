@@ -72,6 +72,7 @@ pub enum PKError {
     NotDealt,
     NotEnoughCards,
     NotEnoughHands,
+    SqlError,
     TooManyCards,
     TooManyHands,
 }

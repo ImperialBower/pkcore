@@ -678,6 +678,9 @@
             * Refactoring impl From<SortedHeadsUp> for HUPResult
               * TestData shu_hup_alignment() test.
           * tests directory for heavy tests.
+          * Bring in the Fudd
+            * Refactor hup_check
+            * PKError::SqlError
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

@@ -17,7 +17,7 @@ mastery. People like the Chess world champion
 [José Raúl Capablanca](https://en.wikipedia.org/wiki/Jos%C3%A9_Ra%C3%BAl_Capablanca),
 who beat his father the first time he played chess. He was four years old. I
 am not one of those people, and to be honest, the skills of the prodigy do
-little good in the are of software, because the whole point of the things we
+little good in the area of software, because the whole point of the things we
 build is for them to be included in other, more complex systems. The human brain
 is a wonderfully brilliant machine. The computer can count to one really really
 fast. It's just not that bright.
@@ -37,12 +37,15 @@ The Answer. They will tell you the right way to do things. That however you
 are doing things, you are doing them wrong. These people are lauded...
 celebrated... held up as geniuses... innovators in their
 fields, and many people will be drawn to them because they're looking for
-The Answer, and are frustrated by how complicated everything is. I understand
-the attraction. Life would be so much easier if I had The Answer;
+The Answer™, and are frustrated by how complicated everything is. I understand
+the attraction. Life would be so much easier if I had The Answer™;
 if I could just do this one thing and all of my problems would vanish.
 
+Be careful. The Answer™ means that you stop doubting. The moment you decide
+that you know everything... that's the true moment you have truly failed.
+
 Unfortunately, I see this for what it is. I have a word for people who have
-The Answer: failures. You see, you become a failure the the moment you stop
+The Answer™: failures. You see, you become a failure the the moment you stop
 doubting. Long before the crashes. Long before the debt. The moment you decided
 that you knew everything... that's the true moment you failed.
 

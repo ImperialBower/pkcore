@@ -37,7 +37,7 @@ when he was working on his evaluator:
     _After a lot of thought, I had a brainstorm to use prime numbers._
 
 The product of his work was the lookup tables and permutation arrays to speed up lookups. But if I could store the hands
-and results as simple integers, than I could turn the complex work that went in to Cactus Kev's method into a simple,
+and results as simple integers, then I could turn the complex work that went in to Cactus Kev's method into a simple,
 single database query. 
 
 ## Card to Bard
