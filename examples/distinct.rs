@@ -13,7 +13,7 @@ fn main() {
     let aces = Two::HAND_AS_AH;
     let kings = Two::HAND_KD_KC;
     let hup = SortedHeadsUp::new(aces, kings);
-    let mut distinct = hup.shifts();
+    let distinct = hup.shifts();
 
     for m in distinct {
         println!("{m}");

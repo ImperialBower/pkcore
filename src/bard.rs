@@ -4,7 +4,6 @@ use crate::cards::Cards;
 use crate::Pile;
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use std::fmt::{Binary, Display, Formatter};
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 
 /// A `Bard` is a binary representation of one or more `Cards` contained in a single unsigned
@@ -331,8 +330,8 @@ impl Bard {
     }
 }
 
-impl Binary for Bard {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+impl fmt::Binary for Bard {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let val = self.0;
 
         fmt::Binary::fmt(&val, f)
@@ -381,11 +380,23 @@ impl BitXorAssign for Bard {
     }
 }
 
-impl Display for Bard {
+impl fmt::Display for Bard {
     /// We are implementing two traits: `fmt::Binary` and `fmt::Display`. The diff
     /// is that Display will put spaces between every eight bits.
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:b}", self.0,)
+    ///
+    /// NOTE: I need to learn more about this `std::fmt::Result` pattern.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        let b = format!("{self:b}");
+        let b = format!("{b:0>52}");
+
+        let mut bit_string = String::with_capacity(52);
+        for (i, c) in b.chars().enumerate() {
+            bit_string.push(c);
+            if i % 8 == 3 && i % 51 != 0 {
+                bit_string.push('_');
+            };
+        }
+        write!(f, "{bit_string}")
     }
 }
 
@@ -522,6 +533,22 @@ mod bard_tests {
             format!("Binary for A♠ is {:b}", Bard::ACE_SPADES),
             "Binary for A♠ is 1000000000000000000000000000000000000000000000000000"
         );
+    }
+
+    /// Left:  1000_00000000_00000000_00000000_00000000_00000000_00000000
+    //  Right: 1000_00000000_00000000_00000000_00000000 00000000 00000000
+    #[test]
+    fn fmt_display() {
+        assert_eq!(
+            format!("{}", Bard::ACE_SPADES),
+            "1000_00000000_00000000_00000000_00000000_00000000_00000000"
+        );
+        assert_eq!(
+            format!("{}", Bard::SIX_HEARTS),
+            "0000_00000000_00000000_01000000_00000000_00000000_00000000"
+        );
+
+        // 0000_00000000_00000000_00000000_00100000_00000000_00000000
     }
 
     #[test]

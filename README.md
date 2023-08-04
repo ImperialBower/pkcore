@@ -755,10 +755,11 @@
 
 ## Dependencies
 
+* [bitvec](https://github.com/ferrilab/bitvec)
+* [Burnt Sushi CSV](https://github.com/BurntSushi/rust-csv) with Serde support
 * [Serde](https://serde.rs/)
   * [Serde JSON](https://github.com/serde-rs/json)
   * [Serde YAML](https://github.com/dtolnay/serde-yaml)
-* [Burnt Sushi CSV](https://github.com/BurntSushi/rust-csv) with Serde support
 
 ## Potential Libraries
 
