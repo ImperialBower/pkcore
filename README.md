@@ -681,6 +681,9 @@
           * Bring in the Fudd
             * Refactor hup_check
             * PKError::SqlError
+        * The return of bitvec
+          * impl Binary for Bard
+          * impl Display for Bard
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

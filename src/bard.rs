@@ -3,6 +3,8 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::Pile;
 use serde::{Deserialize, Serialize};
+use std::fmt;
+use std::fmt::{Binary, Display, Formatter};
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 
 /// A `Bard` is a binary representation of one or more `Cards` contained in a single unsigned
@@ -329,6 +331,14 @@ impl Bard {
     }
 }
 
+impl Binary for Bard {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let val = self.0;
+
+        fmt::Binary::fmt(&val, f)
+    }
+}
+
 impl BitAnd for Bard {
     type Output = Self;
 
@@ -368,6 +378,14 @@ impl BitXor for Bard {
 impl BitXorAssign for Bard {
     fn bitxor_assign(&mut self, rhs: Self) {
         *self = Self(self.0 ^ rhs.0);
+    }
+}
+
+impl Display for Bard {
+    /// We are implementing two traits: `fmt::Binary` and `fmt::Display`. The diff
+    /// is that Display will put spaces between every eight bits.
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:b}", self.0,)
     }
 }
 
@@ -496,6 +514,14 @@ mod bard_tests {
     #[test]
     fn default() {
         assert_eq!(Bard::default(), Bard::BLANK);
+    }
+
+    #[test]
+    fn fmt_binary() {
+        assert_eq!(
+            format!("Binary for A♠ is {:b}", Bard::ACE_SPADES),
+            "Binary for A♠ is 1000000000000000000000000000000000000000000000000000"
+        );
     }
 
     #[test]
