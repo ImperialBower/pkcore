@@ -671,8 +671,8 @@ impl TryFrom<Card> for Cards {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod card_tests {
-    use std::collections::HashSet;
     use super::*;
+    use std::collections::HashSet;
 
     #[test]
     fn deck() {

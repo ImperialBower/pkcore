@@ -1,5 +1,5 @@
-use std::collections::HashSet;
 use crate::{PKError, SuitShift};
+use std::collections::HashSet;
 use std::fmt;
 use std::str::FromStr;
 use strum::{EnumIter, IntoEnumIterator}; // TODO Early

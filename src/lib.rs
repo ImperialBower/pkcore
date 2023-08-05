@@ -165,7 +165,7 @@ pub trait Pile {
     fn suits(&self) -> HashSet<Suit> {
         self.to_vec()
             .iter()
-            .map(|c| c.get_suit())
+            .map(card::Card::get_suit)
             .collect::<HashSet<Suit>>()
     }
 
