@@ -684,6 +684,7 @@
         * The return of bitvec
           * impl Binary for Bard
           * impl Display for Bard
+          * Bard.guided()
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
