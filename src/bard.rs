@@ -303,6 +303,8 @@ impl Bard {
         Bard::TREY_CLUBS,
         Bard::DEUCE_CLUBS,
     ];
+
+    const GUIDE: &'static str = "🂡🂮🂭🂫🂪🂩🂨🂧🂦🂥🂤🂣🂢🂱🂾🂽🂻🂺🂹🂸🂷🂶🂵🂴🂳🂲🃁🃎🃍🃋🃊🃉🃈🃇🃆🃅🃄🃃🃂🃑🃞🃝🃛🃚🃙🃘🃗🃖🃕🃔🃓🃒";
     // endregion
 
     // endregion
@@ -327,6 +329,11 @@ impl Bard {
     #[must_use]
     pub fn as_u64(&self) -> u64 {
         self.0
+    }
+
+    #[must_use]
+    pub fn as_guided_string(&self) -> String {
+        format!("{}\n{self}", Bard::GUIDE)
     }
 }
 
@@ -528,10 +535,23 @@ mod bard_tests {
     }
 
     #[test]
+    fn as_guided_string() {
+
+    }
+
+    #[test]
     fn fmt_binary() {
         assert_eq!(
-            format!("Binary for A♠ is {:b}", Bard::ACE_SPADES),
-            "Binary for A♠ is 1000000000000000000000000000000000000000000000000000"
+            format!("Binary for A♠ is {:0>52}", Bard::ACE_SPADES),
+            "Binary for A♠ is 1000_00000000_00000000_00000000_00000000_00000000_00000000"
+        );
+        assert_eq!(
+            format!("{:b}", Bard::ACE_SPADES),
+            "1000000000000000000000000000000000000000000000000000"
+        );
+        assert_eq!(
+            format!("Binary for 3♦ is {:0>52}", Bard::TREY_DIAMONDS),
+            "Binary for 3♦ is 0000_00000000_00000000_00000000_00000000_01000000_00000000"
         );
     }
 
