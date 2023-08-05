@@ -671,6 +671,7 @@ impl TryFrom<Card> for Cards {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod card_tests {
+    use std::collections::HashSet;
     use super::*;
 
     #[test]
@@ -1024,6 +1025,16 @@ mod card_tests {
 
         assert!(wheel_flush.contains(&Card::FIVE_CLUBS));
         assert!(!wheel_flush.contains(&Card::SIX_CLUBS));
+    }
+
+    #[test]
+    fn pile__suits() {
+        let aces = Cards::from_str("AS AH AD AC").unwrap();
+
+        let suits = aces.suits();
+
+        assert_eq!(4, suits.len());
+        assert_eq!(Suit::all(), suits);
     }
 
     #[test]
