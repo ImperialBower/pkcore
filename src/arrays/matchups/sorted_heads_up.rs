@@ -578,11 +578,14 @@ impl SortedHeadsUp {
     }
 
     /// Type one heads up matchups are where all cards of both players are the same suit.
+    ///
+    /// `1111 - suited, suited, same suit`
     #[must_use]
     pub fn is_type_one(&self) -> bool {
         self.suits().len() == 1
     }
 
+    /// `1112 - suited, off suit, sharing suit`
     #[must_use]
     pub fn is_type_two(&self) -> bool {
         (self.suits().len() == 2)
@@ -590,9 +593,10 @@ impl SortedHeadsUp {
                 || (!self.higher.is_suited() && self.lower.is_suited()))
     }
 
+    /// `1122 - suited, suited, different suits`
     #[must_use]
     pub fn is_type_three(&self) -> bool {
-        todo!()
+        (self.suits().len() == 2) && (self.higher.is_suited() && self.lower.is_suited())
     }
 
     /// Returns a `HashSet` of the possible suit shifts. I'm thinking that I want to add this to the
@@ -1085,11 +1089,20 @@ mod arrays__matchups__sorted_heads_up_tests {
 
     #[test]
     fn is_type_two() {
-        let no = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C);
         let yes = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
+        let no = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C);
 
         assert!(yes.is_type_two());
         assert!(!no.is_type_two());
+    }
+
+    #[test]
+    fn is_type_three() {
+        let yes = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7S);
+        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
+
+        assert!(yes.is_type_three());
+        assert!(!no.is_type_three());
     }
 
     #[test]
