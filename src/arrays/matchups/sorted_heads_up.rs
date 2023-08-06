@@ -585,8 +585,9 @@ impl SortedHeadsUp {
 
     #[must_use]
     pub fn is_type_two(&self) -> bool {
-        (self.suits().len() == 2) && ((self.higher.is_suited() && !self.lower.is_suited())
-            || (!self.higher.is_suited() && self.lower.is_suited()))
+        (self.suits().len() == 2)
+            && ((self.higher.is_suited() && !self.lower.is_suited())
+                || (!self.higher.is_suited() && self.lower.is_suited()))
     }
 
     #[must_use]
@@ -1262,23 +1263,31 @@ mod arrays__matchups__sorted_heads_up_tests {
     fn try_from__hup_result() {}
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct SortedHeadsUpSuitBinary{
+pub struct SortedHeadsUpSuitBinary {
     pub higher: u32,
     pub lower: u32,
 }
 
 impl SortedHeadsUpSuitBinary {
+    #[must_use]
     pub fn new(higher: u32, lower: u32) -> Self {
-        SortedHeadsUpSuitBinary {
-            higher,
-            lower,
-        }
+        SortedHeadsUpSuitBinary { higher, lower }
     }
 }
 
 impl From<&SortedHeadsUp> for SortedHeadsUpSuitBinary {
     fn from(shu: &SortedHeadsUp) -> Self {
+        SortedHeadsUpSuitBinary {
+            higher: shu.higher.suit_binary().rotate_right(12),
+            lower: shu.lower.suit_binary().rotate_right(12),
+        }
+    }
+}
+
+impl From<SortedHeadsUp> for SortedHeadsUpSuitBinary {
+    fn from(shu: SortedHeadsUp) -> Self {
         SortedHeadsUpSuitBinary {
             higher: shu.higher.suit_binary().rotate_right(12),
             lower: shu.lower.suit_binary().rotate_right(12),
@@ -1295,8 +1304,8 @@ impl Display for SortedHeadsUpSuitBinary {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod arrays__matchups__shusb_tests {
-    use crate::util::data::TestData;
     use super::*;
+    use crate::util::data::TestData;
 
     #[test]
     fn display() {
