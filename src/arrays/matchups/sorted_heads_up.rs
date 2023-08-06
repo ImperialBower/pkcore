@@ -16,7 +16,9 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, PartialEq, PartialOrd)]
+#[derive(
+    Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
+)]
 #[serde(rename_all = "PascalCase")]
 pub struct SortedHeadsUp {
     pub higher: Two,
@@ -564,8 +566,10 @@ impl SortedHeadsUp {
         path: &str,
         shus: HashSet<SortedHeadsUp>,
     ) -> Result<(), Box<dyn std::error::Error>> {
+        let mut v = Vec::from_iter(shus);
+        v.sort();
+        v.reverse();
         let mut wtr = WriterBuilder::new().has_headers(true).from_path(path)?;
-        let v = Vec::from_iter(shus);
         for shu in &v {
             wtr.serialize(shu)?;
         }
@@ -579,8 +583,9 @@ impl SortedHeadsUp {
         self.suits().len() == 1
     }
 
+    #[must_use]
     pub fn is_type_two(&self) -> bool {
-        (self.higher.is_suited() && !self.lower.is_suited())
+        (self.suits().len() == 1) && (self.higher.is_suited() && !self.lower.is_suited())
             || (!self.higher.is_suited() && self.lower.is_suited())
     }
 
@@ -1065,6 +1070,15 @@ mod arrays__matchups__sorted_heads_up_tests {
 
         assert!(yes.is_type_one());
         assert!(!no.is_type_one());
+    }
+
+    #[test]
+    fn is_type_two() {
+        let no = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C);
+        let yes = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
+
+        assert!(yes.is_type_two());
+        assert!(!no.is_type_two());
     }
 
     #[test]

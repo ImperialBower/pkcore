@@ -1,6 +1,5 @@
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
-use pkcore::arrays::two::Two;
-use pkcore::{PKError, Shifty};
+use pkcore::PKError;
 use std::collections::HashSet;
 
 // A♦ A♣ - K♠ K♥
@@ -33,12 +32,17 @@ fn main() -> Result<(), PKError> {
     SortedHeadsUp::generate_csv("generated/unique_type_one.csv", type_one)
         .expect("TODO: panic message");
 
+    let mut type_two = HashSet::new();
+
     for shu in unique.clone().into_iter() {
-        if shu.is_type_one() {
+        if shu.is_type_two() {
             unique.remove(&shu);
-            type_one.insert(shu);
+            type_two.insert(shu);
         }
     }
+    println!("{} type two hands", type_two.len());
+    SortedHeadsUp::generate_csv("generated/unique_type_two.csv", type_two)
+        .expect("TODO: panic message");
 
     Ok(())
 }
