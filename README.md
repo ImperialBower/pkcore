@@ -686,6 +686,7 @@
           * impl Display for Bard
           * Bard.guided()
           * impl IntoIterator for Cards
+          * impl SuitShift for Cards
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

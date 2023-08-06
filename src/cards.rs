@@ -642,18 +642,21 @@ impl Pile for Cards {
 
 impl SuitShift for Cards {
     fn shift_suit_down(&self) -> Self {
-        todo!();
-        // self.into_iter().map(|c| c.shift_suit_down()).collect()
+        self.clone()
+            .into_iter()
+            .map(|c| c.shift_suit_down())
+            .collect()
     }
 
     fn shift_suit_up(&self) -> Self {
-        todo!();
-        // self.into_iter().map(|c| c.shift_suit_up()).collect()
+        self.clone()
+            .into_iter()
+            .map(|c| c.shift_suit_up())
+            .collect()
     }
 
     fn opposite(&self) -> Self {
-        todo!();
-        // self.into_iter().map(|c| c.opposite()).collect()
+        self.clone().into_iter().map(|c| c.opposite()).collect()
     }
 }
 
