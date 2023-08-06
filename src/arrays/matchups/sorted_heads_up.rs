@@ -599,6 +599,14 @@ impl SortedHeadsUp {
         (self.suits().len() == 2) && (self.higher.is_suited() && self.lower.is_suited())
     }
 
+    /// `1123 - suited, off suit, different suits`
+    #[must_use]
+    pub fn is_type_four(&self) -> bool {
+        (self.suits().len() == 3)
+            && ((self.higher.is_suited() && !self.lower.is_suited())
+            || (!self.higher.is_suited() && self.lower.is_suited()))
+    }
+
     /// Returns a `HashSet` of the possible suit shifts. I'm thinking that I want to add this to the
     /// `SuitShift` trait. This would require that the trait would need Copy as a
     /// [supertrait](https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#using-supertraits-to-require-one-traits-functionality-within-another-trait).
@@ -1103,6 +1111,15 @@ mod arrays__matchups__sorted_heads_up_tests {
 
         assert!(yes.is_type_three());
         assert!(!no.is_type_three());
+    }
+
+    #[test]
+    fn is_type_four() {
+        let yes = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D);
+        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
+
+        assert!(yes.is_type_four());
+        assert!(!no.is_type_four());
     }
 
     #[test]

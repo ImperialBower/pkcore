@@ -15,12 +15,14 @@ use std::collections::HashSet;
 /// 8580 type one hands with 4 suit sigs
 /// 133848 type two hands with 24 suit sigs
 /// 36504 type three hands with 12 suit sigs
+/// 158184 type four hands with 24 suit sigs
 fn main() -> Result<(), PKError> {
     let mut unique = SortedHeadsUp::unique()?;
 
-    do_it(&mut unique, SortedHeadsUp::is_type_one, "one");
-    do_it(&mut unique, SortedHeadsUp::is_type_two, "two");
-    do_it(&mut unique, SortedHeadsUp::is_type_three, "three");
+    // do_it(&mut unique, SortedHeadsUp::is_type_one, "one");
+    // do_it(&mut unique, SortedHeadsUp::is_type_two, "two");
+    // do_it(&mut unique, SortedHeadsUp::is_type_three, "three");
+    do_it(&mut unique, SortedHeadsUp::is_type_four, "four");
 
     Ok(())
 }
