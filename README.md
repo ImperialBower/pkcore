@@ -710,6 +710,9 @@
   * Pluribus
     * [Superhuman AI for multiplayer poker](https://www.science.org/doi/10.1126/science.aay2400)
     * [pluribus-hand-parser](https://github.com/VitamintK/pluribus-hand-parser)
+  * Probability
+    * Wikipedia > [Poker probability](https://en.wikipedia.org/wiki/Poker_probability)
+    * [Distinct head-to-head match ups in holdem](https://poker.stackexchange.com/questions/5682/distinct-head-to-head-match-ups-in-holdem)
 * Rust
   * [The Rust Programming Language](https://doc.rust-lang.org/stable/book/)
   * [Rust Design Patterns](https://rust-unofficial.github.io/patterns/intro.html)

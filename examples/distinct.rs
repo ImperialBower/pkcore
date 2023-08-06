@@ -7,6 +7,7 @@ use pkcore::Shifty;
 // A♥ A♦ - K♠ K♣
 // A♠ A♥ - K♦ K♣
 // A♠ A♦ - K♥ K♣
+// A♥ A♣ - K♠ K♦
 fn main() {
     // ♠ ♥ ♦ ♣
 
