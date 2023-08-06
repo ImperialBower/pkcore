@@ -201,7 +201,6 @@ impl Cards {
     #[must_use]
     pub fn filter_by_suit(&self, suit: Suit) -> Self {
         let filtered: Vec<Card> = self
-            .0
             .clone()
             .into_iter()
             .filter(|card| card.get_suit() == suit)
@@ -554,8 +553,12 @@ impl From<Vec<&Card>> for Cards {
 }
 
 impl FromIterator<card::Card> for Cards {
-    fn from_iter<T: IntoIterator<Item = card::Card>>(_: T) -> Self {
-        todo!()
+    fn from_iter<T: IntoIterator<Item = card::Card>>(iter: T) -> Self {
+        let mut c = Cards::default();
+        for i in iter {
+            c.insert(i);
+        }
+        c
     }
 }
 
@@ -672,7 +675,6 @@ impl TryFrom<Card> for Cards {
 #[allow(non_snake_case)]
 mod card_tests {
     use super::*;
-    use std::collections::HashSet;
 
     #[test]
     fn deck() {
@@ -1017,6 +1019,17 @@ mod card_tests {
     }
 
     #[test]
+    fn into_iterator() {
+        let kings = Cards::deck()
+            .into_iter()
+            .filter(|c| c.get_rank().to_char() == 'K')
+            .collect::<Cards>();
+
+        assert_eq!(4, kings.len());
+        assert_eq!(Cards::from_str("K♠ K♥ K♦ K♣").unwrap(), kings);
+    }
+
+    #[test]
     fn pile__are_unique() {}
 
     #[test]
@@ -1030,11 +1043,20 @@ mod card_tests {
     #[test]
     fn pile__suits() {
         let aces = Cards::from_str("AS AH AD AC").unwrap();
+        let deck = Cards::deck();
 
         let suits = aces.suits();
+        let clubs = deck
+            .clone()
+            .into_iter()
+            .filter(|c| c.get_suit() == Suit::CLUBS)
+            .collect::<Cards>();
 
         assert_eq!(4, suits.len());
         assert_eq!(Suit::all(), suits);
+        assert_eq!(Suit::all(), deck.suits());
+        assert_eq!(13, clubs.len());
+        assert_eq!(1, clubs.suits().len());
     }
 
     #[test]
