@@ -585,8 +585,13 @@ impl SortedHeadsUp {
 
     #[must_use]
     pub fn is_type_two(&self) -> bool {
-        (self.suits().len() == 1) && (self.higher.is_suited() && !self.lower.is_suited())
-            || (!self.higher.is_suited() && self.lower.is_suited())
+        (self.suits().len() == 2) && ((self.higher.is_suited() && !self.lower.is_suited())
+            || (!self.higher.is_suited() && self.lower.is_suited()))
+    }
+
+    #[must_use]
+    pub fn is_type_three(&self) -> bool {
+        todo!()
     }
 
     /// Returns a `HashSet` of the possible suit shifts. I'm thinking that I want to add this to the
@@ -820,6 +825,11 @@ impl SortedHeadsUp {
         }
 
         v
+    }
+
+    #[must_use]
+    pub fn suit_binaries(&self) -> (u32, u32) {
+        (self.higher.suit_binary(), self.lower().suit_binary())
     }
 
     /// For now, returning default is all part of the blueprint. Still, let's write a test
@@ -1250,4 +1260,47 @@ mod arrays__matchups__sorted_heads_up_tests {
 
     #[test]
     fn try_from__hup_result() {}
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct SortedHeadsUpSuitBinary{
+    pub higher: u32,
+    pub lower: u32,
+}
+
+impl SortedHeadsUpSuitBinary {
+    pub fn new(higher: u32, lower: u32) -> Self {
+        SortedHeadsUpSuitBinary {
+            higher,
+            lower,
+        }
+    }
+}
+
+impl From<&SortedHeadsUp> for SortedHeadsUpSuitBinary {
+    fn from(shu: &SortedHeadsUp) -> Self {
+        SortedHeadsUpSuitBinary {
+            higher: shu.higher.suit_binary().rotate_right(12),
+            lower: shu.lower.suit_binary().rotate_right(12),
+        }
+    }
+}
+
+impl Display for SortedHeadsUpSuitBinary {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:04b},{:04b}", self.higher, self.lower)
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod arrays__matchups__shusb_tests {
+    use crate::util::data::TestData;
+    use super::*;
+
+    #[test]
+    fn display() {
+        let the_hand = SortedHeadsUpSuitBinary::from(&TestData::the_hand_sorted_headsup());
+        assert_eq!(the_hand.to_string(), "1100,0011")
+    }
 }

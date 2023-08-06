@@ -1,6 +1,7 @@
-use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+use pkcore::arrays::matchups::sorted_heads_up::{SortedHeadsUp, SortedHeadsUpSuitBinary};
 use pkcore::PKError;
 use std::collections::HashSet;
+use itertools::Itertools;
 
 // A♦ A♣ - K♠ K♥
 // A♠ A♣ - K♥ K♦
@@ -20,29 +21,43 @@ fn main() -> Result<(), PKError> {
 
     let mut unique = SortedHeadsUp::unique()?;
     let mut type_one = HashSet::new();
+    let mut t1_shusbs = HashSet::new();
 
     for shu in unique.clone().into_iter() {
         if shu.is_type_one() {
             unique.remove(&shu);
             type_one.insert(shu);
+            t1_shusbs.insert(SortedHeadsUpSuitBinary::from(&shu));
         }
     }
 
-    println!("{} type one hands", type_one.len());
+    println!("{} type one hands with {} suit sigs", type_one.len(), t1_shusbs.len());
+    for shusb in t1_shusbs.iter().sorted() {
+        println!("{shusb}");
+    }
     SortedHeadsUp::generate_csv("generated/unique_type_one.csv", type_one)
         .expect("TODO: panic message");
 
     let mut type_two = HashSet::new();
+    let mut t2_shusbs = HashSet::new();
 
     for shu in unique.clone().into_iter() {
         if shu.is_type_two() {
             unique.remove(&shu);
             type_two.insert(shu);
+            t2_shusbs.insert(SortedHeadsUpSuitBinary::from(&shu));
         }
     }
-    println!("{} type two hands", type_two.len());
+    println!("{} type two hands with {} suit sigs", type_two.len(), t2_shusbs.len());
+    for shusb in t2_shusbs.iter().sorted() {
+        println!("{shusb}");
+    }
     SortedHeadsUp::generate_csv("generated/unique_type_two.csv", type_two)
         .expect("TODO: panic message");
 
     Ok(())
+}
+
+fn generate_type_one(_unique: &mut HashSet<SortedHeadsUp>) {
+
 }

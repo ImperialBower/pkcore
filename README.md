@@ -687,6 +687,7 @@
           * Bard.guided()
           * impl IntoIterator for Cards
           * impl SuitShift for Cards
+          * SortedHeadsUpSuitBinary
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
