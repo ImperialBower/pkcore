@@ -573,6 +573,17 @@ impl SortedHeadsUp {
         Ok(())
     }
 
+    /// Type one heads up matchups are where all cards of both players are the same suit.
+    #[must_use]
+    pub fn is_type_one(&self) -> bool {
+        self.suits().len() == 1
+    }
+
+    pub fn is_type_two(&self) -> bool {
+        (self.higher.is_suited() && !self.lower.is_suited())
+            || (!self.higher.is_suited() && self.lower.is_suited())
+    }
+
     /// Returns a `HashSet` of the possible suit shifts. I'm thinking that I want to add this to the
     /// `SuitShift` trait. This would require that the trait would need Copy as a
     /// [supertrait](https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#using-supertraits-to-require-one-traits-functionality-within-another-trait).
@@ -1045,6 +1056,15 @@ mod arrays__matchups__sorted_heads_up_tests {
         }
 
         assert_eq!(holding.len(), 1);
+    }
+
+    #[test]
+    fn is_type_one() {
+        let yes = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C);
+        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
+
+        assert!(yes.is_type_one());
+        assert!(!no.is_type_one());
     }
 
     #[test]

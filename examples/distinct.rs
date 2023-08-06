@@ -1,6 +1,7 @@
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use pkcore::arrays::two::Two;
-use pkcore::Shifty;
+use pkcore::{PKError, Shifty};
+use std::collections::HashSet;
 
 // A♦ A♣ - K♠ K♥
 // A♠ A♣ - K♥ K♦
@@ -8,15 +9,36 @@ use pkcore::Shifty;
 // A♠ A♥ - K♦ K♣
 // A♠ A♦ - K♥ K♣
 // A♥ A♣ - K♠ K♦
-fn main() {
+// 1111 - suited, suited, same suit
+// 1112 - suited, off suit, sharing suit
+// 1122 - suited, suited, different suits
+// 1123 - suited, off suit, different suits
+// 1223 - off suit, off suit, sharing one suit
+// 1212 - off suit, off suit, sharing both suits
+// 1234 - off suit, off suit, sharing no suits
+fn main() -> Result<(), PKError> {
     // ♠ ♥ ♦ ♣
 
-    let aces = Two::HAND_AS_AH;
-    let kings = Two::HAND_KD_KC;
-    let hup = SortedHeadsUp::new(aces, kings);
-    let distinct = hup.shifts();
+    let mut unique = SortedHeadsUp::unique()?;
+    let mut type_one = HashSet::new();
 
-    for m in distinct {
-        println!("{m}");
+    for shu in unique.clone().into_iter() {
+        if shu.is_type_one() {
+            unique.remove(&shu);
+            type_one.insert(shu);
+        }
     }
+
+    println!("{} type one hands", type_one.len());
+    SortedHeadsUp::generate_csv("generated/unique_type_one.csv", type_one)
+        .expect("TODO: panic message");
+
+    for shu in unique.clone().into_iter() {
+        if shu.is_type_one() {
+            unique.remove(&shu);
+            type_one.insert(shu);
+        }
+    }
+
+    Ok(())
 }
