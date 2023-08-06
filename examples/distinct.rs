@@ -11,30 +11,29 @@ use std::collections::HashSet;
 /// 1223 - off suit, off suit, sharing one suit
 /// 1212 - off suit, off suit, sharing both suits
 /// 1234 - off suit, off suit, sharing no suits
+///
+/// 8580 type one hands with 4 suit sigs
+/// 133848 type two hands with 24 suit sigs
+/// 36504 type three hands with 12 suit sigs
 fn main() -> Result<(), PKError> {
     let mut unique = SortedHeadsUp::unique()?;
 
-    let (type_one, t1_shusbs) = generate(&mut unique, SortedHeadsUp::is_type_one);
-
-    info(&type_one, &t1_shusbs, "one");
-
-    for shusb in t1_shusbs.iter().sorted() {
-        println!("{shusb}");
-    }
-    SortedHeadsUp::generate_csv("generated/unique_type_one.csv", type_one)
-        .expect("TODO: panic message");
-
-    let (type_two, t2_shusbs) = generate(&mut unique, SortedHeadsUp::is_type_two);
-
-    info(&type_two, &t2_shusbs, "two");
-
-    for shusb in t2_shusbs.iter().sorted() {
-        println!("{shusb}");
-    }
-    SortedHeadsUp::generate_csv("generated/unique_type_two.csv", type_two)
-        .expect("TODO: panic message");
+    do_it(&mut unique, SortedHeadsUp::is_type_one, "one");
+    do_it(&mut unique, SortedHeadsUp::is_type_two, "two");
+    do_it(&mut unique, SortedHeadsUp::is_type_three, "three");
 
     Ok(())
+}
+
+fn do_it(unique: &mut HashSet<SortedHeadsUp>, f: fn(&SortedHeadsUp) -> bool, s: &str) {
+    let (shus, shusbs) = generate(unique, f);
+    info(&shus, &shusbs, s);
+    for shusb in shusbs.iter().sorted() {
+        println!("{shusb}");
+    }
+
+    SortedHeadsUp::generate_csv(format!("generated/unique_type_{}.csv", s).as_str(), shus)
+        .expect("TODO: panic message");
 }
 
 /// Original:
@@ -57,13 +56,10 @@ fn main() -> Result<(), PKError> {
 /// }
 /// ```
 fn generate(
-    unique: &mut HashSet<SortedHeadsUp>, f: fn(&SortedHeadsUp) -> bool
+    unique: &mut HashSet<SortedHeadsUp>,
+    f: fn(&SortedHeadsUp) -> bool,
 ) -> (HashSet<SortedHeadsUp>, HashSet<SortedHeadsUpSuitBinary>) {
-    let type_one: HashSet<SortedHeadsUp> = unique
-        .clone()
-        .into_iter()
-        .filter(f)
-        .collect();
+    let type_one: HashSet<SortedHeadsUp> = unique.clone().into_iter().filter(f).collect();
     let shusb: HashSet<SortedHeadsUpSuitBinary> = type_one
         .clone()
         .into_iter()
