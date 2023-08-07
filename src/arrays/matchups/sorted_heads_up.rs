@@ -604,7 +604,19 @@ impl SortedHeadsUp {
     pub fn is_type_four(&self) -> bool {
         (self.suits().len() == 3)
             && ((self.higher.is_suited() && !self.lower.is_suited())
-            || (!self.higher.is_suited() && self.lower.is_suited()))
+                || (!self.higher.is_suited() && self.lower.is_suited()))
+    }
+
+    /// `1212 - off suit, off suit, sharing both suits`
+    #[must_use]
+    pub fn is_type_five(&self) -> bool {
+        (self.suits().len() == 2) && (!self.higher.is_suited() && !self.lower.is_suited())
+    }
+
+    /// `1234 - off suit, off suit, sharing no suits`
+    #[must_use]
+    pub fn is_type_six(&self) -> bool {
+        self.suits().len() == 4
     }
 
     /// Returns a `HashSet` of the possible suit shifts. I'm thinking that I want to add this to the
@@ -1120,6 +1132,23 @@ mod arrays__matchups__sorted_heads_up_tests {
 
         assert!(yes.is_type_four());
         assert!(!no.is_type_four());
+    }
+
+    #[test]
+    fn is_type_five() {
+        let yes = SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7C);
+        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
+
+        assert!(yes.is_type_five());
+        assert!(!no.is_type_five());
+    }
+
+    #[test]
+    fn is_type_six() {
+        assert!(SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8H_7D).is_type_six());
+        assert!(SortedHeadsUp::new(Two::HAND_AS_AH, Two::HAND_AD_AC).is_type_six());
+
+        assert!(!SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8H_7C).is_type_six());
     }
 
     #[test]

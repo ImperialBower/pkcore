@@ -16,26 +16,63 @@ use std::collections::HashSet;
 /// 133848 type two hands with 24 suit sigs
 /// 36504 type three hands with 12 suit sigs
 /// 158184 type four hands with 24 suit sigs
+/// 73008 type five hands with 6 suit sigs
+/// 85683 type six hands with 6 suit sigs
 fn main() -> Result<(), PKError> {
     let mut unique = SortedHeadsUp::unique()?;
 
-    // do_it(&mut unique, SortedHeadsUp::is_type_one, "one");
-    // do_it(&mut unique, SortedHeadsUp::is_type_two, "two");
-    // do_it(&mut unique, SortedHeadsUp::is_type_three, "three");
-    do_it(&mut unique, SortedHeadsUp::is_type_four, "four");
+    let total = unique.len();
+
+    let one = do_it(&mut unique, SortedHeadsUp::is_type_one, "one");
+    let two = do_it(&mut unique, SortedHeadsUp::is_type_two, "two");
+    let three = do_it(&mut unique, SortedHeadsUp::is_type_three, "three");
+    let four = do_it(&mut unique, SortedHeadsUp::is_type_four, "four");
+    let five = do_it(&mut unique, SortedHeadsUp::is_type_five, "five");
+    let six = do_it(&mut unique, SortedHeadsUp::is_type_six, "six");
+
+    let sum = one.len() + two.len() + three.len() + four.len() + five.len() + six.len();
+    // assert_eq!(sum, unique.len());
+    assert_eq!(total, unique.len() + sum);
+    check(&unique, &one);
+    check(&unique, &two);
+    check(&unique, &three);
+    check(&unique, &four);
+    check(&unique, &five);
+    check(&unique, &six);
+
+    // assert_eq!(total, one + two + three + four + five + six);
+    SortedHeadsUp::generate_csv("generated/unique_type_remaining.csv", unique)
+        .expect("TODO: panic message");
 
     Ok(())
 }
 
-fn do_it(unique: &mut HashSet<SortedHeadsUp>, f: fn(&SortedHeadsUp) -> bool, s: &str) {
+fn check(unique: &HashSet<SortedHeadsUp>, types: &HashSet<SortedHeadsUp>) {
+    for shu in types {
+        if unique.contains(shu) {
+            println!("{shu} not removed");
+        }
+    }
+}
+
+fn do_it(
+    unique: &mut HashSet<SortedHeadsUp>,
+    f: fn(&SortedHeadsUp) -> bool,
+    s: &str,
+) -> HashSet<SortedHeadsUp> {
     let (shus, shusbs) = generate(unique, f);
     info(&shus, &shusbs, s);
     for shusb in shusbs.iter().sorted() {
         println!("{shusb}");
     }
 
-    SortedHeadsUp::generate_csv(format!("generated/unique_type_{}.csv", s).as_str(), shus)
-        .expect("TODO: panic message");
+    SortedHeadsUp::generate_csv(
+        format!("generated/unique_type_{}.csv", s).as_str(),
+        shus.clone(),
+    )
+    .expect("TODO: panic message");
+
+    shus
 }
 
 /// Original:
@@ -61,13 +98,18 @@ fn generate(
     unique: &mut HashSet<SortedHeadsUp>,
     f: fn(&SortedHeadsUp) -> bool,
 ) -> (HashSet<SortedHeadsUp>, HashSet<SortedHeadsUpSuitBinary>) {
-    let type_one: HashSet<SortedHeadsUp> = unique.clone().into_iter().filter(f).collect();
-    let shusb: HashSet<SortedHeadsUpSuitBinary> = type_one
+    let t: HashSet<SortedHeadsUp> = unique.clone().into_iter().filter(f).collect();
+    let shusb: HashSet<SortedHeadsUpSuitBinary> = t
         .clone()
         .into_iter()
         .map(SortedHeadsUpSuitBinary::from)
         .collect();
-    (type_one, shusb)
+
+    for shu in &t {
+        unique.remove(&shu);
+    }
+
+    (t, shusb)
 }
 
 fn info(shus: &HashSet<SortedHeadsUp>, shusbs: &HashSet<SortedHeadsUpSuitBinary>, s: &str) {
