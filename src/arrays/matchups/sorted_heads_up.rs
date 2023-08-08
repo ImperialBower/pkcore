@@ -629,18 +629,75 @@ impl SortedHeadsUp {
     /// Type one heads up matchups are where all cards of both players are the same suit.
     ///
     /// `1111 - suited, suited, same suit`
+    ///
+    /// Suit signatures:
+    ///
+    /// ```txt
+    /// 0001,0001
+    /// 0010,0010
+    /// 0100,0100
+    /// 1000,1000
+    /// ```
     #[must_use]
     pub fn is_type_one(&self) -> bool {
         self.texture == HeadsUpTexture::Type1111
     }
 
     /// `1112 - suited, off suit, sharing suit`
+    ///
+    /// Suit signatures:
+    ///
+    /// ```txt
+    /// 133848 type two hands with 24 suit sigs
+    ///
+    /// 0001,0011
+    /// 0001,0101
+    /// 0001,1001
+    /// 0010,0011
+    /// 0010,0110
+    /// 0010,1010
+    /// 0011,0001
+    /// 0011,0010
+    /// 0100,0101
+    /// 0100,0110
+    /// 0100,1100
+    /// 0101,0001
+    /// 0101,0100
+    /// 0110,0010
+    /// 0110,0100
+    /// 1000,1001
+    /// 1000,1010
+    /// 1000,1100
+    /// 1001,0001
+    /// 1001,1000
+    /// 1010,0010
+    /// 1010,1000
+    /// 1100,0100
+    /// 1100,1000
+    /// ```
     #[must_use]
     pub fn is_type_two(&self) -> bool {
         self.texture == HeadsUpTexture::Type1112
     }
 
     /// `1122 - suited, suited, different suits`
+    ///
+    /// ```txt
+    /// 36504 type three hands with 12 suit sigs
+    ///
+    /// 0001,0010
+    /// 0001,0100
+    /// 0001,1000
+    /// 0010,0001
+    /// 0010,0100
+    /// 0010,1000
+    /// 0100,0001
+    /// 0100,0010
+    /// 0100,1000
+    /// 1000,0001
+    /// 1000,0010
+    /// 1000,0100
+    /// ```
     #[must_use]
     pub fn is_type_three(&self) -> bool {
         self.texture == HeadsUpTexture::Type1122
