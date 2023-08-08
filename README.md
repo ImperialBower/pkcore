@@ -681,6 +681,13 @@
           * Bring in the Fudd
             * Refactor hup_check
             * PKError::SqlError
+        * The return of bitvec
+          * impl Binary for Bard
+          * impl Display for Bard
+          * Bard.guided()
+          * impl IntoIterator for Cards
+          * impl SuitShift for Cards
+          * SortedHeadsUpSuitBinary
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
@@ -704,6 +711,9 @@
   * Pluribus
     * [Superhuman AI for multiplayer poker](https://www.science.org/doi/10.1126/science.aay2400)
     * [pluribus-hand-parser](https://github.com/VitamintK/pluribus-hand-parser)
+  * Probability
+    * Wikipedia > [Poker probability](https://en.wikipedia.org/wiki/Poker_probability)
+    * [Distinct head-to-head match ups in holdem](https://poker.stackexchange.com/questions/5682/distinct-head-to-head-match-ups-in-holdem)
 * Rust
   * [The Rust Programming Language](https://doc.rust-lang.org/stable/book/)
   * [Rust Design Patterns](https://rust-unofficial.github.io/patterns/intro.html)
@@ -752,10 +762,11 @@
 
 ## Dependencies
 
+* [bitvec](https://github.com/ferrilab/bitvec)
+* [Burnt Sushi CSV](https://github.com/BurntSushi/rust-csv) with Serde support
 * [Serde](https://serde.rs/)
   * [Serde JSON](https://github.com/serde-rs/json)
   * [Serde YAML](https://github.com/dtolnay/serde-yaml)
-* [Burnt Sushi CSV](https://github.com/BurntSushi/rust-csv) with Serde support
 
 ## Potential Libraries
 

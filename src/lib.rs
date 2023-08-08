@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::hash::Hash;
 
+use crate::suit::Suit;
 use std::iter::Enumerate;
 
 pub mod analysis;
@@ -159,6 +160,13 @@ pub trait Pile {
         let mut held = self.cards();
         held.insert_all(cards);
         Cards::deck_minus(&held)
+    }
+
+    fn suits(&self) -> HashSet<Suit> {
+        self.to_vec()
+            .iter()
+            .map(card::Card::get_suit)
+            .collect::<HashSet<Suit>>()
     }
 
     fn the_nuts(&self) -> TheNuts;

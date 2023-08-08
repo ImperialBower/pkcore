@@ -3,6 +3,7 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::Pile;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 
 /// A `Bard` is a binary representation of one or more `Cards` contained in a single unsigned
@@ -302,6 +303,8 @@ impl Bard {
         Bard::TREY_CLUBS,
         Bard::DEUCE_CLUBS,
     ];
+
+    const GUIDE: &'static str = "🂡🂮🂭🂫🂪🂩🂨🂧🂦🂥🂤🂣🂢🂱🂾🂽🂻🂺🂹🂸🂷🂶🂵🂴🂳🂲🃁🃎🃍🃋🃊🃉🃈🃇🃆🃅🃄🃃🃂🃑🃞🃝🃛🃚🃙🃘🃗🃖🃕🃔🃓🃒";
     // endregion
 
     // endregion
@@ -326,6 +329,19 @@ impl Bard {
     #[must_use]
     pub fn as_u64(&self) -> u64 {
         self.0
+    }
+
+    #[must_use]
+    pub fn as_guided_string(&self) -> String {
+        format!("{}\n{self}", Bard::GUIDE)
+    }
+}
+
+impl fmt::Binary for Bard {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let val = self.0;
+
+        fmt::Binary::fmt(&val, f)
     }
 }
 
@@ -368,6 +384,26 @@ impl BitXor for Bard {
 impl BitXorAssign for Bard {
     fn bitxor_assign(&mut self, rhs: Self) {
         *self = Self(self.0 ^ rhs.0);
+    }
+}
+
+impl fmt::Display for Bard {
+    /// We are implementing two traits: `fmt::Binary` and `fmt::Display`. The diff
+    /// is that Display will put spaces between every eight bits.
+    ///
+    /// NOTE: I need to learn more about this `std::fmt::Result` pattern.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        let b = format!("{self:b}");
+        let b = format!("{b:0>52}");
+
+        let mut bit_string = String::with_capacity(52);
+        for (i, c) in b.chars().enumerate() {
+            bit_string.push(c);
+            if i % 8 == 3 && i % 51 != 0 {
+                bit_string.push('_');
+            };
+        }
+        write!(f, "{bit_string}")
     }
 }
 
@@ -496,6 +532,46 @@ mod bard_tests {
     #[test]
     fn default() {
         assert_eq!(Bard::default(), Bard::BLANK);
+    }
+
+    #[test]
+    fn as_guided_string() {
+        assert_eq!(
+            format!("{}", Bard::TREY_DIAMONDS.as_guided_string()),
+            "🂡🂮🂭🂫🂪🂩🂨🂧🂦🂥🂤🂣🂢🂱🂾🂽🂻🂺🂹🂸🂷🂶🂵🂴🂳🂲🃁🃎🃍🃋🃊🃉🃈🃇🃆🃅🃄🃃🃂🃑🃞🃝🃛🃚🃙🃘🃗🃖🃕🃔🃓🃒\n0000_00000000_00000000_00000000_00000000_01000000_00000000"
+        );
+    }
+
+    #[test]
+    fn fmt_binary() {
+        assert_eq!(
+            format!("Binary for A♠ is {:0>52}", Bard::ACE_SPADES),
+            "Binary for A♠ is 1000_00000000_00000000_00000000_00000000_00000000_00000000"
+        );
+        assert_eq!(
+            format!("{:b}", Bard::ACE_SPADES),
+            "1000000000000000000000000000000000000000000000000000"
+        );
+        assert_eq!(
+            format!("Binary for 3♦ is {:0>52}", Bard::TREY_DIAMONDS),
+            "Binary for 3♦ is 0000_00000000_00000000_00000000_00000000_01000000_00000000"
+        );
+    }
+
+    /// Left:  1000_00000000_00000000_00000000_00000000_00000000_00000000
+    //  Right: 1000_00000000_00000000_00000000_00000000 00000000 00000000
+    #[test]
+    fn fmt_display() {
+        assert_eq!(
+            format!("{}", Bard::ACE_SPADES),
+            "1000_00000000_00000000_00000000_00000000_00000000_00000000"
+        );
+        assert_eq!(
+            format!("{}", Bard::SIX_HEARTS),
+            "0000_00000000_00000000_01000000_00000000_00000000_00000000"
+        );
+
+        // 0000_00000000_00000000_00000000_00100000_00000000_00000000
     }
 
     #[test]

@@ -1,7 +1,8 @@
 use crate::{PKError, SuitShift};
+use std::collections::HashSet;
 use std::fmt;
 use std::str::FromStr;
-use strum::EnumIter; // TODO Early
+use strum::{EnumIter, IntoEnumIterator}; // TODO Early
 
 #[derive(Clone, Copy, Debug, EnumIter, Eq, Hash, PartialEq)]
 pub enum Suit {
@@ -13,6 +14,11 @@ pub enum Suit {
 }
 
 impl Suit {
+    #[must_use]
+    pub fn all() -> HashSet<Suit> {
+        Suit::iter().filter(|c| c != &Suit::BLANK).collect()
+    }
+
     #[must_use]
     pub fn binary_signature(&self) -> u32 {
         match self {

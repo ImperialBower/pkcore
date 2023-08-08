@@ -617,6 +617,11 @@ impl Two {
     pub fn is_suited(&self) -> bool {
         self.first().get_suit() == self.second().get_suit()
     }
+
+    #[must_use]
+    pub fn suit_binary(&self) -> u32 {
+        self.first().get_suit().binary_signature() | self.second().get_suit().binary_signature()
+    }
 }
 
 impl Display for Two {
@@ -853,6 +858,7 @@ impl TryFrom<&[Card]> for Two {
 #[allow(non_snake_case)]
 mod arrays__two_tests {
     use super::*;
+    use crate::suit::Suit;
     use rstest::rstest;
     use std::collections::HashSet;
     use std::str::FromStr;
@@ -940,6 +946,16 @@ mod arrays__two_tests {
         assert!(Two::HAND_8S_7S.is_suited());
         assert!(!Two::HAND_8S_7H.is_suited());
         assert!(!Two::HAND_AS_AH.is_suited());
+    }
+
+    #[test]
+    fn suit_binary() {
+        let spades = Suit::SPADES.binary_signature();
+        let hearts = Suit::HEARTS.binary_signature();
+
+        assert_eq!(spades, Two::HAND_AS_KS.suit_binary());
+        assert_eq!(hearts, Two::HAND_AH_KH.suit_binary());
+        assert_eq!(spades | hearts, Two::HAND_AS_KH.suit_binary());
     }
 
     #[test]
