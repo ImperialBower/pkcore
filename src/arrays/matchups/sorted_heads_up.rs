@@ -15,6 +15,23 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
+use crate::suit::Suit;
+
+#[derive(
+    Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
+)]
+#[serde(rename_all = "PascalCase")]
+pub enum HeadsUpTexture {
+    #[default]
+    TypeUnknown,
+    Type1111, // suited, suited, same suit
+    Type1112, // suited, off suit, sharing suit
+    Type1122, // suited, suited, different suits
+    Type1123, // suited, off suit, different suits
+    Type1223, // off suit, off suit, sharing one suit
+    Type1212, // off suit, off suit, sharing both suits
+    Type1234, // off suit, off suit, sharing no suits
+}
 
 #[derive(
     Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
@@ -23,21 +40,51 @@ use std::fmt::{Display, Formatter};
 pub struct SortedHeadsUp {
     pub higher: Two,
     pub lower: Two,
+    pub texture: HeadsUpTexture,
 }
 
 impl SortedHeadsUp {
     #[must_use]
     pub fn new(first: Two, second: Two) -> SortedHeadsUp {
+        let texture = SortedHeadsUp::determine_texture(first, second);
         if first > second {
             SortedHeadsUp {
                 higher: first,
                 lower: second,
+                texture,
             }
         } else {
             SortedHeadsUp {
                 higher: second,
                 lower: first,
+                texture,
             }
+        }
+    }
+
+    fn determine_texture(first: Two, second: Two) -> HeadsUpTexture {
+        let suits: HashSet<Suit> = first.suits().union(&second.suits()).copied().collect();
+
+        match suits.len() {
+            1 => HeadsUpTexture::Type1111,
+            2 => {
+                if first.is_suited() && second.is_suited() {
+                    HeadsUpTexture::Type1122
+                } else if !first.is_suited() && !second.is_suited() {
+                    HeadsUpTexture::Type1212
+                } else {
+                    HeadsUpTexture::Type1112
+                }
+            },
+            3 => {
+                if !first.is_suited() && !second.is_suited() {
+                    HeadsUpTexture::Type1223
+                } else {
+                    HeadsUpTexture::Type1123
+                }
+            },
+            4 => HeadsUpTexture::Type1234,
+            _ => HeadsUpTexture::TypeUnknown,
         }
     }
 
@@ -385,6 +432,7 @@ impl SortedHeadsUp {
     /// Let's add the other two shifts to the test.
     ///
     /// ```
+    /// use pkcore::arrays::matchups::sorted_heads_up::HeadsUpTexture::Type1234;
     /// use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
     /// use pkcore::arrays::two::Two;
     ///
@@ -392,6 +440,7 @@ impl SortedHeadsUp {
     /// let shu = SortedHeadsUp {
     ///   higher: Two::HAND_7D_7C,
     ///   lower: Two::HAND_6S_6H,
+    ///   texture: Type1234,
     /// };
     ///
     /// shu.remove_shifts(&mut hs);
@@ -607,15 +656,21 @@ impl SortedHeadsUp {
                 || (!self.higher.is_suited() && self.lower.is_suited()))
     }
 
-    /// `1212 - off suit, off suit, sharing both suits`
+    /// `1223 - off suit, off suit, sharing one suit`
     #[must_use]
     pub fn is_type_five(&self) -> bool {
+        (self.suits().len() == 3) && (!self.higher.is_suited() && !self.lower.is_suited())
+    }
+
+    /// `1212 - off suit, off suit, sharing both suits`
+    #[must_use]
+    pub fn is_type_six(&self) -> bool {
         (self.suits().len() == 2) && (!self.higher.is_suited() && !self.lower.is_suited())
     }
 
     /// `1234 - off suit, off suit, sharing no suits`
     #[must_use]
-    pub fn is_type_six(&self) -> bool {
+    pub fn is_type_seven(&self) -> bool {
         self.suits().len() == 4
     }
 
@@ -1022,11 +1077,13 @@ impl TryFrom<Vec<&Two>> for SortedHeadsUp {
 #[allow(non_snake_case)]
 mod arrays__matchups__sorted_heads_up_tests {
     use super::*;
+    use crate::arrays::matchups::sorted_heads_up::HeadsUpTexture::Type1234;
     use crate::util::data::TestData;
 
     const HANDS_7D_7C_V_6S_6H: SortedHeadsUp = SortedHeadsUp {
         higher: Two::HAND_7D_7C,
         lower: Two::HAND_6S_6H,
+        texture: Type1234,
     };
 
     #[test]
@@ -1098,57 +1155,25 @@ mod arrays__matchups__sorted_heads_up_tests {
         assert_eq!(holding.len(), 1);
     }
 
-    #[test]
-    fn is_type_one() {
-        let yes = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C);
-        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
-
-        assert!(yes.is_type_one());
-        assert!(!no.is_type_one());
-    }
-
-    #[test]
-    fn is_type_two() {
-        let yes = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
-        let no = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C);
-
-        assert!(yes.is_type_two());
-        assert!(!no.is_type_two());
-    }
+    ///     Type1111, // suited, suited, same suit
+    ///     Type1112, // suited, off suit, sharing suit
+    ///     Type1122, // suited, suited, different suits
+    ///     Type1123, // suited, off suit, different suits
+    ///     Type1223, // off suit, off suit, sharing one suit
+    ///     Type1212, // off suit, off suit, sharing both suits
+    ///     Type1234, // off suit, off suit, sharing no suits
 
     #[test]
-    fn is_type_three() {
-        let yes = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7S);
-        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
+    fn determine_texture() {
+        assert_eq!(HeadsUpTexture::Type1111, SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C).texture);
+        assert_eq!(HeadsUpTexture::Type1112, SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C).texture);
+        assert_eq!(HeadsUpTexture::Type1122, SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7S).texture);
+        assert_eq!(HeadsUpTexture::Type1123, SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D).texture);
+        assert_eq!(HeadsUpTexture::Type1223, SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7D).texture);
+        assert_eq!(HeadsUpTexture::Type1212, SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7C).texture);
+        assert_eq!(HeadsUpTexture::Type1234, SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8H_7D).texture);
+        assert_eq!(HeadsUpTexture::TypeUnknown, SortedHeadsUp::default().texture);
 
-        assert!(yes.is_type_three());
-        assert!(!no.is_type_three());
-    }
-
-    #[test]
-    fn is_type_four() {
-        let yes = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D);
-        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
-
-        assert!(yes.is_type_four());
-        assert!(!no.is_type_four());
-    }
-
-    #[test]
-    fn is_type_five() {
-        let yes = SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7C);
-        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
-
-        assert!(yes.is_type_five());
-        assert!(!no.is_type_five());
-    }
-
-    #[test]
-    fn is_type_six() {
-        assert!(SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8H_7D).is_type_six());
-        assert!(SortedHeadsUp::new(Two::HAND_AS_AH, Two::HAND_AD_AC).is_type_six());
-
-        assert!(!SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8H_7C).is_type_six());
     }
 
     #[test]

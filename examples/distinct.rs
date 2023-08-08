@@ -11,6 +11,7 @@ use std::collections::HashSet;
 /// 1223 - off suit, off suit, sharing one suit
 /// 1212 - off suit, off suit, sharing both suits
 /// 1234 - off suit, off suit, sharing no suits
+
 ///
 /// 8580 type one hands with 4 suit sigs
 /// 133848 type two hands with 24 suit sigs
@@ -29,9 +30,11 @@ fn main() -> Result<(), PKError> {
     let four = do_it(&mut unique, SortedHeadsUp::is_type_four, "four");
     let five = do_it(&mut unique, SortedHeadsUp::is_type_five, "five");
     let six = do_it(&mut unique, SortedHeadsUp::is_type_six, "six");
+    let seven = do_it(&mut unique, SortedHeadsUp::is_type_seven, "seven");
 
-    let sum = one.len() + two.len() + three.len() + four.len() + five.len() + six.len();
-    // assert_eq!(sum, unique.len());
+    let sum =
+        one.len() + two.len() + three.len() + four.len() + five.len() + six.len() + seven.len();
+    assert_eq!(0, unique.len());
     assert_eq!(total, unique.len() + sum);
     check(&unique, &one);
     check(&unique, &two);
