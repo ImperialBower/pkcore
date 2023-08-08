@@ -7,6 +7,7 @@ use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::suit::Suit;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::{PKError, Pile, Shifty, SuitShift};
@@ -15,7 +16,6 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
-use crate::suit::Suit;
 
 #[derive(
     Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
@@ -75,14 +75,14 @@ impl SortedHeadsUp {
                 } else {
                     HeadsUpTexture::Type1112
                 }
-            },
+            }
             3 => {
                 if !first.is_suited() && !second.is_suited() {
                     HeadsUpTexture::Type1223
                 } else {
                     HeadsUpTexture::Type1123
                 }
-            },
+            }
             4 => HeadsUpTexture::Type1234,
             _ => HeadsUpTexture::TypeUnknown,
         }
@@ -631,47 +631,43 @@ impl SortedHeadsUp {
     /// `1111 - suited, suited, same suit`
     #[must_use]
     pub fn is_type_one(&self) -> bool {
-        self.suits().len() == 1
+        self.texture == HeadsUpTexture::Type1111
     }
 
     /// `1112 - suited, off suit, sharing suit`
     #[must_use]
     pub fn is_type_two(&self) -> bool {
-        (self.suits().len() == 2)
-            && ((self.higher.is_suited() && !self.lower.is_suited())
-                || (!self.higher.is_suited() && self.lower.is_suited()))
+        self.texture == HeadsUpTexture::Type1112
     }
 
     /// `1122 - suited, suited, different suits`
     #[must_use]
     pub fn is_type_three(&self) -> bool {
-        (self.suits().len() == 2) && (self.higher.is_suited() && self.lower.is_suited())
+        self.texture == HeadsUpTexture::Type1122
     }
 
     /// `1123 - suited, off suit, different suits`
     #[must_use]
     pub fn is_type_four(&self) -> bool {
-        (self.suits().len() == 3)
-            && ((self.higher.is_suited() && !self.lower.is_suited())
-                || (!self.higher.is_suited() && self.lower.is_suited()))
+        self.texture == HeadsUpTexture::Type1123
     }
 
     /// `1223 - off suit, off suit, sharing one suit`
     #[must_use]
     pub fn is_type_five(&self) -> bool {
-        (self.suits().len() == 3) && (!self.higher.is_suited() && !self.lower.is_suited())
+        self.texture == HeadsUpTexture::Type1223
     }
 
     /// `1212 - off suit, off suit, sharing both suits`
     #[must_use]
     pub fn is_type_six(&self) -> bool {
-        (self.suits().len() == 2) && (!self.higher.is_suited() && !self.lower.is_suited())
+        self.texture == HeadsUpTexture::Type1212
     }
 
     /// `1234 - off suit, off suit, sharing no suits`
     #[must_use]
     pub fn is_type_seven(&self) -> bool {
-        self.suits().len() == 4
+        self.texture == HeadsUpTexture::Type1234
     }
 
     /// Returns a `HashSet` of the possible suit shifts. I'm thinking that I want to add this to the
@@ -1165,15 +1161,92 @@ mod arrays__matchups__sorted_heads_up_tests {
 
     #[test]
     fn determine_texture() {
-        assert_eq!(HeadsUpTexture::Type1111, SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C).texture);
-        assert_eq!(HeadsUpTexture::Type1112, SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C).texture);
-        assert_eq!(HeadsUpTexture::Type1122, SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7S).texture);
-        assert_eq!(HeadsUpTexture::Type1123, SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D).texture);
-        assert_eq!(HeadsUpTexture::Type1223, SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7D).texture);
-        assert_eq!(HeadsUpTexture::Type1212, SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7C).texture);
-        assert_eq!(HeadsUpTexture::Type1234, SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8H_7D).texture);
-        assert_eq!(HeadsUpTexture::TypeUnknown, SortedHeadsUp::default().texture);
+        assert_eq!(
+            HeadsUpTexture::Type1111,
+            SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C).texture
+        );
+        assert_eq!(
+            HeadsUpTexture::Type1112,
+            SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C).texture
+        );
+        assert_eq!(
+            HeadsUpTexture::Type1122,
+            SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7S).texture
+        );
+        assert_eq!(
+            HeadsUpTexture::Type1123,
+            SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D).texture
+        );
+        assert_eq!(
+            HeadsUpTexture::Type1223,
+            SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7D).texture
+        );
+        assert_eq!(
+            HeadsUpTexture::Type1212,
+            SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7C).texture
+        );
+        assert_eq!(
+            HeadsUpTexture::Type1234,
+            SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8H_7D).texture
+        );
+        assert_eq!(
+            HeadsUpTexture::TypeUnknown,
+            SortedHeadsUp::default().texture
+        );
+    }
 
+    #[test]
+    fn is_type_one() {
+        let yes = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C);
+        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
+
+        assert!(yes.is_type_one());
+        assert!(!no.is_type_one());
+    }
+
+    #[test]
+    fn is_type_two() {
+        let yes = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
+        let no = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C);
+
+        assert!(yes.is_type_two());
+        assert!(!no.is_type_two());
+    }
+
+    #[test]
+    fn is_type_three() {
+        let yes = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7S);
+        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
+
+        assert!(yes.is_type_three());
+        assert!(!no.is_type_three());
+    }
+
+    #[test]
+    fn is_type_four() {
+        let yes = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D);
+        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
+
+        assert!(yes.is_type_four());
+        assert!(!no.is_type_four());
+    }
+
+    #[test]
+    fn is_type_five() {
+        let yes = SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7D);
+        let no = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D);
+
+        assert!(yes.is_type_five());
+        assert!(!no.is_type_five());
+    }
+
+    #[test]
+    fn is_type_six() {
+        let yes = SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7C);
+        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
+
+        assert!(yes.is_type_six());
+        assert!(!no.is_type_six());
     }
 
     #[test]

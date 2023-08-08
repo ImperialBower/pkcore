@@ -3,6 +3,7 @@ use pkcore::arrays::matchups::sorted_heads_up::{SortedHeadsUp, SortedHeadsUpSuit
 use pkcore::PKError;
 use std::collections::HashSet;
 
+/// ```txt
 /// ♠ ♥ ♦ ♣
 /// 1111 - suited, suited, same suit
 /// 1112 - suited, off suit, sharing suit
@@ -11,14 +12,15 @@ use std::collections::HashSet;
 /// 1223 - off suit, off suit, sharing one suit
 /// 1212 - off suit, off suit, sharing both suits
 /// 1234 - off suit, off suit, sharing no suits
-
 ///
 /// 8580 type one hands with 4 suit sigs
 /// 133848 type two hands with 24 suit sigs
 /// 36504 type three hands with 12 suit sigs
 /// 158184 type four hands with 24 suit sigs
-/// 73008 type five hands with 6 suit sigs
-/// 85683 type six hands with 6 suit sigs
+/// 316368 type five hands with 24 suit sigs
+/// 73008 type six hands with 6 suit sigs
+/// 85683 type 85683 hands with 6 suit sigs
+/// ```
 fn main() -> Result<(), PKError> {
     let mut unique = SortedHeadsUp::unique()?;
 
