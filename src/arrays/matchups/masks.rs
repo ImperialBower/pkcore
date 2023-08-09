@@ -2,6 +2,9 @@ use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use bitvec::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
+use crate::arrays::two::Two;
+use crate::card::Card;
+use crate::suit::Suit;
 
 #[derive(
     Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
@@ -114,8 +117,31 @@ impl SuitMask {
     }
 
     #[must_use]
-    pub fn mask(shu: SortedHeadsUp, mask: SuitMask) -> SortedHeadsUp {
-        todo!()
+    pub fn mask(shu: SortedHeadsUp, mask: SuitMask) -> Vec<SortedHeadsUp> {
+
+    }
+
+    #[must_use]
+    fn suited_mask(two: Two, suit: u8) -> Two {
+        let suit = match suit {
+            1 => {
+                Suit::CLUBS
+            },
+            2 => {
+                Suit::DIAMONDS
+            },
+            3 => {
+                Suit::HEARTS
+            },
+            4 => {
+                Suit::SPADES
+            },
+            _ => Suit::BLANK
+        };
+        Two::new(
+            Card::new(two.first().get_rank(), suit),
+            Card::new(two.second().get_rank(), suit)
+        ).unwrap()
     }
 }
 
@@ -151,6 +177,7 @@ mod arrays__matchups__masks__suit_mask_tests {
     use super::*;
     use crate::util::data::TestData;
     use rstest::rstest;
+    use std::str::FromStr;
 
     #[test]
     fn inverse() {
@@ -158,14 +185,13 @@ mod arrays__matchups__masks__suit_mask_tests {
         assert_eq!(the_hand.inverse().to_string(), "0011,1100");
     }
 
-
     #[rstest]
-    #[case(1,2,8,4)] // type three 1122
-    #[case(1,4,8,2)]
-    #[case(1,8,8,1)]
-    #[case(2,1,4,8)]
-    #[case(2,4,4,2)]
-    #[case(2,8,4,1)]
+    #[case(1, 2, 8, 4)] // type three 1122
+    #[case(1, 4, 8, 2)]
+    #[case(1, 8, 8, 1)]
+    #[case(2, 1, 4, 8)]
+    #[case(2, 4, 4, 2)]
+    #[case(2, 8, 4, 1)]
     fn inverse_many(#[case] b1: u8, #[case] b2: u8, #[case] a1: u8, #[case] a2: u8) {
         let mask = SuitMask::new(b1, b2);
         let inverse = SuitMask::new(a1, a2);
@@ -175,9 +201,15 @@ mod arrays__matchups__masks__suit_mask_tests {
     #[test]
     fn mask() {
         let shu = SortedHeadsUp::from_str("A♠ K♠ K♥ 8♥").unwrap();
-        let expected = SortedHeadsUp::from_str("AD KD KC 8C").unwrap();
+        let expected = vec![SortedHeadsUp::from_str("AD KD KC 8C").unwrap()];
 
-        let masked = SuitMask::mask(shu, SuitMask { higher: 1u8, lower: 2u8 });
+        let masked = SuitMask::mask(
+            shu,
+            SuitMask {
+                higher: 1u8,
+                lower: 2u8,
+            },
+        );
 
         assert_eq!(masked, expected);
     }

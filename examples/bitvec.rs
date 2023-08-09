@@ -8,7 +8,6 @@ use pkcore::Pile;
 // }
 
 fn main() {
-
     // let ba = BitArray::new()
 
     let bits = bits![u16, Msb0; 0; 4];
