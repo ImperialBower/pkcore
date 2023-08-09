@@ -688,6 +688,10 @@
           * impl IntoIterator for Cards
           * impl SuitShift for Cards
           * SortedHeadsUpSuitBinary
+        * Masks
+          * SuitMask
+          * Texture
+          * RankMask
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

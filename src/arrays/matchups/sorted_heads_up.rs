@@ -2,6 +2,7 @@ use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
 use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::analysis::the_nuts::TheNuts;
 use crate::arrays::five::Five;
+use crate::arrays::matchups::masks::SuitTexture;
 use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
@@ -16,22 +17,7 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
-
-#[derive(
-    Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
-)]
-#[serde(rename_all = "PascalCase")]
-pub enum HeadsUpTexture {
-    #[default]
-    TypeUnknown,
-    Type1111, // suited, suited, same suit
-    Type1112, // suited, off suit, sharing suit
-    Type1122, // suited, suited, different suits
-    Type1123, // suited, off suit, different suits
-    Type1223, // off suit, off suit, sharing one suit
-    Type1212, // off suit, off suit, sharing both suits
-    Type1234, // off suit, off suit, sharing no suits
-}
+use std::str::FromStr;
 
 #[derive(
     Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
@@ -40,7 +26,7 @@ pub enum HeadsUpTexture {
 pub struct SortedHeadsUp {
     pub higher: Two,
     pub lower: Two,
-    pub texture: HeadsUpTexture,
+    pub texture: SuitTexture,
 }
 
 impl SortedHeadsUp {
@@ -62,29 +48,29 @@ impl SortedHeadsUp {
         }
     }
 
-    fn determine_texture(first: Two, second: Two) -> HeadsUpTexture {
+    fn determine_texture(first: Two, second: Two) -> SuitTexture {
         let suits: HashSet<Suit> = first.suits().union(&second.suits()).copied().collect();
 
         match suits.len() {
-            1 => HeadsUpTexture::Type1111,
+            1 => SuitTexture::Type1111,
             2 => {
                 if first.is_suited() && second.is_suited() {
-                    HeadsUpTexture::Type1122
+                    SuitTexture::Type1122
                 } else if !first.is_suited() && !second.is_suited() {
-                    HeadsUpTexture::Type1212
+                    SuitTexture::Type1212
                 } else {
-                    HeadsUpTexture::Type1112
+                    SuitTexture::Type1112
                 }
             }
             3 => {
                 if !first.is_suited() && !second.is_suited() {
-                    HeadsUpTexture::Type1223
+                    SuitTexture::Type1223
                 } else {
-                    HeadsUpTexture::Type1123
+                    SuitTexture::Type1123
                 }
             }
-            4 => HeadsUpTexture::Type1234,
-            _ => HeadsUpTexture::TypeUnknown,
+            4 => SuitTexture::Type1234,
+            _ => SuitTexture::TypeUnknown,
         }
     }
 
@@ -432,8 +418,8 @@ impl SortedHeadsUp {
     /// Let's add the other two shifts to the test.
     ///
     /// ```
-    /// use pkcore::arrays::matchups::sorted_heads_up::HeadsUpTexture::Type1234;
     /// use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+    /// use pkcore::arrays::matchups::masks::SuitTexture::Type1234;
     /// use pkcore::arrays::two::Two;
     ///
     /// let mut hs = SortedHeadsUp::unique().unwrap();
@@ -640,7 +626,7 @@ impl SortedHeadsUp {
     /// ```
     #[must_use]
     pub fn is_type_one(&self) -> bool {
-        self.texture == HeadsUpTexture::Type1111
+        self.texture == SuitTexture::Type1111
     }
 
     /// `1112 - suited, off suit, sharing suit`
@@ -677,7 +663,7 @@ impl SortedHeadsUp {
     /// ```
     #[must_use]
     pub fn is_type_two(&self) -> bool {
-        self.texture == HeadsUpTexture::Type1112
+        self.texture == SuitTexture::Type1112
     }
 
     /// `1122 - suited, suited, different suits`
@@ -700,31 +686,107 @@ impl SortedHeadsUp {
     /// ```
     #[must_use]
     pub fn is_type_three(&self) -> bool {
-        self.texture == HeadsUpTexture::Type1122
+        self.texture == SuitTexture::Type1122
     }
 
     /// `1123 - suited, off suit, different suits`
+    ///
+    /// ```txt
+    /// 158184 type four hands with 24 suit sigs
+    /// 0001,0110
+    /// 0001,1010
+    /// 0001,1100
+    /// 0010,0101
+    /// 0010,1001
+    /// 0010,1100
+    /// 0011,0100
+    /// 0011,1000
+    /// 0100,0011
+    /// 0100,1001
+    /// 0100,1010
+    /// 0101,0010
+    /// 0101,1000
+    /// 0110,0001
+    /// 0110,1000
+    /// 1000,0011
+    /// 1000,0101
+    /// 1000,0110
+    /// 1001,0010
+    /// 1001,0100
+    /// 1010,0001
+    /// 1010,0100
+    /// 1100,0001
+    /// 1100,0010
+    /// ```
     #[must_use]
     pub fn is_type_four(&self) -> bool {
-        self.texture == HeadsUpTexture::Type1123
+        self.texture == SuitTexture::Type1123
     }
 
     /// `1223 - off suit, off suit, sharing one suit`
+    ///
+    /// ```txt
+    /// 316368 type five hands with 24 suit sigs
+    /// 0011,0101
+    /// 0011,0110
+    /// 0011,1001
+    /// 0011,1010
+    /// 0101,0011
+    /// 0101,0110
+    /// 0101,1001
+    /// 0101,1100
+    /// 0110,0011
+    /// 0110,0101
+    /// 0110,1010
+    /// 0110,1100
+    /// 1001,0011
+    /// 1001,0101
+    /// 1001,1010
+    /// 1001,1100
+    /// 1010,0011
+    /// 1010,0110
+    /// 1010,1001
+    /// 1010,1100
+    /// 1100,0101
+    /// 1100,0110
+    /// 1100,1001
+    /// 1100,1010
+    /// ```
     #[must_use]
     pub fn is_type_five(&self) -> bool {
-        self.texture == HeadsUpTexture::Type1223
+        self.texture == SuitTexture::Type1223
     }
 
     /// `1212 - off suit, off suit, sharing both suits`
+    ///
+    /// ```txt
+    /// 73008 type six hands with 6 suit sigs
+    /// 0011,0011
+    /// 0101,0101
+    /// 0110,0110
+    /// 1001,1001
+    /// 1010,1010
+    /// 1100,1100
+    /// ```
     #[must_use]
     pub fn is_type_six(&self) -> bool {
-        self.texture == HeadsUpTexture::Type1212
+        self.texture == SuitTexture::Type1212
     }
 
     /// `1234 - off suit, off suit, sharing no suits`
+    ///
+    /// ```txt
+    /// 85683 type seven hands with 6 suit sigs
+    /// 0011,1100
+    /// 0101,1010
+    /// 0110,1001
+    /// 1001,0110
+    /// 1010,0101
+    /// 1100,0011
+    /// ```
     #[must_use]
     pub fn is_type_seven(&self) -> bool {
-        self.texture == HeadsUpTexture::Type1234
+        self.texture == SuitTexture::Type1234
     }
 
     /// Returns a `HashSet` of the possible suit shifts. I'm thinking that I want to add this to the
@@ -1056,6 +1118,14 @@ impl SuitShift for SortedHeadsUp {
 
 impl Shifty for SortedHeadsUp {}
 
+impl FromStr for SortedHeadsUp {
+    type Err = PKError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        SortedHeadsUp::try_from(Cards::from_str(s)?)
+    }
+}
+
 impl TryFrom<Cards> for SortedHeadsUp {
     type Error = PKError;
 
@@ -1130,7 +1200,7 @@ impl TryFrom<Vec<&Two>> for SortedHeadsUp {
 #[allow(non_snake_case)]
 mod arrays__matchups__sorted_heads_up_tests {
     use super::*;
-    use crate::arrays::matchups::sorted_heads_up::HeadsUpTexture::Type1234;
+    use crate::arrays::matchups::sorted_heads_up::SuitTexture::Type1234;
     use crate::util::data::TestData;
 
     const HANDS_7D_7C_V_6S_6H: SortedHeadsUp = SortedHeadsUp {
@@ -1219,37 +1289,34 @@ mod arrays__matchups__sorted_heads_up_tests {
     #[test]
     fn determine_texture() {
         assert_eq!(
-            HeadsUpTexture::Type1111,
+            SuitTexture::Type1111,
             SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C).texture
         );
         assert_eq!(
-            HeadsUpTexture::Type1112,
+            SuitTexture::Type1112,
             SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C).texture
         );
         assert_eq!(
-            HeadsUpTexture::Type1122,
+            SuitTexture::Type1122,
             SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7S).texture
         );
         assert_eq!(
-            HeadsUpTexture::Type1123,
+            SuitTexture::Type1123,
             SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D).texture
         );
         assert_eq!(
-            HeadsUpTexture::Type1223,
+            SuitTexture::Type1223,
             SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7D).texture
         );
         assert_eq!(
-            HeadsUpTexture::Type1212,
+            SuitTexture::Type1212,
             SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7C).texture
         );
         assert_eq!(
-            HeadsUpTexture::Type1234,
+            SuitTexture::Type1234,
             SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8H_7D).texture
         );
-        assert_eq!(
-            HeadsUpTexture::TypeUnknown,
-            SortedHeadsUp::default().texture
-        );
+        assert_eq!(SuitTexture::TypeUnknown, SortedHeadsUp::default().texture);
     }
 
     #[test]
@@ -1475,55 +1542,4 @@ mod arrays__matchups__sorted_heads_up_tests {
 
     #[test]
     fn try_from__hup_result() {}
-}
-
-#[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct SortedHeadsUpSuitBinary {
-    pub higher: u32,
-    pub lower: u32,
-}
-
-impl SortedHeadsUpSuitBinary {
-    #[must_use]
-    pub fn new(higher: u32, lower: u32) -> Self {
-        SortedHeadsUpSuitBinary { higher, lower }
-    }
-}
-
-impl From<&SortedHeadsUp> for SortedHeadsUpSuitBinary {
-    fn from(shu: &SortedHeadsUp) -> Self {
-        SortedHeadsUpSuitBinary {
-            higher: shu.higher.suit_binary().rotate_right(12),
-            lower: shu.lower.suit_binary().rotate_right(12),
-        }
-    }
-}
-
-impl From<SortedHeadsUp> for SortedHeadsUpSuitBinary {
-    fn from(shu: SortedHeadsUp) -> Self {
-        SortedHeadsUpSuitBinary {
-            higher: shu.higher.suit_binary().rotate_right(12),
-            lower: shu.lower.suit_binary().rotate_right(12),
-        }
-    }
-}
-
-impl Display for SortedHeadsUpSuitBinary {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:04b},{:04b}", self.higher, self.lower)
-    }
-}
-
-#[cfg(test)]
-#[allow(non_snake_case)]
-mod arrays__matchups__shusb_tests {
-    use super::*;
-    use crate::util::data::TestData;
-
-    #[test]
-    fn display() {
-        let the_hand = SortedHeadsUpSuitBinary::from(&TestData::the_hand_sorted_headsup());
-        assert_eq!(the_hand.to_string(), "1100,0011")
-    }
 }

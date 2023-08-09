@@ -1,5 +1,6 @@
 use itertools::Itertools;
-use pkcore::arrays::matchups::sorted_heads_up::{SortedHeadsUp, SortedHeadsUpSuitBinary};
+use pkcore::arrays::matchups::masks::SuitMask;
+use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use pkcore::PKError;
 use std::collections::HashSet;
 
@@ -19,7 +20,7 @@ use std::collections::HashSet;
 /// 158184 type four hands with 24 suit sigs
 /// 316368 type five hands with 24 suit sigs
 /// 73008 type six hands with 6 suit sigs
-/// 85683 type 85683 hands with 6 suit sigs
+/// 85683 type seven hands with 6 suit sigs
 /// ```
 fn main() -> Result<(), PKError> {
     let mut unique = SortedHeadsUp::unique()?;
@@ -68,7 +69,7 @@ fn do_it(
     let (shus, shusbs) = generate(unique, f);
     info(&shus, &shusbs, s);
     for shusb in shusbs.iter().sorted() {
-        println!("{shusb}");
+        println!("{shusb} {} {}", shusb.higher, shusb.lower);
     }
 
     SortedHeadsUp::generate_csv(
@@ -102,13 +103,9 @@ fn do_it(
 fn generate(
     unique: &mut HashSet<SortedHeadsUp>,
     f: fn(&SortedHeadsUp) -> bool,
-) -> (HashSet<SortedHeadsUp>, HashSet<SortedHeadsUpSuitBinary>) {
+) -> (HashSet<SortedHeadsUp>, HashSet<SuitMask>) {
     let t: HashSet<SortedHeadsUp> = unique.clone().into_iter().filter(f).collect();
-    let shusb: HashSet<SortedHeadsUpSuitBinary> = t
-        .clone()
-        .into_iter()
-        .map(SortedHeadsUpSuitBinary::from)
-        .collect();
+    let shusb: HashSet<SuitMask> = t.clone().into_iter().map(SuitMask::from).collect();
 
     for shu in &t {
         unique.remove(&shu);
@@ -117,7 +114,7 @@ fn generate(
     (t, shusb)
 }
 
-fn info(shus: &HashSet<SortedHeadsUp>, shusbs: &HashSet<SortedHeadsUpSuitBinary>, s: &str) {
+fn info(shus: &HashSet<SortedHeadsUp>, shusbs: &HashSet<SuitMask>, s: &str) {
     println!(
         "{} type {} hands with {} suit sigs",
         shus.len(),
