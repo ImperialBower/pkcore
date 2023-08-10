@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use pkcore::arrays::matchups::masks::SuitMask;
+use pkcore::arrays::matchups::masks::{RankMask, SuitMask};
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use pkcore::PKError;
 use std::collections::HashSet;
@@ -103,15 +103,16 @@ fn do_it(
 fn generate(
     unique: &mut HashSet<SortedHeadsUp>,
     f: fn(&SortedHeadsUp) -> bool,
-) -> (HashSet<SortedHeadsUp>, HashSet<SuitMask>) {
+) -> (HashSet<SortedHeadsUp>, HashSet<SuitMask>, HashSet<RankMask>) {
     let t: HashSet<SortedHeadsUp> = unique.clone().into_iter().filter(f).collect();
-    let shusb: HashSet<SuitMask> = t.clone().into_iter().map(SuitMask::from).collect();
+    let sm: HashSet<SuitMask> = t.clone().into_iter().map(SuitMask::from).collect();
+    let rm: HashSet<RankMask> = t.clone().into_iter().map(RankMask::from).collect();
 
     for shu in &t {
         unique.remove(&shu);
     }
 
-    (t, shusb)
+    (t, sm, rm)
 }
 
 fn info(shus: &HashSet<SortedHeadsUp>, shusbs: &HashSet<SuitMask>, s: &str) {

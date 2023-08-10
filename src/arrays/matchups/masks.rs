@@ -6,6 +6,23 @@ use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::suit::Suit;
 
+/// Type 2 examples:
+///
+/// ```txt
+/// A♠ A♥,K♠ Q♠
+/// A♠ A♥,K♥ Q♥
+/// A♠ A♦,K♠ Q♠
+/// A♠ A♦,K♦ Q♦
+/// A♠ A♣,K♠ Q♠
+/// A♠ A♣,K♣ Q♣
+/// A♥ A♦,K♥ Q♥
+/// A♥ A♦,K♦ Q♦
+/// A♥ A♣,K♥ Q♥
+/// A♥ A♣,K♣ Q♣
+/// A♦ A♣,K♦ Q♦
+/// A♦ A♣,K♣ Q♣
+/// ```
+///
 #[derive(
     Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
 )]
