@@ -2,13 +2,11 @@ use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
 use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::analysis::the_nuts::TheNuts;
 use crate::arrays::five::Five;
-use crate::arrays::matchups::masks::SuitTexture;
 use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::suit::Suit;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::{PKError, Pile, Shifty, SuitShift};
@@ -26,51 +24,21 @@ use std::str::FromStr;
 pub struct SortedHeadsUp {
     pub higher: Two,
     pub lower: Two,
-    pub texture: SuitTexture,
 }
 
 impl SortedHeadsUp {
     #[must_use]
     pub fn new(first: Two, second: Two) -> SortedHeadsUp {
-        let texture = SortedHeadsUp::determine_texture(first, second);
         if first > second {
             SortedHeadsUp {
                 higher: first,
                 lower: second,
-                texture,
             }
         } else {
             SortedHeadsUp {
                 higher: second,
                 lower: first,
-                texture,
             }
-        }
-    }
-
-    fn determine_texture(first: Two, second: Two) -> SuitTexture {
-        let suits: HashSet<Suit> = first.suits().union(&second.suits()).copied().collect();
-
-        match suits.len() {
-            1 => SuitTexture::Type1111,
-            2 => {
-                if first.is_suited() && second.is_suited() {
-                    SuitTexture::Type1122
-                } else if !first.is_suited() && !second.is_suited() {
-                    SuitTexture::Type1212
-                } else {
-                    SuitTexture::Type1112
-                }
-            }
-            3 => {
-                if !first.is_suited() && !second.is_suited() {
-                    SuitTexture::Type1223
-                } else {
-                    SuitTexture::Type1123
-                }
-            }
-            4 => SuitTexture::Type1234,
-            _ => SuitTexture::TypeUnknown,
         }
     }
 
@@ -426,7 +394,6 @@ impl SortedHeadsUp {
     /// let shu = SortedHeadsUp {
     ///   higher: Two::HAND_7D_7C,
     ///   lower: Two::HAND_6S_6H,
-    ///   texture: Type1234,
     /// };
     ///
     /// shu.remove_shifts(&mut hs);
@@ -610,183 +577,6 @@ impl SortedHeadsUp {
         }
         wtr.flush()?;
         Ok(())
-    }
-
-    /// Type one heads up matchups are where all cards of both players are the same suit.
-    ///
-    /// `1111 - suited, suited, same suit`
-    ///
-    /// Suit signatures:
-    ///
-    /// ```txt
-    /// 0001,0001
-    /// 0010,0010
-    /// 0100,0100
-    /// 1000,1000
-    /// ```
-    #[must_use]
-    pub fn is_type_one(&self) -> bool {
-        self.texture == SuitTexture::Type1111
-    }
-
-    /// `1112 - suited, off suit, sharing suit`
-    ///
-    /// Suit signatures:
-    ///
-    /// ```txt
-    /// 133848 type two hands with 24 suit sigs
-    ///
-    /// 0001,0011
-    /// 0001,0101
-    /// 0001,1001
-    /// 0010,0011
-    /// 0010,0110
-    /// 0010,1010
-    /// 0011,0001
-    /// 0011,0010
-    /// 0100,0101
-    /// 0100,0110
-    /// 0100,1100
-    /// 0101,0001
-    /// 0101,0100
-    /// 0110,0010
-    /// 0110,0100
-    /// 1000,1001
-    /// 1000,1010
-    /// 1000,1100
-    /// 1001,0001
-    /// 1001,1000
-    /// 1010,0010
-    /// 1010,1000
-    /// 1100,0100
-    /// 1100,1000
-    /// ```
-    #[must_use]
-    pub fn is_type_two(&self) -> bool {
-        self.texture == SuitTexture::Type1112
-    }
-
-    /// `1122 - suited, suited, different suits`
-    ///
-    /// ```txt
-    /// 36504 type three hands with 12 suit sigs
-    ///
-    /// 0001,0010
-    /// 0001,0100
-    /// 0001,1000
-    /// 0010,0001
-    /// 0010,0100
-    /// 0010,1000
-    /// 0100,0001
-    /// 0100,0010
-    /// 0100,1000
-    /// 1000,0001
-    /// 1000,0010
-    /// 1000,0100
-    /// ```
-    #[must_use]
-    pub fn is_type_three(&self) -> bool {
-        self.texture == SuitTexture::Type1122
-    }
-
-    /// `1123 - suited, off suit, different suits`
-    ///
-    /// ```txt
-    /// 158184 type four hands with 24 suit sigs
-    /// 0001,0110
-    /// 0001,1010
-    /// 0001,1100
-    /// 0010,0101
-    /// 0010,1001
-    /// 0010,1100
-    /// 0011,0100
-    /// 0011,1000
-    /// 0100,0011
-    /// 0100,1001
-    /// 0100,1010
-    /// 0101,0010
-    /// 0101,1000
-    /// 0110,0001
-    /// 0110,1000
-    /// 1000,0011
-    /// 1000,0101
-    /// 1000,0110
-    /// 1001,0010
-    /// 1001,0100
-    /// 1010,0001
-    /// 1010,0100
-    /// 1100,0001
-    /// 1100,0010
-    /// ```
-    #[must_use]
-    pub fn is_type_four(&self) -> bool {
-        self.texture == SuitTexture::Type1123
-    }
-
-    /// `1223 - off suit, off suit, sharing one suit`
-    ///
-    /// ```txt
-    /// 316368 type five hands with 24 suit sigs
-    /// 0011,0101
-    /// 0011,0110
-    /// 0011,1001
-    /// 0011,1010
-    /// 0101,0011
-    /// 0101,0110
-    /// 0101,1001
-    /// 0101,1100
-    /// 0110,0011
-    /// 0110,0101
-    /// 0110,1010
-    /// 0110,1100
-    /// 1001,0011
-    /// 1001,0101
-    /// 1001,1010
-    /// 1001,1100
-    /// 1010,0011
-    /// 1010,0110
-    /// 1010,1001
-    /// 1010,1100
-    /// 1100,0101
-    /// 1100,0110
-    /// 1100,1001
-    /// 1100,1010
-    /// ```
-    #[must_use]
-    pub fn is_type_five(&self) -> bool {
-        self.texture == SuitTexture::Type1223
-    }
-
-    /// `1212 - off suit, off suit, sharing both suits`
-    ///
-    /// ```txt
-    /// 73008 type six hands with 6 suit sigs
-    /// 0011,0011
-    /// 0101,0101
-    /// 0110,0110
-    /// 1001,1001
-    /// 1010,1010
-    /// 1100,1100
-    /// ```
-    #[must_use]
-    pub fn is_type_six(&self) -> bool {
-        self.texture == SuitTexture::Type1212
-    }
-
-    /// `1234 - off suit, off suit, sharing no suits`
-    ///
-    /// ```txt
-    /// 85683 type seven hands with 6 suit sigs
-    /// 0011,1100
-    /// 0101,1010
-    /// 0110,1001
-    /// 1001,0110
-    /// 1010,0101
-    /// 1100,0011
-    /// ```
-    #[must_use]
-    pub fn is_type_seven(&self) -> bool {
-        self.texture == SuitTexture::Type1234
     }
 
     /// Returns a `HashSet` of the possible suit shifts. I'm thinking that I want to add this to the
@@ -1200,13 +990,11 @@ impl TryFrom<Vec<&Two>> for SortedHeadsUp {
 #[allow(non_snake_case)]
 mod arrays__matchups__sorted_heads_up_tests {
     use super::*;
-    use crate::arrays::matchups::sorted_heads_up::SuitTexture::Type1234;
     use crate::util::data::TestData;
 
     const HANDS_7D_7C_V_6S_6H: SortedHeadsUp = SortedHeadsUp {
         higher: Two::HAND_7D_7C,
         lower: Two::HAND_6S_6H,
-        texture: Type1234,
     };
 
     #[test]
@@ -1285,93 +1073,6 @@ mod arrays__matchups__sorted_heads_up_tests {
     ///     Type1223, // off suit, off suit, sharing one suit
     ///     Type1212, // off suit, off suit, sharing both suits
     ///     Type1234, // off suit, off suit, sharing no suits
-
-    #[test]
-    fn determine_texture() {
-        assert_eq!(
-            SuitTexture::Type1111,
-            SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C).texture
-        );
-        assert_eq!(
-            SuitTexture::Type1112,
-            SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C).texture
-        );
-        assert_eq!(
-            SuitTexture::Type1122,
-            SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7S).texture
-        );
-        assert_eq!(
-            SuitTexture::Type1123,
-            SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D).texture
-        );
-        assert_eq!(
-            SuitTexture::Type1223,
-            SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7D).texture
-        );
-        assert_eq!(
-            SuitTexture::Type1212,
-            SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7C).texture
-        );
-        assert_eq!(
-            SuitTexture::Type1234,
-            SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8H_7D).texture
-        );
-        assert_eq!(SuitTexture::TypeUnknown, SortedHeadsUp::default().texture);
-    }
-
-    #[test]
-    fn is_type_one() {
-        let yes = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C);
-        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
-
-        assert!(yes.is_type_one());
-        assert!(!no.is_type_one());
-    }
-
-    #[test]
-    fn is_type_two() {
-        let yes = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
-        let no = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C);
-
-        assert!(yes.is_type_two());
-        assert!(!no.is_type_two());
-    }
-
-    #[test]
-    fn is_type_three() {
-        let yes = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7S);
-        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
-
-        assert!(yes.is_type_three());
-        assert!(!no.is_type_three());
-    }
-
-    #[test]
-    fn is_type_four() {
-        let yes = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D);
-        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
-
-        assert!(yes.is_type_four());
-        assert!(!no.is_type_four());
-    }
-
-    #[test]
-    fn is_type_five() {
-        let yes = SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7D);
-        let no = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D);
-
-        assert!(yes.is_type_five());
-        assert!(!no.is_type_five());
-    }
-
-    #[test]
-    fn is_type_six() {
-        let yes = SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7C);
-        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
-
-        assert!(yes.is_type_six());
-        assert!(!no.is_type_six());
-    }
 
     #[test]
     fn remove_shifts() {

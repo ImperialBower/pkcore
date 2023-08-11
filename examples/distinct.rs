@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use pkcore::arrays::matchups::masked::Masked;
 use pkcore::arrays::matchups::masks::{RankMask, SuitMask};
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use pkcore::PKError;
@@ -22,38 +23,63 @@ use std::collections::HashSet;
 /// 73008 type six hands with 6 suit sigs
 /// 85683 type seven hands with 6 suit sigs
 /// ```
+/// //
+//     // let total = unique.len();
+//     //
+//     // let one = do_it(&mut unique, SortedHeadsUp::is_type_one, "one");
+//     // let two = do_it(&mut unique, SortedHeadsUp::is_type_two, "two");
+//     // let three = do_it(&mut unique, SortedHeadsUp::is_type_three, "three");
+//     // let four = do_it(&mut unique, SortedHeadsUp::is_type_four, "four");
+//     // let five = do_it(&mut unique, SortedHeadsUp::is_type_five, "five");
+//     // let six = do_it(&mut unique, SortedHeadsUp::is_type_six, "six");
+//     // let seven = do_it(&mut unique, SortedHeadsUp::is_type_seven, "seven");
+//     //
+//     // let sum =
+//     //     one.len() + two.len() + three.len() + four.len() + five.len() + six.len() + seven.len();
+//     // assert_eq!(0, unique.len());
+//     // assert_eq!(total, unique.len() + sum);
+//     // check(&unique, &one);
+//     // check(&unique, &two);
+//     // check(&unique, &three);
+//     // check(&unique, &four);
+//     // check(&unique, &five);
+//     // check(&unique, &six);
+//     //
+//     // // assert_eq!(total, one + two + three + four + five + six);
+//     // SortedHeadsUp::generate_csv("generated/unique_type_remaining.csv", unique)
+//     //     .expect("TODO: panic message");
 fn main() -> Result<(), PKError> {
-    let mut unique = SortedHeadsUp::unique()?;
+    let unique = Masked::unique();
 
-    let total = unique.len();
-
-    let one = do_it(&mut unique, SortedHeadsUp::is_type_one, "one");
-    let two = do_it(&mut unique, SortedHeadsUp::is_type_two, "two");
-    let three = do_it(&mut unique, SortedHeadsUp::is_type_three, "three");
-    let four = do_it(&mut unique, SortedHeadsUp::is_type_four, "four");
-    let five = do_it(&mut unique, SortedHeadsUp::is_type_five, "five");
-    let six = do_it(&mut unique, SortedHeadsUp::is_type_six, "six");
-    let seven = do_it(&mut unique, SortedHeadsUp::is_type_seven, "seven");
+    let one = do_it(&unique, Masked::is_type_one, "one");
+    let two = do_it(&unique, Masked::is_type_two, "two");
+    let three = do_it(&unique, Masked::is_type_three, "three");
+    let four = do_it(&unique, Masked::is_type_four, "four");
+    let five = do_it(&unique, Masked::is_type_five, "five");
+    let six = do_it(&unique, Masked::is_type_six, "six");
+    let seven = do_it(&unique, Masked::is_type_seven, "seven");
 
     let sum =
         one.len() + two.len() + three.len() + four.len() + five.len() + six.len() + seven.len();
-    assert_eq!(0, unique.len());
-    assert_eq!(total, unique.len() + sum);
-    check(&unique, &one);
-    check(&unique, &two);
-    check(&unique, &three);
-    check(&unique, &four);
-    check(&unique, &five);
-    check(&unique, &six);
 
-    // assert_eq!(total, one + two + three + four + five + six);
-    SortedHeadsUp::generate_csv("generated/unique_type_remaining.csv", unique)
-        .expect("TODO: panic message");
-
+    assert_eq!(sum, unique.len());
     Ok(())
 }
 
-fn check(unique: &HashSet<SortedHeadsUp>, types: &HashSet<SortedHeadsUp>) {
+fn do_it(unique: &HashSet<Masked>, f: fn(&Masked) -> bool, s: &str) -> HashSet<SortedHeadsUp> {
+    let filtered = Masked::filter(&unique, f);
+    let suit_makes = Masked::suit_masks(&unique, f);
+    // let rank_masks = Masked::rank_masks(&unique);
+    println!(
+        "{} type {} hands with {} suit masks",
+        filtered.len(),
+        s,
+        suit_makes.len()
+    );
+    filtered
+}
+
+fn _check(unique: &HashSet<SortedHeadsUp>, types: &HashSet<SortedHeadsUp>) {
     for shu in types {
         if unique.contains(shu) {
             println!("{shu} not removed");
@@ -61,13 +87,13 @@ fn check(unique: &HashSet<SortedHeadsUp>, types: &HashSet<SortedHeadsUp>) {
     }
 }
 
-fn do_it(
+fn _do_it(
     unique: &mut HashSet<SortedHeadsUp>,
     f: fn(&SortedHeadsUp) -> bool,
     s: &str,
 ) -> HashSet<SortedHeadsUp> {
-    let (shus, shusbs) = generate(unique, f);
-    info(&shus, &shusbs, s);
+    let (shus, shusbs, _) = _generate(unique, f);
+    _info(&shus, &shusbs, s);
     for shusb in shusbs.iter().sorted() {
         println!("{shusb} {} {}", shusb.higher, shusb.lower);
     }
@@ -100,7 +126,7 @@ fn do_it(
 ///     (type_one, shusb)
 /// }
 /// ```
-fn generate(
+fn _generate(
     unique: &mut HashSet<SortedHeadsUp>,
     f: fn(&SortedHeadsUp) -> bool,
 ) -> (HashSet<SortedHeadsUp>, HashSet<SuitMask>, HashSet<RankMask>) {
@@ -115,7 +141,7 @@ fn generate(
     (t, sm, rm)
 }
 
-fn info(shus: &HashSet<SortedHeadsUp>, shusbs: &HashSet<SuitMask>, s: &str) {
+fn _info(shus: &HashSet<SortedHeadsUp>, shusbs: &HashSet<SuitMask>, s: &str) {
     println!(
         "{} type {} hands with {} suit sigs",
         shus.len(),

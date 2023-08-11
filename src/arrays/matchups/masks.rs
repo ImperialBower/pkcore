@@ -1,10 +1,12 @@
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
-use bitvec::prelude::*;
-use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::suit::Suit;
+use crate::Pile;
+use bitvec::prelude::*;
+use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::fmt::{Display, Formatter};
 
 /// Type 2 examples:
 ///
@@ -39,7 +41,49 @@ pub enum SuitTexture {
     Type1234, // off suit, off suit, sharing no suits
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+impl From<SortedHeadsUp> for SuitTexture {
+    fn from(shu: SortedHeadsUp) -> Self {
+        SuitTexture::from(&shu)
+    }
+}
+
+impl From<&SortedHeadsUp> for SuitTexture {
+    fn from(shu: &SortedHeadsUp) -> Self {
+        let suits: HashSet<Suit> = shu
+            .higher
+            .suits()
+            .union(&shu.lower.suits())
+            .copied()
+            .collect();
+
+        match suits.len() {
+            1 => SuitTexture::Type1111,
+            2 => {
+                if shu.higher.is_suited() && shu.lower.is_suited() {
+                    SuitTexture::Type1122
+                } else if !shu.higher.is_suited() && !shu.lower.is_suited() {
+                    SuitTexture::Type1212
+                } else {
+                    SuitTexture::Type1112
+                }
+            }
+            3 => {
+                if !shu.higher.is_suited() && !shu.lower.is_suited() {
+                    SuitTexture::Type1223
+                } else {
+                    SuitTexture::Type1123
+                }
+            }
+            4 => SuitTexture::Type1234,
+            _ => SuitTexture::TypeUnknown,
+        }
+    }
+}
+
+#[derive(
+    Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
+)]
+#[serde(rename_all = "PascalCase")]
 pub struct SuitMask {
     pub higher: u8,
     pub lower: u8,
@@ -133,32 +177,23 @@ impl SuitMask {
         bv.load_be::<u8>()
     }
 
+    /// # Panics
+    ///
+    /// Under construction
     #[must_use]
-    pub fn mask(shu: SortedHeadsUp, mask: SuitMask) -> Vec<SortedHeadsUp> {
-
-    }
-
-    #[must_use]
-    fn suited_mask(two: Two, suit: u8) -> Two {
+    pub fn suited_mask(two: Two, suit: u8) -> Two {
         let suit = match suit {
-            1 => {
-                Suit::CLUBS
-            },
-            2 => {
-                Suit::DIAMONDS
-            },
-            3 => {
-                Suit::HEARTS
-            },
-            4 => {
-                Suit::SPADES
-            },
-            _ => Suit::BLANK
+            1 => Suit::CLUBS,
+            2 => Suit::DIAMONDS,
+            3 => Suit::HEARTS,
+            4 => Suit::SPADES,
+            _ => Suit::BLANK,
         };
         Two::new(
             Card::new(two.first().get_rank(), suit),
-            Card::new(two.second().get_rank(), suit)
-        ).unwrap()
+            Card::new(two.second().get_rank(), suit),
+        )
+        .unwrap()
     }
 }
 
@@ -194,7 +229,6 @@ mod arrays__matchups__masks__suit_mask_tests {
     use super::*;
     use crate::util::data::TestData;
     use rstest::rstest;
-    use std::str::FromStr;
 
     #[test]
     fn inverse() {
@@ -215,21 +249,21 @@ mod arrays__matchups__masks__suit_mask_tests {
         assert_eq!(inverse, mask.inverse());
     }
 
-    #[test]
-    fn mask() {
-        let shu = SortedHeadsUp::from_str("A♠ K♠ K♥ 8♥").unwrap();
-        let expected = vec![SortedHeadsUp::from_str("AD KD KC 8C").unwrap()];
-
-        let masked = SuitMask::mask(
-            shu,
-            SuitMask {
-                higher: 1u8,
-                lower: 2u8,
-            },
-        );
-
-        assert_eq!(masked, expected);
-    }
+    // #[test]
+    // fn mask() {
+    //     let shu = SortedHeadsUp::from_str("A♠ K♠ K♥ 8♥").unwrap();
+    //     let expected = vec![SortedHeadsUp::from_str("AD KD KC 8C").unwrap()];
+    //
+    //     let masked = SuitMask::mask(
+    //         shu,
+    //         SuitMask {
+    //             higher: 1u8,
+    //             lower: 2u8,
+    //         },
+    //     );
+    //
+    //     assert_eq!(masked, expected);
+    // }
 
     #[test]
     fn display() {
@@ -238,7 +272,10 @@ mod arrays__matchups__masks__suit_mask_tests {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(
+    Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
+)]
+#[serde(rename_all = "PascalCase")]
 pub struct RankMask {
     pub higher: u16,
     pub lower: u16,
