@@ -53,24 +53,25 @@ impl Masked {
     /// # Errors
     ///
     /// Calling on a value that isn't type one.
-    pub fn type_one_shifts(&self) -> Result<Vec<Masked>, PKError> {
+    pub fn type_one_shifts(&self) -> Result<HashSet<Masked>, PKError> {
         if !self.is_type_one() {
             return Err(PKError::Fubar);
         }
-        let mut v = Vec::new();
-        v.push(*self);
+        let mut v = HashSet::new();
+        v.insert(*self);
+        let mut last = *self;
 
         for _ in 0..3 {
-            let shifty = self.shu.shift_suit_up();
+            let shifty = last.shu.shift_suit_up();
             let masked = Masked {
                 shu: shifty,
                 texture: Type1111,
                 suit_mask: SuitMask::from(&shifty),
                 rank_mask: self.rank_mask,
             };
-            v.push(masked);
+            v.insert(masked);
+            last = masked;
         }
-        v.sort();
         Ok(v)
     }
 
@@ -316,7 +317,26 @@ mod arrays__matchups__masked_tests {
     };
 
     #[test]
-    fn type_one_shifts() {}
+    fn type_one_shifts__invalid() {
+        let original = Masked::from_str("AS AH AD AC").unwrap();
+        assert!(original.type_one_shifts().is_err());
+    }
+
+    #[test]
+    fn type_one_shifts() {
+        let original = Masked::from_str("A♠ K♠ 8♠ 7♠").unwrap();
+        let shift1 = Masked::from_str("A♣ K♣ 8♣ 7♣").unwrap();
+        let shift2 = Masked::from_str("A♦ K♦ 8♦ 7♦").unwrap();
+        let shift3 = Masked::from_str("A♥ K♥ 8♥ 7♥").unwrap();
+
+        let shifts = original.type_one_shifts().unwrap();
+
+        assert_eq!(4, shifts.len());
+        assert!(shifts.contains(&original));
+        assert!(shifts.contains(&shift1));
+        assert!(shifts.contains(&shift2));
+        assert!(shifts.contains(&shift3));
+    }
 
     // region textures
 
