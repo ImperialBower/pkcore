@@ -1,8 +1,12 @@
+use crate::arrays::matchups::masks::SuitTexture::Type1111;
 use crate::arrays::matchups::masks::{RankMask, SuitMask, SuitTexture};
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+use crate::cards::Cards;
+use crate::{PKError, SuitShift};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 
 #[derive(
     Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
@@ -46,9 +50,35 @@ impl Masked {
             .collect()
     }
 
+    /// # Errors
+    ///
+    /// Calling on a value that isn't type one.
+    pub fn type_one_shifts(&self) -> Result<Vec<Masked>, PKError> {
+        if !self.is_type_one() {
+            return Err(PKError::Fubar);
+        }
+        let mut v = Vec::new();
+        v.push(*self);
+
+        for _ in 0..3 {
+            let shifty = self.shu.shift_suit_up();
+            let masked = Masked {
+                shu: shifty,
+                texture: Type1111,
+                suit_mask: SuitMask::from(&shifty),
+                rank_mask: self.rank_mask,
+            };
+            v.push(masked);
+        }
+        v.sort();
+        Ok(v)
+    }
+
     // pub fn rank_masks(unique: &HashSet<Masked>, f: fn(&Masked) -> bool) -> HashSet<RankMask> {
     //     unique.clone().into_iter().map(|s| s.rank_mask).collect()
     // }
+
+    // region is_type
 
     /// Type one heads up matchups are where all cards of both players are the same suit.
     ///
@@ -226,6 +256,8 @@ impl Masked {
     pub fn is_type_seven(&self) -> bool {
         self.texture == SuitTexture::Type1234
     }
+
+    // endregion
 }
 
 impl Display for Masked {
@@ -245,6 +277,17 @@ impl From<SortedHeadsUp> for Masked {
             texture: SuitTexture::from(&shu),
             suit_mask: SuitMask::from(&shu),
             rank_mask: RankMask::from(&shu),
+        }
+    }
+}
+
+impl FromStr for Masked {
+    type Err = PKError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match SortedHeadsUp::try_from(Cards::from_str(s)?) {
+            Ok(shu) => Ok(Masked::from(shu)),
+            Err(e) => Err(e),
         }
     }
 }
@@ -271,6 +314,9 @@ mod arrays__matchups__masked_tests {
             lower: 8,
         },
     };
+
+    #[test]
+    fn type_one_shifts() {}
 
     // region textures
 

@@ -869,6 +869,14 @@ impl Display for SortedHeadsUp {
     }
 }
 
+impl FromStr for SortedHeadsUp {
+    type Err = PKError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        SortedHeadsUp::try_from(Cards::from_str(s)?)
+    }
+}
+
 impl Pile for SortedHeadsUp {
     /// Shoot. Forgot about my frequency mask idea. Still has potential, but later.
     fn clean(&self) -> Self {
@@ -907,14 +915,6 @@ impl SuitShift for SortedHeadsUp {
 }
 
 impl Shifty for SortedHeadsUp {}
-
-impl FromStr for SortedHeadsUp {
-    type Err = PKError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        SortedHeadsUp::try_from(Cards::from_str(s)?)
-    }
-}
 
 impl TryFrom<Cards> for SortedHeadsUp {
     type Error = PKError;
