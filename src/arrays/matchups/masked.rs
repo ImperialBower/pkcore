@@ -54,6 +54,23 @@ impl Masked {
             .collect()
     }
 
+    pub fn my_shifts(&self) -> HashSet<Masked> {
+        self.my_types().into_iter().filter(|x| x.rank_mask == self.rank_mask).collect()
+    }
+
+    pub fn my_types(&self) -> HashSet<Masked> {
+        match self.texture {
+            SuitTexture::TypeUnknown => HashSet::new(),
+            SuitTexture::Type1111 => MASKED_UNIQUE_TYPE_ONE.clone(),
+            SuitTexture::Type1112 => MASKED_UNIQUE_TYPE_TWO.clone(),
+            SuitTexture::Type1122 => MASKED_UNIQUE_TYPE_THREE.clone(),
+            SuitTexture::Type1123 => MASKED_UNIQUE_TYPE_FOUR.clone(),
+            SuitTexture::Type1223 => MASKED_UNIQUE_TYPE_FIVE.clone(),
+            SuitTexture::Type1212 => MASKED_UNIQUE_TYPE_SIX.clone(),
+            SuitTexture::Type1234 => MASKED_UNIQUE_TYPE_SEVEN.clone(),
+        }
+    }
+
     pub fn parse(shus: &HashSet<SortedHeadsUp>) -> HashSet<Masked> {
         shus.clone().into_iter().map(Masked::from).collect()
     }
@@ -406,6 +423,7 @@ mod arrays__matchups__masked_tests {
     fn type_one_shifts__invalid() {
         let original = Masked::from_str("AS AH AD AC").unwrap();
         assert!(original.type_one_shifts().is_err());
+
     }
 
     #[test]
@@ -422,6 +440,7 @@ mod arrays__matchups__masked_tests {
         assert!(shifts.contains(&shift1));
         assert!(shifts.contains(&shift2));
         assert!(shifts.contains(&shift3));
+        assert_eq!(shifts, original.my_shifts());
     }
 
     /// A♠ K♥ Q♠ J♥, 65.10% (1114667), 34.36% (588268), 0.55% (9369)
