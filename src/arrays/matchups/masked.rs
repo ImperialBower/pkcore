@@ -1,14 +1,30 @@
-use crate::arrays::matchups::masks::SuitTexture::Type1111;
 use crate::arrays::matchups::masks::{RankMask, SuitMask, SuitTexture};
-use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+use crate::arrays::matchups::sorted_heads_up::{SortedHeadsUp, SORTED_HEADS_UP_UNIQUE};
 use crate::cards::Cards;
 use crate::{PKError, Shifty, SuitShift};
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-
+lazy_static! {
+    pub static ref MASKED_UNIQUE: HashSet<Masked> = Masked::parse(&SORTED_HEADS_UP_UNIQUE);
+    pub static ref MASKED_UNIQUE_TYPE_ONE: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_one);
+    pub static ref MASKED_UNIQUE_TYPE_TWO: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_two);
+    pub static ref MASKED_UNIQUE_TYPE_THREE: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_three);
+    pub static ref MASKED_UNIQUE_TYPE_FOUR: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_four);
+    pub static ref MASKED_UNIQUE_TYPE_FIVE: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_five);
+    pub static ref MASKED_UNIQUE_TYPE_SIX: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_six);
+    pub static ref MASKED_UNIQUE_TYPE_SEVEN: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_seven);
+}
 
 #[derive(
     Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
@@ -22,7 +38,14 @@ pub struct Masked {
 }
 
 impl Masked {
-    pub fn filter(unique: &HashSet<Masked>, f: fn(&Masked) -> bool) -> HashSet<SortedHeadsUp> {
+    pub fn filter(unique: &HashSet<Masked>, f: fn(&Masked) -> bool) -> HashSet<Masked> {
+        unique.clone().into_iter().filter(f).collect()
+    }
+
+    pub fn filter_into_shu(
+        unique: &HashSet<Masked>,
+        f: fn(&Masked) -> bool,
+    ) -> HashSet<SortedHeadsUp> {
         unique
             .clone()
             .into_iter()
@@ -49,27 +72,7 @@ impl Masked {
     /// shouldn't
     #[must_use]
     pub fn unique() -> HashSet<Masked> {
-        Masked::parse(&SortedHeadsUp::unique().unwrap())
-    }
-
-    /// All suit types are going to have the basic shifts.
-    #[must_use]
-    pub fn basic_shifts(&self) -> HashSet<Masked> {
-        let mut hs = HashSet::new();
-        hs.insert(*self);
-        let mut last = *self;
-        for _ in 0..3 {
-            let shifty = last.shu.shift_suit_up();
-            let masked = Masked {
-                shu: shifty,
-                texture: Type1111,
-                suit_mask: SuitMask::from(&shifty),
-                rank_mask: self.rank_mask,
-            };
-            hs.insert(masked);
-            last = masked;
-        }
-        hs
+        Masked::parse(&SORTED_HEADS_UP_UNIQUE)
     }
 
     /// # Errors
@@ -89,7 +92,7 @@ impl Masked {
         if !self.is_type_six() {
             return Err(PKError::Fubar);
         }
-        let mut hs = self.basic_shifts();
+        let hs = self.shifts();
 
         Ok(hs)
     }
@@ -350,6 +353,61 @@ mod arrays__matchups__masked_tests {
             lower: 8,
         },
     };
+
+    #[test]
+    fn suit_masks() {
+        assert_eq!(
+            4,
+            Masked::suit_masks(&MASKED_UNIQUE_TYPE_ONE, Masked::is_type_one).len()
+        );
+        assert_eq!(
+            24,
+            Masked::suit_masks(&MASKED_UNIQUE_TYPE_TWO, Masked::is_type_two).len()
+        );
+        assert_eq!(
+            12,
+            Masked::suit_masks(&MASKED_UNIQUE_TYPE_THREE, Masked::is_type_three).len()
+        );
+        assert_eq!(
+            24,
+            Masked::suit_masks(&MASKED_UNIQUE_TYPE_FOUR, Masked::is_type_four).len()
+        );
+        assert_eq!(
+            24,
+            Masked::suit_masks(&MASKED_UNIQUE_TYPE_FIVE, Masked::is_type_five).len()
+        );
+        assert_eq!(
+            6,
+            Masked::suit_masks(&MASKED_UNIQUE_TYPE_SIX, Masked::is_type_six).len()
+        );
+        assert_eq!(
+            6,
+            Masked::suit_masks(&MASKED_UNIQUE_TYPE_SEVEN, Masked::is_type_seven).len()
+        );
+    }
+
+    #[test]
+    fn unique() {
+        assert_eq!(812175, MASKED_UNIQUE.len());
+    }
+
+    /// 8580 type one hands with 4 suit sigs
+    /// 133848 type two hands with 24 suit sigs
+    /// 36504 type three hands with 12 suit sigs
+    /// 158184 type four hands with 24 suit sigs
+    /// 316368 type five hands with 24 suit sigs
+    /// 73008 type six hands with 6 suit sigs
+    /// 85683 type seven hands with 6 suit sigs
+    #[test]
+    fn unique_types() {
+        assert_eq!(8580, MASKED_UNIQUE_TYPE_ONE.len());
+        assert_eq!(133848, MASKED_UNIQUE_TYPE_TWO.len());
+        assert_eq!(36504, MASKED_UNIQUE_TYPE_THREE.len());
+        assert_eq!(158184, MASKED_UNIQUE_TYPE_FOUR.len());
+        assert_eq!(316368, MASKED_UNIQUE_TYPE_FIVE.len());
+        assert_eq!(73008, MASKED_UNIQUE_TYPE_SIX.len());
+        assert_eq!(85683, MASKED_UNIQUE_TYPE_SEVEN.len());
+    }
 
     #[test]
     fn type_one_shifts__invalid() {

@@ -11,12 +11,12 @@ use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::{PKError, Pile, Shifty, SuitShift};
 use csv::WriterBuilder;
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use lazy_static::lazy_static;
 
 lazy_static! {
     pub static ref SORTED_HEADS_UP_UNIQUE: HashSet<SortedHeadsUp> = {
@@ -329,7 +329,7 @@ impl SortedHeadsUp {
     ///
     /// If a deck isn't divisible by 2, which shouldn't happen. Maybe if we add jokers some day.
     pub fn distinct() -> Result<HashSet<SortedHeadsUp>, PKError> {
-        let mut unique = SortedHeadsUp::unique()?;
+        let mut unique = SORTED_HEADS_UP_UNIQUE.clone();
 
         let v = Vec::from_iter(unique.clone());
         for shu in &v {
@@ -783,6 +783,11 @@ mod arrays__matchups__sorted_heads_up_tests {
         higher: Two::HAND_7D_7C,
         lower: Two::HAND_6S_6H,
     };
+
+    #[test]
+    fn unique() {
+        assert_eq!(812175, SORTED_HEADS_UP_UNIQUE.len());
+    }
 
     #[test]
     fn new() {

@@ -1,5 +1,5 @@
 use itertools::Itertools;
-use pkcore::arrays::matchups::masked::Masked;
+use pkcore::arrays::matchups::masked::{Masked, MASKED_UNIQUE};
 use pkcore::arrays::matchups::masks::{RankMask, SuitMask};
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use pkcore::PKError;
@@ -49,32 +49,31 @@ use std::collections::HashSet;
 //     // SortedHeadsUp::generate_csv("generated/unique_type_remaining.csv", unique)
 //     //     .expect("TODO: panic message");
 fn main() -> Result<(), PKError> {
-    let unique = Masked::unique();
-
-    let one = do_it(&unique, Masked::is_type_one, "one");
-    let two = do_it(&unique, Masked::is_type_two, "two");
-    let three = do_it(&unique, Masked::is_type_three, "three");
-    let four = do_it(&unique, Masked::is_type_four, "four");
-    let five = do_it(&unique, Masked::is_type_five, "five");
-    let six = do_it(&unique, Masked::is_type_six, "six");
-    let seven = do_it(&unique, Masked::is_type_seven, "seven");
+    let one = do_it(&MASKED_UNIQUE, Masked::is_type_one, "one");
+    let two = do_it(&MASKED_UNIQUE, Masked::is_type_two, "two");
+    let three = do_it(&MASKED_UNIQUE, Masked::is_type_three, "three");
+    let four = do_it(&MASKED_UNIQUE, Masked::is_type_four, "four");
+    let five = do_it(&MASKED_UNIQUE, Masked::is_type_five, "five");
+    let six = do_it(&MASKED_UNIQUE, Masked::is_type_six, "six");
+    let seven = do_it(&MASKED_UNIQUE, Masked::is_type_seven, "seven");
 
     let sum =
         one.len() + two.len() + three.len() + four.len() + five.len() + six.len() + seven.len();
 
-    assert_eq!(sum, unique.len());
+    assert_eq!(sum, MASKED_UNIQUE.len());
+    println!("{sum}");
     Ok(())
 }
 
 fn do_it(unique: &HashSet<Masked>, f: fn(&Masked) -> bool, s: &str) -> HashSet<SortedHeadsUp> {
-    let filtered = Masked::filter(&unique, f);
-    let suit_makes = Masked::suit_masks(&unique, f);
+    let filtered = Masked::filter_into_shu(&unique, f);
+    let suit_masks = Masked::suit_masks(&unique, f);
     // let rank_masks = Masked::rank_masks(&unique);
     println!(
         "{} type {} hands with {} suit masks",
         filtered.len(),
         s,
-        suit_makes.len()
+        suit_masks.len()
     );
     filtered
 }

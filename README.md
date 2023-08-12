@@ -698,6 +698,7 @@
             * .type_one_shifts()
             * .type_six_shifts()
               * impl Shifty for Masked
+              * MASKED_UNIQUE_TYPEs
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
