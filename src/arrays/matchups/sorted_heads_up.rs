@@ -326,8 +326,6 @@ impl SortedHeadsUp {
         Ok(unique)
     }
 
-
-
     /// I want to be able to generate these values into a CSV file, so that I can use them to
     /// load into our odds db.
     ///
@@ -494,12 +492,8 @@ impl SortedHeadsUp {
 
     #[must_use]
     pub fn invert_suits(&self) -> Self {
-        todo!()
+        SortedHeadsUp::new(self.higher.invert_suits(), self.lower.invert_suits())
     }
-
-
-
-
 
     /// This should be interesting. Certainly testable.
     ///
@@ -846,7 +840,14 @@ mod arrays__matchups__sorted_heads_up_tests {
 
     #[test]
     fn invert_suits() {
-
+        assert_eq!(
+            SortedHeadsUp::new(Two::HAND_8S_7H, Two::HAND_8H_7S),
+            SortedHeadsUp::new(Two::HAND_8S_7H, Two::HAND_8H_7S).invert_suits()
+        );
+        assert_eq!(
+            SortedHeadsUp::new(Two::HAND_AS_KD, Two::HAND_8H_7S),
+            SortedHeadsUp::new(Two::HAND_AD_KS, Two::HAND_8S_7H).invert_suits()
+        );
     }
 
     #[test]

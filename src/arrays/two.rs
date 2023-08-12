@@ -620,7 +620,7 @@ impl Two {
             Card::new(self.second().get_rank(), self.first().get_suit()),
         ) {
             Ok(two) => two,
-            Err(_) => Two::default()
+            Err(_) => Two::default(),
         }
     }
 

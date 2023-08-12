@@ -692,8 +692,12 @@
           * SuitMask
           * Texture
           * RankMask
-          * Two.invert_suits()
-          * SortedHeadsUp.invert_suits()
+          * Masked
+            * Two.invert_suits()
+            * SortedHeadsUp.invert_suits()
+            * .type_one_shifts()
+            * .type_six_shifts()
+              * impl Shifty for Masked
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

@@ -2,7 +2,7 @@ use crate::arrays::matchups::masks::SuitTexture::Type1111;
 use crate::arrays::matchups::masks::{RankMask, SuitMask, SuitTexture};
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::cards::Cards;
-use crate::{PKError, SuitShift};
+use crate::{PKError, Shifty, SuitShift};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
@@ -20,18 +20,6 @@ pub struct Masked {
 }
 
 impl Masked {
-    pub fn parse(shus: &HashSet<SortedHeadsUp>) -> HashSet<Masked> {
-        shus.clone().into_iter().map(Masked::from).collect()
-    }
-
-    /// # Panics
-    ///
-    /// shouldn't
-    #[must_use]
-    pub fn unique() -> HashSet<Masked> {
-        Masked::parse(&SortedHeadsUp::unique().unwrap())
-    }
-
     pub fn filter(unique: &HashSet<Masked>, f: fn(&Masked) -> bool) -> HashSet<SortedHeadsUp> {
         unique
             .clone()
@@ -39,6 +27,10 @@ impl Masked {
             .filter(f)
             .map(|s| s.shu)
             .collect()
+    }
+
+    pub fn parse(shus: &HashSet<SortedHeadsUp>) -> HashSet<Masked> {
+        shus.clone().into_iter().map(Masked::from).collect()
     }
 
     pub fn suit_masks(unique: &HashSet<Masked>, f: fn(&Masked) -> bool) -> HashSet<SuitMask> {
@@ -50,7 +42,16 @@ impl Masked {
             .collect()
     }
 
+    /// # Panics
+    ///
+    /// shouldn't
+    #[must_use]
+    pub fn unique() -> HashSet<Masked> {
+        Masked::parse(&SortedHeadsUp::unique().unwrap())
+    }
+
     /// All suit types are going to have the basic shifts.
+    #[must_use]
     pub fn basic_shifts(&self) -> HashSet<Masked> {
         let mut hs = HashSet::new();
         hs.insert(*self);
@@ -76,16 +77,17 @@ impl Masked {
         if !self.is_type_one() {
             return Err(PKError::Fubar);
         }
-        Ok(self.basic_shifts())
+        Ok(self.shifts())
     }
 
+    /// # Errors
+    ///
+    /// When you try to shift something that isn't type six.
     pub fn type_six_shifts(&self) -> Result<HashSet<Masked>, PKError> {
         if !self.is_type_six() {
             return Err(PKError::Fubar);
         }
         let mut hs = self.basic_shifts();
-
-
 
         Ok(hs)
     }
@@ -307,6 +309,22 @@ impl FromStr for Masked {
         }
     }
 }
+
+impl SuitShift for Masked {
+    fn shift_suit_down(&self) -> Self {
+        Masked::from(self.shu.shift_suit_down())
+    }
+
+    fn shift_suit_up(&self) -> Self {
+        Masked::from(self.shu.shift_suit_up())
+    }
+
+    fn opposite(&self) -> Self {
+        Masked::from(self.shu.opposite())
+    }
+}
+
+impl Shifty for Masked {}
 
 #[cfg(test)]
 #[allow(non_snake_case)]
