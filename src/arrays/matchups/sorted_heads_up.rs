@@ -16,6 +16,21 @@ use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    pub static ref SORTED_HEADS_UP_UNIQUE: HashSet<SortedHeadsUp> = {
+        let mut hs: HashSet<SortedHeadsUp> = HashSet::new();
+        for v in Cards::deck().combinations(2) {
+            let hero = Two::try_from(v.as_slice()).unwrap();
+            for r in hero.remaining().combinations(2) {
+                let villain = Two::try_from(r.as_slice()).unwrap();
+                hs.insert(SortedHeadsUp::new(hero, villain));
+            }
+        }
+        hs
+    };
+}
 
 #[derive(
     Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
