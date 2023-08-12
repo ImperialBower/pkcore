@@ -692,6 +692,8 @@
           * SuitMask
           * Texture
           * RankMask
+          * Two.invert_suits()
+          * SortedHeadsUp.invert_suits()
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

@@ -326,94 +326,7 @@ impl SortedHeadsUp {
         Ok(unique)
     }
 
-    /// This should be interesting. Certainly testable.
-    ///
-    /// First we start with the bare signature for the function:
-    ///
-    /// ```txt
-    /// pub fn remove_shifts(&self, from: &mut HashSet<SortedHeadsUp>) {
-    ///   todo!()
-    /// }
-    /// ```
-    ///
-    /// A couple things of note. This is a method with side effects. That's something to watch
-    /// out for. When it's the best tool for the job, go right ahead, but just be careful. Also,
-    /// not that we have a &self in the sig, which may, or may not, bite us in the ass. __We shall
-    /// see... 😈__
-    ///
-    /// Here's our sure to fail test after letting the compiler guide us:
-    ///
-    /// ```txt
-    /// #[test]
-    /// fn remove_shifts() {
-    ///     let mut hs = SortedHeadsUp::unique().unwrap();
-    ///     let shu = HANDS_7D_7C_V_6S_6H;
-    ///
-    ///     shu.remove_shifts(&mut hs);
-    /// }
-    /// ```
-    ///
-    /// I'll confess that the line `shu.remove_shifts(&mut hs)` surprised me. I was a tad surprised
-    /// about needing the `&mut` prefix. It's been a long time since I passed in a mutable
-    /// reference.
-    ///
-    /// Let's add a little more heft to the test.
-    ///
-    /// ```txt
-    /// #[test]
-    /// fn remove_shifts() {
-    ///     let mut hs = SortedHeadsUp::unique().unwrap();
-    ///     let shu = HANDS_7D_7C_V_6S_6H;
-    ///
-    ///     shu.remove_shifts(&mut hs);
-    ///
-    ///     assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
-    /// }
-    /// ```
-    ///
-    /// This makes the test pass:
-    ///
-    /// ```txt
-    ///     pub fn remove_shifts(&self, from: &mut HashSet<SortedHeadsUp>) {
-    ///         for shift in self.other_shifts() {
-    ///             if from.contains(&shift) {
-    ///                 from.remove(&shift);
-    ///             }
-    ///         }
-    ///     }
-    /// ```
-    ///
-    /// Let's add the other two shifts to the test.
-    ///
-    /// ```
-    /// use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
-    /// use pkcore::arrays::matchups::masks::SuitTexture::Type1234;
-    /// use pkcore::arrays::two::Two;
-    ///
-    /// let mut hs = SortedHeadsUp::unique().unwrap();
-    /// let shu = SortedHeadsUp {
-    ///   higher: Two::HAND_7D_7C,
-    ///   lower: Two::HAND_6S_6H,
-    /// };
-    ///
-    /// shu.remove_shifts(&mut hs);
-    ///
-    /// assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
-    /// assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C)));
-    /// assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C)));
-    /// ```
-    ///
-    /// It works. Huzzah!
-    ///
-    /// Now, can we leverage this in refactoring our distinct function? How about we use the exact
-    /// same test against it?
-    pub fn remove_shifts(&self, from: &mut HashSet<SortedHeadsUp>) {
-        for shift in self.other_shifts() {
-            if from.contains(&shift) {
-                from.remove(&shift);
-            }
-        }
-    }
+
 
     /// I want to be able to generate these values into a CSV file, so that I can use them to
     /// load into our odds db.
@@ -579,237 +492,102 @@ impl SortedHeadsUp {
         Ok(())
     }
 
-    /// Returns a `HashSet` of the possible suit shifts. I'm thinking that I want to add this to the
-    /// `SuitShift` trait. This would require that the trait would need Copy as a
-    /// [supertrait](https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#using-supertraits-to-require-one-traits-functionality-within-another-trait).
-    ///
-    /// I've never used a supertrait before. This should be fun.
-    ///
-    /// Firs, let's implement it on `SuitShift` without changing anything, and then we'll see if
-    /// we can make this method apply to any struct that implements the trait.
-    ///
-    /// Adding the supertrait was easy:
-    ///
-    /// ```txt
-    /// pub trait SuitShift: Copy {
-    ///     #[must_use]
-    ///     fn shift_suit_down(&self) -> Self;
-    ///
-    ///     #[must_use]
-    ///     fn shift_suit_up(&self) -> Self;
-    ///
-    ///     #[must_use]
-    ///     fn opposite(&self) -> Self;
-    /// }
-    /// ```
-    ///
-    /// But that won't work:
-    ///
-    /// ```txt
-    /// error[E0277]: the trait bound `Cards: std::marker::Copy` is not satisfied
-    ///    --> src/cards.rs:640:20
-    ///     |
-    /// 640 | impl SuitShift for Cards {
-    ///     |                    ^^^^^ the trait `std::marker::Copy` is not implemented for `Cards`
-    ///     |
-    /// note: required by a bound in `SuitShift`
-    ///    --> src/lib.rs:183:22
-    ///     |
-    /// 183 | pub trait SuitShift: Copy {
-    ///     |                      ^^^^ required by this bound in `SuitShift`
-    /// ```
-    ///
-    /// `Cards` doesn't implement `Copy`, and since it's an `IndexSet`, it isn't going to. Back to
-    /// the drawing board.
-    ///
-    /// How about we create a trait called `Shifty`, and make `SuitShift` its supertrait? Something like:
-    ///
-    /// ```txt
-    /// use std::collections::HashSet;
-    /// use pkcore::SuitShift;
-    /// pub trait Shifty: SuitShift {
-    ///     #[must_use]
-    ///     fn shifts(&self) -> HashSet<Self>;
-    /// }
-    /// ```
-    ///
-    /// Nope. Strike two!
-    ///
-    /// ```txt
-    /// error[E0277]: the size for values of type `Self` cannot be known at compilation time
-    ///    --> src/arrays/matchups/sorted_heads_up.rs:151:25
-    ///     |
-    /// 9   |     fn shifts(&self) -> HashSet<Self>;
-    ///     |                         ^^^^^^^^^^^^^ doesn't have a size known at compile-time
-    ///     |
-    /// note: required by a bound in `HashSet`
-    ///    --> ~/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/collections/hash/set.rs:106:20
-    ///     |
-    /// 106 | pub struct HashSet<T, S = RandomState> {
-    ///     |                    ^ required by this bound in `HashSet`
-    /// help: consider further restricting `Self`
-    ///     |
-    /// 9   |     fn shifts(&self) -> HashSet<Self> where Self: Sized;
-    ///     |                                       +++++++++++++++++
-    ///
-    /// error: aborting due to previous error
-    /// ```
-    ///
-    ///  Wonder if its recommendations will work?
-    ///
-    /// ```
-    /// use std::collections::HashSet;
-    /// use pkcore::SuitShift;
-    /// pub trait Shifty: SuitShift {
-    ///     #[must_use]
-    ///     fn shifts(&self) -> HashSet<Self> where Self: Sized;
-    /// }
-    /// ```
-    ///
-    /// 💥! That compiles! But... will it actually work?
-    ///
-    /// First, we'll need to rewrite shifts into the trait, and then swap it out inside here.
-    ///
-    /// ```txt
-    /// use std::collections::HashSet;
-    /// use pkcore::SuitShift;
-    /// pub trait Shifty: SuitShift {
-    ///     #[must_use]
-    ///     fn shifts(&self) -> HashSet<Self> where Self: Sized {
-    ///         let mut hs = HashSet::new();
-    ///         let mut shifty = *self;
-    ///         hs.insert(shifty);
-    ///         for _ in 1..=3 {
-    ///             shifty = shifty.shift_suit_up();
-    ///             hs.insert(shifty);
-    ///         }
-    ///
-    ///         hs
-    ///     }
-    /// }
-    /// ```
-    ///
-    /// Nope... but we're getting closer...
-    ///
-    /// ```txt
-    /// error[E0277]: the trait bound `Self: std::cmp::Eq` is not satisfied
-    ///    --> src/lib.rs:200:12
-    ///     |
-    /// 200 |         hs.insert(shifty);
-    ///     |            ^^^^^^ the trait `std::cmp::Eq` is not implemented for `Self`
-    ///     |
-    /// note: required by a bound in `HashSet::<T, S>::insert`
-    ///    --> ~/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/collections/hash/set.rs:428:8
-    ///     |
-    /// 428 |     T: Eq + Hash,
-    ///     |        ^^ required by this bound in `HashSet::<T, S>::insert`
-    /// ...
-    /// 887 |     pub fn insert(&mut self, value: T) -> bool {
-    ///     |            ------ required by a bound in this associated function
-    /// help: consider further restricting `Self`
-    /// ```
-    ///
-    /// Adding that we get
-    ///
-    /// ```txt
-    /// error[E0277]: the trait bound `Self: Hash` is not satisfied
-    ///    --> src/lib.rs:200:12
-    ///     |
-    /// 200 |         hs.insert(shifty);
-    ///     |            ^^^^^^ the trait `Hash` is not implemented for `Self`
-    ///     |
-    /// note: required by a bound in `HashSet::<T, S>::insert`
-    ///    --> ~/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/collections/hash/set.rs:428:13
-    ///     |
-    /// 428 |     T: Eq + Hash,
-    ///     |             ^^^^ required by this bound in `HashSet::<T, S>::insert`
-    /// ...
-    /// 887 |     pub fn insert(&mut self, value: T) -> bool {
-    ///     |            ------ required by a bound in this associated function
-    /// help: consider further restricting `Self`
-    ///     |
-    /// 197 |     fn shifts(&self) -> HashSet<Self> where Self: Sized, Self: std::cmp::Eq, Self: Hash {
-    ///     |                                                                            ++++++++++++
-    /// ```
-    ///
-    /// Still no.
-    ///
-    /// ```txt
-    /// error[E0507]: cannot move out of `*self` which is behind a shared reference
-    ///    --> src/lib.rs:200:26
-    ///     |
-    /// 200 |         let mut shifty = *self;
-    ///     |                          ^^^^^ move occurs because `*self` has type `Self`, which does not implement the `Copy` trait
-    ///     |
-    /// help: consider removing the dereference here
-    ///     |
-    /// 200 -         let mut shifty = *self;
-    /// 200 +         let mut shifty = self;
-    /// ```
-    ///
-    /// So let's add the Copy trait as a supertrait of `Shifty`.
-    ///
-    /// ```
-    /// use std::collections::HashSet;
-    /// use std::hash::Hash;
-    /// use pkcore::SuitShift;
-    /// pub trait Shifty: SuitShift + Copy {
-    ///     #[must_use]
-    ///     fn shifts(&self) -> HashSet<Self> where Self: Sized, Self: std::cmp::Eq, Self: Hash {
-    ///         let mut hs = HashSet::new();
-    ///         let mut shifty = *self;
-    ///         hs.insert(shifty);
-    ///         for _ in 1..=3 {
-    ///             shifty = shifty.shift_suit_up();
-    ///             hs.insert(shifty);
-    ///         }
-    ///
-    ///         hs
-    ///     }
-    /// }
-    /// ```
-    ///
-    /// 💥💥💥! It compiles! We're back in business. Still, we don't know if it will actually work.
-    /// Let's swap out the function for the trait and see what transpires, shall we.
-    ///
-    /// ```txt
-    /// error[E0599]: no method named `shifts` found for reference `&SortedHeadsUp` in the current scope
-    ///    --> examples/hup.rs:277:34
-    ///     |
-    /// 277 |         let possible_sorts = shu.shifts();
-    ///     |                                  ^^^^^^
-    ///     |
-    ///     = help: items from traits can only be used if the trait is in scope
-    /// help: the following trait is implemented but not in scope; perhaps add a `use` for it:
-    ///     |
-    /// 1   + use pkcore::Shifty;
-    ///     |
-    /// help: there is a method with a similar name
-    ///     |
-    /// 277 |         let possible_sorts = shu.old_shifts();
-    ///     |                                  ~~~~~~~~~~
-    /// ```
-    ///
-    /// Gonna need to import the trait for the code that was using our `shifts()` method.
-    ///
-    /// Tests pass... let's see if `examples/hup.rs` still does its magic.
-    ///
-    /// Still works, although to be fair we've never ran it through an entire run. I'm going to
-    /// check it out in a different location from this point and let hup run to see what happens
-    /// when we get all the way to the end. At the same time I'm going to refactor the code so
-    /// that it works on a smaller sample so we can get faster feedback.
     #[must_use]
-    pub fn old_shifts(&self) -> HashSet<Self> {
-        let mut v = HashSet::new();
-        let mut shifty = *self;
-        v.insert(shifty);
+    pub fn invert_suits(&self) -> Self {
+        todo!()
+    }
 
-        for _ in 1..=3 {
-            shifty = shifty.shift_suit_up();
-            v.insert(shifty);
+
+
+
+
+    /// This should be interesting. Certainly testable.
+    ///
+    /// First we start with the bare signature for the function:
+    ///
+    /// ```txt
+    /// pub fn remove_shifts(&self, from: &mut HashSet<SortedHeadsUp>) {
+    ///   todo!()
+    /// }
+    /// ```
+    ///
+    /// A couple things of note. This is a method with side effects. That's something to watch
+    /// out for. When it's the best tool for the job, go right ahead, but just be careful. Also,
+    /// not that we have a &self in the sig, which may, or may not, bite us in the ass. __We shall
+    /// see... 😈__
+    ///
+    /// Here's our sure to fail test after letting the compiler guide us:
+    ///
+    /// ```txt
+    /// #[test]
+    /// fn remove_shifts() {
+    ///     let mut hs = SortedHeadsUp::unique().unwrap();
+    ///     let shu = HANDS_7D_7C_V_6S_6H;
+    ///
+    ///     shu.remove_shifts(&mut hs);
+    /// }
+    /// ```
+    ///
+    /// I'll confess that the line `shu.remove_shifts(&mut hs)` surprised me. I was a tad surprised
+    /// about needing the `&mut` prefix. It's been a long time since I passed in a mutable
+    /// reference.
+    ///
+    /// Let's add a little more heft to the test.
+    ///
+    /// ```txt
+    /// #[test]
+    /// fn remove_shifts() {
+    ///     let mut hs = SortedHeadsUp::unique().unwrap();
+    ///     let shu = HANDS_7D_7C_V_6S_6H;
+    ///
+    ///     shu.remove_shifts(&mut hs);
+    ///
+    ///     assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
+    /// }
+    /// ```
+    ///
+    /// This makes the test pass:
+    ///
+    /// ```txt
+    ///     pub fn remove_shifts(&self, from: &mut HashSet<SortedHeadsUp>) {
+    ///         for shift in self.other_shifts() {
+    ///             if from.contains(&shift) {
+    ///                 from.remove(&shift);
+    ///             }
+    ///         }
+    ///     }
+    /// ```
+    ///
+    /// Let's add the other two shifts to the test.
+    ///
+    /// ```
+    /// use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+    /// use pkcore::arrays::matchups::masks::SuitTexture::Type1234;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let mut hs = SortedHeadsUp::unique().unwrap();
+    /// let shu = SortedHeadsUp {
+    ///   higher: Two::HAND_7D_7C,
+    ///   lower: Two::HAND_6S_6H,
+    /// };
+    ///
+    /// shu.remove_shifts(&mut hs);
+    ///
+    /// assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
+    /// assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C)));
+    /// assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C)));
+    /// ```
+    ///
+    /// It works. Huzzah!
+    ///
+    /// Now, can we leverage this in refactoring our distinct function? How about we use the exact
+    /// same test against it?
+    pub fn remove_shifts(&self, from: &mut HashSet<SortedHeadsUp>) {
+        for shift in self.other_shifts() {
+            if from.contains(&shift) {
+                from.remove(&shift);
+            }
         }
-
-        v
     }
 
     #[must_use]
@@ -1066,13 +844,10 @@ mod arrays__matchups__sorted_heads_up_tests {
         assert_eq!(holding.len(), 1);
     }
 
-    ///     Type1111, // suited, suited, same suit
-    ///     Type1112, // suited, off suit, sharing suit
-    ///     Type1122, // suited, suited, different suits
-    ///     Type1123, // suited, off suit, different suits
-    ///     Type1223, // off suit, off suit, sharing one suit
-    ///     Type1212, // off suit, off suit, sharing both suits
-    ///     Type1234, // off suit, off suit, sharing no suits
+    #[test]
+    fn invert_suits() {
+
+    }
 
     #[test]
     fn remove_shifts() {

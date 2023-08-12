@@ -614,6 +614,17 @@ impl Two {
     //endregion
 
     #[must_use]
+    pub fn invert_suits(&self) -> Self {
+        match Two::new(
+            Card::new(self.first().get_rank(), self.second().get_suit()),
+            Card::new(self.second().get_rank(), self.first().get_suit()),
+        ) {
+            Ok(two) => two,
+            Err(_) => Two::default()
+        }
+    }
+
+    #[must_use]
     pub fn is_pair(&self) -> bool {
         self.first().get_rank() == self.second().get_rank()
     }
@@ -949,6 +960,12 @@ mod arrays__two_tests {
     #[test]
     fn to_array() {
         assert_eq!(BIG_SLICK, Two::from(BIG_SLICK).to_arr());
+    }
+
+    #[test]
+    fn invert_suits() {
+        assert_eq!(Two::HAND_8S_7H.invert_suits(), Two::HAND_8H_7S);
+        assert_eq!(Two::HAND_AS_AH.invert_suits(), Two::HAND_AS_AH);
     }
 
     #[test]
