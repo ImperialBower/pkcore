@@ -1,6 +1,7 @@
 use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
 use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::analysis::the_nuts::TheNuts;
+use crate::arrays::matchups::masked::{Masked, MASKED_UNIQUE};
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
@@ -30,6 +31,20 @@ lazy_static! {
         }
         hs
     };
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_ONE: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_one);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_TWO: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_THREE: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_three);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_FOUR: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_four);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_FIVE: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_five);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_SIX: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_six);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_SEVEN: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_seven);
 }
 
 #[derive(
@@ -787,6 +802,17 @@ mod arrays__matchups__sorted_heads_up_tests {
     #[test]
     fn unique() {
         assert_eq!(812175, SORTED_HEADS_UP_UNIQUE.len());
+    }
+
+    #[test]
+    fn unique_types() {
+        assert_eq!(8580, SORTED_HEADS_UP_UNIQUE_TYPE_ONE.len());
+        assert_eq!(133848, SORTED_HEADS_UP_UNIQUE_TYPE_TWO.len());
+        assert_eq!(36504, SORTED_HEADS_UP_UNIQUE_TYPE_THREE.len());
+        assert_eq!(158184, SORTED_HEADS_UP_UNIQUE_TYPE_FOUR.len());
+        assert_eq!(316368, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE.len());
+        assert_eq!(73008, SORTED_HEADS_UP_UNIQUE_TYPE_SIX.len());
+        assert_eq!(85683, SORTED_HEADS_UP_UNIQUE_TYPE_SEVEN.len());
     }
 
     #[test]
