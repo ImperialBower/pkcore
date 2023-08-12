@@ -391,13 +391,6 @@ mod arrays__matchups__masked_tests {
         assert_eq!(812175, MASKED_UNIQUE.len());
     }
 
-    /// 8580 type one hands with 4 suit sigs
-    /// 133848 type two hands with 24 suit sigs
-    /// 36504 type three hands with 12 suit sigs
-    /// 158184 type four hands with 24 suit sigs
-    /// 316368 type five hands with 24 suit sigs
-    /// 73008 type six hands with 6 suit sigs
-    /// 85683 type seven hands with 6 suit sigs
     #[test]
     fn unique_types() {
         assert_eq!(8580, MASKED_UNIQUE_TYPE_ONE.len());
