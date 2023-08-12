@@ -50,17 +50,11 @@ impl Masked {
             .collect()
     }
 
-    /// # Errors
-    ///
-    /// Calling on a value that isn't type one.
-    pub fn type_one_shifts(&self) -> Result<HashSet<Masked>, PKError> {
-        if !self.is_type_one() {
-            return Err(PKError::Fubar);
-        }
-        let mut v = HashSet::new();
-        v.insert(*self);
+    /// All suit types are going to have the basic shifts.
+    pub fn basic_shifts(&self) -> HashSet<Masked> {
+        let mut hs = HashSet::new();
+        hs.insert(*self);
         let mut last = *self;
-
         for _ in 0..3 {
             let shifty = last.shu.shift_suit_up();
             let masked = Masked {
@@ -69,10 +63,31 @@ impl Masked {
                 suit_mask: SuitMask::from(&shifty),
                 rank_mask: self.rank_mask,
             };
-            v.insert(masked);
+            hs.insert(masked);
             last = masked;
         }
-        Ok(v)
+        hs
+    }
+
+    /// # Errors
+    ///
+    /// Calling on a value that isn't type one.
+    pub fn type_one_shifts(&self) -> Result<HashSet<Masked>, PKError> {
+        if !self.is_type_one() {
+            return Err(PKError::Fubar);
+        }
+        Ok(self.basic_shifts())
+    }
+
+    pub fn type_six_shifts(&self) -> Result<HashSet<Masked>, PKError> {
+        if !self.is_type_six() {
+            return Err(PKError::Fubar);
+        }
+        let mut hs = self.basic_shifts();
+
+
+
+        Ok(hs)
     }
 
     // pub fn rank_masks(unique: &HashSet<Masked>, f: fn(&Masked) -> bool) -> HashSet<RankMask> {
@@ -336,6 +351,40 @@ mod arrays__matchups__masked_tests {
         assert!(shifts.contains(&shift1));
         assert!(shifts.contains(&shift2));
         assert!(shifts.contains(&shift3));
+    }
+
+    /// A♠ K♥ Q♠ J♥, 65.10% (1114667), 34.36% (588268), 0.55% (9369)
+    /// A♠ K♥ Q♥ J♠, 65.10% (1114667), 34.36% (588268), 0.55% (9369)
+    ///
+    /// A♠ Q♥ 5♠ 2♥, 65.49% (1121471), 33.92% (580748), 0.59% (10085)
+    /// A♠ Q♥ 5♥ 2♠, 65.49% (1121471), 33.92% (580748), 0.59% (10085)
+    /// A♠ Q♦ 5♠ 2♦
+    /// A♠ Q♦ 5♦ 2♠
+    /// A♠ Q♣ 5♠ 2♣
+    /// A♠ Q♣ 5♣ 2♠
+    /// A♥ Q♠ 5♠ 2♥
+    /// A♥ Q♠ 5♥ 2♠
+    /// A♥ Q♦ 5♥ 2♦
+    /// A♥ Q♦ 5♦ 2♥
+    /// A♥ Q♣ 5♥ 2♣
+    /// A♥ Q♣ 5♣ 2♥
+    /// A♦ Q♠ 5♠ 2♦
+    /// A♦ Q♠ 5♦ 2♠
+    /// A♦ Q♥ 5♥ 2♦
+    /// A♦ Q♥ 5♦ 2♥
+    /// A♦ Q♣ 5♦ 2♣
+    /// A♦ Q♣ 5♣ 2♦
+    /// A♣ Q♠ 5♠ 2♣
+    /// A♣ Q♠ 5♣ 2♠
+    /// A♣ Q♥ 5♥ 2♣
+    /// A♣ Q♥ 5♣ 2♥
+    /// A♣ Q♦ 5♦ 2♣
+    /// A♣ Q♦ 5♣ 2♦
+
+    #[test]
+    fn type_six_shifts__invalid() {
+        let original = Masked::from_str("AS AH AD AC").unwrap();
+        assert!(original.type_one_shifts().is_err());
     }
 
     // region textures
