@@ -2,35 +2,49 @@ use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
 use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::analysis::the_nuts::TheNuts;
 use crate::arrays::five::Five;
+use crate::arrays::matchups::masked::{Masked, MASKED_UNIQUE};
 use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::suit::Suit;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::{PKError, Pile, Shifty, SuitShift};
 use csv::WriterBuilder;
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 
-#[derive(
-    Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
-)]
-#[serde(rename_all = "PascalCase")]
-pub enum HeadsUpTexture {
-    #[default]
-    TypeUnknown,
-    Type1111, // suited, suited, same suit
-    Type1112, // suited, off suit, sharing suit
-    Type1122, // suited, suited, different suits
-    Type1123, // suited, off suit, different suits
-    Type1223, // off suit, off suit, sharing one suit
-    Type1212, // off suit, off suit, sharing both suits
-    Type1234, // off suit, off suit, sharing no suits
+lazy_static! {
+    pub static ref SORTED_HEADS_UP_UNIQUE: HashSet<SortedHeadsUp> = {
+        let mut hs: HashSet<SortedHeadsUp> = HashSet::new();
+        for v in Cards::deck().combinations(2) {
+            let hero = Two::try_from(v.as_slice()).unwrap();
+            for r in hero.remaining().combinations(2) {
+                let villain = Two::try_from(r.as_slice()).unwrap();
+                hs.insert(SortedHeadsUp::new(hero, villain));
+            }
+        }
+        hs
+    };
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_ONE: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_one);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_TWO: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_THREE: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_three);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_FOUR: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_four);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_FIVE: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_five);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_SIX: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_six);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_SEVEN: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_seven);
 }
 
 #[derive(
@@ -40,51 +54,21 @@ pub enum HeadsUpTexture {
 pub struct SortedHeadsUp {
     pub higher: Two,
     pub lower: Two,
-    pub texture: HeadsUpTexture,
 }
 
 impl SortedHeadsUp {
     #[must_use]
     pub fn new(first: Two, second: Two) -> SortedHeadsUp {
-        let texture = SortedHeadsUp::determine_texture(first, second);
         if first > second {
             SortedHeadsUp {
                 higher: first,
                 lower: second,
-                texture,
             }
         } else {
             SortedHeadsUp {
                 higher: second,
                 lower: first,
-                texture,
             }
-        }
-    }
-
-    fn determine_texture(first: Two, second: Two) -> HeadsUpTexture {
-        let suits: HashSet<Suit> = first.suits().union(&second.suits()).copied().collect();
-
-        match suits.len() {
-            1 => HeadsUpTexture::Type1111,
-            2 => {
-                if first.is_suited() && second.is_suited() {
-                    HeadsUpTexture::Type1122
-                } else if !first.is_suited() && !second.is_suited() {
-                    HeadsUpTexture::Type1212
-                } else {
-                    HeadsUpTexture::Type1112
-                }
-            }
-            3 => {
-                if !first.is_suited() && !second.is_suited() {
-                    HeadsUpTexture::Type1223
-                } else {
-                    HeadsUpTexture::Type1123
-                }
-            }
-            4 => HeadsUpTexture::Type1234,
-            _ => HeadsUpTexture::TypeUnknown,
         }
     }
 
@@ -360,7 +344,7 @@ impl SortedHeadsUp {
     ///
     /// If a deck isn't divisible by 2, which shouldn't happen. Maybe if we add jokers some day.
     pub fn distinct() -> Result<HashSet<SortedHeadsUp>, PKError> {
-        let mut unique = SortedHeadsUp::unique()?;
+        let mut unique = SORTED_HEADS_UP_UNIQUE.clone();
 
         let v = Vec::from_iter(unique.clone());
         for shu in &v {
@@ -370,96 +354,6 @@ impl SortedHeadsUp {
         }
 
         Ok(unique)
-    }
-
-    /// This should be interesting. Certainly testable.
-    ///
-    /// First we start with the bare signature for the function:
-    ///
-    /// ```txt
-    /// pub fn remove_shifts(&self, from: &mut HashSet<SortedHeadsUp>) {
-    ///   todo!()
-    /// }
-    /// ```
-    ///
-    /// A couple things of note. This is a method with side effects. That's something to watch
-    /// out for. When it's the best tool for the job, go right ahead, but just be careful. Also,
-    /// not that we have a &self in the sig, which may, or may not, bite us in the ass. __We shall
-    /// see... 😈__
-    ///
-    /// Here's our sure to fail test after letting the compiler guide us:
-    ///
-    /// ```txt
-    /// #[test]
-    /// fn remove_shifts() {
-    ///     let mut hs = SortedHeadsUp::unique().unwrap();
-    ///     let shu = HANDS_7D_7C_V_6S_6H;
-    ///
-    ///     shu.remove_shifts(&mut hs);
-    /// }
-    /// ```
-    ///
-    /// I'll confess that the line `shu.remove_shifts(&mut hs)` surprised me. I was a tad surprised
-    /// about needing the `&mut` prefix. It's been a long time since I passed in a mutable
-    /// reference.
-    ///
-    /// Let's add a little more heft to the test.
-    ///
-    /// ```txt
-    /// #[test]
-    /// fn remove_shifts() {
-    ///     let mut hs = SortedHeadsUp::unique().unwrap();
-    ///     let shu = HANDS_7D_7C_V_6S_6H;
-    ///
-    ///     shu.remove_shifts(&mut hs);
-    ///
-    ///     assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
-    /// }
-    /// ```
-    ///
-    /// This makes the test pass:
-    ///
-    /// ```txt
-    ///     pub fn remove_shifts(&self, from: &mut HashSet<SortedHeadsUp>) {
-    ///         for shift in self.other_shifts() {
-    ///             if from.contains(&shift) {
-    ///                 from.remove(&shift);
-    ///             }
-    ///         }
-    ///     }
-    /// ```
-    ///
-    /// Let's add the other two shifts to the test.
-    ///
-    /// ```
-    /// use pkcore::arrays::matchups::sorted_heads_up::HeadsUpTexture::Type1234;
-    /// use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
-    /// use pkcore::arrays::two::Two;
-    ///
-    /// let mut hs = SortedHeadsUp::unique().unwrap();
-    /// let shu = SortedHeadsUp {
-    ///   higher: Two::HAND_7D_7C,
-    ///   lower: Two::HAND_6S_6H,
-    ///   texture: Type1234,
-    /// };
-    ///
-    /// shu.remove_shifts(&mut hs);
-    ///
-    /// assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
-    /// assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C)));
-    /// assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C)));
-    /// ```
-    ///
-    /// It works. Huzzah!
-    ///
-    /// Now, can we leverage this in refactoring our distinct function? How about we use the exact
-    /// same test against it?
-    pub fn remove_shifts(&self, from: &mut HashSet<SortedHeadsUp>) {
-        for shift in self.other_shifts() {
-            if from.contains(&shift) {
-                from.remove(&shift);
-            }
-        }
     }
 
     /// I want to be able to generate these values into a CSV file, so that I can use them to
@@ -626,338 +520,98 @@ impl SortedHeadsUp {
         Ok(())
     }
 
-    /// Type one heads up matchups are where all cards of both players are the same suit.
+    #[must_use]
+    pub fn invert_suits(&self) -> Self {
+        SortedHeadsUp::new(self.higher.invert_suits(), self.lower.invert_suits())
+    }
+
+    /// This should be interesting. Certainly testable.
     ///
-    /// `1111 - suited, suited, same suit`
-    ///
-    /// Suit signatures:
+    /// First we start with the bare signature for the function:
     ///
     /// ```txt
-    /// 0001,0001
-    /// 0010,0010
-    /// 0100,0100
-    /// 1000,1000
-    /// ```
-    #[must_use]
-    pub fn is_type_one(&self) -> bool {
-        self.texture == HeadsUpTexture::Type1111
-    }
-
-    /// `1112 - suited, off suit, sharing suit`
-    ///
-    /// Suit signatures:
-    ///
-    /// ```txt
-    /// 133848 type two hands with 24 suit sigs
-    ///
-    /// 0001,0011
-    /// 0001,0101
-    /// 0001,1001
-    /// 0010,0011
-    /// 0010,0110
-    /// 0010,1010
-    /// 0011,0001
-    /// 0011,0010
-    /// 0100,0101
-    /// 0100,0110
-    /// 0100,1100
-    /// 0101,0001
-    /// 0101,0100
-    /// 0110,0010
-    /// 0110,0100
-    /// 1000,1001
-    /// 1000,1010
-    /// 1000,1100
-    /// 1001,0001
-    /// 1001,1000
-    /// 1010,0010
-    /// 1010,1000
-    /// 1100,0100
-    /// 1100,1000
-    /// ```
-    #[must_use]
-    pub fn is_type_two(&self) -> bool {
-        self.texture == HeadsUpTexture::Type1112
-    }
-
-    /// `1122 - suited, suited, different suits`
-    ///
-    /// ```txt
-    /// 36504 type three hands with 12 suit sigs
-    ///
-    /// 0001,0010
-    /// 0001,0100
-    /// 0001,1000
-    /// 0010,0001
-    /// 0010,0100
-    /// 0010,1000
-    /// 0100,0001
-    /// 0100,0010
-    /// 0100,1000
-    /// 1000,0001
-    /// 1000,0010
-    /// 1000,0100
-    /// ```
-    #[must_use]
-    pub fn is_type_three(&self) -> bool {
-        self.texture == HeadsUpTexture::Type1122
-    }
-
-    /// `1123 - suited, off suit, different suits`
-    #[must_use]
-    pub fn is_type_four(&self) -> bool {
-        self.texture == HeadsUpTexture::Type1123
-    }
-
-    /// `1223 - off suit, off suit, sharing one suit`
-    #[must_use]
-    pub fn is_type_five(&self) -> bool {
-        self.texture == HeadsUpTexture::Type1223
-    }
-
-    /// `1212 - off suit, off suit, sharing both suits`
-    #[must_use]
-    pub fn is_type_six(&self) -> bool {
-        self.texture == HeadsUpTexture::Type1212
-    }
-
-    /// `1234 - off suit, off suit, sharing no suits`
-    #[must_use]
-    pub fn is_type_seven(&self) -> bool {
-        self.texture == HeadsUpTexture::Type1234
-    }
-
-    /// Returns a `HashSet` of the possible suit shifts. I'm thinking that I want to add this to the
-    /// `SuitShift` trait. This would require that the trait would need Copy as a
-    /// [supertrait](https://doc.rust-lang.org/book/ch19-03-advanced-traits.html#using-supertraits-to-require-one-traits-functionality-within-another-trait).
-    ///
-    /// I've never used a supertrait before. This should be fun.
-    ///
-    /// Firs, let's implement it on `SuitShift` without changing anything, and then we'll see if
-    /// we can make this method apply to any struct that implements the trait.
-    ///
-    /// Adding the supertrait was easy:
-    ///
-    /// ```txt
-    /// pub trait SuitShift: Copy {
-    ///     #[must_use]
-    ///     fn shift_suit_down(&self) -> Self;
-    ///
-    ///     #[must_use]
-    ///     fn shift_suit_up(&self) -> Self;
-    ///
-    ///     #[must_use]
-    ///     fn opposite(&self) -> Self;
+    /// pub fn remove_shifts(&self, from: &mut HashSet<SortedHeadsUp>) {
+    ///   todo!()
     /// }
     /// ```
     ///
-    /// But that won't work:
+    /// A couple things of note. This is a method with side effects. That's something to watch
+    /// out for. When it's the best tool for the job, go right ahead, but just be careful. Also,
+    /// not that we have a &self in the sig, which may, or may not, bite us in the ass. __We shall
+    /// see... 😈__
+    ///
+    /// Here's our sure to fail test after letting the compiler guide us:
     ///
     /// ```txt
-    /// error[E0277]: the trait bound `Cards: std::marker::Copy` is not satisfied
-    ///    --> src/cards.rs:640:20
-    ///     |
-    /// 640 | impl SuitShift for Cards {
-    ///     |                    ^^^^^ the trait `std::marker::Copy` is not implemented for `Cards`
-    ///     |
-    /// note: required by a bound in `SuitShift`
-    ///    --> src/lib.rs:183:22
-    ///     |
-    /// 183 | pub trait SuitShift: Copy {
-    ///     |                      ^^^^ required by this bound in `SuitShift`
-    /// ```
+    /// #[test]
+    /// fn remove_shifts() {
+    ///     let mut hs = SortedHeadsUp::unique().unwrap();
+    ///     let shu = HANDS_7D_7C_V_6S_6H;
     ///
-    /// `Cards` doesn't implement `Copy`, and since it's an `IndexSet`, it isn't going to. Back to
-    /// the drawing board.
-    ///
-    /// How about we create a trait called `Shifty`, and make `SuitShift` its supertrait? Something like:
-    ///
-    /// ```txt
-    /// use std::collections::HashSet;
-    /// use pkcore::SuitShift;
-    /// pub trait Shifty: SuitShift {
-    ///     #[must_use]
-    ///     fn shifts(&self) -> HashSet<Self>;
+    ///     shu.remove_shifts(&mut hs);
     /// }
     /// ```
     ///
-    /// Nope. Strike two!
+    /// I'll confess that the line `shu.remove_shifts(&mut hs)` surprised me. I was a tad surprised
+    /// about needing the `&mut` prefix. It's been a long time since I passed in a mutable
+    /// reference.
+    ///
+    /// Let's add a little more heft to the test.
     ///
     /// ```txt
-    /// error[E0277]: the size for values of type `Self` cannot be known at compilation time
-    ///    --> src/arrays/matchups/sorted_heads_up.rs:151:25
-    ///     |
-    /// 9   |     fn shifts(&self) -> HashSet<Self>;
-    ///     |                         ^^^^^^^^^^^^^ doesn't have a size known at compile-time
-    ///     |
-    /// note: required by a bound in `HashSet`
-    ///    --> ~/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/collections/hash/set.rs:106:20
-    ///     |
-    /// 106 | pub struct HashSet<T, S = RandomState> {
-    ///     |                    ^ required by this bound in `HashSet`
-    /// help: consider further restricting `Self`
-    ///     |
-    /// 9   |     fn shifts(&self) -> HashSet<Self> where Self: Sized;
-    ///     |                                       +++++++++++++++++
+    /// #[test]
+    /// fn remove_shifts() {
+    ///     let mut hs = SortedHeadsUp::unique().unwrap();
+    ///     let shu = HANDS_7D_7C_V_6S_6H;
     ///
-    /// error: aborting due to previous error
-    /// ```
+    ///     shu.remove_shifts(&mut hs);
     ///
-    ///  Wonder if its recommendations will work?
-    ///
-    /// ```
-    /// use std::collections::HashSet;
-    /// use pkcore::SuitShift;
-    /// pub trait Shifty: SuitShift {
-    ///     #[must_use]
-    ///     fn shifts(&self) -> HashSet<Self> where Self: Sized;
+    ///     assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
     /// }
     /// ```
     ///
-    /// 💥! That compiles! But... will it actually work?
-    ///
-    /// First, we'll need to rewrite shifts into the trait, and then swap it out inside here.
+    /// This makes the test pass:
     ///
     /// ```txt
-    /// use std::collections::HashSet;
-    /// use pkcore::SuitShift;
-    /// pub trait Shifty: SuitShift {
-    ///     #[must_use]
-    ///     fn shifts(&self) -> HashSet<Self> where Self: Sized {
-    ///         let mut hs = HashSet::new();
-    ///         let mut shifty = *self;
-    ///         hs.insert(shifty);
-    ///         for _ in 1..=3 {
-    ///             shifty = shifty.shift_suit_up();
-    ///             hs.insert(shifty);
+    ///     pub fn remove_shifts(&self, from: &mut HashSet<SortedHeadsUp>) {
+    ///         for shift in self.other_shifts() {
+    ///             if from.contains(&shift) {
+    ///                 from.remove(&shift);
+    ///             }
     ///         }
-    ///
-    ///         hs
     ///     }
-    /// }
     /// ```
     ///
-    /// Nope... but we're getting closer...
-    ///
-    /// ```txt
-    /// error[E0277]: the trait bound `Self: std::cmp::Eq` is not satisfied
-    ///    --> src/lib.rs:200:12
-    ///     |
-    /// 200 |         hs.insert(shifty);
-    ///     |            ^^^^^^ the trait `std::cmp::Eq` is not implemented for `Self`
-    ///     |
-    /// note: required by a bound in `HashSet::<T, S>::insert`
-    ///    --> ~/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/collections/hash/set.rs:428:8
-    ///     |
-    /// 428 |     T: Eq + Hash,
-    ///     |        ^^ required by this bound in `HashSet::<T, S>::insert`
-    /// ...
-    /// 887 |     pub fn insert(&mut self, value: T) -> bool {
-    ///     |            ------ required by a bound in this associated function
-    /// help: consider further restricting `Self`
-    /// ```
-    ///
-    /// Adding that we get
-    ///
-    /// ```txt
-    /// error[E0277]: the trait bound `Self: Hash` is not satisfied
-    ///    --> src/lib.rs:200:12
-    ///     |
-    /// 200 |         hs.insert(shifty);
-    ///     |            ^^^^^^ the trait `Hash` is not implemented for `Self`
-    ///     |
-    /// note: required by a bound in `HashSet::<T, S>::insert`
-    ///    --> ~/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/collections/hash/set.rs:428:13
-    ///     |
-    /// 428 |     T: Eq + Hash,
-    ///     |             ^^^^ required by this bound in `HashSet::<T, S>::insert`
-    /// ...
-    /// 887 |     pub fn insert(&mut self, value: T) -> bool {
-    ///     |            ------ required by a bound in this associated function
-    /// help: consider further restricting `Self`
-    ///     |
-    /// 197 |     fn shifts(&self) -> HashSet<Self> where Self: Sized, Self: std::cmp::Eq, Self: Hash {
-    ///     |                                                                            ++++++++++++
-    /// ```
-    ///
-    /// Still no.
-    ///
-    /// ```txt
-    /// error[E0507]: cannot move out of `*self` which is behind a shared reference
-    ///    --> src/lib.rs:200:26
-    ///     |
-    /// 200 |         let mut shifty = *self;
-    ///     |                          ^^^^^ move occurs because `*self` has type `Self`, which does not implement the `Copy` trait
-    ///     |
-    /// help: consider removing the dereference here
-    ///     |
-    /// 200 -         let mut shifty = *self;
-    /// 200 +         let mut shifty = self;
-    /// ```
-    ///
-    /// So let's add the Copy trait as a supertrait of `Shifty`.
+    /// Let's add the other two shifts to the test.
     ///
     /// ```
-    /// use std::collections::HashSet;
-    /// use std::hash::Hash;
-    /// use pkcore::SuitShift;
-    /// pub trait Shifty: SuitShift + Copy {
-    ///     #[must_use]
-    ///     fn shifts(&self) -> HashSet<Self> where Self: Sized, Self: std::cmp::Eq, Self: Hash {
-    ///         let mut hs = HashSet::new();
-    ///         let mut shifty = *self;
-    ///         hs.insert(shifty);
-    ///         for _ in 1..=3 {
-    ///             shifty = shifty.shift_suit_up();
-    ///             hs.insert(shifty);
-    ///         }
+    /// use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+    /// use pkcore::arrays::matchups::masks::SuitTexture::Type1234;
+    /// use pkcore::arrays::two::Two;
     ///
-    ///         hs
-    ///     }
-    /// }
+    /// let mut hs = SortedHeadsUp::unique().unwrap();
+    /// let shu = SortedHeadsUp {
+    ///   higher: Two::HAND_7D_7C,
+    ///   lower: Two::HAND_6S_6H,
+    /// };
+    ///
+    /// shu.remove_shifts(&mut hs);
+    ///
+    /// assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
+    /// assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C)));
+    /// assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C)));
     /// ```
     ///
-    /// 💥💥💥! It compiles! We're back in business. Still, we don't know if it will actually work.
-    /// Let's swap out the function for the trait and see what transpires, shall we.
+    /// It works. Huzzah!
     ///
-    /// ```txt
-    /// error[E0599]: no method named `shifts` found for reference `&SortedHeadsUp` in the current scope
-    ///    --> examples/hup.rs:277:34
-    ///     |
-    /// 277 |         let possible_sorts = shu.shifts();
-    ///     |                                  ^^^^^^
-    ///     |
-    ///     = help: items from traits can only be used if the trait is in scope
-    /// help: the following trait is implemented but not in scope; perhaps add a `use` for it:
-    ///     |
-    /// 1   + use pkcore::Shifty;
-    ///     |
-    /// help: there is a method with a similar name
-    ///     |
-    /// 277 |         let possible_sorts = shu.old_shifts();
-    ///     |                                  ~~~~~~~~~~
-    /// ```
-    ///
-    /// Gonna need to import the trait for the code that was using our `shifts()` method.
-    ///
-    /// Tests pass... let's see if `examples/hup.rs` still does its magic.
-    ///
-    /// Still works, although to be fair we've never ran it through an entire run. I'm going to
-    /// check it out in a different location from this point and let hup run to see what happens
-    /// when we get all the way to the end. At the same time I'm going to refactor the code so
-    /// that it works on a smaller sample so we can get faster feedback.
-    #[must_use]
-    pub fn old_shifts(&self) -> HashSet<Self> {
-        let mut v = HashSet::new();
-        let mut shifty = *self;
-        v.insert(shifty);
-
-        for _ in 1..=3 {
-            shifty = shifty.shift_suit_up();
-            v.insert(shifty);
+    /// Now, can we leverage this in refactoring our distinct function? How about we use the exact
+    /// same test against it?
+    pub fn remove_shifts(&self, from: &mut HashSet<SortedHeadsUp>) {
+        for shift in self.other_shifts() {
+            if from.contains(&shift) {
+                from.remove(&shift);
+            }
         }
-
-        v
     }
 
     #[must_use]
@@ -1014,6 +668,14 @@ impl SortedHeadsUp {
 impl Display for SortedHeadsUp {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} - {}", self.higher, self.lower)
+    }
+}
+
+impl FromStr for SortedHeadsUp {
+    type Err = PKError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        SortedHeadsUp::try_from(Cards::from_str(s)?)
     }
 }
 
@@ -1130,14 +792,28 @@ impl TryFrom<Vec<&Two>> for SortedHeadsUp {
 #[allow(non_snake_case)]
 mod arrays__matchups__sorted_heads_up_tests {
     use super::*;
-    use crate::arrays::matchups::sorted_heads_up::HeadsUpTexture::Type1234;
     use crate::util::data::TestData;
 
     const HANDS_7D_7C_V_6S_6H: SortedHeadsUp = SortedHeadsUp {
         higher: Two::HAND_7D_7C,
         lower: Two::HAND_6S_6H,
-        texture: Type1234,
     };
+
+    #[test]
+    fn unique() {
+        assert_eq!(812175, SORTED_HEADS_UP_UNIQUE.len());
+    }
+
+    #[test]
+    fn unique_types() {
+        assert_eq!(8580, SORTED_HEADS_UP_UNIQUE_TYPE_ONE.len());
+        assert_eq!(133848, SORTED_HEADS_UP_UNIQUE_TYPE_TWO.len());
+        assert_eq!(36504, SORTED_HEADS_UP_UNIQUE_TYPE_THREE.len());
+        assert_eq!(158184, SORTED_HEADS_UP_UNIQUE_TYPE_FOUR.len());
+        assert_eq!(316368, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE.len());
+        assert_eq!(73008, SORTED_HEADS_UP_UNIQUE_TYPE_SIX.len());
+        assert_eq!(85683, SORTED_HEADS_UP_UNIQUE_TYPE_SEVEN.len());
+    }
 
     #[test]
     fn new() {
@@ -1208,102 +884,16 @@ mod arrays__matchups__sorted_heads_up_tests {
         assert_eq!(holding.len(), 1);
     }
 
-    ///     Type1111, // suited, suited, same suit
-    ///     Type1112, // suited, off suit, sharing suit
-    ///     Type1122, // suited, suited, different suits
-    ///     Type1123, // suited, off suit, different suits
-    ///     Type1223, // off suit, off suit, sharing one suit
-    ///     Type1212, // off suit, off suit, sharing both suits
-    ///     Type1234, // off suit, off suit, sharing no suits
-
     #[test]
-    fn determine_texture() {
+    fn invert_suits() {
         assert_eq!(
-            HeadsUpTexture::Type1111,
-            SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C).texture
+            SortedHeadsUp::new(Two::HAND_8S_7H, Two::HAND_8H_7S),
+            SortedHeadsUp::new(Two::HAND_8S_7H, Two::HAND_8H_7S).invert_suits()
         );
         assert_eq!(
-            HeadsUpTexture::Type1112,
-            SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C).texture
+            SortedHeadsUp::new(Two::HAND_AS_KD, Two::HAND_8H_7S),
+            SortedHeadsUp::new(Two::HAND_AD_KS, Two::HAND_8S_7H).invert_suits()
         );
-        assert_eq!(
-            HeadsUpTexture::Type1122,
-            SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7S).texture
-        );
-        assert_eq!(
-            HeadsUpTexture::Type1123,
-            SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D).texture
-        );
-        assert_eq!(
-            HeadsUpTexture::Type1223,
-            SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7D).texture
-        );
-        assert_eq!(
-            HeadsUpTexture::Type1212,
-            SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7C).texture
-        );
-        assert_eq!(
-            HeadsUpTexture::Type1234,
-            SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8H_7D).texture
-        );
-        assert_eq!(
-            HeadsUpTexture::TypeUnknown,
-            SortedHeadsUp::default().texture
-        );
-    }
-
-    #[test]
-    fn is_type_one() {
-        let yes = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C);
-        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
-
-        assert!(yes.is_type_one());
-        assert!(!no.is_type_one());
-    }
-
-    #[test]
-    fn is_type_two() {
-        let yes = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
-        let no = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C);
-
-        assert!(yes.is_type_two());
-        assert!(!no.is_type_two());
-    }
-
-    #[test]
-    fn is_type_three() {
-        let yes = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7S);
-        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
-
-        assert!(yes.is_type_three());
-        assert!(!no.is_type_three());
-    }
-
-    #[test]
-    fn is_type_four() {
-        let yes = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D);
-        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
-
-        assert!(yes.is_type_four());
-        assert!(!no.is_type_four());
-    }
-
-    #[test]
-    fn is_type_five() {
-        let yes = SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7D);
-        let no = SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D);
-
-        assert!(yes.is_type_five());
-        assert!(!no.is_type_five());
-    }
-
-    #[test]
-    fn is_type_six() {
-        let yes = SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7C);
-        let no = SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C);
-
-        assert!(yes.is_type_six());
-        assert!(!no.is_type_six());
     }
 
     #[test]
@@ -1475,55 +1065,4 @@ mod arrays__matchups__sorted_heads_up_tests {
 
     #[test]
     fn try_from__hup_result() {}
-}
-
-#[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct SortedHeadsUpSuitBinary {
-    pub higher: u32,
-    pub lower: u32,
-}
-
-impl SortedHeadsUpSuitBinary {
-    #[must_use]
-    pub fn new(higher: u32, lower: u32) -> Self {
-        SortedHeadsUpSuitBinary { higher, lower }
-    }
-}
-
-impl From<&SortedHeadsUp> for SortedHeadsUpSuitBinary {
-    fn from(shu: &SortedHeadsUp) -> Self {
-        SortedHeadsUpSuitBinary {
-            higher: shu.higher.suit_binary().rotate_right(12),
-            lower: shu.lower.suit_binary().rotate_right(12),
-        }
-    }
-}
-
-impl From<SortedHeadsUp> for SortedHeadsUpSuitBinary {
-    fn from(shu: SortedHeadsUp) -> Self {
-        SortedHeadsUpSuitBinary {
-            higher: shu.higher.suit_binary().rotate_right(12),
-            lower: shu.lower.suit_binary().rotate_right(12),
-        }
-    }
-}
-
-impl Display for SortedHeadsUpSuitBinary {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:04b},{:04b}", self.higher, self.lower)
-    }
-}
-
-#[cfg(test)]
-#[allow(non_snake_case)]
-mod arrays__matchups__shusb_tests {
-    use super::*;
-    use crate::util::data::TestData;
-
-    #[test]
-    fn display() {
-        let the_hand = SortedHeadsUpSuitBinary::from(&TestData::the_hand_sorted_headsup());
-        assert_eq!(the_hand.to_string(), "1100,0011")
-    }
 }

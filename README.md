@@ -688,6 +688,19 @@
           * impl IntoIterator for Cards
           * impl SuitShift for Cards
           * SortedHeadsUpSuitBinary
+        * Masks
+          * SuitMask
+          * Texture
+          * RankMask
+          * Masked
+            * Two.invert_suits()
+            * SortedHeadsUp.invert_suits()
+            * .type_one_shifts()
+            * .type_six_shifts()
+              * impl Shifty for Masked
+              * MASKED_UNIQUE_TYPEs
+              * SORTED_HEADS_UP_UNIQUE_TYPEs
+            * Masked::distinct()
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

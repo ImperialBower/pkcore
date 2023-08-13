@@ -614,6 +614,27 @@ impl Two {
     //endregion
 
     #[must_use]
+    pub fn invert_suits(&self) -> Self {
+        match Two::new(
+            Card::new(self.first().get_rank(), self.second().get_suit()),
+            Card::new(self.second().get_rank(), self.first().get_suit()),
+        ) {
+            Ok(two) => two,
+            Err(_) => Two::default(),
+        }
+    }
+
+    #[must_use]
+    pub fn is_pair(&self) -> bool {
+        self.first().get_rank() == self.second().get_rank()
+    }
+
+    #[must_use]
+    pub fn rank_binary(&self) -> u32 {
+        self.first().get_rank().bits() | self.second().get_rank().bits()
+    }
+
+    #[must_use]
     pub fn is_suited(&self) -> bool {
         self.first().get_suit() == self.second().get_suit()
     }
@@ -858,6 +879,7 @@ impl TryFrom<&[Card]> for Two {
 #[allow(non_snake_case)]
 mod arrays__two_tests {
     use super::*;
+    use crate::rank::Rank;
     use crate::suit::Suit;
     use rstest::rstest;
     use std::collections::HashSet;
@@ -940,6 +962,33 @@ mod arrays__two_tests {
         assert_eq!(BIG_SLICK, Two::from(BIG_SLICK).to_arr());
     }
 
+    #[test]
+    fn invert_suits() {
+        assert_eq!(Two::HAND_8S_7H.invert_suits(), Two::HAND_8H_7S);
+        assert_eq!(Two::HAND_AS_AH.invert_suits(), Two::HAND_AS_AH);
+    }
+
+    #[test]
+    fn is_pair() {
+        assert!(Two::HAND_KS_KD.is_pair());
+        assert!(Two::HAND_8S_8D.is_pair());
+        assert!(!Two::HAND_8S_7H.is_pair());
+        assert!(!Two::HAND_AS_KH.is_pair());
+    }
+
+    #[test]
+    fn rank_binary() {
+        let ace = Rank::ACE.bits();
+        let king = Rank::KING.bits();
+        let deuce = Rank::DEUCE.bits();
+
+        assert_eq!(ace, Two::HAND_AS_AD.rank_binary());
+        assert_eq!(king, Two::HAND_KS_KD.rank_binary());
+        assert_eq!(deuce, Two::HAND_2D_2C.rank_binary());
+        assert_eq!(ace | king, Two::HAND_AS_KD.rank_binary());
+    }
+
+    /// 100000000000
     #[test]
     fn is_suited() {
         assert!(Two::HAND_KS_TS.is_suited());
