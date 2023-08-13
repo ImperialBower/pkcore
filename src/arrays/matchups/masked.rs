@@ -532,19 +532,12 @@ mod arrays__matchups__masked_tests {
 
     #[test]
     fn type_one_shifts() {
-        let original = Masked::from_str("A♠ K♠ 8♠ 7♠").unwrap();
-        let shift1 = Masked::from_str("A♣ K♣ 8♣ 7♣").unwrap();
-        let shift2 = Masked::from_str("A♦ K♦ 8♦ 7♦").unwrap();
-        let shift3 = Masked::from_str("A♥ K♥ 8♥ 7♥").unwrap();
+        shifts_check("A♠ K♠ 8♠ 7♠", SuitTexture::Type1111, 4);
 
-        let shifts = original.shifts();
+        /// TODO: Random samples
+        /// MASKED_UNIQUE_TYPE_ONE
 
-        assert_eq!(4, shifts.len());
-        assert!(shifts.contains(&original));
-        assert!(shifts.contains(&shift1));
-        assert!(shifts.contains(&shift2));
-        assert!(shifts.contains(&shift3));
-        assert_eq!(shifts, original.my_shifts());
+
     }
 
     /// I'm really surprised that these type six shifts all have the exact same odds. I was worried
@@ -562,23 +555,29 @@ mod arrays__matchups__masked_tests {
     /// ```
     #[test]
     fn type_six_shifts() {
-        let original = Masked::from_str("A♠ Q♥ 5♠ 2♥").unwrap();
+        shifts_check("A♠ Q♥ 5♠ 2♥", SuitTexture::Type1212, 24);
+    }
+
+    fn shifts_check(index: &str, texture: SuitTexture, num: usize) {
+        let original = Masked::from_str(index).unwrap();
 
         let shifts = original.shifts();
 
-        assert_eq!(original.texture, SuitTexture::Type1212);
+        assert_eq!(original.texture, texture);
         assert!(shifts.contains(&original));
-        assert_eq!(24, shifts.len());
+        assert_eq!(num, shifts.len());
         let shus = Masked::into_shus(&shifts);
-        assert_eq!(24, shus.len());
+        assert_eq!(num, shus.len());
+        // Verify that they all have the same `SuitTexture` and `RankMask`.
         for shift in shifts.clone() {
-            assert_eq!(shift.texture, SuitTexture::Type1212);
+            assert_eq!(shift.texture, texture);
             assert_eq!(shift.rank_mask, original.rank_mask);
         }
         for masked in Masked::parse(&shus) {
             assert!(shifts.contains(&masked));
         }
     }
+
 
     // region textures
 
