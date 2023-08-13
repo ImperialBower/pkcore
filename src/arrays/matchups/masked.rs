@@ -534,10 +534,17 @@ mod arrays__matchups__masked_tests {
     fn type_one_shifts() {
         shifts_check("A♠ K♠ 8♠ 7♠", SuitTexture::Type1111, 4);
 
-        /// TODO: Random samples
-        /// MASKED_UNIQUE_TYPE_ONE
-
-
+        // Test 10 random type 1 values.
+        let mut types = MASKED_UNIQUE_TYPE_ONE.clone();
+        for _ in 0..10 {
+            let elem = types.iter().next().unwrap().clone();
+            types.remove(&elem);
+            shifts_check(
+                format!("{} {}", elem.shu.higher, elem.shu.lower).as_str(),
+                SuitTexture::Type1111,
+                4,
+            );
+        }
     }
 
     /// I'm really surprised that these type six shifts all have the exact same odds. I was worried
@@ -577,7 +584,6 @@ mod arrays__matchups__masked_tests {
             assert!(shifts.contains(&masked));
         }
     }
-
 
     // region textures
 
