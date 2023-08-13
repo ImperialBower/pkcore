@@ -707,6 +707,7 @@
           * Cleanup Masked type tests and functions
             * ~~type_six_shifts()~~
             * ~~type_one_shifts()~~
+            * Masked.shifts_check()
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
