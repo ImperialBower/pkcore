@@ -6,6 +6,7 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
+use std::hash::Hash;
 use std::str::FromStr;
 
 lazy_static! {
@@ -26,6 +27,23 @@ lazy_static! {
         Masked::filter(&MASKED_UNIQUE, Masked::is_type_seven);
 }
 
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+struct RankMasked {
+    pub shu: SortedHeadsUp,
+    pub texture: SuitTexture,
+    pub rank_mask: RankMask,
+}
+
+impl From<Masked> for RankMasked {
+    fn from(masked: Masked) -> Self {
+        RankMasked {
+            shu: masked.shu,
+            texture: masked.texture,
+            rank_mask: masked.rank_mask,
+        }
+    }
+}
+
 #[derive(
     Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
 )]
@@ -38,6 +56,46 @@ pub struct Masked {
 }
 
 impl Masked {
+    /// ```txt
+    /// pub fn distinct() -> Result<HashSet<SortedHeadsUp>, PKError> {
+    ///   let mut unique = SORTED_HEADS_UP_UNIQUE.clone();
+    ///
+    ///   let v = Vec::from_iter(unique.clone());
+    ///   for shu in &v {
+    ///     if unique.contains(shu) {
+    ///       shu.remove_shifts(&mut unique);
+    ///     }
+    ///   }
+    ///
+    ///   Ok(unique)
+    /// }
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// Shrugs
+    #[must_use]
+    pub fn distinct() -> HashSet<Masked> {
+        let mut unique = MASKED_UNIQUE.clone();
+
+        for masked in unique.clone() {
+            if unique.contains(&masked) {
+                for shift in masked.other_shifts() {
+                    unique.remove(&shift);
+                }
+            }
+        }
+        unique
+    }
+
+    pub fn remove_other_shifts(&self, from: &mut HashSet<Masked>) {
+        for shift in self.other_shifts() {
+            if from.contains(&shift) {
+                from.remove(&shift);
+            }
+        }
+    }
+
     pub fn filter(unique: &HashSet<Masked>, f: fn(&Masked) -> bool) -> HashSet<Masked> {
         unique.clone().into_iter().filter(f).collect()
     }
@@ -54,10 +112,20 @@ impl Masked {
             .collect()
     }
 
-    pub fn my_shifts(&self) -> HashSet<Masked> {
-        self.my_types().into_iter().filter(|x| x.rank_mask == self.rank_mask).collect()
+    #[must_use]
+    pub fn into_shus(masked: &HashSet<Masked>) -> HashSet<SortedHeadsUp> {
+        masked.clone().into_iter().map(|s| s.shu).collect()
     }
 
+    #[must_use]
+    pub fn my_shifts(&self) -> HashSet<Masked> {
+        self.my_types()
+            .into_iter()
+            .filter(|x| x.rank_mask == self.rank_mask)
+            .collect()
+    }
+
+    #[must_use]
     pub fn my_types(&self) -> HashSet<Masked> {
         match self.texture {
             SuitTexture::TypeUnknown => HashSet::new(),
@@ -310,6 +378,17 @@ impl Display for Masked {
     }
 }
 
+impl From<RankMasked> for Masked {
+    fn from(rm: RankMasked) -> Self {
+        Masked {
+            shu: rm.shu,
+            texture: rm.texture,
+            suit_mask: SuitMask::from(&rm.shu),
+            rank_mask: rm.rank_mask,
+        }
+    }
+}
+
 impl From<SortedHeadsUp> for Masked {
     fn from(shu: SortedHeadsUp) -> Self {
         Masked {
@@ -346,7 +425,34 @@ impl SuitShift for Masked {
     }
 }
 
-impl Shifty for Masked {}
+impl Shifty for Masked {
+    #[must_use]
+    fn other_shifts(&self) -> HashSet<Self>
+    where
+        Self: Sized,
+        Self: Eq,
+        Self: Hash,
+        Self: Display,
+    {
+        let mut shifts = self.shifts();
+        shifts.remove(self);
+        shifts
+    }
+
+    #[must_use]
+    fn shifts(&self) -> HashSet<Self>
+    where
+        Self: Sized,
+        Self: Eq,
+        Self: Hash,
+        Self: Display,
+    {
+        self.my_types()
+            .into_iter()
+            .filter(|x| x.rank_mask == self.rank_mask)
+            .collect()
+    }
+}
 
 #[cfg(test)]
 #[allow(non_snake_case)]
@@ -423,7 +529,6 @@ mod arrays__matchups__masked_tests {
     fn type_one_shifts__invalid() {
         let original = Masked::from_str("AS AH AD AC").unwrap();
         assert!(original.type_one_shifts().is_err());
-
     }
 
     #[test]
@@ -591,5 +696,49 @@ mod arrays__matchups__masked_tests {
             HANDS_6S_6H_V_5D_5C,
             Masked::from(TestData::the_hand_sorted_headsup())
         );
+    }
+
+    #[test]
+    #[ignore]
+    fn distinct__aces() {
+        let original = Masked::from_str("A♠ A♥ A♦ A♣").unwrap();
+        let shift1 = Masked::from_str("A♠ A♦ A♥ A♣").unwrap();
+        let shift2 = Masked::from_str("A♠ A♣ A♥ A♦").unwrap();
+        let distinct = Masked::distinct();
+
+        let contains = distinct.contains(&original)
+            || distinct.contains(&shift1)
+            || distinct.contains(&shift2);
+
+        assert!(contains);
+        SortedHeadsUp::generate_csv("generated/dist.csv", Masked::into_shus(&distinct))
+            .expect("TODO: panic message");
+    }
+
+    #[test]
+    fn remove_other_shifts() {
+        let original = Masked::from_str("A♠ A♥ A♦ A♣").unwrap();
+        let mut all = MASKED_UNIQUE.clone();
+
+        original.remove_other_shifts(&mut all);
+
+        assert!(all.contains(&original));
+        assert!(!all.contains(&Masked::from_str("A♠ A♦ A♥ A♣").unwrap()));
+        assert!(!all.contains(&Masked::from_str("A♠ A♣ A♥ A♦").unwrap()));
+    }
+
+    #[test]
+    fn shifts__aces() {
+        assert_eq!(3, Masked::from_str("A♠ A♥ A♦ A♣").unwrap().shifts().len());
+        assert_eq!(3, Masked::from_str("K♠ K♥ K♦ K♣").unwrap().shifts().len());
+    }
+
+    #[test]
+    fn other_shifts__aces() {
+        let original = Masked::from_str("A♠ A♥ A♦ A♣").unwrap();
+        let others = original.other_shifts();
+
+        assert_eq!(2, others.len());
+        assert!(!others.contains(&original));
     }
 }

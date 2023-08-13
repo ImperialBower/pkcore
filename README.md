@@ -700,6 +700,7 @@
               * impl Shifty for Masked
               * MASKED_UNIQUE_TYPEs
               * SORTED_HEADS_UP_UNIQUE_TYPEs
+            * Masked::distinct()
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

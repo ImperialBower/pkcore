@@ -3,6 +3,7 @@ use pkcore::arrays::matchups::masked::{
     MASKED_UNIQUE_TYPE_SEVEN, MASKED_UNIQUE_TYPE_SIX, MASKED_UNIQUE_TYPE_THREE,
     MASKED_UNIQUE_TYPE_TWO,
 };
+use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use pkcore::PKError;
 
 /// ```txt
@@ -84,6 +85,15 @@ fn main() -> Result<(), PKError> {
         MASKED_UNIQUE_TYPE_SEVEN.len(),
         Masked::suit_masks(&MASKED_UNIQUE_TYPE_SEVEN, Masked::is_type_seven).len()
     );
+
+    let distinct = Masked::distinct();
+    println!("{}", distinct.len());
+
+    SortedHeadsUp::generate_csv(
+        "generated/distinct_masked_shus.csv",
+        Masked::into_shus(&distinct),
+    )
+    .expect("TODO: panic message");
 
     Ok(())
 }
