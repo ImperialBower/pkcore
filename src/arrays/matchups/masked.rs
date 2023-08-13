@@ -99,7 +99,7 @@ impl Masked {
         v.sort();
         v.reverse();
         for masked in &v {
-            if unique.contains(&masked) {
+            if unique.contains(masked) {
                 for shift in masked.other_shifts() {
                     unique.remove(&shift);
                 }
