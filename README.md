@@ -701,6 +701,8 @@
               * MASKED_UNIQUE_TYPEs
               * SORTED_HEADS_UP_UNIQUE_TYPEs
             * Masked::distinct()
+        * Back to storing distinct
+          * util::terminal::receive_usize()
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

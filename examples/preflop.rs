@@ -7,6 +7,7 @@ use rusqlite::Connection;
 use std::fs::File;
 use std::io;
 use std::io::Write;
+use pkcore::util::terminal::receive_usize;
 
 /// Naked
 /// ```txt
@@ -125,27 +126,17 @@ fn main() {
 fn read_input(conn: &Connection, shus: &mut Vec<SortedHeadsUp>) {
     let now = std::time::Instant::now();
 
-    print!("How many runs? ");
-    let _ = io::stdout().flush();
-    let mut input_text = String::new();
-    io::stdin()
-        .read_line(&mut input_text)
-        .expect("Failed to receive value");
-    let trimmed = input_text.trim();
-    let i = match trimmed.parse::<u32>() {
-        Ok(i) => i,
-        Err(..) => 0,
-    };
+    let i = receive_usize("How many runs? ");
 
     println!("Processing {i} hands.");
 
-    for _ in 0..i {
-        let shu = shus.pop().unwrap();
-        println!("{shu}");
-        process(&conn, &shu);
-    }
-
-    println!("read_input() time elapsed: {:.2?}", now.elapsed());
+    // for _ in 0..i {
+    //     let shu = shus.pop().unwrap();
+    //     println!("{shu}");
+    //     process(&conn, &shu);
+    // }
+    //
+    // println!("read_input() time elapsed: {:.2?}", now.elapsed());
 }
 
 fn calc(shu: &SortedHeadsUp) -> HUPResult {
