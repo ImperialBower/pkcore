@@ -2,12 +2,10 @@ use csv::Reader;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+use pkcore::util::terminal::receive_usize;
 use pkcore::Shifty;
 use rusqlite::Connection;
 use std::fs::File;
-use std::io;
-use std::io::Write;
-use pkcore::util::terminal::receive_usize;
 
 /// Naked
 /// ```txt
@@ -130,13 +128,13 @@ fn read_input(conn: &Connection, shus: &mut Vec<SortedHeadsUp>) {
 
     println!("Processing {i} hands.");
 
-    // for _ in 0..i {
-    //     let shu = shus.pop().unwrap();
-    //     println!("{shu}");
-    //     process(&conn, &shu);
-    // }
-    //
-    // println!("read_input() time elapsed: {:.2?}", now.elapsed());
+    for _ in 0..i {
+        let shu = shus.pop().unwrap();
+        println!("{shu}");
+        process(&conn, &shu);
+    }
+
+    println!("read_input() time elapsed: {:.2?}", now.elapsed());
 }
 
 fn calc(shu: &SortedHeadsUp) -> HUPResult {

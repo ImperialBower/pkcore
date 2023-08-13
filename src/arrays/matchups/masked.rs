@@ -174,39 +174,17 @@ impl Masked {
             .collect()
     }
 
+    /// While Clippy is warning us that this function isn't used, it actually is used by our
+    /// `MASKED_UNIQUE` `lazy_static!` constant.
+    ///
     /// # Panics
     ///
     /// shouldn't
     #[must_use]
-    pub fn unique() -> HashSet<Masked> {
+    #[allow(unused_variables, dead_code)]
+    fn unique() -> HashSet<Masked> {
         Masked::parse(&SORTED_HEADS_UP_UNIQUE)
     }
-
-    /// # Errors
-    ///
-    /// Calling on a value that isn't type one.
-    pub fn type_one_shifts(&self) -> Result<HashSet<Masked>, PKError> {
-        if !self.is_type_one() {
-            return Err(PKError::Fubar);
-        }
-        Ok(self.shifts())
-    }
-
-    /// # Errors
-    ///
-    /// When you try to shift something that isn't type six.
-    pub fn type_six_shifts(&self) -> Result<HashSet<Masked>, PKError> {
-        if !self.is_type_six() {
-            return Err(PKError::Fubar);
-        }
-        let hs = self.shifts();
-
-        Ok(hs)
-    }
-
-    // pub fn rank_masks(unique: &HashSet<Masked>, f: fn(&Masked) -> bool) -> HashSet<RankMask> {
-    //     unique.clone().into_iter().map(|s| s.rank_mask).collect()
-    // }
 
     // region is_type
 
@@ -217,6 +195,8 @@ impl Masked {
     /// Suit signatures:
     ///
     /// ```txt
+    /// 8580 type one hands with 4 suit sigs
+    ///
     /// 0001,0001
     /// 0010,0010
     /// 0100,0100
@@ -325,6 +305,7 @@ impl Masked {
     ///
     /// ```txt
     /// 316368 type five hands with 24 suit sigs
+    ///
     /// 0011,0101
     /// 0011,0110
     /// 0011,1001
@@ -359,6 +340,7 @@ impl Masked {
     ///
     /// ```txt
     /// 73008 type six hands with 6 suit sigs
+    ///
     /// 0011,0011
     /// 0101,0101
     /// 0110,0110
@@ -375,6 +357,7 @@ impl Masked {
     ///
     /// ```txt
     /// 85683 type seven hands with 6 suit sigs
+    ///
     /// 0011,1100
     /// 0101,1010
     /// 0110,1001
@@ -548,19 +531,13 @@ mod arrays__matchups__masked_tests {
     }
 
     #[test]
-    fn type_one_shifts__invalid() {
-        let original = Masked::from_str("AS AH AD AC").unwrap();
-        assert!(original.type_one_shifts().is_err());
-    }
-
-    #[test]
     fn type_one_shifts() {
         let original = Masked::from_str("A♠ K♠ 8♠ 7♠").unwrap();
         let shift1 = Masked::from_str("A♣ K♣ 8♣ 7♣").unwrap();
         let shift2 = Masked::from_str("A♦ K♦ 8♦ 7♦").unwrap();
         let shift3 = Masked::from_str("A♥ K♥ 8♥ 7♥").unwrap();
 
-        let shifts = original.type_one_shifts().unwrap();
+        let shifts = original.shifts();
 
         assert_eq!(4, shifts.len());
         assert!(shifts.contains(&original));
@@ -570,38 +547,37 @@ mod arrays__matchups__masked_tests {
         assert_eq!(shifts, original.my_shifts());
     }
 
+    /// I'm really surprised that these type six shifts all have the exact same odds. I was worried
+    /// that when the bottom hand was completely suit covered by the top one, that if you inverted
+    /// the suits you would see a slightly different result from the matchup, but so far, you don't.
+    ///
+    /// Case in point:
+    ///
+    /// ```txt
     /// A♠ K♥ Q♠ J♥, 65.10% (1114667), 34.36% (588268), 0.55% (9369)
     /// A♠ K♥ Q♥ J♠, 65.10% (1114667), 34.36% (588268), 0.55% (9369)
     ///
     /// A♠ Q♥ 5♠ 2♥, 65.49% (1121471), 33.92% (580748), 0.59% (10085)
     /// A♠ Q♥ 5♥ 2♠, 65.49% (1121471), 33.92% (580748), 0.59% (10085)
-    /// A♠ Q♦ 5♠ 2♦
-    /// A♠ Q♦ 5♦ 2♠
-    /// A♠ Q♣ 5♠ 2♣
-    /// A♠ Q♣ 5♣ 2♠
-    /// A♥ Q♠ 5♠ 2♥
-    /// A♥ Q♠ 5♥ 2♠
-    /// A♥ Q♦ 5♥ 2♦
-    /// A♥ Q♦ 5♦ 2♥
-    /// A♥ Q♣ 5♥ 2♣
-    /// A♥ Q♣ 5♣ 2♥
-    /// A♦ Q♠ 5♠ 2♦
-    /// A♦ Q♠ 5♦ 2♠
-    /// A♦ Q♥ 5♥ 2♦
-    /// A♦ Q♥ 5♦ 2♥
-    /// A♦ Q♣ 5♦ 2♣
-    /// A♦ Q♣ 5♣ 2♦
-    /// A♣ Q♠ 5♠ 2♣
-    /// A♣ Q♠ 5♣ 2♠
-    /// A♣ Q♥ 5♥ 2♣
-    /// A♣ Q♥ 5♣ 2♥
-    /// A♣ Q♦ 5♦ 2♣
-    /// A♣ Q♦ 5♣ 2♦
-
+    /// ```
     #[test]
-    fn type_six_shifts__invalid() {
-        let original = Masked::from_str("AS AH AD AC").unwrap();
-        assert!(original.type_one_shifts().is_err());
+    fn type_six_shifts() {
+        let original = Masked::from_str("A♠ Q♥ 5♠ 2♥").unwrap();
+
+        let shifts = original.shifts();
+
+        assert_eq!(original.texture, SuitTexture::Type1212);
+        assert!(shifts.contains(&original));
+        assert_eq!(24, shifts.len());
+        let shus = Masked::into_shus(&shifts);
+        assert_eq!(24, shus.len());
+        for shift in shifts.clone() {
+            assert_eq!(shift.texture, SuitTexture::Type1212);
+            assert_eq!(shift.rank_mask, original.rank_mask);
+        }
+        for masked in Masked::parse(&shus) {
+            assert!(shifts.contains(&masked));
+        }
     }
 
     // region textures

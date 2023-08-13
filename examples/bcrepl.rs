@@ -2,13 +2,11 @@ use pkcore::arrays::five::Five;
 use pkcore::arrays::seven::Seven;
 use pkcore::arrays::two::Two;
 use pkcore::cards::Cards;
+use pkcore::util::terminal::receive_x_cards;
 use pkcore::util::wincounter::heads_up::HeadsUp;
 use pkcore::util::wincounter::win::Win;
 use pkcore::util::wincounter::wins::Wins;
 use pkcore::{PKError, Pile};
-use std::io;
-use std::io::Write;
-use std::str::FromStr;
 
 /// OK, this makes me sad. My new shiny pkcore library takes over twice as long to run a single calc
 ///
@@ -30,8 +28,8 @@ use std::str::FromStr;
 ///
 /// This is going to need some investigation.
 ///
-/// cargo run --example bcrepl
-/// A♠ A♥ A♦ A♣
+/// `cargo run --example bcrepl`
+/// `A♠ A♥ A♦ A♣`
 fn main() {
     env_logger::init();
     loop {
@@ -42,33 +40,16 @@ fn main() {
 fn read_input() {
     let now = std::time::Instant::now();
 
-    print!("hole cards> ");
-    let _ = io::stdout().flush();
-    let mut input_text = String::new();
-    io::stdin()
-        .read_line(&mut input_text)
-        .expect("Failed to receive value");
-
-    let cards = Cards::from_str(input_text.as_str());
-
-    match cards {
-        Ok(c) => {
-            if c.len() != 4 {
-                println!("Enter 4 cards");
-            } else {
-                println!("{}", c);
-                match work(c.clone()) {
-                    Ok(hup) => {
-                        println!("{}, {}", c, hup);
-                    }
-                    Err(e) => {
-                        println!("{:?}", e);
-                    }
-                }
-            }
+    match receive_x_cards("hole cards> ", 4) {
+        Ok(cards) => match work(cards.clone()) {
+            Ok(hup) => println!("{}, {}", cards, hup),
+            Err(e) => println!("{:?}", e),
+        },
+        Err(e) => {
+            println!("{:?}", e);
         }
-        Err(_) => println!("Invalid Cards"),
     }
+
     println!("Elapsed: {:.2?}", now.elapsed());
 }
 
@@ -86,7 +67,6 @@ fn work(cards: Cards) -> Result<HeadsUp, PKError> {
 
     let wins = grind(*hero, *villain, cards.remaining());
     Ok(wins.results_heads_up())
-    // println!("{}, {}", cards, results);
 }
 
 fn grind(hero: Two, villain: Two, remaining: Cards) -> Wins {

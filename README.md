@@ -703,6 +703,10 @@
             * Masked::distinct()
         * Back to storing distinct
           * util::terminal::receive_usize()
+          * archive old examples
+          * Cleanup Masked type tests and functions
+            * ~~type_six_shifts()~~
+            * ~~type_one_shifts()~~
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
