@@ -1,6 +1,7 @@
 pub mod data;
 pub mod random_ordering;
 pub mod wincounter;
+pub mod terminal;
 
 /// Blank struct that is home to misfit utility functions.
 ///
