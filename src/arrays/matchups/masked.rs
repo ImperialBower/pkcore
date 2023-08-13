@@ -87,6 +87,8 @@ impl Masked {
     ///     }
     /// ```
     ///
+    /// This current version sorts the unique `Masked` values so that when we generate their
+    /// distinct versions, they will be in order.
     ///
     /// # Panics
     ///
