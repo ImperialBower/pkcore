@@ -38,7 +38,7 @@ fn ff(conn: &Connection, shus: &mut Vec<SortedHeadsUp>) {
 }
 
 fn distinct() -> Vec<SortedHeadsUp> {
-    let file = File::open("generated/distinct_shu.csv").unwrap();
+    let file = File::open("../generated/old/distinct_shu.csv").unwrap();
     let mut rdr = Reader::from_reader(file);
     let mut shus: Vec<SortedHeadsUp> = Vec::new();
     for deserialized_shu in rdr.deserialize::<SortedHeadsUp>() {

@@ -25,6 +25,7 @@ lazy_static! {
         Masked::filter(&MASKED_UNIQUE, Masked::is_type_six);
     pub static ref MASKED_UNIQUE_TYPE_SEVEN: HashSet<Masked> =
         Masked::filter(&MASKED_UNIQUE, Masked::is_type_seven);
+    pub static ref MASKED_DISTINCT: HashSet<Masked> = Masked::distinct();
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]

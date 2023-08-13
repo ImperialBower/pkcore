@@ -169,7 +169,7 @@ fn process(conn: &Connection, shu: &SortedHeadsUp) {
 }
 
 fn reader() -> Reader<File> {
-    let file = File::open("generated/distinct_shu.csv").unwrap();
+    let file = File::open("../generated/old/distinct_shu.csv").unwrap();
     Reader::from_reader(file)
 }
 
