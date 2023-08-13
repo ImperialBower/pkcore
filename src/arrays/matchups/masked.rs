@@ -71,6 +71,23 @@ impl Masked {
     /// }
     /// ```
     ///
+    /// revised:
+    /// ```txt
+    /// pub fn distinct() -> HashSet<Masked> {
+    ///         let mut unique = MASKED_UNIQUE.clone();
+    ///
+    ///         for masked in unique.clone() {
+    ///             if unique.contains(&masked) {
+    ///                 for shift in masked.other_shifts() {
+    ///                     unique.remove(&shift);
+    ///                 }
+    ///             }
+    ///         }
+    ///         unique
+    ///     }
+    /// ```
+    ///
+    ///
     /// # Panics
     ///
     /// Shrugs
@@ -78,7 +95,10 @@ impl Masked {
     pub fn distinct() -> HashSet<Masked> {
         let mut unique = MASKED_UNIQUE.clone();
 
-        for masked in unique.clone() {
+        let mut v = Vec::from_iter(unique.clone());
+        v.sort();
+        v.reverse();
+        for masked in &v {
             if unique.contains(&masked) {
                 for shift in masked.other_shifts() {
                     unique.remove(&shift);

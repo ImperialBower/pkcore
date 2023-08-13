@@ -50,6 +50,7 @@ use pkcore::PKError;
 //     // SortedHeadsUp::generate_csv("generated/unique_type_remaining.csv", unique)
 //     //     .expect("TODO: panic message");
 fn main() -> Result<(), PKError> {
+    let now = std::time::Instant::now();
     println!(
         "{} type one has {} suit masks",
         MASKED_UNIQUE_TYPE_ONE.len(),
@@ -94,6 +95,8 @@ fn main() -> Result<(), PKError> {
         Masked::into_shus(&distinct),
     )
     .expect("TODO: panic message");
+
+    println!("Elapsed: {:.2?}", now.elapsed());
 
     Ok(())
 }
