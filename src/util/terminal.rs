@@ -6,6 +6,10 @@ use std::str::FromStr;
 
 /// Then goal of the functions in this module is to isolate and standardize the patterns we've been
 /// using in our example files.
+///
+/// # Panics
+///
+/// If it somehow wigs out on the input.
 #[must_use]
 pub fn receive_usize(prompt: &str) -> usize {
     print!("{prompt}");
@@ -21,6 +25,9 @@ pub fn receive_usize(prompt: &str) -> usize {
     }
 }
 
+/// # Panics
+///
+/// If it somehow wigs out on the input.
 #[must_use]
 pub fn receive_cards(prompt: &str) -> Option<Cards> {
     print!("{prompt}");
