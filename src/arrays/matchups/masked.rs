@@ -168,7 +168,11 @@ impl Masked {
         shus.clone().into_iter().map(Masked::from).collect()
     }
 
-    pub fn parse_as_vectors(hups: &[HUPResult]) -> Vec<Masked> {
+    pub fn parse_as_vectors(hups: &[SortedHeadsUp]) -> Vec<Masked> {
+        hups.iter().copied().map(Masked::from).collect()
+    }
+
+    pub fn parse_hups_as_vectors(hups: &[HUPResult]) -> Vec<Masked> {
         hups.iter().copied().map(Masked::from).collect()
     }
 

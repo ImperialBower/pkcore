@@ -735,6 +735,8 @@
   * Probability
     * Wikipedia > [Poker probability](https://en.wikipedia.org/wiki/Poker_probability)
     * [Distinct head-to-head match ups in holdem](https://poker.stackexchange.com/questions/5682/distinct-head-to-head-match-ups-in-holdem)
+  * Cheating
+    * [FTX’s ‘chief regulatory officer’ Dan Friedberg tied to online poker scandal](https://nypost.com/2022/11/20/ftxs-ex-chief-regulatory-officer-tied-to-online-poker-scandal/)
 * Rust
   * [The Rust Programming Language](https://doc.rust-lang.org/stable/book/)
   * [Rust Design Patterns](https://rust-unofficial.github.io/patterns/intro.html)

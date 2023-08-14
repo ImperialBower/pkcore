@@ -11,12 +11,13 @@ use crate::cards::Cards;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::{PKError, Pile, Shifty, SuitShift};
-use csv::WriterBuilder;
+use csv::{Reader, WriterBuilder};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
+use std::fs::File;
 use std::str::FromStr;
 
 lazy_static! {
@@ -518,6 +519,29 @@ impl SortedHeadsUp {
         }
         wtr.flush()?;
         Ok(())
+    }
+
+    /// # Errors
+    ///
+    /// * Throws `PKError::InvalidBinaryFormat` if the csv file is corrupted.
+    /// * Throws `PKError::Fubar` if unable to open at all.
+    pub fn read_csv(path: &str) -> Result<Vec<SortedHeadsUp>, PKError> {
+        match File::open(path) {
+            Ok(file) => {
+                let mut rdr = Reader::from_reader(file);
+                let mut v = Vec::new();
+                for hup in rdr.deserialize::<SortedHeadsUp>() {
+                    match hup {
+                        Ok(r) => v.push(r),
+                        Err(_) => {
+                            return Err(PKError::InvalidBinaryFormat);
+                        }
+                    }
+                }
+                Ok(v)
+            }
+            Err(_) => Err(PKError::Fubar),
+        }
     }
 
     #[must_use]

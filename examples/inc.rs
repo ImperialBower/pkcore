@@ -16,11 +16,9 @@ fn main() {
 }
 
 fn read_input() {
-    let hups = HUPResult::read_csv("data/distinct_masked_shus.csv").unwrap();
-    let mut distinct = Masked::parse_as_vectors(&*hups);
-
-    // let mut distinct = Vec::from_iter(MASKED_DISTINCT.clone());
-    // let mut distinct = MASKED_DISTINCT.clone();
+    let shus = SortedHeadsUp::read_csv("data/distinct_masked_shus.csv").unwrap();
+    let mut distinct = Masked::parse_as_vectors(&*shus);
+    distinct.reverse();
 
     let conn = Connection::open("generated/hups.db").unwrap();
     HUPResult::create_table(&conn).expect("TODO: panic message");
