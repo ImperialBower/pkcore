@@ -78,8 +78,8 @@ fn grind(hero: Two, villain: Two, remaining: Cards) -> Wins {
     for combo in combos {
         let five = Five::try_from(combo).unwrap();
 
-        let hero7 = Seven::from_case_at_deal(hero, five).unwrap().to_bard();
-        let villain7 = Seven::from_case_at_deal(villain, five).unwrap().to_bard();
+        let hero7 = Seven::from_case_at_deal(hero, five).unwrap().bard();
+        let villain7 = Seven::from_case_at_deal(villain, five).unwrap().bard();
 
         let hero_rank = pkcore::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP
             .get(&hero7)

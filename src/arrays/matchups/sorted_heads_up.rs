@@ -639,10 +639,10 @@ impl SortedHeadsUp {
             let (high7, low7) = self.sevens(Five::try_from(combo)?)?;
 
             let high_rank = BC_RANK_HASHMAP
-                .get(&high7.to_bard())
+                .get(&high7.bard())
                 .ok_or(PKError::InvalidHand)?;
             let low_rank = BC_RANK_HASHMAP
-                .get(&low7.to_bard())
+                .get(&low7.bard())
                 .ok_or(PKError::InvalidHand)?;
 
             match high_rank.rank.cmp(&low_rank.rank) {
