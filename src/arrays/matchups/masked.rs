@@ -1,3 +1,4 @@
+use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::arrays::matchups::masks::{RankMask, SuitMask, SuitTexture};
 use crate::arrays::matchups::sorted_heads_up::{SortedHeadsUp, SORTED_HEADS_UP_UNIQUE};
 use crate::cards::Cards;
@@ -25,6 +26,7 @@ lazy_static! {
         Masked::filter(&MASKED_UNIQUE, Masked::is_type_six);
     pub static ref MASKED_UNIQUE_TYPE_SEVEN: HashSet<Masked> =
         Masked::filter(&MASKED_UNIQUE, Masked::is_type_seven);
+    /// These are available as `data/distinct_masked_shus.csv`.
     pub static ref MASKED_DISTINCT: HashSet<Masked> = Masked::distinct();
 }
 
@@ -164,6 +166,14 @@ impl Masked {
 
     pub fn parse(shus: &HashSet<SortedHeadsUp>) -> HashSet<Masked> {
         shus.clone().into_iter().map(Masked::from).collect()
+    }
+
+    pub fn parse_as_vectors(hups: &[SortedHeadsUp]) -> Vec<Masked> {
+        hups.iter().copied().map(Masked::from).collect()
+    }
+
+    pub fn parse_hups_as_vectors(hups: &[HUPResult]) -> Vec<Masked> {
+        hups.iter().copied().map(Masked::from).collect()
     }
 
     pub fn suit_masks(unique: &HashSet<Masked>, f: fn(&Masked) -> bool) -> HashSet<SuitMask> {
@@ -381,6 +391,12 @@ impl Display for Masked {
             "{} {:?} {} {}",
             self.shu, self.texture, self.suit_mask, self.rank_mask
         )
+    }
+}
+
+impl From<HUPResult> for Masked {
+    fn from(hup: HUPResult) -> Self {
+        Masked::from(SortedHeadsUp::try_from(&hup).unwrap())
     }
 }
 

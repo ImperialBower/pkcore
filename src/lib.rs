@@ -175,10 +175,6 @@ pub trait Pile {
         self.the_nuts().to_evals()
     }
 
-    fn to_bard(&self) -> Bard {
-        Bard::from(self.cards())
-    }
-
     fn to_vec(&self) -> Vec<Card>;
 }
 
