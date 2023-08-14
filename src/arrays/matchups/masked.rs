@@ -1,3 +1,4 @@
+use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::arrays::matchups::masks::{RankMask, SuitMask, SuitTexture};
 use crate::arrays::matchups::sorted_heads_up::{SortedHeadsUp, SORTED_HEADS_UP_UNIQUE};
 use crate::cards::Cards;
@@ -8,7 +9,6 @@ use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 use std::str::FromStr;
-use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 
 lazy_static! {
     pub static ref MASKED_UNIQUE: HashSet<Masked> = Masked::parse(&SORTED_HEADS_UP_UNIQUE);

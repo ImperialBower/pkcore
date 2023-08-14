@@ -1,6 +1,6 @@
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
-use pkcore::arrays::matchups::masked::{Masked, MASKED_DISTINCT};
+use pkcore::arrays::matchups::masked::Masked;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use pkcore::util::terminal::receive_usize;
 use pkcore::{Pile, Shifty};
@@ -16,8 +16,10 @@ fn main() {
 }
 
 fn read_input() {
-    // let hups = HUPResult::read_csv("distinct_masked_shus.csv").unwrap();
-    let mut distinct = Vec::from_iter(MASKED_DISTINCT.clone());
+    let hups = HUPResult::read_csv("data/distinct_masked_shus.csv").unwrap();
+    let mut distinct = Masked::parse_as_vectors(&*hups);
+
+    // let mut distinct = Vec::from_iter(MASKED_DISTINCT.clone());
     // let mut distinct = MASKED_DISTINCT.clone();
 
     let conn = Connection::open("generated/hups.db").unwrap();
