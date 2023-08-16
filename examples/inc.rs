@@ -9,24 +9,35 @@ use rusqlite::Connection;
 /// `cargo run --example inc`
 fn main() {
     env_logger::init();
-    println!("Loading distinct entries...");
+
+    let mut distinct = get_distinct();
+    let conn = get_connection();
+
     loop {
-        read_input();
+        read_input(&conn, &mut distinct);
     }
 }
 
-fn read_input() {
-    let shus = SortedHeadsUp::read_csv("data/distinct_masked_shus.csv").unwrap();
-    let mut distinct = Masked::parse_as_vectors(&*shus);
-    distinct.reverse();
+fn get_distinct() -> Vec<Masked> {
+    println!("Loading distinct entries...");
 
+    let shus = SortedHeadsUp::read_csv("data/csv/shus/distinct_masked_shus.csv").unwrap();
+    let mut distinct = Masked::parse_as_vectors(&*shus);
+
+    distinct.reverse();
+    distinct
+}
+
+fn get_connection() -> Connection {
     let conn = Connection::open("generated/hups.db").unwrap();
     HUPResult::create_table(&conn).expect("TODO: panic message");
+    conn
+}
 
+fn read_input(conn: &Connection, distinct: &mut Vec<Masked>) {
+    let mut x = 0usize;
     let i = receive_usize("How many runs? ");
     println!("Processing {i} hands.");
-
-    let mut x = 0usize;
 
     while x < i {
         let Some(masked) = distinct.pop() else {

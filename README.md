@@ -795,6 +795,7 @@
 
 * [mycelium-bitfield](https://crates.io/crates/mycelium-bitfield)
 * [modular-bitfield](https://crates.io/crates/modular-bitfield)
+* [RustyLine](https://github.com/kkawakam/rustyline)
 * [sled](https://github.com/spacejam/sled)
 * SQLite
   * [rusqlite](https://github.com/rusqlite/rusqlite)

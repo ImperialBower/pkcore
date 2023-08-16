@@ -7,6 +7,8 @@ use std::str::FromStr;
 /// Then goal of the functions in this module is to isolate and standardize the patterns we've been
 /// using in our example files.
 ///
+/// TODO use [RustyLine](https://github.com/kkawakam/rustyline)
+///
 /// # Panics
 ///
 /// If it somehow wigs out on the input.
