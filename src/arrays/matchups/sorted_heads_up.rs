@@ -499,6 +499,17 @@ impl SortedHeadsUp {
     ///
     /// Let's try it and see.
     ///
+    /// How it works:
+    ///
+    /// ```txt
+    /// let distinct = Masked::distinct();
+    /// SortedHeadsUp::generate_csv(
+    ///     "generated/distinct_masked_shus.csv",
+    ///     Masked::into_shus(&distinct),
+    /// )
+    /// .expect("TODO: panic message");
+    /// ```
+    ///
     /// # Errors
     ///
     /// When it can't write to path.
