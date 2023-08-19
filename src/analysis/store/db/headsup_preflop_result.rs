@@ -1,4 +1,5 @@
 use crate::analysis::store::db::sqlite::Sqlable;
+use crate::arrays::matchups::masked::{Masked, MASKED_DISTINCT};
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::bard::Bard;
 use crate::util::wincounter::win::Win;
@@ -154,6 +155,27 @@ impl HUPResult {
         let hups = HUPResult::select_all(&conn);
         conn.close().unwrap();
         Ok(hups)
+    }
+
+    /// # Errors
+    ///
+    /// Returns error if db contains duplicate entries..
+    pub fn check_db(conn: &Connection) -> Result<usize, PKError> {
+        let (v, hs) = HUPResult::db_count(conn);
+        if v == hs {
+            Ok(v)
+        } else {
+            Err(PKError::Duplicate)
+        }
+    }
+
+    pub fn distinct_remaining(conn: &Connection) -> HashSet<Masked> {
+        let mut distinct = MASKED_DISTINCT.clone();
+        let hups = HUPResult::select_all(conn);
+        for hup in hups {
+            distinct.remove(&Masked::from(hup));
+        }
+        distinct
     }
 
     /// # Errors

@@ -217,6 +217,8 @@ fn main() {
         for h in hs.clone() {
             HUPResult::insert(&conn, h).unwrap();
         }
+    } else {
+        println!("Data integrity intact!");
     }
 
     // assert_eq!(hs.len(), hups.len());

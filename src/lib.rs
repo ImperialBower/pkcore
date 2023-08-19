@@ -61,6 +61,7 @@ pub const POSSIBLE_UNIQUE_HOLDEM_HUP_MATCHUPS: usize = 1_624_350;
 pub enum PKError {
     BlankCard,
     CardCast,
+    DBConnectionError,
     Duplicate,
     Fubar,
     Incomplete,
