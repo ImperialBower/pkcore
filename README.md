@@ -710,6 +710,7 @@
             * Masked.shifts_check()
             * distinct_diff.csv
           * examples/insert_distinct
+          * examples/audit
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *

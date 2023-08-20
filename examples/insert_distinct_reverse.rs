@@ -1,15 +1,16 @@
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::masked::Masked;
-use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use pkcore::util::terminal::receive_usize;
 use rusqlite::Connection;
+use pkcore::util::csv::distinct_shus_from_csv_as_masked_vec;
 
 /// `cargo run --example insert_distinct_reverse`
 fn main() {
     env_logger::init();
 
-    let mut distinct = get_distinct();
+    let mut distinct = distinct_shus_from_csv_as_masked_vec();
+    distinct.reverse();
     let conn = get_connection();
 
     loop {
@@ -44,13 +45,6 @@ fn read_input(conn: &Connection, distinct: &mut Vec<Masked>) {
         }
         x = x + 1;
     }
-}
-
-fn get_distinct() -> Vec<Masked> {
-    println!("Loading distinct entries...");
-
-    let shus = SortedHeadsUp::read_csv("data/csv/shus/distinct_masked_shus.csv").unwrap();
-    Masked::parse_as_vectors(&*shus)
 }
 
 fn get_connection() -> Connection {
