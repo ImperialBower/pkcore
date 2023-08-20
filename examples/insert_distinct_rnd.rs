@@ -25,7 +25,7 @@ fn read_input(conn: &Connection, distinct: &mut Vec<Masked>) {
     let mut rng = rand::thread_rng();
 
     while x < i {
-        let Some(masked) = distinct.into_iter().choose(&mut rng)else {
+        let Some(masked) = distinct.into_iter().choose(&mut rng) else {
             println!("None remaining.");
             return;
         };
