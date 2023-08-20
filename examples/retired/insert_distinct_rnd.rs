@@ -54,7 +54,7 @@ fn read_input(conn: &Connection, distinct: &mut Vec<Masked>) {
 }
 
 fn get_connection() -> Connection {
-    let conn = Connection::open("generated/hups.db").unwrap();
+    let conn = Connection::open("../../generated/hups.db").unwrap();
     HUPResult::create_table(&conn).expect("TODO: panic message");
     conn
 }

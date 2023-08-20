@@ -186,6 +186,20 @@ impl TestData {
             lower_wins: 343300,
             ties: 4396,
         });
+        hups.push(HUPResult {
+            higher: Two::HAND_AS_AH.bard(),
+            lower: Two::HAND_6D_6C.bard(),
+            higher_wins: 1364608,
+            lower_wins: 343300,
+            ties: 4396,
+        });
+        hups.push(HUPResult {
+            higher: Two::HAND_AS_AH.bard(),
+            lower: Two::HAND_5D_5C.bard(),
+            higher_wins: 1364608,
+            lower_wins: 343300,
+            ties: 4396,
+        });
 
         hups
     }
