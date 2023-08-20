@@ -709,6 +709,7 @@
             * ~~type_one_shifts()~~
             * Masked.shifts_check()
             * distinct_diff.csv
+          * examples/insert_distinct
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
