@@ -12,7 +12,7 @@ use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
-use crate::Card;
+use crate::{Card, Pile};
 use std::str::FromStr;
 
 /// I am a classicist when it comes to testing. Martin Fowler, in his essay
@@ -173,6 +173,21 @@ impl TestData {
     #[must_use]
     pub fn the_hand_sorted_headsup() -> SortedHeadsUp {
         SortedHeadsUp::new(Two::HAND_6S_6H, Two::HAND_5D_5C)
+    }
+
+    #[must_use]
+    pub fn known_hups() -> Vec<HUPResult> {
+        let mut hups: Vec<HUPResult> = Vec::new();
+
+        hups.push(HUPResult {
+            higher: Two::HAND_AS_AH.bard(),
+            lower: Two::HAND_7D_7C.bard(),
+            higher_wins: 1364608,
+            lower_wins: 343300,
+            ties: 4396,
+        });
+
+        hups
     }
 }
 
