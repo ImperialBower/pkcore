@@ -35,7 +35,7 @@ use pkcore::Shifty;
 /// ...A♠ J♥ (1109148) T♥ 8♠ (594971) ties: (8185)
 fn main() {
     // let case1 = Masked::from_str("A♠ J♥ T♠ 8♥").unwrap();
-    let case2 = Masked::from_str("K♠ 7♦,T♠ 3♣").unwrap();
+    let case2 = Masked::from_str("K♠ 7♦ T♠ 3♣").unwrap();
 
     println!("Auditing Case #1: {case2}");
 
