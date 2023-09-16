@@ -9,10 +9,12 @@ use analysis::the_nuts::TheNuts;
 use indexmap::set::IntoIter;
 use itertools::Combinations;
 use serde::{Deserialize, Serialize};
+use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::hash::Hash;
 
 use crate::suit::Suit;
+use rayon::iter::IterBridge;
 use std::iter::Enumerate;
 
 pub mod analysis;
@@ -127,6 +129,11 @@ pub trait Pile {
         self.remaining().combinations(k)
     }
 
+    fn par_combinations_remaining(&self, k: usize) -> IterBridge<Combinations<IntoIter<Card>>> {
+        log::debug!("Pile.combinations_after(k: {})", k);
+        self.remaining().par_combinations(k)
+    }
+
     fn contains(&self, card: &Card) -> bool {
         self.to_vec().contains(card)
     }
@@ -201,35 +208,59 @@ pub trait SuitShift {
     fn opposite(&self) -> Self;
 }
 
-pub trait Shifty: SuitShift + Copy {
+pub trait Shifty {
+    #[must_use]
+    fn is_shift(&self, other: Box<Self>) -> bool
+    where
+        Self: Sized,
+        Self: Eq,
+        Self: Hash,
+    {
+        self.shifts().contains(other.borrow())
+    }
+
+    /// ```txt
+    /// #[must_use]
+    ///     fn other_shifts(&self) -> HashSet<Self>
+    ///     where
+    ///         Self: Sized,
+    ///         Self: Eq,
+    ///         Self: Hash,
+    ///         Self: std::fmt::Display,
+    ///     {
+    ///         let mut hs = HashSet::new();
+    ///         let original = *self;
+    ///         let mut shifted = *self;
+    ///         /// Tbe original version of this section has a flaw. It adds itself back if there is a gap. We
+    ///         /// Need to fix that.
+    ///         //
+    ///         /// ```
+    ///         /// for _ in 1..=3 {
+    ///         ///   shifty = shifty.shift_suit_up();
+    ///         ///   hs.insert(shifty);
+    ///         /// }
+    ///         /// ````
+    ///         for _ in 1..=3 {
+    ///             shifted = shifted.shift_suit_up();
+    ///             if shifted != original {
+    ///                 hs.insert(shifted);
+    ///             }
+    ///         }
+    ///
+    ///         hs
+    ///     }
+    /// ```
     #[must_use]
     fn other_shifts(&self) -> HashSet<Self>
     where
         Self: Sized,
-        Self: std::cmp::Eq,
+        Self: Eq,
         Self: Hash,
         Self: std::fmt::Display,
     {
-        let mut hs = HashSet::new();
-        let original = *self;
-        let mut shifted = *self;
-        // Tbe original version of this section has a flaw. It adds itself back if there is a gap. We
-        // Need to fix that.
-        //
-        // ```
-        // for _ in 1..=3 {
-        //   shifty = shifty.shift_suit_up();
-        //   hs.insert(shifty);
-        // }
-        // ````
-        for _ in 1..=3 {
-            shifted = shifted.shift_suit_up();
-            if shifted != original {
-                hs.insert(shifted);
-            }
-        }
-
-        hs
+        let mut shifts = self.shifts();
+        shifts.remove(self);
+        shifts
     }
 
     /// Returns a `HashSet` of the possible suit shifts. I'm thinking that I want to add this to the
@@ -469,20 +500,31 @@ pub trait Shifty: SuitShift + Copy {
     ///         v
     ///     }
     /// ```
-    #[must_use]
+    ///
+    /// ## UPDATE: Type X DEFECT
+    ///
+    /// We're going to retire all of the trait implementations. They are based on
+    /// flawed logic, that simply rotating the suits will return all the shifts.
+    ///
+    /// ```txt
+    /// #[must_use]
+    ///     fn shifts(&self) -> HashSet<Self>
+    ///     where
+    ///         Self: Sized,
+    ///         Self: Eq,
+    ///         Self: Hash,
+    ///         Self: std::fmt::Display,
+    ///     {
+    ///         let mut hs = HashSet::new();
+    ///         let shifty = *self;
+    ///         hs.insert(shifty);
+    ///         hs.extend(self.other_shifts());
+    ///         hs
+    ///     }
+    /// ```
     fn shifts(&self) -> HashSet<Self>
     where
-        Self: Sized,
-        Self: std::cmp::Eq,
-        Self: Hash,
-        Self: std::fmt::Display,
-    {
-        let mut hs = HashSet::new();
-        let shifty = *self;
-        hs.insert(shifty);
-        hs.extend(self.other_shifts());
-        hs
-    }
+        Self: Sized;
 }
 
 #[cfg(test)]

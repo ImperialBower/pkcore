@@ -6,9 +6,10 @@ use crate::rank::Rank;
 use crate::suit::Suit;
 use crate::util::random_ordering::RandomOrdering;
 use crate::{card, PKError, Pile, SuitShift, TheNuts};
-use indexmap::set::Iter;
+use indexmap::set::{IntoIter, Iter};
 use indexmap::IndexSet;
 use itertools::{Combinations, Itertools};
+use rayon::iter::{IterBridge, ParallelBridge};
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Formatter;
@@ -137,6 +138,11 @@ impl Cards {
 
     pub fn combinations(&self, k: usize) -> Combinations<indexmap::set::IntoIter<Card>> {
         self.0.clone().into_iter().combinations(k)
+    }
+
+    #[must_use]
+    pub fn par_combinations(&self, k: usize) -> IterBridge<Combinations<IntoIter<Card>>> {
+        self.0.clone().into_iter().combinations(k).par_bridge()
     }
 
     #[must_use]

@@ -141,6 +141,55 @@ impl CaseEvals {
     }
 }
 
+impl From<Vec<CaseEval>> for CaseEvals {
+    fn from(value: Vec<CaseEval>) -> Self {
+        CaseEvals(value)
+    }
+}
+
+impl FromIterator<CaseEval> for CaseEvals {
+    fn from_iter<T: IntoIterator<Item = CaseEval>>(iter: T) -> Self {
+        let mut v = Vec::new();
+        for i in iter {
+            v.push(i);
+        }
+        CaseEvals::from(v)
+    }
+}
+
+// https://docs.rs/rayon/1.7.0/rayon/iter/trait.FromParallelIterator.html
+// impl<T: Send> FromParallelIterator<T> for CaseEvals {
+//     fn from_par_iter<I>(par_iter: I) -> Self
+//         where I: IntoParallelIterator<Item = T>
+//     {
+//         let par_iter = par_iter.into_par_iter();
+//         BlackHole {
+//             mass: par_iter.count() * mem::size_of::<T>(),
+//         }
+//     }
+// }
+//
+//
+// impl FromParallelIterator<CaseEval> for CaseEvals {
+//     fn from_par_iter<I>(par_iter: I) -> Self where I: IntoParallelIterator<Item=CaseEval> {
+//         let mut v = Vec::new();
+//         for i in par_iter {
+//             v.push(i);
+//         }
+//         CaseEvals::from(v)
+//     }
+// }
+
+//
+// impl IntoIterator for CaseEvals {
+//     type Item = CaseEval;
+//     type IntoIter = dyn Iterator<Item=CaseEval>;
+//
+//     fn into_iter(self) -> Self::IntoIter {
+//         todo!()
+//     }
+// }
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod analysis___case_evals_tests {

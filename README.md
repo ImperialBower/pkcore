@@ -712,6 +712,14 @@
           * examples/insert_distinct
           * examples/audit
             * DEFECT: TYPE6 audit fail 
+            * REFACTORING: created arrays::matchups::masks module
+            * FIXED with new SuitTextures
+              * examples/strip.rs to get DB with just clean HUPS
+              * examples/pf.rs
+              * DEFECT: Type X shift defect
+          * gaps detour
+        * THE MAIN EVENT REDUX
+          * arrays::hole_cards::holdem
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
     *
@@ -738,6 +746,9 @@
   * Probability
     * Wikipedia > [Poker probability](https://en.wikipedia.org/wiki/Poker_probability)
     * [Distinct head-to-head match ups in holdem](https://poker.stackexchange.com/questions/5682/distinct-head-to-head-match-ups-in-holdem)
+    * [Texas Hold’em Poker Odds (over 100 Poker Probabilities)](https://www.primedope.com/texas-holdem-poker-probabilities-odds/)
+    * Heads up
+      * [Mathmatrucker > Preflop High Hand Equity and Tie Percentages](https://www.mathematrucker.com/poker/matchups.php)
   * Cheating
     * [FTX’s ‘chief regulatory officer’ Dan Friedberg tied to online poker scandal](https://nypost.com/2022/11/20/ftxs-ex-chief-regulatory-officer-tied-to-online-poker-scandal/)
 * Rust
@@ -772,6 +783,10 @@
   * concurrency
     * [Rayon](https://github.com/rayon-rs/rayon)
       * [How Rust makes Rayon's data parallelism magical](https://developers.redhat.com/blog/2021/04/30/how-rust-makes-rayons-data-parallelism-magical#generic_constraints_in_rayon)
+      * [Implementing Rayon’s Parallel Iterators - A Tutorial](https://geo-ant.github.io/blog/2022/implementing-parallel-iterators-rayon/)
+  * Macros
+    * [The Little Book of Rust Macros](https://github.com/Veykril/tlborm.git)
+    * [What Every Rust Developer Should Know About Macro Support in IDEs](https://blog.jetbrains.com/rust/2022/12/05/what-every-rust-developer-should-know-about-macro-support-in-ides/)
   * DBs
     * [SurrealDB](https://surrealdb.com/)
   * Code Coverage
@@ -804,3 +819,6 @@
   * [rusqlite](https://github.com/rusqlite/rusqlite)
     * [Rust Cookbook](https://rust-lang-nursery.github.io/rust-cookbook/database/sqlite.html)
     * [In-Memory Databases](https://www.sqlite.org/inmemorydb.html)
+* UI
+  * [shadcn/ui](https://ui.shadcn.com/)
+    * [This UI Library is NEXT LEVEL](https://www.youtube.com/watch?v=dD1fpoGHuC8&t=29s)

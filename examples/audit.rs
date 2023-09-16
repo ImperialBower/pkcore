@@ -1,10 +1,10 @@
-use pkcore::arrays::matchups::masked::Masked;
-use pkcore::util::csv::distinct_shus_from_csv_as_masked_vec;
-use rand::prelude::SliceRandom;
-use rusqlite::Connection;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
-use pkcore::util::terminal::receive_usize;
+use pkcore::arrays::matchups::masked::Masked;
+use pkcore::util::csv::distinct_shus_from_csv_as_masked_vec;
+use pkcore::util::terminal::Terminal;
+use rand::prelude::SliceRandom;
+use rusqlite::Connection;
 
 /// `cargo run --example audit`
 fn main() {
@@ -19,7 +19,7 @@ fn main() {
 
 fn read_input(conn: &Connection, distinct: &Vec<Masked>) {
     let mut x = 0usize;
-    let i = receive_usize("How many audits? ");
+    let i = Terminal::receive_usize("How many audits? ");
     println!("Auditing {i} hands.");
 
     while x < i {
@@ -40,7 +40,6 @@ fn read_input(conn: &Connection, distinct: &Vec<Masked>) {
             }
         };
         if HUPResult::exists(&conn, &masked.shu) {
-
         } else {
             println!("Not in DB: {}", &masked.shu);
         }

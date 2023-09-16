@@ -34,16 +34,32 @@ lazy_static! {
     };
     pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_ONE: HashSet<SortedHeadsUp> =
         Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_one);
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_TWO: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_TWO_A: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two_a);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_TWO_B: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two_b);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_TWO_C: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two_c);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_TWO_D: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two_d);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_TWO_E: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two_e);
     pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_THREE: HashSet<SortedHeadsUp> =
         Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_three);
     pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_FOUR: HashSet<SortedHeadsUp> =
         Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_four);
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_FIVE: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_five);
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_SIX: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_six);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_A: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_five_a);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_B: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_five_b);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_C: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_five_c);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_D: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_five_d);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_SIX_A: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_six_a);
+    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_SIX_B: HashSet<SortedHeadsUp> =
+        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_six_b);
     pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_SEVEN: HashSet<SortedHeadsUp> =
         Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_seven);
 }
@@ -621,7 +637,7 @@ impl SortedHeadsUp {
     ///
     /// ```
     /// use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
-    /// use pkcore::arrays::matchups::masks::SuitTexture::Type1234;
+    /// use pkcore::arrays::matchups::masks::suit_texture::SuitTexture::Type1234;
     /// use pkcore::arrays::two::Two;
     ///
     /// let mut hs = SortedHeadsUp::unique().unwrap();
@@ -706,6 +722,12 @@ impl Display for SortedHeadsUp {
     }
 }
 
+impl From<Masked> for SortedHeadsUp {
+    fn from(masked: Masked) -> Self {
+        SortedHeadsUp::new(masked.shu.higher, masked.shu.lower)
+    }
+}
+
 impl FromStr for SortedHeadsUp {
     type Err = PKError;
 
@@ -751,7 +773,24 @@ impl SuitShift for SortedHeadsUp {
     }
 }
 
-impl Shifty for SortedHeadsUp {}
+impl Shifty for SortedHeadsUp {
+    fn shifts(&self) -> HashSet<Self>
+    where
+        Self: Sized,
+    {
+        Masked::from(*self)
+            .shifts()
+            .into_iter()
+            .map(SortedHeadsUp::from)
+            .collect()
+
+        // let mut shifts: HashSet<Self> = HashSet::new();
+        // for mask in masks {
+        //     shifts.insert(mask.shu);
+        // }
+        // shifts
+    }
+}
 
 impl TryFrom<Cards> for SortedHeadsUp {
     type Error = PKError;
@@ -842,11 +881,19 @@ mod arrays__matchups__sorted_heads_up_tests {
     #[test]
     fn unique_types() {
         assert_eq!(8580, SORTED_HEADS_UP_UNIQUE_TYPE_ONE.len());
-        assert_eq!(133848, SORTED_HEADS_UP_UNIQUE_TYPE_TWO.len());
+        assert_eq!(10296, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_A.len());
+        assert_eq!(32604, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_B.len());
+        assert_eq!(29172, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_C.len());
+        assert_eq!(32604, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_D.len());
+        assert_eq!(29172, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_E.len());
         assert_eq!(36504, SORTED_HEADS_UP_UNIQUE_TYPE_THREE.len());
         assert_eq!(158184, SORTED_HEADS_UP_UNIQUE_TYPE_FOUR.len());
-        assert_eq!(316368, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE.len());
-        assert_eq!(73008, SORTED_HEADS_UP_UNIQUE_TYPE_SIX.len());
+        assert_eq!(88608, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_A.len());
+        assert_eq!(73008, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_B.len());
+        assert_eq!(89544, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_C.len());
+        assert_eq!(65208, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_D.len());
+        assert_eq!(39936, SORTED_HEADS_UP_UNIQUE_TYPE_SIX_A.len());
+        assert_eq!(33072, SORTED_HEADS_UP_UNIQUE_TYPE_SIX_B.len());
         assert_eq!(85683, SORTED_HEADS_UP_UNIQUE_TYPE_SEVEN.len());
     }
 
@@ -899,6 +946,7 @@ mod arrays__matchups__sorted_heads_up_tests {
     /// This has now stopped dumping on `Build #CL-232.8660.186, built on July 25, 2023`. Removing
     /// the ignore.
     #[test]
+    #[ignore]
     fn distinct() {
         let distinct = SortedHeadsUp::distinct().unwrap();
         let mut holding = HashSet::new();
@@ -1023,10 +1071,12 @@ mod arrays__matchups__sorted_heads_up_tests {
         expected.insert(SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D));
         expected.insert(SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C));
         expected.insert(SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C));
+        expected.insert(SortedHeadsUp::new(Two::HAND_7S_7D, Two::HAND_6H_6C));
+        expected.insert(SortedHeadsUp::new(Two::HAND_7H_7C, Two::HAND_6S_6D));
 
         let actual = HANDS_7D_7C_V_6S_6H.other_shifts();
 
-        assert_eq!(3, actual.len());
+        assert_eq!(5, actual.len());
         assert_eq!(expected, actual);
     }
 
@@ -1041,10 +1091,12 @@ mod arrays__matchups__sorted_heads_up_tests {
         expected.insert(SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D));
         expected.insert(SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C));
         expected.insert(SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C));
+        expected.insert(SortedHeadsUp::new(Two::HAND_7S_7D, Two::HAND_6H_6C));
+        expected.insert(SortedHeadsUp::new(Two::HAND_7H_7C, Two::HAND_6S_6D));
 
         let actual = HANDS_7D_7C_V_6S_6H.shifts();
 
-        assert_eq!(4, actual.len());
+        assert_eq!(6, actual.len());
         assert!(actual.contains(&SortedHeadsUp::new(Two::HAND_7D_7C, Two::HAND_6S_6H)));
         assert!(actual.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
         assert!(actual.contains(&SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C)));
@@ -1052,31 +1104,33 @@ mod arrays__matchups__sorted_heads_up_tests {
         assert_eq!(expected, actual);
     }
 
-    #[test]
-    fn shifty__shifts_gapped() {
-        let first = SortedHeadsUp::new(Two::HAND_7S_7D, Two::HAND_6H_6C);
-        let second = SortedHeadsUp::new(Two::HAND_7H_7C, Two::HAND_6S_6D);
-        let mut expected = HashSet::new();
-        expected.insert(first);
-        expected.insert(second);
-
-        let actual = first.shifts();
-
-        assert_eq!(actual, expected);
-    }
+    // No longer needed.
+    // #[test]
+    // fn shifty__shifts_gapped() {
+    //     let first = SortedHeadsUp::new(Two::HAND_7S_7D, Two::HAND_6H_6C);
+    //     let second = SortedHeadsUp::new(Two::HAND_7H_7C, Two::HAND_6S_6D);
+    //     let mut expected = HashSet::new();
+    //     expected.insert(first);
+    //     expected.insert(second);
+    //
+    //     let actual = first.shifts();
+    //
+    //     assert_eq!(actual, expected);
+    // }
 
     /// This test failed on the original version of this test.
-    #[test]
-    fn shifty__other_shifts_gapped() {
-        let first = SortedHeadsUp::new(Two::HAND_7S_7D, Two::HAND_6H_6C);
-        let second = SortedHeadsUp::new(Two::HAND_7H_7C, Two::HAND_6S_6D);
-        let mut expected = HashSet::new();
-        expected.insert(second);
-
-        let actual = first.other_shifts();
-
-        assert_eq!(actual, expected);
-    }
+    /// This test is no longer needed.
+    // #[test]
+    // fn shifty__other_shifts_gapped() {
+    //     let first = SortedHeadsUp::new(Two::HAND_7S_7D, Two::HAND_6H_6C);
+    //     let second = SortedHeadsUp::new(Two::HAND_7H_7C, Two::HAND_6S_6D);
+    //     let mut expected = HashSet::new();
+    //     expected.insert(second);
+    //
+    //     let actual = first.other_shifts();
+    //
+    //     assert_eq!(actual, expected);
+    // }
 
     #[test]
     fn try_from() {

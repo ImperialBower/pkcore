@@ -1,7 +1,7 @@
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::masked::{Masked, MASKED_DISTINCT};
-use pkcore::util::terminal::receive_usize;
+use pkcore::util::terminal::Terminal;
 use rand::prelude::IteratorRandom;
 use rusqlite::Connection;
 use std::collections::HashSet;
@@ -17,7 +17,7 @@ fn main() {
 
 fn read_input(conn: &Connection, distinct: &mut HashSet<Masked>) {
     let mut x = 0usize;
-    let i = receive_usize("How many runs? ");
+    let i = Terminal::receive_usize("How many runs? ");
     println!("Processing {i} hands.");
 
     let mut rng = rand::thread_rng();

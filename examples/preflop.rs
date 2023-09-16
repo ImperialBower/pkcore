@@ -2,7 +2,7 @@ use csv::Reader;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
-use pkcore::util::terminal::receive_usize;
+use pkcore::util::terminal::Terminal;
 use pkcore::Shifty;
 use rusqlite::Connection;
 use std::fs::File;
@@ -127,7 +127,7 @@ fn main() {
 fn read_input(conn: &Connection, shus: &mut Vec<SortedHeadsUp>) {
     let now = std::time::Instant::now();
 
-    let i = receive_usize("How many runs? ");
+    let i = Terminal::receive_usize("How many runs? ");
 
     println!("Processing {i} hands.");
 

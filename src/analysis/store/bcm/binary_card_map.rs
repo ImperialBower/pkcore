@@ -134,7 +134,7 @@ pub struct SevenFiveBCM {
 }
 
 impl SevenFiveBCM {
-    pub const DEFAULT_PKCORE_75BCM_CSV_PATH: &str = "generated/bcm.original.csv";
+    pub const DEFAULT_PKCORE_75BCM_CSV_PATH: &'static str = "generated/bcm.original.csv";
 
     #[must_use]
     pub fn get_csv_filepath() -> String {

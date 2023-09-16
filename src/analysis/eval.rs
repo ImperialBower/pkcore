@@ -1,7 +1,9 @@
 use crate::analysis::hand_rank::HandRank;
+use crate::analysis::store::bcm::binary_card_map::FiveBCM;
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::HandRanker;
+use crate::PKError;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 
@@ -216,6 +218,17 @@ impl From<Five> for Eval {
         let (hand_rank, hand) = five.hand_rank_and_hand();
 
         Eval { hand_rank, hand }
+    }
+}
+
+impl TryFrom<FiveBCM> for Eval {
+    type Error = PKError;
+
+    fn try_from(bcm: FiveBCM) -> Result<Self, Self::Error> {
+        Ok(Eval {
+            hand_rank: HandRank::from(bcm.rank),
+            hand: Five::try_from(bcm.bc)?,
+        })
     }
 }
 

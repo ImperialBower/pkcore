@@ -2,6 +2,7 @@ use crate::analysis::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
+use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::play::board::Board;
@@ -305,6 +306,14 @@ impl Pile for Five {
 
     fn to_vec(&self) -> Vec<Card> {
         self.0.to_vec()
+    }
+}
+
+impl TryFrom<Bard> for Five {
+    type Error = PKError;
+
+    fn try_from(bard: Bard) -> Result<Self, Self::Error> {
+        Five::try_from(Cards::from(bard))
     }
 }
 
