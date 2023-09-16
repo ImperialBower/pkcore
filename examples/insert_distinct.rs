@@ -1,9 +1,9 @@
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::masked::Masked;
-use pkcore::util::terminal::receive_usize;
-use rusqlite::Connection;
 use pkcore::util::csv::distinct_shus_from_csv_as_masked_vec;
+use pkcore::util::terminal::Terminal;
+use rusqlite::Connection;
 
 /// `cargo run --example insert_distinct`
 fn main() {
@@ -18,7 +18,7 @@ fn main() {
 }
 fn read_input(conn: &Connection, distinct: &mut Vec<Masked>) {
     let mut x = 0usize;
-    let i = receive_usize("How many runs? ");
+    let i = Terminal::receive_usize("How many runs? ");
     println!("Processing {i} hands.");
 
     while x < i {

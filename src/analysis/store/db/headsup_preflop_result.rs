@@ -13,7 +13,7 @@ use std::fmt::{Display, Formatter};
 use std::fs::File;
 
 /// TODO TD: Why u64 not usize?
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[serde(rename_all = "PascalCase")]
 pub struct HUPResult {
     pub higher: Bard,
@@ -169,6 +169,18 @@ impl HUPResult {
         }
     }
 
+    pub fn select_from_shifts(conn: &Connection, masked: &Masked) -> Option<HUPResult> {
+        for shift in masked.shifts() {
+            match HUPResult::select(conn, &shift.shu) {
+                None => {}
+                Some(hupr) => {
+                    return Some(hupr);
+                }
+            }
+        }
+        None
+    }
+
     pub fn distinct_remaining(conn: &Connection) -> HashSet<Masked> {
         let mut distinct = MASKED_DISTINCT.clone();
         let hups = HUPResult::select_all(conn);
@@ -176,6 +188,13 @@ impl HUPResult {
             distinct.remove(&Masked::from(hup));
         }
         distinct
+    }
+
+    #[must_use]
+    pub fn matches(&self, other: &Self) -> bool {
+        (self.higher_wins == other.higher_wins)
+            && (self.lower_wins == other.lower_wins)
+            && (self.ties == other.ties)
     }
 
     /// # Errors
@@ -200,6 +219,33 @@ impl HUPResult {
             Err(_) => Err(PKError::Fubar),
         }
     }
+
+    // region private methods
+
+    fn fold(&self, masked: &Masked) -> Self {
+        let mymask = Masked::from(self);
+        if mymask.rank_mask == masked.rank_mask {
+            HUPResult {
+                higher: masked.shu.higher_as_bard(),
+                lower: masked.shu.lower_as_bard(),
+                higher_wins: self.higher_wins,
+                lower_wins: self.lower_wins,
+                ties: self.ties,
+            }
+        } else if mymask.rank_mask == masked.rank_mask.invert() {
+            HUPResult {
+                higher: masked.shu.higher_as_bard(),
+                lower: masked.shu.lower_as_bard(),
+                higher_wins: self.lower_wins,
+                lower_wins: self.higher_wins,
+                ties: self.ties,
+            }
+        } else {
+            HUPResult::default()
+        }
+    }
+
+    // endregion
 }
 
 impl Display for HUPResult {
@@ -438,16 +484,30 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
 
 impl SuitShift for HUPResult {
     fn shift_suit_down(&self) -> Self {
-        let shu = match SortedHeadsUp::try_from(self) {
-            Ok(s) => s.shift_suit_down(),
-            Err(_) => SortedHeadsUp::default(),
-        };
-        HUPResult {
-            higher: shu.higher_as_bard(),
-            lower: shu.lower_as_bard(),
-            higher_wins: self.higher_wins,
-            lower_wins: self.lower_wins,
-            ties: self.ties,
+        match SortedHeadsUp::try_from(self) {
+            Ok(s) => {
+                let first = s.higher.shift_suit_down();
+                let second = s.lower.shift_suit_down();
+
+                if second > first {
+                    HUPResult {
+                        higher: second.bard(),
+                        lower: first.bard(),
+                        higher_wins: self.lower_wins,
+                        lower_wins: self.higher_wins,
+                        ties: self.ties,
+                    }
+                } else {
+                    HUPResult {
+                        higher: first.bard(),
+                        lower: second.bard(),
+                        higher_wins: self.higher_wins,
+                        lower_wins: self.lower_wins,
+                        ties: self.ties,
+                    }
+                }
+            }
+            Err(_) => HUPResult::default(),
         }
     }
 
@@ -473,16 +533,30 @@ impl SuitShift for HUPResult {
     /// }
     /// ```
     fn shift_suit_up(&self) -> Self {
-        let shu = match SortedHeadsUp::try_from(self) {
-            Ok(s) => s.shift_suit_up(),
-            Err(_) => SortedHeadsUp::default(),
-        };
-        HUPResult {
-            higher: shu.higher_as_bard(),
-            lower: shu.lower_as_bard(),
-            higher_wins: self.higher_wins,
-            lower_wins: self.lower_wins,
-            ties: self.ties,
+        match SortedHeadsUp::try_from(self) {
+            Ok(s) => {
+                let first = s.higher.shift_suit_up();
+                let second = s.lower.shift_suit_up();
+
+                if second > first {
+                    HUPResult {
+                        higher: second.bard(),
+                        lower: first.bard(),
+                        higher_wins: self.lower_wins,
+                        lower_wins: self.higher_wins,
+                        ties: self.ties,
+                    }
+                } else {
+                    HUPResult {
+                        higher: first.bard(),
+                        lower: second.bard(),
+                        higher_wins: self.higher_wins,
+                        lower_wins: self.lower_wins,
+                        ties: self.ties,
+                    }
+                }
+            }
+            Err(_) => HUPResult::default(),
         }
     }
 
@@ -501,7 +575,21 @@ impl SuitShift for HUPResult {
     }
 }
 
-impl Shifty for HUPResult {}
+impl Shifty for HUPResult {
+    fn shifts(&self) -> HashSet<Self>
+    where
+        Self: Sized,
+    {
+        let masks = Masked::from(self).other_shifts();
+        let mut shifts: HashSet<Self> = HashSet::new();
+        shifts.insert(*self);
+
+        for mask in masks {
+            shifts.insert(self.fold(&mask));
+        }
+        shifts
+    }
+}
 
 #[cfg(test)]
 #[allow(non_snake_case)]
@@ -511,6 +599,7 @@ mod analysis__store__db__hupresult_tests {
     use crate::arrays::two::Two;
     use crate::util::data::TestData;
     use std::collections::HashSet;
+    use std::str::FromStr;
 
     const SAMPLE_DB_PATH: &str = "data/sample_hups.db";
 
@@ -530,6 +619,46 @@ mod analysis__store__db__hupresult_tests {
     }
 
     #[test]
+    fn matches() {
+        let first = HUPResult {
+            higher: Bard::SIX_SPADES | Bard::SIX_HEARTS,
+            lower: Bard::FIVE_DIAMONDS | Bard::FIVE_CLUBS,
+            higher_wins: 1_365_284,
+            lower_wins: 314_904,
+            ties: 32_116,
+        };
+        let second = HUPResult {
+            higher: Bard::SIX_DIAMONDS | Bard::SIX_CLUBS,
+            lower: Bard::FIVE_SPADES | Bard::FIVE_HEARTS,
+            higher_wins: 1_365_284,
+            lower_wins: 314_904,
+            ties: 32_116,
+        };
+
+        assert!(first.matches(&second));
+    }
+
+    #[test]
+    fn matches_not() {
+        let first = HUPResult {
+            higher: Bard::ACE_SPADES | Bard::FIVE_HEARTS,
+            lower: Bard::FOUR_HEARTS | Bard::TREY_HEARTS,
+            higher_wins: 1_068_796,
+            lower_wins: 632_976,
+            ties: 10_532,
+        };
+        let second = HUPResult {
+            higher: Bard::ACE_CLUBS | Bard::FIVE_CLUBS,
+            lower: Bard::FOUR_DIAMONDS | Bard::FIVE_CLUBS,
+            higher_wins: 1_145_595,
+            lower_wins: 556_028,
+            ties: 10_681,
+        };
+
+        assert!(!first.matches(&second));
+    }
+
+    #[test]
     fn get_sorted_heads_up() {
         assert_eq!(
             TestData::the_hand_sorted_headsup(),
@@ -537,6 +666,58 @@ mod analysis__store__db__hupresult_tests {
                 .get_sorted_heads_up()
                 .unwrap()
         );
+    }
+
+    // T♠ T♦ - T♥ 2♦ Type1223d 1010,0110 0000100000000,0000100000001
+    // T♠ T♥ - T♣ 2♥ Type1223d 1100,0101 0000100000000,0000100000001
+    // T♥ T♣ - T♦ 2♣ Type1223d 0101,0011 0000100000000,0000100000001
+    // T♥ T♦ - T♣ 2♦ Type1223d 0110,0011 0000100000000,0000100000001
+    // T♠ T♦ - T♣ 2♦ Type1223d 1010,0011 0000100000000,0000100000001
+    // T♠ T♣ - T♥ 2♣ Type1223d 1001,0101 0000100000000,0000100000001
+    // T♠ T♣ - T♦ 2♣ Type1223d 1001,0011 0000100000000,0000100000001
+    // T♠ T♥ - T♦ 2♥ Type1223d 1100,0110 0000100000000,0000100000001
+    // T♠ 2♣ - T♥ T♣ Type1223d 1001,0101 0000100000001,0000100000000
+    // T♠ 2♦ - T♥ T♦ Type1223d 1010,0110 0000100000001,0000100000000
+    // T♠ 2♣ - T♦ T♣ Type1223d 1001,0011 0000100000001,0000100000000
+    // T♥ 2♣ - T♦ T♣ Type1223d 0101,0011 0000100000001,0000100000000
+    #[test]
+    fn fold() {
+        let base = HUPResult {
+            higher: Two::HAND_TS_2H.bard(),
+            lower: Two::HAND_TH_TD.bard(),
+            higher_wins: 73_828,
+            lower_wins: 1_580_550,
+            ties: 57_926,
+        };
+        let masked = Masked::from_str("T♠ 2♣ T♥ T♣").unwrap();
+
+        let folded = base.fold(&masked);
+
+        assert_eq!(folded.higher, Two::HAND_TS_2C.bard());
+        assert_eq!(folded.lower, Two::HAND_TH_TC.bard());
+        assert_eq!(folded.higher_wins, 73_828);
+        assert_eq!(folded.lower_wins, 1_580_550);
+        assert_eq!(folded.ties, 57_926);
+    }
+
+    #[test]
+    fn fold_inverted() {
+        let base = HUPResult {
+            higher: Two::HAND_TS_2H.bard(),
+            lower: Two::HAND_TH_TD.bard(),
+            higher_wins: 73_828,
+            lower_wins: 1_580_550,
+            ties: 57_926,
+        };
+        let masked = Masked::from_str("T♠ T♥ T♣ 2♥").unwrap();
+
+        let folded = base.fold(&masked);
+
+        assert_eq!(folded.higher, Two::HAND_TS_TH.bard());
+        assert_eq!(folded.lower, Two::HAND_TC_2H.bard());
+        assert_eq!(folded.higher_wins, 1_580_550);
+        assert_eq!(folded.lower_wins, 73_828);
+        assert_eq!(folded.ties, 57_926);
     }
 
     /// I'm test driving this one backwards. I do that some time.
@@ -638,6 +819,30 @@ mod analysis__store__db__hupresult_tests {
         assert_eq!(hup1().shift_suit_up(), hup4());
     }
 
+    /// This is the worst case edge case, and why you need to watch out for those edge cases and
+    /// write tests. You're assumptions are what will kill you. Those you need to test.
+    ///
+    /// This was a big miss by me, that the shifts will invert the order of the sort, and thus the
+    /// results need to be inverted.
+    #[test]
+    fn suit_shift__shift_suit_up__defect() {
+        let base = HUPResult {
+            higher: Two::HAND_TS_2H.bard(),
+            lower: Two::HAND_TH_TD.bard(),
+            higher_wins: 73_828,
+            lower_wins: 1_580_550,
+            ties: 57_926,
+        };
+        let shiftup = base.shift_suit_up();
+
+        assert_eq!(shiftup.higher, Two::HAND_TS_TH.bard());
+        assert_eq!(shiftup.lower, Two::HAND_TC_2S.bard());
+        assert_eq!(shiftup.higher_wins, 1_580_550);
+        assert_eq!(shiftup.lower_wins, 73_828);
+        assert_eq!(shiftup.ties, 57_926);
+        assert_eq!(shiftup.shift_suit_down(), base);
+    }
+
     /// These tests are a pain in the ass to setup. Not sure what an easier way to do it is. Slow
     /// and stupid wins the race I guess.
     #[test]
@@ -645,15 +850,20 @@ mod analysis__store__db__hupresult_tests {
         let actual = hup1().shifts();
 
         assert!(actual.contains(&hup1()));
-        assert!(actual.contains(&hup3()));
-
         assert!(actual.contains(&hup2()));
+        assert!(actual.contains(&hup3()));
         assert!(actual.contains(&hup4()));
-        assert_eq!(actual.len(), 4);
+        assert!(actual.contains(&hup5()));
+        assert!(actual.contains(&hup6()));
+
+        assert_eq!(actual.len(), 6);
         assert_eq!(hs(), actual);
     }
 
     /// Test data
+
+    // 7♠ 7♦ (1375342) 6♥ 6♣ (315362) ties: (21600)
+
     fn hup1() -> HUPResult {
         HUPResult {
             higher: Two::HAND_7D_7C.bard(),
@@ -694,8 +904,28 @@ mod analysis__store__db__hupresult_tests {
         }
     }
 
+    fn hup5() -> HUPResult {
+        HUPResult {
+            higher: Two::HAND_7H_7C.bard(),
+            lower: Two::HAND_6S_6D.bard(),
+            higher_wins: 1375342,
+            lower_wins: 315362,
+            ties: 21600,
+        }
+    }
+
+    fn hup6() -> HUPResult {
+        HUPResult {
+            higher: Two::HAND_7S_7D.bard(),
+            lower: Two::HAND_6H_6C.bard(),
+            higher_wins: 1375342,
+            lower_wins: 315362,
+            ties: 21600,
+        }
+    }
+
     fn v() -> Vec<HUPResult> {
-        let v: Vec<HUPResult> = vec![hup1(), hup2(), hup3(), hup4()];
+        let v: Vec<HUPResult> = vec![hup1(), hup2(), hup3(), hup4(), hup5(), hup6()];
         v
     }
 

@@ -177,7 +177,13 @@ impl TestData {
 
     #[must_use]
     pub fn known_hups() -> Vec<HUPResult> {
-        let mut hups: Vec<HUPResult> = Vec::new();
+        let mut hups: Vec<HUPResult> = vec![HUPResult {
+            higher: Two::HAND_AS_AH.bard(),
+            lower: Two::HAND_7D_7C.bard(),
+            higher_wins: 1364608,
+            lower_wins: 343300,
+            ties: 4396,
+        }];
 
         hups.push(HUPResult {
             higher: Two::HAND_AS_AH.bard(),

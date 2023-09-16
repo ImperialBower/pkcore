@@ -1,8 +1,8 @@
+pub mod csv;
 pub mod data;
 pub mod random_ordering;
 pub mod terminal;
 pub mod wincounter;
-pub mod csv;
 
 /// Blank struct that is home to misfit utility functions.
 ///

@@ -5,7 +5,7 @@ use rusqlite::Connection;
 ///
 /// `cargo run --example hup_check`
 fn main() -> Result<(), rusqlite::Error> {
-    let conn = Connection::open("generated/hups.db")?;
+    let conn = Connection::open("generated/dhups.db")?;
     match HUPResult::check_db(&conn) {
         Ok(count) => println!("HUP Check passes! {count} unique entries"),
         Err(_) => println!("DB misaligned"),

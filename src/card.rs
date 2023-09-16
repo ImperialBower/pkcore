@@ -289,6 +289,15 @@ impl FromStr for Card {
     }
 }
 
+// impl IntoParallelIterator for Card {
+//     type Iter = Self;
+//     type Item = rayon::range::Iter<Card>;
+//
+//     fn into_par_iter(self) -> Self::Iter {
+//         todo!()
+//     }
+// }
+
 impl Pile for Card {
     fn clean(&self) -> Self {
         Card(self.0 & Card::FREQUENCY_MASK_FILTER)

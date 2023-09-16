@@ -1,5 +1,7 @@
 use crate::analysis::store::db::headsup_preflop_result::HUPResult;
-use crate::arrays::matchups::masks::{RankMask, SuitMask, SuitTexture};
+use crate::arrays::matchups::masks::rank_mask::RankMask;
+use crate::arrays::matchups::masks::suit_mask::SuitMask;
+use crate::arrays::matchups::masks::suit_texture::SuitTexture;
 use crate::arrays::matchups::sorted_heads_up::{SortedHeadsUp, SORTED_HEADS_UP_UNIQUE};
 use crate::cards::Cards;
 use crate::{PKError, Shifty, SuitShift};
@@ -14,16 +16,32 @@ lazy_static! {
     pub static ref MASKED_UNIQUE: HashSet<Masked> = Masked::parse(&SORTED_HEADS_UP_UNIQUE);
     pub static ref MASKED_UNIQUE_TYPE_ONE: HashSet<Masked> =
         Masked::filter(&MASKED_UNIQUE, Masked::is_type_one);
-    pub static ref MASKED_UNIQUE_TYPE_TWO: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_two);
+    pub static ref MASKED_UNIQUE_TYPE_TWO_A: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_two_a);
+    pub static ref MASKED_UNIQUE_TYPE_TWO_B: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_two_b);
+    pub static ref MASKED_UNIQUE_TYPE_TWO_C: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_two_c);
+    pub static ref MASKED_UNIQUE_TYPE_TWO_D: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_two_d);
+    pub static ref MASKED_UNIQUE_TYPE_TWO_E: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_two_e);
     pub static ref MASKED_UNIQUE_TYPE_THREE: HashSet<Masked> =
         Masked::filter(&MASKED_UNIQUE, Masked::is_type_three);
     pub static ref MASKED_UNIQUE_TYPE_FOUR: HashSet<Masked> =
         Masked::filter(&MASKED_UNIQUE, Masked::is_type_four);
-    pub static ref MASKED_UNIQUE_TYPE_FIVE: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_five);
-    pub static ref MASKED_UNIQUE_TYPE_SIX: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_six);
+    pub static ref MASKED_UNIQUE_TYPE_FIVE_A: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_five_a);
+    pub static ref MASKED_UNIQUE_TYPE_FIVE_B: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_five_b);
+    pub static ref MASKED_UNIQUE_TYPE_FIVE_C: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_five_c);
+    pub static ref MASKED_UNIQUE_TYPE_FIVE_D: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_five_d);
+    pub static ref MASKED_UNIQUE_TYPE_SIX_A: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_six_a);
+    pub static ref MASKED_UNIQUE_TYPE_SIX_B: HashSet<Masked> =
+        Masked::filter(&MASKED_UNIQUE, Masked::is_type_six_b);
     pub static ref MASKED_UNIQUE_TYPE_SEVEN: HashSet<Masked> =
         Masked::filter(&MASKED_UNIQUE, Masked::is_type_seven);
     /// These are available as `data/distinct_masked_shus.csv`.
@@ -47,6 +65,7 @@ impl From<Masked> for RankMasked {
     }
 }
 
+/// TODO DEFECT:
 #[derive(
     Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
 )]
@@ -106,6 +125,7 @@ impl Masked {
         for masked in &v {
             if unique.contains(masked) {
                 for shift in masked.other_shifts() {
+                    // println!("Removing {shift}");
                     unique.remove(&shift);
                 }
             }
@@ -155,11 +175,19 @@ impl Masked {
         match self.texture {
             SuitTexture::TypeUnknown => HashSet::new(),
             SuitTexture::Type1111 => MASKED_UNIQUE_TYPE_ONE.clone(),
-            SuitTexture::Type1112 => MASKED_UNIQUE_TYPE_TWO.clone(),
+            SuitTexture::Type1112a => MASKED_UNIQUE_TYPE_TWO_A.clone(),
+            SuitTexture::Type1112b => MASKED_UNIQUE_TYPE_TWO_B.clone(),
+            SuitTexture::Type1112c => MASKED_UNIQUE_TYPE_TWO_C.clone(),
+            SuitTexture::Type1112d => MASKED_UNIQUE_TYPE_TWO_D.clone(),
+            SuitTexture::Type1112e => MASKED_UNIQUE_TYPE_TWO_E.clone(),
             SuitTexture::Type1122 => MASKED_UNIQUE_TYPE_THREE.clone(),
             SuitTexture::Type1123 => MASKED_UNIQUE_TYPE_FOUR.clone(),
-            SuitTexture::Type1223 => MASKED_UNIQUE_TYPE_FIVE.clone(),
-            SuitTexture::Type1212 => MASKED_UNIQUE_TYPE_SIX.clone(),
+            SuitTexture::Type1223a => MASKED_UNIQUE_TYPE_FIVE_A.clone(),
+            SuitTexture::Type1223b => MASKED_UNIQUE_TYPE_FIVE_B.clone(),
+            SuitTexture::Type1223c => MASKED_UNIQUE_TYPE_FIVE_C.clone(),
+            SuitTexture::Type1223d => MASKED_UNIQUE_TYPE_FIVE_D.clone(),
+            SuitTexture::Type1212a => MASKED_UNIQUE_TYPE_SIX_A.clone(),
+            SuitTexture::Type1212b => MASKED_UNIQUE_TYPE_SIX_B.clone(),
             SuitTexture::Type1234 => MASKED_UNIQUE_TYPE_SEVEN.clone(),
         }
     }
@@ -251,8 +279,28 @@ impl Masked {
     /// 1100,1000
     /// ```
     #[must_use]
-    pub fn is_type_two(&self) -> bool {
-        self.texture == SuitTexture::Type1112
+    pub fn is_type_two_a(&self) -> bool {
+        self.texture == SuitTexture::Type1112a
+    }
+
+    #[must_use]
+    pub fn is_type_two_b(&self) -> bool {
+        self.texture == SuitTexture::Type1112b
+    }
+
+    #[must_use]
+    pub fn is_type_two_c(&self) -> bool {
+        self.texture == SuitTexture::Type1112c
+    }
+
+    #[must_use]
+    pub fn is_type_two_d(&self) -> bool {
+        self.texture == SuitTexture::Type1112d
+    }
+
+    #[must_use]
+    pub fn is_type_two_e(&self) -> bool {
+        self.texture == SuitTexture::Type1112e
     }
 
     /// `1122 - suited, suited, different suits`
@@ -342,9 +390,26 @@ impl Masked {
     /// 1100,1001
     /// 1100,1010
     /// ```
+    ///
+    /// High suits equal
     #[must_use]
-    pub fn is_type_five(&self) -> bool {
-        self.texture == SuitTexture::Type1223
+    pub fn is_type_five_a(&self) -> bool {
+        self.texture == SuitTexture::Type1223a
+    }
+
+    #[must_use]
+    pub fn is_type_five_b(&self) -> bool {
+        self.texture == SuitTexture::Type1223b
+    }
+
+    #[must_use]
+    pub fn is_type_five_c(&self) -> bool {
+        self.texture == SuitTexture::Type1223c
+    }
+
+    #[must_use]
+    pub fn is_type_five_d(&self) -> bool {
+        self.texture == SuitTexture::Type1223d
     }
 
     /// `1212 - off suit, off suit, sharing both suits`
@@ -360,8 +425,13 @@ impl Masked {
     /// 1100,1100
     /// ```
     #[must_use]
-    pub fn is_type_six(&self) -> bool {
-        self.texture == SuitTexture::Type1212
+    pub fn is_type_six_a(&self) -> bool {
+        self.texture == SuitTexture::Type1212a
+    }
+
+    #[must_use]
+    pub fn is_type_six_b(&self) -> bool {
+        self.texture == SuitTexture::Type1212b
     }
 
     /// `1234 - off suit, off suit, sharing no suits`
@@ -396,7 +466,13 @@ impl Display for Masked {
 
 impl From<HUPResult> for Masked {
     fn from(hup: HUPResult) -> Self {
-        Masked::from(SortedHeadsUp::try_from(&hup).unwrap())
+        Masked::from(&hup)
+    }
+}
+
+impl From<&HUPResult> for Masked {
+    fn from(hup: &HUPResult) -> Self {
+        Masked::from(SortedHeadsUp::try_from(hup).unwrap())
     }
 }
 
@@ -449,19 +525,6 @@ impl SuitShift for Masked {
 
 impl Shifty for Masked {
     #[must_use]
-    fn other_shifts(&self) -> HashSet<Self>
-    where
-        Self: Sized,
-        Self: Eq,
-        Self: Hash,
-        Self: Display,
-    {
-        let mut shifts = self.shifts();
-        shifts.remove(self);
-        shifts
-    }
-
-    #[must_use]
     fn shifts(&self) -> HashSet<Self>
     where
         Self: Sized,
@@ -469,10 +532,20 @@ impl Shifty for Masked {
         Self: Hash,
         Self: Display,
     {
-        self.my_types()
+        let mut shifts: HashSet<Self> = self
+            .my_types()
             .into_iter()
             .filter(|x| x.rank_mask == self.rank_mask)
-            .collect()
+            .collect();
+
+        let opposites: HashSet<Self> = self
+            .my_types()
+            .into_iter()
+            .filter(|x| x.rank_mask == self.rank_mask.invert())
+            .collect();
+
+        shifts.extend(&opposites);
+        shifts
     }
 }
 
@@ -500,6 +573,22 @@ mod arrays__matchups__masked_tests {
     };
 
     #[test]
+    #[ignore]
+    fn distinct() {
+        let mut distinct = Masked::distinct();
+
+        for masked in distinct.clone() {
+            for shift in masked.other_shifts() {
+                if !distinct.insert(shift) {
+                    println!("{shift} already existed");
+                }
+            }
+        }
+
+        assert_eq!(distinct.len(), SORTED_HEADS_UP_UNIQUE.len());
+    }
+
+    #[test]
     fn suit_masks() {
         assert_eq!(
             4,
@@ -507,7 +596,7 @@ mod arrays__matchups__masked_tests {
         );
         assert_eq!(
             24,
-            Masked::suit_masks(&MASKED_UNIQUE_TYPE_TWO, Masked::is_type_two).len()
+            Masked::suit_masks(&MASKED_UNIQUE_TYPE_TWO_A, Masked::is_type_two_a).len()
         );
         assert_eq!(
             12,
@@ -519,11 +608,11 @@ mod arrays__matchups__masked_tests {
         );
         assert_eq!(
             24,
-            Masked::suit_masks(&MASKED_UNIQUE_TYPE_FIVE, Masked::is_type_five).len()
+            Masked::suit_masks(&MASKED_UNIQUE_TYPE_FIVE_A, Masked::is_type_five_a).len()
         );
         assert_eq!(
             6,
-            Masked::suit_masks(&MASKED_UNIQUE_TYPE_SIX, Masked::is_type_six).len()
+            Masked::suit_masks(&MASKED_UNIQUE_TYPE_SIX_A, Masked::is_type_six_a).len()
         );
         assert_eq!(
             6,
@@ -539,11 +628,19 @@ mod arrays__matchups__masked_tests {
     #[test]
     fn unique_types() {
         assert_eq!(8580, MASKED_UNIQUE_TYPE_ONE.len());
-        assert_eq!(133848, MASKED_UNIQUE_TYPE_TWO.len());
+        assert_eq!(10296, MASKED_UNIQUE_TYPE_TWO_A.len());
+        assert_eq!(32604, MASKED_UNIQUE_TYPE_TWO_B.len());
+        assert_eq!(29172, MASKED_UNIQUE_TYPE_TWO_C.len());
+        assert_eq!(32604, MASKED_UNIQUE_TYPE_TWO_D.len());
+        assert_eq!(29172, MASKED_UNIQUE_TYPE_TWO_E.len());
         assert_eq!(36504, MASKED_UNIQUE_TYPE_THREE.len());
         assert_eq!(158184, MASKED_UNIQUE_TYPE_FOUR.len());
-        assert_eq!(316368, MASKED_UNIQUE_TYPE_FIVE.len());
-        assert_eq!(73008, MASKED_UNIQUE_TYPE_SIX.len());
+        assert_eq!(88608, MASKED_UNIQUE_TYPE_FIVE_A.len());
+        assert_eq!(73008, MASKED_UNIQUE_TYPE_FIVE_B.len());
+        assert_eq!(89544, MASKED_UNIQUE_TYPE_FIVE_C.len());
+        assert_eq!(65208, MASKED_UNIQUE_TYPE_FIVE_D.len());
+        assert_eq!(39936, MASKED_UNIQUE_TYPE_SIX_A.len());
+        assert_eq!(33072, MASKED_UNIQUE_TYPE_SIX_B.len());
         assert_eq!(85683, MASKED_UNIQUE_TYPE_SEVEN.len());
     }
 
@@ -564,6 +661,29 @@ mod arrays__matchups__masked_tests {
         }
     }
 
+    #[test]
+    fn type_five_a_shifts() {
+        shifts_check("K♠ 7♥ T♠ 3♦", SuitTexture::Type1223a, 24);
+        shifts_check("K♠ Q♥ T♠ 3♦", SuitTexture::Type1223a, 24);
+        shifts_check("K♠ Q♥ Q♠ J♦", SuitTexture::Type1223a, 24);
+        shifts_check("K♠ Q♥ 3♠ 2♦", SuitTexture::Type1223a, 24);
+    }
+
+    #[test]
+    fn type_five_b_shifts() {
+        shifts_check("K♦ 7♠ T♣ 3♦", SuitTexture::Type1223b, 24);
+    }
+
+    #[test]
+    fn type_five_c_shifts() {
+        shifts_check("K♣ 7♠ T♠ 3♦", SuitTexture::Type1223c, 24);
+    }
+
+    #[test]
+    fn type_five_d_shifts() {
+        shifts_check("K♥ 7♦ T♠ 3♦", SuitTexture::Type1223d, 24);
+    }
+
     /// I'm really surprised that these type six shifts all have the exact same odds. I was worried
     /// that when the bottom hand was completely suit covered by the top one, that if you inverted
     /// the suits you would see a slightly different result from the matchup, but so far, you don't.
@@ -578,8 +698,13 @@ mod arrays__matchups__masked_tests {
     /// A♠ Q♥ 5♥ 2♠, 65.49% (1121471), 33.92% (580748), 0.59% (10085)
     /// ```
     #[test]
-    fn type_six_shifts() {
-        shifts_check("A♠ Q♥ 5♠ 2♥", SuitTexture::Type1212, 24);
+    fn type_six_a_shifts() {
+        shifts_check("A♠ Q♥ 5♠ 2♥", SuitTexture::Type1212a, 12);
+    }
+
+    #[test]
+    fn type_six_b_shifts() {
+        shifts_check("A♥ Q♠ 5♠ 2♥", SuitTexture::Type1212b, 12);
     }
 
     fn shifts_check(index: &str, texture: SuitTexture, num: usize) {
@@ -611,8 +736,24 @@ mod arrays__matchups__masked_tests {
             Masked::from(TestData::the_hand_sorted_headsup()).texture
         );
         assert_eq!(
-            SuitTexture::Type1112,
+            SuitTexture::Type1112a,
+            Masked::from(SortedHeadsUp::new(Two::HAND_AD_AC, Two::HAND_8C_7C)).texture
+        );
+        assert_eq!(
+            SuitTexture::Type1112b,
+            Masked::from(SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8D_7C)).texture
+        );
+        assert_eq!(
+            SuitTexture::Type1112c,
+            Masked::from(SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7D)).texture
+        );
+        assert_eq!(
+            SuitTexture::Type1112d,
             Masked::from(SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C)).texture
+        );
+        assert_eq!(
+            SuitTexture::Type1112e,
+            Masked::from(SortedHeadsUp::new(Two::HAND_AD_KC, Two::HAND_8C_7C)).texture
         );
         assert_eq!(
             SuitTexture::Type1122,
@@ -623,11 +764,27 @@ mod arrays__matchups__masked_tests {
             Masked::from(SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D)).texture
         );
         assert_eq!(
-            SuitTexture::Type1223,
-            Masked::from(SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7D)).texture
+            SuitTexture::Type1223a,
+            Masked::from(SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8C_7D)).texture
         );
         assert_eq!(
-            SuitTexture::Type1212,
+            SuitTexture::Type1223b,
+            Masked::from(SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8D_7C)).texture
+        );
+        assert_eq!(
+            SuitTexture::Type1223c,
+            Masked::from(SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7H)).texture
+        );
+        assert_eq!(
+            SuitTexture::Type1223d,
+            Masked::from(SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8D_7S)).texture
+        );
+        assert_eq!(
+            SuitTexture::Type1212a,
+            Masked::from(SortedHeadsUp::new(Two::HAND_AS_KC, Two::HAND_8S_7C)).texture
+        );
+        assert_eq!(
+            SuitTexture::Type1212b,
             Masked::from(SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7C)).texture
         );
         assert_eq!(
@@ -647,12 +804,48 @@ mod arrays__matchups__masked_tests {
     }
 
     #[test]
-    fn is_type_two() {
+    fn is_type_two_a() {
+        let yes = Masked::from(SortedHeadsUp::new(Two::HAND_AD_AC, Two::HAND_8C_7C));
+        let no = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C));
+
+        assert!(yes.is_type_two_a());
+        assert!(!no.is_type_two_a());
+    }
+
+    #[test]
+    fn is_type_two_b() {
+        let yes = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8D_7C));
+        let no = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C));
+
+        assert!(yes.is_type_two_b());
+        assert!(!no.is_type_two_b());
+    }
+
+    #[test]
+    fn is_type_two_c() {
+        let yes = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7D));
+        let no = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C));
+
+        assert!(yes.is_type_two_c());
+        assert!(!no.is_type_two_c());
+    }
+
+    #[test]
+    fn is_type_two_d() {
         let yes = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C));
         let no = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C));
 
-        assert!(yes.is_type_two());
-        assert!(!no.is_type_two());
+        assert!(yes.is_type_two_d());
+        assert!(!no.is_type_two_d());
+    }
+
+    #[test]
+    fn is_type_two_e() {
+        let yes = Masked::from(SortedHeadsUp::new(Two::HAND_AD_KC, Two::HAND_8C_7C));
+        let no = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8C_7C));
+
+        assert!(yes.is_type_two_e());
+        assert!(!no.is_type_two_e());
     }
 
     #[test]
@@ -674,21 +867,56 @@ mod arrays__matchups__masked_tests {
     }
 
     #[test]
-    fn is_type_five() {
-        let yes = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7D));
+    fn is_type_five_a() {
+        let yes = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KH, Two::HAND_8C_7D));
         let no = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D));
 
-        assert!(yes.is_type_five());
-        assert!(!no.is_type_five());
+        assert!(yes.is_type_five_a());
+        assert!(!no.is_type_five_a());
     }
 
     #[test]
-    fn is_type_six() {
+    fn is_type_five_b() {
+        let yes = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KH, Two::HAND_8D_7C));
+        let no = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D));
+
+        assert!(yes.is_type_five_b());
+        assert!(!no.is_type_five_b());
+    }
+
+    #[test]
+    fn is_type_five_c() {
+        let yes = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KH, Two::HAND_8H_7S));
+        let no = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D));
+
+        assert!(yes.is_type_five_c());
+        assert!(!no.is_type_five_c());
+    }
+    #[test]
+    fn is_type_five_d() {
+        let yes = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KH, Two::HAND_8S_7H));
+        let no = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KC, Two::HAND_8S_7D));
+
+        assert!(yes.is_type_five_d());
+        assert!(!no.is_type_five_d());
+    }
+
+    #[test]
+    fn is_type_six_a() {
+        let yes = Masked::from(SortedHeadsUp::new(Two::HAND_AS_KC, Two::HAND_8S_7C));
+        let no = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C));
+
+        assert!(yes.is_type_six_a());
+        assert!(!no.is_type_six_a());
+    }
+
+    #[test]
+    fn is_type_six_b() {
         let yes = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KS, Two::HAND_8S_7C));
         let no = Masked::from(SortedHeadsUp::new(Two::HAND_AC_KD, Two::HAND_8C_7C));
 
-        assert!(yes.is_type_six());
-        assert!(!no.is_type_six());
+        assert!(yes.is_type_six_b());
+        assert!(!no.is_type_six_b());
     }
 
     #[test]
