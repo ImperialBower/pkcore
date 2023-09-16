@@ -1,5 +1,6 @@
 pub mod csv;
 pub mod data;
+pub mod name;
 pub mod random_ordering;
 pub mod terminal;
 pub mod wincounter;

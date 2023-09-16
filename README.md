@@ -727,6 +727,9 @@
       * tables submodule
       * players submodule
       * Adding [uuid](https://crates.io/crates/uuid) crate
+      * Player struct
+        * using [random_name_generator](https://crates.io/crates/random_name_generator) for test player names
+        * Chips struct
 
 ## LATER
 
