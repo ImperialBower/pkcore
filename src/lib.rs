@@ -29,6 +29,7 @@ pub mod play;
 pub mod rank;
 pub mod suit;
 pub mod util;
+pub mod casino;
 
 // region CONSTANTS
 
