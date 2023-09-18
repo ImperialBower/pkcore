@@ -46,7 +46,7 @@ impl Display for Player {
             f,
             "{}: {} chips",
             self.handle,
-            self.chips.stack().separate_with_commas()
+            self.chips
         )
     }
 }
@@ -72,4 +72,5 @@ mod casino__players__player_tests {
         assert_eq!(1_000_002, player.chips.stack());
         assert_eq!("Bugsy: 1,000,002 chips", player.to_string());
     }
+
 }
