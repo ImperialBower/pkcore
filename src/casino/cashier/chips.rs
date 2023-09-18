@@ -1,24 +1,31 @@
 use std::fmt::{Display, Formatter};
-use bitvec::macros::internal::funty::Fundamental;
 use thousands::Separable;
 use crate::PKError;
 
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Chips(Box<usize>);
+pub struct Chips(usize);
 
 impl Chips {
     #[must_use]
     pub fn starting(stack: usize) -> Chips {
-        Chips(Box::new(stack))
+        Chips(stack)
     }
 
-    pub fn bet(amount: usize) -> Result<usize, PKError> {
-        todo!()
+    /// # Errors
+    ///
+    /// Returns `PKError::InsufficientChips` if there are insufficient chips.
+    pub fn bet(&mut self, amount: usize) -> Result<Chips, PKError> {
+        if self.stack() < amount {
+            Err(PKError::InsufficientChips)
+        } else {
+            self.0 -= amount;
+            Ok(Chips::starting(amount))
+        }
     }
 
     #[must_use]
     pub fn stack(&self) -> usize {
-        self.0.as_usize()
+        self.0
     }
 }
 
@@ -38,6 +45,18 @@ mod casino__chips_tests {
         let chips = Chips::starting(1_000);
 
         assert_eq!(chips.stack(), 1_000);
+    }
+
+    #[test]
+    fn bet() {
+        let mut starting = Chips::starting(1_000);
+        let expected = Chips::starting(50);
+
+        let bet = starting.bet(50);
+
+        assert!(bet.is_ok());
+        assert_eq!(expected, bet.unwrap());
+        assert_eq!(950, starting.stack());
     }
 
     #[test]

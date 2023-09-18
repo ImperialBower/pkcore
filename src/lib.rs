@@ -68,6 +68,7 @@ pub enum PKError {
     Duplicate,
     Fubar,
     Incomplete,
+    InsufficientChips,
     InvalidBinaryFormat,
     InvalidCard,
     InvalidCardNumber,

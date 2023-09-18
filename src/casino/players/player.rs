@@ -1,7 +1,6 @@
-use crate::casino::chips::Chips;
+use crate::casino::cashier::chips::Chips;
 use crate::util::name::Name;
 use std::fmt::{Display, Formatter};
-use thousands::Separable;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
