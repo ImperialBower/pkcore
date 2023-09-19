@@ -732,6 +732,7 @@
         * Chips struct
           * .bet
           * .all_in()
+          * impl Add for Chips
 
 ## LATER
 

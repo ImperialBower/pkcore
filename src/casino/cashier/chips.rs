@@ -1,5 +1,6 @@
 use crate::PKError;
 use std::fmt::{Display, Formatter};
+use std::ops::{Add, AddAssign};
 use thousands::Separable;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -18,7 +19,7 @@ impl Chips {
         if self.stack() == 0 {
             Err(PKError::Busted)
         } else {
-            let all = self.clone();
+            let all = *self;
             self.0 = 0;
             Ok(all)
         }
@@ -37,8 +38,31 @@ impl Chips {
     }
 
     #[must_use]
+    pub fn is_busted(&self) -> bool {
+        self.0 == 0
+    }
+
+    #[must_use]
     pub fn stack(&self) -> usize {
         self.0
+    }
+
+    pub fn win(&mut self, winnings: Chips) {
+        *self += winnings;
+    }
+}
+
+impl Add for Chips {
+    type Output = Chips;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Chips::starting(self.0 + rhs.0)
+    }
+}
+
+impl AddAssign for Chips {
+    fn add_assign(&mut self, rhs: Self) {
+        self.0 += rhs.0;
     }
 }
 
@@ -103,6 +127,22 @@ mod casino__chips_tests {
 
         assert!(bet.is_err());
         assert_eq!(PKError::InsufficientChips, bet.unwrap_err());
+    }
+
+    #[test]
+    fn win() {
+        let mut starting = Chips::starting(1_000);
+
+        starting.win(Chips::starting(1_000_000));
+
+        assert_eq!(Chips::starting(1_001_000), starting);
+    }
+
+    #[test]
+    fn add() {
+        let sum = Chips::starting(1_000) + Chips::starting(1);
+
+        assert_eq!(Chips::starting(1_001), sum);
     }
 
     #[test]
