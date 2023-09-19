@@ -41,12 +41,7 @@ impl Player {
 
 impl Display for Player {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}: {} chips",
-            self.handle,
-            self.chips
-        )
+        write!(f, "{}: {} chips", self.handle, self.chips)
     }
 }
 #[cfg(test)]
@@ -71,5 +66,4 @@ mod casino__players__player_tests {
         assert_eq!(1_000_002, player.chips.stack());
         assert_eq!("Bugsy: 1,000,002 chips", player.to_string());
     }
-
 }

@@ -1,6 +1,6 @@
+use crate::PKError;
 use std::fmt::{Display, Formatter};
 use thousands::Separable;
-use crate::PKError;
 
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Chips(usize);
