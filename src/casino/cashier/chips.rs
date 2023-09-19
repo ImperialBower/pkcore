@@ -2,13 +2,26 @@ use crate::PKError;
 use std::fmt::{Display, Formatter};
 use thousands::Separable;
 
-#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Chips(usize);
 
 impl Chips {
     #[must_use]
     pub fn starting(stack: usize) -> Chips {
         Chips(stack)
+    }
+
+    /// # Errors
+    ///
+    /// Returns `PKError::Busted` if there are no chips.
+    pub fn all_in(&mut self) -> Result<Chips, PKError> {
+        if self.stack() == 0 {
+            Err(PKError::Busted)
+        } else {
+            let all = self.clone();
+            self.0 = 0;
+            Ok(all)
+        }
     }
 
     /// # Errors
@@ -48,6 +61,29 @@ mod casino__chips_tests {
     }
 
     #[test]
+    fn all_in() {
+        let mut starting = Chips::starting(1_000);
+        let expected = starting.clone();
+
+        let bet = starting.all_in();
+
+        assert!(bet.is_ok());
+        assert_eq!(expected, bet.unwrap());
+        assert_eq!(0, starting.stack());
+    }
+
+    #[test]
+    fn all_in__busted() {
+        let mut starting = Chips::default();
+
+        let busted = starting.all_in();
+
+        assert!(busted.is_err());
+        assert_eq!(PKError::Busted, busted.unwrap_err());
+        assert_eq!(starting, Chips::default());
+    }
+
+    #[test]
     fn bet() {
         let mut starting = Chips::starting(1_000);
         let expected = Chips::starting(50);
@@ -57,6 +93,16 @@ mod casino__chips_tests {
         assert!(bet.is_ok());
         assert_eq!(expected, bet.unwrap());
         assert_eq!(950, starting.stack());
+    }
+
+    #[test]
+    fn bet__insufficient() {
+        let mut starting = Chips::starting(1_000);
+
+        let bet = starting.bet(1_001);
+
+        assert!(bet.is_err());
+        assert_eq!(PKError::InsufficientChips, bet.unwrap_err());
     }
 
     #[test]

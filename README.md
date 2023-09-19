@@ -730,6 +730,8 @@
       * Player struct
         * using [random_name_generator](https://crates.io/crates/random_name_generator) for test player names
         * Chips struct
+          * .bet
+          * .all_in()
 
 ## LATER
 
