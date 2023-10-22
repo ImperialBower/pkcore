@@ -14,6 +14,7 @@ use std::{println as debug, println as info, println as warn};
 /// tell me who is next to act who is active in the hand. If a seat fold, it
 ///
 /// Note: AI is close but I want it to leverage
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Position6MaxPointer {
     pub position: Cell<Position6Max>,
     pub active: [Cell<bool>; 6],
@@ -135,7 +136,7 @@ impl Position6MaxPointer {
 impl Default for Position6MaxPointer {
     fn default() -> Self {
         Position6MaxPointer {
-            position: Cell::new(Position6Max::UTG),
+            position: Cell::new(Position6Max::SB),
             active: [
                 Cell::new(true),
                 Cell::new(true),
@@ -195,6 +196,16 @@ mod play__positions_tests {
     #[test]
     fn next() {
         let pointer = Position6MaxPointer::default();
+
+        assert_eq!(Position6Max::SB, pointer.current());
+        assert_eq!(Position6Max::BB, pointer.next().unwrap());
+        pointer.increment();
+        println!("===================");
+
+        assert_eq!(Position6Max::BB, pointer.current());
+        assert_eq!(Position6Max::UTG, pointer.next().unwrap());
+        pointer.increment();
+        println!("===================");
 
         assert_eq!(Position6Max::UTG, pointer.current());
         assert_eq!(Position6Max::MP, pointer.next().unwrap());
