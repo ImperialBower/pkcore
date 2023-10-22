@@ -54,7 +54,7 @@ impl From<Vec<Card>> for Three {
     fn from(v: Vec<Card>) -> Self {
         match v.len() {
             3 => {
-                let one = match v.get(0) {
+                let one = match v.first() {
                     Some(m) => *m,
                     None => Card::BLANK,
                 };

@@ -65,7 +65,7 @@ impl Seven {
             flop.first(),
             flop.second(),
             flop.third(),
-            *case.get(0).ok_or(PKError::InvalidCard)?,
+            *case.first().ok_or(PKError::InvalidCard)?,
             *case.get(1).ok_or(PKError::InvalidCard)?,
         ]))
     }

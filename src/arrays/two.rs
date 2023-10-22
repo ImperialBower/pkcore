@@ -1160,7 +1160,7 @@ impl From<Vec<Card>> for Two {
     fn from(v: Vec<Card>) -> Self {
         match v.len() {
             2 => {
-                let one = match v.get(0) {
+                let one = match v.first() {
                     Some(m) => *m,
                     None => Card::BLANK,
                 };
@@ -1364,7 +1364,7 @@ impl TryFrom<&[Card]> for Two {
         match slice.len() {
             0..=1 => Err(PKError::NotEnoughCards),
             2 => Two::new(
-                Card::filter(*slice.get(0).ok_or(PKError::InvalidCard)?)?,
+                Card::filter(*slice.first().ok_or(PKError::InvalidCard)?)?,
                 Card::filter(*slice.get(1).ok_or(PKError::InvalidCard)?)?,
             ),
             _ => Err(PKError::TooManyCards),

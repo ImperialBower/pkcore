@@ -242,7 +242,7 @@ impl ActionType {
 
     #[must_use]
     pub fn actions_preflop(rounds: &[String]) -> Vec<String> {
-        match rounds.get(0) {
+        match rounds.first() {
             None => Vec::new(),
             Some(s) => ActionType::machete(s),
         }
