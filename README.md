@@ -722,7 +722,17 @@
           * arrays::hole_cards::holdem
   * EPIC _____: Bets
     * Added in sample data from pluribus, etc.
-    *
+    * Introducing: The Casino Module
+      * cashier submodule
+      * tables submodule
+      * players submodule
+      * Adding [uuid](https://crates.io/crates/uuid) crate
+      * Player struct
+        * using [random_name_generator](https://crates.io/crates/random_name_generator) for test player names
+        * Chips struct
+          * .bet
+          * .all_in()
+          * impl Add for Chips
 
 ## LATER
 

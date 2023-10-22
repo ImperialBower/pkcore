@@ -23,6 +23,7 @@ pub mod bard;
 pub mod card;
 pub mod card_number;
 pub mod cards;
+pub mod casino;
 pub mod deck;
 mod lookups;
 pub mod play;
@@ -62,11 +63,13 @@ pub const POSSIBLE_UNIQUE_HOLDEM_HUP_MATCHUPS: usize = 1_624_350;
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub enum PKError {
     BlankCard,
+    Busted,
     CardCast,
     DBConnectionError,
     Duplicate,
     Fubar,
     Incomplete,
+    InsufficientChips,
     InvalidBinaryFormat,
     InvalidCard,
     InvalidCardNumber,
