@@ -708,7 +708,7 @@ impl Game {
             board.second(),
             board.third(),
             board.forth(),
-            *three.get(0).ok_or(PKError::InvalidCard)?,
+            *three.first().ok_or(PKError::InvalidCard)?,
             *three.get(1).ok_or(PKError::InvalidCard)?,
             *three.get(2).ok_or(PKError::InvalidCard)?,
         ]))

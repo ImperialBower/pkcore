@@ -279,11 +279,23 @@ impl FromStr for Card {
         let mut chars = s.trim().chars();
         let rank: Rank = match chars.next() {
             None => return Err(PKError::InvalidIndex),
-            Some(r) => Rank::from(r),
+            Some(r) => {
+                let rank = Rank::from(r);
+                if rank == Rank::BLANK {
+                    return Err(PKError::InvalidIndex);
+                }
+                rank
+            }
         };
         let suit: Suit = match chars.next() {
             None => return Err(PKError::InvalidIndex),
-            Some(s) => Suit::from(s),
+            Some(s) => {
+                let suit = Suit::from(s);
+                if suit == Suit::BLANK {
+                    return Err(PKError::InvalidIndex);
+                }
+                suit
+            }
         };
         Ok(Card::new(rank, suit))
     }
@@ -726,6 +738,12 @@ mod card_tests {
         assert_eq!(Card::ACE_HEARTS, Card::from_str("AH").unwrap());
         assert_eq!(Card::KING_DIAMONDS, Card::from_str("  K♢   ").unwrap());
         assert_eq!(PKError::InvalidIndex, Card::from_str("  ").unwrap_err());
+        assert_eq!(PKError::InvalidIndex, Card::from_str("QQ").unwrap_err());
+    }
+
+    #[test]
+    fn from_str_boop() {
+        assert_eq!(PKError::InvalidIndex, Card::from_str("QQ").unwrap_err());
     }
 
     // https://serde.rs/unit-testing.html

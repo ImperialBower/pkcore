@@ -157,7 +157,7 @@ impl PlayOut for PlayerWins {
                 "{}: FLOP: {} TURN: {} RIVER: {} -------",
                 j,
                 flop,
-                case.get(0).unwrap(),
+                case.first().unwrap(),
                 case.get(1).unwrap()
             );
 

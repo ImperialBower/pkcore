@@ -2,8 +2,10 @@ use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{PKError, Pile, TheNuts};
+use crate::util::Util;
+use crate::{PKError, Pile, Plurable, TheNuts};
 use std::fmt::{Display, Formatter};
+use std::ops::Index;
 use std::str::FromStr;
 
 /// A `Board` is a type that represents a single instance of the face up `Cards`
@@ -47,6 +49,38 @@ impl FromStr for Board {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Board::try_from(Cards::from_str(s)?)
+    }
+}
+
+impl Plurable for Board {
+    /// The Pluribus format for a board is `3h7s5c/Qs/6c`.
+    fn from_pluribus(s: &str) -> Result<Self, PKError>
+    where
+        Self: Sized,
+    {
+        if s.is_empty() {
+            return Ok(Board::default());
+        }
+        let v = Util::str_splitter(s, "/");
+
+        match v.len() {
+            1 => Ok(Board::new(
+                Three::from_str(Util::str_len_splitter(v.index(0), 2).as_str())?,
+                Card::BLANK,
+                Card::BLANK,
+            )),
+            2 => Ok(Board::new(
+                Three::from_str(Util::str_len_splitter(v.index(0), 2).as_str())?,
+                Card::from_str(v.index(1))?,
+                Card::BLANK,
+            )),
+            3 => Ok(Board::new(
+                Three::from_str(Util::str_len_splitter(v.index(0), 2).as_str())?,
+                Card::from_str(v.index(1))?,
+                Card::from_str(v.index(2))?,
+            )),
+            _ => Err(PKError::InvalidPluribusIndex),
+        }
     }
 }
 
@@ -121,6 +155,42 @@ mod play_board_tests {
             "FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: 8♠",
             Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap().to_string()
         )
+    }
+
+    #[test]
+    fn from_pluribus() {
+        assert_eq!(
+            Board::from_str("3h 7s 5c Qs 6c").unwrap(),
+            Board::from_pluribus("3h7s5c/Qs/6c").unwrap()
+        );
+        assert_eq!(
+            Board::from_str("3h 7s 5c Qs").unwrap(),
+            Board::from_pluribus("3h7s5c/Qs").unwrap()
+        );
+        assert_eq!(
+            Board::from_str("3h 7s 5c").unwrap(),
+            Board::from_pluribus("3h7s5c").unwrap()
+        );
+        assert_eq!(
+            PKError::InvalidPluribusIndex,
+            Board::from_pluribus("/3h7s5c/Qs/6c").unwrap_err()
+        );
+        assert_eq!(
+            PKError::InvalidPluribusIndex,
+            Board::from_pluribus("3h7s5c/Qs/6c/2d").unwrap_err()
+        );
+        assert_eq!(
+            PKError::InvalidIndex,
+            Board::from_pluribus("3h7s55/Qs/6c").unwrap_err()
+        );
+        assert_eq!(
+            PKError::InvalidIndex,
+            Board::from_pluribus("3h7s5c/QQ/6c").unwrap_err()
+        );
+        assert_eq!(
+            PKError::InvalidIndex,
+            Board::from_pluribus("3h7s5c/Qs/6A").unwrap_err()
+        );
     }
 
     #[test]

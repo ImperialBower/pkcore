@@ -838,7 +838,7 @@ impl TryFrom<Vec<Two>> for SortedHeadsUp {
         match v.len() {
             0..=1 => Err(PKError::NotEnoughHands),
             2 => Ok(SortedHeadsUp::new(
-                *v.get(0).ok_or(PKError::InvalidHand)?,
+                *v.first().ok_or(PKError::InvalidHand)?,
                 *v.get(1).ok_or(PKError::InvalidHand)?,
             )),
             _ => Err(PKError::TooManyHands),
@@ -854,7 +854,7 @@ impl TryFrom<Vec<&Two>> for SortedHeadsUp {
         match v.len() {
             0..=1 => Err(PKError::NotEnoughHands),
             2 => Ok(SortedHeadsUp::new(
-                **v.get(0).ok_or(PKError::InvalidHand)?,
+                **v.first().ok_or(PKError::InvalidHand)?,
                 **v.get(1).ok_or(PKError::InvalidHand)?,
             )),
             _ => Err(PKError::TooManyHands),

@@ -25,7 +25,7 @@ impl Player {
         Player {
             id: Uuid::new_v4(),
             handle,
-            chips: Chips::starting(stack),
+            chips: Chips::new(stack),
         }
     }
 
@@ -34,7 +34,7 @@ impl Player {
         Player {
             id: Uuid::new_v4(),
             handle: Name::generate(),
-            chips: Chips::starting(stack),
+            chips: Chips::new(stack),
         }
     }
 }
@@ -48,13 +48,14 @@ impl Display for Player {
 #[allow(non_snake_case)]
 mod casino__players__player_tests {
     use super::*;
+    use crate::Betting;
 
     #[test]
     fn new() {
         let player = Player::new("Elmer".to_string());
 
         assert_eq!("Elmer", player.handle);
-        assert_eq!(0, player.chips.stack());
+        assert_eq!(0, player.chips.size());
         assert_eq!("Elmer: 0 chips", player.to_string());
     }
 
@@ -63,7 +64,7 @@ mod casino__players__player_tests {
         let player = Player::new_with_chips("Bugsy".to_string(), 1_000_002);
 
         assert_eq!("Bugsy", player.handle);
-        assert_eq!(1_000_002, player.chips.stack());
+        assert_eq!(1_000_002, player.chips.size());
         assert_eq!("Bugsy: 1,000,002 chips", player.to_string());
     }
 }
