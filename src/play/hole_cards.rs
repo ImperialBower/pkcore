@@ -7,12 +7,14 @@ use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::cards::Cards;
 use crate::play::board::Board;
-use crate::{Card, PKError, Pile, TheNuts};
+use crate::util::Util;
+use crate::{Card, PKError, Pile, Plurable, TheNuts};
 use itertools::Itertools;
 use log::error;
 use std::fmt;
 use std::slice::Iter;
 use std::str::FromStr;
+use std::vec::IntoIter;
 
 /// To start with I am only focusing on supporting a single round of play.
 ///
@@ -103,6 +105,11 @@ impl HoleCards {
 
     pub fn iter(&self) -> Iter<'_, Two> {
         self.0.iter()
+    }
+
+    #[must_use]
+    pub fn into_iter(self) -> IntoIter<Two> {
+        self.0.into_iter()
     }
 
     // pub fn par_iter(&self) -> rayon::vec::IntoIter<Two> {
@@ -205,6 +212,18 @@ impl FromStr for HoleCards {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         HoleCards::try_from(Cards::from_str(s)?)
+    }
+}
+
+impl Plurable for HoleCards {
+    /// "Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d"
+    fn from_pluribus(s: &str) -> Result<Self, PKError>
+    where
+        Self: Sized,
+    {
+        HoleCards::from_str(
+            Util::str_len_splitter(Util::str_splitter(s, "|").join("").as_str(), 2).as_str(),
+        )
     }
 }
 
@@ -405,6 +424,22 @@ mod play__hold_cards_tests {
         let expected = TestData::hole_cards_the_hand();
 
         assert_eq!(HoleCards::from_str("6♥ 6♠ 5♦ 5♣").unwrap(), expected);
+    }
+
+    #[test]
+    fn from_pluribus() {
+        let raw = "Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d";
+        let expected = HoleCards::from_str("Qc 4h Tc 9c 8s As Qh 7c Jc Qd 5h 5d").unwrap();
+
+        assert_eq!(expected, HoleCards::from_pluribus(raw).unwrap());
+    }
+
+    #[test]
+    fn from_pluribus_defect1() {
+        let raw = "Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d";
+        let expected = HoleCards::from_str("Qc 4h Tc 9c 8s As Qh 7c Jc Qd 5h 5d").unwrap();
+
+        assert_eq!(expected, HoleCards::from_pluribus(raw).unwrap());
     }
 
     #[test]

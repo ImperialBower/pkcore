@@ -22,6 +22,31 @@ impl Util {
             _ => (number as f32 * 100.0) / total as f32,
         }
     }
+
+    #[must_use]
+    pub fn str_splitter(s: &str, splitter: &str) -> Vec<String> {
+        s.to_string()
+            .split(splitter)
+            .map(std::string::ToString::to_string)
+            .collect()
+    }
+
+    /// Code from [stackoverflow](https://stackoverflow.com/questions/57029974/how-to-split-string-into-chunks-in-rust-to-insert-spaces)
+    #[must_use]
+    pub fn str_len_splitter(s: &str, on: usize) -> String {
+        s.chars()
+            .enumerate()
+            .flat_map(|(i, c)| {
+                if i != 0 && i % on == 0 {
+                    Some(' ')
+                } else {
+                    None
+                }
+                .into_iter()
+                .chain(std::iter::once(c))
+            })
+            .collect::<String>()
+    }
 }
 
 #[cfg(test)]

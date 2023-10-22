@@ -733,6 +733,40 @@
           * .bet
           * .all_in()
           * impl Add for Chips
+      * YAML feature
+        * [nubibus](https://github.com/ImperialBower/nubibus) Pluribus log parser spike
+          * Two::from_pluribus
+          * pub trait Nubibus
+            * refactored Two::from_pluribus to trait
+            * Refactored Nubibus trait to return Result
+          * impl Nubibus for Three
+          * pub struct Pluribus
+            * impl Nubibus for Board
+              * DEFECT: Card::from_str("QQ") doesn't return `PKError::InvalidIndex`
+          * pluribus::actions::Actions
+            * Actions::parse_round()
+            * examples/pluribus acts spike
+            * DEFECT: tripping when the play ends before the flop RESOLVED.
+          * Seat Struct
+            * impl Sub for Chips
+            * CLIPPY UPDATE (rustup update to 1.73.0): added clippy::iter_without_into_iter and clippy::should_implement_trait to allow for now until I can figure it out.
+            * Seat.bet()
+            * impl Display for Seat
+            * Seat.fold
+            * TODO: Tracing/Logging for Pluribus etc
+            * REFACTORING: Seat.seat_number from Cell(u8) to u8
+            * seat::SeatSnapshot
+            * play::positions::Position6Max
+              * Refactored Seat number to Position using enum
+              * Updated Bint crate with BintCell
+              * Lots of work on Nubibus
+                * Added ActionTypes: check sb and bb
+                * Moving actions to queues inside the Nubibus struct
+                * NOTE: Experimenting with copilot generation
+                * Update to PhaseHoldem added PhaseHoldemTracker
+                * Added Position6MaxPointer
+                  * added .next() and increment()
+                  * Refactoring: removed BintCell not needed
 
 ## LATER
 
@@ -753,6 +787,10 @@
   * Pluribus
     * [Superhuman AI for multiplayer poker](https://www.science.org/doi/10.1126/science.aay2400)
     * [pluribus-hand-parser](https://github.com/VitamintK/pluribus-hand-parser)
+    * [Let's analyze Pluribus's Hands!](http://kevinwang.us/lets-analyze-pluribuss-hands/)
+      * [reddit](https://www.reddit.com/r/poker/comments/cdhasb/download_all_10000_hands_that_pluribus_poker_ai/)
+    * [fedden / poker_ai](https://github.com/fedden/poker_ai) - An Open Source Texas Hold'em AI
+    * [Remembering Pluribus: The Techniques that Facebook Used to Master World’s Most Difficult Poker Game](https://www.kdnuggets.com/2020/12/remembering-pluribus-facebook-master-difficult-poker-game.html)
   * Probability
     * Wikipedia > [Poker probability](https://en.wikipedia.org/wiki/Poker_probability)
     * [Distinct head-to-head match ups in holdem](https://poker.stackexchange.com/questions/5682/distinct-head-to-head-match-ups-in-holdem)
@@ -775,6 +813,9 @@
         * [Rust and TUI: Building a command-line interface in Rust](https://blog.logrocket.com/rust-and-tui-building-a-command-line-interface-in-rust/)
       * [Crossterm](https://github.com/crossterm-rs/crossterm)
     * [Creating successful open source projects - with @orhunp - RustShip 1](https://www.youtube.com/watch?v=_xABF_H8b3g)
+  * OTel
+    * [tracing.rs](https://tracing.rs/tracing/) [GitHub](https://github.com/tokio-rs/tracing)
+      * [tracing-test](https://docs.rs/tracing-test/latest/tracing_test/)
   * articles
     * [Rust Is Hard, Or: The Misery of Mainstream Programming](https://hirrolot.github.io/posts/rust-is-hard-or-the-misery-of-mainstream-programming.html)
     * [Rust: Your code can be perfect](https://www.youtube.com/watch?v=IA4q0lzmyfM)

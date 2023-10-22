@@ -1,5 +1,11 @@
 #![warn(clippy::pedantic)]
-#![allow(clippy::unreadable_literal)]
+#![allow(
+    clippy::unreadable_literal,
+    clippy::iter_without_into_iter,
+    clippy::should_implement_trait
+)]
+
+extern crate core;
 
 use crate::bard::Bard;
 use crate::card::Card;
@@ -13,6 +19,7 @@ use std::borrow::Borrow;
 use std::collections::HashSet;
 use std::hash::Hash;
 
+use crate::casino::cashier::chips::Chips;
 use crate::suit::Suit;
 use rayon::iter::IterBridge;
 use std::iter::Enumerate;
@@ -62,6 +69,7 @@ pub const POSSIBLE_UNIQUE_HOLDEM_HUP_MATCHUPS: usize = 1_624_350;
 
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
 pub enum PKError {
+    AlreadyDealt,
     BlankCard,
     Busted,
     CardCast,
@@ -76,12 +84,48 @@ pub enum PKError {
     InvalidCardCount,
     InvalidHand,
     InvalidIndex,
+    InvalidPluribusIndex,
+    InvalidPosition,
     NotDealt,
     NotEnoughCards,
     NotEnoughHands,
+    PlayerOutOfHand,
     SqlError,
     TooManyCards,
     TooManyHands,
+}
+
+pub trait Betting {
+    /// # Errors
+    ///
+    /// Returns `PKError::Busted` if there are no chips.
+    fn all_in(&mut self) -> Result<Chips, PKError>;
+
+    /// # Errors
+    ///
+    /// Returns `PKError::InsufficientChips` if there are insufficient chips.
+    fn bet(&mut self, amount: usize) -> Result<Chips, PKError>;
+
+    fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
+
+    fn size(&self) -> usize;
+
+    /// Adds the amount of Chips won to the stack. Returns the resulting stack size.
+    fn wins(&mut self, winnings: Chips) -> usize;
+}
+
+/// The name of this trait is a pun om pluribus, which is the name of the poker AI group.
+pub trait Plurable {
+    /// Converts a part of the Pluribus log format
+    ///
+    /// # Errors
+    ///
+    /// Throws a `PKError` if the string isn't formatted correctly or the length isn't correct.
+    fn from_pluribus(s: &str) -> Result<Self, PKError>
+    where
+        Self: Sized;
 }
 
 pub trait Pile {

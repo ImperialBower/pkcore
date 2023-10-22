@@ -5,7 +5,8 @@ use crate::arrays::HandRanker;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{PKError, Pile, SuitShift, TheNuts};
+use crate::util::Util;
+use crate::{PKError, Pile, Plurable, SuitShift, TheNuts};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -724,6 +725,63 @@ impl Two {
         Two::HAND_8C_7D,
     ];
 
+    pub const HAND_7S_6S: Two = Two([Card::SEVEN_SPADES, Card::SIX_SPADES]);
+    pub const HAND_7H_6H: Two = Two([Card::SEVEN_HEARTS, Card::SIX_HEARTS]);
+    pub const HAND_7D_6D: Two = Two([Card::SEVEN_DIAMONDS, Card::SIX_DIAMONDS]);
+    pub const HAND_7C_6C: Two = Two([Card::SEVEN_CLUBS, Card::SIX_CLUBS]);
+    pub const SEVEN_SIX_SUITED: [Two; 4] = [
+        Two::HAND_7S_6S,
+        Two::HAND_7H_6H,
+        Two::HAND_7D_6D,
+        Two::HAND_7C_6C,
+    ];
+
+    pub const HAND_7S_6H: Two = Two([Card::SEVEN_SPADES, Card::SIX_HEARTS]);
+    pub const HAND_7S_6D: Two = Two([Card::SEVEN_SPADES, Card::SIX_DIAMONDS]);
+    pub const HAND_7S_6C: Two = Two([Card::SEVEN_SPADES, Card::SIX_CLUBS]);
+    pub const HAND_7H_6S: Two = Two([Card::SEVEN_HEARTS, Card::SIX_SPADES]);
+    pub const HAND_7H_6D: Two = Two([Card::SEVEN_HEARTS, Card::SIX_DIAMONDS]);
+    pub const HAND_7H_6C: Two = Two([Card::SEVEN_HEARTS, Card::SIX_CLUBS]);
+    pub const HAND_7D_6S: Two = Two([Card::SEVEN_DIAMONDS, Card::SIX_SPADES]);
+    pub const HAND_7D_6H: Two = Two([Card::SEVEN_DIAMONDS, Card::SIX_HEARTS]);
+    pub const HAND_7D_6C: Two = Two([Card::SEVEN_DIAMONDS, Card::SIX_CLUBS]);
+    pub const HAND_7C_6S: Two = Two([Card::SEVEN_CLUBS, Card::SIX_SPADES]);
+    pub const HAND_7C_6H: Two = Two([Card::SEVEN_CLUBS, Card::SIX_HEARTS]);
+    pub const HAND_7C_6D: Two = Two([Card::SEVEN_CLUBS, Card::SIX_DIAMONDS]);
+    pub const SEVEN_SIX_OFFSUIT: [Two; 12] = [
+        Two::HAND_7S_6H,
+        Two::HAND_7S_6D,
+        Two::HAND_7S_6C,
+        Two::HAND_7H_6S,
+        Two::HAND_7H_6D,
+        Two::HAND_7H_6C,
+        Two::HAND_7D_6S,
+        Two::HAND_7D_6H,
+        Two::HAND_7D_6C,
+        Two::HAND_7C_6S,
+        Two::HAND_7C_6H,
+        Two::HAND_7C_6D,
+    ];
+
+    pub const SEVEN_SIX: [Two; 16] = [
+        Two::HAND_7S_6S,
+        Two::HAND_7H_6H,
+        Two::HAND_7D_6D,
+        Two::HAND_7C_6C,
+        Two::HAND_7S_6H,
+        Two::HAND_7S_6D,
+        Two::HAND_7S_6C,
+        Two::HAND_7H_6S,
+        Two::HAND_7H_6D,
+        Two::HAND_7H_6C,
+        Two::HAND_7D_6S,
+        Two::HAND_7D_6H,
+        Two::HAND_7D_6C,
+        Two::HAND_7C_6S,
+        Two::HAND_7C_6H,
+        Two::HAND_7C_6D,
+    ];
+
     // endregion
 
     // region unconnected
@@ -1135,6 +1193,20 @@ impl Masked for Two {
     }
 }
 
+impl Plurable for Two {
+    /// Parses a Pluribus log format hand string, such as `5s8s`.
+    ///
+    /// TODO RF: This could be refactored into a universal method
+    fn from_pluribus(s: &str) -> Result<Self, PKError> {
+        let s = s.trim();
+        match s.len() {
+            0..=3 => Err(PKError::NotEnoughCards),
+            4 => Self::from_str(Util::str_len_splitter(s, 2).as_str()),
+            _ => Err(PKError::TooManyCards),
+        }
+    }
+}
+
 impl Pile for Two {
     fn clean(&self) -> Self {
         Two([self.first().clean(), self.second().clean()])
@@ -1409,6 +1481,11 @@ mod arrays__two_tests {
     }
 
     #[test]
+    fn is_dealt() {
+        assert!(Two::HAND_KS_KD.is_dealt());
+    }
+
+    #[test]
     fn is_pair() {
         assert!(Two::HAND_KS_KD.is_pair());
         assert!(Two::HAND_8S_8D.is_pair());
@@ -1507,6 +1584,25 @@ mod arrays__two_tests {
         assert_eq!(
             PKError::TooManyCards,
             Two::from_str("AD KD QD").unwrap_err()
+        );
+    }
+
+    #[test]
+    fn from_pluribus() {
+        assert_eq!(Two::HAND_8S_7H, Two::from_pluribus("8s7h").unwrap());
+        assert_eq!(Two::HAND_8S_7H, Two::from_pluribus(" 7h8s").unwrap());
+        assert_eq!(Two::HAND_AS_AH, Two::from_pluribus("AhAs   ").unwrap());
+        assert_eq!(
+            PKError::NotEnoughCards,
+            Two::from_pluribus("AH").unwrap_err()
+        );
+        assert_eq!(
+            PKError::TooManyCards,
+            Two::from_pluribus("AHASAD").unwrap_err()
+        );
+        assert_eq!(
+            PKError::InvalidIndex,
+            Two::from_pluribus("AHAa").unwrap_err()
         );
     }
 

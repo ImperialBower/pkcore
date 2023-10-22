@@ -3,7 +3,8 @@ use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::{PKError, Pile, TheNuts};
+use crate::util::Util;
+use crate::{PKError, Pile, Plurable, TheNuts};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -82,6 +83,17 @@ impl FromStr for Three {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Three::try_from(Cards::from_str(s)?)
+    }
+}
+
+impl Plurable for Three {
+    fn from_pluribus(s: &str) -> Result<Self, PKError> {
+        let s = s.trim();
+        match s.len() {
+            0..=5 => Err(PKError::NotEnoughCards),
+            6 => Self::from_str(Util::str_len_splitter(s, 2).as_str()),
+            _ => Err(PKError::TooManyCards),
+        }
     }
 }
 
@@ -224,6 +236,29 @@ mod arrays__three_tests {
             PKError::TooManyCards,
             Three::from_str("AD KD QD JD").unwrap_err()
         );
+    }
+
+    #[test]
+    fn from_pluribus() {
+        assert_eq!(Three(THE_FLOP), Three::from_pluribus(" 9c6d5h").unwrap());
+        assert_eq!(Three(THE_FLOP), Three::from_pluribus("9c6d5h ").unwrap());
+        assert_eq!(Three(THE_FLOP), Three::from_pluribus("9c6d5h").unwrap());
+        assert_eq!(
+            PKError::NotEnoughCards,
+            Three::from_pluribus("9c6d").unwrap_err()
+        );
+        assert_eq!(
+            PKError::TooManyCards,
+            Three::from_pluribus("9c6d5h4h").unwrap_err()
+        );
+        assert_eq!(
+            PKError::InvalidIndex,
+            Three::from_pluribus("AHASAa").unwrap_err()
+        );
+        // assert_eq!(Two::HAND_8S_7H, Three::from_pluribus("8s7h"));
+        // assert_eq!(Two::HAND_8S_7H, Three::from_pluribus(" 7h8s"));
+        // assert_eq!(Two::HAND_AS_AH, Three::from_pluribus("AhAs   "));
+        // assert_eq!(Two::default(), Three::from_pluribus("AH"));
     }
 
     #[test]
