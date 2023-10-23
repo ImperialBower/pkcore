@@ -908,7 +908,10 @@ impl Two {
 
     pub const HAND_TS_2S: Two = Two([Card::TEN_SPADES, Card::DEUCE_SPADES]);
     pub const HAND_TH_2H: Two = Two([Card::TEN_HEARTS, Card::DEUCE_HEARTS]);
+
+    pub const HAND_TD_5D: Two = Two([Card::TEN_DIAMONDS, Card::FIVE_DIAMONDS]);
     pub const HAND_TD_2D: Two = Two([Card::TEN_DIAMONDS, Card::DEUCE_DIAMONDS]);
+
     pub const HAND_TC_2C: Two = Two([Card::TEN_CLUBS, Card::DEUCE_CLUBS]);
     pub const TEN_DEUCE_SUITED: [Two; 4] = [
         Two::HAND_TS_2S,
@@ -1021,6 +1024,8 @@ impl Two {
     ];
 
     pub const HAND_8S_5S: Two = Two([Card::EIGHT_SPADES, Card::FIVE_SPADES]);
+
+    pub const HAND_8H_3C: Two = Two([Card::EIGHT_HEARTS, Card::TREY_CLUBS]);
 
     pub const HAND_6D_4D: Two = Two([Card::SIX_DIAMONDS, Card::FOUR_DIAMONDS]);
 

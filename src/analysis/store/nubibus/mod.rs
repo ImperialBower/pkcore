@@ -4,7 +4,6 @@ use crate::analysis::store::nubibus::seat::{Seat, SeatSnapshot};
 use crate::arrays::two::Two;
 use crate::casino::cashier::chips::Chips;
 use crate::{Betting, PKError};
-use bint::BintCell;
 use itertools::Itertools;
 use std::fmt::{Display, Formatter};
 
@@ -21,6 +20,7 @@ use crate::play::Position6Max;
 use std::cell::Cell;
 #[cfg(test)]
 use std::{println as debug, println as info, println as warn};
+use crate::play::positions::Position6MaxPointer;
 
 /// This is the struct that will be used to leverage the Pluribus data so that we can use it to
 /// drive state through the system.
@@ -30,8 +30,8 @@ use std::{println as debug, println as info, println as warn};
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Nubibus {
     pub phase: PhaseHoldemTracker,
-    pub pointer: BintCell,
     pub pluribus: Pluribus,
+    pub position: Position6MaxPointer,
     pub seats: [Seat; 6],
     pub floor: Cell<usize>,
     pub queue_preflop: Vec<String>,
@@ -50,8 +50,8 @@ impl Nubibus {
         let mut nubibus = Nubibus {
             phase: PhaseHoldemTracker::default(),
             pluribus: pluribus.clone(),
+            position: Position6MaxPointer::default(),
             seats: Default::default(),
-            pointer: BintCell::new(6),
             floor: Cell::new(0),
             queue_preflop: ActionType::actions_preflop_reverse(&pluribus.rounds),
             queue_flop: ActionType::actions_flop_reverse(&pluribus.rounds),
@@ -77,19 +77,11 @@ impl Nubibus {
     ///
     /// Shouldn't be possible to panic if coded correctly.
     pub fn current_position(&self) -> Position6Max {
-        Position6Max::try_from(self.pointer.value() + 1)
-            .expect("Nubibus.current_position() ¯\\_(ツ)_/¯")
+        self.position.current()
     }
 
     pub fn next_active_position(&self) -> Option<Position6Max> {
-        // self.pointer.up();
-        loop {
-            let position = self.current_position();
-            if self.seat_from_position(position).is_active() {
-                return Some(position);
-            }
-            self.pointer.up();
-        }
+        self.position.next()
     }
 
     /// # Errors
@@ -120,7 +112,7 @@ impl Nubibus {
             ActionType::SmallBlind,
             Pluribus::SMALL_BLIND
         );
-        self.pointer.up();
+        self.position.increment();
     }
 
     pub fn post_big_blind(&mut self) {
@@ -133,7 +125,7 @@ impl Nubibus {
             ActionType::BigBlind,
             Pluribus::BIG_BLIND
         );
-        self.pointer.up();
+        self.position.increment();
         self.floor.set(Pluribus::BIG_BLIND);
     }
 
@@ -162,23 +154,7 @@ impl Nubibus {
         }
     }
 
-    /// # Panics
-    ///
-    /// Will panic if the player has already folded.
-    #[must_use]
-    pub fn do_fold(&mut self, position: Position6Max) -> (Two, usize) {
-        let seat = self.seat_from_position(position);
-        if !seat.is_active() {
-            warn!("{} has already folded", position.description());
-            panic!("Nubibus.do_fold() ¯\\_(ツ)_/¯")
-        }
-        let (two, leaves) = seat.fold();
-        info!(
-            "{}({}) folds {} leaving {} in the pot",
-            seat.name, position, two, leaves
-        );
-        (two, leaves)
-    }
+
 
     pub fn do_init(&mut self) {
         self.do_blinds();
@@ -189,45 +165,117 @@ impl Nubibus {
     ///
     /// ¯\\_(ツ)_/¯
     pub fn play_preflop(&mut self) {
+        // for action in self.queue_preflop.clone() {
+        //     if !self.seat_from_position(self.current_position()).is_active() {
+        //         self.pointer.up();
+        //     }
+        //
+        //     if self.seat_from_position(self.current_position()).is_active() {
+        //         match ActionType::from(action.chars().next().unwrap()) {
+        //             ActionType::FOLD => {
+        //                 let _ = self.do_fold(self.current_position());
+        //             }
+        //             ActionType::CALL => {
+        //                 println!("{} calls", self.current_position().description());
+        //             }
+        //             ActionType::RAISE => {
+        //                 let _amount = ActionType::parse_raise(action.as_str());
+        //             }
+        //             _ => {}
+        //         }
+        //     } else {
+        //         println!("{} out of hand", self.current_position().description());
+        //     }
+        //
+        //     #[allow(unused_variables)]
+        //     self.pointer.up();
+        // }
         for action in self.queue_preflop.clone() {
-            if !self.seat_from_position(self.current_position()).is_active() {
-                self.pointer.up();
-            }
-
-            if self.seat_from_position(self.current_position()).is_active() {
-                match ActionType::from(action.chars().next().unwrap()) {
-                    ActionType::FOLD => {
-                        let _ = self.do_fold(self.current_position());
-                    }
-                    ActionType::CALL => {
-                        println!("{} calls", self.current_position().description());
-                    }
-                    ActionType::RAISE => {
-                        let _amount = ActionType::parse_raise(action.as_str());
-                    }
-                    _ => {}
+            match ActionType::from(action.chars().next().unwrap()) {
+                ActionType::FOLD => {
+                    // I love the recommendations that are based on old refactored code.
+                    let _ = self.do_fold();
                 }
-            } else {
-                println!("{} out of hand", self.current_position().description());
+                ActionType::CALL => {
+                    println!("{} calls", self.current_position().description());
+                }
+                ActionType::RAISE => {
+                    let _amount = ActionType::parse_raise(action.as_str());
+                }
+                _ => {}
             }
-
-            #[allow(unused_variables)]
-            self.pointer.up();
         }
     }
 
-    pub fn get_next_active_seat(&self) -> Option<Position6Max> {
-        let position = self.current_position();
-        loop {
-            let next = position.next();
-            if next == position {
-                return None;
-            } else if self.seat_from_position(next).is_active() {
-                self.pointer.up();
-                return Some(next);
-            }
-            self.pointer.up();
+    pub fn do_check_or_call(&mut self) {
+        let seat = self.seat_from_position(self.current_position());
+        if seat.chips_in_play.get().size() == self.floor.get() {
+            self.do_check();
+        } else {
+            self.do_call();
         }
+    }
+
+    pub fn do_check(&mut self) {
+        info!(
+            "{}({}) {}",
+            self.seat_from_position(self.current_position()).name,
+            self.current_position(),
+            ActionType::CHECK,
+        );
+        self.position.increment();
+    }
+
+    pub fn do_call(&mut self) {
+        let seat = self.seat_from_position(self.current_position());
+
+        // let chips_already_in_play = seat.chips_in_play.get().size();
+        // let amount = self.floor.get() - chips_already_in_play; // Well done AI but not needed
+
+        let amount = seat.chips_in_play.get().size();
+        seat.bet(amount);
+        info!(
+            "{}({}) {} {}",
+            seat.name,
+            self.current_position(),
+            ActionType::CALL, // I love how the AI gets the case wrong for the enums
+            amount
+        );
+        self.position.increment();
+    }
+
+    /// # Panics
+    ///
+    /// Will panic if the player has already folded.
+    #[must_use]
+    pub fn do_fold(&mut self) -> (Two, usize) {
+        let seat = self.seat_from_position(self.current_position());
+        if !seat.is_active() {
+            warn!("{} has already folded", self.current_position());
+            panic!("Nubibus.do_fold() ¯\\_(ツ)_/¯")
+        }
+        let (two, leaves) = seat.fold();
+        self.position.fold(self.current_position());
+        info!(
+            "{}({}) folds {} leaving {} in the pot",
+            seat.name, self.current_position(), two, leaves
+        );
+        (two, leaves)
+    }
+
+    pub fn get_next_active_seat(&self) -> Option<Position6Max> {
+        // let position = self.current_position();
+        // loop {
+        //     let next = position.next();
+        //     if next == position {
+        //         return None;
+        //     } else if self.seat_from_position(next).is_active() {
+        //         self.pointer.up();
+        //         return Some(next);
+        //     }
+        //     self.pointer.up();
+        // }
+        self.position.next()
     }
 
     #[must_use]
@@ -440,6 +488,22 @@ mod store_nubibus_tests {
     }
 
     #[test]
+    fn do_deal() {
+        let mut nubibus = parse_row_52();
+
+        nubibus.do_deal();
+
+        // 8h3c|7d6d|5dTd|7c7s|Ah4c|Ts9d
+        assert_eq!(nubibus.seat_from_position(Position6Max::SB).hand.get(), Two::HAND_8H_3C);
+        assert_eq!(nubibus.seat_from_position(Position6Max::BB).hand.get(), Two::HAND_7D_6D);
+        assert_eq!(nubibus.seat_from_position(Position6Max::UTG).hand.get(), Two::HAND_TD_5D);
+        assert_eq!(nubibus.seat_from_position(Position6Max::MP).hand.get(), Two::HAND_7S_7C);
+        assert_eq!(nubibus.seat_from_position(Position6Max::CO).hand.get(), Two::HAND_AH_4C);
+        assert_eq!(nubibus.seat_from_position(Position6Max::BTN).hand.get(), Two::HAND_TS_9D);
+
+    }
+
+    #[test]
     fn do_init() {
         let mut nubibus = parse_row_52();
         nubibus.do_init();
@@ -452,10 +516,12 @@ mod store_nubibus_tests {
         let mut nubibus = parse_row_52();
         nubibus.do_init();
 
-        let (two, left) = nubibus.do_fold(Position6Max::BB);
+        let (two, left) = nubibus.do_fold();
 
-        assert_eq!(Two::HAND_7D_6D, two);
-        assert_eq!(Pluribus::BIG_BLIND, left);
+        println!("{two} {left}");
+
+        assert_eq!(Two::HAND_TD_5D, two);
+        assert_eq!(0, left);
     }
 
     #[test]
@@ -464,8 +530,8 @@ mod store_nubibus_tests {
         let mut nubibus = parse_row_52();
         nubibus.do_init();
 
-        let _ = nubibus.do_fold(Position6Max::BB);
-        let _ = nubibus.do_fold(Position6Max::BB);
+        let _ = nubibus.do_fold();
+        let _ = nubibus.do_fold();
     }
 
     /// NOTE:
@@ -480,9 +546,8 @@ mod store_nubibus_tests {
 
         assert_eq!(Position6Max::MP, next);
 
-        nubibus.pointer.up();
-        let next = nubibus.get_next_active_seat().unwrap();
-        let _ = nubibus.do_fold(next);
+        nubibus.position.increment();
+        let _ = nubibus.do_fold();
 
         // assert_eq!(Position6Max::SB, nubibus.get_next_active_seat().unwrap());
         // assert_eq!(Position6Max::BB, nubibus.get_next_active_seat().unwrap());
@@ -502,6 +567,38 @@ mod store_nubibus_tests {
     fn next_active_position() {
         let mut nubibus = parse_row_52();
         nubibus.do_init();
+    }
+
+    #[test]
+    fn post_small_blind() {
+        let mut nubibus = parse_row_52();
+        assert_eq!(Position6Max::SB, nubibus.current_position());
+
+        // let (two, left) = nubibus.post_small_blind(); // Cute AI. Doesn't even match the signature.
+        nubibus.post_small_blind();
+
+        assert_eq!(nubibus.seat_from_position(Position6Max::SB).chips_in_play.get().size(), 50); // AI good!
+        assert_eq!(Position6Max::BB, nubibus.current_position());
+    }
+
+    #[test]
+    fn post_big_blind() {
+        let mut nubibus = parse_row_52();
+        assert_eq!(Position6Max::SB, nubibus.current_position());
+        nubibus.post_small_blind();
+        assert_eq!(Position6Max::BB, nubibus.current_position());
+
+        nubibus.post_big_blind();
+
+        assert_eq!(nubibus.seat_from_position(Position6Max::BB).chips_in_play.get().size(), 100); // AI good!
+        assert_eq!(Position6Max::UTG, nubibus.current_position());
+    }
+
+    #[test]
+    fn default() {
+        let default = Nubibus::default();
+
+        assert_eq!(Position6Max::SB, default.current_position());
     }
 
     #[test]
