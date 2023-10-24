@@ -7,7 +7,7 @@ use log::{debug, info, warn}; // Use log crate when building application
 
 #[cfg(test)]
 #[allow(unused_imports)]
-use std::{println as debug, println as info, println as warn};
+use std::{println as info, println as warn};
 
 /// Idea: `Position6MaxPointer`
 /// I want a struct that manages who is active in a hand. It should be able to
@@ -24,7 +24,7 @@ impl Position6MaxPointer {
     /// NOTE AI generated code.
     pub fn current(&self) -> Position6Max {
         let current = self.position.get();
-        debug!(
+        log::debug!(
             "Position6MaxPointer.current() {} is current player to act in hand",
             current.description().to_ascii_uppercase()
         );
@@ -38,13 +38,13 @@ impl Position6MaxPointer {
             // debug!("Position6MaxPointer.next() checking if {} is next to act in hand", next.description().to_ascii_uppercase());
             if self.is_active(next) {
                 if self.is_over() {
-                    debug!("Position6MaxPointer.next() hand is over");
-                    debug!(
+                    log::debug!("Position6MaxPointer.next() hand is over");
+                    log::debug!(
                         "Position6MaxPointer.next() {} wins the hand",
                         next.description().to_ascii_uppercase()
                     );
                 } else {
-                    debug!(
+                    log::debug!(
                         "Position6MaxPointer.next() {} is next to act in hand",
                         next.description().to_ascii_uppercase()
                     );
@@ -63,7 +63,7 @@ impl Position6MaxPointer {
                 info!("Position6MaxPointer::increment() called when already over");
             }
             Some(position) => {
-                debug!(
+                log::debug!(
                     "Position6MaxPointer.increment() action passes to {}",
                     position.description().to_ascii_uppercase()
                 );
@@ -83,7 +83,7 @@ impl Position6MaxPointer {
     }
 
     pub fn fold(&self, position: Position6Max) {
-        debug!(
+        log::debug!(
             "Position6MaxPointer.fold() {} folds",
             position.description().to_ascii_uppercase()
         );

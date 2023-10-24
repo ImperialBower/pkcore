@@ -9,11 +9,12 @@ use strum_macros::{EnumCount, EnumIter};
 )]
 pub enum PhaseHoldem {
     #[default]
-    Preflop = 0,
-    Flop = 1,
-    Turn = 2,
-    River = 3,
-    Over = 4,
+    Init = 0,
+    Preflop = 1,
+    Flop = 2,
+    Turn = 3,
+    River = 4,
+    Over = 5,
 }
 
 impl PhaseHoldem {
@@ -22,6 +23,7 @@ impl PhaseHoldem {
     #[allow(clippy::match_same_arms)]
     pub fn next(&self) -> Self {
         match *self {
+            PhaseHoldem::Init => PhaseHoldem::Preflop,
             PhaseHoldem::Preflop => PhaseHoldem::Flop,
             PhaseHoldem::Flop => PhaseHoldem::Turn,
             PhaseHoldem::Turn => PhaseHoldem::River,
@@ -62,6 +64,11 @@ impl PhaseHoldemTracker {
     }
 
     /// NOTE AI generated code.
+    pub fn is_init(&self) -> bool {
+        self.phase.get() == PhaseHoldem::Init
+    }
+
+    /// NOTE AI generated code.
     pub fn is_preflop(&self) -> bool {
         self.phase.get() == PhaseHoldem::Preflop
     }
@@ -91,7 +98,7 @@ impl PhaseHoldemTracker {
 impl Default for PhaseHoldemTracker {
     fn default() -> Self {
         Self {
-            phase: Cell::new(PhaseHoldem::Preflop),
+            phase: Cell::new(PhaseHoldem::Init),
         }
     }
 }
@@ -120,6 +127,7 @@ mod play_phases_tests {
     /// NOTE AI generated code.
     #[test]
     fn next() {
+        assert_eq!(PhaseHoldem::Preflop, PhaseHoldem::Init.next());
         assert_eq!(PhaseHoldem::Flop, PhaseHoldem::Preflop.next());
         assert_eq!(PhaseHoldem::Turn, PhaseHoldem::Flop.next());
         assert_eq!(PhaseHoldem::River, PhaseHoldem::Turn.next());
@@ -130,20 +138,25 @@ mod play_phases_tests {
     #[test]
     fn tracker_default() {
         assert_eq!(
-            PhaseHoldem::Preflop,
+            PhaseHoldem::Init,
             PhaseHoldemTracker::default().current()
         );
     }
 
     #[test]
     fn tracker_display() {
-        assert_eq!("Preflop", PhaseHoldemTracker::default().to_string());
+        assert_eq!("Init", PhaseHoldemTracker::default().to_string());
     }
 
     /// It's fun how wrong the AI is when I ask it to generate tests.
     #[test]
     fn tracker() {
         let tracker = PhaseHoldemTracker::default();
+        assert_eq!(PhaseHoldem::Init, tracker.current());
+        assert_eq!(PhaseHoldem::Preflop, tracker.next());
+
+        tracker.increment();
+
         assert_eq!(PhaseHoldem::Preflop, tracker.current());
         assert_eq!(PhaseHoldem::Flop, tracker.next());
 

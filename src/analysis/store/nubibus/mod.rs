@@ -53,10 +53,10 @@ impl Nubibus {
             position: Position6MaxPointer::default(),
             seats: Default::default(),
             floor: Cell::new(0),
-            queue_preflop: ActionType::actions_preflop_reverse(&pluribus.rounds),
-            queue_flop: ActionType::actions_flop_reverse(&pluribus.rounds),
-            queue_turn: ActionType::actions_turn_reverse(&pluribus.rounds),
-            queue_river: ActionType::actions_river_reverse(&pluribus.rounds),
+            queue_preflop: ActionType::actions_preflop(&pluribus.rounds),
+            queue_flop: ActionType::actions_flop(&pluribus.rounds),
+            queue_turn: ActionType::actions_turn(&pluribus.rounds),
+            queue_river: ActionType::actions_river(&pluribus.rounds),
         };
         for i in 0..pluribus.players.len() {
             let seat_number = u8::try_from(i + 1).unwrap_or_default();
@@ -100,6 +100,15 @@ impl Nubibus {
         } else {
             Err(PKError::PlayerOutOfHand)
         }
+    }
+
+    pub fn do_raise(&mut self, amount: usize) {
+        let seat = self.seat_from_position(self.current_position());
+        let chips_in_play = seat.chips_in_play.get().size();
+        let new_amount = self.floor.get() - chips_in_play + amount;
+        info!("{} {} raise {} to {}", seat.name, self.current_position().description(), new_amount, amount);
+        seat.bet(new_amount);
+        self.position.increment();
     }
 
     pub fn post_small_blind(&mut self) {
@@ -165,46 +174,7 @@ impl Nubibus {
     ///
     /// ¯\\_(ツ)_/¯
     pub fn play_preflop(&mut self) {
-        // for action in self.queue_preflop.clone() {
-        //     if !self.seat_from_position(self.current_position()).is_active() {
-        //         self.pointer.up();
-        //     }
-        //
-        //     if self.seat_from_position(self.current_position()).is_active() {
-        //         match ActionType::from(action.chars().next().unwrap()) {
-        //             ActionType::FOLD => {
-        //                 let _ = self.do_fold(self.current_position());
-        //             }
-        //             ActionType::CALL => {
-        //                 println!("{} calls", self.current_position().description());
-        //             }
-        //             ActionType::RAISE => {
-        //                 let _amount = ActionType::parse_raise(action.as_str());
-        //             }
-        //             _ => {}
-        //         }
-        //     } else {
-        //         println!("{} out of hand", self.current_position().description());
-        //     }
-        //
-        //     #[allow(unused_variables)]
-        //     self.pointer.up();
-        // }
-        for action in self.queue_preflop.clone() {
-            match ActionType::from(action.chars().next().unwrap()) {
-                ActionType::FOLD => {
-                    // I love the recommendations that are based on old refactored code.
-                    let _ = self.do_fold();
-                }
-                ActionType::CALL => {
-                    println!("{} calls", self.current_position().description());
-                }
-                ActionType::RAISE => {
-                    let _amount = ActionType::parse_raise(action.as_str());
-                }
-                _ => {}
-            }
-        }
+        self.preflop_action(self.queue_preflop.clone());
     }
 
     pub fn do_check_or_call(&mut self) {
@@ -260,6 +230,7 @@ impl Nubibus {
             "{}({}) folds {} leaving {} in the pot",
             seat.name, self.current_position(), two, leaves
         );
+        self.position.increment();
         (two, leaves)
     }
 
@@ -302,6 +273,32 @@ impl Nubibus {
         match self.seats.get(i) {
             None => SeatSnapshot::default(),
             Some(seat) => SeatSnapshot::from(seat),
+        }
+    }
+
+    fn preflop_action(&mut self, queue: Vec<String>) {
+        for action in queue {
+            let action_type = ActionType::from(action.chars().next().unwrap());
+            // debug!(" floor> {}", self.floor.get());
+            debug!("\naction> {action_type}");
+            match action_type {
+                ActionType::FOLD => {
+                    // I love the recommendations that are based on old refactored code.
+                    let _ = self.do_fold();
+                }
+                ActionType::CALL => {
+                    self.do_check_or_call();
+                    println!("{} calls", self.current_position().description());
+                }
+                ActionType::RAISE => {
+                    // self.raise();
+                    let amount = ActionType::parse_raise(action.as_str());
+                    self.do_raise(amount);
+                }
+                _ => {
+                    debug!("miss> {action_type}");
+                }
+            }
         }
     }
 }
