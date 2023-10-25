@@ -1,4 +1,4 @@
-use crate::analysis::store::nubibus::actions::ActionType;
+use crate::analysis::store::nubibus::actions::{Action, ActionType};
 use crate::analysis::store::nubibus::pluribus::Pluribus;
 use crate::analysis::store::nubibus::seat::{Seat, SeatSnapshot};
 use crate::arrays::two::Two;
@@ -16,11 +16,11 @@ pub mod seat;
 use log::{debug, info, warn}; // Use log crate when building application
 
 use crate::play::phases::PhaseHoldemTracker;
+use crate::play::positions::Position6MaxPointer;
 use crate::play::Position6Max;
 use std::cell::Cell;
 #[cfg(test)]
 use std::{println as debug, println as info, println as warn};
-use crate::play::positions::Position6MaxPointer;
 
 /// This is the struct that will be used to leverage the Pluribus data so that we can use it to
 /// drive state through the system.
@@ -34,10 +34,12 @@ pub struct Nubibus {
     pub position: Position6MaxPointer,
     pub seats: [Seat; 6],
     pub floor: Cell<usize>,
+    pub pot: Cell<Chips>,
     pub queue_preflop: Vec<String>,
     pub queue_flop: Vec<String>,
     pub queue_turn: Vec<String>,
     pub queue_river: Vec<String>,
+    pub ledger: Vec<Action>,
 }
 
 impl Nubibus {
@@ -53,10 +55,12 @@ impl Nubibus {
             position: Position6MaxPointer::default(),
             seats: Default::default(),
             floor: Cell::new(0),
+            pot: Cell::new(Chips::default()),
             queue_preflop: ActionType::actions_preflop(&pluribus.rounds),
             queue_flop: ActionType::actions_flop(&pluribus.rounds),
             queue_turn: ActionType::actions_turn(&pluribus.rounds),
             queue_river: ActionType::actions_river(&pluribus.rounds),
+            ledger: Vec::new(),
         };
         for i in 0..pluribus.players.len() {
             let seat_number = u8::try_from(i + 1).unwrap_or_default();
@@ -71,6 +75,10 @@ impl Nubibus {
             nubibus.seats[i] = seat;
         }
         nubibus
+    }
+
+    pub fn add_to_pot(&self, amount: usize) {
+        self.pot.set(self.pot.get() + Chips::new(amount));
     }
 
     /// # Panics
@@ -106,7 +114,13 @@ impl Nubibus {
         let seat = self.seat_from_position(self.current_position());
         let chips_in_play = seat.chips_in_play.get().size();
         let new_amount = self.floor.get() - chips_in_play + amount;
-        info!("{} {} raise {} to {}", seat.name, self.current_position().description(), new_amount, amount);
+        info!(
+            "{} {} raise {} to {}",
+            seat.name,
+            self.current_position().description(),
+            new_amount,
+            amount
+        );
         seat.bet(new_amount);
         self.position.increment();
     }
@@ -114,28 +128,23 @@ impl Nubibus {
     pub fn post_small_blind(&mut self) {
         let seat = self.seat_from_position(Position6Max::SB);
         seat.bet(Pluribus::SMALL_BLIND);
-        info!(
-            "{}({}) {} {}",
-            seat.name,
-            Position6Max::SB,
-            ActionType::SmallBlind,
-            Pluribus::SMALL_BLIND
-        );
+
+        // TODO RF
+        let action = Action::small_blind(Pluribus::SMALL_BLIND);
+        info!("{} {}", seat.desc(), action);
+
         self.position.increment();
+        self.ledger.push(action);
     }
 
     pub fn post_big_blind(&mut self) {
         let seat = self.seat_from_position(Position6Max::BB);
         seat.bet(Pluribus::BIG_BLIND);
-        info!(
-            "{}({}) {} {}",
-            seat.name,
-            Position6Max::BB,
-            ActionType::BigBlind,
-            Pluribus::BIG_BLIND
-        );
+        let action = Action::big_blind(Pluribus::BIG_BLIND);
+        info!("{} {}", seat.desc(), action);
         self.position.increment();
         self.floor.set(Pluribus::BIG_BLIND);
+        self.ledger.push(action);
     }
 
     /// Makes the small and big blind's forced bets, and then fast forwards the pointer to the
@@ -155,19 +164,23 @@ impl Nubibus {
     /// ¯\\_(ツ)_/¯
     pub fn do_deal(&mut self) {
         for (i, two) in self.pluribus.hole_cards.iter().enumerate() {
-            self.seats
-                .get(i)
-                .unwrap()
-                .dealt(*two)
-                .expect("Nubibus.do_deal() ¯\\_(ツ)_/¯");
+            let seat = self.seats.get(i).unwrap();
+            seat.dealt(*two).expect("Nubibus.do_deal() ¯\\_(ツ)_/¯");
+
+            let action = Action::dealt(*two);
+            info!("{} {}", seat.desc(), action);
+            self.ledger.push(action);
         }
     }
-
-
 
     pub fn do_init(&mut self) {
         self.do_blinds();
         self.do_deal();
+        self.phase.increment();
+
+        let action = Action::end_round(self.phase.current());
+        info!("{} Phase over", action.detail);
+        self.ledger.push(action);
     }
 
     /// # Panics
@@ -187,30 +200,35 @@ impl Nubibus {
     }
 
     pub fn do_check(&mut self) {
-        info!(
-            "{}({}) {}",
-            self.seat_from_position(self.current_position()).name,
-            self.current_position(),
-            ActionType::CHECK,
-        );
+        let seat = self.seat_from_position(self.current_position());
+
+        let action = Action::CHECK;
+        info!("{} {}", seat.desc(), action);
+        self.ledger.push(action);
+
         self.position.increment();
     }
 
     pub fn do_call(&mut self) {
         let seat = self.seat_from_position(self.current_position());
 
-        // let chips_already_in_play = seat.chips_in_play.get().size();
-        // let amount = self.floor.get() - chips_already_in_play; // Well done AI but not needed
+        let chips_already_in_play = seat.chips_in_play.get().size();
 
-        let amount = seat.chips_in_play.get().size();
-        seat.bet(amount);
-        info!(
-            "{}({}) {} {}",
-            seat.name,
-            self.current_position(),
-            ActionType::CALL, // I love how the AI gets the case wrong for the enums
-            amount
+        println!(
+            "floor {} in_play {}",
+            self.floor.get(),
+            chips_already_in_play
         );
+
+        let amount = self.floor.get() - chips_already_in_play; // Well done AI but not needed
+
+        // let amount = seat.chips_in_play.get().size();
+        seat.bet(amount);
+
+        let action = Action::call(amount);
+        info!("{} {}", seat.desc(), action);
+        self.ledger.push(action);
+
         self.position.increment();
     }
 
@@ -228,24 +246,16 @@ impl Nubibus {
         self.position.fold(self.current_position());
         info!(
             "{}({}) folds {} leaving {} in the pot",
-            seat.name, self.current_position(), two, leaves
+            seat.name,
+            self.current_position(),
+            two,
+            leaves
         );
         self.position.increment();
         (two, leaves)
     }
 
     pub fn get_next_active_seat(&self) -> Option<Position6Max> {
-        // let position = self.current_position();
-        // loop {
-        //     let next = position.next();
-        //     if next == position {
-        //         return None;
-        //     } else if self.seat_from_position(next).is_active() {
-        //         self.pointer.up();
-        //         return Some(next);
-        //     }
-        //     self.pointer.up();
-        // }
         self.position.next()
     }
 
@@ -276,28 +286,48 @@ impl Nubibus {
         }
     }
 
+    pub fn end_preflop_round(&mut self) {
+        // I'm surprised how easy my code makes this.
+        for seat in &self.seats {
+            seat.end_round();
+            self.add_to_pot(seat.chips_in_pot.get());
+        }
+
+        let action = Action::end_round(self.phase.current());
+        info!("{} Phase over {} in pot", action.detail, self.pot.get());
+        self.ledger.push(action);
+    }
+
     fn preflop_action(&mut self, queue: Vec<String>) {
         for action in queue {
-            let action_type = ActionType::from(action.chars().next().unwrap());
-            // debug!(" floor> {}", self.floor.get());
-            debug!("\naction> {action_type}");
-            match action_type {
-                ActionType::FOLD => {
-                    // I love the recommendations that are based on old refactored code.
-                    let _ = self.do_fold();
-                }
-                ActionType::CALL => {
-                    self.do_check_or_call();
-                    println!("{} calls", self.current_position().description());
-                }
-                ActionType::RAISE => {
-                    // self.raise();
-                    let amount = ActionType::parse_raise(action.as_str());
-                    self.do_raise(amount);
-                }
-                _ => {
-                    debug!("miss> {action_type}");
-                }
+            self.act(&action);
+        }
+    }
+
+    /// This the first step in refactoring the code so that it is more testable and controllable.
+    /// `preflop_action` was doing too much.
+    ///
+    /// Renamed from `preflop_act` to `act` to make it more generic.
+    fn act(&mut self, act: &str) {
+        let action_type = ActionType::from(act.chars().next().unwrap());
+        // debug!(" floor> {}", self.floor.get());
+        debug!("\naction> {action_type}");
+        match action_type {
+            ActionType::FOLD => {
+                // I love the recommendations that are based on old refactored code.
+                let _ = self.do_fold();
+            }
+            ActionType::CALL => {
+                self.do_check_or_call();
+                println!("{} calls", self.current_position().description());
+            }
+            ActionType::RAISE => {
+                // self.raise();
+                let amount = ActionType::parse_raise(act);
+                self.do_raise(amount);
+            }
+            _ => {
+                debug!("miss> {action_type}");
             }
         }
     }
@@ -314,6 +344,7 @@ impl Display for Nubibus {
 #[allow(non_snake_case)]
 mod store_nubibus_tests {
     use super::*;
+    use crate::play::phases::PhaseHoldem;
     use crate::Betting;
     use rstest::rstest;
     use std::str::FromStr;
@@ -491,13 +522,30 @@ mod store_nubibus_tests {
         nubibus.do_deal();
 
         // 8h3c|7d6d|5dTd|7c7s|Ah4c|Ts9d
-        assert_eq!(nubibus.seat_from_position(Position6Max::SB).hand.get(), Two::HAND_8H_3C);
-        assert_eq!(nubibus.seat_from_position(Position6Max::BB).hand.get(), Two::HAND_7D_6D);
-        assert_eq!(nubibus.seat_from_position(Position6Max::UTG).hand.get(), Two::HAND_TD_5D);
-        assert_eq!(nubibus.seat_from_position(Position6Max::MP).hand.get(), Two::HAND_7S_7C);
-        assert_eq!(nubibus.seat_from_position(Position6Max::CO).hand.get(), Two::HAND_AH_4C);
-        assert_eq!(nubibus.seat_from_position(Position6Max::BTN).hand.get(), Two::HAND_TS_9D);
-
+        assert_eq!(
+            nubibus.seat_from_position(Position6Max::SB).hand.get(),
+            Two::HAND_8H_3C
+        );
+        assert_eq!(
+            nubibus.seat_from_position(Position6Max::BB).hand.get(),
+            Two::HAND_7D_6D
+        );
+        assert_eq!(
+            nubibus.seat_from_position(Position6Max::UTG).hand.get(),
+            Two::HAND_TD_5D
+        );
+        assert_eq!(
+            nubibus.seat_from_position(Position6Max::MP).hand.get(),
+            Two::HAND_7S_7C
+        );
+        assert_eq!(
+            nubibus.seat_from_position(Position6Max::CO).hand.get(),
+            Two::HAND_AH_4C
+        );
+        assert_eq!(
+            nubibus.seat_from_position(Position6Max::BTN).hand.get(),
+            Two::HAND_TS_9D
+        );
     }
 
     #[test]
@@ -526,8 +574,10 @@ mod store_nubibus_tests {
     fn do_fold__already_folded() {
         let mut nubibus = parse_row_52();
         nubibus.do_init();
-
+        let pointer = nubibus.position.current();
         let _ = nubibus.do_fold();
+        nubibus.position.set(pointer);
+
         let _ = nubibus.do_fold();
     }
 
@@ -574,7 +624,14 @@ mod store_nubibus_tests {
         // let (two, left) = nubibus.post_small_blind(); // Cute AI. Doesn't even match the signature.
         nubibus.post_small_blind();
 
-        assert_eq!(nubibus.seat_from_position(Position6Max::SB).chips_in_play.get().size(), 50); // AI good!
+        assert_eq!(
+            nubibus
+                .seat_from_position(Position6Max::SB)
+                .chips_in_play
+                .get()
+                .size(),
+            50
+        ); // AI good!
         assert_eq!(Position6Max::BB, nubibus.current_position());
     }
 
@@ -587,7 +644,14 @@ mod store_nubibus_tests {
 
         nubibus.post_big_blind();
 
-        assert_eq!(nubibus.seat_from_position(Position6Max::BB).chips_in_play.get().size(), 100); // AI good!
+        assert_eq!(
+            nubibus
+                .seat_from_position(Position6Max::BB)
+                .chips_in_play
+                .get()
+                .size(),
+            100
+        ); // AI good!
         assert_eq!(Position6Max::UTG, nubibus.current_position());
     }
 
@@ -610,10 +674,75 @@ mod store_nubibus_tests {
 
     #[test]
     fn preflop_queue() {
-        let mut nub = parse_row_52();
+        let nub = parse_row_52();
 
-        let first = nub.queue_preflop.pop();
-
+        let first = nub.queue_preflop.first();
         assert_eq!("f", first.unwrap());
+    }
+
+    #[test]
+    fn act() {
+        let s = "STATE:52:cccccc:8h3c|7d6d|5dTd|7c7s|Ah4c|Ts9d/3s6c8c/Ad/8s:-50|2275|0|-2225|0|0:Bill|Pluribus|MrWhite|Gogo|Budd|Eddie";
+        let plur = Pluribus::from_str(s);
+        let mut nub = Nubibus::from_pluribus(&plur.as_ref().unwrap());
+
+        assert_eq!(PhaseHoldem::Init, nub.phase.current());
+
+        nub.do_init();
+
+        assert_eq!(PhaseHoldem::Preflop, nub.phase.current());
+
+        assert_eq!(
+            nub.ledger.first().unwrap().action_type,
+            ActionType::SmallBlind
+        );
+        assert_eq!(nub.ledger.get(1).unwrap().action_type, ActionType::BigBlind);
+
+        // MrWhite(UTG) calls 100
+        nub.do_check_or_call();
+        assert_eq!("100".to_string(), nub.ledger.last().unwrap().detail);
+        let utg = nub.seat_from_position(Position6Max::UTG);
+        assert_eq!(100, utg.chips_in_play.get().size());
+        assert_eq!(9_900, utg.stack.get().size());
+
+        // Gogo(MP) calls 100
+        nub.do_check_or_call();
+        assert_eq!("100".to_string(), nub.ledger.last().unwrap().detail);
+        let mp = nub.seat_from_position(Position6Max::MP);
+        assert_eq!(100, mp.chips_in_play.get().size());
+        assert_eq!(9_900, mp.stack.get().size());
+
+        // Budd(CO) calls 100
+        nub.do_check_or_call();
+        assert_eq!("100".to_string(), nub.ledger.last().unwrap().detail);
+
+        // Eddie(BTN) calls 100
+        nub.do_check_or_call();
+        assert_eq!("100".to_string(), nub.ledger.last().unwrap().detail);
+
+        // Bill(SB) calls 50
+        nub.do_check_or_call();
+        assert_eq!("50".to_string(), nub.ledger.last().unwrap().detail);
+        let sb = nub.seat_from_position(Position6Max::SB);
+        assert_eq!(100, sb.chips_in_play.get().size());
+        assert_eq!(9_900, sb.stack.get().size());
+
+        // Pluribus(BB) checks
+        nub.do_check_or_call();
+        assert_eq!(
+            Action::CHECK.action_type,
+            nub.ledger.last().unwrap().action_type
+        );
+        let bb = nub.seat_from_position(Position6Max::BB);
+        assert_eq!(100, bb.chips_in_play.get().size());
+        assert_eq!(9_900, bb.stack.get().size());
+
+        // nub
+
+        nub.end_preflop_round();
+
+        assert_eq!(nub.pot.get().size(), 600);
+
+        println!("{}", nub);
     }
 }

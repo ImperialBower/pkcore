@@ -137,10 +137,7 @@ mod play_phases_tests {
 
     #[test]
     fn tracker_default() {
-        assert_eq!(
-            PhaseHoldem::Init,
-            PhaseHoldemTracker::default().current()
-        );
+        assert_eq!(PhaseHoldem::Init, PhaseHoldemTracker::default().current());
     }
 
     #[test]

@@ -768,6 +768,9 @@
                   * added .next() and increment()
                   * Refactoring: removed BintCell not needed
                 * Refactoring Nubibus: Removing BintCell Adding Position6MaxPointer
+                * Refactoring Nubibus: Isolating individual acts with `act()`
+                * Adding Action ledger
+                  * Adding Seat.desc()
 
 ## LATER
 

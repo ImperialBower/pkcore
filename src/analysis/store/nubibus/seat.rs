@@ -67,6 +67,10 @@ impl Seat {
         }
     }
 
+    pub fn desc(&self) -> String {
+        format!("{}({})", self.name, self.position,)
+    }
+
     pub fn end_round(&self) -> Chips {
         let into_pot = self.chips_in_play.get();
         self.chips_in_play.set(Chips::default());
@@ -108,7 +112,7 @@ impl Display for Seat {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "SEAT #{} {:>4}\t{:>8}:\t{}\t{} IN PLAY: {}\tIN POT: {}",
+            "SEAT #{} {:>4}\t{:>8}:\t{}\t{} IN PLAY: {}\tINTO POT: {}",
             self.position as u8,
             self.position,
             self.name,
@@ -202,6 +206,13 @@ mod store_pluribus_seat_tests {
     }
 
     #[test]
+    fn desc() {
+        let seat = test_struct();
+
+        assert_eq!("Flub(UTG)", seat.desc());
+    }
+
+    #[test]
     fn end_round() {
         let seat = test_struct();
         seat.chips_in_pot.set(100);
@@ -258,7 +269,7 @@ mod store_pluribus_seat_tests {
         seat.bet(40);
 
         assert_eq!(
-            "SEAT #3 UTG\t    Flub:\t460\tA♠ A♥ IN PLAY: 40\tIN POT: 0",
+            "SEAT #3 UTG\t    Flub:\t460\tA♠ A♥ IN PLAY: 40\tINTO POT: 0",
             seat.to_string()
         );
     }

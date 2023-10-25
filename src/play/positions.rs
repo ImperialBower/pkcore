@@ -31,57 +31,6 @@ impl Position6MaxPointer {
         current
     }
 
-    /// NOTE AI generated code.
-    pub fn next(&self) -> Option<Position6Max> {
-        let mut next = self.position.get().next();
-        loop {
-            // debug!("Position6MaxPointer.next() checking if {} is next to act in hand", next.description().to_ascii_uppercase());
-            if self.is_active(next) {
-                if self.is_over() {
-                    log::debug!("Position6MaxPointer.next() hand is over");
-                    log::debug!(
-                        "Position6MaxPointer.next() {} wins the hand",
-                        next.description().to_ascii_uppercase()
-                    );
-                } else {
-                    log::debug!(
-                        "Position6MaxPointer.next() {} is next to act in hand",
-                        next.description().to_ascii_uppercase()
-                    );
-                }
-                return Some(next);
-            }
-            next = next.next();
-        }
-    }
-
-    /// NOTE AI generated code.
-    pub fn increment(&self) {
-        self.position.set(self.current());
-        match self.next() {
-            None => {
-                info!("Position6MaxPointer::increment() called when already over");
-            }
-            Some(position) => {
-                log::debug!(
-                    "Position6MaxPointer.increment() action passes to {}",
-                    position.description().to_ascii_uppercase()
-                );
-                self.position.set(position);
-            }
-        }
-    }
-
-    /// NOTE AI generated code.
-    pub fn is_over(&self) -> bool {
-        self.in_hand_count() < 2
-    }
-
-    /// NOTE AI generated code.
-    pub fn is_active(&self, position: Position6Max) -> bool {
-        self.active[position as usize - 1].get()
-    }
-
     pub fn fold(&self, position: Position6Max) {
         log::debug!(
             "Position6MaxPointer.fold() {} folds",
@@ -130,6 +79,61 @@ impl Position6MaxPointer {
             .filter(|c| c.get())
             .collect::<Vec<&Cell<bool>>>()
             .len()
+    }
+
+    /// NOTE AI generated code.
+    pub fn increment(&self) {
+        self.position.set(self.current());
+        match self.next() {
+            None => {
+                info!("Position6MaxPointer::increment() called when already over");
+            }
+            Some(position) => {
+                log::debug!(
+                    "Position6MaxPointer.increment() action passes to {}",
+                    position.description().to_ascii_uppercase()
+                );
+                self.position.set(position);
+            }
+        }
+    }
+
+    /// NOTE AI generated code.
+    pub fn is_over(&self) -> bool {
+        self.in_hand_count() < 2
+    }
+
+    /// NOTE AI generated code.
+    pub fn is_active(&self, position: Position6Max) -> bool {
+        self.active[position as usize - 1].get()
+    }
+
+    /// NOTE AI generated code.
+    pub fn next(&self) -> Option<Position6Max> {
+        let mut next = self.position.get().next();
+        loop {
+            // debug!("Position6MaxPointer.next() checking if {} is next to act in hand", next.description().to_ascii_uppercase());
+            if self.is_active(next) {
+                if self.is_over() {
+                    log::debug!("Position6MaxPointer.next() hand is over");
+                    log::debug!(
+                        "Position6MaxPointer.next() {} wins the hand",
+                        next.description().to_ascii_uppercase()
+                    );
+                } else {
+                    log::debug!(
+                        "Position6MaxPointer.next() {} is next to act in hand",
+                        next.description().to_ascii_uppercase()
+                    );
+                }
+                return Some(next);
+            }
+            next = next.next();
+        }
+    }
+
+    pub fn set(&self, position: Position6Max) {
+        self.position.set(position);
     }
 }
 
@@ -267,5 +271,17 @@ mod play__positions_tests {
         pointer.fold(Position6Max::CO);
 
         assert_eq!(Position6Max::BTN, pointer.next().unwrap());
+    }
+
+    #[test]
+    fn set() {
+        let pointer = Position6MaxPointer::default();
+        assert_eq!(Position6Max::SB, pointer.current());
+        assert_eq!(Position6Max::BB, pointer.next().unwrap());
+        pointer.increment();
+
+        pointer.set(Position6Max::SB);
+
+        assert_eq!(Position6Max::SB, pointer.current());
     }
 }
