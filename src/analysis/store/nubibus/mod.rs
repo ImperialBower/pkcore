@@ -92,39 +92,6 @@ impl Nubibus {
         self.position.next()
     }
 
-    /// # Errors
-    ///
-    /// Throws `PKError::InsufficientChips` if the player doesn't have enough chips
-    pub fn do_bet(&mut self, position: Position6Max, amount: usize) -> Result<bool, PKError> {
-        let seat = self.seat_from_position(position);
-        if seat.is_active() {
-            if seat.stack.get().size() >= amount {
-                info!("{} {} bets {}", seat.name, position.description(), amount);
-                seat.bet(amount);
-                Ok(true)
-            } else {
-                Err(PKError::InsufficientChips)
-            }
-        } else {
-            Err(PKError::PlayerOutOfHand)
-        }
-    }
-
-    pub fn do_raise(&mut self, amount: usize) {
-        let seat = self.seat_from_position(self.current_position());
-        let chips_in_play = seat.chips_in_play.get().size();
-        let new_amount = self.floor.get() - chips_in_play + amount;
-        info!(
-            "{} {} raise {} to {}",
-            seat.name,
-            self.current_position().description(),
-            new_amount,
-            amount
-        );
-        seat.bet(new_amount);
-        self.position.increment();
-    }
-
     pub fn post_small_blind(&mut self) {
         let seat = self.seat_from_position(Position6Max::SB);
         seat.bet(Pluribus::SMALL_BLIND);
@@ -179,7 +146,7 @@ impl Nubibus {
         self.phase.increment();
 
         let action = Action::end_round(self.phase.current());
-        info!("{} Phase over", action.detail);
+        info!("{} Phase over\n", action.detail);
         self.ledger.push(action);
     }
 
@@ -188,6 +155,21 @@ impl Nubibus {
     /// ¯\\_(ツ)_/¯
     pub fn play_preflop(&mut self) {
         self.preflop_action(self.queue_preflop.clone());
+    }
+
+    /// # Errors
+    ///
+    /// Throws `PKError::InsufficientChips` if the player doesn't have enough chips
+    pub fn do_bet(&mut self, amount: usize) -> Result<bool, PKError> {
+        let seat = self.seat_from_position(self.current_position());
+
+        if seat.stack.get().size() >= amount {
+            info!("{} {} bets {}", seat.name, seat.desc(), amount);
+            seat.bet(amount);
+            Ok(true)
+        } else {
+            Err(PKError::InsufficientChips)
+        }
     }
 
     pub fn do_check_or_call(&mut self) {
@@ -211,7 +193,6 @@ impl Nubibus {
 
     pub fn do_call(&mut self) {
         let seat = self.seat_from_position(self.current_position());
-
         let chips_already_in_play = seat.chips_in_play.get().size();
 
         println!(
@@ -221,11 +202,22 @@ impl Nubibus {
         );
 
         let amount = self.floor.get() - chips_already_in_play; // Well done AI but not needed
-
-        // let amount = seat.chips_in_play.get().size();
         seat.bet(amount);
 
         let action = Action::call(amount);
+        info!("{} {}", seat.desc(), action);
+        self.ledger.push(action);
+
+        self.position.increment();
+    }
+
+    pub fn do_raise(&mut self, amount: usize) {
+        let seat = self.seat_from_position(self.current_position());
+        let chips_in_play = seat.chips_in_play.get().size();
+        let new_amount = self.floor.get() - chips_in_play + amount;
+        seat.bet(new_amount);
+
+        let action = Action::raise(new_amount);
         info!("{} {}", seat.desc(), action);
         self.ledger.push(action);
 
@@ -294,7 +286,7 @@ impl Nubibus {
         }
 
         let action = Action::end_round(self.phase.current());
-        info!("{} Phase over {} in pot", action.detail, self.pot.get());
+        info!("{} Phase over {} in pot\n", action.detail, self.pot.get());
         self.ledger.push(action);
     }
 
@@ -311,7 +303,7 @@ impl Nubibus {
     fn act(&mut self, act: &str) {
         let action_type = ActionType::from(act.chars().next().unwrap());
         // debug!(" floor> {}", self.floor.get());
-        debug!("\naction> {action_type}");
+        // debug!("\naction> {action_type}");
         match action_type {
             ActionType::FOLD => {
                 // I love the recommendations that are based on old refactored code.
