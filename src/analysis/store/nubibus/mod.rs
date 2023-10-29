@@ -157,6 +157,40 @@ impl Nubibus {
         self.preflop_action(self.queue_preflop.clone());
     }
 
+    fn preflop_action(&mut self, queue: Vec<String>) {
+        for action in queue {
+            self.act(&action);
+        }
+    }
+
+    /// This the first step in refactoring the code so that it is more testable and controllable.
+    /// `preflop_action` was doing too much.
+    ///
+    /// Renamed from `preflop_act` to `act` to make it more generic.
+    fn act(&mut self, act: &str) {
+        let action_type = ActionType::from(act.chars().next().unwrap());
+        // debug!(" floor> {}", self.floor.get());
+        // debug!("\naction> {action_type}");
+        match action_type {
+            ActionType::FOLD => {
+                // I love the recommendations that are based on old refactored code.
+                let _ = self.do_fold();
+            }
+            ActionType::CALL => {
+                self.do_check_or_call();
+                println!("{} calls", self.current_position().description());
+            }
+            ActionType::RAISE => {
+                // self.raise();
+                let amount = ActionType::parse_raise(act);
+                self.do_raise(amount);
+            }
+            _ => {
+                debug!("miss> {action_type}");
+            }
+        }
+    }
+
     /// # Errors
     ///
     /// Throws `PKError::InsufficientChips` if the player doesn't have enough chips
@@ -201,6 +235,7 @@ impl Nubibus {
             chips_already_in_play
         );
 
+        // floor 100 in_play 300
         let amount = self.floor.get() - chips_already_in_play; // Well done AI but not needed
         seat.bet(amount);
 
@@ -211,14 +246,17 @@ impl Nubibus {
         self.position.increment();
     }
 
+    /// Gawd this code is a horrible mess.
     pub fn do_raise(&mut self, amount: usize) {
         let seat = self.seat_from_position(self.current_position());
         let chips_in_play = seat.chips_in_play.get().size();
-        let new_amount = self.floor.get() - chips_in_play + amount;
+        let floor_before = self.floor.get();
+        let new_amount = chips_in_play + amount;
+        self.floor.set(new_amount);
         seat.bet(new_amount);
 
         let action = Action::raise(new_amount);
-        info!("{} {}", seat.desc(), action);
+        info!("{} {} FLOOR BEFORE: {floor_before} FLOOR AFTER:{}", seat.desc(), action, self.floor.get());
         self.ledger.push(action);
 
         self.position.increment();
@@ -288,40 +326,6 @@ impl Nubibus {
         let action = Action::end_round(self.phase.current());
         info!("{} Phase over {} in pot\n", action.detail, self.pot.get());
         self.ledger.push(action);
-    }
-
-    fn preflop_action(&mut self, queue: Vec<String>) {
-        for action in queue {
-            self.act(&action);
-        }
-    }
-
-    /// This the first step in refactoring the code so that it is more testable and controllable.
-    /// `preflop_action` was doing too much.
-    ///
-    /// Renamed from `preflop_act` to `act` to make it more generic.
-    fn act(&mut self, act: &str) {
-        let action_type = ActionType::from(act.chars().next().unwrap());
-        // debug!(" floor> {}", self.floor.get());
-        // debug!("\naction> {action_type}");
-        match action_type {
-            ActionType::FOLD => {
-                // I love the recommendations that are based on old refactored code.
-                let _ = self.do_fold();
-            }
-            ActionType::CALL => {
-                self.do_check_or_call();
-                println!("{} calls", self.current_position().description());
-            }
-            ActionType::RAISE => {
-                // self.raise();
-                let amount = ActionType::parse_raise(act);
-                self.do_raise(amount);
-            }
-            _ => {
-                debug!("miss> {action_type}");
-            }
-        }
     }
 }
 
