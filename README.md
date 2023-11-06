@@ -771,6 +771,10 @@
                 * Refactoring Nubibus: Isolating individual acts with `act()`
                 * Adding Action ledger
                   * Adding Seat.desc()
+                * .pop() to walk through steps
+                  * .seat_check() to validate .pop()
+                    * DEFECT: .seat_state() off by one FIXED
+                  * 
 
 ## LATER
 
@@ -863,6 +867,7 @@
 * [Serde](https://serde.rs/)
   * [Serde JSON](https://github.com/serde-rs/json)
   * [Serde YAML](https://github.com/dtolnay/serde-yaml)
+* [Termion](https://github.com/redox-os/termion)
 
 ## Potential Libraries
 

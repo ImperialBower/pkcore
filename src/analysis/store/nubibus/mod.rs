@@ -56,10 +56,10 @@ impl Nubibus {
             seats: Default::default(),
             floor: Cell::new(0),
             pot: Cell::new(Chips::default()),
-            queue_preflop: ActionType::actions_preflop(&pluribus.rounds),
-            queue_flop: ActionType::actions_flop(&pluribus.rounds),
-            queue_turn: ActionType::actions_turn(&pluribus.rounds),
-            queue_river: ActionType::actions_river(&pluribus.rounds),
+            queue_preflop: ActionType::actions_preflop_reverse(&pluribus.rounds),
+            queue_flop: ActionType::actions_flop_reverse(&pluribus.rounds),
+            queue_turn: ActionType::actions_turn_reverse(&pluribus.rounds),
+            queue_river: ActionType::actions_river_reverse(&pluribus.rounds),
             ledger: Vec::new(),
         };
         for i in 0..pluribus.players.len() {
@@ -191,6 +191,27 @@ impl Nubibus {
         }
     }
 
+    pub fn pop(&mut self) -> Option<()> {
+        if !self.queue_preflop.is_empty() {
+            match self.queue_preflop.pop() {
+                None => None,
+                Some(action) => {
+                    self.act(&action);
+                    Some(())
+                }
+            }
+        } else if !self.queue_flop.is_empty() {
+            todo!()
+        } else if !self.queue_turn.is_empty() {
+            todo!()
+        } else if !self.queue_river.is_empty() {
+            todo!()
+        } else {
+            info!("Hand {} is played out.", self.pluribus.index);
+            None
+        }
+    }
+
     /// # Errors
     ///
     /// Throws `PKError::InsufficientChips` if the player doesn't have enough chips
@@ -256,7 +277,12 @@ impl Nubibus {
         seat.bet(new_amount);
 
         let action = Action::raise(new_amount);
-        info!("{} {} FLOOR BEFORE: {floor_before} FLOOR AFTER:{}", seat.desc(), action, self.floor.get());
+        info!(
+            "{} {} FLOOR BEFORE: {floor_before} FLOOR AFTER:{}",
+            seat.desc(),
+            action,
+            self.floor.get()
+        );
         self.ledger.push(action);
 
         self.position.increment();
@@ -303,19 +329,6 @@ impl Nubibus {
         self.seat_from_position(self.current_position()).is_active()
     }
 
-    pub fn seat_from_position(&self, position: Position6Max) -> &Seat {
-        &self.seats[position as usize - 1]
-    }
-
-    #[must_use]
-    pub fn seat_state(&self, position: Position6Max) -> SeatSnapshot {
-        let i = position as usize;
-        match self.seats.get(i) {
-            None => SeatSnapshot::default(),
-            Some(seat) => SeatSnapshot::from(seat),
-        }
-    }
-
     pub fn end_preflop_round(&mut self) {
         // I'm surprised how easy my code makes this.
         for seat in &self.seats {
@@ -326,6 +339,39 @@ impl Nubibus {
         let action = Action::end_round(self.phase.current());
         info!("{} Phase over {} in pot\n", action.detail, self.pot.get());
         self.ledger.push(action);
+    }
+
+    /// # Errors
+    ///
+    /// Returns a `SeatSnapshot` of the actual state if the seat doesn't match what's expected.
+    pub fn seat_check(
+        &self,
+        position: Position6Max,
+        stack: usize,
+        in_play: usize,
+        in_pot: usize,
+    ) -> Result<(), SeatSnapshot> {
+        let seat = self.seat_state(position);
+        if seat.stack == stack && seat.chips_in_play == in_play && seat.chips_in_pot == in_pot {
+            Ok(())
+        } else {
+            Err(seat)
+        }
+    }
+
+    pub fn seat_from_position(&self, position: Position6Max) -> &Seat {
+        &self.seats[position as usize - 1]
+    }
+
+    /// Grea, I didn't write any tests for this method, and sure enough
+    /// it's off by one.
+    #[must_use]
+    pub fn seat_state(&self, position: Position6Max) -> SeatSnapshot {
+        let i = position as usize;
+        match self.seats.get(i - 1) {
+            None => SeatSnapshot::default(),
+            Some(seat) => SeatSnapshot::from(seat),
+        }
     }
 }
 
@@ -672,7 +718,7 @@ mod store_nubibus_tests {
     fn preflop_queue() {
         let nub = parse_row_52();
 
-        let first = nub.queue_preflop.first();
+        let first = nub.queue_preflop.last();
         assert_eq!("f", first.unwrap());
     }
 
@@ -740,5 +786,37 @@ mod store_nubibus_tests {
         assert_eq!(nub.pot.get().size(), 600);
 
         println!("{}", nub);
+    }
+
+    #[test]
+    fn pop() {
+        let mut nub = parse_row_52();
+        nub.do_init();
+
+        assert!(nub.seat_check(Position6Max::SB, 9_950, 50, 0).is_ok());
+        assert!(nub.seat_check(Position6Max::BB, 9_900, 100, 0).is_ok());
+        assert!(nub.seat_check(Position6Max::UTG, 10_000, 0, 0).is_ok());
+        assert_eq!(Position6Max::UTG, nub.current_position());
+
+        // fr200fffr1100c/r2225c/cc/r5600f
+        // assert_eq!("f", nub.pop().unwrap());
+    }
+
+    #[test]
+    fn seat_check() {
+        let mut nub = parse_row_52();
+        nub.do_init();
+
+        assert!(nub.seat_check(Position6Max::SB, 9_950, 50, 0).is_ok());
+        assert!(nub.seat_check(Position6Max::BB, 9_900, 100, 0).is_ok());
+        assert!(nub.seat_check(Position6Max::UTG, 10_000, 0, 0).is_ok());
+    }
+
+    #[test]
+    fn seat_state() {
+        let nub = parse_row_52();
+        let sb = nub.seat_state(Position6Max::SB);
+
+        assert_eq!(Position6Max::SB, sb.position);
     }
 }

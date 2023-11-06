@@ -151,6 +151,22 @@ pub struct SeatSnapshot {
     pub hand: Two,
 }
 
+impl Display for SeatSnapshot {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "SEAT #{} {:>4}\t{:>8}:\t{}\t{} IN PLAY: {}\tINTO POT: {}",
+            self.position as u8,
+            self.position,
+            self.name,
+            self.stack,
+            self.hand,
+            self.chips_in_play,
+            self.chips_in_pot
+        )
+    }
+}
+
 impl From<&Seat> for SeatSnapshot {
     fn from(seat: &Seat) -> Self {
         SeatSnapshot {
