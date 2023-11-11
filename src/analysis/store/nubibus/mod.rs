@@ -169,8 +169,6 @@ impl Nubibus {
     /// Renamed from `preflop_act` to `act` to make it more generic.
     fn act(&mut self, act: &str) {
         let action_type = ActionType::from(act.chars().next().unwrap());
-        // debug!(" floor> {}", self.floor.get());
-        // debug!("\naction> {action_type}");
         match action_type {
             ActionType::FOLD => {
                 // I love the recommendations that are based on old refactored code.
@@ -178,7 +176,6 @@ impl Nubibus {
             }
             ActionType::CALL => {
                 self.do_check_or_call();
-                println!("{} calls", self.current_position().description());
             }
             ActionType::RAISE => {
                 // self.raise();
@@ -201,11 +198,29 @@ impl Nubibus {
                 }
             }
         } else if !self.queue_flop.is_empty() {
-            todo!()
+            match self.queue_flop.pop() {
+                None => None,
+                Some(action) => {
+                    self.act(&action);
+                    Some(())
+                }
+            }
         } else if !self.queue_turn.is_empty() {
-            todo!()
+            match self.queue_turn.pop() {
+                None => None,
+                Some(action) => {
+                    self.act(&action);
+                    Some(())
+                }
+            }
         } else if !self.queue_river.is_empty() {
-            todo!()
+            match self.queue_river.pop() {
+                None => None,
+                Some(action) => {
+                    self.act(&action);
+                    Some(())
+                }
+            }
         } else {
             info!("Hand {} is played out.", self.pluribus.index);
             None
@@ -248,16 +263,8 @@ impl Nubibus {
 
     pub fn do_call(&mut self) {
         let seat = self.seat_from_position(self.current_position());
-        let chips_already_in_play = seat.chips_in_play.get().size();
 
-        println!(
-            "floor {} in_play {}",
-            self.floor.get(),
-            chips_already_in_play
-        );
-
-        // floor 100 in_play 300
-        let amount = self.floor.get() - chips_already_in_play; // Well done AI but not needed
+        let amount = self.floor.get();
         seat.bet(amount);
 
         let action = Action::call(amount);
@@ -270,16 +277,15 @@ impl Nubibus {
     /// Gawd this code is a horrible mess.
     pub fn do_raise(&mut self, amount: usize) {
         let seat = self.seat_from_position(self.current_position());
-        let chips_in_play = seat.chips_in_play.get().size();
         let floor_before = self.floor.get();
-        let new_amount = chips_in_play + amount;
-        self.floor.set(new_amount);
-        seat.bet(new_amount);
+        self.floor.set(amount);
+        seat.bet(amount);
 
-        let action = Action::raise(new_amount);
+        let action = Action::raise(amount);
         info!(
-            "{} {} FLOOR BEFORE: {floor_before} FLOOR AFTER:{}",
+            "{} {} {} FLOOR BEFORE: {floor_before} FLOOR AFTER:{}",
             seat.desc(),
+            seat.hand.get(),
             action,
             self.floor.get()
         );
@@ -341,18 +347,25 @@ impl Nubibus {
         self.ledger.push(action);
     }
 
+    /// This method doesn't work.
+    ///
     /// # Errors
     ///
     /// Returns a `SeatSnapshot` of the actual state if the seat doesn't match what's expected.
     pub fn seat_check(
         &self,
         position: Position6Max,
+        is_active: bool,
         stack: usize,
         in_play: usize,
         in_pot: usize,
     ) -> Result<(), SeatSnapshot> {
         let seat = self.seat_state(position);
-        if seat.stack == stack && seat.chips_in_play == in_play && seat.chips_in_pot == in_pot {
+        if seat.stack == stack
+            && seat.is_active == is_active
+            && seat.chips_in_play == in_play
+            && seat.chips_in_pot == in_pot
+        {
             Ok(())
         } else {
             Err(seat)
@@ -793,13 +806,84 @@ mod store_nubibus_tests {
         let mut nub = parse_row_52();
         nub.do_init();
 
-        assert!(nub.seat_check(Position6Max::SB, 9_950, 50, 0).is_ok());
-        assert!(nub.seat_check(Position6Max::BB, 9_900, 100, 0).is_ok());
-        assert!(nub.seat_check(Position6Max::UTG, 10_000, 0, 0).is_ok());
+        assert!(nub.seat_check(Position6Max::SB, true, 9_950, 50, 0).is_ok());
+        assert!(nub
+            .seat_check(Position6Max::BB, true, 9_900, 100, 0)
+            .is_ok());
+        assert!(nub
+            .seat_check(Position6Max::UTG, true, 10_000, 0, 0)
+            .is_ok());
         assert_eq!(Position6Max::UTG, nub.current_position());
 
-        // fr200fffr1100c/r2225c/cc/r5600f
-        // assert_eq!("f", nub.pop().unwrap());
+        // f r200 f f f r1100 c/r2225c/cc/r5600f
+
+        // UTG Folds
+        let pop = nub.pop();
+        assert!(pop.is_some());
+        assert!(nub
+            .seat_check(Position6Max::UTG, false, 10_000, 0, 0)
+            .is_ok());
+        assert_eq!(100, nub.floor.get());
+
+        // MP raises to 200
+        let pop = nub.pop();
+        assert!(pop.is_some());
+        assert!(nub
+            .seat_check(Position6Max::MP, true, 9_800, 200, 0)
+            .is_ok());
+        assert_eq!(200, nub.floor.get());
+
+        // CO Folds
+        let pop = nub.pop();
+        assert!(pop.is_some());
+        assert!(nub
+            .seat_check(Position6Max::CO, false, 10_000, 0, 0)
+            .is_ok());
+        assert_eq!(200, nub.floor.get());
+
+        // BTN Folds
+        let pop = nub.pop();
+        assert!(pop.is_some());
+        assert!(nub
+            .seat_check(Position6Max::BTN, false, 10_000, 0, 0)
+            .is_ok());
+        assert_eq!(200, nub.floor.get());
+
+        // SB Folds
+        let pop = nub.pop();
+        assert!(pop.is_some());
+        assert!(nub
+            .seat_check(Position6Max::SB, false, 9_950, 0, 50)
+            .is_ok());
+        assert_eq!(200, nub.floor.get());
+
+        // BB raises to 1100
+        //
+        let pop = nub.pop();
+        assert!(pop.is_some());
+        // println!("{}", nub.seat_state(Position6Max::BB));
+        assert!(nub
+            .seat_check(Position6Max::BB, true, 8_900, 1_100, 0)
+            .is_ok());
+        assert_eq!(1_100, nub.floor.get());
+
+        // MP calls
+        let pop = nub.pop();
+        assert!(pop.is_some());
+        // println!("{}", nub.seat_state(Position6Max::MP));
+        assert!(nub
+            .seat_check(Position6Max::MP, true, 8_900, 1_100, 0)
+            .is_ok());
+
+        println!("{}", nub);
+        println!();
+        println!("FLOP: {}", nub.pluribus.board.flop);
+
+        let pop = nub.pop();
+        assert!(pop.is_some());
+
+        let pop = nub.pop();
+        assert!(pop.is_some());
     }
 
     #[test]
@@ -807,9 +891,13 @@ mod store_nubibus_tests {
         let mut nub = parse_row_52();
         nub.do_init();
 
-        assert!(nub.seat_check(Position6Max::SB, 9_950, 50, 0).is_ok());
-        assert!(nub.seat_check(Position6Max::BB, 9_900, 100, 0).is_ok());
-        assert!(nub.seat_check(Position6Max::UTG, 10_000, 0, 0).is_ok());
+        assert!(nub.seat_check(Position6Max::SB, true, 9_950, 50, 0).is_ok());
+        assert!(nub
+            .seat_check(Position6Max::BB, true, 9_900, 100, 0)
+            .is_ok());
+        assert!(nub
+            .seat_check(Position6Max::UTG, true, 10_000, 0, 0)
+            .is_ok());
     }
 
     #[test]
