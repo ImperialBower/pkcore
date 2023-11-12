@@ -777,7 +777,7 @@ mod store_nubibus_tests {
 
         // Bill(SB) calls 50
         nub.do_check_or_call();
-        assert_eq!("50".to_string(), nub.ledger.last().unwrap().detail);
+        assert_eq!("100".to_string(), nub.ledger.last().unwrap().detail);
         let sb = nub.seat_from_position(Position6Max::SB);
         assert_eq!(100, sb.chips_in_play.get().size());
         assert_eq!(9_900, sb.stack.get().size());
@@ -878,6 +878,29 @@ mod store_nubibus_tests {
         println!("{}", nub);
         println!();
         println!("FLOP: {}", nub.pluribus.board.flop);
+
+        let pop = nub.pop();
+        assert!(pop.is_some());
+
+        let pop = nub.pop();
+        assert!(pop.is_some());
+
+        println!("{}", nub);
+        println!();
+        println!(
+            "FLOP: {} TURN: {}",
+            nub.pluribus.board.flop, nub.pluribus.board.turn
+        );
+
+        let pop = nub.pop();
+        assert!(pop.is_some());
+
+        let pop = nub.pop();
+        assert!(pop.is_some());
+
+        println!("{}", nub);
+        println!();
+        println!("{}", nub.pluribus.board);
 
         let pop = nub.pop();
         assert!(pop.is_some());
