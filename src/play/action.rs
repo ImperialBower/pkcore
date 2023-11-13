@@ -7,7 +7,6 @@ pub enum PlayState {
     YetToAct,
     Fold,
     Check,
-    Bet,
     Call,
     Raise,
     Fubar,
@@ -25,6 +24,12 @@ pub struct Actor {
 /// I have been playing poker for over 30 years, and the flow of action within a hand comes easily
 /// to me, but it is entirely ingrained, and, as it turns out, is rather complex. This will require
 /// some serious test-driving.
+///
+/// Now that I've been coding through it for a while, it seems to me that it's not nearly as
+/// complicated as it seems.
+///
+/// The big idea is that Action continues until there are no actors in a `PlayState::YetToAct` state.
+/// Any time someone rises, all
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Action {
     pub actors: Vec<Actor>,
@@ -62,8 +67,19 @@ impl Action {
             .count()
     }
 
+    pub fn raise(&self, position: usize) {
+        self.set_state(position, PlayState::Raise);
+    }
+
     pub fn set_state(&self, position: usize, state: PlayState) {
         self.actors[position].state.set(state);
+        if state == PlayState::Raise {
+            for (i, actor) in self.actors.iter().enumerate() {
+                if (i != position) && (actor.state.get() != PlayState::Fold) {
+                    actor.state.set(PlayState::YetToAct);
+                }
+            }
+        };
     }
 
     #[must_use]
@@ -116,11 +132,123 @@ mod play__action__tests {
         assert!(!actions.is_open());
     }
 
-    // #[test]
-    // fn is_open__only_one_player_let_standing() {
-    //     let actions = Action::new(6);
-    //
-    // }
+    #[test]
+    fn is_open__checks_all_around() {
+        let actions = Action::new(6);
+
+        actions.set_state(0, PlayState::Check);
+        assert!(actions.is_open());
+
+        actions.set_state(1, PlayState::Check);
+        assert!(actions.is_open());
+
+        actions.set_state(2, PlayState::Check);
+        assert!(actions.is_open());
+
+        actions.set_state(3, PlayState::Check);
+        assert!(actions.is_open());
+
+        actions.set_state(4, PlayState::Check);
+        assert!(actions.is_open());
+
+        actions.set_state(5, PlayState::Check);
+        assert!(!actions.is_open());
+    }
+
+    #[test]
+    fn is_open__preflop() {
+        let actions = Action::new(6);
+
+        actions.set_state(2, PlayState::Call);
+        assert!(actions.is_open());
+
+        actions.set_state(3, PlayState::Call);
+        assert!(actions.is_open());
+
+        actions.set_state(4, PlayState::Call);
+        assert!(actions.is_open());
+
+        actions.set_state(5, PlayState::Call);
+        assert!(actions.is_open());
+
+        actions.set_state(0, PlayState::Call);
+        assert!(actions.is_open());
+
+        actions.set_state(1, PlayState::Check);
+        assert!(!actions.is_open());
+    }
+
+    #[test]
+    fn is_open__btn_raises_bb_protects() {
+        let actions = Action::new(6);
+
+        actions.set_state(2, PlayState::Fold);
+        assert!(actions.is_open());
+
+        actions.set_state(3, PlayState::Fold);
+        assert!(actions.is_open());
+
+        actions.set_state(4, PlayState::Fold);
+        assert!(actions.is_open());
+
+        actions.set_state(5, PlayState::Raise);
+        assert!(actions.is_open());
+
+        actions.set_state(0, PlayState::Fold);
+        assert!(actions.is_open());
+
+        actions.set_state(1, PlayState::Raise);
+        assert!(actions.is_open());
+
+        actions.set_state(5, PlayState::Call);
+        assert!(!actions.is_open());
+    }
+
+    #[test]
+    fn is_open__preflop_btn_raises_fold_all_around() {
+        let actions = Action::new(6);
+
+        actions.set_state(2, PlayState::Fold);
+        assert!(actions.is_open());
+
+        actions.set_state(3, PlayState::Fold);
+        assert!(actions.is_open());
+
+        actions.set_state(4, PlayState::Fold);
+        assert!(actions.is_open());
+
+        actions.set_state(5, PlayState::Raise);
+        assert!(actions.is_open());
+
+        actions.set_state(0, PlayState::Fold);
+        assert!(actions.is_open());
+
+        actions.set_state(1, PlayState::Fold);
+        assert!(!actions.is_open());
+    }
+
+    #[test]
+    fn is_open__preflop_btn_limps_bb_checks() {
+        let actions = Action::new(6);
+
+        actions.set_state(2, PlayState::Fold);
+        assert!(actions.is_open());
+
+        actions.set_state(3, PlayState::Fold);
+        assert!(actions.is_open());
+
+        actions.set_state(4, PlayState::Fold);
+        assert!(actions.is_open());
+
+        actions.set_state(5, PlayState::Call);
+        assert!(actions.is_open());
+
+        actions.set_state(0, PlayState::Fold);
+        assert!(actions.is_open());
+
+        actions.set_state(1, PlayState::Check);
+        assert!(!actions.is_open());
+    }
 
     #[test]
     fn player_count() {
