@@ -3,8 +3,6 @@ use strum_macros::{EnumCount, EnumIter};
 
 #[derive(Clone, Copy, Debug, Default, EnumCount, EnumIter, Eq, Hash, PartialEq)]
 pub enum PlayState {
-    SmallBlind,
-    BigBlind,
     #[default]
     YetToAct,
     Fold,
@@ -42,8 +40,6 @@ impl Action {
         for _ in 0..count {
             actors.push(Actor::default());
         }
-        actors.first().unwrap().state.set(PlayState::SmallBlind);
-        actors.get(1).unwrap().state.set(PlayState::BigBlind);
         Action { actors }
     }
 
@@ -88,8 +84,8 @@ mod play__action__tests {
     fn new() {
         let actions = Action::new(6);
 
-        assert_eq!(PlayState::SmallBlind, actions.state(0));
-        assert_eq!(PlayState::BigBlind, actions.state(1));
+        assert_eq!(PlayState::YetToAct, actions.state(0));
+        assert_eq!(PlayState::YetToAct, actions.state(1));
         assert_eq!(PlayState::YetToAct, actions.state(2));
         assert_eq!(PlayState::YetToAct, actions.state(3));
         assert_eq!(PlayState::YetToAct, actions.state(4));
