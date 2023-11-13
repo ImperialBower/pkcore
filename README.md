@@ -774,7 +774,8 @@
                 * .pop() to walk through steps
                   * .seat_check() to validate .pop()
                     * DEFECT: .seat_state() off by one FIXED
-                  * 
+                * PROBlEM: How do I know a round of play is over?
+                  * POSSIBLE SOLUTION: play::action::Action
 
 ## LATER
 

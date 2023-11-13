@@ -2,6 +2,7 @@ use crate::PKError;
 use std::fmt::{Display, Formatter};
 use strum_macros::{EnumCount, EnumIter};
 
+pub mod action;
 pub mod board;
 pub mod game;
 pub mod hole_cards;

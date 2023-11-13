@@ -376,7 +376,7 @@ impl Nubibus {
         &self.seats[position as usize - 1]
     }
 
-    /// Grea, I didn't write any tests for this method, and sure enough
+    /// Great, I didn't write any tests for this method, and sure enough
     /// it's off by one.
     #[must_use]
     pub fn seat_state(&self, position: Position6Max) -> SeatSnapshot {
