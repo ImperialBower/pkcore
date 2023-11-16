@@ -14,6 +14,9 @@ use std::{println as info, println as warn};
 /// tell me who is next to act who is active in the hand. If a seat fold, it
 ///
 /// Note: AI is close but I want it to leverage
+///
+/// UPDATE: I am not feeling these count specific seat types. I want something that supports
+/// anything from 2 to 11 players.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Position6MaxPointer {
     pub position: Cell<Position6Max>,

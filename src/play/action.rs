@@ -31,11 +31,11 @@ pub struct Actor {
 /// The big idea is that Action continues until there are no actors in a `PlayState::YetToAct` state.
 /// Any time someone rises, all
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct Action {
+pub struct ActionTracker {
     pub actors: Vec<Actor>,
 }
 
-impl Action {
+impl ActionTracker {
     /// # Panics
     ///
     /// Throws a panic if `count` is less than 2.
@@ -45,7 +45,7 @@ impl Action {
         for _ in 0..count {
             actors.push(Actor::default());
         }
-        Action { actors }
+        ActionTracker { actors }
     }
 
     #[must_use]
@@ -57,6 +57,14 @@ impl Action {
         self.actors
             .iter()
             .any(|a| a.state.get() == PlayState::YetToAct)
+    }
+
+    pub fn next_round(&self) {
+        for actor in self.actors.iter() {
+            if actor.state.get() != PlayState::Fold {
+                actor.state.set(PlayState::YetToAct);
+            }
+        }
     }
 
     #[must_use]
@@ -93,12 +101,12 @@ impl Action {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod play__action__tests {
+mod play__action_tracker__tests {
     use super::*;
 
     #[test]
     fn new() {
-        let actions = Action::new(6);
+        let actions = ActionTracker::new(6);
 
         assert_eq!(PlayState::YetToAct, actions.state(0));
         assert_eq!(PlayState::YetToAct, actions.state(1));
@@ -110,7 +118,7 @@ mod play__action__tests {
 
     #[test]
     fn is_open__any_yet_to_act() {
-        let actions = Action::new(6);
+        let actions = ActionTracker::new(6);
         assert!(actions.is_open());
 
         actions.set_state(0, PlayState::Call);
@@ -134,7 +142,7 @@ mod play__action__tests {
 
     #[test]
     fn is_open__checks_all_around() {
-        let actions = Action::new(6);
+        let actions = ActionTracker::new(6);
 
         actions.set_state(0, PlayState::Check);
         assert!(actions.is_open());
@@ -157,7 +165,7 @@ mod play__action__tests {
 
     #[test]
     fn is_open__preflop() {
-        let actions = Action::new(6);
+        let actions = ActionTracker::new(6);
 
         actions.set_state(2, PlayState::Call);
         assert!(actions.is_open());
@@ -180,7 +188,7 @@ mod play__action__tests {
 
     #[test]
     fn is_open__btn_raises_bb_protects() {
-        let actions = Action::new(6);
+        let actions = ActionTracker::new(6);
 
         actions.set_state(2, PlayState::Fold);
         assert!(actions.is_open());
@@ -206,7 +214,7 @@ mod play__action__tests {
 
     #[test]
     fn is_open__preflop_btn_raises_fold_all_around() {
-        let actions = Action::new(6);
+        let actions = ActionTracker::new(6);
 
         actions.set_state(2, PlayState::Fold);
         assert!(actions.is_open());
@@ -229,7 +237,7 @@ mod play__action__tests {
 
     #[test]
     fn is_open__preflop_btn_limps_bb_checks() {
-        let actions = Action::new(6);
+        let actions = ActionTracker::new(6);
 
         actions.set_state(2, PlayState::Fold);
         assert!(actions.is_open());
@@ -251,8 +259,28 @@ mod play__action__tests {
     }
 
     #[test]
+    fn next_round() {
+        let actions = ActionTracker::new(6);
+        actions.set_state(2, PlayState::Fold);
+        actions.set_state(3, PlayState::Fold);
+        actions.set_state(4, PlayState::Fold);
+        actions.set_state(5, PlayState::Call);
+        actions.set_state(0, PlayState::Fold);
+        actions.set_state(1, PlayState::Check);
+
+        actions.next_round();
+
+        assert_eq!(PlayState::Fold, actions.state(0));
+        assert_eq!(PlayState::YetToAct, actions.state(1));
+        assert_eq!(PlayState::Fold, actions.state(2));
+        assert_eq!(PlayState::Fold, actions.state(3));
+        assert_eq!(PlayState::Fold, actions.state(4));
+        assert_eq!(PlayState::YetToAct, actions.state(5));
+    }
+
+    #[test]
     fn player_count() {
-        let actions = Action::new(6);
+        let actions = ActionTracker::new(6);
         assert_eq!(6, actions.player_count());
 
         actions.set_state(0, PlayState::Fold);
@@ -261,7 +289,7 @@ mod play__action__tests {
 
     #[test]
     fn state_invalid_index() {
-        let actions = Action::new(6);
+        let actions = ActionTracker::new(6);
 
         assert_eq!(PlayState::Fubar, actions.state(6));
     }

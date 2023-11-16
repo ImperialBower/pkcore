@@ -21,6 +21,7 @@ use crate::play::Position6Max;
 use std::cell::Cell;
 #[cfg(test)]
 use std::{println as debug, println as info, println as warn};
+use crate::play::action::ActionTracker;
 
 /// This is the struct that will be used to leverage the Pluribus data so that we can use it to
 /// drive state through the system.
@@ -33,6 +34,7 @@ pub struct Nubibus {
     pub pluribus: Pluribus,
     pub position: Position6MaxPointer,
     pub seats: [Seat; 6],
+    pub tracker: ActionTracker,
     pub floor: Cell<usize>,
     pub pot: Cell<Chips>,
     pub queue_preflop: Vec<String>,
@@ -54,6 +56,7 @@ impl Nubibus {
             pluribus: pluribus.clone(),
             position: Position6MaxPointer::default(),
             seats: Default::default(),
+            tracker: ActionTracker::new(6),
             floor: Cell::new(0),
             pot: Cell::new(Chips::default()),
             queue_preflop: ActionType::actions_preflop_reverse(&pluribus.rounds),

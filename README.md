@@ -777,6 +777,10 @@
                 * PROBlEM: How do I know a round of play is over?
                   * POSSIBLE SOLUTION: play::action::Action
                     * Done!
+                * Add play::action::Action to Nubibus
+                  * Renamed play::action::Action to play::action::ActionTracker
+                  * ActionTracker.next_round()
+                  * Added ActionTracker to Nubibus
 
 ## LATER
 

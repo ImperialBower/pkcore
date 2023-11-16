@@ -10,6 +10,7 @@ pub mod phases;
 pub mod positions;
 pub mod stages;
 pub mod table;
+pub mod position;
 
 #[derive(Clone, Copy, Debug, Default, EnumCount, EnumIter, Eq, Hash, PartialEq)]
 pub enum Position6Max {
