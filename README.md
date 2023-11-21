@@ -877,6 +877,7 @@
 
 ## Potential Libraries
 
+* [derive_more](https://github.com/JelteF/derive_more) (Recommended by Rust Power Tools)
 * [mycelium-bitfield](https://crates.io/crates/mycelium-bitfield)
 * [modular-bitfield](https://crates.io/crates/modular-bitfield)
 * [RustyLine](https://github.com/kkawakam/rustyline)
