@@ -614,11 +614,12 @@ mod hand_rank__case_eval_tests {
 
     #[test]
     fn from_holdem_at_flop__happy__tie() {
-        let board = Three::from(vec![
-            Card::NINE_CLUBS,
-            Card::EIGHT_DIAMONDS,
-            Card::SEVEN_CLUBS,
-        ]);
+        let board =
+            Three::from(vec![
+                Card::NINE_CLUBS,
+                Card::EIGHT_DIAMONDS,
+                Card::SEVEN_CLUBS,
+            ]);
         let hole_cards = HoleCards::from(vec![Two::HAND_JC_TD, Two::HAND_QH_6H, Two::HAND_JS_TC]);
         let case = Two::HAND_QH_6H;
 
@@ -642,11 +643,12 @@ mod hand_rank__case_eval_tests {
 
     #[test]
     fn from_holdem_at_flop__blank_card_in_case() {
-        let board = Three::from(vec![
-            Card::NINE_CLUBS,
-            Card::EIGHT_DIAMONDS,
-            Card::SEVEN_DIAMONDS,
-        ]);
+        let board =
+            Three::from(vec![
+                Card::NINE_CLUBS,
+                Card::EIGHT_DIAMONDS,
+                Card::SEVEN_DIAMONDS,
+            ]);
         let hole_cards = HoleCards::from(vec![Two::HAND_JC_TD, Two::HAND_QH_6H, Two::HAND_JS_TC]);
         let case = Two::from([Card::ACE_DIAMONDS, Card::BLANK]);
 
@@ -658,11 +660,12 @@ mod hand_rank__case_eval_tests {
 
     #[test]
     fn from_holdem_at_flop__blank_card_in_hand() {
-        let board = Three::from(vec![
-            Card::NINE_CLUBS,
-            Card::EIGHT_DIAMONDS,
-            Card::SEVEN_CLUBS,
-        ]);
+        let board =
+            Three::from(vec![
+                Card::NINE_CLUBS,
+                Card::EIGHT_DIAMONDS,
+                Card::SEVEN_CLUBS,
+            ]);
         let hole_cards = HoleCards::from(vec![
             Two::HAND_JC_TD,
             Two::from([Card::QUEEN_HEARTS, Card::BLANK]),
@@ -697,13 +700,14 @@ mod hand_rank__case_eval_tests {
 
     #[test]
     fn get() {
-        let sut = CaseEval(
-            vec![
-                TestData::daniel_eval_at_flop(),
-                TestData::gus_eval_at_flop(),
-            ],
-            Cards::default(),
-        );
+        let sut =
+            CaseEval(
+                vec![
+                    TestData::daniel_eval_at_flop(),
+                    TestData::gus_eval_at_flop(),
+                ],
+                Cards::default(),
+            );
 
         assert_eq!(sut.get(0).unwrap(), &TestData::daniel_eval_at_flop());
         assert_eq!(sut.get(1).unwrap(), &TestData::gus_eval_at_flop());
@@ -743,13 +747,14 @@ mod hand_rank__case_eval_tests {
     #[test]
     fn push() {
         let mut sut = CaseEval::default();
-        let expected = CaseEval(
-            vec![
-                TestData::daniel_eval_at_flop(),
-                TestData::gus_eval_at_flop(),
-            ],
-            Cards::default(),
-        );
+        let expected =
+            CaseEval(
+                vec![
+                    TestData::daniel_eval_at_flop(),
+                    TestData::gus_eval_at_flop(),
+                ],
+                Cards::default(),
+            );
 
         sut.push(TestData::daniel_eval_at_flop());
         sut.push(TestData::gus_eval_at_flop());
@@ -799,13 +804,14 @@ mod hand_rank__case_eval_tests {
         let the_nuts = Eval::from(Five::from_2and3(Two::HAND_8S_7S, TestData::the_flop()));
         let the_2nd_nuts = Eval::from(Five::from_2and3(Two::HAND_9S_9H, TestData::the_flop()));
 
-        let actual = CaseEval::from(vec![
-            the_nuts,
-            the_2nd_nuts,
-            TestData::daniel_eval_at_flop(),
-            TestData::gus_eval_at_flop(),
-        ])
-        .win_count();
+        let actual =
+            CaseEval::from(vec![
+                the_nuts,
+                the_2nd_nuts,
+                TestData::daniel_eval_at_flop(),
+                TestData::gus_eval_at_flop(),
+            ])
+            .win_count();
 
         assert_eq!(expected, actual);
     }
@@ -817,13 +823,14 @@ mod hand_rank__case_eval_tests {
         let the_nuts = Eval::from(Five::from_2and3(Two::HAND_8S_7S, TestData::the_flop()));
         let the_2nd_nuts = Eval::from(Five::from_2and3(Two::HAND_9S_9H, TestData::the_flop()));
 
-        let actual = CaseEval::from(vec![
-            TestData::daniel_eval_at_flop(),
-            the_2nd_nuts,
-            TestData::gus_eval_at_flop(),
-            the_nuts,
-        ])
-        .win_count();
+        let actual =
+            CaseEval::from(vec![
+                TestData::daniel_eval_at_flop(),
+                the_2nd_nuts,
+                TestData::gus_eval_at_flop(),
+                the_nuts,
+            ])
+            .win_count();
 
         assert_eq!(expected, actual);
     }
@@ -835,13 +842,14 @@ mod hand_rank__case_eval_tests {
         let the_nuts = Eval::from(Five::from_2and3(Two::HAND_8S_7S, TestData::the_flop()));
         let also_the_nuts = Eval::from(Five::from_2and3(Two::HAND_8H_7D, TestData::the_flop()));
 
-        let actual = CaseEval::from(vec![
-            TestData::daniel_eval_at_flop(),
-            the_nuts,
-            also_the_nuts,
-            TestData::gus_eval_at_flop(),
-        ])
-        .win_count();
+        let actual =
+            CaseEval::from(vec![
+                TestData::daniel_eval_at_flop(),
+                the_nuts,
+                also_the_nuts,
+                TestData::gus_eval_at_flop(),
+            ])
+            .win_count();
 
         assert_eq!(expected, actual);
     }
@@ -853,13 +861,14 @@ mod hand_rank__case_eval_tests {
         let the_nuts = Eval::from(Five::from_2and3(Two::HAND_8S_7S, TestData::the_flop()));
         let also_the_nuts = Eval::from(Five::from_2and3(Two::HAND_8H_7D, TestData::the_flop()));
 
-        let actual = CaseEval::from(vec![
-            the_nuts,
-            TestData::daniel_eval_at_flop(),
-            TestData::gus_eval_at_flop(),
-            also_the_nuts,
-        ])
-        .win_count();
+        let actual =
+            CaseEval::from(vec![
+                the_nuts,
+                TestData::daniel_eval_at_flop(),
+                TestData::gus_eval_at_flop(),
+                also_the_nuts,
+            ])
+            .win_count();
 
         assert_eq!(expected, actual);
     }

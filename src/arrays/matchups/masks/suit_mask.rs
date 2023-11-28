@@ -110,13 +110,14 @@ impl SuitMask {
     /// Under construction
     #[must_use]
     pub fn suited_mask(two: Two, suit: u8) -> Two {
-        let suit = match suit {
-            1 => Suit::CLUBS,
-            2 => Suit::DIAMONDS,
-            3 => Suit::HEARTS,
-            4 => Suit::SPADES,
-            _ => Suit::BLANK,
-        };
+        let suit =
+            match suit {
+                1 => Suit::CLUBS,
+                2 => Suit::DIAMONDS,
+                3 => Suit::HEARTS,
+                4 => Suit::SPADES,
+                _ => Suit::BLANK,
+            };
         Two::new(
             Card::new(two.first().get_rank(), suit),
             Card::new(two.second().get_rank(), suit),

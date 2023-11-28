@@ -60,7 +60,7 @@ impl ActionTracker {
     }
 
     pub fn next_round(&self) {
-        for actor in self.actors.iter() {
+        for actor in &self.actors {
             if actor.state.get() != PlayState::Fold {
                 actor.state.set(PlayState::YetToAct);
             }

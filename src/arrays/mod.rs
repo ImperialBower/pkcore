@@ -6,6 +6,7 @@ pub mod five;
 pub mod four;
 pub mod hole_cards;
 pub mod matchups;
+pub mod ranges;
 pub mod seven;
 pub mod six;
 pub mod three;

@@ -568,12 +568,13 @@ mod store_pluribus_actions_tests {
             "c".to_string(),
         ];
 
-        let actual = ActionType::actions_preflop(&vec![
-            "fr200fffr1100c".to_string(),
-            "r2225c".to_string(),
-            "cc".to_string(),
-            "r5600f".to_string(),
-        ]);
+        let actual =
+            ActionType::actions_preflop(&vec![
+                "fr200fffr1100c".to_string(),
+                "r2225c".to_string(),
+                "cc".to_string(),
+                "r5600f".to_string(),
+            ]);
 
         assert_eq!(expected, actual);
     }

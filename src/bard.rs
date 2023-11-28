@@ -247,7 +247,7 @@ impl Bard {
     pub const TREYS: Bard = Bard(Bard::TREY_SPADES.0 | Bard::TREY_HEARTS.0 | Bard::TREY_DIAMONDS.0 | Bard::TREY_CLUBS.0);
     pub const DEUCES: Bard = Bard(Bard::DEUCE_SPADES.0 | Bard::DEUCE_HEARTS.0 | Bard::DEUCE_DIAMONDS.0 | Bard::DEUCE_CLUBS.0);
     //endregion Ranks
-    
+
     // region deck
     pub const DECK: [Bard; 52] = [
         Bard::ACE_SPADES,
@@ -723,13 +723,14 @@ mod bard_tests {
 
     #[test]
     fn from__vec_card() {
-        let v: Vec<Card> = vec![
-            Card::ACE_SPADES,
-            Card::KING_SPADES,
-            Card::QUEEN_SPADES,
-            Card::JACK_SPADES,
-            Card::TEN_SPADES,
-        ];
+        let v: Vec<Card> =
+            vec![
+                Card::ACE_SPADES,
+                Card::KING_SPADES,
+                Card::QUEEN_SPADES,
+                Card::JACK_SPADES,
+                Card::TEN_SPADES,
+            ];
         let actual = Bard::from(v);
         let expected = Bard::ACE_SPADES
             | Bard::KING_SPADES

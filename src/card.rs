@@ -277,26 +277,28 @@ impl FromStr for Card {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut chars = s.trim().chars();
-        let rank: Rank = match chars.next() {
-            None => return Err(PKError::InvalidIndex),
-            Some(r) => {
-                let rank = Rank::from(r);
-                if rank == Rank::BLANK {
-                    return Err(PKError::InvalidIndex);
+        let rank: Rank =
+            match chars.next() {
+                None => return Err(PKError::InvalidIndex),
+                Some(r) => {
+                    let rank = Rank::from(r);
+                    if rank == Rank::BLANK {
+                        return Err(PKError::InvalidIndex);
+                    }
+                    rank
                 }
-                rank
-            }
-        };
-        let suit: Suit = match chars.next() {
-            None => return Err(PKError::InvalidIndex),
-            Some(s) => {
-                let suit = Suit::from(s);
-                if suit == Suit::BLANK {
-                    return Err(PKError::InvalidIndex);
+            };
+        let suit: Suit =
+            match chars.next() {
+                None => return Err(PKError::InvalidIndex),
+                Some(s) => {
+                    let suit = Suit::from(s);
+                    if suit == Suit::BLANK {
+                        return Err(PKError::InvalidIndex);
+                    }
+                    suit
                 }
-                suit
-            }
-        };
+            };
         Ok(Card::new(rank, suit))
     }
 }

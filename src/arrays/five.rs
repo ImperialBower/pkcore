@@ -2514,20 +2514,22 @@ mod arrays__five_tests {
 
     #[test]
     fn pile__clean() {
-        let full_house = Five::from([
-            Card::FIVE_SPADES,
-            Card::SIX_DIAMONDS,
-            Card::FIVE_HEARTS,
-            Card::SIX_SPADES,
-            Card::SIX_CLUBS,
-        ]);
-        let full_house_sorted = Five::from([
-            Card::SIX_SPADES,
-            Card::SIX_DIAMONDS,
-            Card::SIX_CLUBS,
-            Card::FIVE_SPADES,
-            Card::FIVE_HEARTS,
-        ]);
+        let full_house =
+            Five::from([
+                Card::FIVE_SPADES,
+                Card::SIX_DIAMONDS,
+                Card::FIVE_HEARTS,
+                Card::SIX_SPADES,
+                Card::SIX_CLUBS,
+            ]);
+        let full_house_sorted =
+            Five::from([
+                Card::SIX_SPADES,
+                Card::SIX_DIAMONDS,
+                Card::SIX_CLUBS,
+                Card::FIVE_SPADES,
+                Card::FIVE_HEARTS,
+            ]);
 
         let clean_full_house = full_house.sort().clean();
 

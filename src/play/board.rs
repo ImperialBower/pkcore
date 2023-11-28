@@ -69,11 +69,13 @@ impl Plurable for Board {
                 Card::BLANK,
                 Card::BLANK,
             )),
-            2 => Ok(Board::new(
-                Three::from_str(Util::str_len_splitter(v.index(0), 2).as_str())?,
-                Card::from_str(v.index(1))?,
-                Card::BLANK,
-            )),
+            2 => {
+                Ok(Board::new(
+                    Three::from_str(Util::str_len_splitter(v.index(0), 2).as_str())?,
+                    Card::from_str(v.index(1))?,
+                    Card::BLANK,
+                ))
+            }
             3 => Ok(Board::new(
                 Three::from_str(Util::str_len_splitter(v.index(0), 2).as_str())?,
                 Card::from_str(v.index(1))?,

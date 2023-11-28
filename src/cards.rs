@@ -531,14 +531,15 @@ impl From<Bard> for Cards {
 
 impl From<Vec<Card>> for Cards {
     fn from(v: Vec<Card>) -> Self {
-        let filtered = v.iter().filter_map(|c| {
-            let pc = *c;
-            if pc.contains_blank() {
-                None
-            } else {
-                Some(pc)
-            }
-        });
+        let filtered =
+            v.iter().filter_map(|c| {
+                let pc = *c;
+                if pc.contains_blank() {
+                    None
+                } else {
+                    Some(pc)
+                }
+            });
         Cards(filtered.collect())
     }
 }
@@ -546,14 +547,15 @@ impl From<Vec<Card>> for Cards {
 impl From<Vec<&Card>> for Cards {
     fn from(v: Vec<&Card>) -> Self {
         // TODO RF: Hack :-P
-        let filtered = v.iter().filter_map(|c| {
-            let pc = **c;
-            if pc.contains_blank() {
-                None
-            } else {
-                Some(pc)
-            }
-        });
+        let filtered =
+            v.iter().filter_map(|c| {
+                let pc = **c;
+                if pc.contains_blank() {
+                    None
+                } else {
+                    Some(pc)
+                }
+            });
         Cards(filtered.collect())
     }
 }

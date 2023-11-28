@@ -2,15 +2,15 @@ use crate::PKError;
 use std::fmt::{Display, Formatter};
 use strum_macros::{EnumCount, EnumIter};
 
-pub mod action;
+pub mod actions;
 pub mod board;
 pub mod game;
 pub mod hole_cards;
 pub mod phases;
+pub mod position;
 pub mod positions;
 pub mod stages;
 pub mod table;
-pub mod position;
 
 #[derive(Clone, Copy, Debug, Default, EnumCount, EnumIter, Eq, Hash, PartialEq)]
 pub enum Position6Max {

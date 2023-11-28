@@ -257,10 +257,7 @@ impl TryFrom<Cards> for HoleCards {
             let mut hands = HoleCards::with_capacity(num_of_players);
 
             for _ in 0..num_of_players {
-                hands.push(Two::new(
-                    cards.draw_one().unwrap(),
-                    cards.draw_one().unwrap(),
-                )?);
+                hands.push(Two::new(cards.draw_one().unwrap(), cards.draw_one().unwrap())?);
             }
             Ok(hands)
         } else {

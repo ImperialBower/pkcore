@@ -35,11 +35,12 @@ impl Display for HandRank {
 
 impl From<HandRankValue> for HandRank {
     fn from(value: HandRankValue) -> Self {
-        let hr = HandRank {
-            value,
-            name: Name::from(value),
-            class: Class::from(value),
-        };
+        let hr =
+            HandRank {
+                value,
+                name: Name::from(value),
+                class: Class::from(value),
+            };
 
         if !hr.salright() {
             return HandRank::default();
