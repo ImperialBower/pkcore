@@ -781,6 +781,10 @@
                   * Renamed play::action::Action to play::action::ActionTracker
                   * ActionTracker.next_round()
                   * Added ActionTracker to Nubibus
+      * Two UPDATES
+        * Two::combos()
+        * Two::filter_pairs()
+        * arrays::combos::twos::Twos
 
 ## LATER
 
@@ -793,6 +797,7 @@
   * [Mike Caro's Website](https://www.poker1.com/)
   * GTO
     * [Minimum Defense Frequency vs Pot Odds](https://upswingpoker.com/minimum-defense-frequency-vs-pot-odds/)
+    * [A Beginner’s Guide to Poker Combinatorics](https://blog.gtowizard.com/a-beginners-guide-to-poker-combinatorics/)
   * Terms
     * [The Nuts](https://en.wikipedia.org/wiki/Nut_hand)
       * 888poker > [What is Nuts in Poker?](https://www.888poker.com/magazine/poker-terms/nuts)

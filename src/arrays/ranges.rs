@@ -76,6 +76,51 @@ macro_rules! range {
     (AT) => {
         Two::ACE_TEN.to_vec()
     };
+    (A9s) => {
+        Two::ACE_NINE_SUITED.to_vec()
+    };
+    (A9o) => {
+        Two::ACE_NINE_OFFSUIT.to_vec()
+    };
+    (A9) => {
+        Two::ACE_NINE.to_vec()
+    };
+    (A8s) => {
+        Two::ACE_EIGHT_SUITED.to_vec()
+    };
+    (A8o) => {
+        Two::ACE_EIGHT_OFFSUIT.to_vec()
+    };
+    (A8) => {
+        Two::ACE_EIGHT.to_vec()
+    };
+    (A7s) => {
+        Two::ACE_SEVEN_SUITED.to_vec()
+    };
+    (A7o) => {
+        Two::ACE_SEVEN_OFFSUIT.to_vec()
+    };
+    (A7) => {
+        Two::ACE_SEVEN.to_vec()
+    };
+    (A6s) => {
+        Two::ACE_SIX_SUITED.to_vec()
+    };
+    (A6o) => {
+        Two::ACE_SIX_OFFSUIT.to_vec()
+    };
+    (A6) => {
+        Two::ACE_SIX.to_vec()
+    };
+    (A5s) => {
+        Two::ACE_FIVE_SUITED.to_vec()
+    };
+    (A5o) => {
+        Two::ACE_FIVE_OFFSUIT.to_vec()
+    };
+    (A5) => {
+        Two::ACE_FIVE.to_vec()
+    };
     (A4s) => {
         Two::ACE_FOUR_SUITED.to_vec()
     };
@@ -84,6 +129,24 @@ macro_rules! range {
     };
     (A4) => {
         Two::ACE_FOUR.to_vec()
+    };
+    (A3s) => {
+        Two::ACE_TREY_SUITED.to_vec()
+    };
+    (A3o) => {
+        Two::ACE_TREY_OFFSUIT.to_vec()
+    };
+    (A3) => {
+        Two::ACE_TREY.to_vec()
+    };
+    (A2s) => {
+        Two::ACE_DEUCE_SUITED.to_vec()
+    };
+    (A2o) => {
+        Two::ACE_DEUCE_OFFSUIT.to_vec()
+    };
+    (A2) => {
+        Two::ACE_DEUCE.to_vec()
     };
     (KQs) => {
         Two::KING_QUEEN_SUITED.to_vec()

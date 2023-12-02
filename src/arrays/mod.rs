@@ -11,6 +11,7 @@ pub mod seven;
 pub mod six;
 pub mod three;
 pub mod two;
+pub mod combos;
 
 /// TODO: How can we make this work?
 pub trait Arrayable<T> {
