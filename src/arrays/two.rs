@@ -1690,7 +1690,7 @@ impl Two {
 
     #[must_use]
     pub fn combos() -> Vec<Two> {
-        POKER_DECK.combinations(2).map(|c| Two::from(c)).collect()
+        POKER_DECK.combinations(2).map(Two::from).collect()
     }
 
     #[must_use]
@@ -1705,12 +1705,12 @@ impl Two {
 
     #[must_use]
     pub fn filter_pairs(twos: Vec<Two>) -> Vec<Two> {
-        twos.into_iter().filter(|t| t.is_pair()).collect()
+        twos.into_iter().filter(Two::is_pair).collect()
     }
 
     #[must_use]
     pub fn filter_suited(twos: Vec<Two>) -> Vec<Two> {
-        twos.into_iter().filter(|t| t.is_suited()).collect()
+        twos.into_iter().filter(Two::is_suited).collect()
     }
 
     #[must_use]
