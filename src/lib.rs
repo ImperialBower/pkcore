@@ -61,9 +61,11 @@ pub const UNIQUE_ONE_PAIR: i32 = 1_098_240;
 pub const DISTINCT_ONE_PAIR: i32 = 2_860;
 pub const UNIQUE_HIGH_CARD: i32 = 1_302_540;
 pub const DISTINCT_HIGH_CARD: i32 = 1_277;
-pub const DISTINCT_2_CARD_HANDS: usize = 1_326;
-pub const DISTINCT_SUITED_2_CARD_HANDS: usize = 312;
-pub const NON_EQUIVALENT_2_CARD_HANDS: usize = 169;
+
+pub const UNIQUE_2_CARD_HANDS: usize = 1_326;
+pub const UNIQUE_SUITED_2_CARD_HANDS: usize = 312;
+pub const DISTINCT_2_CARD_HANDS: usize = 169;
+
 pub const UNIQUE_5_CARD_HANDS: usize = 2_598_960;
 pub const DISTINCT_5_CARD_HANDS: usize = 7_462;
 pub const POSSIBLE_UNIQUE_HOLDEM_HUP_MATCHUPS: usize = 1_624_350;

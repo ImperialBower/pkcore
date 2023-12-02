@@ -2150,7 +2150,7 @@ mod arrays__two_tests {
 
     #[test]
     fn combos() {
-        assert_eq!(crate::DISTINCT_2_CARD_HANDS, Two::combos().len());
+        assert_eq!(crate::UNIQUE_2_CARD_HANDS, Two::combos().len());
     }
 
     #[test]
@@ -2178,7 +2178,7 @@ mod arrays__two_tests {
     fn filter_suited() {
         let suited = Two::filter_suited(Two::combos());
 
-        assert_eq!(crate::DISTINCT_SUITED_2_CARD_HANDS, suited.len());
+        assert_eq!(crate::UNIQUE_SUITED_2_CARD_HANDS, suited.len());
     }
 
     #[test]

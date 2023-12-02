@@ -1,7 +1,9 @@
 use crate::arrays::two::Two;
 use crate::deck::POKER_DECK;
+use crate::rank::Rank;
 
-///
+/// This struct is to deal with the fact that the `arrays::Two` struct is getting overloaded with
+/// functionality that is really about combinations of `Two` structs.
 ///
 /// # Links
 ///
@@ -11,8 +13,13 @@ pub struct Twos(Vec<Two>);
 
 impl Twos {
     #[must_use]
-    pub fn distinct() -> Twos {
+    pub fn unique() -> Twos {
         Twos::from(POKER_DECK.combinations(2).map(Two::from).collect::<Vec<Two>>())
+    }
+
+    #[must_use]
+    pub fn filter_on_rank(&self, rank: Rank) -> Self {
+        Self(self.iter().filter(|two| two.contains_rank(rank)).copied().collect())
     }
 
     #[must_use]
@@ -63,12 +70,22 @@ mod arrays__combos__twos_tests {
     use super::*;
 
     #[test]
-    fn distinct() {
-        let distinct = Twos::distinct();
+    fn unique() {
+        let unique = Twos::unique();
 
-        assert!(!distinct.is_empty());
-        assert_eq!(crate::DISTINCT_2_CARD_HANDS, distinct.len());
-        assert_eq!(crate::DISTINCT_2_CARD_HANDS, Twos::from(distinct.hashset()).len());
+        assert!(!unique.is_empty());
+        assert_eq!(crate::UNIQUE_2_CARD_HANDS, unique.len());
+        assert_eq!(crate::UNIQUE_2_CARD_HANDS, Twos::from(unique.hashset()).len());
+    }
+
+    #[test]
+    fn filter_on_rank() {
+        let twos = Twos::from(vec![Two::HAND_TD_5D, Two::HAND_TS_9D]);
+
+        assert!(twos.filter_on_rank(Rank::JACK).is_empty());
+        assert_eq!(1, twos.filter_on_rank(Rank::NINE).len());
+        assert_eq!(2, twos.filter_on_rank(Rank::TEN).len());
+        assert_eq!(2, Twos::unique().filter_on_rank(Rank::ACE).len());
     }
 
     #[test]
