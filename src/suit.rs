@@ -77,12 +77,10 @@ impl FromStr for Suit {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s: Vec<char> = s.trim().chars().collect();
         match s.len() {
-            1 => {
-                match s.first() {
-                    Some(c) => Ok(Suit::from(*c)),
-                    None => Err(PKError::Fubar),
-                }
-            }
+            1 => match s.first() {
+                Some(c) => Ok(Suit::from(*c)),
+                None => Err(PKError::Fubar),
+            },
             _ => Err(PKError::InvalidIndex),
         }
     }

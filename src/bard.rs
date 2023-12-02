@@ -723,14 +723,13 @@ mod bard_tests {
 
     #[test]
     fn from__vec_card() {
-        let v: Vec<Card> =
-            vec![
-                Card::ACE_SPADES,
-                Card::KING_SPADES,
-                Card::QUEEN_SPADES,
-                Card::JACK_SPADES,
-                Card::TEN_SPADES,
-            ];
+        let v: Vec<Card> = vec![
+            Card::ACE_SPADES,
+            Card::KING_SPADES,
+            Card::QUEEN_SPADES,
+            Card::JACK_SPADES,
+            Card::TEN_SPADES,
+        ];
         let actual = Bard::from(v);
         let expected = Bard::ACE_SPADES
             | Bard::KING_SPADES

@@ -620,36 +620,33 @@ mod analysis__store__db__hupresult_tests {
 
     #[test]
     fn matches() {
-        let first =
-            HUPResult {
-                higher: Bard::SIX_SPADES | Bard::SIX_HEARTS,
-                lower: Bard::FIVE_DIAMONDS | Bard::FIVE_CLUBS,
-                higher_wins: 1_365_284,
-                lower_wins: 314_904,
-                ties: 32_116,
-            };
-        let second =
-            HUPResult {
-                higher: Bard::SIX_DIAMONDS | Bard::SIX_CLUBS,
-                lower: Bard::FIVE_SPADES | Bard::FIVE_HEARTS,
-                higher_wins: 1_365_284,
-                lower_wins: 314_904,
-                ties: 32_116,
-            };
+        let first = HUPResult {
+            higher: Bard::SIX_SPADES | Bard::SIX_HEARTS,
+            lower: Bard::FIVE_DIAMONDS | Bard::FIVE_CLUBS,
+            higher_wins: 1_365_284,
+            lower_wins: 314_904,
+            ties: 32_116,
+        };
+        let second = HUPResult {
+            higher: Bard::SIX_DIAMONDS | Bard::SIX_CLUBS,
+            lower: Bard::FIVE_SPADES | Bard::FIVE_HEARTS,
+            higher_wins: 1_365_284,
+            lower_wins: 314_904,
+            ties: 32_116,
+        };
 
         assert!(first.matches(&second));
     }
 
     #[test]
     fn matches_not() {
-        let first =
-            HUPResult {
-                higher: Bard::ACE_SPADES | Bard::FIVE_HEARTS,
-                lower: Bard::FOUR_HEARTS | Bard::TREY_HEARTS,
-                higher_wins: 1_068_796,
-                lower_wins: 632_976,
-                ties: 10_532,
-            };
+        let first = HUPResult {
+            higher: Bard::ACE_SPADES | Bard::FIVE_HEARTS,
+            lower: Bard::FOUR_HEARTS | Bard::TREY_HEARTS,
+            higher_wins: 1_068_796,
+            lower_wins: 632_976,
+            ties: 10_532,
+        };
         let second = HUPResult {
             higher: Bard::ACE_CLUBS | Bard::FIVE_CLUBS,
             lower: Bard::FOUR_DIAMONDS | Bard::FIVE_CLUBS,
@@ -750,7 +747,10 @@ mod analysis__store__db__hupresult_tests {
         let inserted = HUPResult::insert(&conn, &the_hand).unwrap();
 
         // the proof
-        assert!(HUPResult::exists(&conn, &TestData::the_hand_sorted_headsup()));
+        assert!(HUPResult::exists(
+            &conn,
+            &TestData::the_hand_sorted_headsup()
+        ));
         assert!(inserted);
         conn.close().unwrap()
     }

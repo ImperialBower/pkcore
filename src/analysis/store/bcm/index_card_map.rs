@@ -94,12 +94,11 @@ impl TryFrom<Seven> for IndexCardMap {
 
     fn try_from(seven: Seven) -> Result<Self, Self::Error> {
         let (rank, five) = seven.hand_rank_value_and_hand();
-        let icm =
-            IndexCardMap {
-                cards: seven.to_string(),
-                best: five.to_string(),
-                rank,
-            };
+        let icm = IndexCardMap {
+            cards: seven.to_string(),
+            best: five.to_string(),
+            rank,
+        };
         Ok(icm)
     }
 }
