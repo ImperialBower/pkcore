@@ -2,6 +2,7 @@ use crate::analysis::eval::Eval;
 use crate::analysis::hand_rank::{HandRank, HandRankValue};
 use crate::arrays::five::Five;
 
+pub mod combos;
 pub mod five;
 pub mod four;
 pub mod hole_cards;
@@ -10,7 +11,6 @@ pub mod seven;
 pub mod six;
 pub mod three;
 pub mod two;
-pub mod combos;
 
 /// TODO: How can we make this work?
 pub trait Arrayable<T> {

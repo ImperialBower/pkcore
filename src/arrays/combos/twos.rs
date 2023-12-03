@@ -1,4 +1,5 @@
 use crate::arrays::two::Two;
+use crate::card::Card;
 use crate::deck::POKER_DECK;
 use crate::rank::Rank;
 use crate::suit::Suit;
@@ -15,22 +16,59 @@ pub struct Twos(Vec<Two>);
 impl Twos {
     #[must_use]
     pub fn unique() -> Twos {
-        Twos::from(POKER_DECK.combinations(2).map(Two::from).collect::<Vec<Two>>())
+        Twos::from(
+            POKER_DECK
+                .combinations(2)
+                .map(Two::from)
+                .collect::<Vec<Two>>(),
+        )
+    }
+
+    #[must_use]
+    pub fn filter_on_card(&self, card: Card) -> Self {
+        Self(
+            self.iter()
+                .filter(|two| two.contains_card(card))
+                .copied()
+                .collect(),
+        )
+    }
+
+    #[must_use]
+    pub fn filter_is_paired(&self) -> Self {
+        Self(self.iter().filter(|two| two.is_pair()).copied().collect())
+    }
+
+    #[must_use]
+    pub fn filter_is_suited(&self) -> Self {
+        Self(self.iter().filter(|two| two.is_suited()).copied().collect())
     }
 
     #[must_use]
     pub fn filter_on_rank(&self, rank: Rank) -> Self {
-        Self(self.iter().filter(|two| two.contains_rank(rank)).copied().collect())
+        Self(
+            self.iter()
+                .filter(|two| two.contains_rank(rank))
+                .copied()
+                .collect(),
+        )
     }
 
     #[must_use]
     pub fn filter_on_suit(&self, suit: Suit) -> Self {
-        Self(self.iter().filter(|two| two.contains_suit(suit)).copied().collect())
+        Self(
+            self.iter()
+                .filter(|two| two.contains_suit(suit))
+                .copied()
+                .collect(),
+        )
     }
 
     #[must_use]
     pub fn hashset(&self) -> std::collections::HashSet<Two> {
-        self.iter().copied().collect::<std::collections::HashSet<Two>>()
+        self.iter()
+            .copied()
+            .collect::<std::collections::HashSet<Two>>()
     }
 
     #[must_use]
@@ -81,7 +119,32 @@ mod arrays__combos__twos_tests {
 
         assert!(!unique.is_empty());
         assert_eq!(crate::UNIQUE_2_CARD_HANDS, unique.len());
-        assert_eq!(crate::UNIQUE_2_CARD_HANDS, Twos::from(unique.hashset()).len());
+        assert_eq!(
+            crate::UNIQUE_2_CARD_HANDS,
+            Twos::from(unique.hashset()).len()
+        );
+    }
+
+    #[test]
+    fn filter_is_pair() {
+        let unique = Twos::unique();
+
+        let pocket_pairs = unique.filter_is_paired();
+
+        // 13 x 6 = 78
+        assert_eq!(crate::UNIQUE_POCKET_PAIRS, pocket_pairs.len());
+        assert!(pocket_pairs.is_aligned());
+    }
+
+    #[test]
+    fn filter_on_card() {
+        let unique = Twos::unique();
+        let twos = Twos::from(vec![Two::HAND_TD_5D, Two::HAND_TD_9D]);
+
+        assert!(twos.filter_on_card(Card::DEUCE_CLUBS).is_empty());
+        assert_eq!(1, twos.filter_on_card(Card::NINE_DIAMONDS).len());
+        assert_eq!(2, twos.filter_on_card(Card::TEN_DIAMONDS).len());
+        assert_eq!(51, unique.filter_on_card(Card::ACE_CLUBS).len());
     }
 
     #[test]
@@ -93,19 +156,59 @@ mod arrays__combos__twos_tests {
         assert_eq!(1, twos.filter_on_rank(Rank::NINE).len());
         assert_eq!(2, twos.filter_on_rank(Rank::TEN).len());
         // 6 + (16 x 12) = 198
-        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::ACE).len());
-        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::KING).len());
-        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::QUEEN).len());
-        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::JACK).len());
-        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::TEN).len());
-        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::NINE).len());
-        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::EIGHT).len());
-        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::SEVEN).len());
-        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::SIX).len());
-        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::FIVE).len());
-        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::FOUR).len());
-        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::TREY).len());
-        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::DEUCE).len());
+        assert_eq!(
+            crate::UNIQUE_PER_RANK_2_CARD_HANDS,
+            unique.filter_on_rank(Rank::ACE).len()
+        );
+        assert_eq!(
+            crate::UNIQUE_PER_RANK_2_CARD_HANDS,
+            unique.filter_on_rank(Rank::KING).len()
+        );
+        assert_eq!(
+            crate::UNIQUE_PER_RANK_2_CARD_HANDS,
+            unique.filter_on_rank(Rank::QUEEN).len()
+        );
+        assert_eq!(
+            crate::UNIQUE_PER_RANK_2_CARD_HANDS,
+            unique.filter_on_rank(Rank::JACK).len()
+        );
+        assert_eq!(
+            crate::UNIQUE_PER_RANK_2_CARD_HANDS,
+            unique.filter_on_rank(Rank::TEN).len()
+        );
+        assert_eq!(
+            crate::UNIQUE_PER_RANK_2_CARD_HANDS,
+            unique.filter_on_rank(Rank::NINE).len()
+        );
+        assert_eq!(
+            crate::UNIQUE_PER_RANK_2_CARD_HANDS,
+            unique.filter_on_rank(Rank::EIGHT).len()
+        );
+        assert_eq!(
+            crate::UNIQUE_PER_RANK_2_CARD_HANDS,
+            unique.filter_on_rank(Rank::SEVEN).len()
+        );
+        assert_eq!(
+            crate::UNIQUE_PER_RANK_2_CARD_HANDS,
+            unique.filter_on_rank(Rank::SIX).len()
+        );
+        assert_eq!(
+            crate::UNIQUE_PER_RANK_2_CARD_HANDS,
+            unique.filter_on_rank(Rank::FIVE).len()
+        );
+        assert_eq!(
+            crate::UNIQUE_PER_RANK_2_CARD_HANDS,
+            unique.filter_on_rank(Rank::FOUR).len()
+        );
+        assert_eq!(
+            crate::UNIQUE_PER_RANK_2_CARD_HANDS,
+            unique.filter_on_rank(Rank::TREY).len()
+        );
+        assert_eq!(
+            crate::UNIQUE_PER_RANK_2_CARD_HANDS,
+            unique.filter_on_rank(Rank::DEUCE).len()
+        );
+        assert!(unique.filter_on_rank(Rank::DEUCE).is_aligned());
     }
 
     #[test]
@@ -118,10 +221,23 @@ mod arrays__combos__twos_tests {
         assert_eq!(2, twos.filter_on_suit(Suit::DIAMONDS).len());
         assert_eq!(0, twos.filter_on_suit(Suit::HEARTS).len());
         // 6 + (16 x 12) = 198
-        assert_eq!(crate::UNIQUE_PER_SUIT_2_CARD_HANDS, unique.filter_on_suit(Suit::CLUBS).len());
-        assert_eq!(crate::UNIQUE_PER_SUIT_2_CARD_HANDS, unique.filter_on_suit(Suit::DIAMONDS).len());
-        assert_eq!(crate::UNIQUE_PER_SUIT_2_CARD_HANDS, unique.filter_on_suit(Suit::SPADES).len());
-        assert_eq!(crate::UNIQUE_PER_SUIT_2_CARD_HANDS, unique.filter_on_suit(Suit::HEARTS).len());
+        assert_eq!(
+            crate::UNIQUE_PER_SUIT_2_CARD_HANDS,
+            unique.filter_on_suit(Suit::CLUBS).len()
+        );
+        assert_eq!(
+            crate::UNIQUE_PER_SUIT_2_CARD_HANDS,
+            unique.filter_on_suit(Suit::DIAMONDS).len()
+        );
+        assert_eq!(
+            crate::UNIQUE_PER_SUIT_2_CARD_HANDS,
+            unique.filter_on_suit(Suit::SPADES).len()
+        );
+        assert_eq!(
+            crate::UNIQUE_PER_SUIT_2_CARD_HANDS,
+            unique.filter_on_suit(Suit::HEARTS).len()
+        );
+        assert!(unique.filter_on_suit(Suit::CLUBS).is_aligned());
     }
 
     #[test]

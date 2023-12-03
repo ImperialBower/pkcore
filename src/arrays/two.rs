@@ -5,7 +5,6 @@ use crate::arrays::HandRanker;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::deck::POKER_DECK;
 use crate::rank::Rank;
 use crate::suit::Suit;
 use crate::util::Util;
@@ -1648,6 +1647,11 @@ impl Two {
     //endregion
 
     #[must_use]
+    pub fn contains_card(&self, card: Card) -> bool {
+        self.first() == card || self.second() == card
+    }
+
+    #[must_use]
     pub fn contains_rank(&self, rank: Rank) -> bool {
         self.first().get_rank() == rank || self.second().get_rank() == rank
     }
@@ -1686,31 +1690,6 @@ impl Two {
     #[must_use]
     pub fn suit_binary(&self) -> u32 {
         self.first().get_suit().binary_signature() | self.second().get_suit().binary_signature()
-    }
-
-    #[must_use]
-    pub fn combos() -> Vec<Two> {
-        POKER_DECK.combinations(2).map(Two::from).collect()
-    }
-
-    #[must_use]
-    pub fn filter_contains_rank(twos: Vec<Two>, rank: Rank) -> Vec<Two> {
-        twos.into_iter().filter(|t| t.contains_rank(rank)).collect()
-    }
-
-    #[must_use]
-    pub fn filter_contains_suit(twos: Vec<Two>, suit: Suit) -> Vec<Two> {
-        twos.into_iter().filter(|t| t.contains_suit(suit)).collect()
-    }
-
-    #[must_use]
-    pub fn filter_pairs(twos: Vec<Two>) -> Vec<Two> {
-        twos.into_iter().filter(Two::is_pair).collect()
-    }
-
-    #[must_use]
-    pub fn filter_suited(twos: Vec<Two>) -> Vec<Two> {
-        twos.into_iter().filter(Two::is_suited).collect()
     }
 
     #[must_use]
@@ -2072,6 +2051,13 @@ mod arrays__two_tests {
     }
 
     #[test]
+    fn contains_card() {
+        assert!(Two::HAND_AS_KH.contains_card(Card::ACE_SPADES));
+        assert!(Two::HAND_AS_KH.contains_card(Card::KING_HEARTS));
+        assert!(!Two::HAND_AS_KH.contains_card(Card::QUEEN_HEARTS));
+    }
+
+    #[test]
     fn contains_rank() {
         assert!(Two::HAND_AS_KH.contains_rank(Rank::ACE));
         assert!(Two::HAND_AS_KH.contains_rank(Rank::KING));
@@ -2146,39 +2132,6 @@ mod arrays__two_tests {
 
         assert!(!sut.is_dealt());
         assert_eq!("__ __", Two::from([Card::BLANK, Card::BLANK]).to_string());
-    }
-
-    #[test]
-    fn combos() {
-        assert_eq!(crate::UNIQUE_2_CARD_HANDS, Two::combos().len());
-    }
-
-    #[test]
-    fn filter_contains_suit() {
-        let spades = Suit::SPADES;
-        let hearts = Suit::HEARTS;
-
-        let spades = Two::filter_contains_suit(Two::combos(), spades);
-        let hearts = Two::filter_contains_suit(Two::combos(), hearts);
-
-        // assert_eq!(4, Two::filter_contains_suit(Two::filter_pairs(Two::combos()), Suit::SPADES)
-
-        assert_eq!(78, spades.len());
-        assert_eq!(78, hearts.len());
-    }
-
-    #[test]
-    fn filter_pairs() {
-        let pairs = Two::filter_pairs(Two::combos());
-
-        assert_eq!(78, pairs.len());
-    }
-
-    #[test]
-    fn filter_suited() {
-        let suited = Two::filter_suited(Two::combos());
-
-        assert_eq!(crate::UNIQUE_SUITED_2_CARD_HANDS, suited.len());
     }
 
     #[test]
