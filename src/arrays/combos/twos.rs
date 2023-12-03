@@ -1,6 +1,7 @@
 use crate::arrays::two::Two;
 use crate::deck::POKER_DECK;
 use crate::rank::Rank;
+use crate::suit::Suit;
 
 /// This struct is to deal with the fact that the `arrays::Two` struct is getting overloaded with
 /// functionality that is really about combinations of `Two` structs.
@@ -20,6 +21,11 @@ impl Twos {
     #[must_use]
     pub fn filter_on_rank(&self, rank: Rank) -> Self {
         Self(self.iter().filter(|two| two.contains_rank(rank)).copied().collect())
+    }
+
+    #[must_use]
+    pub fn filter_on_suit(&self, suit: Suit) -> Self {
+        Self(self.iter().filter(|two| two.contains_suit(suit)).copied().collect())
     }
 
     #[must_use]
@@ -80,12 +86,42 @@ mod arrays__combos__twos_tests {
 
     #[test]
     fn filter_on_rank() {
+        let unique = Twos::unique();
         let twos = Twos::from(vec![Two::HAND_TD_5D, Two::HAND_TS_9D]);
 
         assert!(twos.filter_on_rank(Rank::JACK).is_empty());
         assert_eq!(1, twos.filter_on_rank(Rank::NINE).len());
         assert_eq!(2, twos.filter_on_rank(Rank::TEN).len());
-        assert_eq!(2, Twos::unique().filter_on_rank(Rank::ACE).len());
+        // 6 + (16 x 12) = 198
+        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::ACE).len());
+        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::KING).len());
+        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::QUEEN).len());
+        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::JACK).len());
+        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::TEN).len());
+        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::NINE).len());
+        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::EIGHT).len());
+        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::SEVEN).len());
+        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::SIX).len());
+        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::FIVE).len());
+        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::FOUR).len());
+        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::TREY).len());
+        assert_eq!(crate::UNIQUE_PER_RANK_2_CARD_HANDS, unique.filter_on_rank(Rank::DEUCE).len());
+    }
+
+    #[test]
+    fn filter_on_suit() {
+        let unique = Twos::unique();
+        let twos = Twos::from(vec![Two::HAND_TD_5D, Two::HAND_TS_9D]);
+
+        assert!(twos.filter_on_suit(Suit::CLUBS).is_empty());
+        assert_eq!(1, twos.filter_on_suit(Suit::SPADES).len());
+        assert_eq!(2, twos.filter_on_suit(Suit::DIAMONDS).len());
+        assert_eq!(0, twos.filter_on_suit(Suit::HEARTS).len());
+        // 6 + (16 x 12) = 198
+        assert_eq!(crate::UNIQUE_PER_SUIT_2_CARD_HANDS, unique.filter_on_suit(Suit::CLUBS).len());
+        assert_eq!(crate::UNIQUE_PER_SUIT_2_CARD_HANDS, unique.filter_on_suit(Suit::DIAMONDS).len());
+        assert_eq!(crate::UNIQUE_PER_SUIT_2_CARD_HANDS, unique.filter_on_suit(Suit::SPADES).len());
+        assert_eq!(crate::UNIQUE_PER_SUIT_2_CARD_HANDS, unique.filter_on_suit(Suit::HEARTS).len());
     }
 
     #[test]

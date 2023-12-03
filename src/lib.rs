@@ -64,6 +64,10 @@ pub const DISTINCT_HIGH_CARD: i32 = 1_277;
 
 pub const UNIQUE_2_CARD_HANDS: usize = 1_326;
 pub const UNIQUE_SUITED_2_CARD_HANDS: usize = 312;
+pub const UNIQUE_PER_RANK_2_CARD_HANDS: usize = 198; // 6 + (16 x 12) = 198
+pub const DISTINCT_PER_RANK_2_CARD_HANDS: usize = 25; // 1 + (2 x 12) = 25
+pub const UNIQUE_PER_SUIT_2_CARD_HANDS: usize = 198; // 6 + (16 x 12) = 198
+
 pub const DISTINCT_2_CARD_HANDS: usize = 169;
 
 pub const UNIQUE_5_CARD_HANDS: usize = 2_598_960;
