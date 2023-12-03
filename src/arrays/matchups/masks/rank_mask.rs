@@ -2,9 +2,7 @@ use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
-#[derive(
-    Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
-)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct RankMask {
     pub higher: u16,
@@ -64,8 +62,7 @@ mod arrays__matchups__masks__rank_mask_tests {
         let the_hand = RankMask::from(&TestData::the_hand_sorted_headsup());
         let other_hand = RankMask::from(&SortedHeadsUp::new(Two::HAND_3S_3H, Two::HAND_2D_2C));
         let another_hand = RankMask::from(&SortedHeadsUp::new(Two::HAND_AS_AH, Two::HAND_KD_KC));
-        let yet_another_hand =
-            RankMask::from(&SortedHeadsUp::new(Two::HAND_AS_KH, Two::HAND_8S_7H));
+        let yet_another_hand = RankMask::from(&SortedHeadsUp::new(Two::HAND_AS_KH, Two::HAND_8S_7H));
 
         assert_eq!("0000000010000,0000000001000", the_hand.to_string());
         assert_eq!("0000000000010,0000000000001", other_hand.to_string());

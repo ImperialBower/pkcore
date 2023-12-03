@@ -30,6 +30,7 @@ serde_yaml = "0.9.25"
 sled = "0.34.7"
 strum = { version = "0.25.0", features = ["derive"] }
 strum_macros = "0.25.2"
+termion = "*"
 thousands = "0.2.0"
 uuid = { version = "1.4.1", features = ["v4"] }
 zerocopy = "0.7.11"

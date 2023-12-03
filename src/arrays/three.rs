@@ -99,11 +99,7 @@ impl Plurable for Three {
 
 impl Pile for Three {
     fn clean(&self) -> Self {
-        Three([
-            self.first().clean(),
-            self.second().clean(),
-            self.third().clean(),
-        ])
+        Three([self.first().clean(), self.second().clean(), self.third().clean()])
     }
 
     fn the_nuts(&self) -> TheNuts {
@@ -169,11 +165,7 @@ mod arrays__three_tests {
     fn from__vec() {
         assert_eq!(
             Three(THE_FLOP),
-            Three::from(vec![
-                Card::NINE_CLUBS,
-                Card::SIX_DIAMONDS,
-                Card::FIVE_HEARTS
-            ])
+            Three::from(vec![Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS])
         );
         // It should return default if any Let's do all the permutations, just to be sure.
         //
@@ -227,15 +219,9 @@ mod arrays__three_tests {
         assert_eq!(PKError::InvalidIndex, Three::from_str("").unwrap_err());
         assert_eq!(PKError::InvalidIndex, Three::from_str(" ").unwrap_err());
         assert_eq!(PKError::InvalidIndex, Three::from_str(" __ ").unwrap_err());
-        assert_eq!(
-            PKError::NotEnoughCards,
-            Three::from_str("AC 2D").unwrap_err()
-        );
+        assert_eq!(PKError::NotEnoughCards, Three::from_str("AC 2D").unwrap_err());
         assert!(Three::from_str("AD KD QD JD TD 9D").is_err());
-        assert_eq!(
-            PKError::TooManyCards,
-            Three::from_str("AD KD QD JD").unwrap_err()
-        );
+        assert_eq!(PKError::TooManyCards, Three::from_str("AD KD QD JD").unwrap_err());
     }
 
     #[test]
@@ -243,18 +229,9 @@ mod arrays__three_tests {
         assert_eq!(Three(THE_FLOP), Three::from_pluribus(" 9c6d5h").unwrap());
         assert_eq!(Three(THE_FLOP), Three::from_pluribus("9c6d5h ").unwrap());
         assert_eq!(Three(THE_FLOP), Three::from_pluribus("9c6d5h").unwrap());
-        assert_eq!(
-            PKError::NotEnoughCards,
-            Three::from_pluribus("9c6d").unwrap_err()
-        );
-        assert_eq!(
-            PKError::TooManyCards,
-            Three::from_pluribus("9c6d5h4h").unwrap_err()
-        );
-        assert_eq!(
-            PKError::InvalidIndex,
-            Three::from_pluribus("AHASAa").unwrap_err()
-        );
+        assert_eq!(PKError::NotEnoughCards, Three::from_pluribus("9c6d").unwrap_err());
+        assert_eq!(PKError::TooManyCards, Three::from_pluribus("9c6d5h4h").unwrap_err());
+        assert_eq!(PKError::InvalidIndex, Three::from_pluribus("AHASAa").unwrap_err());
         // assert_eq!(Two::HAND_8S_7H, Three::from_pluribus("8s7h"));
         // assert_eq!(Two::HAND_8S_7H, Three::from_pluribus(" 7h8s"));
         // assert_eq!(Two::HAND_AS_AH, Three::from_pluribus("AhAs   "));
@@ -263,9 +240,7 @@ mod arrays__three_tests {
 
     #[test]
     fn pile__are_unique() {
-        assert!(
-            Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]).are_unique()
-        );
+        assert!(Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]).are_unique());
         assert!(!Three::from([Card::NINE_CLUBS, Card::NINE_CLUBS, Card::FIVE_HEARTS]).are_unique());
     }
 
@@ -334,9 +309,7 @@ mod arrays__three_tests {
         assert!(!Three::from([Card::BLANK, Card::DEUCE_SPADES, Card::SIX_DIAMONDS]).is_dealt());
         assert!(!Three::from([Card::DEUCE_SPADES, Card::BLANK, Card::SIX_DIAMONDS]).is_dealt());
         assert!(!Three::from([Card::BLANK, Card::BLANK, Card::BLANK]).is_dealt());
-        assert!(
-            !Three::from([Card::DEUCE_SPADES, Card::DEUCE_SPADES, Card::SIX_DIAMONDS]).is_dealt()
-        );
+        assert!(!Three::from([Card::DEUCE_SPADES, Card::DEUCE_SPADES, Card::SIX_DIAMONDS]).is_dealt());
     }
 
     #[test]

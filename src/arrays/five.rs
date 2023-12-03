@@ -267,13 +267,7 @@ impl HandRanker for Five {
             // be last.
             // // TODO RF: MEGA Hack :-P
             self.0.sort_unstable();
-            let wheel = [
-                self.fifth(),
-                self.first(),
-                self.second(),
-                self.third(),
-                self.forth(),
-            ];
+            let wheel = [self.fifth(), self.first(), self.second(), self.third(), self.forth()];
             self.0 = wheel;
         } else {
             let five = match Five::try_from(self.cards().frequency_weighted()) {
@@ -409,42 +403,18 @@ mod arrays__five_tests {
 
     #[test]
     fn is_straight_flush() {
-        assert!(Five::from_str("A♠ K♠ Q♠ J♠ T♠")
-            .unwrap()
-            .is_straight_flush());
-        assert!(Five::from_str("9♠ K♠ Q♠ J♠ T♠")
-            .unwrap()
-            .is_straight_flush());
-        assert!(Five::from_str("9♠ 8♠ Q♠ J♠ T♠")
-            .unwrap()
-            .is_straight_flush());
-        assert!(Five::from_str("9♠ 8♠ 7♠ J♠ T♠")
-            .unwrap()
-            .is_straight_flush());
-        assert!(Five::from_str("9♠ 8♠ 7♠ 6♠ T♠")
-            .unwrap()
-            .is_straight_flush());
-        assert!(Five::from_str("9♠ 8♠ 7♠ 6♠ 5♠")
-            .unwrap()
-            .is_straight_flush());
-        assert!(Five::from_str("4♠ 8♠ 7♠ 6♠ 5♠")
-            .unwrap()
-            .is_straight_flush());
-        assert!(Five::from_str("4♠ 3♠ 7♠ 6♠ 5♠")
-            .unwrap()
-            .is_straight_flush());
-        assert!(Five::from_str("4♠ 3♠ 2♠ 6♠ 5♠")
-            .unwrap()
-            .is_straight_flush());
-        assert!(Five::from_str("4♠ 3♠ 2♠ A♠ 5♠")
-            .unwrap()
-            .is_straight_flush());
-        assert!(!Five::from_str("4♠ 3♥ 2♠ A♠ 5♠")
-            .unwrap()
-            .is_straight_flush());
-        assert!(!Five::from_str("4♠ 3♠ 2♠ A♠ 5♥")
-            .unwrap()
-            .is_straight_flush());
+        assert!(Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap().is_straight_flush());
+        assert!(Five::from_str("9♠ K♠ Q♠ J♠ T♠").unwrap().is_straight_flush());
+        assert!(Five::from_str("9♠ 8♠ Q♠ J♠ T♠").unwrap().is_straight_flush());
+        assert!(Five::from_str("9♠ 8♠ 7♠ J♠ T♠").unwrap().is_straight_flush());
+        assert!(Five::from_str("9♠ 8♠ 7♠ 6♠ T♠").unwrap().is_straight_flush());
+        assert!(Five::from_str("9♠ 8♠ 7♠ 6♠ 5♠").unwrap().is_straight_flush());
+        assert!(Five::from_str("4♠ 8♠ 7♠ 6♠ 5♠").unwrap().is_straight_flush());
+        assert!(Five::from_str("4♠ 3♠ 7♠ 6♠ 5♠").unwrap().is_straight_flush());
+        assert!(Five::from_str("4♠ 3♠ 2♠ 6♠ 5♠").unwrap().is_straight_flush());
+        assert!(Five::from_str("4♠ 3♠ 2♠ A♠ 5♠").unwrap().is_straight_flush());
+        assert!(!Five::from_str("4♠ 3♥ 2♠ A♠ 5♠").unwrap().is_straight_flush());
+        assert!(!Five::from_str("4♠ 3♠ 2♠ A♠ 5♥").unwrap().is_straight_flush());
     }
 
     #[test]
@@ -479,10 +449,7 @@ mod arrays__five_tests {
             "00000001000000001000100000010111",
             format!("{:032b}", hand.fifth().as_u32())
         );
-        assert_eq!(
-            "00000000000000001000100000000001",
-            format!("{:032b}", and_bits)
-        );
+        assert_eq!("00000000000000001000100000000001", format!("{:032b}", and_bits));
     }
 
     #[test]
@@ -493,10 +460,7 @@ mod arrays__five_tests {
     #[test]
     fn rank() {
         assert_eq!(1, Five::from(ROYAL_FLUSH).hand_rank_value());
-        assert_eq!(
-            1603,
-            Five::from_str("J♣ T♣ 9♣ 8♠ 7♣").unwrap().hand_rank_value()
-        );
+        assert_eq!(1603, Five::from_str("J♣ T♣ 9♣ 8♠ 7♣").unwrap().hand_rank_value());
     }
 
     #[test]
@@ -536,30 +500,21 @@ mod arrays__five_tests {
 
     #[test]
     fn from_str() {
-        assert_eq!(
-            Five::from(ROYAL_FLUSH),
-            Five::from_str("AD KD QD JD TD").unwrap()
-        );
+        assert_eq!(Five::from(ROYAL_FLUSH), Five::from_str("AD KD QD JD TD").unwrap());
         assert!(Five::from_str("AD KD QD JD").is_err());
         assert_eq!(PKError::InvalidIndex, Five::from_str("").unwrap_err());
         assert_eq!(PKError::InvalidIndex, Five::from_str(" ").unwrap_err());
         assert_eq!(PKError::InvalidIndex, Five::from_str(" __ ").unwrap_err());
         assert_eq!(PKError::NotEnoughCards, Five::from_str("AC").unwrap_err());
         assert!(Five::from_str("AD KD QD JD TD 9D").is_err());
-        assert_eq!(
-            PKError::TooManyCards,
-            Five::from_str("AD KD QD JD TD 9D").unwrap_err()
-        );
+        assert_eq!(PKError::TooManyCards, Five::from_str("AD KD QD JD TD 9D").unwrap_err());
     }
 
     #[test]
     fn hand_ranker__sort() {
         assert_eq!(
             "A♠ K♠ Q♠ J♠ T♠",
-            Five::from_str("K♠ A♠  Q♠  T♠ J♠")
-                .unwrap()
-                .sort()
-                .to_string()
+            Five::from_str("K♠ A♠  Q♠  T♠ J♠").unwrap().sort().to_string()
         );
     }
 
@@ -2506,10 +2461,7 @@ mod arrays__five_tests {
     #[test]
     fn pile__cards() {
         assert_eq!(0, Five::default().cards().len());
-        assert_eq!(
-            "A♦ K♦ Q♦ J♦ T♦",
-            Five::from(ROYAL_FLUSH).cards().to_string()
-        );
+        assert_eq!("A♦ K♦ Q♦ J♦ T♦", Five::from(ROYAL_FLUSH).cards().to_string());
     }
 
     #[test]

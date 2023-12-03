@@ -340,11 +340,7 @@ impl From<Seven> for SevenEval {
     fn from(seven: Seven) -> Self {
         let (hand_rank, five) = seven.hand_rank_and_hand();
 
-        SevenEval {
-            seven,
-            five,
-            hand_rank,
-        }
+        SevenEval { seven, five, hand_rank }
     }
 }
 

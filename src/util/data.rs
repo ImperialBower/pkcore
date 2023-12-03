@@ -56,12 +56,7 @@ impl TestData {
     #[must_use]
     #[allow(clippy::missing_panics_doc)]
     pub fn the_board() -> Game {
-        let hands = HoleCards::from(vec![
-            Two::HAND_AC_QS,
-            Two::HAND_TD_TC,
-            Two::HAND_6D_4D,
-            Two::HAND_2H_2D,
-        ]);
+        let hands = HoleCards::from(vec![Two::HAND_AC_QS, Two::HAND_TD_TC, Two::HAND_6D_4D, Two::HAND_2H_2D]);
         let board = Board::from_str("J♦ J♠ J♥ A♥ J♣").unwrap();
         Game { hands, board }
     }

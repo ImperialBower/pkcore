@@ -1,5 +1,129 @@
+use crate::arrays::three::Three;
+use crate::arrays::two::Two;
+use crate::card::Card;
+use crate::play::phases::PhaseHoldem;
 use regex::Regex;
 use std::fmt::{Display, Formatter};
+
+/// I want a struct to use as a log for all plays within a hand.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct Action {
+    pub action_type: ActionType,
+    pub detail: String,
+}
+
+impl Action {
+    pub const CHECK: Action = Action {
+        action_type: ActionType::CHECK,
+        detail: String::new(),
+    };
+
+    pub const FOLD: Action = Action {
+        action_type: ActionType::FOLD,
+        detail: String::new(),
+    };
+
+    #[must_use]
+    pub fn dealt(two: Two) -> Self {
+        Action {
+            action_type: ActionType::DEALT,
+            detail: two.to_string(),
+        }
+    }
+
+    #[must_use]
+    pub fn flops(three: Three) -> Self {
+        Action {
+            action_type: ActionType::FLOP,
+            detail: three.to_string(),
+        }
+    }
+
+    #[must_use]
+    pub fn turn(card: Card) -> Self {
+        Action {
+            action_type: ActionType::TURN,
+            detail: card.to_string(),
+        }
+    }
+
+    #[must_use]
+    pub fn river(card: Card) -> Self {
+        Action {
+            action_type: ActionType::RIVER,
+            detail: card.to_string(),
+        }
+    }
+
+    /// AI generated code.
+    #[must_use]
+    pub fn call(amount: usize) -> Self {
+        Action {
+            action_type: ActionType::CALL,
+            detail: amount.to_string(),
+        }
+    }
+
+    /// AI generated code.
+    #[must_use]
+    pub fn check() -> Self {
+        Action::CHECK
+    }
+
+    /// AI generated code.
+    #[must_use]
+    pub fn raise(amount: usize) -> Self {
+        Action {
+            action_type: ActionType::RAISE,
+            detail: amount.to_string(),
+        }
+    }
+
+    /// AI generated code.
+    #[must_use]
+    pub fn small_blind(amount: usize) -> Self {
+        Action {
+            action_type: ActionType::SmallBlind,
+            detail: amount.to_string(),
+        }
+    }
+
+    /// AI generated code.
+    #[must_use]
+    pub fn big_blind(amount: usize) -> Self {
+        Action {
+            action_type: ActionType::BigBlind,
+            detail: amount.to_string(),
+        }
+    }
+
+    /// AI generated code.
+    #[must_use]
+    pub fn fold() -> Self {
+        Action::FOLD
+    }
+
+    /// AI generated code.
+    #[must_use]
+    pub fn end_round(phase: PhaseHoldem) -> Self {
+        Action {
+            action_type: ActionType::EndRound,
+            detail: phase.to_string(),
+        }
+    }
+}
+
+impl Display for Action {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let s = match self.action_type {
+            ActionType::NONE | ActionType::CHECK | ActionType::FOLD | ActionType::EndRound => {
+                self.action_type.to_string()
+            }
+            _ => format!("{} {}", self.action_type, self.detail),
+        };
+        write!(f, "{s}")
+    }
+}
 
 /// This is going to be the biggest challenge working with the Pluribus data. Their actions
 /// serialization type is brilliant in its elegant compactness. It also makes it a heck of a
@@ -59,15 +183,21 @@ use std::fmt::{Display, Formatter};
 /// Seat 3: Pluribus showed [8s As] and lost
 /// Seat 6: Budd showed [5h 5d] and won (20250.0)
 /// ```
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum ActionType {
+    #[default]
     NONE,
+    DEALT,
+    FLOP,
+    TURN,
+    RIVER,
     CALL,
     CHECK,
     RAISE,
     SmallBlind,
     BigBlind,
     FOLD,
+    EndRound,
 }
 
 impl ActionType {
@@ -79,12 +209,17 @@ impl ActionType {
     #[must_use]
     pub fn value(&self) -> char {
         match *self {
+            ActionType::DEALT => 'd',
+            ActionType::FLOP => 'p',
+            ActionType::TURN => 't',
+            ActionType::RIVER => 'x',
             ActionType::CALL => 'c',
             ActionType::CHECK => 'k',
             ActionType::RAISE => 'r',
             ActionType::SmallBlind => 's',
             ActionType::BigBlind => 'b',
             ActionType::FOLD => 'f',
+            ActionType::EndRound => 'e',
             ActionType::NONE => '_',
         }
     }
@@ -339,12 +474,17 @@ impl Display for ActionType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let s = match self {
             ActionType::NONE => "sits on hands",
+            ActionType::DEALT => "dealt",
+            ActionType::FLOP => "flops",
+            ActionType::TURN => "turn",
+            ActionType::RIVER => "rivers",
             ActionType::CALL => "calls",
             ActionType::CHECK => "checks",
             ActionType::RAISE => "raises",
             ActionType::SmallBlind => "posts Small Blind",
             ActionType::BigBlind => "posts Big Blind",
             ActionType::FOLD => "folds",
+            ActionType::EndRound => "round ends",
         };
         write!(f, "{s}")
     }
@@ -383,15 +523,9 @@ mod store_pluribus_actions_tests {
 
     #[test]
     fn machete() {
-        assert_eq!(
-            vec!["r200", "f", "f", "c", "f", "c"],
-            ActionType::machete("r200ffcfc")
-        );
+        assert_eq!(vec!["r200", "f", "f", "c", "f", "c"], ActionType::machete("r200ffcfc"));
         assert_eq!(vec!["c", "r850", "c", "f"], ActionType::machete("cr850cf"));
-        assert_eq!(
-            vec!["c", "r1825", "r3775", "c"],
-            ActionType::machete("cr1825r3775c")
-        );
+        assert_eq!(vec!["c", "r1825", "r3775", "c"], ActionType::machete("cr1825r3775c"));
         assert_eq!(vec!["r10000", "c"], ActionType::machete("r10000c"));
         assert_eq!(
             vec!["f", "r200", "f", "f", "r850", "f", "c"],

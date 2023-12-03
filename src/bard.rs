@@ -162,9 +162,7 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 ///
 /// One of the things that I have noticed about myself over the years, is that I find comfort in
 /// repetitive tasks, such as writing out all of the test scenarios for converting a `Card` to a `Bard`.
-#[derive(
-    Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
-)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Bard(pub u64);
 
 #[rustfmt::skip]
@@ -247,7 +245,7 @@ impl Bard {
     pub const TREYS: Bard = Bard(Bard::TREY_SPADES.0 | Bard::TREY_HEARTS.0 | Bard::TREY_DIAMONDS.0 | Bard::TREY_CLUBS.0);
     pub const DEUCES: Bard = Bard(Bard::DEUCE_SPADES.0 | Bard::DEUCE_HEARTS.0 | Bard::DEUCE_DIAMONDS.0 | Bard::DEUCE_CLUBS.0);
     //endregion Ranks
-    
+
     // region deck
     pub const DECK: [Bard; 52] = [
         Bard::ACE_SPADES,
@@ -614,10 +612,7 @@ mod bard_tests {
 
     #[test]
     fn bit_xor() {
-        assert_eq!(
-            Bard::ACE_SPADES ^ Bard::ACE_HEARTS,
-            Bard::ACE_SPADES | Bard::ACE_HEARTS
-        );
+        assert_eq!(Bard::ACE_SPADES ^ Bard::ACE_HEARTS, Bard::ACE_SPADES | Bard::ACE_HEARTS);
         assert_eq!(Bard::ACE_SPADES ^ Bard::ACE_SPADES, Bard::BLANK);
         assert_eq!(Bard::BLANK ^ Bard::BLANK, Bard::BLANK);
     }
@@ -705,10 +700,7 @@ mod bard_tests {
         let actual = Bard::from(Cards::from_str("T♣ 9♥").unwrap());
 
         assert_eq!(actual, expected);
-        assert_ne!(
-            actual,
-            Bard::TEN_CLUBS | Bard::NINE_HEARTS | Bard::EIGHT_HEARTS
-        );
+        assert_ne!(actual, Bard::TEN_CLUBS | Bard::NINE_HEARTS | Bard::EIGHT_HEARTS);
         assert_eq!(Bard::from(Cards::deck()), Bard::ALL);
     }
 
@@ -731,11 +723,7 @@ mod bard_tests {
             Card::TEN_SPADES,
         ];
         let actual = Bard::from(v);
-        let expected = Bard::ACE_SPADES
-            | Bard::KING_SPADES
-            | Bard::QUEEN_SPADES
-            | Bard::JACK_SPADES
-            | Bard::TEN_SPADES;
+        let expected = Bard::ACE_SPADES | Bard::KING_SPADES | Bard::QUEEN_SPADES | Bard::JACK_SPADES | Bard::TEN_SPADES;
 
         assert_eq!(actual, expected);
     }

@@ -21,6 +21,16 @@ pub struct Seat {
 
 impl Seat {
     #[must_use]
+    pub fn chips_in_play_size(&self) -> usize {
+        self.chips_in_play.get().size()
+    }
+
+    #[must_use]
+    pub fn chips_in_pot_size(&self) -> usize {
+        self.chips_in_pot.get()
+    }
+
+    #[must_use]
     pub fn new(name: String, seat: Position6Max, starting_chips: Chips) -> Seat {
         Seat {
             position: seat,
@@ -41,18 +51,29 @@ impl Seat {
     /// * `Chips` are removed from the players stack
     /// * Those `Chips` are added to the chips in play.
     /// * When the betting round is over, those chips are moved to the `Table` and the amount is added to `chips_in_pot`.
+    ///
+    /// # Panics
+    ///
+    /// For Pluribus processing, it should never have a chips in play value that's greater than the amount bet.
     pub fn bet(&self, amount: usize) -> Option<usize> {
-        if self.stack.get().size() >= amount {
+        // This logic would need to be different for a non pluribus module. I am debating if the code should
+        // be generic.
+        let Some(diff) = amount.checked_sub(self.chips_in_play.get().size()) else {
+            panic!(
+                "amount: {} is less than chips_in_play: {}",
+                amount,
+                self.chips_in_play.get().size()
+            )
+        };
+
+        self.stack.get().size().checked_sub(diff).map(|new_stack_size| {
             // Remove the `Chips` from the stack
-            self.stack.set(Chips::new(self.stack.get().size() - amount));
-            // Add the `Chips` to `chips_in_play`.
-            self.chips_in_play
-                .set(self.chips_in_play.get() + Chips::new(amount));
+            self.stack.set(Chips::new(new_stack_size));
+            // Pluribus passes in the total chips in play for the round, so just set that.
+            self.chips_in_play.set(Chips::new(amount));
             // Return the player's remaining Chips.
-            Some(self.stack.get().size())
-        } else {
-            None
-        }
+            new_stack_size
+        })
     }
 
     /// # Errors
@@ -67,11 +88,14 @@ impl Seat {
         }
     }
 
+    pub fn desc(&self) -> String {
+        format!("{}({})", self.name, self.position,)
+    }
+
     pub fn end_round(&self) -> Chips {
         let into_pot = self.chips_in_play.get();
         self.chips_in_play.set(Chips::default());
-        self.chips_in_pot
-            .set(self.chips_in_pot.get() + into_pot.size());
+        self.chips_in_pot.set(self.chips_in_pot.get() + into_pot.size());
         into_pot
     }
 
@@ -108,7 +132,7 @@ impl Display for Seat {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "SEAT #{} {:>4}\t{:>8}:\t{}\t{} IN PLAY: {}\tIN POT: {}",
+            "SEAT #{} {:>4}\t{:>8}:\t{}\t{} IN PLAY: {}\tINTO POT: {}",
             self.position as u8,
             self.position,
             self.name,
@@ -145,6 +169,16 @@ pub struct SeatSnapshot {
     pub chips_in_play: usize,
     pub chips_in_pot: usize,
     pub hand: Two,
+}
+
+impl Display for SeatSnapshot {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "SEAT #{} {:>4}\t{:>8}:\t{}\t{} IN PLAY: {}\tINTO POT: {}",
+            self.position as u8, self.position, self.name, self.stack, self.hand, self.chips_in_play, self.chips_in_pot
+        )
+    }
 }
 
 impl From<&Seat> for SeatSnapshot {
@@ -201,6 +235,43 @@ mod store_pluribus_seat_tests {
         assert!(seat.bet(600).is_none());
     }
 
+    // Bill(SB) posts Small Blind 50
+    // Pluribus(BB) posts Big Blind 100
+    // Bill(SB) dealt 8♥ 3♣
+    // Pluribus(BB) dealt 7♦ 6♦
+    // MrWhite(UTG) dealt T♦ 5♦
+    // Gogo(MP) dealt 7♠ 7♣
+    // Budd(CO) dealt A♥ 4♣
+    // Eddie(BTN) dealt T♠ 9♦
+    // Preflop Phase over
+    //
+    // MrWhite(UTG) folds T♦ 5♦ leaving 0 in the pot
+    // Gogo(MP) 7♠ 7♣ raises 200 FLOOR BEFORE: 100 FLOOR AFTER:200
+    // Budd(CO) folds A♥ 4♣ leaving 0 in the pot
+    // Eddie(BTN) folds T♠ 9♦ leaving 0 in the pot
+    // Bill(SB) folds 8♥ 3♣ leaving 50 in the pot
+    // Pluribus(BB) 7♦ 6♦ raises 1100 FLOOR BEFORE: 200 FLOOR AFTER:1100
+    // SEAT #2 BB	Pluribus:	8800	7♦ 6♦ IN PLAY: 1200	INTO POT: 0
+    #[test]
+    fn bet_52() {
+        let pluribus = Seat::new("Pluribus".to_string(), Position6Max::BB, Chips::new(10_000));
+        pluribus.hand.set(Two::HAND_7D_6D);
+        pluribus.bet(100);
+        assert_eq!(9_900, pluribus.stack.get().size());
+        assert_eq!(100, pluribus.chips_in_play.get().size());
+
+        pluribus.bet(1_100);
+        assert_eq!(8_900, pluribus.stack.get().size());
+        assert_eq!(1_100, pluribus.chips_in_play.get().size());
+    }
+
+    #[test]
+    fn desc() {
+        let seat = test_struct();
+
+        assert_eq!("Flub(UTG)", seat.desc());
+    }
+
     #[test]
     fn end_round() {
         let seat = test_struct();
@@ -209,8 +280,8 @@ mod store_pluribus_seat_tests {
         seat.bet(first_bet_amount);
         let second_bet_amount = 120usize;
         seat.bet(second_bet_amount);
-        let expected_into = Chips::new(first_bet_amount + second_bet_amount);
-        let expected_in_pot = first_bet_amount + second_bet_amount + seat.chips_in_pot.get();
+        let expected_into = Chips::new(second_bet_amount);
+        let expected_in_pot = second_bet_amount + seat.chips_in_pot.get();
 
         let in_to_pot = seat.end_round();
 
@@ -258,7 +329,7 @@ mod store_pluribus_seat_tests {
         seat.bet(40);
 
         assert_eq!(
-            "SEAT #3 UTG\t    Flub:\t460\tA♠ A♥ IN PLAY: 40\tIN POT: 0",
+            "SEAT #3 UTG\t    Flub:\t460\tA♠ A♥ IN PLAY: 40\tINTO POT: 0",
             seat.to_string()
         );
     }

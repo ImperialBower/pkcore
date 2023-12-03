@@ -194,14 +194,8 @@ mod arrays__six_tests {
 
     #[test]
     fn from_str() {
-        assert_eq!(
-            Six::from_str("AD 2D 3D 4D 5d 6d").unwrap(),
-            Six::from(CARDS)
-        );
-        assert_eq!(
-            Six::from_str("AD 2D 3D 4D 5d").unwrap_err(),
-            PKError::NotEnoughCards
-        );
+        assert_eq!(Six::from_str("AD 2D 3D 4D 5d 6d").unwrap(), Six::from(CARDS));
+        assert_eq!(Six::from_str("AD 2D 3D 4D 5d").unwrap_err(), PKError::NotEnoughCards);
         assert_eq!(
             Six::from_str("AD 2D 3D 4D 5d 6d 7d").unwrap_err(),
             PKError::TooManyCards
@@ -227,10 +221,7 @@ mod arrays__six_tests {
 
     #[test]
     fn sort() {
-        assert_eq!(
-            Six::from_str("Ad 6d 5D 4D 3D 2d").unwrap(),
-            Six::from(CARDS).sort()
-        );
+        assert_eq!(Six::from_str("Ad 6d 5D 4D 3D 2d").unwrap(), Six::from(CARDS).sort());
     }
 
     #[test]

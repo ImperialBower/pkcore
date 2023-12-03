@@ -105,13 +105,7 @@ pub struct PreflopRow {
 
 impl PreflopRow {
     #[must_use]
-    pub fn new(
-        first: Two,
-        second: Two,
-        first_wins: usize,
-        second_wins: usize,
-        ties: usize,
-    ) -> PreflopRow {
+    pub fn new(first: Two, second: Two, first_wins: usize, second_wins: usize, ties: usize) -> PreflopRow {
         if first > second {
             PreflopRow {
                 higher: first,
@@ -189,14 +183,8 @@ mod analysis__store__heads_up__hup_test {
 
     #[test]
     fn two_to_index() {
-        assert_eq!(
-            "5♦ 5♣ 6♠ 6♥",
-            HUP::two_to_index(Two::HAND_5D_5C, Two::HAND_6S_6H)
-        );
-        assert_eq!(
-            "5♦ 5♣ 6♠ 6♥",
-            HUP::two_to_index(Two::HAND_5D_5C, Two::HAND_6S_6H)
-        );
+        assert_eq!("5♦ 5♣ 6♠ 6♥", HUP::two_to_index(Two::HAND_5D_5C, Two::HAND_6S_6H));
+        assert_eq!("5♦ 5♣ 6♠ 6♥", HUP::two_to_index(Two::HAND_5D_5C, Two::HAND_6S_6H));
     }
 }
 
@@ -259,14 +247,8 @@ mod analysis__store__heads_up_row_test {
         assert_eq!(row.get_wins(Two::HAND_5D_5C).unwrap(), wins.second_wins);
         assert!(row.get_wins(Two::HAND_AC_KC).is_none());
 
-        assert_eq!(
-            row_inverted.get_wins(Two::HAND_6S_6H).unwrap(),
-            wins.first_wins
-        );
-        assert_eq!(
-            row_inverted.get_wins(Two::HAND_5D_5C).unwrap(),
-            wins.second_wins
-        );
+        assert_eq!(row_inverted.get_wins(Two::HAND_6S_6H).unwrap(), wins.first_wins);
+        assert_eq!(row_inverted.get_wins(Two::HAND_5D_5C).unwrap(), wins.second_wins);
         assert!(row_inverted.get_wins(Two::HAND_AC_KS).is_none());
     }
 

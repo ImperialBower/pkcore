@@ -189,14 +189,8 @@ mod util__wincounter__results__tests {
     fn player_to_string() {
         let results = Results::from_wins(&TestData::the_hand_as_wins(), 2);
 
-        assert_eq!(
-            "81.6% (79.73%/1.88%) [1365284/32116]",
-            results.player_to_string(0)
-        );
-        assert_eq!(
-            "20.3% (18.39%/1.88%) [314904/32116]",
-            results.player_to_string(1)
-        );
+        assert_eq!("81.6% (79.73%/1.88%) [1365284/32116]", results.player_to_string(0));
+        assert_eq!("20.3% (18.39%/1.88%) [314904/32116]", results.player_to_string(1));
         assert_eq!("0.00%", results.player_to_string(2));
     }
 

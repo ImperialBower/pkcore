@@ -191,8 +191,7 @@ impl Sqlable<SevenFiveBCM, Bard> for SevenFiveBCM {
     }
 
     fn insert(conn: &Connection, bcm: &SevenFiveBCM) -> rusqlite::Result<bool> {
-        let mut stmt =
-            conn.prepare("INSERT INTO bcm (bc, best, rank) VALUES (:bc, :best, :rank)")?;
+        let mut stmt = conn.prepare("INSERT INTO bcm (bc, best, rank) VALUES (:bc, :best, :rank)")?;
         stmt.execute(named_params! {
             ":bc": bcm.bc.as_u64(),
             ":best": bcm.best.as_u64(),
@@ -206,9 +205,7 @@ impl Sqlable<SevenFiveBCM, Bard> for SevenFiveBCM {
     }
 
     fn select(conn: &Connection, bc: &Bard) -> Option<SevenFiveBCM> {
-        let mut stmt = conn
-            .prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc")
-            .ok()?;
+        let mut stmt = conn.prepare("SELECT bc, best, rank FROM bcm WHERE bc=:bc").ok()?;
 
         let bcm = stmt
             .query_row(named_params! {":bc": bc.as_u64()}, |row| {

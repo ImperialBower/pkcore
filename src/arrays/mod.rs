@@ -2,6 +2,7 @@ use crate::analysis::eval::Eval;
 use crate::analysis::hand_rank::{HandRank, HandRankValue};
 use crate::arrays::five::Five;
 
+pub mod combos;
 pub mod five;
 pub mod four;
 pub mod hole_cards;

@@ -66,9 +66,7 @@ impl From<Masked> for RankMasked {
 }
 
 /// TODO DEFECT:
-#[derive(
-    Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
-)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct Masked {
     pub shu: SortedHeadsUp,
@@ -145,16 +143,8 @@ impl Masked {
         unique.clone().into_iter().filter(f).collect()
     }
 
-    pub fn filter_into_shu(
-        unique: &HashSet<Masked>,
-        f: fn(&Masked) -> bool,
-    ) -> HashSet<SortedHeadsUp> {
-        unique
-            .clone()
-            .into_iter()
-            .filter(f)
-            .map(|s| s.shu)
-            .collect()
+    pub fn filter_into_shu(unique: &HashSet<Masked>, f: fn(&Masked) -> bool) -> HashSet<SortedHeadsUp> {
+        unique.clone().into_iter().filter(f).map(|s| s.shu).collect()
     }
 
     #[must_use]
@@ -205,12 +195,7 @@ impl Masked {
     }
 
     pub fn suit_masks(unique: &HashSet<Masked>, f: fn(&Masked) -> bool) -> HashSet<SuitMask> {
-        unique
-            .clone()
-            .into_iter()
-            .filter(f)
-            .map(|s| s.suit_mask)
-            .collect()
+        unique.clone().into_iter().filter(f).map(|s| s.suit_mask).collect()
     }
 
     /// While Clippy is warning us that this function isn't used, it actually is used by our
@@ -562,14 +547,8 @@ mod arrays__matchups__masked_tests {
             lower: Two::HAND_5D_5C,
         },
         texture: SuitTexture::Type1234,
-        suit_mask: SuitMask {
-            higher: 12,
-            lower: 3,
-        },
-        rank_mask: RankMask {
-            higher: 16,
-            lower: 8,
-        },
+        suit_mask: SuitMask { higher: 12, lower: 3 },
+        rank_mask: RankMask { higher: 16, lower: 8 },
     };
 
     #[test]
@@ -940,10 +919,7 @@ mod arrays__matchups__masked_tests {
 
     #[test]
     fn from_sorted_heads_up() {
-        assert_eq!(
-            HANDS_6S_6H_V_5D_5C,
-            Masked::from(TestData::the_hand_sorted_headsup())
-        );
+        assert_eq!(HANDS_6S_6H_V_5D_5C, Masked::from(TestData::the_hand_sorted_headsup()));
     }
 
     #[test]
@@ -954,13 +930,10 @@ mod arrays__matchups__masked_tests {
         let shift2 = Masked::from_str("A♠ A♣ A♥ A♦").unwrap();
         let distinct = Masked::distinct();
 
-        let contains = distinct.contains(&original)
-            || distinct.contains(&shift1)
-            || distinct.contains(&shift2);
+        let contains = distinct.contains(&original) || distinct.contains(&shift1) || distinct.contains(&shift2);
 
         assert!(contains);
-        SortedHeadsUp::generate_csv("generated/dist.csv", Masked::into_shus(&distinct))
-            .expect("TODO: panic message");
+        SortedHeadsUp::generate_csv("generated/dist.csv", Masked::into_shus(&distinct)).expect("TODO: panic message");
     }
 
     #[test]

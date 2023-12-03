@@ -25,8 +25,7 @@ fn main() -> Result<(), PKError> {
     }
 
     println!("{} unique shus remaining", unique.len());
-    SortedHeadsUp::generate_csv("data/remaining_unique_shus.csv", unique)
-        .expect("Unable to generate CSV.");
+    SortedHeadsUp::generate_csv("data/remaining_unique_shus.csv", unique).expect("Unable to generate CSV.");
 
     Ok(())
 }

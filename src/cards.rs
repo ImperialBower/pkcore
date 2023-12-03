@@ -317,8 +317,7 @@ impl Cards {
 
     pub fn shuffle_in_place(&mut self) {
         for _ in 0..Cards::NUMBER_OF_SHUFFLES {
-            self.0
-                .sort_by(|_, _| rand::random::<RandomOrdering>().into());
+            self.0.sort_by(|_, _| rand::random::<RandomOrdering>().into());
         }
     }
 
@@ -391,11 +390,7 @@ impl Cards {
         // video games, which closed a while ago, but they are great.
         let mut mappy: HashMap<Rank, Cards> = HashMap::new();
         for rank in Rank::iter() {
-            let pile: Vec<Card> = self
-                .iter()
-                .copied()
-                .filter(|card| card.get_rank() == rank)
-                .collect();
+            let pile: Vec<Card> = self.iter().copied().filter(|card| card.get_rank() == rank).collect();
             mappy.insert(rank, Cards::from(pile));
         }
         mappy
@@ -448,11 +443,7 @@ impl BitXorAssign for Cards {
 
 impl fmt::Display for Cards {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let s = self
-            .iter()
-            .map(Card::to_string)
-            .collect::<Vec<String>>()
-            .join(" ");
+        let s = self.iter().map(Card::to_string).collect::<Vec<String>>().join(" ");
 
         write!(f, "{s}")
     }
@@ -648,17 +639,11 @@ impl Pile for Cards {
 
 impl SuitShift for Cards {
     fn shift_suit_down(&self) -> Self {
-        self.clone()
-            .into_iter()
-            .map(|c| c.shift_suit_down())
-            .collect()
+        self.clone().into_iter().map(|c| c.shift_suit_down()).collect()
     }
 
     fn shift_suit_up(&self) -> Self {
-        self.clone()
-            .into_iter()
-            .map(|c| c.shift_suit_up())
-            .collect()
+        self.clone().into_iter().map(|c| c.shift_suit_up()).collect()
     }
 
     fn opposite(&self) -> Self {
@@ -787,14 +772,8 @@ mod card_tests {
     fn flag_paired() {
         let mut cards = Cards::from_str("T♠ T♥").unwrap().flag_paired();
 
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_PAIRED_MASK));
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_PAIRED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_PAIRED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_PAIRED_MASK));
         assert!(!Cards::from_str("T♠")
             .unwrap()
             .draw_one()
@@ -806,14 +785,8 @@ mod card_tests {
     fn flag_tripped() {
         let mut cards = Cards::from_str("T♠ T♥ T♦").unwrap().flag_tripped();
 
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_TRIPPED_MASK));
         assert!(!Cards::from_str("T♠")
             .unwrap()
             .draw_one()
@@ -825,14 +798,8 @@ mod card_tests {
     fn flag_quaded() {
         let mut cards = Cards::from_str("T♠ T♥ T♦ T♣").unwrap().flag_quaded();
 
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_QUADED_MASK));
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_QUADED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_QUADED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_QUADED_MASK));
         assert!(!Cards::from_str("T♠")
             .unwrap()
             .draw_one()
@@ -846,26 +813,11 @@ mod card_tests {
 
         let mut cards = cards.frequency_weighted();
 
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_PAIRED_MASK));
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_PAIRED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_PAIRED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_PAIRED_MASK));
     }
 
     #[test]
@@ -875,22 +827,10 @@ mod card_tests {
         let mut cards = cards.frequency_weighted();
 
         assert_eq!(5, cards.len());
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_QUADED_MASK));
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_QUADED_MASK));
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_QUADED_MASK));
-        assert!(cards
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_QUADED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_QUADED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_QUADED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_QUADED_MASK));
+        assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_QUADED_MASK));
         assert!(!cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_MASK));
     }
 
@@ -1001,19 +941,13 @@ mod card_tests {
     #[test]
     fn from__bard() {
         let my_bard = Bard::TEN_SPADES | Bard::TEN_DIAMONDS | Bard::TEN_CLUBS | Bard::TEN_HEARTS;
-        assert_eq!(
-            Cards::from_str("T♣ T♦ T♥ T♠").unwrap(),
-            Cards::from(my_bard)
-        );
+        assert_eq!(Cards::from_str("T♣ T♦ T♥ T♠").unwrap(), Cards::from(my_bard));
         assert_eq!(Cards::default(), Cards::from(Bard::BLANK));
     }
 
     #[test]
     fn from__card() {
-        assert_eq!(
-            Cards::from_str("3♣").unwrap(),
-            Cards::from(&Card::TREY_CLUBS)
-        );
+        assert_eq!(Cards::from_str("3♣").unwrap(), Cards::from(&Card::TREY_CLUBS));
         assert_eq!(Cards::default(), Cards::from(&Card::BLANK));
     }
 

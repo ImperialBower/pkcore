@@ -767,6 +767,25 @@
                 * Added Position6MaxPointer
                   * added .next() and increment()
                   * Refactoring: removed BintCell not needed
+                * Refactoring Nubibus: Removing BintCell Adding Position6MaxPointer
+                * Refactoring Nubibus: Isolating individual acts with `act()`
+                * Adding Action ledger
+                  * Adding Seat.desc()
+                * .pop() to walk through steps
+                  * .seat_check() to validate .pop()
+                    * DEFECT: .seat_state() off by one FIXED
+                * PROBlEM: How do I know a round of play is over?
+                  * POSSIBLE SOLUTION: play::action::Action
+                    * Done!
+                * Add play::action::Action to Nubibus
+                  * Renamed play::action::Action to play::action::ActionTracker
+                  * ActionTracker.next_round()
+                  * Added ActionTracker to Nubibus
+      * Two UPDATES
+        * Two::combos()
+        * Two::filter_pairs()
+        * arrays::combos::twos::Twos
+        * REFACTOR: Ranges to return Twos
 
 ## LATER
 
@@ -779,6 +798,7 @@
   * [Mike Caro's Website](https://www.poker1.com/)
   * GTO
     * [Minimum Defense Frequency vs Pot Odds](https://upswingpoker.com/minimum-defense-frequency-vs-pot-odds/)
+    * [A Beginner’s Guide to Poker Combinatorics](https://blog.gtowizard.com/a-beginners-guide-to-poker-combinatorics/)
   * Terms
     * [The Nuts](https://en.wikipedia.org/wiki/Nut_hand)
       * 888poker > [What is Nuts in Poker?](https://www.888poker.com/magazine/poker-terms/nuts)
@@ -859,9 +879,11 @@
 * [Serde](https://serde.rs/)
   * [Serde JSON](https://github.com/serde-rs/json)
   * [Serde YAML](https://github.com/dtolnay/serde-yaml)
+* [Termion](https://github.com/redox-os/termion)
 
 ## Potential Libraries
 
+* [derive_more](https://github.com/JelteF/derive_more) (Recommended by Rust Power Tools)
 * [mycelium-bitfield](https://crates.io/crates/mycelium-bitfield)
 * [modular-bitfield](https://crates.io/crates/modular-bitfield)
 * [RustyLine](https://github.com/kkawakam/rustyline)

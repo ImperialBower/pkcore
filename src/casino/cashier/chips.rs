@@ -27,6 +27,20 @@ impl AddAssign for Chips {
     }
 }
 
+impl Sub for Chips {
+    type Output = Chips;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        Chips::new(self.0 - rhs.0)
+    }
+}
+
+impl SubAssign for Chips {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.0 -= rhs.0;
+    }
+}
+
 impl Betting for Chips {
     fn all_in(&mut self) -> Result<Chips, PKError> {
         if self.size() == 0 {
@@ -60,20 +74,6 @@ impl Betting for Chips {
 impl Display for Chips {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.size().separate_with_commas())
-    }
-}
-
-impl Sub for Chips {
-    type Output = Chips;
-
-    fn sub(self, rhs: Self) -> Self::Output {
-        Chips::new(self.0 - rhs.0)
-    }
-}
-
-impl SubAssign for Chips {
-    fn sub_assign(&mut self, rhs: Self) {
-        self.0 -= rhs.0;
     }
 }
 

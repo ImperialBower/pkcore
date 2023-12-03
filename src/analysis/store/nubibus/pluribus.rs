@@ -60,10 +60,7 @@ impl Pluribus {
                 Board::from_pluribus(&caps["board"]).unwrap_or_default(),
             )
         } else {
-            (
-                HoleCards::from_pluribus(s).unwrap_or_default(),
-                Board::default(),
-            )
+            (HoleCards::from_pluribus(s).unwrap_or_default(), Board::default())
         }
     }
 }
@@ -162,10 +159,7 @@ mod store_pluribus_tests {
         let actual = Pluribus::from_str(LOG).unwrap();
 
         assert_eq!(27, actual.index);
-        assert_eq!(
-            vec!["r200ffcfc", "cr850cf", "cr1825r3775c", "r10000c"],
-            actual.rounds
-        );
+        assert_eq!(vec!["r200ffcfc", "cr850cf", "cr1825r3775c", "r10000c"], actual.rounds);
         assert_eq!(
             HoleCards::from_str("Qc 4h Tc 9c 8s As Qh 7c Jc Qd 5h 5d").unwrap(),
             actual.hole_cards
@@ -180,7 +174,9 @@ mod store_pluribus_tests {
     #[rstest]
     #[case("STATE:0:ffr225fff:3c9s|6d5s|9dTs|2sQs|AdKd|7cTc:-50|-100|0|0|150|0:MrWhite|Gogo|Budd|Eddie|Bill|Pluribus")]
     #[case("STATE:1:ffffr300f:8sQc|2s8d|7dTs|5d8h|2h9s|6cQd:100|-100|0|0|0|0:Gogo|Budd|Eddie|Bill|Pluribus|MrWhite")]
-    #[case("STATE:5:ffr200fr950ff:JhJs|7d7c|7sKc|4d6s|8hAs|8s4c:300|-100|0|0|-200|0:Pluribus|MrWhite|Gogo|Budd|Eddie|Bill")]
+    #[case(
+        "STATE:5:ffr200fr950ff:JhJs|7d7c|7sKc|4d6s|8hAs|8s4c:300|-100|0|0|-200|0:Pluribus|MrWhite|Gogo|Budd|Eddie|Bill"
+    )]
     #[case("STATE:6:ffr225fff:Qd4c|7h9d|6s3h|7s9c|JcKc|Ks7c:-50|-100|0|0|150|0:MrWhite|Gogo|Budd|Eddie|Bill|Pluribus")]
     #[case("STATE:11:fffr250ff:9cAd|4h7c|Ts2s|6s8c|6c8s|QhAh:-50|-100|0|0|0|150:Pluribus|MrWhite|Gogo|Budd|Eddie|Bill")]
     fn from_str__errors(#[case] row: &str) {
@@ -212,7 +208,8 @@ mod store_pluribus_tests {
 
     #[test]
     fn do_test() {
-        let row = "STATE:0:ffr225fff:3c9s|6d5s|9dTs|2sQs|AdKd|7cTc:-50|-100|0|0|150|0:MrWhite|Gogo|Budd|Eddie|Bill|Pluribus";
+        let row =
+            "STATE:0:ffr225fff:3c9s|6d5s|9dTs|2sQs|AdKd|7cTc:-50|-100|0|0|150|0:MrWhite|Gogo|Budd|Eddie|Bill|Pluribus";
         let v = Pluribus::parse_string(row).unwrap();
         let (player_cards, board) = Pluribus::parse_cards(v.index(3));
 

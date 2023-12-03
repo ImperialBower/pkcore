@@ -2,12 +2,23 @@ use crate::arrays::hole_cards::twos::Twos;
 use crate::cards::Cards;
 use crate::PKError;
 use std::io;
-use std::io::Write;
+use std::io::{stdin, stdout, Write};
 use std::str::FromStr;
+use termion::input::TermRead;
+use termion::raw::IntoRawMode;
 
 pub struct Terminal;
 
 impl Terminal {
+    /// # Panics
+    ///
+    /// If it somehow wigs out on the input.
+    pub fn pause(prompt: &str) {
+        let mut stdout = stdout().into_raw_mode().unwrap();
+        write!(stdout, "{prompt}").unwrap();
+        stdout.flush().unwrap();
+        stdin().keys().next();
+    }
     /// # Panics
     ///
     /// If it somehow wigs out on the input.
@@ -16,9 +27,7 @@ impl Terminal {
         print!("{prompt}");
         let _ = io::stdout().flush();
         let mut input_text = String::new();
-        io::stdin()
-            .read_line(&mut input_text)
-            .expect("Failed to receive value");
+        io::stdin().read_line(&mut input_text).expect("Failed to receive value");
 
         match Cards::from_str(input_text.as_str()) {
             Ok(cards) => Some(cards),
@@ -51,9 +60,7 @@ impl Terminal {
         print!("{prompt}");
         let _ = io::stdout().flush();
         let mut input_text = String::new();
-        io::stdin()
-            .read_line(&mut input_text)
-            .expect("Failed to receive value");
+        io::stdin().read_line(&mut input_text).expect("Failed to receive value");
         let trimmed = input_text.trim();
         match trimmed.parse::<usize>() {
             Ok(i) => i,

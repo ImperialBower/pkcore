@@ -200,33 +200,13 @@ impl From<[Two; 9]> for Twos {
 
 impl From<[Two; 8]> for Twos {
     fn from(v: [Two; 8]) -> Self {
-        Twos([
-            v[0],
-            v[1],
-            v[2],
-            v[3],
-            v[4],
-            v[5],
-            v[6],
-            v[7],
-            Two::default(),
-        ])
+        Twos([v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], Two::default()])
     }
 }
 
 impl From<[Two; 7]> for Twos {
     fn from(v: [Two; 7]) -> Self {
-        Twos([
-            v[0],
-            v[1],
-            v[2],
-            v[3],
-            v[4],
-            v[5],
-            v[6],
-            Two::default(),
-            Two::default(),
-        ])
+        Twos([v[0], v[1], v[2], v[3], v[4], v[5], v[6], Two::default(), Two::default()])
     }
 }
 
@@ -397,10 +377,7 @@ mod arrays__hole_cards__twos_tests {
     // A♠ 4♠ K♠ K♥ 8♣ 7♣
     #[test]
     fn display() {
-        assert_eq!(
-            "A♠ 4♠, K♠ K♥, 8♣ 7♣",
-            Twos::from([HERO, VILLAIN, MINION]).to_string()
-        );
+        assert_eq!("A♠ 4♠, K♠ K♥, 8♣ 7♣", Twos::from([HERO, VILLAIN, MINION]).to_string());
     }
 
     #[test]

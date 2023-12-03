@@ -114,11 +114,7 @@ impl CaseEval {
     /// # Errors
     ///
     /// Returns a `PKError` if any of the cards is invalid.
-    pub fn from_holdem_at_flop(
-        board: Three,
-        case: Two,
-        hands: &HoleCards,
-    ) -> Result<Self, PKError> {
+    pub fn from_holdem_at_flop(board: Three, case: Two, hands: &HoleCards) -> Result<Self, PKError> {
         if board.is_dealt() && case.is_dealt() {
             let mut case_eval = CaseEval::default();
 
@@ -614,11 +610,7 @@ mod hand_rank__case_eval_tests {
 
     #[test]
     fn from_holdem_at_flop__happy__tie() {
-        let board = Three::from(vec![
-            Card::NINE_CLUBS,
-            Card::EIGHT_DIAMONDS,
-            Card::SEVEN_CLUBS,
-        ]);
+        let board = Three::from(vec![Card::NINE_CLUBS, Card::EIGHT_DIAMONDS, Card::SEVEN_CLUBS]);
         let hole_cards = HoleCards::from(vec![Two::HAND_JC_TD, Two::HAND_QH_6H, Two::HAND_JS_TC]);
         let case = Two::HAND_QH_6H;
 
@@ -642,11 +634,7 @@ mod hand_rank__case_eval_tests {
 
     #[test]
     fn from_holdem_at_flop__blank_card_in_case() {
-        let board = Three::from(vec![
-            Card::NINE_CLUBS,
-            Card::EIGHT_DIAMONDS,
-            Card::SEVEN_DIAMONDS,
-        ]);
+        let board = Three::from(vec![Card::NINE_CLUBS, Card::EIGHT_DIAMONDS, Card::SEVEN_DIAMONDS]);
         let hole_cards = HoleCards::from(vec![Two::HAND_JC_TD, Two::HAND_QH_6H, Two::HAND_JS_TC]);
         let case = Two::from([Card::ACE_DIAMONDS, Card::BLANK]);
 
@@ -658,11 +646,7 @@ mod hand_rank__case_eval_tests {
 
     #[test]
     fn from_holdem_at_flop__blank_card_in_hand() {
-        let board = Three::from(vec![
-            Card::NINE_CLUBS,
-            Card::EIGHT_DIAMONDS,
-            Card::SEVEN_CLUBS,
-        ]);
+        let board = Three::from(vec![Card::NINE_CLUBS, Card::EIGHT_DIAMONDS, Card::SEVEN_CLUBS]);
         let hole_cards = HoleCards::from(vec![
             Two::HAND_JC_TD,
             Two::from([Card::QUEEN_HEARTS, Card::BLANK]),
@@ -698,10 +682,7 @@ mod hand_rank__case_eval_tests {
     #[test]
     fn get() {
         let sut = CaseEval(
-            vec![
-                TestData::daniel_eval_at_flop(),
-                TestData::gus_eval_at_flop(),
-            ],
+            vec![TestData::daniel_eval_at_flop(), TestData::gus_eval_at_flop()],
             Cards::default(),
         );
 
@@ -714,10 +695,7 @@ mod hand_rank__case_eval_tests {
     fn is_empty() {
         assert!(CaseEval::default().is_empty());
         assert!(!CaseEval(
-            vec![
-                TestData::daniel_eval_at_flop(),
-                TestData::gus_eval_at_flop(),
-            ],
+            vec![TestData::daniel_eval_at_flop(), TestData::gus_eval_at_flop(),],
             Cards::default()
         )
         .is_empty());
@@ -729,10 +707,7 @@ mod hand_rank__case_eval_tests {
         assert_eq!(
             2,
             CaseEval(
-                vec![
-                    TestData::daniel_eval_at_flop(),
-                    TestData::gus_eval_at_flop(),
-                ],
+                vec![TestData::daniel_eval_at_flop(), TestData::gus_eval_at_flop(),],
                 Cards::default()
             )
             .len()
@@ -744,10 +719,7 @@ mod hand_rank__case_eval_tests {
     fn push() {
         let mut sut = CaseEval::default();
         let expected = CaseEval(
-            vec![
-                TestData::daniel_eval_at_flop(),
-                TestData::gus_eval_at_flop(),
-            ],
+            vec![TestData::daniel_eval_at_flop(), TestData::gus_eval_at_flop()],
             Cards::default(),
         );
 
@@ -759,16 +731,10 @@ mod hand_rank__case_eval_tests {
 
     #[test]
     fn to_vec() {
-        let expected = vec![
-            TestData::daniel_eval_at_flop(),
-            TestData::gus_eval_at_flop(),
-        ];
+        let expected = vec![TestData::daniel_eval_at_flop(), TestData::gus_eval_at_flop()];
 
         let actual = CaseEval(
-            vec![
-                TestData::daniel_eval_at_flop(),
-                TestData::gus_eval_at_flop(),
-            ],
+            vec![TestData::daniel_eval_at_flop(), TestData::gus_eval_at_flop()],
             Cards::default(),
         )
         .to_vec();
@@ -781,10 +747,7 @@ mod hand_rank__case_eval_tests {
         let expected = Win::FIRST;
 
         let actual = CaseEval(
-            vec![
-                TestData::daniel_eval_at_flop(),
-                TestData::gus_eval_at_flop(),
-            ],
+            vec![TestData::daniel_eval_at_flop(), TestData::gus_eval_at_flop()],
             Cards::default(),
         )
         .win_count();
@@ -869,10 +832,7 @@ mod hand_rank__case_eval_tests {
         let expected = TestData::daniel_eval_at_flop().hand_rank;
 
         let actual = CaseEval(
-            vec![
-                TestData::daniel_eval_at_flop(),
-                TestData::gus_eval_at_flop(),
-            ],
+            vec![TestData::daniel_eval_at_flop(), TestData::gus_eval_at_flop()],
             Cards::default(),
         )
         .winning_hand_rank();
@@ -885,10 +845,7 @@ mod hand_rank__case_eval_tests {
         let expected_hand_rank = TestData::daniel_eval_at_flop().hand_rank;
 
         let (player_flag, actual_hand_rank) = CaseEval(
-            vec![
-                TestData::daniel_eval_at_flop(),
-                TestData::gus_eval_at_flop(),
-            ],
+            vec![TestData::daniel_eval_at_flop(), TestData::gus_eval_at_flop()],
             Cards::default(),
         )
         .winner();
