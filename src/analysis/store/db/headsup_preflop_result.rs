@@ -113,20 +113,14 @@ impl HUPResult {
     /// # Errors
     ///
     /// Unable to create csv file.
-    pub fn generate_csv_from_hash_set(
-        path: &str,
-        hups: HashSet<HUPResult>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn generate_csv_from_hash_set(path: &str, hups: HashSet<HUPResult>) -> Result<(), Box<dyn std::error::Error>> {
         HUPResult::generate_csv_from_vector(path, &Vec::from_iter(hups))
     }
 
     /// # Errors
     ///
     /// Unable to create csv file.
-    pub fn generate_csv_from_vector(
-        path: &str,
-        hups: &[HUPResult],
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn generate_csv_from_vector(path: &str, hups: &[HUPResult]) -> Result<(), Box<dyn std::error::Error>> {
         let mut wtr = WriterBuilder::new().has_headers(true).from_path(path)?;
         for hup in hups {
             wtr.serialize(hup)?;
@@ -192,9 +186,7 @@ impl HUPResult {
 
     #[must_use]
     pub fn matches(&self, other: &Self) -> bool {
-        (self.higher_wins == other.higher_wins)
-            && (self.lower_wins == other.lower_wins)
-            && (self.ties == other.ties)
+        (self.higher_wins == other.higher_wins) && (self.lower_wins == other.lower_wins) && (self.ties == other.ties)
     }
 
     /// # Errors
@@ -456,10 +448,7 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
     fn select_all(conn: &Connection) -> Vec<HUPResult> {
         log::debug!("HUPResult::select_all({:?})", conn);
 
-        let mut stmt = conn
-            .prepare("SELECT * FROM nlh_headsup_result")
-            .ok()
-            .unwrap();
+        let mut stmt = conn.prepare("SELECT * FROM nlh_headsup_result").ok().unwrap();
 
         let mut r: Vec<HUPResult> = Vec::new();
         let mut hups = stmt.query(()).unwrap();
@@ -662,9 +651,7 @@ mod analysis__store__db__hupresult_tests {
     fn get_sorted_heads_up() {
         assert_eq!(
             TestData::the_hand_sorted_headsup(),
-            TestData::the_hand_as_hup_result()
-                .get_sorted_heads_up()
-                .unwrap()
+            TestData::the_hand_as_hup_result().get_sorted_heads_up().unwrap()
         );
     }
 
@@ -747,10 +734,7 @@ mod analysis__store__db__hupresult_tests {
         let inserted = HUPResult::insert(&conn, &the_hand).unwrap();
 
         // the proof
-        assert!(HUPResult::exists(
-            &conn,
-            &TestData::the_hand_sorted_headsup()
-        ));
+        assert!(HUPResult::exists(&conn, &TestData::the_hand_sorted_headsup()));
         assert!(inserted);
         conn.close().unwrap()
     }

@@ -54,9 +54,7 @@ impl ActionTracker {
             return false;
         }
 
-        self.actors
-            .iter()
-            .any(|a| a.state.get() == PlayState::YetToAct)
+        self.actors.iter().any(|a| a.state.get() == PlayState::YetToAct)
     }
 
     pub fn next_round(&self) {
@@ -69,10 +67,7 @@ impl ActionTracker {
 
     #[must_use]
     pub fn player_count(&self) -> usize {
-        self.actors
-            .iter()
-            .filter(|a| a.state.get() != PlayState::Fold)
-            .count()
+        self.actors.iter().filter(|a| a.state.get() != PlayState::Fold).count()
     }
 
     pub fn raise(&self, position: usize) {

@@ -785,6 +785,7 @@
         * Two::combos()
         * Two::filter_pairs()
         * arrays::combos::twos::Twos
+        * REFACTOR: Ranges to return Twos
 
 ## LATER
 

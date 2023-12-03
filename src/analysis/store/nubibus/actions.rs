@@ -523,15 +523,9 @@ mod store_pluribus_actions_tests {
 
     #[test]
     fn machete() {
-        assert_eq!(
-            vec!["r200", "f", "f", "c", "f", "c"],
-            ActionType::machete("r200ffcfc")
-        );
+        assert_eq!(vec!["r200", "f", "f", "c", "f", "c"], ActionType::machete("r200ffcfc"));
         assert_eq!(vec!["c", "r850", "c", "f"], ActionType::machete("cr850cf"));
-        assert_eq!(
-            vec!["c", "r1825", "r3775", "c"],
-            ActionType::machete("cr1825r3775c")
-        );
+        assert_eq!(vec!["c", "r1825", "r3775", "c"], ActionType::machete("cr1825r3775c"));
         assert_eq!(vec!["r10000", "c"], ActionType::machete("r10000c"));
         assert_eq!(
             vec!["f", "r200", "f", "f", "r850", "f", "c"],

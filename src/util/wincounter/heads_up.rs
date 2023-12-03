@@ -2,9 +2,7 @@ use crate::util::Util;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(
-    Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize,
-)]
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub struct HeadsUp {
     pub first_wins: usize,
     pub second_wins: usize,

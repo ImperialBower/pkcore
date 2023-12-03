@@ -4,9 +4,7 @@ use crate::Pile;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
-#[derive(
-    Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
-)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub enum SuitTexture {
     #[default]
@@ -37,12 +35,7 @@ impl From<SortedHeadsUp> for SuitTexture {
 impl From<&SortedHeadsUp> for SuitTexture {
     #[allow(clippy::if_same_then_else, clippy::collapsible_else_if)]
     fn from(shu: &SortedHeadsUp) -> Self {
-        let suits: HashSet<Suit> = shu
-            .higher
-            .suits()
-            .union(&shu.lower.suits())
-            .copied()
-            .collect();
+        let suits: HashSet<Suit> = shu.higher.suits().union(&shu.lower.suits()).copied().collect();
 
         match suits.len() {
             1 => SuitTexture::Type1111,
@@ -125,8 +118,8 @@ mod arrays__matchups__masks__suit_texture_tests {
     use std::str::FromStr;
 
     use crate::arrays::matchups::masks::suit_texture::SuitTexture::{
-        Type1111, Type1112b, Type1112d, Type1112e, Type1123, Type1212a, Type1212b, Type1223a,
-        Type1223b, Type1223c, Type1223d, Type1234,
+        Type1111, Type1112b, Type1112d, Type1112e, Type1123, Type1212a, Type1212b, Type1223a, Type1223b, Type1223c,
+        Type1223d, Type1234,
     };
     use crate::Shifty;
     use rstest::rstest;

@@ -185,11 +185,7 @@ impl Card {
 
     #[must_use]
     pub fn get_letter_index(&self) -> String {
-        format!(
-            "{}{}",
-            self.get_rank().to_char(),
-            self.get_suit().to_char_letter()
-        )
+        format!("{}{}", self.get_rank().to_char(), self.get_suit().to_char_letter())
     }
 
     #[must_use]
@@ -252,12 +248,7 @@ impl Card {
 
 impl fmt::Display for Card {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}{}",
-            self.get_rank().to_char(),
-            self.get_suit().to_char_symbol()
-        )
+        write!(f, "{}{}", self.get_rank().to_char(), self.get_suit().to_char_symbol())
     }
 }
 
@@ -462,10 +453,7 @@ mod card_tests {
 
     #[test]
     fn bit_string() {
-        assert_eq!(
-            "00010000 00000000 10001100 00101001",
-            Card::ACE_SPADES.bit_string()
-        );
+        assert_eq!("00010000 00000000 10001100 00101001", Card::ACE_SPADES.bit_string());
     }
 
     #[test]
@@ -481,14 +469,8 @@ mod card_tests {
         let weighted = Card::TREY_CLUBS.frequency_paired();
 
         assert!(weighted.is_flagged(Card::FREQUENCY_PAIRED_MASK));
-        assert_eq!(
-            0b00000000_00000010_00000000_00000000,
-            weighted.get_rank_flag()
-        );
-        assert_eq!(
-            0b00000000_00000000_00010000_00000000,
-            weighted.get_suit_flag()
-        );
+        assert_eq!(0b00000000_00000010_00000000_00000000, weighted.get_rank_flag());
+        assert_eq!(0b00000000_00000000_00010000_00000000, weighted.get_suit_flag());
         assert_eq!("3♣", weighted.to_string());
     }
 
@@ -497,14 +479,8 @@ mod card_tests {
         let weighted = Card::TREY_DIAMONDS.frequency_tripped();
 
         assert!(weighted.is_flagged(Card::FREQUENCY_TRIPPED_MASK));
-        assert_eq!(
-            0b00000000_00000010_00000000_00000000,
-            weighted.get_rank_flag()
-        );
-        assert_eq!(
-            0b00000000_00000000_00100000_00000000,
-            weighted.get_suit_flag()
-        );
+        assert_eq!(0b00000000_00000010_00000000_00000000, weighted.get_rank_flag());
+        assert_eq!(0b00000000_00000000_00100000_00000000, weighted.get_suit_flag());
         assert_eq!("3♦", weighted.to_string());
     }
 
@@ -513,14 +489,8 @@ mod card_tests {
         let weighted = Card::TREY_HEARTS.frequency_quaded();
 
         assert!(weighted.is_flagged(Card::FREQUENCY_QUADED_MASK));
-        assert_eq!(
-            0b00000000_00000010_00000000_00000000,
-            weighted.get_rank_flag()
-        );
-        assert_eq!(
-            0b00000000_00000000_01000000_00000000,
-            weighted.get_suit_flag()
-        );
+        assert_eq!(0b00000000_00000010_00000000_00000000, weighted.get_rank_flag());
+        assert_eq!(0b00000000_00000000_01000000_00000000, weighted.get_suit_flag());
         assert_eq!("3♥", weighted.to_string());
     }
 
@@ -586,14 +556,8 @@ mod card_tests {
 
         let weighted = card.frequency_paired();
 
-        assert_eq!(
-            0b00000000_00000010_00000000_00000000,
-            weighted.get_rank_flag()
-        );
-        assert_eq!(
-            0b00000000_00000010_00000000_00000000,
-            weighted.get_rank_flag()
-        );
+        assert_eq!(0b00000000_00000010_00000000_00000000, weighted.get_rank_flag());
+        assert_eq!(0b00000000_00000010_00000000_00000000, weighted.get_rank_flag());
         assert_eq!("3♣", weighted.to_string());
     }
 
@@ -638,18 +602,9 @@ mod card_tests {
 
     #[test]
     fn clean() {
-        assert_eq!(
-            Card::TREY_CLUBS,
-            Card::TREY_CLUBS.frequency_paired().clean()
-        );
-        assert_eq!(
-            Card::TREY_CLUBS,
-            Card::TREY_CLUBS.frequency_tripped().clean()
-        );
-        assert_eq!(
-            Card::TREY_CLUBS,
-            Card::TREY_CLUBS.frequency_quaded().clean()
-        );
+        assert_eq!(Card::TREY_CLUBS, Card::TREY_CLUBS.frequency_paired().clean());
+        assert_eq!(Card::TREY_CLUBS, Card::TREY_CLUBS.frequency_tripped().clean());
+        assert_eq!(Card::TREY_CLUBS, Card::TREY_CLUBS.frequency_quaded().clean());
         assert_eq!(Card::TREY_CLUBS, Card::TREY_CLUBS.clean());
     }
 
@@ -751,10 +706,7 @@ mod card_tests {
     fn serialize() {
         let card = Card::QUEEN_HEARTS;
 
-        assert_tokens(
-            &card,
-            &[Token::NewtypeStruct { name: "Card" }, Token::Str("Q♥")],
-        );
+        assert_tokens(&card, &[Token::NewtypeStruct { name: "Card" }, Token::Str("Q♥")]);
     }
 
     /// By default, cards will sort themselves from lowest, to highest, which means
@@ -765,10 +717,7 @@ mod card_tests {
 
         v.sort();
 
-        assert_eq!(
-            v,
-            vec![Card::KING_SPADES, Card::ACE_CLUBS, Card::ACE_SPADES]
-        );
+        assert_eq!(v, vec![Card::KING_SPADES, Card::ACE_CLUBS, Card::ACE_SPADES]);
     }
 
     #[rstest]

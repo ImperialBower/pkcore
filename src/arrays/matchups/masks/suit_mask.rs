@@ -8,9 +8,7 @@ use bitvec::view::BitView;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
-#[derive(
-    Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
-)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct SuitMask {
     pub higher: u8,
@@ -32,54 +30,18 @@ pub struct SuitMask {
 impl SuitMask {
     // region type three
     pub const TYPE_1122: [SuitMask; 12] = [
-        SuitMask {
-            higher: 1,
-            lower: 2,
-        },
-        SuitMask {
-            higher: 1,
-            lower: 4,
-        },
-        SuitMask {
-            higher: 1,
-            lower: 8,
-        },
-        SuitMask {
-            higher: 2,
-            lower: 1,
-        },
-        SuitMask {
-            higher: 2,
-            lower: 4,
-        },
-        SuitMask {
-            higher: 2,
-            lower: 8,
-        },
-        SuitMask {
-            higher: 4,
-            lower: 1,
-        },
-        SuitMask {
-            higher: 4,
-            lower: 2,
-        },
-        SuitMask {
-            higher: 4,
-            lower: 8,
-        },
-        SuitMask {
-            higher: 8,
-            lower: 1,
-        },
-        SuitMask {
-            higher: 8,
-            lower: 2,
-        },
-        SuitMask {
-            higher: 8,
-            lower: 4,
-        },
+        SuitMask { higher: 1, lower: 2 },
+        SuitMask { higher: 1, lower: 4 },
+        SuitMask { higher: 1, lower: 8 },
+        SuitMask { higher: 2, lower: 1 },
+        SuitMask { higher: 2, lower: 4 },
+        SuitMask { higher: 2, lower: 8 },
+        SuitMask { higher: 4, lower: 1 },
+        SuitMask { higher: 4, lower: 2 },
+        SuitMask { higher: 4, lower: 8 },
+        SuitMask { higher: 8, lower: 1 },
+        SuitMask { higher: 8, lower: 2 },
+        SuitMask { higher: 8, lower: 4 },
     ];
     // endregion
 

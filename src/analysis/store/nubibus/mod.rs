@@ -414,10 +414,14 @@ mod store_nubibus_tests {
     #[case("STATE:2:fffr200fc/cc/r875f:2h3c|Jc4c|6c9c|8c4s|Jh4h|KsAd/5c9s7c/3h:-50|250|0|0|0|-200:Budd|Eddie|Bill|Pluribus|MrWhite|Gogo")]
     #[case("STATE:3:ffr200r700ffr2050c/cc/cr4175f:JhKh|JdTs|3hAc|4sTc|5hAh|9c9d/9sJc5d/8h:-50|-100|0|0|-2050|2200:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd")]
     #[case("STATE:4:ffr225r800fff:Tc2c|3c6c|5s8s|Ts2h|KcTh|TdAh:-50|-100|0|0|-225|375:Bill|Pluribus|MrWhite|Gogo|Budd|Eddie")]
-    #[case("STATE:5:ffr200fr950ff:JhJs|7d7c|7sKc|4d6s|8hAs|8s4c:300|-100|0|0|-200|0:Pluribus|MrWhite|Gogo|Budd|Eddie|Bill")]
+    #[case(
+        "STATE:5:ffr200fr950ff:JhJs|7d7c|7sKc|4d6s|8hAs|8s4c:300|-100|0|0|-200|0:Pluribus|MrWhite|Gogo|Budd|Eddie|Bill"
+    )]
     #[case("STATE:6:ffr225fff:Qd4c|7h9d|6s3h|7s9c|JcKc|Ks7c:-50|-100|0|0|150|0:MrWhite|Gogo|Budd|Eddie|Bill|Pluribus")]
     #[case("STATE:7:fr225fffc/cr475c/cr1225c/cc:5hJc|Jd9h|6s5c|Ah7h|2s2d|3hTs/3sJh2h/Tc/Ks:-50|1275|0|-1225|0|0:Gogo|Budd|Eddie|Bill|Pluribus|MrWhite")]
-    #[case("STATE:8:r225ffr700ffc/cr1200f:7hTd|Jh3d|QcAh|2hAd|Ts2d|KhQd/Ks3h4s:-50|-100|-700|0|0|850:Budd|Eddie|Bill|Pluribus|MrWhite|Gogo")]
+    #[case(
+        "STATE:8:r225ffr700ffc/cr1200f:7hTd|Jh3d|QcAh|2hAd|Ts2d|KhQd/Ks3h4s:-50|-100|-700|0|0|850:Budd|Eddie|Bill|Pluribus|MrWhite|Gogo"
+    )]
     #[case("STATE:9:r200fffff:4cTc|9s3c|7sAs|2cQd|Ah9d|8s2h:-50|-100|150|0|0|0:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd")]
     #[case("STATE:10:fffr222r950ff:AcQh|9d9c|7d4s|8s4c|Td4h|4dAh:322|-100|0|0|0|-222:Bill|Pluribus|MrWhite|Gogo|Budd|Eddie")]
     #[case("STATE:11:fffr250ff:9cAd|4h7c|Ts2s|6s8c|6c8s|QhAh:-50|-100|0|0|0|150:Pluribus|MrWhite|Gogo|Budd|Eddie|Bill")]
@@ -444,18 +448,28 @@ mod store_nubibus_tests {
     #[case("STATE:32:fffr200r900fc/r1600f:KcJh|5d3c|8c2h|8d3d|6sTs|TdQc/2s9d5c:1000|-100|0|0|0|-900:Budd|Eddie|Bill|Pluribus|MrWhite|Gogo")]
     #[case("STATE:33:fr225fffc/cr600r1350c/cr2349f:7h9c|Jh9h|5cJd|KhQd|5dTh|4s8s/TsKd3h/4c:-50|-1350|0|1400|0|0:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd")]
     #[case("STATE:34:fffr222r950ff:6hAh|8c7s|4cQc|7hAs|Jd2d|9cAd:322|-100|0|0|0|-222:Bill|Pluribus|MrWhite|Gogo|Budd|Eddie")]
-    #[case("STATE:35:fffr250cf/cc/cc/cc:TdAd|3dQc|7c2d|As8c|3h6h|KdAc/3c9hJh/5h/Jd:-250|-100|0|0|0|350:Pluribus|MrWhite|Gogo|Budd|Eddie|Bill")]
+    #[case(
+        "STATE:35:fffr250cf/cc/cc/cc:TdAd|3dQc|7c2d|As8c|3h6h|KdAc/3c9hJh/5h/Jd:-250|-100|0|0|0|350:Pluribus|MrWhite|Gogo|Budd|Eddie|Bill"
+    )]
     #[case("STATE:36:r225fr700fffc/cr1225c/cr3175f:6s3d|2h5h|9h9d|Th8h|AsQh|TdKc/6d5sQs/Jd:-50|-100|-1225|0|1375|0:MrWhite|Gogo|Budd|Eddie|Bill|Pluribus")]
     #[case("STATE:37:r200ffcfr1350fc/cc/cc/cc:3h2s|AsKc|AcJd|KdQh|JcTs|7h7d/Jh2d4h/Qd/6c:-50|-1350|-200|0|0|1600:Gogo|Budd|Eddie|Bill|Pluribus|MrWhite")]
-    #[case("STATE:38:fr225fr700ffc/cr1200f:2cTc|3cKh|5d8s|QhTh|Jh3s|KsJd/4h3dAc:-50|-100|0|-700|0|850:Budd|Eddie|Bill|Pluribus|MrWhite|Gogo")]
-    #[case("STATE:39:ffffcr350c/cc/cc/cc:As7c|QsAh|Jh2h|Th6c|2cAd|5dKc/5c7d8s/4h/8d:350|-350|0|0|0|0:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd")]
-    #[case("STATE:40:r225ffffc/cc/cc/cc:5s8c|6c6d|JcQc|4cJd|4hKd|2s5h/7dKsQd/8h/As:-50|-225|275|0|0|0:Bill|Pluribus|MrWhite|Gogo|Budd|Eddie")]
+    #[case(
+        "STATE:38:fr225fr700ffc/cr1200f:2cTc|3cKh|5d8s|QhTh|Jh3s|KsJd/4h3dAc:-50|-100|0|-700|0|850:Budd|Eddie|Bill|Pluribus|MrWhite|Gogo"
+    )]
+    #[case(
+        "STATE:39:ffffcr350c/cc/cc/cc:As7c|QsAh|Jh2h|Th6c|2cAd|5dKc/5c7d8s/4h/8d:350|-350|0|0|0|0:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd"
+    )]
+    #[case(
+        "STATE:40:r225ffffc/cc/cc/cc:5s8c|6c6d|JcQc|4cJd|4hKd|2s5h/7dKsQd/8h/As:-50|-225|275|0|0|0:Bill|Pluribus|MrWhite|Gogo|Budd|Eddie"
+    )]
     #[case("STATE:41:fffr250cc/r1000ff:ThTs|7s7h|9c6c|3s5c|8s4c|QcKd/4h9s6h:500|-250|0|0|0|-250:Pluribus|MrWhite|Gogo|Budd|Eddie|Bill")]
     #[case("STATE:42:fffff:3c6c|KhTh|Jd5c|Ad2h|4c7s|9c7h:-50|50|0|0|0|0:MrWhite|Gogo|Budd|Eddie|Bill|Pluribus")]
     #[case("STATE:43:fr225ffff:Kh3d|Td7c|2c2h|AcAs|9cAd|8cKc:-50|-100|0|150|0|0:Gogo|Budd|Eddie|Bill|Pluribus|MrWhite")]
     #[case("STATE:44:fr200ffff:3h7h|Qd5h|5d4h|Kd9d|9hTs|3d6h:-50|-100|0|150|0|0:Budd|Eddie|Bill|Pluribus|MrWhite|Gogo")]
     #[case("STATE:45:ffffcc/cr250c/cr625f:As6c|9c4c|3c5h|6h2s|Ks7c|3s9s/5c8sTs/Qc:-250|250|0|0|0|0:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd")]
-    #[case("STATE:46:ffffr300r1200f:Kc3c|8s7s|Ts5d|4d7d|6d3s|Qc5h:-300|300|0|0|0|0:Bill|Pluribus|MrWhite|Gogo|Budd|Eddie")]
+    #[case(
+        "STATE:46:ffffr300r1200f:Kc3c|8s7s|Ts5d|4d7d|6d3s|Qc5h:-300|300|0|0|0|0:Bill|Pluribus|MrWhite|Gogo|Budd|Eddie"
+    )]
     #[case("STATE:47:fffr250fc/cr525c/cc/cc:6d5s|Td2d|4dKh|7c4c|3s6c|7d8c/6sAsTh/7s/Ts:-50|575|0|0|0|-525:Pluribus|MrWhite|Gogo|Budd|Eddie|Bill")]
     #[case("STATE:48:fr200ffff:Ts7d|2c8h|2h5h|JsAd|3cQc|Td2s:-50|-100|0|150|0|0:MrWhite|Gogo|Budd|Eddie|Bill|Pluribus")]
     #[case("STATE:49:ffr225fff:Qh7d|6cQs|9h8s|3dJs|As7s|7h5d:-50|-100|0|0|150|0:Gogo|Budd|Eddie|Bill|Pluribus|MrWhite")]
@@ -541,35 +555,19 @@ mod store_nubibus_tests {
         assert_eq!(Position6Max::UTG, nubibus.current_position());
         assert_eq!(
             50,
-            nubibus
-                .seat_from_position(Position6Max::SB)
-                .chips_in_play
-                .get()
-                .size()
+            nubibus.seat_from_position(Position6Max::SB).chips_in_play.get().size()
         );
         assert_eq!(
             100,
-            nubibus
-                .seat_from_position(Position6Max::BB)
-                .chips_in_play
-                .get()
-                .size()
+            nubibus.seat_from_position(Position6Max::BB).chips_in_play.get().size()
         );
         assert_eq!(
             10_000 - 50,
-            nubibus
-                .seat_from_position(Position6Max::SB)
-                .stack
-                .get()
-                .size()
+            nubibus.seat_from_position(Position6Max::SB).stack.get().size()
         );
         assert_eq!(
             10_000 - 100,
-            nubibus
-                .seat_from_position(Position6Max::BB)
-                .stack
-                .get()
-                .size()
+            nubibus.seat_from_position(Position6Max::BB).stack.get().size()
         );
     }
 
@@ -580,26 +578,14 @@ mod store_nubibus_tests {
         nubibus.do_deal();
 
         // 8h3c|7d6d|5dTd|7c7s|Ah4c|Ts9d
-        assert_eq!(
-            nubibus.seat_from_position(Position6Max::SB).hand.get(),
-            Two::HAND_8H_3C
-        );
-        assert_eq!(
-            nubibus.seat_from_position(Position6Max::BB).hand.get(),
-            Two::HAND_7D_6D
-        );
+        assert_eq!(nubibus.seat_from_position(Position6Max::SB).hand.get(), Two::HAND_8H_3C);
+        assert_eq!(nubibus.seat_from_position(Position6Max::BB).hand.get(), Two::HAND_7D_6D);
         assert_eq!(
             nubibus.seat_from_position(Position6Max::UTG).hand.get(),
             Two::HAND_TD_5D
         );
-        assert_eq!(
-            nubibus.seat_from_position(Position6Max::MP).hand.get(),
-            Two::HAND_7S_7C
-        );
-        assert_eq!(
-            nubibus.seat_from_position(Position6Max::CO).hand.get(),
-            Two::HAND_AH_4C
-        );
+        assert_eq!(nubibus.seat_from_position(Position6Max::MP).hand.get(), Two::HAND_7S_7C);
+        assert_eq!(nubibus.seat_from_position(Position6Max::CO).hand.get(), Two::HAND_AH_4C);
         assert_eq!(
             nubibus.seat_from_position(Position6Max::BTN).hand.get(),
             Two::HAND_TS_9D
@@ -683,11 +669,7 @@ mod store_nubibus_tests {
         nubibus.post_small_blind();
 
         assert_eq!(
-            nubibus
-                .seat_from_position(Position6Max::SB)
-                .chips_in_play
-                .get()
-                .size(),
+            nubibus.seat_from_position(Position6Max::SB).chips_in_play.get().size(),
             50
         ); // AI good!
         assert_eq!(Position6Max::BB, nubibus.current_position());
@@ -703,11 +685,7 @@ mod store_nubibus_tests {
         nubibus.post_big_blind();
 
         assert_eq!(
-            nubibus
-                .seat_from_position(Position6Max::BB)
-                .chips_in_play
-                .get()
-                .size(),
+            nubibus.seat_from_position(Position6Max::BB).chips_in_play.get().size(),
             100
         ); // AI good!
         assert_eq!(Position6Max::UTG, nubibus.current_position());
@@ -750,10 +728,7 @@ mod store_nubibus_tests {
 
         assert_eq!(PhaseHoldem::Preflop, nub.phase.current());
 
-        assert_eq!(
-            nub.ledger.first().unwrap().action_type,
-            ActionType::SmallBlind
-        );
+        assert_eq!(nub.ledger.first().unwrap().action_type, ActionType::SmallBlind);
         assert_eq!(nub.ledger.get(1).unwrap().action_type, ActionType::BigBlind);
 
         // MrWhite(UTG) calls 100
@@ -787,10 +762,7 @@ mod store_nubibus_tests {
 
         // Pluribus(BB) checks
         nub.do_check_or_call();
-        assert_eq!(
-            Action::CHECK.action_type,
-            nub.ledger.last().unwrap().action_type
-        );
+        assert_eq!(Action::CHECK.action_type, nub.ledger.last().unwrap().action_type);
         let bb = nub.seat_from_position(Position6Max::BB);
         assert_eq!(100, bb.chips_in_play.get().size());
         assert_eq!(9_900, bb.stack.get().size());
@@ -810,12 +782,8 @@ mod store_nubibus_tests {
         nub.do_init();
 
         assert!(nub.seat_check(Position6Max::SB, true, 9_950, 50, 0).is_ok());
-        assert!(nub
-            .seat_check(Position6Max::BB, true, 9_900, 100, 0)
-            .is_ok());
-        assert!(nub
-            .seat_check(Position6Max::UTG, true, 10_000, 0, 0)
-            .is_ok());
+        assert!(nub.seat_check(Position6Max::BB, true, 9_900, 100, 0).is_ok());
+        assert!(nub.seat_check(Position6Max::UTG, true, 10_000, 0, 0).is_ok());
         assert_eq!(Position6Max::UTG, nub.current_position());
 
         // f r200 f f f r1100 c/r2225c/cc/r5600f
@@ -823,41 +791,31 @@ mod store_nubibus_tests {
         // UTG Folds
         let pop = nub.pop();
         assert!(pop.is_some());
-        assert!(nub
-            .seat_check(Position6Max::UTG, false, 10_000, 0, 0)
-            .is_ok());
+        assert!(nub.seat_check(Position6Max::UTG, false, 10_000, 0, 0).is_ok());
         assert_eq!(100, nub.floor.get());
 
         // MP raises to 200
         let pop = nub.pop();
         assert!(pop.is_some());
-        assert!(nub
-            .seat_check(Position6Max::MP, true, 9_800, 200, 0)
-            .is_ok());
+        assert!(nub.seat_check(Position6Max::MP, true, 9_800, 200, 0).is_ok());
         assert_eq!(200, nub.floor.get());
 
         // CO Folds
         let pop = nub.pop();
         assert!(pop.is_some());
-        assert!(nub
-            .seat_check(Position6Max::CO, false, 10_000, 0, 0)
-            .is_ok());
+        assert!(nub.seat_check(Position6Max::CO, false, 10_000, 0, 0).is_ok());
         assert_eq!(200, nub.floor.get());
 
         // BTN Folds
         let pop = nub.pop();
         assert!(pop.is_some());
-        assert!(nub
-            .seat_check(Position6Max::BTN, false, 10_000, 0, 0)
-            .is_ok());
+        assert!(nub.seat_check(Position6Max::BTN, false, 10_000, 0, 0).is_ok());
         assert_eq!(200, nub.floor.get());
 
         // SB Folds
         let pop = nub.pop();
         assert!(pop.is_some());
-        assert!(nub
-            .seat_check(Position6Max::SB, false, 9_950, 0, 50)
-            .is_ok());
+        assert!(nub.seat_check(Position6Max::SB, false, 9_950, 0, 50).is_ok());
         assert_eq!(200, nub.floor.get());
 
         // BB raises to 1100
@@ -865,18 +823,14 @@ mod store_nubibus_tests {
         let pop = nub.pop();
         assert!(pop.is_some());
         // println!("{}", nub.seat_state(Position6Max::BB));
-        assert!(nub
-            .seat_check(Position6Max::BB, true, 8_900, 1_100, 0)
-            .is_ok());
+        assert!(nub.seat_check(Position6Max::BB, true, 8_900, 1_100, 0).is_ok());
         assert_eq!(1_100, nub.floor.get());
 
         // MP calls
         let pop = nub.pop();
         assert!(pop.is_some());
         // println!("{}", nub.seat_state(Position6Max::MP));
-        assert!(nub
-            .seat_check(Position6Max::MP, true, 8_900, 1_100, 0)
-            .is_ok());
+        assert!(nub.seat_check(Position6Max::MP, true, 8_900, 1_100, 0).is_ok());
 
         println!("{}", nub);
         println!();
@@ -890,10 +844,7 @@ mod store_nubibus_tests {
 
         println!("{}", nub);
         println!();
-        println!(
-            "FLOP: {} TURN: {}",
-            nub.pluribus.board.flop, nub.pluribus.board.turn
-        );
+        println!("FLOP: {} TURN: {}", nub.pluribus.board.flop, nub.pluribus.board.turn);
 
         let pop = nub.pop();
         assert!(pop.is_some());
@@ -918,12 +869,8 @@ mod store_nubibus_tests {
         nub.do_init();
 
         assert!(nub.seat_check(Position6Max::SB, true, 9_950, 50, 0).is_ok());
-        assert!(nub
-            .seat_check(Position6Max::BB, true, 9_900, 100, 0)
-            .is_ok());
-        assert!(nub
-            .seat_check(Position6Max::UTG, true, 10_000, 0, 0)
-            .is_ok());
+        assert!(nub.seat_check(Position6Max::BB, true, 9_900, 100, 0).is_ok());
+        assert!(nub.seat_check(Position6Max::UTG, true, 10_000, 0, 0).is_ok());
     }
 
     #[test]

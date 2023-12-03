@@ -299,12 +299,7 @@ impl Two {
     pub const HAND_AH_KH: Two = Two([Card::ACE_HEARTS, Card::KING_HEARTS]);
     pub const HAND_AD_KD: Two = Two([Card::ACE_DIAMONDS, Card::KING_DIAMONDS]);
     pub const HAND_AC_KC: Two = Two([Card::ACE_CLUBS, Card::KING_CLUBS]);
-    pub const ACE_KING_SUITED: [Two; 4] = [
-        Two::HAND_AS_KS,
-        Two::HAND_AH_KH,
-        Two::HAND_AD_KD,
-        Two::HAND_AC_KC,
-    ];
+    pub const ACE_KING_SUITED: [Two; 4] = [Two::HAND_AS_KS, Two::HAND_AH_KH, Two::HAND_AD_KD, Two::HAND_AC_KC];
 
     pub const HAND_AS_KH: Two = Two([Card::ACE_SPADES, Card::KING_HEARTS]);
     pub const HAND_AS_KD: Two = Two([Card::ACE_SPADES, Card::KING_DIAMONDS]);
@@ -356,12 +351,7 @@ impl Two {
     pub const HAND_AH_QH: Two = Two([Card::ACE_HEARTS, Card::QUEEN_HEARTS]);
     pub const HAND_AD_QD: Two = Two([Card::ACE_DIAMONDS, Card::QUEEN_DIAMONDS]);
     pub const HAND_AC_QC: Two = Two([Card::ACE_CLUBS, Card::QUEEN_CLUBS]);
-    pub const ACE_QUEEN_SUITED: [Two; 4] = [
-        Two::HAND_AS_QS,
-        Two::HAND_AH_QH,
-        Two::HAND_AD_QD,
-        Two::HAND_AC_QC,
-    ];
+    pub const ACE_QUEEN_SUITED: [Two; 4] = [Two::HAND_AS_QS, Two::HAND_AH_QH, Two::HAND_AD_QD, Two::HAND_AC_QC];
 
     pub const HAND_AS_QH: Two = Two([Card::ACE_SPADES, Card::QUEEN_HEARTS]);
     pub const HAND_AS_QD: Two = Two([Card::ACE_SPADES, Card::QUEEN_DIAMONDS]);
@@ -413,12 +403,7 @@ impl Two {
     pub const HAND_AH_JH: Two = Two([Card::ACE_HEARTS, Card::JACK_HEARTS]);
     pub const HAND_AD_JD: Two = Two([Card::ACE_DIAMONDS, Card::JACK_DIAMONDS]);
     pub const HAND_AC_JC: Two = Two([Card::ACE_CLUBS, Card::JACK_CLUBS]);
-    pub const ACE_JACK_SUITED: [Two; 4] = [
-        Two::HAND_AS_JS,
-        Two::HAND_AH_JH,
-        Two::HAND_AD_JD,
-        Two::HAND_AC_JC,
-    ];
+    pub const ACE_JACK_SUITED: [Two; 4] = [Two::HAND_AS_JS, Two::HAND_AH_JH, Two::HAND_AD_JD, Two::HAND_AC_JC];
 
     pub const HAND_AS_JH: Two = Two([Card::ACE_SPADES, Card::JACK_HEARTS]);
     pub const HAND_AS_JD: Two = Two([Card::ACE_SPADES, Card::JACK_DIAMONDS]);
@@ -470,12 +455,7 @@ impl Two {
     pub const HAND_AH_TH: Two = Two([Card::ACE_HEARTS, Card::TEN_HEARTS]);
     pub const HAND_AD_TD: Two = Two([Card::ACE_DIAMONDS, Card::TEN_DIAMONDS]);
     pub const HAND_AC_TC: Two = Two([Card::ACE_CLUBS, Card::TEN_CLUBS]);
-    pub const ACE_TEN_SUITED: [Two; 4] = [
-        Two::HAND_AS_TS,
-        Two::HAND_AH_TH,
-        Two::HAND_AD_TD,
-        Two::HAND_AC_TC,
-    ];
+    pub const ACE_TEN_SUITED: [Two; 4] = [Two::HAND_AS_TS, Two::HAND_AH_TH, Two::HAND_AD_TD, Two::HAND_AC_TC];
 
     pub const HAND_AS_TH: Two = Two([Card::ACE_SPADES, Card::TEN_HEARTS]);
     pub const HAND_AS_TD: Two = Two([Card::ACE_SPADES, Card::TEN_DIAMONDS]);
@@ -527,12 +507,7 @@ impl Two {
     pub const HAND_AH_9H: Two = Two([Card::ACE_HEARTS, Card::NINE_HEARTS]);
     pub const HAND_AD_9D: Two = Two([Card::ACE_DIAMONDS, Card::NINE_DIAMONDS]);
     pub const HAND_AC_9C: Two = Two([Card::ACE_CLUBS, Card::NINE_CLUBS]);
-    pub const ACE_NINE_SUITED: [Two; 4] = [
-        Two::HAND_AS_9S,
-        Two::HAND_AH_9H,
-        Two::HAND_AD_9D,
-        Two::HAND_AC_9C,
-    ];
+    pub const ACE_NINE_SUITED: [Two; 4] = [Two::HAND_AS_9S, Two::HAND_AH_9H, Two::HAND_AD_9D, Two::HAND_AC_9C];
 
     pub const HAND_AS_9H: Two = Two([Card::ACE_SPADES, Card::NINE_HEARTS]);
     pub const HAND_AS_9D: Two = Two([Card::ACE_SPADES, Card::NINE_DIAMONDS]);
@@ -584,12 +559,7 @@ impl Two {
     pub const HAND_AH_8H: Two = Two([Card::ACE_HEARTS, Card::EIGHT_HEARTS]);
     pub const HAND_AD_8D: Two = Two([Card::ACE_DIAMONDS, Card::EIGHT_DIAMONDS]);
     pub const HAND_AC_8C: Two = Two([Card::ACE_CLUBS, Card::EIGHT_CLUBS]);
-    pub const ACE_EIGHT_SUITED: [Two; 4] = [
-        Two::HAND_AS_8S,
-        Two::HAND_AH_8H,
-        Two::HAND_AD_8D,
-        Two::HAND_AC_8C,
-    ];
+    pub const ACE_EIGHT_SUITED: [Two; 4] = [Two::HAND_AS_8S, Two::HAND_AH_8H, Two::HAND_AD_8D, Two::HAND_AC_8C];
 
     pub const HAND_AS_8H: Two = Two([Card::ACE_SPADES, Card::EIGHT_HEARTS]);
     pub const HAND_AS_8D: Two = Two([Card::ACE_SPADES, Card::EIGHT_DIAMONDS]);
@@ -641,12 +611,7 @@ impl Two {
     pub const HAND_AH_7H: Two = Two([Card::ACE_HEARTS, Card::SEVEN_HEARTS]);
     pub const HAND_AD_7D: Two = Two([Card::ACE_DIAMONDS, Card::SEVEN_DIAMONDS]);
     pub const HAND_AC_7C: Two = Two([Card::ACE_CLUBS, Card::SEVEN_CLUBS]);
-    pub const ACE_SEVEN_SUITED: [Two; 4] = [
-        Two::HAND_AS_7S,
-        Two::HAND_AH_7H,
-        Two::HAND_AD_7D,
-        Two::HAND_AC_7C,
-    ];
+    pub const ACE_SEVEN_SUITED: [Two; 4] = [Two::HAND_AS_7S, Two::HAND_AH_7H, Two::HAND_AD_7D, Two::HAND_AC_7C];
 
     pub const HAND_AS_7H: Two = Two([Card::ACE_SPADES, Card::SEVEN_HEARTS]);
     pub const HAND_AS_7D: Two = Two([Card::ACE_SPADES, Card::SEVEN_DIAMONDS]);
@@ -698,12 +663,7 @@ impl Two {
     pub const HAND_AH_6H: Two = Two([Card::ACE_HEARTS, Card::SIX_HEARTS]);
     pub const HAND_AD_6D: Two = Two([Card::ACE_DIAMONDS, Card::SIX_DIAMONDS]);
     pub const HAND_AC_6C: Two = Two([Card::ACE_CLUBS, Card::SIX_CLUBS]);
-    pub const ACE_SIX_SUITED: [Two; 4] = [
-        Two::HAND_AS_6S,
-        Two::HAND_AH_6H,
-        Two::HAND_AD_6D,
-        Two::HAND_AC_6C,
-    ];
+    pub const ACE_SIX_SUITED: [Two; 4] = [Two::HAND_AS_6S, Two::HAND_AH_6H, Two::HAND_AD_6D, Two::HAND_AC_6C];
 
     pub const HAND_AS_6H: Two = Two([Card::ACE_SPADES, Card::SIX_HEARTS]);
     pub const HAND_AS_6D: Two = Two([Card::ACE_SPADES, Card::SIX_DIAMONDS]);
@@ -755,12 +715,7 @@ impl Two {
     pub const HAND_AH_5H: Two = Two([Card::ACE_HEARTS, Card::FIVE_HEARTS]);
     pub const HAND_AD_5D: Two = Two([Card::ACE_DIAMONDS, Card::FIVE_DIAMONDS]);
     pub const HAND_AC_5C: Two = Two([Card::ACE_CLUBS, Card::FIVE_CLUBS]);
-    pub const ACE_FIVE_SUITED: [Two; 4] = [
-        Two::HAND_AS_5S,
-        Two::HAND_AH_5H,
-        Two::HAND_AD_5D,
-        Two::HAND_AC_5C,
-    ];
+    pub const ACE_FIVE_SUITED: [Two; 4] = [Two::HAND_AS_5S, Two::HAND_AH_5H, Two::HAND_AD_5D, Two::HAND_AC_5C];
 
     pub const HAND_AS_5H: Two = Two([Card::ACE_SPADES, Card::FIVE_HEARTS]);
     pub const HAND_AS_5D: Two = Two([Card::ACE_SPADES, Card::FIVE_DIAMONDS]);
@@ -812,12 +767,7 @@ impl Two {
     pub const HAND_AH_4H: Two = Two([Card::ACE_HEARTS, Card::FOUR_HEARTS]);
     pub const HAND_AD_4D: Two = Two([Card::ACE_DIAMONDS, Card::FOUR_DIAMONDS]);
     pub const HAND_AC_4C: Two = Two([Card::ACE_CLUBS, Card::FOUR_CLUBS]);
-    pub const ACE_FOUR_SUITED: [Two; 4] = [
-        Two::HAND_AS_4S,
-        Two::HAND_AH_4H,
-        Two::HAND_AD_4D,
-        Two::HAND_AC_4C,
-    ];
+    pub const ACE_FOUR_SUITED: [Two; 4] = [Two::HAND_AS_4S, Two::HAND_AH_4H, Two::HAND_AD_4D, Two::HAND_AC_4C];
 
     pub const HAND_AS_4H: Two = Two([Card::ACE_SPADES, Card::FOUR_HEARTS]);
     pub const HAND_AS_4D: Two = Two([Card::ACE_SPADES, Card::FOUR_DIAMONDS]);
@@ -869,12 +819,7 @@ impl Two {
     pub const HAND_AH_3H: Two = Two([Card::ACE_HEARTS, Card::TREY_HEARTS]);
     pub const HAND_AD_3D: Two = Two([Card::ACE_DIAMONDS, Card::TREY_DIAMONDS]);
     pub const HAND_AC_3C: Two = Two([Card::ACE_CLUBS, Card::TREY_CLUBS]);
-    pub const ACE_TREY_SUITED: [Two; 4] = [
-        Two::HAND_AS_3S,
-        Two::HAND_AH_3H,
-        Two::HAND_AD_3D,
-        Two::HAND_AC_3C,
-    ];
+    pub const ACE_TREY_SUITED: [Two; 4] = [Two::HAND_AS_3S, Two::HAND_AH_3H, Two::HAND_AD_3D, Two::HAND_AC_3C];
 
     pub const HAND_AS_3H: Two = Two([Card::ACE_SPADES, Card::TREY_HEARTS]);
     pub const HAND_AS_3D: Two = Two([Card::ACE_SPADES, Card::TREY_DIAMONDS]);
@@ -926,12 +871,7 @@ impl Two {
     pub const HAND_AH_2H: Two = Two([Card::ACE_HEARTS, Card::DEUCE_HEARTS]);
     pub const HAND_AD_2D: Two = Two([Card::ACE_DIAMONDS, Card::DEUCE_DIAMONDS]);
     pub const HAND_AC_2C: Two = Two([Card::ACE_CLUBS, Card::DEUCE_CLUBS]);
-    pub const ACE_DEUCE_SUITED: [Two; 4] = [
-        Two::HAND_AS_2S,
-        Two::HAND_AH_2H,
-        Two::HAND_AD_2D,
-        Two::HAND_AC_2C,
-    ];
+    pub const ACE_DEUCE_SUITED: [Two; 4] = [Two::HAND_AS_2S, Two::HAND_AH_2H, Two::HAND_AD_2D, Two::HAND_AC_2C];
 
     pub const HAND_AS_2H: Two = Two([Card::ACE_SPADES, Card::DEUCE_HEARTS]);
     pub const HAND_AS_2D: Two = Two([Card::ACE_SPADES, Card::DEUCE_DIAMONDS]);
@@ -983,12 +923,7 @@ impl Two {
     pub const HAND_KH_QH: Two = Two([Card::KING_HEARTS, Card::QUEEN_HEARTS]);
     pub const HAND_KD_QD: Two = Two([Card::KING_DIAMONDS, Card::QUEEN_DIAMONDS]);
     pub const HAND_KC_QC: Two = Two([Card::KING_CLUBS, Card::QUEEN_CLUBS]);
-    pub const KING_QUEEN_SUITED: [Two; 4] = [
-        Two::HAND_KS_QS,
-        Two::HAND_KH_QH,
-        Two::HAND_KD_QD,
-        Two::HAND_KC_QC,
-    ];
+    pub const KING_QUEEN_SUITED: [Two; 4] = [Two::HAND_KS_QS, Two::HAND_KH_QH, Two::HAND_KD_QD, Two::HAND_KC_QC];
 
     pub const HAND_KS_QH: Two = Two([Card::KING_SPADES, Card::QUEEN_HEARTS]);
     pub const HAND_KS_QD: Two = Two([Card::KING_SPADES, Card::QUEEN_DIAMONDS]);
@@ -1040,12 +975,7 @@ impl Two {
     pub const HAND_QH_JH: Two = Two([Card::QUEEN_HEARTS, Card::JACK_HEARTS]);
     pub const HAND_QD_JD: Two = Two([Card::QUEEN_DIAMONDS, Card::JACK_DIAMONDS]);
     pub const HAND_QC_JC: Two = Two([Card::QUEEN_CLUBS, Card::JACK_CLUBS]);
-    pub const QUEEN_JACK_SUITED: [Two; 4] = [
-        Two::HAND_QS_JS,
-        Two::HAND_QH_JH,
-        Two::HAND_QD_JD,
-        Two::HAND_QC_JC,
-    ];
+    pub const QUEEN_JACK_SUITED: [Two; 4] = [Two::HAND_QS_JS, Two::HAND_QH_JH, Two::HAND_QD_JD, Two::HAND_QC_JC];
 
     pub const HAND_QS_JH: Two = Two([Card::QUEEN_SPADES, Card::JACK_HEARTS]);
     pub const HAND_QS_JD: Two = Two([Card::QUEEN_SPADES, Card::JACK_DIAMONDS]);
@@ -1102,12 +1032,7 @@ impl Two {
     pub const HAND_JH_TH: Two = Two([Card::JACK_HEARTS, Card::TEN_HEARTS]);
     pub const HAND_JD_TD: Two = Two([Card::JACK_DIAMONDS, Card::TEN_DIAMONDS]);
     pub const HAND_JC_TC: Two = Two([Card::JACK_CLUBS, Card::TEN_CLUBS]);
-    pub const JACK_TEN_SUITED: [Two; 4] = [
-        Two::HAND_JS_TS,
-        Two::HAND_JH_TH,
-        Two::HAND_JD_TD,
-        Two::HAND_JC_TC,
-    ];
+    pub const JACK_TEN_SUITED: [Two; 4] = [Two::HAND_JS_TS, Two::HAND_JH_TH, Two::HAND_JD_TD, Two::HAND_JC_TC];
 
     pub const HAND_JS_TH: Two = Two([Card::JACK_SPADES, Card::TEN_HEARTS]);
     pub const HAND_JS_TD: Two = Two([Card::JACK_SPADES, Card::TEN_DIAMONDS]);
@@ -1159,12 +1084,7 @@ impl Two {
     pub const HAND_TH_9H: Two = Two([Card::TEN_HEARTS, Card::NINE_HEARTS]);
     pub const HAND_TD_9D: Two = Two([Card::TEN_DIAMONDS, Card::NINE_DIAMONDS]);
     pub const HAND_TC_9C: Two = Two([Card::TEN_CLUBS, Card::NINE_CLUBS]);
-    pub const TEN_NINE_SUITED: [Two; 4] = [
-        Two::HAND_TS_9S,
-        Two::HAND_TH_9H,
-        Two::HAND_TD_9D,
-        Two::HAND_TC_9C,
-    ];
+    pub const TEN_NINE_SUITED: [Two; 4] = [Two::HAND_TS_9S, Two::HAND_TH_9H, Two::HAND_TD_9D, Two::HAND_TC_9C];
 
     pub const HAND_TS_9H: Two = Two([Card::TEN_SPADES, Card::NINE_HEARTS]);
     pub const HAND_TS_9D: Two = Two([Card::TEN_SPADES, Card::NINE_DIAMONDS]);
@@ -1216,12 +1136,7 @@ impl Two {
     pub const HAND_9H_8H: Two = Two([Card::NINE_HEARTS, Card::EIGHT_HEARTS]);
     pub const HAND_9D_8D: Two = Two([Card::NINE_DIAMONDS, Card::EIGHT_DIAMONDS]);
     pub const HAND_9C_8C: Two = Two([Card::NINE_CLUBS, Card::EIGHT_CLUBS]);
-    pub const NINE_EIGHT_SUITED: [Two; 4] = [
-        Two::HAND_9S_8S,
-        Two::HAND_9H_8H,
-        Two::HAND_9D_8D,
-        Two::HAND_9C_8C,
-    ];
+    pub const NINE_EIGHT_SUITED: [Two; 4] = [Two::HAND_9S_8S, Two::HAND_9H_8H, Two::HAND_9D_8D, Two::HAND_9C_8C];
 
     pub const HAND_9S_8H: Two = Two([Card::NINE_SPADES, Card::EIGHT_HEARTS]);
     pub const HAND_9S_8D: Two = Two([Card::NINE_SPADES, Card::EIGHT_DIAMONDS]);
@@ -1273,12 +1188,7 @@ impl Two {
     pub const HAND_8H_7H: Two = Two([Card::EIGHT_HEARTS, Card::SEVEN_HEARTS]);
     pub const HAND_8D_7D: Two = Two([Card::EIGHT_DIAMONDS, Card::SEVEN_DIAMONDS]);
     pub const HAND_8C_7C: Two = Two([Card::EIGHT_CLUBS, Card::SEVEN_CLUBS]);
-    pub const EIGHT_SEVEN_SUITED: [Two; 4] = [
-        Two::HAND_8S_7S,
-        Two::HAND_8H_7H,
-        Two::HAND_8D_7D,
-        Two::HAND_8C_7C,
-    ];
+    pub const EIGHT_SEVEN_SUITED: [Two; 4] = [Two::HAND_8S_7S, Two::HAND_8H_7H, Two::HAND_8D_7D, Two::HAND_8C_7C];
 
     pub const HAND_8S_7H: Two = Two([Card::EIGHT_SPADES, Card::SEVEN_HEARTS]);
     pub const HAND_8S_7D: Two = Two([Card::EIGHT_SPADES, Card::SEVEN_DIAMONDS]);
@@ -1358,12 +1268,7 @@ impl Two {
     pub const HAND_7H_6H: Two = Two([Card::SEVEN_HEARTS, Card::SIX_HEARTS]);
     pub const HAND_7D_6D: Two = Two([Card::SEVEN_DIAMONDS, Card::SIX_DIAMONDS]);
     pub const HAND_7C_6C: Two = Two([Card::SEVEN_CLUBS, Card::SIX_CLUBS]);
-    pub const SEVEN_SIX_SUITED: [Two; 4] = [
-        Two::HAND_7S_6S,
-        Two::HAND_7H_6H,
-        Two::HAND_7D_6D,
-        Two::HAND_7C_6C,
-    ];
+    pub const SEVEN_SIX_SUITED: [Two; 4] = [Two::HAND_7S_6S, Two::HAND_7H_6H, Two::HAND_7D_6D, Two::HAND_7C_6C];
 
     pub const HAND_7S_6H: Two = Two([Card::SEVEN_SPADES, Card::SIX_HEARTS]);
     pub const HAND_7S_6D: Two = Two([Card::SEVEN_SPADES, Card::SIX_DIAMONDS]);
@@ -1419,12 +1324,7 @@ impl Two {
     pub const HAND_KH_TH: Two = Two([Card::KING_HEARTS, Card::TEN_HEARTS]);
     pub const HAND_KD_TD: Two = Two([Card::KING_DIAMONDS, Card::TEN_DIAMONDS]);
     pub const HAND_KC_TC: Two = Two([Card::KING_CLUBS, Card::TEN_CLUBS]);
-    pub const KING_TEN_SUITED: [Two; 4] = [
-        Two::HAND_KS_TS,
-        Two::HAND_KH_TH,
-        Two::HAND_KD_TD,
-        Two::HAND_KC_TC,
-    ];
+    pub const KING_TEN_SUITED: [Two; 4] = [Two::HAND_KS_TS, Two::HAND_KH_TH, Two::HAND_KD_TD, Two::HAND_KC_TC];
 
     pub const HAND_KS_TH: Two = Two([Card::KING_SPADES, Card::TEN_HEARTS]);
     pub const HAND_KS_TD: Two = Two([Card::KING_SPADES, Card::TEN_DIAMONDS]);
@@ -1483,12 +1383,7 @@ impl Two {
     pub const HAND_TD_2D: Two = Two([Card::TEN_DIAMONDS, Card::DEUCE_DIAMONDS]);
 
     pub const HAND_TC_2C: Two = Two([Card::TEN_CLUBS, Card::DEUCE_CLUBS]);
-    pub const TEN_DEUCE_SUITED: [Two; 4] = [
-        Two::HAND_TS_2S,
-        Two::HAND_TH_2H,
-        Two::HAND_TD_2D,
-        Two::HAND_TC_2C,
-    ];
+    pub const TEN_DEUCE_SUITED: [Two; 4] = [Two::HAND_TS_2S, Two::HAND_TH_2H, Two::HAND_TD_2D, Two::HAND_TC_2C];
 
     pub const HAND_TS_2H: Two = Two([Card::TEN_SPADES, Card::DEUCE_HEARTS]);
     pub const HAND_TS_2D: Two = Two([Card::TEN_SPADES, Card::DEUCE_DIAMONDS]);
@@ -1540,12 +1435,7 @@ impl Two {
     pub const HAND_8H_6H: Two = Two([Card::EIGHT_HEARTS, Card::SIX_HEARTS]);
     pub const HAND_8D_6D: Two = Two([Card::EIGHT_DIAMONDS, Card::SIX_DIAMONDS]);
     pub const HAND_8C_6C: Two = Two([Card::EIGHT_CLUBS, Card::SIX_CLUBS]);
-    pub const EIGHT_SIX_SUITED: [Two; 4] = [
-        Two::HAND_8S_6S,
-        Two::HAND_8H_6H,
-        Two::HAND_8D_6D,
-        Two::HAND_8C_6C,
-    ];
+    pub const EIGHT_SIX_SUITED: [Two; 4] = [Two::HAND_8S_6S, Two::HAND_8H_6H, Two::HAND_8D_6D, Two::HAND_8C_6C];
 
     pub const HAND_8S_6H: Two = Two([Card::EIGHT_SPADES, Card::SIX_HEARTS]);
     pub const HAND_8S_6D: Two = Two([Card::EIGHT_SPADES, Card::SIX_DIAMONDS]);
@@ -1884,10 +1774,7 @@ where
 
 impl SuitShift for Two {
     fn shift_suit_down(&self) -> Self {
-        match Two::new(
-            self.first().shift_suit_down(),
-            self.second().shift_suit_down(),
-        ) {
+        match Two::new(self.first().shift_suit_down(), self.second().shift_suit_down()) {
             Ok(two) => two,
             Err(_) => Two::default(),
         }
@@ -2136,10 +2023,7 @@ mod arrays__two_tests {
 
     #[test]
     fn display() {
-        assert_eq!(
-            "A♦ __",
-            Two::from([Card::ACE_DIAMONDS, Card::BLANK]).to_string()
-        );
+        assert_eq!("A♦ __", Two::from([Card::ACE_DIAMONDS, Card::BLANK]).to_string());
         assert_eq!("A♦ K♥", Two::from(BIG_SLICK).to_string());
     }
 
@@ -2154,23 +2038,13 @@ mod arrays__two_tests {
 
     #[test]
     fn from__vec() {
-        assert_eq!(
-            Two(BIG_SLICK),
-            Two::from(vec![Card::ACE_DIAMONDS, Card::KING_HEARTS])
-        );
-        assert_eq!(
-            Two::HAND_6S_6H,
-            Two::from(vec![Card::SIX_HEARTS, Card::SIX_SPADES])
-        );
+        assert_eq!(Two(BIG_SLICK), Two::from(vec![Card::ACE_DIAMONDS, Card::KING_HEARTS]));
+        assert_eq!(Two::HAND_6S_6H, Two::from(vec![Card::SIX_HEARTS, Card::SIX_SPADES]));
         assert_eq!(Two::default(), Two::from(vec![Card::BLANK, Card::BLANK]));
         assert_eq!(Two::default(), Two::from(vec![Card::ACE_HEARTS]));
         assert_eq!(
             Two::default(),
-            Two::from(vec![
-                Card::ACE_HEARTS,
-                Card::SEVEN_HEARTS,
-                Card::SEVEN_DIAMONDS
-            ])
+            Two::from(vec![Card::ACE_HEARTS, Card::SEVEN_HEARTS, Card::SEVEN_DIAMONDS])
         );
         assert!(!Two::from(vec![Card::BLANK, Card::BLANK]).is_dealt());
     }
@@ -2183,10 +2057,7 @@ mod arrays__two_tests {
         assert_eq!(PKError::InvalidIndex, Two::from_str(" __ ").unwrap_err());
         assert_eq!(PKError::NotEnoughCards, Two::from_str("AC").unwrap_err());
         assert!(Two::from_str("AD KD QD JD TD 9D").is_err());
-        assert_eq!(
-            PKError::TooManyCards,
-            Two::from_str("AD KD QD").unwrap_err()
-        );
+        assert_eq!(PKError::TooManyCards, Two::from_str("AD KD QD").unwrap_err());
     }
 
     #[test]
@@ -2194,18 +2065,9 @@ mod arrays__two_tests {
         assert_eq!(Two::HAND_8S_7H, Two::from_pluribus("8s7h").unwrap());
         assert_eq!(Two::HAND_8S_7H, Two::from_pluribus(" 7h8s").unwrap());
         assert_eq!(Two::HAND_AS_AH, Two::from_pluribus("AhAs   ").unwrap());
-        assert_eq!(
-            PKError::NotEnoughCards,
-            Two::from_pluribus("AH").unwrap_err()
-        );
-        assert_eq!(
-            PKError::TooManyCards,
-            Two::from_pluribus("AHASAD").unwrap_err()
-        );
-        assert_eq!(
-            PKError::InvalidIndex,
-            Two::from_pluribus("AHAa").unwrap_err()
-        );
+        assert_eq!(PKError::NotEnoughCards, Two::from_pluribus("AH").unwrap_err());
+        assert_eq!(PKError::TooManyCards, Two::from_pluribus("AHASAD").unwrap_err());
+        assert_eq!(PKError::InvalidIndex, Two::from_pluribus("AHAa").unwrap_err());
     }
 
     #[test]

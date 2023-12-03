@@ -37,13 +37,9 @@ impl Util {
         s.chars()
             .enumerate()
             .flat_map(|(i, c)| {
-                if i != 0 && i % on == 0 {
-                    Some(' ')
-                } else {
-                    None
-                }
-                .into_iter()
-                .chain(std::iter::once(c))
+                if i != 0 && i % on == 0 { Some(' ') } else { None }
+                    .into_iter()
+                    .chain(std::iter::once(c))
             })
             .collect::<String>()
     }
@@ -59,10 +55,7 @@ mod util__tests {
         let percentage = Util::calculate_percentage(48, 2_598_960);
 
         assert_eq!("0.00185%", format!("{:.5}%", percentage));
-        assert_eq!(
-            "0.00000%",
-            format!("{:.5}%", Util::calculate_percentage(0, 0))
-        );
+        assert_eq!("0.00000%", format!("{:.5}%", Util::calculate_percentage(0, 0)));
     }
 
     #[test]

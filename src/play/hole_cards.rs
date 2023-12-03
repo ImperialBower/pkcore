@@ -77,10 +77,7 @@ impl HoleCards {
     /// vector of `Evals`.
     #[must_use]
     pub fn three_into_evals(&self, three: Three) -> Vec<Eval> {
-        self.three_into_fives(three)
-            .iter()
-            .map(Eval::from)
-            .collect()
+        self.three_into_fives(three).iter().map(Eval::from).collect()
     }
 
     /// Returns all the five card hands from a collection of hole cars.
@@ -93,9 +90,7 @@ impl HoleCards {
     /// This came surprisingly easy.
     #[must_use]
     pub fn three_into_fives(&self, three: Three) -> Vec<Five> {
-        self.iter()
-            .map(|two| Five::from_2and3(*two, three))
-            .collect()
+        self.iter().map(|two| Five::from_2and3(*two, three)).collect()
     }
 
     #[must_use]
@@ -174,10 +169,7 @@ impl HoleCards {
         for hand in self.iter() {
             match Seven::from_case_at_flop_old(*hand, flop, case) {
                 Ok(seven) => cases.push(Eval::from(seven)),
-                Err(e) => error!(
-                    "{:?} from realize_case_at_flop({}, {}, {:?})",
-                    e, self, flop, case
-                ),
+                Err(e) => error!("{:?} from realize_case_at_flop({}, {}, {:?})", e, self, flop, case),
             }
         }
 
@@ -221,9 +213,7 @@ impl Plurable for HoleCards {
     where
         Self: Sized,
     {
-        HoleCards::from_str(
-            Util::str_len_splitter(Util::str_splitter(s, "|").join("").as_str(), 2).as_str(),
-        )
+        HoleCards::from_str(Util::str_len_splitter(Util::str_splitter(s, "|").join("").as_str(), 2).as_str())
     }
 }
 
@@ -257,10 +247,7 @@ impl TryFrom<Cards> for HoleCards {
             let mut hands = HoleCards::with_capacity(num_of_players);
 
             for _ in 0..num_of_players {
-                hands.push(Two::new(
-                    cards.draw_one().unwrap(),
-                    cards.draw_one().unwrap(),
-                )?);
+                hands.push(Two::new(cards.draw_one().unwrap(), cards.draw_one().unwrap())?);
             }
             Ok(hands)
         } else {
@@ -358,14 +345,8 @@ mod play__hold_cards_tests {
 
         let cases = the_hand.realize_case_at_flop(flop, &TestData::case_985());
 
-        assert_eq!(
-            cases.get(0).unwrap().hand,
-            Five::from_str("6♠ 6♥ 6♦ 6♣ 9♣").unwrap()
-        );
-        assert_eq!(
-            cases.get(1).unwrap().hand,
-            Five::from_str("5♥ 5♦ 5♣ 6♦ 6♣").unwrap()
-        );
+        assert_eq!(cases.get(0).unwrap().hand, Five::from_str("6♠ 6♥ 6♦ 6♣ 9♣").unwrap());
+        assert_eq!(cases.get(1).unwrap().hand, Five::from_str("5♥ 5♦ 5♣ 6♦ 6♣").unwrap());
     }
 
     #[test]
@@ -376,27 +357,20 @@ mod play__hold_cards_tests {
 
         assert_eq!(124, case_eval.winning_hand_rank().value);
         assert_eq!(Class::FourFives, case_eval.get(1).unwrap().hand_rank.class);
-        assert_eq!(
-            Class::SixesOverFives,
-            case_eval.get(0).unwrap().hand_rank.class
-        );
+        assert_eq!(Class::SixesOverFives, case_eval.get(0).unwrap().hand_rank.class);
     }
 
     #[test]
     fn cards() {
         assert_eq!(
             "6♠ 6♥ 5♦ 5♣",
-            HoleCards::from_str("6♥ 6♠ 5♦ 5♣")
-                .unwrap()
-                .cards()
-                .to_string()
+            HoleCards::from_str("6♥ 6♠ 5♦ 5♣").unwrap().cards().to_string()
         );
     }
 
     #[test]
     fn remaining_after() {
-        let remaining =
-            TestData::hole_cards_the_hand().remaining_after(&TestData::the_flop().cards());
+        let remaining = TestData::hole_cards_the_hand().remaining_after(&TestData::the_flop().cards());
 
         assert_eq!(remaining.sort().to_string(), "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 4♣ 3♣ 2♣");
     }

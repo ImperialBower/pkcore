@@ -543,10 +543,7 @@ impl Game {
     ///
     /// Throws `PKError::Incomplete` if the board is not complete.
     pub fn river_case_eval(&self) -> Result<CaseEval, PKError> {
-        if !self.board.flop.is_dealt()
-            || !self.board.turn.is_dealt()
-            || !self.board.river.is_dealt()
-        {
+        if !self.board.flop.is_dealt() || !self.board.turn.is_dealt() || !self.board.river.is_dealt() {
             return Err(PKError::Incomplete);
         }
 

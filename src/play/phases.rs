@@ -4,9 +4,7 @@ use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use strum_macros::{EnumCount, EnumIter};
 
-#[derive(
-    Clone, Copy, Debug, Default, EnumCount, EnumIter, Eq, Hash, PartialEq, strum_macros::Display,
-)]
+#[derive(Clone, Copy, Debug, Default, EnumCount, EnumIter, Eq, Hash, PartialEq, strum_macros::Display)]
 pub enum PhaseHoldem {
     #[default]
     Init = 0,

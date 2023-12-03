@@ -17,22 +17,12 @@ pub struct Twos(Vec<Two>);
 impl Twos {
     #[must_use]
     pub fn unique() -> Twos {
-        Twos::from(
-            POKER_DECK
-                .combinations(2)
-                .map(Two::from)
-                .collect::<Vec<Two>>(),
-        )
+        Twos::from(POKER_DECK.combinations(2).map(Two::from).collect::<Vec<Two>>())
     }
 
     #[must_use]
     pub fn filter_on_card(&self, card: Card) -> Self {
-        Self(
-            self.iter()
-                .filter(|two| two.contains_card(card))
-                .copied()
-                .collect(),
-        )
+        Self(self.iter().filter(|two| two.contains_card(card)).copied().collect())
     }
 
     #[must_use]
@@ -51,30 +41,23 @@ impl Twos {
     }
 
     #[must_use]
+    pub fn filter_is_not_suited(&self) -> Self {
+        Self(self.iter().filter(|two| !two.is_suited()).copied().collect())
+    }
+
+    #[must_use]
     pub fn filter_on_rank(&self, rank: Rank) -> Self {
-        Self(
-            self.iter()
-                .filter(|two| two.contains_rank(rank))
-                .copied()
-                .collect(),
-        )
+        Self(self.iter().filter(|two| two.contains_rank(rank)).copied().collect())
     }
 
     #[must_use]
     pub fn filter_on_suit(&self, suit: Suit) -> Self {
-        Self(
-            self.iter()
-                .filter(|two| two.contains_suit(suit))
-                .copied()
-                .collect(),
-        )
+        Self(self.iter().filter(|two| two.contains_suit(suit)).copied().collect())
     }
 
     #[must_use]
     pub fn hashset(&self) -> std::collections::HashSet<Two> {
-        self.iter()
-            .copied()
-            .collect::<std::collections::HashSet<Two>>()
+        self.iter().copied().collect::<std::collections::HashSet<Two>>()
     }
 
     #[must_use]
@@ -125,10 +108,7 @@ mod arrays__combos__twos_tests {
 
         assert!(!unique.is_empty());
         assert_eq!(crate::UNIQUE_2_CARD_HANDS, unique.len());
-        assert_eq!(
-            crate::UNIQUE_2_CARD_HANDS,
-            Twos::from(unique.hashset()).len()
-        );
+        assert_eq!(crate::UNIQUE_2_CARD_HANDS, Twos::from(unique.hashset()).len());
     }
 
     #[test]
@@ -149,8 +129,30 @@ mod arrays__combos__twos_tests {
         let non_pocket_pairs = unique.filter_is_not_paired();
 
         // 1,326 - 78 = 1,248
-        assert_eq!(1_248, non_pocket_pairs.len());
+        assert_eq!(crate::UNIQUE_NON_POCKET_PAIRS, non_pocket_pairs.len());
         assert!(non_pocket_pairs.is_aligned());
+    }
+
+    #[test]
+    fn filter_is_suited() {
+        let unique = Twos::unique();
+
+        let suited = unique.filter_is_suited();
+
+        // 4 x 78 = 312
+        assert_eq!(312, suited.len());
+        assert!(suited.is_aligned());
+    }
+
+    #[test]
+    fn filter_is_not_suited() {
+        let unique = Twos::unique();
+
+        let non_suited = unique.filter_is_not_suited();
+
+        // 1,326 - 312 = 1,014
+        assert_eq!(1014, non_suited.len());
+        assert!(non_suited.is_aligned());
     }
 
     #[test]

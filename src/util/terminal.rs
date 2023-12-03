@@ -27,9 +27,7 @@ impl Terminal {
         print!("{prompt}");
         let _ = io::stdout().flush();
         let mut input_text = String::new();
-        io::stdin()
-            .read_line(&mut input_text)
-            .expect("Failed to receive value");
+        io::stdin().read_line(&mut input_text).expect("Failed to receive value");
 
         match Cards::from_str(input_text.as_str()) {
             Ok(cards) => Some(cards),
@@ -62,9 +60,7 @@ impl Terminal {
         print!("{prompt}");
         let _ = io::stdout().flush();
         let mut input_text = String::new();
-        io::stdin()
-            .read_line(&mut input_text)
-            .expect("Failed to receive value");
+        io::stdin().read_line(&mut input_text).expect("Failed to receive value");
         let trimmed = input_text.trim();
         match trimmed.parse::<usize>() {
             Ok(i) => i,

@@ -26,11 +26,7 @@ impl Board {
 
 impl Display for Board {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "FLOP: {}, TURN: {}, RIVER: {}",
-            self.flop, self.turn, self.river
-        )
+        write!(f, "FLOP: {}, TURN: {}, RIVER: {}", self.flop, self.turn, self.river)
     }
 }
 
@@ -143,10 +139,7 @@ mod play_board_tests {
 
     #[test]
     fn display() {
-        assert_eq!(
-            "FLOP: __ __ __, TURN: __, RIVER: __",
-            Board::default().to_string()
-        );
+        assert_eq!("FLOP: __ __ __, TURN: __, RIVER: __", Board::default().to_string());
     }
 
     #[test]
@@ -179,18 +172,9 @@ mod play_board_tests {
             PKError::InvalidPluribusIndex,
             Board::from_pluribus("3h7s5c/Qs/6c/2d").unwrap_err()
         );
-        assert_eq!(
-            PKError::InvalidIndex,
-            Board::from_pluribus("3h7s55/Qs/6c").unwrap_err()
-        );
-        assert_eq!(
-            PKError::InvalidIndex,
-            Board::from_pluribus("3h7s5c/QQ/6c").unwrap_err()
-        );
-        assert_eq!(
-            PKError::InvalidIndex,
-            Board::from_pluribus("3h7s5c/Qs/6A").unwrap_err()
-        );
+        assert_eq!(PKError::InvalidIndex, Board::from_pluribus("3h7s55/Qs/6c").unwrap_err());
+        assert_eq!(PKError::InvalidIndex, Board::from_pluribus("3h7s5c/QQ/6c").unwrap_err());
+        assert_eq!(PKError::InvalidIndex, Board::from_pluribus("3h7s5c/Qs/6A").unwrap_err());
     }
 
     #[test]

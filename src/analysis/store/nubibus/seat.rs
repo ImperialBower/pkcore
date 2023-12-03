@@ -66,18 +66,14 @@ impl Seat {
             )
         };
 
-        self.stack
-            .get()
-            .size()
-            .checked_sub(diff)
-            .map(|new_stack_size| {
-                // Remove the `Chips` from the stack
-                self.stack.set(Chips::new(new_stack_size));
-                // Pluribus passes in the total chips in play for the round, so just set that.
-                self.chips_in_play.set(Chips::new(amount));
-                // Return the player's remaining Chips.
-                new_stack_size
-            })
+        self.stack.get().size().checked_sub(diff).map(|new_stack_size| {
+            // Remove the `Chips` from the stack
+            self.stack.set(Chips::new(new_stack_size));
+            // Pluribus passes in the total chips in play for the round, so just set that.
+            self.chips_in_play.set(Chips::new(amount));
+            // Return the player's remaining Chips.
+            new_stack_size
+        })
     }
 
     /// # Errors
@@ -99,8 +95,7 @@ impl Seat {
     pub fn end_round(&self) -> Chips {
         let into_pot = self.chips_in_play.get();
         self.chips_in_play.set(Chips::default());
-        self.chips_in_pot
-            .set(self.chips_in_pot.get() + into_pot.size());
+        self.chips_in_pot.set(self.chips_in_pot.get() + into_pot.size());
         into_pot
     }
 
@@ -181,13 +176,7 @@ impl Display for SeatSnapshot {
         write!(
             f,
             "SEAT #{} {:>4}\t{:>8}:\t{}\t{} IN PLAY: {}\tINTO POT: {}",
-            self.position as u8,
-            self.position,
-            self.name,
-            self.stack,
-            self.hand,
-            self.chips_in_play,
-            self.chips_in_pot
+            self.position as u8, self.position, self.name, self.stack, self.hand, self.chips_in_play, self.chips_in_pot
         )
     }
 }

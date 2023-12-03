@@ -64,9 +64,7 @@ lazy_static! {
         Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_seven);
 }
 
-#[derive(
-    Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd,
-)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct SortedHeadsUp {
     pub higher: Two,
@@ -533,10 +531,7 @@ impl SortedHeadsUp {
     /// # Panics
     ///
     /// When can't write to file system
-    pub fn generate_csv(
-        path: &str,
-        shus: HashSet<SortedHeadsUp>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn generate_csv(path: &str, shus: HashSet<SortedHeadsUp>) -> Result<(), Box<dyn std::error::Error>> {
         let mut v = Vec::from_iter(shus);
         v.sort();
         v.reverse();
@@ -689,12 +684,8 @@ impl SortedHeadsUp {
         for combo in self.remaining().combinations(5) {
             let (high7, low7) = self.sevens(Five::try_from(combo)?)?;
 
-            let high_rank = BC_RANK_HASHMAP
-                .get(&high7.bard())
-                .ok_or(PKError::InvalidHand)?;
-            let low_rank = BC_RANK_HASHMAP
-                .get(&low7.bard())
-                .ok_or(PKError::InvalidHand)?;
+            let high_rank = BC_RANK_HASHMAP.get(&high7.bard()).ok_or(PKError::InvalidHand)?;
+            let low_rank = BC_RANK_HASHMAP.get(&low7.bard()).ok_or(PKError::InvalidHand)?;
 
             match high_rank.rank.cmp(&low_rank.rank) {
                 Ordering::Less => wins.add(Win::FIRST),
@@ -1016,10 +1007,7 @@ mod arrays__matchups__sorted_heads_up_tests {
     /// Moving on...
     #[test]
     fn display() {
-        assert_eq!(
-            "6♠ 6♥ - 5♦ 5♣",
-            TestData::the_hand_sorted_headsup().to_string()
-        );
+        assert_eq!("6♠ 6♥ - 5♦ 5♣", TestData::the_hand_sorted_headsup().to_string());
     }
 
     #[test]
@@ -1147,8 +1135,7 @@ mod arrays__matchups__sorted_heads_up_tests {
         );
         assert_eq!(
             PKError::TooManyHands,
-            SortedHeadsUp::try_from(vec![Two::HAND_6S_6H, Two::HAND_7S_7C, Two::HAND_2D_2C])
-                .unwrap_err()
+            SortedHeadsUp::try_from(vec![Two::HAND_6S_6H, Two::HAND_7S_7C, Two::HAND_2D_2C]).unwrap_err()
         );
     }
 

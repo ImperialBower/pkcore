@@ -58,12 +58,7 @@ impl Wins {
     /// of ties.
     #[must_use]
     pub fn wins_for(&self, result: PlayerFlag) -> (usize, usize) {
-        let wins: Vec<PlayerFlag> = self
-            .0
-            .clone()
-            .into_iter()
-            .filter(|r| r.win_for(result))
-            .collect();
+        let wins: Vec<PlayerFlag> = self.0.clone().into_iter().filter(|r| r.win_for(result)).collect();
         (wins.len(), wins.into_iter().filter(Result::is_tie).count())
     }
 

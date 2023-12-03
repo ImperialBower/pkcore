@@ -54,11 +54,7 @@ impl Seven {
     /// # Errors
     ///
     /// `PKError::InvalidCard` if the case slice contains an invalid card.
-    pub fn from_case_at_flop_old(
-        player: Two,
-        flop: Three,
-        case: &[Card],
-    ) -> Result<Seven, PKError> {
+    pub fn from_case_at_flop_old(player: Two, flop: Three, case: &[Card]) -> Result<Seven, PKError> {
         Ok(Seven::from([
             player.first(),
             player.second(),
@@ -272,14 +268,8 @@ mod arrays__seven_tests {
 
     #[test]
     fn from_str() {
-        assert_eq!(
-            Seven::from_str("A♦ 6♠ 4♠ A♠ 5♦ 3♣ 2♠").unwrap(),
-            Seven::from(CARDS)
-        );
-        assert_eq!(
-            Seven::from_str("AD 2D 3D 4D 5d").unwrap_err(),
-            PKError::NotEnoughCards
-        );
+        assert_eq!(Seven::from_str("A♦ 6♠ 4♠ A♠ 5♦ 3♣ 2♠").unwrap(), Seven::from(CARDS));
+        assert_eq!(Seven::from_str("AD 2D 3D 4D 5d").unwrap_err(), PKError::NotEnoughCards);
         assert_eq!(
             Seven::from_str("AD 2D 3D 4D 5d 6d 7d 8d").unwrap_err(),
             PKError::TooManyCards
@@ -306,10 +296,7 @@ mod arrays__seven_tests {
     #[test]
     fn cards() {
         assert_eq!(0, Seven::default().cards().len());
-        assert_eq!(
-            "A♦ 6♠ 4♠ A♠ 5♦ 3♣ 2♠",
-            Seven::from(CARDS).cards().to_string()
-        );
+        assert_eq!("A♦ 6♠ 4♠ A♠ 5♦ 3♣ 2♠", Seven::from(CARDS).cards().to_string());
     }
 
     #[test]
