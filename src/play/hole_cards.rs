@@ -145,7 +145,7 @@ impl HoleCards {
     /// it's throwaway code that I have no interest in including in the codebase. I have a fanatical
     /// hatred of redundancies in entity names. Code such as
     ///
-    /// ```
+    /// ```txt
     /// #[test]
     /// fn testing_test() {
     ///     // Run the test.
