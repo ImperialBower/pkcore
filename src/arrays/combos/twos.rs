@@ -10,6 +10,7 @@ use crate::suit::Suit;
 /// # Links
 ///
 /// * [Texas hold 'em starting hands](https://en.wikipedia.org/wiki/Texas_hold_%27em_starting_hands)
+/// * [Texas Hold’em Poker Odds (over 100 Poker Probabilities)](https://www.primedope.com/texas-holdem-poker-probabilities-odds/)
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct Twos(Vec<Two>);
 
@@ -37,6 +38,11 @@ impl Twos {
     #[must_use]
     pub fn filter_is_paired(&self) -> Self {
         Self(self.iter().filter(|two| two.is_pair()).copied().collect())
+    }
+
+    #[must_use]
+    pub fn filter_is_not_paired(&self) -> Self {
+        Self(self.iter().filter(|two| !two.is_pair()).copied().collect())
     }
 
     #[must_use]
@@ -126,7 +132,7 @@ mod arrays__combos__twos_tests {
     }
 
     #[test]
-    fn filter_is_pair() {
+    fn filter_is_paired() {
         let unique = Twos::unique();
 
         let pocket_pairs = unique.filter_is_paired();
@@ -134,6 +140,17 @@ mod arrays__combos__twos_tests {
         // 13 x 6 = 78
         assert_eq!(crate::UNIQUE_POCKET_PAIRS, pocket_pairs.len());
         assert!(pocket_pairs.is_aligned());
+    }
+
+    #[test]
+    fn filter_is_not_paired() {
+        let unique = Twos::unique();
+
+        let non_pocket_pairs = unique.filter_is_not_paired();
+
+        // 1,326 - 78 = 1,248
+        assert_eq!(1_248, non_pocket_pairs.len());
+        assert!(non_pocket_pairs.is_aligned());
     }
 
     #[test]

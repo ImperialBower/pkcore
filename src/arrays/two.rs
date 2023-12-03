@@ -1678,13 +1678,13 @@ impl Two {
     }
 
     #[must_use]
-    pub fn rank_binary(&self) -> u32 {
-        self.first().get_rank().bits() | self.second().get_rank().bits()
+    pub fn is_suited(&self) -> bool {
+        self.first().get_suit() == self.second().get_suit()
     }
 
     #[must_use]
-    pub fn is_suited(&self) -> bool {
-        self.first().get_suit() == self.second().get_suit()
+    pub fn rank_binary(&self) -> u32 {
+        self.first().get_rank().bits() | self.second().get_rank().bits()
     }
 
     #[must_use]
