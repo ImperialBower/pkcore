@@ -1,5 +1,7 @@
 /// I want to get the tests right for this macro since it's going to be the foundation
 /// for all of the range analysis work.
+///
+/// And the testing already caught an error with the `ACE_JACK_OFFSUIT` constant.
 #[macro_export]
 #[rustfmt::skip]
 macro_rules! range {
@@ -295,7 +297,7 @@ mod tests {
         assert_on_pair(range!(22), Rank::DEUCE);
     }
 
-    fn assert_on_suited_pairs(range: Twos, top: Rank, bottom: Rank) {
+    fn assert_on_suited_non_pairs(range: Twos, top: Rank, bottom: Rank) {
         let twos = Twos::unique()
             .filter_on_rank(top)
             .filter_on_rank(bottom)
@@ -305,39 +307,239 @@ mod tests {
     }
 
     #[test]
-    fn test_suited_pairs() {
-        assert_on_suited_pairs(range!(AKs), Rank::ACE, Rank::KING);
-        assert_on_suited_pairs(range!(AQs), Rank::ACE, Rank::QUEEN);
-        assert_on_suited_pairs(range!(AJs), Rank::ACE, Rank::JACK);
-        assert_on_suited_pairs(range!(ATs), Rank::ACE, Rank::TEN);
-        assert_on_suited_pairs(range!(A9s), Rank::ACE, Rank::NINE);
-        assert_on_suited_pairs(range!(A8s), Rank::ACE, Rank::EIGHT);
-        assert_on_suited_pairs(range!(A7s), Rank::ACE, Rank::SEVEN);
-        assert_on_suited_pairs(range!(A6s), Rank::ACE, Rank::SIX);
-        assert_on_suited_pairs(range!(A5s), Rank::ACE, Rank::FIVE);
-        assert_on_suited_pairs(range!(A4s), Rank::ACE, Rank::FOUR);
-        assert_on_suited_pairs(range!(A3s), Rank::ACE, Rank::TREY);
-        assert_on_suited_pairs(range!(A2s), Rank::ACE, Rank::DEUCE);
+    fn test_suited_non_pairs() {
+        assert_on_suited_non_pairs(range!(AKs), Rank::ACE, Rank::KING);
+        assert_on_suited_non_pairs(range!(AQs), Rank::ACE, Rank::QUEEN);
+        assert_on_suited_non_pairs(range!(AJs), Rank::ACE, Rank::JACK);
+        assert_on_suited_non_pairs(range!(ATs), Rank::ACE, Rank::TEN);
+        assert_on_suited_non_pairs(range!(A9s), Rank::ACE, Rank::NINE);
+        assert_on_suited_non_pairs(range!(A8s), Rank::ACE, Rank::EIGHT);
+        assert_on_suited_non_pairs(range!(A7s), Rank::ACE, Rank::SEVEN);
+        assert_on_suited_non_pairs(range!(A6s), Rank::ACE, Rank::SIX);
+        assert_on_suited_non_pairs(range!(A5s), Rank::ACE, Rank::FIVE);
+        assert_on_suited_non_pairs(range!(A4s), Rank::ACE, Rank::FOUR);
+        assert_on_suited_non_pairs(range!(A3s), Rank::ACE, Rank::TREY);
+        assert_on_suited_non_pairs(range!(A2s), Rank::ACE, Rank::DEUCE);
 
-        assert_on_suited_pairs(range!(KQs), Rank::KING, Rank::QUEEN);
-        assert_on_suited_pairs(range!(KJs), Rank::KING, Rank::JACK);
-        assert_on_suited_pairs(range!(KTs), Rank::KING, Rank::TEN);
-        assert_on_suited_pairs(range!(K9s), Rank::KING, Rank::NINE);
-        assert_on_suited_pairs(range!(K8s), Rank::KING, Rank::EIGHT);
-        assert_on_suited_pairs(range!(K7s), Rank::KING, Rank::SEVEN);
-        assert_on_suited_pairs(range!(K6s), Rank::KING, Rank::SIX);
-        assert_on_suited_pairs(range!(K5s), Rank::KING, Rank::FIVE);
-        assert_on_suited_pairs(range!(K4s), Rank::KING, Rank::FOUR);
-        assert_on_suited_pairs(range!(K3s), Rank::KING, Rank::TREY);
-        assert_on_suited_pairs(range!(K2s), Rank::KING, Rank::DEUCE);
+        assert_on_suited_non_pairs(range!(KQs), Rank::KING, Rank::QUEEN);
+        assert_on_suited_non_pairs(range!(KJs), Rank::KING, Rank::JACK);
+        assert_on_suited_non_pairs(range!(KTs), Rank::KING, Rank::TEN);
+        assert_on_suited_non_pairs(range!(K9s), Rank::KING, Rank::NINE);
+        assert_on_suited_non_pairs(range!(K8s), Rank::KING, Rank::EIGHT);
+        assert_on_suited_non_pairs(range!(K7s), Rank::KING, Rank::SEVEN);
+        assert_on_suited_non_pairs(range!(K6s), Rank::KING, Rank::SIX);
+        assert_on_suited_non_pairs(range!(K5s), Rank::KING, Rank::FIVE);
+        assert_on_suited_non_pairs(range!(K4s), Rank::KING, Rank::FOUR);
+        assert_on_suited_non_pairs(range!(K3s), Rank::KING, Rank::TREY);
+        assert_on_suited_non_pairs(range!(K2s), Rank::KING, Rank::DEUCE);
 
-        assert_on_suited_pairs(range!(QJs), Rank::QUEEN, Rank::JACK);
-        assert_on_suited_pairs(range!(QTs), Rank::QUEEN, Rank::TEN);
-        assert_on_suited_pairs(range!(Q9s), Rank::QUEEN, Rank::NINE);
-        assert_on_suited_pairs(range!(Q8s), Rank::QUEEN, Rank::EIGHT);
-        assert_on_suited_pairs(range!(Q7s), Rank::QUEEN, Rank::SEVEN);
-        assert_on_suited_pairs(range!(Q6s), Rank::QUEEN, Rank::SIX);
-        assert_on_suited_pairs(range!(Q5s), Rank::QUEEN, Rank::FIVE);
-        assert_on_suited_pairs(range!(Q4s), Rank::QUEEN, Rank::FOUR);
+        assert_on_suited_non_pairs(range!(QJs), Rank::QUEEN, Rank::JACK);
+        assert_on_suited_non_pairs(range!(QTs), Rank::QUEEN, Rank::TEN);
+        assert_on_suited_non_pairs(range!(Q9s), Rank::QUEEN, Rank::NINE);
+        assert_on_suited_non_pairs(range!(Q8s), Rank::QUEEN, Rank::EIGHT);
+        assert_on_suited_non_pairs(range!(Q7s), Rank::QUEEN, Rank::SEVEN);
+        assert_on_suited_non_pairs(range!(Q6s), Rank::QUEEN, Rank::SIX);
+        assert_on_suited_non_pairs(range!(Q5s), Rank::QUEEN, Rank::FIVE);
+        assert_on_suited_non_pairs(range!(Q4s), Rank::QUEEN, Rank::FOUR);
+    }
+
+    fn assert_on_non_suited_non_pairs(range: Twos, top: Rank, bottom: Rank) {
+        let twos = Twos::unique()
+            .filter_on_rank(top)
+            .filter_on_rank(bottom)
+            .filter_is_not_suited()
+            .hashset();
+        assert_eq!(range.hashset(), twos)
+    }
+
+    #[test]
+    fn test_non_suited_non_pairs() {
+        assert_on_non_suited_non_pairs(range!(AKo), Rank::ACE, Rank::KING);
+        assert_on_non_suited_non_pairs(range!(AQo), Rank::ACE, Rank::QUEEN);
+        assert_on_non_suited_non_pairs(range!(AJo), Rank::ACE, Rank::JACK);
+        assert_on_non_suited_non_pairs(range!(ATo), Rank::ACE, Rank::TEN);
+        assert_on_non_suited_non_pairs(range!(A9o), Rank::ACE, Rank::NINE);
+        assert_on_non_suited_non_pairs(range!(A8o), Rank::ACE, Rank::EIGHT);
+        assert_on_non_suited_non_pairs(range!(A7o), Rank::ACE, Rank::SEVEN);
+        assert_on_non_suited_non_pairs(range!(A6o), Rank::ACE, Rank::SIX);
+        assert_on_non_suited_non_pairs(range!(A5o), Rank::ACE, Rank::FIVE);
+        assert_on_non_suited_non_pairs(range!(A4o), Rank::ACE, Rank::FOUR);
+        assert_on_non_suited_non_pairs(range!(A3o), Rank::ACE, Rank::TREY);
+        assert_on_non_suited_non_pairs(range!(A2o), Rank::ACE, Rank::DEUCE);
+
+        assert_on_non_suited_non_pairs(range!(KQo), Rank::KING, Rank::QUEEN);
+        assert_on_non_suited_non_pairs(range!(KJo), Rank::KING, Rank::JACK);
+        assert_on_non_suited_non_pairs(range!(KTo), Rank::KING, Rank::TEN);
+        assert_on_non_suited_non_pairs(range!(K9o), Rank::KING, Rank::NINE);
+        assert_on_non_suited_non_pairs(range!(K8o), Rank::KING, Rank::EIGHT);
+        assert_on_non_suited_non_pairs(range!(K7o), Rank::KING, Rank::SEVEN);
+        assert_on_non_suited_non_pairs(range!(K6o), Rank::KING, Rank::SIX);
+        assert_on_non_suited_non_pairs(range!(K5o), Rank::KING, Rank::FIVE);
+        assert_on_non_suited_non_pairs(range!(K4o), Rank::KING, Rank::FOUR);
+        assert_on_non_suited_non_pairs(range!(K3o), Rank::KING, Rank::TREY);
+        assert_on_non_suited_non_pairs(range!(K2o), Rank::KING, Rank::DEUCE);
+
+        assert_on_non_suited_non_pairs(range!(QJo), Rank::QUEEN, Rank::JACK);
+        assert_on_non_suited_non_pairs(range!(QTo), Rank::QUEEN, Rank::TEN);
+        assert_on_non_suited_non_pairs(range!(Q9o), Rank::QUEEN, Rank::NINE);
+        assert_on_non_suited_non_pairs(range!(Q8o), Rank::QUEEN, Rank::EIGHT);
+        assert_on_non_suited_non_pairs(range!(Q7o), Rank::QUEEN, Rank::SEVEN);
+        assert_on_non_suited_non_pairs(range!(Q6o), Rank::QUEEN, Rank::SIX);
+        assert_on_non_suited_non_pairs(range!(Q5o), Rank::QUEEN, Rank::FIVE);
+        assert_on_non_suited_non_pairs(range!(Q4o), Rank::QUEEN, Rank::FOUR);
+        assert_on_non_suited_non_pairs(range!(Q3o), Rank::QUEEN, Rank::TREY);
+        assert_on_non_suited_non_pairs(range!(Q2o), Rank::QUEEN, Rank::DEUCE);
+
+        assert_on_non_suited_non_pairs(range!(JTo), Rank::JACK, Rank::TEN);
+        assert_on_non_suited_non_pairs(range!(J9o), Rank::JACK, Rank::NINE);
+        assert_on_non_suited_non_pairs(range!(J8o), Rank::JACK, Rank::EIGHT);
+        assert_on_non_suited_non_pairs(range!(J7o), Rank::JACK, Rank::SEVEN);
+        assert_on_non_suited_non_pairs(range!(J6o), Rank::JACK, Rank::SIX);
+        assert_on_non_suited_non_pairs(range!(J5o), Rank::JACK, Rank::FIVE);
+        assert_on_non_suited_non_pairs(range!(J4o), Rank::JACK, Rank::FOUR);
+        assert_on_non_suited_non_pairs(range!(J3o), Rank::JACK, Rank::TREY);
+        assert_on_non_suited_non_pairs(range!(J2o), Rank::JACK, Rank::DEUCE);
+
+        assert_on_non_suited_non_pairs(range!(T9o), Rank::TEN, Rank::NINE);
+        assert_on_non_suited_non_pairs(range!(T8o), Rank::TEN, Rank::EIGHT);
+        assert_on_non_suited_non_pairs(range!(T7o), Rank::TEN, Rank::SEVEN);
+        assert_on_non_suited_non_pairs(range!(T6o), Rank::TEN, Rank::SIX);
+        assert_on_non_suited_non_pairs(range!(T5o), Rank::TEN, Rank::FIVE);
+        assert_on_non_suited_non_pairs(range!(T4o), Rank::TEN, Rank::FOUR);
+        assert_on_non_suited_non_pairs(range!(T3o), Rank::TEN, Rank::TREY);
+        assert_on_non_suited_non_pairs(range!(T2o), Rank::TEN, Rank::DEUCE);
+
+        assert_on_non_suited_non_pairs(range!(98o), Rank::NINE, Rank::EIGHT);
+        assert_on_non_suited_non_pairs(range!(97o), Rank::NINE, Rank::SEVEN);
+        assert_on_non_suited_non_pairs(range!(96o), Rank::NINE, Rank::SIX);
+        assert_on_non_suited_non_pairs(range!(95o), Rank::NINE, Rank::FIVE);
+        assert_on_non_suited_non_pairs(range!(94o), Rank::NINE, Rank::FOUR);
+        assert_on_non_suited_non_pairs(range!(93o), Rank::NINE, Rank::TREY);
+        assert_on_non_suited_non_pairs(range!(92o), Rank::NINE, Rank::DEUCE);
+
+        assert_on_non_suited_non_pairs(range!(87o), Rank::EIGHT, Rank::SEVEN);
+        assert_on_non_suited_non_pairs(range!(86o), Rank::EIGHT, Rank::SIX);
+        assert_on_non_suited_non_pairs(range!(85o), Rank::EIGHT, Rank::FIVE);
+        assert_on_non_suited_non_pairs(range!(84o), Rank::EIGHT, Rank::FOUR);
+        assert_on_non_suited_non_pairs(range!(83o), Rank::EIGHT, Rank::TREY);
+        assert_on_non_suited_non_pairs(range!(82o), Rank::EIGHT, Rank::DEUCE);
+
+        assert_on_non_suited_non_pairs(range!(76o), Rank::SEVEN, Rank::SIX);
+        assert_on_non_suited_non_pairs(range!(75o), Rank::SEVEN, Rank::FIVE);
+        assert_on_non_suited_non_pairs(range!(74o), Rank::SEVEN, Rank::FOUR);
+        assert_on_non_suited_non_pairs(range!(73o), Rank::SEVEN, Rank::TREY);
+        assert_on_non_suited_non_pairs(range!(72o), Rank::SEVEN, Rank::DEUCE);
+
+        assert_on_non_suited_non_pairs(range!(65o), Rank::SIX, Rank::FIVE);
+        assert_on_non_suited_non_pairs(range!(64o), Rank::SIX, Rank::FOUR);
+        assert_on_non_suited_non_pairs(range!(63o), Rank::SIX, Rank::TREY);
+        assert_on_non_suited_non_pairs(range!(62o), Rank::SIX, Rank::DEUCE);
+
+        assert_on_non_suited_non_pairs(range!(54o), Rank::FIVE, Rank::FOUR);
+        assert_on_non_suited_non_pairs(range!(53o), Rank::FIVE, Rank::TREY);
+        assert_on_non_suited_non_pairs(range!(52o), Rank::FIVE, Rank::DEUCE);
+
+        assert_on_non_suited_non_pairs(range!(43o), Rank::FOUR, Rank::TREY);
+        assert_on_non_suited_non_pairs(range!(42o), Rank::FOUR, Rank::DEUCE);
+
+        assert_on_non_suited_non_pairs(range!(32o), Rank::TREY, Rank::DEUCE);
+    }
+
+    fn assert_on_non_pairs(range: Twos, top: Rank, bottom: Rank) {
+        let twos = Twos::unique().filter_on_rank(top).filter_on_rank(bottom).hashset();
+        assert_eq!(range.hashset(), twos)
+    }
+
+    #[test]
+    fn test_non_pairs() {
+        assert_on_non_pairs(range!(AK), Rank::ACE, Rank::KING);
+        assert_on_non_pairs(range!(AQ), Rank::ACE, Rank::QUEEN);
+        assert_on_non_pairs(range!(AJ), Rank::ACE, Rank::JACK);
+        assert_on_non_pairs(range!(AT), Rank::ACE, Rank::TEN);
+        assert_on_non_pairs(range!(A9), Rank::ACE, Rank::NINE);
+        assert_on_non_pairs(range!(A8), Rank::ACE, Rank::EIGHT);
+        assert_on_non_pairs(range!(A7), Rank::ACE, Rank::SEVEN);
+        assert_on_non_pairs(range!(A6), Rank::ACE, Rank::SIX);
+        assert_on_non_pairs(range!(A5), Rank::ACE, Rank::FIVE);
+        assert_on_non_pairs(range!(A4), Rank::ACE, Rank::FOUR);
+        assert_on_non_pairs(range!(A3), Rank::ACE, Rank::TREY);
+        assert_on_non_pairs(range!(A2), Rank::ACE, Rank::DEUCE);
+
+        assert_on_non_pairs(range!(KQ), Rank::KING, Rank::QUEEN);
+        assert_on_non_pairs(range!(KJ), Rank::KING, Rank::JACK);
+        assert_on_non_pairs(range!(KT), Rank::KING, Rank::TEN);
+        assert_on_non_pairs(range!(K9), Rank::KING, Rank::NINE);
+        assert_on_non_pairs(range!(K8), Rank::KING, Rank::EIGHT);
+        assert_on_non_pairs(range!(K7), Rank::KING, Rank::SEVEN);
+        assert_on_non_pairs(range!(K6), Rank::KING, Rank::SIX);
+        assert_on_non_pairs(range!(K5), Rank::KING, Rank::FIVE);
+        assert_on_non_pairs(range!(K4), Rank::KING, Rank::FOUR);
+        assert_on_non_pairs(range!(K3), Rank::KING, Rank::TREY);
+        assert_on_non_pairs(range!(K2), Rank::KING, Rank::DEUCE);
+
+        assert_on_non_pairs(range!(QJ), Rank::QUEEN, Rank::JACK);
+        assert_on_non_pairs(range!(QT), Rank::QUEEN, Rank::TEN);
+        assert_on_non_pairs(range!(Q9), Rank::QUEEN, Rank::NINE);
+        assert_on_non_pairs(range!(Q8), Rank::QUEEN, Rank::EIGHT);
+        assert_on_non_pairs(range!(Q7), Rank::QUEEN, Rank::SEVEN);
+        assert_on_non_pairs(range!(Q6), Rank::QUEEN, Rank::SIX);
+        assert_on_non_pairs(range!(Q5), Rank::QUEEN, Rank::FIVE);
+        assert_on_non_pairs(range!(Q4), Rank::QUEEN, Rank::FOUR);
+        assert_on_non_pairs(range!(Q3), Rank::QUEEN, Rank::TREY);
+        assert_on_non_pairs(range!(Q2), Rank::QUEEN, Rank::DEUCE);
+
+        assert_on_non_pairs(range!(JT), Rank::JACK, Rank::TEN);
+        assert_on_non_pairs(range!(J9), Rank::JACK, Rank::NINE);
+        assert_on_non_pairs(range!(J8), Rank::JACK, Rank::EIGHT);
+        assert_on_non_pairs(range!(J7), Rank::JACK, Rank::SEVEN);
+        assert_on_non_pairs(range!(J6), Rank::JACK, Rank::SIX);
+        assert_on_non_pairs(range!(J5), Rank::JACK, Rank::FIVE);
+        assert_on_non_pairs(range!(J4), Rank::JACK, Rank::FOUR);
+        assert_on_non_pairs(range!(J3), Rank::JACK, Rank::TREY);
+        assert_on_non_pairs(range!(J2), Rank::JACK, Rank::DEUCE);
+
+        assert_on_non_pairs(range!(T9), Rank::TEN, Rank::NINE);
+        assert_on_non_pairs(range!(T8), Rank::TEN, Rank::EIGHT);
+        assert_on_non_pairs(range!(T7), Rank::TEN, Rank::SEVEN);
+        assert_on_non_pairs(range!(T6), Rank::TEN, Rank::SIX);
+        assert_on_non_pairs(range!(T5), Rank::TEN, Rank::FIVE);
+        assert_on_non_pairs(range!(T4), Rank::TEN, Rank::FOUR);
+        assert_on_non_pairs(range!(T3), Rank::TEN, Rank::TREY);
+        assert_on_non_pairs(range!(T2), Rank::TEN, Rank::DEUCE);
+
+        assert_on_non_pairs(range!(98), Rank::NINE, Rank::EIGHT);
+        assert_on_non_pairs(range!(97), Rank::NINE, Rank::SEVEN);
+        assert_on_non_pairs(range!(96), Rank::NINE, Rank::SIX);
+        assert_on_non_pairs(range!(95), Rank::NINE, Rank::FIVE);
+        assert_on_non_pairs(range!(94), Rank::NINE, Rank::FOUR);
+        assert_on_non_pairs(range!(93), Rank::NINE, Rank::TREY);
+        assert_on_non_pairs(range!(92), Rank::NINE, Rank::DEUCE);
+
+        assert_on_non_pairs(range!(87), Rank::EIGHT, Rank::SEVEN);
+        assert_on_non_pairs(range!(86), Rank::EIGHT, Rank::SIX);
+        assert_on_non_pairs(range!(85), Rank::EIGHT, Rank::FIVE);
+        assert_on_non_pairs(range!(84), Rank::EIGHT, Rank::FOUR);
+        assert_on_non_pairs(range!(83), Rank::EIGHT, Rank::TREY);
+        assert_on_non_pairs(range!(82), Rank::EIGHT, Rank::DEUCE);
+
+        assert_on_non_pairs(range!(76), Rank::SEVEN, Rank::SIX);
+        assert_on_non_pairs(range!(75), Rank::SEVEN, Rank::FIVE);
+        assert_on_non_pairs(range!(74), Rank::SEVEN, Rank::FOUR);
+        assert_on_non_pairs(range!(73), Rank::SEVEN, Rank::TREY);
+        assert_on_non_pairs(range!(72), Rank::SEVEN, Rank::DEUCE);
+
+        assert_on_non_pairs(range!(65), Rank::SIX, Rank::FIVE);
+        assert_on_non_pairs(range!(64), Rank::SIX, Rank::FOUR);
+        assert_on_non_pairs(range!(63), Rank::SIX, Rank::TREY);
+        assert_on_non_pairs(range!(62), Rank::SIX, Rank::DEUCE);
+
+        assert_on_non_pairs(range!(54), Rank::FIVE, Rank::FOUR);
+        assert_on_non_pairs(range!(53), Rank::FIVE, Rank::TREY);
+        assert_on_non_pairs(range!(52), Rank::FIVE, Rank::DEUCE);
+
+        assert_on_non_pairs(range!(43), Rank::FOUR, Rank::TREY);
+        assert_on_non_pairs(range!(42), Rank::FOUR, Rank::DEUCE);
+
+        assert_on_non_pairs(range!(32), Rank::TREY, Rank::DEUCE);
     }
 }

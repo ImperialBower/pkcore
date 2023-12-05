@@ -246,18 +246,18 @@ pub const ACE_QUEEN: [Two; 16] = [
 
 pub const ACE_JACK_SUITED: [Two; 4] = [Two::HAND_AS_JS, Two::HAND_AH_JH, Two::HAND_AD_JD, Two::HAND_AC_JC];
 pub const ACE_JACK_OFFSUIT: [Two; 12] = [
-    Two::HAND_AS_QH,
-    Two::HAND_AS_QD,
-    Two::HAND_AS_QC,
-    Two::HAND_AH_QS,
-    Two::HAND_AH_QD,
-    Two::HAND_AH_QC,
-    Two::HAND_AD_QS,
-    Two::HAND_AD_QH,
-    Two::HAND_AD_QC,
-    Two::HAND_AC_QS,
-    Two::HAND_AC_QH,
-    Two::HAND_AC_QD,
+    Two::HAND_AS_JH,
+    Two::HAND_AS_JD,
+    Two::HAND_AS_JC,
+    Two::HAND_AH_JS,
+    Two::HAND_AH_JD,
+    Two::HAND_AH_JC,
+    Two::HAND_AD_JS,
+    Two::HAND_AD_JH,
+    Two::HAND_AD_JC,
+    Two::HAND_AC_JS,
+    Two::HAND_AC_JH,
+    Two::HAND_AC_JD,
 ];
 pub const ACE_JACK: [Two; 16] = [
     Two::HAND_AS_JS,
