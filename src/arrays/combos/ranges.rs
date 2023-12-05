@@ -270,59 +270,27 @@ mod tests {
     use crate::arrays::combos::twos::Twos;
     use crate::rank::Rank;
 
+    fn assert_on_pair(range: Twos, rank: Rank) {
+        assert_eq!(
+            range.hashset(),
+            Twos::unique().filter_on_rank(rank).filter_is_paired().hashset()
+        )
+    }
+
     #[test]
     fn poker_pairs() {
-        assert_eq!(
-            range!(AA).hashset(),
-            Twos::unique().filter_on_rank(Rank::ACE).filter_is_paired().hashset()
-        );
-        assert_eq!(
-            range!(KK).hashset(),
-            Twos::unique().filter_on_rank(Rank::KING).filter_is_paired().hashset()
-        );
-        assert_eq!(
-            range!(QQ).hashset(),
-            Twos::unique().filter_on_rank(Rank::QUEEN).filter_is_paired().hashset()
-        );
-        assert_eq!(
-            range!(JJ).hashset(),
-            Twos::unique().filter_on_rank(Rank::JACK).filter_is_paired().hashset()
-        );
-        assert_eq!(
-            range!(TT).hashset(),
-            Twos::unique().filter_on_rank(Rank::TEN).filter_is_paired().hashset()
-        );
-        assert_eq!(
-            range!(99).hashset(),
-            Twos::unique().filter_on_rank(Rank::NINE).filter_is_paired().hashset()
-        );
-        assert_eq!(
-            range!(88).hashset(),
-            Twos::unique().filter_on_rank(Rank::EIGHT).filter_is_paired().hashset()
-        );
-        assert_eq!(
-            range!(77).hashset(),
-            Twos::unique().filter_on_rank(Rank::SEVEN).filter_is_paired().hashset()
-        );
-        assert_eq!(
-            range!(66).hashset(),
-            Twos::unique().filter_on_rank(Rank::SIX).filter_is_paired().hashset()
-        );
-        assert_eq!(
-            range!(55).hashset(),
-            Twos::unique().filter_on_rank(Rank::FIVE).filter_is_paired().hashset()
-        );
-        assert_eq!(
-            range!(44).hashset(),
-            Twos::unique().filter_on_rank(Rank::FOUR).filter_is_paired().hashset()
-        );
-        assert_eq!(
-            range!(33).hashset(),
-            Twos::unique().filter_on_rank(Rank::TREY).filter_is_paired().hashset()
-        );
-        assert_eq!(
-            range!(22).hashset(),
-            Twos::unique().filter_on_rank(Rank::DEUCE).filter_is_paired().hashset()
-        );
+        assert_on_pair(range!(AA), Rank::ACE);
+        assert_on_pair(range!(KK), Rank::KING);
+        assert_on_pair(range!(QQ), Rank::QUEEN);
+        assert_on_pair(range!(JJ), Rank::JACK);
+        assert_on_pair(range!(TT), Rank::TEN);
+        assert_on_pair(range!(99), Rank::NINE);
+        assert_on_pair(range!(88), Rank::EIGHT);
+        assert_on_pair(range!(77), Rank::SEVEN);
+        assert_on_pair(range!(66), Rank::SIX);
+        assert_on_pair(range!(55), Rank::FIVE);
+        assert_on_pair(range!(44), Rank::FOUR);
+        assert_on_pair(range!(33), Rank::TREY);
+        assert_on_pair(range!(22), Rank::DEUCE);
     }
 }
