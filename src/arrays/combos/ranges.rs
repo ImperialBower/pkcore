@@ -1,4 +1,5 @@
-///
+/// I want to get the tests right for this macro since it's going to be the foundation
+/// for all of the range analysis work.
 #[macro_export]
 #[rustfmt::skip]
 macro_rules! range {
@@ -292,5 +293,51 @@ mod tests {
         assert_on_pair(range!(44), Rank::FOUR);
         assert_on_pair(range!(33), Rank::TREY);
         assert_on_pair(range!(22), Rank::DEUCE);
+    }
+
+    fn assert_on_suited_pairs(range: Twos, top: Rank, bottom: Rank) {
+        let twos = Twos::unique()
+            .filter_on_rank(top)
+            .filter_on_rank(bottom)
+            .filter_is_suited()
+            .hashset();
+        assert_eq!(range.hashset(), twos)
+    }
+
+    #[test]
+    fn test_suited_pairs() {
+        assert_on_suited_pairs(range!(AKs), Rank::ACE, Rank::KING);
+        assert_on_suited_pairs(range!(AQs), Rank::ACE, Rank::QUEEN);
+        assert_on_suited_pairs(range!(AJs), Rank::ACE, Rank::JACK);
+        assert_on_suited_pairs(range!(ATs), Rank::ACE, Rank::TEN);
+        assert_on_suited_pairs(range!(A9s), Rank::ACE, Rank::NINE);
+        assert_on_suited_pairs(range!(A8s), Rank::ACE, Rank::EIGHT);
+        assert_on_suited_pairs(range!(A7s), Rank::ACE, Rank::SEVEN);
+        assert_on_suited_pairs(range!(A6s), Rank::ACE, Rank::SIX);
+        assert_on_suited_pairs(range!(A5s), Rank::ACE, Rank::FIVE);
+        assert_on_suited_pairs(range!(A4s), Rank::ACE, Rank::FOUR);
+        assert_on_suited_pairs(range!(A3s), Rank::ACE, Rank::TREY);
+        assert_on_suited_pairs(range!(A2s), Rank::ACE, Rank::DEUCE);
+
+        assert_on_suited_pairs(range!(KQs), Rank::KING, Rank::QUEEN);
+        assert_on_suited_pairs(range!(KJs), Rank::KING, Rank::JACK);
+        assert_on_suited_pairs(range!(KTs), Rank::KING, Rank::TEN);
+        assert_on_suited_pairs(range!(K9s), Rank::KING, Rank::NINE);
+        assert_on_suited_pairs(range!(K8s), Rank::KING, Rank::EIGHT);
+        assert_on_suited_pairs(range!(K7s), Rank::KING, Rank::SEVEN);
+        assert_on_suited_pairs(range!(K6s), Rank::KING, Rank::SIX);
+        assert_on_suited_pairs(range!(K5s), Rank::KING, Rank::FIVE);
+        assert_on_suited_pairs(range!(K4s), Rank::KING, Rank::FOUR);
+        assert_on_suited_pairs(range!(K3s), Rank::KING, Rank::TREY);
+        assert_on_suited_pairs(range!(K2s), Rank::KING, Rank::DEUCE);
+
+        assert_on_suited_pairs(range!(QJs), Rank::QUEEN, Rank::JACK);
+        assert_on_suited_pairs(range!(QTs), Rank::QUEEN, Rank::TEN);
+        assert_on_suited_pairs(range!(Q9s), Rank::QUEEN, Rank::NINE);
+        assert_on_suited_pairs(range!(Q8s), Rank::QUEEN, Rank::EIGHT);
+        assert_on_suited_pairs(range!(Q7s), Rank::QUEEN, Rank::SEVEN);
+        assert_on_suited_pairs(range!(Q6s), Rank::QUEEN, Rank::SIX);
+        assert_on_suited_pairs(range!(Q5s), Rank::QUEEN, Rank::FIVE);
+        assert_on_suited_pairs(range!(Q4s), Rank::QUEEN, Rank::FOUR);
     }
 }
