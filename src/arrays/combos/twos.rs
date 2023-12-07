@@ -135,14 +135,17 @@ mod arrays__combos__twos_tests {
     fn extend() {
         let aces = range!(AA);
         let kings = range!(KK);
+        let length = aces.len() + kings.len();
 
         let aces_and_kings = aces.extend(&kings);
 
-        // for ace in aces.iter() {
-        //     assert!(aces_and_kings.iter().any(|two| two.contains_card(*ace)));
-        // }
-        //
-        // assert_eq!(crate::UNIQUE_2_CARD_HANDS + 2, unique.extend(&twos).len());
+        assert_eq!(length, aces_and_kings.len());
+        for ace in aces.iter() {
+            assert!(aces_and_kings.contains(ace));
+        }
+        for kk in kings.iter() {
+            assert!(aces_and_kings.contains(kk));
+        }
     }
 
     #[test]
