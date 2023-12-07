@@ -2,7 +2,7 @@
 /// for all of the range analysis work.
 ///
 /// And the testing already caught an error with the `ACE_JACK_OFFSUIT` constant.
-#[macro_export]
+#[macro_export(local_inner_macros)]
 #[rustfmt::skip]
 macro_rules! range {
     (AA) => { Twos::from($crate::arrays::combos::AA.to_vec()) };
@@ -541,5 +541,11 @@ mod tests {
         assert_on_non_pairs(range!(42), Rank::FOUR, Rank::DEUCE);
 
         assert_on_non_pairs(range!(32), Rank::TREY, Rank::DEUCE);
+    }
+
+    #[test]
+    fn combine() {
+        // let range = range!(AKs AKo);
+        // assert_eq!(range.hashset(), range!(AK).hashset());
     }
 }

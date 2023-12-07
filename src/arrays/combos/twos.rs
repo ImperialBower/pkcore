@@ -21,6 +21,18 @@ impl Twos {
     }
 
     #[must_use]
+    pub fn contains(&self, two: &Two) -> bool {
+        self.iter().any(|t| t == two)
+    }
+
+    #[must_use]
+    pub fn extend(&self, other: &Self) -> Self {
+        let mut twos = self.clone();
+        twos.0.extend(other.iter().copied());
+        twos
+    }
+
+    #[must_use]
     pub fn filter_on_card(&self, card: Card) -> Self {
         Self(self.iter().filter(|two| two.contains_card(card)).copied().collect())
     }
@@ -109,6 +121,28 @@ mod arrays__combos__twos_tests {
         assert!(!unique.is_empty());
         assert_eq!(crate::UNIQUE_2_CARD_HANDS, unique.len());
         assert_eq!(crate::UNIQUE_2_CARD_HANDS, Twos::from(unique.hashset()).len());
+    }
+
+    #[test]
+    fn contains() {
+        let unique = Twos::unique();
+
+        assert!(unique.contains(&Two::HAND_TD_5D));
+        assert!(!unique.contains(&Two::default()));
+    }
+
+    #[test]
+    fn extend() {
+        let aces = range!(AA);
+        let kings = range!(KK);
+
+        let aces_and_kings = aces.extend(&kings);
+
+        // for ace in aces.iter() {
+        //     assert!(aces_and_kings.iter().any(|two| two.contains_card(*ace)));
+        // }
+        //
+        // assert_eq!(crate::UNIQUE_2_CARD_HANDS + 2, unique.extend(&twos).len());
     }
 
     #[test]

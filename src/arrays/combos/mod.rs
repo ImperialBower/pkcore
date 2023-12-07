@@ -1,6 +1,8 @@
+#[macro_use]
+pub mod ranges;
+
 use crate::arrays::two::Two;
 
-pub mod ranges;
 pub mod twos;
 // region hand range array constants
 // region pocket pair range array constants

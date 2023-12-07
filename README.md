@@ -786,6 +786,8 @@
         * Two::filter_pairs()
         * arrays::combos::twos::Twos
         * REFACTOR: Ranges to return Twos
+      * Ranges: Finished basic range macro... now need to work on combining them
+        * FEATURE: Twos + 
 
 ## LATER
 
