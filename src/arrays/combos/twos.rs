@@ -139,6 +139,7 @@ mod arrays__combos__twos_tests {
 
         let aces_and_kings = aces.extend(&kings);
 
+        assert!(aces_and_kings.is_aligned());
         assert_eq!(length, aces_and_kings.len());
         for ace in aces.iter() {
             assert!(aces_and_kings.contains(ace));
