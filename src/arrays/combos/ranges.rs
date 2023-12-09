@@ -1,3 +1,4 @@
+use crate::arrays::combos::twos::Twos;
 /// I want to get the tests right for this macro since it's going to be the foundation
 /// for all of the range analysis work.
 ///
@@ -265,7 +266,17 @@ macro_rules! range {
     (32o) => { Twos::from($crate::arrays::combos::TREY_DEUCE_OFFSUIT.to_vec()) };
     (32) => { Twos::from($crate::arrays::combos::TREY_DEUCE.to_vec()) };
 
-
+    // [$($x:tt),* $(,)?] => {
+    [$($x:tt),* ] => {
+        {
+            let mut v = Twos::default();
+            $(
+                let extended = range!($x);
+                v.extend($x);
+            )*
+            v
+        }
+    };
 }
 
 #[cfg(test)]
@@ -545,7 +556,7 @@ mod tests {
 
     #[test]
     fn combine() {
-        // let range = range!(AKs AKo);
-        // assert_eq!(range.hashset(), range!(AK).hashset());
+        let range = range!(AKs, AKo);
+        assert_eq!(range.hashset(), range!(AK).hashset());
     }
 }
