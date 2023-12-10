@@ -603,7 +603,7 @@ macro_rules! range {
             )
         )
     };
-    (A2+) => {
+    (Ax) => {
         Twos::from($crate::arrays::combos::ACE_DEUCE.to_vec()).extend(
             &Twos::from($crate::arrays::combos::ACE_TREY.to_vec()).extend(
                 &Twos::from($crate::arrays::combos::ACE_FOUR.to_vec()).extend(
@@ -628,8 +628,171 @@ macro_rules! range {
             )
         )
     };
-    (Ax) => {
-        range!(A2x)
+
+        (AQs+) => {
+        Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
+        )
+    };
+    (AJs+) => {
+        Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
+            )
+        )
+    };
+    (ATs+) => {
+        Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
+                )
+            )
+        )
+    };
+    (A9s+) => {
+        Twos::from($crate::arrays::combos::ACE_NINE_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
+                    )
+                )
+            )
+        )
+    };
+    (A8s+) => {
+        Twos::from($crate::arrays::combos::ACE_EIGHT_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_NINE_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (A7s+) => {
+        Twos::from($crate::arrays::combos::ACE_SEVEN_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_EIGHT_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_NINE_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (A6s+) => {
+        Twos::from($crate::arrays::combos::ACE_SIX_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_SEVEN_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_EIGHT_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_NINE_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (A5s+) => {
+        Twos::from($crate::arrays::combos::ACE_FIVE_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_SIX_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_SEVEN_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_EIGHT_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::ACE_NINE_SUITED.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
+                                        &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (A4s+) => {
+        Twos::from($crate::arrays::combos::ACE_FOUR_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_FIVE_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_SIX_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_SEVEN_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::ACE_EIGHT_SUITED.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::ACE_NINE_SUITED.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
+                                        &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
+                                            &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (A3s+) => {
+        Twos::from($crate::arrays::combos::ACE_TREY_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_FOUR_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_FIVE_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_SIX_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::ACE_SEVEN_SUITED.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::ACE_EIGHT_SUITED.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::ACE_NINE_SUITED.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
+                                        &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
+                                            &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
+                                                &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (A2s+) => {
+        Twos::from($crate::arrays::combos::ACE_DEUCE_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_TREY_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_FOUR_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_FIVE_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::ACE_SIX_SUITED.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::ACE_SEVEN_SUITED.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::ACE_EIGHT_SUITED.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::ACE_NINE_SUITED.to_vec()).extend(
+                                        &Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
+                                            &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
+                                                &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
+                                                    &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
     };
 
     (AQo+) => {
@@ -797,178 +960,6 @@ macro_rules! range {
             )
         )
     };
-    (Axo) => {
-        range!(A2o)
-    };
-
-    (AQs+) => {
-        Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
-            &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
-        )
-    };
-    (AJs+) => {
-        Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
-            &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
-                &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
-            )
-        )
-    };
-    (ATs+) => {
-        Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
-            &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
-                &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
-                    &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
-                )
-            )
-        )
-    };
-    (A9s+) => {
-        Twos::from($crate::arrays::combos::ACE_NINE_SUITED.to_vec()).extend(
-            &Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
-                &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
-                    &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
-                        &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
-                    )
-                )
-            )
-        )
-    };
-    (A8s+) => {
-        Twos::from($crate::arrays::combos::ACE_EIGHT_SUITED.to_vec()).extend(
-            &Twos::from($crate::arrays::combos::ACE_NINE_SUITED.to_vec()).extend(
-                &Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
-                    &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
-                        &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
-                            &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
-                        )
-                    )
-                )
-            )
-        )
-    };
-    (A7s+) => {
-        Twos::from($crate::arrays::combos::ACE_SEVEN_SUITED.to_vec()).extend(
-            &Twos::from($crate::arrays::combos::ACE_EIGHT_SUITED.to_vec()).extend(
-                &Twos::from($crate::arrays::combos::ACE_NINE_SUITED.to_vec()).extend(
-                    &Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
-                        &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
-                            &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
-                                &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
-                            )
-                        )
-                    )
-                )
-            )
-        )
-    };
-    (A6s+) => {
-        Twos::from($crate::arrays::combos::ACE_SIX_SUITED.to_vec()).extend(
-            &Twos::from($crate::arrays::combos::ACE_SEVEN_SUITED.to_vec()).extend(
-                &Twos::from($crate::arrays::combos::ACE_EIGHT_SUITED.to_vec()).extend(
-                    &Twos::from($crate::arrays::combos::ACE_NINE_SUITED.to_vec()).extend(
-                        &Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
-                            &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
-                                &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
-                                    &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-        )
-    };
-    (A5s+) => {
-        Twos::from($crate::arrays::combos::ACE_FIVE_SUITED.to_vec()).extend(
-            &Twos::from($crate::arrays::combos::ACE_SIX_SUITED.to_vec()).extend(
-                &Twos::from($crate::arrays::combos::ACE_SEVEN_SUITED.to_vec()).extend(
-                    &Twos::from($crate::arrays::combos::ACE_EIGHT_SUITED.to_vec()).extend(
-                        &Twos::from($crate::arrays::combos::ACE_NINE_SUITED.to_vec()).extend(
-                            &Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
-                                &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
-                                    &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
-                                        &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-        )
-    };
-    (A4s+) => {
-        Twos::from($crate::arrays::combos::ACE_FOUR_SUITED.to_vec()).extend(
-            &Twos::from($crate::arrays::combos::ACE_FIVE_SUITED.to_vec()).extend(
-                &Twos::from($crate::arrays::combos::ACE_SIX_SUITED.to_vec()).extend(
-                    &Twos::from($crate::arrays::combos::ACE_SEVEN_SUITED.to_vec()).extend(
-                        &Twos::from($crate::arrays::combos::ACE_EIGHT_SUITED.to_vec()).extend(
-                            &Twos::from($crate::arrays::combos::ACE_NINE_SUITED.to_vec()).extend(
-                                &Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
-                                    &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
-                                        &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
-                                            &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-        )
-    };
-    (A3s+) => {
-        Twos::from($crate::arrays::combos::ACE_TREY_SUITED.to_vec()).extend(
-            &Twos::from($crate::arrays::combos::ACE_FOUR_SUITED.to_vec()).extend(
-                &Twos::from($crate::arrays::combos::ACE_FIVE_SUITED.to_vec()).extend(
-                    &Twos::from($crate::arrays::combos::ACE_SIX_SUITED.to_vec()).extend(
-                        &Twos::from($crate::arrays::combos::ACE_SEVEN_SUITED.to_vec()).extend(
-                            &Twos::from($crate::arrays::combos::ACE_EIGHT_SUITED.to_vec()).extend(
-                                &Twos::from($crate::arrays::combos::ACE_NINE_SUITED.to_vec()).extend(
-                                    &Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
-                                        &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
-                                            &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
-                                                &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-        )
-    };
-    (A2s+) => {
-        Twos::from($crate::arrays::combos::ACE_DEUCE_SUITED.to_vec()).extend(
-            &Twos::from($crate::arrays::combos::ACE_TREY_SUITED.to_vec()).extend(
-                &Twos::from($crate::arrays::combos::ACE_FOUR_SUITED.to_vec()).extend(
-                    &Twos::from($crate::arrays::combos::ACE_FIVE_SUITED.to_vec()).extend(
-                        &Twos::from($crate::arrays::combos::ACE_SIX_SUITED.to_vec()).extend(
-                            &Twos::from($crate::arrays::combos::ACE_SEVEN_SUITED.to_vec()).extend(
-                                &Twos::from($crate::arrays::combos::ACE_EIGHT_SUITED.to_vec()).extend(
-                                    &Twos::from($crate::arrays::combos::ACE_NINE_SUITED.to_vec()).extend(
-                                        &Twos::from($crate::arrays::combos::ACE_TEN_SUITED.to_vec()).extend(
-                                            &Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
-                                                &Twos::from($crate::arrays::combos::ACE_QUEEN_SUITED.to_vec()).extend(
-                                                    &Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec())
-                                                )
-                                            )
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-        )
-    };
-    (Axs) => {
-        range!(A2s)
-    }
 
     // TODO: Work in Progress
     // [$($x:tt),* $(,)?] => {
@@ -1579,7 +1570,7 @@ mod tests {
     }
 
     #[test]
-    fn a2_plus() {
+    fn ax() {
         let expected = range!(A2)
             .extend(&range!(A3))
             .extend(&range!(A4))
@@ -1593,7 +1584,42 @@ mod tests {
             .extend(&range!(AQ))
             .extend(&range!(AK));
 
-        assert_eq!(expected, range!(A2+));
         assert_eq!(expected, range!(Ax));
+    }
+
+    #[test]
+    fn a2s_plus() {
+        let expected = range!(A2s)
+            .extend(&range!(A3s))
+            .extend(&range!(A4s))
+            .extend(&range!(A5s))
+            .extend(&range!(A6s))
+            .extend(&range!(A7s))
+            .extend(&range!(A8s))
+            .extend(&range!(A9s))
+            .extend(&range!(ATs))
+            .extend(&range!(AJs))
+            .extend(&range!(AQs))
+            .extend(&range!(AKs));
+
+        assert_eq!(expected, range!(A2s+));
+    }
+
+    #[test]
+    fn a2o_plus() {
+        let expected = range!(A2o)
+            .extend(&range!(A3o))
+            .extend(&range!(A4o))
+            .extend(&range!(A5o))
+            .extend(&range!(A6o))
+            .extend(&range!(A7o))
+            .extend(&range!(A8o))
+            .extend(&range!(A9o))
+            .extend(&range!(ATo))
+            .extend(&range!(AJo))
+            .extend(&range!(AQo))
+            .extend(&range!(AKo));
+
+        assert_eq!(expected, range!(A2o+));
     }
 }
