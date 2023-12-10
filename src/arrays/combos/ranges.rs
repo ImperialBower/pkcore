@@ -458,17 +458,18 @@ macro_rules! range {
     (32o) => { Twos::from($crate::arrays::combos::TREY_DEUCE_OFFSUIT.to_vec()) };
     (32) => { Twos::from($crate::arrays::combos::TREY_DEUCE.to_vec()) };
 
+    // TODO: Work in Progress
     // [$($x:tt),* $(,)?] => {
-    [$($x:tt),* ] => {
-        {
-            let mut v = Twos::default();
-            $(
-                let extended = range!($x);
-                v.extend($x);
-            )*
-            v
-        }
-    };
+    // [$($x:tt),* ] => {
+    //     {
+    //         let mut v = Twos::default();
+    //         $(
+    //             let extended = range!($x);
+    //             v.extend($x);
+    //         )*
+    //         v
+    //     }
+    // };
 }
 
 #[cfg(test)]
