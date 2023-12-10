@@ -2,6 +2,11 @@
 /// for all of the range analysis work.
 ///
 /// And the testing already caught an error with the `ACE_JACK_OFFSUIT` constant.
+///
+/// ## Resources
+///
+/// * [Poker Ranges & Range Reading](https://www.splitsuit.com/poker-ranges-reading)
+/// * [POKER RANGES: POKER RANGE CHARTS](https://www.tightpoker.com/poker-ranges/)
 #[macro_export(local_inner_macros)]
 #[rustfmt::skip]
 macro_rules! range {
@@ -457,6 +462,175 @@ macro_rules! range {
     (32s) => { Twos::from($crate::arrays::combos::TREY_DEUCE_SUITED.to_vec()) };
     (32o) => { Twos::from($crate::arrays::combos::TREY_DEUCE_OFFSUIT.to_vec()) };
     (32) => { Twos::from($crate::arrays::combos::TREY_DEUCE.to_vec()) };
+
+    (AQ+) => {
+        Twos::from($crate::arrays::combos::ACE_QUEEN.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_KING.to_vec())
+        )
+    };
+    (AJ+) => {
+        Twos::from($crate::arrays::combos::ACE_JACK.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_QUEEN.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_KING.to_vec())
+            )
+        )
+    };
+    (AT+) => {
+        Twos::from($crate::arrays::combos::ACE_TEN.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_JACK.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_QUEEN.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_KING.to_vec())
+                )
+            )
+        )
+    };
+    (A9+) => {
+        Twos::from($crate::arrays::combos::ACE_NINE.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_TEN.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_JACK.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_QUEEN.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::ACE_KING.to_vec())
+                    )
+                )
+            )
+        )
+    };
+    (A8+) => {
+        Twos::from($crate::arrays::combos::ACE_EIGHT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_NINE.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_TEN.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_JACK.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::ACE_QUEEN.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::ACE_KING.to_vec())
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (A7+) => {
+        Twos::from($crate::arrays::combos::ACE_SEVEN.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_EIGHT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_NINE.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_TEN.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::ACE_JACK.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::ACE_QUEEN.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::ACE_KING.to_vec())
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (A6+) => {
+        Twos::from($crate::arrays::combos::ACE_SIX.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_SEVEN.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_EIGHT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_NINE.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::ACE_TEN.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::ACE_JACK.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::ACE_QUEEN.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::ACE_KING.to_vec())
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (A5+) => {
+        Twos::from($crate::arrays::combos::ACE_FIVE.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_SIX.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_SEVEN.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_EIGHT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::ACE_NINE.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::ACE_TEN.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::ACE_JACK.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::ACE_QUEEN.to_vec()).extend(
+                                        &Twos::from($crate::arrays::combos::ACE_KING.to_vec())
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (A4+) => {
+        Twos::from($crate::arrays::combos::ACE_FOUR.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_FIVE.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_SIX.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_SEVEN.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::ACE_EIGHT.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::ACE_NINE.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::ACE_TEN.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::ACE_JACK.to_vec()).extend(
+                                        &Twos::from($crate::arrays::combos::ACE_QUEEN.to_vec()).extend(
+                                            &Twos::from($crate::arrays::combos::ACE_KING.to_vec())
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (A3+) => {
+        Twos::from($crate::arrays::combos::ACE_TREY.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_FOUR.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_FIVE.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_SIX.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::ACE_SEVEN.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::ACE_EIGHT.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::ACE_NINE.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::ACE_TEN.to_vec()).extend(
+                                        &Twos::from($crate::arrays::combos::ACE_JACK.to_vec()).extend(
+                                            &Twos::from($crate::arrays::combos::ACE_QUEEN.to_vec()).extend(
+                                                &Twos::from($crate::arrays::combos::ACE_KING.to_vec())
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (A2+) => {
+        Twos::from($crate::arrays::combos::ACE_DEUCE.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::ACE_TREY.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::ACE_FOUR.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::ACE_FIVE.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::ACE_SIX.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::ACE_SEVEN.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::ACE_EIGHT.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::ACE_NINE.to_vec()).extend(
+                                        &Twos::from($crate::arrays::combos::ACE_TEN.to_vec()).extend(
+                                            &Twos::from($crate::arrays::combos::ACE_JACK.to_vec()).extend(
+                                                &Twos::from($crate::arrays::combos::ACE_QUEEN.to_vec()).extend(
+                                                    &Twos::from($crate::arrays::combos::ACE_KING.to_vec())
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (Ax) => {
+        range!(A2x)
+    }
 
     // TODO: Work in Progress
     // [$($x:tt),* $(,)?] => {
@@ -925,5 +1099,163 @@ mod tests {
         let actual = range!(22+);
 
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn aq_plus() {
+        let expected = range!(AQ).extend(&range!(AK));
+
+        let actual = range!(AQ+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn aj_plus() {
+        let expected = range!(AJ).extend(&range!(AQ)).extend(&range!(AK));
+
+        let actual = range!(AJ+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn at_plus() {
+        let expected = range!(AT).extend(&range!(AJ)).extend(&range!(AQ)).extend(&range!(AK));
+
+        let actual = range!(AT+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn a9_plus() {
+        let expected = range!(A9)
+            .extend(&range!(AT))
+            .extend(&range!(AJ))
+            .extend(&range!(AQ))
+            .extend(&range!(AK));
+
+        let actual = range!(A9+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn a8_plus() {
+        let expected = range!(A8)
+            .extend(&range!(A9))
+            .extend(&range!(AT))
+            .extend(&range!(AJ))
+            .extend(&range!(AQ))
+            .extend(&range!(AK));
+
+        let actual = range!(A8+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn a7_plus() {
+        let expected = range!(A7)
+            .extend(&range!(A8))
+            .extend(&range!(A9))
+            .extend(&range!(AT))
+            .extend(&range!(AJ))
+            .extend(&range!(AQ))
+            .extend(&range!(AK));
+
+        let actual = range!(A7+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn a6_plus() {
+        let expected = range!(A6)
+            .extend(&range!(A7))
+            .extend(&range!(A8))
+            .extend(&range!(A9))
+            .extend(&range!(AT))
+            .extend(&range!(AJ))
+            .extend(&range!(AQ))
+            .extend(&range!(AK));
+
+        let actual = range!(A6+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn a5_plus() {
+        let expected = range!(A5)
+            .extend(&range!(A6))
+            .extend(&range!(A7))
+            .extend(&range!(A8))
+            .extend(&range!(A9))
+            .extend(&range!(AT))
+            .extend(&range!(AJ))
+            .extend(&range!(AQ))
+            .extend(&range!(AK));
+
+        let actual = range!(A5+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn a4_plus() {
+        let expected = range!(A4)
+            .extend(&range!(A5))
+            .extend(&range!(A6))
+            .extend(&range!(A7))
+            .extend(&range!(A8))
+            .extend(&range!(A9))
+            .extend(&range!(AT))
+            .extend(&range!(AJ))
+            .extend(&range!(AQ))
+            .extend(&range!(AK));
+
+        let actual = range!(A4+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn a3_plus() {
+        let expected = range!(A3)
+            .extend(&range!(A4))
+            .extend(&range!(A5))
+            .extend(&range!(A6))
+            .extend(&range!(A7))
+            .extend(&range!(A8))
+            .extend(&range!(A9))
+            .extend(&range!(AT))
+            .extend(&range!(AJ))
+            .extend(&range!(AQ))
+            .extend(&range!(AK));
+
+        let actual = range!(A3+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn a2_plus() {
+        let expected = range!(A2)
+            .extend(&range!(A3))
+            .extend(&range!(A4))
+            .extend(&range!(A5))
+            .extend(&range!(A6))
+            .extend(&range!(A7))
+            .extend(&range!(A8))
+            .extend(&range!(A9))
+            .extend(&range!(AT))
+            .extend(&range!(AJ))
+            .extend(&range!(AQ))
+            .extend(&range!(AK));
+
+        assert_eq!(expected, range!(A2+));
+        assert_eq!(expected, range!(Ax));
     }
 }
