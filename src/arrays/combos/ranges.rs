@@ -1242,6 +1242,147 @@ macro_rules! range {
         )
     };
 
+    (KJo+) => {
+        Twos::from($crate::arrays::combos::KING_JACK_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec())
+        )
+    };
+    (KTo+) => {
+        Twos::from($crate::arrays::combos::KING_TEN_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_JACK_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec())
+            )
+        )
+    };
+    (K9o+) => {
+        Twos::from($crate::arrays::combos::KING_NINE_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_TEN_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::KING_JACK_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec())
+                )
+            )
+        )
+    };
+    (K8o+) => {
+        Twos::from($crate::arrays::combos::KING_EIGHT_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_NINE_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::KING_TEN_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::KING_JACK_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec())
+                    )
+                )
+            )
+        )
+    };
+    (K7o+) => {
+        Twos::from($crate::arrays::combos::KING_SEVEN_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_EIGHT_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::KING_NINE_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::KING_TEN_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::KING_JACK_OFFSUIT.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec())
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (K6o+) => {
+        Twos::from($crate::arrays::combos::KING_SIX_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_SEVEN_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::KING_EIGHT_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::KING_NINE_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::KING_TEN_OFFSUIT.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::KING_JACK_OFFSUIT.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec())
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (K5o+) => {
+        Twos::from($crate::arrays::combos::KING_FIVE_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_SIX_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::KING_SEVEN_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::KING_EIGHT_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::KING_NINE_OFFSUIT.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::KING_TEN_OFFSUIT.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::KING_JACK_OFFSUIT.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec())
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (K4o+) => {
+        Twos::from($crate::arrays::combos::KING_FOUR_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_FIVE_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::KING_SIX_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::KING_SEVEN_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::KING_EIGHT_OFFSUIT.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::KING_NINE_OFFSUIT.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::KING_TEN_OFFSUIT.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::KING_JACK_OFFSUIT.to_vec()).extend(
+                                        &Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec())
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (K3o+) => {
+        Twos::from($crate::arrays::combos::KING_TREY_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_FOUR_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::KING_FIVE_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::KING_SIX_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::KING_SEVEN_OFFSUIT.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::KING_EIGHT_OFFSUIT.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::KING_NINE_OFFSUIT.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::KING_TEN_OFFSUIT.to_vec()).extend(
+                                        &Twos::from($crate::arrays::combos::KING_JACK_OFFSUIT.to_vec()).extend(
+                                            &Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec())
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (K2o+) => {
+        Twos::from($crate::arrays::combos::KING_DEUCE_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_TREY_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::KING_FOUR_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::KING_FIVE_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::KING_SIX_OFFSUIT.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::KING_SEVEN_OFFSUIT.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::KING_EIGHT_OFFSUIT.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::KING_NINE_OFFSUIT.to_vec()).extend(
+                                        &Twos::from($crate::arrays::combos::KING_TEN_OFFSUIT.to_vec()).extend(
+                                            &Twos::from($crate::arrays::combos::KING_JACK_OFFSUIT.to_vec()).extend(
+                                                &Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec())
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+
 
 
     // TODO: Work in Progress
@@ -2233,6 +2374,158 @@ mod tests {
             .extend(&range!(KQs));
 
         let actual = range!(K2s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn kjo_plus() {
+        let expected = range!(KJo).extend(&range!(KQo));
+
+        let actual = range!(KJo+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn kto_plus() {
+        let expected = range!(KTo).extend(&range!(KJo)).extend(&range!(KQo));
+
+        let actual = range!(KTo+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn k9o_plus() {
+        let expected = range!(K9o)
+            .extend(&range!(KTo))
+            .extend(&range!(KJo))
+            .extend(&range!(KQo));
+
+        let actual = range!(K9o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn k8o_plus() {
+        let expected = range!(K8o)
+            .extend(&range!(K9o))
+            .extend(&range!(KTo))
+            .extend(&range!(KJo))
+            .extend(&range!(KQo));
+
+        let actual = range!(K8o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn k7o_plus() {
+        let expected = range!(K7o)
+            .extend(&range!(K8o))
+            .extend(&range!(K9o))
+            .extend(&range!(KTo))
+            .extend(&range!(KJo))
+            .extend(&range!(KQo));
+
+        let actual = range!(K7o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn k6o_plus() {
+        let expected = range!(K6o)
+            .extend(&range!(K7o))
+            .extend(&range!(K8o))
+            .extend(&range!(K9o))
+            .extend(&range!(KTo))
+            .extend(&range!(KJo))
+            .extend(&range!(KQo));
+
+        let actual = range!(K6o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn k5o_plus() {
+        let expected = range!(K5o)
+            .extend(&range!(K6o))
+            .extend(&range!(K7o))
+            .extend(&range!(K8o))
+            .extend(&range!(K9o))
+            .extend(&range!(KTo))
+            .extend(&range!(KJo))
+            .extend(&range!(KQo));
+
+        let actual = range!(K5o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn k4o_plus() {
+        let expected = range!(K4o)
+            .extend(&range!(K5o))
+            .extend(&range!(K6o))
+            .extend(&range!(K7o))
+            .extend(&range!(K8o))
+            .extend(&range!(K9o))
+            .extend(&range!(KTo))
+            .extend(&range!(KJo))
+            .extend(&range!(KQo));
+
+        let actual = range!(K4o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn k3o_plus() {
+        let expected = range!(K3o)
+            .extend(&range!(K4o))
+            .extend(&range!(K5o))
+            .extend(&range!(K6o))
+            .extend(&range!(K7o))
+            .extend(&range!(K8o))
+            .extend(&range!(K9o))
+            .extend(&range!(KTo))
+            .extend(&range!(KJo))
+            .extend(&range!(KQo));
+
+        let actual = range!(K3o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn k2o_plus() {
+        let expected = range!(K2o)
+            .extend(&range!(K3o))
+            .extend(&range!(K4o))
+            .extend(&range!(K5o))
+            .extend(&range!(K6o))
+            .extend(&range!(K7o))
+            .extend(&range!(K8o))
+            .extend(&range!(K9o))
+            .extend(&range!(KTo))
+            .extend(&range!(KJo))
+            .extend(&range!(KQo));
+
+        let actual = range!(K2o+);
 
         assert_eq!(expected, actual);
         assert!(actual.is_aligned());
