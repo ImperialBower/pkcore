@@ -2028,6 +2028,423 @@ macro_rules! range {
         )
     };
 
+    (T8+) => {
+        Twos::from($crate::arrays::combos::TEN_EIGHT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_NINE.to_vec())
+        )
+    };
+    (T7+) => {
+        Twos::from($crate::arrays::combos::TEN_SEVEN.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_EIGHT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_NINE.to_vec())
+            )
+        )
+    };
+    (T6+) => {
+        Twos::from($crate::arrays::combos::TEN_SIX.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_SEVEN.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_EIGHT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::TEN_NINE.to_vec())
+                )
+            )
+        )
+    };
+    (T5+) => {
+        Twos::from($crate::arrays::combos::TEN_FIVE.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_SIX.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_SEVEN.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::TEN_EIGHT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_NINE.to_vec())
+                    )
+                )
+            )
+        )
+    };
+    (T4+) => {
+        Twos::from($crate::arrays::combos::TEN_FOUR.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_FIVE.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_SIX.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::TEN_SEVEN.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_EIGHT.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::TEN_NINE.to_vec())
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (T3+) => {
+        Twos::from($crate::arrays::combos::TEN_TREY.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_FOUR.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_FIVE.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::TEN_SIX.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_SEVEN.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::TEN_EIGHT.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::TEN_NINE.to_vec())
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (Tx) => {
+        Twos::from($crate::arrays::combos::TEN_DEUCE.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_TREY.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_FOUR.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::TEN_FIVE.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_SIX.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::TEN_SEVEN.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::TEN_EIGHT.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::TEN_NINE.to_vec())
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+
+    (T8s+) => {
+        Twos::from($crate::arrays::combos::TEN_EIGHT_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_NINE_SUITED.to_vec())
+        )
+    };
+    (T7s+) => {
+        Twos::from($crate::arrays::combos::TEN_SEVEN_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_EIGHT_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_NINE_SUITED.to_vec())
+            )
+        )
+    };
+    (T6s+) => {
+        Twos::from($crate::arrays::combos::TEN_SIX_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_SEVEN_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_EIGHT_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::TEN_NINE_SUITED.to_vec())
+                )
+            )
+        )
+    };
+    (T5s+) => {
+        Twos::from($crate::arrays::combos::TEN_FIVE_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_SIX_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_SEVEN_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::TEN_EIGHT_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_NINE_SUITED.to_vec())
+                    )
+                )
+            )
+        )
+    };
+    (T4s+) => {
+        Twos::from($crate::arrays::combos::TEN_FOUR_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_FIVE_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_SIX_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::TEN_SEVEN_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_EIGHT_SUITED.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::TEN_NINE_SUITED.to_vec())
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (T3s+) => {
+        Twos::from($crate::arrays::combos::TEN_TREY_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_FOUR_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_FIVE_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::TEN_SIX_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_SEVEN_SUITED.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::TEN_EIGHT_SUITED.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::TEN_NINE_SUITED.to_vec())
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (T2s+) => {
+        Twos::from($crate::arrays::combos::TEN_DEUCE_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_TREY_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_FOUR_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::TEN_FIVE_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_SIX_SUITED.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::TEN_SEVEN_SUITED.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::TEN_EIGHT_SUITED.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::TEN_NINE_SUITED.to_vec())
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+
+    (T8o+) => {
+        Twos::from($crate::arrays::combos::TEN_EIGHT_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_NINE_OFFSUIT.to_vec())
+        )
+    };
+    (T7o+) => {
+        Twos::from($crate::arrays::combos::TEN_SEVEN_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_EIGHT_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_NINE_OFFSUIT.to_vec())
+            )
+        )
+    };
+    (T6o+) => {
+        Twos::from($crate::arrays::combos::TEN_SIX_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_SEVEN_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_EIGHT_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::TEN_NINE_OFFSUIT.to_vec())
+                )
+            )
+        )
+    };
+    (T5o+) => {
+        Twos::from($crate::arrays::combos::TEN_FIVE_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_SIX_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_SEVEN_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::TEN_EIGHT_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_NINE_OFFSUIT.to_vec())
+                    )
+                )
+            )
+        )
+    };
+    (T4o+) => {
+        Twos::from($crate::arrays::combos::TEN_FOUR_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_FIVE_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_SIX_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::TEN_SEVEN_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_EIGHT_OFFSUIT.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::TEN_NINE_OFFSUIT.to_vec())
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (T3o+) => {
+        Twos::from($crate::arrays::combos::TEN_TREY_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_FOUR_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_FIVE_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::TEN_SIX_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_SEVEN_OFFSUIT.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::TEN_EIGHT_OFFSUIT.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::TEN_NINE_OFFSUIT.to_vec())
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (T2o+) => {
+        Twos::from($crate::arrays::combos::TEN_DEUCE_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TEN_TREY_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TEN_FOUR_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::TEN_FIVE_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_SIX_OFFSUIT.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::TEN_SEVEN_OFFSUIT.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::TEN_EIGHT_OFFSUIT.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::TEN_NINE_OFFSUIT.to_vec())
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+
+    (97+) => {
+        Twos::from($crate::arrays::combos::NINE_SEVEN.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_EIGHT.to_vec())
+        )
+    };
+    (96+) => {
+        Twos::from($crate::arrays::combos::NINE_SIX.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_SEVEN.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::NINE_EIGHT.to_vec())
+            )
+        )
+    };
+    (95+) => {
+        Twos::from($crate::arrays::combos::NINE_FIVE.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_SIX.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::NINE_SEVEN.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::NINE_EIGHT.to_vec())
+                )
+            )
+        )
+    };
+    (94+) => {
+        Twos::from($crate::arrays::combos::NINE_FOUR.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_FIVE.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::NINE_SIX.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::NINE_SEVEN.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::NINE_EIGHT.to_vec())
+                    )
+                )
+            )
+        )
+    };
+    (93+) => {
+        Twos::from($crate::arrays::combos::NINE_TREY.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_FOUR.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::NINE_FIVE.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::NINE_SIX.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::NINE_SEVEN.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::NINE_EIGHT.to_vec())
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (9x) => {
+        Twos::from($crate::arrays::combos::NINE_DEUCE.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_TREY.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::NINE_FOUR.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::NINE_FIVE.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::NINE_SIX.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::NINE_SEVEN.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::NINE_EIGHT.to_vec())
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+
+    (97s+) => {
+        Twos::from($crate::arrays::combos::NINE_SEVEN_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_EIGHT_SUITED.to_vec())
+        )
+    };
+    (96s+) => {
+        Twos::from($crate::arrays::combos::NINE_SIX_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_SEVEN_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::NINE_EIGHT_SUITED.to_vec())
+            )
+        )
+    };
+    (95s+) => {
+        Twos::from($crate::arrays::combos::NINE_FIVE_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_SIX_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::NINE_SEVEN_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::NINE_EIGHT_SUITED.to_vec())
+                )
+            )
+        )
+    };
+    (94s+) => {
+        Twos::from($crate::arrays::combos::NINE_FOUR_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_FIVE_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::NINE_SIX_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::NINE_SEVEN_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::NINE_EIGHT_SUITED.to_vec())
+                    )
+                )
+            )
+        )
+    };
+    (93s+) => {
+        Twos::from($crate::arrays::combos::NINE_TREY_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_FOUR_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::NINE_FIVE_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::NINE_SIX_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::NINE_SEVEN_SUITED.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::NINE_EIGHT_SUITED.to_vec())
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (92s+) => {
+        Twos::from($crate::arrays::combos::NINE_DEUCE_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_TREY_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::NINE_FOUR_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::NINE_FIVE_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::NINE_SIX_SUITED.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::NINE_SEVEN_SUITED.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::NINE_EIGHT_SUITED.to_vec())
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+
+    (97o+) => {
+        Twos::from($crate::arrays::combos::NINE_SEVEN_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_EIGHT_OFFSUIT.to_vec())
+        )
+    };
+    (96o+) => {
+        Twos::from($crate::arrays::combos::NINE_SIX_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_SEVEN_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::NINE_EIGHT_OFFSUIT.to_vec())
+            )
+        )
+    };
+    (95o+) => {
+        Twos::from($crate::arrays::combos::NINE_FIVE_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_SIX_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::NINE_SEVEN_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::NINE_EIGHT_OFFSUIT.to_vec())
+                )
+            )
+        )
+    };
+    (94o+) => {
+        Twos::from($crate::arrays::combos::NINE_FOUR_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_FIVE_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::NINE_SIX_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::NINE_SEVEN_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::NINE_EIGHT_OFFSUIT.to_vec())
+                    )
+                )
+            )
+        )
+    };
+    (93o+) => {
+        Twos::from($crate::arrays::combos::NINE_TREY_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_FOUR_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::NINE_FIVE_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::NINE_SIX_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::NINE_SEVEN_OFFSUIT.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::NINE_EIGHT_OFFSUIT.to_vec())
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (92o+) => {
+        Twos::from($crate::arrays::combos::NINE_DEUCE_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINE_TREY_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::NINE_FOUR_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::NINE_FIVE_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::NINE_SIX_OFFSUIT.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::NINE_SEVEN_OFFSUIT.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::NINE_EIGHT_OFFSUIT.to_vec())
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+
 
 
 
@@ -3901,6 +4318,519 @@ mod tests {
             .extend(&range!(JTo));
 
         let actual = range!(J2o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t8_plus() {
+        let expected = range!(T8).extend(&range!(T9));
+
+        let actual = range!(T8+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t7_plus() {
+        let expected = range!(T7).extend(&range!(T8)).extend(&range!(T9));
+
+        let actual = range!(T7+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t6_plus() {
+        let expected = range!(T6).extend(&range!(T7)).extend(&range!(T8)).extend(&range!(T9));
+
+        let actual = range!(T6+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t5_plus() {
+        let expected = range!(T5)
+            .extend(&range!(T6))
+            .extend(&range!(T7))
+            .extend(&range!(T8))
+            .extend(&range!(T9));
+
+        let actual = range!(T5+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t4_plus() {
+        let expected = range!(T4)
+            .extend(&range!(T5))
+            .extend(&range!(T6))
+            .extend(&range!(T7))
+            .extend(&range!(T8))
+            .extend(&range!(T9));
+
+        let actual = range!(T4+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t3_plus() {
+        let expected = range!(T3)
+            .extend(&range!(T4))
+            .extend(&range!(T5))
+            .extend(&range!(T6))
+            .extend(&range!(T7))
+            .extend(&range!(T8))
+            .extend(&range!(T9));
+
+        let actual = range!(T3+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn tx() {
+        let expected = range!(T2)
+            .extend(&range!(T3))
+            .extend(&range!(T4))
+            .extend(&range!(T5))
+            .extend(&range!(T6))
+            .extend(&range!(T7))
+            .extend(&range!(T8))
+            .extend(&range!(T9));
+
+        let actual = range!(Tx);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t8s_plus() {
+        let expected = range!(T8s).extend(&range!(T9s));
+
+        let actual = range!(T8s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t7s_plus() {
+        let expected = range!(T7s).extend(&range!(T8s)).extend(&range!(T9s));
+
+        let actual = range!(T7s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t6s_plus() {
+        let expected = range!(T6s)
+            .extend(&range!(T7s))
+            .extend(&range!(T8s))
+            .extend(&range!(T9s));
+
+        let actual = range!(T6s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t5s_plus() {
+        let expected = range!(T5s)
+            .extend(&range!(T6s))
+            .extend(&range!(T7s))
+            .extend(&range!(T8s))
+            .extend(&range!(T9s));
+
+        let actual = range!(T5s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t4s_plus() {
+        let expected = range!(T4s)
+            .extend(&range!(T5s))
+            .extend(&range!(T6s))
+            .extend(&range!(T7s))
+            .extend(&range!(T8s))
+            .extend(&range!(T9s));
+
+        let actual = range!(T4s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t3s_plus() {
+        let expected = range!(T3s)
+            .extend(&range!(T4s))
+            .extend(&range!(T5s))
+            .extend(&range!(T6s))
+            .extend(&range!(T7s))
+            .extend(&range!(T8s))
+            .extend(&range!(T9s));
+
+        let actual = range!(T3s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t2s_plus() {
+        let expected = range!(T2s)
+            .extend(&range!(T3s))
+            .extend(&range!(T4s))
+            .extend(&range!(T5s))
+            .extend(&range!(T6s))
+            .extend(&range!(T7s))
+            .extend(&range!(T8s))
+            .extend(&range!(T9s));
+
+        let actual = range!(T2s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t8o_plus() {
+        let expected = range!(T8o).extend(&range!(T9o));
+
+        let actual = range!(T8o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t7o_plus() {
+        let expected = range!(T7o).extend(&range!(T8o)).extend(&range!(T9o));
+
+        let actual = range!(T7o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t6o_plus() {
+        let expected = range!(T6o)
+            .extend(&range!(T7o))
+            .extend(&range!(T8o))
+            .extend(&range!(T9o));
+
+        let actual = range!(T6o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t5o_plus() {
+        let expected = range!(T5o)
+            .extend(&range!(T6o))
+            .extend(&range!(T7o))
+            .extend(&range!(T8o))
+            .extend(&range!(T9o));
+
+        let actual = range!(T5o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t4o_plus() {
+        let expected = range!(T4o)
+            .extend(&range!(T5o))
+            .extend(&range!(T6o))
+            .extend(&range!(T7o))
+            .extend(&range!(T8o))
+            .extend(&range!(T9o));
+
+        let actual = range!(T4o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t3o_plus() {
+        let expected = range!(T3o)
+            .extend(&range!(T4o))
+            .extend(&range!(T5o))
+            .extend(&range!(T6o))
+            .extend(&range!(T7o))
+            .extend(&range!(T8o))
+            .extend(&range!(T9o));
+
+        let actual = range!(T3o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn t2o_plus() {
+        let expected = range!(T2o)
+            .extend(&range!(T3o))
+            .extend(&range!(T4o))
+            .extend(&range!(T5o))
+            .extend(&range!(T6o))
+            .extend(&range!(T7o))
+            .extend(&range!(T8o))
+            .extend(&range!(T9o));
+
+        let actual = range!(T2o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn nine7_plus() {
+        let expected = range!(97).extend(&range!(98));
+
+        let actual = range!(97+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn nine6_plus() {
+        let expected = range!(96).extend(&range!(97)).extend(&range!(98));
+
+        let actual = range!(96+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn nine5_plus() {
+        let expected = range!(95).extend(&range!(96)).extend(&range!(97)).extend(&range!(98));
+
+        let actual = range!(95+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn nine4_plus() {
+        let expected = range!(94)
+            .extend(&range!(95))
+            .extend(&range!(96))
+            .extend(&range!(97))
+            .extend(&range!(98));
+
+        let actual = range!(94+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn nine3_plus() {
+        let expected = range!(93)
+            .extend(&range!(94))
+            .extend(&range!(95))
+            .extend(&range!(96))
+            .extend(&range!(97))
+            .extend(&range!(98));
+
+        let actual = range!(93+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn ninex_plus() {
+        let expected = range!(92)
+            .extend(&range!(93))
+            .extend(&range!(94))
+            .extend(&range!(95))
+            .extend(&range!(96))
+            .extend(&range!(97))
+            .extend(&range!(98));
+
+        let actual = range!(9x);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn nine7s_plus() {
+        let expected = range!(97s).extend(&range!(98s));
+
+        let actual = range!(97s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn nine6s_plus() {
+        let expected = range!(96s).extend(&range!(97s)).extend(&range!(98s));
+
+        let actual = range!(96s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn nine5s_plus() {
+        let expected = range!(95s)
+            .extend(&range!(96s))
+            .extend(&range!(97s))
+            .extend(&range!(98s));
+
+        let actual = range!(95s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn nine4s_plus() {
+        let expected = range!(94s)
+            .extend(&range!(95s))
+            .extend(&range!(96s))
+            .extend(&range!(97s))
+            .extend(&range!(98s));
+
+        let actual = range!(94s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn nine3s_plus() {
+        let expected = range!(93s)
+            .extend(&range!(94s))
+            .extend(&range!(95s))
+            .extend(&range!(96s))
+            .extend(&range!(97s))
+            .extend(&range!(98s));
+
+        let actual = range!(93s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn nine2s_plus() {
+        let expected = range!(92s)
+            .extend(&range!(93s))
+            .extend(&range!(94s))
+            .extend(&range!(95s))
+            .extend(&range!(96s))
+            .extend(&range!(97s))
+            .extend(&range!(98s));
+
+        let actual = range!(92s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn nine7o_plus() {
+        let expected = range!(97o).extend(&range!(98o));
+
+        let actual = range!(97o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn nine6o_plus() {
+        let expected = range!(96o).extend(&range!(97o)).extend(&range!(98o));
+
+        let actual = range!(96o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn nine5o_plus() {
+        let expected = range!(95o)
+            .extend(&range!(96o))
+            .extend(&range!(97o))
+            .extend(&range!(98o));
+
+        let actual = range!(95o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn nine4o_plus() {
+        let expected = range!(94o)
+            .extend(&range!(95o))
+            .extend(&range!(96o))
+            .extend(&range!(97o))
+            .extend(&range!(98o));
+
+        let actual = range!(94o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn nine3o_plus() {
+        let expected = range!(93o)
+            .extend(&range!(94o))
+            .extend(&range!(95o))
+            .extend(&range!(96o))
+            .extend(&range!(97o))
+            .extend(&range!(98o));
+
+        let actual = range!(93o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn nine2o_plus() {
+        let expected = range!(92o)
+            .extend(&range!(93o))
+            .extend(&range!(94o))
+            .extend(&range!(95o))
+            .extend(&range!(96o))
+            .extend(&range!(97o))
+            .extend(&range!(98o));
+
+        let actual = range!(92o+);
 
         assert_eq!(expected, actual);
         assert!(actual.is_aligned());
