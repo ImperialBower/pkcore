@@ -1,4 +1,3 @@
-use crate::arrays::combos::twos::Twos;
 /// I want to get the tests right for this macro since it's going to be the foundation
 /// for all of the range analysis work.
 ///
@@ -19,6 +18,199 @@ macro_rules! range {
     (44) => { Twos::from($crate::arrays::combos::FOURS.to_vec()) };
     (33) => { Twos::from($crate::arrays::combos::TREYS.to_vec()) };
     (22) => { Twos::from($crate::arrays::combos::DEUCES.to_vec()) };
+
+    (KK+) => {
+        Twos::from($crate::arrays::combos::KK.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::AA.to_vec())
+        )
+    };
+    (QQ+) => {
+        Twos::from($crate::arrays::combos::QQ.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KK.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::AA.to_vec())
+            )
+        )
+    };
+    (JJ+) => {
+        Twos::from($crate::arrays::combos::JJ.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::QQ.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::KK.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::AA.to_vec())
+                )
+            )
+        )
+    };
+    (TT+) => {
+        Twos::from($crate::arrays::combos::TENS.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::JJ.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::QQ.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::KK.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::AA.to_vec())
+                    )
+                )
+            )
+        )
+    };
+    (99+) => {
+        Twos::from($crate::arrays::combos::NINES.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TENS.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::JJ.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::QQ.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::KK.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::AA.to_vec())
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (88+) => {
+        Twos::from($crate::arrays::combos::EIGHTS.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::NINES.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::TENS.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::JJ.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::QQ.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::KK.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::AA.to_vec())
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (77+) => {
+        Twos::from($crate::arrays::combos::SEVENS.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::EIGHTS.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::NINES.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::TENS.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::JJ.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::QQ.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::KK.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::AA.to_vec())
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (66+) => {
+        Twos::from($crate::arrays::combos::SIXES.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SEVENS.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::EIGHTS.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::NINES.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TENS.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::JJ.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::QQ.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::KK.to_vec()).extend(
+                                        &Twos::from($crate::arrays::combos::AA.to_vec())
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (55+) => {
+        Twos::from($crate::arrays::combos::FIVES.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SIXES.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::SEVENS.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::EIGHTS.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::NINES.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::TENS.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::JJ.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::QQ.to_vec()).extend(
+                                        &Twos::from($crate::arrays::combos::KK.to_vec()).extend(
+                                            &Twos::from($crate::arrays::combos::AA.to_vec())
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (44+) => {
+        Twos::from($crate::arrays::combos::FOURS.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::FIVES.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::SIXES.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::SEVENS.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::EIGHTS.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::NINES.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::TENS.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::JJ.to_vec()).extend(
+                                        &Twos::from($crate::arrays::combos::QQ.to_vec()).extend(
+                                            &Twos::from($crate::arrays::combos::KK.to_vec()).extend(
+                                                &Twos::from($crate::arrays::combos::AA.to_vec())
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (33+) => {
+        Twos::from($crate::arrays::combos::TREYS.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::FOURS.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::FIVES.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::SIXES.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::SEVENS.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::EIGHTS.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::NINES.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::TENS.to_vec()).extend(
+                                        &Twos::from($crate::arrays::combos::JJ.to_vec()).extend(
+                                            &Twos::from($crate::arrays::combos::QQ.to_vec()).extend(
+                                                &Twos::from($crate::arrays::combos::KK.to_vec()).extend(
+                                                    &Twos::from($crate::arrays::combos::AA.to_vec())
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (22+) => {
+        Twos::from($crate::arrays::combos::DEUCES.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::TREYS.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::FOURS.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::FIVES.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::SIXES.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::SEVENS.to_vec()).extend(
+                                &Twos::from($crate::arrays::combos::EIGHTS.to_vec()).extend(
+                                    &Twos::from($crate::arrays::combos::NINES.to_vec()).extend(
+                                        &Twos::from($crate::arrays::combos::TENS.to_vec()).extend(
+                                            &Twos::from($crate::arrays::combos::JJ.to_vec()).extend(
+                                                &Twos::from($crate::arrays::combos::QQ.to_vec()).extend(
+                                                    &Twos::from($crate::arrays::combos::KK.to_vec()).extend(
+                                                        &Twos::from($crate::arrays::combos::AA.to_vec())
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
 
     (AKs) => { Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec()) };
     (AKo) => { Twos::from($crate::arrays::combos::ACE_KING_OFFSUIT.to_vec()) };
@@ -555,8 +747,182 @@ mod tests {
     }
 
     #[test]
-    fn combine() {
-        let range = range!(AKs, AKo);
-        assert_eq!(range.hashset(), range!(AK).hashset());
+    fn kk_plus() {
+        let expected = range!(AA).extend(&range!(KK));
+
+        let actual = range!(KK+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn qq_plus() {
+        let expected = range!(AA).extend(&range!(KK)).extend(&range!(QQ));
+
+        let actual = range!(QQ+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn jj_plus() {
+        let expected = range!(AA).extend(&range!(KK)).extend(&range!(QQ)).extend(&range!(JJ));
+
+        let actual = range!(JJ+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn tt_plus() {
+        let expected = range!(AA)
+            .extend(&range!(KK))
+            .extend(&range!(QQ))
+            .extend(&range!(JJ))
+            .extend(&range!(TT));
+
+        let actual = range!(TT+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn nine_plus() {
+        let expected = range!(AA)
+            .extend(&range!(KK))
+            .extend(&range!(QQ))
+            .extend(&range!(JJ))
+            .extend(&range!(TT))
+            .extend(&range!(99));
+
+        let actual = range!(99+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn eight_plus() {
+        let expected = range!(AA)
+            .extend(&range!(KK))
+            .extend(&range!(QQ))
+            .extend(&range!(JJ))
+            .extend(&range!(TT))
+            .extend(&range!(99))
+            .extend(&range!(88));
+
+        let actual = range!(88+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn seven_plus() {
+        let expected = range!(AA)
+            .extend(&range!(KK))
+            .extend(&range!(QQ))
+            .extend(&range!(JJ))
+            .extend(&range!(TT))
+            .extend(&range!(99))
+            .extend(&range!(88))
+            .extend(&range!(77));
+
+        let actual = range!(77+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn six_plus() {
+        let expected = range!(AA)
+            .extend(&range!(KK))
+            .extend(&range!(QQ))
+            .extend(&range!(JJ))
+            .extend(&range!(TT))
+            .extend(&range!(99))
+            .extend(&range!(88))
+            .extend(&range!(77))
+            .extend(&range!(66));
+
+        let actual = range!(66+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn five_plus() {
+        let expected = range!(AA)
+            .extend(&range!(KK))
+            .extend(&range!(QQ))
+            .extend(&range!(JJ))
+            .extend(&range!(TT))
+            .extend(&range!(99))
+            .extend(&range!(88))
+            .extend(&range!(77))
+            .extend(&range!(66))
+            .extend(&range!(55));
+
+        let actual = range!(55+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn four_plus() {
+        let expected = range!(AA)
+            .extend(&range!(KK))
+            .extend(&range!(QQ))
+            .extend(&range!(JJ))
+            .extend(&range!(TT))
+            .extend(&range!(99))
+            .extend(&range!(88))
+            .extend(&range!(77))
+            .extend(&range!(66))
+            .extend(&range!(55))
+            .extend(&range!(44));
+
+        let actual = range!(44+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn three_plus() {
+        let expected = range!(AA)
+            .extend(&range!(KK))
+            .extend(&range!(QQ))
+            .extend(&range!(JJ))
+            .extend(&range!(TT))
+            .extend(&range!(99))
+            .extend(&range!(88))
+            .extend(&range!(77))
+            .extend(&range!(66))
+            .extend(&range!(55))
+            .extend(&range!(44))
+            .extend(&range!(33));
+
+        let actual = range!(33+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn two_plus() {
+        let expected = range!(AA)
+            .extend(&range!(KK))
+            .extend(&range!(QQ))
+            .extend(&range!(JJ))
+            .extend(&range!(TT))
+            .extend(&range!(99))
+            .extend(&range!(88))
+            .extend(&range!(77))
+            .extend(&range!(66))
+            .extend(&range!(55))
+            .extend(&range!(44))
+            .extend(&range!(33))
+            .extend(&range!(22));
+
+        let actual = range!(22+);
+
+        assert_eq!(expected, actual);
     }
 }

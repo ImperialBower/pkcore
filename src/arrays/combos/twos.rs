@@ -29,6 +29,7 @@ impl Twos {
     pub fn extend(&self, other: &Self) -> Self {
         let mut twos = self.clone();
         twos.0.extend(other.iter().copied());
+        twos.sort();
         twos
     }
 
@@ -94,6 +95,10 @@ impl Twos {
 
     pub fn iter(&self) -> std::slice::Iter<Two> {
         self.0.iter()
+    }
+
+    pub fn sort(&mut self) {
+        self.0.sort();
     }
 }
 

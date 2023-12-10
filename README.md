@@ -787,8 +787,9 @@
         * arrays::combos::twos::Twos
         * REFACTOR: Ranges to return Twos
       * Ranges: Finished basic range macro... now need to work on combining them
-        * FEATURE: Twos + 
         * DEFECT: hopefully fixed https://github.com/rust-lang/rust/pull/52234
+        * FEATURE: Twos + 
+          * Twos pairs +
 
 ## LATER
 
