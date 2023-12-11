@@ -2445,8 +2445,365 @@ macro_rules! range {
         )
     };
 
+    (86+) => {
+        Twos::from($crate::arrays::combos::EIGHT_SIX.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::EIGHT_SEVEN.to_vec())
+        )
+    };
+    (85+) => {
+        Twos::from($crate::arrays::combos::EIGHT_FIVE.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::EIGHT_SIX.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::EIGHT_SEVEN.to_vec())
+            )
+        )
+    };
+    (84+) => {
+        Twos::from($crate::arrays::combos::EIGHT_FOUR.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::EIGHT_FIVE.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::EIGHT_SIX.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::EIGHT_SEVEN.to_vec())
+                )
+            )
+        )
+    };
+    (83+) => {
+        Twos::from($crate::arrays::combos::EIGHT_TREY.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::EIGHT_FOUR.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::EIGHT_FIVE.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::EIGHT_SIX.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::EIGHT_SEVEN.to_vec())
+                    )
+                )
+            )
+        )
+    };
+    (8x) => {
+        Twos::from($crate::arrays::combos::EIGHT_DEUCE.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::EIGHT_TREY.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::EIGHT_FOUR.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::EIGHT_FIVE.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::EIGHT_SIX.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::EIGHT_SEVEN.to_vec())
+                        )
+                    )
+                )
+            )
+        )
+    };
 
+    (86s+) => {
+        Twos::from($crate::arrays::combos::EIGHT_SIX_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::EIGHT_SEVEN_SUITED.to_vec())
+        )
+    };
+    (85s+) => {
+        Twos::from($crate::arrays::combos::EIGHT_FIVE_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::EIGHT_SIX_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::EIGHT_SEVEN_SUITED.to_vec())
+            )
+        )
+    };
+    (84s+) => {
+        Twos::from($crate::arrays::combos::EIGHT_FOUR_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::EIGHT_FIVE_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::EIGHT_SIX_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::EIGHT_SEVEN_SUITED.to_vec())
+                )
+            )
+        )
+    };
+    (83s+) => {
+        Twos::from($crate::arrays::combos::EIGHT_TREY_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::EIGHT_FOUR_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::EIGHT_FIVE_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::EIGHT_SIX_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::EIGHT_SEVEN_SUITED.to_vec())
+                    )
+                )
+            )
+        )
+    };
+    (82s+) => {
+        Twos::from($crate::arrays::combos::EIGHT_DEUCE_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::EIGHT_TREY_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::EIGHT_FOUR_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::EIGHT_FIVE_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::EIGHT_SIX_SUITED.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::EIGHT_SEVEN_SUITED.to_vec())
+                        )
+                    )
+                )
+            )
+        )
+    };
 
+(86o+) => {
+        Twos::from($crate::arrays::combos::EIGHT_SIX_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::EIGHT_SEVEN_OFFSUIT.to_vec())
+        )
+    };
+    (85o+) => {
+        Twos::from($crate::arrays::combos::EIGHT_FIVE_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::EIGHT_SIX_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::EIGHT_SEVEN_OFFSUIT.to_vec())
+            )
+        )
+    };
+    (84o+) => {
+        Twos::from($crate::arrays::combos::EIGHT_FOUR_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::EIGHT_FIVE_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::EIGHT_SIX_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::EIGHT_SEVEN_OFFSUIT.to_vec())
+                )
+            )
+        )
+    };
+    (83o+) => {
+        Twos::from($crate::arrays::combos::EIGHT_TREY_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::EIGHT_FOUR_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::EIGHT_FIVE_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::EIGHT_SIX_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::EIGHT_SEVEN_OFFSUIT.to_vec())
+                    )
+                )
+            )
+        )
+    };
+    (82o+) => {
+        Twos::from($crate::arrays::combos::EIGHT_DEUCE_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::EIGHT_TREY_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::EIGHT_FOUR_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::EIGHT_FIVE_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::EIGHT_SIX_OFFSUIT.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::EIGHT_SEVEN_OFFSUIT.to_vec())
+                        )
+                    )
+                )
+            )
+        )
+    };
+
+    (75+) => {
+        Twos::from($crate::arrays::combos::SEVEN_FIVE.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SEVEN_SIX.to_vec())
+        )
+    };
+    (74+) => {
+        Twos::from($crate::arrays::combos::SEVEN_FOUR.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SEVEN_FIVE.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::SEVEN_SIX.to_vec())
+            )
+        )
+    };
+    (73+) => {
+        Twos::from($crate::arrays::combos::SEVEN_TREY.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SEVEN_FOUR.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::SEVEN_FIVE.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::SEVEN_SIX.to_vec())
+                )
+            )
+        )
+    };
+    (7x) => {
+        Twos::from($crate::arrays::combos::SEVEN_DEUCE.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SEVEN_TREY.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::SEVEN_FOUR.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::SEVEN_FIVE.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::SEVEN_SIX.to_vec())
+                    )
+                )
+            )
+        )
+    };
+
+    (75s+) => {
+        Twos::from($crate::arrays::combos::SEVEN_FIVE_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SEVEN_SIX_SUITED.to_vec())
+        )
+    };
+    (74s+) => {
+        Twos::from($crate::arrays::combos::SEVEN_FOUR_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SEVEN_FIVE_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::SEVEN_SIX_SUITED.to_vec())
+            )
+        )
+    };
+    (73s+) => {
+        Twos::from($crate::arrays::combos::SEVEN_TREY_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SEVEN_FOUR_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::SEVEN_FIVE_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::SEVEN_SIX_SUITED.to_vec())
+                )
+            )
+        )
+    };
+    (72s+) => {
+        Twos::from($crate::arrays::combos::SEVEN_DEUCE_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SEVEN_TREY_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::SEVEN_FOUR_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::SEVEN_FIVE_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::SEVEN_SIX_SUITED.to_vec())
+                    )
+                )
+            )
+        )
+    };
+
+    (75o+) => {
+        Twos::from($crate::arrays::combos::SEVEN_FIVE_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SEVEN_SIX_OFFSUIT.to_vec())
+        )
+    };
+    (74o+) => {
+        Twos::from($crate::arrays::combos::SEVEN_FOUR_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SEVEN_FIVE_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::SEVEN_SIX_OFFSUIT.to_vec())
+            )
+        )
+    };
+    (73o+) => {
+        Twos::from($crate::arrays::combos::SEVEN_TREY_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SEVEN_FOUR_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::SEVEN_FIVE_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::SEVEN_SIX_OFFSUIT.to_vec())
+                )
+            )
+        )
+    };
+    (72o+) => {
+        Twos::from($crate::arrays::combos::SEVEN_DEUCE_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SEVEN_TREY_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::SEVEN_FOUR_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::SEVEN_FIVE_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::SEVEN_SIX_OFFSUIT.to_vec())
+                    )
+                )
+            )
+        )
+    };
+
+    (64+) => {
+        Twos::from($crate::arrays::combos::SIX_FOUR.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SIX_FIVE.to_vec())
+        )
+    };
+    (63+) => {
+        Twos::from($crate::arrays::combos::SIX_TREY.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SIX_FOUR.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::SIX_FIVE.to_vec())
+            )
+        )
+    };
+    (6x) => {
+        Twos::from($crate::arrays::combos::SIX_DEUCE.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SIX_TREY.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::SIX_FOUR.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::SIX_FIVE.to_vec())
+                )
+            )
+        )
+    };
+
+    (64s+) => {
+        Twos::from($crate::arrays::combos::SIX_FOUR_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SIX_FIVE_SUITED.to_vec())
+        )
+    };
+    (63s+) => {
+        Twos::from($crate::arrays::combos::SIX_TREY_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SIX_FOUR_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::SIX_FIVE_SUITED.to_vec())
+            )
+        )
+    };
+    (62s+) => {
+        Twos::from($crate::arrays::combos::SIX_DEUCE_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SIX_TREY_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::SIX_FOUR_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::SIX_FIVE_SUITED.to_vec())
+                )
+            )
+        )
+    };
+
+    (64o+) => {
+        Twos::from($crate::arrays::combos::SIX_FOUR_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SIX_FIVE_OFFSUIT.to_vec())
+        )
+    };
+    (63o+) => {
+        Twos::from($crate::arrays::combos::SIX_TREY_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SIX_FOUR_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::SIX_FIVE_OFFSUIT.to_vec())
+            )
+        )
+    };
+    (62o+) => {
+        Twos::from($crate::arrays::combos::SIX_DEUCE_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::SIX_TREY_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::SIX_FOUR_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::SIX_FIVE_OFFSUIT.to_vec())
+                )
+            )
+        )
+    };
+
+    (53+) => {
+        Twos::from($crate::arrays::combos::FIVE_TREY.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::FIVE_FOUR.to_vec())
+        )
+    };
+    (5x) => {
+        Twos::from($crate::arrays::combos::FIVE_DEUCE.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::FIVE_TREY.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::FIVE_FOUR.to_vec())
+            )
+        )
+    };
+
+    (53s+) => {
+        Twos::from($crate::arrays::combos::FIVE_TREY_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::FIVE_FOUR_SUITED.to_vec())
+        )
+    };
+    (52s+) => {
+        Twos::from($crate::arrays::combos::FIVE_DEUCE_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::FIVE_TREY_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::FIVE_FOUR_SUITED.to_vec())
+            )
+        )
+    };
+
+    (53o+) => {
+        Twos::from($crate::arrays::combos::FIVE_TREY_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::FIVE_FOUR_OFFSUIT.to_vec())
+        )
+    };
+    (52o+) => {
+        Twos::from($crate::arrays::combos::FIVE_DEUCE_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::FIVE_TREY_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::FIVE_FOUR_OFFSUIT.to_vec())
+            )
+        )
+    };
+
+    (4x) => {
+        Twos::from($crate::arrays::combos::FOUR_DEUCE.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::FOUR_TREY.to_vec())
+        )
+    };
+
+    (42s+) => {
+        Twos::from($crate::arrays::combos::FOUR_DEUCE_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::FOUR_TREY_SUITED.to_vec())
+        )
+    };
+
+    (42o+) => {
+        Twos::from($crate::arrays::combos::FOUR_DEUCE_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::FOUR_TREY_OFFSUIT.to_vec())
+        )
+    };
 
     // TODO: Work in Progress
     // [$($x:tt),* $(,)?] => {
@@ -4831,6 +5188,513 @@ mod tests {
             .extend(&range!(98o));
 
         let actual = range!(92o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn eight6_plus() {
+        let expected = range!(86).extend(&range!(87));
+
+        let actual = range!(86+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn eight5_plus() {
+        let expected = range!(85).extend(&range!(86)).extend(&range!(87));
+
+        let actual = range!(85+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn eight4_plus() {
+        let expected = range!(84).extend(&range!(85)).extend(&range!(86)).extend(&range!(87));
+
+        let actual = range!(84+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn eight3_plus() {
+        let expected = range!(83)
+            .extend(&range!(84))
+            .extend(&range!(85))
+            .extend(&range!(86))
+            .extend(&range!(87));
+
+        let actual = range!(83+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn eightx_plus() {
+        let expected = range!(82)
+            .extend(&range!(83))
+            .extend(&range!(84))
+            .extend(&range!(85))
+            .extend(&range!(86))
+            .extend(&range!(87));
+
+        let actual = range!(8x);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn eight6s_plus() {
+        let expected = range!(86s).extend(&range!(87s));
+
+        let actual = range!(86s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn eight5s_plus() {
+        let expected = range!(85s).extend(&range!(86s)).extend(&range!(87s));
+
+        let actual = range!(85s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn eight4s_plus() {
+        let expected = range!(84s)
+            .extend(&range!(85s))
+            .extend(&range!(86s))
+            .extend(&range!(87s));
+
+        let actual = range!(84s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn eight3s_plus() {
+        let expected = range!(83s)
+            .extend(&range!(84s))
+            .extend(&range!(85s))
+            .extend(&range!(86s))
+            .extend(&range!(87s));
+
+        let actual = range!(83s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn eight2s_plus() {
+        let expected = range!(82s)
+            .extend(&range!(83s))
+            .extend(&range!(84s))
+            .extend(&range!(85s))
+            .extend(&range!(86s))
+            .extend(&range!(87s));
+
+        let actual = range!(82s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn eight6o_plus() {
+        let expected = range!(86o).extend(&range!(87o));
+
+        let actual = range!(86o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn eight5o_plus() {
+        let expected = range!(85o).extend(&range!(86o)).extend(&range!(87o));
+
+        let actual = range!(85o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn eight4o_plus() {
+        let expected = range!(84o)
+            .extend(&range!(85o))
+            .extend(&range!(86o))
+            .extend(&range!(87o));
+
+        let actual = range!(84o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn eight3o_plus() {
+        let expected = range!(83o)
+            .extend(&range!(84o))
+            .extend(&range!(85o))
+            .extend(&range!(86o))
+            .extend(&range!(87o));
+
+        let actual = range!(83o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn eight2o_plus() {
+        let expected = range!(82o)
+            .extend(&range!(83o))
+            .extend(&range!(84o))
+            .extend(&range!(85o))
+            .extend(&range!(86o))
+            .extend(&range!(87o));
+
+        let actual = range!(82o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn seven5_plus() {
+        let expected = range!(75).extend(&range!(76));
+
+        let actual = range!(75+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn seven4_plus() {
+        let expected = range!(74).extend(&range!(75)).extend(&range!(76));
+
+        let actual = range!(74+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn seven3_plus() {
+        let expected = range!(73).extend(&range!(74)).extend(&range!(75)).extend(&range!(76));
+
+        let actual = range!(73+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn sevenx_plus() {
+        let expected = range!(72)
+            .extend(&range!(73))
+            .extend(&range!(74))
+            .extend(&range!(75))
+            .extend(&range!(76));
+
+        let actual = range!(7x);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn seven5s_plus() {
+        let expected = range!(75s).extend(&range!(76s));
+
+        let actual = range!(75s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn seven4s_plus() {
+        let expected = range!(74s).extend(&range!(75s)).extend(&range!(76s));
+
+        let actual = range!(74s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn seven3s_plus() {
+        let expected = range!(73s)
+            .extend(&range!(74s))
+            .extend(&range!(75s))
+            .extend(&range!(76s));
+
+        let actual = range!(73s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn seven2s_plus() {
+        let expected = range!(72s)
+            .extend(&range!(73s))
+            .extend(&range!(74s))
+            .extend(&range!(75s))
+            .extend(&range!(76s));
+
+        let actual = range!(72s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn seven5o_plus() {
+        let expected = range!(75o).extend(&range!(76o));
+
+        let actual = range!(75o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn seven4o_plus() {
+        let expected = range!(74o).extend(&range!(75o)).extend(&range!(76o));
+
+        let actual = range!(74o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn seven3o_plus() {
+        let expected = range!(73o)
+            .extend(&range!(74o))
+            .extend(&range!(75o))
+            .extend(&range!(76o));
+
+        let actual = range!(73o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn seven2o_plus() {
+        let expected = range!(72o)
+            .extend(&range!(73o))
+            .extend(&range!(74o))
+            .extend(&range!(75o))
+            .extend(&range!(76o));
+
+        let actual = range!(72o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn six4_plus() {
+        let expected = range!(64).extend(&range!(65));
+
+        let actual = range!(64+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn six3_plus() {
+        let expected = range!(63).extend(&range!(64)).extend(&range!(65));
+
+        let actual = range!(63+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn sixx_plus() {
+        let expected = range!(62).extend(&range!(63)).extend(&range!(64)).extend(&range!(65));
+
+        let actual = range!(6x);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn six4s_plus() {
+        let expected = range!(64s).extend(&range!(65s));
+
+        let actual = range!(64s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn six3s_plus() {
+        let expected = range!(63s).extend(&range!(64s)).extend(&range!(65s));
+
+        let actual = range!(63s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn six2s_plus() {
+        let expected = range!(62s)
+            .extend(&range!(63s))
+            .extend(&range!(64s))
+            .extend(&range!(65s));
+
+        let actual = range!(62s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn six4o_plus() {
+        let expected = range!(64o).extend(&range!(65o));
+
+        let actual = range!(64o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn six3o_plus() {
+        let expected = range!(63o).extend(&range!(64o)).extend(&range!(65o));
+
+        let actual = range!(63o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn six2o_plus() {
+        let expected = range!(62o)
+            .extend(&range!(63o))
+            .extend(&range!(64o))
+            .extend(&range!(65o));
+
+        let actual = range!(62o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn five3_plus() {
+        let expected = range!(53).extend(&range!(54));
+
+        let actual = range!(53+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn fivex_plus() {
+        let expected = range!(52).extend(&range!(53)).extend(&range!(54));
+
+        let actual = range!(5x);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn five3s_plus() {
+        let expected = range!(53s).extend(&range!(54s));
+
+        let actual = range!(53s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn five2s_plus() {
+        let expected = range!(52s).extend(&range!(53s)).extend(&range!(54s));
+
+        let actual = range!(52s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn five3o_plus() {
+        let expected = range!(53o).extend(&range!(54o));
+
+        let actual = range!(53o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn five2o_plus() {
+        let expected = range!(52o).extend(&range!(53o)).extend(&range!(54o));
+
+        let actual = range!(52o+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn fourx_plus() {
+        let expected = range!(42).extend(&range!(43));
+
+        let actual = range!(4x);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn fourxs_plus() {
+        let expected = range!(42s).extend(&range!(43s));
+
+        let actual = range!(42s+);
+
+        assert_eq!(expected, actual);
+        assert!(actual.is_aligned());
+    }
+
+    #[test]
+    fn fourxo_plus() {
+        let expected = range!(42o).extend(&range!(43o));
+
+        let actual = range!(42o+);
 
         assert_eq!(expected, actual);
         assert!(actual.is_aligned());
