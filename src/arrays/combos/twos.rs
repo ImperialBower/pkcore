@@ -39,6 +39,11 @@ impl Twos {
     }
 
     #[must_use]
+    pub fn filter_on_not_card(&self, card: Card) -> Self {
+        Self(self.iter().filter(|two| !two.contains_card(card)).copied().collect())
+    }
+
+    #[must_use]
     pub fn filter_is_paired(&self) -> Self {
         Self(self.iter().filter(|two| two.is_pair()).copied().collect())
     }
@@ -117,6 +122,7 @@ impl From<Vec<Two>> for Twos {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod arrays__combos__twos_tests {
+    use crate::arrays::combos::AA;
     use super::*;
 
     #[test]
@@ -207,6 +213,15 @@ mod arrays__combos__twos_tests {
         assert_eq!(1, twos.filter_on_card(Card::NINE_DIAMONDS).len());
         assert_eq!(2, twos.filter_on_card(Card::TEN_DIAMONDS).len());
         assert_eq!(51, unique.filter_on_card(Card::ACE_CLUBS).len());
+    }
+
+    #[test]
+    fn filter_on_not_card() {
+        let aces = Twos::from(AA.to_vec());
+
+        let remaining = aces.filter_on_not_card(Card::ACE_CLUBS);
+
+        assert_eq!(3, remaining.len());
     }
 
     #[test]

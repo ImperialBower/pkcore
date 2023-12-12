@@ -2537,7 +2537,7 @@ macro_rules! range {
         )
     };
 
-(86o+) => {
+    (86o+) => {
         Twos::from($crate::arrays::combos::EIGHT_SIX_OFFSUIT.to_vec()).extend(
             &Twos::from($crate::arrays::combos::EIGHT_SEVEN_OFFSUIT.to_vec())
         )
@@ -2804,19 +2804,6 @@ macro_rules! range {
             &Twos::from($crate::arrays::combos::FOUR_TREY_OFFSUIT.to_vec())
         )
     };
-
-    // TODO: Work in Progress
-    // [$($x:tt),* $(,)?] => {
-    // [$($x:tt),* ] => {
-    //     {
-    //         let mut v = Twos::default();
-    //         $(
-    //             let extended = range!($x);
-    //             v.extend($x);
-    //         )*
-    //         v
-    //     }
-    // };
 }
 
 #[cfg(test)]
