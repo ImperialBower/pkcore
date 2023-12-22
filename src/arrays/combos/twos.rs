@@ -1,6 +1,8 @@
+use std::str::FromStr;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::deck::POKER_DECK;
+use crate::PKError;
 use crate::rank::Rank;
 use crate::suit::Suit;
 
@@ -105,6 +107,13 @@ impl Twos {
     pub fn sort(&mut self) {
         self.0.sort();
     }
+
+    // region private functions
+    fn parse_individual_range(s: &str) -> Result<Self, PKError> {
+        let mut twos = Self::default();
+        todo!();
+    }
+    // endregion
 }
 
 impl From<std::collections::HashSet<Two>> for Twos {
@@ -116,6 +125,19 @@ impl From<std::collections::HashSet<Two>> for Twos {
 impl From<Vec<Two>> for Twos {
     fn from(twos: Vec<Two>) -> Self {
         Self(twos)
+    }
+}
+
+impl FromStr for Twos {
+    type Err = PKError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut twos = Self::default();
+        for two in s.split(',') {
+            twos.0.push(two.parse()?);
+        }
+        twos.sort();
+        Ok(twos)
     }
 }
 
