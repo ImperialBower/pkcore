@@ -1,10 +1,10 @@
-use std::str::FromStr;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::deck::POKER_DECK;
-use crate::PKError;
 use crate::rank::Rank;
 use crate::suit::Suit;
+use crate::PKError;
+use std::str::FromStr;
 
 /// This struct is to deal with the fact that the `arrays::Two` struct is getting overloaded with
 /// functionality that is really about combinations of `Two` structs.
@@ -109,6 +109,7 @@ impl Twos {
     }
 
     // region private functions
+    #[allow(clippy::too_many_lines)]
     fn parse_individual_range(raw: &str) -> Result<Self, PKError> {
         let twos = match raw.trim().to_ascii_uppercase().as_str() {
             "AA" => range!(AA),
@@ -373,8 +374,7 @@ impl Twos {
 
             _ => return Err(PKError::InvalidIndex),
         };
-        return Ok(twos);
-
+        Ok(twos)
     }
     // endregion
 }
@@ -407,8 +407,9 @@ impl FromStr for Twos {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod arrays__combos__twos_tests {
-    use crate::arrays::combos::AA;
     use super::*;
+    use crate::arrays::combos::AA;
+    use rstest::rstest;
 
     #[test]
     fn unique() {
@@ -612,5 +613,48 @@ mod arrays__combos__twos_tests {
     fn is_empty() {
         assert!(Twos::default().is_empty());
         assert!(!Twos::from(vec![Two::HAND_TD_5D]).is_empty());
+    }
+
+    #[test]
+    fn parse_individual_range_capitalization() {
+        assert_eq!(range!(KK+), Twos::parse_individual_range("KK+").unwrap());
+        assert_eq!(range!(KK+), Twos::parse_individual_range("Kk+").unwrap());
+        assert_eq!(range!(KK+), Twos::parse_individual_range("kK+").unwrap());
+        assert_eq!(range!(KK+), Twos::parse_individual_range("kk+").unwrap());
+        assert_eq!(range!(KK+), Twos::parse_individual_range(" kk+").unwrap());
+        assert_eq!(range!(KK+), Twos::parse_individual_range(" kk+  ").unwrap());
+        assert_eq!(range!(KK+), Twos::parse_individual_range(" kk+   ").unwrap());
+    }
+
+    #[rstest]
+    #[case("AA", range!(AA))]
+    #[case("KK", range!(KK))]
+    #[case("QQ", range!(QQ))]
+    #[case("JJ", range!(JJ))]
+    #[case("TT", range!(TT))]
+    #[case("99", range!(99))]
+    #[case("88", range!(88))]
+    #[case("77", range!(77))]
+    #[case("66", range!(66))]
+    #[case("55", range!(55))]
+    #[case("44", range!(44))]
+    #[case("33", range!(33))]
+    #[case("22", range!(22))]
+    #[case("KK+", range!(KK+))]
+    #[case("QQ+", range!(QQ+))]
+    #[case("JJ+", range!(JJ+))]
+    #[case("TT+", range!(TT+))]
+    #[case("99+", range!(99+))]
+    #[case("88+", range!(88+))]
+    #[case("77+", range!(77+))]
+    #[case("66+", range!(66+))]
+    #[case("55+", range!(55+))]
+    #[case("44+", range!(44+))]
+    #[case("33+", range!(33+))]
+    #[case("22+", range!(22+))]
+    #[case("AK", range!(AK))]
+    #[case("AKS", range!(AKs))]
+    fn parse_individual_range(#[case] raw: &str, #[case] expected: Twos) {
+        assert_eq!(expected, Twos::parse_individual_range(raw).unwrap());
     }
 }
