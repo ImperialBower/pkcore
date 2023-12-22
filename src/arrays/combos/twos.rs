@@ -396,8 +396,11 @@ impl FromStr for Twos {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut twos = Self::default();
-        for two in s.split(',') {
-            twos.0.push(two.parse()?);
+        for raw in s.split(',') {
+            match Twos::parse_individual_range(raw) {
+                Ok(range) => twos = twos.extend(&range),
+                Err(_) => return Err(PKError::InvalidIndex),
+            };
         }
         twos.sort();
         Ok(twos)
@@ -656,5 +659,13 @@ mod arrays__combos__twos_tests {
     #[case("AKS", range!(AKs))]
     fn parse_individual_range(#[case] raw: &str, #[case] expected: Twos) {
         assert_eq!(expected, Twos::parse_individual_range(raw).unwrap());
+    }
+
+    #[test]
+    fn from_str() {
+        assert_eq!(range!(AA), Twos::from_str("AA").unwrap());
+
+
+
     }
 }
