@@ -109,6 +109,7 @@ pub enum PKError {
     SqlError,
     TooManyCards,
     TooManyHands,
+    InvalidTwo(String),
 }
 
 pub trait Betting {
