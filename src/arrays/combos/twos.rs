@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fmt::Display;
 use crate::arrays::two::Two;
 use crate::card::Card;
@@ -14,8 +15,8 @@ use std::str::FromStr;
 ///
 /// * [Texas hold 'em starting hands](https://en.wikipedia.org/wiki/Texas_hold_%27em_starting_hands)
 /// * [Texas Hold’em Poker Odds (over 100 Poker Probabilities)](https://www.primedope.com/texas-holdem-poker-probabilities-odds/)
-#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
-pub struct Twos(Vec<Two>);
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct Twos(HashSet<Two>);
 
 pub const RANGE_MATRIX: [[&str; 13]; 13] = [
     ["AA", "AKs", "AQs", "AJs", "ATs", "A9s", "A8s", "A7s", "A6s", "A5s", "A4s", "A3s", "A2s"],
@@ -41,65 +42,64 @@ impl Twos {
 
     #[must_use]
     pub fn contains(&self, two: &Two) -> bool {
-        self.iter().any(|t| t == two)
+        self.0.contains(two)
     }
 
     #[must_use]
     pub fn extend(&self, other: &Self) -> Self {
         let mut twos = self.clone();
-        twos.0.extend(other.iter().copied());
-        twos.sort();
+        twos.0.extend(other.0.iter().copied());
         twos
     }
 
     #[must_use]
     pub fn filter_on_card(&self, card: Card) -> Self {
-        Self(self.iter().filter(|two| two.contains_card(card)).copied().collect())
+        Self(self.0.iter().filter(|two| two.contains_card(card)).copied().collect())
     }
 
     #[must_use]
     pub fn filter_on_not_card(&self, card: Card) -> Self {
-        Self(self.iter().filter(|two| !two.contains_card(card)).copied().collect())
+        Self(self.0.iter().filter(|two| !two.contains_card(card)).copied().collect())
     }
 
     #[must_use]
     pub fn filter_is_paired(&self) -> Self {
-        Self(self.iter().filter(|two| two.is_pair()).copied().collect())
+        Self(self.0.iter().filter(|two| two.is_pair()).copied().collect())
     }
 
     #[must_use]
     pub fn filter_is_not_paired(&self) -> Self {
-        Self(self.iter().filter(|two| !two.is_pair()).copied().collect())
+        Self(self.0.iter().filter(|two| !two.is_pair()).copied().collect())
     }
 
     #[must_use]
     pub fn filter_is_suited(&self) -> Self {
-        Self(self.iter().filter(|two| two.is_suited()).copied().collect())
+        Self(self.0.iter().filter(|two| two.is_suited()).copied().collect())
     }
 
     #[must_use]
     pub fn filter_is_not_suited(&self) -> Self {
-        Self(self.iter().filter(|two| !two.is_suited()).copied().collect())
+        Self(self.0.iter().filter(|two| !two.is_suited()).copied().collect())
     }
 
     #[must_use]
     pub fn filter_on_rank(&self, rank: Rank) -> Self {
-        Self(self.iter().filter(|two| two.contains_rank(rank)).copied().collect())
+        Self(self.0.iter().filter(|two| two.contains_rank(rank)).copied().collect())
     }
 
     #[must_use]
     pub fn filter_on_suit(&self, suit: Suit) -> Self {
-        Self(self.iter().filter(|two| two.contains_suit(suit)).copied().collect())
+        Self(self.0.iter().filter(|two| two.contains_suit(suit)).copied().collect())
     }
 
     #[must_use]
-    pub fn hashset(&self) -> std::collections::HashSet<Two> {
-        self.iter().copied().collect::<std::collections::HashSet<Two>>()
+    pub fn hashset(&self) -> HashSet<Two> {
+        self.0.clone()
     }
 
     #[must_use]
     pub fn into_iter(self) -> std::vec::IntoIter<Two> {
-        self.0.into_iter()
+        Vec::from_iter(self.0).into_iter()
     }
 
     #[must_use]
@@ -108,27 +108,16 @@ impl Twos {
     }
 
     #[must_use]
-    pub fn is_aligned(&self) -> bool {
-        self.len() == self.hashset().len()
-    }
-
-    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
-    pub fn iter(&self) -> std::slice::Iter<Two> {
-        self.0.iter()
+    pub fn to_vec(&self) -> Vec<Two> {
+        let mut v: Vec<Two> = self.0.iter().copied().collect();
+        v.sort();
+        v.reverse();
+        v
     }
-
-    pub fn reverse(&mut self) {
-        self.0.reverse();
-    }
-
-    pub fn sort(&mut self) {
-        self.0.sort();
-    }
-
     // region private functions
     #[allow(clippy::too_many_lines)]
     fn parse_individual_range(raw: &str) -> Result<Self, PKError> {
@@ -408,8 +397,7 @@ impl From<std::collections::HashSet<Two>> for Twos {
 
 impl From<Vec<Two>> for Twos {
     fn from(twos: Vec<Two>) -> Self {
-
-        Self(twos)
+        Self(twos.into_iter().collect())
     }
 }
 
@@ -424,8 +412,6 @@ impl FromStr for Twos {
                 Err(_) => return Err(PKError::InvalidIndex),
             };
         }
-        twos.sort();
-        twos.reverse();
         Ok(twos)
     }
 }
@@ -433,7 +419,7 @@ impl FromStr for Twos {
 impl Display for Twos {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut output = String::new();
-        for (i, two) in self.iter().enumerate() {
+        for (i, two) in self.to_vec().iter().enumerate() {
             // println!("{two}");
             output.push_str(&format!("{}", two));
             if i < self.len() - 1 {
@@ -476,12 +462,11 @@ mod arrays__combos__twos_tests {
 
         let aces_and_kings = aces.extend(&kings);
 
-        assert!(aces_and_kings.is_aligned());
         assert_eq!(length, aces_and_kings.len());
-        for ace in aces.iter() {
+        for ace in aces.0.iter() {
             assert!(aces_and_kings.contains(ace));
         }
-        for kk in kings.iter() {
+        for kk in kings.0.iter() {
             assert!(aces_and_kings.contains(kk));
         }
     }
@@ -494,7 +479,6 @@ mod arrays__combos__twos_tests {
 
         // 13 x 6 = 78
         assert_eq!(crate::UNIQUE_POCKET_PAIRS, pocket_pairs.len());
-        assert!(pocket_pairs.is_aligned());
     }
 
     #[test]
@@ -505,7 +489,6 @@ mod arrays__combos__twos_tests {
 
         // 1,326 - 78 = 1,248
         assert_eq!(crate::UNIQUE_NON_POCKET_PAIRS, non_pocket_pairs.len());
-        assert!(non_pocket_pairs.is_aligned());
     }
 
     #[test]
@@ -516,7 +499,6 @@ mod arrays__combos__twos_tests {
 
         // 4 x 78 = 312
         assert_eq!(312, suited.len());
-        assert!(suited.is_aligned());
     }
 
     #[test]
@@ -527,7 +509,6 @@ mod arrays__combos__twos_tests {
 
         // 1,326 - 312 = 1,014
         assert_eq!(1014, non_suited.len());
-        assert!(non_suited.is_aligned());
     }
 
     #[test]
@@ -611,7 +592,6 @@ mod arrays__combos__twos_tests {
             crate::UNIQUE_PER_RANK_2_CARD_HANDS,
             unique.filter_on_rank(Rank::DEUCE).len()
         );
-        assert!(unique.filter_on_rank(Rank::DEUCE).is_aligned());
     }
 
     #[test]
@@ -640,13 +620,6 @@ mod arrays__combos__twos_tests {
             crate::UNIQUE_PER_SUIT_2_CARD_HANDS,
             unique.filter_on_suit(Suit::HEARTS).len()
         );
-        assert!(unique.filter_on_suit(Suit::CLUBS).is_aligned());
-    }
-
-    #[test]
-    fn is_aligned() {
-        assert!(Twos::from(vec![Two::HAND_TD_5D, Two::HAND_TS_9D]).is_aligned());
-        assert!(!Twos::from(vec![Two::HAND_TD_5D, Two::HAND_TD_5D]).is_aligned());
     }
 
     #[test]
@@ -659,9 +632,9 @@ mod arrays__combos__twos_tests {
     fn from__vec() {
         let v = AA.to_vec();
 
-        let actual = Twos::from(v.clone());
+        let actual = Twos::from(v.clone()).to_vec();
 
-        assert_eq!(v, actual.0);
+        assert_eq!(v, actual);
     }
 
     #[test]
@@ -710,11 +683,12 @@ mod arrays__combos__twos_tests {
     #[test]
     fn from_str() {
         assert_eq!(range!(22+).to_string(), Twos::from_str("22+").unwrap().to_string());
-        println!("{}", Twos::from_str("22+").unwrap());
-        // assert_eq!(range!(AA).to_string(), Twos::from_str("AA").unwrap().to_string());
-        // assert_eq!(range!(AA), Twos::from_str("AA").unwrap());
+        assert_eq!(range!(AA).to_string(), Twos::from_str("AA").unwrap().to_string());
+        assert_eq!(range!(AA), Twos::from_str("AA").unwrap());
+        assert_eq!(range!(76o), Twos::from_str("76O").unwrap());
 
+        assert_eq!(range!(KK+), Twos::from_str("KK, AA").unwrap());
 
-
+        assert_eq!(range!(KK+).extend(&range!(73s)), Twos::from_str("73s, KK+").unwrap());
     }
 }

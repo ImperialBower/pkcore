@@ -793,6 +793,7 @@
           * Twos::from_str()
             * Twos::parse_individual_range()
             * Twos::to_string()
+          * REFACTOR: Twos into Twos(HashSet<Two>)
 
 ## LATER
 
