@@ -790,6 +790,9 @@
         * DEFECT: hopefully fixed https://github.com/rust-lang/rust/pull/52234
         * FEATURE: Twos + 
           * Twos pairs +
+          * Twos::from_str()
+            * Twos::parse_individual_range()
+            * Twos::to_string()
 
 ## LATER
 
