@@ -63,7 +63,7 @@ impl Position6MaxPointer {
     /// I have discovered the [`FilterMap`](https://doc.rust-lang.org/std/iter/struct.FilterMap.html)
     /// for the first time.
     ///
-    /// The code that copilot generated is very helpful. It starts at c.get(). Once I started
+    /// The code that copilot generated is very helpful. It starts at `c.get()`. Once I started
     /// the idea, it ran with it. This pattern is really beautiful.
     ///
     /// ```txt

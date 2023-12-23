@@ -452,7 +452,7 @@ impl Display for Twos {
                 output.push_str(", ");
             }
         }
-        write!(f, "{}", output)
+        write!(f, "{output}")
     }
 }
 
