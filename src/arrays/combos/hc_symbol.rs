@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::str::FromStr;
 use crate::PKError;
 
@@ -7,7 +8,15 @@ use crate::PKError;
 pub struct HCSymbol(String);
 
 impl HCSymbol {
-    
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Display for HCSymbol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.0.to_string())
+    }
 }
 
 impl FromStr for HCSymbol {
@@ -28,18 +37,7 @@ impl FromStr for HCSymbol {
             "44" => "44",
             "33" => "33",
             "22" => "22",
-            "KK+" => "KK+",
-            "QQ+" => "QQ+",
-            "JJ+" => "JJ+",
-            "TT+" => "TT+",
-            "99+" => "99+",
-            "88+" => "88+",
-            "77+" => "77+",
-            "66+" => "66+",
-            "55+" => "55+",
-            "44+" => "44+",
-            "33+" => "33+",
-            "22+" => "22+",
+
             "AK" => "AK",
             "AKS" => "AKs",
             "AKO" => "AKo",
@@ -76,18 +74,7 @@ impl FromStr for HCSymbol {
             "A2" => "A2",
             "A2S" => "A2s",
             "A2O" => "A2o",
-            "AQ+" => "AQ+",
-            "AJ+" => "AJ+",
-            "AT+" => "AT+",
-            "A9+" => "A9+",
-            "A8+" => "A8+",
-            "A7+" => "A7+",
-            "A6+" => "A6+",
-            "A5+" => "A5+",
-            "A4+" => "A4+",
-            "A3+" => "A3+",
-            "A2+" => "Ax",
-            "AX" => "Ax",
+
             "KQ" => "KQ",
             "KQS" => "KQs",
             "KQO" => "KQo",
@@ -121,18 +108,7 @@ impl FromStr for HCSymbol {
             "K2" => "K2",
             "K2S" => "K2s",
             "K2O" => "K2o",
-            "KQ+" => "KQ+",
-            "KJ+" => "KJ+",
-            "KT+" => "KT+",
-            "K9+" => "K9+",
-            "K8+" => "K8+",
-            "K7+" => "K7+",
-            "K6+" => "K6+",
-            "K5+" => "K5+",
-            "K4+" => "K4+",
-            "K3+" => "K3+",
-            "K2+" => "Kx",
-            "KX"  => "Kx",
+
             "QJ" => "QJ",
             "QJS" => "QJs",
             "QJO" => "QJo",
@@ -298,6 +274,61 @@ impl FromStr for HCSymbol {
             "32" => "32",
             "32S" => "32s",
             "32O" => "32o",
+
+            // Multis
+            "KK+" => "KK+", // Multi pairs
+            "QQ+" => "QQ+",
+            "JJ+" => "JJ+",
+            "TT+" => "TT+",
+            "99+" => "99+",
+            "88+" => "88+",
+            "77+" => "77+",
+            "66+" => "66+",
+            "55+" => "55+",
+            "44+" => "44+",
+            "33+" => "33+",
+            "22+" => "22+",
+
+            "KQ+" => "KQ+",
+            "QJ+" => "QJ+",
+            "JT+" => "JT+",
+            "T9+" => "T9+",
+            "98+" => "98+",
+            "87+" => "87+",
+            "76+" => "76+",
+            "65+" => "65+",
+            "54+" => "54+",
+            "43+" => "43+",
+            "32+" => "32+",
+
+            "AQ+" => "AQ+", // Multi disconnected (includes connected top aka AK)
+            "AJ+" => "AJ+",
+            "AT+" => "AT+",
+            "A9+" => "A9+",
+            "A8+" => "A8+",
+            "A7+" => "A7+",
+            "A6+" => "A6+",
+            "A5+" => "A5+",
+            "A4+" => "A4+",
+            "A3+" => "A3+",
+            "A2+" => "Ax",
+            "AX" => "Ax",
+
+
+            "KJ+" => "KJ+",
+            "KT+" => "KT+",
+            "K9+" => "K9+",
+            "K8+" => "K8+",
+            "K7+" => "K7+",
+            "K6+" => "K6+",
+            "K5+" => "K5+",
+            "K4+" => "K4+",
+            "K3+" => "K3+",
+            "K2+" => "Kx",
+            "KX"  => "Kx",
+
+            "QT+" => "QT+",
+            "Q9+" => "Q9+",
 
             _ => return Err(PKError::InvalidIndex),
         };
