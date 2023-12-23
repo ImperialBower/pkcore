@@ -433,7 +433,7 @@ impl Game {
     ///
     /// # Refactoring.
     ///
-    /// Moved this to CaseEvals.wins(). Turns out we don't need it.
+    /// Moved this to `CaseEvals.wins()`. Turns out we don't need it.
     // #[must_use]
     // pub fn wins(&self) -> Wins {
     //     todo!()

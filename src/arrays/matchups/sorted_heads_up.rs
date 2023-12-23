@@ -458,7 +458,7 @@ impl SortedHeadsUp {
     /// ```
     ///
     /// I'm working with two kinds of errors: `std::error::Error` and my `PKError`. So, I will punt
-    /// and unwrap() like the lazy f I am. Really need to figure out a good way to deal with this.
+    /// and `unwrap()` like the lazy f I am. Really need to figure out a good way to deal with this.
     /// This would be so easy in Java. :-P
     ///
     /// Still, I think we've got it now...

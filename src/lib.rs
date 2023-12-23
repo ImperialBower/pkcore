@@ -2,7 +2,8 @@
 #![allow(
     clippy::unreadable_literal,
     clippy::iter_without_into_iter,
-    clippy::should_implement_trait
+    clippy::should_implement_trait,
+    // macro_expanded_macro_exports_accessed_by_absolute_paths,
 )]
 
 extern crate core;
@@ -108,6 +109,7 @@ pub enum PKError {
     SqlError,
     TooManyCards,
     TooManyHands,
+    InvalidTwo(String),
 }
 
 pub trait Betting {
