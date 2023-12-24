@@ -3,8 +3,8 @@ pub mod ranges;
 
 use crate::arrays::two::Two;
 
+pub mod hc_symbol;
 pub mod twos;
-mod hc_symbol;
 
 // region hand range array constants
 // region pocket pair range array constants

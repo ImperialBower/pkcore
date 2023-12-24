@@ -1,6 +1,6 @@
+use crate::PKError;
 use std::fmt::Display;
 use std::str::FromStr;
-use crate::PKError;
 
 /// Struct representing a hand combination symbol, aka AKs or 99+. A subset of strings that
 /// can represent a hand combination.
@@ -8,6 +8,7 @@ use crate::PKError;
 pub struct HCSymbol(String);
 
 impl HCSymbol {
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -22,6 +23,7 @@ impl Display for HCSymbol {
 impl FromStr for HCSymbol {
     type Err = PKError;
 
+    #[allow(clippy::too_many_lines)]
     fn from_str(raw: &str) -> Result<Self, Self::Err> {
         let s = match raw.trim().to_ascii_uppercase().as_str() {
             "AA" => "AA",
@@ -301,6 +303,30 @@ impl FromStr for HCSymbol {
             "43+" => "43+",
             "32+" => "32+",
 
+            "KQS+" => "KQs+", // Multi connector suited
+            "QJS+" => "QJs+",
+            "JTS+" => "JTs+",
+            "T9S+" => "T9s+",
+            "98S+" => "98s+",
+            "87S+" => "87s+",
+            "76S+" => "76s+",
+            "65S+" => "65s+",
+            "54S+" => "54s+",
+            "43S+" => "43s+",
+            "32S+" => "32s+",
+
+            "KQO+" => "KQo+", // Multi connector offsuit
+            "QJO+" => "QJo+",
+            "JTO+" => "JTo+",
+            "T9O+" => "T9o+",
+            "98O+" => "98o+",
+            "87O+" => "87o+",
+            "76O+" => "76o+",
+            "65O+" => "65o+",
+            "54O+" => "54o+",
+            "43O+" => "43o+",
+            "32O+" => "32o+",
+
             "AQ+" => "AQ+", // Multi disconnected (includes connected top aka AK)
             "AJ+" => "AJ+",
             "AT+" => "AT+",
@@ -311,9 +337,7 @@ impl FromStr for HCSymbol {
             "A5+" => "A5+",
             "A4+" => "A4+",
             "A3+" => "A3+",
-            "A2+" => "Ax",
-            "AX" => "Ax",
-
+            "A2+" | "AX" => "Ax",
 
             "KJ+" => "KJ+",
             "KT+" => "KT+",
@@ -324,15 +348,195 @@ impl FromStr for HCSymbol {
             "K5+" => "K5+",
             "K4+" => "K4+",
             "K3+" => "K3+",
-            "K2+" => "Kx",
-            "KX"  => "Kx",
+            "K2+" | "KX" => "Kx",
 
             "QT+" => "QT+",
             "Q9+" => "Q9+",
+            "Q8+" => "Q8+",
+            "Q7+" => "Q7+",
+            "Q6+" => "Q6+",
+            "Q5+" => "Q5+",
+            "Q4+" => "Q4+",
+            "Q3+" => "Q3+",
+            "Q2+" | "QX" => "Qx",
+
+            "J9+" => "J9+",
+            "J8+" => "J8+",
+            "J7+" => "J7+",
+            "J6+" => "J6+",
+            "J5+" => "J5+",
+            "J4+" => "J4+",
+            "J3+" => "J3+",
+            "J2+" | "JX" => "Jx",
+
+            "T8+" => "T8+",
+            "T7+" => "T7+",
+            "T6+" => "T6+",
+            "T5+" => "T5+",
+            "T4+" => "T4+",
+            "T3+" => "T3+",
+            "T2+" | "TX" => "Tx",
+
+            "97+" => "97+",
+            "96+" => "96+",
+            "95+" => "95+",
+            "94+" => "94+",
+            "93+" => "93+",
+            "92+" | "9X" => "9x",
+
+            "86+" => "86+",
+            "85+" => "85+",
+            "84+" => "84+",
+            "83+" => "83+",
+            "82+" | "8X" => "8x",
+
+            "75+" => "75+",
+            "74+" => "74+",
+            "73+" => "73+",
+            "72+" | "7X" => "72+",
+
+            "64+" => "64+",
+            "63+" => "63+",
+            "6X" | "62+" => "6x",
+
+            "53+" => "53+",
+            "5X" | "52+" => "5x",
+
+            "4X" | "42+" => "4x",
+
+            "KJS+" => "KJs+", // Multi suited non connectors
+            "KTS+" => "KTs+",
+            "K9S+" => "K9s+",
+            "K8S+" => "K8s+",
+            "K7S+" => "K7s+",
+            "K6S+" => "K6s+",
+            "K5S+" => "K5s+",
+            "K4S+" => "K4s+",
+            "K3S+" => "K3s+",
+            "K2S+" => "K2s+",
+
+            "QTS+" => "QTs+",
+            "Q9S+" => "Q9s+",
+            "Q8S+" => "Q8s+",
+            "Q7S+" => "Q7s+",
+            "Q6S+" => "Q6s+",
+            "Q5S+" => "Q5s+",
+            "Q4S+" => "Q4s+",
+            "Q3S+" => "Q3s+",
+            "Q2S+" => "Q2s+",
+
+            "J9S+" => "J9s+",
+            "J8S+" => "J8s+",
+            "J7S+" => "J7s+",
+            "J6S+" => "J6s+",
+            "J5S+" => "J5s+",
+            "J4S+" => "J4s+",
+            "J3S+" => "J3s+",
+            "J2S+" => "J2s+",
+
+            "T8S+" => "T8s+",
+            "T7S+" => "T7s+",
+            "T6S+" => "T6s+",
+            "T5S+" => "T5s+",
+            "T4S+" => "T4s+",
+            "T3S+" => "T3s+",
+            "T2S+" => "T2s+",
+
+            "97S+" => "97s+",
+            "96S+" => "96s+",
+            "95S+" => "95s+",
+            "94S+" => "94s+",
+            "93S+" => "93s+",
+            "92S+" => "92s+",
+
+            "86S+" => "86s+",
+            "85S+" => "85s+",
+            "84S+" => "84s+",
+            "83S+" => "83s+",
+            "82S+" => "82s+",
+
+            "75S+" => "75s+",
+            "74S+" => "74s+",
+            "73S+" => "73s+",
+            "72S+" => "72s+",
+
+            "64S+" => "64s+",
+            "63S+" => "63s+",
+            "62S+" => "62s+",
+
+            "53S+" => "53s+",
+            "52S+" => "52s+",
+
+            "42S+" => "42s+",
+
+            "KJO+" => "KJo+", // Multi offsuit non connectors
+            "KTO+" => "KTo+",
+            "K9O+" => "K9o+",
+            "K8O+" => "K8o+",
+            "K7O+" => "K7o+",
+            "K6O+" => "K6o+",
+            "K5O+" => "K5o+",
+            "K4O+" => "K4o+",
+            "K3O+" => "K3o+",
+            "K2O+" => "K2o+",
+
+            "QTO+" => "QTo+",
+            "Q9O+" => "Q9o+",
+            "Q8O+" => "Q8o+",
+            "Q7O+" => "Q7o+",
+            "Q6O+" => "Q6o+",
+            "Q5O+" => "Q5o+",
+            "Q4O+" => "Q4o+",
+            "Q3O+" => "Q3o+",
+            "Q2O+" => "Q2o+",
+
+            "J9O+" => "J9o+",
+            "J8O+" => "J8o+",
+            "J7O+" => "J7o+",
+            "J6O+" => "J6o+",
+            "J5O+" => "J5o+",
+            "J4O+" => "J4o+",
+            "J3O+" => "J3o+",
+            "J2O+" => "J2o+",
+
+            "T8O+" => "T8o+",
+            "T7O+" => "T7o+",
+            "T6O+" => "T6o+",
+            "T5O+" => "T5o+",
+            "T4O+" => "T4o+",
+            "T3O+" => "T3o+",
+            "T2O+" => "T2o+",
+
+            "97O+" => "97o+",
+            "96O+" => "96o+",
+            "95O+" => "95o+",
+            "94O+" => "94o+",
+            "93O+" => "93o+",
+            "92O+" => "92o+",
+
+            "86O+" => "86o+",
+            "85O+" => "85o+",
+            "84O+" => "84o+",
+            "83O+" => "83o+",
+            "82O+" => "82o+",
+
+            "75O+" => "75o+",
+            "74O+" => "74o+",
+            "73O+" => "73o+",
+            "72O+" => "72o+",
+
+            "64O+" => "64o+",
+            "63O+" => "63o+",
+            "62O+" => "62o+",
+
+            "53O+" => "53o+",
+            "52O+" => "52o+",
+
+            "42O+" => "42o+",
 
             _ => return Err(PKError::InvalidIndex),
         };
-            
+
         Ok(HCSymbol(s.to_string()))
     }
 }
