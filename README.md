@@ -901,5 +901,7 @@
     * [Rust Cookbook](https://rust-lang-nursery.github.io/rust-cookbook/database/sqlite.html)
     * [In-Memory Databases](https://www.sqlite.org/inmemorydb.html)
 * UI
+  * [Ratatui](https://github.com/ratatui-org/ratatui)
   * [shadcn/ui](https://ui.shadcn.com/)
     * [This UI Library is NEXT LEVEL](https://www.youtube.com/watch?v=dD1fpoGHuC8&t=29s)
+  

@@ -18,6 +18,8 @@ use itertools::Combinations;
 use serde::{Deserialize, Serialize};
 use std::borrow::Borrow;
 use std::collections::HashSet;
+use std::error::Error;
+use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 
 use crate::casino::cashier::chips::Chips;
@@ -111,6 +113,41 @@ pub enum PKError {
     TooManyHands,
     InvalidTwo(String),
 }
+
+impl Display for PKError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let msg = match self {
+            PKError::AlreadyDealt => "Already dealt error",
+            PKError::BlankCard => "Blank card error",
+            PKError::Busted => "Player is out of chips",
+            PKError::CardCast => "",
+            PKError::DBConnectionError => {}
+            PKError::Duplicate => "Duplicate card error",
+            PKError::Fubar => "Unexpected error",
+            PKError::Incomplete => {}
+            PKError::InsufficientChips => {}
+            PKError::InvalidBinaryFormat => {}
+            PKError::InvalidCard => {}
+            PKError::InvalidCardNumber => {}
+            PKError::InvalidCardCount => {}
+            PKError::InvalidHand => {}
+            PKError::InvalidIndex => {}
+            PKError::InvalidPluribusIndex => {}
+            PKError::InvalidPosition => {}
+            PKError::NotDealt => {}
+            PKError::NotEnoughCards => {}
+            PKError::NotEnoughHands => {}
+            PKError::PlayerOutOfHand => {}
+            PKError::SqlError => {}
+            PKError::TooManyCards => {}
+            PKError::TooManyHands => {}
+            PKError::InvalidTwo(_) => {}
+        };
+        write!(f, "{msg}")
+    }
+}
+
+impl Error for PKError {}
 
 pub trait Betting {
     /// # Errors
