@@ -117,31 +117,31 @@ pub enum PKError {
 impl Display for PKError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let msg = match self {
-            PKError::AlreadyDealt => "Already dealt error",
-            PKError::BlankCard => "Blank card error",
+            PKError::AlreadyDealt => "Already dealt Error",
+            PKError::BlankCard => "Blank Card Error",
             PKError::Busted => "Player is out of chips",
-            PKError::CardCast => "",
-            PKError::DBConnectionError => {}
-            PKError::Duplicate => "Duplicate card error",
-            PKError::Fubar => "Unexpected error",
-            PKError::Incomplete => {}
-            PKError::InsufficientChips => {}
-            PKError::InvalidBinaryFormat => {}
-            PKError::InvalidCard => {}
-            PKError::InvalidCardNumber => {}
-            PKError::InvalidCardCount => {}
-            PKError::InvalidHand => {}
-            PKError::InvalidIndex => {}
-            PKError::InvalidPluribusIndex => {}
-            PKError::InvalidPosition => {}
-            PKError::NotDealt => {}
-            PKError::NotEnoughCards => {}
-            PKError::NotEnoughHands => {}
-            PKError::PlayerOutOfHand => {}
-            PKError::SqlError => {}
-            PKError::TooManyCards => {}
-            PKError::TooManyHands => {}
-            PKError::InvalidTwo(_) => {}
+            PKError::CardCast => "Card Cast Error",
+            PKError::DBConnectionError => "Unable to connect to DB",
+            PKError::Duplicate => "Duplicate Card Error",
+            PKError::Fubar => "Unexpected Error",
+            PKError::Incomplete => "Incomplete Error",
+            PKError::InsufficientChips => "Insufficient chips Error",
+            PKError::InvalidBinaryFormat => "Invalid binary format Error",
+            PKError::InvalidCard => "Invalid Card Error",
+            PKError::InvalidCardNumber => "Invalid Card Number Error",
+            PKError::InvalidCardCount => "Invalid Card Count Error",
+            PKError::InvalidHand => "Invalid Hand Error",
+            PKError::InvalidIndex => "Invalid Index Error",
+            PKError::InvalidPluribusIndex => "Invalid Pluribus Index Error",
+            PKError::InvalidPosition => "Invalid Position Error",
+            PKError::NotDealt => "Not Dealt Error",
+            PKError::NotEnoughCards => "Not Enough Cards Error",
+            PKError::NotEnoughHands => "Not Enough Hands Error",
+            PKError::PlayerOutOfHand => "Player is out of hand Error",
+            PKError::SqlError => "SQL Error",
+            PKError::TooManyCards => "Too Many Cards Error",
+            PKError::TooManyHands => "Too Many Hands Error",
+            PKError::InvalidTwo(_) => "Invalid Two Error",
         };
         write!(f, "{msg}")
     }

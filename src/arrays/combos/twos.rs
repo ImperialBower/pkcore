@@ -1,3 +1,4 @@
+use crate::arrays::combos::hc_symbol::HCSymbol;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::deck::POKER_DECK;
@@ -7,7 +8,6 @@ use crate::PKError;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::str::FromStr;
-use crate::arrays::combos::hc_symbol::HCSymbol;
 
 /// This struct is to deal with the fact that the `arrays::Two` struct is getting overloaded with
 /// functionality that is really about combinations of `Two` structs.
