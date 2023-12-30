@@ -3,7 +3,9 @@ pub mod ranges;
 
 use crate::arrays::two::Two;
 
+pub mod hc_symbol;
 pub mod twos;
+
 // region hand range array constants
 // region pocket pair range array constants
 pub const AA: [Two; 6] = [

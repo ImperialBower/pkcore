@@ -23,10 +23,7 @@ impl Pluribus {
     pub const BIG_BLIND: usize = 100;
 
     fn parse_isizes(s: &str) -> Vec<isize> {
-        s.to_string()
-            .split('|')
-            .map(|raw| raw.parse::<isize>().unwrap_or(0))
-            .collect()
+        s.split('|').map(|raw| raw.parse::<isize>().unwrap_or(0)).collect()
     }
 
     fn parse_usize(s: &str) -> Result<usize, PKError> {
