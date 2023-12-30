@@ -25,10 +25,7 @@ impl Util {
 
     #[must_use]
     pub fn str_splitter(s: &str, splitter: &str) -> Vec<String> {
-        s.to_string()
-            .split(splitter)
-            .map(std::string::ToString::to_string)
-            .collect()
+        s.split(splitter).map(std::string::ToString::to_string).collect()
     }
 
     /// Code from [stackoverflow](https://stackoverflow.com/questions/57029974/how-to-split-string-into-chunks-in-rust-to-insert-spaces)
