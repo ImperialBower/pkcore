@@ -48,7 +48,10 @@ Now this applies to any combination of hands. A♠ K♠ vs Q♠ J♠ has the sam
 Here's the thing... if the odds are the same no matter what the actual suits are, why do I have to do the complex
 calculation of preflop odds for each of the possible suit variations? 
 
-    A♠ A♥ vs K♦ K♣
+    A♠ A♥ vs K♠ K♣ // COVERED 
+    A♠ A♥ vs K♠ K♥ // SMOTHERED
+    A♠ A♥ vs K♦ K♣ 
+
     A♠ A♦ vs K♥ K♣
     A♠ A♣ vs K♥ K♦
     A♥ A♦ vs K♠ K♣
