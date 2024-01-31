@@ -421,6 +421,7 @@ impl TryFrom<Bard> for Card {
 mod card_tests {
     use super::*;
     use crate::bard::Bard;
+
     use rstest::rstest;
     use serde_test::{assert_tokens, Token};
 

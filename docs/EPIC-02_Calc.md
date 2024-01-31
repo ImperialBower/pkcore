@@ -171,3 +171,5 @@ An `Eval` is ...
 This is going to be a easier than for the flop, since there are many fewer
 possible outcomes, but more importantly, because we've done most of the hard
 work all ready.
+
+## Interlude: Testing command line and web services

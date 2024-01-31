@@ -794,6 +794,8 @@
             * Twos::parse_individual_range()
             * Twos::to_string()
           * REFACTOR: Twos into Twos(HashSet<Two>)
+  * EPIC TWO Interlude
+    * Testing command line and web services
 
 ## LATER
 

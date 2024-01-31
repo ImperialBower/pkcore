@@ -1,3 +1,6 @@
+use std::borrow::Cow;
+use std::str::Utf8Error;
+
 pub mod csv;
 pub mod data;
 pub mod name;
@@ -21,6 +24,28 @@ impl Util {
             0 => 0_f32,
             _ => (number as f32 * 100.0) / total as f32,
         }
+    }
+
+    ///
+    ///
+    /// # Errors
+    ///
+    /// Returns `Utf8Error` if the `&str` is not valid UTF-8.
+    pub fn percent_decode(s: &str) -> Result<String, Utf8Error> {
+        Ok(percent_encoding::percent_decode_str(s).decode_utf8()?.to_string())
+    }
+
+    /// I need to study the ideas behind `Cow`.
+    ///
+    /// Usage:
+    /// ```
+    /// use pkcore::util::Util;
+    /// assert_eq!(Util::replace_plus("A♠+J♦+6♥+6♣".into()), "A♠ J♦ 6♥ 6♣");
+    /// ```
+    #[must_use]
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn replace_plus(s: Cow<str>) -> String {
+        s.replace('+', " ")
     }
 
     #[must_use]

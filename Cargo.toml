@@ -20,6 +20,7 @@ indexmap = { version = "2.0.2", features = ["rayon"] }
 itertools = "0.11.0"
 lazy_static = "1.4.0"
 log = "0.4.20"
+percent-encoding = "2.3.1"
 rand = "0.8.5"
 random_name_generator = "0.3.6"
 ratatui = { version = "0.25.0", features = ["all-widgets", "crossterm", "macros", "serde"] }
