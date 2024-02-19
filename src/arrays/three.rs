@@ -143,10 +143,8 @@ impl TryFrom<Cards> for Three {
 #[allow(non_snake_case)]
 mod arrays__three_tests {
     use super::*;
-    use crate::cards::Cards;
     use crate::util::data::TestData;
     use crate::Evals;
-    use std::str::FromStr;
 
     /// <https://www.youtube.com/watch?v=vjM60lqRhPg />
     const THE_FLOP: [Card; 3] = [Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS];

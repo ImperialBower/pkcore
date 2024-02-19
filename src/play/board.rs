@@ -135,7 +135,6 @@ impl TryFrom<Cards> for Board {
 #[allow(non_snake_case)]
 mod play_board_tests {
     use super::*;
-    use std::str::FromStr;
 
     #[test]
     fn display() {

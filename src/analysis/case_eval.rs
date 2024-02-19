@@ -586,10 +586,7 @@ impl From<Vec<Eval>> for CaseEval {
 #[allow(non_snake_case)]
 mod hand_rank__case_eval_tests {
     use super::*;
-    use crate::arrays::five::Five;
-    use crate::arrays::two::Two;
     use crate::util::data::TestData;
-    use crate::util::wincounter::win::Win;
     use std::str::FromStr;
 
     /// This is our first happy path test of the function. It works simple enough, but, if I am

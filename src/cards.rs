@@ -43,7 +43,7 @@ impl Cards {
     pub fn deck_minus(cards: &Cards) -> Cards {
         let mut minus = Cards::deck();
         for card in cards.iter() {
-            minus.0.remove(card);
+            minus.0.swap_remove(card);
         }
         // minus.sort()
         minus

@@ -356,7 +356,6 @@ mod analysis__outs_tests {
     use crate::play::game::Game;
     use crate::play::hole_cards::HoleCards;
     use crate::util::data::TestData;
-    use crate::util::wincounter::win::Win;
     use std::str::FromStr;
 
     #[test]

@@ -350,7 +350,6 @@ impl TryFrom<&Cards> for Twos {
 #[allow(non_snake_case)]
 mod arrays__hole_cards__twos_tests {
     use super::*;
-    use std::str::FromStr;
 
     const HERO: Two = Two::HAND_AS_4S;
     const VILLAIN: Two = Two::HAND_KS_KH;

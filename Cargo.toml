@@ -1,7 +1,7 @@
 [package]
 name = "pkcore"
-version = "0.0.9"
-rust-version = "1.70"
+version = "0.0.10"
+rust-version = "1.76"
 edition = "2021"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
 license = "GPL-3.0-or-later"
@@ -16,23 +16,23 @@ bint = "0.1.4"
 bitvec = { version = "1.0.1", features = ["alloc",  "atomic", "std", "serde", "testing" ] }
 crossterm = { version = "0.27.0", features = ["serde"] }
 csv = "1.3.0"
-indexmap = { version = "2.0.2", features = ["rayon"] }
-itertools = "0.11.0"
+indexmap = { version = "2.2.3", features = ["rayon"] }
+itertools = "0.12.1"
 lazy_static = "1.4.0"
 log = "0.4.20"
 percent-encoding = "2.3.1"
 rand = "0.8.5"
 random_name_generator = "0.3.6"
-ratatui = { version = "0.25.0", features = ["all-widgets", "crossterm", "macros", "serde"] }
+ratatui = { version = "0.26.1", features = ["all-widgets", "crossterm", "macros", "serde"] }
 rayon = "1.8.0"
 regex = { version = "1.10.2", features = [] }
-rusqlite = { version = "0.29.0", features = ["bundled"] }
+rusqlite = { version = "0.31.0", features = ["bundled"] }
 serde = { version = "1.0.189", features = ["derive"] }
 serde_json = "1.0.107"
 serde_yaml = "0.9.25"
 sled = "0.34.7"
-strum = { version = "0.25.0", features = ["derive"] }
-strum_macros = "0.25.3"
+strum = { version = "0.26.1", features = ["derive"] }
+strum_macros = "0.26.1"
 termion = "*"
 thousands = "0.2.0"
 uuid = { version = "1.5.0", features = ["v4"] }
@@ -41,7 +41,7 @@ zerocopy = "0.7.11"
 [dev-dependencies]
 clap = { version = "4.4.6", features = ["derive", "unicode"] }
 elr_primes = "0.1.2"
-env_logger = "0.10.1"
+env_logger = "0.11.2"
 fudd = "0.1.9"
 rstest = "0.18.2"
 serde_test = "1.0.176"

@@ -99,7 +99,6 @@ impl FromStr for Pluribus {
 mod store_pluribus_tests {
     use super::*;
     use rstest::rstest;
-    use std::ops::Index;
 
     const LOG: &str = "STATE:27:r200ffcfc/cr850cf/cr1825r3775c/r10000c:Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d/3h7s5c/Qs/6c:-50|-200|-10000|0|0|10250:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd";
 
