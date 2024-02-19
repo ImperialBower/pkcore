@@ -892,6 +892,9 @@ This is an outline of the work as it is done.
           * REFACTOR: Twos into Twos(HashSet<Two>)
   * EPIC TWO Interlude
     * Testing command line and web services
+  * HOUSECLEANING:
+    * Bumped versions
+    * Updated deprecated `IndexSet::remove` to `swap_remove`.
 
 ## LATER
 
