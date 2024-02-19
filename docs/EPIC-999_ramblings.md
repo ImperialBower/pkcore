@@ -30,15 +30,6 @@ just about any development shop. Personally, anyone who starts coding strainght
 from either of these environments earns my mad respect. They've clearly done
 the work.
 
-__Aside:__
-
-One of the developers that I have such respect for is Kristen
-
-One of the ways that Kirsten
-
-One of the ways that you can walk into any new development with a certain armor
-of
-
 /// ## The Gold Standard
 ///
 /// There is a state in any codebase that I like to call the Gold Standard. It's very hard to achieve but when you do give

@@ -1,31 +1,127 @@
-# pkcore AKA Rust for Imposters AKA Rust for Failures
+# pkcore AKA Rust for Failures AKA Spawn of [Fudd](https://github.com/ImperialBower/fudd)
+
+🚧 **Work In Progress** 🚧
+
+[Rust](https://www.rust-lang.org/) poker library. Code inspired by [Cactus Kev's](https://suffe.cool)
+[work in C](https://suffe.cool/poker/code/). An isolated version of the core hand evaluation library is available at [ckc-rs](https://github.com/ContractBridge/ckc-rs).
+
+Currently only supports [hold'em](https://en.wikipedia.org/wiki/Texas_hold_%27em), but working on [Omaha](https://en.wikipedia.org/wiki/Omaha_hold_%27em) and want to add more types of games. Supporting
+things like [Razz](https://en.wikipedia.org/wiki/Razz_(poker)) would be a total kick.
+
+This code is a complete rewrite from scratch of my [Fudd](https://github.com/ImperialBower/fudd) crate. Changes:
+
+* Folded [ckc-rs](https://github.com/ContractBridge/ckc-rs) crate into the repo.
+* Folded [wincounter](https://github.com/ImperialBower/wincounter) crate into the repo.
+* Removed [cardpack.rs](https://github.com/ImperialBower/cardpack.rs) dependency
+
+## TODO:
+
+* Roadmap
+* Clear release breakdowns.
+
+## Examples
+
+Check out the examples directory for various ways to use the library. 
+
+The best example is [calc](examples/calc.rs), which allows you to do a breakdown of the odds of a specific hand
+of poker. Here it is running [the famous hand](https://www.youtube.com/watch?v=vjM60lqRhPg) quads vs full
+house between Gus Hansen and Daniel Negreanu on High Stakes Poker:
+
+```shell
+❯ cargo run --example calc -- -d "6s 6h 5d 5c" -b "9c 6d 5h 5d 8d"
+    Finished dev [unoptimized + debuginfo] target(s) in 0.10s
+     Running `target/debug/examples/calc -d '6s 6h 5d 5c' -b '9c 6d 5h 5d 8d'`
+DEALT: [6♠ 6♥, 5♦ 5♣] FLOP: 9♣ 6♦ 5♥, TURN: 5♦, RIVER: 8♦
+
+The Flop: 9♣ 6♦ 5♥
+  Player #1 [6♠ 6♥] 95.7% (94.04%/1.62%) [931/16]
+     6♠ 6♥ 6♦ 9♣ 5♥ (2185-ThreeSixes)
+  Player #2 [5♦ 5♣] 6.0% (4.34%/1.62%) [43/16]
+     5♥ 5♦ 5♣ 9♣ 6♦ (2251-ThreeFives)
+
+The Turn: 5♦
+  Player #1 [6♠ 6♥] 97.8% (97.78%/0.00%) [44/0]
+    HAND: 6♠ 6♥ 6♦ 5♥ 5♦ (271-SixesOverFives)
+  Player #2 [5♦ 5♣] 2.2% (2.22%/0.00%) [1/0]
+    HAND: 5♥ 5♦ 5♣ 9♣ 6♦ (2251-ThreeFives)
+    OUTS: 5♠
+
+The River: 8♦
+ Winning Hand: 271-SixesOverFives
+   Player #1: 6♠ 6♥ 6♦ 5♥ 5♦ - 271-SixesOverFives WINS!
+   Player #2: 5♥ 5♦ 5♣ 9♣ 8♦ - 2249-ThreeFives
+
+cargo run --example calc -- -d  "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♦ 8♦"
+Elapsed: 467.50ms
+```
+
+Add the -n flag and it will add all possible hands at the flop, sorted by strength:
+
+```shell
+❯ cargo run --example calc -- -d "6s 6h 5d 5c" -b "9c 6d 5h 5d 8d" -n
+    Finished dev [unoptimized + debuginfo] target(s) in 0.09s
+     Running `target/debug/examples/calc -d '6s 6h 5d 5c' -b '9c 6d 5h 5d 8d' -n`
+DEALT: [6♠ 6♥, 5♦ 5♣] FLOP: 9♣ 6♦ 5♥, TURN: 5♦, RIVER: 8♦
+
+The Flop: 9♣ 6♦ 5♥
+  Player #1 [6♠ 6♥] 95.7% (94.04%/1.62%) [931/16]
+     6♠ 6♥ 6♦ 9♣ 5♥ (2185-ThreeSixes)
+  Player #2 [5♦ 5♣] 6.0% (4.34%/1.62%) [43/16]
+     5♥ 5♦ 5♣ 9♣ 6♦ (2251-ThreeFives)
+
+The Nuts @ Flop:
+  #1: 9♣ 8♠ 7♠ 6♦ 5♥ - 1605-NineHighStraight
+  #2: 9♠ 9♥ 9♣ 6♦ 5♥ - 1996-ThreeNines
+  #3: 6♠ 6♥ 6♦ 9♣ 5♥ - 2185-ThreeSixes
+  #4: 5♠ 5♥ 5♦ 9♣ 6♦ - 2251-ThreeFives
+  #5: 9♠ 9♣ 6♠ 6♦ 5♥ - 3047-NinesAndSixes
+  #6: 9♠ 9♣ 5♠ 5♥ 6♦ - 3058-NinesAndFives
+  #7: 6♠ 6♦ 5♠ 5♥ 9♣ - 3221-SixesAndFives
+  #8: A♠ A♥ 9♣ 6♦ 5♥ - 3501-PairOfAces
+  #9: K♠ K♥ 9♣ 6♦ 5♥ - 3721-PairOfKings
+  #10: Q♠ Q♥ 9♣ 6♦ 5♥ - 3941-PairOfQueens
+  #11: J♠ J♥ 9♣ 6♦ 5♥ - 4161-PairOfJacks
+  #12: T♠ T♥ 9♣ 6♦ 5♥ - 4381-PairOfTens
+  #13: 9♠ 9♣ A♠ 6♦ 5♥ - 4471-PairOfNines
+  #14: 8♠ 8♥ 9♣ 6♦ 5♥ - 4836-PairOfEights
+  #15: 7♠ 7♥ 9♣ 6♦ 5♥ - 5056-PairOfSevens
+  #16: 6♠ 6♦ A♠ 9♣ 5♥ - 5122-PairOfSixes
+  #17: 5♠ 5♥ A♠ 9♣ 6♦ - 5342-PairOfFives
+  #18: 4♠ 4♣ 9♣ 6♦ 5♥ - 5720-PairOfFours
+  #19: 3♠ 3♥ 9♣ 6♦ 5♥ - 5940-PairOfTreys
+  #20: 2♠ 2♥ 9♣ 6♦ 5♥ - 6160-PairOfDeuces
+  #21: A♠ K♠ 9♣ 6♦ 5♥ - 6305-AceHigh
+  #22: K♠ Q♠ 9♣ 6♦ 5♥ - 6753-KingHigh
+  #23: Q♠ J♠ 9♣ 6♦ 5♥ - 7046-QueenHigh
+  #24: J♠ T♠ 9♣ 6♦ 5♥ - 7227-JackHigh
+  #25: T♠ 9♣ 8♠ 6♦ 5♥ - 7346-TenHigh
+  #26: 9♣ 8♠ 6♦ 5♥ 4♠ - 7420-NineHigh
+
+The Turn: 5♦
+  Player #1 [6♠ 6♥] 97.8% (97.78%/0.00%) [44/0]
+    HAND: 6♠ 6♥ 6♦ 5♥ 5♦ (271-SixesOverFives)
+  Player #2 [5♦ 5♣] 2.2% (2.22%/0.00%) [1/0]
+    HAND: 5♥ 5♦ 5♣ 9♣ 6♦ (2251-ThreeFives)
+    OUTS: 5♠
+
+The River: 8♦
+ Winning Hand: 271-SixesOverFives
+   Player #1: 6♠ 6♥ 6♦ 5♥ 5♦ - 271-SixesOverFives WINS!
+   Player #2: 5♥ 5♦ 5♣ 9♣ 8♦ - 2249-ThreeFives
+
+cargo run --example calc -- -d  "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♦ 8♦"
+Elapsed: 484.90ms
+```
 
 ## Value Stories
 
-* I want a tool that will help me get better at GTO style poker playing.
+* I want a tool that will help me get better at [GTO](https://www.888poker.com/magazine/strategy/beginners-guide-gto-poker) style poker playing.
 * I want a library that can be reused for poker applications.
 
-## Outline
+## Outline of work
 
-* Got rust?
-  * Cargo, your new best friend
-  * Cargo clippy BEAST MODE
-  * Cargo fmt
-    * STORY TIME: Why I love clean code. (Migraines)
-* [Setup wasm](https://rustwasm.github.io/docs/book/game-of-life/setup.html).
-* Why Rust?
-  * Inverting the curve
-  * THE BIG IDEA: Better to eliminate a problem than to solve it.
-  * Rust TDD loop
-    * define
-    * create fn sig returning default value
-    * create failing test valid on expected value
-    * Make test green
-    * any more boundary conditions?
-    * refactor
-    * draw negative boundary refactor to Result for overdraw
-* Letting the IDE do a lot of the work (Mad Dog Murdock)
-  * Compare CLion to VSCode
+This is an outline of the work as it is done. 
+
 * Create pkcore lib
   * Set #![warn(clippy::pedantic)]
 * EPIC: Display HandRank

@@ -1644,24 +1644,15 @@ where
 
 impl SuitShift for Two {
     fn shift_suit_down(&self) -> Self {
-        match Two::new(self.first().shift_suit_down(), self.second().shift_suit_down()) {
-            Ok(two) => two,
-            Err(_) => Two::default(),
-        }
+        Two::new(self.first().shift_suit_down(), self.second().shift_suit_down()).unwrap_or_else(|_| Two::default())
     }
 
     fn shift_suit_up(&self) -> Self {
-        match Two::new(self.first().shift_suit_up(), self.second().shift_suit_up()) {
-            Ok(two) => two,
-            Err(_) => Two::default(),
-        }
+        Two::new(self.first().shift_suit_up(), self.second().shift_suit_up()).unwrap_or_else(|_| Two::default())
     }
 
     fn opposite(&self) -> Self {
-        match Two::new(self.first().opposite(), self.second().opposite()) {
-            Ok(two) => two,
-            Err(_) => Two::default(),
-        }
+        Two::new(self.first().opposite(), self.second().opposite()).unwrap_or_else(|_| Two::default())
     }
 }
 

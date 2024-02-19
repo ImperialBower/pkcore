@@ -1,5 +1,27 @@
 # EPIC 00
 
+## Outline
+
+* Got rust?
+  * Cargo, your new best friend
+  * Cargo clippy BEAST MODE
+  * Cargo fmt
+    * STORY TIME: Why I love clean code. (Migraines)
+* [Setup wasm](https://rustwasm.github.io/docs/book/game-of-life/setup.html).
+* Why Rust?
+  * Inverting the curve
+  * THE BIG IDEA: Better to eliminate a problem than to solve it.
+  * Rust TDD loop
+    * define
+    * create fn sig returning default value
+    * create failing test valid on expected value
+    * Make test green
+    * any more boundary conditions?
+    * refactor
+    * draw negative boundary refactor to Result for overdraw
+* Letting the IDE do a lot of the work (Mad Dog Murdock)
+  * Compare CLion to VSCode
+
 ## Reading material
 
 ## Notes on the Imposter
@@ -30,10 +52,10 @@ Thus, we must learn from our mistakes if we are going to improve.
 
 CI tools, tests, give yourself a safe place to fail and learn.
 
-### Beware those with The Answer
+### Beware those with The Answer™
 
 You will meet many people in your journey through life that will offer you
-The Answer. They will tell you the right way to do things. That however you
+The Answer™. They will tell you the right way to do things. That however you
 are doing things, you are doing them wrong. These people are lauded...
 celebrated... held up as geniuses... innovators in their
 fields, and many people will be drawn to them because they're looking for
@@ -43,11 +65,6 @@ if I could just do this one thing and all of my problems would vanish.
 
 Be careful. The Answer™ means that you stop doubting. The moment you decide
 that you know everything... that's the true moment you have truly failed.
-
-Unfortunately, I see this for what it is. I have a word for people who have
-The Answer™: failures. You see, you become a failure the the moment you stop
-doubting. Long before the crashes. Long before the debt. The moment you decided
-that you knew everything... that's the true moment you failed.
 
 ## Ways to read
 
