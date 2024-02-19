@@ -242,7 +242,6 @@ mod arrays__seven_tests {
     use crate::analysis::class::Class;
     use crate::analysis::name::Name;
     use crate::util::data::TestData;
-    use std::str::FromStr;
 
     const CARDS: [Card; 7] = [
         Card::ACE_DIAMONDS,

@@ -587,7 +587,6 @@ mod analysis__store__db__hupresult_tests {
     use crate::analysis::store::db::sqlite::Connect;
     use crate::arrays::two::Two;
     use crate::util::data::TestData;
-    use std::collections::HashSet;
     use std::str::FromStr;
 
     const SAMPLE_DB_PATH: &str = "data/sample_hups.db";

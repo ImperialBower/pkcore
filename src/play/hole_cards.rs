@@ -261,11 +261,8 @@ impl TryFrom<Cards> for HoleCards {
 mod play__hold_cards_tests {
     use super::*;
     use crate::analysis::class::Class;
-    use crate::arrays::five::Five;
-    use crate::card::Card;
     use crate::util::data::TestData;
     use rstest::rstest;
-    use std::str::FromStr;
 
     #[test]
     fn get() {

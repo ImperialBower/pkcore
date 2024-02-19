@@ -403,7 +403,6 @@ impl Display for Nubibus {
 mod store_nubibus_tests {
     use super::*;
     use crate::play::phases::PhaseHoldem;
-    use crate::Betting;
     use rstest::rstest;
     use std::str::FromStr;
 

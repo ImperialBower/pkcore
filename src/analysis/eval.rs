@@ -273,7 +273,6 @@ mod hand_rank__eval_tests {
     use super::*;
     use crate::analysis::class::Class;
     use crate::analysis::name::Name;
-    use crate::arrays::HandRanker;
     use std::str::FromStr;
 
     #[test]

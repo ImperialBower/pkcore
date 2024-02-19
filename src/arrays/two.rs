@@ -1720,10 +1720,7 @@ impl TryFrom<&[Card]> for Two {
 #[allow(non_snake_case)]
 mod arrays__two_tests {
     use super::*;
-    use crate::rank::Rank;
-    use crate::suit::Suit;
     use rstest::rstest;
-    use std::str::FromStr;
 
     /// <https://groups.google.com/g/rec.gambling.poker/c/KZNAicdopK8?hl=en&pli=1#720c87127510688b />
     ///

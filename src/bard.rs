@@ -499,7 +499,6 @@ impl From<u64> for Bard {
 #[allow(non_snake_case)]
 mod bard_tests {
     use super::*;
-    use crate::cards::Cards;
     use rstest::rstest;
     use std::str::FromStr;
 
