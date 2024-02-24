@@ -1444,13 +1444,11 @@ impl Two {
 
     #[must_use]
     pub fn invert_suits(&self) -> Self {
-        match Two::new(
+        Two::new(
             Card::new(self.first().get_rank(), self.second().get_suit()),
             Card::new(self.second().get_rank(), self.first().get_suit()),
-        ) {
-            Ok(two) => two,
-            Err(_) => Two::default(),
-        }
+        )
+        .unwrap_or_else(|_| Two::default())
     }
 
     #[must_use]
@@ -1471,6 +1469,13 @@ impl Two {
     #[must_use]
     pub fn suit_binary(&self) -> u32 {
         self.first().get_suit().binary_signature() | self.second().get_suit().binary_signature()
+    }
+
+    #[must_use]
+    pub fn get_letter_index(&self) -> String {
+        let first = self.first().get_letter_index();
+        let second = self.second().get_letter_index();
+        format!("{first} {second}")
     }
 }
 
@@ -1987,6 +1992,12 @@ mod arrays__two_tests {
         assert!(!Two::from([Card::DEUCE_SPADES, Card::BLANK]).is_dealt());
         assert!(!Two::from([Card::BLANK, Card::BLANK]).is_dealt());
         assert!(!Two::from([Card::DEUCE_SPADES, Card::DEUCE_SPADES]).is_dealt());
+    }
+
+    #[test]
+    fn get_letter_index() {
+        assert_eq!("AD KH", Two::from(BIG_SLICK).get_letter_index());
+        assert_eq!("__ __", Two::default().get_letter_index());
     }
 
     /// FUCK yeah!!! Test passes right out of the gate. Let's go!!!

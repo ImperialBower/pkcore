@@ -775,3 +775,5 @@ This is an outline of the work as it is done.
     * HOUSECLEANING:
         * Bumped versions
         * Updated deprecated `IndexSet::remove` to `swap_remove`.
+    * PKWEB
+      * Added Two::get_letter_index()
