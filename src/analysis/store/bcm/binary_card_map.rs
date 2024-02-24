@@ -138,10 +138,8 @@ impl SevenFiveBCM {
 
     #[must_use]
     pub fn get_csv_filepath() -> String {
-        match std::env::var("PKCORE_75BCM_CSV_PATH") {
-            Ok(path) => path,
-            Err(_) => SevenFiveBCM::DEFAULT_PKCORE_75BCM_CSV_PATH.to_string(),
-        }
+        std::env::var("PKCORE_75BCM_CSV_PATH")
+            .unwrap_or_else(|_| SevenFiveBCM::DEFAULT_PKCORE_75BCM_CSV_PATH.to_string())
     }
 
     /// OK, this is the old school way of generating serialized data. Next step
