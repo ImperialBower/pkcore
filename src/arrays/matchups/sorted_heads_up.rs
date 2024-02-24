@@ -665,6 +665,13 @@ impl SortedHeadsUp {
         (self.higher.suit_binary(), self.lower().suit_binary())
     }
 
+    #[must_use]
+    pub fn get_letter_index(&self) -> String {
+        let higher = self.higher().get_letter_index();
+        let lower = self.lower().get_letter_index();
+        format!("{higher} - {lower}")
+    }
+
     /// For now, returning default is all part of the blueprint. Still, let's write a test
     /// that fails that we can ignore later on when we get everything wired in.
     ///
@@ -810,14 +817,8 @@ impl TryFrom<&HUPResult> for SortedHeadsUp {
     type Error = PKError;
 
     fn try_from(hup: &HUPResult) -> Result<Self, Self::Error> {
-        let higher_two = match Two::try_from(hup.higher) {
-            Ok(t) => t,
-            Err(_) => Two::default(),
-        };
-        let lower_two = match Two::try_from(hup.lower) {
-            Ok(t) => t,
-            Err(_) => Two::default(),
-        };
+        let higher_two = Two::try_from(hup.higher).unwrap_or_else(|_| Two::default());
+        let lower_two = Two::try_from(hup.lower).unwrap_or_else(|_| Two::default());
         Ok(SortedHeadsUp::new(higher_two, lower_two))
     }
 }
@@ -980,6 +981,11 @@ mod arrays__matchups__sorted_heads_up_tests {
         assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7C, Two::HAND_6H_6D)));
         assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C)));
         assert!(!hs.contains(&SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C)));
+    }
+
+    #[test]
+    fn get_letter_index() {
+        assert_eq!("7D 7C - 6S 6H", HANDS_7D_7C_V_6S_6H.get_letter_index());
     }
 
     /// Here's the original test that panics, just for fun. I love it's error message:

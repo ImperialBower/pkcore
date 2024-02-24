@@ -777,3 +777,4 @@ This is an outline of the work as it is done.
         * Updated deprecated `IndexSet::remove` to `swap_remove`.
     * PKWEB
       * Added Two::get_letter_index()
+      * Added SortedHeadsUp::get_letter_index()
