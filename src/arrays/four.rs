@@ -1,3 +1,5 @@
+use crate::analysis::eval::Eval;
+use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::{Card, Pile, TheNuts};
 use std::fmt;
@@ -12,6 +14,8 @@ use std::fmt::{Display, Formatter};
 pub struct Four([Card; 4]);
 
 impl Four {
+    pub const OMAHA_PERMUTATIONS: [[u8; 2]; 6] = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]];
+
     #[must_use]
     pub fn from_turn(flop: Three, turn: Card) -> Four {
         Four([flop.first(), flop.second(), flop.third(), turn])
@@ -43,6 +47,11 @@ impl Four {
         self.0
     }
     //endregion
+
+    #[must_use]
+    pub fn omaha_high(&self, _board: Five) -> Eval {
+        todo!()
+    }
 }
 
 impl Display for Four {

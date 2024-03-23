@@ -775,6 +775,9 @@ This is an outline of the work as it is done.
     * HOUSECLEANING:
         * Bumped versions
         * Updated deprecated `IndexSet::remove` to `swap_remove`.
+    * FEATURE: OMAHA
+      * impl Ord properly for Eval
+      * Adding omaha permutations to Four
     * PKWEB
       * Added Two::get_letter_index()
       * Added SortedHeadsUp::get_letter_index()
