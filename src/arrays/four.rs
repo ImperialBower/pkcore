@@ -7,6 +7,8 @@ use crate::arrays::HandRanker;
 use crate::{Card, Pile, TheNuts};
 use std::fmt;
 use std::fmt::{Display, Formatter};
+use crate::arrays::seven::Seven;
+use crate::play::board::Board;
 
 /// This is a convenience struct for Game. I'm not writing many tests *WHAT???* for it because I don't
 /// feel it is necessary right now. Later on, who knows, but for now that's OK.
@@ -17,7 +19,7 @@ use std::fmt::{Display, Formatter};
 pub struct Four([Card; 4]);
 
 impl Four {
-    pub const OMAHA_PERMUTATIONS: [[u8; 2]; 6] = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]];
+    pub const OMAHA_PERMUTATIONS: [[usize; 2]; 6] = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]];
 
     #[must_use]
     pub fn from_twos(first: Two, second: Two) -> Self {
@@ -57,28 +59,24 @@ impl Four {
     //endregion
 
     #[must_use]
-    pub fn omaha_high(&self, board: Five) -> Eval {
-        let mut best_hrv: HandRankValue = NO_HAND_RANK_VALUE;
-        let mut best_hand = Five::default();
+    pub fn omaha_high(&self, board: &Board) -> Eval {
+        let mut best_eval = Eval::default();
 
-        todo!();
+        for perm in Self::OMAHA_PERMUTATIONS.iter() {
+            let two = Two::from([self.0[perm[0]], self.0[perm[1]]]);
+            let seven = Seven::from_case_and_board(&two, board);
 
-        // for perm in Self::OMAHA_PERMUTATIONS.iter() {
-        //     let mut hand = Five::default();
-        //     hand.0[0] = self.0[perm[0] as usize];
-        //     hand.0[1] = self.0[perm[1] as usize];
-        //     hand.0[2] = _board.first();
-        //     hand.0[3] = _board.second();
-        //     hand.0[4] = _board.third();
-        //
-        //     let eval = hand.eval();
-        //     if eval.hand_rank.value < best_hrv {
-        //         best_hrv = eval.hand_rank.value;
-        //         best_hand = hand;
-        //     }
-        // }
-        //
-        // Eval::new(HandRank::from(best_hrv), best_hand)
+            let eval = seven.eval();
+            if eval > best_eval {
+                best_eval = eval;
+            }
+        }
+
+        best_eval
+    }
+
+    pub fn two_from_permutation(&self, permutation: &[usize; 2]) -> Two {
+        Two::from([self.0[permutation[0]], self.0[permutation[1]]])
     }
 }
 
