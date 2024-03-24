@@ -1,6 +1,9 @@
 use crate::analysis::eval::Eval;
+use crate::analysis::hand_rank::{HandRank, HandRankValue, NO_HAND_RANK_VALUE};
 use crate::arrays::five::Five;
 use crate::arrays::three::Three;
+use crate::arrays::two::Two;
+use crate::arrays::HandRanker;
 use crate::{Card, Pile, TheNuts};
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -15,6 +18,11 @@ pub struct Four([Card; 4]);
 
 impl Four {
     pub const OMAHA_PERMUTATIONS: [[u8; 2]; 6] = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]];
+
+    #[must_use]
+    pub fn from_twos(first: Two, second: Two) -> Self {
+        Four::from([first.first(), first.second(), second.first(), second.second()])
+    }
 
     #[must_use]
     pub fn from_turn(flop: Three, turn: Card) -> Four {
@@ -49,8 +57,28 @@ impl Four {
     //endregion
 
     #[must_use]
-    pub fn omaha_high(&self, _board: Five) -> Eval {
-        todo!()
+    pub fn omaha_high(&self, board: Five) -> Eval {
+        let mut best_hrv: HandRankValue = NO_HAND_RANK_VALUE;
+        let mut best_hand = Five::default();
+
+        todo!();
+
+        // for perm in Self::OMAHA_PERMUTATIONS.iter() {
+        //     let mut hand = Five::default();
+        //     hand.0[0] = self.0[perm[0] as usize];
+        //     hand.0[1] = self.0[perm[1] as usize];
+        //     hand.0[2] = _board.first();
+        //     hand.0[3] = _board.second();
+        //     hand.0[4] = _board.third();
+        //
+        //     let eval = hand.eval();
+        //     if eval.hand_rank.value < best_hrv {
+        //         best_hrv = eval.hand_rank.value;
+        //         best_hand = hand;
+        //     }
+        // }
+        //
+        // Eval::new(HandRank::from(best_hrv), best_hand)
     }
 }
 
@@ -69,6 +97,9 @@ impl Display for Four {
 
 impl From<[Card; 4]> for Four {
     fn from(array: [Card; 4]) -> Self {
+        let mut array = array;
+        array.sort();
+        array.reverse();
         Four(array)
     }
 }
@@ -76,6 +107,9 @@ impl From<[Card; 4]> for Four {
 impl From<Vec<Card>> for Four {
     /// I do want to test this baby, since it's the main reason we are here.
     fn from(v: Vec<Card>) -> Self {
+        let mut v = v.clone();
+        v.sort();
+        v.reverse();
         match v.len() {
             4 => {
                 let one = match v.first() {
@@ -131,14 +165,39 @@ mod arrays__four_tests {
     use super::*;
 
     #[test]
-    fn from__vec() {
+    fn from__array() {
         let cards = [
             Card::NINE_CLUBS,
             Card::SIX_DIAMONDS,
             Card::FIVE_HEARTS,
             Card::FIVE_SPADES,
         ];
-        let expected = Four(cards);
+        let expected = Four([
+            Card::NINE_CLUBS,
+            Card::SIX_DIAMONDS,
+            Card::FIVE_SPADES,
+            Card::FIVE_HEARTS,
+        ]);
+
+        let actual = Four::from(cards);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn from__vec() {
+        let cards = vec![
+            Card::NINE_CLUBS,
+            Card::SIX_DIAMONDS,
+            Card::FIVE_HEARTS,
+            Card::FIVE_SPADES,
+        ];
+        let expected = Four([
+            Card::NINE_CLUBS,
+            Card::SIX_DIAMONDS,
+            Card::FIVE_SPADES,
+            Card::FIVE_HEARTS,
+        ]);
 
         let actual = Four::from(cards);
 
