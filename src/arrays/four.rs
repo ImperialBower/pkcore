@@ -1,14 +1,12 @@
 use crate::analysis::eval::Eval;
-use crate::analysis::hand_rank::{HandRank, HandRankValue, NO_HAND_RANK_VALUE};
-use crate::arrays::five::Five;
+use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
+use crate::play::board::Board;
 use crate::{Card, Pile, TheNuts};
 use std::fmt;
 use std::fmt::{Display, Formatter};
-use crate::arrays::seven::Seven;
-use crate::play::board::Board;
 
 /// This is a convenience struct for Game. I'm not writing many tests *WHAT???* for it because I don't
 /// feel it is necessary right now. Later on, who knows, but for now that's OK.
@@ -62,7 +60,7 @@ impl Four {
     pub fn omaha_high(&self, board: &Board) -> Eval {
         let mut best_eval = Eval::default();
 
-        for perm in Self::OMAHA_PERMUTATIONS.iter() {
+        for perm in &Self::OMAHA_PERMUTATIONS {
             let two = Two::from([self.0[perm[0]], self.0[perm[1]]]);
             let seven = Seven::from_case_and_board(&two, board);
 
@@ -75,6 +73,7 @@ impl Four {
         best_eval
     }
 
+    #[must_use]
     pub fn two_from_permutation(&self, permutation: &[usize; 2]) -> Two {
         Two::from([self.0[permutation[0]], self.0[permutation[1]]])
     }
@@ -161,6 +160,23 @@ impl Pile for Four {
 #[allow(non_snake_case)]
 mod arrays__four_tests {
     use super::*;
+    use crate::analysis::class::Class;
+
+    #[test]
+    fn from_twos() {
+        let first = Two::from([Card::KING_CLUBS, Card::KING_DIAMONDS]);
+        let second = Two::from([Card::ACE_CLUBS, Card::ACE_DIAMONDS]);
+        let expected = Four([
+            Card::ACE_DIAMONDS,
+            Card::ACE_CLUBS,
+            Card::KING_DIAMONDS,
+            Card::KING_CLUBS,
+        ]);
+
+        let actual = Four::from_twos(first, second);
+
+        assert_eq!(expected, actual);
+    }
 
     #[test]
     fn from__array() {
@@ -178,6 +194,28 @@ mod arrays__four_tests {
         ]);
 
         let actual = Four::from(cards);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn omaha_high() {
+        let four = Four::from([
+            Card::ACE_DIAMONDS,
+            Card::ACE_CLUBS,
+            Card::KING_DIAMONDS,
+            Card::KING_CLUBS,
+        ]);
+        let board = Board::from([
+            Card::QUEEN_DIAMONDS,
+            Card::QUEEN_HEARTS,
+            Card::JACK_DIAMONDS,
+            Card::TEN_CLUBS,
+            Card::TEN_DIAMONDS,
+        ]);
+        let expected = Class::RoyalFlush;
+
+        let actual = four.omaha_high(&board).hand_rank.class;
 
         assert_eq!(expected, actual);
     }

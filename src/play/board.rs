@@ -40,6 +40,12 @@ impl From<Five> for Board {
     }
 }
 
+impl From<[Card; 5]> for Board {
+    fn from(value: [Card; 5]) -> Self {
+        Board::from(Five::from(value))
+    }
+}
+
 impl FromStr for Board {
     type Err = PKError;
 
