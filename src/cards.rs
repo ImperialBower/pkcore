@@ -136,6 +136,15 @@ impl Cards {
         Ok(v)
     }
 
+    /// Collapse
+    // pub fn collapse(&self) -> u32 {
+    //     let mut result: u32 = 0;
+    //     for card in self.iter() {
+    //         result = result | card.as_u32();
+    //     }
+    //     result
+    // }
+
     pub fn combinations(&self, k: usize) -> Combinations<indexmap::set::IntoIter<Card>> {
         self.0.clone().into_iter().combinations(k)
     }
@@ -685,6 +694,17 @@ mod card_tests {
         let minus = Cards::deck_minus(&cards);
 
         assert_eq!("A♠ K♠", minus.to_string());
+    }
+
+    #[test]
+    fn collapse() {
+        let wheel = Cards::from_str("5♠ 4♠ 3♠ 2♠ A♥").unwrap().shuffle();
+        // for card in wheel {
+        //     println!("{}", card.bit_string());
+        // }
+        let expected: u32 = 0b00010000_00001111_11001111_00101111;
+
+        assert_eq!(expected, wheel.collapse());
     }
 
     #[test]

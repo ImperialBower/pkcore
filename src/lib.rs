@@ -203,6 +203,11 @@ pub trait Pile {
     #[must_use]
     fn clean(&self) -> Self;
 
+    #[must_use]
+    fn collapse(&self) -> u32 {
+        self.to_vec().iter().fold(0, |acc, card| acc | card.as_u32())
+    }
+
     /// If I can move logic to a trait that can be automatically reusable by other implementations
     /// that I do it. A strict TDD person could argue that you shouldn't do this unless you have
     /// a need for more than one use case that demands it. As an anti-fundamentalist, when I see

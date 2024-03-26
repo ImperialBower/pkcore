@@ -783,3 +783,6 @@ This is an outline of the work as it is done.
       * Adding omaha permutations to Four
       * TODO: Refactor game analysis from array structs
       * Four::omaha_high()
+      * 8 or better
+        * Cards.collapse()
+          * moved to Pile trait
