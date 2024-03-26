@@ -125,6 +125,7 @@ mod arrays__matchups__masks__suit_texture_tests {
     use rstest::rstest;
 
     #[rstest]
+    #[allow(clippy::duplicated_attributes)]
     #[case("7♥ 5♥ 6♥ 2♥", "7♠ 5♠ 6♠ 2♠", Type1111)]
     #[case("A♦ Q♦ K♣ 5♦", "A♠ Q♠ K♥ 5♠", Type1112b)]
     #[case("8♥ 2♦ 7♥ 5♥", "8♠ 2♥ 7♠ 5♠", Type1112d)]
