@@ -18,13 +18,15 @@ mod lookups__omaha_tests {
     use super::*;
     use crate::arrays::five::Five;
     use crate::Pile;
+    use rstest::rstest;
     use std::str::FromStr;
 
-    #[test]
-    fn filter_on_8or_better() {
-        let collapsed = Five::from_str("A♠ 5♠ 4♠ 3♠ 2♠").unwrap().collapse();
-
-        let expected = 0b00010000_00001111_00000000_00000000;
+    #[rstest]
+    #[case("A♠ 5♠ 4♠ 3♠ 2♠", 0b00010000_00001111_00000000_00000000)]
+    #[case("6♠ 5♠ 4♠ 3♠ 2♠", 0b00000000_00011111_00000000_00000000)]
+    #[case("K♠ Q♠ J♠ T♠ 9♠", 0b00000000_00000000_00000000_00000000)]
+    fn filter_on_8or_better(#[case] index: &'static str, #[case] expected: u32) {
+        let collapsed = Five::from_str(index).unwrap().collapse();
 
         assert_eq!(EightOrBetter::filter_on_8or_better(collapsed), expected);
     }
