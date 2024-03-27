@@ -203,6 +203,15 @@ pub trait Pile {
     #[must_use]
     fn clean(&self) -> Self;
 
+    /// > This is a bit of a hack. I'm not sure if I should be doing this. I'm going to try it and
+    ///
+    /// Why TF is copilot using this tone for its suggested documentation???
+    ///
+    /// This method takes a `Pile` of `Cards` and does a bitwise OR on all of the `Cards` in the
+    /// `pile`, returning a single `u32`.
+    ///
+    /// The initial goal of this method is for use in 8 or Better hand evals where all that matters
+    /// us the `Rank` of the cards.
     #[must_use]
     fn collapse(&self) -> u32 {
         self.to_vec().iter().fold(0, |acc, card| acc | card.as_u32())
