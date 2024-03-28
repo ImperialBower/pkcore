@@ -104,6 +104,7 @@ pub enum PKError {
     InvalidIndex,
     InvalidPluribusIndex,
     InvalidPosition,
+    NoLow,
     NotDealt,
     NotEnoughCards,
     NotEnoughHands,
@@ -134,6 +135,7 @@ impl Display for PKError {
             PKError::InvalidIndex => "Invalid Index Error",
             PKError::InvalidPluribusIndex => "Invalid Pluribus Index Error",
             PKError::InvalidPosition => "Invalid Position Error",
+            PKError::NoLow => "No low hand possible Error",
             PKError::NotDealt => "Not Dealt Error",
             PKError::NotEnoughCards => "Not Enough Cards Error",
             PKError::NotEnoughHands => "Not Enough Hands Error",
@@ -170,7 +172,7 @@ pub trait Betting {
     fn wins(&mut self, winnings: Chips) -> usize;
 }
 
-/// The name of this trait is a pun om pluribus, which is the name of the poker AI group.
+/// The name of this trait is a pun on pluribus, which is the name of the poker AI group.
 pub trait Plurable {
     /// Converts a part of the Pluribus log format
     ///
