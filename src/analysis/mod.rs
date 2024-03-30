@@ -15,6 +15,7 @@ pub mod outs;
 pub mod player_wins;
 pub mod store;
 pub mod the_nuts;
+pub mod omaha;
 
 /// The start of an analysis plugin system.
 #[allow(clippy::module_name_repetitions)]

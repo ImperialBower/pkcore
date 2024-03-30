@@ -5,7 +5,7 @@ use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::suit::Suit;
 use crate::util::random_ordering::RandomOrdering;
-use crate::{card, PKError, Pile, SuitShift, TheNuts};
+use crate::{PKError, Pile, SuitShift, TheNuts};
 use indexmap::set::{IntoIter, Iter};
 use indexmap::IndexSet;
 use itertools::{Combinations, Itertools};
@@ -558,8 +558,22 @@ impl From<Vec<&Card>> for Cards {
     }
 }
 
-impl FromIterator<card::Card> for Cards {
-    fn from_iter<T: IntoIterator<Item = card::Card>>(iter: T) -> Self {
+impl From<&Vec<Card>> for Cards {
+    fn from(v: &Vec<Card>) -> Self {
+        let filtered = v.iter().filter_map(|c| {
+            let pc = *c;
+            if pc.contains_blank() {
+                None
+            } else {
+                Some(pc)
+            }
+        });
+        Cards(filtered.collect())
+    }
+}
+
+impl FromIterator<Card> for Cards {
+    fn from_iter<T: IntoIterator<Item = Card>>(iter: T) -> Self {
         let mut c = Cards::default();
         for i in iter {
             c.insert(i);
