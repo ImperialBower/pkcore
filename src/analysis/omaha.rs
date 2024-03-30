@@ -24,13 +24,10 @@ impl EightOrBetter {
         let filtered = EightOrBetter::filter_on_8or_better(five.collapse());
         filtered.count_ones() == 5
     }
-    //
-    // #[must_use]
-    // pub fn is_eight_or_better_from_vec(v: &Vec<Card>) -> bool {
-    //
-    //     let filtered = EightOrBetter::filter_on_8or_better(v.collapse());
-    //     filtered.count_ones() == 5
-    // }
+
+    #[must_use]
+    pub fn filter(five: Five)
+
 }
 
 impl From<Five> for EightOrBetter {
