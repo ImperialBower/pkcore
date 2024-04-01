@@ -1,5 +1,7 @@
 use crate::arrays::five::Five;
+use crate::card::Card;
 use crate::Pile;
+use crate::rank::Rank;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum EightOrBetter {
@@ -10,13 +12,97 @@ pub enum EightOrBetter {
     Lo6543A = 5, // 6♠ 5♠ 4♠ 3♠ A♠
     Lo7432A = 6, // 7♠ 4♠ 3♠ 2♠ A♠
     NoLow = 0,
+
+
+    // 5♠ 4♠ 3♠ 2♠ A♠
+    // 6♠ 4♠ 3♠ 2♠ A♠
+    // 6♠ 5♠ 3♠ 2♠ A♠
+    // 6♠ 5♠ 4♠ 2♠ A♠
+    // 6♠ 5♠ 4♠ 3♠ A♠
+    // 6♠ 5♠ 4♠ 3♠ 2♠
+
+    // 7♠ 4♠ 3♠ 2♠ A♠
+    // 7♠ 5♠ 3♠ 2♠ A♠
+    // 7♠ 5♠ 4♠ 2♠ A♠
+    // 7♠ 5♠ 4♠ 3♠ A♠
+    // 7♠ 5♠ 4♠ 3♠ 2♠
+    // 7♠ 6♠ 3♠ 2♠ A♠
+    // 7♠ 6♠ 4♠ 2♠ A♠
+    // 7♠ 6♠ 4♠ 3♠ A♠
+    // 7♠ 6♠ 4♠ 3♠ 2♠
+    // 7♠ 6♠ 5♠ 2♠ A♠
+    // 7♠ 6♠ 5♠ 3♠ A♠
+    // 7♠ 6♠ 5♠ 3♠ 2♠
+    // 7♠ 6♠ 5♠ 4♠ A♠
+    // 7♠ 6♠ 5♠ 4♠ 2♠
+    // 7♠ 6♠ 5♠ 4♠ 3♠
+
+    // 8♠ 4♠ 3♠ 2♠ A♠
+    // 8♠ 5♠ 3♠ 2♠ A♠
+    // 8♠ 5♠ 4♠ 2♠ A♠
+    // 8♠ 5♠ 4♠ 3♠ A♠
+    // 8♠ 5♠ 4♠ 3♠ 2♠
+    // 8♠ 6♠ 3♠ 2♠ A♠
+    // 8♠ 6♠ 4♠ 2♠ A♠
+    // 8♠ 6♠ 4♠ 3♠ A♠
+    // 8♠ 6♠ 4♠ 3♠ 2♠
+    // 8♠ 6♠ 5♠ 2♠ A♠
+    // 8♠ 6♠ 5♠ 3♠ A♠
+    // 8♠ 6♠ 5♠ 4♠ A♠
+    // 8♠ 7♠ 3♠ 2♠ A♠
+    // 8♠ 7♠ 4♠ 2♠ A♠
+    // 8♠ 7♠ 4♠ 3♠ A♠
+    // 8♠ 7♠ 5♠ 2♠ A♠
+    // 8♠ 6♠ 5♠ 3♠ 2♠
+    // 8♠ 6♠ 5♠ 4♠ 2♠
+    // 8♠ 6♠ 5♠ 4♠ 3♠
+    // 8♠ 7♠ 4♠ 3♠ 2♠
+    // 8♠ 7♠ 5♠ 3♠ A♠
+    // 8♠ 7♠ 5♠ 3♠ 2♠
+    // 8♠ 7♠ 5♠ 4♠ A♠
+    // 8♠ 7♠ 5♠ 4♠ 2♠
+    // 8♠ 7♠ 5♠ 4♠ 3♠
+    // 8♠ 7♠ 6♠ 2♠ A♠
+    // 8♠ 7♠ 6♠ 3♠ A♠
+    // 8♠ 7♠ 6♠ 3♠ 2♠
+    // 8♠ 7♠ 6♠ 4♠ A♠
+    // 8♠ 7♠ 6♠ 4♠ 2♠
+    // 8♠ 7♠ 6♠ 4♠ 3♠
+    // 8♠ 7♠ 6♠ 5♠ A♠
+    // 8♠ 7♠ 6♠ 5♠ 2♠
+    // 8♠ 7♠ 6♠ 5♠ 3♠
+    // 8♠ 7♠ 6♠ 5♠ 4♠
+    //
+    // Process finished with exit code 0
 }
 
 impl EightOrBetter {
     pub const EIGHT_OR_BETTER_MASK: u32 = 0b00010000_01111111_00000000_00000000;
+    pub const LO_BIT_ACE: u32 =   0b00000001;
+    pub const LO_BIT_DEUCE: u32 =   0b00000010;
+    pub const LO_BIT_TREY: u32 = 0b00000100;
+    pub const LO_BIT_FOUR: u32 =  0b00001000;
+    pub const LO_BIT_FIVE: u32 =  0b00010000;
+    pub const LO_BIT_SIX: u32 =   0b00100000;
+    pub const LO_BIT_SEVEN: u32 = 0b01000000;
+    pub const LO_BIT_EIGHT: u32 = 0b10000000;
 
     fn filter_on_8or_better(collapsed: u32) -> u32 {
         collapsed & EightOrBetter::EIGHT_OR_BETTER_MASK
+    }
+
+    fn get_low_bit(card: Card) -> u32 {
+        match card.get_rank() {
+            Rank::ACE => EightOrBetter::LO_BIT_ACE,
+            Rank::DEUCE => EightOrBetter::LO_BIT_DEUCE,
+            Rank::TREY => EightOrBetter::LO_BIT_TREY,
+            Rank::FOUR => EightOrBetter::LO_BIT_FOUR,
+            Rank::FIVE => EightOrBetter::LO_BIT_FIVE,
+            Rank::SIX => EightOrBetter::LO_BIT_SIX,
+            Rank::SEVEN => EightOrBetter::LO_BIT_SEVEN,
+            Rank::EIGHT => EightOrBetter::LO_BIT_EIGHT,
+            _ => 0,
+        }
     }
 
     #[must_use]
@@ -26,7 +112,13 @@ impl EightOrBetter {
     }
 
     #[must_use]
-    pub fn filter(five: Five)
+    pub fn filter(five: Five) -> Option<u32> {
+        let filtered = EightOrBetter::filter_on_8or_better(five.collapse());
+        match filtered.count_ones() {
+            5 => Some(filtered),
+            _ => None,
+        }
+    }
 
 }
 
