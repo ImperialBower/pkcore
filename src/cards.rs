@@ -1037,6 +1037,13 @@ mod card_tests {
     }
 
     #[test]
+    fn pile__to_eight_or_better_bits() {
+        let pile = Cards::from_str("A♦ 2♦ 3♦ 4♦ 5♥").unwrap();
+
+        assert_eq!(pile.to_eight_or_better_bits(), 0b11111);
+    }
+
+    #[test]
     fn pile__to_vec() {
         let expected: Vec<Card> = vec![
             Card::FIVE_CLUBS,

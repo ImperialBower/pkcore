@@ -786,3 +786,4 @@ This is an outline of the work as it is done.
       * 8 or better
         * Cards.collapse()
           * moved to Pile trait
+        * Rank.to_eight_or_better_lo_bit

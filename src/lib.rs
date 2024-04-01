@@ -296,6 +296,12 @@ pub trait Pile {
 
     fn the_nuts(&self) -> TheNuts;
 
+    fn to_eight_or_better_bits(&self) -> u8 {
+        self.cards()
+            .iter()
+            .fold(0, |acc, card| acc | card.get_rank().to_eight_or_better_lo_bit() | acc)
+    }
+
     fn evals(&self) -> Evals {
         self.the_nuts().to_evals()
     }

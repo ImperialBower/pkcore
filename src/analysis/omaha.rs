@@ -1,89 +1,77 @@
 use crate::arrays::five::Five;
-use crate::card::Card;
+use crate::cards::Cards;
 use crate::Pile;
-use crate::rank::Rank;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum EightOrBetter {
-    LoWheel = 1, // 5♠ 4♠ 3♠ 2♠ A♠
-    Lo6432A = 2, // 6♠ 4♠ 3♠ 2♠ A♠
-    Lo6532A = 3, // 6♠ 5♠ 3♠ 2♠ A♠
-    Lo6542A = 4, // 6♠ 5♠ 4♠ 2♠ A♠
-    Lo6543A = 5, // 6♠ 5♠ 4♠ 3♠ A♠
-    Lo7432A = 6, // 7♠ 4♠ 3♠ 2♠ A♠
+    Wheel = 0b11111,       // 5♠ 4♠ 3♠ 2♠ A♠
+    Lo2ndBest = 0b101111,  // 6♠ 4♠ 3♠ 2♠ A♠
+    Lo3rdBest = 0b110111,  // 6♠ 5♠ 3♠ 2♠ A♠
+    Lo4thBest = 0b111011,  // 6♠ 5♠ 4♠ 2♠ A♠
+    Lo5thBest = 0b111101,  // 6♠ 5♠ 4♠ 3♠ A♠
+    Lo6thBest = 0b111110,  // 6♣ 5♣ 4♣ 3♣ 2♣
+    Lo7thBest = 0b1001111, // 7♣ 4♣ 3♣ 2♣ A♣
+
+    // 7 - 0b1010111 87: A♣ 7♣ 5♣ 3♣ 2♣
+    // 8 - 0b1011011 91: A♣ 7♣ 5♣ 4♣ 2♣
+    // 9 - 0b1011101 93: A♣ 7♣ 5♣ 4♣ 3♣
+    // 10 - 0b1011110 94: 7♣ 5♣ 4♣ 3♣ 2♣
+    // 11 - 0b1100111 103: A♣ 7♣ 6♣ 3♣ 2♣
+    // 12 - 0b1101011 107: A♣ 7♣ 6♣ 4♣ 2♣
+    // 13 - 0b1101101 109: A♣ 7♣ 6♣ 4♣ 3♣
+    // 14 - 0b1101110 110: 7♣ 6♣ 4♣ 3♣ 2♣
+    // 15 - 0b1110011 115: A♣ 7♣ 6♣ 5♣ 2♣
+    // 16 - 0b1110101 117: A♣ 7♣ 6♣ 5♣ 3♣
+    // 17 - 0b1110110 118: 7♣ 6♣ 5♣ 3♣ 2♣
+    // 18 - 0b1111001 121: A♣ 7♣ 6♣ 5♣ 4♣
+    // 19 - 0b1111010 122: 7♣ 6♣ 5♣ 4♣ 2♣
+    // 20 - 0b1111100 124: 7♣ 6♣ 5♣ 4♣ 3♣
+    // 21 - 0b10001111 143: A♣ 8♣ 4♣ 3♣ 2♣
+    // 22 - 0b10010111 151: A♣ 8♣ 5♣ 3♣ 2♣
+    // 23 - 0b10011011 155: A♣ 8♣ 5♣ 4♣ 2♣
+    // 24 - 0b10011101 157: A♣ 8♣ 5♣ 4♣ 3♣
+    // 25 - 0b10011110 158: 8♣ 5♣ 4♣ 3♣ 2♣
+    // 26 - 0b10100111 167: A♣ 8♣ 6♣ 3♣ 2♣
+    // 27 - 0b10101011 171: A♣ 8♣ 6♣ 4♣ 2♣
+    // 28 - 0b10101101 173: A♣ 8♣ 6♣ 4♣ 3♣
+    // 29 - 0b10101110 174: 8♣ 6♣ 4♣ 3♣ 2♣
+    // 30 - 0b10110011 179: A♣ 8♣ 6♣ 5♣ 2♣
+    // 31 - 0b10110101 181: A♣ 8♣ 6♣ 5♣ 3♣
+    // 32 - 0b10110110 182: 8♣ 6♣ 5♣ 3♣ 2♣
+    // 33 - 0b10111001 185: A♣ 8♣ 6♣ 5♣ 4♣
+    // 34 - 0b10111010 186: 8♣ 6♣ 5♣ 4♣ 2♣
+    // 35 - 0b10111100 188: 8♣ 6♣ 5♣ 4♣ 3♣
+    // 36 - 0b11000111 199: A♣ 8♣ 7♣ 3♣ 2♣
+    // 37 - 0b11001011 203: A♣ 8♣ 7♣ 4♣ 2♣
+    // 38 - 0b11001101 205: A♣ 8♣ 7♣ 4♣ 3♣
+    // 39 - 0b11001110 206: 8♣ 7♣ 4♣ 3♣ 2♣
+    // 40 - 0b11010011 211: A♣ 8♣ 7♣ 5♣ 2♣
+    // 41 - 0b11010101 213: A♣ 8♣ 7♣ 5♣ 3♣
+    // 42 - 0b11010110 214: 8♣ 7♣ 5♣ 3♣ 2♣
+    // 43 - 0b11011001 217: A♣ 8♣ 7♣ 5♣ 4♣
+    // 44 - 0b11011010 218: 8♣ 7♣ 5♣ 4♣ 2♣
+    // 45 - 0b11011100 220: 8♣ 7♣ 5♣ 4♣ 3♣
+    // 46 - 0b11100011 227: A♣ 8♣ 7♣ 6♣ 2♣
+    // 47 - 0b11100101 229: A♣ 8♣ 7♣ 6♣ 3♣
+    // 48 - 0b11100110 230: 8♣ 7♣ 6♣ 3♣ 2♣
+    // 49 - 0b11101001 233: A♣ 8♣ 7♣ 6♣ 4♣
+    // 50 - 0b11101010 234: 8♣ 7♣ 6♣ 4♣ 2♣
+    // 51 - 0b11101100 236: 8♣ 7♣ 6♣ 4♣ 3♣
+    // 52 - 0b11110001 241: A♣ 8♣ 7♣ 6♣ 5♣
+    // 53 - 0b11110010 242: 8♣ 7♣ 6♣ 5♣ 2♣
+    // 54 - 0b11110100 244: 8♣ 7♣ 6♣ 5♣ 3♣
+    // 55 - 0b11111000 248: 8♣ 7♣ 6♣ 5♣ 4♣
     NoLow = 0,
-
-
-    // 5♠ 4♠ 3♠ 2♠ A♠
-    // 6♠ 4♠ 3♠ 2♠ A♠
-    // 6♠ 5♠ 3♠ 2♠ A♠
-    // 6♠ 5♠ 4♠ 2♠ A♠
-    // 6♠ 5♠ 4♠ 3♠ A♠
-    // 6♠ 5♠ 4♠ 3♠ 2♠
-
-    // 7♠ 4♠ 3♠ 2♠ A♠
-    // 7♠ 5♠ 3♠ 2♠ A♠
-    // 7♠ 5♠ 4♠ 2♠ A♠
-    // 7♠ 5♠ 4♠ 3♠ A♠
-    // 7♠ 5♠ 4♠ 3♠ 2♠
-    // 7♠ 6♠ 3♠ 2♠ A♠
-    // 7♠ 6♠ 4♠ 2♠ A♠
-    // 7♠ 6♠ 4♠ 3♠ A♠
-    // 7♠ 6♠ 4♠ 3♠ 2♠
-    // 7♠ 6♠ 5♠ 2♠ A♠
-    // 7♠ 6♠ 5♠ 3♠ A♠
-    // 7♠ 6♠ 5♠ 3♠ 2♠
-    // 7♠ 6♠ 5♠ 4♠ A♠
-    // 7♠ 6♠ 5♠ 4♠ 2♠
-    // 7♠ 6♠ 5♠ 4♠ 3♠
-
-    // 8♠ 4♠ 3♠ 2♠ A♠
-    // 8♠ 5♠ 3♠ 2♠ A♠
-    // 8♠ 5♠ 4♠ 2♠ A♠
-    // 8♠ 5♠ 4♠ 3♠ A♠
-    // 8♠ 5♠ 4♠ 3♠ 2♠
-    // 8♠ 6♠ 3♠ 2♠ A♠
-    // 8♠ 6♠ 4♠ 2♠ A♠
-    // 8♠ 6♠ 4♠ 3♠ A♠
-    // 8♠ 6♠ 4♠ 3♠ 2♠
-    // 8♠ 6♠ 5♠ 2♠ A♠
-    // 8♠ 6♠ 5♠ 3♠ A♠
-    // 8♠ 6♠ 5♠ 4♠ A♠
-    // 8♠ 7♠ 3♠ 2♠ A♠
-    // 8♠ 7♠ 4♠ 2♠ A♠
-    // 8♠ 7♠ 4♠ 3♠ A♠
-    // 8♠ 7♠ 5♠ 2♠ A♠
-    // 8♠ 6♠ 5♠ 3♠ 2♠
-    // 8♠ 6♠ 5♠ 4♠ 2♠
-    // 8♠ 6♠ 5♠ 4♠ 3♠
-    // 8♠ 7♠ 4♠ 3♠ 2♠
-    // 8♠ 7♠ 5♠ 3♠ A♠
-    // 8♠ 7♠ 5♠ 3♠ 2♠
-    // 8♠ 7♠ 5♠ 4♠ A♠
-    // 8♠ 7♠ 5♠ 4♠ 2♠
-    // 8♠ 7♠ 5♠ 4♠ 3♠
-    // 8♠ 7♠ 6♠ 2♠ A♠
-    // 8♠ 7♠ 6♠ 3♠ A♠
-    // 8♠ 7♠ 6♠ 3♠ 2♠
-    // 8♠ 7♠ 6♠ 4♠ A♠
-    // 8♠ 7♠ 6♠ 4♠ 2♠
-    // 8♠ 7♠ 6♠ 4♠ 3♠
-    // 8♠ 7♠ 6♠ 5♠ A♠
-    // 8♠ 7♠ 6♠ 5♠ 2♠
-    // 8♠ 7♠ 6♠ 5♠ 3♠
-    // 8♠ 7♠ 6♠ 5♠ 4♠
-    //
-    // Process finished with exit code 0
 }
 
 impl EightOrBetter {
     pub const EIGHT_OR_BETTER_MASK: u32 = 0b00010000_01111111_00000000_00000000;
-    pub const LO_BIT_ACE: u32 =   0b00000001;
-    pub const LO_BIT_DEUCE: u32 =   0b00000010;
+    pub const LO_BIT_ACE: u32 = 0b00000001;
+    pub const LO_BIT_DEUCE: u32 = 0b00000010;
     pub const LO_BIT_TREY: u32 = 0b00000100;
-    pub const LO_BIT_FOUR: u32 =  0b00001000;
-    pub const LO_BIT_FIVE: u32 =  0b00010000;
-    pub const LO_BIT_SIX: u32 =   0b00100000;
+    pub const LO_BIT_FOUR: u32 = 0b00001000;
+    pub const LO_BIT_FIVE: u32 = 0b00010000;
+    pub const LO_BIT_SIX: u32 = 0b00100000;
     pub const LO_BIT_SEVEN: u32 = 0b01000000;
     pub const LO_BIT_EIGHT: u32 = 0b10000000;
 
@@ -91,18 +79,11 @@ impl EightOrBetter {
         collapsed & EightOrBetter::EIGHT_OR_BETTER_MASK
     }
 
-    fn get_low_bit(card: Card) -> u32 {
-        match card.get_rank() {
-            Rank::ACE => EightOrBetter::LO_BIT_ACE,
-            Rank::DEUCE => EightOrBetter::LO_BIT_DEUCE,
-            Rank::TREY => EightOrBetter::LO_BIT_TREY,
-            Rank::FOUR => EightOrBetter::LO_BIT_FOUR,
-            Rank::FIVE => EightOrBetter::LO_BIT_FIVE,
-            Rank::SIX => EightOrBetter::LO_BIT_SIX,
-            Rank::SEVEN => EightOrBetter::LO_BIT_SEVEN,
-            Rank::EIGHT => EightOrBetter::LO_BIT_EIGHT,
-            _ => 0,
-        }
+    #[must_use]
+    pub fn get_low_bits(cards: &Cards) -> u8 {
+        cards
+            .iter()
+            .fold(0, |acc, card| acc | card.get_rank().to_eight_or_better_lo_bit())
     }
 
     #[must_use]
@@ -119,7 +100,6 @@ impl EightOrBetter {
             _ => None,
         }
     }
-
 }
 
 impl From<Five> for EightOrBetter {
@@ -130,7 +110,7 @@ impl From<Five> for EightOrBetter {
         }
 
         match filtered {
-            0b00010000_00001111_00000000_00000000 => EightOrBetter::LoWheel,
+            0b00010000_00001111_00000000_00000000 => EightOrBetter::Wheel,
             0b00010000_00010111_00000000_00000000 => EightOrBetter::Lo6432A,
             0b00010000_00011011_00000000_00000000 => EightOrBetter::Lo6532A,
             0b00010000_00011101_00000000_00000000 => EightOrBetter::Lo6542A,
@@ -161,7 +141,7 @@ mod lookups__omaha_tests {
         let five = Five::from_str("A♠ 5♠ 4♠ 3♠ 2♠").unwrap();
         let eight_or_better = EightOrBetter::from(five);
 
-        assert_eq!(eight_or_better, EightOrBetter::LoWheel);
+        assert_eq!(eight_or_better, EightOrBetter::Wheel);
     }
 
     #[rstest]
@@ -181,7 +161,7 @@ mod lookups__omaha_tests {
     #[case("6♠ 5♠ 3♠ 2♠ A♠", EightOrBetter::Lo6532A)]
     #[case("6♠ 5♠ 4♠ 2♠ A♠", EightOrBetter::Lo6542A)]
     #[case("6♠ 5♠ 4♠ 3♠ A♠", EightOrBetter::Lo6543A)]
-    #[case("7♠ 4♠ 3♠ 2♠ A♠", EightOrBetter::Lo7432A)]
+    // #[case("7♠ 4♠ 3♠ 2♠ A♠", EightOrBetter::Lo7432A)]
     // #[case("7♠ 5♠ 3♠ 2♠ A♠", EightOrBetter::Lo7543A)]
 
     // #[case("8♠ 6♠ 4♠ 3♠ 2♠", EightOrBetter::SixthNuts)]

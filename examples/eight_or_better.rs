@@ -1,44 +1,35 @@
-use std::collections::HashMap;
 use pkcore::analysis::omaha::EightOrBetter;
 use pkcore::arrays::five::Five;
+use pkcore::cards::Cards;
 use pkcore::deck::POKER_DECK;
+use std::collections::HashMap;
 
 fn main() {
-
-    let combos = POKER_DECK.combinations(5);
-
-    // let lows = combos.filter(EightOrBetter::is_eight_or_better).collect::<Vec<_>>();
-
-    let mut all: Vec<Five> = Vec::new();
-    let mut mappy: HashMap<u32, Five> = HashMap::new();
+    let mut mappy: HashMap<u8, Five> = HashMap::new();
 
     POKER_DECK.combinations(5).for_each(|c| {
-        let hand = Five::try_from(c).unwrap();
-        match EightOrBetter::filter(hand) {
-            Some(v) => {
-                all.push(hand);
-                if !mappy.contains_key(&v) {
-                    mappy.insert(v, hand);
+        let cards = Cards::from(c);
+        let bits = EightOrBetter::get_low_bits(&cards);
+        if bits.count_ones() == 5 {
+            match Five::try_from(cards) {
+                Ok(five) => {
+                    mappy.insert(bits, five);
                 }
-            },
-            None => ()
+                Err(_) => {}
+            }
         }
     });
 
-    let mut lows: Vec<Five> = mappy.values().cloned().collect();
-    lows.sort();
-    for low in lows {
-        println!("{}", low);
+    let mut keys = mappy.keys().cloned().collect::<Vec<u8>>();
+    keys.sort();
+
+    for (i, key) in keys.iter().enumerate() {
+        println!("{i} - {key:0b} {key}: {}", mappy.get(&key).unwrap());
     }
-
-
 
     // let lows: Vec<Five> = combos
     //     .filter(|c| match_value(Five::try_from(c)).is_ok())
     //     .filter(EightOrBetter::is_eight_or_better)
     //     .collect();
     //
-
-
-
 }
