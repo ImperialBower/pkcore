@@ -26,10 +26,4 @@ fn main() {
     for (i, key) in keys.iter().enumerate() {
         println!("{i} - {key:0b} {key}: {}", mappy.get(&key).unwrap());
     }
-
-    // let lows: Vec<Five> = combos
-    //     .filter(|c| match_value(Five::try_from(c)).is_ok())
-    //     .filter(EightOrBetter::is_eight_or_better)
-    //     .collect();
-    //
 }
