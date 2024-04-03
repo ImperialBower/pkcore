@@ -776,5 +776,14 @@ This is an outline of the work as it is done.
         * Bumped versions
         * Updated deprecated `IndexSet::remove` to `swap_remove`.
     * PKWEB
-      * Added Two::get_letter_index()
-      * Added SortedHeadsUp::get_letter_index()
+        * Added Two::get_letter_index()
+        * Added SortedHeadsUp::get_letter_index()
+    * FEATURE: OMAHA
+      * impl Ord properly for Eval
+      * Adding omaha permutations to Four
+      * TODO: Refactor game analysis from array structs
+      * Four::omaha_high()
+      * 8 or better
+        * Cards.collapse()
+          * moved to Pile trait
+        * Rank.to_eight_or_better_lo_bit

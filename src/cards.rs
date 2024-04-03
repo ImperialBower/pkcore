@@ -5,7 +5,7 @@ use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::suit::Suit;
 use crate::util::random_ordering::RandomOrdering;
-use crate::{card, PKError, Pile, SuitShift, TheNuts};
+use crate::{PKError, Pile, SuitShift, TheNuts};
 use indexmap::set::{IntoIter, Iter};
 use indexmap::IndexSet;
 use itertools::{Combinations, Itertools};
@@ -135,6 +135,15 @@ impl Cards {
         }
         Ok(v)
     }
+
+    /// Collapse
+    // pub fn collapse(&self) -> u32 {
+    //     let mut result: u32 = 0;
+    //     for card in self.iter() {
+    //         result = result | card.as_u32();
+    //     }
+    //     result
+    // }
 
     pub fn combinations(&self, k: usize) -> Combinations<indexmap::set::IntoIter<Card>> {
         self.0.clone().into_iter().combinations(k)
@@ -549,8 +558,22 @@ impl From<Vec<&Card>> for Cards {
     }
 }
 
-impl FromIterator<card::Card> for Cards {
-    fn from_iter<T: IntoIterator<Item = card::Card>>(iter: T) -> Self {
+impl From<&Vec<Card>> for Cards {
+    fn from(v: &Vec<Card>) -> Self {
+        let filtered = v.iter().filter_map(|c| {
+            let pc = *c;
+            if pc.contains_blank() {
+                None
+            } else {
+                Some(pc)
+            }
+        });
+        Cards(filtered.collect())
+    }
+}
+
+impl FromIterator<Card> for Cards {
+    fn from_iter<T: IntoIterator<Item = Card>>(iter: T) -> Self {
         let mut c = Cards::default();
         for i in iter {
             c.insert(i);
@@ -685,6 +708,17 @@ mod card_tests {
         let minus = Cards::deck_minus(&cards);
 
         assert_eq!("A♠ K♠", minus.to_string());
+    }
+
+    #[test]
+    fn collapse() {
+        let wheel = Cards::from_str("5♠ 4♠ 3♠ 2♠ A♥").unwrap().shuffle();
+        // for card in wheel {
+        //     println!("{}", card.bit_string());
+        // }
+        let expected: u32 = 0b00010000_00001111_11001111_00101111;
+
+        assert_eq!(expected, wheel.collapse());
     }
 
     #[test]
@@ -1000,6 +1034,13 @@ mod card_tests {
         assert_eq!(Suit::all(), deck.suits());
         assert_eq!(13, clubs.len());
         assert_eq!(1, clubs.suits().len());
+    }
+
+    #[test]
+    fn pile__to_eight_or_better_bits() {
+        let pile = Cards::from_str("A♦ 2♦ 3♦ 4♦ 5♥").unwrap();
+
+        assert_eq!(pile.to_eight_or_better_bits(), 0b11111);
     }
 
     #[test]

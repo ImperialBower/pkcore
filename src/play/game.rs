@@ -688,12 +688,7 @@ impl Game {
     // region Private Methods
     #[must_use]
     pub fn flop_and_turn(&self) -> Four {
-        Four::from([
-            self.board.flop.first(),
-            self.board.flop.second(),
-            self.board.flop.third(),
-            self.board.turn,
-        ])
+        Four::from_turn(self.board.flop, self.board.turn)
     }
 
     /// # Errors
@@ -725,6 +720,7 @@ impl Display for Game {
 mod play__game_tests {
     use super::*;
     use crate::analysis::class::Class;
+    use crate::arrays::three::Three;
     use crate::arrays::two::Two;
     use crate::util::data::TestData;
     use crate::util::wincounter::win::Win;
@@ -754,12 +750,10 @@ mod play__game_tests {
     #[test]
     fn flop_and_turn() {
         let game = TestData::the_hand();
-        let expected = Four::from([
-            Card::NINE_CLUBS,
-            Card::SIX_DIAMONDS,
-            Card::FIVE_HEARTS,
+        let expected = Four::from_turn(
+            Three::from([Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS]),
             Card::FIVE_SPADES,
-        ]);
+        );
 
         assert_eq!(expected, game.flop_and_turn());
     }

@@ -25,6 +25,15 @@ pub enum Rank {
 }
 
 impl Rank {
+    pub const EIGHT_OR_BETTER_LO_BIT_ACE: u8 = 0b00000001;
+    pub const EIGHT_OR_BETTER_LO_BIT_DEUCE: u8 = 0b00000010;
+    pub const EIGHT_OR_BETTER_LO_BIT_TREY: u8 = 0b00000100;
+    pub const EIGHT_OR_BETTER_LO_BIT_FOUR: u8 = 0b00001000;
+    pub const EIGHT_OR_BETTER_LO_BIT_FIVE: u8 = 0b00010000;
+    pub const EIGHT_OR_BETTER_LO_BIT_SIX: u8 = 0b00100000;
+    pub const EIGHT_OR_BETTER_LO_BIT_SEVEN: u8 = 0b01000000;
+    pub const EIGHT_OR_BETTER_LO_BIT_EIGHT: u8 = 0b10000000;
+
     #[must_use]
     pub fn bits(self) -> u32 {
         1 << (16 + self.number())
@@ -92,6 +101,21 @@ impl Rank {
             Rank::TREY => '3',
             Rank::DEUCE => '2',
             Rank::BLANK => '_',
+        }
+    }
+
+    #[must_use]
+    pub fn to_eight_or_better_lo_bit(self) -> u8 {
+        match self {
+            Rank::ACE => Rank::EIGHT_OR_BETTER_LO_BIT_ACE,
+            Rank::DEUCE => Rank::EIGHT_OR_BETTER_LO_BIT_DEUCE,
+            Rank::TREY => Rank::EIGHT_OR_BETTER_LO_BIT_TREY,
+            Rank::FOUR => Rank::EIGHT_OR_BETTER_LO_BIT_FOUR,
+            Rank::FIVE => Rank::EIGHT_OR_BETTER_LO_BIT_FIVE,
+            Rank::SIX => Rank::EIGHT_OR_BETTER_LO_BIT_SIX,
+            Rank::SEVEN => Rank::EIGHT_OR_BETTER_LO_BIT_SEVEN,
+            Rank::EIGHT => Rank::EIGHT_OR_BETTER_LO_BIT_EIGHT,
+            _ => 0,
         }
     }
 }
@@ -174,6 +198,26 @@ mod rank_tests {
             // https://crates.io/crates/elr_primes#user-content-examples
             assert_eq!(i.next().unwrap().prime(), *p as u32);
         }
+    }
+
+    #[rstest]
+    #[case(Rank::ACE, Rank::EIGHT_OR_BETTER_LO_BIT_ACE)]
+    #[case(Rank::KING, 0)]
+    #[case(Rank::QUEEN, 0)]
+    #[case(Rank::JACK, 0)]
+    #[case(Rank::TEN, 0)]
+    #[case(Rank::NINE, 0)]
+    #[case(Rank::EIGHT, Rank::EIGHT_OR_BETTER_LO_BIT_EIGHT)]
+    #[case(Rank::SEVEN, Rank::EIGHT_OR_BETTER_LO_BIT_SEVEN)]
+    #[case(Rank::SIX, Rank::EIGHT_OR_BETTER_LO_BIT_SIX)]
+    #[case(Rank::FIVE, Rank::EIGHT_OR_BETTER_LO_BIT_FIVE)]
+    #[case(Rank::FOUR, Rank::EIGHT_OR_BETTER_LO_BIT_FOUR)]
+    #[case(Rank::TREY, Rank::EIGHT_OR_BETTER_LO_BIT_TREY)]
+    #[case(Rank::DEUCE, Rank::EIGHT_OR_BETTER_LO_BIT_DEUCE)]
+    #[case(Rank::BLANK, 0)]
+    fn to_eight_or_better_lo_bit(#[case] input: Rank, #[case] expected: u8) {
+        // NOTE: This test is a twofer, handing both display and to_char()
+        assert_eq!(expected, input.to_eight_or_better_lo_bit());
     }
 
     #[rstest]

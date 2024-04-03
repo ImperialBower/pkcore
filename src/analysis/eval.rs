@@ -4,6 +4,7 @@ use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::HandRanker;
 use crate::PKError;
+use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 
@@ -194,7 +195,7 @@ use std::hash::{Hash, Hasher};
 /// wear safety goggles when using a power saw to cut wood, but anyone with half a brain who enjoys
 /// seeing knows that you'd be an idiot not to. Know your craft, and anytime you are going against
 /// the traditional rules you have learned, have a damn good reason.
-#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Eval {
     pub hand_rank: HandRank,
     pub hand: Five,
@@ -260,6 +261,22 @@ impl Hash for Eval {
     }
 }
 
+impl Ord for Eval {
+    /// I originally was using derive for Ord, but adding even a simple test revealed that the
+    /// `Five` struct was messing up the concept, since a Royal Flush made up of spades beats one
+    /// of hearts, even though they are equal as far as Texas Hold'em is concerned.
+    /// The only think that matters is the `HandRank` itself.
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.hand_rank.cmp(&other.hand_rank)
+    }
+}
+
+impl PartialOrd<Self> for Eval {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl PartialEq for Eval {
     fn eq(&self, other: &Self) -> bool {
         self.hand_rank == other.hand_rank
@@ -306,6 +323,38 @@ mod hand_rank__eval_tests {
             Eval::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap()),
             Eval::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap())
         )
+    }
+
+    #[test]
+    fn hash() {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = DefaultHasher::new();
+        Eval::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap()).hash(&mut hasher);
+        let hash1 = hasher.finish();
+
+        let mut hasher = DefaultHasher::new();
+        Eval::from(Five::from_str("A♠ T♠ K♠ J♠ Q♠ ").unwrap()).hash(&mut hasher);
+        let hash2 = hasher.finish();
+
+        assert_eq!(hash1, hash2);
+    }
+
+    #[test]
+    fn ord() {
+        assert_eq!(
+            Eval::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap()),
+            Eval::from(Five::from_str("Q♥ J♥ A♥ T♥ K♥").unwrap())
+        );
+        assert!(
+            Eval::from(Five::from_str("Q♠ A♠ T♠ K♠ J♠").unwrap())
+                > Eval::from(Five::from_str("Q♥ J♥ 9♥ T♥ K♥").unwrap())
+        );
+        assert!(
+            Eval::from(Five::from_str("Q♠ 9♠ T♠ 8♠ J♠").unwrap())
+                < Eval::from(Five::from_str("Q♥ J♥ 9♥ T♥ K♥").unwrap())
+        );
     }
 
     /// This is to validate that `Eval` is primarily sorting on `HandRank` and then

@@ -104,6 +104,7 @@ pub enum PKError {
     InvalidIndex,
     InvalidPluribusIndex,
     InvalidPosition,
+    NoLow,
     NotDealt,
     NotEnoughCards,
     NotEnoughHands,
@@ -134,6 +135,7 @@ impl Display for PKError {
             PKError::InvalidIndex => "Invalid Index Error",
             PKError::InvalidPluribusIndex => "Invalid Pluribus Index Error",
             PKError::InvalidPosition => "Invalid Position Error",
+            PKError::NoLow => "No low hand possible Error",
             PKError::NotDealt => "Not Dealt Error",
             PKError::NotEnoughCards => "Not Enough Cards Error",
             PKError::NotEnoughHands => "Not Enough Hands Error",
@@ -170,7 +172,7 @@ pub trait Betting {
     fn wins(&mut self, winnings: Chips) -> usize;
 }
 
-/// The name of this trait is a pun om pluribus, which is the name of the poker AI group.
+/// The name of this trait is a pun on pluribus, which is the name of the poker AI group.
 pub trait Plurable {
     /// Converts a part of the Pluribus log format
     ///
@@ -202,6 +204,20 @@ pub trait Pile {
     /// *NARRATOR:* _The answer is yes._
     #[must_use]
     fn clean(&self) -> Self;
+
+    /// > This is a bit of a hack. I'm not sure if I should be doing this. I'm going to try it and
+    ///
+    /// Why TF is copilot using this tone for its suggested documentation???
+    ///
+    /// This method takes a `Pile` of `Cards` and does a bitwise OR on all of the `Cards` in the
+    /// `pile`, returning a single `u32`.
+    ///
+    /// The initial goal of this method is for use in 8 or Better hand evals where all that matters
+    /// us the `Rank` of the cards.
+    #[must_use]
+    fn collapse(&self) -> u32 {
+        self.to_vec().iter().fold(0, |acc, card| acc | card.as_u32())
+    }
 
     /// If I can move logic to a trait that can be automatically reusable by other implementations
     /// that I do it. A strict TDD person could argue that you shouldn't do this unless you have
@@ -279,6 +295,12 @@ pub trait Pile {
     }
 
     fn the_nuts(&self) -> TheNuts;
+
+    fn to_eight_or_better_bits(&self) -> u8 {
+        self.cards()
+            .iter()
+            .fold(0, |acc, card| acc | card.get_rank().to_eight_or_better_lo_bit() | acc)
+    }
 
     fn evals(&self) -> Evals {
         self.the_nuts().to_evals()

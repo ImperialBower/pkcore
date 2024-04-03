@@ -11,6 +11,7 @@ pub mod evals;
 pub mod hand_rank;
 pub mod matchups;
 pub mod name;
+pub mod omaha;
 pub mod outs;
 pub mod player_wins;
 pub mod store;
