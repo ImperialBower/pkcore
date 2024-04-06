@@ -4,7 +4,9 @@ use crate::arrays::four::Four;
 use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
 use crate::arrays::HandRanker;
+use crate::cards::Cards;
 use crate::play::board::Board;
+use crate::PKError;
 use std::fmt;
 use std::fmt::{Display, Formatter};
 
@@ -60,11 +62,63 @@ impl Display for OmahaHigh {
     }
 }
 
+impl TryFrom<Cards> for OmahaHigh {
+    type Error = PKError;
+
+    fn try_from(cards: Cards) -> Result<Self, Self::Error> {
+        let four = Four::try_from(cards)?;
+        Ok(OmahaHigh { hand: four })
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod games__omaha_high_tests {
     use super::*;
+    use crate::card::Card;
+    use std::str::FromStr;
 
     #[test]
     fn display() {}
+
+    #[test]
+    fn try_from__cards() {
+        let cards = Cards::from_str("AS QS QD JC").unwrap();
+        let expected = OmahaHigh {
+            hand: Four::from([
+                Card::ACE_SPADES,
+                Card::QUEEN_SPADES,
+                Card::QUEEN_DIAMONDS,
+                Card::JACK_CLUBS,
+            ]),
+        };
+
+        let actual = OmahaHigh::try_from(cards).unwrap();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn try_from__cards__error() {
+        assert_eq!(
+            PKError::NotEnoughCards,
+            OmahaHigh::try_from(Cards::default()).unwrap_err()
+        );
+        assert_eq!(
+            PKError::NotEnoughCards,
+            OmahaHigh::try_from(Cards::from_str("AS").unwrap()).unwrap_err()
+        );
+        assert_eq!(
+            PKError::NotEnoughCards,
+            OmahaHigh::try_from(Cards::from_str("AS KS").unwrap()).unwrap_err()
+        );
+        assert_eq!(
+            PKError::NotEnoughCards,
+            OmahaHigh::try_from(Cards::from_str("AS KS QC").unwrap()).unwrap_err()
+        );
+        assert_eq!(
+            PKError::TooManyCards,
+            OmahaHigh::try_from(Cards::from_str("AS KS QC JC TC").unwrap()).unwrap_err()
+        );
+    }
 }

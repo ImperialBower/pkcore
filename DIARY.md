@@ -793,4 +793,4 @@ This is an outline of the work as it is done.
           * impl FromStr for OmahaHigh
             * impl FromStr for Four
               * impl TryFrom<Cards> for Four
-              * 
+            * impl TryFrom<Cards> for OmahaHigh
