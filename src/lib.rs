@@ -35,6 +35,7 @@ pub mod card_number;
 pub mod cards;
 pub mod casino;
 pub mod deck;
+pub mod games;
 mod lookups;
 pub mod play;
 pub mod rank;

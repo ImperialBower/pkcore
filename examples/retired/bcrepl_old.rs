@@ -11,7 +11,7 @@ use pkcore::{PKError, Pile};
 /// OK, this makes me sad. My new shiny pkcore library takes over twice as long to run a single calc
 ///
 /// ```txt
-/// fudd❯ cargo run --example bcrepl
+/// ❯ cargo run --example bcrepl
 /// ...
 /// hole cards> A♠ A♥ 6♦ 6♣
 /// Elapsed: 8.27s

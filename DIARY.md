@@ -787,3 +787,10 @@ This is an outline of the work as it is done.
         * Cards.collapse()
           * moved to Pile trait
         * Rank.to_eight_or_better_lo_bit
+      * BACK TO OMAHA
+        * games::omaha::OmahaHigh
+          * impl Display for OmahaHigh 
+          * impl FromStr for OmahaHigh
+            * impl FromStr for Four
+              * impl TryFrom<Cards> for Four
+              * 

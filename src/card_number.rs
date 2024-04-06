@@ -3,27 +3,6 @@ use strum::EnumIter;
 
 pub type CKCNumber = u32;
 
-pub const RANK_FLAG_FILTER: u32 = 0x1FFF0000; // 536805376 aka 0b00011111_11111111_00000000_00000000
-pub const RANK_FLAG_SHIFT: u32 = 16;
-pub const RANK_PRIME_FILTER: u32 = 0b00111111;
-
-/// Binary filter for `CardNumber` `Suit` flags.
-/// 00000000 00000000 11110000 00000000
-pub const SUIT_FILTER: u32 = 0xF000; // 61440 aka 0b11110000_00000000
-pub const SUIT_SHORT_MASK: u32 = 0b1111;
-pub const SUIT_SHIFT: u32 = 12;
-
-//region multiples
-
-/// These flags are used to give sorting priority when more than one card
-/// of a specific rank is present.
-pub const PAIR: u32 = 536_870_912;
-pub const TRIPS: u32 = 1_073_741_824;
-pub const QUADS: u32 = 2_147_483_648;
-pub const MULTIPLES_FILTER: u32 = 536_870_911;
-
-//endregion
-
 //region cardnumbers
 const CKC_AS: CKCNumber = 0b010000000000001000110000101001;
 const CKC_KS: CKCNumber = 0b001000000000001000101100100101;
