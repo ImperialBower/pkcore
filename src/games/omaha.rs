@@ -9,6 +9,7 @@ use crate::play::board::Board;
 use crate::PKError;
 use std::fmt;
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 
 pub const OMAHA_HAND_PERMUTATIONS: [[usize; 2]; 6] = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]];
 pub const OMAHA_BOARD_PERMUTATIONS: [[usize; 3]; 10] = [
@@ -62,6 +63,14 @@ impl Display for OmahaHigh {
     }
 }
 
+impl FromStr for OmahaHigh {
+    type Err = PKError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        OmahaHigh::try_from(Cards::from_str(s)?)
+    }
+}
+
 impl TryFrom<Cards> for OmahaHigh {
     type Error = PKError;
 
@@ -80,6 +89,22 @@ mod games__omaha_high_tests {
 
     #[test]
     fn display() {}
+
+    #[test]
+    fn from_str() {
+        let expected = OmahaHigh {
+            hand: Four::from([
+                Card::ACE_SPADES,
+                Card::QUEEN_SPADES,
+                Card::QUEEN_DIAMONDS,
+                Card::JACK_CLUBS,
+            ]),
+        };
+
+        let actual = OmahaHigh::from_str("AS QS QD JC").unwrap();
+
+        assert_eq!(expected, actual);
+    }
 
     #[test]
     fn try_from__cards() {
