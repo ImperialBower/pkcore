@@ -1,62 +1,142 @@
 use crate::PKError;
 use strum::EnumIter;
 
+pub type CKCNumber = u32;
+
+pub const RANK_FLAG_FILTER: u32 = 0x1FFF0000; // 536805376 aka 0b00011111_11111111_00000000_00000000
+pub const RANK_FLAG_SHIFT: u32 = 16;
+pub const RANK_PRIME_FILTER: u32 = 0b00111111;
+
+/// Binary filter for `CardNumber` `Suit` flags.
+/// 00000000 00000000 11110000 00000000
+pub const SUIT_FILTER: u32 = 0xF000; // 61440 aka 0b11110000_00000000
+pub const SUIT_SHORT_MASK: u32 = 0b1111;
+pub const SUIT_SHIFT: u32 = 12;
+
+//region multiples
+
+/// These flags are used to give sorting priority when more than one card
+/// of a specific rank is present.
+pub const PAIR: u32 = 536_870_912;
+pub const TRIPS: u32 = 1_073_741_824;
+pub const QUADS: u32 = 2_147_483_648;
+pub const MULTIPLES_FILTER: u32 = 536_870_911;
+
+//endregion
+
+//region cardnumbers
+const CKC_AS: CKCNumber = 0b010000000000001000110000101001;
+const CKC_KS: CKCNumber = 0b001000000000001000101100100101;
+const CKC_QS: CKCNumber = 0b000100000000001000101000011111;
+const CKC_JS: CKCNumber = 0b000010000000001000100100011101;
+const CKC_TS: CKCNumber = 0b000001000000001000100000010111;
+const CKC_9S: CKCNumber = 0b000000100000001000011100010011;
+const CKC_8S: CKCNumber = 0b000000010000001000011000010001;
+const CKC_7S: CKCNumber = 0b000000001000001000010100001101;
+const CKC_6S: CKCNumber = 0b000000000100001000010000001011;
+const CKC_5S: CKCNumber = 0b000000000010001000001100000111;
+const CKC_4S: CKCNumber = 0b000000000001001000001000000101;
+const CKC_3S: CKCNumber = 0b000000000000101000000100000011;
+const CKC_2S: CKCNumber = 0b000000000000011000000000000010;
+
+const CKC_AH: CKCNumber = 0b010000000000000100110000101001;
+const CKC_KH: CKCNumber = 0b001000000000000100101100100101;
+const CKC_QH: CKCNumber = 0b000100000000000100101000011111;
+const CKC_JH: CKCNumber = 0b000010000000000100100100011101;
+const CKC_TH: CKCNumber = 0b000001000000000100100000010111;
+const CKC_9H: CKCNumber = 0b000000100000000100011100010011;
+const CKC_8H: CKCNumber = 0b000000010000000100011000010001;
+const CKC_7H: CKCNumber = 0b000000001000000100010100001101;
+const CKC_6H: CKCNumber = 0b000000000100000100010000001011;
+const CKC_5H: CKCNumber = 0b000000000010000100001100000111;
+const CKC_4H: CKCNumber = 0b000000000001000100001000000101;
+const CKC_3H: CKCNumber = 0b000000000000100100000100000011;
+const CKC_2H: CKCNumber = 0b000000000000010100000000000010;
+
+const CKC_AD: CKCNumber = 0b010000000000000010110000101001;
+const CKC_KD: CKCNumber = 0b001000000000000010101100100101;
+const CKC_QD: CKCNumber = 0b000100000000000010101000011111;
+const CKC_JD: CKCNumber = 0b000010000000000010100100011101;
+const CKC_TD: CKCNumber = 0b000001000000000010100000010111;
+const CKC_9D: CKCNumber = 0b000000100000000010011100010011;
+const CKC_8D: CKCNumber = 0b000000010000000010011000010001;
+const CKC_7D: CKCNumber = 0b000000001000000010010100001101;
+const CKC_6D: CKCNumber = 0b000000000100000010010000001011;
+const CKC_5D: CKCNumber = 0b000000000010000010001100000111;
+const CKC_4D: CKCNumber = 0b000000000001000010001000000101;
+const CKC_3D: CKCNumber = 0b000000000000100010000100000011;
+const CKC_2D: CKCNumber = 0b000000000000010010000000000010;
+
+const CKC_AC: CKCNumber = 0b010000000000000001110000101001;
+const CKC_KC: CKCNumber = 0b001000000000000001101100100101;
+const CKC_QC: CKCNumber = 0b000100000000000001101000011111;
+const CKC_JC: CKCNumber = 0b000010000000000001100100011101;
+const CKC_TC: CKCNumber = 0b000001000000000001100000010111;
+const CKC_9C: CKCNumber = 0b000000100000000001011100010011;
+const CKC_8C: CKCNumber = 0b000000010000000001011000010001;
+const CKC_7C: CKCNumber = 0b000000001000000001010100001101;
+const CKC_6C: CKCNumber = 0b000000000100000001010000001011;
+const CKC_5C: CKCNumber = 0b000000000010000001001100000111;
+const CKC_4C: CKCNumber = 0b000000000001000001001000000101;
+const CKC_3C: CKCNumber = 0b000000000000100001000100000011;
+const CKC_2C: CKCNumber = 0b000000000000010001000000000010;
+//endregion
+
 #[derive(Clone, Copy, Debug, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[repr(u32)]
-#[rustfmt::skip]
 pub enum CardNumber {
-    AceSpades     = 0b010000000000001000110000101001,
-    KingSpades    = 0b001000000000001000101100100101,
-    QueenSpades   = 0b000100000000001000101000011111,
-    JackSpades    = 0b000010000000001000100100011101,
-    TenSpades     = 0b000001000000001000100000010111,
-    NineSpades    = 0b000000100000001000011100010011,
-    EightSpades   = 0b000000010000001000011000010001,
-    SevenSpades   = 0b000000001000001000010100001101,
-    SixSpades     = 0b000000000100001000010000001011,
-    FiveSpades    = 0b000000000010001000001100000111,
-    FourSpades    = 0b000000000001001000001000000101,
-    TreySpades    = 0b000000000000101000000100000011,
-    DeuceSpades   = 0b000000000000011000000000000010,
-    AceHearts     = 0b010000000000000100110000101001,
-    KingHearts    = 0b001000000000000100101100100101,
-    QueenHearts   = 0b000100000000000100101000011111,
-    JackHearts    = 0b000010000000000100100100011101,
-    TenHearts     = 0b000001000000000100100000010111,
-    NineHearts    = 0b000000100000000100011100010011,
-    EightHearts   = 0b000000010000000100011000010001,
-    SevenHearts   = 0b000000001000000100010100001101,
-    SixHearts     = 0b000000000100000100010000001011,
-    FiveHearts    = 0b000000000010000100001100000111,
-    FourHearts    = 0b000000000001000100001000000101,
-    TreyHearts    = 0b000000000000100100000100000011,
-    DeuceHearts   = 0b000000000000010100000000000010,
-    AceDiamonds   = 0b010000000000000010110000101001,
-    KingDiamonds  = 0b001000000000000010101100100101,
-    QueenDiamonds = 0b000100000000000010101000011111,
-    JackDiamonds  = 0b000010000000000010100100011101,
-    TenDiamonds   = 0b000001000000000010100000010111,
-    NineDiamonds  = 0b000000100000000010011100010011,
-    EightDiamonds = 0b000000010000000010011000010001,
-    SevenDiamonds = 0b000000001000000010010100001101,
-    SixDiamonds   = 0b000000000100000010010000001011,
-    FiveDiamonds  = 0b000000000010000010001100000111,
-    FourDiamonds  = 0b000000000001000010001000000101,
-    TreyDiamonds  = 0b000000000000100010000100000011,
-    DeuceDiamonds = 0b000000000000010010000000000010,
-    AceClubs      = 0b010000000000000001110000101001,
-    KingClubs     = 0b001000000000000001101100100101,
-    QueenClubs    = 0b000100000000000001101000011111,
-    JackClubs     = 0b000010000000000001100100011101,
-    TenClubs      = 0b000001000000000001100000010111,
-    NineClubs     = 0b000000100000000001011100010011,
-    EightClubs    = 0b000000010000000001011000010001,
-    SevenClubs    = 0b000000001000000001010100001101,
-    SixClubs      = 0b000000000100000001010000001011,
-    FiveClubs     = 0b000000000010000001001100000111,
-    FourClubs     = 0b000000000001000001001000000101,
-    TreyClubs     = 0b000000000000100001000100000011,
-    DeuceClubs    = 0b000000000000010001000000000010,
+    AceSpades = CKC_AS,
+    KingSpades = CKC_KS,
+    QueenSpades = CKC_QS,
+    JackSpades = CKC_JS,
+    TenSpades = CKC_TS,
+    NineSpades = CKC_9S,
+    EightSpades = CKC_8S,
+    SevenSpades = CKC_7S,
+    SixSpades = CKC_6S,
+    FiveSpades = CKC_5S,
+    FourSpades = CKC_4S,
+    TreySpades = CKC_3S,
+    DeuceSpades = CKC_2S,
+    AceHearts = CKC_AH,
+    KingHearts = CKC_KH,
+    QueenHearts = CKC_QH,
+    JackHearts = CKC_JH,
+    TenHearts = CKC_TH,
+    NineHearts = CKC_9H,
+    EightHearts = CKC_8H,
+    SevenHearts = CKC_7H,
+    SixHearts = CKC_6H,
+    FiveHearts = CKC_5H,
+    FourHearts = CKC_4H,
+    TreyHearts = CKC_3H,
+    DeuceHearts = CKC_2H,
+    AceDiamonds = CKC_AD,
+    KingDiamonds = CKC_KD,
+    QueenDiamonds = CKC_QD,
+    JackDiamonds = CKC_JD,
+    TenDiamonds = CKC_TD,
+    NineDiamonds = CKC_9D,
+    EightDiamonds = CKC_8D,
+    SevenDiamonds = CKC_7D,
+    SixDiamonds = CKC_6D,
+    FiveDiamonds = CKC_5D,
+    FourDiamonds = CKC_4D,
+    TreyDiamonds = CKC_3D,
+    DeuceDiamonds = CKC_2D,
+    AceClubs = CKC_AC,
+    KingClubs = CKC_KC,
+    QueenClubs = CKC_QC,
+    JackClubs = CKC_JC,
+    TenClubs = CKC_TC,
+    NineClubs = CKC_9C,
+    EightClubs = CKC_8C,
+    SevenClubs = CKC_7C,
+    SixClubs = CKC_6C,
+    FiveClubs = CKC_5C,
+    FourClubs = CKC_4C,
+    TreyClubs = CKC_3C,
+    DeuceClubs = CKC_2C,
 }
 
 impl TryFrom<u32> for CardNumber {
@@ -64,61 +144,61 @@ impl TryFrom<u32> for CardNumber {
 
     fn try_from(value: u32) -> Result<Self, Self::Error> {
         match value {
-            268_471_337 => Ok(CardNumber::AceSpades),
-            134_253_349 => Ok(CardNumber::KingSpades),
-            67_144_223 => Ok(CardNumber::QueenSpades),
-            33_589_533 => Ok(CardNumber::JackSpades),
-            16_812_055 => Ok(CardNumber::TenSpades),
-            8_423_187 => Ok(CardNumber::NineSpades),
-            4_228_625 => Ok(CardNumber::EightSpades),
-            2_131_213 => Ok(CardNumber::SevenSpades),
-            1_082_379 => Ok(CardNumber::SixSpades),
-            557_831 => Ok(CardNumber::FiveSpades),
-            295_429 => Ok(CardNumber::FourSpades),
-            164_099 => Ok(CardNumber::TreySpades),
-            98_306 => Ok(CardNumber::DeuceSpades),
+            CKC_AS => Ok(CardNumber::AceSpades),
+            CKC_KS => Ok(CardNumber::KingSpades),
+            CKC_QS => Ok(CardNumber::QueenSpades),
+            CKC_JS => Ok(CardNumber::JackSpades),
+            CKC_TS => Ok(CardNumber::TenSpades),
+            CKC_9S => Ok(CardNumber::NineSpades),
+            CKC_8S => Ok(CardNumber::EightSpades),
+            CKC_7S => Ok(CardNumber::SevenSpades),
+            CKC_6S => Ok(CardNumber::SixSpades),
+            CKC_5S => Ok(CardNumber::FiveSpades),
+            CKC_4S => Ok(CardNumber::FourSpades),
+            CKC_3S => Ok(CardNumber::TreySpades),
+            CKC_2S => Ok(CardNumber::DeuceSpades),
 
-            268_454_953 => Ok(CardNumber::AceHearts),
-            134_236_965 => Ok(CardNumber::KingHearts),
-            67_127_839 => Ok(CardNumber::QueenHearts),
-            33_573_149 => Ok(CardNumber::JackHearts),
-            16_795_671 => Ok(CardNumber::TenHearts),
-            8_406_803 => Ok(CardNumber::NineHearts),
-            4_212_241 => Ok(CardNumber::EightHearts),
-            2_114_829 => Ok(CardNumber::SevenHearts),
-            1_065_995 => Ok(CardNumber::SixHearts),
-            541_447 => Ok(CardNumber::FiveHearts),
-            279_045 => Ok(CardNumber::FourHearts),
-            147_715 => Ok(CardNumber::TreyHearts),
-            81_922 => Ok(CardNumber::DeuceHearts),
+            CKC_AH => Ok(CardNumber::AceHearts),
+            CKC_KH => Ok(CardNumber::KingHearts),
+            CKC_QH => Ok(CardNumber::QueenHearts),
+            CKC_JH => Ok(CardNumber::JackHearts),
+            CKC_TH => Ok(CardNumber::TenHearts),
+            CKC_9H => Ok(CardNumber::NineHearts),
+            CKC_8H => Ok(CardNumber::EightHearts),
+            CKC_7H => Ok(CardNumber::SevenHearts),
+            CKC_6H => Ok(CardNumber::SixHearts),
+            CKC_5H => Ok(CardNumber::FiveHearts),
+            CKC_4H => Ok(CardNumber::FourHearts),
+            CKC_3H => Ok(CardNumber::TreyHearts),
+            CKC_2H => Ok(CardNumber::DeuceHearts),
 
-            268_446_761 => Ok(CardNumber::AceDiamonds),
-            134_228_773 => Ok(CardNumber::KingDiamonds),
-            67_119_647 => Ok(CardNumber::QueenDiamonds),
-            33_564_957 => Ok(CardNumber::JackDiamonds),
-            16_787_479 => Ok(CardNumber::TenDiamonds),
-            8_398_611 => Ok(CardNumber::NineDiamonds),
-            4_204_049 => Ok(CardNumber::EightDiamonds),
-            2_106_637 => Ok(CardNumber::SevenDiamonds),
-            1_057_803 => Ok(CardNumber::SixDiamonds),
-            533_255 => Ok(CardNumber::FiveDiamonds),
-            270_853 => Ok(CardNumber::FourDiamonds),
-            139_523 => Ok(CardNumber::TreyDiamonds),
-            73_730 => Ok(CardNumber::DeuceDiamonds),
+            CKC_AD => Ok(CardNumber::AceDiamonds),
+            CKC_KD => Ok(CardNumber::KingDiamonds),
+            CKC_QD => Ok(CardNumber::QueenDiamonds),
+            CKC_JD => Ok(CardNumber::JackDiamonds),
+            CKC_TD => Ok(CardNumber::TenDiamonds),
+            CKC_9D => Ok(CardNumber::NineDiamonds),
+            CKC_8D => Ok(CardNumber::EightDiamonds),
+            CKC_7D => Ok(CardNumber::SevenDiamonds),
+            CKC_6D => Ok(CardNumber::SixDiamonds),
+            CKC_5D => Ok(CardNumber::FiveDiamonds),
+            CKC_4D => Ok(CardNumber::FourDiamonds),
+            CKC_3D => Ok(CardNumber::TreyDiamonds),
+            CKC_2D => Ok(CardNumber::DeuceDiamonds),
 
-            268_442_665 => Ok(CardNumber::AceClubs),
-            134_224_677 => Ok(CardNumber::KingClubs),
-            67_115_551 => Ok(CardNumber::QueenClubs),
-            33_560_861 => Ok(CardNumber::JackClubs),
-            16_783_383 => Ok(CardNumber::TenClubs),
-            8_394_515 => Ok(CardNumber::NineClubs),
-            4_199_953 => Ok(CardNumber::EightClubs),
-            2_102_541 => Ok(CardNumber::SevenClubs),
-            1_053_707 => Ok(CardNumber::SixClubs),
-            529_159 => Ok(CardNumber::FiveClubs),
-            266_757 => Ok(CardNumber::FourClubs),
-            135_427 => Ok(CardNumber::TreyClubs),
-            69_634 => Ok(CardNumber::DeuceClubs),
+            CKC_AC => Ok(CardNumber::AceClubs),
+            CKC_KC => Ok(CardNumber::KingClubs),
+            CKC_QC => Ok(CardNumber::QueenClubs),
+            CKC_JC => Ok(CardNumber::JackClubs),
+            CKC_TC => Ok(CardNumber::TenClubs),
+            CKC_9C => Ok(CardNumber::NineClubs),
+            CKC_8C => Ok(CardNumber::EightClubs),
+            CKC_7C => Ok(CardNumber::SevenClubs),
+            CKC_6C => Ok(CardNumber::SixClubs),
+            CKC_5C => Ok(CardNumber::FiveClubs),
+            CKC_4C => Ok(CardNumber::FourClubs),
+            CKC_3C => Ok(CardNumber::TreyClubs),
+            CKC_2C => Ok(CardNumber::DeuceClubs),
 
             _ => Err(PKError::InvalidCardNumber),
         }
