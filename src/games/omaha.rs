@@ -34,6 +34,7 @@ pub struct OmahaHigh {
 /// Robl: AS QS QD JC
 /// Antonius: 9H 8D 6D 5D
 /// board: 4D AD 7S JD AC
+/// https://www.youtube.com/watch?v=iXmrtiqoUKM
 impl OmahaHigh {
     #[must_use]
     pub fn permutation(&self, board: &Five, from_hand: usize, from_board: usize) -> Seven {
