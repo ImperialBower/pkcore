@@ -102,7 +102,8 @@ pub enum PKError {
     InvalidCardNumber,
     InvalidCardCount,
     InvalidHand,
-    InvalidIndex,
+    InvalidCardIndex,
+    InvalidPermutationIndex,
     InvalidPluribusIndex,
     InvalidPosition,
     NoLow,
@@ -133,7 +134,8 @@ impl Display for PKError {
             PKError::InvalidCardNumber => "Invalid Card Number Error",
             PKError::InvalidCardCount => "Invalid Card Count Error",
             PKError::InvalidHand => "Invalid Hand Error",
-            PKError::InvalidIndex => "Invalid Index Error",
+            PKError::InvalidCardIndex => "Invalid Card Index Error",
+            PKError::InvalidPermutationIndex => "Invalid Permutation Index Error",
             PKError::InvalidPluribusIndex => "Invalid Pluribus Index Error",
             PKError::InvalidPosition => "Invalid Position Error",
             PKError::NoLow => "No low hand possible Error",
@@ -268,6 +270,11 @@ pub trait Pile {
     fn enumerate_remaining(&self, k: usize) -> Enumerate<Combinations<IntoIter<Card>>> {
         log::info!("Pile.enumerate_after(k: {})", k);
         self.combinations_remaining(k).enumerate()
+    }
+
+
+    fn how_many(&self, cards: Cards) -> usize {
+        self.to_vec().iter().filter(|card| cards.contains(card)).count()
     }
 
     /// This feels like the best name for this functionality. If a `Pile` doesn't contain

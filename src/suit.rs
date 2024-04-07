@@ -81,7 +81,7 @@ impl FromStr for Suit {
                 Some(c) => Ok(Suit::from(*c)),
                 None => Err(PKError::Fubar),
             },
-            _ => Err(PKError::InvalidIndex),
+            _ => Err(PKError::InvalidCardIndex),
         }
     }
 }
@@ -193,9 +193,9 @@ mod card_suit_tests {
 
     #[test]
     fn from_str__invalid() {
-        assert_eq!(PKError::InvalidIndex, Suit::from_str("").unwrap_err());
-        assert_eq!(PKError::InvalidIndex, Suit::from_str(" ").unwrap_err());
-        assert_eq!(PKError::InvalidIndex, Suit::from_str("AK").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Suit::from_str("").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Suit::from_str(" ").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Suit::from_str("AK").unwrap_err());
     }
 
     #[test]

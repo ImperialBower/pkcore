@@ -793,4 +793,8 @@ This is an outline of the work as it is done.
           * impl FromStr for OmahaHigh
             * impl FromStr for Four
               * impl TryFrom<Cards> for Four
-            * impl TryFrom<Cards> for OmahaHigh
+          * impl TryFrom<Cards> for OmahaHigh
+          * ASIDE: Renamed PKError::InvalidIndex to InvalidCardIndex
+          * made Five internal array pub(crate) visible
+          * impl Pile for OmahaHigh
+          * OmahaHigh.is_valid

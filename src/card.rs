@@ -269,21 +269,21 @@ impl FromStr for Card {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut chars = s.trim().chars();
         let rank: Rank = match chars.next() {
-            None => return Err(PKError::InvalidIndex),
+            None => return Err(PKError::InvalidCardIndex),
             Some(r) => {
                 let rank = Rank::from(r);
                 if rank == Rank::BLANK {
-                    return Err(PKError::InvalidIndex);
+                    return Err(PKError::InvalidCardIndex);
                 }
                 rank
             }
         };
         let suit: Suit = match chars.next() {
-            None => return Err(PKError::InvalidIndex),
+            None => return Err(PKError::InvalidCardIndex),
             Some(s) => {
                 let suit = Suit::from(s);
                 if suit == Suit::BLANK {
-                    return Err(PKError::InvalidIndex);
+                    return Err(PKError::InvalidCardIndex);
                 }
                 suit
             }
@@ -693,13 +693,13 @@ mod card_tests {
     fn from_str() {
         assert_eq!(Card::ACE_HEARTS, Card::from_str("AH").unwrap());
         assert_eq!(Card::KING_DIAMONDS, Card::from_str("  K♢   ").unwrap());
-        assert_eq!(PKError::InvalidIndex, Card::from_str("  ").unwrap_err());
-        assert_eq!(PKError::InvalidIndex, Card::from_str("QQ").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Card::from_str("  ").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Card::from_str("QQ").unwrap_err());
     }
 
     #[test]
     fn from_str_boop() {
-        assert_eq!(PKError::InvalidIndex, Card::from_str("QQ").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Card::from_str("QQ").unwrap_err());
     }
 
     // https://serde.rs/unit-testing.html

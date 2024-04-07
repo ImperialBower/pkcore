@@ -177,9 +177,18 @@ mod play_board_tests {
             PKError::InvalidPluribusIndex,
             Board::from_pluribus("3h7s5c/Qs/6c/2d").unwrap_err()
         );
-        assert_eq!(PKError::InvalidIndex, Board::from_pluribus("3h7s55/Qs/6c").unwrap_err());
-        assert_eq!(PKError::InvalidIndex, Board::from_pluribus("3h7s5c/QQ/6c").unwrap_err());
-        assert_eq!(PKError::InvalidIndex, Board::from_pluribus("3h7s5c/Qs/6A").unwrap_err());
+        assert_eq!(
+            PKError::InvalidCardIndex,
+            Board::from_pluribus("3h7s55/Qs/6c").unwrap_err()
+        );
+        assert_eq!(
+            PKError::InvalidCardIndex,
+            Board::from_pluribus("3h7s5c/QQ/6c").unwrap_err()
+        );
+        assert_eq!(
+            PKError::InvalidCardIndex,
+            Board::from_pluribus("3h7s5c/Qs/6A").unwrap_err()
+        );
     }
 
     #[test]

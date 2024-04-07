@@ -1,1 +1,1 @@
-mod omaha;
+pub mod omaha;

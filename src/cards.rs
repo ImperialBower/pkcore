@@ -590,12 +590,12 @@ impl FromStr for Cards {
         for s in s.split_whitespace() {
             let c = Card::from_str(s)?;
             if c.contains_blank() {
-                return Err(PKError::InvalidIndex);
+                return Err(PKError::InvalidCardIndex);
             }
             cards.insert(c);
         }
         if cards.is_empty() {
-            Err(PKError::InvalidIndex)
+            Err(PKError::InvalidCardIndex)
         } else {
             Ok(cards)
         }

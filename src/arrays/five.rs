@@ -17,7 +17,7 @@ use std::str::FromStr;
 ///
 /// IDEA: The hub and spoke.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Five([Card; 5]);
+pub struct Five(pub(crate) [Card; 5]);
 
 impl Five {
     pub const POSSIBLE_COMBINATIONS: usize = 7937;
@@ -510,9 +510,9 @@ mod arrays__five_tests {
     fn from_str() {
         assert_eq!(Five::from(ROYAL_FLUSH), Five::from_str("AD KD QD JD TD").unwrap());
         assert!(Five::from_str("AD KD QD JD").is_err());
-        assert_eq!(PKError::InvalidIndex, Five::from_str("").unwrap_err());
-        assert_eq!(PKError::InvalidIndex, Five::from_str(" ").unwrap_err());
-        assert_eq!(PKError::InvalidIndex, Five::from_str(" __ ").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Five::from_str("").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Five::from_str(" ").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Five::from_str(" __ ").unwrap_err());
         assert_eq!(PKError::NotEnoughCards, Five::from_str("AC").unwrap_err());
         assert!(Five::from_str("AD KD QD JD TD 9D").is_err());
         assert_eq!(PKError::TooManyCards, Five::from_str("AD KD QD JD TD 9D").unwrap_err());

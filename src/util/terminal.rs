@@ -41,7 +41,7 @@ impl Terminal {
     /// `PKError::InvalidCardCount` if number of cards isn't divisible by two
     pub fn receive_cards_in_twos(prompt: &str) -> Result<Twos, PKError> {
         let Some(cards) = Terminal::receive_cards(prompt) else {
-            return Err(PKError::InvalidIndex);
+            return Err(PKError::InvalidCardIndex);
         };
 
         Twos::try_from(cards)
@@ -82,7 +82,7 @@ impl Terminal {
         }
 
         let Some(cards) = Terminal::receive_cards(prompt) else {
-            return Err(PKError::InvalidIndex);
+            return Err(PKError::InvalidCardIndex);
         };
 
         if cards.len() < x {
