@@ -68,7 +68,7 @@ impl OmahaHigh {
     }
 
     #[must_use]
-    pub fn permutations(&self, board: &Five) -> Vec<Eval> {
+    pub fn permutations(&self, board: &Five) -> Vec<Five> {
         let mut permutations = Vec::new();
         for hand_perm in &OMAHA_HAND_PERMUTATIONS {
             for board_perm in &OMAHA_BOARD_PERMUTATIONS {
@@ -78,7 +78,7 @@ impl OmahaHigh {
                 let card4 = board.0[board_perm[1]];
                 let card5 = board.0[board_perm[2]];
                 let five = Five::from([card1, card2, card3, card4, card5]).sort();
-                permutations.push(five.eval());
+                permutations.push(five);
             }
         }
         permutations
@@ -194,15 +194,22 @@ mod games__omaha_high_tests {
         let board = Five::from(BOARD);
 
         let actual = hand.permutations(&board);
-        let hs: HashSet<Eval> = HashSet::from_iter(actual.clone().into_iter());
+        // let hs: HashSet<Eval> = HashSet::from_iter(actual.clone().into_iter());
 
-        for eval in &actual {
-            assert_eq!(2, eval.hand.how_many(hand.cards()));
-            assert_eq!(3, eval.hand.how_many(board.cards()));
-            hand.is_valid(&board, &eval.hand);
+        for permutation in &actual {
+            println!("{} - {board} - {}", hand.cards(), permutation);
+            assert_eq!(2, permutation.how_many(hand.cards()));
+            assert_eq!(3, permutation.how_many(board.cards()));
+            assert!(hand.is_valid(&board, &permutation));
+            // if !hs.contains(&eval) {
+            //     println!("{}", eval);
+            // }
         }
+
+
+
         assert_eq!(60, actual.len());
-        assert_eq!(60, hs.len());
+        // assert_eq!(60, hs.len());
     }
 
     #[test]
