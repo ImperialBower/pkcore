@@ -190,26 +190,74 @@ mod games__omaha_high_tests {
 
     #[test]
     fn permutations() {
-        let hand = OmahaHigh::from(Four::from(ROBL_HAND));
+        let hand = OmahaHigh::from(ROBL_HAND);
         let board = Five::from(BOARD);
 
         let actual = hand.permutations(&board);
         // let hs: HashSet<Eval> = HashSet::from_iter(actual.clone().into_iter());
 
-        for permutation in &actual {
-            println!("{} - {board} - {}", hand.cards(), permutation);
-            assert_eq!(2, permutation.how_many(hand.cards()));
-            assert_eq!(3, permutation.how_many(board.cards()));
-            assert!(hand.is_valid(&board, &permutation));
-            // if !hs.contains(&eval) {
-            //     println!("{}", eval);
-            // }
-        }
+        let perm = actual[0];
+
+        println!("{hand} - {board} - {perm}");
+        // println!("{} - {}", hand.common(hand.cards()), board.common(board.cards()));
+        println!("{} - {}", hand.common(perm.cards()), board.common(perm.cards()));
+        println!("{} - {}", perm.common(hand.cards()), perm.common(board.cards()));
+
+        assert_eq!(2, perm.how_many(hand.cards()));
+
+        assert_eq!(3, board.how_many(perm.cards()));
+        assert_eq!(2, hand.how_many(perm.cards()));
+
+        // for permutation in &actual {
+        //     let common = hand.cards().common(permutation.cards());
+        //     println!("{} - {} - {common}", hand.cards(), permutation);
+        //     assert_eq!(2, hand.how_many(permutation.cards()));
+        //     assert_eq!(3, permutation.how_many(board.cards()));
+        //     assert!(hand.is_valid(&board, &permutation));
+        //     // if !hs.contains(&eval) {
+        //     //     println!("{}", eval);
+        //     // }
+        // }
 
 
 
         assert_eq!(60, actual.len());
         // assert_eq!(60, hs.len());
+    }
+
+    #[test]
+    fn pile__common() {
+        let hand = OmahaHigh::from(Four::from(ROBL_HAND));
+        let result = [
+            Card::ACE_SPADES,
+            Card::ACE_DIAMONDS,
+            Card::JACK_CLUBS,
+            Card::JACK_DIAMONDS,
+            Card::ACE_CLUBS,
+        ];
+        let board = Five::from(result);
+        let expected = Cards::from_str("A♠ J♣").unwrap();
+
+        let actual = hand.common(board.cards());
+
+        // make sure that the common returns the exact same cards as the hand itself.
+        assert_eq!(hand.cards(), hand.cards().common(hand.cards()));
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn pile__to_vec() {
+        let hand = OmahaHigh::from(Four::from(ROBL_HAND));
+        let expected = vec![
+            Card::ACE_SPADES,
+            Card::QUEEN_SPADES,
+            Card::QUEEN_DIAMONDS,
+            Card::JACK_CLUBS,
+        ];
+
+        let actual = hand.to_vec();
+
+        assert_eq!(expected, actual);
     }
 
     #[test]

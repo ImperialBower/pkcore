@@ -277,6 +277,15 @@ pub trait Pile {
         self.to_vec().iter().filter(|card| cards.contains(card)).count()
     }
 
+    fn common(&self, cards: Cards) -> Cards {
+
+        let v = self.to_vec().iter().filter(|card| cards.contains(card)).cloned().collect::<Vec<Card>>();
+
+
+
+        Cards::from(self.to_vec().iter().filter(|card| cards.contains(card)).cloned().collect::<Vec<Card>>())
+    }
+
     /// This feels like the best name for this functionality. If a `Pile` doesn't contain
     /// a blank card, and all of the cards are unique, that it has been dealt.
     fn is_dealt(&self) -> bool {
