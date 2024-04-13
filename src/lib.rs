@@ -272,11 +272,11 @@ pub trait Pile {
         self.combinations_remaining(k).enumerate()
     }
 
-    fn how_many(&self, cards: Cards) -> usize {
+    fn how_many(&self, cards: &Cards) -> usize {
         cards.to_vec().iter().filter(|card| self.contains(card)).count()
     }
 
-    fn common(&self, cards: Cards) -> Cards {
+    fn common(&self, cards: &Cards) -> Cards {
 
         // let v = self.to_vec().iter().filter(|card| {
         //     let contains = cards.contains(card);

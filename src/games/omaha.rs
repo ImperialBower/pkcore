@@ -64,7 +64,7 @@ impl OmahaHigh {
     /// from the board.
     #[must_use]
     pub fn is_valid(&self, board: &Five, hand: &Five) -> bool {
-        hand.how_many(self.hand.cards()) == 2 && hand.how_many(board.cards()) == 3
+        hand.how_many(&self.hand.cards()) == 2 && hand.how_many(&board.cards()) == 3
     }
 
     #[must_use]
@@ -198,7 +198,7 @@ mod games__omaha_high_tests {
 
         let perm = actual[0];
 
-        println!("{hand} - {board} - {perm}");
+        // println!("{hand} - {board} - {perm}");
         // // println!("{} - {}", hand.common(hand.cards()), board.common(board.cards()));
 
         assert!(hand.contains(&Card::ACE_SPADES));
@@ -207,13 +207,22 @@ mod games__omaha_high_tests {
         // assert_eq!(pile.common(hand.cards()), pile);
 
 
-        println!("{}", hand.common(perm.cards()));
-        println!("{} - {}", hand.common(perm.cards()), board.common(perm.cards()));
+        // println!("{}", hand.common(&perm.cards()));
+        // println!("{} - {}", hand.common(&perm.cards()), board.common(&perm.cards()));
         // println!("{} - {}", perm.common(hand.cards()), perm.common(board.cards()));
+        println!("{hand} - {perm} {}", perm.cards());
+        println!("{}", Card::from(805342249));
+        println!("{}", Card::from(805317673));
+        assert_eq!(Cards::from_str("A♠ Q♠ Q♦ J♣").unwrap(), hand.cards());
+        assert_eq!(Cards::from_str("A♠ A♦ Q♠ 7♠ 4♦").unwrap(), perm.cards());
 
-        assert_eq!(2, perm.how_many(hand.cards()));
+        // A♠ Q♠ Q♦ J♣ - A♠ A♦ Q♠ 7♠ 4♦
+
+        println!("{}", perm.common(&hand.cards()));
+        assert_eq!(Cards::from_str("A♠ Q♠").unwrap(), perm.common(&hand.cards()));
+        assert_eq!(2, perm.how_many(&hand.cards()));
         //
-        assert_eq!(3, board.how_many(perm.cards()));
+        assert_eq!(3, board.how_many(&perm.cards()));
         // assert_eq!(2, hand.how_many(perm.cards()));
 
         // for permutation in &actual {
@@ -246,10 +255,10 @@ mod games__omaha_high_tests {
         let board = Five::from(result);
         let expected = Cards::from_str("A♠ J♣").unwrap();
 
-        let actual = hand.common(board.cards());
+        let actual = hand.common(&board.cards());
 
         // make sure that the common returns the exact same cards as the hand itself.
-        assert_eq!(hand.cards(), hand.cards().common(hand.cards()));
+        assert_eq!(hand.cards(), hand.cards().common(&hand.cards()));
         assert_eq!(actual, expected);
     }
 

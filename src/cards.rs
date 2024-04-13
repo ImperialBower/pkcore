@@ -534,6 +534,36 @@ impl From<Bard> for Cards {
     }
 }
 
+impl From<[Card; 2]> for Cards {
+    fn from(array: [Card; 2]) -> Self {
+        Cards::from(array.to_vec())
+    }
+}
+
+impl From<[Card; 3]> for Cards {
+    fn from(array: [Card; 3]) -> Self {
+        Cards::from(array.to_vec())
+    }
+}
+
+impl From<[Card; 4]> for Cards {
+    fn from(array: [Card; 4]) -> Self {
+        Cards::from(array.to_vec())
+    }
+}
+
+impl From<[Card; 5]> for Cards {
+    fn from(array: [Card; 5]) -> Self {
+        Cards::from(array.to_vec())
+    }
+}
+
+impl From<[Card; 7]> for Cards {
+    fn from(array: [Card; 7]) -> Self {
+        Cards::from(array.to_vec())
+    }
+}
+
 impl From<Vec<Card>> for Cards {
     fn from(v: Vec<Card>) -> Self {
         let filtered = v.iter().filter_map(|c| {
@@ -1022,12 +1052,12 @@ mod card_tests {
 
         let expected = Cards::from_str("A♠ K♠ Q♠").unwrap();
 
-        let common = cards.common(cards2.clone());
-        let common_inverse = cards2.common(cards.clone());
+        let common = cards.common(&cards2);
+        let common_inverse = cards2.common(&cards);
 
         assert_eq!(common, expected);
         assert_eq!(common_inverse, expected);
-        assert_eq!(3, cards.how_many(cards2.clone()));
+        assert_eq!(3, cards.how_many(&cards2.clone()));
 
     }
 
