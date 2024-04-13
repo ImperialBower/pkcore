@@ -282,6 +282,11 @@ impl Cards {
         self.0.get_index(index)
     }
 
+    #[must_use]
+    pub fn index_set(&self) -> &IndexSet<Card> {
+        &self.0
+    }
+
     /// Allows you to insert a `PlayingCard` provided it isn't blank.
     pub fn insert(&mut self, card: Card) -> bool {
         if card.contains_blank() {
@@ -692,6 +697,7 @@ impl TryFrom<Card> for Cards {
 #[allow(non_snake_case)]
 mod card_tests {
     use super::*;
+    use rstest::rstest;
 
     #[test]
     fn deck() {
@@ -1010,6 +1016,22 @@ mod card_tests {
     fn pile__are_unique() {}
 
     #[test]
+    fn pile__common() {
+        let cards = Cards::from_str("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠").unwrap();
+        let cards2 = Cards::from_str("A♠ K♠ Q♠ JD").unwrap();
+
+        let expected = Cards::from_str("A♠ K♠ Q♠").unwrap();
+
+        let common = cards.common(cards2.clone());
+        let common_inverse = cards2.common(cards.clone());
+
+        assert_eq!(common, expected);
+        assert_eq!(common_inverse, expected);
+        assert_eq!(3, cards.how_many(cards2.clone()));
+
+    }
+
+    #[test]
     fn pile__contains() {
         let wheel_flush = Cards::from_str("5♣ 4♣ 3♣ 2♣ A♣").unwrap();
 
@@ -1092,4 +1114,21 @@ mod card_tests {
         cards
     }
     //endregion
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod pile_tests {
+    use super::*;
+    use rstest::rstest;
+
+
+    #[rstest]
+    #[case(Card::ACE_SPADES, true)]
+    #[case(Card::ACE_DIAMONDS, false)]
+    fn pile__contains(#[case] card: Card, #[case] assert: bool) {
+        let cards = Cards::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
+
+        assert_eq!(cards.contains(&card), assert);
+    }
 }

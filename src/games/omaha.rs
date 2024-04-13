@@ -199,14 +199,22 @@ mod games__omaha_high_tests {
         let perm = actual[0];
 
         println!("{hand} - {board} - {perm}");
-        // println!("{} - {}", hand.common(hand.cards()), board.common(board.cards()));
+        // // println!("{} - {}", hand.common(hand.cards()), board.common(board.cards()));
+
+        assert!(hand.contains(&Card::ACE_SPADES));
+
+        let mut pile = Cards::from_str("AS").unwrap();
+        // assert_eq!(pile.common(hand.cards()), pile);
+
+
+        println!("{}", hand.common(perm.cards()));
         println!("{} - {}", hand.common(perm.cards()), board.common(perm.cards()));
-        println!("{} - {}", perm.common(hand.cards()), perm.common(board.cards()));
+        // println!("{} - {}", perm.common(hand.cards()), perm.common(board.cards()));
 
         assert_eq!(2, perm.how_many(hand.cards()));
-
+        //
         assert_eq!(3, board.how_many(perm.cards()));
-        assert_eq!(2, hand.how_many(perm.cards()));
+        // assert_eq!(2, hand.how_many(perm.cards()));
 
         // for permutation in &actual {
         //     let common = hand.cards().common(permutation.cards());

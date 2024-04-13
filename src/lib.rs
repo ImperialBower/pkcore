@@ -255,7 +255,7 @@ pub trait Pile {
     }
 
     fn contains(&self, card: &Card) -> bool {
-        self.to_vec().contains(card)
+        self.cards().index_set().contains(card)
     }
 
     fn contains_blank(&self) -> bool {
@@ -272,18 +272,23 @@ pub trait Pile {
         self.combinations_remaining(k).enumerate()
     }
 
-
     fn how_many(&self, cards: Cards) -> usize {
-        self.to_vec().iter().filter(|card| cards.contains(card)).count()
+        cards.to_vec().iter().filter(|card| self.contains(card)).count()
     }
 
     fn common(&self, cards: Cards) -> Cards {
 
-        let v = self.to_vec().iter().filter(|card| cards.contains(card)).cloned().collect::<Vec<Card>>();
+        // let v = self.to_vec().iter().filter(|card| {
+        //     let contains = cards.contains(card);
+        //     println!("{} contains {}? {}", self.cards(), card, contains);
+        //
+        //     contains
+        //
+        // }).cloned().collect::<Vec<Card>>();
+        //
+        // Cards::from(v)
 
-
-
-        Cards::from(self.to_vec().iter().filter(|card| cards.contains(card)).cloned().collect::<Vec<Card>>())
+        Cards::from(cards.to_vec().iter().filter(|card| self.contains(*card)).cloned().collect::<Vec<Card>>())
     }
 
     /// This feels like the best name for this functionality. If a `Pile` doesn't contain
