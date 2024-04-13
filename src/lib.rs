@@ -277,7 +277,6 @@ pub trait Pile {
     }
 
     fn common(&self, cards: &Cards) -> Cards {
-
         // let v = self.to_vec().iter().filter(|card| {
         //     let contains = cards.contains(card);
         //     println!("{} contains {}? {}", self.cards(), card, contains);
@@ -288,7 +287,14 @@ pub trait Pile {
         //
         // Cards::from(v)
 
-        Cards::from(cards.to_vec().iter().filter(|card| self.contains(*card)).cloned().collect::<Vec<Card>>())
+        Cards::from(
+            cards
+                .to_vec()
+                .iter()
+                .filter(|card| self.contains(card))
+                .copied()
+                .collect::<Vec<Card>>(),
+        )
     }
 
     /// This feels like the best name for this functionality. If a `Pile` doesn't contain

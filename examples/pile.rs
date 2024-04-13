@@ -1,7 +1,7 @@
-use std::str::FromStr;
 use pkcore::card::Card;
 use pkcore::cards::Cards;
 use pkcore::Pile;
+use std::str::FromStr;
 
 #[allow(dead_code)]
 const ROBL_HAND: [Card; 4] = [

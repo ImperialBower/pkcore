@@ -251,6 +251,11 @@ impl Cards {
     ///
     /// The only time this is really needed is to display `Five` so that it sorts based on the
     /// `HandRank`.
+    ///
+    /// ## Many months later...
+    ///
+    /// Sure enough, I'm trying to figure out WTF with `Five.sort()` and this shit is getting in the
+    /// way.
     #[must_use]
     pub fn frequency_weighted(&self) -> Cards {
         let mappy = self.map_by_rank();
@@ -727,7 +732,6 @@ impl TryFrom<Card> for Cards {
 #[allow(non_snake_case)]
 mod card_tests {
     use super::*;
-    use rstest::rstest;
 
     #[test]
     fn deck() {
@@ -1058,7 +1062,6 @@ mod card_tests {
         assert_eq!(common, expected);
         assert_eq!(common_inverse, expected);
         assert_eq!(3, cards.how_many(&cards2.clone()));
-
     }
 
     #[test]
@@ -1151,7 +1154,6 @@ mod card_tests {
 mod pile_tests {
     use super::*;
     use rstest::rstest;
-
 
     #[rstest]
     #[case(Card::ACE_SPADES, true)]

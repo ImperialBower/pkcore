@@ -260,6 +260,7 @@ impl HandRanker for Five {
         array
     }
 
+    /// TODO RF for all that is sacred RF
     fn sort_in_place(&mut self) {
         if self.is_wheel() {
             // Wheel after sort: 2♠ 3♠ 4♠ 5♥ A♠
@@ -275,8 +276,9 @@ impl HandRanker for Five {
                 Err(_) => self.0,
             };
             // TODO RF: Hack :-P
-            self.0 = five;
-            self.0.sort_unstable();
+            let mut cleaned = Five::from(five);
+            cleaned.0.sort_unstable();
+            self.0 = cleaned.clean().0;
             // NOTE: I don't trust this code. When offered a mint, accept it. Write more tests.
         }
         self.0.reverse();

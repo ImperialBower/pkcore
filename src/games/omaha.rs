@@ -1,4 +1,5 @@
 use crate::analysis::eval::Eval;
+use crate::analysis::the_nuts::TheNuts;
 use crate::arrays::five::Five;
 use crate::arrays::four::Four;
 use crate::arrays::seven::Seven;
@@ -7,11 +8,10 @@ use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::play::board::Board;
-use crate::{Pile, PKError};
+use crate::{PKError, Pile};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use crate::analysis::the_nuts::TheNuts;
 
 pub const OMAHA_HAND_PERMUTATIONS: [[usize; 2]; 6] = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]];
 pub const OMAHA_BOARD_PERMUTATIONS: [[usize; 3]; 10] = [
@@ -139,7 +139,6 @@ impl TryFrom<Cards> for OmahaHigh {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod games__omaha_high_tests {
-    use std::collections::HashSet;
     use super::*;
 
     /// The hand:
@@ -194,52 +193,16 @@ mod games__omaha_high_tests {
         let board = Five::from(BOARD);
 
         let actual = hand.permutations(&board);
-        // let hs: HashSet<Eval> = HashSet::from_iter(actual.clone().into_iter());
 
-        let perm = actual[0];
-
-        // println!("{hand} - {board} - {perm}");
-        // // println!("{} - {}", hand.common(hand.cards()), board.common(board.cards()));
-
-        assert!(hand.contains(&Card::ACE_SPADES));
-
-        let mut pile = Cards::from_str("AS").unwrap();
-        // assert_eq!(pile.common(hand.cards()), pile);
-
-
-        // println!("{}", hand.common(&perm.cards()));
-        // println!("{} - {}", hand.common(&perm.cards()), board.common(&perm.cards()));
-        // println!("{} - {}", perm.common(hand.cards()), perm.common(board.cards()));
-        println!("{hand} - {perm} {}", perm.cards());
-        println!("{}", Card::from(805342249));
-        println!("{}", Card::from(805317673));
-        assert_eq!(Cards::from_str("A♠ Q♠ Q♦ J♣").unwrap(), hand.cards());
-        assert_eq!(Cards::from_str("A♠ A♦ Q♠ 7♠ 4♦").unwrap(), perm.cards());
-
-        // A♠ Q♠ Q♦ J♣ - A♠ A♦ Q♠ 7♠ 4♦
-
-        println!("{}", perm.common(&hand.cards()));
-        assert_eq!(Cards::from_str("A♠ Q♠").unwrap(), perm.common(&hand.cards()));
-        assert_eq!(2, perm.how_many(&hand.cards()));
-        //
-        assert_eq!(3, board.how_many(&perm.cards()));
-        // assert_eq!(2, hand.how_many(perm.cards()));
-
-        // for permutation in &actual {
-        //     let common = hand.cards().common(permutation.cards());
-        //     println!("{} - {} - {common}", hand.cards(), permutation);
-        //     assert_eq!(2, hand.how_many(permutation.cards()));
-        //     assert_eq!(3, permutation.how_many(board.cards()));
-        //     assert!(hand.is_valid(&board, &permutation));
-        //     // if !hs.contains(&eval) {
-        //     //     println!("{}", eval);
-        //     // }
-        // }
-
-
+        for permutation in &actual {
+            let common = hand.cards().common(&permutation.cards());
+            println!("{} - {} - {common}", hand.cards(), permutation);
+            assert_eq!(2, hand.how_many(&permutation.cards()));
+            assert_eq!(3, permutation.how_many(&board.cards()));
+            assert!(hand.is_valid(&board, &permutation));
+        }
 
         assert_eq!(60, actual.len());
-        // assert_eq!(60, hs.len());
     }
 
     #[test]
