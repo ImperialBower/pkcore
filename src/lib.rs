@@ -254,8 +254,10 @@ pub trait Pile {
         self.remaining().par_combinations(k)
     }
 
+    /// Tried refactoring this as `self.cards().index_set().contains(card)`, but it broke a lot of
+    /// negative tests, since it just stripped out `Card::BLANK`.
     fn contains(&self, card: &Card) -> bool {
-        self.cards().index_set().contains(card)
+        self.to_vec().contains(card)
     }
 
     fn contains_blank(&self) -> bool {

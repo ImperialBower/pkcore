@@ -1988,10 +1988,18 @@ mod arrays__two_tests {
     #[test]
     fn sok() {
         assert!(Two::from(BIG_SLICK).is_dealt());
-        assert!(!Two::from([Card::BLANK, Card::DEUCE_SPADES]).is_dealt());
+        // assert!(!Two::from([Card::BLANK, Card::DEUCE_SPADES]).is_dealt());
         assert!(!Two::from([Card::DEUCE_SPADES, Card::BLANK]).is_dealt());
         assert!(!Two::from([Card::BLANK, Card::BLANK]).is_dealt());
         assert!(!Two::from([Card::DEUCE_SPADES, Card::DEUCE_SPADES]).is_dealt());
+    }
+
+    #[test]
+    fn sok_isolagted() {
+        let sut = Two::from([Card::BLANK, Card::DEUCE_SPADES]);
+        println!("{sut}");
+        assert!(sut.contains_blank());
+        assert!(!sut.is_dealt());
     }
 
     #[test]

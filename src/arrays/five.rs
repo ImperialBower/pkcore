@@ -276,9 +276,15 @@ impl HandRanker for Five {
                 Err(_) => self.0,
             };
             // TODO RF: Hack :-P
-            let mut cleaned = Five::from(five);
-            cleaned.0.sort_unstable();
-            self.0 = cleaned.clean().0;
+            let mut five = Five(five);
+            five.0.sort_unstable();
+            five = five.clean();
+            self.0 = five.0;
+            // self.0.sort_unstable();
+
+            // let mut cleaned = Five::from(five);
+            // cleaned.0.sort_unstable();
+            // self.0 = cleaned.clean().0;
             // NOTE: I don't trust this code. When offered a mint, accept it. Write more tests.
         }
         self.0.reverse();

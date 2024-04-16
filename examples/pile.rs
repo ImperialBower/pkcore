@@ -11,7 +11,7 @@ const ROBL_HAND: [Card; 4] = [
     Card::JACK_CLUBS,
 ];
 
-const ANTONIUS_HAND: [Card; 4] = [
+const _ANTONIUS_HAND: [Card; 4] = [
     Card::NINE_HEARTS,
     Card::EIGHT_DIAMONDS,
     Card::SIX_DIAMONDS,
