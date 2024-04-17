@@ -251,6 +251,11 @@ impl Cards {
     ///
     /// The only time this is really needed is to display `Five` so that it sorts based on the
     /// `HandRank`.
+    ///
+    /// ## Many months later...
+    ///
+    /// Sure enough, I'm trying to figure out WTF with `Five.sort()` and this shit is getting in the
+    /// way.
     #[must_use]
     pub fn frequency_weighted(&self) -> Cards {
         let mappy = self.map_by_rank();
@@ -280,6 +285,11 @@ impl Cards {
     #[must_use]
     pub fn get_index(&self, index: usize) -> Option<&Card> {
         self.0.get_index(index)
+    }
+
+    #[must_use]
+    pub fn index_set(&self) -> &IndexSet<Card> {
+        &self.0
     }
 
     /// Allows you to insert a `PlayingCard` provided it isn't blank.
@@ -529,6 +539,36 @@ impl From<Bard> for Cards {
     }
 }
 
+impl From<[Card; 2]> for Cards {
+    fn from(array: [Card; 2]) -> Self {
+        Cards::from(array.to_vec())
+    }
+}
+
+impl From<[Card; 3]> for Cards {
+    fn from(array: [Card; 3]) -> Self {
+        Cards::from(array.to_vec())
+    }
+}
+
+impl From<[Card; 4]> for Cards {
+    fn from(array: [Card; 4]) -> Self {
+        Cards::from(array.to_vec())
+    }
+}
+
+impl From<[Card; 5]> for Cards {
+    fn from(array: [Card; 5]) -> Self {
+        Cards::from(array.to_vec())
+    }
+}
+
+impl From<[Card; 7]> for Cards {
+    fn from(array: [Card; 7]) -> Self {
+        Cards::from(array.to_vec())
+    }
+}
+
 impl From<Vec<Card>> for Cards {
     fn from(v: Vec<Card>) -> Self {
         let filtered = v.iter().filter_map(|c| {
@@ -590,12 +630,12 @@ impl FromStr for Cards {
         for s in s.split_whitespace() {
             let c = Card::from_str(s)?;
             if c.contains_blank() {
-                return Err(PKError::InvalidIndex);
+                return Err(PKError::InvalidCardIndex);
             }
             cards.insert(c);
         }
         if cards.is_empty() {
-            Err(PKError::InvalidIndex)
+            Err(PKError::InvalidCardIndex)
         } else {
             Ok(cards)
         }
@@ -1010,6 +1050,21 @@ mod card_tests {
     fn pile__are_unique() {}
 
     #[test]
+    fn pile__common() {
+        let cards = Cards::from_str("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠").unwrap();
+        let cards2 = Cards::from_str("A♠ K♠ Q♠ JD").unwrap();
+
+        let expected = Cards::from_str("A♠ K♠ Q♠").unwrap();
+
+        let common = cards.common(&cards2);
+        let common_inverse = cards2.common(&cards);
+
+        assert_eq!(common, expected);
+        assert_eq!(common_inverse, expected);
+        assert_eq!(3, cards.how_many(&cards2.clone()));
+    }
+
+    #[test]
     fn pile__contains() {
         let wheel_flush = Cards::from_str("5♣ 4♣ 3♣ 2♣ A♣").unwrap();
 
@@ -1092,4 +1147,20 @@ mod card_tests {
         cards
     }
     //endregion
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod pile_tests {
+    use super::*;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case(Card::ACE_SPADES, true)]
+    #[case(Card::ACE_DIAMONDS, false)]
+    fn pile__contains(#[case] card: Card, #[case] assert: bool) {
+        let cards = Cards::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
+
+        assert_eq!(cards.contains(&card), assert);
+    }
 }

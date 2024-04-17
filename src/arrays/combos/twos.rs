@@ -411,7 +411,7 @@ impl Twos {
             "32s" => range!(32s),
             "32o" => range!(32o),
 
-            _ => return Err(PKError::InvalidIndex),
+            _ => return Err(PKError::InvalidCardIndex),
         };
         Ok(twos)
     }
@@ -438,7 +438,7 @@ impl FromStr for Twos {
         for raw in s.split(',') {
             match Twos::parse_individual_range(raw) {
                 Ok(range) => twos = twos.extend(&range),
-                Err(_) => return Err(PKError::InvalidIndex),
+                Err(_) => return Err(PKError::InvalidCardIndex),
             };
         }
         Ok(twos)

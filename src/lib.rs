@@ -35,6 +35,7 @@ pub mod card_number;
 pub mod cards;
 pub mod casino;
 pub mod deck;
+pub mod games;
 mod lookups;
 pub mod play;
 pub mod rank;
@@ -101,7 +102,8 @@ pub enum PKError {
     InvalidCardNumber,
     InvalidCardCount,
     InvalidHand,
-    InvalidIndex,
+    InvalidCardIndex,
+    InvalidPermutationIndex,
     InvalidPluribusIndex,
     InvalidPosition,
     NoLow,
@@ -132,7 +134,8 @@ impl Display for PKError {
             PKError::InvalidCardNumber => "Invalid Card Number Error",
             PKError::InvalidCardCount => "Invalid Card Count Error",
             PKError::InvalidHand => "Invalid Hand Error",
-            PKError::InvalidIndex => "Invalid Index Error",
+            PKError::InvalidCardIndex => "Invalid Card Index Error",
+            PKError::InvalidPermutationIndex => "Invalid Permutation Index Error",
             PKError::InvalidPluribusIndex => "Invalid Pluribus Index Error",
             PKError::InvalidPosition => "Invalid Position Error",
             PKError::NoLow => "No low hand possible Error",
@@ -251,6 +254,8 @@ pub trait Pile {
         self.remaining().par_combinations(k)
     }
 
+    /// Tried refactoring this as `self.cards().index_set().contains(card)`, but it broke a lot of
+    /// negative tests, since it just stripped out `Card::BLANK`.
     fn contains(&self, card: &Card) -> bool {
         self.to_vec().contains(card)
     }
@@ -267,6 +272,31 @@ pub trait Pile {
     fn enumerate_remaining(&self, k: usize) -> Enumerate<Combinations<IntoIter<Card>>> {
         log::info!("Pile.enumerate_after(k: {})", k);
         self.combinations_remaining(k).enumerate()
+    }
+
+    fn how_many(&self, cards: &Cards) -> usize {
+        cards.to_vec().iter().filter(|card| self.contains(card)).count()
+    }
+
+    fn common(&self, cards: &Cards) -> Cards {
+        // let v = self.to_vec().iter().filter(|card| {
+        //     let contains = cards.contains(card);
+        //     println!("{} contains {}? {}", self.cards(), card, contains);
+        //
+        //     contains
+        //
+        // }).cloned().collect::<Vec<Card>>();
+        //
+        // Cards::from(v)
+
+        Cards::from(
+            cards
+                .to_vec()
+                .iter()
+                .filter(|card| self.contains(card))
+                .copied()
+                .collect::<Vec<Card>>(),
+        )
     }
 
     /// This feels like the best name for this functionality. If a `Pile` doesn't contain

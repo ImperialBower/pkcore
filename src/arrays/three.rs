@@ -214,9 +214,9 @@ mod arrays__three_tests {
     #[test]
     fn from_str() {
         assert_eq!(Three::from(THE_FLOP), Three::from_str("9♣ 6♦ 5♥").unwrap());
-        assert_eq!(PKError::InvalidIndex, Three::from_str("").unwrap_err());
-        assert_eq!(PKError::InvalidIndex, Three::from_str(" ").unwrap_err());
-        assert_eq!(PKError::InvalidIndex, Three::from_str(" __ ").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Three::from_str("").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Three::from_str(" ").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Three::from_str(" __ ").unwrap_err());
         assert_eq!(PKError::NotEnoughCards, Three::from_str("AC 2D").unwrap_err());
         assert!(Three::from_str("AD KD QD JD TD 9D").is_err());
         assert_eq!(PKError::TooManyCards, Three::from_str("AD KD QD JD").unwrap_err());
@@ -229,7 +229,7 @@ mod arrays__three_tests {
         assert_eq!(Three(THE_FLOP), Three::from_pluribus("9c6d5h").unwrap());
         assert_eq!(PKError::NotEnoughCards, Three::from_pluribus("9c6d").unwrap_err());
         assert_eq!(PKError::TooManyCards, Three::from_pluribus("9c6d5h4h").unwrap_err());
-        assert_eq!(PKError::InvalidIndex, Three::from_pluribus("AHASAa").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Three::from_pluribus("AHASAa").unwrap_err());
         // assert_eq!(Two::HAND_8S_7H, Three::from_pluribus("8s7h"));
         // assert_eq!(Two::HAND_8S_7H, Three::from_pluribus(" 7h8s"));
         // assert_eq!(Two::HAND_AS_AH, Three::from_pluribus("AhAs   "));

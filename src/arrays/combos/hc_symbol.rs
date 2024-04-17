@@ -534,7 +534,7 @@ impl FromStr for HCSymbol {
 
             "42O+" => "42o+",
 
-            _ => return Err(PKError::InvalidIndex),
+            _ => return Err(PKError::InvalidCardIndex),
         };
 
         Ok(HCSymbol(s.to_string()))

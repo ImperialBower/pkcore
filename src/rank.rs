@@ -158,7 +158,7 @@ impl FromStr for Rank {
                 // No idea how to reach this.
                 None => Err(PKError::Fubar),
             },
-            _ => Err(PKError::InvalidIndex),
+            _ => Err(PKError::InvalidCardIndex),
         }
     }
 }
@@ -293,8 +293,8 @@ mod rank_tests {
 
     #[test]
     fn from_str__invalid() {
-        assert_eq!(PKError::InvalidIndex, Rank::from_str("").unwrap_err());
-        assert_eq!(PKError::InvalidIndex, Rank::from_str(" ").unwrap_err());
-        assert_eq!(PKError::InvalidIndex, Rank::from_str("AK").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Rank::from_str("").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Rank::from_str(" ").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Rank::from_str("AK").unwrap_err());
     }
 }

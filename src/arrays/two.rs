@@ -1903,9 +1903,9 @@ mod arrays__two_tests {
     #[test]
     fn from_str() {
         assert_eq!(Two::from(BIG_SLICK), Two::from_str("AD KH").unwrap());
-        assert_eq!(PKError::InvalidIndex, Two::from_str("").unwrap_err());
-        assert_eq!(PKError::InvalidIndex, Two::from_str(" ").unwrap_err());
-        assert_eq!(PKError::InvalidIndex, Two::from_str(" __ ").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Two::from_str("").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Two::from_str(" ").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Two::from_str(" __ ").unwrap_err());
         assert_eq!(PKError::NotEnoughCards, Two::from_str("AC").unwrap_err());
         assert!(Two::from_str("AD KD QD JD TD 9D").is_err());
         assert_eq!(PKError::TooManyCards, Two::from_str("AD KD QD").unwrap_err());
@@ -1918,7 +1918,7 @@ mod arrays__two_tests {
         assert_eq!(Two::HAND_AS_AH, Two::from_pluribus("AhAs   ").unwrap());
         assert_eq!(PKError::NotEnoughCards, Two::from_pluribus("AH").unwrap_err());
         assert_eq!(PKError::TooManyCards, Two::from_pluribus("AHASAD").unwrap_err());
-        assert_eq!(PKError::InvalidIndex, Two::from_pluribus("AHAa").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Two::from_pluribus("AHAa").unwrap_err());
     }
 
     #[test]
@@ -1988,10 +1988,18 @@ mod arrays__two_tests {
     #[test]
     fn sok() {
         assert!(Two::from(BIG_SLICK).is_dealt());
-        assert!(!Two::from([Card::BLANK, Card::DEUCE_SPADES]).is_dealt());
+        // assert!(!Two::from([Card::BLANK, Card::DEUCE_SPADES]).is_dealt());
         assert!(!Two::from([Card::DEUCE_SPADES, Card::BLANK]).is_dealt());
         assert!(!Two::from([Card::BLANK, Card::BLANK]).is_dealt());
         assert!(!Two::from([Card::DEUCE_SPADES, Card::DEUCE_SPADES]).is_dealt());
+    }
+
+    #[test]
+    fn sok_isolagted() {
+        let sut = Two::from([Card::BLANK, Card::DEUCE_SPADES]);
+        println!("{sut}");
+        assert!(sut.contains_blank());
+        assert!(!sut.is_dealt());
     }
 
     #[test]

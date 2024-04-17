@@ -17,7 +17,7 @@ use std::str::FromStr;
 ///
 /// IDEA: The hub and spoke.
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Five([Card; 5]);
+pub struct Five(pub(crate) [Card; 5]);
 
 impl Five {
     pub const POSSIBLE_COMBINATIONS: usize = 7937;
@@ -260,6 +260,7 @@ impl HandRanker for Five {
         array
     }
 
+    /// TODO RF for all that is sacred RF
     fn sort_in_place(&mut self) {
         if self.is_wheel() {
             // Wheel after sort: 2♠ 3♠ 4♠ 5♥ A♠
@@ -275,8 +276,15 @@ impl HandRanker for Five {
                 Err(_) => self.0,
             };
             // TODO RF: Hack :-P
-            self.0 = five;
-            self.0.sort_unstable();
+            let mut five = Five(five);
+            five.0.sort_unstable();
+            five = five.clean();
+            self.0 = five.0;
+            // self.0.sort_unstable();
+
+            // let mut cleaned = Five::from(five);
+            // cleaned.0.sort_unstable();
+            // self.0 = cleaned.clean().0;
             // NOTE: I don't trust this code. When offered a mint, accept it. Write more tests.
         }
         self.0.reverse();
@@ -510,9 +518,9 @@ mod arrays__five_tests {
     fn from_str() {
         assert_eq!(Five::from(ROYAL_FLUSH), Five::from_str("AD KD QD JD TD").unwrap());
         assert!(Five::from_str("AD KD QD JD").is_err());
-        assert_eq!(PKError::InvalidIndex, Five::from_str("").unwrap_err());
-        assert_eq!(PKError::InvalidIndex, Five::from_str(" ").unwrap_err());
-        assert_eq!(PKError::InvalidIndex, Five::from_str(" __ ").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Five::from_str("").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Five::from_str(" ").unwrap_err());
+        assert_eq!(PKError::InvalidCardIndex, Five::from_str(" __ ").unwrap_err());
         assert_eq!(PKError::NotEnoughCards, Five::from_str("AC").unwrap_err());
         assert!(Five::from_str("AD KD QD JD TD 9D").is_err());
         assert_eq!(PKError::TooManyCards, Five::from_str("AD KD QD JD TD 9D").unwrap_err());
