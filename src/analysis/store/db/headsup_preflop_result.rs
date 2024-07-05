@@ -242,10 +242,7 @@ impl HUPResult {
 
 impl Display for HUPResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let sho = match SortedHeadsUp::try_from(self) {
-            Ok(s) => s,
-            Err(_) => SortedHeadsUp::default(),
-        };
+        let sho = SortedHeadsUp::try_from(self).unwrap_or_else(|_| SortedHeadsUp::default());
 
         // let higher_two = match Two::try_from(self.higher) {
         //     Ok(t) => t,

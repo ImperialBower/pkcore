@@ -146,6 +146,11 @@ Elapsed: 484.90ms
       * [Mathmatrucker > Preflop High Hand Equity and Tie Percentages](https://www.mathematrucker.com/poker/matchups.php)
   * Cheating
     * [FTX’s ‘chief regulatory officer’ Dan Friedberg tied to online poker scandal](https://nypost.com/2022/11/20/ftxs-ex-chief-regulatory-officer-tied-to-online-poker-scandal/)
+  * Cool Resources
+    * YouTube > [I created an AI to Play Poker](https://www.youtube.com/watch?v=MWRXx2saLw4)
+      * The code: [Gongsta / Poker-AI](https://github.com/Gongsta/Poker-AI/)
+      * Related Stuff
+        * [Counterfactual regret minimization in Rust](https://github.com/erikbrinkman/cfr)
 * Rust
   * [The Rust Programming Language](https://doc.rust-lang.org/stable/book/)
   * [Rust Design Patterns](https://rust-unofficial.github.io/patterns/intro.html)
