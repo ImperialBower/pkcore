@@ -1,5 +1,5 @@
-use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
-use pkcore::analysis::store::db::Sqlable;
+use pkcore::analysis::store::db::sqlite::headsup_preflop_result::HUPResult;
+use pkcore::analysis::store::db::sqlite::Sqlable;
 use rusqlite::Connection;
 use std::collections::HashSet;
 

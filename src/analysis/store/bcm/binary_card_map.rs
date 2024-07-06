@@ -1,5 +1,5 @@
 use crate::analysis::hand_rank::HandRankValue;
-use crate::analysis::store::db::Sqlable;
+use crate::analysis::store::db::sqlite::Sqlable;
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::HandRanker;
@@ -273,7 +273,7 @@ impl TryFrom<Vec<Card>> for SevenFiveBCM {
 #[allow(non_snake_case)]
 mod analysis__store__bcm__binary_card_map_tests {
     use super::*;
-    use crate::analysis::store::db::Connect;
+    use crate::analysis::store::db::sqlite::Connect;
     use crate::util::data::TestData;
     use std::str::FromStr;
 
