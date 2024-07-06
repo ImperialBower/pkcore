@@ -6,7 +6,7 @@ pub struct Connect {
 
 impl Connect {
     /// Now we're ready to start setting the Sqlite code into the actual library. Right off the path
-    /// I am intrigued with what what rusqlite's `Connection::open` takes as a parameter. It looks like
+    /// I am intrigued with what rusqlite's `Connection::open` takes as a parameter. It looks like
     /// a simple `&str` but it's actually something I didn't even know was a thing, but now that I see
     /// it, of course it is:
     ///

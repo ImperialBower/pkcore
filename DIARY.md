@@ -798,3 +798,10 @@ This is an outline of the work as it is done.
           * made Five internal array pub(crate) visible
           * impl Pile for OmahaHigh
           * OmahaHigh.is_valid
+    * EPIC: MySQL
+      * Added mysql crate
+      * Created `examples/mysql.rs`
+        * TASK: Reading in .env file var for MySQL DB password
+          * `cargo add dotenv`
+          * created `.env-example`
+          * 
