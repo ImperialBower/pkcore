@@ -1,4 +1,5 @@
 use dotenv::dotenv;
+use mysql::{Pool, PooledConn};
 use std::env;
 use std::env::VarError;
 
@@ -27,3 +28,9 @@ pub fn connection_string() -> mysql::Result<String, VarError> {
 
     Ok(format!("mysql://{user}:{pwd}@{host}:{port}/{database}"))
 }
+
+// pub fn get_connection() -> mysql::Result<PooledConn, dyn std::error::Error> {
+//     let connection_string = connection_string()?;
+//     let pool = Pool::new(connection_string.as_str())?;
+//     Ok(pool.get_conn()?)
+// }
