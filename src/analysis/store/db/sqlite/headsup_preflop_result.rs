@@ -79,7 +79,7 @@ impl HUPResult {
     /// How about we write a doctest to make sure things are working OK?
     ///
     /// ```
-    /// use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
+    /// use pkcore::analysis::store::db::sqlite::headsup_preflop_result::HUPResult;
     /// use pkcore::util::data::TestData;
     ///
     /// assert_eq!(
