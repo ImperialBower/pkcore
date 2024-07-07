@@ -212,6 +212,7 @@ Elapsed: 484.90ms
   * [Serde JSON](https://github.com/serde-rs/json)
   * [Serde YAML](https://github.com/dtolnay/serde-yaml)
 * [Termion](https://github.com/redox-os/termion)
+* [MySql](https://docs.rs/mysql/latest/mysql/)
 
 ## Potential Libraries
 
