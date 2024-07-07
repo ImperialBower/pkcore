@@ -460,10 +460,7 @@ impl ActionType {
     pub fn parse_raise(s: &str) -> usize {
         if let Some(stripped) = s.strip_prefix('r') {
             let val = stripped;
-            match val.parse::<usize>() {
-                Ok(i) => i,
-                Err(_e) => 0,
-            }
+            val.parse::<usize>().unwrap_or(0)
         } else {
             0
         }

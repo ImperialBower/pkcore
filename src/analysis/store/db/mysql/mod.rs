@@ -29,6 +29,14 @@ pub fn connection_string() -> mysql::Result<String, VarError> {
     Ok(format!("mysql://{user}:{pwd}@{host}:{port}/{database}"))
 }
 
+/// # `CoPilot` bringing the snark:
+///
+/// This function is a simple wrapper around the mysql `Pool::get_conn` method. It's a little
+/// redundant, but it's a good way to keep the connection logic in one place.
+///
+/// # Errors
+///
+/// Returns an error if the connection string is not set properly.
 pub fn get_connection() -> Result<PooledConn, Box<dyn std::error::Error>> {
     let connection_string = connection_string()?;
     let pool = Pool::new(connection_string.as_str())?;

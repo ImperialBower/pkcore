@@ -45,16 +45,7 @@ impl Cards {
         for card in cards.iter() {
             minus.0.swap_remove(card);
         }
-        // minus.sort()
         minus
-        // let mut minus = Cards::default();
-        // let deck = Cards::deck();
-        // for card in deck.iter() {
-        //     if cards.get(card).is_none() {
-        //         minus.insert(*card);
-        //     }
-        // }
-        // minus
     }
 
     /// DEFECT bad twos STEP 3

@@ -1,4 +1,4 @@
-use crate::analysis::store::db::sqlite::Sqlable;
+use crate::analysis::store::db::sqlite::Sqlitable;
 use crate::arrays::matchups::masked::{Masked, MASKED_DISTINCT};
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::bard::Bard;
@@ -79,7 +79,7 @@ impl HUPResult {
     /// How about we write a doctest to make sure things are working OK?
     ///
     /// ```
-    /// use pkcore::analysis::store::db::sqlite::headsup_preflop_result::HUPResult;
+    /// use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
     /// use pkcore::util::data::TestData;
     ///
     /// assert_eq!(
@@ -304,7 +304,7 @@ impl From<&SortedHeadsUp> for HUPResult {
     }
 }
 
-impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
+impl Sqlitable<HUPResult, SortedHeadsUp> for HUPResult {
     fn create_table(conn: &Connection) -> rusqlite::Result<usize> {
         log::debug!("HUPResult::create_table({:?})", conn);
         conn.execute(

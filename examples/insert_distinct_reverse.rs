@@ -1,5 +1,5 @@
-use pkcore::analysis::store::db::sqlite::headsup_preflop_result::HUPResult;
-use pkcore::analysis::store::db::sqlite::Sqlable;
+use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
+use pkcore::analysis::store::db::sqlite::Sqlitable;
 use pkcore::arrays::matchups::masked::Masked;
 use pkcore::util::csv::distinct_shus_from_csv_as_masked_vec;
 use pkcore::util::terminal::Terminal;

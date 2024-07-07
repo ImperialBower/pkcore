@@ -1,4 +1,4 @@
-use pkcore::analysis::store::db::sqlite::headsup_preflop_result::HUPResult;
+use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use rusqlite::Connection;
 
 /// I'm thinking that I want to turn this into a test.

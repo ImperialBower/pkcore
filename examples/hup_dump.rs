@@ -1,5 +1,5 @@
 use clap::Parser;
-use pkcore::analysis::store::db::sqlite::headsup_preflop_result::HUPResult;
+use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 
 /// `cargo run --example hup_dump -- -f "generated/hups.db" -t "generated/current_hups.csv"`
 #[derive(Parser, Debug)]

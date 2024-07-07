@@ -1,5 +1,3 @@
-pub mod headsup_preflop_result;
-
 use rusqlite::Connection;
 
 pub struct Connect {
@@ -68,7 +66,7 @@ impl From<Connection> for Connect {
     }
 }
 
-pub trait Sqlable<T, S> {
+pub trait Sqlitable<T, S> {
     /// OK, this whole trait slaps! It's nothing substantial, but I love the cleanliness of it,
     /// and the fact that I can even code it. Don't forget to take the Ws.
     ///

@@ -1,4 +1,4 @@
-use crate::analysis::store::db::sqlite::headsup_preflop_result::HUPResult;
+use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::arrays::matchups::masks::rank_mask::RankMask;
 use crate::arrays::matchups::masks::suit_mask::SuitMask;
 use crate::arrays::matchups::masks::suit_texture::SuitTexture;

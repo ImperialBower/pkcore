@@ -1,5 +1,5 @@
 use crate::analysis::hand_rank::HandRankValue;
-use crate::analysis::store::db::sqlite::Sqlable;
+use crate::analysis::store::db::sqlite::Sqlitable;
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::HandRanker;
@@ -172,7 +172,7 @@ impl SevenFiveBCM {
     }
 }
 
-impl Sqlable<SevenFiveBCM, Bard> for SevenFiveBCM {
+impl Sqlitable<SevenFiveBCM, Bard> for SevenFiveBCM {
     fn create_table(conn: &Connection) -> rusqlite::Result<usize> {
         conn.execute(
             "create table if not exists bcm (

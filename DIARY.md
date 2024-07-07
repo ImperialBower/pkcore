@@ -804,4 +804,4 @@ This is an outline of the work as it is done.
         * TASK: Reading in .env file var for MySQL DB password
           * `cargo add dotenv`
           * created `.env-example`
-          * 
+          * Renamed Sqlable to Sqlitable, because we're adding MySql.

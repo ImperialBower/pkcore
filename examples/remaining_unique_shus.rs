@@ -1,5 +1,5 @@
-use pkcore::analysis::store::db::sqlite::headsup_preflop_result::HUPResult;
-use pkcore::analysis::store::db::sqlite::Sqlable;
+use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
+use pkcore::analysis::store::db::sqlite::Sqlitable;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use pkcore::PKError;
 use rusqlite::Connection;
