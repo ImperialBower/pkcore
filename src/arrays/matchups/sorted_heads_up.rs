@@ -2,6 +2,7 @@ use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
 use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::analysis::the_nuts::TheNuts;
 use crate::arrays::five::Five;
+use crate::arrays::hole_cards::twos::Twos;
 use crate::arrays::matchups::masked::{Masked, MASKED_UNIQUE};
 use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
@@ -851,6 +852,14 @@ impl TryFrom<Vec<&Two>> for SortedHeadsUp {
             )),
             _ => Err(PKError::TooManyHands),
         }
+    }
+}
+
+impl TryFrom<Twos> for SortedHeadsUp {
+    type Error = PKError;
+
+    fn try_from(twos: Twos) -> Result<Self, Self::Error> {
+        SortedHeadsUp::try_from(twos.vec())
     }
 }
 

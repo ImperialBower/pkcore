@@ -1,9 +1,16 @@
+use crate::arrays::hole_cards::twos::Twos;
+use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+use crate::arrays::two::Two;
+use crate::bard::Bard;
+use crate::{PKError, Pile};
 use dotenv::dotenv;
 use mysql::{Pool, PooledConn};
 use std::env;
 use std::env::VarError;
-use crate::arrays::hole_cards::twos::Twos;
-use crate::{Pile, PKError};
+use std::fmt::{Display, Formatter};
+use std::str::FromStr;
+use mysql::prelude::Queryable;
+use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 
 pub struct DB;
 
@@ -51,30 +58,112 @@ impl DB {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct HeadsUpResult {
-    higher: u64,
-    lower: u64,
-    higher_wins: u64,
-    lower_wins: u64,
-    ties: u64,
+    pub higher: u64,
+    pub lower: u64,
+    pub higher_wins: u64,
+    pub lower_wins: u64,
+    pub ties: u64,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct HeadsUpQuery {
-    higher: u64,
-    lower: u64,
+    pub higher: u64,
+    pub lower: u64,
+}
+
+impl HeadsUpQuery {
+    pub fn query(&self, conn: &mut PooledConn) -> Result<HUPResult, PKError> {
+
+        let query = match conn.exec_map(
+            "SELECT higher, lower, higher_wins, lower_wins, ties FROM nlh_headsup_result WHERE higher = ? AND lower = ?",
+            (self.higher, self.lower),
+            |(higher, lower, higher_wins, lower_wins, ties)| {HeadsUpResult{higher, lower, higher_wins, lower_wins, ties}},
+        ) {
+            Ok(q) => q,
+            Err(e) => return Err(PKError::from(e)),
+        };
+
+        let query = conn.exec_map(
+            "SELECT higher, lower, higher_wins, lower_wins, ties FROM nlh_headsup_result WHERE higher = ? AND lower = ?",
+            (self.higher, self.lower),
+            |(higher, lower, higher_wins, lower_wins, ties)| {HeadsUpResult{higher, lower, higher_wins, lower_wins, ties}},
+        )?;
+
+        query.into_iter().next().ok_or(PKError::NotFound)
+
+    }
+}
+
+impl Display for HeadsUpQuery {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let high = Two::try_from(Bard::from(self.higher)).unwrap_or(Two::default());
+        let low = Two::try_from(Bard::from(self.lower)).unwrap_or(Two::default());
+        write!(f, "{}", SortedHeadsUp::new(high, low))
+    }
+}
+
+impl From<SortedHeadsUp> for HeadsUpQuery {
+    fn from(sorted: SortedHeadsUp) -> Self {
+        HeadsUpQuery {
+            higher: sorted.higher().bard().as_u64(),
+            lower: sorted.lower().bard().as_u64(),
+        }
+    }
+}
+
+impl FromStr for HeadsUpQuery {
+    type Err = PKError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        SortedHeadsUp::from_str(s).map(HeadsUpQuery::from)
+    }
 }
 
 impl TryFrom<Twos> for HeadsUpQuery {
     type Error = PKError;
 
     fn try_from(twos: Twos) -> Result<Self, Self::Error> {
-        match twos.len() {
-            1 => Err(PKError::NotEnoughHands),
-            2 => Ok(HeadsUpQuery {
-                higher: twos.0[0].bard().as_u64(),
-                lower: twos.0[1].bard().as_u64(),
-            }),
-            _ => Err(PKError::TooManyHands),
+        match SortedHeadsUp::try_from(twos) {
+            Err(e) => return Err(e),
+            Ok(sorted) => Ok(HeadsUpQuery::from(sorted)),
         }
+    }
+}
+
+#[allow(non_snake_case)]
+mod analysis_store_db_mysql_tests {
+    use super::*;
+
+    #[test]
+    fn from_str() {
+        let expected = HeadsUpQuery {
+            higher: 70368748371968,
+            lower: 549890031616,
+        };
+
+        let actual = HeadsUpQuery::from_str("J♦ 9♠ 3♥ 2♠").unwrap();
+
+        assert_eq!(expected, actual);
+        assert_ne!(expected, HeadsUpQuery::from_str("J♦ 9♠ 3♥ 3♠").unwrap());
+    }
+
+    #[test]
+    fn test_heads_up_query_from_sorted_heads_up() {
+        let expected = HeadsUpQuery {
+            higher: 70368748371968,
+            lower: 549890031616,
+        };
+
+        let actual = HeadsUpQuery::from(SortedHeadsUp::new(
+            Two::try_from(Bard::from(70368748371968)).unwrap(),
+            Two::try_from(Bard::from(549890031616)).unwrap(),
+        ));
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_heads_up_query_from_twos() {
+        let huq = HeadsUpQuery::from_str("J♦ 9♠ 3♥ 2♠").unwrap();
     }
 }
