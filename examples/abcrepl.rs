@@ -3,17 +3,7 @@ use pkcore::util::terminal::Terminal;
 use pkcore::util::wincounter::results::Results;
 use pkcore::PKError;
 
-/// OK, this makes me sad. My new shiny pkcore library takes over twice as long to run a single calc
-///
 /// ```txt
-/// ❯ cargo run --example bcrepl
-/// ...
-/// hole cards> A♠ A♥ 6♦ 6♣
-/// Elapsed: 8.27s
-/// A♠ A♥ 6♦ 6♣, 79.66% (1363968), 20.05% (343394), 0.29% (4942)
-/// ```
-///
-/// ```
 /// pkcore❯ cargo run --example bcrepl
 /// ...
 /// hole cards> A♠ A♥ 6♦ 6♣
@@ -23,7 +13,7 @@ use pkcore::PKError;
 ///
 /// This is going to need some investigation.
 ///
-/// `cargo run --example bcrepl`
+/// `cargo run --example abcrepl`
 /// `A♠ A♥ A♦ A♣`
 fn main() {
     env_logger::init();

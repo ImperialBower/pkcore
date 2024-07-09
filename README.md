@@ -212,8 +212,12 @@ Elapsed: 484.90ms
   * [Serde JSON](https://github.com/serde-rs/json)
   * [Serde YAML](https://github.com/dtolnay/serde-yaml)
 * [Termion](https://github.com/redox-os/termion)
-* [MySql](https://docs.rs/mysql/latest/mysql/)
-
+* DBs
+  * [MySql](https://docs.rs/mysql/latest/mysql/)
+  * SQLite
+    * [rusqlite](https://github.com/rusqlite/rusqlite)
+      * [Rust Cookbook](https://rust-lang-nursery.github.io/rust-cookbook/database/sqlite.html)
+      * [In-Memory Databases](https://www.sqlite.org/inmemorydb.html)
 ## Potential Libraries
 
 * [derive_more](https://github.com/JelteF/derive_more) (Recommended by Rust Power Tools)
@@ -221,10 +225,6 @@ Elapsed: 484.90ms
 * [modular-bitfield](https://crates.io/crates/modular-bitfield)
 * [RustyLine](https://github.com/kkawakam/rustyline)
 * [sled](https://github.com/spacejam/sled)
-* SQLite
-  * [rusqlite](https://github.com/rusqlite/rusqlite)
-    * [Rust Cookbook](https://rust-lang-nursery.github.io/rust-cookbook/database/sqlite.html)
-    * [In-Memory Databases](https://www.sqlite.org/inmemorydb.html)
 * UI
   * [Ratatui](https://github.com/ratatui-org/ratatui)
   * [shadcn/ui](https://ui.shadcn.com/)

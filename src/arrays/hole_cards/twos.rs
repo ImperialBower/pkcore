@@ -16,7 +16,7 @@ use std::sync::mpsc;
 use std::{fmt, thread};
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Twos([Two; 9]);
+pub struct Twos(pub [Two; 9]);
 
 impl Twos {
     /// This type of code scares me, because I can't simply test drive it. Perhaps
