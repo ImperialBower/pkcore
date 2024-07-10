@@ -1,3 +1,4 @@
+use crate::analysis::store::db::mysql::HeadsUpRawResult;
 use crate::analysis::store::db::sqlite::Sqlitable;
 use crate::arrays::matchups::masked::{Masked, MASKED_DISTINCT};
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
@@ -300,6 +301,18 @@ impl From<&SortedHeadsUp> for HUPResult {
             higher_wins: u64::try_from(higher_wins).unwrap() - ties,
             lower_wins: u64::try_from(lower_wins).unwrap() - ties,
             ties: u64::try_from(lower_ties).unwrap(),
+        }
+    }
+}
+
+impl From<HeadsUpRawResult> for HUPResult {
+    fn from(raw: HeadsUpRawResult) -> Self {
+        HUPResult {
+            higher: Bard::from(raw.higher),
+            lower: Bard::from(raw.lower),
+            higher_wins: raw.higher_wins,
+            lower_wins: raw.lower_wins,
+            ties: raw.ties,
         }
     }
 }

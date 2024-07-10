@@ -1,16 +1,16 @@
+use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::arrays::hole_cards::twos::Twos;
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::{PKError, Pile};
 use dotenv::dotenv;
+use mysql::prelude::Queryable;
 use mysql::{Pool, PooledConn};
 use std::env;
 use std::env::VarError;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use mysql::prelude::Queryable;
-use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 
 pub struct DB;
 
@@ -57,7 +57,7 @@ impl DB {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct HeadsUpResult {
+pub struct HeadsUpRawResult {
     pub higher: u64,
     pub lower: u64,
     pub higher_wins: u64,
@@ -73,24 +73,20 @@ pub struct HeadsUpQuery {
 
 impl HeadsUpQuery {
     pub fn query(&self, conn: &mut PooledConn) -> Result<HUPResult, PKError> {
-
         let query = match conn.exec_map(
             "SELECT higher, lower, higher_wins, lower_wins, ties FROM nlh_headsup_result WHERE higher = ? AND lower = ?",
             (self.higher, self.lower),
-            |(higher, lower, higher_wins, lower_wins, ties)| {HeadsUpResult{higher, lower, higher_wins, lower_wins, ties}},
+            |(higher, lower, higher_wins, lower_wins, ties)| { HeadsUpRawResult {higher, lower, higher_wins, lower_wins, ties}},
         ) {
             Ok(q) => q,
-            Err(e) => return Err(PKError::from(e)),
+            Err(_) => return Err(PKError::from(PKError::SqlError)),
         };
 
-        let query = conn.exec_map(
-            "SELECT higher, lower, higher_wins, lower_wins, ties FROM nlh_headsup_result WHERE higher = ? AND lower = ?",
-            (self.higher, self.lower),
-            |(higher, lower, higher_wins, lower_wins, ties)| {HeadsUpResult{higher, lower, higher_wins, lower_wins, ties}},
-        )?;
-
-        query.into_iter().next().ok_or(PKError::NotFound)
-
+        match query.len() {
+            0 => Err(PKError::SqlEmptyResult),
+            1 => Ok(HUPResult::from(query.into_iter().next().unwrap())),
+            _ => Err(PKError::SqlDuplicateResult),
+        }
     }
 }
 
