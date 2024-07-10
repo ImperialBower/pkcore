@@ -11,6 +11,7 @@ use std::env;
 use std::env::VarError;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use crate::arrays::matchups::masked::Masked;
 
 pub struct DB;
 
@@ -72,6 +73,23 @@ pub struct HeadsUpQuery {
 }
 
 impl HeadsUpQuery {
+    pub fn exists(&self, conn: &mut PooledConn) -> bool {
+        self.query(conn).is_ok()
+    }
+
+    /// # Errors
+    ///
+    /// Throws PKError if unable to insert the result.
+    pub fn insert(&self, conn: &mut PooledConn, result: &HUPResult) -> Result<(), PKError> {
+        match conn.exec_drop(
+            "INSERT INTO nlh_headsup_result (higher, lower, higher_wins, lower_wins, ties) VALUES (?, ?, ?, ?, ?)",
+            (self.higher, self.lower, result.higher_wins, result.lower_wins, result.ties),
+        ) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(PKError::from(PKError::SqlError)),
+        }
+    }
+
     pub fn query(&self, conn: &mut PooledConn) -> Result<HUPResult, PKError> {
         let query = match conn.exec_map(
             "SELECT higher, lower, higher_wins, lower_wins, ties FROM nlh_headsup_result WHERE higher = ? AND lower = ?",
@@ -95,6 +113,15 @@ impl Display for HeadsUpQuery {
         let high = Two::try_from(Bard::from(self.higher)).unwrap_or(Two::default());
         let low = Two::try_from(Bard::from(self.lower)).unwrap_or(Two::default());
         write!(f, "{}", SortedHeadsUp::new(high, low))
+    }
+}
+
+impl From<Masked> for HeadsUpQuery {
+    fn from(masked: Masked) -> Self {
+        HeadsUpQuery {
+            higher: masked.shu.higher().bard().as_u64(),
+            lower: masked.shu.lower().bard().as_u64(),
+        }
     }
 }
 

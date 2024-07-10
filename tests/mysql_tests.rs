@@ -1,6 +1,5 @@
 #[allow(non_snake_case)]
 mod mysql_integration_tests {
-    use mysql::prelude::Queryable;
     use pkcore::analysis::store::db::mysql::{HeadsUpQuery, DB};
     use pkcore::PKError;
     use std::str::FromStr;
