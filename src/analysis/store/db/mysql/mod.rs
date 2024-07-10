@@ -126,6 +126,7 @@ impl TryFrom<Twos> for HeadsUpQuery {
     }
 }
 
+#[cfg(test)]
 #[allow(non_snake_case)]
 mod analysis_store_db_mysql_tests {
     use super::*;
