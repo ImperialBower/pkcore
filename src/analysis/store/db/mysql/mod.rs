@@ -79,17 +79,20 @@ impl HeadsUpQuery {
 
     /// # Errors
     ///
-    /// Throws PKError if unable to insert the result.
+    /// Throws `PKError` if unable to insert the result.
     pub fn insert(&self, conn: &mut PooledConn, result: &HUPResult) -> Result<(), PKError> {
         match conn.exec_drop(
             "INSERT INTO nlh_headsup_result (higher, lower, higher_wins, lower_wins, ties) VALUES (?, ?, ?, ?, ?)",
             (self.higher, self.lower, result.higher_wins, result.lower_wins, result.ties),
         ) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(PKError::from(PKError::SqlError)),
+            Ok(()) => Ok(()),
+            Err(_) => Err(PKError::SqlError),
         }
     }
 
+    /// # Panics
+    ///
+    /// 
     pub fn query(&self, conn: &mut PooledConn) -> Result<HUPResult, PKError> {
         let query = match conn.exec_map(
             "SELECT higher, lower, higher_wins, lower_wins, ties FROM nlh_headsup_result WHERE higher = ? AND lower = ?",

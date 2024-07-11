@@ -40,7 +40,7 @@ fn read_input(conn: &mut PooledConn, distinct: &mut Vec<Masked>) {
             println!("{} exists!", masked.shu);
             continue;
         } else {
-            println!("Calculating {}", masked.shu);
+            println!("Calculating #{x} {}", masked.shu);
             let hupr = HUPResult::from(&masked.shu);
             if huq.exists(conn) {
                 println!("{} exists after calc!", masked.shu);
