@@ -1,8 +1,18 @@
 #[allow(non_snake_case)]
 mod mysql_integration_tests {
-    use pkcore::analysis::store::db::mysql::{HeadsUpQuery, DB};
+    use pkcore::analysis::store::db::mysql::{HeadsUpQuery, HeadsUpRawResult, DB};
     use pkcore::PKError;
     use std::str::FromStr;
+
+    #[test]
+    fn test_all() {
+        let mut conn = DB::get_connection().unwrap();
+        let hurrs = HeadsUpRawResult::all_as_hup_results(&mut conn).unwrap();
+
+        for hurr in hurrs {
+            println!("{hurr}");
+        }
+    }
 
     #[test]
     fn test_existing_shu() {

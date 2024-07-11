@@ -1,5 +1,6 @@
 use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::arrays::hole_cards::twos::Twos;
+use crate::arrays::matchups::masked::Masked;
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
@@ -11,7 +12,6 @@ use std::env;
 use std::env::VarError;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use crate::arrays::matchups::masked::Masked;
 
 pub struct DB;
 
@@ -57,7 +57,7 @@ impl DB {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HeadsUpRawResult {
     pub higher: u64,
     pub lower: u64,
@@ -66,7 +66,37 @@ pub struct HeadsUpRawResult {
     pub ties: u64,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+impl HeadsUpRawResult {
+    /// # Errors
+    ///
+    /// Thows a `PKError` if unable to query the database.
+    pub fn all(conn: &mut PooledConn) -> Result<Vec<Self>, PKError> {
+        match conn.query_map(
+            "SELECT higher, lower, higher_wins, lower_wins, ties FROM nlh_headsup_result",
+            |(higher, lower, higher_wins, lower_wins, ties)| HeadsUpRawResult {
+                higher,
+                lower,
+                higher_wins,
+                lower_wins,
+                ties,
+            },
+        ) {
+            Ok(q) => Ok(q),
+            Err(_) => Err(PKError::SqlError),
+        }
+    }
+
+    /// # Errors
+    ///
+    /// Thows a `PKError` if unable to query the database.
+    pub fn all_as_hup_results(conn: &mut PooledConn) -> Result<Vec<HUPResult>, PKError> {
+        let raw_results = HeadsUpRawResult::all(conn)?;
+
+        Ok(raw_results.into_iter().map(HUPResult::from).collect())
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HeadsUpQuery {
     pub higher: u64,
     pub lower: u64,
@@ -83,29 +113,36 @@ impl HeadsUpQuery {
     pub fn insert(&self, conn: &mut PooledConn, result: &HUPResult) -> Result<(), PKError> {
         match conn.exec_drop(
             "INSERT INTO nlh_headsup_result (higher, lower, higher_wins, lower_wins, ties) VALUES (?, ?, ?, ?, ?)",
-            (self.higher, self.lower, result.higher_wins, result.lower_wins, result.ties),
+            (
+                self.higher,
+                self.lower,
+                result.higher_wins,
+                result.lower_wins,
+                result.ties,
+            ),
         ) {
             Ok(()) => Ok(()),
             Err(_) => Err(PKError::SqlError),
         }
     }
 
-    /// # Panics
+    /// # Errors
     ///
-    /// 
+    /// Throws `PKError::SqlError` if unable to query the database.
+    /// Throws `PKError::Fubar` if the match statement somehow gets messed up.
     pub fn query(&self, conn: &mut PooledConn) -> Result<HUPResult, PKError> {
-        let query = match conn.exec_map(
-            "SELECT higher, lower, higher_wins, lower_wins, ties FROM nlh_headsup_result WHERE higher = ? AND lower = ?",
-            (self.higher, self.lower),
-            |(higher, lower, higher_wins, lower_wins, ties)| { HeadsUpRawResult {higher, lower, higher_wins, lower_wins, ties}},
-        ) {
-            Ok(q) => q,
-            Err(_) => return Err(PKError::from(PKError::SqlError)),
-        };
+        let Ok(query) = conn.exec_map(
+                        "SELECT higher, lower, higher_wins, lower_wins, ties FROM nlh_headsup_result WHERE higher = ? AND lower = ?",
+                     (self.higher, self.lower),
+                     |(higher, lower, higher_wins, lower_wins, ties)| { HeadsUpRawResult {higher, lower, higher_wins, lower_wins, ties}},
+                ) else { return Err(PKError::SqlError) };
 
         match query.len() {
             0 => Err(PKError::SqlEmptyResult),
-            1 => Ok(HUPResult::from(query.into_iter().next().unwrap())),
+            1 => match query.into_iter().next() {
+                Some(raw) => Ok(HUPResult::from(raw)),
+                None => Err(PKError::Fubar),
+            },
             _ => Err(PKError::SqlDuplicateResult),
         }
     }
@@ -150,7 +187,7 @@ impl TryFrom<Twos> for HeadsUpQuery {
 
     fn try_from(twos: Twos) -> Result<Self, Self::Error> {
         match SortedHeadsUp::try_from(twos) {
-            Err(e) => return Err(e),
+            Err(e) => Err(e),
             Ok(sorted) => Ok(HeadsUpQuery::from(sorted)),
         }
     }
@@ -191,6 +228,7 @@ mod analysis_store_db_mysql_tests {
 
     #[test]
     fn test_heads_up_query_from_twos() {
+        let twos = Twos::from_str("J♦ 9♠ 3♥ 2♠").unwrap();
         let huq = HeadsUpQuery::from_str("J♦ 9♠ 3♥ 2♠").unwrap();
     }
 }
