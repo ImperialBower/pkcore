@@ -66,6 +66,12 @@ pub struct HeadsUpRawResult {
     pub ties: u64,
 }
 
+impl Display for HeadsUpRawResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "INSERT INTO `nlh_headsup_result` (`higher`, `lower`, `higher_wins`, `lower_wins`, `ties`) VALUES({},{},{},{},{});", self.higher, self.lower, self.higher_wins, self.lower_wins, self.ties)
+    }
+}
+
 impl HeadsUpRawResult {
     /// # Errors
     ///
