@@ -66,12 +66,6 @@ pub struct HeadsUpRawResult {
     pub ties: u64,
 }
 
-impl Display for HeadsUpRawResult {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "INSERT INTO `nlh_headsup_result` (`higher`, `lower`, `higher_wins`, `lower_wins`, `ties`) VALUES({},{},{},{},{});", self.higher, self.lower, self.higher_wins, self.lower_wins, self.ties)
-    }
-}
-
 impl HeadsUpRawResult {
     /// # Errors
     ///
@@ -102,6 +96,37 @@ impl HeadsUpRawResult {
     }
 }
 
+trait DbOps {
+    fn insert(&self, conn: &mut PooledConn) -> Result<(), PKError>;
+}
+
+impl DbOps for HeadsUpRawResult {
+    /// # Errors
+    ///
+    /// Throws `PKError` if unable to insert the result.
+    fn insert(&self, conn: &mut PooledConn) -> Result<(), PKError> {
+        match conn.exec_drop(
+            "INSERT INTO nlh_headsup_result (higher, lower, higher_wins, lower_wins, ties) VALUES (?, ?, ?, ?, ?)",
+            (
+                self.higher,
+                self.lower,
+                self.higher_wins,
+                self.lower_wins,
+                self.ties,
+            ),
+        ) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(PKError::SqlError),
+        }
+    }
+}
+
+impl Display for HeadsUpRawResult {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "INSERT INTO `nlh_headsup_result` (`higher`, `lower`, `higher_wins`, `lower_wins`, `ties`) VALUES({},{},{},{},{});", self.higher, self.lower, self.higher_wins, self.lower_wins, self.ties)
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HeadsUpQuery {
     pub higher: u64,
@@ -113,6 +138,8 @@ impl HeadsUpQuery {
         self.query(conn).is_ok()
     }
 
+    /// TODO: How do I test this without a database connection?
+    ///
     /// # Errors
     ///
     /// Throws `PKError` if unable to insert the result.
@@ -215,6 +242,26 @@ mod analysis_store_db_mysql_tests {
 
         assert_eq!(expected, actual);
         assert_ne!(expected, HeadsUpQuery::from_str("J♦ 9♠ 3♥ 3♠").unwrap());
+    }
+
+    #[test]
+    fn test_heads_up_query__insert() {
+        let hurr = HeadsUpRawResult {
+            higher: 17592186052608,
+            lower: 549822922752,
+            higher_wins: 523851,
+            lower_wins: 1118235,
+            ties: 70218,
+        };
+
+        let huq = HeadsUpQuery {
+            higher: 17592186052608,
+            lower: 549822922752,
+        };
+
+        let actual = HeadsUpQuery::from(Masked::from_str("J♦ 9♠ 3♥ 2♠").unwrap());
+
+        // assert_eq!(expected, actual);
     }
 
     #[test]

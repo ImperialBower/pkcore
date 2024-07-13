@@ -805,3 +805,5 @@ This is an outline of the work as it is done.
           * `cargo add dotenv`
           * created `.env-example`
           * Renamed Sqlable to Sqlitable, because we're adding MySql.
+      * Created `examples\abcrepl.rs` to push new heads up matchups into db
+      * Created `examples\bard.rs` utility to convert to and from Bard values

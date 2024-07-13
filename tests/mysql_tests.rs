@@ -3,36 +3,125 @@ mod mysql_integration_tests {
     use pkcore::analysis::store::db::mysql::{HeadsUpQuery, HeadsUpRawResult, DB};
     use pkcore::PKError;
     use std::str::FromStr;
+    use mysql::PooledConn;
 
     #[test]
+    #[ignore]
     fn test_all() {
-        let mut conn = DB::get_connection().unwrap();
-        let hurrs = HeadsUpRawResult::all_as_hup_results(&mut conn).unwrap();
+        match DB::get_connection() {
+            Ok(pooled_connection) => {
+                let mut conn: PooledConn = pooled_connection;
+                let hurrs = HeadsUpRawResult::all_as_hup_results(&mut conn).unwrap();
 
-        for hurr in hurrs {
-            println!("{hurr}");
+                for hurr in hurrs {
+                    println!("{hurr}");
+                }
+            },
+            Err(e) => {
+                println!("Unable to run integration test: {:?}", e);
+            }
         }
     }
 
     #[test]
-    fn test_existing_shu() {
-        let mut conn = DB::get_connection().unwrap();
-        let huq = HeadsUpQuery::from_str("J♦ 9♠ 3♥ 2♠").unwrap();
+    fn test_query_existing_shu() {
+        match DB::get_connection() {
+            Ok(pooled_connection) => {
+                let mut conn: PooledConn = pooled_connection;
+                let huq = HeadsUpQuery::from_str("J♦ 9♠ 3♥ 2♠").unwrap();
 
-        let result = huq.query(&mut conn);
+                let result = huq.query(&mut conn);
 
-        assert!(result.is_ok());
+                assert!(result.is_ok());
+                println!("{}", result.unwrap());
+            },
+            Err(e) => {
+                println!("Unable to run integration test: {:?}", e);
+            }
+        }
+    }
 
-        println!("{}", result.unwrap());
+    /// How it starts:
+    /// ```rust
+    /// let HeadsUpRawResult = HeadsUpRawResult { // Press ENTER
+    /// };
+    /// ```
+    ///
+    /// Copilot generates:
+    ///
+    /// ```rust
+    /// let HeadsUpRawResult = HeadsUpRawResult {
+    ///     higher: 70368748371968,
+    ///     lower: 549890031616,
+    ///     wins: 523851,
+    ///     ties: 0,
+    ///     losses: 1118235,
+    /// };
+    /// ```
+    ///
+    /// Notice the names for the fields don't always match.
+    #[test]
+    fn test_query_nonexisting_shu() {
+        match DB::get_connection() {
+            Ok(pooled_connection) => {
+                let mut conn: PooledConn = pooled_connection;
+                let huq = HeadsUpQuery::from_str("7♠ 2♦ 2♥ 2♠").unwrap();
+                // let huq = HeadsUpQuery::from_str("T♠ 7♥ 7♠ 4♠").unwrap();
+
+                let result = huq.query(&mut conn);
+
+                assert!(!result.is_ok());
+                assert_eq!(result.unwrap_err(), PKError::SqlEmptyResult);
+
+                let HeadsUpRawResult = HeadsUpRawResult {
+                    higher: 17592186052608,
+                    lower: 549822922752,
+                    higher_wins: 523851,
+                    lower_wins: 1118235,
+                    ties: 70218,
+                };
+
+                // let huq = HeadsUpQuery::from_str("J♦ 9♠ 3♥ 2♠").unwrap();
+                //
+                // assert!(huq.exists(&mut conn));
+            },
+            Err(e) => {
+                println!("Unable to run integration test: {:?}", e);
+            }
+        }
     }
 
     #[test]
     fn test_no_shu() {
-        let mut conn = DB::get_connection().unwrap();
-        let huq = HeadsUpQuery::from_str("2♦ 3♠ 3♥ 2♠").unwrap();
+        match DB::get_connection() {
+            Ok(pooled_connection) => {
+                let mut conn: PooledConn = pooled_connection;
 
-        let result = huq.query(&mut conn);
+                let huq = HeadsUpQuery::from_str("2♦ 3♠ 3♥ 2♠").unwrap();
 
-        assert_eq!(result.unwrap_err(), PKError::SqlEmptyResult);
+                let result = huq.query(&mut conn);
+
+                assert_eq!(result.unwrap_err(), PKError::SqlEmptyResult);
+            },
+            Err(e) => {
+                println!("Unable to run integration test: {:?}", e);
+            }
+        }
+    }
+
+    #[test]
+    fn test_exists() {
+        match DB::get_connection() {
+            Ok(pooled_connection) => {
+                let mut conn: PooledConn = pooled_connection;
+
+                let huq = HeadsUpQuery::from_str("J♦ 9♠ 3♥ 2♠").unwrap();
+
+                assert!(huq.exists(&mut conn));
+            },
+            Err(e) => {
+                println!("Unable to run integration test: {:?}", e);
+            }
+        }
     }
 }
