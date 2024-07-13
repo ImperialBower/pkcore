@@ -231,6 +231,15 @@ impl TryFrom<Twos> for HeadsUpQuery {
 mod analysis_store_db_mysql_tests {
     use super::*;
 
+    use mockall::predicate::*;
+    use mockall::*;
+
+    mock! {
+        DbOpsMock {
+            fn insert(&self, conn: &mut PooledConn) -> Result<(), PKError>;
+        }
+    }
+
     #[test]
     fn from_str() {
         let expected = HeadsUpQuery {
@@ -246,6 +255,10 @@ mod analysis_store_db_mysql_tests {
 
     #[test]
     fn test_heads_up_query__insert() {
+        let mut mock = MockDbOpsMock::new();
+        let dummy_conn = &mut PooledConn::
+        let dummy_result = HUPResult::...; // Create a dummy HUPResult
+
         let hurr = HeadsUpRawResult {
             higher: 17592186052608,
             lower: 549822922752,
