@@ -1,7 +1,7 @@
 #[allow(non_snake_case)]
 mod mysql_integration_tests {
     use mysql::PooledConn;
-    use pkcore::analysis::store::db::mysql::{HeadsUpQuery, HeadsUpRawResult, MySqlDB};
+    use pkcore::analysis::store::db::mysql::{DbConnectOps, HeadsUpQuery, HeadsUpRawResult, MySqlDB};
     use pkcore::PKError;
     use std::str::FromStr;
 

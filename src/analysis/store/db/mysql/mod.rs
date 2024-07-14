@@ -86,7 +86,7 @@ pub struct HeadsUpRawResult {
 impl HeadsUpRawResult {
     /// # Errors
     ///
-    /// Thows a `PKError` if unable to query the database.
+    /// Throws a `PKError` if unable to query the database.
     pub fn all(conn: &mut PooledConn) -> Result<Vec<Self>, PKError> {
         match conn.query_map(
             "SELECT higher, lower, higher_wins, lower_wins, ties FROM nlh_headsup_result",
@@ -108,12 +108,11 @@ impl HeadsUpRawResult {
     /// Thows a `PKError` if unable to query the database.
     pub fn all_as_hup_results(conn: &mut PooledConn) -> Result<Vec<HUPResult>, PKError> {
         let raw_results = HeadsUpRawResult::all(conn)?;
-
         Ok(raw_results.into_iter().map(HUPResult::from).collect())
     }
 }
 
-trait DbHeadsUpRawResultOps {
+pub trait DbHeadsUpRawResultOps {
     fn insert(&self, conn: &mut PooledConn) -> Result<(), PKError>;
 }
 
