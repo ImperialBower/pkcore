@@ -208,6 +208,7 @@ Elapsed: 484.90ms
 
 * [bitvec](https://github.com/ferrilab/bitvec)
 * [Burnt Sushi CSV](https://github.com/BurntSushi/rust-csv) with Serde support
+* [Mockall](https://github.com/asomers/mockall)
 * [Serde](https://serde.rs/)
   * [Serde JSON](https://github.com/serde-rs/json)
   * [Serde YAML](https://github.com/dtolnay/serde-yaml)

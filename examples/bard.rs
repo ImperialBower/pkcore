@@ -1,8 +1,8 @@
-use std::str::FromStr;
 use clap::Parser;
 use pkcore::bard::Bard;
 use pkcore::cards::Cards;
-use pkcore::{Pile, PKError};
+use pkcore::{PKError, Pile};
+use std::str::FromStr;
 
 /// `cargo run --example bard -- -t 1`
 #[derive(Parser, Debug)]

@@ -1,12 +1,11 @@
 use mysql::prelude::*;
 use mysql::*;
-use pkcore::analysis::store::db::mysql::DB;
+use pkcore::analysis::store::db::mysql::DbConnectOps;
+use pkcore::analysis::store::db::mysql::MySqlDB;
 
+/// `cargo run --example mysql`
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut conn = DB::get_connection()?;
-
-    let row: Option<String> = conn.query_first("SELECT VERSION()")?;
-    println!("MySQL version: {:?}", row.unwrap());
+    println!("MySQL version: {:?}", MySqlDB::version_string().unwrap());
 
     Ok(())
 }

@@ -6,6 +6,7 @@ use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::{PKError, Pile};
 use dotenv::dotenv;
+use mockall::automock;
 use mysql::prelude::Queryable;
 use mysql::{Pool, PooledConn};
 use std::env;
@@ -13,9 +14,16 @@ use std::env::VarError;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-pub struct DB;
+pub struct MySqlDB;
 
-impl DB {
+#[automock]
+pub trait DbConnectOps {
+    fn connection_string() -> mysql::Result<String, VarError>;
+    fn get_connection() -> Result<PooledConn, Box<dyn std::error::Error>>;
+    fn version_string() -> Option<String>;
+}
+
+impl DbConnectOps for MySqlDB {
     /// There are several ways that we can create this function. One is to use unwrap or else and
     /// provide default values. Another is to return a Result type and error out if the env vars aren't
     /// set properly. While this will make the work a little harder, by forcing the user to set things
@@ -30,7 +38,7 @@ impl DB {
     /// # Errors
     ///
     /// This function will return an error if the environment variables are not set.
-    pub fn connection_string() -> mysql::Result<String, VarError> {
+    fn connection_string() -> mysql::Result<String, VarError> {
         dotenv().ok();
 
         let user = env::var("MYSQL_PKDB_USER")?;
@@ -44,16 +52,25 @@ impl DB {
 
     /// # `CoPilot` bringing the snark:
     ///
-    /// This function is a simple wrapper around the mysql `Pool::get_conn` method. It's a little
-    /// redundant, but it's a good way to keep the connection logic in one place.
+    /// "This function is a simple wrapper around the mysql `Pool::get_conn` method. It's a little
+    /// redundant, but it's a good way to keep the connection logic in one place."
     ///
     /// # Errors
     ///
     /// Returns an error if the connection string is not set properly.
-    pub fn get_connection() -> Result<PooledConn, Box<dyn std::error::Error>> {
-        let connection_string = DB::connection_string()?;
+    fn get_connection() -> Result<PooledConn, Box<dyn std::error::Error>> {
+        let connection_string = MySqlDB::connection_string()?;
         let pool = Pool::new(connection_string.as_str())?;
         Ok(pool.get_conn()?)
+    }
+
+    fn version_string() -> Option<String> {
+        match MySqlDB::get_connection() {
+            Ok(mut conn) => {
+                conn.query_first("SELECT VERSION()").unwrap_or_else(|_| None)
+            },
+            Err(_) => None,
+        }
     }
 }
 
@@ -96,24 +113,18 @@ impl HeadsUpRawResult {
     }
 }
 
-trait DbOps {
+trait DbHeadsUpRawResultOps {
     fn insert(&self, conn: &mut PooledConn) -> Result<(), PKError>;
 }
 
-impl DbOps for HeadsUpRawResult {
+impl DbHeadsUpRawResultOps for HeadsUpRawResult {
     /// # Errors
     ///
     /// Throws `PKError` if unable to insert the result.
     fn insert(&self, conn: &mut PooledConn) -> Result<(), PKError> {
         match conn.exec_drop(
             "INSERT INTO nlh_headsup_result (higher, lower, higher_wins, lower_wins, ties) VALUES (?, ?, ?, ?, ?)",
-            (
-                self.higher,
-                self.lower,
-                self.higher_wins,
-                self.lower_wins,
-                self.ties,
-            ),
+            (self.higher, self.lower, self.higher_wins, self.lower_wins, self.ties),
         ) {
             Ok(()) => Ok(()),
             Err(_) => Err(PKError::SqlError),
@@ -235,6 +246,7 @@ mod analysis_store_db_mysql_tests {
     use mockall::*;
 
     mock! {
+
         DbOpsMock {
             fn insert(&self, conn: &mut PooledConn) -> Result<(), PKError>;
         }
@@ -256,16 +268,14 @@ mod analysis_store_db_mysql_tests {
     #[test]
     fn test_heads_up_query__insert() {
         let mut mock = MockDbOpsMock::new();
-        let dummy_conn = &mut PooledConn::
-        let dummy_result = HUPResult::...; // Create a dummy HUPResult
-
-        let hurr = HeadsUpRawResult {
+        // let dummy_conn = &mut PooledConn::
+        let dummy_result = HeadsUpRawResult {
             higher: 17592186052608,
             lower: 549822922752,
             higher_wins: 523851,
             lower_wins: 1118235,
             ties: 70218,
-        };
+        }; // Create a dummy HUPResult
 
         let huq = HeadsUpQuery {
             higher: 17592186052608,

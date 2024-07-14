@@ -1,6 +1,6 @@
 use mysql::*;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
-use pkcore::analysis::store::db::mysql::{HeadsUpQuery, DB};
+use pkcore::analysis::store::db::mysql::{HeadsUpQuery, MySqlDB};
 use pkcore::arrays::matchups::masked::Masked;
 use pkcore::util::csv::distinct_shus_from_csv_as_masked_vec;
 use pkcore::util::terminal::Terminal;
@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut rng = thread_rng(); // Obtain a random number generator
     distinct.shuffle(&mut rng); // Shuffle the vector
 
-    let mut conn = DB::get_connection()?;
+    let mut conn = MySqlDB::get_connection()?;
 
     loop {
         read_input(&mut conn, &mut distinct);

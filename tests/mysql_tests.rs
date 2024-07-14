@@ -1,14 +1,14 @@
 #[allow(non_snake_case)]
 mod mysql_integration_tests {
-    use pkcore::analysis::store::db::mysql::{HeadsUpQuery, HeadsUpRawResult, DB};
+    use mysql::PooledConn;
+    use pkcore::analysis::store::db::mysql::{HeadsUpQuery, HeadsUpRawResult, MySqlDB};
     use pkcore::PKError;
     use std::str::FromStr;
-    use mysql::PooledConn;
 
     #[test]
     #[ignore]
     fn test_all() {
-        match DB::get_connection() {
+        match MySqlDB::get_connection() {
             Ok(pooled_connection) => {
                 let mut conn: PooledConn = pooled_connection;
                 let hurrs = HeadsUpRawResult::all_as_hup_results(&mut conn).unwrap();
@@ -16,7 +16,7 @@ mod mysql_integration_tests {
                 for hurr in hurrs {
                     println!("{hurr}");
                 }
-            },
+            }
             Err(e) => {
                 println!("Unable to run integration test: {:?}", e);
             }
@@ -25,7 +25,7 @@ mod mysql_integration_tests {
 
     #[test]
     fn test_query_existing_shu() {
-        match DB::get_connection() {
+        match MySqlDB::get_connection() {
             Ok(pooled_connection) => {
                 let mut conn: PooledConn = pooled_connection;
                 let huq = HeadsUpQuery::from_str("J♦ 9♠ 3♥ 2♠").unwrap();
@@ -34,7 +34,7 @@ mod mysql_integration_tests {
 
                 assert!(result.is_ok());
                 println!("{}", result.unwrap());
-            },
+            }
             Err(e) => {
                 println!("Unable to run integration test: {:?}", e);
             }
@@ -62,7 +62,7 @@ mod mysql_integration_tests {
     /// Notice the names for the fields don't always match.
     #[test]
     fn test_query_nonexisting_shu() {
-        match DB::get_connection() {
+        match MySqlDB::get_connection() {
             Ok(pooled_connection) => {
                 let mut conn: PooledConn = pooled_connection;
                 let huq = HeadsUpQuery::from_str("7♠ 2♦ 2♥ 2♠").unwrap();
@@ -84,7 +84,7 @@ mod mysql_integration_tests {
                 // let huq = HeadsUpQuery::from_str("J♦ 9♠ 3♥ 2♠").unwrap();
                 //
                 // assert!(huq.exists(&mut conn));
-            },
+            }
             Err(e) => {
                 println!("Unable to run integration test: {:?}", e);
             }
@@ -93,7 +93,7 @@ mod mysql_integration_tests {
 
     #[test]
     fn test_no_shu() {
-        match DB::get_connection() {
+        match MySqlDB::get_connection() {
             Ok(pooled_connection) => {
                 let mut conn: PooledConn = pooled_connection;
 
@@ -102,7 +102,7 @@ mod mysql_integration_tests {
                 let result = huq.query(&mut conn);
 
                 assert_eq!(result.unwrap_err(), PKError::SqlEmptyResult);
-            },
+            }
             Err(e) => {
                 println!("Unable to run integration test: {:?}", e);
             }
@@ -111,14 +111,14 @@ mod mysql_integration_tests {
 
     #[test]
     fn test_exists() {
-        match DB::get_connection() {
+        match MySqlDB::get_connection() {
             Ok(pooled_connection) => {
                 let mut conn: PooledConn = pooled_connection;
 
                 let huq = HeadsUpQuery::from_str("J♦ 9♠ 3♥ 2♠").unwrap();
 
                 assert!(huq.exists(&mut conn));
-            },
+            }
             Err(e) => {
                 println!("Unable to run integration test: {:?}", e);
             }

@@ -1,8 +1,8 @@
 use mysql::*;
-use pkcore::analysis::store::db::mysql::{HeadsUpRawResult, DB};
+use pkcore::analysis::store::db::mysql::{HeadsUpRawResult, MySqlDB};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut conn = DB::get_connection()?;
+    let mut conn = MySqlDB::get_connection()?;
 
     let hups = HeadsUpRawResult::all(&mut conn).unwrap();
 
