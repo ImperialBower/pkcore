@@ -1,4 +1,3 @@
-use mysql::prelude::*;
 use mysql::*;
 use pkcore::analysis::store::db::mysql::DbConnectOps;
 use pkcore::analysis::store::db::mysql::MySqlDB;

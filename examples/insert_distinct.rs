@@ -1,5 +1,6 @@
 use mysql::*;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
+use pkcore::analysis::store::db::mysql::DbConnectOps;
 use pkcore::analysis::store::db::mysql::{HeadsUpQuery, MySqlDB};
 use pkcore::arrays::matchups::masked::Masked;
 use pkcore::util::csv::distinct_shus_from_csv_as_masked_vec;

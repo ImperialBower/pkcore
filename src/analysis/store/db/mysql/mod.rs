@@ -18,12 +18,6 @@ pub struct MySqlDB;
 
 #[automock]
 pub trait DbConnectOps {
-    fn connection_string() -> mysql::Result<String, VarError>;
-    fn get_connection() -> Result<PooledConn, Box<dyn std::error::Error>>;
-    fn version_string() -> Option<String>;
-}
-
-impl DbConnectOps for MySqlDB {
     /// There are several ways that we can create this function. One is to use unwrap or else and
     /// provide default values. Another is to return a Result type and error out if the env vars aren't
     /// set properly. While this will make the work a little harder, by forcing the user to set things
@@ -38,6 +32,22 @@ impl DbConnectOps for MySqlDB {
     /// # Errors
     ///
     /// This function will return an error if the environment variables are not set.
+    fn connection_string() -> mysql::Result<String, VarError>;
+
+    /// # `CoPilot` bringing the snark:
+    ///
+    /// "This function is a simple wrapper around the mysql `Pool::get_conn` method. It's a little
+    /// redundant, but it's a good way to keep the connection logic in one place."
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the connection string is not set properly.
+    fn get_connection() -> Result<PooledConn, Box<dyn std::error::Error>>;
+
+    fn version_string() -> Option<String>;
+}
+
+impl DbConnectOps for MySqlDB {
     fn connection_string() -> mysql::Result<String, VarError> {
         dotenv().ok();
 
@@ -50,14 +60,6 @@ impl DbConnectOps for MySqlDB {
         Ok(format!("mysql://{user}:{pwd}@{host}:{port}/{database}"))
     }
 
-    /// # `CoPilot` bringing the snark:
-    ///
-    /// "This function is a simple wrapper around the mysql `Pool::get_conn` method. It's a little
-    /// redundant, but it's a good way to keep the connection logic in one place."
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the connection string is not set properly.
     fn get_connection() -> Result<PooledConn, Box<dyn std::error::Error>> {
         let connection_string = MySqlDB::connection_string()?;
         let pool = Pool::new(connection_string.as_str())?;
@@ -66,9 +68,7 @@ impl DbConnectOps for MySqlDB {
 
     fn version_string() -> Option<String> {
         match MySqlDB::get_connection() {
-            Ok(mut conn) => {
-                conn.query_first("SELECT VERSION()").unwrap_or_else(|_| None)
-            },
+            Ok(mut conn) => conn.query_first("SELECT VERSION()").unwrap_or(None),
             Err(_) => None,
         }
     }
@@ -113,13 +113,13 @@ impl HeadsUpRawResult {
 }
 
 pub trait DbHeadsUpRawResultOps {
+    /// # Errors
+    ///
+    /// Throws `PKError` if unable to insert the result.
     fn insert(&self, conn: &mut PooledConn) -> Result<(), PKError>;
 }
 
 impl DbHeadsUpRawResultOps for HeadsUpRawResult {
-    /// # Errors
-    ///
-    /// Throws `PKError` if unable to insert the result.
     fn insert(&self, conn: &mut PooledConn) -> Result<(), PKError> {
         match conn.exec_drop(
             "INSERT INTO nlh_headsup_result (higher, lower, higher_wins, lower_wins, ties) VALUES (?, ?, ?, ?, ?)",
