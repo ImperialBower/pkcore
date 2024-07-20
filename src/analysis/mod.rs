@@ -9,7 +9,6 @@ pub mod class;
 pub mod eval;
 pub mod evals;
 pub mod hand_rank;
-pub mod matchups;
 pub mod name;
 pub mod omaha;
 pub mod outs;

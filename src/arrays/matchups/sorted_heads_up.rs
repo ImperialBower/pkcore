@@ -20,6 +20,7 @@ use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::str::FromStr;
+use crate::analysis::store::db::mysql::HeadsUpRawResult;
 
 lazy_static! {
     pub static ref SORTED_HEADS_UP_UNIQUE: HashSet<SortedHeadsUp> = {
@@ -782,12 +783,6 @@ impl Shifty for SortedHeadsUp {
             .into_iter()
             .map(SortedHeadsUp::from)
             .collect()
-
-        // let mut shifts: HashSet<Self> = HashSet::new();
-        // for mask in masks {
-        //     shifts.insert(mask.shu);
-        // }
-        // shifts
     }
 }
 
@@ -820,6 +815,16 @@ impl TryFrom<&HUPResult> for SortedHeadsUp {
     fn try_from(hup: &HUPResult) -> Result<Self, Self::Error> {
         let higher_two = Two::try_from(hup.higher).unwrap_or_else(|_| Two::default());
         let lower_two = Two::try_from(hup.lower).unwrap_or_else(|_| Two::default());
+        Ok(SortedHeadsUp::new(higher_two, lower_two))
+    }
+}
+
+impl TryFrom<&HeadsUpRawResult> for SortedHeadsUp {
+    type Error = PKError;
+
+    fn try_from(hup: &HeadsUpRawResult) -> Result<Self, Self::Error> {
+        let higher_two = Two::try_from(Bard::from(hup.higher)).unwrap_or_else(|_| Two::default());
+        let lower_two = Two::try_from(Bard::from(hup.lower)).unwrap_or_else(|_| Two::default());
         Ok(SortedHeadsUp::new(higher_two, lower_two))
     }
 }
