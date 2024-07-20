@@ -808,3 +808,10 @@ This is an outline of the work as it is done.
       * Created `examples\abcrepl.rs` to push new heads up matchups into db
       * Created `examples\bard.rs` utility to convert to and from Bard values
       * Renamed DB empty struct to MySqlDB
+      * Created `examples\pkdbdump.rs` to create MySQL insert statements of all the rows of the current db.
+      * Created `examples\insert_distinct.rs` to randomly insert all remaining distinct HUPS.
+      * Created `examples\insert_unique.rs` to insert all shifts for distinct HUPS.
+        * Implement Shifty for `HeadsUpRawResult`
+          * `SortedHeadsUp` `shifty__shifts__deep()` test
+          * test shifty_shifts()
+          * TODO: wasm only test

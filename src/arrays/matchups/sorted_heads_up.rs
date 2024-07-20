@@ -1,5 +1,6 @@
 use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
 use crate::analysis::store::db::headsup_preflop_result::HUPResult;
+use crate::analysis::store::db::mysql::HeadsUpRawResult;
 use crate::analysis::the_nuts::TheNuts;
 use crate::arrays::five::Five;
 use crate::arrays::hole_cards::twos::Twos;
@@ -20,7 +21,6 @@ use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::str::FromStr;
-use crate::analysis::store::db::mysql::HeadsUpRawResult;
 
 lazy_static! {
     pub static ref SORTED_HEADS_UP_UNIQUE: HashSet<SortedHeadsUp> = {
@@ -829,6 +829,14 @@ impl TryFrom<&HeadsUpRawResult> for SortedHeadsUp {
     }
 }
 
+impl TryFrom<HeadsUpRawResult> for SortedHeadsUp {
+    type Error = PKError;
+
+    fn try_from(hup: HeadsUpRawResult) -> Result<Self, Self::Error> {
+        SortedHeadsUp::try_from(&hup)
+    }
+}
+
 impl TryFrom<Vec<Two>> for SortedHeadsUp {
     type Error = PKError;
 
@@ -1110,6 +1118,28 @@ mod arrays__matchups__sorted_heads_up_tests {
         assert!(actual.contains(&SortedHeadsUp::new(Two::HAND_7S_7H, Two::HAND_6D_6C)));
         assert!(actual.contains(&SortedHeadsUp::new(Two::HAND_7H_7D, Two::HAND_6S_6C)));
         assert_eq!(expected, actual);
+    }
+
+    /// Making sure that the shifts for every shift match and the other shifts are aligned.
+    #[test]
+    #[ignore]
+    fn shifty__shifts__deep() {
+        let origin = SortedHeadsUp::new(Two::HAND_JD_9S, Two::HAND_3H_2S);
+        let shifts = origin.shifts();
+        let other_shifts = origin.other_shifts();
+
+        assert_eq!(shifts.len(), 24);
+        assert_eq!(other_shifts.len(), 23);
+
+        for shu in &other_shifts {
+            let sshifts = shu.shifts();
+            let sother_shifts = shu.other_shifts();
+
+            assert_eq!(sshifts.len(), 24);
+            assert_eq!(sother_shifts.len(), 23);
+            assert_eq!(shifts, sshifts);
+            assert_ne!(other_shifts, sother_shifts);
+        }
     }
 
     // No longer needed.

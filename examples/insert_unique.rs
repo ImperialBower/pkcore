@@ -1,6 +1,6 @@
 use mysql::*;
-use pkcore::analysis::store::db::mysql::{DbConnectOps, HeadsUpRawResult};
 use pkcore::analysis::store::db::mysql::MySqlDB;
+use pkcore::analysis::store::db::mysql::{DbConnectOps, HeadsUpRawResult};
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use pkcore::util::csv::distinct_shus_from_csv_as_masked_vec;
 

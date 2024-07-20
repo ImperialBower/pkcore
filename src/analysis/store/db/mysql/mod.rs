@@ -4,11 +4,12 @@ use crate::arrays::matchups::masked::Masked;
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
-use crate::{PKError, Pile};
+use crate::{PKError, Pile, Shifty};
 use dotenv::dotenv;
 use mockall::automock;
 use mysql::prelude::Queryable;
 use mysql::{Pool, PooledConn};
+use std::collections::HashSet;
 use std::env;
 use std::env::VarError;
 use std::fmt::{Display, Formatter};
@@ -74,7 +75,7 @@ impl DbConnectOps for MySqlDB {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct HeadsUpRawResult {
     pub higher: u64,
     pub lower: u64,
@@ -110,6 +111,29 @@ impl HeadsUpRawResult {
         let raw_results = HeadsUpRawResult::all(conn)?;
         Ok(raw_results.into_iter().map(HUPResult::from).collect())
     }
+
+    fn from_sorted_heads_up(&self, shu: SortedHeadsUp) -> Self {
+        HeadsUpRawResult {
+            higher: shu.higher().bard().as_u64(),
+            lower: shu.lower().bard().as_u64(),
+            higher_wins: self.higher_wins,
+            lower_wins: self.lower_wins,
+            ties: self.ties,
+        }
+    }
+}
+
+impl Shifty for HeadsUpRawResult {
+    fn shifts(&self) -> HashSet<Self> {
+        match SortedHeadsUp::try_from(self) {
+            Ok(shu) => shu
+                .shifts()
+                .into_iter()
+                .map(|shu| self.from_sorted_heads_up(shu))
+                .collect(),
+            Err(_) => HashSet::new(),
+        }
+    }
 }
 
 pub trait DbHeadsUpRawResultOps {
@@ -134,6 +158,53 @@ impl DbHeadsUpRawResultOps for HeadsUpRawResult {
 impl Display for HeadsUpRawResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "INSERT INTO `nlh_headsup_result` (`higher`, `lower`, `higher_wins`, `lower_wins`, `ties`) VALUES({},{},{},{},{});", self.higher, self.lower, self.higher_wins, self.lower_wins, self.ties)
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod analysis_store_db_mysql_heads_up_query_raw_results_tests {
+    use super::*;
+    use crate::Shifty;
+
+    const HURR_JD9S_3H2S: HeadsUpRawResult = HeadsUpRawResult {
+        higher: 70368748371968,
+        lower: 549890031616,
+        higher_wins: 523851,
+        lower_wins: 1118235,
+        ties: 70218,
+    };
+
+    #[test]
+    fn from_sorted_heads_up__simple_alignment() {
+        let shu = SortedHeadsUp::try_from(HURR_JD9S_3H2S).unwrap();
+        assert_eq!(HURR_JD9S_3H2S, HURR_JD9S_3H2S.from_sorted_heads_up(shu));
+    }
+
+    #[test]
+    fn from_sorted_heads_up() {
+        let shu = SortedHeadsUp::new(Two::HAND_JH_9C, Two::HAND_3D_2C);
+        let hurr = HURR_JD9S_3H2S.from_sorted_heads_up(shu);
+
+        assert_eq!(shu.higher().bard().as_u64(), hurr.higher);
+        assert_eq!(shu.lower().bard().as_u64(), hurr.lower);
+        assert_ne!(HURR_JD9S_3H2S.higher, hurr.higher);
+        assert_ne!(HURR_JD9S_3H2S.lower, hurr.lower);
+        assert_eq!(HURR_JD9S_3H2S.higher_wins, hurr.higher_wins);
+        assert_eq!(HURR_JD9S_3H2S.lower_wins, hurr.lower_wins);
+        assert_eq!(HURR_JD9S_3H2S.ties, hurr.ties);
+
+        assert_eq!(
+            HURR_JD9S_3H2S,
+            hurr.from_sorted_heads_up(SortedHeadsUp::try_from(HURR_JD9S_3H2S).unwrap())
+        );
+    }
+
+    #[test]
+    fn shifty_shifts() {
+        let shifts = HURR_JD9S_3H2S.shifts();
+
+        assert_eq!(24, shifts.len());
     }
 }
 
@@ -238,14 +309,13 @@ impl TryFrom<Twos> for HeadsUpQuery {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod analysis_store_db_mysql_tests {
+mod analysis_store_db_mysql_heads_up_query_tests {
     use super::*;
 
     use mockall::predicate::*;
     use mockall::*;
 
     mock! {
-
         DbOpsMock {
             fn insert(&self, conn: &mut PooledConn) -> Result<(), PKError>;
         }
@@ -265,10 +335,10 @@ mod analysis_store_db_mysql_tests {
     }
 
     #[test]
-    fn test_heads_up_query__insert() {
-        let mut mock = MockDbOpsMock::new();
+    fn insert() {
+        let mut _mock = MockDbOpsMock::new();
         // let dummy_conn = &mut PooledConn::
-        let dummy_result = HeadsUpRawResult {
+        let _dummy_result = HeadsUpRawResult {
             higher: 17592186052608,
             lower: 549822922752,
             higher_wins: 523851,
@@ -276,18 +346,18 @@ mod analysis_store_db_mysql_tests {
             ties: 70218,
         }; // Create a dummy HUPResult
 
-        let huq = HeadsUpQuery {
+        let _huq = HeadsUpQuery {
             higher: 17592186052608,
             lower: 549822922752,
         };
 
-        let actual = HeadsUpQuery::from(Masked::from_str("J♦ 9♠ 3♥ 2♠").unwrap());
+        let _actual = HeadsUpQuery::from(Masked::from_str("J♦ 9♠ 3♥ 2♠").unwrap());
 
         // assert_eq!(expected, actual);
     }
 
     #[test]
-    fn test_heads_up_query_from_sorted_heads_up() {
+    fn heads_up_query_from_sorted_heads_up() {
         let expected = HeadsUpQuery {
             higher: 70368748371968,
             lower: 549890031616,
