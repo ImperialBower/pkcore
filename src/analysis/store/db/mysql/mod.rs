@@ -9,7 +9,7 @@ use dotenv::dotenv;
 use mockall::automock;
 use mysql::prelude::Queryable;
 use mysql::{Pool, PooledConn};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::env::VarError;
 use std::fmt::{Display, Formatter};
@@ -104,8 +104,48 @@ impl HeadsUpRawResult {
         }
     }
 
+    /// # Errors
+    ///
+    /// Throws a `PKError` if unable to query the database.
     pub fn all_as_hashset(conn: &mut PooledConn) -> Result<HashSet<Self>, PKError> {
         Ok(HeadsUpRawResult::all(conn)?.into_iter().collect())
+    }
+
+    /// # Errors
+    ///
+    /// Throws a `PKError` if unable to query the database.
+    pub fn all_as_shus(conn: &mut PooledConn) -> Result<Vec<SortedHeadsUp>, PKError> {
+        let mut sieved: Vec<SortedHeadsUp> = Vec::new();
+        for hurr in HeadsUpRawResult::all(conn)? {
+            match SortedHeadsUp::try_from(hurr) {
+                Ok(shu) => sieved.push(shu),
+                Err(_) => continue,
+            }
+        }
+        Ok(sieved)
+    }
+
+    /// # Errors
+    ///
+    /// Throws a `PKError` if unable to query the database.
+    pub fn all_as_shu_hashmap(conn: &mut PooledConn) -> Result<HashMap<SortedHeadsUp, Self>, PKError> {
+        let mut map = HashMap::new();
+        for hurr in HeadsUpRawResult::all_as_hashset(conn)? {
+            match SortedHeadsUp::try_from(hurr) {
+                Ok(shu) => {
+                    map.insert(shu, hurr);
+                }
+                Err(_) => continue,
+            }
+        }
+        Ok(map)
+    }
+
+    /// # Errors
+    ///
+    /// Throws a `PKError` if unable to query the database.
+    pub fn all_as_shus_hashset(conn: &mut PooledConn) -> Result<HashSet<SortedHeadsUp>, PKError> {
+        Ok(HeadsUpRawResult::all_as_shus(conn)?.into_iter().collect())
     }
 
     /// # Errors
@@ -116,7 +156,7 @@ impl HeadsUpRawResult {
         Ok(raw_results.into_iter().map(HUPResult::from).collect())
     }
 
-    fn from_sorted_heads_up(&self, shu: SortedHeadsUp) -> Self {
+    fn cast_from_sorted_heads_up(&self, shu: SortedHeadsUp) -> Self {
         HeadsUpRawResult {
             higher: shu.higher().bard().as_u64(),
             lower: shu.lower().bard().as_u64(),
@@ -133,7 +173,7 @@ impl Shifty for HeadsUpRawResult {
             Ok(shu) => shu
                 .shifts()
                 .into_iter()
-                .map(|shu| self.from_sorted_heads_up(shu))
+                .map(|shu| self.cast_from_sorted_heads_up(shu))
                 .collect(),
             Err(_) => HashSet::new(),
         }
@@ -182,13 +222,13 @@ mod analysis_store_db_mysql_heads_up_query_raw_results_tests {
     #[test]
     fn from_sorted_heads_up__simple_alignment() {
         let shu = SortedHeadsUp::try_from(HURR_JD9S_3H2S).unwrap();
-        assert_eq!(HURR_JD9S_3H2S, HURR_JD9S_3H2S.from_sorted_heads_up(shu));
+        assert_eq!(HURR_JD9S_3H2S, HURR_JD9S_3H2S.cast_from_sorted_heads_up(shu));
     }
 
     #[test]
     fn from_sorted_heads_up() {
         let shu = SortedHeadsUp::new(Two::HAND_JH_9C, Two::HAND_3D_2C);
-        let hurr = HURR_JD9S_3H2S.from_sorted_heads_up(shu);
+        let hurr = HURR_JD9S_3H2S.cast_from_sorted_heads_up(shu);
 
         assert_eq!(shu.higher().bard().as_u64(), hurr.higher);
         assert_eq!(shu.lower().bard().as_u64(), hurr.lower);
@@ -200,7 +240,7 @@ mod analysis_store_db_mysql_heads_up_query_raw_results_tests {
 
         assert_eq!(
             HURR_JD9S_3H2S,
-            hurr.from_sorted_heads_up(SortedHeadsUp::try_from(HURR_JD9S_3H2S).unwrap())
+            hurr.cast_from_sorted_heads_up(SortedHeadsUp::try_from(HURR_JD9S_3H2S).unwrap())
         );
     }
 

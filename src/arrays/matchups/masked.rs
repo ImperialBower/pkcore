@@ -2,7 +2,7 @@ use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::arrays::matchups::masks::rank_mask::RankMask;
 use crate::arrays::matchups::masks::suit_mask::SuitMask;
 use crate::arrays::matchups::masks::suit_texture::SuitTexture;
-use crate::arrays::matchups::sorted_heads_up::{SortedHeadsUp, SORTED_HEADS_UP_UNIQUE};
+use crate::arrays::matchups::sorted_heads_up::{SortedHeadsUp, DISTINCT_SHUS_CSV_PATH, SORTED_HEADS_UP_UNIQUE};
 use crate::cards::Cards;
 use crate::{PKError, Shifty, SuitShift};
 use lazy_static::lazy_static;
@@ -437,6 +437,17 @@ impl Masked {
     }
 
     // endregion
+
+    /// # Panics
+    ///
+    /// If their path isn't there
+    #[must_use]
+    pub fn distinct_shus_from_csv_as_masked_vec() -> Vec<Masked> {
+        let shus = SortedHeadsUp::read_csv(DISTINCT_SHUS_CSV_PATH).unwrap();
+        let mut distinct = Masked::parse_as_vectors(&shus);
+        distinct.reverse();
+        distinct
+    }
 }
 
 impl Display for Masked {

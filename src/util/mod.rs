@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 use std::str::Utf8Error;
 
-pub mod csv;
 pub mod data;
 pub mod name;
 pub mod random_ordering;

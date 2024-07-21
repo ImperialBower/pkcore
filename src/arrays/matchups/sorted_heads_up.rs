@@ -66,6 +66,8 @@ lazy_static! {
         Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_seven);
 }
 
+pub const DISTINCT_SHUS_CSV_PATH: &str = "data/csv/shus/distinct_masked_shus.csv";
+
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct SortedHeadsUp {
@@ -713,6 +715,13 @@ impl SortedHeadsUp {
         let high7 = Seven::from_case_at_deal(self.higher, five)?;
         let low7 = Seven::from_case_at_deal(self.lower, five)?;
         Ok((high7, low7))
+    }
+
+    /// # Errors
+    ///
+    /// Throws a `PKError` if unable to query the database.
+    pub fn distinct_shus_from_csv() -> Result<Vec<SortedHeadsUp>, PKError> {
+        SortedHeadsUp::read_csv(DISTINCT_SHUS_CSV_PATH)
     }
 }
 

@@ -3,7 +3,7 @@ use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::mysql::DbConnectOps;
 use pkcore::analysis::store::db::mysql::{HeadsUpQuery, MySqlDB};
 use pkcore::arrays::matchups::masked::Masked;
-use pkcore::util::csv::distinct_shus_from_csv_as_masked_vec;
+
 use pkcore::util::terminal::Terminal;
 use rand::seq::SliceRandom; // For the shuffle method
 use rand::thread_rng; // For the random number generator
@@ -13,7 +13,7 @@ use rand::thread_rng; // For the random number generator
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
 
-    let mut distinct = distinct_shus_from_csv_as_masked_vec();
+    let mut distinct = Masked::distinct_shus_from_csv_as_masked_vec();
     let mut rng = thread_rng(); // Obtain a random number generator
     distinct.shuffle(&mut rng); // Shuffle the vector
 
