@@ -104,6 +104,10 @@ impl HeadsUpRawResult {
         }
     }
 
+    pub fn all_as_hashset(conn: &mut PooledConn) -> Result<HashSet<Self>, PKError> {
+        Ok(HeadsUpRawResult::all(conn)?.into_iter().collect())
+    }
+
     /// # Errors
     ///
     /// Thows a `PKError` if unable to query the database.
