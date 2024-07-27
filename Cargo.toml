@@ -21,7 +21,7 @@ indexmap = { version = "2.2.6", features = ["rayon"] }
 itertools = "0.13.0"
 lazy_static = "1.4.0"
 log = "0.4"
-mockall = "0.12.1"
+mockall = "0.13.0"
 mysql = "25.0.1"
 percent-encoding = "2.3.1"
 rand = "0.8.5"

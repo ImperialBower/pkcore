@@ -73,7 +73,7 @@ mod mysql_integration_tests {
                 assert!(!result.is_ok());
                 assert_eq!(result.unwrap_err(), PKError::SqlEmptyResult);
 
-                let HeadsUpRawResult = HeadsUpRawResult {
+                let _HeadsUpRawResult = HeadsUpRawResult {
                     higher: 17592186052608,
                     lower: 549822922752,
                     higher_wins: 523851,

@@ -417,7 +417,7 @@ mod analysis_store_db_mysql_heads_up_query_tests {
 
     #[test]
     fn test_heads_up_query_from_twos() {
-        let twos = Twos::from_str("J♦ 9♠ 3♥ 2♠").unwrap();
-        let huq = HeadsUpQuery::from_str("J♦ 9♠ 3♥ 2♠").unwrap();
+        let _twos = Twos::from_str("J♦ 9♠ 3♥ 2♠").unwrap();
+        let _huq = HeadsUpQuery::from_str("J♦ 9♠ 3♥ 2♠").unwrap();
     }
 }

@@ -7,7 +7,7 @@ use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 /// `cargo run --example mysql`
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();
-    let mut distinct = Masked::distinct_shus_from_csv_as_masked_vec();
+    let _distinct = Masked::distinct_shus_from_csv_as_masked_vec();
 
     let mut conn = MySqlDB::get_connection()?;
 

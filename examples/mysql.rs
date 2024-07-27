@@ -1,7 +1,6 @@
 use mysql::*;
 use pkcore::analysis::store::db::mysql::MySqlDB;
 use pkcore::analysis::store::db::mysql::{DbConnectOps, HeadsUpRawResult};
-use pkcore::arrays::matchups::masked::Masked;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 
 /// `cargo run --example mysql`
@@ -11,7 +10,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut conn = MySqlDB::get_connection()?;
     let distinct = SortedHeadsUp::distinct_shus_from_csv()?;
     let all = HeadsUpRawResult::all(&mut conn).unwrap();
-    let mut unique = HeadsUpRawResult::all_as_hashset(&mut conn)?;
+    let db_unique = HeadsUpRawResult::all_as_hashset(&mut conn)?;
 
     let mut mappie = HeadsUpRawResult::all_as_shu_hashmap(&mut conn)?;
 
@@ -19,7 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "DISTINCT: {} ALL: {} UNIQUE: {} hands remaining",
         distinct.len(),
         all.len(),
-        unique.len()
+        db_unique.len()
     );
 
     let mut remains: Vec<SortedHeadsUp> = Vec::new();
@@ -34,10 +33,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("remaining {} spillover: {}", mappie.keys().len(), remains.len());
 
-    // for (i, hup) in distinct.into_iter().enumerate() {
-    //
-    //     println!("#{i} {}", hup);
-    // }
+
+
+
 
     Ok(())
 }
