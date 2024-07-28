@@ -33,9 +33,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("remaining {} spillover: {}", mappie.keys().len(), remains.len());
 
-
-
-
+    for (i, hup) in remains.iter().enumerate() {
+        println!("{i} {hup}");
+    }
 
     Ok(())
 }

@@ -318,7 +318,7 @@ impl From<HeadsUpRawResult> for HUPResult {
 }
 
 impl Sqlitable<HUPResult, SortedHeadsUp> for HUPResult {
-    fn create_table(conn: &Connection) -> rusqlite::Result<usize> {
+    fn create_table_unless_exists(conn: &Connection) -> rusqlite::Result<usize> {
         log::debug!("HUPResult::create_table({:?})", conn);
         conn.execute(
             "create table if not exists nlh_headsup_result
@@ -728,7 +728,7 @@ mod analysis__store__db__hupresult_tests {
     #[test]
     fn sqlable__create_table() {
         let conn = Connect::in_memory_connection().unwrap().connection;
-        assert!(HUPResult::create_table(&conn).is_ok());
+        assert!(HUPResult::create_table_unless_exists(&conn).is_ok());
         conn.close().unwrap();
     }
 
@@ -736,7 +736,7 @@ mod analysis__store__db__hupresult_tests {
     fn sqlable__exists() {
         // Preamble
         let conn = Connect::in_memory_connection().unwrap().connection;
-        HUPResult::create_table(&conn).unwrap();
+        HUPResult::create_table_unless_exists(&conn).unwrap();
         let the_hand = TestData::the_hand_as_hup_result();
 
         // the work
@@ -762,7 +762,7 @@ mod analysis__store__db__hupresult_tests {
     #[test]
     fn sqlable__insert() {
         let conn = Connect::in_memory_connection().unwrap().connection;
-        HUPResult::create_table(&conn).unwrap();
+        HUPResult::create_table_unless_exists(&conn).unwrap();
 
         let first_time = HUPResult::insert(&conn, &TestData::the_hand_as_hup_result());
         let second_time = HUPResult::insert(&conn, &TestData::the_hand_as_hup_result());
@@ -777,7 +777,7 @@ mod analysis__store__db__hupresult_tests {
     #[test]
     fn sqlable__select() {
         let conn = Connect::in_memory_connection().unwrap().connection;
-        HUPResult::create_table(&conn).unwrap();
+        HUPResult::create_table_unless_exists(&conn).unwrap();
         HUPResult::insert(&conn, &TestData::the_hand_as_hup_result()).unwrap();
 
         let actual = HUPResult::select(&conn, &TestData::the_hand_sorted_headsup());
@@ -792,7 +792,7 @@ mod analysis__store__db__hupresult_tests {
     #[test]
     fn sqlable__select_all() {
         let conn = Connect::in_memory_connection().unwrap().connection;
-        HUPResult::create_table(&conn).unwrap();
+        HUPResult::create_table_unless_exists(&conn).unwrap();
         HUPResult::insert(&conn, &TestData::the_hand_as_hup_result()).unwrap();
 
         let actual = HUPResult::select_all(&conn);

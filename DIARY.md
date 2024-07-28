@@ -815,3 +815,4 @@ This is an outline of the work as it is done.
           * `SortedHeadsUp` `shifty__shifts__deep()` test
           * test shifty_shifts()
           * TODO: wasm only test
+          * NOTE: THe mysql crate does NOT play well with others. Feelings like it needs to be isolated.

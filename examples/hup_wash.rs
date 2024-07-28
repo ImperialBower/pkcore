@@ -199,7 +199,7 @@ use std::collections::HashSet;
 /// ```
 fn main() {
     let conn = Connection::open("generated/hups.db").unwrap();
-    HUPResult::create_table(&conn).unwrap();
+    HUPResult::create_table_unless_exists(&conn).unwrap();
 
     let mut hs = HashSet::new();
     let hups = HUPResult::select_all(&conn);
@@ -212,7 +212,7 @@ fn main() {
     if hs.len() != hups.len() {
         println!("Washing...");
         let conn = Connection::open("generated/washed_hups.db").unwrap();
-        HUPResult::create_table(&conn).unwrap();
+        HUPResult::create_table_unless_exists(&conn).unwrap();
 
         for h in hs.clone() {
             HUPResult::insert(&conn, h).unwrap();

@@ -25,6 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
 fn read_input(conn: &mut PooledConn, distinct: &mut Vec<Masked>) {
     let mut x = 0usize;
     let i = Terminal::receive_usize("How many runs? ");

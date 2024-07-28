@@ -22,7 +22,7 @@ fn main() {
 
     let hups = HUPResult::read_csv(from).unwrap();
     let conn = Connection::open(to).unwrap();
-    HUPResult::create_table(&conn).unwrap();
+    HUPResult::create_table_unless_exists(&conn).unwrap();
 
     for h in hups.clone() {
         HUPResult::insert(&conn, &h).unwrap();

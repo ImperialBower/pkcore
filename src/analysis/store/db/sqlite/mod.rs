@@ -73,7 +73,7 @@ pub trait Sqlitable<T, S> {
     /// # Errors
     ///
     /// Throws an error if rusqlite isn't able to create the table.
-    fn create_table(conn: &Connection) -> rusqlite::Result<usize>;
+    fn create_table_unless_exists(conn: &Connection) -> rusqlite::Result<usize>;
 
     fn exists(conn: &Connection, record: &S) -> bool;
 

@@ -173,7 +173,7 @@ impl SevenFiveBCM {
 }
 
 impl Sqlitable<SevenFiveBCM, Bard> for SevenFiveBCM {
-    fn create_table(conn: &Connection) -> rusqlite::Result<usize> {
+    fn create_table_unless_exists(conn: &Connection) -> rusqlite::Result<usize> {
         conn.execute(
             "create table if not exists bcm (
             bc integer primary key,
@@ -315,7 +315,7 @@ mod analysis__store__bcm__binary_card_map_tests {
     #[test]
     fn sqlite() {
         let conn = Connect::in_memory_connection().unwrap().connection;
-        SevenFiveBCM::create_table(&conn).unwrap();
+        SevenFiveBCM::create_table_unless_exists(&conn).unwrap();
         SevenFiveBCM::insert(&conn, &TestData::spades_royal_flush_bcm()).unwrap();
 
         assert!(SevenFiveBCM::select(&conn, &TestData::spades_royal_flush_bcm().bc).is_some());
