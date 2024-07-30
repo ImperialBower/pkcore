@@ -8,6 +8,11 @@ use pkcore::analysis::store::db::sqlite::Sqlitable;
 fn main() {
     env_logger::init();
 
+    let distinct = get_distinct_hups().unwrap();
+
+    for (i, hurr) in distinct.iter().enumerate() {
+        println!("{i} {hurr}");
+    }
 }
 
 fn get_connection() -> Connection {
