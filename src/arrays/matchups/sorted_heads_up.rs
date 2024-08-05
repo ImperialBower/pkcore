@@ -92,6 +92,11 @@ impl SortedHeadsUp {
     }
 
     #[must_use]
+    pub fn is_valid(&self) -> bool {
+        self.cards().len() == 4
+    }
+
+    #[must_use]
     pub fn contains(&self, two: &Two) -> bool {
         self.is_higher(two) || self.is_lower(two)
     }
@@ -828,6 +833,14 @@ impl TryFrom<&HUPResult> for SortedHeadsUp {
     }
 }
 
+impl TryFrom<HUPResult> for SortedHeadsUp {
+    type Error = PKError;
+
+    fn try_from(hup: HUPResult) -> Result<Self, Self::Error> {
+        SortedHeadsUp::try_from(&hup)
+    }
+}
+
 impl TryFrom<&HeadsUpRawResult> for SortedHeadsUp {
     type Error = PKError;
 
@@ -895,6 +908,13 @@ mod arrays__matchups__sorted_heads_up_tests {
         higher: Two::HAND_7D_7C,
         lower: Two::HAND_6S_6H,
     };
+
+    #[test]
+    fn is_valid() {
+        assert!(HANDS_7D_7C_V_6S_6H.is_valid());
+        assert!(!SortedHeadsUp::default().is_valid());
+        assert!(!SortedHeadsUp::new(Two::HAND_7D_7C, Two::HAND_7D_7C).is_valid());
+    }
 
     #[test]
     fn unique() {

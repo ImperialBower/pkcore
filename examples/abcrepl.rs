@@ -4,7 +4,7 @@ use pkcore::util::wincounter::results::Results;
 use pkcore::PKError;
 
 /// ```txt
-/// pkcore❯ cargo run --example bcrepl
+/// pkcore❯ cargo run --example abcrepl
 /// ...
 /// hole cards> A♠ A♥ 6♦ 6♣
 /// Elapsed: 22.00s

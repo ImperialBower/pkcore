@@ -8,7 +8,9 @@ use pkcore::util::terminal::Terminal;
 use rand::seq::SliceRandom; // For the shuffle method
 use rand::thread_rng; // For the random number generator
 
-/// `cargo run --example insert_distinct`
+/// # insert_distinct
+///
+/// `cargo run --example it`
 #[allow(unreachable_code)]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     env_logger::init();

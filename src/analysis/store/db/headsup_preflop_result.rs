@@ -213,6 +213,11 @@ impl HUPResult {
         }
     }
 
+    #[must_use]
+    pub fn sum(&self) -> u64 {
+        self.higher_wins + self.lower_wins + self.ties
+    }
+
     // region private methods
 
     fn fold(&self, masked: &Masked) -> Self {

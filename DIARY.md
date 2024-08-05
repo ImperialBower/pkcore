@@ -817,3 +817,5 @@ This is an outline of the work as it is done.
           * TODO: wasm only test
           * NOTE: THe mysql crate does NOT play well with others. Feelings like it needs to be isolated.
         * Created `examples\unique-distinct.rs`.
+          * Aligner - struct to help fix the alignment issue in the distinct results. 
+            * SortedHeadsUp.is_valid() I can't believe that this struct allowed for invalid instantiation.
