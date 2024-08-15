@@ -1,4 +1,4 @@
-# pkcore AKA Rust for Failures AKA Spawn of [Fudd](https://github.com/ImperialBower/fudd)
+# pkcore AKA Spawn of [Fudd](https://github.com/ImperialBower/fudd)
 
 🚧 **Work In Progress** 🚧
 
