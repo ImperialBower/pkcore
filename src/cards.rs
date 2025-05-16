@@ -180,7 +180,7 @@ impl Cards {
     }
 
     /// # Errors
-    ///
+    ///r
     /// Returns `PKError::NotEnoughCards` if not enough cards are available.
     pub fn draw_from_the_bottom(&mut self, number: usize) -> Result<Self, PKError> {
         let l = self.len();
