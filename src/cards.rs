@@ -731,6 +731,7 @@ impl TryFrom<Card> for Cards {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod card_tests {
+    use std::net::ToSocketAddrs;
     use super::*;
 
     #[test]
@@ -747,7 +748,7 @@ mod card_tests {
 
         let minus = Cards::deck_minus(&cards);
 
-        assert_eq!("A♠ K♠", minus.to_string());
+        assert_eq!("A♠ K♠".to_string(), minus.to_string());
     }
 
     #[test]

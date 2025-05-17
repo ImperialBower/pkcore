@@ -509,7 +509,6 @@ impl SuitShift for Masked {
 }
 
 impl Shifty for Masked {
-    #[must_use]
     fn shifts(&self) -> HashSet<Self>
     where
         Self: Sized,
