@@ -1,6 +1,3 @@
-// use serde::ser::{Serialize, Serializer};
-// use serde::Deserialize;
-
 use crate::bard::Bard;
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
