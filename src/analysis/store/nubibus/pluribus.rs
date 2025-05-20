@@ -48,9 +48,8 @@ impl Pluribus {
             let re = Regex::new(r"^(?<dealt>[0-9a-zA-Z|]+)/(?<board>.+)$").unwrap();
             let mut res = re.captures_iter(s);
 
-            let caps = match res.next() {
-                None => return (HoleCards::default(), Board::default()),
-                Some(c) => c,
+            let Some(caps) = res.next() else {
+                return (HoleCards::default(), Board::default());
             };
             (
                 HoleCards::from_pluribus(&caps["dealt"]).unwrap_or_default(),

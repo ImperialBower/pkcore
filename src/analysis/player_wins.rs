@@ -111,7 +111,7 @@ impl PlayerWins {
 /// until we really need it.
 impl PlayOut for PlayerWins {
     fn play_out_flop(&mut self, hands: &HoleCards, flop: Three) {
-        info!("PlayerWins.play_out_flop(hands: {} flop: {})", hands, flop);
+        info!("PlayerWins.play_out_flop(hands: {hands} flop: {flop})");
 
         let case_evals = self.case_evals_flop(hands, flop);
 
@@ -123,10 +123,7 @@ impl PlayOut for PlayerWins {
     }
 
     fn play_out_turn(&mut self, hands: &HoleCards, flop: Three, turn: Card) {
-        info!(
-            "PlayerWins.play_out_turn(hands: {} flop: {} turn: {})",
-            hands, flop, turn
-        );
+        info!("PlayerWins.play_out_turn(hands: {hands} flop: {flop} turn: {turn})");
 
         let case_evals = self.case_evals_turn(hands, flop, turn);
 
@@ -151,9 +148,7 @@ impl PlayOut for PlayerWins {
 
         for (j, case) in hands.enumerate_after(2, &flop.cards()) {
             debug!(
-                "{}: FLOP: {} TURN: {} RIVER: {} -------",
-                j,
-                flop,
+                "{j}: FLOP: {flop} TURN: {} RIVER: {} -------",
                 case.first().unwrap(),
                 case.get(1).unwrap()
             );
@@ -194,7 +189,7 @@ impl PlayOut for PlayerWins {
         let mut case_evals = CaseEvals::default();
 
         for (j, case) in Four::from_turn(flop, turn).remaining().iter().enumerate() {
-            debug!("{}: FLOP: {} TURN: {} RIVER: {} -------", j, flop, turn, case);
+            debug!("{j}: FLOP: {flop} TURN: {turn} RIVER: {case} -------");
 
             let mut case_eval = CaseEval::default();
 

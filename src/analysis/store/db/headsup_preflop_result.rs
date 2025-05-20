@@ -303,7 +303,7 @@ impl From<&SortedHeadsUp> for HUPResult {
 
 impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
     fn create_table(conn: &Connection) -> rusqlite::Result<usize> {
-        log::debug!("HUPResult::create_table({:?})", conn);
+        log::debug!("HUPResult::create_table({conn:?})");
         conn.execute(
             "create table if not exists nlh_headsup_result
             (
@@ -340,7 +340,7 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
     ///
     /// Returns true if the record isn't already there. False if it is.
     fn insert(conn: &Connection, hup: &HUPResult) -> rusqlite::Result<bool> {
-        log::debug!("HUPResult::insert({})", hup);
+        log::debug!("HUPResult::insert({hup})");
 
         let shu = hup
             .get_sorted_heads_up()
@@ -370,7 +370,7 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
     }
 
     fn select(conn: &Connection, key: &SortedHeadsUp) -> Option<HUPResult> {
-        log::debug!("HUPResult::select({:?})", conn);
+        log::debug!("HUPResult::select({conn:?})");
         let mut stmt = conn
             .prepare(
                 "SELECT higher_wins, lower_wins, ties \
@@ -440,7 +440,7 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
     /// ...
     /// ```
     fn select_all(conn: &Connection) -> Vec<HUPResult> {
-        log::debug!("HUPResult::select_all({:?})", conn);
+        log::debug!("HUPResult::select_all({conn:?})");
 
         let mut stmt = conn.prepare("SELECT * FROM nlh_headsup_result").ok().unwrap();
 

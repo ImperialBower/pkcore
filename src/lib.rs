@@ -240,17 +240,17 @@ pub trait Pile {
     ///
     /// **Breakdown strict TDD**
     fn combinations_after(&self, k: usize, cards: &Cards) -> Combinations<IntoIter<Card>> {
-        log::debug!("Pile.combinations_after(k: {} cards: {})", k, cards);
+        log::debug!("Pile.combinations_after(k: {k} cards: {cards})");
         self.remaining_after(cards).combinations(k)
     }
 
     fn combinations_remaining(&self, k: usize) -> Combinations<IntoIter<Card>> {
-        log::debug!("Pile.combinations_after(k: {})", k);
+        log::debug!("Pile.combinations_after(k: {k})");
         self.remaining().combinations(k)
     }
 
     fn par_combinations_remaining(&self, k: usize) -> IterBridge<Combinations<IntoIter<Card>>> {
-        log::debug!("Pile.combinations_after(k: {})", k);
+        log::debug!("Pile.combinations_after(k: {k})");
         self.remaining().par_combinations(k)
     }
 
@@ -265,12 +265,12 @@ pub trait Pile {
     }
 
     fn enumerate_after(&self, k: usize, cards: &Cards) -> Enumerate<Combinations<IntoIter<Card>>> {
-        log::info!("Pile.enumerate_after(k: {} cards: {})", k, cards);
+        log::info!("Pile.enumerate_after(k: {k} cards: {cards})");
         self.remaining_after(cards).combinations(k).enumerate()
     }
 
     fn enumerate_remaining(&self, k: usize) -> Enumerate<Combinations<IntoIter<Card>>> {
-        log::info!("Pile.enumerate_after(k: {})", k);
+        log::info!("Pile.enumerate_after(k: {k})");
         self.combinations_remaining(k).enumerate()
     }
 
@@ -311,7 +311,7 @@ pub trait Pile {
     }
 
     fn remaining_after(&self, cards: &Cards) -> Cards {
-        log::debug!("Pile.remaining_after(cards: {})", cards);
+        log::debug!("Pile.remaining_after(cards: {cards})");
         let mut held = self.cards();
         held.insert_all(cards);
         Cards::deck_minus(&held)
