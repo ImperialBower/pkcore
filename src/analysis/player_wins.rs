@@ -142,7 +142,7 @@ impl PlayOut for PlayerWins {
     ///     * `Eval::from(seven)`
     ///     * push onto `CaseEval`
     fn case_evals_flop(&self, hands: &HoleCards, flop: Three) -> CaseEvals {
-        debug!("PlayerWins.case_evals_flop(hands: {} flop: {})", hands, flop);
+        debug!("PlayerWins.case_evals_flop(hands: {hands} flop: {flop})");
 
         let mut case_evals = CaseEvals::default();
 
@@ -181,10 +181,7 @@ impl PlayOut for PlayerWins {
     /// capos chasing after you with baseball bats, you have a cool application to play
     /// with.
     fn case_evals_turn(&self, hands: &HoleCards, flop: Three, turn: Card) -> CaseEvals {
-        debug!(
-            "PlayerWins.case_evals_turn(hands: {} flop: {} turn: {})",
-            hands, flop, turn
-        );
+        debug!("PlayerWins.case_evals_turn(hands: {hands} flop: {flop} turn: {turn})");
 
         let mut case_evals = CaseEvals::default();
 
