@@ -268,8 +268,8 @@ use std::collections::HashSet;
 /// 2. Return a probability distribution for every type of possible `HandRank`s.
 ///
 /// 3. Finally, return an integer indicating where a specific player's hand is in relationship to the
-/// nuts. So, for Daniel's hand of `9♠ 9♥ 9♣ 6♦ 5♥`, it would return three, since he has the third
-/// nuts, as they say; over a nine high straight and three nines.
+///    nuts. So, for Daniel's hand of `9♠ 9♥ 9♣ 6♦ 5♥`, it would return three, since he has the third
+///    nuts, as they say; over a nine high straight and three nines.
 ///
 /// ## Redux
 ///

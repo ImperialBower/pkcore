@@ -2289,7 +2289,6 @@ pub const EIGHT_SIX_SUITED: [Two; 4] = [Two::HAND_8S_6S, Two::HAND_8H_6H, Two::H
 /// the World Poker Tour. His announcing, with Vince Van Patten, is one of the main reasons I
 /// fell in love with poker. [One of the greats.](https://www.youtube.com/watch?v=zMNMJnMJhJA)
 ///
-
 pub const EIGHT_SIX_OFFSUIT: [Two; 12] = [
     Two::HAND_8S_6H,
     Two::HAND_8S_6D,

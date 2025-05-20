@@ -133,7 +133,9 @@ impl Display for Action {
 ///
 /// Here's the proposed
 ///
+/// ```txt
 /// Action(ActionType, amount) -> Actions<Action> -> Rounds
+/// ```
 ///
 /// Here's a parsed version of the log we're focusing on:
 ///
@@ -460,10 +462,7 @@ impl ActionType {
     pub fn parse_raise(s: &str) -> usize {
         if let Some(stripped) = s.strip_prefix('r') {
             let val = stripped;
-            match val.parse::<usize>() {
-                Ok(i) => i,
-                Err(_e) => 0,
-            }
+            val.parse::<usize>().unwrap_or_default()
         } else {
             0
         }

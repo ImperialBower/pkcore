@@ -131,10 +131,7 @@ impl HUPResult {
 
     #[must_use]
     pub fn get_sorted_heads_up(&self) -> Option<SortedHeadsUp> {
-        match SortedHeadsUp::try_from(self) {
-            Ok(shu) => Some(shu),
-            Err(_) => None,
-        }
+        SortedHeadsUp::try_from(self).ok()
     }
 
     /// # Errors

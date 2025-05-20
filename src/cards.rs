@@ -136,14 +136,15 @@ impl Cards {
     }
 
     /// Collapse
-    // pub fn collapse(&self) -> u32 {
-    //     let mut result: u32 = 0;
-    //     for card in self.iter() {
-    //         result = result | card.as_u32();
-    //     }
-    //     result
-    // }
-
+    /// ```txt
+    /// pub fn collapse(&self) -> u32 {
+    ///     let mut result: u32 = 0;
+    ///     for card in self.iter() {
+    ///         result = result | card.as_u32();
+    ///     }
+    ///     result
+    /// }
+    /// ```
     pub fn combinations(&self, k: usize) -> Combinations<indexmap::set::IntoIter<Card>> {
         self.0.clone().into_iter().combinations(k)
     }
@@ -531,7 +532,7 @@ impl From<Bard> for Cards {
                 let c = Card::try_from(b);
                 if let Ok(c) = c {
                     let _ = cards.insert(c);
-                };
+                }
             }
         }
 
@@ -695,7 +696,7 @@ impl Pile for Cards {
     /// their build instructions are these insane Rube Goldburgesque machinations. Make your code flow.
     /// *BOOP!* There it goes. [Push button, baby.](https://www.youtube.com/watch?v=En3-GWOUCcI)
     /// _Be water, my friend._
-    fn to_vec(&self) -> Vec<Card> {6
+    fn to_vec(&self) -> Vec<Card> {
         self.clone().into_iter().collect()
     }
 }

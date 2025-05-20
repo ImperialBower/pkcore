@@ -82,7 +82,7 @@ impl ActionTracker {
                     actor.state.set(PlayState::YetToAct);
                 }
             }
-        };
+        }
     }
 
     #[must_use]
