@@ -66,13 +66,12 @@ impl Seat {
             )
         };
 
-        self.stack.get().size().checked_sub(diff).map(|new_stack_size| {
+        self.stack.get().size().checked_sub(diff).inspect(|&new_stack_size| {
             // Remove the `Chips` from the stack
             self.stack.set(Chips::new(new_stack_size));
             // Pluribus passes in the total chips in play for the round, so just set that.
             self.chips_in_play.set(Chips::new(amount));
             // Return the player's remaining Chips.
-            new_stack_size
         })
     }
 

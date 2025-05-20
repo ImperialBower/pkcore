@@ -698,7 +698,7 @@ impl SortedHeadsUp {
                 Ordering::Less => wins.add(Win::FIRST),
                 Ordering::Greater => wins.add(Win::SECOND),
                 Ordering::Equal => wins.add(Win::FIRST | Win::SECOND),
-            };
+            }
         }
 
         Ok(wins)

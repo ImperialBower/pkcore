@@ -261,10 +261,7 @@ impl std::fmt::Display for FlopEval {
         v.push(format!("The Flop: {}", self.board));
 
         for (i, hole_cards) in self.hands.iter().enumerate() {
-            let eval = match self.eval_for_player_str(i) {
-                Ok(e) => e,
-                Err(_) => String::new(),
-            };
+            let eval = self.eval_for_player_str(i).unwrap_or_default();
 
             v.push(format!(
                 "  Player #{} [{}] {}",

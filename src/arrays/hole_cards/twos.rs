@@ -86,44 +86,44 @@ impl Twos {
 
     /// # Errors
     ///
+    /// ```txt
     /// `PKError` if unable to convert the five `Cards`.
-    // pub fn bcm_case_evals(&self) -> Result<CaseEvals, PKError> {
-    //     self.combinations_remaining(5)
-    //         .map(|v| {
-    //             let five = Five::try_from(v).unwrap();
-    //             self.bcm_case_eval(five).unwrap()
-    //         })
-    //         .collect()
-    // }
-
-    /// # Errors
+    /// pub fn bcm_case_evals(&self) -> Result<CaseEvals, PKError> {
+    ///     self.combinations_remaining(5)
+    ///         .map(|v| {
+    ///             let five = Five::try_from(v).unwrap();
+    ///             self.bcm_case_eval(five).unwrap()
+    ///         })
+    ///         .collect()
+    /// }
+    ///    /// # Errors
     ///
     /// `PKError` if unable to convert the five `Cards`.
-    // pub fn bcm_rayon_case_evals(&self) -> Result<CaseEvals, PKError> {
-    //     let remaining = self.remaining();
-    //     let v = remaining.par_combinations_remaining(5)
-    //         .map(|v| {
-    //             let five = Five::try_from(v).unwrap();
-    //             self.bcm_case_eval(five)
-    //         })
-    //         .collect::<Vec<CaseEval>>();
-    //     Ok(CaseEvals::from(v))
-    //     //
-    //     // let bridge = self.par_combinations_remaining(5);
-    //     // bridge       //     .map(|v| {
-    //     //         let five = Five::try_from(v)?;
-    //     //         self.bcm_case_eval(five)
-    //     //     })
-    //     //
-    //     // let v = self.par_combinations_remaining(5)
-    //     //     .map(|v| {
-    //     //         let five = Five::try_from(v)?;
-    //     //         self.bcm_case_eval(five)
-    //     //     })
-    //     //     .collect::<Vec<CaseEval>>();
-    //     // Ok(CaseEvals::from(v))
-    // }
-
+    /// pub fn bcm_rayon_case_evals(&self) -> Result<CaseEvals, PKError> {
+    ///     let remaining = self.remaining();
+    ///     let v = remaining.par_combinations_remaining(5)
+    ///         .map(|v| {
+    ///             let five = Five::try_from(v).unwrap();
+    ///             self.bcm_case_eval(five)
+    ///         })
+    ///         .collect::<Vec<CaseEval>>();
+    ///     Ok(CaseEvals::from(v))
+    ///     //
+    ///     // let bridge = self.par_combinations_remaining(5);
+    ///     // bridge       //     .map(|v| {
+    ///     //         let five = Five::try_from(v)?;
+    ///     //         self.bcm_case_eval(five)
+    ///     //     })
+    ///     //
+    ///     // let v = self.par_combinations_remaining(5)
+    ///     //     .map(|v| {
+    ///     //         let five = Five::try_from(v)?;
+    ///     //         self.bcm_case_eval(five)
+    ///     //     })
+    ///     //     .collect::<Vec<CaseEval>>();
+    ///     // Ok(CaseEvals::from(v))
+    /// }
+    /// ```
     /// # Panics
     ///
     /// Should not be possible. Fingers crossed

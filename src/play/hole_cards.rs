@@ -169,7 +169,7 @@ impl HoleCards {
         for hand in self.iter() {
             match Seven::from_case_at_flop_old(*hand, flop, case) {
                 Ok(seven) => cases.push(Eval::from(seven)),
-                Err(e) => error!("{:?} from realize_case_at_flop({}, {}, {:?})", e, self, flop, case),
+                Err(e) => error!("{e:?} from realize_case_at_flop({self}, {flop}, {case:?})"),
             }
         }
 

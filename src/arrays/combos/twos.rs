@@ -7,6 +7,7 @@ use crate::suit::Suit;
 use crate::PKError;
 use std::collections::HashSet;
 use std::fmt::Display;
+use std::fmt::Write;
 use std::str::FromStr;
 
 /// This struct is to deal with the fact that the `arrays::Two` struct is getting overloaded with
@@ -439,7 +440,7 @@ impl FromStr for Twos {
             match Twos::parse_individual_range(raw) {
                 Ok(range) => twos = twos.extend(&range),
                 Err(_) => return Err(PKError::InvalidCardIndex),
-            };
+            }
         }
         Ok(twos)
     }
@@ -449,9 +450,9 @@ impl Display for Twos {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut output = String::new();
         for (i, two) in self.to_vec().iter().enumerate() {
-            output.push_str(&format!("{two}"));
+            let _ = write!(output, "{two}");
             if i < self.len() - 1 {
-                output.push_str(", ");
+                let _ = write!(output, ", ");
             }
         }
         write!(f, "{output}")

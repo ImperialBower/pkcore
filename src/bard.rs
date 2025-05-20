@@ -399,7 +399,7 @@ impl fmt::Display for Bard {
             bit_string.push(c);
             if i % 8 == 3 && i % 51 != 0 {
                 bit_string.push('_');
-            };
+            }
         }
         write!(f, "{bit_string}")
     }

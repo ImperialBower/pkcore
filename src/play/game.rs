@@ -434,11 +434,14 @@ impl Game {
     /// # Refactoring.
     ///
     /// Moved this to `CaseEvals.wins()`. Turns out we don't need it.
-    // #[must_use]
-    // pub fn wins(&self) -> Wins {
-    //     todo!()
-    // }
-
+    ///
+    /// ```txt
+    /// #[must_use]
+    /// pub fn wins(&self) -> Wins {
+    ///     todo!()
+    /// }
+    /// ```
+    ///
     /// # Errors
     ///
     /// Throws `PKError::Fubar` if invalid index
@@ -562,7 +565,7 @@ impl Game {
     /// So, we need to generate a single `CaseEval`, and then display it to the user. Let's map out
     /// the steps:
     ///
-    /// * impl From<Board> for Five
+    /// * `impl From<Board> for Five`
     ///
     /// I did this before I started writing down this plan. As soon as I finished writing this
     /// I realized that I didn't need this conversion. What I really needed was to get this into
