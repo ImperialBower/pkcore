@@ -1,7 +1,7 @@
+use crate::PKError;
 use crate::arrays::hole_cards::twos::Twos;
 use crate::cards::Cards;
-use crate::PKError;
-use std::io::{stdin, stdout, Write};
+use std::io::{Write, stdin, stdout};
 use std::str::FromStr;
 use termion::input::TermRead;
 use termion::raw::IntoRawMode;

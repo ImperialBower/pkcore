@@ -1,8 +1,8 @@
 [package]
 name = "pkcore"
 version = "0.0.12"
-rust-version = "1.76"
-edition = "2021"
+rust-version = "1.85.1"
+edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
 license = "GPL-3.0-or-later"
 repository = "https://github.com/ImperialBower/pkcore.git"

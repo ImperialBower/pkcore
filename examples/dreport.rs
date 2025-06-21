@@ -1,5 +1,5 @@
-use pkcore::util::csv::distinct_shus_from_csv_as_masked_vec;
 use pkcore::Shifty;
+use pkcore::util::csv::distinct_shus_from_csv_as_masked_vec;
 
 /// `cargo run --example dreport`
 fn main() {

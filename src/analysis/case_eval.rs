@@ -5,8 +5,8 @@ use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::play::hole_cards::HoleCards;
-use crate::util::wincounter::win::Win;
 use crate::util::wincounter::PlayerFlag;
+use crate::util::wincounter::win::Win;
 use crate::{Card, Cards, PKError, Pile};
 use std::slice::Iter;
 
@@ -177,11 +177,7 @@ impl CaseEval {
     /// ```
     #[must_use]
     pub fn cards(&self) -> Option<Cards> {
-        if self.1.is_empty() {
-            None
-        } else {
-            Some(self.1.clone())
-        }
+        if self.1.is_empty() { None } else { Some(self.1.clone()) }
     }
 
     #[must_use]
@@ -691,11 +687,13 @@ mod hand_rank__case_eval_tests {
     #[test]
     fn is_empty() {
         assert!(CaseEval::default().is_empty());
-        assert!(!CaseEval(
-            vec![TestData::daniel_eval_at_flop(), TestData::gus_eval_at_flop(),],
-            Cards::default()
-        )
-        .is_empty());
+        assert!(
+            !CaseEval(
+                vec![TestData::daniel_eval_at_flop(), TestData::gus_eval_at_flop(),],
+                Cards::default()
+            )
+            .is_empty()
+        );
     }
 
     #[test]

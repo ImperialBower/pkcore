@@ -1,6 +1,6 @@
+use crate::Card;
 use crate::arrays::three::Three;
 use crate::play::hole_cards::HoleCards;
-use crate::Card;
 use case_evals::CaseEvals;
 
 pub mod case_eval;

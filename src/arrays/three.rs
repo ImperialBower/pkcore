@@ -1,6 +1,6 @@
+use crate::arrays::HandRanker;
 use crate::arrays::five::Five;
 use crate::arrays::two::Two;
-use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::util::Util;
@@ -67,11 +67,7 @@ impl From<Vec<Card>> for Three {
                     None => Card::BLANK,
                 };
                 let three = Three([one, two, three]);
-                if three.is_dealt() {
-                    three
-                } else {
-                    Three::default()
-                }
+                if three.is_dealt() { three } else { Three::default() }
             }
             _ => Three::default(),
         }
@@ -143,8 +139,8 @@ impl TryFrom<Cards> for Three {
 #[allow(non_snake_case)]
 mod arrays__three_tests {
     use super::*;
-    use crate::util::data::TestData;
     use crate::Evals;
+    use crate::util::data::TestData;
 
     /// <https://www.youtube.com/watch?v=vjM60lqRhPg />
     const THE_FLOP: [Card; 3] = [Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS];

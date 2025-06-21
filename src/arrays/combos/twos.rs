@@ -1,10 +1,10 @@
+use crate::PKError;
 use crate::arrays::combos::hc_symbol::HCSymbol;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::deck::POKER_DECK;
 use crate::rank::Rank;
 use crate::suit::Suit;
-use crate::PKError;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::fmt::Write;

@@ -1,10 +1,10 @@
 use crate::analysis::case_eval::CaseEval;
 use crate::analysis::eval::Eval;
+use crate::arrays::HandRanker;
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
-use crate::arrays::HandRanker;
 use crate::cards::Cards;
 use crate::play::board::Board;
 use crate::util::Util;
@@ -369,7 +369,10 @@ mod play__hold_cards_tests {
     fn remaining_after() {
         let remaining = TestData::hole_cards_the_hand().remaining_after(&TestData::the_flop().cards());
 
-        assert_eq!(remaining.sort().to_string(), "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 4♣ 3♣ 2♣");
+        assert_eq!(
+            remaining.sort().to_string(),
+            "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 4♣ 3♣ 2♣"
+        );
     }
 
     #[test]

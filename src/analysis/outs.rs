@@ -1,7 +1,7 @@
 use crate::analysis::case_eval::CaseEval;
 use crate::analysis::case_evals::CaseEvals;
-use crate::util::wincounter::win::Win;
 use crate::util::wincounter::PlayerFlag;
+use crate::util::wincounter::win::Win;
 use crate::{Card, Cards};
 use indexmap::IndexMap;
 
@@ -474,7 +474,10 @@ mod analysis__outs_tests {
 
         assert_eq!("6♣", outs.get(1).unwrap().to_string());
         let outs_cards = outs.get(2).unwrap().sort();
-        assert_eq!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 4♣ 3♣ 2♣", outs_cards.to_string());
+        assert_eq!(
+            "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 4♣ 3♣ 2♣",
+            outs_cards.to_string()
+        );
     }
 
     #[test]

@@ -2,10 +2,10 @@ use crate::analysis::case_eval::CaseEval;
 use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
 use crate::analysis::outs::Outs;
+use crate::arrays::HandRanker;
 use crate::arrays::four::Four;
 use crate::arrays::seven::Seven;
 use crate::arrays::six::Six;
-use crate::arrays::HandRanker;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::results::Results;
@@ -722,12 +722,12 @@ impl Display for Game {
 #[allow(non_snake_case)]
 mod play__game_tests {
     use super::*;
+    use crate::Evals;
     use crate::analysis::class::Class;
     use crate::arrays::three::Three;
     use crate::arrays::two::Two;
     use crate::util::data::TestData;
     use crate::util::wincounter::win::Win;
-    use crate::Evals;
     use std::str::FromStr;
 
     #[test]

@@ -2,51 +2,48 @@ use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::arrays::matchups::masks::rank_mask::RankMask;
 use crate::arrays::matchups::masks::suit_mask::SuitMask;
 use crate::arrays::matchups::masks::suit_texture::SuitTexture;
-use crate::arrays::matchups::sorted_heads_up::{SortedHeadsUp, SORTED_HEADS_UP_UNIQUE};
+use crate::arrays::matchups::sorted_heads_up::{SORTED_HEADS_UP_UNIQUE, SortedHeadsUp};
 use crate::cards::Cards;
 use crate::{PKError, Shifty, SuitShift};
-use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 use std::str::FromStr;
 
-lazy_static! {
-    pub static ref MASKED_UNIQUE: HashSet<Masked> = Masked::parse(&SORTED_HEADS_UP_UNIQUE);
-    pub static ref MASKED_UNIQUE_TYPE_ONE: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_one);
-    pub static ref MASKED_UNIQUE_TYPE_TWO_A: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_two_a);
-    pub static ref MASKED_UNIQUE_TYPE_TWO_B: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_two_b);
-    pub static ref MASKED_UNIQUE_TYPE_TWO_C: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_two_c);
-    pub static ref MASKED_UNIQUE_TYPE_TWO_D: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_two_d);
-    pub static ref MASKED_UNIQUE_TYPE_TWO_E: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_two_e);
-    pub static ref MASKED_UNIQUE_TYPE_THREE: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_three);
-    pub static ref MASKED_UNIQUE_TYPE_FOUR: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_four);
-    pub static ref MASKED_UNIQUE_TYPE_FIVE_A: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_five_a);
-    pub static ref MASKED_UNIQUE_TYPE_FIVE_B: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_five_b);
-    pub static ref MASKED_UNIQUE_TYPE_FIVE_C: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_five_c);
-    pub static ref MASKED_UNIQUE_TYPE_FIVE_D: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_five_d);
-    pub static ref MASKED_UNIQUE_TYPE_SIX_A: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_six_a);
-    pub static ref MASKED_UNIQUE_TYPE_SIX_B: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_six_b);
-    pub static ref MASKED_UNIQUE_TYPE_SEVEN: HashSet<Masked> =
-        Masked::filter(&MASKED_UNIQUE, Masked::is_type_seven);
-    /// These are available as `data/distinct_masked_shus.csv`.
-    pub static ref MASKED_DISTINCT: HashSet<Masked> = Masked::distinct();
-}
+pub static MASKED_UNIQUE: std::sync::LazyLock<HashSet<Masked>> =
+    std::sync::LazyLock::new(|| Masked::parse(&SORTED_HEADS_UP_UNIQUE));
+pub static MASKED_UNIQUE_TYPE_ONE: std::sync::LazyLock<HashSet<Masked>> =
+    std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_one));
+pub static MASKED_UNIQUE_TYPE_TWO_A: std::sync::LazyLock<HashSet<Masked>> =
+    std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_two_a));
+pub static MASKED_UNIQUE_TYPE_TWO_B: std::sync::LazyLock<HashSet<Masked>> =
+    std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_two_b));
+pub static MASKED_UNIQUE_TYPE_TWO_C: std::sync::LazyLock<HashSet<Masked>> =
+    std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_two_c));
+pub static MASKED_UNIQUE_TYPE_TWO_D: std::sync::LazyLock<HashSet<Masked>> =
+    std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_two_d));
+pub static MASKED_UNIQUE_TYPE_TWO_E: std::sync::LazyLock<HashSet<Masked>> =
+    std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_two_e));
+pub static MASKED_UNIQUE_TYPE_THREE: std::sync::LazyLock<HashSet<Masked>> =
+    std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_three));
+pub static MASKED_UNIQUE_TYPE_FOUR: std::sync::LazyLock<HashSet<Masked>> =
+    std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_four));
+pub static MASKED_UNIQUE_TYPE_FIVE_A: std::sync::LazyLock<HashSet<Masked>> =
+    std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_five_a));
+pub static MASKED_UNIQUE_TYPE_FIVE_B: std::sync::LazyLock<HashSet<Masked>> =
+    std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_five_b));
+pub static MASKED_UNIQUE_TYPE_FIVE_C: std::sync::LazyLock<HashSet<Masked>> =
+    std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_five_c));
+pub static MASKED_UNIQUE_TYPE_FIVE_D: std::sync::LazyLock<HashSet<Masked>> =
+    std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_five_d));
+pub static MASKED_UNIQUE_TYPE_SIX_A: std::sync::LazyLock<HashSet<Masked>> =
+    std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_six_a));
+pub static MASKED_UNIQUE_TYPE_SIX_B: std::sync::LazyLock<HashSet<Masked>> =
+    std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_six_b));
+pub static MASKED_UNIQUE_TYPE_SEVEN: std::sync::LazyLock<HashSet<Masked>> =
+    std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_seven));
+pub static MASKED_DISTINCT: std::sync::LazyLock<HashSet<Masked>> = std::sync::LazyLock::new(Masked::distinct);
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 struct RankMasked {

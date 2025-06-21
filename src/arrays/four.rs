@@ -1,8 +1,8 @@
 use crate::analysis::eval::Eval;
+use crate::arrays::HandRanker;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
-use crate::arrays::HandRanker;
 use crate::cards::Cards;
 use crate::play::board::Board;
 use crate::{Card, PKError, Pile, TheNuts};
@@ -132,11 +132,7 @@ impl From<Vec<Card>> for Four {
                     None => Card::BLANK,
                 };
                 let four = Four([one, two, three, four]);
-                if four.is_dealt() {
-                    four
-                } else {
-                    Four::default()
-                }
+                if four.is_dealt() { four } else { Four::default() }
             }
             _ => Four::default(),
         }

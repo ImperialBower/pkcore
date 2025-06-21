@@ -1,6 +1,6 @@
+use crate::util::Util;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
-use crate::util::Util;
 use std::fmt::{Display, Formatter};
 
 /// # PHASE 2.2/Step 4: Results

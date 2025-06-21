@@ -1,7 +1,7 @@
+use crate::util::Util;
 use crate::util::wincounter::heads_up::HeadsUp;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::{PlayerFlag, Result};
-use crate::util::Util;
 
 /// I've moved wincounter into the library so that I can make updates to the library
 /// as a part of this work. The plan is to later on move the updated module back to

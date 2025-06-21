@@ -1,7 +1,7 @@
+use pkcore::PKError;
 use pkcore::arrays::hole_cards::twos::Twos;
 use pkcore::util::terminal::Terminal;
 use pkcore::util::wincounter::results::Results;
-use pkcore::PKError;
 
 /// OK, this makes me sad. My new shiny pkcore library takes over twice as long to run a single calc
 ///
