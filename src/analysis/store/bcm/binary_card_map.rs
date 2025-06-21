@@ -9,32 +9,17 @@ use crate::cards::Cards;
 use crate::{PKError, Pile};
 use csv::Reader;
 use csv::WriterBuilder;
-// use lazy_static::lazy_static;
 use rusqlite::{Connection, named_params};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
 
-// lazy_static! {
-//     /// This code is brutal, heavy, and wonderful. It is an optimization that makes things much slower
-//     /// in the short term, and MUCH faster in the long term. Eventually, we will want containers that
-//     /// have all this stuff loaded for bear. We're not there yet.
-//     ///
-//     /// TODO TD: Add logging
-//     pub static ref BC_RANK_HASHMAP: HashMap<Bard, FiveBCM> = {
-//         let mut m = HashMap::new();
-//         let file = File::open(SevenFiveBCM::get_csv_filepath()).unwrap();
-//         let mut rdr = Reader::from_reader(file);
-//
-//         for result in rdr.deserialize() {
-//             let bcm: SevenFiveBCM = result.unwrap();
-//             m.insert(bcm.bc, FiveBCM::from(bcm));
-//         }
-//         m
-//     };
-// }
-
+/// This code is brutal, heavy, and wonderful. It is an optimization that makes things much slower
+/// in the short term, and MUCH faster in the long term. Eventually, we will want containers that
+/// have all this stuff loaded for bear. We're not there yet.
+///
+/// TODO TD: Add logging
 pub static BC_RANK_HASHMAP: std::sync::LazyLock<HashMap<Bard, FiveBCM>> = std::sync::LazyLock::new(|| {
     let mut m = HashMap::new();
     let file = File::open(SevenFiveBCM::get_csv_filepath()).unwrap();

@@ -19,9 +19,6 @@ use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::str::FromStr;
 
-// pub static MASKED_UNIQUE: std::sync::LazyLock<HashSet<Masked>> =
-//     std::sync::LazyLock::new(|| Masked::parse(&SORTED_HEADS_UP_UNIQUE));
-
 pub static SORTED_HEADS_UP_UNIQUE: std::sync::LazyLock<HashSet<SortedHeadsUp>> = std::sync::LazyLock::new(|| {
     let mut hs: HashSet<SortedHeadsUp> = HashSet::new();
     for v in Cards::deck().combinations(2) {
