@@ -5,8 +5,8 @@ use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::suit::Suit;
 use crate::{PKError, Pile, SuitShift, TheNuts};
-use indexmap::set::{IntoIter, Iter};
 use indexmap::IndexSet;
+use indexmap::set::{IntoIter, Iter};
 use itertools::{Combinations, Itertools};
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
@@ -574,11 +574,7 @@ impl From<Vec<Card>> for Cards {
     fn from(v: Vec<Card>) -> Self {
         let filtered = v.iter().filter_map(|c| {
             let pc = *c;
-            if pc.contains_blank() {
-                None
-            } else {
-                Some(pc)
-            }
+            if pc.contains_blank() { None } else { Some(pc) }
         });
         Cards(filtered.collect())
     }
@@ -589,11 +585,7 @@ impl From<Vec<&Card>> for Cards {
         // TODO RF: Hack :-P
         let filtered = v.iter().filter_map(|c| {
             let pc = **c;
-            if pc.contains_blank() {
-                None
-            } else {
-                Some(pc)
-            }
+            if pc.contains_blank() { None } else { Some(pc) }
         });
         Cards(filtered.collect())
     }
@@ -603,11 +595,7 @@ impl From<&Vec<Card>> for Cards {
     fn from(v: &Vec<Card>) -> Self {
         let filtered = v.iter().filter_map(|c| {
             let pc = *c;
-            if pc.contains_blank() {
-                None
-            } else {
-                Some(pc)
-            }
+            if pc.contains_blank() { None } else { Some(pc) }
         });
         Cards(filtered.collect())
     }
@@ -739,7 +727,10 @@ mod card_tests {
         let deck = Cards::deck();
 
         assert_eq!(deck.len(), 52);
-        assert_eq!(deck.to_string(), "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣");
+        assert_eq!(
+            deck.to_string(),
+            "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣"
+        );
     }
 
     #[test]
@@ -861,11 +852,13 @@ mod card_tests {
 
         assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_PAIRED_MASK));
         assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_PAIRED_MASK));
-        assert!(!Cards::from_str("T♠")
-            .unwrap()
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_PAIRED_MASK));
+        assert!(
+            !Cards::from_str("T♠")
+                .unwrap()
+                .draw_one()
+                .unwrap()
+                .is_flagged(Card::FREQUENCY_PAIRED_MASK)
+        );
     }
 
     #[test]
@@ -874,11 +867,13 @@ mod card_tests {
 
         assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_TRIPPED_MASK));
         assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_TRIPPED_MASK));
-        assert!(!Cards::from_str("T♠")
-            .unwrap()
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_TRIPPED_MASK));
+        assert!(
+            !Cards::from_str("T♠")
+                .unwrap()
+                .draw_one()
+                .unwrap()
+                .is_flagged(Card::FREQUENCY_TRIPPED_MASK)
+        );
     }
 
     #[test]
@@ -887,11 +882,13 @@ mod card_tests {
 
         assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_QUADED_MASK));
         assert!(cards.draw_one().unwrap().is_flagged(Card::FREQUENCY_QUADED_MASK));
-        assert!(!Cards::from_str("T♠")
-            .unwrap()
-            .draw_one()
-            .unwrap()
-            .is_flagged(Card::FREQUENCY_QUADED_MASK));
+        assert!(
+            !Cards::from_str("T♠")
+                .unwrap()
+                .draw_one()
+                .unwrap()
+                .is_flagged(Card::FREQUENCY_QUADED_MASK)
+        );
     }
 
     #[test]

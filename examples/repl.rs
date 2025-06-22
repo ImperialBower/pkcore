@@ -1,11 +1,11 @@
 use clap::Parser;
 use itertools::Itertools;
+use pkcore::PKError;
+use pkcore::arrays::HandRanker;
 use pkcore::arrays::five::Five;
 use pkcore::arrays::seven::Seven;
 use pkcore::arrays::six::Six;
-use pkcore::arrays::HandRanker;
 use pkcore::cards::Cards;
-use pkcore::PKError;
 use std::fmt::Display;
 use std::str::FromStr;
 

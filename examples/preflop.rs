@@ -1,9 +1,9 @@
 use csv::Reader;
+use pkcore::Shifty;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use pkcore::util::terminal::Terminal;
-use pkcore::Shifty;
 use rusqlite::Connection;
 use std::fs::File;
 

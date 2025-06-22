@@ -1,7 +1,7 @@
+use crate::arrays::HandRanker;
 use crate::arrays::five::Five;
 use crate::arrays::matchups::masks::Masked;
 use crate::arrays::three::Three;
-use crate::arrays::HandRanker;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;

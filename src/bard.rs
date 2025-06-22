@@ -1,7 +1,7 @@
+use crate::Pile;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::Pile;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};

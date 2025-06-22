@@ -1,9 +1,9 @@
+use crate::PKError;
 use crate::analysis::hand_rank::HandRank;
 use crate::analysis::store::bcm::binary_card_map::FiveBCM;
+use crate::arrays::HandRanker;
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
-use crate::arrays::HandRanker;
-use crate::PKError;
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};

@@ -1,7 +1,7 @@
+use pkcore::Pile;
 use pkcore::arrays::four::Four;
 use pkcore::card::Card;
 use pkcore::games::omaha::OmahaHigh;
-use pkcore::Pile;
 
 const ROBL_HAND: [Card; 4] = [
     Card::ACE_SPADES,

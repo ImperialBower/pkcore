@@ -1,5 +1,5 @@
-use pkcore::analysis::store::nubibus::pluribus::Pluribus;
 use pkcore::analysis::store::nubibus::Nubibus;
+use pkcore::analysis::store::nubibus::pluribus::Pluribus;
 use std::str::FromStr;
 
 fn main() {

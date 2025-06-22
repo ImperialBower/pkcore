@@ -1,6 +1,6 @@
+use crate::Evals;
 use crate::analysis::class::Class;
 use crate::analysis::eval::Eval;
-use crate::Evals;
 use std::collections::HashSet;
 
 #[allow(clippy::needless_doctest_main)]

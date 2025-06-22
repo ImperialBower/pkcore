@@ -1,8 +1,8 @@
 use crate::analysis::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
+use crate::arrays::HandRanker;
 use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
-use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::play::board::Board;

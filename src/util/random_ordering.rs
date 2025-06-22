@@ -1,7 +1,7 @@
 extern crate core;
 use rand::{
-    distributions::{Distribution, Standard},
     Rng,
+    distributions::{Distribution, Standard},
 };
 use std::cmp::Ordering;
 

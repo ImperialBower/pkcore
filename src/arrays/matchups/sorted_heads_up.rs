@@ -2,7 +2,7 @@ use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
 use crate::analysis::store::db::headsup_preflop_result::HUPResult;
 use crate::analysis::the_nuts::TheNuts;
 use crate::arrays::five::Five;
-use crate::arrays::matchups::masked::{Masked, MASKED_UNIQUE};
+use crate::arrays::matchups::masked::{MASKED_UNIQUE, Masked};
 use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
@@ -12,7 +12,6 @@ use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::{PKError, Pile, Shifty, SuitShift};
 use csv::{Reader, WriterBuilder};
-use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashSet;
@@ -20,49 +19,47 @@ use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::str::FromStr;
 
-lazy_static! {
-    pub static ref SORTED_HEADS_UP_UNIQUE: HashSet<SortedHeadsUp> = {
-        let mut hs: HashSet<SortedHeadsUp> = HashSet::new();
-        for v in Cards::deck().combinations(2) {
-            let hero = Two::try_from(v.as_slice()).unwrap();
-            for r in hero.remaining().combinations(2) {
-                let villain = Two::try_from(r.as_slice()).unwrap();
-                hs.insert(SortedHeadsUp::new(hero, villain));
-            }
+pub static SORTED_HEADS_UP_UNIQUE: std::sync::LazyLock<HashSet<SortedHeadsUp>> = std::sync::LazyLock::new(|| {
+    let mut hs: HashSet<SortedHeadsUp> = HashSet::new();
+    for v in Cards::deck().combinations(2) {
+        let hero = Two::try_from(v.as_slice()).unwrap();
+        for r in hero.remaining().combinations(2) {
+            let villain = Two::try_from(r.as_slice()).unwrap();
+            hs.insert(SortedHeadsUp::new(hero, villain));
         }
-        hs
-    };
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_ONE: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_one);
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_TWO_A: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two_a);
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_TWO_B: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two_b);
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_TWO_C: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two_c);
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_TWO_D: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two_d);
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_TWO_E: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two_e);
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_THREE: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_three);
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_FOUR: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_four);
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_A: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_five_a);
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_B: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_five_b);
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_C: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_five_c);
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_D: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_five_d);
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_SIX_A: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_six_a);
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_SIX_B: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_six_b);
-    pub static ref SORTED_HEADS_UP_UNIQUE_TYPE_SEVEN: HashSet<SortedHeadsUp> =
-        Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_seven);
-}
+    }
+    hs
+});
+pub static SORTED_HEADS_UP_UNIQUE_TYPE_ONE: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
+    std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_one));
+pub static SORTED_HEADS_UP_UNIQUE_TYPE_TWO_A: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
+    std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two_a));
+pub static SORTED_HEADS_UP_UNIQUE_TYPE_TWO_B: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
+    std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two_b));
+pub static SORTED_HEADS_UP_UNIQUE_TYPE_TWO_C: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
+    std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two_c));
+pub static SORTED_HEADS_UP_UNIQUE_TYPE_TWO_D: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
+    std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two_d));
+pub static SORTED_HEADS_UP_UNIQUE_TYPE_TWO_E: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
+    std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_two_e));
+pub static SORTED_HEADS_UP_UNIQUE_TYPE_THREE: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
+    std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_three));
+pub static SORTED_HEADS_UP_UNIQUE_TYPE_FOUR: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
+    std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_four));
+pub static SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_A: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
+    std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_five_a));
+pub static SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_B: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
+    std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_five_b));
+pub static SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_C: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
+    std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_five_c));
+pub static SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_D: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
+    std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_five_d));
+pub static SORTED_HEADS_UP_UNIQUE_TYPE_SIX_A: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
+    std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_six_a));
+pub static SORTED_HEADS_UP_UNIQUE_TYPE_SIX_B: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
+    std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_six_b));
+pub static SORTED_HEADS_UP_UNIQUE_TYPE_SEVEN: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
+    std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_seven));
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
@@ -876,6 +873,7 @@ mod arrays__matchups__sorted_heads_up_tests {
         assert_eq!(10296, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_A.len());
         assert_eq!(32604, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_B.len());
         assert_eq!(29172, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_C.len());
+        assert_eq!(29172, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_C.len());
         assert_eq!(32604, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_D.len());
         assert_eq!(29172, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_E.len());
         assert_eq!(36504, SORTED_HEADS_UP_UNIQUE_TYPE_THREE.len());
@@ -1033,7 +1031,10 @@ mod arrays__matchups__sorted_heads_up_tests {
     /// doing double checks. Part of me is just like how cool is it that I can even do this?!
     #[test]
     fn pile__remaining() {
-        assert_eq!(HANDS_7D_7C_V_6S_6H.remaining().sort().to_string(), "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 6♣ 5♣ 4♣ 3♣ 2♣");
+        assert_eq!(
+            HANDS_7D_7C_V_6S_6H.remaining().sort().to_string(),
+            "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 6♣ 5♣ 4♣ 3♣ 2♣"
+        );
     }
 
     #[test]

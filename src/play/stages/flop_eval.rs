@@ -1,8 +1,8 @@
 use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
+use crate::arrays::HandRanker;
 use crate::arrays::five::Five;
 use crate::arrays::three::Three;
-use crate::arrays::HandRanker;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::results::Results;

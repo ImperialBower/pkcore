@@ -1,10 +1,10 @@
+use crate::Pile;
 use crate::analysis::case_eval::CaseEval;
 use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::play::hole_cards::HoleCards;
 use crate::util::wincounter::wins::Wins;
-use crate::Pile;
 use log::info;
 use std::slice::Iter;
 use std::sync::mpsc;

@@ -5,8 +5,8 @@ use crate::suit::Suit;
 use crate::{PKError, Pile, SuitShift, TheNuts};
 use serde::de::Deserializer;
 
-use serde::ser::{Serialize, Serializer};
 use serde::Deserialize;
+use serde::ser::{Serialize, Serializer};
 use std::fmt;
 use std::str::FromStr;
 
@@ -420,7 +420,7 @@ mod card_tests {
     use crate::bard::Bard;
 
     use rstest::rstest;
-    use serde_test::{assert_tokens, Token};
+    use serde_test::{Token, assert_tokens};
 
     #[test]
     fn new() {

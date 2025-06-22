@@ -1,5 +1,5 @@
-use crate::analysis::hand_rank::HandRankValue;
 use crate::SOK;
+use crate::analysis::hand_rank::HandRankValue;
 use strum::EnumIter;
 
 /// `HandRankClass` represents the more specific type of the five card `PokerHand`.

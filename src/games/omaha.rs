@@ -1,10 +1,10 @@
 use crate::analysis::eval::Eval;
 use crate::analysis::the_nuts::TheNuts;
+use crate::arrays::HandRanker;
 use crate::arrays::five::Five;
 use crate::arrays::four::Four;
 use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
-use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::play::board::Board;

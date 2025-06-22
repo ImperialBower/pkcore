@@ -1,6 +1,6 @@
+use crate::Pile;
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::suit::Suit;
-use crate::Pile;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -117,11 +117,11 @@ mod arrays__matchups__masks__suit_texture_tests {
     use crate::arrays::matchups::masks::suit_texture::SuitTexture;
     use std::str::FromStr;
 
+    use crate::Shifty;
     use crate::arrays::matchups::masks::suit_texture::SuitTexture::{
         Type1111, Type1112b, Type1112d, Type1112e, Type1123, Type1212a, Type1212b, Type1223a, Type1223b, Type1223c,
         Type1223d, Type1234,
     };
-    use crate::Shifty;
     use rstest::rstest;
 
     #[rstest]

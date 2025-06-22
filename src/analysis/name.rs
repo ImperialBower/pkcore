@@ -1,5 +1,5 @@
-use crate::analysis::hand_rank::HandRankValue;
 use crate::SOK;
+use crate::analysis::hand_rank::HandRankValue;
 use strum::EnumIter;
 
 /// `HandRankName` represents the

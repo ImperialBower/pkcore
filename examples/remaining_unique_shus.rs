@@ -1,7 +1,7 @@
+use pkcore::PKError;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
-use pkcore::PKError;
 use rusqlite::Connection;
 
 fn main() -> Result<(), PKError> {

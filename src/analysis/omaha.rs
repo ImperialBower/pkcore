@@ -1,6 +1,6 @@
+use crate::Pile;
 use crate::arrays::five::Five;
 use crate::cards::Cards;
-use crate::Pile;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum EightOrBetter {

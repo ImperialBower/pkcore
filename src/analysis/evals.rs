@@ -84,11 +84,11 @@ impl From<Vec<Five>> for Evals {
 #[allow(non_snake_case)]
 mod hand_rank__evals_tests {
     use super::*;
+    use crate::Card;
     use crate::analysis::class::Class;
     use crate::arrays::three::Three;
     use crate::arrays::two::Two;
     use crate::util::data::TestData;
-    use crate::Card;
 
     #[test]
     fn sort() {

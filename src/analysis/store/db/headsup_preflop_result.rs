@@ -1,12 +1,12 @@
 use crate::analysis::store::db::sqlite::Sqlable;
-use crate::arrays::matchups::masked::{Masked, MASKED_DISTINCT};
+use crate::arrays::matchups::masked::{MASKED_DISTINCT, Masked};
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::bard::Bard;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::{PKError, Pile, Shifty, SuitShift};
 use csv::{Reader, WriterBuilder};
-use rusqlite::{named_params, Connection};
+use rusqlite::{Connection, named_params};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
@@ -153,11 +153,7 @@ impl HUPResult {
     /// Returns error if db contains duplicate entries..
     pub fn check_db(conn: &Connection) -> Result<usize, PKError> {
         let (v, hs) = HUPResult::db_count(conn);
-        if v == hs {
-            Ok(v)
-        } else {
-            Err(PKError::Duplicate)
-        }
+        if v == hs { Ok(v) } else { Err(PKError::Duplicate) }
     }
 
     pub fn select_from_shifts(conn: &Connection, masked: &Masked) -> Option<HUPResult> {
