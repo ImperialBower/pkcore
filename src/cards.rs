@@ -9,7 +9,7 @@ use indexmap::IndexSet;
 use indexmap::set::{IntoIter, Iter};
 use itertools::{Combinations, Itertools};
 use rand::prelude::SliceRandom;
-use rand::thread_rng;
+use rand::rng;
 use rayon::iter::{IterBridge, ParallelBridge};
 use std::collections::HashMap;
 use std::fmt;
@@ -335,7 +335,7 @@ impl Cards {
     }
 
     pub fn shuffle_in_place(&mut self) {
-        let mut rng = thread_rng();
+        let mut rng = rng();
         let mut vec: Vec<_> = self.0.drain(..).collect();
         vec.shuffle(&mut rng);
         self.0.extend(vec);
