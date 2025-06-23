@@ -3,7 +3,7 @@ use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::masked::Masked;
 use pkcore::util::csv::distinct_shus_from_csv_as_masked_vec;
 use pkcore::util::terminal::Terminal;
-use rand::prelude::SliceRandom;
+use rand::prelude::IndexedRandom;
 use rusqlite::Connection;
 
 /// `cargo run --example audit`
@@ -48,6 +48,6 @@ fn read_input(conn: &Connection, distinct: &Vec<Masked>) {
 }
 
 fn random(distinct: &Vec<Masked>) -> Option<&Masked> {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     distinct.choose(&mut rng)
 }

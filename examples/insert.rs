@@ -20,7 +20,7 @@ fn read_input(conn: &Connection, distinct: &mut HashSet<Masked>) {
     let i = Terminal::receive_usize("How many runs? ");
     println!("Processing {i} hands.");
 
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     while x < i {
         let Some(masked) = distinct.clone().into_iter().choose(&mut rng) else {

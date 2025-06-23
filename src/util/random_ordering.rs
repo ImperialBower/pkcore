@@ -1,8 +1,5 @@
 extern crate core;
-use rand::{
-    Rng,
-    distributions::{Distribution, Standard},
-};
+use rand::prelude::*;
 use std::cmp::Ordering;
 
 /// From: <https://github.com/bluss/indexmap/issues/171#issuecomment-786429977>
@@ -16,9 +13,9 @@ impl Into<Ordering> for RandomOrdering {
     }
 }
 
-impl Distribution<RandomOrdering> for Standard {
+impl Distribution<RandomOrdering> for rand::distr::StandardUniform {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> RandomOrdering {
-        RandomOrdering(match rng.gen_range(0..2) {
+        RandomOrdering(match rng.random_range(0..2) {
             0 => Ordering::Less,
             1 => Ordering::Equal,
             _ => Ordering::Greater,
