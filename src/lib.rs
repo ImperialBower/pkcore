@@ -39,6 +39,7 @@ pub mod games;
 mod lookups;
 pub mod play;
 pub mod rank;
+pub mod ranks;
 pub mod suit;
 pub mod util;
 
@@ -273,7 +274,7 @@ pub trait Pile {
         log::info!("Pile.enumerate_after(k: {k})");
         self.combinations_remaining(k).enumerate()
     }
-    
+
     fn get_rank_bits(&self) -> u32 {
         todo!()
     }

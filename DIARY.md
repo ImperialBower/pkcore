@@ -798,3 +798,6 @@ This is an outline of the work as it is done.
           * made Five internal array pub(crate) visible
           * impl Pile for OmahaHigh
           * OmahaHigh.is_valid
+      * FEATURE: Razz
+        * Add bit flag consts to rank
+        * 

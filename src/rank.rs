@@ -118,6 +118,62 @@ impl Rank {
             _ => 0,
         }
     }
+
+    // region rank bit flags
+    pub const RANK_BIT_FLAG_A: u16 = 0b1_0000_0000_0000;
+    pub const RANK_BIT_FLAG_K: u16 = 0b0_1000_0000_0000;
+    pub const RANK_BIT_FLAG_Q: u16 = 0b0_0100_0000_0000;
+    pub const RANK_BIT_FLAG_J: u16 = 0b0_0010_0000_0000;
+    pub const RANK_BIT_FLAG_T: u16 = 0b0_0001_0000_0000;
+    pub const RANK_BIT_FLAG_9: u16 = 0b0_0000_1000_0000;
+    pub const RANK_BIT_FLAG_8: u16 = 0b0_0000_0100_0000;
+    pub const RANK_BIT_FLAG_7: u16 = 0b0_0000_0010_0000;
+    pub const RANK_BIT_FLAG_6: u16 = 0b0_0000_0001_0000;
+    pub const RANK_BIT_FLAG_5: u16 = 0b0_0000_0000_1000;
+    pub const RANK_BIT_FLAG_4: u16 = 0b0_0000_0000_0100;
+    pub const RANK_BIT_FLAG_3: u16 = 0b0_0000_0000_0010;
+    pub const RANK_BIT_FLAG_2: u16 = 0b0_0000_0000_0001;
+
+    #[must_use]
+    pub fn from_rank_bit_flag(rank: u16) -> Rank {
+        match rank {
+            Rank::RANK_BIT_FLAG_A => Rank::ACE,
+            Rank::RANK_BIT_FLAG_K => Rank::KING,
+            Rank::RANK_BIT_FLAG_Q => Rank::QUEEN,
+            Rank::RANK_BIT_FLAG_J => Rank::JACK,
+            Rank::RANK_BIT_FLAG_T => Rank::TEN,
+            Rank::RANK_BIT_FLAG_9 => Rank::NINE,
+            Rank::RANK_BIT_FLAG_8 => Rank::EIGHT,
+            Rank::RANK_BIT_FLAG_7 => Rank::SEVEN,
+            Rank::RANK_BIT_FLAG_6 => Rank::SIX,
+            Rank::RANK_BIT_FLAG_5 => Rank::FIVE,
+            Rank::RANK_BIT_FLAG_4 => Rank::FOUR,
+            Rank::RANK_BIT_FLAG_3 => Rank::TREY,
+            Rank::RANK_BIT_FLAG_2 => Rank::DEUCE,
+            _ => Rank::BLANK,
+        }
+    }
+
+    #[must_use]
+    pub fn rank_bit_flag(&self) -> u16 {
+        match self {
+            Rank::ACE => Rank::RANK_BIT_FLAG_A,
+            Rank::KING => Rank::RANK_BIT_FLAG_K,
+            Rank::QUEEN => Rank::RANK_BIT_FLAG_Q,
+            Rank::JACK => Rank::RANK_BIT_FLAG_J,
+            Rank::TEN => Rank::RANK_BIT_FLAG_T,
+            Rank::NINE => Rank::RANK_BIT_FLAG_9,
+            Rank::EIGHT => Rank::RANK_BIT_FLAG_8,
+            Rank::SEVEN => Rank::RANK_BIT_FLAG_7,
+            Rank::SIX => Rank::RANK_BIT_FLAG_6,
+            Rank::FIVE => Rank::RANK_BIT_FLAG_5,
+            Rank::FOUR => Rank::RANK_BIT_FLAG_4,
+            Rank::TREY => Rank::RANK_BIT_FLAG_3,
+            Rank::DEUCE => Rank::RANK_BIT_FLAG_2,
+            Rank::BLANK => 0,
+        }
+    }
+    // endregion rank bit flags
 }
 
 impl fmt::Display for Rank {
@@ -198,6 +254,26 @@ mod rank_tests {
             // https://crates.io/crates/elr_primes#user-content-examples
             assert_eq!(i.next().unwrap().prime(), *p as u32);
         }
+    }
+
+    #[rstest]
+    #[case(Rank::ACE, Rank::RANK_BIT_FLAG_A)]
+    #[case(Rank::KING, Rank::RANK_BIT_FLAG_K)]
+    #[case(Rank::QUEEN, Rank::RANK_BIT_FLAG_Q)]
+    #[case(Rank::JACK, Rank::RANK_BIT_FLAG_J)]
+    #[case(Rank::TEN, Rank::RANK_BIT_FLAG_T)]
+    #[case(Rank::NINE, Rank::RANK_BIT_FLAG_9)]
+    #[case(Rank::EIGHT, Rank::RANK_BIT_FLAG_8)]
+    #[case(Rank::SEVEN, Rank::RANK_BIT_FLAG_7)]
+    #[case(Rank::SIX, Rank::RANK_BIT_FLAG_6)]
+    #[case(Rank::FIVE, Rank::RANK_BIT_FLAG_5)]
+    #[case(Rank::FOUR, Rank::RANK_BIT_FLAG_4)]
+    #[case(Rank::TREY, Rank::RANK_BIT_FLAG_3)]
+    #[case(Rank::DEUCE, Rank::RANK_BIT_FLAG_2)]
+    #[case(Rank::BLANK, 0)]
+    fn rank_bit_flag(#[case] rank: Rank, #[case] bit_flag: u16) {
+        assert_eq!(bit_flag, rank.rank_bit_flag());
+        assert_eq!(rank, Rank::from_rank_bit_flag(bit_flag));
     }
 
     #[rstest]
