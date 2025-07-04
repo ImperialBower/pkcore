@@ -273,6 +273,10 @@ pub trait Pile {
         log::info!("Pile.enumerate_after(k: {k})");
         self.combinations_remaining(k).enumerate()
     }
+    
+    fn get_rank_bits(&self) -> u32 {
+        todo!()
+    }
 
     fn how_many(&self, cards: &Cards) -> usize {
         cards.to_vec().iter().filter(|card| self.contains(card)).count()
