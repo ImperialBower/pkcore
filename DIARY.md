@@ -800,4 +800,7 @@ This is an outline of the work as it is done.
           * OmahaHigh.is_valid
       * FEATURE: Razz
         * Add bit flag consts to rank
-        * 
+        * Ranks struct to manage hand rank evals.
+          * Ranks::sum_or()
+          * Ranks::count_ones()
+        * Pile::ranks()

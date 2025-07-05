@@ -120,58 +120,78 @@ impl Rank {
     }
 
     // region rank bit flags
-    pub const RANK_BIT_FLAG_A: u16 = 0b1_0000_0000_0000;
-    pub const RANK_BIT_FLAG_K: u16 = 0b0_1000_0000_0000;
-    pub const RANK_BIT_FLAG_Q: u16 = 0b0_0100_0000_0000;
-    pub const RANK_BIT_FLAG_J: u16 = 0b0_0010_0000_0000;
-    pub const RANK_BIT_FLAG_T: u16 = 0b0_0001_0000_0000;
-    pub const RANK_BIT_FLAG_9: u16 = 0b0_0000_1000_0000;
-    pub const RANK_BIT_FLAG_8: u16 = 0b0_0000_0100_0000;
-    pub const RANK_BIT_FLAG_7: u16 = 0b0_0000_0010_0000;
-    pub const RANK_BIT_FLAG_6: u16 = 0b0_0000_0001_0000;
-    pub const RANK_BIT_FLAG_5: u16 = 0b0_0000_0000_1000;
-    pub const RANK_BIT_FLAG_4: u16 = 0b0_0000_0000_0100;
-    pub const RANK_BIT_FLAG_3: u16 = 0b0_0000_0000_0010;
-    pub const RANK_BIT_FLAG_2: u16 = 0b0_0000_0000_0001;
+    pub const LOW_RANK_BIT_FLAG_K: u16 = 0b1_0000_0000_0000;
+    pub const LOW_RANK_BIT_FLAG_Q: u16 = 0b0_1000_0000_0000;
+    pub const LOW_RANK_BIT_FLAG_J: u16 = 0b0_0100_0000_0000;
+    pub const LOW_RANK_BIT_FLAG_T: u16 = 0b0_0010_0000_0000;
+    pub const LOW_RANK_BIT_FLAG_9: u16 = 0b0_0001_0000_0000;
+    pub const LOW_RANK_BIT_FLAG_8: u16 = 0b0_0000_1000_0000;
+    pub const LOW_RANK_BIT_FLAG_7: u16 = 0b0_0000_0100_0000;
+    pub const LOW_RANK_BIT_FLAG_6: u16 = 0b0_0000_0010_0000;
+    pub const LOW_RANK_BIT_FLAG_5: u16 = 0b0_0000_0001_0000;
+    pub const LOW_RANK_BIT_FLAG_4: u16 = 0b0_0000_0000_1000;
+    pub const LOW_RANK_BIT_FLAG_3: u16 = 0b0_0000_0000_0100;
+    pub const LOW_RANK_BIT_FLAG_2: u16 = 0b0_0000_0000_0010;
+    pub const LOW_RANK_BIT_FLAG_A: u16 = 0b0_0000_0000_0001;
 
     #[must_use]
     pub fn from_rank_bit_flag(rank: u16) -> Rank {
         match rank {
-            Rank::RANK_BIT_FLAG_A => Rank::ACE,
-            Rank::RANK_BIT_FLAG_K => Rank::KING,
-            Rank::RANK_BIT_FLAG_Q => Rank::QUEEN,
-            Rank::RANK_BIT_FLAG_J => Rank::JACK,
-            Rank::RANK_BIT_FLAG_T => Rank::TEN,
-            Rank::RANK_BIT_FLAG_9 => Rank::NINE,
-            Rank::RANK_BIT_FLAG_8 => Rank::EIGHT,
-            Rank::RANK_BIT_FLAG_7 => Rank::SEVEN,
-            Rank::RANK_BIT_FLAG_6 => Rank::SIX,
-            Rank::RANK_BIT_FLAG_5 => Rank::FIVE,
-            Rank::RANK_BIT_FLAG_4 => Rank::FOUR,
-            Rank::RANK_BIT_FLAG_3 => Rank::TREY,
-            Rank::RANK_BIT_FLAG_2 => Rank::DEUCE,
+            Rank::LOW_RANK_BIT_FLAG_A => Rank::ACE,
+            Rank::LOW_RANK_BIT_FLAG_K => Rank::KING,
+            Rank::LOW_RANK_BIT_FLAG_Q => Rank::QUEEN,
+            Rank::LOW_RANK_BIT_FLAG_J => Rank::JACK,
+            Rank::LOW_RANK_BIT_FLAG_T => Rank::TEN,
+            Rank::LOW_RANK_BIT_FLAG_9 => Rank::NINE,
+            Rank::LOW_RANK_BIT_FLAG_8 => Rank::EIGHT,
+            Rank::LOW_RANK_BIT_FLAG_7 => Rank::SEVEN,
+            Rank::LOW_RANK_BIT_FLAG_6 => Rank::SIX,
+            Rank::LOW_RANK_BIT_FLAG_5 => Rank::FIVE,
+            Rank::LOW_RANK_BIT_FLAG_4 => Rank::FOUR,
+            Rank::LOW_RANK_BIT_FLAG_3 => Rank::TREY,
+            Rank::LOW_RANK_BIT_FLAG_2 => Rank::DEUCE,
             _ => Rank::BLANK,
         }
     }
 
     #[must_use]
+    pub fn is_blank(&self) -> bool {
+        self == &Rank::BLANK
+    }
+
+    #[must_use]
     pub fn rank_bit_flag(&self) -> u16 {
         match self {
-            Rank::ACE => Rank::RANK_BIT_FLAG_A,
-            Rank::KING => Rank::RANK_BIT_FLAG_K,
-            Rank::QUEEN => Rank::RANK_BIT_FLAG_Q,
-            Rank::JACK => Rank::RANK_BIT_FLAG_J,
-            Rank::TEN => Rank::RANK_BIT_FLAG_T,
-            Rank::NINE => Rank::RANK_BIT_FLAG_9,
-            Rank::EIGHT => Rank::RANK_BIT_FLAG_8,
-            Rank::SEVEN => Rank::RANK_BIT_FLAG_7,
-            Rank::SIX => Rank::RANK_BIT_FLAG_6,
-            Rank::FIVE => Rank::RANK_BIT_FLAG_5,
-            Rank::FOUR => Rank::RANK_BIT_FLAG_4,
-            Rank::TREY => Rank::RANK_BIT_FLAG_3,
-            Rank::DEUCE => Rank::RANK_BIT_FLAG_2,
+            Rank::ACE => Rank::LOW_RANK_BIT_FLAG_A,
+            Rank::KING => Rank::LOW_RANK_BIT_FLAG_K,
+            Rank::QUEEN => Rank::LOW_RANK_BIT_FLAG_Q,
+            Rank::JACK => Rank::LOW_RANK_BIT_FLAG_J,
+            Rank::TEN => Rank::LOW_RANK_BIT_FLAG_T,
+            Rank::NINE => Rank::LOW_RANK_BIT_FLAG_9,
+            Rank::EIGHT => Rank::LOW_RANK_BIT_FLAG_8,
+            Rank::SEVEN => Rank::LOW_RANK_BIT_FLAG_7,
+            Rank::SIX => Rank::LOW_RANK_BIT_FLAG_6,
+            Rank::FIVE => Rank::LOW_RANK_BIT_FLAG_5,
+            Rank::FOUR => Rank::LOW_RANK_BIT_FLAG_4,
+            Rank::TREY => Rank::LOW_RANK_BIT_FLAG_3,
+            Rank::DEUCE => Rank::LOW_RANK_BIT_FLAG_2,
             Rank::BLANK => 0,
         }
+    }
+
+    #[must_use]
+    pub fn rank_bit_flags_pretty_format(bits: u16) -> String {
+        let bin = format!("{bits:13}");
+        bin.chars()
+            .rev()
+            .collect::<Vec<_>>()
+            .chunks(4)
+            .map(|chunk| chunk.iter().collect::<String>())
+            .collect::<Vec<_>>()
+            .join("_")
+            .chars()
+            .rev()
+            .collect()
     }
     // endregion rank bit flags
 }
@@ -257,19 +277,19 @@ mod rank_tests {
     }
 
     #[rstest]
-    #[case(Rank::ACE, Rank::RANK_BIT_FLAG_A)]
-    #[case(Rank::KING, Rank::RANK_BIT_FLAG_K)]
-    #[case(Rank::QUEEN, Rank::RANK_BIT_FLAG_Q)]
-    #[case(Rank::JACK, Rank::RANK_BIT_FLAG_J)]
-    #[case(Rank::TEN, Rank::RANK_BIT_FLAG_T)]
-    #[case(Rank::NINE, Rank::RANK_BIT_FLAG_9)]
-    #[case(Rank::EIGHT, Rank::RANK_BIT_FLAG_8)]
-    #[case(Rank::SEVEN, Rank::RANK_BIT_FLAG_7)]
-    #[case(Rank::SIX, Rank::RANK_BIT_FLAG_6)]
-    #[case(Rank::FIVE, Rank::RANK_BIT_FLAG_5)]
-    #[case(Rank::FOUR, Rank::RANK_BIT_FLAG_4)]
-    #[case(Rank::TREY, Rank::RANK_BIT_FLAG_3)]
-    #[case(Rank::DEUCE, Rank::RANK_BIT_FLAG_2)]
+    #[case(Rank::ACE, Rank::LOW_RANK_BIT_FLAG_A)]
+    #[case(Rank::KING, Rank::LOW_RANK_BIT_FLAG_K)]
+    #[case(Rank::QUEEN, Rank::LOW_RANK_BIT_FLAG_Q)]
+    #[case(Rank::JACK, Rank::LOW_RANK_BIT_FLAG_J)]
+    #[case(Rank::TEN, Rank::LOW_RANK_BIT_FLAG_T)]
+    #[case(Rank::NINE, Rank::LOW_RANK_BIT_FLAG_9)]
+    #[case(Rank::EIGHT, Rank::LOW_RANK_BIT_FLAG_8)]
+    #[case(Rank::SEVEN, Rank::LOW_RANK_BIT_FLAG_7)]
+    #[case(Rank::SIX, Rank::LOW_RANK_BIT_FLAG_6)]
+    #[case(Rank::FIVE, Rank::LOW_RANK_BIT_FLAG_5)]
+    #[case(Rank::FOUR, Rank::LOW_RANK_BIT_FLAG_4)]
+    #[case(Rank::TREY, Rank::LOW_RANK_BIT_FLAG_3)]
+    #[case(Rank::DEUCE, Rank::LOW_RANK_BIT_FLAG_2)]
     #[case(Rank::BLANK, 0)]
     fn rank_bit_flag(#[case] rank: Rank, #[case] bit_flag: u16) {
         assert_eq!(bit_flag, rank.rank_bit_flag());

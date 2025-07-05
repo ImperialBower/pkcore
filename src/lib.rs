@@ -23,6 +23,8 @@ use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 
 use crate::casino::cashier::chips::Chips;
+use crate::rank::Rank;
+use crate::ranks::Ranks;
 use crate::suit::Suit;
 use rayon::iter::IterBridge;
 use std::iter::Enumerate;
@@ -107,6 +109,7 @@ pub enum PKError {
     InvalidPermutationIndex,
     InvalidPluribusIndex,
     InvalidPosition,
+    InvalidRankIndex,
     NoLow,
     NotDealt,
     NotEnoughCards,
@@ -139,6 +142,7 @@ impl Display for PKError {
             PKError::InvalidPermutationIndex => "Invalid Permutation Index Error",
             PKError::InvalidPluribusIndex => "Invalid Pluribus Index Error",
             PKError::InvalidPosition => "Invalid Position Error",
+            PKError::InvalidRankIndex => "Invalid Rank Index Error",
             PKError::NoLow => "No low hand possible Error",
             PKError::NotDealt => "Not Dealt Error",
             PKError::NotEnoughCards => "Not Enough Cards Error",
@@ -322,11 +326,13 @@ pub trait Pile {
         Cards::deck_minus(&held)
     }
 
+    /// Returns the `Ranks` vector struct for the `Pile`.
+    fn ranks(&self) -> Ranks {
+        Ranks::from(self.to_vec().iter().map(Card::get_rank).collect::<Vec<Rank>>())
+    }
+
     fn suits(&self) -> HashSet<Suit> {
-        self.to_vec()
-            .iter()
-            .map(card::Card::get_suit)
-            .collect::<HashSet<Suit>>()
+        self.to_vec().iter().map(Card::get_suit).collect::<HashSet<Suit>>()
     }
 
     fn the_nuts(&self) -> TheNuts;
