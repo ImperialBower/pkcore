@@ -18,6 +18,10 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::str::FromStr;
 use strum::IntoEnumIterator;
 
+pub static FIVE_CARD_COMBOS: std::sync::LazyLock<Combinations<IntoIter<Card>>>  = std::sync::LazyLock::new(|| {
+    Cards::deck().combinations(5)
+});
+
 /// What are the contracts for Cards?
 ///
 /// 1. Cards should be saved in order.
@@ -145,7 +149,7 @@ impl Cards {
     ///     result
     /// }
     /// ```
-    pub fn combinations(&self, k: usize) -> Combinations<indexmap::set::IntoIter<Card>> {
+    pub fn combinations(&self, k: usize) -> Combinations<IntoIter<Card>> {
         self.0.clone().into_iter().combinations(k)
     }
 
@@ -768,7 +772,7 @@ mod card_tests {
     #[test]
     fn combinations() {
         assert_eq!(1_326, Cards::deck().combinations(2).count());
-        assert_eq!(2_598_960, Cards::deck().combinations(5).count());
+        assert_eq!(2_598_960, FIVE_CARD_COMBOS.clone().count());
     }
 
     #[test]

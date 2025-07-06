@@ -3,6 +3,7 @@
     clippy::unreadable_literal,
     clippy::iter_without_into_iter,
     clippy::should_implement_trait,
+    clippy::upper_case_acronyms,
     // macro_expanded_macro_exports_accessed_by_absolute_paths,
 )]
 
@@ -279,8 +280,8 @@ pub trait Pile {
         self.combinations_remaining(k).enumerate()
     }
 
-    fn get_rank_bits(&self) -> u32 {
-        todo!()
+    fn get_rank_bits(&self) -> u16 {
+        self.ranks().sum_or()
     }
 
     fn how_many(&self, cards: &Cards) -> usize {

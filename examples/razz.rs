@@ -32,6 +32,8 @@ fn main() {
         let ranks = Ranks::from_str(display.join(" ").as_str()).unwrap();
         let sum = ranks.sum_or();
 
-        println!("LOW_{} = 0b{:013b} {}", display.join(""), sum, sum);
+        // println!("LOW_{} = 0b{:013b} {}", display.join(""), sum, sum);
+        // println!("LOW_{} = 0b{:013b},", display.join(""), sum);
+        println!("0b{:013b} => RazzHandRank::LOW_{},", sum, display.join(""));
     }
 }
