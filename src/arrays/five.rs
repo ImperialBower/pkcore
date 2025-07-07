@@ -2474,6 +2474,13 @@ mod arrays__five_tests {
         assert_eq!(expected_name, hand_rank.name);
         assert_eq!(expected_class, hand_rank.class);
     }
+
+    #[test]
+    fn find_in_products() {
+        let hand = Five::from_str("8D 7C 6S 3D 2H").unwrap();
+        let hand_rank = hand.hand_rank();
+
+    }
     //endregion
 
     #[test]
