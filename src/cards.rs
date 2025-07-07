@@ -18,9 +18,8 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::str::FromStr;
 use strum::IntoEnumIterator;
 
-pub static FIVE_CARD_COMBOS: std::sync::LazyLock<Combinations<IntoIter<Card>>>  = std::sync::LazyLock::new(|| {
-    Cards::deck().combinations(5)
-});
+pub static FIVE_CARD_COMBOS: std::sync::LazyLock<Combinations<IntoIter<Card>>> =
+    std::sync::LazyLock::new(|| Cards::deck().combinations(5));
 
 /// What are the contracts for Cards?
 ///
@@ -725,6 +724,7 @@ impl TryFrom<Card> for Cards {
 #[allow(non_snake_case)]
 mod card_tests {
     use super::*;
+    use crate::arrays::five::Five;
 
     #[test]
     fn deck() {
@@ -772,8 +772,18 @@ mod card_tests {
     #[test]
     fn combinations() {
         assert_eq!(1_326, Cards::deck().combinations(2).count());
-        assert_eq!(2_598_960, FIVE_CARD_COMBOS.clone().count());
+        assert_eq!(2_598_960, Cards::deck().combinations(5).count());
     }
+
+    // #[test]
+    // fn combos() {
+    //     let all = FIVE_CARD_COMBOS.clone();
+    //
+    //     let flushes = FIVE_CARD_COMBOS
+    //         .clone()
+    //         .filter(|combo| Five::is_flush(combo))
+    //         .collect::<Vec<_>>();
+    // }
 
     #[test]
     fn draw() {

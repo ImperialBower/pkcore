@@ -1,3 +1,5 @@
+mod hands;
+
 use crate::analysis::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
 use crate::arrays::HandRanker;
 use crate::arrays::three::Three;
