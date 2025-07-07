@@ -15,6 +15,7 @@ impl From<Vec<Five>> for Hands {
     }
 }
 
+/// Iterator that takes over ownership of each `Five`.
 impl IntoIterator for Hands {
     type Item = Five;
     type IntoIter = std::vec::IntoIter<Self::Item>;
@@ -23,11 +24,29 @@ impl IntoIterator for Hands {
     }
 }
 
+impl<'a> IntoIterator for &'a Hands {
+    type Item = &'a Five;
+    type IntoIter = std::slice::Iter<'a, Five>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+impl FromIterator<Five> for Hands {
+    fn from_iter<T: IntoIterator<Item = Five>>(iter: T) -> Self {
+        let mut v = Vec::new();
+        for i in iter {
+            v.push(i);
+        }
+        Hands::from(v)
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod arrays__five__hands_tests {
-    use crate::card::Card;
     use super::*;
+    use crate::card::Card;
 
     const ROYAL_FLUSH: [Card; 5] = [
         Card::ACE_DIAMONDS,
@@ -45,10 +64,39 @@ mod arrays__five__hands_tests {
         Card::FIVE_SPADES,
     ];
 
+    fn my_hands() -> Hands {
+        let hands: Vec<Five> = vec![Five::from(ROYAL_FLUSH), Five::from(WHEEL)];
+        Hands::from(hands)
+    }
+
     #[test]
     fn get() {
-        let hands: Vec<Five> = vec![Five::from(ROYAL_FLUSH), Five::from(WHEEL)];
+        assert_eq!(&Five::from(WHEEL), my_hands().get(1).unwrap());
+    }
 
-        assert_eq!(&Five::from(WHEEL), hands.get(1).unwrap());
+    #[test]
+    fn from__vec() {
+        let my_hands = my_hands();
+        assert_eq!(my_hands.get(0).unwrap(), &Five::from(ROYAL_FLUSH));
+        assert_eq!(my_hands.get(1).unwrap(), &Five::from(WHEEL));
+        assert_eq!(my_hands.get(2), None);
+    }
+
+    #[test]
+    fn into_iter() {
+        let mut iter = my_hands().into_iter();
+        assert_eq!(iter.next().unwrap(), Five::from(ROYAL_FLUSH));
+        assert_eq!(iter.next().unwrap(), Five::from(WHEEL));
+        assert!(iter.next().is_none());
+    }
+
+    #[test]
+    fn into_iter__ref() {
+        let hands = my_hands();
+        let mut iter = hands.into_iter();
+        assert_eq!(&iter.next().unwrap(), &Five::from(ROYAL_FLUSH));
+        assert_eq!(&iter.next().unwrap(), &Five::from(WHEEL));
+        assert!(&iter.next().is_none());
+        // assert_eq!(hands, my_hands());
     }
 }

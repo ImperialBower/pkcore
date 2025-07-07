@@ -724,7 +724,6 @@ impl TryFrom<Card> for Cards {
 #[allow(non_snake_case)]
 mod card_tests {
     use super::*;
-    use crate::arrays::five::Five;
 
     #[test]
     fn deck() {
