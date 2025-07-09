@@ -1,4 +1,4 @@
-mod hand_rank;
+pub mod low_a5_hand_rank;
 
 pub struct Razz;
 

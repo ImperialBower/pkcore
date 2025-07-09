@@ -100,7 +100,7 @@ impl Five {
     //region private functions
 
     #[must_use]
-    fn and_bits(&self) -> u32 {
+    pub fn and_bits(&self) -> u32 {
         self.first().as_u32()
             & self.second().as_u32()
             & self.third().as_u32()
@@ -110,7 +110,7 @@ impl Five {
 
     #[must_use]
     #[allow(clippy::comparison_chain)]
-    fn find_in_products(&self) -> usize {
+    pub fn find_in_products(&self) -> usize {
         let key = self.multiply_primes();
 
         let mut low = 0;
@@ -133,7 +133,7 @@ impl Five {
     }
 
     #[must_use]
-    fn multiply_primes(&self) -> usize {
+    pub fn multiply_primes(&self) -> usize {
         (self.first().get_rank_prime()
             * self.second().get_rank_prime()
             * self.third().get_rank_prime()
@@ -141,12 +141,12 @@ impl Five {
             * self.fifth().get_rank_prime()) as usize
     }
 
-    fn not_unique(&self) -> u16 {
+    pub fn not_unique(&self) -> u16 {
         crate::lookups::values::VALUES[self.find_in_products()]
     }
 
     #[must_use]
-    fn or_bits(&self) -> u32 {
+    pub fn or_bits(&self) -> u32 {
         self.first().as_u32()
             | self.second().as_u32()
             | self.third().as_u32()
@@ -155,12 +155,12 @@ impl Five {
     }
 
     #[must_use]
-    fn or_rank_bits(&self) -> u32 {
+    pub fn or_rank_bits(&self) -> u32 {
         self.or_bits() >> Card::RANK_FLAG_SHIFT
     }
 
     #[allow(clippy::cast_possible_truncation)]
-    fn unique_rank(index: usize) -> HandRankValue {
+    pub fn unique_rank(index: usize) -> HandRankValue {
         if index > Five::POSSIBLE_COMBINATIONS {
             return Card::BLANK_NUMBER as HandRankValue;
         }
@@ -239,6 +239,7 @@ impl HandRanker for Five {
     }
 
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
+        println!("boop!");
         if self.is_dealt() {
             let i = self.or_rank_bits() as usize;
             let rank: u16 = if self.is_flush() {
