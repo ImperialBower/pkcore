@@ -4,8 +4,13 @@ use crate::arrays::five::Five;
 pub struct Hands(Vec<Five>);
 
 impl Hands {
+    #[must_use]
     pub fn get(&self, index: usize) -> Option<&Five> {
         self.0.get(index)
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<Five> {
+        <&Self as IntoIterator>::into_iter(self)
     }
 }
 

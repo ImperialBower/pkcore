@@ -141,6 +141,7 @@ impl Five {
             * self.fifth().get_rank_prime()) as usize
     }
 
+    #[must_use]
     pub fn not_unique(&self) -> u16 {
         crate::lookups::values::VALUES[self.find_in_products()]
     }
@@ -160,6 +161,7 @@ impl Five {
     }
 
     #[allow(clippy::cast_possible_truncation)]
+    #[must_use]
     pub fn unique_rank(index: usize) -> HandRankValue {
         if index > Five::POSSIBLE_COMBINATIONS {
             return Card::BLANK_NUMBER as HandRankValue;
@@ -239,7 +241,6 @@ impl HandRanker for Five {
     }
 
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
-        println!("boop!");
         if self.is_dealt() {
             let i = self.or_rank_bits() as usize;
             let rank: u16 = if self.is_flush() {
@@ -2480,7 +2481,6 @@ mod arrays__five_tests {
     fn find_in_products() {
         let hand = Five::from_str("8D 7C 6S 3D 2H").unwrap();
         let hand_rank = hand.hand_rank();
-
     }
     //endregion
 

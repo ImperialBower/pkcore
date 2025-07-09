@@ -1,4 +1,4 @@
-pub mod low_a5_hand_rank;
+pub mod california;
 
 pub struct Razz;
 
