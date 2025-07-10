@@ -1,19 +1,4 @@
-     3,729  # possible equiv classes for 8-card hands, choosing best five     4,824  # possible equiv classes for 7-card hands, choosing best five
-     6,075  # possible equiv classes for 6-card hands, choosing best five
-     7,462  # possible equiv classes for 5-card hands
 
-
-
-6185    384       0        0         0   2 2 5 4 3   1P   Pair of Deuces
-6184    384       0        0         0   2 2 6 4 3   1P   Pair of Deuces
-6183    384       0        0         0   2 2 6 5 3   1P   Pair of Deuces
-6182    384       0        0         0   2 2 6 5 4   1P   Pair of Deuces
-6181    384       0        0         0   2 2 7 4 3   1P   Pair of Deuces
-6180    384       0        0         0   2 2 7 5 3   1P   Pair of Deuces
-6179    384    1524        0         0   2 2 7 5 4   1P   Pair of Deuces
-6178    384       0        0         0   2 2 7 6 3   1P   Pair of Deuces
-6177    384    1524        0         0   2 2 7 6 4   1P   Pair of Deuces
-6176    384    3048        0         0   2 2 7 6 5   1P   Pair of Deuces
 6175    384       0        0         0   2 2 8 4 3   1P   Pair of Deuces
 6174    384       0        0         0   2 2 8 5 3   1P   Pair of Deuces
 6173    384    1524        0         0   2 2 8 5 4   1P   Pair of Deuces

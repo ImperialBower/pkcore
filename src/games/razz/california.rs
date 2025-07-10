@@ -1,12 +1,15 @@
 use crate::Pile;
 use crate::arrays::five::Five;
 use strum::EnumIter;
+use crate::analysis::hand_rank::HandRankValue;
 
 pub type CaliforniaHandRankValue = u16;
 
 #[derive(Clone, Copy, Debug, Default, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[allow(non_camel_case_types)]
 pub enum CaliforniaHandRank {
+    #[default]
+    Unknown,
     WHEEL,
     LOW_A2346,
     LOW_A2347,
@@ -1294,30 +1297,26 @@ pub enum CaliforniaHandRank {
     LOW_89JQK,
     LOW_8TJQK,
     LOW_9TJQK,
-    PAIR_22345,
-    PAIR_22346,
-    PAIR_22356,
-
-    #[default]
-    Unknown,
+    PAIR_22543,
+    PAIR_22643,
+    PAIR_22653,
+    PAIR_22654,
+    PAIR_22743,
+    PAIR_22753,
+    PAIR_22754,
+    PAIR_22763,
+    PAIR_22764,
+    PAIR_22765,
+    PAIR_22843,
+    PAIR_22853,
+    PAIR_22854,
+    PAIR_22863,
 }
 
 impl CaliforniaHandRank {
     #[must_use]
-    pub fn is_unknown(&self) -> bool {
-        matches!(self, CaliforniaHandRank::Unknown)
-    }
-
-    #[must_use]
-    pub fn get_hand_rank(&self) -> usize {
-        if self.is_unknown() { 0 } else { *self as usize + 1 }
-    }
-}
-
-impl From<CaliforniaHandRankValue> for CaliforniaHandRank {
-    #[allow(clippy::too_many_lines)]
-    fn from(value: CaliforniaHandRankValue) -> Self {
-        match value {
+    pub fn get_hand_rank_from_rank_bit_flags(rank_bit_flags: u16) -> CaliforniaHandRank {
+        match rank_bit_flags {
             0b1000000001111 => CaliforniaHandRank::WHEEL,
             0b1000000010111 => CaliforniaHandRank::LOW_A2346,
             0b1000000100111 => CaliforniaHandRank::LOW_A2347,
@@ -2609,6 +2608,23 @@ impl From<CaliforniaHandRankValue> for CaliforniaHandRank {
             _ => CaliforniaHandRank::Unknown,
         }
     }
+
+    #[must_use]
+    pub fn is_unknown(&self) -> bool {
+        matches!(self, CaliforniaHandRank::Unknown)
+    }
+
+    #[must_use]
+    pub fn get_hand_rank(&self) -> CaliforniaHandRankValue {
+        if self.is_unknown() { 0 } else { *self as CaliforniaHandRankValue }
+    }
+}
+
+impl From<CaliforniaHandRankValue> for CaliforniaHandRank {
+    #[allow(clippy::too_many_lines)]
+    fn from(value: CaliforniaHandRankValue) -> Self {
+        todo!()
+    }
 }
 
 /// DIARY: All of this feels hacky as heck, but I want to see that it's at least possible.
@@ -2616,7 +2632,28 @@ impl From<CaliforniaHandRankValue> for CaliforniaHandRank {
 impl From<Five> for CaliforniaHandRank {
     fn from(five: Five) -> Self {
         let rankflags: CaliforniaHandRankValue = five.get_rank_bits();
-        CaliforniaHandRank::from(rankflags)
+        let hr = CaliforniaHandRank::get_hand_rank_from_rank_bit_flags(rankflags);
+        if !hr.is_unknown() {
+            return hr;
+        }
+        match five.multiply_primes() {
+            420 => CaliforniaHandRank::PAIR_22543,
+            660 => CaliforniaHandRank::PAIR_22643,
+            924 => CaliforniaHandRank::PAIR_22653,
+            1540 => CaliforniaHandRank::PAIR_22654,
+            780 => CaliforniaHandRank::PAIR_22743,
+            1092 => CaliforniaHandRank::PAIR_22753,
+            1820 => CaliforniaHandRank::PAIR_22754,
+            1716 => CaliforniaHandRank::PAIR_22763,
+            2860 => CaliforniaHandRank::PAIR_22764,
+            4004 => CaliforniaHandRank::PAIR_22765,
+            1020 => CaliforniaHandRank::PAIR_22843,
+            1428 => CaliforniaHandRank::PAIR_22853,
+            2380 => CaliforniaHandRank::PAIR_22854,
+            2244 => CaliforniaHandRank::PAIR_22863,
+            _ => CaliforniaHandRank::Unknown,
+        }
+
     }
 }
 
