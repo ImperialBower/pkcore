@@ -1,7 +1,11 @@
 use crate::arrays::five::Five;
 use crate::arrays::HandRanker;
 use crate::deck::POKER_DECK;
+use std::fs::read_to_string;
+use std::str::FromStr;
 
+/// The big difference between this and `FIVE_CARD_COMBOS` is that the hands are sorted
+/// to be frequency weighted and collected into the `Five` struct.
 pub static DISTINCT_HANDS: std::sync::LazyLock<Hands> = std::sync::LazyLock::new(|| {
     let combos = POKER_DECK.combinations(5);
 
@@ -14,6 +18,24 @@ pub static DISTINCT_HANDS: std::sync::LazyLock<Hands> = std::sync::LazyLock::new
     Hands::from(hands)
 });
 
+pub static UNIQUE_HANDS: std::sync::LazyLock<Hands> = std::sync::LazyLock::new(|| {
+    let mut hands: Vec<Five> = Vec::new();
+
+    for line in read_to_string("generated/5card_distinct_hands.txt").unwrap().lines() {
+
+        if line.is_empty() {
+            continue; // Skip empty lines
+        }
+
+        let hand = Five::from_str(line).unwrap();
+        hands.push(hand);
+    }
+
+
+    Hands::from(hands)
+});
+
+
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Hands(Vec<Five>);
 
@@ -25,6 +47,10 @@ impl Hands {
 
     pub fn iter(&self) -> std::slice::Iter<Five> {
         <&Self as IntoIterator>::into_iter(self)
+    }
+
+    pub fn push(&mut self, hand: Five) {
+        self.0.push(hand);
     }
 }
 

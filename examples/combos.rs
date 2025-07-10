@@ -1,23 +1,21 @@
-use pkcore::arrays::five::Five;
-use pkcore::arrays::five::hands::DISTINCT_HANDS;
-use pkcore::arrays::HandRanker;
-use pkcore::arrays::two::Two;
-use pkcore::deck::POKER_DECK;
+use pkcore::arrays::five::hands::UNIQUE_HANDS;
+use pkcore::games::razz::california::CaliforniaHandRank;
+use pkcore::Pile;
 
 fn main() {
-    for hand in DISTINCT_HANDS.iter() {
-        println!("{hand}");
-    }
-}
+    for hand in UNIQUE_HANDS.iter() {
 
+        let hr = CaliforniaHandRank::get_hand_rank_from_rank_bit_flags(hand.get_rank_bits());
 
+        if hr != CaliforniaHandRank::Unknown {
+            continue; // Skip unknown hands
+        }
 
-fn _twos() {
-    let combos = POKER_DECK.combinations(2);
+        let index = hand.ranks_index();
 
-    let twos: Vec<Two> = combos.map(|c| Two::from(c)).collect();
+        let hr = hand.multiply_primes();
 
-    for combo in twos {
-        println!("{}", combo);
+        // println!("{hr} => CaliforniaHandRank::HIGH_{},", index);
+        println!("#[case(\"{hand}\", CaliforniaHandRank::HIGH_{index}, {hr})]");
     }
 }
