@@ -195,37 +195,6 @@ impl From<Board> for Five {
     }
 }
 
-// impl From<Vec<Card>> for Five {
-//     fn from(v: Vec<Card>) -> Self {
-//         match v.len() {
-//             5 => {
-//                 let one = match v.get(0) {
-//                     Some(m) => *m,
-//                     None => Card::BLANK,
-//                 };
-//                 let two = match v.get(1) {
-//                     Some(m) => *m,
-//                     None => Card::BLANK,
-//                 };
-//                 let three = match v.get(2) {
-//                     Some(m) => *m,
-//                     None => Card::BLANK,
-//                 };
-//                 let four = match v.get(3) {
-//                     Some(m) => *m,
-//                     None => Card::BLANK,
-//                 };
-//                 let five = match v.get(4) {
-//                     Some(m) => *m,
-//                     None => Card::BLANK,
-//                 };
-//                 Five::from([one, two, three, four, five])
-//             }
-//             _ => Five::default(),
-//         }
-//     }
-// }
-
 impl FromStr for Five {
     type Err = PKError;
 
@@ -2534,5 +2503,52 @@ mod arrays__five_tests {
 
         assert!(sut.is_err());
         assert_eq!(sut.unwrap_err(), PKError::TooManyCards);
+    }
+
+    // Weightest tests
+
+    #[test]
+    fn weighted__pair() {
+        let hand = Five::try_from(Five::from_str("2♠ 2♦ 7♣ 6♠ 3♠").unwrap().cards().shuffle())
+            .unwrap()
+            .sort();
+        println!("Weighted Pair: {}", hand);
+        assert_eq!(hand.to_string(), "2♠ 2♦ 7♣ 6♠ 3♠");
+    }
+
+    #[test]
+    fn weighted__two_pair() {
+        let hand = Five::try_from(Five::from_str("2♠ 2♦ 7♣ 7♠ 3♠").unwrap().cards().shuffle())
+            .unwrap()
+            .sort();
+        println!("Weighted Two Pair: {}", hand);
+        assert_eq!(hand.to_string(), "7♠ 7♣ 2♠ 2♦ 3♠");
+    }
+
+    #[test]
+    fn weighted__trips() {
+        let hand = Five::try_from(Five::from_str("2♠ 2♦ 2♣ 6♠ 3♠").unwrap().cards().shuffle())
+            .unwrap()
+            .sort();
+        println!("Weighted Trips: {}", hand);
+        assert_eq!(hand.to_string(), "2♠ 2♦ 2♣ 6♠ 3♠");
+    }
+
+    #[test]
+    fn weighted__full() {
+        let hand = Five::try_from(Five::from_str("2♠ 2♦ 2♣ 6♠ 6♦").unwrap().cards().shuffle())
+            .unwrap()
+            .sort();
+        println!("Weighted Full House: {}", hand);
+        assert_eq!(hand.to_string(), "2♠ 2♦ 2♣ 6♠ 6♦");
+    }
+
+    #[test]
+    fn weighted__quads() {
+        let hand = Five::try_from(Five::from_str("2♠ 2♦ 2♣ 2♥ 6♦").unwrap().cards().shuffle())
+            .unwrap()
+            .sort();
+        println!("Weighted Quads: {}", hand);
+        assert_eq!(hand.to_string(), "2♠ 2♥ 2♦ 2♣ 6♦");
     }
 }

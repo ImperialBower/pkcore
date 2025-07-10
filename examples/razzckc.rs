@@ -12,10 +12,7 @@ fn main() {
 #[allow(non_snake_case)]
 mod tests {
     use super::*;
-    use pkcore::analysis::class::Class;
-    use pkcore::analysis::hand_rank::HandRankValue;
-    use pkcore::analysis::name::Name;
-    use pkcore::games::razz::california::{CaliforniaHandRank, CaliforniaHandRankValue};
+    use pkcore::games::razz::california::CaliforniaHandRank;
     use rstest::rstest;
 
     fn get_wheel() -> Five {

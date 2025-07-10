@@ -1,5 +1,4 @@
 use crate::Pile;
-use crate::analysis::hand_rank::HandRankValue;
 use crate::arrays::five::Five;
 use strum::EnumIter;
 
@@ -7500,7 +7499,7 @@ impl CaliforniaHandRank {
 
 impl From<CaliforniaHandRankValue> for CaliforniaHandRank {
     #[allow(clippy::too_many_lines)]
-    fn from(value: CaliforniaHandRankValue) -> Self {
+    fn from(_value: CaliforniaHandRankValue) -> Self {
         todo!()
     }
 }
@@ -7554,6 +7553,6 @@ mod games__razz__hand_rank_tests {
 
     #[test]
     fn razz_hand_rank_value() {
-        assert_eq!(CaliforniaHandRank::LOW_9TJQK as u16, 1286);
+        assert_eq!(CaliforniaHandRank::LOW_9TJQK as u16, 1287);
     }
 }

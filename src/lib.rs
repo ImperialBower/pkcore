@@ -332,6 +332,10 @@ pub trait Pile {
         Ranks::from(self.to_vec().iter().map(Card::get_rank).collect::<Vec<Rank>>())
     }
 
+    fn ranks_index(&self) -> String {
+        todo!()
+    }
+
     fn suits(&self) -> HashSet<Suit> {
         self.to_vec().iter().map(Card::get_suit).collect::<HashSet<Suit>>()
     }
