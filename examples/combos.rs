@@ -1,22 +1,16 @@
 use pkcore::arrays::five::Five;
+use pkcore::arrays::five::hands::DISTINCT_HANDS;
 use pkcore::arrays::HandRanker;
 use pkcore::arrays::two::Two;
 use pkcore::deck::POKER_DECK;
 
 fn main() {
-
-
+    for hand in DISTINCT_HANDS.iter() {
+        println!("{hand}");
+    }
 }
 
-fn hands() -> Vec<Five> {
-    let combos = POKER_DECK.combinations(5);
 
-    let hands: Vec<Five> = combos.map(|c| {
-        Five::try_from(c).unwrap().sort()
-    }).collect();
-
-    hands
-}
 
 fn _twos() {
     let combos = POKER_DECK.combinations(2);

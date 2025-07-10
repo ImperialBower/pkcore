@@ -1,4 +1,18 @@
 use crate::arrays::five::Five;
+use crate::arrays::HandRanker;
+use crate::deck::POKER_DECK;
+
+pub static DISTINCT_HANDS: std::sync::LazyLock<Hands> = std::sync::LazyLock::new(|| {
+    let combos = POKER_DECK.combinations(5);
+
+    let mut hands: Vec<Five> = combos.map(|c| {
+        Five::try_from(c).unwrap().sort()
+    }).collect();
+
+    hands.sort();
+
+    Hands::from(hands)
+});
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Hands(Vec<Five>);
