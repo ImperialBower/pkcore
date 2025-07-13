@@ -7,6 +7,7 @@ use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::games::razz::california::CaliforniaHandRank;
 use crate::play::board::Board;
 use crate::{PKError, Pile, TheNuts};
 use std::fmt;
@@ -204,6 +205,10 @@ impl FromStr for Five {
 }
 
 impl HandRanker for Five {
+    fn california_hand_rank_value_and_hand(&self) -> (CaliforniaHandRank, Five) {
+        todo!()
+    }
+
     /// This isn't used for `Five` since there is only one permutation.
     fn five_from_permutation(&self, _permutation: [usize; 5]) -> Five {
         *self

@@ -1,6 +1,7 @@
 use crate::analysis::eval::Eval;
 use crate::analysis::hand_rank::{HandRank, HandRankValue};
 use crate::arrays::five::Five;
+use crate::games::razz::california::CaliforniaHandRank;
 
 pub mod combos;
 pub mod five;
@@ -19,6 +20,8 @@ pub trait Arrayable<T> {
 
 /// The `HandRanker` trait is designed to return a `HandRank` for a collection five or more cards.
 pub trait HandRanker {
+    fn california_hand_rank_value_and_hand(&self) -> (CaliforniaHandRank, Five);
+
     fn eval(&self) -> Eval {
         let (hand_rank, five) = self.hand_rank_and_hand();
         Eval::new(hand_rank, five)

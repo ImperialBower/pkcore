@@ -5,6 +5,7 @@ use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::games::razz::california::CaliforniaHandRank;
 use crate::play::board::Board;
 use crate::{PKError, Pile, TheNuts};
 use std::fmt;
@@ -150,6 +151,10 @@ impl FromStr for Seven {
 }
 
 impl HandRanker for Seven {
+    fn california_hand_rank_value_and_hand(&self) -> (CaliforniaHandRank, Five) {
+        todo!()
+    }
+
     /// TODO RF: How do I distill this down to the trait?
     ///
     /// One of the things that I love about `JetBrains` products is that they show me code duplication
