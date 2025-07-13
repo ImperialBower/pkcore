@@ -151,7 +151,7 @@ impl FromStr for Seven {
 }
 
 impl HandRanker for Seven {
-    fn california_hand_rank_value_and_hand(&self) -> (CaliforniaHandRank, Five) {
+    fn razz_hand_rank_value_and_hand(&self) -> (CaliforniaHandRank, Five) {
         todo!()
     }
 

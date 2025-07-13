@@ -20,7 +20,7 @@ pub trait Arrayable<T> {
 
 /// The `HandRanker` trait is designed to return a `HandRank` for a collection five or more cards.
 pub trait HandRanker {
-    fn california_hand_rank_value_and_hand(&self) -> (CaliforniaHandRank, Five);
+    fn razz_hand_rank_value_and_hand(&self) -> (CaliforniaHandRank, Five);
 
     fn eval(&self) -> Eval {
         let (hand_rank, five) = self.hand_rank_and_hand();
