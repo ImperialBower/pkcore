@@ -1,10 +1,9 @@
+use pkcore::Pile;
 use pkcore::arrays::five::hands::UNIQUE_HANDS;
 use pkcore::games::razz::california::CaliforniaHandRank;
-use pkcore::Pile;
 
 fn main() {
     for hand in UNIQUE_HANDS.iter() {
-
         let hr = CaliforniaHandRank::get_hand_rank_from_rank_bit_flags(hand.get_rank_bits());
 
         if hr != CaliforniaHandRank::Unknown {

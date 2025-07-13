@@ -41,7 +41,6 @@ mod tests {
     #[case("2♠ 2♦ 9♣ 5♠ 3♠", CaliforniaHandRank::HIGH_22953, 1596)]
     #[case("2♠ 2♦ 9♣ 5♠ 4♠", CaliforniaHandRank::HIGH_22954, 2660)]
     #[case("2♠ 2♦ 9♣ 6♠ 3♠", CaliforniaHandRank::HIGH_22963, 2508)]
-
     #[case("2♦ 2♣ 9♣ 6♣ 4♣", CaliforniaHandRank::HIGH_22964, 4180)]
     #[case("2♦ 2♣ 9♣ 6♣ 5♣", CaliforniaHandRank::HIGH_22965, 5852)]
     #[case("2♦ 2♣ 9♣ 7♣ 3♣", CaliforniaHandRank::HIGH_22973, 2964)]

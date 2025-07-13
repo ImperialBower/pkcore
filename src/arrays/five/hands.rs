@@ -1,5 +1,5 @@
-use crate::arrays::five::Five;
 use crate::arrays::HandRanker;
+use crate::arrays::five::Five;
 use crate::deck::POKER_DECK;
 use std::fs::read_to_string;
 use std::str::FromStr;
@@ -9,9 +9,7 @@ use std::str::FromStr;
 pub static DISTINCT_HANDS: std::sync::LazyLock<Hands> = std::sync::LazyLock::new(|| {
     let combos = POKER_DECK.combinations(5);
 
-    let mut hands: Vec<Five> = combos.map(|c| {
-        Five::try_from(c).unwrap().sort()
-    }).collect();
+    let mut hands: Vec<Five> = combos.map(|c| Five::try_from(c).unwrap().sort()).collect();
 
     hands.sort();
 
@@ -22,7 +20,6 @@ pub static UNIQUE_HANDS: std::sync::LazyLock<Hands> = std::sync::LazyLock::new(|
     let mut hands: Vec<Five> = Vec::new();
 
     for line in read_to_string("generated/5card_distinct_hands.txt").unwrap().lines() {
-
         if line.is_empty() {
             continue; // Skip empty lines
         }
@@ -31,10 +28,8 @@ pub static UNIQUE_HANDS: std::sync::LazyLock<Hands> = std::sync::LazyLock::new(|
         hands.push(hand);
     }
 
-
     Hands::from(hands)
 });
-
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Hands(Vec<Five>);

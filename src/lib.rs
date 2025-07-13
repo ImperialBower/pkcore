@@ -333,8 +333,10 @@ pub trait Pile {
     }
 
     fn ranks_index(&self) -> String {
-        self.to_vec().iter()
-            .map(|card| card.get_rank().to_char()).collect::<String>()
+        self.to_vec()
+            .iter()
+            .map(|card| card.get_rank().to_char())
+            .collect::<String>()
     }
 
     fn suits(&self) -> HashSet<Suit> {
