@@ -506,11 +506,11 @@ mod arrays__five_tests {
 
     #[test]
     fn hand_ranker__razz_hand_rank_value_and_hand() {
-        let hand = Five::from_str("A♠ 2♠ 3♠ 4♠ 5♠").unwrap();
-        let (rank, hand) = hand.razz_hand_rank_value_and_hand();
+        let five = Five::from_str("A♠ 2♠ 3♠ 4♠ 5♠").unwrap();
+        let (rank, hand) = five.razz_hand_rank_value_and_hand();
 
-        assert_eq!(1, rank);
-        assert_eq!("A♠ 2♠ 3♠ 4♠ 5♠", hand.to_string());
+        assert_eq!(1, rank as u16);
+        assert_eq!(five, hand);
     }
 
     #[test]

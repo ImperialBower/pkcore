@@ -3,7 +3,7 @@ use crate::arrays::five::Five;
 use std::fmt;
 use std::fmt::Display;
 use std::fmt::Formatter;
-use strum::EnumIter;
+use strum::{EnumIter, IntoEnumIterator};
 use strum_macros::AsRefStr;
 
 pub type CaliforniaHandRankValue = u16;
@@ -7524,8 +7524,10 @@ impl Display for CaliforniaHandRank {
 
 impl From<CaliforniaHandRankValue> for CaliforniaHandRank {
     #[allow(clippy::too_many_lines)]
-    fn from(_value: CaliforniaHandRankValue) -> Self {
-        todo!()
+    fn from(i: CaliforniaHandRankValue) -> Self {
+        CaliforniaHandRank::iter()
+            .nth(i.into())
+            .unwrap_or(CaliforniaHandRank::Unknown)
     }
 }
 
@@ -12444,6 +12446,11 @@ mod games__razz__california__hand_rank_tests {
     #[test]
     fn display() {
         assert_eq!(CaliforniaHandRank::RAZZ_9TJQK.to_string(), "9TJQK")
+    }
+
+    #[test]
+    fn from__california_hand_rank_value() {
+        assert_eq!(CaliforniaHandRank::WHEEL, CaliforniaHandRank::from(1));
     }
 
     #[test]
