@@ -205,8 +205,12 @@ impl FromStr for Five {
 }
 
 impl HandRanker for Five {
-    fn razz_hand_rank_value_and_hand(&self) -> (CaliforniaHandRank, Five) {
+    fn razz_hand_rank_and_hand(&self) -> (CaliforniaHandRank, Five) {
         (CaliforniaHandRank::from(*self), *self)
+    }
+
+    fn razz_hand_rank_value_and_hand(&self) -> (CaliforniaHandRank, Five) {
+        todo!()
     }
 
     /// This isn't used for `Five` since there is only one permutation.
@@ -507,7 +511,7 @@ mod arrays__five_tests {
     #[test]
     fn hand_ranker__razz_hand_rank_value_and_hand() {
         let five = Five::from_str("A♠ 2♠ 3♠ 4♠ 5♠").unwrap();
-        let (rank, hand) = five.razz_hand_rank_value_and_hand();
+        let (rank, hand) = five.razz_hand_rank_and_hand();
 
         assert_eq!(1, rank as u16);
         assert_eq!(five, hand);

@@ -8,6 +8,8 @@ use strum_macros::AsRefStr;
 
 pub type CaliforniaHandRankValue = u16;
 
+pub const NO_RAZZ_HAND_RANK_VALUE: CaliforniaHandRankValue = 0;
+
 #[derive(Clone, Copy, Debug, Default, AsRefStr, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[allow(non_camel_case_types)]
 pub enum CaliforniaHandRank {

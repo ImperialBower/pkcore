@@ -151,7 +151,7 @@ impl FromStr for Seven {
 }
 
 impl HandRanker for Seven {
-    fn razz_hand_rank_value_and_hand(&self) -> (CaliforniaHandRank, Five) {
+    fn razz_hand_rank_and_hand(&self) -> (CaliforniaHandRank, Five) {
         todo!()
     }
 
@@ -195,6 +195,10 @@ impl HandRanker for Seven {
     fn sort_in_place(&mut self) {
         self.0.sort_unstable();
         self.0.reverse();
+    }
+
+    fn razz_hand_rank_value_and_hand(&self) -> (CaliforniaHandRank, Five) {
+        todo!()
     }
 }
 
