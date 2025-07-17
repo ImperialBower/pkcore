@@ -155,21 +155,6 @@ impl HandRanker for Seven {
         todo!()
     }
 
-    /// TODO RF: How do I distill this down to the trait?
-    ///
-    /// One of the things that I love about `JetBrains` products is that they show me code duplication
-    /// in my projects. As the code for your system grows, code duplication is one of the clearest
-    /// signs that it is becoming more and more unmanageable.
-    fn five_from_permutation(&self, permutation: [usize; 5]) -> Five {
-        Five::from([
-            self.0[permutation[0]],
-            self.0[permutation[1]],
-            self.0[permutation[2]],
-            self.0[permutation[3]],
-            self.0[permutation[4]],
-        ])
-    }
-
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
         let mut best_hrv: HandRankValue = NO_HAND_RANK_VALUE;
         let mut best_hand = Five::default();
@@ -186,6 +171,21 @@ impl HandRanker for Seven {
         (best_hrv, best_hand.sort().clean())
     }
 
+    /// TODO RF: How do I distill this down to the trait?
+    ///
+    /// One of the things that I love about `JetBrains` products is that they show me code duplication
+    /// in my projects. As the code for your system grows, code duplication is one of the clearest
+    /// signs that it is becoming more and more unmanageable.
+    fn five_from_permutation(&self, permutation: [usize; 5]) -> Five {
+        Five::from([
+            self.0[permutation[0]],
+            self.0[permutation[1]],
+            self.0[permutation[2]],
+            self.0[permutation[3]],
+            self.0[permutation[4]],
+        ])
+    }
+
     fn sort(&self) -> Self {
         let mut array = *self;
         array.sort_in_place();
@@ -195,10 +195,6 @@ impl HandRanker for Seven {
     fn sort_in_place(&mut self) {
         self.0.sort_unstable();
         self.0.reverse();
-    }
-
-    fn razz_hand_rank_value_and_hand(&self) -> (CaliforniaHandRank, Five) {
-        todo!()
     }
 }
 

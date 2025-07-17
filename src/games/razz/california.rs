@@ -7495,7 +7495,7 @@ impl CaliforniaHandRank {
     }
 
     #[must_use]
-    pub fn get_hand_rank(&self) -> CaliforniaHandRankValue {
+    pub fn get_hand_rank_value(&self) -> CaliforniaHandRankValue {
         if self.is_unknown() {
             0
         } else {

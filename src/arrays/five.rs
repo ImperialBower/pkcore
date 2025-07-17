@@ -209,15 +209,6 @@ impl HandRanker for Five {
         (CaliforniaHandRank::from(*self), *self)
     }
 
-    fn razz_hand_rank_value_and_hand(&self) -> (CaliforniaHandRank, Five) {
-        todo!()
-    }
-
-    /// This isn't used for `Five` since there is only one permutation.
-    fn five_from_permutation(&self, _permutation: [usize; 5]) -> Five {
-        *self
-    }
-
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
         if self.is_dealt() {
             let i = self.or_rank_bits() as usize;
@@ -234,6 +225,11 @@ impl HandRanker for Five {
         } else {
             (NO_HAND_RANK_VALUE, Five::default())
         }
+    }
+
+    /// This isn't used for `Five` since there is only one permutation.
+    fn five_from_permutation(&self, _permutation: [usize; 5]) -> Five {
+        *self
     }
 
     fn sort(&self) -> Self {
