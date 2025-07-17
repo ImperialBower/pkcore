@@ -5,7 +5,7 @@ use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::games::razz::california::CaliforniaHandRank;
+use crate::games::razz::california::{CaliforniaHandRank, CaliforniaHandRankValue, NO_RAZZ_HAND_RANK_VALUE};
 use crate::play::board::Board;
 use crate::{PKError, Pile, TheNuts};
 use std::fmt;
@@ -152,7 +152,20 @@ impl FromStr for Seven {
 
 impl HandRanker for Seven {
     fn razz_hand_rank_and_hand(&self) -> (CaliforniaHandRank, Five) {
-        todo!()
+        let mut best_hrv: CaliforniaHandRankValue = NO_RAZZ_HAND_RANK_VALUE;
+        let mut best_hand = Five::default();
+
+        for perm in Seven::FIVE_CARD_PERMUTATIONS {
+            let hand = self.five_from_permutation(perm);
+            let hrv = CaliforniaHandRank::from(hand).get_hand_rank_value();
+
+            if (best_hrv == 0) || hrv != 0 && hrv < best_hrv {
+                best_hrv = hrv;
+                best_hand = hand;
+            }
+        }
+
+        (CaliforniaHandRank::from(best_hrv), best_hand.sort())
     }
 
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
@@ -295,6 +308,16 @@ mod arrays__seven_tests {
         assert_eq!(Class::SixHighStraight, hr.class);
         assert_eq!(Name::Straight, hr.name);
         assert_eq!(Five::from_str("6S 5D 4S 3C 2S").unwrap(), best);
+    }
+
+    #[test]
+    fn hand_ranker__razz_hand_rank_and_hand() {
+        let seven = Seven::from_str("A♠ 2♠ 3♠ 4♠ 5♠ A♦ 2♦").unwrap();
+        let (rank, hand) = seven.razz_hand_rank_and_hand();
+
+        assert_eq!("5♠ 4♠ 3♠ 2♠ A♠", hand.to_string());
+        assert_eq!(1, rank as u16);
+        assert_eq!(Five::from_str("5♠ 4♠ 3♠ 2♠ A♠").unwrap(), hand);
     }
 
     #[test]
