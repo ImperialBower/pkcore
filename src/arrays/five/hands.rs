@@ -40,7 +40,7 @@ impl Hands {
         self.0.get(index)
     }
 
-    pub fn iter(&self) -> std::slice::Iter<Five> {
+    pub fn iter(&self) -> std::slice::Iter<'_, Five> {
         <&Self as IntoIterator>::into_iter(self)
     }
 
