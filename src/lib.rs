@@ -3,6 +3,7 @@
     clippy::unreadable_literal,
     clippy::iter_without_into_iter,
     clippy::should_implement_trait,
+    clippy::upper_case_acronyms,
     // macro_expanded_macro_exports_accessed_by_absolute_paths,
 )]
 
@@ -23,6 +24,8 @@ use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 
 use crate::casino::cashier::chips::Chips;
+use crate::rank::Rank;
+use crate::ranks::Ranks;
 use crate::suit::Suit;
 use rayon::iter::IterBridge;
 use std::iter::Enumerate;
@@ -39,6 +42,7 @@ pub mod games;
 mod lookups;
 pub mod play;
 pub mod rank;
+pub mod ranks;
 pub mod suit;
 pub mod util;
 
@@ -106,6 +110,7 @@ pub enum PKError {
     InvalidPermutationIndex,
     InvalidPluribusIndex,
     InvalidPosition,
+    InvalidRankIndex,
     NoLow,
     NotDealt,
     NotEnoughCards,
@@ -138,6 +143,7 @@ impl Display for PKError {
             PKError::InvalidPermutationIndex => "Invalid Permutation Index Error",
             PKError::InvalidPluribusIndex => "Invalid Pluribus Index Error",
             PKError::InvalidPosition => "Invalid Position Error",
+            PKError::InvalidRankIndex => "Invalid Rank Index Error",
             PKError::NoLow => "No low hand possible Error",
             PKError::NotDealt => "Not Dealt Error",
             PKError::NotEnoughCards => "Not Enough Cards Error",
@@ -274,6 +280,10 @@ pub trait Pile {
         self.combinations_remaining(k).enumerate()
     }
 
+    fn get_rank_bits(&self) -> u16 {
+        self.ranks().sum_or()
+    }
+
     fn how_many(&self, cards: &Cards) -> usize {
         cards.to_vec().iter().filter(|card| self.contains(card)).count()
     }
@@ -317,11 +327,20 @@ pub trait Pile {
         Cards::deck_minus(&held)
     }
 
-    fn suits(&self) -> HashSet<Suit> {
+    /// Returns the `Ranks` vector struct for the `Pile`.
+    fn ranks(&self) -> Ranks {
+        Ranks::from(self.to_vec().iter().map(Card::get_rank).collect::<Vec<Rank>>())
+    }
+
+    fn ranks_index(&self) -> String {
         self.to_vec()
             .iter()
-            .map(card::Card::get_suit)
-            .collect::<HashSet<Suit>>()
+            .map(|card| card.get_rank().to_char())
+            .collect::<String>()
+    }
+
+    fn suits(&self) -> HashSet<Suit> {
+        self.to_vec().iter().map(Card::get_suit).collect::<HashSet<Suit>>()
     }
 
     fn the_nuts(&self) -> TheNuts;

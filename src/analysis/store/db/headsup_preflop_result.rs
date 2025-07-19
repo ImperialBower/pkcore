@@ -6,7 +6,7 @@ use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::{PKError, Pile, Shifty, SuitShift};
 use csv::{Reader, WriterBuilder};
-use rusqlite::{Connection, named_params};
+use rusqlite::{Connection, Statement, named_params};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
@@ -438,7 +438,13 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
     fn select_all(conn: &Connection) -> Vec<HUPResult> {
         log::debug!("HUPResult::select_all({conn:?})");
 
-        let mut stmt = conn.prepare("SELECT * FROM nlh_headsup_result").ok().unwrap();
+        let mut stmt: Statement = match conn.prepare("SELECT * FROM nlh_headsup_result") {
+            Ok(statement) => statement,
+            Err(e) => {
+                log::error!("Error preparing statement: {e}");
+                return Vec::new();
+            }
+        };
 
         let mut r: Vec<HUPResult> = Vec::new();
         let mut hups = stmt.query(()).unwrap();

@@ -1,3 +1,5 @@
+pub mod hands;
+
 use crate::analysis::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
 use crate::arrays::HandRanker;
 use crate::arrays::three::Three;
@@ -5,6 +7,7 @@ use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::games::razz::california::CaliforniaHandRank;
 use crate::play::board::Board;
 use crate::{PKError, Pile, TheNuts};
 use std::fmt;
@@ -98,7 +101,7 @@ impl Five {
     //region private functions
 
     #[must_use]
-    fn and_bits(&self) -> u32 {
+    pub fn and_bits(&self) -> u32 {
         self.first().as_u32()
             & self.second().as_u32()
             & self.third().as_u32()
@@ -108,7 +111,7 @@ impl Five {
 
     #[must_use]
     #[allow(clippy::comparison_chain)]
-    fn find_in_products(&self) -> usize {
+    pub fn find_in_products(&self) -> usize {
         let key = self.multiply_primes();
 
         let mut low = 0;
@@ -131,7 +134,7 @@ impl Five {
     }
 
     #[must_use]
-    fn multiply_primes(&self) -> usize {
+    pub fn multiply_primes(&self) -> usize {
         (self.first().get_rank_prime()
             * self.second().get_rank_prime()
             * self.third().get_rank_prime()
@@ -139,12 +142,13 @@ impl Five {
             * self.fifth().get_rank_prime()) as usize
     }
 
-    fn not_unique(&self) -> u16 {
+    #[must_use]
+    pub fn not_unique(&self) -> u16 {
         crate::lookups::values::VALUES[self.find_in_products()]
     }
 
     #[must_use]
-    fn or_bits(&self) -> u32 {
+    pub fn or_bits(&self) -> u32 {
         self.first().as_u32()
             | self.second().as_u32()
             | self.third().as_u32()
@@ -153,12 +157,13 @@ impl Five {
     }
 
     #[must_use]
-    fn or_rank_bits(&self) -> u32 {
+    pub fn or_rank_bits(&self) -> u32 {
         self.or_bits() >> Card::RANK_FLAG_SHIFT
     }
 
     #[allow(clippy::cast_possible_truncation)]
-    fn unique_rank(index: usize) -> HandRankValue {
+    #[must_use]
+    pub fn unique_rank(index: usize) -> HandRankValue {
         if index > Five::POSSIBLE_COMBINATIONS {
             return Card::BLANK_NUMBER as HandRankValue;
         }
@@ -191,37 +196,6 @@ impl From<Board> for Five {
     }
 }
 
-// impl From<Vec<Card>> for Five {
-//     fn from(v: Vec<Card>) -> Self {
-//         match v.len() {
-//             5 => {
-//                 let one = match v.get(0) {
-//                     Some(m) => *m,
-//                     None => Card::BLANK,
-//                 };
-//                 let two = match v.get(1) {
-//                     Some(m) => *m,
-//                     None => Card::BLANK,
-//                 };
-//                 let three = match v.get(2) {
-//                     Some(m) => *m,
-//                     None => Card::BLANK,
-//                 };
-//                 let four = match v.get(3) {
-//                     Some(m) => *m,
-//                     None => Card::BLANK,
-//                 };
-//                 let five = match v.get(4) {
-//                     Some(m) => *m,
-//                     None => Card::BLANK,
-//                 };
-//                 Five::from([one, two, three, four, five])
-//             }
-//             _ => Five::default(),
-//         }
-//     }
-// }
-
 impl FromStr for Five {
     type Err = PKError;
 
@@ -231,9 +205,8 @@ impl FromStr for Five {
 }
 
 impl HandRanker for Five {
-    /// This isn't used for `Five` since there is only one permutation.
-    fn five_from_permutation(&self, _permutation: [usize; 5]) -> Five {
-        *self
+    fn razz_hand_rank_and_hand(&self) -> (CaliforniaHandRank, Five) {
+        (CaliforniaHandRank::from(*self), *self)
     }
 
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
@@ -252,6 +225,11 @@ impl HandRanker for Five {
         } else {
             (NO_HAND_RANK_VALUE, Five::default())
         }
+    }
+
+    /// This isn't used for `Five` since there is only one permutation.
+    fn five_from_permutation(&self, _permutation: [usize; 5]) -> Five {
+        *self
     }
 
     fn sort(&self) -> Self {
@@ -524,6 +502,15 @@ mod arrays__five_tests {
         assert_eq!(PKError::NotEnoughCards, Five::from_str("AC").unwrap_err());
         assert!(Five::from_str("AD KD QD JD TD 9D").is_err());
         assert_eq!(PKError::TooManyCards, Five::from_str("AD KD QD JD TD 9D").unwrap_err());
+    }
+
+    #[test]
+    fn hand_ranker__razz_hand_rank_value_and_hand() {
+        let five = Five::from_str("A♠ 2♠ 3♠ 4♠ 5♠").unwrap();
+        let (rank, hand) = five.razz_hand_rank_and_hand();
+
+        assert_eq!(1, rank as u16);
+        assert_eq!(five, hand);
     }
 
     #[test]
@@ -2472,6 +2459,7 @@ mod arrays__five_tests {
         assert_eq!(expected_name, hand_rank.name);
         assert_eq!(expected_class, hand_rank.class);
     }
+
     //endregion
 
     #[test]
@@ -2524,5 +2512,52 @@ mod arrays__five_tests {
 
         assert!(sut.is_err());
         assert_eq!(sut.unwrap_err(), PKError::TooManyCards);
+    }
+
+    // Weightest tests
+
+    #[test]
+    fn weighted__pair() {
+        let hand = Five::try_from(Five::from_str("2♠ 2♦ 7♣ 6♠ 3♠").unwrap().cards().shuffle())
+            .unwrap()
+            .sort();
+        println!("Weighted Pair: {}", hand);
+        assert_eq!(hand.to_string(), "2♠ 2♦ 7♣ 6♠ 3♠");
+    }
+
+    #[test]
+    fn weighted__two_pair() {
+        let hand = Five::try_from(Five::from_str("2♠ 2♦ 7♣ 7♠ 3♠").unwrap().cards().shuffle())
+            .unwrap()
+            .sort();
+        println!("Weighted Two Pair: {}", hand);
+        assert_eq!(hand.to_string(), "7♠ 7♣ 2♠ 2♦ 3♠");
+    }
+
+    #[test]
+    fn weighted__trips() {
+        let hand = Five::try_from(Five::from_str("2♠ 2♦ 2♣ 6♠ 3♠").unwrap().cards().shuffle())
+            .unwrap()
+            .sort();
+        println!("Weighted Trips: {}", hand);
+        assert_eq!(hand.to_string(), "2♠ 2♦ 2♣ 6♠ 3♠");
+    }
+
+    #[test]
+    fn weighted__full() {
+        let hand = Five::try_from(Five::from_str("2♠ 2♦ 2♣ 6♠ 6♦").unwrap().cards().shuffle())
+            .unwrap()
+            .sort();
+        println!("Weighted Full House: {}", hand);
+        assert_eq!(hand.to_string(), "2♠ 2♦ 2♣ 6♠ 6♦");
+    }
+
+    #[test]
+    fn weighted__quads() {
+        let hand = Five::try_from(Five::from_str("2♠ 2♦ 2♣ 2♥ 6♦").unwrap().cards().shuffle())
+            .unwrap()
+            .sort();
+        println!("Weighted Quads: {}", hand);
+        assert_eq!(hand.to_string(), "2♠ 2♥ 2♦ 2♣ 6♦");
     }
 }

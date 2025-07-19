@@ -1,2 +1,3 @@
 pub mod omaha;
-mod stud;
+pub mod razz;
+pub mod stud;

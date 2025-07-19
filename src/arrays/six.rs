@@ -5,6 +5,7 @@ use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::games::razz::california::{CaliforniaHandRank, CaliforniaHandRankValue, NO_RAZZ_HAND_RANK_VALUE};
 use crate::{PKError, Pile, TheNuts};
 use std::fmt;
 use std::fmt::Formatter;
@@ -95,14 +96,21 @@ impl FromStr for Six {
 }
 
 impl HandRanker for Six {
-    fn five_from_permutation(&self, permutation: [usize; 5]) -> Five {
-        Five::from([
-            self.0[permutation[0]],
-            self.0[permutation[1]],
-            self.0[permutation[2]],
-            self.0[permutation[3]],
-            self.0[permutation[4]],
-        ])
+    fn razz_hand_rank_and_hand(&self) -> (CaliforniaHandRank, Five) {
+        let mut best_hrv: CaliforniaHandRankValue = NO_RAZZ_HAND_RANK_VALUE;
+        let mut best_hand = Five::default();
+
+        for perm in Six::FIVE_CARD_PERMUTATIONS {
+            let hand = self.five_from_permutation(perm);
+            let hrv = CaliforniaHandRank::from(hand).get_hand_rank_value();
+
+            if (best_hrv == 0) || hrv != 0 && hrv < best_hrv {
+                best_hrv = hrv;
+                best_hand = hand;
+            }
+        }
+
+        (CaliforniaHandRank::from(best_hrv), best_hand.sort())
     }
 
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
@@ -119,6 +127,16 @@ impl HandRanker for Six {
         }
 
         (best_hrv, best_hand.sort())
+    }
+
+    fn five_from_permutation(&self, permutation: [usize; 5]) -> Five {
+        Five::from([
+            self.0[permutation[0]],
+            self.0[permutation[1]],
+            self.0[permutation[2]],
+            self.0[permutation[3]],
+            self.0[permutation[4]],
+        ])
     }
 
     fn sort(&self) -> Self {
@@ -185,6 +203,16 @@ mod arrays__six_tests {
     #[test]
     fn display() {
         assert_eq!("A♦ 2♦ 3♦ 4♦ 5♦ 6♦", Six(CARDS).to_string());
+    }
+
+    #[test]
+    fn hand_ranker__razz_hand_rank_and_hand() {
+        let six = Six::from_str("A♠ 2♠ 3♠ 4♠ 5♠ A♦").unwrap();
+        let (rank, hand) = six.razz_hand_rank_and_hand();
+
+        assert_eq!("5♠ 4♠ 3♠ 2♠ A♠", hand.to_string());
+        assert_eq!(1, rank as u16);
+        assert_eq!(Five::from_str("5♠ 4♠ 3♠ 2♠ A♠").unwrap(), hand);
     }
 
     #[test]

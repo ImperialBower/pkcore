@@ -798,3 +798,18 @@ This is an outline of the work as it is done.
           * made Five internal array pub(crate) visible
           * impl Pile for OmahaHigh
           * OmahaHigh.is_valid
+      * FEATURE: Razz
+        * Add bit flag consts to rank
+        * Ranks struct to manage hand rank evals.
+          * Ranks::sum_or()
+          * Ranks::count_ones()
+        * Pile::ranks()
+        * razz::California for all Razz hand ranks
+        * five::hands::Hands a frequency ranked hand collection
+        * rank added rank bit flags and methods for Razz hand calcs
+        * Added Ranks struct to hold collections of Ranks
+        * Added to arrays::HandRanker
+          * razz_hand_rank()
+          * razz_hand_rank_and_hand()
+          * razz_hand_rank_value_and_hand()
+          * All of these methods added to the Five, Six, and Seven structs implementations
