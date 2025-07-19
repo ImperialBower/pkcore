@@ -798,7 +798,7 @@ This is an outline of the work as it is done.
           * made Five internal array pub(crate) visible
           * impl Pile for OmahaHigh
           * OmahaHigh.is_valid
-      * FEATURE: Razz
+      * FEATURE: Razz (v0.0.13)
         * Add bit flag consts to rank
         * Ranks struct to manage hand rank evals.
           * Ranks::sum_or()
