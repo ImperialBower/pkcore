@@ -1,9 +1,6 @@
-#[macro_use]
-pub mod ranges;
-
 use crate::arrays::two::Two;
 
-pub mod hc_symbol;
+pub mod hc;
 pub mod twos;
 
 // region hand range array constants

@@ -2,6 +2,18 @@ use crate::PKError;
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// Vector of `HCSymbols`
+#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct HCSymbols(Vec<HCSymbol>);
+
+impl FromStr for HCSymbols {
+    type Err = PKError;
+
+    fn from_str(_s: &str) -> Result<Self, Self::Err> {
+        Ok(HCSymbols::default())
+    }
+}
+
 /// Struct representing a hand combination symbol, aka AKs or 99+. A subset of strings that
 /// can represent a hand combination.
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]

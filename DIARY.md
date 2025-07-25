@@ -813,3 +813,11 @@ This is an outline of the work as it is done.
           * razz_hand_rank_and_hand()
           * razz_hand_rank_value_and_hand()
           * All of these methods added to the Five, Six, and Seven structs implementations
+      * FEATURE: Ranger
+        * Created Ranger example 
+        * Created HCSymbols 
+        * Added Terminal::receive_range()
+        * Created arrays::ranges modules. 
+          * Moved range into it
+        * Created ranked::Combo struct
+        * Added PKError::InvalidComboIndex

@@ -7,7 +7,7 @@
 ///
 /// * [Poker Ranges & Range Reading](https://www.splitsuit.com/poker-ranges-reading)
 /// * [POKER RANGES: POKER RANGE CHARTS](https://www.tightpoker.com/poker-ranges/)
-#[macro_export(local_inner_macros)]
+#[macro_export]
 #[rustfmt::skip]
 macro_rules! range {
     (AA) => { Twos::from($crate::arrays::combos::AA.to_vec()) };

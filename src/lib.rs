@@ -4,7 +4,7 @@
     clippy::iter_without_into_iter,
     clippy::should_implement_trait,
     clippy::upper_case_acronyms,
-    // macro_expanded_macro_exports_accessed_by_absolute_paths,
+    macro_expanded_macro_exports_accessed_by_absolute_paths
 )]
 
 extern crate core;
@@ -30,6 +30,7 @@ use crate::suit::Suit;
 use rayon::iter::IterBridge;
 use std::iter::Enumerate;
 
+#[macro_use]
 pub mod analysis;
 pub mod arrays;
 pub mod bard;
@@ -105,6 +106,7 @@ pub enum PKError {
     InvalidCard,
     InvalidCardNumber,
     InvalidCardCount,
+    InvalidComboIndex,
     InvalidHand,
     InvalidCardIndex,
     InvalidPermutationIndex,
@@ -138,8 +140,9 @@ impl Display for PKError {
             PKError::InvalidCard => "Invalid Card Error",
             PKError::InvalidCardNumber => "Invalid Card Number Error",
             PKError::InvalidCardCount => "Invalid Card Count Error",
-            PKError::InvalidHand => "Invalid Hand Error",
             PKError::InvalidCardIndex => "Invalid Card Index Error",
+            PKError::InvalidComboIndex => "Invalid Combo Index Error",
+            PKError::InvalidHand => "Invalid Hand Error",
             PKError::InvalidPermutationIndex => "Invalid Permutation Index Error",
             PKError::InvalidPluribusIndex => "Invalid Pluribus Index Error",
             PKError::InvalidPosition => "Invalid Position Error",

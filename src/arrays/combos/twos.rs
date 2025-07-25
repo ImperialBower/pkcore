@@ -1,8 +1,9 @@
 use crate::PKError;
-use crate::arrays::combos::hc_symbol::HCSymbol;
+use crate::arrays::combos::hc::HCSymbol;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::deck::POKER_DECK;
+use crate::range;
 use crate::rank::Rank;
 use crate::suit::Suit;
 use std::collections::HashSet;
@@ -419,8 +420,8 @@ impl Twos {
     // endregion
 }
 
-impl From<std::collections::HashSet<Two>> for Twos {
-    fn from(twos: std::collections::HashSet<Two>) -> Self {
+impl From<HashSet<Two>> for Twos {
+    fn from(twos: HashSet<Two>) -> Self {
         Self(twos.into_iter().collect())
     }
 }
@@ -436,7 +437,7 @@ impl FromStr for Twos {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut twos = Self::default();
-        for raw in s.split(',') {
+        for raw in s.split_whitespace() {
             match Twos::parse_individual_range(raw) {
                 Ok(range) => twos = twos.extend(&range),
                 Err(_) => return Err(PKError::InvalidCardIndex),
@@ -716,8 +717,8 @@ mod arrays__combos__twos_tests {
         assert_eq!(range!(AA), Twos::from_str("AA").unwrap());
         assert_eq!(range!(76o), Twos::from_str("76O").unwrap());
 
-        assert_eq!(range!(KK+), Twos::from_str("KK, AA").unwrap());
+        assert_eq!(range!(KK+), Twos::from_str("KK AA").unwrap());
 
-        assert_eq!(range!(KK+).extend(&range!(73s)), Twos::from_str("73s, KK+").unwrap());
+        assert_eq!(range!(KK+).extend(&range!(73s)), Twos::from_str("73s KK+").unwrap());
     }
 }

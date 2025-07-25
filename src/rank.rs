@@ -1,4 +1,5 @@
 use crate::PKError;
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
 use strum::EnumCount;
@@ -6,7 +7,9 @@ use strum::EnumIter;
 
 /// TODO THEME I am an artist, and I paint with code. The pallet I am using to paint is the domain
 /// of the area I am coding for, in this case the traditional 52 card French Deck.
-#[derive(Clone, Copy, Debug, EnumCount, EnumIter, Eq, Hash, PartialEq)]
+#[derive(
+    Serialize, Deserialize, Clone, Copy, Debug, Default, EnumCount, EnumIter, Eq, Hash, PartialEq, Ord, PartialOrd,
+)]
 pub enum Rank {
     ACE = 14,
     KING = 13,
@@ -21,6 +24,7 @@ pub enum Rank {
     FOUR = 4,
     TREY = 3,
     DEUCE = 2,
+    #[default]
     BLANK = 0,
 }
 
