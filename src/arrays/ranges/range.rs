@@ -961,6 +961,11 @@ macro_rules! range {
         )
     };
 
+    (KQ+) => {
+        Twos::from($crate::arrays::combos::ACE_KING.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_QUEEN.to_vec())
+        )
+    };
     (KJ+) => {
         Twos::from($crate::arrays::combos::KING_JACK.to_vec()).extend(
             &Twos::from($crate::arrays::combos::KING_QUEEN.to_vec()))
@@ -1101,6 +1106,11 @@ macro_rules! range {
         )
     };
 
+    (KQs+) => {
+        Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_QUEEN_SUITED.to_vec())
+        )
+    };
     (KJs+) => {
         Twos::from($crate::arrays::combos::KING_JACK_SUITED.to_vec()).extend(
             &Twos::from($crate::arrays::combos::KING_QUEEN_SUITED.to_vec())
@@ -1242,6 +1252,11 @@ macro_rules! range {
         )
     };
 
+    (KQo+) => {
+        Twos::from($crate::arrays::combos::ACE_KING_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec())
+        )
+    };
     (KJo+) => {
         Twos::from($crate::arrays::combos::KING_JACK_OFFSUIT.to_vec()).extend(
             &Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec())
@@ -1383,6 +1398,13 @@ macro_rules! range {
         )
     };
 
+    (QJ+) => {
+        Twos::from($crate::arrays::combos::ACE_JACK.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_QUEEN.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::QUEEN_JACK.to_vec())
+            )
+        )
+    };
     (QT+) => {
         Twos::from($crate::arrays::combos::QUEEN_TEN.to_vec()).extend(
             &Twos::from($crate::arrays::combos::QUEEN_JACK.to_vec())
@@ -1501,6 +1523,13 @@ macro_rules! range {
         )
     };
 
+    (QJs+) => {
+        Twos::from($crate::arrays::combos::ACE_JACK_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_QUEEN_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::QUEEN_JACK_SUITED.to_vec())
+            )
+        )
+    };
     (QTs+) => {
         Twos::from($crate::arrays::combos::QUEEN_TEN_SUITED.to_vec()).extend(
             &Twos::from($crate::arrays::combos::QUEEN_JACK_SUITED.to_vec())
@@ -1619,6 +1648,13 @@ macro_rules! range {
         )
     };
 
+    (QJo+) => {
+        Twos::from($crate::arrays::combos::ACE_JACK_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::QUEEN_JACK_OFFSUIT.to_vec())
+            )
+        )
+    };
     (QTo+) => {
         Twos::from($crate::arrays::combos::QUEEN_TEN_OFFSUIT.to_vec()).extend(
             &Twos::from($crate::arrays::combos::QUEEN_JACK_OFFSUIT.to_vec())
@@ -1737,6 +1773,15 @@ macro_rules! range {
         )
     };
 
+    (JT+) => {
+        Twos::from($crate::arrays::combos::ACE_KING.to_vec()).extend(
+            Twos::from($crate::arrays::combos::KING_QUEEN.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::QUEEN_JACK.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::JACK_TEN.to_vec())
+                )
+            )
+        )
+    };
     (J9+) => {
         Twos::from($crate::arrays::combos::JACK_NINE.to_vec()).extend(
             &Twos::from($crate::arrays::combos::JACK_TEN.to_vec())
@@ -1834,6 +1879,15 @@ macro_rules! range {
         )
     };
 
+    (JTs+) => {
+        Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec()).extend(
+            Twos::from($crate::arrays::combos::KING_QUEEN_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::QUEEN_JACK_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::JACK_TEN_SUITED.to_vec())
+                )
+            )
+        )
+    };
     (J9s+) => {
         Twos::from($crate::arrays::combos::JACK_NINE_SUITED.to_vec()).extend(
             &Twos::from($crate::arrays::combos::JACK_TEN_SUITED.to_vec())
@@ -1931,6 +1985,15 @@ macro_rules! range {
         )
     };
 
+    (JTo+) => {
+        Twos::from($crate::arrays::combos::ACE_KING_OFFSUIT.to_vec()).extend(
+            Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::QUEEN_JACK_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::JACK_TEN_OFFSUIT.to_vec())
+                )
+            )
+        )
+    };
     (J9o+) => {
         Twos::from($crate::arrays::combos::JACK_NINE_OFFSUIT.to_vec()).extend(
             &Twos::from($crate::arrays::combos::JACK_TEN_OFFSUIT.to_vec())
