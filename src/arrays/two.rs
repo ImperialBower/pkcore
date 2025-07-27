@@ -1443,6 +1443,11 @@ impl Two {
     }
 
     #[must_use]
+    pub fn in_cards(&self, cards: &Cards) -> bool {
+        cards.contains(&self.first()) && cards.contains(&self.second())
+    }
+
+    #[must_use]
     pub fn invert_suits(&self) -> Self {
         Two::new(
             Card::new(self.first().get_rank(), self.second().get_suit()),
@@ -1807,6 +1812,13 @@ mod arrays__two_tests {
         assert!(Two::HAND_AS_KH.contains_suit(Suit::SPADES));
         assert!(Two::HAND_AS_KH.contains_suit(Suit::HEARTS));
         assert!(!Two::HAND_AS_KH.contains_suit(Suit::DIAMONDS));
+    }
+
+    #[test]
+    fn in_cards() {
+        let cards = Cards::from(vec![Card::ACE_SPADES, Card::KING_HEARTS, Card::QUEEN_HEARTS]);
+        assert!(Two::HAND_AS_KH.in_cards(&cards));
+        assert!(!Two::HAND_8S_7H.in_cards(&cards));
     }
 
     #[test]

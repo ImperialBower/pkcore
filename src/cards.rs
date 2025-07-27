@@ -27,7 +27,7 @@ pub static FIVE_CARD_COMBOS: std::sync::LazyLock<Combinations<IntoIter<Card>>> =
 /// 2. Cards should be unique.
 /// 3. Cards should be legitimate cards. (No blanks)
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct Cards(IndexSet<Card>);
+pub struct Cards(pub IndexSet<Card>);
 
 impl Cards {
     /// TODO: macro!

@@ -1,7 +1,9 @@
 use crate::PKError;
 use crate::arrays::combos::hc::HCSymbol;
+use crate::arrays::ranges::combo::Combo;
 use crate::arrays::two::Two;
 use crate::card::Card;
+use crate::cards::Cards;
 use crate::deck::POKER_DECK;
 use crate::range;
 use crate::rank::Rank;
@@ -21,6 +23,7 @@ use std::str::FromStr;
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Twos(HashSet<Two>);
 
+// region range matrix
 pub const RANGE_MATRIX: [[&str; 13]; 13] = [
     [
         "AA", "AKs", "AQs", "AJs", "ATs", "A9s", "A8s", "A7s", "A6s", "A5s", "A4s", "A3s", "A2s",
@@ -62,6 +65,7 @@ pub const RANGE_MATRIX: [[&str; 13]; 13] = [
         "A2o", "K2o", "Q2o", "J2o", "T2o", "92o", "82o", "72o", "62o", "52o", "42o", "32o", "22",
     ],
 ];
+// endregion
 
 impl Twos {
     #[must_use]
@@ -84,6 +88,25 @@ impl Twos {
     #[must_use]
     pub fn filter_on_card(&self, card: Card) -> Self {
         Self(self.0.iter().filter(|two| two.contains_card(card)).copied().collect())
+    }
+
+    #[must_use]
+    pub fn filter_on_cards(&mut self, cards: &Cards) -> Self {
+        // cards.0.iter().filter(|two| Two::contains_card).cloned()
+        //     .collect()
+        // Self(self.0.iter().filter(|two| two.contains_card(card)).copied().collect())
+
+        // for card in cards.0.iter() {
+        //     self.0 = self.filter_on_card(*card).0;
+        // }
+
+        Twos::from(
+            self.0
+                .iter()
+                .filter(|two| two.in_cards(cards))
+                .copied()
+                .collect::<Vec<_>>(),
+        )
     }
 
     #[must_use]
@@ -420,6 +443,196 @@ impl Twos {
     // endregion
 }
 
+impl From<Combo> for Twos {
+    #[allow(clippy::too_many_lines)]
+    fn from(combo: Combo) -> Self {
+        match combo {
+            Combo::COMBO_AA => range!(AA),
+            Combo::COMBO_KK => range!(KK),
+            Combo::COMBO_QQ => range!(QQ),
+            Combo::COMBO_JJ => range!(JJ),
+            Combo::COMBO_TT => range!(TT),
+            Combo::COMBO_99 => range!(99),
+            Combo::COMBO_88 => range!(88),
+            Combo::COMBO_77 => range!(77),
+            Combo::COMBO_66 => range!(66),
+            Combo::COMBO_55 => range!(55),
+            Combo::COMBO_44 => range!(44),
+            Combo::COMBO_33 => range!(33),
+            Combo::COMBO_22 => range!(22),
+            Combo::COMBO_KK_PLUS => range!(KK+),
+            Combo::COMBO_QQ_PLUS => range!(QQ+),
+            Combo::COMBO_JJ_PLUS => range!(JJ+),
+            Combo::COMBO_TT_PLUS => range!(TT+),
+            Combo::COMBO_99_PLUS => range!(99+),
+            Combo::COMBO_88_PLUS => range!(88+),
+            Combo::COMBO_77_PLUS => range!(77+),
+            Combo::COMBO_66_PLUS => range!(66+),
+            Combo::COMBO_55_PLUS => range!(55+),
+            Combo::COMBO_44_PLUS => range!(44+),
+            Combo::COMBO_33_PLUS => range!(33+),
+            Combo::COMBO_22_PLUS => range!(22+),
+            Combo::COMBO_AKs => range!(AKs),
+            Combo::COMBO_AKo => range!(AKo),
+            Combo::COMBO_AK => range!(AK),
+            Combo::COMBO_AQs => range!(AQs),
+            Combo::COMBO_AQo => range!(AQo),
+            Combo::COMBO_AQ => range!(AQ),
+            Combo::COMBO_AQs_PLUS => range!(AQs+),
+            Combo::COMBO_AQo_PLUS => range!(AQo+),
+            Combo::COMBO_AQ_PLUS => range!(AQ+),
+            Combo::COMBO_AJs => range!(AJs),
+            Combo::COMBO_AJo => range!(AJo),
+            Combo::COMBO_AJ => range!(AJ),
+            Combo::COMBO_AJs_PLUS => range!(AJs+),
+            Combo::COMBO_AJo_PLUS => range!(AJo+),
+            Combo::COMBO_AJ_PLUS => range!(AJ+),
+            Combo::COMBO_ATs => range!(ATs),
+            Combo::COMBO_ATo => range!(ATo),
+            Combo::COMBO_AT => range!(AT),
+            Combo::COMBO_ATs_PLUS => range!(ATs+),
+            Combo::COMBO_ATo_PLUS => range!(ATo+),
+            Combo::COMBO_AT_PLUS => range!(AT+),
+            Combo::COMBO_A9s => range!(A9s),
+            Combo::COMBO_A9o => range!(A9o),
+            Combo::COMBO_A9 => range!(A9),
+            Combo::COMBO_A9s_PLUS => range!(A9s+),
+            Combo::COMBO_A9o_PLUS => range!(A9o+),
+            Combo::COMBO_A9_PLUS => range!(A9+),
+            Combo::COMBO_A8s => range!(A8s),
+            Combo::COMBO_A8o => range!(A8o),
+            Combo::COMBO_A8 => range!(A8),
+            Combo::COMBO_A8s_PLUS => range!(A8s+),
+            Combo::COMBO_A8o_PLUS => range!(A8o+),
+            Combo::COMBO_A8_PLUS => range!(A8+),
+            Combo::COMBO_A7s => range!(A7s),
+            Combo::COMBO_A7o => range!(A7o),
+            Combo::COMBO_A7 => range!(A7),
+            Combo::COMBO_A7s_PLUS => range!(A7s+),
+            Combo::COMBO_A7o_PLUS => range!(A7o+),
+            Combo::COMBO_A7_PLUS => range!(A7+),
+            Combo::COMBO_A6s => range!(A6s),
+            Combo::COMBO_A6o => range!(A6o),
+            Combo::COMBO_A6 => range!(A6),
+            Combo::COMBO_A6s_PLUS => range!(A6s+),
+            Combo::COMBO_A6o_PLUS => range!(A6o+),
+            Combo::COMBO_A6_PLUS => range!(A6+),
+            Combo::COMBO_A5s => range!(A5s),
+            Combo::COMBO_A5o => range!(A5o),
+            Combo::COMBO_A5 => range!(A5),
+            Combo::COMBO_A5s_PLUS => range!(A5s+),
+            Combo::COMBO_A5o_PLUS => range!(A5o+),
+            Combo::COMBO_A5_PLUS => range!(A5+),
+            Combo::COMBO_A4s => range!(A4s),
+            Combo::COMBO_A4o => range!(A4o),
+            Combo::COMBO_A4 => range!(A4),
+            Combo::COMBO_A4s_PLUS => range!(A4s+),
+            Combo::COMBO_A4o_PLUS => range!(A4o+),
+            Combo::COMBO_A4_PLUS => range!(A4+),
+            Combo::COMBO_A3s => range!(A3s),
+            Combo::COMBO_A3o => range!(A3o),
+            Combo::COMBO_A3 => range!(A3),
+            Combo::COMBO_A3s_PLUS => range!(A3s+),
+            Combo::COMBO_A3o_PLUS => range!(A3o+),
+            Combo::COMBO_A3_PLUS => range!(A3+),
+            Combo::COMBO_A2s => range!(A2s),
+            Combo::COMBO_A2o => range!(A2o),
+            Combo::COMBO_A2 => range!(A2),
+            Combo::COMBO_A2s_PLUS => range!(A2s+),
+            Combo::COMBO_A2o_PLUS => range!(A2o+),
+            Combo::COMBO_A2_PLUS => todo!(),
+            Combo::COMBO_KQ => range!(KQ),
+            Combo::COMBO_KQs => range!(KQs),
+            Combo::COMBO_KQo => range!(KQo),
+            Combo::COMBO_KQ_PLUS => range!(KQ+),
+            Combo::COMBO_KQs_PLUS => range!(KQs+),
+            Combo::COMBO_KQo_PLUS => range!(KQo+),
+            Combo::COMBO_KJ => range!(KJ),
+            Combo::COMBO_KJs => range!(KJs),
+            Combo::COMBO_KJo => range!(KJo),
+            Combo::COMBO_KJ_PLUS => range!(KJ+),
+            Combo::COMBO_KJs_PLUS => range!(KJs+),
+            Combo::COMBO_KJo_PLUS => range!(KJo+),
+            Combo::COMBO_KT => range!(KT),
+            Combo::COMBO_KTs => range!(KTs),
+            Combo::COMBO_KTo => range!(KTo),
+            Combo::COMBO_KT_PLUS => range!(KT+),
+            Combo::COMBO_KTs_PLUS => range!(KTs+),
+            Combo::COMBO_KTo_PLUS => range!(KTo+),
+            Combo::COMBO_K9 => range!(K9),
+            Combo::COMBO_K9s => range!(K9s),
+            Combo::COMBO_K9o => range!(K9o),
+            Combo::COMBO_K9_PLUS => range!(K9+),
+            Combo::COMBO_K9s_PLUS => range!(K9s+),
+            Combo::COMBO_K9o_PLUS => range!(K9o+),
+            Combo::COMBO_K8 => range!(K8),
+            Combo::COMBO_K8s => range!(K8s),
+            Combo::COMBO_K8o => range!(K8o),
+            Combo::COMBO_K8_PLUS => range!(K8+),
+            Combo::COMBO_K8s_PLUS => range!(K8s+),
+            Combo::COMBO_K8o_PLUS => range!(K8o+),
+            Combo::COMBO_K7 => range!(K7),
+            Combo::COMBO_K7s => range!(K7s),
+            Combo::COMBO_K7o => range!(K7o),
+            Combo::COMBO_K7_PLUS => range!(K7+),
+            Combo::COMBO_K7s_PLUS => range!(K7s+),
+            Combo::COMBO_K7o_PLUS => range!(K7o+),
+            Combo::COMBO_K6 => range!(K6),
+            Combo::COMBO_K6s => range!(K6s),
+            Combo::COMBO_K6o => range!(K6o),
+            Combo::COMBO_K6_PLUS => range!(K6+),
+            Combo::COMBO_K6s_PLUS => range!(K6s+),
+            Combo::COMBO_K6o_PLUS => range!(K6o+),
+            Combo::COMBO_K5 => range!(K5),
+            Combo::COMBO_K5s => range!(K5s),
+            Combo::COMBO_K5o => range!(K5o),
+            Combo::COMBO_K5_PLUS => range!(K5+),
+            Combo::COMBO_K5s_PLUS => range!(K5s+),
+            Combo::COMBO_K5o_PLUS => range!(K5o+),
+            Combo::COMBO_K4 => range!(K4),
+            Combo::COMBO_K4s => range!(K4s),
+            Combo::COMBO_K4o => range!(K4o),
+            Combo::COMBO_K4_PLUS => range!(K4+),
+            Combo::COMBO_K4s_PLUS => range!(K4s+),
+            Combo::COMBO_K4o_PLUS => range!(K4o+),
+            Combo::COMBO_K3 => range!(K3),
+            Combo::COMBO_K3s => range!(K3s),
+            Combo::COMBO_K3o => range!(K3o),
+            Combo::COMBO_K3_PLUS => range!(K3+),
+            Combo::COMBO_K3s_PLUS => range!(K3s+),
+            Combo::COMBO_K3o_PLUS => range!(K3o+),
+            Combo::COMBO_K2 => range!(K2),
+            Combo::COMBO_K2s => range!(K2s),
+            Combo::COMBO_K2o => range!(K2o),
+            Combo::COMBO_K2_PLUS => todo!(),
+            Combo::COMBO_QJ => range!(QJ),
+            Combo::COMBO_QJs => range!(QJs),
+            Combo::COMBO_QJo => range!(QJo),
+            Combo::COMBO_QJ_PLUS => range!(QJ+),
+            Combo::COMBO_QJs_PLUS => range!(QJs+),
+            Combo::COMBO_QJo_PLUS => range!(QJo+),
+            Combo::COMBO_QT => range!(QT),
+            Combo::COMBO_QTs => range!(QTs),
+            Combo::COMBO_QTo => range!(QTo),
+            Combo::COMBO_QT_PLUS => range!(QT+),
+            Combo::COMBO_QTs_PLUS => range!(QTs+),
+            Combo::COMBO_QTo_PLUS => range!(QTo+),
+            Combo::COMBO_Q9 => range!(Q9),
+            Combo::COMBO_Q9s => range!(Q9s),
+            Combo::COMBO_Q9o => range!(Q9o),
+            Combo::COMBO_Q9_PLUS => range!(Q9+),
+            Combo::COMBO_Q9s_PLUS => range!(Q9s+),
+            Combo::COMBO_Q9o_PLUS => range!(Q9o+),
+            Combo::COMBO_Q8 => range!(Q8),
+            Combo::COMBO_Q8s => range!(Q8s),
+            Combo::COMBO_Q8o => range!(Q8o),
+            Combo::COMBO_Q8_PLUS => range!(Q8+),
+
+            _ => Twos::default(),
+        }
+    }
+}
+
 impl From<HashSet<Two>> for Twos {
     fn from(twos: HashSet<Two>) -> Self {
         Self(twos.into_iter().collect())
@@ -553,6 +766,16 @@ mod arrays__combos__twos_tests {
     }
 
     #[test]
+    fn filter_on_cards() {
+        let deck = Cards::deck_minus(&Cards::from(&Card::ACE_SPADES));
+        let expected = Twos::from(vec![Two::HAND_AH_AD, Two::HAND_AH_AC, Two::HAND_AD_AC]);
+
+        let actual = Twos::from(Combo::COMBO_AA).filter_on_cards(&deck);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
     fn filter_on_not_card() {
         let aces = Twos::from(AA.to_vec());
 
@@ -659,6 +882,14 @@ mod arrays__combos__twos_tests {
     }
 
     #[test]
+    fn from__combo() {
+        let actual = Twos::from(Combo::COMBO_KK_PLUS);
+        let expected = range!(KK+);
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
     fn from__vec() {
         let v = AA.to_vec();
 
@@ -678,6 +909,7 @@ mod arrays__combos__twos_tests {
         assert_eq!(range!(KK+), Twos::parse_individual_range(" kk+   ").unwrap());
     }
 
+    // region from_str
     #[rstest]
     #[case("AA", range!(AA))]
     #[case("KK", range!(KK))]
@@ -709,6 +941,7 @@ mod arrays__combos__twos_tests {
     fn parse_individual_range(#[case] raw: &str, #[case] expected: Twos) {
         assert_eq!(expected, Twos::parse_individual_range(raw).unwrap());
     }
+    // endregion
 
     #[test]
     fn from_str() {

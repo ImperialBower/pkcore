@@ -1,7 +1,7 @@
-use std::fmt::{Display, Formatter};
 use crate::PKError;
 use crate::rank::Rank;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 /// The `ranges` module is an attempt to create a progromatic representation of poker ranges.
@@ -2994,9 +2994,9 @@ impl Display for Combo {
         let qualifier = self.qualifier.to_string();
 
         if self.higher {
-            write!(f, "{}{}{}+", first, second, qualifier)
+            write!(f, "{first}{second}{qualifier}+")
         } else {
-            write!(f, "{}{}{}", first, second, qualifier)
+            write!(f, "{first}{second}{qualifier}")
         }
     }
 }
