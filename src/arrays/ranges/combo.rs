@@ -1,3 +1,4 @@
+use std::fmt::{Display, Formatter};
 use crate::PKError;
 use crate::rank::Rank;
 use serde::{Deserialize, Serialize};
@@ -12,6 +13,16 @@ pub enum Qualifier {
     ALL,
     SUITED,
     OFFSUIT,
+}
+
+impl Display for Qualifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Qualifier::ALL => write!(f, ""),
+            Qualifier::SUITED => write!(f, "s"),
+            Qualifier::OFFSUIT => write!(f, "o"),
+        }
+    }
 }
 
 /// DIARY: I'm trying to decide if my need to create a completely structured struct :-P that
@@ -181,6 +192,7 @@ impl Combo {
     };
     // endregion
 
+    // region connectors
     pub const COMBO_AKs: Combo = Combo {
         first: Rank::ACE,
         second: Rank::KING,
@@ -2972,6 +2984,21 @@ impl Combo {
         higher: true,
         qualifier: Qualifier::ALL,
     };
+    // endregion
+}
+
+impl Display for Combo {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
+        let first = self.first.to_string();
+        let second = self.second.to_string();
+        let qualifier = self.qualifier.to_string();
+
+        if self.higher {
+            write!(f, "{}{}{}+", first, second, qualifier)
+        } else {
+            write!(f, "{}{}{}", first, second, qualifier)
+        }
+    }
 }
 
 impl FromStr for Combo {
@@ -3488,6 +3515,16 @@ impl FromStr for Combo {
 mod arrays__ranges__combo_tests {
     use super::*;
     use rstest::rstest;
+
+    #[test]
+    fn display() {
+        assert_eq!(Combo::COMBO_AA.to_string(), "AA");
+        assert_eq!(Combo::COMBO_AKs.to_string(), "AKs");
+        assert_eq!(Combo::COMBO_AKo.to_string(), "AKo");
+        assert_eq!(Combo::COMBO_AQo_PLUS.to_string(), "AQo+");
+        assert_eq!(Combo::COMBO_QQ_PLUS.to_string(), "QQ+");
+        assert_eq!(Combo::COMBO_99_PLUS.to_string(), "99+");
+    }
 
     // region Combo::from_str
     #[rstest]
