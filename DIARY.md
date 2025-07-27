@@ -821,3 +821,11 @@ This is an outline of the work as it is done.
           * Moved range into it
         * Created ranked::Combo struct
         * Added PKError::InvalidComboIndex
+        * FAILURE: Tried to create a pkrange crate, but got lost in macro hell and had to abandon.
+        * Combo struct THE PLAN:
+          * Combo constants
+          * Combo strings to Combo constants
+          * Combo constants to range! macros
+          * Combo constructor from string (i.e. QQ+, AKs-98s, AQJs+)
+          * ...
+          * Profit!

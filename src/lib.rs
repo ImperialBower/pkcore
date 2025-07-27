@@ -1,5 +1,6 @@
 #![warn(clippy::pedantic)]
 #![allow(
+    non_upper_case_globals,
     clippy::unreadable_literal,
     clippy::iter_without_into_iter,
     clippy::should_implement_trait,
