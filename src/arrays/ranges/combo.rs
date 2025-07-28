@@ -9,14 +9,14 @@ use std::str::FromStr;
 /// - [Poker Ranges & Range Reading](https://www.splitsuit.com/poker-ranges-reading)
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum Qualifier {
+    OFFSUIT,
+    SUITED,
     #[default]
     ALL,
-    SUITED,
-    OFFSUIT,
 }
 
 impl Display for Qualifier {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Qualifier::ALL => write!(f, ""),
             Qualifier::SUITED => write!(f, "s"),
@@ -39,6 +39,113 @@ pub struct Combo {
 }
 
 impl Combo {
+    // region Combo collections
+    pub const POCKET_PAIRS: [Combo; 13] = [
+        Combo::COMBO_AA,
+        Combo::COMBO_KK,
+        Combo::COMBO_QQ,
+        Combo::COMBO_JJ,
+        Combo::COMBO_TT,
+        Combo::COMBO_99,
+        Combo::COMBO_88,
+        Combo::COMBO_77,
+        Combo::COMBO_66,
+        Combo::COMBO_55,
+        Combo::COMBO_44,
+        Combo::COMBO_33,
+        Combo::COMBO_22,
+    ];
+
+    pub const CONNECTORS: [Combo; 12] = [
+        Combo::COMBO_AK,
+        Combo::COMBO_KQ,
+        Combo::COMBO_QJ,
+        Combo::COMBO_JT,
+        Combo::COMBO_T9,
+        Combo::COMBO_98,
+        Combo::COMBO_87,
+        Combo::COMBO_76,
+        Combo::COMBO_65,
+        Combo::COMBO_54,
+        Combo::COMBO_43,
+        Combo::COMBO_32,
+    ];
+
+    pub const SUITED_CONNECTORS: [Combo; 12] = [
+        Combo::COMBO_AKs,
+        Combo::COMBO_KQs,
+        Combo::COMBO_QJs,
+        Combo::COMBO_JTs,
+        Combo::COMBO_T9s,
+        Combo::COMBO_98s,
+        Combo::COMBO_87s,
+        Combo::COMBO_76s,
+        Combo::COMBO_65s,
+        Combo::COMBO_54s,
+        Combo::COMBO_43s,
+        Combo::COMBO_32s,
+    ];
+
+    pub const OFFSUIT_CONNECTORS: [Combo; 12] = [
+        Combo::COMBO_AKo,
+        Combo::COMBO_KQo,
+        Combo::COMBO_QJo,
+        Combo::COMBO_JTo,
+        Combo::COMBO_T9o,
+        Combo::COMBO_98o,
+        Combo::COMBO_87o,
+        Combo::COMBO_76o,
+        Combo::COMBO_65o,
+        Combo::COMBO_54o,
+        Combo::COMBO_43o,
+        Combo::COMBO_32o,
+    ];
+
+    pub const ACE_X_COMBOS: [Combo; 12] = [
+        Combo::COMBO_AK,
+        Combo::COMBO_AQ,
+        Combo::COMBO_AJ,
+        Combo::COMBO_AT,
+        Combo::COMBO_A9,
+        Combo::COMBO_A8,
+        Combo::COMBO_A7,
+        Combo::COMBO_A6,
+        Combo::COMBO_A5,
+        Combo::COMBO_A4,
+        Combo::COMBO_A3,
+        Combo::COMBO_A2,
+    ];
+    pub const ACE_X_SUITED_COMBOS: [Combo; 12] = [
+        Combo::COMBO_AKs,
+        Combo::COMBO_AQs,
+        Combo::COMBO_AJs,
+        Combo::COMBO_ATs,
+        Combo::COMBO_A9s,
+        Combo::COMBO_A8s,
+        Combo::COMBO_A7s,
+        Combo::COMBO_A6s,
+        Combo::COMBO_A5s,
+        Combo::COMBO_A4s,
+        Combo::COMBO_A3s,
+        Combo::COMBO_A2s,
+    ];
+    pub const ACE_X_OFFSUIT_COMBOS: [Combo; 12] = [
+        Combo::COMBO_AKo,
+        Combo::COMBO_AQo,
+        Combo::COMBO_AJo,
+        Combo::COMBO_ATo,
+        Combo::COMBO_A9o,
+        Combo::COMBO_A8o,
+        Combo::COMBO_A7o,
+        Combo::COMBO_A6o,
+        Combo::COMBO_A5o,
+        Combo::COMBO_A4o,
+        Combo::COMBO_A3o,
+        Combo::COMBO_A2o,
+    ];
+
+    // endregion
+
     // region pocket pairs
     pub const COMBO_AA: Combo = Combo {
         first: Rank::ACE,
@@ -3514,6 +3621,8 @@ impl FromStr for Combo {
 #[allow(non_snake_case)]
 mod arrays__ranges__combo_tests {
     use super::*;
+    use rand::rng;
+    use rand::seq::SliceRandom;
     use rstest::rstest;
 
     #[test]
@@ -3814,13 +3923,43 @@ mod arrays__ranges__combo_tests {
     #[case("T8o", Combo::COMBO_T8o)]
     #[case("T8", Combo::COMBO_T8)]
     #[case("T8s+", Combo::COMBO_T8s_PLUS)]
+    #[case("T8o+", Combo::COMBO_T8o_PLUS)]
+    #[case("T8+", Combo::COMBO_T8_PLUS)]
+    #[case("T7s", Combo::COMBO_T7s)]
+    #[case("T7o", Combo::COMBO_T7o)]
+    #[case("T7", Combo::COMBO_T7)]
+    #[case("T7s+", Combo::COMBO_T7s_PLUS)]
+    #[case("T7o+", Combo::COMBO_T7o_PLUS)]
+    #[case("T7+", Combo::COMBO_T7_PLUS)]
+    #[case("T6s", Combo::COMBO_T6s)]
+    #[case("T6o", Combo::COMBO_T6o)]
+    #[case("T6", Combo::COMBO_T6)]
+    #[case("T6s+", Combo::COMBO_T6s_PLUS)]
+    #[case("T6o+", Combo::COMBO_T6o_PLUS)]
     fn from_str(#[case] s: &str, #[case] combo: Combo) {
         assert_eq!(Combo::from_str(s), Ok(combo));
     }
     // endregion
 
     #[test]
-    fn isolate() {
-        assert_eq!(Combo::from_str("AKs"), Ok(Combo::COMBO_AKs));
+    fn sort() {
+        let v: Vec<Combo> = vec![
+            Combo::COMBO_AA,
+            Combo::COMBO_AKs,
+            Combo::COMBO_AKo,
+            Combo::COMBO_AQo_PLUS,
+            Combo::COMBO_QQ_PLUS,
+            Combo::COMBO_99_PLUS,
+        ];
+        let mut shuffled = v.clone();
+        shuffled.shuffle(&mut rng());
+        shuffled.sort();
+        shuffled.reverse();
+
+        for combo in &shuffled {
+            println!("{combo}");
+        }
+
+        assert_eq!(shuffled, v);
     }
 }

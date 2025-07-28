@@ -1775,7 +1775,7 @@ macro_rules! range {
 
     (JT+) => {
         Twos::from($crate::arrays::combos::ACE_KING.to_vec()).extend(
-            Twos::from($crate::arrays::combos::KING_QUEEN.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_QUEEN.to_vec()).extend(
                 &Twos::from($crate::arrays::combos::QUEEN_JACK.to_vec()).extend(
                     &Twos::from($crate::arrays::combos::JACK_TEN.to_vec())
                 )
@@ -1881,7 +1881,7 @@ macro_rules! range {
 
     (JTs+) => {
         Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec()).extend(
-            Twos::from($crate::arrays::combos::KING_QUEEN_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_QUEEN_SUITED.to_vec()).extend(
                 &Twos::from($crate::arrays::combos::QUEEN_JACK_SUITED.to_vec()).extend(
                     &Twos::from($crate::arrays::combos::JACK_TEN_SUITED.to_vec())
                 )
@@ -1987,7 +1987,7 @@ macro_rules! range {
 
     (JTo+) => {
         Twos::from($crate::arrays::combos::ACE_KING_OFFSUIT.to_vec()).extend(
-            Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec()).extend(
                 &Twos::from($crate::arrays::combos::QUEEN_JACK_OFFSUIT.to_vec()).extend(
                     &Twos::from($crate::arrays::combos::JACK_TEN_OFFSUIT.to_vec())
                 )
@@ -2091,6 +2091,17 @@ macro_rules! range {
         )
     };
 
+    (T9+) => {
+        Twos::from($crate::arrays::combos::ACE_KING.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_QUEEN.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::QUEEN_JACK.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::JACK_TEN.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_NINE.to_vec())
+                    )
+                )
+            )
+        )
+    };
     (T8+) => {
         Twos::from($crate::arrays::combos::TEN_EIGHT.to_vec()).extend(
             &Twos::from($crate::arrays::combos::TEN_NINE.to_vec())
@@ -2169,6 +2180,17 @@ macro_rules! range {
         )
     };
 
+    (T9s+) => {
+        Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_QUEEN_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::QUEEN_JACK_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::JACK_TEN_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_NINE_SUITED.to_vec())
+                    )
+                )
+            )
+        )
+    };
     (T8s+) => {
         Twos::from($crate::arrays::combos::TEN_EIGHT_SUITED.to_vec()).extend(
             &Twos::from($crate::arrays::combos::TEN_NINE_SUITED.to_vec())
@@ -2247,6 +2269,17 @@ macro_rules! range {
         )
     };
 
+    (T9o+) => {
+        Twos::from($crate::arrays::combos::ACE_KING_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::QUEEN_JACK_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::JACK_TEN_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_NINE_OFFSUIT.to_vec())
+                    )
+                )
+            )
+        )
+    };
     (T8o+) => {
         Twos::from($crate::arrays::combos::TEN_EIGHT_OFFSUIT.to_vec()).extend(
             &Twos::from($crate::arrays::combos::TEN_NINE_OFFSUIT.to_vec())
@@ -2325,6 +2358,19 @@ macro_rules! range {
         )
     };
 
+    (98+) => {
+        Twos::from($crate::arrays::combos::ACE_KING.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_QUEEN.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::QUEEN_JACK.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::JACK_TEN.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_NINE.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::NINE_EIGHT.to_vec())
+                        )
+                    )
+                )
+            )
+        )
+    };
     (97+) => {
         Twos::from($crate::arrays::combos::NINE_SEVEN.to_vec()).extend(
             &Twos::from($crate::arrays::combos::NINE_EIGHT.to_vec())
@@ -2386,6 +2432,19 @@ macro_rules! range {
         )
     };
 
+    (98s+) => {
+        Twos::from($crate::arrays::combos::ACE_KING_SUITED.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_QUEEN_SUITED.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::QUEEN_JACK_SUITED.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::JACK_TEN_SUITED.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_NINE_SUITED.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::NINE_EIGHT_SUITED.to_vec())
+                        )
+                    )
+                )
+            )
+        )
+    };
     (97s+) => {
         Twos::from($crate::arrays::combos::NINE_SEVEN_SUITED.to_vec()).extend(
             &Twos::from($crate::arrays::combos::NINE_EIGHT_SUITED.to_vec())
@@ -2447,6 +2506,19 @@ macro_rules! range {
         )
     };
 
+    (98o+) => {
+        Twos::from($crate::arrays::combos::ACE_KING_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::arrays::combos::KING_QUEEN_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::arrays::combos::QUEEN_JACK_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::arrays::combos::JACK_TEN_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::arrays::combos::TEN_NINE_OFFSUIT.to_vec()).extend(
+                            &Twos::from($crate::arrays::combos::NINE_EIGHT_OFFSUIT.to_vec())
+                        )
+                    )
+                )
+            )
+        )
+    };
     (97o+) => {
         Twos::from($crate::arrays::combos::NINE_SEVEN_OFFSUIT.to_vec()).extend(
             &Twos::from($crate::arrays::combos::NINE_EIGHT_OFFSUIT.to_vec())
@@ -2757,7 +2829,7 @@ macro_rules! range {
             )
         )
     };
-    (6x) => {
+    (62+) => {
         Twos::from($crate::arrays::combos::SIX_DEUCE.to_vec()).extend(
             &Twos::from($crate::arrays::combos::SIX_TREY.to_vec()).extend(
                 &Twos::from($crate::arrays::combos::SIX_FOUR.to_vec()).extend(
@@ -2816,7 +2888,7 @@ macro_rules! range {
             &Twos::from($crate::arrays::combos::FIVE_FOUR.to_vec())
         )
     };
-    (5x) => {
+    (52+) => {
         Twos::from($crate::arrays::combos::FIVE_DEUCE.to_vec()).extend(
             &Twos::from($crate::arrays::combos::FIVE_TREY.to_vec()).extend(
                 &Twos::from($crate::arrays::combos::FIVE_FOUR.to_vec())
@@ -2850,7 +2922,7 @@ macro_rules! range {
         )
     };
 
-    (4x) => {
+    (42+) => {
         Twos::from($crate::arrays::combos::FOUR_DEUCE.to_vec()).extend(
             &Twos::from($crate::arrays::combos::FOUR_TREY.to_vec())
         )
@@ -5414,7 +5486,7 @@ mod tests {
     fn sixx_plus() {
         let expected = range!(62).extend(&range!(63)).extend(&range!(64)).extend(&range!(65));
 
-        let actual = range!(6x);
+        let actual = range!(62+);
 
         assert_eq!(expected, actual);
     }
@@ -5492,7 +5564,7 @@ mod tests {
     fn fivex_plus() {
         let expected = range!(52).extend(&range!(53)).extend(&range!(54));
 
-        let actual = range!(5x);
+        let actual = range!(52+);
 
         assert_eq!(expected, actual);
     }
@@ -5537,7 +5609,7 @@ mod tests {
     fn fourx_plus() {
         let expected = range!(42).extend(&range!(43));
 
-        let actual = range!(4x);
+        let actual = range!(42+);
 
         assert_eq!(expected, actual);
     }

@@ -167,7 +167,7 @@ pub const DEUCES: [Two; 6] = [
 /// ```
 ///
 /// OK, I have to admit, that that looks pretty bad-assed, and I'm betting that many of my
-/// programmer friends would look at my code and marvel at my functional foo.
+/// programmer friends would look at my code and marvel at my functional foo. ASIDE: Yeah, right.
 ///
 /// Here's the thing thought... nobody gives a shit. When I'm looking through your code, trying
 /// to figure out what it does, don't make me think. For me, the first test is easier to figure
