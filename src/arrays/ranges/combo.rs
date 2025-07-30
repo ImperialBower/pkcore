@@ -143,6 +143,45 @@ impl Combo {
         Combo::COMBO_A3o,
         Combo::COMBO_A2o,
     ];
+    pub const KING_X_COMBOS: [Combo; 11] = [
+        Combo::COMBO_KQ,
+        Combo::COMBO_KJ,
+        Combo::COMBO_KT,
+        Combo::COMBO_K9,
+        Combo::COMBO_K8,
+        Combo::COMBO_K7,
+        Combo::COMBO_K6,
+        Combo::COMBO_K5,
+        Combo::COMBO_K4,
+        Combo::COMBO_K3,
+        Combo::COMBO_K2,
+    ];
+    pub const KING_X_SUITED_COMBOS: [Combo; 11] = [
+        Combo::COMBO_KQs,
+        Combo::COMBO_KJs,
+        Combo::COMBO_KTs,
+        Combo::COMBO_K9s,
+        Combo::COMBO_K8s,
+        Combo::COMBO_K7s,
+        Combo::COMBO_K6s,
+        Combo::COMBO_K5s,
+        Combo::COMBO_K4s,
+        Combo::COMBO_K3s,
+        Combo::COMBO_K2s,
+    ];
+    pub const KING_X_OFFSUIT_COMBOS: [Combo; 11] = [
+        Combo::COMBO_KQo,
+        Combo::COMBO_KJo,
+        Combo::COMBO_KTo,
+        Combo::COMBO_K9o,
+        Combo::COMBO_K8o,
+        Combo::COMBO_K7o,
+        Combo::COMBO_K6o,
+        Combo::COMBO_K5o,
+        Combo::COMBO_K4o,
+        Combo::COMBO_K3o,
+        Combo::COMBO_K2o,
+    ];
 
     // endregion
 

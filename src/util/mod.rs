@@ -49,6 +49,11 @@ impl Util {
     }
 
     #[must_use]
+    pub fn str_remove_spaces(s: &str) -> String {
+        s.replace(' ', "")
+    }
+
+    #[must_use]
     pub fn str_splitter(s: &str, splitter: &str) -> Vec<String> {
         s.split(splitter).map(std::string::ToString::to_string).collect()
     }
@@ -92,5 +97,14 @@ mod util__tests {
         let percentage = Util::calculate_percentage(48, 0);
 
         assert_eq!("0.00000%", format!("{:.5}%", percentage));
+    }
+
+    #[test]
+    fn str_remove_spaces() {
+        let index = "JJ-22, AQs -    ATs,KJs+";
+
+        let expected = "JJ-22,AQs-ATs,KJs+".to_string();
+
+        assert_eq!(Util::str_remove_spaces(index), expected);
     }
 }
