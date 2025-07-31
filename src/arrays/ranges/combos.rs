@@ -1,14 +1,12 @@
-use std::str::FromStr;
-use crate::arrays::ranges::combo::Combo;
 use crate::PKError;
+use crate::arrays::ranges::combo::Combo;
 use crate::util::Util;
+use std::str::FromStr;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Combos(Vec<Combo>);
 
-impl Combos {
-
-}
+impl Combos {}
 
 impl From<Vec<Combo>> for Combos {
     fn from(combos: Vec<Combo>) -> Self {
@@ -28,7 +26,7 @@ impl FromStr for Combos {
 
         let combos = index
             .split(',')
-            .map(|c| c.parse::<Combo>())
+            .map(str::parse::<Combo>)
             .collect::<Result<Vec<Combo>, PKError>>()?;
 
         Ok(Combos::from(combos))
