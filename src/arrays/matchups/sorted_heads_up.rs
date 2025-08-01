@@ -18,6 +18,7 @@ use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::str::FromStr;
+use rusqlite::Connection;
 
 pub static SORTED_HEADS_UP_UNIQUE: std::sync::LazyLock<HashSet<SortedHeadsUp>> = std::sync::LazyLock::new(|| {
     let mut hs: HashSet<SortedHeadsUp> = HashSet::new();
@@ -87,6 +88,18 @@ impl SortedHeadsUp {
     #[must_use]
     pub fn contains(&self, two: &Two) -> bool {
         self.is_higher(two) || self.is_lower(two)
+    }
+
+    /// ## Aside
+    ///
+    /// Not sure if mixing the connection to the data struct is Kosher, but I can refactor later.
+    /// Yeah, right.
+    ///
+    /// TODO: My eyes!!! My eyes!!! They burn!!! Refactor out this pollution of the struct space, you fiend.
+    #[must_use]
+    pub fn hup_result_from_shift(&self, conn: &Connection) -> Result<HUPResult, PKError> {
+        let shifts = self.shifts();
+        todo!()
     }
 
     #[must_use]

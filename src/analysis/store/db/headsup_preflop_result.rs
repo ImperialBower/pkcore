@@ -39,6 +39,28 @@ impl HUPResult {
         v == hs
     }
 
+    /// # THIS IS WRONG
+    /// 
+    /// I'm doing it in the inverse order. I need to do this from `SortedHeadsUp` and pass in 
+    /// the connection to see if it's there. 
+    pub fn from_shift(&self, shu: &SortedHeadsUp) -> Option<Self> {
+        let shifts = self.shifts();
+
+        for shift in shifts {
+            if shift.get_sorted_heads_up().is_some_and(|s| s == *shu) {
+                let hpr = HUPResult {
+                    higher: shu.higher_as_bard(),
+                    lower: shu.lower_as_bard(),
+                    higher_wins: self.higher_wins,
+                    lower_wins: self.lower_wins,
+                    ties: self.ties,
+                };
+                return Some(hpr);
+            }
+        }
+        None
+    }
+
     /// `assert_eq!(first_ties, second_ties);`
     /// This is something I want to get much more into the habit of writing. An assertion that's
     /// simply a sanity check. There is no way that these two values shouldn't be equal, so,
