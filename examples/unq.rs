@@ -5,18 +5,30 @@ use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use pkcore::arrays::two::Two;
 use pkcore::{PKError, Shifty};
 use rusqlite::Connection;
+use pkcore::arrays::matchups::shift::Shifter;
 
-// `cargo run --example unq2dinct`
+// `cargo run --example unq`
 fn main() -> Result<(), PKError> {
-    let conn = match Connection::open("generated/hups.db") {
+    let conn = match Connection::open("generated/hups_TEST.db") {
         Ok(c) => c,
         Err(_) => return Err(PKError::SqlError),
     };
     let hups = HUPResult::select_all(&conn);
     println!("{} shus processed", hups.len());
 
-    let shu = SortedHeadsUp::new(Two::HAND_2S_2C, Two::HAND_2H_2D);
-    shifty(&shu, &conn);
+
+    for hupr in hups.clone() {
+        let masked = Shifter::from(hupr);
+        println!("{hupr}");
+        println!("{masked}");
+    }
+
+    println!("{} shus processed", hups.len());
+
+
+
+    // let shu = SortedHeadsUp::new(Two::HAND_2S_2C, Two::HAND_2H_2D);
+    // shifty(&shu, &conn);
 
     Ok(())
 }

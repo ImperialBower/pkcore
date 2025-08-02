@@ -730,6 +730,15 @@ impl Display for SortedHeadsUp {
     }
 }
 
+impl From<HUPResult> for SortedHeadsUp {
+    fn from(hup: HUPResult) -> Self {
+        SortedHeadsUp::new(
+            Two::try_from(hup.higher).unwrap_or_else(|_| Two::default()),
+            Two::try_from(hup.lower).unwrap_or_else(|_| Two::default()),
+        )
+    }
+}
+
 impl From<Masked> for SortedHeadsUp {
     fn from(masked: Masked) -> Self {
         SortedHeadsUp::new(masked.shu.higher, masked.shu.lower)

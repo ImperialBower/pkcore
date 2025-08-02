@@ -480,6 +480,17 @@ impl From<SortedHeadsUp> for Masked {
     }
 }
 
+impl From<&SortedHeadsUp> for Masked {
+    fn from(shu: &SortedHeadsUp) -> Self {
+        Masked {
+            shu: *shu,
+            texture: SuitTexture::from(shu),
+            suit_mask: SuitMask::from(shu),
+            rank_mask: RankMask::from(shu),
+        }
+    }
+}
+
 impl FromStr for Masked {
     type Err = PKError;
 
