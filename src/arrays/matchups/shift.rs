@@ -34,13 +34,13 @@ mod arrays__matchups__masks__shift_tests {
     use std::str::FromStr;
     use super::*;
 
-    /// - A♠ A♥ - T♥ 4♦
-    /// - A♠ A♥ - T♠ 4♣
-    /// - A♠ A♦ - T♠ 4♣
-    /// - A♥ A♣ - T♣ 4♦
-    ///
-    /// missing:
-    /// - A♠ A♥ - T♥ 4♣
+    /// - AS AH - TH 4D
+    ///   - AS AH - TH 4C
+    /// - AS AH - TD 4C
+    /// - AS AD - TS 4C
+    ///   - AS AD - TS 4H
+    /// - AH AC - TC 4D
+    ///   - AH AD - TC 4D
     ///
     #[test]
     fn display() {
