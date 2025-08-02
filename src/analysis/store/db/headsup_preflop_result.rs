@@ -40,9 +40,9 @@ impl HUPResult {
     }
 
     /// # THIS IS WRONG
-    /// 
-    /// I'm doing it in the inverse order. I need to do this from `SortedHeadsUp` and pass in 
-    /// the connection to see if it's there. 
+    ///
+    /// I'm doing it in the inverse order. I need to do this from `SortedHeadsUp` and pass in
+    /// the connection to see if it's there.
     pub fn from_shift(&self, shu: &SortedHeadsUp) -> Option<Self> {
         let shifts = self.shifts();
 
