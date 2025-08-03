@@ -61,6 +61,8 @@ pub static SORTED_HEADS_UP_UNIQUE_TYPE_SIX_B: std::sync::LazyLock<HashSet<Sorted
     std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_six_b));
 pub static SORTED_HEADS_UP_UNIQUE_TYPE_SEVEN: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
     std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_seven));
+pub static SORTED_HEADS_UP_UNIQUE_TYPE_EIGHT: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
+    std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_eight));
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
@@ -96,9 +98,12 @@ impl SortedHeadsUp {
     /// Yeah, right.
     ///
     /// TODO: My eyes!!! My eyes!!! They burn!!! Refactor out this pollution of the struct space, you fiend.
-    #[must_use]
-    pub fn hup_result_from_shift(&self, conn: &Connection) -> Result<HUPResult, PKError> {
-        let shifts = self.shifts();
+    ///
+    /// # Errors
+    ///
+    /// If the connection to the database fails, or if the query fails.
+    pub fn hup_result_from_shift(&self, _conn: &Connection) -> Result<HUPResult, PKError> {
+        let _shifts = self.shifts();
         todo!()
     }
 
@@ -899,7 +904,7 @@ mod arrays__matchups__sorted_heads_up_tests {
         assert_eq!(32604, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_D.len());
         assert_eq!(29172, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_E.len());
         assert_eq!(36504, SORTED_HEADS_UP_UNIQUE_TYPE_THREE.len());
-        assert_eq!(158184, SORTED_HEADS_UP_UNIQUE_TYPE_FOUR.len());
+        assert_eq!(81120, SORTED_HEADS_UP_UNIQUE_TYPE_FOUR.len());
         assert_eq!(88608, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_A.len());
         assert_eq!(73008, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_B.len());
         assert_eq!(89544, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_C.len());
@@ -907,6 +912,7 @@ mod arrays__matchups__sorted_heads_up_tests {
         assert_eq!(39936, SORTED_HEADS_UP_UNIQUE_TYPE_SIX_A.len());
         assert_eq!(33072, SORTED_HEADS_UP_UNIQUE_TYPE_SIX_B.len());
         assert_eq!(85683, SORTED_HEADS_UP_UNIQUE_TYPE_SEVEN.len());
+        assert_eq!(77064, SORTED_HEADS_UP_UNIQUE_TYPE_EIGHT.len());
     }
 
     #[test]

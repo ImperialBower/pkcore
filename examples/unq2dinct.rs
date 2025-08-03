@@ -17,7 +17,7 @@ fn main() -> Result<(), PKError> {
     let hero = Two::HAND_AS_AH;
     let villain = Two::HAND_AD_AC;
 
-    let mut shu = SortedHeadsUp::new(hero, villain);
+    let shu = SortedHeadsUp::new(hero, villain);
 
     let shifts = shu.shifts();
 

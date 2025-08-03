@@ -43,6 +43,8 @@ pub static MASKED_UNIQUE_TYPE_SIX_B: std::sync::LazyLock<HashSet<Masked>> =
     std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_six_b));
 pub static MASKED_UNIQUE_TYPE_SEVEN: std::sync::LazyLock<HashSet<Masked>> =
     std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_seven));
+pub static MASKED_UNIQUE_TYPE_EIGHT: std::sync::LazyLock<HashSet<Masked>> =
+    std::sync::LazyLock::new(|| Masked::filter(&MASKED_UNIQUE, Masked::is_type_eight));
 pub static MASKED_DISTINCT: std::sync::LazyLock<HashSet<Masked>> = std::sync::LazyLock::new(Masked::distinct);
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -176,6 +178,7 @@ impl Masked {
             SuitTexture::Type1212a => MASKED_UNIQUE_TYPE_SIX_A.clone(),
             SuitTexture::Type1212b => MASKED_UNIQUE_TYPE_SIX_B.clone(),
             SuitTexture::Type1234 => MASKED_UNIQUE_TYPE_SEVEN.clone(),
+            SuitTexture::Type1233 => MASKED_UNIQUE_TYPE_EIGHT.clone(),
         }
     }
 
@@ -433,6 +436,11 @@ impl Masked {
         self.texture == SuitTexture::Type1234
     }
 
+    #[must_use]
+    pub fn is_type_eight(&self) -> bool {
+        self.texture == SuitTexture::Type1233
+    }
+
     // endregion
 }
 
@@ -589,7 +597,7 @@ mod arrays__matchups__masked_tests {
             Masked::suit_masks(&MASKED_UNIQUE_TYPE_THREE, Masked::is_type_three).len()
         );
         assert_eq!(
-            24,
+            12,
             Masked::suit_masks(&MASKED_UNIQUE_TYPE_FOUR, Masked::is_type_four).len()
         );
         assert_eq!(
@@ -604,6 +612,10 @@ mod arrays__matchups__masked_tests {
             6,
             Masked::suit_masks(&MASKED_UNIQUE_TYPE_SEVEN, Masked::is_type_seven).len()
         );
+        assert_eq!(
+            12,
+            Masked::suit_masks(&MASKED_UNIQUE_TYPE_EIGHT, Masked::is_type_eight).len()
+        );
     }
 
     #[test]
@@ -611,6 +623,7 @@ mod arrays__matchups__masked_tests {
         assert_eq!(812175, MASKED_UNIQUE.len());
     }
 
+    /// Not sure what the point of these tests are other than to tell me when things change.
     #[test]
     fn unique_types() {
         assert_eq!(8580, MASKED_UNIQUE_TYPE_ONE.len());
@@ -620,7 +633,7 @@ mod arrays__matchups__masked_tests {
         assert_eq!(32604, MASKED_UNIQUE_TYPE_TWO_D.len());
         assert_eq!(29172, MASKED_UNIQUE_TYPE_TWO_E.len());
         assert_eq!(36504, MASKED_UNIQUE_TYPE_THREE.len());
-        assert_eq!(158184, MASKED_UNIQUE_TYPE_FOUR.len());
+        assert_eq!(81120, MASKED_UNIQUE_TYPE_FOUR.len());
         assert_eq!(88608, MASKED_UNIQUE_TYPE_FIVE_A.len());
         assert_eq!(73008, MASKED_UNIQUE_TYPE_FIVE_B.len());
         assert_eq!(89544, MASKED_UNIQUE_TYPE_FIVE_C.len());
@@ -628,6 +641,7 @@ mod arrays__matchups__masked_tests {
         assert_eq!(39936, MASKED_UNIQUE_TYPE_SIX_A.len());
         assert_eq!(33072, MASKED_UNIQUE_TYPE_SIX_B.len());
         assert_eq!(85683, MASKED_UNIQUE_TYPE_SEVEN.len());
+        assert_eq!(77064, MASKED_UNIQUE_TYPE_EIGHT.len());
     }
 
     #[test]
@@ -968,5 +982,37 @@ mod arrays__matchups__masked_tests {
 
         assert_eq!(2, others.len());
         assert!(!others.contains(&original));
+    }
+
+    // 4. suited, off suit, different suits
+    #[test]
+    fn defect_type4_1123() {
+        let target = SortedHeadsUp::new(Two::HAND_AD_TD, Two::HAND_5H_4S);
+        let masked = Masked::from(target);
+
+        assert_eq!(SuitTexture::Type1123, masked.texture);
+
+        let shifts = masked.shifts();
+        assert_eq!(24, shifts.len());
+
+        for shift in shifts {
+            println!("{shift}");
+        }
+        //A♥ T♣ - 5♠ 4♠
+    }
+
+    #[test]
+    fn defect_type4_1123_2() {
+        let target = SortedHeadsUp::new(Two::HAND_AH_TC, Two::HAND_5S_4S);
+        let masked = Masked::from(target);
+
+        assert_eq!(SuitTexture::Type1233, masked.texture);
+
+        let shifts = masked.shifts();
+        assert_eq!(24, shifts.len());
+
+        for shift in shifts {
+            println!("{shift}");
+        }
     }
 }

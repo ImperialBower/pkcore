@@ -1,11 +1,10 @@
+use pkcore::PKError;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::masked::Masked;
-use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
-use pkcore::arrays::two::Two;
-use pkcore::{PKError, Shifty};
-use rusqlite::Connection;
 use pkcore::arrays::matchups::shift::Shifter;
+use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+use rusqlite::Connection;
 
 // `cargo run --example unq`
 fn main() -> Result<(), PKError> {
@@ -16,7 +15,6 @@ fn main() -> Result<(), PKError> {
     let hups = HUPResult::select_all(&conn);
     println!("{} shus processed", hups.len());
 
-
     for hupr in hups.clone() {
         let masked = Shifter::from(hupr);
         println!("{hupr}");
@@ -25,18 +23,16 @@ fn main() -> Result<(), PKError> {
 
     println!("{} shus processed", hups.len());
 
-
-
     // let shu = SortedHeadsUp::new(Two::HAND_2S_2C, Two::HAND_2H_2D);
     // shifty(&shu, &conn);
 
     Ok(())
 }
 
-fn shifty(shu: &SortedHeadsUp, conn: &Connection) {
+fn _shifty(shu: &SortedHeadsUp, conn: &Connection) {
     if !HUPResult::exists(conn, shu) {
         let masked = Masked::from(*shu);
-        let hup_result = HUPResult::select_from_shifts(conn, &masked);
+        let _hup_result = HUPResult::select_from_shifts(conn, &masked);
 
         match HUPResult::select_from_shifts(conn, &masked) {
             Some(hupr) => {
