@@ -78,6 +78,7 @@ mod arrays__matchups__masks__shift_tests {
     use super::*;
     use crate::arrays::matchups::masks::rank_mask::RankMask;
     use crate::arrays::matchups::masks::suit_mask::SuitMask;
+    use crate::arrays::matchups::masks::suit_texture::SuitTexture;
     use crate::arrays::two::Two;
     use crate::bard::Bard;
     use std::str::FromStr;
@@ -131,7 +132,7 @@ mod arrays__matchups__masks__shift_tests {
         let expected = Shifter {
             masked: Masked {
                 shu: SortedHeadsUp::new(Two::HAND_AD_TD, Two::HAND_5H_4S),
-                texture: crate::arrays::matchups::masks::suit_texture::SuitTexture::Type1123,
+                texture: SuitTexture::Type1123,
                 suit_mask: SuitMask {
                     higher: 0b0010,
                     lower: 0b1100,
