@@ -21,7 +21,7 @@ fn main() -> Result<(), PKError> {
 
     let shifts = shu.shifts();
 
-    for shift in shifts {
+    for shift in shifts {wwww
         println!("{shift}");
     }
 
