@@ -7,20 +7,14 @@ use std::str::FromStr;
 pub struct Combos(Vec<Combo>);
 
 impl Combos {
-    fn combo_range(s: &str) -> Result<(Combo, Combo), PKError> {
+    fn combo_range(s: &str) -> Result<Combos, PKError> {
         let mut iter = s.split('-');
-        if iter.clone().count() != 2 {
-            Err(PKError::InvalidRangeIndex)
+        if iter.clone().count() == 2 {
+            let start = iter.next().ok_or(PKError::InvalidRangeIndex)?.parse::<Combo>()?;
+            let end = iter.next().ok_or(PKError::InvalidRangeIndex)?.parse::<Combo>()?;
+            Ok(Combos(vec![start, end]))
         } else {
-            let start = iter
-                .next()
-                .ok_or(PKError::InvalidRangeIndex)?
-                .parse::<Combo>()?;
-            let end = iter
-                .next()
-                .ok_or(PKError::InvalidRangeIndex)?
-                .parse::<Combo>()?;
-            Ok((start, end))
+            Err(PKError::InvalidRangeIndex)
         }
     }
 }
@@ -59,12 +53,12 @@ mod arrays__ranges__combos_tests {
     #[test]
     fn combo_range() {
         let range = "AQs-ATs";
-        let aqs = Combo::COMBO_AQs;
-        let ats = Combo::COMBO_ATs;
+        let expected = Combos(vec![Combo::COMBO_AQs, Combo::COMBO_ATs]);
 
-        let (left, right) = Combos::combo_range(range).unwrap();
+        let actual = Combos::combo_range(range).unwrap();
 
-        assert_eq!(left, aqs);
-        assert_eq!(right, ats);
+        assert_eq!(expected, actual);
+        assert!(Combos::combo_range("AQs-ATs-AAs").is_err());
+        assert!(Combos::combo_range("AQs").is_err());
     }
 }
