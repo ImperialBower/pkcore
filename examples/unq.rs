@@ -1,4 +1,4 @@
-use pkcore::PKError;
+use pkcore::{PKError, Shifty};
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::masked::Masked;
@@ -19,6 +19,23 @@ fn main() -> Result<(), PKError> {
         let masked = Shifter::from(hupr);
         println!("{hupr}");
         println!("{masked}");
+
+        for hupy in hupr.other_shifts() {
+            if !HUPResult::exists(&conn, &hupy.get_sorted_heads_up().unwrap()) {
+
+                match HUPResult::insert(&conn, &hupy) {
+                    Ok(_) => {
+                        println!("... inserted: {hupy}");
+                    }
+                    Err(e) => {
+                        println!("Unable to insert {hupy}");
+                        println!("Error: {:?}", e);
+                    }
+                }
+            } else {
+                println!("{hupy} already exists");
+            }
+        }
     }
 
     println!("{} shus processed", hups.len());

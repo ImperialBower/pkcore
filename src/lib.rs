@@ -436,7 +436,7 @@ pub trait Shifty {
         Self: Sized,
         Self: Eq,
         Self: Hash,
-        Self: std::fmt::Display,
+        Self: Display,
     {
         let mut shifts = self.shifts();
         shifts.remove(self);
