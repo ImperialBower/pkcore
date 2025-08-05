@@ -2,6 +2,11 @@ use crate::arrays::two::Two;
 
 pub mod hc;
 pub mod twos;
+pub mod combo;
+#[macro_use]
+pub mod range;
+pub mod combos;
+pub mod ranger;
 
 // region hand range array constants
 // region pocket pair range array constants

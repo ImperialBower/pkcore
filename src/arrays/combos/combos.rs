@@ -1,5 +1,5 @@
 use crate::PKError;
-use crate::arrays::ranges::combo::Combo;
+use crate::arrays::combos::combo::Combo;
 use crate::util::Util;
 use std::str::FromStr;
 

@@ -1,6 +1,6 @@
 use crate::PKError;
 use crate::arrays::combos::hc::HCSymbol;
-use crate::arrays::ranges::combo::Combo;
+use crate::arrays::combos::combo::Combo;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
