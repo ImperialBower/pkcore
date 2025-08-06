@@ -829,3 +829,5 @@ This is an outline of the work as it is done.
           * Combo constructor from string (i.e. QQ+, AKs-98s, AQJs+)
           * ...
           * Profit!
+        * Finished parsing of sub ranges, aka `AKs-98s`
+        * FEATURE: Added support for `A♠ A♥,A♦ K♦` and `A♠ A♥ - A♦ K♦` style index strings to `Cards::from_str()`

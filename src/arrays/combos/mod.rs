@@ -1,8 +1,8 @@
 use crate::arrays::two::Two;
 
+pub mod combo;
 pub mod hc;
 pub mod twos;
-pub mod combo;
 #[macro_use]
 pub mod range;
 pub mod combos;

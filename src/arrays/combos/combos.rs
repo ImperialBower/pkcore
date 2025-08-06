@@ -7,7 +7,21 @@ use std::str::FromStr;
 pub struct Combos(Vec<Combo>);
 
 impl Combos {
-    fn combo_range(s: &str) -> Result<Combos, PKError> {
+    fn parse(s: &str) -> Result<Combos, PKError> {
+        let index = Util::str_remove_spaces(s);
+
+        if index.contains('-') {
+            Combos::range(index.as_str())
+        } else {
+            let combos = index
+                .split(',')
+                .map(str::parse::<Combo>)
+                .collect::<Result<Vec<Combo>, PKError>>()?;
+            Ok(Combos::from(combos))
+        }
+    }
+
+    fn range(s: &str) -> Result<Combos, PKError> {
         let mut iter = s.split('-');
         if iter.clone().count() == 2 {
             let start = iter.next().ok_or(PKError::InvalidRangeIndex)?.parse::<Combo>()?;
@@ -51,14 +65,14 @@ mod arrays__ranges__combos_tests {
 
     /// `JJ-22,AQs-ATs,KJs+,QJs,JTs,T9s,98s,87s,76s,65s,54s,AQo-ATo,KJo+`
     #[test]
-    fn combo_range() {
+    fn range() {
         let range = "AQs-ATs";
         let expected = Combos(vec![Combo::COMBO_AQs, Combo::COMBO_ATs]);
 
-        let actual = Combos::combo_range(range).unwrap();
+        let actual = Combos::range(range).unwrap();
 
         assert_eq!(expected, actual);
-        assert!(Combos::combo_range("AQs-ATs-AAs").is_err());
-        assert!(Combos::combo_range("AQs").is_err());
+        assert!(Combos::range("AQs-ATs-AAs").is_err());
+        assert!(Combos::range("AQs").is_err());
     }
 }

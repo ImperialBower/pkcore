@@ -1,9 +1,9 @@
-use pkcore::{PKError, Shifty};
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::masked::Masked;
 use pkcore::arrays::matchups::shift::Shifter;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+use pkcore::{PKError, Shifty};
 use rusqlite::Connection;
 
 // `cargo run --example unq`
@@ -22,7 +22,6 @@ fn main() -> Result<(), PKError> {
 
         for hupy in hupr.other_shifts() {
             if !HUPResult::exists(&conn, &hupy.get_sorted_heads_up().unwrap()) {
-
                 match HUPResult::insert(&conn, &hupy) {
                     Ok(_) => {
                         println!("... inserted: {hupy}");

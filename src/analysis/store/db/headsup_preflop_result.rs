@@ -1,5 +1,5 @@
 use crate::analysis::store::db::sqlite::Sqlable;
-use crate::arrays::matchups::masked::{MASKED_DISTINCT, Masked, MASKED_UNIQUE};
+use crate::arrays::matchups::masked::{MASKED_DISTINCT, MASKED_UNIQUE, Masked};
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::bard::Bard;
 use crate::util::wincounter::win::Win;

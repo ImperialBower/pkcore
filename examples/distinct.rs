@@ -1,6 +1,19 @@
 use pkcore::PKError;
-use pkcore::arrays::matchups::masked::{MASKED_UNIQUE, MASKED_UNIQUE_TYPE_FIVE_A, MASKED_UNIQUE_TYPE_FIVE_B, MASKED_UNIQUE_TYPE_FIVE_C, MASKED_UNIQUE_TYPE_FIVE_D, MASKED_UNIQUE_TYPE_FOUR, MASKED_UNIQUE_TYPE_ONE, MASKED_UNIQUE_TYPE_SEVEN, MASKED_UNIQUE_TYPE_SIX_A, MASKED_UNIQUE_TYPE_SIX_B, MASKED_UNIQUE_TYPE_THREE, MASKED_UNIQUE_TYPE_TWO_A, MASKED_UNIQUE_TYPE_TWO_B, MASKED_UNIQUE_TYPE_TWO_C, MASKED_UNIQUE_TYPE_TWO_D, MASKED_UNIQUE_TYPE_TWO_E, Masked, MASKED_UNIQUE_TYPE_EIGHT};
-use pkcore::arrays::matchups::sorted_heads_up::{SortedHeadsUp, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_A, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_B, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_C, SORTED_HEADS_UP_UNIQUE_TYPE_FOUR, SORTED_HEADS_UP_UNIQUE_TYPE_ONE, SORTED_HEADS_UP_UNIQUE_TYPE_THREE, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_A, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_B, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_C, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_D, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_E};
+use pkcore::arrays::matchups::masked::{
+    MASKED_UNIQUE, MASKED_UNIQUE_TYPE_EIGHT, MASKED_UNIQUE_TYPE_FIVE_A, MASKED_UNIQUE_TYPE_FIVE_B,
+    MASKED_UNIQUE_TYPE_FIVE_C, MASKED_UNIQUE_TYPE_FIVE_D, MASKED_UNIQUE_TYPE_FOUR, MASKED_UNIQUE_TYPE_ONE,
+    MASKED_UNIQUE_TYPE_SEVEN, MASKED_UNIQUE_TYPE_SIX_A, MASKED_UNIQUE_TYPE_SIX_B, MASKED_UNIQUE_TYPE_THREE,
+    MASKED_UNIQUE_TYPE_TWO_A, MASKED_UNIQUE_TYPE_TWO_B, MASKED_UNIQUE_TYPE_TWO_C, MASKED_UNIQUE_TYPE_TWO_D,
+    MASKED_UNIQUE_TYPE_TWO_E, Masked,
+};
+use pkcore::arrays::matchups::sorted_heads_up::{
+    SORTED_HEADS_UP_UNIQUE_TYPE_EIGHT, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_A, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_B,
+    SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_C, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_D, SORTED_HEADS_UP_UNIQUE_TYPE_FOUR,
+    SORTED_HEADS_UP_UNIQUE_TYPE_ONE, SORTED_HEADS_UP_UNIQUE_TYPE_SEVEN, SORTED_HEADS_UP_UNIQUE_TYPE_SIX_A,
+    SORTED_HEADS_UP_UNIQUE_TYPE_SIX_B, SORTED_HEADS_UP_UNIQUE_TYPE_THREE, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_A,
+    SORTED_HEADS_UP_UNIQUE_TYPE_TWO_B, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_C, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_D,
+    SORTED_HEADS_UP_UNIQUE_TYPE_TWO_E, SortedHeadsUp,
+};
 
 /// ```txt
 /// 8580 type one has 4 suit masks
@@ -112,71 +125,91 @@ fn main() -> Result<(), PKError> {
     println!("distinct: {}", Masked::distinct().len());
     println!("unique: {}", MASKED_UNIQUE.len());
 
-
     SortedHeadsUp::generate_csv(
         "generated/unique_shus_type1.csv",
         SORTED_HEADS_UP_UNIQUE_TYPE_ONE.clone(),
-    ).expect("TODO: panic message");
+    )
+    .expect("TODO: panic message");
     SortedHeadsUp::generate_csv(
         "generated/unique_shus_type2a.csv",
         SORTED_HEADS_UP_UNIQUE_TYPE_TWO_A.clone(),
-    ).expect("TODO: panic message");
+    )
+    .expect("TODO: panic message");
     SortedHeadsUp::generate_csv(
         "generated/unique_shus_type2b.csv",
         SORTED_HEADS_UP_UNIQUE_TYPE_TWO_B.clone(),
-    ).expect("TODO: panic message");
+    )
+    .expect("TODO: panic message");
     SortedHeadsUp::generate_csv(
         "generated/unique_shus_type2c.csv",
         SORTED_HEADS_UP_UNIQUE_TYPE_TWO_C.clone(),
-    ).expect("TODO: panic message");
+    )
+    .expect("TODO: panic message");
     SortedHeadsUp::generate_csv(
         "generated/unique_shus_type2d.csv",
         SORTED_HEADS_UP_UNIQUE_TYPE_TWO_D.clone(),
-    ).expect("TODO: panic message");
+    )
+    .expect("TODO: panic message");
     SortedHeadsUp::generate_csv(
         "generated/unique_shus_type2e.csv",
         SORTED_HEADS_UP_UNIQUE_TYPE_TWO_E.clone(),
-    ).expect("TODO: panic message");
+    )
+    .expect("TODO: panic message");
     SortedHeadsUp::generate_csv(
         "generated/unique_shus_type3.csv",
         SORTED_HEADS_UP_UNIQUE_TYPE_THREE.clone(),
-    ).expect("TODO: panic message");
+    )
+    .expect("TODO: panic message");
     SortedHeadsUp::generate_csv(
         "generated/unique_shus_type4.csv",
         SORTED_HEADS_UP_UNIQUE_TYPE_FOUR.clone(),
-    ).expect("TODO: panic message");
+    )
+    .expect("TODO: panic message");
     SortedHeadsUp::generate_csv(
         "generated/unique_shus_type5a.csv",
         SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_A.clone(),
-    ).expect("TODO: panic message");
+    )
+    .expect("TODO: panic message");
     SortedHeadsUp::generate_csv(
         "generated/unique_shus_type5b.csv",
         SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_B.clone(),
-    ).expect("TODO: panic message");
+    )
+    .expect("TODO: panic message");
     SortedHeadsUp::generate_csv(
         "generated/unique_shus_type5c.csv",
         SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_C.clone(),
-    ).expect("TODO: panic message");
-    SortedHeadsUp::generate_csv(
-        "generated/unique_shus_type5c.csv",
-        SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_C.clone(),
-    ).expect("TODO: panic message");
-    SortedHeadsUp::generate_csv(
-        "generated/unique_masked_type6a_shus.csv",
-        Masked::into_shus(&MASKED_UNIQUE_TYPE_SIX_A),
     )
     .expect("TODO: panic message");
     SortedHeadsUp::generate_csv(
-        "generated/unique_masked_type6b_shus.csv",
-        Masked::into_shus(&MASKED_UNIQUE_TYPE_SIX_B),
+        "generated/unique_shus_type5d.csv",
+        SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_D.clone(),
     )
     .expect("TODO: panic message");
-
     SortedHeadsUp::generate_csv(
-        "generated/distinct_masked_shus.csv",
-        Masked::into_shus(&distinct),
+        "generated/unique_shus_type6a.csv",
+        SORTED_HEADS_UP_UNIQUE_TYPE_SIX_A.clone(),
     )
     .expect("TODO: panic message");
+    SortedHeadsUp::generate_csv(
+        "generated/unique_shus_type6b.csv",
+        SORTED_HEADS_UP_UNIQUE_TYPE_SIX_B.clone(),
+    )
+    .expect("TODO: panic message");
+    SortedHeadsUp::generate_csv(
+        "generated/unique_shus_type7.csv",
+        SORTED_HEADS_UP_UNIQUE_TYPE_SEVEN.clone(),
+    )
+    .expect("TODO: panic message");
+    SortedHeadsUp::generate_csv(
+        "generated/unique_shus_type8.csv",
+        SORTED_HEADS_UP_UNIQUE_TYPE_EIGHT.clone(),
+    )
+    .expect("TODO: panic message");
+    // SortedHeadsUp::generate_csv(
+    //     "generated/distinct_shus.csv",
+    //     Masked::into_shus(&distinct),
+    // )
+    // .expect("TODO: panic message");
 
     println!("Elapsed: {:.2?}", now.elapsed());
 

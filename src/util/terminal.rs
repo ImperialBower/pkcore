@@ -10,6 +10,24 @@ use termion::raw::IntoRawMode;
 pub struct Terminal;
 
 impl Terminal {
+    /// Cleans up the `Card` index string by replacing commas and dashes with spaces.
+    ///
+    /// ```
+    /// use std::str::FromStr;
+    /// use pkcore::card::Card;
+    /// use pkcore::cards::Cards;
+    ///
+    /// let expected = Cards::from(vec![Card::ACE_SPADES, Card::ACE_HEARTS,Card::ACE_DIAMONDS, Card::KING_DIAMONDS]);
+    ///
+    /// assert_eq!(expected, Cards::from_str("A♠ A♥ A♦ K♦").unwrap());
+    /// assert_eq!(expected, Cards::from_str("A♠ A♥ - A♦ K♦").unwrap());
+    /// assert_eq!(expected, Cards::from_str("A♠ A♥,A♦ K♦").unwrap());
+    /// ```
+    #[must_use]
+    pub fn index_cleaner(index: &str) -> String {
+        index.replace([',', '-'], " ")
+    }
+
     /// # Panics
     ///
     /// If it somehow wigs out on the input.
