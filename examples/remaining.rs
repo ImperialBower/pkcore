@@ -1,10 +1,10 @@
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use rusqlite::Connection;
 
-/// `cargo run --example distinct_remaining`
+/// `cargo run --example remaining`
 fn main() {
     let conn = Connection::open("generated/hups_TEST.db").unwrap();
-    let distinct = HUPResult::distinct_remaining(&conn);
+    let distinct = HUPResult::unique_remaining(&conn);
 
     for shu in distinct.clone() {
         println!("{shu}");

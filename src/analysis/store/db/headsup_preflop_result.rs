@@ -1,5 +1,5 @@
 use crate::analysis::store::db::sqlite::Sqlable;
-use crate::arrays::matchups::masked::{MASKED_DISTINCT, Masked};
+use crate::arrays::matchups::masked::{MASKED_DISTINCT, Masked, MASKED_UNIQUE};
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::bard::Bard;
 use crate::util::wincounter::win::Win;
@@ -191,13 +191,22 @@ impl HUPResult {
         None
     }
 
-    pub fn distinct_remaining(conn: &Connection) -> HashSet<Masked> {
-        let mut distinct = MASKED_DISTINCT.clone();
+    pub fn remaining(conn: &Connection, mut hands: HashSet<Masked>) -> HashSet<Masked> {
         let hups = HUPResult::select_all(conn);
         for hup in hups {
-            distinct.remove(&Masked::from(hup));
+            hands.remove(&Masked::from(hup));
         }
-        distinct
+        hands
+    }
+
+    pub fn distinct_remaining(conn: &Connection) -> HashSet<Masked> {
+        let distinct = MASKED_DISTINCT.clone();
+        HUPResult::remaining(conn, distinct)
+    }
+
+    pub fn unique_remaining(conn: &Connection) -> HashSet<Masked> {
+        let distinct = MASKED_UNIQUE.clone();
+        HUPResult::remaining(conn, distinct)
     }
 
     #[must_use]
