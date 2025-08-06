@@ -86,7 +86,7 @@ fn case(shift: &Masked) {
     println!("=================");
     println!("=================");
 
-    // let conn = Connection::open("generated/hups.db").unwrap();
+    // let conn = Connection::open("generated/hups_07_31_2025.db").unwrap();
 
     for shift in shift.other_shifts() {
         process_case(&shift, &baseline);

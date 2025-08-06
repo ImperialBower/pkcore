@@ -13,7 +13,7 @@ struct Args {
     to: String,
 }
 
-/// `cargo run --example hups_import -- -f "data/washed_hups.csv" -t "data/hups.db"`
+/// `cargo run --example hups_import -- -f "data/washed_hups.csv" -t "data/hups_07_31_2025.db"`
 fn main() {
     let args = Args::parse();
 

@@ -49,7 +49,7 @@ fn main() {
     println!("=================");
     println!("=================");
 
-    // let conn = Connection::open("generated/hups.db").unwrap();
+    // let conn = Connection::open("generated/hups_07_31_2025.db").unwrap();
 
     for shift in case2.other_shifts() {
         let hupr = HUPResult::from(&shift.shu);

@@ -5,7 +5,7 @@ use pkcore::arrays::matchups::masks::suit_texture::SuitTexture;
 use rusqlite::Connection;
 
 fn main() {
-    let conn = Connection::open("../../generated/hups.db").unwrap();
+    let conn = Connection::open("../../generated/hups_07_31_2025.db").unwrap();
     let hupr = HUPResult::select_all(&conn);
     // let masks = Masked::parse_hups_as_vectors(&hupr);
     conn.close().unwrap();
