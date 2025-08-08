@@ -150,6 +150,42 @@ impl Combos {
         Combo::COMBO_K3o,
         Combo::COMBO_K2o,
     ];
+    pub const QUEEN_X_COMBOS: [Combo; 10] = [
+        Combo::COMBO_QJ,
+        Combo::COMBO_QT,
+        Combo::COMBO_Q9,
+        Combo::COMBO_Q8,
+        Combo::COMBO_Q7,
+        Combo::COMBO_Q6,
+        Combo::COMBO_Q5,
+        Combo::COMBO_Q4,
+        Combo::COMBO_Q3,
+        Combo::COMBO_Q2,
+    ];
+    pub const QUEEN_X_SUITED_COMBOS: [Combo; 10] = [
+        Combo::COMBO_QJs,
+        Combo::COMBO_QTs,
+        Combo::COMBO_Q9s,
+        Combo::COMBO_Q8s,
+        Combo::COMBO_Q7s,
+        Combo::COMBO_Q6s,
+        Combo::COMBO_Q5s,
+        Combo::COMBO_Q4s,
+        Combo::COMBO_Q3s,
+        Combo::COMBO_Q2s,
+    ];
+    pub const QUEEN_X_OFFSUIT_COMBOS: [Combo; 10] = [
+        Combo::COMBO_QJo,
+        Combo::COMBO_QTo,
+        Combo::COMBO_Q9o,
+        Combo::COMBO_Q8o,
+        Combo::COMBO_Q7o,
+        Combo::COMBO_Q6o,
+        Combo::COMBO_Q5o,
+        Combo::COMBO_Q4o,
+        Combo::COMBO_Q3o,
+        Combo::COMBO_Q2o,
+    ];
 
     // endregion
 
