@@ -386,5 +386,6 @@ mod arrays__ranges__combos__combo_range_tests {
         assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QJo).is_aligned());
 
         assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QT).is_aligned());
+        assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_AK).is_aligned());
     }
 }
