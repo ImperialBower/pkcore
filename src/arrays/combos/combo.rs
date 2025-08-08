@@ -2985,6 +2985,19 @@ impl Combo {
         qualifier: Qualifier::ALL,
     };
     // endregion
+
+    #[must_use]
+    pub fn is_pocket_pair(&self) -> bool {
+        self.first == self.second
+    }
+
+    #[must_use]
+    pub fn is_same_type(&self, other: &Self) -> bool {
+        if self.is_pocket_pair() {
+            return other.is_pocket_pair();
+        }
+        (self.higher == other.higher) && (self.qualifier == other.qualifier)
+    }
 }
 
 impl Display for Combo {
@@ -3519,6 +3532,22 @@ mod arrays__ranges__combo_tests {
     use rstest::rstest;
 
     #[test]
+    fn is_pocket_pair() {
+        assert!(Combo::COMBO_AA.is_pocket_pair());
+        assert!(Combo::COMBO_22.is_pocket_pair());
+        assert!(!Combo::COMBO_AKs.is_pocket_pair());
+        assert!(!Combo::COMBO_AQo_PLUS.is_pocket_pair());
+    }
+
+    #[test]
+    fn is_same_type() {
+        assert!(Combo::COMBO_AA.is_same_type(&Combo::COMBO_KK));
+        assert!(Combo::COMBO_QQ_PLUS.is_same_type(&Combo::COMBO_99_PLUS));
+        assert!(Combo::COMBO_AJo_PLUS.is_same_type(&Combo::COMBO_AQo_PLUS));
+        assert!(!Combo::COMBO_AKs.is_same_type(&Combo::COMBO_AQo_PLUS));
+    }
+
+    #[test]
     fn display() {
         assert_eq!(Combo::COMBO_AA.to_string(), "AA");
         assert_eq!(Combo::COMBO_AKs.to_string(), "AKs");
@@ -3848,10 +3877,6 @@ mod arrays__ranges__combo_tests {
         shuffled.shuffle(&mut rng());
         shuffled.sort();
         shuffled.reverse();
-
-        for combo in &shuffled {
-            println!("{combo}");
-        }
 
         assert_eq!(shuffled, v);
     }

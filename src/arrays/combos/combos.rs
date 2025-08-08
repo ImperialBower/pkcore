@@ -170,7 +170,6 @@ impl Combos {
         //     }
         // }
         todo!()
-
     }
 
     fn range(s: &str) -> Result<(Combo, Combo), PKError> {
@@ -182,6 +181,30 @@ impl Combos {
         } else {
             Err(PKError::InvalidRangeIndex)
         }
+    }
+
+    fn unwrap_range(from: Combo, to: Combo) -> Vec<Combo> {
+        if from == to {
+            return vec![from];
+        }
+
+        let my_from = from;
+        let my_to = to;
+
+        if to > from {
+            let my_from = to;
+            let my_to = from;
+        }
+
+        // let mut combos = Vec::new();
+        // for i in from.index()..=to.index() {
+        //     if let Some(combo) = Combo::from_index(i) {
+        //         combos.push(combo);
+        //     }
+        // }
+        // combos
+
+        todo!()
     }
 }
 
@@ -218,10 +241,15 @@ mod arrays__ranges__combos_tests {
     #[test]
     fn parse() {
         let expected = Combos(vec![
-            Combo::COMBO_JJ, Combo::COMBO_TT, Combo::COMBO_99,
-            Combo::COMBO_AQs, Combo::COMBO_AJs, Combo::COMBO_ATs,
-            Combo::COMBO_KJs_PLUS, Combo::COMBO_QJs,
-            Combo::COMBO_JTs
+            Combo::COMBO_JJ,
+            Combo::COMBO_TT,
+            Combo::COMBO_99,
+            Combo::COMBO_AQs,
+            Combo::COMBO_AJs,
+            Combo::COMBO_ATs,
+            Combo::COMBO_KJs_PLUS,
+            Combo::COMBO_QJs,
+            Combo::COMBO_JTs,
         ]);
 
         let combos = Combos::parse("JJ-99,AQs-ATs,KJs+,QJs,JTs").unwrap();
@@ -234,10 +262,51 @@ mod arrays__ranges__combos_tests {
     fn range() {
         let range = "AQs-ATs";
 
-        let actual= Combos::range(range).unwrap();
+        let actual = Combos::range(range).unwrap();
 
         assert_eq!((Combo::COMBO_AQs, Combo::COMBO_ATs), actual);
         assert!(Combos::range("AQs-ATs-AAs").is_err());
         assert!(Combos::range("AQs").is_err());
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct ComboRange {
+    pub higher: Combo,
+    pub lower: Combo,
+}
+
+impl ComboRange {
+    pub fn new(higher: Combo, lower: Combo) -> Self {
+        if higher < lower {
+            Self { higher: lower, lower: higher }
+        } else {
+            Self { higher, lower }
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.higher == self.lower
+    }
+
+    pub fn contains(&self, combo: Combo) -> bool {
+        combo >= self.higher && combo <= self.lower
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod arrays__ranges__combos__combo_range_tests {
+    use super::*;
+
+    #[test]
+    fn new() {
+        let range = ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QJ);
+        assert_eq!(Combo::COMBO_AK, range.higher);
+        assert_eq!(Combo::COMBO_QJ, range.lower);
+
+        let range = ComboRange::new(Combo::COMBO_QJ, Combo::COMBO_AK);
+        assert_eq!(Combo::COMBO_AK, range.higher);
+        assert_eq!(Combo::COMBO_QJ, range.lower);
     }
 }
