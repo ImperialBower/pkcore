@@ -220,17 +220,11 @@ impl Combos {
     }
 
     fn unwrap_range(from: Combo, to: Combo) -> Vec<Combo> {
-        if from == to {
+        let range = ComboRange::new(from, to);
+        if range.is_empty() {
             return vec![from];
         }
 
-        let my_from = from;
-        let my_to = to;
-
-        if to > from {
-            let my_from = to;
-            let my_to = from;
-        }
 
         // let mut combos = Vec::new();
         // for i in from.index()..=to.index() {
@@ -324,6 +318,10 @@ impl ComboRange {
         }
     }
 
+    pub fn are_pocket_pairs(&self) -> bool {
+        self.higher.is_pocket_pair() && self.lower.is_pocket_pair()
+    }
+
     pub fn is_empty(&self) -> bool {
         self.higher == self.lower
     }
@@ -347,6 +345,13 @@ mod arrays__ranges__combos__combo_range_tests {
         let range = ComboRange::new(Combo::COMBO_QJ, Combo::COMBO_AK);
         assert_eq!(Combo::COMBO_AK, range.higher);
         assert_eq!(Combo::COMBO_QJ, range.lower);
+    }
+
+    #[test]
+    fn are_pocket_pairs() {
+        assert!(ComboRange::new(Combo::COMBO_AA, Combo::COMBO_22).are_pocket_pairs());
+        assert!(ComboRange::new(Combo::COMBO_33, Combo::COMBO_44).are_pocket_pairs());
+        assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QJ).are_pocket_pairs());
     }
 
     #[test]
