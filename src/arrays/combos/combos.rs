@@ -279,7 +279,10 @@ pub struct ComboRange {
 impl ComboRange {
     pub fn new(higher: Combo, lower: Combo) -> Self {
         if higher < lower {
-            Self { higher: lower, lower: higher }
+            Self {
+                higher: lower,
+                lower: higher,
+            }
         } else {
             Self { higher, lower }
         }
@@ -290,7 +293,7 @@ impl ComboRange {
     }
 
     pub fn contains(&self, combo: Combo) -> bool {
-        combo >= self.higher && combo <= self.lower
+        combo >= self.lower && combo <= self.higher
     }
 }
 
@@ -308,5 +311,21 @@ mod arrays__ranges__combos__combo_range_tests {
         let range = ComboRange::new(Combo::COMBO_QJ, Combo::COMBO_AK);
         assert_eq!(Combo::COMBO_AK, range.higher);
         assert_eq!(Combo::COMBO_QJ, range.lower);
+    }
+
+    #[test]
+    fn contains() {
+        let range = ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QJ);
+        assert!(range.contains(Combo::COMBO_AK));
+        assert!(range.contains(Combo::COMBO_KQ));
+        assert!(range.contains(Combo::COMBO_QJ));
+        assert!(!range.contains(Combo::COMBO_JT));
+        assert!(!range.contains(Combo::COMBO_T9));
+
+        let range = ComboRange::new(Combo::COMBO_QJ, Combo::COMBO_AK);
+        assert!(range.contains(Combo::COMBO_AK));
+        assert!(range.contains(Combo::COMBO_QJ));
+        assert!(!range.contains(Combo::COMBO_JT));
+        assert!(!range.contains(Combo::COMBO_T9));
     }
 }
