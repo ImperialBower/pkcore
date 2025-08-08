@@ -34,7 +34,7 @@ impl Display for Qualifier {
 pub struct Combo {
     pub first: Rank,
     pub second: Rank,
-    pub higher: bool,
+    pub plus: bool,
     pub qualifier: Qualifier,
 }
 
@@ -43,151 +43,151 @@ impl Combo {
     pub const COMBO_AA: Combo = Combo {
         first: Rank::ACE,
         second: Rank::ACE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_KK: Combo = Combo {
         first: Rank::KING,
         second: Rank::KING,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_KK_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::KING,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_QQ: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::QUEEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_QQ_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::QUEEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_JJ: Combo = Combo {
         first: Rank::JACK,
         second: Rank::JACK,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_JJ_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::JACK,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_TT: Combo = Combo {
         first: Rank::TEN,
         second: Rank::TEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_TT_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::TEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_99: Combo = Combo {
         first: Rank::NINE,
         second: Rank::NINE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_99_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::NINE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_88: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_88_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_77: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_77_PLUS: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_66: Combo = Combo {
         first: Rank::SIX,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_66_PLUS: Combo = Combo {
         first: Rank::SIX,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_55: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_55_PLUS: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_44: Combo = Combo {
         first: Rank::FOUR,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_44_PLUS: Combo = Combo {
         first: Rank::FOUR,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_33: Combo = Combo {
         first: Rank::TREY,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_33_PLUS: Combo = Combo {
         first: Rank::TREY,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_22: Combo = Combo {
         first: Rank::DEUCE,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_22_PLUS: Combo = Combo {
         first: Rank::DEUCE,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     // endregion
@@ -196,2797 +196,2800 @@ impl Combo {
     pub const COMBO_AKs: Combo = Combo {
         first: Rank::ACE,
         second: Rank::KING,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_AKo: Combo = Combo {
         first: Rank::ACE,
         second: Rank::KING,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_AK: Combo = Combo {
         first: Rank::ACE,
         second: Rank::KING,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_AQs: Combo = Combo {
         first: Rank::ACE,
         second: Rank::QUEEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_AQo: Combo = Combo {
         first: Rank::ACE,
         second: Rank::QUEEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_AQ: Combo = Combo {
         first: Rank::ACE,
         second: Rank::QUEEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_AQs_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::QUEEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_AQo_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::QUEEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_AQ_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::QUEEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_AJs: Combo = Combo {
         first: Rank::ACE,
         second: Rank::JACK,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_AJo: Combo = Combo {
         first: Rank::ACE,
         second: Rank::JACK,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_AJ: Combo = Combo {
         first: Rank::ACE,
         second: Rank::JACK,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_AJs_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::JACK,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_AJo_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::JACK,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_AJ_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::JACK,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_ATs: Combo = Combo {
         first: Rank::ACE,
         second: Rank::TEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_ATo: Combo = Combo {
         first: Rank::ACE,
         second: Rank::TEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_AT: Combo = Combo {
         first: Rank::ACE,
         second: Rank::TEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_ATs_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::TEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_ATo_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::TEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_AT_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::TEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_A9s: Combo = Combo {
         first: Rank::ACE,
         second: Rank::NINE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_A9o: Combo = Combo {
         first: Rank::ACE,
         second: Rank::NINE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_A9: Combo = Combo {
         first: Rank::ACE,
         second: Rank::NINE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_A9s_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::NINE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_A9o_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::NINE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_A9_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::NINE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_A8s: Combo = Combo {
         first: Rank::ACE,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_A8o: Combo = Combo {
         first: Rank::ACE,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_A8: Combo = Combo {
         first: Rank::ACE,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_A8s_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_A8o_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_A8_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_A7s: Combo = Combo {
         first: Rank::ACE,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_A7o: Combo = Combo {
         first: Rank::ACE,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_A7: Combo = Combo {
         first: Rank::ACE,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_A7s_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_A7o_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_A7_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_A6s: Combo = Combo {
         first: Rank::ACE,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_A6o: Combo = Combo {
         first: Rank::ACE,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_A6: Combo = Combo {
         first: Rank::ACE,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_A6s_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_A6o_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_A6_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_A5s: Combo = Combo {
         first: Rank::ACE,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_A5o: Combo = Combo {
         first: Rank::ACE,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_A5: Combo = Combo {
         first: Rank::ACE,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_A5s_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_A5o_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_A5_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_A4s: Combo = Combo {
         first: Rank::ACE,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_A4o: Combo = Combo {
         first: Rank::ACE,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_A4: Combo = Combo {
         first: Rank::ACE,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_A4s_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_A4o_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_A4_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_A3s: Combo = Combo {
         first: Rank::ACE,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_A3o: Combo = Combo {
         first: Rank::ACE,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_A3: Combo = Combo {
         first: Rank::ACE,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_A3s_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_A3o_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_A3_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_A2s: Combo = Combo {
         first: Rank::ACE,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_A2o: Combo = Combo {
         first: Rank::ACE,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_A2: Combo = Combo {
         first: Rank::ACE,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_A2s_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_A2o_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_A2_PLUS: Combo = Combo {
         first: Rank::ACE,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_KQs: Combo = Combo {
         first: Rank::KING,
         second: Rank::QUEEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_KQo: Combo = Combo {
         first: Rank::KING,
         second: Rank::QUEEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_KQ: Combo = Combo {
         first: Rank::KING,
         second: Rank::QUEEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_KQs_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::QUEEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_KQo_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::QUEEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_KQ_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::QUEEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_KJs: Combo = Combo {
         first: Rank::KING,
         second: Rank::JACK,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_KJo: Combo = Combo {
         first: Rank::KING,
         second: Rank::JACK,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_KJ: Combo = Combo {
         first: Rank::KING,
         second: Rank::JACK,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_KJs_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::JACK,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_KJo_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::JACK,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_KJ_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::JACK,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_KTs: Combo = Combo {
         first: Rank::KING,
         second: Rank::TEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_KTo: Combo = Combo {
         first: Rank::KING,
         second: Rank::TEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_KT: Combo = Combo {
         first: Rank::KING,
         second: Rank::TEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_KTs_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::TEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_KTo_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::TEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_KT_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::TEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_K9s: Combo = Combo {
         first: Rank::KING,
         second: Rank::NINE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_K9o: Combo = Combo {
         first: Rank::KING,
         second: Rank::NINE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_K9: Combo = Combo {
         first: Rank::KING,
         second: Rank::NINE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_K9s_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::NINE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_K9o_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::NINE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_K9_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::NINE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_K8s: Combo = Combo {
         first: Rank::KING,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_K8o: Combo = Combo {
         first: Rank::KING,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_K8: Combo = Combo {
         first: Rank::KING,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_K8s_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_K8o_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_K8_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_K7s: Combo = Combo {
         first: Rank::KING,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_K7o: Combo = Combo {
         first: Rank::KING,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_K7: Combo = Combo {
         first: Rank::KING,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_K7s_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_K7o_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_K7_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_K6s: Combo = Combo {
         first: Rank::KING,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_K6o: Combo = Combo {
         first: Rank::KING,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_K6: Combo = Combo {
         first: Rank::KING,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_K6s_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_K6o_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_K6_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_K5s: Combo = Combo {
         first: Rank::KING,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_K5o: Combo = Combo {
         first: Rank::KING,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_K5: Combo = Combo {
         first: Rank::KING,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_K5s_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_K5o_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_K5_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_K4s: Combo = Combo {
         first: Rank::KING,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_K4o: Combo = Combo {
         first: Rank::KING,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_K4: Combo = Combo {
         first: Rank::KING,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_K4s_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_K4o_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_K4_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_K3s: Combo = Combo {
         first: Rank::KING,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_K3o: Combo = Combo {
         first: Rank::KING,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_K3: Combo = Combo {
         first: Rank::KING,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_K3s_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_K3o_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_K3_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_K2s: Combo = Combo {
         first: Rank::KING,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_K2o: Combo = Combo {
         first: Rank::KING,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_K2: Combo = Combo {
         first: Rank::KING,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_K2s_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_K2o_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_K2_PLUS: Combo = Combo {
         first: Rank::KING,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_QJs: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::JACK,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_QJo: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::JACK,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_QJ: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::JACK,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_QJs_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::JACK,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_QJo_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::JACK,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_QJ_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::JACK,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_QTs: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::TEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_QTo: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::TEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_QT: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::TEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_QTs_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::TEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_QTo_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::TEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_QT_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::TEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_Q9s: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::NINE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_Q9o: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::NINE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_Q9: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::NINE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_Q9s_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::NINE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_Q9o_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::NINE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_Q9_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::NINE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_Q8s: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_Q8o: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_Q8: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_Q8s_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_Q8o_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_Q8_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
 
     pub const COMBO_Q7s: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_Q7o: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_Q7: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_Q7s_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_Q7o_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_Q7_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_Q6s: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_Q6o: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_Q6: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_Q6s_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_Q6o_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_Q6_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_Q5s: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_Q5o: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_Q5: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_Q5s_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_Q5o_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_Q5_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_Q4s: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_Q4o: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_Q4: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_Q4s_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_Q4o_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_Q4_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_Q3s: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_Q3o: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_Q3: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_Q3s_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_Q3o_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_Q3_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_Q2s: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_Q2o: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_Q2: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_Q2s_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_Q2o_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_Q2_PLUS: Combo = Combo {
         first: Rank::QUEEN,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_JTs: Combo = Combo {
         first: Rank::JACK,
         second: Rank::TEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_JTo: Combo = Combo {
         first: Rank::JACK,
         second: Rank::TEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_JT: Combo = Combo {
         first: Rank::JACK,
         second: Rank::TEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_JTs_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::TEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_JTo_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::TEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_JT_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::TEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_J9s: Combo = Combo {
         first: Rank::JACK,
         second: Rank::NINE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_J9o: Combo = Combo {
         first: Rank::JACK,
         second: Rank::NINE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_J9: Combo = Combo {
         first: Rank::JACK,
         second: Rank::NINE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_J9s_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::NINE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_J9o_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::NINE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_J9_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::NINE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_J8s: Combo = Combo {
         first: Rank::JACK,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_J8o: Combo = Combo {
         first: Rank::JACK,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_J8: Combo = Combo {
         first: Rank::JACK,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_J8s_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_J8o_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_J8_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_J7s: Combo = Combo {
         first: Rank::JACK,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_J7o: Combo = Combo {
         first: Rank::JACK,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_J7: Combo = Combo {
         first: Rank::JACK,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_J7s_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_J7o_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_J7_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_J6s: Combo = Combo {
         first: Rank::JACK,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_J6o: Combo = Combo {
         first: Rank::JACK,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_J6: Combo = Combo {
         first: Rank::JACK,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_J6s_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_J6o_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_J6_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_J5s: Combo = Combo {
         first: Rank::JACK,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_J5o: Combo = Combo {
         first: Rank::JACK,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_J5: Combo = Combo {
         first: Rank::JACK,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_J5s_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_J5o_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_J5_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_J4s: Combo = Combo {
         first: Rank::JACK,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_J4o: Combo = Combo {
         first: Rank::JACK,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_J4: Combo = Combo {
         first: Rank::JACK,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_J4s_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_J4o_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_J4_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_J3s: Combo = Combo {
         first: Rank::JACK,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_J3o: Combo = Combo {
         first: Rank::JACK,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_J3: Combo = Combo {
         first: Rank::JACK,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_J3s_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_J3o_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_J3_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_J2s: Combo = Combo {
         first: Rank::JACK,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_J2o: Combo = Combo {
         first: Rank::JACK,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_J2: Combo = Combo {
         first: Rank::JACK,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_J2s_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_J2o_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_J2_PLUS: Combo = Combo {
         first: Rank::JACK,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_T9s: Combo = Combo {
         first: Rank::TEN,
         second: Rank::NINE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_T9o: Combo = Combo {
         first: Rank::TEN,
         second: Rank::NINE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_T9: Combo = Combo {
         first: Rank::TEN,
         second: Rank::NINE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_T9s_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::NINE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_T9o_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::NINE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_T9_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::NINE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_T8s: Combo = Combo {
         first: Rank::TEN,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_T8o: Combo = Combo {
         first: Rank::TEN,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_T8: Combo = Combo {
         first: Rank::TEN,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_T8s_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_T8o_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_T8_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_T7s: Combo = Combo {
         first: Rank::TEN,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_T7o: Combo = Combo {
         first: Rank::TEN,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_T7: Combo = Combo {
         first: Rank::TEN,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_T7s_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_T7o_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_T7_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_T6s: Combo = Combo {
         first: Rank::TEN,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_T6o: Combo = Combo {
         first: Rank::TEN,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_T6: Combo = Combo {
         first: Rank::TEN,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_T6s_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_T6o_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_T6_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_T5s: Combo = Combo {
         first: Rank::TEN,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_T5o: Combo = Combo {
         first: Rank::TEN,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_T5: Combo = Combo {
         first: Rank::TEN,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_T5s_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_T5o_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_T5_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_T4s: Combo = Combo {
         first: Rank::TEN,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_T4o: Combo = Combo {
         first: Rank::TEN,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_T4: Combo = Combo {
         first: Rank::TEN,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_T4s_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_T4o_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_T4_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_T3s: Combo = Combo {
         first: Rank::TEN,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_T3o: Combo = Combo {
         first: Rank::TEN,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_T3: Combo = Combo {
         first: Rank::TEN,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_T3s_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_T3o_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_T3_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_T2s: Combo = Combo {
         first: Rank::TEN,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_T2o: Combo = Combo {
         first: Rank::TEN,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_T2: Combo = Combo {
         first: Rank::TEN,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_T2s_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_T2o_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_T2_PLUS: Combo = Combo {
         first: Rank::TEN,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_98s: Combo = Combo {
         first: Rank::NINE,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_98o: Combo = Combo {
         first: Rank::NINE,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_98: Combo = Combo {
         first: Rank::NINE,
         second: Rank::EIGHT,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_98s_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_98o_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_98_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::EIGHT,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_97s: Combo = Combo {
         first: Rank::NINE,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_97o: Combo = Combo {
         first: Rank::NINE,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_97: Combo = Combo {
         first: Rank::NINE,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_97s_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_97o_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_97_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_96s: Combo = Combo {
         first: Rank::NINE,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_96o: Combo = Combo {
         first: Rank::NINE,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_96: Combo = Combo {
         first: Rank::NINE,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_96s_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_96o_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_96_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_95s: Combo = Combo {
         first: Rank::NINE,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_95o: Combo = Combo {
         first: Rank::NINE,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_95: Combo = Combo {
         first: Rank::NINE,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_95s_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_95o_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_95_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_94s: Combo = Combo {
         first: Rank::NINE,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_94o: Combo = Combo {
         first: Rank::NINE,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_94: Combo = Combo {
         first: Rank::NINE,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_94s_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_94o_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_94_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_93s: Combo = Combo {
         first: Rank::NINE,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_93o: Combo = Combo {
         first: Rank::NINE,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_93: Combo = Combo {
         first: Rank::NINE,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_93s_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_93o_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_93_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_92s: Combo = Combo {
         first: Rank::NINE,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_92o: Combo = Combo {
         first: Rank::NINE,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_92: Combo = Combo {
         first: Rank::NINE,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_92s_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_92o_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_92_PLUS: Combo = Combo {
         first: Rank::NINE,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_87s: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_87o: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_87: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::SEVEN,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_87s_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_87o_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_87_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::SEVEN,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_86s: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_86o: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_86: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_86s_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_86o_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_86_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_85s: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_85o: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_85: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_85s_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_85o_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_85_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_84s: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_84o: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_84: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_84s_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_84o_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_84_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_83s: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_83o: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_83: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_83s_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_83o_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_83_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_82s: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_82o: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_82: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_82s_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_82o_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_82_PLUS: Combo = Combo {
         first: Rank::EIGHT,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_76s: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_76o: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_76: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::SIX,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_76s_PLUS: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_76o_PLUS: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_76_PLUS: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::SIX,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_75s: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_75o: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_75: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_75s_PLUS: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_75o_PLUS: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_75_PLUS: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_74s: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_74o: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_74: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_74s_PLUS: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_74o_PLUS: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_74_PLUS: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_73s: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_73o: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_73: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_73s_PLUS: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_73o_PLUS: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_73_PLUS: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_72s: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_72o: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_72: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_72s_PLUS: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_72o_PLUS: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_72_PLUS: Combo = Combo {
         first: Rank::SEVEN,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_65s: Combo = Combo {
         first: Rank::SIX,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_65o: Combo = Combo {
         first: Rank::SIX,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_65: Combo = Combo {
         first: Rank::SIX,
         second: Rank::FIVE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_65s_PLUS: Combo = Combo {
         first: Rank::SIX,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_65o_PLUS: Combo = Combo {
         first: Rank::SIX,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_65_PLUS: Combo = Combo {
         first: Rank::SIX,
         second: Rank::FIVE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_64s: Combo = Combo {
         first: Rank::SIX,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_64o: Combo = Combo {
         first: Rank::SIX,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_64: Combo = Combo {
         first: Rank::SIX,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_64s_PLUS: Combo = Combo {
         first: Rank::SIX,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_64o_PLUS: Combo = Combo {
         first: Rank::SIX,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_64_PLUS: Combo = Combo {
         first: Rank::SIX,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_63s: Combo = Combo {
         first: Rank::SIX,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_63o: Combo = Combo {
         first: Rank::SIX,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_63: Combo = Combo {
         first: Rank::SIX,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_63s_PLUS: Combo = Combo {
         first: Rank::SIX,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_63o_PLUS: Combo = Combo {
         first: Rank::SIX,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_63_PLUS: Combo = Combo {
         first: Rank::SIX,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_62s: Combo = Combo {
         first: Rank::SIX,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_62o: Combo = Combo {
         first: Rank::SIX,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_62: Combo = Combo {
         first: Rank::SIX,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_62s_PLUS: Combo = Combo {
         first: Rank::SIX,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_62o_PLUS: Combo = Combo {
         first: Rank::SIX,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_62_PLUS: Combo = Combo {
         first: Rank::SIX,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_54s: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_54o: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_54: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::FOUR,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_54s_PLUS: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_54o_PLUS: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_54_PLUS: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::FOUR,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_53s: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_53o: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_53: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_53s_PLUS: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_53o_PLUS: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_53_PLUS: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_52s: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_52o: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_52: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_52s_PLUS: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_52o_PLUS: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_52_PLUS: Combo = Combo {
         first: Rank::FIVE,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_43s: Combo = Combo {
         first: Rank::FOUR,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_43o: Combo = Combo {
         first: Rank::FOUR,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_43: Combo = Combo {
         first: Rank::FOUR,
         second: Rank::TREY,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_43s_PLUS: Combo = Combo {
         first: Rank::FOUR,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_43o_PLUS: Combo = Combo {
         first: Rank::FOUR,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_43_PLUS: Combo = Combo {
         first: Rank::FOUR,
         second: Rank::TREY,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_42s: Combo = Combo {
         first: Rank::FOUR,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_42o: Combo = Combo {
         first: Rank::FOUR,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_42: Combo = Combo {
         first: Rank::FOUR,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_42s_PLUS: Combo = Combo {
         first: Rank::FOUR,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_42o_PLUS: Combo = Combo {
         first: Rank::FOUR,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_42_PLUS: Combo = Combo {
         first: Rank::FOUR,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_32s: Combo = Combo {
         first: Rank::TREY,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_32o: Combo = Combo {
         first: Rank::TREY,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_32: Combo = Combo {
         first: Rank::TREY,
         second: Rank::DEUCE,
-        higher: false,
+        plus: false,
         qualifier: Qualifier::ALL,
     };
     pub const COMBO_32s_PLUS: Combo = Combo {
         first: Rank::TREY,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::SUITED,
     };
     pub const COMBO_32o_PLUS: Combo = Combo {
         first: Rank::TREY,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::OFFSUIT,
     };
     pub const COMBO_32_PLUS: Combo = Combo {
         first: Rank::TREY,
         second: Rank::DEUCE,
-        higher: true,
+        plus: true,
         qualifier: Qualifier::ALL,
     };
     // endregion
 
     pub fn is_aligned_with(&self, other: &Self) -> bool {
+        if self.plus || other.plus {
+            return false; // Combo plus can't be aligned since they rep multiple combos
+        }
         if self.is_pocket_pair() {
             return other.is_pocket_pair();
         }
@@ -2999,7 +3002,34 @@ impl Combo {
         if self.is_connector() {
             return other.is_connector();
         }
+        if self.is_ace_x_suited() {
+            return other.is_ace_x_suited();
+        }
+        if self.is_ace_x_offsuit() {
+            return other.is_ace_x_offsuit();
+        }
+        if self.is_ace_x() {
+            return other.is_ace_x();
+        }
         false
+    }
+
+    pub fn is_ace_x(&self) -> bool {
+        if self.is_pocket_pair() {
+            return false;
+        }
+        if self.first == Rank::ACE {
+            return self.second != Rank::ACE;
+        }
+        false
+    }
+
+    pub fn is_ace_x_suited(&self) -> bool {
+        self.is_ace_x() && self.is_suited()
+    }
+
+    pub fn is_ace_x_offsuit(&self) -> bool {
+        self.is_ace_x() && !self.is_suited()
     }
 
     pub fn is_connector(&self) -> bool {
@@ -3020,7 +3050,7 @@ impl Combo {
         if self.is_pocket_pair() {
             return other.is_pocket_pair();
         }
-        (self.higher == other.higher) && (self.qualifier == other.qualifier)
+        (self.plus == other.plus) && (self.qualifier == other.qualifier)
     }
 
     pub fn is_suited(&self) -> bool {
@@ -3042,7 +3072,7 @@ impl Display for Combo {
         let second = self.second.to_string();
         let qualifier = self.qualifier.to_string();
 
-        if self.higher {
+        if self.plus {
             write!(f, "{first}{second}{qualifier}+")
         } else {
             write!(f, "{first}{second}{qualifier}")
@@ -3566,6 +3596,36 @@ mod arrays__ranges__combo_tests {
     use rand::rng;
     use rand::seq::SliceRandom;
     use rstest::rstest;
+
+    #[test]
+    fn is_ace_x() {
+        assert!(Combo::COMBO_AKo.is_ace_x());
+        assert!(Combo::COMBO_AJs.is_ace_x());
+        assert!(Combo::COMBO_AQo_PLUS.is_ace_x());
+        assert!(!Combo::COMBO_AA.is_ace_x());
+        assert!(!Combo::COMBO_QQ_PLUS.is_ace_x());
+        assert!(!Combo::COMBO_76s.is_ace_x());
+    }
+
+    #[test]
+    fn is_ace_x_suited() {
+        assert!(Combo::COMBO_AKs.is_ace_x_suited());
+        assert!(Combo::COMBO_AJs.is_ace_x_suited());
+        assert!(!Combo::COMBO_AQo_PLUS.is_ace_x_suited());
+        assert!(!Combo::COMBO_AA.is_ace_x_suited());
+        assert!(!Combo::COMBO_QQ_PLUS.is_ace_x_suited());
+        assert!(!Combo::COMBO_76s.is_ace_x_suited());
+    }
+
+    #[test]
+    fn is_ace_x_offsuit() {
+        assert!(Combo::COMBO_AKo.is_ace_x_offsuit());
+        assert!(Combo::COMBO_AQo_PLUS.is_ace_x_offsuit());
+        assert!(!Combo::COMBO_AJs.is_ace_x_offsuit());
+        assert!(!Combo::COMBO_AA.is_ace_x_offsuit());
+        assert!(!Combo::COMBO_QQ_PLUS.is_ace_x_offsuit());
+        assert!(!Combo::COMBO_76s.is_ace_x_offsuit());
+    }
 
     #[test]
     fn is_connector() {

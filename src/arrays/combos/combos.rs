@@ -189,7 +189,6 @@ impl Combos {
 
     // endregion
 
-
     fn parse(s: &str) -> Result<Combos, PKError> {
         let index = Util::str_remove_spaces(s);
 
@@ -225,7 +224,9 @@ impl Combos {
         if range.is_empty() {
             return vec![from];
         }
-
+        if !range.is_aligned() {
+            return vec![];
+        }
 
         // let mut combos = Vec::new();
         // for i in from.index()..=to.index() {
