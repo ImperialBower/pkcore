@@ -2986,6 +2986,30 @@ impl Combo {
     };
     // endregion
 
+    pub fn is_aligned_with(&self, other: &Self) -> bool {
+        if self.is_pocket_pair() {
+            return other.is_pocket_pair();
+        }
+        if self.is_suited_connector() {
+            return other.is_suited_connector();
+        }
+        if self.is_offsuit_connector() {
+            return other.is_offsuit_connector();
+        }
+        if self.is_connector() {
+            return other.is_connector();
+        }
+        false
+    }
+
+    pub fn is_connector(&self) -> bool {
+        if self.is_pocket_pair() {
+            return false;
+        }
+        let rank_diff = self.first as i8 - self.second as i8;
+        rank_diff.abs() == 1
+    }
+
     #[must_use]
     pub fn is_pocket_pair(&self) -> bool {
         self.first == self.second
@@ -2997,6 +3021,18 @@ impl Combo {
             return other.is_pocket_pair();
         }
         (self.higher == other.higher) && (self.qualifier == other.qualifier)
+    }
+
+    pub fn is_suited(&self) -> bool {
+        self.qualifier == Qualifier::SUITED
+    }
+
+    pub fn is_suited_connector(&self) -> bool {
+        self.is_connector() && self.is_suited()
+    }
+
+    pub fn is_offsuit_connector(&self) -> bool {
+        self.is_connector() && !self.is_suited()
     }
 }
 
@@ -3532,6 +3568,15 @@ mod arrays__ranges__combo_tests {
     use rstest::rstest;
 
     #[test]
+    fn is_connector() {
+        assert!(Combo::COMBO_76s.is_connector());
+        assert!(Combo::COMBO_65s.is_connector());
+        assert!(Combo::COMBO_AKo.is_connector());
+        assert!(!Combo::COMBO_AA.is_connector());
+        assert!(!Combo::COMBO_AQo.is_connector());
+    }
+
+    #[test]
     fn is_pocket_pair() {
         assert!(Combo::COMBO_AA.is_pocket_pair());
         assert!(Combo::COMBO_22.is_pocket_pair());
@@ -3545,6 +3590,37 @@ mod arrays__ranges__combo_tests {
         assert!(Combo::COMBO_QQ_PLUS.is_same_type(&Combo::COMBO_99_PLUS));
         assert!(Combo::COMBO_AJo_PLUS.is_same_type(&Combo::COMBO_AQo_PLUS));
         assert!(!Combo::COMBO_AKs.is_same_type(&Combo::COMBO_AQo_PLUS));
+    }
+
+    #[test]
+    fn is_suited() {
+        assert!(Combo::COMBO_AKs.is_suited());
+        assert!(Combo::COMBO_QJs.is_suited());
+        assert!(Combo::COMBO_QTs.is_suited());
+        assert!(Combo::COMBO_Q9s_PLUS.is_suited());
+        assert!(!Combo::COMBO_AKo.is_suited());
+        assert!(!Combo::COMBO_AQo_PLUS.is_suited());
+        assert!(!Combo::COMBO_AA.is_suited());
+    }
+
+    #[test]
+    fn is_suited_connector() {
+        assert!(Combo::COMBO_AKs.is_suited_connector());
+        assert!(Combo::COMBO_QJs.is_suited_connector());
+        assert!(Combo::COMBO_76s.is_suited_connector());
+        assert!(!Combo::COMBO_AKo.is_suited_connector());
+        assert!(!Combo::COMBO_AQo_PLUS.is_suited_connector());
+        assert!(!Combo::COMBO_AA.is_suited_connector());
+    }
+
+    #[test]
+    fn is_offsuit_connector() {
+        assert!(Combo::COMBO_AKo.is_offsuit_connector());
+        assert!(Combo::COMBO_QJo.is_offsuit_connector());
+        assert!(Combo::COMBO_76o.is_offsuit_connector());
+        assert!(!Combo::COMBO_AKs.is_offsuit_connector());
+        assert!(!Combo::COMBO_AQo_PLUS.is_offsuit_connector());
+        assert!(!Combo::COMBO_AA.is_offsuit_connector());
     }
 
     #[test]

@@ -189,6 +189,7 @@ impl Combos {
 
     // endregion
 
+
     fn parse(s: &str) -> Result<Combos, PKError> {
         let index = Util::str_remove_spaces(s);
 
@@ -322,12 +323,16 @@ impl ComboRange {
         self.higher.is_pocket_pair() && self.lower.is_pocket_pair()
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.higher == self.lower
-    }
-
     pub fn contains(&self, combo: Combo) -> bool {
         combo >= self.lower && combo <= self.higher
+    }
+
+    pub fn is_aligned(&self) -> bool {
+        self.higher.is_aligned_with(&self.lower)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.higher == self.lower
     }
 }
 
@@ -368,5 +373,18 @@ mod arrays__ranges__combos__combo_range_tests {
         assert!(range.contains(Combo::COMBO_QJ));
         assert!(!range.contains(Combo::COMBO_JT));
         assert!(!range.contains(Combo::COMBO_T9));
+    }
+
+    #[test]
+    fn is_aligned() {
+        assert!(ComboRange::new(Combo::COMBO_AA, Combo::COMBO_22).is_aligned());
+        assert!(ComboRange::new(Combo::COMBO_AA, Combo::COMBO_KQ).is_aligned());
+        assert!(ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QJ).is_aligned());
+        assert!(ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_QJs).is_aligned());
+        assert!(ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_QJo).is_aligned());
+        assert!(!ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_QJo).is_aligned());
+        assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QJo).is_aligned());
+
+        assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QT).is_aligned());
     }
 }
