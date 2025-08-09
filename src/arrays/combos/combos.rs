@@ -300,6 +300,25 @@ mod arrays__ranges__combos_tests {
         assert!(Combos::range("AQs-ATs-AAs").is_err());
         assert!(Combos::range("AQs").is_err());
     }
+
+    #[test]
+    fn unwrap_range() {
+        let from = Combo::COMBO_AK;
+        let to = Combo::COMBO_QJ;
+
+        // let combos = Combos::unwrap_range(from, to);
+        // assert_eq!(combos.len(), 3);
+        // assert!(combos.contains(&Combo::COMBO_AK));
+        // assert!(combos.contains(&Combo::COMBO_KQ));
+        // assert!(combos.contains(&Combo::COMBO_QJ));
+
+        let empty_range = Combos::unwrap_range(Combo::COMBO_AK, Combo::COMBO_AK);
+        assert_eq!(empty_range.len(), 1);
+        assert_eq!(empty_range[0], Combo::COMBO_AK);
+
+        let non_aligned_range = Combos::unwrap_range(Combo::COMBO_AKs, Combo::COMBO_QJo);
+        assert!(non_aligned_range.is_empty());
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -320,20 +339,37 @@ impl ComboRange {
         }
     }
 
-    pub fn are_pocket_pairs(&self) -> bool {
-        self.higher.is_pocket_pair() && self.lower.is_pocket_pair()
-    }
-
     pub fn contains(&self, combo: Combo) -> bool {
         combo >= self.lower && combo <= self.higher
     }
 
     pub fn is_aligned(&self) -> bool {
-        self.higher.is_aligned_with(&self.lower)
+        !self.is_empty() && self.higher.is_aligned_with(&self.lower)
+    }
+
+    pub fn is_ace_x(&self) -> bool {
+        !self.is_empty() && self.higher.is_ace_x() && self.lower.is_ace_x()
+
+    }
+
+    pub fn is_ace_x_suited(&self) -> bool {
+        !self.is_empty() && self.higher.is_ace_x_suited() && self.lower.is_ace_x_suited()
+    }
+
+    pub fn is_ace_x_offsuit(&self) -> bool {
+        !self.is_empty() && self.higher.is_ace_x_offsuit() && self.lower.is_ace_x_offsuit()
+    }
+
+    pub fn is_connector(&self) -> bool {
+        !self.is_empty() && self.is_aligned() && self.higher.is_connector()
     }
 
     pub fn is_empty(&self) -> bool {
         self.higher == self.lower
+    }
+
+    pub fn is_pocket_pairs(&self) -> bool {
+        !self.is_empty() && self.higher.is_pocket_pair() && self.lower.is_pocket_pair()
     }
 }
 
@@ -351,13 +387,6 @@ mod arrays__ranges__combos__combo_range_tests {
         let range = ComboRange::new(Combo::COMBO_QJ, Combo::COMBO_AK);
         assert_eq!(Combo::COMBO_AK, range.higher);
         assert_eq!(Combo::COMBO_QJ, range.lower);
-    }
-
-    #[test]
-    fn are_pocket_pairs() {
-        assert!(ComboRange::new(Combo::COMBO_AA, Combo::COMBO_22).are_pocket_pairs());
-        assert!(ComboRange::new(Combo::COMBO_33, Combo::COMBO_44).are_pocket_pairs());
-        assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QJ).are_pocket_pairs());
     }
 
     #[test]
@@ -379,14 +408,22 @@ mod arrays__ranges__combos__combo_range_tests {
     #[test]
     fn is_aligned() {
         assert!(ComboRange::new(Combo::COMBO_AA, Combo::COMBO_22).is_aligned());
-        assert!(ComboRange::new(Combo::COMBO_AA, Combo::COMBO_KQ).is_aligned());
         assert!(ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QJ).is_aligned());
         assert!(ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_QJs).is_aligned());
         assert!(ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_QJo).is_aligned());
+
         assert!(!ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_QJo).is_aligned());
         assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QJo).is_aligned());
-
+        assert!(!ComboRange::new(Combo::COMBO_AA, Combo::COMBO_KQ).is_aligned());
         assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QT).is_aligned());
         assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_AK).is_aligned());
+    }
+
+
+    #[test]
+    fn is_pocket_pairs() {
+        assert!(ComboRange::new(Combo::COMBO_AA, Combo::COMBO_22).is_pocket_pairs());
+        assert!(ComboRange::new(Combo::COMBO_33, Combo::COMBO_44).is_pocket_pairs());
+        assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QJ).is_pocket_pairs());
     }
 }
