@@ -2996,15 +2996,21 @@ impl Combo {
         if self.is_pocket_pair() {
             return other.is_pocket_pair();
         }
-        if self.is_suited_connector() {
-            return other.is_suited_connector();
-        }
-        if self.is_offsuit_connector() {
-            return other.is_offsuit_connector();
-        }
+
+        // :-P
         if self.is_connector() {
+            if self.is_suited_connector() {
+                return other.is_suited_connector();
+            }
+            if self.is_offsuit_connector() {
+                return other.is_offsuit_connector();
+            }
+            if other.is_suited_connector() || other.is_offsuit_connector() {
+                return false; // One is a suited/offsuit connector, the other is just a connector
+            }
             return other.is_connector();
         }
+
         if self.is_ace_x_suited() {
             return other.is_ace_x_suited();
         }
@@ -3060,12 +3066,16 @@ impl Combo {
         self.qualifier == Qualifier::SUITED
     }
 
+    pub fn is_offsuit(&self) -> bool {
+        self.qualifier == Qualifier::OFFSUIT
+    }
+
     pub fn is_suited_connector(&self) -> bool {
         self.is_connector() && self.is_suited()
     }
 
     pub fn is_offsuit_connector(&self) -> bool {
-        self.is_connector() && !self.is_suited()
+        self.is_connector() && self.is_offsuit()
     }
 }
 
