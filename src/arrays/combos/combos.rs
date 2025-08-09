@@ -344,12 +344,11 @@ impl ComboRange {
     }
 
     pub fn is_aligned(&self) -> bool {
-        !self.is_empty() && self.higher.is_aligned_with(&self.lower)
+        !self.is_empty() && self.higher.is_aligned_with(&self.lower) && self.lower.is_aligned_with(&self.higher)
     }
 
     pub fn is_ace_x(&self) -> bool {
         !self.is_empty() && self.higher.is_ace_x() && self.lower.is_ace_x()
-
     }
 
     pub fn is_ace_x_suited(&self) -> bool {
@@ -418,7 +417,6 @@ mod arrays__ranges__combos__combo_range_tests {
         assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QT).is_aligned());
         assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_AK).is_aligned());
     }
-
 
     #[test]
     fn is_pocket_pairs() {
