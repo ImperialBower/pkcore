@@ -2990,6 +2990,9 @@ impl Combo {
         if self.plus || other.plus {
             return false; // Combo plus can't be aligned since they rep multiple combos
         }
+        if self == other {
+            return false; // Same combo
+        }
         if self.is_pocket_pair() {
             return other.is_pocket_pair();
         }
@@ -3598,6 +3601,41 @@ mod arrays__ranges__combo_tests {
     use rstest::rstest;
 
     #[test]
+    fn equals() {
+        assert_eq!(Combo::COMBO_AA, Combo::COMBO_AA);
+        assert_eq!(Combo::COMBO_AK, Combo::COMBO_AK);
+        assert_eq!(Combo::COMBO_AKs, Combo::COMBO_AKs);
+        assert_eq!(Combo::COMBO_AKo, Combo::COMBO_AKo);
+        assert_ne!(Combo::COMBO_AK, Combo::COMBO_QQ_PLUS);
+        assert_ne!(Combo::COMBO_AKs, Combo::COMBO_76s);
+        assert_ne!(Combo::COMBO_AKo, Combo::COMBO_22);
+    }
+
+    #[test]
+    fn is_aligned_with() {
+        assert!(Combo::COMBO_AA.is_aligned_with(&Combo::COMBO_KK));
+        assert!(Combo::COMBO_AKs.is_aligned_with(&Combo::COMBO_KQs));
+        assert!(Combo::COMBO_AKo.is_aligned_with(&Combo::COMBO_KQo));
+        assert!(Combo::COMBO_AK.is_aligned_with(&Combo::COMBO_KQ));
+        assert!(Combo::COMBO_AQ.is_aligned_with(&Combo::COMBO_A2));
+        assert!(Combo::COMBO_AQo.is_aligned_with(&Combo::COMBO_A2o));
+        assert!(Combo::COMBO_AQs.is_aligned_with(&Combo::COMBO_A2s));
+
+        // Negative tests
+        // Either plus
+        assert!(!Combo::COMBO_QQ_PLUS.is_aligned_with(&Combo::COMBO_99_PLUS));
+        assert!(!Combo::COMBO_AQo_PLUS.is_aligned_with(&Combo::COMBO_AQo_PLUS));
+        assert!(!Combo::COMBO_AQo_PLUS.is_aligned_with(&Combo::COMBO_AQo));
+        // Same
+        assert!(!Combo::COMBO_AK.is_aligned_with(&Combo::COMBO_AK));
+        assert!(!Combo::COMBO_AKs.is_aligned_with(&Combo::COMBO_AKs));
+        assert!(!Combo::COMBO_AKo.is_aligned_with(&Combo::COMBO_AKo));
+        assert!(!Combo::COMBO_AA.is_aligned_with(&Combo::COMBO_AA));
+
+        assert!(!Combo::COMBO_AQo.is_aligned_with(&Combo::COMBO_AQo_PLUS));
+    }
+
+    #[test]
     fn is_ace_x() {
         assert!(Combo::COMBO_AKo.is_ace_x());
         assert!(Combo::COMBO_AJs.is_ace_x());
@@ -3666,6 +3704,7 @@ mod arrays__ranges__combo_tests {
     #[test]
     fn is_suited_connector() {
         assert!(Combo::COMBO_AKs.is_suited_connector());
+        assert!(Combo::COMBO_KQs.is_suited_connector());
         assert!(Combo::COMBO_QJs.is_suited_connector());
         assert!(Combo::COMBO_76s.is_suited_connector());
         assert!(!Combo::COMBO_AKo.is_suited_connector());
