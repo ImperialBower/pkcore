@@ -2986,7 +2986,7 @@ impl Combo {
     };
     // endregion
 
-    pub fn is_aligned_with(&self, other: &Self) -> bool {
+    #[must_use] pub fn is_aligned_with(&self, other: &Self) -> bool {
         if self.plus || other.plus {
             return false; // Combo plus can't be aligned since they rep multiple combos
         }
@@ -3023,7 +3023,7 @@ impl Combo {
         false
     }
 
-    pub fn is_ace_x(&self) -> bool {
+    #[must_use] pub fn is_ace_x(&self) -> bool {
         if self.is_pocket_pair() {
             return false;
         }
@@ -3033,15 +3033,15 @@ impl Combo {
         false
     }
 
-    pub fn is_ace_x_suited(&self) -> bool {
+    #[must_use] pub fn is_ace_x_suited(&self) -> bool {
         self.is_ace_x() && self.is_suited()
     }
 
-    pub fn is_ace_x_offsuit(&self) -> bool {
+    #[must_use] pub fn is_ace_x_offsuit(&self) -> bool {
         self.is_ace_x() && !self.is_suited()
     }
 
-    pub fn is_connector(&self) -> bool {
+    #[must_use] pub fn is_connector(&self) -> bool {
         if self.is_pocket_pair() {
             return false;
         }
@@ -3062,19 +3062,19 @@ impl Combo {
         (self.plus == other.plus) && (self.qualifier == other.qualifier)
     }
 
-    pub fn is_suited(&self) -> bool {
+    #[must_use] pub fn is_suited(&self) -> bool {
         self.qualifier == Qualifier::SUITED
     }
 
-    pub fn is_offsuit(&self) -> bool {
+    #[must_use] pub fn is_offsuit(&self) -> bool {
         self.qualifier == Qualifier::OFFSUIT
     }
 
-    pub fn is_suited_connector(&self) -> bool {
+    #[must_use] pub fn is_suited_connector(&self) -> bool {
         self.is_connector() && self.is_suited()
     }
 
-    pub fn is_offsuit_connector(&self) -> bool {
+    #[must_use] pub fn is_offsuit_connector(&self) -> bool {
         self.is_connector() && self.is_offsuit()
     }
 }
@@ -3730,6 +3730,7 @@ mod arrays__ranges__combo_tests {
         assert!(!Combo::COMBO_AKs.is_offsuit_connector());
         assert!(!Combo::COMBO_AQo_PLUS.is_offsuit_connector());
         assert!(!Combo::COMBO_AA.is_offsuit_connector());
+        assert!(!Combo::COMBO_AK.is_offsuit_connector());
     }
 
     #[test]

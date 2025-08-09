@@ -328,7 +328,7 @@ pub struct ComboRange {
 }
 
 impl ComboRange {
-    pub fn new(higher: Combo, lower: Combo) -> Self {
+    #[must_use] pub fn new(higher: Combo, lower: Combo) -> Self {
         if higher < lower {
             Self {
                 higher: lower,
@@ -339,35 +339,43 @@ impl ComboRange {
         }
     }
 
-    pub fn contains(&self, combo: Combo) -> bool {
+    fn filter_collection(self, collection: &[Combo]) -> Combos {
+        Combos::from(collection
+            .iter()
+            .copied()
+            .filter(|combo| *combo >= self.lower && *combo <= self.higher)
+            .collect::<Vec<Combo>>())
+    }
+
+    #[must_use] pub fn contains(&self, combo: Combo) -> bool {
         combo >= self.lower && combo <= self.higher
     }
 
-    pub fn is_aligned(&self) -> bool {
+    #[must_use] pub fn is_aligned(&self) -> bool {
         !self.is_empty() && self.higher.is_aligned_with(&self.lower) && self.lower.is_aligned_with(&self.higher)
     }
 
-    pub fn is_ace_x(&self) -> bool {
+    #[must_use] pub fn is_ace_x(&self) -> bool {
         !self.is_empty() && self.higher.is_ace_x() && self.lower.is_ace_x()
     }
 
-    pub fn is_ace_x_suited(&self) -> bool {
+    #[must_use] pub fn is_ace_x_suited(&self) -> bool {
         !self.is_empty() && self.higher.is_ace_x_suited() && self.lower.is_ace_x_suited()
     }
 
-    pub fn is_ace_x_offsuit(&self) -> bool {
+    #[must_use] pub fn is_ace_x_offsuit(&self) -> bool {
         !self.is_empty() && self.higher.is_ace_x_offsuit() && self.lower.is_ace_x_offsuit()
     }
 
-    pub fn is_connector(&self) -> bool {
+    #[must_use] pub fn is_connector(&self) -> bool {
         !self.is_empty() && self.is_aligned() && self.higher.is_connector()
     }
 
-    pub fn is_empty(&self) -> bool {
+    #[must_use] pub fn is_empty(&self) -> bool {
         self.higher == self.lower
     }
 
-    pub fn is_pocket_pairs(&self) -> bool {
+    #[must_use] pub fn is_pocket_pairs(&self) -> bool {
         !self.is_empty() && self.higher.is_pocket_pair() && self.lower.is_pocket_pair()
     }
 }
@@ -405,16 +413,27 @@ mod arrays__ranges__combos__combo_range_tests {
     }
 
     #[test]
-    fn is_aligned() {
-        // assert!(ComboRange::new(Combo::COMBO_AA, Combo::COMBO_22).is_aligned());
-        // assert!(ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QJ).is_aligned());
-        // assert!(ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_QJs).is_aligned());
-        // assert!(ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_QJo).is_aligned());
-        //
-        // assert!(!ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_QJo).is_aligned());
+    fn filter_collection() {
+        let range = ComboRange::new(Combo::COMBO_AK, Combo::COMBO_T9);
+        let collection = vec![
+            Combo::COMBO_AK,
+            Combo::COMBO_KQ,
+            Combo::COMBO_QJ,
+            Combo::COMBO_JT,
+            Combo::COMBO_T9,
+        ];
+        let filtered = range.filter_collection(&collection);
+        assert_eq!(Combos::from(collection), filtered);
+    }
 
-        assert!(!Combo::COMBO_AK.is_offsuit_connector());
-        assert!(Combo::COMBO_QJo.is_offsuit_connector());
+    #[test]
+    fn is_aligned() {
+        assert!(ComboRange::new(Combo::COMBO_AA, Combo::COMBO_22).is_aligned());
+        assert!(ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QJ).is_aligned());
+        assert!(ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_QJs).is_aligned());
+        assert!(ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_QJo).is_aligned());
+
+        assert!(!ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_QJo).is_aligned());
 
         assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QJo).is_aligned());
         assert!(!ComboRange::new(Combo::COMBO_AA, Combo::COMBO_KQ).is_aligned());
