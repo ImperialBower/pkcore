@@ -189,6 +189,10 @@ impl Combos {
 
     // endregion
 
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
     fn parse(s: &str) -> Result<Combos, PKError> {
         let index = Util::str_remove_spaces(s);
 
@@ -219,14 +223,17 @@ impl Combos {
         }
     }
 
-    fn unwrap_range(from: Combo, to: Combo) -> Vec<Combo> {
-        let range = ComboRange::new(from, to);
+    fn unwrap_range(range: ComboRange) -> Self {
         if range.is_empty() {
-            return vec![from];
+            return Combos::from(vec![range.higher]);
         }
         if !range.is_aligned() {
-            return vec![];
+            return Combos::default();
         }
+        if range.is_pocket_pairs() {
+            return range.filter_collection(&Combos::POCKET_PAIRS);
+        }
+        // if range.is
 
         // let mut combos = Vec::new();
         // for i in from.index()..=to.index() {
@@ -269,6 +276,7 @@ impl FromStr for Combos {
 #[allow(non_snake_case)]
 mod arrays__ranges__combos_tests {
     use super::*;
+    use rusqlite::fallible_iterator::FallibleIterator;
 
     #[test]
     fn parse() {
@@ -312,12 +320,33 @@ mod arrays__ranges__combos_tests {
         // assert!(combos.contains(&Combo::COMBO_KQ));
         // assert!(combos.contains(&Combo::COMBO_QJ));
 
-        let empty_range = Combos::unwrap_range(Combo::COMBO_AK, Combo::COMBO_AK);
+        let empty_range = Combos::unwrap_range(ComboRange::new(Combo::COMBO_AK, Combo::COMBO_AK));
         assert_eq!(empty_range.len(), 1);
-        assert_eq!(empty_range[0], Combo::COMBO_AK);
+        assert_eq!(empty_range.0[0], Combo::COMBO_AK);
+        //
+        // let non_aligned_range = Combos::unwrap_range(Combo::COMBO_AKs, Combo::COMBO_QJo);
+        // assert!(non_aligned_range.is_empty());
+    }
 
-        let non_aligned_range = Combos::unwrap_range(Combo::COMBO_AKs, Combo::COMBO_QJo);
-        assert!(non_aligned_range.is_empty());
+    #[test]
+    fn unwrap_range__pocket_pairs() {
+        let range = ComboRange::new(Combo::COMBO_KK, Combo::COMBO_33);
+
+        let expected: Combos = Combos::from(vec![
+            Combo::COMBO_KK,
+            Combo::COMBO_QQ,
+            Combo::COMBO_JJ,
+            Combo::COMBO_TT,
+            Combo::COMBO_99,
+            Combo::COMBO_88,
+            Combo::COMBO_77,
+            Combo::COMBO_66,
+            Combo::COMBO_55,
+            Combo::COMBO_44,
+            Combo::COMBO_33,
+        ]);
+
+        assert_eq!(expected, Combos::unwrap_range(range));
     }
 }
 
@@ -328,7 +357,8 @@ pub struct ComboRange {
 }
 
 impl ComboRange {
-    #[must_use] pub fn new(higher: Combo, lower: Combo) -> Self {
+    #[must_use]
+    pub fn new(higher: Combo, lower: Combo) -> Self {
         if higher < lower {
             Self {
                 higher: lower,
@@ -340,42 +370,52 @@ impl ComboRange {
     }
 
     fn filter_collection(self, collection: &[Combo]) -> Combos {
-        Combos::from(collection
-            .iter()
-            .copied()
-            .filter(|combo| *combo >= self.lower && *combo <= self.higher)
-            .collect::<Vec<Combo>>())
+        Combos::from(
+            collection
+                .iter()
+                .copied()
+                .filter(|combo| self.contains(*combo))
+                .collect::<Vec<Combo>>(),
+        )
     }
 
-    #[must_use] pub fn contains(&self, combo: Combo) -> bool {
+    #[must_use]
+    pub fn contains(&self, combo: Combo) -> bool {
         combo >= self.lower && combo <= self.higher
     }
 
-    #[must_use] pub fn is_aligned(&self) -> bool {
+    #[must_use]
+    pub fn is_aligned(&self) -> bool {
         !self.is_empty() && self.higher.is_aligned_with(&self.lower) && self.lower.is_aligned_with(&self.higher)
     }
 
-    #[must_use] pub fn is_ace_x(&self) -> bool {
+    #[must_use]
+    pub fn is_ace_x(&self) -> bool {
         !self.is_empty() && self.higher.is_ace_x() && self.lower.is_ace_x()
     }
 
-    #[must_use] pub fn is_ace_x_suited(&self) -> bool {
+    #[must_use]
+    pub fn is_ace_x_suited(&self) -> bool {
         !self.is_empty() && self.higher.is_ace_x_suited() && self.lower.is_ace_x_suited()
     }
 
-    #[must_use] pub fn is_ace_x_offsuit(&self) -> bool {
+    #[must_use]
+    pub fn is_ace_x_offsuit(&self) -> bool {
         !self.is_empty() && self.higher.is_ace_x_offsuit() && self.lower.is_ace_x_offsuit()
     }
 
-    #[must_use] pub fn is_connector(&self) -> bool {
+    #[must_use]
+    pub fn is_connector(&self) -> bool {
         !self.is_empty() && self.is_aligned() && self.higher.is_connector()
     }
 
-    #[must_use] pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
         self.higher == self.lower
     }
 
-    #[must_use] pub fn is_pocket_pairs(&self) -> bool {
+    #[must_use]
+    pub fn is_pocket_pairs(&self) -> bool {
         !self.is_empty() && self.higher.is_pocket_pair() && self.lower.is_pocket_pair()
     }
 }
