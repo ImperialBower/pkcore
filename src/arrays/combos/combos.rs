@@ -233,6 +233,25 @@ impl Combos {
         if range.is_pocket_pairs() {
             return range.filter_collection(&Combos::POCKET_PAIRS);
         }
+        if range.is_suited_connector() {
+            return range.filter_collection(&Combos::SUITED_CONNECTORS);
+        }
+        if range.is_offsuit_connector() {
+            return range.filter_collection(&Combos::OFFSUIT_CONNECTORS);
+        }
+        if range.is_connector() {
+            return range.filter_collection(&Combos::CONNECTORS);
+        }
+        if range.is_ace_x_suited() {
+            return range.filter_collection(&Combos::ACE_X_SUITED_COMBOS);
+        }
+        if range.is_ace_x_offsuit() {
+            return range.filter_collection(&Combos::ACE_X_OFFSUIT_COMBOS);
+        }
+        if range.is_ace_x() {
+            return range.filter_collection(&Combos::ACE_X_COMBOS);
+        }
+
         // if range.is
 
         // let mut combos = Vec::new();
@@ -348,6 +367,74 @@ mod arrays__ranges__combos_tests {
 
         assert_eq!(expected, Combos::unwrap_range(range));
     }
+
+    #[test]
+    fn unwrap_range__suited_connectors() {
+        let range = ComboRange::new(Combo::COMBO_KQs, Combo::COMBO_87s);
+
+        let expected: Combos = Combos::from(vec![
+            Combo::COMBO_KQs,
+            Combo::COMBO_QJs,
+            Combo::COMBO_JTs,
+            Combo::COMBO_T9s,
+            Combo::COMBO_98s,
+            Combo::COMBO_87s,
+        ]);
+
+        assert_eq!(expected, Combos::unwrap_range(range));
+    }
+
+    #[test]
+    fn unwrap_range__offsuit_connectors() {
+        let range = ComboRange::new(Combo::COMBO_KQo, Combo::COMBO_76o);
+
+        let expected: Combos = Combos::from(vec![
+            Combo::COMBO_KQo,
+            Combo::COMBO_QJo,
+            Combo::COMBO_JTo,
+            Combo::COMBO_T9o,
+            Combo::COMBO_98o,
+            Combo::COMBO_87o,
+            Combo::COMBO_76o,
+        ]);
+
+        assert_eq!(expected, Combos::unwrap_range(range));
+    }
+
+    #[test]
+    fn unwrap_range__connectors() {
+        let range = ComboRange::new(Combo::COMBO_QJ, Combo::COMBO_98);
+
+        let expected: Combos = Combos::from(vec![
+            Combo::COMBO_QJ,
+            Combo::COMBO_JT,
+            Combo::COMBO_T9,
+            Combo::COMBO_98,
+        ]);
+
+        assert_eq!(expected, Combos::unwrap_range(range));
+    }
+
+    #[test]
+    fn unwrap_range__ace_x_suited() {
+        let range = ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A3s);
+
+        let expected: Combos = Combos::from(vec![
+            Combo::COMBO_AKs,
+            Combo::COMBO_AQs,
+            Combo::COMBO_AJs,
+            Combo::COMBO_ATs,
+            Combo::COMBO_A9s,
+            Combo::COMBO_A8s,
+            Combo::COMBO_A7s,
+            Combo::COMBO_A6s,
+            Combo::COMBO_A5s,
+            Combo::COMBO_A4s,
+            Combo::COMBO_A3s,
+        ]);
+
+        assert_eq!(expected, Combos::unwrap_range(range));
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -407,6 +494,16 @@ impl ComboRange {
     #[must_use]
     pub fn is_connector(&self) -> bool {
         !self.is_empty() && self.is_aligned() && self.higher.is_connector()
+    }
+
+    #[must_use]
+    pub fn is_suited_connector(&self) -> bool {
+        !self.is_empty() && self.is_aligned() && self.higher.is_suited_connector()
+    }
+
+    #[must_use]
+    pub fn is_offsuit_connector(&self) -> bool {
+        !self.is_empty() && self.is_aligned() && self.higher.is_offsuit_connector()
     }
 
     #[must_use]
@@ -470,6 +567,7 @@ mod arrays__ranges__combos__combo_range_tests {
     fn is_aligned() {
         assert!(ComboRange::new(Combo::COMBO_AA, Combo::COMBO_22).is_aligned());
         assert!(ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QJ).is_aligned());
+        assert!(ComboRange::new(Combo::COMBO_AK, Combo::COMBO_A4).is_aligned());
         assert!(ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_QJs).is_aligned());
         assert!(ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_QJo).is_aligned());
 
@@ -482,9 +580,60 @@ mod arrays__ranges__combos__combo_range_tests {
     }
 
     #[test]
+    fn is_aligned_ace_x_suited() {
+        let ace_xs = ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A2s);
+
+        assert!(Combo::COMBO_AKs.is_connector());
+        assert!(Combo::COMBO_AKs.is_suited_connector());
+        assert!(Combo::COMBO_A2s.is_ace_x_suited());
+
+        assert!(!ace_xs.is_empty());
+        assert!(ace_xs.higher.is_aligned_with(&ace_xs.lower));
+        assert!(ace_xs.is_aligned());
+        assert!(!ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_A2s).is_aligned());
+        assert!(!ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_A2).is_aligned());
+        assert!(!ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A2o).is_aligned());
+        assert!(!ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_A2s).is_aligned());
+        assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_A2o).is_aligned());
+        assert!(!ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_A2).is_aligned());
+    }
+
+    #[test]
+    fn is_aligned_ace_x_offsuit() {
+        assert!(ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_A4o).is_aligned());
+        assert!(!ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_A4s).is_aligned());
+        assert!(!ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_A4).is_aligned());
+        assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_A4o).is_aligned());
+        assert!(!ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A4o).is_aligned());
+    }
+
+    #[test]
+    fn is_aligned_ace_x() {
+        assert!(Combo::COMBO_AK.is_aligned_with(&Combo::COMBO_A4));
+        assert!(Combo::COMBO_A4.is_aligned_with(&Combo::COMBO_AK));
+        assert!(ComboRange::new(Combo::COMBO_AK, Combo::COMBO_A4).is_aligned());
+        assert!(!ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_A4s).is_aligned());
+        assert!(!ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_A4).is_aligned());
+        assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_A4o).is_aligned());
+        assert!(!ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A4o).is_aligned());
+    }
+
+    #[test]
     fn is_pocket_pairs() {
         assert!(ComboRange::new(Combo::COMBO_AA, Combo::COMBO_22).is_pocket_pairs());
         assert!(ComboRange::new(Combo::COMBO_33, Combo::COMBO_44).is_pocket_pairs());
         assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QJ).is_pocket_pairs());
+    }
+
+    #[test]
+    fn is_ace_x_suited() {
+        assert!(ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A2s).is_aligned());
+        assert!(ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A2s).is_ace_x_suited());
+
+        assert!(ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A3s).is_aligned());
+        assert!(ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A3s).is_ace_x_suited());
+
+        assert!(ComboRange::new(Combo::COMBO_AQs, Combo::COMBO_A3s).is_ace_x_suited());
+        assert!(!ComboRange::new(Combo::COMBO_AK, Combo::COMBO_QJ).is_ace_x_suited());
     }
 }

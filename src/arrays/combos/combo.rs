@@ -2998,18 +2998,27 @@ impl Combo {
             return other.is_pocket_pair();
         }
 
-        // :-P
+        // :-P This may be some of the most conveluted shit I have ever written.
         if self.is_connector() {
             if self.is_suited_connector() {
-                return other.is_suited_connector();
+                if other.is_suited_connector() {
+                    return true;
+                }
+                return other.is_ace_x_suited();
             }
             if self.is_offsuit_connector() {
-                return other.is_offsuit_connector();
+                if other.is_offsuit_connector() {
+                    return true;
+                }
+                return other.is_ace_x_offsuit();
             }
-            if other.is_suited_connector() || other.is_offsuit_connector() {
-                return false; // One is a suited/offsuit connector, the other is just a connector
+            if other.is_connector() && !other.is_suited_connector() && !other.is_offsuit_connector() {
+                return true;
             }
-            return other.is_connector();
+            if other.is_ace_x() && !other.is_ace_x_suited() && !other.is_ace_x_offsuit() {
+                return true;
+            }
+            return false;
         }
 
         if self.is_ace_x_suited() {
@@ -3042,7 +3051,7 @@ impl Combo {
 
     #[must_use]
     pub fn is_ace_x_offsuit(&self) -> bool {
-        self.is_ace_x() && !self.is_suited()
+        self.is_ace_x() && self.is_offsuit()
     }
 
     #[must_use]
