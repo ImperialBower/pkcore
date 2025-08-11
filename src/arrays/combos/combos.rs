@@ -252,17 +252,7 @@ impl Combos {
             return range.filter_collection(&Combos::ACE_X_COMBOS);
         }
 
-        // if range.is
-
-        // let mut combos = Vec::new();
-        // for i in from.index()..=to.index() {
-        //     if let Some(combo) = Combo::from_index(i) {
-        //         combos.push(combo);
-        //     }
-        // }
-        // combos
-
-        todo!()
+        Combos::default()
     }
 }
 
@@ -435,6 +425,33 @@ mod arrays__ranges__combos_tests {
 
         assert_eq!(expected, Combos::unwrap_range(range));
     }
+
+    #[test]
+    fn unwrap_range__ace_x_offsuit() {
+        let range = ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_A6o);
+
+        let expected: Combos = Combos::from(vec![
+            Combo::COMBO_AKo,
+            Combo::COMBO_AQo,
+            Combo::COMBO_AJo,
+            Combo::COMBO_ATo,
+            Combo::COMBO_A9o,
+            Combo::COMBO_A8o,
+            Combo::COMBO_A7o,
+            Combo::COMBO_A6o,
+        ]);
+
+        assert!(range.contains(Combo::COMBO_AKo));
+        assert!(range.contains(Combo::COMBO_AQo));
+        assert!(range.contains(Combo::COMBO_AJo));
+        assert!(range.contains(Combo::COMBO_ATo));
+        assert!(range.contains(Combo::COMBO_A9o));
+        assert!(range.contains(Combo::COMBO_A8o));
+        assert!(range.contains(Combo::COMBO_A7o));
+        assert!(range.contains(Combo::COMBO_A6o));
+
+        assert_eq!(expected, Combos::unwrap_range(range));
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -498,12 +515,12 @@ impl ComboRange {
 
     #[must_use]
     pub fn is_suited_connector(&self) -> bool {
-        !self.is_empty() && self.is_aligned() && self.higher.is_suited_connector()
+        !self.is_empty() && self.is_aligned() && self.higher.is_suited_connector() && self.lower.is_suited_connector()
     }
 
     #[must_use]
     pub fn is_offsuit_connector(&self) -> bool {
-        !self.is_empty() && self.is_aligned() && self.higher.is_offsuit_connector()
+        !self.is_empty() && self.is_aligned() && self.higher.is_offsuit_connector() && self.lower.is_offsuit_connector()
     }
 
     #[must_use]
