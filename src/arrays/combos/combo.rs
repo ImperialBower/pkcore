@@ -2998,12 +2998,29 @@ impl Combo {
             return other.is_pocket_pair();
         }
 
-        // :-P This may be some of the most conveluted shit I have ever written.
+        if other.is_ace_x() {
+
+            if self.is_ace_x() {
+                return true; // Ace-x vs Ace-x
+            }
+            if self.is_connector() {
+                return true; // Ace-x vs connector
+            }
+
+            if self.is_ace_x_suited() || self.is_ace_x_offsuit() {
+                return true; // Ace-x suited/offsuit vs Ace-x
+            }
+            return false; // Ace-x vs non-connector, non-ace-x
+        }
+
+        // :-P This may be some of the most convoluted shit I have ever written.
         if self.is_connector() {
+            println!("{self} is connector");
             if self.is_suited_connector() {
                 if other.is_suited_connector() {
                     return true;
                 }
+                println!("{other} is_ace_x_suited {}", other.is_ace_x_suited());
                 return other.is_ace_x_suited();
             }
             if self.is_offsuit_connector() {

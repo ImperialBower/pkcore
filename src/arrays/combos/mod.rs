@@ -7,6 +7,7 @@ pub mod twos;
 pub mod range;
 pub mod combos;
 pub mod ranger;
+pub mod combo_range;
 
 // region hand range array constants
 // region pocket pair range array constants
