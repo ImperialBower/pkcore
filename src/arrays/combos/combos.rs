@@ -244,13 +244,13 @@ impl Combos {
         if range.is_connector() {
             return range.filter_collection(&Combos::CONNECTORS);
         }
-        if range.is_ace_x_suited() {
+        if range.are_ace_x_suited() {
             return range.filter_collection(&Combos::ACE_X_SUITED_COMBOS);
         }
-        if range.is_ace_x_offsuit() {
+        if range.are_ace_x_offsuit() {
             return range.filter_collection(&Combos::ACE_X_OFFSUIT_COMBOS);
         }
-        if range.is_ace_x() {
+        if range.are_ace_x() {
             return range.filter_collection(&Combos::ACE_X_COMBOS);
         }
 

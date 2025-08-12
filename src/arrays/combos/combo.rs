@@ -3055,7 +3055,7 @@ impl Combo {
         if self.is_pocket_pair() {
             return false;
         }
-        if self.first == Rank::ACE {
+        if (self.first == Rank::ACE) && self.qualifier == Qualifier::ALL {
             return self.second != Rank::ACE;
         }
         false
