@@ -1,3 +1,5 @@
+use log::trace;
+
 use crate::arrays::combos::combo::Combo;
 use crate::arrays::combos::combos::Combos;
 
@@ -23,17 +25,17 @@ pub struct ComboRange {
 impl ComboRange {
     #[must_use]
     pub fn new(higher: Combo, lower: Combo) -> Self {
-        let cr = match higher < lower {
-            true => ComboRange {
+        if higher < lower {
+            ComboRange {
                 higher: lower,
                 lower: higher,
-            },
-            false => ComboRange { higher, lower },
-        };
-
-        cr
+            }
+        } else {
+            ComboRange { higher, lower }
+        }
     }
 
+    #[must_use]
     pub fn filter_collection(self, collection: &[Combo]) -> Combos {
         Combos::from(
             collection
@@ -70,18 +72,18 @@ impl ComboRange {
     }
 
     #[must_use]
-    pub fn is_connector(&self) -> bool {
-        !self.is_empty() && self.is_aligned() && self.higher.is_connector()
+    pub fn are_connectors(&self) -> bool {
+        self.higher.is_connector() && self.lower.is_connector()
     }
 
     #[must_use]
-    pub fn is_suited_connector(&self) -> bool {
-        !self.is_empty() && self.is_aligned() && self.higher.is_suited_connector() && self.lower.is_suited_connector()
+    pub fn are_suited_connectors(&self) -> bool {
+        self.higher.is_suited_connector() && self.lower.is_suited_connector()
     }
 
     #[must_use]
-    pub fn is_offsuit_connector(&self) -> bool {
-        !self.is_empty() && self.is_aligned() && self.higher.is_offsuit_connector() && self.lower.is_offsuit_connector()
+    pub fn are_offsuit_connectors(&self) -> bool {
+        self.higher.is_offsuit_connector() && self.lower.is_offsuit_connector()
     }
 
     #[must_use]
@@ -94,27 +96,39 @@ impl ComboRange {
         self.higher.is_pocket_pair() && self.lower.is_pocket_pair()
     }
 
-
+    #[must_use]
     pub fn form(&self) -> ComboRangeForm {
         if self.is_empty() {
-            println!("{self} is_empty");
+            trace!("{self} is_empty");
             return ComboRangeForm::Unsupported;
         }
         if self.are_pocket_pairs() {
-            println!("{self} PocketPairs");
+            trace!("{self} PocketPairs");
             return ComboRangeForm::PocketPairs;
         }
         if self.are_ace_x_suited() {
-            println!("{self} AceXSuited");
+            trace!("{self} AceXSuited");
             return ComboRangeForm::AceXSuited;
         }
         if self.are_ace_x_offsuit() {
-            println!("{self} AceXOffsuit");
+            trace!("{self} AceXOffsuit");
             return ComboRangeForm::AceXOffsuit;
         }
         if self.are_ace_x() {
-            println!("{self} AceX");
+            trace!("{self} AceX");
             return ComboRangeForm::AceX;
+        }
+        if self.are_suited_connectors() {
+            trace!("{self} SuitedConnectors");
+            return ComboRangeForm::SuitedConnectors;
+        }
+        if self.are_offsuit_connectors() {
+            trace!("{self} OffsuitConnectors");
+            return ComboRangeForm::OffsuitConnectors;
+        }
+        if self.are_connectors() {
+            trace!("{self} Connectors");
+            return ComboRangeForm::Connectors;
         }
 
         ComboRangeForm::Unsupported
@@ -134,47 +148,152 @@ mod arrays__ranges__combos__combo_range_tests {
 
     #[test]
     fn form__is_empty() {
-        assert_eq!(ComboRangeForm::Unsupported, ComboRange::new(Combo::COMBO_AA, Combo::COMBO_AA).form());
-        assert_eq!(ComboRangeForm::Unsupported, ComboRange::new(Combo::COMBO_22, Combo::COMBO_22).form());
+        assert_eq!(
+            ComboRangeForm::Unsupported,
+            ComboRange::new(Combo::COMBO_AA, Combo::COMBO_AA).form()
+        );
+        assert_eq!(
+            ComboRangeForm::Unsupported,
+            ComboRange::new(Combo::COMBO_22, Combo::COMBO_22).form()
+        );
     }
 
     #[test]
     fn form__unsupported() {
-        assert_eq!(ComboRangeForm::Unsupported, ComboRange::new(Combo::COMBO_AA, Combo::COMBO_AA).form());
-        assert_eq!(ComboRangeForm::Unsupported, ComboRange::new(Combo::COMBO_22, Combo::COMBO_22).form());
-        assert_eq!(ComboRangeForm::Unsupported, ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A2).form());
-        assert_eq!(ComboRangeForm::Unsupported, ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A2o).form());
+        assert_eq!(
+            ComboRangeForm::Unsupported,
+            ComboRange::new(Combo::COMBO_AA, Combo::COMBO_AA).form()
+        );
+        assert_eq!(
+            ComboRangeForm::Unsupported,
+            ComboRange::new(Combo::COMBO_22, Combo::COMBO_22).form()
+        );
+        assert_eq!(
+            ComboRangeForm::Unsupported,
+            ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A2).form()
+        );
+        assert_eq!(
+            ComboRangeForm::Unsupported,
+            ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A2o).form()
+        );
     }
 
     #[test]
     fn form__pocket_pairs() {
-        assert_eq!(ComboRangeForm::PocketPairs, ComboRange::new(Combo::COMBO_AA, Combo::COMBO_22).form());
-        assert_eq!(ComboRangeForm::PocketPairs, ComboRange::new(Combo::COMBO_22, Combo::COMBO_AA).form());
-        assert_eq!(ComboRangeForm::PocketPairs, ComboRange::new(Combo::COMBO_44, Combo::COMBO_33).form());
-        assert_eq!(ComboRangeForm::PocketPairs, ComboRange::new(Combo::COMBO_33, Combo::COMBO_44).form());
+        assert_eq!(
+            ComboRangeForm::PocketPairs,
+            ComboRange::new(Combo::COMBO_AA, Combo::COMBO_22).form()
+        );
+        assert_eq!(
+            ComboRangeForm::PocketPairs,
+            ComboRange::new(Combo::COMBO_22, Combo::COMBO_AA).form()
+        );
+        assert_eq!(
+            ComboRangeForm::PocketPairs,
+            ComboRange::new(Combo::COMBO_44, Combo::COMBO_33).form()
+        );
+        assert_eq!(
+            ComboRangeForm::PocketPairs,
+            ComboRange::new(Combo::COMBO_33, Combo::COMBO_44).form()
+        );
     }
 
     #[test]
     fn form__ace_x_suited() {
         assert!(Combo::COMBO_AKs.is_ace_x_suited());
         assert!(Combo::COMBO_A2s.is_ace_x_suited());
-        assert_eq!(ComboRangeForm::AceXSuited, ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A2s).form());
-        assert_eq!(ComboRangeForm::AceXSuited, ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A3s).form());
-        assert_eq!(ComboRangeForm::AceXSuited, ComboRange::new(Combo::COMBO_AQs, Combo::COMBO_A3s).form());
+        assert_eq!(
+            ComboRangeForm::AceXSuited,
+            ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A2s).form()
+        );
+        assert_eq!(
+            ComboRangeForm::AceXSuited,
+            ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A3s).form()
+        );
+        assert_eq!(
+            ComboRangeForm::AceXSuited,
+            ComboRange::new(Combo::COMBO_AQs, Combo::COMBO_A3s).form()
+        );
     }
 
     #[test]
     fn form__ace_x() {
-        assert_eq!(ComboRangeForm::AceX, ComboRange::new(Combo::COMBO_AK, Combo::COMBO_A2).form());
-        assert_eq!(ComboRangeForm::AceX, ComboRange::new(Combo::COMBO_AK, Combo::COMBO_A3).form());
-        assert_eq!(ComboRangeForm::AceX, ComboRange::new(Combo::COMBO_AQ, Combo::COMBO_A3).form());
+        assert_eq!(
+            ComboRangeForm::AceX,
+            ComboRange::new(Combo::COMBO_AK, Combo::COMBO_A2).form()
+        );
+        assert_eq!(
+            ComboRangeForm::AceX,
+            ComboRange::new(Combo::COMBO_AK, Combo::COMBO_A3).form()
+        );
+        assert_eq!(
+            ComboRangeForm::AceX,
+            ComboRange::new(Combo::COMBO_AQ, Combo::COMBO_A3).form()
+        );
     }
 
     #[test]
     fn form__ace_x_offsuit() {
-        assert_eq!(ComboRangeForm::AceXOffsuit, ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_A2o).form());
-        assert_eq!(ComboRangeForm::AceXOffsuit, ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_A3o).form());
-        assert_eq!(ComboRangeForm::AceXOffsuit, ComboRange::new(Combo::COMBO_AQo, Combo::COMBO_A3o).form());
+        assert_eq!(
+            ComboRangeForm::AceXOffsuit,
+            ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_A2o).form()
+        );
+        assert_eq!(
+            ComboRangeForm::AceXOffsuit,
+            ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_A3o).form()
+        );
+        assert_eq!(
+            ComboRangeForm::AceXOffsuit,
+            ComboRange::new(Combo::COMBO_AQo, Combo::COMBO_A3o).form()
+        );
+    }
+
+    #[test]
+    fn form__suited_connectors() {
+        assert_eq!(
+            ComboRangeForm::SuitedConnectors,
+            ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_76s).form()
+        );
+        assert_eq!(
+            ComboRangeForm::SuitedConnectors,
+            ComboRange::new(Combo::COMBO_KQs, Combo::COMBO_87s).form()
+        );
+        assert_eq!(
+            ComboRangeForm::SuitedConnectors,
+            ComboRange::new(Combo::COMBO_T9s, Combo::COMBO_32s).form()
+        );
+    }
+
+    #[test]
+    fn form__offsuit_connectors() {
+        assert_eq!(
+            ComboRangeForm::OffsuitConnectors,
+            ComboRange::new(Combo::COMBO_AKo, Combo::COMBO_76o).form()
+        );
+        assert_eq!(
+            ComboRangeForm::OffsuitConnectors,
+            ComboRange::new(Combo::COMBO_KQo, Combo::COMBO_87o).form()
+        );
+        assert_eq!(
+            ComboRangeForm::OffsuitConnectors,
+            ComboRange::new(Combo::COMBO_T9o, Combo::COMBO_32o).form()
+        );
+    }
+
+    #[test]
+    fn form__connectors() {
+        assert_eq!(
+            ComboRangeForm::Connectors,
+            ComboRange::new(Combo::COMBO_AK, Combo::COMBO_76).form()
+        );
+        assert_eq!(
+            ComboRangeForm::Connectors,
+            ComboRange::new(Combo::COMBO_KQ, Combo::COMBO_87).form()
+        );
+        assert_eq!(
+            ComboRangeForm::Connectors,
+            ComboRange::new(Combo::COMBO_T9, Combo::COMBO_32).form()
+        );
     }
 
     #[test]

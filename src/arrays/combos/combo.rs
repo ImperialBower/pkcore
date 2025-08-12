@@ -2999,7 +2999,6 @@ impl Combo {
         }
 
         if other.is_ace_x() {
-
             if self.is_ace_x() {
                 return true; // Ace-x vs Ace-x
             }
@@ -3050,7 +3049,7 @@ impl Combo {
         false
     }
 
-    fn is_ace_x_internal(&self, qualifier: Qualifier) -> bool {
+    fn is_ace_x_internal(self, qualifier: Qualifier) -> bool {
         if self.is_pocket_pair() {
             return false;
         }
@@ -3687,9 +3686,11 @@ mod arrays__ranges__combo_tests {
 
     #[test]
     fn is_ace_x() {
-        assert!(Combo::COMBO_AKo.is_ace_x());
-        assert!(Combo::COMBO_AJs.is_ace_x());
-        assert!(Combo::COMBO_AQo_PLUS.is_ace_x());
+        assert!(Combo::COMBO_AK.is_ace_x());
+        assert!(Combo::COMBO_AJ.is_ace_x());
+        assert!(!Combo::COMBO_AKo.is_ace_x());
+        assert!(!Combo::COMBO_AJs.is_ace_x());
+        assert!(!Combo::COMBO_AQo_PLUS.is_ace_x());
         assert!(!Combo::COMBO_AA.is_ace_x());
         assert!(!Combo::COMBO_QQ_PLUS.is_ace_x());
         assert!(!Combo::COMBO_76s.is_ace_x());

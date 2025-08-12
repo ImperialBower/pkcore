@@ -1,8 +1,8 @@
 use crate::PKError;
 use crate::arrays::combos::combo::Combo;
+use crate::arrays::combos::combo_range::ComboRange;
 use crate::util::Util;
 use std::str::FromStr;
-use crate::arrays::combos::combo_range::ComboRange;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Combos(Vec<Combo>);
@@ -190,6 +190,12 @@ impl Combos {
 
     // endregion
 
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
     }
@@ -234,13 +240,13 @@ impl Combos {
         if range.are_pocket_pairs() {
             return range.filter_collection(&Combos::POCKET_PAIRS);
         }
-        if range.is_suited_connector() {
+        if range.are_suited_connectors() {
             return range.filter_collection(&Combos::SUITED_CONNECTORS);
         }
-        if range.is_offsuit_connector() {
+        if range.are_offsuit_connectors() {
             return range.filter_collection(&Combos::OFFSUIT_CONNECTORS);
         }
-        if range.is_connector() {
+        if range.are_connectors() {
             return range.filter_collection(&Combos::CONNECTORS);
         }
         if range.are_ace_x_suited() {
@@ -396,12 +402,7 @@ mod arrays__ranges__combos_tests {
     fn unwrap_range__connectors() {
         let range = ComboRange::new(Combo::COMBO_QJ, Combo::COMBO_98);
 
-        let expected: Combos = Combos::from(vec![
-            Combo::COMBO_QJ,
-            Combo::COMBO_JT,
-            Combo::COMBO_T9,
-            Combo::COMBO_98,
-        ]);
+        let expected: Combos = Combos::from(vec![Combo::COMBO_QJ, Combo::COMBO_JT, Combo::COMBO_T9, Combo::COMBO_98]);
 
         assert_eq!(expected, Combos::unwrap_range(range));
     }
@@ -456,4 +457,3 @@ mod arrays__ranges__combos_tests {
         assert_eq!(expected, Combos::unwrap_range(range));
     }
 }
-
