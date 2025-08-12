@@ -2,7 +2,6 @@ use crate::PKError;
 use crate::arrays::combos::combo::Combo;
 use crate::util::Util;
 use std::str::FromStr;
-use serde::{Deserialize, Serialize};
 use crate::arrays::combos::combo_range::ComboRange;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -195,10 +194,10 @@ impl Combos {
         self.0.len()
     }
 
-    fn parse(s: &str) -> Result<Combos, PKError> {
-        let index = Util::str_remove_spaces(s);
-
-        let v: Vec<Combo> = Vec::new();
+    fn parse(_s: &str) -> Result<Combos, PKError> {
+        // let index = Util::str_remove_spaces(s);
+        //
+        // let v: Vec<Combo> = Vec::new();
 
         // for c in index.split(',') {
         //     if index.contains('-') {
@@ -287,7 +286,6 @@ impl FromStr for Combos {
 #[allow(non_snake_case)]
 mod arrays__ranges__combos_tests {
     use super::*;
-    use rusqlite::fallible_iterator::FallibleIterator;
     use crate::arrays::combos::combo_range::ComboRange;
 
     #[test]
@@ -323,8 +321,8 @@ mod arrays__ranges__combos_tests {
 
     #[test]
     fn unwrap_range() {
-        let from = Combo::COMBO_AK;
-        let to = Combo::COMBO_QJ;
+        // let from = Combo::COMBO_AK;
+        // let to = Combo::COMBO_QJ;
 
         // let combos = Combos::unwrap_range(from, to);
         // assert_eq!(combos.len(), 3);
@@ -335,7 +333,7 @@ mod arrays__ranges__combos_tests {
         let empty_range = Combos::unwrap_range(ComboRange::new(Combo::COMBO_AK, Combo::COMBO_AK));
         assert_eq!(empty_range.len(), 1);
         assert_eq!(empty_range.0[0], Combo::COMBO_AK);
-        //
+        //Σ
         // let non_aligned_range = Combos::unwrap_range(Combo::COMBO_AKs, Combo::COMBO_QJo);
         // assert!(non_aligned_range.is_empty());
     }

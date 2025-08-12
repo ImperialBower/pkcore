@@ -3050,25 +3050,30 @@ impl Combo {
         false
     }
 
-    #[must_use]
-    pub fn is_ace_x(&self) -> bool {
+    fn is_ace_x_internal(&self, qualifier: Qualifier) -> bool {
         if self.is_pocket_pair() {
             return false;
         }
-        if (self.first == Rank::ACE) && self.qualifier == Qualifier::ALL {
+        if (self.first == Rank::ACE) && self.qualifier == qualifier {
             return self.second != Rank::ACE;
         }
         false
     }
 
+    /// NOTE: The `AceX` combos are the biggest pain in the ass.
+    #[must_use]
+    pub fn is_ace_x(&self) -> bool {
+        self.is_ace_x_internal(Qualifier::ALL)
+    }
+
     #[must_use]
     pub fn is_ace_x_suited(&self) -> bool {
-        self.is_ace_x() && self.is_suited()
+        self.is_ace_x_internal(Qualifier::SUITED)
     }
 
     #[must_use]
     pub fn is_ace_x_offsuit(&self) -> bool {
-        self.is_ace_x() && self.is_offsuit()
+        self.is_ace_x_internal(Qualifier::OFFSUIT)
     }
 
     #[must_use]

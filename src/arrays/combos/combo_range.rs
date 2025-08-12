@@ -97,6 +97,7 @@ impl ComboRange {
 
     pub fn form(&self) -> ComboRangeForm {
         if self.is_empty() {
+            println!("{self} is_empty");
             return ComboRangeForm::Unsupported;
         }
         if self.are_pocket_pairs() {
@@ -155,6 +156,8 @@ mod arrays__ranges__combos__combo_range_tests {
 
     #[test]
     fn form__ace_x_suited() {
+        assert!(Combo::COMBO_AKs.is_ace_x_suited());
+        assert!(Combo::COMBO_A2s.is_ace_x_suited());
         assert_eq!(ComboRangeForm::AceXSuited, ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A2s).form());
         assert_eq!(ComboRangeForm::AceXSuited, ComboRange::new(Combo::COMBO_AKs, Combo::COMBO_A3s).form());
         assert_eq!(ComboRangeForm::AceXSuited, ComboRange::new(Combo::COMBO_AQs, Combo::COMBO_A3s).form());
