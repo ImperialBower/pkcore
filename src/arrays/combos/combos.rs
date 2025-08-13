@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+use std::fmt::Display;
 use crate::PKError;
 use crate::arrays::combos::combo::Combo;
 use crate::arrays::combos::combo_range::ComboRange;
@@ -203,7 +205,7 @@ impl Combos {
     fn parse(s: &str) -> Result<Combos, PKError> {
         let index = Util::str_remove_spaces(s);
 
-        let mut v: Vec<Combo> = Vec::new();
+        let mut v: HashSet<Combo> = HashSet::new();
 
         for c in index.split(',') {
             if index.contains('-') {
@@ -264,6 +266,26 @@ impl Combos {
     }
 }
 
+impl Display for Combos {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.is_empty() {
+            write!(f, "No combos")
+        } else {
+            write!(f, "{}", self.0.iter().map(ToString::to_string).collect::<Vec<String>>().join(", "))
+        }
+    }
+}
+
+impl From<HashSet<Combo>> for Combos {
+    fn from(combos: HashSet<Combo>) -> Self {
+        if combos.is_empty() {
+            Combos::default()
+        } else {
+            Combos(combos.into_iter().collect())
+        }
+    }
+}
+
 impl From<Vec<Combo>> for Combos {
     fn from(combos: Vec<Combo>) -> Self {
         if combos.is_empty() {
@@ -310,6 +332,24 @@ mod arrays__ranges__combos_tests {
         ]);
 
         let combos = Combos::parse("JJ-99,AQs-ATs,KJs+,QJs,JTs").unwrap();
+
+
+
+        assert_eq!(expected, combos);
+    }
+
+    #[test]
+    fn parse_1() {
+        let expected = Combos(vec![
+            Combo::COMBO_JJ,
+            Combo::COMBO_TT,
+            Combo::COMBO_99,
+        ]);
+
+        let combos = Combos::parse("JJ,TT,99").unwrap();
+
+        println!("expected: {expected}");
+        println!("combos: {combos}");
 
         assert_eq!(expected, combos);
     }
