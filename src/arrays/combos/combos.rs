@@ -445,14 +445,21 @@ mod arrays__ranges__combos_tests {
             Combo::COMBO_A6o,
         ]);
 
-        assert!(range.contains(Combo::COMBO_AKo));
-        assert!(range.contains(Combo::COMBO_AQo));
-        assert!(range.contains(Combo::COMBO_AJo));
-        assert!(range.contains(Combo::COMBO_ATo));
-        assert!(range.contains(Combo::COMBO_A9o));
-        assert!(range.contains(Combo::COMBO_A8o));
-        assert!(range.contains(Combo::COMBO_A7o));
-        assert!(range.contains(Combo::COMBO_A6o));
+        assert_eq!(expected, Combos::unwrap_range(range));
+    }
+
+    #[test]
+    fn unwrap_range__ace_x() {
+        let range = ComboRange::new(Combo::COMBO_AQ, Combo::COMBO_A7);
+
+        let expected: Combos = Combos::from(vec![
+            Combo::COMBO_AQ,
+            Combo::COMBO_AJ,
+            Combo::COMBO_AT,
+            Combo::COMBO_A9,
+            Combo::COMBO_A8,
+            Combo::COMBO_A7,
+        ]);
 
         assert_eq!(expected, Combos::unwrap_range(range));
     }
