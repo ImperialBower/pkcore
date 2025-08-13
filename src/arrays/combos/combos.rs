@@ -200,31 +200,32 @@ impl Combos {
         self.0.len()
     }
 
-    fn parse(_s: &str) -> Result<Combos, PKError> {
-        // let index = Util::str_remove_spaces(s);
-        //
-        // let v: Vec<Combo> = Vec::new();
+    fn parse(s: &str) -> Result<Combos, PKError> {
+        let index = Util::str_remove_spaces(s);
 
-        // for c in index.split(',') {
-        //     if index.contains('-') {
-        //         Combos::range(c)
-        //     } else {
-        //         let combos = index
-        //             .split(',')
-        //             .map(str::parse::<Combo>)
-        //             .collect::<Result<Vec<Combo>, PKError>>()?;
-        //         Ok(Combos::from(combos))
-        //     }
-        // }
-        todo!()
+        let mut v: Vec<Combo> = Vec::new();
+
+        for c in index.split(',') {
+            if index.contains('-') {
+                let combo_range = Combos::range(c)?;
+                v.extend(Combos::unwrap_range(combo_range).0);
+            } else {
+                let combos = index
+                    .split(',')
+                    .map(str::parse::<Combo>)
+                    .collect::<Result<Vec<Combo>, PKError>>()?;
+                v.extend(combos);
+            }
+        }
+        Ok(Combos::from(v))
     }
 
-    fn range(s: &str) -> Result<(Combo, Combo), PKError> {
+    fn range(s: &str) -> Result<ComboRange, PKError> {
         let mut iter = s.split('-');
         if iter.clone().count() == 2 {
             let start = iter.next().ok_or(PKError::InvalidRangeIndex)?.parse::<Combo>()?;
             let end = iter.next().ok_or(PKError::InvalidRangeIndex)?.parse::<Combo>()?;
-            Ok((start, end))
+            Ok(ComboRange::new(start, end))
         } else {
             Err(PKError::InvalidRangeIndex)
         }
@@ -320,7 +321,7 @@ mod arrays__ranges__combos_tests {
 
         let actual = Combos::range(range).unwrap();
 
-        assert_eq!((Combo::COMBO_AQs, Combo::COMBO_ATs), actual);
+        assert_eq!(ComboRange::new(Combo::COMBO_AQs, Combo::COMBO_ATs), actual);
         assert!(Combos::range("AQs-ATs-AAs").is_err());
         assert!(Combos::range("AQs").is_err());
     }
