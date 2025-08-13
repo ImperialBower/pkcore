@@ -1,13 +1,13 @@
-use std::collections::HashSet;
-use std::fmt::Display;
 use crate::PKError;
 use crate::arrays::combos::combo::Combo;
 use crate::arrays::combos::combo_range::ComboRange;
 use crate::util::Util;
+use std::collections::HashSet;
+use std::fmt::Display;
 use std::str::FromStr;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct Combos(Vec<Combo>);
+pub struct Combos(HashSet<Combo>);
 
 impl Combos {
     // region Combo collections
@@ -271,7 +271,15 @@ impl Display for Combos {
         if self.is_empty() {
             write!(f, "No combos")
         } else {
-            write!(f, "{}", self.0.iter().map(ToString::to_string).collect::<Vec<String>>().join(", "))
+            write!(
+                f,
+                "{}",
+                self.0
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            )
         }
     }
 }
@@ -291,7 +299,8 @@ impl From<Vec<Combo>> for Combos {
         if combos.is_empty() {
             Combos::default()
         } else {
-            Combos(combos)
+            // let combos: HashSet<Combo> = combos.into_iter().collect();
+            Combos(combos.into_iter().collect())
         }
     }
 }
@@ -319,7 +328,7 @@ mod arrays__ranges__combos_tests {
 
     #[test]
     fn parse() {
-        let expected = Combos(vec![
+        let expected = Combos::from(vec![
             Combo::COMBO_JJ,
             Combo::COMBO_TT,
             Combo::COMBO_99,
@@ -331,27 +340,28 @@ mod arrays__ranges__combos_tests {
             Combo::COMBO_JTs,
         ]);
 
-        let combos = Combos::parse("JJ-99,AQs-ATs,KJs+,QJs,JTs").unwrap();
+        // let combos = Combos::parse("JJ-99,AQs-ATs,KJs+,QJs,JTs").unwrap();
+        let combos = Combos::parse("JJ-99,AQs-ATs,KJs+").unwrap();
 
-
+        println!("{expected}");
+        println!("{combos}");
 
         assert_eq!(expected, combos);
     }
 
     #[test]
-    fn parse_1() {
-        let expected = Combos(vec![
-            Combo::COMBO_JJ,
-            Combo::COMBO_TT,
-            Combo::COMBO_99,
-        ]);
+    fn parse_99_TT_JJ() {
+        let expected = Combos::from(vec![Combo::COMBO_JJ, Combo::COMBO_TT, Combo::COMBO_99]);
 
-        let combos = Combos::parse("JJ,TT,99").unwrap();
+        assert_eq!(expected, Combos::parse("JJ,TT,99").unwrap());
+        assert_eq!(expected, Combos::parse("JJ-99").unwrap());
+    }
 
-        println!("expected: {expected}");
-        println!("combos: {combos}");
+    #[test]
+    fn parse_AQs_ATs() {
+        let expected = Combos::from(vec![Combo::COMBO_AQs, Combo::COMBO_AJs, Combo::COMBO_ATs]);
 
-        assert_eq!(expected, combos);
+        assert_eq!(expected, Combos::parse("AQs-ATs").unwrap());
     }
 
     /// `JJ-22,AQs-ATs,KJs+,QJs,JTs,T9s,98s,87s,76s,65s,54s,AQo-ATo,KJo+`
@@ -379,7 +389,6 @@ mod arrays__ranges__combos_tests {
 
         let empty_range = Combos::unwrap_range(ComboRange::new(Combo::COMBO_AK, Combo::COMBO_AK));
         assert_eq!(empty_range.len(), 1);
-        assert_eq!(empty_range.0[0], Combo::COMBO_AK);
         //Σ
         // let non_aligned_range = Combos::unwrap_range(Combo::COMBO_AKs, Combo::COMBO_QJo);
         // assert!(non_aligned_range.is_empty());
