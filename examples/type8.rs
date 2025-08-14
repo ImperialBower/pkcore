@@ -1,6 +1,5 @@
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 use pkcore::arrays::matchups::masked::MASKED_UNIQUE_TYPE_EIGHT;
-use pkcore::arrays::matchups::sorted_heads_up::SORTED_HEADS_UP_UNIQUE_TYPE_EIGHT;
 use rusqlite::Connection;
 
 fn main() {

@@ -202,24 +202,13 @@ impl Combos {
         self.0.len()
     }
 
-    fn parse(s: &str) -> Result<Combos, PKError> {
+    fn parse_comma_delimited(s: &str) -> Result<Combos, PKError> {
         let index = Util::str_remove_spaces(s);
-
-        let mut v: HashSet<Combo> = HashSet::new();
-
-        for c in index.split(',') {
-            if index.contains('-') {
-                let combo_range = Combos::range(c)?;
-                v.extend(Combos::unwrap_range(combo_range).0);
-            } else {
-                let combos = index
-                    .split(',')
-                    .map(str::parse::<Combo>)
-                    .collect::<Result<Vec<Combo>, PKError>>()?;
-                v.extend(combos);
-            }
-        }
-        Ok(Combos::from(v))
+        let combos = index
+            .split(',')
+            .map(str::parse::<Combo>)
+            .collect::<Result<Vec<Combo>, PKError>>()?;
+        Ok(Combos::from(combos))
     }
 
     fn range(s: &str) -> Result<ComboRange, PKError> {
@@ -311,12 +300,19 @@ impl FromStr for Combos {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let index = Util::str_remove_spaces(s);
 
-        let combos = index
-            .split(',')
-            .map(str::parse::<Combo>)
-            .collect::<Result<Vec<Combo>, PKError>>()?;
+        let mut v: HashSet<Combo> = HashSet::new();
 
-        Ok(Combos::from(combos))
+        for c in index.split(',') {
+            if c.contains('-') {
+                let combo_range = Combos::range(c)?;
+                let upwrapped_range = Combos::unwrap_range(combo_range);
+                v.extend(upwrapped_range.0);
+            } else {
+                let combos = Combos::parse_comma_delimited(c)?;
+                v.extend(combos.0);
+            }
+        }
+        Ok(Combos::from(v))
     }
 }
 
@@ -327,7 +323,7 @@ mod arrays__ranges__combos_tests {
     use crate::arrays::combos::combo_range::ComboRange;
 
     #[test]
-    fn parse() {
+    fn from_str() {
         let expected = Combos::from(vec![
             Combo::COMBO_JJ,
             Combo::COMBO_TT,
@@ -340,31 +336,79 @@ mod arrays__ranges__combos_tests {
             Combo::COMBO_JTs,
         ]);
 
-        // let combos = Combos::parse("JJ-99,AQs-ATs,KJs+,QJs,JTs").unwrap();
-        let combos = Combos::parse("JJ-99,AQs-ATs,KJs+").unwrap();
-
-        println!("{expected}");
-        println!("{combos}");
+        let combos = Combos::from_str("JJ-99,AQs-ATs,KJs+,QJs,JTs").unwrap();
 
         assert_eq!(expected, combos);
     }
 
     #[test]
-    fn parse_99_TT_JJ() {
-        let expected = Combos::from(vec![Combo::COMBO_JJ, Combo::COMBO_TT, Combo::COMBO_99]);
+    fn from_str_long() {
+        let expected = Combos::from(vec![
+            Combo::COMBO_JJ,
+            Combo::COMBO_TT,
+            Combo::COMBO_99,
+            Combo::COMBO_88,
+            Combo::COMBO_77,
+            Combo::COMBO_66,
+            Combo::COMBO_55,
+            Combo::COMBO_44,
+            Combo::COMBO_33,
+            Combo::COMBO_22,
+            Combo::COMBO_AQs,
+            Combo::COMBO_AJs,
+            Combo::COMBO_ATs,
+            Combo::COMBO_KJs_PLUS,
+            Combo::COMBO_QJs,
+            Combo::COMBO_JTs,
+            Combo::COMBO_T9s,
+            Combo::COMBO_98s,
+            Combo::COMBO_87s,
+            Combo::COMBO_76s,
+            Combo::COMBO_65s,
+            Combo::COMBO_54s,
+            Combo::COMBO_AQo,
+            Combo::COMBO_AJo,
+            Combo::COMBO_ATo,
+            Combo::COMBO_KJo_PLUS,
+        ]);
 
-        assert_eq!(expected, Combos::parse("JJ,TT,99").unwrap());
-        assert_eq!(expected, Combos::parse("JJ-99").unwrap());
+        let combos = Combos::from_str("JJ-22,AQs-ATs,KJs+,QJs,JTs,T9s,98s,87s,76s,65s,54s,AQo-ATo,KJo+").unwrap();
+
+        assert_eq!(expected, combos);
     }
 
     #[test]
-    fn parse_AQs_ATs() {
-        let expected = Combos::from(vec![Combo::COMBO_AQs, Combo::COMBO_AJs, Combo::COMBO_ATs]);
-
-        assert_eq!(expected, Combos::parse("AQs-ATs").unwrap());
+    fn from_str_KJsplus() {
+        assert_eq!(
+            Combos::from(vec![Combo::COMBO_KJs_PLUS]),
+            Combos::from_str("KJs+").unwrap()
+        );
+        assert_eq!(
+            Combos::from(vec![
+                Combo::COMBO_KJs_PLUS,
+                Combo::COMBO_JJ,
+                Combo::COMBO_TT,
+                Combo::COMBO_99
+            ]),
+            Combos::from_str("JJ-99, KJs+").unwrap()
+        );
     }
 
-    /// `JJ-22,AQs-ATs,KJs+,QJs,JTs,T9s,98s,87s,76s,65s,54s,AQo-ATo,KJo+`
+    #[test]
+    fn from_str_99_TT_JJ() {
+        let expected = Combos::from(vec![Combo::COMBO_JJ, Combo::COMBO_TT, Combo::COMBO_99]);
+
+        assert_eq!(expected, Combos::from_str("JJ,TT,99").unwrap());
+        assert_eq!(expected, Combos::from_str("JJ-99").unwrap());
+    }
+
+    #[test]
+    fn from_str_AQs_ATs() {
+        let expected = Combos::from(vec![Combo::COMBO_AQs, Combo::COMBO_AJs, Combo::COMBO_ATs]);
+
+        assert_eq!(expected, Combos::from_str("AQs-ATs").unwrap());
+    }
+
     #[test]
     fn range() {
         let range = "AQs-ATs";

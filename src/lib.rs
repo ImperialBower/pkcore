@@ -3,6 +3,7 @@
     non_upper_case_globals,
     clippy::unreadable_literal,
     clippy::iter_without_into_iter,
+    clippy::module_inception,
     clippy::should_implement_trait,
     clippy::upper_case_acronyms,
     macro_expanded_macro_exports_accessed_by_absolute_paths
