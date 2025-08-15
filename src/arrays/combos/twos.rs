@@ -1,5 +1,6 @@
 use crate::PKError;
 use crate::arrays::combos::combo::Combo;
+use crate::arrays::combos::combos::Combos;
 use crate::arrays::combos::hc::HCSymbol;
 use crate::arrays::two::Two;
 use crate::card::Card;
@@ -147,6 +148,10 @@ impl Twos {
     #[must_use]
     pub fn hashset(&self) -> HashSet<Two> {
         self.0.clone()
+    }
+
+    pub fn insert(&mut self, two: Two) {
+        self.0.insert(two);
     }
 
     #[must_use]
@@ -922,6 +927,17 @@ impl From<Combo> for Twos {
             Combo::COMBO_32_PLUS => todo!(),
             _ => Twos::default(),
         }
+    }
+}
+
+impl From<Combos> for Twos {
+    fn from(combos: Combos) -> Self {
+        let mut twos = Twos::default();
+        for combo in combos.to_hash_set() {
+            let other_twos = Twos::from(combo);
+            twos.0.extend(other_twos.0.iter().copied());
+        }
+        twos
     }
 }
 

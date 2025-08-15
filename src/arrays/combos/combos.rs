@@ -193,6 +193,16 @@ impl Combos {
     // endregion
 
     #[must_use]
+    pub fn to_hash_set(&self) -> HashSet<Combo> {
+        self.0.clone()
+    }
+
+    #[must_use]
+    pub fn to_vec(&self) -> Vec<Combo> {
+        self.0.iter().copied().collect()
+    }
+
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -321,6 +331,7 @@ impl FromStr for Combos {
 mod arrays__ranges__combos_tests {
     use super::*;
     use crate::arrays::combos::combo_range::ComboRange;
+    use crate::arrays::combos::twos::Twos;
 
     #[test]
     fn from_str() {
@@ -373,6 +384,8 @@ mod arrays__ranges__combos_tests {
         ]);
 
         let combos = Combos::from_str("JJ-22,AQs-ATs,KJs+,QJs,JTs,T9s,98s,87s,76s,65s,54s,AQo-ATo,KJo+").unwrap();
+
+        println!("{}", Twos::from(combos.clone()));
 
         assert_eq!(expected, combos);
     }
