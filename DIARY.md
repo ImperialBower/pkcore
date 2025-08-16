@@ -832,4 +832,5 @@ This is an outline of the work as it is done.
         * Finished parsing of sub ranges, aka `AKs-98s`
         * FEATURE: Added support for `A♠ A♥,A♦ K♦` and `A♠ A♥ - A♦ K♦` style index strings to `Cards::from_str()`
         * Removed HCSymbols for Combos
+        * Added Solver and gto example
         * 

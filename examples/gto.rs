@@ -38,12 +38,27 @@ fn main() -> Result<(), PKError> {
 
     println!("{}", solver);
 
-    for (i, combo) in Twos::from(solver.villain()).into_iter().enumerate() {
+    let twos = Twos::from(solver.villain()).to_vec();
+
+    for (i, combo) in twos.into_iter().enumerate() {
         if i % 10 == 0 {
             println!();
         }
         print!(" {combo} ");
     }
+
+    println!();
+    println!();
+
+    let twos = solver.remaining().to_vec();
+
+    for (i, combo) in twos.into_iter().enumerate() {
+        if i % 10 == 0 {
+            println!();
+        }
+        print!(" {combo} ");
+    }
+
     println!();
     println!();
 

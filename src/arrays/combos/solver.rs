@@ -32,6 +32,15 @@ impl Solver {
         &self.board
     }
 
+    /// The remaining `Twos` that the villain can have, excluding the hero's cards.
+    #[must_use]
+    pub fn remaining(&self) -> Twos {
+        Twos::from(self.villain.clone())
+            .filter_on_not_card(self.hero.first())
+            .filter_on_not_card(self.hero.second())
+    }
+
+    /// All the `Twos` including ones in the hero's hand.
     #[must_use]
     pub fn twos(&self) -> Twos {
         Twos::from(self.villain.clone())
