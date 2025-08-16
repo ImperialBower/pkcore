@@ -1,7 +1,6 @@
 use crate::arrays::two::Two;
 
 pub mod combo;
-pub mod hc;
 pub mod twos;
 #[macro_use]
 pub mod range;

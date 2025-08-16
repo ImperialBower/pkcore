@@ -1,5 +1,5 @@
 use crate::PKError;
-use crate::arrays::combos::hc::HCSymbols;
+use crate::arrays::combos::combos::Combos;
 use crate::arrays::hole_cards::twos::StartingHands;
 use crate::cards::Cards;
 use std::io::{Write, stdin, stdout};
@@ -66,9 +66,9 @@ impl Terminal {
     /// # Errors
     ///
     /// TODO
-    pub fn receive_range(prompt: &str) -> Result<HCSymbols, PKError> {
+    pub fn receive_range(prompt: &str) -> Result<Combos, PKError> {
         print!("{prompt}");
-        Ok(HCSymbols::default())
+        Combos::from_str(prompt)
     }
 
     /// Then goal of the functions in this module is to isolate and standardize the patterns we've been
