@@ -8,6 +8,7 @@ pub mod range;
 pub mod combo_range;
 pub mod combos;
 pub mod ranger;
+pub mod solver;
 
 // region hand range array constants
 // region pocket pair range array constants
