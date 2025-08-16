@@ -2,10 +2,10 @@ use clap::Parser;
 use pkcore::PKError;
 use pkcore::arrays::combos::combos::Combos;
 use pkcore::arrays::combos::solver::Solver;
+use pkcore::arrays::combos::twos::Twos;
 use pkcore::arrays::two::Two;
 use pkcore::play::board::Board;
 use std::str::FromStr;
-use pkcore::arrays::combos::twos::Twos;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -44,6 +44,8 @@ fn main() -> Result<(), PKError> {
         }
         print!(" {combo} ");
     }
+    println!();
+    println!();
 
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())

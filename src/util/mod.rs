@@ -8,6 +8,24 @@ pub mod random_ordering;
 pub mod terminal;
 pub mod wincounter;
 
+#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct Percentage {
+    pub number: usize,
+    pub total: usize,
+}
+
+impl Percentage {
+    #[must_use]
+    pub fn new(number: usize, total: usize) -> Self {
+        Self { number, total }
+    }
+
+    #[must_use]
+    pub fn calculate(&self) -> f32 {
+        Util::calculate_percentage(self.number, self.total)
+    }
+}
+
 /// Blank struct that is home to misfit utility functions.
 ///
 /// There is a whole school that argues against util functions and modules like

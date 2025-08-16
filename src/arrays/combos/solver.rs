@@ -1,8 +1,8 @@
 use crate::arrays::combos::combos::Combos;
+use crate::arrays::combos::twos::Twos;
 use crate::arrays::two::Two;
 use crate::play::board::Board;
 use std::fmt::Display;
-use crate::arrays::combos::twos::Twos;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Solver {
@@ -32,6 +32,7 @@ impl Solver {
         &self.board
     }
 
+    #[must_use]
     pub fn twos(&self) -> Twos {
         Twos::from(self.villain.clone())
     }

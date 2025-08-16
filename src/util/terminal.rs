@@ -1,6 +1,6 @@
 use crate::PKError;
 use crate::arrays::combos::hc::HCSymbols;
-use crate::arrays::hole_cards::twos::Twos;
+use crate::arrays::hole_cards::twos::StartingHands;
 use crate::cards::Cards;
 use std::io::{Write, stdin, stdout};
 use std::str::FromStr;
@@ -55,12 +55,12 @@ impl Terminal {
     ///
     /// `PKError::InvalidIndex` if `str` doesn't translate into `Cards`
     /// `PKError::InvalidCardCount` if number of cards isn't divisible by two
-    pub fn receive_cards_in_twos(prompt: &str) -> Result<Twos, PKError> {
+    pub fn receive_cards_in_twos(prompt: &str) -> Result<StartingHands, PKError> {
         let Some(cards) = Terminal::receive_cards(prompt) else {
             return Err(PKError::InvalidCardIndex);
         };
 
-        Twos::try_from(cards)
+        StartingHands::try_from(cards)
     }
 
     /// # Errors
