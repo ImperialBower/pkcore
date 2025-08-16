@@ -5,6 +5,7 @@ use pkcore::arrays::combos::solver::Solver;
 use pkcore::arrays::two::Two;
 use pkcore::play::board::Board;
 use std::str::FromStr;
+use pkcore::arrays::combos::twos::Twos;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -36,6 +37,13 @@ fn main() -> Result<(), PKError> {
     );
 
     println!("{}", solver);
+
+    for (i, combo) in Twos::from(solver.villain()).into_iter().enumerate() {
+        if i % 10 == 0 {
+            println!();
+        }
+        print!(" {combo} ");
+    }
 
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())

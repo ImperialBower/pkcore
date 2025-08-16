@@ -202,6 +202,10 @@ impl Combos {
         self.0.iter().copied().collect()
     }
 
+    pub fn iter(&self) -> impl Iterator<Item = &Combo> {
+        self.0.iter()
+    }
+
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
