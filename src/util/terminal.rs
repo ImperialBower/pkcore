@@ -1,5 +1,5 @@
 use crate::PKError;
-use crate::arrays::combos::combos::Combos;
+use crate::analysis::gto::combos::Combos;
 use crate::arrays::hole_cards::twos::StartingHands;
 use crate::cards::Cards;
 use std::io::{Write, stdin, stdout};

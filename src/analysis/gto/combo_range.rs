@@ -1,7 +1,7 @@
 use log::trace;
 
-use crate::arrays::combos::combo::Combo;
-use crate::arrays::combos::combos::Combos;
+use crate::analysis::gto::combo::Combo;
+use crate::analysis::gto::combos::Combos;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum ComboRangeForm {

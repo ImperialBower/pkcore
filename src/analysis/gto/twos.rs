@@ -1,6 +1,6 @@
 use crate::PKError;
-use crate::arrays::combos::combo::Combo;
-use crate::arrays::combos::combos::Combos;
+use crate::analysis::gto::combo::Combo;
+use crate::analysis::gto::combos::Combos;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
@@ -13,6 +13,9 @@ use std::collections::HashSet;
 use std::fmt::Display;
 use std::fmt::Write;
 use std::str::FromStr;
+
+pub static DISTINCT_POCKET_PAIRS: std::sync::LazyLock<Twos> =
+    std::sync::LazyLock::new(|| Twos::from(POKER_DECK.combinations(2).map(Two::from).collect::<Vec<Two>>()));
 
 /// This struct is to deal with the fact that the `arrays::Two` struct is getting overloaded with
 /// functionality that is really about combinations of `Two` structs.
@@ -69,11 +72,6 @@ pub const RANGE_MATRIX: [[&str; 13]; 13] = [
 // endregion
 
 impl Twos {
-    #[must_use]
-    pub fn unique() -> Twos {
-        Twos::from(POKER_DECK.combinations(2).map(Two::from).collect::<Vec<Two>>())
-    }
-
     #[must_use]
     pub fn contains(&self, two: &Two) -> bool {
         self.0.contains(two)
@@ -740,12 +738,12 @@ impl Display for Twos {
 #[allow(non_snake_case)]
 mod arrays__combos__twos_tests {
     use super::*;
-    use crate::arrays::combos::AA;
+    use crate::analysis::gto::AA;
     use rstest::rstest;
 
     #[test]
     fn unique() {
-        let unique = Twos::unique();
+        let unique = &DISTINCT_POCKET_PAIRS;
 
         assert!(!unique.is_empty());
         assert_eq!(crate::UNIQUE_2_CARD_HANDS, unique.len());
@@ -754,7 +752,7 @@ mod arrays__combos__twos_tests {
 
     #[test]
     fn contains() {
-        let unique = Twos::unique();
+        let unique = &DISTINCT_POCKET_PAIRS;
 
         assert!(unique.contains(&Two::HAND_TD_5D));
         assert!(!unique.contains(&Two::default()));
@@ -779,7 +777,7 @@ mod arrays__combos__twos_tests {
 
     #[test]
     fn filter_is_paired() {
-        let unique = Twos::unique();
+        let unique = &DISTINCT_POCKET_PAIRS;
 
         let pocket_pairs = unique.filter_is_paired();
 
@@ -789,7 +787,7 @@ mod arrays__combos__twos_tests {
 
     #[test]
     fn filter_is_not_paired() {
-        let unique = Twos::unique();
+        let unique = &DISTINCT_POCKET_PAIRS;
 
         let non_pocket_pairs = unique.filter_is_not_paired();
 
@@ -799,7 +797,7 @@ mod arrays__combos__twos_tests {
 
     #[test]
     fn filter_is_suited() {
-        let unique = Twos::unique();
+        let unique = &DISTINCT_POCKET_PAIRS;
 
         let suited = unique.filter_is_suited();
 
@@ -809,7 +807,7 @@ mod arrays__combos__twos_tests {
 
     #[test]
     fn filter_is_not_suited() {
-        let unique = Twos::unique();
+        let unique = &DISTINCT_POCKET_PAIRS;
 
         let non_suited = unique.filter_is_not_suited();
 
@@ -819,7 +817,7 @@ mod arrays__combos__twos_tests {
 
     #[test]
     fn filter_on_card() {
-        let unique = Twos::unique();
+        let unique = &DISTINCT_POCKET_PAIRS;
         let twos = Twos::from(vec![Two::HAND_TD_5D, Two::HAND_TD_9D]);
 
         assert!(twos.filter_on_card(Card::DEUCE_CLUBS).is_empty());
@@ -849,7 +847,7 @@ mod arrays__combos__twos_tests {
 
     #[test]
     fn filter_on_rank() {
-        let unique = Twos::unique();
+        let unique = &DISTINCT_POCKET_PAIRS;
         let twos = Twos::from(vec![Two::HAND_TD_5D, Two::HAND_TS_9D]);
 
         assert!(twos.filter_on_rank(Rank::JACK).is_empty());
@@ -912,7 +910,7 @@ mod arrays__combos__twos_tests {
 
     #[test]
     fn filter_on_suit() {
-        let unique = Twos::unique();
+        let unique = &DISTINCT_POCKET_PAIRS;
         let twos = Twos::from(vec![Two::HAND_TD_5D, Two::HAND_TS_9D]);
 
         assert!(twos.filter_on_suit(Suit::CLUBS).is_empty());

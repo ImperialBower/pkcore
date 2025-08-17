@@ -1,5 +1,5 @@
-use crate::arrays::combos::combo::Combo;
-use crate::arrays::combos::twos::Twos;
+use crate::analysis::gto::combo::Combo;
+use crate::analysis::gto::twos::Twos;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

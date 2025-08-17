@@ -1,8 +1,8 @@
 use clap::Parser;
 use pkcore::PKError;
-use pkcore::arrays::combos::combos::Combos;
-use pkcore::arrays::combos::solver::Solver;
-use pkcore::arrays::combos::twos::Twos;
+use pkcore::analysis::gto::combos::Combos;
+use pkcore::analysis::gto::solver::Solver;
+use pkcore::analysis::gto::twos::Twos;
 use pkcore::arrays::two::Two;
 use pkcore::play::board::Board;
 use std::str::FromStr;

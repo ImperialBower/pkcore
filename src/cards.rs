@@ -778,7 +778,7 @@ mod card_tests {
     }
 
     // #[test]
-    // fn combos() {
+    // fn gto() {
     //     let all = FIVE_CARD_COMBOS.clone();
     //
     //     let flushes = FIVE_CARD_COMBOS

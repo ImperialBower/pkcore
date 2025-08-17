@@ -1,6 +1,6 @@
 use crate::PKError;
-use crate::arrays::combos::combo::Combo;
-use crate::arrays::combos::combo_range::ComboRange;
+use crate::analysis::gto::combo::Combo;
+use crate::analysis::gto::combo_range::ComboRange;
 use crate::util::Util;
 use std::collections::HashSet;
 use std::fmt::Display;
@@ -272,7 +272,7 @@ impl Combos {
 impl Display for Combos {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.is_empty() {
-            write!(f, "No combos")
+            write!(f, "No gto")
         } else {
             write!(
                 f,
@@ -302,7 +302,7 @@ impl From<Vec<Combo>> for Combos {
         if combos.is_empty() {
             Combos::default()
         } else {
-            // let combos: HashSet<Combo> = combos.into_iter().collect();
+            // let gto: HashSet<Combo> = gto.into_iter().collect();
             Combos(combos.into_iter().collect())
         }
     }
@@ -334,8 +334,8 @@ impl FromStr for Combos {
 #[allow(non_snake_case)]
 mod arrays__ranges__combos_tests {
     use super::*;
-    use crate::arrays::combos::combo_range::ComboRange;
-    use crate::arrays::combos::twos::Twos;
+    use crate::analysis::gto::combo_range::ComboRange;
+    use crate::analysis::gto::twos::Twos;
 
     #[test]
     fn from_str() {
@@ -442,11 +442,11 @@ mod arrays__ranges__combos_tests {
         // let from = Combo::COMBO_AK;
         // let to = Combo::COMBO_QJ;
 
-        // let combos = Combos::unwrap_range(from, to);
-        // assert_eq!(combos.len(), 3);
-        // assert!(combos.contains(&Combo::COMBO_AK));
-        // assert!(combos.contains(&Combo::COMBO_KQ));
-        // assert!(combos.contains(&Combo::COMBO_QJ));
+        // let gto = Combos::unwrap_range(from, to);
+        // assert_eq!(gto.len(), 3);
+        // assert!(gto.contains(&Combo::COMBO_AK));
+        // assert!(gto.contains(&Combo::COMBO_KQ));
+        // assert!(gto.contains(&Combo::COMBO_QJ));
 
         let empty_range = Combos::unwrap_range(ComboRange::new(Combo::COMBO_AK, Combo::COMBO_AK));
         assert_eq!(empty_range.len(), 1);

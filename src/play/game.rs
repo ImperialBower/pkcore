@@ -496,8 +496,8 @@ impl Game {
         let mut the_nuts = TheNuts::default();
         let board = self.flop_and_turn();
 
-        // let combos = self.turn_remaining_board().combinations(3);
-        // let chunks = combos.chunks(5);
+        // let gto = self.turn_remaining_board().combinations(3);
+        // let chunks = gto.chunks(5);
         let (sender, receiver) = mpsc::channel();
 
         // for chunk in &chunks {
@@ -633,7 +633,7 @@ impl Game {
     /// hands.
     ///
     /// What really complicates things is that in hold'em we're not just comparing all possible five
-    /// card combos, but in reality all possible seven card combinations, since each player's hand
+    /// card gto, but in reality all possible seven card combinations, since each player's hand
     /// needs to be evaluated based on the seven possible cards that can be in play; the two they're
     /// holding as well as all five possible hands on the board. That results in 136,383,520
     /// different possible hands.

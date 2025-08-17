@@ -146,7 +146,7 @@ pub const DEUCES: [Two; 6] = [
 ///
 /// Now, let's try it with our 87 constants:
 /// ```
-/// use pkcore::arrays::combos::{EIGHT_SEVEN_OFFSUIT, EIGHT_SEVEN_SUITED};
+/// use pkcore::analysis::gto::{EIGHT_SEVEN_OFFSUIT, EIGHT_SEVEN_SUITED};
 /// use pkcore::arrays::two::Two;
 ///
 /// let suited: HashSet<Two> = EIGHT_SEVEN_SUITED.into_iter().collect();
@@ -161,7 +161,7 @@ pub const DEUCES: [Two; 6] = [
 /// [`oli_obk`'s hardcore solution](https://stackoverflow.com/a/46766782/1245251):
 ///
 /// ```
-/// use pkcore::arrays::combos::{EIGHT_SEVEN_OFFSUIT, EIGHT_SEVEN_SUITED};
+/// use pkcore::analysis::gto::{EIGHT_SEVEN_OFFSUIT, EIGHT_SEVEN_SUITED};
 /// use pkcore::arrays::two::Two;
 ///
 /// assert!(!(1..EIGHT_SEVEN_SUITED.len())

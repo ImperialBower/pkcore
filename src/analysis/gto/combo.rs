@@ -2990,7 +2990,7 @@ impl Combo {
     #[must_use]
     pub fn is_aligned_with(&self, other: &Self) -> bool {
         if self.plus || other.plus {
-            return false; // Combo plus can't be aligned since they rep multiple combos
+            return false; // Combo plus can't be aligned since they rep multiple gto
         }
         if self == other {
             return false; // Same combo
@@ -3060,7 +3060,7 @@ impl Combo {
         false
     }
 
-    /// NOTE: The `AceX` combos are the biggest pain in the ass.
+    /// NOTE: The `AceX` gto are the biggest pain in the ass.
     #[must_use]
     pub fn is_ace_x(&self) -> bool {
         self.is_ace_x_internal(Qualifier::ALL)
