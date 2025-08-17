@@ -3,6 +3,7 @@ use crate::arrays::combos::twos::Twos;
 use crate::arrays::two::Two;
 use crate::play::board::Board;
 use std::fmt::Display;
+use crate::arrays::combos::combo_pairs::ComboPairs;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Solver {
@@ -30,6 +31,10 @@ impl Solver {
     #[must_use]
     pub fn board(&self) -> &Board {
         &self.board
+    }
+
+    pub fn combo_pairs(&self) -> ComboPairs {
+        todo!()
     }
 
     /// The remaining `Twos` that the villain can have, excluding the hero's cards.
