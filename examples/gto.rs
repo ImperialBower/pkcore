@@ -40,6 +40,8 @@ fn main() -> Result<(), PKError> {
 
     let twos = Twos::from(solver.villain()).to_vec();
 
+    println!();
+    println!("ALL:");
     for (i, combo) in twos.into_iter().enumerate() {
         if i % 10 == 0 {
             println!();
@@ -48,9 +50,10 @@ fn main() -> Result<(), PKError> {
     }
 
     println!();
-    println!();
 
     let twos = solver.remaining().to_vec();
+    println!();
+    println!("BLOCKED:");
 
     for (i, combo) in twos.into_iter().enumerate() {
         if i % 10 == 0 {

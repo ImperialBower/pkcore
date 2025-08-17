@@ -93,7 +93,7 @@ impl ComboRange {
 
     #[must_use]
     pub fn are_pocket_pairs(&self) -> bool {
-        self.higher.is_pocket_pair() && self.lower.is_pocket_pair()
+        self.higher.is_pair() && self.lower.is_pair()
     }
 
     #[must_use]

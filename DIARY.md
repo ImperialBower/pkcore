@@ -833,4 +833,6 @@ This is an outline of the work as it is done.
         * FEATURE: Added support for `A♠ A♥,A♦ K♦` and `A♠ A♥ - A♦ K♦` style index strings to `Cards::from_str()`
         * Removed HCSymbols for Combos
         * Added Solver and gto example
-        * 
+        * FEATURE: Compute Combo Blocker percentage 
+          * Added From<Two> for Combo
+          * Added ComboCount struct to hole available Two hands per Combo

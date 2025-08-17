@@ -1,4 +1,5 @@
 use crate::PKError;
+use crate::arrays::two::Two;
 use crate::rank::Rank;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
@@ -2994,8 +2995,8 @@ impl Combo {
         if self == other {
             return false; // Same combo
         }
-        if self.is_pocket_pair() {
-            return other.is_pocket_pair();
+        if self.is_pair() {
+            return other.is_pair();
         }
 
         if other.is_ace_x() {
@@ -3050,7 +3051,7 @@ impl Combo {
     }
 
     fn is_ace_x_internal(self, qualifier: Qualifier) -> bool {
-        if self.is_pocket_pair() {
+        if self.is_pair() {
             return false;
         }
         if (self.first == Rank::ACE) && self.qualifier == qualifier {
@@ -3077,7 +3078,7 @@ impl Combo {
 
     #[must_use]
     pub fn is_connector(&self) -> bool {
-        if self.is_pocket_pair() {
+        if self.is_pair() {
             return false;
         }
         let rank_diff = self.first as i8 - self.second as i8;
@@ -3085,14 +3086,14 @@ impl Combo {
     }
 
     #[must_use]
-    pub fn is_pocket_pair(&self) -> bool {
+    pub fn is_pair(&self) -> bool {
         self.first == self.second
     }
 
     #[must_use]
     pub fn is_same_type(&self, other: &Self) -> bool {
-        if self.is_pocket_pair() {
-            return other.is_pocket_pair();
+        if self.is_pair() {
+            return other.is_pair();
         }
         (self.plus == other.plus) && (self.qualifier == other.qualifier)
     }
@@ -3128,6 +3129,28 @@ impl Display for Combo {
             write!(f, "{first}{second}{qualifier}+")
         } else {
             write!(f, "{first}{second}{qualifier}")
+        }
+    }
+}
+
+impl From<Two> for Combo {
+    fn from(two: Two) -> Self {
+        if two.is_blank() {
+            return Combo::default();
+        }
+        Combo {
+            first: two.first().get_rank(),
+            second: two.second().get_rank(),
+            plus: false,
+            qualifier: {
+                if two.is_pair() {
+                    Qualifier::ALL
+                } else if two.is_suited() {
+                    Qualifier::SUITED
+                } else {
+                    Qualifier::OFFSUIT
+                }
+            },
         }
     }
 }
@@ -3727,10 +3750,10 @@ mod arrays__ranges__combo_tests {
 
     #[test]
     fn is_pocket_pair() {
-        assert!(Combo::COMBO_AA.is_pocket_pair());
-        assert!(Combo::COMBO_22.is_pocket_pair());
-        assert!(!Combo::COMBO_AKs.is_pocket_pair());
-        assert!(!Combo::COMBO_AQo_PLUS.is_pocket_pair());
+        assert!(Combo::COMBO_AA.is_pair());
+        assert!(Combo::COMBO_22.is_pair());
+        assert!(!Combo::COMBO_AKs.is_pair());
+        assert!(!Combo::COMBO_AQo_PLUS.is_pair());
     }
 
     #[test]
@@ -3782,6 +3805,16 @@ mod arrays__ranges__combo_tests {
         assert_eq!(Combo::COMBO_AQo_PLUS.to_string(), "AQo+");
         assert_eq!(Combo::COMBO_QQ_PLUS.to_string(), "QQ+");
         assert_eq!(Combo::COMBO_99_PLUS.to_string(), "99+");
+    }
+
+    #[rstest]
+    #[case(Two::HAND_AS_AC, Combo::COMBO_AA)]
+    #[case(Two::HAND_AC_KC, Combo::COMBO_AKs)]
+    #[case(Two::HAND_AH_KS, Combo::COMBO_AKo)]
+    #[case(Two::HAND_9S_2S, Combo::COMBO_92s)]
+    #[case(Two::HAND_6S_4D, Combo::COMBO_64o)]
+    fn from__two(#[case] two: Two, #[case] combo: Combo) {
+        assert_eq!(Combo::from(two), combo);
     }
 
     // region Combo::from_str

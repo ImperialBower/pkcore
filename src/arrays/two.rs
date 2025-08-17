@@ -1457,6 +1457,11 @@ impl Two {
     }
 
     #[must_use]
+    pub fn is_blank(&self) -> bool {
+        self.first() == Card::BLANK || self.second() == Card::BLANK
+    }
+
+    #[must_use]
     pub fn is_pair(&self) -> bool {
         self.first().get_rank() == self.second().get_rank()
     }
