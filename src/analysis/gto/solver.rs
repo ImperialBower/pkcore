@@ -62,3 +62,60 @@ impl Display for Solver {
         )
     }
 }
+
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod arrays__combos__solver_tests {
+    use std::collections::HashMap;
+    use std::str::FromStr;
+    use crate::analysis::gto::combo::Combo;
+    use super::*;
+
+    #[test]
+    fn combo_pairs() {
+        let hero = Two::HAND_KS_KH;
+        let villain = Combos::from_str("66+,AJs+,KQs,AJo+,KQo").unwrap();
+        let board = Board::from_str("J♦ T♣ A♥ K♣ 2♣").unwrap();
+        let solver = Solver::new(hero, villain, board);
+
+        let mut combos_aa: HashMap<Combo, Twos> = HashMap::new();
+        combos_aa.insert(Combo::COMBO_KK,
+            Twos::from(vec![
+                Two::HAND_AS_AH, Two::HAND_AS_AD, Two::HAND_AS_AC,
+                Two::HAND_AH_AD, Two::HAND_AH_AC, Two::HAND_AD_AC,
+                Two::HAND_AS_KD, Two::HAND_AS_KC, Two::HAND_AH_KD,
+                Two::HAND_AH_KC, Two::HAND_AD_KD, Two::HAND_AD_KC,
+                Two::HAND_AC_KD, Two::HAND_AC_KC, Two::HAND_AS_QS,
+                Two::HAND_AS_QH, Two::HAND_AS_QD, Two::HAND_AS_QC,
+                Two::HAND_AH_QS, Two::HAND_AH_QH, Two::HAND_AH_QD, Two::HAND_AH_QC,
+                Two::HAND_AD_QS, Two::HAND_AD_QH, Two::HAND_AD_QD,
+                Two::HAND_AD_QC, Two::HAND_AC_QS, Two::HAND_AC_QH,
+                Two::HAND_AC_QD, Two::HAND_AC_QC, Two::HAND_AS_JH,
+                Two::HAND_AS_JD, Two::HAND_AS_JC, Two::HAND_AS_JS,
+
+            ]));
+
+
+        let combo_pairs = ComboPairs::from(combos_aa);
+    }
+
+
+    // A♥ J♠  A♥ J♥  A♥ J♦  A♥ J♣
+    // A♦ J♠  A♦ J♥  A♦ J♦  A♦ J♣
+    // A♣ J♠  A♣ J♥  A♣ J♦  A♣ J♣
+    // K♦ K♣
+    // K♦ Q♠  K♦ Q♥  K♦ Q♦
+    // K♦ Q♣  K♣ Q♠  K♣ Q♥  K♣ Q♦  K♣ Q♣
+    // Q♠ Q♥  Q♠ Q♦  Q♠ Q♣  Q♥ Q♦  Q♥ Q♣
+    // Q♦ Q♣
+    // J♠ J♥  J♠ J♦  J♠ J♣  J♥ J♦  J♥ J♣  J♦ J♣
+    // T♠ T♥  T♠ T♦  T♠ T♣
+    // T♥ T♦  T♥ T♣  T♦ T♣
+    // 9♠ 9♥  9♠ 9♦  9♠ 9♣  9♥ 9♦  9♥ 9♣  9♦ 9♣
+    // 8♠ 8♥
+    // 8♠ 8♦  8♠ 8♣  8♥ 8♦  8♥ 8♣  8♦ 8♣
+    // 7♠ 7♥  7♠ 7♦  7♠ 7♣  7♥ 7♦  7♥ 7♣
+    // 7♦ 7♣
+    // 6♠ 6♥  6♠ 6♦  6♠ 6♣  6♥ 6♦  6♥ 6♣  6♦ 6♣
+}

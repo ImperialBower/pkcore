@@ -26,8 +26,8 @@ impl ComboPairs {
     }
 }
 
-#[cfg(test)]
-#[allow(non_snake_case)]
-mod arrays__combos__combo_pairs_tests {
-    use super::*;
+impl From<HashMap<Combo, Twos>> for ComboPairs {
+    fn from(hash_map: HashMap<Combo, Twos>) -> Self {
+        ComboPairs(hash_map)
+    }
 }
