@@ -1,14 +1,16 @@
 use crate::analysis::gto::combo::Combo;
 use crate::analysis::gto::twos::Twos;
+use crate::arrays::two::Two;
 use std::collections::HashMap;
+use std::fmt::Display;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ComboPairs(HashMap<Combo, Twos>);
 
 impl ComboPairs {
-    #[must_use]
-    pub fn count(&self) -> usize {
-        self.0.len()
+    pub fn add(&mut self, combo: Combo, two: Two) {
+        let twos = self.0.entry(combo).or_default();
+        twos.insert(two);
     }
 
     #[must_use]
@@ -23,6 +25,15 @@ impl ComboPairs {
     #[must_use]
     pub fn hash_map(&self) -> &HashMap<Combo, Twos> {
         &self.0
+    }
+}
+
+impl Display for ComboPairs {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (combo, twos) in &self.0 {
+            writeln!(f, "{combo}: {twos}")?;
+        }
+        Ok(())
     }
 }
 

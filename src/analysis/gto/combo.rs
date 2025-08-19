@@ -3117,6 +3117,19 @@ impl Combo {
     pub fn is_offsuit_connector(&self) -> bool {
         self.is_connector() && self.is_offsuit()
     }
+
+    #[must_use]
+    pub fn total_pairs(&self) -> usize {
+        if self.is_pair() {
+            6
+        } else {
+            match self.qualifier {
+                Qualifier::SUITED => 4,
+                Qualifier::OFFSUIT => 12,
+                Qualifier::ALL => 16,
+            }
+        }
+    }
 }
 
 impl Display for Combo {
