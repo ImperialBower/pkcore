@@ -14,8 +14,8 @@ impl ComboPairs {
     }
 
     #[must_use]
-    pub fn combo(&self, combo: &Combo) -> Option<&Twos> {
-        self.0.get(combo)
+    pub fn hash_map(&self) -> &HashMap<Combo, Twos> {
+        &self.0
     }
 
     pub fn insert(&mut self, combo: Combo, twos: Twos) {
@@ -23,8 +23,20 @@ impl ComboPairs {
     }
 
     #[must_use]
-    pub fn hash_map(&self) -> &HashMap<Combo, Twos> {
-        &self.0
+    pub fn key_vec(&self) -> Vec<Combo> {
+        let mut v: Vec<Combo> = self.0.keys().copied().collect();
+        v.sort();
+        v.reverse();
+        v
+    }
+
+    pub fn keys(&self) -> impl Iterator<Item = &Combo> {
+        self.0.keys()
+    }
+
+    #[must_use]
+    pub fn twos_for_combo(&self, combo: &Combo) -> Option<&Twos> {
+        self.0.get(combo)
     }
 }
 
