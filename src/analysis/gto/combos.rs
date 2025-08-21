@@ -199,7 +199,10 @@ impl Combos {
 
     #[must_use]
     pub fn to_vec(&self) -> Vec<Combo> {
-        self.0.iter().copied().collect()
+        let mut v: Vec<Combo> = self.0.iter().copied().collect();
+        v.sort();
+        v.reverse();
+        v
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &Combo> {

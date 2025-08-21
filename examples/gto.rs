@@ -52,6 +52,7 @@ fn main() -> Result<(), PKError> {
     println!();
 
     let twos = solver.remaining().to_vec();
+
     println!();
     println!("BLOCKED:");
 
@@ -64,6 +65,25 @@ fn main() -> Result<(), PKError> {
 
     println!();
     println!();
+
+    let combo_pairs = solver.combo_pairs();
+
+    println!("{combo_pairs}");
+    println!();
+    println!();
+
+    for combo in solver.villain().to_vec() {
+        match combo_pairs.twos_for_combo(&combo) {
+            Some(twos) => {
+                println!("{}: {}", combo, twos);
+            }
+            None => {
+                println!("{}: <empty>", combo);
+            }
+        }
+    }
+
+
 
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())
