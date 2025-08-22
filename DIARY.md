@@ -836,3 +836,4 @@ This is an outline of the work as it is done.
         * FEATURE: Compute Combo Blocker percentage 
           * Added From<Two> for Combo
           * Added ComboCount struct to hole available Two hands per Combo
+          * Added better ComboPairs.display() function

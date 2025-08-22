@@ -7,11 +7,11 @@ use pkcore::arrays::two::Two;
 use pkcore::play::board::Board;
 use std::str::FromStr;
 
-use ratatui::{
-    prelude::*,
-    widgets::{Block, Borders, Cell, Row, Table},
-};
-use std::io::{self, stdout};
+// use ratatui::{
+//     prelude::*,
+//     widgets::{Block, Borders, Cell, Row, Table},
+// };
+// use std::io::{self, stdout};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -73,17 +73,7 @@ fn main() -> Result<(), PKError> {
     println!();
 
     let combo_pairs = solver.combo_pairs();
-
-    for combo in combo_pairs.key_vec() {
-        match combo_pairs.twos_for_combo(&combo) {
-            Some(twos) => {
-                println!("{}: {}", combo, twos);
-            }
-            None => {
-                println!("{}: <empty>", combo);
-            }
-        }
-    }
+    println!("{combo_pairs}");
 
     // // Set up terminal backend (Crossterm example)
     // let mut stdout = stdout();

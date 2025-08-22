@@ -3,6 +3,7 @@ use crate::analysis::gto::twos::Twos;
 use crate::arrays::two::Two;
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::fmt::Write as _; // import without risk of name clashing
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ComboPairs(HashMap<Combo, Twos>);
@@ -43,10 +44,20 @@ impl ComboPairs {
 
 impl Display for ComboPairs {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for (combo, twos) in &self.0 {
-            writeln!(f, "{combo}: {twos}")?;
+        let mut s = String::new();
+        for combo in self.key_vec() {
+            match self.twos_for_combo(&combo) {
+                // https://rust-lang.github.io/rust-clippy/master/index.html#format_push_string
+                Some(twos) => {
+                    let _ = write!(s, "{:>03}", combo.to_string());
+                    let _ = writeln!(s, ": {twos}");
+                }
+                None => {
+                    let _ = write!(s, "{:>03}:", combo.to_string());
+                }
+            }
         }
-        Ok(())
+        write!(f, "{s}")
     }
 }
 
