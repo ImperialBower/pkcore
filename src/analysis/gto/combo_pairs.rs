@@ -50,6 +50,7 @@ impl Display for ComboPairs {
                 // https://rust-lang.github.io/rust-clippy/master/index.html#format_push_string
                 Some(twos) => {
                     let _ = write!(s, "{:>03}", combo.to_string());
+                    let _ = write!(s, " {:>2} of {:>2}", twos.len(), combo.total_pairs());
                     let _ = writeln!(s, ": {twos}");
                 }
                 None => {
