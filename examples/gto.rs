@@ -7,6 +7,12 @@ use pkcore::arrays::two::Two;
 use pkcore::play::board::Board;
 use std::str::FromStr;
 
+use ratatui::{
+    prelude::*,
+    widgets::{Block, Borders, Cell, Row, Table},
+};
+use std::io::{self, stdout};
+
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
@@ -68,11 +74,7 @@ fn main() -> Result<(), PKError> {
 
     let combo_pairs = solver.combo_pairs();
 
-    println!("{combo_pairs}");
-    println!();
-    println!();
-
-    for combo in solver.villain().to_vec() {
+    for combo in combo_pairs.key_vec() {
         match combo_pairs.twos_for_combo(&combo) {
             Some(twos) => {
                 println!("{}: {}", combo, twos);
@@ -83,7 +85,29 @@ fn main() -> Result<(), PKError> {
         }
     }
 
-
+    // // Set up terminal backend (Crossterm example)
+    // let mut stdout = stdout();
+    // let backend = ratatui::backend::CrosstermBackend::new(&mut stdout);
+    // let mut terminal = Terminal::new(backend)?;
+    //
+    // // Example: fill with "AA", "AK", etc.
+    // let combos: Vec<Vec<String>> = (0..13)
+    //     .map(|i| {
+    //         (0..13)
+    //             .map(|j| format!("{}{}", (b'A' + i as u8) as char, (b'A' + j as u8) as char))
+    //             .collect()
+    //     })
+    //     .collect();
+    //
+    // terminal.draw(|f| {
+    //     let rows = combos
+    //         .iter()
+    //         .map(|row| Row::new(row.iter().map(|c| Cell::from(c.as_str()))));
+    //     let table = Table::new(rows)
+    //         .block(Block::default().borders(Borders::ALL).title("Combos"))
+    //         .widths(&vec![Constraint::Length(5); 13]);
+    //     f.render_widget(table, f.size());
+    // })?;
 
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())

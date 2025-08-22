@@ -9,7 +9,7 @@ pub struct ComboPairs(HashMap<Combo, Twos>);
 
 impl ComboPairs {
     pub fn add(&mut self, combo: Combo, two: Two) {
-        println!("Adding {two} to {combo}");
+        // println!("Adding {two} to {combo}");
         let twos = self.0.entry(combo).or_default();
         twos.insert(two);
     }
