@@ -74,6 +74,8 @@ fn main() -> Result<(), PKError> {
 
     let combo_pairs = solver.combo_pairs();
     println!("{combo_pairs}");
+    println!();
+    println!("¹⁄₁₆");
 
     // // Set up terminal backend (Crossterm example)
     // let mut stdout = stdout();
