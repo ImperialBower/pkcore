@@ -1,5 +1,5 @@
 use crate::analysis::store::db::sqlite::Sqlable;
-use crate::arrays::matchups::masked::{MASKED_DISTINCT, Masked};
+use crate::arrays::matchups::masked::{MASKED_DISTINCT, MASKED_UNIQUE, Masked};
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::bard::Bard;
 use crate::util::wincounter::win::Win;
@@ -37,6 +37,29 @@ impl HUPResult {
     pub fn db_is_valid(conn: &Connection) -> bool {
         let (v, hs) = HUPResult::db_count(conn);
         v == hs
+    }
+
+    /// # THIS IS WRONG
+    ///
+    /// I'm doing it in the inverse order. I need to do this from `SortedHeadsUp` and pass in
+    /// the connection to see if it's there.
+    #[must_use]
+    pub fn from_shift(&self, shu: &SortedHeadsUp) -> Option<Self> {
+        let shifts = self.shifts();
+
+        for shift in shifts {
+            if shift.get_sorted_heads_up().is_some_and(|s| s == *shu) {
+                let hpr = HUPResult {
+                    higher: shu.higher_as_bard(),
+                    lower: shu.lower_as_bard(),
+                    higher_wins: self.higher_wins,
+                    lower_wins: self.lower_wins,
+                    ties: self.ties,
+                };
+                return Some(hpr);
+            }
+        }
+        None
     }
 
     /// `assert_eq!(first_ties, second_ties);`
@@ -168,13 +191,22 @@ impl HUPResult {
         None
     }
 
-    pub fn distinct_remaining(conn: &Connection) -> HashSet<Masked> {
-        let mut distinct = MASKED_DISTINCT.clone();
+    pub fn remaining(conn: &Connection, mut hands: HashSet<Masked>) -> HashSet<Masked> {
         let hups = HUPResult::select_all(conn);
         for hup in hups {
-            distinct.remove(&Masked::from(hup));
+            hands.remove(&Masked::from(hup));
         }
-        distinct
+        hands
+    }
+
+    pub fn distinct_remaining(conn: &Connection) -> HashSet<Masked> {
+        let distinct = MASKED_DISTINCT.clone();
+        HUPResult::remaining(conn, distinct)
+    }
+
+    pub fn unique_remaining(conn: &Connection) -> HashSet<Masked> {
+        let distinct = MASKED_UNIQUE.clone();
+        HUPResult::remaining(conn, distinct)
     }
 
     #[must_use]

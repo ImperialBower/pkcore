@@ -1,6 +1,6 @@
 use crate::PKError;
-use crate::arrays::combos::hc::HCSymbols;
-use crate::arrays::hole_cards::twos::Twos;
+use crate::analysis::gto::combos::Combos;
+use crate::arrays::hole_cards::twos::StartingHands;
 use crate::cards::Cards;
 use std::io::{Write, stdin, stdout};
 use std::str::FromStr;
@@ -10,6 +10,24 @@ use termion::raw::IntoRawMode;
 pub struct Terminal;
 
 impl Terminal {
+    /// Cleans up the `Card` index string by replacing commas and dashes with spaces.
+    ///
+    /// ```
+    /// use std::str::FromStr;
+    /// use pkcore::card::Card;
+    /// use pkcore::cards::Cards;
+    ///
+    /// let expected = Cards::from(vec![Card::ACE_SPADES, Card::ACE_HEARTS,Card::ACE_DIAMONDS, Card::KING_DIAMONDS]);
+    ///
+    /// assert_eq!(expected, Cards::from_str("A♠ A♥ A♦ K♦").unwrap());
+    /// assert_eq!(expected, Cards::from_str("A♠ A♥ - A♦ K♦").unwrap());
+    /// assert_eq!(expected, Cards::from_str("A♠ A♥,A♦ K♦").unwrap());
+    /// ```
+    #[must_use]
+    pub fn index_cleaner(index: &str) -> String {
+        index.replace([',', '-'], " ")
+    }
+
     /// # Panics
     ///
     /// If it somehow wigs out on the input.
@@ -37,20 +55,20 @@ impl Terminal {
     ///
     /// `PKError::InvalidIndex` if `str` doesn't translate into `Cards`
     /// `PKError::InvalidCardCount` if number of cards isn't divisible by two
-    pub fn receive_cards_in_twos(prompt: &str) -> Result<Twos, PKError> {
+    pub fn receive_cards_in_twos(prompt: &str) -> Result<StartingHands, PKError> {
         let Some(cards) = Terminal::receive_cards(prompt) else {
             return Err(PKError::InvalidCardIndex);
         };
 
-        Twos::try_from(cards)
+        StartingHands::try_from(cards)
     }
 
     /// # Errors
     ///
     /// TODO
-    pub fn receive_range(prompt: &str) -> Result<HCSymbols, PKError> {
+    pub fn receive_range(prompt: &str) -> Result<Combos, PKError> {
         print!("{prompt}");
-        Ok(HCSymbols::default())
+        Combos::from_str(prompt)
     }
 
     /// Then goal of the functions in this module is to isolate and standardize the patterns we've been

@@ -4,6 +4,7 @@ use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use rusqlite::Connection;
 
+/// `cargo run --example remaining_unique_shus`
 fn main() -> Result<(), PKError> {
     let mut unique = SortedHeadsUp::unique()?;
     println!("{} total unique shus", unique.len());

@@ -16,9 +16,9 @@ use std::sync::mpsc;
 use std::{fmt, thread};
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct Twos([Two; 9]);
+pub struct StartingHands([Two; 9]);
 
-impl Twos {
+impl StartingHands {
     /// This type of code scares me, because I can't simply test drive it. Perhaps
     /// I can? What about creating a smaller subset bcm file?
     /// TODO: do that
@@ -40,7 +40,7 @@ impl Twos {
         Ok(case_eval)
     }
 
-    fn process_case(twos: Twos, v: Vec<Card>) -> Result<CaseEval, PKError> {
+    fn process_case(twos: StartingHands, v: Vec<Card>) -> Result<CaseEval, PKError> {
         let case = Five::try_from(v)?;
         let mut case_eval = CaseEval::default();
 
@@ -70,7 +70,7 @@ impl Twos {
         for v in self.combinations_remaining(5) {
             let tx = tx.clone();
             thread::spawn(move || {
-                tx.send(Twos::process_case(twos, v).unwrap())
+                tx.send(StartingHands::process_case(twos, v).unwrap())
                     .expect("TODO: panic message");
             });
         }
@@ -179,7 +179,7 @@ impl Twos {
     }
 }
 
-impl fmt::Display for Twos {
+impl fmt::Display for StartingHands {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let s = self
             .vec()
@@ -192,27 +192,27 @@ impl fmt::Display for Twos {
     }
 }
 
-impl From<[Two; 9]> for Twos {
+impl From<[Two; 9]> for StartingHands {
     fn from(value: [Two; 9]) -> Self {
-        Twos(value)
+        StartingHands(value)
     }
 }
 
-impl From<[Two; 8]> for Twos {
+impl From<[Two; 8]> for StartingHands {
     fn from(v: [Two; 8]) -> Self {
-        Twos([v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], Two::default()])
+        StartingHands([v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], Two::default()])
     }
 }
 
-impl From<[Two; 7]> for Twos {
+impl From<[Two; 7]> for StartingHands {
     fn from(v: [Two; 7]) -> Self {
-        Twos([v[0], v[1], v[2], v[3], v[4], v[5], v[6], Two::default(), Two::default()])
+        StartingHands([v[0], v[1], v[2], v[3], v[4], v[5], v[6], Two::default(), Two::default()])
     }
 }
 
-impl From<[Two; 6]> for Twos {
+impl From<[Two; 6]> for StartingHands {
     fn from(v: [Two; 6]) -> Self {
-        Twos([
+        StartingHands([
             v[0],
             v[1],
             v[2],
@@ -226,9 +226,9 @@ impl From<[Two; 6]> for Twos {
     }
 }
 
-impl From<[Two; 5]> for Twos {
+impl From<[Two; 5]> for StartingHands {
     fn from(v: [Two; 5]) -> Self {
-        Twos([
+        StartingHands([
             v[0],
             v[1],
             v[2],
@@ -242,9 +242,9 @@ impl From<[Two; 5]> for Twos {
     }
 }
 
-impl From<[Two; 4]> for Twos {
+impl From<[Two; 4]> for StartingHands {
     fn from(v: [Two; 4]) -> Self {
-        Twos([
+        StartingHands([
             v[0],
             v[1],
             v[2],
@@ -258,9 +258,9 @@ impl From<[Two; 4]> for Twos {
     }
 }
 
-impl From<[Two; 3]> for Twos {
+impl From<[Two; 3]> for StartingHands {
     fn from(v: [Two; 3]) -> Self {
-        Twos([
+        StartingHands([
             v[0],
             v[1],
             v[2],
@@ -274,9 +274,9 @@ impl From<[Two; 3]> for Twos {
     }
 }
 
-impl From<[Two; 2]> for Twos {
+impl From<[Two; 2]> for StartingHands {
     fn from(v: [Two; 2]) -> Self {
-        Twos([
+        StartingHands([
             v[0],
             v[1],
             Two::default(),
@@ -290,9 +290,9 @@ impl From<[Two; 2]> for Twos {
     }
 }
 
-impl From<Vec<Two>> for Twos {
+impl From<Vec<Two>> for StartingHands {
     fn from(v: Vec<Two>) -> Self {
-        let mut twos = Twos::default();
+        let mut twos = StartingHands::default();
         for (i, two) in v.iter().enumerate() {
             twos.0[i] = *two;
         }
@@ -300,17 +300,17 @@ impl From<Vec<Two>> for Twos {
     }
 }
 
-impl FromStr for Twos {
+impl FromStr for StartingHands {
     type Err = PKError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Twos::try_from(Cards::from_str(s)?)
+        StartingHands::try_from(Cards::from_str(s)?)
     }
 }
 
-impl Pile for Twos {
+impl Pile for StartingHands {
     fn clean(&self) -> Self {
-        Twos::default()
+        StartingHands::default()
     }
 
     fn the_nuts(&self) -> TheNuts {
@@ -327,22 +327,22 @@ impl Pile for Twos {
     }
 }
 
-impl TryFrom<Cards> for Twos {
+impl TryFrom<Cards> for StartingHands {
     type Error = PKError;
 
     fn try_from(cards: Cards) -> Result<Self, Self::Error> {
         match cards.clone().as_twos() {
-            Ok(t) => Ok(Twos::from(t)),
+            Ok(t) => Ok(StartingHands::from(t)),
             Err(e) => Err(e),
         }
     }
 }
 
-impl TryFrom<&Cards> for Twos {
+impl TryFrom<&Cards> for StartingHands {
     type Error = PKError;
 
     fn try_from(cards: &Cards) -> Result<Self, Self::Error> {
-        Twos::try_from(cards.clone())
+        StartingHands::try_from(cards.clone())
     }
 }
 
@@ -357,18 +357,18 @@ mod arrays__hole_cards__twos_tests {
 
     #[test]
     fn is_empty() {
-        assert!(Twos::default().is_empty());
-        assert!(!Twos::from([HERO, VILLAIN, MINION]).is_empty());
+        assert!(StartingHands::default().is_empty());
+        assert!(!StartingHands::from([HERO, VILLAIN, MINION]).is_empty());
     }
 
     #[test]
     fn len() {
-        assert_eq!(3, Twos::from([HERO, VILLAIN, MINION]).len())
+        assert_eq!(3, StartingHands::from([HERO, VILLAIN, MINION]).len())
     }
 
     #[test]
     fn vec() {
-        let twos = Twos::from([HERO, VILLAIN, MINION]);
+        let twos = StartingHands::from([HERO, VILLAIN, MINION]);
 
         assert_eq!(3, twos.vec().len());
     }
@@ -376,7 +376,10 @@ mod arrays__hole_cards__twos_tests {
     // A♠ 4♠ K♠ K♥ 8♣ 7♣
     #[test]
     fn display() {
-        assert_eq!("A♠ 4♠, K♠ K♥, 8♣ 7♣", Twos::from([HERO, VILLAIN, MINION]).to_string());
+        assert_eq!(
+            "A♠ 4♠, K♠ K♥, 8♣ 7♣",
+            StartingHands::from([HERO, VILLAIN, MINION]).to_string()
+        );
     }
 
     #[test]
@@ -393,7 +396,7 @@ mod arrays__hole_cards__twos_tests {
             Two::default(),
         ];
 
-        let twos = Twos::from_str("AS 4S KS KH 8C 7C").unwrap();
+        let twos = StartingHands::from_str("AS 4S KS KH 8C 7C").unwrap();
 
         assert_eq!(expected, twos.array());
         assert_eq!(vec![HERO, VILLAIN, MINION], twos.vec());
@@ -414,7 +417,7 @@ mod arrays__hole_cards__twos_tests {
             Two::default(),
         ];
 
-        let twos = Twos::try_from(cards).unwrap();
+        let twos = StartingHands::try_from(cards).unwrap();
 
         assert_eq!(expected, twos.array());
         assert_eq!(vec![HERO, VILLAIN, MINION], twos.vec());

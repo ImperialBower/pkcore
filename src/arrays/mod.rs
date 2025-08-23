@@ -3,12 +3,10 @@ use crate::analysis::hand_rank::{HandRank, HandRankValue};
 use crate::arrays::five::Five;
 use crate::games::razz::california::{CaliforniaHandRank, CaliforniaHandRankValue};
 
-pub mod combos;
 pub mod five;
 pub mod four;
 pub mod hole_cards;
 pub mod matchups;
-mod ranges;
 pub mod seven;
 pub mod six;
 pub mod three;

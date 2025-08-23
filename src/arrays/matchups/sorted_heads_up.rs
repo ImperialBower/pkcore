@@ -12,6 +12,7 @@ use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::{PKError, Pile, Shifty, SuitShift};
 use csv::{Reader, WriterBuilder};
+use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashSet;
@@ -60,6 +61,8 @@ pub static SORTED_HEADS_UP_UNIQUE_TYPE_SIX_B: std::sync::LazyLock<HashSet<Sorted
     std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_six_b));
 pub static SORTED_HEADS_UP_UNIQUE_TYPE_SEVEN: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
     std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_seven));
+pub static SORTED_HEADS_UP_UNIQUE_TYPE_EIGHT: std::sync::LazyLock<HashSet<SortedHeadsUp>> =
+    std::sync::LazyLock::new(|| Masked::filter_into_shu(&MASKED_UNIQUE, Masked::is_type_eight));
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
@@ -87,6 +90,21 @@ impl SortedHeadsUp {
     #[must_use]
     pub fn contains(&self, two: &Two) -> bool {
         self.is_higher(two) || self.is_lower(two)
+    }
+
+    /// ## Aside
+    ///
+    /// Not sure if mixing the connection to the data struct is Kosher, but I can refactor later.
+    /// Yeah, right.
+    ///
+    /// TODO: My eyes!!! My eyes!!! They burn!!! Refactor out this pollution of the struct space, you fiend.
+    ///
+    /// # Errors
+    ///
+    /// If the connection to the database fails, or if the query fails.
+    pub fn hup_result_from_shift(&self, _conn: &Connection) -> Result<HUPResult, PKError> {
+        let _shifts = self.shifts();
+        todo!()
     }
 
     #[must_use]
@@ -717,6 +735,15 @@ impl Display for SortedHeadsUp {
     }
 }
 
+impl From<HUPResult> for SortedHeadsUp {
+    fn from(hup: HUPResult) -> Self {
+        SortedHeadsUp::new(
+            Two::try_from(hup.higher).unwrap_or_else(|_| Two::default()),
+            Two::try_from(hup.lower).unwrap_or_else(|_| Two::default()),
+        )
+    }
+}
+
 impl From<Masked> for SortedHeadsUp {
     fn from(masked: Masked) -> Self {
         SortedHeadsUp::new(masked.shu.higher, masked.shu.lower)
@@ -877,7 +904,7 @@ mod arrays__matchups__sorted_heads_up_tests {
         assert_eq!(32604, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_D.len());
         assert_eq!(29172, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_E.len());
         assert_eq!(36504, SORTED_HEADS_UP_UNIQUE_TYPE_THREE.len());
-        assert_eq!(158184, SORTED_HEADS_UP_UNIQUE_TYPE_FOUR.len());
+        assert_eq!(81120, SORTED_HEADS_UP_UNIQUE_TYPE_FOUR.len());
         assert_eq!(88608, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_A.len());
         assert_eq!(73008, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_B.len());
         assert_eq!(89544, SORTED_HEADS_UP_UNIQUE_TYPE_FIVE_C.len());
@@ -885,6 +912,7 @@ mod arrays__matchups__sorted_heads_up_tests {
         assert_eq!(39936, SORTED_HEADS_UP_UNIQUE_TYPE_SIX_A.len());
         assert_eq!(33072, SORTED_HEADS_UP_UNIQUE_TYPE_SIX_B.len());
         assert_eq!(85683, SORTED_HEADS_UP_UNIQUE_TYPE_SEVEN.len());
+        assert_eq!(77064, SORTED_HEADS_UP_UNIQUE_TYPE_EIGHT.len());
     }
 
     #[test]

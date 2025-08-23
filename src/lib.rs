@@ -1,7 +1,9 @@
 #![warn(clippy::pedantic)]
 #![allow(
+    non_upper_case_globals,
     clippy::unreadable_literal,
     clippy::iter_without_into_iter,
+    clippy::module_inception,
     clippy::should_implement_trait,
     clippy::upper_case_acronyms,
     macro_expanded_macro_exports_accessed_by_absolute_paths
@@ -112,7 +114,9 @@ pub enum PKError {
     InvalidPermutationIndex,
     InvalidPluribusIndex,
     InvalidPosition,
+    InvalidRangeIndex,
     InvalidRankIndex,
+    InvalidShift,
     NoLow,
     NotDealt,
     NotEnoughCards,
@@ -147,6 +151,8 @@ impl Display for PKError {
             PKError::InvalidPluribusIndex => "Invalid Pluribus Index Error",
             PKError::InvalidPosition => "Invalid Position Error",
             PKError::InvalidRankIndex => "Invalid Rank Index Error",
+            PKError::InvalidRangeIndex => "Invalid Range Index Error",
+            PKError::InvalidShift => "Invalid Shift Error",
             PKError::NoLow => "No low hand possible Error",
             PKError::NotDealt => "Not Dealt Error",
             PKError::NotEnoughCards => "Not Enough Cards Error",
@@ -431,7 +437,7 @@ pub trait Shifty {
         Self: Sized,
         Self: Eq,
         Self: Hash,
-        Self: std::fmt::Display,
+        Self: Display,
     {
         let mut shifts = self.shifts();
         shifts.remove(self);

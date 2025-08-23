@@ -24,6 +24,7 @@ pub enum SuitTexture {
     Type1212a, // 6a. off suit, off suit, sharing both suits, higher first shares suit with lower first
     Type1212b, // 6b. off suit, off suit, sharing both suits, higher first shares suit with lower second
     Type1234,  // 7. off suit, off suit, sharing no suits
+    Type1233,  // 8. off suit, suited, sharing no suits
 }
 
 impl From<SortedHeadsUp> for SuitTexture {
@@ -32,6 +33,7 @@ impl From<SortedHeadsUp> for SuitTexture {
     }
 }
 
+/// TODO: HARRANGE - This code is an abomination. No wonder there are so many gaps in it.
 impl From<&SortedHeadsUp> for SuitTexture {
     #[allow(clippy::if_same_then_else, clippy::collapsible_else_if)]
     fn from(shu: &SortedHeadsUp) -> Self {
@@ -70,38 +72,48 @@ impl From<&SortedHeadsUp> for SuitTexture {
                 }
             }
             3 => {
-                if !shu.higher.is_suited() && !shu.lower.is_suited() {
-                    if shu.higher.is_pair() {
-                        if (shu.lower.first().get_suit() == shu.higher.first().get_suit())
-                            || (shu.lower.first().get_suit() == shu.higher.second().get_suit())
-                        {
-                            // A♠ A♥ T♥ 4♦
-                            SuitTexture::Type1223a
-                        } else {
-                            // A♥ A♦ T♣ 4♥
-                            SuitTexture::Type1223c
-                        }
-                    } else if shu.lower.is_pair() {
-                        if (shu.higher.first().get_suit() == shu.lower.first().get_suit())
-                            || (shu.higher.first().get_suit() == shu.lower.second().get_suit())
-                        {
-                            SuitTexture::Type1223a
-                        } else {
-                            SuitTexture::Type1223c
-                        }
+                // #[case("A♠ A♣ A♥ 2♥", "A♠ A♥ A♦ 2♦", Type1123)]
+                if shu.higher.is_suited() {
+                    if shu.lower.is_suited() {
+                        panic!("This is impossible since ")
                     } else {
-                        if shu.higher.first().get_suit() == shu.lower.first().get_suit() {
-                            SuitTexture::Type1223a
-                        } else if shu.higher.first().get_suit() == shu.lower.second().get_suit() {
-                            SuitTexture::Type1223b
-                        } else if shu.higher.second().get_suit() == shu.lower.first().get_suit() {
-                            SuitTexture::Type1223c
-                        } else {
-                            SuitTexture::Type1223d
-                        }
+                        // #[case("8♣ 2♣ 3♠ 2♥", "8♠ 2♠ 3♥ 2♦", Type1233)]
+                        SuitTexture::Type1123
                     }
                 } else {
-                    SuitTexture::Type1123
+                    if shu.lower.is_suited() {
+                        SuitTexture::Type1233
+                    } else {
+                        if shu.higher.is_pair() {
+                            if (shu.lower.first().get_suit() == shu.higher.first().get_suit())
+                                || (shu.lower.first().get_suit() == shu.higher.second().get_suit())
+                            {
+                                // A♠ A♥ T♥ 4♦
+                                SuitTexture::Type1223a
+                            } else {
+                                // A♥ A♦ T♣ 4♥
+                                SuitTexture::Type1223c
+                            }
+                        } else if shu.lower.is_pair() {
+                            if (shu.higher.first().get_suit() == shu.lower.first().get_suit())
+                                || (shu.higher.first().get_suit() == shu.lower.second().get_suit())
+                            {
+                                SuitTexture::Type1223a
+                            } else {
+                                SuitTexture::Type1223c
+                            }
+                        } else {
+                            if shu.higher.first().get_suit() == shu.lower.first().get_suit() {
+                                SuitTexture::Type1223a
+                            } else if shu.higher.first().get_suit() == shu.lower.second().get_suit() {
+                                SuitTexture::Type1223b
+                            } else if shu.higher.second().get_suit() == shu.lower.first().get_suit() {
+                                SuitTexture::Type1223c
+                            } else {
+                                SuitTexture::Type1223d
+                            }
+                        }
+                    }
                 }
             }
             4 => SuitTexture::Type1234,
@@ -120,7 +132,7 @@ mod arrays__matchups__masks__suit_texture_tests {
     use crate::Shifty;
     use crate::arrays::matchups::masks::suit_texture::SuitTexture::{
         Type1111, Type1112b, Type1112d, Type1112e, Type1123, Type1212a, Type1212b, Type1223a, Type1223b, Type1223c,
-        Type1223d, Type1234,
+        Type1223d, Type1233, Type1234,
     };
     use rstest::rstest;
 
@@ -153,7 +165,7 @@ mod arrays__matchups__masks__suit_texture_tests {
     #[case("T♣ 2♠ 5♠ 4♥", "T♠ 2♥ 5♥ 4♦", Type1223c)]
     #[case("6♠ 2♣ 6♦ 6♣", "6♠ 6♥ 6♦ 2♠", Type1223c)]
     #[case("3♠ 3♥ 3♣ 2♦", "3♠ 3♥ 3♦ 2♣", Type1234)]
-    #[case("A♠ A♣ A♥ 2♥", "A♠ A♥ A♦ 2♦", Type1123)]
+    #[case("A♠ A♣ A♥ 2♥", "A♠ A♥ A♦ 2♦", Type1233)]
     #[case("8♣ 2♣ 3♠ 2♥", "8♠ 2♠ 3♥ 2♦", Type1123)]
     #[case("8♠ 7♣ 4♥ 3♦", "8♣ 7♠ 4♥ 3♦", Type1234)]
     #[case("7♣ 5♠ 6♥ 3♦", "7♠ 5♥ 6♦ 3♣", Type1234)]

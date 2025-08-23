@@ -18,7 +18,7 @@ fn main() -> Result<(), PKError> {
 fn process(shu: &SortedHeadsUp) {
     println!("{shu}");
 
-    let conn = Connection::open("../../generated/hups.db").unwrap();
+    let conn = Connection::open("../../generated/hups_07_31_2025.db").unwrap();
 
     if !HUPResult::exists(&conn, &shu) {
         let hup = HUPResult::from(shu);

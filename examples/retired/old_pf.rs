@@ -7,7 +7,7 @@ use rusqlite::Connection;
 use std::fs::File;
 
 fn main() {
-    let conn = Connection::open("data/hups.db").unwrap();
+    let conn = Connection::open("data/hups_07_31_2025.db").unwrap();
     HUPResult::create_table(&conn).unwrap();
     let mut shus = distinct();
     // db_dump(&conn);

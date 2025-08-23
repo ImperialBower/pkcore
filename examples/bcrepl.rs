@@ -1,5 +1,5 @@
 use pkcore::PKError;
-use pkcore::arrays::hole_cards::twos::Twos;
+use pkcore::arrays::hole_cards::twos::StartingHands;
 use pkcore::util::terminal::Terminal;
 use pkcore::util::wincounter::results::Results;
 
@@ -44,7 +44,7 @@ fn read_input() {
     }
 }
 
-fn work(hands: Twos) -> Result<(), PKError> {
+fn work(hands: StartingHands) -> Result<(), PKError> {
     let now = std::time::Instant::now();
 
     // let case_events = hands.bcm_case_evals()?;

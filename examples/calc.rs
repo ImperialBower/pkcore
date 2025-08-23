@@ -89,6 +89,7 @@ struct Args {
 /// cargo run --example calc -- -d "3♥ A♠ 5♥ A♦ 8♦ 7♦ K♥ K♠ 2♥ Q♠" -b "6♦ 6♣ 7♣ 9♦ 5♦" - Straight Flush at the river
 /// cargo run --example calc -- -d "3♠ 9♦ J♠ 8♦ 2♠ Q♠ 6♣ 4♠" -b "Q♥ 5♥ 5♣ 7♥ 4♥" -- Two Pair vs Straight Draw
 ///
+/// cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠" HSP THE HAND Negreanu/Hansen
 /// cargo run --example calc -- -d "K♠ Q♠ 5♦ K♥ 5♥ J♥" -b "J♦ T♣ A♥ K♣ 2♣" -n -- Flopping the nuts
 /// cargo run --example calc -- -d "A♣ Q♠ T♦ T♣ 6♦ 4♦ 2♥ 2♦" -b "J♦ J♠ J♥ A♥ 3♦" HSP S04E08 Harman/Safai
 /// cargo run --example calc -- -d "T♦ 2♦ 9♠ 6♥" -b "3♠ 8♦ A♦" HSP S04E08 Elezra/Negreanu
@@ -99,7 +100,6 @@ struct Args {
 /// cargo run --example calc -- -d "A♠ J♦ 6♥ 6♣" -b "A♥ 3♠ 6♠ J♠ 5♠" HSP S01E01 Negreanu/Greenstein
 /// cargo run --example calc -- -d "7♣ 6♥ K♣ 2♣ J♦ 9♦" -b "Q♣ 7♥ K♥ 6♣ Q♠" HSP S01E01 Alaei/Negreanu/Harman
 /// cargo run --example calc -- -d "A♠ K♠ A♣ K♥" -b "4♠ 7♠ K♣" HSP S04E09 Hellmuth/Gold
-/// cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠" HSP THE HAND Negreanu/Hansen
 /// cargo run --example calc -- -d "6♠ 4♠ 8♣ 6♣ A♦ 2♦ K♥ J♣" -b "2♣ 3♦ 3♣ 4♦ 4♣" HSP S06E10 Grospellier/Benyamine
 /// cargo run --example calc -- -d "A♠ K♥ 9♦ 8♥" -b "6♦ 7♥ T♣ 3♥ 5♥" HSP S06E11 Galfond/Negreanu
 /// cargo run --example calc -- -d "7♠ 6♠ Q♠ Q♦" -b "2♠ 7♥ 9♠ T♦ 4♣" HSP S08E07 Bellande Schwimer FIRST RUN

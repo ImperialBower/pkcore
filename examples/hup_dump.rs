@@ -1,7 +1,7 @@
 use clap::Parser;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 
-/// `cargo run --example hup_dump -- -f "generated/hups.db" -t "generated/current_hups.csv"`
+/// `cargo run --example hup_dump -- -f "generated/hups_07_31_2025.db" -t "generated/current_hups.csv"`
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {
@@ -21,5 +21,5 @@ fn main() {
     let hups = HUPResult::read_db(from).unwrap();
     HUPResult::generate_csv_from_vector(to, &hups).unwrap();
 
-    println!("{from} {to}");
+    println!("{from} {to} - {} records", hups.len());
 }

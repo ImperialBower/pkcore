@@ -4,6 +4,7 @@ use crate::card::Card;
 use crate::card_number::CardNumber;
 use crate::rank::Rank;
 use crate::suit::Suit;
+use crate::util::terminal::Terminal;
 use crate::{PKError, Pile, SuitShift, TheNuts};
 use indexmap::IndexSet;
 use indexmap::set::{IntoIter, Iter};
@@ -27,7 +28,7 @@ pub static FIVE_CARD_COMBOS: std::sync::LazyLock<Combinations<IntoIter<Card>>> =
 /// 2. Cards should be unique.
 /// 3. Cards should be legitimate cards. (No blanks)
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct Cards(IndexSet<Card>);
+pub struct Cards(pub IndexSet<Card>);
 
 impl Cards {
     /// TODO: macro!
@@ -619,6 +620,8 @@ impl FromStr for Cards {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut cards = Cards::default();
+        let binding = Terminal::index_cleaner(s);
+        let s = binding.as_str();
         for s in s.split_whitespace() {
             let c = Card::from_str(s)?;
             if c.contains_blank() {
@@ -775,7 +778,7 @@ mod card_tests {
     }
 
     // #[test]
-    // fn combos() {
+    // fn gto() {
     //     let all = FIVE_CARD_COMBOS.clone();
     //
     //     let flushes = FIVE_CARD_COMBOS
