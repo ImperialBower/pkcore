@@ -837,3 +837,5 @@ This is an outline of the work as it is done.
           * Added From<Two> for Combo
           * Added ComboCount struct to hole available Two hands per Combo
           * Added better ComboPairs.display() function
+        * Renaming Solver to vs::Versus
+          * Removed Board from Solver since not used yet

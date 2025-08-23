@@ -3,20 +3,18 @@ use crate::analysis::gto::combo_pairs::ComboPairs;
 use crate::analysis::gto::combos::Combos;
 use crate::analysis::gto::twos::Twos;
 use crate::arrays::two::Two;
-use crate::play::board::Board;
 use std::fmt::Display;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct Solver {
+pub struct Versus {
     pub hero: Two,
     pub villain: Combos,
-    pub board: Board,
 }
 
-impl Solver {
+impl Versus {
     #[must_use]
-    pub fn new(hero: Two, villain: Combos, board: Board) -> Self {
-        Solver { hero, villain, board }
+    pub fn new(hero: Two, villain: Combos) -> Self {
+        Versus { hero, villain }
     }
 
     #[must_use]
@@ -27,11 +25,6 @@ impl Solver {
     #[must_use]
     pub fn villain(&self) -> &Combos {
         &self.villain
-    }
-
-    #[must_use]
-    pub fn board(&self) -> &Board {
-        &self.board
     }
 
     #[must_use]
@@ -61,13 +54,9 @@ impl Solver {
     }
 }
 
-impl Display for Solver {
+impl Display for Versus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Solver {{ hero: {}, villain: {}, board: {} }}",
-            self.hero, self.villain, self.board
-        )
+        write!(f, "Solver {{ hero: {}, villain: {} }}", self.hero, self.villain)
     }
 }
 
@@ -83,8 +72,7 @@ mod arrays__combos__solver_tests {
     fn combo_pairs() {
         let hero = Two::HAND_KS_KH;
         let villain = Combos::from_str("66+,AJs+,KQs,AJo+,KQo").unwrap();
-        let board = Board::from_str("J♦ T♣ A♥ K♣ 2♣").unwrap();
-        let solver = Solver::new(hero, villain, board);
+        let solver = Versus::new(hero, villain);
 
         let mut combos_pairs_hashmap: HashMap<Combo, Twos> = HashMap::new();
 

@@ -1,3 +1,6 @@
+use pkcore::PKError;
+use pkcore::analysis::gto::combos::Combos;
+use pkcore::arrays::two::Two;
 use pkcore::util::terminal::Terminal;
 
 fn main() {
@@ -8,13 +11,14 @@ fn main() {
     read_input();
 }
 
-fn read_input() {
-    match Terminal::receive_range("range> ") {
-        Ok(_) => {
-            println!("boop!");
-        }
-        Err(e) => {
-            println!("{:?}", e);
-        }
-    }
+fn read_input() -> Result<(Two, Combos), PKError> {
+    // match Terminal::receive_range("range> ") {
+    //     Ok(_) => {
+    //         println!("boop!");
+    //     }
+    //     Err(e) => {
+    //         println!("{:?}", e);
+    //     }
+    // }
+    todo!()
 }
