@@ -11,6 +11,7 @@
 
 extern crate core;
 
+use rusqlite::Connection;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
@@ -168,6 +169,13 @@ impl Display for PKError {
 }
 
 impl Error for PKError {}
+
+impl From<rusqlite::Error> for PKError {
+    fn from(err: rusqlite::Error) -> Self {
+        log::error!("{err}");
+        PKError::DBConnectionError
+    }
+}
 
 pub trait Betting {
     /// # Errors
