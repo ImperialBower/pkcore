@@ -30,7 +30,7 @@ fn main() -> Result<(), PKError>  {
 
     }
     println!("{} remaining distinct", distinct.len());
-    conn.close()?;
+    conn.close().unwrap();
 
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())
