@@ -1,10 +1,11 @@
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
-use rusqlite::Connection;
 use pkcore::analysis::store::db::sqlite::Sqlable;
-use pkcore::PKError;
+use pkcore::arrays::matchups::masked::Masked;
+use pkcore::{PKError, Shifty};
+use rusqlite::Connection;
 
 /// `cargo run --example remaining`
-fn main() -> Result<(), PKError>  {
+fn main() -> Result<(), PKError> {
     let now = std::time::Instant::now();
     env_logger::init();
 
@@ -12,28 +13,33 @@ fn main() -> Result<(), PKError>  {
     let distinct = HUPResult::distinct_remaining(&conn);
 
     for masked in distinct.clone() {
-        println!("Processing {masked}");
-
-        if HUPResult::exists(&conn, &masked.shu) {
-            println!("{} exists!", masked.shu);
-        } else {
-            println!("Calculating {}", masked.shu);
-            let hupr = HUPResult::from(&masked.shu);
-            match insert(&conn, &hupr) {
-                Ok(_) => {
-
-                }
-                Err(_) => {}
-            }
-        }
-
-
+        process_distinct(&conn, masked)?;
     }
     println!("{} remaining distinct", distinct.len());
     conn.close().unwrap();
 
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())
+}
+
+fn process_distinct(conn: &Connection, masked: Masked) -> Result<(), PKError> {
+    println!("Processing {masked}");
+
+    if HUPResult::exists(conn, &masked.shu) {
+        println!("{} exists!", masked.shu);
+        Ok(())
+    } else {
+        println!("Calculating {}", masked.shu);
+        let hupr = HUPResult::from(&masked.shu);
+        println!("...inserting {hupr}");
+        let _ = insert(&conn, &hupr);
+
+        for shift in hupr.shifts() {
+            println!("......shift {shift}");
+            let _ = insert(&conn, &shift)?;
+        }
+        Ok(())
+    }
 }
 
 fn insert(conn: &Connection, hup: &HUPResult) -> Result<(), PKError> {

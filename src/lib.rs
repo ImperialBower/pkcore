@@ -11,7 +11,6 @@
 
 extern crate core;
 
-use rusqlite::Connection;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
