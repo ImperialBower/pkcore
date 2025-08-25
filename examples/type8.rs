@@ -14,5 +14,9 @@ fn main() {
     //         println!("...{shift}");
     //     }
     // }
-    println!("{} out of {} remaining type 8", type_eight.len(), MASKED_UNIQUE_TYPE_EIGHT.len());
+    println!(
+        "{} out of {} remaining type 8",
+        type_eight.len(),
+        MASKED_UNIQUE_TYPE_EIGHT.len()
+    );
 }
