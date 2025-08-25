@@ -5,6 +5,8 @@ use pkcore::{PKError, Shifty};
 use rusqlite::Connection;
 
 /// `cargo run --example remaining`
+///
+/// Run `cargo run --example type8` to get a count of remaining type 8 hands to process.
 fn main() -> Result<(), PKError> {
     let now = std::time::Instant::now();
     env_logger::init();
