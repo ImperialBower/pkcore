@@ -11,7 +11,7 @@ fn main() -> Result<(), PKError> {
     let now = std::time::Instant::now();
     env_logger::init();
 
-    let conn = Connection::open("generated/hups_add8.db").unwrap();
+    let conn = Connection::open("generated/hups.db").unwrap();
     let distinct = HUPResult::distinct_remaining(&conn);
 
     for masked in distinct.clone() {

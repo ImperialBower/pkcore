@@ -1,12 +1,12 @@
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
-use pkcore::arrays::matchups::masked::MASKED_UNIQUE_TYPE_EIGHT;
+use pkcore::arrays::matchups::masked::{MASKED_UNIQUE, MASKED_UNIQUE_TYPE_EIGHT};
 use rusqlite::Connection;
 
 /// `cargo run --example type8`
 fn main() {
-    let conn = Connection::open("generated/hups_add8.db").unwrap();
+    let conn = Connection::open("generated/hups.db").unwrap();
 
-    let type_eight = HUPResult::remaining(&conn, MASKED_UNIQUE_TYPE_EIGHT.clone());
+    let type_eight = HUPResult::remaining(&conn, MASKED_UNIQUE.clone());
 
     // for shu in type_eight.iter() {
     //     println!("{shu}");
@@ -17,6 +17,6 @@ fn main() {
     println!(
         "{} out of {} remaining type 8",
         type_eight.len(),
-        MASKED_UNIQUE_TYPE_EIGHT.len()
+        MASKED_UNIQUE.len()
     );
 }
