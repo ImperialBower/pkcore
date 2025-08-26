@@ -1,8 +1,8 @@
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
-use pkcore::arrays::matchups::masked::{MASKED_UNIQUE, MASKED_UNIQUE_TYPE_EIGHT};
+use pkcore::arrays::matchups::masked::MASKED_UNIQUE;
 use rusqlite::Connection;
 
-/// `cargo run --example type8`
+/// `cargo run --example types_remaining`
 fn main() {
     let conn = Connection::open("generated/hups.db").unwrap();
 
@@ -14,9 +14,5 @@ fn main() {
     //         println!("...{shift}");
     //     }
     // }
-    println!(
-        "{} out of {} remaining type 8",
-        type_eight.len(),
-        MASKED_UNIQUE.len()
-    );
+    println!("{} out of {} remaining type 8", type_eight.len(), MASKED_UNIQUE.len());
 }
