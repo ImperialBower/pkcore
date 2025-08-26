@@ -1,10 +1,9 @@
 use clap::Parser;
 use pkcore::PKError;
 use pkcore::analysis::gto::combos::Combos;
-use pkcore::analysis::gto::solver::Solver;
 use pkcore::analysis::gto::twos::Twos;
+use pkcore::analysis::gto::vs::Versus;
 use pkcore::arrays::two::Two;
-use pkcore::play::board::Board;
 use std::str::FromStr;
 
 // use ratatui::{
@@ -22,25 +21,18 @@ struct Args {
     #[clap(short = 'v', long)]
     villain: String,
 
-    #[clap(short = 'b', long)]
-    board: String,
-
     #[clap(short = 'n', long)]
     nuts: bool,
 }
 
-/// `cargo run --example gto -- -p "K♠ K♥" -v "66+,AJs+,KQs,AJo+,KQo" -b "J♦ T♣ A♥ K♣ 2♣" -n`
+/// `cargo run --example gto -- -p "K♠ K♥" -v "66+,AJs+,KQs,AJo+,KQo"`
 fn main() -> Result<(), PKError> {
     let now = std::time::Instant::now();
     env_logger::init();
 
     let args = Args::parse();
 
-    let solver = Solver::new(
-        Two::from_str(&*args.player)?,
-        Combos::from_str(&*args.villain)?,
-        Board::from_str(&*args.board)?,
-    );
+    let solver = Versus::new(Two::from_str(&*args.player)?, Combos::from_str(&*args.villain)?);
 
     println!("{}", solver);
 

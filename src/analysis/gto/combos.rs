@@ -6,10 +6,24 @@ use std::collections::HashSet;
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// A collection of Combos, used to represent a player's range.
+///
+/// See [Poker Ranges & Range Reading](https://www.splitsuit.com/poker-ranges-reading)
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Combos(HashSet<Combo>);
 
 impl Combos {
+    // region Range example constants
+
+    // Precents
+    pub const PERCENT_2_5: &'static str = "QQ+, AK";
+    pub const PERCENT_5: &'static str = "TT+, AQ+";
+    pub const PERCENT_10: &'static str = "44+, AJ+, KQ, KJs";
+    pub const PERCENT_20: &'static str = "22+, AT+, 54s+";
+    pub const PERCENT_33: &'static str = "22+, AT+, A2s+, A7o+, T9+, 43s+"; // 53s+/J8s+/K8s
+
+    // endregion
+
     // region Combo collections
     pub const POCKET_PAIRS: [Combo; 13] = [
         Combo::COMBO_AA,

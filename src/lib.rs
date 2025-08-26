@@ -169,6 +169,13 @@ impl Display for PKError {
 
 impl Error for PKError {}
 
+impl From<rusqlite::Error> for PKError {
+    fn from(err: rusqlite::Error) -> Self {
+        log::error!("{err}");
+        PKError::DBConnectionError
+    }
+}
+
 pub trait Betting {
     /// # Errors
     ///

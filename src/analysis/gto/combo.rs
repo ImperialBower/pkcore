@@ -2988,6 +2988,18 @@ impl Combo {
     // endregion
 
     #[must_use]
+    pub fn distance_first(&self, other: &Self) -> i8 {
+        let first_diff = self.first as i8 - other.first as i8;
+        first_diff.abs()
+    }
+
+    #[must_use]
+    pub fn distance_second(&self, other: &Self) -> i8 {
+        let second_diff = self.second as i8 - other.second as i8;
+        second_diff.abs()
+    }
+
+    #[must_use]
     pub fn is_aligned_with(&self, other: &Self) -> bool {
         if self.plus || other.plus {
             return false; // Combo plus can't be aligned since they rep multiple gto
@@ -3015,12 +3027,10 @@ impl Combo {
 
         // :-P This may be some of the most convoluted shit I have ever written.
         if self.is_connector() {
-            println!("{self} is connector");
             if self.is_suited_connector() {
                 if other.is_suited_connector() {
                     return true;
                 }
-                println!("{other} is_ace_x_suited {}", other.is_ace_x_suited());
                 return other.is_ace_x_suited();
             }
             if self.is_offsuit_connector() {
@@ -3684,6 +3694,34 @@ mod arrays__ranges__combo_tests {
     use rand::rng;
     use rand::seq::SliceRandom;
     use rstest::rstest;
+
+    #[test]
+    fn distance_first() {
+        assert_eq!(Combo::COMBO_AA.distance_first(&Combo::COMBO_AK), 0);
+        assert_eq!(Combo::COMBO_AK.distance_first(&Combo::COMBO_AA), 0);
+        assert_eq!(Combo::COMBO_AKs.distance_first(&Combo::COMBO_AQo), 0);
+        assert_eq!(Combo::COMBO_AQo.distance_first(&Combo::COMBO_AKs), 0);
+        assert_eq!(Combo::COMBO_76s.distance_first(&Combo::COMBO_65s), 1);
+        assert_eq!(Combo::COMBO_65s.distance_first(&Combo::COMBO_76s), 1);
+        assert_eq!(Combo::COMBO_76s.distance_first(&Combo::COMBO_54s), 2);
+        assert_eq!(Combo::COMBO_54s.distance_first(&Combo::COMBO_76s), 2);
+        assert_eq!(Combo::COMBO_AK.distance_first(&Combo::COMBO_22), 12);
+        assert_eq!(Combo::COMBO_22.distance_first(&Combo::COMBO_AK), 12);
+    }
+
+    #[test]
+    fn distance_second() {
+        assert_eq!(Combo::COMBO_AA.distance_second(&Combo::COMBO_AK), 1);
+        assert_eq!(Combo::COMBO_AK.distance_second(&Combo::COMBO_AA), 1);
+        assert_eq!(Combo::COMBO_AKs.distance_second(&Combo::COMBO_AQo), 1);
+        assert_eq!(Combo::COMBO_AQo.distance_second(&Combo::COMBO_AKs), 1);
+        assert_eq!(Combo::COMBO_76s.distance_second(&Combo::COMBO_65s), 1);
+        assert_eq!(Combo::COMBO_65s.distance_second(&Combo::COMBO_76s), 1);
+        assert_eq!(Combo::COMBO_76s.distance_second(&Combo::COMBO_54s), 2);
+        assert_eq!(Combo::COMBO_54s.distance_second(&Combo::COMBO_76s), 2);
+        assert_eq!(Combo::COMBO_AK.distance_second(&Combo::COMBO_22), 11);
+        assert_eq!(Combo::COMBO_22.distance_second(&Combo::COMBO_AK), 11);
+    }
 
     #[test]
     fn equals() {
