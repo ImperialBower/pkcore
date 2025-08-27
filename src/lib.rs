@@ -31,6 +31,7 @@ use crate::ranks::Ranks;
 use crate::suit::Suit;
 use rayon::iter::IterBridge;
 use std::iter::Enumerate;
+use crate::analysis::gto::combo_pairs::ComboPairs;
 
 #[macro_use]
 pub mod analysis;
@@ -197,16 +198,8 @@ pub trait Betting {
     fn wins(&mut self, winnings: Chips) -> usize;
 }
 
-/// The name of this trait is a pun on pluribus, which is the name of the poker AI group.
-pub trait Plurable {
-    /// Converts a part of the Pluribus log format
-    ///
-    /// # Errors
-    ///
-    /// Throws a `PKError` if the string isn't formatted correctly or the length isn't correct.
-    fn from_pluribus(s: &str) -> Result<Self, PKError>
-    where
-        Self: Sized;
+pub trait GTO {
+    fn combo_pairs(&self) -> ComboPairs;
 }
 
 pub trait Pile {
@@ -372,6 +365,18 @@ pub trait Pile {
     }
 
     fn to_vec(&self) -> Vec<Card>;
+}
+
+/// The name of this trait is a pun on pluribus, which is the name of the poker AI group.
+pub trait Plurable {
+    /// Converts a part of the Pluribus log format
+    ///
+    /// # Errors
+    ///
+    /// Throws a `PKError` if the string isn't formatted correctly or the length isn't correct.
+    fn from_pluribus(s: &str) -> Result<Self, PKError>
+    where
+        Self: Sized;
 }
 
 // https://en.wikipedia.org/wiki/Se%C3%B1or_Wences#Catchphrases
@@ -713,13 +718,4 @@ pub trait Shifty {
     fn shifts(&self) -> HashSet<Self>
     where
         Self: Sized;
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
 }

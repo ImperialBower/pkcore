@@ -4,6 +4,7 @@ use crate::analysis::gto::combos::Combos;
 use crate::analysis::gto::twos::Twos;
 use crate::arrays::two::Two;
 use std::fmt::Display;
+use crate::GTO;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Versus {
@@ -27,18 +28,6 @@ impl Versus {
         &self.villain
     }
 
-    #[must_use]
-    pub fn combo_pairs(&self) -> ComboPairs {
-        let twos = self.remaining();
-        let mut cps = ComboPairs::default();
-
-        for two in twos.into_iter() {
-            let combo = Combo::from(two);
-            cps.add(combo, two);
-        }
-        cps
-    }
-
     /// The remaining `Twos` that the villain can have, excluding the hero's cards.
     #[must_use]
     pub fn remaining(&self) -> Twos {
@@ -57,6 +46,19 @@ impl Versus {
 impl Display for Versus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Solver {{ hero: {}, villain: {} }}", self.hero, self.villain)
+    }
+}
+
+impl GTO for Versus {
+    fn combo_pairs(&self) -> ComboPairs {
+        let twos = self.remaining();
+        let mut cps = ComboPairs::default();
+
+        for two in twos.into_iter() {
+            let combo = Combo::from(two);
+            cps.add(combo, two);
+        }
+        cps
     }
 }
 

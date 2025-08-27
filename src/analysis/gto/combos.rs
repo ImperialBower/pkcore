@@ -1,10 +1,12 @@
-use crate::PKError;
+use crate::{PKError, GTO};
 use crate::analysis::gto::combo::Combo;
 use crate::analysis::gto::combo_range::ComboRange;
 use crate::util::Util;
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::str::FromStr;
+use crate::analysis::gto::combo_pairs::ComboPairs;
+use crate::analysis::gto::twos::Twos;
 
 /// A collection of Combos, used to represent a player's range.
 ///
@@ -344,6 +346,20 @@ impl FromStr for Combos {
             }
         }
         Ok(Combos::from(v))
+    }
+}
+
+impl GTO for Combos {
+    fn combo_pairs(&self) -> ComboPairs {
+        let mut cps = ComboPairs::default();
+
+        for combo in self.0.iter() {
+            let twos = Twos::from(*combo);
+            for two in twos.into_iter() {
+                cps.add(*combo, two);
+            }
+        }
+        cps
     }
 }
 
