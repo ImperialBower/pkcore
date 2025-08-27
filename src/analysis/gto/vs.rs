@@ -1,10 +1,8 @@
-use crate::analysis::gto::combo::Combo;
-use crate::analysis::gto::combo_pairs::ComboPairs;
+use crate::GTO;
 use crate::analysis::gto::combos::Combos;
 use crate::analysis::gto::twos::Twos;
 use crate::arrays::two::Two;
 use std::fmt::Display;
-use crate::GTO;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Versus {
@@ -50,15 +48,8 @@ impl Display for Versus {
 }
 
 impl GTO for Versus {
-    fn combo_pairs(&self) -> ComboPairs {
-        let twos = self.remaining();
-        let mut cps = ComboPairs::default();
-
-        for two in twos.into_iter() {
-            let combo = Combo::from(two);
-            cps.add(combo, two);
-        }
-        cps
+    fn explode(&self) -> Twos {
+        self.remaining()
     }
 }
 
@@ -67,6 +58,7 @@ impl GTO for Versus {
 mod arrays__combos__solver_tests {
     use super::*;
     use crate::analysis::gto::combo::Combo;
+    use crate::analysis::gto::combo_pairs::ComboPairs;
     use std::collections::HashMap;
     use std::str::FromStr;
 

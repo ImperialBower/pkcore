@@ -25,13 +25,15 @@ use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 
+use crate::analysis::gto::combo::Combo;
+use crate::analysis::gto::combo_pairs::ComboPairs;
+use crate::analysis::gto::twos::Twos;
 use crate::casino::cashier::chips::Chips;
 use crate::rank::Rank;
 use crate::ranks::Ranks;
 use crate::suit::Suit;
 use rayon::iter::IterBridge;
 use std::iter::Enumerate;
-use crate::analysis::gto::combo_pairs::ComboPairs;
 
 #[macro_use]
 pub mod analysis;
@@ -199,7 +201,18 @@ pub trait Betting {
 }
 
 pub trait GTO {
-    fn combo_pairs(&self) -> ComboPairs;
+    fn combo_pairs(&self) -> ComboPairs {
+        let twos = self.explode();
+        let mut cps = ComboPairs::default();
+
+        for two in twos.into_iter() {
+            let combo = Combo::from(two);
+            cps.add(combo, two);
+        }
+        cps
+    }
+
+    fn explode(&self) -> Twos;
 }
 
 pub trait Pile {

@@ -1,9 +1,8 @@
 use clap::Parser;
-use pkcore::{PKError, GTO};
 use pkcore::analysis::gto::combos::Combos;
-use pkcore::analysis::gto::twos::Twos;
 use pkcore::analysis::gto::vs::Versus;
 use pkcore::arrays::two::Two;
+use pkcore::{GTO, PKError};
 use std::str::FromStr;
 
 #[derive(Parser, Debug)]
@@ -29,28 +28,14 @@ fn main() -> Result<(), PKError> {
     let solver = Versus::new(Two::from_str(&*args.player)?, Combos::from_str(&*args.villain)?);
 
     println!("{}", solver);
-
+    println!();
     println!("{}", solver.villain.combo_pairs());
 
-    // let twos = Twos::from(solver.villain()).to_vec();
-    //
-    // println!();
-    // println!("ALL:");
-    // for (i, combo) in twos.into_iter().enumerate() {
-    //     if i % 10 == 0 {
-    //         println!();
-    //     }
-    //     print!(" {combo} ");
-    // }
-
-    println!();
     println!();
 
-    let combo_pairs = solver.combo_pairs();
-    println!("{combo_pairs}");
+    println!("{}", solver.combo_pairs());
     println!();
     println!("¹⁄₁₆");
-
 
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())
