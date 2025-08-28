@@ -92,6 +92,13 @@ impl SortedHeadsUp {
         self.is_higher(two) || self.is_lower(two)
     }
 
+    /// # Errors
+    ///
+    /// Throws `PKError::SqlError` if unable to select from db.
+    pub fn hup_result(&self, conn: &Connection) -> Result<HUPResult, PKError> {
+        HUPResult::from_db(conn, &self.higher, &self.lower)
+    }
+
     /// ## Aside
     ///
     /// Not sure if mixing the connection to the data struct is Kosher, but I can refactor later.

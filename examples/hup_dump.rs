@@ -2,6 +2,7 @@ use clap::Parser;
 use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
 
 /// `cargo run --example hup_dump -- -f "generated/hups_07_31_2025.db" -t "generated/current_hups.csv"`
+/// `cargo run --example hup_dump -- -f "generated/hups.db" -t "generated/hups.csv"`
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Args {

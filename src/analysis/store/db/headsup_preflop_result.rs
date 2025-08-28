@@ -1,6 +1,7 @@
 use crate::analysis::store::db::sqlite::Sqlable;
 use crate::arrays::matchups::masked::{MASKED_DISTINCT, MASKED_UNIQUE, Masked};
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
@@ -11,6 +12,14 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[serde(rename_all = "PascalCase")]
+pub struct WinLoseDraw {
+    pub wins: u64,
+    pub losses: u64,
+    pub draws: u64,
+}
 
 /// TODO TD: Why u64 not usize?
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
@@ -37,6 +46,25 @@ impl HUPResult {
     pub fn db_is_valid(conn: &Connection) -> bool {
         let (v, hs) = HUPResult::db_count(conn);
         v == hs
+    }
+
+    /// # Errors
+    ///
+    /// Throws `PKError::SqlError` if unable to select from db.
+    pub fn from_db(conn: &Connection, from: &Two, to: &Two) -> Result<HUPResult, PKError> {
+        let shu = SortedHeadsUp::new(*from, *to);
+        HUPResult::select(conn, &shu).ok_or(PKError::SqlError)
+    }
+
+    #[must_use]
+    pub fn flip_mode(&self) -> Self {
+        HUPResult {
+            higher: self.lower,
+            lower: self.higher,
+            higher_wins: self.lower_wins,
+            lower_wins: self.higher_wins,
+            ties: self.ties,
+        }
     }
 
     /// # THIS IS WRONG

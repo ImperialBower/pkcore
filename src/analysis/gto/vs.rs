@@ -1,8 +1,12 @@
+use std::collections::HashMap;
 use crate::GTO;
 use crate::analysis::gto::combos::Combos;
 use crate::analysis::gto::twos::Twos;
 use crate::arrays::two::Two;
 use std::fmt::Display;
+use rusqlite::Connection;
+use crate::analysis::store::db::headsup_preflop_result::HUPResult;
+use crate::bard::Bard;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Versus {
@@ -19,6 +23,29 @@ impl Versus {
     #[must_use]
     pub fn hero(&self) -> &Two {
         &self.hero
+    }
+
+    pub fn hups(&self, conn: &Connection) -> HashMap<Two, HUPResult> {
+        let mut hm: HashMap<Two, HUPResult> = HashMap::new();
+
+        let remaining = self.explode();
+
+        for two in &remaining.to_vec() {
+            let hup = HUPResult::from_db(conn, &self.hero, two);
+            match hup {
+                Ok(hup) => {
+                    if Bard::from(self.hero) == hup.higher {
+                        hm.insert(*two, hup);
+                    } else {
+                        hm.insert(*two, hup.flip_mode());
+                    }
+                }
+                Err(e) => {
+                    log::error!("Error retrieving HUPResult for hero {} and villain {}: {}", self.hero, two, e);
+                }
+            }
+        }
+        hm
     }
 
     #[must_use]

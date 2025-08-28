@@ -3,7 +3,9 @@ use pkcore::analysis::gto::combos::Combos;
 use pkcore::analysis::gto::vs::Versus;
 use pkcore::arrays::two::Two;
 use pkcore::{GTO, PKError};
+use rusqlite::Connection;
 use std::str::FromStr;
+use rusqlite::fallible_iterator::FallibleIterator;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -36,6 +38,17 @@ fn main() -> Result<(), PKError> {
     println!("{}", solver.combo_pairs());
     println!();
     println!("¹⁄₁₆");
+
+    println!();
+    println!();
+
+    let conn = Connection::open("generated/hups.db").unwrap();
+
+    let hups = solver.hups(&conn);
+
+    for key in hups.keys() {
+        println!("{}", hups.get(key).unwrap());
+    }
 
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())
