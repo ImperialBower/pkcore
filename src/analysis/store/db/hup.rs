@@ -13,14 +13,6 @@ use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
-#[serde(rename_all = "PascalCase")]
-pub struct WinLoseDraw {
-    pub wins: u64,
-    pub losses: u64,
-    pub draws: u64,
-}
-
 /// TODO TD: Why u64 not usize?
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[serde(rename_all = "PascalCase")]

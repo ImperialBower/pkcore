@@ -7,6 +7,7 @@ pub mod range;
 pub mod combo_pairs;
 pub mod combo_range;
 pub mod combos;
+pub mod odds;
 pub mod ranger;
 pub mod vs;
 
