@@ -50,13 +50,13 @@ impl std::fmt::Display for WinLoseDraw {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{}-{}-{} (W:{:.2}% L:{:.2}% D:{:.2}%)",
-            self.wins,
-            self.losses,
-            self.draws,
+            "{:.2}% ({}), {:.2}% ({}), {:.2}% ({})",
             self.win_percentage(),
+            self.wins,
             self.loss_percentage(),
-            self.draw_percentage()
+            self.losses,
+            self.draw_percentage(),
+            self.draws,
         )
     }
 }
@@ -87,5 +87,15 @@ mod analysis__gto__odds_tests {
                 draws: 9
             }
         );
+    }
+
+    #[test]
+    fn display() {
+        let a = WinLoseDraw {
+            wins: 1,
+            losses: 2,
+            draws: 3,
+        };
+        assert_eq!(format!("{}", a), "16.67% (1), 33.33% (2), 50.00% (3)");
     }
 }
