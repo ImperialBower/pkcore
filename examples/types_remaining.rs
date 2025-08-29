@@ -1,4 +1,4 @@
-use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
+use pkcore::analysis::store::db::hup::HUPResult;
 use pkcore::arrays::matchups::masked::MASKED_UNIQUE;
 use rusqlite::Connection;
 

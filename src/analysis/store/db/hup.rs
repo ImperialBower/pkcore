@@ -130,7 +130,7 @@ impl HUPResult {
     /// How about we write a doctest to make sure things are working OK?
     ///
     /// ```
-    /// use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
+    /// use pkcore::analysis::store::db::hup::HUPResult;
     /// use pkcore::util::data::TestData;
     ///
     /// assert_eq!(
@@ -803,7 +803,7 @@ mod analysis__store__db__hupresult_tests {
     }
 
     /// ```
-    /// use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
+    /// use pkcore::analysis::store::db::hup::HUPResult;
     /// use pkcore::bard::Bard;
     /// HUPResult {
     ///     higher: Bard::SIX_SPADES | Bard::SIX_HEARTS,

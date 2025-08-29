@@ -1,5 +1,5 @@
 use crate::Shifty;
-use crate::analysis::store::db::headsup_preflop_result::HUPResult;
+use crate::analysis::store::db::hup::HUPResult;
 use crate::arrays::matchups::masked::Masked;
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use std::fmt::{Display, Formatter};

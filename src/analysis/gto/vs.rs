@@ -1,7 +1,7 @@
 use crate::GTO;
 use crate::analysis::gto::combos::Combos;
 use crate::analysis::gto::twos::Twos;
-use crate::analysis::store::db::headsup_preflop_result::HUPResult;
+use crate::analysis::store::db::hup::HUPResult;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
 use rusqlite::Connection;
