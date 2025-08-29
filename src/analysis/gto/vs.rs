@@ -1,12 +1,12 @@
-use std::collections::HashMap;
 use crate::GTO;
 use crate::analysis::gto::combos::Combos;
 use crate::analysis::gto::twos::Twos;
-use crate::arrays::two::Two;
-use std::fmt::Display;
-use rusqlite::Connection;
 use crate::analysis::store::db::headsup_preflop_result::HUPResult;
+use crate::arrays::two::Two;
 use crate::bard::Bard;
+use rusqlite::Connection;
+use std::collections::HashMap;
+use std::fmt::Display;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Versus {
@@ -34,18 +34,28 @@ impl Versus {
             let hup = HUPResult::from_db(conn, &self.hero, two);
             match hup {
                 Ok(hup) => {
-                    if Bard::from(self.hero) == hup.higher {
-                        hm.insert(*two, hup);
-                    } else {
-                        hm.insert(*two, hup.flip_mode());
-                    }
+                    hm.insert(*two, self.hup_flip(hup));
                 }
                 Err(e) => {
-                    log::error!("Error retrieving HUPResult for hero {} and villain {}: {}", self.hero, two, e);
+                    log::error!(
+                        "Error retrieving HUPResult for hero {} and villain {}: {}",
+                        self.hero,
+                        two,
+                        e
+                    );
                 }
             }
         }
         hm
+    }
+
+    #[must_use]
+    pub fn hup_flip(&self, hup: HUPResult) -> HUPResult {
+        if Bard::from(self.hero) == hup.higher {
+            hup
+        } else {
+            hup.flip_mode()
+        }
     }
 
     #[must_use]
@@ -279,5 +289,28 @@ mod arrays__combos__solver_tests {
         println!("{actual}");
 
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn hup_flip() {
+        let hero = Two::HAND_KS_KH;
+        let villain = Combos::from_str("KK+").unwrap();
+        let solver = Versus::new(hero, villain);
+
+        let hup = HUPResult {
+            higher: Bard::from(Two::HAND_AS_AH),
+            lower: Bard::from(Two::HAND_KS_KH),
+            higher_wins: 1410336,
+            lower_wins: 292660,
+            ties: 9308,
+        };
+
+        let flipped_hup = solver.hup_flip(hup.clone());
+
+        assert_eq!(flipped_hup.higher, Bard::from(Two::HAND_KS_KH));
+        assert_eq!(flipped_hup.lower, Bard::from(Two::HAND_AS_AH));
+        assert_eq!(flipped_hup.ties, 9308);
+        println!("{hup}");
+        println!("{flipped_hup}");
     }
 }

@@ -295,20 +295,13 @@ impl HUPResult {
 
 impl Display for HUPResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let sho = SortedHeadsUp::try_from(self).unwrap_or_else(|_| SortedHeadsUp::default());
+        let higher = Two::try_from(self.higher).unwrap();
+        let lower = Two::try_from(self.lower).unwrap();
 
-        // let higher_two = match Two::try_from(self.higher) {
-        //     Ok(t) => t,
-        //     Err(_) => Two::default(),
-        // };
-        // let lower_two = match Two::try_from(self.lower) {
-        //     Ok(t) => t,
-        //     Err(_) => Two::default(),
-        // };
         write!(
             f,
             "{} ({}) {} ({}) ties: ({})",
-            sho.higher, self.higher_wins, sho.lower, self.lower_wins, self.ties
+            higher, self.higher_wins, lower, self.lower_wins, self.ties
         )
     }
 }
@@ -660,6 +653,21 @@ mod analysis__store__db__hupresult_tests {
         let conn = Connection::open(SAMPLE_DB_PATH).unwrap();
         assert!(HUPResult::db_is_valid(&conn));
         conn.close().unwrap();
+    }
+
+    #[test]
+    fn flip_mode() {
+        let hup = HUPResult {
+            higher: Bard::SIX_SPADES | Bard::SIX_HEARTS,
+            lower: Bard::FIVE_DIAMONDS | Bard::FIVE_CLUBS,
+            higher_wins: 1_365_284,
+            lower_wins: 314_904,
+            ties: 32_116,
+        };
+
+        let hup_flipped = hup.flip_mode();
+
+        assert_eq!(hup_flipped.higher, Bard::FIVE_DIAMONDS | Bard::FIVE_CLUBS);
     }
 
     #[test]

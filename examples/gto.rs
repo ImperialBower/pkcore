@@ -5,7 +5,6 @@ use pkcore::arrays::two::Two;
 use pkcore::{GTO, PKError};
 use rusqlite::Connection;
 use std::str::FromStr;
-use rusqlite::fallible_iterator::FallibleIterator;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]

@@ -5,7 +5,7 @@ fn main() {
     let now = std::time::Instant::now();
     env_logger::init();
 
-    let hs = SortedHeadsUp::distwinct().unwrap();
+    let hs = SortedHeadsUp::distinct().unwrap();
     println!("{}", hs.len());
     SortedHeadsUp::generate_csv("generated/distinct_shu3.csv", hs).expect("TODO: panic message");
 
