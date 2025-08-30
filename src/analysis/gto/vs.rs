@@ -7,6 +7,7 @@ use crate::bard::Bard;
 use rusqlite::Connection;
 use std::collections::HashMap;
 use std::fmt::Display;
+use crate::analysis::gto::odds::WinLoseDraw;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Versus {
@@ -18,6 +19,10 @@ impl Versus {
     #[must_use]
     pub fn new(hero: Two, villain: Combos) -> Self {
         Versus { hero, villain }
+    }
+
+    pub fn combined_odds(hups: Vec<&HUPResult>) -> WinLoseDraw {
+        hups.iter().fold(WinLoseDraw::default(), |acc, hup| acc + hup.odds)
     }
 
     #[must_use]

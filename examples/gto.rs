@@ -5,6 +5,7 @@ use pkcore::arrays::two::Two;
 use pkcore::{GTO, PKError};
 use rusqlite::Connection;
 use std::str::FromStr;
+use pkcore::analysis::store::db::hup::HUPResult;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -48,6 +49,11 @@ fn main() -> Result<(), PKError> {
     for key in hups.keys() {
         println!("{}", hups.get(key).unwrap());
     }
+
+    let results = Versus::combined_odds(hups.values().collect::<Vec<&HUPResult>>());
+    println!();
+    println!("{}", results);
+
 
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())
