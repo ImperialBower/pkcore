@@ -1,27 +1,39 @@
 use crate::GTO;
 use crate::analysis::gto::combos::Combos;
+use crate::analysis::gto::odds::WinLoseDraw;
 use crate::analysis::gto::twos::Twos;
 use crate::analysis::store::db::hup::HUPResult;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
+use crate::play::board::Board;
 use rusqlite::Connection;
 use std::collections::HashMap;
 use std::fmt::Display;
-use crate::analysis::gto::odds::WinLoseDraw;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Versus {
     pub hero: Two,
     pub villain: Combos,
+    pub board: Board,
 }
 
 impl Versus {
     #[must_use]
     pub fn new(hero: Two, villain: Combos) -> Self {
-        Versus { hero, villain }
+        Versus {
+            hero,
+            villain,
+            board: Board::default(),
+        }
     }
 
-    pub fn combined_odds(hups: Vec<&HUPResult>) -> WinLoseDraw {
+    #[must_use]
+    pub fn new_with_board(hero: Two, villain: Combos, board: Board) -> Self {
+        Versus { hero, villain, board }
+    }
+
+    #[must_use]
+    pub fn combined_odds_at_deal(hups: &[&HUPResult]) -> WinLoseDraw {
         hups.iter().fold(WinLoseDraw::default(), |acc, hup| acc + hup.odds)
     }
 
@@ -30,7 +42,7 @@ impl Versus {
         &self.hero
     }
 
-    pub fn hups(&self, conn: &Connection) -> HashMap<Two, HUPResult> {
+    pub fn hups_at_deal(&self, conn: &Connection) -> HashMap<Two, HUPResult> {
         let mut hm: HashMap<Two, HUPResult> = HashMap::new();
 
         let remaining = self.explode();
@@ -290,10 +302,6 @@ mod arrays__combos__solver_tests {
         let expected = ComboPairs::from(combos_pairs_hashmap);
         let actual = solver.combo_pairs();
 
-        println!("{expected}");
-        println!();
-        println!("{actual}");
-
         assert_eq!(expected, actual);
     }
 
@@ -318,7 +326,5 @@ mod arrays__combos__solver_tests {
         assert_eq!(flipped_hup.higher, Bard::from(Two::HAND_KS_KH));
         assert_eq!(flipped_hup.lower, Bard::from(Two::HAND_AS_AH));
         assert_eq!(flipped_hup.odds.draws, 9308);
-        println!("{hup}");
-        println!("{flipped_hup}");
     }
 }

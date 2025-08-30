@@ -1,11 +1,12 @@
 use clap::Parser;
 use pkcore::analysis::gto::combos::Combos;
 use pkcore::analysis::gto::vs::Versus;
+use pkcore::analysis::store::db::hup::HUPResult;
 use pkcore::arrays::two::Two;
+use pkcore::play::board::Board;
 use pkcore::{GTO, PKError};
 use rusqlite::Connection;
 use std::str::FromStr;
-use pkcore::analysis::store::db::hup::HUPResult;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -15,6 +16,9 @@ struct Args {
 
     #[clap(short = 'v', long)]
     villain: String,
+
+    #[clap(short = 'b', long, required = false)]
+    board: Option<Board>,
 
     #[clap(short = 'n', long)]
     nuts: bool,
@@ -27,7 +31,13 @@ fn main() -> Result<(), PKError> {
 
     let args = Args::parse();
 
-    let solver = Versus::new(Two::from_str(&*args.player)?, Combos::from_str(&*args.villain)?);
+    let solver: Versus;
+
+    if let Some(board) = args.board {
+        solver = Versus::new_with_board(Two::from_str(&*args.player)?, Combos::from_str(&*args.villain)?, board);
+    } else {
+        solver = Versus::new(Two::from_str(&*args.player)?, Combos::from_str(&*args.villain)?);
+    }
 
     println!("{}", solver);
     println!();
@@ -44,16 +54,15 @@ fn main() -> Result<(), PKError> {
 
     let conn = Connection::open("generated/hups.db").unwrap();
 
-    let hups = solver.hups(&conn);
+    let hups = solver.hups_at_deal(&conn);
 
     for key in hups.keys() {
         println!("{}", hups.get(key).unwrap());
     }
 
-    let results = Versus::combined_odds(hups.values().collect::<Vec<&HUPResult>>());
+    let results = Versus::combined_odds_at_deal(hups.values().collect::<Vec<&HUPResult>>());
     println!();
     println!("{}", results);
-
 
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())
