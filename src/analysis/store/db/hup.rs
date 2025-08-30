@@ -843,6 +843,7 @@ mod analysis__store__db__hupresult_tests {
     }
 
     /// ```
+    /// use pkcore::analysis::gto::odds::WinLoseDraw;
     /// use pkcore::analysis::store::db::hup::HUPResult;
     /// use pkcore::bard::Bard;
     /// HUPResult {
