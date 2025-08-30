@@ -1,3 +1,4 @@
+use crate::analysis::gto::odds::WinLoseDraw;
 use crate::analysis::store::db::sqlite::Sqlable;
 use crate::arrays::matchups::masked::{MASKED_DISTINCT, MASKED_UNIQUE, Masked};
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
@@ -19,9 +20,7 @@ use std::fs::File;
 pub struct HUPResult {
     pub higher: Bard,
     pub lower: Bard,
-    pub higher_wins: u64,
-    pub lower_wins: u64,
-    pub ties: u64,
+    pub odds: WinLoseDraw,
 }
 
 impl HUPResult {
@@ -53,9 +52,11 @@ impl HUPResult {
         HUPResult {
             higher: self.lower,
             lower: self.higher,
-            higher_wins: self.lower_wins,
-            lower_wins: self.higher_wins,
-            ties: self.ties,
+            odds: WinLoseDraw {
+                wins: self.odds.losses,
+                losses: self.odds.wins,
+                draws: self.odds.draws,
+            },
         }
     }
 
@@ -72,9 +73,11 @@ impl HUPResult {
                 let hpr = HUPResult {
                     higher: shu.higher_as_bard(),
                     lower: shu.lower_as_bard(),
-                    higher_wins: self.higher_wins,
-                    lower_wins: self.lower_wins,
-                    ties: self.ties,
+                    odds: WinLoseDraw {
+                        wins: shift.odds.wins,
+                        losses: shift.odds.losses,
+                        draws: shift.odds.draws,
+                    },
                 };
                 return Some(hpr);
             }
@@ -147,9 +150,11 @@ impl HUPResult {
         HUPResult {
             higher: shu.higher_as_bard(),
             lower: shu.lower_as_bard(),
-            higher_wins: u64::try_from(first_wins - first_ties).unwrap(),
-            lower_wins: u64::try_from(second_wins - second_ties).unwrap(),
-            ties: u64::try_from(first_ties).unwrap(),
+            odds: WinLoseDraw {
+                wins: u64::try_from(first_wins - first_ties).unwrap(),
+                losses: u64::try_from(second_wins - second_ties).unwrap(),
+                draws: u64::try_from(first_ties).unwrap(),
+            },
         }
     }
 
@@ -231,7 +236,9 @@ impl HUPResult {
 
     #[must_use]
     pub fn matches(&self, other: &Self) -> bool {
-        (self.higher_wins == other.higher_wins) && (self.lower_wins == other.lower_wins) && (self.ties == other.ties)
+        (self.odds.wins == other.odds.wins)
+            && (self.odds.losses == other.odds.losses)
+            && (self.odds.draws == other.odds.draws)
     }
 
     /// # Errors
@@ -265,17 +272,21 @@ impl HUPResult {
             HUPResult {
                 higher: masked.shu.higher_as_bard(),
                 lower: masked.shu.lower_as_bard(),
-                higher_wins: self.higher_wins,
-                lower_wins: self.lower_wins,
-                ties: self.ties,
+                odds: WinLoseDraw {
+                    wins: self.odds.wins,
+                    losses: self.odds.losses,
+                    draws: self.odds.draws,
+                },
             }
         } else if mymask.rank_mask == masked.rank_mask.invert() {
             HUPResult {
                 higher: masked.shu.higher_as_bard(),
                 lower: masked.shu.lower_as_bard(),
-                higher_wins: self.lower_wins,
-                lower_wins: self.higher_wins,
-                ties: self.ties,
+                odds: WinLoseDraw {
+                    wins: self.odds.losses,
+                    losses: self.odds.wins,
+                    draws: self.odds.draws,
+                },
             }
         } else {
             HUPResult::default()
@@ -292,8 +303,15 @@ impl Display for HUPResult {
 
         write!(
             f,
-            "{} ({}) {} ({}) ties: ({})",
-            higher, self.higher_wins, lower, self.lower_wins, self.ties
+            "{} {:.2}% ({}) {} {:.2}% ({}) ties: {:.2}% ({})",
+            higher,
+            self.odds.win_percentage(),
+            self.odds.wins,
+            lower,
+            self.odds.loss_percentage(),
+            self.odds.losses,
+            self.odds.draw_percentage(),
+            self.odds.draws,
         )
     }
 }
@@ -335,9 +353,11 @@ impl From<&SortedHeadsUp> for HUPResult {
         HUPResult {
             higher: shu.higher.bard(),
             lower: shu.lower.bard(),
-            higher_wins: u64::try_from(higher_wins).unwrap() - ties,
-            lower_wins: u64::try_from(lower_wins).unwrap() - ties,
-            ties: u64::try_from(lower_ties).unwrap(),
+            odds: WinLoseDraw {
+                wins: u64::try_from(higher_wins).unwrap() - ties,
+                losses: u64::try_from(lower_wins).unwrap() - ties,
+                draws: u64::try_from(lower_ties).unwrap(),
+            },
         }
     }
 }
@@ -399,9 +419,9 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
             stmt.execute(named_params! {
             ":higher": hup.higher.as_u64(),
             ":lower": hup.lower.as_u64(),
-            ":higher_wins": hup.higher_wins,
-            ":lower_wins": hup.lower_wins,
-            ":ties": hup.ties})?;
+            ":higher_wins": hup.odds.wins,
+            ":lower_wins": hup.odds.losses,
+            ":ties": hup.odds.draws})?;
             Ok(true)
         }
     }
@@ -436,9 +456,11 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
                     let r = HUPResult {
                         higher: hb,
                         lower: lb,
-                        higher_wins: hw,
-                        lower_wins: lw,
-                        ties,
+                        odds: WinLoseDraw {
+                            wins: hw,
+                            losses: lw,
+                            draws: ties,
+                        },
                     };
                     Ok(r)
                 },
@@ -502,9 +524,11 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
             let hup = HUPResult {
                 higher: Bard::from(higher),
                 lower: Bard::from(lower),
-                higher_wins,
-                lower_wins,
-                ties,
+                odds: WinLoseDraw {
+                    wins: higher_wins,
+                    losses: lower_wins,
+                    draws: ties,
+                },
             };
             r.push(hup);
         }
@@ -523,17 +547,21 @@ impl SuitShift for HUPResult {
                     HUPResult {
                         higher: second.bard(),
                         lower: first.bard(),
-                        higher_wins: self.lower_wins,
-                        lower_wins: self.higher_wins,
-                        ties: self.ties,
+                        odds: WinLoseDraw {
+                            wins: self.odds.losses,
+                            losses: self.odds.wins,
+                            draws: self.odds.draws,
+                        },
                     }
                 } else {
                     HUPResult {
                         higher: first.bard(),
                         lower: second.bard(),
-                        higher_wins: self.higher_wins,
-                        lower_wins: self.lower_wins,
-                        ties: self.ties,
+                        odds: WinLoseDraw {
+                            wins: self.odds.wins,
+                            losses: self.odds.losses,
+                            draws: self.odds.draws,
+                        },
                     }
                 }
             }
@@ -572,17 +600,21 @@ impl SuitShift for HUPResult {
                     HUPResult {
                         higher: second.bard(),
                         lower: first.bard(),
-                        higher_wins: self.lower_wins,
-                        lower_wins: self.higher_wins,
-                        ties: self.ties,
+                        odds: WinLoseDraw {
+                            wins: self.odds.losses,
+                            losses: self.odds.wins,
+                            draws: self.odds.draws,
+                        },
                     }
                 } else {
                     HUPResult {
                         higher: first.bard(),
                         lower: second.bard(),
-                        higher_wins: self.higher_wins,
-                        lower_wins: self.lower_wins,
-                        ties: self.ties,
+                        odds: WinLoseDraw {
+                            wins: self.odds.wins,
+                            losses: self.odds.losses,
+                            draws: self.odds.draws,
+                        },
                     }
                 }
             }
@@ -598,9 +630,11 @@ impl SuitShift for HUPResult {
         HUPResult {
             higher: shu.higher_as_bard(),
             lower: shu.lower_as_bard(),
-            higher_wins: self.higher_wins,
-            lower_wins: self.lower_wins,
-            ties: self.ties,
+            odds: WinLoseDraw {
+                wins: self.odds.wins,
+                losses: self.odds.losses,
+                draws: self.odds.draws,
+            },
         }
     }
 }
@@ -652,9 +686,11 @@ mod analysis__store__db__hupresult_tests {
         let hup = HUPResult {
             higher: Bard::SIX_SPADES | Bard::SIX_HEARTS,
             lower: Bard::FIVE_DIAMONDS | Bard::FIVE_CLUBS,
-            higher_wins: 1_365_284,
-            lower_wins: 314_904,
-            ties: 32_116,
+            odds: WinLoseDraw {
+                wins: 1_365_284,
+                losses: 314_904,
+                draws: 32_116,
+            },
         };
 
         let hup_flipped = hup.flip_mode();
@@ -667,16 +703,20 @@ mod analysis__store__db__hupresult_tests {
         let first = HUPResult {
             higher: Bard::SIX_SPADES | Bard::SIX_HEARTS,
             lower: Bard::FIVE_DIAMONDS | Bard::FIVE_CLUBS,
-            higher_wins: 1_365_284,
-            lower_wins: 314_904,
-            ties: 32_116,
+            odds: WinLoseDraw {
+                wins: 1_365_284,
+                losses: 314_904,
+                draws: 32_116,
+            },
         };
         let second = HUPResult {
             higher: Bard::SIX_DIAMONDS | Bard::SIX_CLUBS,
             lower: Bard::FIVE_SPADES | Bard::FIVE_HEARTS,
-            higher_wins: 1_365_284,
-            lower_wins: 314_904,
-            ties: 32_116,
+            odds: WinLoseDraw {
+                wins: 1_365_284,
+                losses: 314_904,
+                draws: 32_116,
+            },
         };
 
         assert!(first.matches(&second));
@@ -687,16 +727,20 @@ mod analysis__store__db__hupresult_tests {
         let first = HUPResult {
             higher: Bard::ACE_SPADES | Bard::FIVE_HEARTS,
             lower: Bard::FOUR_HEARTS | Bard::TREY_HEARTS,
-            higher_wins: 1_068_796,
-            lower_wins: 632_976,
-            ties: 10_532,
+            odds: WinLoseDraw {
+                wins: 1_068_796,
+                losses: 632_976,
+                draws: 10_532,
+            },
         };
         let second = HUPResult {
             higher: Bard::ACE_CLUBS | Bard::FIVE_CLUBS,
             lower: Bard::FOUR_DIAMONDS | Bard::FIVE_CLUBS,
-            higher_wins: 1_145_595,
-            lower_wins: 556_028,
-            ties: 10_681,
+            odds: WinLoseDraw {
+                wins: 1_145_595,
+                losses: 556_028,
+                draws: 10_681,
+            },
         };
 
         assert!(!first.matches(&second));
@@ -727,9 +771,11 @@ mod analysis__store__db__hupresult_tests {
         let base = HUPResult {
             higher: Two::HAND_TS_2H.bard(),
             lower: Two::HAND_TH_TD.bard(),
-            higher_wins: 73_828,
-            lower_wins: 1_580_550,
-            ties: 57_926,
+            odds: WinLoseDraw {
+                wins: 73_828,
+                losses: 1_580_550,
+                draws: 57_926,
+            },
         };
         let masked = Masked::from_str("T♠ 2♣ T♥ T♣").unwrap();
 
@@ -737,9 +783,9 @@ mod analysis__store__db__hupresult_tests {
 
         assert_eq!(folded.higher, Two::HAND_TS_2C.bard());
         assert_eq!(folded.lower, Two::HAND_TH_TC.bard());
-        assert_eq!(folded.higher_wins, 73_828);
-        assert_eq!(folded.lower_wins, 1_580_550);
-        assert_eq!(folded.ties, 57_926);
+        assert_eq!(folded.odds.wins, 73_828);
+        assert_eq!(folded.odds.losses, 1_580_550);
+        assert_eq!(folded.odds.draws, 57_926);
     }
 
     #[test]
@@ -747,9 +793,11 @@ mod analysis__store__db__hupresult_tests {
         let base = HUPResult {
             higher: Two::HAND_TS_2H.bard(),
             lower: Two::HAND_TH_TD.bard(),
-            higher_wins: 73_828,
-            lower_wins: 1_580_550,
-            ties: 57_926,
+            odds: WinLoseDraw {
+                wins: 73_828,
+                losses: 1_580_550,
+                draws: 57_926,
+            },
         };
         let masked = Masked::from_str("T♠ T♥ T♣ 2♥").unwrap();
 
@@ -757,16 +805,16 @@ mod analysis__store__db__hupresult_tests {
 
         assert_eq!(folded.higher, Two::HAND_TS_TH.bard());
         assert_eq!(folded.lower, Two::HAND_TC_2H.bard());
-        assert_eq!(folded.higher_wins, 1_580_550);
-        assert_eq!(folded.lower_wins, 73_828);
-        assert_eq!(folded.ties, 57_926);
+        assert_eq!(folded.odds.wins, 1_580_550);
+        assert_eq!(folded.odds.losses, 73_828);
+        assert_eq!(folded.odds.draws, 57_926);
     }
 
     /// I'm test driving this one backwards. I do that some time.
     #[test]
     fn display() {
         assert_eq!(
-            "6♠ 6♥ (1365284) 5♦ 5♣ (314904) ties: (32116)",
+            "6♠ 6♥ 79.73% (1365284) 5♦ 5♣ 18.39% (314904) ties: 1.88% (32116)",
             TestData::the_hand_as_hup_result().to_string()
         );
     }
@@ -800,9 +848,11 @@ mod analysis__store__db__hupresult_tests {
     /// HUPResult {
     ///     higher: Bard::SIX_SPADES | Bard::SIX_HEARTS,
     ///     lower: Bard::FIVE_DIAMONDS | Bard::FIVE_CLUBS,
-    ///     higher_wins: 1_365_284,
-    ///     lower_wins: 314_904,
-    ///     ties: 32_116,
+    ///     odds: WinLoseDraw {
+    ///         wins: 1_365_284,
+    ///         losses: 314_904,
+    ///         draws: 32_116,
+    ///     },
     /// };
     /// ```
     #[test]
@@ -868,17 +918,19 @@ mod analysis__store__db__hupresult_tests {
         let base = HUPResult {
             higher: Two::HAND_TS_2H.bard(),
             lower: Two::HAND_TH_TD.bard(),
-            higher_wins: 73_828,
-            lower_wins: 1_580_550,
-            ties: 57_926,
+            odds: WinLoseDraw {
+                wins: 73_828,
+                losses: 1_580_550,
+                draws: 57_926,
+            },
         };
         let shiftup = base.shift_suit_up();
 
         assert_eq!(shiftup.higher, Two::HAND_TS_TH.bard());
         assert_eq!(shiftup.lower, Two::HAND_TC_2S.bard());
-        assert_eq!(shiftup.higher_wins, 1_580_550);
-        assert_eq!(shiftup.lower_wins, 73_828);
-        assert_eq!(shiftup.ties, 57_926);
+        assert_eq!(shiftup.odds.wins, 1_580_550);
+        assert_eq!(shiftup.odds.losses, 73_828);
+        assert_eq!(shiftup.odds.draws, 57_926);
         assert_eq!(shiftup.shift_suit_down(), base);
     }
 
@@ -907,9 +959,11 @@ mod analysis__store__db__hupresult_tests {
         HUPResult {
             higher: Two::HAND_7D_7C.bard(),
             lower: Two::HAND_6S_6H.bard(),
-            higher_wins: 1375342,
-            lower_wins: 315362,
-            ties: 21600,
+            odds: WinLoseDraw {
+                wins: 1375342,
+                losses: 315362,
+                draws: 21600,
+            },
         }
     }
 
@@ -917,9 +971,11 @@ mod analysis__store__db__hupresult_tests {
         HUPResult {
             higher: Two::HAND_7S_7C.bard(),
             lower: Two::HAND_6H_6D.bard(),
-            higher_wins: 1375342,
-            lower_wins: 315362,
-            ties: 21600,
+            odds: WinLoseDraw {
+                wins: 1375342,
+                losses: 315362,
+                draws: 21600,
+            },
         }
     }
 
@@ -927,9 +983,11 @@ mod analysis__store__db__hupresult_tests {
         HUPResult {
             higher: Two::HAND_7S_7H.bard(),
             lower: Two::HAND_6D_6C.bard(),
-            higher_wins: 1375342,
-            lower_wins: 315362,
-            ties: 21600,
+            odds: WinLoseDraw {
+                wins: 1375342,
+                losses: 315362,
+                draws: 21600,
+            },
         }
     }
 
@@ -937,9 +995,11 @@ mod analysis__store__db__hupresult_tests {
         HUPResult {
             higher: Two::HAND_7H_7D.bard(),
             lower: Two::HAND_6S_6C.bard(),
-            higher_wins: 1375342,
-            lower_wins: 315362,
-            ties: 21600,
+            odds: WinLoseDraw {
+                wins: 1375342,
+                losses: 315362,
+                draws: 21600,
+            },
         }
     }
 
@@ -947,9 +1007,11 @@ mod analysis__store__db__hupresult_tests {
         HUPResult {
             higher: Two::HAND_7H_7C.bard(),
             lower: Two::HAND_6S_6D.bard(),
-            higher_wins: 1375342,
-            lower_wins: 315362,
-            ties: 21600,
+            odds: WinLoseDraw {
+                wins: 1375342,
+                losses: 315362,
+                draws: 21600,
+            },
         }
     }
 
@@ -957,9 +1019,11 @@ mod analysis__store__db__hupresult_tests {
         HUPResult {
             higher: Two::HAND_7S_7D.bard(),
             lower: Two::HAND_6H_6C.bard(),
-            higher_wins: 1375342,
-            lower_wins: 315362,
-            ties: 21600,
+            odds: WinLoseDraw {
+                wins: 1375342,
+                losses: 315362,
+                draws: 21600,
+            },
         }
     }
 

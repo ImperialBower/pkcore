@@ -1,4 +1,5 @@
 use crate::analysis::eval::Eval;
+use crate::analysis::gto::odds::WinLoseDraw;
 use crate::analysis::store::bcm::binary_card_map::SevenFiveBCM;
 use crate::analysis::store::db::hup::HUPResult;
 use crate::arrays::five::Five;
@@ -159,9 +160,11 @@ impl TestData {
         HUPResult {
             higher: Bard::SIX_SPADES | Bard::SIX_HEARTS,
             lower: Bard::FIVE_DIAMONDS | Bard::FIVE_CLUBS,
-            higher_wins: 1_365_284,
-            lower_wins: 314_904,
-            ties: 32_116,
+            odds: WinLoseDraw {
+                wins: 1_365_284,
+                losses: 314_904,
+                draws: 32_116,
+            },
         }
     }
 
@@ -175,31 +178,39 @@ impl TestData {
         let mut hups: Vec<HUPResult> = vec![HUPResult {
             higher: Two::HAND_AS_AH.bard(),
             lower: Two::HAND_7D_7C.bard(),
-            higher_wins: 1364608,
-            lower_wins: 343300,
-            ties: 4396,
+            odds: WinLoseDraw {
+                wins: 1364608,
+                losses: 343300,
+                draws: 4396,
+            },
         }];
 
         hups.push(HUPResult {
             higher: Two::HAND_AS_AH.bard(),
             lower: Two::HAND_7D_7C.bard(),
-            higher_wins: 1364608,
-            lower_wins: 343300,
-            ties: 4396,
+            odds: WinLoseDraw {
+                wins: 1364608,
+                losses: 343300,
+                draws: 4396,
+            },
         });
         hups.push(HUPResult {
             higher: Two::HAND_AS_AH.bard(),
             lower: Two::HAND_6D_6C.bard(),
-            higher_wins: 1364608,
-            lower_wins: 343300,
-            ties: 4396,
+            odds: WinLoseDraw {
+                wins: 1364608,
+                losses: 343300,
+                draws: 4396,
+            },
         });
         hups.push(HUPResult {
             higher: Two::HAND_AS_AH.bard(),
             lower: Two::HAND_5D_5C.bard(),
-            higher_wins: 1364608,
-            lower_wins: 343300,
-            ties: 4396,
+            odds: WinLoseDraw {
+                wins: 1364608,
+                losses: 343300,
+                draws: 4396,
+            },
         });
 
         hups
@@ -220,7 +231,7 @@ mod util__data_tests {
         let (first_wins, first_ties) = wins.wins_for(Win::FIRST);
         let (second_wins, second_ties) = wins.wins_for(Win::SECOND);
 
-        assert_eq!(hup.higher_wins as usize, first_wins - first_ties);
-        assert_eq!(hup.lower_wins as usize, second_wins - second_ties);
+        assert_eq!(hup.odds.wins as usize, first_wins - first_ties);
+        assert_eq!(hup.odds.losses as usize, second_wins - second_ties);
     }
 }

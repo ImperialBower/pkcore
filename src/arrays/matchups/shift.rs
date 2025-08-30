@@ -76,6 +76,7 @@ impl From<&SortedHeadsUp> for Shifter {
 #[allow(non_snake_case)]
 mod arrays__matchups__masks__shift_tests {
     use super::*;
+    use crate::analysis::gto::odds::WinLoseDraw;
     use crate::arrays::matchups::masks::rank_mask::RankMask;
     use crate::arrays::matchups::masks::suit_mask::SuitMask;
     use crate::arrays::matchups::masks::suit_texture::SuitTexture;
@@ -87,9 +88,11 @@ mod arrays__matchups__masks__shift_tests {
         HUPResult {
             higher: Bard::from(Two::HAND_AD_TD),
             lower: Bard::from(Two::HAND_5H_4S),
-            higher_wins: 1108295,
-            lower_wins: 595903,
-            ties: 8106,
+            odds: WinLoseDraw {
+                wins: 1108295,
+                losses: 595903,
+                draws: 8106,
+            },
         }
     }
 

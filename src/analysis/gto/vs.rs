@@ -96,6 +96,7 @@ mod arrays__combos__solver_tests {
     use super::*;
     use crate::analysis::gto::combo::Combo;
     use crate::analysis::gto::combo_pairs::ComboPairs;
+    use crate::analysis::gto::odds::WinLoseDraw;
     use std::collections::HashMap;
     use std::str::FromStr;
 
@@ -300,16 +301,18 @@ mod arrays__combos__solver_tests {
         let hup = HUPResult {
             higher: Bard::from(Two::HAND_AS_AH),
             lower: Bard::from(Two::HAND_KS_KH),
-            higher_wins: 1410336,
-            lower_wins: 292660,
-            ties: 9308,
+            odds: WinLoseDraw {
+                wins: 1410336,
+                losses: 292660,
+                draws: 9308,
+            },
         };
 
         let flipped_hup = solver.hup_flip(hup.clone());
 
         assert_eq!(flipped_hup.higher, Bard::from(Two::HAND_KS_KH));
         assert_eq!(flipped_hup.lower, Bard::from(Two::HAND_AS_AH));
-        assert_eq!(flipped_hup.ties, 9308);
+        assert_eq!(flipped_hup.odds.draws, 9308);
         println!("{hup}");
         println!("{flipped_hup}");
     }
