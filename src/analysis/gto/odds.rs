@@ -1,5 +1,6 @@
 use crate::util::Percentage;
 use serde::{Deserialize, Serialize};
+use crate::play::stages::flop_eval::FlopEval;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[serde(rename_all = "PascalCase")]
@@ -58,6 +59,17 @@ impl std::fmt::Display for WinLoseDraw {
             self.draw_percentage(),
             self.draws,
         )
+    }
+}
+
+impl From<FlopEval> for WinLoseDraw {
+    fn from(value: FlopEval) -> Self {
+        // WinLoseDraw {
+        //     wins: value.wins as u64,
+        //     losses: value. as u64,
+        //     draws: value.draws as u64,
+        // }
+        todo!()
     }
 }
 
