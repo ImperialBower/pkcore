@@ -1,4 +1,3 @@
-use crate::GTO;
 use crate::analysis::gto::combos::Combos;
 use crate::analysis::gto::odds::WinLoseDraw;
 use crate::analysis::gto::twos::Twos;
@@ -6,6 +5,9 @@ use crate::analysis::store::db::hup::HUPResult;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::play::board::Board;
+use crate::play::game::Game;
+use crate::play::hole_cards::HoleCards;
+use crate::{GTO, SOK};
 use rusqlite::Connection;
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -35,6 +37,24 @@ impl Versus {
     #[must_use]
     pub fn combined_odds_at_deal(hups: &[&HUPResult]) -> WinLoseDraw {
         hups.iter().fold(WinLoseDraw::default(), |acc, hup| acc + hup.odds)
+    }
+
+    #[must_use]
+    pub fn games(&self) -> Vec<Game> {
+        let mut games = Vec::new();
+        let remaining = self.remaining_at_flop();
+
+        for two in &remaining.to_vec() {
+            let game = Game::new(HoleCards::from(vec![self.hero, *two]), self.board);
+            games.push(game);
+        }
+
+        games
+    }
+
+    #[must_use]
+    pub fn has_board(&self) -> bool {
+        self.board.salright()
     }
 
     #[must_use]
@@ -88,6 +108,19 @@ impl Versus {
             .filter_on_not_card(self.hero.second())
     }
 
+    #[must_use]
+    pub fn remaining_at_flop(&self) -> Twos {
+        self.remaining()
+            .filter_on_not_card(self.board.flop.first())
+            .filter_on_not_card(self.board.flop.second())
+            .filter_on_not_card(self.board.flop.third())
+    }
+
+    #[must_use]
+    pub fn remaining_at_turn(&self) -> Twos {
+        self.remaining_at_flop().filter_on_not_card(self.board.turn)
+    }
+
     /// All the `Twos` including ones in the hero's hand.
     #[must_use]
     pub fn twos(&self) -> Twos {
@@ -97,7 +130,15 @@ impl Versus {
 
 impl Display for Versus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Solver {{ hero: {}, villain: {} }}", self.hero, self.villain)
+        if self.board.salright() {
+            write!(
+                f,
+                "Solver {{ hero: {}, villain: {}, board: {}  }}",
+                self.hero, self.villain, self.board
+            )
+        } else {
+            write!(f, "Solver {{ hero: {}, villain: {} }}", self.hero, self.villain)
+        }
     }
 }
 

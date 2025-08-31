@@ -4,6 +4,7 @@ use pkcore::analysis::gto::vs::Versus;
 use pkcore::analysis::store::db::hup::HUPResult;
 use pkcore::arrays::two::Two;
 use pkcore::play::board::Board;
+use pkcore::play::stages::flop_eval::FlopEval;
 use pkcore::{GTO, PKError};
 use rusqlite::Connection;
 use std::str::FromStr;
@@ -60,9 +61,21 @@ fn main() -> Result<(), PKError> {
         println!("{}", hups.get(key).unwrap());
     }
 
-    let results = Versus::combined_odds_at_deal(hups.values().collect::<Vec<&HUPResult>>());
+    let results = Versus::combined_odds_at_deal(&hups.values().collect::<Vec<&HUPResult>>());
     println!();
     println!("{}", results);
+
+    if solver.has_board() {
+        let games = solver.games();
+        for game in &games {
+            let fe = FlopEval::try_from(game.clone()).unwrap();
+            println!("{fe}");
+        }
+
+        // for game in &games {
+        //     game.river_display_results();
+        // }
+    }
 
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())

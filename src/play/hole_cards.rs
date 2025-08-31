@@ -42,6 +42,8 @@ use std::vec::IntoIter;
 /// major refactorings without having to worry about breaking external systems that are dependent
 /// on it. Later on, we will need to be much more careful. Enjoy your isolation while you can. It
 /// is fleeting.
+///
+/// TODO: Refactor to Two;
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct HoleCards(Vec<Two>);
 
