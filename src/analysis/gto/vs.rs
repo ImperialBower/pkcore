@@ -11,6 +11,7 @@ use crate::{GTO, SOK};
 use rusqlite::Connection;
 use std::collections::HashMap;
 use std::fmt::Display;
+use crate::play::stages::flop_eval::FlopEval;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Versus {
@@ -40,7 +41,16 @@ impl Versus {
     }
 
     #[must_use]
-    pub fn games(&self) -> Vec<Game> {
+    pub fn combined_odds_at_flop(&self) -> WinLoseDraw {
+        // self.games_at_flop()
+        //     .iter()
+        //     .map(|game| FlopEval::try_from(game.clone()).unwrap())
+        //     .fold(WinLoseDraw::default(), |acc, hup| acc + hup.odds)
+        todo!()
+    }
+
+    #[must_use]
+    pub fn games_at_flop(&self) -> Vec<Game> {
         let mut games = Vec::new();
         let remaining = self.remaining_at_flop();
 

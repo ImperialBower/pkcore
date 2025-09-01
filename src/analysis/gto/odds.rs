@@ -63,13 +63,14 @@ impl std::fmt::Display for WinLoseDraw {
 }
 
 impl From<FlopEval> for WinLoseDraw {
-    fn from(value: FlopEval) -> Self {
-        // WinLoseDraw {
-        //     wins: value.wins as u64,
-        //     losses: value. as u64,
-        //     draws: value.draws as u64,
-        // }
-        todo!()
+    fn from(fe: FlopEval) -> Self {
+        let (wins, draws) = fe.results.wins_and_ties(0);
+        let (loses, _) = fe.results.wins_and_ties(1);
+        WinLoseDraw {
+            wins: wins as u64,
+            losses: loses as u64,
+            draws: draws as u64,
+        }
     }
 }
 
