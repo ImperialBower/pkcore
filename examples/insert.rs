@@ -1,4 +1,4 @@
-use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
+use pkcore::analysis::store::db::hup::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::masked::{MASKED_DISTINCT, Masked};
 use pkcore::util::terminal::Terminal;

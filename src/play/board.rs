@@ -3,7 +3,7 @@ use crate::arrays::three::Three;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::util::Util;
-use crate::{PKError, Pile, Plurable, TheNuts};
+use crate::{PKError, Pile, Plurable, SOK, TheNuts};
 use std::fmt::{Display, Formatter};
 use std::ops::Index;
 use std::str::FromStr;
@@ -101,6 +101,12 @@ impl Pile for Board {
         v.push(self.turn);
         v.push(self.river);
         v
+    }
+}
+
+impl SOK for Board {
+    fn salright(&self) -> bool {
+        self != &Board::default()
     }
 }
 

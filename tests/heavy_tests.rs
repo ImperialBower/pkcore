@@ -1,4 +1,4 @@
-use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
+use pkcore::analysis::store::db::hup::HUPResult;
 use pkcore::util::data::TestData;
 use pkcore::util::wincounter::win::Win;
 

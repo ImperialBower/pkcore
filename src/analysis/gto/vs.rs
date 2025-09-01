@@ -1,20 +1,86 @@
-use crate::analysis::gto::combo::Combo;
-use crate::analysis::gto::combo_pairs::ComboPairs;
 use crate::analysis::gto::combos::Combos;
+use crate::analysis::gto::odds::WinLoseDraw;
 use crate::analysis::gto::twos::Twos;
+use crate::analysis::store::db::hup::HUPResult;
 use crate::arrays::two::Two;
+use crate::bard::Bard;
+use crate::play::board::Board;
+use crate::play::game::Game;
+use crate::play::hole_cards::HoleCards;
+use crate::play::stages::flop_eval::FlopEval;
+use crate::{GTO, SOK};
+use rusqlite::Connection;
+use std::collections::HashMap;
 use std::fmt::Display;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Versus {
     pub hero: Two,
     pub villain: Combos,
+    pub board: Board,
 }
 
 impl Versus {
     #[must_use]
     pub fn new(hero: Two, villain: Combos) -> Self {
-        Versus { hero, villain }
+        Versus {
+            hero,
+            villain,
+            board: Board::default(),
+        }
+    }
+
+    #[must_use]
+    pub fn new_with_board(hero: Two, villain: Combos, board: Board) -> Self {
+        Versus { hero, villain, board }
+    }
+
+    #[must_use]
+    pub fn combined_odds_at_deal(hups: &[&HUPResult]) -> WinLoseDraw {
+        hups.iter().fold(WinLoseDraw::default(), |acc, hup| acc + hup.odds)
+    }
+
+    #[must_use]
+    pub fn combined_odds_at_flop(&self) -> WinLoseDraw {
+        Versus::combined_odds_from_games(&self.games_at_flop())
+    }
+
+    #[must_use]
+    pub fn combined_odds_at_turn(&self) -> WinLoseDraw {
+        Versus::combined_odds_from_games(&self.games_at_turn())
+    }
+
+    fn combined_odds_from_games(games: &[Game]) -> WinLoseDraw {
+        games
+            .iter()
+            .map(|game| FlopEval::try_from(game.clone()).unwrap())
+            .fold(WinLoseDraw::default(), |acc, fe| acc + WinLoseDraw::from(fe))
+    }
+
+    #[must_use]
+    pub fn games_at_flop(&self) -> Vec<Game> {
+        self.games_from_twos(&self.remaining_at_flop())
+    }
+
+    #[must_use]
+    pub fn games_at_turn(&self) -> Vec<Game> {
+        self.games_from_twos(&self.remaining_at_turn())
+    }
+
+    fn games_from_twos(&self, twos: &Twos) -> Vec<Game> {
+        let mut games = Vec::new();
+
+        for two in &twos.to_vec() {
+            let game = Game::new(HoleCards::from(vec![self.hero, *two]), self.board);
+            games.push(game);
+        }
+
+        games
+    }
+
+    #[must_use]
+    pub fn has_board(&self) -> bool {
+        self.board.salright()
     }
 
     #[must_use]
@@ -22,21 +88,42 @@ impl Versus {
         &self.hero
     }
 
-    #[must_use]
-    pub fn villain(&self) -> &Combos {
-        &self.villain
+    pub fn hups_at_deal(&self, conn: &Connection) -> HashMap<Two, HUPResult> {
+        let mut hm: HashMap<Two, HUPResult> = HashMap::new();
+
+        let remaining = self.explode();
+
+        for two in &remaining.to_vec() {
+            let hup = HUPResult::from_db(conn, &self.hero, two);
+            match hup {
+                Ok(hup) => {
+                    hm.insert(*two, self.hup_flip(hup));
+                }
+                Err(e) => {
+                    log::error!(
+                        "Error retrieving HUPResult for hero {} and villain {}: {}",
+                        self.hero,
+                        two,
+                        e
+                    );
+                }
+            }
+        }
+        hm
     }
 
     #[must_use]
-    pub fn combo_pairs(&self) -> ComboPairs {
-        let twos = self.remaining();
-        let mut cps = ComboPairs::default();
-
-        for two in twos.into_iter() {
-            let combo = Combo::from(two);
-            cps.add(combo, two);
+    pub fn hup_flip(&self, hup: HUPResult) -> HUPResult {
+        if Bard::from(self.hero) == hup.higher {
+            hup
+        } else {
+            hup.flip_mode()
         }
-        cps
+    }
+
+    #[must_use]
+    pub fn villain(&self) -> &Combos {
+        &self.villain
     }
 
     /// The remaining `Twos` that the villain can have, excluding the hero's cards.
@@ -45,6 +132,19 @@ impl Versus {
         Twos::from(self.villain.clone())
             .filter_on_not_card(self.hero.first())
             .filter_on_not_card(self.hero.second())
+    }
+
+    #[must_use]
+    pub fn remaining_at_flop(&self) -> Twos {
+        self.remaining()
+            .filter_on_not_card(self.board.flop.first())
+            .filter_on_not_card(self.board.flop.second())
+            .filter_on_not_card(self.board.flop.third())
+    }
+
+    #[must_use]
+    pub fn remaining_at_turn(&self) -> Twos {
+        self.remaining_at_flop().filter_on_not_card(self.board.turn)
     }
 
     /// All the `Twos` including ones in the hero's hand.
@@ -56,7 +156,21 @@ impl Versus {
 
 impl Display for Versus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Solver {{ hero: {}, villain: {} }}", self.hero, self.villain)
+        if self.board.salright() {
+            write!(
+                f,
+                "Solver {{ hero: {}, villain: {}, board: {}  }}",
+                self.hero, self.villain, self.board
+            )
+        } else {
+            write!(f, "Solver {{ hero: {}, villain: {} }}", self.hero, self.villain)
+        }
+    }
+}
+
+impl GTO for Versus {
+    fn explode(&self) -> Twos {
+        self.remaining()
     }
 }
 
@@ -65,6 +179,8 @@ impl Display for Versus {
 mod arrays__combos__solver_tests {
     use super::*;
     use crate::analysis::gto::combo::Combo;
+    use crate::analysis::gto::combo_pairs::ComboPairs;
+    use crate::analysis::gto::odds::WinLoseDraw;
     use std::collections::HashMap;
     use std::str::FromStr;
 
@@ -253,10 +369,29 @@ mod arrays__combos__solver_tests {
         let expected = ComboPairs::from(combos_pairs_hashmap);
         let actual = solver.combo_pairs();
 
-        println!("{expected}");
-        println!();
-        println!("{actual}");
-
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn hup_flip() {
+        let hero = Two::HAND_KS_KH;
+        let villain = Combos::from_str("KK+").unwrap();
+        let solver = Versus::new(hero, villain);
+
+        let hup = HUPResult {
+            higher: Bard::from(Two::HAND_AS_AH),
+            lower: Bard::from(Two::HAND_KS_KH),
+            odds: WinLoseDraw {
+                wins: 1410336,
+                losses: 292660,
+                draws: 9308,
+            },
+        };
+
+        let flipped_hup = solver.hup_flip(hup.clone());
+
+        assert_eq!(flipped_hup.higher, Bard::from(Two::HAND_KS_KH));
+        assert_eq!(flipped_hup.lower, Bard::from(Two::HAND_AS_AH));
+        assert_eq!(flipped_hup.odds.draws, 9308);
     }
 }

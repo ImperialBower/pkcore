@@ -1,2 +1,2 @@
-pub mod headsup_preflop_result;
+pub mod hup;
 pub mod sqlite;

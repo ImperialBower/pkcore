@@ -25,6 +25,9 @@ use std::error::Error;
 use std::fmt::{Display, Formatter};
 use std::hash::Hash;
 
+use crate::analysis::gto::combo::Combo;
+use crate::analysis::gto::combo_pairs::ComboPairs;
+use crate::analysis::gto::twos::Twos;
 use crate::casino::cashier::chips::Chips;
 use crate::rank::Rank;
 use crate::ranks::Ranks;
@@ -197,16 +200,19 @@ pub trait Betting {
     fn wins(&mut self, winnings: Chips) -> usize;
 }
 
-/// The name of this trait is a pun on pluribus, which is the name of the poker AI group.
-pub trait Plurable {
-    /// Converts a part of the Pluribus log format
-    ///
-    /// # Errors
-    ///
-    /// Throws a `PKError` if the string isn't formatted correctly or the length isn't correct.
-    fn from_pluribus(s: &str) -> Result<Self, PKError>
-    where
-        Self: Sized;
+pub trait GTO {
+    fn combo_pairs(&self) -> ComboPairs {
+        let twos = self.explode();
+        let mut cps = ComboPairs::default();
+
+        for two in twos.into_iter() {
+            let combo = Combo::from(two);
+            cps.add(combo, two);
+        }
+        cps
+    }
+
+    fn explode(&self) -> Twos;
 }
 
 pub trait Pile {
@@ -372,6 +378,18 @@ pub trait Pile {
     }
 
     fn to_vec(&self) -> Vec<Card>;
+}
+
+/// The name of this trait is a pun on pluribus, which is the name of the poker AI group.
+pub trait Plurable {
+    /// Converts a part of the Pluribus log format
+    ///
+    /// # Errors
+    ///
+    /// Throws a `PKError` if the string isn't formatted correctly or the length isn't correct.
+    fn from_pluribus(s: &str) -> Result<Self, PKError>
+    where
+        Self: Sized;
 }
 
 // https://en.wikipedia.org/wiki/Se%C3%B1or_Wences#Catchphrases
@@ -713,13 +731,4 @@ pub trait Shifty {
     fn shifts(&self) -> HashSet<Self>
     where
         Self: Sized;
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
-    }
 }

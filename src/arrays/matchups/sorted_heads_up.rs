@@ -1,5 +1,5 @@
 use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
-use crate::analysis::store::db::headsup_preflop_result::HUPResult;
+use crate::analysis::store::db::hup::HUPResult;
 use crate::analysis::the_nuts::TheNuts;
 use crate::arrays::five::Five;
 use crate::arrays::matchups::masked::{MASKED_UNIQUE, Masked};
@@ -90,6 +90,13 @@ impl SortedHeadsUp {
     #[must_use]
     pub fn contains(&self, two: &Two) -> bool {
         self.is_higher(two) || self.is_lower(two)
+    }
+
+    /// # Errors
+    ///
+    /// Throws `PKError::SqlError` if unable to select from db.
+    pub fn hup_result(&self, conn: &Connection) -> Result<HUPResult, PKError> {
+        HUPResult::from_db(conn, &self.higher, &self.lower)
     }
 
     /// ## Aside

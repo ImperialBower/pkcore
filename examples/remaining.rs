@@ -1,4 +1,4 @@
-use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
+use pkcore::analysis::store::db::hup::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::masked::Masked;
 use pkcore::{PKError, Shifty};
@@ -6,7 +6,7 @@ use rusqlite::Connection;
 
 /// `cargo run --example remaining`
 ///
-/// Run `cargo run --example type8` to get a count of remaining type 8 hands to process.
+/// Run `cargo run --example types_remaining` to get a count of remaining type 8 hands to process.
 fn main() -> Result<(), PKError> {
     let now = std::time::Instant::now();
     env_logger::init();

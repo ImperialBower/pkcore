@@ -1,5 +1,5 @@
 use crate::Shifty;
-use crate::analysis::store::db::headsup_preflop_result::HUPResult;
+use crate::analysis::store::db::hup::HUPResult;
 use crate::arrays::matchups::masked::Masked;
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use std::fmt::{Display, Formatter};
@@ -76,6 +76,7 @@ impl From<&SortedHeadsUp> for Shifter {
 #[allow(non_snake_case)]
 mod arrays__matchups__masks__shift_tests {
     use super::*;
+    use crate::analysis::gto::odds::WinLoseDraw;
     use crate::arrays::matchups::masks::rank_mask::RankMask;
     use crate::arrays::matchups::masks::suit_mask::SuitMask;
     use crate::arrays::matchups::masks::suit_texture::SuitTexture;
@@ -87,9 +88,11 @@ mod arrays__matchups__masks__shift_tests {
         HUPResult {
             higher: Bard::from(Two::HAND_AD_TD),
             lower: Bard::from(Two::HAND_5H_4S),
-            higher_wins: 1108295,
-            lower_wins: 595903,
-            ties: 8106,
+            odds: WinLoseDraw {
+                wins: 1108295,
+                losses: 595903,
+                draws: 8106,
+            },
         }
     }
 

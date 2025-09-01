@@ -1,7 +1,8 @@
-use crate::PKError;
 use crate::analysis::gto::combo::Combo;
 use crate::analysis::gto::combo_range::ComboRange;
+use crate::analysis::gto::twos::Twos;
 use crate::util::Util;
+use crate::{GTO, PKError};
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::str::FromStr;
@@ -344,6 +345,12 @@ impl FromStr for Combos {
             }
         }
         Ok(Combos::from(v))
+    }
+}
+
+impl GTO for Combos {
+    fn explode(&self) -> Twos {
+        Twos::from(self.clone())
     }
 }
 

@@ -1,4 +1,4 @@
-use pkcore::analysis::store::db::headsup_preflop_result::HUPResult;
+use pkcore::analysis::store::db::hup::HUPResult;
 use pkcore::analysis::store::db::sqlite::Sqlable;
 use pkcore::arrays::matchups::masked::Masked;
 use rusqlite::Connection;
@@ -10,11 +10,11 @@ fn main() {
     let huprs = HUPResult::select_all(&conn);
     let mut mappy: HashMap<u64, Vec<HUPResult>> = HashMap::new();
     for hupr in huprs.clone() {
-        mappy.insert(hupr.higher_wins, Vec::new());
+        mappy.insert(hupr.odds.wins, Vec::new());
     }
 
     for hupr in huprs {
-        mappy.get_mut(&hupr.higher_wins).expect("REASON").push(hupr);
+        mappy.get_mut(&hupr.odds.wins).expect("REASON").push(hupr);
     }
 
     for m in mappy.keys() {

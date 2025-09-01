@@ -1,16 +1,14 @@
 use clap::Parser;
-use pkcore::PKError;
 use pkcore::analysis::gto::combos::Combos;
-use pkcore::analysis::gto::twos::Twos;
+use pkcore::analysis::gto::odds::WinLoseDraw;
 use pkcore::analysis::gto::vs::Versus;
+use pkcore::analysis::store::db::hup::HUPResult;
 use pkcore::arrays::two::Two;
+use pkcore::play::board::Board;
+use pkcore::play::stages::flop_eval::FlopEval;
+use pkcore::{GTO, PKError};
+use rusqlite::Connection;
 use std::str::FromStr;
-
-// use ratatui::{
-//     prelude::*,
-//     widgets::{Block, Borders, Cell, Row, Table},
-// };
-// use std::io::{self, stdout};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -20,6 +18,9 @@ struct Args {
 
     #[clap(short = 'v', long)]
     villain: String,
+
+    #[clap(short = 'b', long, required = false)]
+    board: Option<Board>,
 
     #[clap(short = 'n', long)]
     nuts: bool,
@@ -32,66 +33,53 @@ fn main() -> Result<(), PKError> {
 
     let args = Args::parse();
 
-    let solver = Versus::new(Two::from_str(&*args.player)?, Combos::from_str(&*args.villain)?);
+    let solver: Versus;
+
+    if let Some(board) = args.board {
+        solver = Versus::new_with_board(Two::from_str(&*args.player)?, Combos::from_str(&*args.villain)?, board);
+    } else {
+        solver = Versus::new(Two::from_str(&*args.player)?, Combos::from_str(&*args.villain)?);
+    }
 
     println!("{}", solver);
-
-    let twos = Twos::from(solver.villain()).to_vec();
-
     println!();
-    println!("ALL:");
-    for (i, combo) in twos.into_iter().enumerate() {
-        if i % 10 == 0 {
-            println!();
-        }
-        print!(" {combo} ");
-    }
+    println!("{}", solver.villain.combo_pairs());
 
     println!();
 
-    let twos = solver.remaining().to_vec();
-
-    println!();
-    println!("BLOCKED:");
-
-    for (i, combo) in twos.into_iter().enumerate() {
-        if i % 10 == 0 {
-            println!();
-        }
-        print!(" {combo} ");
-    }
-
-    println!();
-    println!();
-
-    let combo_pairs = solver.combo_pairs();
-    println!("{combo_pairs}");
+    println!("{}", solver.combo_pairs());
     println!();
     println!("¹⁄₁₆");
 
-    // // Set up terminal backend (Crossterm example)
-    // let mut stdout = stdout();
-    // let backend = ratatui::backend::CrosstermBackend::new(&mut stdout);
-    // let mut terminal = Terminal::new(backend)?;
-    //
-    // // Example: fill with "AA", "AK", etc.
-    // let combos: Vec<Vec<String>> = (0..13)
-    //     .map(|i| {
-    //         (0..13)
-    //             .map(|j| format!("{}{}", (b'A' + i as u8) as char, (b'A' + j as u8) as char))
-    //             .collect()
-    //     })
-    //     .collect();
-    //
-    // terminal.draw(|f| {
-    //     let rows = combos
-    //         .iter()
-    //         .map(|row| Row::new(row.iter().map(|c| Cell::from(c.as_str()))));
-    //     let table = Table::new(rows)
-    //         .block(Block::default().borders(Borders::ALL).title("Combos"))
-    //         .widths(&vec![Constraint::Length(5); 13]);
-    //     f.render_widget(table, f.size());
-    // })?;
+    println!();
+    println!();
+
+    let conn = Connection::open("generated/hups.db").unwrap();
+
+    let hups = solver.hups_at_deal(&conn);
+
+    for key in hups.keys() {
+        println!("{}", hups.get(key).unwrap());
+    }
+
+    let results = Versus::combined_odds_at_deal(&hups.values().collect::<Vec<&HUPResult>>());
+    println!();
+    println!("{}", results);
+
+    if solver.has_board() {
+        let games = solver.games_at_flop();
+        for game in &games {
+            let fe = FlopEval::try_from(game.clone()).unwrap();
+            println!("{fe}");
+            println!("{}", WinLoseDraw::from(fe));
+        }
+        println!("FLOP: {}", solver.combined_odds_at_flop());
+        println!("TURN: {}", solver.combined_odds_at_turn());
+
+        // for game in &games {
+        //     game.river_display_results();
+        // }
+    }
 
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())
