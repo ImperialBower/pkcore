@@ -1,5 +1,6 @@
 use clap::Parser;
 use pkcore::analysis::gto::combos::Combos;
+use pkcore::analysis::gto::odds::WinLoseDraw;
 use pkcore::analysis::gto::vs::Versus;
 use pkcore::analysis::store::db::hup::HUPResult;
 use pkcore::arrays::two::Two;
@@ -8,7 +9,6 @@ use pkcore::play::stages::flop_eval::FlopEval;
 use pkcore::{GTO, PKError};
 use rusqlite::Connection;
 use std::str::FromStr;
-use pkcore::analysis::gto::odds::WinLoseDraw;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -67,14 +67,14 @@ fn main() -> Result<(), PKError> {
     println!("{}", results);
 
     if solver.has_board() {
-        // let games = solver.games_at_flop();
-        // for game in &games {
-        //     let fe = FlopEval::try_from(game.clone()).unwrap();
-        //     println!("{fe}");
-        //     println!(">>>{}", WinLoseDraw::from(fe));
-        //
-        // }
-        println!("{}", solver.combined_odds_at_flop());
+        let games = solver.games_at_flop();
+        for game in &games {
+            let fe = FlopEval::try_from(game.clone()).unwrap();
+            println!("{fe}");
+            println!("{}", WinLoseDraw::from(fe));
+        }
+        println!("FLOP: {}", solver.combined_odds_at_flop());
+        println!("TURN: {}", solver.combined_odds_at_turn());
 
         // for game in &games {
         //     game.river_display_results();

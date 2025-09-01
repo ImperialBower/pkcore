@@ -1,6 +1,6 @@
+use crate::play::stages::flop_eval::FlopEval;
 use crate::util::Percentage;
 use serde::{Deserialize, Serialize};
-use crate::play::stages::flop_eval::FlopEval;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 #[serde(rename_all = "PascalCase")]

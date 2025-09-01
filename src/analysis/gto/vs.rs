@@ -7,11 +7,11 @@ use crate::bard::Bard;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
+use crate::play::stages::flop_eval::FlopEval;
 use crate::{GTO, SOK};
 use rusqlite::Connection;
 use std::collections::HashMap;
 use std::fmt::Display;
-use crate::play::stages::flop_eval::FlopEval;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Versus {
@@ -42,19 +42,35 @@ impl Versus {
 
     #[must_use]
     pub fn combined_odds_at_flop(&self) -> WinLoseDraw {
-        // self.games_at_flop()
-        //     .iter()
-        //     .map(|game| FlopEval::try_from(game.clone()).unwrap())
-        //     .fold(WinLoseDraw::default(), |acc, hup| acc + hup.odds)
-        todo!()
+        Versus::combined_odds_from_games(&self.games_at_flop())
+    }
+
+    #[must_use]
+    pub fn combined_odds_at_turn(&self) -> WinLoseDraw {
+        Versus::combined_odds_from_games(&self.games_at_turn())
+    }
+
+    fn combined_odds_from_games(games: &[Game]) -> WinLoseDraw {
+        games
+            .iter()
+            .map(|game| FlopEval::try_from(game.clone()).unwrap())
+            .fold(WinLoseDraw::default(), |acc, fe| acc + WinLoseDraw::from(fe))
     }
 
     #[must_use]
     pub fn games_at_flop(&self) -> Vec<Game> {
-        let mut games = Vec::new();
-        let remaining = self.remaining_at_flop();
+        self.games_from_twos(&self.remaining_at_flop())
+    }
 
-        for two in &remaining.to_vec() {
+    #[must_use]
+    pub fn games_at_turn(&self) -> Vec<Game> {
+        self.games_from_twos(&self.remaining_at_turn())
+    }
+
+    fn games_from_twos(&self, twos: &Twos) -> Vec<Game> {
+        let mut games = Vec::new();
+
+        for two in &twos.to_vec() {
             let game = Game::new(HoleCards::from(vec![self.hero, *two]), self.board);
             games.push(game);
         }
