@@ -9,6 +9,7 @@ pub enum PlayState {
     Check,
     Call,
     Raise,
+    Out,
     Fubar,
 }
 

@@ -13,6 +13,7 @@ exclude = [".github/workflows/*", "examples/*", ".gitignore", "Cargo.lock"]
 
 [dependencies]
 bitvec = { version = "1.0.1", features = ["alloc",  "atomic", "std", "serde", "testing" ] }
+cardpack = "0.6.2"
 csv = "1.3.1"
 indexmap = { version = "2.10", features = ["rayon"] }
 itertools = "0.14"
