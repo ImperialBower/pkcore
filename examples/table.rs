@@ -1,14 +1,21 @@
 use pkcore::PKError;
 use pkcore::arrays::hole_cards::twos::StartingHands;
+use pkcore::casino::table::Table;
 use pkcore::util::terminal::Terminal;
 use pkcore::util::wincounter::results::Results;
 
 /// `cargo run --example table`
 fn main() {
     env_logger::init();
-    loop {
-        read_input();
-    }
+    // loop {
+    //     read_input();
+    // }
+    let mut table = Table::default();
+
+    println!("{table}");
+    Terminal::pause("deal the cards> ");
+
+
 }
 
 fn read_input() {

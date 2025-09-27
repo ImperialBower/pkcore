@@ -8,6 +8,7 @@ pub struct Player {
     pub id: Uuid,
     pub handle: String,
     pub chips: Chips,
+    pub bet: Chips,
 }
 
 impl Player {
@@ -17,6 +18,7 @@ impl Player {
             id: Uuid::new_v4(),
             handle,
             chips: Chips::default(),
+            bet: Chips::default(),
         }
     }
 
@@ -26,6 +28,7 @@ impl Player {
             id: Uuid::new_v4(),
             handle,
             chips: Chips::new(stack),
+            bet: Chips::default(),
         }
     }
 
@@ -35,6 +38,7 @@ impl Player {
             id: Uuid::new_v4(),
             handle: Name::generate(),
             chips: Chips::new(stack),
+            bet: Chips::default(),
         }
     }
 }

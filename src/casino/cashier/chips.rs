@@ -11,6 +11,26 @@ impl Chips {
     pub fn new(stack: usize) -> Chips {
         Chips(stack)
     }
+
+    #[must_use]
+    pub fn stack(&self) -> usize {
+        self.0
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
+
+    #[must_use]
+    pub fn remove(&mut self, chips: Chips) -> Option<Chips> {
+        if self.is_empty() || (chips.stack() > self.stack()) {
+            None
+        } else {
+            self.0 -= chips.0;
+            Some(chips)
+        }
+    }
 }
 
 impl Add for Chips {
