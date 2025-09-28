@@ -26,6 +26,6 @@ impl Seat {
 
 impl fmt::Display for Seat {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Player: {}, Cards: {}", self.player, self.cards)
+        write!(f, "Cards: {}, Player: {}", self.cards, self.player)
     }
 }

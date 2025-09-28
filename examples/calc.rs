@@ -90,6 +90,8 @@ struct Args {
 /// cargo run --example calc -- -d "3♠ 9♦ J♠ 8♦ 2♠ Q♠ 6♣ 4♠" -b "Q♥ 5♥ 5♣ 7♥ 4♥" -- Two Pair vs Straight Draw
 ///
 /// cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠" HSP THE HAND Negreanu/Hansen
+///     https://www.youtube.com/watch?v=vjM60lqRhPg
+///     https://www.youtube.com/watch?v=fEEW06iX4n8
 /// cargo run --example calc -- -d "K♠ Q♠ 5♦ K♥ 5♥ J♥" -b "J♦ T♣ A♥ K♣ 2♣" -n -- Flopping the nuts
 /// cargo run --example calc -- -d "A♣ Q♠ T♦ T♣ 6♦ 4♦ 2♥ 2♦" -b "J♦ J♠ J♥ A♥ 3♦" HSP S04E08 Harman/Safai
 /// cargo run --example calc -- -d "T♦ 2♦ 9♠ 6♥" -b "3♠ 8♦ A♦" HSP S04E08 Elezra/Negreanu

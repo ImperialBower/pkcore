@@ -41,7 +41,32 @@ pub enum GamePhase {
     DealRiver,
     RiverBetting,
     AwardWinners,
-    Razz,
+}
+
+impl GamePhase {
+    #[must_use]
+    pub fn next(&self) -> GamePhase {
+        match self {
+            GamePhase::NewHand => GamePhase::ShuffleNewDeck,
+            GamePhase::ShuffleNewDeck => GamePhase::ForcedBets,
+            GamePhase::ForcedBets => GamePhase::BurnCardBeforeFlop,
+            GamePhase::BurnCardBeforeFlop => GamePhase::DealHoleCards,
+            GamePhase::DealHoleCards => GamePhase::PreFlopBetting,
+            GamePhase::PreFlopBetting => GamePhase::ConsolidatePreFlopBets,
+            GamePhase::ConsolidatePreFlopBets => GamePhase::DealFlop,
+            GamePhase::DealFlop => GamePhase::FlopBetting,
+            GamePhase::FlopBetting => GamePhase::ConsolidateFlopBets,
+            GamePhase::ConsolidateFlopBets => GamePhase::BurnCardBeforeTurn,
+            GamePhase::BurnCardBeforeTurn => GamePhase::DealTurn,
+            GamePhase::DealTurn => GamePhase::TurnBetting,
+            GamePhase::TurnBetting => GamePhase::ConsolidateTurnBets,
+            GamePhase::ConsolidateTurnBets => GamePhase::BurnCardBeforeRiver,
+            GamePhase::BurnCardBeforeRiver => GamePhase::DealRiver,
+            GamePhase::DealRiver => GamePhase::RiverBetting,
+            GamePhase::RiverBetting => GamePhase::AwardWinners,
+            GamePhase::AwardWinners => GamePhase::NewHand,
+        }
+    }
 }
 
 impl std::fmt::Display for GamePhase {
@@ -65,7 +90,6 @@ impl std::fmt::Display for GamePhase {
             GamePhase::DealRiver => write!(f, "Deal River"),
             GamePhase::RiverBetting => write!(f, "River Betting"),
             GamePhase::AwardWinners => write!(f, "Award Winners"),
-            GamePhase::Razz => write!(f, "Razz Phase"),
         }
     }
 }

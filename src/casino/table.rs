@@ -1,26 +1,29 @@
+use crate::casino::cashier::chips::Chips;
 use crate::casino::player::Player;
 use crate::casino::table::seat::Seat;
 use crate::games::{GamePhase, GameType};
-use std::fmt;
+use bint::BintCell;
 use cardpack::prelude::{BasicPile, DeckedBase, Pile, Standard52};
-use crate::casino::cashier::chips::Chips;
+use std::cell::Cell;
+use std::fmt;
 
 pub mod position;
 pub mod seat;
 
 /// There are up to 3 total burn cards in a Texas Hold'em poker hand. Before dealing the flop,
 /// turn, or river, the dealer is required to take the top card from the deck and burn (discard) it.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Table {
     pub id: String,
     pub game: GameType,
-    pub phase: GamePhase,
+    pub phase: Cell<GamePhase>,
     pub seats: Vec<Seat>,
-    pub dealer: u8,
+    pub dealer: BintCell,
+    pub action_to: BintCell,
     pub deck: BasicPile,
     pub board: BasicPile,
     pub discards: BasicPile,
-    pub pot: Chips,
+    pub pot: Cell<Chips>,
 }
 
 impl Table {
@@ -38,7 +41,6 @@ impl Table {
         seats
     }
 
-    #[must_use]
     pub fn deal(&mut self) {
         match self.game {
             GameType::NoLimitHoldem => self.deal_cards(2),
@@ -47,24 +49,32 @@ impl Table {
         }
     }
 
-    #[must_use]
     pub fn deal_cards(&mut self, num_cards: usize) {
+        todo!()
+    }
+
+    pub fn determine_utg(&self) -> u8 {
+        // let bint = Bint::
         todo!()
     }
 }
 
 impl Default for Table {
     fn default() -> Self {
+        let seats = Table::generate_seats(6, 10_000);
+        #[allow(clippy::pedantic)] // allow cast
+        let player_count = seats.len() as u8;
         Table {
             id: "No Limit Hold'em Table".to_string(),
             game: GameType::NoLimitHoldem,
-            phase: GamePhase::NewHand,
-            seats: Table::generate_seats(6, 10_000),
-            dealer: 0,
+            phase: GamePhase::NewHand.into(),
+            seats,
+            dealer: BintCell::new(player_count),
+            action_to: BintCell::new(player_count),
             deck: Pile::<Standard52>::basic_pile(),
             board: BasicPile::default(),
             discards: BasicPile::default(),
-            pot: Chips::default(),
+            pot: Chips::default().into(),
         }
     }
 }
@@ -74,13 +84,25 @@ impl fmt::Display for Table {
         writeln!(f, "Table: {}", self.id)?;
         writeln!(f, "Game: {:?}", self.game)?;
         writeln!(f, "Phase: {:?}", self.phase)?;
-        writeln!(f, "Dealer Position: {}", self.dealer + 1)?;
-        if !self.pot.is_empty() {
-            writeln!(f, "Pot Size: {}", self.pot)?;
+        writeln!(f, "Dealer Position: {}", self.dealer.value() + 1)?;
+        if !self.pot.get().is_empty() {
+            writeln!(f, "Pot Size: {}", self.pot.get())?;
         }
         for (i, seat) in self.seats.iter().enumerate() {
             writeln!(f, "Seat {}: {}", i + 1, seat)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod casino__table_tests {
+    use super::*;
+
+    #[test]
+    fn deck_cell() {
+        let pile = Pile::<Standard52>::basic_pile();
+        let cell: Cell<BasicPile> = Cell::new(pile);
     }
 }

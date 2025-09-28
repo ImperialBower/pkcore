@@ -97,6 +97,30 @@ impl Display for Chips {
     }
 }
 
+impl From<usize> for Chips {
+    fn from(value: usize) -> Self {
+        Chips::new(value)
+    }
+}
+
+impl From<u8> for Chips {
+    fn from(value: u8) -> Self {
+        Chips::new(value as usize)
+    }
+}
+
+impl From<u16> for Chips {
+    fn from(value: u16) -> Self {
+        Chips::new(value as usize)
+    }
+}
+
+impl From<u32> for Chips {
+    fn from(value: u32) -> Self {
+        Chips::new(value as usize)
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod casino__chips_tests {
