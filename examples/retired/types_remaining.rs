@@ -4,7 +4,7 @@ use rusqlite::Connection;
 
 /// `cargo run --example types_remaining`
 fn main() {
-    let conn = Connection::open("generated/hups.db").unwrap();
+    let conn = Connection::open("../../generated/hups.db").unwrap();
 
     let type_eight = HUPResult::remaining(&conn, MASKED_UNIQUE.clone());
 

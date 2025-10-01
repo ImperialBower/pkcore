@@ -6,7 +6,7 @@ use std::collections::HashMap;
 
 /// `cargo run --example gaps`
 fn main() {
-    let conn = Connection::open("generated/dhups.db").unwrap();
+    let conn = Connection::open("../../generated/dhups.db").unwrap();
     let huprs = HUPResult::select_all(&conn);
     let mut mappy: HashMap<u64, Vec<HUPResult>> = HashMap::new();
     for hupr in huprs.clone() {

@@ -5,12 +5,11 @@ use pkcore::util::csv::distinct_shus_from_csv_as_masked_vec;
 use pkcore::util::terminal::Terminal;
 use rusqlite::Connection;
 
-/// `cargo run --example insert_distinct_reverse`
+/// `cargo run --example insert_distinct`
 fn main() {
     env_logger::init();
 
     let mut distinct = distinct_shus_from_csv_as_masked_vec();
-    distinct.reverse();
     let conn = get_connection();
 
     loop {
@@ -48,7 +47,7 @@ fn read_input(conn: &Connection, distinct: &mut Vec<Masked>) {
 }
 
 fn get_connection() -> Connection {
-    let conn = Connection::open("generated/hups.db").unwrap();
+    let conn = Connection::open("../../generated/hups.db").unwrap();
     HUPResult::create_table(&conn).expect("TODO: panic message");
     conn
 }

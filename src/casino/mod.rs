@@ -1,3 +1,3 @@
 pub mod cashier;
-pub mod players;
-pub mod tables;
+pub mod player;
+pub mod table;

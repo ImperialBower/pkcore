@@ -8,7 +8,7 @@ use rusqlite::Connection;
 fn main() -> Result<(), PKError> {
     let mut unique = SortedHeadsUp::unique()?;
     println!("{} total unique shus", unique.len());
-    let conn = Connection::open("generated/hups.db").unwrap();
+    let conn = Connection::open("../../generated/hups.db").unwrap();
 
     if !HUPResult::db_is_valid(&conn) {
         return Err(PKError::SqlError);

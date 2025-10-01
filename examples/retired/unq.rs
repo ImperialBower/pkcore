@@ -8,7 +8,7 @@ use rusqlite::Connection;
 
 // `cargo run --example unq`
 fn main() -> Result<(), PKError> {
-    let conn = match Connection::open("generated/hups_TEST.db") {
+    let conn = match Connection::open("../../generated/hups_TEST.db") {
         Ok(c) => c,
         Err(_) => return Err(PKError::SqlError),
     };

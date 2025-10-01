@@ -11,6 +11,26 @@ impl Chips {
     pub fn new(stack: usize) -> Chips {
         Chips(stack)
     }
+
+    #[must_use]
+    pub fn stack(&self) -> usize {
+        self.0
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.0 == 0
+    }
+
+    #[must_use]
+    pub fn remove(&mut self, chips: Chips) -> Option<Chips> {
+        if self.is_empty() || (chips.stack() > self.stack()) {
+            None
+        } else {
+            self.0 -= chips.0;
+            Some(chips)
+        }
+    }
 }
 
 impl Add for Chips {
@@ -74,6 +94,30 @@ impl Betting for Chips {
 impl Display for Chips {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.size().separate_with_commas())
+    }
+}
+
+impl From<usize> for Chips {
+    fn from(value: usize) -> Self {
+        Chips::new(value)
+    }
+}
+
+impl From<u8> for Chips {
+    fn from(value: u8) -> Self {
+        Chips::new(value as usize)
+    }
+}
+
+impl From<u16> for Chips {
+    fn from(value: u16) -> Self {
+        Chips::new(value as usize)
+    }
+}
+
+impl From<u32> for Chips {
+    fn from(value: u32) -> Self {
+        Chips::new(value as usize)
     }
 }
 

@@ -9,7 +9,7 @@ use std::collections::HashSet;
 /// `cargo run --example insert`
 fn main() {
     let mut distinct = MASKED_DISTINCT.clone();
-    let conn = Connection::open("generated/hups.db").unwrap();
+    let conn = Connection::open("../../generated/hups.db").unwrap();
     loop {
         read_input(&conn, &mut distinct);
     }
