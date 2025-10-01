@@ -49,7 +49,7 @@ impl Table {
         }
     }
 
-    pub fn deal_cards(&mut self, num_cards: usize) {
+    pub fn deal_cards(&mut self, _num_cards: usize) {
         todo!()
     }
 
@@ -99,4 +99,19 @@ impl fmt::Display for Table {
 #[allow(non_snake_case)]
 mod casino__table_tests {
     use super::*;
+
+    #[test]
+    fn default() {
+        let table = Table::default();
+        assert_eq!("No Limit Hold'em Table", table.id);
+        assert_eq!(GameType::NoLimitHoldem, table.game);
+        assert_eq!(GamePhase::NewHand, table.phase.get());
+        assert_eq!(6, table.seats.len());
+        assert_eq!(0, table.dealer.value());
+        assert_eq!(0, table.action_to.value());
+        assert_eq!(52, table.deck.len());
+        assert_eq!(52, table.board.len());
+        assert_eq!(52, table.discards.len());
+        assert!(table.pot.get().is_empty());
+    }
 }

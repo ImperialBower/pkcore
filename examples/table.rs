@@ -8,20 +8,20 @@ fn main() {
     // loop {
     //     read_input();
     // }
-    let mut table = Table::default();
+    let table = Table::default();
 
     println!("{table}");
     Terminal::pause("deal the cards> ");
 }
 
-fn read_input() {
+fn _read_input() {
     loop {
         Terminal::pause("step> ");
-        work();
+        let _ = _work();
     }
 }
 
-fn work() -> Result<(), PKError> {
+fn _work() -> Result<(), PKError> {
     let now = std::time::Instant::now();
 
     println!("{}", now.elapsed().as_secs());
