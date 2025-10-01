@@ -3,7 +3,7 @@ use crate::casino::player::Player;
 use crate::casino::table::seat::Seat;
 use crate::games::{GamePhase, GameType};
 use bint::BintCell;
-use cardpack::prelude::{BasicPile, DeckedBase, Pile, Standard52};
+use cardpack::prelude::*;
 use std::cell::Cell;
 use std::fmt;
 
@@ -20,9 +20,9 @@ pub struct Table {
     pub seats: Vec<Seat>,
     pub dealer: BintCell,
     pub action_to: BintCell,
-    pub deck: BasicPile,
-    pub board: BasicPile,
-    pub discards: BasicPile,
+    pub deck: BasicPileCell,
+    pub board: BasicPileCell,
+    pub discards: BasicPileCell,
     pub pot: Cell<Chips>,
 }
 
@@ -34,7 +34,7 @@ impl Table {
             let seat_number = i + 1;
             let seat = Seat {
                 player: Player::new_with_chips(format!("Player {seat_number}"), stack),
-                cards: BasicPile::default(),
+                cards: BasicPileCell::default(),
             };
             seats.push(seat);
         }
@@ -71,9 +71,9 @@ impl Default for Table {
             seats,
             dealer: BintCell::new(player_count),
             action_to: BintCell::new(player_count),
-            deck: Pile::<Standard52>::basic_pile(),
-            board: BasicPile::default(),
-            discards: BasicPile::default(),
+            deck: Standard52::deck_cell(),
+            board: Standard52::deck_cell(),
+            discards: Standard52::deck_cell(),
             pot: Chips::default().into(),
         }
     }
@@ -99,10 +99,4 @@ impl fmt::Display for Table {
 #[allow(non_snake_case)]
 mod casino__table_tests {
     use super::*;
-
-    #[test]
-    fn deck_cell() {
-        let pile = Pile::<Standard52>::basic_pile();
-        let cell: Cell<BasicPile> = Cell::new(pile);
-    }
 }

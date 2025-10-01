@@ -107,7 +107,7 @@ use std::fs::File;
 /// `cargo run --example preflop`
 fn main() {
     // TODO TD: There should be an easy way to cast this into our error.
-    let conn = Connection::open("generated/hups.db").unwrap();
+    let conn = Connection::open("../../generated/hups.db").unwrap();
     HUPResult::create_table(&conn).unwrap();
     let mut rdr = reader();
 

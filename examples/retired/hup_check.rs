@@ -7,7 +7,7 @@ use rusqlite::Connection;
 fn main() -> Result<(), rusqlite::Error> {
     env_logger::init();
 
-    let conn = Connection::open("generated/hups.db")?;
+    let conn = Connection::open("../../generated/hups.db")?;
     match HUPResult::check_db(&conn) {
         Ok(count) => println!("HUP Check passes! {count} unique entries"),
         Err(_) => println!("DB misaligned"),

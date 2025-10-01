@@ -198,7 +198,7 @@ use std::collections::HashSet;
 /// Process finished with exit code 0
 /// ```
 fn main() {
-    let conn = Connection::open("generated/hups.db").unwrap();
+    let conn = Connection::open("../../generated/hups.db").unwrap();
     HUPResult::create_table(&conn).unwrap();
 
     let mut hs = HashSet::new();
