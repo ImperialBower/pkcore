@@ -1,0 +1,27 @@
+[package]
+name = "web-gto"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Web framework
+warp = "0.3"
+tokio = { version = "1.40", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+
+# JSON serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Poker core library
+pkcore = { path = ".." }
+
+# Database
+rusqlite = { version = "0.34", features = ["bundled"] }
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# Error handling
+anyhow = "1.0"

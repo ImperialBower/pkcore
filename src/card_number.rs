@@ -1,9 +1,10 @@
 use crate::PKError;
+use cardpack::prelude::{BasicCard, CKCRevised};
 use strum::EnumIter;
 
 pub type CKCNumber = u32;
 
-//region cardnumbers
+//region BasicCards
 const CKC_AS: CKCNumber = 0b010000000000001000110000101001;
 const CKC_KS: CKCNumber = 0b001000000000001000101100100101;
 const CKC_QS: CKCNumber = 0b000100000000001000101000011111;
@@ -118,6 +119,15 @@ pub enum CardNumber {
     DeuceClubs = CKC_2C,
 }
 
+impl TryFrom<BasicCard> for CardNumber {
+    type Error = PKError;
+
+    #[allow(clippy::cast_possible_truncation)]
+    fn try_from(basic_card: BasicCard) -> Result<Self, Self::Error> {
+        CardNumber::try_from(basic_card.get_ckc_number() as u32)
+    }
+}
+
 impl TryFrom<u32> for CardNumber {
     type Error = PKError;
 
@@ -181,5 +191,20 @@ impl TryFrom<u32> for CardNumber {
 
             _ => Err(PKError::InvalidCardNumber),
         }
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod card_number_tests {
+    use super::*;
+    use cardpack::prelude::FrenchBasicCard;
+
+    #[test]
+    fn try_from__basic_card() {
+        assert_eq!(
+            CardNumber::AceClubs,
+            CardNumber::try_from(FrenchBasicCard::ACE_CLUBS).unwrap()
+        );
     }
 }

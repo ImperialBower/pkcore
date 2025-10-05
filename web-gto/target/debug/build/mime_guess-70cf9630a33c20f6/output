@@ -1,0 +1,1 @@
+cargo:rustc-env=MIME_TYPES_GENERATED_PATH=/Users/christoph/src/github.com/ImperialBower/pkcore/web-gto/target/debug/build/mime_guess-70cf9630a33c20f6/out/mime_types_generated.rs

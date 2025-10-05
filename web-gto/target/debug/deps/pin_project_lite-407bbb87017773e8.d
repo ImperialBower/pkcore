@@ -1,0 +1,5 @@
+/Users/christoph/src/github.com/ImperialBower/pkcore/web-gto/target/debug/deps/pin_project_lite-407bbb87017773e8.d: /Users/christoph/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-project-lite-0.2.16/src/lib.rs
+
+/Users/christoph/src/github.com/ImperialBower/pkcore/web-gto/target/debug/deps/libpin_project_lite-407bbb87017773e8.rmeta: /Users/christoph/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-project-lite-0.2.16/src/lib.rs
+
+/Users/christoph/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/pin-project-lite-0.2.16/src/lib.rs:

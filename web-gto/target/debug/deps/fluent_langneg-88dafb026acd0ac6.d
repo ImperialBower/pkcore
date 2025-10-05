@@ -1,0 +1,8 @@
+/Users/christoph/src/github.com/ImperialBower/pkcore/web-gto/target/debug/deps/fluent_langneg-88dafb026acd0ac6.d: /Users/christoph/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fluent-langneg-0.13.0/src/lib.rs /Users/christoph/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fluent-langneg-0.13.0/src/accepted_languages.rs /Users/christoph/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fluent-langneg-0.13.0/src/negotiate/mod.rs /Users/christoph/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fluent-langneg-0.13.0/src/negotiate/likely_subtags.rs
+
+/Users/christoph/src/github.com/ImperialBower/pkcore/web-gto/target/debug/deps/libfluent_langneg-88dafb026acd0ac6.rmeta: /Users/christoph/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fluent-langneg-0.13.0/src/lib.rs /Users/christoph/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fluent-langneg-0.13.0/src/accepted_languages.rs /Users/christoph/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fluent-langneg-0.13.0/src/negotiate/mod.rs /Users/christoph/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fluent-langneg-0.13.0/src/negotiate/likely_subtags.rs
+
+/Users/christoph/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fluent-langneg-0.13.0/src/lib.rs:
+/Users/christoph/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fluent-langneg-0.13.0/src/accepted_languages.rs:
+/Users/christoph/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fluent-langneg-0.13.0/src/negotiate/mod.rs:
+/Users/christoph/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/fluent-langneg-0.13.0/src/negotiate/likely_subtags.rs:

@@ -42,6 +42,7 @@ pub mod bard;
 pub mod card;
 pub mod card_number;
 pub mod cards;
+pub mod cards_cell;
 pub mod casino;
 pub mod deck;
 pub mod games;
@@ -51,7 +52,6 @@ pub mod rank;
 pub mod ranks;
 pub mod suit;
 pub mod util;
-
 // region CONSTANTS
 
 /// See Cactus Kev's explanation of [unique vs. distinct](https://suffe.cool/poker/evaluator.html)

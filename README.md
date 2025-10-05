@@ -12,7 +12,7 @@ This code is a complete rewrite from scratch of my [Fudd](https://github.com/Imp
 
 * Folded [ckc-rs](https://github.com/ContractBridge/ckc-rs) crate into the repo.
 * Folded [wincounter](https://github.com/ImperialBower/wincounter) crate into the repo.
-* Removed [cardpack.rs](https://github.com/ImperialBower/cardpack.rs) dependency
+* ~~Removed [cardpack.rs](https://github.com/ImperialBower/cardpack.rs) dependency~~ Added back in for BasicPileCell.
 
 ## TODO:
 
