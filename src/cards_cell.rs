@@ -112,6 +112,42 @@ impl CardsCell {
         length
     }
 
+    /// ```
+    /// use pkcore::card::Card;
+    /// use pkcore::cards_cell::CardsCell;
+    ///
+    /// let cards = CardsCell::default();
+    ///
+    /// cards.insert(Card::NINE_SPADES);
+    ///
+    /// assert_eq!(cards.to_string(), "9♠");
+    /// ```
+    pub fn insert(&self, card: Card) {
+        let mut internal = self.0.take();
+        internal.insert(card);
+        self.0.set(internal);
+    }
+
+    /// ```
+    /// use pkcore::cards::Cards;
+    /// use pkcore::cards_cell::CardsCell;
+    /// use std::str::FromStr;
+    ///
+    /// let cards = CardsCell::default();
+    /// let to_insert = Cards::from_str("9♠ 8♠ T♠").unwrap();
+    ///
+    /// cards.insert_all(to_insert);
+    ///
+    /// assert_eq!(cards.to_string(), "9♠ 8♠ T♠");
+    /// ```
+    pub fn insert_all(&self, cards: Cards) {
+        let mut internal = self.0.take();
+        for card in cards {
+            internal.insert(card);
+        }
+        self.0.set(internal);
+    }
+
     #[must_use]
     pub fn shuffle(&self) -> Self {
         let internal = self.clone();

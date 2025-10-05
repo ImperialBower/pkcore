@@ -43,27 +43,27 @@ fn main() -> Result<(), PKError> {
 
     println!("{}", solver);
     println!();
+    println!("Villain combos before your blockers:");
     println!("{}", solver.villain.combo_pairs());
 
     println!();
 
+    println!("Villain combos after your blockers:");
     println!("{}", solver.combo_pairs());
-    println!();
-    println!("¹⁄₁₆");
-
-    println!();
     println!();
 
     let conn = Connection::open("generated/hups.db").unwrap();
 
     let hups = solver.hups_at_deal(&conn);
 
+    println!("Odds per hand matchup:");
     for key in hups.keys() {
         println!("{}", hups.get(key).unwrap());
     }
 
     let results = Versus::combined_odds_at_deal(&hups.values().collect::<Vec<&HUPResult>>());
     println!();
+    println!("Consolidated odds:");
     println!("{}", results);
 
     if solver.has_board() {
@@ -81,6 +81,7 @@ fn main() -> Result<(), PKError> {
         // }
     }
 
+    println!();
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())
 }

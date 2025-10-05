@@ -131,6 +131,9 @@ pub struct SevenFiveBCM {
 }
 
 impl SevenFiveBCM {
+    /// This file is a little under 5GB in size. Please ask the author for a link
+    /// if you don't want to generate it yourself with the `examples/generate_bcm.rs` utility.
+    /// TBH, I don't remember how long it took to generate.
     pub const DEFAULT_PKCORE_75BCM_CSV_PATH: &'static str = "generated/bcm.original.csv";
 
     #[must_use]
