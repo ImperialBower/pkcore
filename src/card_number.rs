@@ -3,7 +3,7 @@ use strum::EnumIter;
 
 pub type CKCNumber = u32;
 
-//region cardnumbers
+//region BasicCards
 const CKC_AS: CKCNumber = 0b010000000000001000110000101001;
 const CKC_KS: CKCNumber = 0b001000000000001000101100100101;
 const CKC_QS: CKCNumber = 0b000100000000001000101000011111;

@@ -15,9 +15,17 @@ use rayon::iter::{IterBridge, ParallelBridge};
 use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Formatter;
+use std::hash::Hash;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::str::FromStr;
 use strum::IntoEnumIterator;
+
+#[macro_export]
+macro_rules! deck {
+    () => {
+        Cards::deck()
+    };
+}
 
 pub static FIVE_CARD_COMBOS: std::sync::LazyLock<Combinations<IntoIter<Card>>> =
     std::sync::LazyLock::new(|| Cards::deck().combinations(5));
@@ -31,7 +39,19 @@ pub static FIVE_CARD_COMBOS: std::sync::LazyLock<Combinations<IntoIter<Card>>> =
 pub struct Cards(pub IndexSet<Card>);
 
 impl Cards {
-    /// TODO: macro!
+    /// ```
+    /// use pkcore::cards::Cards;
+    /// use pkcore::deck;
+    ///
+    /// let deck = Cards::deck();
+    ///
+    /// assert_eq!(deck!(), deck);
+    /// assert_eq!(deck.len(), 52);
+    /// assert_eq!(
+    ///     deck.to_string(),
+    ///     "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣"
+    /// );
+    /// ```
     #[must_use]
     pub fn deck() -> Cards {
         let mut cards = Cards::default();
@@ -184,7 +204,7 @@ impl Cards {
     }
 
     /// # Errors
-    ///r
+    ///
     /// Returns `PKError::NotEnoughCards` if not enough cards are available.
     pub fn draw_from_the_bottom(&mut self, number: usize) -> Result<Self, PKError> {
         let l = self.len();
@@ -229,7 +249,7 @@ impl Cards {
 
     /// Sets the card's paired bit to true for all cards in the collection.
     #[must_use]
-    pub fn flag_paired(&self) -> Cards {
+    pub fn flag_paired(&self) -> Self {
         Cards::from(self.iter().map(Card::frequency_paired).collect::<Vec<_>>())
     }
 
@@ -379,7 +399,7 @@ impl Cards {
     ///
     /// TODO TD: Update `Card` so that sort is `Suit` weighted first.
     #[must_use]
-    pub fn sort(&self) -> Cards {
+    pub fn sort(&self) -> Self {
         let mut c = self.clone();
         c.sort_in_place();
         c
@@ -637,9 +657,17 @@ impl FromStr for Cards {
     }
 }
 
+impl Hash for Cards {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        for card in self.iter() {
+            card.hash(state);
+        }
+    }
+}
+
 impl IntoIterator for Cards {
     type Item = Card;
-    type IntoIter = indexmap::set::IntoIter<Self::Item>;
+    type IntoIter = IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
@@ -729,14 +757,8 @@ mod card_tests {
     use super::*;
 
     #[test]
-    fn deck() {
-        let deck = Cards::deck();
-
-        assert_eq!(deck.len(), 52);
-        assert_eq!(
-            deck.to_string(),
-            "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣"
-        );
+    fn deck_macro() {
+        assert_eq!(Cards::deck(), deck!());
     }
 
     #[test]

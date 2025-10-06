@@ -839,3 +839,6 @@ This is an outline of the work as it is done.
           * Added better ComboPairs.display() function
         * Renaming Solver to vs::Versus
           * Removed Board from Solver since not used yet
+      * FEATURE: Casino Table
+        * Created CardsCell instead of using cardpack.rs' version.
+        * Creating log::TableEvent

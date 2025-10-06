@@ -1,18 +1,20 @@
+use crate::cards::Cards;
 use crate::casino::cashier::chips::Chips;
 use crate::casino::player::Player;
 use crate::casino::table::seat::Seat;
+use crate::deck;
 use crate::games::{GamePhase, GameType};
 use bint::BintCell;
-use cardpack::prelude::*;
 use std::cell::Cell;
 use std::fmt;
 
+pub mod log;
 pub mod position;
 pub mod seat;
 
 /// There are up to 3 total burn cards in a Texas Hold'em poker hand. Before dealing the flop,
 /// turn, or river, the dealer is required to take the top card from the deck and burn (discard) it.
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Table {
     pub id: String,
     pub game: GameType,
@@ -20,9 +22,9 @@ pub struct Table {
     pub seats: Vec<Seat>,
     pub dealer: BintCell,
     pub action_to: BintCell,
-    pub deck: BasicPileCell,
-    pub board: BasicPileCell,
-    pub discards: BasicPileCell,
+    pub deck: Cards,
+    pub board: Cards,
+    pub discards: Cards,
     pub pot: Cell<Chips>,
 }
 
@@ -34,7 +36,7 @@ impl Table {
             let seat_number = i + 1;
             let seat = Seat {
                 player: Player::new_with_chips(format!("Player {seat_number}"), stack),
-                cards: BasicPileCell::default(),
+                cards: Cards::default(),
             };
             seats.push(seat);
         }
@@ -71,9 +73,9 @@ impl Default for Table {
             seats,
             dealer: BintCell::new(player_count),
             action_to: BintCell::new(player_count),
-            deck: Standard52::deck_cell(),
-            board: Standard52::deck_cell(),
-            discards: Standard52::deck_cell(),
+            deck: deck!(),
+            board: Cards::default(),
+            discards: Cards::default(),
             pot: Chips::default().into(),
         }
     }
@@ -110,8 +112,8 @@ mod casino__table_tests {
         assert_eq!(0, table.dealer.value());
         assert_eq!(0, table.action_to.value());
         assert_eq!(52, table.deck.len());
-        assert_eq!(52, table.board.len());
-        assert_eq!(52, table.discards.len());
+        assert_eq!(0, table.board.len());
+        assert_eq!(0, table.discards.len());
         assert!(table.pot.get().is_empty());
     }
 }
