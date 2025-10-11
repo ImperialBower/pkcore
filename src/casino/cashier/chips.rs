@@ -210,6 +210,7 @@ mod casino__chips_tests {
     }
 }
 
+/// - [Interior Mutability Explained: When and Why to Use Cell and RefCell](https://dev.to/sgchris/interior-mutability-explained-when-and-why-to-use-cell-and-refcell-4bek)
 #[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Stack(Cell<usize>);
 
@@ -227,6 +228,38 @@ impl Stack {
         let mut current = self.count();
         current += chips.count();
         self.0.set(current);
+    }
+
+    /// This function, along with `bet` and `wins` were originally part of the `Betting` trait,
+    /// however, because `Stack` uses interior mutability, there is no need for them to be
+    /// mutable, and so I moved them here.
+    ///
+    /// # Errors
+    ///
+    /// - `PKError::Busted` - if the stack is empty
+    pub fn all_in(&self) -> Result<Stack, PKError> {
+        if self.count() == 0 {
+            Err(PKError::Busted)
+        } else {
+            let all = Stack::new(self.count());
+            self.0.set(0);
+            Ok(all)
+        }
+    }
+
+    /// # Errors
+    ///
+    /// - `PKError::InsufficientChips` - if the stack is less than the amount bet.
+    pub fn bet(&self, amount: usize) -> Result<Stack, PKError> {
+        if self.count() < amount {
+            Err(PKError::InsufficientChips)
+        } else {
+            let bet = Stack::new(amount);
+            let mut current = self.count();
+            current -= amount;
+            self.0.set(current);
+            Ok(bet)
+        }
     }
 
     #[must_use]
@@ -253,6 +286,12 @@ impl Stack {
 
     pub fn set(&mut self, chips: Stack) {
         self.0 = chips.0;
+    }
+
+    #[must_use]
+    pub fn wins(&self, winnings: Stack) -> usize {
+        self.add_to(winnings);
+        self.count()
     }
 }
 
@@ -285,36 +324,6 @@ impl SubAssign for Stack {
         let mut current = self.count();
         current -= rhs.count();
         self.0.set(current);
-    }
-}
-
-impl Betting for Stack {
-    fn all_in(&mut self) -> Result<Stack, PKError> {
-        if self.size() == 0 {
-            Err(PKError::Busted)
-        } else {
-            let all = self.clone();
-            self.0 = 0.into();
-            Ok(all)
-        }
-    }
-
-    fn bet(&mut self, amount: usize) -> Result<Stack, PKError> {
-        if self.size() < amount {
-            Err(PKError::InsufficientChips)
-        } else {
-            *self -= Stack::new(amount);
-            Ok(Stack::new(amount))
-        }
-    }
-
-    fn size(&self) -> usize {
-        self.count()
-    }
-
-    fn wins(&mut self, winnings: Stack) -> usize {
-        *self += winnings;
-        self.size()
     }
 }
 
