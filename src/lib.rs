@@ -28,7 +28,7 @@ use std::hash::Hash;
 use crate::analysis::gto::combo::Combo;
 use crate::analysis::gto::combo_pairs::ComboPairs;
 use crate::analysis::gto::twos::Twos;
-use crate::casino::cashier::chips::Chips;
+use crate::casino::cashier::chips::Stack;
 use crate::rank::Rank;
 use crate::ranks::Ranks;
 use crate::suit::Suit;
@@ -120,6 +120,7 @@ pub enum PKError {
     InvalidRangeIndex,
     InvalidRankIndex,
     InvalidShift,
+    InvalidTableAction,
     NoLow,
     NotDealt,
     NotEnoughCards,
@@ -156,6 +157,7 @@ impl Display for PKError {
             PKError::InvalidRankIndex => "Invalid Rank Index Error",
             PKError::InvalidRangeIndex => "Invalid Range Index Error",
             PKError::InvalidShift => "Invalid Shift Error",
+            PKError::InvalidTableAction => "Invalid Table Action Error",
             PKError::NoLow => "No low hand possible Error",
             PKError::NotDealt => "Not Dealt Error",
             PKError::NotEnoughCards => "Not Enough Cards Error",
@@ -183,12 +185,12 @@ pub trait Betting {
     /// # Errors
     ///
     /// Returns `PKError::Busted` if there are no chips.
-    fn all_in(&mut self) -> Result<Chips, PKError>;
+    fn all_in(&mut self) -> Result<Stack, PKError>;
 
     /// # Errors
     ///
     /// Returns `PKError::InsufficientChips` if there are insufficient chips.
-    fn bet(&mut self, amount: usize) -> Result<Chips, PKError>;
+    fn bet(&mut self, amount: usize) -> Result<Stack, PKError>;
 
     fn is_empty(&self) -> bool {
         self.size() == 0
@@ -197,7 +199,7 @@ pub trait Betting {
     fn size(&self) -> usize;
 
     /// Adds the amount of Chips won to the stack. Returns the resulting stack size.
-    fn wins(&mut self, winnings: Chips) -> usize;
+    fn wins(&mut self, winnings: Stack) -> usize;
 }
 
 pub trait GTO {

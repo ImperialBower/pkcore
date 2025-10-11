@@ -1,28 +1,28 @@
-use crate::casino::cashier::chips::Chips;
+use crate::casino::cashier::chips::Stack;
 
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct ForcedBets {
-    pub small_blind: Chips,
-    pub big_blind: Chips,
-    pub ante: Chips,
+    pub small_blind: Stack,
+    pub big_blind: Stack,
+    pub ante: Stack,
 }
 
 impl ForcedBets {
     #[must_use]
     pub fn new(small_blind: usize, big_blind: usize) -> Self {
         ForcedBets {
-            small_blind: Chips::new(small_blind),
-            big_blind: Chips::new(big_blind),
-            ante: Chips::new(0),
+            small_blind: Stack::new(small_blind),
+            big_blind: Stack::new(big_blind),
+            ante: Stack::new(0),
         }
     }
 
     #[must_use]
     pub fn new_with_ante(small_blind: usize, big_blind: usize, ante: usize) -> Self {
         ForcedBets {
-            small_blind: Chips::new(small_blind),
-            big_blind: Chips::new(big_blind),
-            ante: Chips::new(ante),
+            small_blind: Stack::new(small_blind),
+            big_blind: Stack::new(big_blind),
+            ante: Stack::new(ante),
         }
     }
 }

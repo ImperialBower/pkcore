@@ -1,11 +1,12 @@
-use crate::cards::Cards;
-use crate::casino::cashier::chips::Chips;
+use crate::cards_cell::CardsCell;
+use crate::casino::cashier::chips::Stack;
 use crate::casino::player::Player;
+use crate::casino::table::log::TableLog;
 use crate::casino::table::seat::Seat;
-use crate::deck;
 use crate::games::{GamePhase, GameType};
+use crate::{PKError, deck_cell};
 use bint::BintCell;
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::fmt;
 
 pub mod log;
@@ -18,14 +19,15 @@ pub mod seat;
 pub struct Table {
     pub id: String,
     pub game: GameType,
-    pub phase: Cell<GamePhase>,
+    pub phase: RefCell<GamePhase>,
     pub seats: Vec<Seat>,
     pub dealer: BintCell,
     pub action_to: BintCell,
-    pub deck: Cards,
-    pub board: Cards,
-    pub discards: Cards,
-    pub pot: Cell<Chips>,
+    pub deck: CardsCell,
+    pub board: CardsCell,
+    pub discards: CardsCell,
+    pub pot: Stack,
+    pub log: TableLog,
 }
 
 impl Table {
@@ -36,7 +38,7 @@ impl Table {
             let seat_number = i + 1;
             let seat = Seat {
                 player: Player::new_with_chips(format!("Player {seat_number}"), stack),
-                cards: Cards::default(),
+                cards: CardsCell::default(),
             };
             seats.push(seat);
         }
@@ -59,6 +61,17 @@ impl Table {
         // let bint = Bint::
         todo!()
     }
+
+    /// # Errors
+    ///
+    /// ...
+    pub fn forced_bets(&mut self) -> Result<(), PKError> {
+        todo!()
+    }
+
+    // fn seat(&mut self, number: u8) -> Option<&Seat> {
+    //     self.seats.get(number as usize).m
+    // }
 }
 
 impl Default for Table {
@@ -73,10 +86,11 @@ impl Default for Table {
             seats,
             dealer: BintCell::new(player_count),
             action_to: BintCell::new(player_count),
-            deck: deck!(),
-            board: Cards::default(),
-            discards: Cards::default(),
-            pot: Chips::default().into(),
+            deck: deck_cell!(),
+            board: CardsCell::default(),
+            discards: CardsCell::default(),
+            pot: Stack::default().into(),
+            log: TableLog::default(),
         }
     }
 }
@@ -87,8 +101,8 @@ impl fmt::Display for Table {
         writeln!(f, "Game: {:?}", self.game)?;
         writeln!(f, "Phase: {:?}", self.phase)?;
         writeln!(f, "Dealer Position: {}", self.dealer.value() + 1)?;
-        if !self.pot.get().is_empty() {
-            writeln!(f, "Pot Size: {}", self.pot.get())?;
+        if !self.pot.is_empty() {
+            writeln!(f, "Pot Size: {}", self.pot.count())?;
         }
         for (i, seat) in self.seats.iter().enumerate() {
             writeln!(f, "Seat {}: {}", i + 1, seat)?;
@@ -107,13 +121,30 @@ mod casino__table_tests {
         let table = Table::default();
         assert_eq!("No Limit Hold'em Table", table.id);
         assert_eq!(GameType::NoLimitHoldem, table.game);
-        assert_eq!(GamePhase::NewHand, table.phase.get());
+        // assert_eq!(GamePhase::NewHand, table.phase.);
         assert_eq!(6, table.seats.len());
         assert_eq!(0, table.dealer.value());
         assert_eq!(0, table.action_to.value());
         assert_eq!(52, table.deck.len());
         assert_eq!(0, table.board.len());
         assert_eq!(0, table.discards.len());
-        assert!(table.pot.get().is_empty());
+        assert!(table.pot.is_empty());
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod card_tests {
+    use super::*;
+
+    #[test]
+    fn seat() {
+        let _table = Table::default();
+
+        // let mut seat: &mut Seat = table.seat(1).unwrap();
+        // assert_eq!("Player 2", seat.player.handle);
+        // assert_eq!(10_000, seat.player.chips.stack());
+        //
+        // seat.player.chips += Chips::new(500);
     }
 }

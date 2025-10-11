@@ -2,7 +2,7 @@ use crate::PKError;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
-use std::cell::Cell;
+use std::cell::RefCell;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::str::FromStr;
@@ -14,8 +14,8 @@ macro_rules! deck_cell {
     };
 }
 
-#[derive(Default)]
-pub struct CardsCell(Cell<Cards>);
+#[derive(Clone, Debug, Default)]
+pub struct CardsCell(RefCell<Cards>);
 
 impl CardsCell {
     /// ```
@@ -39,7 +39,7 @@ impl CardsCell {
     /// Creates a new `CardsCell` containing the given `Cards`.
     #[must_use]
     pub fn new(cards: Cards) -> Self {
-        Self(Cell::new(cards))
+        Self(RefCell::new(cards))
     }
 
     #[must_use]
@@ -49,24 +49,40 @@ impl CardsCell {
 
     /// Gets a clone of the internal `Cards`.
     ///
+    /// ```
+    /// use pkcore::cards_cell::CardsCell;
+    /// use pkcore::deck_cell;
+    ///
+    /// let deck = deck_cell!();
+    ///
+    /// assert_eq!(deck.draw(2).unwrap().to_string(), "A♠ K♠");
+    /// ```
+    ///
     /// # Errors
     ///
     /// Returns `PKError::NotEnoughCards` if not enough cards are available.
     pub fn draw(&self, n: usize) -> Result<Self, PKError> {
-        let mut internal = self.0.take();
-        let drawn_cards = internal.draw(n);
-        self.0.set(internal);
-        drawn_cards.map(Self::new)
+        let mut internal = self.0.borrow_mut();
+        let drawn_cards = internal.draw(n)?;
+        // drawn_cards.map(Self::new)
+        Ok(Self::new(drawn_cards))
     }
 
+    /// ```
+    /// use pkcore::cards_cell::CardsCell;
+    /// use pkcore::deck_cell;
+    ///
+    /// let deck = deck_cell!();
+    ///
+    /// assert_eq!(deck.draw_one().unwrap().to_string(), "A♠");
+    /// ```
     /// # Errors
     ///
     /// Returns `PKError::NotEnoughCards` if there are no more cards left.
     pub fn draw_one(&self) -> Result<Card, PKError> {
-        let mut internal = self.0.take();
-        let drawn_card = internal.draw_one();
-        self.0.set(internal);
-        drawn_card
+        let mut internal = self.0.borrow_mut();
+        let drawn_card = internal.draw_one()?;
+        Ok(drawn_card)
     }
 
     /// ```
@@ -81,16 +97,14 @@ impl CardsCell {
     ///
     /// Returns `PKError::NotEnoughCards` if not enough cards are available.
     pub fn draw_from_the_bottom(&self, number: usize) -> Result<Self, PKError> {
-        let mut internal = self.0.take();
-        let drawn_cards = internal.draw_from_the_bottom(number);
-        self.0.set(internal);
-        drawn_cards.map(Self::new)
+        let mut internal = self.0.borrow_mut();
+        let drawn_cards = internal.draw_from_the_bottom(number)?;
+        Ok(Self::new(drawn_cards))
     }
 
     pub fn dump(&self) {
-        let internal = self.0.take();
+        let internal = self.0.borrow_mut();
         internal.dump();
-        self.0.set(internal.clone());
     }
 
     #[must_use]
@@ -106,10 +120,8 @@ impl CardsCell {
     /// ```
     #[must_use]
     pub fn len(&self) -> usize {
-        let internal = self.0.take();
-        let length = internal.len();
-        self.0.set(internal);
-        length
+        let internal = self.0.borrow_mut();
+        internal.len()
     }
 
     /// ```
@@ -123,9 +135,8 @@ impl CardsCell {
     /// assert_eq!(cards.to_string(), "9♠");
     /// ```
     pub fn insert(&self, card: Card) {
-        let mut internal = self.0.take();
+        let mut internal = self.0.borrow_mut();
         internal.insert(card);
-        self.0.set(internal);
     }
 
     /// ```
@@ -141,18 +152,17 @@ impl CardsCell {
     /// assert_eq!(cards.to_string(), "9♠ 8♠ T♠");
     /// ```
     pub fn insert_all(&self, cards: Cards) {
-        let mut internal = self.0.take();
+        let mut internal = self.0.borrow_mut();
         for card in cards {
             internal.insert(card);
         }
-        self.0.set(internal);
     }
 
     #[must_use]
     pub fn shuffle(&self) -> Self {
         let internal = self.clone();
-        let cards = internal.0.take();
-        Self::new(cards.shuffle())
+        internal.shuffle_in_place();
+        internal
     }
 
     /// ```
@@ -164,9 +174,8 @@ impl CardsCell {
     /// println!("{deck}");
     /// ```
     pub fn shuffle_in_place(&self) {
-        let mut internal = self.0.take();
+        let mut internal = self.0.borrow_mut();
         internal.shuffle_in_place();
-        self.0.set(internal);
     }
 
     /// ```
@@ -180,7 +189,7 @@ impl CardsCell {
     #[must_use]
     pub fn sort(&self) -> Self {
         let internal = self.clone();
-        let cards = internal.0.take();
+        let cards = internal.0.borrow_mut();
         Self::new(cards.sort())
     }
 
@@ -194,9 +203,8 @@ impl CardsCell {
     /// assert_eq!(shuffled_deck, deck);
     /// ```
     pub fn sort_in_place(&mut self) {
-        let mut internal = self.0.take();
+        let mut internal = self.0.borrow_mut();
         internal.sort_in_place();
-        self.0.set(internal);
     }
 
     /// Takes the value of the cell, leaving `Default::default()` in its place.
@@ -214,26 +222,9 @@ impl CardsCell {
     }
 }
 
-impl Clone for CardsCell {
-    fn clone(&self) -> Self {
-        let internal = self.0.take();
-        self.0.set(internal.clone());
-        Self(Cell::from(internal))
-    }
-}
-
-impl Debug for CardsCell {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let internal = self.0.take();
-        self.0.set(internal.clone());
-        write!(f, "{internal:?}")
-    }
-}
-
 impl Display for CardsCell {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let internal = self.0.take();
-        self.0.set(internal.clone());
+        let internal = self.0.borrow_mut();
         write!(f, "{internal}")
     }
 }
@@ -242,20 +233,16 @@ impl Eq for CardsCell {}
 
 impl PartialEq for CardsCell {
     fn eq(&self, other: &Self) -> bool {
-        let self_internal = self.0.take();
-        let other_internal = other.0.take();
-        let result = self_internal == other_internal;
-        self.0.set(self_internal);
-        other.0.set(other_internal);
-        result
+        let self_internal = self.0.borrow_mut().clone();
+        let other_internal = other.0.borrow_mut().clone();
+        self_internal == other_internal
     }
 }
 
 impl Hash for CardsCell {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        let internal = self.0.take();
+        let internal = self.0.borrow_mut();
         internal.hash(state);
-        self.0.set(internal);
     }
 }
 

@@ -1,12 +1,12 @@
-use crate::cards::Cards;
+use crate::cards_cell::CardsCell;
 use crate::casino::player::Player;
 use std::fmt;
 
 /// Want this to be a `BasicPile`, which is a vector
-#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Seat {
     pub player: Player,
-    pub cards: Cards,
+    pub cards: CardsCell,
 }
 
 impl Seat {
@@ -14,12 +14,12 @@ impl Seat {
     pub fn new(player: Player) -> Self {
         Seat {
             player,
-            cards: Cards::default(),
+            cards: CardsCell::default(),
         }
     }
 
     #[must_use]
-    pub fn new_with_cards(player: Player, cards: Cards) -> Self {
+    pub fn new_with_cards(player: Player, cards: CardsCell) -> Self {
         Seat { player, cards }
     }
 }

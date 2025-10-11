@@ -1,5 +1,5 @@
 use bint::BintCell;
-use pkcore::cards::Cards;
+use pkcore::cards_cell::CardsCell;
 use pkcore::casino::table::Table;
 use pkcore::casino::table::seat::Seat;
 use pkcore::games::GamePhase;
@@ -26,35 +26,35 @@ fn main() {
 fn seats() -> Vec<Seat> {
     let doyle_brunson = Seat {
         player: pkcore::casino::player::Player::new_with_chips("Doyle Brunson".to_string(), 1_000_000),
-        cards: Cards::from_str("T♠ 2♥").unwrap(),
+        cards: CardsCell::from_str("T♠ 2♥").unwrap(),
     };
     let eli_elezra = Seat {
         player: pkcore::casino::player::Player::new_with_chips("Eli Elezra".to_string(), 1_000_000),
-        cards: Cards::from_str("8♠ 3♥").unwrap(),
+        cards: CardsCell::from_str("8♠ 3♥").unwrap(),
     };
     let antonio_esfandiari = Seat {
         player: pkcore::casino::player::Player::new_with_chips("Antonio Esfandari".to_string(), 1_000_000),
-        cards: Cards::from_str("A♦ Q♣").unwrap(),
+        cards: CardsCell::from_str("A♦ Q♣").unwrap(),
     };
     let gus_hansen = Seat {
         player: pkcore::casino::player::Player::new_with_chips("Gus Hansen".to_string(), 1_000_000),
-        cards: Cards::from_str("5♦ 5♣").unwrap(),
+        cards: CardsCell::from_str("5♦ 5♣").unwrap(),
     };
     let daniel_negreanu = Seat {
         player: pkcore::casino::player::Player::new_with_chips("Daniel Negreanu".to_string(), 1_000_000),
-        cards: Cards::from_str("6♠ 6♥").unwrap(),
+        cards: CardsCell::from_str("6♠ 6♥").unwrap(),
     };
     let cory_zeidman = Seat {
         player: pkcore::casino::player::Player::new_with_chips("Cory Zeidman".to_string(), 1_000_000),
-        cards: Cards::from_str("K♠ J♦").unwrap(),
+        cards: CardsCell::from_str("K♠ J♦").unwrap(),
     };
     let barry_greenstein = Seat {
         player: pkcore::casino::player::Player::new_with_chips("Barry Greenstein".to_string(), 1_000_000),
-        cards: Cards::from_str("4♣ 4♦").unwrap(),
+        cards: CardsCell::from_str("4♣ 4♦").unwrap(),
     };
     let amnon_filippi = Seat {
         player: pkcore::casino::player::Player::new_with_chips("Amnon Filippi".to_string(), 1_000_000),
-        cards: Cards::from_str("7♣ 2♣").unwrap(),
+        cards: CardsCell::from_str("7♣ 2♣").unwrap(),
     };
     vec![
         doyle_brunson,

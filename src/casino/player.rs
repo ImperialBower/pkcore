@@ -1,14 +1,14 @@
-use crate::casino::cashier::chips::Chips;
+use crate::casino::cashier::chips::Stack;
 use crate::util::name::Name;
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;
 
-#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Player {
     pub id: Uuid,
     pub handle: String,
-    pub chips: Chips,
-    pub bet: Chips,
+    pub chips: Stack,
+    pub bet: Stack,
 }
 
 impl Player {
@@ -17,8 +17,8 @@ impl Player {
         Player {
             id: Uuid::new_v4(),
             handle,
-            chips: Chips::default(),
-            bet: Chips::default(),
+            chips: Stack::default(),
+            bet: Stack::default(),
         }
     }
 
@@ -27,8 +27,8 @@ impl Player {
         Player {
             id: Uuid::new_v4(),
             handle,
-            chips: Chips::new(stack),
-            bet: Chips::default(),
+            chips: Stack::new(stack),
+            bet: Stack::default(),
         }
     }
 
@@ -37,8 +37,8 @@ impl Player {
         Player {
             id: Uuid::new_v4(),
             handle: Name::generate(),
-            chips: Chips::new(stack),
-            bet: Chips::default(),
+            chips: Stack::new(stack),
+            bet: Stack::default(),
         }
     }
 }
@@ -59,7 +59,7 @@ mod casino__players__player_tests {
         let player = Player::new("Elmer".to_string());
 
         assert_eq!("Elmer", player.handle);
-        assert_eq!(0, player.chips.size());
+        assert_eq!(0, player.chips.count());
         assert_eq!("Elmer: 0 chips", player.to_string());
     }
 
@@ -68,7 +68,7 @@ mod casino__players__player_tests {
         let player = Player::new_with_chips("Bugsy".to_string(), 1_000_002);
 
         assert_eq!("Bugsy", player.handle);
-        assert_eq!(1_000_002, player.chips.size());
+        assert_eq!(1_000_002, player.chips.count());
         assert_eq!("Bugsy: 1,000,002 chips", player.to_string());
     }
 }
