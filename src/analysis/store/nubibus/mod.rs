@@ -2,7 +2,7 @@ use crate::analysis::store::nubibus::actions::{Action, ActionType};
 use crate::analysis::store::nubibus::pluribus::Pluribus;
 use crate::analysis::store::nubibus::seat::{Seat, SeatSnapshot};
 use crate::arrays::two::Two;
-use crate::casino::cashier::chips::Stack;
+use crate::casino::cashier::chips::Chips;
 use crate::{Betting, PKError};
 use itertools::Itertools;
 use std::fmt::{Display, Formatter};
@@ -36,7 +36,7 @@ pub struct Nubibus {
     pub seats: [Seat; 6],
     pub tracker: ActionTracker,
     pub floor: Cell<usize>,
-    pub pot: Stack,
+    pub pot: Cell<Chips>,
     pub queue_preflop: Vec<String>,
     pub queue_flop: Vec<String>,
     pub queue_turn: Vec<String>,
@@ -58,7 +58,7 @@ impl Nubibus {
             seats: Default::default(),
             tracker: ActionTracker::new(6),
             floor: Cell::new(0),
-            pot: Stack::default(),
+            pot: Cell::new(Chips::default()),
             queue_preflop: ActionType::actions_preflop_reverse(&pluribus.rounds),
             queue_flop: ActionType::actions_flop_reverse(&pluribus.rounds),
             queue_turn: ActionType::actions_turn_reverse(&pluribus.rounds),
@@ -72,7 +72,7 @@ impl Nubibus {
             let seat = Seat::new(
                 pluribus.players.get(i).unwrap_or(&default_name).clone(),
                 Position6Max::try_from(seat_number).unwrap(),
-                Stack::new(10_000),
+                Chips::new(10_000),
             );
 
             nubibus.seats[i] = seat;
@@ -81,7 +81,7 @@ impl Nubibus {
     }
 
     pub fn add_to_pot(&self, amount: usize) {
-        self.pot.set(self.pot.clone() + Stack::new(amount));
+        self.pot.set(self.pot.get() + Chips::new(amount));
     }
 
     /// # Panics
@@ -236,7 +236,7 @@ impl Nubibus {
     pub fn do_bet(&mut self, amount: usize) -> Result<bool, PKError> {
         let seat = self.seat_from_position(self.current_position());
 
-        if seat.stack.count() >= amount {
+        if seat.stack.get().size() >= amount {
             info!("{} {} bets {}", seat.name, seat.desc(), amount);
             seat.bet(amount);
             Ok(true)
@@ -247,7 +247,7 @@ impl Nubibus {
 
     pub fn do_check_or_call(&mut self) {
         let seat = self.seat_from_position(self.current_position());
-        if seat.chips_in_play.count() == self.floor.get() {
+        if seat.chips_in_play.get().size() == self.floor.get() {
             self.do_check();
         } else {
             self.do_call();
@@ -342,11 +342,11 @@ impl Nubibus {
         // I'm surprised how easy my code makes this.
         for seat in &self.seats {
             seat.end_round();
-            self.add_to_pot(seat.chips_in_pot.count());
+            self.add_to_pot(seat.chips_in_pot.get());
         }
 
         let action = Action::end_round(self.phase.current());
-        info!("{} Phase over {} in pot\n", action.detail, self.pot.count());
+        info!("{} Phase over {} in pot\n", action.detail, self.pot.get());
         self.ledger.push(action);
     }
 
@@ -642,19 +642,19 @@ mod store_nubibus_tests {
         assert_eq!(Position6Max::UTG, nubibus.current_position());
         assert_eq!(
             50,
-            nubibus.seat_from_position(Position6Max::SB).chips_in_play.count()
+            nubibus.seat_from_position(Position6Max::SB).chips_in_play.get().size()
         );
         assert_eq!(
             100,
-            nubibus.seat_from_position(Position6Max::BB).chips_in_play.count()
+            nubibus.seat_from_position(Position6Max::BB).chips_in_play.get().size()
         );
         assert_eq!(
             10_000 - 50,
-            nubibus.seat_from_position(Position6Max::SB).stack.count()
+            nubibus.seat_from_position(Position6Max::SB).stack.get().size()
         );
         assert_eq!(
             10_000 - 100,
-            nubibus.seat_from_position(Position6Max::BB).stack.count()
+            nubibus.seat_from_position(Position6Max::BB).stack.get().size()
         );
     }
 
@@ -756,7 +756,7 @@ mod store_nubibus_tests {
         nubibus.post_small_blind();
 
         assert_eq!(
-            nubibus.seat_from_position(Position6Max::SB).chips_in_play.count(),
+            nubibus.seat_from_position(Position6Max::SB).chips_in_play.get().size(),
             50
         ); // AI good!
         assert_eq!(Position6Max::BB, nubibus.current_position());
@@ -772,7 +772,7 @@ mod store_nubibus_tests {
         nubibus.post_big_blind();
 
         assert_eq!(
-            nubibus.seat_from_position(Position6Max::BB).chips_in_play.count(),
+            nubibus.seat_from_position(Position6Max::BB).chips_in_play.get().size(),
             100
         ); // AI good!
         assert_eq!(Position6Max::UTG, nubibus.current_position());
@@ -822,15 +822,15 @@ mod store_nubibus_tests {
         nub.do_check_or_call();
         assert_eq!("100".to_string(), nub.ledger.last().unwrap().detail);
         let utg = nub.seat_from_position(Position6Max::UTG);
-        assert_eq!(100, utg.chips_in_play.count());
-        assert_eq!(9_900, utg.stack.count());
+        assert_eq!(100, utg.chips_in_play.get().size());
+        assert_eq!(9_900, utg.stack.get().size());
 
         // Gogo(MP) calls 100
         nub.do_check_or_call();
         assert_eq!("100".to_string(), nub.ledger.last().unwrap().detail);
         let mp = nub.seat_from_position(Position6Max::MP);
-        assert_eq!(100, mp.chips_in_play.count());
-        assert_eq!(9_900, mp.stack.count());
+        assert_eq!(100, mp.chips_in_play.get().size());
+        assert_eq!(9_900, mp.stack.get().size());
 
         // Budd(CO) calls 100
         nub.do_check_or_call();
@@ -844,21 +844,21 @@ mod store_nubibus_tests {
         nub.do_check_or_call();
         assert_eq!("100".to_string(), nub.ledger.last().unwrap().detail);
         let sb = nub.seat_from_position(Position6Max::SB);
-        assert_eq!(100, sb.chips_in_play.count());
-        assert_eq!(9_900, sb.stack.count());
+        assert_eq!(100, sb.chips_in_play.get().size());
+        assert_eq!(9_900, sb.stack.get().size());
 
         // Pluribus(BB) checks
         nub.do_check_or_call();
         assert_eq!(Action::CHECK.action_type, nub.ledger.last().unwrap().action_type);
         let bb = nub.seat_from_position(Position6Max::BB);
-        assert_eq!(100, bb.chips_in_play.count());
-        assert_eq!(9_900, bb.stack.count());
+        assert_eq!(100, bb.chips_in_play.get().size());
+        assert_eq!(9_900, bb.stack.get().size());
 
         // nub
 
         nub.end_preflop_round();
 
-        assert_eq!(nub.pot.count(), 600);
+        assert_eq!(nub.pot.get().size(), 600);
 
         println!("{}", nub);
     }

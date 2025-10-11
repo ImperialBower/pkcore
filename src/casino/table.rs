@@ -6,7 +6,7 @@ use crate::casino::table::seat::Seat;
 use crate::games::{GamePhase, GameType};
 use crate::{PKError, deck_cell};
 use bint::BintCell;
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::fmt;
 
 pub mod log;
@@ -89,7 +89,7 @@ impl Default for Table {
             deck: deck_cell!(),
             board: CardsCell::default(),
             discards: CardsCell::default(),
-            pot: Stack::default().into(),
+            pot: Stack::default(),
             log: TableLog::default(),
         }
     }

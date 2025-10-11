@@ -1,5 +1,5 @@
 use crate::arrays::two::Two;
-use crate::casino::cashier::chips::Stack;
+use crate::casino::cashier::chips::Chips;
 use crate::play::Position6Max;
 use crate::{Betting, PKError, Pile};
 use std::cell::Cell;
@@ -13,32 +13,32 @@ pub struct Seat {
     pub position: Position6Max,
     pub name: String,
     pub is_active: Cell<bool>,
-    pub stack: Stack,
-    pub chips_in_play: Stack,
-    pub chips_in_pot: Stack,
+    pub stack: Cell<Chips>,
+    pub chips_in_play: Cell<Chips>,
+    pub chips_in_pot: Cell<usize>,
     pub hand: Cell<Two>,
 }
 
 impl Seat {
     #[must_use]
     pub fn chips_in_play_size(&self) -> usize {
-        self.chips_in_play.count()
+        self.chips_in_play.get().size()
     }
 
     #[must_use]
     pub fn chips_in_pot_size(&self) -> usize {
-        self.chips_in_pot.count()
+        self.chips_in_pot.get()
     }
 
     #[must_use]
-    pub fn new(name: String, seat: Position6Max, starting_chips: Stack) -> Seat {
+    pub fn new(name: String, seat: Position6Max, starting_chips: Chips) -> Seat {
         Seat {
             position: seat,
             name,
             is_active: Cell::new(true),
-            stack: starting_chips,
-            chips_in_play: Stack::default(),
-            chips_in_pot: Stack::default(),
+            stack: Cell::new(starting_chips),
+            chips_in_play: Cell::new(Chips::default()),
+            chips_in_pot: Cell::new(0),
             hand: Cell::new(Two::default()),
         }
     }
@@ -58,19 +58,19 @@ impl Seat {
     pub fn bet(&self, amount: usize) -> Option<usize> {
         // This logic would need to be different for a non pluribus module. I am debating if the code should
         // be generic.
-        let Some(diff) = amount.checked_sub(self.chips_in_play.count()) else {
+        let Some(diff) = amount.checked_sub(self.chips_in_play.get().size()) else {
             panic!(
                 "amount: {} is less than chips_in_play: {}",
                 amount,
-                self.chips_in_play.count()
+                self.chips_in_play.get().size()
             )
         };
 
-        self.stack.count().checked_sub(diff).inspect(|&new_stack_size| {
+        self.stack.get().size().checked_sub(diff).inspect(|&new_stack_size| {
             // Remove the `Chips` from the stack
-            self.stack.add_to(Stack::new(new_stack_size));
+            self.stack.set(Chips::new(new_stack_size));
             // Pluribus passes in the total chips in play for the round, so just set that.
-            self.chips_in_play.add_to(Stack::new(amount));
+            self.chips_in_play.set(Chips::new(amount));
             // Return the player's remaining Chips.
         })
     }
@@ -91,17 +91,17 @@ impl Seat {
         format!("{}({})", self.name, self.position,)
     }
 
-    pub fn end_round(&self) -> usize {
-        let into_pot = self.chips_in_play.clone();
-        self.chips_in_play.set(Stack::default());
-        self.chips_in_pot.add_to(into_pot.clone());
-        into_pot.count()
+    pub fn end_round(&self) -> Chips {
+        let into_pot = self.chips_in_play.get();
+        self.chips_in_play.set(Chips::default());
+        self.chips_in_pot.set(self.chips_in_pot.get() + into_pot.size());
+        into_pot
     }
 
     pub fn fold(&self) -> (Two, usize) {
         // Throw hand into the muck
         let discarded = self.hand.get();
-        let chips_lost_in_round = self.chips_in_play.count();
+        let chips_lost_in_round = self.chips_in_play.get().size();
 
         self.hand.set(Two::default());
         self.end_round();
@@ -121,6 +121,10 @@ impl Seat {
     pub fn is_dealt(&self) -> bool {
         self.hand.get().is_dealt()
     }
+
+    pub fn stack_size(&self) -> usize {
+        self.stack.get().size()
+    }
 }
 
 impl Display for Seat {
@@ -131,10 +135,10 @@ impl Display for Seat {
             self.position as u8,
             self.position,
             self.name,
-            self.stack.count(),
+            self.stack.get(),
             self.hand.get(),
-            self.chips_in_play.count(),
-            self.chips_in_pot.count()
+            self.chips_in_play.get(),
+            self.chips_in_pot.get()
         )
     }
 }
@@ -144,10 +148,10 @@ impl From<SeatSnapshot> for Seat {
         Seat {
             position: ss.position,
             name: ss.name.clone(),
-            is_active: ss.is_active.into(),
-            stack: ss.stack.into(),
-            chips_in_play: ss.chips_in_play.into(),
-            chips_in_pot: ss.chips_in_pot.into(),
+            is_active: Cell::new(ss.is_active),
+            stack: Cell::new(Chips::new(ss.stack)),
+            chips_in_play: Cell::new(Chips::new(ss.chips_in_play)),
+            chips_in_pot: Cell::new(ss.chips_in_pot),
             hand: Cell::new(ss.hand),
         }
     }
@@ -182,9 +186,9 @@ impl From<&Seat> for SeatSnapshot {
             position: seat.position,
             name: seat.name.clone(),
             is_active: seat.is_active.get(),
-            stack: seat.stack.count(),
-            chips_in_play: seat.chips_in_play.count(),
-            chips_in_pot: seat.chips_in_pot.count(),
+            stack: seat.stack.get().size(),
+            chips_in_play: seat.chips_in_play.get().size(),
+            chips_in_pot: seat.chips_in_pot.get(),
             hand: seat.hand.get(),
         }
     }
@@ -200,9 +204,9 @@ mod store_pluribus_seat_tests {
             position: Position6Max::UTG,
             name: "Flub".to_string(),
             is_active: Cell::new(true),
-            stack: Stack::new(500),
-            chips_in_play: Stack::default(),
-            chips_in_pot: Stack::default(),
+            stack: Cell::new(Chips::new(500)),
+            chips_in_play: Cell::new(Chips::default()),
+            chips_in_pot: Cell::new(0),
             hand: Cell::from(Two::default()),
         }
     }
@@ -211,7 +215,7 @@ mod store_pluribus_seat_tests {
     fn new() {
         let expected = test_struct();
 
-        let actual = Seat::new("Flub".to_string(), Position6Max::UTG, Stack::new(500));
+        let actual = Seat::new("Flub".to_string(), Position6Max::UTG, Chips::new(500));
 
         assert_eq!(expected, actual);
     }
@@ -220,13 +224,13 @@ mod store_pluribus_seat_tests {
     fn bet() {
         let seat = test_struct();
         let amount = 40usize;
-        let expected_stack_size = seat.stack.count() - amount;
+        let expected_stack_size = seat.stack_size() - amount;
 
         let the_bet = seat.bet(amount);
 
-        assert_eq!(expected_stack_size, seat.stack.count());
+        assert_eq!(expected_stack_size, seat.stack_size());
         assert_eq!(expected_stack_size, the_bet.unwrap());
-        assert_eq!(Stack::new(amount), seat.chips_in_play);
+        assert_eq!(Chips::new(amount), seat.chips_in_play.get());
         assert!(seat.bet(600).is_none());
     }
 
@@ -249,15 +253,15 @@ mod store_pluribus_seat_tests {
     // SEAT #2 BB	Pluribus:	8800	7♦ 6♦ IN PLAY: 1200	INTO POT: 0
     #[test]
     fn bet_52() {
-        let pluribus = Seat::new("Pluribus".to_string(), Position6Max::BB, Stack::new(10_000));
+        let pluribus = Seat::new("Pluribus".to_string(), Position6Max::BB, Chips::new(10_000));
         pluribus.hand.set(Two::HAND_7D_6D);
         pluribus.bet(100);
-        assert_eq!(9_900, pluribus.stack.count());
-        assert_eq!(100, pluribus.chips_in_play.count());
+        assert_eq!(9_900, pluribus.stack.get().size());
+        assert_eq!(100, pluribus.chips_in_play.get().size());
 
         pluribus.bet(1_100);
-        assert_eq!(8_900, pluribus.stack.count());
-        assert_eq!(1_100, pluribus.chips_in_play.count());
+        assert_eq!(8_900, pluribus.stack.get().size());
+        assert_eq!(1_100, pluribus.chips_in_play.get().size());
     }
 
     #[test]
@@ -270,19 +274,19 @@ mod store_pluribus_seat_tests {
     #[test]
     fn end_round() {
         let seat = test_struct();
-        seat.chips_in_pot.set(Stack::new(100));
+        seat.chips_in_pot.set(100);
         let first_bet_amount = 40usize;
         seat.bet(first_bet_amount);
         let second_bet_amount = 120usize;
         seat.bet(second_bet_amount);
-        let expected_into = Stack::new(second_bet_amount);
-        let expected_in_pot = second_bet_amount + seat.chips_in_pot.count();
+        let expected_into = Chips::new(second_bet_amount);
+        let expected_in_pot = second_bet_amount + seat.chips_in_pot.get();
 
         let in_to_pot = seat.end_round();
 
-        assert_eq!(expected_into.count(), in_to_pot);
-        assert_eq!(expected_in_pot, seat.chips_in_pot.count());
-        assert!(seat.chips_in_play.is_empty());
+        assert_eq!(expected_into, in_to_pot);
+        assert_eq!(expected_in_pot, seat.chips_in_pot.get());
+        assert!(seat.chips_in_play.get().is_empty());
     }
 
     #[test]
@@ -296,8 +300,8 @@ mod store_pluribus_seat_tests {
         assert_eq!(200, chips_lost_in_round);
         assert!(!seat.is_dealt());
         assert_eq!(Two::default(), seat.hand.get());
-        assert_eq!(Stack::new(0), seat.chips_in_play);
-        assert_eq!(200, seat.chips_in_pot.count());
+        assert_eq!(Chips::new(0), seat.chips_in_play.get());
+        assert_eq!(200, seat.chips_in_pot.get());
     }
 
     #[test]
@@ -314,7 +318,7 @@ mod store_pluribus_seat_tests {
 
     #[test]
     fn stack_size() {
-        assert_eq!(500, test_struct().stack.count());
+        assert_eq!(500, test_struct().stack_size());
     }
 
     #[test]

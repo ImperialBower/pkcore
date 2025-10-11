@@ -1,5 +1,5 @@
-use std::cell::Cell;
 use crate::{Betting, PKError};
+use std::cell::Cell;
 use std::fmt::{Display, Formatter};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 use thousands::Separable;
@@ -219,6 +219,10 @@ impl Stack {
         Stack(Cell::new(stack))
     }
 
+    /// This function forces the caller to pass by value, because the basic contract of a Stack
+    /// is that they must come out of one to go into another. This is to avoid accidentally creating
+    /// excess chips.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn add_to(&self, chips: Stack) {
         let mut current = self.count();
         current += chips.count();
@@ -247,8 +251,8 @@ impl Stack {
         }
     }
 
-    pub fn set(&self, chips: Stack) {
-        self.0.set(chips.count());
+    pub fn set(&mut self, chips: Stack) {
+        self.0 = chips.0;
     }
 }
 

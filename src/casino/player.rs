@@ -52,7 +52,6 @@ impl Display for Player {
 #[allow(non_snake_case)]
 mod casino__players__player_tests {
     use super::*;
-    use crate::Betting;
 
     #[test]
     fn new() {
