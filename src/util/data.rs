@@ -15,6 +15,8 @@ use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::{Card, Pile};
 use std::str::FromStr;
+use crate::cards_cell::CardsCell;
+use crate::casino::table::seat::Seat;
 
 /// I am a classicist when it comes to testing. Martin Fowler, in his essay
 /// [Mocks Aren't Stubs](https://martinfowler.com/articles/mocksArentStubs.html)
@@ -214,6 +216,52 @@ impl TestData {
         });
 
         hups
+    }
+
+    #[must_use]
+    pub fn the_hand_seats() -> Vec<Seat> {
+        let doyle_brunson = Seat {
+            player: crate::casino::player::Player::new_with_chips("Doyle Brunson".to_string(), 1_000_000),
+            cards: CardsCell::from_str("T♠ 2♥").unwrap(),
+        };
+        let eli_elezra = Seat {
+            player: crate::casino::player::Player::new_with_chips("Eli Elezra".to_string(), 1_000_000),
+            cards: CardsCell::from_str("8♠ 3♥").unwrap(),
+        };
+        let antonio_esfandiari = Seat {
+            player: crate::casino::player::Player::new_with_chips("Antonio Esfandari".to_string(), 1_000_000),
+            cards: CardsCell::from_str("A♦ Q♣").unwrap(),
+        };
+        let gus_hansen = Seat {
+            player: crate::casino::player::Player::new_with_chips("Gus Hansen".to_string(), 1_000_000),
+            cards: CardsCell::from_str("5♦ 5♣").unwrap(),
+        };
+        let daniel_negreanu = Seat {
+            player: crate::casino::player::Player::new_with_chips("Daniel Negreanu".to_string(), 1_000_000),
+            cards: CardsCell::from_str("6♠ 6♥").unwrap(),
+        };
+        let cory_zeidman = Seat {
+            player: crate::casino::player::Player::new_with_chips("Cory Zeidman".to_string(), 1_000_000),
+            cards: CardsCell::from_str("K♠ J♦").unwrap(),
+        };
+        let barry_greenstein = Seat {
+            player: crate::casino::player::Player::new_with_chips("Barry Greenstein".to_string(), 1_000_000),
+            cards: CardsCell::from_str("4♣ 4♦").unwrap(),
+        };
+        let amnon_filippi = Seat {
+            player: crate::casino::player::Player::new_with_chips("Amnon Filippi".to_string(), 1_000_000),
+            cards: CardsCell::from_str("7♣ 2♣").unwrap(),
+        };
+        vec![
+            doyle_brunson,
+            eli_elezra,
+            antonio_esfandiari,
+            gus_hansen,
+            daniel_negreanu,
+            cory_zeidman,
+            barry_greenstein,
+            amnon_filippi,
+        ]
     }
 }
 

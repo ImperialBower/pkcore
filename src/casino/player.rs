@@ -70,4 +70,15 @@ mod casino__players__player_tests {
         assert_eq!(1_000_002, player.chips.count());
         assert_eq!("Bugsy: 1,000,002 chips", player.to_string());
     }
+
+    #[test]
+    fn default() {
+        let player = Player::default();
+
+        println!("{player:?}");
+
+        assert_eq!("", player.handle);
+        assert_eq!(0, player.chips.count());
+        assert_eq!(": 0 chips", player.to_string());
+    }
 }

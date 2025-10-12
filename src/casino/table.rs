@@ -7,11 +7,11 @@ use crate::games::{GamePhase, GameType};
 use crate::{PKError, deck_cell};
 use bint::BintCell;
 use std::cell::RefCell;
-use std::fmt;
 
 pub mod log;
 pub mod position;
 pub mod seat;
+pub mod seats;
 
 /// There are up to 3 total burn cards in a Texas Hold'em poker hand. Before dealing the flop,
 /// turn, or river, the dealer is required to take the top card from the deck and burn (discard) it.
@@ -69,9 +69,9 @@ impl Table {
         todo!()
     }
 
-    // fn seat(&mut self, number: u8) -> Option<&Seat> {
-    //     self.seats.get(number as usize).m
-    // }
+    pub fn seat(&mut self, number: u8) -> Option<&Seat> {
+        self.seats.get(number as usize)
+    }
 }
 
 impl Default for Table {
@@ -95,8 +95,8 @@ impl Default for Table {
     }
 }
 
-impl fmt::Display for Table {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for Table {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Table: {}", self.id)?;
         writeln!(f, "Game: {:?}", self.game)?;
         writeln!(f, "Phase: {:?}", self.phase)?;

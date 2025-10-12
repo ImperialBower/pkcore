@@ -371,19 +371,19 @@ mod casino__chips__stack_tests {
 
     #[test]
     fn all_in() {
-        let mut starting = Stack::new(1_000);
+        let starting = Stack::new(1_000);
         let expected = starting.clone();
 
         let bet = starting.all_in();
 
         assert!(bet.is_ok());
         assert_eq!(expected, bet.unwrap());
-        assert_eq!(0, starting.size());
+        assert_eq!(0, starting.count());
     }
 
     #[test]
     fn all_in__busted() {
-        let mut starting = Stack::default();
+        let starting = Stack::default();
 
         let busted = starting.all_in();
 
@@ -394,19 +394,19 @@ mod casino__chips__stack_tests {
 
     #[test]
     fn bet() {
-        let mut starting = Stack::new(1_000);
+        let starting = Stack::new(1_000);
         let expected = Stack::new(50);
 
         let bet = starting.bet(50);
 
         assert!(bet.is_ok());
         assert_eq!(expected, bet.unwrap());
-        assert_eq!(950, starting.size());
+        assert_eq!(950, starting.count());
     }
 
     #[test]
     fn bet__insufficient() {
-        let mut starting = Stack::new(1_000);
+        let starting = Stack::new(1_000);
 
         let bet = starting.bet(1_001);
 
@@ -416,9 +416,9 @@ mod casino__chips__stack_tests {
 
     #[test]
     fn win() {
-        let mut starting = Stack::new(1_000);
+        let starting = Stack::new(1_000);
 
-        starting.wins(Stack::new(1_000_000));
+        let _ = starting.wins(Stack::new(1_000_000));
 
         assert_eq!(Stack::new(1_001_000), starting);
     }
@@ -434,7 +434,7 @@ mod casino__chips__stack_tests {
 
     #[test]
     fn default() {
-        assert_eq!(Stack::default().size(), 0);
+        assert_eq!(Stack::default().count(), 0);
     }
 
     #[test]
