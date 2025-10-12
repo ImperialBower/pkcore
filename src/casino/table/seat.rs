@@ -1,6 +1,6 @@
-use std::cell::RefCell;
 use crate::cards_cell::CardsCell;
 use crate::casino::player::Player;
+use std::cell::{BorrowMutError, Ref, RefCell, RefMut};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct SeatCell(RefCell<Seat>);
@@ -11,11 +11,11 @@ impl SeatCell {
         Self(RefCell::new(seat))
     }
 
-    pub fn borrow(&self) -> std::cell::Ref<'_, Seat> {
+    pub fn borrow(&self) -> Ref<'_, Seat> {
         self.0.borrow()
     }
 
-    pub fn borrow_mut(&self) -> std::cell::RefMut<'_, Seat> {
+    pub fn borrow_mut(&self) -> RefMut<'_, Seat> {
         self.0.borrow_mut()
     }
 
@@ -31,12 +31,24 @@ impl SeatCell {
         self.0.get_mut()
     }
 
-    pub fn take(&self) -> Seat {
-        self.0.take()
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.borrow().is_empty()
     }
 
     pub fn swap(&self, other: &SeatCell) {
         self.0.swap(&other.0);
+    }
+
+    pub fn take(&self) -> Seat {
+        self.0.take()
+    }
+
+    /// # Errors
+    ///
+    /// This will return a `BorrowMutError` error if the `RefCell` is already borrowed.
+    pub fn try_borrow_mut(&self) -> Result<RefMut<'_, Seat>, BorrowMutError> {
+        self.0.try_borrow_mut()
     }
 }
 
@@ -81,7 +93,7 @@ impl std::fmt::Display for Seat {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod casino__table_tests {
+mod casino__table__seat_tests {
     use super::*;
 
     #[test]

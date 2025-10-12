@@ -8,6 +8,8 @@ use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
+use crate::cards_cell::CardsCell;
+use crate::casino::table::seat::Seat;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
@@ -15,8 +17,6 @@ use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::{Card, Pile};
 use std::str::FromStr;
-use crate::cards_cell::CardsCell;
-use crate::casino::table::seat::Seat;
 
 /// I am a classicist when it comes to testing. Martin Fowler, in his essay
 /// [Mocks Aren't Stubs](https://martinfowler.com/articles/mocksArentStubs.html)
@@ -218,6 +218,9 @@ impl TestData {
         hups
     }
 
+    /// # Panics
+    ///
+    /// Because of `CardsCell` usage, but this is test data so... ¯\_(ツ)_/¯
     #[must_use]
     pub fn the_hand_seats() -> Vec<Seat> {
         let doyle_brunson = Seat {

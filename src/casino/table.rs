@@ -3,10 +3,11 @@ use crate::casino::cashier::chips::Stack;
 use crate::casino::player::Player;
 use crate::casino::table::log::TableLog;
 use crate::casino::table::seat::Seat;
+use crate::casino::table::seats::Seats;
 use crate::games::{GamePhase, GameType};
 use crate::{PKError, deck_cell};
 use bint::BintCell;
-use std::cell::RefCell;
+use std::cell::{RefCell, RefMut};
 
 pub mod log;
 pub mod position;
@@ -20,7 +21,7 @@ pub struct Table {
     pub id: String,
     pub game: GameType,
     pub phase: RefCell<GamePhase>,
-    pub seats: Vec<Seat>,
+    pub seats: Seats,
     pub dealer: BintCell,
     pub action_to: BintCell,
     pub deck: CardsCell,
@@ -31,18 +32,35 @@ pub struct Table {
 }
 
 impl Table {
+    /// Factory method used to setup seats for a default instance.
     #[must_use]
-    pub fn generate_seats(count: u8, stack: usize) -> Vec<Seat> {
+    pub fn generate_seats(count: u8) -> Seats {
         let mut seats = Vec::with_capacity(count as usize);
-        for i in 0..count {
-            let seat_number = i + 1;
+        for _ in 0..count {
             let seat = Seat {
-                player: Player::new_with_chips(format!("Player {seat_number}"), stack),
+                player: Player::default(),
                 cards: CardsCell::default(),
             };
             seats.push(seat);
         }
-        seats
+        Seats::new(seats)
+    }
+
+    #[must_use]
+    pub fn nlh_from_seats(seats: Seats) -> Self {
+        Table {
+            id: "No Limit Hold'em Table".to_string(),
+            game: GameType::NoLimitHoldem,
+            phase: GamePhase::NewHand.into(),
+            seats,
+            dealer: BintCell::new(0),
+            action_to: BintCell::new(0),
+            deck: deck_cell!(),
+            board: CardsCell::default(),
+            discards: CardsCell::default(),
+            pot: Stack::default(),
+            log: TableLog::default(),
+        }
     }
 
     pub fn deal(&mut self) {
@@ -69,20 +87,20 @@ impl Table {
         todo!()
     }
 
-    pub fn seat(&mut self, number: u8) -> Option<&Seat> {
-        self.seats.get(number as usize)
+    pub fn seat(&self, number: usize) -> Option<RefMut<'_, Seat>> {
+        self.seats.seat(number)
     }
 }
 
 impl Default for Table {
     fn default() -> Self {
-        let seats = Table::generate_seats(6, 10_000);
+        let seats = Table::generate_seats(6);
         #[allow(clippy::pedantic)] // allow cast
         let player_count = seats.len() as u8;
         Table {
             id: "No Limit Hold'em Table".to_string(),
             game: GameType::NoLimitHoldem,
-            phase: GamePhase::NewHand.into(),
+            phase: GamePhase::default().into(),
             seats,
             dealer: BintCell::new(player_count),
             action_to: BintCell::new(player_count),
@@ -104,7 +122,7 @@ impl std::fmt::Display for Table {
         if !self.pot.is_empty() {
             writeln!(f, "Pot Size: {}", self.pot.count())?;
         }
-        for (i, seat) in self.seats.iter().enumerate() {
+        for (i, seat) in self.seats.borrow_all().iter().enumerate() {
             writeln!(f, "Seat {}: {}", i + 1, seat)?;
         }
         Ok(())
@@ -136,15 +154,13 @@ mod casino__table_tests {
 #[allow(non_snake_case)]
 mod card_tests {
     use super::*;
+    use crate::util::data::TestData;
 
     #[test]
     fn seat() {
-        let _table = Table::default();
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()));
 
-        // let mut seat: &mut Seat = table.seat(1).unwrap();
-        // assert_eq!("Player 2", seat.player.handle);
-        // assert_eq!(10_000, seat.player.chips.stack());
-        //
-        // seat.player.chips += Chips::new(500);
+        let seat = table.seat(6).unwrap();
+        assert_eq!("Barry Greenstein", seat.player.handle);
     }
 }

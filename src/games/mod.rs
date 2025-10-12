@@ -23,6 +23,7 @@ impl std::fmt::Display for GameType {
 #[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq)]
 pub enum GamePhase {
     #[default]
+    Break,
     NewHand,
     ShuffleNewDeck,
     ForcedBets,
@@ -64,7 +65,7 @@ impl GamePhase {
             GamePhase::BurnCardBeforeRiver => GamePhase::DealRiver,
             GamePhase::DealRiver => GamePhase::RiverBetting,
             GamePhase::RiverBetting => GamePhase::AwardWinners,
-            GamePhase::AwardWinners => GamePhase::NewHand,
+            GamePhase::Break | GamePhase::AwardWinners => GamePhase::NewHand,
         }
     }
 }
@@ -72,6 +73,7 @@ impl GamePhase {
 impl std::fmt::Display for GamePhase {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            GamePhase::Break => write!(f, "Break"),
             GamePhase::NewHand => write!(f, "New Hand"),
             GamePhase::ShuffleNewDeck => write!(f, "Shuffle New Deck"),
             GamePhase::ForcedBets => write!(f, "Forced Bets"),

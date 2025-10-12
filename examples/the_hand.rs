@@ -1,5 +1,6 @@
 use bint::BintCell;
 use pkcore::casino::table::Table;
+use pkcore::casino::table::seats::Seats;
 use pkcore::games::GamePhase;
 use pkcore::util::data::TestData;
 
@@ -13,7 +14,7 @@ fn main() {
 
     let mut table = Table::default();
     table.phase = GamePhase::ForcedBets.into();
-    table.seats = TestData::the_hand_seats();
+    table.seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
     table.dealer = BintCell::new(TestData::the_hand_seats().len() as u8);
 
     // table.deal_hole_cards().unwrap();

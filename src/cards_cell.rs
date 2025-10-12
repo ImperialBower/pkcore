@@ -215,7 +215,8 @@ impl CardsCell {
     ///
     /// let cards_cell = CardsCell::deck();
     ///
-    /// assert_eq!(cards_cell.take(), Cards::deck())
+    /// assert_eq!(cards_cell.take(), Cards::deck());
+    /// assert_eq!(cards_cell, CardsCell::default());
     /// ```
     pub fn take(&self) -> Cards {
         self.0.take()
