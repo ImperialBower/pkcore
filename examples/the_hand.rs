@@ -15,7 +15,7 @@ fn main() {
     let mut table = Table::default();
     table.phase = GamePhase::ForcedBets.into();
     table.seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
-    table.dealer = BintCell::new(TestData::the_hand_seats().len() as u8);
+    table.button = BintCell::new(TestData::the_hand_seats().len() as u8);
 
     // table.deal_hole_cards().unwrap();
 

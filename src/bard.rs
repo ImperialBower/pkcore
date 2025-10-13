@@ -1,10 +1,11 @@
-use crate::Pile;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::{PKError, Pile};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
+use std::str::FromStr;
 
 /// A `Bard` is a binary representation of one or more `Cards` contained in a single unsigned
 /// integer. Each bit flag represents one card. Since each flag is a different card, you can
@@ -495,6 +496,14 @@ impl From<u64> for Bard {
     }
 }
 
+impl FromStr for Bard {
+    type Err = PKError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Bard::from(Cards::from_str(s)?))
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod bard_tests {
@@ -722,6 +731,15 @@ mod bard_tests {
             Card::TEN_SPADES,
         ];
         let actual = Bard::from(v);
+        let expected = Bard::ACE_SPADES | Bard::KING_SPADES | Bard::QUEEN_SPADES | Bard::JACK_SPADES | Bard::TEN_SPADES;
+
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn from_str() {
+        let s = "A♠ K♠ Q♠ J♠ T♠";
+        let actual = Bard::from_str(s).unwrap();
         let expected = Bard::ACE_SPADES | Bard::KING_SPADES | Bard::QUEEN_SPADES | Bard::JACK_SPADES | Bard::TEN_SPADES;
 
         assert_eq!(actual, expected);

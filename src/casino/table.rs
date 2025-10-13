@@ -1,7 +1,8 @@
 use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
+use crate::casino::game::ForcedBets;
 use crate::casino::player::Player;
-use crate::casino::table::log::TableLog;
+use crate::casino::table::event::TableLog;
 use crate::casino::table::seat::Seat;
 use crate::casino::table::seats::Seats;
 use crate::games::{GamePhase, GameType};
@@ -9,7 +10,7 @@ use crate::{PKError, deck_cell};
 use bint::BintCell;
 use std::cell::{RefCell, RefMut};
 
-pub mod log;
+pub mod event;
 pub mod position;
 pub mod seat;
 pub mod seats;
@@ -20,15 +21,16 @@ pub mod seats;
 pub struct Table {
     pub id: String,
     pub game: GameType,
+    pub forced: ForcedBets,
     pub phase: RefCell<GamePhase>,
     pub seats: Seats,
-    pub dealer: BintCell,
+    pub button: BintCell,
     pub action_to: BintCell,
     pub deck: CardsCell,
     pub board: CardsCell,
     pub discards: CardsCell,
     pub pot: Stack,
-    pub log: TableLog,
+    pub event_log: TableLog,
 }
 
 impl Table {
@@ -46,20 +48,38 @@ impl Table {
         Seats::new(seats)
     }
 
+    /// # Panics
+    ///
+    /// This will panic if the number of seats exceeds `u8::MAX`, which shouldn't be possible.
     #[must_use]
-    pub fn nlh_from_seats(seats: Seats) -> Self {
+    pub fn nlh_from_seats(seats: Seats, forced: ForcedBets) -> Self {
+        let event_log = TableLog::default();
+        for seat in seats.borrow_all() {
+            if !seat.borrow().is_empty() {
+                if let Ok(num) = u8::try_from(seats.borrow_all().iter().position(|s| s == seat).unwrap()) {
+                    event_log.log(event::TableAction::PlayerSeated(num, seat.borrow().player.id));
+                } else {
+                    event_log.log(event::TableAction::InvalidAction);
+                    log::error!("Seat number conversion error");
+                }
+            }
+        }
+
+        let number_players = seats.size();
+
         Table {
             id: "No Limit Hold'em Table".to_string(),
             game: GameType::NoLimitHoldem,
+            forced,
             phase: GamePhase::NewHand.into(),
             seats,
-            dealer: BintCell::new(0),
-            action_to: BintCell::new(0),
+            button: BintCell::new(number_players),
+            action_to: BintCell::new(number_players),
             deck: deck_cell!(),
             board: CardsCell::default(),
             discards: CardsCell::default(),
             pot: Stack::default(),
-            log: TableLog::default(),
+            event_log,
         }
     }
 
@@ -90,25 +110,36 @@ impl Table {
     pub fn seat(&self, number: usize) -> Option<RefMut<'_, Seat>> {
         self.seats.seat(number)
     }
+
+    pub fn set_button(&self, seat_number: u8) {
+        self.button.set(seat_number);
+        self.event_log.log(event::TableAction::SetButton(seat_number));
+    }
+
+    pub fn move_button(&self) {
+        self.button.up();
+        self.event_log.log(event::TableAction::MoveButton(self.button.value()));
+    }
 }
 
 impl Default for Table {
     fn default() -> Self {
         let seats = Table::generate_seats(6);
         #[allow(clippy::pedantic)] // allow cast
-        let player_count = seats.len() as u8;
+        let player_count = seats.size();
         Table {
             id: "No Limit Hold'em Table".to_string(),
             game: GameType::NoLimitHoldem,
             phase: GamePhase::default().into(),
+            forced: ForcedBets::new(50, 100),
             seats,
-            dealer: BintCell::new(player_count),
+            button: BintCell::new(player_count),
             action_to: BintCell::new(player_count),
             deck: deck_cell!(),
             board: CardsCell::default(),
             discards: CardsCell::default(),
             pot: Stack::default(),
-            log: TableLog::default(),
+            event_log: TableLog::default(),
         }
     }
 }
@@ -118,12 +149,12 @@ impl std::fmt::Display for Table {
         writeln!(f, "Table: {}", self.id)?;
         writeln!(f, "Game: {:?}", self.game)?;
         writeln!(f, "Phase: {:?}", self.phase)?;
-        writeln!(f, "Dealer Position: {}", self.dealer.value() + 1)?;
+        writeln!(f, "Dealer Position: {}", self.button.value())?;
         if !self.pot.is_empty() {
             writeln!(f, "Pot Size: {}", self.pot.count())?;
         }
         for (i, seat) in self.seats.borrow_all().iter().enumerate() {
-            writeln!(f, "Seat {}: {}", i + 1, seat)?;
+            writeln!(f, "Seat {i}: {seat}")?;
         }
         Ok(())
     }
@@ -133,6 +164,24 @@ impl std::fmt::Display for Table {
 #[allow(non_snake_case)]
 mod casino__table_tests {
     use super::*;
+    use crate::util::data::TestData;
+
+    #[test]
+    fn nlh_from_seats() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        assert_eq!("No Limit Hold'em Table", table.id);
+        assert_eq!(GameType::NoLimitHoldem, table.game);
+        // assert_eq!(GamePhase::NewHand, table.phase.);
+        assert_eq!(8, table.seats.size());
+        assert_eq!(0, table.button.value());
+        assert_eq!(0, table.action_to.value());
+        assert_eq!(52, table.deck.len());
+        assert_eq!(0, table.board.len());
+        assert_eq!(0, table.discards.len());
+        assert!(table.pot.is_empty());
+
+        println!("{}", table.event_log)
+    }
 
     #[test]
     fn default() {
@@ -140,27 +189,45 @@ mod casino__table_tests {
         assert_eq!("No Limit Hold'em Table", table.id);
         assert_eq!(GameType::NoLimitHoldem, table.game);
         // assert_eq!(GamePhase::NewHand, table.phase.);
-        assert_eq!(6, table.seats.len());
-        assert_eq!(0, table.dealer.value());
+        assert_eq!(6, table.seats.size());
+        assert_eq!(0, table.button.value());
         assert_eq!(0, table.action_to.value());
         assert_eq!(52, table.deck.len());
         assert_eq!(0, table.board.len());
         assert_eq!(0, table.discards.len());
         assert!(table.pot.is_empty());
     }
-}
-
-#[cfg(test)]
-#[allow(non_snake_case)]
-mod card_tests {
-    use super::*;
-    use crate::util::data::TestData;
 
     #[test]
     fn seat() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()));
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
 
         let seat = table.seat(6).unwrap();
         assert_eq!("Barry Greenstein", seat.player.handle);
+    }
+
+    #[test]
+    fn set_button() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        assert_eq!(0, table.button.value());
+        table.set_button(3);
+        assert_eq!(3, table.button.value());
+        assert_eq!(
+            table.event_log.entries().last(),
+            Some(&event::TableAction::SetButton(3))
+        );
+    }
+
+    #[test]
+    fn move_button() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+
+        table.move_button();
+
+        assert_eq!(1, table.button.value());
+        assert_eq!(
+            table.event_log.entries().last(),
+            Some(&event::TableAction::MoveButton(1))
+        );
     }
 }

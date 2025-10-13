@@ -8,8 +8,8 @@ use std::cell::{Ref, RefMut};
 pub struct Seats(Box<[SeatCell]>);
 
 impl Seats {
-    pub const DEFAULT_NUMBER_SEATS: usize = 6;
-    pub const MAX_NUMBER_SEATS: usize = 9;
+    pub const DEFAULT_NUMBER_SEATS: u8 = 6;
+    pub const MAX_NUMBER_SEATS: u8 = 10;
 
     /// How frackin' cool is this `into_boxed_slice` pattern?! I'm going to need to play with this.
     #[must_use]
@@ -25,7 +25,7 @@ impl Seats {
     /// This will return a `PKError::TableFull` error if the `seat_number` is not one of the
     /// available seats.
     pub fn assign(&self, seat_number: usize, seat: Seat) -> Result<Seat, PKError> {
-        if seat_number >= self.len() {
+        if seat_number >= self.size() as usize {
             return Err(PKError::TableFull);
         }
         Ok(self.0[seat_number].replace(seat))
@@ -52,11 +52,6 @@ impl Seats {
     }
 
     #[must_use]
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -70,6 +65,16 @@ impl Seats {
                 log::error!("Failed to borrow seat #{index} mutably: {e}");
                 None
             }
+        }
+    }
+
+    #[must_use]
+    pub fn size(&self) -> u8 {
+        if let Ok(size) = u8::try_from(self.0.len()) {
+            size
+        } else {
+            log::error!("Seat size conversion error");
+            0
         }
     }
 
@@ -102,7 +107,7 @@ impl Seats {
 
 impl Default for Seats {
     fn default() -> Self {
-        let mut seats = Vec::with_capacity(Self::DEFAULT_NUMBER_SEATS);
+        let mut seats = Vec::with_capacity(Self::DEFAULT_NUMBER_SEATS as usize);
         for _ in 0..Self::DEFAULT_NUMBER_SEATS {
             seats.push(Seat::default());
         }
@@ -114,9 +119,9 @@ impl std::fmt::Display for Seats {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (i, seat) in self.0.iter().enumerate() {
             if seat.is_empty() {
-                writeln!(f, "Seat {}: __________", i + 1)?;
+                writeln!(f, "Seat {i}: __________")?;
             } else {
-                writeln!(f, "Seat {}: {}", i + 1, seat)?;
+                writeln!(f, "Seat {i}: {seat}")?;
             }
         }
         Ok(())
@@ -151,7 +156,7 @@ impl TryFrom<Vec<Seat>> for Seats {
     type Error = PKError;
 
     fn try_from(value: Vec<Seat>) -> Result<Self, Self::Error> {
-        if value.len() > Self::MAX_NUMBER_SEATS {
+        if value.len() > Self::MAX_NUMBER_SEATS as usize {
             return Err(PKError::TableFull);
         }
         Ok(Self::new(value))
@@ -162,7 +167,7 @@ impl TryFrom<Vec<SeatCell>> for Seats {
     type Error = PKError;
 
     fn try_from(value: Vec<SeatCell>) -> Result<Self, Self::Error> {
-        if value.len() > Self::MAX_NUMBER_SEATS {
+        if value.len() > Self::MAX_NUMBER_SEATS as usize {
             return Err(PKError::TableFull);
         }
         Ok(Self(value.into_boxed_slice()))

@@ -842,3 +842,5 @@ This is an outline of the work as it is done.
       * FEATURE: Casino Table
         * Created CardsCell instead of using cardpack.rs' version.
         * Creating log::TableEvent
+          * set_button and move_button methods
+          * Upgraded bint to 0.1.9 to fix 0 boundary defect
