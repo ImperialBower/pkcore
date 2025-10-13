@@ -17,6 +17,7 @@ pub enum TableAction {
     ForcedBetBigBlind(u8, usize),
     BetAnteForced(u8, usize),
     Dealt(u8, Bard),
+    ForceDealt(u8, Bard),
     Bet(u8, usize),
     Call(u8, usize),
     Raise(u8, usize),
@@ -57,6 +58,9 @@ impl Display for TableAction {
                 write!(f, "Seat {seat} Antes {amount}")
             }
             TableAction::Dealt(seat, cards) => write!(f, "Seat {seat} is dealt {}", Cards::from(*cards)),
+            TableAction::ForceDealt(seat, cards) => {
+                write!(f, "Seat {seat} is force-dealt {}", Cards::from(*cards))
+            }
             TableAction::Bet(seat, amount) => write!(f, "Seat {seat} bets {amount}"),
             TableAction::Call(seat, amount) => write!(f, "Seat {seat} calls {amount}"),
             TableAction::Raise(seat, amount) => write!(f, "Seat {seat} raises to {amount}"),
@@ -95,7 +99,11 @@ impl TableLog {
 impl Display for TableLog {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let internal = self.0.borrow();
-        let lines: Vec<String> = internal.iter().map(std::string::ToString::to_string).collect();
+        let lines: Vec<String> = internal
+            .iter()
+            .enumerate()
+            .map(|(i, action)| format!("{}: {}", i + 1, action))
+            .collect();
         write!(f, "{}", lines.join("\n"))
     }
 }
@@ -110,15 +118,15 @@ mod casino__table__log_tests {
     fn display() {
         let log = TableLog::new();
 
+        log.log(TableAction::PlayerSeated(0, Uuid::nil()));
         log.log(TableAction::PlayerSeated(1, Uuid::nil()));
-        log.log(TableAction::PlayerSeated(2, Uuid::nil()));
-        log.log(TableAction::ForcedBetSmallBlind(1, 50));
-        log.log(TableAction::ForcedBetBigBlind(2, 100));
-        log.log(TableAction::Dealt(1, Bard::from_str("AS KS").unwrap()));
+        log.log(TableAction::ForcedBetSmallBlind(0, 50));
+        log.log(TableAction::ForcedBetBigBlind(1, 100));
+        log.log(TableAction::Dealt(0, Bard::from_str("AS KS").unwrap()));
         log.log(TableAction::Dealt(1, Bard::from_str("KD KC").unwrap()));
 
         assert_eq!(
-            "Player 00000000-0000-0000-0000-000000000000 is seated at Seat 1\nPlayer 00000000-0000-0000-0000-000000000000 is seated at Seat 2\nSeat 1 puts in Small Blind of 50\nSeat 2 puts in Big Blind of 100\nSeat 1 is dealt A♠ K♠\nSeat 1 is dealt K♦ K♣",
+            "1: Player 00000000-0000-0000-0000-000000000000 is seated at Seat 0\n2: Player 00000000-0000-0000-0000-000000000000 is seated at Seat 1\n3: Seat 0 puts in Small Blind of 50\n4: Seat 1 puts in Big Blind of 100\n5: Seat 0 is dealt A♠ K♠\n6: Seat 1 is dealt K♦ K♣",
             log.to_string()
         );
     }

@@ -21,6 +21,14 @@ use std::str::FromStr;
 use strum::IntoEnumIterator;
 
 #[macro_export]
+#[allow(clippy::pedantic)]
+macro_rules! cards {
+    ($card_str:expr) => {
+        Cards::forgiving_from_str($card_str)
+    };
+}
+
+#[macro_export]
 macro_rules! deck {
     () => {
         Cards::deck()
@@ -265,6 +273,15 @@ impl Cards {
         Cards::from(self.iter().map(Card::frequency_quaded).collect::<Vec<_>>())
     }
 
+    /// Idea stolen from my `CardPack.rs` library.
+    #[must_use]
+    pub fn forgiving_from_str(index: &str) -> Self {
+        Self::from_str(index).unwrap_or_else(|_| {
+            log::warn!("Cards::forgiving_from_str(): {index} is invalid. Returning empty Pile.");
+            Self::default()
+        })
+    }
+
     /// This function is most likely going to be a shit show. I could just cast everything over
     /// to my [cardpack.rs](https://github.com/ContractBridge/cardpack.rs) library where this is
     /// [already solved](https://github.com/ContractBridge/cardpack.rs/blob/main/src/cards/pile.rs#L448),
@@ -349,6 +366,10 @@ impl Cards {
     #[must_use]
     pub fn deal_from_the_bottom(&mut self) -> Option<Card> {
         self.0.pop()
+    }
+
+    pub fn remove(&mut self, card: &Card) -> bool {
+        self.0.shift_remove(card)
     }
 
     #[must_use]
@@ -1199,7 +1220,7 @@ mod card_tests {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod pile_tests {
+mod cards_tests {
     use super::*;
     use rstest::rstest;
 
@@ -1210,5 +1231,12 @@ mod pile_tests {
         let cards = Cards::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
 
         assert_eq!(cards.contains(&card), assert);
+    }
+
+    #[test]
+    fn cards() {
+        let cards = cards!("AS KH QC JD TC 9H 8D");
+
+        assert_eq!("A♠ K♥ Q♣ J♦ T♣ 9♥ 8♦", cards.to_string());
     }
 }

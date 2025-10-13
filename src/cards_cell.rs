@@ -1,11 +1,20 @@
-use crate::PKError;
+use crate::analysis::the_nuts::TheNuts;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::{PKError, Pile};
 use std::cell::RefCell;
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::str::FromStr;
+
+#[macro_export]
+#[allow(clippy::pedantic)]
+macro_rules! cc {
+    ($card_str:expr) => {
+        CardsCell::new(Cards::forgiving_from_str($card_str))
+    };
+}
 
 #[macro_export]
 macro_rules! deck_cell {
@@ -105,6 +114,18 @@ impl CardsCell {
     pub fn dump(&self) {
         let internal = self.0.borrow_mut();
         internal.dump();
+    }
+
+    /// # Errors
+    ///
+    /// Returns `PKError::CardNotFound` if the specified card is not found in the collection.
+    pub fn force_draw(&self, card: Card) -> Result<Card, PKError> {
+        let mut internal = self.0.borrow_mut();
+        if internal.remove(&card) {
+            Ok(card)
+        } else {
+            Err(PKError::CardNotFound)
+        }
     }
 
     #[must_use]
@@ -253,6 +274,12 @@ impl From<Bard> for CardsCell {
     }
 }
 
+impl From<Vec<Card>> for CardsCell {
+    fn from(cards: Vec<Card>) -> Self {
+        CardsCell::new(Cards::from(cards))
+    }
+}
+
 impl FromStr for CardsCell {
     type Err = PKError;
 
@@ -270,5 +297,57 @@ impl FromStr for CardsCell {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let cards = Cards::from_str(s)?;
         Ok(CardsCell::new(cards))
+    }
+}
+
+impl Pile for CardsCell {
+    fn contains(&self, card: &Card) -> bool {
+        let internal = self.0.borrow();
+        internal.contains(card)
+    }
+
+    fn clean(&self) -> Self {
+        todo!()
+    }
+
+    fn the_nuts(&self) -> TheNuts {
+        todo!()
+    }
+
+    fn to_vec(&self) -> Vec<Card> {
+        let internal = self.0.borrow();
+        internal.to_vec()
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod cards_cell_tests {
+    use super::*;
+    use rstest::rstest;
+
+    #[rstest]
+    #[case(Card::ACE_SPADES, true)]
+    #[case(Card::ACE_DIAMONDS, false)]
+    fn pile__contains(#[case] card: Card, #[case] assert: bool) {
+        let cards = CardsCell::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
+
+        assert_eq!(cards.contains(&card), assert);
+    }
+
+    #[test]
+    fn pile__to_vec() {
+        let cards = deck_cell!();
+
+        let back_again = CardsCell::from(cards.to_vec());
+
+        assert_eq!(cards, back_again);
+    }
+
+    #[test]
+    fn cards() {
+        let cards = cc!("AS KH QC JD TC 9H 8D");
+
+        assert_eq!("A♠ K♥ Q♣ J♦ T♣ 9♥ 8♦", cards.to_string());
     }
 }

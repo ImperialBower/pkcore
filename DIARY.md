@@ -844,3 +844,10 @@ This is an outline of the work as it is done.
         * Creating log::TableEvent
           * set_button and move_button methods
           * Upgraded bint to 0.1.9 to fix 0 boundary defect
+          * Upgraded bint to 0.1.11 to make it cooler
+          * Added cc! and cards! macros
+          * Added support for Pile with CardsCell
+          * Added CardsCell.force_draw 
+          * Added From<Vec<Cards>> to CardsCell
+          * Added uuid to table
+          * 

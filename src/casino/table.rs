@@ -9,6 +9,7 @@ use crate::games::{GamePhase, GameType};
 use crate::{PKError, deck_cell};
 use bint::BintCell;
 use std::cell::{RefCell, RefMut};
+use uuid::Uuid;
 
 pub mod event;
 pub mod position;
@@ -19,7 +20,8 @@ pub mod seats;
 /// turn, or river, the dealer is required to take the top card from the deck and burn (discard) it.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Table {
-    pub id: String,
+    pub id: Uuid,
+    pub name: String,
     pub game: GameType,
     pub forced: ForcedBets,
     pub phase: RefCell<GamePhase>,
@@ -68,7 +70,8 @@ impl Table {
         let number_players = seats.size();
 
         Table {
-            id: "No Limit Hold'em Table".to_string(),
+            id: Uuid::new_v4(),
+            name: "No Limit Hold'em Table".to_string(),
             game: GameType::NoLimitHoldem,
             forced,
             phase: GamePhase::NewHand.into(),
@@ -171,7 +174,8 @@ impl Default for Table {
         #[allow(clippy::pedantic)] // allow cast
         let player_count = seats.size();
         Table {
-            id: "No Limit Hold'em Table".to_string(),
+            id: Uuid::default(),
+            name: "Default No Limit Hold'em Table".to_string(),
             game: GameType::NoLimitHoldem,
             phase: GamePhase::default().into(),
             forced: ForcedBets::new(50, 100),
@@ -189,7 +193,7 @@ impl Default for Table {
 
 impl std::fmt::Display for Table {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Table: {}", self.id)?;
+        writeln!(f, "Table: {} [{}]", self.name, self.id)?;
         writeln!(f, "Game: {:?}", self.game)?;
         writeln!(f, "Phase: {:?}", self.phase)?;
         writeln!(f, "Dealer Position: {}", self.button.value())?;
@@ -212,7 +216,7 @@ mod casino__table_tests {
     #[test]
     fn nlh_from_seats() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
-        assert_eq!("No Limit Hold'em Table", table.id);
+        assert_eq!("No Limit Hold'em Table", table.name);
         assert_eq!(GameType::NoLimitHoldem, table.game);
         // assert_eq!(GamePhase::NewHand, table.phase.);
         assert_eq!(8, table.seats.size());
@@ -229,7 +233,7 @@ mod casino__table_tests {
     #[test]
     fn default() {
         let table = Table::default();
-        assert_eq!("No Limit Hold'em Table", table.id);
+        assert_eq!("Default No Limit Hold'em Table", table.name);
         assert_eq!(GameType::NoLimitHoldem, table.game);
         // assert_eq!(GamePhase::NewHand, table.phase.);
         assert_eq!(6, table.seats.size());
