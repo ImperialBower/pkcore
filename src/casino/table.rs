@@ -95,9 +95,52 @@ impl Table {
         todo!()
     }
 
+    /// ```
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::seats::Seats;
+    /// use pkcore::casino::table::Table;
+    /// use pkcore::util::data::TestData;
+    ///
+    /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+    /// let table = Table::nlh_from_seats(seats.clone(), ForcedBets::new(50, 100));
+    ///
+    /// assert_eq!(seats.size(), 8);
+    /// assert_eq!(table.determine_big_blind(), 6, "If seat 0 is the dealer, than seat 6 is the big blind");
+    /// ```
+    pub fn determine_big_blind(&self) -> u8 {
+        self.button.static_down_x(2).value
+    }
+
+    /// ```
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::seats::Seats;
+    /// use pkcore::casino::table::Table;
+    /// use pkcore::util::data::TestData;
+    ///
+    /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+    /// let table = Table::nlh_from_seats(seats.clone(), ForcedBets::new(50, 100));
+    ///
+    /// assert_eq!(seats.size(), 8);
+    /// assert_eq!(table.determine_small_blind(), 7, "If seat 0 is the dealer, than seat 6 is the big blind");
+    /// ```
+    pub fn determine_small_blind(&self) -> u8 {
+        self.button.static_down_x(1).value
+    }
+
+    /// ```
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::seats::Seats;
+    /// use pkcore::casino::table::Table;
+    /// use pkcore::util::data::TestData;
+    ///
+    /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+    /// let table = Table::nlh_from_seats(seats.clone(), ForcedBets::new(50, 100));
+    ///
+    /// assert_eq!(seats.size(), 8);
+    /// assert_eq!(table.determine_utg(), 5, "If seat 0 is the dealer, than seat 5 is under the gun");
+    /// ```
     pub fn determine_utg(&self) -> u8 {
-        // let bint = Bint::
-        todo!()
+        self.button.static_down_x(3).value
     }
 
     /// # Errors
