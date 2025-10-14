@@ -1,3 +1,4 @@
+use crate::PKError;
 use crate::casino::cashier::chips::Stack;
 use crate::util::name::Name;
 use std::fmt::{Display, Formatter};
@@ -29,6 +30,19 @@ impl Player {
             handle,
             chips: Stack::new(stack),
             bet: Stack::default(),
+        }
+    }
+
+    /// # Errors
+    ///
+    /// * `PKError::InsufficientChips` - if the player does not have enough chips to make the bet
+    pub fn bets(&mut self, amount: usize) -> Result<usize, PKError> {
+        if amount > self.chips.count() {
+            Err(PKError::InsufficientChips)
+        } else {
+            self.chips = Stack::new(self.chips.count() - amount);
+            self.bet = Stack::new(self.bet.count() + amount);
+            Ok(self.chips.count())
         }
     }
 
@@ -80,5 +94,15 @@ mod casino__players__player_tests {
         assert_eq!("", player.handle);
         assert_eq!(0, player.chips.count());
         assert_eq!(": 0 chips", player.to_string());
+    }
+
+    #[test]
+    fn bets() {
+        let mut player = Player::new_with_chips("The Russian".to_string(), 1_000);
+
+        let did_bet = player.bets(100);
+
+        assert!(did_bet.is_ok());
+        assert_eq!(900, did_bet.unwrap());
     }
 }

@@ -149,8 +149,31 @@ impl Table {
     /// # Errors
     ///
     /// ...
-    pub fn forced_bets(&mut self) -> Result<(), PKError> {
-        todo!()
+    pub fn forced_bets(&self) -> Result<(), PKError> {
+        let sb_seat_num = self.determine_small_blind();
+        let bb_seat_num = self.determine_big_blind();
+
+        if let Some(mut sb_seat) = self.seat(usize::from(sb_seat_num)) {
+            let sb_amount = self.forced.small_blind;
+            sb_seat.player.bets(sb_amount)?;
+            self.event_log
+                .log(event::TableAction::ForcedBetSmallBlind(sb_seat_num, sb_amount));
+        } else {
+            log::error!("Failed to find small blind seat #{sb_seat_num}");
+            return Err(PKError::InvalidSeatNumber);
+        }
+
+        if let Some(mut bb_seat) = self.seat(usize::from(bb_seat_num)) {
+            let bb_amount = self.forced.big_blind;
+            bb_seat.player.bets(bb_amount)?;
+            self.event_log
+                .log(event::TableAction::ForcedBetBigBlind(bb_seat_num, bb_amount));
+        } else {
+            log::error!("Failed to find big blind seat #{bb_seat_num}");
+            return Err(PKError::InvalidSeatNumber);
+        }
+
+        Ok(())
     }
 
     pub fn seat(&self, number: usize) -> Option<RefMut<'_, Seat>> {
