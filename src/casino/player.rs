@@ -55,6 +55,12 @@ impl Player {
             bet: Stack::default(),
         }
     }
+
+    /// Returns the total count of the player that is in play.
+    #[must_use]
+    pub fn total_chip_count(&self) -> usize {
+        self.chips.count() + self.bet.count()
+    }
 }
 
 impl Display for Player {

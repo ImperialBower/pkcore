@@ -8,10 +8,12 @@ use uuid::Uuid;
 pub enum TableAction {
     #[default]
     Pause,
+    TableOpen(Uuid),
     PlayerSeated(u8, Uuid),
+    NewHand,
+    ShuffleDeck,
     SetButton(u8),
     MoveButton(u8),
-    ShuffleNewDeck,
     ForcedBets,
     ForcedBetSmallBlind(u8, usize),
     ForcedBetBigBlind(u8, usize),
@@ -41,12 +43,14 @@ impl Display for TableAction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TableAction::Pause => write!(f, "Pause"),
+            TableAction::TableOpen(table_id) => write!(f, "Table {table_id} is now open"),
             TableAction::PlayerSeated(seat, player_id) => {
                 write!(f, "Player {player_id} is seated at Seat {seat}")
             }
+            TableAction::NewHand => write!(f, "New Hand"),
+            TableAction::ShuffleDeck => write!(f, "Shuffle Deck"),
             TableAction::SetButton(seat) => write!(f, "Set Button to Seat {seat}"),
             TableAction::MoveButton(seat) => write!(f, "Move Button to Seat {seat}"),
-            TableAction::ShuffleNewDeck => write!(f, "Shuffle New Deck"),
             TableAction::ForcedBets => write!(f, "Forced Bets"),
             TableAction::ForcedBetSmallBlind(seat, amount) => {
                 write!(f, "Seat {seat} puts in Small Blind of {amount}")

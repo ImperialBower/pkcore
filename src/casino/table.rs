@@ -8,6 +8,7 @@ use crate::casino::table::seats::Seats;
 use crate::games::{GamePhase, GameType};
 use crate::{PKError, deck_cell};
 use bint::BintCell;
+use std::cell::Ref;
 use std::cell::{RefCell, RefMut};
 use uuid::Uuid;
 
@@ -56,6 +57,10 @@ impl Table {
     #[must_use]
     pub fn nlh_from_seats(seats: Seats, forced: ForcedBets) -> Self {
         let event_log = TableLog::default();
+
+        let uuid = Uuid::new_v4();
+        event_log.log(event::TableAction::TableOpen(uuid));
+
         for seat in seats.borrow_all() {
             if !seat.borrow().is_empty() {
                 if let Ok(num) = u8::try_from(seats.borrow_all().iter().position(|s| s == seat).unwrap()) {
@@ -70,7 +75,7 @@ impl Table {
         let number_players = seats.size();
 
         Table {
-            id: Uuid::new_v4(),
+            id: uuid,
             name: "No Limit Hold'em Table".to_string(),
             game: GameType::NoLimitHoldem,
             forced,
@@ -86,16 +91,68 @@ impl Table {
         }
     }
 
-    pub fn deal(&mut self) {
+    pub fn act_shuffle_deck(&self) {
+        self.deck.shuffle_in_place();
+        log::debug!("Deck shuffled: {}", self.deck);
+        self.event_log.log(event::TableAction::ShuffleDeck);
+    }
+
+    pub fn act_button_move(&self) {
+        self.button.up();
+        self.event_log.log(event::TableAction::MoveButton(self.button.value()));
+    }
+
+    pub fn act_deal(&self) {
         match self.game {
-            GameType::NoLimitHoldem => self.deal_cards(2),
-            GameType::PLO => self.deal_cards(4),
-            GameType::Razz => self.deal_cards(3),
+            GameType::NoLimitHoldem => self.act_deal_cards(2),
+            GameType::PLO => self.act_deal_cards(4),
+            GameType::Razz => self.act_deal_cards(3),
         }
     }
 
-    pub fn deal_cards(&mut self, _num_cards: usize) {
+    pub fn act_deal_cards(&self, _num_cards: usize) {
         todo!()
+    }
+
+    /// # Errors
+    ///
+    /// Throws an `InvalidSeatNumber` if the seat number isn't or the seat is currently
+    /// borrowed mutably.
+    pub fn act_forced_bets(&self) -> Result<(), PKError> {
+        let sb_seat_num = self.determine_small_blind();
+        let bb_seat_num = self.determine_big_blind();
+
+        if let Some(mut sb_seat) = self.seat_mut(usize::from(sb_seat_num)) {
+            let sb_amount = self.forced.small_blind;
+            sb_seat.player.bets(sb_amount)?;
+            self.event_log
+                .log(event::TableAction::ForcedBetSmallBlind(sb_seat_num, sb_amount));
+        } else {
+            log::error!("Failed to find small blind seat #{sb_seat_num}");
+            return Err(PKError::InvalidSeatNumber);
+        }
+
+        if let Some(mut bb_seat) = self.seat_mut(usize::from(bb_seat_num)) {
+            let bb_amount = self.forced.big_blind;
+            bb_seat.player.bets(bb_amount)?;
+            self.event_log
+                .log(event::TableAction::ForcedBetBigBlind(bb_seat_num, bb_amount));
+        } else {
+            log::error!("Failed to find big blind seat #{bb_seat_num}");
+            return Err(PKError::InvalidSeatNumber);
+        }
+
+        Ok(())
+    }
+
+    pub fn act_new_hand(&self) {
+        *self.phase.borrow_mut() = GamePhase::NewHand;
+        self.event_log.log(event::TableAction::NewHand);
+    }
+
+    pub fn button_set(&self, seat_number: u8) {
+        self.button.set(seat_number);
+        self.event_log.log(event::TableAction::SetButton(seat_number));
     }
 
     /// ```
@@ -146,48 +203,44 @@ impl Table {
         self.button.static_down_x(3).value
     }
 
-    /// # Errors
-    ///
-    /// ...
-    pub fn forced_bets(&self) -> Result<(), PKError> {
-        let sb_seat_num = self.determine_small_blind();
-        let bb_seat_num = self.determine_big_blind();
-
-        if let Some(mut sb_seat) = self.seat(usize::from(sb_seat_num)) {
-            let sb_amount = self.forced.small_blind;
-            sb_seat.player.bets(sb_amount)?;
-            self.event_log
-                .log(event::TableAction::ForcedBetSmallBlind(sb_seat_num, sb_amount));
-        } else {
-            log::error!("Failed to find small blind seat #{sb_seat_num}");
-            return Err(PKError::InvalidSeatNumber);
-        }
-
-        if let Some(mut bb_seat) = self.seat(usize::from(bb_seat_num)) {
-            let bb_amount = self.forced.big_blind;
-            bb_seat.player.bets(bb_amount)?;
-            self.event_log
-                .log(event::TableAction::ForcedBetBigBlind(bb_seat_num, bb_amount));
-        } else {
-            log::error!("Failed to find big blind seat #{bb_seat_num}");
-            return Err(PKError::InvalidSeatNumber);
-        }
-
-        Ok(())
+    pub fn event_count(&self, action: &event::TableAction) -> usize {
+        self.event_log.entries().iter().filter(|a| *a == action).count()
     }
 
-    pub fn seat(&self, number: usize) -> Option<RefMut<'_, Seat>> {
+    #[must_use]
+    pub fn min_bet(&self) -> usize {
+        self.forced.big_blind
+    }
+
+    pub fn seat(&self, number: usize) -> Option<Ref<'_, Seat>> {
         self.seats.seat(number)
     }
 
-    pub fn set_button(&self, seat_number: u8) {
-        self.button.set(seat_number);
-        self.event_log.log(event::TableAction::SetButton(seat_number));
+    pub fn seat_mut(&self, number: usize) -> Option<RefMut<'_, Seat>> {
+        self.seats.seat_mut(number)
     }
 
-    pub fn move_button(&self) {
-        self.button.up();
-        self.event_log.log(event::TableAction::MoveButton(self.button.value()));
+    /// This is an audit
+    #[must_use]
+    pub fn table_chip_count(&self) -> usize {
+        self.seats.total_chip_count()
+    }
+
+    #[must_use]
+    pub fn to_call(&self, player: usize) -> usize {
+        let highest_bet = self
+            .seats
+            .borrow_all()
+            .iter()
+            .map(|s| s.borrow().player.bet.count())
+            .max()
+            .unwrap_or_default();
+
+        if let Some(seat) = self.seat(player) {
+            highest_bet.saturating_sub(seat.player.bet.count())
+        } else {
+            0
+        }
     }
 }
 
@@ -269,6 +322,19 @@ mod casino__table_tests {
     }
 
     #[test]
+    fn event_count() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        table.act_shuffle_deck();
+        let _ = table.act_forced_bets();
+
+        assert_eq!(1, table.event_count(&event::TableAction::TableOpen(table.id)));
+        assert_eq!(1, table.event_count(&event::TableAction::ForcedBetSmallBlind(7, 50)));
+        assert_eq!(1, table.event_count(&event::TableAction::ForcedBetBigBlind(6, 100)));
+        assert_eq!(1, table.event_count(&event::TableAction::ShuffleDeck));
+        assert_eq!(0, table.event_count(&event::TableAction::InvalidAction));
+    }
+
+    #[test]
     fn seat() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
 
@@ -280,7 +346,7 @@ mod casino__table_tests {
     fn set_button() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
         assert_eq!(0, table.button.value());
-        table.set_button(3);
+        table.button_set(3);
         assert_eq!(3, table.button.value());
         assert_eq!(
             table.event_log.entries().last(),
@@ -292,12 +358,80 @@ mod casino__table_tests {
     fn move_button() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
 
-        table.move_button();
+        table.act_button_move();
 
         assert_eq!(1, table.button.value());
         assert_eq!(
             table.event_log.entries().last(),
             Some(&event::TableAction::MoveButton(1))
         );
+    }
+
+    #[test]
+    fn table_chip_count() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        assert_eq!(800_000, table.table_chip_count());
+
+        table.button_set(0);
+        let _ = table.act_forced_bets();
+        assert_eq!(800_000, table.table_chip_count());
+    }
+
+    /// These are scenario validation tests as opposed to ones that test a specific function.
+    ///
+    /// This is to verify that
+    #[test]
+    fn validate__utg() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        assert_eq!(5, table.determine_utg());
+
+        table.button_set(3);
+        assert_eq!(0, table.determine_utg());
+
+        table.button_set(7);
+        assert_eq!(4, table.determine_utg());
+    }
+
+    #[test]
+    fn validate__flow() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        assert_eq!(800_000, table.table_chip_count());
+        assert_eq!(0, table.button.value());
+        assert_eq!(5, table.determine_utg());
+        assert_eq!(7, table.determine_small_blind());
+        assert_eq!(6, table.determine_big_blind());
+
+        table.act_button_move();
+        assert_eq!(1, table.button.value());
+        assert_eq!(6, table.determine_utg());
+        assert_eq!(0, table.determine_small_blind());
+        assert_eq!(7, table.determine_big_blind());
+
+        let _ = table.act_forced_bets();
+        assert_eq!(800_000, table.table_chip_count());
+
+        if let Some(seat) = table.seat(0) {
+            assert_eq!(99_950, seat.player.chips.count());
+            assert_eq!(50, seat.player.bet.count());
+            assert_eq!(50, table.to_call(0));
+        } else {
+            panic!("Failed to get seat 0");
+        }
+
+        if let Some(seat) = table.seat(7) {
+            assert_eq!(99_900, seat.player.chips.count());
+            assert_eq!(100, seat.player.bet.count());
+            assert_eq!(0, table.to_call(7));
+        } else {
+            panic!("Failed to get seat 7");
+        }
+
+        if let Some(seat) = table.seat(6) {
+            assert_eq!(100_000, seat.player.chips.count());
+            assert_eq!(0, seat.player.bet.count());
+            assert_eq!(100, table.to_call(6));
+        } else {
+            panic!("Failed to get seat 6");
+        }
     }
 }

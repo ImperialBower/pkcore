@@ -19,8 +19,9 @@ fn main() {
 
     // Doyle Brunson is the dealer.
     // Gus Hansen is under the gun.
-    table.set_button(0);
-    table.forced_bets();
+    table.button_set(0);
+    table.act_shuffle_deck();
+    let _ = table.act_forced_bets();
 
     println!("{table}");
     println!("{}", table.event_log);
