@@ -33,18 +33,32 @@ impl Player {
         }
     }
 
+    /// Working with cells this way is a completely different way of coding in `Rust`. It turns
+    /// your natural instict to make everything mutable on its head. When I first coded this
+    /// I made everything mutable even though I was working with a `Cell`.
+    ///
     /// # Errors
     ///
     /// * `PKError::InsufficientChips` - if the player does not have enough chips to make the bet
-    pub fn bets(&mut self, amount: usize) -> Result<usize, PKError> {
+    pub fn bets(&self, amount: usize) -> Result<usize, PKError> {
         if amount > self.chips.count() {
             Err(PKError::InsufficientChips)
         } else {
-            self.chips = Stack::new(self.chips.count() - amount);
-            self.bet = Stack::new(self.bet.count() + amount);
+            let bet_chips = self.chips.bet(amount)?;
+            self.bet.add_to(bet_chips);
             Ok(self.chips.count())
         }
     }
+
+    pub fn is_all_in(&self) -> bool {
+        self.chips.count() == 0 && self.bet.count() > 0
+    }
+
+    pub fn is_tapped_out(&self) -> bool {
+        self.chips.count() == 0 && self.bet.count() == 0
+    }
+
+    pub fn lose_bet(&self) {}
 
     #[must_use]
     pub fn random(stack: usize) -> Player {
@@ -104,11 +118,32 @@ mod casino__players__player_tests {
 
     #[test]
     fn bets() {
-        let mut player = Player::new_with_chips("The Russian".to_string(), 1_000);
+        let player = Player::new_with_chips("The Russian".to_string(), 1_000);
 
         let did_bet = player.bets(100);
 
         assert!(did_bet.is_ok());
         assert_eq!(900, did_bet.unwrap());
+    }
+
+    #[test]
+    fn is_all_in() {
+        let player = Player::new_with_chips("All In Andy".to_string(), 500);
+        assert!(!player.is_all_in());
+
+        let _ = player.bets(500);
+        assert!(player.is_all_in());
+    }
+
+    #[test]
+    fn is_tapped_out() {
+        let player = Player::new_with_chips("Tapped Out Tom".to_string(), 0);
+        assert!(player.is_tapped_out());
+
+        let player2 = Player::new_with_chips("Not Tapped Out Nancy".to_string(), 100);
+        assert!(!player2.is_tapped_out());
+
+        let _ = player2.bets(100);
+        assert!(!player2.is_tapped_out());
     }
 }

@@ -91,10 +91,19 @@ impl Table {
         }
     }
 
-    pub fn act_shuffle_deck(&self) {
-        self.deck.shuffle_in_place();
-        log::debug!("Deck shuffled: {}", self.deck);
-        self.event_log.log(event::TableAction::ShuffleDeck);
+    /// # Errors
+    ///
+    /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
+    /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
+    pub fn act_bet(&self, seat_number: u8, amount: usize) -> Result<(), PKError> {
+        if let Some(seat) = self.seat_mut(usize::from(seat_number)) {
+            seat.player.bets(amount)?;
+            self.event_log.log(event::TableAction::Bet(seat_number, amount));
+            Ok(())
+        } else {
+            log::error!("Failed to find seat #{seat_number} for betting");
+            Err(PKError::InvalidSeatNumber)
+        }
     }
 
     pub fn act_button_move(&self) {
@@ -122,7 +131,7 @@ impl Table {
         let sb_seat_num = self.determine_small_blind();
         let bb_seat_num = self.determine_big_blind();
 
-        if let Some(mut sb_seat) = self.seat_mut(usize::from(sb_seat_num)) {
+        if let Some(sb_seat) = self.seat_mut(usize::from(sb_seat_num)) {
             let sb_amount = self.forced.small_blind;
             sb_seat.player.bets(sb_amount)?;
             self.event_log
@@ -132,7 +141,7 @@ impl Table {
             return Err(PKError::InvalidSeatNumber);
         }
 
-        if let Some(mut bb_seat) = self.seat_mut(usize::from(bb_seat_num)) {
+        if let Some(bb_seat) = self.seat_mut(usize::from(bb_seat_num)) {
             let bb_amount = self.forced.big_blind;
             bb_seat.player.bets(bb_amount)?;
             self.event_log
@@ -148,6 +157,12 @@ impl Table {
     pub fn act_new_hand(&self) {
         *self.phase.borrow_mut() = GamePhase::NewHand;
         self.event_log.log(event::TableAction::NewHand);
+    }
+
+    pub fn act_shuffle_deck(&self) {
+        self.deck.shuffle_in_place();
+        log::debug!("Deck shuffled: {}", self.deck);
+        self.event_log.log(event::TableAction::ShuffleDeck);
     }
 
     pub fn button_set(&self, seat_number: u8) {

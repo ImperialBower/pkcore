@@ -1,5 +1,5 @@
+use crate::analysis::store::nubibus::chips::Chips;
 use crate::arrays::two::Two;
-use crate::casino::cashier::chips::Chips;
 use crate::play::Position6Max;
 use crate::{Betting, PKError, Pile};
 use std::cell::Cell;

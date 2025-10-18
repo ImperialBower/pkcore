@@ -1,13 +1,14 @@
 use crate::analysis::store::nubibus::actions::{Action, ActionType};
+use crate::analysis::store::nubibus::chips::Chips;
 use crate::analysis::store::nubibus::pluribus::Pluribus;
 use crate::analysis::store::nubibus::seat::{Seat, SeatSnapshot};
 use crate::arrays::two::Two;
-use crate::casino::cashier::chips::Chips;
 use crate::{Betting, PKError};
 use itertools::Itertools;
 use std::fmt::{Display, Formatter};
 
 pub mod actions;
+pub mod chips;
 pub mod player;
 pub mod pluribus;
 pub mod seat;
