@@ -94,7 +94,7 @@ impl TableLog {
     pub fn commentary(&self, seats: &Seats, index: usize) -> Option<String> {
         let player: String = match seats.seat(index) {
             None => return None,
-            Some(s) => s.player.handle.to_string(),
+            Some(s) => s.player.handle.clone(),
         };
 
         let last = self.last()?;
