@@ -1,5 +1,6 @@
 use crate::bard::Bard;
 use crate::cards::Cards;
+use crate::casino::table::seats::Seats;
 use std::cell::RefCell;
 use std::fmt::Display;
 use uuid::Uuid;
@@ -86,6 +87,32 @@ impl TableLog {
         Self(RefCell::new(Vec::new()))
     }
 
+    pub fn clear(&self) {
+        self.0.borrow_mut().clear();
+    }
+
+    pub fn commentary(&self, seats: &Seats, index: usize) -> Option<String> {
+        let player: String = match seats.seat(index) {
+            None => return None,
+            Some(s) => s.player.handle.to_string(),
+        };
+
+        let last = self.last()?;
+
+        match last {
+            TableAction::Bet(_, amount) => Some(format!("{player} bets {amount}")),
+            TableAction::Call(_, amount) => Some(format!("{player} calls {amount}")),
+            TableAction::Raise(_, amount) => Some(format!("{player} raises to {amount}")),
+            TableAction::Fold(_) => Some(format!("{player} folds")),
+            TableAction::Check(_) => Some(format!("{player} checks")),
+            _ => Some(last.to_string()),
+        }
+    }
+
+    pub fn last(&self) -> Option<TableAction> {
+        self.0.borrow().last().copied()
+    }
+
     pub fn log(&self, action: TableAction) {
         self.0.borrow_mut().push(action);
     }
@@ -93,10 +120,6 @@ impl TableLog {
     #[must_use]
     pub fn entries(&self) -> Vec<TableAction> {
         self.0.borrow().clone()
-    }
-
-    pub fn clear(&self) {
-        self.0.borrow_mut().clear();
     }
 }
 
