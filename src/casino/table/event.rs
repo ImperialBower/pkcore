@@ -21,14 +21,71 @@ pub enum TableAction {
     BetAnteForced(u8, usize),
     Dealt(u8, Bard),
     ForceDealt(u8, Bard),
+    ActionTo(u8),
+    Check(u8),
     Bet(u8, usize),
     Call(u8, usize),
     Raise(u8, usize),
+    AllIn(u8, usize),
     Fold(u8),
-    Check(u8),
     TakePlayerCards(Bard),
     TakeBoardCards(Bard),
     InvalidAction,
+}
+
+impl TableAction {
+    #[must_use]
+    pub fn commentary(&self, name: &str) -> String {
+        match self {
+            TableAction::ForcedBetSmallBlind(_, amount) => format!("{name} posts {amount} small blind"),
+            TableAction::ForcedBetBigBlind(_, amount) => format!("{name} posts {amount} big blind"),
+            TableAction::Bet(_, amount) => format!("{name} bets {amount}"),
+            TableAction::Call(_, amount) => format!("{name} calls {amount}"),
+            TableAction::Raise(_, amount) => format!("{name} raises to {amount}"),
+            TableAction::AllIn(_, _) => format!("{name} goes all in."),
+            TableAction::Fold(_) => format!("{name} folds"),
+            TableAction::Check(_) => format!("{name} checks"),
+            TableAction::Dealt(_, bard) => format!("{name} dealt {}", Cards::from(*bard)),
+            _ => self.to_string(),
+        }
+    }
+
+    /// Returns the seat number for the `TableAction`, if there is one.
+    #[must_use]
+    pub fn get_seat(&self) -> Option<u8> {
+        match self {
+            TableAction::PlayerSeated(seat, _)
+            | TableAction::SetButton(seat)
+            | TableAction::MoveButton(seat)
+            | TableAction::ForcedBetSmallBlind(seat, _)
+            | TableAction::ForcedBetBigBlind(seat, _)
+            | TableAction::BetAnteForced(seat, _)
+            | TableAction::Dealt(seat, _)
+            | TableAction::ForceDealt(seat, _)
+            | TableAction::ActionTo(seat)
+            | TableAction::Check(seat)
+            | TableAction::Bet(seat, _)
+            | TableAction::Call(seat, _)
+            | TableAction::Raise(seat, _)
+            | TableAction::AllIn(seat, _)
+            | TableAction::Fold(seat) => Some(*seat),
+            _ => None,
+        }
+    }
+
+    #[must_use]
+    pub fn is_player_action(&self) -> bool {
+        matches!(
+            self,
+            TableAction::Bet(_, _)
+                | TableAction::Call(_, _)
+                | TableAction::Raise(_, _)
+                | TableAction::Fold(_)
+                | TableAction::Check(_)
+                | TableAction::AllIn(_, _)
+                | TableAction::Dealt(_, _)
+        )
+    }
 }
 
 impl Display for TableAction {
@@ -66,11 +123,13 @@ impl Display for TableAction {
             TableAction::ForceDealt(seat, cards) => {
                 write!(f, "Seat {seat} is force-dealt {}", Cards::from(*cards))
             }
+            TableAction::ActionTo(seat) => write!(f, "Action to Seat {seat}"),
+            TableAction::Check(seat) => write!(f, "Seat {seat} checks"),
             TableAction::Bet(seat, amount) => write!(f, "Seat {seat} bets {amount}"),
             TableAction::Call(seat, amount) => write!(f, "Seat {seat} calls {amount}"),
             TableAction::Raise(seat, amount) => write!(f, "Seat {seat} raises to {amount}"),
+            TableAction::AllIn(seat, amount) => write!(f, "Seat {seat} goes all in with {amount}"),
             TableAction::Fold(seat) => write!(f, "Seat {seat} folds"),
-            TableAction::Check(seat) => write!(f, "Seat {seat} checks"),
             TableAction::TakePlayerCards(cards) => write!(f, "Take player cards: {}", Cards::from(*cards)),
             TableAction::TakeBoardCards(cards) => write!(f, "Take board cards: {}", Cards::from(*cards)),
             TableAction::InvalidAction => write!(f, "Invalid Action"),

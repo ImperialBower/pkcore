@@ -13,7 +13,7 @@ impl Seats {
 
     /// How frackin' cool is this `into_boxed_slice` pattern?! I'm going to need to play with this.
     #[must_use]
-    pub(crate) fn new(seats: Vec<Seat>) -> Self {
+    pub fn new(seats: Vec<Seat>) -> Self {
         let seat_cells: Vec<SeatCell> = seats.into_iter().map(SeatCell::new).collect();
         Seats(seat_cells.into_boxed_slice())
     }

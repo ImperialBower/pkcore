@@ -87,6 +87,11 @@ impl Stack {
         self.add_to(winnings);
         self.count()
     }
+
+    #[must_use]
+    pub fn takes(&self) -> Self {
+        Stack::new(self.0.take())
+    }
 }
 
 impl Add for Stack {

@@ -50,6 +50,10 @@ impl Player {
         }
     }
 
+    pub fn folds(&self) -> Stack {
+        self.bet.takes()
+    }
+
     pub fn is_all_in(&self) -> bool {
         self.chips.count() == 0 && self.bet.count() > 0
     }
