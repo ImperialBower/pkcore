@@ -2,7 +2,7 @@ use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
 use crate::casino::game::ForcedBets;
 use crate::casino::player::Player;
-use crate::casino::table::event::TableLog;
+use crate::casino::table::event::{TableAction, TableLog};
 use crate::casino::table::seat::Seat;
 use crate::casino::table::seats::Seats;
 use crate::games::{GamePhase, GameType};
@@ -131,10 +131,6 @@ impl Table {
         self.action_to.set(self.determine_utg());
     }
 
-    pub fn set_action_to(&self, seat_number: u8) {
-        self.action_to.set(seat_number);
-    }
-
     /// # Errors
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
@@ -143,7 +139,8 @@ impl Table {
         let to_call = self.to_call(usize::from(seat_number));
         if let Some(seat) = self.seat_mut(usize::from(seat_number)) {
             let remaining = seat.player.bets(to_call)?;
-            self.event_log.log(event::TableAction::Call(seat_number, to_call));
+            drop(seat);
+            self.log_info(TableAction::Call(seat_number, to_call));
             Ok(remaining)
         } else {
             log::error!("Failed to find seat #{seat_number} for calling");
@@ -152,14 +149,21 @@ impl Table {
     }
 
     pub fn act_deal(&self) {
+        let deal: u8 = match self.game {
+            GameType::NoLimitHoldem => 2,
+            GameType::PLO => 4,
+            GameType::Razz => 3,
+        };
         match self.game {
             GameType::NoLimitHoldem => self.act_deal_cards(2),
             GameType::PLO => self.act_deal_cards(4),
             GameType::Razz => self.act_deal_cards(3),
         }
+        self.act_deal_cards(deal);
+        self.log_info(TableAction::DealingXCards(deal));
     }
 
-    pub fn act_deal_cards(&self, _num_cards: usize) {
+    pub fn act_deal_cards(&self, _num_cards: u8) {
         todo!()
     }
 
@@ -169,11 +173,12 @@ impl Table {
     pub fn act_fold(&self, seat_number: u8) -> Result<usize, PKError> {
         if let Some(seat) = self.seat_mut(usize::from(seat_number)) {
             let folded_chips = seat.player.folds();
+            drop(seat);
             let amount = folded_chips.count();
             self.pot.add_to(folded_chips);
-            self.event_log.log(event::TableAction::Fold(seat_number));
+            self.log_info(TableAction::Fold(seat_number));
             self.action_to.up();
-            self.event_log.log(event::TableAction::ActionTo(self.action_to.value()));
+            self.log_info(TableAction::ActionTo(self.action_to.value()));
             Ok(amount)
         } else {
             log::error!("Failed to find seat #{seat_number} for folding");
@@ -190,20 +195,20 @@ impl Table {
         let bb_seat_num = self.determine_big_blind();
 
         if let Some(sb_seat) = self.seat_mut(usize::from(sb_seat_num)) {
-            let sb_amount = self.forced.small_blind;
-            sb_seat.player.bets(sb_amount)?;
-            self.event_log
-                .log(event::TableAction::ForcedBetSmallBlind(sb_seat_num, sb_amount));
+            sb_seat.player.bets(self.forced.small_blind)?;
+            // You need to drop the seat after betting, because the logging function needs to
+            // borrow the seat immutably to get the player handle for logging.
+            drop(sb_seat);
+            self.log_info(TableAction::ForcedBetSmallBlind(sb_seat_num, self.forced.small_blind));
         } else {
             log::error!("Failed to find small blind seat #{sb_seat_num}");
             return Err(PKError::InvalidSeatNumber);
         }
 
         if let Some(bb_seat) = self.seat_mut(usize::from(bb_seat_num)) {
-            let bb_amount = self.forced.big_blind;
-            bb_seat.player.bets(bb_amount)?;
-            self.event_log
-                .log(event::TableAction::ForcedBetBigBlind(bb_seat_num, bb_amount));
+            bb_seat.player.bets(self.forced.big_blind)?;
+            drop(bb_seat);
+            self.log_info(TableAction::ForcedBetBigBlind(bb_seat_num, self.forced.big_blind));
         } else {
             log::error!("Failed to find big blind seat #{bb_seat_num}");
             return Err(PKError::InvalidSeatNumber);
@@ -214,22 +219,21 @@ impl Table {
 
     pub fn act_new_hand(&self) {
         *self.phase.borrow_mut() = GamePhase::NewHand;
-        self.event_log.log(event::TableAction::NewHand);
+        self.log_info(TableAction::NewHand);
     }
 
     pub fn act_shuffle_deck(&self) {
         self.deck.shuffle_in_place();
-        log::debug!("Deck shuffled: {}", self.deck);
-        self.event_log.log(event::TableAction::ShuffleDeck);
+        self.log_debug(TableAction::ShuffleDeck);
     }
 
     pub fn button_set(&self, seat_number: u8) {
         self.button.set(seat_number);
-        self.event_log.log(event::TableAction::SetButton(seat_number));
+        self.log_info(TableAction::SetButton(seat_number));
     }
 
     pub fn commentary_action_to(&self) -> String {
-        if let Some(seat) = self.seat(usize::from(self.action_to.value())) {
+        if let Some(seat) = self.get_seat(usize::from(self.action_to.value())) {
             format!("Action to: {}", seat.player.handle)
         } else {
             String::default()
@@ -239,7 +243,7 @@ impl Table {
     pub fn commentary_dump(&self) {
         for event in self.event_log.entries() {
             if let Some(seat_number) = event.get_seat() {
-                if let Some(seat) = self.seat(usize::from(seat_number)) {
+                if let Some(seat) = self.get_seat(usize::from(seat_number)) {
                     println!("{}", event.commentary(&seat.player.handle.clone()));
                 } else {
                     println!("{event}");
@@ -253,7 +257,7 @@ impl Table {
     pub fn commentary_last(&self) -> String {
         if let Some(last_event) = self.event_log.last() {
             if let Some(seat_number) = last_event.get_seat() {
-                if let Some(seat) = self.seat(usize::from(seat_number)) {
+                if let Some(seat) = self.get_seat(usize::from(seat_number)) {
                     return last_event.commentary(&seat.player.handle.clone());
                 }
             }
@@ -277,7 +281,7 @@ impl Table {
     /// ```
     pub fn determine_big_blind(&self) -> u8 {
         let bb_seat = self.button.static_up_x(2).value;
-        log::trace!("BB seat #{bb_seat} {}", self.seat_handle(bb_seat as usize));
+        log::trace!("BB seat #{bb_seat} {}", self.get_seat_handle(bb_seat as usize));
         bb_seat
     }
 
@@ -295,7 +299,7 @@ impl Table {
     /// ```
     pub fn determine_small_blind(&self) -> u8 {
         let sb_seat = self.button.static_up_x(1).value;
-        log::trace!("SB seat #{sb_seat} {}", self.seat_handle(sb_seat as usize));
+        log::trace!("SB seat #{sb_seat} {}", self.get_seat_handle(sb_seat as usize));
         sb_seat
     }
 
@@ -315,8 +319,32 @@ impl Table {
         self.button.static_up_x(3).value
     }
 
-    pub fn event_count(&self, action: &event::TableAction) -> usize {
+    pub fn event_count(&self, action: &TableAction) -> usize {
         self.event_log.entries().iter().filter(|a| *a == action).count()
+    }
+
+    pub fn get_seat(&self, number: usize) -> Option<Ref<'_, Seat>> {
+        self.seats.seat(number)
+    }
+
+    pub fn get_seat_handle(&self, number: usize) -> String {
+        if let Some(seat) = self.get_seat(number) {
+            seat.player.handle.clone()
+        } else {
+            String::default()
+        }
+    }
+
+    fn log_debug(&self, action: TableAction) {
+        let handle = self.get_seat_handle(usize::from(action.get_seat().unwrap_or_default()));
+        log::debug!("{}", action.commentary(&handle));
+        self.event_log.log(action);
+    }
+
+    fn log_info(&self, action: TableAction) {
+        let handle = self.get_seat_handle(usize::from(action.get_seat().unwrap_or_default()));
+        log::info!("{}", action.commentary(&handle));
+        self.event_log.log(action);
     }
 
     #[must_use]
@@ -324,20 +352,12 @@ impl Table {
         self.forced.big_blind
     }
 
-    pub fn seat(&self, number: usize) -> Option<Ref<'_, Seat>> {
-        self.seats.seat(number)
-    }
-
-    pub fn seat_handle(&self, number: usize) -> String {
-        if let Some(seat) = self.seat(number) {
-            seat.player.handle.clone()
-        } else {
-            String::default()
-        }
-    }
-
     pub fn seat_mut(&self, number: usize) -> Option<RefMut<'_, Seat>> {
         self.seats.seat_mut(number)
+    }
+
+    pub fn set_action_to(&self, seat_number: u8) {
+        self.action_to.set(seat_number);
     }
 
     /// This is an audit
@@ -360,7 +380,7 @@ impl Table {
             .max()
             .unwrap_or_default();
 
-        if let Some(seat) = self.seat(player) {
+        if let Some(seat) = self.get_seat(player) {
             highest_bet.saturating_sub(seat.player.bet.count())
         } else {
             0
@@ -465,7 +485,7 @@ mod casino__table_tests {
     fn seat() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
 
-        let seat = table.seat(6).unwrap();
+        let seat = table.get_seat(6).unwrap();
         assert_eq!("Barry Greenstein", seat.player.handle);
     }
 
@@ -538,7 +558,7 @@ mod casino__table_tests {
         let _ = table.act_forced_bets();
         assert_eq!(800_000, table.table_chip_count());
 
-        if let Some(seat) = table.seat(1) {
+        if let Some(seat) = table.get_seat(1) {
             assert_eq!(99_950, seat.player.chips.count());
             assert_eq!(50, seat.player.bet.count());
             assert_eq!(50, table.to_call(1));
@@ -546,7 +566,7 @@ mod casino__table_tests {
             panic!("Failed to get seat 1");
         }
 
-        if let Some(seat) = table.seat(2) {
+        if let Some(seat) = table.get_seat(2) {
             assert_eq!(99_900, seat.player.chips.count());
             assert_eq!(100, seat.player.bet.count());
             assert_eq!(0, table.to_call(2));
@@ -554,7 +574,7 @@ mod casino__table_tests {
             panic!("Failed to get seat 2");
         }
 
-        if let Some(seat) = table.seat(6) {
+        if let Some(seat) = table.get_seat(6) {
             assert_eq!(100_000, seat.player.chips.count());
             assert_eq!(0, seat.player.bet.count());
             assert_eq!(100, table.to_call(6));

@@ -35,16 +35,10 @@ fn main() -> Result<(), PKError> {
     assert_eq!(1, table.determine_small_blind());
     assert_eq!(2, table.determine_big_blind());
 
-    // table.act_button_move();
-    // assert_eq!(1, table.button.value());
-    // assert_eq!(4, table.determine_utg());
-    // assert_eq!(2, table.determine_small_blind());
-    // assert_eq!(3, table.determine_big_blind());
-
     let _ = table.act_forced_bets();
     assert_eq!(800_000, table.table_chip_count());
 
-    if let Some(seat) = table.seat(1) {
+    if let Some(seat) = table.get_seat(1) {
         assert_eq!(99_950, seat.player.chips.count());
         assert_eq!(50, seat.player.bet.count());
         assert_eq!(50, table.to_call(1));
@@ -52,7 +46,7 @@ fn main() -> Result<(), PKError> {
         panic!("Failed to get seat 1");
     }
 
-    if let Some(seat) = table.seat(2) {
+    if let Some(seat) = table.get_seat(2) {
         assert_eq!(99_900, seat.player.chips.count());
         assert_eq!(100, seat.player.bet.count());
         assert_eq!(0, table.to_call(2));
@@ -60,7 +54,7 @@ fn main() -> Result<(), PKError> {
         panic!("Failed to get seat 2");
     }
 
-    if let Some(seat) = table.seat(6) {
+    if let Some(seat) = table.get_seat(6) {
         assert_eq!(100_000, seat.player.chips.count());
         assert_eq!(0, seat.player.bet.count());
         assert_eq!(100, table.to_call(6));

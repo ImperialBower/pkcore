@@ -2,6 +2,7 @@ use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::card_number::CardNumber;
+use crate::cards_cell::CardsCell;
 use crate::rank::Rank;
 use crate::suit::Suit;
 use crate::util::terminal::Terminal;
@@ -70,22 +71,26 @@ impl Cards {
     }
 
     /// TODO RF: :-P
+    ///
+    /// UPDATE: Originally had this doing sway remove with totally fucks with the order, grabbing the
+    /// last item in the list and using it as a replacement. Yes. it's faster, but for me, useless.
     #[must_use]
     pub fn deck_minus(cards: &Cards) -> Cards {
-        let mut minus = Cards::deck();
-        for card in cards.iter() {
-            minus.0.swap_remove(card);
-        }
-        // minus.sort()
-        minus
-        // let mut minus = Cards::default();
-        // let deck = Cards::deck();
-        // for card in deck.iter() {
-        //     if cards.get(card).is_none() {
-        //         minus.insert(*card);
-        //     }
-        // }
-        // minus
+        Cards::deck().into_iter().filter(|c| !cards.contains(c)).collect()
+    }
+
+    /// A Deck primed, is one where the initial cards are the ones passed in. This is to facilitate
+    /// testing specific scenarios.
+    ///
+    /// TODO: Add the ability to pass in burn cards
+    #[must_use]
+    pub fn deck_primed(cards: &Cards) -> Cards {
+        cards.clone().into_iter().chain(Cards::deck_minus(cards)).collect()
+    }
+
+    pub fn append(&mut self, appended: &Cards) {
+        let mut to_append = appended.0.clone();
+        self.0.append(&mut to_append);
     }
 
     /// DEFECT bad twos STEP 3
@@ -615,6 +620,20 @@ impl From<[Card; 7]> for Cards {
     }
 }
 
+impl From<CardsCell> for Cards {
+    fn from(cells: CardsCell) -> Self {
+        let internal = cells.0.borrow();
+        internal.clone()
+    }
+}
+
+impl From<&CardsCell> for Cards {
+    fn from(cells: &CardsCell) -> Self {
+        let internal = cells.0.borrow();
+        internal.clone()
+    }
+}
+
 impl From<Vec<Card>> for Cards {
     fn from(v: Vec<Card>) -> Self {
         let filtered = v.iter().filter_map(|c| {
@@ -774,8 +793,10 @@ impl TryFrom<Card> for Cards {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod card_tests {
+mod cards_tests {
     use super::*;
+    use crate::util::data::TestData;
+    use rstest::rstest;
 
     #[test]
     fn deck_macro() {
@@ -791,6 +812,13 @@ mod card_tests {
         cards.insert(Card::ACE_CLUBS);
         cards.shuffle_in_place();
 
+        let minus = Cards::deck_minus(&cards!("AS Q♥ 3♦"));
+
+        assert_eq!(
+            "K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣",
+            minus.to_string()
+        );
+
         // let minus = Cards::deck_minus(&cards);
         //
         // assert_eq!("A♠ K♠".to_string(), minus.to_string());
@@ -801,6 +829,17 @@ mod card_tests {
         // for card in cards.iter() {
         //     minus.0.swap_remove(card);
         // }
+    }
+
+    #[test]
+    fn deck_primed() {
+        let deck_minus = TestData::the_hand_cards();
+        let expected = "8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ 7♣ 2♣ 9♣ 6♦ 5♥ 5♠ 8♠ A♠ Q♠ J♠ T♠ 9♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 2♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 6♣ 3♣";
+
+        let primed = Cards::deck_primed(&deck_minus);
+
+        assert_eq!(52, primed.len());
+        assert_eq!(expected.to_string(), primed.to_string());
     }
 
     #[test]
@@ -1134,14 +1173,6 @@ mod card_tests {
     }
 
     #[test]
-    fn pile__contains() {
-        let wheel_flush = Cards::from_str("5♣ 4♣ 3♣ 2♣ A♣").unwrap();
-
-        assert!(wheel_flush.contains(&Card::FIVE_CLUBS));
-        assert!(!wheel_flush.contains(&Card::SIX_CLUBS));
-    }
-
-    #[test]
     fn pile__suits() {
         let aces = Cards::from_str("AS AH AD AC").unwrap();
         let deck = Cards::deck();
@@ -1216,25 +1247,20 @@ mod card_tests {
         cards
     }
     //endregion
-}
-
-#[cfg(test)]
-#[allow(non_snake_case)]
-mod cards_tests {
-    use super::*;
-    use rstest::rstest;
 
     #[rstest]
-    #[case(Card::ACE_SPADES, true)]
-    #[case(Card::ACE_DIAMONDS, false)]
-    fn pile__contains(#[case] card: Card, #[case] assert: bool) {
-        let cards = Cards::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
+    #[case(Card::ACE_SPADES, "A♠ K♠ Q♠ J♠ T♠", true)]
+    #[case(Card::FIVE_CLUBS, "5♣ 4♣ 3♣ 2♣ A♣", true)]
+    #[case(Card::ACE_DIAMONDS, "A♠ K♠ Q♠ J♠ T♠", false)]
+    #[case(Card::SIX_CLUBS, "5♣ 4♣ 3♣ 2♣ A♣", false)]
+    fn pile__contains(#[case] card: Card, #[case] index: &str, #[case] assert: bool) {
+        let cards = Cards::from_str(index).unwrap();
 
         assert_eq!(cards.contains(&card), assert);
     }
 
     #[test]
-    fn cards() {
+    fn macro__cards() {
         let cards = cards!("AS KH QC JD TC 9H 8D");
 
         assert_eq!("A♠ K♥ Q♣ J♦ T♣ 9♥ 8♦", cards.to_string());

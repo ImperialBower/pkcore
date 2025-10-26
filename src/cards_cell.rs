@@ -12,7 +12,7 @@ use std::str::FromStr;
 #[allow(clippy::pedantic)]
 macro_rules! cc {
     ($card_str:expr) => {
-        CardsCell::new(Cards::forgiving_from_str($card_str))
+        CardsCell::from(Cards::forgiving_from_str($card_str))
     };
 }
 
@@ -24,7 +24,7 @@ macro_rules! deck_cell {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct CardsCell(RefCell<Cards>);
+pub struct CardsCell(pub(crate) RefCell<Cards>);
 
 impl CardsCell {
     /// ```
@@ -42,18 +42,26 @@ impl CardsCell {
     /// ```
     #[must_use]
     pub fn deck() -> Self {
-        Self::new(Cards::deck())
+        Self::from(Cards::deck())
     }
 
     /// Creates a new `CardsCell` containing the given `Cards`.
+    ///
+    /// # Deprecatred
+    ///
+    /// I really need to get out of the habit of using new methods for simple froms.
+    /// Another example of the Java dev poison still flowing through my veins.
+    #[deprecated(since = "0.8.0", note = "Use `CardsCell::from` instead")]
     #[must_use]
     pub fn new(cards: Cards) -> Self {
         Self(RefCell::new(cards))
     }
 
+    /// REFACTOR: Changing this to taking a `CardCell` reference. I'm feeling that we need to keep
+    /// things in the [family](https://www.youtube.com/watch?v=IQuc7wfO16Q).
     #[must_use]
-    pub fn deck_minus(cards: &Cards) -> CardsCell {
-        Self::new(Cards::deck_minus(cards))
+    pub fn deck_minus(cards: &CardsCell) -> CardsCell {
+        Self::from(Cards::deck_minus(&Cards::from(cards)))
     }
 
     /// Gets a clone of the internal `Cards`.
@@ -74,7 +82,7 @@ impl CardsCell {
         let mut internal = self.0.borrow_mut();
         let drawn_cards = internal.draw(n)?;
         // drawn_cards.map(Self::new)
-        Ok(Self::new(drawn_cards))
+        Ok(Self::from(drawn_cards))
     }
 
     /// ```
@@ -108,7 +116,7 @@ impl CardsCell {
     pub fn draw_from_the_bottom(&self, number: usize) -> Result<Self, PKError> {
         let mut internal = self.0.borrow_mut();
         let drawn_cards = internal.draw_from_the_bottom(number)?;
-        Ok(Self::new(drawn_cards))
+        Ok(Self::from(drawn_cards))
     }
 
     pub fn dump(&self) {
@@ -211,7 +219,7 @@ impl CardsCell {
     pub fn sort(&self) -> Self {
         let internal = self.clone();
         let cards = internal.0.borrow_mut();
-        Self::new(cards.sort())
+        Self::from(cards.sort())
     }
 
     /// ```
@@ -270,13 +278,25 @@ impl Hash for CardsCell {
 
 impl From<Bard> for CardsCell {
     fn from(bard: Bard) -> Self {
-        CardsCell::new(Cards::from(bard))
+        CardsCell::from(Cards::from(bard))
+    }
+}
+
+impl From<Cards> for CardsCell {
+    fn from(cards: Cards) -> Self {
+        Self(RefCell::new(cards))
+    }
+}
+
+impl From<&Cards> for CardsCell {
+    fn from(cards: &Cards) -> Self {
+        Self(RefCell::new(cards.clone()))
     }
 }
 
 impl From<Vec<Card>> for CardsCell {
     fn from(cards: Vec<Card>) -> Self {
-        CardsCell::new(Cards::from(cards))
+        CardsCell::from(Cards::from(cards))
     }
 }
 
@@ -296,7 +316,7 @@ impl FromStr for CardsCell {
     /// ```
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let cards = Cards::from_str(s)?;
-        Ok(CardsCell::new(cards))
+        Ok(CardsCell::from(cards))
     }
 }
 

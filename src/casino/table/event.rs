@@ -19,6 +19,7 @@ pub enum TableAction {
     ForcedBetSmallBlind(u8, usize),
     ForcedBetBigBlind(u8, usize),
     BetAnteForced(u8, usize),
+    DealingXCards(u8),
     Dealt(u8, Bard),
     ForceDealt(u8, Bard),
     ActionTo(u8),
@@ -119,6 +120,7 @@ impl Display for TableAction {
             TableAction::BetAnteForced(seat, amount) => {
                 write!(f, "Seat {seat} Antes {amount}")
             }
+            TableAction::DealingXCards(x) => write!(f, "Dealing {x} cards to each player"),
             TableAction::Dealt(seat, cards) => write!(f, "Seat {seat} is dealt {}", Cards::from(*cards)),
             TableAction::ForceDealt(seat, cards) => {
                 write!(f, "Seat {seat} is force-dealt {}", Cards::from(*cards))
