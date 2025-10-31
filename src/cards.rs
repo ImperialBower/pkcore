@@ -3,6 +3,7 @@ use crate::bard::Bard;
 use crate::card::Card;
 use crate::card_number::CardNumber;
 use crate::cards_cell::CardsCell;
+use crate::prelude::Boxes;
 use crate::rank::Rank;
 use crate::suit::Suit;
 use crate::util::terminal::Terminal;
@@ -99,6 +100,11 @@ impl Cards {
     #[must_use]
     pub fn deck_primed(cards: &Cards) -> Cards {
         cards.clone().into_iter().chain(Cards::deck_minus(cards)).collect()
+    }
+
+    #[must_use]
+    pub fn as_chunks(&self, chunk_size: usize) -> Vec<Vec<Card>> {
+        self.to_vec().chunks(chunk_size).map(<[Card]>::to_vec).collect()
     }
 
     pub fn append(&mut self, appended: &Cards) {
@@ -532,26 +538,6 @@ impl fmt::Display for Cards {
     }
 }
 
-impl From<&Card> for Cards {
-    /// Turns out we already have a `TryFrom<Card>` implemented, but I want something similar.
-    /// This will give us the contract that if it's blank it won't be inserted, which is fine.
-    /// I can see wanted to do both versions of the functionality.
-    ///
-    /// When I am coding in rust, I do feel the constant tension between my desire to make things
-    /// just flow as easily as possible in the short term, and wanting to code things the right,
-    /// "rusty" way.
-    ///
-    /// My general rule is to follow Socrates' maxim: _the unexamined life is not worth living._
-    /// Know why you are doing anything. Following rules blindly makes you a tool. If you can't
-    /// answer questions like: _why did you code it this way?_ and _what's the purpose of this
-    /// test?_ you need to take a step back
-    fn from(card: &Card) -> Self {
-        let mut cards = Cards::default();
-        cards.insert(*card);
-        cards
-    }
-}
-
 impl From<Bard> for Cards {
     /// This method is designed to deserialize a binary `Bard` entity into a `Cards` `IndexSet`
     /// type. The `Bard` type is a handy way to store a collection of `Card`s in a single
@@ -599,6 +585,37 @@ impl From<Bard> for Cards {
             }
         }
 
+        cards
+    }
+}
+
+impl From<&Boxes> for Cards {
+    fn from(boxes: &Boxes) -> Self {
+        let mut cards = Cards::default();
+        for boxed in &boxes.0 {
+            let c = Cards::from(boxed.as_slice());
+            cards.insert_all(&c);
+        }
+        cards
+    }
+}
+
+impl From<&Card> for Cards {
+    /// Turns out we already have a `TryFrom<Card>` implemented, but I want something similar.
+    /// This will give us the contract that if it's blank it won't be inserted, which is fine.
+    /// I can see wanted to do both versions of the functionality.
+    ///
+    /// When I am coding in rust, I do feel the constant tension between my desire to make things
+    /// just flow as easily as possible in the short term, and wanting to code things the right,
+    /// "rusty" way.
+    ///
+    /// My general rule is to follow Socrates' maxim: _the unexamined life is not worth living._
+    /// Know why you are doing anything. Following rules blindly makes you a tool. If you can't
+    /// answer questions like: _why did you code it this way?_ and _what's the purpose of this
+    /// test?_ you need to take a step back
+    fn from(card: &Card) -> Self {
+        let mut cards = Cards::default();
+        cards.insert(*card);
         cards
     }
 }
