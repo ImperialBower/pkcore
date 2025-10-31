@@ -146,6 +146,7 @@ impl std::fmt::Display for Seats {
     }
 }
 
+/// TODO: Why do I need these?
 impl From<Box<[SeatCell; 6]>> for Seats {
     fn from(value: Box<[SeatCell; 6]>) -> Self {
         Self(value)
@@ -181,6 +182,7 @@ impl TryFrom<Vec<Seat>> for Seats {
     }
 }
 
+/// TODO: This feels like stupid over architecting.
 impl TryFrom<Vec<SeatCell>> for Seats {
     type Error = PKError;
 

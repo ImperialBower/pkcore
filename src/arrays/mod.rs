@@ -9,6 +9,7 @@ pub mod hole_cards;
 pub mod matchups;
 pub mod seven;
 pub mod six;
+pub mod sliced;
 pub mod three;
 pub mod two;
 

@@ -47,6 +47,7 @@ pub mod deck;
 pub mod games;
 mod lookups;
 pub mod play;
+pub mod prelude;
 pub mod rank;
 pub mod ranks;
 pub mod suit;

@@ -603,6 +603,12 @@ impl From<Bard> for Cards {
     }
 }
 
+impl From<&[Card]> for Cards {
+    fn from(slice: &[Card]) -> Self {
+        Cards::from(slice.to_vec())
+    }
+}
+
 impl From<[Card; 2]> for Cards {
     fn from(array: [Card; 2]) -> Self {
         Cards::from(array.to_vec())
@@ -748,6 +754,7 @@ impl Pile for Cards {
     }
 
     /// ```
+    /// use pkcore::Pile;
     /// use pkcore::cards::Cards;
     /// use pkcore::card::Card;
     /// use std::str::FromStr;

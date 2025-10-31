@@ -340,7 +340,7 @@ impl Pile for CardsCell {
         internal.contains(card)
     }
 
-    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
+    fn swap(&mut self, _tttttttttindex: usize, _card: Card) -> Option<Card> {
         todo!()
     }
 

@@ -311,8 +311,10 @@ impl Pile for Card {
         self.0 == Card::BLANK_NUMBER
     }
 
-    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
-        todo!()
+    fn swap(&mut self, _index: usize, card: Card) -> Option<Card> {
+        let old = *self;
+        *self = card;
+        Some(old)
     }
 
     fn the_nuts(&self) -> TheNuts {
