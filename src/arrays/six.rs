@@ -152,7 +152,15 @@ impl HandRanker for Six {
 }
 
 impl Pile for Six {
+    fn card_at(self, _index: usize) -> Option<Card> {
+        todo!()
+    }
+
     fn clean(&self) -> Self {
+        todo!()
+    }
+
+    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
         todo!()
     }
 

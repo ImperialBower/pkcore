@@ -299,12 +299,20 @@ impl FromStr for Card {
 // }
 
 impl Pile for Card {
+    fn card_at(self, _index: usize) -> Option<Card> {
+        Some(self)
+    }
+
     fn clean(&self) -> Self {
         Card(self.0 & Card::FREQUENCY_MASK_FILTER)
     }
 
     fn contains_blank(&self) -> bool {
         self.0 == Card::BLANK_NUMBER
+    }
+
+    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
+        todo!()
     }
 
     fn the_nuts(&self) -> TheNuts {

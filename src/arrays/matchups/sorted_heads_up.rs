@@ -766,8 +766,16 @@ impl FromStr for SortedHeadsUp {
 }
 
 impl Pile for SortedHeadsUp {
+    fn card_at(self, _index: usize) -> Option<Card> {
+        todo!()
+    }
+
     /// Shoot. Forgot about my frequency mask idea. Still has potential, but later.
     fn clean(&self) -> Self {
+        todo!()
+    }
+
+    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
         todo!()
     }
 

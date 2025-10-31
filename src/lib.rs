@@ -237,6 +237,8 @@ pub trait Pile {
         Bard::from(self.to_vec())
     }
 
+    fn card_at(self, index: usize) -> Option<Card>;
+
     fn cards(&self) -> Cards {
         Cards::from(self.to_vec())
     }
@@ -375,6 +377,8 @@ pub trait Pile {
     fn suits(&self) -> HashSet<Suit> {
         self.to_vec().iter().map(Card::get_suit).collect::<HashSet<Suit>>()
     }
+
+    fn swap(&mut self, index: usize, card: Card) -> Option<Card>;
 
     fn the_nuts(&self) -> TheNuts;
 

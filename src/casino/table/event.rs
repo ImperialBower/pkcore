@@ -21,6 +21,7 @@ pub enum TableAction {
     BetAnteForced(u8, usize),
     DealingXCards(u8),
     Dealt(u8, Bard),
+    DealtPlayers,
     ForceDealt(u8, Bard),
     ActionTo(u8),
     Check(u8),
@@ -122,6 +123,7 @@ impl Display for TableAction {
             }
             TableAction::DealingXCards(x) => write!(f, "Dealing {x} cards to each player"),
             TableAction::Dealt(seat, cards) => write!(f, "Seat {seat} is dealt {}", Cards::from(*cards)),
+            TableAction::DealtPlayers => write!(f, "Dealt Players"),
             TableAction::ForceDealt(seat, cards) => {
                 write!(f, "Seat {seat} is force-dealt {}", Cards::from(*cards))
             }

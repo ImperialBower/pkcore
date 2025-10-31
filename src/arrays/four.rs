@@ -148,6 +148,10 @@ impl FromStr for Four {
 }
 
 impl Pile for Four {
+    fn card_at(self, _index: usize) -> Option<Card> {
+        todo!()
+    }
+
     fn clean(&self) -> Self {
         Four([
             self.first().clean(),
@@ -155,6 +159,10 @@ impl Pile for Four {
             self.third().clean(),
             self.forth().clean(),
         ])
+    }
+
+    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
+        todo!()
     }
 
     fn the_nuts(&self) -> TheNuts {

@@ -53,6 +53,13 @@ impl Table {
         Seats::new(seats)
     }
 
+    #[must_use]
+    pub fn nlh_primed(seats: Seats, dealt: &CardsCell, forced_bets: ForcedBets) -> Self {
+        let table = Table::nlh_from_seats(seats, forced_bets);
+        table.deck.0.swap(&dealt.0);
+        table
+    }
+
     /// # Panics
     ///
     /// This will panic if the number of seats exceeds `u8::MAX`, which shouldn't be possible.
@@ -63,18 +70,18 @@ impl Table {
         let event_log = TableLog::default();
 
         let uuid = Uuid::new_v4();
-        event_log.log(event::TableAction::TableOpen(uuid));
+        event_log.log(TableAction::TableOpen(uuid));
 
         for seat in seats.borrow_all() {
             if !seat.borrow().is_empty() {
                 log::debug!("Seating {seat}");
                 if let Ok(num) = u8::try_from(seats.borrow_all().iter().position(|s| s == seat).unwrap()) {
-                    event_log.log(event::TableAction::PlayerSeated(num, seat.borrow().player.id));
+                    event_log.log(TableAction::PlayerSeated(num, seat.borrow().player.id));
                     if !seat.borrow().cards.is_empty() {
-                        event_log.log(event::TableAction::Dealt(num, seat.borrow().cards.bard()));
+                        event_log.log(TableAction::Dealt(num, seat.borrow().cards.bard()));
                     }
                 } else {
-                    event_log.log(event::TableAction::InvalidAction);
+                    event_log.log(TableAction::InvalidAction);
                     log::error!("Seat number conversion error");
                 }
             }
@@ -164,6 +171,11 @@ impl Table {
     }
 
     pub fn act_deal_cards(&self, _num_cards: u8) {
+        todo!()
+    }
+
+    #[allow(dead_code)]
+    fn act_deal_nlh(&self) -> Result<TableAction, PKError> {
         todo!()
     }
 
@@ -432,8 +444,21 @@ impl std::fmt::Display for Table {
 #[allow(non_snake_case)]
 mod casino__table_tests {
     use super::*;
+    use crate::cards::Cards;
     use crate::casino::table::event::TableAction;
     use crate::util::data::TestData;
+
+    #[test]
+    fn nlh_primed() {
+        let _primed = Cards::deck_primed(&TestData::the_hand_cards());
+        let _table = Table::nlh_primed(
+            Seats::new(TestData::the_hand_players()),
+            &CardsCell::from(Cards::deck_primed(&TestData::the_hand_cards())),
+            ForcedBets::new(50, 100),
+        );
+
+        // TODO: Test something. Need to add the dealing functionality,
+    }
 
     #[test]
     fn nlh_from_seats() {

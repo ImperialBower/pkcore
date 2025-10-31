@@ -270,6 +270,10 @@ impl HandRanker for Five {
 }
 
 impl Pile for Five {
+    fn card_at(self, _index: usize) -> Option<Card> {
+        todo!()
+    }
+
     fn clean(&self) -> Self {
         Five([
             self.first().clean(),
@@ -278,6 +282,10 @@ impl Pile for Five {
             self.forth().clean(),
             self.fifth().clean(),
         ])
+    }
+
+    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
+        todo!()
     }
 
     fn the_nuts(&self) -> TheNuts {

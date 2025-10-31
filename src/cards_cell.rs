@@ -222,6 +222,12 @@ impl CardsCell {
         Self::from(cards.sort())
     }
 
+    pub fn swap(&self, _index: usize, _card: Card) -> Option<Card> {
+        // let mut internal = self.0.borrow_mut();
+        // internal.
+        todo!()
+    }
+
     /// ```
     /// use pkcore::cards_cell::CardsCell;
     ///
@@ -321,12 +327,20 @@ impl FromStr for CardsCell {
 }
 
 impl Pile for CardsCell {
+    fn card_at(self, _index: usize) -> Option<Card> {
+        todo!()
+    }
+
+    fn clean(&self) -> Self {
+        todo!()
+    }
+
     fn contains(&self, card: &Card) -> bool {
         let internal = self.0.borrow();
         internal.contains(card)
     }
 
-    fn clean(&self) -> Self {
+    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
         todo!()
     }
 

@@ -212,7 +212,15 @@ impl HandRanker for Seven {
 }
 
 impl Pile for Seven {
+    fn card_at(self, _index: usize) -> Option<Card> {
+        todo!()
+    }
+
     fn clean(&self) -> Self {
+        todo!()
+    }
+
+    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
         todo!()
     }
 

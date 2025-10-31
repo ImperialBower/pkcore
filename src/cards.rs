@@ -82,6 +82,19 @@ impl Cards {
     /// A Deck primed, is one where the initial cards are the ones passed in. This is to facilitate
     /// testing specific scenarios.
     ///
+    /// This initial version of this code was particularly clunky:
+    ///
+    /// ```
+    /// use pkcore::cards::Cards;
+    ///
+    /// pub fn deck_primed(cards: &Cards) -> Cards {
+    ///     let deck_minus = Cards::deck_minus(cards);
+    ///     let mut cloned = cards.clone();
+    ///     cloned.append(&deck_minus);
+    ///     cloned
+    /// }
+    /// ```
+    ///
     /// TODO: Add the ability to pass in burn cards
     #[must_use]
     pub fn deck_primed(cards: &Cards) -> Cards {
@@ -720,6 +733,10 @@ impl Pile for Cards {
         true
     }
 
+    fn card_at(self, index: usize) -> Option<Card> {
+        self.0.get_index(index).copied()
+    }
+
     fn clean(&self) -> Self {
         todo!()
     }
@@ -728,6 +745,20 @@ impl Pile for Cards {
     /// always be true.
     fn is_dealt(&self) -> bool {
         true
+    }
+
+    /// ```
+    /// use pkcore::cards::Cards;
+    /// use pkcore::card::Card;
+    /// use std::str::FromStr;
+    ///
+    /// let mut cards = Cards::forgiving_from_str("A♠ K♠ Q♠ J♠ T♠");
+    /// let old_card = cards.swap(2, Card::from_str("9♠").unwrap());
+    /// assert_eq!(old_card.unwrap().to_string(), "Q♠");
+    /// assert_eq!(cards.to_string(), "A♠ K♠ 9♠ J♠ T♠");
+    /// ```
+    fn swap(&mut self, index: usize, card: Card) -> Option<Card> {
+        self.0.replace_index(index, card).ok()
     }
 
     fn the_nuts(&self) -> TheNuts {

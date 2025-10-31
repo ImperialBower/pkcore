@@ -1564,8 +1564,16 @@ impl Plurable for Two {
 }
 
 impl Pile for Two {
+    fn card_at(self, _index: usize) -> Option<Card> {
+        todo!()
+    }
+
     fn clean(&self) -> Self {
         Two([self.first().clean(), self.second().clean()])
+    }
+
+    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
+        todo!()
     }
 
     /// When I look at the traits I've coded, they don't feel particularly rusty to me. One of my

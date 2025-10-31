@@ -309,8 +309,16 @@ impl FromStr for StartingHands {
 }
 
 impl Pile for StartingHands {
+    fn card_at(self, _index: usize) -> Option<Card> {
+        todo!()
+    }
+
     fn clean(&self) -> Self {
         StartingHands::default()
+    }
+
+    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
+        todo!()
     }
 
     fn the_nuts(&self) -> TheNuts {
