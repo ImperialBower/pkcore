@@ -49,6 +49,26 @@ pub static FIVE_CARD_COMBOS: std::sync::LazyLock<Combinations<IntoIter<Card>>> =
 pub struct Cards(pub IndexSet<Card>);
 
 impl Cards {
+    /// This is an example of my stupidity. I want to full the collection of `Cards` with blanks
+    /// so that I can tell what needs to be dealt, but it's a damned `IndexSet`. There will always
+    /// only be one.
+    /// ```
+    /// use pkcore::cards::Cards;
+    ///
+    /// let blanks = Cards::blanks(3);
+    ///
+    /// assert_eq!(blanks.len(), 1);
+    /// assert_eq!(blanks.to_string(), "__");
+    /// ```
+    #[must_use]
+    pub fn blanks(len: usize) -> Self {
+        let mut i: IndexSet<Card> = IndexSet::new();
+        for _ in 0..len {
+            i.insert(Card::BLANK);
+        }
+        Cards(i)
+    }
+
     /// ```
     /// use pkcore::cards::Cards;
     /// use pkcore::deck;

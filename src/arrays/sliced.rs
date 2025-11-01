@@ -32,6 +32,19 @@ impl BoxedCards {
     /// ```
     /// use pkcore::prelude::*;
     ///
+    /// let blanks = BoxedCards::blanks(3);
+    ///
+    /// assert_eq!(3, blanks.len());
+    /// assert_eq!("__ __ __", blanks.to_string());
+    /// ```
+    #[must_use]
+    pub fn blanks(len: usize) -> Self {
+        BoxedCards(vec![Card::BLANK; len].into_boxed_slice())
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
     /// assert!(BoxedCards::default().is_empty());
     /// assert!(!BoxedCards::from_str("T♠ 2♠").unwrap().is_empty());
     /// ```
@@ -88,7 +101,8 @@ impl BoxedCards {
 
 impl Display for BoxedCards {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Cards::from(self.as_slice()).fmt(f)
+        let box_strings: Vec<String> = self.0.iter().map(std::string::ToString::to_string).collect();
+        write!(f, "{}", box_strings.join(" "))
     }
 }
 
@@ -117,6 +131,19 @@ impl FromStr for BoxedCards {
 pub struct Boxes(pub Box<[BoxedCards]>);
 
 impl Boxes {
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let boxes = Boxes::blanks(2, 6);
+    ///
+    /// assert_eq!(6, boxes.len());
+    /// assert_eq!("__ __, __ __, __ __, __ __, __ __, __ __", boxes.to_string());
+    /// ```
+    #[must_use]
+    pub fn blanks(size: usize, count: usize) -> Self {
+        Boxes::from(vec![BoxedCards::blanks(size); count])
+    }
+
     /// Creates `Boxes` by dividing the provided Cards into equal sizes.
     ///
     /// ```
@@ -142,6 +169,20 @@ impl Boxes {
         }
 
         Ok(Boxes::from(cards.as_chunks(capacity)))
+    }
+
+    /// # Errors
+    ///
+    /// `PKError::InvalidLength` if the capacity is zero.
+    /// `PKError::Misaligned` if the resulting Boxes are not aligned.
+    pub fn box_up_aligned(cards: &Cards, capacity: usize) -> Result<Self, PKError> {
+        let boxes = Self::box_up(cards, capacity)?;
+
+        if boxes.is_aligned() {
+            Ok(boxes)
+        } else {
+            Err(PKError::Misaligned)
+        }
     }
 
     /// Verifies if all cards across the Boxes are unique, and so could
