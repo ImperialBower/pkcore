@@ -358,6 +358,7 @@ impl Pile for CardsCell {
 #[allow(non_snake_case)]
 mod cards_cell_tests {
     use super::*;
+    use crate::Forgiving;
     use rstest::rstest;
 
     #[rstest]

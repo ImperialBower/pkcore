@@ -244,6 +244,13 @@ impl Card {
 }
 
 impl fmt::Display for Card {
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert_eq!("A♠", Card::ACE_SPADES.to_string());
+    /// assert_eq!("__", Card::BLANK.to_string());
+    ///
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}{}", self.get_rank().to_char(), self.get_suit().to_char_symbol())
     }

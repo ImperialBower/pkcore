@@ -22,7 +22,7 @@ pub use crate::ranks::Ranks;
 pub use crate::suit::Suit;
 
 // Re-export core traits
-pub use crate::{Betting, GTO, PKError, Pile, Plurable, SOK, Shifty, SuitShift};
+pub use crate::{Betting, Forgiving, GTO, PKError, Pile, Plurable, SOK, Shifty, SuitShift};
 
 // Re-export all constants
 pub use crate::{

@@ -33,6 +33,7 @@ use crate::ranks::Ranks;
 use crate::suit::Suit;
 use rayon::iter::IterBridge;
 use std::iter::Enumerate;
+use std::str::FromStr;
 
 #[macro_use]
 pub mod analysis;
@@ -125,6 +126,7 @@ pub enum PKError {
     InvalidShift,
     InvalidTableAction,
     Misaligned,
+    NoBlankSlots,
     NoLow,
     NotDealt,
     NotEnoughCards,
@@ -167,6 +169,7 @@ impl Display for PKError {
             PKError::InvalidShift => "Invalid Shift Error",
             PKError::InvalidTableAction => "Invalid Table Action Error",
             PKError::Misaligned => "Misaligned Error",
+            PKError::NoBlankSlots => "No Blank Slots Error",
             PKError::NoLow => "No low hand possible Error",
             PKError::NotDealt => "Not Dealt Error",
             PKError::NotEnoughCards => "Not Enough Cards Error",
@@ -214,6 +217,44 @@ pub trait Betting {
 
     /// Adds the amount of Chips won to the stack. Returns the resulting stack size.
     fn wins(&mut self, winnings: Self) -> usize;
+}
+
+pub trait Forgiving: FromStr + Default {
+    /// Idea stolen from my `CardPack.rs` library.
+    ///
+    /// DIARY:
+    ///
+    /// ```txt
+    /// pub trait Forgiving {
+    ///     Self::from_str(index).unwrap_or_else(|_| {
+    ///         log::warn!("forgiving_from_str(): {index} is invalid. Returning empty Pile.");
+    ///         Self::default()
+    ///    })
+    /// }
+    /// ```
+    ///
+    /// So I ask `CoPilot` how I get the code to compile, and it tells me that I need to
+    /// make sure that the implementing struct implements `FromStr` and `Default`. DUMBASS!!!
+    /// What TF is your code trying to do? What TWO MOTHER FUCKING THINGS does `Self` require?
+    /// Take a minute... use that planet sized brain of yours. Why yes, if you need to use your
+    /// structs `from_str`, which comes from implementing the `FromStr` trait, and the `default`,
+    /// which requires the... **DRUM ROLL PLEASE** the FUCKING DEFAULT TRAIT **DUN DUN DUNNNN**,
+    /// so yes, you need to make sure your implementer needs to have those traits implemented.
+    ///
+    /// As the great
+    /// [Ben Stern](https://www.legacy.com/news/celebrity-deaths/ben-stern-2022-howard-sterns-father/)
+    /// once said: "I told you not to be stupid, you moron."
+    ///
+    /// AI is making you dumber than you already clearly are.
+    ///
+    /// Perhaps I should implement this trait on myself.
+    #[must_use]
+    fn forgiving_from_str(index: &str) -> Self {
+        Self::from_str(index).unwrap_or_else(|_| {
+            log::warn!("forgiving_from_str(): {index} is invalid. Returning empty Pile.");
+            Self::default()
+        })
+    }
 }
 
 pub trait GTO {

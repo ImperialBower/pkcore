@@ -7,7 +7,7 @@ use crate::prelude::Boxes;
 use crate::rank::Rank;
 use crate::suit::Suit;
 use crate::util::terminal::Terminal;
-use crate::{PKError, Pile, SuitShift, TheNuts};
+use crate::{Forgiving, PKError, Pile, SuitShift, TheNuts};
 use indexmap::IndexSet;
 use indexmap::set::{IntoIter, Iter};
 use itertools::{Combinations, Itertools};
@@ -317,15 +317,6 @@ impl Cards {
         Cards::from(self.iter().map(Card::frequency_quaded).collect::<Vec<_>>())
     }
 
-    /// Idea stolen from my `CardPack.rs` library.
-    #[must_use]
-    pub fn forgiving_from_str(index: &str) -> Self {
-        Self::from_str(index).unwrap_or_else(|_| {
-            log::warn!("Cards::forgiving_from_str(): {index} is invalid. Returning empty Pile.");
-            Self::default()
-        })
-    }
-
     /// This function is most likely going to be a shit show. I could just cast everything over
     /// to my [cardpack.rs](https://github.com/ContractBridge/cardpack.rs) library where this is
     /// [already solved](https://github.com/ContractBridge/cardpack.rs/blob/main/src/cards/pile.rs#L448),
@@ -557,6 +548,8 @@ impl fmt::Display for Cards {
         write!(f, "{s}")
     }
 }
+
+impl Forgiving for Cards {}
 
 impl From<Bard> for Cards {
     /// This method is designed to deserialize a binary `Bard` entity into a `Cards` `IndexSet`
@@ -791,10 +784,7 @@ impl Pile for Cards {
     }
 
     /// ```
-    /// use pkcore::Pile;
-    /// use pkcore::cards::Cards;
-    /// use pkcore::card::Card;
-    /// use std::str::FromStr;
+    /// use pkcore::prelude::*;
     ///
     /// let mut cards = Cards::forgiving_from_str("A♠ K♠ Q♠ J♠ T♠");
     /// let old_card = cards.swap(2, Card::from_str("9♠").unwrap());

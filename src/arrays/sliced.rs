@@ -1,14 +1,21 @@
+use crate::PKError;
 use crate::card::Card;
-use crate::{Cards, Pile};
-use crate::{PKError, cards};
+use crate::prelude::TheNuts;
+use crate::util::terminal::Terminal;
+use crate::{Cards, Forgiving, Pile};
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// ```
+/// use pkcore::prelude::*;
+///
+/// assert_eq!(BoxedCards::blanks(3), boxed!("__ __ __"));
+/// ```
 #[macro_export]
 #[allow(clippy::pedantic)]
 macro_rules! boxed {
     ($card_str:expr) => {
-        BoxedCards::from(Cards::forgiving_from_str($card_str))
+        BoxedCards::forgiving_from_str($card_str)
     };
 }
 
@@ -45,12 +52,54 @@ impl BoxedCards {
     /// ```
     /// use pkcore::prelude::*;
     ///
+    /// let mut boxed_cards = BoxedCards::from_str("T♠ __ __").unwrap();
+    /// assert_eq!("T♠ __ __", boxed_cards.to_string());
+    /// boxed_cards.deal(Card::ACE_DIAMONDS);
+    ///
+    /// assert_eq!("T♠ A♦ __", boxed_cards.to_string());
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// `PKError::NoBlankSlots` if there are no blank slots to deal into.
+    pub fn deal(&mut self, card: Card) -> Result<(), PKError> {
+        for slot in &mut self.0 {
+            if *slot == Card::BLANK {
+                *slot = card;
+                return Ok(());
+            }
+        }
+
+        Err(PKError::NoBlankSlots)
+    }
+
+    // /// Idea stolen from my `CardPack.rs` library.
+    // ///
+    // /// This is exactly the same code as in the `Cards` struct, the difference being that
+    // /// `BoxedCards` struct's from_str accepts `Card::BLANK` as a valid card.
+    // #[must_use]
+    // pub fn forgiving_from_str(index: &str) -> Self {
+    //     Self::from_str(index).unwrap_or_else(|_| {
+    //         log::warn!("BoxedCards::forgiving_from_str(): {index} is invalid. Returning empty Pile.");
+    //         Self::default()
+    //     })
+    // }
+
+    #[must_use]
+    pub fn is_dealt(&self) -> bool {
+        !self.0.contains(&Card::BLANK)
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
     /// assert!(BoxedCards::default().is_empty());
+    /// assert!(BoxedCards::blanks(3).is_empty());
     /// assert!(!BoxedCards::from_str("T♠ 2♠").unwrap().is_empty());
     /// ```
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
+        self.cards().is_empty()
     }
 
     /// ```
@@ -79,6 +128,11 @@ impl BoxedCards {
         self.0.len()
     }
 
+    #[must_use]
+    pub fn number_of_dealt_cards(&self) -> usize {
+        self.0.iter().filter(|c| **c != Card::BLANK).count()
+    }
+
     /// ```
     /// use pkcore::prelude::*;
     ///
@@ -100,11 +154,19 @@ impl BoxedCards {
 }
 
 impl Display for BoxedCards {
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert_eq!("A♠ K♦", boxed!("AS KD").to_string());
+    /// assert_eq!("A♠ K♦ __", boxed!("AS KD __").to_string());
+    /// ```
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let box_strings: Vec<String> = self.0.iter().map(std::string::ToString::to_string).collect();
         write!(f, "{}", box_strings.join(" "))
     }
 }
+
+impl Forgiving for BoxedCards {}
 
 impl From<Cards> for BoxedCards {
     fn from(cards: Cards) -> Self {
@@ -121,9 +183,75 @@ impl From<Vec<Card>> for BoxedCards {
 impl FromStr for BoxedCards {
     type Err = PKError;
 
+    /// The analysis layer way of doing things isn't going to work at the Table level. Suddenly,
+    /// having a `Card::BLANK` in one of the slots is perfectly normal, as cards are dealt out to
+    /// the players.
+    ///
+    /// Here's what I originally wrote:
+    ///
+    /// ```txt
+    /// let cards = cards!(s);
+    /// Ok(BoxedCards::from(cards))
+    /// ```
+    ///
+    /// Clean, crisp, clear, and totally wrong.
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert_eq!("__ __ __", BoxedCards::from_str("__ __ __").unwrap().to_string());
+    /// ```
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let cards = cards!(s);
-        Ok(BoxedCards::from(cards))
+        let mut v: Vec<Card> = Vec::new();
+        let binding = Terminal::index_cleaner(s);
+        let s = binding.as_str();
+        for s in s.split_whitespace() {
+            let c = Card::from_str(s).unwrap_or(Card::BLANK);
+            v.push(c);
+        }
+        if v.is_empty() {
+            Err(PKError::InvalidCardIndex)
+        } else {
+            Ok(BoxedCards::from(v))
+        }
+    }
+}
+
+impl Pile for BoxedCards {
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert_eq!(
+    ///     Card::BLANK,
+    ///     BoxedCards::from(vec![Card::ACE_DIAMONDS, Card::BLANK]).card_at(1).unwrap()
+    /// );
+    /// assert_eq!(Card::KING_CLUBS, boxed!("T♥ 2♠ K♣ 7♣").card_at(2).unwrap())
+    /// ```
+    fn card_at(self, index: usize) -> Option<Card> {
+        self.0.get(index).copied()
+    }
+
+    fn clean(&self) -> Self {
+        BoxedCards::blanks(self.len())
+    }
+
+    fn swap(&mut self, index: usize, card: Card) -> Option<Card> {
+        match self.0.get(index) {
+            Some(old_card) => {
+                let old_card = *old_card;
+                self.0[index] = card;
+                Some(old_card)
+            }
+            None => None,
+        }
+    }
+
+    fn the_nuts(&self) -> TheNuts {
+        todo!("Doesn't apply")
+    }
+
+    fn to_vec(&self) -> Vec<Card> {
+        self.0.to_vec()
     }
 }
 
@@ -286,9 +414,18 @@ impl From<Vec<Vec<Card>>> for Boxes {
     }
 }
 
-// #[cfg(test)]
-// #[allow(non_snake_case)]
-// mod arrays__sliced_tests {
-//     use super::*;
-//     use crate::cards;
-// }
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod arrays__sliced_tests {
+    use super::*;
+
+    #[test]
+    fn boxed_cards__swap() {
+        let mut boxed_cards: BoxedCards = boxed!("T♥ 2♠ __ 7♣");
+        let swapped = boxed_cards.swap(2, Card::ACE_DIAMONDS);
+
+        assert_eq!(Some(Card::BLANK), swapped);
+        assert_eq!("T♥ 2♠ A♦ 7♣", boxed_cards.to_string());
+        assert_eq!(None, boxed_cards.swap(6, Card::KING_CLUBS));
+    }
+}
