@@ -22,21 +22,6 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::str::FromStr;
 use strum::IntoEnumIterator;
 
-#[macro_export]
-#[allow(clippy::pedantic)]
-macro_rules! cards {
-    ($card_str:expr) => {
-        Cards::forgiving_from_str($card_str)
-    };
-}
-
-#[macro_export]
-macro_rules! deck {
-    () => {
-        Cards::deck()
-    };
-}
-
 pub static FIVE_CARD_COMBOS: std::sync::LazyLock<Combinations<IntoIter<Card>>> =
     std::sync::LazyLock::new(|| Cards::deck().combinations(5));
 

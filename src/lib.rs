@@ -36,6 +36,7 @@ use std::iter::Enumerate;
 use std::str::FromStr;
 
 #[macro_use]
+pub mod macros;
 pub mod analysis;
 pub mod arrays;
 pub mod bard;
@@ -53,6 +54,7 @@ pub mod rank;
 pub mod ranks;
 pub mod suit;
 pub mod util;
+
 // region CONSTANTS
 
 /// See Cactus Kev's explanation of [unique vs. distinct](https://suffe.cool/poker/evaluator.html)

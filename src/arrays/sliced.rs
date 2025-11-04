@@ -6,19 +6,6 @@ use crate::{Cards, Forgiving, Pile};
 use std::fmt::Display;
 use std::str::FromStr;
 
-/// ```
-/// use pkcore::prelude::*;
-///
-/// assert_eq!(BoxedCards::blanks(3), boxed!("__ __ __"));
-/// ```
-#[macro_export]
-#[allow(clippy::pedantic)]
-macro_rules! boxed {
-    ($card_str:expr) => {
-        BoxedCards::forgiving_from_str($card_str)
-    };
-}
-
 /// This is an attempt at a refactoring of could be seen as the abomination that is my
 /// arrays structs. They do have the advantage of being geared for my direct use cases within
 /// the hand analysis, but I am feeling that in the future that would be better suited
@@ -275,7 +262,6 @@ impl Boxes {
     /// Creates `Boxes` by dividing the provided Cards into equal sizes.
     ///
     /// ```
-    /// use pkcore::cards;
     /// use pkcore::prelude::*;
     ///
     /// let cards = cards!("8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ 7♣ 2♣");
@@ -299,6 +285,34 @@ impl Boxes {
         Ok(Boxes::from(cards.as_chunks(capacity)))
     }
 
+    /// Works the same as `box_up`, but verifies that the resulting Boxes are aligned.
+    /// Nothing different here.
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let cards = cards!("8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ 7♣ 2♣");
+    ///
+    /// let boxes = Boxes::box_up_aligned(&cards, 2).unwrap();
+    ///
+    /// assert_eq!(7, boxes.len());
+    /// assert_eq!(14, boxes.card_count());
+    /// assert!(boxes.is_aligned());
+    /// assert_eq!("8♣ 3♥, A♦ Q♣, 5♦ 5♣, 6♠ 6♥, K♠ J♦, 4♦ 4♣, 7♣ 2♣", boxes.to_string());
+    /// ```
+    ///
+    /// But somwthing ver different here.
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let cards = cards!("8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ 7♣");
+    ///
+    /// let boxes = Boxes::box_up_aligned(&cards, 2);
+    ///
+    /// assert!(boxes.is_err());
+    /// assert_eq!(PKError::Misaligned, boxes.unwrap_err());
+    /// ```
     /// # Errors
     ///
     /// `PKError::InvalidLength` if the capacity is zero.
@@ -349,6 +363,33 @@ impl Boxes {
         self.0.iter().map(BoxedCards::len).sum()
     }
 
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let mut boxes = Boxes::blanks(2, 4);
+    ///
+    /// assert!(boxes.deal(2, Card::ACE_HEARTS).is_ok());
+    /// assert_eq!("__ __, __ __, A♥ __, __ __", boxes.to_string());
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns `PKError::AlreadyDealt` is there is no empty slot available.
+    pub fn deal(&mut self, utg: usize, card: Card) -> Result<(), PKError> {
+        let slice = &mut self.0;
+        let start = utg;
+
+        for i in 0..slice.len() {
+            let index = (start + i) % slice.len();
+            let item = &mut slice[index];
+            if item.deal(card).is_ok() {
+                return Ok(());
+            }
+        }
+
+        Err(PKError::AlreadyDealt)
+    }
+
     /// Verifies that the individual `BoxedCards` are all of the same length.
     ///
     /// ```
@@ -392,6 +433,28 @@ impl Boxes {
     #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let mut boxes = Boxes::blanks(4, 3);
+    /// assert_eq!("__ __ __ __, __ __ __ __, __ __ __ __", boxes.to_string());
+    ///
+    /// let old_card = boxes.swap(1, 2, Card::KING_HEARTS);
+    /// assert_eq!(old_card, Some(Card::BLANK));
+    /// assert_eq!("__ __ __ __, __ __ K♥ __, __ __ __ __", boxes.to_string());
+    /// ```
+    pub fn swap(&mut self, box_index: usize, card_index: usize, card: Card) -> Option<Card> {
+        match self.0.get(box_index) {
+            Some(boxed_cards) => {
+                let mut boxed_cards = boxed_cards.clone();
+                let old_card = boxed_cards.swap(card_index, card);
+                self.0[box_index] = boxed_cards;
+                old_card
+            }
+            None => None,
+        }
     }
 }
 

@@ -7,6 +7,8 @@
 
 pub use std::str::FromStr;
 
+pub use crate::macros;
+
 pub use crate::analysis::evals::Evals;
 pub use crate::analysis::gto::combo::Combo;
 pub use crate::analysis::gto::combo_pairs::ComboPairs;
@@ -15,6 +17,7 @@ pub use crate::arrays::sliced::*;
 pub use crate::bard::Bard;
 pub use crate::boxed;
 pub use crate::card::Card;
+pub use crate::cards;
 pub use crate::cards::Cards;
 pub use crate::deck::Deck;
 pub use crate::rank::Rank;

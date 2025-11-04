@@ -8,21 +8,6 @@ use std::fmt::{Debug, Display};
 use std::hash::Hash;
 use std::str::FromStr;
 
-#[macro_export]
-#[allow(clippy::pedantic)]
-macro_rules! cc {
-    ($card_str:expr) => {
-        CardsCell::from(Cards::forgiving_from_str($card_str))
-    };
-}
-
-#[macro_export]
-macro_rules! deck_cell {
-    () => {
-        CardsCell::deck()
-    };
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct CardsCell(pub(crate) RefCell<Cards>);
 
