@@ -3,7 +3,7 @@ use crate::bard::Bard;
 use crate::card::Card;
 use crate::card_number::CardNumber;
 use crate::cards_cell::CardsCell;
-use crate::prelude::Boxes;
+use crate::prelude::{BoxedCards, Boxes};
 use crate::rank::Rank;
 use crate::suit::Suit;
 use crate::util::terminal::Terminal;
@@ -584,6 +584,18 @@ impl From<Bard> for Cards {
         }
 
         cards
+    }
+}
+
+impl From<Box<[Card]>> for Cards {
+    fn from(cards: Box<[Card]>) -> Self {
+        Cards::from(cards.to_vec())
+    }
+}
+
+impl From<BoxedCards> for Cards {
+    fn from(cards: BoxedCards) -> Self {
+        Cards::from(cards.as_slice())
     }
 }
 

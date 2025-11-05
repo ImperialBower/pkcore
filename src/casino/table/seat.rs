@@ -1,5 +1,5 @@
-use crate::cards_cell::CardsCell;
 use crate::casino::player::Player;
+use crate::prelude::BoxedCards;
 use std::cell::{BorrowMutError, Ref, RefCell, RefMut};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -63,7 +63,7 @@ impl std::fmt::Display for SeatCell {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Seat {
     pub player: Player,
-    pub cards: CardsCell,
+    pub cards: BoxedCards,
 }
 
 impl Seat {
@@ -71,12 +71,12 @@ impl Seat {
     pub fn new(player: Player) -> Self {
         Seat {
             player,
-            cards: CardsCell::default(),
+            cards: BoxedCards::default(),
         }
     }
 
     #[must_use]
-    pub fn new_with_cards(player: Player, cards: CardsCell) -> Self {
+    pub fn new_with_cards(player: Player, cards: BoxedCards) -> Self {
         Seat { player, cards }
     }
 

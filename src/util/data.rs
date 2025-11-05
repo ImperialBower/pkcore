@@ -8,14 +8,15 @@ use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
-use crate::cards_cell::CardsCell;
+use crate::casino::player::Player;
 use crate::casino::table::seat::Seat;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
+use crate::prelude::BoxedCards;
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
-use crate::{Card, Cards, Forgiving, Pile, cards, cc};
+use crate::{Card, Cards, Forgiving, Pile, cards};
 use std::str::FromStr;
 
 /// I am a classicist when it comes to testing. Martin Fowler, in his essay
@@ -230,35 +231,35 @@ impl TestData {
     pub fn the_hand_players() -> Vec<Seat> {
         let doyle_brunson = Seat {
             player: crate::casino::player::Player::new_with_chips("Doyle Brunson".to_string(), 100_000),
-            cards: CardsCell::default(),
+            cards: BoxedCards::blanks(2),
         };
         let eli_elezra = Seat {
-            player: crate::casino::player::Player::new_with_chips("Eli Elezra".to_string(), 100_000),
-            cards: CardsCell::default(),
+            player: Player::new_with_chips("Eli Elezra".to_string(), 100_000),
+            cards: BoxedCards::blanks(2),
         };
         let antonio_esfandiari = Seat {
-            player: crate::casino::player::Player::new_with_chips("Antonio Esfandari".to_string(), 100_000),
-            cards: CardsCell::default(),
+            player: Player::new_with_chips("Antonio Esfandari".to_string(), 100_000),
+            cards: BoxedCards::blanks(2),
         };
         let gus_hansen = Seat {
-            player: crate::casino::player::Player::new_with_chips("Gus Hansen".to_string(), 100_000),
-            cards: CardsCell::default(),
+            player: Player::new_with_chips("Gus Hansen".to_string(), 100_000),
+            cards: BoxedCards::blanks(2),
         };
         let daniel_negreanu = Seat {
-            player: crate::casino::player::Player::new_with_chips("Daniel Negreanu".to_string(), 100_000),
-            cards: CardsCell::default(),
+            player: Player::new_with_chips("Daniel Negreanu".to_string(), 100_000),
+            cards: BoxedCards::blanks(2),
         };
         let cory_zeidman = Seat {
-            player: crate::casino::player::Player::new_with_chips("Cory Zeidman".to_string(), 100_000),
-            cards: CardsCell::default(),
+            player: Player::new_with_chips("Cory Zeidman".to_string(), 100_000),
+            cards: BoxedCards::blanks(2),
         };
         let barry_greenstein = Seat {
-            player: crate::casino::player::Player::new_with_chips("Barry Greenstein".to_string(), 100_000),
-            cards: CardsCell::default(),
+            player: Player::new_with_chips("Barry Greenstein".to_string(), 100_000),
+            cards: BoxedCards::blanks(2),
         };
         let amnon_filippi = Seat {
-            player: crate::casino::player::Player::new_with_chips("Amnon Filippi".to_string(), 100_000),
-            cards: CardsCell::default(),
+            player: Player::new_with_chips("Amnon Filippi".to_string(), 100_000),
+            cards: BoxedCards::blanks(2),
         };
         vec![
             doyle_brunson,
@@ -278,36 +279,36 @@ impl TestData {
     #[must_use]
     pub fn the_hand_seats() -> Vec<Seat> {
         let doyle_brunson = Seat {
-            player: crate::casino::player::Player::new_with_chips("Doyle Brunson".to_string(), 100_000),
-            cards: cc!("T♠ 2♥"),
+            player: Player::new_with_chips("Doyle Brunson".to_string(), 100_000),
+            cards: boxed!("T♠ 2♥"),
         };
         let eli_elezra = Seat {
-            player: crate::casino::player::Player::new_with_chips("Eli Elezra".to_string(), 100_000),
-            cards: cc!("8♠ 3♥"),
+            player: Player::new_with_chips("Eli Elezra".to_string(), 100_000),
+            cards: boxed!("8♠ 3♥"),
         };
         let antonio_esfandiari = Seat {
-            player: crate::casino::player::Player::new_with_chips("Antonio Esfandari".to_string(), 100_000),
-            cards: cc!("A♦ Q♣"),
+            player: Player::new_with_chips("Antonio Esfandari".to_string(), 100_000),
+            cards: boxed!("A♦ Q♣"),
         };
         let gus_hansen = Seat {
-            player: crate::casino::player::Player::new_with_chips("Gus Hansen".to_string(), 100_000),
-            cards: cc!("5♦ 5♣"),
+            player: Player::new_with_chips("Gus Hansen".to_string(), 100_000),
+            cards: boxed!("5♦ 5♣"),
         };
         let daniel_negreanu = Seat {
-            player: crate::casino::player::Player::new_with_chips("Daniel Negreanu".to_string(), 100_000),
-            cards: cc!("6♠ 6♥"),
+            player: Player::new_with_chips("Daniel Negreanu".to_string(), 100_000),
+            cards: boxed!("6♠ 6♥"),
         };
         let cory_zeidman = Seat {
-            player: crate::casino::player::Player::new_with_chips("Cory Zeidman".to_string(), 100_000),
-            cards: cc!("K♠ J♦"),
+            player: Player::new_with_chips("Cory Zeidman".to_string(), 100_000),
+            cards: boxed!("K♠ J♦"),
         };
         let barry_greenstein = Seat {
-            player: crate::casino::player::Player::new_with_chips("Barry Greenstein".to_string(), 100_000),
-            cards: cc!("4♣ 4♦"),
+            player: Player::new_with_chips("Barry Greenstein".to_string(), 100_000),
+            cards: boxed!("4♣ 4♦"),
         };
         let amnon_filippi = Seat {
-            player: crate::casino::player::Player::new_with_chips("Amnon Filippi".to_string(), 100_000),
-            cards: cc!("7♣ 2♣"),
+            player: Player::new_with_chips("Amnon Filippi".to_string(), 100_000),
+            cards: boxed!("7♣ 2♣"),
         };
         vec![
             doyle_brunson,

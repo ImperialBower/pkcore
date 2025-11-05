@@ -6,6 +6,7 @@ use crate::casino::table::event::{TableAction, TableLog};
 use crate::casino::table::seat::Seat;
 use crate::casino::table::seats::Seats;
 use crate::games::{GamePhase, GameType};
+use crate::prelude::BoxedCards;
 use crate::{PKError, Pile, deck_cell};
 use bint::BintCell;
 use std::cell::{Cell, Ref};
@@ -46,7 +47,7 @@ impl Table {
         for _ in 0..count {
             let seat = Seat {
                 player: Player::default(),
-                cards: CardsCell::default(),
+                cards: BoxedCards::default(),
             };
             seats.push(seat);
         }

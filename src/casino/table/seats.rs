@@ -1,4 +1,5 @@
 use crate::PKError;
+use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::table::seat::{Seat, SeatCell};
 use log;
@@ -102,9 +103,10 @@ impl Seats {
     pub fn take_cards(&self) -> CardsCell {
         let cards = CardsCell::default();
         for seat_cell in &self.0 {
-            let seat = seat_cell.borrow_mut();
+            let mut seat = seat_cell.borrow_mut();
             if !seat.is_empty() {
-                cards.insert_all(seat.cards.take());
+                let seat_cards = Cards::from(seat.cards.take());
+                cards.insert_all(seat_cards);
             }
         }
         cards
@@ -198,16 +200,15 @@ impl TryFrom<Vec<SeatCell>> for Seats {
 #[allow(non_snake_case)]
 mod casino__table__seats_tests {
     use super::*;
-    use crate::cards_cell::CardsCell;
+    use crate::prelude::*;
     use crate::util::data::TestData;
-    use std::str::FromStr;
 
     #[test]
     fn assign() {
         let seats = Seats::default();
         let antonio_esfandiari = Seat {
             player: crate::casino::player::Player::new_with_chips("Antonio Esfandari".to_string(), 1_000_000),
-            cards: CardsCell::from_str("A♦ Q♣").unwrap(),
+            cards: boxed!("A♦ Q♣"),
         };
 
         let old_seat = seats.assign(1, antonio_esfandiari.clone()).unwrap();
@@ -239,7 +240,7 @@ mod casino__table__seats_tests {
         let seat = seats.get(0).unwrap();
         let gus_hansen = Seat {
             player: crate::casino::player::Player::new_with_chips("Gus Hansen".to_string(), 1_000_000),
-            cards: CardsCell::from_str("5♦ 5♣").unwrap(),
+            cards: boxed!("5♦ 5♣"),
         };
 
         assert!(seat.is_empty());

@@ -138,6 +138,12 @@ impl BoxedCards {
     pub fn as_slice(&self) -> &[Card] {
         &self.0
     }
+
+    pub fn take(&mut self) -> Box<[Card]> {
+        let cards = std::mem::take(&mut self.0);
+        self.0 = vec![Card::BLANK; cards.len()].into_boxed_slice();
+        cards
+    }
 }
 
 impl Display for BoxedCards {
