@@ -230,7 +230,7 @@ impl TestData {
     #[must_use]
     pub fn the_hand_players() -> Vec<Seat> {
         let doyle_brunson = Seat {
-            player: crate::casino::player::Player::new_with_chips("Doyle Brunson".to_string(), 100_000),
+            player: Player::new_with_chips("Doyle Brunson".to_string(), 100_000),
             cards: BoxedCards::blanks(2),
         };
         let eli_elezra = Seat {

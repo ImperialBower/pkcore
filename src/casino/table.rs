@@ -157,18 +157,16 @@ impl Table {
     }
 
     pub fn act_deal(&self) {
-        let deal: u8 = match self.game {
-            GameType::NoLimitHoldem => 2,
-            GameType::PLO => 4,
-            GameType::Razz => 3,
-        };
-        match self.game {
-            GameType::NoLimitHoldem => self.act_deal_cards(2),
-            GameType::PLO => self.act_deal_cards(4),
-            GameType::Razz => self.act_deal_cards(3),
-        }
+        let deal: u8 = self.game.cards_per_player();
         self.act_deal_cards(deal);
         self.log_info(TableAction::DealingXCards(deal));
+    }
+
+    /// # Errors
+    ///
+    /// TODO: Implement
+    pub fn act_deal_card(&self) -> Result<(), PKError> {
+        todo!()
     }
 
     pub fn act_deal_cards(&self, _num_cards: u8) {

@@ -196,6 +196,25 @@ impl Cards {
         Ok(v)
     }
 
+    /// # Errors
+    ///
+    /// Returns `PKError::Misaligned` if the cards cannot be evenly divided by `x`.
+    pub fn by_x(&self, x: usize) -> Result<Self, PKError> {
+        if !self.divisible_by(x) {
+            return Err(PKError::Misaligned);
+        }
+
+        let by = self.len() / x;
+
+        let mut chunk = Vec::new();
+
+        for i in 0..by {
+            chunk = self.0.iter().skip(i * x).take(x).copied().collect::<Vec<Card>>();
+        }
+
+        Ok(Cards::from(chunk.as_slice()))
+    }
+
     /// Collapse
     /// ```txt
     /// pub fn collapse(&self) -> u32 {

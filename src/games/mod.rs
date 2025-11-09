@@ -10,6 +10,17 @@ pub enum GameType {
     Razz,
 }
 
+impl GameType {
+    #[must_use]
+    pub fn cards_per_player(&self) -> u8 {
+        match self {
+            GameType::NoLimitHoldem => 2,
+            GameType::PLO => 4,
+            GameType::Razz => 7,
+        }
+    }
+}
+
 impl std::fmt::Display for GameType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
