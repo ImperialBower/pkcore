@@ -224,6 +224,11 @@ impl TestData {
         cards!("8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ 7♣ 2♣ 9♣ 6♦ 5♥ 5♠ 8♠")
     }
 
+    #[must_use]
+    pub fn the_hand_cards_dealable() -> Cards {
+        cards!("8♣ A♦ 5♦ 6♠ K♠ 4♦ 7♣ 3♥ Q♣ 5♣ 6♥ J♦ 4♣ 2♣ 9♣ 6♦ 5♥ 5♠ 8♠")
+    }
+
     /// # Panics
     ///
     /// Because of `CardsCell` usage, but this is test data so... ¯\_(ツ)_/¯

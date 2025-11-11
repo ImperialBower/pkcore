@@ -9,7 +9,7 @@ fn main() {
 
     let byx = cards.by_x(2).unwrap();
 
-    let expected = cards!("A♠ 9♠ K♠ 8♠ Q♠ 7♠ J♠ 6♠ T♠ 5♠");
+    let _expected = cards!("A♠ 9♠ K♠ 8♠ Q♠ 7♠ J♠ 6♠ T♠ 5♠");
 
     println!("{byx}")
 }

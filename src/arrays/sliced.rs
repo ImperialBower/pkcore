@@ -381,19 +381,111 @@ impl Boxes {
     /// # Errors
     ///
     /// Returns `PKError::AlreadyDealt` is there is no empty slot available.
-    pub fn deal(&mut self, utg: usize, card: Card) -> Result<(), PKError> {
+    pub fn deal_old(&mut self, utg: usize, card: Card) -> Result<(), PKError> {
         let slice = &mut self.0;
         let start = utg;
 
         for i in 0..slice.len() {
             let index = (start + i) % slice.len();
-            let item = &mut slice[index];
-            if item.deal(card).is_ok() {
+            let boxed = &mut slice[index];
+            if boxed.deal(card).is_ok() {
                 return Ok(());
             }
         }
 
         Err(PKError::AlreadyDealt)
+    }
+
+    /// Deals one card to each `BoxedCards` in sequence before dealing another card
+    /// to the starting position.
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let mut boxes = Boxes::blanks(2, 4);
+    ///
+    /// assert!(boxes.deal(2, Card::ACE_HEARTS).is_ok());
+    /// assert_eq!("__ __, __ __, A♥ __, __ __", boxes.to_string());
+    ///
+    /// assert!(boxes.deal(2, Card::KING_SPADES).is_ok());
+    /// assert_eq!("__ __, __ __, A♥ __, K♠ __", boxes.to_string());
+    ///
+    /// assert!(boxes.deal(2, Card::QUEEN_DIAMONDS).is_ok());
+    /// assert_eq!("Q♦ __, __ __, A♥ __, K♠ __", boxes.to_string());
+    ///
+    /// assert!(boxes.deal(2, Card::QUEEN_CLUBS).is_ok());
+    /// assert_eq!("Q♦ __, Q♣ __, A♥ __, K♠ __", boxes.to_string());
+    ///
+    /// assert!(boxes.deal(2, Card::TEN_CLUBS).is_ok());
+    /// assert_eq!("Q♦ __, Q♣ __, A♥ T♣, K♠ __", boxes.to_string());
+    /// ```
+    ///
+    /// ## Diary
+    ///
+    /// This is me admitting defeat against a problem that I am just too tired to try to tackle
+    /// right now. I want to do this cute thing where it deals the way a dealer sends one card to
+    /// each player in a circle, instead of all of the cards to each player at a time. I let Claude
+    /// do it and it got it right, even if it feels like there is a real refactoring opportunity
+    /// here.
+    ///
+    /// I worry that the more I use `CoPilot`, the worse a programmer I will become.
+    ///
+    /// Here's the prompt I used: `Can you refactor the Boxes.deal function so that it deals one
+    /// card to each BoxedCards struct before dealing another card to the original BoxedCards?`
+    ///
+    /// The original version of the code was:
+    ///
+    /// ```txt
+    /// use pkcore::prelude::*;
+    ///
+    /// pub fn deal_old(&mut self, utg: usize, card: Card) -> Result<(), PKError> {
+    ///     let slice = &mut self.0;
+    ///     let start = utg;
+    ///
+    ///     for i in 0..slice.len() {
+    ///         let index = (start + i) % slice.len();
+    ///         let boxed = &mut slice[index];
+    ///         if boxed.deal(card).is_ok() {
+    ///             return Ok(());
+    ///         }
+    ///     }
+    ///
+    ///     Err(PKError::AlreadyDealt)
+    /// }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns `PKError::AlreadyDealt` if there is no empty slot available.
+    pub fn deal(&mut self, utg: usize, card: Card) -> Result<(), PKError> {
+        let slice = &mut self.0;
+        let len = slice.len();
+
+        // Find the minimum number of dealt cards to determine current round
+        let min_dealt = slice.iter().map(BoxedCards::number_of_dealt_cards).min().unwrap_or(0);
+
+        // Try to deal to boxes that have exactly min_dealt cards (current round)
+        for i in 0..len {
+            let index = (utg + i) % len;
+            let boxed = &mut slice[index];
+
+            if boxed.number_of_dealt_cards() == min_dealt && boxed.deal(card).is_ok() {
+                return Ok(());
+            }
+        }
+
+        Err(PKError::AlreadyDealt)
+    }
+
+    /// # Errors
+    ///
+    /// `PKError::InvalidPosition` if the provided `box_index` is out of range.
+    /// `PKError::NoBlankSlots` if there are no blank slots to deal into.
+    pub fn deal_at(&mut self, box_index: usize, card: Card) -> Result<(), PKError> {
+        match self.0.get_mut(box_index) {
+            Some(boxed_cards) => boxed_cards.deal(card),
+            None => Err(PKError::InvalidPosition),
+        }
     }
 
     /// Verifies that the individual `BoxedCards` are all of the same length.
@@ -426,6 +518,11 @@ impl Boxes {
         self.0.is_empty()
     }
 
+    #[must_use]
+    pub fn is_dealt(&self) -> bool {
+        self.0.iter().all(BoxedCards::is_dealt)
+    }
+
     /// ```
     /// use pkcore::prelude::*;
     ///
@@ -439,6 +536,34 @@ impl Boxes {
     #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let cards = cards!("8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣");
+    /// let boxes = Boxes::box_up_aligned(&cards, 2).unwrap();
+    ///
+    /// assert_eq!(12, boxes.number_of_card_slots());
+    /// assert_eq!(12, Boxes::blanks(4, 3).number_of_card_slots());
+    /// ```
+    #[must_use]
+    pub fn number_of_card_slots(&self) -> usize {
+        self.0.iter().map(BoxedCards::len).sum()
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let cards = cards!("8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣");
+    /// let boxes = Boxes::box_up_aligned(&cards, 2).unwrap();
+    ///
+    /// assert_eq!(12, boxes.number_of_dealt_cards());
+    /// assert_eq!(0, Boxes::blanks(4, 3).number_of_dealt_cards());
+    /// ```
+    #[must_use]
+    pub fn number_of_dealt_cards(&self) -> usize {
+        self.0.iter().map(BoxedCards::number_of_dealt_cards).sum()
     }
 
     /// ```
@@ -487,6 +612,7 @@ impl From<Vec<Vec<Card>>> for Boxes {
 #[allow(non_snake_case)]
 mod arrays__sliced_tests {
     use super::*;
+    use crate::util::data::TestData;
 
     #[test]
     fn boxed_cards__swap() {
@@ -496,5 +622,35 @@ mod arrays__sliced_tests {
         assert_eq!(Some(Card::BLANK), swapped);
         assert_eq!("T♥ 2♠ A♦ 7♣", boxed_cards.to_string());
         assert_eq!(None, boxed_cards.swap(6, Card::KING_CLUBS));
+    }
+
+    /// OK, I officially hate it when `CoPilot` farts out a test that is actually pretty good.
+    #[test]
+    fn boxed_cards_deal() {
+        let mut boxed_cards: BoxedCards = boxed!("T♥ __ __ 7♣");
+
+        assert!(boxed_cards.deal(Card::ACE_DIAMONDS).is_ok());
+        assert_eq!("T♥ A♦ __ 7♣", boxed_cards.to_string());
+
+        assert!(boxed_cards.deal(Card::KING_CLUBS).is_ok());
+        assert_eq!("T♥ A♦ K♣ 7♣", boxed_cards.to_string());
+
+        let result = boxed_cards.deal(Card::QUEEN_SPADES);
+        assert!(result.is_err());
+        assert_eq!(PKError::NoBlankSlots, result.unwrap_err());
+    }
+
+    #[test]
+    fn boxed_cards_deal__basic() {
+        let mut deck = TestData::the_hand_cards_dealable();
+        let mut boxes = Boxes::blanks(2, 7);
+
+        while !boxes.is_dealt() {
+            let card = deck.draw_one().unwrap();
+            boxes.deal(0, card).unwrap();
+            println!("{boxes}");
+        }
+
+        assert!(boxes.deal(0, deck.draw_one().unwrap()).is_err());
     }
 }

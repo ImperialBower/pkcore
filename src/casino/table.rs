@@ -5,6 +5,7 @@ use crate::casino::player::Player;
 use crate::casino::table::event::{TableAction, TableLog};
 use crate::casino::table::seat::Seat;
 use crate::casino::table::seats::Seats;
+use crate::games::GameType::NoLimitHoldem;
 use crate::games::{GamePhase, GameType};
 use crate::prelude::BoxedCards;
 use crate::{PKError, Pile, deck_cell};
@@ -41,13 +42,13 @@ pub struct Table {
 impl Table {
     /// Factory method used to setup seats for a default instance.
     #[must_use]
-    pub fn generate_seats(count: u8) -> Seats {
+    pub fn generate_seats(count: u8, cards_per: u8) -> Seats {
         log::debug!("Generating {count} seats for table");
         let mut seats = Vec::with_capacity(count as usize);
         for _ in 0..count {
             let seat = Seat {
                 player: Player::default(),
-                cards: BoxedCards::default(),
+                cards: BoxedCards::blanks(cards_per as usize),
             };
             seats.push(seat);
         }
@@ -401,13 +402,13 @@ impl Table {
 
 impl Default for Table {
     fn default() -> Self {
-        let seats = Table::generate_seats(6);
+        let seats = Table::generate_seats(6, NoLimitHoldem.cards_per_player());
         #[allow(clippy::pedantic)] // allow cast
         let player_count = seats.size();
         Table {
             id: Uuid::default(),
             name: "Default No Limit Hold'em Table".to_string(),
-            game: GameType::NoLimitHoldem,
+            game: NoLimitHoldem,
             phase: GamePhase::default().into(),
             forced: ForcedBets::new(50, 100),
             seats,
