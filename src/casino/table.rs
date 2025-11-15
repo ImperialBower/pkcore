@@ -1,3 +1,5 @@
+use crate::card::Card;
+use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
 use crate::casino::game::ForcedBets;
@@ -10,6 +12,7 @@ use crate::games::{GamePhase, GameType};
 use crate::prelude::BoxedCards;
 use crate::{PKError, Pile, deck_cell};
 use bint::BintCell;
+use std::borrow::Borrow;
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
 use uuid::Uuid;
@@ -279,6 +282,11 @@ impl Table {
         }
     }
 
+    /// Returns the number of cards from a `Deck` that will be in play for a hand.
+    fn cards_in_play(&self) -> usize {
+        self.seats.count_cards_in_play() + self.game.cards_on_board() as usize
+    }
+
     /// ```
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::table::seats::Seats;
@@ -370,6 +378,28 @@ impl Table {
 
     pub fn set_action_to(&self, seat_number: u8) {
         self.action_to.set(seat_number);
+    }
+
+    /// This
+    pub fn splice_in_nlh_deal(&self, spliced: &Cards) -> Result<(), PKError> {
+        let spliced_cell = CardsCell::from(spliced);
+        let minus = CardsCell::deck_minus(&spliced_cell).shuffle();
+
+        let river = spliced_cell.draw_from_the_bottom(1)?;
+        let turn = spliced_cell.draw_from_the_bottom(1)?;
+        let flop = spliced_cell.draw_from_the_bottom(3)?;
+
+        minus.insert_at(3, river.draw_one()?);
+        minus.insert_at(2, turn.draw_one()?);
+        minus.insert_at(1, flop.draw_one()?);
+        minus.insert_at(1, flop.draw_one()?);
+        minus.insert_at(1, flop.draw_one()?);
+
+        spliced_cell.insert_all(minus.cards());
+
+        self.deck.0.swap(&spliced_cell.0);
+
+        Ok(())
     }
 
     /// This is an audit
@@ -537,6 +567,18 @@ mod casino__table_tests {
             table.event_log.entries().last(),
             Some(&event::TableAction::MoveButton(1))
         );
+    }
+
+    #[test]
+    fn splice_in_nlh_deal() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        let spliced = TestData::the_hand_cards_dealable();
+
+        let result = table.splice_in_nlh_deal(&spliced);
+        assert!(result.is_ok());
+
+        println!("Spliced deck: {}", table.deck.borrow());
+        assert_eq!(52, table.deck.len());
     }
 
     #[test]

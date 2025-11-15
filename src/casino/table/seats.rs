@@ -43,6 +43,16 @@ impl Seats {
     }
 
     #[must_use]
+    pub fn count_cards_in_play(&self) -> usize {
+        let mut count = 0;
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            count += seat.cards.len()
+        }
+        count
+    }
+
+    #[must_use]
     pub fn borrow_mut(&self, index: usize) -> Option<RefMut<'_, Seat>> {
         self.0.get(index).map(|seat_cell| seat_cell.borrow_mut())
     }
@@ -218,6 +228,12 @@ mod casino__table__seats_tests {
         let seat = seats.get(1).unwrap();
 
         assert_eq!(&SeatCell::new(antonio_esfandiari), seat);
+    }
+
+    #[test]
+    fn count_cards_in_play() {
+        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        assert_eq!(16, seats.count_cards_in_play());
     }
 
     #[test]

@@ -172,6 +172,11 @@ impl CardsCell {
         }
     }
 
+    pub fn insert_at(&self, index: usize, card: Card) {
+        let mut internal = self.0.borrow_mut();
+        internal.insert_at(index, card);
+    }
+
     #[must_use]
     pub fn shuffle(&self) -> Self {
         let internal = self.clone();

@@ -387,6 +387,17 @@ impl Cards {
         }
     }
 
+    pub fn insert_at(&mut self, index: usize, card: Card) -> bool {
+        if card.contains_blank() {
+            return false;
+        }
+
+        let mut vec = self.to_vec();
+        vec.insert(index, card);
+        self.0 = IndexSet::from_iter(vec);
+        true
+    }
+
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
@@ -1138,6 +1149,25 @@ mod cards_tests {
         pile.insert_all(&Cards::from_str("3♣ 2♣ A♣").unwrap());
 
         assert_eq!(Cards::from_str("5♣ 4♣ 3♣ 2♣ A♣").unwrap(), pile);
+    }
+
+    #[test]
+    fn insert_at() {
+        let mut pile = cards!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠");
+
+        pile.insert_at(3, Card::ACE_CLUBS);
+        assert_eq!(cards!("A♠ K♠ Q♠ A♣ J♠ T♠ 9♠ 8♠ 7♠ 6♠").to_string(), pile.to_string());
+
+        pile.insert_at(2, Card::DEUCE_CLUBS);
+        assert_eq!(cards!("A♠ K♠ 2♣ Q♠ A♣ J♠ T♠ 9♠ 8♠ 7♠ 6♠").to_string(), pile.to_string());
+
+        pile.insert_at(1, Card::TREY_CLUBS);
+        pile.insert_at(1, Card::FOUR_CLUBS);
+        pile.insert_at(1, Card::FIVE_CLUBS);
+        assert_eq!(
+            cards!("A♠ 5♣ 4♣ 3♣ K♠ 2♣ Q♠ A♣ J♠ T♠ 9♠ 8♠ 7♠ 6♠").to_string(),
+            pile.to_string()
+        );
     }
 
     #[test]

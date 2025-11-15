@@ -477,6 +477,61 @@ impl Boxes {
         Err(PKError::AlreadyDealt)
     }
 
+    /// Returns cards in the order they would need to be dealt to recreate the current state.
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let mut boxes = Boxes::blanks(2, 3);
+    /// boxes.deal(1, Card::ACE_HEARTS).unwrap();
+    /// boxes.deal(1, Card::KING_SPADES).unwrap();
+    /// boxes.deal(1, Card::QUEEN_DIAMONDS).unwrap();
+    /// boxes.deal(1, Card::JACK_CLUBS).unwrap();
+    /// boxes.deal(1, Card::TEN_HEARTS).unwrap();
+    /// boxes.deal(1, Card::NINE_SPADES).unwrap();
+    ///
+    /// assert_eq!("Q♦ 9♠, A♥ J♣, K♠ T♥", boxes.to_string());
+    ///
+    /// let undealt = boxes.undeal(1);
+    /// assert_eq!("A♥ K♠ Q♦ J♣ T♥ 9♠", undealt.to_string());
+    ///
+    /// // Verify we can recreate the boxes
+    /// let mut new_boxes = Boxes::blanks(2, 3);
+    /// for card in undealt.to_vec() {
+    ///     new_boxes.deal(1, card).unwrap();
+    /// }
+    /// assert_eq!(boxes.to_string(), new_boxes.to_string());
+    /// ```
+    pub fn undeal(&self, utg: usize) -> Cards {
+        let len = self.0.len();
+        if len == 0 {
+            return Cards::default();
+        }
+
+        // Find max number of cards any BoxedCards has
+        let max_cards = self.0.iter().map(BoxedCards::number_of_dealt_cards).max().unwrap_or(0);
+
+        let mut result = Vec::new();
+
+        // For each round (0 to max_cards)
+        for round in 0..max_cards {
+            // Go through each position starting from utg
+            for i in 0..len {
+                let index = (utg + i) % len;
+                let boxed = &self.0[index];
+
+                // Get the card at this round position if it exists and isn't blank
+                if let Some(&card) = boxed.as_slice().get(round) {
+                    if card != Card::BLANK {
+                        result.push(card);
+                    }
+                }
+            }
+        }
+
+        Cards::from(result)
+    }
+
     /// # Errors
     ///
     /// `PKError::InvalidPosition` if the provided `box_index` is out of range.

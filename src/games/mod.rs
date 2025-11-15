@@ -19,6 +19,14 @@ impl GameType {
             GameType::Razz => 7,
         }
     }
+
+    #[must_use]
+    pub fn cards_on_board(&self) -> u8 {
+        match self {
+            GameType::NoLimitHoldem => 5,
+            _ => 0,
+        }
+    }
 }
 
 impl std::fmt::Display for GameType {
