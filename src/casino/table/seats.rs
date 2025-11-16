@@ -1,4 +1,5 @@
 use crate::PKError;
+use crate::card::Card;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::table::seat::{Seat, SeatCell};
@@ -43,18 +44,90 @@ impl Seats {
     }
 
     #[must_use]
+    pub fn borrow_mut(&self, index: usize) -> Option<RefMut<'_, Seat>> {
+        self.0.get(index).map(|seat_cell| seat_cell.borrow_mut())
+    }
+
+    #[must_use]
+    pub fn cards_string(&self) -> String {
+        let mut seat_strings = Vec::new();
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            seat_strings.push(seat.cards.to_string());
+        }
+        seat_strings.join(", ")
+    }
+
+    #[must_use]
     pub fn count_cards_in_play(&self) -> usize {
         let mut count = 0;
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow();
-            count += seat.cards.len()
+            count += seat.cards.len();
         }
         count
     }
 
-    #[must_use]
-    pub fn borrow_mut(&self, index: usize) -> Option<RefMut<'_, Seat>> {
-        self.0.get(index).map(|seat_cell| seat_cell.borrow_mut())
+    /// ```
+    /// use pkcore::prelude::*;
+    /// use pkcore::util::data::TestData;
+    ///
+    /// let seats = Seats::try_from(TestData::the_hand_players()).unwrap();
+    ///
+    /// assert!(seats.deal(2, Card::ACE_HEARTS).is_ok());
+    /// assert_eq!("__ __, __ __, A♥ __, __ __, __ __, __ __, __ __, __ __", seats.cards_string());
+    ///
+    /// assert!(seats.deal(2, Card::KING_SPADES).is_ok());
+    /// assert_eq!("__ __, __ __, A♥ __, K♠ __, __ __, __ __, __ __, __ __", seats.cards_string());
+    ///
+    /// assert!(seats.deal(2, Card::QUEEN_DIAMONDS).is_ok());
+    /// assert!(seats.deal(2, Card::JACK_CLUBS).is_ok());
+    /// assert!(seats.deal(2, Card::TEN_HEARTS).is_ok());
+    /// assert!(seats.deal(2, Card::NINE_SPADES).is_ok());
+    /// assert!(seats.deal(2, Card::EIGHT_DIAMONDS).is_ok());
+    /// assert!(seats.deal(2, Card::SEVEN_CLUBS).is_ok());
+    /// assert_eq!("8♦ __, 7♣ __, A♥ __, K♠ __, Q♦ __, J♣ __, T♥ __, 9♠ __", seats.cards_string());
+    ///
+    /// assert!(seats.deal(2, Card::SIX_HEARTS).is_ok());
+    /// assert_eq!("8♦ __, 7♣ __, A♥ 6♥, K♠ __, Q♦ __, J♣ __, T♥ __, 9♠ __", seats.cards_string());
+    ///
+    /// assert!(seats.deal(2, Card::FOUR_SPADES).is_ok());
+    /// assert!(seats.deal(2, Card::TREY_DIAMONDS).is_ok());
+    /// assert!(seats.deal(2, Card::DEUCE_CLUBS).is_ok());
+    /// assert!(seats.deal(2, Card::ACE_SPADES).is_ok());
+    /// assert!(seats.deal(2, Card::KING_HEARTS).is_ok());
+    /// assert!(seats.deal(2, Card::QUEEN_CLUBS).is_ok());
+    /// assert!(seats.deal(2, Card::JACK_DIAMONDS).is_ok());
+    /// assert_eq!("8♦ Q♣, 7♣ J♦, A♥ 6♥, K♠ 4♠, Q♦ 3♦, J♣ 2♣, T♥ A♠, 9♠ K♥", seats.cards_string());
+    ///
+    /// assert_eq!(PKError::AlreadyDealt, seats.deal(2, Card::DEUCE_DIAMONDS).unwrap_err());
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// /// This will return a `PKError::AlreadyDealt` error if all seats have already been dealt
+    pub fn deal(&self, utg: usize, card: Card) -> Result<(), PKError> {
+        let seat_count = self.size() as usize;
+
+        // Find the minimum number of dealt cards to determine current round
+        let min_dealt = self
+            .0
+            .iter()
+            .map(|s| s.borrow().cards.number_of_dealt_cards())
+            .min()
+            .unwrap_or(0);
+
+        for i in 0..seat_count {
+            let seat_index = (utg + i) % seat_count;
+            let seat_cell = self.0.get(seat_index).ok_or(PKError::TableFull)?;
+
+            if seat_cell.borrow().cards.number_of_dealt_cards() == min_dealt
+                && seat_cell.borrow_mut().cards.deal(card).is_ok()
+            {
+                return Ok(());
+            }
+        }
+        Err(PKError::AlreadyDealt)
     }
 
     #[must_use]

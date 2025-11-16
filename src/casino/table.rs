@@ -1,4 +1,3 @@
-use crate::card::Card;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
@@ -12,7 +11,6 @@ use crate::games::{GamePhase, GameType};
 use crate::prelude::BoxedCards;
 use crate::{PKError, Pile, deck_cell};
 use bint::BintCell;
-use std::borrow::Borrow;
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
 use uuid::Uuid;
@@ -283,7 +281,7 @@ impl Table {
     }
 
     /// Returns the number of cards from a `Deck` that will be in play for a hand.
-    fn cards_in_play(&self) -> usize {
+    pub fn cards_in_play(&self) -> usize {
         self.seats.count_cards_in_play() + self.game.cards_on_board() as usize
     }
 
@@ -380,7 +378,9 @@ impl Table {
         self.action_to.set(seat_number);
     }
 
-    /// This
+    /// # Errors
+    ///
+    /// - `PKError::NotEnoughCards` if there aren't enough cards in the deck to splice in the deal.
     pub fn splice_in_nlh_deal(&self, spliced: &Cards) -> Result<(), PKError> {
         let spliced_cell = CardsCell::from(spliced);
         let minus = CardsCell::deck_minus(&spliced_cell).shuffle();
@@ -477,6 +477,7 @@ mod casino__table_tests {
     use crate::cards::Cards;
     use crate::casino::table::event::TableAction;
     use crate::util::data::TestData;
+    use std::borrow::Borrow;
 
     #[test]
     fn nlh_primed() {

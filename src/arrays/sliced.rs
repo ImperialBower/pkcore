@@ -1,6 +1,6 @@
 use crate::PKError;
 use crate::card::Card;
-use crate::prelude::TheNuts;
+use crate::prelude::{Seats, TheNuts};
 use crate::util::terminal::Terminal;
 use crate::{Cards, Forgiving, Pile};
 use std::fmt::Display;
@@ -307,7 +307,7 @@ impl Boxes {
     /// assert_eq!("8♣ 3♥, A♦ Q♣, 5♦ 5♣, 6♠ 6♥, K♠ J♦, 4♦ 4♣, 7♣ 2♣", boxes.to_string());
     /// ```
     ///
-    /// But somwthing ver different here.
+    /// But something very different here.
     ///
     /// ```
     /// use pkcore::prelude::*;
@@ -648,6 +648,18 @@ impl Display for Boxes {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let box_strings: Vec<String> = self.0.iter().map(std::string::ToString::to_string).collect();
         write!(f, "{}", box_strings.join(", "))
+    }
+}
+
+impl From<&Seats> for Boxes {
+    fn from(seats: &Seats) -> Self {
+        Boxes::from(
+            seats
+                .borrow_all()
+                .iter()
+                .map(|seat_cell| seat_cell.borrow().cards.clone())
+                .collect::<Vec<_>>(),
+        )
     }
 }
 
