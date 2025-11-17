@@ -14,6 +14,7 @@ use bint::BintCell;
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
 use uuid::Uuid;
+use crate::card::Card;
 
 pub mod event;
 pub mod position;
@@ -285,6 +286,10 @@ impl Table {
         self.seats.count_cards_in_play() + self.game.cards_on_board() as usize
     }
 
+    pub fn deal(&self) -> Result<(), PKError> {
+        todo!()
+    }
+
     /// ```
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::table::seats::Seats;
@@ -351,6 +356,10 @@ impl Table {
         } else {
             String::default()
         }
+    }
+
+    pub fn is_dealt(&self) -> bool {
+        todo!()
     }
 
     fn log_debug(&self, action: TableAction) {
