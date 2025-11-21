@@ -1,5 +1,6 @@
 use crate::PKError;
 use crate::card::Card;
+use crate::cards_cell::CardsCell;
 use crate::prelude::{Seats, TheNuts};
 use crate::util::terminal::Terminal;
 use crate::{Cards, Forgiving, Pile};
@@ -173,6 +174,12 @@ impl From<Vec<Card>> for BoxedCards {
     }
 }
 
+impl From<CardsCell> for BoxedCards {
+    fn from(cards_cell: CardsCell) -> Self {
+        BoxedCards::from(cards_cell.to_vec())
+    }
+}
+
 impl FromStr for BoxedCards {
     type Err = PKError;
 
@@ -261,8 +268,8 @@ impl Boxes {
     /// assert_eq!("__ __, __ __, __ __, __ __, __ __, __ __", boxes.to_string());
     /// ```
     #[must_use]
-    pub fn blanks(size: usize, count: usize) -> Self {
-        Boxes::from(vec![BoxedCards::blanks(size); count])
+    pub fn blanks(box_size: usize, numer_of_boxes: usize) -> Self {
+        Boxes::from(vec![BoxedCards::blanks(box_size); numer_of_boxes])
     }
 
     /// Creates `Boxes` by dividing the provided Cards into equal sizes.
@@ -289,6 +296,39 @@ impl Boxes {
         }
 
         Ok(Boxes::from(cards.as_chunks(capacity)))
+    }
+
+    /// Works the same as `box_up`, but each Card is folded in as if it was dealt.
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let deck = cards!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠");
+    ///
+    /// let boxes = Boxes::box_up_horizontal(&deck, 2).unwrap();
+    ///
+    /// assert_eq!("A♠ 8♠, K♠ 7♠, Q♠ 6♠, J♠ 5♠, T♠ 4♠, 9♠ 3♠", boxes.to_string());
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// `PKError::InvalidLength` if the capacity is zero.
+    /// `PKError::NotEnoughCards` if not enough cards are available.
+    pub fn box_up_horizontal(cards: &Cards, box_size: usize) -> Result<Self, PKError> {
+        if box_size == 0 {
+            return Err(PKError::InvalidLength);
+        }
+
+        let number_of_boxes = cards.len() / box_size;
+        let mut boxes = Boxes::blanks(box_size, number_of_boxes);
+
+        let ccell = CardsCell::from(cards);
+
+        while !ccell.is_empty() {
+            let _ = boxes.deal(0, ccell.draw_one()?);
+        }
+
+        Ok(boxes)
     }
 
     /// Works the same as `box_up`, but verifies that the resulting Boxes are aligned.
@@ -352,6 +392,36 @@ impl Boxes {
     #[must_use]
     pub fn are_unique(&self) -> bool {
         Cards::from(self).len() == self.card_count()
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let deck = cards!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠");
+    /// let boxes = Boxes::box_up_horizontal(&deck, 2).unwrap();
+    ///
+    /// assert_eq!("A♠ 8♠, K♠ 7♠, Q♠ 6♠, J♠ 5♠, T♠ 4♠, 9♠ 3♠", boxes.to_string());
+    /// assert_eq!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠", boxes.as_dealt().to_string());
+    /// ```
+    pub fn as_dealt(&self) -> Cards {
+        if self.0.is_empty() {
+            return Cards::default();
+        }
+
+        let mut dealt_cards = Vec::new();
+        let max_len = self.0.iter().map(BoxedCards::len).max().unwrap_or(0);
+
+        for cycle in 0..max_len {
+            for boxed in &self.0 {
+                if let Some(&card) = boxed.as_slice().get(cycle) {
+                    if card != Card::BLANK {
+                        dealt_cards.push(card);
+                    }
+                }
+            }
+        }
+
+        Cards::from(dealt_cards)
     }
 
     /// Returns the total number of cards within the `Boxes`.
