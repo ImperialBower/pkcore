@@ -78,14 +78,16 @@ impl Table {
         for seat in seats.borrow_all() {
             if !seat.borrow().is_empty() {
                 log::debug!("Seating {seat}");
-                if let Ok(num) = u8::try_from(seats.borrow_all().iter().position(|s| s == seat).unwrap()) {
-                    event_log.log(TableAction::PlayerSeated(num, seat.borrow().player.id));
-                    if !seat.borrow().cards.is_empty() {
-                        event_log.log(TableAction::Dealt(num, seat.borrow().cards.bard()));
+                if let Some(position) = seats.borrow_all().iter().position(|s| s == seat) {
+                    if let Ok(num) = u8::try_from(position) {
+                        event_log.log(TableAction::PlayerSeated(num, seat.borrow().player.id));
+                        if !seat.borrow().cards.is_empty() {
+                            event_log.log(TableAction::Dealt(num, seat.borrow().cards.bard()));
+                        }
+                    } else {
+                        event_log.log(TableAction::InvalidAction);
+                        log::error!("Seat number conversion error");
                     }
-                } else {
-                    event_log.log(TableAction::InvalidAction);
-                    log::error!("Seat number conversion error");
                 }
             }
         }
@@ -289,6 +291,18 @@ impl Table {
     ///
     /// TODO: Implement
     pub fn deal(&self) -> Result<(), PKError> {
+        let seats = self.seats.borrow_all();
+        let min_dealt = seats
+            .iter()
+            .map(|s| s.borrow().cards.len())
+            .min()
+            .unwrap_or(0);
+
+        let player_count = seats.len() as u8;
+
+        for i in 0..seats.len() {
+
+        }
         todo!()
     }
 

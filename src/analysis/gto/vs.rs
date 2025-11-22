@@ -50,10 +50,19 @@ impl Versus {
         Versus::combined_odds_from_games(&self.games_at_turn())
     }
 
+    /// Originally was:
+    /// ```txt
+    /// games
+    ///     .iter()
+    ///     .map(|game| FlopEval::try_from(game.clone()).unwrap())
+    ///     .fold(WinLoseDraw::default(), |acc, fe| acc + WinLoseDraw::from(fe))
+    /// ```
+    ///
+    /// This was an educational refactoring on how to avoid unwraps.
     fn combined_odds_from_games(games: &[Game]) -> WinLoseDraw {
         games
             .iter()
-            .map(|game| FlopEval::try_from(game.clone()).unwrap())
+            .filter_map(|game| FlopEval::try_from(game.clone()).ok())
             .fold(WinLoseDraw::default(), |acc, fe| acc + WinLoseDraw::from(fe))
     }
 

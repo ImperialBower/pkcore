@@ -149,8 +149,8 @@ impl PlayOut for PlayerWins {
         for (j, case) in hands.enumerate_after(2, &flop.cards()) {
             debug!(
                 "{j}: FLOP: {flop} TURN: {} RIVER: {} -------",
-                case.first().unwrap(),
-                case.get(1).unwrap()
+                case.first().unwrap_or(&Card::default()),
+                case.get(1).unwrap_or(&Card::default())
             );
 
             let mut case_eval = CaseEval::default();

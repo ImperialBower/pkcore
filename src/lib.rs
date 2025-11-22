@@ -1,4 +1,8 @@
-#![warn(clippy::pedantic)]
+#![warn(
+    clippy::pedantic,
+    clippy::unwrap_used,
+    clippy::expect_used
+)]
 #![allow(
     non_upper_case_globals,
     clippy::unreadable_literal,
