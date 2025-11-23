@@ -28,14 +28,17 @@ impl Terminal {
         index.replace([',', '-'], " ")
     }
 
-    /// # Panics
+    /// # Errors
     ///
-    /// If it somehow wigs out on the input.
-    pub fn pause(prompt: &str) {
-        let mut stdout = stdout().into_raw_mode().unwrap();
-        write!(stdout, "{prompt}").unwrap();
-        stdout.flush().unwrap();
-        stdin().keys().next();
+    /// If unable to read input.
+    pub fn pause(prompt: &str) -> std::io::Result<()> {
+        let mut stdout = stdout().into_raw_mode()?;
+        write!(stdout, "{prompt}")?;
+        stdout.flush()?;
+        if let Some(key_res) = stdin().keys().next() {
+            key_res?;
+        }
+        Ok(())
     }
 
     /// # Panics
@@ -46,7 +49,7 @@ impl Terminal {
         print!("{prompt}");
         let _ = stdout().flush();
         let mut input_text = String::new();
-        stdin().read_line(&mut input_text).expect("Failed to receive value");
+        stdin().read_line(&mut input_text).unwrap_or_default();
 
         Cards::from_str(input_text.as_str()).ok()
     }
@@ -80,6 +83,7 @@ impl Terminal {
     ///
     /// If it somehow wigs out on the input.
     #[must_use]
+    #[allow(clippy::expect_used)]
     pub fn receive_usize(prompt: &str) -> usize {
         print!("{prompt}");
         let _ = stdout().flush();

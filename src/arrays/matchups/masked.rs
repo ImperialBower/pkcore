@@ -461,6 +461,7 @@ impl From<HUPResult> for Masked {
 }
 
 impl From<&HUPResult> for Masked {
+    #[allow(clippy::unwrap_used)]
     fn from(hup: &HUPResult) -> Self {
         Masked::from(SortedHeadsUp::try_from(hup).unwrap())
     }

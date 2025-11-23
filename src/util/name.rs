@@ -2,6 +2,7 @@ use rnglib::{Language, RNG};
 
 pub struct Name;
 
+#[allow(clippy::unwrap_used)]
 pub static NAMER: std::sync::LazyLock<RNG> = std::sync::LazyLock::new(|| RNG::new(&Language::Demonic).unwrap());
 
 impl Name {

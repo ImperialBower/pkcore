@@ -14,7 +14,6 @@ use crate::{Card, Cards, PKError, Pile, TheNuts};
 use log::debug;
 use std::fmt::{Display, Formatter};
 use std::sync::mpsc;
-use std::thread;
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -515,9 +514,12 @@ impl Game {
         for v in self.turn_remaining_board().combinations(3) {
             if let Ok(seven) = Game::flop_get_seven(board, &v) {
                 let sender = sender.clone();
-                thread::spawn(move || {
-                    sender.send(seven.eval()).unwrap();
-                });
+                // handle send errors instead of panicking
+                // DIARY: I need to get used to this pattern where the assignment is on the left.
+                // It's counterintuitive to me.
+                if let Err(e) = sender.send(seven.eval()) {
+                    log::error!("turn_the_nuts: failed to send eval from thread: {e:?}");
+                }
             }
         }
 

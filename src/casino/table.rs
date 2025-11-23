@@ -292,17 +292,11 @@ impl Table {
     /// TODO: Implement
     pub fn deal(&self) -> Result<(), PKError> {
         let seats = self.seats.borrow_all();
-        let min_dealt = seats
-            .iter()
-            .map(|s| s.borrow().cards.len())
-            .min()
-            .unwrap_or(0);
+        let _min_dealt = seats.iter().map(|s| s.borrow().cards.len()).min().unwrap_or(0);
 
-        let player_count = seats.len() as u8;
+        let _player_count = u8::try_from(seats.len());
 
-        for i in 0..seats.len() {
-
-        }
+        for _i in 0..seats.len() {}
         todo!()
     }
 

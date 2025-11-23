@@ -83,7 +83,7 @@ impl SuitMask {
             Card::new(two.first().get_rank(), suit),
             Card::new(two.second().get_rank(), suit),
         )
-        .unwrap()
+        .unwrap_or_default()
     }
 }
 

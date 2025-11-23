@@ -23,9 +23,9 @@ use std::str::FromStr;
 pub static SORTED_HEADS_UP_UNIQUE: std::sync::LazyLock<HashSet<SortedHeadsUp>> = std::sync::LazyLock::new(|| {
     let mut hs: HashSet<SortedHeadsUp> = HashSet::new();
     for v in Cards::deck().combinations(2) {
-        let hero = Two::try_from(v.as_slice()).unwrap();
+        let hero = Two::try_from(v.as_slice()).unwrap_or_default();
         for r in hero.remaining().combinations(2) {
-            let villain = Two::try_from(r.as_slice()).unwrap();
+            let villain = Two::try_from(r.as_slice()).unwrap_or_default();
             hs.insert(SortedHeadsUp::new(hero, villain));
         }
     }

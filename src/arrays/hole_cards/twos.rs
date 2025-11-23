@@ -70,15 +70,19 @@ impl StartingHands {
         for v in self.combinations_remaining(5) {
             let tx = tx.clone();
             thread::spawn(move || {
-                tx.send(StartingHands::process_case(twos, v).unwrap())
-                    .expect("TODO: panic message");
+                let res = StartingHands::process_case(twos, v);
+                // don't panic on send failure; receiver may have been dropped
+                let _ = tx.send(res);
             });
         }
 
         drop(tx);
 
         for received in rx {
-            case_evals.push(received);
+            match received {
+                Ok(case_eval) => case_evals.push(case_eval),
+                Err(e) => return Err(e),
+            }
         }
 
         Ok(case_evals)
@@ -127,6 +131,7 @@ impl StartingHands {
     /// # Panics
     ///
     /// Should not be possible. Fingers crossed
+    #[allow(clippy::unwrap_used)]
     pub fn bcm_rayon_case_evals(&self) -> Result<CaseEvals, PKError> {
         let v: Vec<CaseEval> = self
             .par_combinations_remaining(5)

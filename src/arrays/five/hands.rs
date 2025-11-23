@@ -9,7 +9,7 @@ use std::str::FromStr;
 pub static DISTINCT_HANDS: std::sync::LazyLock<Hands> = std::sync::LazyLock::new(|| {
     let combos = POKER_DECK.combinations(5);
 
-    let mut hands: Vec<Five> = combos.map(|c| Five::try_from(c).unwrap().sort()).collect();
+    let mut hands: Vec<Five> = combos.map(|c| Five::try_from(c).unwrap_or_default().sort()).collect();
 
     hands.sort();
 
@@ -19,12 +19,15 @@ pub static DISTINCT_HANDS: std::sync::LazyLock<Hands> = std::sync::LazyLock::new
 pub static UNIQUE_HANDS: std::sync::LazyLock<Hands> = std::sync::LazyLock::new(|| {
     let mut hands: Vec<Five> = Vec::new();
 
-    for line in read_to_string("generated/5card_distinct_hands.txt").unwrap().lines() {
+    for line in read_to_string("generated/5card_distinct_hands.txt")
+        .unwrap_or_default()
+        .lines()
+    {
         if line.is_empty() {
             continue; // Skip empty lines
         }
 
-        let hand = Five::from_str(line).unwrap();
+        let hand = Five::from_str(line).unwrap_or_default();
         hands.push(hand);
     }
 

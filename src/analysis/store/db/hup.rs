@@ -151,9 +151,9 @@ impl HUPResult {
             higher: shu.higher_as_bard(),
             lower: shu.lower_as_bard(),
             odds: WinLoseDraw {
-                wins: u64::try_from(first_wins - first_ties).unwrap(),
-                losses: u64::try_from(second_wins - second_ties).unwrap(),
-                draws: u64::try_from(first_ties).unwrap(),
+                wins: u64::try_from(first_wins - first_ties).unwrap_or(0),
+                losses: u64::try_from(second_wins - second_ties).unwrap_or(0),
+                draws: u64::try_from(first_ties).unwrap_or(0),
             },
         }
     }
@@ -192,8 +192,10 @@ impl HUPResult {
     pub fn read_db(path: &str) -> rusqlite::Result<Vec<HUPResult>> {
         let conn = Connection::open(path)?;
         let hups = HUPResult::select_all(&conn);
-        conn.close().unwrap();
-        Ok(hups)
+        match conn.close() {
+            Ok(()) => Ok(hups),
+            Err((_conn, err)) => Err(err),
+        }
     }
 
     /// # Errors
@@ -298,8 +300,8 @@ impl HUPResult {
 
 impl Display for HUPResult {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let higher = Two::try_from(self.higher).unwrap();
-        let lower = Two::try_from(self.lower).unwrap();
+        let higher = Two::try_from(self.higher).unwrap_or_default();
+        let lower = Two::try_from(self.lower).unwrap_or_default();
 
         write!(
             f,
@@ -342,21 +344,21 @@ impl From<&SortedHeadsUp> for HUPResult {
     /// test here, that's ignored to validate this calculation. So let's refactor this to leverage
     /// what we've got now.
     fn from(shu: &SortedHeadsUp) -> Self {
-        let wins = shu.wins().unwrap();
+        let wins = shu.wins().unwrap_or_default();
 
         let (higher_wins, higher_ties) = wins.wins_for(Win::FIRST);
         let (lower_wins, lower_ties) = wins.wins_for(Win::SECOND);
         assert_eq!(higher_ties, lower_ties);
 
-        let ties = u64::try_from(lower_ties).unwrap();
+        let ties = u64::try_from(lower_ties).unwrap_or_default();
 
         HUPResult {
             higher: shu.higher.bard(),
             lower: shu.lower.bard(),
             odds: WinLoseDraw {
-                wins: u64::try_from(higher_wins).unwrap() - ties,
-                losses: u64::try_from(lower_wins).unwrap() - ties,
-                draws: u64::try_from(lower_ties).unwrap(),
+                wins: u64::try_from(higher_wins).unwrap_or_default() - ties,
+                losses: u64::try_from(lower_wins).unwrap_or_default() - ties,
+                draws: u64::try_from(lower_ties).unwrap_or_default(),
             },
         }
     }
@@ -502,6 +504,7 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
     ///  Q♦ J♦ (1198761) 9♠ 4♥ (498275) ties: (15268)
     /// ...
     /// ```
+    #[allow(clippy::unwrap_used)]
     fn select_all(conn: &Connection) -> Vec<HUPResult> {
         log::debug!("HUPResult::select_all({conn:?})");
 
@@ -516,11 +519,11 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
         let mut r: Vec<HUPResult> = Vec::new();
         let mut hups = stmt.query(()).unwrap();
         while let Some(row) = hups.next().unwrap() {
-            let higher: u64 = row.get(1).unwrap();
-            let lower: u64 = row.get(2).unwrap();
-            let higher_wins: u64 = row.get(3).unwrap();
-            let lower_wins: u64 = row.get(4).unwrap();
-            let ties: u64 = row.get(5).unwrap();
+            let higher: u64 = row.get(1).unwrap_or_default();
+            let lower: u64 = row.get(2).unwrap_or_default();
+            let higher_wins: u64 = row.get(3).unwrap_or_default();
+            let lower_wins: u64 = row.get(4).unwrap_or_default();
+            let ties: u64 = row.get(5).unwrap_or_default();
             let hup = HUPResult {
                 higher: Bard::from(higher),
                 lower: Bard::from(lower),

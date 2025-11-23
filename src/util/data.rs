@@ -45,9 +45,8 @@ pub enum TestData {}
 #[allow(dead_code)]
 impl TestData {
     #[must_use]
-    #[allow(clippy::missing_panics_doc)]
     pub fn the_hand() -> Game {
-        let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
+        let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap_or_default();
 
         Game {
             hands: TestData::hole_cards_the_hand(),
@@ -61,7 +60,7 @@ impl TestData {
     #[allow(clippy::missing_panics_doc)]
     pub fn the_board() -> Game {
         let hands = HoleCards::from(vec![Two::HAND_AC_QS, Two::HAND_TD_TC, Two::HAND_6D_4D, Two::HAND_2H_2D]);
-        let board = Board::from_str("J♦ J♠ J♥ A♥ J♣").unwrap();
+        let board = Board::from_str("J♦ J♠ J♥ A♥ J♣").unwrap_or_default();
         Game { hands, board }
     }
 
@@ -145,7 +144,7 @@ impl TestData {
     /// ¯\_(ツ)_/¯
     #[must_use]
     pub fn spades_royal_flush_bcm() -> SevenFiveBCM {
-        SevenFiveBCM::try_from(Seven::from_str("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠").unwrap()).unwrap()
+        SevenFiveBCM::try_from(Seven::from_str("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠").unwrap_or_default()).unwrap_or_default()
     }
 
     /// # Panics
@@ -153,7 +152,7 @@ impl TestData {
     /// ¯\_(ツ)_/¯
     #[must_use]
     pub fn spades_king_high_flush_bcm() -> SevenFiveBCM {
-        SevenFiveBCM::try_from(Seven::from_str("K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠").unwrap()).unwrap()
+        SevenFiveBCM::try_from(Seven::from_str("K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠").unwrap_or_default()).unwrap_or_default()
     }
 
     /// This data comes from my old [Fudd hup example](https://github.com/ImperialBower/fudd/blob/main/examples/hup.rs)

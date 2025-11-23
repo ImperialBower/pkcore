@@ -11,12 +11,12 @@ fn main() {
     let table = Table::default();
 
     println!("{table}");
-    Terminal::pause("deal the cards> ");
+    Terminal::pause("deal the cards> ").expect("TODO: panic message");
 }
 
 fn _read_input() {
     loop {
-        Terminal::pause("step> ");
+        Terminal::pause("step> ").expect("TODO: panic message");
         let _ = _work();
     }
 }

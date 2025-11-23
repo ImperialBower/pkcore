@@ -7513,8 +7513,23 @@ impl Display for CaliforniaHandRank {
                 let s = self.as_ref().to_string();
 
                 // https://stackoverflow.com/a/76211846/1245251
+                // let last_five = {
+                //     let split_pos = s.char_indices().nth_back(4).unwrap().0;
+                //     &s[split_pos..]
+                // };
+                //
+                // This was the original version of the code that I only caught the issues when I
+                // added the linting checking for unwraps. This is where coding tools like `CoPilot`
+                // will sometimes have a bit of an advantage over stack overflow. The code works, but is pointed
+                // out that there is a better solution, which in turn doesn't point out that
+                // there is a .nth_back() that avoids the need for the rev() call.
+                // https://stackoverflow.com/questions/48642342/how-to-get-the-last-character-of-a-str
+                //
+                // Still, AI is often way behind on languages that are in such evolution as Rust. The
+                // coding suggestions are out of date and often trigger linting warnings. THIS is
+                // why linting is so important.
                 let last_five = {
-                    let split_pos = s.char_indices().nth_back(4).unwrap().0;
+                    let split_pos = s.char_indices().nth_back(4).ok_or(fmt::Error)?.0;
                     &s[split_pos..]
                 };
 

@@ -50,6 +50,7 @@ impl Nubibus {
     ///
     /// Panics of the seat number passed in isn't from 1 and 6.
     #[must_use]
+    #[allow(clippy::unwrap_used)]
     pub fn from_pluribus(pluribus: &Pluribus) -> Nubibus {
         debug!("\npluribus: {}", pluribus.raw);
         let mut nubibus = Nubibus {
@@ -133,6 +134,7 @@ impl Nubibus {
     /// # Panics
     ///
     /// ¯\\_(ツ)_/¯
+    #[allow(clippy::unwrap_used, clippy::expect_used)]
     pub fn do_deal(&mut self) {
         for (i, two) in self.pluribus.hole_cards.iter().enumerate() {
             let seat = self.seats.get(i).unwrap();
@@ -172,7 +174,7 @@ impl Nubibus {
     ///
     /// Renamed from `preflop_act` to `act` to make it more generic.
     fn act(&mut self, act: &str) {
-        let action_type = ActionType::from(act.chars().next().unwrap());
+        let action_type = ActionType::from(act.chars().next().unwrap_or_default());
         match action_type {
             ActionType::FOLD => {
                 // I love the recommendations that are based on old refactored code.

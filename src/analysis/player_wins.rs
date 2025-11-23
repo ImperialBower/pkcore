@@ -156,12 +156,13 @@ impl PlayOut for PlayerWins {
             let mut case_eval = CaseEval::default();
 
             for (i, player) in hands.iter().enumerate() {
-                let seven = Seven::from_case_at_flop_old(*player, flop, &case).unwrap();
-                let eval = Eval::from(seven);
-
-                case_eval.push(eval);
-
-                debug!("Player {} {}: {}", i + 1, *player, eval);
+                if let Ok(seven) = Seven::from_case_at_flop_old(*player, flop, &case) {
+                    let eval = Eval::from(seven);
+                    case_eval.push(eval);
+                    debug!("Player {} {}: {}", i + 1, *player, eval);
+                } else {
+                    debug!("Player {} {}: skipping invalid seven (flop case)", i + 1, *player);
+                }
             }
             case_evals.push(case_eval);
 

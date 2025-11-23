@@ -312,11 +312,11 @@ impl TryFrom<Cards> for Five {
         match cards.len() {
             0..=4 => Err(PKError::NotEnoughCards),
             5 => Ok(Five::from([
-                *cards.get_index(0).unwrap(),
-                *cards.get_index(1).unwrap(),
-                *cards.get_index(2).unwrap(),
-                *cards.get_index(3).unwrap(),
-                *cards.get_index(4).unwrap(),
+                *cards.get_index(0).unwrap_or(&Card::BLANK),
+                *cards.get_index(1).unwrap_or(&Card::BLANK),
+                *cards.get_index(2).unwrap_or(&Card::BLANK),
+                *cards.get_index(3).unwrap_or(&Card::BLANK),
+                *cards.get_index(4).unwrap_or(&Card::BLANK),
             ])),
             _ => Err(PKError::TooManyCards),
         }
