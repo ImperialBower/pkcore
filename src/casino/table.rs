@@ -287,17 +287,30 @@ impl Table {
         self.seats.count_cards_in_play() + self.game.cards_on_board() as usize
     }
 
+    /// This is such a complex dance just to do something that IRL comes so easily. Just deal
+    /// one card at a time to each player in a clockwise fashion.
+    ///
     /// # Errors
     ///
     /// TODO: Implement
     pub fn deal(&self) -> Result<(), PKError> {
-        let seats = self.seats.borrow_all();
-        let _min_dealt = seats.iter().map(|s| s.borrow().cards.len()).min().unwrap_or(0);
 
+        let _min_dealt = self.min_dealt();
+
+        let seats = self.seats.borrow_all();
         let _player_count = u8::try_from(seats.len());
 
         for _i in 0..seats.len() {}
         todo!()
+    }
+
+    fn min_dealt(&self) -> usize {
+        let seats = self.seats.borrow_all();
+        seats
+            .iter()
+            .map(|s| s.borrow().cards.number_of_dealt_cards())
+            .min()
+            .unwrap_or(0)
     }
 
     /// ```
@@ -554,6 +567,24 @@ mod casino__table_tests {
         assert_eq!(1, table.event_count(&TableAction::ForcedBetBigBlind(2, 100)));
         assert_eq!(1, table.event_count(&TableAction::ShuffleDeck));
         assert_eq!(0, table.event_count(&TableAction::InvalidAction));
+    }
+
+    #[test]
+    fn dealt() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
+
+        let dealt = table.deal();
+
+    }
+
+    #[test]
+    fn min_dealt() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
+
+        // let seats = table.seats.borrow_all();
+        // let _min_dealt = seats.iter().map(|s| s.borrow().cards.len()).min().unwrap_or(0);
+
+        assert_eq!(0, table.min_dealt());
     }
 
     #[test]
