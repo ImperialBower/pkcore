@@ -294,7 +294,6 @@ impl Table {
     ///
     /// TODO: Implement
     pub fn deal(&self) -> Result<(), PKError> {
-
         let _min_dealt = self.min_depth_dealt();
 
         let seats = self.seats.borrow_all();
@@ -304,6 +303,9 @@ impl Table {
         todo!()
     }
 
+    /// Returns `true` if the seat holds at least the `depth` number of dealt cards.
+    ///
+    /// Utility function to help with dealing cards.
     fn has_card_at_depth(&self, seat_number: usize, depth: usize) -> bool {
         if let Some(seat) = self.get_seat(seat_number) {
             let num = seat.cards.number_of_dealt_cards();
@@ -585,23 +587,24 @@ mod casino__table_tests {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
 
         let dealt = table.deal();
-
     }
 
     #[test]
     fn has_card_at_depth() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+
         assert!(table.has_card_at_depth(0, 0));
         assert!(table.has_card_at_depth(1, 1));
-        assert!(table.has_card_at_depth(2, 1));
+        assert!(table.has_card_at_depth(2, 2));
         assert!(table.has_card_at_depth(3, 1));
         assert!(table.has_card_at_depth(4, 1));
-        assert!(table.has_card_at_depth(5, 1));
+        assert!(table.has_card_at_depth(5, 2));
         assert!(table.has_card_at_depth(6, 1));
-        assert!(table.has_card_at_depth(7, 1));
+        assert!(table.has_card_at_depth(7, 2));
 
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
-        assert!(!table.has_card_at_depth(0, 0));
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
+
+        assert!(!table.has_card_at_depth(0, 1));
         assert!(!table.has_card_at_depth(1, 1));
         assert!(!table.has_card_at_depth(2, 1));
         assert!(!table.has_card_at_depth(3, 1));
@@ -613,8 +616,14 @@ mod casino__table_tests {
 
     #[test]
     fn min_depth_dealt() {
-        assert_eq!(0, Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100)).min_depth_dealt());
-        assert_eq!(2, Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100)).min_depth_dealt());
+        assert_eq!(
+            0,
+            Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100)).min_depth_dealt()
+        );
+        assert_eq!(
+            2,
+            Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100)).min_depth_dealt()
+        );
     }
 
     #[test]

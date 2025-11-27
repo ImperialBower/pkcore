@@ -752,6 +752,16 @@ mod arrays__sliced_tests {
     use crate::util::data::TestData;
 
     #[test]
+    fn number_of_dealt_cards() {
+        let blank_boxed: BoxedCards = boxed!("__ __");
+
+        assert_eq!(2, blank_boxed.len());
+        assert_eq!(0, blank_boxed.number_of_dealt_cards());
+        assert_eq!(2, boxed!("T♣ __ 3♥").number_of_dealt_cards());
+        assert_eq!(3, boxed!("T♣ 2♠ 3♥").number_of_dealt_cards());
+    }
+
+    #[test]
     fn boxed_cards__swap() {
         let mut boxed_cards: BoxedCards = boxed!("T♥ 2♠ __ 7♣");
         let swapped = boxed_cards.swap(2, Card::ACE_DIAMONDS);
