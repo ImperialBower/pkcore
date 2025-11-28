@@ -99,7 +99,7 @@ pub const POSSIBLE_UNIQUE_HOLDEM_HUP_MATCHUPS: usize = 1_624_350;
 
 // endregion
 
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Ord, PartialOrd, Eq, Hash, PartialEq)]
 pub enum PKError {
     AlreadyDealt,
     BlankCard,
@@ -138,7 +138,7 @@ pub enum PKError {
     TableFull,
     TooManyCards,
     TooManyHands,
-    InvalidTwo(String),
+    InvalidTwo,
 }
 
 impl Display for PKError {
@@ -181,7 +181,7 @@ impl Display for PKError {
             PKError::TableFull => "Table Full Error",
             PKError::TooManyCards => "Too Many Cards Error",
             PKError::TooManyHands => "Too Many Hands Error",
-            PKError::InvalidTwo(_) => "Invalid Two Error",
+            PKError::InvalidTwo => "Invalid Two Error",
         };
         write!(f, "{msg}")
     }

@@ -1,3 +1,4 @@
+use crate::PKError;
 use crate::bard::Bard;
 use crate::cards::Cards;
 use crate::casino::table::seats::Seats;
@@ -33,6 +34,7 @@ pub enum TableAction {
     TakePlayerCards(Bard),
     TakeBoardCards(Bard),
     InvalidAction,
+    Error(PKError),
 }
 
 impl TableAction {
@@ -137,6 +139,7 @@ impl Display for TableAction {
             TableAction::TakePlayerCards(cards) => write!(f, "Take player cards: {}", Cards::from(*cards)),
             TableAction::TakeBoardCards(cards) => write!(f, "Take board cards: {}", Cards::from(*cards)),
             TableAction::InvalidAction => write!(f, "Invalid Action"),
+            TableAction::Error(err) => write!(f, "Error: {err}"),
         }
     }
 }
@@ -155,7 +158,7 @@ impl TableLog {
     }
 
     pub fn commentary(&self, seats: &Seats, index: usize) -> Option<String> {
-        let player: String = match seats.seat(index) {
+        let player: String = match seats.get_seat(index) {
             None => return None,
             Some(s) => s.player.handle.clone(),
         };

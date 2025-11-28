@@ -117,7 +117,7 @@ impl Table {
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
     pub fn act_bet(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
-        if let Some(seat) = self.seat_mut(usize::from(seat_number)) {
+        if let Some(seat) = self.get_seat_mut(usize::from(seat_number)) {
             let remaining = seat.player.bets(amount)?;
             self.event_log.log(event::TableAction::Bet(seat_number, amount));
             self.action_to.up();
@@ -149,7 +149,7 @@ impl Table {
     /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
     pub fn act_call(&self, seat_number: u8) -> Result<usize, PKError> {
         let to_call = self.to_call(usize::from(seat_number));
-        if let Some(seat) = self.seat_mut(usize::from(seat_number)) {
+        if let Some(seat) = self.get_seat_mut(usize::from(seat_number)) {
             let remaining = seat.player.bets(to_call)?;
             drop(seat);
             self.log_info(TableAction::Call(seat_number, to_call));
@@ -186,7 +186,7 @@ impl Table {
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     pub fn act_fold(&self, seat_number: u8) -> Result<usize, PKError> {
-        if let Some(seat) = self.seat_mut(usize::from(seat_number)) {
+        if let Some(seat) = self.get_seat_mut(usize::from(seat_number)) {
             let folded_chips = seat.player.folds();
             drop(seat);
             let amount = folded_chips.count();
@@ -209,7 +209,7 @@ impl Table {
         let sb_seat_num = self.determine_small_blind();
         let bb_seat_num = self.determine_big_blind();
 
-        if let Some(sb_seat) = self.seat_mut(usize::from(sb_seat_num)) {
+        if let Some(sb_seat) = self.get_seat_mut(usize::from(sb_seat_num)) {
             sb_seat.player.bets(self.forced.small_blind)?;
             // You need to drop the seat after betting, because the logging function needs to
             // borrow the seat immutably to get the player handle for logging.
@@ -220,7 +220,7 @@ impl Table {
             return Err(PKError::InvalidSeatNumber);
         }
 
-        if let Some(bb_seat) = self.seat_mut(usize::from(bb_seat_num)) {
+        if let Some(bb_seat) = self.get_seat_mut(usize::from(bb_seat_num)) {
             bb_seat.player.bets(self.forced.big_blind)?;
             drop(bb_seat);
             self.log_info(TableAction::ForcedBetBigBlind(bb_seat_num, self.forced.big_blind));
@@ -292,15 +292,18 @@ impl Table {
     ///
     /// # Errors
     ///
-    /// TODO: Implement
-    pub fn deal(&self) -> Result<(), PKError> {
-        let _min_dealt = self.min_depth_dealt();
-
-        let seats = self.seats.borrow_all();
-        let _player_count = u8::try_from(seats.len());
-
-        for _i in 0..seats.len() {}
-        todo!()
+    /// `PKError::NotEnoughCards` if there are no more cards left.
+    /// `PKError::NoBlankSlots` if there are no blank slots to deal into.
+    /// `PKError::InvalidSeatNumber` if the seat number isn't valid.
+    pub fn deal_card_to_seat(&self, seat_number: u8) -> Result<bool, PKError> {
+        if let Some(mut seat) = self.get_seat_mut(usize::from(seat_number)) {
+            let card = self.deck.draw_one()?;
+            seat.cards.deal(card)?;
+            Ok(seat.cards.is_dealt())
+        } else {
+            self.event_log.log(TableAction::Error(PKError::InvalidSeatNumber));
+            Err(PKError::InvalidSeatNumber)
+        }
     }
 
     /// Returns `true` if the seat holds at least the `depth` number of dealt cards.
@@ -383,7 +386,7 @@ impl Table {
     }
 
     pub fn get_seat(&self, number: usize) -> Option<Ref<'_, Seat>> {
-        self.seats.seat(number)
+        self.seats.get_seat(number)
     }
 
     pub fn get_seat_handle(&self, number: usize) -> String {
@@ -392,6 +395,10 @@ impl Table {
         } else {
             String::default()
         }
+    }
+
+    pub fn get_seat_mut(&self, number: usize) -> Option<RefMut<'_, Seat>> {
+        self.seats.get_seat_mut(number)
     }
 
     pub fn is_dealt(&self) -> bool {
@@ -413,10 +420,6 @@ impl Table {
     #[must_use]
     pub fn min_bet(&self) -> usize {
         self.forced.big_blind
-    }
-
-    pub fn seat_mut(&self, number: usize) -> Option<RefMut<'_, Seat>> {
-        self.seats.seat_mut(number)
     }
 
     pub fn set_action_to(&self, seat_number: u8) {
@@ -586,7 +589,7 @@ mod casino__table_tests {
     fn dealt() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
 
-        let dealt = table.deal();
+        let dealt = table.deal_card_to_seat(1);
     }
 
     #[test]
@@ -751,5 +754,12 @@ mod casino__table_tests {
         println!("{}", table.commentary_action_to());
 
         Ok(())
+    }
+
+    #[test]
+    fn deal_one_card_scratch() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+
+        let _ = table.deal_card_to_seat(1);
     }
 }

@@ -173,13 +173,13 @@ impl Seats {
     }
 
     #[must_use]
-    pub fn seat(&self, index: usize) -> Option<Ref<'_, Seat>> {
+    pub fn get_seat(&self, index: usize) -> Option<Ref<'_, Seat>> {
         let seat_cell = self.0.get(index)?;
         Some(seat_cell.borrow())
     }
 
     #[must_use]
-    pub fn seat_mut(&self, index: usize) -> Option<RefMut<'_, Seat>> {
+    pub fn get_seat_mut(&self, index: usize) -> Option<RefMut<'_, Seat>> {
         let seat_cell = self.0.get(index)?;
         match seat_cell.try_borrow_mut() {
             Ok(seat) => Some(seat),
@@ -345,12 +345,12 @@ mod casino__table__seats_tests {
     fn seat() {
         let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
         // Gab the seat, change the player's handle, and then return it.
-        let mut seat = seats.seat_mut(0).unwrap();
+        let mut seat = seats.get_seat_mut(0).unwrap();
         assert_eq!("Doyle Brunson", seat.player.handle);
         seat.player.handle = "Texas Dolly".to_string();
         drop(seat);
 
-        let seat = seats.seat_mut(0).unwrap();
+        let seat = seats.get_seat_mut(0).unwrap();
 
         assert_eq!("Texas Dolly", seat.player.handle);
     }
