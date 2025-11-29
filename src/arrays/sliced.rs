@@ -73,6 +73,19 @@ impl BoxedCards {
     //     })
     // }
 
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert!(boxed!("T♥ 2♠ 8♣ 7♣").has_cards());
+    /// assert!(boxed!("__ __ 7♣").has_cards());
+    /// assert!(!boxed!("__ __ __").has_cards());
+    ///
+    /// ```
+    #[must_use]
+    pub fn has_cards(&self) -> bool {
+        self.0.iter().any(|c| *c != Card::BLANK)
+    }
+
     #[must_use]
     pub fn is_dealt(&self) -> bool {
         !self.0.contains(&Card::BLANK)
@@ -759,6 +772,15 @@ mod arrays__sliced_tests {
         assert_eq!(0, blank_boxed.number_of_dealt_cards());
         assert_eq!(2, boxed!("T♣ __ 3♥").number_of_dealt_cards());
         assert_eq!(3, boxed!("T♣ 2♠ 3♥").number_of_dealt_cards());
+    }
+
+    #[test]
+    fn take() {
+        let mut boxed_cards: BoxedCards = boxed!("T♥ 2♠ A♦ 7♣");
+        let taken = boxed_cards.take();
+
+        assert_eq!(boxed!("T♥ 2♠ A♦ 7♣").to_vec(), taken.to_vec());
+        assert_eq!("__ __ __ __", boxed_cards.to_string());
     }
 
     #[test]

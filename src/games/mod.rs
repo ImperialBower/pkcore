@@ -1,3 +1,5 @@
+use crate::cards_cell::CardsCell;
+
 pub mod omaha;
 pub mod razz;
 pub mod stud;
@@ -26,6 +28,11 @@ impl GameType {
             GameType::NoLimitHoldem => 5,
             _ => 0,
         }
+    }
+
+    #[must_use]
+    pub fn get_deck(&self) -> CardsCell {
+        CardsCell::deck()
     }
 }
 
@@ -112,5 +119,32 @@ impl std::fmt::Display for GamePhase {
             GamePhase::BettingRiver => write!(f, "River Betting"),
             GamePhase::AwardWinners => write!(f, "Award Winners"),
         }
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod games_tests {
+    use super::*;
+
+    #[test]
+    fn cards_per_player() {
+        assert_eq!(2, GameType::NoLimitHoldem.cards_per_player());
+        assert_eq!(4, GameType::PLO.cards_per_player());
+        assert_eq!(7, GameType::Razz.cards_per_player());
+    }
+
+    #[test]
+    fn cards_on_board() {
+        assert_eq!(5, GameType::NoLimitHoldem.cards_on_board());
+        assert_eq!(0, GameType::PLO.cards_on_board());
+        assert_eq!(0, GameType::Razz.cards_on_board());
+    }
+
+    #[test]
+    fn get_deck() {
+        assert_eq!(CardsCell::deck(), GameType::NoLimitHoldem.get_deck());
+        assert_eq!(CardsCell::deck(), GameType::PLO.get_deck());
+        assert_eq!(CardsCell::deck(), GameType::Razz.get_deck());
     }
 }

@@ -2,6 +2,7 @@ use crate::analysis::the_nuts::TheNuts;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::prelude::BoxedCards;
 use crate::{PKError, Pile};
 use std::cell::RefCell;
 use std::fmt::{Debug, Display};
@@ -68,6 +69,13 @@ impl CardsCell {
         let drawn_cards = internal.draw(n)?;
         // drawn_cards.map(Self::new)
         Ok(Self::from(drawn_cards))
+    }
+
+    #[must_use]
+    pub fn draw_all(&self) -> Self {
+        let mut internal = self.0.borrow_mut();
+        let drawn_cards = internal.draw_all();
+        Self::from(drawn_cards)
     }
 
     /// ```
@@ -278,6 +286,18 @@ impl From<Bard> for CardsCell {
     }
 }
 
+impl From<Box<[Card]>> for CardsCell {
+    fn from(boxed_cards: Box<[Card]>) -> Self {
+        Self(RefCell::new(Cards::from(boxed_cards.as_ref())))
+    }
+}
+
+impl From<BoxedCards> for CardsCell {
+    fn from(boxed_cards: BoxedCards) -> Self {
+        Self(RefCell::new(Cards::from(boxed_cards)))
+    }
+}
+
 impl From<Cards> for CardsCell {
     fn from(cards: Cards) -> Self {
         Self(RefCell::new(cards))
@@ -351,6 +371,16 @@ mod cards_cell_tests {
     use crate::Forgiving;
     use rstest::rstest;
 
+    #[test]
+    fn draw_all() {
+        let deck = CardsCell::deck();
+
+        let drawn = deck.draw_all();
+
+        assert_eq!(deck.len(), 0);
+        assert_eq!(drawn.len(), 52);
+    }
+
     #[rstest]
     #[case(Card::ACE_SPADES, true)]
     #[case(Card::ACE_DIAMONDS, false)]
@@ -370,7 +400,7 @@ mod cards_cell_tests {
     }
 
     #[test]
-    fn cards() {
+    fn macro__cc() {
         let cards = cc!("AS KH QC JD TC 9H 8D");
 
         assert_eq!("A♠ K♥ Q♣ J♦ T♣ 9♥ 8♦", cards.to_string());

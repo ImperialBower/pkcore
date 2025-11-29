@@ -31,7 +31,8 @@ pub enum TableAction {
     Raise(u8, usize),
     AllIn(u8, usize),
     Fold(u8),
-    TakePlayerCards(Bard),
+    MuckPlayerCards(u8, Bard),
+    TakePlayerCards(u8, Bard),
     TakeBoardCards(Bard),
     InvalidAction,
     Error(PKError),
@@ -72,7 +73,9 @@ impl TableAction {
             | TableAction::Call(seat, _)
             | TableAction::Raise(seat, _)
             | TableAction::AllIn(seat, _)
-            | TableAction::Fold(seat) => Some(*seat),
+            | TableAction::Fold(seat)
+            | TableAction::MuckPlayerCards(seat, _)
+            | TableAction::TakePlayerCards(seat, _) => Some(*seat),
             _ => None,
         }
     }
@@ -136,7 +139,12 @@ impl Display for TableAction {
             TableAction::Raise(seat, amount) => write!(f, "Seat {seat} raises to {amount}"),
             TableAction::AllIn(seat, amount) => write!(f, "Seat {seat} goes all in with {amount}"),
             TableAction::Fold(seat) => write!(f, "Seat {seat} folds"),
-            TableAction::TakePlayerCards(cards) => write!(f, "Take player cards: {}", Cards::from(*cards)),
+            TableAction::MuckPlayerCards(seat, cards) => {
+                write!(f, "Muck player {seat}'s cards: {}", Cards::from(*cards))
+            }
+            TableAction::TakePlayerCards(seat, cards) => {
+                write!(f, "Take player {seat}'s cards: {}", Cards::from(*cards))
+            }
             TableAction::TakeBoardCards(cards) => write!(f, "Take board cards: {}", Cards::from(*cards)),
             TableAction::InvalidAction => write!(f, "Invalid Action"),
             TableAction::Error(err) => write!(f, "Error: {err}"),
@@ -185,7 +193,7 @@ impl TableLog {
 
     #[must_use]
     pub fn entries(&self) -> Vec<TableAction> {
-        self.0.borrow().clone()
+        self.0.borrow().iter().copied().collect()
     }
 }
 

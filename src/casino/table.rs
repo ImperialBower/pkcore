@@ -8,7 +8,7 @@ use crate::casino::table::seat::Seat;
 use crate::casino::table::seats::Seats;
 use crate::games::GameType::NoLimitHoldem;
 use crate::games::{GamePhase, GameType};
-use crate::prelude::BoxedCards;
+use crate::prelude::{Bard, BoxedCards};
 use crate::{PKError, Pile, deck_cell};
 use bint::BintCell;
 use std::cell::{Cell, Ref};
@@ -34,7 +34,7 @@ pub struct Table {
     pub action_to: BintCell,
     pub deck: CardsCell,
     pub board: CardsCell,
-    pub discards: CardsCell,
+    pub muck: CardsCell,
     pub pot: Stack,
     pub bet: Cell<usize>,
     pub event_log: TableLog,
@@ -105,7 +105,7 @@ impl Table {
             action_to: BintCell::new(number_players),
             deck: deck_cell!(),
             board: CardsCell::default(),
-            discards: CardsCell::default(),
+            muck: CardsCell::default(),
             pot: Stack::default(),
             bet: Cell::new(forced.big_blind),
             event_log,
@@ -422,6 +422,27 @@ impl Table {
         self.forced.big_blind
     }
 
+    pub fn player_mucks_cards(&self, seat_number: u8) {
+        if let Some(mut seat) = self.get_seat_mut(usize::from(seat_number)) {
+            if seat.cards.has_cards() {
+                let handle = seat.player.handle.clone();
+                let cards = CardsCell::from(seat.cards.take());
+                drop(seat);
+
+                self.log_info(TableAction::MuckPlayerCards(seat_number, Bard::from(&cards)));
+                self.log_info(TableAction::TakePlayerCards(seat_number, Bard::from(&cards)));
+                log::info!("{handle} mucks {cards}");
+
+                self.muck.insert_all(cards.cards());
+            } else {
+                log::trace!("Seat #{seat_number} has no cards");
+            }
+        } else {
+            self.log_info(TableAction::InvalidAction);
+            log::error!("Failed to find seat #{seat_number} for mucking cards");
+        }
+    }
+
     pub fn set_action_to(&self, seat_number: u8) {
         self.action_to.set(seat_number);
     }
@@ -494,7 +515,7 @@ impl Default for Table {
             action_to: BintCell::new(player_count),
             deck: deck_cell!(),
             board: CardsCell::default(),
-            discards: CardsCell::default(),
+            muck: CardsCell::default(),
             pot: Stack::default(),
             bet: Cell::new(0),
             event_log: TableLog::default(),
@@ -527,6 +548,12 @@ mod casino__table_tests {
     use crate::util::data::TestData;
     use std::borrow::Borrow;
 
+    fn the_table() -> Table {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+
+        table
+    }
+
     #[test]
     fn nlh_primed() {
         let _primed = Cards::deck_primed(&TestData::the_hand_cards());
@@ -550,7 +577,7 @@ mod casino__table_tests {
         assert_eq!(0, table.action_to.value());
         assert_eq!(52, table.deck.len());
         assert_eq!(0, table.board.len());
-        assert_eq!(0, table.discards.len());
+        assert_eq!(0, table.muck.len());
         assert!(table.pot.is_empty());
 
         println!("{}", table.event_log)
@@ -567,7 +594,7 @@ mod casino__table_tests {
         assert_eq!(0, table.action_to.value());
         assert_eq!(52, table.deck.len());
         assert_eq!(0, table.board.len());
-        assert_eq!(0, table.discards.len());
+        assert_eq!(0, table.muck.len());
         assert!(table.pot.is_empty());
     }
 
@@ -586,7 +613,7 @@ mod casino__table_tests {
     }
 
     #[test]
-    fn dealt() {
+    fn deal_card_to_seat() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
 
         let dealt = table.deal_card_to_seat(1);
@@ -627,6 +654,38 @@ mod casino__table_tests {
             2,
             Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100)).min_depth_dealt()
         );
+    }
+
+    #[test]
+    fn player_mucks_cards() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+
+        table.player_mucks_cards(0);
+        table.player_mucks_cards(1);
+        let binding = table.event_log.entries();
+        let last = binding.last().unwrap();
+
+        assert_eq!("Take player 1's cards: 8♠ 3♥", last.to_string());
+        assert_eq!("__ __", table.get_seat(0).unwrap().cards.to_string());
+        assert_eq!("__ __", table.get_seat(1).unwrap().cards.to_string());
+        assert!(!table.get_seat(0).unwrap().cards.is_dealt());
+        assert!(!table.get_seat(1).unwrap().cards.is_dealt());
+        assert_eq!("T♠ 2♥ 8♠ 3♥", table.muck.to_string());
+    }
+
+    #[test]
+    fn player_mucks_cards_logging() {
+        testing_logger::setup();
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+
+        table.player_mucks_cards(0);
+        table.player_mucks_cards(0);
+
+        testing_logger::validate(|captured_logs| {
+            assert_eq!(captured_logs.len(), 13);
+            assert_eq!(captured_logs[12].body, "Seat #0 has no cards");
+            assert_eq!(captured_logs[12].level, log::Level::Trace);
+        });
     }
 
     #[test]
@@ -754,12 +813,5 @@ mod casino__table_tests {
         println!("{}", table.commentary_action_to());
 
         Ok(())
-    }
-
-    #[test]
-    fn deal_one_card_scratch() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
-
-        let _ = table.deal_card_to_seat(1);
     }
 }

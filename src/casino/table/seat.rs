@@ -1,3 +1,4 @@
+use crate::cards_cell::CardsCell;
 use crate::casino::player::Player;
 use crate::prelude::BoxedCards;
 use std::cell::{BorrowMutError, Ref, RefCell, RefMut};
@@ -80,6 +81,12 @@ impl Seat {
         Seat { player, cards }
     }
 
+    #[must_use]
+    pub fn discard_cards(&mut self) -> CardsCell {
+        let boxed = self.cards.take();
+        CardsCell::from(boxed)
+    }
+
     pub fn is_empty(&self) -> bool {
         self.player.id == uuid::Uuid::nil()
     }
@@ -95,6 +102,18 @@ impl std::fmt::Display for Seat {
 #[allow(non_snake_case)]
 mod casino__table__seat_tests {
     use super::*;
+    use crate::prelude::*;
+
+    #[test]
+    pub fn discard_cards() {
+        let player = Player::new("Bob".to_string());
+        let mut seat = Seat::new(player);
+        seat.cards = boxed!("A♠ K♠");
+
+        let discarded = seat.discard_cards();
+        assert_eq!(discarded.to_string(), "A♠ K♠");
+        assert_eq!(seat.cards.to_string(), "__ __");
+    }
 
     #[test]
     pub fn is_empty() {

@@ -250,6 +250,12 @@ impl Cards {
         }
     }
 
+    #[must_use]
+    pub fn draw_all(&mut self) -> Self {
+        let l = self.len();
+        Cards(self.0.drain(0..l).collect())
+    }
+
     /// # Errors
     /// Returns `PKError::NotEnoughCards` if there are no more cards left.
     pub fn draw_one(&mut self) -> Result<Card, PKError> {
@@ -970,6 +976,16 @@ mod cards_tests {
         assert_eq!(drawn.len(), 5);
         assert_eq!(deck.len(), 47);
         assert_eq!("A♠ K♠ Q♠ J♠ T♠", drawn.to_string());
+    }
+
+    #[test]
+    fn draw_all() {
+        let mut deck = Cards::deck();
+
+        let drawn = deck.draw_all();
+
+        assert_eq!(deck.len(), 0);
+        assert_eq!(drawn.len(), 52);
     }
 
     #[test]

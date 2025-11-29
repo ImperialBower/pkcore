@@ -38,6 +38,7 @@ env_logger = "0.11.8"
 
 rstest = "0.26.1"
 serde_test = "1.0.177"
+testing_logger = "0.1.1"
 ratatui = { version = "0.28.0", features = ["all-widgets"] }
 test-log = "0.2.15"
 #wincounter = "0.1.1"

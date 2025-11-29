@@ -1,6 +1,7 @@
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::cards_cell::CardsCell;
 use crate::{PKError, Pile};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -475,6 +476,18 @@ impl From<Cards> for Bard {
         }
 
         bard
+    }
+}
+
+impl From<CardsCell> for Bard {
+    fn from(cells: CardsCell) -> Self {
+        Bard::from(Cards::from(cells))
+    }
+}
+
+impl From<&CardsCell> for Bard {
+    fn from(cells: &CardsCell) -> Self {
+        Bard::from(Cards::from(cells))
     }
 }
 
