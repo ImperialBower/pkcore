@@ -10,7 +10,7 @@ use crate::games::GameType::NoLimitHoldem;
 use crate::games::{GamePhase, GameType};
 use crate::prelude::{Bard, BoxedCards};
 use crate::{PKError, Pile, deck_cell};
-use bint::BintCell;
+use bint::{BintCell, DrainableBintCell};
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
 use uuid::Uuid;
@@ -422,6 +422,17 @@ impl Table {
         self.forced.big_blind
     }
 
+    fn muck_cards(&self) {
+        let b = DrainableBintCell::new_with_value(self.seats.size(), self.seats.size() as usize, self.button.value());
+        let mut seat_number = b.value();
+        while b.has_capacity() {
+            println!("{}", seat_number);
+            self.player_mucks_cards(seat_number);
+
+            seat_number = b.up().unwrap_or_default();
+        }
+    }
+
     pub fn player_mucks_cards(&self, seat_number: u8) {
         if let Some(mut seat) = self.get_seat_mut(usize::from(seat_number)) {
             if seat.cards.has_cards() {
@@ -686,6 +697,18 @@ mod casino__table_tests {
             assert_eq!(captured_logs[12].body, "Seat #0 has no cards");
             assert_eq!(captured_logs[12].level, log::Level::Trace);
         });
+    }
+
+    #[test]
+    fn mucks_cards() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        table.button.up();
+        assert!(table.seats.are_dealt());
+
+        table.muck_cards();
+
+        assert!(!table.seats.are_dealt());
+        assert_eq!("8♠ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♣ 4♦ 7♣ 2♣ T♠ 2♥", table.muck.to_string());
     }
 
     #[test]

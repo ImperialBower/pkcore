@@ -167,6 +167,18 @@ impl Seats {
         self.0.get(index)
     }
 
+
+    #[must_use]
+    pub fn are_dealt(&self) -> bool {
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            if !seat.cards.is_dealt() {
+                return false;
+            }
+        }
+        true
+    }
+
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
