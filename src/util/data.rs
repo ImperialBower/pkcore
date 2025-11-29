@@ -220,12 +220,12 @@ impl TestData {
 
     #[must_use]
     pub fn the_hand_cards() -> Cards {
-        cards!("8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ T♠ 2♥ 9♣ 6♦ 5♥ 5♠ 8♠")
+        cards!("8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ T♠ 2♥ 9♣ 6♦ 5♥ 5♠ 8♦")
     }
 
     #[must_use]
     pub fn the_hand_cards_dealable() -> Cards {
-        cards!("8♣ A♦ 5♦ 6♠ K♠ 4♦ T♠ 3♥ Q♣ 5♣ 6♥ J♦ 4♣ 2♥ 9♣ 6♦ 5♥ 5♠ 8♠")
+        cards!("8♣ A♦ 5♦ 6♠ K♠ 4♦ T♠ 3♥ Q♣ 5♣ 6♥ J♦ 4♣ 2♥ 9♣ 6♦ 5♥ 5♠ 8♦")
     }
 
     /// # Panics

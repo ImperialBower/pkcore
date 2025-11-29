@@ -422,11 +422,27 @@ impl Table {
         self.forced.big_blind
     }
 
-    fn muck_cards(&self) {
+    pub fn muck_board(&self) {
+        let cards = self.board.take();
+        self.event_log.log(TableAction::MuckCards(cards.bard()));
+        self.muck.insert_all(cards);
+    }
+
+    pub fn muck_cards(&self) {
+        self.muck_players();
+        self.muck_board();
+    }
+
+    pub fn muck_deck(&self) {
+        let cards = self.deck.take();
+        self.event_log.log(TableAction::MuckCards(cards.bard()));
+        self.muck.insert_all(cards);
+    }
+
+    fn muck_players(&self) {
         let b = DrainableBintCell::new_with_value(self.seats.size(), self.seats.size() as usize, self.button.value());
         let mut seat_number = b.value();
         while b.has_capacity() {
-            println!("{}", seat_number);
             self.player_mucks_cards(seat_number);
 
             seat_number = b.up().unwrap_or_default();
@@ -452,6 +468,12 @@ impl Table {
             self.log_info(TableAction::InvalidAction);
             log::error!("Failed to find seat #{seat_number} for mucking cards");
         }
+    }
+
+    pub fn reset_cards(&self) {
+        self.muck_cards();
+
+        todo!()
     }
 
     pub fn set_action_to(&self, seat_number: u8) {
@@ -556,6 +578,7 @@ mod casino__table_tests {
     use super::*;
     use crate::cards::Cards;
     use crate::casino::table::event::TableAction;
+    use crate::prelude::*;
     use crate::util::data::TestData;
     use std::borrow::Borrow;
 
@@ -668,23 +691,6 @@ mod casino__table_tests {
     }
 
     #[test]
-    fn player_mucks_cards() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
-
-        table.player_mucks_cards(0);
-        table.player_mucks_cards(1);
-        let binding = table.event_log.entries();
-        let last = binding.last().unwrap();
-
-        assert_eq!("Take player 1's cards: 8♠ 3♥", last.to_string());
-        assert_eq!("__ __", table.get_seat(0).unwrap().cards.to_string());
-        assert_eq!("__ __", table.get_seat(1).unwrap().cards.to_string());
-        assert!(!table.get_seat(0).unwrap().cards.is_dealt());
-        assert!(!table.get_seat(1).unwrap().cards.is_dealt());
-        assert_eq!("T♠ 2♥ 8♠ 3♥", table.muck.to_string());
-    }
-
-    #[test]
     fn player_mucks_cards_logging() {
         testing_logger::setup();
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
@@ -700,15 +706,59 @@ mod casino__table_tests {
     }
 
     #[test]
-    fn mucks_cards() {
+    fn muck_board() {
+        testing_logger::setup();
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        table.board.insert_all(cards!("A♦ Q♣ 5♦"));
+
+        table.muck_board();
+
+        println!("{}", table.event_log.to_string());
+
+        assert_eq!("A♦ Q♣ 5♦", table.muck.to_string());
+        assert_eq!(0, table.board.len());
+        assert_eq!(
+            table.event_log.last().unwrap(),
+            TableAction::MuckCards(Bard::from_str("A♦ Q♣ 5♦").unwrap())
+        );
+    }
+
+    #[test]
+    fn muck_deck() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
+    }
+
+    #[test]
+    fn muck_cards() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        table.board.insert_all(cards!("9♣ 6♦ 5♥ 5♠ 8♦"));
         table.button.up();
         assert!(table.seats.are_dealt());
 
         table.muck_cards();
 
         assert!(!table.seats.are_dealt());
-        assert_eq!("8♠ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♣ 4♦ 7♣ 2♣ T♠ 2♥", table.muck.to_string());
+        assert_eq!(
+            "8♠ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♣ 4♦ 7♣ 2♣ T♠ 2♥ 9♣ 6♦ 5♥ 5♠ 8♦",
+            table.muck.to_string()
+        );
+    }
+
+    #[test]
+    fn player_mucks_cards() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+
+        table.player_mucks_cards(0);
+        table.player_mucks_cards(1);
+        let binding = table.event_log.entries();
+        let last = binding.last().unwrap();
+
+        assert_eq!("Take player 1's cards: 8♠ 3♥", last.to_string());
+        assert_eq!("__ __", table.get_seat(0).unwrap().cards.to_string());
+        assert_eq!("__ __", table.get_seat(1).unwrap().cards.to_string());
+        assert!(!table.get_seat(0).unwrap().cards.is_dealt());
+        assert!(!table.get_seat(1).unwrap().cards.is_dealt());
+        assert_eq!("T♠ 2♥ 8♠ 3♥", table.muck.to_string());
     }
 
     #[test]

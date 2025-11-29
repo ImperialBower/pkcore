@@ -167,7 +167,6 @@ impl Seats {
         self.0.get(index)
     }
 
-
     #[must_use]
     pub fn are_dealt(&self) -> bool {
         for seat_cell in &self.0 {

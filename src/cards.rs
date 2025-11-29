@@ -424,6 +424,21 @@ impl Cards {
         self.0.pop()
     }
 
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let mut all_cards = Cards::deck();
+    /// all_cards = all_cards.minus(&cards!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠"));
+    /// all_cards = all_cards.minus(&cards!("A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥"));
+    ///
+    /// assert_eq!("A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣", all_cards.to_string());
+    ///
+    /// ```
+    #[must_use]
+    pub fn minus(&self, cards: &Cards) -> Cards {
+        self.iter().filter(|c| !cards.contains(c)).copied().collect()
+    }
+
     pub fn remove(&mut self, card: &Card) -> bool {
         self.0.shift_remove(card)
     }
@@ -932,7 +947,7 @@ mod cards_tests {
     #[test]
     fn deck_primed() {
         let deck_minus = TestData::the_hand_cards();
-        let expected = "8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ T♠ 2♥ 9♣ 6♦ 5♥ 5♠ 8♠ A♠ Q♠ J♠ 9♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 7♣ 6♣ 3♣ 2♣";
+        let expected = "8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ T♠ 2♥ 9♣ 6♦ 5♥ 5♠ 8♦ A♠ Q♠ J♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 7♣ 6♣ 3♣ 2♣";
 
         let primed = Cards::deck_primed(&deck_minus);
 

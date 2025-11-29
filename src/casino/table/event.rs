@@ -31,6 +31,7 @@ pub enum TableAction {
     Raise(u8, usize),
     AllIn(u8, usize),
     Fold(u8),
+    MuckCards(Bard),
     MuckPlayerCards(u8, Bard),
     TakePlayerCards(u8, Bard),
     TakeBoardCards(Bard),
@@ -139,6 +140,7 @@ impl Display for TableAction {
             TableAction::Raise(seat, amount) => write!(f, "Seat {seat} raises to {amount}"),
             TableAction::AllIn(seat, amount) => write!(f, "Seat {seat} goes all in with {amount}"),
             TableAction::Fold(seat) => write!(f, "Seat {seat} folds"),
+            TableAction::MuckCards(cards) => write!(f, "Muck cards: {}", Cards::from(*cards)),
             TableAction::MuckPlayerCards(seat, cards) => {
                 write!(f, "Muck player {seat}'s cards: {}", Cards::from(*cards))
             }
