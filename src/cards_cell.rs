@@ -50,6 +50,20 @@ impl CardsCell {
         Self::from(Cards::deck_minus(&Cards::from(cards)))
     }
 
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let deck = deck_cell!();
+    /// let without_aces = deck.minus(&cc!("A♠ A♥ A♦ A♣"));
+    ///
+    /// assert_eq!(without_aces.len(), 48);
+    /// assert_eq!(without_aces.to_string(), "K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣");
+    /// ```
+    #[must_use]
+    pub fn minus(&self, cards: &CardsCell) -> CardsCell {
+        Self::from(self.0.borrow_mut().minus(&Cards::from(cards)))
+    }
+
     /// Gets a clone of the internal `Cards`.
     ///
     /// ```

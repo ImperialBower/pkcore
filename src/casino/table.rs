@@ -75,6 +75,8 @@ impl Table {
         let uuid = Uuid::new_v4();
         event_log.log(TableAction::TableOpen(uuid));
 
+        let mut deck = deck_cell!();
+
         for seat in seats.borrow_all() {
             if !seat.borrow().is_empty() {
                 log::debug!("Seating {seat}");
@@ -82,6 +84,11 @@ impl Table {
                     if let Ok(num) = u8::try_from(position) {
                         event_log.log(TableAction::PlayerSeated(num, seat.borrow().player.id));
                         if !seat.borrow().cards.is_empty() {
+                            // Make sure the cards they're holding aren't in the deck anymore.
+                            let hole_cards = seat.borrow().cards.clone();
+                            let cc = CardsCell::from(hole_cards.cards());
+                            deck = deck.minus(&cc);
+
                             event_log.log(TableAction::Dealt(num, seat.borrow().cards.bard()));
                         }
                     } else {
@@ -103,7 +110,7 @@ impl Table {
             seats,
             button: BintCell::new(number_players),
             action_to: BintCell::new(number_players),
-            deck: deck_cell!(),
+            deck,
             board: CardsCell::default(),
             muck: CardsCell::default(),
             pot: Stack::default(),
@@ -309,7 +316,7 @@ impl Table {
     /// Returns `true` if the seat holds at least the `depth` number of dealt cards.
     ///
     /// Utility function to help with dealing cards.
-    fn has_card_at_depth(&self, seat_number: usize, depth: usize) -> bool {
+    pub fn has_card_at_depth(&self, seat_number: usize, depth: usize) -> bool {
         if let Some(seat) = self.get_seat(seat_number) {
             let num = seat.cards.number_of_dealt_cards();
             num >= depth
@@ -320,7 +327,9 @@ impl Table {
 
     /// Returns the minimum number of dealt cards among all seats. Used to determine the next player
     /// who should be dealt a card.
-    fn min_depth_dealt(&self) -> usize {
+    ///
+    /// Never used
+    pub fn min_depth_dealt(&self) -> usize {
         let seats = self.seats.borrow_all();
         seats
             .iter()
@@ -610,11 +619,32 @@ mod casino__table_tests {
         assert_eq!(0, table.button.value());
         assert_eq!(0, table.action_to.value());
         assert_eq!(52, table.deck.len());
+        assert_eq!(
+            "A♠ Q♠ J♠ 9♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 5♥ 4♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 6♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 9♣ 8♣ 6♣ 3♣",
+            table.deck.to_string()
+        );
         assert_eq!(0, table.board.len());
         assert_eq!(0, table.muck.len());
         assert!(table.pot.is_empty());
+    }
 
-        println!("{}", table.event_log)
+    #[test]
+    fn nlh_from_seats__not_holding() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
+        assert_eq!("No Limit Hold'em Table", table.name);
+        assert_eq!(GameType::NoLimitHoldem, table.game);
+        // assert_eq!(GamePhase::NewHand, table.phase.);
+        assert_eq!(8, table.seats.size());
+        assert_eq!(0, table.button.value());
+        assert_eq!(0, table.action_to.value());
+        assert_eq!(52, table.deck.len());
+        assert_eq!(
+            "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣",
+            table.deck.to_string()
+        );
+        assert_eq!(0, table.board.len());
+        assert_eq!(0, table.muck.len());
+        assert!(table.pot.is_empty());
     }
 
     #[test]
