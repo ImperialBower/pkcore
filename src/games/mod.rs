@@ -34,6 +34,11 @@ impl GameType {
     pub fn get_deck(&self) -> CardsCell {
         CardsCell::deck()
     }
+
+    #[must_use]
+    pub fn get_deck_size(&self) -> usize {
+        52
+    }
 }
 
 impl std::fmt::Display for GameType {

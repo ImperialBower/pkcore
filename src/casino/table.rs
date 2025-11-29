@@ -426,6 +426,12 @@ impl Table {
         self.event_log.log(action);
     }
 
+    fn log_warn(&self, action: TableAction) {
+        let handle = self.get_seat_handle(usize::from(action.get_seat().unwrap_or_default()));
+        log::warn!("{}", action.commentary(&handle));
+        self.event_log.log(action);
+    }
+
     #[must_use]
     pub fn min_bet(&self) -> usize {
         self.forced.big_blind
@@ -479,14 +485,35 @@ impl Table {
         }
     }
 
-    pub fn reset_cards(&self) {
+    pub fn reset(&self) {
         self.muck_cards();
 
-        todo!()
+        self.deck.insert_all(self.muck.take());
+        self.deck.sort_in_place();
+
+        let deck_size = self.game.get_deck_size();
+        // Convert to cards to avoid dupes.
+        let deck_length = self.deck.cards().len();
+
+        match deck_length.cmp(&deck_size) {
+            std::cmp::Ordering::Less => {
+                self.log_warn(TableAction::Error(PKError::NotEnoughCards));
+            }
+            std::cmp::Ordering::Greater => {
+                self.log_warn(TableAction::Error(PKError::TooManyCards));
+            }
+            std::cmp::Ordering::Equal => self.log_warn(TableAction::DeckPassesAudit),
+        }
     }
 
     pub fn set_action_to(&self, seat_number: u8) {
         self.action_to.set(seat_number);
+    }
+
+    pub fn set_board(&self, cards: Cards) {
+        let _ = self.board.take();
+        self.deck.remove_all(&CardsCell::from(&cards));
+        self.board.insert_all(cards);
     }
 
     /// # Errors
@@ -618,7 +645,7 @@ mod casino__table_tests {
         assert_eq!(8, table.seats.size());
         assert_eq!(0, table.button.value());
         assert_eq!(0, table.action_to.value());
-        assert_eq!(52, table.deck.len());
+        assert_eq!(36, table.deck.len());
         assert_eq!(
             "A♠ Q♠ J♠ 9♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 5♥ 4♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 6♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 9♣ 8♣ 6♣ 3♣",
             table.deck.to_string()
@@ -681,6 +708,8 @@ mod casino__table_tests {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
 
         let dealt = table.deal_card_to_seat(1);
+
+        assert_eq!("", table.seats.cards_string());
     }
 
     #[test]
@@ -739,7 +768,7 @@ mod casino__table_tests {
     fn muck_board() {
         testing_logger::setup();
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
-        table.board.insert_all(cards!("A♦ Q♣ 5♦"));
+        table.set_board(cards!("A♦ Q♣ 5♦"));
 
         table.muck_board();
 
@@ -756,12 +785,18 @@ mod casino__table_tests {
     #[test]
     fn muck_deck() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
+        table.set_board(cards!("9♣ 6♦ 5♥ 5♠ 8♦"));
+
+        table.muck_deck();
+
+        // Make sure that all 52 cards are now in the muck.
+        assert_eq!(52, table.muck.cards().len());
     }
 
     #[test]
     fn muck_cards() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
-        table.board.insert_all(cards!("9♣ 6♦ 5♥ 5♠ 8♦"));
+        table.set_board(cards!("9♣ 6♦ 5♥ 5♠ 8♦"));
         table.button.up();
         assert!(table.seats.are_dealt());
 
@@ -792,6 +827,12 @@ mod casino__table_tests {
     }
 
     #[test]
+    fn reset() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        table.set_board(cards!("9♣ 6♦ 5♥ 5♠ 8♦"));
+    }
+
+    #[test]
     fn seat() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
 
@@ -808,6 +849,33 @@ mod casino__table_tests {
         assert_eq!(
             table.event_log.entries().last(),
             Some(&event::TableAction::SetButton(3))
+        );
+    }
+
+    #[test]
+    fn set_board() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        assert_eq!(36, table.deck.len());
+
+        table.set_board(cards!("9♣ 6♦ 5♥ 5♠ 8♦"));
+
+        assert_eq!(31, table.deck.len());
+        assert_eq!("9♣ 6♦ 5♥ 5♠ 8♦", table.board.to_string());
+        assert_eq!(
+            "A♠ Q♠ J♠ 9♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 8♣ 6♣ 3♣",
+            table.deck.to_string()
+        );
+        assert_eq!(
+            "T♠ 2♥, 8♠ 3♥, A♦ Q♣, 5♦ 5♣, 6♠ 6♥, K♠ J♦, 4♣ 4♦, 7♣ 2♣",
+            table.seats.cards_string()
+        );
+
+        table.reset();
+        assert_eq!(0, table.muck.len());
+        assert_eq!(52, table.deck.len());
+        assert_eq!(
+            table.event_log.entries().last(),
+            Some(&event::TableAction::DeckPassesAudit)
         );
     }
 

@@ -37,6 +37,7 @@ pub enum TableAction {
     TakeBoardCards(Bard),
     InvalidAction,
     Error(PKError),
+    DeckPassesAudit,
 }
 
 impl TableAction {
@@ -150,6 +151,7 @@ impl Display for TableAction {
             TableAction::TakeBoardCards(cards) => write!(f, "Take board cards: {}", Cards::from(*cards)),
             TableAction::InvalidAction => write!(f, "Invalid Action"),
             TableAction::Error(err) => write!(f, "Error: {err}"),
+            TableAction::DeckPassesAudit => write!(f, "Deck passes audit"),
         }
     }
 }

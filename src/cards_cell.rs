@@ -47,7 +47,9 @@ impl CardsCell {
     /// things in the [family](https://www.youtube.com/watch?v=IQuc7wfO16Q).
     #[must_use]
     pub fn deck_minus(cards: &CardsCell) -> CardsCell {
-        Self::from(Cards::deck_minus(&Cards::from(cards)))
+        let deck = Self::deck();
+        deck.remove_all(cards);
+        deck
     }
 
     /// ```
@@ -199,6 +201,31 @@ impl CardsCell {
         internal.insert_at(index, card);
     }
 
+    /// Removes all cards from this `CardsCell` that are present in the given `CardsCell`.
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let deck = deck_cell!();
+    /// let aces = cc!("A♠ A♥ A♦ A♣");
+    ///
+    /// deck.remove_all(&aces);
+    ///
+    /// assert_eq!(deck.len(), 48);
+    /// assert!(!deck.contains(&Card::ACE_SPADES));
+    /// assert!(!deck.contains(&Card::ACE_DIAMONDS));
+    /// assert!(!deck.contains(&Card::ACE_HEARTS));
+    /// assert!(!deck.contains(&Card::ACE_CLUBS));
+    /// ```
+    pub fn remove_all(&self, cards: &CardsCell) {
+        let mut internal = self.0.borrow_mut();
+        let cards_to_remove = cards.0.borrow();
+
+        for card in cards_to_remove.iter() {
+            internal.remove(card);
+        }
+    }
+
     #[must_use]
     pub fn shuffle(&self) -> Self {
         let internal = self.clone();
@@ -249,7 +276,7 @@ impl CardsCell {
     ///
     /// assert_eq!(shuffled_deck, deck);
     /// ```
-    pub fn sort_in_place(&mut self) {
+    pub fn sort_in_place(&self) {
         let mut internal = self.0.borrow_mut();
         internal.sort_in_place();
     }
