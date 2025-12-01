@@ -218,10 +218,13 @@ impl Table {
         if let Some(sb_seat) = self.get_seat_mut(usize::from(sb_seat_num)) {
             sb_seat.player.bets(self.forced.small_blind)?;
 
-            let state = PlayerState::Bet(self.forced.small_blind);
+            let state = PlayerState::Blind(self.forced.small_blind);
             if sb_seat.player.state.set(state).is_none() {
                 self.log_warn(TableAction::InvalidAction);
-                log::error!("Failed to set state for seat with player {}", sb_seat.player.handle);
+                log::error!(
+                    "Failed to set state ForcedBetSmallBlind for seat with player {}",
+                    sb_seat.player.handle
+                );
                 return Err(PKError::InvalidTableAction);
             }
 
@@ -236,6 +239,17 @@ impl Table {
 
         if let Some(bb_seat) = self.get_seat_mut(usize::from(bb_seat_num)) {
             bb_seat.player.bets(self.forced.big_blind)?;
+
+            let state = PlayerState::Blind(self.forced.big_blind);
+            if bb_seat.player.state.set(state).is_none() {
+                self.log_warn(TableAction::InvalidAction);
+                log::error!(
+                    "Failed to set state ForcedBetBigBlind for seat with player {}",
+                    bb_seat.player.handle
+                );
+                return Err(PKError::InvalidTableAction);
+            }
+
             drop(bb_seat);
             self.log_info(TableAction::ForcedBetBigBlind(bb_seat_num, self.forced.big_blind));
         } else {
