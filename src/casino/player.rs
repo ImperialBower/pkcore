@@ -1,5 +1,6 @@
 use crate::PKError;
 use crate::casino::cashier::chips::Stack;
+use crate::prelude::PlayerStateCell;
 use crate::util::name::Name;
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;
@@ -10,6 +11,7 @@ pub struct Player {
     pub handle: String,
     pub chips: Stack,
     pub bet: Stack,
+    pub state: PlayerStateCell,
 }
 
 impl Player {

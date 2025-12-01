@@ -11,15 +11,35 @@ impl PlayerStateCell {
     }
 
     #[must_use]
+    pub fn can(&self, next: PlayerState) -> bool {
+        self.0.get().can(next)
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let state_cell = PlayerStateCell::new(PlayerState::YetToAct);
+    /// assert_eq!(state_cell.get(), PlayerState::YetToAct);
+    /// ```
+    #[must_use]
     pub fn get(&self) -> PlayerState {
         self.0.get()
     }
 
-    pub fn set(&self, state: PlayerState) -> Option<()> {
-        let current = self.0.get();
-        if current.can(state) {
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let state_cell = PlayerStateCell::new(PlayerState::YetToAct);
+    /// assert_eq!(state_cell.set(PlayerState::Bet(100)), Some(PlayerState::Bet(100)));
+    /// assert_eq!(state_cell.get(), PlayerState::Bet(100));
+    /// assert_eq!(state_cell.set(PlayerState::Check), None);
+    /// assert_eq!(state_cell.get(), PlayerState::Bet(100));
+    /// assert_eq!(state_cell.set(PlayerState::Bet(300)), Some(PlayerState::Bet(300)));
+    /// ```
+    pub fn set(&self, state: PlayerState) -> Option<PlayerState> {
+        if self.can(state) {
             self.0.set(state);
-            Some(())
+            Some(state)
         } else {
             None
         }
@@ -77,6 +97,7 @@ impl PlayerState {
             | (PlayerState::Check, PlayerState::ReRaise(_))
             | (PlayerState::Check, PlayerState::AllIn(_))
             | (PlayerState::Bet(_), PlayerState::Call(_))
+            | (PlayerState::Bet(_), PlayerState::Bet(_))
             | (PlayerState::Bet(_), PlayerState::Raise(_))
             | (PlayerState::Bet(_), PlayerState::ReRaise(_))
             | (PlayerState::Bet(_), PlayerState::AllIn(_))
@@ -178,6 +199,8 @@ mod casino__state_tests {
         assert!(PlayerState::Call(100).can(PlayerState::Fold));
         assert!(PlayerState::Raise(200).can(PlayerState::ReRaise(300)));
         assert!(!PlayerState::Raise(200).can(PlayerState::ReRaise(100)));
+
+        assert!(PlayerState::Bet(200).can(PlayerState::Bet(300)));
 
         assert!(!PlayerState::Fold.can(PlayerState::Check));
         assert!(!PlayerState::Fold.can(PlayerState::Bet(100)));

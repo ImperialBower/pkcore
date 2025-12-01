@@ -21,6 +21,7 @@ pub use crate::cards;
 pub use crate::cards::Cards;
 pub use crate::cards_cell::CardsCell;
 pub use crate::casino;
+pub use crate::casino::state::*;
 pub use crate::casino::table;
 pub use crate::cc;
 pub use crate::deck;
