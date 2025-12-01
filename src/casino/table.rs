@@ -6,9 +6,8 @@ use crate::casino::player::Player;
 use crate::casino::table::event::{TableAction, TableLog};
 use crate::casino::table::seat::Seat;
 use crate::casino::table::seats::Seats;
-use crate::games::GameType::NoLimitHoldem;
 use crate::games::{GamePhase, GameType};
-use crate::prelude::{Bard, BoxedCards};
+use crate::prelude::{Bard, BoxedCards, PlayerState};
 use crate::{PKError, Pile, deck_cell};
 use bint::{BintCell, DrainableBintCell};
 use std::cell::{Cell, Ref};
@@ -41,7 +40,7 @@ pub struct Table {
 }
 
 impl Table {
-    /// Factory method used to setup seats for a default instance.
+    /// Factory method used to set up seats for a default instance.
     #[must_use]
     pub fn generate_seats(count: u8, cards_per: u8) -> Seats {
         log::debug!("Generating {count} seats for table");
@@ -126,7 +125,7 @@ impl Table {
     pub fn act_bet(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
         if let Some(seat) = self.get_seat_mut(usize::from(seat_number)) {
             let remaining = seat.player.bets(amount)?;
-            self.event_log.log(event::TableAction::Bet(seat_number, amount));
+            self.event_log.log(TableAction::Bet(seat_number, amount));
             self.action_to.up();
             Ok(remaining)
         } else {
@@ -146,7 +145,7 @@ impl Table {
 
     pub fn act_button_move(&self) {
         self.button.up();
-        self.event_log.log(event::TableAction::MoveButton(self.button.value()));
+        self.event_log.log(TableAction::MoveButton(self.button.value()));
         self.action_to.set(self.determine_utg());
     }
 
@@ -218,6 +217,14 @@ impl Table {
 
         if let Some(sb_seat) = self.get_seat_mut(usize::from(sb_seat_num)) {
             sb_seat.player.bets(self.forced.small_blind)?;
+
+            let state = PlayerState::Bet(self.forced.small_blind);
+            if sb_seat.player.state.set(state).is_none() {
+                self.log_warn(TableAction::InvalidAction);
+                log::error!("Failed to set state for seat with player {}", sb_seat.player.handle);
+                return Err(PKError::InvalidTableAction);
+            }
+
             // You need to drop the seat after betting, because the logging function needs to
             // borrow the seat immutably to get the player handle for logging.
             drop(sb_seat);
@@ -443,7 +450,8 @@ impl Table {
         self.muck.insert_all(cards);
     }
 
-    pub fn muck_cards(&self) {
+    /// Throws every card that's in play into the muck.
+    pub fn muck_cards_in_play(&self) {
         self.muck_players();
         self.muck_board();
     }
@@ -486,7 +494,7 @@ impl Table {
     }
 
     pub fn reset(&self) {
-        self.muck_cards();
+        self.muck_cards_in_play();
 
         self.deck.insert_all(self.muck.take());
         self.deck.sort_in_place();
@@ -570,13 +578,13 @@ impl Table {
 
 impl Default for Table {
     fn default() -> Self {
-        let seats = Table::generate_seats(6, NoLimitHoldem.cards_per_player());
+        let seats = Table::generate_seats(6, GameType::NoLimitHoldem.cards_per_player());
         #[allow(clippy::pedantic)] // allow cast
         let player_count = seats.size();
         Table {
             id: Uuid::default(),
             name: "Default No Limit Hold'em Table".to_string(),
-            game: NoLimitHoldem,
+            game: GameType::NoLimitHoldem,
             phase: GamePhase::default().into(),
             forced: ForcedBets::new(50, 100),
             seats,
@@ -709,7 +717,10 @@ mod casino__table_tests {
 
         let dealt = table.deal_card_to_seat(1);
 
-        assert_eq!("", table.seats.cards_string());
+        assert_eq!(
+            "__ __, A♠ __, __ __, __ __, __ __, __ __, __ __, __ __",
+            table.seats.cards_string()
+        );
     }
 
     #[test]
@@ -789,18 +800,18 @@ mod casino__table_tests {
 
         table.muck_deck();
 
-        // Make sure that all 52 cards are now in the muck.
-        assert_eq!(52, table.muck.cards().len());
+        // Should move all the cards in the deck to the muck, leaving only the cards on the board.
+        assert_eq!(47, table.muck.cards().len());
     }
 
     #[test]
-    fn muck_cards() {
+    fn muck_cards_in_play() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
         table.set_board(cards!("9♣ 6♦ 5♥ 5♠ 8♦"));
         table.button.up();
         assert!(table.seats.are_dealt());
 
-        table.muck_cards();
+        table.muck_cards_in_play();
 
         assert!(!table.seats.are_dealt());
         assert_eq!(
@@ -846,10 +857,7 @@ mod casino__table_tests {
         assert_eq!(0, table.button.value());
         table.button_set(3);
         assert_eq!(3, table.button.value());
-        assert_eq!(
-            table.event_log.entries().last(),
-            Some(&event::TableAction::SetButton(3))
-        );
+        assert_eq!(table.event_log.entries().last(), Some(&TableAction::SetButton(3)));
     }
 
     #[test]
@@ -873,10 +881,7 @@ mod casino__table_tests {
         table.reset();
         assert_eq!(0, table.muck.len());
         assert_eq!(52, table.deck.len());
-        assert_eq!(
-            table.event_log.entries().last(),
-            Some(&event::TableAction::DeckPassesAudit)
-        );
+        assert_eq!(table.event_log.entries().last(), Some(&TableAction::DeckPassesAudit));
     }
 
     #[test]
@@ -886,10 +891,7 @@ mod casino__table_tests {
         table.act_button_move();
 
         assert_eq!(1, table.button.value());
-        assert_eq!(
-            table.event_log.entries().last(),
-            Some(&event::TableAction::MoveButton(1))
-        );
+        assert_eq!(table.event_log.entries().last(), Some(&TableAction::MoveButton(1)));
     }
 
     #[test]

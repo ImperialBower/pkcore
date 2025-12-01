@@ -22,6 +22,7 @@ impl Player {
             handle,
             chips: Stack::default(),
             bet: Stack::default(),
+            state: PlayerStateCell::default(),
         }
     }
 
@@ -32,6 +33,7 @@ impl Player {
             handle,
             chips: Stack::new(stack),
             bet: Stack::default(),
+            state: PlayerStateCell::default(),
         }
     }
 
@@ -73,6 +75,7 @@ impl Player {
             handle: Name::generate(),
             chips: Stack::new(stack),
             bet: Stack::default(),
+            state: PlayerStateCell::default(),
         }
     }
 

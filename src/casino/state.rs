@@ -83,32 +83,33 @@ impl PlayerState {
     }
 
     #[must_use]
+    #[allow(clippy::unnested_or_patterns)]
     pub fn can(&self, next: PlayerState) -> bool {
         // An action can't be performned if the bet value is less than what happened before.
         if next < *self && next.is_active() {
             return false;
         }
-        match (self, next) {
-            (_, PlayerState::Fold) => true,
-            (PlayerState::YetToAct, _)
-            | (PlayerState::Blind(_), _)
-            | (PlayerState::Check, PlayerState::Bet(_))
-            | (PlayerState::Check, PlayerState::Raise(_))
-            | (PlayerState::Check, PlayerState::ReRaise(_))
-            | (PlayerState::Check, PlayerState::AllIn(_))
-            | (PlayerState::Bet(_), PlayerState::Call(_))
-            | (PlayerState::Bet(_), PlayerState::Bet(_))
-            | (PlayerState::Bet(_), PlayerState::Raise(_))
-            | (PlayerState::Bet(_), PlayerState::ReRaise(_))
-            | (PlayerState::Bet(_), PlayerState::AllIn(_))
-            | (PlayerState::Call(_), PlayerState::Raise(_))
-            | (PlayerState::Call(_), PlayerState::ReRaise(_))
-            | (PlayerState::Call(_), PlayerState::AllIn(_))
-            | (PlayerState::Raise(_), PlayerState::ReRaise(_))
-            | (PlayerState::Raise(_), PlayerState::AllIn(_))
-            | (PlayerState::ReRaise(_), PlayerState::AllIn(_)) => true,
-            _ => false,
-        }
+        matches!(
+            (self, next),
+            (_, PlayerState::Fold)
+                | (PlayerState::YetToAct, _)
+                | (PlayerState::Blind(_), _)
+                | (PlayerState::Check, PlayerState::Bet(_))
+                | (PlayerState::Check, PlayerState::Raise(_))
+                | (PlayerState::Check, PlayerState::ReRaise(_))
+                | (PlayerState::Check, PlayerState::AllIn(_))
+                | (PlayerState::Bet(_), PlayerState::Call(_))
+                | (PlayerState::Bet(_), PlayerState::Bet(_))
+                | (PlayerState::Bet(_), PlayerState::Raise(_))
+                | (PlayerState::Bet(_), PlayerState::ReRaise(_))
+                | (PlayerState::Bet(_), PlayerState::AllIn(_))
+                | (PlayerState::Call(_), PlayerState::Raise(_))
+                | (PlayerState::Call(_), PlayerState::ReRaise(_))
+                | (PlayerState::Call(_), PlayerState::AllIn(_))
+                | (PlayerState::Raise(_), PlayerState::ReRaise(_))
+                | (PlayerState::Raise(_), PlayerState::AllIn(_))
+                | (PlayerState::ReRaise(_), PlayerState::AllIn(_))
+        )
     }
 
     #[must_use]
