@@ -5,8 +5,6 @@ use crate::cards_cell::CardsCell;
 use crate::casino::table::seat::{Seat, SeatCell};
 use log;
 use std::cell::{Ref, RefMut};
-use crate::casino::player::Player;
-use crate::prelude::PlayerState;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Seats(Box<[SeatCell]>);
@@ -203,10 +201,11 @@ impl Seats {
         }
     }
 
+    /// Clears the `PlayerState` for all the seats.
     pub fn reset_state(&self) {
         for seat_cell in &self.0 {
-            let mut seat = seat_cell.borrow_mut();
-            seat.player.state.set(PlayerState::YetToAct);
+            let seat = seat_cell.borrow_mut();
+            seat.player.state.reset();
         }
     }
 
@@ -334,9 +333,9 @@ impl TryFrom<Vec<SeatCell>> for Seats {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod casino__table__seats_tests {
+    use super::*;
     use crate::casino::game::ForcedBets;
     use crate::casino::table::Table;
-    use super::*;
     use crate::prelude::*;
     use crate::util::data::TestData;
 

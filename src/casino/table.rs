@@ -735,7 +735,7 @@ mod casino__table_tests {
 
     #[test]
     fn act_forced_bets() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50    , 100));
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
         let _ = table.act_forced_bets();
 
         let sb_seat = table.seats.get_seat(1).unwrap();

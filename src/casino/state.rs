@@ -26,6 +26,10 @@ impl PlayerStateCell {
         self.0.get()
     }
 
+    pub fn reset(&self) {
+        self.0.set(PlayerState::YetToAct);
+    }
+
     /// ```
     /// use pkcore::prelude::*;
     ///
@@ -115,6 +119,10 @@ impl PlayerState {
     #[must_use]
     pub fn is_active(&self) -> bool {
         !matches!(self, PlayerState::Fold | PlayerState::Out)
+    }
+
+    pub fn reset(&mut self) {
+        *self = PlayerState::YetToAct;
     }
 }
 
