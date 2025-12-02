@@ -216,6 +216,7 @@ impl Table {
         let sb_seat_num = self.determine_small_blind();
         let bb_seat_num = self.determine_big_blind();
 
+        // Small blind
         if let Some(sb_seat) = self.get_seat_mut(usize::from(sb_seat_num)) {
             sb_seat.player.bets(self.forced.small_blind)?;
 
@@ -238,6 +239,7 @@ impl Table {
             return Err(PKError::InvalidSeatNumber);
         }
 
+        // Big blind
         if let Some(bb_seat) = self.get_seat_mut(usize::from(bb_seat_num)) {
             bb_seat.player.bets(self.forced.big_blind)?;
 
@@ -713,8 +715,26 @@ mod casino__table_tests {
     }
 
     #[test]
-    fn act_forced_bets() {
+    fn act_fold() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        let _ = table.act_forced_bets();
+        let seat0_folded_amount = table.act_fold(0).unwrap();
+        let seat1_folded_amount = table.act_fold(1).unwrap();
+
+        let seat0 = table.seats.get_seat(0).unwrap();
+        let seat1 = table.seats.get_seat(1).unwrap(); // small blind
+
+        assert_eq!(0, seat0.player.bet.count());
+        assert_eq!(PlayerState::Fold, seat0.player.state.get());
+        assert_eq!(0, seat0_folded_amount);
+        assert_eq!(0, seat1.player.bet.count());
+        assert_eq!(PlayerState::Fold, seat1.player.state.get());
+        assert_eq!(50, seat1_folded_amount);
+    }
+
+    #[test]
+    fn act_forced_bets() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50    , 100));
         let _ = table.act_forced_bets();
 
         let sb_seat = table.seats.get_seat(1).unwrap();
@@ -724,24 +744,6 @@ mod casino__table_tests {
         assert_eq!(PlayerState::Blind(50), sb_seat.player.state.get());
         assert_eq!(100, bb_seat.player.bet.count());
         assert_eq!(PlayerState::Blind(100), bb_seat.player.state.get());
-    }
-
-    #[test]
-    fn act_fold() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
-        let _ = table.act_forced_bets();
-        let seat0_folded_amount = table.act_fold(0).unwrap();
-        let seat1_folded_amount = table.act_fold(1).unwrap();
-
-        let seat0 = table.seats.get_seat(0).unwrap();
-        let seat1 = table.seats.get_seat(1).unwrap();
-
-        assert_eq!(0, seat0.player.bet.count());
-        assert_eq!(PlayerState::Fold, seat0.player.state.get());
-        assert_eq!(0, seat0_folded_amount);
-        assert_eq!(0, seat1.player.bet.count());
-        assert_eq!(PlayerState::Fold, seat1.player.state.get());
-        assert_eq!(50, seat1_folded_amount);
     }
 
     #[test]
