@@ -1030,6 +1030,12 @@ mod casino__table_tests {
         assert_eq!(97_900, seat3_remaining);
         assert_eq!(table.event_log.last().unwrap(), TableAction::Bet(3, 2100));
 
+        if let Some(seat) = table.get_seat(3) {
+            assert_eq!(PlayerState::Bet(2101), seat.player.state.get());
+        } else {
+            panic!("Failed to get seat 3");
+        }
+
         println!("{table}");
         table.commentary_dump();
 

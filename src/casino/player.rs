@@ -49,6 +49,7 @@ impl Player {
             Err(PKError::InsufficientChips)
         } else {
             let bet_chips = self.chips.bet(amount)?;
+            self.state.set(PlayerState::Bet(bet_chips.count()));
             self.bet.add_to(bet_chips);
             Ok(self.chips.count())
         }
