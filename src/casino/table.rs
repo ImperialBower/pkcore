@@ -512,6 +512,7 @@ impl Table {
 
     pub fn reset(&self) {
         self.muck_cards_in_play();
+        self.seats.reset_state();
 
         self.deck.insert_all(self.muck.take());
         self.deck.sort_in_place();

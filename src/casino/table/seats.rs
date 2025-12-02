@@ -5,6 +5,8 @@ use crate::cards_cell::CardsCell;
 use crate::casino::table::seat::{Seat, SeatCell};
 use log;
 use std::cell::{Ref, RefMut};
+use crate::casino::player::Player;
+use crate::prelude::PlayerState;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Seats(Box<[SeatCell]>);
@@ -201,6 +203,13 @@ impl Seats {
         }
     }
 
+    pub fn reset_state(&self) {
+        for seat_cell in &self.0 {
+            let mut seat = seat_cell.borrow_mut();
+            seat.player.state.set(PlayerState::YetToAct);
+        }
+    }
+
     #[must_use]
     pub fn size(&self) -> u8 {
         if let Ok(size) = u8::try_from(self.0.len()) {
@@ -325,6 +334,8 @@ impl TryFrom<Vec<SeatCell>> for Seats {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod casino__table__seats_tests {
+    use crate::casino::game::ForcedBets;
+    use crate::casino::table::Table;
     use super::*;
     use crate::prelude::*;
     use crate::util::data::TestData;
@@ -350,6 +361,21 @@ mod casino__table__seats_tests {
     fn count_cards_in_play() {
         let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
         assert_eq!(16, seats.count_cards_in_play());
+    }
+
+    #[test]
+    fn reset_state() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        let _ = table.act_forced_bets();
+        let seat0_folded_amount = table.act_fold(0).unwrap();
+        let seat1_folded_amount = table.act_fold(1).unwrap();
+
+        table.seats.reset_state();
+
+        for seat in table.seats.borrow_all() {
+            let seat = seat.borrow();
+            assert_eq!(PlayerState::YetToAct, seat.player.state.get());
+        }
     }
 
     #[test]
