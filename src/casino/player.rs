@@ -1,6 +1,6 @@
 use crate::PKError;
 use crate::casino::cashier::chips::Stack;
-use crate::prelude::PlayerStateCell;
+use crate::prelude::{PlayerState, PlayerStateCell};
 use crate::util::name::Name;
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;
@@ -55,6 +55,7 @@ impl Player {
     }
 
     pub fn folds(&self) -> Stack {
+        self.state.set(PlayerState::Fold);
         self.bet.takes()
     }
 

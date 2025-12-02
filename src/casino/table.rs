@@ -194,6 +194,7 @@ impl Table {
     pub fn act_fold(&self, seat_number: u8) -> Result<usize, PKError> {
         if let Some(seat) = self.get_seat_mut(usize::from(seat_number)) {
             let folded_chips = seat.player.folds();
+
             drop(seat);
             let amount = folded_chips.count();
             self.pot.add_to(folded_chips);
@@ -709,6 +710,38 @@ mod casino__table_tests {
         assert_eq!(0, table.board.len());
         assert_eq!(0, table.muck.len());
         assert!(table.pot.is_empty());
+    }
+
+    #[test]
+    fn act_forced_bets() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        let _ = table.act_forced_bets();
+
+        let sb_seat = table.seats.get_seat(1).unwrap();
+        let bb_seat = table.seats.get_seat(2).unwrap();
+
+        assert_eq!(50, sb_seat.player.bet.count());
+        assert_eq!(PlayerState::Blind(50), sb_seat.player.state.get());
+        assert_eq!(100, bb_seat.player.bet.count());
+        assert_eq!(PlayerState::Blind(100), bb_seat.player.state.get());
+    }
+
+    #[test]
+    fn act_fold() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        let _ = table.act_forced_bets();
+        let seat0_folded_amount = table.act_fold(0).unwrap();
+        let seat1_folded_amount = table.act_fold(1).unwrap();
+
+        let seat0 = table.seats.get_seat(0).unwrap();
+        let seat1 = table.seats.get_seat(1).unwrap();
+
+        assert_eq!(0, seat0.player.bet.count());
+        assert_eq!(PlayerState::Fold, seat0.player.state.get());
+        assert_eq!(0, seat0_folded_amount);
+        assert_eq!(0, seat1.player.bet.count());
+        assert_eq!(PlayerState::Fold, seat1.player.state.get());
+        assert_eq!(50, seat1_folded_amount);
     }
 
     #[test]
