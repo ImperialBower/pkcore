@@ -88,7 +88,7 @@ impl Player {
 
 impl Display for Player {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {} chips", self.handle, self.chips)
+        write!(f, "{}: {} chips [{}]", self.handle, self.chips, self.state)
     }
 }
 #[cfg(test)]
@@ -102,7 +102,7 @@ mod casino__players__player_tests {
 
         assert_eq!("Elmer", player.handle);
         assert_eq!(0, player.chips.count());
-        assert_eq!("Elmer: 0 chips", player.to_string());
+        assert_eq!("Elmer: 0 chips [Yet to act]", player.to_string());
     }
 
     #[test]
@@ -111,7 +111,7 @@ mod casino__players__player_tests {
 
         assert_eq!("Bugsy", player.handle);
         assert_eq!(1_000_002, player.chips.count());
-        assert_eq!("Bugsy: 1,000,002 chips", player.to_string());
+        assert_eq!("Bugsy: 1,000,002 chips [Yet to act]", player.to_string());
     }
 
     #[test]
@@ -122,7 +122,7 @@ mod casino__players__player_tests {
 
         assert_eq!("", player.handle);
         assert_eq!(0, player.chips.count());
-        assert_eq!(": 0 chips", player.to_string());
+        assert_eq!(": 0 chips [Yet to act]", player.to_string());
     }
 
     #[test]
