@@ -218,7 +218,7 @@ impl Table {
 
         // Small blind
         if let Some(sb_seat) = self.get_seat_mut(usize::from(sb_seat_num)) {
-            sb_seat.player.bets(self.forced.small_blind)?;
+            sb_seat.player.bets_blind(self.forced.small_blind)?;
 
             let state = PlayerState::Blind(self.forced.small_blind);
             if sb_seat.player.state.set(state).is_none() {
@@ -241,7 +241,7 @@ impl Table {
 
         // Big blind
         if let Some(bb_seat) = self.get_seat_mut(usize::from(bb_seat_num)) {
-            bb_seat.player.bets(self.forced.big_blind)?;
+            bb_seat.player.bets_blind(self.forced.big_blind)?;
 
             let state = PlayerState::Blind(self.forced.big_blind);
             if bb_seat.player.state.set(state).is_none() {
@@ -644,12 +644,6 @@ mod casino__table_tests {
     use crate::util::data::TestData;
     use std::borrow::Borrow;
 
-    fn the_table() -> Table {
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
-
-        table
-    }
-
     #[test]
     fn nlh_primed() {
         let _primed = Cards::deck_primed(&TestData::the_hand_cards());
@@ -765,7 +759,7 @@ mod casino__table_tests {
     fn deal_card_to_seat() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
 
-        let dealt = table.deal_card_to_seat(1);
+        table.deal_card_to_seat(1).expect("TODO: panic message");
 
         assert_eq!(
             "__ __, A♠ __, __ __, __ __, __ __, __ __, __ __, __ __",
@@ -1031,7 +1025,7 @@ mod casino__table_tests {
         assert_eq!(table.event_log.last().unwrap(), TableAction::Bet(3, 2100));
 
         if let Some(seat) = table.get_seat(3) {
-            assert_eq!(PlayerState::Bet(2101), seat.player.state.get());
+            assert_eq!(PlayerState::Bet(2100), seat.player.state.get());
         } else {
             panic!("Failed to get seat 3");
         }

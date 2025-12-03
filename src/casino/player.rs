@@ -55,6 +55,20 @@ impl Player {
         }
     }
 
+    /// # Errors
+    ///
+    /// * `PKError::InsufficientChips` - if the player does not have enough chips to make the bet
+    pub fn bets_blind(&self, amount: usize) -> Result<usize, PKError> {
+        if amount > self.chips.count() {
+            Err(PKError::InsufficientChips)
+        } else {
+            let bet_chips = self.chips.bet(amount)?;
+            self.state.set(PlayerState::Blind(bet_chips.count()));
+            self.bet.add_to(bet_chips);
+            Ok(self.chips.count())
+        }
+    }
+
     pub fn folds(&self) -> Stack {
         self.state.set(PlayerState::Fold);
         self.bet.takes()

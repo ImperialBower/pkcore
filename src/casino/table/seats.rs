@@ -366,8 +366,8 @@ mod casino__table__seats_tests {
     fn reset_state() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
         let _ = table.act_forced_bets();
-        let seat0_folded_amount = table.act_fold(0).unwrap();
-        let seat1_folded_amount = table.act_fold(1).unwrap();
+        let _seat0_folded_amount = table.act_fold(0).unwrap();
+        let _seat1_folded_amount = table.act_fold(1).unwrap();
 
         table.seats.reset_state();
 
