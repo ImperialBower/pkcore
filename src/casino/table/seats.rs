@@ -48,10 +48,6 @@ impl Seats {
         self.0.get(index).map(|seat_cell| seat_cell.borrow_mut())
     }
 
-    pub fn can_bet(&self, seat: Seat) -> bool {
-        todo!()
-    }
-
     #[must_use]
     pub fn cards_string(&self) -> String {
         let mut seat_strings = Vec::new();
