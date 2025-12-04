@@ -121,6 +121,7 @@ impl PlayerState {
         !matches!(self, PlayerState::Fold | PlayerState::Out)
     }
 
+    #[must_use]
     pub fn is_bet(&self) -> bool {
         matches!(
             self,
