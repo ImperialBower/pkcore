@@ -121,6 +121,18 @@ impl PlayerState {
         !matches!(self, PlayerState::Fold | PlayerState::Out)
     }
 
+    pub fn is_bet(&self) -> bool {
+        matches!(
+            self,
+            PlayerState::Blind(_)
+                | PlayerState::Bet(_)
+                | PlayerState::Call(_)
+                | PlayerState::Raise(_)
+                | PlayerState::ReRaise(_)
+                | PlayerState::AllIn(_)
+        )
+    }
+
     pub fn reset(&mut self) {
         *self = PlayerState::YetToAct;
     }

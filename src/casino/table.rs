@@ -124,7 +124,7 @@ impl Table {
     /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
     pub fn act_bet(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
         if let Some(seat) = self.get_seat_mut(usize::from(seat_number)) {
-            let remaining = seat.player.bets(amount)?;
+            let remaining = seat.player.bet(amount)?;
             self.event_log.log(TableAction::Bet(seat_number, amount));
             self.action_to.up();
             Ok(remaining)
@@ -156,7 +156,7 @@ impl Table {
     pub fn act_call(&self, seat_number: u8) -> Result<usize, PKError> {
         let to_call = self.to_call(usize::from(seat_number));
         if let Some(seat) = self.get_seat_mut(usize::from(seat_number)) {
-            let remaining = seat.player.bets(to_call)?;
+            let remaining = seat.player.bet_internal(PlayerState::Call(to_call))?;
             drop(seat);
             self.log_info(TableAction::Call(seat_number, to_call));
             Ok(remaining)
@@ -218,7 +218,7 @@ impl Table {
 
         // Small blind
         if let Some(sb_seat) = self.get_seat_mut(usize::from(sb_seat_num)) {
-            sb_seat.player.bets_blind(self.forced.small_blind)?;
+            sb_seat.player.bet_blind(self.forced.small_blind)?;
 
             let state = PlayerState::Blind(self.forced.small_blind);
             if sb_seat.player.state.set(state).is_none() {
@@ -241,7 +241,7 @@ impl Table {
 
         // Big blind
         if let Some(bb_seat) = self.get_seat_mut(usize::from(bb_seat_num)) {
-            bb_seat.player.bets_blind(self.forced.big_blind)?;
+            bb_seat.player.bet_blind(self.forced.big_blind)?;
 
             let state = PlayerState::Blind(self.forced.big_blind);
             if bb_seat.player.state.set(state).is_none() {

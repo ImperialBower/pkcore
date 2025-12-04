@@ -58,9 +58,9 @@ impl Player {
     ///
     /// let player = Player::new_with_chips("The Russian".to_string(), 1_000);
     ///
-    /// let first_bet = player.bets(50);
-    /// let second_bet = player.bets(100);
-    /// let third_bet = player.bets(100);
+    /// let first_bet = player.bet(50);
+    /// let second_bet = player.bet(100);
+    /// let third_bet = player.bet(100);
     ///
     /// assert!(first_bet.is_ok());
     /// assert!(second_bet.is_ok());
@@ -75,12 +75,12 @@ impl Player {
     /// # Errors
     ///
     /// * `PKError::InsufficientChips` - if the player does not have enough chips to make the bet
-    pub fn bets(&self, amount: usize) -> Result<usize, PKError> {
-        if amount > self.chips.count() {
+    pub fn bet_internal(&self, bet_type: PlayerState) -> Result<usize, PKError> {
+        if bet_type.amount() > self.chips.count() {
             Err(PKError::InsufficientChips)
         } else {
             // How many chips are there above what's already committed to the round?
-            let additional_bet = amount.saturating_sub(self.bet.count());
+            let additional_bet = bet_type.amount() .saturating_sub(self.bet.count());
 
             // Throw an error if the result is 0, meaning they aren't betting anything.
             if additional_bet == 0 {
@@ -89,24 +89,21 @@ impl Player {
             }
 
             let bet_chips = self.chips.bet(additional_bet)?;
-            self.state.set(PlayerState::Bet(bet_chips.count()));
+            self.state.set(bet_type);
             self.bet.add_to(bet_chips);
             Ok(self.chips.count())
         }
     }
 
+    pub fn bet(&self, amount: usize) -> Result<usize, PKError> {
+        self.bet_internal(PlayerState::Bet(amount))
+    }
+
     /// # Errors
     ///
     /// * `PKError::InsufficientChips` - if the player does not have enough chips to make the bet
-    pub fn bets_blind(&self, amount: usize) -> Result<usize, PKError> {
-        if amount > self.chips.count() {
-            Err(PKError::InsufficientChips)
-        } else {
-            let bet_chips = self.chips.bet(amount)?;
-            self.state.set(PlayerState::Blind(bet_chips.count()));
-            self.bet.add_to(bet_chips);
-            Ok(self.chips.count())
-        }
+    pub fn bet_blind(&self, amount: usize) -> Result<usize, PKError> {
+        self.bet_internal(PlayerState::Blind(amount))
     }
 
     pub fn folds(&self) -> Stack {
@@ -185,7 +182,7 @@ mod casino__players__player_tests {
     fn bets() {
         let player = Player::new_with_chips("The Russian".to_string(), 1_000);
 
-        let did_bet = player.bets(100);
+        let did_bet = player.bet_internal(PlayerState::Bet(100));
 
         assert!(did_bet.is_ok());
         assert_eq!(900, did_bet.unwrap());
@@ -196,7 +193,7 @@ mod casino__players__player_tests {
         let player = Player::new_with_chips("All In Andy".to_string(), 500);
         assert!(!player.is_all_in());
 
-        let _ = player.bets(500);
+        let _ = player.bet_internal(PlayerState::Bet(500));
         assert!(player.is_all_in());
     }
 
@@ -208,7 +205,7 @@ mod casino__players__player_tests {
         let player2 = Player::new_with_chips("Not Tapped Out Nancy".to_string(), 100);
         assert!(!player2.is_tapped_out());
 
-        let _ = player2.bets(100);
+        let _ = player2.bet_internal(PlayerState::Bet(100));
         assert!(!player2.is_tapped_out());
     }
 }
