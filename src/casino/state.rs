@@ -57,7 +57,7 @@ impl Display for PlayerStateCell {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum PlayerState {
     #[default]
     YetToAct,
@@ -156,13 +156,7 @@ impl Display for PlayerState {
     }
 }
 
-impl PartialEq for PlayerState {
-    fn eq(&self, other: &Self) -> bool {
-        self.amount() == other.amount()
-    }
-}
 
-impl Eq for PlayerState {}
 
 impl PartialOrd for PlayerState {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
@@ -232,20 +226,20 @@ mod casino__state_tests {
     /// Of course, most of them are wrong, but they help save me some typing.
     #[test]
     fn partial_eq_distinguishes_variants() {
-        assert_eq!(PlayerState::Bet(100), PlayerState::Call(100));
+        // assert_eq!(PlayerState::Bet(100), PlayerState::Call(100));
         assert_eq!(PlayerState::Bet(100), PlayerState::Bet(100));
         assert_eq!(PlayerState::YetToAct, PlayerState::YetToAct);
-        assert_eq!(PlayerState::YetToAct, PlayerState::Check);
+        // assert_eq!(PlayerState::YetToAct, PlayerState::Check);
 
         assert_ne!(PlayerState::Raise(200), PlayerState::ReRaise(300));
     }
 
     #[test]
     fn ord_compares_by_variant_then_amount() {
-        assert_eq!(PlayerState::YetToAct, PlayerState::Check);
-        assert_eq!(PlayerState::Fold, PlayerState::Out);
-        assert_eq!(PlayerState::Bet(100), PlayerState::Call(100));
-        assert_eq!(PlayerState::Raise(200), PlayerState::ReRaise(200));
+        // assert_eq!(PlayerState::YetToAct, PlayerState::Check);
+        // assert_eq!(PlayerState::Fold, PlayerState::Out);
+        // assert_eq!(PlayerState::Bet(100), PlayerState::Call(100));
+        // assert_eq!(PlayerState::Raise(200), PlayerState::ReRaise(200));
         assert!(PlayerState::Check < PlayerState::Bet(100));
         assert!(PlayerState::Bet(50) < PlayerState::Bet(100));
         assert!(PlayerState::AllIn(500) > PlayerState::Fold);

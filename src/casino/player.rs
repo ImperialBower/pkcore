@@ -89,9 +89,12 @@ impl Player {
             }
 
             let bet_chips = self.chips.bet(additional_bet)?;
+
+            self.bet.add_to(bet_chips);
+
             // if self.is_all_in()
             self.state.set(bet_type);
-            self.bet.add_to(bet_chips);
+
             Ok(self.chips.count())
         }
     }
@@ -183,7 +186,7 @@ mod casino__players__player_tests {
     }
 
     #[test]
-    fn bets() {
+    fn bet() {
         let player = Player::new_with_chips("The Russian".to_string(), 1_000);
 
         let did_bet = player.bet(100);
@@ -199,6 +202,7 @@ mod casino__players__player_tests {
 
         let _ = player.bet(500);
         assert!(player.is_all_in());
+        assert_eq!(PlayerState::AllIn(500), player.state.get());
     }
 
     #[test]
