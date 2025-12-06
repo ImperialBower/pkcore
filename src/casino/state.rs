@@ -26,6 +26,10 @@ impl PlayerStateCell {
         self.0.get()
     }
 
+    pub fn is_active(&self) -> bool {
+        self.0.get().is_active()
+    }
+
     pub fn reset(&self) {
         self.0.set(PlayerState::YetToAct);
     }

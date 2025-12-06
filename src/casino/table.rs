@@ -193,7 +193,7 @@ impl Table {
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     pub fn act_fold(&self, seat_number: u8) -> Result<usize, PKError> {
         if let Some(seat) = self.get_seat_mut(usize::from(seat_number)) {
-            let folded_chips = seat.player.folds();
+            let folded_chips = seat.player.folds()?;
 
             drop(seat);
             let amount = folded_chips.count();

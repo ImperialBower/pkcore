@@ -42,15 +42,19 @@ impl Player {
     /// the table mechanism can simply reject the bet or it can force the player to bet all it. It
     /// up to them.
     ///
-    /// ```
-    ///
     /// # Errors
     ///
     /// * `PKError::InsufficientChips` - if the player does not have enough chips to make the bet
+    /// * `PKError::InvalidTableAction` - throws if the player is already all in when all in is passed..
     fn bet_internal(&self, bet_type: PlayerState) -> Result<usize, PKError> {
-        if bet_type.amount() > self.chips.count() {
+        if bet_type.amount() > self.total_chip_count() {
+            log::warn!("InsufficientChips: Bet amount is greater than total chips.");
             Err(PKError::InsufficientChips)
+        } else if !self.state.is_active() {
+            log::warn!("InvalidTableAction: Player is not in hand.");
+            Err(PKError::InvalidTableAction)
         } else {
+            log::trace!("Player already bet {}", self.bet.count());
             // How many chips are there above what's already committed to the round?
             let additional_bet = bet_type.amount().saturating_sub(self.bet.count());
 
@@ -64,14 +68,15 @@ impl Player {
             self.bet.add_to(bet_chips);
 
             if self.is_all_in() {
+                log::debug!("Resetting PlayerState to AllIn");
                 self.state.set(PlayerState::AllIn(self.bet.count()));
             } else {
                 if matches!(bet_type, PlayerState::AllIn(_)) {
                     // If they aren't all in, throw an error.
-                    return Err(PKError::InsufficientChips);
-                } else {
-                    self.state.set(bet_type);
+                    log::warn!("InvalidTableAction: Player is already all in.");
+                    return Err(PKError::InvalidTableAction);
                 }
+                self.state.set(bet_type);
             }
 
             Ok(self.chips.count())
@@ -100,15 +105,18 @@ impl Player {
     /// let player = Player::new_with_chips("The Russian".to_string(), 1_000);
     ///
     /// let first_bet = player.bet(50);
-    /// let second_bet = player.bet(100);
-    /// let third_bet = player.bet(100);
-    ///
     /// assert!(first_bet.is_ok());
-    /// assert!(second_bet.is_ok());
-    /// assert!(third_bet.is_err());
-    /// assert_eq!(PKError::InsufficientChips, third_bet.unwrap_err());
     /// assert_eq!(950, first_bet.unwrap());
+    ///
+    /// let second_bet = player.bet(100);
+    /// assert!(second_bet.is_ok());
     /// assert_eq!(900, second_bet.unwrap());
+    ///
+    /// // The 3rd bet has the same amount as the last, so throws an error.
+    /// let third_bet = player.bet(100);
+    /// assert!(!third_bet.is_ok());
+    /// assert_eq!(PKError::InsufficientChips, third_bet.unwrap_err());
+    ///
     /// assert_eq!(100, player.bet.count());
     /// assert_eq!(900, player.chips.count());
     /// ```
@@ -125,12 +133,34 @@ impl Player {
     ///
     /// let player = Player::new_with_chips("The Russian".to_string(), 1_000);
     ///
+    /// let bet = player.bet(500);
+    /// assert!(bet.is_ok());
+    /// assert_eq!(500, bet.unwrap());
+    /// assert_eq!(1_000, player.total_chip_count());
+    /// assert_eq!(500, player.chips.count());
+    /// assert_eq!(500, player.bet.count());
+    ///  assert_eq!(PlayerState::Bet(500), player.state.get());
     ///
+    /// let all_in_bet = player.bet_all_in();
+    /// assert!(all_in_bet.is_ok());
+    /// assert_eq!(PlayerState::AllIn(1_000), player.state.get());
+    /// assert_eq!(0, player.chips.count());
+    /// assert_eq!(1_000, player.bet.count());
     ///
-    ///
+    /// let another_all_in_bet = player.bet_all_in();
+    /// assert!(another_all_in_bet.is_err());
+    /// assert_eq!(PKError::InvalidTableAction, another_all_in_bet.unwrap_err());
+    /// assert_eq!(1_000, player.bet.count());
     /// ```
+    /// # Errors
+    ///
+    /// * `PKError::InvalidTableAction` - throws if the player is already all in.
     pub fn bet_all_in(&self) -> Result<usize, PKError> {
-        let amount = self.chips.count();
+        if self.is_all_in() {
+            log::warn!("InvalidTableAction: Player is already all in.");
+            return Err(PKError::InvalidTableAction);
+        }
+        let amount = self.total_chip_count();
         self.bet_internal(PlayerState::AllIn(amount))
     }
 
@@ -141,9 +171,83 @@ impl Player {
         self.bet_internal(PlayerState::Blind(amount))
     }
 
-    pub fn folds(&self) -> Stack {
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let player = Player::new_with_chips("The Russian".to_string(), 1_000);
+    ///
+    /// let call = player.bet_call(500);
+    ///
+    /// assert!(call.is_ok());
+    /// assert_eq!(500, call.unwrap());
+    /// assert_eq!(1_000, player.total_chip_count());
+    /// assert_eq!(500, player.chips.count());
+    /// assert_eq!(500, player.bet.count());
+    /// assert_eq!(PlayerState::Call(500), player.state.get());
+    /// ```
+    ///
+    /// # Errors
+    ///
+    ///  * `PKError::InsufficientChips` - if the player does not have enough chips to make the bet
+    pub fn bet_call(&self, amount: usize) -> Result<usize, PKError> {
+        self.bet_internal(PlayerState::Call(amount))
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let player = Player::new_with_chips("The Russian".to_string(), 1_000);
+    ///
+    /// let first_bet = player.bet(50);
+    /// let second_bet = player.bet(100);
+    /// let third_bet = player.bet(100);
+    ///
+    /// assert!(first_bet.is_ok());
+    /// assert!(second_bet.is_ok());
+    /// assert!(third_bet.is_err());
+    /// assert_eq!(PKError::InsufficientChips, third_bet.unwrap_err());
+    /// assert_eq!(950, first_bet.unwrap());
+    /// assert_eq!(900, second_bet.unwrap());
+    /// assert_eq!(100, player.bet.count());
+    /// assert_eq!(900, player.chips.count());
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// * `PKError::InsufficientChips` - if the player does not have enough chips to make the bet
+    pub fn bet_raise(&self, amount: usize) -> Result<usize, PKError> {
+        self.bet_internal(PlayerState::Raise(amount))
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let player = Player::new_with_chips("The Russian".to_string(), 1_000);
+    ///
+    /// // Bet and then fold.
+    /// let bet = player.bet(500);
+    /// let folds = player.folds();
+    ///
+    /// assert_eq!(500, player.total_chip_count());
+    /// assert_eq!(500, player.chips.count());
+    /// assert_eq!(0, player.bet.count());
+    /// assert_eq!(PlayerState::Fold, player.state.get());
+    ///
+    /// // Trying to fold again should trigger a `PKError::InvalidTableAction`
+    /// let folds_again = player.folds();
+    /// assert!(folds_again.is_err());
+    /// assert_eq!(PKError::InvalidTableAction, folds_again.unwrap_err());
+    /// ```
+    /// # Errors
+    ///
+    /// * `PKError::InvalidTableAction` - throws if the player is already all in.
+    pub fn folds(&self) -> Result<Stack, PKError> {
+        if !self.state.is_active() {
+            log::warn!("InvalidTableAction: Player is not active and cannot fold.");
+            return Err(PKError::InvalidTableAction);
+        }
         self.state.set(PlayerState::Fold);
-        self.bet.takes()
+        Ok(self.bet.takes())
     }
 
     pub fn is_all_in(&self) -> bool {
