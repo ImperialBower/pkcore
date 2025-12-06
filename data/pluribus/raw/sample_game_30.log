@@ -36,7 +36,7 @@ STATE:30:ffr225fff:8sQd|5s3c|3s7h|Td8c|JdAs|2dTs:-50|-100|0|0|150|0:MrWhite|Gogo
 STATE:31:r200ffffc/cr335r725c/cc/r2225f:Js4h|7h5h|TcTd|6c4c|Kc6s|Kh6h/5s2sQh/2d/5c:-50|775|-725|0|0|0:Gogo|Budd|Eddie|Bill|Pluribus|MrWhite
 STATE:32:fffr200r900fc/r1600f:KcJh|5d3c|8c2h|8d3d|6sTs|TdQc/2s9d5c:1000|-100|0|0|0|-900:Budd|Eddie|Bill|Pluribus|MrWhite|Gogo
 STATE:33:fr225fffc/cr600r1350c/cr2349f:7h9c|Jh9h|5cJd|KhQd|5dTh|4s8s/TsKd3h/4c:-50|-1350|0|1400|0|0:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd
-STATE:34:fffr222r950ff:6hAh|8c7s|4cQc|7hAs|Jd2d|9cAd:322|-100|0|0|0|-222:Bill|Pluribus|MrWhite|Gogo|Budd|Eddie
+STATE:34:fffr222r950ff:6hAh|8c7s|4cQc|7hAs|Jd2d|9cAd:322|-100|0|0|0|-222:Bill|Pluribus| |Gogo|Budd|Eddie
 STATE:35:fffr250cf/cc/cc/cc:TdAd|3dQc|7c2d|As8c|3h6h|KdAc/3c9hJh/5h/Jd:-250|-100|0|0|0|350:Pluribus|MrWhite|Gogo|Budd|Eddie|Bill
 STATE:36:r225fr700fffc/cr1225c/cr3175f:6s3d|2h5h|9h9d|Th8h|AsQh|TdKc/6d5sQs/Jd:-50|-100|-1225|0|1375|0:MrWhite|Gogo|Budd|Eddie|Bill|Pluribus
 STATE:37:r200ffcfr1350fc/cc/cc/cc:3h2s|AsKc|AcJd|KdQh|JcTs|7h7d/Jh2d4h/Qd/6c:-50|-1350|-200|0|0|1600:Gogo|Budd|Eddie|Bill|Pluribus|MrWhite

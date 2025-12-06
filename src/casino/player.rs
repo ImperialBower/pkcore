@@ -92,8 +92,11 @@ impl Player {
 
             self.bet.add_to(bet_chips);
 
-            // if self.is_all_in()
-            self.state.set(bet_type);
+            if self.is_all_in() {
+                self.state.set(PlayerState::AllIn(self.bet.count()));
+            } else {
+                self.state.set(bet_type);
+            }
 
             Ok(self.chips.count())
         }
