@@ -54,7 +54,9 @@ impl Player {
             log::warn!("InvalidTableAction: Player is not in hand.");
             Err(PKError::InvalidTableAction)
         } else {
-            log::trace!("Player already bet {}", self.bet.count());
+            if self.bet.count() > 0 {
+                log::debug!("Player has already bet {} this round.", self.bet.count());
+            }
             // How many chips are there above what's already committed to the round?
             let additional_bet = bet_type.amount().saturating_sub(self.bet.count());
 
@@ -78,6 +80,8 @@ impl Player {
                 }
                 self.state.set(bet_type);
             }
+
+            log::debug!("Player {} {}", self.state, self.handle);
 
             Ok(self.chips.count())
         }
@@ -189,6 +193,7 @@ impl Player {
     /// # Errors
     ///
     ///  * `PKError::InsufficientChips` - if the player does not have enough chips to make the bet
+    ///  * `PKError::InvalidTableAction` - throws if the player is not able to call.
     pub fn bet_call(&self, amount: usize) -> Result<usize, PKError> {
         self.bet_internal(PlayerState::Call(amount))
     }
@@ -198,18 +203,16 @@ impl Player {
     ///
     /// let player = Player::new_with_chips("The Russian".to_string(), 1_000);
     ///
-    /// let first_bet = player.bet(50);
-    /// let second_bet = player.bet(100);
-    /// let third_bet = player.bet(100);
+    /// let bet = player.bet(50);
+    /// let raise = player.bet_raise(100);
     ///
-    /// assert!(first_bet.is_ok());
-    /// assert!(second_bet.is_ok());
-    /// assert!(third_bet.is_err());
-    /// assert_eq!(PKError::InsufficientChips, third_bet.unwrap_err());
-    /// assert_eq!(950, first_bet.unwrap());
-    /// assert_eq!(900, second_bet.unwrap());
+    /// assert!(bet.is_ok());
+    /// assert!(raise.is_ok());
+    /// assert_eq!(950, bet.unwrap());
+    /// assert_eq!(900, raise.unwrap());
     /// assert_eq!(100, player.bet.count());
     /// assert_eq!(900, player.chips.count());
+    /// assert_eq!(PlayerState::Raise(100), player.state.get());
     /// ```
     ///
     /// # Errors
@@ -217,6 +220,64 @@ impl Player {
     /// * `PKError::InsufficientChips` - if the player does not have enough chips to make the bet
     pub fn bet_raise(&self, amount: usize) -> Result<usize, PKError> {
         self.bet_internal(PlayerState::Raise(amount))
+    }
+
+    /// The only difference between the different bets from a logic perspective is the stored state.
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let player = Player::new_with_chips("The Russian".to_string(), 1_000);
+    ///
+    /// let bet = player.bet(50);
+    /// assert!(bet.is_ok());
+    /// assert_eq!(950, bet.unwrap());
+    ///
+    /// let raise = player.bet_raise(100);
+    /// assert!(raise.is_ok());
+    /// assert_eq!(900, raise.unwrap());
+    ///
+    /// let reraise = player.bet_reraise(150);
+    /// assert!(reraise.is_ok());
+    /// assert_eq!(850, reraise.unwrap());
+    ///
+    /// assert_eq!(150, player.bet.count());
+    /// assert_eq!(850, player.chips.count());
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// * `PKError::InsufficientChips` - if the player does not have enough chips to make the bet
+    pub fn bet_reraise(&self, amount: usize) -> Result<usize, PKError> {
+        self.bet_internal(PlayerState::ReRaise(amount))
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let player = Player::new_with_chips("The Russian".to_string(), 1_000);
+    ///
+    /// // Check
+    /// let check = player.check();
+    /// assert_eq!(PlayerState::Check, player.state.get());
+    ///
+    /// let folds = player.folds();
+    /// // Now the check should return a `PKError::InvalidTableAction`
+    /// let check = player.check();
+    /// assert!(check.is_err());
+    /// assert_eq!(PKError::InvalidTableAction, check.unwrap_err());
+    /// ```
+    /// # Errors
+    ///
+    /// * `PKError::InvalidTableAction` - throws if the player is already all in.
+    pub fn check(&self) -> Result<usize, PKError> {
+        if !self.state.is_active() {
+            log::warn!("InvalidTableAction: Player is not active and cannot check.");
+            return Err(PKError::InvalidTableAction);
+        }
+        self.state.set(PlayerState::Check);
+        log::debug!("Player {} with {} bet checks", self.handle, self.bet.count());
+        Ok(self.chips.count())
     }
 
     /// ```
