@@ -37,8 +37,49 @@ impl Player {
         }
     }
 
+    /// The control flow of the `bet_internal` is forgiving general to specific, but throwing errors
+    /// when the specific isn't right. If you say all in, and you aren't all in, that's an error. Now
+    /// the table mechanism can simply reject the bet or it can force the player to bet all it. It
+    /// up to them.
+    ///
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// * `PKError::InsufficientChips` - if the player does not have enough chips to make the bet
+    fn bet_internal(&self, bet_type: PlayerState) -> Result<usize, PKError> {
+        if bet_type.amount() > self.chips.count() {
+            Err(PKError::InsufficientChips)
+        } else {
+            // How many chips are there above what's already committed to the round?
+            let additional_bet = bet_type.amount().saturating_sub(self.bet.count());
+
+            // Throw an error if the result is 0, meaning they aren't betting anything.
+            if additional_bet == 0 {
+                log::warn!("InsufficientChips: Bet amount already placed.");
+                return Err(PKError::InsufficientChips);
+            }
+
+            let bet_chips = self.chips.bet(additional_bet)?;
+            self.bet.add_to(bet_chips);
+
+            if self.is_all_in() {
+                self.state.set(PlayerState::AllIn(self.bet.count()));
+            } else {
+                if matches!(bet_type, PlayerState::AllIn(_)) {
+                    // If they aren't all in, throw an error.
+                    return Err(PKError::InsufficientChips);
+                } else {
+                    self.state.set(bet_type);
+                }
+            }
+
+            Ok(self.chips.count())
+        }
+    }
+
     /// Working with cells this way is a completely different way of coding in `Rust`. It turns
-    /// your natural instict to make everything mutable on its head. When I first coded this
+    /// your natural instinct to make everything mutable on its head. When I first coded this
     /// I made everything mutable even though I was working with a `Cell`.
     ///
     /// **UPDATE:** The original version of this code simply removed chips from the player's stack,
@@ -75,38 +116,22 @@ impl Player {
     /// # Errors
     ///
     /// * `PKError::InsufficientChips` - if the player does not have enough chips to make the bet
-    pub fn bet_internal(&self, bet_type: PlayerState) -> Result<usize, PKError> {
-        if bet_type.amount() > self.chips.count() {
-            Err(PKError::InsufficientChips)
-        } else {
-            // How many chips are there above what's already committed to the round?
-            let additional_bet = bet_type.amount().saturating_sub(self.bet.count());
-
-            // Throw an error if the result is 0, meaning they aren't betting anything.
-            if additional_bet == 0 {
-                log::warn!("InsufficientChips: Bet amount already placed.");
-                return Err(PKError::InsufficientChips);
-            }
-
-            let bet_chips = self.chips.bet(additional_bet)?;
-
-            self.bet.add_to(bet_chips);
-
-            if self.is_all_in() {
-                self.state.set(PlayerState::AllIn(self.bet.count()));
-            } else {
-                self.state.set(bet_type);
-            }
-
-            Ok(self.chips.count())
-        }
-    }
-
-    /// # Errors
-    ///
-    /// * `PKError::InsufficientChips` - if the player does not have enough chips to make the bet
     pub fn bet(&self, amount: usize) -> Result<usize, PKError> {
         self.bet_internal(PlayerState::Bet(amount))
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let player = Player::new_with_chips("The Russian".to_string(), 1_000);
+    ///
+    ///
+    ///
+    ///
+    /// ```
+    pub fn bet_all_in(&self) -> Result<usize, PKError> {
+        let amount = self.chips.count();
+        self.bet_internal(PlayerState::AllIn(amount))
     }
 
     /// # Errors
