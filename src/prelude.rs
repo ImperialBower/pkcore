@@ -21,17 +21,20 @@ pub use crate::cards;
 pub use crate::cards::Cards;
 pub use crate::cards_cell::CardsCell;
 pub use crate::casino;
+pub use crate::casino::game::ForcedBets;
 pub use crate::casino::player::Player;
 pub use crate::casino::state::*;
 pub use crate::casino::table;
+pub use crate::casino::table::Table;
+pub use crate::casino::table::seats::Seats;
 pub use crate::cc;
 pub use crate::deck;
 pub use crate::deck::Deck;
 pub use crate::deck_cell;
-pub use crate::prelude::table::seats::Seats;
 pub use crate::rank::Rank;
 pub use crate::ranks::Ranks;
 pub use crate::suit::Suit;
+pub use crate::util::data::TestData;
 
 // Re-export core traits
 pub use crate::{Betting, Forgiving, GTO, PKError, Pile, Plurable, SOK, Shifty, SuitShift};

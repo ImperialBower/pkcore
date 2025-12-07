@@ -363,10 +363,7 @@ impl Table {
     }
 
     /// ```
-    /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table::seats::Seats;
-    /// use pkcore::casino::table::Table;
-    /// use pkcore::util::data::TestData;
+    /// use pkcore::prelude::*;
     ///
     /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
     /// let table = Table::nlh_from_seats(seats.clone(), ForcedBets::new(50, 100));
@@ -381,10 +378,7 @@ impl Table {
     }
 
     /// ```
-    /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table::seats::Seats;
-    /// use pkcore::casino::table::Table;
-    /// use pkcore::util::data::TestData;
+    /// use pkcore::prelude::*;
     ///
     /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
     /// let table = Table::nlh_from_seats(seats.clone(), ForcedBets::new(50, 100));
@@ -529,6 +523,21 @@ impl Table {
                 self.log_warn(TableAction::Error(PKError::TooManyCards));
             }
             std::cmp::Ordering::Equal => self.log_warn(TableAction::DeckPassesAudit),
+        }
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// ```
+    /// # Errors
+    ///
+    /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
+    pub fn seat_to_act(&self) -> Result<Ref<'_, Seat>, PKError> {
+        if let Some(seat_to_act) = self.get_seat(self.action_to.value() as usize) {
+            Ok(seat_to_act)
+        } else {
+            Err(PKError::InvalidSeatNumber)
         }
     }
 

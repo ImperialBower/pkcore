@@ -116,6 +116,7 @@ impl PlayerState {
                 | (PlayerState::Call(_), PlayerState::AllIn(_))
                 | (PlayerState::Raise(_), PlayerState::ReRaise(_))
                 | (PlayerState::Raise(_), PlayerState::AllIn(_))
+                | (PlayerState::ReRaise(_), PlayerState::ReRaise(_))
                 | (PlayerState::ReRaise(_), PlayerState::AllIn(_))
         )
     }
