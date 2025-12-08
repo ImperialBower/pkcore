@@ -30,6 +30,11 @@ impl PlayerStateCell {
         self.0.get().is_active()
     }
 
+    #[must_use]
+    pub fn is_blind(&self) -> bool {
+        self.0.get().is_blind()
+    }
+
     pub fn reset(&self) {
         self.0.set(PlayerState::YetToAct);
     }
@@ -121,6 +126,56 @@ impl PlayerState {
         )
     }
 
+    /// DIARY: This shit is going to be ugly AF. Going to test drive the shit out of it and
+    /// refactor. This is the way.
+    #[must_use]
+    pub fn can_act_after_played(&self, other: &PlayerState) -> bool {
+        // A player who is out of the hand can't act before anything.
+        if !self.is_active() {
+            return false;
+        }
+
+        if other.is_blind() {
+            if matches!(self, PlayerState::Check) {
+                // Can't check if there's an active blind.
+                return false;
+            } else if self.is_blind() {
+                // The player who pays out the smaller blind acts first.
+                return self <= other;
+            }
+        }
+
+        if matches!(self, PlayerState::YetToAct) {
+            return true;
+        }
+
+        if matches!(self, PlayerState::AllIn(_)) {
+            return true;
+        }
+
+        //Blind(usize),
+        //     Bet(usize),
+        //     Call(usize),
+        //     Raise(usize),
+        //     ReRaise(usize),
+        //     AllIn(usize),
+        // We've already checked if there's a blind, so you can only check if there's been nothing
+        // but checks.
+        if matches!(self, PlayerState::Check) {
+            return matches!(other, PlayerState::Check);
+        }
+
+        if matches!(self, PlayerState::Bet(_)) {
+            return self.amount() > other.amount();
+        }
+
+        if matches!(self, PlayerState::Raise(_)) || matches!(self, PlayerState::ReRaise(_)) {
+            return self.amount() > other.amount();
+        }
+
+        self.amount() >= other.amount()
+    }
+
     #[must_use]
     pub fn is_active(&self) -> bool {
         !matches!(self, PlayerState::Fold | PlayerState::Out)
@@ -136,6 +191,20 @@ impl PlayerState {
                 | PlayerState::Raise(_)
                 | PlayerState::ReRaise(_)
                 | PlayerState::AllIn(_)
+        )
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert!(PlayerState::Blind(100).is_blind());
+    /// assert!(!PlayerState::Bet(100).is_blind());
+    /// ```
+    #[must_use]
+    pub fn is_blind(&self) -> bool {
+        matches!(
+            self,
+            PlayerState::Blind(_)
         )
     }
 
@@ -223,6 +292,48 @@ mod casino__state_tests {
 
         assert!(!PlayerState::Fold.can(PlayerState::Check));
         assert!(!PlayerState::Fold.can(PlayerState::Bet(100)));
+    }
+
+    #[test]
+    fn can_act_after_played() {
+        // Out of the hand
+        assert!(!PlayerState::Fold.can_act_after_played(&PlayerState::Blind(100)));
+        assert!(!PlayerState::Out.can_act_after_played(&PlayerState::Blind(100)));
+
+        // Vs blind
+        assert!(PlayerState::Blind(50).can_act_after_played(&PlayerState::Blind(50)));
+        assert!(PlayerState::Blind(50).can_act_after_played(&PlayerState::Blind(100)));
+        assert!(!PlayerState::Blind(100).can_act_after_played(&PlayerState::Blind(50)));
+
+        // Yet to act
+        assert!(PlayerState::YetToAct.can_act_after_played(&PlayerState::Check));
+        assert!(PlayerState::YetToAct.can_act_after_played(&PlayerState::Bet(100)));
+        assert!(PlayerState::YetToAct.can_act_after_played(&PlayerState::AllIn(100)));
+        assert!(PlayerState::YetToAct.can_act_after_played(&PlayerState::Fold));
+
+        // Check
+        assert!(PlayerState::Check.can_act_after_played(&PlayerState::Check));
+        assert!(!PlayerState::Check.can_act_after_played(&PlayerState::Blind(50)));
+        assert!(!PlayerState::Check.can_act_after_played(&PlayerState::Bet(50)));
+
+        assert!(PlayerState::AllIn(50).can_act_after_played(&PlayerState::Blind(100)));
+        assert!(PlayerState::AllIn(50).can_act_after_played(&PlayerState::Bet(25)));
+        assert!(PlayerState::AllIn(50).can_act_after_played(&PlayerState::Raise(2500)));
+
+        assert!(PlayerState::Bet(150).can_act_after_played(&PlayerState::Blind(100)));
+        assert!(PlayerState::Bet(500).can_act_after_played(&PlayerState::Bet(100)));
+        assert!(PlayerState::Bet(500).can_act_after_played(&PlayerState::AllIn(100)));
+        assert!(!PlayerState::Bet(500).can_act_after_played(&PlayerState::Bet(500)));
+        assert!(!PlayerState::Bet(50).can_act_after_played(&PlayerState::Blind(100)));
+        assert!(!PlayerState::Bet(50).can_act_after_played(&PlayerState::AllIn(100)));
+        assert!(!PlayerState::Bet(150).can_act_after_played(&PlayerState::Raise(100)));
+
+        assert!(PlayerState::Raise(150).can_act_after_played(&PlayerState::Blind(100)));
+        assert!(PlayerState::Raise(500).can_act_after_played(&PlayerState::Bet(100)));
+        assert!(PlayerState::Raise(500).can_act_after_played(&PlayerState::AllIn(100)));
+        assert!(!PlayerState::Raise(500).can_act_after_played(&PlayerState::Bet(500)));
+        assert!(!PlayerState::Raise(50).can_act_after_played(&PlayerState::Blind(100)));
+        assert!(!PlayerState::Raise(50).can_act_after_played(&PlayerState::AllIn(100)));
     }
 
     /// DIARY: Too tired to write unit tests. Hey CoPilot, write some unit tests for me.

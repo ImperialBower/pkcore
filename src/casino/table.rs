@@ -777,6 +777,14 @@ mod casino__table_tests {
     }
 
     #[test]
+    fn get_seat() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+
+        let seat = table.get_seat(6).unwrap();
+        assert_eq!("Barry Greenstein", seat.player.handle);
+    }
+
+    #[test]
     fn has_card_at_depth() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
 
@@ -897,11 +905,12 @@ mod casino__table_tests {
     }
 
     #[test]
-    fn seat() {
+    fn seat_to_act__simple() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        table.set_action_to(5);
 
-        let seat = table.get_seat(6).unwrap();
-        assert_eq!("Barry Greenstein", seat.player.handle);
+        let seat = table.seat_to_act().unwrap();
+        assert_eq!("Cory Zeidman", seat.player.handle);
     }
 
     #[test]
