@@ -213,6 +213,24 @@ impl Seats {
         }
     }
 
+    /// ```
+    /// use pkcore::prelude::*;
+    /// use pkcore::util::data::TestData;
+    ///
+    /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+    ///
+    /// ```
+    /// # Errors
+    ///
+    /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
+    pub fn seat_to_act(&self, action_to: usize) -> Result<Ref<'_, Seat>, PKError> {
+        if let Some(seat_to_act) = self.get_seat(action_to) {
+            Ok(seat_to_act)
+        } else {
+            Err(PKError::InvalidSeatNumber)
+        }
+    }
+
     #[must_use]
     pub fn size(&self) -> u8 {
         if let Ok(size) = u8::try_from(self.0.len()) {
