@@ -541,6 +541,15 @@ impl Table {
         }
     }
 
+    pub fn next_to_act(&self) {
+        let bint_2act =
+            DrainableBintCell::new_with_value(self.seats.size(), self.seats.size() as usize, self.action_to.value());
+
+
+
+        todo!()
+    }
+
     pub fn set_action_to(&self, seat_number: u8) {
         self.action_to.set(seat_number);
     }

@@ -201,6 +201,10 @@ impl Seats {
         }
     }
 
+    pub fn iter(&self) -> std::slice::Iter<'_, SeatCell> {
+        self.0.iter()
+    }
+
     /// Clears the `PlayerState` for all the seats.
     pub fn reset_state(&self) {
         for seat_cell in &self.0 {
