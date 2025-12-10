@@ -223,9 +223,9 @@ impl Seats {
     /// # Errors
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
-    pub fn seat_to_act(&self, action_to: usize) -> Result<Ref<'_, Seat>, PKError> {
-        if let Some(seat_to_act) = self.get_seat(action_to) {
-            Ok(seat_to_act)
+    pub fn seat_to_act(&self, utg: usize) -> Result<Ref<'_, Seat>, PKError> {
+        if let Some(seat_utg) = self.get_seat(utg) {
+            Ok(seat_utg)
         } else {
             Err(PKError::InvalidSeatNumber)
         }
