@@ -18,6 +18,18 @@ impl PlayerStateCell {
     /// ```
     /// use pkcore::prelude::*;
     ///
+    /// let hero_cell = PlayerStateCell::new(PlayerState::Raise(100));
+    /// let villain_cell = PlayerStateCell::new(PlayerState::Bet(50));
+    ///
+    /// assert!(hero_cell.can_act_after_played(&villain_cell));
+    /// ```
+    pub fn can_act_after_played(&self, other: &PlayerStateCell) -> bool {
+        self.get().can_act_after_played(&other.get())
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
     /// let state_cell = PlayerStateCell::new(PlayerState::YetToAct);
     /// assert_eq!(state_cell.get(), PlayerState::YetToAct);
     /// ```
@@ -43,6 +55,7 @@ impl PlayerStateCell {
     /// use pkcore::prelude::*;
     ///
     /// let state_cell = PlayerStateCell::new(PlayerState::YetToAct);
+    ///
     /// assert_eq!(state_cell.set(PlayerState::Bet(100)), Some(PlayerState::Bet(100)));
     /// assert_eq!(state_cell.get(), PlayerState::Bet(100));
     /// assert_eq!(state_cell.set(PlayerState::Check), None);
@@ -326,10 +339,10 @@ mod casino__state_tests {
         assert!(PlayerState::AllIn(50).can_act_after_played(&PlayerState::Bet(25)));
         assert!(PlayerState::AllIn(50).can_act_after_played(&PlayerState::Raise(2500)));
 
+        assert!(!PlayerState::Bet(500).can_act_after_played(&PlayerState::Bet(100)));
         assert!(PlayerState::Bet(150).can_act_after_played(&PlayerState::Blind(100)));
         assert!(PlayerState::Bet(500).can_act_after_played(&PlayerState::AllIn(100)));
         assert!(PlayerState::Bet(500).can_act_after_played(&PlayerState::Call(100)));
-        assert!(!PlayerState::Bet(500).can_act_after_played(&PlayerState::Bet(100)));
         assert!(!PlayerState::Bet(500).can_act_after_played(&PlayerState::Call(500)));
         assert!(!PlayerState::Bet(500).can_act_after_played(&PlayerState::Bet(500)));
         assert!(!PlayerState::Bet(50).can_act_after_played(&PlayerState::Blind(100)));

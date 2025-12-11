@@ -5,6 +5,7 @@ use crate::cards_cell::CardsCell;
 use crate::casino::table::seat::{Seat, SeatCell};
 use log;
 use std::cell::{Ref, RefMut};
+use bint::DrainableBintCell;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Seats(Box<[SeatCell]>);
@@ -184,14 +185,14 @@ impl Seats {
     }
 
     #[must_use]
-    pub fn get_seat(&self, index: usize) -> Option<Ref<'_, Seat>> {
-        let seat_cell = self.0.get(index)?;
+    pub fn get_seat(&self, index: u8) -> Option<Ref<'_, Seat>> {
+        let seat_cell = self.0.get(index as usize)?;
         Some(seat_cell.borrow())
     }
 
     #[must_use]
-    pub fn get_seat_mut(&self, index: usize) -> Option<RefMut<'_, Seat>> {
-        let seat_cell = self.0.get(index)?;
+    pub fn get_seat_mut(&self, index: u8) -> Option<RefMut<'_, Seat>> {
+        let seat_cell = self.0.get(index as usize)?;
         match seat_cell.try_borrow_mut() {
             Ok(seat) => Some(seat),
             Err(e) => {
@@ -205,29 +206,47 @@ impl Seats {
         self.0.iter()
     }
 
-    /// Clears the `PlayerState` for all the seats.
-    pub fn reset_state(&self) {
-        for seat_cell in &self.0 {
-            let seat = seat_cell.borrow_mut();
-            seat.player.state.reset();
-        }
-    }
-
     /// ```
     /// use pkcore::prelude::*;
     /// use pkcore::util::data::TestData;
     ///
     /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
     ///
+    /// let _ = seats.next_to_act(3).unwrap();
+    ///
     /// ```
     /// # Errors
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
-    pub fn seat_to_act(&self, utg: usize) -> Result<Ref<'_, Seat>, PKError> {
+    pub fn next_to_act(&self, utg: u8) -> Result<Ref<'_, Seat>, PKError> {
         if let Some(seat_utg) = self.get_seat(utg) {
+
+            let bint = DrainableBintCell::new_with_value(self.size(), self.size() as usize - 1, utg);
+            let mut seat_to_act: u8 = utg;
+
+            while let Some(seat_index) = bint.up() {
+                // let seat_cell = self.0.get(seat_index as usize).ok_or(PKError::InvalidSeatNumber)?;
+                // let seat = seat_cell.borrow();
+
+                if let Some(seat_next) = self.get_seat(bint.value()) {
+                    println!("{seat_index} : {seat_next}");
+                    // if seat_utg.player.state.ca
+
+                }
+            }
+
+
             Ok(seat_utg)
         } else {
             Err(PKError::InvalidSeatNumber)
+        }
+    }
+
+    /// Clears the `PlayerState` for all the seats.
+    pub fn reset_state(&self) {
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow_mut();
+            seat.player.state.reset();
         }
     }
 
@@ -382,6 +401,15 @@ mod casino__table__seats_tests {
     fn count_cards_in_play() {
         let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
         assert_eq!(16, seats.count_cards_in_play());
+    }
+
+    #[test]
+    fn next_to_act() {
+        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+
+        let seat = seats.next_to_act(3).unwrap();
+
+        assert_eq!("Gus Hansen", seat.player.handle);
     }
 
     #[test]

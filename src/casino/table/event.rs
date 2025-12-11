@@ -169,7 +169,7 @@ impl TableLog {
         self.0.borrow_mut().clear();
     }
 
-    pub fn commentary(&self, seats: &Seats, index: usize) -> Option<String> {
+    pub fn commentary(&self, seats: &Seats, index: u8) -> Option<String> {
         let player: String = match seats.get_seat(index) {
             None => return None,
             Some(s) => s.player.handle.clone(),
