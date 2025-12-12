@@ -432,6 +432,18 @@ impl Table {
         todo!()
     }
 
+    pub fn is_ready_for_action(&self) -> bool {
+        let bint = DrainableBintCell::new_with_value(
+            self.seats.size(),
+            self.seats.size() as usize - 2,
+            self.action_to.value(),
+        );
+
+        // if self.
+
+        todo!()
+    }
+
     fn log_debug(&self, action: TableAction) {
         let handle = self.get_seat_handle(action.get_seat().unwrap_or_default());
         log::debug!("{}", action.commentary(&handle));
@@ -543,8 +555,6 @@ impl Table {
 
     pub fn next_to_act(&self) {
         // let bint_2act = DrainableBintCell::new_with_value(self.seats.size(), self.seats.size() as usize, self.action_to.value());
-
-
 
         todo!();
     }

@@ -47,6 +47,17 @@ impl PlayerStateCell {
         self.0.get().is_blind()
     }
 
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert!(PlayerStateCell::new(PlayerState::YetToAct).is_yet_to_act());
+    /// assert!(!PlayerStateCell::new(PlayerState::Bet(100)).is_yet_to_act());
+    /// ```
+    #[must_use]
+    pub fn is_yet_to_act(&self) -> bool {
+        self.get().is_yet_to_act()
+    }
+
     pub fn reset(&self) {
         self.0.set(PlayerState::YetToAct);
     }
@@ -225,6 +236,17 @@ impl PlayerState {
     #[must_use]
     pub fn is_blind(&self) -> bool {
         matches!(self, PlayerState::Blind(_))
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert!(PlayerState::YetToAct.is_yet_to_act());
+    /// assert!(!PlayerState::Bet(100).is_blind());
+    /// ```
+    #[must_use]
+    pub fn is_yet_to_act(&self) -> bool {
+        matches!(self, PlayerState::YetToAct)
     }
 
     pub fn reset(&mut self) {

@@ -1,6 +1,6 @@
 use crate::cards_cell::CardsCell;
 use crate::casino::player::Player;
-use crate::prelude::BoxedCards;
+use crate::prelude::{BoxedCards, PlayerState};
 use std::cell::{BorrowMutError, Ref, RefCell, RefMut};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -26,6 +26,10 @@ impl SeatCell {
 
     pub fn into_inner(self) -> Seat {
         self.0.into_inner()
+    }
+
+    pub fn is_yet_to_act(&self) -> bool {
+        self.borrow().player.state.is_yet_to_act()
     }
 
     pub fn get_mut(&mut self) -> &mut Seat {
@@ -89,6 +93,10 @@ impl Seat {
 
     pub fn is_empty(&self) -> bool {
         self.player.id == uuid::Uuid::nil()
+    }
+
+    pub fn is_yet_to_act(&self) -> bool {
+        self.player.state.is_yet_to_act()
     }
 }
 

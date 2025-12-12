@@ -3,9 +3,9 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::table::seat::{Seat, SeatCell};
+use bint::DrainableBintCell;
 use log;
 use std::cell::{Ref, RefMut};
-use bint::DrainableBintCell;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Seats(Box<[SeatCell]>);
@@ -211,18 +211,19 @@ impl Seats {
     /// use pkcore::util::data::TestData;
     ///
     /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
-    ///
-    /// let _ = seats.next_to_act(3).unwrap();
-    ///
+    /// assert_eq!("Gus Hansen", seats.next_to_act(3).unwrap().player.handle);
     /// ```
     /// # Errors
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     pub fn next_to_act(&self, utg: u8) -> Result<Ref<'_, Seat>, PKError> {
         if let Some(seat_utg) = self.get_seat(utg) {
+            if seat_utg.player.state.is_yet_to_act() {
+                return Ok(seat_utg);
+            }
 
             let bint = DrainableBintCell::new_with_value(self.size(), self.size() as usize - 1, utg);
-            let mut seat_to_act: u8 = utg;
+            let mut seat_index: u8 = utg;
 
             while let Some(seat_index) = bint.up() {
                 // let seat_cell = self.0.get(seat_index as usize).ok_or(PKError::InvalidSeatNumber)?;
@@ -231,12 +232,10 @@ impl Seats {
                 if let Some(seat_next) = self.get_seat(bint.value()) {
                     println!("{seat_index} : {seat_next}");
                     // if seat_utg.player.state.ca
-
                 }
             }
 
-
-            Ok(seat_utg)
+            todo!()
         } else {
             Err(PKError::InvalidSeatNumber)
         }
