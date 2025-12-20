@@ -238,6 +238,11 @@ impl PlayerState {
         matches!(self, PlayerState::Blind(_))
     }
 
+    #[must_use]
+    pub fn is_opener(&self) -> bool {
+        matches!(self, PlayerState::Bet(_) | PlayerState::Call(_))
+    }
+
     /// ```
     /// use pkcore::prelude::*;
     ///

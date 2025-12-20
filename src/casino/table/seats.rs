@@ -184,6 +184,16 @@ impl Seats {
         self.0.is_empty()
     }
 
+    pub fn is_to_utg_preflop(&self) -> bool {
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            if seat.player.state.is_yet_to_act() {
+                return true;
+            }
+        }
+        false
+    }
+
     #[must_use]
     pub fn get_seat(&self, index: u8) -> Option<Ref<'_, Seat>> {
         let seat_cell = self.0.get(index as usize)?;
@@ -211,29 +221,38 @@ impl Seats {
     /// use pkcore::util::data::TestData;
     ///
     /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
-    /// assert_eq!("Gus Hansen", seats.next_to_act(3).unwrap().player.handle);
+    ///
+    /// let gus = seats.next_to_act(3).unwrap();
+    /// assert_eq!("Gus Hansen", gus.player.handle);
+    ///
+    /// gus.player.state.set(PlayerState::Bet(100));
+    /// drop(gus);
+    ///
+    /// // let daniel = seats.next_to_act(3).unwrap();
+    /// // assert_eq!("Gus Hansen", daniel.player.handle);
+    ///
     /// ```
     /// # Errors
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
-    pub fn next_to_act(&self, utg: u8) -> Result<Ref<'_, Seat>, PKError> {
-        if let Some(seat_utg) = self.get_seat(utg) {
+    pub fn next_to_act(&self, utg: u8) -> Result<RefMut<'_, Seat>, PKError> {
+        if let Some(seat_utg) = self.get_seat_mut(utg) {
             if seat_utg.player.state.is_yet_to_act() {
                 return Ok(seat_utg);
             }
 
             let bint = DrainableBintCell::new_with_value(self.size(), self.size() as usize - 1, utg);
             let mut seat_index: u8 = utg;
-
-            while let Some(seat_index) = bint.up() {
-                // let seat_cell = self.0.get(seat_index as usize).ok_or(PKError::InvalidSeatNumber)?;
-                // let seat = seat_cell.borrow();
-
-                if let Some(seat_next) = self.get_seat(bint.value()) {
-                    println!("{seat_index} : {seat_next}");
-                    // if seat_utg.player.state.ca
-                }
-            }
+            //
+            // if let Some=(next_seat_numer) = bint.up() {
+            //     // let seat_cell = self.0.get(seat_index as usize).ok_or(PKError::InvalidSeatNumber)?;
+            //     // let seat = seat_cell.borrow();
+            //
+            //     if let Some(seat_next) = self.get_seat(bint.value()) {
+            //         println!("{seat_index} : {seat_next}");
+            //         // if seat_utg.player.state.ca
+            //     }
+            // }
 
             todo!()
         } else {
@@ -296,6 +315,36 @@ impl Seats {
             }
         }
         total
+    }
+
+    /// Iterate indices starting at `start`, wrapping once through all seats.
+    #[must_use]
+    pub fn indices_from(&self, start: u8) -> impl Iterator<Item = usize> + '_ {
+        let len = self.0.len();
+        (0..len).map(move |offset| (start as usize + offset) % len)
+    }
+
+    /// Iterate immutably over seats starting at `start`, wrapping through all seats.
+    pub fn iter_from(&self, start: u8) -> impl Iterator<Item = Ref<'_, Seat>> {
+        self.indices_from(start).map(|i| self.0[i].borrow())
+    }
+
+    /// Iterate mutably over seats starting at `start`, wrapping through all seats.
+    /// Note: avoid holding on to the returned RefMut across iterations.
+    pub fn iter_from_mut(&self, start: u8) -> impl Iterator<Item = RefMut<'_, Seat>> {
+        self.indices_from(start).map(|i| self.0[i].borrow_mut())
+    }
+
+    /// Run a closure for each seat starting at `start`, passing (index, &Seat).
+    /// Each borrow is dropped before the next iteration.
+    pub fn for_each_from<F>(&self, start: u8, mut f: F)
+    where
+        F: FnMut(usize, &Seat),
+    {
+        for i in self.indices_from(start) {
+            let seat_ref = self.0[i].borrow();
+            f(i, &*seat_ref);
+        }
     }
 }
 
@@ -459,5 +508,50 @@ mod casino__table__seats_tests {
         assert!(!seat.is_empty());
 
         print!("{seats}");
+    }
+
+    #[test]
+    fn iter_from_wraps_in_order() {
+        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let order: Vec<usize> = seats.indices_from(6).take(4).collect();
+        assert_eq!(order, vec![6, 7, 0, 1]);
+
+        // Sanity: collect a couple of handles starting at 6
+        let handles: Vec<String> = seats.iter_from(6).take(2).map(|s| s.player.handle.clone()).collect();
+        assert_eq!(handles.len(), 2);
+    }
+
+    #[test]
+    fn iter_from_wraps_confirm_next_to_act() {
+        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+
+        let utg: u8 = 3;
+
+        if let Some(seat_utg) = seats.get_seat(utg) {
+            let order: Vec<usize> = seats.indices_from(utg + 1).take((seats.size() - 1) as usize).collect();
+            assert_eq!(order, vec![4, 5, 6, 7, 0, 1, 2]);
+            for i in order.iter() {
+                let seat = seats.get_seat(*i as u8).unwrap();
+                if seat.player.state.is_yet_to_act() {
+                    // assert_eq!(seat.player.handle, "Gus Hansen");
+                    break;
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn iterror() {
+        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+
+        let gus = seats.next_to_act(3).unwrap();
+        assert_eq!("Gus Hansen", gus.player.handle);
+
+        gus.player.state.set(PlayerState::Bet(100));
+
+        drop(gus);
+
+        // let daniel = seats.next_to_act(3).unwrap();
+        // assert_eq!("Gus Hansen", daniel.player.handle);
     }
 }
