@@ -85,6 +85,20 @@ impl PlayerStateCell {
     }
 }
 
+impl Agency for PlayerStateCell {
+    fn can_act(&self) -> bool {
+        self.get().can_act()
+    }
+
+    fn can_given(&self, next: &PlayerState) -> bool {
+        self.get().can_given(next)
+    }
+
+    fn can_given_against(&self, next: &PlayerState, other: &PlayerState) -> bool {
+        self.get().can_given_against(next, other)
+    }
+}
+
 impl Display for PlayerStateCell {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let internal = self.0.get();
@@ -234,6 +248,11 @@ impl PlayerState {
     }
 
     #[must_use]
+    pub fn is_fold(&self) -> bool {
+        matches!(self, PlayerState::Fold)
+    }
+
+    #[must_use]
     pub fn is_opener(&self) -> bool {
         matches!(self, PlayerState::Bet(_) | PlayerState::Call(_))
     }
@@ -294,8 +313,45 @@ impl Agency for PlayerState {
         )
     }
 
+    #[allow(clippy::unnested_or_patterns)]
     fn can_given_against(&self, next: &PlayerState, other: &PlayerState) -> bool {
-        todo!()
+        if self.can_given(next) {
+            if self.is_all_in() {
+                // A player who is all-in can't act against anything.
+                return false;
+            }
+
+            // Comparing against a player who is out of the hand, any action is valid.
+            if !other.is_active() || next.is_fold() {
+                return true;
+            }
+            // Against another player, the amount of the action needs to be at least as much
+            // as the other players.
+            if next < other {
+                return false;
+            }
+            matches!(
+                (next, other),
+                (_, PlayerState::YetToAct)
+                    | (PlayerState::Check, PlayerState::Check)
+                    | (PlayerState::Call(_), PlayerState::Check)
+                    | (PlayerState::Call(_), PlayerState::Bet(_))
+                    | (PlayerState::Call(_), PlayerState::Raise(_))
+                    | (PlayerState::Call(_), PlayerState::ReRaise(_))
+                    | (PlayerState::Call(_), PlayerState::AllIn(_))
+                    | (PlayerState::Bet(_), PlayerState::Check)
+                    | (PlayerState::Raise(_), PlayerState::Check)
+                    | (PlayerState::Raise(_), PlayerState::Bet(_))
+                    | (PlayerState::ReRaise(_), PlayerState::Bet(_))
+                    | (PlayerState::ReRaise(_), PlayerState::Check)
+                    | (PlayerState::ReRaise(_), PlayerState::Raise(_))
+                    | (PlayerState::ReRaise(_), PlayerState::ReRaise(_))
+                    | (PlayerState::AllIn(_), _)
+                    | (PlayerState::Blind(_), _)
+            )
+        } else {
+            false
+        }
     }
 }
 
@@ -418,6 +474,132 @@ mod casino__state_tests {
         assert!(!PlayerState::Fold.can_given(&PlayerState::ReRaise(100)));
         assert!(!PlayerState::Fold.can_given(&PlayerState::AllIn(100)));
         assert!(!PlayerState::Fold.can_given(&PlayerState::AllIn(100)));
+    }
+
+    #[test]
+    fn agency__can_given_against() {
+        let state = PlayerState::YetToAct;
+
+        assert!(state.can_given_against(&PlayerState::Check, &PlayerState::Fold));
+        assert!(state.can_given_against(&PlayerState::Check, &PlayerState::YetToAct));
+        assert!(state.can_given_against(&PlayerState::Check, &PlayerState::Check));
+        // Player is already YetToAct, has to do something.
+        assert!(!state.can_given_against(&PlayerState::YetToAct, &PlayerState::Check));
+        assert!(!state.can_given_against(&PlayerState::Check, &PlayerState::Blind(50)));
+
+        // These follow the same rules
+        asserter(&PlayerState::Check);
+        asserter(&PlayerState::Bet(100));
+
+        let state = PlayerState::Raise(300);
+        assert!(state.can_given_against(&PlayerState::Fold, &PlayerState::Bet(50)));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::Fold));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::YetToAct));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::Check));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::Bet(50)));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::Raise(50)));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::ReRaise(50)));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::AllIn(50)));
+        assert!(state.can_given_against(&PlayerState::ReRaise(500), &PlayerState::Check));
+        assert!(state.can_given_against(&PlayerState::ReRaise(500), &PlayerState::Bet(50)));
+        assert!(state.can_given_against(&PlayerState::ReRaise(500), &PlayerState::Raise(50)));
+        assert!(state.can_given_against(&PlayerState::ReRaise(500), &PlayerState::ReRaise(450)));
+        assert!(state.can_given_against(&PlayerState::AllIn(500), &PlayerState::Check));
+        assert!(state.can_given_against(&PlayerState::AllIn(500), &PlayerState::Bet(50)));
+        assert!(state.can_given_against(&PlayerState::AllIn(500), &PlayerState::Raise(50)));
+        assert!(state.can_given_against(&PlayerState::AllIn(500), &PlayerState::ReRaise(50)));
+        assert!(state.can_given_against(&PlayerState::AllIn(500), &PlayerState::AllIn(50)));
+
+        assert!(!state.can_given_against(&PlayerState::Check, &PlayerState::Check));
+        // You can't bet if you're already bet, only call, raise, re-raise or all-in.
+        assert!(!state.can_given_against(&PlayerState::Bet(500), &PlayerState::Check));
+        assert!(!state.can_given_against(&PlayerState::Bet(500), &PlayerState::Bet(400)));
+        assert!(!state.can_given_against(&PlayerState::Raise(500), &PlayerState::Check));
+        assert!(!state.can_given_against(&PlayerState::Raise(500), &PlayerState::Bet(50)));
+        assert!(!state.can_given_against(&PlayerState::Raise(500), &PlayerState::Raise(500)));
+        assert!(!state.can_given_against(&PlayerState::Raise(500), &PlayerState::ReRaise(500)));
+
+        let state = PlayerState::ReRaise(300);
+        assert!(state.can_given_against(&PlayerState::Fold, &PlayerState::Bet(50)));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::Fold));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::YetToAct));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::Check));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::Bet(50)));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::Raise(50)));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::ReRaise(50)));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::AllIn(50)));
+        assert!(state.can_given_against(&PlayerState::ReRaise(500), &PlayerState::Check));
+        assert!(state.can_given_against(&PlayerState::ReRaise(500), &PlayerState::Bet(50)));
+        assert!(state.can_given_against(&PlayerState::ReRaise(500), &PlayerState::Raise(50)));
+        assert!(state.can_given_against(&PlayerState::ReRaise(500), &PlayerState::ReRaise(450)));
+        assert!(state.can_given_against(&PlayerState::AllIn(500), &PlayerState::Check));
+        assert!(state.can_given_against(&PlayerState::AllIn(500), &PlayerState::Bet(50)));
+        assert!(state.can_given_against(&PlayerState::AllIn(500), &PlayerState::Raise(50)));
+        assert!(state.can_given_against(&PlayerState::AllIn(500), &PlayerState::ReRaise(50)));
+        assert!(state.can_given_against(&PlayerState::AllIn(500), &PlayerState::AllIn(50)));
+
+        assert!(!state.can_given_against(&PlayerState::Check, &PlayerState::Check));
+        // You can't bet if you're already bet, only call, raise, re-raise or all-in.
+        assert!(!state.can_given_against(&PlayerState::Bet(500), &PlayerState::Check));
+        assert!(!state.can_given_against(&PlayerState::Bet(500), &PlayerState::Bet(400)));
+        assert!(!state.can_given_against(&PlayerState::Raise(500), &PlayerState::Check));
+        assert!(!state.can_given_against(&PlayerState::Raise(500), &PlayerState::Bet(50)));
+        assert!(!state.can_given_against(&PlayerState::Raise(500), &PlayerState::Raise(500)));
+        assert!(!state.can_given_against(&PlayerState::Raise(500), &PlayerState::ReRaise(500)));
+
+        let state = PlayerState::AllIn(1000);
+        assert!(!state.can_given_against(&PlayerState::Fold, &PlayerState::Bet(50)));
+        assert!(!state.can_given_against(&PlayerState::Call(500), &PlayerState::Fold));
+        assert!(!state.can_given_against(&PlayerState::Call(500), &PlayerState::YetToAct));
+        assert!(!state.can_given_against(&PlayerState::Call(500), &PlayerState::Check));
+        assert!(!state.can_given_against(&PlayerState::Call(500), &PlayerState::Bet(50)));
+        assert!(!state.can_given_against(&PlayerState::Call(500), &PlayerState::Raise(50)));
+        assert!(!state.can_given_against(&PlayerState::Call(500), &PlayerState::ReRaise(50)));
+        assert!(!state.can_given_against(&PlayerState::Call(500), &PlayerState::AllIn(50)));
+        assert!(!state.can_given_against(&PlayerState::Raise(500), &PlayerState::Check));
+        assert!(!state.can_given_against(&PlayerState::Raise(500), &PlayerState::Bet(50)));
+        assert!(!state.can_given_against(&PlayerState::ReRaise(500), &PlayerState::Check));
+        assert!(!state.can_given_against(&PlayerState::ReRaise(500), &PlayerState::Bet(50)));
+        assert!(!state.can_given_against(&PlayerState::ReRaise(500), &PlayerState::Raise(50)));
+        assert!(!state.can_given_against(&PlayerState::AllIn(500), &PlayerState::Check));
+        assert!(!state.can_given_against(&PlayerState::AllIn(500), &PlayerState::Bet(50)));
+        assert!(!state.can_given_against(&PlayerState::AllIn(500), &PlayerState::Raise(50)));
+        assert!(!state.can_given_against(&PlayerState::AllIn(500), &PlayerState::ReRaise(50)));
+        assert!(!state.can_given_against(&PlayerState::AllIn(500), &PlayerState::AllIn(50)));
+        assert!(!state.can_given_against(&PlayerState::Check, &PlayerState::Check));
+        // You can't bet if you're already bet, only call, raise, re-raise or all-in.
+        assert!(!state.can_given_against(&PlayerState::Bet(500), &PlayerState::Check));
+        assert!(!state.can_given_against(&PlayerState::Bet(500), &PlayerState::Bet(400)));
+        assert!(!state.can_given_against(&PlayerState::Raise(500), &PlayerState::Raise(500)));
+        assert!(!state.can_given_against(&PlayerState::Raise(500), &PlayerState::ReRaise(500)));
+    }
+
+    fn asserter(state: &PlayerState) {
+        assert!(state.can_given_against(&PlayerState::Fold, &PlayerState::Bet(50)));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::Fold));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::YetToAct));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::Check));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::Bet(50)));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::Raise(50)));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::ReRaise(50)));
+        assert!(state.can_given_against(&PlayerState::Call(500), &PlayerState::AllIn(50)));
+        assert!(state.can_given_against(&PlayerState::Raise(500), &PlayerState::Check));
+        assert!(state.can_given_against(&PlayerState::Raise(500), &PlayerState::Bet(50)));
+        assert!(state.can_given_against(&PlayerState::ReRaise(500), &PlayerState::Check));
+        assert!(state.can_given_against(&PlayerState::ReRaise(500), &PlayerState::Bet(50)));
+        assert!(state.can_given_against(&PlayerState::ReRaise(500), &PlayerState::Raise(50)));
+        assert!(state.can_given_against(&PlayerState::AllIn(500), &PlayerState::Check));
+        assert!(state.can_given_against(&PlayerState::AllIn(500), &PlayerState::Bet(50)));
+        assert!(state.can_given_against(&PlayerState::AllIn(500), &PlayerState::Raise(50)));
+        assert!(state.can_given_against(&PlayerState::AllIn(500), &PlayerState::ReRaise(50)));
+        assert!(state.can_given_against(&PlayerState::AllIn(500), &PlayerState::AllIn(50)));
+
+        assert!(!state.can_given_against(&PlayerState::Check, &PlayerState::Check));
+        // You can't bet if you're already bet, only call, raise, re-raise or all-in.
+        assert!(!state.can_given_against(&PlayerState::Bet(500), &PlayerState::Check));
+        assert!(!state.can_given_against(&PlayerState::Bet(500), &PlayerState::Bet(400)));
+        assert!(!state.can_given_against(&PlayerState::Raise(500), &PlayerState::Raise(500)));
+        assert!(!state.can_given_against(&PlayerState::Raise(500), &PlayerState::ReRaise(500)));
     }
 
     #[test]

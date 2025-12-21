@@ -777,8 +777,6 @@ mod casino__table_tests {
         assert_eq!(PlayerState::Blind(50), sb_seat.player.state.get());
         assert_eq!(100, bb_seat.player.bet.count());
         assert_eq!(PlayerState::Blind(100), bb_seat.player.state.get());
-
-
     }
 
     #[test]
