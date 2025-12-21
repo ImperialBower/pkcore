@@ -24,7 +24,7 @@ impl PlayerStateCell {
     /// assert!(hero_cell.can_act_after_played(&villain_cell));
     /// ```
     pub fn can_act_after_played(&self, other: &PlayerStateCell) -> bool {
-        self.get().can_act_after_played(&other.get())
+        self.get().can_act_after(&other.get())
     }
 
     /// ```
@@ -150,10 +150,46 @@ impl PlayerState {
         )
     }
 
+    /// # Player Agency Action perspectives
+    ///
+    /// - CAN? Can they act at all? _The current function._
+    /// - CAN THIS IF THAT? Can they do something given what they did before?
+    /// - CAN_GIVEN? Can they do something given what another player has done?
+    ///
+    /// The perspective on this call is that given this `PlayerState` is any other action possible,
+    /// regardless of any other player's state.
+    ///
+    /// - If `self's PlayerState` is not active, the player cannot act in the hand.
+    /// - If `self's PlayerState` is all-in, the player cannot perform any other actions. Their hand and chips are locked.
+    #[must_use]
+    pub fn can_act(&self) -> bool {
+        self.is_active() && !self.is_all_in()
+    }
+
+    ///
+    #[must_use]
+    pub fn can_do_this_if_did_that(&self, new: &PlayerState) -> bool {
+        if !self.is_active() {
+            return false;
+        }
+
+        todo!()
+    }
+
+    #[must_use]
+    pub fn can_act_given(&self, new: &PlayerState, other: &PlayerState) -> bool {
+        if !self.is_active() {
+            return false;
+        }
+
+        todo!()
+    }
+
+
     /// DIARY: This shit is going to be ugly AF. Going to test drive the shit out of it and
     /// refactor. This is the way.
     #[must_use]
-    pub fn can_act_after_played(&self, other: &PlayerState) -> bool {
+    pub fn can_act_after(&self, other: &PlayerState) -> bool {
         // A player who is out of the hand can't act before anything.
         if !self.is_active() {
             return false;
@@ -209,9 +245,29 @@ impl PlayerState {
         self.amount() >= other.amount()
     }
 
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert!(PlayerState::AllIn(100).is_blind());
+    /// assert!(!PlayerState::Fold.is_blind());
+    /// assert!(!PlayerState::Out.is_blind());
+    /// ```
     #[must_use]
     pub fn is_active(&self) -> bool {
         !matches!(self, PlayerState::Fold | PlayerState::Out)
+    }
+
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert!(PlayerState::AllIn(100).is_all_in());
+    /// assert!(!PlayerState::Blind(100).is_all_in());
+    /// assert!(!PlayerState::Fold.is_all_in());
+    /// ```
+    #[must_use]
+    pub fn is_all_in(&self) -> bool {
+        matches!(self, PlayerState::AllIn(_))
     }
 
     #[must_use]
@@ -341,62 +397,78 @@ mod casino__state_tests {
     }
 
     #[test]
-    fn can_act_after_played() {
+    fn can_act() {
         // Out of the hand
-        assert!(!PlayerState::Fold.can_act_after_played(&PlayerState::Blind(100)));
-        assert!(!PlayerState::Out.can_act_after_played(&PlayerState::Blind(100)));
+        assert!(PlayerState::Blind(500).can_act());
+        assert!(PlayerState::YetToAct.can_act());
+        assert!(PlayerState::Check.can_act());
+        assert!(PlayerState::Bet(500).can_act());
+        assert!(PlayerState::Raise(500).can_act());
+        assert!(PlayerState::ReRaise(500).can_act());
+
+        assert!(!PlayerState::Fold.can_act());
+        assert!(!PlayerState::Out.can_act());
+        assert!(!PlayerState::AllIn(500).can_act());
+    }
+
+    #[test]
+    fn can_act_after() {
+        // Out of the hand
+        assert!(!PlayerState::Fold.can_act_after(&PlayerState::Blind(100)));
+        assert!(!PlayerState::Out.can_act_after(&PlayerState::Blind(100)));
 
         // Vs blind
-        assert!(PlayerState::Blind(50).can_act_after_played(&PlayerState::Blind(50)));
-        assert!(PlayerState::Blind(50).can_act_after_played(&PlayerState::Blind(100)));
-        assert!(!PlayerState::Blind(100).can_act_after_played(&PlayerState::Blind(50)));
+        assert!(PlayerState::Blind(50).can_act_after(&PlayerState::Blind(50)));
+        assert!(PlayerState::Blind(50).can_act_after(&PlayerState::Blind(100)));
+        assert!(!PlayerState::Blind(100).can_act_after(&PlayerState::Blind(50)));
 
         // Yet to act
-        assert!(PlayerState::YetToAct.can_act_after_played(&PlayerState::Check));
-        assert!(PlayerState::YetToAct.can_act_after_played(&PlayerState::Bet(100)));
-        assert!(PlayerState::YetToAct.can_act_after_played(&PlayerState::AllIn(100)));
-        assert!(PlayerState::YetToAct.can_act_after_played(&PlayerState::Fold));
+        assert!(PlayerState::YetToAct.can_act_after(&PlayerState::YetToAct));
+        assert!(PlayerState::YetToAct.can_act_after(&PlayerState::Check));
+        assert!(PlayerState::YetToAct.can_act_after(&PlayerState::Bet(100)));
+        assert!(PlayerState::YetToAct.can_act_after(&PlayerState::AllIn(100)));
+        assert!(PlayerState::YetToAct.can_act_after(&PlayerState::Fold));
 
         // Check
-        assert!(PlayerState::Check.can_act_after_played(&PlayerState::Check));
-        assert!(!PlayerState::Check.can_act_after_played(&PlayerState::Blind(50)));
-        assert!(!PlayerState::Check.can_act_after_played(&PlayerState::Bet(50)));
+        assert!(PlayerState::Check.can_act_after(&PlayerState::Check));
+        assert!(!PlayerState::Check.can_act_after(&PlayerState::Blind(50)));
+        assert!(!PlayerState::Check.can_act_after(&PlayerState::Bet(50)));
 
-        assert!(PlayerState::AllIn(50).can_act_after_played(&PlayerState::Blind(100)));
-        assert!(PlayerState::AllIn(50).can_act_after_played(&PlayerState::Bet(25)));
-        assert!(PlayerState::AllIn(50).can_act_after_played(&PlayerState::Raise(2500)));
+        assert!(PlayerState::AllIn(50).can_act_after(&PlayerState::Blind(100)));
+        assert!(PlayerState::AllIn(50).can_act_after(&PlayerState::Bet(25)));
+        assert!(PlayerState::AllIn(50).can_act_after(&PlayerState::Raise(2500)));
 
-        assert!(!PlayerState::Bet(500).can_act_after_played(&PlayerState::Bet(100)));
-        assert!(PlayerState::Bet(150).can_act_after_played(&PlayerState::Blind(100)));
-        assert!(PlayerState::Bet(500).can_act_after_played(&PlayerState::AllIn(100)));
-        assert!(PlayerState::Bet(500).can_act_after_played(&PlayerState::Call(100)));
-        assert!(!PlayerState::Bet(500).can_act_after_played(&PlayerState::Call(500)));
-        assert!(!PlayerState::Bet(500).can_act_after_played(&PlayerState::Bet(500)));
-        assert!(!PlayerState::Bet(50).can_act_after_played(&PlayerState::Blind(100)));
-        assert!(!PlayerState::Bet(50).can_act_after_played(&PlayerState::AllIn(100)));
-        assert!(!PlayerState::Bet(150).can_act_after_played(&PlayerState::Raise(100)));
-        assert!(!PlayerState::Bet(400).can_act_after_played(&PlayerState::ReRaise(200)));
+        assert!(!PlayerState::Bet(500).can_act_after(&PlayerState::Bet(100)));
+        assert!(PlayerState::Bet(150).can_act_after(&PlayerState::Blind(100)));
+        assert!(PlayerState::Bet(500).can_act_after(&PlayerState::AllIn(100)));
+        assert!(PlayerState::Bet(500).can_act_after(&PlayerState::Call(100)));
+        assert!(!PlayerState::Bet(500).can_act_after(&PlayerState::Call(500)));
+        assert!(!PlayerState::Bet(500).can_act_after(&PlayerState::Bet(500)));
+        assert!(!PlayerState::Bet(50).can_act_after(&PlayerState::Blind(100)));
+        assert!(!PlayerState::Bet(50).can_act_after(&PlayerState::AllIn(100)));
+        assert!(!PlayerState::Bet(150).can_act_after(&PlayerState::Raise(100)));
+        assert!(!PlayerState::Bet(400).can_act_after(&PlayerState::ReRaise(200)));
 
-        assert!(PlayerState::Raise(150).can_act_after_played(&PlayerState::Blind(100)));
-        assert!(PlayerState::Raise(500).can_act_after_played(&PlayerState::Bet(100)));
-        assert!(PlayerState::Raise(500).can_act_after_played(&PlayerState::AllIn(100)));
-        assert!(!PlayerState::Raise(500).can_act_after_played(&PlayerState::Bet(500)));
-        assert!(!PlayerState::Raise(500).can_act_after_played(&PlayerState::ReRaise(500)));
-        assert!(!PlayerState::Raise(1000).can_act_after_played(&PlayerState::ReRaise(500)));
-        assert!(!PlayerState::Raise(50).can_act_after_played(&PlayerState::Blind(100)));
-        assert!(!PlayerState::Raise(50).can_act_after_played(&PlayerState::AllIn(100)));
+        assert!(PlayerState::Raise(150).can_act_after(&PlayerState::Blind(100)));
+        assert!(PlayerState::Raise(500).can_act_after(&PlayerState::Bet(100)));
+        assert!(PlayerState::Raise(500).can_act_after(&PlayerState::AllIn(100)));
+        assert!(!PlayerState::Raise(500).can_act_after(&PlayerState::Bet(500)));
+        assert!(!PlayerState::Raise(500).can_act_after(&PlayerState::ReRaise(500)));
+        assert!(!PlayerState::Raise(1000).can_act_after(&PlayerState::ReRaise(500)));
+        assert!(!PlayerState::Raise(50).can_act_after(&PlayerState::Blind(100)));
+        assert!(!PlayerState::Raise(50).can_act_after(&PlayerState::AllIn(100)));
 
-        assert!(PlayerState::ReRaise(500).can_act_after_played(&PlayerState::Call(100)));
-        assert!(PlayerState::ReRaise(150).can_act_after_played(&PlayerState::Blind(100)));
-        assert!(PlayerState::ReRaise(500).can_act_after_played(&PlayerState::Bet(100)));
-        assert!(PlayerState::ReRaise(500).can_act_after_played(&PlayerState::Raise(200)));
-        assert!(PlayerState::ReRaise(500).can_act_after_played(&PlayerState::AllIn(100)));
+        assert!(PlayerState::ReRaise(500).can_act_after(&PlayerState::Call(100)));
+        assert!(PlayerState::ReRaise(150).can_act_after(&PlayerState::Blind(100)));
+        assert!(PlayerState::ReRaise(500).can_act_after(&PlayerState::Bet(100)));
+        assert!(PlayerState::ReRaise(500).can_act_after(&PlayerState::Raise(200)));
+        assert!(PlayerState::ReRaise(500).can_act_after(&PlayerState::AllIn(100)));
 
-        assert!(!PlayerState::ReRaise(50).can_act_after_played(&PlayerState::Call(100)));
-        assert!(!PlayerState::ReRaise(50).can_act_after_played(&PlayerState::Blind(100)));
-        assert!(!PlayerState::ReRaise(50).can_act_after_played(&PlayerState::Bet(100)));
-        assert!(!PlayerState::ReRaise(50).can_act_after_played(&PlayerState::Raise(200)));
-        assert!(!PlayerState::ReRaise(50).can_act_after_played(&PlayerState::AllIn(100)));
+        assert!(!PlayerState::ReRaise(50).can_act_after(&PlayerState::Call(100)));
+        assert!(!PlayerState::ReRaise(50).can_act_after(&PlayerState::Blind(100)));
+        assert!(!PlayerState::ReRaise(50).can_act_after(&PlayerState::Bet(100)));
+        assert!(!PlayerState::ReRaise(50).can_act_after(&PlayerState::Raise(200)));
+        assert!(!PlayerState::ReRaise(50).can_act_after(&PlayerState::AllIn(100)));
     }
 
     /// DIARY: Too tired to write unit tests. Hey CoPilot, write some unit tests for me.

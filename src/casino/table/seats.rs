@@ -223,10 +223,9 @@ impl Seats {
     /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
     ///
     /// let gus = seats.next_to_act(3).unwrap();
-    /// assert_eq!("Gus Hansen", gus.player.handle);
+    /// assert_eq!(3, gus);
     ///
-    /// gus.player.state.set(PlayerState::Bet(100));
-    /// drop(gus);
+    /// seats.get_seat_mut(gus).unwrap().player.state.set(PlayerState::Bet(100));
     ///
     /// // let daniel = seats.next_to_act(3).unwrap();
     /// // assert_eq!("Gus Hansen", daniel.player.handle);
@@ -235,10 +234,10 @@ impl Seats {
     /// # Errors
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
-    pub fn next_to_act(&self, utg: u8) -> Result<RefMut<'_, Seat>, PKError> {
+    pub fn next_to_act(&self, utg: u8) -> Result<u8, PKError> {
         if let Some(seat_utg) = self.get_seat_mut(utg) {
             if seat_utg.player.state.is_yet_to_act() {
-                return Ok(seat_utg);
+                return Ok(utg);
             }
 
             let bint = DrainableBintCell::new_with_value(self.size(), self.size() as usize - 1, utg);
@@ -457,7 +456,7 @@ mod casino__table__seats_tests {
 
         let seat = seats.next_to_act(3).unwrap();
 
-        assert_eq!("Gus Hansen", seat.player.handle);
+        assert_eq!(3, seat);
     }
 
     #[test]
@@ -545,13 +544,14 @@ mod casino__table__seats_tests {
         let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
 
         let gus = seats.next_to_act(3).unwrap();
-        assert_eq!("Gus Hansen", gus.player.handle);
+        assert_eq!(3, gus);
 
-        gus.player.state.set(PlayerState::Bet(100));
+        seats.get_seat_mut(gus).unwrap().player.state.set(PlayerState::Bet(100));
 
-        drop(gus);
 
-        // let daniel = seats.next_to_act(3).unwrap();
-        // assert_eq!("Gus Hansen", daniel.player.handle);
+
+        let daniel = seats.next_to_act(3).unwrap();
+        assert_eq!(4, daniel);
+
     }
 }
