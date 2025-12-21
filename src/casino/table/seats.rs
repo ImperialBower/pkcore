@@ -236,6 +236,13 @@ impl Seats {
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     pub fn next_to_act(&self, utg: u8) -> Result<u8, PKError> {
+        for seat in self.iter_from(utg) {
+            if seat.player.state.is_yet_to_act() {
+                let index = self.0.iter().position(|s| s.borrow().player.handle == seat.player.handle).ok_or(PKError::InvalidSeatNumber)?;
+                return Ok(index as u8);
+            }
+        }
+
         if let Some(seat_utg) = self.get_seat_mut(utg) {
             if seat_utg.player.state.is_yet_to_act() {
                 return Ok(utg);
@@ -455,8 +462,15 @@ mod casino__table__seats_tests {
         let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
 
         let seat = seats.next_to_act(3).unwrap();
-
         assert_eq!(3, seat);
+
+        seats.get_seat_mut(seat).unwrap().player.state.set(PlayerState::Check);
+        let seat = seats.next_to_act(3).unwrap();
+        assert_eq!(4, seat);
+
+        seats.get_seat_mut(seat).unwrap().player.state.set(PlayerState::Bet(100));
+        let seat = seats.next_to_act(3).unwrap();
+        assert_eq!(5, seat);
     }
 
     #[test]

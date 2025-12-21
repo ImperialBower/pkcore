@@ -1,4 +1,4 @@
-use crate::PKError;
+use crate::{Agency, PKError};
 use crate::casino::cashier::chips::Stack;
 use crate::prelude::{PlayerState, PlayerStateCell};
 use crate::util::name::Name;
@@ -336,6 +336,20 @@ impl Player {
     #[must_use]
     pub fn total_chip_count(&self) -> usize {
         self.chips.count() + self.bet.count()
+    }
+}
+
+impl Agency for Player {
+    fn can_act(&self) -> bool {
+        self.state.can_act()
+    }
+
+    fn can_given(&self, next: &PlayerState) -> bool {
+        self.state.can_given(next)
+    }
+
+    fn can_given_against(&self, next: &PlayerState, other: &PlayerState) -> bool {
+        self.state.can_given_against(next, other)
     }
 }
 
