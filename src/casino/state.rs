@@ -1,3 +1,4 @@
+use crate::Agency;
 use std::cell::Cell;
 use std::fmt::{Display, Formatter};
 
@@ -11,8 +12,8 @@ impl PlayerStateCell {
     }
 
     #[must_use]
-    pub fn can(&self, next: PlayerState) -> bool {
-        self.0.get().can(next)
+    pub fn can(&self, next: &PlayerState) -> bool {
+        self.0.get().can_given(next)
     }
 
     /// ```
@@ -71,10 +72,11 @@ impl PlayerStateCell {
     /// assert_eq!(state_cell.get(), PlayerState::Bet(100));
     /// assert_eq!(state_cell.set(PlayerState::Check), None);
     /// assert_eq!(state_cell.get(), PlayerState::Bet(100));
-    /// assert_eq!(state_cell.set(PlayerState::Bet(300)), Some(PlayerState::Bet(300)));
+    /// assert_eq!(state_cell.set(PlayerState::Bet(300)), None);
+    /// assert_eq!(state_cell.set(PlayerState::Raise(300)), Some(PlayerState::Raise(300)));
     /// ```
     pub fn set(&self, state: PlayerState) -> Option<PlayerState> {
-        if self.can(state) {
+        if self.can(&state) {
             self.0.set(state);
             Some(state)
         } else {
@@ -118,73 +120,6 @@ impl PlayerState {
             _ => 0,
         }
     }
-
-    #[must_use]
-    #[allow(clippy::unnested_or_patterns)]
-    pub fn can(&self, next: PlayerState) -> bool {
-        // An action can't be performned if the bet value is less than what happened before.
-        if next < *self && next.is_active() {
-            return false;
-        }
-        matches!(
-            (self, next),
-            (_, PlayerState::Fold)
-                | (PlayerState::YetToAct, _)
-                | (PlayerState::Blind(_), _)
-                | (PlayerState::Check, PlayerState::Bet(_))
-                | (PlayerState::Check, PlayerState::Raise(_))
-                | (PlayerState::Check, PlayerState::ReRaise(_))
-                | (PlayerState::Check, PlayerState::AllIn(_))
-                | (PlayerState::Bet(_), PlayerState::Call(_))
-                | (PlayerState::Bet(_), PlayerState::Bet(_))
-                | (PlayerState::Bet(_), PlayerState::Raise(_))
-                | (PlayerState::Bet(_), PlayerState::ReRaise(_))
-                | (PlayerState::Bet(_), PlayerState::AllIn(_))
-                | (PlayerState::Call(_), PlayerState::Raise(_))
-                | (PlayerState::Call(_), PlayerState::ReRaise(_))
-                | (PlayerState::Call(_), PlayerState::AllIn(_))
-                | (PlayerState::Raise(_), PlayerState::ReRaise(_))
-                | (PlayerState::Raise(_), PlayerState::AllIn(_))
-                | (PlayerState::ReRaise(_), PlayerState::ReRaise(_))
-                | (PlayerState::ReRaise(_), PlayerState::AllIn(_))
-        )
-    }
-
-    /// # Player Agency Action perspectives
-    ///
-    /// - CAN? Can they act at all? _The current function._
-    /// - CAN THIS IF THAT? Can they do something given what they did before?
-    /// - CAN_GIVEN? Can they do something given what another player has done?
-    ///
-    /// The perspective on this call is that given this `PlayerState` is any other action possible,
-    /// regardless of any other player's state.
-    ///
-    /// - If `self's PlayerState` is not active, the player cannot act in the hand.
-    /// - If `self's PlayerState` is all-in, the player cannot perform any other actions. Their hand and chips are locked.
-    #[must_use]
-    pub fn can_act(&self) -> bool {
-        self.is_active() && !self.is_all_in()
-    }
-
-    ///
-    #[must_use]
-    pub fn can_do_this_if_did_that(&self, new: &PlayerState) -> bool {
-        if !self.is_active() {
-            return false;
-        }
-
-        todo!()
-    }
-
-    #[must_use]
-    pub fn can_act_given(&self, new: &PlayerState, other: &PlayerState) -> bool {
-        if !self.is_active() {
-            return false;
-        }
-
-        todo!()
-    }
-
 
     /// DIARY: This shit is going to be ugly AF. Going to test drive the shit out of it and
     /// refactor. This is the way.
@@ -248,15 +183,14 @@ impl PlayerState {
     /// ```
     /// use pkcore::prelude::*;
     ///
-    /// assert!(PlayerState::AllIn(100).is_blind());
-    /// assert!(!PlayerState::Fold.is_blind());
-    /// assert!(!PlayerState::Out.is_blind());
+    /// assert!(PlayerState::AllIn(100).is_active());
+    /// assert!(!PlayerState::Fold.is_active());
+    /// assert!(!PlayerState::Out.is_active());
     /// ```
     #[must_use]
     pub fn is_active(&self) -> bool {
         !matches!(self, PlayerState::Fold | PlayerState::Out)
     }
-
 
     /// ```
     /// use pkcore::prelude::*;
@@ -295,6 +229,11 @@ impl PlayerState {
     }
 
     #[must_use]
+    pub fn is_check(&self) -> bool {
+        matches!(self, PlayerState::Check)
+    }
+
+    #[must_use]
     pub fn is_opener(&self) -> bool {
         matches!(self, PlayerState::Bet(_) | PlayerState::Call(_))
     }
@@ -312,6 +251,51 @@ impl PlayerState {
 
     pub fn reset(&mut self) {
         *self = PlayerState::YetToAct;
+    }
+}
+
+impl Agency for PlayerState {
+    fn can_act(&self) -> bool {
+        self.is_active() && !self.is_all_in()
+    }
+
+    #[allow(clippy::unnested_or_patterns)]
+    fn can_given(&self, next: &PlayerState) -> bool {
+        if self.is_yet_to_act() {
+            return true;
+        }
+
+        // An action can't be performed if their bet value is less, equal to what they bet before.
+        if next <= self && next.is_active() {
+            return false;
+        }
+        matches!(
+            (self, next),
+            (_, PlayerState::Fold)
+                | (PlayerState::YetToAct, _)
+                | (PlayerState::Blind(_), _)
+                | (PlayerState::Check, PlayerState::Call(_))
+                | (PlayerState::Check, PlayerState::Raise(_))
+                | (PlayerState::Check, PlayerState::ReRaise(_))
+                | (PlayerState::Check, PlayerState::AllIn(_))
+                | (PlayerState::Bet(_), PlayerState::Call(_))
+                | (PlayerState::Bet(_), PlayerState::Raise(_))
+                | (PlayerState::Bet(_), PlayerState::ReRaise(_))
+                | (PlayerState::Bet(_), PlayerState::AllIn(_))
+                | (PlayerState::Call(_), PlayerState::Call(_))
+                | (PlayerState::Call(_), PlayerState::ReRaise(_))
+                | (PlayerState::Call(_), PlayerState::AllIn(_))
+                | (PlayerState::Raise(_), PlayerState::Call(_))
+                | (PlayerState::Raise(_), PlayerState::ReRaise(_))
+                | (PlayerState::Raise(_), PlayerState::AllIn(_))
+                | (PlayerState::ReRaise(_), PlayerState::Call(_))
+                | (PlayerState::ReRaise(_), PlayerState::ReRaise(_))
+                | (PlayerState::ReRaise(_), PlayerState::AllIn(_))
+        )
+    }
+
+    fn can_given_against(&self, next: &PlayerState, other: &PlayerState) -> bool {
+        todo!()
     }
 }
 
@@ -357,47 +341,7 @@ mod casino__state_tests {
     use super::*;
 
     #[test]
-    fn can() {
-        assert!(PlayerState::YetToAct.can(PlayerState::Check));
-        assert!(PlayerState::YetToAct.can(PlayerState::Bet(100)));
-        assert!(PlayerState::YetToAct.can(PlayerState::AllIn(100)));
-        assert!(PlayerState::YetToAct.can(PlayerState::Fold));
-        assert!(PlayerState::YetToAct.can(PlayerState::ReRaise(100)));
-
-        assert!(PlayerState::Blind(50).can(PlayerState::Bet(200)));
-        assert!(PlayerState::Blind(50).can(PlayerState::AllIn(500)));
-        assert!(PlayerState::Blind(50).can(PlayerState::Fold));
-        assert!(PlayerState::Blind(50).can(PlayerState::Raise(200)));
-        assert!(PlayerState::Blind(50).can(PlayerState::ReRaise(300)));
-        assert!(!PlayerState::Blind(100).can(PlayerState::Bet(50)));
-
-        assert!(PlayerState::Check.can(PlayerState::Bet(200)));
-        assert!(PlayerState::Check.can(PlayerState::Raise(100)));
-        assert!(PlayerState::Check.can(PlayerState::ReRaise(100)));
-        assert!(PlayerState::Check.can(PlayerState::AllIn(500)));
-        assert!(PlayerState::Check.can(PlayerState::Fold));
-
-        assert!(PlayerState::Bet(100).can(PlayerState::Call(100)));
-        assert!(PlayerState::Bet(100).can(PlayerState::ReRaise(200)));
-        assert!(PlayerState::Bet(100).can(PlayerState::Raise(200)));
-        assert!(PlayerState::Bet(100).can(PlayerState::AllIn(500)));
-        assert!(PlayerState::Bet(100).can(PlayerState::Fold));
-
-        assert!(PlayerState::Call(100).can(PlayerState::Raise(200)));
-        assert!(PlayerState::Call(200).can(PlayerState::ReRaise(300)));
-        assert!(PlayerState::Call(100).can(PlayerState::AllIn(500)));
-        assert!(PlayerState::Call(100).can(PlayerState::Fold));
-        assert!(PlayerState::Raise(200).can(PlayerState::ReRaise(300)));
-        assert!(!PlayerState::Raise(200).can(PlayerState::ReRaise(100)));
-
-        assert!(PlayerState::Bet(200).can(PlayerState::Bet(300)));
-
-        assert!(!PlayerState::Fold.can(PlayerState::Check));
-        assert!(!PlayerState::Fold.can(PlayerState::Bet(100)));
-    }
-
-    #[test]
-    fn can_act() {
+    fn agency__can_act() {
         // Out of the hand
         assert!(PlayerState::Blind(500).can_act());
         assert!(PlayerState::YetToAct.can_act());
@@ -409,6 +353,71 @@ mod casino__state_tests {
         assert!(!PlayerState::Fold.can_act());
         assert!(!PlayerState::Out.can_act());
         assert!(!PlayerState::AllIn(500).can_act());
+    }
+
+    #[test]
+    fn agency__can_given() {
+        assert!(PlayerState::YetToAct.can_given(&PlayerState::Check));
+        assert!(PlayerState::YetToAct.can_given(&PlayerState::Bet(100)));
+        assert!(PlayerState::YetToAct.can_given(&PlayerState::Call(100)));
+        assert!(PlayerState::YetToAct.can_given(&PlayerState::Raise(100)));
+        assert!(PlayerState::YetToAct.can_given(&PlayerState::ReRaise(100)));
+        assert!(PlayerState::YetToAct.can_given(&PlayerState::AllIn(100)));
+        assert!(PlayerState::YetToAct.can_given(&PlayerState::Fold));
+
+        assert!(PlayerState::Blind(50).can_given(&PlayerState::Bet(200)));
+        assert!(PlayerState::Blind(50).can_given(&PlayerState::Call(200)));
+        assert!(PlayerState::Blind(50).can_given(&PlayerState::Raise(200)));
+        assert!(PlayerState::Blind(50).can_given(&PlayerState::ReRaise(300)));
+        assert!(PlayerState::Blind(50).can_given(&PlayerState::AllIn(500)));
+        assert!(PlayerState::Blind(50).can_given(&PlayerState::Fold));
+        assert!(!PlayerState::Blind(100).can_given(&PlayerState::Bet(50)));
+
+        assert!(PlayerState::Check.can_given(&PlayerState::Fold));
+        assert!(PlayerState::Check.can_given(&PlayerState::Call(100)));
+        assert!(PlayerState::Check.can_given(&PlayerState::Raise(100)));
+        assert!(PlayerState::Check.can_given(&PlayerState::ReRaise(100)));
+        assert!(PlayerState::Check.can_given(&PlayerState::AllIn(500)));
+        assert!(!PlayerState::Check.can_given(&PlayerState::Bet(200)));
+        assert!(!PlayerState::Check.can_given(&PlayerState::Check));
+
+        assert!(PlayerState::Bet(100).can_given(&PlayerState::Fold));
+        assert!(PlayerState::Bet(100).can_given(&PlayerState::Call(200)));
+        assert!(PlayerState::Bet(100).can_given(&PlayerState::Raise(200)));
+        assert!(PlayerState::Bet(100).can_given(&PlayerState::ReRaise(200)));
+        assert!(PlayerState::Bet(100).can_given(&PlayerState::AllIn(500)));
+        assert!(!PlayerState::Bet(100).can_given(&PlayerState::Call(100)));
+        assert!(!PlayerState::Bet(200).can_given(&PlayerState::Raise(200)));
+        assert!(!PlayerState::Bet(200).can_given(&PlayerState::Bet(300)));
+
+        assert!(PlayerState::Call(200).can_given(&PlayerState::Fold));
+        assert!(PlayerState::Call(100).can_given(&PlayerState::Call(200)));
+        assert!(PlayerState::Call(200).can_given(&PlayerState::ReRaise(300)));
+        assert!(PlayerState::Call(100).can_given(&PlayerState::AllIn(500)));
+        assert!(PlayerState::Call(100).can_given(&PlayerState::Fold));
+        assert!(!PlayerState::Call(100).can_given(&PlayerState::Raise(200)));
+
+        assert!(PlayerState::Raise(200).can_given(&PlayerState::Fold));
+        assert!(PlayerState::Raise(200).can_given(&PlayerState::Call(300)));
+        assert!(PlayerState::Raise(200).can_given(&PlayerState::ReRaise(300)));
+        assert!(PlayerState::Raise(200).can_given(&PlayerState::AllIn(300)));
+        assert!(!PlayerState::Raise(200).can_given(&PlayerState::Bet(100)));
+        assert!(!PlayerState::Raise(200).can_given(&PlayerState::ReRaise(100)));
+
+        assert!(PlayerState::ReRaise(200).can_given(&PlayerState::Fold));
+        assert!(PlayerState::ReRaise(200).can_given(&PlayerState::Call(300)));
+        assert!(PlayerState::ReRaise(200).can_given(&PlayerState::ReRaise(300)));
+        assert!(PlayerState::ReRaise(200).can_given(&PlayerState::AllIn(300)));
+        assert!(!PlayerState::ReRaise(200).can_given(&PlayerState::Raise(300)));
+        assert!(!PlayerState::ReRaise(200).can_given(&PlayerState::Bet(100)));
+
+        assert!(!PlayerState::Fold.can_given(&PlayerState::Check));
+        assert!(!PlayerState::Fold.can_given(&PlayerState::Bet(100)));
+        assert!(!PlayerState::Fold.can_given(&PlayerState::Call(100)));
+        assert!(!PlayerState::Fold.can_given(&PlayerState::Raise(100)));
+        assert!(!PlayerState::Fold.can_given(&PlayerState::ReRaise(100)));
+        assert!(!PlayerState::Fold.can_given(&PlayerState::AllIn(100)));
+        assert!(!PlayerState::Fold.can_given(&PlayerState::AllIn(100)));
     }
 
     #[test]

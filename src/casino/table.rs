@@ -7,7 +7,7 @@ use crate::casino::table::event::{TableAction, TableLog};
 use crate::casino::table::seat::Seat;
 use crate::casino::table::seats::Seats;
 use crate::games::{GamePhase, GameType};
-use crate::prelude::{Bard, BoxedCards, PlayerState};
+use crate::prelude::{Bard, BoxedCards};
 use crate::{PKError, Pile, deck_cell};
 use bint::{BintCell, DrainableBintCell};
 use std::cell::{Cell, Ref};
@@ -208,57 +208,44 @@ impl Table {
         }
     }
 
+    fn act_forced_bet(&self, seat_number: u8, amount: usize) -> Result<(), PKError> {
+        if let Some(seat) = self.get_seat_mut(seat_number) {
+            seat.player.bet_blind(amount)?;
+            drop(seat);
+            self.log_info(TableAction::ForcedBet(seat_number, amount));
+        } else {
+            log::error!("Failed to find forced bet seat #{seat_number}");
+            return Err(PKError::InvalidSeatNumber);
+        }
+        Ok(())
+    }
+
+    pub fn act_forced_bet_small_blind(&self) -> Result<(), PKError> {
+        let sb_seat_num = self.determine_small_blind();
+        self.act_forced_bet(sb_seat_num, self.forced.small_blind)?;
+        self.log_info(TableAction::ForcedBetSmallBlind(sb_seat_num, self.forced.small_blind));
+
+        Ok(())
+    }
+
+    pub fn act_forced_bet_big_blind(&self) -> Result<(), PKError> {
+        let bb_seat_num = self.determine_big_blind();
+        let big_blind = self.forced.big_blind;
+        self.act_forced_bet(bb_seat_num, big_blind)?;
+        self.log_info(TableAction::ForcedBetBigBlind(bb_seat_num, big_blind));
+
+        Ok(())
+    }
+
+    /// TODO: Handle all in on forced bet.
+    ///
     /// # Errors
     ///
     /// Throws an `InvalidSeatNumber` if the seat number isn't or the seat is currently
     /// borrowed mutably.
     pub fn act_forced_bets(&self) -> Result<(), PKError> {
-        let sb_seat_num = self.determine_small_blind();
-        let bb_seat_num = self.determine_big_blind();
-
-        // Small blind
-        if let Some(sb_seat) = self.get_seat_mut(sb_seat_num) {
-            sb_seat.player.bet_blind(self.forced.small_blind)?;
-
-            let state = PlayerState::Blind(self.forced.small_blind);
-            if sb_seat.player.state.set(state).is_none() {
-                self.log_warn(TableAction::InvalidAction);
-                log::error!(
-                    "Failed to set state ForcedBetSmallBlind for seat with player {}",
-                    sb_seat.player.handle
-                );
-                return Err(PKError::InvalidTableAction);
-            }
-
-            // You need to drop the seat after betting, because the logging function needs to
-            // borrow the seat immutably to get the player handle for logging.
-            drop(sb_seat);
-            self.log_info(TableAction::ForcedBetSmallBlind(sb_seat_num, self.forced.small_blind));
-        } else {
-            log::error!("Failed to find small blind seat #{sb_seat_num}");
-            return Err(PKError::InvalidSeatNumber);
-        }
-
-        // Big blind
-        if let Some(bb_seat) = self.get_seat_mut(bb_seat_num) {
-            bb_seat.player.bet_blind(self.forced.big_blind)?;
-
-            let state = PlayerState::Blind(self.forced.big_blind);
-            if bb_seat.player.state.set(state).is_none() {
-                self.log_warn(TableAction::InvalidAction);
-                log::error!(
-                    "Failed to set state ForcedBetBigBlind for seat with player {}",
-                    bb_seat.player.handle
-                );
-                return Err(PKError::InvalidTableAction);
-            }
-
-            drop(bb_seat);
-            self.log_info(TableAction::ForcedBetBigBlind(bb_seat_num, self.forced.big_blind));
-        } else {
-            log::error!("Failed to find big blind seat #{bb_seat_num}");
-            return Err(PKError::InvalidSeatNumber);
-        }
+        self.act_forced_bet_small_blind()?;
+        self.act_forced_bet_big_blind()?;
 
         Ok(())
     }
@@ -755,6 +742,28 @@ mod casino__table_tests {
     }
 
     #[test]
+    fn act_forced_bet_small_blind() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        let _ = table.act_forced_bet_small_blind();
+
+        let sb_seat = table.seats.get_seat(1).unwrap();
+
+        assert_eq!(50, sb_seat.player.bet.count());
+        assert_eq!(PlayerState::Blind(50), sb_seat.player.state.get());
+    }
+
+    #[test]
+    fn act_forced_bet_big_blind() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        let _ = table.act_forced_bet_big_blind();
+
+        let bb_seat = table.seats.get_seat(2).unwrap();
+
+        assert_eq!(100, bb_seat.player.bet.count());
+        assert_eq!(PlayerState::Blind(100), bb_seat.player.state.get());
+    }
+
+    #[test]
     fn act_forced_bets() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
         let _ = table.act_forced_bets();
@@ -762,10 +771,14 @@ mod casino__table_tests {
         let sb_seat = table.seats.get_seat(1).unwrap();
         let bb_seat = table.seats.get_seat(2).unwrap();
 
+        println!(">>>>> {}", table);
+
         assert_eq!(50, sb_seat.player.bet.count());
         assert_eq!(PlayerState::Blind(50), sb_seat.player.state.get());
         assert_eq!(100, bb_seat.player.bet.count());
         assert_eq!(PlayerState::Blind(100), bb_seat.player.state.get());
+
+
     }
 
     #[test]

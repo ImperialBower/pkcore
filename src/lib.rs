@@ -28,6 +28,7 @@ use std::hash::Hash;
 use crate::analysis::gto::combo::Combo;
 use crate::analysis::gto::combo_pairs::ComboPairs;
 use crate::analysis::gto::twos::Twos;
+use crate::prelude::PlayerState;
 use crate::rank::Rank;
 use crate::ranks::Ranks;
 use crate::suit::Suit;
@@ -194,6 +195,30 @@ impl From<rusqlite::Error> for PKError {
         log::error!("{err}");
         PKError::DBConnectionError
     }
+}
+
+/// # Agency Trait
+///
+/// Player Agency Action perspectives
+///
+/// - CAN? Can they act at all? _The current function._
+/// - CAN THIS IF THAT? Can they do something given what they did before?
+/// - CAN GIVEN? Can they do something given what another player has done?
+///
+/// This trait is used to establish the contract for when an entity in a game can act, given the
+/// `PlayerState` abd the state of the action in the game.
+pub trait Agency {
+    /// The perspective on this call is that given this `PlayerState` is any other action possible,
+    /// regardless of any other player's state.
+    ///
+    /// - If `self's PlayerState` is not active, the player cannot act in the hand.
+    /// - If `self's PlayerState` is all-in, the player cannot perform any other actions. Their hand and chips are locked.
+    #[must_use]
+    fn can_act(&self) -> bool;
+
+    fn can_given(&self, next: &PlayerState) -> bool;
+
+    fn can_given_against(&self, next: &PlayerState, other: &PlayerState) -> bool;
 }
 
 pub trait Betting {

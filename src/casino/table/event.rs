@@ -17,6 +17,7 @@ pub enum TableAction {
     SetButton(u8),
     MoveButton(u8),
     ForcedBets,
+    ForcedBet(u8, usize),
     ForcedBetSmallBlind(u8, usize),
     ForcedBetBigBlind(u8, usize),
     BetAnteForced(u8, usize),
@@ -119,6 +120,9 @@ impl Display for TableAction {
             TableAction::SetButton(seat) => write!(f, "Set Button to Seat {seat}"),
             TableAction::MoveButton(seat) => write!(f, "Move Button to Seat {seat}"),
             TableAction::ForcedBets => write!(f, "Forced Bets"),
+            TableAction::ForcedBet(seat, amount) => {
+                write!(f, "Seat {seat} puts in forced bet of {amount}")
+            }
             TableAction::ForcedBetSmallBlind(seat, amount) => {
                 write!(f, "Seat {seat} puts in Small Blind of {amount}")
             }

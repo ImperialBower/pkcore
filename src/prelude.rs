@@ -37,7 +37,7 @@ pub use crate::suit::Suit;
 pub use crate::util::data::TestData;
 
 // Re-export core traits
-pub use crate::{Betting, Forgiving, GTO, PKError, Pile, Plurable, SOK, Shifty, SuitShift};
+pub use crate::{Agency, Betting, Forgiving, GTO, PKError, Pile, Plurable, SOK, Shifty, SuitShift};
 
 // Re-export all constants
 pub use crate::{

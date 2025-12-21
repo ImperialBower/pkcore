@@ -184,6 +184,7 @@ impl Seats {
         self.0.is_empty()
     }
 
+    #[must_use]
     pub fn is_to_utg_preflop(&self) -> bool {
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow();
@@ -317,7 +318,6 @@ impl Seats {
     }
 
     /// Iterate indices starting at `start`, wrapping once through all seats.
-    #[must_use]
     pub fn indices_from(&self, start: u8) -> impl Iterator<Item = usize> + '_ {
         let len = self.0.len();
         (0..len).map(move |offset| (start as usize + offset) % len)
@@ -329,7 +329,7 @@ impl Seats {
     }
 
     /// Iterate mutably over seats starting at `start`, wrapping through all seats.
-    /// Note: avoid holding on to the returned RefMut across iterations.
+    /// Note: avoid holding on to the returned `RefMut` across iterations.
     pub fn iter_from_mut(&self, start: u8) -> impl Iterator<Item = RefMut<'_, Seat>> {
         self.indices_from(start).map(|i| self.0[i].borrow_mut())
     }
@@ -342,7 +342,7 @@ impl Seats {
     {
         for i in self.indices_from(start) {
             let seat_ref = self.0[i].borrow();
-            f(i, &*seat_ref);
+            f(i, &seat_ref);
         }
     }
 }
@@ -548,10 +548,7 @@ mod casino__table__seats_tests {
 
         seats.get_seat_mut(gus).unwrap().player.state.set(PlayerState::Bet(100));
 
-
-
         let daniel = seats.next_to_act(3).unwrap();
         assert_eq!(4, daniel);
-
     }
 }
