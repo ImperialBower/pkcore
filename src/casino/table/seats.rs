@@ -238,8 +238,12 @@ impl Seats {
     pub fn next_to_act(&self, utg: u8) -> Result<u8, PKError> {
         for seat in self.iter_from(utg) {
             if seat.player.state.is_yet_to_act() {
-                let index = self.0.iter().position(|s| s.borrow().player.handle == seat.player.handle).ok_or(PKError::InvalidSeatNumber)?;
-                return Ok(index as u8);
+                let index = self
+                    .0
+                    .iter()
+                    .position(|s| s.borrow().player.handle == seat.player.handle)
+                    .ok_or(PKError::InvalidSeatNumber)?;
+                return Ok(u8::try_from(index).unwrap_or(0));
             }
         }
 
@@ -328,6 +332,24 @@ impl Seats {
     pub fn indices_from(&self, start: u8) -> impl Iterator<Item = usize> + '_ {
         let len = self.0.len();
         (0..len).map(move |offset| (start as usize + offset) % len)
+    }
+
+    #[must_use]
+    pub fn is_active(&self, seat_id: u8) -> bool {
+        if let Some(seat) = self.get_seat(seat_id) {
+            seat.is_active()
+        } else {
+            false
+        }
+    }
+
+    #[must_use]
+    pub fn is_in_hand(&self, seat_id: u8) -> bool {
+        if let Some(seat) = self.get_seat(seat_id) {
+            seat.is_in_hand()
+        } else {
+            false
+        }
     }
 
     /// Iterate immutably over seats starting at `start`, wrapping through all seats.
@@ -468,7 +490,12 @@ mod casino__table__seats_tests {
         let seat = seats.next_to_act(3).unwrap();
         assert_eq!(4, seat);
 
-        seats.get_seat_mut(seat).unwrap().player.state.set(PlayerState::Bet(100));
+        seats
+            .get_seat_mut(seat)
+            .unwrap()
+            .player
+            .state
+            .set(PlayerState::Bet(100));
         let seat = seats.next_to_act(3).unwrap();
         assert_eq!(5, seat);
     }

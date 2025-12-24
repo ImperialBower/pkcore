@@ -1,7 +1,7 @@
-use crate::{Agency, PKError};
 use crate::casino::cashier::chips::Stack;
 use crate::prelude::{PlayerState, PlayerStateCell};
 use crate::util::name::Name;
+use crate::{Agency, PKError};
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;
 
@@ -309,6 +309,10 @@ impl Player {
         }
         self.state.set(PlayerState::Fold);
         Ok(self.bet.takes())
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.state.is_active()
     }
 
     pub fn is_all_in(&self) -> bool {

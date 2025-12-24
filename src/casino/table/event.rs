@@ -36,6 +36,7 @@ pub enum TableAction {
     MuckPlayerCards(u8, Bard),
     TakePlayerCards(u8, Bard),
     TakeBoardCards(Bard),
+    ClosesTheAction(u8),
     InvalidAction,
     Error(PKError),
     DeckPassesAudit,
@@ -93,7 +94,7 @@ impl TableAction {
                 | TableAction::Fold(_)
                 | TableAction::Check(_)
                 | TableAction::AllIn(_, _)
-                | TableAction::Dealt(_, _)
+                | TableAction::ClosesTheAction(_)
         )
     }
 }
@@ -153,6 +154,7 @@ impl Display for TableAction {
                 write!(f, "Take player {seat}'s cards: {}", Cards::from(*cards))
             }
             TableAction::TakeBoardCards(cards) => write!(f, "Take board cards: {}", Cards::from(*cards)),
+            TableAction::ClosesTheAction(seat) => write!(f, "Seat {seat} closes the action"),
             TableAction::InvalidAction => write!(f, "Invalid Action"),
             TableAction::Error(err) => write!(f, "Error: {err}"),
             TableAction::DeckPassesAudit => write!(f, "Deck passes audit"),
@@ -191,17 +193,36 @@ impl TableLog {
         }
     }
 
+    #[must_use]
+    pub fn entries(&self) -> Vec<TableAction> {
+        self.0.borrow().iter().copied().collect()
+    }
+
+    pub fn iter_reverse(&self) -> impl Iterator<Item = TableAction> {
+        self.0.borrow().iter().rev().copied().collect::<Vec<_>>().into_iter()
+    }
+
     pub fn last(&self) -> Option<TableAction> {
         self.0.borrow().last().copied()
     }
 
-    pub fn log(&self, action: TableAction) {
-        self.0.borrow_mut().push(action);
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let log = TableLog::new();
+    /// log.log(TableAction::Bet(0, 200));
+    /// log.log(TableAction::Raise(1, 400));
+    ///
+    /// let last_player_action = log.last_player_action().unwrap();
+    ///
+    /// assert_eq!(last_player_action, TableAction::Raise(1, 400));
+    /// ```
+    pub fn last_player_action(&self) -> Option<TableAction> {
+        self.iter_reverse().find(|&action| action.is_player_action())
     }
 
-    #[must_use]
-    pub fn entries(&self) -> Vec<TableAction> {
-        self.0.borrow().iter().copied().collect()
+    pub fn log(&self, action: TableAction) {
+        self.0.borrow_mut().push(action);
     }
 }
 
@@ -222,6 +243,27 @@ impl Display for TableLog {
 mod casino__table__log_tests {
     use super::*;
     use std::str::FromStr;
+
+    #[test]
+    fn last_player_action() {
+        let log = TableLog::new();
+        log.log(TableAction::PlayerSeated(0, Uuid::nil()));
+        log.log(TableAction::PlayerSeated(1, Uuid::nil()));
+        log.log(TableAction::ForcedBetSmallBlind(0, 50));
+        log.log(TableAction::ForcedBetBigBlind(1, 100));
+        log.log(TableAction::Dealt(0, Bard::from_str("AS KS").unwrap()));
+        log.log(TableAction::Dealt(1, Bard::from_str("KD KC").unwrap()));
+        log.log(TableAction::ActionTo(0));
+        log.log(TableAction::Bet(0, 200));
+        log.log(TableAction::ActionTo(1));
+        log.log(TableAction::Call(1, 200));
+        log.log(TableAction::NewHand);
+
+        let last_player_action = log.last_player_action().unwrap();
+
+        assert_eq!(last_player_action, TableAction::Call(1, 200));
+        assert!(TableLog::new().last_player_action().is_none());
+    }
 
     #[test]
     fn display() {

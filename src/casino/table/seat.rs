@@ -91,8 +91,16 @@ impl Seat {
         CardsCell::from(boxed)
     }
 
+    pub fn is_active(&self) -> bool {
+        self.player.state.is_active()
+    }
+
     pub fn is_empty(&self) -> bool {
         self.player.id == uuid::Uuid::nil()
+    }
+
+    pub fn is_in_hand(&self) -> bool {
+        self.player.state.is_in_hand()
     }
 
     pub fn is_yet_to_act(&self) -> bool {

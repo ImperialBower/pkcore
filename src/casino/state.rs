@@ -48,6 +48,11 @@ impl PlayerStateCell {
         self.0.get().is_blind()
     }
 
+    #[must_use]
+    pub fn is_in_hand(&self) -> bool {
+        self.0.get().is_in_hand()
+    }
+
     /// ```
     /// use pkcore::prelude::*;
     ///
@@ -197,13 +202,15 @@ impl PlayerState {
     /// ```
     /// use pkcore::prelude::*;
     ///
-    /// assert!(PlayerState::AllIn(100).is_active());
+    /// assert!(PlayerState::Bet(100).is_active());
+    ///
+    /// assert!(!PlayerState::AllIn(100).is_active());
     /// assert!(!PlayerState::Fold.is_active());
     /// assert!(!PlayerState::Out.is_active());
     /// ```
     #[must_use]
     pub fn is_active(&self) -> bool {
-        !matches!(self, PlayerState::Fold | PlayerState::Out)
+        !matches!(self, PlayerState::Fold | PlayerState::Out | PlayerState::AllIn(_))
     }
 
     /// ```
@@ -250,6 +257,20 @@ impl PlayerState {
     #[must_use]
     pub fn is_fold(&self) -> bool {
         matches!(self, PlayerState::Fold)
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert!(PlayerState::Bet(100).is_in_hand());
+    /// assert!(PlayerState::AllIn(100).is_in_hand());
+    ///
+    /// assert!(!PlayerState::Fold.is_in_hand());
+    /// assert!(!PlayerState::Out.is_in_hand());
+    /// ```
+    #[must_use]
+    pub fn is_in_hand(&self) -> bool {
+        !matches!(self, PlayerState::Fold | PlayerState::Out)
     }
 
     #[must_use]

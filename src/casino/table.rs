@@ -220,6 +220,9 @@ impl Table {
         Ok(())
     }
 
+    /// # Errors
+    ///
+    /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     pub fn act_forced_bet_small_blind(&self) -> Result<(), PKError> {
         let sb_seat_num = self.determine_small_blind();
         self.act_forced_bet(sb_seat_num, self.forced.small_blind)?;
@@ -228,6 +231,9 @@ impl Table {
         Ok(())
     }
 
+    /// # Errors
+    ///
+    /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     pub fn act_forced_bet_big_blind(&self) -> Result<(), PKError> {
         let bb_seat_num = self.determine_big_blind();
         let big_blind = self.forced.big_blind;
