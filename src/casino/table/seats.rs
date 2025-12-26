@@ -128,18 +128,12 @@ impl Seats {
     }
 
     #[must_use]
-    pub fn current_bet(&self) -> Option<usize> {
-        self.0
+    pub fn current_bet(&self) -> usize {
+        self.borrow_all()
             .iter()
-            .filter_map(|seat_cell| {
-                let seat = seat_cell.borrow();
-                if seat.player.state.is_active() {
-                    Some(seat.player.bet.count())
-                } else {
-                    None
-                }
-            })
+            .map(|s| s.borrow().player.bet.count())
             .max()
+            .unwrap_or_default()
     }
 
     /// ```
@@ -524,16 +518,16 @@ mod casino__table__seats_tests {
     fn current_bet() {
         let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
         let _ = seats.act_forced_bet(0, 100);
-        assert_eq!(Some(100), seats.current_bet());
+        assert_eq!(100, seats.current_bet());
 
         let _ = seats.act_forced_bet(1, 200);
-        assert_eq!(Some(200), seats.current_bet());
+        assert_eq!(200, seats.current_bet());
 
         let _ = seats.act_bet(2, 400);
-        assert_eq!(Some(400), seats.current_bet());
+        assert_eq!(400, seats.current_bet());
 
         let _ = seats.act_bet(0, 400);
-        assert_eq!(Some(400), seats.current_bet());
+        assert_eq!(400, seats.current_bet());
     }
 
     #[test]

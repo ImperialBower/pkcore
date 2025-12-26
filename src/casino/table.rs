@@ -594,13 +594,7 @@ impl Table {
     /// to call was whatever the highest bet was.
     #[must_use]
     pub fn to_call(&self, player: u8) -> usize {
-        let highest_bet = self
-            .seats
-            .borrow_all()
-            .iter()
-            .map(|s| s.borrow().player.bet.count())
-            .max()
-            .unwrap_or_default();
+        let highest_bet = self.seats.current_bet();
 
         if let Some(seat) = self.get_seat(player) {
             highest_bet.saturating_sub(seat.player.bet.count())
