@@ -39,5 +39,6 @@ dependencies = [
     "create_docs"
 ]
 
+# ayce = All You Can Eat
 [tasks.default]
 alias = "ayce"

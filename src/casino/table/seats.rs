@@ -25,7 +25,7 @@ impl Seats {
     /// `PKError::InvalidSeatNumber` error if the `seat_number` is not valid.
     pub fn act_bet(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
         if let Some(seat) = self.get_seat_mut(seat_number) {
-            let remaining = seat.player.bet(amount)?;
+            let remaining = seat.player.act_bet(amount)?;
             Ok(remaining)
         } else {
             log::error!("Failed to find seat #{seat_number} for betting");
@@ -35,10 +35,35 @@ impl Seats {
 
     /// # Errors
     ///
+    /// `PKError::InvalidTableAction` error if the player cannot check.
+    /// `PKError::InvalidSeatNumber` error if the `seat_number` is not valid.
+    pub fn act_check(&self, seat_number: u8) -> Result<usize, PKError> {
+        let current_bet = self.current_bet();
+        if let Some(seat) = self.get_seat_mut(seat_number) {
+            if seat.player.bet.count() < current_bet || seat.is_yet_to_act() {
+                log::error!(
+                    "Seat #{seat_number} cannot check; current bet is {} but seat's bet is {}",
+                    current_bet,
+                    seat.player.bet.count()
+                );
+                return Err(PKError::InvalidTableAction);
+            }
+            seat.player.act_check()?;
+            let remaining = seat.player.chips.count();
+            drop(seat);
+            Ok(remaining)
+        } else {
+            log::error!("Failed to find seat #{seat_number} for checking");
+            Err(PKError::InvalidSeatNumber)
+        }
+    }
+
+    /// # Errors
+    ///
     /// `PKError::InvalidSeatNumber` error if the `seat_number` is not valid.
     pub fn act_forced_bet(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
         if let Some(seat) = self.get_seat_mut(seat_number) {
-            let ramaining = seat.player.bet_blind(amount)?;
+            let ramaining = seat.player.act_bet_blind(amount)?;
             drop(seat);
             Ok(ramaining)
         } else {
@@ -53,7 +78,7 @@ impl Seats {
 
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow();
-            if seat.player.state.is_yet_to_act() {
+            if seat.player.state.is_yet_to_act_or_blind() {
                 return false;
             }
             if seat.is_active() && seat.player.bet.count() != current_bet {
@@ -506,6 +531,49 @@ mod casino__table__seats_tests {
     use crate::casino::table::Table;
     use crate::prelude::*;
     use crate::util::data::TestData;
+
+    #[test]
+    fn act_check() {
+        let seats = Seats::try_from(TestData::min_seats().clone()).unwrap();
+
+        let _ = seats.act_forced_bet(0, 50);
+        let _ = seats.act_forced_bet(1, 100);
+
+        // Seat 0 and 2 cannot check because they have not put enough money in the pot.
+        assert!(!seats.all_players_have_acted());
+        assert_eq!(PKError::InvalidTableAction, seats.act_check(0).unwrap_err());
+        assert_eq!(PKError::InvalidTableAction, seats.act_check(2).unwrap_err());
+        // Seat 1 can check because their big blind is the highest bet.
+        assert_eq!(99900, seats.act_check(1).unwrap());
+
+        // // Seat 0 tries to check when the current bet is 100
+        // let _ = seats.act_forced_bet(0, 100);
+        // assert_eq!(100, seats.current_bet());
+        //
+        // let result = seats.act_check(0);
+        // assert_eq!(PKError::InvalidTableAction, result.unwrap_err());
+        //
+        // // Seat 1 matches the bet
+        // let _ = seats.act_bet(1, 100);
+        // assert_eq!(100, seats.current_bet());
+        //
+        // // Now seat 0 can check
+        // let result = seats.act_check(0);
+        // assert!(result.is_ok());
+    }
+
+    #[test]
+    fn all_players_have_acted() {
+        let seats = Seats::try_from(TestData::min_seats()).unwrap();
+        assert!(!seats.all_players_have_acted());
+
+        for seat_cell in seats.borrow_all() {
+            let seat = seat_cell.borrow();
+            seat.player.state.set(PlayerState::Check);
+        }
+
+        assert!(seats.all_players_have_acted());
+    }
 
     #[test]
     fn assign() {
