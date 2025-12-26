@@ -123,14 +123,13 @@ impl Table {
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
     pub fn act_bet(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
-        if let Some(seat) = self.get_seat_mut(seat_number) {
-            let remaining = seat.player.bet(amount)?;
-            self.event_log.log(TableAction::Bet(seat_number, amount));
-            self.action_to.up();
-            Ok(remaining)
-        } else {
-            log::error!("Failed to find seat #{seat_number} for betting");
-            Err(PKError::InvalidSeatNumber)
+        match self.seats.act_bet(seat_number, amount) {
+            Ok(remaining) => {
+                self.log_info(TableAction::Bet(seat_number, amount));
+                self.action_to.up();
+                Ok(remaining)
+            }
+            Err(e) => Err(e),
         }
     }
 
@@ -155,14 +154,13 @@ impl Table {
     /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
     pub fn act_call(&self, seat_number: u8) -> Result<usize, PKError> {
         let to_call = self.to_call(seat_number);
-        if let Some(seat) = self.get_seat_mut(seat_number) {
-            let remaining = seat.player.bet(to_call)?;
-            drop(seat);
-            self.log_info(TableAction::Call(seat_number, to_call));
-            Ok(remaining)
-        } else {
-            log::error!("Failed to find seat #{seat_number} for calling");
-            Err(PKError::InvalidSeatNumber)
+        match self.seats.act_bet(seat_number, to_call) {
+            Ok(remaining) => {
+                self.log_info(TableAction::Call(seat_number, to_call));
+                self.action_to.up();
+                Ok(remaining)
+            }
+            Err(e) => Err(e),
         }
     }
 
@@ -208,16 +206,14 @@ impl Table {
         }
     }
 
-    fn act_forced_bet(&self, seat_number: u8, amount: usize) -> Result<(), PKError> {
-        if let Some(seat) = self.get_seat_mut(seat_number) {
-            seat.player.bet_blind(amount)?;
-            drop(seat);
-            self.log_info(TableAction::ForcedBet(seat_number, amount));
-        } else {
-            log::error!("Failed to find forced bet seat #{seat_number}");
-            return Err(PKError::InvalidSeatNumber);
+    fn act_forced_bet(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
+        match self.seats.act_forced_bet(seat_number, amount) {
+            Ok(remaining) => {
+                self.log_info(TableAction::ForcedBet(seat_number, amount));
+                Ok(remaining)
+            }
+            Err(e) => Err(e),
         }
-        Ok(())
     }
 
     /// # Errors
@@ -426,7 +422,7 @@ impl Table {
     }
 
     pub fn is_ready_for_action(&self) -> bool {
-        let bint = DrainableBintCell::new_with_value(
+        let _bint = DrainableBintCell::new_with_value(
             self.seats.size(),
             self.seats.size() as usize - 2,
             self.action_to.value(),

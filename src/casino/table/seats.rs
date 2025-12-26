@@ -3,7 +3,6 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::table::seat::{Seat, SeatCell};
-use bint::DrainableBintCell;
 use log;
 use std::cell::{Ref, RefMut};
 
@@ -19,6 +18,33 @@ impl Seats {
     pub fn new(seats: Vec<Seat>) -> Self {
         let seat_cells: Vec<SeatCell> = seats.into_iter().map(SeatCell::new).collect();
         Seats(seat_cells.into_boxed_slice())
+    }
+
+    /// # Errors
+    ///
+    /// `PKError::InvalidSeatNumber` error if the `seat_number` is not valid.
+    pub fn act_bet(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
+        if let Some(seat) = self.get_seat_mut(seat_number) {
+            let remaining = seat.player.bet(amount)?;
+            Ok(remaining)
+        } else {
+            log::error!("Failed to find seat #{seat_number} for betting");
+            Err(PKError::InvalidSeatNumber)
+        }
+    }
+
+    /// # Errors
+    ///
+    /// `PKError::InvalidSeatNumber` error if the `seat_number` is not valid.
+    pub fn act_forced_bet(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
+        if let Some(seat) = self.get_seat_mut(seat_number) {
+            let ramaining = seat.player.bet_blind(amount)?;
+            drop(seat);
+            Ok(ramaining)
+        } else {
+            log::error!("Failed to act forced bet for seat #{seat_number}");
+            Err(PKError::InvalidSeatNumber)
+        }
     }
 
     /// Assigns a `Seat` to the given index, returning the old `Seat`.
@@ -99,6 +125,21 @@ impl Seats {
             count += seat.cards.number_of_dealt_cards();
         }
         count
+    }
+
+    #[must_use]
+    pub fn current_bet(&self) -> Option<usize> {
+        self.0
+            .iter()
+            .filter_map(|seat_cell| {
+                let seat = seat_cell.borrow();
+                if seat.player.state.is_active() {
+                    Some(seat.player.bet.count())
+                } else {
+                    None
+                }
+            })
+            .max()
     }
 
     /// ```
@@ -252,8 +293,8 @@ impl Seats {
                 return Ok(utg);
             }
 
-            let bint = DrainableBintCell::new_with_value(self.size(), self.size() as usize - 1, utg);
-            let mut seat_index: u8 = utg;
+            // let bint = DrainableBintCell::new_with_value(self.size(), self.size() as usize - 1, utg);
+            // let mut seat_index: u8 = utg;
             //
             // if let Some=(next_seat_numer) = bint.up() {
             //     // let seat_cell = self.0.get(seat_index as usize).ok_or(PKError::InvalidSeatNumber)?;
@@ -480,6 +521,22 @@ mod casino__table__seats_tests {
     }
 
     #[test]
+    fn current_bet() {
+        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let _ = seats.act_forced_bet(0, 100);
+        assert_eq!(Some(100), seats.current_bet());
+
+        let _ = seats.act_forced_bet(1, 200);
+        assert_eq!(Some(200), seats.current_bet());
+
+        let _ = seats.act_bet(2, 400);
+        assert_eq!(Some(400), seats.current_bet());
+
+        let _ = seats.act_bet(0, 400);
+        assert_eq!(Some(400), seats.current_bet());
+    }
+
+    #[test]
     fn next_to_act() {
         let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
 
@@ -567,7 +624,7 @@ mod casino__table__seats_tests {
 
         let utg: u8 = 3;
 
-        if let Some(seat_utg) = seats.get_seat(utg) {
+        if let Some(_seat_utg) = seats.get_seat(utg) {
             let order: Vec<usize> = seats.indices_from(utg + 1).take((seats.size() - 1) as usize).collect();
             assert_eq!(order, vec![4, 5, 6, 7, 0, 1, 2]);
             for i in order.iter() {
@@ -589,7 +646,7 @@ mod casino__table__seats_tests {
         //
         seats.get_seat_mut(gus).unwrap().player.state.set(PlayerState::Bet(100));
         //
-        let daniel = seats.next_to_act(3).unwrap();
+        let _daniel = seats.next_to_act(3).unwrap();
         // assert_eq!(4, daniel);
     }
 }

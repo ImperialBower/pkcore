@@ -646,9 +646,9 @@ mod casino__state_tests {
         assert!(!PlayerState::Check.can_act_after(&PlayerState::Blind(50)));
         assert!(!PlayerState::Check.can_act_after(&PlayerState::Bet(50)));
 
-        assert!(PlayerState::AllIn(50).can_act_after(&PlayerState::Blind(100)));
-        assert!(PlayerState::AllIn(50).can_act_after(&PlayerState::Bet(25)));
-        assert!(PlayerState::AllIn(50).can_act_after(&PlayerState::Raise(2500)));
+        assert!(!PlayerState::AllIn(50).can_act_after(&PlayerState::Blind(100)));
+        assert!(!PlayerState::AllIn(50).can_act_after(&PlayerState::Bet(25)));
+        assert!(!PlayerState::AllIn(50).can_act_after(&PlayerState::Raise(2500)));
 
         assert!(!PlayerState::Bet(500).can_act_after(&PlayerState::Bet(100)));
         assert!(PlayerState::Bet(150).can_act_after(&PlayerState::Blind(100)));
