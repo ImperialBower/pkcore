@@ -47,6 +47,22 @@ impl Seats {
         }
     }
 
+    #[must_use]
+    pub fn all_players_have_acted(&self) -> bool {
+        let current_bet = self.current_bet();
+
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            if seat.player.state.is_yet_to_act() {
+                return false;
+            }
+            if seat.is_active() && seat.player.bet.count() != current_bet {
+                return false;
+            }
+        }
+        true
+    }
+
     /// Assigns a `Seat` to the given index, returning the old `Seat`.
     ///
     /// # Errors

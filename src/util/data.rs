@@ -339,6 +339,26 @@ impl TestData {
             amnon_filippi,
         ]
     }
+
+    /// # Panics
+    ///
+    /// Because of `CardsCell` usage, but this is test data so... ¯\_(ツ)_/¯
+    #[must_use]
+    pub fn min_seats() -> Vec<Seat> {
+        let antonio_esfandiari = Seat {
+            player: Player::new_with_chips("Antonio Esfandari".to_string(), 100_000),
+            cards: boxed!("A♦ Q♣"),
+        };
+        let gus_hansen = Seat {
+            player: Player::new_with_chips("Gus Hansen".to_string(), 100_000),
+            cards: boxed!("5♦ 5♣"),
+        };
+        let daniel_negreanu = Seat {
+            player: Player::new_with_chips("Daniel Negreanu".to_string(), 100_000),
+            cards: boxed!("6♠ 6♥"),
+        };
+        vec![antonio_esfandiari, gus_hansen, daniel_negreanu]
+    }
 }
 
 #[cfg(test)]

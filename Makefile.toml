@@ -22,12 +22,21 @@ command = "cargo"
 args = ["test"]
 dependencies = ["clean"]
 
+[tasks.create_docs]
+command = "cargo"
+args = ["doc", "--no-deps"]
+
+[tasks.docs]
+command = "open"
+args = ["./target/doc/pkcore/index.html"]
+
 [tasks.ayce]
 dependencies = [
     "fmt",
     "build",
     "test",
-    "clippy"
+    "clippy",
+    "create_docs"
 ]
 
 [tasks.default]
