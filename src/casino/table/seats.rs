@@ -35,6 +35,21 @@ impl Seats {
 
     /// # Errors
     ///
+    /// `PKError::InvalidSeatNumber` error if the `seat_number` is not valid.
+    pub fn act_call(&self, seat_number: u8) -> Result<(usize, usize), PKError> {
+        let to_call = self.to_call(seat_number);
+        if let Some(seat) = self.get_seat_mut(seat_number) {
+            let remaining = seat.player.act_call(to_call)?;
+            drop(seat);
+            Ok((to_call, remaining))
+        } else {
+            log::error!("Failed to find seat #{seat_number} for calling");
+            Err(PKError::InvalidSeatNumber)
+        }
+    }
+
+    /// # Errors
+    ///
     /// `PKError::InvalidTableAction` error if the player cannot check.
     /// `PKError::InvalidSeatNumber` error if the `seat_number` is not valid.
     pub fn act_check(&self, seat_number: u8) -> Result<usize, PKError> {
@@ -428,6 +443,21 @@ impl Seats {
         }
     }
 
+    /// The original version of this function was completely flawed. It assumed that the value of
+    /// to call was whatever the highest bet was.
+    #[must_use]
+    pub fn to_call(&self, player: u8) -> usize {
+        let highest_bet = self.current_bet();
+
+        if let Some(seat) = self.get_seat(player) {
+            highest_bet.saturating_sub(seat.player.bet.count())
+        } else {
+            0
+        }
+    }
+
+    // region iterators
+
     /// Iterate immutably over seats starting at `start`, wrapping through all seats.
     pub fn iter_from(&self, start: u8) -> impl Iterator<Item = Ref<'_, Seat>> {
         self.indices_from(start).map(|i| self.0[i].borrow())
@@ -450,6 +480,8 @@ impl Seats {
             f(i, &seat_ref);
         }
     }
+
+    // endregion
 }
 
 impl Default for Seats {
@@ -542,8 +574,11 @@ mod casino__table__seats_tests {
         // Seat 0 and 2 cannot check because they have not put enough money in the pot.
         assert!(!seats.all_players_have_acted());
         assert_eq!(PKError::InvalidTableAction, seats.act_check(0).unwrap_err());
+        assert_eq!(50, seats.to_call(0));
         assert_eq!(PKError::InvalidTableAction, seats.act_check(2).unwrap_err());
+        assert_eq!(100, seats.to_call(2));
         // Seat 1 can check because their big blind is the highest bet.
+        assert_eq!(0, seats.to_call(1));
         assert_eq!(99900, seats.act_check(1).unwrap());
 
         // // Seat 0 tries to check when the current bet is 100

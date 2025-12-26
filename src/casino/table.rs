@@ -153,9 +153,8 @@ impl Table {
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
     pub fn act_call(&self, seat_number: u8) -> Result<usize, PKError> {
-        let to_call = self.to_call(seat_number);
-        match self.seats.act_bet(seat_number, to_call) {
-            Ok(remaining) => {
+        match self.seats.act_call(seat_number) {
+            Ok((to_call, remaining)) => {
                 self.log_info(TableAction::Call(seat_number, to_call));
                 self.action_to.up();
                 Ok(remaining)
@@ -590,17 +589,9 @@ impl Table {
         count
     }
 
-    /// The original version of this function was completely flawed. It assumed that the value of
-    /// to call was whatever the highest bet was.
     #[must_use]
     pub fn to_call(&self, player: u8) -> usize {
-        let highest_bet = self.seats.current_bet();
-
-        if let Some(seat) = self.get_seat(player) {
-            highest_bet.saturating_sub(seat.player.bet.count())
-        } else {
-            0
-        }
+        self.seats.to_call(player)
     }
 }
 
