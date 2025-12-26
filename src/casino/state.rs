@@ -282,11 +282,23 @@ impl PlayerState {
     /// use pkcore::prelude::*;
     ///
     /// assert!(PlayerState::YetToAct.is_yet_to_act());
-    /// assert!(!PlayerState::Bet(100).is_blind());
+    /// assert!(!PlayerState::Bet(100).is_yet_to_act());
     /// ```
     #[must_use]
     pub fn is_yet_to_act(&self) -> bool {
         matches!(self, PlayerState::YetToAct)
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert!(PlayerState::YetToAct.is_yet_to_act_or_blind());
+    /// assert!(PlayerState::Blind(20).is_yet_to_act_or_blind());
+    /// assert!(!PlayerState::Bet(100).is_yet_to_act_or_blind());
+    /// ```
+    #[must_use]
+    pub fn is_yet_to_act_or_blind(&self) -> bool {
+        matches!(self, PlayerState::YetToAct | PlayerState::Blind(_))
     }
 
     pub fn reset(&mut self) {
@@ -430,6 +442,11 @@ mod casino__state_tests {
         assert!(!PlayerState::Fold.can_act());
         assert!(!PlayerState::Out.can_act());
         assert!(!PlayerState::AllIn(500).can_act());
+    }
+
+    #[test]
+    fn agency__can_given__isolated() {
+        assert!(!PlayerState::Blind(100).can_given(&PlayerState::Bet(50)));
     }
 
     #[test]
