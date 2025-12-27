@@ -37,7 +37,7 @@ impl Seats {
     ///
     /// `PKError::InvalidSeatNumber` error if the `seat_number` is not valid.
     pub fn act_call(&self, seat_number: u8) -> Result<(usize, usize), PKError> {
-        let to_call = self.to_call(seat_number);
+        let to_call = self.current_bet();
         if let Some(seat) = self.get_seat_mut(seat_number) {
             let remaining = seat.player.act_call(to_call)?;
             drop(seat);
@@ -275,6 +275,7 @@ impl Seats {
         self.0.is_empty()
     }
 
+    /// NOTE: I have no idea why I wrote this.
     #[must_use]
     pub fn is_to_utg_preflop(&self) -> bool {
         for seat_cell in &self.0 {
@@ -565,43 +566,6 @@ mod casino__table__seats_tests {
     use crate::util::data::TestData;
 
     #[test]
-    fn act_check() {
-        let seats = Seats::try_from(TestData::min_seats().clone()).unwrap();
-
-        let _ = seats.act_forced_bet(0, 50);
-        let _ = seats.act_forced_bet(1, 100);
-
-        // // Seat 0 and 2 cannot check because they have not put enough money in the pot.
-        // assert!(!seats.all_players_have_acted());
-        // assert_eq!(PKError::InvalidTableAction, seats.act_check(0).unwrap_err());
-        // assert_eq!(50, seats.to_call(0));
-        // assert_eq!(PKError::InvalidTableAction, seats.act_check(2).unwrap_err());
-        // assert_eq!(100, seats.to_call(2));
-        // // Seat 1 can check because their big blind is the highest bet.
-        // assert_eq!(0, seats.to_call(1));
-        // assert_eq!(99900, seats.act_check(1).unwrap());
-
-        assert_eq!((100, 99900), seats.act_call(2).unwrap());
-        assert_eq!(0, seats.to_call(2));
-        assert_eq!(PKError::InvalidAction, seats.act_call(2).unwrap_err());
-
-        // // Seat 0 tries to check when the current bet is 100
-        // let _ = seats.act_forced_bet(0, 100);
-        // assert_eq!(100, seats.current_bet());
-        //
-        // let result = seats.act_check(0);
-        // assert_eq!(PKError::InvalidTableAction, result.unwrap_err());
-        //
-        // // Seat 1 matches the bet
-        // let _ = seats.act_bet(1, 100);
-        // assert_eq!(100, seats.current_bet());
-        //
-        // // Now seat 0 can check
-        // let result = seats.act_check(0);
-        // assert!(result.is_ok());
-    }
-
-    #[test]
     fn all_players_have_acted() {
         let seats = Seats::try_from(TestData::min_seats()).unwrap();
         assert!(!seats.all_players_have_acted());
@@ -765,5 +729,44 @@ mod casino__table__seats_tests {
         //
         let _daniel = seats.next_to_act(3).unwrap();
         // assert_eq!(4, daniel);
+    }
+
+    /// Matches test in `Table`
+    #[test]
+    fn validate__tiny_table() {
+        let seats = Seats::try_from(TestData::min_seats()).unwrap();
+
+        let _ = seats.act_forced_bet(1, 50);
+        let _ = seats.act_forced_bet(2, 100);
+
+        // Seat 0 and 2 cannot check because they have not put enough money in the pot.
+        assert!(!seats.all_players_have_acted());
+        assert_eq!(PKError::InvalidTableAction, seats.act_check(1).unwrap_err());
+        assert_eq!(50, seats.to_call(1));
+        assert_eq!(PKError::InvalidTableAction, seats.act_check(0).unwrap_err());
+        assert_eq!(100, seats.to_call(0));
+        // Seat 1 can check because their big blind is the highest bet.
+        assert_eq!(0, seats.to_call(2));
+        assert_eq!(99900, seats.act_check(2).unwrap());
+
+        assert_eq!((100, 99900), seats.act_call(0).unwrap());
+        assert_eq!(0, seats.to_call(0));
+        assert_eq!(PKError::InsufficientChips, seats.act_call(0).unwrap_err());
+        assert!(!seats.all_players_have_acted());
+
+        // // Seat 0 tries to check when the current bet is 100
+        // let _ = seats.act_forced_bet(0, 100);
+        // assert_eq!(100, seats.current_bet());
+        //
+        // let result = seats.act_check(0);
+        // assert_eq!(PKError::InvalidTableAction, result.unwrap_err());
+        //
+        // // Seat 1 matches the bet
+        // let _ = seats.act_bet(1, 100);
+        // assert_eq!(100, seats.current_bet());
+        //
+        // // Now seat 0 can check
+        // let result = seats.act_check(0);
+        // assert!(result.is_ok());
     }
 }

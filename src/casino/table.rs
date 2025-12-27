@@ -584,9 +584,11 @@ impl Table {
     /// This is an audit
     #[must_use]
     pub fn table_chip_count(&self) -> usize {
-        let count = self.seats.total_chip_count();
-        log::debug!("table_chip_count = {count}");
-        count
+        let player_chip_count = self.seats.total_chip_count();
+        let pot_chip_count = self.pot.count();
+        let total = player_chip_count + pot_chip_count;
+        log::debug!("table_chip_count = {total}");
+        total
     }
 
     #[must_use]
@@ -1070,5 +1072,47 @@ mod casino__table_tests {
         println!("{}", table.commentary_action_to());
 
         Ok(())
+    }
+
+    /// Matches test in `Seats`
+    #[test]
+    fn validate__tiny_table() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+        assert_eq!(300_000, table.table_chip_count());
+        assert_eq!(0, table.button.value());
+        assert_eq!(0, table.determine_utg());
+        assert_eq!(1, table.determine_small_blind());
+        assert_eq!(2, table.determine_big_blind());
+        assert!(!table.seats.all_players_have_acted());
+
+        let _ = table.act_forced_bets();
+        assert_eq!(300_000, table.table_chip_count());
+
+        if let Some(seat) = table.get_seat(1) {
+            assert_eq!(99_950, seat.player.chips.count());
+            assert_eq!(50, seat.player.bet.count());
+            assert_eq!(50, table.to_call(1));
+        } else {
+            panic!("Failed to get seat 1");
+        }
+
+        if let Some(seat) = table.get_seat(2) {
+            assert_eq!(99_900, seat.player.chips.count());
+            assert_eq!(100, seat.player.bet.count());
+            assert_eq!(0, table.to_call(2));
+        } else {
+            panic!("Failed to get seat 2");
+        }
+        assert!(!table.seats.all_players_have_acted());
+
+        let seat1_remaining = table.act_call(1).unwrap();
+        assert_eq!(99_900, seat1_remaining);
+        if let Some(seat) = table.get_seat(1) {
+            assert_eq!(100, seat.player.bet.count());
+            assert_eq!(0, table.to_call(1));
+        } else {
+            panic!("Failed to get seat 1");
+        }
+        assert!(!table.seats.all_players_have_acted());
     }
 }
