@@ -572,7 +572,7 @@ mod casino__table__seats_tests {
 
         for seat_cell in seats.borrow_all() {
             let seat = seat_cell.borrow();
-            seat.player.state.set(PlayerState::Check);
+            seat.player.state.set(PlayerState::Check(100));
         }
 
         assert!(seats.all_players_have_acted());
@@ -624,7 +624,12 @@ mod casino__table__seats_tests {
         let seat = seats.next_to_act(3).unwrap();
         assert_eq!(3, seat);
 
-        seats.get_seat_mut(seat).unwrap().player.state.set(PlayerState::Check);
+        seats
+            .get_seat_mut(seat)
+            .unwrap()
+            .player
+            .state
+            .set(PlayerState::Check(100));
         let seat = seats.next_to_act(3).unwrap();
         assert_eq!(4, seat);
 
@@ -749,24 +754,10 @@ mod casino__table__seats_tests {
         assert_eq!(0, seats.to_call(2));
         assert_eq!(99900, seats.act_check(2).unwrap());
 
+        assert_eq!(100, seats.to_call(0));
         assert_eq!((100, 99900), seats.act_call(0).unwrap());
         assert_eq!(0, seats.to_call(0));
         assert_eq!(PKError::InsufficientChips, seats.act_call(0).unwrap_err());
         assert!(!seats.all_players_have_acted());
-
-        // // Seat 0 tries to check when the current bet is 100
-        // let _ = seats.act_forced_bet(0, 100);
-        // assert_eq!(100, seats.current_bet());
-        //
-        // let result = seats.act_check(0);
-        // assert_eq!(PKError::InvalidTableAction, result.unwrap_err());
-        //
-        // // Seat 1 matches the bet
-        // let _ = seats.act_bet(1, 100);
-        // assert_eq!(100, seats.current_bet());
-        //
-        // // Now seat 0 can check
-        // let result = seats.act_check(0);
-        // assert!(result.is_ok());
     }
 }

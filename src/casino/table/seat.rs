@@ -106,6 +106,11 @@ impl Seat {
     pub fn is_yet_to_act(&self) -> bool {
         self.player.state.is_yet_to_act()
     }
+
+    #[must_use]
+    pub fn is_yet_to_act_or_blind(&self) -> bool {
+        self.player.state.is_yet_to_act_or_blind()
+    }
 }
 
 impl std::fmt::Display for Seat {

@@ -208,7 +208,7 @@ impl Player {
     ///
     /// // Check
     /// let check = player.act_check();
-    /// assert_eq!(PlayerState::Check, player.state.get());
+    /// assert_eq!(PlayerState::Check(0), player.state.get());
     ///
     /// let folds = player.act_fold();
     /// // Now the check should return a `PKError::InvalidTableAction`
@@ -224,7 +224,7 @@ impl Player {
             log::warn!("InvalidTableAction: Player is not active and cannot check.");
             return Err(PKError::InvalidTableAction);
         }
-        self.state.set(PlayerState::Check);
+        self.state.set(PlayerState::Check(self.bet.count()));
         log::debug!("Player {} with {} bet checks", self.handle, self.bet.count());
         Ok(self.chips.count())
     }
@@ -407,6 +407,23 @@ mod casino__players__player_tests {
 
         assert!(did_bet.is_ok());
         assert_eq!(900, did_bet.unwrap());
+    }
+
+    #[test]
+    fn act_check() {
+        let player = Player::new_with_chips("The Russian".to_string(), 1_000);
+
+        let did_blind = player.act_bet_blind(100);
+
+        assert!(did_blind.is_ok());
+        assert_eq!(900, did_blind.unwrap());
+        assert_eq!(PlayerState::Blind(100), player.state.get());
+
+        let did_check = player.act_check();
+
+        assert!(did_check.is_ok());
+        assert_eq!(900, did_check.unwrap());
+        assert_eq!(PlayerState::Check(100), player.state.get());
     }
 
     #[test]

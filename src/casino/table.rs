@@ -163,6 +163,21 @@ impl Table {
         }
     }
 
+    /// # Errors
+    ///
+    /// `PKError::InvalidTableAction` error if the player cannot check.
+    /// `PKError::InvalidSeatNumber` error if the `seat_number` is not valid.
+    pub fn act_check(&self, seat_number: u8) -> Result<usize, PKError> {
+        match self.seats.act_check(seat_number) {
+            Ok(remaining) => {
+                self.log_info(TableAction::Check(seat_number));
+                self.action_to.up();
+                Ok(remaining)
+            }
+            Err(e) => Err(e),
+        }
+    }
+
     pub fn act_deal(&self) {
         let deal: u8 = self.game.cards_per_player();
         self.act_deal_cards(deal);
@@ -1083,7 +1098,10 @@ mod casino__table_tests {
         assert_eq!(0, table.determine_utg());
         assert_eq!(1, table.determine_small_blind());
         assert_eq!(2, table.determine_big_blind());
-        assert!(!table.seats.all_players_have_acted());
+        // assert!(!table.seats.all_players_have_acted());
+
+        assert_eq!(PKError::InvalidTableAction, table.act_check(0).unwrap_err());
+        assert_eq!(PKError::InvalidTableAction, table.act_check(1).unwrap_err());
 
         let _ = table.act_forced_bets();
         assert_eq!(300_000, table.table_chip_count());
@@ -1103,7 +1121,17 @@ mod casino__table_tests {
         } else {
             panic!("Failed to get seat 2");
         }
-        assert!(!table.seats.all_players_have_acted());
+        // assert!(!table.seats.all_players_have_acted());
+
+        let seat0_remaining = table.act_call(0).unwrap();
+        assert_eq!(99_900, seat0_remaining);
+        if let Some(seat) = table.get_seat(0) {
+            assert_eq!(100, seat.player.bet.count());
+            assert_eq!(0, table.to_call(0));
+        } else {
+            panic!("Failed to get seat 0");
+        }
+        // assert!(!table.seats.all_players_have_acted());
 
         let seat1_remaining = table.act_call(1).unwrap();
         assert_eq!(99_900, seat1_remaining);
@@ -1113,6 +1141,34 @@ mod casino__table_tests {
         } else {
             panic!("Failed to get seat 1");
         }
-        assert!(!table.seats.all_players_have_acted());
+        // assert!(!table.seats.all_players_have_acted());
+
+        // Big blind already has the max bet in, so can't call
+        assert_eq!(PKError::InsufficientChips, table.act_call(0).unwrap_err());
+        assert_eq!(PKError::InsufficientChips, table.act_call(1).unwrap_err());
+        assert_eq!(PKError::InsufficientChips, table.act_call(2).unwrap_err());
+
+        let seat2_remaining = table.act_check(2).unwrap();
+        assert_eq!(99_900, seat2_remaining);
+
+        if let Some(seat) = table.get_seat(0) {
+            assert!(!seat.is_yet_to_act_or_blind());
+        } else {
+            panic!("Failed to get seat 9");
+        }
+        if let Some(seat) = table.get_seat(1) {
+            assert!(!seat.is_yet_to_act_or_blind());
+        } else {
+            panic!("Failed to get seat 1");
+        }
+
+        if let Some(seat) = table.get_seat(2) {
+            assert_eq!(PlayerState::Check(100), seat.player.state.get());
+            assert!(!seat.is_yet_to_act_or_blind());
+        } else {
+            panic!("Failed to get seat 2");
+        }
+
+        assert!(table.seats.all_players_have_acted());
     }
 }
