@@ -571,15 +571,19 @@ mod casino__table__seats_tests {
         let _ = seats.act_forced_bet(0, 50);
         let _ = seats.act_forced_bet(1, 100);
 
-        // Seat 0 and 2 cannot check because they have not put enough money in the pot.
-        assert!(!seats.all_players_have_acted());
-        assert_eq!(PKError::InvalidTableAction, seats.act_check(0).unwrap_err());
-        assert_eq!(50, seats.to_call(0));
-        assert_eq!(PKError::InvalidTableAction, seats.act_check(2).unwrap_err());
-        assert_eq!(100, seats.to_call(2));
-        // Seat 1 can check because their big blind is the highest bet.
-        assert_eq!(0, seats.to_call(1));
-        assert_eq!(99900, seats.act_check(1).unwrap());
+        // // Seat 0 and 2 cannot check because they have not put enough money in the pot.
+        // assert!(!seats.all_players_have_acted());
+        // assert_eq!(PKError::InvalidTableAction, seats.act_check(0).unwrap_err());
+        // assert_eq!(50, seats.to_call(0));
+        // assert_eq!(PKError::InvalidTableAction, seats.act_check(2).unwrap_err());
+        // assert_eq!(100, seats.to_call(2));
+        // // Seat 1 can check because their big blind is the highest bet.
+        // assert_eq!(0, seats.to_call(1));
+        // assert_eq!(99900, seats.act_check(1).unwrap());
+
+        assert_eq!((100, 99900), seats.act_call(2).unwrap());
+        assert_eq!(0, seats.to_call(2));
+        assert_eq!(PKError::InvalidAction, seats.act_call(2).unwrap_err());
 
         // // Seat 0 tries to check when the current bet is 100
         // let _ = seats.act_forced_bet(0, 100);

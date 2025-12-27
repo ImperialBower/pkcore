@@ -203,7 +203,7 @@ impl HUPResult {
     /// Returns error if db contains duplicate entries..
     pub fn check_db(conn: &Connection) -> Result<usize, PKError> {
         let (v, hs) = HUPResult::db_count(conn);
-        if v == hs { Ok(v) } else { Err(PKError::Duplicate) }
+        if v == hs { Ok(v) } else { Err(PKError::DuplicateCard) }
     }
 
     pub fn select_from_shifts(conn: &Connection, masked: &Masked) -> Option<HUPResult> {

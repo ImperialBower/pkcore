@@ -47,7 +47,10 @@ impl Player {
     /// * `PKError::InsufficientChips` - if the player does not have enough chips to make the bet
     /// * `PKError::InvalidTableAction` - throws if the player is already all in when all in is passed..
     fn act_bet_internal(&self, bet_type: PlayerState) -> Result<usize, PKError> {
-        if bet_type.amount() > self.total_chip_count() {
+        if bet_type.amount() == 0 {
+            log::warn!("InvalidAction: Player can't make a bet of zero.");
+            Err(PKError::InvalidAction)
+        } else if bet_type.amount() > self.total_chip_count() {
             log::warn!("InsufficientChips: Bet amount is greater than total chips.");
             Err(PKError::InsufficientChips)
         } else if !self.state.is_active() {
