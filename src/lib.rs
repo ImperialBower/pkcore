@@ -102,6 +102,7 @@ pub const POSSIBLE_UNIQUE_HOLDEM_HUP_MATCHUPS: usize = 1_624_350;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Ord, PartialOrd, Eq, Hash, PartialEq)]
 pub enum PKError {
+    ActionIsntFinished,
     AlreadyDealt,
     BlankCard,
     Busted,
@@ -147,6 +148,7 @@ pub enum PKError {
 impl Display for PKError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let msg = match self {
+            PKError::ActionIsntFinished => "Action isn't finished Error",
             PKError::AlreadyDealt => "Already dealt Error",
             PKError::BlankCard => "Blank Card Error",
             PKError::Busted => "Player is out of chips",

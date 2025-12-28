@@ -276,6 +276,16 @@ impl Table {
         self.log_debug(TableAction::ShuffleDeck);
     }
 
+    pub fn bring_it_in(&self) -> Result<usize, PKError> {
+        if !self.seats.all_players_have_acted() {
+            return Err(PKError::ActionIsntFinished)
+        }
+        for seat in self.seats.borrow_all() {
+            self.pot.add_to(seat.borrow_mut().player.bet.takes())
+        }
+        self.log_info(TableAction::BringItIn(self.pot.count()));
+    }
+
     pub fn button_set(&self, seat_number: u8) {
         self.button.set(seat_number);
         self.log_info(TableAction::SetButton(seat_number));
@@ -1099,6 +1109,17 @@ mod casino__table_tests {
         table
     }
 
+    fn tiny_table__through_flop() -> Table {
+        let table = tiny_table_setup();
+
+        let _ = table.act_forced_bets();
+        let _ = table.act_call(0).unwrap();
+        let _ = table.act_call(1).unwrap();
+        let _ = table.act_check(2).unwrap();
+
+        table
+    }
+
     /// Matches test in `Seats`
     #[test]
     fn validate__tiny_table() {
@@ -1176,5 +1197,6 @@ mod casino__table_tests {
         }
 
         assert!(table.seats.all_players_have_acted());
+
     }
 }
