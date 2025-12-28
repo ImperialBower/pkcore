@@ -180,28 +180,6 @@ impl Table {
         }
     }
 
-    pub fn act_deal(&self) {
-        let deal: u8 = self.game.cards_per_player();
-        self.act_deal_cards(deal);
-        self.log_info(TableAction::DealingXCards(deal));
-    }
-
-    /// # Errors
-    ///
-    /// TODO: Implement
-    pub fn act_deal_card(&self) -> Result<(), PKError> {
-        todo!()
-    }
-
-    pub fn act_deal_cards(&self, _num_cards: u8) {
-        todo!()
-    }
-
-    #[allow(dead_code)]
-    fn act_deal_nlh(&self) -> Result<TableAction, PKError> {
-        todo!()
-    }
-
     /// # Errors
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
@@ -366,6 +344,9 @@ impl Table {
         }
     }
 
+    /// Deals cards to each seat in a clockwise fashion until all players have their hands.
+    ///
+    /// TODO: Alternative logic for Stud and Razz games.
     /// # Errors
     ///
     /// - `PKError::AlreadyDealt` if all cards have already been dealt to the players.
@@ -376,6 +357,8 @@ impl Table {
         let capacity = seats as usize * cards_per as usize;
 
         let dbc = DrainableBintCell::new_with_value(seats, capacity, button);
+
+        self.log_info(TableAction::DealingXCards(u8::try_from(capacity).unwrap_or_default()));
 
         while dbc.has_capacity() {
             let seat_number = dbc.value();
@@ -838,6 +821,18 @@ mod casino__table_tests {
     }
 
     #[test]
+    fn deal_card_to_seat() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
+
+        table.deal_card_to_seat(1).expect("TODO: panic message");
+
+        assert_eq!(
+            "__ __, A♠ __, __ __, __ __, __ __, __ __, __ __, __ __",
+            table.seats.cards_string()
+        );
+    }
+
+    #[test]
     fn deal_cards_to_seats() {
         let table = TestData::min_table();
         assert!(!table.seats_are_dealt());
@@ -860,18 +855,6 @@ mod casino__table_tests {
         assert_eq!(1, table.event_count(&TableAction::ForcedBetBigBlind(2, 100)));
         assert_eq!(1, table.event_count(&TableAction::ShuffleDeck));
         assert_eq!(0, table.event_count(&TableAction::InvalidAction));
-    }
-
-    #[test]
-    fn deal_card_to_seat() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
-
-        table.deal_card_to_seat(1).expect("TODO: panic message");
-
-        assert_eq!(
-            "__ __, A♠ __, __ __, __ __, __ __, __ __, __ __, __ __",
-            table.seats.cards_string()
-        );
     }
 
     #[test]
@@ -1172,7 +1155,7 @@ mod casino__table_tests {
         table
     }
 
-    fn min_table__through_flop() -> Table {
+    fn min_table__up_to_flop() -> Table {
         let table = min_table_setup();
 
         let _ = table.act_forced_bets();
@@ -1302,7 +1285,7 @@ mod casino__table_tests {
 
     #[test]
     fn validate__min_table__post_flop() {
-        let table = min_table__through_flop();
+        let table = min_table__up_to_flop();
 
         let pot = table.bring_it_in().unwrap();
         assert_eq!(300000, table.table_chip_count());
