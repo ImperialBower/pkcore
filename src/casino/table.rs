@@ -838,6 +838,17 @@ mod casino__table_tests {
     }
 
     #[test]
+    fn deal_cards_to_seats() {
+        let table = TestData::min_table();
+        assert!(!table.seats_are_dealt());
+
+        table.deal_cards_to_seats().expect("WOOPSIE!!!");
+
+        assert_eq!("A♦ Q♣, 5♦ 5♣, 6♠ 6♥", table.seats.cards_string());
+        assert!(table.seats_are_dealt());
+    }
+
+    #[test]
     fn event_count() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
         table.act_shuffle_deck();
@@ -1145,6 +1156,8 @@ mod casino__table_tests {
 
     fn min_table_setup() -> Table {
         let table = TestData::min_table();
+        table.deal_cards_to_seats().expect("WOOPSIE!!!");
+
         assert_eq!("Antonio Esfandari", table.get_seat(0).unwrap().player.handle);
         assert_eq!("Gus Hansen", table.get_seat(1).unwrap().player.handle);
         assert_eq!("Daniel Negreanu", table.get_seat(2).unwrap().player.handle);
@@ -1154,6 +1167,8 @@ mod casino__table_tests {
         assert_eq!(0, table.determine_utg());
         assert_eq!(1, table.determine_small_blind());
         assert_eq!(2, table.determine_big_blind());
+        assert_eq!("A♦ Q♣, 5♦ 5♣, 6♠ 6♥", table.seats.cards_string());
+
         table
     }
 
@@ -1295,17 +1310,6 @@ mod casino__table_tests {
         assert_eq!(300, pot);
         assert_eq!(0, table.determine_utg());
         assert!(!table.seats.all_players_have_acted());
-    }
-
-    #[test]
-    fn deal_cards_to_seats() {
-        let table = TestData::min_table();
-        assert!(!table.seats_are_dealt());
-
-        table.deal_cards_to_seats().expect("WOOPSIE!!!");
-
-        assert_eq!("A♦ Q♣, 5♦ 5♣, 6♠ 6♥", table.seats.cards_string());
-        assert!(table.seats_are_dealt());
     }
 
     #[test]
