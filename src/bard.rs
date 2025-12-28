@@ -467,6 +467,12 @@ impl From<Card> for Bard {
     }
 }
 
+impl From<&Card> for Bard {
+    fn from(card: &Card) -> Self {
+        Bard::from(*card)
+    }
+}
+
 impl From<Cards> for Bard {
     fn from(cards: Cards) -> Self {
         let mut bard = Bard::default();

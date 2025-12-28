@@ -8,12 +8,13 @@ use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
+use crate::cards_cell::CardsCell;
 use crate::casino::player::Player;
 use crate::casino::table::seat::Seat;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
-use crate::prelude::BoxedCards;
+use crate::prelude::{BoxedCards, ForcedBets, Seats, Table};
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
 use crate::{Card, Cards, Forgiving, Pile, cards};
@@ -338,6 +339,29 @@ impl TestData {
             barry_greenstein,
             amnon_filippi,
         ]
+    }
+
+    #[must_use]
+    pub fn min_players() -> Vec<Seat> {
+        Vec::from(&TestData::the_hand_players()[2..5])
+    }
+
+    /// cargo run --example calc -- -d "A♦ Q♣ 6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"
+    ///
+    /// ```shell
+    /// hole cards> A♦ Q♣ 5♦ 5♣ 6♠ 6♥
+    /// Player #1 38.4% (38.15%/0.29%) [522929/4035]
+    /// Player #2 16.7% (16.43%/0.29%) [225186/4035]
+    /// Player #3 45.4% (45.13%/0.29%) [618604/4035]
+    /// ```
+    #[must_use]
+    pub fn min_table() -> Table {
+        let primed = cards!("A♦ 5♦ 6♠ Q♣ 5♣ 6♥ 9♣ 6♦ 5♥ 5♠ 8♦");
+        Table::nlh_primed(
+            Seats::new(TestData::min_players()),
+            &CardsCell::from(Cards::deck_primed(&primed)),
+            ForcedBets::new(50, 100),
+        )
     }
 
     /// # Panics

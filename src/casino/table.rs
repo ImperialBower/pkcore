@@ -118,6 +118,8 @@ impl Table {
         }
     }
 
+    // region table actions
+
     /// # Errors
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
@@ -276,6 +278,8 @@ impl Table {
         self.log_debug(TableAction::ShuffleDeck);
     }
 
+    // endregion
+
     /// Removes and returns the chips from the player's bet stack and sets their state to `YetToAct`.
     ///
     /// # Errors
@@ -351,12 +355,39 @@ impl Table {
     pub fn deal_card_to_seat(&self, seat_number: u8) -> Result<bool, PKError> {
         if let Some(mut seat) = self.get_seat_mut(seat_number) {
             let card = self.deck.draw_one()?;
+
+            self.event_log.log(TableAction::Dealt(seat_number, Bard::from(&card)));
+
             seat.cards.deal(card)?;
             Ok(seat.cards.is_dealt())
         } else {
             self.event_log.log(TableAction::Error(PKError::InvalidSeatNumber));
             Err(PKError::InvalidSeatNumber)
         }
+    }
+
+    /// # Errors
+    ///
+    /// - `PKError::AlreadyDealt` if all cards have already been dealt to the players.
+    pub fn deal_cards_to_seats(&self) -> Result<(), PKError> {
+        let cards_per = self.game.cards_per_player();
+        let seats = self.seats.size();
+        let button = self.button.value();
+        let capacity = seats as usize * cards_per as usize;
+
+        let dbc = DrainableBintCell::new_with_value(seats, capacity, button);
+
+        while dbc.has_capacity() {
+            let seat_number = dbc.value();
+            self.deal_card_to_seat(seat_number)?;
+
+            match dbc.up() {
+                Some(_) => {}
+                None => return Err(PKError::AlreadyDealt),
+            }
+        }
+
+        Ok(())
     }
 
     /// Returns `true` if the seat holds at least the `depth` number of dealt cards.
@@ -450,8 +481,8 @@ impl Table {
         self.seats.get_seat_mut(number)
     }
 
-    pub fn is_dealt(&self) -> bool {
-        todo!()
+    pub fn seats_are_dealt(&self) -> bool {
+        self.seats.are_dealt()
     }
 
     pub fn is_ready_for_action(&self) -> bool {
@@ -683,14 +714,18 @@ mod casino__table_tests {
 
     #[test]
     fn nlh_primed() {
-        let _primed = Cards::deck_primed(&TestData::the_hand_cards());
-        let _table = Table::nlh_primed(
+        let primed = Cards::deck_primed(&TestData::the_hand_cards());
+        let table = Table::nlh_primed(
             Seats::new(TestData::the_hand_players()),
             &CardsCell::from(Cards::deck_primed(&TestData::the_hand_cards())),
             ForcedBets::new(50, 100),
         );
 
-        // TODO: Test something. Need to add the dealing functionality,
+        assert_eq!(
+            "8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ T♠ 2♥ 9♣ 6♦ 5♥ 5♠ 8♦ A♠ Q♠ J♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 7♣ 6♣ 3♣ 2♣",
+            table.deck.to_string()
+        );
+        assert_eq!(primed, table.deck.cards());
     }
 
     #[test]
@@ -1108,11 +1143,12 @@ mod casino__table_tests {
         Ok(())
     }
 
-    fn tiny_table_setup() -> Table {
-        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+    fn min_table_setup() -> Table {
+        let table = TestData::min_table();
         assert_eq!("Antonio Esfandari", table.get_seat(0).unwrap().player.handle);
         assert_eq!("Gus Hansen", table.get_seat(1).unwrap().player.handle);
         assert_eq!("Daniel Negreanu", table.get_seat(2).unwrap().player.handle);
+        assert_eq!(3, table.seats.size());
         assert_eq!(300_000, table.table_chip_count());
         assert_eq!(0, table.button.value());
         assert_eq!(0, table.determine_utg());
@@ -1121,8 +1157,8 @@ mod casino__table_tests {
         table
     }
 
-    fn tiny_table__through_flop() -> Table {
-        let table = tiny_table_setup();
+    fn min_table__through_flop() -> Table {
+        let table = min_table_setup();
 
         let _ = table.act_forced_bets();
         let _ = table.act_call(0).unwrap();
@@ -1132,6 +1168,7 @@ mod casino__table_tests {
         table
     }
 
+    /// Adding a forth player who folds to catch that case in the test.
     #[test]
     fn bring_it_in() {
         let table = Table::nlh_from_seats(Seats::new(TestData::four_seats()), ForcedBets::new(50, 100));
@@ -1146,6 +1183,7 @@ mod casino__table_tests {
 
         let pot = table.bring_it_in().unwrap();
 
+        assert_eq!(4, table.seats.size());
         assert_eq!(400_000, table.table_chip_count());
         assert_eq!(300, pot);
         // All of their chips have been moved into the pot.
@@ -1160,8 +1198,8 @@ mod casino__table_tests {
 
     /// Matches test in `Seats`
     #[test]
-    fn validate__tiny_table() {
-        let table = tiny_table_setup();
+    fn validate__min_table__through_preflop() {
+        let table = min_table_setup();
 
         assert!(!table.seats.all_players_have_acted());
 
@@ -1245,5 +1283,85 @@ mod casino__table_tests {
         assert_eq!(0, table.get_seat(1).unwrap().player.bet.count());
         assert_eq!(0, table.get_seat(2).unwrap().player.bet.count());
         assert!(!table.seats.all_players_have_acted());
+    }
+
+    #[test]
+    fn validate__min_table__post_flop() {
+        let table = min_table__through_flop();
+
+        let pot = table.bring_it_in().unwrap();
+        assert_eq!(300000, table.table_chip_count());
+        assert_eq!(0, table.seats.current_bet());
+        assert_eq!(300, pot);
+        assert_eq!(0, table.determine_utg());
+        assert!(!table.seats.all_players_have_acted());
+    }
+
+    #[test]
+    fn deal_cards_to_seats() {
+        let table = TestData::min_table();
+        assert!(!table.seats_are_dealt());
+
+        table.deal_cards_to_seats().expect("WOOPSIE!!!");
+
+        assert_eq!("A♦ Q♣, 5♦ 5♣, 6♠ 6♥", table.seats.cards_string());
+        assert!(table.seats_are_dealt());
+    }
+
+    #[test]
+    fn validate__min_table() {
+        let table = TestData::min_table();
+
+        table.act_forced_bets().expect("TODO: panic message");
+        assert_eq!(TableAction::ForcedBetBigBlind(2, 100), table.event_log.last().unwrap());
+
+        assert_eq!(300_000, table.table_chip_count());
+        assert_eq!(0, table.button.value());
+        assert_eq!(
+            "A♦ 5♦ 6♠ Q♣ 5♣ 6♥ 9♣ 6♦ 5♥ 5♠ 8♦ A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ K♦ Q♦ J♦ T♦ 9♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 8♣ 7♣ 6♣ 4♣ 3♣ 2♣",
+            table.deck.to_string()
+        );
+        assert!(!table.seats_are_dealt());
+
+        table.deal_card_to_seat(0).expect("TODO: panic message");
+        assert_eq!("A♦ __, __ __, __ __", table.seats.cards_string());
+        assert_eq!(
+            TableAction::Dealt(0, Bard::ACE_DIAMONDS),
+            table.event_log.last().unwrap()
+        );
+        assert!(!table.seats_are_dealt());
+
+        table.deal_card_to_seat(1).expect("TODO: panic message");
+        assert_eq!("A♦ __, 5♦ __, __ __", table.seats.cards_string());
+        assert_eq!(
+            TableAction::Dealt(1, Bard::FIVE_DIAMONDS),
+            table.event_log.last().unwrap()
+        );
+        assert!(!table.seats_are_dealt());
+
+        table.deal_card_to_seat(2).expect("TODO: panic message");
+        assert_eq!("A♦ __, 5♦ __, 6♠ __", table.seats.cards_string());
+        assert_eq!(TableAction::Dealt(2, Bard::SIX_SPADES), table.event_log.last().unwrap());
+        assert!(!table.seats_are_dealt());
+
+        table.deal_card_to_seat(0).expect("TODO: panic message");
+        assert_eq!("A♦ Q♣, 5♦ __, 6♠ __", table.seats.cards_string());
+        assert_eq!(
+            TableAction::Dealt(0, Bard::QUEEN_CLUBS),
+            table.event_log.last().unwrap()
+        );
+        assert!(!table.seats_are_dealt());
+
+        table.deal_card_to_seat(1).expect("TODO: panic message");
+        assert_eq!("A♦ Q♣, 5♦ 5♣, 6♠ __", table.seats.cards_string());
+        assert_eq!(TableAction::Dealt(1, Bard::FIVE_CLUBS), table.event_log.last().unwrap());
+        assert!(!table.seats_are_dealt());
+
+        table.deal_card_to_seat(2).expect("TODO: panic message");
+        assert_eq!("A♦ Q♣, 5♦ 5♣, 6♠ 6♥", table.seats.cards_string());
+        assert_eq!(TableAction::Dealt(2, Bard::SIX_HEARTS), table.event_log.last().unwrap());
+
+        // Now all seats have been dealt 2 cards each.
+        assert!(table.seats_are_dealt());
     }
 }
