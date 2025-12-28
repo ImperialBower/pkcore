@@ -1134,12 +1134,19 @@ mod casino__table_tests {
 
     #[test]
     fn bring_it_in() {
-        let table = tiny_table__through_flop();
+        let table = Table::nlh_from_seats(Seats::new(TestData::four_seats()), ForcedBets::new(50, 100));
+
+        let _ = table.act_forced_bets();
+        let _ = table.act_call(0).unwrap();
+        let _ = table.act_call(1).unwrap();
+        let _ = table.act_check(2).unwrap();
+        let _ = table.act_fold(3).unwrap();
+
         assert!(table.seats.all_players_have_acted());
 
         let pot = table.bring_it_in().unwrap();
 
-        assert_eq!(300_000, table.table_chip_count());
+        assert_eq!(400_000, table.table_chip_count());
         assert_eq!(300, pot);
         // All of their chips have been moved into the pot.
         assert_eq!(99_900, table.get_seat(0).unwrap().player.chips.count());
