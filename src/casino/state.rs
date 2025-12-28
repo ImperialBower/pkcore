@@ -185,12 +185,6 @@ impl PlayerState {
             return true;
         }
 
-        //Blind(usize),
-        //     Bet(usize),
-        //     Call(usize),
-        //     Raise(usize),
-        //     ReRaise(usize),
-        //     AllIn(usize),
         // We've already checked if there's a blind, so you can only check if there's been nothing
         // but checks.
         if matches!(self, PlayerState::Check(_)) {
@@ -474,9 +468,8 @@ mod casino__state_tests {
 
     #[test]
     fn agency__can_given__isolated() {
-        // assert!(PlayerState::Blind(100).can_given(&PlayerState::Check(100)));
-        // assert!(!PlayerState::Blind(300).can_given(&PlayerState::Check(100)));
-
+        assert!(PlayerState::Blind(100).can_given(&PlayerState::Check(100)));
+        assert!(!PlayerState::Blind(300).can_given(&PlayerState::Check(100)));
         assert!(!PlayerState::Check(100).can_given(&PlayerState::Blind(100)));
         assert!(!PlayerState::Blind(300).can_given(&PlayerState::Check(400)));
         assert!(!PlayerState::Check(0).can_given(&PlayerState::Check(0)));

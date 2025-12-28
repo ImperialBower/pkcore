@@ -1089,16 +1089,22 @@ mod casino__table_tests {
         Ok(())
     }
 
-    /// Matches test in `Seats`
-    #[test]
-    fn validate__tiny_table() {
+    fn tiny_table_setup() -> Table {
         let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
         assert_eq!(300_000, table.table_chip_count());
         assert_eq!(0, table.button.value());
         assert_eq!(0, table.determine_utg());
         assert_eq!(1, table.determine_small_blind());
         assert_eq!(2, table.determine_big_blind());
-        // assert!(!table.seats.all_players_have_acted());
+        table
+    }
+
+    /// Matches test in `Seats`
+    #[test]
+    fn validate__tiny_table() {
+        let table = tiny_table_setup() ;
+
+        assert!(!table.seats.all_players_have_acted());
 
         assert_eq!(PKError::InvalidTableAction, table.act_check(0).unwrap_err());
         assert_eq!(PKError::InvalidTableAction, table.act_check(1).unwrap_err());
@@ -1121,7 +1127,7 @@ mod casino__table_tests {
         } else {
             panic!("Failed to get seat 2");
         }
-        // assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.all_players_have_acted());
 
         let seat0_remaining = table.act_call(0).unwrap();
         assert_eq!(99_900, seat0_remaining);
@@ -1131,7 +1137,7 @@ mod casino__table_tests {
         } else {
             panic!("Failed to get seat 0");
         }
-        // assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.all_players_have_acted());
 
         let seat1_remaining = table.act_call(1).unwrap();
         assert_eq!(99_900, seat1_remaining);
@@ -1141,7 +1147,7 @@ mod casino__table_tests {
         } else {
             panic!("Failed to get seat 1");
         }
-        // assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.all_players_have_acted());
 
         // Big blind already has the max bet in, so can't call
         assert_eq!(PKError::InsufficientChips, table.act_call(0).unwrap_err());
