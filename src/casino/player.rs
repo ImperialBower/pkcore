@@ -178,6 +178,20 @@ impl Player {
         self.act_bet_internal(PlayerState::Blind(amount))
     }
 
+    /// Removes and returns the chips from the player's bet stack and sets their state to `YetToAct`.
+    ///
+    /// # Errors
+    ///
+    /// * `PKError::InvalidTableAction` - throws if the player is not active in the hand.
+    pub fn act_bring_it_in(&self) -> Result<Stack, PKError> {
+        if !self.state.is_active() {
+            log::warn!("InvalidTableAction: Player is not active in the hand.");
+            return Err(PKError::InvalidTableAction);
+        }
+        self.state.set(PlayerState::YetToAct);
+        Ok(self.bet.takes())
+    }
+
     /// ```
     /// use pkcore::prelude::*;
     ///
@@ -322,6 +336,10 @@ impl Player {
         self.chips.count() == 0 && self.bet.count() > 0
     }
 
+    pub fn is_in_hand(&self) -> bool {
+        self.state.is_in_hand()
+    }
+
     pub fn is_tapped_out(&self) -> bool {
         self.chips.count() == 0 && self.bet.count() == 0
     }
@@ -407,6 +425,21 @@ mod casino__players__player_tests {
 
         assert!(did_bet.is_ok());
         assert_eq!(900, did_bet.unwrap());
+        assert_eq!(PlayerState::Bet(100), player.state.get());
+    }
+
+    #[test]
+    fn act_bring_it_in() {
+        let player = Player::new_with_chips("The Russian".to_string(), 1_000);
+
+        let _ = player.act_bet(100);
+        let did_bring_it_in = player.act_bring_it_in();
+
+        assert!(did_bring_it_in.is_ok());
+        assert_eq!(Stack::new(100), did_bring_it_in.unwrap());
+        assert_eq!(0, player.bet.count());
+        assert_eq!(900, player.chips.count());
+        assert_eq!(PlayerState::YetToAct, player.state.get());
     }
 
     #[test]
@@ -434,6 +467,15 @@ mod casino__players__player_tests {
         let _ = player.act_bet(500);
         assert!(player.is_all_in());
         assert_eq!(PlayerState::AllIn(500), player.state.get());
+    }
+
+    #[test]
+    fn is_in_hand() {
+        let player = Player::new_with_chips("All In Andy".to_string(), 500);
+        assert!(player.is_in_hand());
+
+        let _ = player.act_fold();
+        assert!(!player.is_in_hand());
     }
 
     #[test]

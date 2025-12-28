@@ -25,6 +25,7 @@ pub enum TableAction {
     Dealt(u8, Bard),
     DealtPlayers,
     ForceDealt(u8, Bard),
+    BringItIn(usize),
     ActionTo(u8),
     Check(u8),
     Bet(u8, usize),
@@ -48,6 +49,7 @@ impl TableAction {
         match self {
             TableAction::ForcedBetSmallBlind(_, amount) => format!("{name} posts {amount} small blind"),
             TableAction::ForcedBetBigBlind(_, amount) => format!("{name} posts {amount} big blind"),
+            TableAction::BringItIn(amount) => format!("Brings in {amount}"),
             TableAction::Bet(_, amount) => format!("{name} bets {amount}"),
             TableAction::Call(_, amount) => format!("{name} calls {amount}"),
             TableAction::Raise(_, amount) => format!("{name} raises to {amount}"),
@@ -139,6 +141,7 @@ impl Display for TableAction {
             TableAction::ForceDealt(seat, cards) => {
                 write!(f, "Seat {seat} is force-dealt {}", Cards::from(*cards))
             }
+            TableAction::BringItIn(amount) => write!(f, "Brings in {amount}"),
             TableAction::ActionTo(seat) => write!(f, "Action to Seat {seat}"),
             TableAction::Check(seat) => write!(f, "Seat {seat} checks"),
             TableAction::Bet(seat, amount) => write!(f, "Seat {seat} bets {amount}"),

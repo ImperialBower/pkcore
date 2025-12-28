@@ -276,14 +276,23 @@ impl Table {
         self.log_debug(TableAction::ShuffleDeck);
     }
 
+    /// Removes and returns the chips from the player's bet stack and sets their state to `YetToAct`.
+    ///
+    /// # Errors
+    ///
+    /// * `PKError::InvalidTableAction` - throws if a player is not active in the hand.
     pub fn bring_it_in(&self) -> Result<usize, PKError> {
         if !self.seats.all_players_have_acted() {
-            return Err(PKError::ActionIsntFinished)
+            return Err(PKError::ActionIsntFinished);
         }
         for seat in self.seats.borrow_all() {
-            self.pot.add_to(seat.borrow_mut().player.bet.takes())
+            if !seat.borrow().player.is_in_hand() {
+                continue;
+            }
+            self.pot.add_to(seat.borrow_mut().player.act_bring_it_in()?);
         }
         self.log_info(TableAction::BringItIn(self.pot.count()));
+        Ok(self.pot.count())
     }
 
     pub fn button_set(&self, seat_number: u8) {
@@ -1101,6 +1110,9 @@ mod casino__table_tests {
 
     fn tiny_table_setup() -> Table {
         let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+        assert_eq!("Antonio Esfandari", table.get_seat(0).unwrap().player.handle);
+        assert_eq!("Gus Hansen", table.get_seat(1).unwrap().player.handle);
+        assert_eq!("Daniel Negreanu", table.get_seat(2).unwrap().player.handle);
         assert_eq!(300_000, table.table_chip_count());
         assert_eq!(0, table.button.value());
         assert_eq!(0, table.determine_utg());
@@ -1120,10 +1132,29 @@ mod casino__table_tests {
         table
     }
 
+    #[test]
+    fn bring_it_in() {
+        let table = tiny_table__through_flop();
+        assert!(table.seats.all_players_have_acted());
+
+        let pot = table.bring_it_in().unwrap();
+
+        assert_eq!(300_000, table.table_chip_count());
+        assert_eq!(300, pot);
+        // All of their chips have been moved into the pot.
+        assert_eq!(99_900, table.get_seat(0).unwrap().player.chips.count());
+        assert_eq!(99_900, table.get_seat(1).unwrap().player.chips.count());
+        assert_eq!(99_900, table.get_seat(2).unwrap().player.chips.count());
+        assert_eq!(0, table.get_seat(0).unwrap().player.bet.count());
+        assert_eq!(0, table.get_seat(1).unwrap().player.bet.count());
+        assert_eq!(0, table.get_seat(2).unwrap().player.bet.count());
+        assert!(!table.seats.all_players_have_acted());
+    }
+
     /// Matches test in `Seats`
     #[test]
     fn validate__tiny_table() {
-        let table = tiny_table_setup() ;
+        let table = tiny_table_setup();
 
         assert!(!table.seats.all_players_have_acted());
 
@@ -1197,6 +1228,15 @@ mod casino__table_tests {
         }
 
         assert!(table.seats.all_players_have_acted());
-
+        let pot = table.bring_it_in().unwrap();
+        assert_eq!(300_000, table.table_chip_count());
+        assert_eq!(300, pot);
+        assert_eq!(99_900, table.get_seat(0).unwrap().player.chips.count());
+        assert_eq!(99_900, table.get_seat(1).unwrap().player.chips.count());
+        assert_eq!(99_900, table.get_seat(2).unwrap().player.chips.count());
+        assert_eq!(0, table.get_seat(0).unwrap().player.bet.count());
+        assert_eq!(0, table.get_seat(1).unwrap().player.bet.count());
+        assert_eq!(0, table.get_seat(2).unwrap().player.bet.count());
+        assert!(!table.seats.all_players_have_acted());
     }
 }

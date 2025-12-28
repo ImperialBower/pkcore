@@ -330,6 +330,10 @@ impl Agency for PlayerState {
             return true;
         }
 
+        if next.is_yet_to_act() {
+            return true;
+        }
+
         if next.is_check() {
             if self.is_check() || self.is_fold() || (next.amount() > self.amount()) {
                 return false;
@@ -508,6 +512,7 @@ mod casino__state_tests {
         assert!(PlayerState::Bet(100).can_given(&PlayerState::Raise(200)));
         assert!(PlayerState::Bet(100).can_given(&PlayerState::ReRaise(200)));
         assert!(PlayerState::Bet(100).can_given(&PlayerState::AllIn(500)));
+        assert!(PlayerState::Bet(100).can_given(&PlayerState::YetToAct));
         assert!(!PlayerState::Bet(100).can_given(&PlayerState::Call(100)));
         assert!(!PlayerState::Bet(200).can_given(&PlayerState::Raise(200)));
         assert!(!PlayerState::Bet(200).can_given(&PlayerState::Bet(300)));
