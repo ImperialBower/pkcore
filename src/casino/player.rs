@@ -123,7 +123,8 @@ impl Player {
             return Err(PKError::InvalidTableAction);
         }
         let amount = self.total_chip_count();
-        self.act_bet_internal(PlayerState::AllIn(amount))
+        let _ = self.act_bet_internal(PlayerState::AllIn(amount))?;
+        Ok(amount)
     }
 
     /// Working with cells this way is a completely different way of coding in `Rust`. It turns

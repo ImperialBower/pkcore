@@ -24,6 +24,8 @@ pub enum TableAction {
     DealingXCards(u8),
     Dealt(u8, Bard),
     DealtFlop(Bard),
+    DealtTurn(Bard),
+    DealtRiver(Bard),
     DealtPlayers,
     ForceDealt(u8, Bard),
     BringItIn(usize),
@@ -140,6 +142,8 @@ impl Display for TableAction {
             TableAction::DealingXCards(x) => write!(f, "Dealing {x} cards to each player"),
             TableAction::Dealt(seat, cards) => write!(f, "Seat {seat} is dealt {}", Cards::from(*cards)),
             TableAction::DealtFlop(cards) => write!(f, "Flop is {}", Cards::from(*cards)),
+            TableAction::DealtTurn(cards) => write!(f, "Turn is {}", Cards::from(*cards)),
+            TableAction::DealtRiver(cards) => write!(f, "River is {}", Cards::from(*cards)),
             TableAction::DealtPlayers => write!(f, "Dealt Players"),
             TableAction::ForceDealt(seat, cards) => {
                 write!(f, "Seat {seat} is force-dealt {}", Cards::from(*cards))

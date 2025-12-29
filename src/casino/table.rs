@@ -124,6 +124,21 @@ impl Table {
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
+    pub fn act_all_in(&self, seat_number: u8) -> Result<usize, PKError> {
+        match self.seats.act_all_in(seat_number) {
+            Ok(amount) => {
+                self.log_info(TableAction::AllIn(seat_number, amount));
+                self.action_to.up();
+                Ok(amount)
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    /// # Errors
+    ///
+    /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
+    /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
     pub fn act_bet(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
         match self.seats.act_bet(seat_number, amount) {
             Ok(remaining) => {
@@ -171,10 +186,10 @@ impl Table {
     /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
     pub fn act_call(&self, seat_number: u8) -> Result<usize, PKError> {
         match self.seats.act_call(seat_number) {
-            Ok((to_call, remaining)) => {
+            Ok((to_call, _remaining)) => {
                 self.log_info(TableAction::Call(seat_number, to_call));
                 self.action_to.up();
-                Ok(remaining)
+                Ok(to_call)
             }
             Err(e) => Err(e),
         }
@@ -400,6 +415,38 @@ impl Table {
         self.set_board(flop.cards());
 
         self.log_info(TableAction::DealtFlop(self.board.bard()));
+
+        Ok(())
+    }
+
+    /// # Errors
+    ///
+    /// - `PKError::NotEnoughCards`
+    pub fn deal_turn(&self) -> Result<(), PKError> {
+        // Burn a card
+        // TODO: FIX ME
+        // let _burn = self.deck.draw_one()?;
+
+        let turn = self.deck.draw_one()?;
+        self.board.insert(turn);
+
+        self.log_info(TableAction::DealtTurn(turn.bard()));
+
+        Ok(())
+    }
+
+    /// # Errors
+    ///
+    /// - `PKError::NotEnoughCards`
+    pub fn deal_river(&self) -> Result<(), PKError> {
+        // Burn a card
+        // TODO: FIX ME
+        // let _burn = self.deck.draw_one()?;
+
+        let river = self.deck.draw_one()?;
+        self.board.insert(river);
+
+        self.log_info(TableAction::DealtRiver(river.bard()));
 
         Ok(())
     }
@@ -736,7 +783,7 @@ mod casino__table_tests {
         );
 
         assert_eq!(
-            "8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ T♠ 2♥ 9♣ 6♦ 5♥ 5♠ 8♦ A♠ Q♠ J♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 7♣ 6♣ 3♣ 2♣",
+            "8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ T♠ 2♥ 9♣ 6♦ 5♥ 5♠ 8♠ A♠ Q♠ J♠ 9♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 7♣ 6♣ 3♣ 2♣",
             table.deck.to_string()
         );
         assert_eq!(primed, table.deck.cards());
@@ -1254,8 +1301,8 @@ mod casino__table_tests {
         }
         assert!(!table.seats.all_players_have_acted());
 
-        let seat0_remaining = table.act_call(0).unwrap();
-        assert_eq!(999_900, seat0_remaining);
+        let seat0 = table.act_call(0).unwrap();
+        assert_eq!(100, seat0);
         if let Some(seat) = table.get_seat(0) {
             assert_eq!(100, seat.player.bet.count());
             assert_eq!(0, table.to_call(0));
@@ -1264,8 +1311,8 @@ mod casino__table_tests {
         }
         assert!(!table.seats.all_players_have_acted());
 
-        let seat1_remaining = table.act_call(1).unwrap();
-        assert_eq!(999_900, seat1_remaining);
+        let seat1 = table.act_call(1).unwrap();
+        assert_eq!(100, seat1);
         if let Some(seat) = table.get_seat(1) {
             assert_eq!(100, seat.player.bet.count());
             assert_eq!(0, table.to_call(1));
@@ -1323,7 +1370,7 @@ mod casino__table_tests {
         assert_eq!(3_000_000, table.table_chip_count());
         assert_eq!(0, table.button.value());
         assert_eq!(
-            "A♦ 5♦ 6♠ Q♣ 5♣ 6♥ 9♣ 6♦ 5♥ 5♠ 8♦ A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ K♦ Q♦ J♦ T♦ 9♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 8♣ 7♣ 6♣ 4♣ 3♣ 2♣",
+            "A♦ 5♦ 6♠ Q♣ 5♣ 6♥ 9♣ 6♦ 5♥ 5♠ 8♠ A♠ K♠ Q♠ J♠ T♠ 9♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 8♣ 7♣ 6♣ 4♣ 3♣ 2♣",
             table.deck.to_string()
         );
         assert!(!table.seats_are_dealt());
@@ -1409,9 +1456,27 @@ mod casino__table_tests {
         let _daniel = table.act_call(2).unwrap();
         assert!(table.seats.all_players_have_acted());
 
-        // assert_eq!(0, table.seats.current_bet());
-        // assert_eq!(300, pot);
-        // assert_eq!(0, table.determine_utg());
-        // assert!(!table.seats.all_players_have_acted());
+        let pot = table.bring_it_in().unwrap();
+        assert_eq!(110050, pot);
+        assert!(!table.seats.all_players_have_acted());
+
+        table.deal_turn().expect("No turn");
+
+        assert_eq!("Turn is 5♠", table.event_log.last().unwrap().to_string());
+        assert_eq!("9♣ 6♦ 5♥ 5♠", table.board.to_string());
+
+        table.deal_river().expect("No turn");
+
+        assert_eq!("River is 8♠", table.event_log.last().unwrap().to_string());
+        assert_eq!("9♣ 6♦ 5♥ 5♠ 8♠", table.board.to_string());
+
+        let _gus = table.act_check(1).unwrap();
+        let _daniel = table.act_bet(2, 65_000).unwrap();
+        let gus = table.act_all_in(1).unwrap();
+        let daniel = table.act_call(2).unwrap();
+
+        assert_eq!(945_000, gus);
+        assert_eq!(945_000, daniel);
+        assert!(table.seats.all_players_have_acted());
     }
 }

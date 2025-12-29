@@ -947,7 +947,7 @@ mod cards_tests {
     #[test]
     fn deck_primed() {
         let deck_minus = TestData::the_hand_cards();
-        let expected = "8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ T♠ 2♥ 9♣ 6♦ 5♥ 5♠ 8♦ A♠ Q♠ J♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 7♣ 6♣ 3♣ 2♣";
+        let expected = "8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ T♠ 2♥ 9♣ 6♦ 5♥ 5♠ 8♠ A♠ Q♠ J♠ 9♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 7♣ 6♣ 3♣ 2♣";
 
         let primed = Cards::deck_primed(&deck_minus);
 

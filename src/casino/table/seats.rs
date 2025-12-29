@@ -23,6 +23,19 @@ impl Seats {
     /// # Errors
     ///
     /// `PKError::InvalidSeatNumber` error if the `seat_number` is not valid.
+    pub fn act_all_in(&self, seat_number: u8) -> Result<usize, PKError> {
+        if let Some(seat) = self.get_seat_mut(seat_number) {
+            let total_chips = seat.player.act_all_in()?;
+            Ok(total_chips)
+        } else {
+            log::error!("Failed to find seat #{seat_number} for betting");
+            Err(PKError::InvalidSeatNumber)
+        }
+    }
+
+    /// # Errors
+    ///
+    /// `PKError::InvalidSeatNumber` error if the `seat_number` is not valid.
     pub fn act_bet(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
         if let Some(seat) = self.get_seat_mut(seat_number) {
             let remaining = seat.player.act_bet(amount)?;
@@ -578,6 +591,14 @@ mod casino__table__seats_tests {
     use crate::casino::table::Table;
     use crate::prelude::*;
     use crate::util::data::TestData;
+
+    #[test]
+    fn act_all_in() {
+        let seats = Seats::try_from(TestData::min_seats()).unwrap();
+
+        let all_in = seats.act_all_in(0).unwrap();
+        assert_eq!(1_000_000, all_in);
+    }
 
     #[test]
     fn all_players_have_acted() {
