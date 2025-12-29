@@ -1,4 +1,4 @@
-#![warn(clippy::pedantic)]
+#![warn(clippy::pedantic, clippy::unwrap_used, clippy::expect_used)]
 #![allow(
     non_upper_case_globals,
     clippy::unreadable_literal,
@@ -28,14 +28,16 @@ use std::hash::Hash;
 use crate::analysis::gto::combo::Combo;
 use crate::analysis::gto::combo_pairs::ComboPairs;
 use crate::analysis::gto::twos::Twos;
-use crate::casino::cashier::chips::Chips;
+use crate::prelude::PlayerState;
 use crate::rank::Rank;
 use crate::ranks::Ranks;
 use crate::suit::Suit;
 use rayon::iter::IterBridge;
 use std::iter::Enumerate;
+use std::str::FromStr;
 
 #[macro_use]
+pub mod macros;
 pub mod analysis;
 pub mod arrays;
 pub mod bard;
@@ -48,10 +50,12 @@ pub mod deck;
 pub mod games;
 mod lookups;
 pub mod play;
+pub mod prelude;
 pub mod rank;
 pub mod ranks;
 pub mod suit;
 pub mod util;
+
 // region CONSTANTS
 
 /// See Cactus Kev's explanation of [unique vs. distinct](https://suffe.cool/poker/evaluator.html)
@@ -96,16 +100,20 @@ pub const POSSIBLE_UNIQUE_HOLDEM_HUP_MATCHUPS: usize = 1_624_350;
 
 // endregion
 
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Ord, PartialOrd, Eq, Hash, PartialEq)]
 pub enum PKError {
+    ActionIsntFinished,
     AlreadyDealt,
     BlankCard,
     Busted,
+    CardNotFound,
     CardCast,
     DBConnectionError,
-    Duplicate,
+    DuplicateCard,
+    DuplicateAction,
     Fubar,
     Incomplete,
+    InvalidAction,
     InsufficientChips,
     InvalidBinaryFormat,
     InvalidCard,
@@ -114,35 +122,45 @@ pub enum PKError {
     InvalidComboIndex,
     InvalidHand,
     InvalidCardIndex,
+    InvalidLength,
     InvalidPermutationIndex,
     InvalidPluribusIndex,
     InvalidPosition,
     InvalidRangeIndex,
     InvalidRankIndex,
+    InvalidSeatNumber,
     InvalidShift,
+    InvalidTableAction,
+    Misaligned,
+    NoBlankSlots,
     NoLow,
     NotDealt,
     NotEnoughCards,
     NotEnoughHands,
     PlayerOutOfHand,
     SqlError,
+    TableFull,
     TooManyCards,
     TooManyHands,
-    InvalidTwo(String),
+    InvalidTwo,
 }
 
 impl Display for PKError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let msg = match self {
+            PKError::ActionIsntFinished => "Action isn't finished Error",
             PKError::AlreadyDealt => "Already dealt Error",
             PKError::BlankCard => "Blank Card Error",
             PKError::Busted => "Player is out of chips",
             PKError::CardCast => "Card Cast Error",
+            PKError::CardNotFound => "Card Not Found Error",
             PKError::DBConnectionError => "Unable to connect to DB",
-            PKError::Duplicate => "Duplicate Card Error",
+            PKError::DuplicateCard => "Duplicate Card Error",
+            PKError::DuplicateAction => "Duplicate Action Error",
             PKError::Fubar => "Unexpected Error",
             PKError::Incomplete => "Incomplete Error",
             PKError::InsufficientChips => "Insufficient chips Error",
+            PKError::InvalidAction => "Invalid Action Error",
             PKError::InvalidBinaryFormat => "Invalid binary format Error",
             PKError::InvalidCard => "Invalid Card Error",
             PKError::InvalidCardNumber => "Invalid Card Number Error",
@@ -150,21 +168,27 @@ impl Display for PKError {
             PKError::InvalidCardIndex => "Invalid Card Index Error",
             PKError::InvalidComboIndex => "Invalid Combo Index Error",
             PKError::InvalidHand => "Invalid Hand Error",
+            PKError::InvalidLength => "Invalid Length Error",
             PKError::InvalidPermutationIndex => "Invalid Permutation Index Error",
             PKError::InvalidPluribusIndex => "Invalid Pluribus Index Error",
             PKError::InvalidPosition => "Invalid Position Error",
             PKError::InvalidRankIndex => "Invalid Rank Index Error",
             PKError::InvalidRangeIndex => "Invalid Range Index Error",
+            PKError::InvalidSeatNumber => "Invalid Seat Number Error",
             PKError::InvalidShift => "Invalid Shift Error",
+            PKError::InvalidTableAction => "Invalid Table Action Error",
+            PKError::Misaligned => "Misaligned Error",
+            PKError::NoBlankSlots => "No Blank Slots Error",
             PKError::NoLow => "No low hand possible Error",
             PKError::NotDealt => "Not Dealt Error",
             PKError::NotEnoughCards => "Not Enough Cards Error",
             PKError::NotEnoughHands => "Not Enough Hands Error",
             PKError::PlayerOutOfHand => "Player is out of hand Error",
             PKError::SqlError => "SQL Error",
+            PKError::TableFull => "Table Full Error",
             PKError::TooManyCards => "Too Many Cards Error",
             PKError::TooManyHands => "Too Many Hands Error",
-            PKError::InvalidTwo(_) => "Invalid Two Error",
+            PKError::InvalidTwo => "Invalid Two Error",
         };
         write!(f, "{msg}")
     }
@@ -179,16 +203,44 @@ impl From<rusqlite::Error> for PKError {
     }
 }
 
+/// # Agency Trait
+///
+/// Player Agency Action perspectives
+///
+/// - CAN? Can they act at all? _The current function._
+/// - CAN THIS IF THAT? Can they do something given what they did before?
+/// - CAN GIVEN? Can they do something given what another player has done?
+///
+/// This trait is used to establish the contract for when an entity in a game can act, given the
+/// `PlayerState` abd the state of the action in the game.
+pub trait Agency {
+    /// The perspective on this call is that given this `PlayerState` is any other action possible,
+    /// regardless of any other player's state.
+    ///
+    /// - If `self's PlayerState` is not active, the player cannot act in the hand.
+    /// - If `self's PlayerState` is all-in, the player cannot perform any other actions. Their hand and chips are locked.
+    #[must_use]
+    fn can_act(&self) -> bool;
+
+    fn can_given(&self, next: &PlayerState) -> bool;
+
+    fn can_given_against(&self, next: &PlayerState, other: &PlayerState) -> bool;
+}
+
 pub trait Betting {
     /// # Errors
     ///
     /// Returns `PKError::Busted` if there are no chips.
-    fn all_in(&mut self) -> Result<Chips, PKError>;
+    fn all_in(&mut self) -> Result<Self, PKError>
+    where
+        Self: Sized;
 
     /// # Errors
     ///
     /// Returns `PKError::InsufficientChips` if there are insufficient chips.
-    fn bet(&mut self, amount: usize) -> Result<Chips, PKError>;
+    fn bet(&mut self, amount: usize) -> Result<Self, PKError>
+    where
+        Self: Sized;
 
     fn is_empty(&self) -> bool {
         self.size() == 0
@@ -197,7 +249,45 @@ pub trait Betting {
     fn size(&self) -> usize;
 
     /// Adds the amount of Chips won to the stack. Returns the resulting stack size.
-    fn wins(&mut self, winnings: Chips) -> usize;
+    fn wins(&mut self, winnings: Self) -> usize;
+}
+
+pub trait Forgiving: FromStr + Default {
+    /// Idea stolen from my `CardPack.rs` library.
+    ///
+    /// DIARY:
+    ///
+    /// ```txt
+    /// pub trait Forgiving {
+    ///     Self::from_str(index).unwrap_or_else(|_| {
+    ///         log::warn!("forgiving_from_str(): {index} is invalid. Returning empty Pile.");
+    ///         Self::default()
+    ///    })
+    /// }
+    /// ```
+    ///
+    /// So I ask `CoPilot` how I get the code to compile, and it tells me that I need to
+    /// make sure that the implementing struct implements `FromStr` and `Default`. DUMBASS!!!
+    /// What TF is your code trying to do? What TWO MOTHER FUCKING THINGS does `Self` require?
+    /// Take a minute... use that planet sized brain of yours. Why yes, if you need to use your
+    /// structs `from_str`, which comes from implementing the `FromStr` trait, and the `default`,
+    /// which requires the... **DRUM ROLL PLEASE** the FUCKING DEFAULT TRAIT **DUN DUN DUNNNN**,
+    /// so yes, you need to make sure your implementer needs to have those traits implemented.
+    ///
+    /// As the great
+    /// [Ben Stern](https://www.legacy.com/news/celebrity-deaths/ben-stern-2022-howard-sterns-father/)
+    /// once said: "I told you not to be stupid, you moron."
+    ///
+    /// AI is making you dumber than you already clearly are.
+    ///
+    /// Perhaps I should implement this trait on myself.
+    #[must_use]
+    fn forgiving_from_str(index: &str) -> Self {
+        Self::from_str(index).unwrap_or_else(|_| {
+            log::warn!("forgiving_from_str(): {index} is invalid. Returning empty Pile.");
+            Self::default()
+        })
+    }
 }
 
 pub trait GTO {
@@ -225,6 +315,8 @@ pub trait Pile {
     fn bard(&self) -> Bard {
         Bard::from(self.to_vec())
     }
+
+    fn card_at(self, index: usize) -> Option<Card>;
 
     fn cards(&self) -> Cards {
         Cards::from(self.to_vec())
@@ -364,6 +456,8 @@ pub trait Pile {
     fn suits(&self) -> HashSet<Suit> {
         self.to_vec().iter().map(Card::get_suit).collect::<HashSet<Suit>>()
     }
+
+    fn swap(&mut self, index: usize, card: Card) -> Option<Card>;
 
     fn the_nuts(&self) -> TheNuts;
 

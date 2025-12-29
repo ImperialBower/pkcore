@@ -56,7 +56,9 @@ impl Outs {
     /// Shouldn't be possible 🤞
     pub fn add(&mut self, player: usize, card: Card) {
         self.touch(player);
-        self.0.get_mut(&player).unwrap().insert(card);
+        if let Some(cards) = self.0.get_mut(&player) {
+            cards.insert(card);
+        }
     }
 
     pub fn add_from_case_eval(&mut self, case_eval: &CaseEval) {
@@ -217,7 +219,9 @@ impl Outs {
     pub fn append(&mut self, other: &Outs) {
         for (player, cards) in other.iter() {
             self.touch(*player);
-            self.0.get_mut(player).unwrap().insert_all(cards);
+            if let Some(dest) = self.0.get_mut(player) {
+                dest.insert_all(cards);
+            }
         }
     }
 

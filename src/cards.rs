@@ -2,10 +2,12 @@ use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::card_number::CardNumber;
+use crate::cards_cell::CardsCell;
+use crate::prelude::{BoxedCards, Boxes};
 use crate::rank::Rank;
 use crate::suit::Suit;
 use crate::util::terminal::Terminal;
-use crate::{PKError, Pile, SuitShift, TheNuts};
+use crate::{Forgiving, PKError, Pile, SuitShift, TheNuts};
 use indexmap::IndexSet;
 use indexmap::set::{IntoIter, Iter};
 use itertools::{Combinations, Itertools};
@@ -20,13 +22,6 @@ use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::str::FromStr;
 use strum::IntoEnumIterator;
 
-#[macro_export]
-macro_rules! deck {
-    () => {
-        Cards::deck()
-    };
-}
-
 pub static FIVE_CARD_COMBOS: std::sync::LazyLock<Combinations<IntoIter<Card>>> =
     std::sync::LazyLock::new(|| Cards::deck().combinations(5));
 
@@ -39,6 +34,26 @@ pub static FIVE_CARD_COMBOS: std::sync::LazyLock<Combinations<IntoIter<Card>>> =
 pub struct Cards(pub IndexSet<Card>);
 
 impl Cards {
+    /// This is an example of my stupidity. I want to full the collection of `Cards` with blanks
+    /// so that I can tell what needs to be dealt, but it's a damned `IndexSet`. There will always
+    /// only be one.
+    /// ```
+    /// use pkcore::cards::Cards;
+    ///
+    /// let blanks = Cards::blanks(3);
+    ///
+    /// assert_eq!(blanks.len(), 1);
+    /// assert_eq!(blanks.to_string(), "__");
+    /// ```
+    #[must_use]
+    pub fn blanks(len: usize) -> Self {
+        let mut i: IndexSet<Card> = IndexSet::new();
+        for _ in 0..len {
+            i.insert(Card::BLANK);
+        }
+        Cards(i)
+    }
+
     /// ```
     /// use pkcore::cards::Cards;
     /// use pkcore::deck;
@@ -62,22 +77,44 @@ impl Cards {
     }
 
     /// TODO RF: :-P
+    ///
+    /// UPDATE: Originally had this doing sway remove with totally fucks with the order, grabbing the
+    /// last item in the list and using it as a replacement. Yes. it's faster, but for me, useless.
     #[must_use]
     pub fn deck_minus(cards: &Cards) -> Cards {
-        let mut minus = Cards::deck();
-        for card in cards.iter() {
-            minus.0.swap_remove(card);
-        }
-        // minus.sort()
-        minus
-        // let mut minus = Cards::default();
-        // let deck = Cards::deck();
-        // for card in deck.iter() {
-        //     if cards.get(card).is_none() {
-        //         minus.insert(*card);
-        //     }
-        // }
-        // minus
+        Cards::deck().into_iter().filter(|c| !cards.contains(c)).collect()
+    }
+
+    /// A Deck primed, is one where the initial cards are the ones passed in. This is to facilitate
+    /// testing specific scenarios.
+    ///
+    /// This initial version of this code was particularly clunky:
+    ///
+    /// ```
+    /// use pkcore::cards::Cards;
+    ///
+    /// pub fn deck_primed(cards: &Cards) -> Cards {
+    ///     let deck_minus = Cards::deck_minus(cards);
+    ///     let mut cloned = cards.clone();
+    ///     cloned.append(&deck_minus);
+    ///     cloned
+    /// }
+    /// ```
+    ///
+    /// TODO: Add the ability to pass in burn cards
+    #[must_use]
+    pub fn deck_primed(cards: &Cards) -> Cards {
+        cards.clone().into_iter().chain(Cards::deck_minus(cards)).collect()
+    }
+
+    #[must_use]
+    pub fn as_chunks(&self, chunk_size: usize) -> Vec<Vec<Card>> {
+        self.to_vec().chunks(chunk_size).map(<[Card]>::to_vec).collect()
+    }
+
+    pub fn append(&mut self, appended: &Cards) {
+        let mut to_append = appended.0.clone();
+        self.0.append(&mut to_append);
     }
 
     /// DEFECT bad twos STEP 3
@@ -159,6 +196,25 @@ impl Cards {
         Ok(v)
     }
 
+    /// # Errors
+    ///
+    /// Returns `PKError::Misaligned` if the cards cannot be evenly divided by `x`.
+    pub fn by_x(&self, x: usize) -> Result<Self, PKError> {
+        if !self.divisible_by(x) {
+            return Err(PKError::Misaligned);
+        }
+
+        let by = self.len() / x;
+
+        let mut chunk = Vec::new();
+
+        for i in 0..by {
+            chunk = self.0.iter().skip(i * x).take(x).copied().collect::<Vec<Card>>();
+        }
+
+        Ok(Cards::from(chunk.as_slice()))
+    }
+
     /// Collapse
     /// ```txt
     /// pub fn collapse(&self) -> u32 {
@@ -192,6 +248,12 @@ impl Cards {
         } else {
             Ok(Cards(self.0.drain(0..number).collect()))
         }
+    }
+
+    #[must_use]
+    pub fn draw_all(&mut self) -> Self {
+        let l = self.len();
+        Cards(self.0.drain(0..l).collect())
     }
 
     /// # Errors
@@ -331,6 +393,17 @@ impl Cards {
         }
     }
 
+    pub fn insert_at(&mut self, index: usize, card: Card) -> bool {
+        if card.contains_blank() {
+            return false;
+        }
+
+        let mut vec = self.to_vec();
+        vec.insert(index, card);
+        self.0 = IndexSet::from_iter(vec);
+        true
+    }
+
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
@@ -349,6 +422,25 @@ impl Cards {
     #[must_use]
     pub fn deal_from_the_bottom(&mut self) -> Option<Card> {
         self.0.pop()
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let mut all_cards = Cards::deck();
+    /// all_cards = all_cards.minus(&cards!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠"));
+    /// all_cards = all_cards.minus(&cards!("A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥"));
+    ///
+    /// assert_eq!("A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣", all_cards.to_string());
+    ///
+    /// ```
+    #[must_use]
+    pub fn minus(&self, cards: &Cards) -> Cards {
+        self.iter().filter(|c| !cards.contains(c)).copied().collect()
+    }
+
+    pub fn remove(&mut self, card: &Card) -> bool {
+        self.0.shift_remove(card)
     }
 
     #[must_use]
@@ -493,25 +585,7 @@ impl fmt::Display for Cards {
     }
 }
 
-impl From<&Card> for Cards {
-    /// Turns out we already have a `TryFrom<Card>` implemented, but I want something similar.
-    /// This will give us the contract that if it's blank it won't be inserted, which is fine.
-    /// I can see wanted to do both versions of the functionality.
-    ///
-    /// When I am coding in rust, I do feel the constant tension between my desire to make things
-    /// just flow as easily as possible in the short term, and wanting to code things the right,
-    /// "rusty" way.
-    ///
-    /// My general rule is to follow Socrates' maxim: _the unexamined life is not worth living._
-    /// Know why you are doing anything. Following rules blindly makes you a tool. If you can't
-    /// answer questions like: _why did you code it this way?_ and _what's the purpose of this
-    /// test?_ you need to take a step back
-    fn from(card: &Card) -> Self {
-        let mut cards = Cards::default();
-        cards.insert(*card);
-        cards
-    }
-}
+impl Forgiving for Cards {}
 
 impl From<Bard> for Cards {
     /// This method is designed to deserialize a binary `Bard` entity into a `Cards` `IndexSet`
@@ -564,6 +638,55 @@ impl From<Bard> for Cards {
     }
 }
 
+impl From<Box<[Card]>> for Cards {
+    fn from(cards: Box<[Card]>) -> Self {
+        Cards::from(cards.to_vec())
+    }
+}
+
+impl From<BoxedCards> for Cards {
+    fn from(cards: BoxedCards) -> Self {
+        Cards::from(cards.as_slice())
+    }
+}
+
+impl From<&Boxes> for Cards {
+    fn from(boxes: &Boxes) -> Self {
+        let mut cards = Cards::default();
+        for boxed in &boxes.0 {
+            let c = Cards::from(boxed.as_slice());
+            cards.insert_all(&c);
+        }
+        cards
+    }
+}
+
+impl From<&Card> for Cards {
+    /// Turns out we already have a `TryFrom<Card>` implemented, but I want something similar.
+    /// This will give us the contract that if it's blank it won't be inserted, which is fine.
+    /// I can see wanted to do both versions of the functionality.
+    ///
+    /// When I am coding in rust, I do feel the constant tension between my desire to make things
+    /// just flow as easily as possible in the short term, and wanting to code things the right,
+    /// "rusty" way.
+    ///
+    /// My general rule is to follow Socrates' maxim: _the unexamined life is not worth living._
+    /// Know why you are doing anything. Following rules blindly makes you a tool. If you can't
+    /// answer questions like: _why did you code it this way?_ and _what's the purpose of this
+    /// test?_ you need to take a step back
+    fn from(card: &Card) -> Self {
+        let mut cards = Cards::default();
+        cards.insert(*card);
+        cards
+    }
+}
+
+impl From<&[Card]> for Cards {
+    fn from(slice: &[Card]) -> Self {
+        Cards::from(slice.to_vec())
+    }
+}
+
 impl From<[Card; 2]> for Cards {
     fn from(array: [Card; 2]) -> Self {
         Cards::from(array.to_vec())
@@ -591,6 +714,20 @@ impl From<[Card; 5]> for Cards {
 impl From<[Card; 7]> for Cards {
     fn from(array: [Card; 7]) -> Self {
         Cards::from(array.to_vec())
+    }
+}
+
+impl From<CardsCell> for Cards {
+    fn from(cells: CardsCell) -> Self {
+        let internal = cells.0.borrow();
+        internal.clone()
+    }
+}
+
+impl From<&CardsCell> for Cards {
+    fn from(cells: &CardsCell) -> Self {
+        let internal = cells.0.borrow();
+        internal.clone()
     }
 }
 
@@ -680,6 +817,10 @@ impl Pile for Cards {
         true
     }
 
+    fn card_at(self, index: usize) -> Option<Card> {
+        self.0.get_index(index).copied()
+    }
+
     fn clean(&self) -> Self {
         todo!()
     }
@@ -688,6 +829,18 @@ impl Pile for Cards {
     /// always be true.
     fn is_dealt(&self) -> bool {
         true
+    }
+
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let mut cards = Cards::forgiving_from_str("A♠ K♠ Q♠ J♠ T♠");
+    /// let old_card = cards.swap(2, Card::from_str("9♠").unwrap());
+    /// assert_eq!(old_card.unwrap().to_string(), "Q♠");
+    /// assert_eq!(cards.to_string(), "A♠ K♠ 9♠ J♠ T♠");
+    /// ```
+    fn swap(&mut self, index: usize, card: Card) -> Option<Card> {
+        self.0.replace_index(index, card).ok()
     }
 
     fn the_nuts(&self) -> TheNuts {
@@ -753,8 +906,10 @@ impl TryFrom<Card> for Cards {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod card_tests {
+mod cards_tests {
     use super::*;
+    use crate::util::data::TestData;
+    use rstest::rstest;
 
     #[test]
     fn deck_macro() {
@@ -770,6 +925,13 @@ mod card_tests {
         cards.insert(Card::ACE_CLUBS);
         cards.shuffle_in_place();
 
+        let minus = Cards::deck_minus(&cards!("AS Q♥ 3♦"));
+
+        assert_eq!(
+            "K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣",
+            minus.to_string()
+        );
+
         // let minus = Cards::deck_minus(&cards);
         //
         // assert_eq!("A♠ K♠".to_string(), minus.to_string());
@@ -780,6 +942,17 @@ mod card_tests {
         // for card in cards.iter() {
         //     minus.0.swap_remove(card);
         // }
+    }
+
+    #[test]
+    fn deck_primed() {
+        let deck_minus = TestData::the_hand_cards();
+        let expected = "8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ T♠ 2♥ 9♣ 6♦ 5♥ 5♠ 8♠ A♠ Q♠ J♠ 9♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 7♣ 6♣ 3♣ 2♣";
+
+        let primed = Cards::deck_primed(&deck_minus);
+
+        assert_eq!(52, primed.len());
+        assert_eq!(expected, primed.to_string());
     }
 
     #[test]
@@ -818,6 +991,16 @@ mod card_tests {
         assert_eq!(drawn.len(), 5);
         assert_eq!(deck.len(), 47);
         assert_eq!("A♠ K♠ Q♠ J♠ T♠", drawn.to_string());
+    }
+
+    #[test]
+    fn draw_all() {
+        let mut deck = Cards::deck();
+
+        let drawn = deck.draw_all();
+
+        assert_eq!(deck.len(), 0);
+        assert_eq!(drawn.len(), 52);
     }
 
     #[test]
@@ -1000,6 +1183,25 @@ mod card_tests {
     }
 
     #[test]
+    fn insert_at() {
+        let mut pile = cards!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠");
+
+        pile.insert_at(3, Card::ACE_CLUBS);
+        assert_eq!(cards!("A♠ K♠ Q♠ A♣ J♠ T♠ 9♠ 8♠ 7♠ 6♠").to_string(), pile.to_string());
+
+        pile.insert_at(2, Card::DEUCE_CLUBS);
+        assert_eq!(cards!("A♠ K♠ 2♣ Q♠ A♣ J♠ T♠ 9♠ 8♠ 7♠ 6♠").to_string(), pile.to_string());
+
+        pile.insert_at(1, Card::TREY_CLUBS);
+        pile.insert_at(1, Card::FOUR_CLUBS);
+        pile.insert_at(1, Card::FIVE_CLUBS);
+        assert_eq!(
+            cards!("A♠ 5♣ 4♣ 3♣ K♠ 2♣ Q♠ A♣ J♠ T♠ 9♠ 8♠ 7♠ 6♠").to_string(),
+            pile.to_string()
+        );
+    }
+
+    #[test]
     fn is_empty() {
         assert!(Cards::default().is_empty());
         assert!(!wheel().is_empty());
@@ -1113,14 +1315,6 @@ mod card_tests {
     }
 
     #[test]
-    fn pile__contains() {
-        let wheel_flush = Cards::from_str("5♣ 4♣ 3♣ 2♣ A♣").unwrap();
-
-        assert!(wheel_flush.contains(&Card::FIVE_CLUBS));
-        assert!(!wheel_flush.contains(&Card::SIX_CLUBS));
-    }
-
-    #[test]
     fn pile__suits() {
         let aces = Cards::from_str("AS AH AD AC").unwrap();
         let deck = Cards::deck();
@@ -1195,20 +1389,22 @@ mod card_tests {
         cards
     }
     //endregion
-}
-
-#[cfg(test)]
-#[allow(non_snake_case)]
-mod pile_tests {
-    use super::*;
-    use rstest::rstest;
 
     #[rstest]
-    #[case(Card::ACE_SPADES, true)]
-    #[case(Card::ACE_DIAMONDS, false)]
-    fn pile__contains(#[case] card: Card, #[case] assert: bool) {
-        let cards = Cards::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
+    #[case(Card::ACE_SPADES, "A♠ K♠ Q♠ J♠ T♠", true)]
+    #[case(Card::FIVE_CLUBS, "5♣ 4♣ 3♣ 2♣ A♣", true)]
+    #[case(Card::ACE_DIAMONDS, "A♠ K♠ Q♠ J♠ T♠", false)]
+    #[case(Card::SIX_CLUBS, "5♣ 4♣ 3♣ 2♣ A♣", false)]
+    fn pile__contains(#[case] card: Card, #[case] index: &str, #[case] assert: bool) {
+        let cards = Cards::from_str(index).unwrap();
 
         assert_eq!(cards.contains(&card), assert);
+    }
+
+    #[test]
+    fn macro__cards() {
+        let cards = cards!("AS KH QC JD TC 9H 8D");
+
+        assert_eq!("A♠ K♥ Q♣ J♦ T♣ 9♥ 8♦", cards.to_string());
     }
 }

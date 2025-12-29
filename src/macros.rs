@@ -1,3 +1,46 @@
+/// ```
+/// use pkcore::prelude::*;
+///
+/// assert_eq!(BoxedCards::blanks(3), boxed!("__ __ __"));
+/// ```
+#[macro_export]
+#[allow(clippy::pedantic)]
+macro_rules! boxed {
+    ($card_str:expr) => {
+        BoxedCards::forgiving_from_str($card_str)
+    };
+}
+
+#[macro_export]
+#[allow(clippy::pedantic)]
+macro_rules! cards {
+    ($card_str:expr) => {
+        Cards::forgiving_from_str($card_str)
+    };
+}
+
+#[macro_export]
+macro_rules! deck {
+    () => {
+        Cards::deck()
+    };
+}
+
+#[macro_export]
+#[allow(clippy::pedantic)]
+macro_rules! cc {
+    ($card_str:expr) => {
+        CardsCell::from(Cards::forgiving_from_str($card_str))
+    };
+}
+
+#[macro_export]
+macro_rules! deck_cell {
+    () => {
+        CardsCell::deck()
+    };
+}
+
 /// I want to get the tests right for this macro since it's going to be the foundation
 /// for all of the range analysis work.
 ///

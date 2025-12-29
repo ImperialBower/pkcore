@@ -244,6 +244,13 @@ impl Card {
 }
 
 impl fmt::Display for Card {
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// assert_eq!("A♠", Card::ACE_SPADES.to_string());
+    /// assert_eq!("__", Card::BLANK.to_string());
+    ///
+    /// ```
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}{}", self.get_rank().to_char(), self.get_suit().to_char_symbol())
     }
@@ -299,12 +306,22 @@ impl FromStr for Card {
 // }
 
 impl Pile for Card {
+    fn card_at(self, _index: usize) -> Option<Card> {
+        Some(self)
+    }
+
     fn clean(&self) -> Self {
         Card(self.0 & Card::FREQUENCY_MASK_FILTER)
     }
 
     fn contains_blank(&self) -> bool {
         self.0 == Card::BLANK_NUMBER
+    }
+
+    fn swap(&mut self, _index: usize, card: Card) -> Option<Card> {
+        let old = *self;
+        *self = card;
+        Some(old)
     }
 
     fn the_nuts(&self) -> TheNuts {

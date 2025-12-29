@@ -5,7 +5,6 @@ use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::deck::POKER_DECK;
-use crate::range;
 use crate::rank::Rank;
 use crate::suit::Suit;
 use crate::util::Percentage;

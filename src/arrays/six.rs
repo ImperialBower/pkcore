@@ -152,7 +152,15 @@ impl HandRanker for Six {
 }
 
 impl Pile for Six {
+    fn card_at(self, _index: usize) -> Option<Card> {
+        todo!()
+    }
+
     fn clean(&self) -> Self {
+        todo!()
+    }
+
+    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
         todo!()
     }
 
@@ -172,12 +180,12 @@ impl TryFrom<Cards> for Six {
         match cards.len() {
             0..=5 => Err(PKError::NotEnoughCards),
             6 => Ok(Six::from([
-                *cards.get_index(0).unwrap(),
-                *cards.get_index(1).unwrap(),
-                *cards.get_index(2).unwrap(),
-                *cards.get_index(3).unwrap(),
-                *cards.get_index(4).unwrap(),
-                *cards.get_index(5).unwrap(),
+                *cards.get_index(0).unwrap_or(&Card::BLANK),
+                *cards.get_index(1).unwrap_or(&Card::BLANK),
+                *cards.get_index(2).unwrap_or(&Card::BLANK),
+                *cards.get_index(3).unwrap_or(&Card::BLANK),
+                *cards.get_index(4).unwrap_or(&Card::BLANK),
+                *cards.get_index(5).unwrap_or(&Card::BLANK),
             ])),
             _ => Err(PKError::TooManyCards),
         }

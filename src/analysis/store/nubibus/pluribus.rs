@@ -43,6 +43,7 @@ impl Pluribus {
     }
 
     // FirstPass { index: 27, bets: ["r200ffcfc", "cr850cf", "cr1825r3775c", "r10000c"], cards: ["Qc4h", "Tc9c", "8sAs", "Qh7c", "JcQd", "5h5d/3h7s5c/Qs/6c"], winnings: [], players: [] }
+    #[allow(clippy::unwrap_used)]
     fn parse_cards(s: &str) -> (HoleCards, Board) {
         if s.contains('/') {
             let re = Regex::new(r"^(?<dealt>[0-9a-zA-Z|]+)/(?<board>.+)$").unwrap();

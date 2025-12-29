@@ -367,6 +367,7 @@ impl ActionType {
     ///
     /// Somehow the regex doesn't parse.
     #[must_use]
+    #[allow(clippy::unwrap_used)]
     pub fn machete(s: &str) -> Vec<String> {
         let re = Regex::new(r"([cfr][0-9]*)").unwrap();
 

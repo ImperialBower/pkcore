@@ -182,8 +182,8 @@ impl Position6MaxPointer {
     /// NOTE AI generated code.
     pub fn reset(&self) {
         self.position.set(Position6Max::UTG);
-        for i in 0..6 {
-            self.active[i].set(true);
+        for _i in 0..6 {
+            self.active[_i].set(true);
         }
     }
 }

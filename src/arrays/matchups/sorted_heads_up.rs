@@ -23,9 +23,9 @@ use std::str::FromStr;
 pub static SORTED_HEADS_UP_UNIQUE: std::sync::LazyLock<HashSet<SortedHeadsUp>> = std::sync::LazyLock::new(|| {
     let mut hs: HashSet<SortedHeadsUp> = HashSet::new();
     for v in Cards::deck().combinations(2) {
-        let hero = Two::try_from(v.as_slice()).unwrap();
+        let hero = Two::try_from(v.as_slice()).unwrap_or_default();
         for r in hero.remaining().combinations(2) {
-            let villain = Two::try_from(r.as_slice()).unwrap();
+            let villain = Two::try_from(r.as_slice()).unwrap_or_default();
             hs.insert(SortedHeadsUp::new(hero, villain));
         }
     }
@@ -766,8 +766,16 @@ impl FromStr for SortedHeadsUp {
 }
 
 impl Pile for SortedHeadsUp {
+    fn card_at(self, _index: usize) -> Option<Card> {
+        todo!()
+    }
+
     /// Shoot. Forgot about my frequency mask idea. Still has potential, but later.
     fn clean(&self) -> Self {
+        todo!()
+    }
+
+    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
         todo!()
     }
 

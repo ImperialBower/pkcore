@@ -20,6 +20,7 @@ use std::fs::File;
 /// have all this stuff loaded for bear. We're not there yet.
 ///
 /// TODO TD: Add logging
+#[allow(clippy::unwrap_used)]
 pub static BC_RANK_HASHMAP: std::sync::LazyLock<HashMap<Bard, FiveBCM>> = std::sync::LazyLock::new(|| {
     let mut m = HashMap::new();
     let file = File::open(SevenFiveBCM::get_csv_filepath()).unwrap();

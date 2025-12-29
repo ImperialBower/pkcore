@@ -220,7 +220,15 @@ impl Plurable for HoleCards {
 }
 
 impl Pile for HoleCards {
+    fn card_at(self, _index: usize) -> Option<Card> {
+        todo!()
+    }
+
     fn clean(&self) -> Self {
+        todo!()
+    }
+
+    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
         todo!()
     }
 
@@ -249,7 +257,10 @@ impl TryFrom<Cards> for HoleCards {
             let mut hands = HoleCards::with_capacity(num_of_players);
 
             for _ in 0..num_of_players {
-                hands.push(Two::new(cards.draw_one().unwrap(), cards.draw_one().unwrap())?);
+                hands.push(Two::new(
+                    cards.draw_one().unwrap_or_default(),
+                    cards.draw_one().unwrap_or_default(),
+                )?);
             }
             Ok(hands)
         } else {

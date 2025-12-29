@@ -8,12 +8,16 @@ use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
+use crate::cards_cell::CardsCell;
+use crate::casino::player::Player;
+use crate::casino::table::seat::Seat;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
+use crate::prelude::{BoxedCards, ForcedBets, Seats, Table};
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
-use crate::{Card, Pile};
+use crate::{Card, Cards, Forgiving, Pile, cards};
 use std::str::FromStr;
 
 /// I am a classicist when it comes to testing. Martin Fowler, in his essay
@@ -42,9 +46,8 @@ pub enum TestData {}
 #[allow(dead_code)]
 impl TestData {
     #[must_use]
-    #[allow(clippy::missing_panics_doc)]
     pub fn the_hand() -> Game {
-        let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
+        let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap_or_default();
 
         Game {
             hands: TestData::hole_cards_the_hand(),
@@ -58,7 +61,7 @@ impl TestData {
     #[allow(clippy::missing_panics_doc)]
     pub fn the_board() -> Game {
         let hands = HoleCards::from(vec![Two::HAND_AC_QS, Two::HAND_TD_TC, Two::HAND_6D_4D, Two::HAND_2H_2D]);
-        let board = Board::from_str("J♦ J♠ J♥ A♥ J♣").unwrap();
+        let board = Board::from_str("J♦ J♠ J♥ A♥ J♣").unwrap_or_default();
         Game { hands, board }
     }
 
@@ -142,7 +145,7 @@ impl TestData {
     /// ¯\_(ツ)_/¯
     #[must_use]
     pub fn spades_royal_flush_bcm() -> SevenFiveBCM {
-        SevenFiveBCM::try_from(Seven::from_str("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠").unwrap()).unwrap()
+        SevenFiveBCM::try_from(Seven::from_str("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠").unwrap_or_default()).unwrap_or_default()
     }
 
     /// # Panics
@@ -150,7 +153,7 @@ impl TestData {
     /// ¯\_(ツ)_/¯
     #[must_use]
     pub fn spades_king_high_flush_bcm() -> SevenFiveBCM {
-        SevenFiveBCM::try_from(Seven::from_str("K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠").unwrap()).unwrap()
+        SevenFiveBCM::try_from(Seven::from_str("K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠").unwrap_or_default()).unwrap_or_default()
     }
 
     /// This data comes from my old [Fudd hup example](https://github.com/ImperialBower/fudd/blob/main/examples/hup.rs)
@@ -214,6 +217,164 @@ impl TestData {
         });
 
         hups
+    }
+
+    #[must_use]
+    pub fn the_hand_cards() -> Cards {
+        cards!("8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ T♠ 2♥ 9♣ 6♦ 5♥ 5♠ 8♠")
+    }
+
+    #[must_use]
+    pub fn the_hand_cards_dealable() -> Cards {
+        cards!("8♣ A♦ 5♦ 6♠ K♠ 4♦ T♠ 3♥ Q♣ 5♣ 6♥ J♦ 4♣ 2♥ 9♣ 6♦ 5♥ 5♠ 8♠")
+    }
+
+    /// # Panics
+    ///
+    /// Because of `draw_from_the_bottom`, but this is test data so... ¯\_(ツ)_/¯
+    #[must_use]
+    pub fn deck_the_hand_dealable() -> Cards {
+        // let mut dealt = TestData::the_hand_cards_dealable();
+        // let mut minus = Cards::deck_minus(&dealt).shuffle();
+        // let river = dealt.draw_from_the_bottom(1).unwrap();
+        // let turn = dealt.draw_from_the_bottom(1).unwrap();
+        // let flop = dealt.draw_from_the_bottom(3).unwrap();
+
+        todo!()
+    }
+
+    /// # Panics
+    ///
+    /// Because of `CardsCell` usage, but this is test data so... ¯\_(ツ)_/¯
+    #[must_use]
+    pub fn the_hand_players() -> Vec<Seat> {
+        let doyle_brunson = Seat {
+            player: Player::new_with_chips("Doyle Brunson".to_string(), 1_000_000),
+            cards: BoxedCards::blanks(2),
+        };
+        let eli_elezra = Seat {
+            player: Player::new_with_chips("Eli Elezra".to_string(), 1_000_000),
+            cards: BoxedCards::blanks(2),
+        };
+        let antonio_esfandiari = Seat {
+            player: Player::new_with_chips("Antonio Esfandari".to_string(), 1_000_000),
+            cards: BoxedCards::blanks(2),
+        };
+        let gus_hansen = Seat {
+            player: Player::new_with_chips("Gus Hansen".to_string(), 1_000_000),
+            cards: BoxedCards::blanks(2),
+        };
+        let daniel_negreanu = Seat {
+            player: Player::new_with_chips("Daniel Negreanu".to_string(), 1_000_000),
+            cards: BoxedCards::blanks(2),
+        };
+        let cory_zeidman = Seat {
+            player: Player::new_with_chips("Cory Zeidman".to_string(), 1_000_000),
+            cards: BoxedCards::blanks(2),
+        };
+        let barry_greenstein = Seat {
+            player: Player::new_with_chips("Barry Greenstein".to_string(), 1_000_000),
+            cards: BoxedCards::blanks(2),
+        };
+        let amnon_filippi = Seat {
+            player: Player::new_with_chips("Amnon Filippi".to_string(), 1_000_000),
+            cards: BoxedCards::blanks(2),
+        };
+        vec![
+            doyle_brunson,
+            eli_elezra,
+            antonio_esfandiari,
+            gus_hansen,
+            daniel_negreanu,
+            cory_zeidman,
+            barry_greenstein,
+            amnon_filippi,
+        ]
+    }
+
+    /// # Panics
+    ///
+    /// Because of `CardsCell` usage, but this is test data so... ¯\_(ツ)_/¯
+    #[must_use]
+    pub fn the_hand_seats() -> Vec<Seat> {
+        let doyle_brunson = Seat {
+            player: Player::new_with_chips("Doyle Brunson".to_string(), 1_000_000),
+            cards: boxed!("T♠ 2♥"),
+        };
+        let eli_elezra = Seat {
+            player: Player::new_with_chips("Eli Elezra".to_string(), 1_000_000),
+            cards: boxed!("8♠ 3♥"),
+        };
+        let antonio_esfandiari = Seat {
+            player: Player::new_with_chips("Antonio Esfandari".to_string(), 1_000_000),
+            cards: boxed!("A♦ Q♣"),
+        };
+        let gus_hansen = Seat {
+            player: Player::new_with_chips("Gus Hansen".to_string(), 1_000_000),
+            cards: boxed!("5♦ 5♣"),
+        };
+        let daniel_negreanu = Seat {
+            player: Player::new_with_chips("Daniel Negreanu".to_string(), 1_000_000),
+            cards: boxed!("6♠ 6♥"),
+        };
+        let cory_zeidman = Seat {
+            player: Player::new_with_chips("Cory Zeidman".to_string(), 1_000_000),
+            cards: boxed!("K♠ J♦"),
+        };
+        let barry_greenstein = Seat {
+            player: Player::new_with_chips("Barry Greenstein".to_string(), 1_000_000),
+            cards: boxed!("4♣ 4♦"),
+        };
+        let amnon_filippi = Seat {
+            player: Player::new_with_chips("Amnon Filippi".to_string(), 1_000_000),
+            cards: boxed!("7♣ 2♣"),
+        };
+        vec![
+            doyle_brunson,
+            eli_elezra,
+            antonio_esfandiari,
+            gus_hansen,
+            daniel_negreanu,
+            cory_zeidman,
+            barry_greenstein,
+            amnon_filippi,
+        ]
+    }
+
+    #[must_use]
+    pub fn min_players() -> Vec<Seat> {
+        Vec::from(&TestData::the_hand_players()[2..5])
+    }
+
+    /// cargo run --example calc -- -d "A♦ Q♣ 6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"
+    ///
+    /// ```shell
+    /// hole cards> A♦ Q♣ 5♦ 5♣ 6♠ 6♥
+    /// Player #1 38.4% (38.15%/0.29%) [522929/4035]
+    /// Player #2 16.7% (16.43%/0.29%) [225186/4035]
+    /// Player #3 45.4% (45.13%/0.29%) [618604/4035]
+    /// ```
+    #[must_use]
+    pub fn min_table() -> Table {
+        let primed = cards!("A♦ 5♦ 6♠ Q♣ 5♣ 6♥ 9♣ 6♦ 5♥ 5♠ 8♠");
+        Table::nlh_primed(
+            Seats::new(TestData::min_players()),
+            &CardsCell::from(Cards::deck_primed(&primed)),
+            ForcedBets::new(50, 100),
+        )
+    }
+
+    /// # Panics
+    ///
+    /// Because of `CardsCell` usage, but this is test data so... ¯\_(ツ)_/¯
+    #[must_use]
+    pub fn min_seats() -> Vec<Seat> {
+        Vec::from(&TestData::the_hand_seats()[2..5])
+    }
+
+    #[must_use]
+    pub fn four_seats() -> Vec<Seat> {
+        Vec::from(&TestData::the_hand_seats()[2..6])
     }
 }
 

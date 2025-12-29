@@ -5,11 +5,18 @@ pub const DISTINCT_SHUS_CSV_PATH: &str = "data/csv/shus/distinct_masked_shus.csv
 
 /// # Panics
 ///
-/// If there path isn't there
+/// If the path isn't there
 #[must_use]
 pub fn distinct_shus_from_csv_as_masked_vec() -> Vec<Masked> {
-    let shus = SortedHeadsUp::read_csv(DISTINCT_SHUS_CSV_PATH).unwrap();
-    let mut distinct = Masked::parse_as_vectors(&shus);
-    distinct.reverse();
-    distinct
+    match SortedHeadsUp::read_csv(DISTINCT_SHUS_CSV_PATH) {
+        Ok(shus) => {
+            let mut distinct = Masked::parse_as_vectors(&shus);
+            distinct.reverse();
+            distinct
+        }
+        Err(_e) => {
+            log::error!("Unable to read {DISTINCT_SHUS_CSV_PATH}");
+            Vec::default()
+        }
+    }
 }

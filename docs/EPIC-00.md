@@ -320,4 +320,4 @@ The structure
 * Core domain definitions
   * Hardened core API
     * Architecture defining system communication and interfaces
-      * Display... i.e. applications
+      * Display... _i._e. applications

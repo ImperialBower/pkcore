@@ -400,7 +400,7 @@ This is an outline of the work as it is done.
                                     * REFACTORING: .wins_total() to use .wins_and_ties()
                                     * .wins_and_ties_percentages()
                                         * removed Wins::percent_calculator() since dupe of Util::calculate_percentage()
-                                        * Fixed Results::from_wins() to include case_count and player_count.
+                                        * Fixed Results::from_wins() to include case_count and _player_count.
                                     * .wins_total_percentage()
                                     * .player_to_string()
                                     * impl Display
@@ -826,7 +826,7 @@ This is an outline of the work as it is done.
           * Combo constants
           * Combo strings to Combo constants
           * Combo constants to range! macros
-          * Combo constructor from string (i.e. QQ+, AKs-98s, AQJs+)
+          * Combo constructor from string (_i._e. QQ+, AKs-98s, AQJs+)
           * ...
           * Profit!
         * Finished parsing of sub ranges, aka `AKs-98s`
@@ -842,3 +842,12 @@ This is an outline of the work as it is done.
       * FEATURE: Casino Table
         * Created CardsCell instead of using cardpack.rs' version.
         * Creating log::TableEvent
+          * set_button and move_button methods
+          * Upgraded bint to 0.1.9 to fix 0 boundary defect
+          * Upgraded bint to 0.1.11 to make it cooler
+          * Added cc! and cards! macros
+          * Added support for Pile with CardsCell
+          * Added CardsCell.force_draw 
+          * Added From<Vec<Cards>> to CardsCell
+          * Added uuid to table
+          * 
