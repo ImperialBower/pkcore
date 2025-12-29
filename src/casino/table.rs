@@ -139,6 +139,21 @@ impl Table {
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
+    pub fn act_raise(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
+        match self.seats.act_raise(seat_number, amount) {
+            Ok(remaining) => {
+                self.log_info(TableAction::Bet(seat_number, amount));
+                self.action_to.up();
+                Ok(remaining)
+            }
+            Err(e) => Err(e),
+        }
+    }
+
+    /// # Errors
+    ///
+    /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
+    /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
     pub fn act_bet_x_times_bb(&self, seat_number: u8, times: usize) -> Result<usize, PKError> {
         let amount = times * self.forced.big_blind;
         self.act_bet(seat_number, amount)
@@ -369,6 +384,22 @@ impl Table {
                 None => return Err(PKError::AlreadyDealt),
             }
         }
+
+        Ok(())
+    }
+
+    /// # Errors
+    ///
+    /// - `PKError::NotEnoughCards`
+    pub fn deal_flop(&self) -> Result<(), PKError> {
+        // Burn a card
+        // TODO: FIX ME
+        // let _burn = self.deck.draw_one()?;
+
+        let flop = self.deck.draw(3)?;
+        self.set_board(flop.cards());
+
+        self.log_info(TableAction::DealtFlop(self.board.bard()));
 
         Ok(())
     }
@@ -1155,7 +1186,7 @@ mod casino__table_tests {
         table
     }
 
-    fn min_table__up_to_flop() -> Table {
+    fn _min_table__up_to_flop() -> Table {
         let table = min_table_setup();
 
         let _ = table.act_forced_bets();
@@ -1360,15 +1391,23 @@ mod casino__table_tests {
         assert_eq!(10050, pot);
         assert!(!table.seats.all_players_have_acted());
 
+        table.deal_flop().expect("No flop");
+
+        assert_eq!("Flop is 5♥ 6♦ 9♣", table.event_log.last().unwrap().to_string());
+
         let _gus = table.act_check(1).unwrap();
         let _daniel = table.act_bet(2, 8000).unwrap();
-        let _gus = table.act_bet(1, 26000).unwrap();
+        let _gus = table.act_raise(1, 26000).unwrap();
         let _daniel = table.act_call(2).unwrap();
         assert!(table.seats.all_players_have_acted());
 
         let pot = table.bring_it_in().unwrap();
         assert_eq!(62_050, pot);
         assert!(!table.seats.all_players_have_acted());
+
+        let _gus = table.act_bet(1, 24_000).unwrap();
+        let _daniel = table.act_call(2).unwrap();
+        assert!(table.seats.all_players_have_acted());
 
         // assert_eq!(0, table.seats.current_bet());
         // assert_eq!(300, pot);

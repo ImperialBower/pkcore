@@ -23,6 +23,7 @@ pub enum TableAction {
     BetAnteForced(u8, usize),
     DealingXCards(u8),
     Dealt(u8, Bard),
+    DealtFlop(Bard),
     DealtPlayers,
     ForceDealt(u8, Bard),
     BringItIn(usize),
@@ -57,6 +58,7 @@ impl TableAction {
             TableAction::Fold(_) => format!("{name} folds"),
             TableAction::Check(_) => format!("{name} checks"),
             TableAction::Dealt(_, bard) => format!("{name} dealt {}", Cards::from(*bard)),
+            TableAction::DealtFlop(bard) => format!("Flop is {}", Cards::from(*bard)),
             _ => self.to_string(),
         }
     }
@@ -137,6 +139,7 @@ impl Display for TableAction {
             }
             TableAction::DealingXCards(x) => write!(f, "Dealing {x} cards to each player"),
             TableAction::Dealt(seat, cards) => write!(f, "Seat {seat} is dealt {}", Cards::from(*cards)),
+            TableAction::DealtFlop(cards) => write!(f, "Flop is {}", Cards::from(*cards)),
             TableAction::DealtPlayers => write!(f, "Dealt Players"),
             TableAction::ForceDealt(seat, cards) => {
                 write!(f, "Seat {seat} is force-dealt {}", Cards::from(*cards))

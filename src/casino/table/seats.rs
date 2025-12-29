@@ -36,6 +36,19 @@ impl Seats {
     /// # Errors
     ///
     /// `PKError::InvalidSeatNumber` error if the `seat_number` is not valid.
+    pub fn act_raise(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
+        if let Some(seat) = self.get_seat_mut(seat_number) {
+            let remaining = seat.player.act_raise(amount)?;
+            Ok(remaining)
+        } else {
+            log::error!("Failed to find seat #{seat_number} for raising");
+            Err(PKError::InvalidSeatNumber)
+        }
+    }
+
+    /// # Errors
+    ///
+    /// `PKError::InvalidSeatNumber` error if the `seat_number` is not valid.
     pub fn act_call(&self, seat_number: u8) -> Result<(usize, usize), PKError> {
         let to_call = self.current_bet();
         if let Some(seat) = self.get_seat_mut(seat_number) {
