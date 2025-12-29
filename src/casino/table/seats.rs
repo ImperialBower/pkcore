@@ -55,7 +55,8 @@ impl Seats {
     pub fn act_check(&self, seat_number: u8) -> Result<usize, PKError> {
         let current_bet = self.current_bet();
         if let Some(seat) = self.get_seat_mut(seat_number) {
-            if seat.player.bet.count() < current_bet || seat.is_yet_to_act() {
+            // if seat.player.bet.count() < current_bet || seat.is_yet_to_act() {
+            if seat.player.bet.count() < current_bet {
                 log::error!(
                     "Seat #{seat_number} cannot check; current bet is {} but seat's bet is {}",
                     current_bet,
@@ -752,10 +753,10 @@ mod casino__table__seats_tests {
         assert_eq!(100, seats.to_call(0));
         // Seat 1 can check because their big blind is the highest bet.
         assert_eq!(0, seats.to_call(2));
-        assert_eq!(99900, seats.act_check(2).unwrap());
+        assert_eq!(999_900, seats.act_check(2).unwrap());
 
         assert_eq!(100, seats.to_call(0));
-        assert_eq!((100, 99900), seats.act_call(0).unwrap());
+        assert_eq!((100, 999_900), seats.act_call(0).unwrap());
         assert_eq!(0, seats.to_call(0));
         assert_eq!(PKError::InsufficientChips, seats.act_call(0).unwrap_err());
         assert!(!seats.all_players_have_acted());

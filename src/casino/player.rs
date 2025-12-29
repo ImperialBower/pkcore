@@ -239,7 +239,7 @@ impl Player {
             return Err(PKError::InvalidTableAction);
         }
         self.state.set(PlayerState::Check(self.bet.count()));
-        log::debug!("Player {} with {} bet checks", self.handle, self.bet.count());
+        log::debug!("Player {} with {} checks", self.handle, self.bet.count());
         Ok(self.chips.count())
     }
 

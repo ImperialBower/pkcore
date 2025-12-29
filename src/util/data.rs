@@ -249,35 +249,35 @@ impl TestData {
     #[must_use]
     pub fn the_hand_players() -> Vec<Seat> {
         let doyle_brunson = Seat {
-            player: Player::new_with_chips("Doyle Brunson".to_string(), 100_000),
+            player: Player::new_with_chips("Doyle Brunson".to_string(), 1_000_000),
             cards: BoxedCards::blanks(2),
         };
         let eli_elezra = Seat {
-            player: Player::new_with_chips("Eli Elezra".to_string(), 100_000),
+            player: Player::new_with_chips("Eli Elezra".to_string(), 1_000_000),
             cards: BoxedCards::blanks(2),
         };
         let antonio_esfandiari = Seat {
-            player: Player::new_with_chips("Antonio Esfandari".to_string(), 100_000),
+            player: Player::new_with_chips("Antonio Esfandari".to_string(), 1_000_000),
             cards: BoxedCards::blanks(2),
         };
         let gus_hansen = Seat {
-            player: Player::new_with_chips("Gus Hansen".to_string(), 100_000),
+            player: Player::new_with_chips("Gus Hansen".to_string(), 1_000_000),
             cards: BoxedCards::blanks(2),
         };
         let daniel_negreanu = Seat {
-            player: Player::new_with_chips("Daniel Negreanu".to_string(), 100_000),
+            player: Player::new_with_chips("Daniel Negreanu".to_string(), 1_000_000),
             cards: BoxedCards::blanks(2),
         };
         let cory_zeidman = Seat {
-            player: Player::new_with_chips("Cory Zeidman".to_string(), 100_000),
+            player: Player::new_with_chips("Cory Zeidman".to_string(), 1_000_000),
             cards: BoxedCards::blanks(2),
         };
         let barry_greenstein = Seat {
-            player: Player::new_with_chips("Barry Greenstein".to_string(), 100_000),
+            player: Player::new_with_chips("Barry Greenstein".to_string(), 1_000_000),
             cards: BoxedCards::blanks(2),
         };
         let amnon_filippi = Seat {
-            player: Player::new_with_chips("Amnon Filippi".to_string(), 100_000),
+            player: Player::new_with_chips("Amnon Filippi".to_string(), 1_000_000),
             cards: BoxedCards::blanks(2),
         };
         vec![
@@ -298,35 +298,35 @@ impl TestData {
     #[must_use]
     pub fn the_hand_seats() -> Vec<Seat> {
         let doyle_brunson = Seat {
-            player: Player::new_with_chips("Doyle Brunson".to_string(), 100_000),
+            player: Player::new_with_chips("Doyle Brunson".to_string(), 1_000_000),
             cards: boxed!("T♠ 2♥"),
         };
         let eli_elezra = Seat {
-            player: Player::new_with_chips("Eli Elezra".to_string(), 100_000),
+            player: Player::new_with_chips("Eli Elezra".to_string(), 1_000_000),
             cards: boxed!("8♠ 3♥"),
         };
         let antonio_esfandiari = Seat {
-            player: Player::new_with_chips("Antonio Esfandari".to_string(), 100_000),
+            player: Player::new_with_chips("Antonio Esfandari".to_string(), 1_000_000),
             cards: boxed!("A♦ Q♣"),
         };
         let gus_hansen = Seat {
-            player: Player::new_with_chips("Gus Hansen".to_string(), 100_000),
+            player: Player::new_with_chips("Gus Hansen".to_string(), 1_000_000),
             cards: boxed!("5♦ 5♣"),
         };
         let daniel_negreanu = Seat {
-            player: Player::new_with_chips("Daniel Negreanu".to_string(), 100_000),
+            player: Player::new_with_chips("Daniel Negreanu".to_string(), 1_000_000),
             cards: boxed!("6♠ 6♥"),
         };
         let cory_zeidman = Seat {
-            player: Player::new_with_chips("Cory Zeidman".to_string(), 100_000),
+            player: Player::new_with_chips("Cory Zeidman".to_string(), 1_000_000),
             cards: boxed!("K♠ J♦"),
         };
         let barry_greenstein = Seat {
-            player: Player::new_with_chips("Barry Greenstein".to_string(), 100_000),
+            player: Player::new_with_chips("Barry Greenstein".to_string(), 1_000_000),
             cards: boxed!("4♣ 4♦"),
         };
         let amnon_filippi = Seat {
-            player: Player::new_with_chips("Amnon Filippi".to_string(), 100_000),
+            player: Player::new_with_chips("Amnon Filippi".to_string(), 1_000_000),
             cards: boxed!("7♣ 2♣"),
         };
         vec![
