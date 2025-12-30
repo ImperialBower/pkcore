@@ -15,6 +15,7 @@ use std::fmt;
 use std::slice::Iter;
 use std::str::FromStr;
 use std::vec::IntoIter;
+use crate::prelude::Seats;
 
 /// To start with I am only focusing on supporting a single round of play.
 ///
@@ -192,6 +193,16 @@ impl fmt::Display for HoleCards {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let joined = Itertools::join(&mut self.0.iter(), ", ");
         write!(f, "[{joined}]")
+    }
+}
+
+impl From<Seats> for HoleCards {
+    fn from(seats: Seats) -> Self {
+        let mut hands = HoleCards::with_capacity(seats.size() as usize);
+        for seat in seats.iter() {
+            hands.push(Two::from(seat.borrow().cards.as_slice()));
+        }
+        hands
     }
 }
 

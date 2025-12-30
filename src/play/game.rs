@@ -14,6 +14,7 @@ use crate::{Card, Cards, PKError, Pile, TheNuts};
 use log::debug;
 use std::fmt::{Display, Formatter};
 use std::sync::mpsc;
+use crate::prelude::Table;
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -719,6 +720,15 @@ impl Display for Game {
         write!(f, "DEALT: {} {}", self.hands, self.board)
     }
 }
+
+// impl From<Table> for Game {
+//     fn from(table: Table) -> Self {
+//         Game {
+//             hands: HoleCards::from(table.seats),
+//             board: table.board,
+//         }
+//     }
+// }
 
 #[cfg(test)]
 #[allow(non_snake_case)]
