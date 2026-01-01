@@ -7,6 +7,7 @@ use crate::{PKError, Pile, Plurable, SOK, TheNuts};
 use std::fmt::{Display, Formatter};
 use std::ops::Index;
 use std::str::FromStr;
+use crate::cards_cell::CardsCell;
 
 /// A `Board` is a type that represents a single instance of the face up `Cards`
 /// of one `Game` of `Texas hold 'em`.
@@ -118,6 +119,14 @@ impl SOK for Board {
     }
 }
 
+impl TryFrom<CardsCell> for Board {
+    type Error = PKError;
+
+    fn try_from(cards_cell: CardsCell) -> Result<Self, Self::Error> {
+        Board::try_from(cards_cell.cards())
+    }
+}
+
 impl TryFrom<Cards> for Board {
     type Error = PKError;
 
@@ -155,6 +164,7 @@ impl TryFrom<Cards> for Board {
 #[allow(non_snake_case)]
 mod play_board_tests {
     use super::*;
+    use crate::Forgiving;
 
     #[test]
     fn display() {
@@ -239,6 +249,12 @@ mod play_board_tests {
             ]))
             .unwrap()
             .to_string()
+        );
+        assert_eq!(
+            "FLOP: A♠ K♥ Q♣, TURN: J♦, RIVER: T♣",
+            Board::try_from(cc!("AS KH QC JD TC"))
+                .unwrap()
+                .to_string()
         );
     }
 

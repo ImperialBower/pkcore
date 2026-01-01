@@ -721,14 +721,16 @@ impl Display for Game {
     }
 }
 
-// impl From<Table> for Game {
-//     fn from(table: Table) -> Self {
-//         Game {
-//             hands: HoleCards::from(table.seats),
-//             board: table.board,
-//         }
-//     }
-// }
+impl TryFrom<Table> for Game {
+    type Error = PKError;
+
+    fn try_from(table: Table) -> Result<Self, Self::Error> {
+        Ok(Game {
+            hands: HoleCards::try_from(table.seats)?,
+            board: Board::try_from(table.board)?,
+        })
+    }
+}
 
 #[cfg(test)]
 #[allow(non_snake_case)]

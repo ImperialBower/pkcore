@@ -17,7 +17,7 @@ use crate::play::hole_cards::HoleCards;
 use crate::prelude::{BoxedCards, ForcedBets, Seats, Table};
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
-use crate::{Card, Cards, Forgiving, Pile, cards};
+use crate::{Card, Cards, Forgiving, Pile};
 use std::str::FromStr;
 
 /// I am a classicist when it comes to testing. Martin Fowler, in his essay

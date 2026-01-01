@@ -200,7 +200,7 @@ impl From<Seats> for HoleCards {
     fn from(seats: Seats) -> Self {
         let mut hands = HoleCards::with_capacity(seats.size() as usize);
         for seat in seats.iter() {
-            hands.push(Two::from(seat.borrow().cards.as_slice()));
+            hands.push(Two::try_from(seat.borrow().cards.as_slice()).unwrap_or_default());
         }
         hands
     }
@@ -438,6 +438,16 @@ mod play__hold_cards_tests {
         let expected = HoleCards::from_str("Qc 4h Tc 9c 8s As Qh 7c Jc Qd 5h 5d").unwrap();
 
         assert_eq!(expected, HoleCards::from_pluribus(raw).unwrap());
+    }
+
+    #[test]
+    fn from__seats() {
+        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let expected = "[T♠ 2♥, 8♠ 3♥, A♦ Q♣, 5♦ 5♣, 6♠ 6♥, K♠ J♦, 4♦ 4♣, 7♣ 2♣]";
+
+        let hands = HoleCards::from(seats);
+
+        assert_eq!(expected, hands.to_string());
     }
 
     #[test]

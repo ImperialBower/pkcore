@@ -43,6 +43,10 @@ impl CardsCell {
         Self(RefCell::new(cards))
     }
 
+    pub fn cards(&self) -> Cards {
+        self.0.borrow().clone()
+    }
+
     /// REFACTOR: Changing this to taking a `CardCell` reference. I'm feeling that we need to keep
     /// things in the [family](https://www.youtube.com/watch?v=IQuc7wfO16Q).
     #[must_use]

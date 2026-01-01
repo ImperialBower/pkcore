@@ -8,7 +8,7 @@ use crate::casino::table::seat::Seat;
 use crate::casino::table::seats::Seats;
 use crate::games::{GamePhase, GameType};
 use crate::prelude::{Bard, BoxedCards};
-use crate::{PKError, Pile, deck_cell};
+use crate::{PKError, Pile};
 use bint::{BintCell, DrainableBintCell};
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
