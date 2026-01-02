@@ -85,7 +85,7 @@ impl From<Vec<Five>> for Evals {
 mod hand_rank__evals_tests {
     use super::*;
     use crate::Card;
-    use crate::analysis::class::Class;
+    use crate::analysis::class::HandRankClass;
     use crate::arrays::three::Three;
     use crate::arrays::two::Two;
     use crate::util::data::TestData;
@@ -96,9 +96,9 @@ mod hand_rank__evals_tests {
 
         let sorted = the_nuts.sort();
 
-        assert_eq!(Class::ThreeNines, sorted.0.get(0).unwrap().hand_rank.class);
-        assert_eq!(Class::ThreeFives, sorted.0.get(1).unwrap().hand_rank.class);
-        assert_eq!(Class::PairOfTens, sorted.0.get(2).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::ThreeNines, sorted.0.get(0).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::ThreeFives, sorted.0.get(1).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::PairOfTens, sorted.0.get(2).unwrap().hand_rank.class);
     }
 
     #[test]

@@ -221,6 +221,9 @@ impl Table {
             let amount = folded_chips.count();
             self.pot.add_to(folded_chips);
             self.log_info(TableAction::Fold(seat_number));
+
+            self.player_mucks_cards(seat_number);
+
             self.action_to.up();
             self.log_info(TableAction::ActionTo(self.action_to.value()));
             Ok(amount)

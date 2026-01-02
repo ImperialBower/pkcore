@@ -196,8 +196,8 @@ impl TryFrom<Cards> for Six {
 #[allow(non_snake_case)]
 mod arrays__six_tests {
     use super::*;
-    use crate::analysis::class::Class;
-    use crate::analysis::name::Name;
+    use crate::analysis::class::HandRankClass;
+    use crate::analysis::name::HandRankName;
 
     const CARDS: [Card; 6] = [
         Card::ACE_DIAMONDS,
@@ -250,8 +250,8 @@ mod arrays__six_tests {
     fn hand_rank() {
         let (hr, best) = Six::from(CARDS).hand_rank_and_hand();
         assert_eq!(9, hr.value);
-        assert_eq!(Class::SixHighStraightFlush, hr.class);
-        assert_eq!(Name::StraightFlush, hr.name);
+        assert_eq!(HandRankClass::SixHighStraightFlush, hr.class);
+        assert_eq!(HandRankName::StraightFlush, hr.name);
         assert_eq!(Five::from_str("6d 5D 4D 3D 2d").unwrap(), best);
     }
 

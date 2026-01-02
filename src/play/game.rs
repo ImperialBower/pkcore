@@ -8,13 +8,13 @@ use crate::arrays::seven::Seven;
 use crate::arrays::six::Six;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
+use crate::prelude::Table;
 use crate::util::wincounter::results::Results;
 use crate::util::wincounter::wins::Wins;
 use crate::{Card, Cards, PKError, Pile, TheNuts};
 use log::debug;
 use std::fmt::{Display, Formatter};
 use std::sync::mpsc;
-use crate::prelude::Table;
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -726,7 +726,7 @@ impl TryFrom<Table> for Game {
 
     fn try_from(table: Table) -> Result<Self, Self::Error> {
         Ok(Game {
-            hands: HoleCards::try_from(table.seats)?,
+            hands: HoleCards::from(table.seats),
             board: Board::try_from(table.board)?,
         })
     }
@@ -737,9 +737,11 @@ impl TryFrom<Table> for Game {
 mod play__game_tests {
     use super::*;
     use crate::Evals;
-    use crate::analysis::class::Class;
+    use crate::analysis::class::HandRankClass;
+    use crate::analysis::name::HandRankName;
     use crate::arrays::three::Three;
     use crate::arrays::two::Two;
+    use crate::play::stages::flop_eval::FlopEval;
     use crate::util::data::TestData;
     use crate::util::wincounter::win::Win;
     use std::str::FromStr;
@@ -1036,10 +1038,10 @@ mod play__game_tests {
             Win::FIRST | Win::SECOND | Win::THIRD | Win::FORTH,
             case_eval.win_count()
         );
-        assert_eq!(Class::FourJacks, case_eval.get(0).unwrap().hand_rank.class);
-        assert_eq!(Class::FourJacks, case_eval.get(1).unwrap().hand_rank.class);
-        assert_eq!(Class::FourJacks, case_eval.get(2).unwrap().hand_rank.class);
-        assert_eq!(Class::FourJacks, case_eval.get(3).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::FourJacks, case_eval.get(0).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::FourJacks, case_eval.get(1).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::FourJacks, case_eval.get(2).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::FourJacks, case_eval.get(3).unwrap().hand_rank.class);
     }
 
     /// I really like this test, even though it asserts nothing. It's just making sure that we
@@ -1063,6 +1065,58 @@ mod play__game_tests {
             "DEALT: [6♠ 6♥, 5♦ 5♣] FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: 8♠",
             TestData::the_hand().to_string()
         );
+    }
+
+    #[test]
+    fn try_from__table() {
+        let table = TestData::min_table();
+        table.deal_cards_to_seats().expect("WOOPSIE!!!");
+        table.deal_flop().expect("No flop");
+        let _ = table.act_fold(0).unwrap();
+
+        let game = Game::try_from(table.clone()).unwrap();
+
+        let flop_eval = FlopEval::try_from(game.clone()).unwrap();
+
+        assert_eq!(2251, flop_eval.eval_for_player(0).unwrap().hand_rank.value);
+        assert_eq!(
+            HandRankName::ThreeOfAKind,
+            flop_eval.eval_for_player(0).unwrap().hand_rank.name
+        );
+        assert_eq!(
+            HandRankClass::ThreeFives,
+            flop_eval.eval_for_player(0).unwrap().hand_rank.class
+        );
+
+        assert_eq!(2185, flop_eval.eval_for_player(1).unwrap().hand_rank.value);
+        assert_eq!(
+            HandRankName::ThreeOfAKind,
+            flop_eval.eval_for_player(1).unwrap().hand_rank.name
+        );
+        assert_eq!(
+            HandRankClass::ThreeSixes,
+            flop_eval.eval_for_player(1).unwrap().hand_rank.class
+        );
+
+        table.deal_turn().expect("No turn");
+        let game = Game::try_from(table.clone()).unwrap();
+
+        game.turn_display_odds().unwrap();
+
+        table.deal_river().expect("No turn");
+        let game = Game::try_from(table.clone()).unwrap();
+
+        game.river_display_results();
+
+        // println!("{:#?}", game);
+
+        //
+        // let table = TestData::the_table();
+        // let game = TestData::the_hand();
+        //
+        // let actual = Game::try_from(table).unwrap();
+        //
+        // assert_eq!(game, actual);
     }
 
     /// This test comes out of an issue discovered by running the cards from this

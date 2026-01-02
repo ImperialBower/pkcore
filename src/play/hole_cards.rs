@@ -7,6 +7,7 @@ use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::cards::Cards;
 use crate::play::board::Board;
+use crate::prelude::Seats;
 use crate::util::Util;
 use crate::{Card, PKError, Pile, Plurable, TheNuts};
 use itertools::Itertools;
@@ -15,7 +16,6 @@ use std::fmt;
 use std::slice::Iter;
 use std::str::FromStr;
 use std::vec::IntoIter;
-use crate::prelude::Seats;
 
 /// To start with I am only focusing on supporting a single round of play.
 ///
@@ -200,7 +200,9 @@ impl From<Seats> for HoleCards {
     fn from(seats: Seats) -> Self {
         let mut hands = HoleCards::with_capacity(seats.size() as usize);
         for seat in seats.iter() {
-            hands.push(Two::try_from(seat.borrow().cards.as_slice()).unwrap_or_default());
+            if seat.is_in_hand() {
+                hands.push(Two::try_from(seat.borrow().cards.as_slice()).unwrap_or_default());
+            }
         }
         hands
     }
@@ -284,7 +286,7 @@ impl TryFrom<Cards> for HoleCards {
 #[allow(non_snake_case)]
 mod play__hold_cards_tests {
     use super::*;
-    use crate::analysis::class::Class;
+    use crate::analysis::class::HandRankClass;
     use crate::util::data::TestData;
     use rstest::rstest;
 
@@ -377,8 +379,8 @@ mod play__hold_cards_tests {
         let case_eval = the_hand.hands.river_case_eval(&the_hand.board);
 
         assert_eq!(124, case_eval.winning_hand_rank().value);
-        assert_eq!(Class::FourFives, case_eval.get(1).unwrap().hand_rank.class);
-        assert_eq!(Class::SixesOverFives, case_eval.get(0).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::FourFives, case_eval.get(1).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::SixesOverFives, case_eval.get(0).unwrap().hand_rank.class);
     }
 
     #[test]
