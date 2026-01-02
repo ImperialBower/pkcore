@@ -1077,26 +1077,16 @@ mod play__game_tests {
         let game = Game::try_from(table.clone()).unwrap();
 
         let flop_eval = FlopEval::try_from(game.clone()).unwrap();
+        let fe_gus = flop_eval.eval_for_player(0).unwrap();
+        let fe_daniel = flop_eval.eval_for_player(1).unwrap();
 
-        assert_eq!(2251, flop_eval.eval_for_player(0).unwrap().hand_rank.value);
-        assert_eq!(
-            HandRankName::ThreeOfAKind,
-            flop_eval.eval_for_player(0).unwrap().hand_rank.name
-        );
-        assert_eq!(
-            HandRankClass::ThreeFives,
-            flop_eval.eval_for_player(0).unwrap().hand_rank.class
-        );
+        assert_eq!(HandRankName::ThreeOfAKind, fe_gus.hand_rank.name);
+        assert_eq!(HandRankClass::ThreeFives, fe_gus.hand_rank.class);
+        assert_eq!(2251, fe_gus.hand_rank.value);
 
-        assert_eq!(2185, flop_eval.eval_for_player(1).unwrap().hand_rank.value);
-        assert_eq!(
-            HandRankName::ThreeOfAKind,
-            flop_eval.eval_for_player(1).unwrap().hand_rank.name
-        );
-        assert_eq!(
-            HandRankClass::ThreeSixes,
-            flop_eval.eval_for_player(1).unwrap().hand_rank.class
-        );
+        assert_eq!(HandRankName::ThreeOfAKind, fe_daniel.hand_rank.name);
+        assert_eq!(HandRankClass::ThreeSixes, fe_daniel.hand_rank.class);
+        assert_eq!(2185, fe_daniel.hand_rank.value);
 
         table.deal_turn().expect("No turn");
         let game = Game::try_from(table.clone()).unwrap();
