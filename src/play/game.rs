@@ -260,46 +260,10 @@ impl Game {
         })
     }
 
-    /// This is really a sort of utility method so that I can quickly
-    /// generate a specific `CaseEval` at the turn.
-    ///
-    /// The hardest part about writing the method is going to be generating
-    /// a good test expected value. Within our domain, our state transformations are now
-    /// getting fairly complicated. Well, let's see how it goes...
-    #[must_use]
-    pub fn turn_case_eval(&self, case: &Card) -> CaseEval {
-        let mut case_eval = CaseEval::new(Cards::from(case));
-        for (i, player) in self.hands.iter().enumerate() {
-            let seven = Seven::from_case_at_turn(*player, self.board.flop, self.board.turn, *case);
-            let eval = Eval::from(seven);
-
-            case_eval.push(eval);
-
-            debug!("Player {} {}: {}", i + 1, *player, eval);
-        }
-        case_eval
-    }
-
     /// Returns all the possible `CaseEvals` for the `Game` at the turn.
     #[must_use]
     pub fn turn_case_evals(&self) -> CaseEvals {
-        debug!(
-            "PlayerWins.case_evals_turn(hands: {} flop: {} turn: {})",
-            self.hands, self.board.flop, self.board.turn
-        );
-
-        let mut case_evals = CaseEvals::default();
-
-        for (j, case) in self.turn_remaining().iter().enumerate() {
-            debug!(
-                "{}: FLOP: {} TURN: {} RIVER: {} -------",
-                j, self.board.flop, self.board.turn, case
-            );
-
-            case_evals.push(self.turn_case_eval(case));
-        }
-
-        case_evals
+        TurnEval::case_evals(self)
     }
 
     fn turn_cards(&self) -> Cards {
@@ -765,19 +729,6 @@ mod play__game_tests {
         let game = TestData::the_hand();
 
         assert_eq!(game, Game::new(game.hands.clone(), game.board));
-    }
-
-    #[test]
-    fn case_eval_at_turn() {
-        let game = Game {
-            hands: TestData::hole_cards_the_hand(),
-            board: Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap(),
-        };
-
-        let actual = game.turn_case_eval(&Card::SIX_CLUBS);
-
-        assert_eq!(Win::FIRST, actual.win_count());
-        assert_eq!(Card::SIX_CLUBS, actual.card());
     }
 
     #[test]
