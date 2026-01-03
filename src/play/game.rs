@@ -13,9 +13,7 @@ use crate::prelude::Table;
 use crate::util::wincounter::results::Results;
 use crate::util::wincounter::wins::Wins;
 use crate::{Card, Cards, PKError, Pile, TheNuts};
-use log::debug;
 use std::fmt::{Display, Formatter};
-use std::sync::mpsc;
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -228,6 +226,11 @@ impl Game {
         Game { hands, board }
     }
 
+    #[must_use]
+    pub fn has_dealt_turn(&self) -> bool {
+        self.board.flop.is_dealt() && self.board.turn.is_dealt()
+    }
+
     // region The Turn
 
     /// Function that does the work. I can see this returning outs as well.
@@ -245,19 +248,11 @@ impl Game {
         (case_evals, wins, results, outs)
     }
 
+    /// # Errors
+    ///
+    /// Throws `PKError::NotEnoughCards` if there are not enough cards on the `Board`.
     pub fn turn_eval(&self) -> Result<TurnEval, PKError> {
-        let (case_evals, wins, results, outs) = self.turn_calculations();
-        if !self.board.turn.is_dealt() || !self.board.turn.is_dealt() {
-            return Err(PKError::Fubar);
-        }
-        Ok(TurnEval {
-            board: self.board,
-            hands: self.hands.clone(),
-            case_evals,
-            wins,
-            results,
-            outs,
-        })
+        TurnEval::try_from(self)
     }
 
     /// Returns all the possible `CaseEvals` for the `Game` at the turn.
@@ -373,33 +368,9 @@ impl Game {
     /// Throws `PKError::Fubar` if there is an invalid index.
     pub fn turn_display_odds(&self) -> Result<(), PKError> {
         if self.board.turn.is_dealt() {
-            let (_, _, results, outs) = self.turn_calculations();
-
-            let winning_player = outs.longest_player();
-
-            println!();
-            println!("The Turn: {}", self.board.turn);
-
-            for (i, hole_cards) in self.hands.iter().enumerate() {
-                let player_id = i + 1;
-                println!(
-                    "  Player #{} [{}] {}",
-                    player_id,
-                    hole_cards,
-                    results.player_to_string(i)
-                );
-                println!("    HAND: {}", self.turn_eval_for_player_str(i)?);
-                if player_id != winning_player {
-                    match outs.get(player_id) {
-                        None => {}
-                        Some(cards) => {
-                            println!("    OUTS: {cards}");
-                        }
-                    }
-                }
-            }
+            let turn_eval = self.turn_eval()?;
+            println!("{turn_eval}");
         }
-
         Ok(())
     }
 
@@ -440,80 +411,15 @@ impl Game {
         }
     }
 
-    /// I don't think I am doing this right. The nuts at the turn shouldn't have any idea what the
-    /// cards being held are. Could it  be that I did the flop wrong too? Lemme think about this.
-    ///
-    /// It could be that there is simply no point for this function. What's important at the turn
-    /// is odds and outs.
-    ///
-    /// # Refactor
-    ///
-    /// I want to try to use concurrency to speed up the code we've written so far. The long term
-    /// goal is to take on pre-flop odds, which require a massive amounts of time. Right now
-    /// the code executed in `calc` feels sluggish.
-    ///
-    /// TBH, using `calc` as our method of getting a feel for our code's performance is going
-    /// to hit a wall. Eventually, we're going to want to write some real performance tests.
-    ///
-    /// OK, after the first refactoring, we've got the execution time of this method down
-    /// from 19 seconds to 4. This, just by executing `Seven.eval()` in its own thread.
-    ///
-    /// The only problem is, that the test is floppy, with the test line
-    /// `assert_eq!(5306, evals.get(61).unwrap().hand_rank.value);` not always returning
-    /// the same result. This is an issue that needs to be tracked down.
-    ///
-    /// # Panics
-    ///
-    /// Hard to imaging when this would panic from a case iterator.
     #[must_use]
     pub fn turn_the_nuts(&self) -> TheNuts {
-        if !self.board.flop.is_dealt() || !self.board.turn.is_dealt() {
+        let turn_eval = TurnEval::try_from(self).unwrap_or_default();
+
+        if !turn_eval.game.has_dealt_turn() {
             return TheNuts::default();
         }
 
-        let mut the_nuts = TheNuts::default();
-        let board = self.flop_and_turn();
-
-        // let gto = self.turn_remaining_board().combinations(3);
-        // let chunks = gto.chunks(5);
-        let (sender, receiver) = mpsc::channel();
-
-        // for chunk in &chunks {
-        //     for v in chunk {
-        //         if let Ok(seven) = Game::flop_get_seven(board, &v) {
-        //             let sender = sender.clone();
-        //
-        //             thread::spawn(move || {
-        //                 sender.send(seven.eval()).unwrap();
-        //             });
-        //         }
-        //     }
-        // }
-
-        for v in self.turn_remaining_board().combinations(3) {
-            if let Ok(seven) = Game::flop_get_seven(board, &v) {
-                let sender = sender.clone();
-                // handle send errors instead of panicking
-                // DIARY: I need to get used to this pattern where the assignment is on the left.
-                // It's counterintuitive to me.
-                if let Err(e) = sender.send(seven.eval()) {
-                    log::error!("turn_the_nuts: failed to send eval from thread: {e:?}");
-                }
-            }
-        }
-
-        drop(sender);
-
-        for received in receiver {
-            the_nuts.push(received);
-        }
-
-        // This had no effect on the floppiness of the ignored test.
-        // thread::sleep(Duration::from_millis(1000));
-
-        the_nuts.sort_in_place();
-
-        the_nuts
+        turn_eval.the_nuts()
     }
 
     // endregion

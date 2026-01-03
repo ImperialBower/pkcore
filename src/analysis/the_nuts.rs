@@ -2,6 +2,7 @@ use crate::Evals;
 use crate::analysis::class::HandRankClass;
 use crate::analysis::eval::Eval;
 use std::collections::HashSet;
+use std::fmt::Display;
 
 #[allow(clippy::needless_doctest_main)]
 /// The immediate need for this class is so that we can have an easy way to hold and sort the
@@ -441,6 +442,15 @@ impl TheNuts {
     #[must_use]
     pub fn to_evals(&self) -> Evals {
         Evals::from(self.0.clone())
+    }
+}
+
+impl Display for TheNuts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for eval in &self.0 {
+            writeln!(f, "{eval}")?;
+        }
+        Ok(())
     }
 }
 

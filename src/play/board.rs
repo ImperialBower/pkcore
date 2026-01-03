@@ -24,6 +24,7 @@ impl Board {
         Board { flop, turn, river }
     }
 
+    #[must_use]
     pub fn turn_cards(&self) -> Cards {
         let mut cards = self.flop.to_vec();
         if self.turn.is_dealt() {
