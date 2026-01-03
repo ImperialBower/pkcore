@@ -308,7 +308,7 @@ impl Game {
 
     /// Returns the Cards remaining after you remove the flop, the turn, and the
     /// cards held by all the players.
-    fn turn_remaining(&self) -> Cards {
+    pub(crate) fn turn_remaining(&self) -> Cards {
         let mut cards = self.turn_cards();
         cards.insert_all(&self.hands.cards());
         Cards::deck_minus(&cards)
