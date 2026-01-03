@@ -5,9 +5,10 @@ use crate::analysis::eval::Eval;
 use crate::analysis::outs::Outs;
 use crate::arrays::HandRanker;
 use crate::arrays::seven::Seven;
+use crate::arrays::six::Six;
 use crate::card::Card;
 use crate::play::game::Game;
-use crate::prelude::{Cards, TheNuts};
+use crate::prelude::{Cards, Table, TheNuts};
 use crate::util::wincounter::results::Results;
 use crate::util::wincounter::wins::Wins;
 use log::debug;
@@ -128,6 +129,33 @@ impl TurnEval {
 
         the_nuts
     }
+
+    /// Now that I've embarked down this refactoring path, I'm thinking that it would be
+    /// cool to add a mechanism to cache our analysis. I can really see `CaseEvals` as a
+    /// dataset that could be very useful later on. Are there common textures that can be
+    /// compared? What are the characteristics of various types of flops? How can these be
+    /// visualized?
+    ///
+    /// # Refactoring.
+    ///
+    /// Moved this to `CaseEvals.wins()`. Turns out we don't need it.
+    ///
+    /// ```txt
+    /// #[must_use]
+    /// pub fn wins(&self) -> Wins {
+    ///     todo!()
+    /// }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// Throws `PKError::Fubar` if invalid index
+    pub fn turn_eval_for_player(&self, i: usize) -> Result<Eval, PKError> {
+        match self.game.hands.get(i) {
+            None => Err(PKError::Fubar),
+            Some(two) => Ok(Six::from_2and3and1(*two, self.game.board.flop, self.game.board.turn).eval()),
+        }
+    }
 }
 
 impl Display for TurnEval {
@@ -183,6 +211,15 @@ impl TryFrom<&Game> for TurnEval {
             results,
             outs,
         })
+    }
+}
+
+impl TryFrom<&Table> for TurnEval {
+    type Error = PKError;
+
+    fn try_from(table: &Table) -> Result<Self, Self::Error> {
+        let game = Game::try_from(table)?;
+        TurnEval::try_from(&game)
     }
 }
 

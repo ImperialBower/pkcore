@@ -616,6 +616,17 @@ impl TryFrom<Table> for Game {
     }
 }
 
+impl TryFrom<&Table> for Game {
+    type Error = PKError;
+
+    fn try_from(table: &Table) -> Result<Self, Self::Error> {
+        Ok(Game {
+            hands: HoleCards::from(table.seats.clone()),
+            board: Board::try_from(table.board.clone())?,
+        })
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod play__game_tests {
