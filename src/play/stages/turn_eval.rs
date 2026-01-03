@@ -14,3 +14,5 @@ pub struct TurnEval {
     pub results: Results,
     pub outs: Outs,
 }
+
+impl TurnEval {}

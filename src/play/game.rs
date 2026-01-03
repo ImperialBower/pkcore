@@ -8,6 +8,7 @@ use crate::arrays::seven::Seven;
 use crate::arrays::six::Six;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
+use crate::play::stages::turn_eval::TurnEval;
 use crate::prelude::Table;
 use crate::util::wincounter::results::Results;
 use crate::util::wincounter::wins::Wins;
@@ -242,6 +243,19 @@ impl Game {
         let results = Results::from_wins(&wins, self.hands.len());
         let outs = Outs::from(&case_evals);
         (case_evals, wins, results, outs)
+    }
+
+    #[must_use]
+    pub fn turn_eval(&self) -> TurnEval {
+        let (case_evals, wins, results, outs) = self.turn_calculations();
+        TurnEval {
+            board: self.board,
+            hands: self.hands.clone(),
+            case_evals,
+            wins,
+            results,
+            outs,
+        }
     }
 
     /// This is really a sort of utility method so that I can quickly
