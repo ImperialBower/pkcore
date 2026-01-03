@@ -23,6 +23,14 @@ impl Board {
     pub fn new(flop: Three, turn: Card, river: Card) -> Self {
         Board { flop, turn, river }
     }
+
+    pub fn turn_cards(&self) -> Cards {
+        let mut cards = self.flop.to_vec();
+        if self.turn.is_dealt() {
+            cards.push(self.turn);
+        }
+        Cards::from(cards)
+    }
 }
 
 impl Display for Board {
@@ -165,6 +173,15 @@ impl TryFrom<Cards> for Board {
 mod play_board_tests {
     use super::*;
     use crate::Forgiving;
+
+    #[test]
+    fn turn_cards() {
+        let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap_or_default();
+
+        let turn_cards = board.turn_cards();
+
+        assert_eq!("9♣ 6♦ 5♥ 5♠", turn_cards.to_string());
+    }
 
     #[test]
     fn display() {

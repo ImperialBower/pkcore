@@ -245,17 +245,19 @@ impl Game {
         (case_evals, wins, results, outs)
     }
 
-    #[must_use]
-    pub fn turn_eval(&self) -> TurnEval {
+    pub fn turn_eval(&self) -> Result<TurnEval, PKError> {
         let (case_evals, wins, results, outs) = self.turn_calculations();
-        TurnEval {
+        if !self.board.turn.is_dealt() || !self.board.turn.is_dealt() {
+            return Err(PKError::Fubar);
+        }
+        Ok(TurnEval {
             board: self.board,
             hands: self.hands.clone(),
             case_evals,
             wins,
             results,
             outs,
-        }
+        })
     }
 
     /// This is really a sort of utility method so that I can quickly
@@ -301,9 +303,7 @@ impl Game {
     }
 
     fn turn_cards(&self) -> Cards {
-        let mut cards = self.board.flop.cards();
-        cards.insert(self.board.turn);
-        cards
+        self.board.turn_cards()
     }
 
     /// Returns the Cards remaining after you remove the flop, the turn, and the
