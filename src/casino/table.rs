@@ -143,7 +143,7 @@ impl Table {
         match self.seats.act_bet(seat_number, amount) {
             Ok(remaining) => {
                 self.log_info(TableAction::Bet(seat_number, amount));
-                self.action_to.up();
+                self.action_to_next();
                 Ok(remaining)
             }
             Err(e) => Err(e),
@@ -224,13 +224,18 @@ impl Table {
 
             self.player_mucks_cards(seat_number);
 
-            self.action_to.up();
+            self.action_to_next();
             self.log_info(TableAction::ActionTo(self.action_to.value()));
             Ok(amount)
         } else {
             log::error!("Failed to find seat #{seat_number} for folding");
             Err(PKError::InvalidSeatNumber)
         }
+    }
+
+    pub fn action_to_next(&self) {
+        self.action_to.up();
+        self.log_info(TableAction::ActionTo(self.action_to.value()));
     }
 
     fn act_forced_bet(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
@@ -317,7 +322,7 @@ impl Table {
 
     pub fn commentary_action_to(&self) -> String {
         if let Some(seat) = self.get_seat(self.action_to.value()) {
-            format!("Action to: {}", seat.player.handle)
+            format!("Action to Seat {} {}", self.action_to.value(), seat.player.handle)
         } else {
             String::default()
         }
