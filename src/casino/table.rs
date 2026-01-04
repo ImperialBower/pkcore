@@ -255,6 +255,7 @@ impl Table {
         let sb_seat_num = self.determine_small_blind();
         self.act_forced_bet(sb_seat_num, self.forced.small_blind)?;
         self.log_info(TableAction::ForcedBetSmallBlind(sb_seat_num, self.forced.small_blind));
+        self.action_to_next();
 
         Ok(())
     }
@@ -267,6 +268,7 @@ impl Table {
         let big_blind = self.forced.big_blind;
         self.act_forced_bet(bb_seat_num, big_blind)?;
         self.log_info(TableAction::ForcedBetBigBlind(bb_seat_num, big_blind));
+        self.action_to_next();
 
         Ok(())
     }
@@ -278,6 +280,10 @@ impl Table {
     /// Throws an `InvalidSeatNumber` if the seat number isn't or the seat is currently
     /// borrowed mutably.
     pub fn act_forced_bets(&self) -> Result<(), PKError> {
+
+        // Make sure that `action_to` is pointing to the small blind at the start of the hand.
+        self.action_to.set(self.determine_small_blind());
+
         self.act_forced_bet_small_blind()?;
         self.act_forced_bet_big_blind()?;
 
@@ -353,6 +359,18 @@ impl Table {
         } else {
             String::default()
         }
+    }
+
+    pub fn commentary_last_player_action(&self) -> Option<String> {
+        if let Some(action) = self.event_log.last_player_action() {
+            if let Some(seat_number) = action.get_seat() {
+                if let Some(seat) = self.get_seat(seat_number) {
+                    return Some(format!("{} {}", seat.player.handle, action))
+                }
+            }
+        }
+
+        None
     }
 
     /// Returns the number of cards from a `Deck` that will be in play for a hand.
