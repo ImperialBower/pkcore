@@ -139,7 +139,7 @@ impl Display for TableAction {
             TableAction::BetAnteForced(seat, amount) => {
                 write!(f, "Seat {seat} Antes {amount}")
             }
-            TableAction::DealingXCards(x) => write!(f, "Dealing {x} cards to each player"),
+            TableAction::DealingXCards(x) => write!(f, "Dealing out {x} cards"),
             TableAction::Dealt(seat, cards) => write!(f, "Seat {seat} is dealt {}", Cards::from(*cards)),
             TableAction::DealtFlop(cards) => write!(f, "Flop is {}", Cards::from(*cards)),
             TableAction::DealtTurn(cards) => write!(f, "Turn is {}", Cards::from(*cards)),

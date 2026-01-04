@@ -1,8 +1,11 @@
-use pkcore::PKError;
+use pkcore::{PKError, Pile};
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::table::Table;
 use pkcore::casino::table::event::TableAction;
 use pkcore::casino::table::seats::Seats;
+use pkcore::play::game::Game;
+use pkcore::play::stages::flop_eval::FlopEval;
+use pkcore::play::stages::turn_eval::TurnEval;
 use pkcore::util::data::TestData;
 
 /// cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠" HSP THE HAND Negreanu/Hansen
@@ -15,7 +18,7 @@ fn main() -> Result<(), PKError> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("trace")).init();
 
     // TODO: Add ante of 200
-    let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+    let table = TestData::the_hand_table();
     assert_eq!(8_000_000, table.table_chip_count());
 
     assert!(!table.seats.all_players_have_acted());
@@ -44,15 +47,22 @@ fn main() -> Result<(), PKError> {
         panic!("Failed to get seat 2");
     }
 
+    table.deal_cards_to_seats().expect("Failed to deal cards to seats");
+    println!();
+    table.commentary_dump();
+    assert_eq!("T♠ 2♥, 8♣ 3♥, A♦ Q♣, 5♦ 5♣, 6♠ 6♥, K♠ J♦, 4♦ 4♣, 7♣ 2♦", table.seats.cards_string());
+
+    println!("\n{table}");
+
     commentary_action_to(&table);
 
-    let seat3_remaining = table.act_bet(3, 2100)?;
-    assert_eq!(997_900, seat3_remaining);
+    let gus = table.act_bet(3, 2100)?;
+    assert_eq!(997_900, gus);
     assert_eq!(table.event_log.last_player_action().unwrap(), TableAction::Bet(3, 2100));
 
     commentary_action_to(&table);
 
-    let _seat4_remaining = table.act_bet(4, 5000)?;
+    let daniel = table.act_raise(4, 5000)?;
     commentary_action_to(&table);
 
     let _seat5_remaining = table.act_fold(5)?;
@@ -72,6 +82,35 @@ fn main() -> Result<(), PKError> {
 
     let _seat2_remaining = table.act_fold(2)?;
     commentary_action_to(&table);
+
+    table.act_call(3)?;
+    commentary_action_to(&table);
+    assert!(table.seats.all_players_have_acted());
+
+    // The Flop
+    let pot = table.bring_it_in()?;
+    assert_eq!(10150, pot);
+    assert!(!table.seats.all_players_have_acted());
+
+    table.deal_flop().expect("No flop");
+
+    let flop_eval = FlopEval::try_from(&table)?;
+    println!("\n{}", flop_eval);
+
+    println!();
+    println!("The Nuts @ Flop:");
+    println!("{}", Game::try_from(&table)?.board.flop.evals());
+
+    table.deal_turn().expect("No turn");
+    let turn_eval = TurnEval::try_from(&table)?;
+    println!("\n{}", turn_eval);
+
+    let _gus = table.act_bet(3, 24_000)?;
+    commentary_action_to(&table);
+    let _daniel = table.act_call(4)?;
+    commentary_action_to(&table);
+    
+    assert!(table.seats.all_players_have_acted());
 
     //
     // println!("{table}");

@@ -157,7 +157,7 @@ impl Table {
     pub fn act_raise(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
         match self.seats.act_raise(seat_number, amount) {
             Ok(remaining) => {
-                self.log_info(TableAction::Bet(seat_number, amount));
+                self.log_info(TableAction::Raise(seat_number, amount));
                 self.action_to.up();
                 Ok(remaining)
             }
@@ -328,7 +328,13 @@ impl Table {
 
     pub fn commentary_action_to(&self) -> String {
         if let Some(seat) = self.get_seat(self.action_to.value()) {
-            format!("Action to Seat {} {}", self.action_to.value(), seat.player.handle)
+
+            if self.seats.all_players_have_acted() {
+                "All players have acted".to_string()
+            } else {
+                format!("Action to Seat {} {}", self.action_to.value(), seat.player.handle)
+            }
+
         } else {
             String::default()
         }
@@ -338,12 +344,12 @@ impl Table {
         for event in self.event_log.entries() {
             if let Some(seat_number) = event.get_seat() {
                 if let Some(seat) = self.get_seat(seat_number) {
-                    println!("{}", event.commentary(&seat.player.handle.clone()));
+                    println!("--- {}", event.commentary(&seat.player.handle.clone()));
                 } else {
-                    println!("{event}");
+                    println!("--- {event}");
                 }
             } else {
-                println!("{event}");
+                println!("--- {event}");
             }
         }
     }
@@ -1478,6 +1484,11 @@ mod casino__table_tests {
         assert_eq!(62_050, pot);
         assert!(!table.seats.all_players_have_acted());
 
+        table.deal_turn().expect("No turn");
+
+        assert_eq!("Turn is 5♠", table.event_log.last().unwrap().to_string());
+        assert_eq!("9♣ 6♦ 5♥ 5♠", table.board.to_string());
+
         let _gus = table.act_bet(1, 24_000).unwrap();
         let _daniel = table.act_call(2).unwrap();
         assert!(table.seats.all_players_have_acted());
@@ -1485,11 +1496,6 @@ mod casino__table_tests {
         let pot = table.bring_it_in().unwrap();
         assert_eq!(110050, pot);
         assert!(!table.seats.all_players_have_acted());
-
-        table.deal_turn().expect("No turn");
-
-        assert_eq!("Turn is 5♠", table.event_log.last().unwrap().to_string());
-        assert_eq!("9♣ 6♦ 5♥ 5♠", table.board.to_string());
 
         table.deal_river().expect("No turn");
 
