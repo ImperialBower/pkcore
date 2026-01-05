@@ -1234,7 +1234,7 @@ mod casino__table_tests {
 
         let seat3_remaining = table.act_bet(3, 2100)?;
         assert_eq!(997_900, seat3_remaining);
-        assert_eq!(table.event_log.last().unwrap(), TableAction::Bet(3, 2100));
+        assert_eq!(table.event_log.last_player_action().unwrap(), TableAction::Bet(3, 2100));
 
         if let Some(seat) = table.get_seat(3) {
             assert_eq!(PlayerState::Bet(2100), seat.player.state.get());
@@ -1400,7 +1400,7 @@ mod casino__table_tests {
         let table = TestData::min_table();
 
         table.act_forced_bets().expect("TODO: panic message");
-        assert_eq!(TableAction::ForcedBetBigBlind(2, 100), table.event_log.last().unwrap());
+        assert_eq!(TableAction::ActionTo(0), table.event_log.last().unwrap());
 
         assert_eq!(3_000_000, table.table_chip_count());
         assert_eq!(0, table.button.value());

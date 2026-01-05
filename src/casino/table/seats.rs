@@ -3,7 +3,6 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::table::seat::{Seat, SeatCell};
-use bint::DrainableBintCell;
 use log;
 use std::cell::{Ref, RefMut};
 
@@ -369,15 +368,13 @@ impl Seats {
                     .ok_or(PKError::InvalidSeatNumber)?;
                 return Ok(u8::try_from(index).unwrap_or(0));
             }
-            if state.is_in_hand() {
-                if state.get().amount() < current_bet {
-                    let index = self
-                        .0
-                        .iter()
-                        .position(|s| s.borrow().player.handle == seat.player.handle)
-                        .ok_or(PKError::InvalidSeatNumber)?;
-                    return Ok(u8::try_from(index).unwrap_or(0));
-                }
+            if state.is_in_hand() && state.get().amount() < current_bet {
+                let index = self
+                    .0
+                    .iter()
+                    .position(|s| s.borrow().player.handle == seat.player.handle)
+                    .ok_or(PKError::InvalidSeatNumber)?;
+                return Ok(u8::try_from(index).unwrap_or(0));
             }
         }
         Err(PKError::InvalidSeatNumber)
