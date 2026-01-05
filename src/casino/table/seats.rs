@@ -3,6 +3,7 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::table::seat::{Seat, SeatCell};
+use bint::DrainableBintCell;
 use log;
 use std::cell::{Ref, RefMut};
 
@@ -354,9 +355,13 @@ impl Seats {
     /// # Errors
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
+    /// - `PKError::Fubar` if no one is found to act next.
     pub fn next_to_act(&self, utg: u8) -> Result<u8, PKError> {
+        let current_bet = self.current_bet();
+
         for seat in self.iter_from(utg) {
-            if seat.player.state.is_yet_to_act() {
+            let state = &seat.player.state;
+            if state.is_yet_to_act_or_blind() {
                 let index = self
                     .0
                     .iter()
@@ -364,30 +369,45 @@ impl Seats {
                     .ok_or(PKError::InvalidSeatNumber)?;
                 return Ok(u8::try_from(index).unwrap_or(0));
             }
-        }
-
-        if let Some(seat_utg) = self.get_seat_mut(utg) {
-            if seat_utg.player.state.is_yet_to_act() {
-                return Ok(utg);
+            if state.is_in_hand() {
+                if state.get().amount() < current_bet {
+                    let index = self
+                        .0
+                        .iter()
+                        .position(|s| s.borrow().player.handle == seat.player.handle)
+                        .ok_or(PKError::InvalidSeatNumber)?;
+                    return Ok(u8::try_from(index).unwrap_or(0));
+                }
             }
-
-            // let bint = DrainableBintCell::new_with_value(self.size(), self.size() as usize - 1, utg);
-            // let mut seat_index: u8 = utg;
-            //
-            // if let Some=(next_seat_numer) = bint.up() {
-            //     // let seat_cell = self.0.get(seat_index as usize).ok_or(PKError::InvalidSeatNumber)?;
-            //     // let seat = seat_cell.borrow();
-            //
-            //     if let Some(seat_next) = self.get_seat(bint.value()) {
-            //         println!("{seat_index} : {seat_next}");
-            //         // if seat_utg.player.state.ca
-            //     }
-            // }
-
-            todo!()
-        } else {
-            Err(PKError::InvalidSeatNumber)
         }
+        Err(PKError::InvalidSeatNumber)
+
+        // if let Some(seat_utg) = self.get_seat_mut(utg) {
+        //     if seat_utg.player.state.is_yet_to_act_or_blind() {
+        //         return Ok(utg);
+        //     }
+        //
+        //     let bint = DrainableBintCell::new_with_value(self.size(), self.size() as usize - 1, utg);
+        //     let seat_index: u8 = utg;
+        //
+        //     if let Some(next_seat_numer) = bint.up() {
+        //         // let seat_cell = self.0.get(seat_index as usize).ok_or(PKError::InvalidSeatNumber)?;
+        //         // let seat = seat_cell.borrow();
+        //
+        //         let bint = bint.value();
+        //
+        //         if let Some(seat_next) = self.get_seat(bint) {
+        //             println!("{seat_index} : {seat_next}");
+        //             if seat_next.is_in_hand() {
+        //                 println!("{seat_index} : {seat_next}");
+        //                 return Ok(bint);
+        //             }
+        //         }
+        //     }
+        //     Err(PKError::Fubar)
+        // } else {
+        //     Err(PKError::InvalidSeatNumber)
+        // }
     }
 
     /// Clears the `PlayerState` for all the seats.

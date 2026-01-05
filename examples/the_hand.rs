@@ -1,12 +1,10 @@
-use pkcore::{PKError, Pile};
-use pkcore::casino::game::ForcedBets;
 use pkcore::casino::table::Table;
 use pkcore::casino::table::event::TableAction;
-use pkcore::casino::table::seats::Seats;
 use pkcore::play::game::Game;
 use pkcore::play::stages::flop_eval::FlopEval;
 use pkcore::play::stages::turn_eval::TurnEval;
 use pkcore::util::data::TestData;
+use pkcore::{PKError, Pile};
 
 /// cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠" HSP THE HAND Negreanu/Hansen
 ///     https://www.youtube.com/watch?v=vjM60lqRhPg
@@ -50,7 +48,10 @@ fn main() -> Result<(), PKError> {
     table.deal_cards_to_seats().expect("Failed to deal cards to seats");
     println!();
     table.commentary_dump();
-    assert_eq!("T♠ 2♥, 8♣ 3♥, A♦ Q♣, 5♦ 5♣, 6♠ 6♥, K♠ J♦, 4♦ 4♣, 7♣ 2♦", table.seats.cards_string());
+    assert_eq!(
+        "T♠ 2♥, 8♣ 3♥, A♦ Q♣, 5♦ 5♣, 6♠ 6♥, K♠ J♦, 4♦ 4♣, 7♣ 2♦",
+        table.seats.cards_string()
+    );
 
     println!("\n{table}");
 
@@ -62,7 +63,7 @@ fn main() -> Result<(), PKError> {
 
     commentary_action_to(&table);
 
-    let daniel = table.act_raise(4, 5000)?;
+    let _daniel = table.act_raise(4, 5000)?;
     commentary_action_to(&table);
 
     let _seat5_remaining = table.act_fold(5)?;
@@ -75,6 +76,7 @@ fn main() -> Result<(), PKError> {
     commentary_action_to(&table);
 
     let _seat0_remaining = table.act_fold(0)?;
+    assert_eq!(1, table.get_action_to());
     commentary_action_to(&table);
 
     let _seat1_remaining = table.act_fold(1)?;
@@ -108,8 +110,11 @@ fn main() -> Result<(), PKError> {
     let _gus = table.act_bet(3, 24_000)?;
     commentary_action_to(&table);
     let _daniel = table.act_call(4)?;
+
+    assert_eq!(3, table.get_action_to());
+
     commentary_action_to(&table);
-    
+
     assert!(table.seats.all_players_have_acted());
 
     //

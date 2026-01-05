@@ -280,7 +280,6 @@ impl Table {
     /// Throws an `InvalidSeatNumber` if the seat number isn't or the seat is currently
     /// borrowed mutably.
     pub fn act_forced_bets(&self) -> Result<(), PKError> {
-
         // Make sure that `action_to` is pointing to the small blind at the start of the hand.
         self.action_to.set(self.determine_small_blind());
 
@@ -327,14 +326,13 @@ impl Table {
     }
 
     pub fn commentary_action_to(&self) -> String {
-        if let Some(seat) = self.get_seat(self.action_to.value()) {
-
+        let action_to = self.get_action_to();
+        if let Some(seat) = self.get_seat(action_to) {
             if self.seats.all_players_have_acted() {
                 "All players have acted".to_string()
             } else {
-                format!("Action to Seat {} {}", self.action_to.value(), seat.player.handle)
+                format!("Action to Seat {} {}", action_to, seat.player.handle)
             }
-
         } else {
             String::default()
         }
@@ -371,7 +369,7 @@ impl Table {
         if let Some(action) = self.event_log.last_player_action() {
             if let Some(seat_number) = action.get_seat() {
                 if let Some(seat) = self.get_seat(seat_number) {
-                    return Some(format!("{} {}", seat.player.handle, action))
+                    return Some(format!("{} {}", seat.player.handle, action));
                 }
             }
         }
@@ -556,6 +554,11 @@ impl Table {
 
     pub fn event_count(&self, action: &TableAction) -> usize {
         self.event_log.entries().iter().filter(|a| *a == action).count()
+    }
+
+    pub fn get_action_to(&self) -> u8 {
+        let action_to = self.action_to.value();
+        self.seats.next_to_act(action_to).unwrap_or(action_to)
     }
 
     pub fn get_seat(&self, number: u8) -> Option<Ref<'_, Seat>> {
@@ -815,7 +818,7 @@ mod casino__table_tests {
         );
 
         assert_eq!(
-            "8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ T♠ 2♥ 9♣ 6♦ 5♥ 5♠ 8♠ A♠ Q♠ J♠ 9♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 7♣ 6♣ 3♣ 2♣",
+            "T♠ 2♥ 8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ 7♣ 9♣ 6♦ 5♥ 5♠ 8♠ A♠ Q♠ J♠ 9♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 6♣ 3♣ 2♣",
             table.deck.to_string()
         );
         assert_eq!(primed, table.deck.cards());

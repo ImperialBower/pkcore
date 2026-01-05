@@ -5,10 +5,10 @@ use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
+use crate::prelude::Table;
 use crate::util::wincounter::results::Results;
 use crate::util::wincounter::wins::Wins;
 use crate::{PKError, Pile};
-use crate::prelude::Table;
 
 /// I'm feeling the need to refactor our `Game` struct. As we get deeper into
 /// the analysis phase of our library, each stage of a hand will need to have
