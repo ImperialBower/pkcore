@@ -19,7 +19,7 @@ fn main() -> Result<(), PKError> {
     let table = TestData::the_hand_table();
     assert_eq!(8_000_000, table.table_chip_count());
 
-    assert!(!table.seats.all_players_have_acted());
+    assert!(!table.seats.is_betting_complete());
     assert_eq!(0, table.button.value());
     assert_eq!(3, table.determine_utg());
     assert_eq!(1, table.determine_small_blind());
@@ -87,12 +87,12 @@ fn main() -> Result<(), PKError> {
 
     table.act_call(3)?;
     commentary_action_to(&table);
-    assert!(table.seats.all_players_have_acted());
+    assert!(table.seats.is_betting_complete());
 
     // The Flop
     let pot = table.bring_it_in()?;
     assert_eq!(10150, pot);
-    assert!(!table.seats.all_players_have_acted());
+    assert!(!table.seats.is_betting_complete());
 
     table.deal_flop().expect("No flop");
 
@@ -115,7 +115,7 @@ fn main() -> Result<(), PKError> {
 
     commentary_action_to(&table);
 
-    assert!(table.seats.all_players_have_acted());
+    assert!(table.seats.is_betting_complete());
 
     //
     // println!("{table}");

@@ -307,16 +307,9 @@ impl Table {
     ///
     /// * `PKError::InvalidTableAction` - throws if a player is not active in the hand.
     pub fn bring_it_in(&self) -> Result<usize, PKError> {
-        if !self.seats.all_players_have_acted() {
-            return Err(PKError::ActionIsntFinished);
-        }
-        for seat in self.seats.borrow_all() {
-            if !seat.borrow().player.is_in_hand() {
-                continue;
-            }
-            self.pot.add_to(seat.borrow_mut().player.act_bring_it_in()?);
-        }
-        self.log_info(TableAction::BringItIn(self.pot.count()));
+        let brought_in = self.seats.bring_it_in()?;
+        self.log_info(TableAction::BringItIn(brought_in.count()));
+        self.pot.add_to(brought_in);
         Ok(self.pot.count())
     }
 
@@ -328,7 +321,7 @@ impl Table {
     pub fn commentary_action_to(&self) -> String {
         let action_to = self.get_action_to();
         if let Some(seat) = self.get_seat(action_to) {
-            if self.seats.all_players_have_acted() {
+            if self.seats.is_betting_complete() {
                 "All players have acted".to_string()
             } else {
                 format!("Action to Seat {} {}", action_to, seat.player.handle)
@@ -1290,7 +1283,7 @@ mod casino__table_tests {
         let _ = table.act_check(2).unwrap();
         let _ = table.act_fold(3).unwrap();
 
-        assert!(table.seats.all_players_have_acted());
+        assert!(table.seats.is_betting_complete());
 
         let pot = table.bring_it_in().unwrap();
 
@@ -1304,7 +1297,7 @@ mod casino__table_tests {
         assert_eq!(0, table.get_seat(0).unwrap().player.bet.count());
         assert_eq!(0, table.get_seat(1).unwrap().player.bet.count());
         assert_eq!(0, table.get_seat(2).unwrap().player.bet.count());
-        assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.is_betting_complete());
     }
 
     /// Matches test in `Seats`
@@ -1312,7 +1305,7 @@ mod casino__table_tests {
     fn validate__min_table__through_preflop() {
         let table = min_table_setup();
 
-        assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.is_betting_complete());
 
         let _ = table.act_forced_bets();
         assert_eq!(PKError::InvalidTableAction, table.act_check(0).unwrap_err());
@@ -1334,7 +1327,7 @@ mod casino__table_tests {
         } else {
             panic!("Failed to get seat 2");
         }
-        assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.is_betting_complete());
 
         let seat0 = table.act_call(0).unwrap();
         assert_eq!(100, seat0);
@@ -1344,7 +1337,7 @@ mod casino__table_tests {
         } else {
             panic!("Failed to get seat 0");
         }
-        assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.is_betting_complete());
 
         let seat1 = table.act_call(1).unwrap();
         assert_eq!(100, seat1);
@@ -1354,7 +1347,7 @@ mod casino__table_tests {
         } else {
             panic!("Failed to get seat 1");
         }
-        assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.is_betting_complete());
 
         // Big blind already has the max bet in, so can't call
         assert_eq!(PKError::InsufficientChips, table.act_call(0).unwrap_err());
@@ -1382,7 +1375,7 @@ mod casino__table_tests {
             panic!("Failed to get seat 2");
         }
 
-        assert!(table.seats.all_players_have_acted());
+        assert!(table.seats.is_betting_complete());
         let pot = table.bring_it_in().unwrap();
         assert_eq!(3_000_000, table.table_chip_count());
         assert_eq!(300, pot);
@@ -1392,7 +1385,7 @@ mod casino__table_tests {
         assert_eq!(0, table.get_seat(0).unwrap().player.bet.count());
         assert_eq!(0, table.get_seat(1).unwrap().player.bet.count());
         assert_eq!(0, table.get_seat(2).unwrap().player.bet.count());
-        assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.is_betting_complete());
     }
 
     #[test]
@@ -1467,11 +1460,11 @@ mod casino__table_tests {
         let _daniel = table.act_bet(2, 5000).unwrap();
         let _ = table.act_fold(0).unwrap();
         let _gus = table.act_call(1).unwrap();
-        assert!(table.seats.all_players_have_acted());
+        assert!(table.seats.is_betting_complete());
 
         let pot = table.bring_it_in().unwrap();
         assert_eq!(10050, pot);
-        assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.is_betting_complete());
 
         table.deal_flop().expect("No flop");
 
@@ -1481,11 +1474,11 @@ mod casino__table_tests {
         let _daniel = table.act_bet(2, 8000).unwrap();
         let _gus = table.act_raise(1, 26000).unwrap();
         let _daniel = table.act_call(2).unwrap();
-        assert!(table.seats.all_players_have_acted());
+        assert!(table.seats.is_betting_complete());
 
         let pot = table.bring_it_in().unwrap();
         assert_eq!(62_050, pot);
-        assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.is_betting_complete());
 
         table.deal_turn().expect("No turn");
 
@@ -1494,11 +1487,11 @@ mod casino__table_tests {
 
         let _gus = table.act_bet(1, 24_000).unwrap();
         let _daniel = table.act_call(2).unwrap();
-        assert!(table.seats.all_players_have_acted());
+        assert!(table.seats.is_betting_complete());
 
         let pot = table.bring_it_in().unwrap();
         assert_eq!(110050, pot);
-        assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.is_betting_complete());
 
         table.deal_river().expect("No turn");
 
@@ -1512,6 +1505,6 @@ mod casino__table_tests {
 
         assert_eq!(945_000, gus);
         assert_eq!(945_000, daniel);
-        assert!(table.seats.all_players_have_acted());
+        assert!(table.seats.is_betting_complete());
     }
 }

@@ -2,10 +2,10 @@ use crate::PKError;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
+use crate::casino::cashier::chips::Stack;
 use crate::casino::table::seat::{Seat, SeatCell};
 use log;
 use std::cell::{Ref, RefMut};
-use crate::casino::cashier::chips::Stack;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Seats(Box<[SeatCell]>);
@@ -101,6 +101,9 @@ impl Seats {
         }
     }
 
+    /// # Errors
+    ///
+    /// `PKError::InvalidSeatNumber` error if the `seat_number` is not valid.
     pub fn act_fold(&self, seat_number: u8) -> Result<Stack, PKError> {
         if let Some(seat) = self.get_seat_mut(seat_number) {
             let remaining = seat.player.act_fold()?;
@@ -124,22 +127,6 @@ impl Seats {
             log::error!("Failed to act forced bet for seat #{seat_number}");
             Err(PKError::InvalidSeatNumber)
         }
-    }
-
-    #[must_use]
-    pub fn all_players_have_acted(&self) -> bool {
-        let current_bet = self.current_bet();
-
-        for seat_cell in &self.0 {
-            let seat = seat_cell.borrow();
-            if seat.player.state.is_yet_to_act_or_blind() {
-                return false;
-            }
-            if seat.is_active() && seat.player.bet.count() != current_bet {
-                return false;
-            }
-        }
-        true
     }
 
     #[must_use]
@@ -179,6 +166,29 @@ impl Seats {
     #[must_use]
     pub fn borrow_mut(&self, index: usize) -> Option<RefMut<'_, Seat>> {
         self.0.get(index).map(|seat_cell| seat_cell.borrow_mut())
+    }
+
+    /// Removes and returns the chips from all the player's bet stack and sets their state to `YetToAct`.
+    ///
+    /// # Errors
+    ///
+    /// * `PKError::InvalidTableAction` - throws if a player is not active in the hand.
+    pub fn bring_it_in(&self) -> Result<Stack, PKError> {
+        if !self.is_betting_complete() {
+            return Err(PKError::ActionIsntFinished);
+        }
+
+        let collected = Stack::default();
+        for seat in self.borrow_all() {
+            if !seat.borrow().player.has_bet() {
+                continue;
+            }
+            collected.add_to(seat.borrow_mut().player.act_bring_it_in()?);
+        }
+
+        log::info!("Bringing in {}.", collected.count());
+
+        Ok(collected)
     }
 
     #[must_use]
@@ -304,20 +314,22 @@ impl Seats {
         Err(PKError::AlreadyDealt)
     }
 
+    #[must_use]
     pub fn first_yet_to_act(&self, utg: u8) -> Option<u8> {
         for seat in self.iter_from(utg) {
             if seat.player.state.is_yet_to_act() {
-                return Some(self.get_seat_number_from_handle(&*seat.player.handle)?);
+                return self.get_seat_number_from_handle(&seat.player.handle);
             }
         }
         None
     }
 
+    #[must_use]
     pub fn get_seat_number_from_handle(&self, handle: &str) -> Option<u8> {
         for (i, seat_cell) in self.0.iter().enumerate() {
             let seat = seat_cell.borrow();
             if seat.player.handle == handle {
-                return Some(u8::try_from(i).ok()?);
+                return u8::try_from(i).ok();
             }
         }
         None
@@ -346,9 +358,28 @@ impl Seats {
         }
     }
 
+    /// This tests if every player has done something, even if it's a forced bet. This is used
+    /// to check to see if action needs has come back around to the blinds.
     #[must_use]
     pub fn has_everyone_acted(&self) -> bool {
         self.first_yet_to_act(0).is_none()
+    }
+
+    /// Checks if equilibrium has been reached in the betting round.
+    #[must_use]
+    pub fn is_betting_complete(&self) -> bool {
+        let current_bet = self.current_bet();
+
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            if seat.player.state.is_yet_to_act_or_blind() {
+                return false;
+            }
+            if seat.is_active() && seat.player.bet.count() != current_bet {
+                return false;
+            }
+        }
+        true
     }
 
     #[must_use]
@@ -392,6 +423,10 @@ impl Seats {
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     /// - `PKError::Fubar` if no one is found to act next.
     pub fn next_to_act(&self, utg: u8) -> Result<u8, PKError> {
+        if self.is_betting_complete() {
+            return Ok(utg);
+        }
+
         let current_bet = self.current_bet();
 
         // The logic flow is different if we're still waiting for the blinds to act.
@@ -400,19 +435,22 @@ impl Seats {
         for seat in self.iter_from(utg) {
             let state = &seat.player.state;
 
-            if everyone_has_acted {
-                if state.is_blind() && seat.player.bet.count() == current_bet {
-                    return Ok(self.get_seat_number_from_handle(&*seat.player.handle).unwrap_or(0));
+            if state.is_blind() {
+                if everyone_has_acted {
+                    return Ok(self.get_seat_number_from_handle(&seat.player.handle).unwrap_or(0));
                 }
+                continue;
             }
 
             if state.is_yet_to_act() {
-                return Ok(self.get_seat_number_from_handle(&*seat.player.handle).unwrap_or(0));
+                return Ok(self.get_seat_number_from_handle(&seat.player.handle).unwrap_or(0));
             }
-            if state.is_in_hand() && state.get().amount() < current_bet {
-                return Ok(self.get_seat_number_from_handle(&*seat.player.handle).unwrap_or(0));
+
+            if state.is_in_hand() && everyone_has_acted && state.get().amount() < current_bet {
+                return Ok(self.get_seat_number_from_handle(&seat.player.handle).unwrap_or(0));
             }
         }
+
         Err(PKError::InvalidSeatNumber)
 
         // if let Some(seat_utg) = self.get_seat_mut(utg) {
@@ -656,14 +694,14 @@ mod casino__table__seats_tests {
     #[test]
     fn all_players_have_acted() {
         let seats = Seats::try_from(TestData::min_seats()).unwrap();
-        assert!(!seats.all_players_have_acted());
+        assert!(!seats.is_betting_complete());
 
         for seat_cell in seats.borrow_all() {
             let seat = seat_cell.borrow();
             seat.player.state.set(PlayerState::Check(100));
         }
 
-        assert!(seats.all_players_have_acted());
+        assert!(seats.is_betting_complete());
     }
 
     #[test]
@@ -713,7 +751,6 @@ mod casino__table__seats_tests {
 
         assert_eq!(3, seats.first_yet_to_act(1).unwrap());
     }
-
 
     #[test]
     fn get_seat_number_from_handle() {
@@ -769,19 +806,36 @@ mod casino__table__seats_tests {
 
         seats.act_forced_bet(1, 50).expect("Should be able to act");
         seats.act_forced_bet(2, 100).expect("Should be able to act");
+
         assert_eq!(3, seats.next_to_act(1).unwrap());
         seats.act_bet(3, 2100).expect("Should be able to act");
+
+        assert_eq!(4, seats.next_to_act(1).unwrap());
         seats.act_raise(4, 5000).expect("Should be able to act");
+
+        assert_eq!(5, seats.next_to_act(1).unwrap());
         seats.act_fold(5).expect("Should be able to fold");
+
+        assert_eq!(6, seats.next_to_act(1).unwrap());
         seats.act_fold(6).expect("Should be able to fold");
+
+        assert_eq!(7, seats.next_to_act(1).unwrap());
         seats.act_fold(7).expect("Should be able to fold");
+
+        assert_eq!(0, seats.next_to_act(1).unwrap());
         seats.act_fold(0).expect("Should be able to call");
+
+        assert_eq!(1, seats.next_to_act(1).unwrap());
         seats.act_fold(1).expect("Should be able to call");
+
+        assert_eq!(2, seats.next_to_act(1).unwrap());
         seats.act_fold(2).expect("Should be able to call");
+
+        assert_eq!(3, seats.next_to_act(1).unwrap());
         seats.act_call(3).expect("Should be able to call");
-        assert!(seats.all_players_have_acted());
 
-
+        assert!(seats.is_betting_complete());
+        assert_eq!(Stack::new(10150), seats.bring_it_in().unwrap());
     }
 
     #[test]
@@ -886,7 +940,7 @@ mod casino__table__seats_tests {
         let _ = seats.act_forced_bet(2, 100);
 
         // Seat 0 and 2 cannot check because they have not put enough money in the pot.
-        assert!(!seats.all_players_have_acted());
+        assert!(!seats.is_betting_complete());
         assert_eq!(PKError::InvalidTableAction, seats.act_check(1).unwrap_err());
         assert_eq!(50, seats.to_call(1));
         assert_eq!(PKError::InvalidTableAction, seats.act_check(0).unwrap_err());
@@ -899,6 +953,6 @@ mod casino__table__seats_tests {
         assert_eq!((100, 999_900), seats.act_call(0).unwrap());
         assert_eq!(0, seats.to_call(0));
         assert_eq!(PKError::InsufficientChips, seats.act_call(0).unwrap_err());
-        assert!(!seats.all_players_have_acted());
+        assert!(!seats.is_betting_complete());
     }
 }

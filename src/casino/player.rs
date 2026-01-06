@@ -71,6 +71,12 @@ impl Player {
 
             let bet_chips = self.chips.bet(additional_bet)?;
             self.bet.add_to(bet_chips);
+            log::trace!(
+                "Player {} bets {} for a total bet of {}",
+                self.handle,
+                additional_bet,
+                self.bet.count()
+            );
 
             if self.is_all_in() {
                 log::debug!("Resetting PlayerState to AllIn");
@@ -185,12 +191,19 @@ impl Player {
     ///
     /// * `PKError::InvalidTableAction` - throws if the player is not active in the hand.
     pub fn act_bring_it_in(&self) -> Result<Stack, PKError> {
-        if !self.state.is_active() {
-            log::warn!("InvalidTableAction: Player is not active in the hand.");
-            return Err(PKError::InvalidTableAction);
+        // if !self.state.is_active() {
+        //     log::warn!("InvalidTableAction: Player is not active in the hand.");
+        //     return Err(PKError::InvalidTableAction);
+        // }
+        if self.state.is_active() {
+            self.state.set(PlayerState::YetToAct);
         }
-        self.state.set(PlayerState::YetToAct);
-        Ok(self.bet.takes())
+
+        let player_bet = self.bet.takes();
+
+        log::trace!("{} brings in {} chips", self.handle, player_bet);
+
+        Ok(player_bet)
     }
 
     /// ```
@@ -343,6 +356,10 @@ impl Player {
 
     pub fn is_tapped_out(&self) -> bool {
         self.chips.count() == 0 && self.bet.count() == 0
+    }
+
+    pub fn has_bet(&self) -> bool {
+        self.bet.count() > 0
     }
 
     pub fn lose_bet(&self) {}
