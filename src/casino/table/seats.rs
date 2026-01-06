@@ -5,6 +5,7 @@ use crate::cards_cell::CardsCell;
 use crate::casino::table::seat::{Seat, SeatCell};
 use log;
 use std::cell::{Ref, RefMut};
+use crate::casino::cashier::chips::Stack;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Seats(Box<[SeatCell]>);
@@ -100,6 +101,17 @@ impl Seats {
         }
     }
 
+    pub fn act_fold(&self, seat_number: u8) -> Result<Stack, PKError> {
+        if let Some(seat) = self.get_seat_mut(seat_number) {
+            let remaining = seat.player.act_fold()?;
+            drop(seat);
+            Ok(remaining)
+        } else {
+            log::error!("Failed to find seat #{seat_number} for folding");
+            Err(PKError::InvalidSeatNumber)
+        }
+    }
+
     /// # Errors
     ///
     /// `PKError::InvalidSeatNumber` error if the `seat_number` is not valid.
@@ -124,6 +136,17 @@ impl Seats {
                 return false;
             }
             if seat.is_active() && seat.player.bet.count() != current_bet {
+                return false;
+            }
+        }
+        true
+    }
+
+    #[must_use]
+    pub fn are_dealt(&self) -> bool {
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            if !seat.cards.is_dealt() {
                 return false;
             }
         }
@@ -281,37 +304,28 @@ impl Seats {
         Err(PKError::AlreadyDealt)
     }
 
+    pub fn first_yet_to_act(&self, utg: u8) -> Option<u8> {
+        for seat in self.iter_from(utg) {
+            if seat.player.state.is_yet_to_act() {
+                return Some(self.get_seat_number_from_handle(&*seat.player.handle)?);
+            }
+        }
+        None
+    }
+
+    pub fn get_seat_number_from_handle(&self, handle: &str) -> Option<u8> {
+        for (i, seat_cell) in self.0.iter().enumerate() {
+            let seat = seat_cell.borrow();
+            if seat.player.handle == handle {
+                return Some(u8::try_from(i).ok()?);
+            }
+        }
+        None
+    }
+
     #[must_use]
     pub fn get(&self, index: usize) -> Option<&SeatCell> {
         self.0.get(index)
-    }
-
-    #[must_use]
-    pub fn are_dealt(&self) -> bool {
-        for seat_cell in &self.0 {
-            let seat = seat_cell.borrow();
-            if !seat.cards.is_dealt() {
-                return false;
-            }
-        }
-        true
-    }
-
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    /// NOTE: I have no idea why I wrote this.
-    #[must_use]
-    pub fn is_to_utg_preflop(&self) -> bool {
-        for seat_cell in &self.0 {
-            let seat = seat_cell.borrow();
-            if seat.player.state.is_yet_to_act() {
-                return true;
-            }
-        }
-        false
     }
 
     #[must_use]
@@ -330,6 +344,28 @@ impl Seats {
                 None
             }
         }
+    }
+
+    #[must_use]
+    pub fn has_everyone_acted(&self) -> bool {
+        self.first_yet_to_act(0).is_none()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// NOTE: I have no idea why I wrote this.
+    #[must_use]
+    pub fn is_to_utg_preflop(&self) -> bool {
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            if seat.player.state.is_yet_to_act() {
+                return true;
+            }
+        }
+        false
     }
 
     pub fn iter(&self) -> std::slice::Iter<'_, SeatCell> {
@@ -358,23 +394,23 @@ impl Seats {
     pub fn next_to_act(&self, utg: u8) -> Result<u8, PKError> {
         let current_bet = self.current_bet();
 
+        // The logic flow is different if we're still waiting for the blinds to act.
+        let everyone_has_acted = self.has_everyone_acted();
+
         for seat in self.iter_from(utg) {
             let state = &seat.player.state;
-            if state.is_yet_to_act_or_blind() {
-                let index = self
-                    .0
-                    .iter()
-                    .position(|s| s.borrow().player.handle == seat.player.handle)
-                    .ok_or(PKError::InvalidSeatNumber)?;
-                return Ok(u8::try_from(index).unwrap_or(0));
+
+            if everyone_has_acted {
+                if state.is_blind() && seat.player.bet.count() == current_bet {
+                    return Ok(self.get_seat_number_from_handle(&*seat.player.handle).unwrap_or(0));
+                }
+            }
+
+            if state.is_yet_to_act() {
+                return Ok(self.get_seat_number_from_handle(&*seat.player.handle).unwrap_or(0));
             }
             if state.is_in_hand() && state.get().amount() < current_bet {
-                let index = self
-                    .0
-                    .iter()
-                    .position(|s| s.borrow().player.handle == seat.player.handle)
-                    .ok_or(PKError::InvalidSeatNumber)?;
-                return Ok(u8::try_from(index).unwrap_or(0));
+                return Ok(self.get_seat_number_from_handle(&*seat.player.handle).unwrap_or(0));
             }
         }
         Err(PKError::InvalidSeatNumber)
@@ -670,6 +706,38 @@ mod casino__table__seats_tests {
     }
 
     #[test]
+    fn first_yet_to_act() {
+        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        seats.act_forced_bet(1, 50).expect("Should be able to act");
+        seats.act_forced_bet(2, 100).expect("Should be able to act");
+
+        assert_eq!(3, seats.first_yet_to_act(1).unwrap());
+    }
+
+
+    #[test]
+    fn get_seat_number_from_handle() {
+        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+
+        assert_eq!(3, seats.get_seat_number_from_handle("Gus Hansen").unwrap());
+        assert_eq!(4, seats.get_seat_number_from_handle("Daniel Negreanu").unwrap());
+        assert!(seats.get_seat_number_from_handle("The Russian").is_none())
+    }
+
+    #[test]
+    fn has_everyone_acted() {
+        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        assert!(!seats.has_everyone_acted());
+
+        for seat_cell in seats.borrow_all() {
+            let seat = seat_cell.borrow();
+            seat.player.state.set(PlayerState::Call(100));
+        }
+
+        assert!(seats.has_everyone_acted());
+    }
+
+    #[test]
     fn next_to_act() {
         let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
 
@@ -693,6 +761,27 @@ mod casino__table__seats_tests {
             .set(PlayerState::Bet(100));
         let seat = seats.next_to_act(3).unwrap();
         assert_eq!(5, seat);
+    }
+
+    #[test]
+    fn next_to_act__long_play_defect() {
+        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+
+        seats.act_forced_bet(1, 50).expect("Should be able to act");
+        seats.act_forced_bet(2, 100).expect("Should be able to act");
+        assert_eq!(3, seats.next_to_act(1).unwrap());
+        seats.act_bet(3, 2100).expect("Should be able to act");
+        seats.act_raise(4, 5000).expect("Should be able to act");
+        seats.act_fold(5).expect("Should be able to fold");
+        seats.act_fold(6).expect("Should be able to fold");
+        seats.act_fold(7).expect("Should be able to fold");
+        seats.act_fold(0).expect("Should be able to call");
+        seats.act_fold(1).expect("Should be able to call");
+        seats.act_fold(2).expect("Should be able to call");
+        seats.act_call(3).expect("Should be able to call");
+        assert!(seats.all_players_have_acted());
+
+
     }
 
     #[test]
