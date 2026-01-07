@@ -179,11 +179,13 @@ impl Seats {
         }
 
         let collected = Stack::default();
-        for seat in self.borrow_all() {
+        for (i, seat) in self.borrow_all().iter().enumerate() {
             if !seat.borrow().player.has_bet() {
                 continue;
             }
-            collected.add_to(seat.borrow_mut().player.act_bring_it_in()?);
+            let chips = seat.borrow_mut().player.act_bring_it_in()?;
+            log::trace!("Seat #{i} brought in {} chips.", chips.count());
+            collected.add_to(chips);
         }
 
         log::info!("Bringing in {}.", collected.count());
@@ -199,6 +201,18 @@ impl Seats {
             seat_strings.push(seat.cards.to_string());
         }
         seat_strings.join(", ")
+    }
+
+    #[must_use]
+    pub fn count_active_in_hand(&self) -> usize {
+        let mut count = 0;
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            if seat.is_active() {
+                count += 1;
+            }
+        }
+        count
     }
 
     #[must_use]
@@ -368,6 +382,9 @@ impl Seats {
     /// Checks if equilibrium has been reached in the betting round.
     #[must_use]
     pub fn is_betting_complete(&self) -> bool {
+        if self.count_active_in_hand() <= 1 {
+            return true;
+        }
         let current_bet = self.current_bet();
 
         for seat_cell in &self.0 {
@@ -722,6 +739,21 @@ mod casino__table__seats_tests {
     }
 
     #[test]
+    fn bring_it_in() {
+        let seats = Seats::new(TestData::min_players());
+
+        seats.act_forced_bet(1, 50).expect("Should be able to act");
+        seats.act_forced_bet(2, 100).expect("Should be able to act");
+        seats.act_fold(0).expect("Should be able to act");
+        seats.act_call(1).expect("Should be able to act");
+        seats.act_check(2).expect("Should be able to act");
+
+        println!("{seats}");
+
+        assert_eq!(Stack::new(200), seats.bring_it_in().unwrap());
+    }
+
+    #[test]
     fn count_cards_in_play() {
         let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
         assert_eq!(16, seats.count_cards_in_play());
@@ -803,6 +835,7 @@ mod casino__table__seats_tests {
     #[test]
     fn next_to_act__long_play_defect() {
         let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let pot = Stack::default();
 
         seats.act_forced_bet(1, 50).expect("Should be able to act");
         seats.act_forced_bet(2, 100).expect("Should be able to act");
@@ -826,16 +859,17 @@ mod casino__table__seats_tests {
         seats.act_fold(0).expect("Should be able to call");
 
         assert_eq!(1, seats.next_to_act(1).unwrap());
-        seats.act_fold(1).expect("Should be able to call");
+        pot.add_to(seats.act_fold(1).unwrap());
 
         assert_eq!(2, seats.next_to_act(1).unwrap());
-        seats.act_fold(2).expect("Should be able to call");
+        pot.add_to(seats.act_fold(2).unwrap());
 
         assert_eq!(3, seats.next_to_act(1).unwrap());
         seats.act_call(3).expect("Should be able to call");
 
         assert!(seats.is_betting_complete());
-        assert_eq!(Stack::new(10150), seats.bring_it_in().unwrap());
+        pot.add_to(seats.bring_it_in().unwrap());
+        assert_eq!(Stack::new(10150), pot);
     }
 
     #[test]
