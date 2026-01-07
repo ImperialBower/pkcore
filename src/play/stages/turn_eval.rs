@@ -11,7 +11,7 @@ use crate::play::game::Game;
 use crate::prelude::{Cards, Table, TheNuts};
 use crate::util::wincounter::results::Results;
 use crate::util::wincounter::wins::Wins;
-use log::debug;
+use log::{debug, trace};
 use std::fmt::{Display, Formatter};
 use std::sync::mpsc;
 
@@ -40,7 +40,7 @@ impl TurnEval {
 
             case_eval.push(eval);
 
-            debug!("Player {} {}: {}", i + 1, *player, eval);
+            trace!("Player {} {}: {}", i + 1, *player, eval);
         }
         case_eval
     }
@@ -51,7 +51,7 @@ impl TurnEval {
         if !game.has_dealt_turn() {
             return CaseEvals::default();
         }
-        debug!(
+        trace!(
             "PlayerWins.case_evals_turn(hands: {} flop: {} turn: {})",
             game.hands, game.board.flop, game.board.turn
         );
@@ -59,7 +59,7 @@ impl TurnEval {
         let mut case_evals = CaseEvals::default();
 
         for (j, case) in game.turn_remaining().iter().enumerate() {
-            debug!(
+            trace!(
                 "{}: FLOP: {} TURN: {} RIVER: {} -------",
                 j, game.board.flop, game.board.turn, case
             );
