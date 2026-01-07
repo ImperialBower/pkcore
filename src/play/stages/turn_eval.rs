@@ -11,7 +11,7 @@ use crate::play::game::Game;
 use crate::prelude::{Cards, Table, TheNuts};
 use crate::util::wincounter::results::Results;
 use crate::util::wincounter::wins::Wins;
-use log::{debug, trace};
+use log::trace;
 use std::fmt::{Display, Formatter};
 use std::sync::mpsc;
 
