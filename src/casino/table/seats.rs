@@ -339,6 +339,16 @@ impl Seats {
     }
 
     #[must_use]
+    pub fn first_yet_to_bet(&self, utg: u8) -> Option<u8> {
+        for seat in self.iter_from(utg) {
+            if seat.player.state.is_yet_to_act_or_blind() {
+                return self.get_seat_number_from_handle(&seat.player.handle);
+            }
+        }
+        None
+    }
+
+    #[must_use]
     pub fn get_seat_number_from_handle(&self, handle: &str) -> Option<u8> {
         for (i, seat_cell) in self.0.iter().enumerate() {
             let seat = seat_cell.borrow();
@@ -379,6 +389,11 @@ impl Seats {
         self.first_yet_to_act(0).is_none()
     }
 
+    #[must_use]
+    pub fn has_everyone_bet(&self) -> bool {
+        self.first_yet_to_bet(0).is_none()
+    }
+
     /// Checks if equilibrium has been reached in the betting round.
     #[must_use]
     pub fn is_betting_complete(&self) -> bool {
@@ -397,6 +412,15 @@ impl Seats {
             }
         }
         true
+    }
+
+    #[must_use]
+    pub fn is_seat_in_hand(&self, seat_number: u8) -> bool {
+        if let Some(seat) = self.get_seat(seat_number) {
+            seat.is_in_hand()
+        } else {
+            false
+        }
     }
 
     #[must_use]
@@ -447,55 +471,29 @@ impl Seats {
         let current_bet = self.current_bet();
 
         // The logic flow is different if we're still waiting for the blinds to act.
-        let everyone_has_acted = self.has_everyone_acted();
+        let everyone_has_bet = self.has_everyone_bet();
 
         for seat in self.iter_from(utg) {
             let state = &seat.player.state;
 
-            if state.is_blind() {
-                if everyone_has_acted {
-                    return Ok(self.get_seat_number_from_handle(&seat.player.handle).unwrap_or(0));
-                }
+            if !seat.is_in_hand() {
                 continue;
+            }
+
+            if state.is_blind() {
+                return Ok(self.get_seat_number_from_handle(&seat.player.handle).unwrap_or(0));
             }
 
             if state.is_yet_to_act() {
                 return Ok(self.get_seat_number_from_handle(&seat.player.handle).unwrap_or(0));
             }
 
-            if state.is_in_hand() && everyone_has_acted && state.get().amount() < current_bet {
+            if state.is_in_hand() && everyone_has_bet && state.get().amount() < current_bet {
                 return Ok(self.get_seat_number_from_handle(&seat.player.handle).unwrap_or(0));
             }
         }
 
         Err(PKError::InvalidSeatNumber)
-
-        // if let Some(seat_utg) = self.get_seat_mut(utg) {
-        //     if seat_utg.player.state.is_yet_to_act_or_blind() {
-        //         return Ok(utg);
-        //     }
-        //
-        //     let bint = DrainableBintCell::new_with_value(self.size(), self.size() as usize - 1, utg);
-        //     let seat_index: u8 = utg;
-        //
-        //     if let Some(next_seat_numer) = bint.up() {
-        //         // let seat_cell = self.0.get(seat_index as usize).ok_or(PKError::InvalidSeatNumber)?;
-        //         // let seat = seat_cell.borrow();
-        //
-        //         let bint = bint.value();
-        //
-        //         if let Some(seat_next) = self.get_seat(bint) {
-        //             println!("{seat_index} : {seat_next}");
-        //             if seat_next.is_in_hand() {
-        //                 println!("{seat_index} : {seat_next}");
-        //                 return Ok(bint);
-        //             }
-        //         }
-        //     }
-        //     Err(PKError::Fubar)
-        // } else {
-        //     Err(PKError::InvalidSeatNumber)
-        // }
     }
 
     /// Clears the `PlayerState` for all the seats.
@@ -870,6 +868,14 @@ mod casino__table__seats_tests {
         assert!(seats.is_betting_complete());
         pot.add_to(seats.bring_it_in().unwrap());
         assert_eq!(Stack::new(10150), pot);
+
+        assert_eq!(3, seats.next_to_act(1).unwrap());
+        assert_eq!(3, seats.next_to_act(2).unwrap());
+        assert_eq!(3, seats.next_to_act(3).unwrap());
+        assert_eq!(3, seats.next_to_act(5).unwrap());
+        assert_eq!(3, seats.next_to_act(6).unwrap());
+        assert_eq!(3, seats.next_to_act(7).unwrap());
+        assert_eq!(3, seats.next_to_act(0).unwrap());
     }
 
     #[test]

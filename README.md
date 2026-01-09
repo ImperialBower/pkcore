@@ -14,6 +14,18 @@ This code is a complete rewrite from scratch of my [Fudd](https://github.com/Imp
 * Folded [wincounter](https://github.com/ImperialBower/wincounter) crate into the repo.
 * Removed [cardpack.rs](https://github.com/ImperialBower/cardpack.rs) dependency
 
+## Setup
+
+This program uses [cargo make](https://github.com/sagiegurari/cargo-make) to manage tasks. Install it with:
+
+```shell
+cargo install cargo-make
+```
+
+Then you can build the project with:
+
+```shell
+
 ## TODO:
 
 * Roadmap

@@ -319,7 +319,7 @@ impl Table {
     }
 
     pub fn commentary_action_to(&self) -> String {
-        let action_to = self.get_action_to();
+        let action_to = self.next_to_act();
         if let Some(seat) = self.get_seat(action_to) {
             if self.seats.is_betting_complete() {
                 "All players have acted".to_string()
@@ -474,31 +474,6 @@ impl Table {
         Ok(())
     }
 
-    /// Returns `true` if the seat holds at least the `depth` number of dealt cards.
-    ///
-    /// Utility function to help with dealing cards.
-    pub fn has_card_at_depth(&self, seat_number: u8, depth: usize) -> bool {
-        if let Some(seat) = self.get_seat(seat_number) {
-            let num = seat.cards.number_of_dealt_cards();
-            num >= depth
-        } else {
-            false
-        }
-    }
-
-    /// Returns the minimum number of dealt cards among all seats. Used to determine the next player
-    /// who should be dealt a card.
-    ///
-    /// Never used
-    pub fn min_depth_dealt(&self) -> usize {
-        let seats = self.seats.borrow_all();
-        seats
-            .iter()
-            .map(|s| s.borrow().cards.number_of_dealt_cards())
-            .min()
-            .unwrap_or(0)
-    }
-
     /// ```
     /// use pkcore::prelude::*;
     ///
@@ -549,9 +524,11 @@ impl Table {
         self.event_log.entries().iter().filter(|a| *a == action).count()
     }
 
-    pub fn get_action_to(&self) -> u8 {
-        let action_to = self.action_to.value();
-        self.seats.next_to_act(action_to).unwrap_or(action_to)
+    pub fn next_to_act(&self) -> u8 {
+        // let action_to = self.action_to.value();
+        let utg = self.determine_utg();
+
+        self.seats.next_to_act(utg).unwrap_or(utg)
     }
 
     pub fn get_seat(&self, number: u8) -> Option<Ref<'_, Seat>> {
@@ -570,8 +547,16 @@ impl Table {
         self.seats.get_seat_mut(number)
     }
 
-    pub fn seats_are_dealt(&self) -> bool {
-        self.seats.are_dealt()
+    /// Returns `true` if the seat holds at least the `depth` number of dealt cards.
+    ///
+    /// Utility function to help with dealing cards.
+    pub fn has_card_at_depth(&self, seat_number: u8, depth: usize) -> bool {
+        if let Some(seat) = self.get_seat(seat_number) {
+            let num = seat.cards.number_of_dealt_cards();
+            num >= depth
+        } else {
+            false
+        }
     }
 
     pub fn is_ready_for_action(&self) -> bool {
@@ -607,6 +592,19 @@ impl Table {
     #[must_use]
     pub fn min_bet(&self) -> usize {
         self.forced.big_blind
+    }
+
+    /// Returns the minimum number of dealt cards among all seats. Used to determine the next player
+    /// who should be dealt a card.
+    ///
+    /// Never used
+    pub fn min_depth_dealt(&self) -> usize {
+        let seats = self.seats.borrow_all();
+        seats
+            .iter()
+            .map(|s| s.borrow().cards.number_of_dealt_cards())
+            .min()
+            .unwrap_or(0)
     }
 
     pub fn muck_board(&self) {
@@ -695,10 +693,8 @@ impl Table {
         }
     }
 
-    pub fn next_to_act(&self) {
-        // let bint_2act = DrainableBintCell::new_with_value(self.seats.size(), self.seats.size() as usize, self.action_to.value());
-
-        todo!();
+    pub fn seats_are_dealt(&self) -> bool {
+        self.seats.are_dealt()
     }
 
     pub fn set_action_to(&self, seat_number: u8) {

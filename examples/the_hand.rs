@@ -22,6 +22,7 @@ fn main() -> Result<(), PKError> {
     assert!(!table.seats.is_betting_complete());
     assert_eq!(0, table.button.value());
     assert_eq!(3, table.determine_utg());
+    assert_eq!(3, table.next_to_act());
     assert_eq!(1, table.determine_small_blind());
     assert_eq!(2, table.determine_big_blind());
 
@@ -56,43 +57,53 @@ fn main() -> Result<(), PKError> {
     println!("\n{table}");
 
     commentary_action_to(&table);
+    assert_eq!(3, table.next_to_act());
 
     let gus = table.act_bet(3, 2100)?;
     assert_eq!(997_900, gus);
     assert_eq!(table.event_log.last_player_action().unwrap(), TableAction::Bet(3, 2100));
 
     commentary_action_to(&table);
+    assert_eq!(4, table.next_to_act());
 
     let _daniel = table.act_raise(4, 5000)?;
     commentary_action_to(&table);
+    assert_eq!(5, table.next_to_act());
 
     let _seat5_remaining = table.act_fold(5)?;
     commentary_action_to(&table);
+    assert_eq!(6, table.next_to_act());
 
     let _seat6_remaining = table.act_fold(6)?;
     commentary_action_to(&table);
+    assert_eq!(7, table.next_to_act());
 
     let _seat7_remaining = table.act_fold(7)?;
     commentary_action_to(&table);
+    assert_eq!(0, table.next_to_act());
 
     let _seat0_remaining = table.act_fold(0)?;
-    assert_eq!(1, table.get_action_to());
     commentary_action_to(&table);
+    assert_eq!(1, table.next_to_act());
 
     let _seat1_remaining = table.act_fold(1)?;
     commentary_action_to(&table);
+    assert_eq!(2, table.next_to_act());
 
     let _seat2_remaining = table.act_fold(2)?;
     commentary_action_to(&table);
+    assert_eq!(3, table.next_to_act());
 
     table.act_call(3)?;
     commentary_action_to(&table);
     assert!(table.seats.is_betting_complete());
+    assert_eq!(3, table.next_to_act());
 
     // The Flop
     let pot = table.bring_it_in()?;
     assert_eq!(10150, pot);
     assert!(!table.seats.is_betting_complete());
+    assert_eq!(3, table.next_to_act());
 
     table.deal_flop().expect("No flop");
 
@@ -109,9 +120,12 @@ fn main() -> Result<(), PKError> {
 
     let _gus = table.act_bet(3, 24_000)?;
     commentary_action_to(&table);
+    assert_eq!(4, table.next_to_act());
+
     let _daniel = table.act_call(4)?;
 
-    assert_eq!(3, table.get_action_to());
+    // assert_eq!(3, table.action_to.value());
+    assert_eq!(3, table.next_to_act());
 
     commentary_action_to(&table);
 
