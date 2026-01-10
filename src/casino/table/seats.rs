@@ -838,31 +838,31 @@ mod casino__table__seats_tests {
         seats.act_forced_bet(1, 50).expect("Should be able to act");
         seats.act_forced_bet(2, 100).expect("Should be able to act");
 
-        assert_eq!(3, seats.next_to_act(1).unwrap());
+        assert_eq!(3, seats.next_to_act(3).unwrap());
         seats.act_bet(3, 2100).expect("Should be able to act");
 
-        assert_eq!(4, seats.next_to_act(1).unwrap());
+        assert_eq!(4, seats.next_to_act(3).unwrap());
         seats.act_raise(4, 5000).expect("Should be able to act");
 
-        assert_eq!(5, seats.next_to_act(1).unwrap());
+        assert_eq!(5, seats.next_to_act(3).unwrap());
         seats.act_fold(5).expect("Should be able to fold");
 
-        assert_eq!(6, seats.next_to_act(1).unwrap());
+        assert_eq!(6, seats.next_to_act(3).unwrap());
         seats.act_fold(6).expect("Should be able to fold");
 
-        assert_eq!(7, seats.next_to_act(1).unwrap());
+        assert_eq!(7, seats.next_to_act(3).unwrap());
         seats.act_fold(7).expect("Should be able to fold");
 
-        assert_eq!(0, seats.next_to_act(1).unwrap());
+        assert_eq!(0, seats.next_to_act(3).unwrap());
         seats.act_fold(0).expect("Should be able to call");
 
-        assert_eq!(1, seats.next_to_act(1).unwrap());
+        assert_eq!(1, seats.next_to_act(3).unwrap());
         pot.add_to(seats.act_fold(1).unwrap());
 
-        assert_eq!(2, seats.next_to_act(1).unwrap());
+        assert_eq!(2, seats.next_to_act(3).unwrap());
         pot.add_to(seats.act_fold(2).unwrap());
 
-        assert_eq!(3, seats.next_to_act(1).unwrap());
+        assert_eq!(3, seats.next_to_act(3).unwrap());
         seats.act_call(3).expect("Should be able to call");
 
         assert!(seats.is_betting_complete());
