@@ -72,7 +72,7 @@ pub enum GamePhase {
     BurnCardBeforeRiver,
     DealRiver,
     BettingRiver,
-    AwardWinners,
+    Showdown,
 }
 
 impl GamePhase {
@@ -108,8 +108,8 @@ impl GamePhase {
             GamePhase::ConsolidateTurnBets => GamePhase::BurnCardBeforeRiver,
             GamePhase::BurnCardBeforeRiver => GamePhase::DealRiver,
             GamePhase::DealRiver => GamePhase::BettingRiver,
-            GamePhase::BettingRiver => GamePhase::AwardWinners,
-            GamePhase::Break | GamePhase::AwardWinners => GamePhase::NewHand,
+            GamePhase::BettingRiver => GamePhase::Showdown,
+            GamePhase::Break | GamePhase::Showdown => GamePhase::NewHand,
         }
     }
 }
@@ -135,7 +135,7 @@ impl std::fmt::Display for GamePhase {
             GamePhase::BurnCardBeforeRiver => write!(f, "Burn Card Before River"),
             GamePhase::DealRiver => write!(f, "Deal River"),
             GamePhase::BettingRiver => write!(f, "River Betting"),
-            GamePhase::AwardWinners => write!(f, "Award Winners"),
+            GamePhase::Showdown => write!(f, "Award Winners"),
         }
     }
 }

@@ -285,6 +285,7 @@ impl Table {
 
         self.act_forced_bet_small_blind()?;
         self.act_forced_bet_big_blind()?;
+        self.set_phase(GamePhase::ForcedBets);
 
         Ok(())
     }
@@ -422,6 +423,8 @@ impl Table {
                 None => return Err(PKError::AlreadyDealt),
             }
         }
+        self.set_phase(GamePhase::DealHoleCards);
+        self.log_info(TableAction::DealtPlayers);
 
         Ok(())
     }
@@ -472,6 +475,17 @@ impl Table {
         self.log_info(TableAction::DealtRiver(river.bard()));
 
         Ok(())
+    }
+
+    pub fn determine_betting_phase(&self) -> GamePhase {
+        let board_len = self.board.len();
+        match board_len {
+            0 => GamePhase::BettingPreFlop,
+            3 => GamePhase::BettingFlop,
+            4 => GamePhase::BettingTurn,
+            5 => GamePhase::BettingRiver,
+            _ => GamePhase::Showdown,
+        }
     }
 
     /// ```
@@ -532,6 +546,14 @@ impl Table {
         let utg = self.determine_utg();
 
         self.seats.next_to_act(utg).unwrap_or(utg)
+    }
+
+    pub fn get_phase(&self) -> GamePhase {
+        *self.phase.borrow()
+    }
+
+    pub fn set_phase(&self, phase: GamePhase) {
+        *self.phase.borrow_mut() = phase;
     }
 
     pub fn get_seat(&self, number: u8) -> Option<Ref<'_, Seat>> {

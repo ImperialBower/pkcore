@@ -1,8 +1,10 @@
 use pkcore::casino::table::Table;
 use pkcore::casino::table::event::TableAction;
+use pkcore::games::GamePhase;
 use pkcore::play::game::Game;
 use pkcore::play::stages::flop_eval::FlopEval;
 use pkcore::play::stages::turn_eval::TurnEval;
+use pkcore::prelude::PlayerState;
 use pkcore::util::data::TestData;
 use pkcore::{PKError, Pile};
 
@@ -17,6 +19,68 @@ fn main() -> Result<(), PKError> {
 
     // TODO: Add ante of 200
     let table = TestData::the_hand_table();
+
+    setup(&table).expect("Error setting up Table");
+
+    preflop(&table).expect("Error running preflop");
+
+    // The Flop
+    let pot = table.bring_it_in()?;
+    assert_eq!(10150, pot);
+    assert!(!table.seats.is_betting_complete());
+    assert_eq!(3, table.next_to_act());
+
+    table.deal_flop().expect("No flop");
+    assert_eq!(GamePhase::BettingFlop, table.determine_betting_phase());
+
+    let flop_eval = FlopEval::try_from(&table)?;
+    println!("\n{}", flop_eval);
+
+    println!();
+    println!("The Nuts @ Flop:");
+    println!("{}", Game::try_from(&table)?.board.flop.evals());
+
+    table.deal_turn().expect("No turn");
+    assert_eq!(GamePhase::BettingTurn, table.determine_betting_phase());
+
+    let turn_eval = TurnEval::try_from(&table)?;
+    println!("\n{}", turn_eval);
+
+    let _gus = table.act_bet(3, 24_000)?;
+    commentary_action_to(&table);
+    assert_eq!(4, table.next_to_act());
+
+    let _daniel = table.act_call(4)?;
+    assert_eq!(3, table.next_to_act());
+
+    commentary_action_to(&table);
+
+    assert!(table.seats.is_betting_complete());
+    let pot = table.bring_it_in()?;
+    assert_eq!(58150, pot);
+
+    table.deal_river().expect("Unable to deal river");
+    assert_eq!(GamePhase::BettingRiver, table.determine_betting_phase());
+
+    let _gus = table.act_check(3)?;
+    assert_eq!(4, table.next_to_act());
+
+    let daniel = table.act_bet(4, 65_000)?;
+    assert_eq!(
+        table.event_log.last_player_action().unwrap(),
+        TableAction::Bet(4, 65_000)
+    );
+
+    assert_eq!(1_000_000 - 94_000, daniel);
+    assert_eq!(3, table.next_to_act());
+
+    let gus = table.act_all_in(3)?;
+    assert_eq!(971_000, gus);
+
+    Ok(())
+}
+
+fn setup(table: &Table) -> Result<(), PKError> {
     assert_eq!(8_000_000, table.table_chip_count());
 
     assert!(!table.seats.is_betting_complete());
@@ -25,8 +89,11 @@ fn main() -> Result<(), PKError> {
     assert_eq!(3, table.next_to_act());
     assert_eq!(1, table.determine_small_blind());
     assert_eq!(2, table.determine_big_blind());
+    assert_eq!(GamePhase::NewHand, table.get_phase());
 
-    let _ = table.act_forced_bets();
+    table.act_forced_bets().expect("ActForcedBets failed");
+    assert_eq!(GamePhase::ForcedBets, table.get_phase());
+    assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
 
     assert_eq!(8_000_000, table.table_chip_count());
 
@@ -34,6 +101,7 @@ fn main() -> Result<(), PKError> {
         assert_eq!(999_950, seat.player.chips.count());
         assert_eq!(50, seat.player.bet.count());
         assert_eq!(50, table.to_call(1));
+        assert_eq!(seat.player.state.get(), PlayerState::Blind(50));
     } else {
         panic!("Failed to get seat 1");
     }
@@ -42,21 +110,29 @@ fn main() -> Result<(), PKError> {
         assert_eq!(999_900, seat.player.chips.count());
         assert_eq!(100, seat.player.bet.count());
         assert_eq!(0, table.to_call(2));
+        assert_eq!(seat.player.state.get(), PlayerState::Blind(100));
     } else {
         panic!("Failed to get seat 2");
     }
 
     table.deal_cards_to_seats().expect("Failed to deal cards to seats");
-    println!();
-    table.commentary_dump();
+    assert_eq!(GamePhase::DealHoleCards, table.get_phase());
+    assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
+
     assert_eq!(
         "T♠ 2♥, 8♣ 3♥, A♦ Q♣, 5♦ 5♣, 6♠ 6♥, K♠ J♦, 4♦ 4♣, 7♣ 2♦",
         table.seats.cards_string()
     );
 
+    println!();
+    table.commentary_dump();
     println!("\n{table}");
-
     commentary_action_to(&table);
+
+    Ok(())
+}
+
+fn preflop(table: &Table) -> Result<(), PKError> {
     assert_eq!(3, table.next_to_act());
 
     let gus = table.act_bet(3, 2100)?;
@@ -97,50 +173,6 @@ fn main() -> Result<(), PKError> {
     table.act_call(3)?;
     commentary_action_to(&table);
     assert!(table.seats.is_betting_complete());
-    assert_eq!(3, table.next_to_act());
-
-    // The Flop
-    let pot = table.bring_it_in()?;
-    assert_eq!(10150, pot);
-    assert!(!table.seats.is_betting_complete());
-    assert_eq!(3, table.next_to_act());
-
-    table.deal_flop().expect("No flop");
-
-    let flop_eval = FlopEval::try_from(&table)?;
-    println!("\n{}", flop_eval);
-
-    println!();
-    println!("The Nuts @ Flop:");
-    println!("{}", Game::try_from(&table)?.board.flop.evals());
-
-    table.deal_turn().expect("No turn");
-    let turn_eval = TurnEval::try_from(&table)?;
-    println!("\n{}", turn_eval);
-
-    let _gus = table.act_bet(3, 24_000)?;
-    commentary_action_to(&table);
-    assert_eq!(4, table.next_to_act());
-
-    let _daniel = table.act_call(4)?;
-    assert_eq!(3, table.next_to_act());
-
-    commentary_action_to(&table);
-
-    assert!(table.seats.is_betting_complete());
-    let pot = table.bring_it_in()?;
-    assert_eq!(58150, pot);
-
-    let _gus = table.act_check(3)?;
-    assert_eq!(4, table.next_to_act());
-
-    let daniel = table.act_bet(4, 65_000)?;
-    assert_eq!(
-        table.event_log.last_player_action().unwrap(),
-        TableAction::Bet(4, 65_000)
-    );
-
-    assert_eq!(1_000_000 - 94_000, daniel);
     assert_eq!(3, table.next_to_act());
 
     Ok(())
