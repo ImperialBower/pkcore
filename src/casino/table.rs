@@ -128,7 +128,7 @@ impl Table {
         match self.seats.act_all_in(seat_number) {
             Ok(amount) => {
                 self.log_info(TableAction::AllIn(seat_number, amount));
-                self.action_to.up();
+                // self.action_to.up();
                 Ok(amount)
             }
             Err(e) => Err(e),
@@ -158,7 +158,7 @@ impl Table {
         match self.seats.act_raise(seat_number, amount) {
             Ok(remaining) => {
                 self.log_info(TableAction::Raise(seat_number, amount));
-                self.action_to.up();
+                // self.action_to.up();
                 Ok(remaining)
             }
             Err(e) => Err(e),
@@ -177,7 +177,7 @@ impl Table {
     pub fn act_button_move(&self) {
         self.button.up();
         self.event_log.log(TableAction::MoveButton(self.button.value()));
-        self.action_to.set(self.determine_utg());
+        // self.action_to.set(self.determine_utg());
     }
 
     /// # Errors
@@ -188,7 +188,7 @@ impl Table {
         match self.seats.act_call(seat_number) {
             Ok((to_call, _remaining)) => {
                 self.log_info(TableAction::Call(seat_number, to_call));
-                self.action_to.up();
+                // self.action_to.up();
                 Ok(to_call)
             }
             Err(e) => Err(e),
@@ -203,7 +203,7 @@ impl Table {
         match self.seats.act_check(seat_number) {
             Ok(remaining) => {
                 self.log_info(TableAction::Check(seat_number));
-                self.action_to.up();
+                // self.action_to.up();
                 Ok(remaining)
             }
             Err(e) => Err(e),
@@ -225,7 +225,7 @@ impl Table {
             self.player_mucks_cards(seat_number);
 
             self.action_to_next();
-            self.log_info(TableAction::ActionTo(self.action_to.value()));
+            self.log_info(TableAction::ActionTo(self.next_to_act()));
             Ok(amount)
         } else {
             log::error!("Failed to find seat #{seat_number} for folding");
@@ -234,8 +234,8 @@ impl Table {
     }
 
     pub fn action_to_next(&self) {
-        self.action_to.up();
-        self.log_info(TableAction::ActionTo(self.action_to.value()));
+        // self.action_to.up();
+        self.log_info(TableAction::ActionTo(self.next_to_act()));
     }
 
     fn act_forced_bet(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
@@ -281,7 +281,7 @@ impl Table {
     /// borrowed mutably.
     pub fn act_forced_bets(&self) -> Result<(), PKError> {
         // Make sure that `action_to` is pointing to the small blind at the start of the hand.
-        self.action_to.set(self.determine_small_blind());
+        // self.action_to.set(self.determine_small_blind());
 
         self.act_forced_bet_small_blind()?;
         self.act_forced_bet_big_blind()?;
@@ -517,7 +517,11 @@ impl Table {
     /// assert_eq!(3, table.determine_utg(), "If seat 0 is the dealer, than seat 3 is under the gun");
     /// ```
     pub fn determine_utg(&self) -> u8 {
-        self.button.static_up_x(3).value
+        if self.phase.borrow().is_preflop() {
+            self.button.static_up_x(3).value
+        } else {
+            self.button.static_up_x(1).value
+        }
     }
 
     pub fn event_count(&self, action: &TableAction) -> usize {
@@ -525,7 +529,6 @@ impl Table {
     }
 
     pub fn next_to_act(&self) -> u8 {
-        // let action_to = self.action_to.value();
         let utg = self.determine_utg();
 
         self.seats.next_to_act(utg).unwrap_or(utg)
@@ -560,11 +563,8 @@ impl Table {
     }
 
     pub fn is_ready_for_action(&self) -> bool {
-        let _bint = DrainableBintCell::new_with_value(
-            self.seats.size(),
-            self.seats.size() as usize - 2,
-            self.action_to.value(),
-        );
+        let _bint =
+            DrainableBintCell::new_with_value(self.seats.size(), self.seats.size() as usize - 2, self.next_to_act());
 
         // if self.
 
@@ -686,7 +686,7 @@ impl Table {
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     pub fn seat_to_act(&self) -> Result<Ref<'_, Seat>, PKError> {
-        if let Some(seat_to_act) = self.get_seat(self.action_to.value()) {
+        if let Some(seat_to_act) = self.get_seat(self.next_to_act()) {
             Ok(seat_to_act)
         } else {
             Err(PKError::InvalidSeatNumber)
@@ -697,9 +697,9 @@ impl Table {
         self.seats.are_dealt()
     }
 
-    pub fn set_action_to(&self, seat_number: u8) {
-        self.action_to.set(seat_number);
-    }
+    // pub fn set_action_to(&self, seat_number: u8) {
+    //     self.action_to.set(seat_number);
+    // }
 
     pub fn set_board(&self, cards: Cards) {
         let _ = self.board.take();
@@ -821,7 +821,7 @@ mod casino__table_tests {
         // assert_eq!(GamePhase::NewHand, table.phase.);
         assert_eq!(8, table.seats.size());
         assert_eq!(0, table.button.value());
-        assert_eq!(0, table.action_to.value());
+        assert_eq!(3, table.next_to_act());
         assert_eq!(36, table.deck.len());
         assert_eq!(
             "A♠ Q♠ J♠ 9♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 5♥ 4♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 6♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 9♣ 8♣ 6♣ 3♣",
@@ -840,7 +840,7 @@ mod casino__table_tests {
         // assert_eq!(GamePhase::NewHand, table.phase.);
         assert_eq!(8, table.seats.size());
         assert_eq!(0, table.button.value());
-        assert_eq!(0, table.action_to.value());
+        assert_eq!(3, table.next_to_act());
         assert_eq!(52, table.deck.len());
         assert_eq!(
             "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣",
@@ -859,7 +859,7 @@ mod casino__table_tests {
         // assert_eq!(GamePhase::NewHand, table.phase.);
         assert_eq!(6, table.seats.size());
         assert_eq!(0, table.button.value());
-        assert_eq!(0, table.action_to.value());
+        assert_eq!(0, table.next_to_act());
         assert_eq!(52, table.deck.len());
         assert_eq!(0, table.board.len());
         assert_eq!(0, table.muck.len());
@@ -1090,7 +1090,8 @@ mod casino__table_tests {
     #[test]
     fn seat_to_act__simple() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
-        table.set_action_to(5);
+        table.act_button_move();
+        table.act_button_move();
 
         let seat = table.seat_to_act().unwrap();
         assert_eq!("Cory Zeidman", seat.player.handle);

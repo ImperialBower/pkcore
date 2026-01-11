@@ -58,9 +58,9 @@ pub enum GamePhase {
     NewHand,
     ShuffleNewDeck,
     ForcedBets,
+    DealHoleCards,
     BettingPreFlop,
     BurnCardBeforeFlop,
-    DealHoleCards,
     ConsolidatePreFlopBets,
     DealFlop,
     BettingFlop,
@@ -76,6 +76,19 @@ pub enum GamePhase {
 }
 
 impl GamePhase {
+    #[must_use]
+    pub fn is_preflop(&self) -> bool {
+        matches!(
+            self,
+            GamePhase::NewHand
+                | GamePhase::ShuffleNewDeck
+                | GamePhase::ForcedBets
+                | GamePhase::DealHoleCards
+                | GamePhase::BettingPreFlop
+                | GamePhase::ConsolidatePreFlopBets
+        )
+    }
+
     #[must_use]
     pub fn next(&self) -> GamePhase {
         match self {

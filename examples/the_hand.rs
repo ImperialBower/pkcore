@@ -123,19 +123,25 @@ fn main() -> Result<(), PKError> {
     assert_eq!(4, table.next_to_act());
 
     let _daniel = table.act_call(4)?;
-
-    // assert_eq!(3, table.action_to.value());
     assert_eq!(3, table.next_to_act());
 
     commentary_action_to(&table);
 
     assert!(table.seats.is_betting_complete());
+    let pot = table.bring_it_in()?;
+    assert_eq!(58150, pot);
 
-    //
-    // println!("{table}");
-    // table.commentary_dump();
-    //
-    // println!("{}", table.commentary_action_to());
+    let _gus = table.act_check(3)?;
+    assert_eq!(4, table.next_to_act());
+
+    let daniel = table.act_bet(4, 65_000)?;
+    assert_eq!(
+        table.event_log.last_player_action().unwrap(),
+        TableAction::Bet(4, 65_000)
+    );
+
+    assert_eq!(1_000_000 - 94_000, daniel);
+    assert_eq!(3, table.next_to_act());
 
     Ok(())
 }
