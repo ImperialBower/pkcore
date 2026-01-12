@@ -59,6 +59,8 @@ fn main() -> Result<(), PKError> {
     let pot = table.bring_it_in()?;
     assert_eq!(58150, pot);
 
+    // The River
+
     table.deal_river().expect("Unable to deal river");
     assert_eq!(GamePhase::BettingRiver, table.determine_betting_phase());
 
@@ -177,6 +179,14 @@ fn preflop(table: &Table) -> Result<(), PKError> {
 
     Ok(())
 }
+
+
+fn flop(table: &Table) -> Result<(), PKError> {
+
+
+    Ok(())
+}
+
 
 fn commentary_action_to(table: &Table) {
     println!();
