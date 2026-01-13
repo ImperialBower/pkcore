@@ -350,6 +350,10 @@ impl Player {
         self.chips.count() == 0 && self.bet.count() > 0
     }
 
+    pub fn is_check(&self) -> bool {
+        self.state.is_check()
+    }
+
     pub fn is_in_hand(&self) -> bool {
         self.state.is_in_hand()
     }

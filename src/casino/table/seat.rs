@@ -99,6 +99,10 @@ impl Seat {
         self.player.state.is_active()
     }
 
+    pub fn is_all_in(&self) -> bool {
+        self.player.is_all_in()
+    }
+
     pub fn is_empty(&self) -> bool {
         self.player.id == uuid::Uuid::nil()
     }

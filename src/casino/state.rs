@@ -49,6 +49,11 @@ impl PlayerStateCell {
     }
 
     #[must_use]
+    pub fn is_check(&self) -> bool {
+        self.0.get().is_check()
+    }
+
+    #[must_use]
     pub fn is_in_hand(&self) -> bool {
         self.0.get().is_in_hand()
     }
@@ -163,7 +168,7 @@ impl PlayerState {
     #[must_use]
     pub fn can_act_after(&self, other: &PlayerState) -> bool {
         // A player who is out of the hand can't act before anything.
-        if !self.is_active() {
+        if !self.is_active() || self.is_all_in(){
             return false;
         }
 
@@ -216,13 +221,13 @@ impl PlayerState {
     ///
     /// assert!(PlayerState::Bet(100).is_active());
     ///
-    /// assert!(!PlayerState::AllIn(100).is_active());
+    /// assert!(PlayerState::AllIn(100).is_active());
     /// assert!(!PlayerState::Fold.is_active());
     /// assert!(!PlayerState::Out.is_active());
     /// ```
     #[must_use]
     pub fn is_active(&self) -> bool {
-        !matches!(self, PlayerState::Fold | PlayerState::Out | PlayerState::AllIn(_))
+        !matches!(self, PlayerState::Fold | PlayerState::Out)
     }
 
     /// ```

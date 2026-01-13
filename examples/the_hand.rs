@@ -15,7 +15,7 @@ use pkcore::{PKError, Pile};
 /// Season 2, Episode 11
 /// `cargo run --example the_hand`
 fn main() -> Result<(), PKError> {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("trace")).init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     // TODO: Add ante of 200
     let table = TestData::the_hand_table();
@@ -23,61 +23,10 @@ fn main() -> Result<(), PKError> {
     setup(&table).expect("Error setting up Table");
 
     preflop(&table).expect("Error running preflop");
+    flop(&table)?;
+    turn(&table)?;
 
-    // The Flop
-    let pot = table.bring_it_in()?;
-    assert_eq!(10150, pot);
-    assert!(!table.seats.is_betting_complete());
-    assert_eq!(3, table.next_to_act());
-
-    table.deal_flop().expect("No flop");
-    assert_eq!(GamePhase::BettingFlop, table.determine_betting_phase());
-
-    let flop_eval = FlopEval::try_from(&table)?;
-    println!("\n{}", flop_eval);
-
-    println!();
-    println!("The Nuts @ Flop:");
-    println!("{}", Game::try_from(&table)?.board.flop.evals());
-
-    table.deal_turn().expect("No turn");
-    assert_eq!(GamePhase::BettingTurn, table.determine_betting_phase());
-
-    let turn_eval = TurnEval::try_from(&table)?;
-    println!("\n{}", turn_eval);
-
-    let _gus = table.act_bet(3, 24_000)?;
-    commentary_action_to(&table);
-    assert_eq!(4, table.next_to_act());
-
-    let _daniel = table.act_call(4)?;
-    assert_eq!(3, table.next_to_act());
-
-    commentary_action_to(&table);
-
-    assert!(table.seats.is_betting_complete());
-    let pot = table.bring_it_in()?;
-    assert_eq!(58150, pot);
-
-    // The River
-
-    table.deal_river().expect("Unable to deal river");
-    assert_eq!(GamePhase::BettingRiver, table.determine_betting_phase());
-
-    let _gus = table.act_check(3)?;
-    assert_eq!(4, table.next_to_act());
-
-    let daniel = table.act_bet(4, 65_000)?;
-    assert_eq!(
-        table.event_log.last_player_action().unwrap(),
-        TableAction::Bet(4, 65_000)
-    );
-
-    assert_eq!(1_000_000 - 94_000, daniel);
-    assert_eq!(3, table.next_to_act());
-
-    let gus = table.act_all_in(3)?;
-    assert_eq!(971_000, gus);
+    river(&table)?;
 
     Ok(())
 }
@@ -144,7 +93,8 @@ fn preflop(table: &Table) -> Result<(), PKError> {
     commentary_action_to(&table);
     assert_eq!(4, table.next_to_act());
 
-    let _daniel = table.act_raise(4, 5000)?;
+    let daniel = table.act_raise(4, 5000)?;
+    assert_eq!(995_000, daniel);
     commentary_action_to(&table);
     assert_eq!(5, table.next_to_act());
 
@@ -177,12 +127,127 @@ fn preflop(table: &Table) -> Result<(), PKError> {
     assert!(table.seats.is_betting_complete());
     assert_eq!(3, table.next_to_act());
 
+    let pot = table.bring_it_in()?;
+    assert_eq!(10150, pot);
+
+    Ok(())
+}
+
+fn flop(table: &Table) -> Result<(), PKError> {
+    assert!(!table.seats.is_betting_complete());
+    assert_eq!(3, table.next_to_act());
+
+    table.deal_flop().expect("No flop");
+    assert_eq!(GamePhase::BettingFlop, table.determine_betting_phase());
+
+    let flop_eval = FlopEval::try_from(table)?;
+    println!("\n{}", flop_eval);
+
+    println!();
+    println!("The Nuts @ Flop:");
+    println!("{}", Game::try_from(table)?.board.flop.evals());
+
+    let gus = table.act_check(3)?;
+    assert_eq!(995_000, gus);
+    assert_eq!(4, table.next_to_act());
+    assert_eq!(10150, table.pot.count());
+    assert!(!table.seats.is_betting_complete());
+
+    let daniel = table.act_bet(4, 8_000)?;
+    assert_eq!(987_000, daniel);
+    assert_eq!(8_000, table.seats.chips_in_play());
+    assert_eq!(3, table.next_to_act());
+    assert!(!table.seats.is_betting_complete());
+
+    let gus = table.act_raise(3, 26_000)?;
+    assert_eq!(969_000, gus);
+    assert_eq!(34_000, table.seats.chips_in_play());
+    assert_eq!(4, table.next_to_act());
+    assert!(!table.seats.is_betting_complete());
+
+    let daniel = table.act_call(4)?;
+    assert_eq!(26_000, daniel);
+    assert_eq!(52_000, table.seats.chips_in_play());
+    assert_eq!(3, table.next_to_act());
+    assert!(table.seats.is_betting_complete());
+
+    let pot = table.bring_it_in()?;
+    assert_eq!(62_150, pot);
+
+    Ok(())
+}
+
+fn turn(table: &Table) -> Result<(), PKError> {
+    assert!(!table.seats.is_betting_complete());
+    assert_eq!(3, table.next_to_act());
+
+    table.deal_turn().expect("No turn");
+    assert_eq!(GamePhase::BettingTurn, table.determine_betting_phase());
+
+    let turn_eval = TurnEval::try_from(table)?;
+    println!("\n{}", turn_eval);
+
+    let gus = table.act_bet(3, 24_000)?;
+    assert_eq!(945_000, gus);
+
+    commentary_action_to(table);
+
+    assert_eq!(4, table.next_to_act());
+
+    let _daniel = table.act_call(4)?;
+    assert_eq!(3, table.next_to_act());
+
+    commentary_action_to(table);
+
+    assert!(table.seats.is_betting_complete());
+    let pot = table.bring_it_in()?;
+    assert_eq!(110_150, pot);
+
     Ok(())
 }
 
 
-fn flop(table: &Table) -> Result<(), PKError> {
+fn river(table: &Table) -> Result<(), PKError> {
+    assert!(!table.seats.is_betting_complete());
+    assert_eq!(3, table.next_to_act());
 
+    table.deal_river().expect("No river");
+    assert_eq!(GamePhase::BettingRiver, table.determine_betting_phase());
+
+    Game::try_from(table).expect("").river_display_results();
+
+    let gus = table.act_check(3)?;
+    assert_eq!(945_000, gus);
+    assert_eq!(4, table.next_to_act());
+
+    commentary_action_to(table);
+
+    let daniel = table.act_bet(4, 65_000)?;
+    assert_eq!(880_000, daniel);
+    assert_eq!(
+        table.event_log.last_player_action().unwrap(),
+        TableAction::Bet(4, 65_000)
+    );
+    assert_eq!(3, table.next_to_act());
+
+    commentary_action_to(table);
+
+    let gus = table.act_all_in(3)?;
+    assert_eq!(945_000, gus);
+    assert_eq!(4, table.next_to_act());
+
+    commentary_action_to(table);
+
+    let daniel = table.act_call(4)?;
+    assert_eq!(945_000, daniel);
+
+
+    //
+    // assert_eq!(1_000_000 - 94_000, daniel);
+    // assert_eq!(3, table.next_to_act());
+    //
+    // let gus = table.act_all_in(3)?;
+    // assert_eq!(971_000, gus);
 
     Ok(())
 }

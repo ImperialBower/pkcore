@@ -204,6 +204,16 @@ impl Seats {
     }
 
     #[must_use]
+    pub fn chips_in_play(&self) -> usize {
+        let mut total = 0;
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            total += seat.player.bet.count();
+        }
+        total
+    }
+
+    #[must_use]
     pub fn count_active_in_hand(&self) -> usize {
         let mut count = 0;
         for seat_cell in &self.0 {
@@ -476,7 +486,7 @@ impl Seats {
         for seat in self.iter_from(utg) {
             let state = &seat.player.state;
 
-            if !seat.is_in_hand() {
+            if !seat.is_in_hand() || seat.is_all_in() {
                 continue;
             }
 
@@ -486,6 +496,10 @@ impl Seats {
 
             if state.is_yet_to_act() {
                 return Ok(self.get_seat_number_from_handle(&seat.player.handle).unwrap_or(0));
+            }
+
+            if state.is_check() && current_bet == 0 {
+                continue;
             }
 
             if state.is_in_hand() && everyone_has_bet && state.get().amount() < current_bet {
