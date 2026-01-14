@@ -214,7 +214,7 @@ fn river(table: &Table) -> Result<(), PKError> {
     table.deal_river().expect("No river");
     assert_eq!(GamePhase::BettingRiver, table.determine_betting_phase());
 
-    Game::try_from(table).expect("").river_display_results();
+    table.case_eval_river_display();
 
     let gus = table.act_check(3)?;
     assert_eq!(945_000, gus);
@@ -240,14 +240,9 @@ fn river(table: &Table) -> Result<(), PKError> {
 
     let daniel = table.act_call(4)?;
     assert_eq!(945_000, daniel);
+    assert!(table.seats.is_betting_complete());
 
-
-    //
-    // assert_eq!(1_000_000 - 94_000, daniel);
-    // assert_eq!(3, table.next_to_act());
-    //
-    // let gus = table.act_all_in(3)?;
-    // assert_eq!(971_000, gus);
+    commentary_action_to(table);
 
     Ok(())
 }

@@ -13,6 +13,8 @@ use bint::{BintCell, DrainableBintCell};
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
 use uuid::Uuid;
+use crate::analysis::case_eval::CaseEval;
+use crate::play::game::Game;
 
 pub mod event;
 pub mod position;
@@ -317,6 +319,21 @@ impl Table {
     pub fn button_set(&self, seat_number: u8) {
         self.button.set(seat_number);
         self.log_info(TableAction::SetButton(seat_number));
+    }
+
+    pub fn case_eval_river(&self) -> Result<CaseEval, PKError> {
+        Game::try_from(self)?.river_case_eval()
+    }
+
+    pub fn case_eval_river_display(&self) {
+        match Game::try_from(self) {
+            Ok(game) => {
+                game.river_display_results()
+            }
+            Err(e) => {
+                log::error!("Failed to create game from table: {}", e);
+            }
+        }
     }
 
     pub fn commentary_action_to(&self) -> String {
