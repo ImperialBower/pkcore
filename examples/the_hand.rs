@@ -1,12 +1,9 @@
+use pkcore::PKError;
 use pkcore::casino::table::Table;
 use pkcore::casino::table::event::TableAction;
 use pkcore::games::GamePhase;
-use pkcore::play::game::Game;
-use pkcore::play::stages::flop_eval::FlopEval;
-use pkcore::play::stages::turn_eval::TurnEval;
 use pkcore::prelude::PlayerState;
 use pkcore::util::data::TestData;
-use pkcore::{PKError, Pile};
 
 /// cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠" HSP THE HAND Negreanu/Hansen
 ///     https://www.youtube.com/watch?v=vjM60lqRhPg
@@ -17,15 +14,12 @@ use pkcore::{PKError, Pile};
 fn main() -> Result<(), PKError> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    // TODO: Add ante of 200
     let table = TestData::the_hand_table();
 
-    setup(&table).expect("Error setting up Table");
-
-    preflop(&table).expect("Error running preflop");
+    setup(&table)?;
+    preflop(&table)?;
     flop(&table)?;
     turn(&table)?;
-
     river(&table)?;
 
     Ok(())
@@ -140,12 +134,11 @@ fn flop(table: &Table) -> Result<(), PKError> {
     table.deal_flop().expect("No flop");
     assert_eq!(GamePhase::BettingFlop, table.determine_betting_phase());
 
-    let flop_eval = FlopEval::try_from(table)?;
-    println!("\n{}", flop_eval);
+    table.eval_flop_display();
 
     println!();
     println!("The Nuts @ Flop:");
-    println!("{}", Game::try_from(table)?.board.flop.evals());
+    println!("{}", table.eval_flop_the_nuts()?);
 
     let gus = table.act_check(3)?;
     assert_eq!(995_000, gus);
@@ -184,8 +177,7 @@ fn turn(table: &Table) -> Result<(), PKError> {
     table.deal_turn().expect("No turn");
     assert_eq!(GamePhase::BettingTurn, table.determine_betting_phase());
 
-    let turn_eval = TurnEval::try_from(table)?;
-    println!("\n{}", turn_eval);
+    table.eval_turn_display();
 
     let gus = table.act_bet(3, 24_000)?;
     assert_eq!(945_000, gus);
@@ -206,7 +198,6 @@ fn turn(table: &Table) -> Result<(), PKError> {
     Ok(())
 }
 
-
 fn river(table: &Table) -> Result<(), PKError> {
     assert!(!table.seats.is_betting_complete());
     assert_eq!(3, table.next_to_act());
@@ -214,7 +205,7 @@ fn river(table: &Table) -> Result<(), PKError> {
     table.deal_river().expect("No river");
     assert_eq!(GamePhase::BettingRiver, table.determine_betting_phase());
 
-    table.case_eval_river_display();
+    table.eval_river_display();
 
     let gus = table.act_check(3)?;
     assert_eq!(945_000, gus);
@@ -246,7 +237,6 @@ fn river(table: &Table) -> Result<(), PKError> {
 
     Ok(())
 }
-
 
 fn commentary_action_to(table: &Table) {
     println!();

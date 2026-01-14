@@ -1,3 +1,4 @@
+use crate::analysis::case_eval::CaseEval;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
@@ -7,14 +8,15 @@ use crate::casino::table::event::{TableAction, TableLog};
 use crate::casino::table::seat::Seat;
 use crate::casino::table::seats::Seats;
 use crate::games::{GamePhase, GameType};
-use crate::prelude::{Bard, BoxedCards};
+use crate::play::game::Game;
+use crate::play::stages::flop_eval::FlopEval;
+use crate::play::stages::turn_eval::TurnEval;
+use crate::prelude::{Bard, BoxedCards, Evals};
 use crate::{PKError, Pile};
 use bint::{BintCell, DrainableBintCell};
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
 use uuid::Uuid;
-use crate::analysis::case_eval::CaseEval;
-use crate::play::game::Game;
 
 pub mod event;
 pub mod position;
@@ -321,21 +323,6 @@ impl Table {
         self.log_info(TableAction::SetButton(seat_number));
     }
 
-    pub fn case_eval_river(&self) -> Result<CaseEval, PKError> {
-        Game::try_from(self)?.river_case_eval()
-    }
-
-    pub fn case_eval_river_display(&self) {
-        match Game::try_from(self) {
-            Ok(game) => {
-                game.river_display_results()
-            }
-            Err(e) => {
-                log::error!("Failed to create game from table: {}", e);
-            }
-        }
-    }
-
     pub fn commentary_action_to(&self) -> String {
         let action_to = self.next_to_act();
         if let Some(seat) = self.get_seat(action_to) {
@@ -552,6 +539,52 @@ impl Table {
             self.button.static_up_x(3).value
         } else {
             self.button.static_up_x(1).value
+        }
+    }
+
+    /// # Errors
+    ///
+    /// - Throws if evaluation fails.
+    pub fn eval_flop(&self) -> Result<FlopEval, PKError> {
+        FlopEval::try_from(self)
+    }
+
+    pub fn eval_flop_display(&self) {
+        match self.eval_flop() {
+            Ok(fe) => println!("\n{}", fe),
+            Err(e) => {
+                log::error!("Failed to FlopEval from table: {e}");
+            }
+        }
+    }
+
+    pub fn eval_flop_the_nuts(&self) -> Result<Evals, PKError> {
+        Ok(Game::try_from(self)?.board.flop.evals())
+    }
+
+    pub fn eval_turn(&self) -> Result<TurnEval, PKError> {
+        TurnEval::try_from(self)
+    }
+
+    pub fn eval_turn_display(&self) {
+        match self.eval_turn() {
+            Ok(te) => println!("\n{te}"),
+            Err(e) => {
+                log::error!("Failed to TurnEval from table: {e}");
+            }
+        }
+    }
+
+    pub fn eval_river(&self) -> Result<CaseEval, PKError> {
+        Game::try_from(self)?.river_case_eval()
+    }
+
+    pub fn eval_river_display(&self) {
+        match Game::try_from(self) {
+            Ok(game) => game.river_display_results(),
+            Err(e) => {
+                log::error!("Failed to create game from table: {e}");
+            }
         }
     }
 

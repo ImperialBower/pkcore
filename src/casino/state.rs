@@ -168,7 +168,7 @@ impl PlayerState {
     #[must_use]
     pub fn can_act_after(&self, other: &PlayerState) -> bool {
         // A player who is out of the hand can't act before anything.
-        if !self.is_active() || self.is_all_in(){
+        if !self.is_active() || self.is_all_in() {
             return false;
         }
 
