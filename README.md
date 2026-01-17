@@ -25,6 +25,8 @@ cargo install cargo-make
 Then you can build the project with:
 
 ```shell
+cargo make
+````
 
 ## TODO:
 

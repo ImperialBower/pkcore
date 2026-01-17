@@ -34,7 +34,6 @@ pub struct Table {
     pub phase: RefCell<GamePhase>,
     pub seats: Seats,
     pub button: BintCell,
-    pub action_to: BintCell,
     pub deck: CardsCell,
     pub board: CardsCell,
     pub muck: CardsCell,
@@ -112,7 +111,6 @@ impl Table {
             phase: GamePhase::NewHand.into(),
             seats,
             button: BintCell::new(number_players),
-            action_to: BintCell::new(number_players),
             deck,
             board: CardsCell::default(),
             muck: CardsCell::default(),
@@ -237,11 +235,6 @@ impl Table {
         }
     }
 
-    pub fn action_to_next(&self) {
-        // self.action_to.up();
-        self.log_info(TableAction::ActionTo(self.next_to_act()));
-    }
-
     fn act_forced_bet(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
         match self.seats.act_forced_bet(seat_number, amount) {
             Ok(remaining) => {
@@ -305,6 +298,10 @@ impl Table {
     }
 
     // endregion
+
+    pub fn action_to_next(&self) {
+        self.log_info(TableAction::ActionTo(self.next_to_act()));
+    }
 
     /// Removes and returns the chips from the player's bet stack and sets their state to `YetToAct`.
     ///
@@ -551,17 +548,23 @@ impl Table {
 
     pub fn eval_flop_display(&self) {
         match self.eval_flop() {
-            Ok(fe) => println!("\n{}", fe),
+            Ok(fe) => println!("\n{fe}"),
             Err(e) => {
                 log::error!("Failed to FlopEval from table: {e}");
             }
         }
     }
 
+    /// # Errors
+    ///
+    /// - Throws if evaluation fails.
     pub fn eval_flop_the_nuts(&self) -> Result<Evals, PKError> {
         Ok(Game::try_from(self)?.board.flop.evals())
     }
 
+    /// # Errors
+    ///
+    /// - Throws if evaluation fails.
     pub fn eval_turn(&self) -> Result<TurnEval, PKError> {
         TurnEval::try_from(self)
     }
@@ -575,6 +578,9 @@ impl Table {
         }
     }
 
+    /// # Errors
+    ///
+    /// - Throws if evaluation fails.
     pub fn eval_river(&self) -> Result<CaseEval, PKError> {
         Game::try_from(self)?.river_case_eval()
     }
@@ -832,7 +838,6 @@ impl Default for Table {
             forced: ForcedBets::new(50, 100),
             seats,
             button: BintCell::new(player_count),
-            action_to: BintCell::new(player_count),
             deck: deck_cell!(),
             board: CardsCell::default(),
             muck: CardsCell::default(),
