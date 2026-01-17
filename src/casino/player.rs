@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use crate::casino::cashier::chips::Stack;
 use crate::prelude::{PlayerState, PlayerStateCell};
 use crate::util::name::Name;
@@ -11,6 +12,7 @@ pub struct Player {
     pub handle: String,
     pub chips: Stack,
     pub bet: Stack,
+    pub chips_in_play: Cell<usize>,
     pub state: PlayerStateCell,
 }
 
@@ -22,6 +24,7 @@ impl Player {
             handle,
             chips: Stack::default(),
             bet: Stack::default(),
+            chips_in_play: Cell::new(0),
             state: PlayerStateCell::default(),
         }
     }
@@ -33,6 +36,7 @@ impl Player {
             handle,
             chips: Stack::new(stack),
             bet: Stack::default(),
+            chips_in_play: Cell::new(0),
             state: PlayerStateCell::default(),
         }
     }
@@ -91,6 +95,9 @@ impl Player {
             }
 
             log::debug!("Player {} {}", self.state, self.handle);
+
+            
+
 
             Ok(self.chips.count())
         }
@@ -362,6 +369,10 @@ impl Player {
         self.chips.count() == 0 && self.bet.count() == 0
     }
 
+    pub fn get_chips_in_play(&self) -> usize {
+        self.chips_in_play.get()
+    }
+
     pub fn has_bet(&self) -> bool {
         self.bet.count() > 0
     }
@@ -375,6 +386,7 @@ impl Player {
             handle: Name::generate(),
             chips: Stack::new(stack),
             bet: Stack::default(),
+            chips_in_play: Cell::new(0),
             state: PlayerStateCell::default(),
         }
     }
@@ -479,6 +491,13 @@ mod casino__players__player_tests {
         assert!(did_check.is_ok());
         assert_eq!(900, did_check.unwrap());
         assert_eq!(PlayerState::Check(100), player.state.get());
+    }
+
+    #[test]
+    fn get_chips_in_play() {
+        let player = Player::new_with_chips("The Mouth".to_string(), 1_000);
+        player.act_bet_blind(100).expect("Blind bet failed");
+        assert_eq!(100, player.get_chips_in_play());
     }
 
     #[test]
