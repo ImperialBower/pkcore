@@ -240,9 +240,12 @@ fn river(table: &Table) -> Result<(), PKError> {
 
     commentary_action_to(table);
 
+    assert!(!table.is_game_over());
+
     let daniel = table.act_call(4)?;
     assert_eq!(945_000, daniel);
     assert!(table.seats.is_betting_complete());
+    assert!(table.is_game_over());
 
     commentary_action_to(table);
 

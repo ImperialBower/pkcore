@@ -647,6 +647,19 @@ impl Table {
         }
     }
 
+    /// TODO: There are edge cases that I fear these checks won't catch.
+    pub fn is_game_over(&self) -> bool {
+        if self.seats.count_active_in_hand() <= 1 {
+            return true;
+        }
+
+        if self.is_river() && self.seats.is_betting_complete() {
+            return true;
+        }
+
+        false
+    }
+
     pub fn is_hand_over(&self) -> bool {
         if self.seats.count_active_in_hand() <= 1 {
             return true;
