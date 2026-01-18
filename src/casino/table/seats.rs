@@ -225,7 +225,7 @@ impl Seats {
         count
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn count_able_to_bet_in_hand(&self) -> usize {
         let mut count = 0;
         for seat_cell in &self.0 {
@@ -495,9 +495,9 @@ impl Seats {
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     /// - `PKError::Fubar` if no one is found to act next.
     pub fn next_to_act(&self, utg: u8) -> Result<u8, PKError> {
-        if self.is_betting_complete() {
-            return Ok(utg);
-        }
+        // if self.is_betting_complete() {
+        //     return Ok(utg);
+        // }
 
         let current_bet = self.current_bet();
 
@@ -526,6 +526,15 @@ impl Seats {
             if state.is_in_hand() && everyone_has_bet && state.get().amount() < current_bet {
                 return Ok(self.get_seat_number_from_handle(&seat.player.handle).unwrap_or(0));
             }
+        }
+
+        // Edge case where all action is complete for the round, but the bets haven't been
+        // brought in.
+        for seat in self.iter_from(utg) {
+            if !seat.is_in_hand() || seat.is_all_in() {
+                continue;
+            }
+            return Ok(self.get_seat_number_from_handle(&seat.player.handle).unwrap_or(0));
         }
 
         Err(PKError::InvalidSeatNumber)

@@ -288,11 +288,12 @@ impl Table {
     }
 
     pub fn act_new_hand(&self) {
-        *self.phase.borrow_mut() = GamePhase::NewHand;
+        self.set_phase(GamePhase::NewHand);
         self.log_info(TableAction::NewHand);
     }
 
     pub fn act_shuffle_deck(&self) {
+        self.set_phase(GamePhase::ShuffleNewDeck);
         self.deck.shuffle_in_place();
         self.log_debug(TableAction::ShuffleDeck);
     }
@@ -438,6 +439,8 @@ impl Table {
         // TODO: FIX ME
         // let _burn = self.deck.draw_one()?;
 
+        self.set_phase(GamePhase::DealFlop);
+
         let flop = self.deck.draw(3)?;
         self.set_board(flop.cards());
 
@@ -454,6 +457,8 @@ impl Table {
         // TODO: FIX ME
         // let _burn = self.deck.draw_one()?;
 
+        self.set_phase(GamePhase::DealTurn);
+
         let turn = self.deck.draw_one()?;
         self.board.insert(turn);
 
@@ -469,6 +474,8 @@ impl Table {
         // Burn a card
         // TODO: FIX ME
         // let _burn = self.deck.draw_one()?;
+
+        self.set_phase(GamePhase::DealRiver);
 
         let river = self.deck.draw_one()?;
         self.board.insert(river);
@@ -649,19 +656,19 @@ impl Table {
     }
 
     pub fn is_preflop(&self) -> bool {
-        self.phase.borrow().is_preflop()
+        self.get_phase().is_preflop()
     }
 
     pub fn is_flop(&self) -> bool {
-        self.phase.borrow().is_flop()
+        self.get_phase().is_flop()
     }
 
     pub fn is_turn(&self) -> bool {
-        self.phase.borrow().is_turn()
+        self.get_phase().is_turn()
     }
 
     pub fn is_river(&self) -> bool {
-        self.phase.borrow().is_river()
+        self.get_phase().is_river()
     }
 
     fn log_debug(&self, action: TableAction) {

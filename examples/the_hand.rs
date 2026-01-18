@@ -29,17 +29,19 @@ fn setup(table: &Table) -> Result<(), PKError> {
     assert_eq!(8_000_000, table.table_chip_count());
 
     assert!(!table.seats.is_betting_complete());
-    // assert!(table.ga)
+    assert!(table.is_preflop());
     assert_eq!(0, table.button.value());
     assert_eq!(3, table.determine_utg());
     assert_eq!(3, table.next_to_act());
     assert_eq!(1, table.determine_small_blind());
     assert_eq!(2, table.determine_big_blind());
     assert_eq!(GamePhase::NewHand, table.get_phase());
+    assert!(table.is_preflop());
 
     table.act_forced_bets().expect("ActForcedBets failed");
     assert_eq!(GamePhase::ForcedBets, table.get_phase());
     assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
+    assert!(table.is_preflop());
 
     assert_eq!(8_000_000, table.table_chip_count());
 
@@ -74,11 +76,13 @@ fn setup(table: &Table) -> Result<(), PKError> {
     table.commentary_dump();
     println!("\n{table}");
     commentary_action_to(&table);
+    assert!(table.is_preflop());
 
     Ok(())
 }
 
 fn preflop(table: &Table) -> Result<(), PKError> {
+    assert!(table.is_preflop());
     assert_eq!(3, table.next_to_act());
 
     let gus = table.act_bet(3, 2100)?;
@@ -121,6 +125,7 @@ fn preflop(table: &Table) -> Result<(), PKError> {
     commentary_action_to(&table);
     assert!(table.seats.is_betting_complete());
     assert_eq!(3, table.next_to_act());
+    assert!(table.is_preflop());
 
     let pot = table.bring_it_in()?;
     assert_eq!(10150, pot);
@@ -133,6 +138,7 @@ fn flop(table: &Table) -> Result<(), PKError> {
     assert_eq!(3, table.next_to_act());
 
     table.deal_flop().expect("No flop");
+    assert!(table.is_flop());
     assert_eq!(GamePhase::BettingFlop, table.determine_betting_phase());
 
     table.eval_flop_display();
@@ -164,8 +170,10 @@ fn flop(table: &Table) -> Result<(), PKError> {
     assert_eq!(52_000, table.seats.chips_in_play());
     assert_eq!(3, table.next_to_act());
     assert!(table.seats.is_betting_complete());
+    assert!(table.is_flop());
 
     let pot = table.bring_it_in()?;
+    assert!(table.is_flop());
     assert_eq!(62_150, pot);
 
     Ok(())
@@ -176,6 +184,7 @@ fn turn(table: &Table) -> Result<(), PKError> {
     assert_eq!(3, table.next_to_act());
 
     table.deal_turn().expect("No turn");
+    assert!(table.is_turn());
     assert_eq!(GamePhase::BettingTurn, table.determine_betting_phase());
 
     table.eval_turn_display();
@@ -204,6 +213,7 @@ fn river(table: &Table) -> Result<(), PKError> {
     assert_eq!(3, table.next_to_act());
 
     table.deal_river().expect("No river");
+    assert!(table.is_river());
     assert_eq!(GamePhase::BettingRiver, table.determine_betting_phase());
 
     table.eval_river_display();
