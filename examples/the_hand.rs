@@ -5,7 +5,10 @@ use pkcore::games::GamePhase;
 use pkcore::prelude::PlayerState;
 use pkcore::util::data::TestData;
 
-/// cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠" HSP THE HAND Negreanu/Hansen
+/// Here's a recreation of "The Hand" between Daniel Negreanu and Gus Hansen, using strict
+/// assertions to validate that the `Table` engine is working correctly.
+///
+/// `cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"` HSP THE HAND Negreanu/Hansen
 ///     https://www.youtube.com/watch?v=vjM60lqRhPg
 ///     https://www.youtube.com/watch?v=fEEW06iX4n8
 ///
@@ -48,6 +51,7 @@ fn setup(table: &Table) -> Result<(), PKError> {
     if let Some(seat) = table.get_seat(1) {
         assert_eq!(999_950, seat.player.chips.count());
         assert_eq!(50, seat.player.bet.count());
+        assert_eq!(50, seat.player.get_chips_in_play());
         assert_eq!(50, table.to_call(1));
         assert_eq!(seat.player.state.get(), PlayerState::Blind(50));
     } else {
@@ -57,6 +61,7 @@ fn setup(table: &Table) -> Result<(), PKError> {
     if let Some(seat) = table.get_seat(2) {
         assert_eq!(999_900, seat.player.chips.count());
         assert_eq!(100, seat.player.bet.count());
+        assert_eq!(100, seat.player.get_chips_in_play());
         assert_eq!(0, table.to_call(2));
         assert_eq!(seat.player.state.get(), PlayerState::Blind(100));
     } else {
@@ -87,6 +92,8 @@ fn preflop(table: &Table) -> Result<(), PKError> {
 
     let gus = table.act_bet(3, 2100)?;
     assert_eq!(997_900, gus);
+    assert_eq!(2100, table.get_seat(3).unwrap().player.bet.count());
+    assert_eq!(2100, table.get_seat(3).unwrap().player.chips_in_play.get());
     assert_eq!(table.event_log.last_player_action().unwrap(), TableAction::Bet(3, 2100));
 
     commentary_action_to(&table);
@@ -94,6 +101,9 @@ fn preflop(table: &Table) -> Result<(), PKError> {
 
     let daniel = table.act_raise(4, 5000)?;
     assert_eq!(995_000, daniel);
+    assert_eq!(5000, table.get_seat(4).unwrap().player.bet.count());
+    assert_eq!(5000, table.get_seat(4).unwrap().player.chips_in_play.get());
+
     commentary_action_to(&table);
     assert_eq!(5, table.next_to_act());
 
@@ -122,6 +132,9 @@ fn preflop(table: &Table) -> Result<(), PKError> {
     assert_eq!(3, table.next_to_act());
 
     table.act_call(3)?;
+    assert_eq!(5000, table.get_seat(3).unwrap().player.bet.count());
+    assert_eq!(5000, table.get_seat(3).unwrap().player.chips_in_play.get());
+
     commentary_action_to(&table);
     assert!(table.seats.is_betting_complete());
     assert_eq!(3, table.next_to_act());
@@ -149,24 +162,34 @@ fn flop(table: &Table) -> Result<(), PKError> {
 
     let gus = table.act_check(3)?;
     assert_eq!(995_000, gus);
+    assert_eq!(0, table.get_seat(3).unwrap().player.bet.count());
+    assert_eq!(5000, table.get_seat(3).unwrap().player.chips_in_play.get());
+
     assert_eq!(4, table.next_to_act());
     assert_eq!(10150, table.pot.count());
     assert!(!table.seats.is_betting_complete());
 
     let daniel = table.act_bet(4, 8_000)?;
     assert_eq!(987_000, daniel);
+    assert_eq!(8_000, table.get_seat(4).unwrap().player.bet.count());
+    assert_eq!(13_000, table.get_seat(4).unwrap().player.chips_in_play.get());
+
     assert_eq!(8_000, table.seats.chips_in_play());
     assert_eq!(3, table.next_to_act());
     assert!(!table.seats.is_betting_complete());
 
     let gus = table.act_raise(3, 26_000)?;
     assert_eq!(969_000, gus);
+    assert_eq!(26_000, table.get_seat(3).unwrap().player.bet.count());
+    assert_eq!(31_000, table.get_seat(3).unwrap().player.chips_in_play.get());
     assert_eq!(34_000, table.seats.chips_in_play());
     assert_eq!(4, table.next_to_act());
     assert!(!table.seats.is_betting_complete());
 
     let daniel = table.act_call(4)?;
     assert_eq!(26_000, daniel);
+    assert_eq!(26_000, table.get_seat(4).unwrap().player.bet.count());
+    assert_eq!(31_000, table.get_seat(4).unwrap().player.chips_in_play.get());
     assert_eq!(52_000, table.seats.chips_in_play());
     assert_eq!(3, table.next_to_act());
     assert!(table.seats.is_betting_complete());
@@ -190,6 +213,8 @@ fn turn(table: &Table) -> Result<(), PKError> {
     table.eval_turn_display();
 
     let gus = table.act_bet(3, 24_000)?;
+    assert_eq!(24_000, table.get_seat(3).unwrap().player.bet.count());
+    assert_eq!(55_000, table.get_seat(3).unwrap().player.chips_in_play.get());
     assert_eq!(945_000, gus);
 
     commentary_action_to(table);
@@ -197,6 +222,8 @@ fn turn(table: &Table) -> Result<(), PKError> {
     assert_eq!(4, table.next_to_act());
 
     let _daniel = table.act_call(4)?;
+    assert_eq!(24_000, table.get_seat(4).unwrap().player.bet.count());
+    assert_eq!(55_000, table.get_seat(4).unwrap().player.chips_in_play.get());
     assert_eq!(3, table.next_to_act());
 
     commentary_action_to(table);
@@ -219,12 +246,16 @@ fn river(table: &Table) -> Result<(), PKError> {
     table.eval_river_display();
 
     let gus = table.act_check(3)?;
+    assert_eq!(0, table.get_seat(3).unwrap().player.bet.count());
+    assert_eq!(55_000, table.get_seat(3).unwrap().player.chips_in_play.get());
     assert_eq!(945_000, gus);
     assert_eq!(4, table.next_to_act());
 
     commentary_action_to(table);
 
     let daniel = table.act_bet(4, 65_000)?;
+    assert_eq!(65_000, table.get_seat(4).unwrap().player.bet.count());
+    assert_eq!(120_000, table.get_seat(4).unwrap().player.chips_in_play.get());
     assert_eq!(880_000, daniel);
     assert_eq!(
         table.event_log.last_player_action().unwrap(),
@@ -235,6 +266,8 @@ fn river(table: &Table) -> Result<(), PKError> {
     commentary_action_to(table);
 
     let gus = table.act_all_in(3)?;
+    assert_eq!(945_000, table.get_seat(3).unwrap().player.bet.count());
+    assert_eq!(1_000_000, table.get_seat(3).unwrap().player.chips_in_play.get());
     assert_eq!(945_000, gus);
     assert_eq!(4, table.next_to_act());
 
@@ -244,6 +277,8 @@ fn river(table: &Table) -> Result<(), PKError> {
 
     let daniel = table.act_call(4)?;
     assert_eq!(945_000, daniel);
+    assert_eq!(945_000, table.get_seat(3).unwrap().player.bet.count());
+    assert_eq!(1_000_000, table.get_seat(3).unwrap().player.chips_in_play.get());
     assert!(table.seats.is_betting_complete());
     assert!(table.is_game_over());
 
