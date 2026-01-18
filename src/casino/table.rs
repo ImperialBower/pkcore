@@ -22,6 +22,7 @@ pub mod event;
 pub mod position;
 pub mod seat;
 pub mod seats;
+mod showdown;
 
 /// There are up to 3 total burn cards in a Texas Hold'em poker hand. Before dealing the flop,
 /// turn, or river, the dealer is required to take the top card from the deck and burn (discard) it.

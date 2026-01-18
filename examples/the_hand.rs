@@ -284,6 +284,8 @@ fn river(table: &Table) -> Result<(), PKError> {
 
     commentary_action_to(table);
 
+    table.eval_river_display();
+
     Ok(())
 }
 
