@@ -291,6 +291,8 @@ Elapsed: 1.63s
 
 * Poker
   * [Mike Caro's Website](https://www.poker1.com/)
+  * Solvers
+    * [Pro Poker Tools Odds Oracle](http://www.propokertools.com/)
   * GTO
     * [Minimum Defense Frequency vs Pot Odds](https://upswingpoker.com/minimum-defense-frequency-vs-pot-odds/)
     * [A Beginner’s Guide to Poker Combinatorics](https://blog.gtowizard.com/a-beginners-guide-to-poker-combinatorics/)

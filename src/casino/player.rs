@@ -1,8 +1,8 @@
-use std::cell::Cell;
 use crate::casino::cashier::chips::Stack;
 use crate::prelude::{PlayerState, PlayerStateCell};
 use crate::util::name::Name;
 use crate::{Agency, PKError};
+use std::cell::Cell;
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;
 
@@ -94,10 +94,9 @@ impl Player {
                 self.state.set(bet_type);
             }
 
+            self.chips_in_play.set(self.chips_in_play.get() + additional_bet);
+
             log::debug!("Player {} {}", self.state, self.handle);
-
-            
-
 
             Ok(self.chips.count())
         }
@@ -495,9 +494,40 @@ mod casino__players__player_tests {
 
     #[test]
     fn get_chips_in_play() {
-        let player = Player::new_with_chips("The Mouth".to_string(), 1_000);
+        let player = Player::new_with_chips("The Mouth".to_string(), 10_000);
+
         player.act_bet_blind(100).expect("Blind bet failed");
         assert_eq!(100, player.get_chips_in_play());
+
+        player.act_bet(300).expect("Bet failed");
+        assert_eq!(300, player.get_chips_in_play());
+
+        player.act_raise(500).expect("Raise failed");
+        assert_eq!(500, player.get_chips_in_play());
+
+        player.act_reraise(1500).expect("Reraise failed");
+        assert_eq!(1500, player.get_chips_in_play());
+
+        player.act_call(2000).expect("Call failed");
+        assert_eq!(2000, player.get_chips_in_play());
+
+        player.act_bring_it_in().expect("Bring It failed");
+        assert_eq!(2000, player.get_chips_in_play());
+
+        player.act_bet(100).expect("Bet failed");
+        assert_eq!(2100, player.get_chips_in_play());
+
+        player.act_raise(300).expect("Raise failed");
+        assert_eq!(2300, player.get_chips_in_play());
+
+        player.act_reraise(500).expect("Reraise failed");
+        assert_eq!(2500, player.get_chips_in_play());
+
+        player.act_call(1000).expect("Call failed");
+        assert_eq!(3000, player.get_chips_in_play());
+
+        player.act_all_in().expect("All In failed");
+        assert_eq!(10_000, player.get_chips_in_play());
     }
 
     #[test]
