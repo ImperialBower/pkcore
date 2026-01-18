@@ -225,6 +225,18 @@ impl Seats {
         count
     }
 
+    #[must_use] 
+    pub fn count_able_to_bet_in_hand(&self) -> usize {
+        let mut count = 0;
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            if seat.is_active() && !seat.is_all_in() {
+                count += 1;
+            }
+        }
+        count
+    }
+
     #[must_use]
     pub fn count_cards_in_play(&self) -> usize {
         let mut count = 0;

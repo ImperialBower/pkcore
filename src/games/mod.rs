@@ -90,6 +90,38 @@ impl GamePhase {
     }
 
     #[must_use]
+    pub fn is_flop(&self) -> bool {
+        matches!(
+            self,
+            GamePhase::BurnCardBeforeFlop
+                | GamePhase::DealFlop
+                | GamePhase::BettingFlop
+                | GamePhase::ConsolidateFlopBets
+        )
+    }
+
+    #[must_use]
+    pub fn is_turn(&self) -> bool {
+        matches!(
+            self,
+            GamePhase::BurnCardBeforeTurn
+                | GamePhase::DealTurn
+                | GamePhase::BettingTurn
+                | GamePhase::ConsolidateTurnBets
+        )
+    }
+
+    #[must_use]
+    pub fn is_river(&self) -> bool {
+        matches!(
+            self,
+            GamePhase::BurnCardBeforeRiver
+                | GamePhase::DealRiver
+                | GamePhase::BettingRiver
+        )
+    }
+
+    #[must_use]
     pub fn next(&self) -> GamePhase {
         match self {
             GamePhase::NewHand => GamePhase::ShuffleNewDeck,

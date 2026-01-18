@@ -29,6 +29,7 @@ fn setup(table: &Table) -> Result<(), PKError> {
     assert_eq!(8_000_000, table.table_chip_count());
 
     assert!(!table.seats.is_betting_complete());
+    // assert!(table.ga)
     assert_eq!(0, table.button.value());
     assert_eq!(3, table.determine_utg());
     assert_eq!(3, table.next_to_act());

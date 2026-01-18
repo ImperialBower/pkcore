@@ -640,13 +640,28 @@ impl Table {
         }
     }
 
-    pub fn is_ready_for_action(&self) -> bool {
-        let _bint =
-            DrainableBintCell::new_with_value(self.seats.size(), self.seats.size() as usize - 2, self.next_to_act());
+    pub fn is_hand_over(&self) -> bool {
+        if self.seats.count_active_in_hand() <= 1 {
+            return true;
+        }
 
-        // if self.
+        false
+    }
 
-        todo!()
+    pub fn is_preflop(&self) -> bool {
+        self.phase.borrow().is_preflop()
+    }
+
+    pub fn is_flop(&self) -> bool {
+        self.phase.borrow().is_flop()
+    }
+
+    pub fn is_turn(&self) -> bool {
+        self.phase.borrow().is_turn()
+    }
+
+    pub fn is_river(&self) -> bool {
+        self.phase.borrow().is_river()
     }
 
     fn log_debug(&self, action: TableAction) {
