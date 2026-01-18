@@ -404,6 +404,15 @@ impl Seats {
         self.first_yet_to_bet(0).is_none()
     }
 
+    #[must_use]
+    pub fn is_active(&self, seat_id: u8) -> bool {
+        if let Some(seat) = self.get_seat(seat_id) {
+            seat.is_active()
+        } else {
+            false
+        }
+    }
+
     /// Checks if equilibrium has been reached in the betting round.
     #[must_use]
     pub fn is_betting_complete(&self) -> bool {
@@ -571,24 +580,6 @@ impl Seats {
     pub fn indices_from(&self, start: u8) -> impl Iterator<Item = usize> + '_ {
         let len = self.0.len();
         (0..len).map(move |offset| (start as usize + offset) % len)
-    }
-
-    #[must_use]
-    pub fn is_active(&self, seat_id: u8) -> bool {
-        if let Some(seat) = self.get_seat(seat_id) {
-            seat.is_active()
-        } else {
-            false
-        }
-    }
-
-    #[must_use]
-    pub fn is_in_hand(&self, seat_id: u8) -> bool {
-        if let Some(seat) = self.get_seat(seat_id) {
-            seat.is_in_hand()
-        } else {
-            false
-        }
     }
 
     /// The original version of this function was completely flawed. It assumed that the value of
