@@ -22,36 +22,49 @@ This program uses [cargo make](https://github.com/sagiegurari/cargo-make) to man
 cargo install cargo-make
 ```
 
+The default `cargo make` runs the following tasks:
 
-
-Then you can build the project with:
+* `cargo fmt`
+* `cargo clean`
+* `cargo build`
+* `carg test`
+* `cargo clippy` with `clippy::pedantic` lint settings
+* `cargo doc --no-deps` 
 
 ```shell
-cargo make
+❯ cargo make
 ````
 
-## TODO:
+To open the generated docs in your browser:
 
-* Roadmap
-* Clear release breakdowns.
-* Consolidate card collection structs. We currently have:
-  * [Bard](src/bard.rs) - binary representation of one or more [Cards](src/cards.rs)
-  * [BoxedCards](src/arrays/sliced.rs) - Boxed slice of [Card](src/cards.rs) values.
-  * [Cards](src/cards.rs) - IndexSet collection of unique [Card](src/cards.rs) values.
-  * [Board](src/play/board.rs) - The community cards in a game of Hold'em and Omaha.
-  * [HoleCards](src/play/hole_cards.rs) - The cards dealt to each player in Hold'em and Omaha.
-  * Fixed array [Card](src/cards.rs) structs. Can these all be replaced by [BoxedCards](src/arrays/sliced.rs)?
-    * [Deck](src/cards.rs)
-    * [Two](src/arrays/two.rs)
-    * [Three](src/arrays/three.rs)
-    * [Four](src/arrays/four.rs)
-    * [Five](src/arrays/five.rs)
-    * [Six](src/arrays/six.rs) 
-    * [Seven](src/arrays/seven.rs)
+```shell
+❯ cargo make docs
+```
+
+### .env
+
+Some of the library and examples will be looking for a `.env` file in the root of the project. Simply copy 
+`.env.example` to `.env` and modify as needed.
+
+```shell
+
+## Documentation
+
+For comprehensive API documentation, run:
+
+```shell
+cargo doc --open
+````
 
 ## Examples
 
-### [cck](examples/cck.rs)
+### The Hand
+
+The best way to see the library in action is to run the example file that does a step by step of my favorite hand
+of broadcast television poker: "The Hand" between Daniel Negreanu and Gus Hansen on High Stakes Poker. You can 
+watch it here on [YouTube](https://www.youtube.com/watch?v=vjM60lqRhPg).
+
+`cargo run --example the_hand`
 
 [cck](examples/cck.rs) is a simple command line program that prints out a poker hand's 
 [Cactus Kev](https://suffe.cool/poker/evaluator.html) value.
@@ -321,6 +334,25 @@ Consolidated odds:
 Elapsed: 1.63s
 ```
 
+## TODO:
+
+* Roadmap
+* Clear release breakdowns.
+* Consolidate card collection structs. We currently have:
+  * [Bard](src/bard.rs) - binary representation of one or more [Cards](src/cards.rs)
+  * [BoxedCards](src/arrays/sliced.rs) - Boxed slice of [Card](src/cards.rs) values.
+  * [Cards](src/cards.rs) - IndexSet collection of unique [Card](src/cards.rs) values.
+  * [Board](src/play/board.rs) - The community cards in a game of Hold'em and Omaha.
+  * [HoleCards](src/play/hole_cards.rs) - The cards dealt to each player in Hold'em and Omaha.
+  * Fixed array [Card](src/cards.rs) structs. Can these all be replaced by [BoxedCards](src/arrays/sliced.rs)?
+    * [Deck](src/cards.rs)
+    * [Two](src/arrays/two.rs)
+    * [Three](src/arrays/three.rs)
+    * [Four](src/arrays/four.rs)
+    * [Five](src/arrays/five.rs)
+    * [Six](src/arrays/six.rs)
+    * [Seven](src/arrays/seven.rs)
+
 ## Value Stories
 
 * I want a tool that will help me get better at [GTO](https://www.888poker.com/magazine/strategy/beginners-guide-gto-poker) style poker playing.
@@ -439,4 +471,36 @@ Elapsed: 1.63s
   * [Ratatui](https://github.com/ratatui-org/ratatui)
   * [shadcn/ui](https://ui.shadcn.com/)
     * [This UI Library is NEXT LEVEL](https://www.youtube.com/watch?v=dD1fpoGHuC8&t=29s)
-  
+
+## TMI
+
+This library was intended to be the example code for a book tentatively titled _Rust for Failures_. Here's the intro:
+
+Motto
+
+Failure is a gift.
+
+I am a failure. I've been a failure all my life. I’ve dropped out of college three times. I graduated from high school with a D average. I’ve lost every professional French Horn audition I’ve ever taken. 
+(I did win first horn at the California State Honor Band, but all the other horn players were so mad that I'd won that didn't talk to me, so I was miserable the whole time.)
+
+In the fifth grade, I got the silver medal for having the second-worst car in the Cub Scouts Pinewood Derby. I would have been last, but the Scout Master from a rival troupe took 
+the wheel that had fallen off from one of his kids' cars, hammered it back onto the car, and stole first from me by deliberately creating a car that wouldn’t roll. I even failed at failure. I was the worst. I should have gotten the gold, but no, I was the second worst. If you’re not last, you’re…?
+
+There’s only one thing that I’ve ever really felt like a master of. Nobody run the early morning solo coffee rush at a 7-11 better than me. At the Colma 7-11 I kept all five
+pots of coffee humming, making sure to keep them in a steady rotation, so that those smart-asses who tried to get the fresher pot of coffee by grabbing the one in the 
+back were actually getting the oldest one. Not that it mattered. They were always fresh as fuck. A regular walked in, and I had their three packs of Benson & Hedges Ultra 
+Lights waiting for them at the register before they even asked. I was the shit, and all of my customers knew it, and were gracious to let me know, if in more family-friendly terms.
+
+Then, one simple event solidified it all for me. A beautiful motor home drove into the parking lot, and out stepped a gentleman to buy a cup of coffee and a pack of gum. 
+We talked. He wanted to thank me. He was doing really well now. He was working in a restaurant in downtown San Francisco and had really turned his life around, all thanks to me! Great.
+
+A year before, he was pointing a revolver at my face. He ran out with 204 dollars, only to be caught by the K-9 unit a few blocks away 
+shortly thereafter. This nimrod had fucking robbed me, and he was already doing better than me. 
+His life was on beautiful, and I was still that dumb schmuck making $9 an hour under the table, farting his life away at the Colma 7-11, where San Francisco buries its dead.
+
+It wasn’t until I became a professional programmer that I realized failure is a gift IF you learn from it. By testing the shit out of the systems I build and practicing techniques 
+like test-driven development, I turned my ability to fail into a superpower. The faster you fail, the more you profit.
+
+You see… it turns out that we’re all in the feedback business. You will get that feedback. It just depends on if you want to get it when you’re testing your tiles out in a controlled environment, 
+or if you want to find out when every kid in school is watching your [space shuttle explode with the first teacher in space](https://en.wikipedia.org/wiki/Space_Shuttle_Challenger_disaster). (I was one of those kids.)
+
