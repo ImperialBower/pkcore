@@ -306,7 +306,7 @@
 //!
 //! The crate uses Clippy's pedantic checking and forbids unsafe unwrap patterns:
 //! - `#![warn(clippy::pedantic)]` - Strict code quality checks
-//! - `#![warn(clippy::unwrap_used)]` - Unsafe unwrap detection
+//! - `#![warn(clippy::unwrap_used)]` - Unsafe unwrap detection [Thanks Cloudflare!](https://blog.cloudflare.com/18-november-2025-outage/)
 //! - `#![warn(clippy::expect_used)]` - Unsafe expect detection
 //!
 //! Several allowances are configured for practical implementation:
