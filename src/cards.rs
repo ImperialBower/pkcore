@@ -196,6 +196,19 @@ impl Cards {
         Ok(v)
     }
 
+    /// Confirms if `Cards` can be evenly divided by `x`.
+    ///
+    /// TODO: Refactor this to return the `Cards` as `BoxedCards`, instead of an examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let cards = cards!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠");
+    /// let byx = cards.by_x(2).unwrap();
+    /// assert_eq!(cards!("6♠ 5♠"), cards.by_x(2).unwrap());
+    /// assert!(cards.by_x(3).is_err());
+    /// ```
+    ///
     /// # Errors
     ///
     /// Returns `PKError::Misaligned` if the cards cannot be evenly divided by `x`.

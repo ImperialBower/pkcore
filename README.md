@@ -22,6 +22,8 @@ This program uses [cargo make](https://github.com/sagiegurari/cargo-make) to man
 cargo install cargo-make
 ```
 
+
+
 Then you can build the project with:
 
 ```shell
@@ -32,12 +34,49 @@ cargo make
 
 * Roadmap
 * Clear release breakdowns.
+* Consolidate card collection structs. We currently have:
+  * [Bard](src/bard.rs) - binary representation of one or more [Cards](src/cards.rs)
+  * [BoxedCards](src/arrays/sliced.rs) - Boxed slice of [Card](src/cards.rs) values.
+  * [Cards](src/cards.rs) - IndexSet collection of unique [Card](src/cards.rs) values.
+  * [Board](src/play/board.rs) - The community cards in a game of Hold'em and Omaha.
+  * [HoleCards](src/play/hole_cards.rs) - The cards dealt to each player in Hold'em and Omaha.
+  * Fixed array [Card](src/cards.rs) structs. Can these all be replaced by [BoxedCards](src/arrays/sliced.rs)?
+    * [Deck](src/cards.rs)
+    * [Two](src/arrays/two.rs)
+    * [Three](src/arrays/three.rs)
+    * [Four](src/arrays/four.rs)
+    * [Five](src/arrays/five.rs)
+    * [Six](src/arrays/six.rs) 
+    * [Seven](src/arrays/seven.rs)
 
 ## Examples
 
-Check out the examples directory for various ways to use the library. 
+### [cck](examples/cck.rs)
 
-The best example is [calc](examples/calc.rs), which allows you to do a breakdown of the odds of a specific hand
+[cck](examples/cck.rs) is a simple command line program that prints out a poker hand's 
+[Cactus Kev](https://suffe.cool/poker/evaluator.html) value.
+
+```shell
+❯ cargo run --example cck -- -c "AS 9C KS QS 2D JS TS"                                               ✔ ▓▒░
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.22s
+     Running `target/debug/examples/cck -c 'AS 9C KS QS 2D JS TS'`
+CARDS: A♠ 9♣ K♠ Q♠ 2♦ J♠ T♠ - BEST HAND: A♠ K♠ Q♠ J♠ T♠ - 1: RoyalFlush
+{TEN: 1, KING: 1, JACK: 1, QUEEN: 1, ACE: 1}
+Elapsed: 2.45ms
+
+❯ cargo run --example cck -- -c "7S 9C JS 3S 2D 7S 4C"                                               ✔ ▓▒░
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.44s
+     Running `target/debug/examples/cck -c '7S 9C JS 3S 2D 7S 4C'`
+CARDS: 7♠ 9♣ J♠ 3♠ 2♦ 4♣ - BEST HAND: J♠ 9♣ 7♠ 4♣ 3♠ - 7294: JackHigh
+{NINE: 1, SEVEN: 1, JACK: 1, TREY: 1, FOUR: 1}
+Elapsed: 2.16ms
+
+```
+
+
+### [calc](examples/calc.rs)
+
+[calc](examples/calc.rs) allows you to do a breakdown of the odds of a specific hand
 of poker. Here it is running [the famous hand](https://www.youtube.com/watch?v=vjM60lqRhPg) quads vs full
 house between Gus Hansen and Daniel Negreanu on High Stakes Poker:
 
