@@ -142,6 +142,8 @@ fn main() -> Result<(), PKError> {
     //     game.display_evals_at_turn();
     // }
 
+    game.turn_display_evals();
+
     game.river_display_results();
 
     println!();

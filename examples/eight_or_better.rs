@@ -4,6 +4,7 @@ use pkcore::cards::Cards;
 use pkcore::deck::POKER_DECK;
 use std::collections::HashMap;
 
+/// `cargo run --example eight_or_better`
 fn main() {
     let mut mappy: HashMap<u8, Five> = HashMap::new();
 

@@ -2,6 +2,7 @@ use crate::casino::cashier::chips::Stack;
 use crate::prelude::{PlayerState, PlayerStateCell};
 use crate::util::name::Name;
 use crate::{Agency, PKError};
+use std::cell::Cell;
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;
 
@@ -11,6 +12,7 @@ pub struct Player {
     pub handle: String,
     pub chips: Stack,
     pub bet: Stack,
+    pub chips_in_play: Cell<usize>,
     pub state: PlayerStateCell,
 }
 
@@ -22,6 +24,7 @@ impl Player {
             handle,
             chips: Stack::default(),
             bet: Stack::default(),
+            chips_in_play: Cell::new(0),
             state: PlayerStateCell::default(),
         }
     }
@@ -33,6 +36,7 @@ impl Player {
             handle,
             chips: Stack::new(stack),
             bet: Stack::default(),
+            chips_in_play: Cell::new(0),
             state: PlayerStateCell::default(),
         }
     }
@@ -71,6 +75,12 @@ impl Player {
 
             let bet_chips = self.chips.bet(additional_bet)?;
             self.bet.add_to(bet_chips);
+            log::trace!(
+                "Player {} bets {} for a total bet of {}",
+                self.handle,
+                additional_bet,
+                self.bet.count()
+            );
 
             if self.is_all_in() {
                 log::debug!("Resetting PlayerState to AllIn");
@@ -83,6 +93,8 @@ impl Player {
                 }
                 self.state.set(bet_type);
             }
+
+            self.chips_in_play.set(self.chips_in_play.get() + additional_bet);
 
             log::debug!("Player {} {}", self.state, self.handle);
 
@@ -185,12 +197,19 @@ impl Player {
     ///
     /// * `PKError::InvalidTableAction` - throws if the player is not active in the hand.
     pub fn act_bring_it_in(&self) -> Result<Stack, PKError> {
-        if !self.state.is_active() {
-            log::warn!("InvalidTableAction: Player is not active in the hand.");
-            return Err(PKError::InvalidTableAction);
+        // if !self.state.is_active() {
+        //     log::warn!("InvalidTableAction: Player is not active in the hand.");
+        //     return Err(PKError::InvalidTableAction);
+        // }
+        if self.state.is_active() {
+            self.state.set(PlayerState::YetToAct);
         }
-        self.state.set(PlayerState::YetToAct);
-        Ok(self.bet.takes())
+
+        let player_bet = self.bet.takes();
+
+        log::trace!("{} brings in {} chips", self.handle, player_bet);
+
+        Ok(player_bet)
     }
 
     /// ```
@@ -337,12 +356,24 @@ impl Player {
         self.chips.count() == 0 && self.bet.count() > 0
     }
 
+    pub fn is_check(&self) -> bool {
+        self.state.is_check()
+    }
+
     pub fn is_in_hand(&self) -> bool {
         self.state.is_in_hand()
     }
 
     pub fn is_tapped_out(&self) -> bool {
         self.chips.count() == 0 && self.bet.count() == 0
+    }
+
+    pub fn get_chips_in_play(&self) -> usize {
+        self.chips_in_play.get()
+    }
+
+    pub fn has_bet(&self) -> bool {
+        self.bet.count() > 0
     }
 
     pub fn lose_bet(&self) {}
@@ -354,6 +385,7 @@ impl Player {
             handle: Name::generate(),
             chips: Stack::new(stack),
             bet: Stack::default(),
+            chips_in_play: Cell::new(0),
             state: PlayerStateCell::default(),
         }
     }
@@ -458,6 +490,44 @@ mod casino__players__player_tests {
         assert!(did_check.is_ok());
         assert_eq!(900, did_check.unwrap());
         assert_eq!(PlayerState::Check(100), player.state.get());
+    }
+
+    #[test]
+    fn get_chips_in_play() {
+        let player = Player::new_with_chips("The Mouth".to_string(), 10_000);
+
+        player.act_bet_blind(100).expect("Blind bet failed");
+        assert_eq!(100, player.get_chips_in_play());
+
+        player.act_bet(300).expect("Bet failed");
+        assert_eq!(300, player.get_chips_in_play());
+
+        player.act_raise(500).expect("Raise failed");
+        assert_eq!(500, player.get_chips_in_play());
+
+        player.act_reraise(1500).expect("Reraise failed");
+        assert_eq!(1500, player.get_chips_in_play());
+
+        player.act_call(2000).expect("Call failed");
+        assert_eq!(2000, player.get_chips_in_play());
+
+        player.act_bring_it_in().expect("Bring It failed");
+        assert_eq!(2000, player.get_chips_in_play());
+
+        player.act_bet(100).expect("Bet failed");
+        assert_eq!(2100, player.get_chips_in_play());
+
+        player.act_raise(300).expect("Raise failed");
+        assert_eq!(2300, player.get_chips_in_play());
+
+        player.act_reraise(500).expect("Reraise failed");
+        assert_eq!(2500, player.get_chips_in_play());
+
+        player.act_call(1000).expect("Call failed");
+        assert_eq!(3000, player.get_chips_in_play());
+
+        player.act_all_in().expect("All In failed");
+        assert_eq!(10_000, player.get_chips_in_play());
     }
 
     #[test]

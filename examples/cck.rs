@@ -10,7 +10,7 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 /// ```
-/// ❯ cargo run --example repl -- -c "AS KS QS JS TS"
+/// ❯ cargo run --example cck -- -c "AS KS QS JS TS"
 ///     Finished dev [unoptimized + debuginfo] target(s) in 0.04s
 ///      Running `target/debug/examples/repl -c 'AS KS QS JS TS'`
 /// A♠ K♠ Q♠ J♠ T♠

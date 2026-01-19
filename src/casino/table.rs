@@ -1,3 +1,4 @@
+use crate::analysis::case_eval::CaseEval;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
@@ -7,8 +8,11 @@ use crate::casino::table::event::{TableAction, TableLog};
 use crate::casino::table::seat::Seat;
 use crate::casino::table::seats::Seats;
 use crate::games::{GamePhase, GameType};
-use crate::prelude::{Bard, BoxedCards};
-use crate::{PKError, Pile, deck_cell};
+use crate::play::game::Game;
+use crate::play::stages::flop_eval::FlopEval;
+use crate::play::stages::turn_eval::TurnEval;
+use crate::prelude::{Bard, BoxedCards, Evals};
+use crate::{PKError, Pile};
 use bint::{BintCell, DrainableBintCell};
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
@@ -30,7 +34,6 @@ pub struct Table {
     pub phase: RefCell<GamePhase>,
     pub seats: Seats,
     pub button: BintCell,
-    pub action_to: BintCell,
     pub deck: CardsCell,
     pub board: CardsCell,
     pub muck: CardsCell,
@@ -108,7 +111,6 @@ impl Table {
             phase: GamePhase::NewHand.into(),
             seats,
             button: BintCell::new(number_players),
-            action_to: BintCell::new(number_players),
             deck,
             board: CardsCell::default(),
             muck: CardsCell::default(),
@@ -128,7 +130,7 @@ impl Table {
         match self.seats.act_all_in(seat_number) {
             Ok(amount) => {
                 self.log_info(TableAction::AllIn(seat_number, amount));
-                self.action_to.up();
+                // self.action_to.up();
                 Ok(amount)
             }
             Err(e) => Err(e),
@@ -143,7 +145,7 @@ impl Table {
         match self.seats.act_bet(seat_number, amount) {
             Ok(remaining) => {
                 self.log_info(TableAction::Bet(seat_number, amount));
-                self.action_to.up();
+                self.action_to_next();
                 Ok(remaining)
             }
             Err(e) => Err(e),
@@ -157,8 +159,8 @@ impl Table {
     pub fn act_raise(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
         match self.seats.act_raise(seat_number, amount) {
             Ok(remaining) => {
-                self.log_info(TableAction::Bet(seat_number, amount));
-                self.action_to.up();
+                self.log_info(TableAction::Raise(seat_number, amount));
+                // self.action_to.up();
                 Ok(remaining)
             }
             Err(e) => Err(e),
@@ -177,7 +179,7 @@ impl Table {
     pub fn act_button_move(&self) {
         self.button.up();
         self.event_log.log(TableAction::MoveButton(self.button.value()));
-        self.action_to.set(self.determine_utg());
+        // self.action_to.set(self.determine_utg());
     }
 
     /// # Errors
@@ -188,7 +190,7 @@ impl Table {
         match self.seats.act_call(seat_number) {
             Ok((to_call, _remaining)) => {
                 self.log_info(TableAction::Call(seat_number, to_call));
-                self.action_to.up();
+                // self.action_to.up();
                 Ok(to_call)
             }
             Err(e) => Err(e),
@@ -203,7 +205,7 @@ impl Table {
         match self.seats.act_check(seat_number) {
             Ok(remaining) => {
                 self.log_info(TableAction::Check(seat_number));
-                self.action_to.up();
+                // self.action_to.up();
                 Ok(remaining)
             }
             Err(e) => Err(e),
@@ -221,8 +223,11 @@ impl Table {
             let amount = folded_chips.count();
             self.pot.add_to(folded_chips);
             self.log_info(TableAction::Fold(seat_number));
-            self.action_to.up();
-            self.log_info(TableAction::ActionTo(self.action_to.value()));
+
+            self.player_mucks_cards(seat_number);
+
+            self.action_to_next();
+            self.log_info(TableAction::ActionTo(self.next_to_act()));
             Ok(amount)
         } else {
             log::error!("Failed to find seat #{seat_number} for folding");
@@ -247,6 +252,7 @@ impl Table {
         let sb_seat_num = self.determine_small_blind();
         self.act_forced_bet(sb_seat_num, self.forced.small_blind)?;
         self.log_info(TableAction::ForcedBetSmallBlind(sb_seat_num, self.forced.small_blind));
+        self.action_to_next();
 
         Ok(())
     }
@@ -259,6 +265,7 @@ impl Table {
         let big_blind = self.forced.big_blind;
         self.act_forced_bet(bb_seat_num, big_blind)?;
         self.log_info(TableAction::ForcedBetBigBlind(bb_seat_num, big_blind));
+        self.action_to_next();
 
         Ok(())
     }
@@ -270,23 +277,32 @@ impl Table {
     /// Throws an `InvalidSeatNumber` if the seat number isn't or the seat is currently
     /// borrowed mutably.
     pub fn act_forced_bets(&self) -> Result<(), PKError> {
+        // Make sure that `action_to` is pointing to the small blind at the start of the hand.
+        // self.action_to.set(self.determine_small_blind());
+
         self.act_forced_bet_small_blind()?;
         self.act_forced_bet_big_blind()?;
+        self.set_phase(GamePhase::ForcedBets);
 
         Ok(())
     }
 
     pub fn act_new_hand(&self) {
-        *self.phase.borrow_mut() = GamePhase::NewHand;
+        self.set_phase(GamePhase::NewHand);
         self.log_info(TableAction::NewHand);
     }
 
     pub fn act_shuffle_deck(&self) {
+        self.set_phase(GamePhase::ShuffleNewDeck);
         self.deck.shuffle_in_place();
         self.log_debug(TableAction::ShuffleDeck);
     }
 
     // endregion
+
+    pub fn action_to_next(&self) {
+        self.log_info(TableAction::ActionTo(self.next_to_act()));
+    }
 
     /// Removes and returns the chips from the player's bet stack and sets their state to `YetToAct`.
     ///
@@ -294,16 +310,9 @@ impl Table {
     ///
     /// * `PKError::InvalidTableAction` - throws if a player is not active in the hand.
     pub fn bring_it_in(&self) -> Result<usize, PKError> {
-        if !self.seats.all_players_have_acted() {
-            return Err(PKError::ActionIsntFinished);
-        }
-        for seat in self.seats.borrow_all() {
-            if !seat.borrow().player.is_in_hand() {
-                continue;
-            }
-            self.pot.add_to(seat.borrow_mut().player.act_bring_it_in()?);
-        }
-        self.log_info(TableAction::BringItIn(self.pot.count()));
+        let brought_in = self.seats.bring_it_in()?;
+        self.log_info(TableAction::BringItIn(brought_in.count()));
+        self.pot.add_to(brought_in);
         Ok(self.pot.count())
     }
 
@@ -313,8 +322,13 @@ impl Table {
     }
 
     pub fn commentary_action_to(&self) -> String {
-        if let Some(seat) = self.get_seat(self.action_to.value()) {
-            format!("Action to: {}", seat.player.handle)
+        let action_to = self.next_to_act();
+        if let Some(seat) = self.get_seat(action_to) {
+            if self.seats.is_betting_complete() {
+                "All players have acted".to_string()
+            } else {
+                format!("Action to Seat {} {}", action_to, seat.player.handle)
+            }
         } else {
             String::default()
         }
@@ -324,12 +338,12 @@ impl Table {
         for event in self.event_log.entries() {
             if let Some(seat_number) = event.get_seat() {
                 if let Some(seat) = self.get_seat(seat_number) {
-                    println!("{}", event.commentary(&seat.player.handle.clone()));
+                    println!("--- {}", event.commentary(&seat.player.handle.clone()));
                 } else {
-                    println!("{event}");
+                    println!("--- {event}");
                 }
             } else {
-                println!("{event}");
+                println!("--- {event}");
             }
         }
     }
@@ -345,6 +359,18 @@ impl Table {
         } else {
             String::default()
         }
+    }
+
+    pub fn commentary_last_player_action(&self) -> Option<String> {
+        if let Some(action) = self.event_log.last_player_action() {
+            if let Some(seat_number) = action.get_seat() {
+                if let Some(seat) = self.get_seat(seat_number) {
+                    return Some(format!("{} {}", seat.player.handle, action));
+                }
+            }
+        }
+
+        None
     }
 
     /// Returns the number of cards from a `Deck` that will be in play for a hand.
@@ -399,6 +425,8 @@ impl Table {
                 None => return Err(PKError::AlreadyDealt),
             }
         }
+        self.set_phase(GamePhase::DealHoleCards);
+        self.log_info(TableAction::DealtPlayers);
 
         Ok(())
     }
@@ -410,6 +438,8 @@ impl Table {
         // Burn a card
         // TODO: FIX ME
         // let _burn = self.deck.draw_one()?;
+
+        self.set_phase(GamePhase::DealFlop);
 
         let flop = self.deck.draw(3)?;
         self.set_board(flop.cards());
@@ -427,6 +457,8 @@ impl Table {
         // TODO: FIX ME
         // let _burn = self.deck.draw_one()?;
 
+        self.set_phase(GamePhase::DealTurn);
+
         let turn = self.deck.draw_one()?;
         self.board.insert(turn);
 
@@ -443,6 +475,8 @@ impl Table {
         // TODO: FIX ME
         // let _burn = self.deck.draw_one()?;
 
+        self.set_phase(GamePhase::DealRiver);
+
         let river = self.deck.draw_one()?;
         self.board.insert(river);
 
@@ -451,29 +485,15 @@ impl Table {
         Ok(())
     }
 
-    /// Returns `true` if the seat holds at least the `depth` number of dealt cards.
-    ///
-    /// Utility function to help with dealing cards.
-    pub fn has_card_at_depth(&self, seat_number: u8, depth: usize) -> bool {
-        if let Some(seat) = self.get_seat(seat_number) {
-            let num = seat.cards.number_of_dealt_cards();
-            num >= depth
-        } else {
-            false
+    pub fn determine_betting_phase(&self) -> GamePhase {
+        let board_len = self.board.len();
+        match board_len {
+            0 => GamePhase::BettingPreFlop,
+            3 => GamePhase::BettingFlop,
+            4 => GamePhase::BettingTurn,
+            5 => GamePhase::BettingRiver,
+            _ => GamePhase::Showdown,
         }
-    }
-
-    /// Returns the minimum number of dealt cards among all seats. Used to determine the next player
-    /// who should be dealt a card.
-    ///
-    /// Never used
-    pub fn min_depth_dealt(&self) -> usize {
-        let seats = self.seats.borrow_all();
-        seats
-            .iter()
-            .map(|s| s.borrow().cards.number_of_dealt_cards())
-            .min()
-            .unwrap_or(0)
     }
 
     /// ```
@@ -519,11 +539,84 @@ impl Table {
     /// assert_eq!(3, table.determine_utg(), "If seat 0 is the dealer, than seat 3 is under the gun");
     /// ```
     pub fn determine_utg(&self) -> u8 {
-        self.button.static_up_x(3).value
+        if self.phase.borrow().is_preflop() {
+            self.button.static_up_x(3).value
+        } else {
+            self.button.static_up_x(1).value
+        }
+    }
+
+    /// # Errors
+    ///
+    /// - Throws if evaluation fails.
+    pub fn eval_flop(&self) -> Result<FlopEval, PKError> {
+        FlopEval::try_from(self)
+    }
+
+    pub fn eval_flop_display(&self) {
+        match self.eval_flop() {
+            Ok(fe) => println!("\n{fe}"),
+            Err(e) => {
+                log::error!("Failed to FlopEval from table: {e}");
+            }
+        }
+    }
+
+    /// # Errors
+    ///
+    /// - Throws if evaluation fails.
+    pub fn eval_flop_the_nuts(&self) -> Result<Evals, PKError> {
+        Ok(Game::try_from(self)?.board.flop.evals())
+    }
+
+    /// # Errors
+    ///
+    /// - Throws if evaluation fails.
+    pub fn eval_turn(&self) -> Result<TurnEval, PKError> {
+        TurnEval::try_from(self)
+    }
+
+    pub fn eval_turn_display(&self) {
+        match self.eval_turn() {
+            Ok(te) => println!("\n{te}"),
+            Err(e) => {
+                log::error!("Failed to TurnEval from table: {e}");
+            }
+        }
+    }
+
+    /// # Errors
+    ///
+    /// - Throws if evaluation fails.
+    pub fn eval_river(&self) -> Result<CaseEval, PKError> {
+        Game::try_from(self)?.river_case_eval()
+    }
+
+    pub fn eval_river_display(&self) {
+        match Game::try_from(self) {
+            Ok(game) => game.river_display_results(),
+            Err(e) => {
+                log::error!("Failed to create game from table: {e}");
+            }
+        }
     }
 
     pub fn event_count(&self, action: &TableAction) -> usize {
         self.event_log.entries().iter().filter(|a| *a == action).count()
+    }
+
+    pub fn next_to_act(&self) -> u8 {
+        let utg = self.determine_utg();
+
+        self.seats.next_to_act(utg).unwrap_or(utg)
+    }
+
+    pub fn get_phase(&self) -> GamePhase {
+        *self.phase.borrow()
+    }
+
+    pub fn set_phase(&self, phase: GamePhase) {
+        *self.phase.borrow_mut() = phase;
     }
 
     pub fn get_seat(&self, number: u8) -> Option<Ref<'_, Seat>> {
@@ -542,20 +635,53 @@ impl Table {
         self.seats.get_seat_mut(number)
     }
 
-    pub fn seats_are_dealt(&self) -> bool {
-        self.seats.are_dealt()
+    /// Returns `true` if the seat holds at least the `depth` number of dealt cards.
+    ///
+    /// Utility function to help with dealing cards.
+    pub fn has_card_at_depth(&self, seat_number: u8, depth: usize) -> bool {
+        if let Some(seat) = self.get_seat(seat_number) {
+            let num = seat.cards.number_of_dealt_cards();
+            num >= depth
+        } else {
+            false
+        }
     }
 
-    pub fn is_ready_for_action(&self) -> bool {
-        let _bint = DrainableBintCell::new_with_value(
-            self.seats.size(),
-            self.seats.size() as usize - 2,
-            self.action_to.value(),
-        );
+    /// TODO: There are edge cases that I fear these checks won't catch.
+    pub fn is_game_over(&self) -> bool {
+        if self.seats.count_active_in_hand() <= 1 {
+            return true;
+        }
 
-        // if self.
+        if self.is_river() && self.seats.is_betting_complete() {
+            return true;
+        }
 
-        todo!()
+        false
+    }
+
+    pub fn is_hand_over(&self) -> bool {
+        if self.seats.count_active_in_hand() <= 1 {
+            return true;
+        }
+
+        false
+    }
+
+    pub fn is_preflop(&self) -> bool {
+        self.get_phase().is_preflop()
+    }
+
+    pub fn is_flop(&self) -> bool {
+        self.get_phase().is_flop()
+    }
+
+    pub fn is_turn(&self) -> bool {
+        self.get_phase().is_turn()
+    }
+
+    pub fn is_river(&self) -> bool {
+        self.get_phase().is_river()
     }
 
     fn log_debug(&self, action: TableAction) {
@@ -579,6 +705,19 @@ impl Table {
     #[must_use]
     pub fn min_bet(&self) -> usize {
         self.forced.big_blind
+    }
+
+    /// Returns the minimum number of dealt cards among all seats. Used to determine the next player
+    /// who should be dealt a card.
+    ///
+    /// Never used
+    pub fn min_depth_dealt(&self) -> usize {
+        let seats = self.seats.borrow_all();
+        seats
+            .iter()
+            .map(|s| s.borrow().cards.number_of_dealt_cards())
+            .min()
+            .unwrap_or(0)
     }
 
     pub fn muck_board(&self) {
@@ -660,22 +799,20 @@ impl Table {
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     pub fn seat_to_act(&self) -> Result<Ref<'_, Seat>, PKError> {
-        if let Some(seat_to_act) = self.get_seat(self.action_to.value()) {
+        if let Some(seat_to_act) = self.get_seat(self.next_to_act()) {
             Ok(seat_to_act)
         } else {
             Err(PKError::InvalidSeatNumber)
         }
     }
 
-    pub fn next_to_act(&self) {
-        // let bint_2act = DrainableBintCell::new_with_value(self.seats.size(), self.seats.size() as usize, self.action_to.value());
-
-        todo!();
+    pub fn seats_are_dealt(&self) -> bool {
+        self.seats.are_dealt()
     }
 
-    pub fn set_action_to(&self, seat_number: u8) {
-        self.action_to.set(seat_number);
-    }
+    // pub fn set_action_to(&self, seat_number: u8) {
+    //     self.action_to.set(seat_number);
+    // }
 
     pub fn set_board(&self, cards: Cards) {
         let _ = self.board.take();
@@ -736,7 +873,6 @@ impl Default for Table {
             forced: ForcedBets::new(50, 100),
             seats,
             button: BintCell::new(player_count),
-            action_to: BintCell::new(player_count),
             deck: deck_cell!(),
             board: CardsCell::default(),
             muck: CardsCell::default(),
@@ -783,7 +919,7 @@ mod casino__table_tests {
         );
 
         assert_eq!(
-            "8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ T♠ 2♥ 9♣ 6♦ 5♥ 5♠ 8♠ A♠ Q♠ J♠ 9♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 7♣ 6♣ 3♣ 2♣",
+            "T♠ 2♥ 8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ 7♣ 9♣ 6♦ 5♥ 5♠ 8♠ A♠ Q♠ J♠ 9♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 6♣ 3♣ 2♣",
             table.deck.to_string()
         );
         assert_eq!(primed, table.deck.cards());
@@ -797,7 +933,7 @@ mod casino__table_tests {
         // assert_eq!(GamePhase::NewHand, table.phase.);
         assert_eq!(8, table.seats.size());
         assert_eq!(0, table.button.value());
-        assert_eq!(0, table.action_to.value());
+        assert_eq!(3, table.next_to_act());
         assert_eq!(36, table.deck.len());
         assert_eq!(
             "A♠ Q♠ J♠ 9♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 5♥ 4♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 6♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 9♣ 8♣ 6♣ 3♣",
@@ -816,7 +952,7 @@ mod casino__table_tests {
         // assert_eq!(GamePhase::NewHand, table.phase.);
         assert_eq!(8, table.seats.size());
         assert_eq!(0, table.button.value());
-        assert_eq!(0, table.action_to.value());
+        assert_eq!(3, table.next_to_act());
         assert_eq!(52, table.deck.len());
         assert_eq!(
             "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣",
@@ -835,7 +971,7 @@ mod casino__table_tests {
         // assert_eq!(GamePhase::NewHand, table.phase.);
         assert_eq!(6, table.seats.size());
         assert_eq!(0, table.button.value());
-        assert_eq!(0, table.action_to.value());
+        assert_eq!(0, table.next_to_act());
         assert_eq!(52, table.deck.len());
         assert_eq!(0, table.board.len());
         assert_eq!(0, table.muck.len());
@@ -1066,7 +1202,8 @@ mod casino__table_tests {
     #[test]
     fn seat_to_act__simple() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
-        table.set_action_to(5);
+        table.act_button_move();
+        table.act_button_move();
 
         let seat = table.seat_to_act().unwrap();
         assert_eq!("Cory Zeidman", seat.player.handle);
@@ -1199,7 +1336,7 @@ mod casino__table_tests {
 
         let seat3_remaining = table.act_bet(3, 2100)?;
         assert_eq!(997_900, seat3_remaining);
-        assert_eq!(table.event_log.last().unwrap(), TableAction::Bet(3, 2100));
+        assert_eq!(table.event_log.last_player_action().unwrap(), TableAction::Bet(3, 2100));
 
         if let Some(seat) = table.get_seat(3) {
             assert_eq!(PlayerState::Bet(2100), seat.player.state.get());
@@ -1255,7 +1392,7 @@ mod casino__table_tests {
         let _ = table.act_check(2).unwrap();
         let _ = table.act_fold(3).unwrap();
 
-        assert!(table.seats.all_players_have_acted());
+        assert!(table.seats.is_betting_complete());
 
         let pot = table.bring_it_in().unwrap();
 
@@ -1269,7 +1406,7 @@ mod casino__table_tests {
         assert_eq!(0, table.get_seat(0).unwrap().player.bet.count());
         assert_eq!(0, table.get_seat(1).unwrap().player.bet.count());
         assert_eq!(0, table.get_seat(2).unwrap().player.bet.count());
-        assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.is_betting_complete());
     }
 
     /// Matches test in `Seats`
@@ -1277,7 +1414,7 @@ mod casino__table_tests {
     fn validate__min_table__through_preflop() {
         let table = min_table_setup();
 
-        assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.is_betting_complete());
 
         let _ = table.act_forced_bets();
         assert_eq!(PKError::InvalidTableAction, table.act_check(0).unwrap_err());
@@ -1299,7 +1436,7 @@ mod casino__table_tests {
         } else {
             panic!("Failed to get seat 2");
         }
-        assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.is_betting_complete());
 
         let seat0 = table.act_call(0).unwrap();
         assert_eq!(100, seat0);
@@ -1309,7 +1446,7 @@ mod casino__table_tests {
         } else {
             panic!("Failed to get seat 0");
         }
-        assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.is_betting_complete());
 
         let seat1 = table.act_call(1).unwrap();
         assert_eq!(100, seat1);
@@ -1319,7 +1456,7 @@ mod casino__table_tests {
         } else {
             panic!("Failed to get seat 1");
         }
-        assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.is_betting_complete());
 
         // Big blind already has the max bet in, so can't call
         assert_eq!(PKError::InsufficientChips, table.act_call(0).unwrap_err());
@@ -1347,7 +1484,7 @@ mod casino__table_tests {
             panic!("Failed to get seat 2");
         }
 
-        assert!(table.seats.all_players_have_acted());
+        assert!(table.seats.is_betting_complete());
         let pot = table.bring_it_in().unwrap();
         assert_eq!(3_000_000, table.table_chip_count());
         assert_eq!(300, pot);
@@ -1357,7 +1494,7 @@ mod casino__table_tests {
         assert_eq!(0, table.get_seat(0).unwrap().player.bet.count());
         assert_eq!(0, table.get_seat(1).unwrap().player.bet.count());
         assert_eq!(0, table.get_seat(2).unwrap().player.bet.count());
-        assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.is_betting_complete());
     }
 
     #[test]
@@ -1365,7 +1502,7 @@ mod casino__table_tests {
         let table = TestData::min_table();
 
         table.act_forced_bets().expect("TODO: panic message");
-        assert_eq!(TableAction::ForcedBetBigBlind(2, 100), table.event_log.last().unwrap());
+        assert_eq!(TableAction::ActionTo(0), table.event_log.last().unwrap());
 
         assert_eq!(3_000_000, table.table_chip_count());
         assert_eq!(0, table.button.value());
@@ -1432,11 +1569,11 @@ mod casino__table_tests {
         let _daniel = table.act_bet(2, 5000).unwrap();
         let _ = table.act_fold(0).unwrap();
         let _gus = table.act_call(1).unwrap();
-        assert!(table.seats.all_players_have_acted());
+        assert!(table.seats.is_betting_complete());
 
         let pot = table.bring_it_in().unwrap();
         assert_eq!(10050, pot);
-        assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.is_betting_complete());
 
         table.deal_flop().expect("No flop");
 
@@ -1446,24 +1583,24 @@ mod casino__table_tests {
         let _daniel = table.act_bet(2, 8000).unwrap();
         let _gus = table.act_raise(1, 26000).unwrap();
         let _daniel = table.act_call(2).unwrap();
-        assert!(table.seats.all_players_have_acted());
+        assert!(table.seats.is_betting_complete());
 
         let pot = table.bring_it_in().unwrap();
         assert_eq!(62_050, pot);
-        assert!(!table.seats.all_players_have_acted());
-
-        let _gus = table.act_bet(1, 24_000).unwrap();
-        let _daniel = table.act_call(2).unwrap();
-        assert!(table.seats.all_players_have_acted());
-
-        let pot = table.bring_it_in().unwrap();
-        assert_eq!(110050, pot);
-        assert!(!table.seats.all_players_have_acted());
+        assert!(!table.seats.is_betting_complete());
 
         table.deal_turn().expect("No turn");
 
         assert_eq!("Turn is 5♠", table.event_log.last().unwrap().to_string());
         assert_eq!("9♣ 6♦ 5♥ 5♠", table.board.to_string());
+
+        let _gus = table.act_bet(1, 24_000).unwrap();
+        let _daniel = table.act_call(2).unwrap();
+        assert!(table.seats.is_betting_complete());
+
+        let pot = table.bring_it_in().unwrap();
+        assert_eq!(110050, pot);
+        assert!(!table.seats.is_betting_complete());
 
         table.deal_river().expect("No turn");
 
@@ -1477,6 +1614,6 @@ mod casino__table_tests {
 
         assert_eq!(945_000, gus);
         assert_eq!(945_000, daniel);
-        assert!(table.seats.all_players_have_acted());
+        assert!(table.seats.is_betting_complete());
     }
 }

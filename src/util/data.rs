@@ -14,10 +14,10 @@ use crate::casino::table::seat::Seat;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
-use crate::prelude::{BoxedCards, ForcedBets, Seats, Table};
+use crate::prelude::{BoxedCards, ForcedBets, Forgiving, Seats, Table};
 use crate::util::wincounter::win::Win;
 use crate::util::wincounter::wins::Wins;
-use crate::{Card, Cards, Forgiving, Pile, cards};
+use crate::{Card, Cards, Pile};
 use std::str::FromStr;
 
 /// I am a classicist when it comes to testing. Martin Fowler, in his essay
@@ -221,12 +221,12 @@ impl TestData {
 
     #[must_use]
     pub fn the_hand_cards() -> Cards {
-        cards!("8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ T♠ 2♥ 9♣ 6♦ 5♥ 5♠ 8♠")
+        cards!("T♠ 2♥ 8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ 7♣ 9♣ 9♣ 6♦ 5♥ 5♠ 8♠")
     }
 
     #[must_use]
     pub fn the_hand_cards_dealable() -> Cards {
-        cards!("8♣ A♦ 5♦ 6♠ K♠ 4♦ T♠ 3♥ Q♣ 5♣ 6♥ J♦ 4♣ 2♥ 9♣ 6♦ 5♥ 5♠ 8♠")
+        cards!("T♠ 8♣ A♦ 5♦ 6♠ K♠ 4♦ 7♣ 2♥ 3♥ Q♣ 5♣ 6♥ J♦ 4♣ 2♦ 9♣ 6♦ 5♥ 5♠ 8♠")
     }
 
     /// # Panics
@@ -360,6 +360,15 @@ impl TestData {
         Table::nlh_primed(
             Seats::new(TestData::min_players()),
             &CardsCell::from(Cards::deck_primed(&primed)),
+            ForcedBets::new(50, 100),
+        )
+    }
+
+    #[must_use]
+    pub fn the_hand_table() -> Table {
+        Table::nlh_primed(
+            Seats::new(TestData::the_hand_players()),
+            &CardsCell::from(Cards::deck_primed(&TestData::the_hand_cards_dealable())),
             ForcedBets::new(50, 100),
         )
     }

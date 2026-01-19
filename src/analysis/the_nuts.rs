@@ -1,7 +1,8 @@
 use crate::Evals;
-use crate::analysis::class::Class;
+use crate::analysis::class::HandRankClass;
 use crate::analysis::eval::Eval;
 use std::collections::HashSet;
+use std::fmt::Display;
 
 #[allow(clippy::needless_doctest_main)]
 /// The immediate need for this class is so that we can have an easy way to hold and sort the
@@ -285,12 +286,12 @@ use std::collections::HashSet;
 /// use pkcore::arrays::three::Three;
 /// use pkcore::arrays::two::Two;
 /// use pkcore::card::Card;
-/// use pkcore::analysis::class::Class;
+/// use pkcore::analysis::class::HandRankClass;
 /// use pkcore::analysis::eval::Eval;
 /// use pkcore::Pile;
 ///
 /// #[derive(Clone, Debug, Default, Eq, PartialEq)]
-/// pub struct TheNuts(Vec<Eval>, HashSet<Class>);
+/// pub struct TheNuts(Vec<Eval>, HashSet<HandRankClass>);
 ///
 /// impl TheNuts {
 ///     pub fn push(&mut self, evaluated_hand: Eval) {
@@ -397,7 +398,7 @@ use std::collections::HashSet;
 /// This could be the start of functionality that stores and analyses game textures. How much do
 /// the possible hands that the hero would have compare to the villains? etc...
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct TheNuts(Vec<Eval>, HashSet<Class>);
+pub struct TheNuts(Vec<Eval>, HashSet<HandRankClass>);
 
 impl TheNuts {
     #[must_use]
@@ -444,6 +445,15 @@ impl TheNuts {
     }
 }
 
+impl Display for TheNuts {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for eval in &self.0 {
+            writeln!(f, "{eval}")?;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod analysis__the_nuts_tests {
@@ -468,8 +478,8 @@ mod analysis__the_nuts_tests {
     fn get() {
         let the_nuts = test_data();
 
-        assert_eq!(Class::RoyalFlush, the_nuts.get(0).unwrap().hand_rank.class);
-        assert_eq!(Class::AceHighStraight, the_nuts.get(1).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::RoyalFlush, the_nuts.get(0).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::AceHighStraight, the_nuts.get(1).unwrap().hand_rank.class);
         assert!(the_nuts.get(0).is_some());
         assert!(the_nuts.get(1).is_some());
         assert!(the_nuts.get(2).is_none());

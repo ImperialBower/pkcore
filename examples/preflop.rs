@@ -7,6 +7,14 @@ use pkcore::util::terminal::Terminal;
 use rusqlite::Connection;
 use std::fs::File;
 
+/// Incremental generator of HUPResult records from distinct SortedHeadsUp combinations.
+///
+/// - Iterates through SortedHeadsUp::distinct() combinations
+/// - Converts each SortedHeadsUp to HUPResult (which calculates wins)
+/// - Uses HUPResult::exists() to check if already stored
+/// - Inserts results via the Sqlable trait implementation
+///
+///
 /// Naked
 /// ```txt
 /// A♠ A♥ 7♦ 7♣, 79.69% (1364608), 20.05% (343300), 0.26% (4396)
@@ -107,7 +115,7 @@ use std::fs::File;
 /// `cargo run --example preflop`
 fn main() {
     // TODO TD: There should be an easy way to cast this into our error.
-    let conn = Connection::open("../../generated/hups.db").unwrap();
+    let conn = HUPResult::open_connection().unwrap();
     HUPResult::create_table(&conn).unwrap();
     let mut rdr = reader();
 
@@ -172,7 +180,8 @@ fn process(conn: &Connection, shu: &SortedHeadsUp) {
 }
 
 fn reader() -> Reader<File> {
-    let file = File::open("../generated/old/distinct_shu.csv").unwrap();
+    let distinct_key_path = dotenvy::var("DISTINCT_KEY_PATH").unwrap();
+    let file = File::open(distinct_key_path).unwrap();
     Reader::from_reader(file)
 }
 

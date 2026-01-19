@@ -1,6 +1,6 @@
 use crate::SOK;
-use crate::analysis::class::Class;
-use crate::analysis::name::Name;
+use crate::analysis::class::HandRankClass;
+use crate::analysis::name::HandRankName;
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 
@@ -23,8 +23,8 @@ pub const NO_HAND_RANK_VALUE: HandRankValue = 0;
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct HandRank {
     pub value: HandRankValue,
-    pub name: Name,
-    pub class: Class,
+    pub name: HandRankName,
+    pub class: HandRankClass,
 }
 
 impl Display for HandRank {
@@ -37,8 +37,8 @@ impl From<HandRankValue> for HandRank {
     fn from(value: HandRankValue) -> Self {
         let hr = HandRank {
             value,
-            name: Name::from(value),
-            class: Class::from(value),
+            name: HandRankName::from(value),
+            class: HandRankClass::from(value),
         };
 
         if !hr.salright() {
@@ -91,8 +91,8 @@ mod hand_rank_tests {
         let default = HandRank::default();
 
         assert_eq!(default.value, 0);
-        assert_eq!(default.name, Name::Invalid);
-        assert_eq!(default.class, Class::Invalid);
+        assert_eq!(default.name, HandRankName::Invalid);
+        assert_eq!(default.class, HandRankClass::Invalid);
     }
 
     #[test]

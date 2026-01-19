@@ -6,7 +6,7 @@ use strum::EnumIter;
 /// [traditional name](https://en.wikipedia.org/wiki/List_of_poker_hands) of a five card
 /// `PokerHand`.
 #[derive(Clone, Copy, Debug, Default, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum Name {
+pub enum HandRankName {
     StraightFlush,
     FourOfAKind,
     FullHouse,
@@ -20,26 +20,26 @@ pub enum Name {
     Invalid,
 }
 
-impl From<HandRankValue> for Name {
+impl From<HandRankValue> for HandRankName {
     fn from(hrv: HandRankValue) -> Self {
         match hrv {
-            1..=10 => Name::StraightFlush,
-            11..=166 => Name::FourOfAKind,
-            167..=322 => Name::FullHouse,
-            323..=1599 => Name::Flush,
-            1600..=1609 => Name::Straight,
-            1610..=2467 => Name::ThreeOfAKind,
-            2468..=3325 => Name::TwoPair,
-            3326..=6185 => Name::Pair,
-            6186..=7462 => Name::HighCard,
-            _ => Name::Invalid,
+            1..=10 => HandRankName::StraightFlush,
+            11..=166 => HandRankName::FourOfAKind,
+            167..=322 => HandRankName::FullHouse,
+            323..=1599 => HandRankName::Flush,
+            1600..=1609 => HandRankName::Straight,
+            1610..=2467 => HandRankName::ThreeOfAKind,
+            2468..=3325 => HandRankName::TwoPair,
+            3326..=6185 => HandRankName::Pair,
+            6186..=7462 => HandRankName::HighCard,
+            _ => HandRankName::Invalid,
         }
     }
 }
 
-impl SOK for Name {
+impl SOK for HandRankName {
     fn salright(&self) -> bool {
-        self != &Name::Invalid
+        self != &HandRankName::Invalid
     }
 }
 
@@ -50,14 +50,14 @@ mod hand_rank__name_tests {
 
     #[test]
     fn from__hand_rank_value() {
-        assert_eq!(Name::from(10), Name::StraightFlush);
-        assert_eq!(Name::from(190), Name::FullHouse);
-        assert_eq!(Name::from(9999), Name::Invalid);
+        assert_eq!(HandRankName::from(10), HandRankName::StraightFlush);
+        assert_eq!(HandRankName::from(190), HandRankName::FullHouse);
+        assert_eq!(HandRankName::from(9999), HandRankName::Invalid);
     }
 
     #[test]
     fn salright() {
-        assert!(Name::StraightFlush.salright());
-        assert!(!Name::Invalid.salright());
+        assert!(HandRankName::StraightFlush.salright());
+        assert!(!HandRankName::Invalid.salright());
     }
 }

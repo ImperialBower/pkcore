@@ -288,8 +288,8 @@ impl Eq for Eval {}
 #[allow(non_snake_case)]
 mod hand_rank__eval_tests {
     use super::*;
-    use crate::analysis::class::Class;
-    use crate::analysis::name::Name;
+    use crate::analysis::class::HandRankClass;
+    use crate::analysis::name::HandRankName;
     use std::str::FromStr;
 
     #[test]
@@ -300,7 +300,7 @@ mod hand_rank__eval_tests {
 
         assert_eq!(eval.hand, hand.sort());
         assert_eq!(eval.hand_rank, hand.hand_rank());
-        assert_eq!(eval.hand_rank.class, Class::RoyalFlush);
+        assert_eq!(eval.hand_rank.class, HandRankClass::RoyalFlush);
     }
 
     #[test]
@@ -313,8 +313,8 @@ mod hand_rank__eval_tests {
         assert_eq!(eval.hand, expected_hand);
         assert_eq!(eval.hand_rank, seven.hand_rank());
         assert_eq!(eval.hand_rank.value, 271);
-        assert_eq!(eval.hand_rank.name, Name::FullHouse);
-        assert_eq!(eval.hand_rank.class, Class::SixesOverFives);
+        assert_eq!(eval.hand_rank.name, HandRankName::FullHouse);
+        assert_eq!(eval.hand_rank.class, HandRankClass::SixesOverFives);
     }
 
     #[test]
@@ -404,8 +404,8 @@ impl Eq for SevenEval {}
 #[allow(non_snake_case)]
 mod hand_rank__seven_eval_tests {
     use super::*;
-    use crate::analysis::class::Class;
-    use crate::analysis::name::Name;
+    use crate::analysis::class::HandRankClass;
+    use crate::analysis::name::HandRankName;
     use std::str::FromStr;
 
     #[test]
@@ -419,7 +419,7 @@ mod hand_rank__seven_eval_tests {
         assert_eq!(eval.seven, seven);
         assert_eq!(eval.hand_rank, seven.hand_rank());
         assert_eq!(eval.hand_rank.value, 271);
-        assert_eq!(eval.hand_rank.name, Name::FullHouse);
-        assert_eq!(eval.hand_rank.class, Class::SixesOverFives);
+        assert_eq!(eval.hand_rank.name, HandRankName::FullHouse);
+        assert_eq!(eval.hand_rank.class, HandRankClass::SixesOverFives);
     }
 }

@@ -2,6 +2,7 @@ use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::cards_cell::CardsCell;
 use crate::util::Util;
 use crate::{PKError, Pile, Plurable, SOK, TheNuts};
 use std::fmt::{Display, Formatter};
@@ -21,6 +22,15 @@ impl Board {
     #[must_use]
     pub fn new(flop: Three, turn: Card, river: Card) -> Self {
         Board { flop, turn, river }
+    }
+
+    #[must_use]
+    pub fn turn_cards(&self) -> Cards {
+        let mut cards = self.flop.to_vec();
+        if self.turn.is_dealt() {
+            cards.push(self.turn);
+        }
+        Cards::from(cards)
     }
 }
 
@@ -118,6 +128,14 @@ impl SOK for Board {
     }
 }
 
+impl TryFrom<CardsCell> for Board {
+    type Error = PKError;
+
+    fn try_from(cards_cell: CardsCell) -> Result<Self, Self::Error> {
+        Board::try_from(cards_cell.cards())
+    }
+}
+
 impl TryFrom<Cards> for Board {
     type Error = PKError;
 
@@ -155,6 +173,16 @@ impl TryFrom<Cards> for Board {
 #[allow(non_snake_case)]
 mod play_board_tests {
     use super::*;
+    use crate::Forgiving;
+
+    #[test]
+    fn turn_cards() {
+        let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap_or_default();
+
+        let turn_cards = board.turn_cards();
+
+        assert_eq!("9♣ 6♦ 5♥ 5♠", turn_cards.to_string());
+    }
 
     #[test]
     fn display() {
@@ -239,6 +267,10 @@ mod play_board_tests {
             ]))
             .unwrap()
             .to_string()
+        );
+        assert_eq!(
+            "FLOP: A♠ K♥ Q♣, TURN: J♦, RIVER: T♣",
+            Board::try_from(cc!("AS KH QC JD TC")).unwrap().to_string()
         );
     }
 

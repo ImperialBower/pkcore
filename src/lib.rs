@@ -9,6 +9,319 @@
     macro_expanded_macro_exports_accessed_by_absolute_paths
 )]
 
+//! # pkcore
+//!
+//! A comprehensive poker library for Texas Hold'em analysis, evaluation, and game simulation.
+//!
+//! ## Overview
+//!
+//! `pkcore` is a high-performance Rust library designed for serious poker analysis and game theory applications.
+//! It provides tools for:
+//! - Card and deck manipulation with efficient bit representations
+//! - Hand evaluation (5-card, 7-card, and 8-or-better low hands)
+//! - Heads-up preflop equity calculations with `SQLite` persistence
+//! - Game theory optimal (GTO) range analysis and combo breakdowns
+//! - Full game simulation with multi-round betting and pot management
+//! - Suit-shift analysis for distinct hand pattern recognition
+//!
+//! ## Core Types
+//!
+//! ### Cards and Ranks
+//!
+//! - [`card::Card`] - A single playing card with rank and suit
+//!   - Represented internally as a `u8` for efficient bitwise operations
+//!   - Supports parsing from strings like "As" and "a♠" for (Ace of Spades) or "2h" for (Two of Hearts)
+//!
+//! - [`cards::Cards`] - An ordered, deduplicated collection of cards (hands, boards, etc.)
+//!   - Built on `IndexSet` for O(1) lookups and preservation of insertion order
+//!   - Implements [`Pile`] trait for common card collection operations
+//!
+//! - [`deck::Deck`] - A shuffleable 52-card deck
+//!   - Supports drawing cards and checking remaining inventory
+//!
+//! - [`rank::Rank`] and [`suit::Suit`] - Card components
+//!   - [`rank::Rank`]: Ace through King with utility methods for comparisons and bit patterns
+//!   - [`suit::Suit`]: Spades, Hearts, Diamonds, Clubs with shift operations for distinct analysis
+
+//! ## Analysis Module
+//!
+//! The [`analysis`] module provides sophisticated poker analysis tools:
+//!
+//! ### Hand Evaluation
+//!
+//! - [`analysis::evals::Evals`] - Complete hand evaluation results
+//!   - 5-card hand rankings with Cactus Kev's evaluator
+//!   - 7-card hand analysis (Texas Hold'em)
+//!   - 8-or-better low hand qualification
+//!   - Hand classifications (pair, two pair, trips, straight, flush, etc.)
+//!
+//! - [`analysis::the_nuts::TheNuts`] - Nut hand calculations
+//!   - Determines the strongest possible hand given community cards
+//!   - Supports both high and low hand analysis
+//!
+//! ### Preflop Equity
+//!
+//! - [`analysis::store::db::hup::HUPResult`] - Heads-up preflop equity results
+//!   - Precomputed matchups between any two starting hands
+//!   - Ability to compute odds against more than two players in a hand
+//!   - `SQLite` persistence with the `Sqlable` trait
+//!   - Configurable database path via `HUPS_DB_PATH` environment variable
+//!   - Supports split pot scenarios
+//!   - Efficient querying and bulk insertion
+//!
+//! ### GTO Analysis (WIP)
+//!
+//! - [`analysis::gto::combo::Combo`] - Individual hand combinations
+//! - [`analysis::gto::combo_pairs::ComboPairs`] - Grouped combinations by rank pattern
+//! - [`analysis::gto::twos::Twos`] - Two-card hand explosions for range analysis
+//! - Range analysis with combo weighting and equity breakdowns
+//! - See `examples/gto.rs` for a practical demonstration
+//!
+//! ## Game Simulation Module (WIP)
+//!
+//! The [`games`] module provides complete game simulation infrastructure:
+//!
+//! - **Table Management**: Multi-seat tables with position tracking
+//! - **Betting Rounds**: Preflop, Flop, Turn, River with action tracking
+//! - **Pot Calculation**: Side pots, main pots, and all-in scenarios
+//! - **Player State**: Active, folded, all-in, or busted statuses
+//! - **Action History**: Complete hand history tracking
+//!
+//! ## Key Traits
+//!
+//! ### Card Collection Operations
+//!
+//! - [`Pile`] - Common operations for card collections
+//!   - Card containment checks
+//!   - Combination generation (remaining cards, enumeration)
+//!   - Rank and suit extraction
+//!   - Uniqueness validation
+//!   - Hand evaluation delegation
+//!
+//! ### Game State and Actions
+//!
+//! - [`Agency`] - Player action permissions based on game state
+//!   - `can_act()` - Can player act at all?
+//!   - `can_given()` - Can player do action X given previous action Y?
+//!   - `can_given_against()` - Can player respond to opponent's action?
+//!
+//! - [`Betting`] - Chip management and wagering
+//!   - `all_in()` - Wager all remaining chips
+//!   - `bet()` - Wager specific amount
+//!   - `wins()` - Collect winnings
+//!   - Stack size queries
+//!
+//! ### Hand and Range Analysis
+//!
+//! - [`GTO`] - Range explosion and combo analysis
+//!   - `explode()` - Convert range to all two-card combinations
+//!   - `combo_pairs()` - Group combos by rank pattern
+//!
+//! ### Suit Permutation Analysis
+//!
+//! - [`SuitShift`] - Suit rotation operations
+//!   - `shift_suit_up()` / `shift_suit_down()` - Rotate suits
+//!   - `opposite()` - Find suit-shifted equivalent
+//!   - Essential for analyzing distinct hand patterns
+//!
+//! - [`Shifty`] - Comprehensive shift analysis
+//!   - `shifts()` - Generate all suit-shifted variants
+//!   - `other_shifts()` - Get non-identity shifts
+//!   - `is_shift()` - Check if two hands are suit-shifted versions
+//!
+//! ### Utility Traits
+//!
+//! - [`Forgiving`] - Graceful parsing with sensible defaults
+//!   - `forgiving_from_str()` - Parse with fallback to default
+//!   - Reduces error handling boilerplate
+//!
+//! - [`Plurable`] -  [Pluribus](https://en.wikipedia.org/wiki/Pluribus_(poker_bot)) AI log format parsing
+//!   - `from_pluribus()` - Parse hand notation from Pluribus logs
+//!
+//! - [`SOK`] - Validation checks
+//!   - `salright()` - Is this entity in a valid state?
+//!
+//! ## Constants and Metrics
+//!
+//! The crate defines comprehensive constants for poker mathematics,
+//! based on [Cactus Kev's evaluator](https://suffe.cool/poker/evaluator.html):
+//!
+//! ### Hand Classification Counts
+//!
+//! | Hand Type | Unique | Distinct |
+//! |-----------|--------|----------|
+//! | Straight Flushes | 40 | 10 |
+//! | Four of a Kind | 624 | 156 |
+//! | Full Houses | 3,744 | 156 |
+//! | Flushes | 5,108 | 1,277 |
+//! | Straights | 10,200 | 10 |
+//! | Three of a Kind | 54,912 | 858 |
+//! | Two Pair | 123,552 | 858 |
+//! | One Pair | 1,098,240 | 2,860 |
+//! | High Card | 1,302,540 | 1,277 |
+//!
+//! ### Hold'em-Specific Counts
+//!
+//! - [`UNIQUE_5_CARD_HANDS`] = 2,598,960 - All possible 5-card hands
+//! - [`DISTINCT_5_CARD_HANDS`] = 7,462 - Unique hand strengths
+//! - [`UNIQUE_2_CARD_HANDS`] = 1,326 - All starting hand combinations
+//! - [`DISTINCT_2_CARD_HANDS`] = 169 - Distinct starting hand patterns
+//! - [`POSSIBLE_UNIQUE_HOLDEM_HUP_MATCHUPS`] = 1,624,350 - Heads-up preflop scenarios
+//!
+//! ### Starting Hand Metrics
+//!
+//! - [`UNIQUE_POCKET_PAIRS`] = 78 - All pocket pair combinations
+//! - [`UNIQUE_SUITED_2_CARD_HANDS`] = 312 - All suited combinations
+//! - [`UNIQUE_PER_RANK_2_CARD_HANDS`] = 198 - Combinations per specific rank
+//! - [`UNIQUE_PER_SUIT_2_CARD_HANDS`] = 585 - Combinations per specific suit
+//!
+//! ## Error Handling
+//!
+//! The library uses a comprehensive [`PKError`] enum for all error conditions:
+//!
+//! - **Card Errors**: `BlankCard`, `InvalidCard`, `DuplicateCard`
+//! - **Action Errors**: `InvalidAction`, `ActionIsntFinished`
+//! - **Betting Errors**: `InsufficientChips`, `Busted`
+//! - **Data Errors**: `NotDealt`, `AlreadyDealt`, `TooManyCards`
+//! - **System Errors**: `DBConnectionError`, `SqlError`
+//! - **Parsing Errors**: `InvalidCardNumber`, `InvalidRangeIndex`
+//!
+//! All errors implement `std::error::Error` and can be converted from `rusqlite::Error`.
+//!
+//! ## Database Integration
+//!
+//! Precomputed heads-up results can be stored in `SQLite`:
+//!
+//! - **Type**: [`analysis::store::db::hup::HUPResult`]
+//! - **Trait**: Implements `Sqlable` for insert/query operations
+//! - **Configuration**: Set `HUPS_DB_PATH` environment variable (default: `generated/hups.db`)
+//! - **Persistence**: Efficient bulk loading and querying
+//! - **Features**: Split pot tracking, win/loss counts
+//!
+//! Add to `.env`:
+//! ```env
+//! HUPS_DB_PATH=generated/hups.db
+//! ```
+//!
+//! ## Examples
+//!
+//! ### Parsing and Evaluating a Hand at the Turn:
+//!
+//! `cargo run --example simple_eval_example`
+//!
+//! ```rust
+//! use pkcore::prelude::*;
+//!
+//! // 1st player has A♠ K♥ while 2nd player has 8♦ K♣
+//! let hands = HoleCards::from_str("A♠ KH 8♦ K♣").unwrap();
+//! let board = Board::from_str("A♣ 8♥ 7♥ 9♠").unwrap();
+//! let game = Game::new(hands, board);
+//!
+//! let case_evals = game.turn_case_evals();
+//! let outs = Outs::from(&case_evals);
+//!
+//!
+//! let player1_outs = outs.get(1).unwrap();
+//! let player2_outs = outs.get(2).unwrap();
+//!
+//! // Show the outs for each player
+//! println!("Player #1 has {} outs: {}", player1_outs.len(), player1_outs);
+//! assert_eq!("K♠ Q♠ J♠ T♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ Q♥ J♥ T♥ 9♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ Q♣ J♣ T♣ 9♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣", player1_outs.to_string());
+//! println!("Player #2 has {} outs: {}", player2_outs.len(), player2_outs);
+//! assert_eq!("8♠ 8♣", player2_outs.to_string());
+//!
+//! // Show each players odds of winning against every possible card dealt as well
+//! // as their best hand at the turn.
+//! game.turn_display_odds().expect("TurnDisplayOdds");
+//! ```
+//!
+//! ### Showing Remaining Card Combinations
+//!
+//! `cargo run --example simple_collections_example`
+//!
+//! ```rust
+//! use pkcore::prelude::*;
+//!
+//! let hand: Cards = "As Ks".parse().unwrap();
+//! let board: Cards = "Qs Js Ts".parse().unwrap();
+//!
+//! // Get remaining cards
+//! let remaining = hand.remaining_after(&board);
+//! println!("Cards left in deck: {}", remaining.len());
+//! assert_eq!(47, remaining.len());
+//!
+//! // Generate combinations
+//! for combo in hand.combinations_remaining(2) {
+//!     println!("Possible combo: {}", Cards::from(combo));
+//! }
+//! ```
+//!
+//! ### Suit-Shift Analysis
+//!
+//! In order to speed up the brute force analysis of every possible result of two hands playing
+//! against each other, I came up with the idea of suit-shifting.
+//!
+//! See `docs/EPIC-07_Transposition.md` for a detailed description of concept and rationale behind
+//! suit shifting.
+//!
+//! `cargo run --example simple_suit_shift_example`
+//!
+//! ```rust
+//! use pkcore::prelude::*;
+//!
+//! // Create a heads-up example where player 1 has A♠ K♠ and player 2 has A♥ K♥
+//! let hand: SortedHeadsUp = "As Ks Ah kh".parse().unwrap();
+//!
+//! // Find all suit-shifted variants
+//! let all_shifts = hand.shifts();
+//! println!("Total variants: {}", all_shifts.len());
+//! assert_eq!(6, all_shifts.len());
+//!
+//! for variant in all_shifts {
+//!     println!("{}", variant);
+//! }
+//! ```
+//!
+//! returns:
+//!
+//! ```shell
+//! Total variants: 6
+//! A♠ K♠ - A♥ K♥
+//! A♠ K♠ - A♦ K♦
+//! A♥ K♥ - A♦ K♦
+//! A♠ K♠ - A♣ K♣
+//! A♦ K♦ - A♣ K♣
+//! A♥ K♥ - A♣ K♣
+//! ```
+//!
+//! ## Performance Characteristics
+//!
+//! - **Card Operations**: O(1) lookups via bit representation
+//! - **Hand Evaluation**: ~50ns per 5-card hand (Cactus Kev algorithm)
+//! - **Combination Generation**: Lazy iteration without pre-allocation
+//! - **Memory**: Minimal card representation (~4 bytes per card)
+//! - **Database**: Pre-computed results enable instant lookups
+//!
+//! ## Compiler Features
+//!
+//! The crate uses Clippy's pedantic checking and forbids unsafe unwrap patterns:
+//! - `#![warn(clippy::pedantic)]` - Strict code quality checks
+//! - `#![warn(clippy::unwrap_used)]` - Unsafe unwrap detection
+//! - `#![warn(clippy::expect_used)]` - Unsafe expect detection
+//!
+//! Several allowances are configured for practical implementation:
+//! - `non_upper_case_globals` - Library constants use camelCase
+//! - `clippy::upper_case_acronyms` - Pragmatic acronym naming
+//! - Other pragmatic exceptions for macro expansions and inheritance patterns
+//!
+//! ## Philosophy
+//!
+//! `pkcore` is built on principles of:
+//! - **Correctness**: Comprehensive error handling and validation
+//! - **Performance**: Bit-level optimizations where appropriate
+//! - **Clarity**: Descriptive naming and extensive documentation
+//! - **Testability**: Extensive testing, with strict GitHub actions validation
+
 extern crate core;
 
 use crate::bard::Bard;

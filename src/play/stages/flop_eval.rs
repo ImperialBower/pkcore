@@ -5,6 +5,7 @@ use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
+use crate::prelude::Table;
 use crate::util::wincounter::results::Results;
 use crate::util::wincounter::wins::Wins;
 use crate::{PKError, Pile};
@@ -285,6 +286,14 @@ impl TryFrom<Game> for FlopEval {
         } else {
             Ok(FlopEval::new(game.board.flop, game.hands))
         }
+    }
+}
+
+impl TryFrom<&Table> for FlopEval {
+    type Error = PKError;
+
+    fn try_from(table: &Table) -> Result<Self, Self::Error> {
+        FlopEval::try_from(Game::try_from(table)?)
     }
 }
 

@@ -265,8 +265,8 @@ impl TryFrom<Vec<Card>> for Seven {
 #[allow(non_snake_case)]
 mod arrays__seven_tests {
     use super::*;
-    use crate::analysis::class::Class;
-    use crate::analysis::name::Name;
+    use crate::analysis::class::HandRankClass;
+    use crate::analysis::name::HandRankName;
     use crate::util::data::TestData;
 
     const CARDS: [Card; 7] = [
@@ -313,8 +313,8 @@ mod arrays__seven_tests {
     fn hand_rank() {
         let (hr, best) = Seven::from(CARDS).hand_rank_and_hand();
         assert_eq!(1608, hr.value);
-        assert_eq!(Class::SixHighStraight, hr.class);
-        assert_eq!(Name::Straight, hr.name);
+        assert_eq!(HandRankClass::SixHighStraight, hr.class);
+        assert_eq!(HandRankName::Straight, hr.name);
         assert_eq!(Five::from_str("6S 5D 4S 3C 2S").unwrap(), best);
     }
 

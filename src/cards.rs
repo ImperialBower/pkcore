@@ -196,6 +196,19 @@ impl Cards {
         Ok(v)
     }
 
+    /// Confirms if `Cards` can be evenly divided by `x`.
+    ///
+    /// TODO: Refactor this to return the `Cards` as `BoxedCards`, instead of an examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let cards = cards!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠");
+    /// let byx = cards.by_x(2).unwrap();
+    /// assert_eq!(cards!("6♠ 5♠"), cards.by_x(2).unwrap());
+    /// assert!(cards.by_x(3).is_err());
+    /// ```
+    ///
     /// # Errors
     ///
     /// Returns `PKError::Misaligned` if the cards cannot be evenly divided by `x`.
@@ -947,7 +960,7 @@ mod cards_tests {
     #[test]
     fn deck_primed() {
         let deck_minus = TestData::the_hand_cards();
-        let expected = "8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ T♠ 2♥ 9♣ 6♦ 5♥ 5♠ 8♠ A♠ Q♠ J♠ 9♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 7♣ 6♣ 3♣ 2♣";
+        let expected = "T♠ 2♥ 8♣ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♦ 4♣ 7♣ 9♣ 6♦ 5♥ 5♠ 8♠ A♠ Q♠ J♠ 9♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 6♣ 3♣ 2♣";
 
         let primed = Cards::deck_primed(&deck_minus);
 

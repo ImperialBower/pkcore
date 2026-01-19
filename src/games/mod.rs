@@ -56,47 +56,96 @@ pub enum GamePhase {
     #[default]
     Break,
     NewHand,
+    PreFlop,
     ShuffleNewDeck,
     ForcedBets,
-    BettingPreFlop,
-    BurnCardBeforeFlop,
     DealHoleCards,
+    BettingPreFlop,
     ConsolidatePreFlopBets,
+    Flop,
+    BurnCardBeforeFlop,
     DealFlop,
     BettingFlop,
     ConsolidateFlopBets,
+    Turn,
     BurnCardBeforeTurn,
     DealTurn,
     BettingTurn,
     ConsolidateTurnBets,
+    River,
     BurnCardBeforeRiver,
     DealRiver,
     BettingRiver,
-    AwardWinners,
+    Showdown,
+    PayWinners,
 }
 
 impl GamePhase {
     #[must_use]
+    pub fn is_preflop(&self) -> bool {
+        matches!(
+            self,
+            GamePhase::NewHand
+                | GamePhase::ShuffleNewDeck
+                | GamePhase::ForcedBets
+                | GamePhase::DealHoleCards
+                | GamePhase::BettingPreFlop
+                | GamePhase::ConsolidatePreFlopBets
+        )
+    }
+
+    #[must_use]
+    pub fn is_flop(&self) -> bool {
+        matches!(
+            self,
+            GamePhase::BurnCardBeforeFlop
+                | GamePhase::DealFlop
+                | GamePhase::BettingFlop
+                | GamePhase::ConsolidateFlopBets
+        )
+    }
+
+    #[must_use]
+    pub fn is_turn(&self) -> bool {
+        matches!(
+            self,
+            GamePhase::BurnCardBeforeTurn
+                | GamePhase::DealTurn
+                | GamePhase::BettingTurn
+                | GamePhase::ConsolidateTurnBets
+        )
+    }
+
+    #[must_use]
+    pub fn is_river(&self) -> bool {
+        matches!(
+            self,
+            GamePhase::BurnCardBeforeRiver | GamePhase::DealRiver | GamePhase::BettingRiver
+        )
+    }
+
+    #[must_use]
     pub fn next(&self) -> GamePhase {
         match self {
-            GamePhase::NewHand => GamePhase::ShuffleNewDeck,
+            GamePhase::NewHand | GamePhase::PreFlop => GamePhase::ShuffleNewDeck,
             GamePhase::ShuffleNewDeck => GamePhase::ForcedBets,
             GamePhase::ForcedBets => GamePhase::DealHoleCards,
             GamePhase::DealHoleCards => GamePhase::BettingPreFlop,
             GamePhase::BettingPreFlop => GamePhase::ConsolidatePreFlopBets,
-            GamePhase::ConsolidatePreFlopBets => GamePhase::BurnCardBeforeFlop,
+            GamePhase::ConsolidatePreFlopBets | GamePhase::Flop => GamePhase::BurnCardBeforeFlop,
             GamePhase::BurnCardBeforeFlop => GamePhase::DealFlop,
             GamePhase::DealFlop => GamePhase::BettingFlop,
             GamePhase::BettingFlop => GamePhase::ConsolidateFlopBets,
-            GamePhase::ConsolidateFlopBets => GamePhase::BurnCardBeforeTurn,
+            GamePhase::ConsolidateFlopBets | GamePhase::Turn => GamePhase::BurnCardBeforeTurn,
             GamePhase::BurnCardBeforeTurn => GamePhase::DealTurn,
             GamePhase::DealTurn => GamePhase::BettingTurn,
             GamePhase::BettingTurn => GamePhase::ConsolidateTurnBets,
-            GamePhase::ConsolidateTurnBets => GamePhase::BurnCardBeforeRiver,
+            GamePhase::ConsolidateTurnBets | GamePhase::River => GamePhase::BurnCardBeforeRiver,
             GamePhase::BurnCardBeforeRiver => GamePhase::DealRiver,
             GamePhase::DealRiver => GamePhase::BettingRiver,
-            GamePhase::BettingRiver => GamePhase::AwardWinners,
-            GamePhase::Break | GamePhase::AwardWinners => GamePhase::NewHand,
+            GamePhase::BettingRiver => GamePhase::Showdown,
+            GamePhase::Showdown => GamePhase::PayWinners,
+            GamePhase::Break | GamePhase::PayWinners => GamePhase::NewHand,
         }
     }
 }
@@ -105,24 +154,29 @@ impl std::fmt::Display for GamePhase {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             GamePhase::Break => write!(f, "Break"),
+            GamePhase::PreFlop => write!(f, "Pre-Flop"),
             GamePhase::NewHand => write!(f, "New Hand"),
             GamePhase::ShuffleNewDeck => write!(f, "Shuffle New Deck"),
+            GamePhase::DealHoleCards => write!(f, "Deal Hole Cards"),
             GamePhase::ForcedBets => write!(f, "Forced Bets"),
             GamePhase::BettingPreFlop => write!(f, "Pre-Flop Betting"),
+            GamePhase::Flop => write!(f, "Flop"),
             GamePhase::BurnCardBeforeFlop => write!(f, "Burn Card Before Flop"),
-            GamePhase::DealHoleCards => write!(f, "Deal Hole Cards"),
             GamePhase::ConsolidatePreFlopBets => write!(f, "Consolidate Pre-Flop Bets"),
             GamePhase::DealFlop => write!(f, "Deal Flop"),
             GamePhase::BettingFlop => write!(f, "Flop Betting"),
             GamePhase::ConsolidateFlopBets => write!(f, "Consolidate Flop Bets"),
+            GamePhase::Turn => write!(f, "Turn"),
             GamePhase::BurnCardBeforeTurn => write!(f, "Burn Card Before Turn"),
             GamePhase::DealTurn => write!(f, "Deal Turn"),
             GamePhase::BettingTurn => write!(f, "Turn Betting"),
             GamePhase::ConsolidateTurnBets => write!(f, "Consolidate Turn Bets"),
+            GamePhase::River => write!(f, "River"),
             GamePhase::BurnCardBeforeRiver => write!(f, "Burn Card Before River"),
             GamePhase::DealRiver => write!(f, "Deal River"),
             GamePhase::BettingRiver => write!(f, "River Betting"),
-            GamePhase::AwardWinners => write!(f, "Award Winners"),
+            GamePhase::Showdown => write!(f, "Award Winners"),
+            GamePhase::PayWinners => write!(f, "Pay Winners"),
         }
     }
 }

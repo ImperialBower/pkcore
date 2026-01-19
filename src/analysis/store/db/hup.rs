@@ -24,6 +24,9 @@ pub struct HUPResult {
 }
 
 impl HUPResult {
+    const DEFAULT_DB_PATH: &'static str = "generated/hups.db";
+    const ENV_KEY: &'static str = "HUPS_DB_PATH";
+
     pub fn db_count(conn: &Connection) -> (usize, usize) {
         let all = HUPResult::select_all(conn);
         let len = all.len();
@@ -37,6 +40,11 @@ impl HUPResult {
     pub fn db_is_valid(conn: &Connection) -> bool {
         let (v, hs) = HUPResult::db_count(conn);
         v == hs
+    }
+
+    #[must_use]
+    pub fn db_path() -> String {
+        dotenvy::var(Self::ENV_KEY).unwrap_or_else(|_| Self::DEFAULT_DB_PATH.to_string())
     }
 
     /// # Errors
@@ -180,6 +188,13 @@ impl HUPResult {
     #[must_use]
     pub fn get_sorted_heads_up(&self) -> Option<SortedHeadsUp> {
         SortedHeadsUp::try_from(self).ok()
+    }
+
+    /// # Errors
+    ///
+    /// Returns error if unable to open connection.
+    pub fn open_connection() -> rusqlite::Result<Connection> {
+        Connection::open(Self::db_path())
     }
 
     /// # Errors

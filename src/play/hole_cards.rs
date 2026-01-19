@@ -7,6 +7,7 @@ use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::cards::Cards;
 use crate::play::board::Board;
+use crate::prelude::Seats;
 use crate::util::Util;
 use crate::{Card, PKError, Pile, Plurable, TheNuts};
 use itertools::Itertools;
@@ -195,6 +196,18 @@ impl fmt::Display for HoleCards {
     }
 }
 
+impl From<Seats> for HoleCards {
+    fn from(seats: Seats) -> Self {
+        let mut hands = HoleCards::with_capacity(seats.size() as usize);
+        for seat in seats.iter() {
+            if seat.is_in_hand() {
+                hands.push(Two::try_from(seat.borrow().cards.as_slice()).unwrap_or_default());
+            }
+        }
+        hands
+    }
+}
+
 impl From<Vec<Two>> for HoleCards {
     fn from(v: Vec<Two>) -> Self {
         HoleCards(v)
@@ -273,7 +286,7 @@ impl TryFrom<Cards> for HoleCards {
 #[allow(non_snake_case)]
 mod play__hold_cards_tests {
     use super::*;
-    use crate::analysis::class::Class;
+    use crate::analysis::class::HandRankClass;
     use crate::util::data::TestData;
     use rstest::rstest;
 
@@ -366,8 +379,8 @@ mod play__hold_cards_tests {
         let case_eval = the_hand.hands.river_case_eval(&the_hand.board);
 
         assert_eq!(124, case_eval.winning_hand_rank().value);
-        assert_eq!(Class::FourFives, case_eval.get(1).unwrap().hand_rank.class);
-        assert_eq!(Class::SixesOverFives, case_eval.get(0).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::FourFives, case_eval.get(1).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::SixesOverFives, case_eval.get(0).unwrap().hand_rank.class);
     }
 
     #[test]
@@ -427,6 +440,16 @@ mod play__hold_cards_tests {
         let expected = HoleCards::from_str("Qc 4h Tc 9c 8s As Qh 7c Jc Qd 5h 5d").unwrap();
 
         assert_eq!(expected, HoleCards::from_pluribus(raw).unwrap());
+    }
+
+    #[test]
+    fn from__seats() {
+        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let expected = "[T♠ 2♥, 8♠ 3♥, A♦ Q♣, 5♦ 5♣, 6♠ 6♥, K♠ J♦, 4♦ 4♣, 7♣ 2♣]";
+
+        let hands = HoleCards::from(seats);
+
+        assert_eq!(expected, hands.to_string());
     }
 
     #[test]

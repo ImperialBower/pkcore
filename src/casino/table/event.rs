@@ -41,6 +41,8 @@ pub enum TableAction {
     TakePlayerCards(u8, Bard),
     TakeBoardCards(Bard),
     ClosesTheAction(u8),
+    PlayerWins(u8, Uuid, Bard, usize), // (seat, player_id, winning_hand, amount_won, in_showdown)
+    PlayerLoses(u8, Uuid, Bard, usize), // (seat, player_id, winning_hand, amount_lost, in_showdown)
     InvalidAction,
     Error(PKError),
     DeckPassesAudit,
@@ -65,6 +67,11 @@ impl TableAction {
         }
     }
 
+    #[must_use]
+    pub fn generate_player_loses(&self) -> TableAction {
+        todo!()
+    }
+
     /// Returns the seat number for the `TableAction`, if there is one.
     #[must_use]
     pub fn get_seat(&self) -> Option<u8> {
@@ -84,6 +91,8 @@ impl TableAction {
             | TableAction::Raise(seat, _)
             | TableAction::AllIn(seat, _)
             | TableAction::Fold(seat)
+            | TableAction::PlayerWins(seat, _, _, _)
+            | TableAction::PlayerLoses(seat, _, _, _)
             | TableAction::MuckPlayerCards(seat, _)
             | TableAction::TakePlayerCards(seat, _) => Some(*seat),
             _ => None,
@@ -139,7 +148,7 @@ impl Display for TableAction {
             TableAction::BetAnteForced(seat, amount) => {
                 write!(f, "Seat {seat} Antes {amount}")
             }
-            TableAction::DealingXCards(x) => write!(f, "Dealing {x} cards to each player"),
+            TableAction::DealingXCards(x) => write!(f, "Dealing out {x} cards"),
             TableAction::Dealt(seat, cards) => write!(f, "Seat {seat} is dealt {}", Cards::from(*cards)),
             TableAction::DealtFlop(cards) => write!(f, "Flop is {}", Cards::from(*cards)),
             TableAction::DealtTurn(cards) => write!(f, "Turn is {}", Cards::from(*cards)),
@@ -165,6 +174,16 @@ impl Display for TableAction {
             }
             TableAction::TakeBoardCards(cards) => write!(f, "Take board cards: {}", Cards::from(*cards)),
             TableAction::ClosesTheAction(seat) => write!(f, "Seat {seat} closes the action"),
+            TableAction::PlayerWins(seat, player_id, winning_hand, amount_won) => write!(
+                f,
+                "Seat {seat} (Player {player_id}) wins {amount_won} with {}",
+                Cards::from(*winning_hand)
+            ),
+            TableAction::PlayerLoses(seat, player_id, losing_hand, amount_lost) => write!(
+                f,
+                "Seat {seat} (Player {player_id}) loses {amount_lost} with {}",
+                Cards::from(*losing_hand)
+            ),
             TableAction::InvalidAction => write!(f, "Invalid Action"),
             TableAction::Error(err) => write!(f, "Error: {err}"),
             TableAction::DeckPassesAudit => write!(f, "Deck passes audit"),

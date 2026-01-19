@@ -28,6 +28,10 @@ impl SeatCell {
         self.0.into_inner()
     }
 
+    pub fn is_in_hand(&self) -> bool {
+        self.borrow().player.state.is_in_hand()
+    }
+
     pub fn is_yet_to_act(&self) -> bool {
         self.borrow().player.state.is_yet_to_act()
     }
@@ -93,6 +97,10 @@ impl Seat {
 
     pub fn is_active(&self) -> bool {
         self.player.state.is_active()
+    }
+
+    pub fn is_all_in(&self) -> bool {
+        self.player.is_all_in()
     }
 
     pub fn is_empty(&self) -> bool {

@@ -8,12 +8,12 @@ use crate::arrays::seven::Seven;
 use crate::arrays::six::Six;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
+use crate::play::stages::turn_eval::TurnEval;
+use crate::prelude::Table;
 use crate::util::wincounter::results::Results;
 use crate::util::wincounter::wins::Wins;
 use crate::{Card, Cards, PKError, Pile, TheNuts};
-use log::debug;
 use std::fmt::{Display, Formatter};
-use std::sync::mpsc;
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -226,6 +226,11 @@ impl Game {
         Game { hands, board }
     }
 
+    #[must_use]
+    pub fn has_dealt_turn(&self) -> bool {
+        self.board.flop.is_dealt() && self.board.turn.is_dealt()
+    }
+
     // region The Turn
 
     /// Function that does the work. I can see this returning outs as well.
@@ -243,57 +248,26 @@ impl Game {
         (case_evals, wins, results, outs)
     }
 
-    /// This is really a sort of utility method so that I can quickly
-    /// generate a specific `CaseEval` at the turn.
+    /// # Errors
     ///
-    /// The hardest part about writing the method is going to be generating
-    /// a good test expected value. Within our domain, our state transformations are now
-    /// getting fairly complicated. Well, let's see how it goes...
-    #[must_use]
-    pub fn turn_case_eval(&self, case: &Card) -> CaseEval {
-        let mut case_eval = CaseEval::new(Cards::from(case));
-        for (i, player) in self.hands.iter().enumerate() {
-            let seven = Seven::from_case_at_turn(*player, self.board.flop, self.board.turn, *case);
-            let eval = Eval::from(seven);
-
-            case_eval.push(eval);
-
-            debug!("Player {} {}: {}", i + 1, *player, eval);
-        }
-        case_eval
+    /// Throws `PKError::NotEnoughCards` if there are not enough cards on the `Board`.
+    pub fn turn_eval(&self) -> Result<TurnEval, PKError> {
+        TurnEval::try_from(self)
     }
 
     /// Returns all the possible `CaseEvals` for the `Game` at the turn.
     #[must_use]
     pub fn turn_case_evals(&self) -> CaseEvals {
-        debug!(
-            "PlayerWins.case_evals_turn(hands: {} flop: {} turn: {})",
-            self.hands, self.board.flop, self.board.turn
-        );
-
-        let mut case_evals = CaseEvals::default();
-
-        for (j, case) in self.turn_remaining().iter().enumerate() {
-            debug!(
-                "{}: FLOP: {} TURN: {} RIVER: {} -------",
-                j, self.board.flop, self.board.turn, case
-            );
-
-            case_evals.push(self.turn_case_eval(case));
-        }
-
-        case_evals
+        TurnEval::case_evals(self)
     }
 
     fn turn_cards(&self) -> Cards {
-        let mut cards = self.board.flop.cards();
-        cards.insert(self.board.turn);
-        cards
+        self.board.turn_cards()
     }
 
     /// Returns the Cards remaining after you remove the flop, the turn, and the
     /// cards held by all the players.
-    fn turn_remaining(&self) -> Cards {
+    pub(crate) fn turn_remaining(&self) -> Cards {
         let mut cards = self.turn_cards();
         cards.insert_all(&self.hands.cards());
         Cards::deck_minus(&cards)
@@ -394,33 +368,9 @@ impl Game {
     /// Throws `PKError::Fubar` if there is an invalid index.
     pub fn turn_display_odds(&self) -> Result<(), PKError> {
         if self.board.turn.is_dealt() {
-            let (_, _, results, outs) = self.turn_calculations();
-
-            let winning_player = outs.longest_player();
-
-            println!();
-            println!("The Turn: {}", self.board.turn);
-
-            for (i, hole_cards) in self.hands.iter().enumerate() {
-                let player_id = i + 1;
-                println!(
-                    "  Player #{} [{}] {}",
-                    player_id,
-                    hole_cards,
-                    results.player_to_string(i)
-                );
-                println!("    HAND: {}", self.turn_eval_for_player_str(i)?);
-                if player_id != winning_player {
-                    match outs.get(player_id) {
-                        None => {}
-                        Some(cards) => {
-                            println!("    OUTS: {cards}");
-                        }
-                    }
-                }
-            }
+            let turn_eval = self.turn_eval()?;
+            println!("{turn_eval}");
         }
-
         Ok(())
     }
 
@@ -461,80 +411,15 @@ impl Game {
         }
     }
 
-    /// I don't think I am doing this right. The nuts at the turn shouldn't have any idea what the
-    /// cards being held are. Could it  be that I did the flop wrong too? Lemme think about this.
-    ///
-    /// It could be that there is simply no point for this function. What's important at the turn
-    /// is odds and outs.
-    ///
-    /// # Refactor
-    ///
-    /// I want to try to use concurrency to speed up the code we've written so far. The long term
-    /// goal is to take on pre-flop odds, which require a massive amounts of time. Right now
-    /// the code executed in `calc` feels sluggish.
-    ///
-    /// TBH, using `calc` as our method of getting a feel for our code's performance is going
-    /// to hit a wall. Eventually, we're going to want to write some real performance tests.
-    ///
-    /// OK, after the first refactoring, we've got the execution time of this method down
-    /// from 19 seconds to 4. This, just by executing `Seven.eval()` in its own thread.
-    ///
-    /// The only problem is, that the test is floppy, with the test line
-    /// `assert_eq!(5306, evals.get(61).unwrap().hand_rank.value);` not always returning
-    /// the same result. This is an issue that needs to be tracked down.
-    ///
-    /// # Panics
-    ///
-    /// Hard to imaging when this would panic from a case iterator.
     #[must_use]
     pub fn turn_the_nuts(&self) -> TheNuts {
-        if !self.board.flop.is_dealt() || !self.board.turn.is_dealt() {
+        let turn_eval = TurnEval::try_from(self).unwrap_or_default();
+
+        if !turn_eval.game.has_dealt_turn() {
             return TheNuts::default();
         }
 
-        let mut the_nuts = TheNuts::default();
-        let board = self.flop_and_turn();
-
-        // let gto = self.turn_remaining_board().combinations(3);
-        // let chunks = gto.chunks(5);
-        let (sender, receiver) = mpsc::channel();
-
-        // for chunk in &chunks {
-        //     for v in chunk {
-        //         if let Ok(seven) = Game::flop_get_seven(board, &v) {
-        //             let sender = sender.clone();
-        //
-        //             thread::spawn(move || {
-        //                 sender.send(seven.eval()).unwrap();
-        //             });
-        //         }
-        //     }
-        // }
-
-        for v in self.turn_remaining_board().combinations(3) {
-            if let Ok(seven) = Game::flop_get_seven(board, &v) {
-                let sender = sender.clone();
-                // handle send errors instead of panicking
-                // DIARY: I need to get used to this pattern where the assignment is on the left.
-                // It's counterintuitive to me.
-                if let Err(e) = sender.send(seven.eval()) {
-                    log::error!("turn_the_nuts: failed to send eval from thread: {e:?}");
-                }
-            }
-        }
-
-        drop(sender);
-
-        for received in receiver {
-            the_nuts.push(received);
-        }
-
-        // This had no effect on the floppiness of the ignored test.
-        // thread::sleep(Duration::from_millis(1000));
-
-        the_nuts.sort_in_place();
-
-        the_nuts
+        turn_eval.the_nuts()
     }
 
     // endregion
@@ -679,7 +564,7 @@ impl Game {
 
                 for (i, eval) in case_eval.iter().enumerate() {
                     if eval.hand_rank == winning_hand_rank {
-                        println!("   Player #{}: {eval} WINS!", i + 1);
+                        println!("   Player #{}: {eval} has the best hand!", i + 1);
                     } else {
                         println!("   Player #{}: {eval}", i + 1);
                     }
@@ -720,14 +605,38 @@ impl Display for Game {
     }
 }
 
+impl TryFrom<Table> for Game {
+    type Error = PKError;
+
+    fn try_from(table: Table) -> Result<Self, Self::Error> {
+        Ok(Game {
+            hands: HoleCards::from(table.seats),
+            board: Board::try_from(table.board)?,
+        })
+    }
+}
+
+impl TryFrom<&Table> for Game {
+    type Error = PKError;
+
+    fn try_from(table: &Table) -> Result<Self, Self::Error> {
+        Ok(Game {
+            hands: HoleCards::from(table.seats.clone()),
+            board: Board::try_from(table.board.clone())?,
+        })
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod play__game_tests {
     use super::*;
     use crate::Evals;
-    use crate::analysis::class::Class;
+    use crate::analysis::class::HandRankClass;
+    use crate::analysis::name::HandRankName;
     use crate::arrays::three::Three;
     use crate::arrays::two::Two;
+    use crate::play::stages::flop_eval::FlopEval;
     use crate::util::data::TestData;
     use crate::util::wincounter::win::Win;
     use std::str::FromStr;
@@ -737,19 +646,6 @@ mod play__game_tests {
         let game = TestData::the_hand();
 
         assert_eq!(game, Game::new(game.hands.clone(), game.board));
-    }
-
-    #[test]
-    fn case_eval_at_turn() {
-        let game = Game {
-            hands: TestData::hole_cards_the_hand(),
-            board: Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap(),
-        };
-
-        let actual = game.turn_case_eval(&Card::SIX_CLUBS);
-
-        assert_eq!(Win::FIRST, actual.win_count());
-        assert_eq!(Card::SIX_CLUBS, actual.card());
     }
 
     #[test]
@@ -1024,10 +920,10 @@ mod play__game_tests {
             Win::FIRST | Win::SECOND | Win::THIRD | Win::FORTH,
             case_eval.win_count()
         );
-        assert_eq!(Class::FourJacks, case_eval.get(0).unwrap().hand_rank.class);
-        assert_eq!(Class::FourJacks, case_eval.get(1).unwrap().hand_rank.class);
-        assert_eq!(Class::FourJacks, case_eval.get(2).unwrap().hand_rank.class);
-        assert_eq!(Class::FourJacks, case_eval.get(3).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::FourJacks, case_eval.get(0).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::FourJacks, case_eval.get(1).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::FourJacks, case_eval.get(2).unwrap().hand_rank.class);
+        assert_eq!(HandRankClass::FourJacks, case_eval.get(3).unwrap().hand_rank.class);
     }
 
     /// I really like this test, even though it asserts nothing. It's just making sure that we
@@ -1051,6 +947,48 @@ mod play__game_tests {
             "DEALT: [6♠ 6♥, 5♦ 5♣] FLOP: 9♣ 6♦ 5♥, TURN: 5♠, RIVER: 8♠",
             TestData::the_hand().to_string()
         );
+    }
+
+    #[test]
+    fn try_from__table() {
+        let table = TestData::min_table();
+        table.deal_cards_to_seats().expect("WOOPSIE!!!");
+        table.deal_flop().expect("No flop");
+        let _ = table.act_fold(0).unwrap();
+
+        let game = Game::try_from(table.clone()).unwrap();
+
+        let flop_eval = FlopEval::try_from(game.clone()).unwrap();
+        let fe_gus = flop_eval.eval_for_player(0).unwrap();
+        let fe_daniel = flop_eval.eval_for_player(1).unwrap();
+
+        assert_eq!(HandRankName::ThreeOfAKind, fe_gus.hand_rank.name);
+        assert_eq!(HandRankClass::ThreeFives, fe_gus.hand_rank.class);
+        assert_eq!(2251, fe_gus.hand_rank.value);
+
+        assert_eq!(HandRankName::ThreeOfAKind, fe_daniel.hand_rank.name);
+        assert_eq!(HandRankClass::ThreeSixes, fe_daniel.hand_rank.class);
+        assert_eq!(2185, fe_daniel.hand_rank.value);
+
+        table.deal_turn().expect("No turn");
+        let game = Game::try_from(table.clone()).unwrap();
+
+        game.turn_display_odds().unwrap();
+
+        table.deal_river().expect("No turn");
+        let game = Game::try_from(table.clone()).unwrap();
+
+        game.river_display_results();
+
+        // println!("{:#?}", game);
+
+        //
+        // let table = TestData::the_table();
+        // let game = TestData::the_hand();
+        //
+        // let actual = Game::try_from(table).unwrap();
+        //
+        // assert_eq!(game, actual);
     }
 
     /// This test comes out of an issue discovered by running the cards from this
