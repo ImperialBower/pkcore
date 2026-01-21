@@ -15,7 +15,7 @@ use pkcore::util::data::TestData;
 /// Season 2, Episode 11
 /// `cargo run --example the_hand`
 fn main() -> Result<(), PKError> {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("trace")).init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     let table = TestData::the_hand_table();
 
