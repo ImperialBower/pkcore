@@ -46,8 +46,6 @@ To open the generated docs in your browser:
 Some of the library and examples will be looking for a `.env` file in the root of the project. Simply copy
 `.env.example` to `.env` and modify as needed.
 
-```shell
-
 ## Documentation
 
 For comprehensive API documentation, run:
@@ -183,7 +181,7 @@ Elapsed: 484.90ms
 
 ### GTO
 
-A preliminary GTO combo string calculatore is available at [gto](examples/gto.rs). Here's an example
+A preliminary GTO combo string calculator is available at [gto](examples/gto.rs). Here's an example
 that shows how a player would fare against an opponent with a common opening range.
 
 ```shell
