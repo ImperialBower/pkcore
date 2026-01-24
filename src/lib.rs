@@ -13,6 +13,9 @@
 //!
 //! A comprehensive poker library for Texas Hold'em analysis, evaluation, and game simulation.
 //!
+//! *ASIDE: This documentation block was originally generated with AI. Required a lot of rework, but it did
+//! create an interesting overview.*
+//!
 //! ## Overview
 //!
 //! `pkcore` is a high-performance Rust library designed for serious poker analysis and game theory applications.
