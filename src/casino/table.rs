@@ -318,17 +318,17 @@ impl Table {
 
             let winnings = self.pot.takes();
             if let Some(mut seat) = self.get_seat_mut(winner_seat_number) {
-                let case_eval = Game::try_from(self)?.river_case_eval()?.winning_hand_rank();
-                let hand = case_eval.
-                self.log_info(TableAction::PlayerWins(winner_seat_number, seat.player.id,  winnings.count()));
-                seat.player.chips.add(winnings);
-
-                println!(
-                    "   Player #{}: {} wins the pot of {} chips!",
-                    winner_seat_number + 1,
-                    seat.player.handle,
-                    winnings.count()
-                );
+                // let case_eval = Game::try_from(self)?.river_case_eval()?.winning_hand_rank();
+                // let hand = case_eval.
+                // self.log_info(TableAction::PlayerWins(winner_seat_number, seat.player.id,  winnings.count()));
+                // seat.player.chips.add(winnings);
+                //
+                // println!(
+                //     "   Player #{}: {} wins the pot of {} chips!",
+                //     winner_seat_number + 1,
+                //     seat.player.handle,
+                //     winnings.count()
+                // );
             }
 
             // 4. Return all cards to deck
