@@ -228,10 +228,10 @@ impl Seats {
     pub fn active_in_hand(&self) -> Vec<u8> {
         let mut seats: Vec<u8> = Vec::new();
 
-        for (seat_number, seat_cell) in &self.0.iter().enumerate() {
+        for (seat_number, seat_cell) in self.iter().enumerate() {
             let seat = seat_cell.borrow();
             if seat.is_active() {
-                seats.push(seat_number);
+                seats.push(seat_number as u8);
             }
         }
 
