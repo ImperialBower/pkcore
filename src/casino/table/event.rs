@@ -41,6 +41,7 @@ pub enum TableAction {
     TakePlayerCards(u8, Bard),
     TakeBoardCards(Bard),
     ClosesTheAction(u8),
+    EndHand,
     PlayerWins(u8, Uuid, Bard, usize), // (seat, player_id, winning_hand, amount_won, in_showdown)
     PlayerLoses(u8, Uuid, Bard, usize), // (seat, player_id, winning_hand, amount_lost, in_showdown)
     InvalidAction,
@@ -63,6 +64,9 @@ impl TableAction {
             TableAction::Check(_) => format!("{name} checks"),
             TableAction::Dealt(_, bard) => format!("{name} dealt {}", Cards::from(*bard)),
             TableAction::DealtFlop(bard) => format!("Flop is {}", Cards::from(*bard)),
+            TableAction::DealtTurn(bard) => format!("Turn is {}", Cards::from(*bard)),
+            TableAction::DealtRiver(bard) => format!("River is {}", Cards::from(*bard)),
+            TableAction::EndHand => "Hand over.".to_string(),
             _ => self.to_string(),
         }
     }
@@ -174,6 +178,7 @@ impl Display for TableAction {
             }
             TableAction::TakeBoardCards(cards) => write!(f, "Take board cards: {}", Cards::from(*cards)),
             TableAction::ClosesTheAction(seat) => write!(f, "Seat {seat} closes the action"),
+            TableAction::EndHand => write!(f, "End Hand"),
             TableAction::PlayerWins(seat, player_id, winning_hand, amount_won) => write!(
                 f,
                 "Seat {seat} (Player {player_id}) wins {amount_won} with {}",

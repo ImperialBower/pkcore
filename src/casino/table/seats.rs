@@ -225,6 +225,19 @@ impl Seats {
         count
     }
 
+    pub fn active_in_hand(&self) -> Vec<u8> {
+        let mut seats: Vec<u8> = Vec::new();
+
+        for (seat_number, seat_cell) in &self.0.iter().enumerate() {
+            let seat = seat_cell.borrow();
+            if seat.is_active() {
+                seats.push(seat_number);
+            }
+        }
+
+        seats
+    }
+
     #[must_use]
     pub fn count_able_to_bet_in_hand(&self) -> usize {
         let mut count = 0;

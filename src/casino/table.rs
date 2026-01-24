@@ -292,6 +292,100 @@ impl Table {
         self.log_info(TableAction::NewHand);
     }
 
+    pub fn end_hand(&self) -> Result<(), PKError> {
+        self.log_info(TableAction::EndHand);
+
+        if !self.is_game_over() {
+            return Err(PKError::ActionIsntFinished);
+        }
+
+        // 1. Bring in any remaining bets to the pot
+        let _ = self.bring_it_in()?;
+
+        // 2. How many players are still active?
+        let active_seats = match self.seats.active_in_hand() {
+            Some(seats) => seats,
+            None => {
+                self.log_warn(TableAction::Error(PKError::Fubar));
+                return Err(PKError::Fubar);
+            }
+        };
+
+        // 3. If only one player is left, they win the pot automatically.
+        if active_seats.len() == 1 {
+
+            let winner_seat_number = active_seats.first();
+
+            // let winnings = self.pot.count();
+            // if let Some(mut seat) = self.get_seat_mut(winner_seat_number) {
+            //     seat.player.chips.add(winnings);
+            //     self.log_info(TableAction::PlayerWins(winner_seat_number, winnings));
+            // }
+            //
+            // // 3. Clear the pot
+            // self.pot.clear();
+
+            // 4. Return all cards to deck
+            self.muck_cards_in_play();
+            self.muck_deck();
+            self.deck.insert_all(self.muck.take());
+            self.deck.sort_in_place();
+
+            // 5. Reset player states
+            self.seats.reset_state();
+
+            // 6. Set phase to end of hand
+            self.set_phase(GamePhase::PayWinners);
+
+            return Ok(());
+        }
+
+        // 1. Determine winners and show cards
+        let game = Game::try_from(self)?;
+        let case_eval = game.river_case_eval()?;
+
+        let winning_hand_rank = case_eval.winning_hand_rank();
+
+        for (i, eval) in case_eval.iter().enumerate() {
+            if eval.hand_rank == winning_hand_rank {
+                println!("   Player #{}: {eval} has the best hand!", i + 1);
+            } else {
+                println!("   Player #{}: {eval}", i + 1);
+            }
+        }
+        //
+        // // 2. Distribute pot to winners
+        // for winner in results.winners() {
+        //     if let Some(mut seat) = self.get_seat_mut(winner.seat_number) {
+        //         let winnings = winner.amount;
+        //         seat.player.chips.add(winnings);
+        //         self.log_info(TableAction::PlayerWins(winner.seat_number, winnings));
+        //     }
+        // }
+        //
+        // // 3. Clear the pot
+        // self.pot.clear();
+        //
+        // // 4. Return all cards to deck
+        // self.muck_cards_in_play();
+        // self.muck_deck();
+        // self.deck.insert_all(self.muck.take());
+        // self.deck.sort_in_place();
+        //
+        // // 5. Reset player states
+        // self.seats.reset_state();
+        //
+        // // 6. Set phase to end of hand
+        // self.set_phase(GamePhase::Showdown);
+
+        Ok(())
+    }
+
+    pub fn act_pay_out(&self) -> Result<(), PKError> {
+
+        Ok(())
+    }
+
     pub fn act_shuffle_deck(&self) {
         self.set_phase(GamePhase::ShuffleNewDeck);
         self.deck.shuffle_in_place();
@@ -654,14 +748,6 @@ impl Table {
         }
 
         if self.is_river() && self.seats.is_betting_complete() {
-            return true;
-        }
-
-        false
-    }
-
-    pub fn is_hand_over(&self) -> bool {
-        if self.seats.count_active_in_hand() <= 1 {
             return true;
         }
 
@@ -1055,6 +1141,22 @@ mod casino__table_tests {
 
         assert_eq!("A♦ Q♣, 5♦ 5♣, 6♠ 6♥", table.seats.cards_string());
         assert!(table.seats_are_dealt());
+    }
+
+    #[test]
+    fn end_hand() {
+        let table = TestData::the_hand_table();
+        table.act_forced_bets().expect("ActForcedBets failed");
+        table.deal_cards_to_seats().expect("Failed to deal cards to seats");
+        table.act_fold(3).expect("ActFolded");
+        table.act_fold(4).expect("ActFolded");
+        table.act_fold(5).expect("ActFolded");
+        table.act_fold(6).expect("ActFolded");
+        table.act_fold(7).expect("ActFolded");
+        table.act_fold(0).expect("ActFolded");
+        table.act_fold(1).expect("ActFolded");
+
+
     }
 
     #[test]
