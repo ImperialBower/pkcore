@@ -183,7 +183,7 @@ Elapsed: 484.90ms
 
 ### GTO
 
-A preliminary GTO combo string calculatore is available at [gto](examples/gto.rs). Here's an example
+A preliminary GTO combo string calculator is available at [gto](examples/gto.rs). Here's an example
 that shows how a player would fare against an opponent with a common opening range.
 
 ```shell
