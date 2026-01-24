@@ -282,6 +282,9 @@ fn river(table: &Table) -> Result<(), PKError> {
     assert!(table.seats.is_betting_complete());
     assert!(table.is_game_over());
 
+    let pot = table.bring_it_in()?;
+    assert_eq!(2000150, pot);
+
     commentary_action_to(table);
 
     table.eval_river_display();

@@ -225,13 +225,17 @@ impl Seats {
         count
     }
 
+    #[must_use]
     pub fn active_in_hand(&self) -> Vec<u8> {
         let mut seats: Vec<u8> = Vec::new();
 
         for (seat_number, seat_cell) in self.iter().enumerate() {
             let seat = seat_cell.borrow();
             if seat.is_active() {
-                seats.push(seat_number as u8);
+                match u8::try_from(seat_number) {
+                    Ok(snumber) => seats.push(snumber),
+                    Err(e) => log::error!("Failed to convert seat number to u8: {e}"),
+                }
             }
         }
 

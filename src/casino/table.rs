@@ -16,7 +16,6 @@ use crate::{PKError, Pile};
 use bint::{BintCell, DrainableBintCell};
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
-use std::ops::Add;
 use uuid::Uuid;
 
 pub mod event;
@@ -26,6 +25,8 @@ pub mod seats;
 
 /// There are up to 3 total burn cards in a Texas Hold'em poker hand. Before dealing the flop,
 /// turn, or river, the dealer is required to take the top card from the deck and burn (discard) it.
+///
+/// I have a strong love/hate relationship with this struct. In many ways it's a mutability hack
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Table {
     pub id: Uuid,
@@ -222,8 +223,11 @@ impl Table {
 
             drop(seat);
             let amount = folded_chips.count();
+
             self.pot.add_to(folded_chips);
             self.log_info(TableAction::Fold(seat_number));
+            self.log_info(TableAction::BringItIn(amount));
+            self.log_debug(TableAction::PotSize(self.pot.count()));
 
             self.player_mucks_cards(seat_number);
 
@@ -293,12 +297,22 @@ impl Table {
         self.log_info(TableAction::NewHand);
     }
 
-    pub fn end_hand(&self) -> Result<(), PKError> {
+    /// Fuck, this is going to be an ugly function. I just need to drive through it and try to
+    /// clean it up (refactor) once I am satisfied that it works. Martin Fowler's book
+    /// [Refactoring](https://martinfowler.com/books/refactoring.html) is a really good resource for
+    /// this.
+    ///
+    /// # Errors
+    ///
+    /// `PKError::Fubar` if can't find seat.
+    pub fn end_hand(&self) -> Result<usize, PKError> {
         self.log_info(TableAction::EndHand);
 
         if !self.is_game_over() {
             return Err(PKError::ActionIsntFinished);
         }
+
+        let mut pot_size: usize = 0;
 
         // 1. Bring in any remaining bets to the pot
         let _ = self.bring_it_in()?;
@@ -308,15 +322,15 @@ impl Table {
 
         // 3. If only one player is left, they win the pot automatically.
         if active_seats.len() == 1 {
-
             let winner_seat_number: u8 = match active_seats.first() {
                 None => {
                     return Err(PKError::Fubar);
                 }
-                Some(i) => *i
+                Some(i) => *i,
             };
 
             let winnings = self.pot.takes();
+            pot_size = winnings.count();
             if let Some(mut seat) = self.get_seat_mut(winner_seat_number) {
                 // let case_eval = Game::try_from(self)?.river_case_eval()?.winning_hand_rank();
                 // let hand = case_eval.
@@ -343,7 +357,7 @@ impl Table {
             // 6. Set phase to end of hand
             self.set_phase(GamePhase::PayWinners);
 
-            return Ok(());
+            return Ok(pot_size);
         }
 
         // 1. Determine winners and show cards
@@ -384,12 +398,15 @@ impl Table {
         // // 6. Set phase to end of hand
         // self.set_phase(GamePhase::Showdown);
 
-        Ok(())
+        Ok(pot_size)
     }
 
-    pub fn act_pay_out(&self) -> Result<(), PKError> {
 
-        Ok(())
+    /// # Errors
+    ///
+    /// - `PKError::NotImplemented` if payout logic is not implemented.
+    pub fn act_pay_out(&self) -> Result<(), PKError> {
+        todo!()
     }
 
     pub fn act_shuffle_deck(&self) {
@@ -413,12 +430,26 @@ impl Table {
         let brought_in = self.seats.bring_it_in()?;
         self.log_info(TableAction::BringItIn(brought_in.count()));
         self.pot.add_to(brought_in);
+        self.log_debug(TableAction::PotSize(self.pot.count()));
         Ok(self.pot.count())
     }
 
     pub fn button_set(&self, seat_number: u8) {
         self.button.set(seat_number);
         self.log_info(TableAction::SetButton(seat_number));
+    }
+
+    pub fn cards_for_player_plus_board(&self, seat_number: u8) -> Option<Cards> {
+        // if let Some(seat) = self.get_seat(seat_number) {
+        //     let hold_cards = seat.cards.cards();
+        //     let board = self.board.cards();
+        //     let mut combined = seat.cards.clone();
+        //     combined.insert_all(self.board.cards());
+        //     Some(combined)
+        // } else {
+        //     None
+        // }
+        todo!()
     }
 
     pub fn commentary_action_to(&self) -> String {
@@ -1150,7 +1181,7 @@ mod casino__table_tests {
     }
 
     #[test]
-    fn end_hand() {
+    fn end_hand__everyone_folds_to_bb() {
         let table = TestData::the_hand_table();
         table.act_forced_bets().expect("ActForcedBets failed");
         table.deal_cards_to_seats().expect("Failed to deal cards to seats");
@@ -1162,7 +1193,15 @@ mod casino__table_tests {
         table.act_fold(0).expect("ActFolded");
         table.act_fold(1).expect("ActFolded");
 
+        assert_eq!(50, table.pot.count());
 
+        assert!(table.seats.is_betting_complete());
+        assert!(table.is_game_over());
+
+        let pot_size = table.end_hand().unwrap();
+
+        println!(">>>> {}", table.event_log.to_string());
+        assert_eq!(150, pot_size);
     }
 
     #[test]
