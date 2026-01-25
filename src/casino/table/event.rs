@@ -40,6 +40,7 @@ pub enum TableAction {
     SplitPots(),
     MainPot(usize),
     SidePot(usize),
+    SplitPot(u8, usize), // (number of winners, pot size)
     MuckCards(Bard),
     MuckPlayerCards(u8, Bard),
     TakePlayerCards(u8, Bard),
@@ -75,6 +76,7 @@ impl TableAction {
             TableAction::PotSize(amount) => format!("{amount} pots size"),
             TableAction::MainPot(amount) => format!("Main pot {amount}"),
             TableAction::SidePot(amount) => format!("Side pot {amount}"),
+            TableAction::SplitPot(number, size) => format!("{size} split pot between {number} players"),
             TableAction::Dealt(_, bard) => format!("{name} dealt {}", Cards::from(*bard)),
             TableAction::DealtFlop(bard) => format!("Flop is {}", Cards::from(*bard)),
             TableAction::DealtTurn(bard) => format!("Turn is {}", Cards::from(*bard)),
@@ -207,6 +209,9 @@ impl Display for TableAction {
             TableAction::SplitPots() => write!(f, "Split Pots"),
             TableAction::MainPot(amount) => write!(f, "Main Pot is {amount}"),
             TableAction::SidePot(amount) => write!(f, "Side Pot is {amount}"),
+            TableAction::SplitPot(number, size) => {
+                write!(f, "{size} split pot between {number} players")
+            }
             TableAction::MuckCards(cards) => write!(f, "Muck cards: {}", Cards::from(*cards)),
             TableAction::MuckPlayerCards(seat, cards) => {
                 write!(f, "Muck player {seat}'s cards: {}", Cards::from(*cards))
