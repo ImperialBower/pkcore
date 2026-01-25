@@ -438,6 +438,7 @@ pub enum PKError {
     InvalidComboIndex,
     InvalidHand,
     InvalidCardIndex,
+    InvalidIO,
     InvalidLength,
     InvalidPermutationIndex,
     InvalidPluribusIndex,
@@ -484,6 +485,7 @@ impl Display for PKError {
             PKError::InvalidCardIndex => "Invalid Card Index Error",
             PKError::InvalidComboIndex => "Invalid Combo Index Error",
             PKError::InvalidHand => "Invalid Hand Error",
+            PKError::InvalidIO => "Invalid IO Error",
             PKError::InvalidLength => "Invalid Length Error",
             PKError::InvalidPermutationIndex => "Invalid Permutation Index Error",
             PKError::InvalidPluribusIndex => "Invalid Pluribus Index Error",
@@ -514,6 +516,13 @@ impl Error for PKError {}
 
 impl From<rusqlite::Error> for PKError {
     fn from(err: rusqlite::Error) -> Self {
+        log::error!("{err}");
+        PKError::DBConnectionError
+    }
+}
+
+impl From<std::io::Error> for PKError {
+    fn from(err: std::io::Error) -> Self {
         log::error!("{err}");
         PKError::DBConnectionError
     }

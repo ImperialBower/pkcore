@@ -8,6 +8,8 @@ use pkcore::util::data::TestData;
 /// Here's a recreation of "The Hand" between Daniel Negreanu and Gus Hansen, using strict
 /// assertions to validate that the `Table` engine is working correctly.
 ///
+/// TODO: Can I add a way to automate tests based on the logs?
+///
 /// `cargo run --example calc -- -d "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"` HSP THE HAND Negreanu/Hansen
 ///     https://www.youtube.com/watch?v=vjM60lqRhPg
 ///     https://www.youtube.com/watch?v=fEEW06iX4n8
@@ -24,6 +26,16 @@ fn main() -> Result<(), PKError> {
     flop(&table)?;
     turn(&table)?;
     river(&table)?;
+
+    println!("\nDump event logs? (y/n): ");
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input)?;
+
+    if input.trim().eq_ignore_ascii_case("y") {
+        // table.commentary_dump();
+        println!("{}", table.event_log.to_string());
+    }
+
 
     Ok(())
 }

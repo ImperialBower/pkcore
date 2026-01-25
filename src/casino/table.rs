@@ -232,7 +232,6 @@ impl Table {
             self.player_mucks_cards(seat_number);
 
             self.action_to_next();
-            self.log_info(TableAction::ActionTo(self.next_to_act()));
             Ok(amount)
         } else {
             log::error!("Failed to find seat #{seat_number} for folding");
