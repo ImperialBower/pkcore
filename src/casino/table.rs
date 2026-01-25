@@ -329,17 +329,25 @@ impl Table {
                 Some(i) => *i,
             };
 
-            // The fact that I need to call this outside the mutable borrow of the seat is annoying
-            // AF,
-            let effective_cards = self.effective_player_cards(winner_seat_number).ok_or(PKError::Fubar)?;
-
             let winnings = self.pot.takes();
             pot_size = winnings.count();
             if let Some(mut seat) = self.get_seat_mut(winner_seat_number) {
-                // let case_eval = Game::try_from(self)?.river_case_eval()?.winning_hand_rank();
-                // let hand = case_eval.
-                // self.log_info(TableAction::PlayerWins(winner_seat_number, seat.player.id,  winnings.count()));
-                // seat.player.chips.add(winnings);
+                // Cards cards????
+                let player_cards = seat.cards.cards().clone() + self.board.cards().clone();
+
+                let action = TableAction::PlayerWins(
+                    winner_seat_number,
+                    seat.player.id,
+                    player_cards.bard(),
+                    winnings.count(),
+                );
+
+                // The fact that I need to make this call directly and can't use the log_info method
+                // is a sign that I am pushing things to the limit. 
+                log::info!("{}", action.commentary(&seat.player.handle));
+                self.event_log.log(action);
+
+                seat.player.chips.add_to(winnings)
                 //
                 // println!(
                 //     "   Player #{}: {} wins the pot of {} chips!",
@@ -669,13 +677,10 @@ impl Table {
 
     pub fn effective_player_cards(&self, seat_number: u8) -> Option<Cards> {
         if let Some(seat) = self.get_seat(seat_number) {
-            let mut cards = seat.cards.cards();
-            cards.append(&self.board.cards());
-            Some(cards)
+            Some(seat.cards.cards() + self.board.cards())
         } else {
             None
         }
-        // todo!()
     }
 
     /// # Errors
