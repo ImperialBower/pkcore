@@ -206,6 +206,10 @@ impl Player {
         }
 
         let player_bet = self.bet.takes();
+        // NOTE: This doesn't work for issue with end of hand, since this is used to keep track
+        // of how many chips the player has in play for the hand.
+        // let chips_in_play = self.chips_in_play.take();
+        // assert_eq!(player_bet.count(), chips_in_play);
 
         log::trace!("{} brings in {} chips", self.handle, player_bet);
 
