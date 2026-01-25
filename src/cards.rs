@@ -18,7 +18,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::fmt::Formatter;
 use std::hash::Hash;
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
+use std::ops::{Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::str::FromStr;
 use strum::IntoEnumIterator;
 
@@ -546,6 +546,25 @@ impl Cards {
     }
 
     //endregion
+}
+
+/// I'll be honest with you, I used CoPilot to create this shit. I'm need to get this library to a
+/// place where it can be networked. Yes, I could do the work... I've done it before, but I need
+/// this shit fast.
+impl Add for Cards {
+    type Output = Cards;
+
+    fn add(self, rhs: Cards) -> Self::Output {
+        let mut out = self.clone();
+        out.append(&rhs);
+        out
+    }
+}
+
+impl AddAssign for Cards {
+    fn add_assign(&mut self, rhs: Cards) {
+        self.append(&rhs);
+    }
 }
 
 impl BitAnd for Cards {
@@ -1269,6 +1288,55 @@ mod cards_tests {
     //endregion
 
     //region trait tests
+
+    // Rust
+    #[test]
+    fn add__combines_preserving_order_and_uniqueness() {
+        let left = cards!("A♠ K♠ Q♠");
+        let right = cards!("J♠ T♠ Q♠"); // Q♠ is a dupe
+
+        let combined = left + right;
+
+        // Order should be: left first, then right's non\-duplicates in order
+        assert_eq!(combined.to_string(), "A♠ K♠ Q♠ J♠ T♠");
+        assert_eq!(combined.len(), 5);
+    }
+
+    #[test]
+    fn addassign__combines_preserving_order_and_uniqueness() {
+        let mut deck1 = cards!("A♥ K♥ Q♥");
+        let deck2 = cards!("J♥ Q♥ T♥"); // Q♥ is a dupe
+
+        deck1 += deck2;
+
+        assert_eq!(deck1.to_string(), "A♥ K♥ Q♥ J♥ T♥");
+        assert_eq!(deck1.len(), 5);
+    }
+
+    #[test]
+    fn add__with_empty_rhs_and_lhs() {
+        let left = Cards::default();
+        let right = cards!("A♦ K♦");
+
+        let combined1 = left.clone() + right.clone();
+        let combined2 = right.clone() + Cards::default();
+
+        assert_eq!(combined1.to_string(), "A♦ K♦");
+        assert_eq!(combined2.to_string(), "A♦ K♦");
+    }
+
+    #[test]
+    fn addassign__with_empty_rhs_and_lhs() {
+        let mut left = Cards::default();
+        let right = cards!("A♣ K♣");
+
+        left += right.clone();
+        assert_eq!(left.to_string(), "A♣ K♣");
+
+        let mut left2 = right.clone();
+        left2 += Cards::default();
+        assert_eq!(left2.to_string(), "A♣ K♣");
+    }
 
     #[test]
     fn display() {

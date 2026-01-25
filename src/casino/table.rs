@@ -329,6 +329,10 @@ impl Table {
                 Some(i) => *i,
             };
 
+            // The fact that I need to call this outside the mutable borrow of the seat is annoying
+            // AF,
+            let effective_cards = self.effective_player_cards(winner_seat_number).ok_or(PKError::Fubar)?;
+
             let winnings = self.pot.takes();
             pot_size = winnings.count();
             if let Some(mut seat) = self.get_seat_mut(winner_seat_number) {
@@ -401,7 +405,6 @@ impl Table {
         Ok(pot_size)
     }
 
-
     /// # Errors
     ///
     /// - `PKError::NotImplemented` if payout logic is not implemented.
@@ -437,19 +440,6 @@ impl Table {
     pub fn button_set(&self, seat_number: u8) {
         self.button.set(seat_number);
         self.log_info(TableAction::SetButton(seat_number));
-    }
-
-    pub fn cards_for_player_plus_board(&self, seat_number: u8) -> Option<Cards> {
-        // if let Some(seat) = self.get_seat(seat_number) {
-        //     let hold_cards = seat.cards.cards();
-        //     let board = self.board.cards();
-        //     let mut combined = seat.cards.clone();
-        //     combined.insert_all(self.board.cards());
-        //     Some(combined)
-        // } else {
-        //     None
-        // }
-        todo!()
     }
 
     pub fn commentary_action_to(&self) -> String {
@@ -675,6 +665,17 @@ impl Table {
         } else {
             self.button.static_up_x(1).value
         }
+    }
+
+    pub fn effective_player_cards(&self, seat_number: u8) -> Option<Cards> {
+        if let Some(seat) = self.get_seat(seat_number) {
+            let mut cards = seat.cards.cards();
+            cards.append(&self.board.cards());
+            Some(cards)
+        } else {
+            None
+        }
+        // todo!()
     }
 
     /// # Errors
@@ -1181,6 +1182,27 @@ mod casino__table_tests {
     }
 
     #[test]
+    fn effective_player_cards() {
+        let table = TestData::the_hand_table();
+
+        table.deal_cards_to_seats().expect("Failed to deal cards to seats");
+        let seat_0_effective = table.effective_player_cards(0).unwrap();
+        assert_eq!("T♠ 2♥", seat_0_effective.to_string());
+
+        table.set_board(cards!("A♦ Q♣ 5♦"));
+
+        let seat_0_effective = table.effective_player_cards(0).unwrap();
+        assert_eq!("T♠ 2♥ A♦ Q♣ 5♦", seat_0_effective.to_string());
+
+        let seat_1_effective = table.effective_player_cards(1).unwrap();
+        assert_eq!("8♣ 3♥ A♦ Q♣ 5♦", seat_1_effective.to_string());
+
+        table.set_board(cards!("A♦ Q♣ 5♦ 4♦"));
+        let seat_0_effective = table.effective_player_cards(0).unwrap();
+        assert_eq!("T♠ 2♥ A♦ Q♣ 5♦ 4♦", seat_0_effective.to_string());
+    }
+
+    #[test]
     fn end_hand__everyone_folds_to_bb() {
         let table = TestData::the_hand_table();
         table.act_forced_bets().expect("ActForcedBets failed");
@@ -1197,6 +1219,8 @@ mod casino__table_tests {
 
         assert!(table.seats.is_betting_complete());
         assert!(table.is_game_over());
+        let seat_2_effective = table.effective_player_cards(2).unwrap();
+        assert_eq!("A♦ Q♣", seat_2_effective.to_string());
 
         let pot_size = table.end_hand().unwrap();
 
