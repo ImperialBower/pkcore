@@ -548,7 +548,7 @@ impl Cards {
     //endregion
 }
 
-/// I'll be honest with you, I used CoPilot to create this shit. I'm need to get this library to a
+/// I'll be honest with you, I used `CoPilot` to create this shit. I'm need to get this library to a
 /// place where it can be networked. Yes, I could do the work... I've done it before, but I need
 /// this shit fast.
 impl Add for Cards {

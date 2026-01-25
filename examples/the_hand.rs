@@ -36,7 +36,6 @@ fn main() -> Result<(), PKError> {
         println!("{}", table.event_log.to_string());
     }
 
-
     Ok(())
 }
 

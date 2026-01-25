@@ -37,12 +37,21 @@ pub enum TableAction {
     AllIn(u8, usize),
     Fold(u8),
     PotSize(usize),
+    SplitPots(),
+    MainPot(usize),
+    SidePot(usize),
     MuckCards(Bard),
     MuckPlayerCards(u8, Bard),
     TakePlayerCards(u8, Bard),
     TakeBoardCards(Bard),
     ClosesTheAction(u8),
     EndHand,
+    PlayerMucksCards(u8), // At a showdown one player mucks their cards rather than show them.
+    AllFoldedTo(u8),
+    PlayerWinsSidePot(u8, usize),
+    PlayerWinsMainPot(u8, usize),
+    PlayerLosesSidePot(u8, usize),
+    PlayerLosesMainPot(u8, usize),
     PlayerWins(u8, Uuid, Bard, usize), // (seat, player_id, winning_hand, amount_won, in_showdown)
     PlayerLoses(u8, Uuid, Bard, usize), // (seat, player_id, winning_hand, amount_lost, in_showdown)
     InvalidAction,
@@ -64,11 +73,33 @@ impl TableAction {
             TableAction::Fold(_) => format!("{name} folds"),
             TableAction::Check(_) => format!("{name} checks"),
             TableAction::PotSize(amount) => format!("{amount} pots size"),
+            TableAction::MainPot(amount) => format!("Main pot {amount}"),
+            TableAction::SidePot(amount) => format!("Side pot {amount}"),
             TableAction::Dealt(_, bard) => format!("{name} dealt {}", Cards::from(*bard)),
             TableAction::DealtFlop(bard) => format!("Flop is {}", Cards::from(*bard)),
             TableAction::DealtTurn(bard) => format!("Turn is {}", Cards::from(*bard)),
             TableAction::DealtRiver(bard) => format!("River is {}", Cards::from(*bard)),
             TableAction::EndHand => "Hand over.".to_string(),
+            TableAction::PlayerMucksCards(_u8) => format!("{name} mucks their cards."),
+            TableAction::AllFoldedTo(_) => format!("Everyone folds to {name}."),
+            TableAction::PlayerWinsSidePot(seat, winnings) => {
+                format!("{name} (Seat {seat}) wins side pot of {winnings}")
+            }
+            TableAction::PlayerWinsMainPot(seat, winnings) => {
+                format!("{name} (Seat {seat}) wins main pot of {winnings}")
+            }
+            TableAction::PlayerLosesSidePot(seat, losses) => {
+                format!("{name} (Seat {seat}) loses side pot of {losses}")
+            }
+            TableAction::PlayerLosesMainPot(seat, losses) => {
+                format!("{name} (Seat {seat}) loses main pot of {losses}")
+            }
+            TableAction::PlayerWins(seat, _, bard, winnings) => {
+                format!("{name} (Seat {seat}) wins {winnings} with {}", Cards::from(*bard))
+            }
+            TableAction::PlayerLoses(seat, _, bard, losses) => {
+                format!("{name} (Seat {seat}) loses {losses} with {}", Cards::from(*bard))
+            }
             _ => self.to_string(),
         }
     }
@@ -97,6 +128,7 @@ impl TableAction {
             | TableAction::Raise(seat, _)
             | TableAction::AllIn(seat, _)
             | TableAction::Fold(seat)
+            | TableAction::AllFoldedTo(seat)
             | TableAction::PlayerWins(seat, _, _, _)
             | TableAction::PlayerLoses(seat, _, _, _)
             | TableAction::MuckPlayerCards(seat, _)
@@ -172,6 +204,9 @@ impl Display for TableAction {
             TableAction::AllIn(seat, amount) => write!(f, "Seat {seat} goes all in with {amount}"),
             TableAction::Fold(seat) => write!(f, "Seat {seat} folds"),
             TableAction::PotSize(amount) => write!(f, "Pot size is {amount}"),
+            TableAction::SplitPots() => write!(f, "Split Pots"),
+            TableAction::MainPot(amount) => write!(f, "Main Pot is {amount}"),
+            TableAction::SidePot(amount) => write!(f, "Side Pot is {amount}"),
             TableAction::MuckCards(cards) => write!(f, "Muck cards: {}", Cards::from(*cards)),
             TableAction::MuckPlayerCards(seat, cards) => {
                 write!(f, "Muck player {seat}'s cards: {}", Cards::from(*cards))
@@ -182,6 +217,20 @@ impl Display for TableAction {
             TableAction::TakeBoardCards(cards) => write!(f, "Take board cards: {}", Cards::from(*cards)),
             TableAction::ClosesTheAction(seat) => write!(f, "Seat {seat} closes the action"),
             TableAction::EndHand => write!(f, "End Hand"),
+            TableAction::PlayerMucksCards(seat) => write!(f, "Seat {seat} mucks their cards"),
+            TableAction::AllFoldedTo(seat) => write!(f, "All folded to Seat {seat}"),
+            TableAction::PlayerWinsSidePot(seat, amount) => {
+                write!(f, "Seat {seat} wins side pot of {amount}")
+            }
+            TableAction::PlayerWinsMainPot(seat, amount) => {
+                write!(f, "Seat {seat} wins main pot of {amount}")
+            }
+            TableAction::PlayerLosesSidePot(seat, amount) => {
+                write!(f, "Seat {seat} loses side pot of {amount}")
+            }
+            TableAction::PlayerLosesMainPot(seat, amount) => {
+                write!(f, "Seat {seat} loses main pot of {amount}")
+            }
             TableAction::PlayerWins(seat, player_id, winning_hand, amount_won) => write!(
                 f,
                 "Seat {seat} (Player {player_id}) wins {amount_won} with {}",

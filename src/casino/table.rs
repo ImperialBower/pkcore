@@ -328,6 +328,8 @@ impl Table {
                 Some(i) => *i,
             };
 
+            self.log_info(TableAction::AllFoldedTo(winner_seat_number));
+
             let winnings = self.pot.takes();
             pot_size = winnings.count();
             if let Some(mut seat) = self.get_seat_mut(winner_seat_number) {
@@ -342,18 +344,11 @@ impl Table {
                 );
 
                 // The fact that I need to make this call directly and can't use the log_info method
-                // is a sign that I am pushing things to the limit. 
+                // is a sign that I am pushing things to the limit.
                 log::info!("{}", action.commentary(&seat.player.handle));
                 self.event_log.log(action);
 
-                seat.player.chips.add_to(winnings)
-                //
-                // println!(
-                //     "   Player #{}: {} wins the pot of {} chips!",
-                //     winner_seat_number + 1,
-                //     seat.player.handle,
-                //     winnings.count()
-                // );
+                seat.player.chips.add_to(winnings);
             }
 
             // 4. Return all cards to deck
