@@ -1325,6 +1325,12 @@ mod casino__table_tests {
 
         let pot_size = table.end_hand().unwrap();
 
+        if let Some(seat) = table.get_seat(2) {
+            assert_eq!(seat.player.state.get(), PlayerState::Blind(100));
+        } else {
+            panic!("Failed to get seat 2");
+        }
+
         println!(">>>> {}", table.event_log.to_string());
         assert_eq!(150, pot_size);
 
