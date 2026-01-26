@@ -640,6 +640,14 @@ impl Table {
     fn end_hand_all_fold_to(&self, winner_seat_number: u8) -> Result<usize, PKError> {
         self.log_info(TableAction::AllFoldedTo(winner_seat_number));
 
+        if let Some(seat) = self.get_seat_mut(winner_seat_number) {
+            let state = seat.player.state.clone().get();
+            log::trace!(
+                "Player {} state: {}",
+                seat.player.handle, state.to_string()
+            );
+        }
+
         // 1. Bring in any remaining bets to the pot
         let brought_in = self.bring_it_in()?;
         self.log_info(TableAction::BringItIn(brought_in));
