@@ -587,7 +587,7 @@ impl Table {
             return Err(PKError::ActionIsntFinished);
         }
 
-        let mut pot_size: usize = 0;
+        let pot_size: usize = 0;
 
         // How many players are still active?
         let active_seats = self.seats.active_in_hand();
@@ -642,10 +642,7 @@ impl Table {
 
         if let Some(seat) = self.get_seat_mut(winner_seat_number) {
             let state = seat.player.state.clone().get();
-            log::trace!(
-                "Player {} state: {}",
-                seat.player.handle, state.to_string()
-            );
+            log::trace!("Player {} state: {}", seat.player.handle, state);
         }
 
         // 1. Bring in any remaining bets to the pot
@@ -676,7 +673,9 @@ impl Table {
         // Set phase to end of hand
         self.set_phase(GamePhase::PayWinners);
 
-        return Ok(pot_size);
+        self.reset();
+
+        Ok(pot_size)
     }
 
     /// # Errors
@@ -896,7 +895,7 @@ impl Table {
 
     pub fn reset(&self) {
         self.muck_cards_in_play();
-        self.seats.reset_state();
+        self.seats.reset();
 
         self.deck.insert_all(self.muck.take());
         self.deck.sort_in_place();
@@ -1332,12 +1331,17 @@ mod casino__table_tests {
         for (seat_number, seat) in table.seats.iter().enumerate() {
             let seat = seat.borrow();
             assert_eq!(0, seat.player.bet.count(), "Seat #{} has non-zero bet", seat_number);
-            assert_eq!(0, table.to_call(seat_number as u8), "Seat #{} has non-zero to_call", seat_number);
+            assert_eq!(
+                0,
+                table.to_call(seat_number as u8),
+                "Seat #{} has non-zero to_call",
+                seat_number
+            );
         }
 
         if let Some(seat) = table.get_seat(1) {
             assert_eq!(999_950, seat.player.chips.count());
-            assert_eq!(seat.player.state.get(), PlayerState::Fold);
+            assert_eq!(seat.player.state.get(), PlayerState::YetToAct);
             assert_eq!(0, seat.player.get_chips_in_play());
         } else {
             panic!("Failed to get seat 1");
@@ -1345,11 +1349,16 @@ mod casino__table_tests {
 
         if let Some(seat) = table.get_seat(2) {
             assert_eq!(1_000_050, seat.player.chips.count());
-            assert_eq!(seat.player.state.get(), PlayerState::Bet(100));
-            assert_eq!(100, seat.player.get_chips_in_play());
+            assert_eq!(seat.player.bet.count(), 0);
+            // assert_eq!(seat.player.state.get(), PlayerState::Bet(100));
+            assert_eq!(0, seat.player.get_chips_in_play());
         } else {
             panic!("Failed to get seat 2");
         }
+
+        assert_eq!(GamePhase::PayWinners, table.get_phase());
+
+        println!("{table}");
     }
 
     #[test]

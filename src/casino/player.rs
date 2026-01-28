@@ -394,6 +394,11 @@ impl Player {
         }
     }
 
+    pub fn reset(&self) {
+        self.chips_in_play.set(0);
+        self.state.set(PlayerState::YetToAct);
+    }
+
     /// Returns the total count of the player that is in play.
     #[must_use]
     pub fn total_chip_count(&self) -> usize {

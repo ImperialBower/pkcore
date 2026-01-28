@@ -557,6 +557,13 @@ impl Seats {
         Err(PKError::InvalidSeatNumber)
     }
 
+    pub fn reset(&self) {
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow_mut();
+            seat.player.reset();
+        }
+    }
+
     /// Clears the `PlayerState` for all the seats.
     pub fn reset_state(&self) {
         for seat_cell in &self.0 {
