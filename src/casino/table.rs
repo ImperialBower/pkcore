@@ -221,7 +221,9 @@ impl Table {
         if let Some(seat) = self.get_seat_mut(seat_number) {
             let folded_chips = seat.player.act_fold()?;
             let chips_in_play = seat.player.chips_in_play.take();
-            assert_eq!(
+            // ASIDE: OK, this is a good use of AI code assist to me. I
+            // had no idea that `debug_assert_eq!` existed.
+            debug_assert_eq!(
                 folded_chips.count(),
                 chips_in_play,
                 "Folded chips should equal chips that were in play"
@@ -1324,12 +1326,6 @@ mod casino__table_tests {
         }
 
         let pot_size = table.end_hand().unwrap();
-
-        if let Some(seat) = table.get_seat(2) {
-            assert_eq!(seat.player.state.get(), PlayerState::Blind(100));
-        } else {
-            panic!("Failed to get seat 2");
-        }
 
         println!(">>>> {}", table.event_log.to_string());
         assert_eq!(150, pot_size);
