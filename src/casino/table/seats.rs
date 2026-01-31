@@ -129,10 +129,14 @@ impl Seats {
         }
     }
 
+    #[must_use] 
     pub fn are_brought_in(&self) -> bool {
-        self.borrow_all().iter().all(|seat| seat.borrow().player.bet.count() == 0)
+        self.borrow_all()
+            .iter()
+            .all(|seat| seat.borrow().player.bet.count() == 0)
     }
 
+    #[must_use] 
     pub fn are_clear(&self) -> bool {
         for seat_cell in &self.0 {
             if !seat_cell.is_clear() {

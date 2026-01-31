@@ -152,6 +152,19 @@ impl TableAction {
                 | TableAction::ClosesTheAction(_)
         )
     }
+
+    #[must_use]
+    pub fn is_result(&self) -> bool {
+        matches!(
+            self,
+            TableAction::PlayerWins(_, _, _, _)
+                | TableAction::PlayerLoses(_, _, _, _)
+                | TableAction::PlayerWinsMainPot(_, _)
+                | TableAction::PlayerWinsSidePot(_, _)
+                | TableAction::PlayerLosesMainPot(_, _)
+                | TableAction::PlayerLosesSidePot(_, _)
+        )
+    }
 }
 
 impl Display for TableAction {
@@ -354,6 +367,17 @@ mod casino__table__log_tests {
 
         assert_eq!(last_player_action, TableAction::Call(1, 200));
         assert!(TableLog::new().last_player_action().is_none());
+    }
+
+    #[test]
+    fn is_result() {
+        assert!(TableAction::PlayerWins(0, Uuid::nil(), Bard::default(), 100).is_result());
+        assert!(TableAction::PlayerLoses(0, Uuid::nil(), Bard::default(), 100).is_result());
+        assert!(TableAction::PlayerWinsMainPot(0, 100).is_result());
+        assert!(TableAction::PlayerWinsSidePot(0, 100).is_result());
+        assert!(TableAction::PlayerLosesMainPot(0, 100).is_result());
+        assert!(TableAction::PlayerLosesSidePot(0, 100).is_result());
+        assert!(!TableAction::Bet(0, 100).is_result());
     }
 
     #[test]

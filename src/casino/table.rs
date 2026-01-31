@@ -1911,7 +1911,10 @@ mod casino__table___end_hand_tests {
             assert_eq!(997_900, gus);
             assert_eq!(2_100, table.get_seat(3).unwrap().player.bet.count());
             assert_eq!(2_100, table.get_seat(3).unwrap().player.chips_in_play.get());
-            assert_eq!(table.event_log.last_player_action().unwrap(), TableAction::Bet(3, 2_100));
+            assert_eq!(
+                table.event_log.last_player_action().unwrap(),
+                TableAction::Bet(3, 2_100)
+            );
             assert_eq!(2_250, table.seats.chips_in_round());
             assert_eq!(4, table.next_to_act());
         }
@@ -1959,7 +1962,7 @@ mod casino__table___end_hand_tests {
         let gus_call = table.act_call(3).unwrap();
         {
             assert_eq!(5000, gus_call);
-            assert_eq!(995_000,  table.get_seat(3).unwrap().player.chips.count());
+            assert_eq!(995_000, table.get_seat(3).unwrap().player.chips.count());
             assert_eq!(5000, table.get_seat(3).unwrap().player.bet.count());
             assert_eq!(5000, table.get_seat(3).unwrap().player.chips_in_play.get());
             assert_eq!(10_000, table.seats.chips_in_round());
@@ -1973,7 +1976,13 @@ mod casino__table___end_hand_tests {
         let pot = table.bring_it_in().unwrap();
         {
             assert_eq!(10150, pot);
-            assert!(table.seats.borrow_all().iter().all(|seat| seat.borrow().player.bet.count() == 0));
+            assert!(
+                table
+                    .seats
+                    .borrow_all()
+                    .iter()
+                    .all(|seat| seat.borrow().player.bet.count() == 0)
+            );
             assert!(table.seats.are_brought_in());
         }
 
@@ -2142,15 +2151,21 @@ mod casino__table___end_hand_tests {
             assert_eq!(0, table.get_seat(4).unwrap().player.chips.count());
             assert_eq!(945_000, table.get_seat(4).unwrap().player.bet.count());
             assert_eq!(1_000_000, table.get_seat(4).unwrap().player.chips_in_play.get());
-            assert_eq!(2_955_000, table.seats.chips_in_round());
-            assert_eq!(3, table.next_to_act());
+            assert_eq!(1_890_000, table.seats.chips_in_round());
             assert_eq!(110_150, table.pot.count());
             assert!(table.seats.is_betting_complete());
             assert!(table.is_game_over());
+            assert_eq!(1, table.next_to_act());
             assert_eq!(
                 table.event_log.last_player_action().unwrap(),
                 TableAction::Call(4, 945_000)
             );
+        }
+
+        let pot = table.bring_it_in().unwrap();
+        {
+            assert_eq!(2_000_150, pot);
+            assert!(table.seats.are_brought_in());
         }
     }
 

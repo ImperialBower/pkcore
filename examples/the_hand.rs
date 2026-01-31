@@ -49,9 +49,9 @@ fn setup(table: &Table) -> Result<(), PKError> {
 }
 
 fn preflop(table: &Table) -> Result<(), PKError> {
-    let gus = table.act_bet(3, 2100)?;
+    let _gus = table.act_bet(3, 2100)?;
     commentary_action_to(&table);
-    let daniel = table.act_raise(4, 5000)?;
+    let _daniel = table.act_raise(4, 5000)?;
     commentary_action_to(&table);
 
     let _seat5_remaining = table.act_fold(5)?;
@@ -75,7 +75,7 @@ fn preflop(table: &Table) -> Result<(), PKError> {
     table.act_call(3)?;
     commentary_action_to(&table);
 
-    let pot = table.bring_it_in()?;
+    let _pot = table.bring_it_in()?;
 
     Ok(())
 }
@@ -89,11 +89,11 @@ fn flop(table: &Table) -> Result<(), PKError> {
     println!("The Nuts @ Flop:");
     println!("{}", table.eval_flop_the_nuts()?);
 
-    let gus = table.act_check(3)?;
-    let daniel = table.act_bet(4, 8_000)?;
-    let gus = table.act_raise(3, 26_000)?;
-    let daniel = table.act_call(4)?;
-    let pot = table.bring_it_in()?;
+    let _gus = table.act_check(3)?;
+    let _daniel = table.act_bet(4, 8_000)?;
+    let _gus = table.act_raise(3, 26_000)?;
+    let _daniel = table.act_call(4)?;
+    let _pot = table.bring_it_in()?;
 
     Ok(())
 }
@@ -102,13 +102,13 @@ fn turn(table: &Table) -> Result<(), PKError> {
     table.deal_turn().expect("No turn");
     table.eval_turn_display();
 
-    let gus = table.act_bet(3, 24_000)?;
+    let _gus = table.act_bet(3, 24_000)?;
     commentary_action_to(table);
 
     let _daniel = table.act_call(4)?;
     commentary_action_to(table);
 
-    let pot = table.bring_it_in()?;
+    let _pot = table.bring_it_in()?;
 
     Ok(())
 }
@@ -118,25 +118,19 @@ fn river(table: &Table) -> Result<(), PKError> {
 
     table.eval_river_display();
 
-    let gus = table.act_check(3)?;
+    let _gus = table.act_check(3)?;
     commentary_action_to(table);
 
-    let daniel = table.act_bet(4, 65_000)?;
+    let _daniel = table.act_bet(4, 65_000)?;
     commentary_action_to(table);
 
-    let gus = table.act_all_in(3)?;
+    let _gus = table.act_all_in(3)?;
     commentary_action_to(table);
 
-    let daniel = table.act_call(4)?;
-    assert_eq!(945_000, daniel);
-    assert_eq!(945_000, table.get_seat(3).unwrap().player.bet.count());
-    assert_eq!(1_000_000, table.get_seat(3).unwrap().player.chips_in_play.get());
-    assert!(table.seats.is_betting_complete());
-    assert!(table.is_game_over());
+    let _daniel = table.act_call(4)?;
+    commentary_action_to(table);
 
-    let pot = table.bring_it_in()?;
-    assert_eq!(2000150, pot);
-
+    let _pot = table.bring_it_in()?;
     commentary_action_to(table);
 
     table.eval_river_display();
