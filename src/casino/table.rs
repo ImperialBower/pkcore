@@ -1339,6 +1339,7 @@ mod casino__table_tests {
                 "Seat #{} has non-zero to_call",
                 seat_number
             );
+            assert_eq!(0, seat.cards.len());
         }
 
         if let Some(seat) = table.get_seat(1) {
@@ -1361,6 +1362,11 @@ mod casino__table_tests {
         assert_eq!(GamePhase::PayWinners, table.get_phase());
 
         println!("{table}");
+        println!("{}", table.deck);
+
+        assert_eq!(deck_cell!(), table.deck);
+        assert_eq!(table.deck.len(), 52);
+        // assert!(table.deck.)
     }
 
     #[test]
