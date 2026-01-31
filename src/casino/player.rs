@@ -364,6 +364,11 @@ impl Player {
         self.state.is_check()
     }
 
+    /// Returns true if there is no remaining state from a particular had still in the struct.
+    pub fn is_clear(&self) -> bool {
+        self.state.is_yet_to_act() && self.bet.is_empty() && self.chips_in_play.get() == 0
+    }
+
     pub fn is_in_hand(&self) -> bool {
         self.state.is_in_hand()
     }
@@ -394,6 +399,8 @@ impl Player {
         }
     }
 
+    /// Resets the player's state and chips in play for a new hand. NOTE: Does not reset chips
+    /// or bet, which must be done by Bring It In.
     pub fn reset(&self) {
         self.chips_in_play.set(0);
         self.state.set(PlayerState::YetToAct);
@@ -480,6 +487,8 @@ mod casino__players__player_tests {
         assert!(did_bring_it_in.is_ok());
         assert_eq!(Stack::new(100), did_bring_it_in.unwrap());
         assert_eq!(0, player.bet.count());
+        assert!(player.bet.is_empty());
+        assert_eq!(100, player.chips_in_play.get());
         assert_eq!(900, player.chips.count());
         assert_eq!(PlayerState::YetToAct, player.state.get());
     }
@@ -547,6 +556,25 @@ mod casino__players__player_tests {
         let _ = player.act_bet(500);
         assert!(player.is_all_in());
         assert_eq!(PlayerState::AllIn(500), player.state.get());
+    }
+
+    #[test]
+    fn is_clear() {
+        let player = Player::new_with_chips("Clear Carl".to_string(), 500);
+        assert!(player.is_clear());
+
+        let _ = player.act_bet(100);
+        assert!(!player.is_clear());
+
+        let _ = player.act_bring_it_in();
+        let _ = player.reset();
+        assert!(player.is_clear());
+
+        let _ = player.state.set(PlayerState::Fold);
+        assert!(!player.is_clear());
+
+        player.reset();
+        assert!(player.is_clear());
     }
 
     #[test]

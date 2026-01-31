@@ -1339,7 +1339,13 @@ mod casino__table_tests {
                 "Seat #{} has non-zero to_call",
                 seat_number
             );
-            assert_eq!(0, seat.cards.len());
+            assert!(
+                !seat.cards.has_cards(),
+                "Seat #{} has these cards: {}",
+                seat_number,
+                seat.cards
+            );
+            assert_eq!(seat.player.state.get(), PlayerState::YetToAct);
         }
 
         if let Some(seat) = table.get_seat(1) {
