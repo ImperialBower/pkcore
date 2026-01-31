@@ -2135,6 +2135,23 @@ mod casino__table___end_hand_tests {
             );
             assert!(!table.is_game_over());
         }
+
+        let daniel = table.act_call(4).unwrap();
+        {
+            assert_eq!(945_000, daniel);
+            assert_eq!(0, table.get_seat(4).unwrap().player.chips.count());
+            assert_eq!(945_000, table.get_seat(4).unwrap().player.bet.count());
+            assert_eq!(1_000_000, table.get_seat(4).unwrap().player.chips_in_play.get());
+            assert_eq!(2_955_000, table.seats.chips_in_round());
+            assert_eq!(3, table.next_to_act());
+            assert_eq!(110_150, table.pot.count());
+            assert!(table.seats.is_betting_complete());
+            assert!(table.is_game_over());
+            assert_eq!(
+                table.event_log.last_player_action().unwrap(),
+                TableAction::Call(4, 945_000)
+            );
+        }
     }
 
     #[test]
