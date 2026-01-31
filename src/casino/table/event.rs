@@ -328,6 +328,10 @@ impl TableLog {
     pub fn log(&self, action: TableAction) {
         self.0.borrow_mut().push(action);
     }
+
+    pub fn result_actions(&self) -> Vec<TableAction> {
+        self.0.borrow().iter().filter(|action| action.is_result()).copied().collect()
+    }
 }
 
 impl Display for TableLog {
@@ -394,6 +398,27 @@ mod casino__table__log_tests {
         assert_eq!(
             "1: Player 00000000-0000-0000-0000-000000000000 is seated at Seat 0\n2: Player 00000000-0000-0000-0000-000000000000 is seated at Seat 1\n3: Seat 0 puts in Small Blind of 50\n4: Seat 1 puts in Big Blind of 100\n5: Seat 0 is dealt A♠ K♠\n6: Seat 1 is dealt K♦ K♣",
             log.to_string()
+        );
+    }
+
+    #[test]
+    fn result_actions() {
+        let log = TableLog::new();
+
+        log.log(TableAction::PlayerSeated(0, Uuid::nil()));
+        log.log(TableAction::PlayerSeated(1, Uuid::nil()));
+        log.log(TableAction::PlayerWins(0, Uuid::nil(), Bard::from_str("AS KS").unwrap(), 100));
+        log.log(TableAction::PlayerLoses(1, Uuid::nil(), Bard::from_str("KD KC").unwrap(), 100));
+
+        let results = log.result_actions();
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(
+            results,
+            vec![
+                TableAction::PlayerWins(0, Uuid::nil(), Bard::from_str("AS KS").unwrap(), 100),
+                TableAction::PlayerLoses(1, Uuid::nil(), Bard::from_str("KD KC").unwrap(), 100)
+            ]
         );
     }
 }
