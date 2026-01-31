@@ -111,6 +111,31 @@ impl TableAction {
         todo!()
     }
 
+    #[must_use]
+    pub fn get_ammount(&self) -> Option<usize> {
+        match self {
+            TableAction::ForcedBet(_, amount)
+            | TableAction::ForcedBetSmallBlind(_, amount)
+            | TableAction::ForcedBetBigBlind(_, amount)
+            | TableAction::BetAnteForced(_, amount)
+            | TableAction::BringItIn(amount)
+            | TableAction::Bet(_, amount)
+            | TableAction::Call(_, amount)
+            | TableAction::Raise(_, amount)
+            | TableAction::AllIn(_, amount)
+            | TableAction::PotSize(amount)
+            | TableAction::MainPot(amount)
+            | TableAction::SidePot(amount)
+            | TableAction::PlayerWins(_, _, _, amount)
+            | TableAction::PlayerLoses(_, _, _, amount)
+            | TableAction::PlayerWinsSidePot(_, amount)
+            | TableAction::PlayerWinsMainPot(_, amount)
+            | TableAction::PlayerLosesSidePot(_, amount)
+            | TableAction::PlayerLosesMainPot(_, amount) => Some(*amount),
+            _ => None,
+        }
+    }
+
     /// Returns the seat number for the `TableAction`, if there is one.
     #[must_use]
     pub fn get_seat(&self) -> Option<u8> {
@@ -157,12 +182,12 @@ impl TableAction {
     pub fn is_result(&self) -> bool {
         matches!(
             self,
-            TableAction::PlayerWins(_, _, _, _)
-                | TableAction::PlayerLoses(_, _, _, _)
-                | TableAction::PlayerWinsMainPot(_, _)
-                | TableAction::PlayerWinsSidePot(_, _)
-                | TableAction::PlayerLosesMainPot(_, _)
-                | TableAction::PlayerLosesSidePot(_, _)
+            Self::PlayerWins(_, _, _, _)
+                | Self::PlayerLoses(_, _, _, _)
+                | Self::PlayerWinsMainPot(_, _)
+                | Self::PlayerWinsSidePot(_, _)
+                | Self::PlayerLosesMainPot(_, _)
+                | Self::PlayerLosesSidePot(_, _)
         )
     }
 }
@@ -302,6 +327,10 @@ impl TableLog {
         self.0.borrow().iter().copied().collect()
     }
 
+    pub fn get(&self, index: usize) -> Option<TableAction> {
+        self.0.borrow().get(index).copied()
+    }
+
     pub fn iter_reverse(&self) -> impl Iterator<Item = TableAction> {
         self.0.borrow().iter().rev().copied().collect::<Vec<_>>().into_iter()
     }
@@ -325,12 +354,26 @@ impl TableLog {
         self.iter_reverse().find(|&action| action.is_player_action())
     }
 
+    pub fn len(&self) -> usize {
+        self.0.borrow().len()
+    }
+
     pub fn log(&self, action: TableAction) {
         self.0.borrow_mut().push(action);
     }
 
     pub fn result_actions(&self) -> Vec<TableAction> {
         self.0.borrow().iter().filter(|action| action.is_result()).copied().collect()
+    }
+
+    pub fn is_results_only(&self) -> bool {
+        let internal = self.0.borrow();
+        internal.iter().all(|action| action.is_result())
+    }
+
+    pub fn results_only(&self) -> TableLog {
+        let results: Vec<TableAction> = self.result_actions();
+        TableLog::from(results)
     }
 }
 
@@ -343,6 +386,12 @@ impl Display for TableLog {
             .map(|(i, action)| format!("{}: {}", i + 1, action))
             .collect();
         write!(f, "{}", lines.join("\n"))
+    }
+}
+
+impl From<Vec<TableAction>> for TableLog {
+    fn from(actions: Vec<TableAction>) -> Self {
+        Self(RefCell::new(actions))
     }
 }
 
@@ -419,6 +468,28 @@ mod casino__table__log_tests {
                 TableAction::PlayerWins(0, Uuid::nil(), Bard::from_str("AS KS").unwrap(), 100),
                 TableAction::PlayerLoses(1, Uuid::nil(), Bard::from_str("KD KC").unwrap(), 100)
             ]
+        );
+    }
+
+    #[test]
+    fn results_only() {
+        let log = TableLog::new();
+
+        log.log(TableAction::PlayerSeated(0, Uuid::nil()));
+        log.log(TableAction::PlayerSeated(1, Uuid::nil()));
+        log.log(TableAction::PlayerWins(0, Uuid::nil(), Bard::from_str("AS KS").unwrap(), 100));
+        log.log(TableAction::PlayerLoses(1, Uuid::nil(), Bard::from_str("KD KC").unwrap(), 100));
+
+        let results = log.results_only();
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(
+            results,
+            TableLog::from(
+            vec![
+                TableAction::PlayerWins(0, Uuid::nil(), Bard::from_str("AS KS").unwrap(), 100),
+                TableAction::PlayerLoses(1, Uuid::nil(), Bard::from_str("KD KC").unwrap(), 100)
+            ])
         );
     }
 }

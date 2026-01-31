@@ -582,28 +582,27 @@ impl Table {
     /// # Errors
     ///
     /// `PKError::Fubar` if can't find seat.
-    pub fn end_hand(&self) -> Result<usize, PKError> {
+    pub fn end_hand(&self) -> Result<TableLog, PKError> {
         self.log_info(TableAction::EndHand);
 
         if !self.is_game_over() {
             return Err(PKError::ActionIsntFinished);
         }
 
-        let pot_size: usize = 0;
-
         // How many players are still active?
         let active_seats = self.seats.active_in_hand();
+        {
+            // If only one player is left, they win the pot automatically.
+            if active_seats.len() == 1 {
+                let winner_seat_number: u8 = match active_seats.first() {
+                    None => {
+                        return Err(PKError::Fubar);
+                    }
+                    Some(i) => *i,
+                };
 
-        // If only one player is left, they win the pot automatically.
-        if active_seats.len() == 1 {
-            let winner_seat_number: u8 = match active_seats.first() {
-                None => {
-                    return Err(PKError::Fubar);
-                }
-                Some(i) => *i,
-            };
-
-            return self.end_hand_all_fold_to(winner_seat_number);
+                return self.end_hand_all_fold_to(winner_seat_number);
+            }
         }
 
         // 1. Determine winners and show cards
@@ -636,10 +635,10 @@ impl Table {
         // // 6. Set phase to end of hand
         // self.set_phase(GamePhase::Showdown);
 
-        Ok(pot_size)
+        Ok(self.event_log.results_only())
     }
 
-    fn end_hand_all_fold_to(&self, winner_seat_number: u8) -> Result<usize, PKError> {
+    fn end_hand_all_fold_to(&self, winner_seat_number: u8) -> Result<TableLog, PKError> {
         self.log_info(TableAction::AllFoldedTo(winner_seat_number));
 
         if let Some(seat) = self.get_seat_mut(winner_seat_number) {
@@ -652,7 +651,7 @@ impl Table {
         self.log_info(TableAction::BringItIn(brought_in));
 
         let winnings = self.pot.takes();
-        let pot_size = winnings.count();
+
         if let Some(seat) = self.get_seat_mut(winner_seat_number) {
             // Cards cards????
             let player_cards = seat.cards.cards().clone() + self.board.cards().clone();
@@ -677,7 +676,7 @@ impl Table {
 
         self.reset();
 
-        Ok(pot_size)
+        Ok(self.event_log.results_only())
     }
 
     /// # Errors
@@ -2181,45 +2180,33 @@ mod casino__table___end_hand_tests {
         table.act_fold(7).expect("ActFolded");
         table.act_fold(0).expect("ActFolded");
         table.act_fold(1).expect("ActFolded");
-
+        // TODO: shouldn't this be 150?
         assert_eq!(50, table.pot.count());
-
         assert!(table.seats.is_betting_complete());
         assert!(table.is_game_over());
-
         let seat_2_effective = table.effective_player_cards(2).unwrap();
         assert_eq!("A♦ Q♣", seat_2_effective.to_string());
-
         if let Some(seat) = table.get_seat(2) {
             assert_eq!(seat.player.state.get(), PlayerState::Blind(100));
         } else {
             panic!("Failed to get seat 2");
         }
 
-        let pot_size = table.end_hand().unwrap();
+        let pot = table.bring_it_in().unwrap();
+        {
+            assert_eq!(150, pot);
+            assert!(table.seats.are_brought_in());
+        }
 
-        println!(">>>> {}", table.event_log.to_string());
-        assert_eq!(150, pot_size);
+        let results_log = table.end_hand().unwrap();
 
+        assert_eq!(1, results_log.len());
+        assert_eq!(2, results_log.get(0).unwrap().get_seat().unwrap());
+        assert_eq!(150, results_log.get(0).unwrap().get_ammount().unwrap());
         assert!(table.seats.are_clear());
-
-        if let Some(seat) = table.get_seat(1) {
-            assert_eq!(999_950, seat.player.chips.count());
-        } else {
-            panic!("Failed to get seat 1");
-        }
-
-        if let Some(seat) = table.get_seat(2) {
-            assert_eq!(1_000_050, seat.player.chips.count());
-        } else {
-            panic!("Failed to get seat 2");
-        }
-
+        assert_eq!(999_950, table.get_seat(1).unwrap().player.chips.count());
+        assert_eq!(1_000_050, table.get_seat(2).unwrap().player.chips.count());
         assert_eq!(GamePhase::PayWinners, table.get_phase());
-
-        // println!("{table}");
-        // println!("{}", table.deck);
-
         assert_eq!(deck_cell!(), table.deck);
         assert_eq!(table.deck.len(), 52);
     }
