@@ -129,6 +129,19 @@ impl Seats {
         }
     }
 
+    pub fn are_brought_in(&self) -> bool {
+        self.borrow_all().iter().all(|seat| seat.borrow().player.bet.count() == 0)
+    }
+
+    pub fn are_clear(&self) -> bool {
+        for seat_cell in &self.0 {
+            if !seat_cell.is_clear() {
+                return false;
+            }
+        }
+        true
+    }
+
     #[must_use]
     pub fn are_dealt(&self) -> bool {
         for seat_cell in &self.0 {
@@ -204,7 +217,7 @@ impl Seats {
     }
 
     #[must_use]
-    pub fn chips_in_play(&self) -> usize {
+    pub fn chips_in_round(&self) -> usize {
         let mut total = 0;
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow();
@@ -767,6 +780,12 @@ mod casino__table__seats_tests {
         }
 
         assert!(seats.is_betting_complete());
+    }
+
+    #[test]
+    fn are_clear() {
+        assert!(Seats::default().are_clear());
+        assert!(!Seats::try_from(TestData::the_hand_seats()).unwrap().are_clear());
     }
 
     #[test]

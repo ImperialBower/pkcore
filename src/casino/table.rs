@@ -1299,83 +1299,6 @@ mod casino__table_tests {
     }
 
     #[test]
-    fn end_hand__everyone_folds_to_bb() {
-        let table = TestData::the_hand_table();
-        table.act_forced_bets().expect("ActForcedBets failed");
-        table.deal_cards_to_seats().expect("Failed to deal cards to seats");
-        table.act_fold(3).expect("ActFolded");
-        table.act_fold(4).expect("ActFolded");
-        table.act_fold(5).expect("ActFolded");
-        table.act_fold(6).expect("ActFolded");
-        table.act_fold(7).expect("ActFolded");
-        table.act_fold(0).expect("ActFolded");
-        table.act_fold(1).expect("ActFolded");
-
-        assert_eq!(50, table.pot.count());
-
-        assert!(table.seats.is_betting_complete());
-        assert!(table.is_game_over());
-
-        let seat_2_effective = table.effective_player_cards(2).unwrap();
-        assert_eq!("A♦ Q♣", seat_2_effective.to_string());
-
-        if let Some(seat) = table.get_seat(2) {
-            assert_eq!(seat.player.state.get(), PlayerState::Blind(100));
-        } else {
-            panic!("Failed to get seat 2");
-        }
-
-        let pot_size = table.end_hand().unwrap();
-
-        println!(">>>> {}", table.event_log.to_string());
-        assert_eq!(150, pot_size);
-
-        for (seat_number, seat) in table.seats.iter().enumerate() {
-            let seat = seat.borrow();
-            assert_eq!(0, seat.player.bet.count(), "Seat #{} has non-zero bet", seat_number);
-            assert_eq!(
-                0,
-                table.to_call(seat_number as u8),
-                "Seat #{} has non-zero to_call",
-                seat_number
-            );
-            assert!(
-                !seat.cards.has_cards(),
-                "Seat #{} has these cards: {}",
-                seat_number,
-                seat.cards
-            );
-            assert_eq!(seat.player.state.get(), PlayerState::YetToAct);
-        }
-
-        if let Some(seat) = table.get_seat(1) {
-            assert_eq!(999_950, seat.player.chips.count());
-            assert_eq!(seat.player.state.get(), PlayerState::YetToAct);
-            assert_eq!(0, seat.player.get_chips_in_play());
-        } else {
-            panic!("Failed to get seat 1");
-        }
-
-        if let Some(seat) = table.get_seat(2) {
-            assert_eq!(1_000_050, seat.player.chips.count());
-            assert_eq!(seat.player.bet.count(), 0);
-            // assert_eq!(seat.player.state.get(), PlayerState::Bet(100));
-            assert_eq!(0, seat.player.get_chips_in_play());
-        } else {
-            panic!("Failed to get seat 2");
-        }
-
-        assert_eq!(GamePhase::PayWinners, table.get_phase());
-
-        println!("{table}");
-        println!("{}", table.deck);
-
-        assert_eq!(deck_cell!(), table.deck);
-        assert_eq!(table.deck.len(), 52);
-        // assert!(table.deck.)
-    }
-
-    #[test]
     fn event_count() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
         table.act_shuffle_deck();
@@ -1905,5 +1828,367 @@ mod casino__table_tests {
         assert_eq!(945_000, gus);
         assert_eq!(945_000, daniel);
         assert!(table.seats.is_betting_complete());
+    }
+}
+
+/// All the tests for the `end_hand` function. These are so long that I wanted to put them in a
+/// separate place.\
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod casino__table___end_hand_tests {
+    use super::*;
+    use crate::prelude::*;
+    use crate::util::data::TestData;
+
+    #[test]
+    fn end_hand__heads_up_all_in_the_hand() {
+        let table = TestData::the_hand_table();
+
+        // SETUP
+        {
+            assert!(!table.seats.is_betting_complete());
+            assert!(table.is_preflop());
+            assert_eq!(0, table.button.value());
+            assert_eq!(3, table.determine_utg());
+            assert_eq!(3, table.next_to_act());
+            assert_eq!(1, table.determine_small_blind());
+            assert_eq!(2, table.determine_big_blind());
+            assert_eq!(GamePhase::NewHand, table.get_phase());
+            assert!(table.is_preflop());
+            assert_eq!(8_000_000, table.table_chip_count());
+        }
+
+        table.act_forced_bets().expect("ActForcedBets failed");
+        {
+            assert_eq!(GamePhase::ForcedBets, table.get_phase());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
+            assert!(table.is_preflop());
+            assert_eq!(GamePhase::ForcedBets, table.get_phase());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
+            assert!(table.is_preflop());
+
+            assert_eq!(8_000_000, table.table_chip_count());
+
+            if let Some(seat) = table.get_seat(1) {
+                assert_eq!(999_950, seat.player.chips.count());
+                assert_eq!(50, seat.player.bet.count());
+                assert_eq!(50, seat.player.get_chips_in_play());
+                assert_eq!(50, table.to_call(1));
+                assert_eq!(seat.player.state.get(), PlayerState::Blind(50));
+            } else {
+                panic!("Failed to get seat 1");
+            }
+
+            if let Some(seat) = table.get_seat(2) {
+                assert_eq!(999_900, seat.player.chips.count());
+                assert_eq!(100, seat.player.bet.count());
+                assert_eq!(100, seat.player.get_chips_in_play());
+                assert_eq!(0, table.to_call(2));
+                assert_eq!(seat.player.state.get(), PlayerState::Blind(100));
+            } else {
+                panic!("Failed to get seat 2");
+            }
+        }
+
+        table.deal_cards_to_seats().expect("Failed to deal cards to seats");
+        {
+            assert_eq!(GamePhase::DealHoleCards, table.get_phase());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
+            assert_eq!(
+                "T♠ 2♥, 8♣ 3♥, A♦ Q♣, 5♦ 5♣, 6♠ 6♥, K♠ J♦, 4♦ 4♣, 7♣ 2♦",
+                table.seats.cards_string()
+            );
+        }
+
+        // Preflop
+        {
+            assert!(table.is_preflop());
+            assert_eq!(3, table.next_to_act());
+        }
+
+        let gus = table.act_bet(3, 2100).unwrap();
+        {
+            assert_eq!(997_900, gus);
+            assert_eq!(2_100, table.get_seat(3).unwrap().player.bet.count());
+            assert_eq!(2_100, table.get_seat(3).unwrap().player.chips_in_play.get());
+            assert_eq!(table.event_log.last_player_action().unwrap(), TableAction::Bet(3, 2_100));
+            assert_eq!(2_250, table.seats.chips_in_round());
+            assert_eq!(4, table.next_to_act());
+        }
+
+        let daniel = table.act_raise(4, 5000).unwrap();
+        {
+            assert_eq!(995_000, daniel);
+            assert_eq!(5000, table.get_seat(4).unwrap().player.bet.count());
+            assert_eq!(5000, table.get_seat(4).unwrap().player.chips_in_play.get());
+            assert_eq!(7_250, table.seats.chips_in_round());
+            assert_eq!(5, table.next_to_act());
+        }
+
+        let _seat5_remaining = table.act_fold(5).unwrap();
+        {
+            assert_eq!(6, table.next_to_act());
+        }
+
+        let _seat6_remaining = table.act_fold(6).unwrap();
+        {
+            assert_eq!(7, table.next_to_act());
+        }
+
+        let _seat7_remaining = table.act_fold(7).unwrap();
+        {
+            assert_eq!(0, table.next_to_act());
+        }
+
+        let _seat0_remaining = table.act_fold(0).unwrap();
+        {
+            assert_eq!(1, table.next_to_act());
+        }
+
+        let _seat1_remaining = table.act_fold(1).unwrap();
+        {
+            assert_eq!(2, table.next_to_act());
+        }
+
+        let _seat2_remaining = table.act_fold(2).unwrap();
+        {
+            assert_eq!(3, table.next_to_act());
+            assert!(!table.seats.is_betting_complete());
+        }
+
+        let gus_call = table.act_call(3).unwrap();
+        {
+            assert_eq!(5000, gus_call);
+            assert_eq!(995_000,  table.get_seat(3).unwrap().player.chips.count());
+            assert_eq!(5000, table.get_seat(3).unwrap().player.bet.count());
+            assert_eq!(5000, table.get_seat(3).unwrap().player.chips_in_play.get());
+            assert_eq!(10_000, table.seats.chips_in_round());
+
+            assert!(table.seats.is_betting_complete());
+            assert!(!table.is_game_over());
+            assert_eq!(3, table.next_to_act());
+            assert!(table.is_preflop());
+        }
+
+        let pot = table.bring_it_in().unwrap();
+        {
+            assert_eq!(10150, pot);
+            assert!(table.seats.borrow_all().iter().all(|seat| seat.borrow().player.bet.count() == 0));
+            assert!(table.seats.are_brought_in());
+        }
+
+        // Flop
+        {
+            assert!(!table.seats.is_betting_complete());
+            assert_eq!(3, table.next_to_act());
+        }
+
+        table.deal_flop().expect("No flop");
+        {
+            assert!(table.is_flop());
+            assert_eq!(GamePhase::BettingFlop, table.determine_betting_phase());
+        }
+
+        let gus = table.act_check(3).unwrap();
+        {
+            assert_eq!(995_000, gus);
+            assert_eq!(0, table.get_seat(3).unwrap().player.bet.count());
+            assert_eq!(5000, table.get_seat(3).unwrap().player.chips_in_play.get());
+            assert_eq!(4, table.next_to_act());
+            assert_eq!(10150, table.pot.count());
+            assert!(!table.seats.is_betting_complete());
+        }
+
+        let daniel = table.act_bet(4, 8000).unwrap();
+        {
+            assert_eq!(987_000, daniel);
+            assert_eq!(8000, table.get_seat(4).unwrap().player.bet.count());
+            assert_eq!(13_000, table.get_seat(4).unwrap().player.chips_in_play.get());
+            assert_eq!(8_000, table.seats.chips_in_round());
+            assert_eq!(3, table.next_to_act());
+            assert_eq!(10150, table.pot.count());
+            assert!(!table.seats.is_betting_complete());
+        }
+
+        let gus = table.act_raise(3, 26_000).unwrap();
+        {
+            assert_eq!(969_000, gus);
+            assert_eq!(26_000, table.get_seat(3).unwrap().player.bet.count());
+            assert_eq!(31_000, table.get_seat(3).unwrap().player.chips_in_play.get());
+            assert_eq!(34_000, table.seats.chips_in_round());
+            assert_eq!(4, table.next_to_act());
+            assert_eq!(10150, table.pot.count());
+            assert!(!table.seats.is_betting_complete());
+        }
+
+        let daniel = table.act_call(4).unwrap();
+        {
+            assert_eq!(26_000, daniel);
+            assert_eq!(26_000, table.get_seat(4).unwrap().player.bet.count());
+            assert_eq!(31_000, table.get_seat(4).unwrap().player.chips_in_play.get());
+            assert_eq!(52_000, table.seats.chips_in_round());
+            assert_eq!(3, table.next_to_act());
+            assert_eq!(10150, table.pot.count());
+            assert!(table.seats.is_betting_complete());
+            assert!(!table.is_game_over());
+            assert!(table.is_flop());
+        }
+
+        let pot = table.bring_it_in().unwrap();
+        {
+            assert_eq!(62_150, pot);
+            assert!(table.seats.are_brought_in());
+        }
+
+        // Turn
+        {
+            assert!(!table.seats.is_betting_complete());
+            assert_eq!(3, table.next_to_act());
+        }
+
+        table.deal_turn().expect("No turn");
+        {
+            assert!(table.is_turn());
+            assert_eq!(GamePhase::BettingTurn, table.determine_betting_phase());
+        }
+
+        let gus = table.act_bet(3, 24_000).unwrap();
+        {
+            assert_eq!(945_000, gus);
+            assert_eq!(24_000, table.get_seat(3).unwrap().player.bet.count());
+            assert_eq!(55_000, table.get_seat(3).unwrap().player.chips_in_play.get());
+            assert_eq!(24_000, table.seats.chips_in_round());
+            assert_eq!(4, table.next_to_act());
+            assert_eq!(62_150, table.pot.count());
+            assert!(!table.seats.is_betting_complete());
+        }
+
+        let daniel = table.act_call(4).unwrap();
+        {
+            assert_eq!(24_000, daniel);
+            assert_eq!(24_000, table.get_seat(4).unwrap().player.bet.count());
+            assert_eq!(55_000, table.get_seat(4).unwrap().player.chips_in_play.get());
+            assert_eq!(48_000, table.seats.chips_in_round());
+            assert_eq!(3, table.next_to_act());
+            assert_eq!(62_150, table.pot.count());
+            assert!(table.seats.is_betting_complete());
+            assert!(!table.is_game_over());
+            assert!(table.is_turn());
+        }
+
+        let pot = table.bring_it_in().unwrap();
+        {
+            assert_eq!(110_150, pot);
+            assert!(table.seats.are_brought_in());
+        }
+
+        // River
+        {
+            assert!(!table.seats.is_betting_complete());
+            assert_eq!(3, table.next_to_act());
+        }
+
+        table.deal_river().expect("No river");
+        {
+            assert!(table.is_river());
+            assert_eq!(GamePhase::BettingRiver, table.determine_betting_phase());
+        }
+
+        let gus = table.act_check(3).unwrap();
+        {
+            assert_eq!(945_000, gus);
+            assert_eq!(0, table.get_seat(3).unwrap().player.bet.count());
+            assert_eq!(55_000, table.get_seat(3).unwrap().player.chips_in_play.get());
+            assert_eq!(4, table.next_to_act());
+            assert_eq!(110_150, table.pot.count());
+            assert!(!table.seats.is_betting_complete());
+        }
+
+        let daniel = table.act_bet(4, 65_000).unwrap();
+        {
+            assert_eq!(880_000, daniel);
+            assert_eq!(65_000, table.get_seat(4).unwrap().player.bet.count());
+            assert_eq!(120_000, table.get_seat(4).unwrap().player.chips_in_play.get());
+            assert_eq!(65_000, table.seats.chips_in_round());
+            assert_eq!(3, table.next_to_act());
+            assert_eq!(110_150, table.pot.count());
+            assert!(!table.seats.is_betting_complete());
+            assert_eq!(
+                table.event_log.last_player_action().unwrap(),
+                TableAction::Bet(4, 65_000)
+            );
+        }
+
+        let gus = table.act_all_in(3).unwrap();
+        {
+            assert_eq!(945_000, gus);
+            assert_eq!(0, table.get_seat(3).unwrap().player.chips.count());
+            assert_eq!(945_000, table.get_seat(3).unwrap().player.bet.count());
+            assert_eq!(1_000_000, table.get_seat(3).unwrap().player.chips_in_play.get());
+            assert_eq!(1_010_000, table.seats.chips_in_round());
+            assert_eq!(4, table.next_to_act());
+            assert_eq!(110_150, table.pot.count());
+            assert!(!table.seats.is_betting_complete());
+            assert_eq!(
+                table.event_log.last_player_action().unwrap(),
+                TableAction::AllIn(3, 945_000)
+            );
+            assert!(!table.is_game_over());
+        }
+    }
+
+    #[test]
+    fn end_hand__everyone_folds_to_bb() {
+        let table = TestData::the_hand_table();
+        table.act_forced_bets().expect("ActForcedBets failed");
+        table.deal_cards_to_seats().expect("Failed to deal cards to seats");
+        table.act_fold(3).expect("ActFolded");
+        table.act_fold(4).expect("ActFolded");
+        table.act_fold(5).expect("ActFolded");
+        table.act_fold(6).expect("ActFolded");
+        table.act_fold(7).expect("ActFolded");
+        table.act_fold(0).expect("ActFolded");
+        table.act_fold(1).expect("ActFolded");
+
+        assert_eq!(50, table.pot.count());
+
+        assert!(table.seats.is_betting_complete());
+        assert!(table.is_game_over());
+
+        let seat_2_effective = table.effective_player_cards(2).unwrap();
+        assert_eq!("A♦ Q♣", seat_2_effective.to_string());
+
+        if let Some(seat) = table.get_seat(2) {
+            assert_eq!(seat.player.state.get(), PlayerState::Blind(100));
+        } else {
+            panic!("Failed to get seat 2");
+        }
+
+        let pot_size = table.end_hand().unwrap();
+
+        println!(">>>> {}", table.event_log.to_string());
+        assert_eq!(150, pot_size);
+
+        assert!(table.seats.are_clear());
+
+        if let Some(seat) = table.get_seat(1) {
+            assert_eq!(999_950, seat.player.chips.count());
+        } else {
+            panic!("Failed to get seat 1");
+        }
+
+        if let Some(seat) = table.get_seat(2) {
+            assert_eq!(1_000_050, seat.player.chips.count());
+        } else {
+            panic!("Failed to get seat 2");
+        }
+
+        assert_eq!(GamePhase::PayWinners, table.get_phase());
+
+        // println!("{table}");
+        // println!("{}", table.deck);
+
+        assert_eq!(deck_cell!(), table.deck);
+        assert_eq!(table.deck.len(), 52);
     }
 }
