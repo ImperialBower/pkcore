@@ -46,6 +46,7 @@ pub enum TableAction {
     TakePlayerCards(u8, Bard),
     TakeBoardCards(Bard),
     ClosesTheAction(u8),
+    CloseItOut(usize),
     EndHand,
     PlayerMucksCards(u8), // At a showdown one player mucks their cards rather than show them.
     AllFoldedTo(u8),
@@ -123,6 +124,7 @@ impl TableAction {
             | TableAction::Call(_, amount)
             | TableAction::Raise(_, amount)
             | TableAction::AllIn(_, amount)
+            | TableAction::CloseItOut(amount) => Some(*amount),
             | TableAction::PotSize(amount)
             | TableAction::MainPot(amount)
             | TableAction::SidePot(amount)
@@ -259,6 +261,7 @@ impl Display for TableAction {
             }
             TableAction::TakeBoardCards(cards) => write!(f, "Take board cards: {}", Cards::from(*cards)),
             TableAction::ClosesTheAction(seat) => write!(f, "Seat {seat} closes the action"),
+            TableAction::CloseItOut(amount) => write!(f, "Close out the hand with a {amount} pot"),
             TableAction::EndHand => write!(f, "End Hand"),
             TableAction::PlayerMucksCards(seat) => write!(f, "Seat {seat} mucks their cards"),
             TableAction::AllFoldedTo(seat) => write!(f, "All folded to Seat {seat}"),

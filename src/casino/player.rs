@@ -17,6 +17,10 @@ pub struct Player {
 }
 
 impl Player {
+
+}
+
+impl Player {
     #[must_use]
     pub fn new(handle: String) -> Player {
         Player {
@@ -237,6 +241,20 @@ impl Player {
     ///  * `PKError::InvalidTableAction` - throws if the player is not able to call.
     pub fn act_call(&self, amount: usize) -> Result<usize, PKError> {
         self.act_bet_internal(PlayerState::Call(amount))
+    }
+
+    /// NOTE: When to switch to `pub(crate)`
+    pub(crate) fn act_close_it_out(&self) -> Result<Stack, PKError>  {
+        let player_bet = self.bet.takes();
+
+        if self.state.is_active() {
+            let state = PlayerState::Showdown(player_bet.count());
+            self.state.set(state);
+        }
+
+        log::trace!("{} closing out the hand with {} chips", self.handle, player_bet);
+
+        Ok(player_bet)
     }
 
     /// ```

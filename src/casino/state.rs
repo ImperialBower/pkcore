@@ -144,6 +144,7 @@ pub enum PlayerState {
     Raise(usize),
     ReRaise(usize),
     AllIn(usize),
+    Showdown(usize),
     Fold,
     Out,
 }
@@ -158,7 +159,8 @@ impl PlayerState {
             | PlayerState::Call(amt)
             | PlayerState::Raise(amt)
             | PlayerState::ReRaise(amt)
-            | PlayerState::AllIn(amt) => *amt,
+            | PlayerState::AllIn(amt)
+            | PlayerState::Showdown(amt) => *amt,
             _ => 0,
         }
     }
@@ -295,6 +297,10 @@ impl PlayerState {
         matches!(self, PlayerState::Bet(_) | PlayerState::Call(_))
     }
 
+    pub fn is_showdown(&self) -> bool {
+        matches!(self, PlayerState::Showdown(_))
+    }
+
     /// ```
     /// use pkcore::prelude::*;
     ///
@@ -348,6 +354,10 @@ impl Agency for PlayerState {
             }
         }
 
+        if next.is_showdown() {
+            return true;
+        }
+
         // An action can't be performed if their bet value is less, equal to what they bet before.
         if next <= self && next.is_active() {
             return false;
@@ -361,19 +371,25 @@ impl Agency for PlayerState {
                 | (PlayerState::Check(_), PlayerState::Raise(_))
                 | (PlayerState::Check(_), PlayerState::ReRaise(_))
                 | (PlayerState::Check(_), PlayerState::AllIn(_))
+                | (PlayerState::Check(_), PlayerState::Showdown(_))
                 | (PlayerState::Bet(_), PlayerState::Call(_))
                 | (PlayerState::Bet(_), PlayerState::Raise(_))
                 | (PlayerState::Bet(_), PlayerState::ReRaise(_))
                 | (PlayerState::Bet(_), PlayerState::AllIn(_))
+                | (PlayerState::Bet(_), PlayerState::Showdown(_))
                 | (PlayerState::Call(_), PlayerState::Call(_))
                 | (PlayerState::Call(_), PlayerState::ReRaise(_))
                 | (PlayerState::Call(_), PlayerState::AllIn(_))
+                | (PlayerState::Call(_), PlayerState::Showdown(_))
                 | (PlayerState::Raise(_), PlayerState::Call(_))
                 | (PlayerState::Raise(_), PlayerState::ReRaise(_))
                 | (PlayerState::Raise(_), PlayerState::AllIn(_))
+                | (PlayerState::Raise(_), PlayerState::Showdown(_))
                 | (PlayerState::ReRaise(_), PlayerState::Call(_))
                 | (PlayerState::ReRaise(_), PlayerState::ReRaise(_))
                 | (PlayerState::ReRaise(_), PlayerState::AllIn(_))
+                | (PlayerState::ReRaise(_), PlayerState::Showdown(_))
+                | (PlayerState::AllIn(_), PlayerState::Showdown(_))
         )
     }
 
@@ -411,6 +427,7 @@ impl Agency for PlayerState {
                     | (PlayerState::ReRaise(_), PlayerState::Raise(_))
                     | (PlayerState::ReRaise(_), PlayerState::ReRaise(_))
                     | (PlayerState::AllIn(_), _)
+                    | (PlayerState::Showdown(_), _)
                     | (PlayerState::Blind(_), _)
             )
         } else {
@@ -430,6 +447,7 @@ impl Display for PlayerState {
             PlayerState::Raise(amount) => write!(f, "Raise to {amount}"),
             PlayerState::ReRaise(amount) => write!(f, "Re-raise to {amount}"),
             PlayerState::AllIn(amount) => write!(f, "All-in with {amount}"),
+            PlayerState::Showdown(amount) => write!(f, "Showdown with {amount}"),
             PlayerState::Fold => write!(f, "Fold"),
             PlayerState::Out => write!(f, "Out"),
         }
@@ -477,6 +495,8 @@ mod casino__state_tests {
 
     #[test]
     fn agency__can_given__isolated() {
+        assert!(PlayerState::AllIn(1000).can_given(&PlayerState::Showdown(1000)));
+
         assert!(PlayerState::Blind(100).can_given(&PlayerState::Check(100)));
         assert!(!PlayerState::Blind(300).can_given(&PlayerState::Check(100)));
         assert!(!PlayerState::Check(100).can_given(&PlayerState::Blind(100)));
@@ -542,6 +562,8 @@ mod casino__state_tests {
         assert!(PlayerState::ReRaise(200).can_given(&PlayerState::AllIn(300)));
         assert!(!PlayerState::ReRaise(200).can_given(&PlayerState::Raise(300)));
         assert!(!PlayerState::ReRaise(200).can_given(&PlayerState::Bet(100)));
+
+        assert!(PlayerState::AllIn(1000).can_given(&PlayerState::Showdown(1000)));
 
         assert!(!PlayerState::Fold.can_given(&PlayerState::Check(0)));
         assert!(!PlayerState::Fold.can_given(&PlayerState::Bet(100)));
