@@ -588,6 +588,7 @@ impl Table {
         if !self.is_game_over() {
             return Err(PKError::ActionIsntFinished);
         }
+        self.log_debug(TableAction::EndHand);
 
         // How many players are still active?
         let active_seats = self.seats.active_in_hand();
@@ -605,10 +606,9 @@ impl Table {
             }
         }
 
-        // 1. Determine winners and show cards
+        // Determine winners
         let game = Game::try_from(self)?;
         let case_eval = game.river_case_eval()?;
-
         let winning_hand_rank = case_eval.winning_hand_rank();
 
         for (i, eval) in case_eval.iter().enumerate() {
@@ -1838,6 +1838,7 @@ mod casino__table___end_hand_tests {
     use super::*;
     use crate::prelude::*;
     use crate::util::data::TestData;
+    use crate::util::wincounter::win::Win;
 
     #[test]
     fn end_hand__heads_up_all_in_the_hand() {
@@ -2152,13 +2153,18 @@ mod casino__table___end_hand_tests {
             assert_eq!(1_000_000, table.get_seat(4).unwrap().player.chips_in_play.get());
             assert_eq!(1_890_000, table.seats.chips_in_round());
             assert_eq!(110_150, table.pot.count());
+            assert!(table.is_river());
             assert!(table.seats.is_betting_complete());
+            assert!(table.seats.are_bets_equal());
             assert!(table.is_game_over());
             assert_eq!(1, table.next_to_act());
             assert_eq!(
                 table.event_log.last_player_action().unwrap(),
                 TableAction::Call(4, 945_000)
             );
+            // Seat bit flags start from 1 instead of 0.
+            assert_eq!(Win::or(Win::FORTH, Win::FIFTH), table.seats.flags_all_in());
+            assert_eq!(2, table.seats.flags_all_in().count_ones());
         }
 
         let pot = table.bring_it_in().unwrap();
@@ -2166,6 +2172,13 @@ mod casino__table___end_hand_tests {
             assert_eq!(2_000_150, pot);
             assert!(table.seats.are_brought_in());
         }
+
+        // table.reset();
+
+        println!("{table}");
+        //
+        // let results_log = table.end_hand().unwrap();
+        // println!("{results_log}");
     }
 
     #[test]

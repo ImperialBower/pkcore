@@ -4,6 +4,8 @@ use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
 use crate::casino::table::seat::{Seat, SeatCell};
+use crate::util::wincounter::PlayerFlag;
+use crate::util::wincounter::win::Win;
 use log;
 use std::cell::{Ref, RefMut};
 
@@ -129,14 +131,14 @@ impl Seats {
         }
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn are_brought_in(&self) -> bool {
         self.borrow_all()
             .iter()
             .all(|seat| seat.borrow().player.bet.count() == 0)
     }
 
-    #[must_use] 
+    #[must_use]
     pub fn are_clear(&self) -> bool {
         for seat_cell in &self.0 {
             if !seat_cell.is_clear() {
@@ -405,6 +407,18 @@ impl Seats {
     }
 
     #[must_use]
+    pub fn flags_all_in(&self) -> PlayerFlag {
+        let mut flags = PlayerFlag::default();
+        for (i, seat_cell) in self.0.iter().enumerate() {
+            let seat = seat_cell.borrow();
+            if seat.is_all_in() {
+                flags = Win::or(flags, Win::from_index(i));
+            }
+        }
+        flags
+    }
+
+    #[must_use]
     pub fn get_seat_number_from_handle(&self, handle: &str) -> Option<u8> {
         for (i, seat_cell) in self.0.iter().enumerate() {
             let seat = seat_cell.borrow();
@@ -457,6 +471,19 @@ impl Seats {
         } else {
             false
         }
+    }
+
+    #[must_use]
+    pub fn are_bets_equal(&self) -> bool {
+        let current_bet = self.current_bet();
+
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            if seat.is_active() && seat.player.bet.count() != current_bet {
+                return false;
+            }
+        }
+        true
     }
 
     /// Checks if equilibrium has been reached in the betting round.

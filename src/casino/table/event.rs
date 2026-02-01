@@ -358,19 +358,29 @@ impl TableLog {
         self.0.borrow().len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn log(&self, action: TableAction) {
         self.0.borrow_mut().push(action);
     }
 
     pub fn result_actions(&self) -> Vec<TableAction> {
-        self.0.borrow().iter().filter(|action| action.is_result()).copied().collect()
+        self.0
+            .borrow()
+            .iter()
+            .filter(|action| action.is_result())
+            .copied()
+            .collect()
     }
 
     pub fn is_results_only(&self) -> bool {
         let internal = self.0.borrow();
-        internal.iter().all(|action| action.is_result())
+        internal.iter().all(TableAction::is_result)
     }
 
+    #[must_use]
     pub fn results_only(&self) -> TableLog {
         let results: Vec<TableAction> = self.result_actions();
         TableLog::from(results)
@@ -456,8 +466,18 @@ mod casino__table__log_tests {
 
         log.log(TableAction::PlayerSeated(0, Uuid::nil()));
         log.log(TableAction::PlayerSeated(1, Uuid::nil()));
-        log.log(TableAction::PlayerWins(0, Uuid::nil(), Bard::from_str("AS KS").unwrap(), 100));
-        log.log(TableAction::PlayerLoses(1, Uuid::nil(), Bard::from_str("KD KC").unwrap(), 100));
+        log.log(TableAction::PlayerWins(
+            0,
+            Uuid::nil(),
+            Bard::from_str("AS KS").unwrap(),
+            100,
+        ));
+        log.log(TableAction::PlayerLoses(
+            1,
+            Uuid::nil(),
+            Bard::from_str("KD KC").unwrap(),
+            100,
+        ));
 
         let results = log.result_actions();
 
@@ -477,16 +497,25 @@ mod casino__table__log_tests {
 
         log.log(TableAction::PlayerSeated(0, Uuid::nil()));
         log.log(TableAction::PlayerSeated(1, Uuid::nil()));
-        log.log(TableAction::PlayerWins(0, Uuid::nil(), Bard::from_str("AS KS").unwrap(), 100));
-        log.log(TableAction::PlayerLoses(1, Uuid::nil(), Bard::from_str("KD KC").unwrap(), 100));
+        log.log(TableAction::PlayerWins(
+            0,
+            Uuid::nil(),
+            Bard::from_str("AS KS").unwrap(),
+            100,
+        ));
+        log.log(TableAction::PlayerLoses(
+            1,
+            Uuid::nil(),
+            Bard::from_str("KD KC").unwrap(),
+            100,
+        ));
 
         let results = log.results_only();
 
         assert_eq!(results.len(), 2);
         assert_eq!(
             results,
-            TableLog::from(
-            vec![
+            TableLog::from(vec![
                 TableAction::PlayerWins(0, Uuid::nil(), Bard::from_str("AS KS").unwrap(), 100),
                 TableAction::PlayerLoses(1, Uuid::nil(), Bard::from_str("KD KC").unwrap(), 100)
             ])

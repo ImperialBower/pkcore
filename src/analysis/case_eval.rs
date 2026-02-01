@@ -218,6 +218,12 @@ impl CaseEval {
         self.0.clone()
     }
 
+    /// Returns how many winners there are in the `CaseEval`.
+    #[must_use]
+    pub fn win_count(&self) -> usize {
+        self.flags_win().count_ones() as usize
+    }
+
     /// Pure TDD would have me make our first test green by simply having it return
     /// `Win::FIRST`. Write a failing test. Make it pass. Write another failing test
     /// building on the functionality you've already written. Make it pass. And so on...
@@ -277,7 +283,7 @@ impl CaseEval {
     /// let actual = CaseEval::from(vec![
     ///     TestData::daniel_eval_at_flop(),
     ///     TestData::gus_eval_at_flop(),
-    /// ]).win_count();
+    /// ]).flags_win();
     ///
     /// assert_eq!(expected, actual);
     /// ```
@@ -326,7 +332,7 @@ impl CaseEval {
     ///     the_2nd_nuts,
     ///     TestData::daniel_eval_at_flop(),
     ///     TestData::gus_eval_at_flop(),
-    /// ]).win_count();
+    /// ]).flags_win();
     ///
     /// assert_eq!(expected, actual);
     /// ```
@@ -362,7 +368,7 @@ impl CaseEval {
     ///     the_2nd_nuts,
     ///     the_nuts,
     ///     TestData::gus_eval_at_flop(),
-    /// ]).win_count();
+    /// ]).flags_win();
     ///
     /// assert_eq!(expected, actual);
     /// ```
@@ -430,7 +436,7 @@ impl CaseEval {
     ///     the_nuts,
     ///     also_the_nuts,
     ///     TestData::gus_eval_at_flop(),
-    /// ]).win_count();
+    /// ]).flags_win();
     ///
     /// assert_eq!(expected, actual);
     /// ```
@@ -476,7 +482,7 @@ impl CaseEval {
     ///     TestData::daniel_eval_at_flop(),
     ///     TestData::gus_eval_at_flop(),
     ///     also_the_nuts,
-    /// ]).win_count();
+    /// ]).flags_win();
     ///
     /// assert_eq!(expected, actual);
     /// ```
@@ -484,15 +490,15 @@ impl CaseEval {
     /// That's enough. I'm declaring victory. Time to move on to displaying winning percentages.
     ///
     #[must_use]
-    pub fn win_count(&self) -> PlayerFlag {
-        let mut count = PlayerFlag::default();
+    pub fn flags_win(&self) -> PlayerFlag {
+        let mut flags = PlayerFlag::default();
         let best = self.winning_hand_rank();
         for (i, eval) in self.iter().enumerate() {
             if eval.hand_rank == best {
-                count = Win::or(count, Win::from_index(i));
+                flags = Win::or(flags, Win::from_index(i));
             }
         }
-        count
+        flags
     }
 
     /// Returns the top `HandRank` for this specific `CaseEval`.
@@ -568,7 +574,7 @@ impl CaseEval {
     /// old code to our original methods and then passing both back here.
     #[must_use]
     pub fn winner(&self) -> (PlayerFlag, HandRank) {
-        (self.win_count(), self.winning_hand_rank())
+        (self.flags_win(), self.winning_hand_rank())
     }
 }
 
@@ -598,7 +604,7 @@ mod hand_rank__case_eval_tests {
         let sut = CaseEval::from_holdem_at_flop(game.board.flop, case, &game.hands);
 
         assert!(sut.is_ok());
-        assert_eq!(Win::SECOND, sut.unwrap().win_count());
+        assert_eq!(Win::SECOND, sut.unwrap().flags_win());
     }
 
     #[test]
@@ -610,7 +616,7 @@ mod hand_rank__case_eval_tests {
         let sut = CaseEval::from_holdem_at_flop(board, case, &hole_cards);
 
         assert!(sut.is_ok());
-        assert_eq!(Win::FIRST | Win::THIRD, sut.unwrap().win_count());
+        assert_eq!(Win::FIRST | Win::THIRD, sut.unwrap().flags_win());
     }
 
     #[test]
@@ -745,7 +751,7 @@ mod hand_rank__case_eval_tests {
             vec![TestData::daniel_eval_at_flop(), TestData::gus_eval_at_flop()],
             Cards::default(),
         )
-        .win_count();
+        .flags_win();
 
         assert_eq!(expected, actual);
     }
@@ -763,7 +769,7 @@ mod hand_rank__case_eval_tests {
             TestData::daniel_eval_at_flop(),
             TestData::gus_eval_at_flop(),
         ])
-        .win_count();
+        .flags_win();
 
         assert_eq!(expected, actual);
     }
@@ -781,7 +787,7 @@ mod hand_rank__case_eval_tests {
             TestData::gus_eval_at_flop(),
             the_nuts,
         ])
-        .win_count();
+        .flags_win();
 
         assert_eq!(expected, actual);
     }
@@ -799,7 +805,7 @@ mod hand_rank__case_eval_tests {
             also_the_nuts,
             TestData::gus_eval_at_flop(),
         ])
-        .win_count();
+        .flags_win();
 
         assert_eq!(expected, actual);
     }
@@ -817,7 +823,7 @@ mod hand_rank__case_eval_tests {
             TestData::gus_eval_at_flop(),
             also_the_nuts,
         ])
-        .win_count();
+        .flags_win();
 
         assert_eq!(expected, actual);
     }

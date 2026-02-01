@@ -252,7 +252,7 @@ mod play__turn_eval_tests {
 
         let case_eval = TurnEval::turn_case_eval(&game, &Card::SIX_CLUBS);
 
-        assert_eq!(Win::FIRST, case_eval.win_count());
+        assert_eq!(Win::FIRST, case_eval.flags_win());
         assert_eq!(Card::SIX_CLUBS, case_eval.card());
     }
 }

@@ -918,7 +918,7 @@ mod play__game_tests {
         assert_eq!(47, case_eval.winning_hand_rank().value);
         assert_eq!(
             Win::FIRST | Win::SECOND | Win::THIRD | Win::FORTH,
-            case_eval.win_count()
+            case_eval.flags_win()
         );
         assert_eq!(HandRankClass::FourJacks, case_eval.get(0).unwrap().hand_rank.class);
         assert_eq!(HandRankClass::FourJacks, case_eval.get(1).unwrap().hand_rank.class);
