@@ -618,10 +618,16 @@ impl Table {
             }
         }
 
-        // Determine winners
+        // Since there's more than one
         let game = Game::try_from(self)?;
         let case_eval = game.river_case_eval()?;
         let winning_hand_rank = case_eval.winning_hand_rank();
+
+        {
+            if active_seats.len() == 2 {
+                
+            }
+        }
 
         let number_winners = case_eval.flags_win().count_ones();
         self.log_info(TableAction::Showdown(number_winners as u8));
