@@ -624,7 +624,8 @@ impl Table {
         let winning_hand_rank = case_eval.winning_hand_rank();
 
         let number_winners = case_eval.flags_win().count_ones();
-        
+        self.log_info(TableAction::Showdown(number_winners as u8));
+
         for (i, eval) in case_eval.iter().enumerate() {
             if eval.hand_rank == winning_hand_rank {
                 println!("   Player #{}: {eval} has the best hand!", i + 1);
