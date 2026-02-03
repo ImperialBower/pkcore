@@ -244,17 +244,15 @@ impl Player {
     }
 
     /// NOTE: When to switch to `pub(crate)`
-    pub(crate) fn act_close_it_out(&self) -> Result<Stack, PKError>  {
-        let player_bet = self.bet.takes();
-
+    pub(crate) fn act_close_it_out(&self, in_pot: usize) -> Result<(), PKError>  {
         if self.state.is_active() {
-            let state = PlayerState::Showdown(player_bet.count());
+            let state = PlayerState::Showdown(in_pot);
             self.state.set(state);
         }
 
-        log::trace!("{} closing out the hand with {} chips", self.handle, player_bet);
+        log::trace!("{} closing out the hand with {} chips", self.handle, in_pot);
 
-        Ok(player_bet)
+        Ok(())
     }
 
     /// ```

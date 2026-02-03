@@ -8,6 +8,7 @@ use crate::util::wincounter::PlayerFlag;
 use crate::util::wincounter::win::Win;
 use log;
 use std::cell::{Ref, RefMut};
+use crate::prelude::PlayerState;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Seats(Box<[SeatCell]>);
@@ -212,20 +213,18 @@ impl Seats {
         Ok(collected)
     }
 
-    pub fn close_it_out(&self) -> Result<Stack, PKError> {
+    pub fn close_it_out(&self, in_pot: usize) -> Result<(), PKError> {
         if !self.is_betting_complete() {
             return Err(PKError::ActionIsntFinished);
         }
-        let collected = Stack::default();
-        for (i, seat) in self.borrow_all().iter().enumerate() {
+
+        for seat in self.borrow_all().iter(){
             if !seat.borrow().player.has_bet() {
                 continue;
             }
-            let chips = seat.borrow_mut().player.act_close_it_out()?;
-            log::trace!("Seat #{i} brought in {} chips.", chips.count());
-            collected.add_to(chips);
+            seat.borrow_mut().player.act_close_it_out(in_pot)?;
         }
-        Ok(collected)
+        Ok(())
     }
 
     #[must_use]
@@ -630,6 +629,16 @@ impl Seats {
             let seat = seat_cell.borrow_mut();
             seat.player.state.reset();
         }
+    }
+
+    pub fn showdown(&self, pot_size: usize) -> Result<(), PKError> {
+        for seat_cell in &self.0 {
+            let mut seat = seat_cell.borrow_mut();
+            if seat.is_active() {
+                seat.player.state.set(PlayerState::Showdown(pot_size));
+            }
+        }
+        Ok(())
     }
 
     #[must_use]
