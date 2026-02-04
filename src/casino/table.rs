@@ -2232,7 +2232,7 @@ mod casino__table___end_hand_tests {
 
             println!("{table}");
 
-            let pot = table.end_hand().unwrap();
+            let _log = table.end_hand().unwrap();
             {
                 assert_eq!(2_000_150, table.pot.count());
                 assert!(table.seats.are_brought_in());
@@ -2274,14 +2274,16 @@ mod casino__table___end_hand_tests {
             panic!("Failed to get seat 2");
         }
 
-        let pot = table.bring_it_in().unwrap();
-        {
-            assert_eq!(150, pot);
-            assert!(table.seats.are_brought_in());
-        }
+        // let pot = table.bring_it_in().unwrap();
+        // {
+        //     assert_eq!(150, pot);
+        //     assert!(table.seats.are_brought_in());
+        // }
 
         let results_log = table.end_hand().unwrap();
 
+        assert_eq!(150, table.pot.count());
+        assert!(table.seats.are_brought_in());
         assert_eq!(1, results_log.len());
         assert_eq!(2, results_log.get(0).unwrap().get_seat().unwrap());
         assert_eq!(150, results_log.get(0).unwrap().get_ammount().unwrap());

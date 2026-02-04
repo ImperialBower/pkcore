@@ -637,7 +637,7 @@ impl Seats {
 
     pub fn showdown(&self, pot_size: usize) -> Result<(), PKError> {
         for seat_cell in &self.0 {
-            let mut seat = seat_cell.borrow_mut();
+            let seat = seat_cell.borrow_mut();
             if seat.is_active() {
                 seat.player.state.set(PlayerState::Showdown(pot_size));
             }
