@@ -4,11 +4,11 @@ use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
 use crate::casino::table::seat::{Seat, SeatCell};
+use crate::prelude::PlayerState;
 use crate::util::wincounter::PlayerFlag;
 use crate::util::wincounter::win::Win;
 use log;
 use std::cell::{Ref, RefMut};
-use crate::prelude::PlayerState;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Seats(Box<[SeatCell]>);
@@ -213,18 +213,22 @@ impl Seats {
         Ok(collected)
     }
 
-    pub fn close_it_out(&self, in_pot: usize) -> Result<(), PKError> {
+    /// This has almost the exact same flow as `bring_it_in`, but it's for closing out the
+    /// entire hand, so there are some nuances..
+    pub fn close_it_out(&self) -> Result<Stack, PKError> {
         if !self.is_betting_complete() {
             return Err(PKError::ActionIsntFinished);
         }
 
-        for seat in self.borrow_all().iter(){
+        let collected = Stack::default();
+        for seat in self.borrow_all().iter() {
             if !seat.borrow().player.has_bet() {
                 continue;
             }
-            seat.borrow_mut().player.act_close_it_out(in_pot)?;
+            let chips = seat.borrow_mut().player.act_close_it_out()?;
+            collected.add_to(chips);
         }
-        Ok(())
+        Ok(collected)
     }
 
     #[must_use]

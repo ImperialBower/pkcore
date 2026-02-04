@@ -16,9 +16,7 @@ pub struct Player {
     pub state: PlayerStateCell,
 }
 
-impl Player {
-
-}
+impl Player {}
 
 impl Player {
     #[must_use]
@@ -244,15 +242,20 @@ impl Player {
     }
 
     /// NOTE: When to switch to `pub(crate)`
-    pub(crate) fn act_close_it_out(&self, in_pot: usize) -> Result<(), PKError>  {
+    pub(crate) fn act_close_it_out(&self) -> Result<Stack, PKError> {
         if self.state.is_active() {
-            let state = PlayerState::Showdown(in_pot);
+            let state = PlayerState::Showdown(self.chips_in_play.get());
             self.state.set(state);
+            log::trace!(
+                "{} closing out the hand with {} chips in the hand",
+                self.handle,
+                self.chips_in_play.get()
+            );
         }
+        let player_bet = self.bet.takes();
+        log::trace!("{} brings in {} chips", self.handle, player_bet);
 
-        log::trace!("{} closing out the hand with {} chips", self.handle, in_pot);
-
-        Ok(())
+        Ok(player_bet)
     }
 
     /// ```

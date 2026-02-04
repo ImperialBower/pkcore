@@ -131,7 +131,8 @@ impl Table {
     pub fn act_all_in(&self, seat_number: u8) -> Result<usize, PKError> {
         match self.seats.act_all_in(seat_number) {
             Ok(amount) => {
-                self.bet.set(amount);self.bet.set(amount);
+                self.bet.set(amount);
+                self.bet.set(amount);
                 self.log_info(TableAction::AllIn(seat_number, amount));
                 // self.action_to.up();
                 Ok(amount)
@@ -332,20 +333,22 @@ impl Table {
     ///
     /// * `PKError::InvalidTableAction` - throws if a player is not active in the hand.
     pub fn bring_it_in(&self) -> Result<usize, PKError> {
+        if self.is_game_over() {
+            return Err(PKError::InvalidAction);
+        }
         let _ = self.bet.take();
         let brought_in = self.seats.bring_it_in()?;
         self.log_info(TableAction::BringItIn(brought_in.count()));
         self.pot.add_to(brought_in);
         self.log_debug(TableAction::PotSize(self.pot.count()));
-        if self.is_river() && self.is_game_over() {
-            self.close_it_out()?;
-        }
         Ok(self.pot.count())
     }
 
     fn close_it_out(&self) -> Result<usize, PKError> {
-        self.seats.close_it_out(self.pot.count())?;
-        self.log_info(TableAction::BringItIn(self.pot.count()));
+        let brought_in = self.seats.close_it_out()?;
+        self.log_info(TableAction::BringItIn(brought_in.count()));
+        self.pot.add_to(brought_in);
+        let _ = self.bet.take();
         self.log_debug(TableAction::PotSize(self.pot.count()));
         self.log_info(TableAction::CloseItOut(self.pot.count()));
         Ok(self.pot.count())
@@ -625,7 +628,7 @@ impl Table {
         let game = Game::try_from(self)?;
         let case_eval = game.river_case_eval()?;
         let winning_hand_rank = case_eval.winning_hand_rank();
-        let brought_in = self.bring_it_in()?;
+        let brought_in = self.close_it_out()?;
         self.log_info(TableAction::BringItIn(brought_in));
         self.seats.showdown(self.pot.count())?;
 
@@ -635,12 +638,8 @@ impl Table {
         {
             if active_seats.len() == 2 {
                 debug_assert_eq!(0, self.bet.get(), "Bet should be zero at showdown with two players");
-
-
             }
         }
-
-
 
         for (i, eval) in case_eval.iter().enumerate() {
             if eval.hand_rank == winning_hand_rank {
@@ -1967,31 +1966,37 @@ mod casino__table___end_hand_tests {
 
             let _seat5_remaining = table.act_fold(5).unwrap();
             {
+                assert_eq!(0, table.get_seat(5).unwrap().player.chips_in_play.get());
                 assert_eq!(6, table.next_to_act());
             }
 
             let _seat6_remaining = table.act_fold(6).unwrap();
             {
+                assert_eq!(0, table.get_seat(6).unwrap().player.chips_in_play.get());
                 assert_eq!(7, table.next_to_act());
             }
 
             let _seat7_remaining = table.act_fold(7).unwrap();
             {
+                assert_eq!(0, table.get_seat(7).unwrap().player.chips_in_play.get());
                 assert_eq!(0, table.next_to_act());
             }
 
             let _seat0_remaining = table.act_fold(0).unwrap();
             {
+                assert_eq!(0, table.get_seat(0).unwrap().player.chips_in_play.get());
                 assert_eq!(1, table.next_to_act());
             }
 
             let _seat1_remaining = table.act_fold(1).unwrap();
             {
+                assert_eq!(0, table.get_seat(1).unwrap().player.chips_in_play.get());
                 assert_eq!(2, table.next_to_act());
             }
 
             let _seat2_remaining = table.act_fold(2).unwrap();
             {
+                assert_eq!(0, table.get_seat(2).unwrap().player.chips_in_play.get());
                 assert_eq!(3, table.next_to_act());
                 assert!(!table.seats.is_betting_complete());
             }
@@ -2000,9 +2005,10 @@ mod casino__table___end_hand_tests {
             {
                 assert_eq!(5000, gus_call);
                 assert_eq!(5_000, table.bet.get());
+                assert_eq!(5_000, table.get_seat(3).unwrap().player.chips_in_play.get());
                 assert_eq!(995_000, table.get_seat(3).unwrap().player.chips.count());
-                assert_eq!(5000, table.get_seat(3).unwrap().player.bet.count());
-                assert_eq!(5000, table.get_seat(3).unwrap().player.chips_in_play.get());
+                assert_eq!(5_000, table.get_seat(3).unwrap().player.bet.count());
+                assert_eq!(5_000, table.get_seat(3).unwrap().player.chips_in_play.get());
                 assert_eq!(10_000, table.seats.chips_in_round());
 
                 assert!(table.seats.is_betting_complete());
@@ -2042,6 +2048,7 @@ mod casino__table___end_hand_tests {
             {
                 assert_eq!(995_000, gus);
                 assert_eq!(0, table.bet.get());
+                assert_eq!(5_000, table.get_seat(3).unwrap().player.chips_in_play.get());
                 assert_eq!(0, table.get_seat(3).unwrap().player.bet.count());
                 assert_eq!(5000, table.get_seat(3).unwrap().player.chips_in_play.get());
                 assert_eq!(4, table.next_to_act());
@@ -2225,9 +2232,9 @@ mod casino__table___end_hand_tests {
 
             println!("{table}");
 
-            let pot = table.bring_it_in().unwrap();
+            let pot = table.end_hand().unwrap();
             {
-                assert_eq!(2_000_150, pot);
+                assert_eq!(2_000_150, table.pot.count());
                 assert!(table.seats.are_brought_in());
                 println!("{table}");
                 assert!(table.is_river());
@@ -2238,8 +2245,7 @@ mod casino__table___end_hand_tests {
             // table.reset();
 
             println!("{table}");
-            //
-            let results_log = table.end_hand().unwrap();
+
             // println!("{results_log}");
         }
     }
