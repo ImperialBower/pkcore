@@ -668,6 +668,21 @@ impl Table {
         Ok(self.event_log.results_only())
     }
 
+    fn close_heads_up(&self, case_eval: CaseEval) {
+        if case_eval.flags_win().count_ones() == 1 {
+            if let Some(winner_seat_number) = case_eval.flags_win().trailing_zeros().try_into().ok() {
+                if let Some(mut seat) = self.get_seat_mut(winner_seat_number) {
+                    let winnings = self.pot.takes();
+                    let winnings_number = winnings.count();
+                    seat.player.chips.add_to(winnings);
+                    self.log_info(TableAction::PlayerWins(winner_seat_number, seat.player.id, seat.cards.bard(), winnings_number));
+                }
+            }
+        } else {
+
+        }
+    }
+
     fn end_hand_all_fold_to(&self, winner_seat_number: u8) -> Result<TableLog, PKError> {
         self.log_info(TableAction::AllFoldedTo(winner_seat_number));
 
