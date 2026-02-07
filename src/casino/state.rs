@@ -297,6 +297,7 @@ impl PlayerState {
         matches!(self, PlayerState::Bet(_) | PlayerState::Call(_))
     }
 
+    #[must_use]
     pub fn is_showdown(&self) -> bool {
         matches!(self, PlayerState::Showdown(_))
     }

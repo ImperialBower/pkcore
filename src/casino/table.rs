@@ -633,11 +633,12 @@ impl Table {
         self.seats.showdown(self.pot.count())?;
 
         let number_winners = case_eval.flags_win().count_ones();
-        self.log_info(TableAction::Showdown(number_winners as u8));
+        self.log_info(TableAction::Showdown(u8::try_from(number_winners).unwrap_or_default()));
 
         {
             if active_seats.len() == 2 {
                 debug_assert_eq!(0, self.bet.get(), "Bet should be zero at showdown with two players");
+                self.close_heads_up(&case_eval);
             }
         }
 
@@ -668,18 +669,25 @@ impl Table {
         Ok(self.event_log.results_only())
     }
 
-    fn close_heads_up(&self, case_eval: CaseEval) {
-        if case_eval.flags_win().count_ones() == 1 {
-            if let Some(winner_seat_number) = case_eval.flags_win().trailing_zeros().try_into().ok() {
-                if let Some(mut seat) = self.get_seat_mut(winner_seat_number) {
+    /// The original code triggered a wonderful pedantic
+    /// [`Clippy` lint](https://rust-lang.github.io/rust-clippy/rust-1.91.0/index.html#manual_is_power_of_two):
+    /// `if case_eval.flags_win().count_ones() == 1`
+    fn close_heads_up(&self, case_eval: &CaseEval) {
+        if case_eval.flags_win().is_power_of_two() {
+            if let Ok(winner_seat_number) = case_eval.flags_win().trailing_zeros().try_into() {
+                if let Some(seat) = self.get_seat_mut(winner_seat_number) {
                     let winnings = self.pot.takes();
                     let winnings_number = winnings.count();
                     seat.player.chips.add_to(winnings);
-                    self.log_info(TableAction::PlayerWins(winner_seat_number, seat.player.id, seat.cards.bard(), winnings_number));
+                    let hand = seat.cards.bard();
+                    let id = seat.player.id;
+                    let action = TableAction::PlayerWins(winner_seat_number, id, hand, winnings_number);
+                    log::info!("{}", action.commentary(&seat.player.handle));
+                    self.event_log.log(action);
                 }
             }
         } else {
-
+            log::warn!("Tie hand!");
         }
     }
 
@@ -692,7 +700,7 @@ impl Table {
         }
 
         // 1. Bring in any remaining bets to the pot
-        let brought_in = self.bring_it_in()?;
+        let brought_in = self.close_it_out()?;
         self.log_info(TableAction::BringItIn(brought_in));
 
         let winnings = self.pot.takes();
@@ -2297,7 +2305,7 @@ mod casino__table___end_hand_tests {
 
         let results_log = table.end_hand().unwrap();
 
-        assert_eq!(150, table.pot.count());
+        assert_eq!(0, table.pot.count());
         assert!(table.seats.are_brought_in());
         assert_eq!(1, results_log.len());
         assert_eq!(2, results_log.get(0).unwrap().get_seat().unwrap());

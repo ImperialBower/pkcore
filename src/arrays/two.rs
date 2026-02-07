@@ -1564,6 +1564,13 @@ impl Plurable for Two {
 }
 
 impl Pile for Two {
+    fn add<P: Pile>(&self, _other: P) -> Self
+    where
+        Self: Sized,
+    {
+        unimplemented!("Two cannot be added; they represent a fixed length collection.")
+    }
+
     fn card_at(self, _index: usize) -> Option<Card> {
         todo!()
     }

@@ -844,6 +844,15 @@ impl IntoIterator for Cards {
 }
 
 impl Pile for Cards {
+    fn add<P: Pile>(&self, other: P) -> Self
+    where
+        Self: Sized,
+    {
+        let mut combined = self.clone();
+        combined.insert_all(&Cards::from(other.to_vec()));
+        combined
+    }
+
     /// `IndexSet` types can't have dupes.
     fn are_unique(&self) -> bool {
         true

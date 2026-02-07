@@ -231,6 +231,13 @@ impl FromStr for BoxedCards {
 }
 
 impl Pile for BoxedCards {
+    fn add<P: Pile>(&self, _other: P) -> Self
+    where
+        Self: Sized,
+    {
+        todo!()
+    }
+
     /// ```
     /// use pkcore::prelude::*;
     ///

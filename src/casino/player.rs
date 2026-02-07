@@ -251,7 +251,11 @@ impl Player {
                 self.handle,
                 self.chips_in_play.get()
             );
+        } else {
+            log::warn!("InvalidTableAction: Player is not active in the hand and cannot close it out.");
+            return Err(PKError::InvalidTableAction);
         }
+
         let player_bet = self.bet.takes();
         log::trace!("{} brings in {} chips", self.handle, player_bet);
 

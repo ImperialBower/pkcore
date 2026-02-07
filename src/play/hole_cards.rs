@@ -233,6 +233,22 @@ impl Plurable for HoleCards {
 }
 
 impl Pile for HoleCards {
+    fn add<P: Pile>(&self, other: P) -> Self
+    where
+        Self: Sized,
+    {
+        let mut combined = self.clone();
+        let other_cards = Cards::from(other.to_vec());
+
+        if let Ok(other_hands) = HoleCards::try_from(other_cards) {
+            for two in other_hands.iter() {
+                combined.push(*two);
+            }
+        }
+
+        combined
+    }
+
     fn card_at(self, _index: usize) -> Option<Card> {
         todo!()
     }

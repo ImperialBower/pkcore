@@ -215,13 +215,17 @@ impl Seats {
 
     /// This has almost the exact same flow as `bring_it_in`, but it's for closing out the
     /// entire hand, so there are some nuances..
+    ///
+    /// # Errors
+    ///
+    /// `PKError::ActionIsntFinished` if you guessed it
     pub fn close_it_out(&self) -> Result<Stack, PKError> {
         if !self.is_betting_complete() {
             return Err(PKError::ActionIsntFinished);
         }
 
         let collected = Stack::default();
-        for seat in self.borrow_all().iter() {
+        for seat in self.borrow_all() {
             if !seat.borrow().player.has_bet() {
                 continue;
             }
@@ -635,6 +639,9 @@ impl Seats {
         }
     }
 
+    /// # Errors
+    ///
+    /// `¯\_(ツ)_/¯`
     pub fn showdown(&self, pot_size: usize) -> Result<(), PKError> {
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow_mut();

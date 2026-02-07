@@ -125,8 +125,8 @@ impl TableAction {
             | TableAction::Call(_, amount)
             | TableAction::Raise(_, amount)
             | TableAction::AllIn(_, amount)
-            | TableAction::CloseItOut(amount) => Some(*amount),
-            TableAction::PotSize(amount)
+            | TableAction::CloseItOut(amount)
+            | TableAction::PotSize(amount)
             | TableAction::MainPot(amount)
             | TableAction::SidePot(amount)
             | TableAction::PlayerWins(_, _, _, amount)
