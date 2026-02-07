@@ -35,8 +35,7 @@ impl Stack {
         if self.count() == 0 {
             Err(PKError::Busted)
         } else {
-            let all = Stack::new(self.count());
-            self.0.set(0);
+            let all = self.take();
             Ok(all)
         }
     }
@@ -82,6 +81,25 @@ impl Stack {
         self.0 = chips.0;
     }
 
+    pub fn divvy_up(&self, by: usize) -> Vec<Stack> {
+        let winnings = self.take();
+        match by {
+            0 | 1 => vec![winnings],
+            _ => {
+                let total = winnings.count();
+                let share = total / by;
+                let remainder = total % by;
+
+                (0..by)
+                    .map(|i| {
+                        let amount = if i >= by - remainder { share + 1 } else { share };
+                        Stack::new(amount)
+                    })
+                    .collect()
+            }
+        }
+    }
+
     #[must_use]
     pub fn wins(&self, winnings: Stack) -> usize {
         self.add_to(winnings);
@@ -89,7 +107,7 @@ impl Stack {
     }
 
     #[must_use]
-    pub fn takes(&self) -> Self {
+    pub fn take(&self) -> Self {
         Stack::new(self.0.take())
     }
 }
@@ -211,6 +229,31 @@ mod casino__chips__stack_tests {
 
         assert!(bet.is_err());
         assert_eq!(PKError::InsufficientChips, bet.unwrap_err());
+    }
+
+    #[test]
+    fn divvy_up() {
+        let winnings = Stack::new(1_000);
+
+        let shares = winnings.divvy_up(3);
+
+        assert_eq!(3, shares.len());
+        assert_eq!(Stack::new(333), shares[0]);
+        assert_eq!(Stack::new(333), shares[1]);
+        assert_eq!(Stack::new(334), shares[2]);
+    }
+
+    /// I'm such a wimp that I didn't try to solve this myself.
+    #[test]
+    fn divvy_up_overflow() {
+        let winnings = Stack::new(11);
+
+        let shares = winnings.divvy_up(3);
+
+        assert_eq!(3, shares.len());
+        assert_eq!(Stack::new(3), shares[0]);
+        assert_eq!(Stack::new(4), shares[1]);
+        assert_eq!(Stack::new(4), shares[2]);
     }
 
     #[test]

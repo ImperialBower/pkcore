@@ -207,7 +207,7 @@ impl Player {
             self.state.set(PlayerState::YetToAct);
         }
 
-        let player_bet = self.bet.takes();
+        let player_bet = self.bet.take();
         // NOTE: This doesn't work for issue with end of hand, since this is used to keep track
         // of how many chips the player has in play for the hand.
         // let chips_in_play = self.chips_in_play.take();
@@ -256,7 +256,7 @@ impl Player {
             return Err(PKError::InvalidTableAction);
         }
 
-        let player_bet = self.bet.takes();
+        let player_bet = self.bet.take();
         log::trace!("{} brings in {} chips", self.handle, player_bet);
 
         Ok(player_bet)
@@ -318,7 +318,7 @@ impl Player {
             return Err(PKError::InvalidTableAction);
         }
         self.state.set(PlayerState::Fold);
-        Ok(self.bet.takes())
+        Ok(self.bet.take())
     }
 
     /// ```

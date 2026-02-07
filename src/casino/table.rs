@@ -5,6 +5,7 @@ use crate::casino::cashier::chips::Stack;
 use crate::casino::game::ForcedBets;
 use crate::casino::player::Player;
 use crate::casino::table::event::{TableAction, TableLog};
+use crate::casino::table::result::HandResult;
 use crate::casino::table::seat::Seat;
 use crate::casino::table::seats::Seats;
 use crate::games::{GamePhase, GameType};
@@ -17,7 +18,6 @@ use bint::{BintCell, DrainableBintCell};
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
 use uuid::Uuid;
-use crate::casino::table::result::HandResult;
 
 pub mod event;
 pub mod position;
@@ -627,7 +627,7 @@ impl Table {
                     Some(i) => *i,
                 };
 
-                let log = self.end_hand_all_fold_to(winner_seat_number)?;
+                self.end_hand_all_fold_to(winner_seat_number)?;
                 return Ok(HandResult::new(CaseEval::default(), self.event_log.results_only()));
             }
         }
@@ -635,87 +635,86 @@ impl Table {
         let game = Game::try_from(self)?;
         let case_eval = game.river_case_eval()?;
 
-        match active_seats.len() {
-            0 | 1 => return Err(PKError::Fubar),
-            2 => {
+        let winners = case_eval.winning_seats();
 
-            }
-            _ => {
-
-            }
-        }
-
-        todo!();
-
-
-
-
-
-        // Since there's more than one
-        println!(">>> {case_eval}");
-        let winning_hand_rank = case_eval.winning_hand_rank();
         let brought_in = self.close_it_out()?;
         self.log_info(TableAction::BringItIn(brought_in));
         self.seats.showdown(self.pot.count())?;
 
-        let number_winners = case_eval.flags_win().count_ones();
-        self.log_info(TableAction::Showdown(u8::try_from(number_winners).unwrap_or_default()));
+        println!("{self}");
 
-        {
-            if active_seats.len() == 2 {
-                debug_assert_eq!(0, self.bet.get(), "Bet should be zero at showdown with two players");
-                self.close_heads_up(&case_eval);
+        let winnings = self.pot.take().divvy_up(winners.len());
+
+        for (i, winner_seat_number) in winners.iter().enumerate() {
+            if let Some(seat) = self.get_seat_mut(*winner_seat_number) {
+                let player_winnings = winnings.get(i).cloned().unwrap_or_default();
+                let winnings_amount = player_winnings.count();
+                seat.player.chips.add_to(player_winnings);
+                let hand = seat.cards.bard();
+                let id = seat.player.id;
+                let action = TableAction::PlayerWins(*winner_seat_number, id, hand, winnings_amount);
+                log::info!("{}", action.commentary(&seat.player.handle));
+                self.event_log.log(action);
             }
         }
 
-        for (i, eval) in case_eval.iter().enumerate() {
-            if eval.hand_rank == winning_hand_rank {
-                println!("   Player #{}: {eval} has the best hand!", i + 1);
-            } else {
-                println!("   Player #{}: {eval}", i + 1);
+        for (i, seat_cell) in self.seats.borrow_all().iter().enumerate() {
+            if seat_cell.is_in_hand() {
+                if let Some(seat) = self.get_seat(u8::try_from(i).unwrap_or_default()) {
+                    if !winners.contains(&u8::try_from(i).unwrap_or_default()) {
+                        let player_loses = seat.player.chips_in_play.take();
+                        let action = TableAction::PlayerLoses(
+                            u8::try_from(i).unwrap_or_default(),
+                            seat.player.id,
+                            seat.cards.bard(),
+                            player_loses,
+                        );
+                        log::info!("{}", action.commentary(&seat.player.handle));
+                        self.event_log.log(action);
+                    }
+                }
             }
         }
+
+        // ASIDE: I love that I don't have to do sheit like this. Originally, I planned to slice and
+        // dice the divvying out to different scenarios, but it seems that I only needed to handle
+        // where there is only 1 player left in the hand.
+        // match active_seats.len() {
+        //     0 | 1 => return Err(PKError::Fubar),
+        //     2 => {
         //
-        // // 2. Distribute pot to winners
-        // for winner in results.winners() {
-        //     if let Some(mut seat) = self.get_seat_mut(winner.seat_number) {
-        //         let winnings = winner.amount;
-        //         seat.player.chips.add(winnings);
-        //         self.log_info(TableAction::PlayerWins(winner.seat_number, winnings));
+        //     }
+        //     _ => {
+        //
         //     }
         // }
-        //
-        // // 3. Clear the pot
-        // self.pot.clear();
-        //
-        //
-        // // 6. Set phase to end of hand
-        // self.set_phase(GamePhase::Showdown);
 
         Ok(HandResult::new(case_eval, self.event_log.results_only()))
     }
 
-    /// The original code triggered a wonderful pedantic
-    /// [`Clippy` lint](https://rust-lang.github.io/rust-clippy/rust-1.91.0/index.html#manual_is_power_of_two):
-    /// `if case_eval.flags_win().count_ones() == 1`
-    fn close_heads_up(&self, case_eval: &CaseEval) {
-        if case_eval.flags_win().is_power_of_two() {
-            if let Ok(winner_seat_number) = case_eval.flags_win().trailing_zeros().try_into() {
-                if let Some(seat) = self.get_seat_mut(winner_seat_number) {
-                    let winnings = self.pot.takes();
-                    let winnings_number = winnings.count();
-                    seat.player.chips.add_to(winnings);
-                    let hand = seat.cards.bard();
-                    let id = seat.player.id;
-                    let action = TableAction::PlayerWins(winner_seat_number, id, hand, winnings_number);
-                    log::info!("{}", action.commentary(&seat.player.handle));
-                    self.event_log.log(action);
-                }
-            }
-        } else {
-            log::warn!("Tie hand!");
-        }
-    }
+    // The original code triggered a wonderful pedantic
+    // [`Clippy` lint](https://rust-lang.github.io/rust-clippy/rust-1.91.0/index.html#manual_is_power_of_two):
+    // `if case_eval.flags_win().count_ones() == 1`
+    //
+    // This code is gratefully retired.
+    // fn close_heads_up(&self, case_eval: &CaseEval) {
+    //     if case_eval.flags_win().is_power_of_two() {
+    //         if let Ok(winner_seat_number) = case_eval.flags_win().trailing_zeros().try_into() {
+    //             if let Some(seat) = self.get_seat_mut(winner_seat_number) {
+    //                 let winnings = self.pot.take();
+    //                 let winnings_number = winnings.count();
+    //                 seat.player.chips.add_to(winnings);
+    //                 let hand = seat.cards.bard();
+    //                 let id = seat.player.id;
+    //                 let action = TableAction::PlayerWins(winner_seat_number, id, hand, winnings_number);
+    //                 log::info!("{}", action.commentary(&seat.player.handle));
+    //                 self.event_log.log(action);
+    //             }
+    //         }
+    //     } else {
+    //         log::warn!("Tie hand!");
+    //     }
+    // }
 
     fn end_hand_all_fold_to(&self, winner_seat_number: u8) -> Result<(), PKError> {
         self.log_info(TableAction::AllFoldedTo(winner_seat_number));
@@ -729,7 +728,7 @@ impl Table {
         let brought_in = self.close_it_out()?;
         self.log_info(TableAction::BringItIn(brought_in));
 
-        let winnings = self.pot.takes();
+        let winnings = self.pot.take();
 
         if let Some(seat) = self.get_seat_mut(winner_seat_number) {
             // Cards cards????
@@ -2280,23 +2279,21 @@ mod casino__table___end_hand_tests {
                 assert_eq!(2, table.seats.flags_all_in().count_ones());
             }
 
-            println!("{table}");
-
             let _log = table.end_hand().unwrap();
             {
-                assert_eq!(2_000_150, table.pot.count());
+                assert_eq!(0, table.pot.count());
                 assert!(table.seats.are_brought_in());
                 println!("{table}");
                 assert!(table.is_river());
-                // TODO DEFECT: We need to have a player state that differentiates between betting
-                // being complete and the final showdown.
+                assert_eq!(0, table.bet.get());
+                assert_eq!(2000150, table.get_seat(3).unwrap().player.chips.count());
+                assert_eq!(0, table.get_seat(4).unwrap().player.chips.count());
             }
 
-            // table.reset();
+            table.reset();
 
-            println!("{table}");
-
-            // println!("{results_log}");
+            assert_eq!(0, table.get_seat(3).unwrap().player.chips_in_play.get());
+            assert_eq!(0, table.get_seat(4).unwrap().player.chips_in_play.get());
         }
     }
 

@@ -225,8 +225,7 @@ impl CaseEval {
     #[allow(clippy::cast_possible_truncation)]
     pub fn winning_seats(&self) -> Vec<u8> {
         let flags = self.flags_win();
-        (0..u8::BITS as u8)
-            .filter(|i| (flags & (1 << i)) != 0 ).collect()
+        (0..u8::BITS as u8).filter(|i| (flags & (1 << i)) != 0).collect()
     }
 
     /// Pure TDD would have me make our first test green by simply having it return
@@ -500,7 +499,7 @@ impl CaseEval {
         let best = self.winning_hand_rank();
         for (i, eval) in self.iter().enumerate() {
             if eval.hand_rank == best {
-                    flags = Win::or(flags, Win::from_index(i));
+                flags = Win::or(flags, Win::from_index(i));
             }
         }
         flags
