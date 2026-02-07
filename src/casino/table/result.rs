@@ -40,17 +40,30 @@ use crate::prelude::TableLog;
 /// the path wrong. And for `Results`, that struct doesn't even exist. Now, to be fair, I did say
 /// `Results` instead of results, implying that there was a struct, instead of the Vec<TableLog>.
 #[derive(Debug, Clone, PartialEq)]
-pub struct Result {
+pub struct HandResult {
     /// The case evaluation for the hand
     pub case_eval: CaseEval,
     /// The results log from the table
     pub log: TableLog,
 }
 
-impl Result {
+impl HandResult {
     /// Creates a new Result with the given case evaluation and results log
     pub fn new(case_eval: CaseEval, log: TableLog) -> Self {
         Self { case_eval, log }
+    }
+}
+
+impl std::fmt::Display for HandResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Hand Result:")?;
+        writeln!(f, "{}", self.case_eval)?;
+        writeln!(f, "\nTable Log:")?;
+        let log = self.log.clone();
+        for (i, entry) in log.iter().enumerate() {
+            writeln!(f, "  {}: {}", i + 1, entry)?;
+        }
+        Ok(())
     }
 }
 

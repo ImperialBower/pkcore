@@ -385,6 +385,10 @@ impl TableLog {
         internal.iter().all(TableAction::is_result)
     }
 
+    pub fn iter(&self) -> std::vec::IntoIter<TableAction> {
+        <&Self as IntoIterator>::into_iter(self)
+    }
+
     #[must_use]
     pub fn results_only(&self) -> TableLog {
         let results: Vec<TableAction> = self.result_actions();
@@ -407,6 +411,31 @@ impl Display for TableLog {
 impl From<Vec<TableAction>> for TableLog {
     fn from(actions: Vec<TableAction>) -> Self {
         Self(RefCell::new(actions))
+    }
+}
+
+/// # Diary
+///
+/// One of the things that I am trying to make myself do is type out the suggestions that
+/// `CoPi` makes. Composers like Mozart learned how to compose my copying and rearranging
+/// compositions from other composers. In his case, taking the sonatas of J.C.Bach and turning
+/// them into piano concertos. For many other composers, they transcribed the keyboard sonatas
+/// of Scarlatti and turned them into chamber concertos. (See Charles Avison)
+impl IntoIterator for TableLog {
+    type Item = TableAction;
+    type IntoIter = std::vec::IntoIter<TableAction>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_inner().into_iter()
+    }
+}
+
+impl IntoIterator for &TableLog {
+    type Item = TableAction;
+    type IntoIter = std::vec::IntoIter<TableAction>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.borrow().iter().copied().collect::<Vec<_>>().into_iter()
     }
 }
 
