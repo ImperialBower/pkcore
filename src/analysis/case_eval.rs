@@ -162,10 +162,7 @@ impl CaseEval {
     /// when there's nothing there.
     #[must_use]
     pub fn card(&self) -> Card {
-        match self.1.cards().draw_one() {
-            Ok(card) => card,
-            Err(_) => Card::BLANK,
-        }
+        self.1.cards().draw_one().unwrap_or(Card::BLANK)
     }
 
     /// The first test we're going to do is an easy one. By default, does our struct
@@ -222,6 +219,14 @@ impl CaseEval {
     #[must_use]
     pub fn win_count(&self) -> usize {
         self.flags_win().count_ones() as usize
+    }
+
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
+    pub fn winning_seats(&self) -> Vec<u8> {
+        let flags = self.flags_win();
+        (0..u8::BITS as u8)
+            .filter(|i| (flags & (1 << i)) != 0 ).collect()
     }
 
     /// Pure TDD would have me make our first test green by simply having it return
@@ -495,7 +500,7 @@ impl CaseEval {
         let best = self.winning_hand_rank();
         for (i, eval) in self.iter().enumerate() {
             if eval.hand_rank == best {
-                flags = Win::or(flags, Win::from_index(i));
+                    flags = Win::or(flags, Win::from_index(i));
             }
         }
         flags
@@ -874,5 +879,23 @@ mod hand_rank__case_eval_tests {
 
         assert_eq!(Win::FIRST, player_flag);
         assert_eq!(expected_hand_rank, actual_hand_rank);
+    }
+
+    #[test]
+    fn winning_seats() {
+        let the_nuts = Eval::from(Five::from_2and3(Two::HAND_8S_7S, TestData::the_flop()));
+        let also_the_nuts = Eval::from(Five::from_2and3(Two::HAND_8H_7D, TestData::the_flop()));
+        let ce = CaseEval::from(vec![
+            TestData::daniel_eval_at_flop(),
+            the_nuts,
+            also_the_nuts,
+            TestData::gus_eval_at_flop(),
+        ]);
+        let actual = ce.winning_seats();
+
+        let expected = vec![1, 2];
+
+        assert_eq!(0b110, ce.flags_win());
+        assert_eq!(expected, actual);
     }
 }

@@ -17,6 +17,7 @@ use bint::{BintCell, DrainableBintCell};
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
 use uuid::Uuid;
+use crate::casino::table::result::HandResult;
 
 pub mod event;
 pub mod position;
@@ -587,7 +588,9 @@ impl Table {
 
     pub fn effective_player_cards(&self, seat_number: u8) -> Option<Cards> {
         if let Some(seat) = self.get_seat(seat_number) {
-            Some(seat.cards.cards() + self.board.cards())
+            let effective_cards = seat.cards.cards() + self.board.cards();
+            log::trace!("Effective player cards for seat #{seat_number}: {effective_cards}");
+            Some(effective_cards)
         } else {
             None
         }
@@ -601,7 +604,7 @@ impl Table {
     /// # Errors
     ///
     /// `PKError::Fubar` if can't find seat.
-    pub fn end_hand(&self) -> Result<TableLog, PKError> {
+    pub fn end_hand(&self) -> Result<HandResult, PKError> {
         self.log_info(TableAction::EndHand);
 
         if !self.is_game_over() {
@@ -611,6 +614,9 @@ impl Table {
 
         // How many players are still active?
         let active_seats = self.seats.active_in_hand();
+
+        // Everyone folds to is a special case since we can't create a case eval if
+        // we don't have the board complete.
         {
             // If only one player is left, they win the pot automatically.
             if active_seats.len() == 1 {
@@ -621,13 +627,31 @@ impl Table {
                     Some(i) => *i,
                 };
 
-                return self.end_hand_all_fold_to(winner_seat_number);
+                let log = self.end_hand_all_fold_to(winner_seat_number)?;
+                return Ok(HandResult::new(CaseEval::default(), self.event_log.results_only()));
             }
         }
 
-        // Since there's more than one
         let game = Game::try_from(self)?;
         let case_eval = game.river_case_eval()?;
+
+        match active_seats.len() {
+            0 | 1 => return Err(PKError::Fubar),
+            2 => {
+
+            }
+            _ => {
+
+            }
+        }
+
+        todo!();
+
+
+
+
+
+        // Since there's more than one
         println!(">>> {case_eval}");
         let winning_hand_rank = case_eval.winning_hand_rank();
         let brought_in = self.close_it_out()?;
@@ -668,7 +692,7 @@ impl Table {
         // // 6. Set phase to end of hand
         // self.set_phase(GamePhase::Showdown);
 
-        Ok(self.event_log.results_only())
+        Ok(HandResult::new(case_eval, self.event_log.results_only()))
     }
 
     /// The original code triggered a wonderful pedantic
@@ -693,7 +717,7 @@ impl Table {
         }
     }
 
-    fn end_hand_all_fold_to(&self, winner_seat_number: u8) -> Result<TableLog, PKError> {
+    fn end_hand_all_fold_to(&self, winner_seat_number: u8) -> Result<(), PKError> {
         self.log_info(TableAction::AllFoldedTo(winner_seat_number));
 
         if let Some(seat) = self.get_seat_mut(winner_seat_number) {
@@ -731,7 +755,7 @@ impl Table {
 
         self.reset();
 
-        Ok(self.event_log.results_only())
+        Ok(())
     }
 
     /// # Errors
@@ -1069,6 +1093,7 @@ impl std::fmt::Display for Table {
         writeln!(f, "Game: {:?}", self.game)?;
         writeln!(f, "Phase: {:?}", self.phase)?;
         writeln!(f, "Dealer Position: {}", self.button.value())?;
+        writeln!(f, "Board {}", self.board)?;
         if !self.pot.is_empty() {
             writeln!(f, "Pot Size: {}", self.pot.count())?;
         }
@@ -2287,7 +2312,8 @@ mod casino__table___end_hand_tests {
         table.act_fold(7).expect("ActFolded");
         table.act_fold(0).expect("ActFolded");
         table.act_fold(1).expect("ActFolded");
-        // TODO: shouldn't this be 150?
+
+        // TODO: shouldn't this be 150? YES!!!!
         assert_eq!(50, table.pot.count());
         assert!(table.seats.is_betting_complete());
         assert!(table.is_game_over());
@@ -2299,19 +2325,13 @@ mod casino__table___end_hand_tests {
             panic!("Failed to get seat 2");
         }
 
-        // let pot = table.bring_it_in().unwrap();
-        // {
-        //     assert_eq!(150, pot);
-        //     assert!(table.seats.are_brought_in());
-        // }
-
-        let results_log = table.end_hand().unwrap();
+        let hand_result = table.end_hand().unwrap();
 
         assert_eq!(0, table.pot.count());
         assert!(table.seats.are_brought_in());
-        assert_eq!(1, results_log.len());
-        assert_eq!(2, results_log.get(0).unwrap().get_seat().unwrap());
-        assert_eq!(150, results_log.get(0).unwrap().get_ammount().unwrap());
+        assert_eq!(1, hand_result.log.len());
+        assert_eq!(2, hand_result.log.get(0).unwrap().get_seat().unwrap());
+        assert_eq!(150, hand_result.log.get(0).unwrap().get_ammount().unwrap());
         assert!(table.seats.are_clear());
         assert_eq!(999_950, table.get_seat(1).unwrap().player.chips.count());
         assert_eq!(1_000_050, table.get_seat(2).unwrap().player.chips.count());
