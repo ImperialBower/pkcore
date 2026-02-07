@@ -959,8 +959,8 @@ mod play__game_tests {
         let game = Game::try_from(table.clone()).unwrap();
 
         let flop_eval = FlopEval::try_from(game.clone()).unwrap();
-        let fe_gus = flop_eval.eval_for_player(0).unwrap();
-        let fe_daniel = flop_eval.eval_for_player(1).unwrap();
+        let fe_gus = flop_eval.eval_for_player(1).unwrap();
+        let fe_daniel = flop_eval.eval_for_player(2).unwrap();
 
         assert_eq!(HandRankName::ThreeOfAKind, fe_gus.hand_rank.name);
         assert_eq!(HandRankClass::ThreeFives, fe_gus.hand_rank.class);

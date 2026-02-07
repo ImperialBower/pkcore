@@ -578,6 +578,27 @@ impl CaseEval {
     }
 }
 
+impl std::fmt::Display for CaseEval {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.is_empty() {
+            return write!(f, "CaseEval: empty");
+        }
+
+        writeln!(f, "CaseEval ({} players):", self.len())?;
+
+        let (winners, winning_rank) = self.winner();
+
+        for (i, eval) in self.iter().enumerate() {
+            let is_winner = (winners & (1 << i)) != 0;
+            let marker = if is_winner { "* " } else { "  " };
+            writeln!(f, "{}Player {}: {}", marker, i + 1, eval)?;
+        }
+
+        writeln!(f, "Winning hand: {winning_rank}")?;
+        write!(f, "Winner count: {}", self.win_count())
+    }
+}
+
 impl From<Vec<Eval>> for CaseEval {
     fn from(v: Vec<Eval>) -> Self {
         CaseEval(v, Cards::default())

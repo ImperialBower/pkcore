@@ -20,6 +20,7 @@ use uuid::Uuid;
 
 pub mod event;
 pub mod position;
+mod result;
 pub mod seat;
 pub mod seats;
 
@@ -627,6 +628,7 @@ impl Table {
         // Since there's more than one
         let game = Game::try_from(self)?;
         let case_eval = game.river_case_eval()?;
+        println!(">>> {case_eval}");
         let winning_hand_rank = case_eval.winning_hand_rank();
         let brought_in = self.close_it_out()?;
         self.log_info(TableAction::BringItIn(brought_in));
@@ -1254,7 +1256,7 @@ mod casino__table_tests {
     }
 
     #[test]
-    fn bring_it_in_isolate_defect() {
+    fn close_it_out_isolate_defect() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
         let _ = table.act_forced_bets();
         table.act_fold(3).expect("ActFolded");
@@ -1265,7 +1267,7 @@ mod casino__table_tests {
         table.act_fold(0).expect("ActFolded");
         table.act_fold(1).expect("ActFolded");
 
-        let brought_in = table.bring_it_in().expect("Failed to bring it in");
+        let brought_in = table.close_it_out().expect("Failed to bring it in");
 
         for (seat_number, seat) in table.seats.iter().enumerate() {
             let seat = seat.borrow();
