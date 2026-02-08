@@ -46,8 +46,6 @@ To open the generated docs in your browser:
 Some of the library and examples will be looking for a `.env` file in the root of the project. Simply copy
 `.env.example` to `.env` and modify as needed.
 
-```shell
-
 ## Documentation
 
 For comprehensive API documentation, run:
@@ -490,7 +488,7 @@ I am a failure. I've been a failure all my life. I’ve dropped out of college t
 In the fifth grade, I got the silver medal for having the second-worst car in the Cub Scouts Pinewood Derby. I would have been last, but the Scout Master from a rival troupe took
 the wheel that had fallen off from one of his kids' cars, hammered it back onto the car, and stole first from me by deliberately creating a car that wouldn’t roll. I even failed at failure. I was the worst. I should have gotten the gold, but no, I was the second worst. If you’re not last, you’re…?
 
-There’s only one thing that I’ve ever really felt like a master of. Nobody run the early morning solo coffee rush at a 7-11 better than me. At the Colma 7-11 I kept all five
+There’s only one thing that I’ve ever really felt like a master of. Nobody ran the early morning solo coffee rush at a 7-11 better than me. At the Colma 7-11 I kept all five
 pots of coffee humming, making sure to keep them in a steady rotation, so that those smart-asses who tried to get the fresher pot of coffee by grabbing the one in the
 back were actually getting the oldest one. Not that it mattered. They were always fresh as fuck. A regular walked in, and I had their three packs of Benson & Hedges Ultra
 Lights waiting for them at the register before they even asked. I was the shit, and all of my customers knew it, and were gracious to let me know, if in more family-friendly terms.

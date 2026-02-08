@@ -138,7 +138,7 @@ impl CaseEvals {
         let mut wins = Wins::default();
 
         for case_eval in self.iter() {
-            wins.add(case_eval.win_count());
+            wins.add(case_eval.flags_win());
         }
 
         wins

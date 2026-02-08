@@ -766,6 +766,14 @@ impl FromStr for SortedHeadsUp {
 }
 
 impl Pile for SortedHeadsUp {
+    /// Proud of `CoPilot` for just saying nope on this one LOL. Good bot.
+    fn add<P: Pile>(&self, _other: P) -> Self
+    where
+        Self: Sized,
+    {
+        unimplemented!("SortedHeadsUp matchups cannot be added; they represent a fixed two-hand comparison")
+    }
+
     fn card_at(self, _index: usize) -> Option<Card> {
         todo!()
     }

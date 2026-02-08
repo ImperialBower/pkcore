@@ -918,7 +918,7 @@ mod play__game_tests {
         assert_eq!(47, case_eval.winning_hand_rank().value);
         assert_eq!(
             Win::FIRST | Win::SECOND | Win::THIRD | Win::FORTH,
-            case_eval.win_count()
+            case_eval.flags_win()
         );
         assert_eq!(HandRankClass::FourJacks, case_eval.get(0).unwrap().hand_rank.class);
         assert_eq!(HandRankClass::FourJacks, case_eval.get(1).unwrap().hand_rank.class);
@@ -959,8 +959,8 @@ mod play__game_tests {
         let game = Game::try_from(table.clone()).unwrap();
 
         let flop_eval = FlopEval::try_from(game.clone()).unwrap();
-        let fe_gus = flop_eval.eval_for_player(0).unwrap();
-        let fe_daniel = flop_eval.eval_for_player(1).unwrap();
+        let fe_gus = flop_eval.eval_for_player(1).unwrap();
+        let fe_daniel = flop_eval.eval_for_player(2).unwrap();
 
         assert_eq!(HandRankName::ThreeOfAKind, fe_gus.hand_rank.name);
         assert_eq!(HandRankClass::ThreeFives, fe_gus.hand_rank.class);

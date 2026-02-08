@@ -97,6 +97,13 @@ impl Plurable for Board {
 }
 
 impl Pile for Board {
+    fn add<P: Pile>(&self, _other: P) -> Self
+    where
+        Self: Sized,
+    {
+        unimplemented!("Board cannot be added; it's a fixed 5-card hand")
+    }
+
     fn card_at(self, _index: usize) -> Option<Card> {
         todo!()
     }

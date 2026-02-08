@@ -21,7 +21,7 @@ itertools = "0.14"
 log = "0.4"
 percent-encoding = "2.3"
 rand = "0.9"
-random_name_generator = "0.3.6"
+random_name_generator = "0.3.6" 
 rayon = "1.10.0"
 regex = { version = "1.11", features = [] }
 rusqlite = { version = "0.34", features = ["bundled"] } # 0.35 breaks HUPResult https://github.com/rusqlite/rusqlite/releases#reactions--reaction_button_component-a0702b

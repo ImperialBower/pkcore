@@ -28,6 +28,10 @@ impl SeatCell {
         self.0.into_inner()
     }
 
+    pub fn is_clear(&self) -> bool {
+        self.borrow().is_clear()
+    }
+
     pub fn is_in_hand(&self) -> bool {
         self.borrow().player.state.is_in_hand()
     }
@@ -101,6 +105,10 @@ impl Seat {
 
     pub fn is_all_in(&self) -> bool {
         self.player.is_all_in()
+    }
+
+    pub fn is_clear(&self) -> bool {
+        self.player.is_clear() && self.cards.is_empty()
     }
 
     pub fn is_empty(&self) -> bool {

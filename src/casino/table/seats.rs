@@ -4,6 +4,9 @@ use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
 use crate::casino::table::seat::{Seat, SeatCell};
+use crate::prelude::PlayerState;
+use crate::util::wincounter::PlayerFlag;
+use crate::util::wincounter::win::Win;
 use log;
 use std::cell::{Ref, RefMut};
 
@@ -130,6 +133,23 @@ impl Seats {
     }
 
     #[must_use]
+    pub fn are_brought_in(&self) -> bool {
+        self.borrow_all()
+            .iter()
+            .all(|seat| seat.borrow().player.bet.count() == 0)
+    }
+
+    #[must_use]
+    pub fn are_clear(&self) -> bool {
+        for seat_cell in &self.0 {
+            if !seat_cell.is_clear() {
+                return false;
+            }
+        }
+        true
+    }
+
+    #[must_use]
     pub fn are_dealt(&self) -> bool {
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow();
@@ -193,6 +213,28 @@ impl Seats {
         Ok(collected)
     }
 
+    /// This has almost the exact same flow as `bring_it_in`, but it's for closing out the
+    /// entire hand, so there are some nuances..
+    ///
+    /// # Errors
+    ///
+    /// `PKError::ActionIsntFinished` if you guessed it
+    pub fn close_it_out(&self) -> Result<Stack, PKError> {
+        if !self.is_betting_complete() {
+            return Err(PKError::ActionIsntFinished);
+        }
+
+        let collected = Stack::default();
+        for seat in self.borrow_all() {
+            if !seat.borrow().player.has_bet() {
+                continue;
+            }
+            let chips = seat.borrow_mut().player.act_close_it_out()?;
+            collected.add_to(chips);
+        }
+        Ok(collected)
+    }
+
     #[must_use]
     pub fn cards_string(&self) -> String {
         let mut seat_strings = Vec::new();
@@ -204,7 +246,7 @@ impl Seats {
     }
 
     #[must_use]
-    pub fn chips_in_play(&self) -> usize {
+    pub fn chips_in_round(&self) -> usize {
         let mut total = 0;
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow();
@@ -223,6 +265,23 @@ impl Seats {
             }
         }
         count
+    }
+
+    #[must_use]
+    pub fn active_in_hand(&self) -> Vec<u8> {
+        let mut seats: Vec<u8> = Vec::new();
+
+        for (seat_number, seat_cell) in self.iter().enumerate() {
+            let seat = seat_cell.borrow();
+            if seat.is_active() {
+                match u8::try_from(seat_number) {
+                    Ok(snumber) => seats.push(snumber),
+                    Err(e) => log::error!("Failed to convert seat number to u8: {e}"),
+                }
+            }
+        }
+
+        seats
     }
 
     #[must_use]
@@ -371,6 +430,18 @@ impl Seats {
     }
 
     #[must_use]
+    pub fn flags_all_in(&self) -> PlayerFlag {
+        let mut flags = PlayerFlag::default();
+        for (i, seat_cell) in self.0.iter().enumerate() {
+            let seat = seat_cell.borrow();
+            if seat.is_all_in() {
+                flags = Win::or(flags, Win::from_index(i));
+            }
+        }
+        flags
+    }
+
+    #[must_use]
     pub fn get_seat_number_from_handle(&self, handle: &str) -> Option<u8> {
         for (i, seat_cell) in self.0.iter().enumerate() {
             let seat = seat_cell.borrow();
@@ -423,6 +494,19 @@ impl Seats {
         } else {
             false
         }
+    }
+
+    #[must_use]
+    pub fn are_bets_equal(&self) -> bool {
+        let current_bet = self.current_bet();
+
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            if seat.is_active() && seat.player.bet.count() != current_bet {
+                return false;
+            }
+        }
+        true
     }
 
     /// Checks if equilibrium has been reached in the betting round.
@@ -540,12 +624,32 @@ impl Seats {
         Err(PKError::InvalidSeatNumber)
     }
 
+    pub fn reset(&self) {
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow_mut();
+            seat.player.reset();
+        }
+    }
+
     /// Clears the `PlayerState` for all the seats.
     pub fn reset_state(&self) {
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow_mut();
             seat.player.state.reset();
         }
+    }
+
+    /// # Errors
+    ///
+    /// `¯\_(ツ)_/¯`
+    pub fn showdown(&self, pot_size: usize) -> Result<(), PKError> {
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow_mut();
+            if seat.is_active() {
+                seat.player.state.set(PlayerState::Showdown(pot_size));
+            }
+        }
+        Ok(())
     }
 
     #[must_use]
@@ -743,6 +847,12 @@ mod casino__table__seats_tests {
         }
 
         assert!(seats.is_betting_complete());
+    }
+
+    #[test]
+    fn are_clear() {
+        assert!(Seats::default().are_clear());
+        assert!(!Seats::try_from(TestData::the_hand_seats()).unwrap().are_clear());
     }
 
     #[test]

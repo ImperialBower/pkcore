@@ -438,6 +438,7 @@ pub enum PKError {
     InvalidComboIndex,
     InvalidHand,
     InvalidCardIndex,
+    InvalidIO,
     InvalidLength,
     InvalidPermutationIndex,
     InvalidPluribusIndex,
@@ -484,6 +485,7 @@ impl Display for PKError {
             PKError::InvalidCardIndex => "Invalid Card Index Error",
             PKError::InvalidComboIndex => "Invalid Combo Index Error",
             PKError::InvalidHand => "Invalid Hand Error",
+            PKError::InvalidIO => "Invalid IO Error",
             PKError::InvalidLength => "Invalid Length Error",
             PKError::InvalidPermutationIndex => "Invalid Permutation Index Error",
             PKError::InvalidPluribusIndex => "Invalid Pluribus Index Error",
@@ -514,6 +516,13 @@ impl Error for PKError {}
 
 impl From<rusqlite::Error> for PKError {
     fn from(err: rusqlite::Error) -> Self {
+        log::error!("{err}");
+        PKError::DBConnectionError
+    }
+}
+
+impl From<std::io::Error> for PKError {
+    fn from(err: std::io::Error) -> Self {
         log::error!("{err}");
         PKError::DBConnectionError
     }
@@ -622,6 +631,11 @@ pub trait GTO {
 }
 
 pub trait Pile {
+    #[must_use]
+    fn add<P: Pile>(&self, other: P) -> Self
+    where
+        Self: Sized;
+
     /// This code is cribbed from [`oli_obk`](https://stackoverflow.com/a/46766782/1245251).
     fn are_unique(&self) -> bool {
         let v = self.to_vec();
@@ -638,7 +652,7 @@ pub trait Pile {
         Cards::from(self.to_vec())
     }
 
-    /// Will this work? Can I create a self referential clean? Only one want to find out...
+    /// Will this work? Can I create a self-referential clean? Only one way to find out...
     ///
     /// *NARRATOR:* _The answer is yes._
     #[must_use]

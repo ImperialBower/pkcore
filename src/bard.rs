@@ -2,6 +2,7 @@ use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
+use crate::prelude::TheNuts;
 use crate::{PKError, Pile};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -520,6 +521,61 @@ impl FromStr for Bard {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(Bard::from(Cards::from_str(s)?))
+    }
+}
+
+impl Pile for Bard {
+    /// Diary: I am getting so sick of this codebase that I am hippy coding it. At this point
+    /// it has such a solid foundation in test that I'm not that worried, but it may bite
+    /// me in the ass. We shall see.
+    fn add<P: Pile>(&self, other: P) -> Self
+    where
+        Self: Sized,
+    {
+        let mut combined = *self;
+
+        for card in other.to_vec() {
+            combined = combined.fold_in(card);
+        }
+
+        combined
+    }
+
+    /// OK, I wasn't sure what `CoPi` would come up with, but I like it.
+    fn card_at(self, index: usize) -> Option<Card> {
+        self.to_vec().get(index).copied()
+    }
+
+    fn clean(&self) -> Self {
+        Bard(self.0 & u64::from(Card::FREQUENCY_MASK_FILTER))
+    }
+
+    fn contains(&self, card: &Card) -> bool {
+        let card_bard = Bard::from(card);
+        (*self & card_bard) == card_bard
+    }
+
+    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
+        unimplemented!("Bard can't handle this sheit.")
+    }
+
+    fn the_nuts(&self) -> TheNuts {
+        unimplemented!("Some day..")
+    }
+
+    fn to_vec(&self) -> Vec<Card> {
+        let mut v: Vec<Card> = Vec::new();
+
+        for b in Bard::DECK {
+            if b & *self == b {
+                let c = Card::try_from(b);
+                if let Ok(c) = c {
+                    let () = v.push(c);
+                }
+            }
+        }
+
+        v
     }
 }
 

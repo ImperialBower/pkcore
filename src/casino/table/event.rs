@@ -36,13 +36,27 @@ pub enum TableAction {
     Raise(u8, usize),
     AllIn(u8, usize),
     Fold(u8),
+    PotSize(usize),
+    SplitPots(),
+    MainPot(usize),
+    SidePot(usize),
+    SplitPot(u8, usize), // (number of winners, pot size)
     MuckCards(Bard),
     MuckPlayerCards(u8, Bard),
     TakePlayerCards(u8, Bard),
     TakeBoardCards(Bard),
     ClosesTheAction(u8),
-    PlayerWins(u8, Uuid, Bard, usize), // (seat, player_id, winning_hand, amount_won, in_showdown)
-    PlayerLoses(u8, Uuid, Bard, usize), // (seat, player_id, winning_hand, amount_lost, in_showdown)
+    CloseItOut(usize),
+    EndHand,
+    Showdown(u8),
+    PlayerMucksCards(u8), // At a showdown one player mucks their cards rather than show them.
+    AllFoldedTo(u8),
+    PlayerWinsSidePot(u8, usize),
+    PlayerWinsMainPot(u8, usize),
+    PlayerLosesSidePot(u8, usize),
+    PlayerLosesMainPot(u8, usize),
+    PlayerWins(u8, Uuid, Bard, usize, usize), // (seat, player_id, winning_hand, amount_won, in_showdown)
+    PlayerLoses(u8, Uuid, Bard, usize),       // (seat, player_id, winning_hand, amount_lost, in_showdown)
     InvalidAction,
     Error(PKError),
     DeckPassesAudit,
@@ -61,8 +75,38 @@ impl TableAction {
             TableAction::AllIn(_, _) => format!("{name} goes all in."),
             TableAction::Fold(_) => format!("{name} folds"),
             TableAction::Check(_) => format!("{name} checks"),
+            TableAction::PotSize(amount) => format!("{amount} pots size"),
+            TableAction::MainPot(amount) => format!("Main pot {amount}"),
+            TableAction::SidePot(amount) => format!("Side pot {amount}"),
+            TableAction::SplitPot(number, size) => format!("{size} split pot between {number} players"),
             TableAction::Dealt(_, bard) => format!("{name} dealt {}", Cards::from(*bard)),
             TableAction::DealtFlop(bard) => format!("Flop is {}", Cards::from(*bard)),
+            TableAction::DealtTurn(bard) => format!("Turn is {}", Cards::from(*bard)),
+            TableAction::DealtRiver(bard) => format!("River is {}", Cards::from(*bard)),
+            TableAction::EndHand => "Hand over.".to_string(),
+            TableAction::PlayerMucksCards(_u8) => format!("{name} mucks their cards."),
+            TableAction::AllFoldedTo(_) => format!("Everyone folds to {name}."),
+            TableAction::PlayerWinsSidePot(seat, winnings) => {
+                format!("{name} (Seat {seat}) wins side pot of {winnings}")
+            }
+            TableAction::PlayerWinsMainPot(seat, winnings) => {
+                format!("{name} (Seat {seat}) wins main pot of {winnings}")
+            }
+            TableAction::PlayerLosesSidePot(seat, losses) => {
+                format!("{name} (Seat {seat}) loses side pot of {losses}")
+            }
+            TableAction::PlayerLosesMainPot(seat, losses) => {
+                format!("{name} (Seat {seat}) loses main pot of {losses}")
+            }
+            TableAction::PlayerWins(seat, _, bard, winnings, pot_size) => {
+                format!(
+                    "{name} (Seat {seat}) wins {winnings} of a pot of {pot_size} with {}",
+                    Cards::from(*bard)
+                )
+            }
+            TableAction::PlayerLoses(seat, _, bard, losses) => {
+                format!("{name} (Seat {seat}) loses {losses} with {}", Cards::from(*bard))
+            }
             _ => self.to_string(),
         }
     }
@@ -70,6 +114,32 @@ impl TableAction {
     #[must_use]
     pub fn generate_player_loses(&self) -> TableAction {
         todo!()
+    }
+
+    #[must_use]
+    pub fn get_ammount(&self) -> Option<usize> {
+        match self {
+            TableAction::ForcedBet(_, amount)
+            | TableAction::ForcedBetSmallBlind(_, amount)
+            | TableAction::ForcedBetBigBlind(_, amount)
+            | TableAction::BetAnteForced(_, amount)
+            | TableAction::BringItIn(amount)
+            | TableAction::Bet(_, amount)
+            | TableAction::Call(_, amount)
+            | TableAction::Raise(_, amount)
+            | TableAction::AllIn(_, amount)
+            | TableAction::CloseItOut(amount)
+            | TableAction::PotSize(amount)
+            | TableAction::MainPot(amount)
+            | TableAction::SidePot(amount)
+            | TableAction::PlayerWins(_, _, _, amount, _)
+            | TableAction::PlayerLoses(_, _, _, amount)
+            | TableAction::PlayerWinsSidePot(_, amount)
+            | TableAction::PlayerWinsMainPot(_, amount)
+            | TableAction::PlayerLosesSidePot(_, amount)
+            | TableAction::PlayerLosesMainPot(_, amount) => Some(*amount),
+            _ => None,
+        }
     }
 
     /// Returns the seat number for the `TableAction`, if there is one.
@@ -91,7 +161,8 @@ impl TableAction {
             | TableAction::Raise(seat, _)
             | TableAction::AllIn(seat, _)
             | TableAction::Fold(seat)
-            | TableAction::PlayerWins(seat, _, _, _)
+            | TableAction::AllFoldedTo(seat)
+            | TableAction::PlayerWins(seat, _, _, _, _)
             | TableAction::PlayerLoses(seat, _, _, _)
             | TableAction::MuckPlayerCards(seat, _)
             | TableAction::TakePlayerCards(seat, _) => Some(*seat),
@@ -110,6 +181,19 @@ impl TableAction {
                 | TableAction::Check(_)
                 | TableAction::AllIn(_, _)
                 | TableAction::ClosesTheAction(_)
+        )
+    }
+
+    #[must_use]
+    pub fn is_result(&self) -> bool {
+        matches!(
+            self,
+            Self::PlayerWins(_, _, _, _, _)
+                | Self::PlayerLoses(_, _, _, _)
+                | Self::PlayerWinsMainPot(_, _)
+                | Self::PlayerWinsSidePot(_, _)
+                | Self::PlayerLosesMainPot(_, _)
+                | Self::PlayerLosesSidePot(_, _)
         )
     }
 }
@@ -165,6 +249,13 @@ impl Display for TableAction {
             TableAction::Raise(seat, amount) => write!(f, "Seat {seat} raises to {amount}"),
             TableAction::AllIn(seat, amount) => write!(f, "Seat {seat} goes all in with {amount}"),
             TableAction::Fold(seat) => write!(f, "Seat {seat} folds"),
+            TableAction::PotSize(amount) => write!(f, "Pot size is {amount}"),
+            TableAction::SplitPots() => write!(f, "Split Pots"),
+            TableAction::MainPot(amount) => write!(f, "Main Pot is {amount}"),
+            TableAction::SidePot(amount) => write!(f, "Side Pot is {amount}"),
+            TableAction::SplitPot(number, size) => {
+                write!(f, "{size} split pot between {number} players")
+            }
             TableAction::MuckCards(cards) => write!(f, "Muck cards: {}", Cards::from(*cards)),
             TableAction::MuckPlayerCards(seat, cards) => {
                 write!(f, "Muck player {seat}'s cards: {}", Cards::from(*cards))
@@ -174,9 +265,26 @@ impl Display for TableAction {
             }
             TableAction::TakeBoardCards(cards) => write!(f, "Take board cards: {}", Cards::from(*cards)),
             TableAction::ClosesTheAction(seat) => write!(f, "Seat {seat} closes the action"),
-            TableAction::PlayerWins(seat, player_id, winning_hand, amount_won) => write!(
+            TableAction::CloseItOut(amount) => write!(f, "Close out the hand with a {amount} pot"),
+            TableAction::EndHand => write!(f, "End Hand"),
+            TableAction::Showdown(seat) => write!(f, "{seat} seats in showdown"),
+            TableAction::PlayerMucksCards(seat) => write!(f, "Seat {seat} mucks their cards"),
+            TableAction::AllFoldedTo(seat) => write!(f, "All folded to Seat {seat}"),
+            TableAction::PlayerWinsSidePot(seat, amount) => {
+                write!(f, "Seat {seat} wins side pot of {amount}")
+            }
+            TableAction::PlayerWinsMainPot(seat, amount) => {
+                write!(f, "Seat {seat} wins main pot of {amount}")
+            }
+            TableAction::PlayerLosesSidePot(seat, amount) => {
+                write!(f, "Seat {seat} loses side pot of {amount}")
+            }
+            TableAction::PlayerLosesMainPot(seat, amount) => {
+                write!(f, "Seat {seat} loses main pot of {amount}")
+            }
+            TableAction::PlayerWins(seat, player_id, winning_hand, amount_won, pot_size) => write!(
                 f,
-                "Seat {seat} (Player {player_id}) wins {amount_won} with {}",
+                "Seat {seat} (Player {player_id}) wins {amount_won} of a pot of {pot_size} with {}",
                 Cards::from(*winning_hand)
             ),
             TableAction::PlayerLoses(seat, player_id, losing_hand, amount_lost) => write!(
@@ -227,6 +335,10 @@ impl TableLog {
         self.0.borrow().iter().copied().collect()
     }
 
+    pub fn get(&self, index: usize) -> Option<TableAction> {
+        self.0.borrow().get(index).copied()
+    }
+
     pub fn iter_reverse(&self) -> impl Iterator<Item = TableAction> {
         self.0.borrow().iter().rev().copied().collect::<Vec<_>>().into_iter()
     }
@@ -250,8 +362,40 @@ impl TableLog {
         self.iter_reverse().find(|&action| action.is_player_action())
     }
 
+    pub fn len(&self) -> usize {
+        self.0.borrow().len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn log(&self, action: TableAction) {
         self.0.borrow_mut().push(action);
+    }
+
+    pub fn result_actions(&self) -> Vec<TableAction> {
+        self.0
+            .borrow()
+            .iter()
+            .filter(|action| action.is_result())
+            .copied()
+            .collect()
+    }
+
+    pub fn is_results_only(&self) -> bool {
+        let internal = self.0.borrow();
+        internal.iter().all(TableAction::is_result)
+    }
+
+    pub fn iter(&self) -> std::vec::IntoIter<TableAction> {
+        <&Self as IntoIterator>::into_iter(self)
+    }
+
+    #[must_use]
+    pub fn results_only(&self) -> TableLog {
+        let results: Vec<TableAction> = self.result_actions();
+        TableLog::from(results)
     }
 }
 
@@ -264,6 +408,37 @@ impl Display for TableLog {
             .map(|(i, action)| format!("{}: {}", i + 1, action))
             .collect();
         write!(f, "{}", lines.join("\n"))
+    }
+}
+
+impl From<Vec<TableAction>> for TableLog {
+    fn from(actions: Vec<TableAction>) -> Self {
+        Self(RefCell::new(actions))
+    }
+}
+
+/// # Diary
+///
+/// One of the things that I am trying to make myself do is type out the suggestions that
+/// `CoPi` makes. Composers like Mozart learned how to compose my copying and rearranging
+/// compositions from other composers. In his case, taking the sonatas of J.C.Bach and turning
+/// them into piano concertos. For many other composers, they transcribed the keyboard sonatas
+/// of Scarlatti and turned them into chamber concertos. (See Charles Avison)
+impl IntoIterator for TableLog {
+    type Item = TableAction;
+    type IntoIter = std::vec::IntoIter<TableAction>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_inner().into_iter()
+    }
+}
+
+impl IntoIterator for &TableLog {
+    type Item = TableAction;
+    type IntoIter = std::vec::IntoIter<TableAction>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.borrow().iter().copied().collect::<Vec<_>>().into_iter()
     }
 }
 
@@ -295,6 +470,17 @@ mod casino__table__log_tests {
     }
 
     #[test]
+    fn is_result() {
+        assert!(TableAction::PlayerWins(0, Uuid::nil(), Bard::default(), 100, 200).is_result());
+        assert!(TableAction::PlayerLoses(0, Uuid::nil(), Bard::default(), 100).is_result());
+        assert!(TableAction::PlayerWinsMainPot(0, 100).is_result());
+        assert!(TableAction::PlayerWinsSidePot(0, 100).is_result());
+        assert!(TableAction::PlayerLosesMainPot(0, 100).is_result());
+        assert!(TableAction::PlayerLosesSidePot(0, 100).is_result());
+        assert!(!TableAction::Bet(0, 100).is_result());
+    }
+
+    #[test]
     fn display() {
         let log = TableLog::new();
 
@@ -308,6 +494,70 @@ mod casino__table__log_tests {
         assert_eq!(
             "1: Player 00000000-0000-0000-0000-000000000000 is seated at Seat 0\n2: Player 00000000-0000-0000-0000-000000000000 is seated at Seat 1\n3: Seat 0 puts in Small Blind of 50\n4: Seat 1 puts in Big Blind of 100\n5: Seat 0 is dealt A♠ K♠\n6: Seat 1 is dealt K♦ K♣",
             log.to_string()
+        );
+    }
+
+    #[test]
+    fn result_actions() {
+        let log = TableLog::new();
+
+        log.log(TableAction::PlayerSeated(0, Uuid::nil()));
+        log.log(TableAction::PlayerSeated(1, Uuid::nil()));
+        log.log(TableAction::PlayerWins(
+            0,
+            Uuid::nil(),
+            Bard::from_str("AS KS").unwrap(),
+            100,
+            200,
+        ));
+        log.log(TableAction::PlayerLoses(
+            1,
+            Uuid::nil(),
+            Bard::from_str("KD KC").unwrap(),
+            100,
+        ));
+
+        let results = log.result_actions();
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(
+            results,
+            vec![
+                TableAction::PlayerWins(0, Uuid::nil(), Bard::from_str("AS KS").unwrap(), 100, 200),
+                TableAction::PlayerLoses(1, Uuid::nil(), Bard::from_str("KD KC").unwrap(), 100)
+            ]
+        );
+    }
+
+    #[test]
+    fn results_only() {
+        let log = TableLog::new();
+
+        log.log(TableAction::PlayerSeated(0, Uuid::nil()));
+        log.log(TableAction::PlayerSeated(1, Uuid::nil()));
+        log.log(TableAction::PlayerWins(
+            0,
+            Uuid::nil(),
+            Bard::from_str("AS KS").unwrap(),
+            100,
+            200,
+        ));
+        log.log(TableAction::PlayerLoses(
+            1,
+            Uuid::nil(),
+            Bard::from_str("KD KC").unwrap(),
+            100,
+        ));
+
+        let results = log.results_only();
+
+        assert_eq!(results.len(), 2);
+        assert_eq!(
+            results,
+            TableLog::from(vec![
+                TableAction::PlayerWins(0, Uuid::nil(), Bard::from_str("AS KS").unwrap(), 100, 200),
+                TableAction::PlayerLoses(1, Uuid::nil(), Bard::from_str("KD KC").unwrap(), 100)
+            ])
         );
     }
 }

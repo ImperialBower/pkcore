@@ -306,6 +306,13 @@ impl FromStr for Card {
 // }
 
 impl Pile for Card {
+    fn add<P: Pile>(&self, _other: P) -> Self
+    where
+        Self: Sized,
+    {
+        unimplemented!("Card cannot be added; they represent a fixed length collection.")
+    }
+
     fn card_at(self, _index: usize) -> Option<Card> {
         Some(self)
     }

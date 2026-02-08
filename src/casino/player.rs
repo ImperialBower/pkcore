@@ -16,6 +16,8 @@ pub struct Player {
     pub state: PlayerStateCell,
 }
 
+impl Player {}
+
 impl Player {
     #[must_use]
     pub fn new(handle: String) -> Player {
@@ -205,7 +207,11 @@ impl Player {
             self.state.set(PlayerState::YetToAct);
         }
 
-        let player_bet = self.bet.takes();
+        let player_bet = self.bet.take();
+        // NOTE: This doesn't work for issue with end of hand, since this is used to keep track
+        // of how many chips the player has in play for the hand.
+        // let chips_in_play = self.chips_in_play.take();
+        // assert_eq!(player_bet.count(), chips_in_play);
 
         log::trace!("{} brings in {} chips", self.handle, player_bet);
 
@@ -233,6 +239,27 @@ impl Player {
     ///  * `PKError::InvalidTableAction` - throws if the player is not able to call.
     pub fn act_call(&self, amount: usize) -> Result<usize, PKError> {
         self.act_bet_internal(PlayerState::Call(amount))
+    }
+
+    /// NOTE: When to switch to `pub(crate)`
+    pub(crate) fn act_close_it_out(&self) -> Result<Stack, PKError> {
+        if self.state.is_active() {
+            let state = PlayerState::Showdown(self.chips_in_play.get());
+            self.state.set(state);
+            log::trace!(
+                "{} closing out the hand with {} chips in the hand",
+                self.handle,
+                self.chips_in_play.get()
+            );
+        } else {
+            log::warn!("InvalidTableAction: Player is not active in the hand and cannot close it out.");
+            return Err(PKError::InvalidTableAction);
+        }
+
+        let player_bet = self.bet.take();
+        log::trace!("{} brings in {} chips", self.handle, player_bet);
+
+        Ok(player_bet)
     }
 
     /// ```
@@ -291,7 +318,7 @@ impl Player {
             return Err(PKError::InvalidTableAction);
         }
         self.state.set(PlayerState::Fold);
-        Ok(self.bet.takes())
+        Ok(self.bet.take())
     }
 
     /// ```
@@ -360,6 +387,11 @@ impl Player {
         self.state.is_check()
     }
 
+    /// Returns true if there is no remaining state from a particular had still in the struct.
+    pub fn is_clear(&self) -> bool {
+        self.state.is_yet_to_act() && self.bet.is_empty() && self.chips_in_play.get() == 0
+    }
+
     pub fn is_in_hand(&self) -> bool {
         self.state.is_in_hand()
     }
@@ -388,6 +420,13 @@ impl Player {
             chips_in_play: Cell::new(0),
             state: PlayerStateCell::default(),
         }
+    }
+
+    /// Resets the player's state and chips in play for a new hand. NOTE: Does not reset chips
+    /// or bet, which must be done by Bring It In.
+    pub fn reset(&self) {
+        self.chips_in_play.set(0);
+        self.state.set(PlayerState::YetToAct);
     }
 
     /// Returns the total count of the player that is in play.
@@ -471,6 +510,8 @@ mod casino__players__player_tests {
         assert!(did_bring_it_in.is_ok());
         assert_eq!(Stack::new(100), did_bring_it_in.unwrap());
         assert_eq!(0, player.bet.count());
+        assert!(player.bet.is_empty());
+        assert_eq!(100, player.chips_in_play.get());
         assert_eq!(900, player.chips.count());
         assert_eq!(PlayerState::YetToAct, player.state.get());
     }
@@ -538,6 +579,25 @@ mod casino__players__player_tests {
         let _ = player.act_bet(500);
         assert!(player.is_all_in());
         assert_eq!(PlayerState::AllIn(500), player.state.get());
+    }
+
+    #[test]
+    fn is_clear() {
+        let player = Player::new_with_chips("Clear Carl".to_string(), 500);
+        assert!(player.is_clear());
+
+        let _ = player.act_bet(100);
+        assert!(!player.is_clear());
+
+        let _ = player.act_bring_it_in();
+        let _ = player.reset();
+        assert!(player.is_clear());
+
+        let _ = player.state.set(PlayerState::Fold);
+        assert!(!player.is_clear());
+
+        player.reset();
+        assert!(player.is_clear());
     }
 
     #[test]

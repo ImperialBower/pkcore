@@ -850,4 +850,5 @@ This is an outline of the work as it is done.
           * Added CardsCell.force_draw 
           * Added From<Vec<Cards>> to CardsCell
           * Added uuid to table
-          * 
+          * Added add() to Pile
+            * Experimenting with letting CoPilot implement. Weeeeee

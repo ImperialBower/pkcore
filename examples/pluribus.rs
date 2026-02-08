@@ -1,8 +1,8 @@
+use pkcore::analysis::store::nubibus::pluribus::Pluribus;
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::path::Path;
 use std::str::FromStr;
-use pkcore::analysis::store::nubibus::pluribus::Pluribus;
 
 fn main() {
     // File hosts.txt must exist in the current path

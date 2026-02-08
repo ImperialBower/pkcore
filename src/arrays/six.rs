@@ -152,6 +152,13 @@ impl HandRanker for Six {
 }
 
 impl Pile for Six {
+    fn add<P: Pile>(&self, _other: P) -> Self
+    where
+        Self: Sized,
+    {
+        unimplemented!("Six cannot be added; they represent a fixed length collection.")
+    }
+
     fn card_at(self, _index: usize) -> Option<Card> {
         todo!()
     }

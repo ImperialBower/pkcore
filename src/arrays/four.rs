@@ -148,6 +148,13 @@ impl FromStr for Four {
 }
 
 impl Pile for Four {
+    fn add<P: Pile>(&self, _other: P) -> Self
+    where
+        Self: Sized,
+    {
+        unimplemented!("Four cannot be added; it's a fixed 4-card hand")
+    }
+
     fn card_at(self, _index: usize) -> Option<Card> {
         todo!()
     }

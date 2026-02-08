@@ -162,10 +162,7 @@ impl CaseEval {
     /// when there's nothing there.
     #[must_use]
     pub fn card(&self) -> Card {
-        match self.1.cards().draw_one() {
-            Ok(card) => card,
-            Err(_) => Card::BLANK,
-        }
+        self.1.cards().draw_one().unwrap_or(Card::BLANK)
     }
 
     /// The first test we're going to do is an easy one. By default, does our struct
@@ -216,6 +213,19 @@ impl CaseEval {
     #[must_use]
     pub fn to_vec(&self) -> Vec<Eval> {
         self.0.clone()
+    }
+
+    /// Returns how many winners there are in the `CaseEval`.
+    #[must_use]
+    pub fn win_count(&self) -> usize {
+        self.flags_win().count_ones() as usize
+    }
+
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
+    pub fn winning_seats(&self) -> Vec<u8> {
+        let flags = self.flags_win();
+        (0..u8::BITS as u8).filter(|i| (flags & (1 << i)) != 0).collect()
     }
 
     /// Pure TDD would have me make our first test green by simply having it return
@@ -277,7 +287,7 @@ impl CaseEval {
     /// let actual = CaseEval::from(vec![
     ///     TestData::daniel_eval_at_flop(),
     ///     TestData::gus_eval_at_flop(),
-    /// ]).win_count();
+    /// ]).flags_win();
     ///
     /// assert_eq!(expected, actual);
     /// ```
@@ -326,7 +336,7 @@ impl CaseEval {
     ///     the_2nd_nuts,
     ///     TestData::daniel_eval_at_flop(),
     ///     TestData::gus_eval_at_flop(),
-    /// ]).win_count();
+    /// ]).flags_win();
     ///
     /// assert_eq!(expected, actual);
     /// ```
@@ -362,7 +372,7 @@ impl CaseEval {
     ///     the_2nd_nuts,
     ///     the_nuts,
     ///     TestData::gus_eval_at_flop(),
-    /// ]).win_count();
+    /// ]).flags_win();
     ///
     /// assert_eq!(expected, actual);
     /// ```
@@ -430,7 +440,7 @@ impl CaseEval {
     ///     the_nuts,
     ///     also_the_nuts,
     ///     TestData::gus_eval_at_flop(),
-    /// ]).win_count();
+    /// ]).flags_win();
     ///
     /// assert_eq!(expected, actual);
     /// ```
@@ -476,7 +486,7 @@ impl CaseEval {
     ///     TestData::daniel_eval_at_flop(),
     ///     TestData::gus_eval_at_flop(),
     ///     also_the_nuts,
-    /// ]).win_count();
+    /// ]).flags_win();
     ///
     /// assert_eq!(expected, actual);
     /// ```
@@ -484,15 +494,15 @@ impl CaseEval {
     /// That's enough. I'm declaring victory. Time to move on to displaying winning percentages.
     ///
     #[must_use]
-    pub fn win_count(&self) -> PlayerFlag {
-        let mut count = PlayerFlag::default();
+    pub fn flags_win(&self) -> PlayerFlag {
+        let mut flags = PlayerFlag::default();
         let best = self.winning_hand_rank();
         for (i, eval) in self.iter().enumerate() {
             if eval.hand_rank == best {
-                count = Win::or(count, Win::from_index(i));
+                flags = Win::or(flags, Win::from_index(i));
             }
         }
-        count
+        flags
     }
 
     /// Returns the top `HandRank` for this specific `CaseEval`.
@@ -568,7 +578,28 @@ impl CaseEval {
     /// old code to our original methods and then passing both back here.
     #[must_use]
     pub fn winner(&self) -> (PlayerFlag, HandRank) {
-        (self.win_count(), self.winning_hand_rank())
+        (self.flags_win(), self.winning_hand_rank())
+    }
+}
+
+impl std::fmt::Display for CaseEval {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.is_empty() {
+            return write!(f, "CaseEval: empty");
+        }
+
+        writeln!(f, "CaseEval ({} players):", self.len())?;
+
+        let (winners, winning_rank) = self.winner();
+
+        for (i, eval) in self.iter().enumerate() {
+            let is_winner = (winners & (1 << i)) != 0;
+            let marker = if is_winner { "* " } else { "  " };
+            writeln!(f, "{}Player {}: {}", marker, i + 1, eval)?;
+        }
+
+        writeln!(f, "Winning hand: {winning_rank}")?;
+        write!(f, "Winner count: {}", self.win_count())
     }
 }
 
@@ -598,7 +629,7 @@ mod hand_rank__case_eval_tests {
         let sut = CaseEval::from_holdem_at_flop(game.board.flop, case, &game.hands);
 
         assert!(sut.is_ok());
-        assert_eq!(Win::SECOND, sut.unwrap().win_count());
+        assert_eq!(Win::SECOND, sut.unwrap().flags_win());
     }
 
     #[test]
@@ -610,7 +641,7 @@ mod hand_rank__case_eval_tests {
         let sut = CaseEval::from_holdem_at_flop(board, case, &hole_cards);
 
         assert!(sut.is_ok());
-        assert_eq!(Win::FIRST | Win::THIRD, sut.unwrap().win_count());
+        assert_eq!(Win::FIRST | Win::THIRD, sut.unwrap().flags_win());
     }
 
     #[test]
@@ -745,7 +776,7 @@ mod hand_rank__case_eval_tests {
             vec![TestData::daniel_eval_at_flop(), TestData::gus_eval_at_flop()],
             Cards::default(),
         )
-        .win_count();
+        .flags_win();
 
         assert_eq!(expected, actual);
     }
@@ -763,7 +794,7 @@ mod hand_rank__case_eval_tests {
             TestData::daniel_eval_at_flop(),
             TestData::gus_eval_at_flop(),
         ])
-        .win_count();
+        .flags_win();
 
         assert_eq!(expected, actual);
     }
@@ -781,7 +812,7 @@ mod hand_rank__case_eval_tests {
             TestData::gus_eval_at_flop(),
             the_nuts,
         ])
-        .win_count();
+        .flags_win();
 
         assert_eq!(expected, actual);
     }
@@ -799,7 +830,7 @@ mod hand_rank__case_eval_tests {
             also_the_nuts,
             TestData::gus_eval_at_flop(),
         ])
-        .win_count();
+        .flags_win();
 
         assert_eq!(expected, actual);
     }
@@ -817,7 +848,7 @@ mod hand_rank__case_eval_tests {
             TestData::gus_eval_at_flop(),
             also_the_nuts,
         ])
-        .win_count();
+        .flags_win();
 
         assert_eq!(expected, actual);
     }
@@ -847,5 +878,23 @@ mod hand_rank__case_eval_tests {
 
         assert_eq!(Win::FIRST, player_flag);
         assert_eq!(expected_hand_rank, actual_hand_rank);
+    }
+
+    #[test]
+    fn winning_seats() {
+        let the_nuts = Eval::from(Five::from_2and3(Two::HAND_8S_7S, TestData::the_flop()));
+        let also_the_nuts = Eval::from(Five::from_2and3(Two::HAND_8H_7D, TestData::the_flop()));
+        let ce = CaseEval::from(vec![
+            TestData::daniel_eval_at_flop(),
+            the_nuts,
+            also_the_nuts,
+            TestData::gus_eval_at_flop(),
+        ]);
+        let actual = ce.winning_seats();
+
+        let expected = vec![1, 2];
+
+        assert_eq!(0b110, ce.flags_win());
+        assert_eq!(expected, actual);
     }
 }

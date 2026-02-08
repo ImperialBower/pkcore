@@ -183,7 +183,13 @@ impl HoleCards {
     pub fn river_case_eval(&self, board: &Board) -> CaseEval {
         let mut case_eval = CaseEval::default();
         for hand in self.iter() {
-            case_eval.push(Seven::from_case_and_board(hand, board).eval());
+            // Added this to deal with Table mechanics when I have many players who already folded,
+            // and I need to get the winning hands based on their seat.
+            if hand.is_blank() {
+                case_eval.push(Eval::default());
+            } else {
+                case_eval.push(Seven::from_case_and_board(hand, board).eval());
+            }
         }
         case_eval
     }
@@ -202,6 +208,8 @@ impl From<Seats> for HoleCards {
         for seat in seats.iter() {
             if seat.is_in_hand() {
                 hands.push(Two::try_from(seat.borrow().cards.as_slice()).unwrap_or_default());
+            } else {
+                hands.push(Two::default());
             }
         }
         hands
@@ -233,6 +241,22 @@ impl Plurable for HoleCards {
 }
 
 impl Pile for HoleCards {
+    fn add<P: Pile>(&self, other: P) -> Self
+    where
+        Self: Sized,
+    {
+        let mut combined = self.clone();
+        let other_cards = Cards::from(other.to_vec());
+
+        if let Ok(other_hands) = HoleCards::try_from(other_cards) {
+            for two in other_hands.iter() {
+                combined.push(*two);
+            }
+        }
+
+        combined
+    }
+
     fn card_at(self, _index: usize) -> Option<Card> {
         todo!()
     }

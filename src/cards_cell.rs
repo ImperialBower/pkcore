@@ -382,12 +382,23 @@ impl FromStr for CardsCell {
 }
 
 impl Pile for CardsCell {
+    fn add<P: Pile>(&self, other: P) -> Self
+    where
+        Self: Sized,
+    {
+        let combined = self.clone();
+        combined.insert_all(Cards::from(other.to_vec()));
+        combined
+    }
+
     fn card_at(self, _index: usize) -> Option<Card> {
         todo!()
     }
 
     fn clean(&self) -> Self {
-        todo!()
+        let internal = self.0.borrow();
+        let cleaned_cards: Vec<Card> = internal.iter().map(Pile::clean).collect();
+        Self::from(Cards::from(cleaned_cards))
     }
 
     fn contains(&self, card: &Card) -> bool {

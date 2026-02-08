@@ -314,6 +314,32 @@ impl FromStr for StartingHands {
 }
 
 impl Pile for StartingHands {
+    /// Pure `CoPilot` hippy code. Don't have time don't care that much; thought it would be fun
+    /// to see what it would do. YOLO. (It f'ed up the `Two::new()`, forgetting that it returns a
+    /// `Result`.
+    fn add<P: Pile>(&self, other: P) -> Self
+    where
+        Self: Sized,
+    {
+        let mut combined = self.0;
+        let other_cards = other.to_vec();
+        let mut index = self.vec().len();
+
+        for card_pair in other_cards.chunks(2) {
+            if index < 9 && card_pair.len() == 2 {
+                match Two::new(card_pair[0], card_pair[1]) {
+                    Ok(two) => {
+                        combined[index] = two;
+                    }
+                    Err(_) => continue, // skip invalid pairs
+                }
+                index += 1;
+            }
+        }
+
+        StartingHands(combined)
+    }
+
     fn card_at(self, _index: usize) -> Option<Card> {
         todo!()
     }
