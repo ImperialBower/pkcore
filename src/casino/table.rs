@@ -5,6 +5,7 @@ use crate::casino::cashier::chips::Stack;
 use crate::casino::game::ForcedBets;
 use crate::casino::player::Player;
 use crate::casino::table::event::{TableAction, TableLog};
+use crate::casino::table::pot::PotManager;
 use crate::casino::table::result::HandResult;
 use crate::casino::table::seat::Seat;
 use crate::casino::table::seats::Seats;
@@ -21,6 +22,7 @@ use uuid::Uuid;
 
 pub mod event;
 pub mod position;
+pub mod pot;
 mod result;
 pub mod seat;
 pub mod seats;
@@ -599,6 +601,58 @@ impl Table {
         }
     }
 
+    /// # Errors
+    ///
+    /// `PKError::Fubar` if can't find seat.
+    pub fn end_hand_sidepot_experiment(&self) -> Result<HandResult, PKError> {
+        self.log_info(TableAction::EndHand);
+
+        if !self.is_game_over() {
+            return Err(PKError::ActionIsntFinished);
+        }
+
+        let active_seats = self.seats.active_in_hand();
+
+        // Special case: everyone folds
+        if active_seats.len() == 1 {
+            self.end_hand_all_fold_to(active_seats[0])?;
+            return Ok(HandResult::new(CaseEval::default(), self.event_log.results_only()));
+        }
+
+        // Create side pots
+        let pot_manager = PotManager::create_pots(&self.seats);
+        let _ = self.close_it_out()?;
+
+        let game = Game::try_from(self)?;
+        let case_eval = game.river_case_eval()?;
+
+        // Award each pot separately
+        for pot_info in &pot_manager.pots {
+            let eligible_winners: Vec<u8> = case_eval
+                .winning_seats()
+                .iter()
+                .filter(|s| pot_info.eligible_seats.contains(s))
+                .copied()
+                .collect();
+
+            if eligible_winners.is_empty() {
+                continue;
+            }
+
+            let winnings = Stack::new(pot_info.amount).divvy_up(eligible_winners.len());
+
+            for (i, &winner_seat) in eligible_winners.iter().enumerate() {
+                if let Some(seat) = self.get_seat_mut(winner_seat) {
+                    seat.player.chips.add_to(winnings[i].clone());
+                    // Log the win
+                }
+            }
+        }
+
+        self.reset();
+        Ok(HandResult::new(case_eval, self.event_log.results_only()))
+    }
+
     /// Fuck, this is going to be an ugly function. I just need to drive through it and try to
     /// clean it up (refactor) once I am satisfied that it works. Martin Fowler's book
     /// [Refactoring](https://martinfowler.com/books/refactoring.html) is a really good resource for
@@ -643,8 +697,6 @@ impl Table {
         let brought_in = self.close_it_out()?;
         self.log_info(TableAction::BringItIn(brought_in));
         self.seats.showdown(self.pot.count())?;
-
-        println!("{self}");
 
         let winnings = self.pot.take().divvy_up(winners.len());
 
