@@ -346,7 +346,10 @@ impl Table {
         Ok(self.pot.count())
     }
 
-    fn close_it_out(&self) -> Result<usize, PKError> {
+    /// # Errors
+    ///
+    /// `PKError::ActionIsntFinished`
+    pub fn close_it_out(&self) -> Result<usize, PKError> {
         let brought_in = self.seats.close_it_out()?;
         self.log_info(TableAction::BringItIn(brought_in.count()));
         self.pot.add_to(brought_in);
@@ -652,7 +655,8 @@ impl Table {
                 seat.player.chips.add_to(player_winnings);
                 let hand = seat.cards.bard();
                 let id = seat.player.id;
-                let action = TableAction::PlayerWins(*winner_seat_number, id, hand, winnings_amount);
+                let chips_won = winnings_amount - seat.player.chips_in_play.take();
+                let action = TableAction::PlayerWins(*winner_seat_number, id, hand, chips_won, winnings_amount);
                 log::info!("{}", action.commentary(&seat.player.handle));
                 self.event_log.log(action);
             }
@@ -734,10 +738,13 @@ impl Table {
             // Cards cards????
             let player_cards = seat.cards.cards().clone() + self.board.cards().clone();
 
+            let chips_won = winnings.count() - seat.player.chips_in_play.take();
+
             let action = TableAction::PlayerWins(
                 winner_seat_number,
                 seat.player.id,
                 player_cards.bard(),
+                chips_won,
                 winnings.count(),
             );
 
@@ -2328,7 +2335,7 @@ mod casino__table___end_hand_tests {
         assert!(table.seats.are_brought_in());
         assert_eq!(1, hand_result.log.len());
         assert_eq!(2, hand_result.log.get(0).unwrap().get_seat().unwrap());
-        assert_eq!(150, hand_result.log.get(0).unwrap().get_ammount().unwrap());
+        assert_eq!(50, hand_result.log.get(0).unwrap().get_ammount().unwrap());
         assert!(table.seats.are_clear());
         assert_eq!(999_950, table.get_seat(1).unwrap().player.chips.count());
         assert_eq!(1_000_050, table.get_seat(2).unwrap().player.chips.count());

@@ -130,10 +130,12 @@ fn river(table: &Table) -> Result<(), PKError> {
     let _daniel = table.act_call(4)?;
     commentary_action_to(table);
 
-    let _pot = table.bring_it_in()?;
+    let hand_result = table.end_hand()?;
     commentary_action_to(table);
 
-    table.eval_river_display();
+    println!("{hand_result}");
+
+    // table.eval_river_display();
 
     Ok(())
 }

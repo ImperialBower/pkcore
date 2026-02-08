@@ -55,8 +55,8 @@ pub enum TableAction {
     PlayerWinsMainPot(u8, usize),
     PlayerLosesSidePot(u8, usize),
     PlayerLosesMainPot(u8, usize),
-    PlayerWins(u8, Uuid, Bard, usize), // (seat, player_id, winning_hand, amount_won, in_showdown)
-    PlayerLoses(u8, Uuid, Bard, usize), // (seat, player_id, winning_hand, amount_lost, in_showdown)
+    PlayerWins(u8, Uuid, Bard, usize, usize), // (seat, player_id, winning_hand, amount_won, in_showdown)
+    PlayerLoses(u8, Uuid, Bard, usize),       // (seat, player_id, winning_hand, amount_lost, in_showdown)
     InvalidAction,
     Error(PKError),
     DeckPassesAudit,
@@ -98,8 +98,11 @@ impl TableAction {
             TableAction::PlayerLosesMainPot(seat, losses) => {
                 format!("{name} (Seat {seat}) loses main pot of {losses}")
             }
-            TableAction::PlayerWins(seat, _, bard, winnings) => {
-                format!("{name} (Seat {seat}) wins {winnings} with {}", Cards::from(*bard))
+            TableAction::PlayerWins(seat, _, bard, winnings, pot_size) => {
+                format!(
+                    "{name} (Seat {seat}) wins {winnings} of a pot of {pot_size} with {}",
+                    Cards::from(*bard)
+                )
             }
             TableAction::PlayerLoses(seat, _, bard, losses) => {
                 format!("{name} (Seat {seat}) loses {losses} with {}", Cards::from(*bard))
@@ -129,7 +132,7 @@ impl TableAction {
             | TableAction::PotSize(amount)
             | TableAction::MainPot(amount)
             | TableAction::SidePot(amount)
-            | TableAction::PlayerWins(_, _, _, amount)
+            | TableAction::PlayerWins(_, _, _, amount, _)
             | TableAction::PlayerLoses(_, _, _, amount)
             | TableAction::PlayerWinsSidePot(_, amount)
             | TableAction::PlayerWinsMainPot(_, amount)
@@ -159,7 +162,7 @@ impl TableAction {
             | TableAction::AllIn(seat, _)
             | TableAction::Fold(seat)
             | TableAction::AllFoldedTo(seat)
-            | TableAction::PlayerWins(seat, _, _, _)
+            | TableAction::PlayerWins(seat, _, _, _, _)
             | TableAction::PlayerLoses(seat, _, _, _)
             | TableAction::MuckPlayerCards(seat, _)
             | TableAction::TakePlayerCards(seat, _) => Some(*seat),
@@ -185,7 +188,7 @@ impl TableAction {
     pub fn is_result(&self) -> bool {
         matches!(
             self,
-            Self::PlayerWins(_, _, _, _)
+            Self::PlayerWins(_, _, _, _, _)
                 | Self::PlayerLoses(_, _, _, _)
                 | Self::PlayerWinsMainPot(_, _)
                 | Self::PlayerWinsSidePot(_, _)
@@ -279,9 +282,9 @@ impl Display for TableAction {
             TableAction::PlayerLosesMainPot(seat, amount) => {
                 write!(f, "Seat {seat} loses main pot of {amount}")
             }
-            TableAction::PlayerWins(seat, player_id, winning_hand, amount_won) => write!(
+            TableAction::PlayerWins(seat, player_id, winning_hand, amount_won, pot_size) => write!(
                 f,
-                "Seat {seat} (Player {player_id}) wins {amount_won} with {}",
+                "Seat {seat} (Player {player_id}) wins {amount_won} of a pot of {pot_size} with {}",
                 Cards::from(*winning_hand)
             ),
             TableAction::PlayerLoses(seat, player_id, losing_hand, amount_lost) => write!(
@@ -468,7 +471,7 @@ mod casino__table__log_tests {
 
     #[test]
     fn is_result() {
-        assert!(TableAction::PlayerWins(0, Uuid::nil(), Bard::default(), 100).is_result());
+        assert!(TableAction::PlayerWins(0, Uuid::nil(), Bard::default(), 100, 200).is_result());
         assert!(TableAction::PlayerLoses(0, Uuid::nil(), Bard::default(), 100).is_result());
         assert!(TableAction::PlayerWinsMainPot(0, 100).is_result());
         assert!(TableAction::PlayerWinsSidePot(0, 100).is_result());
@@ -505,6 +508,7 @@ mod casino__table__log_tests {
             Uuid::nil(),
             Bard::from_str("AS KS").unwrap(),
             100,
+            200,
         ));
         log.log(TableAction::PlayerLoses(
             1,
@@ -519,7 +523,7 @@ mod casino__table__log_tests {
         assert_eq!(
             results,
             vec![
-                TableAction::PlayerWins(0, Uuid::nil(), Bard::from_str("AS KS").unwrap(), 100),
+                TableAction::PlayerWins(0, Uuid::nil(), Bard::from_str("AS KS").unwrap(), 100, 200),
                 TableAction::PlayerLoses(1, Uuid::nil(), Bard::from_str("KD KC").unwrap(), 100)
             ]
         );
@@ -536,6 +540,7 @@ mod casino__table__log_tests {
             Uuid::nil(),
             Bard::from_str("AS KS").unwrap(),
             100,
+            200,
         ));
         log.log(TableAction::PlayerLoses(
             1,
@@ -550,7 +555,7 @@ mod casino__table__log_tests {
         assert_eq!(
             results,
             TableLog::from(vec![
-                TableAction::PlayerWins(0, Uuid::nil(), Bard::from_str("AS KS").unwrap(), 100),
+                TableAction::PlayerWins(0, Uuid::nil(), Bard::from_str("AS KS").unwrap(), 100, 200),
                 TableAction::PlayerLoses(1, Uuid::nil(), Bard::from_str("KD KC").unwrap(), 100)
             ])
         );
