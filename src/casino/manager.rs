@@ -130,7 +130,7 @@ impl Default for TableManager {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod casino__manage_tests {
-    use super::*;
+    // use super::*;
 
     /// The Plan
     ///

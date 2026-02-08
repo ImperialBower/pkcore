@@ -796,6 +796,13 @@ impl From<Box<[SeatCell; 9]>> for Seats {
     }
 }
 
+impl From<Vec<String>> for Seats {
+    fn from(value: Vec<String>) -> Self {
+        let seats: Vec<Seat> = value.into_iter().map(Seat::from).collect();
+        Self::new(seats)
+    }
+}
+
 impl TryFrom<Vec<Seat>> for Seats {
     type Error = PKError;
 

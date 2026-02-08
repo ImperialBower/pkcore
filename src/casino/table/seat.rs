@@ -135,6 +135,12 @@ impl std::fmt::Display for Seat {
     }
 }
 
+impl From<String> for Seat {
+    fn from(name: String) -> Self {
+        Seat::new(Player::new(name))
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod casino__table__seat_tests {

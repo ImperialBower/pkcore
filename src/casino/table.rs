@@ -1,4 +1,5 @@
 use crate::analysis::case_eval::CaseEval;
+use crate::analysis::store::nubibus::pluribus::Pluribus;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
@@ -1162,6 +1163,30 @@ impl std::fmt::Display for Table {
     }
 }
 
+impl TryFrom<&Pluribus> for Table {
+    type Error = PKError;
+
+    fn try_from(pluribus: &Pluribus) -> Result<Self, Self::Error> {
+        let seats = Seats::from(pluribus.players.clone());
+        for seat in seats.borrow_all() {
+            seat.borrow_mut().player.chips.add_to(Stack::new(10_000));
+            seat.borrow_mut().cards = BoxedCards::blanks(2);
+        }
+        let dealt = CardsCell::from(pluribus);
+        let forced_bets = ForcedBets::new(50, 100);
+
+        let table = Table::nlh_primed(seats, &dealt, forced_bets);
+
+        table.button.set(5);
+        for i in 0..table.seats.size() {
+            table.deal_card_to_seat(i)?;
+            table.deal_card_to_seat(i)?;
+        }
+
+        Ok(table)
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod casino__table_tests {
@@ -1965,6 +1990,19 @@ mod casino__table_tests {
         assert_eq!(945_000, gus);
         assert_eq!(945_000, daniel);
         assert!(table.seats.is_betting_complete());
+    }
+
+    #[test]
+    fn try_from__pluribus() {
+        let log: &str = "STATE:27:r200ffcfc/cr850cf/cr1825r3775c/r10000c:Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d/3h7s5c/Qs/6c:-50|-200|-10000|0|0|10250:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd";
+
+        let pluribus = Pluribus::from_str(log).unwrap();
+        println!("{pluribus}");
+
+        let table = Table::try_from(&pluribus).unwrap();
+        println!("{table}");
+
+        println!("{}", table.deck);
     }
 }
 
