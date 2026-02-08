@@ -1,3 +1,4 @@
+use crate::analysis::store::nubibus::pluribus::Pluribus;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::card::Card;
@@ -763,6 +764,14 @@ impl From<&CardsCell> for Cards {
     }
 }
 
+impl From<&Pluribus> for Cards {
+    fn from(pluribus: &Pluribus) -> Self {
+        let holecards = pluribus.hole_cards.cards();
+        let board = pluribus.board.cards();
+        holecards + board
+    }
+}
+
 impl From<Vec<Card>> for Cards {
     fn from(v: Vec<Card>) -> Self {
         let filtered = v.iter().filter_map(|c| {
@@ -1363,6 +1372,19 @@ mod cards_tests {
     fn from__card() {
         assert_eq!(Cards::from_str("3♣").unwrap(), Cards::from(&Card::TREY_CLUBS));
         assert_eq!(Cards::default(), Cards::from(&Card::BLANK));
+    }
+
+    #[test]
+    fn from__pluribus() {
+        let raw = "STATE:27:r200ffcfc/cr850cf/cr1825r3775c/r10000c:Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d/3h7s5c/Qs/6c:-50|-200|-10000|0|0|10250:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd";
+        let pluribus = Pluribus::from_str(raw).unwrap();
+
+        let cards = Cards::from(&pluribus);
+
+        assert_eq!(
+            cards!("Q♣ 4♥ T♣ 9♣ A♠ 8♠ Q♥ 7♣ Q♦ J♣ 5♥ 5♦ 3♥ 7♠ 5♣ Q♠ 6♣").to_string(),
+            cards.to_string()
+        );
     }
 
     #[test]

@@ -1,13 +1,15 @@
-use std::collections::HashMap;
-use uuid::Uuid;
 use crate::PKError;
 use crate::prelude::{ForcedBets, Seats, Table};
+use std::collections::HashMap;
+use uuid::Uuid;
 
+#[allow(dead_code)]
 pub struct TableManager {
     pub tables: HashMap<Uuid, Table>,
     pub event_queue: Vec<TableEvent>,
 }
 
+#[allow(dead_code)]
 pub enum TableEvent {
     ActBet { table_id: Uuid, seat: u8, amount: usize },
     ActRaise { table_id: Uuid, seat: u8, amount: usize },
@@ -22,6 +24,7 @@ pub enum TableEvent {
     EndHand { table_id: Uuid },
 }
 
+#[allow(dead_code)]
 impl TableManager {
     pub fn new() -> Self {
         TableManager {
@@ -43,13 +46,13 @@ impl TableManager {
 
     pub fn process_events(&mut self) -> Result<(), PKError> {
         while let Some(event) = self.event_queue.pop() {
-            self.handle_event(event)?;
+            self.handle_event(&event)?;
         }
         Ok(())
     }
 
-    fn handle_event(&mut self, event: TableEvent) -> Result<(), PKError> {
-        match event {
+    fn handle_event(&mut self, event: &TableEvent) -> Result<(), PKError> {
+        match *event {
             TableEvent::ActBet { table_id, seat, amount } => {
                 if let Some(table) = self.tables.get(&table_id) {
                     table.act_bet(seat, amount)?;
@@ -121,5 +124,21 @@ impl TableManager {
 impl Default for TableManager {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod casino__manage_tests {
+    use super::*;
+
+    /// The Plan
+    ///
+    /// - Read in a vector of Pluribus hands.
+    /// - Splice the dealt cards into a deck so that they can be dealt back out.
+    ///
+    #[test]
+    fn doit() {
+        assert!(true)
     }
 }

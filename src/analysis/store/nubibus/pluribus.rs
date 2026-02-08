@@ -60,6 +60,99 @@ impl Pluribus {
             (HoleCards::from_pluribus(s).unwrap_or_default(), Board::default())
         }
     }
+
+    /// I love how this code evolved from a double flipmode clippy lint:
+    ///
+    /// First:
+    ///
+    /// ```txt
+    /// /Users/gaoler/.cargo/bin/cargo clippy --color=always --message-format=json-diagnostic-rendered-ansi
+    ///     Checking pkcore v0.0.15 (/Users/gaoler/src/github.com/ImperialBower/pkcore)
+    /// warning: unnecessary `if let` since only the `Ok` variant of the iterator element is used
+    ///   --> src/analysis/store/nubibus/pluribus.rs:71:13
+    ///    |
+    /// 71 | /             for line in lines {
+    /// 72 | |                 if let Ok(ip) = line {
+    /// 73 | |                     match Pluribus::from_str(ip.as_str()) {
+    /// 74 | |                         Ok(pl) => games.push(pl),
+    /// ...  |
+    /// 78 | |             }
+    ///    | |_____________^
+    ///    |
+    /// help: try `.flatten()` and remove the `if let` statement in the for loop
+    ///   --> src/analysis/store/nubibus/pluribus.rs:72:17
+    ///    |
+    /// 72 | /                 if let Ok(ip) = line {
+    /// 73 | |                     match Pluribus::from_str(ip.as_str()) {
+    /// 74 | |                         Ok(pl) => games.push(pl),
+    /// 75 | |                         Err(_) => {}
+    /// 76 | |                     }
+    /// 77 | |                 }
+    ///    | |_________________^
+    ///    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.91.0/index.html#manual_flatten
+    ///    = note: `#[warn(clippy::manual_flatten)]` on by default
+    /// help: try
+    ///    |
+    /// 71 ~             for ip in lines.flatten() {
+    /// 72 +                 match Pluribus::from_str(ip.as_str()) {
+    /// 73 +                     Ok(pl) => games.push(pl),
+    /// 74 +                     Err(_) => {}
+    /// 75 +                 }
+    /// 76 +             }
+    ///    |
+    ///
+    /// warning: you seem to be trying to use `match` for destructuring a single pattern. Consider using `if let`
+    ///   --> src/analysis/store/nubibus/pluribus.rs:73:21
+    ///    |
+    /// 73 | /                     match Pluribus::from_str(ip.as_str()) {
+    /// 74 | |                         Ok(pl) => games.push(pl),
+    /// 75 | |                         Err(_) => {}
+    /// 76 | |                     }
+    ///    | |_____________________^ help: try: `if let Ok(pl) = Pluribus::from_str(ip.as_str()) { games.push(pl) }`
+    ///    |
+    ///    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.91.0/index.html#single_match
+    ///    = note: `#[warn(clippy::single_match)]` on by default
+    ///
+    ///     Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.44s
+    /// Process finished with exit code 0
+    /// ```
+    ///
+    /// ```txt
+    /// /Users/gaoler/.cargo/bin/cargo clippy --color=always --message-format=json-diagnostic-rendered-ansi
+    ///     Checking pkcore v0.0.15 (/Users/gaoler/src/github.com/ImperialBower/pkcore)
+    /// warning: you seem to be trying to use `match` for destructuring a single pattern. Consider using `if let`
+    ///   --> src/analysis/store/nubibus/pluribus.rs:72:17
+    ///    |
+    /// 72 | /                 match Pluribus::from_str(ip.as_str()) {
+    /// 73 | |                     Ok(pl) => games.push(pl),
+    /// 74 | |                     Err(_) => {} // Invalid lines get eaten :-P
+    /// 75 | |                 }
+    ///    | |_________________^ help: try: `if let Ok(pl) = Pluribus::from_str(ip.as_str()) { games.push(pl) }`
+    ///    |
+    ///    = note: you might want to preserve the comments from inside the `match`
+    ///    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.91.0/index.html#single_match
+    ///    = note: `#[warn(clippy::single_match)]` on by default
+    ///
+    ///     Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.42s
+    /// Process finished with exit code 0.
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// `PKError::InvalidPluribusIndex`
+    pub fn read_in_log(filename: &str) -> Result<Vec<Pluribus>, PKError> {
+        let mut games = Vec::new();
+
+        if let Ok(lines) = Util::read_lines(filename) {
+            for ip in lines.map_while(Result::ok) {
+                if let Ok(pl) = Pluribus::from_str(ip.as_str()) {
+                    games.push(pl);
+                }
+            }
+        }
+
+        Ok(games)
+    }
 }
 
 impl Display for Pluribus {

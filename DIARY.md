@@ -852,3 +852,10 @@ This is an outline of the work as it is done.
           * Added uuid to table
           * Added add() to Pile
             * Experimenting with letting CoPilot implement. Weeeeee
+      * FEATURE: Table Manager
+        * The Plan:
+          * Read in a vector of Pluribus hands. 
+            * ✅ Added Util::read_lines() and Pluribus::read_in_log()
+          * Splice the dealt cards into a deck so that they can be dealt back out.
+          * Drive through one hand from the Pluribus struct. 
+          * Create From To Pluribus validation
