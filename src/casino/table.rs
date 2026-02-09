@@ -733,20 +733,11 @@ impl Table {
             }
         }
 
-        // ASIDE: I love that I don't have to do sheit like this. Originally, I planned to slice and
-        // dice the divvying out to different scenarios, but it seems that I only needed to handle
-        // where there is only 1 player left in the hand.
-        // match active_seats.len() {
-        //     0 | 1 => return Err(PKError::Fubar),
-        //     2 => {
-        //
-        //     }
-        //     _ => {
-        //
-        //     }
-        // }
-
-        Ok(HandResult::new(case_eval, self.event_log.results_only()))
+        if self.board.len() == 5 {
+            Ok(HandResult::new(case_eval, self.event_log.results_only()))
+        } else {
+            Ok(HandResult::new(CaseEval::default(), self.event_log.results_only()))
+        }
     }
 
     // The original code triggered a wonderful pedantic
@@ -916,6 +907,10 @@ impl Table {
         } else {
             false
         }
+    }
+
+    pub fn is_betting_complete(&self) -> bool {
+        self.seats.is_betting_complete()
     }
 
     /// TODO: There are edge cases that I fear these checks won't catch.
