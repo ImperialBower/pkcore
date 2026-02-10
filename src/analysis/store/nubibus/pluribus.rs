@@ -1,5 +1,7 @@
+use crate::games::GamePhase;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
+use crate::prelude::Table;
 use crate::util::Util;
 use crate::{PKError, Plurable};
 use regex::Regex;
@@ -47,7 +49,6 @@ impl Display for PluribusEvent {
     }
 }
 
-
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Pluribus {
     pub index: usize,
@@ -75,7 +76,6 @@ impl Pluribus {
             events.extend(Pluribus::parse_rounds(round_str));
         }
         events
-
     }
 
     pub fn parse_round(&self, i: usize) -> Vec<PluribusEvent> {
@@ -102,7 +102,7 @@ impl Pluribus {
                     i += 1;
                 }
                 'r' => {
-                    i += 1;  // Skip 'r'
+                    i += 1; // Skip 'r'
                     let mut amount_str = String::new();
                     while i < chars.len() && chars[i].is_ascii_digit() {
                         amount_str.push(chars[i]);
@@ -152,6 +152,83 @@ impl Pluribus {
         } else {
             (HoleCards::from_pluribus(s).unwrap_or_default(), Board::default())
         }
+    }
+
+    pub fn play_hand(&self) -> Result<(), PKError> {
+        let table = Table::try_from(self)?;
+
+        println!("{self}");
+        println!("{}", self.raw);
+
+        if !table.seats.are_dealt() {
+            table.deal_cards_to_seats().expect("Failed to deal cards to seats");
+        }
+        table.act_forced_bets().expect("ActForcedBets failed");
+        println!("{table}");
+
+        for action in self.parse_all_rounds() {
+            let seat_to_act = table.next_to_act();
+            let handle_to_act = table.get_seat_handle(seat_to_act);
+            println!("{handle_to_act} Seat {seat_to_act} is next to act",);
+
+            match action {
+                PluribusEvent::Fold => {
+                    let _ = table.act_fold(seat_to_act);
+                }
+                PluribusEvent::Call => {
+                    let _ = table.act_call(seat_to_act);
+                }
+                PluribusEvent::Raise(amount) => {
+                    let _ = table.act_bet(seat_to_act, amount);
+                }
+            }
+            println!("{}\n", table.commentary_last_player_action().unwrap());
+
+            let betting_phase = table.determine_betting_phase();
+            println!("{betting_phase}");
+
+            match betting_phase {
+                GamePhase::PreFlop => {
+                    if table.is_betting_complete() {
+                        let _pot = table.bring_it_in()?;
+                        println!("Pot is {}", table.pot.count());
+
+                        table.deal_flop().expect("Failed to deal flop");
+                        println!("Board: {}", table.board);
+                        table.eval_flop_display();
+                    }
+                }
+                GamePhase::Flop => {
+                    if table.is_betting_complete() {
+                        let _pot = table.bring_it_in()?;
+                        println!("Pot is {}", table.pot.count());
+
+                        table.deal_turn().expect("Failed to deal turn");
+                        println!("Board: {}", table.board);
+                        table.eval_turn_display();
+                    }
+                }
+                GamePhase::Turn => {
+                    if table.is_betting_complete() {
+                        let _pot = table.bring_it_in()?;
+                        println!("Pot is {}", table.pot.count());
+
+                        table.deal_river().expect("Failed to deal river");
+                        println!("Board: {}", table.board);
+                        table.eval_river_display();
+                    }
+                }
+                _ => {}
+            }
+
+            if table.is_game_over() {
+                let hand_result = table.end_hand()?;
+                Util::commentary_action_to(&table);
+
+                println!("{hand_result}");
+            }
+        }
+        Ok(())
     }
 
     /// I love how this code evolved from a double flipmode clippy lint:

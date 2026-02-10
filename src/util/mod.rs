@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::fs::File;
 
+use crate::prelude::Table;
 use std::io::{self, BufRead};
 use std::path::Path;
 use std::str::Utf8Error;
@@ -46,6 +47,15 @@ impl Util {
             0 => 0_f32,
             _ => (number as f32 * 100.0) / total as f32,
         }
+    }
+
+    pub fn commentary_action_to(table: &Table) {
+        println!();
+        if let Some(action) = table.commentary_last_player_action() {
+            println!("{action}");
+        }
+        println!("{}", table.commentary_action_to());
+        println!();
     }
 
     ///

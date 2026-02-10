@@ -557,6 +557,47 @@ impl Table {
         bb_seat
     }
 
+    pub fn determine_game_phase(&self) -> GamePhase {
+        let board_phase = self.determine_betting_phase();
+
+        if !self.seats.are_dealt() {
+            return GamePhase::DealHoleCards;
+        }
+
+        match self.determine_betting_phase() {
+            GamePhase::BettingPreFlop => {
+                if self.seats.is_betting_complete() {
+                    GamePhase::ConsolidatePreFlopBets
+                } else {
+                    GamePhase::BettingPreFlop
+                }
+            }
+            GamePhase::BettingFlop => {
+                if self.seats.is_betting_complete() {
+                    GamePhase::ConsolidatePreFlopBets
+                } else {
+                    GamePhase::BettingFlop
+                }
+            }
+            GamePhase::BettingTurn => {
+                if self.seats.is_betting_complete() {
+                    GamePhase::ConsolidatePreFlopBets
+                } else {
+                    GamePhase::BettingTurn
+                }
+            }
+            GamePhase::BettingRiver => {
+                if self.seats.is_betting_complete() {
+                    GamePhase::ConsolidatePreFlopBets
+                } else {
+                    GamePhase::BettingRiver
+                }
+            }
+            GamePhase::Showdown => GamePhase::Showdown,
+            _ => board_phase,
+        }
+    }
+
     /// ```
     /// use pkcore::prelude::*;
     ///

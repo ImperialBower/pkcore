@@ -859,3 +859,5 @@ This is an outline of the work as it is done.
           * Splice the dealt cards into a deck so that they can be dealt back out.
           * Drive through one hand from the Pluribus struct. 
           * Create From To Pluribus validation
+          * PLURIBUS example
+            * REFACTORING: Remove Table.phase() let it be calculated by the table state
