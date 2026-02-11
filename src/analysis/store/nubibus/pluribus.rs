@@ -185,47 +185,48 @@ impl Pluribus {
             println!("{}\n", table.commentary_last_player_action().unwrap());
 
             let betting_phase = table.determine_betting_phase();
-            println!("{betting_phase}");
-
-            match betting_phase {
-                GamePhase::PreFlop => {
-                    if table.is_betting_complete() {
-                        let _pot = table.bring_it_in()?;
-                        println!("Pot is {}", table.pot.count());
-
-                        table.deal_flop().expect("Failed to deal flop");
-                        println!("Board: {}", table.board);
-                        table.eval_flop_display();
-                    }
-                }
-                GamePhase::Flop => {
-                    if table.is_betting_complete() {
-                        let _pot = table.bring_it_in()?;
-                        println!("Pot is {}", table.pot.count());
-
-                        table.deal_turn().expect("Failed to deal turn");
-                        println!("Board: {}", table.board);
-                        table.eval_turn_display();
-                    }
-                }
-                GamePhase::Turn => {
-                    if table.is_betting_complete() {
-                        let _pot = table.bring_it_in()?;
-                        println!("Pot is {}", table.pot.count());
-
-                        table.deal_river().expect("Failed to deal river");
-                        println!("Board: {}", table.board);
-                        table.eval_river_display();
-                    }
-                }
-                _ => {}
-            }
+            println!("{betting_phase} Betting complete: {} Game Over: {}", table.is_betting_complete(), table.is_game_over());
 
             if table.is_game_over() {
                 let hand_result = table.end_hand()?;
                 Util::commentary_action_to(&table);
 
                 println!("{hand_result}");
+            } else {
+                match betting_phase {
+                    GamePhase::BettingPreFlop => {
+                        if table.is_betting_complete() {
+                            let _pot = table.bring_it_in()?;
+                            
+                            println!("Pot is {}", table.pot.count());
+
+                            table.deal_flop().expect("Failed to deal flop");
+                            println!("Board: {}", table.board);
+                            table.eval_flop_display();
+                        }
+                    }
+                    GamePhase::BettingFlop => {
+                        if table.is_betting_complete() {
+                            let _pot = table.bring_it_in()?;
+                            println!("Pot is {}", table.pot.count());
+
+                            table.deal_turn().expect("Failed to deal turn");
+                            println!("Board: {}", table.board);
+                            table.eval_turn_display();
+                        }
+                    }
+                    GamePhase::BettingTurn => {
+                        if table.is_betting_complete() {
+                            let _pot = table.bring_it_in()?;
+                            println!("Pot is {}", table.pot.count());
+
+                            table.deal_river().expect("Failed to deal river");
+                            println!("Board: {}", table.board);
+                            table.eval_river_display();
+                        }
+                    }
+                    _ => {}
+                }
             }
         }
         Ok(())

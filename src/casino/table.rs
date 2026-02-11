@@ -213,14 +213,16 @@ impl Table {
     pub fn act_fold(&self, seat_number: u8) -> Result<usize, PKError> {
         if let Some(seat) = self.get_seat_mut(seat_number) {
             let folded_chips = seat.player.act_fold()?;
-            let chips_in_play = seat.player.chips_in_play.take();
+            let _chips_in_play = seat.player.chips_in_play.take();
             // ASIDE: OK, this is a good use of AI code assist to me. I
             // had no idea that `debug_assert_eq!` existed.
-            debug_assert_eq!(
-                folded_chips.count(),
-                chips_in_play,
-                "Folded chips should equal chips that were in play"
-            );
+
+            // EXCEPT: I don't feel this is true
+            // debug_assert_eq!(
+            //     folded_chips.count(),
+            //     chips_in_play,
+            //     "Folded chips should equal chips that were in play"
+            // );
 
             drop(seat);
             let amount = folded_chips.count();

@@ -166,6 +166,9 @@ impl Display for TurnEval {
         writeln!(f, "The Turn: {}", self.game.board.turn)?;
 
         for (i, hole_cards) in self.game.hands.iter().enumerate() {
+            if hole_cards.is_blank() {
+                continue;
+            }
             let player_id = i + 1;
             writeln!(
                 f,

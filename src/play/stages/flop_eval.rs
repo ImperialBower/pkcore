@@ -262,6 +262,9 @@ impl std::fmt::Display for FlopEval {
         v.push(format!("The Flop: {}", self.board));
 
         for (i, hole_cards) in self.hands.iter().enumerate() {
+            if hole_cards.is_blank() {
+                continue;
+            }
             let eval = self.eval_for_player_str(i).unwrap_or_default();
 
             v.push(format!(
