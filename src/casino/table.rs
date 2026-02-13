@@ -127,6 +127,11 @@ impl Table {
         }
     }
 
+    /// TODO: This will be the catch all for triggering non-player actions
+    pub fn act(&self) -> Option<GamePhase> {
+        todo!()
+    }
+
     // region table actions
 
     /// # Errors
@@ -2470,5 +2475,21 @@ mod casino__table___end_hand_tests {
         assert_eq!(GamePhase::PayWinners, table.get_phase());
         assert_eq!(deck_cell!(), table.deck);
         assert_eq!(table.deck.len(), 52);
+    }
+
+    #[test]
+    fn end_hand__pluribus_155_55() {
+        let log: &str = "STATE:27:r200ffcfc/cr850cf/cr1825r3775c/r10000c:Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d/3h7s5c/Qs/6c:-50|-200|-10000|0|0|10250:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd";
+        let pluribus = Pluribus::from_str(log).expect("Pluribus failed");
+        let table = Table::try_from(&pluribus).expect("can't parse pluribus log");
+
+        println!("{table}");
+
+        table.act_forced_bets().expect("ActForcedBets failed");
+        println!("{table}");
+
+        assert_eq!(2, table.next_to_act());
+
+
     }
 }

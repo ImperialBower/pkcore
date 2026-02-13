@@ -157,6 +157,7 @@ impl Pluribus {
     pub fn play_hand(&self) -> Result<(), PKError> {
         let table = Table::try_from(self)?;
 
+        println!(">>>{}", table.deck.to_string());
         println!("{self}");
         println!("{}", self.raw);
 
@@ -164,12 +165,11 @@ impl Pluribus {
             table.deal_cards_to_seats().expect("Failed to deal cards to seats");
         }
         table.act_forced_bets().expect("ActForcedBets failed");
-        println!("{table}");
 
         for action in self.parse_all_rounds() {
             let seat_to_act = table.next_to_act();
             let handle_to_act = table.get_seat_handle(seat_to_act);
-            println!("{handle_to_act} Seat {seat_to_act} is next to act",);
+            println!("{handle_to_act} Seat {seat_to_act} is next to act: {action}");
 
             match action {
                 PluribusEvent::Fold => {
@@ -182,7 +182,7 @@ impl Pluribus {
                     let _ = table.act_bet(seat_to_act, amount);
                 }
             }
-            println!("{}\n", table.commentary_last_player_action().unwrap());
+            println!("{}", table.commentary_last_player_action().unwrap());
 
             let betting_phase = table.determine_betting_phase();
             println!("{betting_phase} Betting complete: {} Game Over: {}", table.is_betting_complete(), table.is_game_over());
@@ -199,6 +199,7 @@ impl Pluribus {
                             let _pot = table.bring_it_in()?;
                             
                             println!("Pot is {}", table.pot.count());
+                            let _active_players = table.seats.count_active_in_hand();
 
                             table.deal_flop().expect("Failed to deal flop");
                             println!("Board: {}", table.board);

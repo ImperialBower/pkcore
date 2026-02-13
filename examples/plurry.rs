@@ -5,7 +5,7 @@ use pkcore::analysis::store::nubibus::pluribus::Pluribus;
 /// `cargo run --example plurry`
 fn main() -> Result<(), PKError> {
     let plur =
-        "STATE:77:ffr200ffc/cc/r537c/cr1099f:3c7h|TdQd|Qc3h|8hJh|Ad2d|8cKd/5h4c4s/7d/3d:-50|-537|0|0|587|0:Pluribus|MrWhite|Gogo|Budd|Eddie|Bill";
+        "STATE:55:ffr200r700fcr2250ff:Kc7s|8s9s|Jc3d|5d9d|AhAc|JdTd:-50|-700|0|0|1450|-700:MrPink|MrBlue|Joe|Bill|Pluribus|MrOrange";
 
     Pluribus::from_str(plur)?.play_hand()?;
     Ok(())
