@@ -339,6 +339,72 @@ impl TableLog {
         self.0.borrow().get(index).copied()
     }
 
+    /// Returns the first occurrence of a specific TableAction variant that matches the predicate.
+    ///
+    /// ```
+    /// use pkcore::casino::table::event::{TableAction, TableLog};
+    ///
+    /// let log = TableLog::new();
+    /// log.log(TableAction::Bet(0, 200));
+    /// log.log(TableAction::Raise(1, 400));
+    /// log.log(TableAction::Fold(2));
+    ///
+    /// let raise_action = log.find_action(|action| matches!(action, TableAction::Raise(_, _)));
+    /// assert_eq!(raise_action, Some(TableAction::Raise(1, 400)));
+    /// ```
+    pub fn find_action<F>(&self, predicate: F) -> Option<TableAction>
+    where
+        F: Fn(&TableAction) -> bool,
+    {
+        self.0.borrow().iter().find(|&action| predicate(action)).copied()
+    }
+
+    /// ```
+    /// use pkcore::casino::table::event::{TableAction, TableLog};
+    ///
+    /// let log = TableLog::new();
+    /// log.log(TableAction::ForcedBetBigBlind(0, 500));
+    /// log.log(TableAction::Bet(1, 200));
+    ///
+    /// assert_eq!(TableAction::ForcedBetBigBlind(0, 500), log.get_action_big_blind().unwrap());
+    /// ```
+    pub fn get_action_big_blind(&self) -> Option<TableAction> {
+        self.find_action(|action| matches!(action, TableAction::ForcedBetBigBlind(_, _)))
+    }
+
+    /// ```
+    /// use pkcore::casino::table::event::{TableAction, TableLog};
+    ///
+    /// let log = TableLog::new();
+    /// log.log(TableAction::ForcedBetSmallBlind(0, 500));
+    /// log.log(TableAction::Bet(1, 200));
+    ///
+    /// assert_eq!(TableAction::ForcedBetSmallBlind(0, 500), log.get_action_small_blind().unwrap());
+    /// ```
+    pub fn get_action_small_blind(&self) -> Option<TableAction> {
+        self.find_action(|action| matches!(action, TableAction::ForcedBetSmallBlind(_, _)))
+    }
+
+    pub fn has_player_action(&self) -> bool {
+        self.0.borrow().iter().any(TableAction::is_player_action)
+    }
+
+    /// ```
+    /// use pkcore::casino::table::event::{TableAction, TableLog};
+    ///
+    /// let log = TableLog::new();
+    /// assert!(!log.have_posted_blinds());
+    ///
+    /// log.log(TableAction::ForcedBetSmallBlind(0, 500));
+    /// assert!(!log.have_posted_blinds());
+    ///
+    /// log.log(TableAction::ForcedBetBigBlind(0, 500));
+    /// assert!(log.have_posted_blinds());
+    /// ```
+    pub fn have_posted_blinds(&self) -> bool {
+        self.get_action_big_blind().is_some() && self.get_action_small_blind().is_some()
+    }
+
     pub fn iter_reverse(&self) -> impl Iterator<Item = TableAction> {
         self.0.borrow().iter().rev().copied().collect::<Vec<_>>().into_iter()
     }

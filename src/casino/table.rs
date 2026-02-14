@@ -565,8 +565,6 @@ impl Table {
     }
 
     pub fn determine_game_phase(&self) -> GamePhase {
-        let board_phase = self.determine_betting_phase();
-
         if !self.seats.are_dealt() {
             return GamePhase::DealHoleCards;
         }
@@ -601,7 +599,7 @@ impl Table {
                 }
             }
             GamePhase::Showdown => GamePhase::Showdown,
-            _ => board_phase,
+            _ => GamePhase::Showdown,
         }
     }
 
