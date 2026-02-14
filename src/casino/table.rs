@@ -2493,7 +2493,7 @@ mod casino__table___end_hand_tests {
 
     #[test]
     fn end_hand__pluribus_155_55() {
-        let log: &str = "STATE:27:r200ffcfc/cr850cf/cr1825r3775c/r10000c:Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d/3h7s5c/Qs/6c:-50|-200|-10000|0|0|10250:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd";
+        let log: &str = "STATE:55:ffr200r700fcr2250ff:Kc7s|8s9s|Jc3d|5d9d|AhAc|JdTd:-50|-700|0|0|1450|-700:MrPink|MrBlue|Joe|Bill|Pluribus|MrOrange";
         let pluribus = Pluribus::from_str(log).expect("Pluribus failed");
         let table = Table::try_from(&pluribus).expect("can't parse pluribus log");
         let mut actions = pluribus.parse_all_rounds();
@@ -2509,17 +2509,17 @@ mod casino__table___end_hand_tests {
 
         let action: PluribusEvent = actions.pop_front().unwrap();
         {
-            assert_eq!(PluribusEvent::Raise(200), action);
+            assert_eq!(PluribusEvent::Fold, action);
             assert!(!table.seats.is_betting_complete());
             assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
-            // assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
             assert_eq!(2, table.next_to_act());
         }
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Bet failed");
+        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         {
             assert!(!table.seats.is_betting_complete());
             assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
-            // assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
             assert_eq!(3, table.next_to_act());
         }
 
@@ -2533,7 +2533,6 @@ mod casino__table___end_hand_tests {
         }
         Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         {
-            println!("{table}");
             assert!(!table.seats.is_betting_complete());
             assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
             assert!(table.seats.are_dealt());
@@ -2541,6 +2540,95 @@ mod casino__table___end_hand_tests {
             assert_eq!(4, table.next_to_act());
         }
 
+        let action: PluribusEvent = actions.pop_front().unwrap();
+        {
+            assert_eq!(PluribusEvent::Raise(200), action);
+            assert!(!table.seats.is_betting_complete());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
+            assert_eq!(4, table.next_to_act());
+        }
+        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        {
+            assert_eq!(200, table.get_seat(4).unwrap().player.bet.count());
+            assert!(!table.seats.is_betting_complete());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
+            assert!(table.seats.are_dealt());
+            assert_eq!(5, table.next_to_act());
+        }
+
+        let action: PluribusEvent = actions.pop_front().unwrap();
+        {
+            assert_eq!(PluribusEvent::Raise(700), action);
+            assert!(!table.seats.is_betting_complete());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
+            assert_eq!(5, table.next_to_act());
+        }
+        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        {
+            assert_eq!(700, table.get_seat(5).unwrap().player.bet.count());
+            assert!(!table.seats.is_betting_complete());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
+            assert!(table.seats.are_dealt());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
+            assert_eq!(0, table.next_to_act());
+        }
+
+        let action: PluribusEvent = actions.pop_front().unwrap();
+        {
+            assert_eq!(PluribusEvent::Fold, action);
+            assert!(!table.seats.is_betting_complete());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
+            assert_eq!(0, table.next_to_act());
+        }
+        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        {
+            assert!(!table.seats.is_betting_complete());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
+            assert_eq!(1, table.next_to_act());
+        }
+
+        let action: PluribusEvent = actions.pop_front().unwrap();
+        {
+            assert_eq!(PluribusEvent::Call, action);
+            assert!(!table.seats.is_betting_complete());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
+            assert_eq!(1, table.next_to_act());
+        }
+        Pluribus::act(&table, &action, table.next_to_act()).expect("Call failed");
+        {
+            println!("{table}");
+            assert!(!table.seats.is_betting_complete());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
+            assert_eq!(4, table.next_to_act());
+        }
+
+        let action: PluribusEvent = actions.pop_front().unwrap();
+        {
+            assert_eq!(PluribusEvent::Raise(2250), action);
+            assert!(!table.seats.is_betting_complete());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
+            assert_eq!(4, table.next_to_act());
+        }
+        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        {
+            assert_eq!(2250, table.get_seat(4).unwrap().player.bet.count());
+            assert!(!table.seats.is_betting_complete());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
+            assert!(table.seats.are_dealt());
+            assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
+            assert_eq!(0, table.next_to_act());
+        }
+
         println!("{table}");
+
+        // STATE:55:ffr200r700fcr2250ff:Kc7s|8s9s|Jc3d|5d9d|AhAc|JdTd:-50|-700|0|0|1450|-700:MrPink|MrBlue|Joe|Bill|Pluribus|MrOrange
     }
 }
