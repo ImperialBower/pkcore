@@ -153,7 +153,7 @@ impl Seats {
     pub fn are_dealt(&self) -> bool {
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow();
-            if !seat.cards.is_dealt() {
+            if seat.is_in_hand() && !seat.cards.is_dealt() {
                 return false;
             }
         }

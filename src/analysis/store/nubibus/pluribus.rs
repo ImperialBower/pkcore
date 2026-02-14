@@ -5,6 +5,7 @@ use crate::prelude::Table;
 use crate::util::Util;
 use crate::{PKError, Plurable};
 use regex::Regex;
+use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
 use std::ops::Index;
 use std::str::FromStr;
@@ -18,18 +19,22 @@ pub enum PluribusEvent {
 }
 
 impl PluribusEvent {
+    #[must_use]
     pub fn is_fold(&self) -> bool {
         matches!(self, PluribusEvent::Fold)
     }
 
+    #[must_use]
     pub fn is_call(&self) -> bool {
         matches!(self, PluribusEvent::Call)
     }
 
+    #[must_use]
     pub fn is_raise(&self) -> bool {
         matches!(self, PluribusEvent::Raise(_))
     }
 
+    #[must_use]
     pub fn raise_amount(&self) -> Option<usize> {
         if let PluribusEvent::Raise(amount) = self {
             Some(*amount)
@@ -44,7 +49,7 @@ impl Display for PluribusEvent {
         match self {
             PluribusEvent::Fold => write!(f, "Fold"),
             PluribusEvent::Call => write!(f, "Call"),
-            PluribusEvent::Raise(amount) => write!(f, "Raise({})", amount),
+            PluribusEvent::Raise(amount) => write!(f, "Raise({amount})"),
         }
     }
 }
@@ -70,14 +75,16 @@ impl Pluribus {
 
     /// I have a theory that the divider between rounds isn't needed. That we can just take
     /// a vector of all the actions, and they pause when the round is over.
-    pub fn parse_all_rounds(&self) -> Vec<PluribusEvent> {
+    #[must_use]
+    pub fn parse_all_rounds(&self) -> VecDeque<PluribusEvent> {
         let mut events = Vec::new();
         for round_str in &self.rounds {
             events.extend(Pluribus::parse_rounds(round_str));
         }
-        events
+        VecDeque::from(events)
     }
 
+    #[must_use]
     pub fn parse_round(&self, i: usize) -> Vec<PluribusEvent> {
         if let Some(round_str) = self.rounds.get(i) {
             Pluribus::parse_rounds(round_str)
@@ -86,6 +93,7 @@ impl Pluribus {
         }
     }
 
+    #[must_use]
     pub fn parse_rounds(rounds_str: &str) -> Vec<PluribusEvent> {
         let mut events = Vec::new();
         let chars: Vec<char> = rounds_str.chars().collect();
@@ -154,6 +162,25 @@ impl Pluribus {
         }
     }
 
+    /// # Errors
+    ///
+    /// `PKError::InvalidPluribusIndex`
+    pub fn act(table: &Table, action: &PluribusEvent, seat_to_act: u8) -> Result<(), PKError> {
+        match action {
+            PluribusEvent::Fold => {
+                let _ = table.act_fold(seat_to_act);
+            }
+            PluribusEvent::Call => {
+                let _ = table.act_call(seat_to_act);
+            }
+            PluribusEvent::Raise(amount) => {
+                let _ = table.act_bet(seat_to_act, *amount);
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn play_hand(&self) -> Result<(), PKError> {
         let table = Table::try_from(self)?;
 
@@ -171,21 +198,16 @@ impl Pluribus {
             let handle_to_act = table.get_seat_handle(seat_to_act);
             println!("{handle_to_act} Seat {seat_to_act} is next to act: {action}");
 
-            match action {
-                PluribusEvent::Fold => {
-                    let _ = table.act_fold(seat_to_act);
-                }
-                PluribusEvent::Call => {
-                    let _ = table.act_call(seat_to_act);
-                }
-                PluribusEvent::Raise(amount) => {
-                    let _ = table.act_bet(seat_to_act, amount);
-                }
-            }
+            Pluribus::act(&table, &action, seat_to_act)?;
+
             println!("{}", table.commentary_last_player_action().unwrap());
 
             let betting_phase = table.determine_betting_phase();
-            println!("{betting_phase} Betting complete: {} Game Over: {}", table.is_betting_complete(), table.is_game_over());
+            println!(
+                "{betting_phase} Betting complete: {} Game Over: {}",
+                table.is_betting_complete(),
+                table.is_game_over()
+            );
 
             if table.is_game_over() {
                 let hand_result = table.end_hand()?;
@@ -197,7 +219,7 @@ impl Pluribus {
                     GamePhase::BettingPreFlop => {
                         if table.is_betting_complete() {
                             let _pot = table.bring_it_in()?;
-                            
+
                             println!("Pot is {}", table.pot.count());
                             let _active_players = table.seats.count_active_in_hand();
 

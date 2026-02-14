@@ -1,6 +1,7 @@
 use crate::analysis::case_eval::CaseEval;
 use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
+use crate::analysis::name::HandRankName;
 use crate::analysis::outs::Outs;
 use crate::arrays::HandRanker;
 use crate::arrays::four::Four;
@@ -14,7 +15,6 @@ use crate::util::wincounter::results::Results;
 use crate::util::wincounter::wins::Wins;
 use crate::{Card, Cards, PKError, Pile, TheNuts};
 use std::fmt::{Display, Formatter};
-use crate::analysis::name::HandRankName;
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -567,7 +567,7 @@ impl Game {
                     if eval.hand_rank == winning_hand_rank {
                         println!("   Player #{}: {eval} has the best hand!", i + 1);
                     } else if eval.hand_rank.name == HandRankName::Invalid {
-                        continue
+                        continue;
                     } else {
                         println!("   Player #{}: {eval}", i + 1);
                     }

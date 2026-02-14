@@ -1,11 +1,10 @@
-use pkcore::analysis::store::nubibus::pluribus::{Pluribus};
 use pkcore::PKError;
+use pkcore::analysis::store::nubibus::pluribus::Pluribus;
 use std::fs;
 use std::path::Path;
 
 /// `cargo run --example pluribus`
 fn main() -> Result<(), PKError> {
-
     // let logs = vec![
     //     "data/pluribus/raw/sample_game_30.log",
     //     "data/pluribus/raw/sample_game_31.log",
@@ -24,7 +23,7 @@ fn main() -> Result<(), PKError> {
     let logs = get_log_files()?;
 
     for log in logs {
-        for plur in Pluribus::read_in_log(log.as_str())?{
+        for plur in Pluribus::read_in_log(log.as_str())? {
             plur.play_hand()?;
         }
     }

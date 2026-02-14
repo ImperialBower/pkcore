@@ -450,6 +450,7 @@ Elapsed: 1.63s
 
 ## Dependencies
 
+* [assert-struct](https://github.com/carllerche/assert-struct)
 * [bitvec](https://github.com/ferrilab/bitvec)
 * [Burnt Sushi CSV](https://github.com/BurntSushi/rust-csv) with Serde support
 * [itertools](https://github.com/rust-itertools/itertools)
