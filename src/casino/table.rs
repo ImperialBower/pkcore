@@ -2049,6 +2049,17 @@ mod casino__table_tests {
     }
 
     #[test]
+    fn validate__min_table__only_bets() {
+        let table = TestData::min_table();
+        assert_eq!(0, table.determine_utg());
+        assert_eq!(0, table.button.value());
+        table.act().expect("nooooo");
+
+        assert!(table.seats.are_dealt());
+        assert!(table.event_log.have_posted_blinds());
+    }
+
+    #[test]
     fn try_from__pluribus() {
         let log: &str = "STATE:27:r200ffcfc/cr850cf/cr1825r3775c/r10000c:Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d/3h7s5c/Qs/6c:-50|-200|-10000|0|0|10250:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd";
 
