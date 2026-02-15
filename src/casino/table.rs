@@ -127,7 +127,10 @@ impl Table {
         }
     }
 
-    /// TODO: This will be the catch all for triggering non-player actions
+    /// Universal table action regulator. Designed so that you can call this at any time, and
+    /// if there is something for the table to do, it will do it.
+    ///
+    /// You can see it leveraged in the `Pluribus.play_hand()` function.
     ///
     /// # Errors
     ///
@@ -2993,5 +2996,10 @@ mod casino__table___end_hand_tests {
         // print!("{table}");
 
         // STATE:193:r225fcffc/ccc/ccc/ccc:2s7d|7c9c|KcQs|2dQh|9h9s|Ac8d/5cKhJh/As/7s:-50|-225|500|0|-225|0:Eddie|MrOrange|Bill|MrBlue|Pluribus|MrPink
+    }
+    #[test]
+    fn end_hand__pluribus_100_29() {
+
+        // STATE:29:fffr275fc/cc/cr725r1850f:Tc4h|5c6d|3cTs|9hKc|2c8h|Ks7s/7c3hJs/6h:-50|775|0|0|0|-725:Pluribus|MrBlue|MrBlonde|MrWhite|MrPink|MrBrown
     }
 }
