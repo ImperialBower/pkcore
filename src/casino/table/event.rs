@@ -339,7 +339,7 @@ impl TableLog {
         self.0.borrow().get(index).copied()
     }
 
-    /// Returns the first occurrence of a specific TableAction variant that matches the predicate.
+    /// Returns the first occurrence of a specific `TableAction` variant that matches the predicate.
     ///
     /// ```
     /// use pkcore::casino::table::event::{TableAction, TableLog};

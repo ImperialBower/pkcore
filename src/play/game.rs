@@ -567,7 +567,6 @@ impl Game {
                     if eval.hand_rank == winning_hand_rank {
                         println!("   Player #{}: {eval} has the best hand!", i + 1);
                     } else if eval.hand_rank.name == HandRankName::Invalid {
-                        continue;
                     } else {
                         println!("   Player #{}: {eval}", i + 1);
                     }

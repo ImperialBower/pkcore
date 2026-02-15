@@ -578,6 +578,7 @@ impl Seats {
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     /// - `PKError::Fubar` if no one is found to act next.
+    #[allow(clippy::cast_possible_truncation)]
     pub fn next_to_act(&self, utg: u8) -> Result<u8, PKError> {
         // if self.is_betting_complete() {
         //     return Ok(utg);
@@ -588,10 +589,13 @@ impl Seats {
         // The logic flow is different if we're still waiting for the blinds to act.
         let everyone_has_bet = self.has_everyone_bet();
 
-        for seat in self.iter_from(utg) {
+        for (i, seat) in self.iter_from(utg).enumerate() {
+            let seat_index = utg + i as u8;
+            log::trace!("Checking seat #{seat_index} for next to act.");
             let state = &seat.player.state;
 
             if !seat.is_in_hand() || seat.is_all_in() {
+                log::trace!("Seat #{seat_index} is out of the hand.");
                 continue;
             }
 

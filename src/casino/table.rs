@@ -128,6 +128,10 @@ impl Table {
     }
 
     /// TODO: This will be the catch all for triggering non-player actions
+    ///
+    /// # Errors
+    ///
+    /// `PKError::InvalidSeatNumber` if `Seats.act_forced_bet()` calculates the wrong seat number
     pub fn act(&self) -> Result<(), PKError> {
         match self.determine_betting_phase() {
             GamePhase::BettingPreFlop => {
@@ -139,10 +143,10 @@ impl Table {
                 }
                 Ok(())
             }
-            GamePhase::BettingFlop => Ok(()),
-            GamePhase::BettingTurn => Ok(()),
-            GamePhase::BettingRiver => Ok(()),
-            GamePhase::Showdown => Ok(()),
+            // GamePhase::BettingFlop => Ok(()),
+            // GamePhase::BettingTurn => Ok(()),
+            // GamePhase::BettingRiver => Ok(()),
+            // GamePhase::Showdown => Ok(()),
             _ => Ok(()),
         }
     }
@@ -613,7 +617,6 @@ impl Table {
                     GamePhase::BettingRiver
                 }
             }
-            GamePhase::Showdown => GamePhase::Showdown,
             _ => GamePhase::Showdown,
         }
     }
@@ -2057,6 +2060,25 @@ mod casino__table_tests {
 
         assert!(table.seats.are_dealt());
         assert!(table.event_log.have_posted_blinds());
+
+        assert_eq!(0, table.next_to_act());
+
+        let _ = table.act_bet(0, 300);
+        assert_eq!(1, table.next_to_act());
+
+        let _ = table.act_call(1);
+        assert_eq!(300, table.get_seat(1).unwrap().player.bet.count());
+        assert_eq!(300, table.get_seat(1).unwrap().player.chips_in_play.get());
+        assert_eq!(2, table.next_to_act());
+
+        let _ = table.act_bet(2, 900);
+        assert_eq!(900, table.get_seat(2).unwrap().player.bet.count());
+        assert_eq!(900, table.get_seat(2).unwrap().player.chips_in_play.get());
+        assert_eq!(0, table.next_to_act());
+
+
+
+        println!("{table}");
     }
 
     #[test]
@@ -2518,6 +2540,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(2, table.next_to_act());
         }
 
+        // Seat 2 folds
         let action: PluribusEvent = actions.pop_front().unwrap();
         {
             assert_eq!(PluribusEvent::Fold, action);
@@ -2534,6 +2557,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(3, table.next_to_act());
         }
 
+        // Seat 3 folds
         let action: PluribusEvent = actions.pop_front().unwrap();
         {
             assert_eq!(PluribusEvent::Fold, action);
@@ -2551,6 +2575,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(4, table.next_to_act());
         }
 
+        // Seat 4 raises 200
         let action: PluribusEvent = actions.pop_front().unwrap();
         {
             assert_eq!(PluribusEvent::Raise(200), action);
@@ -2569,6 +2594,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(5, table.next_to_act());
         }
 
+        // Seat 5 reraises 700
         let action: PluribusEvent = actions.pop_front().unwrap();
         {
             assert_eq!(PluribusEvent::Raise(700), action);
@@ -2587,6 +2613,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(0, table.next_to_act());
         }
 
+        // Seat 0 folds
         let action: PluribusEvent = actions.pop_front().unwrap();
         {
             assert_eq!(PluribusEvent::Fold, action);
@@ -2603,6 +2630,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(1, table.next_to_act());
         }
 
+        // Seat 1 calls
         let action: PluribusEvent = actions.pop_front().unwrap();
         {
             assert_eq!(PluribusEvent::Call, action);
@@ -2620,6 +2648,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(4, table.next_to_act());
         }
 
+        // Seat 4 reraises 2250
         let action: PluribusEvent = actions.pop_front().unwrap();
         {
             assert_eq!(PluribusEvent::Raise(2250), action);
@@ -2628,18 +2657,46 @@ mod casino__table___end_hand_tests {
             assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
             assert_eq!(4, table.next_to_act());
         }
+        // 4 5 1 in hand
+        println!("{table}");
         Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         {
+            println!(">>{}", table.event_log.to_string());
+            println!(">>> {table}");
             assert_eq!(2250, table.get_seat(4).unwrap().player.bet.count());
             assert!(!table.seats.is_betting_complete());
             assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
             assert!(table.seats.are_dealt());
             assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
-            assert_eq!(0, table.next_to_act());
+
+            assert!(table.get_seat(4).unwrap().is_in_hand());
+            assert!(table.seats.has_everyone_bet());
+
+            let seat_state = &table.get_seat(4).unwrap().player.state;
+            let current_bet = table.seats.current_bet();
+            let seat_amount = seat_state.get().amount();
+
+            assert_eq!(2250, current_bet);
+            // assert_eq!(0, seat_amount);
+
+            assert_eq!(5, table.next_to_act());
         }
 
-        println!("{table}");
+        // println!("{table}");
 
         // STATE:55:ffr200r700fcr2250ff:Kc7s|8s9s|Jc3d|5d9d|AhAc|JdTd:-50|-700|0|0|1450|-700:MrPink|MrBlue|Joe|Bill|Pluribus|MrOrange
+    }
+
+    #[test]
+    fn end_hand__pluribus_193_99() {
+            let log: &str = "STATE:193:r225fcffc/ccc/ccc/ccc:2s7d|7c9c|KcQs|2dQh|9h9s|Ac8d/5cKhJh/As/7s:-50|-225|500|0|-225|0:Eddie|MrOrange|Bill|MrBlue|Pluribus|MrPink";
+            let pluribus = Pluribus::from_str(log).expect("Pluribus failed");
+            let table = Table::try_from(&pluribus).expect("can't parse pluribus log");
+            let mut actions = pluribus.parse_all_rounds();
+
+            assert!(table.seats.are_dealt());
+            assert!(!table.event_log.have_posted_blinds());
+
+            table.act().expect("ActForcedBets failed");
     }
 }

@@ -181,17 +181,20 @@ impl Pluribus {
         Ok(())
     }
 
+    /// # Errors
+    ///
+    /// TODO: Fill in errors
     pub fn play_hand(&self) -> Result<(), PKError> {
         let table = Table::try_from(self)?;
 
-        println!(">>>{}", table.deck.to_string());
+        println!(">>>{}", table.deck);
         println!("{self}");
         println!("{}", self.raw);
 
         if !table.seats.are_dealt() {
-            table.deal_cards_to_seats().expect("Failed to deal cards to seats");
+            table.deal_cards_to_seats()?;
         }
-        table.act_forced_bets().expect("ActForcedBets failed");
+        table.act_forced_bets()?;
 
         for action in self.parse_all_rounds() {
             let seat_to_act = table.next_to_act();
@@ -200,7 +203,7 @@ impl Pluribus {
 
             Pluribus::act(&table, &action, seat_to_act)?;
 
-            println!("{}", table.commentary_last_player_action().unwrap());
+            println!("{}", table.commentary_last_player_action().unwrap_or_default());
 
             let betting_phase = table.determine_betting_phase();
             println!(
@@ -223,7 +226,7 @@ impl Pluribus {
                             println!("Pot is {}", table.pot.count());
                             let _active_players = table.seats.count_active_in_hand();
 
-                            table.deal_flop().expect("Failed to deal flop");
+                            table.deal_flop()?;
                             println!("Board: {}", table.board);
                             table.eval_flop_display();
                         }
@@ -233,7 +236,7 @@ impl Pluribus {
                             let _pot = table.bring_it_in()?;
                             println!("Pot is {}", table.pot.count());
 
-                            table.deal_turn().expect("Failed to deal turn");
+                            table.deal_turn()?;
                             println!("Board: {}", table.board);
                             table.eval_turn_display();
                         }
@@ -243,7 +246,7 @@ impl Pluribus {
                             let _pot = table.bring_it_in()?;
                             println!("Pot is {}", table.pot.count());
 
-                            table.deal_river().expect("Failed to deal river");
+                            table.deal_river()?;
                             println!("Board: {}", table.board);
                             table.eval_river_display();
                         }

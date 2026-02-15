@@ -355,6 +355,10 @@ impl Agency for PlayerState {
             }
         }
 
+        if self.is_bet() && next.is_bet() && (next.amount() > self.amount()) {
+            return true;
+        }
+
         if next.is_showdown() {
             return true;
         }
@@ -539,9 +543,10 @@ mod casino__state_tests {
         assert!(PlayerState::Bet(100).can_given(&PlayerState::ReRaise(200)));
         assert!(PlayerState::Bet(100).can_given(&PlayerState::AllIn(500)));
         assert!(PlayerState::Bet(100).can_given(&PlayerState::YetToAct));
+        assert!(PlayerState::Bet(600).can_given(&PlayerState::Bet(300))); // Updated to deal with Pluribus
+        assert!(!PlayerState::Bet(200).can_given(&PlayerState::Bet(300)));
         assert!(!PlayerState::Bet(100).can_given(&PlayerState::Call(100)));
         assert!(!PlayerState::Bet(200).can_given(&PlayerState::Raise(200)));
-        assert!(!PlayerState::Bet(200).can_given(&PlayerState::Bet(300)));
 
         assert!(PlayerState::Call(200).can_given(&PlayerState::Fold));
         assert!(PlayerState::Call(100).can_given(&PlayerState::Call(200)));
@@ -695,8 +700,9 @@ mod casino__state_tests {
 
         assert!(!state.can_given_against(&PlayerState::Check(0), &PlayerState::Check(0)));
         // You can't bet if you're already bet, only call, raise, re-raise or all-in.
-        assert!(!state.can_given_against(&PlayerState::Bet(500), &PlayerState::Check(0)));
-        assert!(!state.can_given_against(&PlayerState::Bet(500), &PlayerState::Bet(400)));
+        // UPDATE: This is no longer true because of `Pluribus`.
+        assert!(state.can_given_against(&PlayerState::Bet(500), &PlayerState::Check(0)));
+        assert!(state.can_given_against(&PlayerState::Bet(500), &PlayerState::Bet(400)));
         assert!(!state.can_given_against(&PlayerState::Raise(500), &PlayerState::Raise(500)));
         assert!(!state.can_given_against(&PlayerState::Raise(500), &PlayerState::ReRaise(500)));
     }
