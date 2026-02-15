@@ -69,7 +69,12 @@ impl Seats {
     pub fn act_call(&self, seat_number: u8) -> Result<(usize, usize), PKError> {
         let to_call = self.current_bet();
         if let Some(seat) = self.get_seat_mut(seat_number) {
-            let remaining = seat.player.act_call(to_call)?;
+            let mut remaining = seat.player.chips.count();
+            if to_call == 0 {
+                seat.player.act_check()?;
+            } else {
+                remaining = seat.player.act_call(to_call)?;
+            }
             drop(seat);
             Ok((to_call, remaining))
         } else {
@@ -357,7 +362,7 @@ impl Seats {
     /// assert_eq!("__ __, __ __, A♥ __, __ __, __ __, __ __, __ __, __ __", seats.cards_string());
     ///
     /// assert!(seats.deal_card(2, Card::KING_SPADES).is_ok());
-    /// assert_eq!("__ __, __ __, A♥ __, K♠ __, __ __, __ __, __ __, __ __", seats.cards_string());
+    /// assert_eq!("__ __, __ __, A♥ __, K♠ __, __ __, __ __, __ __", seats.cards_string());
     ///
     /// assert!(seats.deal_card(2, Card::QUEEN_DIAMONDS).is_ok());
     /// assert!(seats.deal_card(2, Card::JACK_CLUBS).is_ok());
@@ -626,13 +631,6 @@ impl Seats {
         }
 
         Err(PKError::InvalidSeatNumber)
-    }
-
-    pub fn reset(&self) {
-        for seat_cell in &self.0 {
-            let seat = seat_cell.borrow_mut();
-            seat.player.reset();
-        }
     }
 
     /// Clears the `PlayerState` for all the seats.

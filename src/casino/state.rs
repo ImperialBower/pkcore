@@ -49,6 +49,11 @@ impl PlayerStateCell {
     }
 
     #[must_use]
+    pub fn is_call(&self) -> bool {
+        self.0.get().is_call()
+    }
+
+    #[must_use]
     pub fn is_check(&self) -> bool {
         self.0.get().is_check()
     }
@@ -272,6 +277,11 @@ impl PlayerState {
     #[must_use]
     pub fn is_blind(&self) -> bool {
         matches!(self, PlayerState::Blind(_))
+    }
+
+    #[must_use]
+    pub fn is_call(&self) -> bool {
+        matches!(self, PlayerState::Call(_))
     }
 
     #[must_use]
