@@ -191,10 +191,12 @@ impl Pluribus {
         println!("{self}");
         println!("{}", self.raw);
 
-        if !table.seats.are_dealt() {
-            table.deal_cards_to_seats()?;
-        }
-        table.act_forced_bets()?;
+        table.act()?;
+
+        // if !table.seats.are_dealt() {
+        //     table.deal_cards_to_seats()?;
+        // }
+        // table.act_forced_bets()?;
 
         for action in self.parse_all_rounds() {
             let seat_to_act = table.next_to_act();

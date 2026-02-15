@@ -165,6 +165,17 @@ impl Seats {
         true
     }
 
+    #[must_use]
+    pub fn are_ready_to_act(&self) -> bool {
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            if seat.is_in_hand() && !seat.player.state.is_yet_to_act() {
+                return false;
+            }
+        }
+        true
+    }
+
     /// Assigns a `Seat` to the given index, returning the old `Seat`.
     ///
     /// # Errors
@@ -362,7 +373,7 @@ impl Seats {
     /// assert_eq!("__ __, __ __, A♥ __, __ __, __ __, __ __, __ __, __ __", seats.cards_string());
     ///
     /// assert!(seats.deal_card(2, Card::KING_SPADES).is_ok());
-    /// assert_eq!("__ __, __ __, A♥ __, K♠ __, __ __, __ __, __ __", seats.cards_string());
+    /// assert_eq!("__ __, __ __, A♥ __, K♠ __, __ __, __ __, __ __, __ __", seats.cards_string());
     ///
     /// assert!(seats.deal_card(2, Card::QUEEN_DIAMONDS).is_ok());
     /// assert!(seats.deal_card(2, Card::JACK_CLUBS).is_ok());
@@ -638,6 +649,16 @@ impl Seats {
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow_mut();
             seat.player.state.reset();
+        }
+    }
+
+    /// Clears the `PlayerState` for all the seats.
+    pub fn reset_state_in_hand(&self) {
+        for seat_cell in &self.0 {
+            if seat_cell.borrow().is_in_hand() {
+                let seat = seat_cell.borrow_mut();
+                seat.player.state.reset();
+            }
         }
     }
 

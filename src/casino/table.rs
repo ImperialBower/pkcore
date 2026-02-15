@@ -132,7 +132,7 @@ impl Table {
     /// # Errors
     ///
     /// `PKError::InvalidSeatNumber` if `Seats.act_forced_bet()` calculates the wrong seat number
-pub fn act(&self) -> Result<(), PKError> {
+    pub fn act(&self) -> Result<(), PKError> {
         match self.determine_betting_phase() {
             GamePhase::BettingPreFlop => {
                 if !self.event_log.have_posted_blinds() {
@@ -145,27 +145,34 @@ pub fn act(&self) -> Result<(), PKError> {
                 }
 
                 if self.seats.is_betting_complete() {
-                    self.bring_it_in()?;
+                    let brought_in = self.bring_it_in()?;
+                    log::debug!("Bringing in: {} Pot is {}", brought_in, self.pot.count());
                     debug_assert!(self.seats.are_brought_in());
 
                     debug_assert!(!self.is_flop());
                     self.deal_flop()?;
                     debug_assert!(self.is_flop());
+                    log::debug!("Board: {}", self.board);
                 }
 
                 Ok(())
             }
             GamePhase::BettingFlop => {
                 if self.seats.is_betting_complete() {
-                    self.bring_it_in()?;
+                    let brought_in = self.bring_it_in()?;
+                    log::debug!("Bringing in: {} Pot is {}", brought_in, self.pot.count());
                     debug_assert!(self.seats.are_brought_in());
 
                     debug_assert!(!self.is_turn());
                     self.deal_turn()?;
                     debug_assert!(self.is_turn());
+                    log::debug!("Board: {}", self.board);
+
+                    self.seats.reset_state_in_hand();
+                    debug_assert!(self.seats.are_ready_to_act());
                 }
                 Ok(())
-            },
+            }
             GamePhase::BettingTurn => {
                 if self.seats.is_betting_complete() {
                     self.bring_it_in()?;
@@ -174,10 +181,18 @@ pub fn act(&self) -> Result<(), PKError> {
                     debug_assert!(!self.is_river());
                     self.deal_river()?;
                     debug_assert!(self.is_river());
+
+                    self.seats.reset_state_in_hand();
+                    debug_assert!(self.seats.are_ready_to_act());
                 }
                 Ok(())
-            },
-            // GamePhase::BettingRiver => Ok(()),
+            }
+            GamePhase::BettingRiver => {
+                if self.is_game_over() {
+                    let _ = self.end_hand()?;
+                }
+                Ok(())
+            }
             // GamePhase::Showdown => Ok(()),
             _ => Ok(()),
         }
@@ -630,21 +645,21 @@ pub fn act(&self) -> Result<(), PKError> {
             }
             GamePhase::BettingFlop => {
                 if self.seats.is_betting_complete() {
-                    GamePhase::ConsolidatePreFlopBets
+                    GamePhase::ConsolidateFlopBets
                 } else {
                     GamePhase::BettingFlop
                 }
             }
             GamePhase::BettingTurn => {
                 if self.seats.is_betting_complete() {
-                    GamePhase::ConsolidatePreFlopBets
+                    GamePhase::ConsolidateTurnBets
                 } else {
                     GamePhase::BettingTurn
                 }
             }
             GamePhase::BettingRiver => {
                 if self.seats.is_betting_complete() {
-                    GamePhase::ConsolidatePreFlopBets
+                    GamePhase::Showdown
                 } else {
                     GamePhase::BettingRiver
                 }
@@ -2873,34 +2888,109 @@ mod casino__table___end_hand_tests {
         Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
 
         {
-            print!("{table}");
             assert!(table.seats.is_betting_complete());
             assert!(table.seats.are_brought_in());
             assert!(table.is_flop());
             // Seat 0 folded, so seat 1 is first to act.
             assert_eq!(1, table.next_to_act());
             assert_eq!(GamePhase::BettingFlop, table.determine_betting_phase());
-            assert_eq!(GamePhase::ConsolidatePreFlopBets, table.determine_game_phase());
+            assert_eq!(GamePhase::ConsolidateFlopBets, table.determine_game_phase());
 
-            assert_eq!(3, table.seats.iter().filter(|seat| seat.borrow().player.state.is_check()).count());
-
+            assert_eq!(
+                3,
+                table
+                    .seats
+                    .iter()
+                    .filter(|seat| seat.borrow().player.state.is_check())
+                    .count()
+            );
         }
 
         table.act().expect("Act ready for turn");
         {
-            assert_eq!(3, table.seats.iter().filter(|seat| seat.borrow().player.state.is_yet_to_act()).count());
             assert!(table.seats.are_brought_in());
+            assert!(!table.is_game_over());
+            assert_eq!(
+                3,
+                table
+                    .seats
+                    .iter()
+                    .filter(|seat| seat.borrow().player.state.is_yet_to_act())
+                    .count()
+            );
             assert!(table.is_turn());
             // Seat 0 folded, so seat 1 is first to act.
             assert_eq!(1, table.next_to_act());
-
-            print!("{table}");
             assert!(!table.seats.is_betting_complete());
             assert_eq!(GamePhase::BettingTurn, table.determine_betting_phase());
             assert_eq!(GamePhase::BettingTurn, table.determine_game_phase());
         }
 
-        print!("{table}");
+        assert!(!table.seats.is_betting_complete());
+
+        let action: PluribusEvent = actions.pop_front().unwrap();
+        Pluribus::act(&table, &action, table.next_to_act()).expect("Check failed");
+        let action: PluribusEvent = actions.pop_front().unwrap();
+        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        let action: PluribusEvent = actions.pop_front().unwrap();
+        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+
+        {
+            assert!(table.seats.is_betting_complete());
+            assert!(table.seats.are_brought_in());
+            assert!(table.is_turn());
+            // Seat 0 folded, so seat 1 is first to act.
+            assert_eq!(1, table.next_to_act());
+            assert_eq!(GamePhase::BettingTurn, table.determine_betting_phase());
+            assert_eq!(GamePhase::ConsolidateTurnBets, table.determine_game_phase());
+
+            assert_eq!(
+                3,
+                table
+                    .seats
+                    .iter()
+                    .filter(|seat| seat.borrow().player.state.is_check())
+                    .count()
+            );
+        }
+
+        table.act().expect("Act ready for river");
+        {
+            assert!(table.seats.are_brought_in());
+            assert!(!table.is_game_over());
+            assert_eq!(
+                3,
+                table
+                    .seats
+                    .iter()
+                    .filter(|seat| seat.borrow().player.state.is_yet_to_act())
+                    .count()
+            );
+            assert!(table.is_river());
+            // Seat 0 folded, so seat 1 is first to act.
+            assert_eq!(1, table.next_to_act());
+            assert!(!table.seats.is_betting_complete());
+            assert_eq!(GamePhase::BettingRiver, table.determine_betting_phase());
+            assert_eq!(GamePhase::BettingRiver, table.determine_game_phase());
+        }
+
+        let action: PluribusEvent = actions.pop_front().unwrap();
+        Pluribus::act(&table, &action, table.next_to_act()).expect("Check failed");
+        let action: PluribusEvent = actions.pop_front().unwrap();
+        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        let action: PluribusEvent = actions.pop_front().unwrap();
+        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+
+        table.act().expect("Act ready for river");
+        {
+            assert!(table.seats.are_brought_in());
+            assert!(table.is_game_over());
+            assert!(table.is_river());
+            assert_eq!(GamePhase::BettingRiver, table.determine_betting_phase());
+            assert_eq!(GamePhase::Showdown, table.determine_game_phase());
+        }
+
+        // print!("{table}");
 
         // STATE:193:r225fcffc/ccc/ccc/ccc:2s7d|7c9c|KcQs|2dQh|9h9s|Ac8d/5cKhJh/As/7s:-50|-225|500|0|-225|0:Eddie|MrOrange|Bill|MrBlue|Pluribus|MrPink
     }
