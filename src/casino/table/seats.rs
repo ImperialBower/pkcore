@@ -848,13 +848,25 @@ mod casino__table__seats_tests {
     }
 
     #[test]
+    fn bring_check() {
+        let seats = Seats::new(TestData::min_players());
+
+        seats.act_forced_bet(1, 50).expect("Should be able to act");
+        seats.act_forced_bet(2, 100).expect("Should be able to act");
+        seats.act_fold(0).expect("Should be able to act");
+        seats.act_raise(1, 200).expect("Should be able to act");
+
+        assert_eq!(Err(PKError::InvalidTableAction), seats.act_check(2));
+    }
+
+    #[test]
     fn all_players_have_acted() {
         let seats = Seats::try_from(TestData::min_seats()).unwrap();
         assert!(!seats.is_betting_complete());
 
         for seat_cell in seats.borrow_all() {
             let seat = seat_cell.borrow();
-            seat.player.state.set(PlayerState::Check(100));
+            seat.player.state.set(PlayerState::Check);
         }
 
         assert!(seats.is_betting_complete());
@@ -958,12 +970,7 @@ mod casino__table__seats_tests {
         let seat = seats.next_to_act(3).unwrap();
         assert_eq!(3, seat);
 
-        seats
-            .get_seat_mut(seat)
-            .unwrap()
-            .player
-            .state
-            .set(PlayerState::Check(100));
+        seats.get_seat_mut(seat).unwrap().player.state.set(PlayerState::Check);
         let seat = seats.next_to_act(3).unwrap();
         assert_eq!(4, seat);
 

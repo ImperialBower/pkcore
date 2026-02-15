@@ -1912,7 +1912,7 @@ mod casino__table_tests {
         }
 
         if let Some(seat) = table.get_seat(2) {
-            assert_eq!(PlayerState::Check(100), seat.player.state.get());
+            assert_eq!(PlayerState::Check, seat.player.state.get());
             assert!(!seat.is_yet_to_act_or_blind());
         } else {
             panic!("Failed to get seat 2");
@@ -2075,8 +2075,6 @@ mod casino__table_tests {
         assert_eq!(900, table.get_seat(2).unwrap().player.bet.count());
         assert_eq!(900, table.get_seat(2).unwrap().player.chips_in_play.get());
         assert_eq!(0, table.next_to_act());
-
-
 
         println!("{table}");
     }
@@ -2674,7 +2672,7 @@ mod casino__table___end_hand_tests {
 
             let seat_state = &table.get_seat(4).unwrap().player.state;
             let current_bet = table.seats.current_bet();
-            let seat_amount = seat_state.get().amount();
+            let _seat_amount = seat_state.get().amount();
 
             assert_eq!(2250, current_bet);
             // assert_eq!(0, seat_amount);
@@ -2689,14 +2687,14 @@ mod casino__table___end_hand_tests {
 
     #[test]
     fn end_hand__pluribus_193_99() {
-            let log: &str = "STATE:193:r225fcffc/ccc/ccc/ccc:2s7d|7c9c|KcQs|2dQh|9h9s|Ac8d/5cKhJh/As/7s:-50|-225|500|0|-225|0:Eddie|MrOrange|Bill|MrBlue|Pluribus|MrPink";
-            let pluribus = Pluribus::from_str(log).expect("Pluribus failed");
-            let table = Table::try_from(&pluribus).expect("can't parse pluribus log");
-            let mut actions = pluribus.parse_all_rounds();
+        let log: &str = "STATE:193:r225fcffc/ccc/ccc/ccc:2s7d|7c9c|KcQs|2dQh|9h9s|Ac8d/5cKhJh/As/7s:-50|-225|500|0|-225|0:Eddie|MrOrange|Bill|MrBlue|Pluribus|MrPink";
+        let pluribus = Pluribus::from_str(log).expect("Pluribus failed");
+        let table = Table::try_from(&pluribus).expect("can't parse pluribus log");
+        let _actions = pluribus.parse_all_rounds();
 
-            assert!(table.seats.are_dealt());
-            assert!(!table.event_log.have_posted_blinds());
+        assert!(table.seats.are_dealt());
+        assert!(!table.event_log.have_posted_blinds());
 
-            table.act().expect("ActForcedBets failed");
+        table.act().expect("ActForcedBets failed");
     }
 }
