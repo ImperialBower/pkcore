@@ -9,7 +9,6 @@ use std::fmt::{Display, Formatter};
 
 pub mod actions;
 pub mod chips;
-pub mod player;
 pub mod pluribus;
 pub mod seat;
 
@@ -29,6 +28,8 @@ use std::{println as debug, println as info, println as warn};
 ///
 /// One of the big goals of this work is to spike out handling the flow of a hand of cards
 /// programmatically.
+///
+/// UPDATE: Turns out I don't need this. I'm using the Pluribus struct directly.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Nubibus {
     pub phase: PhaseHoldemTracker,

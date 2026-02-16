@@ -200,48 +200,53 @@ impl Pluribus {
         table.act_forced_bets()?;
 
         for action in self.parse_all_rounds() {
-            let seat_to_act = table.next_to_act();
-            let handle_to_act = table.get_seat_handle(seat_to_act);
-            println!("{handle_to_act} Seat {seat_to_act} is next to act: {action}");
+            self.play_hand_action(&table, &action)?
+        }
+        Ok(())
+    }
 
-            Pluribus::act(&table, &action, seat_to_act)?;
+    pub fn play_hand_action(&self, table: &Table, action: &PluribusEvent) -> Result<(), PKError> {
+        let seat_to_act = table.next_to_act();
+        let handle_to_act = table.get_seat_handle(seat_to_act);
+        println!("{handle_to_act} Seat {seat_to_act} is next to act: {action}");
 
-            println!("{}", table.commentary_last_player_action().unwrap_or_default());
+        Pluribus::act(&table, &action, seat_to_act)?;
 
-            let betting_phase = table.determine_betting_phase();
+        println!("{}", table.commentary_last_player_action().unwrap_or_default());
 
-            if table.is_game_over() {
-                let hand_result = table.end_hand()?;
+        let betting_phase = table.determine_betting_phase();
 
-                println!("================================");
-                println!("================================");
-                println!("{hand_result}");
-                println!("{}", self.display_results());
-            } else {
-                match betting_phase {
-                    GamePhase::BettingPreFlop => {
-                        if table.is_betting_complete() {
-                            table.act()?;
-                            println!("Board: {}", table.board);
-                            table.eval_flop_display();
-                        }
+        if table.is_game_over() {
+            let hand_result = table.end_hand()?;
+
+            println!("================================");
+            println!("================================");
+            println!("{hand_result}");
+            println!("{}", self.display_results());
+        } else {
+            match betting_phase {
+                GamePhase::BettingPreFlop => {
+                    if table.is_betting_complete() {
+                        table.act()?;
+                        println!("Board: {}", table.board);
+                        table.eval_flop_display();
                     }
-                    GamePhase::BettingFlop => {
-                        if table.is_betting_complete() {
-                            table.act()?;
-                            println!("Board: {}", table.board);
-                            table.eval_turn_display();
-                        }
-                    }
-                    GamePhase::BettingTurn => {
-                        if table.is_betting_complete() {
-                            table.act()?;
-                            println!("Board: {}", table.board);
-                            table.eval_river_display();
-                        }
-                    }
-                    _ => {}
                 }
+                GamePhase::BettingFlop => {
+                    if table.is_betting_complete() {
+                        table.act()?;
+                        println!("Board: {}", table.board);
+                        table.eval_turn_display();
+                    }
+                }
+                GamePhase::BettingTurn => {
+                    if table.is_betting_complete() {
+                        table.act()?;
+                        println!("Board: {}", table.board);
+                        table.eval_river_display();
+                    }
+                }
+                _ => {}
             }
         }
         Ok(())
