@@ -15,10 +15,10 @@ use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
 use crate::prelude::{BoxedCards, ForcedBets, Forgiving, Seats, Table};
-use crate::util::wincounter::win::Win;
-use crate::util::wincounter::wins::Wins;
 use crate::{Card, Cards, Pile};
 use std::str::FromStr;
+use wincounter::win::Win;
+use wincounter::wins::Wins;
 
 /// I am a classicist when it comes to testing. Martin Fowler, in his essay
 /// [Mocks Aren't Stubs](https://martinfowler.com/articles/mocksArentStubs.html)

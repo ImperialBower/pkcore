@@ -2152,7 +2152,7 @@ mod casino__table___end_hand_tests {
     use crate::analysis::store::nubibus::pluribus::PluribusEvent;
     use crate::prelude::*;
     use crate::util::data::TestData;
-    use crate::util::wincounter::win::Win;
+    use wincounter::win::Win;
 
     #[test]
     fn end_hand__heads_up_all_in_the_hand() {

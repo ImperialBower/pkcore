@@ -42,12 +42,14 @@ impl Terminal {
         Ok(())
     }
 
-    //    😘
     #[must_use]
     pub fn random_happy() -> char {
-        let sad_faces = ['🥰', '😍', '🤩', '🤑', '🤠', '🥳', '😈', '😺'];
-        let random_index = rand::rng().random_range(0..sad_faces.len());
-        sad_faces[random_index]
+        let happy_faces = [
+            '😀', '😃', '😄', '😁', '😊', '🙂', '😇', '🤗', '🤩', '🥳', '🎉', '🥰', '😍', '🤩', '🤑', '🤠', '🥳', '😈',
+            '😺',
+        ];
+        let random_index = rand::rng().random_range(0..happy_faces.len());
+        happy_faces[random_index]
     }
 
     #[must_use]

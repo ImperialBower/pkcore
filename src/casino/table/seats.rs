@@ -5,10 +5,10 @@ use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
 use crate::casino::table::seat::{Seat, SeatCell};
 use crate::prelude::PlayerState;
-use crate::util::wincounter::PlayerFlag;
-use crate::util::wincounter::win::Win;
 use log;
 use std::cell::{Ref, RefMut};
+use wincounter::PlayerFlag;
+use wincounter::win::Win;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Seats(Box<[SeatCell]>);

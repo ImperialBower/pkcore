@@ -11,10 +11,10 @@ use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
 use crate::play::stages::turn_eval::TurnEval;
 use crate::prelude::Table;
-use crate::util::wincounter::results::Results;
-use crate::util::wincounter::wins::Wins;
 use crate::{Card, Cards, PKError, Pile, TheNuts};
 use std::fmt::{Display, Formatter};
+use wincounter::results::WinResults;
+use wincounter::wins::Wins;
 
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
@@ -241,10 +241,10 @@ impl Game {
     ///
     /// TODO: Write some fucking tests.
     #[must_use]
-    pub fn turn_calculations(&self) -> (CaseEvals, Wins, Results, Outs) {
+    pub fn turn_calculations(&self) -> (CaseEvals, Wins, WinResults, Outs) {
         let case_evals = self.turn_case_evals();
         let wins = case_evals.wins();
-        let results = Results::from_wins(&wins, self.hands.len());
+        let results = WinResults::from_wins(&wins, self.hands.len());
         let outs = Outs::from(&case_evals);
         (case_evals, wins, results, outs)
     }
@@ -640,8 +640,8 @@ mod play__game_tests {
     use crate::arrays::two::Two;
     use crate::play::stages::flop_eval::FlopEval;
     use crate::util::data::TestData;
-    use crate::util::wincounter::win::Win;
     use std::str::FromStr;
+    use wincounter::win::Win;
 
     #[test]
     fn new() {

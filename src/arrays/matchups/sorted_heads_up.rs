@@ -8,8 +8,6 @@ use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::util::wincounter::win::Win;
-use crate::util::wincounter::wins::Wins;
 use crate::{PKError, Pile, Shifty, SuitShift};
 use csv::{Reader, WriterBuilder};
 use rusqlite::Connection;
@@ -19,6 +17,8 @@ use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::str::FromStr;
+use wincounter::win::Win;
+use wincounter::wins::Wins;
 
 pub static SORTED_HEADS_UP_UNIQUE: std::sync::LazyLock<HashSet<SortedHeadsUp>> = std::sync::LazyLock::new(|| {
     let mut hs: HashSet<SortedHeadsUp> = HashSet::new();

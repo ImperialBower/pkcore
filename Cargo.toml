@@ -1,6 +1,6 @@
 [package]
 name = "pkcore"
-version = "0.0.15"
+version = "0.0.16"
 rust-version = "1.85.1"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
@@ -31,6 +31,7 @@ strum_macros = "0.27.2"
 termion = "*"
 thousands = "0.2.0"
 uuid = { version = "1.19", features = ["v4"] }
+wincounter = "0.1.5"
 
 [dev-dependencies]
 assert-struct = "0.2.0"

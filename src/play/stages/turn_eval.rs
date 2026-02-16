@@ -9,18 +9,18 @@ use crate::arrays::six::Six;
 use crate::card::Card;
 use crate::play::game::Game;
 use crate::prelude::{Cards, Table, TheNuts};
-use crate::util::wincounter::results::Results;
-use crate::util::wincounter::wins::Wins;
 use log::trace;
 use std::fmt::{Display, Formatter};
 use std::sync::mpsc;
+use wincounter::results::WinResults;
+use wincounter::wins::Wins;
 
 #[derive(Clone, Debug, Default)]
 pub struct TurnEval {
     pub game: Game,
     pub case_evals: CaseEvals,
     pub wins: Wins,
-    pub results: Results,
+    pub results: WinResults,
     pub outs: Outs,
 }
 
@@ -204,7 +204,7 @@ impl TryFrom<&Game> for TurnEval {
 
         let case_evals = TurnEval::case_evals(game);
         let wins = case_evals.wins();
-        let results = Results::from_wins(&wins, game.hands.len());
+        let results = WinResults::from_wins(&wins, game.hands.len());
         let outs = Outs::from(&case_evals);
 
         Ok(TurnEval {
@@ -233,8 +233,8 @@ mod play__turn_eval_tests {
     use crate::play::board::Board;
     use crate::play::game::Game;
     use crate::prelude::TestData;
-    use crate::util::wincounter::win::Win;
     use std::str::FromStr;
+    use wincounter::win::Win;
 
     #[test]
     fn default() {

@@ -4,11 +4,11 @@ use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::play::hole_cards::HoleCards;
-use crate::util::wincounter::wins::Wins;
 use log::info;
 use std::slice::Iter;
 use std::sync::mpsc;
 use std::thread;
+use wincounter::wins::Wins;
 
 /// Now that we have validated that we can handle a single case, aka one possible result from
 /// a specific collection of hands at the flop, we can assemble them into a collection of

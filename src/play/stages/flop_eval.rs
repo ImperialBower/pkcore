@@ -6,9 +6,9 @@ use crate::arrays::three::Three;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
 use crate::prelude::Table;
-use crate::util::wincounter::results::Results;
-use crate::util::wincounter::wins::Wins;
 use crate::{PKError, Pile};
+use wincounter::results::WinResults;
+use wincounter::wins::Wins;
 
 /// I'm feeling the need to refactor our `Game` struct. As we get deeper into
 /// the analysis phase of our library, each stage of a hand will need to have
@@ -76,18 +76,14 @@ use crate::{PKError, Pile};
 /// from the `Game` method that we were refactoring it from:
 ///
 /// ```
-/// use pkcore::analysis::case_evals::CaseEvals;
-/// use pkcore::arrays::three::Three;
-/// use pkcore::play::hole_cards::HoleCards;
-/// use pkcore::util::wincounter::results::Results;
-/// use pkcore::util::wincounter::wins::Wins;
+/// use pkcore::prelude::*;
 ///
 /// pub struct Flop {
 ///     pub board: Three,
 ///     pub hands: HoleCards,
 ///     pub case_evals: CaseEvals,
 ///     pub wins: Wins,
-///     pub results: Results,
+///     pub results: WinResults,
 /// }
 /// ```
 ///
@@ -205,7 +201,7 @@ pub struct FlopEval {
     pub hands: HoleCards,
     pub case_evals: CaseEvals,
     pub wins: Wins,
-    pub results: Results,
+    pub results: WinResults,
 }
 
 impl FlopEval {
@@ -213,7 +209,7 @@ impl FlopEval {
     pub fn new(board: Three, hands: HoleCards) -> FlopEval {
         let case_evals = CaseEvals::from_holdem_at_flop_mpsc(board, &hands);
         let wins = case_evals.wins();
-        let results = Results::from_wins(&wins, hands.len());
+        let results = WinResults::from_wins(&wins, hands.len());
 
         FlopEval {
             board,

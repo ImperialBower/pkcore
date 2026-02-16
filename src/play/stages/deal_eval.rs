@@ -1,7 +1,7 @@
 use crate::analysis::case_evals::CaseEvals;
 use crate::play::hole_cards::HoleCards;
-use crate::util::wincounter::results::Results;
-use crate::util::wincounter::wins::Wins;
+use wincounter::results::WinResults;
+use wincounter::wins::Wins;
 
 /// OK, now that I've cracked (to a certain extent) the issue with the sluggishness of the
 /// flop evaluation, I'm going to try using the same technique with evaluating the odds
@@ -16,7 +16,7 @@ pub struct DealEval {
     pub hands: HoleCards,
     pub case_evals: CaseEvals,
     pub wins: Wins,
-    pub results: Results,
+    pub results: WinResults,
 }
 
 impl DealEval {
@@ -26,7 +26,7 @@ impl DealEval {
     pub fn new(hands: HoleCards) -> DealEval {
         let case_evals = CaseEvals::from_holdem_at_deal(&hands);
         let wins = case_evals.wins();
-        let results = Results::from_wins(&wins, hands.len());
+        let results = WinResults::from_wins(&wins, hands.len());
 
         DealEval {
             hands,
