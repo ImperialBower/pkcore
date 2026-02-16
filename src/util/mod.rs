@@ -11,7 +11,6 @@ pub mod data;
 pub mod name;
 pub mod random_ordering;
 pub mod terminal;
-pub mod wincounter;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Percentage {

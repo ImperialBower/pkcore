@@ -6,15 +6,26 @@
 //! ```
 
 pub use std::str::FromStr;
+pub use wincounter::PlayerFlag;
+pub use wincounter::results::WinResults;
+pub use wincounter::win::Win;
+pub use wincounter::wins::Wins;
 
 pub use crate::macros;
 
+pub use crate::analysis::case_eval::CaseEval;
+pub use crate::analysis::case_evals::CaseEvals;
+pub use crate::analysis::eval::Eval;
 pub use crate::analysis::evals::Evals;
 pub use crate::analysis::gto::combo::Combo;
 pub use crate::analysis::gto::combo_pairs::ComboPairs;
 pub use crate::analysis::outs::Outs;
 pub use crate::analysis::the_nuts::TheNuts;
+pub use crate::arrays::five::Five;
+pub use crate::arrays::four::Four;
+pub use crate::arrays::seven::Seven;
 pub use crate::arrays::sliced::*;
+pub use crate::arrays::three::Three;
 pub use crate::arrays::two::Two;
 
 pub use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
@@ -44,7 +55,11 @@ pub use crate::play::hole_cards::HoleCards;
 pub use crate::rank::Rank;
 pub use crate::ranks::Ranks;
 pub use crate::suit::Suit;
+pub use crate::util::Percentage;
+pub use crate::util::Util;
 pub use crate::util::data::TestData;
+pub use crate::util::name::Name;
+pub use crate::util::terminal::Terminal;
 
 // Re-export core traits
 pub use crate::{Agency, Betting, Forgiving, GTO, PKError, Pile, Plurable, SOK, Shifty, SuitShift};

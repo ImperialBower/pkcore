@@ -5,10 +5,10 @@ use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::play::hole_cards::HoleCards;
-use crate::util::wincounter::PlayerFlag;
-use crate::util::wincounter::win::Win;
 use crate::{Card, Cards, PKError, Pile};
 use std::slice::Iter;
+use wincounter::PlayerFlag;
+use wincounter::win::Win;
 
 /// # Analysis Saga: Step 2
 ///
@@ -280,7 +280,7 @@ impl CaseEval {
     /// ```
     /// use pkcore::analysis::case_eval::CaseEval;
     /// use pkcore::util::data::TestData;
-    /// use pkcore::util::wincounter::win::Win;
+    /// use wincounter::win::Win;
     ///
     /// let expected = Win::FIRST;
     ///
@@ -324,7 +324,7 @@ impl CaseEval {
     /// use pkcore::analysis::case_eval::CaseEval;
     /// use pkcore::analysis::eval::Eval;
     /// use pkcore::util::data::TestData;
-    /// use pkcore::util::wincounter::win::Win;
+    /// use wincounter::win::Win;
     ///
     /// let expected = Win::FIRST;
     ///
@@ -355,12 +355,7 @@ impl CaseEval {
     /// Shuffle up the order a little bit and let's see what happens:
     ///
     /// ```
-    /// use pkcore::arrays::five::Five;
-    /// use pkcore::arrays::two::Two;
-    /// use pkcore::analysis::case_eval::CaseEval;
-    /// use pkcore::analysis::eval::Eval;
-    /// use pkcore::util::data::TestData;
-    /// use pkcore::util::wincounter::win::Win;
+    /// use pkcore::prelude::*;
     ///
     /// let expected = Win::THIRD;
     ///
@@ -423,12 +418,7 @@ impl CaseEval {
     /// `Case` the second and third hands are the best.
     ///
     /// ```
-    /// use pkcore::arrays::five::Five;
-    /// use pkcore::arrays::two::Two;
-    /// use pkcore::analysis::case_eval::CaseEval;
-    /// use pkcore::analysis::eval::Eval;
-    /// use pkcore::util::data::TestData;
-    /// use pkcore::util::wincounter::win::Win;
+    /// use pkcore::prelude::*;
     ///
     /// let expected = 0b0000_0110;
     ///
@@ -469,12 +459,7 @@ impl CaseEval {
     /// Yes, yes, I know... I write too many tests. It's my weakness...
     ///
     /// ```
-    /// use pkcore::arrays::five::Five;
-    /// use pkcore::arrays::two::Two;
-    /// use pkcore::analysis::case_eval::CaseEval;
-    /// use pkcore::analysis::eval::Eval;
-    /// use pkcore::util::data::TestData;
-    /// use pkcore::util::wincounter::win::Win;
+    /// use pkcore::prelude::*;
     ///
     /// let expected = 0b0000_1001;
     ///

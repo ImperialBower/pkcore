@@ -1,10 +1,10 @@
 use pkcore::analysis::store::db::hup::HUPResult;
 use pkcore::util::data::TestData;
-use pkcore::util::wincounter::win::Win;
 
 #[allow(non_snake_case)]
 mod heavy_tests {
     use super::*;
+    use wincounter::win::Win;
 
     /// Wow, this test caused a panic:
     ///

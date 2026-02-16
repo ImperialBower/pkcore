@@ -4,8 +4,6 @@ use crate::arrays::matchups::masked::{MASKED_DISTINCT, MASKED_UNIQUE, Masked};
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
-use crate::util::wincounter::win::Win;
-use crate::util::wincounter::wins::Wins;
 use crate::{PKError, Pile, Shifty, SuitShift};
 use csv::{Reader, WriterBuilder};
 use rusqlite::{Connection, Statement, named_params};
@@ -13,6 +11,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
+use wincounter::win::Win;
+use wincounter::wins::Wins;
 
 /// TODO TD: Why u64 not usize?
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]

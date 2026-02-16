@@ -6,9 +6,9 @@ use crate::arrays::four::Four;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::play::hole_cards::HoleCards;
-use crate::util::wincounter::wins::Wins;
 use crate::{Card, Pile};
 use log::{debug, info};
+use wincounter::wins::Wins;
 
 #[derive(Clone, Debug, Default)]
 pub struct PlayerWins {

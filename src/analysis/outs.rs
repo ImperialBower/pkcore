@@ -1,9 +1,9 @@
 use crate::analysis::case_eval::CaseEval;
 use crate::analysis::case_evals::CaseEvals;
-use crate::util::wincounter::PlayerFlag;
-use crate::util::wincounter::win::Win;
 use crate::{Card, Cards};
 use indexmap::IndexMap;
+use wincounter::PlayerFlag;
+use wincounter::win::Win;
 
 /// This is old `Fudd` code.
 #[derive(Clone, Debug)]
@@ -73,8 +73,8 @@ impl Outs {
     /// Something like:
     ///
     /// ```
-    /// use pkcore::util::wincounter::PlayerFlag;
-    /// use pkcore::util::wincounter::win::Win;
+    /// use wincounter::PlayerFlag;
+    /// use wincounter::win::Win;
     ///
     /// let mut i: PlayerFlag = 0b0000_0000_0000_0101;
     ///
