@@ -11,7 +11,7 @@ things like [Razz](https://en.wikipedia.org/wiki/Razz_(poker)) would be a total 
 This code is a complete rewrite from scratch of my [Fudd](https://github.com/ImperialBower/fudd) crate. Changes:
 
 * Folded [ckc-rs](https://github.com/ContractBridge/ckc-rs) crate into the repo.
-* Folded [wincounter](https://github.com/ImperialBower/wincounter) crate into the repo.
+* ~~Folded [wincounter](https://github.com/ImperialBower/wincounter) crate into the repo.~~ 
 * Removed [cardpack.rs](https://github.com/ImperialBower/cardpack.rs) dependency
 
 ## Setup
