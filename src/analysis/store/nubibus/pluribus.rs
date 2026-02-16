@@ -1,11 +1,59 @@
+use crate::games::GamePhase;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
+use crate::prelude::Table;
 use crate::util::Util;
+use crate::util::terminal::Terminal;
 use crate::{PKError, Plurable};
 use regex::Regex;
+use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
 use std::ops::Index;
 use std::str::FromStr;
+
+#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq)]
+pub enum PluribusEvent {
+    #[default]
+    Fold,
+    Call,
+    Raise(usize),
+}
+
+impl PluribusEvent {
+    #[must_use]
+    pub fn is_fold(&self) -> bool {
+        matches!(self, PluribusEvent::Fold)
+    }
+
+    #[must_use]
+    pub fn is_call(&self) -> bool {
+        matches!(self, PluribusEvent::Call)
+    }
+
+    #[must_use]
+    pub fn is_raise(&self) -> bool {
+        matches!(self, PluribusEvent::Raise(_))
+    }
+
+    #[must_use]
+    pub fn raise_amount(&self) -> Option<usize> {
+        if let PluribusEvent::Raise(amount) = self {
+            Some(*amount)
+        } else {
+            None
+        }
+    }
+}
+
+impl Display for PluribusEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PluribusEvent::Fold => write!(f, "Fold"),
+            PluribusEvent::Call => write!(f, "Call"),
+            PluribusEvent::Raise(amount) => write!(f, "Raise({amount})"),
+        }
+    }
+}
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Pluribus {
@@ -24,6 +72,60 @@ impl Pluribus {
 
     fn parse_isizes(s: &str) -> Vec<isize> {
         s.split('|').map(|raw| raw.parse::<isize>().unwrap_or(0)).collect()
+    }
+
+    /// I have a theory that the divider between rounds isn't needed. That we can just take
+    /// a vector of all the actions, and they pause when the round is over.
+    #[must_use]
+    pub fn parse_all_rounds(&self) -> VecDeque<PluribusEvent> {
+        let mut events = Vec::new();
+        for round_str in &self.rounds {
+            events.extend(Pluribus::parse_rounds(round_str));
+        }
+        VecDeque::from(events)
+    }
+
+    #[must_use]
+    pub fn parse_round(&self, i: usize) -> Vec<PluribusEvent> {
+        if let Some(round_str) = self.rounds.get(i) {
+            Pluribus::parse_rounds(round_str)
+        } else {
+            Vec::new()
+        }
+    }
+
+    #[must_use]
+    pub fn parse_rounds(rounds_str: &str) -> Vec<PluribusEvent> {
+        let mut events = Vec::new();
+        let chars: Vec<char> = rounds_str.chars().collect();
+        let mut i = 0;
+
+        while i < chars.len() {
+            match chars[i] {
+                'f' => {
+                    events.push(PluribusEvent::Fold);
+                    i += 1;
+                }
+                'c' => {
+                    events.push(PluribusEvent::Call);
+                    i += 1;
+                }
+                'r' => {
+                    i += 1; // Skip 'r'
+                    let mut amount_str = String::new();
+                    while i < chars.len() && chars[i].is_ascii_digit() {
+                        amount_str.push(chars[i]);
+                        i += 1;
+                    }
+                    if let Ok(amount) = amount_str.parse::<usize>() {
+                        events.push(PluribusEvent::Raise(amount));
+                    }
+                }
+                _ => i += 1,
+            }
+        }
+
+        events
     }
 
     fn parse_usize(s: &str) -> Result<usize, PKError> {
@@ -59,6 +161,226 @@ impl Pluribus {
         } else {
             (HoleCards::from_pluribus(s).unwrap_or_default(), Board::default())
         }
+    }
+
+    /// # Errors
+    ///
+    /// `PKError::InvalidPluribusIndex`
+    pub fn act(table: &Table, action: &PluribusEvent, seat_to_act: u8) -> Result<(), PKError> {
+        match action {
+            PluribusEvent::Fold => {
+                let _ = table.act_fold(seat_to_act);
+            }
+            PluribusEvent::Call => {
+                let _ = table.act_call(seat_to_act);
+            }
+            PluribusEvent::Raise(amount) => {
+                let _ = table.act_bet(seat_to_act, *amount);
+            }
+        }
+
+        Ok(())
+    }
+
+    /// # Errors
+    ///
+    /// TODO: Fill in errors
+    pub fn play_hand(&self) -> Result<(), PKError> {
+        let table = Table::try_from(self)?;
+
+        println!(">>>{}", table.deck);
+        println!("{self}");
+        println!("{}", self.raw);
+
+        // table.act()?;
+
+        if !table.seats.are_dealt() {
+            table.deal_cards_to_seats()?;
+        }
+        table.act_forced_bets()?;
+
+        for action in self.parse_all_rounds() {
+            let seat_to_act = table.next_to_act();
+            let handle_to_act = table.get_seat_handle(seat_to_act);
+            println!("{handle_to_act} Seat {seat_to_act} is next to act: {action}");
+
+            Pluribus::act(&table, &action, seat_to_act)?;
+
+            println!("{}", table.commentary_last_player_action().unwrap_or_default());
+
+            let betting_phase = table.determine_betting_phase();
+
+            if table.is_game_over() {
+                let hand_result = table.end_hand()?;
+
+                println!("================================");
+                println!("================================");
+                println!("{hand_result}");
+                println!("{}", self.display_results());
+            } else {
+                match betting_phase {
+                    GamePhase::BettingPreFlop => {
+                        if table.is_betting_complete() {
+                            table.act()?;
+                            println!("Board: {}", table.board);
+                            table.eval_flop_display();
+                        }
+                    }
+                    GamePhase::BettingFlop => {
+                        if table.is_betting_complete() {
+                            table.act()?;
+                            println!("Board: {}", table.board);
+                            table.eval_turn_display();
+                        }
+                    }
+                    GamePhase::BettingTurn => {
+                        if table.is_betting_complete() {
+                            table.act()?;
+                            println!("Board: {}", table.board);
+                            table.eval_river_display();
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// I love how this code evolved from a double flipmode clippy lint:
+    ///
+    /// First:
+    ///
+    /// ```txt
+    /// /Users/gaoler/.cargo/bin/cargo clippy --color=always --message-format=json-diagnostic-rendered-ansi
+    ///     Checking pkcore v0.0.15 (/Users/gaoler/src/github.com/ImperialBower/pkcore)
+    /// warning: unnecessary `if let` since only the `Ok` variant of the iterator element is used
+    ///   --> src/analysis/store/nubibus/pluribus.rs:71:13
+    ///    |
+    /// 71 | /             for line in lines {
+    /// 72 | |                 if let Ok(ip) = line {
+    /// 73 | |                     match Pluribus::from_str(ip.as_str()) {
+    /// 74 | |                         Ok(pl) => games.push(pl),
+    /// ...  |
+    /// 78 | |             }
+    ///    | |_____________^
+    ///    |
+    /// help: try `.flatten()` and remove the `if let` statement in the for loop
+    ///   --> src/analysis/store/nubibus/pluribus.rs:72:17
+    ///    |
+    /// 72 | /                 if let Ok(ip) = line {
+    /// 73 | |                     match Pluribus::from_str(ip.as_str()) {
+    /// 74 | |                         Ok(pl) => games.push(pl),
+    /// 75 | |                         Err(_) => {}
+    /// 76 | |                     }
+    /// 77 | |                 }
+    ///    | |_________________^
+    ///    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.91.0/index.html#manual_flatten
+    ///    = note: `#[warn(clippy::manual_flatten)]` on by default
+    /// help: try
+    ///    |
+    /// 71 ~             for ip in lines.flatten() {
+    /// 72 +                 match Pluribus::from_str(ip.as_str()) {
+    /// 73 +                     Ok(pl) => games.push(pl),
+    /// 74 +                     Err(_) => {}
+    /// 75 +                 }
+    /// 76 +             }
+    ///    |
+    ///
+    /// warning: you seem to be trying to use `match` for destructuring a single pattern. Consider using `if let`
+    ///   --> src/analysis/store/nubibus/pluribus.rs:73:21
+    ///    |
+    /// 73 | /                     match Pluribus::from_str(ip.as_str()) {
+    /// 74 | |                         Ok(pl) => games.push(pl),
+    /// 75 | |                         Err(_) => {}
+    /// 76 | |                     }
+    ///    | |_____________________^ help: try: `if let Ok(pl) = Pluribus::from_str(ip.as_str()) { games.push(pl) }`
+    ///    |
+    ///    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.91.0/index.html#single_match
+    ///    = note: `#[warn(clippy::single_match)]` on by default
+    ///
+    ///     Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.44s
+    /// Process finished with exit code 0
+    /// ```
+    ///
+    /// ```txt
+    /// /Users/gaoler/.cargo/bin/cargo clippy --color=always --message-format=json-diagnostic-rendered-ansi
+    ///     Checking pkcore v0.0.15 (/Users/gaoler/src/github.com/ImperialBower/pkcore)
+    /// warning: you seem to be trying to use `match` for destructuring a single pattern. Consider using `if let`
+    ///   --> src/analysis/store/nubibus/pluribus.rs:72:17
+    ///    |
+    /// 72 | /                 match Pluribus::from_str(ip.as_str()) {
+    /// 73 | |                     Ok(pl) => games.push(pl),
+    /// 74 | |                     Err(_) => {} // Invalid lines get eaten :-P
+    /// 75 | |                 }
+    ///    | |_________________^ help: try: `if let Ok(pl) = Pluribus::from_str(ip.as_str()) { games.push(pl) }`
+    ///    |
+    ///    = note: you might want to preserve the comments from inside the `match`
+    ///    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.91.0/index.html#single_match
+    ///    = note: `#[warn(clippy::single_match)]` on by default
+    ///
+    ///     Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.42s
+    /// Process finished with exit code 0.
+    /// ```
+    ///
+    /// Returns a formatted string showing the winnings/losses for each player
+    /// with their seat number and name.
+    ///
+    /// # Returns
+    ///
+    /// A string with each player's results on a separate line in the format:
+    /// "Seat {n}: {name} {+/-amount}"
+    #[must_use]
+    pub fn display_results(&self) -> String {
+        use std::fmt::Write;
+        let mut result = String::new();
+
+        for (seat, (player_name, winnings)) in self.players.iter().zip(self.winnings.iter()).enumerate() {
+            match (*winnings).cmp(&0) {
+                std::cmp::Ordering::Greater => {
+                    let _ = writeln!(
+                        result,
+                        "{}Seat {} {} wins {}!",
+                        Terminal::random_happy(),
+                        seat,
+                        player_name,
+                        winnings
+                    );
+                }
+                std::cmp::Ordering::Equal => {
+                    let _ = writeln!(result, "  Seat {seat} {player_name} wins {winnings}");
+                }
+                std::cmp::Ordering::Less => {
+                    let _ = writeln!(
+                        result,
+                        "{}Seat {} {} {}",
+                        Terminal::random_sad(),
+                        seat,
+                        player_name,
+                        winnings
+                    );
+                }
+            }
+        }
+
+        result
+    }
+
+    /// # Errors
+    ///
+    /// `PKError::InvalidPluribusIndex`
+    pub fn read_in_log(filename: &str) -> Result<Vec<Pluribus>, PKError> {
+        let mut games = Vec::new();
+
+        if let Ok(lines) = Util::read_lines(filename) {
+            for ip in lines.map_while(Result::ok) {
+                if let Ok(pl) = Pluribus::from_str(ip.as_str()) {
+                    games.push(pl);
+                }
+            }
+        }
+
+        Ok(games)
     }
 }
 
@@ -127,6 +449,42 @@ mod store_pluribus_tests {
         let actual = Pluribus::parse_isizes(Pluribus::parse_string(LOG).unwrap().index(4));
 
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_rounds() {
+        // Test basic fold and call
+        let events = Pluribus::parse_rounds("ffc");
+        assert_eq!(events.len(), 3);
+        matches!(events[0], PluribusEvent::Fold);
+        matches!(events[1], PluribusEvent::Fold);
+        matches!(events[2], PluribusEvent::Call);
+
+        // Test raise with amount
+        let events = Pluribus::parse_rounds("r200ffcfc");
+        assert_eq!(events.len(), 6);
+        matches!(events[0], PluribusEvent::Raise(200));
+        matches!(events[1], PluribusEvent::Fold);
+        matches!(events[2], PluribusEvent::Fold);
+        matches!(events[3], PluribusEvent::Call);
+        matches!(events[4], PluribusEvent::Fold);
+        matches!(events[5], PluribusEvent::Call);
+
+        // Test multiple raises
+        let events = Pluribus::parse_rounds("cr850cf");
+        assert_eq!(events.len(), 4);
+        matches!(events[0], PluribusEvent::Call);
+        matches!(events[1], PluribusEvent::Raise(850));
+        matches!(events[2], PluribusEvent::Call);
+        matches!(events[3], PluribusEvent::Fold);
+
+        // Test complex round with multiple raises
+        let events = Pluribus::parse_rounds("cr1825r3775c");
+        assert_eq!(events.len(), 4);
+        matches!(events[0], PluribusEvent::Call);
+        matches!(events[1], PluribusEvent::Raise(1825));
+        matches!(events[2], PluribusEvent::Raise(3775));
+        matches!(events[3], PluribusEvent::Call);
     }
 
     #[test]

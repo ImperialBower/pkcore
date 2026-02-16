@@ -1,6 +1,7 @@
 use crate::analysis::case_eval::CaseEval;
 use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
+use crate::analysis::name::HandRankName;
 use crate::analysis::outs::Outs;
 use crate::arrays::HandRanker;
 use crate::arrays::four::Four;
@@ -565,6 +566,7 @@ impl Game {
                 for (i, eval) in case_eval.iter().enumerate() {
                     if eval.hand_rank == winning_hand_rank {
                         println!("   Player #{}: {eval} has the best hand!", i + 1);
+                    } else if eval.hand_rank.name == HandRankName::Invalid {
                     } else {
                         println!("   Player #{}: {eval}", i + 1);
                     }

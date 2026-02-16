@@ -2,6 +2,7 @@ use crate::PKError;
 use crate::analysis::gto::combos::Combos;
 use crate::arrays::hole_cards::twos::StartingHands;
 use crate::cards::Cards;
+use rand::prelude::*;
 use std::io::{Write, stdin, stdout};
 use std::str::FromStr;
 use termion::input::TermRead;
@@ -39,6 +40,24 @@ impl Terminal {
             key_res?;
         }
         Ok(())
+    }
+
+    //    😘
+    #[must_use]
+    pub fn random_happy() -> char {
+        let sad_faces = ['🥰', '😍', '🤩', '🤑', '🤠', '🥳', '😈', '😺'];
+        let random_index = rand::rng().random_range(0..sad_faces.len());
+        sad_faces[random_index]
+    }
+
+    #[must_use]
+    pub fn random_sad() -> char {
+        let sad_faces = [
+            '🙃', '🤪', '😢', '😭', '😞', '😔', '😟', '😕', '🤔', '🤮', '🥶', '🫨', '🤡', '😱', '😫', '😖', '🫡', '👿',
+            '🥸', '💩', '😕', '🤔', '🤬', '😿', '🙀',
+        ];
+        let random_index = rand::rng().random_range(0..sad_faces.len());
+        sad_faces[random_index]
     }
 
     /// # Panics

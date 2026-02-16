@@ -1,4 +1,9 @@
 use std::borrow::Cow;
+use std::fs::File;
+
+use crate::prelude::Table;
+use std::io::{self, BufRead};
+use std::path::Path;
 use std::str::Utf8Error;
 
 pub mod csv;
@@ -44,6 +49,15 @@ impl Util {
         }
     }
 
+    pub fn commentary_action_to(table: &Table) {
+        println!();
+        if let Some(action) = table.commentary_last_player_action() {
+            println!("{action}");
+        }
+        println!("{}", table.commentary_action_to());
+        println!();
+    }
+
     ///
     ///
     /// # Errors
@@ -51,6 +65,17 @@ impl Util {
     /// Returns `Utf8Error` if the `&str` is not valid UTF-8.
     pub fn percent_decode(s: &str) -> Result<String, Utf8Error> {
         Ok(percent_encoding::percent_decode_str(s).decode_utf8()?.to_string())
+    }
+
+    /// # Errors
+    ///
+    /// Returns `io::Error` if the file cannot be opened or read.
+    pub fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+    where
+        P: AsRef<Path>,
+    {
+        let file = File::open(filename)?;
+        Ok(io::BufReader::new(file).lines())
     }
 
     /// I need to study the ideas behind `Cow`.

@@ -69,7 +69,12 @@ impl Seats {
     pub fn act_call(&self, seat_number: u8) -> Result<(usize, usize), PKError> {
         let to_call = self.current_bet();
         if let Some(seat) = self.get_seat_mut(seat_number) {
-            let remaining = seat.player.act_call(to_call)?;
+            let mut remaining = seat.player.chips.count();
+            if to_call == 0 {
+                seat.player.act_check()?;
+            } else {
+                remaining = seat.player.act_call(to_call)?;
+            }
             drop(seat);
             Ok((to_call, remaining))
         } else {
@@ -153,7 +158,18 @@ impl Seats {
     pub fn are_dealt(&self) -> bool {
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow();
-            if !seat.cards.is_dealt() {
+            if seat.is_in_hand() && !seat.cards.is_dealt() {
+                return false;
+            }
+        }
+        true
+    }
+
+    #[must_use]
+    pub fn are_ready_to_act(&self) -> bool {
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            if seat.is_in_hand() && !seat.player.state.is_yet_to_act() {
                 return false;
             }
         }
@@ -578,6 +594,7 @@ impl Seats {
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     /// - `PKError::Fubar` if no one is found to act next.
+    #[allow(clippy::cast_possible_truncation)]
     pub fn next_to_act(&self, utg: u8) -> Result<u8, PKError> {
         // if self.is_betting_complete() {
         //     return Ok(utg);
@@ -588,10 +605,13 @@ impl Seats {
         // The logic flow is different if we're still waiting for the blinds to act.
         let everyone_has_bet = self.has_everyone_bet();
 
-        for seat in self.iter_from(utg) {
+        for (i, seat) in self.iter_from(utg).enumerate() {
+            let seat_index = utg + i as u8;
+            log::trace!("Checking seat #{seat_index} for next to act.");
             let state = &seat.player.state;
 
             if !seat.is_in_hand() || seat.is_all_in() {
+                log::trace!("Seat #{seat_index} is out of the hand.");
                 continue;
             }
 
@@ -624,18 +644,21 @@ impl Seats {
         Err(PKError::InvalidSeatNumber)
     }
 
-    pub fn reset(&self) {
-        for seat_cell in &self.0 {
-            let seat = seat_cell.borrow_mut();
-            seat.player.reset();
-        }
-    }
-
     /// Clears the `PlayerState` for all the seats.
     pub fn reset_state(&self) {
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow_mut();
             seat.player.state.reset();
+        }
+    }
+
+    /// Clears the `PlayerState` for all the seats.
+    pub fn reset_state_in_hand(&self) {
+        for seat_cell in &self.0 {
+            if seat_cell.borrow().is_in_hand() {
+                let seat = seat_cell.borrow_mut();
+                seat.player.state.reset();
+            }
         }
     }
 
@@ -796,6 +819,13 @@ impl From<Box<[SeatCell; 9]>> for Seats {
     }
 }
 
+impl From<Vec<String>> for Seats {
+    fn from(value: Vec<String>) -> Self {
+        let seats: Vec<Seat> = value.into_iter().map(Seat::from).collect();
+        Self::new(seats)
+    }
+}
+
 impl TryFrom<Vec<Seat>> for Seats {
     type Error = PKError;
 
@@ -837,13 +867,25 @@ mod casino__table__seats_tests {
     }
 
     #[test]
+    fn bring_check() {
+        let seats = Seats::new(TestData::min_players());
+
+        seats.act_forced_bet(1, 50).expect("Should be able to act");
+        seats.act_forced_bet(2, 100).expect("Should be able to act");
+        seats.act_fold(0).expect("Should be able to act");
+        seats.act_raise(1, 200).expect("Should be able to act");
+
+        assert_eq!(Err(PKError::InvalidTableAction), seats.act_check(2));
+    }
+
+    #[test]
     fn all_players_have_acted() {
         let seats = Seats::try_from(TestData::min_seats()).unwrap();
         assert!(!seats.is_betting_complete());
 
         for seat_cell in seats.borrow_all() {
             let seat = seat_cell.borrow();
-            seat.player.state.set(PlayerState::Check(100));
+            seat.player.state.set(PlayerState::Check);
         }
 
         assert!(seats.is_betting_complete());
@@ -947,12 +989,7 @@ mod casino__table__seats_tests {
         let seat = seats.next_to_act(3).unwrap();
         assert_eq!(3, seat);
 
-        seats
-            .get_seat_mut(seat)
-            .unwrap()
-            .player
-            .state
-            .set(PlayerState::Check(100));
+        seats.get_seat_mut(seat).unwrap().player.state.set(PlayerState::Check);
         let seat = seats.next_to_act(3).unwrap();
         assert_eq!(4, seat);
 

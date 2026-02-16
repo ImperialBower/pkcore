@@ -269,7 +269,7 @@ impl Player {
     ///
     /// // Check
     /// let check = player.act_check();
-    /// assert_eq!(PlayerState::Check(0), player.state.get());
+    /// assert_eq!(PlayerState::Check, player.state.get());
     ///
     /// let folds = player.act_fold();
     /// // Now the check should return a `PKError::InvalidTableAction`
@@ -280,14 +280,17 @@ impl Player {
     /// # Errors
     ///
     /// * `PKError::InvalidTableAction` - throws if the player is already all in.
-    pub fn act_check(&self) -> Result<usize, PKError> {
+    pub fn act_check(&self) -> Result<(), PKError> {
         if !self.state.is_active() {
             log::warn!("InvalidTableAction: Player is not active and cannot check.");
             return Err(PKError::InvalidTableAction);
         }
-        self.state.set(PlayerState::Check(self.bet.count()));
-        log::debug!("Player {} with {} checks", self.handle, self.bet.count());
-        Ok(self.chips.count())
+        if self.state.set(PlayerState::Check).is_none() {
+            Err(PKError::InvalidTableAction)
+        } else {
+            log::debug!("Player {} checks", self.handle);
+            Ok(())
+        }
     }
 
     /// ```
@@ -528,9 +531,10 @@ mod casino__players__player_tests {
 
         let did_check = player.act_check();
 
+        // It's valid to check after posting a blind, as long as the blind matches the current bet.
+        // Since we don't have that context at this layer, we will let the `Seats` determine that.
         assert!(did_check.is_ok());
-        assert_eq!(900, did_check.unwrap());
-        assert_eq!(PlayerState::Check(100), player.state.get());
+        assert_eq!(PlayerState::Check, player.state.get());
     }
 
     #[test]

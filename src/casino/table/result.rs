@@ -58,11 +58,11 @@ impl std::fmt::Display for HandResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Hand Result:")?;
         writeln!(f, "{}", self.case_eval)?;
-        writeln!(f, "\nTable Log:")?;
-        let log = self.log.clone();
-        for (i, entry) in log.iter().enumerate() {
-            writeln!(f, "  {}: {}", i + 1, entry)?;
-        }
+        // writeln!(f, "\nTable Log:")?;
+        // let log = self.log.clone();
+        // for (i, entry) in log.iter().enumerate() {
+        //     writeln!(f, "  {}: {}", i + 1, entry)?;
+        // }
         Ok(())
     }
 }

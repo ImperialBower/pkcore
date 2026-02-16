@@ -1,8 +1,9 @@
+use crate::analysis::store::nubibus::pluribus::Pluribus;
 use crate::analysis::the_nuts::TheNuts;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::prelude::BoxedCards;
+use crate::prelude::{BoxedCards, HoleCards};
 use crate::{PKError, Pile};
 use std::cell::RefCell;
 use std::fmt::{Debug, Display};
@@ -352,6 +353,18 @@ impl From<Cards> for CardsCell {
 impl From<&Cards> for CardsCell {
     fn from(cards: &Cards) -> Self {
         Self(RefCell::new(cards.clone()))
+    }
+}
+
+impl From<&HoleCards> for CardsCell {
+    fn from(hole_cards: &HoleCards) -> Self {
+        CardsCell::from(hole_cards.cards())
+    }
+}
+
+impl From<&Pluribus> for CardsCell {
+    fn from(pluribus: &Pluribus) -> Self {
+        CardsCell::from(Cards::from(pluribus))
     }
 }
 
