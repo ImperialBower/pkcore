@@ -1,7 +1,7 @@
-use crate::analysis::store::nubibus::actions::{Action, ActionType};
-use crate::analysis::store::nubibus::chips::Chips;
-use crate::analysis::store::nubibus::pluribus::Pluribus;
-use crate::analysis::store::nubibus::seat::{Seat, SeatSnapshot};
+use crate::analysis::nubibus::actions::{Action, ActionType};
+use crate::analysis::nubibus::chips::Chips;
+use crate::analysis::nubibus::pluribus::Pluribus;
+use crate::analysis::nubibus::seat::{Seat, SeatSnapshot};
 use crate::arrays::two::Two;
 use crate::{Betting, PKError};
 use itertools::Itertools;

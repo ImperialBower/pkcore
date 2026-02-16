@@ -1,4 +1,4 @@
-use crate::analysis::store::nubibus::chips::Chips;
+use crate::analysis::nubibus::chips::Chips;
 use crate::arrays::two::Two;
 use crate::play::Position6Max;
 use crate::{Betting, PKError, Pile};

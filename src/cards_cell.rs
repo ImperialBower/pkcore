@@ -1,4 +1,4 @@
-use crate::analysis::store::nubibus::pluribus::Pluribus;
+use crate::analysis::nubibus::pluribus::Pluribus;
 use crate::analysis::the_nuts::TheNuts;
 use crate::bard::Bard;
 use crate::card::Card;

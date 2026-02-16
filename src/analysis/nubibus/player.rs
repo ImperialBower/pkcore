@@ -1,4 +1,4 @@
-use crate::analysis::store::nubibus::chips::Chips;
+use crate::analysis::nubibus::chips::Chips;
 use std::cell::Cell;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

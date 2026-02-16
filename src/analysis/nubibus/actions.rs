@@ -441,7 +441,7 @@ impl ActionType {
     /// Returns the integer value of a raise action in a `Pluribus` log.
     ///
     /// ```
-    /// use pkcore::analysis::store::nubibus::actions::ActionType;
+    /// use pkcore::analysis::nubibus::actions::ActionType;
     ///
     /// assert_eq!(1_000_000, ActionType::parse_raise("r1000000"));
     /// ```

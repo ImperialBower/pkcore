@@ -1,5 +1,5 @@
 use crate::analysis::case_eval::CaseEval;
-use crate::analysis::store::nubibus::pluribus::Pluribus;
+use crate::analysis::nubibus::pluribus::Pluribus;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
@@ -2149,7 +2149,7 @@ mod casino__table_tests {
 #[allow(non_snake_case)]
 mod casino__table___end_hand_tests {
     use super::*;
-    use crate::analysis::store::nubibus::pluribus::PluribusEvent;
+    use crate::analysis::nubibus::pluribus::PluribusEvent;
     use crate::prelude::*;
     use crate::util::data::TestData;
     use wincounter::win::Win;
