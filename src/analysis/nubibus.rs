@@ -11,47 +11,119 @@ use std::fmt::{Display, Formatter};
 use std::ops::Index;
 use std::str::FromStr;
 
-#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq)]
-pub enum PluribusEvent {
-    #[default]
-    Fold,
-    Call,
-    Raise(usize),
+/// `nūbĭfĭcus , a, um nubes-facio, - producing clouds`
+///
+/// The name "Nubificus" is derived from the Latin word "nubes," meaning "cloud," and the verb
+/// "facio," meaning "to make" or "to produce."
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct Nubificus {
+    pub pluribus: Pluribus,
+    pub table: Table,
 }
 
-impl PluribusEvent {
-    #[must_use]
-    pub fn is_fold(&self) -> bool {
-        matches!(self, PluribusEvent::Fold)
+impl Nubificus {
+    /// # Errors
+    ///
+    /// `PKError::InvalidPluribusIndex`
+    pub fn act(table: &Table, action: &PluribusEvent, seat_to_act: u8) -> Result<(), PKError> {
+        match action {
+            PluribusEvent::Fold => {
+                let _ = table.act_fold(seat_to_act);
+            }
+            PluribusEvent::Call => {
+                let _ = table.act_call(seat_to_act);
+            }
+            PluribusEvent::Raise(amount) => {
+                let _ = table.act_bet(seat_to_act, *amount);
+            }
+        }
+
+        Ok(())
     }
 
-    #[must_use]
-    pub fn is_call(&self) -> bool {
-        matches!(self, PluribusEvent::Call)
+    /// # Errors
+    ///
+    /// TODO: Fill in errors
+    pub fn play_hand(&self) -> Result<(), PKError> {
+        if !self.table.seats.are_dealt() {
+            self.table.deal_cards_to_seats()?;
+        }
+        self.table.act_forced_bets()?;
+
+        for action in self.pluribus.parse_all_rounds() {
+            self.do_action(&action)?;
+        }
+        Ok(())
     }
 
-    #[must_use]
-    pub fn is_raise(&self) -> bool {
-        matches!(self, PluribusEvent::Raise(_))
-    }
+    /// # Errors
+    ///
+    /// TODO: Fill in errors
+    pub fn do_action(&self, action: &PluribusEvent) -> Result<(), PKError> {
+        let seat_to_act = self.table.next_to_act();
+        let handle_to_act = self.table.get_seat_handle(seat_to_act);
+        log::debug!("{handle_to_act} Seat {seat_to_act} is next to act: {action}");
 
-    #[must_use]
-    pub fn raise_amount(&self) -> Option<usize> {
-        if let PluribusEvent::Raise(amount) = self {
-            Some(*amount)
+        Nubificus::act(&self.table, action, seat_to_act)?;
+
+        log::debug!("{}", self.table.commentary_last_player_action().unwrap_or_default());
+
+        let betting_phase = self.table.determine_betting_phase();
+
+        if self.table.is_game_over() {
+            let hand_result = self.table.end_hand()?;
         } else {
-            None
+            match betting_phase {
+                GamePhase::BettingPreFlop => {
+                    if self.table.is_betting_complete() {
+                        self.table.act()?;
+                        log::debug!("Board: {}", self.table.board);
+                        self.table.eval_flop_display();
+                    }
+                }
+                GamePhase::BettingFlop => {
+                    if self.table.is_betting_complete() {
+                        self.table.act()?;
+                        log::debug!("Board: {}", self.table.board);
+                        self.table.eval_turn_display();
+                    }
+                }
+                GamePhase::BettingTurn => {
+                    if self.table.is_betting_complete() {
+                        self.table.act()?;
+                        log::debug!("Board: {}", self.table.board);
+                        self.table.eval_river_display();
+                    }
+                }
+                _ => {}
+            }
         }
+        Ok(())
     }
 }
 
-impl Display for PluribusEvent {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PluribusEvent::Fold => write!(f, "Fold"),
-            PluribusEvent::Call => write!(f, "Call"),
-            PluribusEvent::Raise(amount) => write!(f, "Raise({amount})"),
-        }
+impl FromStr for Nubificus {
+    type Err = PKError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Nubificus::try_from(Pluribus::from_str(s)?)
+    }
+}
+
+impl TryFrom<Pluribus> for Nubificus {
+    type Error = PKError;
+
+    fn try_from(pluribus: Pluribus) -> Result<Self, Self::Error> {
+        let table = Table::try_from(&pluribus)?;
+        Ok(Nubificus { pluribus, table })
+    }
+}
+
+impl TryFrom<&Pluribus> for Nubificus {
+    type Error = PKError;
+
+    fn try_from(pluribus: &Pluribus) -> Result<Self, Self::Error> {
+        Nubificus::try_from(pluribus.clone())
     }
 }
 
@@ -420,6 +492,51 @@ impl FromStr for Pluribus {
                 })
             }
             Err(e) => Err(e),
+        }
+    }
+}
+
+
+#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq)]
+pub enum PluribusEvent {
+    #[default]
+    Fold,
+    Call,
+    Raise(usize),
+}
+
+impl PluribusEvent {
+    #[must_use]
+    pub fn is_fold(&self) -> bool {
+        matches!(self, PluribusEvent::Fold)
+    }
+
+    #[must_use]
+    pub fn is_call(&self) -> bool {
+        matches!(self, PluribusEvent::Call)
+    }
+
+    #[must_use]
+    pub fn is_raise(&self) -> bool {
+        matches!(self, PluribusEvent::Raise(_))
+    }
+
+    #[must_use]
+    pub fn raise_amount(&self) -> Option<usize> {
+        if let PluribusEvent::Raise(amount) = self {
+            Some(*amount)
+        } else {
+            None
+        }
+    }
+}
+
+impl Display for PluribusEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PluribusEvent::Fold => write!(f, "Fold"),
+            PluribusEvent::Call => write!(f, "Call"),
+            PluribusEvent::Raise(amount) => write!(f, "Raise({amount})"),
         }
     }
 }
