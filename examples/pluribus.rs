@@ -5,26 +5,17 @@ use std::path::Path;
 
 /// `cargo run --example pluribus`
 fn main() -> Result<(), PKError> {
-    // let logs = vec![
-    //     "data/pluribus/raw/sample_game_30.log",
-    //     "data/pluribus/raw/sample_game_31.log",
-    //     "data/pluribus/raw/sample_game_32.log",
-    //     "data/pluribus/raw/sample_game_33.log",
-    //     "data/pluribus/raw/sample_game_34.log",
-    //     "data/pluribus/raw/sample_game_35.log",
-    //     "data/pluribus/raw/sample_game_40.log",
-    //     "data/pluribus/raw/sample_game_40b.log",
-    //     "data/pluribus/raw/sample_game_41.log",
-    //     "data/pluribus/raw/sample_game_41b.log",
-    //     "data/pluribus/raw/sample_game_42.log",
-    //     "data/pluribus/raw/sample_game_42b.log",
-    // ];
-
     let logs = get_log_files()?;
 
-    for log in logs {
+    let mut game_num = 0;
+    for log in logs.iter() {
         for plur in Pluribus::read_in_log(log.as_str())? {
+            println!();
+            println!("------------------------------------------------------------------------------");
+            println!("Game #{game_num}");
+            println!("------------------------------------------------------------------------------");
             plur.play_hand()?;
+            game_num += 1;
         }
     }
 
