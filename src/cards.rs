@@ -1,4 +1,4 @@
-use crate::analysis::nubibus::pluribus::Pluribus;
+use crate::analysis::nubibus::Pluribus;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::card::Card;

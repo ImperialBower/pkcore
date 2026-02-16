@@ -1,5 +1,5 @@
 use pkcore::PKError;
-use pkcore::analysis::nubibus::pluribus::Pluribus;
+use pkcore::analysis::nubibus::Pluribus;
 use std::str::FromStr;
 
 /// `cargo run --example plurry`

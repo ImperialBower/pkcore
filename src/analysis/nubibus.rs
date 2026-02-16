@@ -200,17 +200,20 @@ impl Pluribus {
         table.act_forced_bets()?;
 
         for action in self.parse_all_rounds() {
-            self.play_hand_action(&table, &action)?
+            self.play_hand_action(&table, &action)?;
         }
         Ok(())
     }
 
+    /// # Errors
+    ///
+    /// TODO: Fill in errors
     pub fn play_hand_action(&self, table: &Table, action: &PluribusEvent) -> Result<(), PKError> {
         let seat_to_act = table.next_to_act();
         let handle_to_act = table.get_seat_handle(seat_to_act);
         println!("{handle_to_act} Seat {seat_to_act} is next to act: {action}");
 
-        Pluribus::act(&table, &action, seat_to_act)?;
+        Pluribus::act(table, action, seat_to_act)?;
 
         println!("{}", table.commentary_last_player_action().unwrap_or_default());
 

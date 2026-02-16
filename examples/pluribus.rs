@@ -1,5 +1,5 @@
 use pkcore::PKError;
-use pkcore::analysis::nubibus::pluribus::Pluribus;
+use pkcore::analysis::nubibus::Pluribus;
 use std::fs;
 use std::path::Path;
 
