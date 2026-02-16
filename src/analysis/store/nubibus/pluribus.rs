@@ -3,6 +3,7 @@ use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
 use crate::prelude::Table;
 use crate::util::Util;
+use crate::util::terminal::Terminal;
 use crate::{PKError, Plurable};
 use regex::Regex;
 use std::collections::VecDeque;
@@ -208,19 +209,14 @@ impl Pluribus {
             println!("{}", table.commentary_last_player_action().unwrap_or_default());
 
             let betting_phase = table.determine_betting_phase();
-            // println!(
-            //     "{betting_phase} Betting complete: {} Game Over: {}",
-            //     table.is_betting_complete(),
-            //     table.is_game_over()
-            // );
 
             if table.is_game_over() {
                 let hand_result = table.end_hand()?;
-                // Util::commentary_action_to(&table);
 
                 println!("================================");
                 println!("================================");
                 println!("{hand_result}");
+                println!("{}", self.display_results());
             } else {
                 match betting_phase {
                     GamePhase::BettingPreFlop => {
@@ -327,6 +323,49 @@ impl Pluribus {
     /// Process finished with exit code 0.
     /// ```
     ///
+    /// Returns a formatted string showing the winnings/losses for each player
+    /// with their seat number and name.
+    ///
+    /// # Returns
+    ///
+    /// A string with each player's results on a separate line in the format:
+    /// "Seat {n}: {name} {+/-amount}"
+    #[must_use]
+    pub fn display_results(&self) -> String {
+        use std::fmt::Write;
+        let mut result = String::new();
+
+        for (seat, (player_name, winnings)) in self.players.iter().zip(self.winnings.iter()).enumerate() {
+            match (*winnings).cmp(&0) {
+                std::cmp::Ordering::Greater => {
+                    let _ = writeln!(
+                        result,
+                        "{}Seat {} {} wins {}!",
+                        Terminal::random_happy(),
+                        seat,
+                        player_name,
+                        winnings
+                    );
+                }
+                std::cmp::Ordering::Equal => {
+                    let _ = writeln!(result, "  Seat {seat} {player_name} wins {winnings}");
+                }
+                std::cmp::Ordering::Less => {
+                    let _ = writeln!(
+                        result,
+                        "{}Seat {} {} {}",
+                        Terminal::random_sad(),
+                        seat,
+                        player_name,
+                        winnings
+                    );
+                }
+            }
+        }
+
+        result
+    }
+
     /// # Errors
     ///
     /// `PKError::InvalidPluribusIndex`
