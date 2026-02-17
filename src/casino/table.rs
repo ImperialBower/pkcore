@@ -2599,7 +2599,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
             assert_eq!(2, table.next_to_act());
         }
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         {
             assert!(!table.seats.is_betting_complete());
             assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
@@ -2616,7 +2616,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
             assert_eq!(3, table.next_to_act());
         }
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         {
             assert!(!table.seats.is_betting_complete());
             assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
@@ -2634,7 +2634,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
             assert_eq!(4, table.next_to_act());
         }
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         {
             assert_eq!(200, table.get_seat(4).unwrap().player.bet.count());
             assert!(!table.seats.is_betting_complete());
@@ -2653,7 +2653,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
             assert_eq!(5, table.next_to_act());
         }
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         {
             assert_eq!(700, table.get_seat(5).unwrap().player.bet.count());
             assert!(!table.seats.is_betting_complete());
@@ -2672,7 +2672,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
             assert_eq!(0, table.next_to_act());
         }
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         {
             assert!(!table.seats.is_betting_complete());
             assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
@@ -2689,7 +2689,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
             assert_eq!(1, table.next_to_act());
         }
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Call failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Call failed");
         {
             println!("{table}");
             assert!(!table.seats.is_betting_complete());
@@ -2709,7 +2709,7 @@ mod casino__table___end_hand_tests {
         }
         // 4 5 1 in hand
         println!("{table}");
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         {
             println!(">>{}", table.event_log.to_string());
             println!(">>> {table}");
@@ -2763,7 +2763,7 @@ mod casino__table___end_hand_tests {
                 assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
                 assert_eq!(2, table.next_to_act());
             }
-            Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+            Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
             {
                 assert_eq!(225, table.get_seat(2).unwrap().player.bet.count());
                 assert!(!table.seats.is_betting_complete());
@@ -2781,7 +2781,7 @@ mod casino__table___end_hand_tests {
                 assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
                 assert_eq!(3, table.next_to_act());
             }
-            Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+            Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
             {
                 assert!(!table.seats.is_betting_complete());
                 assert!(table.seats.are_dealt());
@@ -2799,7 +2799,7 @@ mod casino__table___end_hand_tests {
                 assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
                 assert_eq!(4, table.next_to_act());
             }
-            Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+            Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
             {
                 assert_eq!(225, table.get_seat(4).unwrap().player.bet.count());
                 assert!(!table.seats.is_betting_complete());
@@ -2818,7 +2818,7 @@ mod casino__table___end_hand_tests {
                 assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
                 assert_eq!(5, table.next_to_act());
             }
-            Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+            Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
             {
                 assert!(!table.seats.is_betting_complete());
                 assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
@@ -2836,7 +2836,7 @@ mod casino__table___end_hand_tests {
                 assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
                 assert_eq!(0, table.next_to_act());
             }
-            Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+            Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
             {
                 assert!(!table.seats.is_betting_complete());
                 assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
@@ -2854,7 +2854,7 @@ mod casino__table___end_hand_tests {
                 assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
                 assert_eq!(1, table.next_to_act());
             }
-            Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+            Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
             {
                 assert_eq!(225, table.get_seat(4).unwrap().player.bet.count());
                 assert!(table.get_seat(1).unwrap().player.state.is_call());
@@ -2883,12 +2883,12 @@ mod casino__table___end_hand_tests {
         assert!(!table.seats.is_betting_complete());
         let action: PluribusEvent = actions.pop_front().unwrap();
         assert_eq!(PluribusEvent::Call, action);
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Check failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Check failed");
         assert!(table.get_seat(1).unwrap().player.state.is_check());
         let action: PluribusEvent = actions.pop_front().unwrap();
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         let action: PluribusEvent = actions.pop_front().unwrap();
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
 
         {
             assert!(table.seats.is_betting_complete());
@@ -2932,11 +2932,11 @@ mod casino__table___end_hand_tests {
         assert!(!table.seats.is_betting_complete());
 
         let action: PluribusEvent = actions.pop_front().unwrap();
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Check failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Check failed");
         let action: PluribusEvent = actions.pop_front().unwrap();
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         let action: PluribusEvent = actions.pop_front().unwrap();
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
 
         {
             assert!(table.seats.is_betting_complete());
@@ -2978,11 +2978,11 @@ mod casino__table___end_hand_tests {
         }
 
         let action: PluribusEvent = actions.pop_front().unwrap();
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Check failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Check failed");
         let action: PluribusEvent = actions.pop_front().unwrap();
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         let action: PluribusEvent = actions.pop_front().unwrap();
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
 
         table.act().expect("Act ready for river");
         {

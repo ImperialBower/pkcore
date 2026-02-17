@@ -8,7 +8,9 @@ use crate::{PKError, Plurable};
 use regex::Regex;
 use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
+use std::fs;
 use std::ops::Index;
+use std::path::Path;
 use std::str::FromStr;
 
 /// `nūbĭfĭcus , a, um nubes-facio, - producing clouds`
@@ -145,6 +147,32 @@ impl Nubificus {
         }
         Ok(())
     }
+
+    /// # Errors
+    ///
+    /// Throws an error if path doesn't exist.
+    pub fn get_log_files(path: &str) -> Result<Vec<String>, PKError> {
+        let dir = Path::new(path);
+        let mut log_files = Vec::new();
+
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_file() {
+                if let Some(extension) = path.extension() {
+                    if extension == "log" {
+                        if let Some(path_str) = path.to_str() {
+                            log_files.push(path_str.to_string());
+                        }
+                    }
+                }
+            }
+        }
+
+        log_files.sort();
+        Ok(log_files)
+    }
 }
 
 impl FromStr for Nubificus {
@@ -279,98 +307,6 @@ impl Pluribus {
         } else {
             (HoleCards::from_pluribus(s).unwrap_or_default(), Board::default())
         }
-    }
-
-    /// # Errors
-    ///
-    /// `PKError::InvalidPluribusIndex`
-    pub fn act(table: &Table, action: &PluribusEvent, seat_to_act: u8) -> Result<(), PKError> {
-        match action {
-            PluribusEvent::Fold => {
-                let _ = table.act_fold(seat_to_act);
-            }
-            PluribusEvent::Call => {
-                let _ = table.act_call(seat_to_act);
-            }
-            PluribusEvent::Raise(amount) => {
-                let _ = table.act_bet(seat_to_act, *amount);
-            }
-        }
-
-        Ok(())
-    }
-
-    /// # Errors
-    ///
-    /// TODO: Fill in errors
-    pub fn play_hand(&self) -> Result<(), PKError> {
-        let table = Table::try_from(self)?;
-
-        println!(">>>{}", table.deck);
-        println!("{self}");
-        println!("{}", self.raw);
-
-        // table.act()?;
-
-        if !table.seats.are_dealt() {
-            table.deal_cards_to_seats()?;
-        }
-        table.act_forced_bets()?;
-
-        for action in self.actions.clone() {
-            self.play_hand_action(&table, &action)?;
-        }
-        Ok(())
-    }
-
-    /// # Errors
-    ///
-    /// TODO: Fill in errors
-    pub fn play_hand_action(&self, table: &Table, action: &PluribusEvent) -> Result<(), PKError> {
-        let seat_to_act = table.next_to_act();
-        let handle_to_act = table.get_seat_handle(seat_to_act);
-        println!("{handle_to_act} Seat {seat_to_act} is next to act: {action}");
-
-        Pluribus::act(table, action, seat_to_act)?;
-
-        println!("{}", table.commentary_last_player_action().unwrap_or_default());
-
-        let betting_phase = table.determine_betting_phase();
-
-        if table.is_game_over() {
-            let hand_result = table.end_hand()?;
-
-            println!("================================");
-            println!("================================");
-            println!("{hand_result}");
-            println!("{}", self.display_results());
-        } else {
-            match betting_phase {
-                GamePhase::BettingPreFlop => {
-                    if table.is_betting_complete() {
-                        table.act()?;
-                        println!("Board: {}", table.board);
-                        table.eval_flop_display();
-                    }
-                }
-                GamePhase::BettingFlop => {
-                    if table.is_betting_complete() {
-                        table.act()?;
-                        println!("Board: {}", table.board);
-                        table.eval_turn_display();
-                    }
-                }
-                GamePhase::BettingTurn => {
-                    if table.is_betting_complete() {
-                        table.act()?;
-                        println!("Board: {}", table.board);
-                        table.eval_river_display();
-                    }
-                }
-                _ => {}
-            }
-        }
-        Ok(())
     }
 
     /// I love how this code evolved from a double flipmode clippy lint:
@@ -546,7 +482,6 @@ impl FromStr for Pluribus {
         }
     }
 }
-
 
 #[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq)]
 pub enum PluribusEvent {

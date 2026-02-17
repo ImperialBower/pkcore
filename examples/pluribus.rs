@@ -1,12 +1,10 @@
 use pkcore::PKError;
 use pkcore::analysis::nubibus::Pluribus;
-use std::fs;
-use std::path::Path;
 use pkcore::prelude::Nubificus;
 
 /// `cargo run --example pluribus`
 fn main() -> Result<(), PKError> {
-    let logs = get_log_files()?;
+    let logs = Nubificus::get_log_files("data/pluribus/raw/")?;
 
     let mut game_num = 0;
     for log in logs.iter() {
@@ -16,33 +14,9 @@ fn main() -> Result<(), PKError> {
             println!("Game #{game_num}");
             println!("------------------------------------------------------------------------------");
             Nubificus::try_from(&plur)?.play_hand_display()?;
-            // println!("{}", plur.display_results());
             game_num += 1;
         }
     }
 
     Ok(())
-}
-
-fn get_log_files() -> Result<Vec<String>, PKError> {
-    let dir = Path::new("data/pluribus/raw/");
-    let mut log_files = Vec::new();
-
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-
-        if path.is_file() {
-            if let Some(extension) = path.extension() {
-                if extension == "log" {
-                    if let Some(path_str) = path.to_str() {
-                        log_files.push(path_str.to_string());
-                    }
-                }
-            }
-        }
-    }
-
-    log_files.sort();
-    Ok(log_files)
 }
