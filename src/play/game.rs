@@ -557,7 +557,7 @@ impl Game {
             Err(_) => {}
             Ok(case_eval) => {
                 println!();
-                println!("The River: {}", self.board.river);
+                println!("The River: {} {} {}", self.board.flop, self.board.turn, self.board.river);
 
                 let winning_hand_rank = case_eval.winning_hand_rank();
 

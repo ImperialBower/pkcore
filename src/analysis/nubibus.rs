@@ -48,10 +48,10 @@ impl Nubificus {
         if !self.table.seats.are_dealt() {
             self.table.deal_cards_to_seats()?;
         }
-        self.table.act_forced_bets()?;
+        self.table.act()?;
 
         for action in self.pluribus.actions.clone() {
-            self.do_action(&action)?;
+            self.do_action(&action, false)?;
         }
         Ok(())
     }
@@ -59,7 +59,27 @@ impl Nubificus {
     /// # Errors
     ///
     /// TODO: Fill in errors
-    pub fn do_action(&self, action: &PluribusEvent) -> Result<(), PKError> {
+    pub fn play_hand_display(&self) -> Result<(), PKError> {
+        if !self.table.seats.are_dealt() {
+            self.table.deal_cards_to_seats()?;
+        }
+        println!("{}", self.pluribus);
+        println!("{}", self.pluribus.raw);
+        self.table.act()?;
+
+        println!("--------------------------------");
+        println!("{}", self.table);
+
+        for action in self.pluribus.actions.clone() {
+            self.do_action(&action, true)?;
+        }
+        Ok(())
+    }
+
+    /// # Errors
+    ///
+    /// TODO: Fill in errors
+    pub fn do_action(&self, action: &PluribusEvent, display: bool) -> Result<(), PKError> {
         let seat_to_act = self.table.next_to_act();
         let handle_to_act = self.table.get_seat_handle(seat_to_act);
         log::debug!("{handle_to_act} Seat {seat_to_act} is next to act: {action}");
@@ -67,32 +87,57 @@ impl Nubificus {
         Nubificus::act(&self.table, action, seat_to_act)?;
 
         log::debug!("{}", self.table.commentary_last_player_action().unwrap_or_default());
+        if display {
+            println!("{}", self.table.commentary_last_player_action().unwrap_or_default());
+        }
 
         let betting_phase = self.table.determine_betting_phase();
 
         if self.table.is_game_over() {
             let hand_result = self.table.end_hand()?;
+
+            if display {
+                println!();
+                println!("================================");
+                println!("================================");
+                println!("{hand_result}");
+                println!("{}", self.pluribus.display_results());
+            }
         } else {
             match betting_phase {
                 GamePhase::BettingPreFlop => {
                     if self.table.is_betting_complete() {
                         self.table.act()?;
+                        if display {
+                            println!("\nBetting round ends. Dealing the flop...");
+                        }
                         log::debug!("Board: {}", self.table.board);
-                        self.table.eval_flop_display();
+                        if display {
+                            self.table.eval_flop_display();
+                            println!(); // TODO: why the spacing issues?
+                        }
                     }
                 }
                 GamePhase::BettingFlop => {
                     if self.table.is_betting_complete() {
                         self.table.act()?;
+                        if display {
+                            println!("\nBetting round ends. Dealing the turn...");
+                        }
                         log::debug!("Board: {}", self.table.board);
-                        self.table.eval_turn_display();
+                        if display {
+                            self.table.eval_turn_display();
+                        }
                     }
                 }
                 GamePhase::BettingTurn => {
                     if self.table.is_betting_complete() {
                         self.table.act()?;
                         log::debug!("Board: {}", self.table.board);
-                        self.table.eval_river_display();
+                        if display {
+                            self.table.eval_river_display();
+                            println!(); // TODO: why the spacing issues?
+                        }
                     }
                 }
                 _ => {}
@@ -668,6 +713,7 @@ mod store_pluribus_tests {
         let _nl = Pluribus {
             index: 0,
             rounds: Vec::new(),
+            actions: Default::default(),
             hole_cards: HoleCards::default(),
             board: Board::default(),
             winnings: Vec::new(),
@@ -677,9 +723,12 @@ mod store_pluribus_tests {
         let _result = match Pluribus::parse_string(row) {
             Ok(v) => {
                 let (hole_cards, board) = Pluribus::parse_cards(v.index(3));
+                let rounds = Util::str_splitter(v.index(2), "/");
+                let actions = Pluribus::parse_all_rounds(&rounds);
                 Ok(Pluribus {
                     index: Pluribus::parse_usize(v.index(1)).unwrap(),
-                    rounds: Util::str_splitter(v.index(2), "/"),
+                    rounds,
+                    actions,
                     hole_cards,
                     board,
                     winnings: Pluribus::parse_isizes(v.index(4)),

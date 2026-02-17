@@ -2,6 +2,7 @@ use pkcore::PKError;
 use pkcore::analysis::nubibus::Pluribus;
 use std::fs;
 use std::path::Path;
+use pkcore::prelude::Nubificus;
 
 /// `cargo run --example pluribus`
 fn main() -> Result<(), PKError> {
@@ -14,7 +15,8 @@ fn main() -> Result<(), PKError> {
             println!("------------------------------------------------------------------------------");
             println!("Game #{game_num}");
             println!("------------------------------------------------------------------------------");
-            plur.play_hand()?;
+            Nubificus::try_from(&plur)?.play_hand_display()?;
+            // println!("{}", plur.display_results());
             game_num += 1;
         }
     }

@@ -931,7 +931,7 @@ impl Table {
 
     pub fn eval_flop_display(&self) {
         match self.eval_flop() {
-            Ok(fe) => println!("\n{fe}"),
+            Ok(fe) => println!("{fe}"),
             Err(e) => {
                 log::error!("Failed to FlopEval from table: {e}");
             }
@@ -954,7 +954,7 @@ impl Table {
 
     pub fn eval_turn_display(&self) {
         match self.eval_turn() {
-            Ok(te) => println!("\n{te}"),
+            Ok(te) => println!("{te}"),
             Err(e) => {
                 log::error!("Failed to TurnEval from table: {e}");
             }
@@ -1259,7 +1259,7 @@ impl std::fmt::Display for Table {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Table: {} [{}]", self.name, self.id)?;
         writeln!(f, "Game: {:?}", self.game)?;
-        writeln!(f, "Phase: {:?}", self.phase)?;
+        writeln!(f, "Phase: {:?}", self.phase.borrow())?;
         writeln!(f, "Dealer Position: {}", self.button.value())?;
         writeln!(f, "Board {}", self.board)?;
         if !self.pot.is_empty() {
@@ -2579,7 +2579,7 @@ mod casino__table___end_hand_tests {
         let log: &str = "STATE:55:ffr200r700fcr2250ff:Kc7s|8s9s|Jc3d|5d9d|AhAc|JdTd:-50|-700|0|0|1450|-700:MrPink|MrBlue|Joe|Bill|Pluribus|MrOrange";
         let pluribus = Pluribus::from_str(log).expect("Pluribus failed");
         let table = Table::try_from(&pluribus).expect("can't parse pluribus log");
-        let mut actions = pluribus.parse_all_rounds();
+        let mut actions = pluribus.actions.clone();
 
         assert!(table.seats.are_dealt());
         assert!(!table.event_log.have_posted_blinds());
@@ -2742,7 +2742,7 @@ mod casino__table___end_hand_tests {
         let log: &str = "STATE:193:r225fcffc/ccc/ccc/ccc:2s7d|7c9c|KcQs|2dQh|9h9s|Ac8d/5cKhJh/As/7s:-50|-225|500|0|-225|0:Eddie|MrOrange|Bill|MrBlue|Pluribus|MrPink";
         let pluribus = Pluribus::from_str(log).expect("Pluribus failed");
         let table = Table::try_from(&pluribus).expect("can't parse pluribus log");
-        let mut actions = pluribus.parse_all_rounds();
+        let mut actions = pluribus.actions.clone();
 
         assert!(table.seats.are_dealt());
         assert!(!table.event_log.have_posted_blinds());

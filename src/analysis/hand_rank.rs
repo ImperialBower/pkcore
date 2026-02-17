@@ -29,7 +29,7 @@ pub struct HandRank {
 
 impl Display for HandRank {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}-{:?}", self.value, self.class)
+        write!(f, "{}: {:?}", self.value, self.class)
     }
 }
 
@@ -92,7 +92,7 @@ mod hand_rank_tests {
 
         assert_eq!(default.value, 0);
         assert_eq!(default.name, HandRankName::Invalid);
-        assert_eq!(default.class, HandRankClass::Invalid);
+        assert_eq!(default.class, HandRankClass::None);
     }
 
     #[test]
