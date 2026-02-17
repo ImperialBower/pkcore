@@ -28,6 +28,59 @@ mod result;
 pub mod seat;
 pub mod seats;
 
+/// Represents a snapshot of the current game state at the table.
+///
+/// This struct provides a read-only view of all relevant game information including
+/// the phase, players, pot size, board cards, and other details needed to understand
+/// the current state of the hand.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GameState {
+    pub table_id: Uuid,
+    pub table_name: String,
+    pub game_type: GameType,
+    pub phase: GamePhase,
+    pub button_position: u8,
+    pub next_to_act: u8,
+    pub pot_size: usize,
+    pub current_bet: usize,
+    pub board_cards: Vec<Bard>,
+    pub deck_remaining: usize,
+    pub active_players: usize,
+    pub total_players: usize,
+    pub small_blind: usize,
+    pub big_blind: usize,
+}
+
+impl std::fmt::Display for GameState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "=== Game State ===")?;
+        writeln!(f, "Table: {} [{}]", self.table_name, self.table_id)?;
+        writeln!(f, "Game: {:?}", self.game_type)?;
+        writeln!(f, "Phase: {}", self.phase)?;
+        writeln!(f, "Button Position: {}", self.button_position)?;
+        writeln!(f, "Next to Act: {}", self.next_to_act)?;
+
+        if !self.board_cards.is_empty() {
+            write!(f, "Board: ")?;
+            for (i, card) in self.board_cards.iter().enumerate() {
+                if i > 0 {
+                    write!(f, " ")?;
+                }
+                write!(f, "{}", card)?;
+            }
+            writeln!(f)?;
+        }
+
+        writeln!(f, "Pot: {}", self.pot_size)?;
+        writeln!(f, "Current Bet: {}", self.current_bet)?;
+        writeln!(f, "Blinds: {}/{}", self.small_blind, self.big_blind)?;
+        writeln!(f, "Active Players: {}/{}", self.active_players, self.total_players)?;
+        writeln!(f, "Deck Remaining: {}", self.deck_remaining)?;
+
+        Ok(())
+    }
+}
+
 /// There are up to 3 total burn cards in a Texas Hold'em poker hand. Before dealing the flop,
 /// turn, or river, the dealer is required to take the top card from the deck and burn (discard) it.
 ///
@@ -1009,6 +1062,32 @@ impl Table {
 
     pub fn get_seat_mut(&self, number: u8) -> Option<RefMut<'_, Seat>> {
         self.seats.get_seat_mut(number)
+    }
+
+    /// Returns a snapshot of the current game state.
+    ///
+    /// This provides a read-only view of all relevant information about the current
+    /// state of the game, including phase, players, pot, board, and betting information.
+    #[must_use]
+    pub fn get_game_state(&self) -> GameState {
+        let board_cards: Vec<Bard> = self.board.cards().iter().map(Bard::from).collect();
+
+        GameState {
+            table_id: self.id,
+            table_name: self.name.clone(),
+            game_type: self.game,
+            phase: self.get_phase(),
+            button_position: self.button.value(),
+            next_to_act: self.next_to_act(),
+            pot_size: self.pot.count(),
+            current_bet: self.bet.get(),
+            board_cards,
+            deck_remaining: self.deck.len(),
+            active_players: self.seats.count_active_in_hand(),
+            total_players: self.seats.size() as usize,
+            small_blind: self.forced.small_blind,
+            big_blind: self.forced.big_blind,
+        }
     }
 
     /// Returns `true` if the seat holds at least the `depth` number of dealt cards.
@@ -3002,4 +3081,51 @@ mod casino__table___end_hand_tests {
 
         // STATE:29:fffr275fc/cc/cr725r1850f:Tc4h|5c6d|3cTs|9hKc|2c8h|Ks7s/7c3hJs/6h:-50|775|0|0|0|-725:Pluribus|MrBlue|MrBlonde|MrWhite|MrPink|MrBrown
     }
+
+    #[test]
+    fn get_game_state() {
+        let table = Table::default();
+        let state = table.get_game_state();
+
+        assert_eq!(table.id, state.table_id);
+        assert_eq!("Default No Limit Hold'em Table", state.table_name);
+        assert_eq!(GameType::NoLimitHoldem, state.game_type);
+        assert_eq!(table.get_phase(), state.phase);
+        assert_eq!(0, state.button_position);
+        assert_eq!(0, state.pot_size);
+        assert_eq!(0, state.current_bet);
+        assert_eq!(0, state.board_cards.len());
+        assert_eq!(52, state.deck_remaining);
+        assert_eq!(6, state.total_players);
+        assert_eq!(50, state.small_blind);
+        assert_eq!(100, state.big_blind);
+    }
+
+    #[test]
+    fn get_game_state_with_board() {
+        use crate::card::Card;
+        use std::str::FromStr;
+
+        let table = Table::default();
+        // Add some cards to the board
+        let flop = vec![
+            Card::from_str("Ah").unwrap(),
+            Card::from_str("Kh").unwrap(),
+            Card::from_str("Qh").unwrap(),
+        ];
+        for card in flop {
+            table.board.insert(card);
+        }
+
+        let state = table.get_game_state();
+
+        assert_eq!(3, state.board_cards.len());
+        assert_eq!(52, state.deck_remaining);
+
+        // Verify display works
+        let display_output = format!("{}", state);
+        assert!(display_output.contains("Board:"));
+        assert!(display_output.contains("Pot: 0"));
+    }
 }
+
