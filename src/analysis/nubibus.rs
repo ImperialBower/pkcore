@@ -50,7 +50,7 @@ impl Nubificus {
         }
         self.table.act_forced_bets()?;
 
-        for action in self.pluribus.parse_all_rounds() {
+        for action in self.pluribus.actions.clone() {
             self.do_action(&action)?;
         }
         Ok(())
@@ -131,6 +131,7 @@ impl TryFrom<&Pluribus> for Nubificus {
 pub struct Pluribus {
     pub index: usize,
     pub rounds: Vec<String>,
+    pub actions: VecDeque<PluribusEvent>,
     pub hole_cards: HoleCards,
     pub board: Board,
     pub winnings: Vec<isize>,
@@ -149,25 +150,25 @@ impl Pluribus {
     /// I have a theory that the divider between rounds isn't needed. That we can just take
     /// a vector of all the actions, and they pause when the round is over.
     #[must_use]
-    pub fn parse_all_rounds(&self) -> VecDeque<PluribusEvent> {
+    pub fn parse_all_rounds(rounds: &Vec<String>) -> VecDeque<PluribusEvent> {
         let mut events = Vec::new();
-        for round_str in &self.rounds {
-            events.extend(Pluribus::parse_rounds(round_str));
+        for round_str in rounds {
+            events.extend(Pluribus::parse_round(round_str));
         }
         VecDeque::from(events)
     }
 
     #[must_use]
-    pub fn parse_round(&self, i: usize) -> Vec<PluribusEvent> {
+    pub fn parse_round_at(&self, i: usize) -> Vec<PluribusEvent> {
         if let Some(round_str) = self.rounds.get(i) {
-            Pluribus::parse_rounds(round_str)
+            Pluribus::parse_round(round_str)
         } else {
             Vec::new()
         }
     }
 
     #[must_use]
-    pub fn parse_rounds(rounds_str: &str) -> Vec<PluribusEvent> {
+    pub fn parse_round(rounds_str: &str) -> Vec<PluribusEvent> {
         let mut events = Vec::new();
         let chars: Vec<char> = rounds_str.chars().collect();
         let mut i = 0;
@@ -271,7 +272,7 @@ impl Pluribus {
         }
         table.act_forced_bets()?;
 
-        for action in self.parse_all_rounds() {
+        for action in self.actions.clone() {
             self.play_hand_action(&table, &action)?;
         }
         Ok(())
@@ -481,9 +482,14 @@ impl FromStr for Pluribus {
         match Pluribus::parse_string(s) {
             Ok(v) => {
                 let (hole_cards, board) = Pluribus::parse_cards(v.index(3));
+
+                let rounds = Util::str_splitter(v.index(2), "/");
+                let actions = Pluribus::parse_all_rounds(&rounds);
+
                 Ok(Pluribus {
                     index: Pluribus::parse_usize(v.index(1))?,
-                    rounds: Util::str_splitter(v.index(2), "/"),
+                    rounds,
+                    actions,
                     hole_cards,
                     board,
                     winnings: Pluribus::parse_isizes(v.index(4)),
@@ -579,14 +585,14 @@ mod store_pluribus_tests {
     #[test]
     fn parse_rounds() {
         // Test basic fold and call
-        let events = Pluribus::parse_rounds("ffc");
+        let events = Pluribus::parse_round("ffc");
         assert_eq!(events.len(), 3);
         matches!(events[0], PluribusEvent::Fold);
         matches!(events[1], PluribusEvent::Fold);
         matches!(events[2], PluribusEvent::Call);
 
         // Test raise with amount
-        let events = Pluribus::parse_rounds("r200ffcfc");
+        let events = Pluribus::parse_round("r200ffcfc");
         assert_eq!(events.len(), 6);
         matches!(events[0], PluribusEvent::Raise(200));
         matches!(events[1], PluribusEvent::Fold);
@@ -596,7 +602,7 @@ mod store_pluribus_tests {
         matches!(events[5], PluribusEvent::Call);
 
         // Test multiple raises
-        let events = Pluribus::parse_rounds("cr850cf");
+        let events = Pluribus::parse_round("cr850cf");
         assert_eq!(events.len(), 4);
         matches!(events[0], PluribusEvent::Call);
         matches!(events[1], PluribusEvent::Raise(850));
@@ -604,7 +610,7 @@ mod store_pluribus_tests {
         matches!(events[3], PluribusEvent::Fold);
 
         // Test complex round with multiple raises
-        let events = Pluribus::parse_rounds("cr1825r3775c");
+        let events = Pluribus::parse_round("cr1825r3775c");
         assert_eq!(events.len(), 4);
         matches!(events[0], PluribusEvent::Call);
         matches!(events[1], PluribusEvent::Raise(1825));
