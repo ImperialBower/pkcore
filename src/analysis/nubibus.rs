@@ -43,6 +43,18 @@ impl Nubificus {
         Ok(())
     }
 
+    pub fn ff(&self, number_of_actions: usize, display: bool) -> Result<(), PKError> {
+        if !self.table.seats.are_dealt() {
+            self.table.deal_cards_to_seats()?;
+        }
+        self.table.act()?;
+
+        for action in self.pluribus.actions.clone().iter().take(number_of_actions) {
+            self.do_action(&action, display)?;
+        }
+        Ok(())
+    }
+
     /// # Errors
     ///
     /// TODO: Fill in errors
@@ -52,7 +64,7 @@ impl Nubificus {
         }
         self.table.act()?;
 
-        for action in self.pluribus.actions.clone() {
+        for action in self.pluribus.actions.clone(){
             self.do_action(&action, false)?;
         }
         Ok(())
