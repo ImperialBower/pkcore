@@ -1,8 +1,8 @@
 use pkcore::PKError;
 use pkcore::analysis::nubibus::Nubificus;
-use std::str::FromStr;
 use pkcore::play::stages::flop_eval::FlopEval;
 use pkcore::prelude::Game;
+use std::str::FromStr;
 
 /// `cargo run --example ff`
 fn main() -> Result<(), PKError> {

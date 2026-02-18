@@ -66,7 +66,7 @@ impl std::fmt::Display for GameState {
                 if i > 0 {
                     write!(f, " ")?;
                 }
-                write!(f, "{}", card)?;
+                write!(f, "{card}")?;
             }
             writeln!(f)?;
         }
@@ -3128,4 +3128,3 @@ mod casino__table___end_hand_tests {
         assert!(display_output.contains("Pot: 0"));
     }
 }
-

@@ -31,7 +31,6 @@ impl CaseEvals {
 
         for v in hands.combinations_after(2, &board.cards()) {
             let case = Two::from(v);
-            println!("{case}");
             if let Ok(ce) = CaseEval::from_holdem_at_flop(board, case, hands) {
                 case_evals.push(ce);
             }

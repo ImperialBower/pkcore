@@ -43,6 +43,9 @@ impl Nubificus {
         Ok(())
     }
 
+    /// # Errors
+    ///
+    /// TODO: Fill in errors
     pub fn ff(&self, number_of_actions: usize, display: bool) -> Result<(), PKError> {
         if !self.table.seats.are_dealt() {
             self.table.deal_cards_to_seats()?;
@@ -50,7 +53,7 @@ impl Nubificus {
         self.table.act()?;
 
         for action in self.pluribus.actions.clone().iter().take(number_of_actions) {
-            self.do_action(&action, display)?;
+            self.do_action(action, display)?;
         }
         Ok(())
     }
@@ -64,7 +67,7 @@ impl Nubificus {
         }
         self.table.act()?;
 
-        for action in self.pluribus.actions.clone(){
+        for action in self.pluribus.actions.clone() {
             self.do_action(&action, false)?;
         }
         Ok(())
@@ -74,14 +77,28 @@ impl Nubificus {
     ///
     /// TODO: Fill in errors
     pub fn play_hand_display(&self) -> Result<(), PKError> {
+        use termion::color;
+
         if !self.table.seats.are_dealt() {
             self.table.deal_cards_to_seats()?;
         }
-        println!("{}", self.pluribus);
-        println!("{}", self.pluribus.raw);
+
+        // Display header with color
+        println!("{}{}{}", color::Fg(color::Cyan), self.pluribus, color::Fg(color::Reset));
+        println!(
+            "{}{}{}",
+            color::Fg(color::LightBlack),
+            self.pluribus.raw,
+            color::Fg(color::Reset)
+        );
+
         self.table.act()?;
 
-        println!("--------------------------------");
+        println!(
+            "{}--------------------------------{}",
+            color::Fg(color::Yellow),
+            color::Fg(color::Reset)
+        );
         println!("{}", self.table);
 
         for action in self.pluribus.actions.clone() {
@@ -93,7 +110,10 @@ impl Nubificus {
     /// # Errors
     ///
     /// TODO: Fill in errors
+    #[allow(clippy::too_many_lines)]
     pub fn do_action(&self, action: &PluribusEvent, display: bool) -> Result<(), PKError> {
+        use termion::color;
+
         let seat_to_act = self.table.next_to_act();
         let handle_to_act = self.table.get_seat_handle(seat_to_act);
         log::debug!("{handle_to_act} Seat {seat_to_act} is next to act: {action}");
@@ -102,7 +122,34 @@ impl Nubificus {
 
         log::debug!("{}", self.table.commentary_last_player_action().unwrap_or_default());
         if display {
-            println!("{}", self.table.commentary_last_player_action().unwrap_or_default());
+            let commentary = self.table.commentary_last_player_action().unwrap_or_default();
+            // Color player actions based on action type
+            match action {
+                PluribusEvent::Fold => {
+                    println!(
+                        "{}{}{}",
+                        color::Fg(color::LightBlack),
+                        commentary,
+                        color::Fg(color::Reset)
+                    );
+                }
+                PluribusEvent::Call => {
+                    println!(
+                        "{}{}{}",
+                        color::Fg(color::LightBlue),
+                        commentary,
+                        color::Fg(color::Reset)
+                    );
+                }
+                PluribusEvent::Raise(_) => {
+                    println!(
+                        "{}{}{}",
+                        color::Fg(color::LightRed),
+                        commentary,
+                        color::Fg(color::Reset)
+                    );
+                }
+            }
         }
 
         let betting_phase = self.table.determine_betting_phase();
@@ -112,9 +159,22 @@ impl Nubificus {
 
             if display {
                 println!();
-                println!("================================");
-                println!("================================");
-                println!("{hand_result}");
+                println!(
+                    "{}================================{}",
+                    color::Fg(color::Green),
+                    color::Fg(color::Reset)
+                );
+                println!(
+                    "{}================================{}",
+                    color::Fg(color::Green),
+                    color::Fg(color::Reset)
+                );
+                println!(
+                    "{}{}{}",
+                    color::Fg(color::LightGreen),
+                    hand_result,
+                    color::Fg(color::Reset)
+                );
                 println!("{}", self.pluribus.display_results());
             }
         } else {
@@ -123,7 +183,11 @@ impl Nubificus {
                     if self.table.is_betting_complete() {
                         self.table.act()?;
                         if display {
-                            println!("\nBetting round ends. Dealing the flop...");
+                            println!(
+                                "\n{}Betting round ends. Dealing the flop...{}",
+                                color::Fg(color::Magenta),
+                                color::Fg(color::Reset)
+                            );
                         }
                         log::debug!("Board: {}", self.table.board);
                         if display {
@@ -136,7 +200,11 @@ impl Nubificus {
                     if self.table.is_betting_complete() {
                         self.table.act()?;
                         if display {
-                            println!("\nBetting round ends. Dealing the turn...");
+                            println!(
+                                "\n{}Betting round ends. Dealing the turn...{}",
+                                color::Fg(color::Magenta),
+                                color::Fg(color::Reset)
+                            );
                         }
                         log::debug!("Board: {}", self.table.board);
                         if display {
