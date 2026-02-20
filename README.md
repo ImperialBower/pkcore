@@ -363,6 +363,9 @@ Elapsed: 1.63s
 ## Resources
 
 * Poker
+  * [Universal, Open, Free, and Transparent Computer Poker Research Group](https://uoftcprg.com/)
+    * [github.com/uoftcprg](https://github.com/uoftcprg)
+      * 
   * [Mike Caro's Website](https://www.poker1.com/)
   * Solvers
     * [Pro Poker Tools Odds Oracle](http://www.propokertools.com/)

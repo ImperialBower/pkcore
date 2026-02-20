@@ -40,6 +40,7 @@ pub use crate::cards::Cards;
 pub use crate::cards_cell::CardsCell;
 pub use crate::casino;
 pub use crate::casino::game::ForcedBets;
+pub use crate::casino::hand_history::{HandHistoryExt, PokerHandHistory};
 pub use crate::casino::player::Player;
 pub use crate::casino::state::*;
 pub use crate::casino::table;
