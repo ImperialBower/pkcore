@@ -2653,6 +2653,8 @@ mod casino__table___end_hand_tests {
         assert_eq!(table.deck.len(), 52);
     }
 
+    /// These tests where created to isolate on specific issues uncovered when I finally was able
+    /// to drive the `Table` with `Pluribus` events.
     #[test]
     fn end_hand__pluribus_155_55() {
         let log: &str = "STATE:55:ffr200r700fcr2250ff:Kc7s|8s9s|Jc3d|5d9d|AhAc|JdTd:-50|-700|0|0|1450|-700:MrPink|MrBlue|Joe|Bill|Pluribus|MrOrange";
@@ -3075,11 +3077,6 @@ mod casino__table___end_hand_tests {
         // print!("{table}");
 
         // STATE:193:r225fcffc/ccc/ccc/ccc:2s7d|7c9c|KcQs|2dQh|9h9s|Ac8d/5cKhJh/As/7s:-50|-225|500|0|-225|0:Eddie|MrOrange|Bill|MrBlue|Pluribus|MrPink
-    }
-    #[test]
-    fn end_hand__pluribus_100_29() {
-
-        // STATE:29:fffr275fc/cc/cr725r1850f:Tc4h|5c6d|3cTs|9hKc|2c8h|Ks7s/7c3hJs/6h:-50|775|0|0|0|-725:Pluribus|MrBlue|MrBlonde|MrWhite|MrPink|MrBrown
     }
 
     #[test]

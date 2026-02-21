@@ -120,7 +120,7 @@ impl CaseEval {
 
             for player in hands.iter() {
                 if !player.is_dealt() {
-                    return Err(PKError::InvalidHand);
+                    continue;
                 }
                 let seven = Seven::from_case_at_flop(*player, board, case)?;
                 let eval = Eval::from(seven);

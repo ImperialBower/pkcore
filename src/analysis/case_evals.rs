@@ -86,6 +86,12 @@ impl CaseEvals {
 
         let (tx, rx) = mpsc::channel();
 
+        // for hand in hands.iter() {
+        //     if hand.is_dealt() {
+        //
+        //     }
+        // }
+
         for v in hands.combinations_after(2, &board.cards()) {
             let tx = tx.clone();
             let my_hands = hands.clone();

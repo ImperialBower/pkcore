@@ -1,7 +1,7 @@
 use crate::games::GamePhase;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
-use crate::prelude::Table;
+use crate::prelude::{Table, TableLog};
 use crate::util::Util;
 use crate::util::terminal::Terminal;
 use crate::{PKError, Plurable};
@@ -21,6 +21,7 @@ use std::str::FromStr;
 pub struct Nubificus {
     pub pluribus: Pluribus,
     pub table: Table,
+    pub queue: VecDeque<PluribusEvent>,
 }
 
 impl Nubificus {
@@ -43,16 +44,22 @@ impl Nubificus {
         Ok(())
     }
 
+    pub fn boop(&mut self) -> Result<(), PKError>  {
+        self.ff(1, true);
+        match self.queue.pop_front() {
+            Some(_) => {},
+            None => {},
+        }
+        Ok(())
+    }
+
     /// # Errors
     ///
     /// TODO: Fill in errors
-    pub fn ff(&self, number_of_actions: usize, display: bool) -> Result<(), PKError> {
-        if !self.table.seats.are_dealt() {
-            self.table.deal_cards_to_seats()?;
-        }
+    pub fn ff(&mut self, number_of_actions: usize, display: bool) -> Result<(), PKError> {
         self.table.act()?;
 
-        for action in self.pluribus.actions.clone().iter().take(number_of_actions) {
+        for action in self.queue.iter().take(number_of_actions) {
             self.do_action(action, display)?;
         }
         Ok(())
@@ -228,6 +235,11 @@ impl Nubificus {
         Ok(())
     }
 
+    pub fn pop(&mut self) -> TableLog {
+        println!("boop!");
+        TableLog::default()
+    }
+
     /// # Errors
     ///
     /// Throws an error if path doesn't exist.
@@ -267,8 +279,9 @@ impl TryFrom<Pluribus> for Nubificus {
     type Error = PKError;
 
     fn try_from(pluribus: Pluribus) -> Result<Self, Self::Error> {
+        let queue = pluribus.actions.clone();
         let table = Table::try_from(&pluribus)?;
-        Ok(Nubificus { pluribus, table })
+        Ok(Nubificus { pluribus, table, queue })
     }
 }
 
