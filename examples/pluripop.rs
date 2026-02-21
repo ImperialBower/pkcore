@@ -1,6 +1,6 @@
-use std::str::FromStr;
 use pkcore::PKError;
 use pkcore::prelude::{Nubificus, Terminal};
+use std::str::FromStr;
 
 /// `cargo run --example pluripop`
 fn main() -> Result<(), PKError> {

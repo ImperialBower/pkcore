@@ -44,11 +44,13 @@ impl Nubificus {
         Ok(())
     }
 
-    pub fn boop(&mut self) -> Result<(), PKError>  {
-        self.ff(1, true);
+    /// # Errors
+    ///
+    /// I'm not actually sure.
+    pub fn boop(&mut self) -> Result<(), PKError> {
+        let _ = self.ff(1, true);
         match self.queue.pop_front() {
-            Some(_) => {},
-            None => {},
+            Some(_) | None => {}
         }
         Ok(())
     }
