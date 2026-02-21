@@ -13,7 +13,7 @@ fn main() -> Result<(), PKError> {
             println!("------------------------------------------------------------------------------");
             println!("Game #{game_num}");
             println!("------------------------------------------------------------------------------");
-            Nubificus::try_from(&plur)?.play_hand_display()?;
+            Nubificus::try_from(&plur)?.play_hand()?;
             game_num += 1;
         }
     }

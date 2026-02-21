@@ -115,21 +115,26 @@ impl CaseEval {
     ///
     /// Returns a `PKError` if any of the cards is invalid.
     pub fn from_holdem_at_flop(board: Three, case: Two, hands: &HoleCards) -> Result<Self, PKError> {
-        if board.is_dealt() && case.is_dealt() {
-            let mut case_eval = CaseEval::default();
+        if board.is_dealt() {
+            if case.is_dealt() {
+                let mut case_eval = CaseEval::default();
 
-            for player in hands.iter() {
-                if !player.is_dealt() {
-                    return Err(PKError::InvalidHand);
+                for player in hands.iter() {
+                    if player.is_blank() {
+                        case_eval.push(Eval::default());
+                        continue;
+                    }
+                    let seven = Seven::from_case_at_flop(*player, board, case)?;
+                    let eval = Eval::from(seven);
+                    case_eval.push(eval);
                 }
-                let seven = Seven::from_case_at_flop(*player, board, case)?;
-                let eval = Eval::from(seven);
-                case_eval.push(eval);
-            }
 
-            Ok(case_eval)
+                Ok(case_eval)
+            } else {
+                Err(PKError::BlankCard)
+            }
         } else {
-            Err(PKError::BlankCard)
+            Err(PKError::NotDealt)
         }
     }
 
@@ -638,7 +643,7 @@ mod hand_rank__case_eval_tests {
         let sut = CaseEval::from_holdem_at_flop(board, case, &hole_cards);
 
         assert!(!sut.is_ok());
-        assert_eq!(PKError::BlankCard, sut.unwrap_err());
+        assert_eq!(PKError::NotDealt, sut.unwrap_err());
     }
 
     #[test]
@@ -653,6 +658,9 @@ mod hand_rank__case_eval_tests {
         assert_eq!(PKError::BlankCard, sut.unwrap_err());
     }
 
+    /// This test used to make sure that `CaseEval` threw an exception if there was a hand with a
+    /// blank card in it. However, in working through the `Pluribus` hands, I needed to handle the
+    /// fact that I would be doing evaluations including players that have folded.
     #[test]
     fn from_holdem_at_flop__blank_card_in_hand() {
         let board = Three::from(vec![Card::NINE_CLUBS, Card::EIGHT_DIAMONDS, Card::SEVEN_CLUBS]);
@@ -665,8 +673,7 @@ mod hand_rank__case_eval_tests {
 
         let sut = CaseEval::from_holdem_at_flop(board, case, &hole_cards);
 
-        assert!(!sut.is_ok());
-        assert_eq!(PKError::InvalidHand, sut.unwrap_err());
+        assert!(sut.is_ok());
     }
 
     #[test]

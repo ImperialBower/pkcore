@@ -1,57 +1,297 @@
 use crate::games::GamePhase;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
-use crate::prelude::Table;
+use crate::prelude::{Table, TableLog};
 use crate::util::Util;
 use crate::util::terminal::Terminal;
 use crate::{PKError, Plurable};
 use regex::Regex;
 use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
+use std::fs;
 use std::ops::Index;
+use std::path::Path;
 use std::str::FromStr;
 
-#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq)]
-pub enum PluribusEvent {
-    #[default]
-    Fold,
-    Call,
-    Raise(usize),
+/// `nūbĭfĭcus , a, um nubes-facio, - producing clouds`
+///
+/// The name "Nubificus" is derived from the Latin word "nubes," meaning "cloud," and the verb
+/// "facio," meaning "to make" or "to produce."
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct Nubificus {
+    pub pluribus: Pluribus,
+    pub table: Table,
+    pub queue: VecDeque<PluribusEvent>,
 }
 
-impl PluribusEvent {
-    #[must_use]
-    pub fn is_fold(&self) -> bool {
-        matches!(self, PluribusEvent::Fold)
+impl Nubificus {
+    /// # Errors
+    ///
+    /// `PKError::InvalidPluribusIndex`
+    pub fn act(table: &Table, action: &PluribusEvent, seat_to_act: u8) -> Result<(), PKError> {
+        match action {
+            PluribusEvent::Fold => {
+                let _ = table.act_fold(seat_to_act);
+            }
+            PluribusEvent::Call => {
+                let _ = table.act_call(seat_to_act);
+            }
+            PluribusEvent::Raise(amount) => {
+                let _ = table.act_bet(seat_to_act, *amount);
+            }
+        }
+
+        Ok(())
     }
 
-    #[must_use]
-    pub fn is_call(&self) -> bool {
-        matches!(self, PluribusEvent::Call)
+    /// # Errors
+    ///
+    /// I'm not actually sure.
+    pub fn boop(&mut self) -> Result<(), PKError> {
+        let _ = self.ff(1, true);
+        match self.queue.pop_front() {
+            Some(_) | None => {}
+        }
+        Ok(())
     }
 
-    #[must_use]
-    pub fn is_raise(&self) -> bool {
-        matches!(self, PluribusEvent::Raise(_))
+    /// # Errors
+    ///
+    /// TODO: Fill in errors
+    pub fn ff(&mut self, number_of_actions: usize, display: bool) -> Result<(), PKError> {
+        self.table.act()?;
+
+        for action in self.queue.iter().take(number_of_actions) {
+            self.do_action(action, display)?;
+        }
+        Ok(())
     }
 
-    #[must_use]
-    pub fn raise_amount(&self) -> Option<usize> {
-        if let PluribusEvent::Raise(amount) = self {
-            Some(*amount)
+    /// # Errors
+    ///
+    /// TODO: Fill in errors
+    pub fn play_hand(&self) -> Result<(), PKError> {
+        if !self.table.seats.are_dealt() {
+            self.table.deal_cards_to_seats()?;
+        }
+        self.table.act()?;
+
+        for action in self.pluribus.actions.clone() {
+            self.do_action(&action, false)?;
+        }
+        Ok(())
+    }
+
+    /// # Errors
+    ///
+    /// TODO: Fill in errors
+    pub fn play_hand_display(&self) -> Result<(), PKError> {
+        use termion::color;
+
+        if !self.table.seats.are_dealt() {
+            self.table.deal_cards_to_seats()?;
+        }
+
+        // Display header with color
+        println!("{}{}{}", color::Fg(color::Cyan), self.pluribus, color::Fg(color::Reset));
+        println!(
+            "{}{}{}",
+            color::Fg(color::LightBlack),
+            self.pluribus.raw,
+            color::Fg(color::Reset)
+        );
+
+        self.table.act()?;
+
+        println!(
+            "{}--------------------------------{}",
+            color::Fg(color::Yellow),
+            color::Fg(color::Reset)
+        );
+        println!("{}", self.table);
+
+        for action in self.pluribus.actions.clone() {
+            self.do_action(&action, true)?;
+        }
+        Ok(())
+    }
+
+    /// # Errors
+    ///
+    /// TODO: Fill in errors
+    #[allow(clippy::too_many_lines)]
+    pub fn do_action(&self, action: &PluribusEvent, display: bool) -> Result<(), PKError> {
+        use termion::color;
+
+        let seat_to_act = self.table.next_to_act();
+        let handle_to_act = self.table.get_seat_handle(seat_to_act);
+        log::debug!("{handle_to_act} Seat {seat_to_act} is next to act: {action}");
+
+        Nubificus::act(&self.table, action, seat_to_act)?;
+
+        log::debug!("{}", self.table.commentary_last_player_action().unwrap_or_default());
+        if display {
+            let commentary = self.table.commentary_last_player_action().unwrap_or_default();
+            // Color player actions based on action type
+            match action {
+                PluribusEvent::Fold => {
+                    println!(
+                        "{}{}{}",
+                        color::Fg(color::LightBlack),
+                        commentary,
+                        color::Fg(color::Reset)
+                    );
+                }
+                PluribusEvent::Call => {
+                    println!(
+                        "{}{}{}",
+                        color::Fg(color::LightBlue),
+                        commentary,
+                        color::Fg(color::Reset)
+                    );
+                }
+                PluribusEvent::Raise(_) => {
+                    println!(
+                        "{}{}{}",
+                        color::Fg(color::LightRed),
+                        commentary,
+                        color::Fg(color::Reset)
+                    );
+                }
+            }
+        }
+
+        let betting_phase = self.table.determine_betting_phase();
+
+        if self.table.is_game_over() {
+            let hand_result = self.table.end_hand()?;
+
+            if display {
+                println!();
+                println!(
+                    "{}================================{}",
+                    color::Fg(color::Green),
+                    color::Fg(color::Reset)
+                );
+                println!(
+                    "{}================================{}",
+                    color::Fg(color::Green),
+                    color::Fg(color::Reset)
+                );
+                println!(
+                    "{}{}{}",
+                    color::Fg(color::LightGreen),
+                    hand_result,
+                    color::Fg(color::Reset)
+                );
+                println!("{}", self.pluribus.display_results());
+            }
         } else {
-            None
+            match betting_phase {
+                GamePhase::BettingPreFlop => {
+                    if self.table.is_betting_complete() {
+                        self.table.act()?;
+                        if display {
+                            println!(
+                                "\n{}Betting round ends. Dealing the flop...{}",
+                                color::Fg(color::Magenta),
+                                color::Fg(color::Reset)
+                            );
+                        }
+                        log::debug!("Board: {}", self.table.board);
+                        if display {
+                            self.table.eval_flop_display();
+                            println!(); // TODO: why the spacing issues?
+                        }
+                    }
+                }
+                GamePhase::BettingFlop => {
+                    if self.table.is_betting_complete() {
+                        self.table.act()?;
+                        if display {
+                            println!(
+                                "\n{}Betting round ends. Dealing the turn...{}",
+                                color::Fg(color::Magenta),
+                                color::Fg(color::Reset)
+                            );
+                        }
+                        log::debug!("Board: {}", self.table.board);
+                        if display {
+                            self.table.eval_turn_display();
+                        }
+                    }
+                }
+                GamePhase::BettingTurn => {
+                    if self.table.is_betting_complete() {
+                        self.table.act()?;
+                        log::debug!("Board: {}", self.table.board);
+                        if display {
+                            self.table.eval_river_display();
+                            println!(); // TODO: why the spacing issues?
+                        }
+                    }
+                }
+                _ => {}
+            }
         }
+        Ok(())
+    }
+
+    pub fn pop(&mut self) -> TableLog {
+        println!("boop!");
+        TableLog::default()
+    }
+
+    /// # Errors
+    ///
+    /// Throws an error if path doesn't exist.
+    pub fn get_log_files(path: &str) -> Result<Vec<String>, PKError> {
+        let dir = Path::new(path);
+        let mut log_files = Vec::new();
+
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.is_file() {
+                if let Some(extension) = path.extension() {
+                    if extension == "log" {
+                        if let Some(path_str) = path.to_str() {
+                            log_files.push(path_str.to_string());
+                        }
+                    }
+                }
+            }
+        }
+
+        log_files.sort();
+        Ok(log_files)
     }
 }
 
-impl Display for PluribusEvent {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            PluribusEvent::Fold => write!(f, "Fold"),
-            PluribusEvent::Call => write!(f, "Call"),
-            PluribusEvent::Raise(amount) => write!(f, "Raise({amount})"),
-        }
+impl FromStr for Nubificus {
+    type Err = PKError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Nubificus::try_from(Pluribus::from_str(s)?)
+    }
+}
+
+impl TryFrom<Pluribus> for Nubificus {
+    type Error = PKError;
+
+    fn try_from(pluribus: Pluribus) -> Result<Self, Self::Error> {
+        let queue = pluribus.actions.clone();
+        let table = Table::try_from(&pluribus)?;
+        Ok(Nubificus { pluribus, table, queue })
+    }
+}
+
+impl TryFrom<&Pluribus> for Nubificus {
+    type Error = PKError;
+
+    fn try_from(pluribus: &Pluribus) -> Result<Self, Self::Error> {
+        Nubificus::try_from(pluribus.clone())
     }
 }
 
@@ -59,6 +299,7 @@ impl Display for PluribusEvent {
 pub struct Pluribus {
     pub index: usize,
     pub rounds: Vec<String>,
+    pub actions: VecDeque<PluribusEvent>,
     pub hole_cards: HoleCards,
     pub board: Board,
     pub winnings: Vec<isize>,
@@ -77,25 +318,25 @@ impl Pluribus {
     /// I have a theory that the divider between rounds isn't needed. That we can just take
     /// a vector of all the actions, and they pause when the round is over.
     #[must_use]
-    pub fn parse_all_rounds(&self) -> VecDeque<PluribusEvent> {
+    pub fn parse_all_rounds(rounds: &Vec<String>) -> VecDeque<PluribusEvent> {
         let mut events = Vec::new();
-        for round_str in &self.rounds {
-            events.extend(Pluribus::parse_rounds(round_str));
+        for round_str in rounds {
+            events.extend(Pluribus::parse_round(round_str));
         }
         VecDeque::from(events)
     }
 
     #[must_use]
-    pub fn parse_round(&self, i: usize) -> Vec<PluribusEvent> {
+    pub fn parse_round_at(&self, i: usize) -> Vec<PluribusEvent> {
         if let Some(round_str) = self.rounds.get(i) {
-            Pluribus::parse_rounds(round_str)
+            Pluribus::parse_round(round_str)
         } else {
             Vec::new()
         }
     }
 
     #[must_use]
-    pub fn parse_rounds(rounds_str: &str) -> Vec<PluribusEvent> {
+    pub fn parse_round(rounds_str: &str) -> Vec<PluribusEvent> {
         let mut events = Vec::new();
         let chars: Vec<char> = rounds_str.chars().collect();
         let mut i = 0;
@@ -161,90 +402,6 @@ impl Pluribus {
         } else {
             (HoleCards::from_pluribus(s).unwrap_or_default(), Board::default())
         }
-    }
-
-    /// # Errors
-    ///
-    /// `PKError::InvalidPluribusIndex`
-    pub fn act(table: &Table, action: &PluribusEvent, seat_to_act: u8) -> Result<(), PKError> {
-        match action {
-            PluribusEvent::Fold => {
-                let _ = table.act_fold(seat_to_act);
-            }
-            PluribusEvent::Call => {
-                let _ = table.act_call(seat_to_act);
-            }
-            PluribusEvent::Raise(amount) => {
-                let _ = table.act_bet(seat_to_act, *amount);
-            }
-        }
-
-        Ok(())
-    }
-
-    /// # Errors
-    ///
-    /// TODO: Fill in errors
-    pub fn play_hand(&self) -> Result<(), PKError> {
-        let table = Table::try_from(self)?;
-
-        println!(">>>{}", table.deck);
-        println!("{self}");
-        println!("{}", self.raw);
-
-        // table.act()?;
-
-        if !table.seats.are_dealt() {
-            table.deal_cards_to_seats()?;
-        }
-        table.act_forced_bets()?;
-
-        for action in self.parse_all_rounds() {
-            let seat_to_act = table.next_to_act();
-            let handle_to_act = table.get_seat_handle(seat_to_act);
-            println!("{handle_to_act} Seat {seat_to_act} is next to act: {action}");
-
-            Pluribus::act(&table, &action, seat_to_act)?;
-
-            println!("{}", table.commentary_last_player_action().unwrap_or_default());
-
-            let betting_phase = table.determine_betting_phase();
-
-            if table.is_game_over() {
-                let hand_result = table.end_hand()?;
-
-                println!("================================");
-                println!("================================");
-                println!("{hand_result}");
-                println!("{}", self.display_results());
-            } else {
-                match betting_phase {
-                    GamePhase::BettingPreFlop => {
-                        if table.is_betting_complete() {
-                            table.act()?;
-                            println!("Board: {}", table.board);
-                            table.eval_flop_display();
-                        }
-                    }
-                    GamePhase::BettingFlop => {
-                        if table.is_betting_complete() {
-                            table.act()?;
-                            println!("Board: {}", table.board);
-                            table.eval_turn_display();
-                        }
-                    }
-                    GamePhase::BettingTurn => {
-                        if table.is_betting_complete() {
-                            table.act()?;
-                            println!("Board: {}", table.board);
-                            table.eval_river_display();
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
-        Ok(())
     }
 
     /// I love how this code evolved from a double flipmode clippy lint:
@@ -401,9 +558,14 @@ impl FromStr for Pluribus {
         match Pluribus::parse_string(s) {
             Ok(v) => {
                 let (hole_cards, board) = Pluribus::parse_cards(v.index(3));
+
+                let rounds = Util::str_splitter(v.index(2), "/");
+                let actions = Pluribus::parse_all_rounds(&rounds);
+
                 Ok(Pluribus {
                     index: Pluribus::parse_usize(v.index(1))?,
-                    rounds: Util::str_splitter(v.index(2), "/"),
+                    rounds,
+                    actions,
                     hole_cards,
                     board,
                     winnings: Pluribus::parse_isizes(v.index(4)),
@@ -412,6 +574,50 @@ impl FromStr for Pluribus {
                 })
             }
             Err(e) => Err(e),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq)]
+pub enum PluribusEvent {
+    #[default]
+    Fold,
+    Call,
+    Raise(usize),
+}
+
+impl PluribusEvent {
+    #[must_use]
+    pub fn is_fold(&self) -> bool {
+        matches!(self, PluribusEvent::Fold)
+    }
+
+    #[must_use]
+    pub fn is_call(&self) -> bool {
+        matches!(self, PluribusEvent::Call)
+    }
+
+    #[must_use]
+    pub fn is_raise(&self) -> bool {
+        matches!(self, PluribusEvent::Raise(_))
+    }
+
+    #[must_use]
+    pub fn raise_amount(&self) -> Option<usize> {
+        if let PluribusEvent::Raise(amount) = self {
+            Some(*amount)
+        } else {
+            None
+        }
+    }
+}
+
+impl Display for PluribusEvent {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PluribusEvent::Fold => write!(f, "Fold"),
+            PluribusEvent::Call => write!(f, "Call"),
+            PluribusEvent::Raise(amount) => write!(f, "Raise({amount})"),
         }
     }
 }
@@ -454,14 +660,14 @@ mod store_pluribus_tests {
     #[test]
     fn parse_rounds() {
         // Test basic fold and call
-        let events = Pluribus::parse_rounds("ffc");
+        let events = Pluribus::parse_round("ffc");
         assert_eq!(events.len(), 3);
         matches!(events[0], PluribusEvent::Fold);
         matches!(events[1], PluribusEvent::Fold);
         matches!(events[2], PluribusEvent::Call);
 
         // Test raise with amount
-        let events = Pluribus::parse_rounds("r200ffcfc");
+        let events = Pluribus::parse_round("r200ffcfc");
         assert_eq!(events.len(), 6);
         matches!(events[0], PluribusEvent::Raise(200));
         matches!(events[1], PluribusEvent::Fold);
@@ -471,7 +677,7 @@ mod store_pluribus_tests {
         matches!(events[5], PluribusEvent::Call);
 
         // Test multiple raises
-        let events = Pluribus::parse_rounds("cr850cf");
+        let events = Pluribus::parse_round("cr850cf");
         assert_eq!(events.len(), 4);
         matches!(events[0], PluribusEvent::Call);
         matches!(events[1], PluribusEvent::Raise(850));
@@ -479,7 +685,7 @@ mod store_pluribus_tests {
         matches!(events[3], PluribusEvent::Fold);
 
         // Test complex round with multiple raises
-        let events = Pluribus::parse_rounds("cr1825r3775c");
+        let events = Pluribus::parse_round("cr1825r3775c");
         assert_eq!(events.len(), 4);
         matches!(events[0], PluribusEvent::Call);
         matches!(events[1], PluribusEvent::Raise(1825));
@@ -537,6 +743,7 @@ mod store_pluribus_tests {
         let _nl = Pluribus {
             index: 0,
             rounds: Vec::new(),
+            actions: Default::default(),
             hole_cards: HoleCards::default(),
             board: Board::default(),
             winnings: Vec::new(),
@@ -546,9 +753,12 @@ mod store_pluribus_tests {
         let _result = match Pluribus::parse_string(row) {
             Ok(v) => {
                 let (hole_cards, board) = Pluribus::parse_cards(v.index(3));
+                let rounds = Util::str_splitter(v.index(2), "/");
+                let actions = Pluribus::parse_all_rounds(&rounds);
                 Ok(Pluribus {
                     index: Pluribus::parse_usize(v.index(1)).unwrap(),
-                    rounds: Util::str_splitter(v.index(2), "/"),
+                    rounds,
+                    actions,
                     hole_cards,
                     board,
                     winnings: Pluribus::parse_isizes(v.index(4)),

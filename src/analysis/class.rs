@@ -316,7 +316,7 @@ pub enum HandRankClass {
     EightHigh,
     SevenHigh,
     #[default]
-    Invalid,
+    None,
 }
 
 #[allow(clippy::too_many_lines)]
@@ -632,14 +632,14 @@ impl From<HandRankValue> for HandRankClass {
             7411..=7444 => HandRankClass::NineHigh,
             7445..=7458 => HandRankClass::EightHigh,
             7459..=7462 => HandRankClass::SevenHigh,
-            _ => HandRankClass::Invalid,
+            _ => HandRankClass::None,
         }
     }
 }
 
 impl SOK for HandRankClass {
     fn salright(&self) -> bool {
-        self != &HandRankClass::Invalid
+        self != &HandRankClass::None
     }
 }
 
@@ -651,6 +651,6 @@ mod hand_rank__class_tests {
     #[test]
     fn salright() {
         assert!(HandRankClass::AcesOverQueens.salright());
-        assert!(!HandRankClass::Invalid.salright());
+        assert!(!HandRankClass::None.salright());
     }
 }

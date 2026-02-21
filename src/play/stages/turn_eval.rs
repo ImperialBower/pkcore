@@ -162,8 +162,7 @@ impl Display for TurnEval {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let winning_player = self.outs.longest_player();
 
-        writeln!(f)?;
-        writeln!(f, "The Turn: {}", self.game.board.turn)?;
+        writeln!(f, "The Turn: {} {}", self.game.board.flop, self.game.board.turn)?;
 
         for (i, hole_cards) in self.game.hands.iter().enumerate() {
             if hole_cards.is_blank() {

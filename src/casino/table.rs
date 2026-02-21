@@ -1,5 +1,5 @@
 use crate::analysis::case_eval::CaseEval;
-use crate::analysis::store::nubibus::pluribus::Pluribus;
+use crate::analysis::nubibus::Pluribus;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
@@ -27,6 +27,59 @@ pub mod pot;
 mod result;
 pub mod seat;
 pub mod seats;
+
+/// Represents a snapshot of the current game state at the table.
+///
+/// This struct provides a read-only view of all relevant game information including
+/// the phase, players, pot size, board cards, and other details needed to understand
+/// the current state of the hand.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct GameState {
+    pub table_id: Uuid,
+    pub table_name: String,
+    pub game_type: GameType,
+    pub phase: GamePhase,
+    pub button_position: u8,
+    pub next_to_act: u8,
+    pub pot_size: usize,
+    pub current_bet: usize,
+    pub board_cards: Vec<Bard>,
+    pub deck_remaining: usize,
+    pub active_players: usize,
+    pub total_players: usize,
+    pub small_blind: usize,
+    pub big_blind: usize,
+}
+
+impl std::fmt::Display for GameState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "=== Game State ===")?;
+        writeln!(f, "Table: {} [{}]", self.table_name, self.table_id)?;
+        writeln!(f, "Game: {:?}", self.game_type)?;
+        writeln!(f, "Phase: {}", self.phase)?;
+        writeln!(f, "Button Position: {}", self.button_position)?;
+        writeln!(f, "Next to Act: {}", self.next_to_act)?;
+
+        if !self.board_cards.is_empty() {
+            write!(f, "Board: ")?;
+            for (i, card) in self.board_cards.iter().enumerate() {
+                if i > 0 {
+                    write!(f, " ")?;
+                }
+                write!(f, "{card}")?;
+            }
+            writeln!(f)?;
+        }
+
+        writeln!(f, "Pot: {}", self.pot_size)?;
+        writeln!(f, "Current Bet: {}", self.current_bet)?;
+        writeln!(f, "Blinds: {}/{}", self.small_blind, self.big_blind)?;
+        writeln!(f, "Active Players: {}/{}", self.active_players, self.total_players)?;
+        writeln!(f, "Deck Remaining: {}", self.deck_remaining)?;
+
+        Ok(())
+    }
+}
 
 /// There are up to 3 total burn cards in a Texas Hold'em poker hand. Before dealing the flop,
 /// turn, or river, the dealer is required to take the top card from the deck and burn (discard) it.
@@ -931,7 +984,7 @@ impl Table {
 
     pub fn eval_flop_display(&self) {
         match self.eval_flop() {
-            Ok(fe) => println!("\n{fe}"),
+            Ok(fe) => println!("{fe}"),
             Err(e) => {
                 log::error!("Failed to FlopEval from table: {e}");
             }
@@ -954,7 +1007,7 @@ impl Table {
 
     pub fn eval_turn_display(&self) {
         match self.eval_turn() {
-            Ok(te) => println!("\n{te}"),
+            Ok(te) => println!("{te}"),
             Err(e) => {
                 log::error!("Failed to TurnEval from table: {e}");
             }
@@ -1009,6 +1062,32 @@ impl Table {
 
     pub fn get_seat_mut(&self, number: u8) -> Option<RefMut<'_, Seat>> {
         self.seats.get_seat_mut(number)
+    }
+
+    /// Returns a snapshot of the current game state.
+    ///
+    /// This provides a read-only view of all relevant information about the current
+    /// state of the game, including phase, players, pot, board, and betting information.
+    #[must_use]
+    pub fn get_game_state(&self) -> GameState {
+        let board_cards: Vec<Bard> = self.board.cards().iter().map(Bard::from).collect();
+
+        GameState {
+            table_id: self.id,
+            table_name: self.name.clone(),
+            game_type: self.game,
+            phase: self.get_phase(),
+            button_position: self.button.value(),
+            next_to_act: self.next_to_act(),
+            pot_size: self.pot.count(),
+            current_bet: self.bet.get(),
+            board_cards,
+            deck_remaining: self.deck.len(),
+            active_players: self.seats.count_active_in_hand(),
+            total_players: self.seats.size() as usize,
+            small_blind: self.forced.small_blind,
+            big_blind: self.forced.big_blind,
+        }
     }
 
     /// Returns `true` if the seat holds at least the `depth` number of dealt cards.
@@ -1259,7 +1338,7 @@ impl std::fmt::Display for Table {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Table: {} [{}]", self.name, self.id)?;
         writeln!(f, "Game: {:?}", self.game)?;
-        writeln!(f, "Phase: {:?}", self.phase)?;
+        writeln!(f, "Phase: {:?}", self.phase.borrow())?;
         writeln!(f, "Dealer Position: {}", self.button.value())?;
         writeln!(f, "Board {}", self.board)?;
         if !self.pot.is_empty() {
@@ -2149,7 +2228,7 @@ mod casino__table_tests {
 #[allow(non_snake_case)]
 mod casino__table___end_hand_tests {
     use super::*;
-    use crate::analysis::store::nubibus::pluribus::PluribusEvent;
+    use crate::analysis::nubibus::PluribusEvent;
     use crate::prelude::*;
     use crate::util::data::TestData;
     use wincounter::win::Win;
@@ -2574,12 +2653,14 @@ mod casino__table___end_hand_tests {
         assert_eq!(table.deck.len(), 52);
     }
 
+    /// These tests where created to isolate on specific issues uncovered when I finally was able
+    /// to drive the `Table` with `Pluribus` events.
     #[test]
     fn end_hand__pluribus_155_55() {
         let log: &str = "STATE:55:ffr200r700fcr2250ff:Kc7s|8s9s|Jc3d|5d9d|AhAc|JdTd:-50|-700|0|0|1450|-700:MrPink|MrBlue|Joe|Bill|Pluribus|MrOrange";
         let pluribus = Pluribus::from_str(log).expect("Pluribus failed");
         let table = Table::try_from(&pluribus).expect("can't parse pluribus log");
-        let mut actions = pluribus.parse_all_rounds();
+        let mut actions = pluribus.actions.clone();
 
         assert!(table.seats.are_dealt());
         assert!(!table.event_log.have_posted_blinds());
@@ -2599,7 +2680,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
             assert_eq!(2, table.next_to_act());
         }
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         {
             assert!(!table.seats.is_betting_complete());
             assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
@@ -2616,7 +2697,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
             assert_eq!(3, table.next_to_act());
         }
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         {
             assert!(!table.seats.is_betting_complete());
             assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
@@ -2634,7 +2715,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
             assert_eq!(4, table.next_to_act());
         }
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         {
             assert_eq!(200, table.get_seat(4).unwrap().player.bet.count());
             assert!(!table.seats.is_betting_complete());
@@ -2653,7 +2734,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
             assert_eq!(5, table.next_to_act());
         }
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         {
             assert_eq!(700, table.get_seat(5).unwrap().player.bet.count());
             assert!(!table.seats.is_betting_complete());
@@ -2672,7 +2753,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
             assert_eq!(0, table.next_to_act());
         }
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         {
             assert!(!table.seats.is_betting_complete());
             assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
@@ -2689,7 +2770,7 @@ mod casino__table___end_hand_tests {
             assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
             assert_eq!(1, table.next_to_act());
         }
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Call failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Call failed");
         {
             println!("{table}");
             assert!(!table.seats.is_betting_complete());
@@ -2709,7 +2790,7 @@ mod casino__table___end_hand_tests {
         }
         // 4 5 1 in hand
         println!("{table}");
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         {
             println!(">>{}", table.event_log.to_string());
             println!(">>> {table}");
@@ -2742,7 +2823,7 @@ mod casino__table___end_hand_tests {
         let log: &str = "STATE:193:r225fcffc/ccc/ccc/ccc:2s7d|7c9c|KcQs|2dQh|9h9s|Ac8d/5cKhJh/As/7s:-50|-225|500|0|-225|0:Eddie|MrOrange|Bill|MrBlue|Pluribus|MrPink";
         let pluribus = Pluribus::from_str(log).expect("Pluribus failed");
         let table = Table::try_from(&pluribus).expect("can't parse pluribus log");
-        let mut actions = pluribus.parse_all_rounds();
+        let mut actions = pluribus.actions.clone();
 
         assert!(table.seats.are_dealt());
         assert!(!table.event_log.have_posted_blinds());
@@ -2763,7 +2844,7 @@ mod casino__table___end_hand_tests {
                 assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
                 assert_eq!(2, table.next_to_act());
             }
-            Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+            Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
             {
                 assert_eq!(225, table.get_seat(2).unwrap().player.bet.count());
                 assert!(!table.seats.is_betting_complete());
@@ -2781,7 +2862,7 @@ mod casino__table___end_hand_tests {
                 assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
                 assert_eq!(3, table.next_to_act());
             }
-            Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+            Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
             {
                 assert!(!table.seats.is_betting_complete());
                 assert!(table.seats.are_dealt());
@@ -2799,7 +2880,7 @@ mod casino__table___end_hand_tests {
                 assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
                 assert_eq!(4, table.next_to_act());
             }
-            Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+            Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
             {
                 assert_eq!(225, table.get_seat(4).unwrap().player.bet.count());
                 assert!(!table.seats.is_betting_complete());
@@ -2818,7 +2899,7 @@ mod casino__table___end_hand_tests {
                 assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
                 assert_eq!(5, table.next_to_act());
             }
-            Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+            Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
             {
                 assert!(!table.seats.is_betting_complete());
                 assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
@@ -2836,7 +2917,7 @@ mod casino__table___end_hand_tests {
                 assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
                 assert_eq!(0, table.next_to_act());
             }
-            Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+            Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
             {
                 assert!(!table.seats.is_betting_complete());
                 assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
@@ -2854,7 +2935,7 @@ mod casino__table___end_hand_tests {
                 assert_eq!(GamePhase::BettingPreFlop, table.determine_game_phase());
                 assert_eq!(1, table.next_to_act());
             }
-            Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+            Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
             {
                 assert_eq!(225, table.get_seat(4).unwrap().player.bet.count());
                 assert!(table.get_seat(1).unwrap().player.state.is_call());
@@ -2883,12 +2964,12 @@ mod casino__table___end_hand_tests {
         assert!(!table.seats.is_betting_complete());
         let action: PluribusEvent = actions.pop_front().unwrap();
         assert_eq!(PluribusEvent::Call, action);
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Check failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Check failed");
         assert!(table.get_seat(1).unwrap().player.state.is_check());
         let action: PluribusEvent = actions.pop_front().unwrap();
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         let action: PluribusEvent = actions.pop_front().unwrap();
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
 
         {
             assert!(table.seats.is_betting_complete());
@@ -2932,11 +3013,11 @@ mod casino__table___end_hand_tests {
         assert!(!table.seats.is_betting_complete());
 
         let action: PluribusEvent = actions.pop_front().unwrap();
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Check failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Check failed");
         let action: PluribusEvent = actions.pop_front().unwrap();
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         let action: PluribusEvent = actions.pop_front().unwrap();
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
 
         {
             assert!(table.seats.is_betting_complete());
@@ -2978,11 +3059,11 @@ mod casino__table___end_hand_tests {
         }
 
         let action: PluribusEvent = actions.pop_front().unwrap();
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Check failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Check failed");
         let action: PluribusEvent = actions.pop_front().unwrap();
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
         let action: PluribusEvent = actions.pop_front().unwrap();
-        Pluribus::act(&table, &action, table.next_to_act()).expect("Fold failed");
+        Nubificus::act(&table, &action, table.next_to_act()).expect("Fold failed");
 
         table.act().expect("Act ready for river");
         {
@@ -2997,9 +3078,50 @@ mod casino__table___end_hand_tests {
 
         // STATE:193:r225fcffc/ccc/ccc/ccc:2s7d|7c9c|KcQs|2dQh|9h9s|Ac8d/5cKhJh/As/7s:-50|-225|500|0|-225|0:Eddie|MrOrange|Bill|MrBlue|Pluribus|MrPink
     }
-    #[test]
-    fn end_hand__pluribus_100_29() {
 
-        // STATE:29:fffr275fc/cc/cr725r1850f:Tc4h|5c6d|3cTs|9hKc|2c8h|Ks7s/7c3hJs/6h:-50|775|0|0|0|-725:Pluribus|MrBlue|MrBlonde|MrWhite|MrPink|MrBrown
+    #[test]
+    fn get_game_state() {
+        let table = Table::default();
+        let state = table.get_game_state();
+
+        assert_eq!(table.id, state.table_id);
+        assert_eq!("Default No Limit Hold'em Table", state.table_name);
+        assert_eq!(GameType::NoLimitHoldem, state.game_type);
+        assert_eq!(table.get_phase(), state.phase);
+        assert_eq!(0, state.button_position);
+        assert_eq!(0, state.pot_size);
+        assert_eq!(0, state.current_bet);
+        assert_eq!(0, state.board_cards.len());
+        assert_eq!(52, state.deck_remaining);
+        assert_eq!(6, state.total_players);
+        assert_eq!(50, state.small_blind);
+        assert_eq!(100, state.big_blind);
+    }
+
+    #[test]
+    fn get_game_state_with_board() {
+        use crate::card::Card;
+        use std::str::FromStr;
+
+        let table = Table::default();
+        // Add some cards to the board
+        let flop = vec![
+            Card::from_str("Ah").unwrap(),
+            Card::from_str("Kh").unwrap(),
+            Card::from_str("Qh").unwrap(),
+        ];
+        for card in flop {
+            table.board.insert(card);
+        }
+
+        let state = table.get_game_state();
+
+        assert_eq!(3, state.board_cards.len());
+        assert_eq!(52, state.deck_remaining);
+
+        // Verify display works
+        let display_output = format!("{}", state);
+        assert!(display_output.contains("Board:"));
+        assert!(display_output.contains("Pot: 0"));
     }
 }
