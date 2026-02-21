@@ -40,7 +40,7 @@ impl TurnEval {
 
             case_eval.push(eval);
 
-            trace!("Player {} {}: {}", i + 1, *player, eval);
+            trace!("Player {} {}: {}", i, *player, eval);
         }
         case_eval
     }
@@ -168,7 +168,7 @@ impl Display for TurnEval {
             if hole_cards.is_blank() {
                 continue;
             }
-            let player_id = i + 1;
+            let player_id = i;
             writeln!(
                 f,
                 "  Player #{} [{}] {}",

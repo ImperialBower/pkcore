@@ -568,10 +568,10 @@ impl Game {
 
                 for (i, eval) in case_eval.iter().enumerate() {
                     if eval.hand_rank == winning_hand_rank {
-                        println!("   Player #{}: {eval} has the best hand!", i + 1);
+                        println!("   Player #{i}: {eval} has the best hand!");
                     } else if eval.hand_rank.name == HandRankName::Invalid {
                     } else {
-                        println!("   Player #{}: {eval}", i + 1);
+                        println!("   Player #{i}: {eval}");
                     }
                 }
             }

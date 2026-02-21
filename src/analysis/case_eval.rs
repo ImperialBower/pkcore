@@ -585,7 +585,7 @@ impl std::fmt::Display for CaseEval {
         for (i, eval) in self.iter().enumerate() {
             let is_winner = (winners & (1 << i)) != 0;
             let marker = if is_winner { "* " } else { "  " };
-            writeln!(f, "{}Player {}: {}", marker, i + 1, eval)?;
+            writeln!(f, "{marker}Player {i}: {eval}")?;
         }
 
         writeln!(f, "Winning hand: {winning_rank}")?;
