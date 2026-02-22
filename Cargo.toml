@@ -36,7 +36,7 @@ wincounter = "0.1.5"
 [dev-dependencies]
 assert-struct = "0.2.0"
 clap = { version = "4.5", features = ["derive", "unicode"] }
-elr_primes = "0.1.2"
+clap-repl = "0.3.2"
 env_logger = "0.11.8"
 
 rstest = "0.26.1"
