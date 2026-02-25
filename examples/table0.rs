@@ -1,18 +1,24 @@
-use std::path::PathBuf;
 use clap::{Parser, ValueEnum};
-use clap_repl::reedline::{
-    DefaultPrompt, DefaultPromptSegment, FileBackedHistory, Reedline, Signal,
-};
 use clap_repl::ClapEditor;
+use clap_repl::reedline::{DefaultPrompt, DefaultPromptSegment, FileBackedHistory, Reedline, Signal};
 use pkcore::prelude::*;
+use std::path::PathBuf;
 
-/// `cargo run --example table1`
+/// A simple example of using `clap_repl` to create a REPL for a poker table.
+///
+/// -
+/// - [Writing a CLI Tool in Rust with Clap](https://www.shuttle.dev/blog/2023/12/08/clap-rust)
+/// `cargo run --example table0`
 #[derive(Debug, Parser)]
 #[command(name = "")] // This name will show up in clap's error messages, so it is important to set it to "".
 enum SampleCommand {
+    #[command(alias = "s")]
     Status,
-    Deck,
+    #[command(alias = "fb")]
+    Blinds,
+    #[command(alias = "dc")]
     Deal,
+    Deck,
     Download {
         path: PathBuf,
         /// Check the integrity of the downloaded object
@@ -54,7 +60,7 @@ fn main() {
     let table = TestData::the_hand_table();
 
     let prompt = DefaultPrompt {
-        left_prompt: DefaultPromptSegment::Basic("simple-example".to_owned()),
+        left_prompt: DefaultPromptSegment::Basic("table".to_owned()),
         ..DefaultPrompt::default()
     };
     let rl = ClapEditor::<SampleCommand>::builder()
@@ -62,8 +68,7 @@ fn main() {
         .with_editor_hook(|reed| {
             // Do custom things with `Reedline` instance here
             reed.with_history(Box::new(
-                FileBackedHistory::with_file(10000, "./generated/clap-repl-simple-example-history".into())
-                    .unwrap(),
+                FileBackedHistory::with_file(10000, "./generated/clap-repl-simple-example-history".into()).unwrap(),
             ))
         })
         .build();
@@ -75,6 +80,10 @@ fn main() {
             }
             SampleCommand::Deck => {
                 println!("Deck: {}", table.deck);
+            }
+            SampleCommand::Blinds => {
+                table.act_forced_bets().unwrap();
+                println!("Forced bets: {}", table.forced);
             }
             SampleCommand::Deal => {
                 if table.seats.are_dealt() {
@@ -93,8 +102,7 @@ fn main() {
             SampleCommand::Login { username, mode } => {
                 // You can use another `reedline::Reedline` inside the loop.
                 let mut rl = Reedline::create();
-                let username = username
-                    .unwrap_or_else(|| read_line_with_reedline(&mut rl, "What is your username? "));
+                let username = username.unwrap_or_else(|| read_line_with_reedline(&mut rl, "What is your username? "));
                 let password = read_line_with_reedline(&mut rl, "What is your password? ");
                 println!("Logged in with {username} and {password} in mode {mode:?}");
             }

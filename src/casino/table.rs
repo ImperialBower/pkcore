@@ -19,6 +19,7 @@ use crate::{PKError, Pile};
 use bint::{BintCell, DrainableBintCell};
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
+use termion::color;
 use uuid::Uuid;
 
 pub mod event;
@@ -44,11 +45,13 @@ pub struct GameState {
     pub pot_size: usize,
     pub current_bet: usize,
     pub board_cards: Vec<Bard>,
-    pub deck_remaining: usize,
     pub active_players: usize,
     pub total_players: usize,
-    pub small_blind: usize,
-    pub big_blind: usize,
+    pub forced_bets: ForcedBets,
+    pub has_blinded: bool,
+    pub has_hole_cards: bool,
+    pub round_complete: bool,
+    pub game_complete: bool,
 }
 
 impl std::fmt::Display for GameState {
@@ -73,9 +76,26 @@ impl std::fmt::Display for GameState {
 
         writeln!(f, "Pot: {}", self.pot_size)?;
         writeln!(f, "Current Bet: {}", self.current_bet)?;
-        writeln!(f, "Blinds: {}/{}", self.small_blind, self.big_blind)?;
+        writeln!(f, "Blinds: {}", self.forced_bets)?;
         writeln!(f, "Active Players: {}/{}", self.active_players, self.total_players)?;
-        writeln!(f, "Deck Remaining: {}", self.deck_remaining)?;
+
+        if !self.has_blinded {
+            writeln!(
+                f,
+                "{}Blinds have not been posted{}",
+                color::Fg(color::LightRed),
+                color::Fg(color::Reset)
+            )?;
+        }
+
+        if !self.has_hole_cards {
+            writeln!(
+                f,
+                "{}Players have not been dealt their cards{}",
+                color::Fg(color::LightRed),
+                color::Fg(color::Reset)
+            )?;
+        }
 
         Ok(())
     }
@@ -1082,11 +1102,13 @@ impl Table {
             pot_size: self.pot.count(),
             current_bet: self.bet.get(),
             board_cards,
-            deck_remaining: self.deck.len(),
             active_players: self.seats.count_active_in_hand(),
             total_players: self.seats.size() as usize,
-            small_blind: self.forced.small_blind,
-            big_blind: self.forced.big_blind,
+            forced_bets: self.forced,
+            has_hole_cards: self.seats.are_dealt(),
+            has_blinded: self.event_log.have_posted_blinds(),
+            round_complete: self.is_betting_complete(),
+            game_complete: self.is_game_over(),
         }
     }
 

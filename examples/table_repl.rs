@@ -2,9 +2,9 @@ use clap::{Parser, Subcommand};
 use clap_repl::ClapRepl;
 use pkcore::casino::cashier::chips::Stack;
 use pkcore::casino::game::ForcedBets;
+use pkcore::casino::table::Table;
 use pkcore::casino::table::seat::Seat;
 use pkcore::casino::table::seats::Seats;
-use pkcore::casino::table::Table;
 use pkcore::prelude::Player;
 use pkcore::{BoxedCards, PKError};
 use std::str::FromStr;
@@ -51,72 +51,50 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         match repl.read_command() {
             Ok(cmd) => match cmd.command {
-                Commands::Setup { players, sb, bb } => {
-                    match state.setup(players, sb, bb) {
-                        Ok(_) => println!("✓ Table created with {} players (SB: {}, BB: {})", players, sb, bb),
-                        Err(e) => eprintln!("✗ Error: {:?}", e),
-                    }
-                }
-                Commands::Deal => {
-                    match state.deal() {
-                        Ok(_) => println!("✓ Cards dealt to all players"),
-                        Err(e) => eprintln!("✗ Error: {:?}", e),
-                    }
-                }
-                Commands::Flop => {
-                    match state.flop() {
-                        Ok(cards) => println!("✓ Flop: {}", cards),
-                        Err(e) => eprintln!("✗ Error: {:?}", e),
-                    }
-                }
-                Commands::Turn => {
-                    match state.turn() {
-                        Ok(cards) => println!("✓ Turn: {}", cards),
-                        Err(e) => eprintln!("✗ Error: {:?}", e),
-                    }
-                }
-                Commands::River => {
-                    match state.river() {
-                        Ok(cards) => println!("✓ River: {}", cards),
-                        Err(e) => eprintln!("✗ Error: {:?}", e),
-                    }
-                }
-                Commands::Bet { seat, amount } => {
-                    match state.bet(seat, amount) {
-                        Ok(_) => println!("✓ Seat {} bets {}", seat, amount),
-                        Err(e) => eprintln!("✗ Error: {:?}", e),
-                    }
-                }
-                Commands::Call { seat } => {
-                    match state.call(seat) {
-                        Ok(amount) => println!("✓ Seat {} calls {}", seat, amount),
-                        Err(e) => eprintln!("✗ Error: {:?}", e),
-                    }
-                }
-                Commands::Raise { seat, amount } => {
-                    match state.raise(seat, amount) {
-                        Ok(_) => println!("✓ Seat {} raises to {}", seat, amount),
-                        Err(e) => eprintln!("✗ Error: {:?}", e),
-                    }
-                }
-                Commands::Check { seat } => {
-                    match state.check(seat) {
-                        Ok(_) => println!("✓ Seat {} checks", seat),
-                        Err(e) => eprintln!("✗ Error: {:?}", e),
-                    }
-                }
-                Commands::Fold { seat } => {
-                    match state.fold(seat) {
-                        Ok(_) => println!("✓ Seat {} folds", seat),
-                        Err(e) => eprintln!("✗ Error: {:?}", e),
-                    }
-                }
-                Commands::AllIn { seat } => {
-                    match state.allin(seat) {
-                        Ok(amount) => println!("✓ Seat {} goes all-in with {}", seat, amount),
-                        Err(e) => eprintln!("✗ Error: {:?}", e),
-                    }
-                }
+                Commands::Setup { players, sb, bb } => match state.setup(players, sb, bb) {
+                    Ok(_) => println!("✓ Table created with {} players (SB: {}, BB: {})", players, sb, bb),
+                    Err(e) => eprintln!("✗ Error: {:?}", e),
+                },
+                Commands::Deal => match state.deal() {
+                    Ok(_) => println!("✓ Cards dealt to all players"),
+                    Err(e) => eprintln!("✗ Error: {:?}", e),
+                },
+                Commands::Flop => match state.flop() {
+                    Ok(cards) => println!("✓ Flop: {}", cards),
+                    Err(e) => eprintln!("✗ Error: {:?}", e),
+                },
+                Commands::Turn => match state.turn() {
+                    Ok(cards) => println!("✓ Turn: {}", cards),
+                    Err(e) => eprintln!("✗ Error: {:?}", e),
+                },
+                Commands::River => match state.river() {
+                    Ok(cards) => println!("✓ River: {}", cards),
+                    Err(e) => eprintln!("✗ Error: {:?}", e),
+                },
+                Commands::Bet { seat, amount } => match state.bet(seat, amount) {
+                    Ok(_) => println!("✓ Seat {} bets {}", seat, amount),
+                    Err(e) => eprintln!("✗ Error: {:?}", e),
+                },
+                Commands::Call { seat } => match state.call(seat) {
+                    Ok(amount) => println!("✓ Seat {} calls {}", seat, amount),
+                    Err(e) => eprintln!("✗ Error: {:?}", e),
+                },
+                Commands::Raise { seat, amount } => match state.raise(seat, amount) {
+                    Ok(_) => println!("✓ Seat {} raises to {}", seat, amount),
+                    Err(e) => eprintln!("✗ Error: {:?}", e),
+                },
+                Commands::Check { seat } => match state.check(seat) {
+                    Ok(_) => println!("✓ Seat {} checks", seat),
+                    Err(e) => eprintln!("✗ Error: {:?}", e),
+                },
+                Commands::Fold { seat } => match state.fold(seat) {
+                    Ok(_) => println!("✓ Seat {} folds", seat),
+                    Err(e) => eprintln!("✗ Error: {:?}", e),
+                },
+                Commands::AllIn { seat } => match state.allin(seat) {
+                    Ok(amount) => println!("✓ Seat {} goes all-in with {}", seat, amount),
+                    Err(e) => eprintln!("✗ Error: {:?}", e),
+                },
                 Commands::Show => {
                     state.show();
                 }
@@ -126,12 +104,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Commands::Log => {
                     state.show_log();
                 }
-                Commands::Reset => {
-                    match state.reset() {
-                        Ok(_) => println!("✓ Betting round reset"),
-                        Err(e) => eprintln!("✗ Error: {:?}", e),
-                    }
-                }
+                Commands::Reset => match state.reset() {
+                    Ok(_) => println!("✓ Betting round reset"),
+                    Err(e) => eprintln!("✗ Error: {:?}", e),
+                },
                 Commands::Next => {
                     state.show_next_to_act();
                 }
@@ -142,7 +118,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     println!("Goodbye! 👋");
                     break;
                 }
-            }
+            },
             Err(e) => {
                 eprintln!("Error: {}", e);
             }
@@ -429,4 +405,3 @@ impl TableState {
         }
     }
 }
-
