@@ -3114,10 +3114,15 @@ mod casino__table___end_hand_tests {
         assert_eq!(0, state.pot_size);
         assert_eq!(0, state.current_bet);
         assert_eq!(0, state.board_cards.len());
-        assert_eq!(52, state.deck_remaining);
         assert_eq!(6, state.total_players);
-        assert_eq!(50, state.small_blind);
-        assert_eq!(100, state.big_blind);
+        assert_eq!(
+            ForcedBets {
+                small_blind: 50,
+                big_blind: 100,
+                ante: 0,
+            },
+            state.forced_bets
+        );
     }
 
     #[test]
@@ -3139,7 +3144,6 @@ mod casino__table___end_hand_tests {
         let state = table.get_game_state();
 
         assert_eq!(3, state.board_cards.len());
-        assert_eq!(52, state.deck_remaining);
 
         // Verify display works
         let display_output = format!("{}", state);

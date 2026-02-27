@@ -29,12 +29,11 @@ fn main() {
     println!("Current Phase: {}", state.phase);
     println!("Button Position: Seat {}", state.button_position);
     println!("Next to Act: Seat {}", state.next_to_act);
-    println!("Blinds: {}/{}", state.small_blind, state.big_blind);
+    println!("Blinds: {}", state.forced_bets);
     println!(
         "Players: {} active out of {} total",
         state.active_players, state.total_players
     );
-    println!("Deck: {} cards remaining", state.deck_remaining);
 
     // Simulate some game actions
     println!("\n=== Simulating Game Progress ===\n");
