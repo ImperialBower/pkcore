@@ -1,7 +1,7 @@
 use pkcore::PKError;
+use pkcore::play::stages::deal_eval::DealEval;
 use pkcore::prelude::HoleCards;
 use pkcore::util::terminal::Terminal;
-use wincounter::results::WinResults;
 
 /// OK, this makes me sad. My new shiny pkcore library takes over twice as long to run a single calc
 ///
@@ -47,11 +47,13 @@ fn read_input() {
 fn work(hands: HoleCards) -> Result<(), PKError> {
     let now = std::time::Instant::now();
 
+    let results = DealEval::new(hands);
+
     // let case_events = hands.bcm_case_evals()?;
     // let case_events = hands.bcm_case_evals()?;
-    let case_events = hands.bcm_rayon_case_evals()?;
-    let wins = case_events.wins();
-    let results = WinResults::from_wins(&wins, hands.len());
+    // let case_events = hands.bcm_rayon_case_evals()?;
+    // let wins = case_events.wins();
+    // let results = WinResults::from_wins(&wins, hands.len());
     println!("{results}");
 
     println!("Elapsed: {:.2?}", now.elapsed());

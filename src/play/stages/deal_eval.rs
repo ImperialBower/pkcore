@@ -1,8 +1,15 @@
 use crate::analysis::case_evals::CaseEvals;
 use crate::play::hole_cards::HoleCards;
+use std::fmt::Formatter;
 use wincounter::results::WinResults;
 use wincounter::wins::Wins;
 
+/// Originally part of our calc example program. When my examples have functionality
+/// that I want to use in other places, I move it into the lib. I can definitely
+/// see a later refactoring where we move the display functionality to its own home.
+///
+/// Then moved to the `Game` struct, and now moved to here to clean up the code.
+///
 /// OK, now that I've cracked (to a certain extent) the issue with the sluggishness of the
 /// flop evaluation, I'm going to try using the same technique with evaluating the odds
 /// pre-flop. The hope is that I can find some common patterns that will open up some refactoring
@@ -37,11 +44,6 @@ impl DealEval {
     }
 }
 
-/// Originally part of our calc example program. When my examples have functionality
-/// that I want to use in other places, I move it into the lib. I can definitely
-/// see a later refactoring where we move the display functionality to its own home.
-///
-/// Then moved to the `Game` struct, and now moved to here to clean up the code.
 // impl std::fmt::Display for DealEval {
 //     /// TODO: Even spacing for each result string.
 //     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -51,6 +53,18 @@ impl DealEval {
 //         write!(f, "{}", v.join("\n"))
 //     }
 // }
+
+impl std::fmt::Display for DealEval {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut v = Vec::new();
+
+        for (i, hand) in self.hands.iter().enumerate() {
+            v.push(format!("Player #{}: {hand} {}", i, self.results.player_to_string(i)));
+        }
+
+        write!(f, "{}", v.join("\n"))
+    }
+}
 
 #[cfg(test)]
 #[allow(non_snake_case)]
