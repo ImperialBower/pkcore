@@ -1,4 +1,5 @@
 use crate::analysis::case_eval::CaseEval;
+use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
 use crate::arrays::HandRanker;
 use crate::arrays::five::Five;
@@ -12,6 +13,7 @@ use crate::util::Util;
 use crate::{Card, PKError, Pile, Plurable, TheNuts};
 use itertools::Itertools;
 use log::error;
+use rayon::iter::ParallelIterator;
 use std::fmt;
 use std::slice::Iter;
 use std::str::FromStr;
@@ -191,6 +193,31 @@ impl HoleCards {
                 case_eval.push(Seven::from_case_and_board(hand, board).eval());
             }
         }
+        case_eval
+    }
+
+    /// # Errors
+    ///
+    /// `PKError` if unable to convert any five `Cards` combination.
+    pub fn bcm_rayon_case_evals(&self) -> Result<CaseEvals, PKError> {
+        let hands = self.clone();
+        let v: Vec<CaseEval> = self
+            .par_combinations_remaining(5)
+            .filter_map(|v| Five::try_from(v).ok().map(|five| hands.bcm_case_eval(five)))
+            .collect();
+        Ok(CaseEvals::from(v))
+    }
+
+    fn bcm_case_eval(&self, case: Five) -> CaseEval {
+        let mut case_eval = CaseEval::default();
+
+        for player in self.iter() {
+            if let Ok(seven) = Seven::from_case_at_deal(*player, case) {
+                let eval = Eval::from(seven);
+                case_eval.push(eval);
+            }
+        }
+
         case_eval
     }
 }

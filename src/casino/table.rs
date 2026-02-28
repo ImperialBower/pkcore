@@ -35,6 +35,7 @@ pub mod seats;
 /// the phase, players, pot size, board cards, and other details needed to understand
 /// the current state of the hand.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct GameState {
     pub table_id: Uuid,
     pub table_name: String,
