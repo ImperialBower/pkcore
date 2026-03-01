@@ -4,6 +4,7 @@ use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::prelude::TheNuts;
 use crate::{PKError, Pile};
+use cardpack::prelude::{BasicPile, Pile as CPile, Standard52};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
@@ -335,6 +336,17 @@ impl Bard {
     #[must_use]
     pub fn as_guided_string(&self) -> String {
         format!("{}\n{self}", Bard::GUIDE)
+    }
+
+    /// Created for the `From<&Table> for pkstate::PKState` implementation.
+    #[must_use]
+    pub fn to_pile(&self) -> Option<BasicPile> {
+        let s = Cards::from(*self).to_string();
+        if s.trim().is_empty() {
+            None
+        } else {
+            CPile::<Standard52>::from_str(&s).ok().map(|p| BasicPile::from(&p))
+        }
     }
 }
 
