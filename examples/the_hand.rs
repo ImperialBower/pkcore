@@ -1,6 +1,7 @@
 use pkcore::PKError;
 use pkcore::casino::table::Table;
 use pkcore::util::data::TestData;
+use serde_yaml_bw;
 
 /// Here's a recreation of "The Hand" between Daniel Negreanu and Gus Hansen, using strict
 /// assertions to validate that the `Table` engine is working correctly.
@@ -31,6 +32,12 @@ fn main() -> Result<(), PKError> {
     if input.trim().eq_ignore_ascii_case("y") {
         // table.commentary_dump();
         println!("{}", table.event_log.to_string());
+    }
+
+    let pk_state = pkstate::PKState::from(&table);
+    match serde_yaml_bw::to_string(&pk_state) {
+        Ok(yaml) => println!("\n=== PKState YAML ===\n{yaml}"),
+        Err(e) => eprintln!("Failed to serialize PKState: {e}"),
     }
 
     Ok(())

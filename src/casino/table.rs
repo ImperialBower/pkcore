@@ -19,6 +19,7 @@ use crate::{PKError, Pile};
 use bint::{BintCell, DrainableBintCell};
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
+use std::str::FromStr;
 use termion::color;
 use uuid::Uuid;
 
@@ -1395,6 +1396,205 @@ impl TryFrom<&Pluribus> for Table {
         }
 
         Ok(table)
+    }
+}
+
+impl From<&Table> for pkstate::PKState {
+    /// Converts a [`Table`] snapshot into a [`pkstate::PKState`].
+    ///
+    /// Players are taken from the seats in order. The event log is walked once and
+    /// split into [`pkstate::act::Round`]s whenever a street-dealing action is seen
+    /// (`DealtFlop`, `DealtTurn`, `DealtRiver`). Every `Dealt`, `Check`, `Bet`,
+    /// `Call`, `Raise`, `AllIn`, `Fold`, `PlayerWins`, and `PlayerLoses` action is
+    /// mapped to its corresponding [`pkstate::act::Action`] variant.
+    fn from(table: &Table) -> Self {
+        use cardpack::prelude::{BasicPile, Pile as CPile, Standard52};
+        use pkstate::act::{Action, Round};
+        use pkstate::game::ForcedBets as PKForcedBets;
+        use pkstate::seat::Seat as PKSeat;
+
+        // ── players ──────────────────────────────────────────────────────────
+        let players: Vec<PKSeat> = table
+            .seats
+            .iter()
+            .map(|sc| {
+                let s = sc.borrow();
+                PKSeat {
+                    id: Some(s.player.id.to_string()),
+                    name: s.player.handle.clone(),
+                    stack: s.player.chips.count(),
+                }
+            })
+            .collect();
+
+        // ── forced bets ───────────────────────────────────────────────────────
+        let forced_bets = PKForcedBets::new(table.forced.small_blind, table.forced.big_blind);
+
+        // ── board ─────────────────────────────────────────────────────────────
+        let board_str = table.board.to_string();
+        let board: Option<BasicPile> = if board_str.trim().is_empty() {
+            None
+        } else {
+            CPile::<Standard52>::from_str(&board_str)
+                .ok()
+                .map(|p| BasicPile::from(&p))
+        };
+
+        // ── helper: Bard → BasicPile ──────────────────────────────────────────
+        fn bard_to_pile(bard: Bard) -> Option<BasicPile> {
+            let s = Cards::from(bard).to_string();
+            if s.trim().is_empty() {
+                None
+            } else {
+                CPile::<Standard52>::from_str(&s)
+                    .ok()
+                    .map(|p| BasicPile::from(&p))
+            }
+        }
+
+        /// Map (seat, Bard) → the correct PnDealt variant for seats 0-11.
+        fn dealt_action(seat: u8, bard: Bard) -> Option<Action> {
+            let pile = bard_to_pile(bard)?;
+            match seat {
+                0 => Some(Action::P0Dealt(pile)),
+                1 => Some(Action::P1Dealt(pile)),
+                2 => Some(Action::P2Dealt(pile)),
+                3 => Some(Action::P3Dealt(pile)),
+                4 => Some(Action::P4Dealt(pile)),
+                5 => Some(Action::P5Dealt(pile)),
+                6 => Some(Action::P6Dealt(pile)),
+                7 => Some(Action::P7Dealt(pile)),
+                8 => Some(Action::P8Dealt(pile)),
+                9 => Some(Action::P9Dealt(pile)),
+                10 => Some(Action::P10Dealt(pile)),
+                11 => Some(Action::P11Dealt(pile)),
+                _ => None,
+            }
+        }
+
+        // ── rounds (walk the event log) ───────────────────────────────────────
+        let mut rounds: Vec<Round> = Vec::new();
+        let mut current: Vec<Action> = Vec::new();
+
+        for action in table.event_log.entries() {
+            match action {
+                // ── street boundaries: push the current round and start a new one ──
+                TableAction::DealtFlop(bard) => {
+                    if !current.is_empty() {
+                        rounds.push(Round(std::mem::take(&mut current)));
+                    }
+                    if let Some(pile) = bard_to_pile(bard) {
+                        current.push(Action::DealCommon(pile));
+                    }
+                }
+                TableAction::DealtTurn(bard) | TableAction::DealtRiver(bard) => {
+                    if !current.is_empty() {
+                        rounds.push(Round(std::mem::take(&mut current)));
+                    }
+                    if let Some(pile) = bard_to_pile(bard) {
+                        current.push(Action::DealCommon(pile));
+                    }
+                }
+
+                // ── hole cards ────────────────────────────────────────────────────
+                TableAction::Dealt(seat, bard) | TableAction::ForceDealt(seat, bard) => {
+                    if let Some(a) = dealt_action(seat, bard) {
+                        current.push(a);
+                    }
+                }
+
+                // ── player actions ────────────────────────────────────────────────
+                TableAction::Check(seat) => {
+                    if let Some(a) = match seat {
+                        0 => Some(Action::P0Check),  1 => Some(Action::P1Check),
+                        2 => Some(Action::P2Check),  3 => Some(Action::P3Check),
+                        4 => Some(Action::P4Check),  5 => Some(Action::P5Check),
+                        6 => Some(Action::P6Check),  7 => Some(Action::P7Check),
+                        8 => Some(Action::P8Check),  9 => Some(Action::P9Check),
+                        10 => Some(Action::P10Check), 11 => Some(Action::P11Check),
+                        _ => None,
+                    } { current.push(a); }
+                }
+                TableAction::Bet(seat, amount)
+                | TableAction::Call(seat, amount)
+                | TableAction::Raise(seat, amount)
+                | TableAction::AllIn(seat, amount)
+                | TableAction::ForcedBetSmallBlind(seat, amount)
+                | TableAction::ForcedBetBigBlind(seat, amount) => {
+                    if let Some(a) = match seat {
+                        0 => Some(Action::P0CBR(amount)),  1 => Some(Action::P1CBR(amount)),
+                        2 => Some(Action::P2CBR(amount)),  3 => Some(Action::P3CBR(amount)),
+                        4 => Some(Action::P4CBR(amount)),  5 => Some(Action::P5CBR(amount)),
+                        6 => Some(Action::P6CBR(amount)),  7 => Some(Action::P7CBR(amount)),
+                        8 => Some(Action::P8CBR(amount)),  9 => Some(Action::P9CBR(amount)),
+                        10 => Some(Action::P10CBR(amount)), 11 => Some(Action::P11CBR(amount)),
+                        _ => None,
+                    } { current.push(a); }
+                }
+                TableAction::Fold(seat) => {
+                    if let Some(a) = match seat {
+                        0 => Some(Action::P0Fold),  1 => Some(Action::P1Fold),
+                        2 => Some(Action::P2Fold),  3 => Some(Action::P3Fold),
+                        4 => Some(Action::P4Fold),  5 => Some(Action::P5Fold),
+                        6 => Some(Action::P6Fold),  7 => Some(Action::P7Fold),
+                        8 => Some(Action::P8Fold),  9 => Some(Action::P9Fold),
+                        10 => Some(Action::P10Fold), 11 => Some(Action::P11Fold),
+                        _ => None,
+                    } { current.push(a); }
+                }
+
+                // ── results ───────────────────────────────────────────────────────
+                TableAction::PlayerWins(seat, _, _, amount, _)
+                | TableAction::PlayerWinsMainPot(seat, amount)
+                | TableAction::PlayerWinsSidePot(seat, amount) => {
+                    if let Some(a) = match seat {
+                        0 => Some(Action::P0Wins(amount)),  1 => Some(Action::P1Wins(amount)),
+                        2 => Some(Action::P2Wins(amount)),  3 => Some(Action::P3Wins(amount)),
+                        4 => Some(Action::P4Wins(amount)),  5 => Some(Action::P5Wins(amount)),
+                        6 => Some(Action::P6Wins(amount)),  7 => Some(Action::P7Wins(amount)),
+                        8 => Some(Action::P8Wins(amount)),  9 => Some(Action::P9Wins(amount)),
+                        10 => Some(Action::P10Wins(amount)), 11 => Some(Action::P11Wins(amount)),
+                        _ => None,
+                    } { current.push(a); }
+                }
+                TableAction::PlayerLoses(seat, _, _, amount)
+                | TableAction::PlayerLosesMainPot(seat, amount)
+                | TableAction::PlayerLosesSidePot(seat, amount) => {
+                    if let Some(a) = match seat {
+                        0 => Some(Action::P0Loses(amount)),  1 => Some(Action::P1Loses(amount)),
+                        2 => Some(Action::P2Loses(amount)),  3 => Some(Action::P3Loses(amount)),
+                        4 => Some(Action::P4Loses(amount)),  5 => Some(Action::P5Loses(amount)),
+                        6 => Some(Action::P6Loses(amount)),  7 => Some(Action::P7Loses(amount)),
+                        8 => Some(Action::P8Loses(amount)),  9 => Some(Action::P9Loses(amount)),
+                        10 => Some(Action::P10Loses(amount)), 11 => Some(Action::P11Loses(amount)),
+                        _ => None,
+                    } { current.push(a); }
+                }
+
+                _ => {}
+            }
+        }
+
+        if !current.is_empty() {
+            rounds.push(Round(current));
+        }
+
+        pkstate::PKState {
+            id: Some(table.id.to_string()),
+            datetime: None,
+            game: pkstate::game::GameType::NoLimitHoldem,
+            button: table.button.value() as usize,
+            forced_bets,
+            board,
+            players,
+            rounds,
+        }
+    }
+}
+
+impl From<Table> for pkstate::PKState {
+    fn from(table: Table) -> Self {
+        pkstate::PKState::from(&table)
     }
 }
 
@@ -3150,5 +3350,38 @@ mod casino__table___end_hand_tests {
         let display_output = format!("{}", state);
         assert!(display_output.contains("Board:"));
         assert!(display_output.contains("Pot: 0"));
+    }
+
+    #[test]
+    fn from__table_ref__pkstate() {
+        let table = Table::default();
+        let pk = pkstate::PKState::from(&table);
+
+        assert_eq!(table.id.to_string(), pk.id.unwrap());
+        assert_eq!(6, pk.players.len());
+        assert_eq!(pkstate::game::GameType::NoLimitHoldem, pk.game);
+        assert_eq!(50, pk.forced_bets.small);
+        assert_eq!(100, pk.forced_bets.big);
+        assert!(pk.board.is_none());
+        assert!(pk.rounds.is_empty());
+    }
+
+    #[test]
+    fn from__table_ref__pkstate__with_actions() {
+        let table = TestData::min_table();
+        table.deal_cards_to_seats().unwrap();
+        table.act_forced_bets().unwrap();
+        let _ = table.act_bet(2, 5000);
+        let _ = table.act_fold(0);
+        let _ = table.act_call(1);
+        let _ = table.bring_it_in();
+        table.deal_flop().unwrap();
+
+        let pk = pkstate::PKState::from(&table);
+
+        // Preflop round + flop round started
+        assert!(!pk.rounds.is_empty());
+        // Players are populated
+        assert_eq!(3, pk.players.len());
     }
 }

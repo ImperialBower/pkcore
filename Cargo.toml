@@ -13,6 +13,7 @@ exclude = [".github/workflows/*", "examples/*", ".gitignore", "Cargo.lock"]
 
 [dependencies]
 bint = "0.1.15"
+cardpack = "0.6.9"
 bitvec = { version = "1.0.1", features = ["alloc",  "atomic", "std", "serde", "testing" ] }
 csv = "1.4"
 dotenvy = "0.15"
@@ -20,6 +21,7 @@ indexmap = { version = "2.12", features = ["rayon"] }
 itertools = "0.14"
 log = "0.4"
 percent-encoding = "2.3"
+pkstate = "0.1.0"
 rand = "0.9"
 random_name_generator = "0.3.6" 
 rayon = "1.10.0"
@@ -35,6 +37,7 @@ wincounter = "0.1.5"
 
 [dev-dependencies]
 assert-struct = "0.2.0"
+serde_yaml_bw = "2.5.2"
 clap = { version = "4.5", features = ["derive", "unicode"] }
 clap-repl = "0.3.2"
 elr_primes = "0.1.2"
