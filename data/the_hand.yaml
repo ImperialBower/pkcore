@@ -1,0 +1,118 @@
+---
+# The Hand
+# Based on High Stakes Poker Season 4 Episode 8 (Harman/Safai variant)
+# 8-handed No-Limit Texas Hold'em
+# Board: 9♣ 6♦ 5♥ 5♠ 8♠
+# Gus Hansen (5♦ 5♣) makes quads and beats Daniel Negreanu (6♠ 6♥)
+
+table:
+  game_type: NLH
+  button_position: 0
+  forced_bets:
+    small_blind: 50
+    big_blind: 100
+    ante: 0
+
+seats:
+  - seat: 0
+    player: Doyle Brunson
+    starting_chips: 1000000
+    hole_cards: "T♠ 2♥"
+  - seat: 1
+    player: Eli Elezra
+    starting_chips: 1000000
+    hole_cards: "8♣ 3♥"
+  - seat: 2
+    player: Antonio Esfandiari
+    starting_chips: 1000000
+    hole_cards: "A♦ Q♣"
+  - seat: 3
+    player: Gus Hansen
+    starting_chips: 1000000
+    hole_cards: "5♦ 5♣"
+  - seat: 4
+    player: Daniel Negreanu
+    starting_chips: 1000000
+    hole_cards: "6♠ 6♥"
+  - seat: 5
+    player: Cory Zeidman
+    starting_chips: 1000000
+    hole_cards: "K♠ J♦"
+  - seat: 6
+    player: Barry Greenstein
+    starting_chips: 1000000
+    hole_cards: "4♦ 4♣"
+  - seat: 7
+    player: Amnon Filippi
+    starting_chips: 1000000
+    hole_cards: "7♣ 2♦"
+
+board:
+  flop: "9♣ 6♦ 5♥"
+  turn: "5♠"
+  river: "8♠"
+
+actions:
+  preflop:
+    pot_after_street: 10150
+    actions:
+      - { seat: 1, action: small_blind, amount: 50 }
+      - { seat: 2, action: big_blind,   amount: 100 }
+      - { seat: 3, action: bet,         amount: 2100 }
+      - { seat: 4, action: raise,       amount: 5000 }
+      - { seat: 5, action: fold }
+      - { seat: 6, action: fold }
+      - { seat: 7, action: fold }
+      - { seat: 0, action: fold }
+      - { seat: 1, action: fold }
+      - { seat: 2, action: fold }
+      - { seat: 3, action: call,        amount: 5000 }
+
+  flop:
+    cards: "9♣ 6♦ 5♥"
+    pot_after_street: 62150
+    actions:
+      - { seat: 3, action: check }
+      - { seat: 4, action: bet,         amount: 8000 }
+      - { seat: 3, action: raise,       amount: 26000 }
+      - { seat: 4, action: call,        amount: 26000 }
+
+  turn:
+    card: "5♠"
+    pot_after_street: 110150
+    actions:
+      - { seat: 3, action: bet,         amount: 24000 }
+      - { seat: 4, action: call,        amount: 24000 }
+
+  river:
+    card: "8♠"
+    pot_after_street: 2000150
+    actions:
+      - { seat: 3, action: check }
+      - { seat: 4, action: bet,         amount: 65000 }
+      - { seat: 3, action: all_in,      amount: 945000 }
+      - { seat: 4, action: call,        amount: 945000 }
+
+result:
+  winners:
+    - seat: 3
+      player: "Gus Hansen"
+      hand: "5♦ 5♣ 5♥ 5♠ 9♣"
+      hand_rank: "Four of a Kind (Fives)"
+      chips_won: 2000150
+  losers:
+    - seat: 4
+      player: "Daniel Negreanu"
+      hand: "6♠ 6♥ 9♣ 6♦ 5♥"
+      hand_rank: "Full House (Sixes full of Fives)"
+      chips_won: 0
+  ending_chips:
+    - { seat: 0, player: "Doyle Brunson",      chips: 1000000 }
+    - { seat: 1, player: "Eli Elezra",         chips: 999950  }
+    - { seat: 2, player: "Antonio Esfandiari", chips: 1000050 }
+    - { seat: 3, player: "Gus Hansen",         chips: 2000150 }
+    - { seat: 4, player: "Daniel Negreanu",    chips: 0       }
+    - { seat: 5, player: "Cory Zeidman",       chips: 1000000 }
+    - { seat: 6, player: "Barry Greenstein",   chips: 1000000 }
+    - { seat: 7, player: "Amnon Filippi",      chips: 1000000 }
+
