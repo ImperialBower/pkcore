@@ -30,7 +30,7 @@ use uuid::Uuid;
 pub mod event;
 pub mod position;
 pub mod pot;
-mod result;
+pub mod result;
 pub mod seat;
 pub mod seats;
 
