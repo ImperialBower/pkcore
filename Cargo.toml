@@ -40,6 +40,7 @@ assert-struct = "0.2.0"
 serde_yaml_bw = "2.5.2"
 clap = { version = "4.5", features = ["derive", "unicode"] }
 clap-repl = "0.3.2"
+reedline = "0.38.0"
 elr_primes = "0.1.2"
 env_logger = "0.11.8"
 
