@@ -1992,10 +1992,11 @@ mod casino__table_tests {
         let table = Table::default();
         assert_eq!("Default No Limit Hold'em Table", table.name);
         assert_eq!(GameType::NoLimitHoldem, table.game);
-        // assert_eq!(GamePhase::NewHand, table.phase.);
         assert_eq!(6, table.seats.size());
         assert_eq!(0, table.button.value());
-        assert_eq!(0, table.next_to_act());
+        // With no real players seated, next_to_act falls back to determine_utg()
+        // which is button+3 = seat 3 on a default 6-seat table.
+        assert_eq!(table.determine_utg(), table.next_to_act());
         assert_eq!(52, table.deck.len());
         assert_eq!(0, table.board.len());
         assert_eq!(0, table.muck.len());

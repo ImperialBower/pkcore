@@ -783,4 +783,96 @@ mod casino__dealer_tests {
         let s = dealer.to_string();
         assert!(s.contains("Dealer managing table"));
     }
+
+    #[test]
+    fn run_through() {
+        // Use a 2-seat table so there are no empty seats to confuse next_to_act.
+        let mut dealer = Dealer::new(ForcedBets::new(50, 100), 2);
+        dealer
+            .seat_player(Player::new_with_chips("Alice".to_string(), 10_000))
+            .unwrap();
+        dealer
+            .seat_player(Player::new_with_chips("Bob".to_string(), 10_000))
+            .unwrap();
+        dealer.start_hand().unwrap();
+
+        // ── Preflop ──────────────────────────────────────────────────────────
+        // SB is first to act preflop; BB has already posted.
+        // SB calls, BB checks → betting complete.
+        let p1 = dealer.next_to_act();
+        dealer.act(DealerAction::Call { seat: p1 }).unwrap();
+
+        let p2 = dealer.next_to_act();
+        dealer.act(DealerAction::Check { seat: p2 }).unwrap();
+
+        // Consolidate preflop bets and deal the flop.
+        dealer.advance_street().unwrap();
+        assert_eq!(3, dealer.table.board.len(), "flop should have 3 cards");
+
+        // ── Flop ─────────────────────────────────────────────────────────────
+        // First player checks, second player bets, first player folds.
+        let p1 = dealer.next_to_act();
+        dealer.act(DealerAction::Check { seat: p1 }).unwrap();
+
+        let p2 = dealer.next_to_act();
+        dealer
+            .act(DealerAction::Bet { seat: p2, amount: 200 })
+            .unwrap();
+
+        let p1 = dealer.next_to_act();
+        dealer.act(DealerAction::Fold { seat: p1 }).unwrap();
+
+        // Only one player left → hand is over.
+        assert!(dealer.table.is_game_over(), "hand should be over after fold");
+
+        let result = dealer.end_hand().unwrap();
+        assert!(!dealer.is_hand_in_progress());
+        assert!(result.log.len() > 0, "should have result entries");
+    }
+
+    #[test]
+    fn run_through_2_with_4() {
+        // Use a 2-seat table so there are no empty seats to confuse next_to_act.
+        let mut dealer = Dealer::new(ForcedBets::new(50, 100), 4);
+        dealer
+            .seat_player(Player::new_with_chips("Alice".to_string(), 10_000))
+            .unwrap();
+        dealer
+            .seat_player_at(Player::new_with_chips("Bob".to_string(), 10_000), 3)
+            .unwrap();
+        dealer.start_hand().unwrap();
+
+        // ── Preflop ──────────────────────────────────────────────────────────
+        // SB is first to act preflop; BB has already posted.
+        // SB calls, BB checks → betting complete.
+        let p1 = dealer.next_to_act();
+        dealer.act(DealerAction::Call { seat: p1 }).unwrap();
+
+        let p2 = dealer.next_to_act();
+        dealer.act(DealerAction::Check { seat: p2 }).unwrap();
+
+        // Consolidate preflop bets and deal the flop.
+        dealer.advance_street().unwrap();
+        assert_eq!(3, dealer.table.board.len(), "flop should have 3 cards");
+
+        // ── Flop ─────────────────────────────────────────────────────────────
+        // First player checks, second player bets, first player folds.
+        let p1 = dealer.next_to_act();
+        dealer.act(DealerAction::Check { seat: p1 }).unwrap();
+
+        let p2 = dealer.next_to_act();
+        dealer
+            .act(DealerAction::Bet { seat: p2, amount: 200 })
+            .unwrap();
+
+        let p1 = dealer.next_to_act();
+        dealer.act(DealerAction::Fold { seat: p1 }).unwrap();
+
+        // Only one player left → hand is over.
+        assert!(dealer.table.is_game_over(), "hand should be over after fold");
+
+        let result = dealer.end_hand().unwrap();
+        assert!(!dealer.is_hand_in_progress());
+        assert!(result.log.len() > 0, "should have result entries");
+    }
 }

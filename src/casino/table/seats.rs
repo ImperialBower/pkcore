@@ -610,6 +610,12 @@ impl Seats {
             log::trace!("Checking seat #{seat_index} for next to act.");
             let state = &seat.player.state;
 
+            // Skip seats with no real player seated (nil UUID).
+            if seat.is_empty() {
+                log::trace!("Seat #{seat_index} is empty, skipping.");
+                continue;
+            }
+
             if !seat.is_in_hand() || seat.is_all_in() {
                 log::trace!("Seat #{seat_index} is out of the hand.");
                 continue;
@@ -635,6 +641,9 @@ impl Seats {
         // Edge case where all action is complete for the round, but the bets haven't been
         // brought in.
         for seat in self.iter_from(utg) {
+            if seat.is_empty() {
+                continue;
+            }
             if !seat.is_in_hand() || seat.is_all_in() {
                 continue;
             }
