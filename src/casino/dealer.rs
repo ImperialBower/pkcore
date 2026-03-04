@@ -365,7 +365,7 @@ impl Dealer {
     /// - [`DealerError::IllegalAction`] — the hand is not finished yet.
     /// - [`DealerError::TableError`] — a table operation failed.
     pub fn end_hand(&mut self) -> Result<HandResult, DealerError> {
-        if !self.hand_in_progress { 
+        if !self.hand_in_progress {
             return Err(DealerError::HandNotStarted);
         }
 

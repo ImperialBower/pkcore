@@ -39,10 +39,7 @@ use reedline::{DefaultPrompt, DefaultPromptSegment, FileBackedHistory};
 // ── Commands ─────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Parser)]
-#[command(
-    name = "",
-    about = "pkcore Dealer REPL — drive a poker hand from the command line"
-)]
+#[command(name = "", about = "pkcore Dealer REPL — drive a poker hand from the command line")]
 enum Command {
     /// Seat a new player. Chips default to 10 000 if omitted.
     ///
@@ -205,11 +202,7 @@ fn main() {
         .with_prompt(Box::new(prompt))
         .with_editor_hook(|reed| {
             reed.with_history(Box::new(
-                FileBackedHistory::with_file(
-                    1_000,
-                    "./generated/dealer-repl-history".into(),
-                )
-                .unwrap_or_default(),
+                FileBackedHistory::with_file(1_000, "./generated/dealer-repl-history".into()).unwrap_or_default(),
             ))
         })
         .build();
@@ -226,123 +219,103 @@ fn handle(dealer: &mut Dealer, command: Command) {
             let player = Player::new_with_chips(name.clone(), chips);
             match dealer.seat_player(player) {
                 Ok(seat) => println!("✓ {name} seated at seat {seat} with {chips} chips"),
-                Err(e)   => print_error(&e),
+                Err(e) => print_error(&e),
             }
         }
 
         Command::SeatAt { seat, name, chips } => {
             let player = Player::new_with_chips(name.clone(), chips);
             match dealer.seat_player_at(player, seat) {
-                Ok(())  => println!("✓ {name} seated at seat {seat} with {chips} chips"),
-                Err(e)  => print_error(&e),
+                Ok(()) => println!("✓ {name} seated at seat {seat} with {chips} chips"),
+                Err(e) => print_error(&e),
             }
         }
 
-        Command::Remove { seat } => {
-            match dealer.remove_player(seat) {
-                Ok(player) => println!("✓ {} removed from seat {seat}", player.handle),
-                Err(e)     => print_error(&e),
-            }
-        }
+        Command::Remove { seat } => match dealer.remove_player(seat) {
+            Ok(player) => println!("✓ {} removed from seat {seat}", player.handle),
+            Err(e) => print_error(&e),
+        },
 
         // ── Hand lifecycle ────────────────────────────────────────────────────
-        Command::Start => {
-            match dealer.start_hand() {
-                Ok(()) => {
-                    println!("✓ Hand started — blinds posted and hole cards dealt");
-                    print_status(dealer);
-                }
-                Err(e) => print_error(&e),
+        Command::Start => match dealer.start_hand() {
+            Ok(()) => {
+                println!("✓ Hand started — blinds posted and hole cards dealt");
+                print_status(dealer);
             }
-        }
+            Err(e) => print_error(&e),
+        },
 
-        Command::Street => {
-            match dealer.advance_street() {
-                Ok(()) => {
-                    let board = dealer.table.board.to_string();
-                    if board.trim().is_empty() {
-                        println!("✓ Bets consolidated");
-                    } else {
-                        println!("✓ Board: {board}");
-                    }
-                    print_action_to(dealer);
+        Command::Street => match dealer.advance_street() {
+            Ok(()) => {
+                let board = dealer.table.board.to_string();
+                if board.trim().is_empty() {
+                    println!("✓ Bets consolidated");
+                } else {
+                    println!("✓ Board: {board}");
                 }
-                Err(e) => print_error(&e),
+                print_action_to(dealer);
             }
-        }
+            Err(e) => print_error(&e),
+        },
 
-        Command::End => {
-            match dealer.end_hand() {
-                Ok(result) => {
-                    println!("✓ Hand complete");
-                    println!("{result}");
-                    println!();
-                    print_chips(dealer);
-                }
-                Err(e) => print_error(&e),
+        Command::End => match dealer.end_hand() {
+            Ok(result) => {
+                println!("✓ Hand complete");
+                println!("{result}");
+                println!();
+                print_chips(dealer);
             }
-        }
+            Err(e) => print_error(&e),
+        },
 
         // ── Player actions ────────────────────────────────────────────────────
-        Command::Bet { seat, amount } => {
-            match dealer.act(DealerAction::Bet { seat, amount }) {
-                Ok(()) => {
-                    println!("✓ Seat {seat} bets {amount}");
-                    print_action_to(dealer);
-                }
-                Err(e) => print_error(&e),
+        Command::Bet { seat, amount } => match dealer.act(DealerAction::Bet { seat, amount }) {
+            Ok(()) => {
+                println!("✓ Seat {seat} bets {amount}");
+                print_action_to(dealer);
             }
-        }
+            Err(e) => print_error(&e),
+        },
 
-        Command::Call { seat } => {
-            match dealer.act(DealerAction::Call { seat }) {
-                Ok(()) => {
-                    println!("✓ Seat {seat} calls");
-                    print_action_to(dealer);
-                }
-                Err(e) => print_error(&e),
+        Command::Call { seat } => match dealer.act(DealerAction::Call { seat }) {
+            Ok(()) => {
+                println!("✓ Seat {seat} calls");
+                print_action_to(dealer);
             }
-        }
+            Err(e) => print_error(&e),
+        },
 
-        Command::Check { seat } => {
-            match dealer.act(DealerAction::Check { seat }) {
-                Ok(()) => {
-                    println!("✓ Seat {seat} checks");
-                    print_action_to(dealer);
-                }
-                Err(e) => print_error(&e),
+        Command::Check { seat } => match dealer.act(DealerAction::Check { seat }) {
+            Ok(()) => {
+                println!("✓ Seat {seat} checks");
+                print_action_to(dealer);
             }
-        }
+            Err(e) => print_error(&e),
+        },
 
-        Command::Raise { seat, amount } => {
-            match dealer.act(DealerAction::Raise { seat, amount }) {
-                Ok(()) => {
-                    println!("✓ Seat {seat} raises to {amount}");
-                    print_action_to(dealer);
-                }
-                Err(e) => print_error(&e),
+        Command::Raise { seat, amount } => match dealer.act(DealerAction::Raise { seat, amount }) {
+            Ok(()) => {
+                println!("✓ Seat {seat} raises to {amount}");
+                print_action_to(dealer);
             }
-        }
+            Err(e) => print_error(&e),
+        },
 
-        Command::Allin { seat } => {
-            match dealer.act(DealerAction::AllIn { seat }) {
-                Ok(()) => {
-                    println!("✓ Seat {seat} is all-in");
-                    print_action_to(dealer);
-                }
-                Err(e) => print_error(&e),
+        Command::Allin { seat } => match dealer.act(DealerAction::AllIn { seat }) {
+            Ok(()) => {
+                println!("✓ Seat {seat} is all-in");
+                print_action_to(dealer);
             }
-        }
+            Err(e) => print_error(&e),
+        },
 
-        Command::Fold { seat } => {
-            match dealer.act(DealerAction::Fold { seat }) {
-                Ok(()) => {
-                    println!("✓ Seat {seat} folds");
-                    print_action_to(dealer);
-                }
-                Err(e) => print_error(&e),
+        Command::Fold { seat } => match dealer.act(DealerAction::Fold { seat }) {
+            Ok(()) => {
+                println!("✓ Seat {seat} folds");
+                print_action_to(dealer);
             }
-        }
+            Err(e) => print_error(&e),
+        },
 
         // ── Information ───────────────────────────────────────────────────────
         Command::Status => print_status(dealer),
@@ -396,7 +369,7 @@ fn print_action_to(dealer: &Dealer) {
         return;
     }
     let seat = dealer.next_to_act();
-    let pot  = dealer.pot();
+    let pot = dealer.pot();
     print!("  Action to seat {seat}");
     if let Some(s) = dealer.table.get_seat(seat) {
         print!(" ({})  chips: {}", s.player.handle, s.player.chips.count());
@@ -409,10 +382,13 @@ fn print_chips(dealer: &Dealer) {
     for i in 0..dealer.table.seats.size() {
         if let Some(seat) = dealer.table.get_seat(i) {
             if !seat.is_empty() {
-                println!("  Seat {i}  {}  →  {} chips", seat.player.handle, seat.player.chips.count());
+                println!(
+                    "  Seat {i}  {}  →  {} chips",
+                    seat.player.handle,
+                    seat.player.chips.count()
+                );
             }
         }
     }
     println!("{}", "─".repeat(40));
 }
-
