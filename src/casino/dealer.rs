@@ -272,6 +272,8 @@ impl Dealer {
             });
         }
 
+        println!("Dealer.start_hand() called. Current table state:\n{}", self.table);
+
         // Collect occupied seat numbers.
         let occupied: Vec<u8> = self
             .table
@@ -301,21 +303,21 @@ impl Dealer {
         Ok(())
     }
 
-    /// Advances the button until SB (button+1) and BB (button+2) both land
-    /// on occupied seats.
+    /// Advances the button to the next occupied seat.
+    /// Because `determine_small_blind` and `determine_big_blind` now skip empty
+    /// seats, we only need to move the button to any occupied seat — the table
+    /// will correctly find the next two occupied seats for SB and BB.
     fn advance_button_to_occupied(&self, occupied: &[u8]) {
         let size = self.table.seats.size();
-        // Try each possible button position until SB and BB are both occupied.
+        // Move button forward until it lands on an occupied seat.
         for _ in 0..size {
             self.table.act_button_move();
             let btn = self.table.button.value();
-            let sb = (btn + 1) % size;
-            let bb = (btn + 2) % size;
-            if occupied.contains(&sb) && occupied.contains(&bb) {
+            if occupied.contains(&btn) {
                 return;
             }
         }
-        // Fallback: leave button wherever it is (will surface as an error in act_forced_bets).
+        // Fallback: leave button wherever it is.
     }
 
     /// Advances the hand to the next street when the current betting round is

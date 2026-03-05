@@ -276,6 +276,10 @@ impl Seats {
         let mut count = 0;
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow();
+            // Skip empty seats — they are not part of the hand.
+            if seat.is_empty() {
+                continue;
+            }
             if seat.is_active() {
                 count += 1;
             }
@@ -289,6 +293,9 @@ impl Seats {
 
         for (seat_number, seat_cell) in self.iter().enumerate() {
             let seat = seat_cell.borrow();
+            if seat.is_empty() {
+                continue;
+            }
             if seat.is_active() {
                 match u8::try_from(seat_number) {
                     Ok(snumber) => seats.push(snumber),
@@ -305,6 +312,9 @@ impl Seats {
         let mut count = 0;
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow();
+            if seat.is_empty() {
+                continue;
+            }
             if seat.is_active() && !seat.is_all_in() {
                 count += 1;
             }
@@ -535,6 +545,10 @@ impl Seats {
 
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow();
+            // Skip empty seats — they are not part of the hand.
+            if seat.is_empty() {
+                continue;
+            }
             if seat.player.state.is_yet_to_act_or_blind() {
                 return false;
             }

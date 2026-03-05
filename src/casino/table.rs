@@ -712,6 +712,34 @@ impl Table {
         }
     }
 
+    /// Returns the seat index of the Nth next occupied seat after `start`, wrapping
+    /// around through all seats.  If there are fewer than N occupied seats the
+    /// traversal wraps through the occupied seats cyclically (i.e. the result is
+    /// the seat at position `n % occupied_count` after `start`).
+    /// Falls back to raw arithmetic only when no occupied seats exist at all.
+    pub fn next_occupied_seat_after(&self, start: u8, n: usize) -> u8 {
+        let size = self.seats.size() as usize;
+        let start = start as usize;
+
+        // Collect occupied seat indices in order starting just after `start`.
+        let occupied: Vec<u8> = (1..=size)
+            .filter_map(|step| {
+                let idx = (start + step) % size;
+                let seat = self.get_seat(idx as u8)?;
+                if !seat.is_empty() { Some(idx as u8) } else { None }
+            })
+            .collect();
+
+        if occupied.is_empty() {
+            // No occupied seats at all — raw arithmetic fallback.
+            return ((start + n) % size) as u8;
+        }
+
+        // Wrap n through the number of occupied seats.
+        let idx = (n - 1) % occupied.len();
+        occupied[idx]
+    }
+
     /// ```
     /// use pkcore::prelude::*;
     ///
@@ -722,7 +750,7 @@ impl Table {
     /// assert_eq!(table.determine_big_blind(), 2, "If seat 0 is the dealer, than seat 2 is the big blind");
     /// ```
     pub fn determine_big_blind(&self) -> u8 {
-        let bb_seat = self.button.static_up_x(2).value;
+        let bb_seat = self.next_occupied_seat_after(self.button.value(), 2);
         log::trace!("BB seat #{bb_seat} {}", self.get_seat_handle(bb_seat));
         bb_seat
     }
@@ -775,7 +803,7 @@ impl Table {
     /// assert_eq!(1, table.determine_small_blind(), "If seat 0 is the dealer, than seat 1 is the small blind");
     /// ```
     pub fn determine_small_blind(&self) -> u8 {
-        let sb_seat = self.button.static_up_x(1).value;
+        let sb_seat = self.next_occupied_seat_after(self.button.value(), 1);
         log::trace!("SB seat #{sb_seat} {}", self.get_seat_handle(sb_seat));
         sb_seat
     }
@@ -794,9 +822,9 @@ impl Table {
     /// ```
     pub fn determine_utg(&self) -> u8 {
         if self.phase.borrow().is_preflop() {
-            self.button.static_up_x(3).value
+            self.next_occupied_seat_after(self.button.value(), 3)
         } else {
-            self.button.static_up_x(1).value
+            self.next_occupied_seat_after(self.button.value(), 1)
         }
     }
 
