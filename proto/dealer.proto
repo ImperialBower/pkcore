@@ -1,0 +1,245 @@
+syntax = "proto3";
+
+package pkcore.dealer;
+
+// The Dealer service manages a poker table, seating players, starting hands,
+// processing player actions, and resolving showdowns.
+service DealerService {
+  // Seat a new player at the next available seat
+  rpc SeatPlayer(SeatPlayerRequest) returns (SeatPlayerResponse);
+
+  // Seat a player at a specific seat number
+  rpc SeatPlayerAt(SeatPlayerAtRequest) returns (SeatPlayerAtResponse);
+
+  // Remove a player from their seat (between hands only)
+  rpc RemovePlayer(RemovePlayerRequest) returns (RemovePlayerResponse);
+
+  // Start a new hand (shuffle, post blinds, deal hole cards)
+  rpc StartHand(StartHandRequest) returns (StartHandResponse);
+
+  // Advance to the next street (consolidate bets → deal flop/turn/river)
+  rpc AdvanceStreet(AdvanceStreetRequest) returns (AdvanceStreetResponse);
+
+  // End the current hand and pay out winner(s)
+  rpc EndHand(EndHandRequest) returns (EndHandResponse);
+
+  // Process a player action (bet, call, check, raise, all-in, fold)
+  rpc Act(ActRequest) returns (ActResponse);
+
+  // Get the current table status
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+
+  // Get who is next to act
+  rpc GetNextToAct(GetNextToActRequest) returns (GetNextToActResponse);
+
+  // Get the current board (community cards)
+  rpc GetBoard(GetBoardRequest) returns (GetBoardResponse);
+
+  // Get chip counts for all players
+  rpc GetChips(GetChipsRequest) returns (GetChipsResponse);
+
+  // Get the current pot size
+  rpc GetPot(GetPotRequest) returns (GetPotResponse);
+
+  // Get the full event log
+  rpc GetEventLog(GetEventLogRequest) returns (GetEventLogResponse);
+
+  // Stream all table events as they happen (optional advanced feature)
+  rpc StreamEvents(StreamEventsRequest) returns (stream TableEvent);
+}
+
+// ── Messages ─────────────────────────────────────────────────────────────────
+
+message SeatPlayerRequest {
+  string name = 1;
+  uint32 chips = 2;  // defaults to 10_000 in server logic
+}
+
+message SeatPlayerResponse {
+  oneof result {
+    uint32 seat_number = 1;
+    string error = 2;
+  }
+}
+
+message SeatPlayerAtRequest {
+  uint32 seat = 1;
+  string name = 2;
+  uint32 chips = 3;
+}
+
+message SeatPlayerAtResponse {
+  oneof result {
+    bool success = 1;
+    string error = 2;
+  }
+}
+
+message RemovePlayerRequest {
+  uint32 seat = 1;
+}
+
+message RemovePlayerResponse {
+  oneof result {
+    string player_name = 1;
+    string error = 2;
+  }
+}
+
+message StartHandRequest {}
+
+message StartHandResponse {
+  oneof result {
+    TableStatus status = 1;
+    string error = 2;
+  }
+}
+
+message AdvanceStreetRequest {}
+
+message AdvanceStreetResponse {
+  oneof result {
+    StreetResult street_result = 1;
+    string error = 2;
+  }
+}
+
+message StreetResult {
+  string board = 1;
+  uint32 next_to_act = 2;
+  uint32 pot = 3;
+}
+
+message EndHandRequest {}
+
+message EndHandResponse {
+  oneof result {
+    HandResult hand_result = 1;
+    string error = 2;
+  }
+}
+
+message HandResult {
+  string result_text = 1;
+  repeated PlayerChips final_chips = 2;
+}
+
+message ActRequest {
+  PlayerAction action = 1;
+}
+
+message ActResponse {
+  oneof result {
+    ActionResult action_result = 1;
+    string error = 2;
+  }
+}
+
+message PlayerAction {
+  uint32 seat = 1;
+  ActionType action_type = 2;
+  uint32 amount = 3;  // only used for Bet and Raise
+}
+
+enum ActionType {
+  BET = 0;
+  CALL = 1;
+  CHECK = 2;
+  RAISE = 3;
+  ALL_IN = 4;
+  FOLD = 5;
+}
+
+message ActionResult {
+  uint32 next_to_act = 1;
+  uint32 pot = 2;
+  bool hand_complete = 3;
+}
+
+message GetStatusRequest {}
+
+message GetStatusResponse {
+  TableStatus status = 1;
+}
+
+message TableStatus {
+  repeated SeatInfo seats = 1;
+  string board = 2;
+  uint32 pot = 3;
+  uint32 next_to_act = 4;
+  bool hand_in_progress = 5;
+  bool game_over = 6;
+}
+
+message SeatInfo {
+  uint32 seat_number = 1;
+  string player_name = 2;
+  uint32 chips = 3;
+  string cards = 4;  // only shown at showdown or to the player themselves
+  string state = 5;
+}
+
+message GetNextToActRequest {}
+
+message GetNextToActResponse {
+  oneof result {
+    NextToActInfo info = 1;
+    string message = 2;  // e.g., "No hand in progress"
+  }
+}
+
+message NextToActInfo {
+  uint32 seat = 1;
+  string player_name = 2;
+  uint32 chips = 3;
+  uint32 pot = 4;
+}
+
+message GetBoardRequest {}
+
+message GetBoardResponse {
+  string board = 1;
+}
+
+message GetChipsRequest {}
+
+message GetChipsResponse {
+  repeated PlayerChips chips = 1;
+}
+
+message PlayerChips {
+  uint32 seat = 1;
+  string player_name = 2;
+  uint32 chips = 3;
+}
+
+message GetPotRequest {}
+
+message GetPotResponse {
+  uint32 pot = 1;
+}
+
+message GetEventLogRequest {}
+
+message GetEventLogResponse {
+  string log = 1;
+}
+
+message StreamEventsRequest {}
+
+message TableEvent {
+  uint64 timestamp = 1;
+  EventType event_type = 2;
+  string description = 3;
+  TableStatus current_status = 4;
+}
+
+enum EventType {
+  PLAYER_SEATED = 0;
+  PLAYER_REMOVED = 1;
+  HAND_STARTED = 2;
+  PLAYER_ACTION = 3;
+  STREET_ADVANCED = 4;
+  HAND_ENDED = 5;
+}
+

@@ -366,6 +366,7 @@ fn print_action_to(dealer: &Dealer) {
         return;
     }
     if !dealer.is_hand_in_progress() {
+        println!("  No hand in progress — type 'start' to begin a new hand.");
         return;
     }
     let seat = dealer.next_to_act();

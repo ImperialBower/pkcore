@@ -1,0 +1,45 @@
+# Makefile for gRPC Dealer Service
+#
+# Common tasks for building and running the gRPC implementation
+
+.PHONY: help build-grpc server client-rust client-python setup-python clean-grpc
+
+help:
+	@echo "╔══════════════════════════════════════════════════╗"
+	@echo "║      pkcore Dealer gRPC - Make Targets          ║"
+	@echo "╚══════════════════════════════════════════════════╝"
+	@echo ""
+	@echo "  make build-grpc      Build with gRPC support"
+	@echo "  make server          Start the gRPC server"
+	@echo "  make client-rust     Start the Rust client"
+	@echo "  make client-python   Start the Python client"
+	@echo "  make setup-python    Setup Python environment"
+	@echo "  make clean-grpc      Clean gRPC build artifacts"
+	@echo ""
+
+build-grpc:
+	@echo "🔨 Building with gRPC support..."
+	cargo build --features grpc --examples
+
+server:
+	@echo "🚀 Starting gRPC server on 0.0.0.0:50051..."
+	cargo run --example dealer_grpc_server --features grpc
+
+client-rust:
+	@echo "🎮 Starting Rust gRPC client..."
+	cargo run --example dealer_grpc_client --features grpc
+
+client-python:
+	@echo "🐍 Starting Python gRPC client..."
+	python3 examples/dealer_grpc_client.py
+
+setup-python:
+	@echo "🐍 Setting up Python environment..."
+	./scripts/setup_python_grpc.sh
+
+clean-grpc:
+	@echo "🧹 Cleaning gRPC artifacts..."
+	rm -f dealer_pb2.py dealer_pb2_grpc.py
+	rm -rf __pycache__
+	cargo clean
+

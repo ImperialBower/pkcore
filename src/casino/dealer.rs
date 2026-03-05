@@ -28,7 +28,7 @@ use crate::casino::table::event::TableLog;
 use crate::casino::table::result::HandResult;
 use crate::casino::table::seat::Seat;
 use crate::casino::table::seats::Seats;
-use crate::prelude::BoxedCards;
+use crate::prelude::{BoxedCards, PlayerState};
 use std::fmt;
 use uuid::Uuid;
 
@@ -195,6 +195,8 @@ impl Dealer {
     /// - [`DealerError::TableFull`] — no empty seats remain.
     pub fn seat_player(&self, player: Player) -> Result<u8, DealerError> {
         let seat = Seat::new_with_cards(player, BoxedCards::blanks(2));
+        seat.player.state.set(PlayerState::YetToAct);
+
         let seat_number = self
             .table
             .seats
@@ -226,6 +228,7 @@ impl Dealer {
             return Err(DealerError::TableError(PKError::InvalidSeatNumber));
         }
         let seat = Seat::new_with_cards(player, BoxedCards::blanks(2));
+        seat.player.state.set(PlayerState::YetToAct);
         self.table
             .seats
             .assign(seat_number as usize, seat)
@@ -347,12 +350,31 @@ impl Dealer {
             return Ok(());
         }
 
-        if !self.table.is_flop() {
-            self.table.deal_flop().map_err(DealerError::from)?;
-        } else if !self.table.is_turn() {
-            self.table.deal_turn().map_err(DealerError::from)?;
-        } else if !self.table.is_river() {
-            self.table.deal_river().map_err(DealerError::from)?;
+        // Oof, this code is bad. Thanks, `Claude`. This is why we test.
+        // if !self.table.is_flop() {
+        //     self.table.deal_flop().map_err(DealerError::from)?;
+        // } else if !self.table.is_turn() {
+        //     self.table.deal_turn().map_err(DealerError::from)?;
+        // } else if !self.table.is_river() {
+        //     self.table.deal_river().map_err(DealerError::from)?;
+        // }
+        //
+        // Here's its replacement:
+
+        match self.table.board.len() {
+            0 => {
+                self.table.deal_flop().map_err(DealerError::from)?;
+                log::info!("Dealing the flop...");
+            }
+            3 => {
+                self.table.deal_turn().map_err(DealerError::from)?;
+                log::info!("Dealing the turn...");
+            }
+            4 => {
+                self.table.deal_river().map_err(DealerError::from)?;
+                log::info!("Dealing the river...");
+            }
+            _ => log::error!("Unexpected board state with {} cards", self.table.board.len()),
         }
 
         self.table.seats.reset_state_in_hand();
@@ -817,9 +839,7 @@ mod casino__dealer_tests {
         dealer.act(DealerAction::Check { seat: p1 }).unwrap();
 
         let p2 = dealer.next_to_act();
-        dealer
-            .act(DealerAction::Bet { seat: p2, amount: 200 })
-            .unwrap();
+        dealer.act(DealerAction::Bet { seat: p2, amount: 200 }).unwrap();
 
         let p1 = dealer.next_to_act();
         dealer.act(DealerAction::Fold { seat: p1 }).unwrap();
@@ -863,9 +883,7 @@ mod casino__dealer_tests {
         dealer.act(DealerAction::Check { seat: p1 }).unwrap();
 
         let p2 = dealer.next_to_act();
-        dealer
-            .act(DealerAction::Bet { seat: p2, amount: 200 })
-            .unwrap();
+        dealer.act(DealerAction::Bet { seat: p2, amount: 200 }).unwrap();
 
         let p1 = dealer.next_to_act();
         dealer.act(DealerAction::Fold { seat: p1 }).unwrap();

@@ -916,7 +916,8 @@ mod casino__table__seats_tests {
 
     #[test]
     fn are_clear() {
-        assert!(Seats::default().are_clear());
+        assert!(Seats::new(TestData::min_players()).are_clear());
+        assert!(!Seats::default().are_clear());
         assert!(!Seats::try_from(TestData::the_hand_seats()).unwrap().are_clear());
     }
 

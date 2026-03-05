@@ -147,7 +147,6 @@ impl Display for PlayerStateCell {
 /// bugs and confusion. A check has no value in poker, so it shouldn't have any value in the enum.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum PlayerState {
-    #[default]
     YetToAct,
     Check,
     Blind(usize),
@@ -158,6 +157,7 @@ pub enum PlayerState {
     AllIn(usize),
     Showdown(usize),
     Fold,
+    #[default]
     Out,
 }
 

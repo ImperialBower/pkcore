@@ -17,6 +17,7 @@ use crate::play::stages::turn_eval::TurnEval;
 use crate::prelude::{Bard, BoxedCards, Evals};
 use crate::{PKError, Pile};
 use bint::{BintCell, DrainableBintCell};
+use bitvec::macros::internal::funty::Fundamental;
 use cardpack::prelude::{BasicPile, Pile as CPile, Standard52};
 use pkstate::act::{Action, Round};
 use pkstate::game::ForcedBets as PKForcedBets;
@@ -634,7 +635,13 @@ impl Table {
 
         while dbc.has_capacity() {
             let seat_number = dbc.value();
-            self.deal_card_to_seat(seat_number)?;
+
+            if self.seats.is_seat_in_hand(seat_number) {
+                log::debug!("Dealing to seat #{seat_number}");
+                self.deal_card_to_seat(seat_number)?;
+            } else {
+                log::trace!("Skipping seat #{seat_number} because they are not in hand");
+            }
 
             match dbc.up() {
                 Some(_) => {}
@@ -725,14 +732,18 @@ impl Table {
         let occupied: Vec<u8> = (1..=size)
             .filter_map(|step| {
                 let idx = (start + step) % size;
-                let seat = self.get_seat(idx as u8)?;
-                if !seat.is_empty() { Some(idx as u8) } else { None }
+                let seat = self.get_seat(idx.as_u8())?;
+                if seat.is_empty() {
+                    None
+                } else {
+                    Some(u8::try_from(idx).unwrap_or_default())
+                }
             })
             .collect();
 
         if occupied.is_empty() {
             // No occupied seats at all — raw arithmetic fallback.
-            return ((start + n) % size) as u8;
+            return u8::try_from((start + n) % size).unwrap_or_default();
         }
 
         // Wrap n through the number of occupied seats.

@@ -27,7 +27,7 @@ impl Player {
             chips: Stack::default(),
             bet: Stack::default(),
             chips_in_play: Cell::new(0),
-            state: PlayerStateCell::default(),
+            state: PlayerStateCell::new(PlayerState::YetToAct),
         }
     }
 
@@ -39,7 +39,7 @@ impl Player {
             chips: Stack::new(stack),
             bet: Stack::default(),
             chips_in_play: Cell::new(0),
-            state: PlayerStateCell::default(),
+            state: PlayerStateCell::new(PlayerState::YetToAct),
         }
     }
 
@@ -390,7 +390,7 @@ impl Player {
         self.state.is_check()
     }
 
-    /// Returns true if there is no remaining state from a particular had still in the struct.
+    /// Returns true if there is no remaining state from a particular hand still in the struct.
     pub fn is_clear(&self) -> bool {
         self.state.is_yet_to_act() && self.bet.is_empty() && self.chips_in_play.get() == 0
     }
@@ -489,7 +489,7 @@ mod casino__players__player_tests {
 
         assert_eq!("", player.handle);
         assert_eq!(0, player.chips.count());
-        assert_eq!(": 0 chips [Yet to act]", player.to_string());
+        assert_eq!(": 0 chips [Out]", player.to_string());
     }
 
     #[test]

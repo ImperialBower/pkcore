@@ -35,6 +35,17 @@ thousands = "0.2.0"
 uuid = { version = "1.19", features = ["v4"] }
 wincounter = "0.1.5"
 
+# gRPC support (optional)
+tonic = { version = "0.12", optional = true }
+prost = { version = "0.13", optional = true }
+tokio = { version = "1.42", features = ["macros", "rt-multi-thread"], optional = true }
+
+[build-dependencies]
+tonic-build = { version = "0.12", optional = true }
+
+[features]
+grpc = ["tonic", "prost", "tokio", "tonic-build"]
+
 [dev-dependencies]
 assert-struct = "0.2.0"
 serde_yaml_bw = "2.5.2"
