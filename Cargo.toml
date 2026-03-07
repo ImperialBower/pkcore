@@ -1,6 +1,6 @@
 [package]
 name = "pkcore"
-version = "0.0.16"
+version = "0.0.17"
 rust-version = "1.85.1"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
