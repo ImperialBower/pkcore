@@ -47,17 +47,17 @@ tonic-build = { version = "0.12", optional = true }
 grpc = ["tonic", "prost", "tokio", "tonic-build"]
 
 [dev-dependencies]
-assert-struct = "0.2.0"
+assert-struct = "0.4.0"
 serde_yaml_bw = "2.5.2"
 clap = { version = "4.5", features = ["derive", "unicode"] }
 clap-repl = "0.3.2"
-reedline = "0.38.0"
+reedline = "0.46.0"
 elr_primes = "0.1.2"
-env_logger = "0.11.8"
+env_logger = "0.11.9"
 
 rstest = "0.26.1"
 serde_test = "1.0.177"
 testing_logger = "0.1.1"
-ratatui = { version = "0.28.0", features = ["all-widgets"] }
-test-log = "0.2.15"
+ratatui = { version = "0.30", features = ["all-widgets"] }
+test-log = "0.2.19"
 
