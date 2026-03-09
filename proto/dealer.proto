@@ -5,6 +5,8 @@ package pkcore.dealer;
 // The Dealer service manages a poker table, seating players, starting hands,
 // processing player actions, and resolving showdowns.
 service DealerService {
+  rpc Ping(PingRequest) returns (PingReply);
+
   // Seat a new player at the next available seat
   rpc SeatPlayer(SeatPlayerRequest) returns (SeatPlayerResponse);
 
@@ -49,6 +51,14 @@ service DealerService {
 }
 
 // ── Messages ─────────────────────────────────────────────────────────────────
+
+message PingRequest {
+  string client_id = 1;
+}
+
+message PingReply {
+  string message = 1;
+}
 
 message SeatPlayerRequest {
   string name = 1;
