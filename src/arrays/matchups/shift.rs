@@ -118,7 +118,7 @@ mod arrays__matchups__masks__shift_tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore = "Rubber biscuit"]
     fn display() {
         let shu = SortedHeadsUp::from_str("A♠ A♥ T♥ 4♦").unwrap();
         let shifter: Shifter = shu.into();

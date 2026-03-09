@@ -381,14 +381,14 @@ fn print_action_to(dealer: &Dealer) {
 fn print_chips(dealer: &Dealer) {
     println!("{}", "─".repeat(40));
     for i in 0..dealer.table.seats.size() {
-        if let Some(seat) = dealer.table.get_seat(i) {
-            if !seat.is_empty() {
-                println!(
-                    "  Seat {i}  {}  →  {} chips",
-                    seat.player.handle,
-                    seat.player.chips.count()
-                );
-            }
+        if let Some(seat) = dealer.table.get_seat(i)
+            && !seat.is_empty()
+        {
+            println!(
+                "  Seat {i}  {}  →  {} chips",
+                seat.player.handle,
+                seat.player.chips.count()
+            );
         }
     }
     println!("{}", "─".repeat(40));

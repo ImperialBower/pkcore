@@ -26,13 +26,13 @@ fn read_input(conn: &Connection, distinct: &mut Vec<Masked>) {
             println!("None remaining.");
             return;
         };
-        if HUPResult::exists(&conn, &masked.shu) {
+        if HUPResult::exists(conn, &masked.shu) {
             println!("{} exists!", masked.shu);
             continue;
         } else {
             println!("Calculating {}", masked.shu);
             let hupr = HUPResult::from(&masked.shu);
-            match HUPResult::insert(&conn, &hupr) {
+            match HUPResult::insert(conn, &hupr) {
                 Ok(_) => {
                     println!("... inserted");
                 }
@@ -42,7 +42,7 @@ fn read_input(conn: &Connection, distinct: &mut Vec<Masked>) {
                 }
             }
         }
-        x = x + 1;
+        x += 1;
     }
 }
 

@@ -1,7 +1,6 @@
 use pkcore::PKError;
 use pkcore::casino::table::Table;
 use pkcore::util::data::TestData;
-use serde_yaml_bw;
 
 /// Here's a recreation of "The Hand" between Daniel Negreanu and Gus Hansen, using strict
 /// assertions to validate that the `Table` engine is working correctly.
@@ -31,7 +30,7 @@ fn main() -> Result<(), PKError> {
 
     if input.trim().eq_ignore_ascii_case("y") {
         // table.commentary_dump();
-        println!("{}", table.event_log.to_string());
+        println!("{}", table.event_log);
     }
 
     let pk_state = pkstate::PKState::from(&table);
@@ -50,37 +49,37 @@ fn setup(table: &Table) -> Result<(), PKError> {
     println!();
     table.commentary_dump();
     println!("\n{table}");
-    commentary_action_to(&table);
+    commentary_action_to(table);
 
     Ok(())
 }
 
 fn preflop(table: &Table) -> Result<(), PKError> {
     let _gus = table.act_bet(3, 2100)?;
-    commentary_action_to(&table);
+    commentary_action_to(table);
     let _daniel = table.act_raise(4, 5000)?;
-    commentary_action_to(&table);
+    commentary_action_to(table);
 
     let _seat5_remaining = table.act_fold(5)?;
-    commentary_action_to(&table);
+    commentary_action_to(table);
 
     let _seat6_remaining = table.act_fold(6)?;
-    commentary_action_to(&table);
+    commentary_action_to(table);
 
     let _seat7_remaining = table.act_fold(7)?;
-    commentary_action_to(&table);
+    commentary_action_to(table);
 
     let _seat0_remaining = table.act_fold(0)?;
-    commentary_action_to(&table);
+    commentary_action_to(table);
 
     let _seat1_remaining = table.act_fold(1)?;
-    commentary_action_to(&table);
+    commentary_action_to(table);
 
     let _seat2_remaining = table.act_fold(2)?;
-    commentary_action_to(&table);
+    commentary_action_to(table);
 
     table.act_call(3)?;
-    commentary_action_to(&table);
+    commentary_action_to(table);
 
     let _pot = table.bring_it_in()?;
 

@@ -8,7 +8,7 @@ use std::path::PathBuf;
 ///
 /// -
 /// - [Writing a CLI Tool in Rust with Clap](https://www.shuttle.dev/blog/2023/12/08/clap-rust)
-/// `cargo run --example table0`
+///   `cargo run --example table0`
 #[derive(Debug, Parser)]
 #[command(name = "")] // This name will show up in clap's error messages, so it is important to set it to "".
 enum SampleCommand {

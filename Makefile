@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs
+.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch
 
 # Default target
 default: ayce
@@ -6,23 +6,34 @@ default: ayce
 # Display help information
 help:
 	@echo "Available targets:"
-	@echo "  make build         - Build the project"
-	@echo "  make clean         - Clean build artifacts"
-	@echo "  make test          - Run tests"
-	@echo "  make build_test    - Clean once, then build and test"
-	@echo "  make fmt           - Format code"
-	@echo "  make clippy        - Run clippy linter"
-	@echo "  make create_docs   - Create documentation"
-	@echo "  make docs          - Create docs and open in browser (macOS/Linux)"
-	@echo "  make ayce          - Run all checks (fmt → build_test → clippy → create_docs)"
-	@echo "  make help          - Display this help message"
+	@echo "  make (default)       - Run ayce"
+	@echo "  make build           - Build the project"
+	@echo "  make clean           - Clean build artifacts"
+	@echo "  make test            - Run tests"
+	@echo "  make build_test      - Clean once, then build and test"
+	@echo "  make fmt             - Format code"
+	@echo "  make clippy          - Run clippy linter"
+	@echo "  make create_docs     - Build documentation"
+	@echo "  make docs            - Build docs and open in browser"
+	@echo "  make ayce            - Run fmt, build_test, clippy, and docs"
+	@echo "  make help            - Display this help message"
 	@echo ""
-	@echo "Security:"
-	@echo "  make deny           - Run full cargo-deny checks"
-	@echo "  make audit          - Run advisory-only security audit"
+	@echo "Nightly:"
+	@echo "  make test-nightly    - Run all tests with nightly"
+	@echo "  make clippy-nightly  - Run clippy with nightly and deny warnings"
+	@echo "  make nightly         - Run nightly test and clippy checks"
+	@echo "  make unused-deps     - Find unused dependencies with cargo-udeps"
 	@echo ""
-	@echo "Tools:"
-	@echo "  make install-tools  - Install cargo-deny, cargo-udeps, etc."
+	@echo "Dependencies and Security:"
+	@echo "  make tree            - Show dependency tree"
+	@echo "  make tree-duplicates - Show duplicate dependencies"
+	@echo "  make deny            - Run full cargo-deny checks"
+	@echo "  make audit           - Run advisory-only security audit"
+	@echo ""
+	@echo "Tools and Workflow:"
+	@echo "  make install-tools   - Install cargo-deny and cargo-udeps"
+	@echo "  make watch           - Run cargo-watch for check/test loop"
+	@echo "  make install-watch   - Install cargo-watch"
 	@echo ""
 
 # Clean build artifacts
@@ -47,6 +58,14 @@ fmt:
 # Run clippy linter
 clippy:
 	cargo clippy -- -W clippy::pedantic
+
+test-nightly:
+	cargo +nightly test --all-targets --all-features
+
+clippy-nightly:
+	cargo +nightly clippy --lib --all-features -- -D warnings
+
+nightly: test-nightly clippy-nightly
 
 # Show dependency tree
 tree:

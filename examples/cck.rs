@@ -27,7 +27,7 @@ fn main() -> Result<(), PKError> {
 
     let args = Args::parse();
 
-    let cards = Cards::from_str(&*args.card)?;
+    let cards = Cards::from_str(&args.card)?;
 
     // TODO NOTE: This incarnation eats errors in card indexes
     // For example: `❯ cargo run --example repl -- -c "AS KS QS JS TS 9S 9s"`
@@ -52,10 +52,7 @@ where
     let (hand_rank, hand) = cards.hand_rank_and_hand();
     println!(
         "CARDS: {} - BEST HAND: {} - {}: {:?}",
-        cards.to_string(),
-        hand.to_string(),
-        hand_rank.value,
-        hand_rank.class,
+        cards, hand, hand_rank.value, hand_rank.class,
     );
 
     let sorts = hand.iter().counts_by(|card| card.get_rank());
