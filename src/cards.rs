@@ -250,7 +250,7 @@ impl Cards {
 
     #[must_use]
     pub fn divisible_by(&self, x: usize) -> bool {
-        (self.len() % x) == 0
+        self.len().is_multiple_of(x)
     }
 
     /// # Errors

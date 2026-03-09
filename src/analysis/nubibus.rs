@@ -253,14 +253,12 @@ impl Nubificus {
             let entry = entry?;
             let path = entry.path();
 
-            if path.is_file() {
-                if let Some(extension) = path.extension() {
-                    if extension == "log" {
-                        if let Some(path_str) = path.to_str() {
-                            log_files.push(path_str.to_string());
-                        }
-                    }
-                }
+            if path.is_file()
+                && let Some(extension) = path.extension()
+                && extension == "log"
+                && let Some(path_str) = path.to_str()
+            {
+                log_files.push(path_str.to_string());
             }
         }
 

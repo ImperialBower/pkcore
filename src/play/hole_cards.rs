@@ -316,7 +316,7 @@ impl TryFrom<Cards> for HoleCards {
     fn try_from(cards: Cards) -> Result<Self, Self::Error> {
         let mut cards = cards;
 
-        if cards.len() % 2 == 0 {
+        if cards.len().is_multiple_of(2) {
             let num_of_players = cards.len() / 2;
             let mut hands = HoleCards::with_capacity(num_of_players);
 

@@ -182,10 +182,10 @@ impl Display for TurnEval {
                 Err(_) => writeln!(f, "    HAND: Error")?,
             }
 
-            if player_id != winning_player {
-                if let Some(cards) = self.outs.get(player_id) {
-                    writeln!(f, "    OUTS: {cards}")?;
-                }
+            if player_id != winning_player
+                && let Some(cards) = self.outs.get(player_id)
+            {
+                writeln!(f, "    OUTS: {cards}")?;
             }
         }
 

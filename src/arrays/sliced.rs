@@ -113,7 +113,7 @@ impl BoxedCards {
     /// ```
     #[must_use]
     pub fn is_even(&self) -> bool {
-        self.len() % 2 == 0
+        self.len().is_multiple_of(2)
     }
 
     /// ```
@@ -433,10 +433,10 @@ impl Boxes {
 
         for cycle in 0..max_len {
             for boxed in &self.0 {
-                if let Some(&card) = boxed.as_slice().get(cycle) {
-                    if card != Card::BLANK {
-                        dealt_cards.push(card);
-                    }
+                if let Some(&card) = boxed.as_slice().get(cycle)
+                    && card != Card::BLANK
+                {
+                    dealt_cards.push(card);
                 }
             }
         }
@@ -611,10 +611,10 @@ impl Boxes {
                 let boxed = &self.0[index];
 
                 // Get the card at this round position if it exists and isn't blank
-                if let Some(&card) = boxed.as_slice().get(round) {
-                    if card != Card::BLANK {
-                        result.push(card);
-                    }
+                if let Some(&card) = boxed.as_slice().get(round)
+                    && card != Card::BLANK
+                {
+                    result.push(card);
                 }
             }
         }

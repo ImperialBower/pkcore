@@ -552,10 +552,10 @@ impl Table {
 
     pub fn commentary_last(&self) -> String {
         if let Some(last_event) = self.event_log.last() {
-            if let Some(seat_number) = last_event.get_seat() {
-                if let Some(seat) = self.get_seat(seat_number) {
-                    return last_event.commentary(&seat.player.handle.clone());
-                }
+            if let Some(seat_number) = last_event.get_seat()
+                && let Some(seat) = self.get_seat(seat_number)
+            {
+                return last_event.commentary(&seat.player.handle.clone());
             }
             last_event.to_string()
         } else {
@@ -564,12 +564,11 @@ impl Table {
     }
 
     pub fn commentary_last_player_action(&self) -> Option<String> {
-        if let Some(action) = self.event_log.last_player_action() {
-            if let Some(seat_number) = action.get_seat() {
-                if let Some(seat) = self.get_seat(seat_number) {
-                    return Some(format!("{} {}", seat.player.handle, action));
-                }
-            }
+        if let Some(action) = self.event_log.last_player_action()
+            && let Some(seat_number) = action.get_seat()
+            && let Some(seat) = self.get_seat(seat_number)
+        {
+            return Some(format!("{} {}", seat.player.handle, action));
         }
 
         None
@@ -963,20 +962,19 @@ impl Table {
         }
 
         for (i, seat_cell) in self.seats.borrow_all().iter().enumerate() {
-            if seat_cell.is_in_hand() {
-                if let Some(seat) = self.get_seat(u8::try_from(i).unwrap_or_default()) {
-                    if !winners.contains(&u8::try_from(i).unwrap_or_default()) {
-                        let player_loses = seat.player.chips_in_play.take();
-                        let action = TableAction::PlayerLoses(
-                            u8::try_from(i).unwrap_or_default(),
-                            seat.player.id,
-                            seat.cards.bard(),
-                            player_loses,
-                        );
-                        log::info!("{}", action.commentary(&seat.player.handle));
-                        self.event_log.log(action);
-                    }
-                }
+            if seat_cell.is_in_hand()
+                && let Some(seat) = self.get_seat(u8::try_from(i).unwrap_or_default())
+                && !winners.contains(&u8::try_from(i).unwrap_or_default())
+            {
+                let player_loses = seat.player.chips_in_play.take();
+                let action = TableAction::PlayerLoses(
+                    u8::try_from(i).unwrap_or_default(),
+                    seat.player.id,
+                    seat.cards.bard(),
+                    player_loses,
+                );
+                log::info!("{}", action.commentary(&seat.player.handle));
+                self.event_log.log(action);
             }
         }
 
@@ -1702,10 +1700,10 @@ impl From<&pkstate::PKState> for Table {
             .map(|p| {
                 let mut player = Player::new(p.name.clone());
                 player.chips = Stack::new(p.stack);
-                if let Some(id_str) = &p.id {
-                    if let Ok(uuid) = Uuid::parse_str(id_str) {
-                        player.id = uuid;
-                    }
+                if let Some(id_str) = &p.id
+                    && let Ok(uuid) = Uuid::parse_str(id_str)
+                {
+                    player.id = uuid;
                 }
                 Seat::new_with_cards(player, BoxedCards::blanks(cards_per))
             })

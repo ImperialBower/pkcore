@@ -487,13 +487,13 @@ impl Dealer {
         self.validate_is_active(seat, DealerAction::Check { seat })?;
         // A check is only valid when there is no outstanding bet to call.
         let current_bet = self.table.bet.get();
-        if let Some(s) = self.table.get_seat(seat) {
-            if s.player.bet.count() < current_bet {
-                return Err(DealerError::IllegalAction {
-                    action: DealerAction::Check { seat },
-                    reason: format!("Cannot check: there is an outstanding bet of {current_bet}"),
-                });
-            }
+        if let Some(s) = self.table.get_seat(seat)
+            && s.player.bet.count() < current_bet
+        {
+            return Err(DealerError::IllegalAction {
+                action: DealerAction::Check { seat },
+                reason: format!("Cannot check: there is an outstanding bet of {current_bet}"),
+            });
         }
         self.table
             .act_check(seat)
