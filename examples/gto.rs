@@ -36,9 +36,9 @@ fn main() -> Result<(), PKError> {
     let solver: Versus;
 
     if let Some(board) = args.board {
-        solver = Versus::new_with_board(Two::from_str(&*args.player)?, Combos::from_str(&*args.villain)?, board);
+        solver = Versus::new_with_board(Two::from_str(&args.player)?, Combos::from_str(&args.villain)?, board);
     } else {
-        solver = Versus::new(Two::from_str(&*args.player)?, Combos::from_str(&*args.villain)?);
+        solver = Versus::new(Two::from_str(&args.player)?, Combos::from_str(&args.villain)?);
     }
 
     println!("{}", solver);

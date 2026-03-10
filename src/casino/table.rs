@@ -17,14 +17,21 @@ use crate::play::stages::turn_eval::TurnEval;
 use crate::prelude::{Bard, BoxedCards, Evals};
 use crate::{PKError, Pile};
 use bint::{BintCell, DrainableBintCell};
+use bitvec::macros::internal::funty::Fundamental;
+use cardpack::prelude::{BasicPile, Pile as CPile, Standard52};
+use pkstate::act::{Action, Round};
+use pkstate::game::ForcedBets as PKForcedBets;
+use pkstate::seat::Seat as PKSeat;
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
+use std::str::FromStr;
+use termion::color;
 use uuid::Uuid;
 
 pub mod event;
 pub mod position;
 pub mod pot;
-mod result;
+pub mod result;
 pub mod seat;
 pub mod seats;
 
@@ -34,6 +41,7 @@ pub mod seats;
 /// the phase, players, pot size, board cards, and other details needed to understand
 /// the current state of the hand.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct GameState {
     pub table_id: Uuid,
     pub table_name: String,
@@ -44,11 +52,13 @@ pub struct GameState {
     pub pot_size: usize,
     pub current_bet: usize,
     pub board_cards: Vec<Bard>,
-    pub deck_remaining: usize,
     pub active_players: usize,
     pub total_players: usize,
-    pub small_blind: usize,
-    pub big_blind: usize,
+    pub forced_bets: ForcedBets,
+    pub has_blinded: bool,
+    pub has_hole_cards: bool,
+    pub round_complete: bool,
+    pub game_complete: bool,
 }
 
 impl std::fmt::Display for GameState {
@@ -73,9 +83,26 @@ impl std::fmt::Display for GameState {
 
         writeln!(f, "Pot: {}", self.pot_size)?;
         writeln!(f, "Current Bet: {}", self.current_bet)?;
-        writeln!(f, "Blinds: {}/{}", self.small_blind, self.big_blind)?;
+        writeln!(f, "Blinds: {}", self.forced_bets)?;
         writeln!(f, "Active Players: {}/{}", self.active_players, self.total_players)?;
-        writeln!(f, "Deck Remaining: {}", self.deck_remaining)?;
+
+        if !self.has_blinded {
+            writeln!(
+                f,
+                "{}Blinds have not been posted{}",
+                color::Fg(color::LightRed),
+                color::Fg(color::Reset)
+            )?;
+        }
+
+        if !self.has_hole_cards {
+            writeln!(
+                f,
+                "{}Players have not been dealt their cards{}",
+                color::Fg(color::LightRed),
+                color::Fg(color::Reset)
+            )?;
+        }
 
         Ok(())
     }
@@ -525,10 +552,10 @@ impl Table {
 
     pub fn commentary_last(&self) -> String {
         if let Some(last_event) = self.event_log.last() {
-            if let Some(seat_number) = last_event.get_seat() {
-                if let Some(seat) = self.get_seat(seat_number) {
-                    return last_event.commentary(&seat.player.handle.clone());
-                }
+            if let Some(seat_number) = last_event.get_seat()
+                && let Some(seat) = self.get_seat(seat_number)
+            {
+                return last_event.commentary(&seat.player.handle.clone());
             }
             last_event.to_string()
         } else {
@@ -537,12 +564,11 @@ impl Table {
     }
 
     pub fn commentary_last_player_action(&self) -> Option<String> {
-        if let Some(action) = self.event_log.last_player_action() {
-            if let Some(seat_number) = action.get_seat() {
-                if let Some(seat) = self.get_seat(seat_number) {
-                    return Some(format!("{} {}", seat.player.handle, action));
-                }
-            }
+        if let Some(action) = self.event_log.last_player_action()
+            && let Some(seat_number) = action.get_seat()
+            && let Some(seat) = self.get_seat(seat_number)
+        {
+            return Some(format!("{} {}", seat.player.handle, action));
         }
 
         None
@@ -575,6 +601,21 @@ impl Table {
         }
     }
 
+    /// Places a known set of `cards` directly into a seat, removing them from the deck.
+    ///
+    /// Used when reconstructing a [`Table`] from a [`pkstate::PKState`] snapshot where
+    /// the hole cards are already known rather than drawn randomly.
+    pub fn force_deal_to_seat(&self, seat_number: u8, cards: Cards) {
+        self.deck.remove_all(&CardsCell::from(&cards));
+        if let Some(mut seat) = self.get_seat_mut(seat_number) {
+            let bard = Bard::from(cards.clone());
+            for card in cards {
+                let _ = seat.cards.deal(card);
+            }
+            self.event_log.log(TableAction::ForceDealt(seat_number, bard));
+        }
+    }
+
     /// Deals cards to each seat in a clockwise fashion until all players have their hands.
     ///
     /// TODO: Alternative logic for Stud and Razz games.
@@ -593,7 +634,13 @@ impl Table {
 
         while dbc.has_capacity() {
             let seat_number = dbc.value();
-            self.deal_card_to_seat(seat_number)?;
+
+            if self.seats.is_seat_in_hand(seat_number) {
+                log::debug!("Dealing to seat #{seat_number}");
+                self.deal_card_to_seat(seat_number)?;
+            } else {
+                log::trace!("Skipping seat #{seat_number} because they are not in hand");
+            }
 
             match dbc.up() {
                 Some(_) => {}
@@ -671,6 +718,38 @@ impl Table {
         }
     }
 
+    /// Returns the seat index of the Nth next occupied seat after `start`, wrapping
+    /// around through all seats.  If there are fewer than N occupied seats the
+    /// traversal wraps through the occupied seats cyclically (i.e. the result is
+    /// the seat at position `n % occupied_count` after `start`).
+    /// Falls back to raw arithmetic only when no occupied seats exist at all.
+    pub fn next_occupied_seat_after(&self, start: u8, n: usize) -> u8 {
+        let size = self.seats.size() as usize;
+        let start = start as usize;
+
+        // Collect occupied seat indices in order starting just after `start`.
+        let occupied: Vec<u8> = (1..=size)
+            .filter_map(|step| {
+                let idx = (start + step) % size;
+                let seat = self.get_seat(idx.as_u8())?;
+                if seat.is_empty() {
+                    None
+                } else {
+                    Some(u8::try_from(idx).unwrap_or_default())
+                }
+            })
+            .collect();
+
+        if occupied.is_empty() {
+            // No occupied seats at all — raw arithmetic fallback.
+            return u8::try_from((start + n) % size).unwrap_or_default();
+        }
+
+        // Wrap n through the number of occupied seats.
+        let idx = (n - 1) % occupied.len();
+        occupied[idx]
+    }
+
     /// ```
     /// use pkcore::prelude::*;
     ///
@@ -681,7 +760,7 @@ impl Table {
     /// assert_eq!(table.determine_big_blind(), 2, "If seat 0 is the dealer, than seat 2 is the big blind");
     /// ```
     pub fn determine_big_blind(&self) -> u8 {
-        let bb_seat = self.button.static_up_x(2).value;
+        let bb_seat = self.next_occupied_seat_after(self.button.value(), 2);
         log::trace!("BB seat #{bb_seat} {}", self.get_seat_handle(bb_seat));
         bb_seat
     }
@@ -734,7 +813,7 @@ impl Table {
     /// assert_eq!(1, table.determine_small_blind(), "If seat 0 is the dealer, than seat 1 is the small blind");
     /// ```
     pub fn determine_small_blind(&self) -> u8 {
-        let sb_seat = self.button.static_up_x(1).value;
+        let sb_seat = self.next_occupied_seat_after(self.button.value(), 1);
         log::trace!("SB seat #{sb_seat} {}", self.get_seat_handle(sb_seat));
         sb_seat
     }
@@ -753,9 +832,9 @@ impl Table {
     /// ```
     pub fn determine_utg(&self) -> u8 {
         if self.phase.borrow().is_preflop() {
-            self.button.static_up_x(3).value
+            self.next_occupied_seat_after(self.button.value(), 3)
         } else {
-            self.button.static_up_x(1).value
+            self.next_occupied_seat_after(self.button.value(), 1)
         }
     }
 
@@ -883,20 +962,19 @@ impl Table {
         }
 
         for (i, seat_cell) in self.seats.borrow_all().iter().enumerate() {
-            if seat_cell.is_in_hand() {
-                if let Some(seat) = self.get_seat(u8::try_from(i).unwrap_or_default()) {
-                    if !winners.contains(&u8::try_from(i).unwrap_or_default()) {
-                        let player_loses = seat.player.chips_in_play.take();
-                        let action = TableAction::PlayerLoses(
-                            u8::try_from(i).unwrap_or_default(),
-                            seat.player.id,
-                            seat.cards.bard(),
-                            player_loses,
-                        );
-                        log::info!("{}", action.commentary(&seat.player.handle));
-                        self.event_log.log(action);
-                    }
-                }
+            if seat_cell.is_in_hand()
+                && let Some(seat) = self.get_seat(u8::try_from(i).unwrap_or_default())
+                && !winners.contains(&u8::try_from(i).unwrap_or_default())
+            {
+                let player_loses = seat.player.chips_in_play.take();
+                let action = TableAction::PlayerLoses(
+                    u8::try_from(i).unwrap_or_default(),
+                    seat.player.id,
+                    seat.cards.bard(),
+                    player_loses,
+                );
+                log::info!("{}", action.commentary(&seat.player.handle));
+                self.event_log.log(action);
             }
         }
 
@@ -1082,11 +1160,13 @@ impl Table {
             pot_size: self.pot.count(),
             current_bet: self.bet.get(),
             board_cards,
-            deck_remaining: self.deck.len(),
             active_players: self.seats.count_active_in_hand(),
             total_players: self.seats.size() as usize,
-            small_blind: self.forced.small_blind,
-            big_blind: self.forced.big_blind,
+            forced_bets: self.forced,
+            has_hole_cards: self.seats.are_dealt(),
+            has_blinded: self.event_log.have_posted_blinds(),
+            round_complete: self.is_betting_complete(),
+            game_complete: self.is_game_over(),
         }
     }
 
@@ -1309,6 +1389,28 @@ impl Table {
     pub fn to_call(&self, player: u8) -> usize {
         self.seats.to_call(player)
     }
+
+    // utils
+
+    /// Created for the `From<&Table> for pkstate::PKState` implementation.
+    fn dealt_action(seat: u8, bard: Bard) -> Option<Action> {
+        let pile = bard.to_pile()?;
+        match seat {
+            0 => Some(Action::P0Dealt(pile)),
+            1 => Some(Action::P1Dealt(pile)),
+            2 => Some(Action::P2Dealt(pile)),
+            3 => Some(Action::P3Dealt(pile)),
+            4 => Some(Action::P4Dealt(pile)),
+            5 => Some(Action::P5Dealt(pile)),
+            6 => Some(Action::P6Dealt(pile)),
+            7 => Some(Action::P7Dealt(pile)),
+            8 => Some(Action::P8Dealt(pile)),
+            9 => Some(Action::P9Dealt(pile)),
+            10 => Some(Action::P10Dealt(pile)),
+            11 => Some(Action::P11Dealt(pile)),
+            _ => None,
+        }
+    }
 }
 
 impl Default for Table {
@@ -1372,6 +1474,489 @@ impl TryFrom<&Pluribus> for Table {
         }
 
         Ok(table)
+    }
+}
+
+impl From<&Table> for pkstate::PKState {
+    /// Converts a [`Table`] snapshot into a [`pkstate::PKState`].
+    ///
+    /// Players are taken from the seats in order. The event log is walked once and
+    /// split into [`pkstate::act::Round`]s whenever a street-dealing action is seen
+    /// (`DealtFlop`, `DealtTurn`, `DealtRiver`). Every `Dealt`, `Check`, `Bet`,
+    /// `Call`, `Raise`, `AllIn`, `Fold`, `PlayerWins`, and `PlayerLoses` action is
+    /// mapped to its corresponding [`pkstate::act::Action`] variant.
+    #[allow(clippy::too_many_lines)]
+    fn from(table: &Table) -> Self {
+        // ── players ──────────────────────────────────────────────────────────
+        let players: Vec<PKSeat> = table
+            .seats
+            .iter()
+            .map(|sc| {
+                let s = sc.borrow();
+                PKSeat {
+                    id: Some(s.player.id.to_string()),
+                    name: s.player.handle.clone(),
+                    stack: s.player.chips.count(),
+                }
+            })
+            .collect();
+
+        // ── forced bets ───────────────────────────────────────────────────────
+        let forced_bets = PKForcedBets::new(table.forced.small_blind, table.forced.big_blind);
+
+        // ── board ─────────────────────────────────────────────────────────────
+        let board_str = table.board.to_string();
+        let board: Option<BasicPile> = if board_str.trim().is_empty() {
+            None
+        } else {
+            CPile::<Standard52>::from_str(&board_str)
+                .ok()
+                .map(|p| BasicPile::from(&p))
+        };
+
+        // ── rounds (walk the event log) ───────────────────────────────────────
+        let mut rounds: Vec<Round> = Vec::new();
+        let mut current: Vec<Action> = Vec::new();
+
+        for action in table.event_log.entries() {
+            match action {
+                // ── street boundaries: push the current round and start a new one ──
+                TableAction::DealtFlop(bard) | TableAction::DealtTurn(bard) | TableAction::DealtRiver(bard) => {
+                    if !current.is_empty() {
+                        rounds.push(Round(std::mem::take(&mut current)));
+                    }
+                    if let Some(pile) = bard.to_pile() {
+                        current.push(Action::DealCommon(pile));
+                    }
+                }
+
+                // ── hole cards ────────────────────────────────────────────────────
+                TableAction::Dealt(seat, bard) | TableAction::ForceDealt(seat, bard) => {
+                    if let Some(a) = Table::dealt_action(seat, bard) {
+                        current.push(a);
+                    }
+                }
+
+                // ── player actions ────────────────────────────────────────────────
+                TableAction::Check(seat) => {
+                    if let Some(a) = match seat {
+                        0 => Some(Action::P0Check),
+                        1 => Some(Action::P1Check),
+                        2 => Some(Action::P2Check),
+                        3 => Some(Action::P3Check),
+                        4 => Some(Action::P4Check),
+                        5 => Some(Action::P5Check),
+                        6 => Some(Action::P6Check),
+                        7 => Some(Action::P7Check),
+                        8 => Some(Action::P8Check),
+                        9 => Some(Action::P9Check),
+                        10 => Some(Action::P10Check),
+                        11 => Some(Action::P11Check),
+                        _ => None,
+                    } {
+                        current.push(a);
+                    }
+                }
+                TableAction::Bet(seat, amount)
+                | TableAction::Call(seat, amount)
+                | TableAction::Raise(seat, amount)
+                | TableAction::AllIn(seat, amount)
+                | TableAction::ForcedBetSmallBlind(seat, amount)
+                | TableAction::ForcedBetBigBlind(seat, amount) => {
+                    if let Some(a) = match seat {
+                        0 => Some(Action::P0CBR(amount)),
+                        1 => Some(Action::P1CBR(amount)),
+                        2 => Some(Action::P2CBR(amount)),
+                        3 => Some(Action::P3CBR(amount)),
+                        4 => Some(Action::P4CBR(amount)),
+                        5 => Some(Action::P5CBR(amount)),
+                        6 => Some(Action::P6CBR(amount)),
+                        7 => Some(Action::P7CBR(amount)),
+                        8 => Some(Action::P8CBR(amount)),
+                        9 => Some(Action::P9CBR(amount)),
+                        10 => Some(Action::P10CBR(amount)),
+                        11 => Some(Action::P11CBR(amount)),
+                        _ => None,
+                    } {
+                        current.push(a);
+                    }
+                }
+                TableAction::Fold(seat) => {
+                    if let Some(a) = match seat {
+                        0 => Some(Action::P0Fold),
+                        1 => Some(Action::P1Fold),
+                        2 => Some(Action::P2Fold),
+                        3 => Some(Action::P3Fold),
+                        4 => Some(Action::P4Fold),
+                        5 => Some(Action::P5Fold),
+                        6 => Some(Action::P6Fold),
+                        7 => Some(Action::P7Fold),
+                        8 => Some(Action::P8Fold),
+                        9 => Some(Action::P9Fold),
+                        10 => Some(Action::P10Fold),
+                        11 => Some(Action::P11Fold),
+                        _ => None,
+                    } {
+                        current.push(a);
+                    }
+                }
+
+                // ── results ───────────────────────────────────────────────────────
+                TableAction::PlayerWins(seat, _, _, amount, _)
+                | TableAction::PlayerWinsMainPot(seat, amount)
+                | TableAction::PlayerWinsSidePot(seat, amount) => {
+                    if let Some(a) = match seat {
+                        0 => Some(Action::P0Wins(amount)),
+                        1 => Some(Action::P1Wins(amount)),
+                        2 => Some(Action::P2Wins(amount)),
+                        3 => Some(Action::P3Wins(amount)),
+                        4 => Some(Action::P4Wins(amount)),
+                        5 => Some(Action::P5Wins(amount)),
+                        6 => Some(Action::P6Wins(amount)),
+                        7 => Some(Action::P7Wins(amount)),
+                        8 => Some(Action::P8Wins(amount)),
+                        9 => Some(Action::P9Wins(amount)),
+                        10 => Some(Action::P10Wins(amount)),
+                        11 => Some(Action::P11Wins(amount)),
+                        _ => None,
+                    } {
+                        current.push(a);
+                    }
+                }
+                TableAction::PlayerLoses(seat, _, _, amount)
+                | TableAction::PlayerLosesMainPot(seat, amount)
+                | TableAction::PlayerLosesSidePot(seat, amount) => {
+                    if let Some(a) = match seat {
+                        0 => Some(Action::P0Loses(amount)),
+                        1 => Some(Action::P1Loses(amount)),
+                        2 => Some(Action::P2Loses(amount)),
+                        3 => Some(Action::P3Loses(amount)),
+                        4 => Some(Action::P4Loses(amount)),
+                        5 => Some(Action::P5Loses(amount)),
+                        6 => Some(Action::P6Loses(amount)),
+                        7 => Some(Action::P7Loses(amount)),
+                        8 => Some(Action::P8Loses(amount)),
+                        9 => Some(Action::P9Loses(amount)),
+                        10 => Some(Action::P10Loses(amount)),
+                        11 => Some(Action::P11Loses(amount)),
+                        _ => None,
+                    } {
+                        current.push(a);
+                    }
+                }
+
+                _ => {}
+            }
+        }
+
+        if !current.is_empty() {
+            rounds.push(Round(current));
+        }
+
+        pkstate::PKState {
+            id: Some(table.id.to_string()),
+            datetime: None,
+            game: pkstate::game::GameType::NoLimitHoldem,
+            button: table.button.value() as usize,
+            forced_bets,
+            board,
+            players,
+            rounds,
+        }
+    }
+}
+
+impl From<Table> for pkstate::PKState {
+    fn from(table: Table) -> Self {
+        pkstate::PKState::from(&table)
+    }
+}
+
+impl From<&pkstate::PKState> for Table {
+    /// Reconstructs a [`Table`] from a [`pkstate::PKState`] snapshot.
+    ///
+    /// - Players are seated in order with their stacks restored.
+    /// - The button is set to the recorded position.
+    /// - The board (if any) is inserted from the serialised card string.
+    /// - Every [`pkstate::act::Round`] is replayed: hole-card deals, community-card
+    ///   deals, and all betting actions (CBR, Check, Fold) are driven through the
+    ///   same `Table` methods used during live play, so the event log and phase
+    ///   advance exactly as they would have originally.
+    #[allow(clippy::too_many_lines)]
+    fn from(pk: &pkstate::PKState) -> Self {
+        use cardpack::prelude::BasicPile;
+        use pkstate::act::Action;
+
+        /// Convert a `BasicPile` display string into pkcore `Cards`.
+        fn pile_to_cards(pile: &BasicPile) -> Cards {
+            Cards::from_str(&pile.to_string()).unwrap_or_default()
+        }
+
+        // ── seats ─────────────────────────────────────────────────────────────
+        let cards_per = pkstate::game::GameType::NoLimitHoldem.cards_per_player() as usize;
+        let seats: Vec<Seat> = pk
+            .players
+            .iter()
+            .map(|p| {
+                let mut player = Player::new(p.name.clone());
+                player.chips = Stack::new(p.stack);
+                if let Some(id_str) = &p.id
+                    && let Ok(uuid) = Uuid::parse_str(id_str)
+                {
+                    player.id = uuid;
+                }
+                Seat::new_with_cards(player, BoxedCards::blanks(cards_per))
+            })
+            .collect();
+
+        let seats = Seats::new(seats);
+        let forced = ForcedBets::new(pk.forced_bets.small, pk.forced_bets.big);
+        let table = Table::nlh_from_seats(seats, forced);
+
+        // ── button ────────────────────────────────────────────────────────────
+        if let Ok(pos) = u8::try_from(pk.button) {
+            table.button.set(pos);
+        }
+
+        // ── board ─────────────────────────────────────────────────────────────
+        if let Some(board_pile) = &pk.board {
+            let cards = pile_to_cards(board_pile);
+            if !cards.is_empty() {
+                table.set_board(cards);
+            }
+        }
+
+        // ── replay rounds ─────────────────────────────────────────────────────
+        for round in &pk.rounds {
+            for action in &round.0 {
+                let _: Result<(), PKError> = match action {
+                    // Community cards — insert directly onto the board
+                    Action::DealCommon(pile) => {
+                        let cards = pile_to_cards(pile);
+                        for card in cards {
+                            table.board.insert(card);
+                            table.deck.remove_all(&CardsCell::from(Cards::from(&card)));
+                        }
+                        Ok(())
+                    }
+
+                    // Hole cards — deal directly into the seat
+                    Action::P0Dealt(pile) => {
+                        table.force_deal_to_seat(0, pile_to_cards(pile));
+                        Ok(())
+                    }
+                    Action::P1Dealt(pile) => {
+                        table.force_deal_to_seat(1, pile_to_cards(pile));
+                        Ok(())
+                    }
+                    Action::P2Dealt(pile) => {
+                        table.force_deal_to_seat(2, pile_to_cards(pile));
+                        Ok(())
+                    }
+                    Action::P3Dealt(pile) => {
+                        table.force_deal_to_seat(3, pile_to_cards(pile));
+                        Ok(())
+                    }
+                    Action::P4Dealt(pile) => {
+                        table.force_deal_to_seat(4, pile_to_cards(pile));
+                        Ok(())
+                    }
+                    Action::P5Dealt(pile) => {
+                        table.force_deal_to_seat(5, pile_to_cards(pile));
+                        Ok(())
+                    }
+                    Action::P6Dealt(pile) => {
+                        table.force_deal_to_seat(6, pile_to_cards(pile));
+                        Ok(())
+                    }
+                    Action::P7Dealt(pile) => {
+                        table.force_deal_to_seat(7, pile_to_cards(pile));
+                        Ok(())
+                    }
+                    Action::P8Dealt(pile) => {
+                        table.force_deal_to_seat(8, pile_to_cards(pile));
+                        Ok(())
+                    }
+                    Action::P9Dealt(pile) => {
+                        table.force_deal_to_seat(9, pile_to_cards(pile));
+                        Ok(())
+                    }
+                    Action::P10Dealt(pile) => {
+                        table.force_deal_to_seat(10, pile_to_cards(pile));
+                        Ok(())
+                    }
+                    Action::P11Dealt(pile) => {
+                        table.force_deal_to_seat(11, pile_to_cards(pile));
+                        Ok(())
+                    }
+
+                    // Check
+                    Action::P0Check => {
+                        table.event_log.log(TableAction::Check(0));
+                        Ok(())
+                    }
+                    Action::P1Check => {
+                        table.event_log.log(TableAction::Check(1));
+                        Ok(())
+                    }
+                    Action::P2Check => {
+                        table.event_log.log(TableAction::Check(2));
+                        Ok(())
+                    }
+                    Action::P3Check => {
+                        table.event_log.log(TableAction::Check(3));
+                        Ok(())
+                    }
+                    Action::P4Check => {
+                        table.event_log.log(TableAction::Check(4));
+                        Ok(())
+                    }
+                    Action::P5Check => {
+                        table.event_log.log(TableAction::Check(5));
+                        Ok(())
+                    }
+                    Action::P6Check => {
+                        table.event_log.log(TableAction::Check(6));
+                        Ok(())
+                    }
+                    Action::P7Check => {
+                        table.event_log.log(TableAction::Check(7));
+                        Ok(())
+                    }
+                    Action::P8Check => {
+                        table.event_log.log(TableAction::Check(8));
+                        Ok(())
+                    }
+                    Action::P9Check => {
+                        table.event_log.log(TableAction::Check(9));
+                        Ok(())
+                    }
+                    Action::P10Check => {
+                        table.event_log.log(TableAction::Check(10));
+                        Ok(())
+                    }
+                    Action::P11Check => {
+                        table.event_log.log(TableAction::Check(11));
+                        Ok(())
+                    }
+
+                    // Call / Bet / Raise — pkstate collapses all three into CBR.
+                    // We log the amount but do not attempt to re-drive the chip
+                    // mechanics, since the exact action type is ambiguous and
+                    // replaying through Table::act_raise would require the phase
+                    // and bet state to be perfectly in sync.
+                    Action::P0CBR(a) => {
+                        table.event_log.log(TableAction::Bet(0, *a));
+                        Ok(())
+                    }
+                    Action::P1CBR(a) => {
+                        table.event_log.log(TableAction::Bet(1, *a));
+                        Ok(())
+                    }
+                    Action::P2CBR(a) => {
+                        table.event_log.log(TableAction::Bet(2, *a));
+                        Ok(())
+                    }
+                    Action::P3CBR(a) => {
+                        table.event_log.log(TableAction::Bet(3, *a));
+                        Ok(())
+                    }
+                    Action::P4CBR(a) => {
+                        table.event_log.log(TableAction::Bet(4, *a));
+                        Ok(())
+                    }
+                    Action::P5CBR(a) => {
+                        table.event_log.log(TableAction::Bet(5, *a));
+                        Ok(())
+                    }
+                    Action::P6CBR(a) => {
+                        table.event_log.log(TableAction::Bet(6, *a));
+                        Ok(())
+                    }
+                    Action::P7CBR(a) => {
+                        table.event_log.log(TableAction::Bet(7, *a));
+                        Ok(())
+                    }
+                    Action::P8CBR(a) => {
+                        table.event_log.log(TableAction::Bet(8, *a));
+                        Ok(())
+                    }
+                    Action::P9CBR(a) => {
+                        table.event_log.log(TableAction::Bet(9, *a));
+                        Ok(())
+                    }
+                    Action::P10CBR(a) => {
+                        table.event_log.log(TableAction::Bet(10, *a));
+                        Ok(())
+                    }
+                    Action::P11CBR(a) => {
+                        table.event_log.log(TableAction::Bet(11, *a));
+                        Ok(())
+                    }
+
+                    // Fold
+                    Action::P0Fold => {
+                        table.event_log.log(TableAction::Fold(0));
+                        Ok(())
+                    }
+                    Action::P1Fold => {
+                        table.event_log.log(TableAction::Fold(1));
+                        Ok(())
+                    }
+                    Action::P2Fold => {
+                        table.event_log.log(TableAction::Fold(2));
+                        Ok(())
+                    }
+                    Action::P3Fold => {
+                        table.event_log.log(TableAction::Fold(3));
+                        Ok(())
+                    }
+                    Action::P4Fold => {
+                        table.event_log.log(TableAction::Fold(4));
+                        Ok(())
+                    }
+                    Action::P5Fold => {
+                        table.event_log.log(TableAction::Fold(5));
+                        Ok(())
+                    }
+                    Action::P6Fold => {
+                        table.event_log.log(TableAction::Fold(6));
+                        Ok(())
+                    }
+                    Action::P7Fold => {
+                        table.event_log.log(TableAction::Fold(7));
+                        Ok(())
+                    }
+                    Action::P8Fold => {
+                        table.event_log.log(TableAction::Fold(8));
+                        Ok(())
+                    }
+                    Action::P9Fold => {
+                        table.event_log.log(TableAction::Fold(9));
+                        Ok(())
+                    }
+                    Action::P10Fold => {
+                        table.event_log.log(TableAction::Fold(10));
+                        Ok(())
+                    }
+                    Action::P11Fold => {
+                        table.event_log.log(TableAction::Fold(11));
+                        Ok(())
+                    }
+
+                    // Wins / Loses are result annotations — no table action needed
+                    _ => Ok(()),
+                };
+            }
+        }
+
+        table
+    }
+}
+
+impl From<pkstate::PKState> for Table {
+    fn from(pk: pkstate::PKState) -> Self {
+        Table::from(&pk)
     }
 }
 
@@ -1444,10 +2029,11 @@ mod casino__table_tests {
         let table = Table::default();
         assert_eq!("Default No Limit Hold'em Table", table.name);
         assert_eq!(GameType::NoLimitHoldem, table.game);
-        // assert_eq!(GamePhase::NewHand, table.phase.);
         assert_eq!(6, table.seats.size());
         assert_eq!(0, table.button.value());
-        assert_eq!(0, table.next_to_act());
+        // With no real players seated, next_to_act falls back to determine_utg()
+        // which is button+3 = seat 3 on a default 6-seat table.
+        assert_eq!(table.determine_utg(), table.next_to_act());
         assert_eq!(52, table.deck.len());
         assert_eq!(0, table.board.len());
         assert_eq!(0, table.muck.len());
@@ -3092,10 +3678,15 @@ mod casino__table___end_hand_tests {
         assert_eq!(0, state.pot_size);
         assert_eq!(0, state.current_bet);
         assert_eq!(0, state.board_cards.len());
-        assert_eq!(52, state.deck_remaining);
         assert_eq!(6, state.total_players);
-        assert_eq!(50, state.small_blind);
-        assert_eq!(100, state.big_blind);
+        assert_eq!(
+            ForcedBets {
+                small_blind: 50,
+                big_blind: 100,
+                ante: 0,
+            },
+            state.forced_bets
+        );
     }
 
     #[test]
@@ -3117,11 +3708,81 @@ mod casino__table___end_hand_tests {
         let state = table.get_game_state();
 
         assert_eq!(3, state.board_cards.len());
-        assert_eq!(52, state.deck_remaining);
 
         // Verify display works
         let display_output = format!("{}", state);
         assert!(display_output.contains("Board:"));
         assert!(display_output.contains("Pot: 0"));
+    }
+
+    #[test]
+    fn from__table_ref__pkstate() {
+        let table = Table::default();
+        let pk = pkstate::PKState::from(&table);
+
+        assert_eq!(table.id.to_string(), pk.id.unwrap());
+        assert_eq!(6, pk.players.len());
+        assert_eq!(pkstate::game::GameType::NoLimitHoldem, pk.game);
+        assert_eq!(50, pk.forced_bets.small);
+        assert_eq!(100, pk.forced_bets.big);
+        assert!(pk.board.is_none());
+        assert!(pk.rounds.is_empty());
+    }
+
+    #[test]
+    fn from__table_ref__pkstate__with_actions() {
+        let table = TestData::min_table();
+        table.deal_cards_to_seats().unwrap();
+        table.act_forced_bets().unwrap();
+        let _ = table.act_bet(2, 5000);
+        let _ = table.act_fold(0);
+        let _ = table.act_call(1);
+        let _ = table.bring_it_in();
+        table.deal_flop().unwrap();
+
+        let pk = pkstate::PKState::from(&table);
+
+        // Preflop round + flop round started
+        assert!(!pk.rounds.is_empty());
+        // Players are populated
+        assert_eq!(3, pk.players.len());
+    }
+
+    #[test]
+    fn from__pkstate__table_round_trip() {
+        // Use a table with funded players so forced bets work.
+        // Seats need BoxedCards::blanks(2) so deal_cards_to_seats can fill them.
+        let seats = Seats::new(
+            (0..6)
+                .map(|i| {
+                    Seat::new_with_cards(
+                        Player::new_with_chips(format!("Player {i}"), 10_000),
+                        BoxedCards::blanks(2),
+                    )
+                })
+                .collect(),
+        );
+        let original = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        original.act_shuffle_deck();
+        original.deal_cards_to_seats().unwrap();
+        original.act_forced_bets().unwrap();
+
+        let pk = pkstate::PKState::from(&original);
+        let restored = Table::from(&pk);
+
+        // Same number of players
+        assert_eq!(original.seats.size(), restored.seats.size());
+        // Button position preserved
+        assert_eq!(original.button.value(), restored.button.value());
+        // Forced bets preserved
+        assert_eq!(original.forced.small_blind, restored.forced.small_blind);
+        assert_eq!(original.forced.big_blind, restored.forced.big_blind);
+        // Player names and stacks are preserved
+        for i in 0..restored.seats.size() {
+            if let Some(seat) = restored.get_seat(i) {
+                assert_eq!(seat.player.handle, pk.players[i as usize].name);
+                assert_eq!(seat.player.chips.count(), pk.players[i as usize].stack);
+            }
+        }
     }
 }

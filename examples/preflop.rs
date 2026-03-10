@@ -142,7 +142,7 @@ fn read_input(conn: &Connection, shus: &mut Vec<SortedHeadsUp>) {
     for _ in 0..i {
         let shu = shus.pop().unwrap();
         println!("{shu}");
-        process(&conn, &shu);
+        process(conn, &shu);
     }
 
     println!("read_input() time elapsed: {:.2?}", now.elapsed());
@@ -172,10 +172,10 @@ fn process(conn: &Connection, shu: &SortedHeadsUp) {
     if HUPResult::exists(conn, shu) {
         println!("..... already exists");
     } else {
-        let hupr = calc(&shu);
+        let hupr = calc(shu);
         println!("..... {}", hupr);
 
-        store(&conn, &hupr);
+        store(conn, &hupr);
     }
 }
 

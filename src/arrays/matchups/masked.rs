@@ -568,7 +568,7 @@ mod arrays__matchups__masked_tests {
     };
 
     #[test]
-    #[ignore]
+    #[ignore = "rubber biscuit"]
     fn distinct() {
         let mut distinct = Masked::distinct();
 
@@ -945,7 +945,7 @@ mod arrays__matchups__masked_tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore = "rubber biscuit"]
     fn distinct__aces() {
         let original = Masked::from_str("A♠ A♥ A♦ A♣").unwrap();
         let shift1 = Masked::from_str("A♠ A♦ A♥ A♣").unwrap();

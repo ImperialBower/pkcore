@@ -186,7 +186,7 @@ mod arrays__matchups__masks__suit_texture_tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore = "rubber biscuit"]
     fn paired_1212() {
         // #[case(, , Type1212a)]
         let masked1 = Masked::from_str("T♠ 8♥ 4♠ 4♥").unwrap();
@@ -212,7 +212,7 @@ mod arrays__matchups__masks__suit_texture_tests {
         let s1 = masked1.shifts();
         let s2 = masked2.shifts();
         for m in &s1 {
-            if s2.contains(&m) {
+            if s2.contains(m) {
                 return false;
             }
         }
@@ -221,6 +221,6 @@ mod arrays__matchups__masks__suit_texture_tests {
                 return false;
             }
         }
-        return true;
+        true
     }
 }

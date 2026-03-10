@@ -53,12 +53,11 @@ impl CaseEvals {
 
             thread::spawn(move || {
                 let five = Five::try_from(v);
-                if let Ok(case) = five {
-                    if let Ok(ce) = CaseEval::from_holdem_at_deal(case, &my_hands) {
-                        if let Err(e) = tx.send(ce) {
-                            log::error!("Failed to send CaseEval: {e}");
-                        }
-                    }
+                if let Ok(case) = five
+                    && let Ok(ce) = CaseEval::from_holdem_at_deal(case, &my_hands)
+                    && let Err(e) = tx.send(ce)
+                {
+                    log::error!("Failed to send CaseEval: {e}");
                 }
             });
         }
@@ -98,10 +97,10 @@ impl CaseEvals {
 
             thread::spawn(move || {
                 let case = Two::from(v);
-                if let Ok(ce) = CaseEval::from_holdem_at_flop(board, case, &my_hands) {
-                    if let Err(e) = tx.send(ce) {
-                        log::error!("Failed to send CaseEval: {e}");
-                    }
+                if let Ok(ce) = CaseEval::from_holdem_at_flop(board, case, &my_hands)
+                    && let Err(e) = tx.send(ce)
+                {
+                    log::error!("Failed to send CaseEval: {e}");
                 }
             });
         }

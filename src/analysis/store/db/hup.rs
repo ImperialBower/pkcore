@@ -970,10 +970,6 @@ mod analysis__store__db__hupresult_tests {
         assert_eq!(hs(), actual);
     }
 
-    /// Test data
-
-    // 7♠ 7♦ (1375342) 6♥ 6♣ (315362) ties: (21600)
-
     fn hup1() -> HUPResult {
         HUPResult {
             higher: Two::HAND_7D_7C.bard(),

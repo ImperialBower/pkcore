@@ -17,14 +17,14 @@ fn main() {
     }
 }
 
-fn read_input(conn: &Connection, distinct: &Vec<Masked>) {
+fn read_input(conn: &Connection, distinct: &[Masked]) {
     let mut x = 0usize;
     let i = Terminal::receive_usize("How many audits? ");
     println!("Auditing {i} hands.");
 
     while x < i {
-        let masked = random(&distinct).unwrap();
-        match HUPResult::select(&conn, &masked.shu) {
+        let masked = random(distinct).unwrap();
+        match HUPResult::select(conn, &masked.shu) {
             None => println!("{x} - Not in DB: {}", &masked.shu),
             Some(actual) => {
                 println!("{x} - Auditing: {}", &masked.shu);
@@ -39,15 +39,15 @@ fn read_input(conn: &Connection, distinct: &Vec<Masked>) {
                 }
             }
         };
-        if HUPResult::exists(&conn, &masked.shu) {
+        if HUPResult::exists(conn, &masked.shu) {
         } else {
             println!("Not in DB: {}", &masked.shu);
         }
-        x = x + 1;
+        x += 1;
     }
 }
 
-fn random(distinct: &Vec<Masked>) -> Option<&Masked> {
+fn random(distinct: &[Masked]) -> Option<&Masked> {
     let mut rng = rand::rng();
     distinct.choose(&mut rng)
 }

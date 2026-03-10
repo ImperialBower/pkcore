@@ -188,47 +188,41 @@ impl Nubificus {
             }
         } else {
             match betting_phase {
-                GamePhase::BettingPreFlop => {
-                    if self.table.is_betting_complete() {
-                        self.table.act()?;
-                        if display {
-                            println!(
-                                "\n{}Betting round ends. Dealing the flop...{}",
-                                color::Fg(color::Magenta),
-                                color::Fg(color::Reset)
-                            );
-                        }
-                        log::debug!("Board: {}", self.table.board);
-                        if display {
-                            self.table.eval_flop_display();
-                            println!(); // TODO: why the spacing issues?
-                        }
+                GamePhase::BettingPreFlop if self.table.is_betting_complete() => {
+                    self.table.act()?;
+                    if display {
+                        println!(
+                            "\n{}Betting round ends. Dealing the flop...{}",
+                            color::Fg(color::Magenta),
+                            color::Fg(color::Reset)
+                        );
+                    }
+                    log::debug!("Board: {}", self.table.board);
+                    if display {
+                        self.table.eval_flop_display();
+                        println!(); // TODO: why the spacing issues?
                     }
                 }
-                GamePhase::BettingFlop => {
-                    if self.table.is_betting_complete() {
-                        self.table.act()?;
-                        if display {
-                            println!(
-                                "\n{}Betting round ends. Dealing the turn...{}",
-                                color::Fg(color::Magenta),
-                                color::Fg(color::Reset)
-                            );
-                        }
-                        log::debug!("Board: {}", self.table.board);
-                        if display {
-                            self.table.eval_turn_display();
-                        }
+                GamePhase::BettingFlop if self.table.is_betting_complete() => {
+                    self.table.act()?;
+                    if display {
+                        println!(
+                            "\n{}Betting round ends. Dealing the turn...{}",
+                            color::Fg(color::Magenta),
+                            color::Fg(color::Reset)
+                        );
+                    }
+                    log::debug!("Board: {}", self.table.board);
+                    if display {
+                        self.table.eval_turn_display();
                     }
                 }
-                GamePhase::BettingTurn => {
-                    if self.table.is_betting_complete() {
-                        self.table.act()?;
-                        log::debug!("Board: {}", self.table.board);
-                        if display {
-                            self.table.eval_river_display();
-                            println!(); // TODO: why the spacing issues?
-                        }
+                GamePhase::BettingTurn if self.table.is_betting_complete() => {
+                    self.table.act()?;
+                    log::debug!("Board: {}", self.table.board);
+                    if display {
+                        self.table.eval_river_display();
+                        println!(); // TODO: why the spacing issues?
                     }
                 }
                 _ => {}
@@ -253,14 +247,12 @@ impl Nubificus {
             let entry = entry?;
             let path = entry.path();
 
-            if path.is_file() {
-                if let Some(extension) = path.extension() {
-                    if extension == "log" {
-                        if let Some(path_str) = path.to_str() {
-                            log_files.push(path_str.to_string());
-                        }
-                    }
-                }
+            if path.is_file()
+                && let Some(extension) = path.extension()
+                && extension == "log"
+                && let Some(path_str) = path.to_str()
+            {
+                log_files.push(path_str.to_string());
             }
         }
 

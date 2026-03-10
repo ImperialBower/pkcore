@@ -11,13 +11,10 @@ fn main() {
     POKER_DECK.combinations(5).for_each(|c| {
         let cards = Cards::from(c);
         let bits = EightOrBetter::get_low_bits(&cards);
-        if bits.count_ones() == 5 {
-            match Five::try_from(cards) {
-                Ok(five) => {
-                    mappy.insert(bits, five);
-                }
-                Err(_) => {}
-            }
+        if bits.count_ones() == 5
+            && let Ok(five) = Five::try_from(cards)
+        {
+            mappy.insert(bits, five);
         }
     });
 
@@ -25,6 +22,6 @@ fn main() {
     keys.sort();
 
     for (i, key) in keys.iter().enumerate() {
-        println!("{i} - {key:0b} {key}: {}", mappy.get(&key).unwrap());
+        println!("{i} - {key:0b} {key}: {}", mappy.get(key).unwrap());
     }
 }

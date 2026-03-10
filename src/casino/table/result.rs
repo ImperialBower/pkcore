@@ -38,7 +38,7 @@ use crate::prelude::TableLog;
 ///
 /// OK, some hits and some misses. None of the structs it added to it exist. For `CaseEval` it got
 /// the path wrong. And for `Results`, that struct doesn't even exist. Now, to be fair, I did say
-/// `Results` instead of results, implying that there was a struct, instead of the Vec<TableLog>.
+/// `Results` instead of results, implying that there was a struct, instead of the `Vec<TableLog>`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct HandResult {
     /// The case evaluation for the hand

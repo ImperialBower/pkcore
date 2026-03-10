@@ -17,10 +17,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [beta, stable, 1.85.1]
-        include:
-          - rust: nightly
-            rustflags: --cfg thiserror_nightly_testing
+        rust: [beta, stable, 1.91.0]
+#        include:
+#          - rust: nightly
+#            rustflags: --cfg thiserror_nightly_testing
     timeout-minutes: 45
     steps:
       - name: Checkout

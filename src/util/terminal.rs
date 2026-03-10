@@ -1,7 +1,7 @@
 use crate::PKError;
 use crate::analysis::gto::combos::Combos;
-use crate::arrays::hole_cards::twos::StartingHands;
 use crate::cards::Cards;
+use crate::prelude::HoleCards;
 use rand::prelude::*;
 use std::io::{Write, stdin, stdout};
 use std::str::FromStr;
@@ -79,12 +79,12 @@ impl Terminal {
     ///
     /// `PKError::InvalidIndex` if `str` doesn't translate into `Cards`
     /// `PKError::InvalidCardCount` if number of cards isn't divisible by two
-    pub fn receive_cards_in_twos(prompt: &str) -> Result<StartingHands, PKError> {
+    pub fn receive_cards_in_twos(prompt: &str) -> Result<HoleCards, PKError> {
         let Some(cards) = Terminal::receive_cards(prompt) else {
             return Err(PKError::InvalidCardIndex);
         };
 
-        StartingHands::try_from(cards)
+        HoleCards::try_from(cards)
     }
 
     /// # Errors

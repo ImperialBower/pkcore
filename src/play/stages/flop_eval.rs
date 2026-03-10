@@ -265,7 +265,7 @@ impl std::fmt::Display for FlopEval {
 
             v.push(format!(
                 "  Player #{} [{}] {}",
-                i + 1,
+                i,
                 hole_cards,
                 self.results.player_to_string(i)
             ));

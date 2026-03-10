@@ -276,6 +276,10 @@ impl Seats {
         let mut count = 0;
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow();
+            // Skip empty seats — they are not part of the hand.
+            if seat.is_empty() {
+                continue;
+            }
             if seat.is_active() {
                 count += 1;
             }
@@ -289,6 +293,9 @@ impl Seats {
 
         for (seat_number, seat_cell) in self.iter().enumerate() {
             let seat = seat_cell.borrow();
+            if seat.is_empty() {
+                continue;
+            }
             if seat.is_active() {
                 match u8::try_from(seat_number) {
                     Ok(snumber) => seats.push(snumber),
@@ -305,6 +312,9 @@ impl Seats {
         let mut count = 0;
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow();
+            if seat.is_empty() {
+                continue;
+            }
             if seat.is_active() && !seat.is_all_in() {
                 count += 1;
             }
@@ -535,6 +545,10 @@ impl Seats {
 
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow();
+            // Skip empty seats — they are not part of the hand.
+            if seat.is_empty() {
+                continue;
+            }
             if seat.player.state.is_yet_to_act_or_blind() {
                 return false;
             }
@@ -610,6 +624,12 @@ impl Seats {
             log::trace!("Checking seat #{seat_index} for next to act.");
             let state = &seat.player.state;
 
+            // Skip seats with no real player seated (nil UUID).
+            if seat.is_empty() {
+                log::trace!("Seat #{seat_index} is empty, skipping.");
+                continue;
+            }
+
             if !seat.is_in_hand() || seat.is_all_in() {
                 log::trace!("Seat #{seat_index} is out of the hand.");
                 continue;
@@ -635,6 +655,9 @@ impl Seats {
         // Edge case where all action is complete for the round, but the bets haven't been
         // brought in.
         for seat in self.iter_from(utg) {
+            if seat.is_empty() {
+                continue;
+            }
             if !seat.is_in_hand() || seat.is_all_in() {
                 continue;
             }
@@ -893,7 +916,8 @@ mod casino__table__seats_tests {
 
     #[test]
     fn are_clear() {
-        assert!(Seats::default().are_clear());
+        assert!(Seats::new(TestData::min_players()).are_clear());
+        assert!(!Seats::default().are_clear());
         assert!(!Seats::try_from(TestData::the_hand_seats()).unwrap().are_clear());
     }
 
