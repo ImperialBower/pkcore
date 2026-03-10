@@ -112,7 +112,6 @@ docs: create_docs
 # All You Can Eat - Run all checks
 ayce: fmt build_test clippy create_docs
 
-
 # Install required tools
 install-tools:
 	@echo "Installing development tools..."
