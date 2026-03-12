@@ -382,6 +382,21 @@ impl Player {
         self.state.is_active()
     }
 
+    /// Returns `true` when the player is marked as ready for a hand.
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let player = Player::new("Bugsy".to_string());
+    /// assert!(!player.is_ready());
+    ///
+    /// player.state.set(PlayerState::Ready);
+    /// assert!(player.is_ready());
+    /// ```
+    pub fn is_ready(&self) -> bool {
+        self.state.is_ready()
+    }
+
     pub fn is_all_in(&self) -> bool {
         self.chips.count() == 0 && self.bet.count() > 0
     }
@@ -397,6 +412,10 @@ impl Player {
 
     pub fn is_in_hand(&self) -> bool {
         self.state.is_in_hand()
+    }
+
+    pub fn is_out(&self) -> bool {
+        self.state.is_out()
     }
 
     pub fn is_tapped_out(&self) -> bool {
@@ -623,5 +642,29 @@ mod casino__players__player_tests {
 
         let _ = player2.act_bet(100);
         assert!(!player2.is_tapped_out());
+    }
+
+    #[test]
+    fn is_out() {
+        let player = Player::new_with_chips("Out Olivia".to_string(), 500);
+        assert!(!player.is_out());
+
+        player.state.set(PlayerState::Out);
+        assert!(player.is_out());
+
+        player.state.set(PlayerState::Fold);
+        assert!(!player.is_out());
+    }
+
+    #[test]
+    fn is_ready() {
+        let player = Player::new_with_chips("Ready Rita".to_string(), 500);
+        assert!(!player.is_ready());
+
+        player.state.set(PlayerState::Ready);
+        assert!(player.is_ready());
+
+        player.state.set(PlayerState::Fold);
+        assert!(!player.is_ready());
     }
 }
