@@ -667,6 +667,44 @@ impl Seats {
         Err(PKError::InvalidSeatNumber)
     }
 
+    /// Marks all seats that are eligible to play the next hand as `YetToAct`.
+    ///
+    /// A seat is considered eligible when all of the following are true:
+    /// - the seat is occupied,
+    /// - the player is not `Out`, and
+    /// - the player is not tapped out (`0` chips and `0` in the current bet).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use pkcore::casino::player::Player;
+    /// use pkcore::casino::state::PlayerState;
+    /// use pkcore::casino::table::seat::Seat;
+    /// use pkcore::casino::table::seats::Seats;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("Alice".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("Bob".to_string(), 1_000)),
+    /// ]);
+    ///
+    /// seats.get_seat_mut(0).expect("seat 0").player.state.set(PlayerState::Ready);
+    /// seats.get_seat_mut(1).expect("seat 1").player.state.set(PlayerState::Out);
+    ///
+    /// seats.set_eligible_to_yet_to_act();
+    ///
+    /// assert_eq!(PlayerState::YetToAct, seats.get_seat(0).expect("seat 0").player.state.get());
+    /// assert_eq!(PlayerState::Out, seats.get_seat(1).expect("seat 1").player.state.get());
+    /// ```
+    pub fn set_eligible_to_yet_to_act(&self) {
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow_mut();
+            if seat.is_empty() || seat.player.is_out() || seat.player.is_tapped_out() {
+                continue;
+            }
+            seat.player.state.set(PlayerState::YetToAct);
+        }
+    }
+
     /// Clears the `PlayerState` for all the seats.
     pub fn reset_state(&self) {
         for seat_cell in &self.0 {
@@ -877,6 +915,7 @@ impl TryFrom<Vec<SeatCell>> for Seats {
 mod casino__table__seats_tests {
     use super::*;
     use crate::casino::game::ForcedBets;
+    use crate::casino::player::Player;
     use crate::casino::table::Table;
     use crate::prelude::*;
     use crate::util::data::TestData;
@@ -1191,5 +1230,50 @@ mod casino__table__seats_tests {
         assert_eq!(0, seats.to_call(0));
         assert_eq!(PKError::InsufficientChips, seats.act_call(0).unwrap_err());
         assert!(!seats.is_betting_complete());
+    }
+
+    #[test]
+    fn set_eligible_to_yet_to_act_sets_only_eligible_players() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Alice".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("Bob".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("Cara".to_string(), 0)),
+            Seat::default(),
+        ]);
+
+        seats
+            .get_seat_mut(0)
+            .expect("seat 0")
+            .player
+            .state
+            .set(PlayerState::Ready);
+        seats
+            .get_seat_mut(1)
+            .expect("seat 1")
+            .player
+            .state
+            .set(PlayerState::Fold);
+        seats
+            .get_seat_mut(2)
+            .expect("seat 2")
+            .player
+            .state
+            .set(PlayerState::Ready);
+
+        seats.set_eligible_to_yet_to_act();
+
+        assert_eq!(
+            PlayerState::YetToAct,
+            seats.get_seat(0).expect("seat 0").player.state.get()
+        );
+        assert_eq!(
+            PlayerState::YetToAct,
+            seats.get_seat(1).expect("seat 1").player.state.get()
+        );
+        assert_eq!(
+            PlayerState::Ready,
+            seats.get_seat(2).expect("seat 2").player.state.get()
+        );
+        assert_eq!(PlayerState::Out, seats.get_seat(3).expect("seat 3").player.state.get());
     }
 }

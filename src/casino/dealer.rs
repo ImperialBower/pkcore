@@ -72,7 +72,10 @@ pub enum DealerError {
     /// The underlying [`Table`] returned a [`PKError`].
     TableError(PKError),
     /// The action is not legal in the current phase.
-    IllegalAction { action: DealerAction, reason: String },
+    IllegalAction {
+        action: DealerAction,
+        reason: String,
+    },
     /// Tried to seat a player but every seat is occupied.
     TableFull,
     /// There are not enough seated players to start a hand (minimum 2).
@@ -285,14 +288,22 @@ impl Dealer {
 
         println!("Dealer.start_hand() called. Current table state:\n{}", self.table);
 
-        // Collect occupied seat numbers.
+        // A new hand should begin with eligible seated players in YetToAct.
+        self.table.seats.set_eligible_to_yet_to_act();
+
+        // Collect seat numbers of players who can actually be dealt into the hand.
         let occupied: Vec<u8> = self
             .table
             .seats
             .iter()
             .enumerate()
-            .filter(|(_, sc)| !sc.is_empty())
-            .filter_map(|(i, _)| u8::try_from(i).ok())
+            .filter_map(|(i, sc)| {
+                let seat = sc.borrow();
+                if seat.is_empty() || !seat.is_in_hand() || seat.player.is_tapped_out() {
+                    return None;
+                }
+                u8::try_from(i).ok()
+            })
             .collect();
 
         if occupied.len() < 2 {
@@ -532,14 +543,21 @@ impl Dealer {
             })
     }
 
-    fn act_ready(&self, seat: u8) -> Result<(), DealerError> {
+    /// # Errors
+    ///
+    /// - [`DealerError::NoSuchSeat`] — `seat` is out of range.
+    /// - [`DealerError::EmptySeat`] — `seat` is empty.
+    /// - [`DealerError::PlayerIsTappedOut`] — player in `seat` has 0 chips.
+    /// - [`DealerError::HandInProgress`] — player in `seat` is active in a hand that is currently in progress.
+    /// - [`DealerError::IllegalAction`] — player in `seat` is in an unexpected state that is not Ready or Out.
+    pub fn act_ready(&self, seat: u8) -> Result<(), DealerError> {
         match self.table.get_seat(seat) {
             None => Err(DealerError::NoSuchSeat),
             Some(s) if s.is_empty() => Err(DealerError::EmptySeat),
             Some(s) if s.player.is_tapped_out() => Err(DealerError::PlayerIsTappedOut),
             Some(s) if s.player.is_active() => Err(DealerError::HandInProgress),
             Some(s) if s.player.is_ready() || s.player.is_out() => Ok(()),
-            _ => Ok(())
+            _ => Ok(()),
         }
     }
 
