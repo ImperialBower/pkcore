@@ -556,8 +556,8 @@ impl Dealer {
             Some(s) if s.is_empty() => Err(DealerError::EmptySeat),
             Some(s) if s.player.is_tapped_out() => Err(DealerError::PlayerIsTappedOut),
             Some(s) if s.player.is_active() => Err(DealerError::HandInProgress),
-            Some(s) if s.player.is_ready() || s.player.is_out() => Ok(s.player),
-            Some(s) => Ok(s.player),
+            Some(s) if s.player.is_ready() || s.player.is_out() => Ok(s.player.clone()),
+            Some(s) => Ok(s.player.clone()),
         }
     }
 
