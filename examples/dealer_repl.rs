@@ -70,9 +70,7 @@ enum Command {
     /// Lets a player indicate to the `Table` that they are ready
     /// to play.
     #[command(alias = "re")]
-    Ready {
-        seat: u8,
-    },
+    Ready { seat: u8 },
 
     /// Remove a player from their seat (between hands only).
     ///
@@ -236,7 +234,7 @@ fn handle(dealer: &mut Dealer, command: Command) {
                 Ok(()) => println!("✓ {name} seated at seat {seat} with {chips} chips"),
                 Err(e) => print_error(&e),
             }
-        },
+        }
 
         Command::Ready { seat } => match dealer.do_ready(seat) {
             Ok(player) => println!("✓ {} in seat {seat} is ready to play", player.handle),
