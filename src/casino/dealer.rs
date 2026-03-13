@@ -206,7 +206,7 @@ impl Dealer {
     /// - [`DealerError::TableFull`] — no empty seats remain.
     pub fn seat_player(&self, player: Player) -> Result<u8, DealerError> {
         let seat = Seat::new_with_cards(player, BoxedCards::blanks(2));
-        seat.player.state.set(PlayerState::Ready);
+        seat.player.state.set(PlayerState::Out);
 
         let seat_number = self
             .table
@@ -239,7 +239,7 @@ impl Dealer {
             return Err(DealerError::TableError(PKError::InvalidSeatNumber));
         }
         let seat = Seat::new_with_cards(player, BoxedCards::blanks(2));
-        seat.player.state.set(PlayerState::Ready);
+        seat.player.state.set(PlayerState::Out);
         self.table
             .seats
             .assign(seat_number as usize, seat)
@@ -550,14 +550,14 @@ impl Dealer {
     /// - [`DealerError::PlayerIsTappedOut`] — player in `seat` has 0 chips.
     /// - [`DealerError::HandInProgress`] — player in `seat` is active in a hand that is currently in progress.
     /// - [`DealerError::IllegalAction`] — player in `seat` is in an unexpected state that is not Ready or Out.
-    pub fn act_ready(&self, seat: u8) -> Result<(), DealerError> {
+    pub fn act_ready(&self, seat: u8) -> Result<Player, DealerError> {
         match self.table.get_seat(seat) {
             None => Err(DealerError::NoSuchSeat),
             Some(s) if s.is_empty() => Err(DealerError::EmptySeat),
             Some(s) if s.player.is_tapped_out() => Err(DealerError::PlayerIsTappedOut),
             Some(s) if s.player.is_active() => Err(DealerError::HandInProgress),
-            Some(s) if s.player.is_ready() || s.player.is_out() => Ok(()),
-            _ => Ok(()),
+            Some(s) if s.player.is_ready() || s.player.is_out() => Ok(s.player),
+            Some(s) => Ok(s.player),
         }
     }
 
