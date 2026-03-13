@@ -238,7 +238,7 @@ fn handle(dealer: &mut Dealer, command: Command) {
             }
         },
 
-        Command::Ready { seat } => match dealer.act_ready(seat) {
+        Command::Ready { seat } => match dealer.do_ready(seat) {
             Ok(player) => println!("✓ {} in seat {seat} is ready to play", player.handle),
             Err(e) => print_error(&e),
         },

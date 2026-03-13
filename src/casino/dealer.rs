@@ -62,6 +62,8 @@ pub enum DealerAction {
     BringItIn,
     /// Dealer event: resolve the hand and pay out the winner(s).
     EndHand,
+    /// Dealer event: player ready to play (used for lobby management, not actual in-hand actions).
+    Ready { seat: u8 }
 }
 
 // ── DealerError ──────────────────────────────────────────────────────────────
@@ -550,7 +552,7 @@ impl Dealer {
     /// - [`DealerError::PlayerIsTappedOut`] — player in `seat` has 0 chips.
     /// - [`DealerError::HandInProgress`] — player in `seat` is active in a hand that is currently in progress.
     /// - [`DealerError::IllegalAction`] — player in `seat` is in an unexpected state that is not Ready or Out.
-    pub fn act_ready(&self, seat: u8) -> Result<Player, DealerError> {
+    pub fn do_ready(&self, seat: u8) -> Result<Player, DealerError> {
         match self.table.get_seat(seat) {
             None => Err(DealerError::NoSuchSeat),
             Some(s) if s.is_empty() => Err(DealerError::EmptySeat),
@@ -820,72 +822,72 @@ mod casino__dealer_tests {
     }
 
     #[test]
-    fn act_ready__no_such_seat() {
+    fn do_ready__no_such_seat() {
         let dealer = two_player_dealer();
         // Seat 10 is out of range (6-seat table)
-        let err = dealer.act_ready(10).unwrap_err();
+        let err = dealer.do_ready(10).unwrap_err();
         assert_eq!(DealerError::NoSuchSeat, err);
     }
 
     #[test]
-    fn act_ready__empty_seat() {
+    fn do_ready__empty_seat() {
         let dealer = two_player_dealer();
         // Seat 5 is empty (only 2 players seated in 6-seat table)
-        let err = dealer.act_ready(5).unwrap_err();
+        let err = dealer.do_ready(5).unwrap_err();
         assert_eq!(DealerError::EmptySeat, err);
     }
 
     #[test]
-    fn act_ready__player_tapped_out() {
+    fn do_ready__player_tapped_out() {
         let dealer = Dealer::new(ForcedBets::new(50, 100), 6);
         // Seat a player with 0 chips (tapped out)
         dealer
             .seat_player(Player::new_with_chips("Broke Bob".to_string(), 0))
             .unwrap();
-        let err = dealer.act_ready(0).unwrap_err();
+        let err = dealer.do_ready(0).unwrap_err();
         assert_eq!(DealerError::PlayerIsTappedOut, err);
     }
 
     #[test]
-    fn act_ready__player_active() {
+    fn do_ready__player_active() {
         let dealer = two_player_dealer();
         // Manually set a player to an active state (YetToAct means they're in the hand)
         let seat_0 = dealer.table.get_seat(0).unwrap();
         seat_0.player.state.set(PlayerState::YetToAct);
         // Now trying to check readiness should fail because they're active
         assert!(seat_0.player.is_active(), "Player should be active");
-        let err = dealer.act_ready(0).unwrap_err();
+        let err = dealer.do_ready(0).unwrap_err();
         assert_eq!(DealerError::HandInProgress, err);
     }
 
     #[test]
-    fn act_ready__player_ready() {
+    fn do_ready__player_ready() {
         let dealer = two_player_dealer();
         // Players are seated and in Ready state by default
-        let result = dealer.act_ready(0);
+        let result = dealer.do_ready(0);
         assert!(result.is_ok());
     }
 
     #[test]
-    fn act_ready__player_out() {
+    fn do_ready__player_out() {
         let dealer = two_player_dealer();
         // Set a player to Out state
         let seat_0 = dealer.table.get_seat(0).unwrap();
         seat_0.player.state.set(PlayerState::Out);
-        let result = dealer.act_ready(0);
+        let result = dealer.do_ready(0);
         assert!(result.is_ok());
     }
 
     #[test]
-    fn act_ready__player_folded() {
+    fn do_ready__player_folded() {
         let dealer = two_player_dealer();
         // Manually set a player to Fold state without running a hand
         let seat_0 = dealer.table.get_seat(0).unwrap();
         seat_0.player.state.set(PlayerState::Fold);
         // After folding, player is not active but also not in Ready or Out state
-        // The act_ready method's catch-all clause should return Ok
-        let result = dealer.act_ready(0);
-        assert!(result.is_ok(), "folded player should pass act_ready check");
+        // The do_ready method's catch-all clause should return Ok
+        let result = dealer.do_ready(0);
+        assert!(result.is_ok(), "folded player should pass do_ready check");
     }
 
     #[test]
