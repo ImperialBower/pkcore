@@ -566,13 +566,20 @@ impl Dealer {
     /// - [`DealerError::HandInProgress`] — player in `seat` is active in a hand that is currently in progress.
     /// - [`DealerError::IllegalAction`] — player in `seat` is in an unexpected state that is not Ready or Out.
     pub fn do_ready(&self, seat: u8) -> Result<Player, DealerError> {
+        println!("boop");
         match self.table.get_seat(seat) {
             None => Err(DealerError::NoSuchSeat),
             Some(s) if s.is_empty() => Err(DealerError::EmptySeat),
             Some(s) if s.player.is_tapped_out() => Err(DealerError::PlayerIsTappedOut),
             Some(s) if s.player.is_active() => Err(DealerError::HandInProgress),
-            Some(s) if s.player.is_ready() || s.player.is_out() => Ok(s.player.clone()),
-            Some(s) => Ok(s.player.clone()),
+            // Some(s) if s.player.is_ready() || s.player.is_out() => {
+            //     s.player.state.set(PlayerState::Ready);
+            //     Ok(s.player.clone())
+            // },
+            Some(s) => {
+                s.player.state.set(PlayerState::Ready);
+                Ok(s.player.clone())
+            }
         }
     }
 

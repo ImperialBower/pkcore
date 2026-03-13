@@ -387,6 +387,14 @@ impl Agency for PlayerState {
     #[allow(clippy::unnested_or_patterns)]
     fn can_given(&self, next: &PlayerState) -> bool {
         log::trace!("can_given: self: {self}, next: {next}");
+        if self.is_out() && matches!(next, PlayerState::Ready | PlayerState::YetToAct) {
+            return true;
+        }
+
+        if self.is_ready() && matches!(next, PlayerState::YetToAct) {
+            return true;
+        }
+
         if self.is_yet_to_act() {
             return true;
         }
@@ -572,6 +580,9 @@ mod casino__state_tests {
 
     #[test]
     fn agency__can_given() {
+        assert!(PlayerState::Out.can_given(&PlayerState::Ready));
+        assert!(PlayerState::Out.can_given(&PlayerState::YetToAct));
+        assert!(PlayerState::Ready.can_given(&PlayerState::YetToAct));
         assert!(PlayerState::YetToAct.can_given(&PlayerState::Check));
         assert!(PlayerState::YetToAct.can_given(&PlayerState::Bet(100)));
         assert!(PlayerState::YetToAct.can_given(&PlayerState::Call(100)));
