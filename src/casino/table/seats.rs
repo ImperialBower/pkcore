@@ -562,7 +562,7 @@ impl Seats {
     #[must_use]
     pub fn is_seat_in_hand(&self, seat_number: u8) -> bool {
         if let Some(seat) = self.get_seat(seat_number) {
-            seat.is_in_hand()
+            !seat.is_empty() && seat.is_in_hand()
         } else {
             false
         }
@@ -709,7 +709,11 @@ impl Seats {
     pub fn reset_state(&self) {
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow_mut();
-            seat.player.state.reset();
+            if seat.is_empty() {
+                seat.player.state.set(PlayerState::Out);
+            } else {
+                seat.player.state.reset();
+            }
         }
     }
 
@@ -1127,6 +1131,30 @@ mod casino__table__seats_tests {
             let seat = seat.borrow();
             assert_eq!(PlayerState::YetToAct, seat.player.state.get());
         }
+    }
+
+    #[test]
+    fn reset_state_keeps_empty_seat_out() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Alice".to_string(), 1_000)),
+            Seat::default(),
+        ]);
+
+        seats.get_seat_mut(0).unwrap().player.state.set(PlayerState::Fold);
+        seats.get_seat_mut(1).unwrap().player.state.set(PlayerState::YetToAct);
+
+        seats.reset_state();
+
+        assert_eq!(PlayerState::YetToAct, seats.get_seat(0).unwrap().player.state.get());
+        assert_eq!(PlayerState::Out, seats.get_seat(1).unwrap().player.state.get());
+    }
+
+    #[test]
+    fn is_seat_in_hand_false_for_empty_seat_even_if_state_is_yet_to_act() {
+        let seats = Seats::new(vec![Seat::default()]);
+        seats.get_seat_mut(0).unwrap().player.state.set(PlayerState::YetToAct);
+
+        assert!(!seats.is_seat_in_hand(0));
     }
 
     #[test]

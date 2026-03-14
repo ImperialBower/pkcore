@@ -566,7 +566,6 @@ impl Dealer {
     /// - [`DealerError::HandInProgress`] — player in `seat` is active in a hand that is currently in progress.
     /// - [`DealerError::IllegalAction`] — player in `seat` is in an unexpected state that is not Ready or Out.
     pub fn do_ready(&self, seat: u8) -> Result<Player, DealerError> {
-        println!("boop");
         match self.table.get_seat(seat) {
             None => Err(DealerError::NoSuchSeat),
             Some(s) if s.is_empty() => Err(DealerError::EmptySeat),
@@ -1049,6 +1048,33 @@ mod casino__dealer_tests {
         let result = dealer.end_hand().unwrap();
         assert!(!dealer.is_hand_in_progress());
         assert!(result.log.len() > 0, "should have result entries");
+    }
+
+    #[test]
+    fn second_hand_only_deals_to_seated_players_on_six_seat_table() {
+        let mut dealer = Dealer::new(ForcedBets::new(50, 100), 6);
+        dealer
+            .seat_player_at(Player::new_with_chips("Alice".to_string(), 10_000), 0)
+            .unwrap();
+        dealer
+            .seat_player_at(Player::new_with_chips("Bob".to_string(), 10_000), 3)
+            .unwrap();
+
+        // Play a minimal first hand: first player to act folds, then close the hand.
+        dealer.start_hand().unwrap();
+        let first_to_act = dealer.next_to_act();
+        dealer.act(DealerAction::Fold { seat: first_to_act }).unwrap();
+        assert!(dealer.table.is_game_over());
+        dealer.end_hand().unwrap();
+
+        // Start a second hand and verify only occupied seats receive two cards.
+        dealer.start_hand().unwrap();
+
+        let dealt_counts: Vec<usize> = (0..6)
+            .map(|i| dealer.table.get_seat(i).unwrap().cards.number_of_dealt_cards())
+            .collect();
+
+        assert_eq!(vec![2, 0, 0, 2, 0, 0], dealt_counts);
     }
 
     #[test]
