@@ -777,6 +777,35 @@ impl Seats {
         cards
     }
 
+    /// Returns a non-destructive snapshot of all cards currently held by seated players.
+    ///
+    /// Unlike [`Seats::take_cards`], this method does not remove cards from seats.
+    ///
+    /// ```
+    /// use pkcore::casino::table::seats::Seats;
+    /// use pkcore::util::data::TestData;
+    ///
+    /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+    /// let before = seats.cards_string();
+    ///
+    /// let snapshot = seats.cards_snapshot();
+    ///
+    /// assert_eq!(16, snapshot.len());
+    /// assert_eq!(before, seats.cards_string());
+    /// ```
+    #[must_use]
+    pub fn cards_snapshot(&self) -> CardsCell {
+        let cards = CardsCell::default();
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            if !seat.is_empty() {
+                let seat_cards = Cards::from(seat.cards.clone());
+                cards.insert_all(seat_cards);
+            }
+        }
+        cards
+    }
+
     #[must_use]
     pub fn total_chip_count(&self) -> usize {
         let mut total = 0;
@@ -1303,5 +1332,26 @@ mod casino__table__seats_tests {
             seats.get_seat(2).expect("seat 2").player.state.get()
         );
         assert_eq!(PlayerState::Out, seats.get_seat(3).expect("seat 3").player.state.get());
+    }
+
+    #[test]
+    fn cards_snapshot_happy_path_non_destructive() {
+        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let before = seats.cards_string();
+
+        let snapshot = seats.cards_snapshot();
+
+        assert_eq!(16, snapshot.len());
+        assert_eq!("T♠ 2♥ 8♠ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♣ 4♦ 7♣ 2♣", snapshot.to_string());
+        assert_eq!(before, seats.cards_string());
+    }
+
+    #[test]
+    fn cards_snapshot_empty_seats_returns_empty_cards() {
+        let seats = Seats::default();
+
+        let snapshot = seats.cards_snapshot();
+
+        assert!(snapshot.is_empty());
     }
 }

@@ -18,13 +18,9 @@ use crate::prelude::{Bard, BoxedCards, Evals};
 use crate::{PKError, Pile};
 use bint::{BintCell, DrainableBintCell};
 use bitvec::macros::internal::funty::Fundamental;
-use cardpack::prelude::{BasicPile, Pile as CPile, Standard52};
-use pkstate::act::{Action, Round};
-use pkstate::game::ForcedBets as PKForcedBets;
-use pkstate::seat::Seat as PKSeat;
+use pkstate::act::Action;
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
-use std::str::FromStr;
 use termion::color;
 use uuid::Uuid;
 
@@ -1393,6 +1389,7 @@ impl Table {
     // utils
 
     /// Created for the `From<&Table> for pkstate::PKState` implementation.
+    #[allow(unused)]
     fn dealt_action(seat: u8, bard: Bard) -> Option<Action> {
         let pile = bard.to_pile()?;
         match seat {
@@ -1735,8 +1732,12 @@ mod casino__table_tests {
         assert_eq!(0, table.button.value());
         assert_eq!(3, table.next_to_act());
         assert_eq!(36, table.deck.len());
+
+        let dealt_cards = table.seats.cards_snapshot();
+        assert_eq!(16, dealt_cards.len());
+        assert_eq!(52, dealt_cards.len() + table.deck.len());
         assert_eq!(
-            "A♠ Q♠ J♠ 9♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ K♦ Q♦ T♦ 9♦ 7♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 8♣ 6♣ 3♣",
+            "A♠ Q♠ J♠ 9♠ 7♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 5♥ 4♥ K♦ Q♦ T♦ 9♦ 8♦ 7♦ 6♦ 3♦ 2♦ A♣ K♣ J♣ T♣ 9♣ 8♣ 6♣ 3♣",
             table.deck.to_string()
         );
         assert_eq!(0, table.board.len());
