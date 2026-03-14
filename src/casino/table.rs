@@ -1855,7 +1855,7 @@ mod casino__table_tests {
         assert_eq!(300, pot);
 
         assert!(!table.seats.is_betting_complete());
-        for (seat_number, seat) in table.seats.iter().enumerate() {
+        for (_seat_number, seat) in table.seats.iter().enumerate() {
             let seat = seat.borrow();
             // All of their chips have been moved into the pot.
             assert_eq!(999_900, seat.player.chips.count());
