@@ -63,6 +63,16 @@ impl PlayerStateCell {
         self.0.get().is_in_hand()
     }
 
+    #[must_use]
+    pub fn is_out(&self) -> bool {
+        self.0.get().is_out()
+    }
+
+    #[must_use]
+    pub fn is_ready(&self) -> bool {
+        self.0.get().is_ready()
+    }
+
     /// ```
     /// use pkcore::prelude::*;
     ///
@@ -147,16 +157,29 @@ impl Display for PlayerStateCell {
 /// bugs and confusion. A check has no value in poker, so it shouldn't have any value in the enum.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum PlayerState {
+    /// Player is seated and ready to be dealt into the next hand.
+    Ready,
+    /// Player is active in the hand and has not acted in the current betting round.
     YetToAct,
+    /// Player passes action without adding chips because no additional bet is required.
     Check,
+    /// Player posts a blind amount.
     Blind(usize),
+    /// Player makes the first voluntary wager in the current betting round.
     Bet(usize),
+    /// Player matches the current required amount to continue.
     Call(usize),
+    /// Player increases the current wager.
     Raise(usize),
+    /// Player raises again after a prior raise.
     ReRaise(usize),
+    /// Player commits their entire remaining stack.
     AllIn(usize),
+    /// Player reaches showdown with the amount committed.
     Showdown(usize),
+    /// Player relinquishes the hand.
     Fold,
+    /// Player is not participating in the current hand.
     #[default]
     Out,
 }
@@ -240,7 +263,7 @@ impl PlayerState {
     /// ```
     #[must_use]
     pub fn is_active(&self) -> bool {
-        !matches!(self, PlayerState::Fold | PlayerState::Out)
+        !matches!(self, PlayerState::Fold | PlayerState::Out | PlayerState::Ready)
     }
 
     /// ```
@@ -314,6 +337,16 @@ impl PlayerState {
     }
 
     #[must_use]
+    pub fn is_out(&self) -> bool {
+        matches!(self, PlayerState::Out)
+    }
+
+    #[must_use]
+    pub fn is_ready(&self) -> bool {
+        matches!(self, PlayerState::Ready)
+    }
+
+    #[must_use]
     pub fn is_showdown(&self) -> bool {
         matches!(self, PlayerState::Showdown(_))
     }
@@ -354,6 +387,14 @@ impl Agency for PlayerState {
     #[allow(clippy::unnested_or_patterns)]
     fn can_given(&self, next: &PlayerState) -> bool {
         log::trace!("can_given: self: {self}, next: {next}");
+        if self.is_out() && matches!(next, PlayerState::Ready | PlayerState::YetToAct) {
+            return true;
+        }
+
+        if self.is_ready() && matches!(next, PlayerState::YetToAct) {
+            return true;
+        }
+
         if self.is_yet_to_act() {
             return true;
         }
@@ -465,6 +506,7 @@ impl Agency for PlayerState {
 impl Display for PlayerState {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            PlayerState::Ready => write!(f, "Ready for next hand"),
             PlayerState::YetToAct => write!(f, "Yet to act"),
             PlayerState::Check => write!(f, "Check"),
             PlayerState::Blind(amount) => write!(f, "Blind {amount}"),
@@ -538,6 +580,9 @@ mod casino__state_tests {
 
     #[test]
     fn agency__can_given() {
+        assert!(PlayerState::Out.can_given(&PlayerState::Ready));
+        assert!(PlayerState::Out.can_given(&PlayerState::YetToAct));
+        assert!(PlayerState::Ready.can_given(&PlayerState::YetToAct));
         assert!(PlayerState::YetToAct.can_given(&PlayerState::Check));
         assert!(PlayerState::YetToAct.can_given(&PlayerState::Bet(100)));
         assert!(PlayerState::YetToAct.can_given(&PlayerState::Call(100)));

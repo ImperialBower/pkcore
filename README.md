@@ -374,16 +374,21 @@ Elapsed: 1.63s
       * 888poker > [What is Nuts in Poker?](https://www.888poker.com/magazine/poker-terms/nuts)
       * GetMega > [Nuts in Poker](https://www.getmega.com/cards/poker/terms/nuts-in-poker/)
     * 888poker > [What is Texture in Poker?](https://www.888poker.com/magazine/poker-terms/texture)
-  * [Pluribus](https://en.wikipedia.org/wiki/Pluribus_(poker_bot))
-    * [Superhuman AI for multiplayer poker](https://www.science.org/doi/10.1126/science.aay2400)
-    * [pluribus-hand-parser](https://github.com/VitamintK/pluribus-hand-parser)
-    * [Let's analyze Pluribus's Hands!](http://kevinwang.us/lets-analyze-pluribuss-hands/)
-      * [reddit](https://www.reddit.com/r/poker/comments/cdhasb/download_all_10000_hands_that_pluribus_poker_ai/)
-    * [fedden / poker_ai](https://github.com/fedden/poker_ai) - An Open Source Texas Hold'em AI
-      * FORK: [pluribus-poker-AI(https://github.com/apcode/pluribus-poker-AI)
-    * [Remembering Pluribus: The Techniques that Facebook Used to Master World’s Most Difficult Poker Game](https://www.kdnuggets.com/2020/12/remembering-pluribus-facebook-master-difficult-poker-game.html)
-    * [PokerHandEvaluator](https://github.com/HenryRLee/PokerHandEvaluator)
-    * Naom Brown: [5 years ago we revealed Pluribus](https://x.com/polynoamial/status/1816347598623834365?lang=en)
+  * AI
+    * [Pluribus](https://en.wikipedia.org/wiki/Pluribus_(poker_bot))
+      * [Superhuman AI for multiplayer poker](https://www.science.org/doi/10.1126/science.aay2400)
+      * [pluribus-hand-parser](https://github.com/VitamintK/pluribus-hand-parser)
+      * [Let's analyze Pluribus's Hands!](http://kevinwang.us/lets-analyze-pluribuss-hands/)
+        * [reddit](https://www.reddit.com/r/poker/comments/cdhasb/download_all_10000_hands_that_pluribus_poker_ai/)
+      * [fedden / poker_ai](https://github.com/fedden/poker_ai) - An Open Source Texas Hold'em AI
+        * FORK: [pluribus-poker-AI(https://github.com/apcode/pluribus-poker-AI)
+      * [Remembering Pluribus: The Techniques that Facebook Used to Master World’s Most Difficult Poker Game](https://www.kdnuggets.com/2020/12/remembering-pluribus-facebook-master-difficult-poker-game.html)
+      * [PokerHandEvaluator](https://github.com/HenryRLee/PokerHandEvaluator)
+      * Naom Brown: [5 years ago we revealed Pluribus](https://x.com/polynoamial/status/1816347598623834365?lang=en)
+    * [Neuron Poker: OpenAi gym environment for texas holdem poker](https://github.com/dickreuter/neuron_poker)]
+    * [clubs_gym](https://github.com/fschlatt/clubs_gym)
+    * [PokerRL](https://github.com/EricSteinberger/PokerRL) Framework for Multi-Agent Deep Reinforcement Learning in Poker games.
+    * [Best AI Poker Training Tools](https://thepokeragent.com/best-ai-poker-training-tools/)
   * Probability
     * Wikipedia > [Poker probability](https://en.wikipedia.org/wiki/Poker_probability)
     * [Distinct head-to-head match ups in holdem](https://poker.stackexchange.com/questions/5682/distinct-head-to-head-match-ups-in-holdem)

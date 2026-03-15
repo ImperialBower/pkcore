@@ -861,3 +861,10 @@ This is an outline of the work as it is done.
           * Create From To Pluribus validation
           * PLURIBUS example
             * REFACTORING: Remove Table.phase() let it be calculated by the table state
+      * FEATURE: Dealer
+        * Create a struct that manages the action for a Table struct, routing actions from players.
+          * Initial stab done with Dealer struct and dealer_repl example. 
+          * DEFECT: Current Dealer game loop requires a human deal to trigger play events. This needs to be automated.
+            * Added PlayerState::Ready, used to indicate that the player is ready to play the next hand.
+            * Updated seat player functions to start the player struct with the state of Out. Won't be able to play until they specifically switch their state to Ready.
+            * Add ready action to Dealer. 

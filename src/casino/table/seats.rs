@@ -562,7 +562,7 @@ impl Seats {
     #[must_use]
     pub fn is_seat_in_hand(&self, seat_number: u8) -> bool {
         if let Some(seat) = self.get_seat(seat_number) {
-            seat.is_in_hand()
+            !seat.is_empty() && seat.is_in_hand()
         } else {
             false
         }
@@ -667,11 +667,53 @@ impl Seats {
         Err(PKError::InvalidSeatNumber)
     }
 
+    /// Marks all seats that are eligible to play the next hand as `YetToAct`.
+    ///
+    /// A seat is considered eligible when all of the following are true:
+    /// - the seat is occupied,
+    /// - the player is not `Out`, and
+    /// - the player is not tapped out (`0` chips and `0` in the current bet).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use pkcore::casino::player::Player;
+    /// use pkcore::casino::state::PlayerState;
+    /// use pkcore::casino::table::seat::Seat;
+    /// use pkcore::casino::table::seats::Seats;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("Alice".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("Bob".to_string(), 1_000)),
+    /// ]);
+    ///
+    /// seats.get_seat_mut(0).expect("seat 0").player.state.set(PlayerState::Ready);
+    /// seats.get_seat_mut(1).expect("seat 1").player.state.set(PlayerState::Out);
+    ///
+    /// seats.set_eligible_to_yet_to_act();
+    ///
+    /// assert_eq!(PlayerState::YetToAct, seats.get_seat(0).expect("seat 0").player.state.get());
+    /// assert_eq!(PlayerState::Out, seats.get_seat(1).expect("seat 1").player.state.get());
+    /// ```
+    pub fn set_eligible_to_yet_to_act(&self) {
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow_mut();
+            if seat.is_empty() || seat.player.is_out() || seat.player.is_tapped_out() {
+                continue;
+            }
+            seat.player.state.set(PlayerState::YetToAct);
+        }
+    }
+
     /// Clears the `PlayerState` for all the seats.
     pub fn reset_state(&self) {
         for seat_cell in &self.0 {
             let seat = seat_cell.borrow_mut();
-            seat.player.state.reset();
+            if seat.is_empty() {
+                seat.player.state.set(PlayerState::Out);
+            } else {
+                seat.player.state.reset();
+            }
         }
     }
 
@@ -729,6 +771,35 @@ impl Seats {
             let mut seat = seat_cell.borrow_mut();
             if !seat.is_empty() {
                 let seat_cards = Cards::from(seat.cards.take());
+                cards.insert_all(seat_cards);
+            }
+        }
+        cards
+    }
+
+    /// Returns a non-destructive snapshot of all cards currently held by seated players.
+    ///
+    /// Unlike [`Seats::take_cards`], this method does not remove cards from seats.
+    ///
+    /// ```
+    /// use pkcore::casino::table::seats::Seats;
+    /// use pkcore::util::data::TestData;
+    ///
+    /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+    /// let before = seats.cards_string();
+    ///
+    /// let snapshot = seats.cards_snapshot();
+    ///
+    /// assert_eq!(16, snapshot.len());
+    /// assert_eq!(before, seats.cards_string());
+    /// ```
+    #[must_use]
+    pub fn cards_snapshot(&self) -> CardsCell {
+        let cards = CardsCell::default();
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            if !seat.is_empty() {
+                let seat_cards = Cards::from(seat.cards.clone());
                 cards.insert_all(seat_cards);
             }
         }
@@ -877,6 +948,7 @@ impl TryFrom<Vec<SeatCell>> for Seats {
 mod casino__table__seats_tests {
     use super::*;
     use crate::casino::game::ForcedBets;
+    use crate::casino::player::Player;
     use crate::casino::table::Table;
     use crate::prelude::*;
     use crate::util::data::TestData;
@@ -1091,6 +1163,30 @@ mod casino__table__seats_tests {
     }
 
     #[test]
+    fn reset_state_keeps_empty_seat_out() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Alice".to_string(), 1_000)),
+            Seat::default(),
+        ]);
+
+        seats.get_seat_mut(0).unwrap().player.state.set(PlayerState::Fold);
+        seats.get_seat_mut(1).unwrap().player.state.set(PlayerState::YetToAct);
+
+        seats.reset_state();
+
+        assert_eq!(PlayerState::YetToAct, seats.get_seat(0).unwrap().player.state.get());
+        assert_eq!(PlayerState::Out, seats.get_seat(1).unwrap().player.state.get());
+    }
+
+    #[test]
+    fn is_seat_in_hand_false_for_empty_seat_even_if_state_is_yet_to_act() {
+        let seats = Seats::new(vec![Seat::default()]);
+        seats.get_seat_mut(0).unwrap().player.state.set(PlayerState::YetToAct);
+
+        assert!(!seats.is_seat_in_hand(0));
+    }
+
+    #[test]
     fn seat() {
         let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
         // Gab the seat, change the player's handle, and then return it.
@@ -1191,5 +1287,71 @@ mod casino__table__seats_tests {
         assert_eq!(0, seats.to_call(0));
         assert_eq!(PKError::InsufficientChips, seats.act_call(0).unwrap_err());
         assert!(!seats.is_betting_complete());
+    }
+
+    #[test]
+    fn set_eligible_to_yet_to_act_sets_only_eligible_players() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Alice".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("Bob".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("Cara".to_string(), 0)),
+            Seat::default(),
+        ]);
+
+        seats
+            .get_seat_mut(0)
+            .expect("seat 0")
+            .player
+            .state
+            .set(PlayerState::Ready);
+        seats
+            .get_seat_mut(1)
+            .expect("seat 1")
+            .player
+            .state
+            .set(PlayerState::Fold);
+        seats
+            .get_seat_mut(2)
+            .expect("seat 2")
+            .player
+            .state
+            .set(PlayerState::Ready);
+
+        seats.set_eligible_to_yet_to_act();
+
+        assert_eq!(
+            PlayerState::YetToAct,
+            seats.get_seat(0).expect("seat 0").player.state.get()
+        );
+        assert_eq!(
+            PlayerState::YetToAct,
+            seats.get_seat(1).expect("seat 1").player.state.get()
+        );
+        assert_eq!(
+            PlayerState::Ready,
+            seats.get_seat(2).expect("seat 2").player.state.get()
+        );
+        assert_eq!(PlayerState::Out, seats.get_seat(3).expect("seat 3").player.state.get());
+    }
+
+    #[test]
+    fn cards_snapshot_happy_path_non_destructive() {
+        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let before = seats.cards_string();
+
+        let snapshot = seats.cards_snapshot();
+
+        assert_eq!(16, snapshot.len());
+        assert_eq!("T♠ 2♥ 8♠ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♣ 4♦ 7♣ 2♣", snapshot.to_string());
+        assert_eq!(before, seats.cards_string());
+    }
+
+    #[test]
+    fn cards_snapshot_empty_seats_returns_empty_cards() {
+        let seats = Seats::default();
+
+        let snapshot = seats.cards_snapshot();
+
+        assert!(snapshot.is_empty());
     }
 }
