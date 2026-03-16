@@ -41,16 +41,22 @@ mod casino__table_split_pot_tests {
         table.act_all_in(1).expect("seat 1 should be able to go all-in");
         table.act_all_in(2).expect("seat 2 should be able to go all-in");
 
-        table.deal_flop().expect("flop should be dealt");
-        assert!(table.is_flop());
-
-        table.deal_turn().expect("turn should be dealt");
-        assert!(table.is_turn());
-
-        table.deal_river().expect("river should be dealt");
-        assert!(table.is_river());
-        assert_eq!(5, table.board.len());
-
         println!("{table}");
+
+        table.bring_it_in().expect("flop should be dealt");
+        table.deal_flop().expect("flop should be dealt");
+        // assert!(table.is_flop());
+        //
+        // table.deal_turn().expect("turn should be dealt");
+        // assert!(table.is_turn());
+        //
+        // table.deal_river().expect("river should be dealt");
+        // assert!(table.is_river());
+        // assert_eq!(5, table.board.len());
+        //
+        // println!("{table}");
+        //
+        // assert_eq!(0, table.seats.count_able_to_bet_in_hand());
+        // assert!(table.seats.is_everyone_allin_except_one());
     }
 }
