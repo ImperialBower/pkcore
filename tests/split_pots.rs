@@ -17,15 +17,19 @@ mod casino__table_split_pot_tests {
             cards: boxed!("4♣ 4♦"),
         };
         let seats = Seats::new(vec![rich, poor, average]);
-        let cards = seats.cards_snapshot().cards();
 
         let table = Table::nlh_primed(
             seats,
-            &CardsCell::from(Cards::deck_primed(&cards)),
+            &cc!(
+                "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣"
+            ),
             ForcedBets::new(50, 100),
         );
 
         println!("{table}");
+        println!("{}", table.deck);
+
+        assert_eq!(46, table.deck.len());
 
         table.act_forced_bets().expect("forced bets should post");
 
