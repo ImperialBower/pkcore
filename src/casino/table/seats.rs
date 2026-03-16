@@ -12,6 +12,7 @@ use wincounter::win::Win;
 
 pub mod seat;
 pub mod seat_cell;
+pub mod seatbit;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Seats(Box<[SeatCell]>);
