@@ -8,7 +8,6 @@ use crate::casino::player::Player;
 use crate::casino::table::event::{TableAction, TableLog};
 use crate::casino::table::pot::PotManager;
 use crate::casino::table::result::HandResult;
-use crate::casino::table::seat::Seat;
 use crate::casino::table::seats::Seats;
 use crate::games::{GamePhase, GameType};
 use crate::play::game::Game;
@@ -19,6 +18,7 @@ use crate::{PKError, Pile};
 use bint::{BintCell, DrainableBintCell};
 use bitvec::macros::internal::funty::Fundamental;
 use pkstate::act::Action;
+use seats::seat::Seat;
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
 use termion::color;
@@ -28,7 +28,6 @@ pub mod event;
 pub mod position;
 pub mod pot;
 pub mod result;
-pub mod seat;
 pub mod seats;
 
 /// Represents a snapshot of the current game state at the table.

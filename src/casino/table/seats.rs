@@ -3,12 +3,15 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
-use crate::casino::table::seat::{Seat, SeatCell};
-use crate::prelude::PlayerState;
+use crate::casino::table::seats::seat_cell::SeatCell;
+use crate::prelude::{PlayerState, Seat};
 use log;
 use std::cell::{Ref, RefMut};
 use wincounter::PlayerFlag;
 use wincounter::win::Win;
+
+pub mod seat;
+pub mod seat_cell;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Seats(Box<[SeatCell]>);
@@ -679,7 +682,7 @@ impl Seats {
     /// ```rust
     /// use pkcore::casino::player::Player;
     /// use pkcore::casino::state::PlayerState;
-    /// use pkcore::casino::table::seat::Seat;
+    /// use pkcore::casino::table::seats::seat::Seat;
     /// use pkcore::casino::table::seats::Seats;
     ///
     /// let seats = Seats::new(vec![

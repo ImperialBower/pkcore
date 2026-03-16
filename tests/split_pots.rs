@@ -48,7 +48,5 @@ mod casino__table_split_pot_tests {
         assert_eq!(5, table.board.len());
 
         println!("{table}");
-
     }
-
 }

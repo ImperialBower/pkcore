@@ -10,7 +10,7 @@ use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::cards_cell::CardsCell;
 use crate::casino::player::Player;
-use crate::casino::table::seat::Seat;
+use crate::casino::table::seats::seat::Seat;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
