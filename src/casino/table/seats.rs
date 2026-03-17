@@ -556,11 +556,27 @@ impl Seats {
             if seat.player.state.is_yet_to_act_or_blind() {
                 return false;
             }
+            if seat.is_all_in() {
+                continue;
+            }
             if seat.is_active() && seat.player.bet.count() != current_bet {
                 return false;
             }
         }
         true
+    }
+
+    #[must_use]
+    pub fn is_seat_all_in(&self, seat_number: u8) -> bool {
+        if let Some(seat) = self.get_seat(seat_number) {
+
+            // Is every other player all in?
+
+            todo!()
+            // !seat.is_empty() && seat.is_in_hand()
+        } else {
+            false
+        }
     }
 
     #[must_use]

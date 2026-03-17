@@ -25,8 +25,12 @@ mod casino__table_split_pot_tests {
 
         println!("{table}");
 
+        assert!(table.is_betting_complete());
+
         table.bring_it_in().expect("flop should be dealt");
-        // table.deal_flop().expect("flop should be dealt");
+        table.deal_flop().expect("flop should be dealt");
+
+        assert!(table.is_betting_complete());
         // assert!(table.is_flop());
         //
         // table.deal_turn().expect("turn should be dealt");
