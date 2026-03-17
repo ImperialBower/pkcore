@@ -2156,4 +2156,19 @@ mod casino__table_tests {
             ]
         );
     }
+
+    #[test]
+    fn act_all_in__more_chips_than_anyone() {
+        let table = TestData::split_pot_table(&cc!(
+            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣"
+        ));
+
+        table.act_forced_bets().unwrap();
+        table.act_all_in(0).unwrap();
+
+        assert_eq!(9_000, table.get_seat(0).unwrap().player.bet.count());
+
+        println!("{table}")
+
+    }
 }

@@ -118,6 +118,10 @@ impl TableEquity {
 
         self.0 = consolidated;
     }
+
+    pub fn player_ranking(&self, seat_number: u8) -> Option<usize> {
+        self.0.iter().position(|equity| equity.seats.contains(seat_number))
+    }
 }
 
 #[cfg(test)]
@@ -230,5 +234,49 @@ mod casino__table__seats_seat_equities_tests {
         equities.consolidate();
 
         assert_eq!(equities.equities(), &vec![SeatEquity::new(10_000, Seatbit::SEAT_0)]);
+    }
+
+    #[test]
+    fn player_ranking() {
+        let equities = TableEquity::new(vec![
+            SeatEquity::new(10_000, Seatbit::SEAT_0),
+            SeatEquity::new(7_000, Seatbit::SEAT_1),
+            SeatEquity::new(3_000, Seatbit::SEAT_2),
+        ]);
+
+        assert_eq!(equities.player_ranking(0), Some(0));
+        assert_eq!(equities.player_ranking(1), Some(1));
+        assert_eq!(equities.player_ranking(2), Some(2));
+    }
+
+    #[test]
+    fn player_ranking_returns_none_for_absent_seat() {
+        let equities = TableEquity::new(vec![
+            SeatEquity::new(10_000, Seatbit::SEAT_0),
+            SeatEquity::new(7_000, Seatbit::SEAT_1),
+        ]);
+
+        assert_eq!(equities.player_ranking(5), None);
+    }
+
+    #[test]
+    fn player_ranking_returns_none_for_empty_collection() {
+        let equities = TableEquity::default();
+
+        assert_eq!(equities.player_ranking(0), None);
+    }
+
+    #[test]
+    fn player_ranking_tied_seats_share_the_same_rank() {
+        // SEAT_1 and SEAT_2 tie at 7_000 and are consolidated into one entry.
+        let equities = TableEquity::new(vec![
+            SeatEquity::new(10_000, Seatbit::SEAT_0),
+            SeatEquity::new(7_000, Seatbit::SEAT_1),
+            SeatEquity::new(7_000, Seatbit::SEAT_2),
+        ]);
+
+        assert_eq!(equities.player_ranking(0), Some(0));
+        assert_eq!(equities.player_ranking(1), Some(1));
+        assert_eq!(equities.player_ranking(2), Some(1));
     }
 }
