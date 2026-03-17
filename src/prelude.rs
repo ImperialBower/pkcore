@@ -50,6 +50,8 @@ pub use crate::casino::table::event::TableLog;
 pub use crate::casino::table::seats::Seats;
 pub use crate::casino::table::seats::seat::Seat;
 pub use crate::casino::table::seats::seat_cell::SeatCell;
+pub use crate::casino::table::seats::table_equity::TableEquity;
+pub use crate::casino::table::seats::seat_equity::SeatEquity;
 pub use crate::casino::table::seats::seatbit::Seatbit;
 pub use crate::cc;
 pub use crate::deck;

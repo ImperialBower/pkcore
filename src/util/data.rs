@@ -386,7 +386,7 @@ impl TestData {
         Vec::from(&TestData::the_hand_seats()[2..6])
     }
 
-    pub fn split_pot_table(cards: CardsCell) -> Table {
+    pub fn split_pot_table(cards: &CardsCell) -> Table {
         let rich = Seat {
             player: Player::new_with_chips("Rich Man".to_string(), 10_000),
             cards: boxed!("Q♦ Q♣"),
@@ -401,7 +401,7 @@ impl TestData {
         };
         let seats = Seats::new(vec![rich, poor, average]);
 
-        Table::nlh_primed(seats, &cards, ForcedBets::new(50, 100))
+        Table::nlh_primed(seats, cards, ForcedBets::new(50, 100))
     }
 }
 

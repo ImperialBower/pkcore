@@ -10,8 +10,11 @@ use std::cell::{Ref, RefMut};
 use wincounter::PlayerFlag;
 use wincounter::win::Win;
 
+pub mod action;
 pub mod seat;
 pub mod seat_cell;
+pub mod table_equity;
+pub mod seat_equity;
 pub mod seatbit;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -569,7 +572,6 @@ impl Seats {
     #[must_use]
     pub fn is_seat_all_in(&self, seat_number: u8) -> bool {
         if let Some(seat) = self.get_seat(seat_number) {
-
             // Is every other player all in?
 
             todo!()
@@ -1345,7 +1347,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn x_highest_bet() {
-        let table = TestData::split_pot_table(cc!(
+        let table = TestData::split_pot_table(&cc!(
             "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣"
         ));
         table.act_forced_bets().expect("forced bets should post");

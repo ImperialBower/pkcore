@@ -13,7 +13,7 @@ use crate::games::{GamePhase, GameType};
 use crate::play::game::Game;
 use crate::play::stages::flop_eval::FlopEval;
 use crate::play::stages::turn_eval::TurnEval;
-use crate::prelude::{Bard, BoxedCards, Evals};
+use crate::prelude::{Bard, BoxedCards, Evals, SeatEquity, Seatbit, TableEquity};
 use crate::{PKError, Pile};
 use bint::{BintCell, DrainableBintCell};
 use bitvec::macros::internal::funty::Fundamental;
@@ -760,6 +760,60 @@ impl Table {
         bb_seat
     }
 
+    pub fn determine_street_equity_possible(&self) -> TableEquity {
+        todo!()
+    }
+
+    /// Returns per-seat equity commitments for the current betting round.
+    ///
+    /// This uses logged betting actions for the active street and includes
+    /// forced bets (blinds/antes) when they are part of the current round.
+    /// Equal chip commitments are consolidated by `TableEquity`.
+    pub fn determine_street_equity(&self) -> TableEquity {
+        let mut committed = vec![0_usize; self.seats.size() as usize];
+        let board_len = self.board.len();
+
+        for action in self.event_log.entries().iter().rev() {
+            // Stop once we hit the start marker for the current street.
+            match (board_len, action) {
+                (0, TableAction::NewHand) | (3, TableAction::DealtFlop(_)) | (4, TableAction::DealtTurn(_))
+                | (5, TableAction::DealtRiver(_)) => break,
+                _ => {}
+            }
+
+            match action {
+                TableAction::ForcedBet(seat, amount)
+                | TableAction::ForcedBetSmallBlind(seat, amount)
+                | TableAction::ForcedBetBigBlind(seat, amount)
+                | TableAction::BetAnteForced(seat, amount)
+                | TableAction::Bet(seat, amount)
+                | TableAction::Call(seat, amount)
+                | TableAction::Raise(seat, amount)
+                | TableAction::AllIn(seat, amount) => {
+                    let idx = *seat as usize;
+                    if idx < committed.len() {
+                        committed[idx] = committed[idx].max(*amount);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        let equities: Vec<SeatEquity> = committed
+            .into_iter()
+            .enumerate()
+            .filter_map(|(seat_number, amount)| {
+                if amount == 0 {
+                    None
+                } else {
+                    Some(SeatEquity::new(amount, Seatbit::from(seat_number as u8)))
+                }
+            })
+            .collect();
+
+        TableEquity::new(equities)
+    }
+
     pub fn determine_game_phase(&self) -> GamePhase {
         if !self.seats.are_dealt() {
             return GamePhase::DealHoleCards;
@@ -1179,6 +1233,13 @@ impl Table {
 
     pub fn is_betting_complete(&self) -> bool {
         self.seats.is_betting_complete()
+    }
+
+    pub fn is_betting_started(&self) -> bool {
+        self.seats.borrow_all().iter().any(|seat_cell| {
+            let seat = seat_cell.borrow();
+            seat.is_in_hand() && seat.player.bet.count() > 0
+        })
     }
 
     /// TODO: There are edge cases that I fear these checks won't catch.
@@ -1962,5 +2023,68 @@ mod casino__table_tests {
             .collect();
 
         assert_eq!(vec![2, 0, 0, 2, 0, 0], dealt_counts);
+    }
+
+    #[test]
+    fn is_betting_started_false_when_only_check_actions() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        table.act_check(0).unwrap();
+
+        assert!(!table.is_betting_started());
+    }
+
+    #[test]
+    fn is_betting_started_true_when_any_in_hand_player_has_bet() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        table.act_bet(0, 100).unwrap();
+
+        assert!(table.is_betting_started());
+    }
+
+    #[test]
+    fn determine_round_equity_includes_forced_bets() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        table.act_forced_bets().unwrap();
+
+        let equity = table.determine_street_equity();
+
+        assert_eq!(
+            equity.equities(),
+            &vec![
+                SeatEquity::new(100, Seatbit::SEAT_2),
+                SeatEquity::new(50, Seatbit::SEAT_1),
+            ]
+        );
+    }
+
+    #[test]
+    fn determine_round_equity_consolidates_matching_commitments() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        table.act_forced_bets().unwrap();
+        table.act_call(0).unwrap();
+        table.act_call(1).unwrap();
+        table.act_check(2).unwrap();
+
+        let equity = table.determine_street_equity();
+
+        assert_eq!(
+            equity.equities(),
+            &vec![SeatEquity::new(100, Seatbit::SEAT_0 | Seatbit::SEAT_1 | Seatbit::SEAT_2)]
+        );
+    }
+
+    #[test]
+    fn determine_round_equity_ignores_check_only_action() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        table.act_check(0).unwrap();
+
+        let equity = table.determine_street_equity();
+
+        assert!(equity.equities().is_empty());
     }
 }
