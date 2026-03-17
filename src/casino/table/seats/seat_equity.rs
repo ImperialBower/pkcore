@@ -60,6 +60,7 @@ impl PartialOrd for SeatEquity {
 }
 
 #[cfg(test)]
+#[allow(non_snake_case)]
 mod casino__table__seats_seat_equity_tests {
     use super::*;
 

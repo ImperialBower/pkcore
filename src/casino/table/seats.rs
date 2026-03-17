@@ -571,7 +571,7 @@ impl Seats {
 
     #[must_use]
     pub fn is_seat_all_in(&self, seat_number: u8) -> bool {
-        if let Some(seat) = self.get_seat(seat_number) {
+        if let Some(_seat) = self.get_seat(seat_number) {
             // Is every other player all in?
 
             todo!()
@@ -1232,8 +1232,8 @@ mod casino__table__seats_tests {
     fn reset_state() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
         let _ = table.act_forced_bets();
-        let _seat0_folded_amount = table.act_fold(0).unwrap();
-        let _seat1_folded_amount = table.act_fold(1).unwrap();
+        let _seat3_folded_amount = table.act_fold(3).unwrap();
+        let _seat4_folded_amount = table.act_fold(4).unwrap();
 
         table.seats.reset_state();
 
@@ -1351,8 +1351,12 @@ mod casino__table__seats_tests {
             "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣"
         ));
         table.act_forced_bets().expect("forced bets should post");
+
+        assert_eq!(0, table.next_to_act());
         table.act_all_in(0).expect("seat 0 should be able to go all-in");
+        assert_eq!(1, table.next_to_act());
         table.act_all_in(1).expect("seat 1 should be able to go all-in");
+        assert_eq!(2, table.next_to_act());
         table.act_all_in(2).expect("seat 2 should be able to go all-in");
 
         assert_eq!(table.seats.x_highest_bet(0), (Seatbit::SEAT_0, 10_000));
@@ -1386,10 +1390,11 @@ mod casino__table__seats_tests {
         let table = Table::nlh_primed(seats, &cards, ForcedBets::new(50, 100));
 
         table.act_forced_bets().expect("forced bets should post");
+        assert_eq!(3, table.next_to_act());
+        table.act_fold(3).expect("seat 3 should be able to fold");
         table.act_all_in(0).expect("seat 0 should be able to go all-in");
         table.act_all_in(1).expect("seat 1 should be able to go all-in");
         table.act_all_in(2).expect("seat 2 should be able to go all-in");
-        table.act_fold(3).expect("seat 3 should be able to fold");
 
         assert_eq!(table.seats.x_highest_bet(0), (Seatbit::SEAT_0, 10_000));
         assert_eq!(table.seats.x_highest_bet(2), (Seatbit::SEAT_1, 5_000));
@@ -1424,10 +1429,11 @@ mod casino__table__seats_tests {
         let table = Table::nlh_primed(seats, &cards, ForcedBets::new(50, 100));
 
         table.act_forced_bets().expect("forced bets should post");
+        assert_eq!(3, table.next_to_act());
+        table.act_fold(3).expect("seat 3 should be able to fold");
         table.act_all_in(0).expect("seat 0 should be able to go all-in");
         table.act_all_in(1).expect("seat 1 should be able to go all-in");
         table.act_all_in(2).expect("seat 2 should be able to go all-in");
-        table.act_fold(3).expect("seat 3 should be able to fold");
 
         assert_eq!(table.seats.x_highest_bet(0), (Seatbit::SEAT_0, 10_000));
         assert_eq!(table.seats.x_highest_bet(1), (Seatbit::SEAT_1 + Seatbit::SEAT_2, 9_000));
