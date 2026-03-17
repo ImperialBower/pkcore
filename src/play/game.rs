@@ -959,10 +959,11 @@ mod play__game_tests {
         let table = TestData::min_table();
         table.deal_cards_to_seats().expect("WOOPSIE!!!");
 
+        table.act_forced_bets().expect("forced bets should post");
         assert_eq!(0, table.next_to_act());
         let _ = table.act_call(0).unwrap();
         let _ = table.act_call(1).unwrap();
-        let _ = table.act_call(2).unwrap();
+        let _ = table.act_check(2).unwrap();
 
         table.bring_it_in().expect("WOOPSIE!!!");
         table.deal_flop().expect("No flop");

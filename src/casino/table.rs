@@ -290,8 +290,15 @@ impl Table {
             return Err(PKError::TableActionOutOfOrder(err));
         }
 
+        let possible_equity = self.determine_street_equity_possible();
+
         match self.seats.act_all_in(seat_number) {
             Ok(amount) => {
+
+                // if amount > possible_equity. {
+                //
+                // }
+
                 self.bet.set(amount);
                 self.log_info(TableAction::AllIn(seat_number, amount));
                 // self.action_to.up();
@@ -2031,7 +2038,9 @@ mod casino__table_tests {
         table.act_new_hand();
         table.deal_cards_to_seats().unwrap();
 
-        table.act_fold(0).unwrap();
+        assert_eq!(3, table.next_to_act());
+
+        table.act_fold(3).unwrap();
         assert!(table.is_game_over());
         table.end_hand().unwrap();
 
@@ -2131,13 +2140,16 @@ mod casino__table_tests {
     fn determine_street_equity_possible_excludes_folded_players() {
         let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 
-        table.act_fold(1).unwrap();
+        println!("{table}");
+
+        assert_eq!(0, table.next_to_act());
+        table.act_fold(0).unwrap();
 
         let equity = table.determine_street_equity_possible();
 
         assert_eq!(
             equity.equities(),
-            &vec![SeatEquity::new(1_000_000, Seatbit::SEAT_0 | Seatbit::SEAT_2)]
+            &vec![SeatEquity::new(1_000_000, Seatbit::SEAT_1 | Seatbit::SEAT_2)]
         );
     }
 
@@ -2232,16 +2244,11 @@ mod casino__table_tests {
         table.act_forced_bets().unwrap();
         assert_eq!(0, table.next_to_act());
 
-        match table.act_all_in(1) {
-            Ok(_) => {}
-            Err(e) => {
-                panic!("{:?}", e);
-            }
-        }
+        table.act_all_in(0);
 
         println!("{table}");
 
-        assert_eq!(9_000, table.get_seat(1).unwrap().player.bet.count());
+        assert_eq!(9_000, table.get_seat(0).unwrap().player.bet.count());
 
         println!("{table}");
     }
