@@ -4,7 +4,7 @@ use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
 use crate::casino::table::seats::seat_cell::SeatCell;
-use crate::prelude::{PlayerState, Seat};
+use crate::prelude::{PlayerState, Seat, Seatbit};
 use log;
 use std::cell::{Ref, RefMut};
 use wincounter::PlayerFlag;
@@ -841,6 +841,65 @@ impl Seats {
         }
     }
 
+    /// Returns the `x`-th highest committed bet level as `(Seatbit, amount)`.
+    ///
+    /// The `depth` argument is zero-indexed:
+    /// - `0` => highest bet
+    /// - `1` => second-highest bet
+    /// - `2` => third-highest bet
+    ///
+    /// If `depth` is greater than the number of occupied seats, this returns
+    /// `(Seatbit::default(), 0)`.
+    ///
+    /// If the selected level amount is `0`, this also returns
+    /// `(Seatbit::default(), 0)`.
+    ///
+    /// Seats tied at the same amount are combined into a single `Seatbit`.
+    ///
+    /// # Examples
+    /// If seat 1 and seat 2 both have `9_000`, depth `1` returns
+    /// `(Seatbit::SEAT_1 | Seatbit::SEAT_2, 9_000)`.
+    #[must_use]
+    pub fn x_highest_bet(&self, depth: u8) -> (Seatbit, usize) {
+        let mut ranked: Vec<(u8, usize)> = self
+            .0
+            .iter()
+            .enumerate()
+            .filter_map(|(seat_number, seat_cell)| {
+                let seat = seat_cell.borrow();
+                if seat.is_empty() {
+                    None
+                } else {
+                    match u8::try_from(seat_number) {
+                        Ok(snum) => Some((snum, seat.player.bet.count())),
+                        Err(_) => None,
+                    }
+                }
+            })
+            .collect();
+
+        ranked.sort_unstable_by(|(seat_a, bet_a), (seat_b, bet_b)| bet_b.cmp(bet_a).then_with(|| seat_a.cmp(seat_b)));
+
+        let mut levels: Vec<(Seatbit, usize)> = Vec::new();
+        for (seat_number, amount) in ranked {
+            if let Some((seatbits, existing_amount)) = levels.last_mut()
+                && *existing_amount == amount
+            {
+                *seatbits |= Seatbit::from(seat_number);
+            } else {
+                levels.push((Seatbit::from(seat_number), amount));
+            }
+        }
+
+        let (seatbits, amount) = levels.get(depth as usize).copied().unwrap_or((Seatbit::default(), 0));
+
+        if amount == 0 {
+            (Seatbit::default(), 0)
+        } else {
+            (seatbits, amount)
+        }
+    }
+
     // region iterators
 
     /// Iterate immutably over seats starting at `start`, wrapping through all seats.
@@ -1266,6 +1325,95 @@ mod casino__table__seats_tests {
         //
         let _daniel = seats.next_to_act(3).unwrap();
         // assert_eq!(4, daniel);
+    }
+
+    #[test]
+    fn x_highest_bet() {
+        let table = TestData::split_pot_table(cc!(
+            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣"
+        ));
+        table.act_forced_bets().expect("forced bets should post");
+        table.act_all_in(0).expect("seat 0 should be able to go all-in");
+        table.act_all_in(1).expect("seat 1 should be able to go all-in");
+        table.act_all_in(2).expect("seat 2 should be able to go all-in");
+
+        assert_eq!(table.seats.x_highest_bet(0), (Seatbit::SEAT_0, 10_000));
+        assert_eq!(table.seats.x_highest_bet(2), (Seatbit::SEAT_1, 5_000));
+        assert_eq!(table.seats.x_highest_bet(1), (Seatbit::SEAT_2, 9_000));
+    }
+
+    #[test]
+    fn x_highest_bet__with_fold() {
+        let rich = Seat {
+            player: Player::new_with_chips("Rich Man".to_string(), 10_000),
+            cards: boxed!("Q♦ Q♣"),
+        };
+        let poor = Seat {
+            player: Player::new_with_chips("Poor Man".to_string(), 5_000),
+            cards: boxed!("A♠ A♥"),
+        };
+        let average = Seat {
+            player: Player::new_with_chips("Average Person".to_string(), 9_000),
+            cards: boxed!("4♣ 4♦"),
+        };
+        let folder = Seat {
+            player: Player::new_with_chips("Folded".to_string(), 19_000),
+            cards: boxed!("3♣ 2♣"),
+        };
+        let seats = Seats::new(vec![rich, poor, average, folder]);
+        let cards = cc!(
+            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣"
+        );
+
+        let table = Table::nlh_primed(seats, &cards, ForcedBets::new(50, 100));
+
+        table.act_forced_bets().expect("forced bets should post");
+        table.act_all_in(0).expect("seat 0 should be able to go all-in");
+        table.act_all_in(1).expect("seat 1 should be able to go all-in");
+        table.act_all_in(2).expect("seat 2 should be able to go all-in");
+        table.act_fold(3).expect("seat 3 should be able to fold");
+
+        assert_eq!(table.seats.x_highest_bet(0), (Seatbit::SEAT_0, 10_000));
+        assert_eq!(table.seats.x_highest_bet(2), (Seatbit::SEAT_1, 5_000));
+        assert_eq!(table.seats.x_highest_bet(1), (Seatbit::SEAT_2, 9_000));
+        assert_eq!(table.seats.x_highest_bet(3), (Seatbit::default(), 0));
+        assert_eq!(table.seats.x_highest_bet(4), (Seatbit::default(), 0));
+    }
+
+    #[test]
+    fn x_highest_bet__with_fold_and_tie() {
+        let rich = Seat {
+            player: Player::new_with_chips("Rich Man".to_string(), 10_000),
+            cards: boxed!("Q♦ Q♣"),
+        };
+        let poor = Seat {
+            player: Player::new_with_chips("Poor Man".to_string(), 9_000),
+            cards: boxed!("A♠ A♥"),
+        };
+        let average = Seat {
+            player: Player::new_with_chips("Average Person".to_string(), 9_000),
+            cards: boxed!("4♣ 4♦"),
+        };
+        let folder = Seat {
+            player: Player::new_with_chips("Folded".to_string(), 19_000),
+            cards: boxed!("3♣ 2♣"),
+        };
+        let seats = Seats::new(vec![rich, poor, average, folder]);
+        let cards = cc!(
+            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣"
+        );
+
+        let table = Table::nlh_primed(seats, &cards, ForcedBets::new(50, 100));
+
+        table.act_forced_bets().expect("forced bets should post");
+        table.act_all_in(0).expect("seat 0 should be able to go all-in");
+        table.act_all_in(1).expect("seat 1 should be able to go all-in");
+        table.act_all_in(2).expect("seat 2 should be able to go all-in");
+        table.act_fold(3).expect("seat 3 should be able to fold");
+
+        assert_eq!(table.seats.x_highest_bet(0), (Seatbit::SEAT_0, 10_000));
+        assert_eq!(table.seats.x_highest_bet(1), (Seatbit::SEAT_1 + Seatbit::SEAT_2, 9_000));
+        assert_eq!(table.seats.x_highest_bet(2), (Seatbit::default(), 0));
     }
 
     /// Matches test in `Table`

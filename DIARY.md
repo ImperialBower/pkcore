@@ -870,4 +870,5 @@ This is an outline of the work as it is done.
             * Add ready action to Dealer. 
         * ISSUE: Isolate split pots.
           * Types:
-            * The players
+            * The players ... 
+          * ISSUE: Pots where player goes all in and another player goes all in as well, the player isn't having their excess chips returned to them. 

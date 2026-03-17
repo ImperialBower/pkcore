@@ -4,7 +4,7 @@ mod casino__table_split_pot_tests {
 
     #[test]
     fn deals_to_river_after_preflop_all_ins() {
-        let table = TestData::split_pop_table(cc!(
+        let table = TestData::split_pot_table(cc!(
             "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣"
         ));
 
