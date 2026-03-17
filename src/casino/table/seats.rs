@@ -13,9 +13,9 @@ use wincounter::win::Win;
 pub mod action;
 pub mod seat;
 pub mod seat_cell;
-pub mod table_equity;
 pub mod seat_equity;
 pub mod seatbit;
+pub mod table_equity;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Seats(Box<[SeatCell]>);

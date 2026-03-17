@@ -37,6 +37,14 @@ impl SeatEquity {
     pub fn new(chips: usize, seats: Seatbit) -> Self {
         Self { chips, seats }
     }
+
+    #[must_use]
+    pub fn new_from_seat(chips: usize, seat_number: u8) -> Self {
+        Self {
+            chips,
+            seats: Seatbit::from(seat_number),
+        }
+    }
 }
 
 impl Ord for SeatEquity {

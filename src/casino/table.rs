@@ -761,7 +761,20 @@ impl Table {
     }
 
     pub fn determine_street_equity_possible(&self) -> TableEquity {
-        todo!()
+        let mut eqs: Vec<SeatEquity> = Vec::new();
+
+        for (i, seat) in self.seats.iter().enumerate() {
+            let borrowed = seat.borrow();
+            if seat.is_in_hand() && borrowed.player.total_chip_count() > 0 {
+                eqs.push(SeatEquity::new(borrowed.player.total_chip_count(), Seatbit::from(i)));
+            }
+        }
+
+        if eqs.is_empty() {
+            TableEquity::default()
+        } else {
+            TableEquity::new(eqs)
+        }
     }
 
     /// Returns per-seat equity commitments for the current betting round.
@@ -770,48 +783,20 @@ impl Table {
     /// forced bets (blinds/antes) when they are part of the current round.
     /// Equal chip commitments are consolidated by `TableEquity`.
     pub fn determine_street_equity(&self) -> TableEquity {
-        let mut committed = vec![0_usize; self.seats.size() as usize];
-        let board_len = self.board.len();
+        let mut eqs: Vec<SeatEquity> = Vec::new();
 
-        for action in self.event_log.entries().iter().rev() {
-            // Stop once we hit the start marker for the current street.
-            match (board_len, action) {
-                (0, TableAction::NewHand) | (3, TableAction::DealtFlop(_)) | (4, TableAction::DealtTurn(_))
-                | (5, TableAction::DealtRiver(_)) => break,
-                _ => {}
-            }
-
-            match action {
-                TableAction::ForcedBet(seat, amount)
-                | TableAction::ForcedBetSmallBlind(seat, amount)
-                | TableAction::ForcedBetBigBlind(seat, amount)
-                | TableAction::BetAnteForced(seat, amount)
-                | TableAction::Bet(seat, amount)
-                | TableAction::Call(seat, amount)
-                | TableAction::Raise(seat, amount)
-                | TableAction::AllIn(seat, amount) => {
-                    let idx = *seat as usize;
-                    if idx < committed.len() {
-                        committed[idx] = committed[idx].max(*amount);
-                    }
-                }
-                _ => {}
+        for (i, seat) in self.seats.iter().enumerate() {
+            let borrowed = seat.borrow();
+            if seat.is_in_hand() && borrowed.player.bet.count() > 0 {
+                eqs.push(SeatEquity::new(borrowed.player.bet.count(), Seatbit::from(i)));
             }
         }
 
-        let equities: Vec<SeatEquity> = committed
-            .into_iter()
-            .enumerate()
-            .filter_map(|(seat_number, amount)| {
-                if amount == 0 {
-                    None
-                } else {
-                    Some(SeatEquity::new(amount, Seatbit::from(seat_number as u8)))
-                }
-            })
-            .collect();
-
-        TableEquity::new(equities)
+        if eqs.is_empty() {
+            TableEquity::default()
+        } else {
+            TableEquity::new(eqs)
+        }
     }
 
     pub fn determine_game_phase(&self) -> GamePhase {
@@ -2061,7 +2046,7 @@ mod casino__table_tests {
     }
 
     #[test]
-    fn determine_round_equity_consolidates_matching_commitments() {
+    fn determine_street_equity_consolidates_matching_commitments() {
         let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 
         table.act_forced_bets().unwrap();
@@ -2073,12 +2058,15 @@ mod casino__table_tests {
 
         assert_eq!(
             equity.equities(),
-            &vec![SeatEquity::new(100, Seatbit::SEAT_0 | Seatbit::SEAT_1 | Seatbit::SEAT_2)]
+            &vec![SeatEquity::new(
+                100,
+                Seatbit::SEAT_0 | Seatbit::SEAT_1 | Seatbit::SEAT_2
+            )]
         );
     }
 
     #[test]
-    fn determine_round_equity_ignores_check_only_action() {
+    fn determine_street_equity_ignores_check_only_action() {
         let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 
         table.act_check(0).unwrap();
@@ -2086,5 +2074,86 @@ mod casino__table_tests {
         let equity = table.determine_street_equity();
 
         assert!(equity.equities().is_empty());
+    }
+
+    #[test]
+    fn determine_street_equity_possible_happy_path_consolidates_all_in_hand_players() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        let equity = table.determine_street_equity_possible();
+
+        assert_eq!(
+            equity.equities(),
+            &vec![SeatEquity::new(
+                1_000_000,
+                Seatbit::SEAT_0 | Seatbit::SEAT_1 | Seatbit::SEAT_2
+            )]
+        );
+    }
+
+    #[test]
+    fn determine_street_equity_possible_excludes_folded_players() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        table.act_fold(1).unwrap();
+
+        let equity = table.determine_street_equity_possible();
+
+        assert_eq!(
+            equity.equities(),
+            &vec![SeatEquity::new(1_000_000, Seatbit::SEAT_0 | Seatbit::SEAT_2)]
+        );
+    }
+
+    #[test]
+    fn determine_street_equity_possible_uses_total_chips_not_current_bets() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        table.act_forced_bets().unwrap();
+        table.act_call(0).unwrap();
+        table.act_call(1).unwrap();
+
+        let equity = table.determine_street_equity_possible();
+
+        assert_eq!(
+            equity.equities(),
+            &vec![SeatEquity::new(
+                1_000_000,
+                Seatbit::SEAT_0 | Seatbit::SEAT_1 | Seatbit::SEAT_2
+            )]
+        );
+    }
+
+    #[test]
+    fn determine_street_equity_possible_with_different_chip_totals_returns_separate_sorted_entries() {
+        let seat_0 = Seat {
+            player: Player::new_with_chips("Alice".to_string(), 1_500_000),
+            cards: BoxedCards::blanks(2),
+        };
+        seat_0.player.state.set(PlayerState::YetToAct);
+
+        let seat_1 = Seat {
+            player: Player::new_with_chips("Bob".to_string(), 2_000_000),
+            cards: BoxedCards::blanks(2),
+        };
+        seat_1.player.state.set(PlayerState::YetToAct);
+
+        let seat_2 = Seat {
+            player: Player::new_with_chips("Carol".to_string(), 900_000),
+            cards: BoxedCards::blanks(2),
+        };
+        seat_2.player.state.set(PlayerState::YetToAct);
+
+        let table = Table::nlh_from_seats(Seats::new(vec![seat_0, seat_1, seat_2]), ForcedBets::new(50, 100));
+        let equity = table.determine_street_equity_possible();
+
+        assert_eq!(
+            equity.equities(),
+            &vec![
+                SeatEquity::new(2_000_000, Seatbit::SEAT_1),
+                SeatEquity::new(1_500_000, Seatbit::SEAT_0),
+                SeatEquity::new(900_000, Seatbit::SEAT_2),
+            ]
+        );
     }
 }

@@ -96,5 +96,3 @@ pub fn x_highest_bet(&self, depth: u8) -> (Seatbit, usize) {
 }
 ```
 
-
-

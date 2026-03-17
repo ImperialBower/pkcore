@@ -71,6 +71,12 @@ impl From<u8> for Seatbit {
     }
 }
 
+impl From<usize> for Seatbit {
+    fn from(value: usize) -> Seatbit {
+        Seatbit::from(u8::try_from(value).unwrap_or(99))
+    }
+}
+
 impl Add for Seatbit {
     type Output = Self;
 
