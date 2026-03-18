@@ -51,7 +51,7 @@ mod casino__table_split_pot_tests {
     ///
     /// -
     #[test]
-    fn deals_to_river_after_preflop_all_ins() {
+    fn deals_to_river_after_preflop_all_ins__poor_man_then_rich() {
         let table = preroll(
             "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣"
         );
@@ -60,19 +60,29 @@ mod casino__table_split_pot_tests {
 
         let hand_result = table.end_hand().expect("hand should end successfully");
         println!("{hand_result}");
+    }
 
-        // assert!(table.is_flop());
-        //
-        // table.deal_turn().expect("turn should be dealt");
-        // assert!(table.is_turn());
-        //
-        // table.deal_river().expect("river should be dealt");
-        // assert!(table.is_river());
-        // assert_eq!(5, table.board.len());
-        //
-        // println!("{table}");
-        //
-        // assert_eq!(0, table.seats.count_able_to_bet_in_hand());
-        // assert!(table.seats.is_everyone_allin_except_one());
+    #[test]
+    fn deals_to_river_after_preflop_all_ins__rich_man() {
+        let table = preroll(
+            "K♠ Q♠ Q♥ Q♣ J♠ A♦ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣"
+        );
+
+        println!("{table}");
+
+        let hand_result = table.end_hand().expect("hand should end successfully");
+        println!("{hand_result}");
+    }
+
+    #[test]
+    fn deals_to_river_after_preflop_all_ins__rich_man() {
+        let table = preroll(
+            "K♠ Q♠ Q♥ Q♣ J♠ A♦ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣"
+        );
+
+        println!("{table}");
+
+        let hand_result = table.end_hand().expect("hand should end successfully");
+        println!("{hand_result}");
     }
 }
