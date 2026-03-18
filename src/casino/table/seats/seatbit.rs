@@ -40,6 +40,7 @@ impl Seatbit {
         (self.0 & bit.0) != 0
     }
 
+    #[must_use]
     pub fn count_ones(&self) -> usize {
         self.0.count_ones() as usize
     }

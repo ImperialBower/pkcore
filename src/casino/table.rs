@@ -284,30 +284,38 @@ impl Table {
     /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
     pub fn act_all_in(&self, seat_number: u8) -> Result<usize, PKError> {
         if seat_number != self.next_to_act() {
-            let seat = self.get_seat(seat_number).ok_or_else(|| PKError::InvalidSeatNumber)?;
+            let seat = self.get_seat(seat_number).ok_or(PKError::InvalidSeatNumber)?;
             let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::AllIn(seat.player.total_chip_count()));
             self.log_info(err);
             return Err(PKError::TableActionOutOfOrder(err));
         }
 
-        let seat = self.get_seat(seat_number).ok_or_else(|| PKError::InvalidSeatNumber)?;
+        // A player can only truly go all in if there is anyone else in the pot
+        // who can bet at least there total amount of chips. (Amount already
+        // bet in the round + amount of their stack)
 
-        let available = seat.player.total_chip_count();
-        let ceiling = self.determine_street_equity_possible();
+        // How many chips does the player have to invest in the pot?
+        let available = {
+            let seat = self.get_seat(seat_number).ok_or(PKError::InvalidSeatNumber)?;
+            seat.player.total_chip_count()
+        };
+        // What's the maximum amount possible to bet in the round?
+        let ceiling = self.determine_street_equity_possible().ceiling();
 
-        match self.seats.act_all_in(seat_number) {
-            Ok(amount) => {
-
-                // if amount > possible_equity. {
-                //
-                // }
-
-                self.bet.set(amount);
-                self.log_info(TableAction::AllIn(seat_number, amount));
-                // self.action_to.up();
-                Ok(amount)
+        if available > ceiling {
+            // Technically not possible to go all in, since the player has more chips
+            // than anyone else active in the hand.
+            Ok(self.act_bet(seat_number, ceiling)?)
+        } else {
+            match self.seats.act_all_in(seat_number) {
+                Ok(amount) => {
+                    self.bet.set(amount);
+                    self.log_info(TableAction::AllIn(seat_number, amount));
+                    // self.action_to.up();
+                    Ok(amount)
+                }
+                Err(e) => Err(e),
             }
-            Err(e) => Err(e),
         }
     }
 
@@ -756,6 +764,12 @@ impl Table {
             5 => GamePhase::BettingRiver,
             _ => GamePhase::Showdown,
         }
+    }
+
+    /// What is the maximum amount of chips that can be bet in a round? Most useful for dealing
+    /// with all in bets. No player can bet more than the ceiling of the `Table`.
+    pub fn determine_ceiling(&self) -> usize {
+        self.determine_street_equity_possible().ceiling()
     }
 
     /// Returns the seat index of the Nth next occupied seat after `start`, wrapping
@@ -2239,20 +2253,32 @@ mod casino__table_tests {
     }
 
     #[test]
-    fn act_all_in__more_chips_than_anyone() {
+    fn act_all_in__more_chips_than_anyone() -> Result<(), Box<dyn std::error::Error>> {
         let table = TestData::split_pot_table(&cc!(
             "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣"
         ));
 
         table.act_forced_bets().unwrap();
-        assert_eq!(0, table.next_to_act());
+        let available = {
+            let seat = table.get_seat(0).ok_or_else(|| PKError::InvalidSeatNumber)?;
+            seat.player.total_chip_count()
+        };
+        table.act_all_in(0).expect("Failed to go all in");
 
-        table.act_all_in(0);
-
-        println!("{table}");
-
-        assert_eq!(9_000, table.get_seat(0).unwrap().player.bet.count());
-
-        println!("{table}");
+        assert_eq!(
+            10_000, available,
+            "Player should have more chips available to bet than possible to bet."
+        );
+        assert_eq!(
+            9_000,
+            table.determine_ceiling(),
+            "The maximum bet possible in the round."
+        );
+        assert_eq!(
+            9_000,
+            table.get_seat(0).unwrap().player.bet.count(),
+            "The actual amount bet needs to match ceiling."
+        );
+        Ok(())
     }
 }

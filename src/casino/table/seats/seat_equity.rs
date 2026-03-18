@@ -46,6 +46,7 @@ impl SeatEquity {
         }
     }
 
+    #[must_use]
     pub fn count_ones(&self) -> usize {
         self.seats.count_ones()
     }

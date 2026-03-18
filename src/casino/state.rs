@@ -44,6 +44,10 @@ impl PlayerStateCell {
         self.0.get().is_active()
     }
 
+    pub fn is_all_in(&self) -> bool {
+        self.0.get().is_all_in()
+    }
+
     #[must_use]
     pub fn is_blind(&self) -> bool {
         self.0.get().is_blind()

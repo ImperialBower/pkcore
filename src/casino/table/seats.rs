@@ -548,6 +548,9 @@ impl Seats {
         if self.count_active_in_hand() <= 1 {
             return true;
         }
+        if self.count_players_with_action_to_give() <= 1 {
+            return true;
+        }
         let current_bet = self.current_bet();
 
         for seat_cell in &self.0 {
@@ -567,6 +570,21 @@ impl Seats {
             }
         }
         true
+    }
+
+    #[must_use]
+    pub fn count_players_with_action_to_give(&self) -> usize {
+        let mut count = 0;
+        for seat_cell in &self.0 {
+            let seat = seat_cell.borrow();
+            if seat.is_empty() {
+                continue;
+            }
+            if seat.is_active() && !seat.is_all_in() {
+                count += 1;
+            }
+        }
+        count
     }
 
     #[must_use]
@@ -1359,9 +1377,8 @@ mod casino__table__seats_tests {
         assert_eq!(2, table.next_to_act());
         table.act_all_in(2).expect("seat 2 should be able to go all-in");
 
-        assert_eq!(table.seats.x_highest_bet(0), (Seatbit::SEAT_0, 10_000));
-        assert_eq!(table.seats.x_highest_bet(2), (Seatbit::SEAT_1, 5_000));
-        assert_eq!(table.seats.x_highest_bet(1), (Seatbit::SEAT_2, 9_000));
+        assert_eq!(table.seats.x_highest_bet(0), (Seatbit::SEAT_0 | Seatbit::SEAT_2, 9_000));
+        assert_eq!(table.seats.x_highest_bet(1), (Seatbit::SEAT_1, 5_000));
     }
 
     #[test]
@@ -1396,11 +1413,10 @@ mod casino__table__seats_tests {
         table.act_all_in(1).expect("seat 1 should be able to go all-in");
         table.act_all_in(2).expect("seat 2 should be able to go all-in");
 
-        assert_eq!(table.seats.x_highest_bet(0), (Seatbit::SEAT_0, 10_000));
-        assert_eq!(table.seats.x_highest_bet(2), (Seatbit::SEAT_1, 5_000));
-        assert_eq!(table.seats.x_highest_bet(1), (Seatbit::SEAT_2, 9_000));
+        assert_eq!(table.seats.x_highest_bet(0), (Seatbit::SEAT_0 | Seatbit::SEAT_2, 9_000));
+        assert_eq!(table.seats.x_highest_bet(1), (Seatbit::SEAT_1, 5_000));
+        assert_eq!(table.seats.x_highest_bet(2), (Seatbit::default(), 0));
         assert_eq!(table.seats.x_highest_bet(3), (Seatbit::default(), 0));
-        assert_eq!(table.seats.x_highest_bet(4), (Seatbit::default(), 0));
     }
 
     #[test]
@@ -1435,9 +1451,11 @@ mod casino__table__seats_tests {
         table.act_all_in(1).expect("seat 1 should be able to go all-in");
         table.act_all_in(2).expect("seat 2 should be able to go all-in");
 
-        assert_eq!(table.seats.x_highest_bet(0), (Seatbit::SEAT_0, 10_000));
-        assert_eq!(table.seats.x_highest_bet(1), (Seatbit::SEAT_1 + Seatbit::SEAT_2, 9_000));
-        assert_eq!(table.seats.x_highest_bet(2), (Seatbit::default(), 0));
+        assert_eq!(
+            table.seats.x_highest_bet(0),
+            (Seatbit::SEAT_0 + Seatbit::SEAT_1 + Seatbit::SEAT_2, 9_000)
+        );
+        assert_eq!(table.seats.x_highest_bet(1), (Seatbit::default(), 0));
     }
 
     /// Matches test in `Table`

@@ -160,14 +160,17 @@ impl TableEquity {
         &mut self.0
     }
 
+    #[must_use]
     pub fn first(&self) -> &SeatEquity {
         self.0.first().unwrap_or(default_seat_equity_ref())
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
     }
@@ -205,6 +208,7 @@ impl TableEquity {
         self.0.iter().position(|equity| equity.seats.contains(seat_number))
     }
 
+    #[must_use]
     pub fn second(&self) -> &SeatEquity {
         self.0.get(1).unwrap_or(default_seat_equity_ref())
     }
