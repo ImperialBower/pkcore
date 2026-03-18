@@ -1,8 +1,14 @@
 use crate::prelude::SeatEquity;
 use serde::{Deserialize, Serialize};
+use std::sync::OnceLock;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct TableEquity(Vec<SeatEquity>);
+
+fn default_seat_equity_ref() -> &'static SeatEquity {
+    static DEFAULT_SEAT_EQUITY: OnceLock<SeatEquity> = OnceLock::new();
+    DEFAULT_SEAT_EQUITY.get_or_init(SeatEquity::default)
+}
 
 impl TableEquity {
     /// Creates a new collection of seat equities.
@@ -59,15 +65,39 @@ impl TableEquity {
         self.consolidate();
     }
 
-    /// Returns a reference to the vector of `SeatEquity` instances.
+    /// Returns the chip threshold used as the current ceiling for equity comparisons.
+    ///
+    /// The function returns:
+    /// - the top chip count when the highest entry is tied across multiple seats,
+    /// - otherwise the second chip count when available,
+    /// - otherwise `0`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use pkcore::prelude::{SeatEquity, Seatbit, TableEquity};
+    ///
+    /// let tied_top = TableEquity::new(vec![
+    ///     SeatEquity::new(10_000, Seatbit::SEAT_0),
+    ///     SeatEquity::new(10_000, Seatbit::SEAT_1),
+    ///     SeatEquity::new(5_000, Seatbit::SEAT_2),
+    /// ]);
+    /// assert_eq!(tied_top.ceiling(), 10_000);
+    ///
+    /// let distinct_top = TableEquity::new(vec![
+    ///     SeatEquity::new(10_000, Seatbit::SEAT_0),
+    ///     SeatEquity::new(7_000, Seatbit::SEAT_1),
+    /// ]);
+    /// assert_eq!(distinct_top.ceiling(), 7_000);
+    /// ```
     #[must_use]
-    pub fn equities(&self) -> &Vec<SeatEquity> {
-        &self.0
-    }
-
-    /// Returns a mutable reference to the vector of `SeatEquity` instances.
-    pub fn equities_mut(&mut self) -> &mut Vec<SeatEquity> {
-        &mut self.0
+    pub fn ceiling(&self) -> usize {
+        if self.first().count_ones() > 1 {
+            self.first().chips
+        } else if self.len() > 1 {
+            self.second().chips
+        } else {
+            0
+        }
     }
 
     /// Consolidates entries that share the same chip count.
@@ -119,8 +149,64 @@ impl TableEquity {
         self.0 = consolidated;
     }
 
+    /// Returns a reference to the vector of `SeatEquity` instances.
+    #[must_use]
+    pub fn equities(&self) -> &Vec<SeatEquity> {
+        &self.0
+    }
+
+    /// Returns a mutable reference to the vector of `SeatEquity` instances.
+    pub fn equities_mut(&mut self) -> &mut Vec<SeatEquity> {
+        &mut self.0
+    }
+
+    pub fn first(&self) -> &SeatEquity {
+        self.0.first().unwrap_or(default_seat_equity_ref())
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Returns the ranking index for a seat in the current equity ordering.
+    ///
+    /// Rank `0` is the highest chip group, rank `1` is the next highest, and so on.
+    /// Seats that are tied on chips share the same rank because tied entries are
+    /// consolidated into a single [`SeatEquity`].
+    ///
+    /// Returns `None` when the seat is not present in this collection.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use pkcore::prelude::{SeatEquity, Seatbit, TableEquity};
+    ///
+    /// let equities = TableEquity::new(vec![
+    ///     SeatEquity::new(10_000, Seatbit::SEAT_0),
+    ///     SeatEquity::new(7_000, Seatbit::SEAT_1),
+    ///     SeatEquity::new(7_000, Seatbit::SEAT_2),
+    /// ]);
+    ///
+    /// // Present seat at the top chip group.
+    /// assert_eq!(equities.player_ranking(0), Some(0));
+    ///
+    /// // Tied seats share the same ranking index.
+    /// assert_eq!(equities.player_ranking(1), Some(1));
+    /// assert_eq!(equities.player_ranking(2), Some(1));
+    ///
+    /// // Absent seat returns None.
+    /// assert_eq!(equities.player_ranking(5), None);
+    /// ```
+    #[must_use]
     pub fn player_ranking(&self, seat_number: u8) -> Option<usize> {
         self.0.iter().position(|equity| equity.seats.contains(seat_number))
+    }
+
+    pub fn second(&self) -> &SeatEquity {
+        self.0.get(1).unwrap_or(default_seat_equity_ref())
     }
 }
 
@@ -279,5 +365,36 @@ mod casino__table__seats_seat_equities_tests {
         assert_eq!(equities.player_ranking(0), Some(0));
         assert_eq!(equities.player_ranking(1), Some(1));
         assert_eq!(equities.player_ranking(2), Some(1));
+    }
+
+    #[test]
+    fn test_seat_equities_ceiling_returns_top_chips_when_top_entry_is_tied() {
+        let equities = TableEquity::new(vec![
+            SeatEquity::new(10_000, Seatbit::SEAT_0),
+            SeatEquity::new(10_000, Seatbit::SEAT_3),
+            SeatEquity::new(5_000, Seatbit::SEAT_2),
+        ]);
+
+        assert_eq!(equities.ceiling(), 10_000);
+    }
+
+    #[test]
+    fn test_seat_equities_ceiling_returns_second_chips_when_top_is_not_tied() {
+        let equities = TableEquity::new(vec![
+            SeatEquity::new(10_000, Seatbit::SEAT_0),
+            SeatEquity::new(7_000, Seatbit::SEAT_1),
+            SeatEquity::new(3_000, Seatbit::SEAT_2),
+        ]);
+
+        assert_eq!(equities.ceiling(), 7_000);
+    }
+
+    #[test]
+    fn test_seat_equities_ceiling_returns_zero_for_single_or_empty_collection() {
+        let empty = TableEquity::default();
+        let single = TableEquity::new(vec![SeatEquity::new(10_000, Seatbit::SEAT_0)]);
+
+        assert_eq!(empty.ceiling(), 0);
+        assert_eq!(single.ceiling(), 0);
     }
 }

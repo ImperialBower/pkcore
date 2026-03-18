@@ -45,6 +45,30 @@ impl SeatEquity {
             seats: Seatbit::from(seat_number),
         }
     }
+
+    pub fn count_ones(&self) -> usize {
+        self.seats.count_ones()
+    }
+
+    /// Returns `true` when this equity entry represents no chips and no seats.
+    ///
+    /// This is equivalent to checking whether the value is `SeatEquity::default()`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use pkcore::casino::table::seats::seat_equity::SeatEquity;
+    /// use pkcore::casino::table::seats::seatbit::Seatbit;
+    ///
+    /// let empty = SeatEquity::default();
+    /// assert!(empty.is_nada());
+    ///
+    /// let non_empty = SeatEquity::new(100, Seatbit::SEAT_0);
+    /// assert!(!non_empty.is_nada());
+    /// ```
+    #[must_use]
+    pub fn is_nada(&self) -> bool {
+        self == &Self::default()
+    }
 }
 
 impl Ord for SeatEquity {
@@ -90,5 +114,16 @@ mod casino__table__seats_seat_equity_tests {
 
         assert_eq!(equities[0], SeatEquity::new(9_000, Seatbit::SEAT_1));
         assert_eq!(equities[1], SeatEquity::new(9_000, Seatbit::SEAT_2));
+    }
+
+    #[test]
+    fn seat_equity_is_nada_returns_true_for_default() {
+        assert!(SeatEquity::default().is_nada());
+    }
+
+    #[test]
+    fn seat_equity_is_nada_returns_false_for_non_default() {
+        let equity = SeatEquity::new(1, Seatbit::SEAT_0);
+        assert!(!equity.is_nada());
     }
 }

@@ -39,6 +39,10 @@ impl Seatbit {
         let bit = Seatbit::from(seat_number);
         (self.0 & bit.0) != 0
     }
+
+    pub fn count_ones(&self) -> usize {
+        self.0.count_ones() as usize
+    }
 }
 
 impl Display for Seatbit {
