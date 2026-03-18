@@ -2,6 +2,9 @@
 mod casino__table_split_pot_tests {
     use pkcore::prelude::*;
 
+    /// Winning scenarios:
+    ///
+    /// -
     #[test]
     fn deals_to_river_after_preflop_all_ins() {
         let table = TestData::split_pot_table(&cc!(
@@ -19,10 +22,15 @@ mod casino__table_split_pot_tests {
         table.act_all_in(1).expect("seat 1 should be able to go all-in");
         table.act_all_in(2).expect("seat 2 should be able to go all-in");
 
+        assert_eq!(PlayerState::Bet(9_000), table.get_seat(0).unwrap().player.state.get());
+
         assert_eq!(1, table.seats.count_players_with_action_to_give());
         assert!(table.is_betting_complete());
 
         table.bring_it_in().expect("flop should be dealt");
+
+        assert_eq!(PlayerState::Bet(9_000), table.get_seat(0).unwrap().player.state.get());
+
         table.deal_flop().expect("flop should be dealt");
 
         assert_eq!(1, table.seats.count_players_with_action_to_give());
