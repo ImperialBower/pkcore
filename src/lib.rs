@@ -345,7 +345,7 @@ use std::hash::Hash;
 use crate::analysis::gto::combo::Combo;
 use crate::analysis::gto::combo_pairs::ComboPairs;
 use crate::analysis::gto::twos::Twos;
-use crate::prelude::PlayerState;
+use crate::prelude::{PlayerState, TableAction};
 use crate::rank::Rank;
 use crate::ranks::Ranks;
 use crate::suit::Suit;
@@ -457,6 +457,7 @@ pub enum PKError {
     NotEnoughHands,
     PlayerOutOfHand,
     SqlError,
+    TableActionOutOfOrder(TableAction),
     TableFull,
     TooManyCards,
     TooManyHands,
@@ -504,6 +505,9 @@ impl Display for PKError {
             PKError::NotEnoughHands => "Not Enough Hands Error",
             PKError::PlayerOutOfHand => "Player is out of hand Error",
             PKError::SqlError => "SQL Error",
+            PKError::TableActionOutOfOrder(table_action) => {
+                &*format!("Table Action Out of Order Error: {table_action}")
+            }
             PKError::TableFull => "Table Full Error",
             PKError::TooManyCards => "Too Many Cards Error",
             PKError::TooManyHands => "Too Many Hands Error",

@@ -8,17 +8,17 @@ use crate::casino::player::Player;
 use crate::casino::table::event::{TableAction, TableLog};
 use crate::casino::table::pot::PotManager;
 use crate::casino::table::result::HandResult;
-use crate::casino::table::seat::Seat;
 use crate::casino::table::seats::Seats;
 use crate::games::{GamePhase, GameType};
 use crate::play::game::Game;
 use crate::play::stages::flop_eval::FlopEval;
 use crate::play::stages::turn_eval::TurnEval;
-use crate::prelude::{Bard, BoxedCards, Evals};
+use crate::prelude::{Bard, BoxedCards, Evals, PlayerState, SeatEquity, Seatbit, TableEquity};
 use crate::{PKError, Pile};
 use bint::{BintCell, DrainableBintCell};
 use bitvec::macros::internal::funty::Fundamental;
 use pkstate::act::Action;
+use seats::seat::Seat;
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
 use termion::color;
@@ -28,7 +28,6 @@ pub mod event;
 pub mod position;
 pub mod pot;
 pub mod result;
-pub mod seat;
 pub mod seats;
 
 /// Represents a snapshot of the current game state at the table.
@@ -284,15 +283,39 @@ impl Table {
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
     pub fn act_all_in(&self, seat_number: u8) -> Result<usize, PKError> {
-        match self.seats.act_all_in(seat_number) {
-            Ok(amount) => {
-                self.bet.set(amount);
-                self.bet.set(amount);
-                self.log_info(TableAction::AllIn(seat_number, amount));
-                // self.action_to.up();
-                Ok(amount)
+        if seat_number != self.next_to_act() {
+            let seat = self.get_seat(seat_number).ok_or(PKError::InvalidSeatNumber)?;
+            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::AllIn(seat.player.total_chip_count()));
+            self.log_info(err);
+            return Err(PKError::TableActionOutOfOrder(err));
+        }
+
+        // A player can only truly go all in if there is anyone else in the pot
+        // who can bet at least there total amount of chips. (Amount already
+        // bet in the round + amount of their stack)
+
+        // How many chips does the player have to invest in the pot?
+        let available = {
+            let seat = self.get_seat(seat_number).ok_or(PKError::InvalidSeatNumber)?;
+            seat.player.total_chip_count()
+        };
+        // What's the maximum amount possible to bet in the round?
+        let ceiling = self.determine_street_equity_possible().ceiling();
+
+        if available > ceiling {
+            // Technically not possible to go all in, since the player has more chips
+            // than anyone else active in the hand.
+            Ok(self.act_bet(seat_number, ceiling)?)
+        } else {
+            match self.seats.act_all_in(seat_number) {
+                Ok(amount) => {
+                    self.bet.set(amount);
+                    self.log_info(TableAction::AllIn(seat_number, amount));
+                    // self.action_to.up();
+                    Ok(amount)
+                }
+                Err(e) => Err(e),
             }
-            Err(e) => Err(e),
         }
     }
 
@@ -301,6 +324,12 @@ impl Table {
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
     pub fn act_bet(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
+        if seat_number != self.next_to_act() {
+            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::Bet(amount));
+            self.log_info(err);
+            return Err(PKError::TableActionOutOfOrder(err));
+        }
+
         match self.seats.act_bet(seat_number, amount) {
             Ok(remaining) => {
                 self.bet.set(amount);
@@ -332,6 +361,12 @@ impl Table {
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
     pub fn act_call(&self, seat_number: u8) -> Result<usize, PKError> {
+        if seat_number != self.next_to_act() {
+            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::Call(0));
+            self.log_info(err);
+            return Err(PKError::TableActionOutOfOrder(err));
+        }
+
         match self.seats.act_call(seat_number) {
             Ok((to_call, _remaining)) => {
                 self.log_info(TableAction::Call(seat_number, to_call));
@@ -347,6 +382,11 @@ impl Table {
     /// `PKError::InvalidTableAction` error if the player cannot check.
     /// `PKError::InvalidSeatNumber` error if the `seat_number` is not valid.
     pub fn act_check(&self, seat_number: u8) -> Result<usize, PKError> {
+        if seat_number != self.next_to_act() {
+            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::Check);
+            self.log_info(err);
+            return Err(PKError::TableActionOutOfOrder(err));
+        }
         match self.seats.act_check(seat_number) {
             Ok(remaining) => {
                 self.log_info(TableAction::Check(seat_number));
@@ -361,6 +401,12 @@ impl Table {
     ///
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     pub fn act_fold(&self, seat_number: u8) -> Result<usize, PKError> {
+        if seat_number != self.next_to_act() {
+            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::Fold);
+            self.log_info(err);
+            return Err(PKError::TableActionOutOfOrder(err));
+        }
+
         if let Some(seat) = self.get_seat_mut(seat_number) {
             let folded_chips = seat.player.act_fold()?;
             let _chips_in_play = seat.player.chips_in_play.take();
@@ -461,6 +507,12 @@ impl Table {
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
     pub fn act_raise(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
+        if seat_number != self.next_to_act() {
+            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::Raise(amount));
+            self.log_info(err);
+            return Err(PKError::TableActionOutOfOrder(err));
+        }
+
         match self.seats.act_raise(seat_number, amount) {
             Ok(remaining) => {
                 self.bet.set(amount);
@@ -592,7 +644,7 @@ impl Table {
             seat.cards.deal(card)?;
             Ok(seat.cards.is_dealt())
         } else {
-            self.event_log.log(TableAction::Error(PKError::InvalidSeatNumber));
+            self.event_log.log(TableAction::InvalidSeatNumber);
             Err(PKError::InvalidSeatNumber)
         }
     }
@@ -714,6 +766,12 @@ impl Table {
         }
     }
 
+    /// What is the maximum amount of chips that can be bet in a round? Most useful for dealing
+    /// with all in bets. No player can bet more than the ceiling of the `Table`.
+    pub fn determine_ceiling(&self) -> usize {
+        self.determine_street_equity_possible().ceiling()
+    }
+
     /// Returns the seat index of the Nth next occupied seat after `start`, wrapping
     /// around through all seats.  If there are fewer than N occupied seats the
     /// traversal wraps through the occupied seats cyclically (i.e. the result is
@@ -759,6 +817,45 @@ impl Table {
         let bb_seat = self.next_occupied_seat_after(self.button.value(), 2);
         log::trace!("BB seat #{bb_seat} {}", self.get_seat_handle(bb_seat));
         bb_seat
+    }
+
+    pub fn determine_street_equity_possible(&self) -> TableEquity {
+        let mut eqs: Vec<SeatEquity> = Vec::new();
+
+        for (i, seat) in self.seats.iter().enumerate() {
+            let borrowed = seat.borrow();
+            if seat.is_in_hand() && borrowed.player.total_chip_count() > 0 {
+                eqs.push(SeatEquity::new(borrowed.player.total_chip_count(), Seatbit::from(i)));
+            }
+        }
+
+        if eqs.is_empty() {
+            TableEquity::default()
+        } else {
+            TableEquity::new(eqs)
+        }
+    }
+
+    /// Returns per-seat equity commitments for the current betting round.
+    ///
+    /// This uses logged betting actions for the active street and includes
+    /// forced bets (blinds/antes) when they are part of the current round.
+    /// Equal chip commitments are consolidated by `TableEquity`.
+    pub fn determine_street_equity(&self) -> TableEquity {
+        let mut eqs: Vec<SeatEquity> = Vec::new();
+
+        for (i, seat) in self.seats.iter().enumerate() {
+            let borrowed = seat.borrow();
+            if seat.is_in_hand() && borrowed.player.bet.count() > 0 {
+                eqs.push(SeatEquity::new(borrowed.player.bet.count(), Seatbit::from(i)));
+            }
+        }
+
+        if eqs.is_empty() {
+            TableEquity::default()
+        } else {
+            TableEquity::new(eqs)
+        }
     }
 
     pub fn determine_game_phase(&self) -> GamePhase {
@@ -1182,6 +1279,13 @@ impl Table {
         self.seats.is_betting_complete()
     }
 
+    pub fn is_betting_started(&self) -> bool {
+        self.seats.borrow_all().iter().any(|seat_cell| {
+            let seat = seat_cell.borrow();
+            seat.is_in_hand() && seat.player.bet.count() > 0
+        })
+    }
+
     /// TODO: There are edge cases that I fear these checks won't catch.
     pub fn is_game_over(&self) -> bool {
         if self.seats.count_active_in_hand() <= 1 {
@@ -1309,10 +1413,10 @@ impl Table {
 
         match deck_length.cmp(&deck_size) {
             std::cmp::Ordering::Less => {
-                self.log_warn(TableAction::Error(PKError::NotEnoughCards));
+                self.log_warn(TableAction::NotEnoughCards);
             }
             std::cmp::Ordering::Greater => {
-                self.log_warn(TableAction::Error(PKError::TooManyCards));
+                self.log_warn(TableAction::TooManyCards);
             }
             std::cmp::Ordering::Equal => self.log_warn(TableAction::DeckPassesAudit),
         }
@@ -1784,18 +1888,19 @@ mod casino__table_tests {
     fn act_fold() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
         let _ = table.act_forced_bets();
-        let seat0_folded_amount = table.act_fold(0).unwrap();
-        let seat1_folded_amount = table.act_fold(1).unwrap();
+        assert_eq!(3, table.next_to_act());
+        let seat3_folded_amount = table.act_fold(3).unwrap();
+        let seat4_folded_amount = table.act_fold(4).unwrap();
 
-        let seat0 = table.seats.get_seat(0).unwrap();
-        let seat1 = table.seats.get_seat(1).unwrap(); // small blind
+        let seat3 = table.seats.get_seat(3).unwrap();
+        let seat4 = table.seats.get_seat(4).unwrap();
 
-        assert_eq!(0, seat0.player.bet.count());
-        assert_eq!(PlayerState::Fold, seat0.player.state.get());
-        assert_eq!(0, seat0_folded_amount);
-        assert_eq!(0, seat1.player.bet.count());
-        assert_eq!(PlayerState::Fold, seat1.player.state.get());
-        assert_eq!(50, seat1_folded_amount);
+        assert_eq!(0, seat3.player.bet.count());
+        assert_eq!(PlayerState::Fold, seat3.player.state.get());
+        assert_eq!(0, seat3_folded_amount);
+        assert_eq!(0, seat4.player.bet.count());
+        assert_eq!(PlayerState::Fold, seat4.player.state.get());
+        assert_eq!(0, seat4_folded_amount);
     }
 
     #[test]
@@ -1950,7 +2055,9 @@ mod casino__table_tests {
         table.act_new_hand();
         table.deal_cards_to_seats().unwrap();
 
-        table.act_fold(0).unwrap();
+        assert_eq!(3, table.next_to_act());
+
+        table.act_fold(3).unwrap();
         assert!(table.is_game_over());
         table.end_hand().unwrap();
 
@@ -1963,5 +2070,215 @@ mod casino__table_tests {
             .collect();
 
         assert_eq!(vec![2, 0, 0, 2, 0, 0], dealt_counts);
+    }
+
+    #[test]
+    fn is_betting_started_false_when_only_check_actions() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        table.act_check(0).unwrap();
+
+        assert!(!table.is_betting_started());
+    }
+
+    #[test]
+    fn is_betting_started_true_when_any_in_hand_player_has_bet() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        table.act_bet(0, 100).unwrap();
+
+        assert!(table.is_betting_started());
+    }
+
+    #[test]
+    fn determine_round_equity_includes_forced_bets() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        table.act_forced_bets().unwrap();
+
+        let equity = table.determine_street_equity();
+
+        assert_eq!(
+            equity.equities(),
+            &vec![
+                SeatEquity::new(100, Seatbit::SEAT_2),
+                SeatEquity::new(50, Seatbit::SEAT_1),
+            ]
+        );
+    }
+
+    #[test]
+    fn determine_street_equity_consolidates_matching_commitments() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        table.act_forced_bets().unwrap();
+        table.act_call(0).unwrap();
+        table.act_call(1).unwrap();
+        table.act_check(2).unwrap();
+
+        let equity = table.determine_street_equity();
+
+        assert_eq!(
+            equity.equities(),
+            &vec![SeatEquity::new(
+                100,
+                Seatbit::SEAT_0 | Seatbit::SEAT_1 | Seatbit::SEAT_2
+            )]
+        );
+    }
+
+    #[test]
+    fn determine_street_equity_ignores_check_only_action() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        table.act_check(0).unwrap();
+
+        let equity = table.determine_street_equity();
+
+        assert!(equity.equities().is_empty());
+    }
+
+    #[test]
+    fn determine_street_equity_possible_happy_path_consolidates_all_in_hand_players() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        let equity = table.determine_street_equity_possible();
+
+        assert_eq!(
+            equity.equities(),
+            &vec![SeatEquity::new(
+                1_000_000,
+                Seatbit::SEAT_0 | Seatbit::SEAT_1 | Seatbit::SEAT_2
+            )]
+        );
+    }
+
+    #[test]
+    fn determine_street_equity_possible_excludes_folded_players() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        println!("{table}");
+
+        assert_eq!(0, table.next_to_act());
+        table.act_fold(0).unwrap();
+
+        let equity = table.determine_street_equity_possible();
+
+        assert_eq!(
+            equity.equities(),
+            &vec![SeatEquity::new(1_000_000, Seatbit::SEAT_1 | Seatbit::SEAT_2)]
+        );
+    }
+
+    #[test]
+    fn determine_street_equity_possible_uses_total_chips_not_current_bets() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        table.act_forced_bets().unwrap();
+        table.act_call(0).unwrap();
+        table.act_call(1).unwrap();
+
+        let equity = table.determine_street_equity_possible();
+
+        assert_eq!(
+            equity.equities(),
+            &vec![SeatEquity::new(
+                1_000_000,
+                Seatbit::SEAT_0 | Seatbit::SEAT_1 | Seatbit::SEAT_2
+            )]
+        );
+    }
+
+    #[test]
+    fn determine_street_equity_possible_with_different_chip_totals_returns_separate_sorted_entries() {
+        let seat_0 = Seat {
+            player: Player::new_with_chips("Alice".to_string(), 1_500_000),
+            cards: BoxedCards::blanks(2),
+        };
+        seat_0.player.state.set(PlayerState::YetToAct);
+
+        let seat_1 = Seat {
+            player: Player::new_with_chips("Bob".to_string(), 2_000_000),
+            cards: BoxedCards::blanks(2),
+        };
+        seat_1.player.state.set(PlayerState::YetToAct);
+
+        let seat_2 = Seat {
+            player: Player::new_with_chips("Carol".to_string(), 900_000),
+            cards: BoxedCards::blanks(2),
+        };
+        seat_2.player.state.set(PlayerState::YetToAct);
+
+        let table = Table::nlh_from_seats(Seats::new(vec![seat_0, seat_1, seat_2]), ForcedBets::new(50, 100));
+        let equity = table.determine_street_equity_possible();
+
+        assert_eq!(
+            equity.equities(),
+            &vec![
+                SeatEquity::new(2_000_000, Seatbit::SEAT_1),
+                SeatEquity::new(1_500_000, Seatbit::SEAT_0),
+                SeatEquity::new(900_000, Seatbit::SEAT_2),
+            ]
+        );
+    }
+
+    #[test]
+    fn act_bet_out_of_turn_throws_table_action_out_of_order_error() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        table.act_forced_bets().unwrap();
+
+        let result = table.act_bet(1, 200);
+
+        assert!(result.is_err());
+        match result {
+            Err(PKError::TableActionOutOfOrder(_)) => (),
+            _ => panic!("Expected PKError::TableActionOutOfOrder, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn act_all_in_out_of_turn_throws_table_action_out_of_order_error() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        table.act_forced_bets().unwrap();
+
+        let result = table.act_all_in(1);
+
+        assert!(result.is_err());
+        match result {
+            Err(PKError::TableActionOutOfOrder(_)) => (),
+            _ => panic!("Expected PKError::TableActionOutOfOrder, got {:?}", result),
+        }
+    }
+
+    #[test]
+    fn act_all_in__more_chips_than_anyone() -> Result<(), Box<dyn std::error::Error>> {
+        let table = TestData::split_pot_table(&cc!(
+            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣"
+        ));
+
+        table.act_forced_bets().unwrap();
+        let available = {
+            let seat = table.get_seat(0).ok_or_else(|| PKError::InvalidSeatNumber)?;
+            seat.player.total_chip_count()
+        };
+        table.act_all_in(0).expect("Failed to go all in");
+
+        assert_eq!(
+            10_000, available,
+            "Player should have more chips available to bet than possible to bet."
+        );
+        assert_eq!(
+            9_000,
+            table.determine_ceiling(),
+            "The maximum bet possible in the round."
+        );
+        assert_eq!(
+            9_000,
+            table.get_seat(0).unwrap().player.bet.count(),
+            "The actual amount bet needs to match ceiling."
+        );
+        Ok(())
     }
 }

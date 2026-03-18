@@ -868,3 +868,7 @@ This is an outline of the work as it is done.
             * Added PlayerState::Ready, used to indicate that the player is ready to play the next hand.
             * Updated seat player functions to start the player struct with the state of Out. Won't be able to play until they specifically switch their state to Ready.
             * Add ready action to Dealer. 
+        * ISSUE: Isolate split pots.
+          * Types:
+            * The players ... 
+          * ISSUE: Pots where player goes all in and another player goes all in as well, the player isn't having their excess chips returned to them. 

@@ -1,4 +1,5 @@
 use crate::Agency;
+use serde::{Deserialize, Serialize};
 use std::cell::Cell;
 use std::fmt::{Display, Formatter};
 
@@ -41,6 +42,10 @@ impl PlayerStateCell {
 
     pub fn is_active(&self) -> bool {
         self.0.get().is_active()
+    }
+
+    pub fn is_all_in(&self) -> bool {
+        self.0.get().is_all_in()
     }
 
     #[must_use]
@@ -155,7 +160,7 @@ impl Display for PlayerStateCell {
 ///
 /// `PlayerState` is about what a player just did. Adding context outside of that is begging for
 /// bugs and confusion. A check has no value in poker, so it shouldn't have any value in the enum.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub enum PlayerState {
     /// Player is seated and ready to be dealt into the next hand.
     Ready,

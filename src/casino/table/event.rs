@@ -1,12 +1,13 @@
-use crate::PKError;
 use crate::bard::Bard;
 use crate::cards::Cards;
 use crate::casino::table::seats::Seats;
+use crate::prelude::PlayerState;
+use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::fmt::Display;
 use uuid::Uuid;
 
-#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq)]
 pub enum TableAction {
     #[default]
     Pause,
@@ -58,7 +59,10 @@ pub enum TableAction {
     PlayerWins(u8, Uuid, Bard, usize, usize), // (seat, player_id, winning_hand, amount_won, in_showdown)
     PlayerLoses(u8, Uuid, Bard, usize),       // (seat, player_id, winning_hand, amount_lost, in_showdown)
     InvalidAction,
-    Error(PKError),
+    InvalidPlayerAction(u8, PlayerState),
+    NotEnoughCards,
+    TooManyCards,
+    InvalidSeatNumber,
     DeckPassesAudit,
 }
 
@@ -117,7 +121,7 @@ impl TableAction {
     }
 
     #[must_use]
-    pub fn get_ammount(&self) -> Option<usize> {
+    pub fn get_amount(&self) -> Option<usize> {
         match self {
             TableAction::ForcedBet(_, amount)
             | TableAction::ForcedBetSmallBlind(_, amount)
@@ -165,7 +169,9 @@ impl TableAction {
             | TableAction::PlayerWins(seat, _, _, _, _)
             | TableAction::PlayerLoses(seat, _, _, _)
             | TableAction::MuckPlayerCards(seat, _)
+            | TableAction::InvalidPlayerAction(seat, _)
             | TableAction::TakePlayerCards(seat, _) => Some(*seat),
+
             _ => None,
         }
     }
@@ -293,7 +299,10 @@ impl Display for TableAction {
                 Cards::from(*losing_hand)
             ),
             TableAction::InvalidAction => write!(f, "Invalid Action"),
-            TableAction::Error(err) => write!(f, "Error: {err}"),
+            TableAction::InvalidPlayerAction(seat, action) => write!(f, "Invalid action by Seat {seat}: {action}"),
+            TableAction::NotEnoughCards => write!(f, "Not enough cards to deal"),
+            TableAction::TooManyCards => write!(f, "Too many cards to deal"),
+            TableAction::InvalidSeatNumber => write!(f, "Invalid Seat Number"),
             TableAction::DeckPassesAudit => write!(f, "Deck passes audit"),
         }
     }

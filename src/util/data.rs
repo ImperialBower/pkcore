@@ -10,7 +10,7 @@ use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::cards_cell::CardsCell;
 use crate::casino::player::Player;
-use crate::casino::table::seat::Seat;
+use crate::casino::table::seats::seat::Seat;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
@@ -384,6 +384,24 @@ impl TestData {
     #[must_use]
     pub fn four_seats() -> Vec<Seat> {
         Vec::from(&TestData::the_hand_seats()[2..6])
+    }
+
+    pub fn split_pot_table(cards: &CardsCell) -> Table {
+        let rich = Seat {
+            player: Player::new_with_chips("Rich Man".to_string(), 10_000),
+            cards: boxed!("Q♦ Q♣"),
+        };
+        let poor = Seat {
+            player: Player::new_with_chips("Poor Man".to_string(), 5_000),
+            cards: boxed!("A♠ A♥"),
+        };
+        let average = Seat {
+            player: Player::new_with_chips("Average Person".to_string(), 9_000),
+            cards: boxed!("4♣ 4♦"),
+        };
+        let seats = Seats::new(vec![rich, poor, average]);
+
+        Table::nlh_primed(seats, cards, ForcedBets::new(50, 100))
     }
 }
 

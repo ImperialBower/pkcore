@@ -203,15 +203,16 @@ impl Player {
         //     log::warn!("InvalidTableAction: Player is not active in the hand.");
         //     return Err(PKError::InvalidTableAction);
         // }
-        if self.state.is_active() {
-            self.state.set(PlayerState::YetToAct);
-        }
 
         let player_bet = self.bet.take();
         // NOTE: This doesn't work for issue with end of hand, since this is used to keep track
         // of how many chips the player has in play for the hand.
         // let chips_in_play = self.chips_in_play.take();
         // assert_eq!(player_bet.count(), chips_in_play);
+
+        if self.state.is_active() && self.chips.count() > 0 {
+            self.state.set(PlayerState::YetToAct);
+        }
 
         log::trace!("{} brings in {} chips", self.handle, player_bet);
 
@@ -398,7 +399,7 @@ impl Player {
     }
 
     pub fn is_all_in(&self) -> bool {
-        self.chips.count() == 0 && self.bet.count() > 0
+        self.state.is_all_in() || (self.chips.count() == 0 && self.bet.count() > 0)
     }
 
     pub fn is_check(&self) -> bool {
