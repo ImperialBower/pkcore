@@ -290,7 +290,10 @@ impl Table {
             return Err(PKError::TableActionOutOfOrder(err));
         }
 
-        let possible_equity = self.determine_street_equity_possible();
+        let seat = self.get_seat(seat_number).ok_or_else(|| PKError::InvalidSeatNumber)?;
+
+        let available = seat.player.total_chip_count();
+        let ceiling = self.determine_street_equity_possible();
 
         match self.seats.act_all_in(seat_number) {
             Ok(amount) => {
