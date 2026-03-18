@@ -2,13 +2,9 @@
 mod casino__table_split_pot_tests {
     use pkcore::prelude::*;
 
-    /// Winning scenarios:
-    ///
-    /// -
-    #[test]
-    fn deals_to_river_after_preflop_all_ins() {
+    fn preroll(index: &str) -> Table {
         let table = TestData::split_pot_table(&cc!(
-            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣"
+            index
         ));
 
         assert_eq!(46, table.deck.len());
@@ -33,17 +29,32 @@ mod casino__table_split_pot_tests {
 
         table.deal_flop().expect("flop should be dealt");
 
+        assert_eq!(PlayerState::Bet(9_000), table.get_seat(0).unwrap().player.state.get());
         assert_eq!(1, table.seats.count_players_with_action_to_give());
         assert!(!table.is_game_over());
         assert!(table.is_betting_complete());
 
         table.deal_turn().expect("turn should be dealt");
+        assert_eq!(PlayerState::Bet(9_000), table.get_seat(0).unwrap().player.state.get());
         assert!(!table.is_game_over());
         assert!(table.is_betting_complete());
 
         table.deal_river().expect("river should be dealt");
+        assert_eq!(PlayerState::Bet(9_000), table.get_seat(0).unwrap().player.state.get());
         assert!(table.is_betting_complete());
         assert!(table.is_game_over());
+
+        table
+    }
+
+    /// Winning scenarios:
+    ///
+    /// -
+    #[test]
+    fn deals_to_river_after_preflop_all_ins() {
+        let table = preroll(
+            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣"
+        );
 
         println!("{table}");
 

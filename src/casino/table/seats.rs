@@ -226,7 +226,14 @@ impl Seats {
             if !seat.borrow().player.has_bet() {
                 continue;
             }
-            let chips = seat.borrow_mut().player.act_bring_it_in()?;
+
+            // If there is only one player with action yet to give in the hand, that means that
+            // their state doesn't need to change.
+            let chips = match self.count_players_with_action_to_give() {
+                1 => seat.borrow_mut().player.act_bring_it_in_frozen()?,
+                _ => seat.borrow_mut().player.act_bring_it_in()?,
+            };
+
             log::trace!("Seat #{i} brought in {} chips.", chips.count());
             collected.add_to(chips);
         }
@@ -312,21 +319,6 @@ impl Seats {
         }
 
         seats
-    }
-
-    #[must_use]
-    pub fn count_able_to_bet_in_hand(&self) -> usize {
-        let mut count = 0;
-        for seat_cell in &self.0 {
-            let seat = seat_cell.borrow();
-            if seat.is_empty() {
-                continue;
-            }
-            if seat.is_active() && !seat.is_all_in() {
-                count += 1;
-            }
-        }
-        count
     }
 
     #[must_use]
