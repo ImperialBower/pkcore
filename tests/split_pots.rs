@@ -3,9 +3,7 @@ mod casino__table_split_pot_tests {
     use pkcore::prelude::*;
 
     fn preroll(index: &str) -> Table {
-        let table = TestData::split_pot_table(&cc!(
-            index
-        ));
+        let table = TestData::split_pot_table(&cc!(index));
 
         assert_eq!(46, table.deck.len());
 
@@ -53,7 +51,7 @@ mod casino__table_split_pot_tests {
     #[test]
     fn deals_to_river_after_preflop_all_ins__poor_man_then_rich() {
         let table = preroll(
-            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣"
+            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣",
         );
 
         println!("{table}");
@@ -65,7 +63,7 @@ mod casino__table_split_pot_tests {
     #[test]
     fn deals_to_river_after_preflop_all_ins__rich_man() {
         let table = preroll(
-            "K♠ Q♠ Q♥ Q♣ J♠ A♦ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣"
+            "K♠ Q♠ Q♥ Q♣ J♠ A♦ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣",
         );
 
         println!("{table}");
@@ -77,7 +75,7 @@ mod casino__table_split_pot_tests {
     #[test]
     fn deals_to_river_after_preflop_all_ins__average() {
         let table = preroll(
-            "4♠ Q♠ 8♠ 4♥ J♠ A♣ A♦ T♠ K♠ 9♠ 7♠ 6♠ 5♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣"
+            "4♠ Q♠ 8♠ 4♥ J♠ A♣ A♦ T♠ K♠ 9♠ 7♠ 6♠ 5♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣",
         );
 
         println!("{table}");

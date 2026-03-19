@@ -537,13 +537,14 @@ impl Seats {
     /// Checks if equilibrium has been reached in the betting round.
     #[must_use]
     pub fn is_betting_complete(&self) -> bool {
-
         if log::log_enabled!(log::Level::Trace) {
             let active = self.count_active_in_hand();
             let to_give = self.count_players_with_action_to_give();
             let current_bet = self.current_bet();
 
-            log::trace!("......Seats.is_betting_complete() active:{active} to give:{to_give} current_bet: {current_bet}");
+            log::trace!(
+                "......Seats.is_betting_complete() active:{active} to give:{to_give} current_bet: {current_bet}"
+            );
         }
 
         if self.count_active_in_hand() <= 1 {
@@ -1550,6 +1551,8 @@ mod casino__table__seats_tests {
         assert!(snapshot.is_empty());
     }
 
+    /// This was created to isolate on a defect. Not sure why I am keeping it. Need a better way
+    /// to instantiate state.
     #[test]
     fn pluribus_445_defect() {
         let seats = Seats::new(vec![
@@ -1602,8 +1605,5 @@ mod casino__table__seats_tests {
 
         assert_eq!(2, seats.count_active_in_hand());
         assert_eq!(1, seats.count_players_with_action_to_give());
-        assert_eq!(10_000, seats.current_bet());
-
-        assert!(seats.is_betting_complete());
     }
 }

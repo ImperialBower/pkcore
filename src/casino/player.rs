@@ -211,7 +211,7 @@ impl Player {
     }
 
     /// Removes and returns the chips from the player's bet stack, but doesn't change their state,
-    /// since there is no further action possible in the hand. 
+    /// since there is no further action possible in the hand.
     ///
     /// # Errors
     ///

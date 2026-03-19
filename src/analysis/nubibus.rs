@@ -6,13 +6,13 @@ use crate::util::Util;
 use crate::util::terminal::Terminal;
 use crate::{PKError, Plurable};
 use regex::Regex;
-use termion::color;
 use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
 use std::fs;
 use std::ops::Index;
 use std::path::Path;
 use std::str::FromStr;
+use termion::color;
 
 /// `nūbĭfĭcus , a, um nubes-facio, - producing clouds`
 ///
@@ -131,7 +131,10 @@ impl Nubificus {
 
         Nubificus::act(&self.table, action, seat_to_act)?;
 
-        log::debug!("......{}", self.table.commentary_last_player_action().unwrap_or_default());
+        log::debug!(
+            "......{}",
+            self.table.commentary_last_player_action().unwrap_or_default()
+        );
         if display {
             let commentary = self.table.commentary_last_player_action().unwrap_or_default();
             // Color player actions based on action type
