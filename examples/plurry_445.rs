@@ -1,17 +1,21 @@
-use pkcore::PKError;
 use pkcore::analysis::nubibus::Nubificus;
 use std::str::FromStr;
 
 /// `cargo run --example plurry_445`
-fn main() -> Result<(), PKError> {
+fn main() {
+    env_logger::Builder::from_default_env()
+        .filter_level(log::LevelFilter::Trace)
+        .init();
+
+
     // let plur = "STATE:193:r225fcffc/ccc/ccc/ccc:2s7d|7c9c|KcQs|2dQh|9h9s|Ac8d/5cKhJh/As/7s:-50|-225|500|0|-225|0:Eddie|MrOrange|Bill|MrBlue|Pluribus|MrPink";
     // let plur = "STATE:29:fffr275fc/cc/cr725r1850f:Tc4h|5c6d|3cTs|9hKc|2c8h|Ks7s/7c3hJs/6h:-50|775|0|0|0|-725:Pluribus|MrBlue|MrBlonde|MrWhite|MrPink|MrBrown";
     // let plur = "STATE:193:r225fcffc/ccc/ccc/ccc:2s7d|7c9c|KcQs|2dQh|9h9s|Ac8d/5cKhJh/As/7s:-50|-225|500|0|-225|0:Eddie|MrOrange|Bill|MrBlue|Pluribus|MrPink";
     let plur = "STATE:46:r225fffr1050fr2525r10000f:KcAh|9d3h|QcAs|8s2d|4h8c|ThQs:2625|-100|-2525|0|0|0:MrBrown|Pluribus|MrBlue|MrBlonde|MrWhite|MrPink";
 
-    let nubi = Nubificus::from_str(plur)?;
-    nubi.play_hand_display()?;
+    let nubi = Nubificus::from_str(plur).unwrap();
+    println!("{nubi}");
+    nubi.play_hand_display().expect("play hand display should succeed");
 
     nubi.table.eval_flop_display();
-    Ok(())
 }

@@ -87,6 +87,7 @@ impl Nubificus {
     ///
     /// TODO: Fill in errors
     pub fn play_hand_display(&self) -> Result<(), PKError> {
+        log::trace!("Nubibus.play_hand_display()");
         if !self.table.seats.are_dealt() {
             self.table.deal_cards_to_seats()?;
         }
@@ -111,6 +112,7 @@ impl Nubificus {
 
         for action in self.pluribus.actions.clone() {
             println!("{action}");
+            log::trace!("...PluribusEvent: {action}");
             self.do_action(&action, true)?;
         }
         Ok(())
@@ -282,6 +284,23 @@ impl TryFrom<&Pluribus> for Nubificus {
 
     fn try_from(pluribus: &Pluribus) -> Result<Self, Self::Error> {
         Nubificus::try_from(pluribus.clone())
+    }
+}
+
+impl Display for Nubificus {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Nubificus(index={})", self.pluribus.index)?;
+        writeln!(f, "queue:")?;
+
+        if self.queue.is_empty() {
+            writeln!(f, "  (empty)")?;
+        } else {
+            for event in &self.queue {
+                writeln!(f, "  - {event}")?;
+            }
+        }
+
+        write!(f, "table:\n{}", self.table)
     }
 }
 
@@ -773,5 +792,29 @@ mod store_pluribus_tests {
         let _board = board;
         let _winnings = Pluribus::parse_isizes(v.index(4));
         let _players = Util::str_splitter(v.index(5), "|");
+    }
+
+    #[test]
+    fn nubificus_display_contains_key_fields() {
+        let pluribus = Pluribus::from_str(LOG).unwrap();
+        let nubificus = Nubificus::try_from(pluribus).unwrap();
+
+        let rendered = nubificus.to_string();
+
+        assert!(rendered.contains("Nubificus(index=27)"));
+        assert!(rendered.contains("queue:\n"));
+        assert!(rendered.contains("  - Raise(200)"));
+        assert!(rendered.contains("table:\n"));
+    }
+
+    #[test]
+    fn nubificus_display_shows_empty_queue() {
+        let mut nubificus = Nubificus::try_from(Pluribus::from_str(LOG).unwrap()).unwrap();
+        nubificus.queue.clear();
+
+        let rendered = nubificus.to_string();
+
+        assert!(rendered.contains("queue:\n"));
+        assert!(rendered.contains("  (empty)"));
     }
 }
