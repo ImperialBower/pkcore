@@ -114,8 +114,9 @@ impl Nubificus {
         for (i, action) in self.pluribus.actions.clone().iter().enumerate() {
             println!("#{i} {action}");
             log::trace!("...PluribusEvent #{i}: {action}");
-            self.do_action(&action, true)?;
+            self.do_action(action, true)?;
         }
+
         Ok(())
     }
 

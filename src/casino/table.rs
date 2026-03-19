@@ -1007,7 +1007,6 @@ impl Table {
         if !self.is_game_over() {
             return Err(PKError::ActionIsntFinished);
         }
-        self.log_debug(TableAction::EndHand);
 
         // How many players are still active?
         let active_seats = self.seats.active_in_hand();
@@ -1017,6 +1016,7 @@ impl Table {
         {
             // If only one player is left, they win the pot automatically.
             if active_seats.len() == 1 {
+                log::trace!("...active_seats = 1");
                 let winner_seat_number: u8 = match active_seats.first() {
                     None => {
                         return Err(PKError::Fubar);
@@ -1103,6 +1103,7 @@ impl Table {
     // }
 
     fn end_hand_all_fold_to(&self, winner_seat_number: u8) -> Result<(), PKError> {
+        log::trace!("...Table.end_hand_all_fold_to({winner_seat_number})");
         self.log_info(TableAction::AllFoldedTo(winner_seat_number));
 
         if let Some(seat) = self.get_seat_mut(winner_seat_number) {

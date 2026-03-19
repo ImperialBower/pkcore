@@ -15,6 +15,4 @@ fn main() {
     let nubi = Nubificus::from_str(plur).unwrap();
     println!("{nubi}");
     nubi.play_hand_display().expect("play hand display should succeed");
-
-    nubi.table.eval_flop_display();
 }
