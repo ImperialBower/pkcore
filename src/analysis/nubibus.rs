@@ -6,6 +6,7 @@ use crate::util::Util;
 use crate::util::terminal::Terminal;
 use crate::{PKError, Plurable};
 use regex::Regex;
+use termion::color;
 use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
 use std::fs;
@@ -86,8 +87,6 @@ impl Nubificus {
     ///
     /// TODO: Fill in errors
     pub fn play_hand_display(&self) -> Result<(), PKError> {
-        use termion::color;
-
         if !self.table.seats.are_dealt() {
             self.table.deal_cards_to_seats()?;
         }
@@ -111,6 +110,7 @@ impl Nubificus {
         println!("{}", self.table);
 
         for action in self.pluribus.actions.clone() {
+            println!("{action}");
             self.do_action(&action, true)?;
         }
         Ok(())
@@ -121,8 +121,6 @@ impl Nubificus {
     /// TODO: Fill in errors
     #[allow(clippy::too_many_lines)]
     pub fn do_action(&self, action: &PluribusEvent, display: bool) -> Result<(), PKError> {
-        use termion::color;
-
         let seat_to_act = self.table.next_to_act();
         let handle_to_act = self.table.get_seat_handle(seat_to_act);
         log::debug!("{handle_to_act} Seat {seat_to_act} is next to act: {action}");
