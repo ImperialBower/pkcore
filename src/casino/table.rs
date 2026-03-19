@@ -1401,6 +1401,7 @@ impl Table {
     }
 
     pub fn reset(&self) {
+        log::trace!("Table.reset()");
         self.muck_cards_in_play();
         self.seats.reset_state();
 

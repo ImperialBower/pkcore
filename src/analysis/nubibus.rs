@@ -30,6 +30,7 @@ impl Nubificus {
     ///
     /// `PKError::InvalidPluribusIndex`
     pub fn act(table: &Table, action: &PluribusEvent, seat_to_act: u8) -> Result<(), PKError> {
+        log::trace!("...Nubificus.act({action}, {seat_to_act});)");
         match action {
             PluribusEvent::Fold => {
                 let _ = table.act_fold(seat_to_act);
@@ -110,9 +111,9 @@ impl Nubificus {
         );
         println!("{}", self.table);
 
-        for action in self.pluribus.actions.clone() {
-            println!("{action}");
-            log::trace!("...PluribusEvent: {action}");
+        for (i, action) in self.pluribus.actions.clone().iter().enumerate() {
+            println!("#{i} {action}");
+            log::trace!("...PluribusEvent #{i}: {action}");
             self.do_action(&action, true)?;
         }
         Ok(())
@@ -125,11 +126,11 @@ impl Nubificus {
     pub fn do_action(&self, action: &PluribusEvent, display: bool) -> Result<(), PKError> {
         let seat_to_act = self.table.next_to_act();
         let handle_to_act = self.table.get_seat_handle(seat_to_act);
-        log::debug!("{handle_to_act} Seat {seat_to_act} is next to act: {action}");
+        log::debug!("...Nubificus.do_action() {handle_to_act} Seat {seat_to_act} is next to act: {action}");
 
         Nubificus::act(&self.table, action, seat_to_act)?;
 
-        log::debug!("{}", self.table.commentary_last_player_action().unwrap_or_default());
+        log::debug!("......{}", self.table.commentary_last_player_action().unwrap_or_default());
         if display {
             let commentary = self.table.commentary_last_player_action().unwrap_or_default();
             // Color player actions based on action type
@@ -162,8 +163,10 @@ impl Nubificus {
         }
 
         let betting_phase = self.table.determine_betting_phase();
+        log::trace!("......Betting phase is {betting_phase}");
 
         if self.table.is_game_over() {
+            log::trace!("......is_game_over() == true");
             let hand_result = self.table.end_hand()?;
 
             if display {
@@ -187,8 +190,11 @@ impl Nubificus {
                 println!("{}", self.pluribus.display_results());
             }
         } else {
+            log::trace!("......is_game_over() == false");
             match betting_phase {
                 GamePhase::BettingPreFlop if self.table.is_betting_complete() => {
+                    log::trace!("......betting_phase == GamePhase::BettingPreFlop && betting is complete");
+                    println!("{}", self.table);
                     self.table.act()?;
                     if display {
                         println!(
@@ -204,6 +210,7 @@ impl Nubificus {
                     }
                 }
                 GamePhase::BettingFlop if self.table.is_betting_complete() => {
+                    log::trace!("......betting_phase == GamePhase::BettingFlop && betting is complete");
                     self.table.act()?;
                     if display {
                         println!(
@@ -218,6 +225,7 @@ impl Nubificus {
                     }
                 }
                 GamePhase::BettingTurn if self.table.is_betting_complete() => {
+                    log::trace!("......betting_phase == GamePhase::BettingTurn && betting is complete");
                     self.table.act()?;
                     log::debug!("Board: {}", self.table.board);
                     if display {
@@ -225,7 +233,9 @@ impl Nubificus {
                         println!(); // TODO: why the spacing issues?
                     }
                 }
-                _ => {}
+                _ => {
+                    log::trace!("......is_game_over() == false");
+                }
             }
         }
         Ok(())

@@ -537,10 +537,19 @@ impl Seats {
     /// Checks if equilibrium has been reached in the betting round.
     #[must_use]
     pub fn is_betting_complete(&self) -> bool {
+
+        if log::log_enabled!(log::Level::Trace) {
+            let active = self.count_active_in_hand();
+            let to_give = self.count_players_with_action_to_give();
+            let current_bet = self.current_bet();
+
+            log::trace!("......Seats.is_betting_complete() active:{active} to give:{to_give} current_bet: {current_bet}");
+        }
+
         if self.count_active_in_hand() <= 1 {
             return true;
         }
-        if self.count_players_with_action_to_give() <= 1 {
+        if self.count_players_with_action_to_give() < 1 {
             return true;
         }
         let current_bet = self.current_bet();
@@ -1539,5 +1548,62 @@ mod casino__table__seats_tests {
         let snapshot = seats.cards_snapshot();
 
         assert!(snapshot.is_empty());
+    }
+
+    #[test]
+    fn pluribus_445_defect() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("MrBrown".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Pluribus".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("MrBlue".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("MrBlonde".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("MrWhite".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("MrPink".to_string(), 10_000)),
+        ]);
+
+        seats
+            .get_seat_mut(0)
+            .expect("seat 0")
+            .player
+            .state
+            .set(PlayerState::AllIn(10_000));
+        seats
+            .get_seat_mut(1)
+            .expect("seat 1")
+            .player
+            .state
+            .set(PlayerState::Fold);
+        seats
+            .get_seat_mut(2)
+            .expect("seat 2")
+            .player
+            .state
+            .set(PlayerState::Bet(2525));
+        seats
+            .get_seat_mut(3)
+            .expect("seat 3")
+            .player
+            .state
+            .set(PlayerState::Fold);
+        seats
+            .get_seat_mut(4)
+            .expect("seat 4")
+            .player
+            .state
+            .set(PlayerState::Fold);
+        seats
+            .get_seat_mut(5)
+            .expect("seat 5")
+            .player
+            .state
+            .set(PlayerState::Fold);
+
+        println!("{seats}");
+
+        assert_eq!(2, seats.count_active_in_hand());
+        assert_eq!(1, seats.count_players_with_action_to_give());
+        assert_eq!(10_000, seats.current_bet());
+
+        assert!(seats.is_betting_complete());
     }
 }
