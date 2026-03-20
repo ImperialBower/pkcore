@@ -268,9 +268,10 @@ impl TableEquity {
     /// ]);
     ///
     /// let (winnings, remaining) = equities.winnings(Seatbit::SEAT_3).unwrap();
-    /// assert_eq!(winnings, 14_150);
+    /// assert_eq!(winnings, 10_150);
     /// assert_eq!(remaining, TableEquity::new(vec![SeatEquity::new(4_000, Seatbit::SEAT_0)]));
     /// ```
+    #[must_use]
     pub fn winnings(&self, sb: Seatbit) -> Option<(usize, TableEquity)> {
         // Find the chip count that belongs to the winning seat.
         let winner_chips = self
@@ -557,6 +558,23 @@ mod casino__table__seats_seat_equities_tests {
         print!("{equities}");
 
         assert_eq!(equities, expected);
+    }
+
+    #[test]
+    fn winnings() {
+        let equities = TableEquity::new(vec![
+            SeatEquity::new(9_000, Seatbit::SEAT_0),
+            SeatEquity::new(9_000, Seatbit::SEAT_4),
+            SeatEquity::new(5_000, Seatbit::SEAT_3),
+            SeatEquity::new(50, Seatbit::NONE),
+            SeatEquity::new(100, Seatbit::NONE),
+        ]);
+        let expected_winnings = 23_150;
+
+        let (winnings, remaining_equity) = equities.winnings(Seatbit::SEAT_4).unwrap();
+
+        assert_eq!(winnings, expected_winnings);
+        assert_eq!(remaining_equity, TableEquity::default());
     }
 
     #[test]
