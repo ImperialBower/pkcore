@@ -1,5 +1,6 @@
-use crate::prelude::SeatEquity;
+use crate::prelude::{SeatEquity, Table, Seatbit};
 use serde::{Deserialize, Serialize};
+use std::fmt::{self, Display, Formatter};
 use std::sync::OnceLock;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -211,6 +212,39 @@ impl TableEquity {
     #[must_use]
     pub fn second(&self) -> &SeatEquity {
         self.0.get(1).unwrap_or(default_seat_equity_ref())
+    }
+}
+
+impl Display for TableEquity {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        writeln!(f, "TableEquity[")?;
+        for se in &self.0 {
+            writeln!(f, "  {}", se)?;
+        }
+        write!(f, "]")
+    }
+}
+
+impl From<&Table> for TableEquity {
+    fn from(table: &Table) -> Self {
+        let mut v: Vec<SeatEquity> = Vec::new();
+
+        for (i, seat_cell) in table.seats.iter().enumerate() {
+            let seat = seat_cell.borrow();
+            if !seat.is_empty() && seat.player.get_chips_in_play() > 0 {
+                if seat.is_in_hand() {
+                    v.push(SeatEquity::new(seat.player.get_chips_in_play(), Seatbit::from(i)));
+                } else {
+                    v.push(SeatEquity::new(seat.player.get_chips_in_play(), Seatbit::default()));
+                }
+            }
+        }
+
+        if v.is_empty() {
+            TableEquity::default()
+        } else {
+            TableEquity::new(v)
+        }
     }
 }
 

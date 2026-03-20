@@ -3,6 +3,7 @@
 use crate::prelude::Seatbit;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
+use std::fmt::{self, Display, Formatter};
 
 /// Struct representing the potential equity at a specific point in a hand by a specific collection
 /// of `Seats`, stored in the `Seatbit` struct.
@@ -84,6 +85,20 @@ impl PartialOrd for SeatEquity {
     }
 }
 
+impl Display for SeatEquity {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        // Use Seatbit's Display implementation for the seats field (binary representation)
+        write!(
+            f,
+            "SeatEquity(chips={}, seats=0b{}, count={})",
+            self.chips,
+            // Display seats as a 16-bit binary number with leading zeros (u16)
+            format!("{:016b}", self.seats.0),
+            self.count_ones()
+        )
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod casino__table__seats_seat_equity_tests {
@@ -126,5 +141,18 @@ mod casino__table__seats_seat_equity_tests {
     fn seat_equity_is_nada_returns_false_for_non_default() {
         let equity = SeatEquity::new(1, Seatbit::SEAT_0);
         assert!(!equity.is_nada());
+    }
+
+    #[test]
+    fn seat_equity_display_binary_format() {
+        let equity = SeatEquity::new(100, Seatbit::SEAT_0 | Seatbit::SEAT_1);
+
+        let rendered = equity.to_string();
+
+        // Expect 16-bit binary with leading zeros and 0b prefix for the seats field
+        assert!(rendered.contains("seats=0b0000000000000011"), "rendered='{}'", rendered);
+        // chips and count should also be present
+        assert!(rendered.contains("chips=100"), "rendered='{}'", rendered);
+        assert!(rendered.contains("count=2"), "rendered='{}'", rendered);
     }
 }

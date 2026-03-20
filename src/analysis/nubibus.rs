@@ -215,6 +215,7 @@ impl Nubificus {
                 }
                 GamePhase::BettingFlop if self.table.is_betting_complete() => {
                     log::trace!("......betting_phase == GamePhase::BettingFlop && betting is complete");
+                    println!("{}", self.table);
                     self.table.act()?;
                     if display {
                         println!(
@@ -230,6 +231,7 @@ impl Nubificus {
                 }
                 GamePhase::BettingTurn if self.table.is_betting_complete() => {
                     log::trace!("......betting_phase == GamePhase::BettingTurn && betting is complete");
+                    println!("{}", self.table);
                     self.table.act()?;
                     log::debug!("Board: {}", self.table.board);
                     if display {

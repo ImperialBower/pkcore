@@ -478,7 +478,14 @@ impl Agency for Player {
 
 impl Display for Player {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {} chips [{}]", self.handle, self.chips, self.state)
+        write!(
+            f,
+            "{}: {} chips / {} in play [{}]",
+            self.handle,
+            self.chips,
+            self.chips_in_play.get(),
+            self.state
+        )
     }
 }
 #[cfg(test)]

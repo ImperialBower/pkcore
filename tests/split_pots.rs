@@ -49,18 +49,6 @@ mod casino__table_split_pot_tests {
     ///
     /// -
     #[test]
-    fn deals_to_river_after_preflop_all_ins__poor_man_then_rich() {
-        let table = preroll(
-            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣",
-        );
-
-        println!("{table}");
-
-        let hand_result = table.end_hand().expect("hand should end successfully");
-        println!("{hand_result}");
-    }
-
-    #[test]
     fn deals_to_river_after_preflop_all_ins__rich_man() {
         let table = preroll(
             "K♠ Q♠ Q♥ Q♣ J♠ A♦ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣",
@@ -81,6 +69,33 @@ mod casino__table_split_pot_tests {
         println!("{table}");
 
         let hand_result = table.end_hand().expect("hand should end successfully");
+        println!("{hand_result}");
+    }
+
+    #[test]
+    fn deals_to_river_after_preflop_all_ins__poor_man_then_rich() {
+        let table = preroll(
+            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣",
+        );
+        println!("{table}");
+
+        // Verify chips in play for each seat before resolving the hand
+        let s0_chips_in_play = table.get_seat(0).unwrap().player.get_chips_in_play();
+        let s1_chips_in_play = table.get_seat(1).unwrap().player.get_chips_in_play();
+        let s2_chips_in_play = table.get_seat(2).unwrap().player.get_chips_in_play();
+
+        // Expectations derived from the simulated actions in `preroll`:
+        // - Seat 0 (Rich Man) bet 9_000 into play
+        // - Seat 1 (Poor Man) went all-in with 5_000
+        // - Seat 2 (Average Person) went all-in with 9_000
+        assert_eq!(s0_chips_in_play, 9_000, "Seat 0 chips_in_play");
+        assert_eq!(s1_chips_in_play, 5_000, "Seat 1 chips_in_play");
+        assert_eq!(s2_chips_in_play, 9_000, "Seat 2 chips_in_play");
+
+        let hand_result = table.end_hand().expect("hand should end successfully");
+
+        println!("{}", table.event_log);
+
         println!("{hand_result}");
     }
 }

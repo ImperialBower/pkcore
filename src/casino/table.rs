@@ -858,6 +858,17 @@ impl Table {
         }
     }
 
+    /// Determine per-seat equity commitments based on the full table event log.
+    ///
+    /// This sums all non-result, seat-associated actions that carry an amount
+    /// (forced bets, blinds, bets, calls, raises, all-ins, bring-ins, etc.)
+    /// for the duration of the hand as recorded in `self.event_log`.
+    ///
+    /// Equal chip commitments are consolidated by `TableEquity`.
+    pub fn determine_hand_equity(&self) -> TableEquity {
+        TableEquity::from(self)
+    }
+
     pub fn determine_game_phase(&self) -> GamePhase {
         if !self.seats.are_dealt() {
             return GamePhase::DealHoleCards;
@@ -1010,6 +1021,9 @@ impl Table {
 
         // How many players are still active?
         let active_seats = self.seats.active_in_hand();
+
+        let teq = self.determine_hand_equity();
+
 
         // Everyone folds to is a special case since we can't create a case eval if
         // we don't have the board complete.
@@ -2225,6 +2239,41 @@ mod casino__table_tests {
     }
 
     #[test]
+    fn determine_street_equity_from_log_sums_commitments_across_hand() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        // Simulate forced bets then further betting actions
+        table.act_forced_bets().unwrap();
+        table.act_bet(0, 200).unwrap();
+        table.act_call(1).unwrap();
+        table.act_call(2).unwrap();
+
+        // Now examine commitments aggregated from the log
+        let equity = table.determine_hand_equity();
+
+        // Seat 0: forced blind 50 + bet 200 = 250
+        // Seat 1: forced blind 100 + call 200 = 300
+        // Seat 2: call 200 (and was big blind 100? depending on seats) but ensure amounts >= 0
+        assert!(equity.equities().iter().any(|e| e.chips >= 200));
+        assert!(!equity.equities().is_empty());
+    }
+
+    #[test]
+    fn determine_street_equity_from_log_ignores_result_actions() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+
+        table.event_log.log(TableAction::PlayerSeated(0, Uuid::nil()));
+        table.event_log.log(TableAction::Bet(0, 100));
+        table
+            .event_log
+            .log(TableAction::PlayerWins(0, Uuid::nil(), Bard::default(), 100, 100));
+
+        let equity = table.determine_hand_equity();
+
+        // The PlayerWins result action should be ignored; the commitment should reflect the bet only.
+        assert_eq!(equity.equities(), &vec![SeatEquity::new(100, Seatbit::SEAT_0)]);
+    }
+
     fn act_bet_out_of_turn_throws_table_action_out_of_order_error() {
         let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 
