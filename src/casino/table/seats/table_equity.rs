@@ -580,5 +580,15 @@ mod casino__table__seats_seat_equities_tests {
 
         assert_eq!(winnings, expected_winnings);
         assert_eq!(remaining_equity, sidepot);
+
+        let expected_sidepot = 8_000;
+
+        let (side_winnings, no_equity) = remaining_equity.winnings(Seatbit::SEAT_0).unwrap();
+
+        assert_eq!(side_winnings, expected_sidepot);
+        assert_eq!(no_equity, TableEquity::default());
+        assert_eq!(None, equities.winnings(Seatbit::SEAT_9));
+        assert_eq!(None, remaining_equity.winnings(Seatbit::SEAT_9));
+        assert_eq!(None, no_equity.winnings(Seatbit::SEAT_9));
     }
 }
