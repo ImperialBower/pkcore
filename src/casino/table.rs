@@ -300,7 +300,8 @@ impl Table {
             seat.player.total_chip_count()
         };
         // What's the maximum amount possible to bet in the round?
-        let ceiling = self.determine_street_equity_possible().ceiling();
+        let possible = self.determine_street_equity_possible();
+        let ceiling = possible.ceiling();
 
         if available > ceiling {
             // Technically not possible to go all in, since the player has more chips
@@ -1022,7 +1023,7 @@ impl Table {
         // How many players are still active?
         let active_seats = self.seats.active_in_hand();
 
-        let teq = self.determine_hand_equity();
+        let _teq = self.determine_hand_equity();
 
 
         // Everyone folds to is a special case since we can't create a case eval if

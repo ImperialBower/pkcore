@@ -435,4 +435,17 @@ mod casino__table__seats_seat_equities_tests {
         assert_eq!(empty.ceiling(), 0);
         assert_eq!(single.ceiling(), 0);
     }
+
+    #[test]
+    fn test_seat_equities_ceiling_returns_second_chips_when_top_is_not_tied_with_blinds() {
+        let equities = TableEquity::new(vec![
+            SeatEquity::new(10_000, Seatbit::SEAT_0),
+            SeatEquity::new(7_000, Seatbit::SEAT_1),
+            SeatEquity::new(3_000, Seatbit::SEAT_2),
+            SeatEquity::new(50, Seatbit::SEAT_3),
+            SeatEquity::new(100, Seatbit::SEAT_3),
+        ]);
+
+        assert_eq!(equities.ceiling(), 7_000);
+    }
 }

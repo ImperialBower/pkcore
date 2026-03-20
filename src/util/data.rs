@@ -403,6 +403,32 @@ impl TestData {
 
         Table::nlh_primed(seats, cards, ForcedBets::new(50, 100))
     }
+
+    pub fn split_pot_table_with_blinds(cards: &CardsCell) -> Table {
+        let small = Seat {
+            player: Player::new_with_chips("Small Blind".to_string(), 7_000),
+            cards: boxed!("2♦ 7♣"),
+        };
+        let big = Seat {
+            player: Player::new_with_chips("Big Blind".to_string(), 7_000),
+            cards: boxed!("3♦ 8♣"),
+        };
+        let rich = Seat {
+            player: Player::new_with_chips("Rich Man".to_string(), 10_000),
+            cards: boxed!("Q♦ Q♣"),
+        };
+        let poor = Seat {
+            player: Player::new_with_chips("Poor Man".to_string(), 5_000),
+            cards: boxed!("A♠ A♥"),
+        };
+        let average = Seat {
+            player: Player::new_with_chips("Average Person".to_string(), 9_000),
+            cards: boxed!("4♣ 4♦"),
+        };
+        let seats = Seats::new(vec![rich, small, big, poor, average]);
+
+        Table::nlh_primed(seats, cards, ForcedBets::new(50, 100))
+    }
 }
 
 #[cfg(test)]
