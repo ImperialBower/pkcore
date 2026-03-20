@@ -1,4 +1,4 @@
-use crate::prelude::{SeatEquity, Table, Seatbit};
+use crate::prelude::{SeatEquity, Seatbit, Table};
 use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display, Formatter};
 use std::sync::OnceLock;
@@ -147,7 +147,40 @@ impl TableEquity {
             }
         }
 
-        self.0 = consolidated;
+        // Combine any entries that represent 'no seat' (Seatbit::NONE) into a
+        // single entry by summing their chips. This is useful for cases when
+        // blinds/antes are represented as Seatbit::NONE and should be treated
+        // as a single pool rather than separate entries.
+        let mut none_total: usize = 0;
+        consolidated.retain(|e| {
+            if e.seats == Seatbit::NONE {
+                none_total += e.chips;
+                false
+            } else {
+                true
+            }
+        });
+
+        if none_total > 0 {
+            consolidated.push(SeatEquity::new(none_total, Seatbit::NONE));
+        }
+
+        // It's possible the new combined NONE entry (or other additions) created
+        // duplicate chip counts. Re-sort and re-merge to ensure a normalized
+        // collection where equal chip counts are consolidated by OR'ing seats.
+        consolidated.sort();
+        let mut final_vec: Vec<SeatEquity> = Vec::with_capacity(consolidated.len());
+        for equity in consolidated {
+            if let Some(last) = final_vec.last_mut()
+                && last.chips == equity.chips
+            {
+                last.seats |= equity.seats;
+            } else {
+                final_vec.push(equity);
+            }
+        }
+
+        self.0 = final_vec;
     }
 
     /// Returns a reference to the vector of `SeatEquity` instances.
@@ -219,9 +252,9 @@ impl Display for TableEquity {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         writeln!(f, "TableEquity[")?;
         for se in &self.0 {
-            writeln!(f, "  {}", se)?;
+            writeln!(f, "  {se}")?;
         }
-        write!(f, "]")
+        f.write_str("]")
     }
 }
 
@@ -231,7 +264,7 @@ impl From<&Table> for TableEquity {
 
         for (i, seat_cell) in table.seats.iter().enumerate() {
             let seat = seat_cell.borrow();
-            if !seat.is_empty() && seat.player.get_chips_in_play() > 0 {
+            if seat.player.get_chips_in_play() > 0 {
                 if seat.is_in_hand() {
                     v.push(SeatEquity::new(seat.player.get_chips_in_play(), Seatbit::from(i)));
                 } else {
@@ -406,7 +439,7 @@ mod casino__table__seats_seat_equities_tests {
     }
 
     #[test]
-    fn test_seat_equities_ceiling_returns_top_chips_when_top_entry_is_tied() {
+    fn seat_equities_ceiling_returns_top_chips_when_top_entry_is_tied() {
         let equities = TableEquity::new(vec![
             SeatEquity::new(10_000, Seatbit::SEAT_0),
             SeatEquity::new(10_000, Seatbit::SEAT_3),
@@ -417,7 +450,7 @@ mod casino__table__seats_seat_equities_tests {
     }
 
     #[test]
-    fn test_seat_equities_ceiling_returns_second_chips_when_top_is_not_tied() {
+    fn seat_equities_ceiling_returns_second_chips_when_top_is_not_tied() {
         let equities = TableEquity::new(vec![
             SeatEquity::new(10_000, Seatbit::SEAT_0),
             SeatEquity::new(7_000, Seatbit::SEAT_1),
@@ -428,7 +461,7 @@ mod casino__table__seats_seat_equities_tests {
     }
 
     #[test]
-    fn test_seat_equities_ceiling_returns_zero_for_single_or_empty_collection() {
+    fn seat_equities_ceiling_returns_zero_for_single_or_empty_collection() {
         let empty = TableEquity::default();
         let single = TableEquity::new(vec![SeatEquity::new(10_000, Seatbit::SEAT_0)]);
 
@@ -437,7 +470,7 @@ mod casino__table__seats_seat_equities_tests {
     }
 
     #[test]
-    fn test_seat_equities_ceiling_returns_second_chips_when_top_is_not_tied_with_blinds() {
+    fn seat_equities_ceiling_returns_second_chips_when_top_is_not_tied_with_blinds() {
         let equities = TableEquity::new(vec![
             SeatEquity::new(10_000, Seatbit::SEAT_0),
             SeatEquity::new(7_000, Seatbit::SEAT_1),
@@ -447,5 +480,27 @@ mod casino__table__seats_seat_equities_tests {
         ]);
 
         assert_eq!(equities.ceiling(), 7_000);
+    }
+
+    #[test]
+    fn consolidate__with_empties() {
+        let expected = TableEquity::new(vec![
+            SeatEquity::new(9_000, Seatbit::SEAT_0),
+            SeatEquity::new(9_000, Seatbit::SEAT_4),
+            SeatEquity::new(5_000, Seatbit::SEAT_3),
+            SeatEquity::new(150, Seatbit::NONE),
+        ]);
+
+        let equities = TableEquity::new(vec![
+            SeatEquity::new(9_000, Seatbit::SEAT_0),
+            SeatEquity::new(9_000, Seatbit::SEAT_4),
+            SeatEquity::new(5_000, Seatbit::SEAT_3),
+            SeatEquity::new(50, Seatbit::NONE),
+            SeatEquity::new(100, Seatbit::NONE),
+        ]);
+
+        print!("{equities}");
+
+        assert_eq!(equities, expected);
     }
 }

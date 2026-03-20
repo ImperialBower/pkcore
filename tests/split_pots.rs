@@ -2,49 +2,6 @@
 mod casino__table_split_pot_tests {
     use pkcore::prelude::*;
 
-    #[test]
-    fn plus_blinds() {
-        let cards = cc!(
-            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 6♣ 5♣ 3♣ 2♣"
-        );
-
-        let table = TestData::split_pot_table_with_blinds(&cards);
-        table.act_forced_bets().expect("forced bets should post");
-
-        assert_eq!(3, table.next_to_act());
-
-        table.act_all_in(3).expect("seat 3 should be able to go all-in");
-        table.act_all_in(4).expect("seat 4 should be able to go all-in");
-        table.act_all_in(0).expect("seat 0 should be able to go all-in");
-        table.act_fold(1).expect("seat 1 should be able to fold");
-        table.act_fold(2).expect("seat 2 should be able to fold");
-
-        println!("{table}");
-
-        println!("{}", table.determine_hand_equity());
-        assert_eq!(PlayerState::Bet(9_000), table.get_seat(0).unwrap().player.state.get());
-
-        assert!(table.is_betting_complete());
-        assert!(!table.is_game_over());
-        table.bring_it_in().expect("flop should be dealt");
-
-        table.deal_flop().expect("flop should be dealt");
-        assert!(table.is_betting_complete());
-        assert!(!table.is_game_over());
-        table.bring_it_in().expect("flop should be dealt");
-
-        table.deal_turn().expect("turn should be dealt");
-        assert!(table.is_betting_complete());
-        assert!(!table.is_game_over());
-        table.bring_it_in().expect("flop should be dealt");
-
-        table.deal_river().expect("river should be dealt");
-        assert!(table.is_betting_complete());
-        assert!(table.is_game_over());
-
-        println!("{}", table.determine_hand_equity());
-    }
-
     fn preroll(index: &str) -> Table {
         let table = TestData::split_pot_table(&cc!(index));
 
@@ -140,5 +97,47 @@ mod casino__table_split_pot_tests {
         println!("{}", table.event_log);
 
         println!("{hand_result}");
+    }
+
+    #[test]
+    fn plus_blinds() {
+        let cards = cc!(
+            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 6♣ 5♣ 3♣ 2♣"
+        );
+
+        let table = TestData::split_pot_table_with_blinds(&cards);
+        table.act_forced_bets().expect("forced bets should post");
+
+        assert_eq!(3, table.next_to_act());
+
+        table.act_all_in(3).expect("seat 3 should be able to go all-in");
+        table.act_all_in(4).expect("seat 4 should be able to go all-in");
+        table.act_all_in(0).expect("seat 0 should be able to go all-in");
+        table.act_fold(1).expect("seat 1 should be able to fold");
+        table.act_fold(2).expect("seat 2 should be able to fold");
+
+        println!("{table}");
+
+        assert_eq!(PlayerState::Bet(9_000), table.get_seat(0).unwrap().player.state.get());
+
+        assert!(table.is_betting_complete());
+        assert!(!table.is_game_over());
+        table.bring_it_in().expect("flop should be dealt");
+
+        table.deal_flop().expect("flop should be dealt");
+        assert!(table.is_betting_complete());
+        assert!(!table.is_game_over());
+        table.bring_it_in().expect("flop should be dealt");
+
+        table.deal_turn().expect("turn should be dealt");
+        assert!(table.is_betting_complete());
+        assert!(!table.is_game_over());
+        table.bring_it_in().expect("flop should be dealt");
+
+        table.deal_river().expect("river should be dealt");
+        assert!(table.is_betting_complete());
+        assert!(table.is_game_over());
+
+        println!("{}", table.determine_hand_equity());
     }
 }

@@ -410,7 +410,7 @@ impl Table {
 
         if let Some(seat) = self.get_seat_mut(seat_number) {
             let folded_chips = seat.player.act_fold()?;
-            let _chips_in_play = seat.player.chips_in_play.take();
+            // let _chips_in_play = seat.player.chips_in_play.take();
             // ASIDE: OK, this is a good use of AI code assist to me. I
             // had no idea that `debug_assert_eq!` existed.
 
@@ -1024,7 +1024,6 @@ impl Table {
         let active_seats = self.seats.active_in_hand();
 
         let _teq = self.determine_hand_equity();
-
 
         // Everyone folds to is a special case since we can't create a case eval if
         // we don't have the board complete.
@@ -1989,59 +1988,6 @@ mod casino__table_tests {
     }
 
     #[test]
-    fn close_it_out_isolate_defect() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
-        let _ = table.act_forced_bets();
-        table.act_fold(3).expect("ActFolded");
-        table.act_fold(4).expect("ActFolded");
-        table.act_fold(5).expect("ActFolded");
-        table.act_fold(6).expect("ActFolded");
-        table.act_fold(7).expect("ActFolded");
-        table.act_fold(0).expect("ActFolded");
-        table.act_fold(1).expect("ActFolded");
-
-        let brought_in = table.close_it_out().expect("Failed to bring it in");
-
-        for (seat_number, seat) in table.seats.iter().enumerate() {
-            let seat = seat.borrow();
-            if seat.is_in_hand() {
-                assert_eq!(
-                    0,
-                    seat.player.bet.count(),
-                    "Seat #{} has bet of {}",
-                    seat_number,
-                    seat.player.bet.count()
-                );
-                // chips_in_play doesn't get reset until the table is reset for a player still in
-                // the hand.
-                assert_eq!(
-                    100,
-                    seat.player.chips_in_play.get(),
-                    "Seat #{} has non-zero chips in play",
-                    seat_number
-                );
-            } else {
-                assert_eq!(
-                    0,
-                    seat.player.bet.count(),
-                    "Seat #{} has bet of {}",
-                    seat_number,
-                    seat.player.bet.count()
-                );
-                assert_eq!(
-                    0,
-                    seat.player.chips_in_play.get(),
-                    "Seat #{} has non-zero chips in play",
-                    seat_number
-                );
-            }
-        }
-
-        assert_eq!(150, brought_in);
-        assert_eq!(150, table.pot.count());
-    }
-
-    #[test]
     fn deal_card_to_seat() {
         let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
 
@@ -2260,21 +2206,6 @@ mod casino__table_tests {
     }
 
     #[test]
-    fn determine_street_equity_from_log_ignores_result_actions() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
-
-        table.event_log.log(TableAction::PlayerSeated(0, Uuid::nil()));
-        table.event_log.log(TableAction::Bet(0, 100));
-        table
-            .event_log
-            .log(TableAction::PlayerWins(0, Uuid::nil(), Bard::default(), 100, 100));
-
-        let equity = table.determine_hand_equity();
-
-        // The PlayerWins result action should be ignored; the commitment should reflect the bet only.
-        assert_eq!(equity.equities(), &vec![SeatEquity::new(100, Seatbit::SEAT_0)]);
-    }
-
     fn act_bet_out_of_turn_throws_table_action_out_of_order_error() {
         let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 

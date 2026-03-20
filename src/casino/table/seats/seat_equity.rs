@@ -87,13 +87,11 @@ impl PartialOrd for SeatEquity {
 
 impl Display for SeatEquity {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        // Use Seatbit's Display implementation for the seats field (binary representation)
         write!(
             f,
-            "SeatEquity(chips={}, seats=0b{}, count={})",
+            "SeatEquity(chips={}, seats=0b{:016b}, count={})",
             self.chips,
-            // Display seats as a 16-bit binary number with leading zeros (u16)
-            format!("{:016b}", self.seats.0),
+            self.seats.0,
             self.count_ones()
         )
     }
