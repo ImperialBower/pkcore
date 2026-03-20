@@ -246,6 +246,61 @@ impl TableEquity {
     pub fn second(&self) -> &SeatEquity {
         self.0.get(1).unwrap_or(default_seat_equity_ref())
     }
+
+    /// Returns the total chips won by the seat identified by `sb`, and the remaining
+    /// [`TableEquity`] that forms the side pot after the winner takes their share.
+    ///
+    /// Each equity entry contributes at most `winner_chips` per seat to the winner.
+    /// Any excess chips for a seat remain in the side pot.  Orphaned chips
+    /// (`Seatbit::NONE`) are treated as a single contributor and go entirely to
+    /// the winner when they are below the winner's chip level.
+    ///
+    /// Returns `None` if `sb` is not present in this collection.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use pkcore::prelude::{SeatEquity, Seatbit, TableEquity};
+    ///
+    /// let equities = TableEquity::new(vec![
+    ///     SeatEquity::new(9_000, Seatbit::SEAT_0),
+    ///     SeatEquity::new(5_000, Seatbit::SEAT_3),
+    ///     SeatEquity::new(150, Seatbit::NONE),
+    /// ]);
+    ///
+    /// let (winnings, remaining) = equities.winnings(Seatbit::SEAT_3).unwrap();
+    /// assert_eq!(winnings, 14_150);
+    /// assert_eq!(remaining, TableEquity::new(vec![SeatEquity::new(4_000, Seatbit::SEAT_0)]));
+    /// ```
+    pub fn winnings(&self, sb: Seatbit) -> Option<(usize, TableEquity)> {
+        // Find the chip count that belongs to the winning seat.
+        let winner_chips = self
+            .0
+            .iter()
+            .find(|e| e.seats != Seatbit::NONE && (e.seats & sb) != Seatbit::NONE)?
+            .chips;
+
+        let mut total_winnings: usize = 0;
+        let mut remaining: Vec<SeatEquity> = Vec::new();
+
+        for equity in &self.0 {
+            // NONE entries have no individual seat bits, treat as a single contributor.
+            let num_seats = if equity.seats == Seatbit::NONE {
+                1
+            } else {
+                equity.seats.count_ones()
+            };
+
+            let taken_per_seat = equity.chips.min(winner_chips);
+            total_winnings += taken_per_seat * num_seats;
+
+            let leftover = equity.chips.saturating_sub(winner_chips);
+            if leftover > 0 {
+                remaining.push(SeatEquity::new(leftover, equity.seats));
+            }
+        }
+
+        Some((total_winnings, TableEquity::new(remaining)))
+    }
 }
 
 impl Display for TableEquity {
@@ -502,5 +557,28 @@ mod casino__table__seats_seat_equities_tests {
         print!("{equities}");
 
         assert_eq!(equities, expected);
+    }
+
+    #[test]
+    fn winnings__1down() {
+        let equities = TableEquity::new(vec![
+            SeatEquity::new(9_000, Seatbit::SEAT_0),
+            SeatEquity::new(9_000, Seatbit::SEAT_4),
+            SeatEquity::new(5_000, Seatbit::SEAT_3),
+            SeatEquity::new(50, Seatbit::NONE),
+            SeatEquity::new(100, Seatbit::NONE),
+        ]);
+        let sidepot = TableEquity::new(vec![
+            SeatEquity::new(4_000, Seatbit::SEAT_0),
+            SeatEquity::new(4_000, Seatbit::SEAT_4),
+        ]);
+        let expected_winnings = 15_150;
+
+        print!("{sidepot}");
+
+        let (winnings, remaining_equity) = equities.winnings(Seatbit::SEAT_3).unwrap();
+
+        assert_eq!(winnings, expected_winnings);
+        assert_eq!(remaining_equity, sidepot);
     }
 }
