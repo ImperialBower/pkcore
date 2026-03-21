@@ -14,7 +14,7 @@ use crate::casino::table::seats::seat::Seat;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
-use crate::prelude::{BoxedCards, ForcedBets, Forgiving, Seats, Table};
+use crate::prelude::{BoxedCards, ForcedBets, Forgiving, PlayerState, Seats, Table};
 use crate::{Card, Cards, Pile};
 use std::str::FromStr;
 use wincounter::win::Win;
@@ -44,6 +44,7 @@ use wincounter::wins::Wins;
 pub enum TestData {}
 
 #[allow(dead_code)]
+#[allow(non_snake_case, clippy::expect_used)]
 impl TestData {
     #[must_use]
     pub fn the_hand() -> Game {
@@ -406,7 +407,7 @@ impl TestData {
 
     pub fn split_pot_table_with_blinds(cards: &CardsCell) -> Table {
         let small = Seat {
-            player: Player::new_with_chips("Small Blind".to_string(), 7_000),
+            player: Player::new_with_chips("Small Blind".to_string(), 6_000),
             cards: boxed!("2♦ 7♣"),
         };
         let big = Seat {
@@ -428,6 +429,48 @@ impl TestData {
         let seats = Seats::new(vec![rich, small, big, poor, average]);
 
         Table::nlh_primed(seats, cards, ForcedBets::new(50, 100))
+    }
+
+    pub fn preroll_split_pot_with_blinds(index: &str) -> Table {
+        let table = TestData::split_pot_table_with_blinds(&cc!(index));
+
+        table.act_forced_bets().expect("forced bets should post");
+
+        assert_eq!(3, table.next_to_act());
+
+        table
+    }
+    
+    pub fn preroll_split_pot_with_blinds__to_completion(index: &str) -> Table {
+        let table = TestData::preroll_split_pot_with_blinds(index);
+
+        table.act_all_in(3).expect("seat 3 should be able to go all-in");
+        table.act_all_in(4).expect("seat 4 should be able to go all-in");
+        table.act_all_in(0).expect("seat 0 should be able to go all-in");
+        table.act_fold(1).expect("seat 1 should be able to fold");
+        table.act_fold(2).expect("seat 2 should be able to fold");
+
+        assert_eq!(PlayerState::Bet(9_000), table.get_seat(0).unwrap().player.state.get());
+
+        assert!(table.is_betting_complete());
+        assert!(!table.is_game_over());
+        table.bring_it_in().expect("flop should be dealt");
+
+        table.deal_flop().expect("flop should be dealt");
+        assert!(table.is_betting_complete());
+        assert!(!table.is_game_over());
+        table.bring_it_in().expect("flop should be dealt");
+
+        table.deal_turn().expect("turn should be dealt");
+        assert!(table.is_betting_complete());
+        assert!(!table.is_game_over());
+        table.bring_it_in().expect("flop should be dealt");
+
+        table.deal_river().expect("river should be dealt");
+        assert!(table.is_betting_complete());
+        assert!(table.is_game_over());
+
+        table
     }
 }
 
