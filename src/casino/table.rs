@@ -29,6 +29,7 @@ pub mod position;
 pub mod pot;
 pub mod result;
 pub mod seats;
+pub mod showdown;
 
 /// Represents a snapshot of the current game state at the table.
 ///
@@ -952,6 +953,8 @@ impl Table {
             None
         }
     }
+
+
 
     /// # Errors
     ///

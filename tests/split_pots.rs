@@ -99,13 +99,9 @@ mod casino__table_split_pot_tests {
         println!("{hand_result}");
     }
 
-    #[test]
-    fn plus_blinds() {
-        let cards = cc!(
-            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 6♣ 5♣ 3♣ 2♣"
-        );
+    fn preroll2(index: &str) -> Table {
+        let table = TestData::split_pot_table(&cc!(index));
 
-        let table = TestData::split_pot_table_with_blinds(&cards);
         table.act_forced_bets().expect("forced bets should post");
 
         assert_eq!(3, table.next_to_act());
@@ -137,6 +133,20 @@ mod casino__table_split_pot_tests {
         table.deal_river().expect("river should be dealt");
         assert!(table.is_betting_complete());
         assert!(table.is_game_over());
+
+        table
+    }
+
+    #[test]
+    fn plus_blinds() {
+        // let cards = cc!(
+        //     "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 6♣ 5♣ 3♣ 2♣"
+        // );
+
+        // let table = TestData::split_pot_table_with_blinds(&cards);
+        let table = preroll2("K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 6♣ 5♣ 3♣ 2♣");
+
+
 
         println!("{}", table.determine_hand_equity());
     }
