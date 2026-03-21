@@ -1,11 +1,12 @@
 use crate::SOK;
 use crate::analysis::hand_rank::HandRankValue;
+use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
 /// `HandRankName` represents the
 /// [traditional name](https://en.wikipedia.org/wiki/List_of_poker_hands) of a five card
 /// `PokerHand`.
-#[derive(Clone, Copy, Debug, Default, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum HandRankName {
     StraightFlush,
     FourOfAKind,

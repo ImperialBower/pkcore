@@ -100,10 +100,11 @@ mod casino__table_split_pot_tests {
     }
 
     fn preroll2(index: &str) -> Table {
-        let table = TestData::split_pot_table(&cc!(index));
+        let table = TestData::split_pot_table_with_blinds(&cc!(index));
 
         table.act_forced_bets().expect("forced bets should post");
 
+        println!("{table}");
         assert_eq!(3, table.next_to_act());
 
         table.act_all_in(3).expect("seat 3 should be able to go all-in");
@@ -144,10 +145,12 @@ mod casino__table_split_pot_tests {
         // );
 
         // let table = TestData::split_pot_table_with_blinds(&cards);
-        let table = preroll2("K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 6♣ 5♣ 3♣ 2♣");
-
-
+        let table = preroll2(
+            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 6♣ 5♣ 3♣ 2♣",
+        );
 
         println!("{}", table.determine_hand_equity());
+
+        table.end_hand2().expect("hand should end successfully");
     }
 }

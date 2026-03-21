@@ -1,6 +1,7 @@
 use crate::SOK;
 use crate::analysis::class::HandRankClass;
 use crate::analysis::name::HandRankName;
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 
@@ -20,7 +21,7 @@ pub const NO_HAND_RANK_VALUE: HandRankValue = 0;
 /// # REFACTORING
 ///
 /// Remove assessors; make fields public.
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
 pub struct HandRank {
     pub value: HandRankValue,
     pub name: HandRankName,

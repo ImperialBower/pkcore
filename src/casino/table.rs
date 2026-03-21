@@ -30,6 +30,7 @@ pub mod pot;
 pub mod result;
 pub mod seats;
 pub mod showdown;
+pub mod winnings;
 
 /// Represents a snapshot of the current game state at the table.
 ///
@@ -954,8 +955,6 @@ impl Table {
         }
     }
 
-
-
     /// # Errors
     ///
     /// `PKError::Fubar` if can't find seat.
@@ -1017,6 +1016,88 @@ impl Table {
     ///
     /// `PKError::Fubar` if can't find seat.
     pub fn end_hand(&self) -> Result<HandResult, PKError> {
+        self.log_info(TableAction::EndHand);
+
+        if !self.is_game_over() {
+            return Err(PKError::ActionIsntFinished);
+        }
+
+        // How many players are still active?
+        let active_seats = self.seats.active_in_hand();
+
+        let _teq = self.determine_hand_equity();
+
+        // Everyone folds to is a special case since we can't create a case eval if
+        // we don't have the board complete.
+        {
+            // If only one player is left, they win the pot automatically.
+            if active_seats.len() == 1 {
+                log::trace!("...active_seats = 1");
+                let winner_seat_number: u8 = match active_seats.first() {
+                    None => {
+                        return Err(PKError::Fubar);
+                    }
+                    Some(i) => *i,
+                };
+
+                self.end_hand_all_fold_to(winner_seat_number)?;
+                return Ok(HandResult::new(CaseEval::default(), self.event_log.results_only()));
+            }
+        }
+
+        let game = Game::try_from(self)?;
+        let case_eval = game.river_case_eval()?;
+
+        let winners = case_eval.winning_seats();
+
+        let brought_in = self.close_it_out()?;
+        self.log_info(TableAction::BringItIn(brought_in));
+        self.seats.showdown(self.pot.count())?;
+
+        let winnings = self.pot.take().divvy_up(winners.len());
+
+        for (i, winner_seat_number) in winners.iter().enumerate() {
+            if let Some(seat) = self.get_seat_mut(*winner_seat_number) {
+                let player_winnings = winnings.get(i).cloned().unwrap_or_default();
+                let winnings_amount = player_winnings.count();
+                seat.player.chips.add_to(player_winnings);
+                let hand = seat.cards.bard();
+                let id = seat.player.id;
+                let chips_won = winnings_amount - seat.player.chips_in_play.take();
+                let action = TableAction::PlayerWins(*winner_seat_number, id, hand, chips_won, winnings_amount);
+                log::info!("{}", action.commentary(&seat.player.handle));
+                self.event_log.log(action);
+            }
+        }
+
+        for (i, seat_cell) in self.seats.borrow_all().iter().enumerate() {
+            if seat_cell.is_in_hand()
+                && let Some(seat) = self.get_seat(u8::try_from(i).unwrap_or_default())
+                && !winners.contains(&u8::try_from(i).unwrap_or_default())
+            {
+                let player_loses = seat.player.chips_in_play.take();
+                let action = TableAction::PlayerLoses(
+                    u8::try_from(i).unwrap_or_default(),
+                    seat.player.id,
+                    seat.cards.bard(),
+                    player_loses,
+                );
+                log::info!("{}", action.commentary(&seat.player.handle));
+                self.event_log.log(action);
+            }
+        }
+
+        if self.board.len() == 5 {
+            Ok(HandResult::new(case_eval, self.event_log.results_only()))
+        } else {
+            Ok(HandResult::new(CaseEval::default(), self.event_log.results_only()))
+        }
+    }
+
+    /// # Errors
+    ///
+    /// `PKError::Fubar` if can't find seat.
+    pub fn end_hand2(&self) -> Result<HandResult, PKError> {
         self.log_info(TableAction::EndHand);
 
         if !self.is_game_over() {
