@@ -1,10 +1,14 @@
 use crate::PKError;
 use crate::casino::table::winnings::Winnings;
 use crate::prelude::{Eval, Pile, SeatEquity, Seatbit, Seven, Table, TableAction};
+use std::collections::HashMap;
 
 pub struct Showdown;
 
 impl Showdown {
+    /// # Errors
+    ///
+    /// `PKError::Fubar` if noone is in hand
     pub fn process(table: &Table) -> Result<Vec<Winnings>, PKError> {
         table.log_info(TableAction::EndHand);
 
@@ -70,12 +74,11 @@ impl Showdown {
         Ok(winnings)
     }
 
-    fn process_headsup(_table: &Table) -> Result<Vec<Winnings>, PKError> {
+    fn process_headsup(table: &Table) -> Result<Vec<Winnings>, PKError> {
         // Heads-up is effectively the same flow as Table::end_hand for >1 players
         // Build a case eval, close out the bets into the pot, mark seats as in
         // showdown, split the pot between the winners and award chips. Return
         // a Vec<Winnings> describing what each winning seat received.
-        let table = _table;
 
         let game = crate::play::game::Game::try_from(table)?;
         let case_eval = game.river_case_eval()?;
@@ -90,7 +93,7 @@ impl Showdown {
         let mut results: Vec<Winnings> = Vec::new();
 
         for (i, winner_seat_number) in winners.iter().enumerate() {
-            if let Some(mut seat) = table.get_seat_mut(*winner_seat_number) {
+            if let Some(seat) = table.get_seat_mut(*winner_seat_number) {
                 let player_winnings = shares.get(i).cloned().unwrap_or_default();
                 let winnings_amount = player_winnings.count();
 
@@ -144,13 +147,11 @@ impl Showdown {
         Ok(results)
     }
 
-    fn process_multiway(_table: &Table) -> Result<Vec<Winnings>, PKError> {
+    fn process_multiway(table: &Table) -> Result<Vec<Winnings>, PKError> {
         // Multi-way showdown must consider side-pots. Use PotManager to
         // construct pots, close out bets into the table pot, evaluate winners
         // and distribute each pot to its eligible winners. Aggregate per-seat
         // winnings and return them as Vec<Winnings].
-        let table = _table;
-
         let pot_manager = crate::casino::table::pot::PotManager::create_pots(&table.seats);
 
         let _brought_in = table.close_it_out()?;
@@ -159,8 +160,6 @@ impl Showdown {
         let case_eval = game.river_case_eval()?;
 
         table.seats.showdown(table.pot.count())?;
-
-        use std::collections::HashMap;
 
         let mut per_seat: HashMap<u8, usize> = HashMap::new();
         let mut evals: HashMap<u8, Eval> = HashMap::new();
@@ -181,7 +180,7 @@ impl Showdown {
             let shares = crate::casino::cashier::chips::Stack::new(pot_info.amount).divvy_up(eligible_winners.len());
 
             for (i, &winner_seat) in eligible_winners.iter().enumerate() {
-                if let Some(mut seat) = table.get_seat_mut(winner_seat) {
+                if let Some(seat) = table.get_seat_mut(winner_seat) {
                     let share = shares.get(i).cloned().unwrap_or_default();
                     let share_amount = share.count();
 
@@ -212,7 +211,7 @@ impl Showdown {
         }
 
         // Build Winnings vector from aggregated results
-        let mut results: Vec<Winnings> = per_seat
+        let results: Vec<Winnings> = per_seat
             .into_iter()
             .map(|(seat, chips)| Winnings {
                 equity: SeatEquity::new(chips, Seatbit::from(seat)),

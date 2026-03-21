@@ -44,7 +44,7 @@ use wincounter::wins::Wins;
 pub enum TestData {}
 
 #[allow(dead_code)]
-#[allow(non_snake_case, clippy::expect_used)]
+#[allow(non_snake_case, clippy::unwrap_used, clippy::expect_used)]
 impl TestData {
     #[must_use]
     pub fn the_hand() -> Game {
@@ -431,6 +431,10 @@ impl TestData {
         Table::nlh_primed(seats, cards, ForcedBets::new(50, 100))
     }
 
+    /// # Panics
+    ///
+    /// Will crash if the created table can't do forced bets.
+    #[must_use]
     pub fn preroll_split_pot_with_blinds(index: &str) -> Table {
         let table = TestData::split_pot_table_with_blinds(&cc!(index));
 
@@ -440,7 +444,11 @@ impl TestData {
 
         table
     }
-    
+
+    /// # Panics
+    ///
+    /// This being a test class I am OK with using expects.
+    #[must_use]
     pub fn preroll_split_pot_with_blinds__to_completion(index: &str) -> Table {
         let table = TestData::preroll_split_pot_with_blinds(index);
 
