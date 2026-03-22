@@ -1,13 +1,13 @@
 [package]
 name = "pkcore"
-version = "0.0.19"
+version = "0.0.20"
 rust-version = "1.91.0"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
 license = "GPL-3.0-or-later"
 repository = "https://github.com/ImperialBower/pkcore.git"
 homepage = "https://github.com/ImperialBower/pkcore"
-exclude = [".github/workflows/*", "examples/*", ".gitignore", "Cargo.lock"]
+exclude = [".github/workflows/*", "docs/*", "generated/*", "proto/*", "scripts/*", ".gitignore", "Cargo.lock", "Claude.md"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -28,8 +28,8 @@ rayon = "1.11.0"
 regex = { version = "1.12", features = [] }
 rusqlite = { version = "0.34", features = ["bundled"] } # 0.35 breaks HUPResult https://github.com/rusqlite/rusqlite/releases#reactions--reaction_button_component-a0702b
 serde = { version = "1.0", features = ["derive"] }
-strum = { version = "0.27", features = ["derive"] }
-strum_macros = "0.27.2"
+strum = { version = "0.28", features = ["derive"] }
+strum_macros = "0.28"
 termion = "*"
 thousands = "0.2.0"
 uuid = { version = "1.22", features = ["serde", "v4"] }
@@ -37,8 +37,8 @@ wincounter = "0.1.5"
 
 [dev-dependencies]
 assert-struct = "0.4.0"
-serde_yaml_bw = "2.5.2"
-clap = { version = "4.5", features = ["derive", "unicode"] }
+serde_yaml_bw = "2.5"
+clap = { version = "4.6", features = ["derive", "unicode"] }
 clap-repl = "0.3.2"
 reedline = "0.38"
 elr_primes = "0.1.2"
