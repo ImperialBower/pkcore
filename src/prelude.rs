@@ -82,3 +82,34 @@ pub use crate::{
     UNIQUE_PER_RANK_2_CARD_HANDS, UNIQUE_PER_SUIT_2_CARD_HANDS, UNIQUE_POCKET_PAIRS, UNIQUE_STRAIGHT,
     UNIQUE_STRAIGHT_FLUSHES, UNIQUE_SUITED_2_CARD_HANDS, UNIQUE_THREE_OF_A_KIND, UNIQUE_TWO_PAIR,
 };
+
+// Additional public structs not previously in the prelude (except util):
+
+// play
+pub use crate::play::actions::{ActionTracker, Actor};
+pub use crate::play::phases::PhaseHoldemTracker;
+pub use crate::play::positions::Position6MaxPointer;
+pub use crate::play::stages::deal_eval::DealEval;
+pub use crate::play::stages::turn_eval::TurnEval;
+
+// games
+pub use crate::games::omaha::OmahaHigh;
+
+// casino
+pub use crate::casino::manager::TableManager;
+pub use crate::casino::table::result::HandResult;
+pub use crate::casino::table::showdown::Showdown;
+
+// analysis/store
+pub use crate::analysis::store::bcm::binary_card_map::{FiveBCM, SevenFiveBCM};
+pub use crate::analysis::store::bcm::index_card_map::IndexCardMap;
+pub use crate::analysis::store::db::hup::HUPResult;
+pub use crate::analysis::store::db::sqlite::Connect;
+pub use crate::analysis::store::heads_up::{HUP, PreflopRow, PreflopRowHash};
+
+// analysis
+pub use crate::analysis::eval::SevenEval;
+pub use crate::analysis::gto::odds::WinLoseDraw;
+pub use crate::analysis::gto::ranger::Ranger;
+pub use crate::analysis::gto::vs::Versus;
+pub use crate::analysis::player_wins::PlayerWins;

@@ -26,6 +26,7 @@ pub enum TableEvent {
 
 #[allow(dead_code)]
 impl TableManager {
+    #[must_use]
     pub fn new() -> Self {
         TableManager {
             tables: HashMap::new(),
@@ -44,6 +45,9 @@ impl TableManager {
         self.event_queue.push(event);
     }
 
+    /// # Errors
+    ///
+    /// Throws a `PKError` from the underlying called event.
     pub fn process_events(&mut self) -> Result<(), PKError> {
         while let Some(event) = self.event_queue.pop() {
             self.handle_event(&event)?;
@@ -112,6 +116,7 @@ impl TableManager {
         Ok(())
     }
 
+    #[must_use]
     pub fn get_table(&self, id: Uuid) -> Option<&Table> {
         self.tables.get(&id)
     }
