@@ -188,7 +188,7 @@ impl Nubificus {
                 println!(
                     "{}{}{}",
                     color::Fg(color::LightGreen),
-                    hand_result,
+                    hand_result.first(),
                     color::Fg(color::Reset)
                 );
                 println!("{}", self.pluribus.display_results());

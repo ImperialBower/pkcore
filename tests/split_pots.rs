@@ -101,17 +101,12 @@ mod casino__table_split_pot_tests {
 
     #[test]
     fn plus_blinds() {
-        // let cards = cc!(
-        //     "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 6♣ 5♣ 3♣ 2♣"
-        // );
-
-        // let table = TestData::split_pot_table_with_blinds(&cards);
         let table = TestData::preroll_split_pot_with_blinds__to_completion(
             "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 6♣ 5♣ 3♣ 2♣",
         );
 
         println!("{}", table.determine_hand_equity());
 
-        table.end_hand2().expect("hand should end successfully");
+        table.end_hand().expect("hand should end successfully");
     }
 }

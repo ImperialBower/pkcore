@@ -9,6 +9,8 @@ use crate::casino::table::event::{TableAction, TableLog};
 use crate::casino::table::pot::PotManager;
 use crate::casino::table::result::HandResult;
 use crate::casino::table::seats::Seats;
+use crate::casino::table::showdown::Showdown;
+use crate::casino::table::winnings::Winnings;
 use crate::games::{GamePhase, GameType};
 use crate::play::game::Game;
 use crate::play::stages::flop_eval::FlopEval;
@@ -1007,6 +1009,31 @@ impl Table {
         Ok(HandResult::new(case_eval, self.event_log.results_only()))
     }
 
+    /// Resolves the current hand and prepares the table for the next one.
+    ///
+    /// This method delegates the results computation to `Showdown::process` and
+    /// then performs an explicit `reset()` of the table before returning. The
+    /// `reset()` call is required to ensure that any cards held in seat
+    /// containers (and any mucked cards) are returned to the deck and that
+    /// per-seat state is cleared. Without this reset a subsequent call to
+    /// `deal_cards_to_seats()` could attempt to place cards into non-blank
+    /// `BoxedCards` (because previous cards remained), which will cause
+    /// `BoxedCards::deal()` to return `PKError::NoBlankSlots` and break the
+    /// next hand flow.  Placing the `reset()` inside `end_hand()` centralizes
+    /// this lifecycle transition and prevents regressions where callers forget
+    /// to clear table state after a hand concludes.
+    ///
+    /// # Errors
+    ///
+    /// Returns any error produced by `Showdown::process`.
+    pub fn end_hand(&self) -> Result<Winnings, PKError> {
+        // Resolve the showdown and then reset the table so that cards are
+        // returned to the deck and seat state is cleared for the next hand.
+        let result = Showdown::process(self)?;
+        self.reset();
+        Ok(result)
+    }
+
     /// Fuck, this is going to be an ugly function. I just need to drive through it and try to
     /// clean it up (refactor) once I am satisfied that it works. Martin Fowler's book
     /// [Refactoring](https://martinfowler.com/books/refactoring.html) is a really good resource for
@@ -1015,89 +1042,7 @@ impl Table {
     /// # Errors
     ///
     /// `PKError::Fubar` if can't find seat.
-    pub fn end_hand(&self) -> Result<HandResult, PKError> {
-        self.log_info(TableAction::EndHand);
-
-        if !self.is_game_over() {
-            return Err(PKError::ActionIsntFinished);
-        }
-
-        // How many players are still active?
-        let active_seats = self.seats.active_in_hand();
-
-        let _teq = self.determine_hand_equity();
-
-        // Everyone folds to is a special case since we can't create a case eval if
-        // we don't have the board complete.
-        {
-            // If only one player is left, they win the pot automatically.
-            if active_seats.len() == 1 {
-                log::trace!("...active_seats = 1");
-                let winner_seat_number: u8 = match active_seats.first() {
-                    None => {
-                        return Err(PKError::Fubar);
-                    }
-                    Some(i) => *i,
-                };
-
-                self.end_hand_all_fold_to(winner_seat_number)?;
-                return Ok(HandResult::new(CaseEval::default(), self.event_log.results_only()));
-            }
-        }
-
-        let game = Game::try_from(self)?;
-        let case_eval = game.river_case_eval()?;
-
-        let winners = case_eval.winning_seats();
-
-        let brought_in = self.close_it_out()?;
-        self.log_info(TableAction::BringItIn(brought_in));
-        self.seats.showdown(self.pot.count())?;
-
-        let winnings = self.pot.take().divvy_up(winners.len());
-
-        for (i, winner_seat_number) in winners.iter().enumerate() {
-            if let Some(seat) = self.get_seat_mut(*winner_seat_number) {
-                let player_winnings = winnings.get(i).cloned().unwrap_or_default();
-                let winnings_amount = player_winnings.count();
-                seat.player.chips.add_to(player_winnings);
-                let hand = seat.cards.bard();
-                let id = seat.player.id;
-                let chips_won = winnings_amount - seat.player.chips_in_play.take();
-                let action = TableAction::PlayerWins(*winner_seat_number, id, hand, chips_won, winnings_amount);
-                log::info!("{}", action.commentary(&seat.player.handle));
-                self.event_log.log(action);
-            }
-        }
-
-        for (i, seat_cell) in self.seats.borrow_all().iter().enumerate() {
-            if seat_cell.is_in_hand()
-                && let Some(seat) = self.get_seat(u8::try_from(i).unwrap_or_default())
-                && !winners.contains(&u8::try_from(i).unwrap_or_default())
-            {
-                let player_loses = seat.player.chips_in_play.take();
-                let action = TableAction::PlayerLoses(
-                    u8::try_from(i).unwrap_or_default(),
-                    seat.player.id,
-                    seat.cards.bard(),
-                    player_loses,
-                );
-                log::info!("{}", action.commentary(&seat.player.handle));
-                self.event_log.log(action);
-            }
-        }
-
-        if self.board.len() == 5 {
-            Ok(HandResult::new(case_eval, self.event_log.results_only()))
-        } else {
-            Ok(HandResult::new(CaseEval::default(), self.event_log.results_only()))
-        }
-    }
-
-    /// # Errors
-    ///
-    /// `PKError::Fubar` if can't find seat.
-    pub fn end_hand2(&self) -> Result<HandResult, PKError> {
+    pub fn end_hand_old(&self) -> Result<HandResult, PKError> {
         self.log_info(TableAction::EndHand);
 
         if !self.is_game_over() {
@@ -1501,6 +1446,9 @@ impl Table {
 
     pub fn reset(&self) {
         log::trace!("Table.reset()");
+        // Emit an explicit table reset action so callers and logs can detect
+        // when the table lifecycle moves from a finished hand to the next.
+        self.log_info(crate::casino::table::event::TableAction::ResetTable);
         self.muck_cards_in_play();
         self.seats.reset_state();
 
@@ -2117,6 +2065,42 @@ mod casino__table_tests {
             .collect();
 
         assert_eq!(vec![2, 0, 0, 2, 0, 0], dealt_counts);
+    }
+
+    #[test]
+    fn end_hand_resets_seats() {
+        // Setup a minimal table and deal a hand
+        let table = TestData::min_table();
+
+        table.seats.set_eligible_to_yet_to_act();
+        table.act_new_hand();
+        table.deal_cards_to_seats().expect("deal should succeed");
+
+        // Ensure cards were dealt
+        let any_dealt: bool =
+            (0..table.seats.size()).any(|i| table.get_seat(i).unwrap().cards.number_of_dealt_cards() > 0);
+        assert!(any_dealt, "expected at least one seat to have been dealt cards");
+
+        // Fold until only one active player remains so the hand ends.
+        while table.seats.active_in_hand().len() > 1 {
+            let nta = table.next_to_act();
+            table.act_fold(nta).expect("fold should succeed");
+        }
+
+        // Table should now be in game over state
+        assert!(table.is_game_over());
+
+        // Call end_hand which should process showdown and reset the table
+        let _ = table.end_hand().expect("end_hand should succeed");
+
+        // After end_hand, all seats should have zero dealt cards
+        for i in 0..table.seats.size() {
+            assert_eq!(
+                0,
+                table.get_seat(i).unwrap().cards.number_of_dealt_cards(),
+                "seat {i} should have no dealt cards after end_hand"
+            );
+        }
     }
 
     #[test]

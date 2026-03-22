@@ -1,7 +1,8 @@
 use crate::PKError;
-use crate::casino::table::winnings::Winnings;
-use crate::prelude::{Eval, Pile, SeatEquity, Seatbit, Seven, Table, TableAction};
-use std::collections::HashMap;
+use crate::casino::cashier::chips::Stack;
+use crate::casino::table::winnings::{Win, Winnings};
+use crate::prelude::{Eval, Pile, SeatEquity, Seatbit, Seven, Table, TableAction, TableEquity};
+use std::collections::{HashMap, HashSet};
 
 pub struct Showdown;
 
@@ -9,14 +10,15 @@ impl Showdown {
     /// # Errors
     ///
     /// `PKError::Fubar` if noone is in hand
-    pub fn process(table: &Table) -> Result<Vec<Winnings>, PKError> {
+    pub fn process(table: &Table) -> Result<Winnings, PKError> {
         table.log_info(TableAction::EndHand);
 
         if !table.is_game_over() {
             return Err(PKError::ActionIsntFinished);
         }
 
-        println!("{}", table.determine_hand_equity());
+        // Do not print directly from library code (clippy::print_stdout). Logging is used
+        // for recording table events instead. The equity is still computed below.
 
         // let mut winnings: Vec<Winnings> = Vec::new();
 
@@ -30,7 +32,7 @@ impl Showdown {
         Ok(winnings)
     }
 
-    fn process_single_seat_in_hand(table: &Table) -> Result<Vec<Winnings>, PKError> {
+    fn process_single_seat_in_hand(table: &Table) -> Result<Winnings, PKError> {
         // Keep the active seats Vec alive so we can reference its first element
         // without borrowing a temporary that gets dropped.
         let seats_alive = table.seats.active_in_hand();
@@ -69,12 +71,10 @@ impl Showdown {
             None => Eval::default(),
         };
 
-        let winnings = vec![Winnings { equity, eval }];
-
-        Ok(winnings)
+        Ok(Winnings::from(Win { equity, eval }))
     }
 
-    fn process_headsup(table: &Table) -> Result<Vec<Winnings>, PKError> {
+    fn process_headsup(table: &Table) -> Result<Winnings, PKError> {
         // Heads-up is effectively the same flow as Table::end_hand for >1 players
         // Build a case eval, close out the bets into the pot, mark seats as in
         // showdown, split the pot between the winners and award chips. Return
@@ -90,7 +90,7 @@ impl Showdown {
 
         let shares = table.pot.take().divvy_up(winners.len());
 
-        let mut results: Vec<Winnings> = Vec::new();
+        let mut results: Vec<Win> = Vec::new();
 
         for (i, winner_seat_number) in winners.iter().enumerate() {
             if let Some(seat) = table.get_seat_mut(*winner_seat_number) {
@@ -121,7 +121,7 @@ impl Showdown {
                     winnings_amount,
                 ));
 
-                results.push(Winnings {
+                results.push(Win {
                     equity: SeatEquity::new(winnings_amount, Seatbit::from(*winner_seat_number)),
                     eval,
                 });
@@ -144,15 +144,15 @@ impl Showdown {
             }
         }
 
-        Ok(results)
+        Ok(Winnings::from(results))
     }
 
-    fn process_multiway(table: &Table) -> Result<Vec<Winnings>, PKError> {
-        // Multi-way showdown must consider side-pots. Use PotManager to
-        // construct pots, close out bets into the table pot, evaluate winners
-        // and distribute each pot to its eligible winners. Aggregate per-seat
-        // winnings and return them as Vec<Winnings].
-        let pot_manager = crate::casino::table::pot::PotManager::create_pots(&table.seats);
+    /// TODO: refactor me
+    #[allow(clippy::too_many_lines)]
+    fn process_multiway(table: &Table) -> Result<Winnings, PKError> {
+        // Capture equity BEFORE close_it_out so chips_in_play still reflects
+        // each seat's cumulative pot commitment (used to compute side pots).
+        let mut equity: TableEquity = table.determine_hand_equity();
 
         let _brought_in = table.close_it_out()?;
 
@@ -161,65 +161,198 @@ impl Showdown {
 
         table.seats.showdown(table.pot.count())?;
 
+        // Helper: build an Eval for a seat from its effective cards.
+        let build_eval = |seat: u8| -> Eval {
+            match table.effective_player_cards(seat) {
+                Some(cards) => match Seven::try_from(cards) {
+                    Ok(seven) => Eval::from(seven),
+                    Err(_) => Eval::default(),
+                },
+                None => Eval::default(),
+            }
+        };
+
         let mut per_seat: HashMap<u8, usize> = HashMap::new();
         let mut evals: HashMap<u8, Eval> = HashMap::new();
 
-        for (pot_index, pot_info) in pot_manager.pots.iter().enumerate() {
-            // Determine eligible winners for this pot
-            let eligible_winners: Vec<u8> = case_eval
-                .winning_seats()
+        // ── Phase 1: distribute pots for overall winners ──────────────────
+        // Sort winners from lowest chip commitment to highest so all-in players
+        // who created the main pot are awarded before bigger-stack winners.
+        // `player_ranking` returns 0 for the highest chip level, so a higher
+        // index means a lower chip commitment – process those first.
+        let mut overall_winners = case_eval.winning_seats();
+        overall_winners.sort_by(|&a, &b| {
+            let rank_a = equity.player_ranking(a).unwrap_or(0);
+            let rank_b = equity.player_ranking(b).unwrap_or(0);
+            rank_b.cmp(&rank_a) // descending rank index = ascending chip level
+        });
+
+        let mut processed_chip_levels: HashSet<usize> = HashSet::new();
+
+        for &winner_seat in &overall_winners {
+            if equity.is_empty() {
+                break;
+            }
+
+            let winner_sb = Seatbit::from(winner_seat);
+
+            // Find this winner's chip level in the current equity.
+            let Some(winner_chip_level) = equity
+                .equities()
                 .iter()
-                .filter(|s| pot_info.eligible_seats.contains(s))
+                .find(|e| e.seats != Seatbit::NONE && (e.seats & winner_sb) != Seatbit::NONE)
+                .map(|e| e.chips)
+            else {
+                continue;
+            };
+
+            if processed_chip_levels.contains(&winner_chip_level) {
+                continue; // already handled this level (tied winners)
+            }
+            processed_chip_levels.insert(winner_chip_level);
+
+            // All overall winners at this exact chip level share this pot.
+            let tied_at_level: Vec<u8> = overall_winners
+                .iter()
+                .filter(|&&s| {
+                    equity.equities().iter().any(|e| {
+                        e.seats != Seatbit::NONE
+                            && (e.seats & Seatbit::from(s)) != Seatbit::NONE
+                            && e.chips == winner_chip_level
+                    })
+                })
                 .copied()
                 .collect();
 
-            if eligible_winners.is_empty() {
-                continue;
-            }
+            let Some((total, remaining)) = equity.winnings(winner_sb) else {
+                break;
+            };
+            equity = remaining;
 
-            let shares = crate::casino::cashier::chips::Stack::new(pot_info.amount).divvy_up(eligible_winners.len());
+            let shares = Stack::new(total).divvy_up(tied_at_level.len());
+            let is_main_pot = processed_chip_levels.len() == 1;
 
-            for (i, &winner_seat) in eligible_winners.iter().enumerate() {
-                if let Some(seat) = table.get_seat_mut(winner_seat) {
-                    let share = shares.get(i).cloned().unwrap_or_default();
-                    let share_amount = share.count();
+            for (i, &seat) in tied_at_level.iter().enumerate() {
+                let share = shares.get(i).cloned().unwrap_or_default();
+                let share_amount = share.count();
 
-                    // Award chips
-                    let _ = seat.player.chips.wins(share.clone());
-
-                    // Log main/side pot win
-                    if pot_index == 0 {
-                        table.log_info(TableAction::PlayerWinsMainPot(winner_seat, share_amount));
-                    } else {
-                        table.log_info(TableAction::PlayerWinsSidePot(winner_seat, share_amount));
-                    }
-
-                    // Aggregate
-                    *per_seat.entry(winner_seat).or_insert(0) += share_amount;
-
-                    evals
-                        .entry(winner_seat)
-                        .or_insert_with(|| match table.effective_player_cards(winner_seat) {
-                            Some(cards) => match Seven::try_from(cards) {
-                                Ok(seven) => Eval::from(seven),
-                                Err(_) => Eval::default(),
-                            },
-                            None => Eval::default(),
-                        });
+                if let Some(s) = table.get_seat_mut(seat) {
+                    let _ = s.player.chips.wins(share);
                 }
+
+                if is_main_pot {
+                    table.log_info(TableAction::PlayerWinsMainPot(seat, share_amount));
+                } else {
+                    table.log_info(TableAction::PlayerWinsSidePot(seat, share_amount));
+                }
+
+                *per_seat.entry(seat).or_insert(0) += share_amount;
+                evals.entry(seat).or_insert_with(|| build_eval(seat));
             }
         }
 
-        // Build Winnings vector from aggregated results
-        let results: Vec<Winnings> = per_seat
+        // ── Phase 2: distribute remaining side pots ───────────────────────
+        // After overall winners have taken their share, any leftover equity
+        // represents chips that a subset of players are still eligible to
+        // contest. Find the best hand among those eligible seats and award
+        // each sub-pot in turn, iterating until the equity is exhausted.
+        while !equity.is_empty() {
+            // Collect all individual seat numbers still present in the equity.
+            let eligible_seats: Vec<u8> = equity
+                .equities()
+                .iter()
+                .filter(|e| e.seats != Seatbit::NONE)
+                .flat_map(|e| (0u8..16u8).filter(move |&i| e.seats.contains(i)))
+                .collect();
+
+            if eligible_seats.is_empty() {
+                break;
+            }
+
+            // Find the best hand among eligible seats using case_eval indices
+            // (which map 1-to-1 with seat numbers due to HoleCards::from(seats)).
+            let best_eval = eligible_seats
+                .iter()
+                .filter_map(|&s| case_eval.get(s as usize))
+                .max()
+                .copied();
+
+            let Some(best) = best_eval else { break };
+
+            let side_winners: Vec<u8> = eligible_seats
+                .iter()
+                .filter(|&&s| case_eval.get(s as usize) == Some(&best))
+                .copied()
+                .collect();
+
+            if side_winners.is_empty() {
+                break;
+            }
+
+            // Use the winner with the lowest chip commitment so that
+            // equity.winnings() caps the pot correctly at their level.
+            let winner_with_lowest = *side_winners
+                .iter()
+                .min_by_key(|&&s| {
+                    equity
+                        .equities()
+                        .iter()
+                        .find(|e| e.seats != Seatbit::NONE && (e.seats & Seatbit::from(s)) != Seatbit::NONE)
+                        .map_or(usize::MAX, |e| e.chips)
+                })
+                .unwrap_or(&side_winners[0]);
+
+            let lowest_chip_level = equity
+                .equities()
+                .iter()
+                .find(|e| e.seats != Seatbit::NONE && (e.seats & Seatbit::from(winner_with_lowest)) != Seatbit::NONE)
+                .map_or(0, |e| e.chips);
+
+            // If multiple side winners are tied at the same chip level, they
+            // share this sub-pot equally.
+            let tied_side: Vec<u8> = side_winners
+                .iter()
+                .filter(|&&s| {
+                    equity.equities().iter().any(|e| {
+                        e.seats != Seatbit::NONE
+                            && (e.seats & Seatbit::from(s)) != Seatbit::NONE
+                            && e.chips == lowest_chip_level
+                    })
+                })
+                .copied()
+                .collect();
+
+            let Some((total, remaining)) = equity.winnings(Seatbit::from(winner_with_lowest)) else {
+                break;
+            };
+            equity = remaining;
+
+            let shares = Stack::new(total).divvy_up(tied_side.len());
+            for (i, &seat) in tied_side.iter().enumerate() {
+                let share = shares.get(i).cloned().unwrap_or_default();
+                let share_amount = share.count();
+
+                if let Some(s) = table.get_seat_mut(seat) {
+                    let _ = s.player.chips.wins(share);
+                }
+
+                table.log_info(TableAction::PlayerWinsSidePot(seat, share_amount));
+
+                *per_seat.entry(seat).or_insert(0) += share_amount;
+                evals.entry(seat).or_insert_with(|| build_eval(seat));
+            }
+        }
+
+        // ── Build result vector ────────────────────────────────────────────
+        let results: Vec<Win> = per_seat
             .into_iter()
-            .map(|(seat, chips)| Winnings {
+            .map(|(seat, chips)| Win {
                 equity: SeatEquity::new(chips, Seatbit::from(seat)),
                 eval: evals.remove(&seat).unwrap_or_default(),
             })
             .collect();
 
-        Ok(results)
+        Ok(Winnings::from(results))
     }
 }
 
@@ -227,7 +360,8 @@ impl Showdown {
 #[allow(non_snake_case)]
 mod casino__table__showdown_tests {
     use super::*;
-    use crate::prelude::TestData;
+    use crate::prelude::{Five, TestData};
+    use std::str::FromStr;
 
     #[test]
     fn process() {
@@ -271,11 +405,11 @@ mod casino__table__showdown_tests {
         // Capture and validate the returned winnings
         let winnings = Showdown::process(&table).unwrap();
 
-        println!("{}", winnings[0]);
+        println!("{}", winnings.first());
 
         // We expect a single Winnings entry since only one player remains
         assert_eq!(1, winnings.len());
-        let w = &winnings[0];
+        let w = &winnings.first();
         // Awarded equity should be positive
         assert!(w.equity.chips > 0);
         // The winning Seatbit should include seat 3
@@ -291,5 +425,56 @@ mod casino__table__showdown_tests {
         assert_eq!(9_000, table.get_seat(4).expect("Seat 4").player.chips.count());
 
         println!("{table}");
+    }
+
+    #[test]
+    fn process_split_pot() {
+        let table = TestData::preroll_split_pot_with_blinds__to_completion(
+            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣",
+        );
+
+        assert!(table.is_betting_complete());
+        assert!(table.is_game_over());
+
+        println!("{table}");
+
+        // K♠ Q♠ A♦ J♠ A♣
+        let poor_cards = Five::from_str("A♠ A♥ A♦ A♣ K♠").unwrap();
+        let eval = Eval::from(poor_cards);
+        let poor_winnings = Win {
+            eval,
+            equity: SeatEquity::new(15_150, Seatbit::SEAT_3),
+        };
+
+        // K♠ Q♠ A♦ J♠ A♣
+        let rich_cards = Five::from_str("A♦ A♣ Q♦ Q♣ Q♠").unwrap();
+        let eval = Eval::from(rich_cards);
+        let rich_winnings = Win {
+            eval,
+            equity: SeatEquity::new(8_000, Seatbit::SEAT_0),
+        };
+
+        // Capture and validate the returned winnings
+        let winnings = Showdown::process(&table).unwrap();
+
+        assert_eq!(winnings.first().to_string(), poor_winnings.to_string());
+        assert_eq!(
+            winnings.first().to_string(),
+            "Winnings(equity=SeatEquity(chips=15150, seats=0b0000000000001000, count=1), eval=A♠ A♥ A♦ A♣ K♠ - 11: FourAces)"
+        );
+        assert_eq!(winnings.second().to_string(), rich_winnings.to_string());
+        assert_eq!(
+            winnings.second().to_string(),
+            "Winnings(equity=SeatEquity(chips=8000, seats=0b0000000000000001, count=1), eval=Q♠ Q♦ Q♣ A♦ A♣ - 191: QueensOverAces)"
+        );
+
+        assert_eq!(winnings, Winnings::from(vec![poor_winnings, rich_winnings]));
+
+        // Verify chip counts remain as expected after payout
+        assert_eq!(9_000, table.get_seat(0).expect("Seat 0").player.chips.count());
+        assert_eq!(5_950, table.get_seat(1).expect("Seat 1").player.chips.count());
+        assert_eq!(6_900, table.get_seat(2).expect("Seat 2").player.chips.count());
+        assert_eq!(15_150, table.get_seat(3).expect("Seat 3").player.chips.count());
+        assert_eq!(0, table.get_seat(4).expect("Seat 4").player.chips.count());
     }
 }
