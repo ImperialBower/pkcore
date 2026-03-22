@@ -1,5 +1,6 @@
 [package]
 name = "pkcore"
+description = "Prototype core poker library."
 version = "0.0.22"
 rust-version = "1.91.0"
 edition = "2024"
