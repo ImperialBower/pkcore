@@ -49,6 +49,7 @@ pub enum TableAction {
     ClosesTheAction(u8),
     CloseItOut(usize),
     EndHand,
+    ResetTable,
     Showdown(u8),
     PlayerMucksCards(u8), // At a showdown one player mucks their cards rather than show them.
     AllFoldedTo(u8),
@@ -88,6 +89,7 @@ impl TableAction {
             TableAction::DealtTurn(bard) => format!("Turn is {}", Cards::from(*bard)),
             TableAction::DealtRiver(bard) => format!("River is {}", Cards::from(*bard)),
             TableAction::EndHand => "Hand over.".to_string(),
+            TableAction::ResetTable => "Table reset for next hand.".to_string(),
             TableAction::PlayerMucksCards(_u8) => format!("{name} mucks their cards."),
             TableAction::AllFoldedTo(_) => format!("Everyone folds to {name}."),
             TableAction::PlayerWinsSidePot(seat, winnings) => {
@@ -304,6 +306,7 @@ impl Display for TableAction {
             TableAction::TooManyCards => write!(f, "Too many cards to deal"),
             TableAction::InvalidSeatNumber => write!(f, "Invalid Seat Number"),
             TableAction::DeckPassesAudit => write!(f, "Deck passes audit"),
+            TableAction::ResetTable => write!(f, "Table reset for next hand"),
         }
     }
 }

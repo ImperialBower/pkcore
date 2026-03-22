@@ -25,13 +25,12 @@ use crate::casino::game::ForcedBets;
 use crate::casino::player::Player;
 use crate::casino::table::Table;
 use crate::casino::table::event::TableLog;
-use crate::casino::table::result::HandResult;
 use crate::casino::table::seats::Seats;
 use crate::casino::table::seats::seat::Seat;
+use crate::casino::table::winnings::Winnings;
 use crate::prelude::{BoxedCards, PlayerState};
 use std::fmt;
 use uuid::Uuid;
-
 // ── DealerAction ─────────────────────────────────────────────────────────────
 
 /// Every action a player at the table can request, plus the dealer-triggered
@@ -415,7 +414,7 @@ impl Dealer {
     /// - [`DealerError::HandNotStarted`] — `start_hand` has not been called.
     /// - [`DealerError::IllegalAction`] — the hand is not finished yet.
     /// - [`DealerError::TableError`] — a table operation failed.
-    pub fn end_hand(&mut self) -> Result<HandResult, DealerError> {
+    pub fn end_hand(&mut self) -> Result<Winnings, DealerError> {
         if !self.hand_in_progress {
             return Err(DealerError::HandNotStarted);
         }
@@ -1047,7 +1046,11 @@ mod casino__dealer_tests {
 
         let result = dealer.end_hand().unwrap();
         assert!(!dealer.is_hand_in_progress());
-        assert!(result.log.len() > 0, "should have result entries");
+
+        assert_eq!(
+            result.first().to_string(),
+            "Winnings(equity=SeatEquity(chips=400, seats=0b0000000000000010, count=1), eval= - 0: None)"
+        );
     }
 
     #[test]
@@ -1118,7 +1121,11 @@ mod casino__dealer_tests {
 
         let result = dealer.end_hand().unwrap();
         assert!(!dealer.is_hand_in_progress());
-        assert!(result.log.len() > 0, "should have result entries");
+
+        assert_eq!(
+            result.first().to_string(),
+            "Winnings(equity=SeatEquity(chips=400, seats=0b0000000000001000, count=1), eval= - 0: None)"
+        );
     }
 
     #[test]

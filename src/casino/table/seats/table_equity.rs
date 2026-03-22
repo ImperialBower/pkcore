@@ -1,5 +1,6 @@
-use crate::prelude::SeatEquity;
+use crate::prelude::{SeatEquity, Seatbit, Table};
 use serde::{Deserialize, Serialize};
+use std::fmt::{self, Display, Formatter};
 use std::sync::OnceLock;
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -146,7 +147,40 @@ impl TableEquity {
             }
         }
 
-        self.0 = consolidated;
+        // Combine any entries that represent 'no seat' (Seatbit::NONE) into a
+        // single entry by summing their chips. This is useful for cases when
+        // blinds/antes are represented as Seatbit::NONE and should be treated
+        // as a single pool rather than separate entries.
+        let mut none_total: usize = 0;
+        consolidated.retain(|e| {
+            if e.seats == Seatbit::NONE {
+                none_total += e.chips;
+                false
+            } else {
+                true
+            }
+        });
+
+        if none_total > 0 {
+            consolidated.push(SeatEquity::new(none_total, Seatbit::NONE));
+        }
+
+        // It's possible the new combined NONE entry (or other additions) created
+        // duplicate chip counts. Re-sort and re-merge to ensure a normalized
+        // collection where equal chip counts are consolidated by OR'ing seats.
+        consolidated.sort();
+        let mut final_vec: Vec<SeatEquity> = Vec::with_capacity(consolidated.len());
+        for equity in consolidated {
+            if let Some(last) = final_vec.last_mut()
+                && last.chips == equity.chips
+            {
+                last.seats |= equity.seats;
+            } else {
+                final_vec.push(equity);
+            }
+        }
+
+        self.0 = final_vec;
     }
 
     /// Returns a reference to the vector of `SeatEquity` instances.
@@ -211,6 +245,95 @@ impl TableEquity {
     #[must_use]
     pub fn second(&self) -> &SeatEquity {
         self.0.get(1).unwrap_or(default_seat_equity_ref())
+    }
+
+    /// Returns the total chips won by the seat identified by `sb`, and the remaining
+    /// [`TableEquity`] that forms the side pot after the winner takes their share.
+    ///
+    /// Each equity entry contributes at most `winner_chips` per seat to the winner.
+    /// Any excess chips for a seat remain in the side pot.  Orphaned chips
+    /// (`Seatbit::NONE`) are treated as a single contributor and go entirely to
+    /// the winner when they are below the winner's chip level.
+    ///
+    /// Returns `None` if `sb` is not present in this collection.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use pkcore::prelude::{SeatEquity, Seatbit, TableEquity};
+    ///
+    /// let equities = TableEquity::new(vec![
+    ///     SeatEquity::new(9_000, Seatbit::SEAT_0),
+    ///     SeatEquity::new(5_000, Seatbit::SEAT_3),
+    ///     SeatEquity::new(150, Seatbit::NONE),
+    /// ]);
+    ///
+    /// let (winnings, remaining) = equities.winnings(Seatbit::SEAT_3).unwrap();
+    /// assert_eq!(winnings, 10_150);
+    /// assert_eq!(remaining, TableEquity::new(vec![SeatEquity::new(4_000, Seatbit::SEAT_0)]));
+    /// ```
+    #[must_use]
+    pub fn winnings(&self, sb: Seatbit) -> Option<(usize, TableEquity)> {
+        // Find the chip count that belongs to the winning seat.
+        let winner_chips = self
+            .0
+            .iter()
+            .find(|e| e.seats != Seatbit::NONE && (e.seats & sb) != Seatbit::NONE)?
+            .chips;
+
+        let mut total_winnings: usize = 0;
+        let mut remaining: Vec<SeatEquity> = Vec::new();
+
+        for equity in &self.0 {
+            // NONE entries have no individual seat bits, treat as a single contributor.
+            let num_seats = if equity.seats == Seatbit::NONE {
+                1
+            } else {
+                equity.seats.count_ones()
+            };
+
+            let taken_per_seat = equity.chips.min(winner_chips);
+            total_winnings += taken_per_seat * num_seats;
+
+            let leftover = equity.chips.saturating_sub(winner_chips);
+            if leftover > 0 {
+                remaining.push(SeatEquity::new(leftover, equity.seats));
+            }
+        }
+
+        Some((total_winnings, TableEquity::new(remaining)))
+    }
+}
+
+impl Display for TableEquity {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        writeln!(f, "TableEquity[")?;
+        for se in &self.0 {
+            writeln!(f, "  {se}")?;
+        }
+        f.write_str("]")
+    }
+}
+
+impl From<&Table> for TableEquity {
+    fn from(table: &Table) -> Self {
+        let mut v: Vec<SeatEquity> = Vec::new();
+
+        for (i, seat_cell) in table.seats.iter().enumerate() {
+            let seat = seat_cell.borrow();
+            if seat.player.get_chips_in_play() > 0 {
+                if seat.is_in_hand() {
+                    v.push(SeatEquity::new(seat.player.get_chips_in_play(), Seatbit::from(i)));
+                } else {
+                    v.push(SeatEquity::new(seat.player.get_chips_in_play(), Seatbit::default()));
+                }
+            }
+        }
+
+        if v.is_empty() {
+            TableEquity::default()
+        } else {
+            TableEquity::new(v)
+        }
     }
 }
 
@@ -372,7 +495,7 @@ mod casino__table__seats_seat_equities_tests {
     }
 
     #[test]
-    fn test_seat_equities_ceiling_returns_top_chips_when_top_entry_is_tied() {
+    fn seat_equities_ceiling_returns_top_chips_when_top_entry_is_tied() {
         let equities = TableEquity::new(vec![
             SeatEquity::new(10_000, Seatbit::SEAT_0),
             SeatEquity::new(10_000, Seatbit::SEAT_3),
@@ -383,7 +506,7 @@ mod casino__table__seats_seat_equities_tests {
     }
 
     #[test]
-    fn test_seat_equities_ceiling_returns_second_chips_when_top_is_not_tied() {
+    fn seat_equities_ceiling_returns_second_chips_when_top_is_not_tied() {
         let equities = TableEquity::new(vec![
             SeatEquity::new(10_000, Seatbit::SEAT_0),
             SeatEquity::new(7_000, Seatbit::SEAT_1),
@@ -394,11 +517,96 @@ mod casino__table__seats_seat_equities_tests {
     }
 
     #[test]
-    fn test_seat_equities_ceiling_returns_zero_for_single_or_empty_collection() {
+    fn seat_equities_ceiling_returns_zero_for_single_or_empty_collection() {
         let empty = TableEquity::default();
         let single = TableEquity::new(vec![SeatEquity::new(10_000, Seatbit::SEAT_0)]);
 
         assert_eq!(empty.ceiling(), 0);
         assert_eq!(single.ceiling(), 0);
+    }
+
+    #[test]
+    fn seat_equities_ceiling_returns_second_chips_when_top_is_not_tied_with_blinds() {
+        let equities = TableEquity::new(vec![
+            SeatEquity::new(10_000, Seatbit::SEAT_0),
+            SeatEquity::new(7_000, Seatbit::SEAT_1),
+            SeatEquity::new(3_000, Seatbit::SEAT_2),
+            SeatEquity::new(50, Seatbit::SEAT_3),
+            SeatEquity::new(100, Seatbit::SEAT_3),
+        ]);
+
+        assert_eq!(equities.ceiling(), 7_000);
+    }
+
+    #[test]
+    fn consolidate__with_empties() {
+        let expected = TableEquity::new(vec![
+            SeatEquity::new(9_000, Seatbit::SEAT_0),
+            SeatEquity::new(9_000, Seatbit::SEAT_4),
+            SeatEquity::new(5_000, Seatbit::SEAT_3),
+            SeatEquity::new(150, Seatbit::NONE),
+        ]);
+
+        let equities = TableEquity::new(vec![
+            SeatEquity::new(9_000, Seatbit::SEAT_0),
+            SeatEquity::new(9_000, Seatbit::SEAT_4),
+            SeatEquity::new(5_000, Seatbit::SEAT_3),
+            SeatEquity::new(50, Seatbit::NONE),
+            SeatEquity::new(100, Seatbit::NONE),
+        ]);
+
+        print!("{equities}");
+
+        assert_eq!(equities, expected);
+    }
+
+    #[test]
+    fn winnings() {
+        let equities = TableEquity::new(vec![
+            SeatEquity::new(9_000, Seatbit::SEAT_0),
+            SeatEquity::new(9_000, Seatbit::SEAT_4),
+            SeatEquity::new(5_000, Seatbit::SEAT_3),
+            SeatEquity::new(50, Seatbit::NONE),
+            SeatEquity::new(100, Seatbit::NONE),
+        ]);
+        let expected_winnings = 23_150;
+
+        let (winnings, remaining_equity) = equities.winnings(Seatbit::SEAT_4).unwrap();
+
+        assert_eq!(winnings, expected_winnings);
+        assert_eq!(remaining_equity, TableEquity::default());
+    }
+
+    #[test]
+    fn winnings__1down() {
+        let equities = TableEquity::new(vec![
+            SeatEquity::new(9_000, Seatbit::SEAT_0),
+            SeatEquity::new(9_000, Seatbit::SEAT_4),
+            SeatEquity::new(5_000, Seatbit::SEAT_3),
+            SeatEquity::new(50, Seatbit::NONE),
+            SeatEquity::new(100, Seatbit::NONE),
+        ]);
+        let sidepot = TableEquity::new(vec![
+            SeatEquity::new(4_000, Seatbit::SEAT_0),
+            SeatEquity::new(4_000, Seatbit::SEAT_4),
+        ]);
+        let expected_winnings = 15_150;
+
+        print!("{sidepot}");
+
+        let (winnings, remaining_equity) = equities.winnings(Seatbit::SEAT_3).unwrap();
+
+        assert_eq!(winnings, expected_winnings);
+        assert_eq!(remaining_equity, sidepot);
+
+        let expected_sidepot = 8_000;
+
+        let (side_winnings, no_equity) = remaining_equity.winnings(Seatbit::SEAT_0).unwrap();
+
+        assert_eq!(side_winnings, expected_sidepot);
+        assert_eq!(no_equity, TableEquity::default());
+        assert_eq!(None, equities.winnings(Seatbit::SEAT_9));
+        assert_eq!(None, remaining_equity.winnings(Seatbit::SEAT_9));
+        assert_eq!(None, no_equity.winnings(Seatbit::SEAT_9));
     }
 }

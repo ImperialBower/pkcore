@@ -1,10 +1,11 @@
 use crate::SOK;
 use crate::analysis::hand_rank::HandRankValue;
+use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
 /// `HandRankClass` represents the more specific type of the five card `PokerHand`.
 #[allow(clippy::module_name_repetitions)]
-#[derive(Clone, Copy, Debug, Default, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, EnumIter, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum HandRankClass {
     RoyalFlush,
     KingHighStraightFlush,

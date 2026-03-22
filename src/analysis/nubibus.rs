@@ -12,6 +12,7 @@ use std::fs;
 use std::ops::Index;
 use std::path::Path;
 use std::str::FromStr;
+use termion::color;
 
 /// `nūbĭfĭcus , a, um nubes-facio, - producing clouds`
 ///
@@ -29,6 +30,7 @@ impl Nubificus {
     ///
     /// `PKError::InvalidPluribusIndex`
     pub fn act(table: &Table, action: &PluribusEvent, seat_to_act: u8) -> Result<(), PKError> {
+        log::trace!("...Nubificus.act({action}, {seat_to_act});)");
         match action {
             PluribusEvent::Fold => {
                 let _ = table.act_fold(seat_to_act);
@@ -86,8 +88,7 @@ impl Nubificus {
     ///
     /// TODO: Fill in errors
     pub fn play_hand_display(&self) -> Result<(), PKError> {
-        use termion::color;
-
+        log::trace!("Nubibus.play_hand_display()");
         if !self.table.seats.are_dealt() {
             self.table.deal_cards_to_seats()?;
         }
@@ -110,9 +111,12 @@ impl Nubificus {
         );
         println!("{}", self.table);
 
-        for action in self.pluribus.actions.clone() {
-            self.do_action(&action, true)?;
+        for (i, action) in self.pluribus.actions.clone().iter().enumerate() {
+            println!("#{i} {action}");
+            log::trace!("...PluribusEvent #{i}: {action}");
+            self.do_action(action, true)?;
         }
+
         Ok(())
     }
 
@@ -121,15 +125,16 @@ impl Nubificus {
     /// TODO: Fill in errors
     #[allow(clippy::too_many_lines)]
     pub fn do_action(&self, action: &PluribusEvent, display: bool) -> Result<(), PKError> {
-        use termion::color;
-
         let seat_to_act = self.table.next_to_act();
         let handle_to_act = self.table.get_seat_handle(seat_to_act);
-        log::debug!("{handle_to_act} Seat {seat_to_act} is next to act: {action}");
+        log::debug!("...Nubificus.do_action() {handle_to_act} Seat {seat_to_act} is next to act: {action}");
 
         Nubificus::act(&self.table, action, seat_to_act)?;
 
-        log::debug!("{}", self.table.commentary_last_player_action().unwrap_or_default());
+        log::debug!(
+            "......{}",
+            self.table.commentary_last_player_action().unwrap_or_default()
+        );
         if display {
             let commentary = self.table.commentary_last_player_action().unwrap_or_default();
             // Color player actions based on action type
@@ -162,8 +167,10 @@ impl Nubificus {
         }
 
         let betting_phase = self.table.determine_betting_phase();
+        log::trace!("......Betting phase is {betting_phase}");
 
         if self.table.is_game_over() {
+            log::trace!("......is_game_over() == true");
             let hand_result = self.table.end_hand()?;
 
             if display {
@@ -181,14 +188,17 @@ impl Nubificus {
                 println!(
                     "{}{}{}",
                     color::Fg(color::LightGreen),
-                    hand_result,
+                    hand_result.first(),
                     color::Fg(color::Reset)
                 );
                 println!("{}", self.pluribus.display_results());
             }
         } else {
+            log::trace!("......is_game_over() == false");
             match betting_phase {
                 GamePhase::BettingPreFlop if self.table.is_betting_complete() => {
+                    log::trace!("......betting_phase == GamePhase::BettingPreFlop && betting is complete");
+                    println!("{}", self.table);
                     self.table.act()?;
                     if display {
                         println!(
@@ -204,6 +214,8 @@ impl Nubificus {
                     }
                 }
                 GamePhase::BettingFlop if self.table.is_betting_complete() => {
+                    log::trace!("......betting_phase == GamePhase::BettingFlop && betting is complete");
+                    println!("{}", self.table);
                     self.table.act()?;
                     if display {
                         println!(
@@ -218,6 +230,8 @@ impl Nubificus {
                     }
                 }
                 GamePhase::BettingTurn if self.table.is_betting_complete() => {
+                    log::trace!("......betting_phase == GamePhase::BettingTurn && betting is complete");
+                    println!("{}", self.table);
                     self.table.act()?;
                     log::debug!("Board: {}", self.table.board);
                     if display {
@@ -225,7 +239,9 @@ impl Nubificus {
                         println!(); // TODO: why the spacing issues?
                     }
                 }
-                _ => {}
+                _ => {
+                    log::trace!("......is_game_over() == false");
+                }
             }
         }
         Ok(())
@@ -284,6 +300,23 @@ impl TryFrom<&Pluribus> for Nubificus {
 
     fn try_from(pluribus: &Pluribus) -> Result<Self, Self::Error> {
         Nubificus::try_from(pluribus.clone())
+    }
+}
+
+impl Display for Nubificus {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Nubificus(index={})", self.pluribus.index)?;
+        writeln!(f, "queue:")?;
+
+        if self.queue.is_empty() {
+            writeln!(f, "  (empty)")?;
+        } else {
+            for event in &self.queue {
+                writeln!(f, "  - {event}")?;
+            }
+        }
+
+        write!(f, "table:\n{}", self.table)
     }
 }
 
@@ -775,5 +808,37 @@ mod store_pluribus_tests {
         let _board = board;
         let _winnings = Pluribus::parse_isizes(v.index(4));
         let _players = Util::str_splitter(v.index(5), "|");
+    }
+
+    #[test]
+    fn nubificus_display_contains_key_fields() {
+        let pluribus = Pluribus::from_str(LOG).unwrap();
+        let nubificus = Nubificus::try_from(pluribus).unwrap();
+
+        let rendered = nubificus.to_string();
+
+        assert!(rendered.contains("Nubificus(index=27)"));
+        assert!(rendered.contains("queue:\n"));
+        assert!(rendered.contains("  - Raise(200)"));
+        assert!(rendered.contains("table:\n"));
+    }
+
+    #[test]
+    fn nubificus_display_shows_empty_queue() {
+        let mut nubificus = Nubificus::try_from(Pluribus::from_str(LOG).unwrap()).unwrap();
+        nubificus.queue.clear();
+
+        let rendered = nubificus.to_string();
+
+        assert!(rendered.contains("queue:\n"));
+        assert!(rendered.contains("  (empty)"));
+    }
+
+    #[test]
+    fn isolate_15() {
+        let s = "STATE:14:fr200cfff/cc/cc/cc:4cJs|5s9h|Kh7h|9sQs|2d2h|5dTh/3s3dAd/Qc/Td:-50|-100|0|350|-200|0:MrWhite|MrPink|MrBrown|Pluribus|MrBlue|MrBlonde";
+        let pl = Pluribus::from_str(s).unwrap();
+        let nub = Nubificus::try_from(pl).unwrap().play_hand_display().unwrap();
+        println!("{:?}", nub);
     }
 }

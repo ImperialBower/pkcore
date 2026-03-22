@@ -57,6 +57,13 @@ impl SeatCell {
 
     /// # Errors
     ///
+    /// This will return a `BorrowError` if the `RefCell` is already mutably borrowed.
+    pub fn try_borrow(&self) -> Result<Ref<'_, Seat>, std::cell::BorrowError> {
+        self.0.try_borrow()
+    }
+
+    /// # Errors
+    ///
     /// This will return a `BorrowMutError` error if the `RefCell` is already borrowed.
     pub fn try_borrow_mut(&self) -> Result<RefMut<'_, Seat>, BorrowMutError> {
         self.0.try_borrow_mut()

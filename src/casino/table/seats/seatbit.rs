@@ -6,6 +6,7 @@ use std::ops::{Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor,
 pub struct Seatbit(pub u16);
 
 impl Seatbit {
+    pub const NONE: Seatbit = Seatbit(0b0000_0000_0000_0000);
     pub const SEAT_0: Seatbit = Seatbit(0b0000_0000_0000_0001);
     pub const SEAT_1: Seatbit = Seatbit(0b0000_0000_0000_0010);
     pub const SEAT_2: Seatbit = Seatbit(0b0000_0000_0000_0100);

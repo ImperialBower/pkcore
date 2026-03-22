@@ -4,6 +4,7 @@ use crate::analysis::store::bcm::binary_card_map::FiveBCM;
 use crate::arrays::HandRanker;
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
@@ -195,7 +196,7 @@ use std::hash::{Hash, Hasher};
 /// wear safety goggles when using a power saw to cut wood, but anyone with half a brain who enjoys
 /// seeing knows that you'd be an idiot not to. Know your craft, and anytime you are going against
 /// the traditional rules you have learned, have a damn good reason.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default)]
 pub struct Eval {
     pub hand_rank: HandRank,
     pub hand: Five,

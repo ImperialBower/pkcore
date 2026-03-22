@@ -199,16 +199,7 @@ impl Player {
     ///
     /// * `PKError::InvalidTableAction` - throws if the player is not active in the hand.
     pub fn act_bring_it_in(&self) -> Result<Stack, PKError> {
-        // if !self.state.is_active() {
-        //     log::warn!("InvalidTableAction: Player is not active in the hand.");
-        //     return Err(PKError::InvalidTableAction);
-        // }
-
         let player_bet = self.bet.take();
-        // NOTE: This doesn't work for issue with end of hand, since this is used to keep track
-        // of how many chips the player has in play for the hand.
-        // let chips_in_play = self.chips_in_play.take();
-        // assert_eq!(player_bet.count(), chips_in_play);
 
         if self.state.is_active() && self.chips.count() > 0 {
             self.state.set(PlayerState::YetToAct);
@@ -216,6 +207,18 @@ impl Player {
 
         log::trace!("{} brings in {} chips", self.handle, player_bet);
 
+        Ok(player_bet)
+    }
+
+    /// Removes and returns the chips from the player's bet stack, but doesn't change their state,
+    /// since there is no further action possible in the hand.
+    ///
+    /// # Errors
+    ///
+    /// * `PKError::InvalidTableAction` - throws if the player is not active in the hand.
+    pub fn act_bring_it_in_frozen(&self) -> Result<Stack, PKError> {
+        let player_bet = self.bet.take();
+        log::trace!("{} brings in {} chips", self.handle, player_bet);
         Ok(player_bet)
     }
 
@@ -475,7 +478,14 @@ impl Agency for Player {
 
 impl Display for Player {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}: {} chips [{}]", self.handle, self.chips, self.state)
+        write!(
+            f,
+            "{}: {} chips / {} in play [{}]",
+            self.handle,
+            self.chips,
+            self.chips_in_play.get(),
+            self.state
+        )
     }
 }
 #[cfg(test)]
@@ -489,7 +499,7 @@ mod casino__players__player_tests {
 
         assert_eq!("Elmer", player.handle);
         assert_eq!(0, player.chips.count());
-        assert_eq!("Elmer: 0 chips [Yet to act]", player.to_string());
+        assert_eq!("Elmer: 0 chips / 0 in play [Yet to act]", player.to_string());
     }
 
     #[test]
@@ -498,7 +508,7 @@ mod casino__players__player_tests {
 
         assert_eq!("Bugsy", player.handle);
         assert_eq!(1_000_002, player.chips.count());
-        assert_eq!("Bugsy: 1,000,002 chips [Yet to act]", player.to_string());
+        assert_eq!("Bugsy: 1,000,002 chips / 0 in play [Yet to act]", player.to_string());
     }
 
     #[test]
@@ -509,7 +519,7 @@ mod casino__players__player_tests {
 
         assert_eq!("", player.handle);
         assert_eq!(0, player.chips.count());
-        assert_eq!(": 0 chips [Out]", player.to_string());
+        assert_eq!(": 0 chips / 0 in play [Out]", player.to_string());
     }
 
     #[test]

@@ -10,6 +10,7 @@ use crate::cards::Cards;
 use crate::games::razz::california::CaliforniaHandRank;
 use crate::play::board::Board;
 use crate::{PKError, Pile, TheNuts};
+use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::slice::Iter;
@@ -19,7 +20,7 @@ use std::str::FromStr;
 /// It's the best five cards that determine who wins.
 ///
 /// IDEA: The hub and spoke.
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Five(pub(crate) [Card; 5]);
 
 impl Five {

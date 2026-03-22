@@ -226,7 +226,14 @@ impl Seats {
             if !seat.borrow().player.has_bet() {
                 continue;
             }
-            let chips = seat.borrow_mut().player.act_bring_it_in()?;
+
+            // If there is only one player with action yet to give in the hand, that means that
+            // their state doesn't need to change.
+            let chips = match self.count_players_with_action_to_give() {
+                1 => seat.borrow_mut().player.act_bring_it_in_frozen()?,
+                _ => seat.borrow_mut().player.act_bring_it_in()?,
+            };
+
             log::trace!("Seat #{i} brought in {} chips.", chips.count());
             collected.add_to(chips);
         }
@@ -312,21 +319,6 @@ impl Seats {
         }
 
         seats
-    }
-
-    #[must_use]
-    pub fn count_able_to_bet_in_hand(&self) -> usize {
-        let mut count = 0;
-        for seat_cell in &self.0 {
-            let seat = seat_cell.borrow();
-            if seat.is_empty() {
-                continue;
-            }
-            if seat.is_active() && !seat.is_all_in() {
-                count += 1;
-            }
-        }
-        count
     }
 
     #[must_use]
@@ -493,7 +485,13 @@ impl Seats {
     #[must_use]
     pub fn get_seat(&self, index: u8) -> Option<Ref<'_, Seat>> {
         let seat_cell = self.0.get(index as usize)?;
-        Some(seat_cell.borrow())
+        match seat_cell.try_borrow() {
+            Ok(seat) => Some(seat),
+            Err(e) => {
+                log::error!("Failed to immutably borrow seat #{index}: {e}");
+                None
+            }
+        }
     }
 
     #[must_use]
@@ -545,10 +543,20 @@ impl Seats {
     /// Checks if equilibrium has been reached in the betting round.
     #[must_use]
     pub fn is_betting_complete(&self) -> bool {
+        if log::log_enabled!(log::Level::Trace) {
+            let active = self.count_active_in_hand();
+            let to_give = self.count_players_with_action_to_give();
+            let current_bet = self.current_bet();
+
+            log::trace!(
+                "......Seats.is_betting_complete() active:{active} to give:{to_give} current_bet: {current_bet}"
+            );
+        }
+
         if self.count_active_in_hand() <= 1 {
             return true;
         }
-        if self.count_players_with_action_to_give() <= 1 {
+        if self.count_players_with_action_to_give() < 1 {
             return true;
         }
         let current_bet = self.current_bet();
@@ -1547,5 +1555,61 @@ mod casino__table__seats_tests {
         let snapshot = seats.cards_snapshot();
 
         assert!(snapshot.is_empty());
+    }
+
+    /// This was created to isolate on a defect. Not sure why I am keeping it. Need a better way
+    /// to instantiate state.
+    #[test]
+    fn pluribus_445_defect() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("MrBrown".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Pluribus".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("MrBlue".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("MrBlonde".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("MrWhite".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("MrPink".to_string(), 10_000)),
+        ]);
+
+        seats
+            .get_seat_mut(0)
+            .expect("seat 0")
+            .player
+            .state
+            .set(PlayerState::AllIn(10_000));
+        seats
+            .get_seat_mut(1)
+            .expect("seat 1")
+            .player
+            .state
+            .set(PlayerState::Fold);
+        seats
+            .get_seat_mut(2)
+            .expect("seat 2")
+            .player
+            .state
+            .set(PlayerState::Bet(2525));
+        seats
+            .get_seat_mut(3)
+            .expect("seat 3")
+            .player
+            .state
+            .set(PlayerState::Fold);
+        seats
+            .get_seat_mut(4)
+            .expect("seat 4")
+            .player
+            .state
+            .set(PlayerState::Fold);
+        seats
+            .get_seat_mut(5)
+            .expect("seat 5")
+            .player
+            .state
+            .set(PlayerState::Fold);
+
+        println!("{seats}");
+
+        assert_eq!(2, seats.count_active_in_hand());
+        assert_eq!(1, seats.count_players_with_action_to_give());
     }
 }
