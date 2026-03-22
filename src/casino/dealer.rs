@@ -1046,6 +1046,11 @@ mod casino__dealer_tests {
 
         let result = dealer.end_hand().unwrap();
         assert!(!dealer.is_hand_in_progress());
+
+        assert_eq!(
+            result.first().to_string(),
+            "Winnings(equity=SeatEquity(chips=400, seats=0b0000000000000010, count=1), eval= - 0: None)"
+        );
     }
 
     #[test]
@@ -1116,6 +1121,11 @@ mod casino__dealer_tests {
 
         let result = dealer.end_hand().unwrap();
         assert!(!dealer.is_hand_in_progress());
+
+        assert_eq!(
+            result.first().to_string(),
+            "Winnings(equity=SeatEquity(chips=400, seats=0b0000000000001000, count=1), eval= - 0: None)"
+        );
     }
 
     #[test]
