@@ -31,7 +31,7 @@ rusqlite = { version = "0.34", features = ["bundled"] } # 0.35 breaks HUPResult 
 serde = { version = "1.0", features = ["derive"] }
 strum = { version = "0.28", features = ["derive"] }
 strum_macros = "0.28"
-termion = "*"
+termion = "4.0"
 thousands = "0.2.0"
 uuid = { version = "1.22", features = ["serde", "v4"] }
 wincounter = "0.1.5"
