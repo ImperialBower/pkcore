@@ -833,4 +833,12 @@ mod store_pluribus_tests {
         assert!(rendered.contains("queue:\n"));
         assert!(rendered.contains("  (empty)"));
     }
+
+    #[test]
+    fn isolate_15() {
+        let s = "STATE:14:fr200cfff/cc/cc/cc:4cJs|5s9h|Kh7h|9sQs|2d2h|5dTh/3s3dAd/Qc/Td:-50|-100|0|350|-200|0:MrWhite|MrPink|MrBrown|Pluribus|MrBlue|MrBlonde";
+        let pl = Pluribus::from_str(s).unwrap();
+        let nub = Nubificus::try_from(pl).unwrap().play_hand_display().unwrap();
+        println!("{:?}", nub);
+    }
 }

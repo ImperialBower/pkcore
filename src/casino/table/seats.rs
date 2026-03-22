@@ -485,7 +485,13 @@ impl Seats {
     #[must_use]
     pub fn get_seat(&self, index: u8) -> Option<Ref<'_, Seat>> {
         let seat_cell = self.0.get(index as usize)?;
-        Some(seat_cell.borrow())
+        match seat_cell.try_borrow() {
+            Ok(seat) => Some(seat),
+            Err(e) => {
+                log::error!("Failed to immutably borrow seat #{index}: {e}");
+                None
+            }
+        }
     }
 
     #[must_use]
