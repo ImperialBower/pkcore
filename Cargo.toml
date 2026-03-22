@@ -7,7 +7,7 @@ authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
 license = "GPL-3.0-or-later"
 repository = "https://github.com/ImperialBower/pkcore.git"
 homepage = "https://github.com/ImperialBower/pkcore"
-exclude = [".github/workflows/*", "docs/*", "examples/retired/*", "generated/*", "proto/*", "scripts/*", ".gitignore", "Cargo.lock", "Claude.md"]
+exclude = [".github/workflows/*", "data/holding/*", "data/pluribus/*", "docs/*", "examples/retired/*", "generated/old/*", "proto/*", "scripts/*", ".gitignore", "Cargo.lock", "Claude.md"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
