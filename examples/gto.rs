@@ -7,7 +7,6 @@ use pkcore::arrays::two::Two;
 use pkcore::play::board::Board;
 use pkcore::play::stages::flop_eval::FlopEval;
 use pkcore::{GTO, PKError};
-use rusqlite::Connection;
 use std::str::FromStr;
 
 #[derive(Parser, Debug)]
@@ -52,7 +51,9 @@ fn main() -> Result<(), PKError> {
     println!("{}", solver.combo_pairs());
     println!();
 
-    let conn = Connection::open("generated/hups.db").unwrap();
+    // let conn = Connection::open("generated/hups.db").unwrap();
+
+    let (_tmp, conn) = HUPResult::open_embedded_hups_db().unwrap();
 
     let hups = solver.hups_at_deal(&conn);
 
