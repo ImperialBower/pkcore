@@ -1,12 +1,5 @@
 use clap::Parser;
-use pkcore::analysis::gto::combos::Combos;
-use pkcore::analysis::gto::odds::WinLoseDraw;
-use pkcore::analysis::gto::vs::Versus;
-use pkcore::analysis::store::db::hup::HUPResult;
-use pkcore::arrays::two::Two;
-use pkcore::play::board::Board;
-use pkcore::play::stages::flop_eval::FlopEval;
-use pkcore::{GTO, PKError};
+use pkcore::prelude::*;
 use std::str::FromStr;
 
 #[derive(Parser, Debug)]
@@ -40,7 +33,7 @@ fn main() -> Result<(), PKError> {
         solver = Versus::new(Two::from_str(&args.player)?, Combos::from_str(&args.villain)?);
     }
 
-    println!("{}", solver);
+    println!("{solver}");
     println!();
     println!("Villain combos before your blockers:");
     println!("{}", solver.villain.combo_pairs());
@@ -65,7 +58,7 @@ fn main() -> Result<(), PKError> {
     let results = Versus::combined_odds_at_deal(&hups.values().collect::<Vec<&HUPResult>>());
     println!();
     println!("Consolidated odds:");
-    println!("{}", results);
+    println!("{results}");
 
     if solver.has_board() {
         let games = solver.games_at_flop();
@@ -76,10 +69,6 @@ fn main() -> Result<(), PKError> {
         }
         println!("FLOP: {}", solver.combined_odds_at_flop());
         println!("TURN: {}", solver.combined_odds_at_turn());
-
-        // for game in &games {
-        //     game.river_display_results();
-        // }
     }
 
     println!();
