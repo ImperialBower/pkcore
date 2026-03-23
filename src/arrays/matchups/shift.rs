@@ -1,4 +1,5 @@
 use crate::Shifty;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::analysis::store::db::hup::HUPResult;
 use crate::arrays::matchups::masked::Masked;
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
@@ -12,6 +13,7 @@ pub struct Shifter {
 
 impl Shifter {
     #[must_use]
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn shifts(&self, _hupr: &HUPResult) -> Vec<HUPResult> {
         todo!()
     }
@@ -30,6 +32,7 @@ impl Display for Shifter {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<HUPResult> for Shifter {
     fn from(hupr: HUPResult) -> Self {
         let masked = Masked::from(hupr);
@@ -38,6 +41,7 @@ impl From<HUPResult> for Shifter {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<&HUPResult> for Shifter {
     fn from(hupr: &HUPResult) -> Self {
         let masked = Masked::from(hupr);
@@ -84,6 +88,7 @@ mod arrays__matchups__masks__shift_tests {
     use crate::bard::Bard;
     use std::str::FromStr;
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn hupr() -> HUPResult {
         HUPResult {
             higher: Bard::from(Two::HAND_AD_TD),
@@ -96,6 +101,7 @@ mod arrays__matchups__masks__shift_tests {
         }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn shifts() {
         // A♦ T♦ (1108295) 5♥ 4♠ (595903) ties: (8106)
@@ -129,6 +135,7 @@ mod arrays__matchups__masks__shift_tests {
     }
 
     /// This shift looked sus af, which it was, which is why I wrote this test.
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn from_hup_result() {
         let hupr = hupr();

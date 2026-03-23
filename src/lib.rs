@@ -519,6 +519,7 @@ impl Display for PKError {
 
 impl Error for PKError {}
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<rusqlite::Error> for PKError {
     fn from(err: rusqlite::Error) -> Self {
         log::error!("{err}");

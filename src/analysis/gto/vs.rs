@@ -1,7 +1,6 @@
 use crate::analysis::gto::combos::Combos;
 use crate::analysis::gto::odds::WinLoseDraw;
 use crate::analysis::gto::twos::Twos;
-use crate::analysis::store::db::hup::HUPResult;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::play::board::Board;
@@ -9,8 +8,12 @@ use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
 use crate::play::stages::flop_eval::FlopEval;
 use crate::{GTO, SOK};
-use rusqlite::Connection;
 use std::collections::HashMap;
+
+#[cfg(not(target_arch = "wasm32"))]
+use crate::analysis::store::db::hup::HUPResult;
+#[cfg(not(target_arch = "wasm32"))]
+use rusqlite::Connection;
 use std::fmt::Display;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
@@ -35,6 +38,7 @@ impl Versus {
         Versus { hero, villain, board }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
     pub fn combined_odds_at_deal(hups: &[&HUPResult]) -> WinLoseDraw {
         hups.iter().fold(WinLoseDraw::default(), |acc, hup| acc + hup.odds)
@@ -97,6 +101,7 @@ impl Versus {
         &self.hero
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn hups_at_deal(&self, conn: &Connection) -> HashMap<Two, HUPResult> {
         let mut hm: HashMap<Two, HUPResult> = HashMap::new();
 
@@ -121,6 +126,7 @@ impl Versus {
         hm
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
     pub fn hup_flip(&self, hup: HUPResult) -> HUPResult {
         if Bard::from(self.hero) == hup.higher {

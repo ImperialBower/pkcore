@@ -22,7 +22,19 @@ use pkstate::act::Action;
 use seats::seat::Seat;
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
+#[cfg(not(target_arch = "wasm32"))]
 use termion::color;
+#[cfg(target_arch = "wasm32")]
+mod color {
+    pub struct Fg<T>(pub T);
+    impl<T> std::fmt::Display for Fg<T> {
+        fn fmt(&self, _f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            Ok(())
+        }
+    }
+    pub struct LightRed;
+    pub struct Reset;
+}
 use uuid::Uuid;
 
 pub mod event;

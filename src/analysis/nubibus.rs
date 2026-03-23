@@ -12,7 +12,26 @@ use std::fs;
 use std::ops::Index;
 use std::path::Path;
 use std::str::FromStr;
+#[cfg(not(target_arch = "wasm32"))]
 use termion::color;
+#[cfg(target_arch = "wasm32")]
+mod color {
+    pub struct Fg<T>(pub T);
+    impl<T> std::fmt::Display for Fg<T> {
+        fn fmt(&self, _f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            Ok(())
+        }
+    }
+    pub struct Cyan;
+    pub struct LightBlack;
+    pub struct Yellow;
+    pub struct LightBlue;
+    pub struct LightRed;
+    pub struct Green;
+    pub struct LightGreen;
+    pub struct Magenta;
+    pub struct Reset;
+}
 
 /// `nūbĭfĭcus , a, um nubes-facio, - producing clouds`
 ///

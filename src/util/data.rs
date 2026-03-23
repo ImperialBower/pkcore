@@ -1,6 +1,8 @@
 use crate::analysis::eval::Eval;
 use crate::analysis::gto::odds::WinLoseDraw;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::analysis::store::bcm::binary_card_map::SevenFiveBCM;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::analysis::store::db::hup::HUPResult;
 use crate::arrays::five::Five;
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
@@ -145,6 +147,7 @@ impl TestData {
     ///
     /// ¯\_(ツ)_/¯
     #[must_use]
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn spades_royal_flush_bcm() -> SevenFiveBCM {
         SevenFiveBCM::try_from(Seven::from_str("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠").unwrap_or_default()).unwrap_or_default()
     }
@@ -153,6 +156,7 @@ impl TestData {
     ///
     /// ¯\_(ツ)_/¯
     #[must_use]
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn spades_king_high_flush_bcm() -> SevenFiveBCM {
         SevenFiveBCM::try_from(Seven::from_str("K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠").unwrap_or_default()).unwrap_or_default()
     }
@@ -160,6 +164,7 @@ impl TestData {
     /// This data comes from my old [Fudd hup example](https://github.com/ImperialBower/fudd/blob/main/examples/hup.rs)
     /// which was painstakingly slow.
     #[must_use]
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn the_hand_as_hup_result() -> HUPResult {
         HUPResult {
             higher: Bard::SIX_SPADES | Bard::SIX_HEARTS,
@@ -178,6 +183,7 @@ impl TestData {
     }
 
     #[must_use]
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn known_hups() -> Vec<HUPResult> {
         let mut hups: Vec<HUPResult> = vec![HUPResult {
             higher: Two::HAND_AS_AH.bard(),

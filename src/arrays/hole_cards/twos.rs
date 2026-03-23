@@ -1,7 +1,6 @@
 use crate::analysis::case_eval::CaseEval;
 use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
-use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
 use crate::analysis::the_nuts::TheNuts;
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
@@ -9,11 +8,18 @@ use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::{PKError, Pile};
-use rayon::iter::ParallelIterator;
+use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
+
+#[cfg(not(target_arch = "wasm32"))]
+use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
+#[cfg(not(target_arch = "wasm32"))]
+use rayon::iter::ParallelIterator;
+#[cfg(not(target_arch = "wasm32"))]
 use std::sync::mpsc;
-use std::{fmt, thread};
+#[cfg(not(target_arch = "wasm32"))]
+use std::thread;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct StartingHands([Two; 9]);
@@ -26,6 +32,7 @@ impl StartingHands {
     /// # Errors
     ///
     /// If `BC_RANK_HASHMAP` is incapable of parsing the cards passed in.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn bcm_case_eval(&self, case: Five) -> Result<CaseEval, PKError> {
         let mut case_eval = CaseEval::default();
 
@@ -40,6 +47,7 @@ impl StartingHands {
         Ok(case_eval)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     fn process_case(twos: StartingHands, v: Vec<Card>) -> Result<CaseEval, PKError> {
         let case = Five::try_from(v)?;
         let mut case_eval = CaseEval::default();
@@ -62,6 +70,7 @@ impl StartingHands {
     /// # Panics
     ///
     /// If unable to process case
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn bcm_mpsc_case_evals(&self) -> Result<CaseEvals, PKError> {
         let mut case_evals = CaseEvals::default();
         let twos = *self;
@@ -131,6 +140,7 @@ impl StartingHands {
     /// # Panics
     ///
     /// Should not be possible. Fingers crossed
+    #[cfg(not(target_arch = "wasm32"))]
     #[allow(clippy::unwrap_used)]
     pub fn bcm_rayon_case_evals(&self) -> Result<CaseEvals, PKError> {
         let v: Vec<CaseEval> = self

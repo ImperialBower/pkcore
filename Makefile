@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch
+.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm
 
 # Default target
 default: ayce
@@ -29,6 +29,9 @@ help:
 	@echo "  make tree-duplicates - Show duplicate dependencies"
 	@echo "  make deny            - Run full cargo-deny checks"
 	@echo "  make audit           - Run advisory-only security audit"
+	@echo ""
+	@echo "WebAssembly:"
+	@echo "  make check-wasm      - Check the library compiles for wasm32-unknown-unknown"
 	@echo ""
 	@echo "Tools and Workflow:"
 	@echo "  make install-tools   - Install cargo-deny and cargo-udeps"
@@ -128,4 +131,8 @@ watch:
 # Install cargo-watch
 install-watch:
 	cargo install cargo-watch
+
+# Check that the library compiles for WebAssembly
+check-wasm:
+	cargo check --target wasm32-unknown-unknown
 
