@@ -19,6 +19,7 @@ pub use crate::analysis::eval::Eval;
 pub use crate::analysis::evals::Evals;
 pub use crate::analysis::gto::combo::Combo;
 pub use crate::analysis::gto::combo_pairs::ComboPairs;
+pub use crate::analysis::gto::combos::Combos;
 pub use crate::analysis::nubibus::Nubificus;
 pub use crate::analysis::nubibus::Pluribus;
 pub use crate::analysis::nubibus::PluribusEvent;
@@ -90,6 +91,7 @@ pub use crate::play::actions::{ActionTracker, Actor};
 pub use crate::play::phases::PhaseHoldemTracker;
 pub use crate::play::positions::Position6MaxPointer;
 pub use crate::play::stages::deal_eval::DealEval;
+pub use crate::play::stages::flop_eval::FlopEval;
 pub use crate::play::stages::turn_eval::TurnEval;
 
 // games

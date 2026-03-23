@@ -11,6 +11,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
+use std::io::Write;
+use tempfile::NamedTempFile;
 use wincounter::win::Win;
 use wincounter::wins::Wins;
 
@@ -25,6 +27,7 @@ pub struct HUPResult {
 
 impl HUPResult {
     const DEFAULT_DB_PATH: &'static str = "generated/hups.db";
+    const HUPS_DB_BYTES: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/generated/hups.db"));
     const ENV_KEY: &'static str = "HUPS_DB_PATH";
 
     pub fn db_count(conn: &Connection) -> (usize, usize) {
@@ -188,6 +191,18 @@ impl HUPResult {
     #[must_use]
     pub fn get_sorted_heads_up(&self) -> Option<SortedHeadsUp> {
         SortedHeadsUp::try_from(self).ok()
+    }
+
+    /// # Errors
+    ///
+    /// Throws an exception if unable to make a connection.
+    pub fn open_embedded_hups_db() -> Result<(NamedTempFile, Connection), Box<dyn std::error::Error>> {
+        let mut tmp = NamedTempFile::new()?;
+        tmp.write_all(HUPResult::HUPS_DB_BYTES)?;
+        tmp.flush()?;
+
+        let conn = Connection::open(tmp.path())?;
+        Ok((tmp, conn)) // keep tmp alive as long as conn is used
     }
 
     /// # Errors
