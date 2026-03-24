@@ -96,20 +96,23 @@ impl SortedHeadsUp {
 
     /// # Errors
     ///
-    /// Throws `PKError::SqlError` if unable to select from db.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn hup_result(&self, conn: &Connection) -> Result<HUPResult, PKError> {
-        HUPResult::from_db(conn, &self.higher, &self.lower)
-    }
-
-    /// Look up heads-up preflop odds from the embedded binary cache (WASM only).
+    /// Look up heads-up preflop odds from the embedded binary cache.
     ///
     /// # Errors
     ///
     /// Returns `PKError::SqlError` if the matchup is not found in the embedded cache.
-    #[cfg(target_arch = "wasm32")]
     pub fn hup_result(&self) -> Result<HUPResult, PKError> {
         HUPResult::lookup(&self.higher, &self.lower)
+    }
+
+    /// Look up heads-up preflop odds directly from a `SQLite` connection.
+    ///
+    /// # Errors
+    ///
+    /// Throws `PKError::SqlError` if unable to select from db.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn hup_result_from_db(&self, conn: &Connection) -> Result<HUPResult, PKError> {
+        HUPResult::from_db(conn, &self.higher, &self.lower)
     }
 
     /// ## Aside

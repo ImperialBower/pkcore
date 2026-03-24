@@ -17,10 +17,6 @@ use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 #[cfg(not(target_arch = "wasm32"))]
 use std::fs::File;
-#[cfg(not(target_arch = "wasm32"))]
-use std::io::Write;
-#[cfg(not(target_arch = "wasm32"))]
-use tempfile::NamedTempFile;
 use wincounter::win::Win;
 use wincounter::wins::Wins;
 
@@ -36,8 +32,6 @@ pub struct HUPResult {
 impl HUPResult {
     #[cfg(not(target_arch = "wasm32"))]
     const DEFAULT_DB_PATH: &'static str = "generated/hups.db";
-    #[cfg(not(target_arch = "wasm32"))]
-    const HUPS_DB_BYTES: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/generated/hups.db"));
     #[cfg(not(target_arch = "wasm32"))]
     const ENV_KEY: &'static str = "HUPS_DB_PATH";
 
@@ -78,7 +72,6 @@ impl HUPResult {
     /// # Errors
     ///
     /// Returns `PKError::SqlError` if the matchup is not found in the embedded cache.
-    #[cfg(target_arch = "wasm32")]
     pub fn lookup(from: &Two, to: &Two) -> Result<Self, PKError> {
         use crate::analysis::store::embedded::hup_cache;
         let shu = SortedHeadsUp::new(*from, *to);
@@ -226,19 +219,6 @@ impl HUPResult {
     #[must_use]
     pub fn get_sorted_heads_up(&self) -> Option<SortedHeadsUp> {
         SortedHeadsUp::try_from(self).ok()
-    }
-
-    /// # Errors
-    ///
-    /// Throws an exception if unable to make a connection.
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn open_embedded_hups_db() -> Result<(NamedTempFile, Connection), Box<dyn std::error::Error>> {
-        let mut tmp = NamedTempFile::new()?;
-        tmp.write_all(HUPResult::HUPS_DB_BYTES)?;
-        tmp.flush()?;
-
-        let conn = Connection::open(tmp.path())?;
-        Ok((tmp, conn)) // keep tmp alive as long as conn is used
     }
 
     /// # Errors

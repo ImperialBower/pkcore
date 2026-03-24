@@ -99,13 +99,34 @@ impl Versus {
         &self.hero
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn hups_at_deal(&self, conn: &Connection) -> HashMap<Two, HUPResult> {
+    #[must_use]
+    pub fn hups_at_deal(&self) -> HashMap<Two, HUPResult> {
         let mut hm: HashMap<Two, HUPResult> = HashMap::new();
 
-        let remaining = self.explode();
+        for two in &self.explode().to_vec() {
+            match HUPResult::lookup(&self.hero, two) {
+                Ok(hup) => {
+                    hm.insert(*two, self.hup_flip(hup));
+                }
+                Err(e) => {
+                    log::error!(
+                        "Error retrieving HUPResult for hero {} and villain {}: {}",
+                        self.hero,
+                        two,
+                        e
+                    );
+                }
+            }
+        }
+        hm
+    }
 
-        for two in &remaining.to_vec() {
+    /// Look up heads-up preflop odds for all villain hands directly from a `SQLite` connection.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn hups_at_deal_from_db(&self, conn: &Connection) -> HashMap<Two, HUPResult> {
+        let mut hm: HashMap<Two, HUPResult> = HashMap::new();
+
+        for two in &self.explode().to_vec() {
             let hup = HUPResult::from_db(conn, &self.hero, two);
             match hup {
                 Ok(hup) => {
@@ -131,28 +152,6 @@ impl Versus {
         } else {
             hup.flip_mode()
         }
-    }
-
-    #[cfg(target_arch = "wasm32")]
-    pub fn hups_at_deal(&self) -> HashMap<Two, HUPResult> {
-        let mut hm: HashMap<Two, HUPResult> = HashMap::new();
-
-        for two in &self.explode().to_vec() {
-            match HUPResult::lookup(&self.hero, two) {
-                Ok(hup) => {
-                    hm.insert(*two, self.hup_flip(hup));
-                }
-                Err(e) => {
-                    log::error!(
-                        "Error retrieving HUPResult for hero {} and villain {}: {}",
-                        self.hero,
-                        two,
-                        e
-                    );
-                }
-            }
-        }
-        hm
     }
 
     #[must_use]
