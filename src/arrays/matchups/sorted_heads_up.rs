@@ -1,6 +1,5 @@
 #[cfg(not(target_arch = "wasm32"))]
 use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
-#[cfg(not(target_arch = "wasm32"))]
 use crate::analysis::store::db::hup::HUPResult;
 use crate::analysis::the_nuts::TheNuts;
 use crate::arrays::five::Five;
@@ -101,6 +100,16 @@ impl SortedHeadsUp {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn hup_result(&self, conn: &Connection) -> Result<HUPResult, PKError> {
         HUPResult::from_db(conn, &self.higher, &self.lower)
+    }
+
+    /// Look up heads-up preflop odds from the embedded binary cache (WASM only).
+    ///
+    /// # Errors
+    ///
+    /// Returns `PKError::SqlError` if the matchup is not found in the embedded cache.
+    #[cfg(target_arch = "wasm32")]
+    pub fn hup_result(&self) -> Result<HUPResult, PKError> {
+        HUPResult::lookup(&self.higher, &self.lower)
     }
 
     /// ## Aside
@@ -748,7 +757,6 @@ impl Display for SortedHeadsUp {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl From<HUPResult> for SortedHeadsUp {
     fn from(hup: HUPResult) -> Self {
         SortedHeadsUp::new(
@@ -867,7 +875,6 @@ impl TryFrom<Cards> for SortedHeadsUp {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl TryFrom<&HUPResult> for SortedHeadsUp {
     type Error = PKError;
 

@@ -10,7 +10,6 @@ use crate::play::stages::flop_eval::FlopEval;
 use crate::{GTO, SOK};
 use std::collections::HashMap;
 
-#[cfg(not(target_arch = "wasm32"))]
 use crate::analysis::store::db::hup::HUPResult;
 #[cfg(not(target_arch = "wasm32"))]
 use rusqlite::Connection;
@@ -38,7 +37,6 @@ impl Versus {
         Versus { hero, villain, board }
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
     pub fn combined_odds_at_deal(hups: &[&HUPResult]) -> WinLoseDraw {
         hups.iter().fold(WinLoseDraw::default(), |acc, hup| acc + hup.odds)
@@ -126,7 +124,6 @@ impl Versus {
         hm
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
     pub fn hup_flip(&self, hup: HUPResult) -> HUPResult {
         if Bard::from(self.hero) == hup.higher {
@@ -134,6 +131,28 @@ impl Versus {
         } else {
             hup.flip_mode()
         }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn hups_at_deal(&self) -> HashMap<Two, HUPResult> {
+        let mut hm: HashMap<Two, HUPResult> = HashMap::new();
+
+        for two in &self.explode().to_vec() {
+            match HUPResult::lookup(&self.hero, two) {
+                Ok(hup) => {
+                    hm.insert(*two, self.hup_flip(hup));
+                }
+                Err(e) => {
+                    log::error!(
+                        "Error retrieving HUPResult for hero {} and villain {}: {}",
+                        self.hero,
+                        two,
+                        e
+                    );
+                }
+            }
+        }
+        hm
     }
 
     #[must_use]

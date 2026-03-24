@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm
+.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm generate-hups-bin
 
 # Default target
 default: ayce
@@ -31,7 +31,8 @@ help:
 	@echo "  make audit           - Run advisory-only security audit"
 	@echo ""
 	@echo "WebAssembly:"
-	@echo "  make check-wasm      - Check the library compiles for wasm32-unknown-unknown"
+	@echo "  make check-wasm         - Check the library compiles for wasm32-unknown-unknown"
+	@echo "  make generate-hups-bin  - Generate generated/hups.bin for WASM embedded store"
 	@echo ""
 	@echo "Tools and Workflow:"
 	@echo "  make install-tools   - Install cargo-deny and cargo-udeps"
@@ -135,4 +136,8 @@ install-watch:
 # Check that the library compiles for WebAssembly
 check-wasm:
 	cargo check --target wasm32-unknown-unknown
+
+# Generate the embedded HUP binary store for WASM builds
+generate-hups-bin:
+	cargo run --example export_hups_bin
 
