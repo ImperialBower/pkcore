@@ -1,4 +1,3 @@
-#[cfg(not(target_arch = "wasm32"))]
 use crate::analysis::store::db::hup::HUPResult;
 use crate::arrays::matchups::masks::rank_mask::RankMask;
 use crate::arrays::matchups::masks::suit_mask::SuitMask;
@@ -456,14 +455,12 @@ impl Display for Masked {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl From<HUPResult> for Masked {
     fn from(hup: HUPResult) -> Self {
         Masked::from(&hup)
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 impl From<&HUPResult> for Masked {
     #[allow(clippy::unwrap_used)]
     fn from(hup: &HUPResult) -> Self {

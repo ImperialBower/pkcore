@@ -44,11 +44,7 @@ fn main() -> Result<(), PKError> {
     println!("{}", solver.combo_pairs());
     println!();
 
-    // let conn = Connection::open("generated/hups.db").unwrap();
-
-    let (_tmp, conn) = HUPResult::open_embedded_hups_db().unwrap();
-
-    let hups = solver.hups_at_deal(&conn);
+    let hups = solver.hups_at_deal();
 
     println!("Odds per hand matchup:");
     for key in hups.keys() {

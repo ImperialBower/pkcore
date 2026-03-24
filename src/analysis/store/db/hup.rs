@@ -1,18 +1,22 @@
 use crate::analysis::gto::odds::WinLoseDraw;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::analysis::store::db::sqlite::Sqlable;
-use crate::arrays::matchups::masked::{MASKED_DISTINCT, MASKED_UNIQUE, Masked};
+use crate::arrays::matchups::masked::Masked;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::arrays::matchups::masked::{MASKED_DISTINCT, MASKED_UNIQUE};
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::{PKError, Pile, Shifty, SuitShift};
+#[cfg(not(target_arch = "wasm32"))]
 use csv::{Reader, WriterBuilder};
+#[cfg(not(target_arch = "wasm32"))]
 use rusqlite::{Connection, Statement, named_params};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
+#[cfg(not(target_arch = "wasm32"))]
 use std::fs::File;
-use std::io::Write;
-use tempfile::NamedTempFile;
 use wincounter::win::Win;
 use wincounter::wins::Wins;
 
@@ -26,10 +30,12 @@ pub struct HUPResult {
 }
 
 impl HUPResult {
+    #[cfg(not(target_arch = "wasm32"))]
     const DEFAULT_DB_PATH: &'static str = "generated/hups.db";
-    const HUPS_DB_BYTES: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/generated/hups.db"));
+    #[cfg(not(target_arch = "wasm32"))]
     const ENV_KEY: &'static str = "HUPS_DB_PATH";
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn db_count(conn: &Connection) -> (usize, usize) {
         let all = HUPResult::select_all(conn);
         let len = all.len();
@@ -40,11 +46,13 @@ impl HUPResult {
         (len, hs.len())
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn db_is_valid(conn: &Connection) -> bool {
         let (v, hs) = HUPResult::db_count(conn);
         v == hs
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
     pub fn db_path() -> String {
         dotenvy::var(Self::ENV_KEY).unwrap_or_else(|_| Self::DEFAULT_DB_PATH.to_string())
@@ -53,9 +61,27 @@ impl HUPResult {
     /// # Errors
     ///
     /// Throws `PKError::SqlError` if unable to select from db.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn from_db(conn: &Connection, from: &Two, to: &Two) -> Result<HUPResult, PKError> {
         let shu = SortedHeadsUp::new(*from, *to);
         HUPResult::select(conn, &shu).ok_or(PKError::SqlError)
+    }
+
+    /// Look up heads-up preflop odds from the embedded binary cache (WASM only).
+    ///
+    /// # Errors
+    ///
+    /// Returns `PKError::SqlError` if the matchup is not found in the embedded cache.
+    pub fn lookup(from: &Two, to: &Two) -> Result<Self, PKError> {
+        use crate::analysis::store::embedded::hup_cache;
+        let shu = SortedHeadsUp::new(*from, *to);
+        hup_cache::lookup_odds(shu.higher_as_bard().as_u64(), shu.lower_as_bard().as_u64())
+            .map(|odds| Self {
+                higher: shu.higher_as_bard(),
+                lower: shu.lower_as_bard(),
+                odds,
+            })
+            .ok_or(PKError::SqlError)
     }
 
     #[must_use]
@@ -172,6 +198,7 @@ impl HUPResult {
     /// # Errors
     ///
     /// Unable to create csv file.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn generate_csv_from_hash_set(path: &str, hups: HashSet<HUPResult>) -> Result<(), Box<dyn std::error::Error>> {
         HUPResult::generate_csv_from_vector(path, &Vec::from_iter(hups))
     }
@@ -179,6 +206,7 @@ impl HUPResult {
     /// # Errors
     ///
     /// Unable to create csv file.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn generate_csv_from_vector(path: &str, hups: &[HUPResult]) -> Result<(), Box<dyn std::error::Error>> {
         let mut wtr = WriterBuilder::new().has_headers(true).from_path(path)?;
         for hup in hups {
@@ -195,19 +223,8 @@ impl HUPResult {
 
     /// # Errors
     ///
-    /// Throws an exception if unable to make a connection.
-    pub fn open_embedded_hups_db() -> Result<(NamedTempFile, Connection), Box<dyn std::error::Error>> {
-        let mut tmp = NamedTempFile::new()?;
-        tmp.write_all(HUPResult::HUPS_DB_BYTES)?;
-        tmp.flush()?;
-
-        let conn = Connection::open(tmp.path())?;
-        Ok((tmp, conn)) // keep tmp alive as long as conn is used
-    }
-
-    /// # Errors
-    ///
     /// Returns error if unable to open connection.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn open_connection() -> rusqlite::Result<Connection> {
         Connection::open(Self::db_path())
     }
@@ -219,6 +236,7 @@ impl HUPResult {
     /// # Panics
     ///
     /// Unable to close connection
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn read_db(path: &str) -> rusqlite::Result<Vec<HUPResult>> {
         let conn = Connection::open(path)?;
         let hups = HUPResult::select_all(&conn);
@@ -231,11 +249,13 @@ impl HUPResult {
     /// # Errors
     ///
     /// Returns error if db contains duplicate entries..
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn check_db(conn: &Connection) -> Result<usize, PKError> {
         let (v, hs) = HUPResult::db_count(conn);
         if v == hs { Ok(v) } else { Err(PKError::DuplicateCard) }
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn select_from_shifts(conn: &Connection, masked: &Masked) -> Option<HUPResult> {
         for shift in masked.shifts() {
             match HUPResult::select(conn, &shift.shu) {
@@ -248,6 +268,7 @@ impl HUPResult {
         None
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn remaining(conn: &Connection, mut hands: HashSet<Masked>) -> HashSet<Masked> {
         let hups = HUPResult::select_all(conn);
         for hup in hups {
@@ -256,11 +277,13 @@ impl HUPResult {
         hands
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn distinct_remaining(conn: &Connection) -> HashSet<Masked> {
         let distinct = MASKED_DISTINCT.clone();
         HUPResult::remaining(conn, distinct)
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn unique_remaining(conn: &Connection) -> HashSet<Masked> {
         let distinct = MASKED_UNIQUE.clone();
         HUPResult::remaining(conn, distinct)
@@ -277,6 +300,7 @@ impl HUPResult {
     ///
     /// * Throws `PKError::InvalidBinaryFormat` if the csv file is corrupted.
     /// * Throws `PKError::Fubar` if unable to open at all.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn read_csv(path: &str) -> Result<Vec<HUPResult>, PKError> {
         match File::open(path) {
             Ok(file) => {
@@ -348,6 +372,7 @@ impl Display for HUPResult {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<&SortedHeadsUp> for HUPResult {
     /// Clippy doesn't like our higher lower section. Normally, this is a
     /// lint I turn off, but let's do it.
@@ -394,6 +419,7 @@ impl From<&SortedHeadsUp> for HUPResult {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
     fn create_table(conn: &Connection) -> rusqlite::Result<usize> {
         log::debug!("HUPResult::create_table({conn:?})");
@@ -692,13 +718,16 @@ impl Shifty for HUPResult {
 #[allow(non_snake_case)]
 mod analysis__store__db__hupresult_tests {
     use super::*;
+    #[cfg(not(target_arch = "wasm32"))]
     use crate::analysis::store::db::sqlite::Connect;
     use crate::arrays::two::Two;
     use crate::util::data::TestData;
     use std::str::FromStr;
 
+    #[cfg(not(target_arch = "wasm32"))]
     const SAMPLE_DB_PATH: &str = "data/sample_hups.db";
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn db_count() {
         let conn = Connection::open(SAMPLE_DB_PATH).unwrap();
@@ -707,6 +736,7 @@ mod analysis__store__db__hupresult_tests {
         conn.close().unwrap();
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn db_is_valid() {
         let conn = Connection::open(SAMPLE_DB_PATH).unwrap();
@@ -852,6 +882,7 @@ mod analysis__store__db__hupresult_tests {
         );
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn sqlable__create_table() {
         let conn = Connect::in_memory_connection().unwrap().connection;
@@ -859,6 +890,7 @@ mod analysis__store__db__hupresult_tests {
         conn.close().unwrap();
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn sqlable__exists() {
         // Preamble
@@ -889,6 +921,7 @@ mod analysis__store__db__hupresult_tests {
     ///     },
     /// };
     /// ```
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn sqlable__insert() {
         let conn = Connect::in_memory_connection().unwrap().connection;
@@ -904,6 +937,7 @@ mod analysis__store__db__hupresult_tests {
         conn.close().unwrap();
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn sqlable__select() {
         let conn = Connect::in_memory_connection().unwrap().connection;
@@ -919,6 +953,7 @@ mod analysis__store__db__hupresult_tests {
         conn.close().unwrap()
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn sqlable__select_all() {
         let conn = Connect::in_memory_connection().unwrap().connection;

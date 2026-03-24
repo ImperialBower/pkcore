@@ -106,7 +106,6 @@ pub use crate::casino::table::showdown::Showdown;
 #[cfg(not(target_arch = "wasm32"))]
 pub use crate::analysis::store::bcm::binary_card_map::{FiveBCM, SevenFiveBCM};
 pub use crate::analysis::store::bcm::index_card_map::IndexCardMap;
-#[cfg(not(target_arch = "wasm32"))]
 pub use crate::analysis::store::db::hup::HUPResult;
 #[cfg(not(target_arch = "wasm32"))]
 pub use crate::analysis::store::db::sqlite::Connect;
