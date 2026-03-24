@@ -1,4 +1,6 @@
+#[cfg(not(target_arch = "wasm32"))]
 use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
+#[cfg(not(target_arch = "wasm32"))]
 use crate::analysis::store::db::hup::HUPResult;
 use crate::analysis::the_nuts::TheNuts;
 use crate::arrays::five::Five;
@@ -10,6 +12,7 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::{PKError, Pile, Shifty, SuitShift};
 use csv::{Reader, WriterBuilder};
+#[cfg(not(target_arch = "wasm32"))]
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -95,6 +98,7 @@ impl SortedHeadsUp {
     /// # Errors
     ///
     /// Throws `PKError::SqlError` if unable to select from db.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn hup_result(&self, conn: &Connection) -> Result<HUPResult, PKError> {
         HUPResult::from_db(conn, &self.higher, &self.lower)
     }
@@ -109,6 +113,7 @@ impl SortedHeadsUp {
     /// # Errors
     ///
     /// If the connection to the database fails, or if the query fails.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn hup_result_from_shift(&self, _conn: &Connection) -> Result<HUPResult, PKError> {
         let _shifts = self.shifts();
         todo!()
@@ -707,6 +712,7 @@ impl SortedHeadsUp {
     /// # Errors
     ///
     /// Throws `PKError` when unable to cast cards correctly.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn wins(&self) -> Result<Wins, PKError> {
         let mut wins = Wins::default();
 
@@ -742,6 +748,7 @@ impl Display for SortedHeadsUp {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl From<HUPResult> for SortedHeadsUp {
     fn from(hup: HUPResult) -> Self {
         SortedHeadsUp::new(
@@ -860,6 +867,7 @@ impl TryFrom<Cards> for SortedHeadsUp {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl TryFrom<&HUPResult> for SortedHeadsUp {
     type Error = PKError;
 
@@ -1197,6 +1205,7 @@ mod arrays__matchups__sorted_heads_up_tests {
         );
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn try_from__hup_result() {}
 }

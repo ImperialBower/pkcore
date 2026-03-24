@@ -1,11 +1,20 @@
 use crate::PKError;
-use crate::analysis::gto::combos::Combos;
-use crate::cards::Cards;
-use crate::prelude::HoleCards;
-use rand::prelude::*;
-use std::io::{Write, stdin, stdout};
+#[cfg(not(target_arch = "wasm32"))]
 use std::str::FromStr;
+
+#[cfg(not(target_arch = "wasm32"))]
+use crate::analysis::gto::combos::Combos;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::cards::Cards;
+#[cfg(not(target_arch = "wasm32"))]
+use crate::prelude::HoleCards;
+#[cfg(not(target_arch = "wasm32"))]
+use rand::prelude::*;
+#[cfg(not(target_arch = "wasm32"))]
+use std::io::{Write, stdin, stdout};
+#[cfg(not(target_arch = "wasm32"))]
 use termion::input::TermRead;
+#[cfg(not(target_arch = "wasm32"))]
 use termion::raw::IntoRawMode;
 
 pub struct Terminal;
@@ -32,6 +41,7 @@ impl Terminal {
     /// # Errors
     ///
     /// If unable to read input.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn pause(prompt: &str) -> std::io::Result<()> {
         let mut stdout = stdout().into_raw_mode()?;
         write!(stdout, "{prompt}")?;
@@ -42,6 +52,13 @@ impl Terminal {
         Ok(())
     }
 
+    #[cfg(target_arch = "wasm32")]
+    #[must_use]
+    pub fn random_happy() -> char {
+        '😀'
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
     pub fn random_happy() -> char {
         let happy_faces = [
@@ -52,6 +69,13 @@ impl Terminal {
         happy_faces[random_index]
     }
 
+    #[cfg(target_arch = "wasm32")]
+    #[must_use]
+    pub fn random_sad() -> char {
+        '😢'
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
     pub fn random_sad() -> char {
         let sad_faces = [
@@ -65,6 +89,7 @@ impl Terminal {
     /// # Panics
     ///
     /// If it somehow wigs out on the input.
+    #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
     pub fn receive_cards(prompt: &str) -> Option<Cards> {
         print!("{prompt}");
@@ -79,6 +104,7 @@ impl Terminal {
     ///
     /// `PKError::InvalidIndex` if `str` doesn't translate into `Cards`
     /// `PKError::InvalidCardCount` if number of cards isn't divisible by two
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn receive_cards_in_twos(prompt: &str) -> Result<HoleCards, PKError> {
         let Some(cards) = Terminal::receive_cards(prompt) else {
             return Err(PKError::InvalidCardIndex);
@@ -90,6 +116,7 @@ impl Terminal {
     /// # Errors
     ///
     /// TODO
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn receive_range(prompt: &str) -> Result<Combos, PKError> {
         print!("{prompt}");
         Combos::from_str(prompt)
@@ -103,6 +130,7 @@ impl Terminal {
     /// # Panics
     ///
     /// If it somehow wigs out on the input.
+    #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
     #[allow(clippy::expect_used)]
     pub fn receive_usize(prompt: &str) -> usize {
@@ -119,6 +147,7 @@ impl Terminal {
     /// `PKError::NotEnoughCards` if `Cards` is less than `x`.
     /// `PKError::TooManyCards` if `Cards` is greater than `x`.
     /// `PKError::InvalidIndex` if the string entered isn't a valid `Cards` index.
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn receive_x_cards(prompt: &str, x: usize) -> Result<Cards, PKError> {
         if x < 1 {
             return Err(PKError::NotEnoughCards);
