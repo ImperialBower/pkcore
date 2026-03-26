@@ -2133,4 +2133,9 @@ mod casino__table_tests {
         );
         Ok(())
     }
+
+    #[test]
+    fn min_increment() {
+
+    }
 }
