@@ -134,6 +134,7 @@ pub struct Table {
     pub muck: CardsCell,
     pub pot: Stack,
     pub bet: Cell<usize>,
+    pub raise_increment: Cell<usize>,
     pub event_log: TableLog,
 }
 
@@ -211,6 +212,7 @@ impl Table {
             muck: CardsCell::default(),
             pot: Stack::default(),
             bet: Cell::new(forced.big_blind),
+            raise_increment: Cell::new(0),
             event_log,
         }
     }
@@ -346,6 +348,7 @@ impl Table {
 
         match self.seats.act_bet(seat_number, amount) {
             Ok(remaining) => {
+                self.set_raise_increment(seat_number, amount)?;
                 self.bet.set(amount);
                 self.log_info(TableAction::Bet(seat_number, amount));
                 self.action_to_next();
@@ -529,6 +532,7 @@ impl Table {
 
         match self.seats.act_raise(seat_number, amount) {
             Ok(remaining) => {
+                self.set_raise_increment(seat_number, amount - self.bet.get())?;
                 self.bet.set(amount);
                 self.log_info(TableAction::Raise(seat_number, amount));
                 // self.action_to.up();
@@ -536,6 +540,25 @@ impl Table {
             }
             Err(e) => Err(e),
         }
+    }
+
+    /// # Errors
+    ///
+    /// `PKError::InsufficientIncrement` if the raise amount is less than the minimum raise
+    pub fn set_raise_increment(&self, seat_number: u8, amount: usize) -> Result<(), PKError> {
+        match self.get_seat(seat_number) {
+            None => {}
+            Some(seat) => {
+                if !seat.is_all_in() {
+                    if amount < self.min_raise() {
+                        return Err(PKError::InsufficientIncrement);
+                    }
+                    self.raise_increment.set(amount);
+                }
+            }
+        }
+
+        Ok(())
     }
 
     pub fn act_shuffle_deck(&self) {
@@ -561,6 +584,8 @@ impl Table {
         }
         let _ = self.bet.take();
         let brought_in = self.seats.bring_it_in()?;
+        // Reset the raise increment at the end of the round
+        self.raise_increment.set(0);
         self.log_info(TableAction::BringItIn(brought_in.count()));
         self.pot.add_to(brought_in);
         self.log_debug(TableAction::PotSize(self.pot.count()));
@@ -1179,8 +1204,12 @@ impl Table {
     }
 
     #[must_use]
-    pub fn min_bet(&self) -> usize {
-        self.forced.big_blind
+    pub fn min_raise(&self) -> usize {
+        if self.raise_increment.get() > 0 {
+            self.raise_increment.get()
+        } else {
+            self.forced.big_blind
+        }
     }
 
     /// Returns the minimum number of dealt cards among all seats. Used to determine the next player
@@ -1290,10 +1319,6 @@ impl Table {
         self.seats.are_dealt()
     }
 
-    // pub fn set_action_to(&self, seat_number: u8) {
-    //     self.action_to.set(seat_number);
-    // }
-
     pub fn set_board(&self, cards: Cards) {
         let _ = self.board.take();
         self.deck.remove_all(&CardsCell::from(&cards));
@@ -1381,6 +1406,7 @@ impl Default for Table {
             muck: CardsCell::default(),
             pot: Stack::default(),
             bet: Cell::new(0),
+            raise_increment: Cell::new(0),
             event_log: TableLog::default(),
         }
     }
@@ -1917,7 +1943,7 @@ mod casino__table_tests {
     fn is_betting_started_true_when_any_in_hand_player_has_bet() {
         let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 
-        table.act_bet(0, 100).unwrap();
+        table.act_bet(0, 200).unwrap();
 
         assert!(table.is_betting_started());
     }
@@ -2135,7 +2161,25 @@ mod casino__table_tests {
     }
 
     #[test]
-    fn min_increment() {
+    fn min_raise() {
+        let table = TestData::split_pot_table(&cc!(
+            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣"
+        ));
+        table.act_forced_bets().unwrap();
+        assert_eq!(100, table.min_raise());
 
+        table.act_bet(0, 200).expect("raises to 200");
+        assert_eq!(200, table.min_raise());
+
+        table.act_raise(1, 400).expect("raises to 400");
+        assert_eq!(200, table.raise_increment.get());
+        assert_eq!(200, table.min_raise());
+
+        table.act_raise(2, 701).expect("raises to 701");
+        assert_eq!(301, table.raise_increment.get());
+        assert_eq!(301, table.min_raise());
+
+        let bad_raise = table.act_raise(0, 802);
+        assert!(bad_raise.is_err());
     }
 }
