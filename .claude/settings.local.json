@@ -3,7 +3,8 @@
     "allow": [
       "Bash(find /Users/gaoler/src/github.com/folkengine/pkcore/src/analysis/store -type f -name \"*.rs\" -exec wc -l {} +)",
       "Bash(cargo check:*)",
-      "Bash(cargo test:*)"
+      "Bash(cargo test:*)",
+      "Bash(cargo build:*)"
     ]
   }
 }

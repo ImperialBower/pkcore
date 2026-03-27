@@ -7,28 +7,35 @@ use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::{PKError, Pile};
-use csv::Reader;
 use csv::WriterBuilder;
 use rusqlite::{Connection, named_params};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
+use std::io::{BufReader, BufWriter, Read, Write};
 
 /// This code is brutal, heavy, and wonderful. It is an optimization that makes things much slower
 /// in the short term, and MUCH faster in the long term. Eventually, we will want containers that
 /// have all this stuff loaded for bear. We're not there yet.
 ///
+/// Reads from a zstd-compressed binary file (`generated/bcm.zst`) containing 18-byte records:
+/// 8 bytes bc (u64 LE) + 8 bytes best (u64 LE) + 2 bytes rank (u16 LE).
+///
 /// TODO TD: Add logging
 #[allow(clippy::unwrap_used)]
 pub static BC_RANK_HASHMAP: std::sync::LazyLock<HashMap<Bard, FiveBCM>> = std::sync::LazyLock::new(|| {
     let mut m = HashMap::new();
-    let file = File::open(SevenFiveBCM::get_csv_filepath()).unwrap();
-    let mut rdr = Reader::from_reader(file);
+    let file = File::open(SevenFiveBCM::get_filepath()).unwrap();
+    let decoder = zstd::stream::read::Decoder::new(file).unwrap();
+    let mut reader = BufReader::new(decoder);
 
-    for result in rdr.deserialize() {
-        let bcm: SevenFiveBCM = result.unwrap();
-        m.insert(bcm.bc, FiveBCM::from(bcm));
+    let mut buf = [0u8; 18];
+    while reader.read_exact(&mut buf).is_ok() {
+        let bc = Bard::from(u64::from_le_bytes(buf[0..8].try_into().unwrap()));
+        let best = Bard::from(u64::from_le_bytes(buf[8..16].try_into().unwrap()));
+        let rank = u16::from_le_bytes([buf[16], buf[17]]);
+        m.insert(bc, FiveBCM::new(best, rank));
     }
     m
 });
@@ -132,20 +139,65 @@ pub struct SevenFiveBCM {
 }
 
 impl SevenFiveBCM {
-    /// This file is a little under 5GB in size. Please ask the author for a link
-    /// if you don't want to generate it yourself with the `examples/generate_bcm.rs` utility.
-    /// TBH, I don't remember how long it took to generate.
+    /// Default path for the zstd-compressed binary BCM file (~300–600 MB).
+    /// Override with the `PKCORE_75BCM_PATH` environment variable.
+    pub const DEFAULT_PKCORE_75BCM_PATH: &'static str = "generated/bcm.zst";
+
+    /// Default path for the legacy CSV BCM file (~5 GB).
+    /// Override with the `PKCORE_75BCM_CSV_PATH` environment variable.
     pub const DEFAULT_PKCORE_75BCM_CSV_PATH: &'static str = "generated/bcm.csv";
 
+    /// Returns the path to the binary BCM file, using `PKCORE_75BCM_PATH` if set.
+    #[must_use]
+    pub fn get_filepath() -> String {
+        std::env::var("PKCORE_75BCM_PATH").unwrap_or_else(|_| SevenFiveBCM::DEFAULT_PKCORE_75BCM_PATH.to_string())
+    }
+
+    /// Returns the path to the legacy CSV BCM file, using `PKCORE_75BCM_CSV_PATH` if set.
     #[must_use]
     pub fn get_csv_filepath() -> String {
         std::env::var("PKCORE_75BCM_CSV_PATH")
             .unwrap_or_else(|_| SevenFiveBCM::DEFAULT_PKCORE_75BCM_CSV_PATH.to_string())
     }
 
-    /// OK, this is the old school way of generating serialized data. Next step
-    /// is to try to do the same with an embedded DB like
-    /// [sled](https://github.com/spacejam/sled).
+    /// Generates a zstd-compressed binary BCM file at `path`.
+    ///
+    /// Each record is 18 bytes: 8 bytes `bc` (u64 LE) + 8 bytes `best` (u64 LE) +
+    /// 2 bytes `rank` (u16 LE). The resulting file is typically ~300–600 MB, compared
+    /// to ~5 GB for the equivalent CSV.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be created or if card combinations are invalid.
+    pub fn generate_bin(path: &str) -> Result<(), Box<dyn Error>> {
+        let file = File::create(path)?;
+        let mut encoder = zstd::stream::write::Encoder::new(BufWriter::new(file), 0)?;
+
+        let deck = Cards::deck();
+
+        for b in deck.combinations(5) {
+            if let Ok(bcm) = SevenFiveBCM::try_from(b) {
+                encoder.write_all(&bcm.bc.as_u64().to_le_bytes())?;
+                encoder.write_all(&bcm.best.as_u64().to_le_bytes())?;
+                encoder.write_all(&bcm.rank.to_le_bytes())?;
+            }
+        }
+
+        for b in deck.combinations(7) {
+            if let Ok(bcm) = SevenFiveBCM::try_from(b) {
+                encoder.write_all(&bcm.bc.as_u64().to_le_bytes())?;
+                encoder.write_all(&bcm.best.as_u64().to_le_bytes())?;
+                encoder.write_all(&bcm.rank.to_le_bytes())?;
+            }
+        }
+
+        encoder.finish()?;
+        Ok(())
+    }
+
+    /// Generates a CSV BCM file at `path` (~5 GB).
+    ///
+    /// Prefer [`SevenFiveBCM::generate_bin`] for a much smaller zstd-compressed output.
     ///
     /// # Errors
     ///

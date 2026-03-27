@@ -1,17 +1,15 @@
 use pkcore::analysis::store::bcm::binary_card_map::SevenFiveBCM;
 
-/// Creates a pregenerated file that makes 7 cards to the best five cards and to the score NLH
-/// Cactus Kev score for the hand. The file generated is a little under 5GB in size.
-///
-/// While it takes a over 10 minutes to load, once it's in memory, doing combo calculations is
-/// much faster.
+/// Creates a pregenerated zstd-compressed binary file mapping 7-card combinations to the best
+/// five-card hand and its Cactus Kev score. The file is typically ~300–600 MB, compared to the
+/// ~5 GB CSV equivalent.
 ///
 /// RUST_LOG=trace cargo run --example generate_bcm
 fn main() {
     let now = std::time::Instant::now();
     env_logger::init();
 
-    SevenFiveBCM::generate_csv("generated/bcm.csv").expect("TODO: panic message");
+    SevenFiveBCM::generate_bin("generated/bcm.zst").expect("Failed to generate bcm binary");
 
     println!("Elapsed: {:.2?}", now.elapsed());
 }

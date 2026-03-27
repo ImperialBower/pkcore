@@ -38,6 +38,7 @@ wincounter = "0.1.5"
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 rusqlite = { version = "0.34", features = ["bundled"] } # 0.35 breaks HUPResult https://github.com/rusqlite/rusqlite/releases#reactions--reaction_button_component-a0702b
 termion = "4.0"
+zstd = "0.13"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom_v2 = { package = "getrandom", version = "0.2", features = ["js"] }
