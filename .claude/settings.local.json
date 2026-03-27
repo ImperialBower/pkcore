@@ -4,7 +4,9 @@
       "Bash(find /Users/gaoler/src/github.com/folkengine/pkcore/src/analysis/store -type f -name \"*.rs\" -exec wc -l {} +)",
       "Bash(cargo check:*)",
       "Bash(cargo test:*)",
-      "Bash(cargo build:*)"
+      "Bash(cargo build:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(wc -l /Users/christoph/src/github.com/folkengine/pkcore/src/**/*.rs)"
     ]
   }
 }

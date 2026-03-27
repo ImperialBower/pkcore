@@ -2,6 +2,10 @@
 
 These instructions guide Claude to generate code that aligns with our project standards for testing, documentation, and code quality.
 
+## Project Roadmap
+
+The long-term vision for this library — including the poker table service, web spectator app, AI agents, OTel/Langfuse observability, and all architectural decisions — is documented in [`ROADMAP.md`](./ROADMAP.md). Read it at the start of any session involving that work.
+
 ## Testing Requirements
 
 ### Unit Tests

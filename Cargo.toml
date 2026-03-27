@@ -1,14 +1,14 @@
 [package]
 name = "pkcore"
 description = "Prototype core poker library."
-version = "0.0.27"
+version = "0.0.28"
 rust-version = "1.91.0"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
 license = "GPL-3.0-or-later"
 repository = "https://github.com/ImperialBower/pkcore.git"
 homepage = "https://github.com/ImperialBower/pkcore"
-exclude = [".github/workflows/*", "data/*", "docs/*", "examples/*", "generated/hups.db", "generated/old/*", "proto/*", "scripts/*", ".gitignore", "Cargo.lock", "Claude.md"]
+exclude = [".github/workflows/*", "data/*", "docs/*", "examples/*", "generated/hups.db", "generated/old/*", "proto/*", "scripts/*", ".gitignore", "Cargo.lock", ".claude", "Claude.md"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
