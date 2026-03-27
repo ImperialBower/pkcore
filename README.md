@@ -1,5 +1,7 @@
 # pkcore AKA Spawn of [Fudd](https://github.com/ImperialBower/fudd)
 
+[![Crates.io](https://img.shields.io/crates/v/pkcore.svg)](https://crates.io/crates/pkcore)
+
 🚧 **Work In Progress** 🚧
 
 [Rust](https://www.rust-lang.org/) poker library. Code inspired by [Cactus Kev's](https://suffe.cool)
