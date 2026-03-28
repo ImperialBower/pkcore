@@ -47,7 +47,7 @@ use std::vec::IntoIter;
 /// is fleeting.
 ///
 /// TODO: Refactor to Two;
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq)]
 pub struct HoleCards(Vec<Two>);
 
 impl HoleCards {
