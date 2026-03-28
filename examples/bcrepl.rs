@@ -2,6 +2,7 @@ use pkcore::PKError;
 use pkcore::play::stages::deal_eval::DealEval;
 use pkcore::prelude::HoleCards;
 use pkcore::util::terminal::Terminal;
+use std::collections::HashMap;
 
 /// OK, this makes me sad. My new shiny pkcore library takes over twice as long to run a single calc
 ///
@@ -27,14 +28,15 @@ use pkcore::util::terminal::Terminal;
 /// `A♠ A♥ A♦ A♣`
 fn main() {
     env_logger::init();
+    let mut cache: HashMap<HoleCards, DealEval> = HashMap::new();
     loop {
-        read_input();
+        read_input(&mut cache);
     }
 }
 
-fn read_input() {
+fn read_input(cache: &mut HashMap<HoleCards, DealEval>) {
     match Terminal::receive_cards_in_twos("hole cards> ") {
-        Ok(twos) => match work(twos) {
+        Ok(twos) => match work(twos, cache) {
             Ok(_) => {}
             Err(e) => println!("{:?}", e),
         },
@@ -44,18 +46,12 @@ fn read_input() {
     }
 }
 
-fn work(hands: HoleCards) -> Result<(), PKError> {
+fn work(hands: HoleCards, cache: &mut HashMap<HoleCards, DealEval>) -> Result<(), PKError> {
     let now = std::time::Instant::now();
 
-    let results = DealEval::new(hands);
+    let results = cache.entry(hands).or_insert_with_key(|h| DealEval::new(h.clone()));
 
-    // let case_events = hands.bcm_case_evals()?;
-    // let case_events = hands.bcm_case_evals()?;
-    // let case_events = hands.bcm_rayon_case_evals()?;
-    // let wins = case_events.wins();
-    // let results = WinResults::from_wins(&wins, hands.len());
     println!("{results}");
-
     println!("Elapsed: {:.2?}", now.elapsed());
     Ok(())
 }
