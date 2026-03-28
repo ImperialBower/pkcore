@@ -6,7 +6,22 @@
       "Bash(cargo test:*)",
       "Bash(cargo build:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(wc -l /Users/christoph/src/github.com/folkengine/pkcore/src/**/*.rs)"
+      "Bash(wc -l /Users/christoph/src/github.com/folkengine/pkcore/src/**/*.rs)",
+      "Bash(mkdir -p /Users/christoph/src/github.com/folkengine/pkcore-py/src)",
+      "Bash(mkdir -p /Users/christoph/src/github.com/folkengine/pkcore-py/python/pkcore)",
+      "Bash(mkdir -p /Users/christoph/src/github.com/folkengine/pkcore-py/tests)",
+      "Bash(maturin --version)",
+      "Bash(pip3 install:*)",
+      "Bash(maturin develop:*)",
+      "Bash(python3 -m maturin develop)",
+      "Bash(python3 -m venv .venv)",
+      "Bash(source .venv/bin/activate)",
+      "Bash(pip install:*)",
+      "Bash(python3 -m pytest tests/ -v)",
+      "Bash(git init:*)",
+      "Bash(.gitignore:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
