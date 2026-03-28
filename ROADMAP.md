@@ -1,14 +1,20 @@
 # Poker Platform Roadmap
 
-A technical demonstration platform built on `pkcore` that showcases AI decision-making, OpenTelemetry observability, and distributed systems design — all through the lens of a live poker table.
+A technical demonstration platform built on `pkcore` that showcases AI
+decision-making, OpenTelemetry observability, and distributed systems
+design — all through the lens of a live poker table.
 
 ## Vision
 
 A running poker table service where:
-- **Remote clients** (AI agents, human players) connect via gRPC and play hands
-- **A web spectator app** shows all hole cards and live table action in real time (PokerGo-style)
-- **AI agents** powered by different stacks (Claude, OpenAI, local LLMs, rule-based) compete against each other
-- **OTel instrumentation** exposes traces, metrics, and logs for every game event, making the platform a live demo of observability patterns
+- **Remote clients** (AI agents, human players) connect via gRPC and play
+  hands
+- **A web spectator app** shows all hole cards and live table action in
+  real time (PokerGo-style)
+- **AI agents** powered by different stacks (Claude, OpenAI, local LLMs,
+  rule-based) compete against each other
+- **OTel instrumentation** exposes traces, metrics, and logs for every
+  game event, making the platform a live demo of observability patterns
 
 ---
 
@@ -19,7 +25,10 @@ A running poker table service where:
 | [pkcore](https://github.com/folkengine/pkcore) | Active | Full poker library: `Table`, `Dealer`, `Player`, `Game`, card evaluation, GTO analysis |
 | [pkdealer](https://github.com/ImperialBower/pkdealer) | Skeleton | gRPC proto fully defined; only `Ping` is implemented; workspace has `proto`, `service`, `client` crates |
 
-The `dealer.proto` in pkdealer already defines all the RPCs needed: `SeatPlayer`, `StartHand`, `Act`, `AdvanceStreet`, `EndHand`, `StreamEvents`, `GetStatus`, etc. The foundation is solid — it just needs to be wired up.
+The `dealer.proto` in pkdealer already defines all the RPCs needed:
+`SeatPlayer`, `StartHand`, `Act`, `AdvanceStreet`, `EndHand`,
+`StreamEvents`, `GetStatus`, etc. The foundation is solid — it just needs
+to be wired up.
 
 ---
 
@@ -59,20 +68,24 @@ The `dealer.proto` in pkdealer already defines all the RPCs needed: `SeatPlayer`
 - Owns the `Table` state (from pkcore)
 - Exposes the full gRPC `DealerService`
 - Manages a `tokio::sync::broadcast` channel for table events
-- Drives street progression (or exposes hooks for an orchestrator to do it)
+- Drives street progression (or exposes hooks for an orchestrator to do
+  it)
 - Emits OTel spans and metrics for every action
 
-**`pkdealer_spectator`** — Web broadcast app (new crate in pkdealer workspace)
+**`pkdealer_spectator`** — Web broadcast app (new crate in pkdealer
+workspace)
 - Axum web server
 - Subscribes to the event stream from the dealer service
 - Serves an SSE endpoint to browsers
-- Renders a table view where **all hole cards are visible** (broadcast/spectator mode)
+- Renders a table view where **all hole cards are visible**
+  (broadcast/spectator mode)
 - Shows pot, board, action log, chip counts in real time
 
 **AI Agent clients** — Separate binaries/crates
 - Each implements the same gRPC client interface
 - Each uses a different decision-making backend
-- Connects as a player, receives its own hole cards and table state, acts via gRPC
+- Connects as a player, receives its own hole cards and table state, acts
+  via gRPC
 
 ---
 
@@ -83,24 +96,36 @@ The `dealer.proto` in pkdealer already defines all the RPCs needed: `SeatPlayer`
 **Goal:** A fully functional gRPC poker table server.
 
 **Work:**
-1. Implement all `DealerService` methods in `pkdealer_service` using `pkcore::Table` and `pkcore::Dealer`
-2. Implement `StreamEvents` using a `tokio::sync::broadcast::Sender<TableEvent>` shared across connections
-3. Add a game loop binary (`pkdealer_orchestrator`) that drives hand progression:
-   - Seat players → start hand → prompt each player to act → advance streets → end hand → repeat
-4. Wire hole card visibility: the server knows all cards; `GetStatus` returns hole cards only for the requesting player's seat; a separate admin/spectator token reveals all cards
+1. Implement all `DealerService` methods in `pkdealer_service` using
+   `pkcore::Table` and `pkcore::Dealer`
+2. Implement `StreamEvents` using a
+   `tokio::sync::broadcast::Sender<TableEvent>` shared across connections
+3. Add a game loop binary (`pkdealer_orchestrator`) that drives hand
+   progression:
+   - Seat players → start hand → prompt each player to act → advance
+     streets → end hand → repeat
+4. Wire hole card visibility: the server knows all cards; `GetStatus`
+   returns hole cards only for the requesting player's seat; a separate
+   admin/spectator token reveals all cards
 
 **Key decisions:**
-- Use `Arc<Mutex<Table>>` for shared mutable table state across gRPC handlers
-- Game phase enforcement: RPCs return `PermissionDenied` if called out of order
-- Reconnect support: players identify by a UUID issued at `SeatPlayer` time
+- Use `Arc<Mutex<Table>>` for shared mutable table state across gRPC
+  handlers
+- Game phase enforcement: RPCs return `PermissionDenied` if called out of
+  order
+- Reconnect support: players identify by a UUID issued at `SeatPlayer`
+  time
 
-**Deliverable:** `cargo run --bin pkdealer_service` starts a server; the existing `pkdealer_client` can ping, seat a player, start a hand, act, and get status.
+**Deliverable:** `cargo run --bin pkdealer_service` starts a server; the
+existing `pkdealer_client` can ping, seat a player, start a hand, act,
+and get status.
 
 ---
 
 ### Phase 2 — Web Spectator App
 
-**Goal:** A browser tab that looks like watching poker on PokerGo — everyone's cards visible, live updates.
+**Goal:** A browser tab that looks like watching poker on PokerGo —
+everyone's cards visible, live updates.
 
 **Work:**
 1. Add `pkdealer_spectator` crate to the pkdealer workspace
@@ -108,7 +133,8 @@ The `dealer.proto` in pkdealer already defines all the RPCs needed: `SeatPlayer`
    - `GET /` — serve the table UI (HTML + minimal JS)
    - `GET /events` — SSE stream of table events
    - `GET /state` — current full table snapshot (JSON, all cards visible)
-3. The spectator crate connects to `pkdealer_service` via the gRPC `StreamEvents` RPC using a spectator auth token
+3. The spectator crate connects to `pkdealer_service` via the gRPC
+   `StreamEvents` RPC using a spectator auth token
 4. Frontend (HTMX + Tailwind or plain HTML/CSS/JS):
    - Playing card rendering (SVG or CSS card components)
    - Seat positions around an oval table
@@ -119,43 +145,56 @@ The `dealer.proto` in pkdealer already defines all the RPCs needed: `SeatPlayer`
 **Suggested tech for the frontend:**
 - React or Vue (TBD) for a polished, interactive UI with animations
 - [Tailwind CSS](https://tailwindcss.com/) for layout and styling
-- SVG playing card assets (e.g., [cardstarter](https://github.com/htdebeer/SVG-cards))
-- Card deal animations, chip movement, and action highlights to match a broadcast-quality feel
+- SVG playing card assets (e.g.,
+  [cardstarter](https://github.com/htdebeer/SVG-cards))
+- Card deal animations, chip movement, and action highlights to match a
+  broadcast-quality feel
 
-**Deliverable:** Open `http://localhost:3000` and watch a live game with all cards face-up.
+**Deliverable:** Open `http://localhost:3000` and watch a live game with
+all cards face-up.
 
 ---
 
 ### Phase 3 — OpenTelemetry Instrumentation
 
-**Goal:** Make every game event observable. This phase is the core "technical demonstration" value.
+**Goal:** Make every game event observable. This phase is the core
+"technical demonstration" value.
 
 **Work:**
-1. Add `opentelemetry`, `opentelemetry-otlp`, `tracing-opentelemetry`, `tracing` crates to `pkdealer_service`
+1. Add `opentelemetry`, `opentelemetry-otlp`, `tracing-opentelemetry`,
+   `tracing` crates to `pkdealer_service`
 2. Instrument with spans:
-   - `hand` span — covers deal through showdown; attributes: hand_id, player_count, starting_pot
-   - `action` span — child of `hand`; attributes: seat, action_type, amount, pot_after
-   - `street` span — child of `hand`; attributes: street_name, board_cards
+   - `hand` span — covers deal through showdown; attributes: hand_id,
+     player_count, starting_pot
+   - `action` span — child of `hand`; attributes: seat, action_type,
+     amount, pot_after
+   - `street` span — child of `hand`; attributes: street_name,
+     board_cards
 3. Add metrics:
    - `pkdealer.hands_played` counter
    - `pkdealer.pot_size` histogram
    - `pkdealer.action_duration_ms` histogram (time from prompt to act)
    - `pkdealer.ai_decision_latency_ms` histogram (tag by agent type)
-4. Propagate trace context into gRPC metadata so client spans nest under server spans
+4. Propagate trace context into gRPC metadata so client spans nest under
+   server spans
 5. Add `docker-compose.yml` with:
    - Jaeger (or Grafana Tempo) for traces
    - Prometheus for metrics
    - Grafana for dashboards
 
-**Deliverable:** `docker compose up` + run a game → open Jaeger at `http://localhost:16686` and see a full hand trace with action-level spans. Open Grafana and see a live game stats dashboard.
+**Deliverable:** `docker compose up` + run a game → open Jaeger at
+`http://localhost:16686` and see a full hand trace with action-level
+spans. Open Grafana and see a live game stats dashboard.
 
 ---
 
 ### Phase 4 — AI Agent Clients
 
-**Goal:** Multiple AI personalities playing at the same table, each with observable decision-making.
+**Goal:** Multiple AI personalities playing at the same table, each with
+observable decision-making.
 
-**Approach:** Define a shared `PokerAgent` trait (or just a convention) that each agent implements:
+**Approach:** Define a shared `PokerAgent` trait (or just a convention)
+that each agent implements:
 
 ```rust
 trait PokerAgent {
@@ -173,58 +212,86 @@ trait PokerAgent {
 
 #### 4b. Rule-Based Agent
 - Uses pkcore's `Eval`, `Outs`, and `TheNuts` to assess hand strength
-- Simple heuristics: fold weak hands preflop, bet strong hands, check/call marginal hands
+- Simple heuristics: fold weak hands preflop, bet strong hands,
+  check/call marginal hands
 - No AI API required — demonstrates pkcore's analysis capabilities
 
 #### 4c. Claude Agent (Anthropic)
 - Uses the Anthropic Rust SDK or HTTP API
 - Sends a natural-language prompt describing the hand state
 - Parses the LLM response into a `PlayerAction`
-- Prompt includes: hole cards, board, pot odds, position, stack sizes, action history
-- Emits OTel spans using `gen_ai.*` semantic conventions (see Langfuse section below)
+- Prompt includes: hole cards, board, pot odds, position, stack sizes,
+  action history
+- Emits OTel spans using `gen_ai.*` semantic conventions (see Langfuse
+  section below)
 
 #### 4d. OpenAI Agent
 - Same pattern as Claude agent, using the OpenAI API
-- Enables direct A/B comparison of model decision-making via OTel dashboards and Langfuse
+- Enables direct A/B comparison of model decision-making via OTel
+  dashboards and Langfuse
 
 #### 4e. Local LLM Agent (stretch)
-- Uses [Ollama](https://ollama.com/) with a local model (Llama 3, Mistral, etc.)
+- Uses [Ollama](https://ollama.com/) with a local model (Llama 3,
+  Mistral, etc.)
 - Same prompt format as cloud agents
 - Demonstrates offline/on-premises AI
 
 **Each agent:**
-- Lives in its own binary (e.g., `pkdealer_agent_claude`, `pkdealer_agent_random`)
+- Lives in its own binary (e.g., `pkdealer_agent_claude`,
+  `pkdealer_agent_random`)
 - Emits OTel traces including the decision prompt and response
 - Can be started with a seat number and player name argument
 
 #### 4f. LLM Observability with Langfuse
 
-[Langfuse](https://langfuse.com/) is an open-source LLM observability platform that complements OTel for the AI-specific layer. While OTel/Jaeger/Grafana cover game mechanics (hand spans, action latency, pot metrics), Langfuse covers the LLM interaction layer:
+[Langfuse](https://langfuse.com/) is an open-source LLM observability
+platform that complements OTel for the AI-specific layer. While
+OTel/Jaeger/Grafana cover game mechanics (hand spans, action latency, pot
+metrics), Langfuse covers the LLM interaction layer:
 
-- **Full prompt/completion capture** — browse every poker decision with the exact prompt sent and response received
-- **Token usage and cost tracking** — per decision, per model, per session; easily compare Claude vs OpenAI spend
-- **Prompt versioning** — iterate on the poker system prompt and track how win rates change across versions
-- **Scoring** — feed hand outcome (won/lost/folded correctly) back as a numeric score on each LLM trace, building a labeled dataset of good vs. bad AI decisions over time
-- **Side-by-side model comparison** — Langfuse's UI makes it easy to spot behavioral differences (e.g., "Claude folds rivers more than GPT-4o")
+- **Full prompt/completion capture** — browse every poker decision with
+  the exact prompt sent and response received
+- **Token usage and cost tracking** — per decision, per model, per
+  session; easily compare Claude vs OpenAI spend
+- **Prompt versioning** — iterate on the poker system prompt and track
+  how win rates change across versions
+- **Scoring** — feed hand outcome (won/lost/folded correctly) back as a
+  numeric score on each LLM trace, building a labeled dataset of good vs.
+  bad AI decisions over time
+- **Side-by-side model comparison** — Langfuse's UI makes it easy to
+  spot behavioral differences (e.g., "Claude folds rivers more than
+  GPT-4o")
 
-**Integration approach (Rust-friendly):** There is no official Rust SDK, but Langfuse supports an OpenTelemetry-native ingestion mode. Each LLM agent emits spans using the [OpenTelemetry Semantic Conventions for Generative AI](https://opentelemetry.io/docs/specs/semconv/gen-ai/) (`gen_ai.*` attributes). Langfuse ingests these spans via its OTLP endpoint — no vendor SDK required, keeping agent code clean and portable.
+**Integration approach (Rust-friendly):** There is no official Rust SDK,
+but Langfuse supports an OpenTelemetry-native ingestion mode. Each LLM
+agent emits spans using the
+[OpenTelemetry Semantic Conventions for Generative AI](https://opentelemetry.io/docs/specs/semconv/gen-ai/)
+(`gen_ai.*` attributes). Langfuse ingests these spans via its OTLP
+endpoint — no vendor SDK required, keeping agent code clean and portable.
 
 Key `gen_ai.*` attributes to emit per decision span:
 - `gen_ai.system` — `"anthropic"`, `"openai"`, `"ollama"`
 - `gen_ai.request.model` — e.g. `"claude-sonnet-4-6"`
 - `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`
 - `gen_ai.request.max_tokens`
-- Custom: `poker.hand_id`, `poker.street`, `poker.pot_odds`, `poker.action_chosen`
+- Custom: `poker.hand_id`, `poker.street`, `poker.pot_odds`,
+  `poker.action_chosen`
 
-**Scoring workflow:** After each hand resolves, the orchestrator calls the Langfuse HTTP API to post a score (e.g., `+1` for winning the pot, `-1` for a -EV fold) against the trace IDs for that hand's LLM decisions. Over many hands this produces a leaderboard of model effectiveness.
+**Scoring workflow:** After each hand resolves, the orchestrator calls the
+Langfuse HTTP API to post a score (e.g., `+1` for winning the pot, `-1`
+for a -EV fold) against the trace IDs for that hand's LLM decisions. Over
+many hands this produces a leaderboard of model effectiveness.
 
-**Demo value:** OTel/Jaeger shows the game timeline; Langfuse shows the AI reasoning. Two browser tabs open during a live demo tell the complete story — infrastructure observability and LLM observability side by side.
+**Demo value:** OTel/Jaeger shows the game timeline; Langfuse shows the
+AI reasoning. Two browser tabs open during a live demo tell the complete
+story — infrastructure observability and LLM observability side by side.
 
 ---
 
 ### Phase 5 — Demo Scenarios & Packaging
 
-**Goal:** Make this easy to run as a live demo at a conference or in a blog post.
+**Goal:** Make this easy to run as a live demo at a conference or in a
+blog post.
 
 **Work:**
 1. `docker-compose.yml` that starts the full stack:
@@ -292,14 +359,38 @@ pkdealer/
 
 ## Open Questions / Decisions Needed
 
-1. **Game flow ownership**: ✅ `pkdealer_service` drives the game loop autonomously — streets auto-advance once all players have acted, and a new hand starts automatically after showdown. The `pkdealer_orchestrator` crate is not needed and can be removed from scope.
+1. **Game flow ownership**: ✅ `pkdealer_service` drives the game loop
+   autonomously — streets auto-advance once all players have acted, and a
+   new hand starts automatically after showdown. The
+   `pkdealer_orchestrator` crate is not needed and can be removed from
+   scope.
 
-2. **Human players**: ✅ Supported via a dedicated `pkdealer_client_human` binary — a terminal UI (TUI) client that connects via gRPC like any AI agent. The spectator web UI remains read-only. This keeps the spectator simple and auth-free while still allowing a human to sit at the table; the TUI shows only that player's hole cards and prompts for actions at their turn.
+2. **Human players**: ✅ Supported via a dedicated
+   `pkdealer_client_human` binary — a terminal UI (TUI) client that
+   connects via gRPC like any AI agent. The spectator web UI remains
+   read-only. This keeps the spectator simple and auth-free while still
+   allowing a human to sit at the table; the TUI shows only that player's
+   hole cards and prompts for actions at their turn.
 
-3. **Single table vs. multi-table**: ✅ Single table for now. Design the service with multi-table expansion in mind (pkcore's `TableManager` already supports it), but do not implement it yet. Multi-table support is a future phase.
+3. **Single table vs. multi-table**: ✅ Single table for now. Design the
+   service with multi-table expansion in mind (pkcore's `TableManager`
+   already supports it), but do not implement it yet. Multi-table support
+   is a future phase.
 
-4. **Frontend complexity**: ✅ React or Vue with a polished, production-quality look. Card animations, smooth chip transitions, and a visually impressive table are worth the added complexity for demo impact. Framework choice (React vs Vue) TBD, but either pairs well with the Axum SSE backend via a WebSocket or EventSource connection.
+4. **Frontend complexity**: ✅ React or Vue with a polished,
+   production-quality look. Card animations, smooth chip transitions, and
+   a visually impressive table are worth the added complexity for demo
+   impact. Framework choice (React vs Vue) TBD, but either pairs well
+   with the Axum SSE backend via a WebSocket or EventSource connection.
 
-5. **pkcore dependency in pkdealer**: ✅ pkcore is already published to crates.io — the GitHub repo is private but the crate is public. pkdealer can depend on it via crates.io as normal; no path dependency or GitHub source needed.
+5. **pkcore dependency in pkdealer**: ✅ pkcore is already published to
+   crates.io — the GitHub repo is private but the crate is public.
+   pkdealer can depend on it via crates.io as normal; no path dependency
+   or GitHub source needed.
 
-6. **Auth model**: ✅ Use a simple shared secret token (gRPC metadata for player clients, query param or header for the spectator SSE endpoint) for the POC. Design auth as a pluggable layer from the start so it can be replaced with a real system (e.g., JWT + OAuth2) without restructuring the service. No auth refactoring should be required to add it later.
+6. **Auth model**: ✅ Use a simple shared secret token (gRPC metadata for
+   player clients, query param or header for the spectator SSE endpoint)
+   for the POC. Design auth as a pluggable layer from the start so it can
+   be replaced with a real system (e.g., JWT + OAuth2) without
+   restructuring the service. No auth refactoring should be required to
+   add it later.
