@@ -49,9 +49,7 @@ fn read_input(cache: &mut HashMap<HoleCards, DealEval>) {
 fn work(hands: HoleCards, cache: &mut HashMap<HoleCards, DealEval>) -> Result<(), PKError> {
     let now = std::time::Instant::now();
 
-    let results = cache
-        .entry(hands)
-        .or_insert_with_key(|h| DealEval::new(h.clone()));
+    let results = cache.entry(hands).or_insert_with_key(|h| DealEval::new(h.clone()));
 
     println!("{results}");
     println!("Elapsed: {:.2?}", now.elapsed());
