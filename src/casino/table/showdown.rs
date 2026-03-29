@@ -100,7 +100,15 @@ impl Showdown {
                 // Award to player's chips
                 let _ = seat.player.chips.wins(player_winnings.clone());
 
-                // Build eval for the seat
+                // Extract fields needed for logging before releasing the mutable borrow.
+                // effective_player_cards() and log_info(PlayerWins) both call get_seat()
+                // on the same seat, which would fail if the RefMut is still held.
+                let hand = seat.cards.bard();
+                let id = seat.player.id;
+                let chips_won = winnings_amount.saturating_sub(seat.player.chips_in_play.take());
+                drop(seat);
+
+                // Build eval for the seat (calls get_seat internally)
                 let eval = match table.effective_player_cards(*winner_seat_number) {
                     Some(cards) => match Seven::try_from(cards) {
                         Ok(seven) => Eval::from(seven),
@@ -109,10 +117,7 @@ impl Showdown {
                     None => Eval::default(),
                 };
 
-                // Log the win
-                let hand = seat.cards.bard();
-                let id = seat.player.id;
-                let chips_won = winnings_amount.saturating_sub(seat.player.chips_in_play.take());
+                // Log the win (calls get_seat internally via log_info)
                 table.log_info(TableAction::PlayerWins(
                     *winner_seat_number,
                     id,
