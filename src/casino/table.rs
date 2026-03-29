@@ -1453,8 +1453,7 @@ impl TryFrom<&Pluribus> for Table {
     }
 }
 
-#[cfg(any())]
-impl From<Table> for pkstate::PKState {
+impl From<&Table> for pkstate::PKState {
     /// Converts a [`Table`] snapshot into a [`pkstate::PKState`].
     ///
     /// Players are taken from the seats in order. The event log is walked once and
@@ -1465,12 +1464,12 @@ impl From<Table> for pkstate::PKState {
     #[allow(clippy::too_many_lines)]
     fn from(table: &Table) -> Self {
         // ── players ──────────────────────────────────────────────────────────
-        let players: Vec<PKSeat> = table
+        let players: Vec<pkstate::seat::Seat> = table
             .seats
             .iter()
             .map(|sc| {
                 let s = sc.borrow();
-                PKSeat {
+                pkstate::seat::Seat {
                     id: Some(s.player.id.to_string()),
                     name: s.player.handle.clone(),
                     stack: s.player.chips.count(),
@@ -1479,20 +1478,21 @@ impl From<Table> for pkstate::PKState {
             .collect();
 
         // ── forced bets ───────────────────────────────────────────────────────
-        let forced_bets = PKForcedBets::new(table.forced.small_blind, table.forced.big_blind);
+        let forced_bets = pkstate::game::ForcedBets::new(table.forced.small_blind, table.forced.big_blind);
 
         // ── board ─────────────────────────────────────────────────────────────
         let board_str = table.board.to_string();
-        let board: Option<BasicPile> = if board_str.trim().is_empty() {
+        let board: Option<cardpack::prelude::BasicPile> = if board_str.trim().is_empty() {
             None
         } else {
-            CPile::<Standard52>::from_str(&board_str)
+            board_str
+                .parse::<cardpack::prelude::Pile<cardpack::prelude::Standard52>>()
                 .ok()
-                .map(|p| BasicPile::from(&p))
+                .map(|p| p.into_basic_pile())
         };
 
         // ── rounds (walk the event log) ───────────────────────────────────────
-        let mut rounds: Vec<Round> = Vec::new();
+        let mut rounds: Vec<pkstate::act::Round> = Vec::new();
         let mut current: Vec<Action> = Vec::new();
 
         for action in table.event_log.entries() {
@@ -1500,7 +1500,7 @@ impl From<Table> for pkstate::PKState {
                 // ── street boundaries: push the current round and start a new one ──
                 TableAction::DealtFlop(bard) | TableAction::DealtTurn(bard) | TableAction::DealtRiver(bard) => {
                     if !current.is_empty() {
-                        rounds.push(Round(std::mem::take(&mut current)));
+                        rounds.push(pkstate::act::Round(std::mem::take(&mut current)));
                     }
                     if let Some(pile) = bard.to_pile() {
                         current.push(Action::DealCommon(pile));
@@ -1627,7 +1627,7 @@ impl From<Table> for pkstate::PKState {
         }
 
         if !current.is_empty() {
-            rounds.push(Round(current));
+            rounds.push(pkstate::act::Round(current));
         }
 
         pkstate::PKState {
@@ -1646,12 +1646,6 @@ impl From<Table> for pkstate::PKState {
 impl From<Table> for pkstate::PKState {
     fn from(table: Table) -> Self {
         pkstate::PKState::from(&table)
-    }
-}
-
-impl From<&Table> for pkstate::PKState {
-    fn from(table: &Table) -> Self {
-        pkstate::PKState::from(table.clone())
     }
 }
 

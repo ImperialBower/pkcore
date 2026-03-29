@@ -21,7 +21,9 @@
       "Bash(git init:*)",
       "Bash(.gitignore:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(printf 'n\\\\n')",
+      "Bash(cargo run:*)"
     ]
   }
 }
