@@ -10,8 +10,8 @@ use crate::card::Card;
 use crate::play::game::Game;
 use crate::prelude::{Cards, Table, TheNuts};
 use log::trace;
+use rayon::prelude::*;
 use std::fmt::{Display, Formatter};
-use std::sync::mpsc;
 use wincounter::results::WinResults;
 use wincounter::wins::Wins;
 
@@ -100,30 +100,17 @@ impl TurnEval {
         let mut the_nuts = TheNuts::default();
         let board = self.game.flop_and_turn();
 
-        // let gto = self.turn_remaining_board().combinations(3);
-        // let chunks = gto.chunks(5);
-        let (sender, receiver) = mpsc::channel();
+        let combos: Vec<Vec<Card>> = self.game.turn_remaining_board().combinations(3).collect();
 
-        for v in self.game.turn_remaining_board().combinations(3) {
-            if let Ok(seven) = Game::flop_get_seven(board, &v) {
-                let sender = sender.clone();
-                // handle send errors instead of panicking
-                // DIARY: I need to get used to this pattern where the assignment is on the left.
-                // It's counterintuitive to me.
-                if let Err(e) = sender.send(seven.eval()) {
-                    log::error!("turn_the_nuts: failed to send eval from thread: {e:?}");
-                }
-            }
+        let evals: Vec<_> = combos
+            .par_iter()
+            .filter_map(|v| Game::flop_get_seven(board, v).ok())
+            .map(|seven| seven.eval())
+            .collect();
+
+        for eval in evals {
+            the_nuts.push(eval);
         }
-
-        drop(sender);
-
-        for received in receiver {
-            the_nuts.push(received);
-        }
-
-        // This had no effect on the floppiness of the ignored test.
-        // thread::sleep(Duration::from_millis(1000));
 
         the_nuts.sort_in_place();
 
