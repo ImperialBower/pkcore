@@ -7,7 +7,7 @@ use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
 use crate::play::stages::flop_eval::FlopEval;
-use crate::{GTO, SOK};
+use crate::{GTO, PKError, SOK};
 use std::collections::HashMap;
 
 use crate::analysis::store::db::hup::HUPResult;
@@ -99,50 +99,41 @@ impl Versus {
         &self.hero
     }
 
-    #[must_use]
-    pub fn hups_at_deal(&self) -> HashMap<Two, HUPResult> {
+    /// Look up heads-up preflop odds for all villain hands from the embedded binary cache.
+    ///
+    /// # Errors
+    ///
+    /// Returns `PKError::SqlError` if any matchup is missing from the embedded cache.
+    /// A missing entry indicates a corrupt or incomplete cache, so the entire operation fails
+    /// rather than returning a partial result that would silently produce wrong equity calculations.
+    pub fn hups_at_deal(&self) -> Result<HashMap<Two, HUPResult>, PKError> {
         let mut hm: HashMap<Two, HUPResult> = HashMap::new();
 
         for two in &self.explode().to_vec() {
-            match HUPResult::lookup(&self.hero, two) {
-                Ok(hup) => {
-                    hm.insert(*two, self.hup_flip(hup));
-                }
-                Err(e) => {
-                    log::error!(
-                        "Error retrieving HUPResult for hero {} and villain {}: {}",
-                        self.hero,
-                        two,
-                        e
-                    );
-                }
-            }
+            let hup = HUPResult::lookup(&self.hero, two)?;
+            hm.insert(*two, self.hup_flip(hup));
         }
-        hm
+
+        Ok(hm)
     }
 
     /// Look up heads-up preflop odds for all villain hands directly from a `SQLite` connection.
+    ///
+    /// # Errors
+    ///
+    /// Returns `PKError::SqlError` if any matchup is missing from the database.
+    /// A missing entry indicates a corrupt or incomplete database, so the entire operation fails
+    /// rather than returning a partial result that would silently produce wrong equity calculations.
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn hups_at_deal_from_db(&self, conn: &Connection) -> HashMap<Two, HUPResult> {
+    pub fn hups_at_deal_from_db(&self, conn: &Connection) -> Result<HashMap<Two, HUPResult>, PKError> {
         let mut hm: HashMap<Two, HUPResult> = HashMap::new();
 
         for two in &self.explode().to_vec() {
-            let hup = HUPResult::from_db(conn, &self.hero, two);
-            match hup {
-                Ok(hup) => {
-                    hm.insert(*two, self.hup_flip(hup));
-                }
-                Err(e) => {
-                    log::error!(
-                        "Error retrieving HUPResult for hero {} and villain {}: {}",
-                        self.hero,
-                        two,
-                        e
-                    );
-                }
-            }
+            let hup = HUPResult::from_db(conn, &self.hero, two)?;
+            hm.insert(*two, self.hup_flip(hup));
         }
-        hm
+
+        Ok(hm)
     }
 
     #[must_use]
