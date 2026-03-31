@@ -71,11 +71,36 @@ pub const RANGE_MATRIX: [[&str; 13]; 13] = [
 // endregion
 
 impl Twos {
+    /// Returns `true` if this collection contains the given [`Two`].
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let twos = Twos::from(vec![Two::HAND_AS_AH]);
+    /// assert!(twos.contains(&Two::HAND_AS_AH));
+    /// assert!(!twos.contains(&Two::HAND_KS_KH));
+    /// ```
     #[must_use]
     pub fn contains(&self, two: &Two) -> bool {
         self.0.contains(two)
     }
 
+    /// Returns a new [`Twos`] containing all hands from both `self` and `other`.
+    ///
+    /// Does not modify `self`; duplicate hands are deduplicated via the underlying [`HashSet`].
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let a = Twos::from(vec![Two::HAND_AS_AH]);
+    /// let b = Twos::from(vec![Two::HAND_KS_KH]);
+    /// let combined = a.extend(&b);
+    /// assert_eq!(combined.len(), 2);
+    /// ```
     #[must_use]
     pub fn extend(&self, other: &Self) -> Self {
         let mut twos = self.clone();
@@ -83,11 +108,37 @@ impl Twos {
         twos
     }
 
+    /// Returns only hands that contain the given [`Card`].
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    /// use pkcore::arrays::two::Two;
+    /// use pkcore::card::Card;
+    ///
+    /// let twos = Twos::from(vec![Two::HAND_AS_AH, Two::HAND_KS_KH]);
+    /// let filtered = twos.filter_on_card(Card::ACE_SPADES);
+    /// assert_eq!(filtered.len(), 1);
+    /// ```
     #[must_use]
     pub fn filter_on_card(&self, card: Card) -> Self {
         Self(self.0.iter().filter(|two| two.contains_card(card)).copied().collect())
     }
 
+    /// Returns only hands whose both cards are contained within the given [`Cards`] collection.
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    /// use pkcore::arrays::two::Two;
+    /// use pkcore::cards::Cards;
+    /// use pkcore::card::Card;
+    ///
+    /// let mut twos = Twos::from(vec![Two::HAND_AS_AH, Two::HAND_KS_KH]);
+    /// let cards = Cards::from(vec![Card::ACE_SPADES, Card::ACE_HEARTS]);
+    /// let filtered = twos.filter_on_cards(&cards);
+    /// assert_eq!(filtered.len(), 1);
+    /// ```
     #[must_use]
     pub fn filter_on_cards(&mut self, cards: &Cards) -> Self {
         Twos::from(
@@ -99,60 +150,193 @@ impl Twos {
         )
     }
 
+    /// Returns only hands that do **not** contain the given [`Card`].
+    ///
+    /// Commonly used to remove dead cards (hero's hole cards or board cards) from a villain range.
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    /// use pkcore::arrays::two::Two;
+    /// use pkcore::card::Card;
+    ///
+    /// let twos = Twos::from(vec![Two::HAND_AS_AH, Two::HAND_KS_KH]);
+    /// let filtered = twos.filter_on_not_card(Card::ACE_SPADES);
+    /// assert_eq!(filtered.len(), 1);
+    /// ```
     #[must_use]
     pub fn filter_on_not_card(&self, card: Card) -> Self {
         Self(self.0.iter().filter(|two| !two.contains_card(card)).copied().collect())
     }
 
+    /// Returns only pocket pair hands (both cards share the same rank).
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let twos = Twos::from(vec![Two::HAND_AS_AH, Two::HAND_AS_KS]);
+    /// assert_eq!(twos.filter_is_paired().len(), 1);
+    /// ```
     #[must_use]
     pub fn filter_is_paired(&self) -> Self {
         Self(self.0.iter().filter(|two| two.is_pair()).copied().collect())
     }
 
+    /// Returns only non-paired hands (the two cards have different ranks).
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let twos = Twos::from(vec![Two::HAND_AS_AH, Two::HAND_AS_KS]);
+    /// assert_eq!(twos.filter_is_not_paired().len(), 1);
+    /// ```
     #[must_use]
     pub fn filter_is_not_paired(&self) -> Self {
         Self(self.0.iter().filter(|two| !two.is_pair()).copied().collect())
     }
 
+    /// Returns only suited hands (both cards share the same suit).
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let twos = Twos::from(vec![Two::HAND_AS_KS, Two::HAND_AS_KH]);
+    /// assert_eq!(twos.filter_is_suited().len(), 1);
+    /// ```
     #[must_use]
     pub fn filter_is_suited(&self) -> Self {
         Self(self.0.iter().filter(|two| two.is_suited()).copied().collect())
     }
 
+    /// Returns only offsuit hands (the two cards have different suits).
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let twos = Twos::from(vec![Two::HAND_AS_KS, Two::HAND_AS_KH]);
+    /// assert_eq!(twos.filter_is_not_suited().len(), 1);
+    /// ```
     #[must_use]
     pub fn filter_is_not_suited(&self) -> Self {
         Self(self.0.iter().filter(|two| !two.is_suited()).copied().collect())
     }
 
+    /// Returns only hands that contain at least one card of the given [`Rank`].
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    /// use pkcore::arrays::two::Two;
+    /// use pkcore::rank::Rank;
+    ///
+    /// let twos = Twos::from(vec![Two::HAND_AS_AH, Two::HAND_KS_KH]);
+    /// assert_eq!(twos.filter_on_rank(Rank::ACE).len(), 1);
+    /// ```
     #[must_use]
     pub fn filter_on_rank(&self, rank: Rank) -> Self {
         Self(self.0.iter().filter(|two| two.contains_rank(rank)).copied().collect())
     }
 
+    /// Returns only hands that contain at least one card of the given [`Suit`].
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    /// use pkcore::arrays::two::Two;
+    /// use pkcore::suit::Suit;
+    ///
+    /// let twos = Twos::from(vec![Two::HAND_AS_AH, Two::HAND_KS_KH]);
+    /// assert_eq!(twos.filter_on_suit(Suit::SPADES).len(), 2);
+    /// ```
     #[must_use]
     pub fn filter_on_suit(&self, suit: Suit) -> Self {
         Self(self.0.iter().filter(|two| two.contains_suit(suit)).copied().collect())
     }
 
+    /// Returns a clone of the underlying [`HashSet<Two>`].
+    ///
+    /// Prefer iterating via [`to_vec`](Self::to_vec) for ordered access.
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let twos = Twos::from(vec![Two::HAND_AS_AH]);
+    /// assert_eq!(twos.hashset().len(), 1);
+    /// ```
     #[must_use]
     pub fn hashset(&self) -> HashSet<Two> {
         self.0.clone()
     }
 
+    /// Inserts a [`Two`] into the collection.
+    ///
+    /// Has no effect if the hand is already present (set semantics).
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let mut twos = Twos::default();
+    /// twos.insert(Two::HAND_AS_AH);
+    /// assert_eq!(twos.len(), 1);
+    /// twos.insert(Two::HAND_AS_AH); // duplicate — no change
+    /// assert_eq!(twos.len(), 1);
+    /// ```
     pub fn insert(&mut self, two: Two) {
         self.0.insert(two);
     }
 
+    /// Consumes `self` and returns an owning iterator over the hands in arbitrary order.
+    ///
+    /// Use [`to_vec`](Self::to_vec) when a sorted, stable order is needed.
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let twos = Twos::from(vec![Two::HAND_AS_AH]);
+    /// assert_eq!(twos.into_iter().count(), 1);
+    /// ```
     #[must_use]
     pub fn into_iter(self) -> std::vec::IntoIter<Two> {
         Vec::from_iter(self.0).into_iter()
     }
 
+    /// Returns the number of hands in the collection.
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let twos = Twos::from(vec![Two::HAND_AS_AH, Two::HAND_KS_KH]);
+    /// assert_eq!(twos.len(), 2);
+    /// ```
     #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// Returns `true` if the collection contains no hands.
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    ///
+    /// assert!(Twos::default().is_empty());
+    /// ```
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
@@ -163,6 +347,20 @@ impl Twos {
         Ok(Twos::from(Combo::from_str(raw)?))
     }
 
+    /// Returns what percentage of the total [`Combo`] combinations are represented in `self`.
+    ///
+    /// Returns [`Percentage::default`] (zero) if the combo expands to no hands.
+    ///
+    /// # Examples
+    /// ```no_run
+    /// use pkcore::analysis::gto::combo::Combo;
+    /// use pkcore::analysis::gto::twos::Twos;
+    ///
+    /// let twos = Twos::from(Combo::COMBO_AA);
+    /// let pct = twos.percentage(&Combo::COMBO_AA);
+    /// // All 6 AA combos present → 100%
+    /// assert_eq!(pct.calculate(), 100.0);
+    /// ```
     #[must_use]
     pub fn percentage(&self, combo: &Combo) -> Percentage {
         let total = Twos::from(combo).len();
@@ -173,6 +371,18 @@ impl Twos {
         todo!()
     }
 
+    /// Returns a sorted, deduplicated [`Vec<Two>`] in descending order (strongest hand first).
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::twos::Twos;
+    /// use pkcore::arrays::two::Two;
+    ///
+    /// let twos = Twos::from(vec![Two::HAND_AS_AH, Two::HAND_KS_KH]);
+    /// let v = twos.to_vec();
+    /// assert_eq!(v.len(), 2);
+    /// assert!(v[0] >= v[1]);
+    /// ```
     #[must_use]
     pub fn to_vec(&self) -> Vec<Two> {
         let mut v: Vec<Two> = self.0.iter().copied().collect();
