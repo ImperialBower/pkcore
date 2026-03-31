@@ -17,6 +17,7 @@ pub mod omaha;
 pub mod outs;
 pub mod player_wins;
 pub mod pot_odds;
+pub mod range_equity;
 pub mod store;
 pub mod the_nuts;
 

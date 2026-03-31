@@ -8,6 +8,7 @@ pub mod combo_range;
 pub mod combos;
 pub mod odds;
 pub mod vs;
+pub mod weighted_combos;
 
 // region hand range array constants
 // region pocket pair range array constants
