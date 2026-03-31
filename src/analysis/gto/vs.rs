@@ -1,13 +1,15 @@
 use crate::analysis::gto::combos::Combos;
 use crate::analysis::gto::odds::WinLoseDraw;
 use crate::analysis::gto::twos::Twos;
+use crate::analysis::eval::Eval;
+use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
 use crate::play::stages::flop_eval::FlopEval;
-use crate::{GTO, PKError, SOK};
+use crate::{GTO, PKError, Pile, SOK};
 use std::collections::HashMap;
 
 use crate::analysis::store::db::hup::HUPResult;
@@ -169,6 +171,47 @@ impl Versus {
     #[must_use]
     pub fn remaining_at_turn(&self) -> Twos {
         self.remaining_at_flop().filter_on_not_card(self.board.turn)
+    }
+
+    /// The remaining villain hands after removing all five board cards.
+    ///
+    /// Requires a complete board (flop + turn + river). If the river is not dealt,
+    /// the result will still include hands containing the river card.
+    #[must_use]
+    pub fn remaining_at_river(&self) -> Twos {
+        self.remaining_at_turn().filter_on_not_card(self.board.river)
+    }
+
+    /// Computes hero vs. villain equity on a complete board (all five cards dealt).
+    ///
+    /// For each remaining villain hand, the hero's 7-card hand and the villain's 7-card
+    /// hand are ranked against the full board. The result is a [`WinLoseDraw`] aggregated
+    /// across all villain combos.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PKError::NotDealt`] if the board is not complete (flop + turn + river).
+    pub fn combined_odds_at_river(&self) -> Result<WinLoseDraw, PKError> {
+        if !self.board.flop.is_dealt() || !self.board.turn.is_dealt() || !self.board.river.is_dealt() {
+            return Err(PKError::NotDealt);
+        }
+
+        let hero_rank = Eval::from(Seven::from_case_and_board(&self.hero, &self.board));
+
+        let result = self
+            .remaining_at_river()
+            .to_vec()
+            .iter()
+            .fold(WinLoseDraw::default(), |acc, villain| {
+                let villain_rank = Eval::from(Seven::from_case_and_board(villain, &self.board));
+                match hero_rank.cmp(&villain_rank) {
+                    std::cmp::Ordering::Greater => acc + WinLoseDraw { wins: 1, losses: 0, draws: 0 },
+                    std::cmp::Ordering::Less => acc + WinLoseDraw { wins: 0, losses: 1, draws: 0 },
+                    std::cmp::Ordering::Equal => acc + WinLoseDraw { wins: 0, losses: 0, draws: 1 },
+                }
+            });
+
+        Ok(result)
     }
 
     /// All the `Twos` including ones in the hero's hand.
