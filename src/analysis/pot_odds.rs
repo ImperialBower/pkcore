@@ -57,6 +57,7 @@ impl PotOdds {
     /// assert!((po.ratio() - 1.0 / 3.0).abs() < f64::EPSILON);
     /// ```
     #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn ratio(&self) -> f64 {
         let total = self.pot + self.call;
         if total == 0 {

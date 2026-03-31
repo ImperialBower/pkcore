@@ -1,7 +1,7 @@
+use crate::analysis::eval::Eval;
 use crate::analysis::gto::combos::Combos;
 use crate::analysis::gto::odds::WinLoseDraw;
 use crate::analysis::gto::twos::Twos;
-use crate::analysis::eval::Eval;
 use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
@@ -205,9 +205,27 @@ impl Versus {
             .fold(WinLoseDraw::default(), |acc, villain| {
                 let villain_rank = Eval::from(Seven::from_case_and_board(villain, &self.board));
                 match hero_rank.cmp(&villain_rank) {
-                    std::cmp::Ordering::Greater => acc + WinLoseDraw { wins: 1, losses: 0, draws: 0 },
-                    std::cmp::Ordering::Less => acc + WinLoseDraw { wins: 0, losses: 1, draws: 0 },
-                    std::cmp::Ordering::Equal => acc + WinLoseDraw { wins: 0, losses: 0, draws: 1 },
+                    std::cmp::Ordering::Greater => {
+                        acc + WinLoseDraw {
+                            wins: 1,
+                            losses: 0,
+                            draws: 0,
+                        }
+                    }
+                    std::cmp::Ordering::Less => {
+                        acc + WinLoseDraw {
+                            wins: 0,
+                            losses: 1,
+                            draws: 0,
+                        }
+                    }
+                    std::cmp::Ordering::Equal => {
+                        acc + WinLoseDraw {
+                            wins: 0,
+                            losses: 0,
+                            draws: 1,
+                        }
+                    }
                 }
             });
 
@@ -460,5 +478,116 @@ mod arrays__combos__solver_tests {
         assert_eq!(flipped_hup.higher, Bard::from(Two::HAND_KS_KH));
         assert_eq!(flipped_hup.lower, Bard::from(Two::HAND_AS_AH));
         assert_eq!(flipped_hup.odds.draws, 9308);
+    }
+
+    // ── Combo blocking audit ─────────────────────────────────────────────────
+    //
+    // AA expands to exactly 6 combos:
+    //   AS_AH, AS_AD, AS_AC, AH_AD, AH_AC, AD_AC
+    //
+    // Each test removes cards one at a time and verifies the count shrinks
+    // correctly, confirming the blocking chain remaining → at_flop → at_turn
+    // → at_river works end-to-end.
+
+    #[test]
+    fn blocking_remaining_excludes_hero_cards() {
+        // Hero holds KS_KH — no overlap with AA, so all 6 AA combos remain.
+        let hero = Two::HAND_KS_KH;
+        let villain = Combos::from_str("AA").unwrap();
+        let solver = Versus::new(hero, villain);
+
+        assert_eq!(6, solver.remaining().len());
+    }
+
+    #[test]
+    fn blocking_remaining_excludes_hero_cards_with_overlap() {
+        // Hero holds AS_AH — both cards appear in AA combos.
+        // Any hand containing AS or AH must be removed:
+        //   AS_AH (hero's exact hand), AS_AD, AS_AC, AH_AD, AH_AC → 5 removed
+        //   AD_AC → 1 remaining
+        let hero = Two::HAND_AS_AH;
+        let villain = Combos::from_str("AA").unwrap();
+        let solver = Versus::new(hero, villain);
+
+        assert_eq!(1, solver.remaining().len());
+        assert!(solver.remaining().contains(&Two::HAND_AD_AC));
+    }
+
+    #[test]
+    fn blocking_remaining_at_flop_excludes_board_cards() {
+        // Hero: KS_KH (no overlap with AA).
+        // Flop: AS_xx_xx — any villain hand containing AS is removed.
+        // AS_AH, AS_AD, AS_AC → 3 removed; AH_AD, AH_AC, AD_AC → 3 remain.
+        let hero = Two::HAND_KS_KH;
+        let villain = Combos::from_str("AA").unwrap();
+        let board = Board::from_str("A♠ 2♣ 3♦ 0 0").unwrap_or_else(|_| {
+            use crate::arrays::three::Three;
+            use crate::card::Card;
+            Board::new(
+                Three::from([Card::ACE_SPADES, Card::DEUCE_CLUBS, Card::TREY_DIAMONDS]),
+                Card::default(),
+                Card::default(),
+            )
+        });
+        let solver = Versus::new_with_board(hero, villain, board);
+
+        let remaining = solver.remaining_at_flop();
+        assert_eq!(3, remaining.len());
+        assert!(!remaining.contains(&Two::HAND_AS_AH));
+        assert!(!remaining.contains(&Two::HAND_AS_AD));
+        assert!(!remaining.contains(&Two::HAND_AS_AC));
+        assert!(remaining.contains(&Two::HAND_AH_AD));
+        assert!(remaining.contains(&Two::HAND_AH_AC));
+        assert!(remaining.contains(&Two::HAND_AD_AC));
+    }
+
+    #[test]
+    fn blocking_remaining_at_turn_excludes_turn_card() {
+        // Continuing from the flop scenario: turn is AH.
+        // Hands containing AH additionally removed: AH_AD, AH_AC → 2 removed.
+        // Only AD_AC remains.
+        use crate::arrays::three::Three;
+        use crate::card::Card;
+        let hero = Two::HAND_KS_KH;
+        let villain = Combos::from_str("AA").unwrap();
+        let board = Board::new(
+            Three::from([Card::ACE_SPADES, Card::DEUCE_CLUBS, Card::TREY_DIAMONDS]),
+            Card::ACE_HEARTS,
+            Card::default(),
+        );
+        let solver = Versus::new_with_board(hero, villain, board);
+
+        let remaining = solver.remaining_at_turn();
+        assert_eq!(1, remaining.len());
+        assert!(remaining.contains(&Two::HAND_AD_AC));
+    }
+
+    #[test]
+    fn blocking_remaining_at_river_excludes_river_card() {
+        // River is AD — removes AD_AC, leaving no villain combos.
+        use crate::arrays::three::Three;
+        use crate::card::Card;
+        let hero = Two::HAND_KS_KH;
+        let villain = Combos::from_str("AA").unwrap();
+        let board = Board::new(
+            Three::from([Card::ACE_SPADES, Card::DEUCE_CLUBS, Card::TREY_DIAMONDS]),
+            Card::ACE_HEARTS,
+            Card::ACE_DIAMONDS,
+        );
+        let solver = Versus::new_with_board(hero, villain, board);
+
+        assert_eq!(0, solver.remaining_at_river().len());
+    }
+
+    #[test]
+    fn blocking_twos_is_unfiltered() {
+        // twos() returns the raw villain expansion with no blocking applied —
+        // it is intentionally unfiltered and used only for display.
+        let hero = Two::HAND_AS_AH;
+        let villain = Combos::from_str("AA").unwrap();
+        let solver = Versus::new(hero, villain);
+
+        assert_eq!(6, solver.twos().len()); // all 6 AA combos
+        assert_eq!(1, solver.remaining().len()); // only AD_AC after blocking
     }
 }

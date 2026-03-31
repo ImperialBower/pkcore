@@ -2,9 +2,10 @@
 //!
 //! At the river the board is complete (five cards dealt), so there is exactly one outcome
 //! per pair of hands — no runout enumeration is needed. [`RiverEval`] wraps that single
-//! [`CaseEval`] in the same shape as [`FlopEval`] and [`TurnEval`].
+//! [`CaseEval`] in the same shape as [`super::flop_eval::FlopEval`] and [`super::turn_eval::TurnEval`].
 
 use crate::PKError;
+use crate::Pile;
 use crate::analysis::case_eval::CaseEval;
 use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
@@ -12,7 +13,6 @@ use crate::arrays::HandRanker;
 use crate::arrays::seven::Seven;
 use crate::play::game::Game;
 use crate::prelude::Table;
-use crate::Pile;
 use std::fmt::{Display, Formatter};
 use wincounter::results::WinResults;
 use wincounter::wins::Wins;
@@ -20,8 +20,8 @@ use wincounter::wins::Wins;
 /// Hand ranking at the river stage.
 ///
 /// The board is complete, so there is a single deterministic [`CaseEval`] rather than the
-/// enumeration performed by [`FlopEval`](super::flop_eval::FlopEval) and
-/// [`TurnEval`](super::turn_eval::TurnEval).
+/// enumeration performed by [`super::flop_eval::FlopEval`] and
+/// [`super::turn_eval::TurnEval`].
 ///
 /// # Examples
 /// ```
@@ -113,7 +113,12 @@ impl TryFrom<Game> for RiverEval {
         let wins = case_evals.wins();
         let results = WinResults::from_wins(&wins, game.hands.len());
 
-        Ok(RiverEval { game, case_eval, wins, results })
+        Ok(RiverEval {
+            game,
+            case_eval,
+            wins,
+            results,
+        })
     }
 }
 
@@ -155,7 +160,10 @@ mod play__stages__river_eval_tests {
     #[test]
     fn test_river_eval_try_from_game_no_river() {
         let game = TestData::the_hand();
-        let game = Game { hands: game.hands, board: board_flop_and_turn_only() };
+        let game = Game {
+            hands: game.hands,
+            board: board_flop_and_turn_only(),
+        };
         let result = RiverEval::try_from(game);
         assert!(result.is_err());
         assert_eq!(PKError::NotDealt, result.unwrap_err());
@@ -163,7 +171,10 @@ mod play__stages__river_eval_tests {
 
     #[test]
     fn test_river_eval_try_from_game_no_hands() {
-        let game = Game { hands: HoleCards::default(), board: TestData::the_hand().board };
+        let game = Game {
+            hands: HoleCards::default(),
+            board: TestData::the_hand().board,
+        };
         let result = RiverEval::try_from(game);
         assert!(result.is_err());
         assert_eq!(PKError::NotDealt, result.unwrap_err());

@@ -5,8 +5,8 @@ use case_evals::CaseEvals;
 
 pub mod case_eval;
 pub mod case_evals;
-pub mod ev;
 pub mod class;
+pub mod ev;
 pub mod eval;
 pub mod evals;
 pub mod gto;

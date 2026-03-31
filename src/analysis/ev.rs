@@ -76,6 +76,7 @@ impl Ev {
     /// assert!(ev.numerator() > 0);
     /// ```
     #[must_use]
+    #[allow(clippy::cast_possible_wrap)]
     pub fn numerator(&self) -> i64 {
         let wins = self.odds.wins as i64;
         let losses = self.odds.losses as i64;
@@ -137,6 +138,7 @@ impl Ev {
     /// assert!((ev.as_chips() - 110.0).abs() < f64::EPSILON);
     /// ```
     #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn as_chips(&self) -> f64 {
         let total = self.total();
         if total == 0 {
@@ -148,12 +150,7 @@ impl Ev {
 
 impl Display for Ev {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "Ev {{ {}, ev: {:.2} chips }}",
-            self.pot_odds,
-            self.as_chips()
-        )
+        write!(f, "Ev {{ {}, ev: {:.2} chips }}", self.pot_odds, self.as_chips())
     }
 }
 
@@ -165,7 +162,11 @@ mod ev_tests {
     #[test]
     fn test_ev_positive_when_ahead() {
         // 70% equity vs pot-sized bet → +EV
-        let odds = WinLoseDraw { wins: 7, losses: 3, draws: 0 };
+        let odds = WinLoseDraw {
+            wins: 7,
+            losses: 3,
+            draws: 0,
+        };
         let ev = Ev::new(odds, PotOdds::new(100, 100));
         assert!(ev.is_positive());
     }
@@ -173,7 +174,11 @@ mod ev_tests {
     #[test]
     fn test_ev_negative_when_behind() {
         // 30% equity vs pot-sized bet → -EV
-        let odds = WinLoseDraw { wins: 3, losses: 7, draws: 0 };
+        let odds = WinLoseDraw {
+            wins: 3,
+            losses: 7,
+            draws: 0,
+        };
         let ev = Ev::new(odds, PotOdds::new(100, 100));
         assert!(!ev.is_positive());
     }
@@ -181,7 +186,11 @@ mod ev_tests {
     #[test]
     fn test_ev_zero_at_breakeven() {
         // Exactly 50% equity, pot-sized bet → EV = 0, not positive
-        let odds = WinLoseDraw { wins: 1, losses: 1, draws: 0 };
+        let odds = WinLoseDraw {
+            wins: 1,
+            losses: 1,
+            draws: 0,
+        };
         let ev = Ev::new(odds, PotOdds::new(100, 100));
         assert_eq!(ev.numerator(), 0);
         assert!(!ev.is_positive());
@@ -190,7 +199,11 @@ mod ev_tests {
     #[test]
     fn test_ev_as_chips_correct() {
         // (7×200 - 3×100) / 10 = (1400 - 300) / 10 = 110
-        let odds = WinLoseDraw { wins: 7, losses: 3, draws: 0 };
+        let odds = WinLoseDraw {
+            wins: 7,
+            losses: 3,
+            draws: 0,
+        };
         let ev = Ev::new(odds, PotOdds::new(200, 100));
         assert!((ev.as_chips() - 110.0).abs() < f64::EPSILON);
     }
@@ -204,8 +217,16 @@ mod ev_tests {
     #[test]
     fn test_ev_draws_do_not_affect_decision() {
         // Draws are a push — adding draws should not change the numerator
-        let odds_no_draws = WinLoseDraw { wins: 6, losses: 4, draws: 0 };
-        let odds_with_draws = WinLoseDraw { wins: 6, losses: 4, draws: 10 };
+        let odds_no_draws = WinLoseDraw {
+            wins: 6,
+            losses: 4,
+            draws: 0,
+        };
+        let odds_with_draws = WinLoseDraw {
+            wins: 6,
+            losses: 4,
+            draws: 10,
+        };
         let po = PotOdds::new(100, 100);
         let ev_no_draws = Ev::new(odds_no_draws, po);
         let ev_with_draws = Ev::new(odds_with_draws, po);
@@ -215,14 +236,22 @@ mod ev_tests {
 
     #[test]
     fn test_ev_total() {
-        let odds = WinLoseDraw { wins: 6, losses: 3, draws: 1 };
+        let odds = WinLoseDraw {
+            wins: 6,
+            losses: 3,
+            draws: 1,
+        };
         let ev = Ev::new(odds, PotOdds::new(100, 50));
         assert_eq!(ev.total(), 10);
     }
 
     #[test]
     fn test_ev_display() {
-        let odds = WinLoseDraw { wins: 7, losses: 3, draws: 0 };
+        let odds = WinLoseDraw {
+            wins: 7,
+            losses: 3,
+            draws: 0,
+        };
         let ev = Ev::new(odds, PotOdds::new(100, 100));
         let s = ev.to_string();
         assert!(s.contains("Ev {"));
