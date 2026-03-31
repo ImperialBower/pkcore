@@ -114,6 +114,5 @@ pub use crate::analysis::store::heads_up::{HUP, PreflopRow, PreflopRowHash};
 // analysis
 pub use crate::analysis::eval::SevenEval;
 pub use crate::analysis::gto::odds::WinLoseDraw;
-pub use crate::analysis::gto::ranger::Ranger;
 pub use crate::analysis::gto::vs::Versus;
 pub use crate::analysis::player_wins::PlayerWins;
