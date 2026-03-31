@@ -143,7 +143,11 @@ fn river(table: &Table, turn_pot: usize) -> Result<(), PKError> {
 
         match (re.rank_for_player(0), re.rank_for_player(1)) {
             (Ok(daniel), Ok(gus)) => {
-                let winner = if gus > daniel { "Gus Hansen (quads)" } else { "Daniel Negreanu (full house)" };
+                let winner = if gus > daniel {
+                    "Gus Hansen (quads)"
+                } else {
+                    "Daniel Negreanu (full house)"
+                };
                 println!("  Winner: {winner}");
             }
             _ => {}
@@ -167,11 +171,7 @@ fn river(table: &Table, turn_pot: usize) -> Result<(), PKError> {
     // Compute Gus's exact equity (5♦ 5♣ quads) vs Daniel's full-house range (66)
     // on the completed board. remaining_at_river() handles card-removal blocking.
     let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap_or_default();
-    let gus_vs_fullhouse = Versus::new_with_board(
-        Two::HAND_5D_5C,
-        Combos::from_str("66").unwrap_or_default(),
-        board,
-    );
+    let gus_vs_fullhouse = Versus::new_with_board(Two::HAND_5D_5C, Combos::from_str("66").unwrap_or_default(), board);
 
     println!("\n=== Gus Hansen's Decision (facing {} chip bet) ===", daniel_bet);
     println!("{pot_odds}");
