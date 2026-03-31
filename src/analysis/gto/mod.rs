@@ -6,7 +6,9 @@ pub mod twos;
 pub mod combo_pairs;
 pub mod combo_range;
 pub mod combos;
+pub mod game_tree;
 pub mod odds;
+pub mod solver_config;
 pub mod vs;
 pub mod weighted_combos;
 
