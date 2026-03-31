@@ -244,10 +244,10 @@ impl Combos {
     }
 
     fn range(s: &str) -> Result<ComboRange, PKError> {
-        let mut iter = s.split('-');
-        if iter.clone().count() == 2 {
-            let start = iter.next().ok_or(PKError::InvalidRangeIndex)?.parse::<Combo>()?;
-            let end = iter.next().ok_or(PKError::InvalidRangeIndex)?.parse::<Combo>()?;
+        let parts: Vec<&str> = s.split('-').collect();
+        if parts.len() == 2 {
+            let start = parts[0].parse::<Combo>()?;
+            let end = parts[1].parse::<Combo>()?;
             Ok(ComboRange::new(start, end))
         } else {
             Err(PKError::InvalidRangeIndex)
