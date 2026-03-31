@@ -162,7 +162,7 @@ impl Versus {
     /// The remaining `Twos` that the villain can have, excluding the hero's cards.
     #[must_use]
     pub fn remaining(&self) -> Twos {
-        Twos::from(self.villain.clone())
+        Twos::from(&self.villain)
             .filter_on_not_card(self.hero.first())
             .filter_on_not_card(self.hero.second())
     }
@@ -183,7 +183,7 @@ impl Versus {
     /// All the `Twos` including ones in the hero's hand.
     #[must_use]
     pub fn twos(&self) -> Twos {
-        Twos::from(self.villain.clone())
+        Twos::from(&self.villain)
     }
 }
 
@@ -192,7 +192,7 @@ impl Display for Versus {
         if self.board.salright() {
             write!(
                 f,
-                "Solver {{ hero: {}, villain: {}, board: {}  }}",
+                "Solver {{ hero: {}, villain: {}, board: {} }}",
                 self.hero, self.villain, self.board
             )
         } else {
