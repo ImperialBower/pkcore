@@ -93,6 +93,12 @@ impl ActionFrequencies {
     /// when the caller has already computed a valid distribution. The vector is
     /// accepted as-is without re-normalisation.
     ///
+    /// This constructor exists to avoid unnecessary work: the alternative would
+    /// be to build a `uniform` instance and then call `normalize()`, which
+    /// allocates twice and makes an extra pass over the data. Since
+    /// regret-matching already produces a correctly normalized `Vec<f64>`,
+    /// accepting it directly keeps the operation to a single allocation.
+    ///
     /// # Panics
     ///
     /// Panics if `freqs` is empty.
@@ -372,6 +378,58 @@ impl StrategyProfile {
     #[must_use]
     pub fn get_mut(&mut self, node: NodeId) -> Option<&mut HashMap<Two, ActionFrequencies>> {
         self.0.get_mut(&node)
+    }
+
+    /// Constructs a `StrategyProfile` from a pre-built map.
+    ///
+    /// Intended for the solver's `equilibrium()` method, which normalises raw
+    /// cumulative strategy sums into [`ActionFrequencies`] and then hands the
+    /// resulting map to this constructor.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::game_tree::NodeId;
+    /// use pkcore::analysis::gto::strategy_profile::{ActionFrequencies, StrategyProfile};
+    /// use std::collections::HashMap;
+    ///
+    /// let map = HashMap::new();
+    /// let profile = StrategyProfile::from_map(map);
+    /// assert!(profile.is_empty());
+    /// ```
+    #[must_use]
+    pub fn from_map(map: HashMap<NodeId, HashMap<Two, ActionFrequencies>>) -> Self {
+        Self(map)
+    }
+
+    /// Returns a shared reference to the full hand map for `node`, or `None`
+    /// if the node is not tracked.
+    ///
+    /// Useful for iterating over all hands at a node without a specific hand
+    /// lookup — for example, when verifying that all frequencies sum to 1.0.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::game_tree::{GameTree, NodeId};
+    /// use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// use pkcore::analysis::gto::strategy_profile::StrategyProfile;
+    /// use pkcore::play::board::Board;
+    /// use std::str::FromStr;
+    ///
+    /// let oop = Combos::from_str("AA,KK").unwrap_or_default();
+    /// let ip  = Combos::from_str("QQ,JJ").unwrap_or_default();
+    /// let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
+    /// let config = SolverConfig::new(oop.clone(), ip.clone(), board, 1_000, 200);
+    /// let tree = GameTree::build_river(&config);
+    /// let profile = StrategyProfile::from_uniform(&tree, &oop, &ip);
+    /// assert!(profile.get_map(NodeId::new(0)).is_some());
+    /// assert!(profile.get_map(NodeId::new(9999)).is_none());
+    /// ```
+    #[must_use]
+    pub fn get_map(&self, node: NodeId) -> Option<&HashMap<Two, ActionFrequencies>> {
+        self.0.get(&node)
     }
 
     /// Returns the number of action nodes tracked in this profile.

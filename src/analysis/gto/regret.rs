@@ -236,9 +236,11 @@ impl RegretAccumulator {
     /// Returns the raw accumulated regret vector for `(node, hand)`, or `None`
     /// if not tracked.
     ///
-    /// Primarily useful for testing and diagnostics; the solver uses
-    /// [`current_strategy`](Self::current_strategy) for the actual strategy
-    /// derivation.
+    /// The solver itself never needs this — it calls
+    /// [`current_strategy`](Self::current_strategy) to get a normalized
+    /// strategy directly. `get_raw` exists so tests can assert on the exact
+    /// accumulated values (e.g. to verify that the CFR+ floor clamped negative
+    /// regret to zero as expected).
     ///
     /// # Examples
     ///
