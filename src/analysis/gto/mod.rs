@@ -8,6 +8,7 @@ pub mod combo_range;
 pub mod combos;
 pub mod game_tree;
 pub mod odds;
+pub mod regret;
 pub mod solver_config;
 pub mod strategy_profile;
 pub mod vs;

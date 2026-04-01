@@ -87,6 +87,30 @@ impl ActionFrequencies {
         Self(vec![p; n_actions])
     }
 
+    /// Creates an `ActionFrequencies` from a pre-normalized probability vector.
+    ///
+    /// Intended for use by the solver internals (e.g. [`crate::analysis::gto::regret::RegretAccumulator`])
+    /// when the caller has already computed a valid distribution. The vector is
+    /// accepted as-is without re-normalisation.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `freqs` is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::strategy_profile::ActionFrequencies;
+    ///
+    /// let freq = ActionFrequencies::from_normalized(vec![0.75, 0.25]);
+    /// assert!((freq.as_slice()[0] - 0.75).abs() < 1e-9);
+    /// ```
+    #[must_use]
+    pub fn from_normalized(freqs: Vec<f64>) -> Self {
+        assert!(!freqs.is_empty(), "ActionFrequencies: freqs must be non-empty");
+        Self(freqs)
+    }
+
     /// Re-normalises the frequencies so they sum to exactly 1.0.
     ///
     /// If all entries are zero (e.g. after zeroing out dominated actions), the
