@@ -13,7 +13,9 @@
 
 use crate::analysis::gto::combo::Combo;
 use crate::analysis::gto::combos::Combos;
+use crate::analysis::gto::game_tree::NodeId;
 use crate::analysis::gto::odds::WinLoseDraw;
+use crate::analysis::gto::strategy_profile::StrategyProfile;
 use crate::analysis::gto::twos::Twos;
 use crate::arrays::two::Two;
 use std::collections::HashMap;
@@ -135,6 +137,95 @@ impl WeightedCombos {
             .collect()
     }
 
+    /// Returns a new [`WeightedCombos`] reflecting only the portion of this
+    /// range that takes `action` (by index) at `node`.
+    ///
+    /// For each combo, the method averages the action frequency across all of
+    /// the combo's specific [`Two`] hands found in `profile`, then multiplies
+    /// by the combo's existing weight:
+    ///
+    /// ```text
+    /// new_weight[combo] = old_weight[combo] × avg(profile[node][hand][action])
+    ///                     for all Two hands in combo
+    /// ```
+    ///
+    /// Averaging across hands within a combo accounts for blocker effects:
+    /// different specific holdings (e.g. A♠K♦ vs A♥K♣ within `AKo`) may have
+    /// slightly different strategies because they block different board cards.
+    ///
+    /// The resulting weight is the **joint probability** of holding this combo
+    /// and taking this action — exactly the reach probability used in CFR.
+    /// Combos with no hands in `profile` at `node`, or whose averaged action
+    /// frequency is zero, are excluded from the result.
+    ///
+    /// # Note on Node Type
+    ///
+    /// `node` must be an action node for the player whose range `self`
+    /// represents. Passing an opponent's action node returns an empty result
+    /// because none of this player's hands appear in the profile at that node.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::combo::Combo;
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::game_tree::GameTree;
+    /// use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// use pkcore::analysis::gto::strategy_profile::StrategyProfile;
+    /// use pkcore::analysis::gto::weighted_combos::WeightedCombos;
+    /// use pkcore::play::board::Board;
+    /// use std::str::FromStr;
+    ///
+    /// let oop = Combos::from_str("AA,KK").unwrap_or_default();
+    /// let ip  = Combos::from_str("QQ,JJ").unwrap_or_default();
+    /// let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
+    /// let config = SolverConfig::new(oop.clone(), ip.clone(), board, 1_000, 200);
+    /// let tree = GameTree::build_river(&config);
+    /// let profile = StrategyProfile::from_uniform(&tree, &oop, &ip);
+    ///
+    /// let mut wc = WeightedCombos::default();
+    /// wc.insert(Combo::COMBO_AA, 1.0);
+    /// wc.insert(Combo::COMBO_KK, 1.0);
+    ///
+    /// // Uniform profile: each of the 3 actions (Check/Bet½/Bet pot) has prob 1/3.
+    /// // after_action with action 0 returns weights scaled by 1/3.
+    /// let after = wc.after_action(&profile, tree.root_id(), 0);
+    /// for combo in [Combo::COMBO_AA, Combo::COMBO_KK] {
+    ///     let w = after.frequency(&combo).unwrap_or(0.0);
+    ///     assert!((w - 1.0 / 3.0).abs() < 1e-9, "expected ~0.333, got {w}");
+    /// }
+    /// ```
+    #[must_use]
+    pub fn after_action(&self, profile: &StrategyProfile, node: NodeId, action: usize) -> Self {
+        let mut result = Self::default();
+        for (combo, &combo_weight) in &self.0 {
+            if combo_weight <= 0.0 {
+                continue;
+            }
+            let hands = Twos::from(*combo).to_vec();
+            let mut total_freq = 0.0_f64;
+            let mut count = 0_usize;
+            for hand in &hands {
+                if let Some(freq) = profile.get(node, hand)
+                    && let Some(p) = freq.get(action)
+                {
+                    total_freq += p;
+                    count += 1;
+                }
+            }
+            if count == 0 {
+                continue;
+            }
+            #[allow(clippy::cast_precision_loss)]
+            let avg_action_freq = total_freq / count as f64;
+            let new_weight = combo_weight * avg_action_freq;
+            if new_weight > 0.0 {
+                result.insert(*combo, new_weight);
+            }
+        }
+        result
+    }
+
     /// Computes the frequency-weighted win probability from a map of per-hand equity results.
     ///
     /// `hand_odds` should map each [`Two`] to its [`WinLoseDraw`] result against the villain
@@ -201,6 +292,135 @@ impl Display for WeightedCombos {
 #[allow(non_snake_case)]
 mod weighted_combos_tests {
     use super::*;
+    use crate::analysis::gto::combos::Combos;
+    use crate::analysis::gto::game_tree::GameTree;
+    use crate::analysis::gto::solver_config::SolverConfig;
+    use crate::analysis::gto::strategy_profile::StrategyProfile;
+    use crate::play::board::Board;
+    use std::str::FromStr;
+
+    /// Build a uniform profile over AA (OOP) vs KK (IP) on a blank river board.
+    fn make_uniform_profile() -> (StrategyProfile, GameTree, Combos) {
+        let oop = Combos::from_str("AA,KK").unwrap_or_default();
+        let ip = Combos::from_str("QQ,JJ").unwrap_or_default();
+        let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
+        let config = SolverConfig::new(oop.clone(), ip.clone(), board, 1_000, 200);
+        let tree = GameTree::build_river(&config);
+        let profile = StrategyProfile::from_uniform(&tree, &oop, &ip);
+        (profile, tree, oop)
+    }
+
+    #[test]
+    fn test_after_action_uniform_scales_by_action_prob() {
+        let (profile, tree, _) = make_uniform_profile();
+        let root = tree.root_id();
+
+        let mut wc = WeightedCombos::default();
+        wc.insert(Combo::COMBO_AA, 1.0);
+
+        // Default bet sizings: [Check, Bet(½), Bet(pot)] → 3 actions, each 1/3.
+        let after = wc.after_action(&profile, root, 0);
+        let w = after.frequency(&Combo::COMBO_AA).unwrap_or(0.0);
+        assert!(
+            (w - 1.0 / 3.0).abs() < 1e-9,
+            "expected 1/3 for uniform 3-action profile, got {w}"
+        );
+    }
+
+    #[test]
+    fn test_after_action_all_actions_sum_to_original_weight() {
+        let (profile, tree, _) = make_uniform_profile();
+        let root = tree.root_id();
+
+        let mut wc = WeightedCombos::default();
+        wc.insert(Combo::COMBO_AA, 1.0);
+
+        // Sum of after_action over all action indices must equal the original weight.
+        use crate::analysis::gto::game_tree::Node;
+        if let Some(Node::Action(a)) = tree.get(root) {
+            let n = a.actions.len();
+            let total: f64 = (0..n)
+                .map(|i| {
+                    wc.after_action(&profile, root, i)
+                        .frequency(&Combo::COMBO_AA)
+                        .unwrap_or(0.0)
+                })
+                .sum();
+            assert!(
+                (total - 1.0).abs() < 1e-9,
+                "sum of after_action weights over all actions should equal original weight, got {total}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_after_action_combo_not_in_profile_excluded() {
+        let (profile, tree, _) = make_uniform_profile();
+        let root = tree.root_id();
+
+        // QQ is not in the OOP range so it has no entry in the profile at root.
+        let mut wc = WeightedCombos::default();
+        wc.insert(Combo::COMBO_QQ, 1.0);
+
+        let after = wc.after_action(&profile, root, 0);
+        assert!(
+            after.frequency(&Combo::COMBO_QQ).is_none(),
+            "combo not in profile should not appear in result"
+        );
+    }
+
+    #[test]
+    fn test_after_action_zero_weight_combo_excluded() {
+        let (profile, tree, _) = make_uniform_profile();
+        let root = tree.root_id();
+
+        let mut wc = WeightedCombos::default();
+        wc.insert(Combo::COMBO_AA, 0.0);
+
+        let after = wc.after_action(&profile, root, 0);
+        assert!(
+            after.frequency(&Combo::COMBO_AA).is_none(),
+            "zero-weight combos should be skipped"
+        );
+    }
+
+    #[test]
+    fn test_after_action_partial_weight_scales_correctly() {
+        let (profile, tree, _) = make_uniform_profile();
+        let root = tree.root_id();
+
+        let mut wc = WeightedCombos::default();
+        wc.insert(Combo::COMBO_AA, 0.6);
+
+        use crate::analysis::gto::game_tree::Node;
+        if let Some(Node::Action(a)) = tree.get(root) {
+            let expected = 0.6 / a.actions.len() as f64;
+            let after = wc.after_action(&profile, root, 0);
+            let w = after.frequency(&Combo::COMBO_AA).unwrap_or(0.0);
+            assert!((w - expected).abs() < 1e-9, "expected {expected}, got {w}");
+        }
+    }
+
+    #[test]
+    fn test_after_action_multiple_combos_scaled_independently() {
+        let (profile, tree, _) = make_uniform_profile();
+        let root = tree.root_id();
+
+        let mut wc = WeightedCombos::default();
+        wc.insert(Combo::COMBO_AA, 1.0);
+        wc.insert(Combo::COMBO_KK, 0.5);
+
+        let after = wc.after_action(&profile, root, 0);
+        let aa = after.frequency(&Combo::COMBO_AA).unwrap_or(0.0);
+        let kk = after.frequency(&Combo::COMBO_KK).unwrap_or(0.0);
+
+        // Both scaled by same uniform factor; ratio should be preserved.
+        assert!(
+            (aa / kk - 2.0).abs() < 1e-9,
+            "AA/KK ratio should be 2.0, got {}",
+            aa / kk
+        );
+    }
 
     #[test]
     fn test_insert_and_frequency() {

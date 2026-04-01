@@ -83,9 +83,12 @@ type ShowdownMap = HashMap<(Two, Two), Ordering>;
 
 /// The output of a completed [`Solver::solve`] run.
 ///
-/// Contains the number of iterations run, a placeholder exploitability value
-/// (true exploitability requires a best-response pass, planned for a later
-/// step), and the equilibrium [`StrategyProfile`] — the Nash approximation.
+/// Contains the number of iterations run, the exploitability of the resulting
+/// equilibrium strategy, and the equilibrium [`StrategyProfile`] — the Nash
+/// approximation.
+///
+/// Exploitability is computed via a best-response pass after the CFR iterations
+/// complete: see [`Solver::compute_exploitability`] for the full definition.
 ///
 /// # Examples
 ///
@@ -107,15 +110,17 @@ type ShowdownMap = HashMap<(Two, Two), Ordering>;
 /// let result = solver.solve();
 /// assert_eq!(result.iterations, 5);
 /// assert!(!result.equilibrium.is_empty());
+/// assert!(result.exploitability >= 0.0);
 /// ```
 #[derive(Debug)]
 pub struct SolverResult {
     /// Number of CFR iterations that were run.
     pub iterations: usize,
-    /// Exploitability in chips/100 hands.
+    /// Exploitability in chips (averaged over all hand pairs).
     ///
-    /// Currently always `0.0`. True exploitability requires a best-response
-    /// traversal over the full tree, which is planned for a later step.
+    /// Measures the Nash gap: how much either player could gain by deviating
+    /// unilaterally from the returned equilibrium. A perfect Nash equilibrium
+    /// has exploitability `0.0`; more CFR iterations push it toward zero.
     pub exploitability: f64,
     /// The average strategy — the Nash equilibrium approximation.
     ///
@@ -322,11 +327,12 @@ impl Solver {
         for _ in 0..max {
             self.iterate();
         }
+        let equilibrium = self.equilibrium();
+        let exploitability = self.compute_exploitability(&equilibrium);
         SolverResult {
             iterations: self.iteration,
-            // Placeholder: best-response exploitability pass is step 7.
-            exploitability: 0.0,
-            equilibrium: self.equilibrium(),
+            exploitability,
+            equilibrium,
         }
     }
 
@@ -408,6 +414,70 @@ impl Solver {
     #[must_use]
     pub fn iteration(&self) -> usize {
         self.iteration
+    }
+
+    /// Computes the exploitability of a strategy profile via best-response passes.
+    ///
+    /// Two tree traversals are performed:
+    ///
+    /// 1. **OOP best response** — OOP plays greedily (maximises at its nodes)
+    ///    while IP plays the fixed `profile`. Returns `br_oop`: the most OOP
+    ///    could earn against a non-adapting IP.
+    /// 2. **IP best response** — IP plays greedily (minimises OOP payoff at its
+    ///    nodes) while OOP plays the fixed `profile`. Returns `br_ip`: the least
+    ///    IP would allow OOP to earn against a non-adapting OOP.
+    ///
+    /// Both values are OOP-centric (positive = OOP gains chips). At Nash
+    /// equilibrium they are equal; their gap reflects the Nash distance.
+    ///
+    /// `exploitability = (br_oop − br_ip) / 2`
+    ///
+    /// Dividing by 2 splits the gap symmetrically: each player's single-sided
+    /// deviation gain is half the total gap. Smaller is better; `0.0` is a
+    /// perfect Nash equilibrium.
+    ///
+    /// Unlike [`Solver::iterate`], this method takes a shared reference — no
+    /// state is mutated. It operates on a completed `profile` (typically from
+    /// [`Solver::equilibrium`]) and the pre-built game tree and showdown map.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::solver::Solver;
+    /// use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// use pkcore::play::board::Board;
+    /// use std::str::FromStr;
+    ///
+    /// let config = SolverConfig::new(
+    ///     Combos::from_str("AA,KK").unwrap_or_default(),
+    ///     Combos::from_str("QQ,JJ").unwrap_or_default(),
+    ///     Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default(),
+    ///     1_000,
+    ///     200,
+    /// ).with_max_iterations(20);
+    /// let mut solver = Solver::new(config);
+    /// let result = solver.solve();
+    /// assert!(result.exploitability >= 0.0);
+    /// ```
+    #[must_use]
+    pub fn compute_exploitability(&self, profile: &StrategyProfile) -> f64 {
+        let n = self.hand_pairs.len();
+        if n == 0 {
+            return 0.0;
+        }
+        let root = self.tree.root_id();
+        let mut total_br_oop = 0.0_f64;
+        let mut total_br_ip = 0.0_f64;
+        for &(oop_hand, ip_hand) in &self.hand_pairs {
+            let tree = &self.tree;
+            let showdown_map = &self.showdown_map;
+            total_br_oop += best_response_oop(root, oop_hand, ip_hand, tree, showdown_map, profile);
+            total_br_ip += best_response_ip(root, oop_hand, ip_hand, tree, showdown_map, profile);
+        }
+        #[allow(clippy::cast_precision_loss)]
+        let n_f = n as f64;
+        (total_br_oop / n_f - total_br_ip / n_f) / 2.0
     }
 }
 
@@ -640,6 +710,114 @@ fn terminal_payoff(terminal: &TerminalNode, oop_hand: Two, ip_hand: Two, showdow
     }
 }
 
+/// Best-response value for OOP against a fixed equilibrium IP strategy.
+///
+/// OOP plays greedily — it takes the child action with the highest value at its
+/// own nodes. IP follows the fixed `profile` strategy (weighted average of child
+/// values). Returns the OOP payoff in chips for this specific hand matchup.
+///
+/// Unlike CFR's [`traverse`], no reach probabilities are tracked: the
+/// best-responder simply selects the argmax child at its decision nodes. This
+/// makes the recursion simpler and stateless — only the tree structure, the
+/// showdown map, and the fixed opponent strategy are needed.
+fn best_response_oop(
+    node_id: NodeId,
+    oop_hand: Two,
+    ip_hand: Two,
+    tree: &GameTree,
+    showdown_map: &ShowdownMap,
+    profile: &StrategyProfile,
+) -> f64 {
+    match tree.get(node_id) {
+        Some(Node::Terminal(t)) => terminal_payoff(t, oop_hand, ip_hand, showdown_map),
+        Some(Node::Chance(_)) | None => 0.0,
+        Some(Node::Action(action_node)) => {
+            let player = action_node.player;
+            let children: Vec<NodeId> = action_node.children.clone();
+            if children.is_empty() {
+                return 0.0;
+            }
+            let n_actions = children.len();
+            let child_values: Vec<f64> = children
+                .iter()
+                .map(|&child_id| best_response_oop(child_id, oop_hand, ip_hand, tree, showdown_map, profile))
+                .collect();
+            match player {
+                // OOP plays best-response: choose the action with the highest value.
+                Player::Oop => child_values.iter().copied().fold(f64::NEG_INFINITY, f64::max),
+                // IP plays the fixed equilibrium strategy: weighted average.
+                Player::Ip => {
+                    let strategy: Vec<f64> = profile.get(node_id, &ip_hand).map_or_else(
+                        || {
+                            #[allow(clippy::cast_precision_loss)]
+                            let p = 1.0 / n_actions as f64;
+                            vec![p; n_actions]
+                        },
+                        |af| af.as_slice().to_vec(),
+                    );
+                    strategy.iter().zip(child_values.iter()).map(|(&p, &v)| p * v).sum()
+                }
+            }
+        }
+    }
+}
+
+/// Best-response value for IP against a fixed equilibrium OOP strategy.
+///
+/// IP plays greedily — it takes the child action that *minimises* OOP's payoff
+/// at its own nodes. OOP follows the fixed `profile` strategy (weighted average
+/// of child values). Returns the OOP payoff in chips (which IP is trying to
+/// minimise) for this specific hand matchup.
+///
+/// The relationship between the two passes:
+/// - [`best_response_oop`] gives the ceiling: most OOP can earn against a
+///   non-adapting IP.
+/// - [`best_response_ip`] gives the floor: least IP allows OOP to earn against
+///   a non-adapting OOP.
+/// - At Nash equilibrium the ceiling and floor meet; their gap is the
+///   exploitability.
+fn best_response_ip(
+    node_id: NodeId,
+    oop_hand: Two,
+    ip_hand: Two,
+    tree: &GameTree,
+    showdown_map: &ShowdownMap,
+    profile: &StrategyProfile,
+) -> f64 {
+    match tree.get(node_id) {
+        Some(Node::Terminal(t)) => terminal_payoff(t, oop_hand, ip_hand, showdown_map),
+        Some(Node::Chance(_)) | None => 0.0,
+        Some(Node::Action(action_node)) => {
+            let player = action_node.player;
+            let children: Vec<NodeId> = action_node.children.clone();
+            if children.is_empty() {
+                return 0.0;
+            }
+            let n_actions = children.len();
+            let child_values: Vec<f64> = children
+                .iter()
+                .map(|&child_id| best_response_ip(child_id, oop_hand, ip_hand, tree, showdown_map, profile))
+                .collect();
+            match player {
+                // OOP plays the fixed equilibrium strategy: weighted average.
+                Player::Oop => {
+                    let strategy: Vec<f64> = profile.get(node_id, &oop_hand).map_or_else(
+                        || {
+                            #[allow(clippy::cast_precision_loss)]
+                            let p = 1.0 / n_actions as f64;
+                            vec![p; n_actions]
+                        },
+                        |af| af.as_slice().to_vec(),
+                    );
+                    strategy.iter().zip(child_values.iter()).map(|(&p, &v)| p * v).sum()
+                }
+                // IP plays best-response: choose the action that minimises OOP value.
+                Player::Ip => child_values.iter().copied().fold(f64::INFINITY, f64::min),
+            }
+        }
+    }
+}
+
 /// Builds the pre-computed showdown outcome map for all valid hand pairs.
 ///
 /// For each `(oop_hand, ip_hand)` pair, evaluates both seven-card hands and
@@ -761,6 +939,56 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_compute_exploitability_non_negative_after_uniform_start() {
+        // A uniform (unexploited) strategy is not Nash, so exploitability must
+        // be ≥ 0. We verify the sign contract holds before any CFR runs.
+        let solver = make_solver();
+        let profile = solver.equilibrium(); // uniform before any iterations
+        let expl = solver.compute_exploitability(&profile);
+        assert!(expl >= -1e-9, "exploitability must be >= 0.0, got {expl}");
+    }
+
+    #[test]
+    fn test_compute_exploitability_decreases_with_iterations() {
+        // More CFR iterations should reduce exploitability.
+        let oop = Combos::from_str("AA").unwrap_or_default();
+        let ip = Combos::from_str("KK").unwrap_or_default();
+        let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
+
+        let make = |iters: usize| {
+            let config =
+                SolverConfig::new(oop.clone(), ip.clone(), board.clone(), 1_000, 200).with_max_iterations(iters);
+            Solver::new(config).solve().exploitability
+        };
+
+        let expl_few = make(5);
+        let expl_many = make(50);
+        assert!(
+            expl_many <= expl_few + 1e-6,
+            "exploitability should decrease (or stay) with more iterations: \
+             5 iters={expl_few:.4}, 50 iters={expl_many:.4}"
+        );
+    }
+
+    #[test]
+    fn test_compute_exploitability_solve_result_matches_manual_call() {
+        // SolverResult::exploitability must equal compute_exploitability(&equilibrium).
+        let oop = Combos::from_str("AA,KK").unwrap_or_default();
+        let ip = Combos::from_str("QQ,JJ").unwrap_or_default();
+        let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
+        let config = SolverConfig::new(oop, ip, board, 1_000, 200).with_max_iterations(10);
+        let mut solver = Solver::new(config);
+        let result = solver.solve();
+        let manual = solver.compute_exploitability(&result.equilibrium);
+        assert!(
+            (result.exploitability - manual).abs() < 1e-12,
+            "SolverResult exploitability {:.6} != manual {:.6}",
+            result.exploitability,
+            manual
+        );
     }
 
     #[test]
