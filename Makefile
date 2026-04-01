@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm generate-hups-bin
+.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm generate-hups-bin test-debug-json
 
 # Default target
 default: ayce
@@ -10,6 +10,7 @@ help:
 	@echo "  make build           - Build the project"
 	@echo "  make clean           - Clean build artifacts"
 	@echo "  make test            - Run tests"
+	@echo "  make test-debug-json - Run tests with debug-json feature (save/load use JSON)"
 	@echo "  make build_test      - Clean once, then build and test"
 	@echo "  make fmt             - Format code"
 	@echo "  make clippy          - Run clippy linter"
@@ -51,6 +52,10 @@ build:
 # Run tests
 test:
 	cargo test
+
+# Run tests with the debug-json feature enabled (SolverResult::save/load use JSON)
+test-debug-json:
+	cargo test --features debug-json
 
 # Clean once, then run build + test
 build_test: clean build test

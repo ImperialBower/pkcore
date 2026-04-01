@@ -23,7 +23,11 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(printf 'n\\\\n')",
-      "Bash(cargo run:*)"
+      "Bash(cargo run:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(grep:*)",
+      "Bash(cargo clippy:*)"
     ]
   }
 }

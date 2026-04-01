@@ -89,6 +89,16 @@ workspace)
 
 ---
 
+## pkcore Epics
+
+| Epic | Topic | Status |
+|------|-------|--------|
+| [EPIC-14](docs/EPIC-14_Equity.md) | Hand Equity — pot odds, EV, range equity, weighted ranges | Complete |
+| [EPIC-15](docs/EPIC-15_GTO_Solver.md) | GTO Solver — game tree, CFR, strategy profiles, exploitability | Complete |
+| [EPIC-16](docs/EPIC-16_DCFR.md) | CFR+ and Discounted CFR — faster convergence variants | Complete |
+
+---
+
 ## Implementation Phases
 
 ### Phase 1 — Complete the pkdealer gRPC Server

@@ -44,7 +44,7 @@ fn main() -> Result<(), PKError> {
     println!("{}", solver.combo_pairs());
     println!();
 
-    let hups = solver.hups_at_deal();
+    let hups = solver.hups_at_deal()?;
 
     println!("Odds per hand matchup:");
     for key in hups.keys() {

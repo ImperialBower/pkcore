@@ -2982,6 +2982,226 @@ macro_rules! range {
             &Twos::from($crate::analysis::gto::FOUR_TREY_OFFSUIT.to_vec())
         )
     };
+
+    (87+) => {
+        Twos::from($crate::analysis::gto::ACE_KING.to_vec()).extend(
+            &Twos::from($crate::analysis::gto::KING_QUEEN.to_vec()).extend(
+                &Twos::from($crate::analysis::gto::QUEEN_JACK.to_vec()).extend(
+                    &Twos::from($crate::analysis::gto::JACK_TEN.to_vec()).extend(
+                        &Twos::from($crate::analysis::gto::TEN_NINE.to_vec()).extend(
+                            &Twos::from($crate::analysis::gto::NINE_EIGHT.to_vec()).extend(
+                                &Twos::from($crate::analysis::gto::EIGHT_SEVEN.to_vec())
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (87s+) => {
+        Twos::from($crate::analysis::gto::ACE_KING_SUITED.to_vec()).extend(
+            &Twos::from($crate::analysis::gto::KING_QUEEN_SUITED.to_vec()).extend(
+                &Twos::from($crate::analysis::gto::QUEEN_JACK_SUITED.to_vec()).extend(
+                    &Twos::from($crate::analysis::gto::JACK_TEN_SUITED.to_vec()).extend(
+                        &Twos::from($crate::analysis::gto::TEN_NINE_SUITED.to_vec()).extend(
+                            &Twos::from($crate::analysis::gto::NINE_EIGHT_SUITED.to_vec()).extend(
+                                &Twos::from($crate::analysis::gto::EIGHT_SEVEN_SUITED.to_vec())
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (87o+) => {
+        Twos::from($crate::analysis::gto::ACE_KING_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::analysis::gto::KING_QUEEN_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::analysis::gto::QUEEN_JACK_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::analysis::gto::JACK_TEN_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::analysis::gto::TEN_NINE_OFFSUIT.to_vec()).extend(
+                            &Twos::from($crate::analysis::gto::NINE_EIGHT_OFFSUIT.to_vec()).extend(
+                                &Twos::from($crate::analysis::gto::EIGHT_SEVEN_OFFSUIT.to_vec())
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+
+    (76+) => {
+        Twos::from($crate::analysis::gto::ACE_KING.to_vec()).extend(
+            &Twos::from($crate::analysis::gto::KING_QUEEN.to_vec()).extend(
+                &Twos::from($crate::analysis::gto::QUEEN_JACK.to_vec()).extend(
+                    &Twos::from($crate::analysis::gto::JACK_TEN.to_vec()).extend(
+                        &Twos::from($crate::analysis::gto::TEN_NINE.to_vec()).extend(
+                            &Twos::from($crate::analysis::gto::NINE_EIGHT.to_vec()).extend(
+                                &Twos::from($crate::analysis::gto::EIGHT_SEVEN.to_vec()).extend(
+                                    &Twos::from($crate::analysis::gto::SEVEN_SIX.to_vec())
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (76s+) => {
+        Twos::from($crate::analysis::gto::ACE_KING_SUITED.to_vec()).extend(
+            &Twos::from($crate::analysis::gto::KING_QUEEN_SUITED.to_vec()).extend(
+                &Twos::from($crate::analysis::gto::QUEEN_JACK_SUITED.to_vec()).extend(
+                    &Twos::from($crate::analysis::gto::JACK_TEN_SUITED.to_vec()).extend(
+                        &Twos::from($crate::analysis::gto::TEN_NINE_SUITED.to_vec()).extend(
+                            &Twos::from($crate::analysis::gto::NINE_EIGHT_SUITED.to_vec()).extend(
+                                &Twos::from($crate::analysis::gto::EIGHT_SEVEN_SUITED.to_vec()).extend(
+                                    &Twos::from($crate::analysis::gto::SEVEN_SIX_SUITED.to_vec())
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (76o+) => {
+        Twos::from($crate::analysis::gto::ACE_KING_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::analysis::gto::KING_QUEEN_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::analysis::gto::QUEEN_JACK_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::analysis::gto::JACK_TEN_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::analysis::gto::TEN_NINE_OFFSUIT.to_vec()).extend(
+                            &Twos::from($crate::analysis::gto::NINE_EIGHT_OFFSUIT.to_vec()).extend(
+                                &Twos::from($crate::analysis::gto::EIGHT_SEVEN_OFFSUIT.to_vec()).extend(
+                                    &Twos::from($crate::analysis::gto::SEVEN_SIX_OFFSUIT.to_vec())
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+
+    (65+) => {
+        Twos::from($crate::analysis::gto::ACE_KING.to_vec()).extend(
+            &Twos::from($crate::analysis::gto::KING_QUEEN.to_vec()).extend(
+                &Twos::from($crate::analysis::gto::QUEEN_JACK.to_vec()).extend(
+                    &Twos::from($crate::analysis::gto::JACK_TEN.to_vec()).extend(
+                        &Twos::from($crate::analysis::gto::TEN_NINE.to_vec()).extend(
+                            &Twos::from($crate::analysis::gto::NINE_EIGHT.to_vec()).extend(
+                                &Twos::from($crate::analysis::gto::EIGHT_SEVEN.to_vec()).extend(
+                                    &Twos::from($crate::analysis::gto::SEVEN_SIX.to_vec()).extend(
+                                        &Twos::from($crate::analysis::gto::SIX_FIVE.to_vec())
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (65s+) => {
+        Twos::from($crate::analysis::gto::ACE_KING_SUITED.to_vec()).extend(
+            &Twos::from($crate::analysis::gto::KING_QUEEN_SUITED.to_vec()).extend(
+                &Twos::from($crate::analysis::gto::QUEEN_JACK_SUITED.to_vec()).extend(
+                    &Twos::from($crate::analysis::gto::JACK_TEN_SUITED.to_vec()).extend(
+                        &Twos::from($crate::analysis::gto::TEN_NINE_SUITED.to_vec()).extend(
+                            &Twos::from($crate::analysis::gto::NINE_EIGHT_SUITED.to_vec()).extend(
+                                &Twos::from($crate::analysis::gto::EIGHT_SEVEN_SUITED.to_vec()).extend(
+                                    &Twos::from($crate::analysis::gto::SEVEN_SIX_SUITED.to_vec()).extend(
+                                        &Twos::from($crate::analysis::gto::SIX_FIVE_SUITED.to_vec())
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (65o+) => {
+        Twos::from($crate::analysis::gto::ACE_KING_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::analysis::gto::KING_QUEEN_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::analysis::gto::QUEEN_JACK_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::analysis::gto::JACK_TEN_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::analysis::gto::TEN_NINE_OFFSUIT.to_vec()).extend(
+                            &Twos::from($crate::analysis::gto::NINE_EIGHT_OFFSUIT.to_vec()).extend(
+                                &Twos::from($crate::analysis::gto::EIGHT_SEVEN_OFFSUIT.to_vec()).extend(
+                                    &Twos::from($crate::analysis::gto::SEVEN_SIX_OFFSUIT.to_vec()).extend(
+                                        &Twos::from($crate::analysis::gto::SIX_FIVE_OFFSUIT.to_vec())
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+
+    (54+) => {
+        Twos::from($crate::analysis::gto::ACE_KING.to_vec()).extend(
+            &Twos::from($crate::analysis::gto::KING_QUEEN.to_vec()).extend(
+                &Twos::from($crate::analysis::gto::QUEEN_JACK.to_vec()).extend(
+                    &Twos::from($crate::analysis::gto::JACK_TEN.to_vec()).extend(
+                        &Twos::from($crate::analysis::gto::TEN_NINE.to_vec()).extend(
+                            &Twos::from($crate::analysis::gto::NINE_EIGHT.to_vec()).extend(
+                                &Twos::from($crate::analysis::gto::EIGHT_SEVEN.to_vec()).extend(
+                                    &Twos::from($crate::analysis::gto::SEVEN_SIX.to_vec()).extend(
+                                        &Twos::from($crate::analysis::gto::SIX_FIVE.to_vec()).extend(
+                                            &Twos::from($crate::analysis::gto::FIVE_FOUR.to_vec())
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (54s+) => {
+        Twos::from($crate::analysis::gto::ACE_KING_SUITED.to_vec()).extend(
+            &Twos::from($crate::analysis::gto::KING_QUEEN_SUITED.to_vec()).extend(
+                &Twos::from($crate::analysis::gto::QUEEN_JACK_SUITED.to_vec()).extend(
+                    &Twos::from($crate::analysis::gto::JACK_TEN_SUITED.to_vec()).extend(
+                        &Twos::from($crate::analysis::gto::TEN_NINE_SUITED.to_vec()).extend(
+                            &Twos::from($crate::analysis::gto::NINE_EIGHT_SUITED.to_vec()).extend(
+                                &Twos::from($crate::analysis::gto::EIGHT_SEVEN_SUITED.to_vec()).extend(
+                                    &Twos::from($crate::analysis::gto::SEVEN_SIX_SUITED.to_vec()).extend(
+                                        &Twos::from($crate::analysis::gto::SIX_FIVE_SUITED.to_vec()).extend(
+                                            &Twos::from($crate::analysis::gto::FIVE_FOUR_SUITED.to_vec())
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
+    (54o+) => {
+        Twos::from($crate::analysis::gto::ACE_KING_OFFSUIT.to_vec()).extend(
+            &Twos::from($crate::analysis::gto::KING_QUEEN_OFFSUIT.to_vec()).extend(
+                &Twos::from($crate::analysis::gto::QUEEN_JACK_OFFSUIT.to_vec()).extend(
+                    &Twos::from($crate::analysis::gto::JACK_TEN_OFFSUIT.to_vec()).extend(
+                        &Twos::from($crate::analysis::gto::TEN_NINE_OFFSUIT.to_vec()).extend(
+                            &Twos::from($crate::analysis::gto::NINE_EIGHT_OFFSUIT.to_vec()).extend(
+                                &Twos::from($crate::analysis::gto::EIGHT_SEVEN_OFFSUIT.to_vec()).extend(
+                                    &Twos::from($crate::analysis::gto::SEVEN_SIX_OFFSUIT.to_vec()).extend(
+                                        &Twos::from($crate::analysis::gto::SIX_FIVE_OFFSUIT.to_vec()).extend(
+                                            &Twos::from($crate::analysis::gto::FIVE_FOUR_OFFSUIT.to_vec())
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        )
+    };
 }
 
 #[cfg(test)]

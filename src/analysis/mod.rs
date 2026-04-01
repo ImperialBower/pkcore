@@ -6,6 +6,7 @@ use case_evals::CaseEvals;
 pub mod case_eval;
 pub mod case_evals;
 pub mod class;
+pub mod ev;
 pub mod eval;
 pub mod evals;
 pub mod gto;
@@ -15,6 +16,8 @@ pub mod nubibus;
 pub mod omaha;
 pub mod outs;
 pub mod player_wins;
+pub mod pot_odds;
+pub mod range_equity;
 pub mod store;
 pub mod the_nuts;
 

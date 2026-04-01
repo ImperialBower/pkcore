@@ -6,9 +6,14 @@ pub mod twos;
 pub mod combo_pairs;
 pub mod combo_range;
 pub mod combos;
+pub mod game_tree;
 pub mod odds;
-pub mod ranger;
+pub mod regret;
+pub mod solver;
+pub mod solver_config;
+pub mod strategy_profile;
 pub mod vs;
+pub mod weighted_combos;
 
 // region hand range array constants
 // region pocket pair range array constants
