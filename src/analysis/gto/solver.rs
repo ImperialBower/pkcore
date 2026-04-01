@@ -61,6 +61,7 @@ use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 
 /// Pre-computed showdown results keyed by hand pair and optional runout card.
@@ -202,6 +203,142 @@ pub struct SolverResult {
 }
 
 impl SolverResult {
+    // ── Byte / string serialization (always available, including WASM) ────────
+
+    /// Serializes this result to compact binary bytes using bincode.
+    ///
+    /// Unlike [`save_binary`][Self::save_binary] this method does **not** touch
+    /// the filesystem, making it safe to call from any target including
+    /// WebAssembly. The caller is responsible for persisting the returned bytes
+    /// (e.g. writing to a file on native, or passing to JavaScript on WASM).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Binary`] if serialization fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::solver::Solver;
+    /// use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// use pkcore::play::board::Board;
+    /// use std::str::FromStr;
+    ///
+    /// let config = SolverConfig::new(
+    ///     Combos::from_str("AA").unwrap_or_default(),
+    ///     Combos::from_str("KK").unwrap_or_default(),
+    ///     Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default(),
+    ///     1_000, 200,
+    /// ).with_max_iterations(2);
+    /// let result = Solver::new(config).solve();
+    /// let bytes = result.to_binary_bytes().unwrap();
+    /// assert!(!bytes.is_empty());
+    /// ```
+    pub fn to_binary_bytes(&self) -> Result<Vec<u8>, SolverError> {
+        Ok(bincode::serialize(self)?)
+    }
+
+    /// Deserializes a result from compact binary bytes produced by
+    /// [`to_binary_bytes`][Self::to_binary_bytes].
+    ///
+    /// Safe to call from any target including WebAssembly.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Binary`] if deserialization fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::solver::Solver;
+    /// use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// use pkcore::play::board::Board;
+    /// use std::str::FromStr;
+    ///
+    /// let config = SolverConfig::new(
+    ///     Combos::from_str("AA").unwrap_or_default(),
+    ///     Combos::from_str("KK").unwrap_or_default(),
+    ///     Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default(),
+    ///     1_000, 200,
+    /// ).with_max_iterations(2);
+    /// let result = Solver::new(config).solve();
+    /// let bytes = result.to_binary_bytes().unwrap();
+    /// let loaded = pkcore::analysis::gto::solver::SolverResult::from_binary_bytes(&bytes).unwrap();
+    /// assert_eq!(loaded.iterations, result.iterations);
+    /// ```
+    pub fn from_binary_bytes(bytes: &[u8]) -> Result<Self, SolverError> {
+        Ok(bincode::deserialize(bytes)?)
+    }
+
+    /// Serializes this result to a pretty-printed JSON string.
+    ///
+    /// Safe to call from any target including WebAssembly. The caller is
+    /// responsible for persisting the string.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Json`] if serialization fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::solver::Solver;
+    /// use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// use pkcore::play::board::Board;
+    /// use std::str::FromStr;
+    ///
+    /// let config = SolverConfig::new(
+    ///     Combos::from_str("AA").unwrap_or_default(),
+    ///     Combos::from_str("KK").unwrap_or_default(),
+    ///     Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default(),
+    ///     1_000, 200,
+    /// ).with_max_iterations(2);
+    /// let result = Solver::new(config).solve();
+    /// let json = result.to_json_string().unwrap();
+    /// assert!(json.contains("iterations"));
+    /// ```
+    pub fn to_json_string(&self) -> Result<String, SolverError> {
+        Ok(serde_json::to_string_pretty(self)?)
+    }
+
+    /// Deserializes a result from a JSON string produced by
+    /// [`to_json_string`][Self::to_json_string].
+    ///
+    /// Safe to call from any target including WebAssembly.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Json`] if deserialization fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::solver::Solver;
+    /// use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// use pkcore::play::board::Board;
+    /// use std::str::FromStr;
+    ///
+    /// let config = SolverConfig::new(
+    ///     Combos::from_str("AA").unwrap_or_default(),
+    ///     Combos::from_str("KK").unwrap_or_default(),
+    ///     Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default(),
+    ///     1_000, 200,
+    /// ).with_max_iterations(2);
+    /// let result = Solver::new(config).solve();
+    /// let json = result.to_json_string().unwrap();
+    /// let loaded = pkcore::analysis::gto::solver::SolverResult::from_json_str(&json).unwrap();
+    /// assert_eq!(loaded.iterations, result.iterations);
+    /// ```
+    pub fn from_json_str(s: &str) -> Result<Self, SolverError> {
+        Ok(serde_json::from_str(s)?)
+    }
+
+    // ── Filesystem I/O (native only — not available on wasm32) ───────────────
+
     /// Saves this result using the default format.
     ///
     /// The default format is **compact binary** (bincode). When the crate is
@@ -210,6 +347,9 @@ impl SolverResult {
     ///
     /// Use [`save_binary`][Self::save_binary] or [`save_json`][Self::save_json]
     /// to force a specific format regardless of the feature flag.
+    ///
+    /// *Not available on `wasm32` — use [`to_binary_bytes`][Self::to_binary_bytes]
+    /// or [`to_json_string`][Self::to_json_string] instead.*
     ///
     /// # Errors
     ///
@@ -233,6 +373,7 @@ impl SolverResult {
     /// let result = Solver::new(config).solve();
     /// result.save("/tmp/my_solve.bin").unwrap();
     /// ```
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn save(&self, path: impl AsRef<Path>) -> Result<(), SolverError> {
         #[cfg(feature = "debug-json")]
         {
@@ -247,8 +388,10 @@ impl SolverResult {
     /// Loads a result saved by [`save`][Self::save].
     ///
     /// Uses the same format selection as `save`: binary by default, JSON when
-    /// the `debug-json` feature is enabled. The format of the file on disk must
-    /// match the format used to save it.
+    /// the `debug-json` feature is enabled.
+    ///
+    /// *Not available on `wasm32` — use [`from_binary_bytes`][Self::from_binary_bytes]
+    /// or [`from_json_str`][Self::from_json_str] instead.*
     ///
     /// # Errors
     ///
@@ -262,6 +405,7 @@ impl SolverResult {
     /// let result = SolverResult::load("/tmp/my_solve.bin").unwrap();
     /// println!("iterations={} exploitability={:.4}", result.iterations, result.exploitability);
     /// ```
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load(path: impl AsRef<Path>) -> Result<Self, SolverError> {
         #[cfg(feature = "debug-json")]
         {
@@ -275,9 +419,7 @@ impl SolverResult {
 
     /// Saves this result as compact binary using bincode.
     ///
-    /// Binary files are smaller and faster to write/read than JSON, making
-    /// them the right choice for storing production solve results. The file is
-    /// not human-readable; use [`save_json`][Self::save_json] for inspection.
+    /// *Not available on `wasm32` — use [`to_binary_bytes`][Self::to_binary_bytes] instead.*
     ///
     /// # Errors
     ///
@@ -297,13 +439,16 @@ impl SolverResult {
     /// let result = Solver::new(config).solve();
     /// result.save_binary("/tmp/my_solve.bin").unwrap();
     /// ```
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn save_binary(&self, path: impl AsRef<Path>) -> Result<(), SolverError> {
-        let bytes = bincode::serialize(self)?;
+        let bytes = self.to_binary_bytes()?;
         std::fs::write(path, bytes)?;
         Ok(())
     }
 
     /// Loads a result previously written by [`save_binary`][Self::save_binary].
+    ///
+    /// *Not available on `wasm32` — use [`from_binary_bytes`][Self::from_binary_bytes] instead.*
     ///
     /// # Errors
     ///
@@ -315,18 +460,15 @@ impl SolverResult {
     /// use pkcore::analysis::gto::solver::SolverResult;
     /// let result = SolverResult::load_binary("/tmp/my_solve.bin").unwrap();
     /// ```
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_binary(path: impl AsRef<Path>) -> Result<Self, SolverError> {
         let bytes = std::fs::read(path)?;
-        let result = bincode::deserialize(&bytes)?;
-        Ok(result)
+        Self::from_binary_bytes(&bytes)
     }
 
     /// Saves this result as pretty-printed JSON.
     ///
-    /// JSON output is human-readable and useful for inspecting strategy
-    /// frequencies during development. For production storage prefer
-    /// [`save_binary`][Self::save_binary] — bincode files are significantly
-    /// smaller and faster.
+    /// *Not available on `wasm32` — use [`to_json_string`][Self::to_json_string] instead.*
     ///
     /// # Errors
     ///
@@ -346,13 +488,16 @@ impl SolverResult {
     /// let result = Solver::new(config).solve();
     /// result.save_json("/tmp/my_solve.json").unwrap();
     /// ```
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn save_json(&self, path: impl AsRef<Path>) -> Result<(), SolverError> {
-        let json = serde_json::to_string_pretty(self)?;
+        let json = self.to_json_string()?;
         std::fs::write(path, json)?;
         Ok(())
     }
 
     /// Loads a result previously written by [`save_json`][Self::save_json].
+    ///
+    /// *Not available on `wasm32` — use [`from_json_str`][Self::from_json_str] instead.*
     ///
     /// # Errors
     ///
@@ -364,10 +509,10 @@ impl SolverResult {
     /// use pkcore::analysis::gto::solver::SolverResult;
     /// let result = SolverResult::load_json("/tmp/my_solve.json").unwrap();
     /// ```
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn load_json(path: impl AsRef<Path>) -> Result<Self, SolverError> {
         let json = std::fs::read_to_string(path)?;
-        let result = serde_json::from_str(&json)?;
-        Ok(result)
+        Self::from_json_str(&json)
     }
 }
 
@@ -728,6 +873,63 @@ impl Solver {
     #[must_use]
     pub fn iteration(&self) -> usize {
         self.iteration
+    }
+
+    /// Returns the `NodeId` of the root node in the solver's game tree.
+    ///
+    /// Useful for inspecting the equilibrium strategy at the root — e.g., looking
+    /// up per-hand action frequencies via [`StrategyProfile::get`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::solver::Solver;
+    /// use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// use pkcore::play::board::Board;
+    /// use std::str::FromStr;
+    ///
+    /// let config = SolverConfig::new(
+    ///     Combos::from_str("AA").unwrap_or_default(),
+    ///     Combos::from_str("KK").unwrap_or_default(),
+    ///     Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default(),
+    ///     1_000, 200,
+    /// ).with_max_iterations(1);
+    /// let solver = Solver::new(config);
+    /// let root = solver.root_id();
+    /// ```
+    #[must_use]
+    pub fn root_id(&self) -> NodeId {
+        self.tree.root_id()
+    }
+
+    /// Returns the pre-filtered list of valid `(oop_hand, ip_hand)` pairs.
+    ///
+    /// A pair is included only if neither hand conflicts with the board and the
+    /// two hands share no card. Computed once at construction — this accessor
+    /// provides read-only access without exposing the internal field.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::solver::Solver;
+    /// use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// use pkcore::play::board::Board;
+    /// use std::str::FromStr;
+    ///
+    /// let config = SolverConfig::new(
+    ///     Combos::from_str("AA").unwrap_or_default(),
+    ///     Combos::from_str("KK").unwrap_or_default(),
+    ///     Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default(),
+    ///     1_000, 200,
+    /// ).with_max_iterations(1);
+    /// let solver = Solver::new(config);
+    /// assert!(!solver.hand_pairs().is_empty());
+    /// ```
+    #[must_use]
+    pub fn hand_pairs(&self) -> &[(Two, Two)] {
+        &self.hand_pairs
     }
 
     /// Computes the exploitability of a strategy profile via best-response passes.
@@ -1515,6 +1717,23 @@ mod tests {
     }
 
     #[test]
+    fn test_solver_result_bytes_round_trip() {
+        let original = small_result();
+        let bytes = original.to_binary_bytes().expect("to_binary_bytes should succeed");
+        let loaded = SolverResult::from_binary_bytes(&bytes).expect("from_binary_bytes should succeed");
+        assert_round_trip_eq(&original, &loaded);
+    }
+
+    #[test]
+    fn test_solver_result_json_string_round_trip() {
+        let original = small_result();
+        let json = original.to_json_string().expect("to_json_string should succeed");
+        let loaded = SolverResult::from_json_str(&json).expect("from_json_str should succeed");
+        assert_round_trip_eq(&original, &loaded);
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
     fn test_solver_result_binary_round_trip() {
         let original = small_result();
         let path = std::env::temp_dir().join("pkcore_test_solver_binary.bin");
@@ -1524,6 +1743,7 @@ mod tests {
         let _ = std::fs::remove_file(&path);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn test_solver_result_json_round_trip() {
         let original = small_result();
@@ -1534,6 +1754,7 @@ mod tests {
         let _ = std::fs::remove_file(&path);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn test_solver_result_default_save_load_round_trip() {
         // save/load use binary by default (debug-json feature not enabled in tests).
@@ -1560,11 +1781,25 @@ mod tests {
     }
 
     #[test]
+    fn test_solver_result_from_bad_json_returns_json_error() {
+        let result = SolverResult::from_json_str("not valid json {{{{");
+        assert!(matches!(result.unwrap_err(), SolverError::Json(_)));
+    }
+
+    #[test]
+    fn test_solver_result_from_bad_binary_returns_binary_error() {
+        let result = SolverResult::from_binary_bytes(b"this is not bincode");
+        assert!(matches!(result.unwrap_err(), SolverError::Binary(_)));
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
     fn test_solver_result_load_missing_file_returns_io_error() {
         let result = SolverResult::load_binary("/tmp/pkcore_nonexistent_file_xyz.bin");
         assert!(matches!(result.unwrap_err(), SolverError::Io(_)));
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn test_solver_result_load_bad_json_returns_json_error() {
         let path = std::env::temp_dir().join("pkcore_test_bad_json.json");
@@ -1574,6 +1809,7 @@ mod tests {
         let _ = std::fs::remove_file(&path);
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[test]
     fn test_solver_result_load_bad_binary_returns_binary_error() {
         let path = std::env::temp_dir().join("pkcore_test_bad_bin.bin");
