@@ -17,10 +17,14 @@
 //!
 //! # Building a Tree
 //!
-//! [`GameTree::build_river`] constructs a river-only tree from a
-//! [`super::solver_config::SolverConfig`]. River-only trees have no
-//! [`Node::Chance`] nodes — the board is already fully run out — making them
-//! the simplest correctness target for a new solver.
+//! Two builders are provided:
+//!
+//! - [`GameTree::build_river`] — river-only tree; no chance nodes. The board
+//!   is fully run out (5 cards), so there is nothing left to deal.
+//! - [`GameTree::build_turn`] — turn+river tree; a [`Node::Chance`] node is
+//!   inserted at every "both players see showdown" continuation on the turn
+//!   street, fanning out to one river action subtree per possible runout card
+//!   (48 cards when the known board has 4 cards).
 //!
 //! ```
 //! use pkcore::analysis::gto::combos::Combos;
@@ -43,7 +47,9 @@
 use crate::analysis::gto::solver_config::BetSize;
 use crate::analysis::gto::solver_config::SolverConfig;
 use crate::card::Card;
+use crate::deck::Deck;
 use crate::play::phases::PhaseHoldem;
+use std::collections::HashSet;
 use std::fmt;
 
 // ── NodeId ───────────────────────────────────────────────────────────────────
@@ -257,12 +263,18 @@ pub struct ChanceNode {
 
 /// A terminal node: the hand is over.
 ///
+/// For multi-street trees (turn solve), `runout_river` holds the specific river
+/// card dealt at the chance node that led to this terminal. The showdown map is
+/// keyed by `(oop_hand, ip_hand, runout_river)` so the right pre-computed rank
+/// comparison is used. River-only trees always have `runout_river: None`.
+///
 /// # Examples
 /// ```
 /// use pkcore::analysis::gto::game_tree::{Player, TerminalNode, TerminalOutcome};
 ///
-/// let node = TerminalNode { outcome: TerminalOutcome::Showdown, pot: 200 };
+/// let node = TerminalNode { outcome: TerminalOutcome::Showdown, pot: 200, runout_river: None };
 /// assert_eq!(node.pot, 200);
+/// assert!(node.runout_river.is_none());
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TerminalNode {
@@ -270,6 +282,11 @@ pub struct TerminalNode {
     pub outcome: TerminalOutcome,
     /// Total chips in the pot at the end of the hand.
     pub pot: u64,
+    /// The river card dealt at the chance node leading to this terminal.
+    ///
+    /// `None` in river-only trees (board already fully run out). `Some(card)` in
+    /// turn trees, where one of 48 possible river runout cards was dealt.
+    pub runout_river: Option<Card>,
 }
 
 // ── Node ─────────────────────────────────────────────────────────────────────
@@ -283,6 +300,7 @@ pub struct TerminalNode {
 /// let node = Node::Terminal(TerminalNode {
 ///     outcome: TerminalOutcome::Showdown,
 ///     pot: 200,
+///     runout_river: None,
 /// });
 /// assert!(node.is_terminal());
 /// ```
@@ -303,7 +321,7 @@ impl Node {
     /// ```
     /// use pkcore::analysis::gto::game_tree::{Node, TerminalNode, TerminalOutcome};
     ///
-    /// let t = Node::Terminal(TerminalNode { outcome: TerminalOutcome::Showdown, pot: 0 });
+    /// let t = Node::Terminal(TerminalNode { outcome: TerminalOutcome::Showdown, pot: 0, runout_river: None });
     /// assert!(t.is_terminal());
     /// ```
     #[must_use]
@@ -556,20 +574,106 @@ impl GameTree {
         // Children are pushed before their parent, so the root is the last
         // node pushed. After building we reverse the arena and remap all
         // NodeId references so the root lands at index 0.
-        Self::build_open_node(&mut nodes, Player::Oop, config.pot, &config.bet_sizings.river, false);
+        Self::build_open_node(
+            &mut nodes,
+            Player::Oop,
+            config.pot,
+            &config.bet_sizings.river,
+            false,
+            None,
+        );
 
-        let n = nodes.len();
-        nodes.reverse();
-        // After reversal: old index i → new index (n - 1 - i)
-        for node in &mut nodes {
-            if let Node::Action(a) = node {
-                for child in &mut a.children {
-                    child.0 = n - 1 - child.0;
-                }
-            }
-        }
+        Self::reverse_and_remap(nodes)
+    }
 
-        Self { nodes }
+    /// Builds a turn+river game tree from the solver configuration.
+    ///
+    /// The known board has 4 cards (flop + turn). At every point where a
+    /// river-only tree would produce a showdown terminal, this builder instead
+    /// inserts a [`Node::Chance`] node with one child per possible river runout
+    /// card (all 52 cards minus the 4 known board cards = 48 cards). Each child
+    /// subtree is a complete river action tree using `config.bet_sizings.river`.
+    ///
+    /// Folds during the turn betting round produce immediate
+    /// [`TerminalOutcome::Fold`] nodes — no river card is dealt.
+    ///
+    /// Showdown terminals under a chance node carry `runout_river: Some(card)`,
+    /// enabling the solver to look up the correct pre-computed hand comparison
+    /// for that specific runout.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::game_tree::{GameTree, Node};
+    /// use pkcore::analysis::gto::solver_config::{BetSize, BetSizings, SolverConfig};
+    /// use pkcore::play::board::Board;
+    /// use std::str::FromStr;
+    ///
+    /// // Board only needs flop + turn; river is ignored in build_turn.
+    /// let config = SolverConfig::new(
+    ///     Combos::default(), Combos::default(),
+    ///     Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default(),
+    ///     1_000,
+    ///     200,
+    /// ).with_bet_sizings(BetSizings::uniform(vec![BetSize::half_pot()]));
+    ///
+    /// let tree = GameTree::build_turn(&config);
+    /// // Turn tree is larger than a river tree due to the 48-card chance node.
+    /// assert!(tree.len() > 10);
+    /// assert!(tree.count_chance_nodes() > 0);
+    /// ```
+    #[must_use]
+    pub fn build_turn(config: &SolverConfig) -> Self {
+        let known_cards: HashSet<Card> = [
+            config.board.flop.first(),
+            config.board.flop.second(),
+            config.board.flop.third(),
+            config.board.turn,
+        ]
+        .into_iter()
+        .collect();
+
+        // Enumerate all river runout candidates: 52 cards minus the 4 known board cards.
+        // Hand-card conflicts are filtered at traversal time (per hand pair), not here.
+        let runout_cards: Vec<Card> = Deck::as_vec()
+            .into_iter()
+            .filter(|c| !known_cards.contains(c))
+            .collect();
+
+        let mut nodes: Vec<Node> = Vec::new();
+        Self::build_open_node(
+            &mut nodes,
+            Player::Oop,
+            config.pot,
+            &config.bet_sizings.turn,
+            false,
+            Some((&runout_cards, &config.bet_sizings.river)),
+        );
+
+        Self::reverse_and_remap(nodes)
+    }
+
+    /// Counts all chance nodes in the tree.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::game_tree::GameTree;
+    /// use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// use pkcore::play::board::Board;
+    ///
+    /// let config = SolverConfig::new(
+    ///     Combos::default(), Combos::default(),
+    ///     Board::default(), 500, 100,
+    /// );
+    /// // River tree has no chance nodes.
+    /// assert_eq!(GameTree::build_river(&config).count_chance_nodes(), 0);
+    /// ```
+    #[must_use]
+    pub fn count_chance_nodes(&self) -> usize {
+        self.nodes.iter().filter(|n| n.is_chance()).count()
     }
 
     // ── private tree-building helpers ────────────────────────────────────────
@@ -577,18 +681,22 @@ impl GameTree {
     /// Builds a node where `player` faces no outstanding bet.
     ///
     /// Children are pushed before the parent so the parent can reference them
-    /// by id. The root ends up as the last node in the arena; `build_river`
-    /// reverses the arena to move it to index 0.
+    /// by id. After the full tree is built the arena is reversed so the root
+    /// lands at index 0.
     ///
-    /// - Check → showdown terminal if both players have checked; otherwise the
-    ///   other player opens.
-    /// - Bet(size) → the other player faces that bet.
+    /// - `runout` — `None` for a river-only tree (showdown continuations become
+    ///   leaf terminals); `Some((cards, river_sizes))` for a turn tree (showdown
+    ///   continuations become chance nodes fanning out to river action subtrees).
+    ///   Using `Option<(&[Card], &[BetSize])>` rather than a closure avoids
+    ///   closure-capture complexity in recursive functions — both the river and
+    ///   turn cases share this single helper.
     fn build_open_node(
         nodes: &mut Vec<Node>,
         player: Player,
         pot: u64,
         bet_sizes: &[BetSize],
         oop_checked: bool,
+        runout: Option<(&[Card], &[BetSize])>,
     ) -> NodeId {
         let mut actions: Vec<Action> = Vec::with_capacity(1 + bet_sizes.len());
         let mut children: Vec<NodeId> = Vec::with_capacity(1 + bet_sizes.len());
@@ -596,9 +704,9 @@ impl GameTree {
         // ── Check branch ──────────────────────────────────────────────────
         actions.push(Action::Check);
         let check_child = if oop_checked {
-            Self::push_terminal(nodes, TerminalOutcome::Showdown, pot)
+            Self::build_showdown_cont(nodes, pot, runout)
         } else {
-            Self::build_open_node(nodes, player.other(), pot, bet_sizes, true)
+            Self::build_open_node(nodes, player.other(), pot, bet_sizes, true, runout)
         };
         children.push(check_child);
 
@@ -606,7 +714,7 @@ impl GameTree {
         for &size in bet_sizes {
             let bet_chips = size.chips(pot);
             actions.push(Action::Bet(size));
-            let bet_child = Self::build_facing_bet_node(nodes, player.other(), pot, bet_chips, player);
+            let bet_child = Self::build_facing_bet_node(nodes, player.other(), pot, bet_chips, player, runout);
             children.push(bet_child);
         }
 
@@ -623,15 +731,139 @@ impl GameTree {
     /// Builds a node where `player` faces an outstanding bet of `bet_chips`.
     ///
     /// Available actions: Fold, Call (no re-raises in the initial tree).
+    ///
+    /// Call leads to a showdown continuation (river terminal or a river chance
+    /// node, depending on `runout`). Fold always leads to an immediate fold
+    /// terminal — no river card is dealt when a player folds.
     fn build_facing_bet_node(
         nodes: &mut Vec<Node>,
         player: Player,
         pot: u64,
         bet_chips: u64,
         aggressor: Player,
+        runout: Option<(&[Card], &[BetSize])>,
     ) -> NodeId {
-        let fold_id = Self::push_terminal(nodes, TerminalOutcome::Fold { winner: aggressor }, pot + bet_chips);
-        let call_id = Self::push_terminal(nodes, TerminalOutcome::Showdown, pot + 2 * bet_chips);
+        let fold_pot = pot + bet_chips;
+        let call_pot = pot + 2 * bet_chips;
+        let fold_id = Self::push_terminal(nodes, TerminalOutcome::Fold { winner: aggressor }, fold_pot, None);
+        let call_id = Self::build_showdown_cont(nodes, call_pot, runout);
+
+        let id = NodeId::new(nodes.len());
+        nodes.push(Node::Action(ActionNode {
+            player,
+            pot: pot + bet_chips,
+            actions: vec![Action::Fold, Action::Call],
+            children: vec![fold_id, call_id],
+        }));
+        id
+    }
+
+    /// Builds the showdown continuation: either a leaf terminal or a chance node.
+    ///
+    /// - `runout = None` → `Terminal(Showdown)` (river-only tree, board is fixed).
+    /// - `runout = Some((cards, river_sizes))` → `Chance` node with one river
+    ///   action subtree per runout card.
+    fn build_showdown_cont(nodes: &mut Vec<Node>, pot: u64, runout: Option<(&[Card], &[BetSize])>) -> NodeId {
+        match runout {
+            None => Self::push_terminal(nodes, TerminalOutcome::Showdown, pot, None),
+            Some((runout_cards, river_sizes)) => Self::build_river_chance_node(nodes, pot, runout_cards, river_sizes),
+        }
+    }
+
+    /// Builds a chance node covering all river runout cards, each leading to a
+    /// complete river action subtree.
+    ///
+    /// The chance node is a [`Node::Chance`] with `street = PhaseHoldem::River`
+    /// and one `(card, child_id)` pair per runout card. Each river action subtree
+    /// is built with `river_sizes` and produces showdown terminals that carry
+    /// `runout_river: Some(card)`.
+    ///
+    /// All 48 runout cards are stored in the tree regardless of which hand pair
+    /// will traverse it. Conflict filtering (skipping cards that appear in a
+    /// player's hole cards) happens at traversal time in the solver, keeping the
+    /// tree structure hand-agnostic — one tree serves all hand pairs.
+    fn build_river_chance_node(
+        nodes: &mut Vec<Node>,
+        pot: u64,
+        runout_cards: &[Card],
+        river_sizes: &[BetSize],
+    ) -> NodeId {
+        let mut chance_children: Vec<(Card, NodeId)> = Vec::with_capacity(runout_cards.len());
+        for &card in runout_cards {
+            // Each runout gets its own river action subtree; showdown terminals
+            // in this subtree carry `runout_river: Some(card)` so the solver can
+            // look up the correct hand comparison in the showdown map.
+            let river_root = Self::build_river_subtree_for_runout(nodes, pot, river_sizes, card);
+            chance_children.push((card, river_root));
+        }
+        let id = NodeId::new(nodes.len());
+        nodes.push(Node::Chance(ChanceNode {
+            street: PhaseHoldem::River,
+            children: chance_children,
+        }));
+        id
+    }
+
+    /// Builds a single river action subtree for a specific runout card.
+    ///
+    /// Identical to `build_open_node` for a river tree, except that showdown
+    /// terminals carry `runout_river: Some(card)`.
+    fn build_river_subtree_for_runout(nodes: &mut Vec<Node>, pot: u64, river_sizes: &[BetSize], card: Card) -> NodeId {
+        Self::build_open_node_with_card(nodes, Player::Oop, pot, river_sizes, false, card)
+    }
+
+    /// Like `build_open_node` but records `runout_river = Some(card)` on
+    /// showdown terminals. Used for the river action subtrees in turn trees.
+    fn build_open_node_with_card(
+        nodes: &mut Vec<Node>,
+        player: Player,
+        pot: u64,
+        bet_sizes: &[BetSize],
+        oop_checked: bool,
+        card: Card,
+    ) -> NodeId {
+        let mut actions: Vec<Action> = Vec::with_capacity(1 + bet_sizes.len());
+        let mut children: Vec<NodeId> = Vec::with_capacity(1 + bet_sizes.len());
+
+        actions.push(Action::Check);
+        let check_child = if oop_checked {
+            Self::push_terminal(nodes, TerminalOutcome::Showdown, pot, Some(card))
+        } else {
+            Self::build_open_node_with_card(nodes, player.other(), pot, bet_sizes, true, card)
+        };
+        children.push(check_child);
+
+        for &size in bet_sizes {
+            let bet_chips = size.chips(pot);
+            actions.push(Action::Bet(size));
+            let bet_child = Self::build_facing_bet_node_with_card(nodes, player.other(), pot, bet_chips, player, card);
+            children.push(bet_child);
+        }
+
+        let id = NodeId::new(nodes.len());
+        nodes.push(Node::Action(ActionNode {
+            player,
+            pot,
+            actions,
+            children,
+        }));
+        id
+    }
+
+    /// Like `build_facing_bet_node` but records `runout_river = Some(card)` on
+    /// the call (showdown) terminal.
+    fn build_facing_bet_node_with_card(
+        nodes: &mut Vec<Node>,
+        player: Player,
+        pot: u64,
+        bet_chips: u64,
+        aggressor: Player,
+        card: Card,
+    ) -> NodeId {
+        let fold_pot = pot + bet_chips;
+        let call_pot = pot + 2 * bet_chips;
+        let fold_id = Self::push_terminal(nodes, TerminalOutcome::Fold { winner: aggressor }, fold_pot, None);
+        let call_id = Self::push_terminal(nodes, TerminalOutcome::Showdown, call_pot, Some(card));
 
         let id = NodeId::new(nodes.len());
         nodes.push(Node::Action(ActionNode {
@@ -644,10 +876,41 @@ impl GameTree {
     }
 
     /// Pushes a terminal node and returns its id.
-    fn push_terminal(nodes: &mut Vec<Node>, outcome: TerminalOutcome, pot: u64) -> NodeId {
+    fn push_terminal(nodes: &mut Vec<Node>, outcome: TerminalOutcome, pot: u64, runout_river: Option<Card>) -> NodeId {
         let id = NodeId::new(nodes.len());
-        nodes.push(Node::Terminal(TerminalNode { outcome, pot }));
+        nodes.push(Node::Terminal(TerminalNode {
+            outcome,
+            pot,
+            runout_river,
+        }));
         id
+    }
+
+    /// Reverses the node arena (so the root is at index 0) and remaps all child
+    /// [`NodeId`] references to the new indices.
+    ///
+    /// Children are pushed before their parents, so the root is built last and
+    /// ends up at the highest index. After reversal: old index `i` → new index
+    /// `n - 1 - i`. Both [`ActionNode`] and [`ChanceNode`] children are remapped.
+    fn reverse_and_remap(mut nodes: Vec<Node>) -> Self {
+        let n = nodes.len();
+        nodes.reverse();
+        for node in &mut nodes {
+            match node {
+                Node::Action(a) => {
+                    for child in &mut a.children {
+                        child.0 = n - 1 - child.0;
+                    }
+                }
+                Node::Chance(c) => {
+                    for (_, child) in &mut c.children {
+                        child.0 = n - 1 - child.0;
+                    }
+                }
+                Node::Terminal(_) => {}
+            }
+        }
+        Self { nodes }
     }
 }
 
@@ -709,6 +972,7 @@ mod tests {
         let t = Node::Terminal(TerminalNode {
             outcome: TerminalOutcome::Showdown,
             pot: 100,
+            runout_river: None,
         });
         assert!(t.is_terminal());
         assert!(!t.is_action());
@@ -851,8 +1115,97 @@ mod tests {
             Node::Terminal(t) => {
                 assert_eq!(t.outcome, TerminalOutcome::Showdown);
                 assert_eq!(t.pot, 200); // 100 + 50 + 50
+                assert!(t.runout_river.is_none()); // river tree — no runout card
             }
             _ => panic!("expected terminal"),
+        }
+    }
+
+    // ── GameTree::build_turn ──────────────────────────────────────────────────
+
+    fn turn_config() -> SolverConfig {
+        use crate::play::board::Board;
+        use std::str::FromStr;
+        SolverConfig::new(
+            Combos::default(),
+            Combos::default(),
+            Board::from_str("2h 3d 4c 5s 6h").unwrap(),
+            500,
+            100,
+        )
+        .with_bet_sizings(BetSizings::uniform(vec![BetSize::half_pot()]))
+    }
+
+    #[test]
+    fn test_build_turn_root_is_oop_action() {
+        match GameTree::build_turn(&turn_config()).root() {
+            Node::Action(n) => assert_eq!(n.player, Player::Oop),
+            other => panic!("expected Action node, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_build_turn_root_id_is_zero() {
+        assert_eq!(GameTree::build_turn(&turn_config()).root_id(), NodeId::new(0));
+    }
+
+    #[test]
+    fn test_build_turn_has_chance_nodes() {
+        // A turn tree with ≥1 bet size must have at least one chance node
+        // (one per showdown continuation on the turn street).
+        let tree = GameTree::build_turn(&turn_config());
+        assert!(tree.count_chance_nodes() > 0);
+    }
+
+    #[test]
+    fn test_build_river_has_no_chance_nodes() {
+        let tree = GameTree::build_river(&config_with_sizes(vec![BetSize::half_pot()]));
+        assert_eq!(tree.count_chance_nodes(), 0);
+    }
+
+    #[test]
+    fn test_build_turn_chance_node_has_48_children() {
+        // 52 cards - 4 known board cards (2h 3d 4c 5s) = 48 runout candidates.
+        let tree = GameTree::build_turn(&turn_config());
+        // Scan via the public len()/get() interface.
+        let mut chance_counts: Vec<usize> = Vec::new();
+        for i in 0..tree.len() {
+            if let Some(Node::Chance(c)) = tree.get(NodeId::new(i)) {
+                chance_counts.push(c.children.len());
+            }
+        }
+        assert!(!chance_counts.is_empty());
+        for count in chance_counts {
+            assert_eq!(count, 48, "each chance node should have 48 runout children");
+        }
+    }
+
+    #[test]
+    fn test_build_turn_showdown_terminals_have_runout_river() {
+        // Every showdown terminal under a chance node must carry a runout card.
+        let tree = GameTree::build_turn(&turn_config());
+        for i in 0..tree.len() {
+            if let Some(Node::Terminal(t)) = tree.get(NodeId::new(i)) {
+                if t.outcome == TerminalOutcome::Showdown {
+                    assert!(
+                        t.runout_river.is_some(),
+                        "showdown terminal in a turn tree must have runout_river set"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_build_turn_fold_terminals_have_no_runout_river() {
+        // Fold terminals do not need a runout card — the hand ended before the river.
+        let tree = GameTree::build_turn(&turn_config());
+        for i in 0..tree.len() {
+            if let Some(Node::Terminal(t)) = tree.get(NodeId::new(i)) {
+                if matches!(t.outcome, TerminalOutcome::Fold { .. }) {
+                    assert!(t.runout_river.is_none(), "fold terminal should not have a runout card");
+                }
+            }
         }
     }
 }

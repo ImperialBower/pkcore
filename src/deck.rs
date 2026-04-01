@@ -112,6 +112,24 @@ impl Deck {
         cards.shuffle_in_place();
         cards
     }
+
+    /// Return a heap-allocated vector containing the 52 cards in deck order.
+    ///
+    /// This is a convenience function that returns the deck as a `Vec<Card>`.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use pkcore::deck::Deck;
+    /// // Get a vector of cards
+    /// let vec = Deck::as_vec();
+    /// assert_eq!(vec.len(), 52);
+    /// // first element matches the deck's first card
+    /// assert_eq!(vec[0], pkcore::deck::DECK_ARRAY[0]);
+    /// ```
+    #[must_use]
+    pub fn as_vec() -> Vec<Card> {
+        POKER_DECK.0.to_vec()
+    }
 }
 
 #[cfg(test)]
@@ -135,5 +153,12 @@ mod poker_deck_tests {
             assert_eq!(got.unwrap(), card);
         }
         assert_eq!(cards.len(), Deck::len());
+    }
+
+    #[test]
+    fn as_vec_happy_path() {
+        let v = Deck::as_vec();
+        assert_eq!(v.len(), Deck::len());
+        assert_eq!(v[0], Deck::get(0));
     }
 }

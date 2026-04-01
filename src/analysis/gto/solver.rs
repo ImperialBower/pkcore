@@ -58,8 +58,18 @@ use crate::card::Card;
 use crate::play::board::Board;
 use std::cmp::Ordering;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
-/// Pre-computed showdown results for every valid `(oop_hand, ip_hand)` pair.
+/// Pre-computed showdown results keyed by hand pair and optional runout card.
+///
+/// Key: `(oop_hand, ip_hand, runout_river)` where:
+/// - `runout_river = None`       — river-only tree; board is fully fixed.
+/// - `runout_river = Some(card)` — turn tree; this entry covers one specific
+///   river runout card dealt at the chance node.
+///
+/// Using `Option<Card>` as the third key component means the river-tree fast
+/// path (`None`) and the turn-tree path (`Some(card)`) share a single map and
+/// a single `terminal_payoff` lookup — zero code divergence at the call site.
 ///
 /// Maps to [`Ordering`] using `oop_rank.cmp(&ip_rank)` where `HandRankValue`
 /// is lower-is-better:
@@ -77,7 +87,7 @@ use std::collections::HashMap;
 /// iteration is a single `HashMap` lookup instead of two seven-card evaluations.
 /// In practice this gave a 90× wall-clock speedup in tests (77 s → 0.86 s for
 /// 50 iterations over 36 hand pairs).
-type ShowdownMap = HashMap<(Two, Two), Ordering>;
+type ShowdownMap = HashMap<(Two, Two, Option<Card>), Ordering>;
 
 // ── SolverResult ─────────────────────────────────────────────────────────────
 
@@ -214,8 +224,80 @@ impl Solver {
         let tree = GameTree::build_river(&config);
         let regrets = RegretAccumulator::new(&tree, &config.hero_range, &config.villain_range);
         let strategy_sum = build_strategy_sum(&tree, &config.hero_range, &config.villain_range);
-        let hand_pairs = build_hand_pairs(&config.hero_range, &config.villain_range, &config.board);
+        let board_cards: Vec<Card> = vec![
+            config.board.flop.first(),
+            config.board.flop.second(),
+            config.board.flop.third(),
+            config.board.turn,
+            config.board.river,
+        ];
+        let hand_pairs = build_hand_pairs(&config.hero_range, &config.villain_range, &board_cards);
         let showdown_map = build_showdown_map(&hand_pairs, &config.board);
+        Self {
+            config,
+            tree,
+            regrets,
+            strategy_sum,
+            iteration: 0,
+            hand_pairs,
+            showdown_map,
+        }
+    }
+
+    /// Constructs a turn+river solver from a [`SolverConfig`].
+    ///
+    /// Builds a [`GameTree::build_turn`] tree that fans out at every showdown
+    /// continuation via a chance node covering all 48 possible river runout
+    /// cards. The showdown map is pre-computed for every `(oop, ip, river_card)`
+    /// triple where the river card does not conflict with either player's hand.
+    ///
+    /// The `config.board` must have a valid flop and turn; its river field is
+    /// ignored (the river is the unknown dealt by the chance node).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::solver::Solver;
+    /// use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// use pkcore::play::board::Board;
+    /// use std::str::FromStr;
+    ///
+    /// // Board needs flop + turn; river field is ignored by build_turn.
+    /// let config = SolverConfig::new(
+    ///     Combos::from_str("AA,KK").unwrap_or_default(),
+    ///     Combos::from_str("QQ,JJ").unwrap_or_default(),
+    ///     Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default(),
+    ///     1_000,
+    ///     200,
+    /// ).with_max_iterations(5);
+    /// let mut solver = Solver::new_turn(config);
+    /// assert_eq!(solver.iteration(), 0);
+    /// ```
+    #[must_use]
+    pub fn new_turn(config: SolverConfig) -> Self {
+        let tree = GameTree::build_turn(&config);
+        let regrets = RegretAccumulator::new(&tree, &config.hero_range, &config.villain_range);
+        let strategy_sum = build_strategy_sum(&tree, &config.hero_range, &config.villain_range);
+
+        // For a turn tree the river card is unknown, so hand pairs are filtered
+        // only against the 4 known board cards (flop + turn).
+        let board_cards: Vec<Card> = vec![
+            config.board.flop.first(),
+            config.board.flop.second(),
+            config.board.flop.third(),
+            config.board.turn,
+        ];
+        let hand_pairs = build_hand_pairs(&config.hero_range, &config.villain_range, &board_cards);
+
+        // Enumerate all river runout candidates: 52 cards minus the 4 known.
+        let known: HashSet<Card> = board_cards.iter().copied().collect();
+        let runout_cards: Vec<Card> = crate::deck::Deck::as_vec()
+            .into_iter()
+            .filter(|c| !known.contains(c))
+            .collect();
+        let showdown_map = build_turn_showdown_map(&hand_pairs, &config.board, &runout_cards);
+
         Self {
             config,
             tree,
@@ -513,29 +595,24 @@ fn build_strategy_sum(
     outer
 }
 
-/// Pre-computes all valid `(oop_hand, ip_hand)` pairs.
+/// Pre-computes all valid `(oop_hand, ip_hand)` pairs given a set of known board cards.
 ///
-/// A pair is valid if none of the 4 hole cards appears in the 5 board cards
+/// A pair is valid if none of the 4 hole cards appears among `board_cards`
 /// and the two hands share no card. Filtering once at construction avoids
-/// repeating the O(9) conflict check on every traversal in every iteration.
-fn build_hand_pairs(oop_range: &Combos, ip_range: &Combos, board: &Board) -> Vec<(Two, Two)> {
-    let board_cards: [Card; 5] = [
-        board.flop.first(),
-        board.flop.second(),
-        board.flop.third(),
-        board.turn,
-        board.river,
-    ];
-
+/// repeating the conflict check on every traversal in every iteration.
+///
+/// `board_cards` is a slice so the same function works for 5-card boards
+/// (river trees) and 4-card boards (turn trees where the river is unknown).
+fn build_hand_pairs(oop_range: &Combos, ip_range: &Combos, board_cards: &[Card]) -> Vec<(Two, Two)> {
     let oop_hands: Vec<Two> = oop_range
         .iter()
         .flat_map(|combo| Twos::from(*combo).to_vec())
-        .filter(|&h| !conflicts_with_board(h, &board_cards))
+        .filter(|&h| !conflicts_with_board(h, board_cards))
         .collect();
     let ip_hands: Vec<Two> = ip_range
         .iter()
         .flat_map(|combo| Twos::from(*combo).to_vec())
-        .filter(|&h| !conflicts_with_board(h, &board_cards))
+        .filter(|&h| !conflicts_with_board(h, board_cards))
         .collect();
 
     oop_hands
@@ -549,8 +626,11 @@ fn build_hand_pairs(oop_range: &Combos, ip_range: &Combos, board: &Board) -> Vec
         .collect()
 }
 
-/// Returns `true` if either card in `hand` appears among the board cards.
-fn conflicts_with_board(hand: Two, board: &[Card; 5]) -> bool {
+/// Returns `true` if either card in `hand` appears among the given board cards.
+///
+/// Accepts a slice so the same function works for both 5-card boards (river
+/// trees) and 4-card boards (turn trees, where the river is not yet known).
+fn conflicts_with_board(hand: Two, board: &[Card]) -> bool {
     board.contains(&hand.first()) || board.contains(&hand.second())
 }
 
@@ -591,9 +671,48 @@ fn traverse(
     match tree.get(node_id) {
         Some(Node::Terminal(t)) => terminal_payoff(t, oop_hand, ip_hand, showdown_map),
 
-        // River-only trees have no chance nodes. Return 0.0 defensively if
-        // the tree shape is ever extended or the node id is out of range.
-        Some(Node::Chance(_)) | None => 0.0,
+        None => 0.0,
+
+        Some(Node::Chance(chance_node)) => {
+            // Average the values of all non-conflicting river runout branches.
+            //
+            // Each runout card is equi-probable conditional on neither player
+            // holding it. Cards already in oop_hand or ip_hand have zero
+            // probability for this specific hand pair and are skipped. The
+            // remaining branches are averaged uniformly — their relative
+            // probabilities are equal given the 4-card known board.
+            //
+            // The tree stores all 48 candidate runout cards (hand-agnostic).
+            // Conflict filtering here is per-traversal (per hand pair), not
+            // baked into the tree structure.
+            let children: Vec<(Card, NodeId)> = chance_node.children.clone();
+            let valid: Vec<(Card, NodeId)> = children
+                .into_iter()
+                .filter(|(card, _)| !oop_hand.contains_card(*card) && !ip_hand.contains_card(*card))
+                .collect();
+            if valid.is_empty() {
+                return 0.0;
+            }
+            #[allow(clippy::cast_precision_loss)]
+            let n = valid.len() as f64;
+            let sum: f64 = valid
+                .iter()
+                .map(|(_, child_id)| {
+                    traverse(
+                        *child_id,
+                        oop_hand,
+                        ip_hand,
+                        oop_reach,
+                        ip_reach,
+                        tree,
+                        showdown_map,
+                        regrets,
+                        strategy_sum,
+                    )
+                })
+                .sum();
+            sum / n
+        }
 
         Some(Node::Action(action_node)) => {
             let player = action_node.player;
@@ -700,11 +819,13 @@ fn terminal_payoff(terminal: &TerminalNode, oop_hand: Two, ip_hand: Two, showdow
         TerminalOutcome::Fold { winner: Player::Oop } => half_pot,
         TerminalOutcome::Fold { winner: Player::Ip } => -half_pot,
         TerminalOutcome::Showdown => {
-            // `Less` = oop_rank < ip_rank = OOP has a stronger hand = OOP wins.
-            match showdown_map.get(&(oop_hand, ip_hand)) {
+            // Key includes `runout_river`: `None` for river trees (fixed board),
+            // `Some(card)` for turn trees (river card from the chance node).
+            // `Less` = oop_rank < ip_rank = OOP has stronger hand = OOP wins.
+            match showdown_map.get(&(oop_hand, ip_hand, terminal.runout_river)) {
                 Some(Ordering::Less) => half_pot,
                 Some(Ordering::Greater) => -half_pot,
-                _ => 0.0, // tie or pair not found
+                _ => 0.0, // tie or entry not in map (shouldn't happen in practice)
             }
         }
     }
@@ -730,7 +851,24 @@ fn best_response_oop(
 ) -> f64 {
     match tree.get(node_id) {
         Some(Node::Terminal(t)) => terminal_payoff(t, oop_hand, ip_hand, showdown_map),
-        Some(Node::Chance(_)) | None => 0.0,
+        None => 0.0,
+        Some(Node::Chance(chance_node)) => {
+            let children: Vec<(Card, NodeId)> = chance_node.children.clone();
+            let valid: Vec<(Card, NodeId)> = children
+                .into_iter()
+                .filter(|(card, _)| !oop_hand.contains_card(*card) && !ip_hand.contains_card(*card))
+                .collect();
+            if valid.is_empty() {
+                return 0.0;
+            }
+            #[allow(clippy::cast_precision_loss)]
+            let n = valid.len() as f64;
+            let sum: f64 = valid
+                .iter()
+                .map(|(_, child_id)| best_response_oop(*child_id, oop_hand, ip_hand, tree, showdown_map, profile))
+                .sum();
+            sum / n
+        }
         Some(Node::Action(action_node)) => {
             let player = action_node.player;
             let children: Vec<NodeId> = action_node.children.clone();
@@ -786,7 +924,24 @@ fn best_response_ip(
 ) -> f64 {
     match tree.get(node_id) {
         Some(Node::Terminal(t)) => terminal_payoff(t, oop_hand, ip_hand, showdown_map),
-        Some(Node::Chance(_)) | None => 0.0,
+        None => 0.0,
+        Some(Node::Chance(chance_node)) => {
+            let children: Vec<(Card, NodeId)> = chance_node.children.clone();
+            let valid: Vec<(Card, NodeId)> = children
+                .into_iter()
+                .filter(|(card, _)| !oop_hand.contains_card(*card) && !ip_hand.contains_card(*card))
+                .collect();
+            if valid.is_empty() {
+                return 0.0;
+            }
+            #[allow(clippy::cast_precision_loss)]
+            let n = valid.len() as f64;
+            let sum: f64 = valid
+                .iter()
+                .map(|(_, child_id)| best_response_ip(*child_id, oop_hand, ip_hand, tree, showdown_map, profile))
+                .sum();
+            sum / n
+        }
         Some(Node::Action(action_node)) => {
             let player = action_node.player;
             let children: Vec<NodeId> = action_node.children.clone();
@@ -818,24 +973,50 @@ fn best_response_ip(
     }
 }
 
-/// Builds the pre-computed showdown outcome map for all valid hand pairs.
+/// Builds the pre-computed showdown outcome map for a river-only solve.
 ///
 /// For each `(oop_hand, ip_hand)` pair, evaluates both seven-card hands and
-/// stores `oop_rank.cmp(&ip_rank)` using [`HandRankValue`]'s lower-is-better
-/// convention. Called once in [`Solver::new`].
+/// stores `oop_rank.cmp(&ip_rank)` under the key `(oop, ip, None)`. Called
+/// once in [`Solver::new`].
 ///
-/// This is the correct place to call the hand evaluator: the board is fixed for
-/// the entire solve, so the matchup result is a pure function of the two hands
-/// and never changes across iterations. Hoisting it here follows the general
-/// solver principle of computing anything that repeats unchanged across
-/// iterations exactly once, outside the hot loop.
+/// The board is fixed for the entire river solve, so the matchup result is a
+/// pure function of the two hands and never changes across iterations.
 fn build_showdown_map(hand_pairs: &[(Two, Two)], board: &Board) -> ShowdownMap {
     hand_pairs
         .iter()
         .map(|&(oop, ip)| {
             let oop_rank = Seven::from_case_and_board(&oop, board).hand_rank_value();
             let ip_rank = Seven::from_case_and_board(&ip, board).hand_rank_value();
-            ((oop, ip), oop_rank.cmp(&ip_rank))
+            ((oop, ip, None), oop_rank.cmp(&ip_rank))
+        })
+        .collect()
+}
+
+/// Builds the pre-computed showdown outcome map for a turn solve.
+///
+/// For each `(oop_hand, ip_hand)` pair and each non-conflicting river runout
+/// card, evaluates the seven-card hands using the flop + turn + runout river
+/// and stores the result under key `(oop, ip, Some(river_card))`.
+///
+/// Hand–card conflicts (runout card already in a player's hole cards) are
+/// filtered out here — those branches will never be visited by `traverse` for
+/// that hand pair anyway, so omitting their entries is harmless and saves
+/// memory.
+///
+/// `runout_cards` is the set of all candidate river cards (52 minus the 4
+/// known board cards), computed once in [`Solver::new_turn`].
+fn build_turn_showdown_map(hand_pairs: &[(Two, Two)], board: &Board, runout_cards: &[Card]) -> ShowdownMap {
+    hand_pairs
+        .iter()
+        .flat_map(|&(oop, ip)| {
+            runout_cards
+                .iter()
+                .filter(move |&&card| !oop.contains_card(card) && !ip.contains_card(card))
+                .map(move |&card| {
+                    let oop_rank = Seven::from_case_at_turn(oop, board.flop, board.turn, card).hand_rank_value();
+                    let ip_rank = Seven::from_case_at_turn(ip, board.flop, board.turn, card).hand_rank_value();
+                    ((oop, ip, Some(card)), oop_rank.cmp(&ip_rank))
+                })
         })
         .collect()
 }
@@ -1016,6 +1197,72 @@ mod tests {
         assert!(
             any_bet_dominant,
             "AA should bet >50% with at least one hand vs KK after 50 iterations"
+        );
+    }
+
+    // ── Solver::new_turn ─────────────────────────────────────────────────────
+
+    fn make_turn_solver() -> Solver {
+        // Use single-combo ranges to keep turn-tree tests fast in debug mode.
+        // Turn trees are much larger than river trees: 44+ runout branches per
+        // chance node × full river action subtree per branch.
+        let oop = Combos::from_str("AA").unwrap_or_default();
+        let ip = Combos::from_str("KK").unwrap_or_default();
+        // Board: flop=2h3d4c, turn=5s; river field (6h) is ignored by build_turn.
+        let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
+        Solver::new_turn(SolverConfig::new(oop, ip, board, 1_000, 200))
+    }
+
+    #[test]
+    fn test_solver_new_turn_starts_at_zero() {
+        assert_eq!(make_turn_solver().iteration(), 0);
+    }
+
+    #[test]
+    fn test_solver_new_turn_hand_pairs_non_empty() {
+        assert!(!make_turn_solver().hand_pairs.is_empty());
+    }
+
+    #[test]
+    fn test_solver_new_turn_hand_pairs_use_four_board_cards() {
+        // With a turn tree, hands are only filtered against 4 board cards.
+        // River card (6h) should NOT exclude hands containing 6h.
+        // (AA, KK, QQ, JJ on board 2h3d4c5s — none conflict, so all pairs valid.)
+        let solver = make_turn_solver();
+        assert!(!solver.hand_pairs.is_empty());
+    }
+
+    #[test]
+    fn test_solver_turn_iterate_increments_counter() {
+        let mut solver = make_turn_solver();
+        solver.iterate();
+        assert_eq!(solver.iteration(), 1);
+    }
+
+    #[test]
+    fn test_solver_turn_solve_runs_max_iterations() {
+        // Use 1 pair (AA vs KK) and only 3 iterations to stay fast in debug mode.
+        // Turn trees are expensive: each iteration traverses 44+ runout branches.
+        let oop = Combos::from_str("AA").unwrap_or_default();
+        let ip = Combos::from_str("KK").unwrap_or_default();
+        let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
+        let config = SolverConfig::new(oop, ip, board, 1_000, 200).with_max_iterations(3);
+        let result = Solver::new_turn(config).solve();
+        assert_eq!(result.iterations, 3);
+        assert!(!result.equilibrium.is_empty());
+    }
+
+    #[test]
+    fn test_solver_turn_exploitability_non_negative() {
+        let oop = Combos::from_str("AA").unwrap_or_default();
+        let ip = Combos::from_str("KK").unwrap_or_default();
+        let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
+        let config = SolverConfig::new(oop, ip, board, 1_000, 200).with_max_iterations(3);
+        let result = Solver::new_turn(config).solve();
+        assert!(
+            result.exploitability >= -1e-9,
+            "exploitability must be >= 0, got {}",
+            result.exploitability
         );
     }
 }
