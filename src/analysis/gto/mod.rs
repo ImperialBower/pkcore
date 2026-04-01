@@ -9,6 +9,7 @@ pub mod combos;
 pub mod game_tree;
 pub mod odds;
 pub mod solver_config;
+pub mod strategy_profile;
 pub mod vs;
 pub mod weighted_combos;
 
