@@ -12,6 +12,14 @@ exclude = [".github/workflows/*", "data/*", "docs/*", "examples/*", "generated/h
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+## When enabled, `SolverResult::save` and `SolverResult::load` use human-readable
+## JSON instead of the default compact binary (bincode) format. Useful for
+## inspecting solver output during development. The explicit `save_json` /
+## `load_json` and `save_binary` / `load_binary` methods are always available
+## regardless of this flag.
+debug-json = []
+
 [dependencies]
 bint = "0.1.15"
 cardpack = "0.6.9"
@@ -28,7 +36,9 @@ random_name_generator = "0.3.6"
 rayon = "1.11.0"
 regex = { version = "1.12", features = [] }
 postcard = { version = "1", features = ["alloc", "use-std"] }
+bincode = "1"
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 strum = { version = "0.28", features = ["derive"] }
 strum_macros = "0.28"
 thousands = "0.2.0"

@@ -56,9 +56,12 @@ use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::play::board::Board;
+use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::fmt;
+use std::path::Path;
 
 /// Pre-computed showdown results keyed by hand pair and optional runout card.
 ///
@@ -88,6 +91,65 @@ use std::collections::HashSet;
 /// In practice this gave a 90× wall-clock speedup in tests (77 s → 0.86 s for
 /// 50 iterations over 36 hand pairs).
 type ShowdownMap = HashMap<(Two, Two, Option<Card>), Ordering>;
+
+// ── SolverError ───────────────────────────────────────────────────────────────
+
+/// Errors that can occur when saving or loading a [`SolverResult`].
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::analysis::gto::solver::SolverError;
+/// let e = SolverError::Io(std::io::Error::new(std::io::ErrorKind::NotFound, "file missing"));
+/// assert!(e.to_string().contains("file missing"));
+/// ```
+#[derive(Debug)]
+pub enum SolverError {
+    /// An I/O error reading or writing the file.
+    Io(std::io::Error),
+    /// A JSON serialization or deserialization error.
+    Json(serde_json::Error),
+    /// A binary (bincode) serialization or deserialization error.
+    Binary(Box<bincode::ErrorKind>),
+}
+
+impl fmt::Display for SolverError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SolverError::Io(e) => write!(f, "I/O error: {e}"),
+            SolverError::Json(e) => write!(f, "JSON error: {e}"),
+            SolverError::Binary(e) => write!(f, "binary serialization error: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for SolverError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            SolverError::Io(e) => Some(e),
+            SolverError::Json(e) => Some(e),
+            SolverError::Binary(_) => None,
+        }
+    }
+}
+
+impl From<std::io::Error> for SolverError {
+    fn from(e: std::io::Error) -> Self {
+        SolverError::Io(e)
+    }
+}
+
+impl From<serde_json::Error> for SolverError {
+    fn from(e: serde_json::Error) -> Self {
+        SolverError::Json(e)
+    }
+}
+
+impl From<Box<bincode::ErrorKind>> for SolverError {
+    fn from(e: Box<bincode::ErrorKind>) -> Self {
+        SolverError::Binary(e)
+    }
+}
 
 // ── SolverResult ─────────────────────────────────────────────────────────────
 
@@ -122,7 +184,7 @@ type ShowdownMap = HashMap<(Two, Two, Option<Card>), Ordering>;
 /// assert!(!result.equilibrium.is_empty());
 /// assert!(result.exploitability >= 0.0);
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SolverResult {
     /// Number of CFR iterations that were run.
     pub iterations: usize,
@@ -137,6 +199,176 @@ pub struct SolverResult {
     /// This is what CFR guarantees converges to Nash, not the current-iteration
     /// strategy. More iterations → closer to equilibrium.
     pub equilibrium: StrategyProfile,
+}
+
+impl SolverResult {
+    /// Saves this result using the default format.
+    ///
+    /// The default format is **compact binary** (bincode). When the crate is
+    /// compiled with the `debug-json` feature enabled, the default switches to
+    /// pretty-printed JSON for easier inspection during development.
+    ///
+    /// Use [`save_binary`][Self::save_binary] or [`save_json`][Self::save_json]
+    /// to force a specific format regardless of the feature flag.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] on I/O failure or serialization error.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::solver::Solver;
+    /// use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// use pkcore::play::board::Board;
+    /// use std::str::FromStr;
+    ///
+    /// let config = SolverConfig::new(
+    ///     Combos::from_str("AA").unwrap_or_default(),
+    ///     Combos::from_str("KK").unwrap_or_default(),
+    ///     Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default(),
+    ///     1_000, 200,
+    /// ).with_max_iterations(5);
+    /// let result = Solver::new(config).solve();
+    /// result.save("/tmp/my_solve.bin").unwrap();
+    /// ```
+    pub fn save(&self, path: impl AsRef<Path>) -> Result<(), SolverError> {
+        #[cfg(feature = "debug-json")]
+        {
+            self.save_json(path)
+        }
+        #[cfg(not(feature = "debug-json"))]
+        {
+            self.save_binary(path)
+        }
+    }
+
+    /// Loads a result saved by [`save`][Self::save].
+    ///
+    /// Uses the same format selection as `save`: binary by default, JSON when
+    /// the `debug-json` feature is enabled. The format of the file on disk must
+    /// match the format used to save it.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError`] on I/O failure or deserialization error.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use pkcore::analysis::gto::solver::SolverResult;
+    ///
+    /// let result = SolverResult::load("/tmp/my_solve.bin").unwrap();
+    /// println!("iterations={} exploitability={:.4}", result.iterations, result.exploitability);
+    /// ```
+    pub fn load(path: impl AsRef<Path>) -> Result<Self, SolverError> {
+        #[cfg(feature = "debug-json")]
+        {
+            Self::load_json(path)
+        }
+        #[cfg(not(feature = "debug-json"))]
+        {
+            Self::load_binary(path)
+        }
+    }
+
+    /// Saves this result as compact binary using bincode.
+    ///
+    /// Binary files are smaller and faster to write/read than JSON, making
+    /// them the right choice for storing production solve results. The file is
+    /// not human-readable; use [`save_json`][Self::save_json] for inspection.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Io`] or [`SolverError::Binary`] on failure.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use pkcore::analysis::gto::combos::Combos;
+    /// # use pkcore::analysis::gto::solver::Solver;
+    /// # use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// # use pkcore::play::board::Board;
+    /// # use std::str::FromStr;
+    /// # let config = SolverConfig::new(Combos::from_str("AA").unwrap_or_default(),
+    /// #     Combos::from_str("KK").unwrap_or_default(),
+    /// #     Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default(), 1_000, 200);
+    /// let result = Solver::new(config).solve();
+    /// result.save_binary("/tmp/my_solve.bin").unwrap();
+    /// ```
+    pub fn save_binary(&self, path: impl AsRef<Path>) -> Result<(), SolverError> {
+        let bytes = bincode::serialize(self)?;
+        std::fs::write(path, bytes)?;
+        Ok(())
+    }
+
+    /// Loads a result previously written by [`save_binary`][Self::save_binary].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Io`] or [`SolverError::Binary`] on failure.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use pkcore::analysis::gto::solver::SolverResult;
+    /// let result = SolverResult::load_binary("/tmp/my_solve.bin").unwrap();
+    /// ```
+    pub fn load_binary(path: impl AsRef<Path>) -> Result<Self, SolverError> {
+        let bytes = std::fs::read(path)?;
+        let result = bincode::deserialize(&bytes)?;
+        Ok(result)
+    }
+
+    /// Saves this result as pretty-printed JSON.
+    ///
+    /// JSON output is human-readable and useful for inspecting strategy
+    /// frequencies during development. For production storage prefer
+    /// [`save_binary`][Self::save_binary] — bincode files are significantly
+    /// smaller and faster.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Io`] or [`SolverError::Json`] on failure.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # use pkcore::analysis::gto::combos::Combos;
+    /// # use pkcore::analysis::gto::solver::Solver;
+    /// # use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// # use pkcore::play::board::Board;
+    /// # use std::str::FromStr;
+    /// # let config = SolverConfig::new(Combos::from_str("AA").unwrap_or_default(),
+    /// #     Combos::from_str("KK").unwrap_or_default(),
+    /// #     Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default(), 1_000, 200);
+    /// let result = Solver::new(config).solve();
+    /// result.save_json("/tmp/my_solve.json").unwrap();
+    /// ```
+    pub fn save_json(&self, path: impl AsRef<Path>) -> Result<(), SolverError> {
+        let json = serde_json::to_string_pretty(self)?;
+        std::fs::write(path, json)?;
+        Ok(())
+    }
+
+    /// Loads a result previously written by [`save_json`][Self::save_json].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SolverError::Io`] or [`SolverError::Json`] on failure.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use pkcore::analysis::gto::solver::SolverResult;
+    /// let result = SolverResult::load_json("/tmp/my_solve.json").unwrap();
+    /// ```
+    pub fn load_json(path: impl AsRef<Path>) -> Result<Self, SolverError> {
+        let json = std::fs::read_to_string(path)?;
+        let result = serde_json::from_str(&json)?;
+        Ok(result)
+    }
 }
 
 // ── Solver ────────────────────────────────────────────────────────────────────
@@ -1264,5 +1496,90 @@ mod tests {
             "exploitability must be >= 0, got {}",
             result.exploitability
         );
+    }
+
+    // ── SolverResult save / load ──────────────────────────────────────────────
+
+    fn small_result() -> SolverResult {
+        let oop = Combos::from_str("AA").unwrap_or_default();
+        let ip = Combos::from_str("KK").unwrap_or_default();
+        let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
+        let config = SolverConfig::new(oop, ip, board, 1_000, 200).with_max_iterations(5);
+        Solver::new(config).solve()
+    }
+
+    fn assert_round_trip_eq(original: &SolverResult, loaded: &SolverResult) {
+        assert_eq!(loaded.iterations, original.iterations);
+        assert!((loaded.exploitability - original.exploitability).abs() < 1e-12);
+        assert!(!loaded.equilibrium.is_empty());
+    }
+
+    #[test]
+    fn test_solver_result_binary_round_trip() {
+        let original = small_result();
+        let path = std::env::temp_dir().join("pkcore_test_solver_binary.bin");
+        original.save_binary(&path).expect("save_binary should succeed");
+        let loaded = SolverResult::load_binary(&path).expect("load_binary should succeed");
+        assert_round_trip_eq(&original, &loaded);
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_solver_result_json_round_trip() {
+        let original = small_result();
+        let path = std::env::temp_dir().join("pkcore_test_solver_json.json");
+        original.save_json(&path).expect("save_json should succeed");
+        let loaded = SolverResult::load_json(&path).expect("load_json should succeed");
+        assert_round_trip_eq(&original, &loaded);
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_solver_result_default_save_load_round_trip() {
+        // save/load use binary by default (debug-json feature not enabled in tests).
+        let original = small_result();
+        let path = std::env::temp_dir().join("pkcore_test_solver_default.bin");
+        original.save(&path).expect("save should succeed");
+        let loaded = SolverResult::load(&path).expect("load should succeed");
+        assert_round_trip_eq(&original, &loaded);
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_solver_result_binary_smaller_than_json() {
+        // Sanity check: bincode output should be more compact than JSON.
+        let result = small_result();
+        let bin = bincode::serialize(&result).unwrap();
+        let json = serde_json::to_string(&result).unwrap();
+        assert!(
+            bin.len() < json.len(),
+            "binary ({} bytes) should be smaller than JSON ({} bytes)",
+            bin.len(),
+            json.len()
+        );
+    }
+
+    #[test]
+    fn test_solver_result_load_missing_file_returns_io_error() {
+        let result = SolverResult::load_binary("/tmp/pkcore_nonexistent_file_xyz.bin");
+        assert!(matches!(result.unwrap_err(), SolverError::Io(_)));
+    }
+
+    #[test]
+    fn test_solver_result_load_bad_json_returns_json_error() {
+        let path = std::env::temp_dir().join("pkcore_test_bad_json.json");
+        std::fs::write(&path, b"not valid json {{{{").unwrap();
+        let result = SolverResult::load_json(&path);
+        assert!(matches!(result.unwrap_err(), SolverError::Json(_)));
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_solver_result_load_bad_binary_returns_binary_error() {
+        let path = std::env::temp_dir().join("pkcore_test_bad_bin.bin");
+        std::fs::write(&path, b"this is not bincode").unwrap();
+        let result = SolverResult::load_binary(&path);
+        assert!(matches!(result.unwrap_err(), SolverError::Binary(_)));
+        let _ = std::fs::remove_file(&path);
     }
 }

@@ -35,6 +35,7 @@ use crate::analysis::gto::combos::Combos;
 use crate::analysis::gto::game_tree::{GameTree, Node, NodeId, Player};
 use crate::analysis::gto::twos::Twos;
 use crate::arrays::two::Two;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // ── ActionFrequencies ─────────────────────────────────────────────────────────
@@ -58,7 +59,7 @@ use std::collections::HashMap;
 /// assert_eq!(freq.len(), 3);
 /// assert!((freq.as_slice().iter().sum::<f64>() - 1.0).abs() < 1e-9);
 /// ```
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ActionFrequencies(Vec<f64>);
 
 impl ActionFrequencies {
@@ -261,7 +262,7 @@ impl ActionFrequencies {
 /// let profile = StrategyProfile::from_uniform(&tree, &oop, &ip);
 /// assert!(!profile.is_empty());
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StrategyProfile(HashMap<NodeId, HashMap<Two, ActionFrequencies>>);
 
 impl StrategyProfile {

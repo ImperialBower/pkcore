@@ -49,6 +49,7 @@ use crate::analysis::gto::solver_config::SolverConfig;
 use crate::card::Card;
 use crate::deck::Deck;
 use crate::play::phases::PhaseHoldem;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashSet;
 use std::fmt;
 
@@ -97,6 +98,21 @@ impl NodeId {
 impl fmt::Display for NodeId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Node({})", self.0)
+    }
+}
+
+// serde_json requires HashMap keys to be strings. NodeId serializes as its
+// raw index (e.g. `"3"`) so it round-trips cleanly as a JSON object key.
+impl Serialize for NodeId {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(&self.0.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for NodeId {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let raw = String::deserialize(d)?;
+        raw.parse::<usize>().map(NodeId).map_err(serde::de::Error::custom)
     }
 }
 
