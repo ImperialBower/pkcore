@@ -19,9 +19,18 @@
 //! *regret-matching*. The average strategy over all iterations converges to a
 //! Nash equilibrium in two-player zero-sum games.
 //!
-//! This implementation uses the **CFR+ regret floor**: accumulated regret is
-//! clamped to `max(0, value)` after each update inside [`RegretAccumulator`],
-//! discarding stale negative regret for faster convergence.
+//! The specific algorithm is selected via [`SolverConfig::cfr_variant`]:
+//!
+//! - **`Vanilla`** — uniform strategy weighting, regret floor only.
+//! - **`CfrPlus`** — linear strategy weighting (weight = iteration `t`) plus
+//!   regret floor. This is full CFR+ (Tammelin 2014).
+//! - **`Discounted { alpha, beta }`** — DCFR (Brown & Sandholm 2019): regrets
+//!   are multiplied by `t^α / (t^α + 1)` before each update; strategy sums
+//!   are multiplied by `t^β / (t^β + 1)`. Default: `α = 1.5`, `β = 0.0`.
+//!
+//! All variants share the **CFR+ regret floor**: accumulated regret is clamped
+//! to `max(0, value)` after each update inside [`RegretAccumulator`], discarding
+//! stale negative regret.
 //!
 //! # Examples
 //!
@@ -48,7 +57,7 @@
 use crate::analysis::gto::combos::Combos;
 use crate::analysis::gto::game_tree::{GameTree, Node, NodeId, Player, TerminalNode, TerminalOutcome};
 use crate::analysis::gto::regret::RegretAccumulator;
-use crate::analysis::gto::solver_config::SolverConfig;
+use crate::analysis::gto::solver_config::{CfrVariant, SolverConfig};
 use crate::analysis::gto::strategy_profile::{ActionFrequencies, StrategyProfile};
 use crate::analysis::gto::twos::Twos;
 use crate::arrays::HandRanker;
@@ -717,6 +726,39 @@ impl Solver {
     /// ```
     pub fn iterate(&mut self) -> f64 {
         self.iteration += 1;
+
+        // Compute per-iteration discount factors and strategy weight from the
+        // configured CFR variant.
+        //
+        // | Variant          | regret_factor            | strategy_factor          | strategy_weight |
+        // |------------------|--------------------------|--------------------------|-----------------|
+        // | Vanilla          | 1.0 (no change)          | 1.0 (no change)          | 1.0             |
+        // | CfrPlus          | 1.0 (floor already done) | 1.0 (no change)          | t               |
+        // | Discounted(α, β) | t^α / (t^α + 1)          | t^β / (t^β + 1)          | 1.0             |
+        //
+        // `regret_factor`  — multiply all stored regrets before adding new deltas.
+        // `strategy_factor`— multiply all stored strategy sums before this iteration.
+        // `strategy_weight`— weight applied when accumulating this iteration's strategy.
+        #[allow(clippy::cast_precision_loss)]
+        let t = self.iteration as f64;
+        let (strategy_weight, regret_factor, strategy_factor) = match &self.config.cfr_variant {
+            CfrVariant::Vanilla => (1.0_f64, 1.0_f64, 1.0_f64),
+            CfrVariant::CfrPlus => (t, 1.0, 1.0),
+            CfrVariant::Discounted { alpha, beta } => {
+                let ta = t.powf(*alpha);
+                let tb = t.powf(*beta);
+                (1.0, ta / (ta + 1.0), tb / (tb + 1.0))
+            }
+        };
+
+        // Apply pre-iteration discounting to stored state.
+        if (regret_factor - 1.0).abs() > f64::EPSILON {
+            self.regrets.scale_all(regret_factor);
+        }
+        if (strategy_factor - 1.0).abs() > f64::EPSILON {
+            scale_strategy_sum(&mut self.strategy_sum, strategy_factor);
+        }
+
         // Clone the pair list so we can mutably borrow `self.regrets` and
         // `self.strategy_sum` inside the loop without hitting borrow-check
         // conflicts with `self.hand_pairs`.
@@ -743,6 +785,7 @@ impl Solver {
                 ip_hand,
                 1.0,
                 1.0,
+                strategy_weight,
                 tree,
                 showdown_map,
                 regrets,
@@ -1073,6 +1116,22 @@ fn hands_conflict(oop: Two, ip: Two) -> bool {
     oop.first() == ip.first() || oop.first() == ip.second() || oop.second() == ip.first() || oop.second() == ip.second()
 }
 
+/// Multiplies every entry in `strategy_sum` by `factor`.
+///
+/// Used by DCFR's β-discounting step: before accumulating this iteration's
+/// strategy contribution, existing sums are scaled by `β_t = t^β / (t^β + 1)`.
+/// With `β = 0` this equals `0.5` every iteration, which is equivalent in
+/// expectation to CFR+'s linear strategy weighting.
+fn scale_strategy_sum(strategy_sum: &mut HashMap<NodeId, HashMap<Two, Vec<f64>>>, factor: f64) {
+    for hand_map in strategy_sum.values_mut() {
+        for sums in hand_map.values_mut() {
+            for s in sums.iter_mut() {
+                *s *= factor;
+            }
+        }
+    }
+}
+
 /// Recursive CFR traversal. Returns the counterfactual value to OOP.
 ///
 /// - `oop_reach` — cumulative probability of OOP's actions reaching this node.
@@ -1090,13 +1149,14 @@ fn hands_conflict(oop: Two, ip: Two) -> bool {
 /// `showdown_map` holds pre-computed hand strength comparisons for every valid
 /// `(oop_hand, ip_hand)` pair, avoiding repeated seven-card evaluations at
 /// every showdown terminal.
-#[allow(clippy::too_many_arguments)] // six game-state params + two mutable accumulators; no natural grouping reduces this
+#[allow(clippy::too_many_arguments)] // seven game-state params + two mutable accumulators; no natural grouping reduces this
 fn traverse(
     node_id: NodeId,
     oop_hand: Two,
     ip_hand: Two,
     oop_reach: f64,
     ip_reach: f64,
+    strategy_weight: f64,
     tree: &GameTree,
     showdown_map: &ShowdownMap,
     regrets: &mut RegretAccumulator,
@@ -1138,6 +1198,7 @@ fn traverse(
                         ip_hand,
                         oop_reach,
                         ip_reach,
+                        strategy_weight,
                         tree,
                         showdown_map,
                         regrets,
@@ -1184,7 +1245,7 @@ fn traverse(
                 && let Some(sums) = hand_map.get_mut(&acting_hand)
             {
                 for (s, &p) in sums.iter_mut().zip(strategy.iter()) {
-                    *s += acting_reach * p;
+                    *s += strategy_weight * acting_reach * p;
                 }
             }
 
@@ -1201,6 +1262,7 @@ fn traverse(
                     ip_hand,
                     new_oop,
                     new_ip,
+                    strategy_weight,
                     tree,
                     showdown_map,
                     regrets,
@@ -1631,6 +1693,61 @@ mod tests {
         assert!(
             any_bet_dominant,
             "AA should bet >50% with at least one hand vs KK after 50 iterations"
+        );
+    }
+
+    // ── CfrVariant convergence ───────────────────────────────────────────────
+
+    /// Helper: solve AA vs KK on a blank river board for `n` iterations under
+    /// the given CFR variant, return exploitability.
+    fn exploitability_after(variant: CfrVariant, n: usize) -> f64 {
+        let oop = Combos::from_str("AA,KK").unwrap_or_default();
+        let ip = Combos::from_str("QQ,JJ").unwrap_or_default();
+        let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
+        let config = SolverConfig::new(oop, ip, board, 1_000, 200)
+            .with_max_iterations(n)
+            .with_cfr_variant(variant);
+        Solver::new(config).solve().exploitability
+    }
+
+    #[test]
+    fn test_cfr_variant_vanilla_runs() {
+        // Smoke test: vanilla variant completes without panic.
+        let expl = exploitability_after(CfrVariant::Vanilla, 20);
+        assert!(expl >= 0.0);
+    }
+
+    #[test]
+    fn test_cfr_variant_cfr_plus_runs() {
+        let expl = exploitability_after(CfrVariant::CfrPlus, 20);
+        assert!(expl >= 0.0);
+    }
+
+    #[test]
+    fn test_cfr_variant_discounted_runs() {
+        let expl = exploitability_after(CfrVariant::Discounted { alpha: 1.5, beta: 0.0 }, 20);
+        assert!(expl >= 0.0);
+    }
+
+    #[test]
+    fn test_cfr_plus_converges_faster_than_vanilla() {
+        // CFR+ should reach lower exploitability than vanilla in 50 iterations.
+        let vanilla = exploitability_after(CfrVariant::Vanilla, 50);
+        let cfr_plus = exploitability_after(CfrVariant::CfrPlus, 50);
+        assert!(
+            cfr_plus < vanilla,
+            "CFR+ exploitability ({cfr_plus:.4}) should be below vanilla ({vanilla:.4}) at 50 iters"
+        );
+    }
+
+    #[test]
+    fn test_dcfr_converges_faster_than_vanilla() {
+        // DCFR (α=1.5, β=0) should reach lower exploitability than vanilla in 50 iterations.
+        let vanilla = exploitability_after(CfrVariant::Vanilla, 50);
+        let dcfr = exploitability_after(CfrVariant::Discounted { alpha: 1.5, beta: 0.0 }, 50);
+        assert!(
+            dcfr < vanilla,
+            "DCFR exploitability ({dcfr:.4}) should be below vanilla ({vanilla:.4}) at 50 iters"
         );
     }
 

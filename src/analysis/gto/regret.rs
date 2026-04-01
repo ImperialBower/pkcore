@@ -271,6 +271,46 @@ impl RegretAccumulator {
         Some(self.0.get(&node)?.get(hand)?.as_slice())
     }
 
+    /// Multiplies every accumulated regret by `factor`.
+    ///
+    /// Used by DCFR's α-discounting step: before adding new regret deltas for
+    /// iteration `t`, existing regrets are scaled by `α_t = t^α / (t^α + 1)`.
+    /// As `t → ∞`, `α_t → 1.0` (no discounting at convergence), so early
+    /// chaotic regrets are suppressed without affecting the long-run behaviour.
+    ///
+    /// Calling with `factor = 1.0` is a no-op. Calling with `factor = 0.0`
+    /// resets all regrets to zero.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::game_tree::{GameTree, NodeId, Node};
+    /// use pkcore::analysis::gto::regret::RegretAccumulator;
+    /// use pkcore::analysis::gto::solver_config::SolverConfig;
+    /// use pkcore::play::board::Board;
+    /// use std::str::FromStr;
+    ///
+    /// let oop = Combos::from_str("AA,KK").unwrap_or_default();
+    /// let ip  = Combos::from_str("QQ,JJ").unwrap_or_default();
+    /// let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
+    /// let config = SolverConfig::new(oop.clone(), ip.clone(), board, 1_000, 200);
+    /// let tree = GameTree::build_river(&config);
+    /// let mut acc = RegretAccumulator::new(&tree, &oop, &ip);
+    /// // Scale all by 0.0 → reset.
+    /// acc.scale_all(0.0);
+    /// assert!(!acc.is_empty()); // structure preserved, values zeroed
+    /// ```
+    pub fn scale_all(&mut self, factor: f64) {
+        for hand_map in self.0.values_mut() {
+            for regrets in hand_map.values_mut() {
+                for r in regrets.iter_mut() {
+                    *r *= factor;
+                }
+            }
+        }
+    }
+
     /// Returns the number of action nodes tracked in this accumulator.
     ///
     /// # Examples
@@ -481,5 +521,48 @@ mod tests {
         use crate::card::Card;
         let hand = Two::new(Card::from_str("Ah").unwrap(), Card::from_str("Kd").unwrap()).unwrap();
         assert!(acc.get_raw(NodeId::new(9999), &hand).is_none());
+    }
+
+    #[test]
+    fn test_regret_accumulator_scale_all_halves_values() {
+        let (mut acc, tree, _, _) = make_acc();
+        let node = first_action_node(&tree);
+        let hand = first_hand(&acc, node);
+        let n = acc.get_raw(node, &hand).unwrap().len();
+        // Give action 0 a known positive regret.
+        let mut deltas = vec![0.0; n];
+        deltas[0] = 4.0;
+        acc.update(node, hand, &deltas);
+        acc.scale_all(0.5);
+        let raw = acc.get_raw(node, &hand).unwrap();
+        assert!(
+            (raw[0] - 2.0).abs() < 1e-12,
+            "scale_all(0.5) should halve regret: got {}",
+            raw[0]
+        );
+        for &r in &raw[1..] {
+            assert!(r == 0.0, "other regrets should remain zero");
+        }
+    }
+
+    #[test]
+    fn test_regret_accumulator_scale_all_zero_resets() {
+        let (mut acc, tree, _, _) = make_acc();
+        let node = first_action_node(&tree);
+        let hand = first_hand(&acc, node);
+        let n = acc.get_raw(node, &hand).unwrap().len();
+        let deltas: Vec<f64> = vec![3.0; n];
+        acc.update(node, hand, &deltas);
+        acc.scale_all(0.0);
+        let raw = acc.get_raw(node, &hand).unwrap();
+        assert!(raw.iter().all(|&r| r == 0.0), "scale_all(0) should zero all regrets");
+    }
+
+    #[test]
+    fn test_regret_accumulator_scale_all_preserves_structure() {
+        let (mut acc, _, _, _) = make_acc();
+        let before_len = acc.len();
+        acc.scale_all(0.75);
+        assert_eq!(acc.len(), before_len, "scale_all must not add or remove entries");
     }
 }

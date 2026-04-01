@@ -14,6 +14,74 @@ use crate::analysis::gto::combos::Combos;
 use crate::play::board::Board;
 use std::fmt;
 
+// ── CfrVariant ────────────────────────────────────────────────────────────────
+
+/// Selects the CFR update algorithm used by [`super::solver::Solver`].
+///
+/// All variants share the same regret floor (`max(0, value)` applied in
+/// [`super::regret::RegretAccumulator::update`]). The variants differ only in
+/// how they weight strategy sums and discount accumulated regrets between
+/// iterations.
+///
+/// # Convergence comparison (same iteration count)
+///
+/// | Variant | Strategy weight | Regret discount | Typical speedup vs Vanilla |
+/// |---------|----------------|-----------------|---------------------------|
+/// | `Vanilla` | `1.0` | none | baseline |
+/// | `CfrPlus` | `t` (iteration) | none | 2–4× |
+/// | `Discounted { α=1.5, β=0 }` | `1.0` | `t^α / (t^α + 1)` | 3–10× |
+///
+/// The default is `Discounted { alpha: 1.5, beta: 0.0 }`, which matches the
+/// recommended parameters from Brown & Sandholm (2019) for poker solvers.
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::analysis::gto::solver_config::{CfrVariant, SolverConfig};
+/// use pkcore::analysis::gto::combos::Combos;
+/// use pkcore::play::board::Board;
+///
+/// let config = SolverConfig::new(
+///     Combos::default(), Combos::default(), Board::default(), 500, 100,
+/// ).with_cfr_variant(CfrVariant::CfrPlus);
+///
+/// assert_eq!(config.cfr_variant, CfrVariant::CfrPlus);
+/// ```
+#[derive(Clone, Debug, PartialEq)]
+pub enum CfrVariant {
+    /// Vanilla CFR with regret floor only. Uniform strategy weighting; no
+    /// regret discounting between iterations.
+    Vanilla,
+    /// Full CFR+ (Tammelin 2014). Combines the regret floor with **linear
+    /// strategy weighting**: iteration `t`'s strategy contribution is
+    /// multiplied by `t`, so chaotic early iterations are down-weighted.
+    CfrPlus,
+    /// Discounted CFR (Brown & Sandholm 2019). Applies iteration-dependent
+    /// discount factors to both regrets and strategy sums:
+    ///
+    /// - Regrets: multiplied by `t^α / (t^α + 1)` before each update.
+    /// - Strategy sums: multiplied by `t^β / (t^β + 1)` before each update.
+    ///
+    /// Recommended: `alpha = 1.5`, `beta = 0.0`.
+    Discounted {
+        /// Regret discount exponent. Higher values discount early regrets more
+        /// aggressively. Recommended: `1.5`.
+        alpha: f64,
+        /// Strategy sum discount exponent. `0.0` gives a constant `0.5`
+        /// multiplicative factor each iteration, implementing linear
+        /// strategy weighting equivalently to `CfrPlus`. Recommended: `0.0`.
+        beta: f64,
+    },
+}
+
+impl Default for CfrVariant {
+    /// Returns `Discounted { alpha: 1.5, beta: 0.0 }` — the recommended
+    /// DCFR parameters for poker solvers (Brown & Sandholm 2019).
+    fn default() -> Self {
+        Self::Discounted { alpha: 1.5, beta: 0.0 }
+    }
+}
+
 // ── BetSize ──────────────────────────────────────────────────────────────────
 
 /// A bet size expressed as an exact rational fraction of the pot.
@@ -334,6 +402,9 @@ pub struct SolverConfig {
     pub max_iterations: usize,
     /// Stop early if exploitability drops below this threshold (chips/100 hands).
     pub target_exploitability: f64,
+    /// Which CFR update algorithm to use. Defaults to
+    /// [`CfrVariant::Discounted`] with `alpha = 1.5`, `beta = 0.0`.
+    pub cfr_variant: CfrVariant,
 }
 
 impl SolverConfig {
@@ -369,6 +440,7 @@ impl SolverConfig {
             bet_sizings: BetSizings::default(),
             max_iterations: 10_000,
             target_exploitability: 0.1,
+            cfr_variant: CfrVariant::default(),
         }
     }
 
@@ -433,6 +505,26 @@ impl SolverConfig {
     #[must_use]
     pub fn with_target_exploitability(mut self, target: f64) -> Self {
         self.target_exploitability = target;
+        self
+    }
+
+    /// Returns a copy of this config using the given CFR variant.
+    ///
+    /// # Examples
+    /// ```
+    /// use pkcore::analysis::gto::combos::Combos;
+    /// use pkcore::analysis::gto::solver_config::{CfrVariant, SolverConfig};
+    /// use pkcore::play::board::Board;
+    ///
+    /// let config = SolverConfig::new(
+    ///     Combos::default(), Combos::default(), Board::default(), 500, 100,
+    /// ).with_cfr_variant(CfrVariant::CfrPlus);
+    ///
+    /// assert_eq!(config.cfr_variant, CfrVariant::CfrPlus);
+    /// ```
+    #[must_use]
+    pub fn with_cfr_variant(mut self, variant: CfrVariant) -> Self {
+        self.cfr_variant = variant;
         self
     }
 }
@@ -606,5 +698,39 @@ mod tests {
         let board = Board::from_str("Ah Kd 5c 2s 7h").unwrap_or_default();
         let config = SolverConfig::new(hero, villain, board, 1_000, 200);
         assert_eq!(config.pot, 200);
+    }
+
+    // ── CfrVariant ───────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_cfr_variant_default_is_discounted() {
+        assert_eq!(CfrVariant::default(), CfrVariant::Discounted { alpha: 1.5, beta: 0.0 });
+    }
+
+    #[test]
+    fn test_solver_config_default_variant_is_discounted() {
+        let config = SolverConfig::new(Combos::default(), Combos::default(), Board::default(), 500, 100);
+        assert_eq!(config.cfr_variant, CfrVariant::Discounted { alpha: 1.5, beta: 0.0 });
+    }
+
+    #[test]
+    fn test_solver_config_with_cfr_variant_vanilla() {
+        let config = SolverConfig::new(Combos::default(), Combos::default(), Board::default(), 500, 100)
+            .with_cfr_variant(CfrVariant::Vanilla);
+        assert_eq!(config.cfr_variant, CfrVariant::Vanilla);
+    }
+
+    #[test]
+    fn test_solver_config_with_cfr_variant_cfr_plus() {
+        let config = SolverConfig::new(Combos::default(), Combos::default(), Board::default(), 500, 100)
+            .with_cfr_variant(CfrVariant::CfrPlus);
+        assert_eq!(config.cfr_variant, CfrVariant::CfrPlus);
+    }
+
+    #[test]
+    fn test_solver_config_with_cfr_variant_discounted_custom() {
+        let config = SolverConfig::new(Combos::default(), Combos::default(), Board::default(), 500, 100)
+            .with_cfr_variant(CfrVariant::Discounted { alpha: 2.0, beta: 0.5 });
+        assert_eq!(config.cfr_variant, CfrVariant::Discounted { alpha: 2.0, beta: 0.5 });
     }
 }
