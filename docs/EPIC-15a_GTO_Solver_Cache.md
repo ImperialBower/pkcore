@@ -26,13 +26,13 @@ epic adds the lookup layer on top so that a spot solved once is never re-solved.
 
 ---
 
-## What Is Missing
+## Implementation Status
 
-| Feature | Gap |
-|---------|-----|
-| Stable cache key | `Combos` uses `HashSet` (non-deterministic order); `Board` has no `Hash` impl |
-| `SolverCache` struct | No lookup/store/evict API |
-| Module registration | `solver_cache` not listed in `gto/mod.rs` |
+| Feature | Status |
+|---------|--------|
+| Stable cache key | ✅ `cache_key` in `solver_cache.rs` — sorts ranges before hashing, field-order board cards |
+| `SolverCache` struct | ✅ `solver_cache.rs` — `new`, `get`, `put`, `contains`, `len`, `is_empty`, `clear` |
+| Module registration | ✅ `pub mod solver_cache` added to `gto/mod.rs` |
 
 ---
 

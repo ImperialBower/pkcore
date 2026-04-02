@@ -10,6 +10,7 @@ pub mod game_tree;
 pub mod odds;
 pub mod regret;
 pub mod solver;
+pub mod solver_cache;
 pub mod solver_config;
 pub mod strategy_profile;
 pub mod vs;
