@@ -72,7 +72,7 @@ iteration's strategy — you play the running average.
 | CFR iteration loop | ✅ `solver.rs` — `Solver::iterate()` / `solve()` / `equilibrium()`; vanilla / CFR+ / DCFR variants |
 | Convergence metric | ✅ `solver.rs` — `Solver::compute_exploitability()` best-response pass; `SolverResult` |
 | Multi-street propagation | ✅ `game_tree.rs` — `build_turn` with 48-branch chance nodes; `weighted_combos.rs` — `after_action()` |
-| Tree serialization | ⚠️ `SolverResult` serializes via `to_binary_bytes` / `save_json` (done); board+range-hash cache (`solver_cache.rs`) not yet implemented |
+| Tree serialization | ⚠️ `SolverResult` serializes via `to_binary_bytes` / `save_json` (done); board+range-hash cache (`solver_cache.rs`) tracked in [EPIC-15a](EPIC-15a_GTO_Solver_Cache.md) |
 | Kuhn Poker validation | ✅ `tests/kuhn_poker.rs` — 12 tests covering game value, dominated strategies, and unique mixing frequencies |
 | Example binary | ✅ `examples/gto-solver` |
 
@@ -323,7 +323,7 @@ loadable to avoid re-solving the same spot.
 7. ✅ **`WeightedCombos::after_action()`** — range propagation
 8. ✅ **Exploitability metric** — best-response pass for convergence verification
 9. ⚠️ **Serialization** — `SolverResult` save/load done; board+range-hash cache
-   (`solver_cache.rs`) still outstanding
+   (`solver_cache.rs`) tracked in [EPIC-15a](EPIC-15a_GTO_Solver_Cache.md)
 
 ---
 
