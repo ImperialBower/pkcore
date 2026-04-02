@@ -61,18 +61,20 @@ iteration's strategy — you play the running average.
 
 ---
 
-## What Is Missing
+## Implementation Status
 
-| Feature | Gap |
-|---------|-----|
-| Game tree nodes | No representation of decision, chance, or terminal nodes |
-| Bet sizing config | No structure defining allowed actions at each node |
-| Strategy profile | No storage for per-hand action frequencies at each node |
-| Regret accumulators | No per-(node, hand, action) regret tracking |
-| CFR iteration loop | No solver algorithm |
-| Convergence metric | No exploitability or Nash gap measurement |
-| Multi-street propagation | No mechanism to narrow ranges as actions are taken |
-| Tree serialization | No save/load of solver state |
+| Feature | Status |
+|---------|--------|
+| Game tree nodes | ✅ `game_tree.rs` — `Node`, `ActionNode`, `ChanceNode`, `TerminalNode`; flat arena indexed by `NodeId` |
+| Bet sizing config | ✅ `solver_config.rs` — `BetSize`, `BetSizings`, `SolverConfig`, `CfrVariant` |
+| Strategy profile | ✅ `strategy_profile.rs` — `StrategyProfile`, `ActionFrequencies`; uniform init + serde |
+| Regret accumulators | ✅ `regret.rs` — `RegretAccumulator` with CFR+ floor, `scale_all` for DCFR |
+| CFR iteration loop | ✅ `solver.rs` — `Solver::iterate()` / `solve()` / `equilibrium()`; vanilla / CFR+ / DCFR variants |
+| Convergence metric | ✅ `solver.rs` — `Solver::compute_exploitability()` best-response pass; `SolverResult` |
+| Multi-street propagation | ✅ `game_tree.rs` — `build_turn` with 48-branch chance nodes; `weighted_combos.rs` — `after_action()` |
+| Tree serialization | ⚠️ `SolverResult` serializes via `to_binary_bytes` / `save_json` (done); board+range-hash cache (`solver_cache.rs`) not yet implemented |
+| Kuhn Poker validation | ✅ `tests/kuhn_poker.rs` — 12 tests covering game value, dominated strategies, and unique mixing frequencies |
+| Example binary | ✅ `examples/gto-solver` |
 
 ---
 
@@ -305,40 +307,41 @@ loadable to avoid re-solving the same spot.
 
 ---
 
-## Suggested Implementation Order
+## Implementation Order
 
-1. **`SolverConfig` + `BetSizings`** — configuration types, no logic, easy to
+1. ✅ **`SolverConfig` + `BetSizings`** — configuration types, no logic, easy to
    test in isolation
-2. **`GameTree` + node types** — tree construction from config; validate with
+2. ✅ **`GameTree` + node types** — tree construction from config; validate with
    river-only trees first
-3. **`StrategyProfile` + `ActionFrequencies`** — uniform initialization,
+3. ✅ **`StrategyProfile` + `ActionFrequencies`** — uniform initialization,
    normalization
-4. **`RegretAccumulator`** — regret-matching logic; unit-testable against known
+4. ✅ **`RegretAccumulator`** — regret-matching logic; unit-testable against known
    toy games (e.g., Kuhn poker)
-5. **`Solver::iterate()`** — CFR traversal for river nodes; verify convergence
+5. ✅ **`Solver::iterate()`** — CFR traversal for river nodes; verify convergence
    on a single street
-6. **Extend to flop + turn** — add chance nodes, multi-street traversal
-7. **`WeightedCombos::after_action()`** — range propagation
-8. **Exploitability metric** — best-response pass for convergence verification
-9. **Serialization** — save/load solved spots
+6. ✅ **Extend to flop + turn** — add chance nodes, multi-street traversal
+7. ✅ **`WeightedCombos::after_action()`** — range propagation
+8. ✅ **Exploitability metric** — best-response pass for convergence verification
+9. ⚠️ **Serialization** — `SolverResult` save/load done; board+range-hash cache
+   (`solver_cache.rs`) still outstanding
 
 ---
 
 ## Validation Approach
 
-Test CFR correctness against **Kuhn Poker** (3-card game, 1 betting round)
-before touching poker-specific logic. Kuhn Poker has an analytically known Nash
-equilibrium, making it an ideal unit test for the algorithm itself:
+✅ **Complete.** CFR correctness was validated against **Kuhn Poker** (3-card
+game, 1 betting round) before scaling to Hold'em trees. Kuhn Poker has an
+analytically known Nash equilibrium, making it an ideal unit test for the
+algorithm itself:
 
 - Hero range: {J, Q, K} (one card each)
 - One bet size (pot)
 - Known equilibrium: King always bets, Queen checks/calls at a specific
   frequency, Jack bluffs at a specific frequency
 
-Once Kuhn Poker converges correctly, the same traversal logic applies to
-Hold'em trees with a larger range and more streets.
-
-**Where it lives:** `tests/kuhn_poker.rs` (integration test)
+**Where it lives:** `tests/kuhn_poker.rs` — 12 tests covering game value
+(−1/18), dominated strategies, uniquely determined mixing frequencies (1/3),
+and the K-bet = 3×J-bluff structural constraint.
 
 ---
 
