@@ -19,7 +19,7 @@
 //! # File Layout
 //!
 //! Each entry is stored as `{key:016x}.bin` — a 16-character hex filename
-//! containing a bincode-serialized [`SolverResult`]. Files are independent so
+//! containing a postcard-serialized [`SolverResult`]. Files are independent so
 //! the cache is safe for concurrent reads.
 //!
 //! # Examples
@@ -137,7 +137,7 @@ pub fn cache_key(config: &SolverConfig) -> u64 {
 /// A directory-backed cache of solved GTO spots.
 ///
 /// Each entry is stored as `{key:016x}.bin` inside `dir`. Files are
-/// independent bincode-serialized [`SolverResult`] values.
+/// independent postcard-serialized [`SolverResult`] values.
 ///
 /// # Examples
 ///
