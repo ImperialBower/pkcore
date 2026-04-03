@@ -25,6 +25,7 @@ A running poker table service where:
 | [pkcore](https://github.com/folkengine/pkcore) | Active | Full poker library: `Table`, `Dealer`, `Player`, `Game`, card evaluation, GTO analysis |
 | [pkdealer](https://github.com/ImperialBower/pkdealer) | Skeleton | gRPC proto fully defined; only `Ping` is implemented; workspace has `proto`, `service`, `client` crates |
 | [pkbot](https://github.com/ImperialBower/pkbot) | Skeleton | Bot personality library; YAML-serializable range and betting strategies for use by pkdealer agent clients |
+| [pkgto-web](https://github.com/ImperialBower/pkgto-web) | Active | WASM preflop equity analyzer; single `analyze_gto` function, deployed to GitHub Pages |
 
 The `dealer.proto` in pkdealer already defines all the RPCs needed:
 `SeatPlayer`, `StartHand`, `Act`, `AdvanceStreet`, `EndHand`,
@@ -109,6 +110,49 @@ workspace)
 | [EPIC-14](docs/EPIC-14_Equity.md) | Hand Equity — pot odds, EV, range equity, weighted ranges | Complete |
 | [EPIC-15](docs/EPIC-15_GTO_Solver.md) | GTO Solver — game tree, CFR, strategy profiles, exploitability | Complete |
 | [EPIC-16](docs/EPIC-16_DCFR.md) | CFR+ and Discounted CFR — faster convergence variants | Complete |
+| EPIC-17 | Range Frequencies — optional per-combo frequency in range strings (`AA:0.5`) | Planned |
+
+---
+
+## pkgto-web Updates
+
+[pkgto-web](https://github.com/ImperialBower/pkgto-web) is a WASM-powered
+preflop equity analyzer that runs entirely in the browser via a single
+`analyze_gto(hero, villain_range)` function compiled from pkcore.
+
+### Planned UI updates
+
+#### Range frequency display (depends on EPIC-17)
+
+Once pkcore supports per-combo frequencies in range strings, the UI should
+surface them:
+
+- **Range input** — accept the `:f` suffix in the villain range text field
+  (e.g. `AA:0.5, KK, QQ:0.75`); show a validation error if the value is
+  outside `[0.0, 1.0]`
+- **Matchup table** — add a `Frequency` column showing each combo's weight;
+  grey out or visually de-emphasise combos below a configurable threshold
+- **Combined odds** — weight the combined equity calculation by combo
+  frequency so the output reflects the actual mixed-strategy distribution
+  rather than assuming every combo is played 100%
+- **Range display** — render the villain range summary with frequency
+  annotations so users can confirm what was parsed
+
+#### `analyze_gto` WASM API extension
+
+The Rust side needs a corresponding update:
+
+- `GtoResult` gains `frequency: f32` on each `MatchupEntry`
+- Combined odds already use `WeightedCombos` internally; ensure combo-level
+  frequency is threaded through from the parsed range string
+- Return the normalised range string (with frequencies) in `GtoResult` so
+  the JS layer can display exactly what pkcore parsed
+
+#### Stretch: range builder UI
+
+A click-to-build range interface where each hand can be toggled between
+`0%`, `25%`, `50%`, `75%`, and `100%` frequency — outputting a
+frequency-annotated range string that feeds into `analyze_gto`.
 
 ---
 
@@ -217,9 +261,33 @@ spans. Open Grafana and see a live game stats dashboard.
 observable decision-making. Bot profiles are defined in pkbot and loaded
 by agent binaries in pkdealer.
 
+**pkcore work (prerequisite for pkbot):**
+
+Extend the range string format to support optional per-combo frequencies
+using a colon followed by a value in `[0.0, 1.0]`:
+
+```
+AA:0.5, KK, QQ:0.75, AKs:1.0
+```
+
+A combo with no frequency suffix defaults to `1.0` (played 100% of the
+time). This affects how range charts are stored, displayed, and consumed
+by the solver and bot logic.
+
+- Extend `Combo` to carry an optional `frequency: Option<f64>` field
+- Update the range string parser (`FromStr` for `Combos`) to recognise the
+  `:f` suffix and validate that the value is in `[0.0, 1.0]`
+- Update `Display` for `Combo` to emit the suffix when frequency is not
+  `1.0` (omit it otherwise to keep round-tripped strings clean)
+- Ensure `WeightedCombos` respects combo-level frequency when expanding
+  ranges — a combo at frequency `0.5` contributes weight `0.5` per hand
+- Add a pkcore EPIC doc (`docs/EPIC-17_Range_Frequencies.md`) covering
+  the full design and test plan
+
 **pkbot work (prerequisite for rule-based and GTO agents):**
-1. Define `BotProfile` struct with preflop range charts, postflop betting
-   tendencies, aggression factor, and bluff frequency
+1. Define `BotProfile` struct with preflop range charts (using frequency-
+   annotated range strings), postflop betting tendencies, aggression
+   factor, and bluff frequency
 2. Add `serde` + `serde_yaml` — serialize/deserialize profiles to YAML
 3. Ship a set of named reference profiles: `tight_passive.yaml`,
    `loose_aggressive.yaml`, `gto_river.yaml`
