@@ -12,7 +12,14 @@ db-urls = ["https://github.com/rustsec/advisory-db"]
 yanked = "deny"
 # A list of advisory IDs to ignore. Note that ignored advisories will still
 # output a note when they are encountered.
-ignore = []
+ignore = [
+    # atomic-polyfill is a transitive dep via postcard → heapless → atomic-polyfill.
+    # The advisory is unmaintained status only — not a security vulnerability.
+    # atomic-polyfill is a no-op on x86_64 and wasm32 (both have native atomics).
+    # We cannot remove it without switching away from postcard; revisit if postcard
+    # drops the heapless dependency in a future release.
+    "RUSTSEC-2023-0089",
+]
 
 [licenses]
 # List of explicitly allowed licenses
