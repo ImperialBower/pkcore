@@ -24,6 +24,7 @@ A running poker table service where:
 |------|--------|-------|
 | [pkcore](https://github.com/folkengine/pkcore) | Active | Full poker library: `Table`, `Dealer`, `Player`, `Game`, card evaluation, GTO analysis |
 | [pkdealer](https://github.com/ImperialBower/pkdealer) | Skeleton | gRPC proto fully defined; only `Ping` is implemented; workspace has `proto`, `service`, `client` crates |
+| [pkbot](https://github.com/ImperialBower/pkbot) | Skeleton | Bot personality library; YAML-serializable range and betting strategies for use by pkdealer agent clients |
 
 The `dealer.proto` in pkdealer already defines all the RPCs needed:
 `SeatPlayer`, `StartHand`, `Act`, `AdvanceStreet`, `EndHand`,
@@ -81,9 +82,21 @@ workspace)
   (broadcast/spectator mode)
 - Shows pot, board, action log, chip counts in real time
 
+**`pkbot`** — Bot personality library ([ImperialBower/pkbot](https://github.com/ImperialBower/pkbot))
+- Standalone Rust library (not part of the pkdealer workspace)
+- Defines `BotProfile` — a fully serializable bot personality combining a
+  GTO range strategy and a betting strategy
+- Profiles are stored as YAML and loaded via `serde` + `serde_yaml`
+- Covers preflop range charts, postflop betting tendencies, aggression
+  factors, and bluff frequencies
+- Different profiles produce different player archetypes: tight-passive,
+  loose-aggressive, GTO-solver-driven, etc.
+- Agent binaries in pkdealer load a `BotProfile` from a YAML file at
+  startup and use it to drive decisions via the gRPC `Act` RPC
+
 **AI Agent clients** — Separate binaries/crates
 - Each implements the same gRPC client interface
-- Each uses a different decision-making backend
+- Each loads a `BotProfile` from pkbot to drive decision-making
 - Connects as a player, receives its own hole cards and table state, acts
   via gRPC
 
@@ -198,10 +211,19 @@ spans. Open Grafana and see a live game stats dashboard.
 
 ---
 
-### Phase 4 — AI Agent Clients
+### Phase 4 — Bot Personalities & AI Agent Clients
 
 **Goal:** Multiple AI personalities playing at the same table, each with
-observable decision-making.
+observable decision-making. Bot profiles are defined in pkbot and loaded
+by agent binaries in pkdealer.
+
+**pkbot work (prerequisite for rule-based and GTO agents):**
+1. Define `BotProfile` struct with preflop range charts, postflop betting
+   tendencies, aggression factor, and bluff frequency
+2. Add `serde` + `serde_yaml` — serialize/deserialize profiles to YAML
+3. Ship a set of named reference profiles: `tight_passive.yaml`,
+   `loose_aggressive.yaml`, `gto_river.yaml`
+4. Publish to crates.io so pkdealer agent binaries can depend on it
 
 **Approach:** Define a shared `PokerAgent` trait (or just a convention)
 that each agent implements:
@@ -334,6 +356,7 @@ blog post.
 | Layer | Technology | Rationale |
 |-------|-----------|-----------|
 | Game engine | pkcore (Rust) | Already exists, battle-tested |
+| Bot personalities | pkbot (Rust) | YAML-serializable profiles; decoupled from agent transport layer |
 | RPC | gRPC / Tonic | Proto already defined in pkdealer; type-safe, streaming |
 | Web server | Axum | Idiomatic async Rust, SSE support |
 | Frontend | React or Vue + Tailwind | Polished UI with animations; framework TBD |
@@ -348,13 +371,25 @@ blog post.
 ## Repo Structure (end state)
 
 ```
+pkbot/                         # Bot personality library (standalone crate)
+├── src/
+│   ├── lib.rs
+│   ├── profile.rs             # BotProfile — top-level serializable type
+│   ├── range_strategy.rs      # Preflop range charts + postflop tendencies
+│   └── betting_strategy.rs    # Aggression factor, bluff freq, sizing rules
+├── profiles/
+│   ├── tight_passive.yaml
+│   ├── loose_aggressive.yaml
+│   └── gto_river.yaml
+└── Cargo.toml
+
 pkdealer/
 ├── crates/
 │   ├── pkdealer_proto/        # Protobuf types (existing)
 │   ├── pkdealer_service/      # gRPC server + game engine (expand)
 │   ├── pkdealer_spectator/    # Axum web app + SSE (new)
 │   ├── pkdealer_agent_random/ # Random baseline agent (new)
-│   ├── pkdealer_agent_rules/  # Rule-based agent (new)
+│   ├── pkdealer_agent_rules/  # Rule-based agent using pkbot profiles (new)
 │   ├── pkdealer_agent_claude/ # Claude AI agent (new)
 │   ├── pkdealer_agent_openai/ # OpenAI agent (new)
 │   └── pkdealer_client_human/ # Interactive TUI client for human players (new)
