@@ -5,3 +5,8 @@ default: true
 MD013:
   code_blocks: false
   tables: false
+
+# headings must be surrounded by blank lines
+MD022:
+  lines_above: 1
+  lines_below: 1
