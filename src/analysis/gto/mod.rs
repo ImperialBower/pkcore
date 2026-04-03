@@ -10,6 +10,7 @@ pub mod game_tree;
 pub mod odds;
 pub mod regret;
 pub mod solver;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod solver_cache;
 pub mod solver_config;
 pub mod strategy_profile;

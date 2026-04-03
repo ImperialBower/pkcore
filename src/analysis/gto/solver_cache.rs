@@ -51,8 +51,6 @@
 //! println!("exploitability: {:.4}", result.exploitability);
 //! ```
 
-#![cfg(not(target_arch = "wasm32"))]
-
 use crate::analysis::gto::solver::{SolverError, SolverResult};
 use crate::analysis::gto::solver_config::SolverConfig;
 use std::collections::hash_map::DefaultHasher;
