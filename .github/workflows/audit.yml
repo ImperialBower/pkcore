@@ -1,0 +1,30 @@
+name: Security audit
+on:
+  schedule: # Every Sunday at 1 AM
+    - cron: '0 1 * * 0'
+  push:
+    paths:
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
+
+jobs:
+  security_audit:
+    name: SecurityAudit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: taiki-e/install-action@cargo-deny
+      - name: Scan for vulnerabilities
+        run: cargo deny check advisories
+
+# Not supported with Rust 2024 Edition
+# https://github.com/kbknapp/cargo-outdated/issues/419
+#  outdated:
+#    name: Outdated
+#    runs-on: ubuntu-latest
+#    if: github.event_name != 'pull_request'
+#    timeout-minutes: 45
+#    steps:
+#      - uses: actions/checkout@v6
+#      - uses: dtolnay/install@cargo-outdated
+#      - run: cargo outdated --workspace --exit-code 1

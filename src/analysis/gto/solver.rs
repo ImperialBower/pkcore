@@ -119,8 +119,8 @@ pub enum SolverError {
     Io(std::io::Error),
     /// A JSON serialization or deserialization error.
     Json(serde_json::Error),
-    /// A binary (bincode) serialization or deserialization error.
-    Binary(Box<bincode::ErrorKind>),
+    /// A binary (postcard) serialization or deserialization error.
+    Binary(postcard::Error),
 }
 
 impl fmt::Display for SolverError {
@@ -138,7 +138,7 @@ impl std::error::Error for SolverError {
         match self {
             SolverError::Io(e) => Some(e),
             SolverError::Json(e) => Some(e),
-            SolverError::Binary(_) => None,
+            SolverError::Binary(e) => Some(e),
         }
     }
 }
@@ -155,8 +155,8 @@ impl From<serde_json::Error> for SolverError {
     }
 }
 
-impl From<Box<bincode::ErrorKind>> for SolverError {
-    fn from(e: Box<bincode::ErrorKind>) -> Self {
+impl From<postcard::Error> for SolverError {
+    fn from(e: postcard::Error) -> Self {
         SolverError::Binary(e)
     }
 }
@@ -214,7 +214,7 @@ pub struct SolverResult {
 impl SolverResult {
     // ── Byte / string serialization (always available, including WASM) ────────
 
-    /// Serializes this result to compact binary bytes using bincode.
+    /// Serializes this result to compact binary bytes using postcard.
     ///
     /// Unlike [`save_binary`][Self::save_binary] this method does **not** touch
     /// the filesystem, making it safe to call from any target including
@@ -245,7 +245,7 @@ impl SolverResult {
     /// assert!(!bytes.is_empty());
     /// ```
     pub fn to_binary_bytes(&self) -> Result<Vec<u8>, SolverError> {
-        Ok(bincode::serialize(self)?)
+        Ok(postcard::to_allocvec(self)?)
     }
 
     /// Deserializes a result from compact binary bytes produced by
@@ -278,7 +278,7 @@ impl SolverResult {
     /// assert_eq!(loaded.iterations, result.iterations);
     /// ```
     pub fn from_binary_bytes(bytes: &[u8]) -> Result<Self, SolverError> {
-        Ok(bincode::deserialize(bytes)?)
+        Ok(postcard::from_bytes(bytes)?)
     }
 
     /// Serializes this result to a pretty-printed JSON string.
@@ -350,7 +350,7 @@ impl SolverResult {
 
     /// Saves this result using the default format.
     ///
-    /// The default format is **compact binary** (bincode). When the crate is
+    /// The default format is **compact binary** (postcard). When the crate is
     /// compiled with the `debug-json` feature enabled, the default switches to
     /// pretty-printed JSON for easier inspection during development.
     ///
@@ -426,7 +426,7 @@ impl SolverResult {
         }
     }
 
-    /// Saves this result as compact binary using bincode.
+    /// Saves this result as compact binary using postcard.
     ///
     /// *Not available on `wasm32` — use [`to_binary_bytes`][Self::to_binary_bytes] instead.*
     ///
@@ -1885,9 +1885,9 @@ mod tests {
 
     #[test]
     fn test_solver_result_binary_smaller_than_json() {
-        // Sanity check: bincode output should be more compact than JSON.
+        // Sanity check: postcard output should be more compact than JSON.
         let result = small_result();
-        let bin = bincode::serialize(&result).unwrap();
+        let bin = postcard::to_allocvec(&result).unwrap();
         let json = serde_json::to_string(&result).unwrap();
         assert!(
             bin.len() < json.len(),
