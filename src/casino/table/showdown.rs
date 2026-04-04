@@ -1,6 +1,6 @@
 use crate::PKError;
 use crate::casino::cashier::chips::Stack;
-use crate::casino::table::winnings::{Win, Winnings};
+use crate::casino::table::winnings::{PotWin, Winnings};
 use crate::prelude::{Eval, Pile, SeatEquity, Seatbit, Seven, Table, TableAction, TableEquity};
 use std::collections::{HashMap, HashSet};
 
@@ -71,7 +71,7 @@ impl Showdown {
             None => Eval::default(),
         };
 
-        Ok(Winnings::from(Win { equity, eval }))
+        Ok(Winnings::from(PotWin { equity, eval }))
     }
 
     fn process_headsup(table: &Table) -> Result<Winnings, PKError> {
@@ -90,7 +90,7 @@ impl Showdown {
 
         let shares = table.pot.take().divvy_up(winners.len());
 
-        let mut results: Vec<Win> = Vec::new();
+        let mut results: Vec<PotWin> = Vec::new();
 
         for (i, winner_seat_number) in winners.iter().enumerate() {
             if let Some(seat) = table.get_seat_mut(*winner_seat_number) {
@@ -126,7 +126,7 @@ impl Showdown {
                     winnings_amount,
                 ));
 
-                results.push(Win {
+                results.push(PotWin {
                     equity: SeatEquity::new(winnings_amount, Seatbit::from(*winner_seat_number)),
                     eval,
                 });
@@ -349,9 +349,9 @@ impl Showdown {
         }
 
         // ── Build result vector ────────────────────────────────────────────
-        let results: Vec<Win> = per_seat
+        let results: Vec<PotWin> = per_seat
             .into_iter()
-            .map(|(seat, chips)| Win {
+            .map(|(seat, chips)| PotWin {
                 equity: SeatEquity::new(chips, Seatbit::from(seat)),
                 eval: evals.remove(&seat).unwrap_or_default(),
             })
@@ -446,7 +446,7 @@ mod casino__table__showdown_tests {
         // K♠ Q♠ A♦ J♠ A♣
         let poor_cards = Five::from_str("A♠ A♥ A♦ A♣ K♠").unwrap();
         let eval = Eval::from(poor_cards);
-        let poor_winnings = Win {
+        let poor_winnings = PotWin {
             eval,
             equity: SeatEquity::new(15_150, Seatbit::SEAT_3),
         };
@@ -454,7 +454,7 @@ mod casino__table__showdown_tests {
         // K♠ Q♠ A♦ J♠ A♣
         let rich_cards = Five::from_str("A♦ A♣ Q♦ Q♣ Q♠").unwrap();
         let eval = Eval::from(rich_cards);
-        let rich_winnings = Win {
+        let rich_winnings = PotWin {
             eval,
             equity: SeatEquity::new(8_000, Seatbit::SEAT_0),
         };

@@ -22,17 +22,21 @@ pub use crate::analysis::gto::combo_pairs::ComboPairs;
 pub use crate::analysis::gto::combos::Combos;
 pub use crate::analysis::nubibus::Nubificus;
 pub use crate::analysis::nubibus::Pluribus;
-pub use crate::analysis::nubibus::PluribusEvent;
 pub use crate::analysis::outs::Outs;
 pub use crate::analysis::the_nuts::TheNuts;
 pub use crate::arrays::five::Five;
+pub use crate::arrays::five::hands::Hands;
 pub use crate::arrays::four::Four;
+pub use crate::arrays::matchups::masked::Masked;
+pub use crate::arrays::matchups::masks::Mask;
+pub use crate::arrays::matchups::masks::rank_mask::RankMask;
+pub use crate::arrays::matchups::masks::suit_mask::SuitMask;
+pub use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 pub use crate::arrays::seven::Seven;
+pub use crate::arrays::six::Six;
 pub use crate::arrays::sliced::*;
 pub use crate::arrays::three::Three;
 pub use crate::arrays::two::Two;
-
-pub use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 pub use crate::bard::Bard;
 pub use crate::boxed;
 pub use crate::card::Card;
@@ -84,37 +88,54 @@ pub use crate::{
     UNIQUE_STRAIGHT_FLUSHES, UNIQUE_SUITED_2_CARD_HANDS, UNIQUE_THREE_OF_A_KIND, UNIQUE_TWO_PAIR,
 };
 
-// Additional public structs not previously in the prelude (except util):
-
 // play
-pub use crate::play::actions::{ActionTracker, Actor};
-pub use crate::play::phases::PhaseHoldemTracker;
-pub use crate::play::positions::Position6MaxPointer;
 pub use crate::play::stages::deal_eval::DealEval;
 pub use crate::play::stages::flop_eval::FlopEval;
+pub use crate::play::stages::river_eval::RiverEval;
 pub use crate::play::stages::turn_eval::TurnEval;
 
 // games
 pub use crate::games::omaha::OmahaHigh;
 
 // casino
+pub use crate::casino::cashier::chips::Stack;
+pub use crate::casino::dealer::Dealer;
 pub use crate::casino::manager::TableManager;
+pub use crate::casino::table::position::Positions;
 pub use crate::casino::table::result::HandResult;
 pub use crate::casino::table::showdown::Showdown;
+pub use crate::casino::table::winnings::{PotWin, Winnings};
 
 // analysis/store
 #[cfg(not(target_arch = "wasm32"))]
 pub use crate::analysis::store::bcm::binary_card_map::{FiveBCM, SevenFiveBCM};
-pub use crate::analysis::store::bcm::index_card_map::IndexCardMap;
 pub use crate::analysis::store::db::hup::HUPResult;
 #[cfg(not(target_arch = "wasm32"))]
 pub use crate::analysis::store::db::sqlite::Connect;
-pub use crate::analysis::store::heads_up::{HUP, PreflopRow, PreflopRowHash};
+pub use crate::analysis::store::heads_up::HUP;
 
 // analysis
 pub use crate::analysis::ev::Ev;
 pub use crate::analysis::eval::SevenEval;
 pub use crate::analysis::gto::odds::WinLoseDraw;
 pub use crate::analysis::gto::vs::Versus;
+pub use crate::analysis::hand_rank::HandRank;
 pub use crate::analysis::player_wins::PlayerWins;
 pub use crate::analysis::pot_odds::PotOdds;
+pub use crate::analysis::range_equity::RangeEquity;
+
+// GTO solver
+pub use crate::analysis::gto::game_tree::{GameTree, NodeId, TerminalNode};
+pub use crate::analysis::gto::regret::RegretAccumulator;
+pub use crate::analysis::gto::solver::{Solver, SolverResult};
+#[cfg(not(target_arch = "wasm32"))]
+pub use crate::analysis::gto::solver_cache::SolverCache;
+pub use crate::analysis::gto::solver_config::{BetSize, BetSizings, SolverConfig};
+pub use crate::analysis::gto::strategy_profile::{ActionFrequencies, StrategyProfile};
+pub use crate::analysis::gto::twos::Twos;
+pub use crate::analysis::gto::weighted_combos::WeightedCombos;
+
+// bot
+pub use crate::bot::betting_strategy::BettingStrategy;
+pub use crate::bot::profile::{BotProfile, PlayStyle};
+pub use crate::bot::range_strategy::RangeStrategy;
