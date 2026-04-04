@@ -26,7 +26,7 @@ use serde::{Deserialize, Serialize};
 /// let strategy = RangeStrategy::tight_passive();
 /// assert!(!strategy.open_raise.is_empty());
 /// ```
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RangeStrategy {
     /// Hands the bot open-raises with from any position.
     pub open_raise: String,
@@ -34,9 +34,9 @@ pub struct RangeStrategy {
     pub three_bet: String,
     /// Hands the bot calls a 3-bet with.
     pub call_three_bet: String,
-    /// Fraction of the time the bot continuation-bets on the flop after
-    /// raising preflop. In `[0.0, 1.0]`.
-    pub postflop_cbet_frequency: f64,
+    /// How often the bot continuation-bets on the flop after raising preflop,
+    /// expressed as a whole-number percentage in `1..=100`.
+    pub postflop_cbet_frequency: u8,
 }
 
 impl RangeStrategy {
@@ -47,15 +47,16 @@ impl RangeStrategy {
     /// ```
     /// use pkcore::bot::range_strategy::RangeStrategy;
     ///
-    /// let s = RangeStrategy::new("AA,KK", "AA", "KK", 0.5);
+    /// let s = RangeStrategy::new("AA,KK", "AA", "KK", 50);
     /// assert_eq!(s.open_raise, "AA,KK");
+    /// assert_eq!(s.postflop_cbet_frequency, 50);
     /// ```
     #[must_use]
     pub fn new(
         open_raise: impl Into<String>,
         three_bet: impl Into<String>,
         call_three_bet: impl Into<String>,
-        postflop_cbet_frequency: f64,
+        postflop_cbet_frequency: u8,
     ) -> Self {
         Self {
             open_raise: open_raise.into(),
@@ -73,11 +74,11 @@ impl RangeStrategy {
     /// use pkcore::bot::range_strategy::RangeStrategy;
     ///
     /// let s = RangeStrategy::tight_passive();
-    /// assert!(s.postflop_cbet_frequency < 0.5);
+    /// assert!(s.postflop_cbet_frequency < 50);
     /// ```
     #[must_use]
     pub fn tight_passive() -> Self {
-        Self::new("QQ+, AKs", "AA, KK", "QQ, AKs", 0.30)
+        Self::new("QQ+, AKs", "AA, KK", "QQ, AKs", 30)
     }
 
     /// A loose-aggressive archetype — wide ranges, frequent c-bets.
@@ -88,11 +89,11 @@ impl RangeStrategy {
     /// use pkcore::bot::range_strategy::RangeStrategy;
     ///
     /// let s = RangeStrategy::loose_aggressive();
-    /// assert!(s.postflop_cbet_frequency > 0.5);
+    /// assert!(s.postflop_cbet_frequency > 50);
     /// ```
     #[must_use]
     pub fn loose_aggressive() -> Self {
-        Self::new("22+, AT+, 54s+", "QQ+, AKs, AQs", "TT+, AQs+", 0.75)
+        Self::new("22+, AT+, 54s+", "QQ+, AKs, AQs", "TT+, AQs+", 75)
     }
 
     /// A GTO-informed archetype — balanced open range, moderate c-bet frequency.
@@ -103,11 +104,11 @@ impl RangeStrategy {
     /// use pkcore::bot::range_strategy::RangeStrategy;
     ///
     /// let s = RangeStrategy::gto();
-    /// assert!((s.postflop_cbet_frequency - 0.5).abs() < 1e-6);
+    /// assert_eq!(s.postflop_cbet_frequency, 50);
     /// ```
     #[must_use]
     pub fn gto() -> Self {
-        Self::new("TT+, AQ+, KQs", "QQ+, AKs", "JJ+, AQs+", 0.50)
+        Self::new("TT+, AQ+, KQs", "QQ+, AKs", "JJ+, AQs+", 50)
     }
 }
 
@@ -119,30 +120,30 @@ mod tests {
 
     #[test]
     fn test_range_strategy_new_fields() {
-        let s = RangeStrategy::new("AA,KK", "AA", "KK", 0.5);
+        let s = RangeStrategy::new("AA,KK", "AA", "KK", 50);
         assert_eq!(s.open_raise, "AA,KK");
         assert_eq!(s.three_bet, "AA");
         assert_eq!(s.call_three_bet, "KK");
-        assert!((s.postflop_cbet_frequency - 0.5).abs() < f64::EPSILON);
+        assert_eq!(s.postflop_cbet_frequency, 50);
     }
 
     #[test]
     fn test_range_strategy_tight_passive() {
         let s = RangeStrategy::tight_passive();
         assert!(!s.open_raise.is_empty());
-        assert!(s.postflop_cbet_frequency < 0.5);
+        assert!(s.postflop_cbet_frequency < 50);
     }
 
     #[test]
     fn test_range_strategy_loose_aggressive() {
         let s = RangeStrategy::loose_aggressive();
-        assert!(s.postflop_cbet_frequency > 0.5);
+        assert!(s.postflop_cbet_frequency > 50);
     }
 
     #[test]
     fn test_range_strategy_gto() {
         let s = RangeStrategy::gto();
-        assert!((s.postflop_cbet_frequency - 0.5).abs() < f64::EPSILON);
+        assert_eq!(s.postflop_cbet_frequency, 50);
     }
 
     #[test]
