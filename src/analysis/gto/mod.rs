@@ -1,3 +1,111 @@
+//! Game-theory optimal (GTO) analysis for heads-up poker.
+//!
+//! This module implements a complete counterfactual regret minimisation (CFR)
+//! pipeline: from hand range representation through game tree construction,
+//! iterative solving, and persistent result caching. The design follows the
+//! academic CFR literature closely, with support for Vanilla CFR, CFR+, and
+//! Discounted CFR (DCFR).
+//!
+//! # Conceptual Overview
+//!
+//! A GTO solver finds a **Nash equilibrium** strategy for both players in a
+//! two-player zero-sum game (a single poker spot). At equilibrium, neither
+//! player can unilaterally improve their expected value by deviating — the
+//! strategy is **unexploitable**.
+//!
+//! The solver approximates equilibrium iteratively via **CFR**: each iteration
+//! traverses the game tree, measures *regret* (how much better the player
+//! would have done by always playing action `a`), and updates a mixed strategy
+//! based on those regrets. The **average** strategy over all iterations
+//! converges to Nash.
+//!
+//! # Module Map
+//!
+//! ## Range Representation
+//!
+//! | Module | Purpose |
+//! |--------|---------|
+//! | [`combo`] | [`combo::Combo`] — a canonical hand type such as `AKs` or `QQ`, independent of suits. Also [`combo::Qualifier`] (suited / offsuit / all). |
+//! | [`combos`] | [`combos::Combos`] — a `HashSet`-backed collection of combos representing a player's range. Parses standard range notation (`"QQ+, AKs"`). |
+//! | [`combo_range`] | [`combo_range::ComboRange`] — a hi/lo pair of combos used to expand range shorthand (e.g., `"77+"` → all pocket pairs 77 through AA). |
+//! | [`combo_pairs`] | [`combo_pairs::ComboPairs`] — maps each [`combo::Combo`] to the concrete [`twos::Twos`] (specific two-card hands) it represents on a given board. |
+//! | [`twos`] | [`twos::Twos`] — a `HashSet` of [`crate::arrays::two::Two`] (specific two-card hole-card combinations). |
+//! | [`weighted_combos`] | [`weighted_combos::WeightedCombos`] — a range with per-combo frequency weights in `[0.0, 1.0]`, modeling mixed strategies (e.g., "bet `AKs` 100%, `A5s` 40%"). |
+//! | [`odds`] | [`odds::WinLoseDraw`] — win/loss/draw outcome counts for equity calculation. |
+//! | [`vs`] | [`vs::Versus`] — evaluates hero equity against a villain [`combos::Combos`] range on a given board. |
+//!
+//! ## Game Tree
+//!
+//! | Module | Purpose |
+//! |--------|---------|
+//! | [`game_tree`] | [`game_tree::GameTree`] — flat arena of [`game_tree::Node`] variants (Action, Chance, Terminal). Builders: [`game_tree::GameTree::build_river`] and [`game_tree::GameTree::build_turn`]. |
+//!
+//! ## Solver Core
+//!
+//! | Module | Purpose |
+//! |--------|---------|
+//! | [`solver_config`] | [`solver_config::SolverConfig`] — all solver inputs: ranges, board, stack, bet sizings, CFR variant, and convergence target. [`solver_config::BetSize`] is an exact integer fraction of the pot. [`solver_config::CfrVariant`] selects Vanilla / CFR+ / DCFR. |
+//! | [`regret`] | [`regret::RegretAccumulator`] — stores cumulative counterfactual regrets per `(node, hand)`. Implements regret-matching to derive the current mixed strategy. |
+//! | [`strategy_profile`] | [`strategy_profile::StrategyProfile`] — maps every action node to a per-hand [`strategy_profile::ActionFrequencies`] probability distribution. Extracted as the average strategy after convergence. |
+//! | [`solver`] | [`solver::Solver`] — drives CFR iterations. [`solver::Solver::iterate`] runs one full traversal; [`solver::Solver::equilibrium`] extracts the converged [`strategy_profile::StrategyProfile`]. [`solver::SolverResult`] packages the equilibrium with exploitability and metadata for serialization. |
+//! | [`solver_cache`] | [`solver_cache::SolverCache`] — persists [`solver::SolverResult`] to disk keyed by a deterministic hash of [`solver_config::SolverConfig`]. Not available on `wasm32`. |
+//!
+//! # Quick Start
+//!
+//! ```no_run
+//! use std::str::FromStr;
+//! use pkcore::analysis::gto::combos::Combos;
+//! use pkcore::analysis::gto::solver::Solver;
+//! use pkcore::analysis::gto::solver_config::{BetSizings, SolverConfig};
+//! use pkcore::play::board::Board;
+//!
+//! let oop   = Combos::from_str("QQ+, AKs").unwrap_or_default();
+//! let ip    = Combos::from_str("TT+, AQs+").unwrap_or_default();
+//! let board = Board::from_str("Ah Kd 7c 2s Jh").unwrap_or_default();
+//!
+//! let config = SolverConfig::new(oop, ip, board, 10_000, 500);
+//! let mut solver = Solver::new(config);
+//!
+//! for _ in 0..500 {
+//!     solver.iterate();
+//! }
+//!
+//! let result = solver.solve();
+//! println!("exploitability: {:.4}", result.exploitability);
+//! ```
+//!
+//! # CFR Variants
+//!
+//! Select the algorithm via [`solver_config::CfrVariant`]:
+//!
+//! | Variant | Strategy weight | Regret discount | Notes |
+//! |---------|----------------|-----------------|-------|
+//! | `Vanilla` | uniform (`1.0`) | none | Baseline; slowest convergence. |
+//! | `CfrPlus` | linear (`t`) | none | Full CFR+ (Tammelin 2014); fast in practice. |
+//! | `Discounted { alpha, beta }` | `t^β / (t^β + 1)` | `t^α / (t^α + 1)` | DCFR (Brown & Sandholm 2019); default α=1.5, β=0.0. |
+//!
+//! # Hand Range Constants
+//!
+//! This module also re-exports named [`crate::arrays::two::Two`] arrays for
+//! common pocket pairs (`AA`, `KK`, `QQ`, …) and the `GTO` helper type alias.
+//! These are used internally by the range parser and equity engine but are
+//! public for consumers that need direct array access.
+//!
+//! # Feature Flags
+//!
+//! - **`debug-json`** — switches [`solver::SolverResult::save`] /
+//!   [`solver::SolverResult::load`] from compact binary (postcard) to
+//!   human-readable JSON. Useful for inspecting solver output during
+//!   development.
+//!
+//! # References
+//!
+//! - Zinkevich et al. (2007) — *Regret Minimization in Games with Incomplete
+//!   Information* — original CFR paper.
+//! - Tammelin (2014) — *Solving Large Imperfect Information Games Using CFR+*
+//! - Brown & Sandholm (2019) — *Solving Imperfect-Information Games via
+//!   Discounted Regret Minimization* — DCFR.
+
 use crate::arrays::two::Two;
 
 pub mod combo;

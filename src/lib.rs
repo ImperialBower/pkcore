@@ -358,6 +358,7 @@ pub mod macros;
 pub mod analysis;
 pub mod arrays;
 pub mod bard;
+pub mod bot;
 pub mod card;
 pub mod card_number;
 pub mod cards;

@@ -102,7 +102,7 @@ impl Default for CfrVariant {
 /// let third = BetSize::new(1, 3).unwrap();
 /// assert_eq!(third.chips(90), 30);
 /// ```
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct BetSize {
     numerator: u32,
     denominator: u32,

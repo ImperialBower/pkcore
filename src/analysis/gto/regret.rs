@@ -565,4 +565,45 @@ mod tests {
         acc.scale_all(0.75);
         assert_eq!(acc.len(), before_len, "scale_all must not add or remove entries");
     }
+
+    #[test]
+    fn test_regret_matching_proportional_weights() {
+        // Given regrets [3.0, 1.0, 0.0], regret-matching must produce
+        // strategy [0.75, 0.25, 0.0]: each action's share of total positive regret.
+        //
+        // Regret-matching formula:
+        //   strategy[a] = max(R[a], 0) / Σ max(R[a], 0)
+        //
+        // positive sum = 3 + 1 + 0 = 4  →  [3/4, 1/4, 0/4]
+        let (mut acc, tree, _, _) = make_acc();
+        let node = first_action_node(&tree);
+        let hand = first_hand(&acc, node);
+        let n = acc.get_raw(node, &hand).unwrap().len();
+        assert!(n >= 3, "need at least 3 actions for this test");
+
+        let mut deltas = vec![0.0; n];
+        deltas[0] = 3.0;
+        deltas[1] = 1.0;
+        // deltas[2..] remain 0.0
+        acc.update(node, hand, &deltas);
+
+        let strategy = acc.current_strategy(node, &hand).unwrap();
+        assert!(
+            (strategy.get(0).unwrap() - 0.75).abs() < 1e-12,
+            "action 0 (regret 3) should get 75% but got {:.6}",
+            strategy.get(0).unwrap()
+        );
+        assert!(
+            (strategy.get(1).unwrap() - 0.25).abs() < 1e-12,
+            "action 1 (regret 1) should get 25% but got {:.6}",
+            strategy.get(1).unwrap()
+        );
+        for i in 2..n {
+            assert!(
+                strategy.get(i).unwrap().abs() < 1e-12,
+                "action {i} (regret 0) should get 0% but got {:.6}",
+                strategy.get(i).unwrap()
+            );
+        }
+    }
 }

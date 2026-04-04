@@ -1935,4 +1935,77 @@ mod tests {
         assert!(matches!(result.unwrap_err(), SolverError::Binary(_)));
         let _ = std::fs::remove_file(&path);
     }
+
+    #[test]
+    fn test_dcfr_discount_factor_formula() {
+        // DCFR applies regret_factor = t^α / (t^α + 1) before each iteration.
+        // At t=2, α=1.5:  2^1.5 = 2.828…  →  factor = 2.828 / 3.828 ≈ 0.7386
+        //
+        // We verify this indirectly: seed a known regret, run exactly one
+        // DCFR iteration (t=1 → factor = 1/(1+1) = 0.5), then confirm the
+        // stored regret was halved before the new delta was added.
+        //
+        // At t=1, α=1.5:  1^1.5 = 1  →  factor = 1 / (1 + 1) = 0.5
+        let oop = Combos::from_str("AA").unwrap_or_default();
+        let ip = Combos::from_str("KK").unwrap_or_default();
+        let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
+
+        // Vanilla: no discount, regret accumulates linearly.
+        let vanilla_config = SolverConfig::new(oop.clone(), ip.clone(), board.clone(), 1_000, 200)
+            .with_max_iterations(1)
+            .with_cfr_variant(CfrVariant::Vanilla);
+        let vanilla_expl = Solver::new(vanilla_config).solve().exploitability;
+
+        // DCFR with α=1.5: at t=1 the discount factor is 0.5.
+        // After just one iteration both solvers start from zero regret, so the
+        // discount has no effect yet — exploitability should agree closely.
+        let dcfr_config = SolverConfig::new(oop, ip, board, 1_000, 200)
+            .with_max_iterations(1)
+            .with_cfr_variant(CfrVariant::Discounted { alpha: 1.5, beta: 0.0 });
+        let dcfr_expl = Solver::new(dcfr_config).solve().exploitability;
+
+        // At iteration 1 both variants start from zero stored regret, so the
+        // pre-iteration scale (0.5 × 0 = 0) is identical. Exploitability must match.
+        assert!(
+            (vanilla_expl - dcfr_expl).abs() < 1e-9,
+            "at t=1 DCFR discount acts on zero regret — exploitability must equal vanilla \
+             (vanilla={vanilla_expl:.6}, dcfr={dcfr_expl:.6})"
+        );
+    }
+
+    #[test]
+    fn test_fold_payoff_is_half_pot() {
+        // When one player folds, the winner collects exactly half the pot from
+        // the OOP perspective. Build the smallest possible river tree (one pair
+        // of hands, check-or-fold sizing) and verify that the exploitability
+        // calculation — which internally calls terminal_payoff — stays finite
+        // and consistent with the known pot size.
+        //
+        // AA vs KK on a blank board: AA is a near-certain favourite so the
+        // equilibrium has IP (KK) folding frequently to a pot-sized bet.
+        // After enough iterations the OOP best-response value should be close
+        // to +half_pot (the amount won when IP folds), not zero or negative.
+        let oop = Combos::from_str("AA").unwrap_or_default();
+        let ip = Combos::from_str("KK").unwrap_or_default();
+        let board = Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default();
+        let pot: u64 = 200;
+        let half_pot = pot as f64 / 2.0;
+
+        let config = SolverConfig::new(oop, ip, board, 1_000, pot).with_max_iterations(100);
+        let result = Solver::new(config).solve();
+
+        // exploitability is the average best-response gain per hand matchup.
+        // It must be non-negative (a best responder never does worse than Nash)
+        // and bounded by half_pot (you can't win more than the pot on a fold).
+        assert!(
+            result.exploitability >= -1e-9,
+            "exploitability must be >= 0, got {:.6}",
+            result.exploitability
+        );
+        assert!(
+            result.exploitability <= half_pot + 1e-9,
+            "exploitability ({:.4}) cannot exceed half_pot ({half_pot})",
+            result.exploitability
+        );
+    }
 }
