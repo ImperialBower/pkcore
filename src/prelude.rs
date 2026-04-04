@@ -98,9 +98,13 @@ pub use crate::play::stages::turn_eval::TurnEval;
 pub use crate::games::omaha::OmahaHigh;
 
 // casino
+pub use crate::casino::cashier::chips::Stack;
+pub use crate::casino::dealer::Dealer;
 pub use crate::casino::manager::TableManager;
+pub use crate::casino::table::position::Positions;
 pub use crate::casino::table::result::HandResult;
 pub use crate::casino::table::showdown::Showdown;
+pub use crate::casino::table::winnings::{PotWin, Winnings};
 
 // analysis/store
 #[cfg(not(target_arch = "wasm32"))]
@@ -116,8 +120,11 @@ pub use crate::analysis::ev::Ev;
 pub use crate::analysis::eval::SevenEval;
 pub use crate::analysis::gto::odds::WinLoseDraw;
 pub use crate::analysis::gto::vs::Versus;
+pub use crate::analysis::hand_rank::HandRank;
 pub use crate::analysis::player_wins::PlayerWins;
 pub use crate::analysis::pot_odds::PotOdds;
+pub use crate::analysis::range_equity::RangeEquity;
+pub use crate::play::stages::river_eval::RiverEval;
 
 // GTO solver
 pub use crate::analysis::gto::game_tree::{ActionNode, ChanceNode, GameTree, NodeId, TerminalNode};
