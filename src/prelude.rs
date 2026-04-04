@@ -118,3 +118,19 @@ pub use crate::analysis::gto::odds::WinLoseDraw;
 pub use crate::analysis::gto::vs::Versus;
 pub use crate::analysis::player_wins::PlayerWins;
 pub use crate::analysis::pot_odds::PotOdds;
+
+// GTO solver
+pub use crate::analysis::gto::game_tree::{ActionNode, ChanceNode, GameTree, NodeId, TerminalNode};
+pub use crate::analysis::gto::regret::RegretAccumulator;
+pub use crate::analysis::gto::solver::{Solver, SolverResult};
+#[cfg(not(target_arch = "wasm32"))]
+pub use crate::analysis::gto::solver_cache::SolverCache;
+pub use crate::analysis::gto::solver_config::{BetSize, BetSizings, SolverConfig};
+pub use crate::analysis::gto::strategy_profile::{ActionFrequencies, StrategyProfile};
+pub use crate::analysis::gto::twos::Twos;
+pub use crate::analysis::gto::weighted_combos::WeightedCombos;
+
+// bot
+pub use crate::bot::betting_strategy::BettingStrategy;
+pub use crate::bot::profile::{BotProfile, PlayStyle};
+pub use crate::bot::range_strategy::RangeStrategy;
