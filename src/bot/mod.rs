@@ -1,13 +1,13 @@
 //! Bot personality types for building poker-playing agents.
 //!
-//! A [`BotProfile`] is a fully serializable description of a poker bot's
+//! A [`profile::BotProfile`] is a fully serializable description of a poker bot's
 //! playing style — its preflop ranges, postflop tendencies, and betting
 //! behaviour. Profiles can be stored as YAML and loaded at agent startup,
 //! making it easy to swap personalities without recompiling.
 //!
 //! # Modules
 //!
-//! - [`profile`] — top-level [`BotProfile`] type and [`PlayStyle`] enum
+//! - [`profile`] — top-level [`profile::BotProfile`] type and [`profile::PlayStyle`] enum
 //! - [`range_strategy`] — preflop range charts and postflop frequencies
 //! - [`betting_strategy`] — aggression, bluff frequency, and bet sizing
 //!

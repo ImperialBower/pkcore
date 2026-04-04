@@ -93,12 +93,7 @@ impl BettingStrategy {
     /// ```
     #[must_use]
     pub fn loose_aggressive() -> Self {
-        Self::new(
-            75,
-            35,
-            20,
-            vec![BetSize::two_thirds_pot(), BetSize::pot()],
-        )
+        Self::new(75, 35, 20, vec![BetSize::two_thirds_pot(), BetSize::pot()])
     }
 
     /// A GTO-informed archetype — balanced sizing, moderate bluff frequency.
@@ -113,12 +108,7 @@ impl BettingStrategy {
     /// ```
     #[must_use]
     pub fn gto() -> Self {
-        Self::new(
-            50,
-            33,
-            15,
-            vec![BetSize::third_pot(), BetSize::pot()],
-        )
+        Self::new(50, 33, 15, vec![BetSize::third_pot(), BetSize::pot()])
     }
 }
 

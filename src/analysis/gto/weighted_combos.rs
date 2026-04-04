@@ -1,14 +1,20 @@
 //! Frequency-weighted combo ranges.
 //!
-//! [`WeightedCombos`] assigns a frequency weight `[0.0, 1.0]` to each [`Combo`],
-//! representing how often a player uses that hand in a given situation. This models
-//! mixed strategies: e.g., betting `AKs` 100% of the time but `A5s` only 40%.
+//! [`WeightedCombos`] assigns a frequency weight (0–100, as a whole-number
+//! percentage) to each [`Combo`], representing how often a player uses that
+//! hand in a given situation. This models mixed strategies: e.g., betting
+//! `AKs` 100% of the time but `A5s` only 40%.
+//!
+//! Frequencies are stored as `u8` integers (0–100) to avoid floating-point
+//! comparison issues. The public API accepts and returns `f64` at the boundary
+//! so callers can write natural values like `0.5`. The conversion is:
+//! `stored = round(f * 100).clamp(0, 100)`.
 //!
 //! The weighted win probability is:
 //! ```text
 //! Σ(freq_i × wins_i) / Σ(freq_i × total_i)
 //! ```
-//! where `freq_i` is the combo frequency, `wins_i` is wins for that hand vs. the
+//! where `freq_i = stored_i / 100.0`, `wins_i` is wins for that hand vs. the
 //! villain range, and `total_i` is total outcomes.
 
 use crate::analysis::gto::combo::Combo;
@@ -21,7 +27,8 @@ use crate::arrays::two::Two;
 use std::collections::HashMap;
 use std::fmt::Display;
 
-/// A [`Combos`] range with per-combo frequency weights in `[0.0, 1.0]`.
+/// A [`Combos`] range with per-combo frequency weights stored as whole-number
+/// percentages in `0..=100`.
 ///
 /// All hands within a combo share the same weight. Use
 /// [`weighted_win_probability`](WeightedCombos::weighted_win_probability) to combine
@@ -40,12 +47,14 @@ use std::fmt::Display;
 /// assert_eq!(wc.frequency(&Combo::COMBO_KK), None);
 /// ```
 #[derive(Clone, Debug, Default)]
-pub struct WeightedCombos(HashMap<Combo, f64>);
+pub struct WeightedCombos(HashMap<Combo, u8>);
 
 impl WeightedCombos {
     /// Inserts or updates a combo's frequency weight.
     ///
-    /// Frequencies outside `[0.0, 1.0]` are clamped to that range.
+    /// `frequency` is a `f64` in `[0.0, 1.0]`. It is rounded to the nearest
+    /// whole percentage and clamped to `0..=100` before storage. Values
+    /// outside `[0.0, 1.0]` are clamped.
     ///
     /// # Examples
     /// ```
@@ -57,10 +66,13 @@ impl WeightedCombos {
     /// assert_eq!(wc.frequency(&Combo::COMBO_KK), Some(0.8));
     /// ```
     pub fn insert(&mut self, combo: Combo, frequency: f64) {
-        self.0.insert(combo, frequency.clamp(0.0, 1.0));
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let pct = (frequency * 100.0).round().clamp(0.0, 100.0) as u8;
+        self.0.insert(combo, pct);
     }
 
-    /// Returns the frequency for the given [`Combo`], or `None` if not present.
+    /// Returns the frequency for the given [`Combo`] as a `f64` in `[0.0, 1.0]`,
+    /// or `None` if not present.
     ///
     /// # Examples
     /// ```
@@ -72,7 +84,7 @@ impl WeightedCombos {
     /// ```
     #[must_use]
     pub fn frequency(&self, combo: &Combo) -> Option<f64> {
-        self.0.get(combo).copied()
+        self.0.get(combo).map(|&v| f64::from(v) / 100.0)
     }
 
     /// Returns the frequency for the [`Combo`] that contains the given [`Two`].
@@ -93,7 +105,7 @@ impl WeightedCombos {
     #[must_use]
     pub fn frequency_for_two(&self, two: &Two) -> f64 {
         let combo = Combo::from(*two);
-        self.0.get(&combo).copied().unwrap_or(0.0)
+        self.0.get(&combo).map_or(0.0, |&v| f64::from(v) / 100.0)
     }
 
     /// Returns all combos in this range as a [`Combos`], ignoring frequencies.
@@ -115,7 +127,8 @@ impl WeightedCombos {
 
     /// Returns all [`Two`] hands in this range, each paired with its combo's frequency.
     ///
-    /// Hands belonging to combos with a frequency of `0.0` are excluded.
+    /// Hands belonging to combos with a stored percentage of `0` are excluded.
+    /// Frequencies are returned as `f64` in `[0.0, 1.0]`.
     ///
     /// # Examples
     /// ```
@@ -132,8 +145,11 @@ impl WeightedCombos {
     pub fn weighted_twos(&self) -> Vec<(Two, f64)> {
         self.0
             .iter()
-            .filter(|&(_, &freq)| freq > 0.0)
-            .flat_map(|(combo, &freq)| Twos::from(*combo).to_vec().into_iter().map(move |two| (two, freq)))
+            .filter(|&(_, &pct)| pct > 0)
+            .flat_map(|(combo, &pct)| {
+                let freq = f64::from(pct) / 100.0;
+                Twos::from(*combo).to_vec().into_iter().map(move |two| (two, freq))
+            })
             .collect()
     }
 
@@ -149,14 +165,8 @@ impl WeightedCombos {
     ///                     for all Two hands in combo
     /// ```
     ///
-    /// Averaging across hands within a combo accounts for blocker effects:
-    /// different specific holdings (e.g. A♠K♦ vs A♥K♣ within `AKo`) may have
-    /// slightly different strategies because they block different board cards.
-    ///
-    /// The resulting weight is the **joint probability** of holding this combo
-    /// and taking this action — exactly the reach probability used in CFR.
-    /// Combos with no hands in `profile` at `node`, or whose averaged action
-    /// frequency is zero, are excluded from the result.
+    /// The resulting weight is stored as a whole-number percentage (rounded),
+    /// so results have ~1% precision.
     ///
     /// # Note on Node Type
     ///
@@ -188,20 +198,21 @@ impl WeightedCombos {
     /// wc.insert(Combo::COMBO_KK, 1.0);
     ///
     /// // Uniform profile: each of the 3 actions (Check/Bet½/Bet pot) has prob 1/3.
-    /// // after_action with action 0 returns weights scaled by 1/3.
+    /// // after_action weights are scaled by ~1/3 (rounded to nearest percent).
     /// let after = wc.after_action(&profile, tree.root_id(), 0);
     /// for combo in [Combo::COMBO_AA, Combo::COMBO_KK] {
     ///     let w = after.frequency(&combo).unwrap_or(0.0);
-    ///     assert!((w - 1.0 / 3.0).abs() < 1e-9, "expected ~0.333, got {w}");
+    ///     assert!((w - 1.0 / 3.0).abs() < 0.01, "expected ~0.333, got {w}");
     /// }
     /// ```
     #[must_use]
     pub fn after_action(&self, profile: &StrategyProfile, node: NodeId, action: usize) -> Self {
         let mut result = Self::default();
-        for (combo, &combo_weight) in &self.0 {
-            if combo_weight <= 0.0 {
+        for (combo, &combo_pct) in &self.0 {
+            if combo_pct == 0 {
                 continue;
             }
+            let combo_weight = f64::from(combo_pct) / 100.0;
             let hands = Twos::from(*combo).to_vec();
             let mut total_freq = 0.0_f64;
             let mut count = 0_usize;
@@ -278,11 +289,11 @@ impl WeightedCombos {
 
 impl Display for WeightedCombos {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut combos: Vec<(&Combo, &f64)> = self.0.iter().collect();
+        let mut combos: Vec<(&Combo, &u8)> = self.0.iter().collect();
         combos.sort_by_key(|(c, _)| *c);
         combos.reverse();
-        for (combo, freq) in combos {
-            writeln!(f, "{combo}: {freq:.0}%", freq = freq * 100.0)?;
+        for (combo, pct) in combos {
+            writeln!(f, "{combo}: {pct}%")?;
         }
         Ok(())
     }
@@ -299,7 +310,7 @@ mod weighted_combos_tests {
     use crate::play::board::Board;
     use std::str::FromStr;
 
-    /// Build a uniform profile over AA (OOP) vs KK (IP) on a blank river board.
+    /// Build a uniform profile over AA,KK (OOP) vs QQ,JJ (IP) on a blank river board.
     fn make_uniform_profile() -> (StrategyProfile, GameTree, Combos) {
         let oop = Combos::from_str("AA,KK").unwrap_or_default();
         let ip = Combos::from_str("QQ,JJ").unwrap_or_default();
@@ -319,23 +330,25 @@ mod weighted_combos_tests {
         wc.insert(Combo::COMBO_AA, 1.0);
 
         // Default bet sizings: [Check, Bet(½), Bet(pot)] → 3 actions, each 1/3.
+        // Stored as u8: round(33.33) = 33 → 0.33. Precision is ±0.01.
         let after = wc.after_action(&profile, root, 0);
         let w = after.frequency(&Combo::COMBO_AA).unwrap_or(0.0);
         assert!(
-            (w - 1.0 / 3.0).abs() < 1e-9,
-            "expected 1/3 for uniform 3-action profile, got {w}"
+            (w - 1.0 / 3.0).abs() < 0.01,
+            "expected ~1/3 for uniform 3-action profile, got {w}"
         );
     }
 
     #[test]
-    fn test_after_action_all_actions_sum_to_original_weight() {
+    fn test_after_action_all_actions_sum_to_near_original_weight() {
+        // Frequencies are stored as whole percentages, so summing 3 rounded
+        // values (each ~33%) may give 0.99 rather than 1.00 exactly.
         let (profile, tree, _) = make_uniform_profile();
         let root = tree.root_id();
 
         let mut wc = WeightedCombos::default();
         wc.insert(Combo::COMBO_AA, 1.0);
 
-        // Sum of after_action over all action indices must equal the original weight.
         use crate::analysis::gto::game_tree::Node;
         if let Some(Node::Action(a)) = tree.get(root) {
             let n = a.actions.len();
@@ -346,9 +359,10 @@ mod weighted_combos_tests {
                         .unwrap_or(0.0)
                 })
                 .sum();
+            // Allow rounding error of up to 1% per action.
             assert!(
-                (total - 1.0).abs() < 1e-9,
-                "sum of after_action weights over all actions should equal original weight, got {total}"
+                (total - 1.0).abs() < n as f64 * 0.01,
+                "sum of after_action weights over all actions should be ~1.0, got {total}"
             );
         }
     }
@@ -397,12 +411,15 @@ mod weighted_combos_tests {
             let expected = 0.6 / a.actions.len() as f64;
             let after = wc.after_action(&profile, root, 0);
             let w = after.frequency(&Combo::COMBO_AA).unwrap_or(0.0);
-            assert!((w - expected).abs() < 1e-9, "expected {expected}, got {w}");
+            assert!((w - expected).abs() < 0.01, "expected ~{expected:.3}, got {w:.3}");
         }
     }
 
     #[test]
-    fn test_after_action_multiple_combos_scaled_independently() {
+    fn test_after_action_multiple_combos_ratio_preserved() {
+        // AA (weight 1.0) and KK (weight 0.5) should scale by the same action
+        // probability, preserving their 2:1 ratio. With u8 storage the ratio
+        // holds to ~1 percentage point of precision.
         let (profile, tree, _) = make_uniform_profile();
         let root = tree.root_id();
 
@@ -414,10 +431,9 @@ mod weighted_combos_tests {
         let aa = after.frequency(&Combo::COMBO_AA).unwrap_or(0.0);
         let kk = after.frequency(&Combo::COMBO_KK).unwrap_or(0.0);
 
-        // Both scaled by same uniform factor; ratio should be preserved.
         assert!(
-            (aa / kk - 2.0).abs() < 1e-9,
-            "AA/KK ratio should be 2.0, got {}",
+            (aa / kk - 2.0).abs() < 0.15,
+            "AA/KK ratio should be ~2.0 (u8 precision), got {:.3}",
             aa / kk
         );
     }
@@ -457,8 +473,8 @@ mod weighted_combos_tests {
     #[test]
     fn test_weighted_twos_count() {
         let mut wc = WeightedCombos::default();
-        wc.insert(Combo::COMBO_AA, 1.0); // 6 combos
-        wc.insert(Combo::COMBO_AKs, 0.5); // 4 combos
+        wc.insert(Combo::COMBO_AA, 1.0); // 6 specific hands
+        wc.insert(Combo::COMBO_AKs, 0.5); // 4 specific hands
         let pairs = wc.weighted_twos();
         assert_eq!(pairs.len(), 10);
     }
@@ -496,7 +512,6 @@ mod weighted_combos_tests {
         wc.insert(Combo::COMBO_KK, 0.5);
 
         let mut hand_odds: HashMap<Two, WinLoseDraw> = HashMap::new();
-        // AA hand: 80% equity
         hand_odds.insert(
             Two::HAND_AS_AH,
             WinLoseDraw {
@@ -505,7 +520,6 @@ mod weighted_combos_tests {
                 draws: 0,
             },
         );
-        // KK hand: 60% equity
         hand_odds.insert(
             Two::HAND_KS_KH,
             WinLoseDraw {
@@ -515,7 +529,7 @@ mod weighted_combos_tests {
             },
         );
 
-        // weighted: (1.0×8 + 0.5×6) / (1.0×10 + 0.5×10) = 11 / 15 ≈ 0.7333
+        // weighted: (1.0×8 + 0.5×6) / (1.0×10 + 0.5×10) = 11/15 ≈ 0.7333
         let p = wc.weighted_win_probability(&hand_odds);
         assert!((p - 11.0 / 15.0).abs() < 1e-10);
     }
