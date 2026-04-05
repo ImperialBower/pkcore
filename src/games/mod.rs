@@ -1,9 +1,9 @@
 use crate::cards_cell::CardsCell;
 
+pub mod kuhn;
 pub mod omaha;
 pub mod razz;
 pub mod stud;
-pub mod kuhn;
 
 #[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq)]
 pub enum GameType {

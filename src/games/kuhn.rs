@@ -29,6 +29,8 @@
 //! assert_eq!(terminal.payoff().unwrap(), [-2, 2]);
 //! ```
 
+use std::collections::HashMap;
+
 use crate::PKError;
 
 // ── KuhnCard ─────────────────────────────────────────────────────────────────
@@ -217,7 +219,7 @@ impl KuhnHistory {
 
 impl std::fmt::Display for KuhnHistory {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let parts: Vec<String> = self.0.iter().map(|a| a.to_string()).collect();
+        let parts: Vec<String> = self.0.iter().map(std::string::ToString::to_string).collect();
         write!(f, "[{}]", parts.join(", "))
     }
 }
@@ -382,10 +384,8 @@ impl KuhnState {
         matches!(
             self.history.as_slice(),
             [KuhnAction::Check, KuhnAction::Check]
-                | [KuhnAction::Bet, KuhnAction::Fold]
-                | [KuhnAction::Bet, KuhnAction::Call]
-                | [KuhnAction::Check, KuhnAction::Bet, KuhnAction::Fold]
-                | [KuhnAction::Check, KuhnAction::Bet, KuhnAction::Call]
+                | [KuhnAction::Bet, KuhnAction::Fold | KuhnAction::Call]
+                | [KuhnAction::Check, KuhnAction::Bet, KuhnAction::Fold | KuhnAction::Call]
         )
     }
 
@@ -514,16 +514,21 @@ impl KuhnState {
         let p0_wins = self.cards[0] > self.cards[1];
         let payoff = match self.history.as_slice() {
             [KuhnAction::Check, KuhnAction::Check] => {
-                if p0_wins { [1, -1] } else { [-1, 1] }
+                if p0_wins {
+                    [1, -1]
+                } else {
+                    [-1, 1]
+                }
             }
             [KuhnAction::Bet, KuhnAction::Fold] => [1, -1],
-            [KuhnAction::Bet, KuhnAction::Call] => {
-                if p0_wins { [2, -2] } else { [-2, 2] }
+            [KuhnAction::Bet, KuhnAction::Call] | [KuhnAction::Check, KuhnAction::Bet, KuhnAction::Call] => {
+                if p0_wins {
+                    [2, -2]
+                } else {
+                    [-2, 2]
+                }
             }
             [KuhnAction::Check, KuhnAction::Bet, KuhnAction::Fold] => [-1, 1],
-            [KuhnAction::Check, KuhnAction::Bet, KuhnAction::Call] => {
-                if p0_wins { [2, -2] } else { [-2, 2] }
-            }
             _ => return Err(PKError::Fubar),
         };
         Ok(payoff)
@@ -555,6 +560,593 @@ impl KuhnState {
 impl std::fmt::Display for KuhnState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "P0:{} P1:{} {}", self.cards[0], self.cards[1], self.history)
+    }
+}
+
+// ── KuhnStrategy ─────────────────────────────────────────────────────────────
+
+/// The analytical Nash equilibrium strategy for Kuhn poker.
+///
+/// A `KuhnStrategy` maps each [`KuhnInfoSet`] (card + betting history) to a
+/// probability distribution over legal actions. The Nash equilibrium is
+/// parameterized by a single free variable `alpha ∈ [0, 1/3]` that controls
+/// Player 0's bluffing frequency; the game value for Player 0 is `−1/18` at
+/// any `alpha` in that range.
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::games::kuhn::{KuhnStrategy, KuhnCard, KuhnHistory, KuhnInfoSet, KuhnAction};
+///
+/// // Default uses alpha = 1/3 (maximum bluff frequency)
+/// let strategy = KuhnStrategy::default();
+/// let info = KuhnInfoSet::new(KuhnCard::King, KuhnHistory::new());
+/// let probs = strategy.action_probs(&info);
+/// // King always bets when alpha = 1/3 (3 * 1/3 = 1)
+/// assert_eq!(probs[1].0, KuhnAction::Bet);
+/// assert!((probs[1].1 - 1.0).abs() < 1e-10);
+/// ```
+#[derive(Clone, Debug)]
+pub struct KuhnStrategy {
+    table: HashMap<KuhnInfoSet, Vec<(KuhnAction, f64)>>,
+}
+
+impl KuhnStrategy {
+    /// Builds the analytical Nash equilibrium parameterized by `alpha ∈ [0, 1/3]`.
+    ///
+    /// `alpha` is Player 0's bluffing frequency with a Jack. The full mixed
+    /// strategy is derived from this single parameter:
+    ///
+    /// | Context | Card | Bet/Call prob |
+    /// |---|---|---|
+    /// | P0 initial | J | `alpha` |
+    /// | P0 initial | Q | `0` |
+    /// | P0 initial | K | `3 * alpha` |
+    /// | P1 facing check | J | `1/3` (bluff) |
+    /// | P1 facing check | Q | `0` |
+    /// | P1 facing check | K | `1` |
+    /// | P1 facing bet | J | `0` (folds) |
+    /// | P1 facing bet | Q | `1/3` |
+    /// | P1 facing bet | K | `1` |
+    /// | P0 facing check-bet | J | `0` (folds) |
+    /// | P0 facing check-bet | Q | `alpha + 1/3` |
+    /// | P0 facing check-bet | K | `1` |
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PKError::InvalidAlpha`] if `alpha` is outside `[0, 1/3]`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::games::kuhn::{KuhnStrategy, KuhnCard, KuhnHistory, KuhnInfoSet, KuhnAction};
+    /// use pkcore::PKError;
+    ///
+    /// assert!(KuhnStrategy::gto(0.0).is_ok());
+    /// assert!(KuhnStrategy::gto(1.0 / 3.0).is_ok());
+    /// assert_eq!(KuhnStrategy::gto(0.5).unwrap_err(), PKError::InvalidAlpha);
+    /// assert_eq!(KuhnStrategy::gto(-0.1).unwrap_err(), PKError::InvalidAlpha);
+    /// ```
+    pub fn gto(alpha: f64) -> Result<Self, PKError> {
+        const MAX_ALPHA: f64 = 1.0 / 3.0;
+        if !(0.0..=MAX_ALPHA).contains(&alpha) {
+            return Err(PKError::InvalidAlpha);
+        }
+        Ok(KuhnStrategy::build(alpha))
+    }
+
+    /// Returns the probability distribution over legal actions for `info_set`.
+    ///
+    /// Each tuple is `(action, probability)`. The probabilities sum to 1.0 for
+    /// any info set in the strategy table. Returns an empty slice for terminal
+    /// info sets (no action is required) or unknown info sets.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::games::kuhn::{KuhnStrategy, KuhnCard, KuhnHistory, KuhnInfoSet, KuhnAction};
+    ///
+    /// let strategy = KuhnStrategy::gto(0.0).unwrap();
+    /// // With alpha = 0, Jack never bets
+    /// let info = KuhnInfoSet::new(KuhnCard::Jack, KuhnHistory::new());
+    /// let probs = strategy.action_probs(&info);
+    /// assert_eq!(probs[0], (KuhnAction::Check, 1.0));
+    /// assert_eq!(probs[1], (KuhnAction::Bet, 0.0));
+    /// ```
+    #[must_use]
+    pub fn action_probs(&self, info_set: &KuhnInfoSet) -> &[(KuhnAction, f64)] {
+        self.table.get(info_set).map_or(&[], Vec::as_slice)
+    }
+
+    /// Constructs a `KuhnStrategy` directly from a pre-built table.
+    fn from_table(table: HashMap<KuhnInfoSet, Vec<(KuhnAction, f64)>>) -> Self {
+        KuhnStrategy { table }
+    }
+
+    /// Internal constructor — builds the strategy table without validating `alpha`.
+    fn build(alpha: f64) -> Self {
+        let mut table: HashMap<KuhnInfoSet, Vec<(KuhnAction, f64)>> = HashMap::with_capacity(12);
+
+        let empty = KuhnHistory::new();
+        let h_check = empty.push(KuhnAction::Check);
+        let h_bet = empty.push(KuhnAction::Bet);
+        let h_check_bet = h_check.push(KuhnAction::Bet);
+
+        // P0, empty history → Check or Bet
+        for (card, bet_prob) in [
+            (KuhnCard::Jack, alpha),
+            (KuhnCard::Queen, 0.0),
+            (KuhnCard::King, 3.0 * alpha),
+        ] {
+            table.insert(
+                KuhnInfoSet::new(card, empty.clone()),
+                vec![(KuhnAction::Check, 1.0 - bet_prob), (KuhnAction::Bet, bet_prob)],
+            );
+        }
+
+        // P1, history=[Check] → Check or Bet
+        //
+        // J bluffs 1/3: this makes P0(Q) indifferent at [Check,Bet].
+        // Q never bets: at alpha=1/3, P0 checking already reveals P0 is not K
+        // (K always bets), so P1(Q) sees P0=J with certainty and is indifferent
+        // between betting and checking anyway (both yield +1).
+        // The constraint a+b=1/3 (J+Q bluff rates) keeps P0(K) indifferent
+        // between betting and slow-playing; the split a=1/3, b=0 uniquely
+        // satisfies the P0(Q) indifference condition at [Check,Bet].
+        for (card, bet_prob) in [
+            (KuhnCard::Jack, 1.0 / 3.0),
+            (KuhnCard::Queen, 0.0),
+            (KuhnCard::King, 1.0),
+        ] {
+            table.insert(
+                KuhnInfoSet::new(card, h_check.clone()),
+                vec![(KuhnAction::Check, 1.0 - bet_prob), (KuhnAction::Bet, bet_prob)],
+            );
+        }
+
+        // P1, history=[Bet] → Fold or Call
+        for (card, call_prob) in [
+            (KuhnCard::Jack, 0.0),
+            (KuhnCard::Queen, 1.0 / 3.0),
+            (KuhnCard::King, 1.0),
+        ] {
+            table.insert(
+                KuhnInfoSet::new(card, h_bet.clone()),
+                vec![(KuhnAction::Fold, 1.0 - call_prob), (KuhnAction::Call, call_prob)],
+            );
+        }
+
+        // P0, history=[Check, Bet] → Fold or Call
+        for (card, call_prob) in [
+            (KuhnCard::Jack, 0.0),
+            (KuhnCard::Queen, alpha + 1.0 / 3.0),
+            (KuhnCard::King, 1.0),
+        ] {
+            table.insert(
+                KuhnInfoSet::new(card, h_check_bet.clone()),
+                vec![(KuhnAction::Fold, 1.0 - call_prob), (KuhnAction::Call, call_prob)],
+            );
+        }
+
+        KuhnStrategy { table }
+    }
+}
+
+impl Default for KuhnStrategy {
+    /// Returns the GTO strategy with `alpha = 1/3` (maximum bluff frequency).
+    ///
+    /// At `alpha = 1/3` the game value for Player 0 is exactly `−1/18 ≈ −0.0556`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::games::kuhn::{KuhnStrategy, KuhnCard, KuhnHistory, KuhnInfoSet, KuhnAction};
+    ///
+    /// let strategy = KuhnStrategy::default();
+    /// let info = KuhnInfoSet::new(KuhnCard::Queen, KuhnHistory::new());
+    /// let probs = strategy.action_probs(&info);
+    /// // Queen always checks from initial position
+    /// assert_eq!(probs[0], (KuhnAction::Check, 1.0));
+    /// assert_eq!(probs[1], (KuhnAction::Bet, 0.0));
+    /// ```
+    fn default() -> Self {
+        KuhnStrategy::build(1.0 / 3.0)
+    }
+}
+
+// ── KuhnCfr ──────────────────────────────────────────────────────────────────
+
+/// The 6 possible deals in Kuhn poker (ordered pairs of distinct cards).
+const DEALS: [(KuhnCard, KuhnCard); 6] = [
+    (KuhnCard::Jack, KuhnCard::Queen),
+    (KuhnCard::Jack, KuhnCard::King),
+    (KuhnCard::Queen, KuhnCard::Jack),
+    (KuhnCard::Queen, KuhnCard::King),
+    (KuhnCard::King, KuhnCard::Jack),
+    (KuhnCard::King, KuhnCard::Queen),
+];
+
+/// Vanilla CFR trainer for Kuhn poker.
+///
+/// `KuhnCfr` implements counterfactual regret minimization over the full Kuhn
+/// game tree. Because the tree has only 12 terminal nodes, each iteration
+/// traverses all 6 possible deals exactly — no Monte Carlo sampling needed.
+///
+/// After enough iterations, [`KuhnCfr::average_strategy`] converges to the
+/// analytical Nash equilibrium and [`KuhnCfr::exploitability`] approaches zero.
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::games::kuhn::KuhnCfr;
+///
+/// let mut cfr = KuhnCfr::new();
+/// cfr.train(1000);
+/// let exploit = cfr.exploitability();
+/// assert!(exploit.abs() < 0.05, "exploitability after 1k iters: {exploit}");
+/// ```
+#[derive(Clone, Debug)]
+pub struct KuhnCfr {
+    /// Cumulative counterfactual regrets, keyed by info set.
+    regret_sum: HashMap<KuhnInfoSet, Vec<f64>>,
+    /// Cumulative strategy weighted by reach probability, keyed by info set.
+    strategy_sum: HashMap<KuhnInfoSet, Vec<f64>>,
+}
+
+impl KuhnCfr {
+    /// Creates a new, untrained CFR instance with all regrets and strategy sums
+    /// initialized to zero.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::games::kuhn::KuhnCfr;
+    ///
+    /// let cfr = KuhnCfr::new();
+    /// // Before training, exploitability is large (uniform strategy is far from Nash)
+    /// let exploit = cfr.exploitability();
+    /// assert!(exploit.abs() > 0.0);
+    /// ```
+    #[must_use]
+    pub fn new() -> Self {
+        KuhnCfr {
+            regret_sum: HashMap::with_capacity(12),
+            strategy_sum: HashMap::with_capacity(12),
+        }
+    }
+
+    /// Runs `iterations` of vanilla CFR, traversing all 6 deals each iteration.
+    ///
+    /// Each call accumulates regrets and strategy weights; calling `train` multiple
+    /// times is equivalent to calling it once with the combined iteration count.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::games::kuhn::KuhnCfr;
+    ///
+    /// let mut cfr = KuhnCfr::new();
+    /// cfr.train(500);
+    /// cfr.train(500); // equivalent to train(1000)
+    /// assert!(cfr.exploitability().abs() < 0.1);
+    /// ```
+    /// # Panics
+    ///
+    /// Does not panic in practice; the internal `DEALS` constant contains only
+    /// valid distinct card pairs. The `expect` is unreachable by construction.
+    pub fn train(&mut self, iterations: u32) {
+        for _ in 0..iterations {
+            for &(c0, c1) in &DEALS {
+                // DEALS contains only distinct pairs; new() cannot fail here.
+                #[allow(clippy::expect_used)]
+                let state = KuhnState::new(c0, c1).expect("DEALS are always valid");
+                self.cfr(&state, 1.0, 1.0);
+            }
+        }
+    }
+
+    /// Returns the average strategy accumulated over all training iterations.
+    ///
+    /// This converges to the Nash equilibrium as iterations increase. Before any
+    /// training the average strategy is uniform over legal actions.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::games::kuhn::{KuhnCfr, KuhnCard, KuhnHistory, KuhnInfoSet, KuhnAction};
+    ///
+    /// let mut cfr = KuhnCfr::new();
+    /// cfr.train(10_000);
+    /// let strategy = cfr.average_strategy();
+    ///
+    /// // P1 with King always bets after P0 checks — true at every Nash alpha.
+    /// let info = KuhnInfoSet::new(KuhnCard::King, KuhnHistory::new().push(KuhnAction::Check));
+    /// let probs = strategy.action_probs(&info);
+    /// assert!((probs[1].1 - 1.0).abs() < 0.01, "P1 King bet-after-check prob: {}", probs[1].1);
+    /// ```
+    #[must_use]
+    pub fn average_strategy(&self) -> KuhnStrategy {
+        let mut table: HashMap<KuhnInfoSet, Vec<(KuhnAction, f64)>> = HashMap::with_capacity(12);
+
+        for hist in [
+            KuhnHistory::new(),
+            KuhnHistory::new().push(KuhnAction::Check),
+            KuhnHistory::new().push(KuhnAction::Bet),
+            KuhnHistory::new().push(KuhnAction::Check).push(KuhnAction::Bet),
+        ] {
+            // Determine the legal actions for this history depth.
+            let actions: Vec<KuhnAction> = match hist.as_slice() {
+                [] | [KuhnAction::Check] => vec![KuhnAction::Check, KuhnAction::Bet],
+                _ => vec![KuhnAction::Fold, KuhnAction::Call],
+            };
+            let n = actions.len();
+            // n is always 2 in Kuhn poker; cast is exact.
+            #[allow(clippy::cast_precision_loss)]
+            let uniform = 1.0 / (n as f64);
+
+            for card in [KuhnCard::Jack, KuhnCard::Queen, KuhnCard::King] {
+                let info = KuhnInfoSet::new(card, hist.clone());
+                let probs = if let Some(sums) = self.strategy_sum.get(&info) {
+                    let total: f64 = sums.iter().sum();
+                    if total > 0.0 {
+                        sums.iter().map(|&s| s / total).collect::<Vec<_>>()
+                    } else {
+                        vec![uniform; n]
+                    }
+                } else {
+                    vec![uniform; n]
+                };
+
+                table.insert(info, actions.iter().copied().zip(probs).collect());
+            }
+        }
+
+        KuhnStrategy::from_table(table)
+    }
+
+    /// Returns the exploitability of the current average strategy.
+    ///
+    /// Exploitability is the sum of each player's best-response gain against the
+    /// opponent's average strategy, averaged over all 6 deals. It equals zero at
+    /// Nash equilibrium and decreases monotonically with training.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::games::kuhn::KuhnCfr;
+    ///
+    /// let mut cfr = KuhnCfr::new();
+    /// cfr.train(100_000);
+    /// assert!(cfr.exploitability().abs() < 0.005);
+    /// ```
+    #[must_use]
+    pub fn exploitability(&self) -> f64 {
+        let strategy = self.average_strategy();
+        best_response_value(&strategy, 0) + best_response_value(&strategy, 1)
+    }
+
+    /// Recursive vanilla CFR traversal.
+    ///
+    /// Returns the **current player's** expected utility (Neller & Lanctot
+    /// alternating-utility convention). Each recursive call negates the child's
+    /// return value to flip from next-player to current-player perspective.
+    /// Terminal payoffs are indexed by `history.len() % 2` for the same reason.
+    ///
+    /// `p0` and `p1` are each player's reach probability into this node.
+    fn cfr(&mut self, state: &KuhnState, p0: f64, p1: f64) -> f64 {
+        if state.is_terminal() {
+            // Return the utility for the player whose "turn" this history length
+            // implies (len%2=0 → P0, len%2=1 → P1). This keeps utility in the
+            // current-player frame throughout the recursion.
+            let player = state.history().len() % 2;
+            // Safe: is_terminal() guarantees payoff() succeeds.
+            #[allow(clippy::expect_used)]
+            let payoff = state.payoff().expect("terminal state always has a payoff");
+            return f64::from(payoff[player]);
+        }
+
+        // Safe: is_terminal() returned false above.
+        #[allow(clippy::expect_used)]
+        let player = state.current_player().expect("non-terminal has a current player");
+        let info_set = state.info_set(player);
+        let actions = state.legal_actions();
+        let n = actions.len();
+
+        let strategy = self.current_strategy(&info_set, n);
+
+        // Recurse for each action. Negate the child return to convert from the
+        // next player's perspective to the current player's perspective.
+        let mut action_utils = vec![0.0_f64; n];
+        let mut node_util = 0.0_f64;
+        for (i, &action) in actions.iter().enumerate() {
+            // Safe: `action` came from legal_actions(), so apply() cannot fail.
+            #[allow(clippy::expect_used)]
+            let next = state.apply(action).expect("action came from legal_actions");
+            let child_util = if player == 0 {
+                self.cfr(&next, p0 * strategy[i], p1)
+            } else {
+                self.cfr(&next, p0, p1 * strategy[i])
+            };
+            action_utils[i] = -child_util; // flip to current player's frame
+            node_util += strategy[i] * action_utils[i];
+        }
+
+        // Regret update: no sign flip needed — action_utils is already in the
+        // current player's frame, so (action_utils[i] - node_util) is the regret.
+        let opp_reach = if player == 0 { p1 } else { p0 };
+        let my_reach = if player == 0 { p0 } else { p1 };
+
+        let regrets = self.regret_sum.entry(info_set.clone()).or_insert_with(|| vec![0.0; n]);
+        for i in 0..n {
+            regrets[i] += opp_reach * (action_utils[i] - node_util);
+        }
+
+        let strat = self.strategy_sum.entry(info_set).or_insert_with(|| vec![0.0; n]);
+        for i in 0..n {
+            strat[i] += my_reach * strategy[i];
+        }
+
+        node_util
+    }
+
+    /// Computes the current (per-iteration) strategy via regret matching.
+    fn current_strategy(&self, info_set: &KuhnInfoSet, n: usize) -> Vec<f64> {
+        let mut strategy = vec![0.0_f64; n];
+        let mut normalizer = 0.0_f64;
+
+        if let Some(regrets) = self.regret_sum.get(info_set) {
+            for i in 0..n {
+                strategy[i] = regrets[i].max(0.0);
+                normalizer += strategy[i];
+            }
+        }
+
+        if normalizer > 0.0 {
+            for s in &mut strategy {
+                *s /= normalizer;
+            }
+        } else {
+            // n is always 2 in Kuhn poker; cast is exact.
+            #[allow(clippy::cast_precision_loss)]
+            {
+                strategy.fill(1.0 / (n as f64));
+            }
+        }
+
+        strategy
+    }
+}
+
+impl Default for KuhnCfr {
+    fn default() -> Self {
+        KuhnCfr::new()
+    }
+}
+
+/// Computes the best-response value for `br_player` against `strategy`.
+///
+/// Enumerates all 2^6 = 64 pure policies for `br_player` (one binary decision
+/// per info set: 3 cards × 2 decision points). For each policy, the expected
+/// utility is computed over all 6 equally-likely deals, using the opponent's
+/// mixed strategy from `strategy`. The maximum over all policies is returned.
+///
+/// This correctly enforces the imperfect-information constraint: the BR player
+/// can only condition on their own card and the public history, not on the
+/// opponent's hidden card.
+fn best_response_value(strategy: &KuhnStrategy, br_player: usize) -> f64 {
+    let mut best = f64::NEG_INFINITY;
+
+    // Enumerate all 2^6 = 64 pure policies.
+    //
+    // Bits 0-2: first decision for Jack/Queen/King
+    //   P0: true=Bet, false=Check  (at empty history)
+    //   P1: true=Bet, false=Check  (at [Check] history — after P0 checks)
+    //
+    // Bits 3-5: second decision for Jack/Queen/King
+    //   P0: true=Call, false=Fold  (at [Check, Bet] history)
+    //   P1: true=Call, false=Fold  (at [Bet] history — after P0 bets)
+    for bits in 0u32..64 {
+        let first = [bits & 1 != 0, (bits >> 1) & 1 != 0, (bits >> 2) & 1 != 0];
+        let second = [(bits >> 3) & 1 != 0, (bits >> 4) & 1 != 0, (bits >> 5) & 1 != 0];
+
+        let total: f64 = DEALS
+            .iter()
+            .map(|&(c0, c1)| eval_deal_policy(strategy, br_player, c0, c1, first, second))
+            .sum();
+        let avg = total / 6.0;
+        if avg > best {
+            best = avg;
+        }
+    }
+
+    best
+}
+
+/// Returns `br_player`'s expected utility in a single deal `(c0, c1)` given a
+/// pure policy described by `first` and `second` action arrays (indexed by
+/// card: 0=Jack, 1=Queen, 2=King).
+fn eval_deal_policy(
+    strategy: &KuhnStrategy,
+    br_player: usize,
+    c0: KuhnCard,
+    c1: KuhnCard,
+    first: [bool; 3],
+    second: [bool; 3],
+) -> f64 {
+    let br_card = if br_player == 0 { c0 } else { c1 };
+    let ci = br_card as usize; // Jack=0, Queen=1, King=2
+
+    // Helper: probability of action `act` in a strategy entry.
+    let prob_of = |probs: &[(KuhnAction, f64)], act: KuhnAction| -> f64 {
+        probs.iter().find(|(a, _)| *a == act).map_or(0.0, |(_, p)| *p)
+    };
+
+    if br_player == 0 {
+        let p0_wins = c0 > c1;
+
+        if first[ci] {
+            // P0 bets.  P1 responds per strategy at info set c1[Bet].
+            let is1 = KuhnInfoSet::new(c1, KuhnHistory::new().push(KuhnAction::Bet));
+            let probs1 = strategy.action_probs(&is1);
+            let p_call = prob_of(probs1, KuhnAction::Call);
+
+            // P1 folds → P0 wins pot=2 (+1); P1 calls → showdown pot=4
+            (1.0 - p_call) * 1.0 + p_call * if p0_wins { 2.0 } else { -2.0 }
+        } else {
+            // P0 checks.  P1 responds per strategy at info set c1[Check].
+            let is1 = KuhnInfoSet::new(c1, KuhnHistory::new().push(KuhnAction::Check));
+            let probs1 = strategy.action_probs(&is1);
+            let p_bet = prob_of(probs1, KuhnAction::Bet);
+
+            // P1 checks → showdown pot=2
+            let ev_cc = if p0_wins { 1.0 } else { -1.0 };
+
+            // P1 bets → P0 responds with second[ci]
+            let ev_late = if second[ci] {
+                // P0 calls → showdown pot=4
+                if p0_wins { 2.0 } else { -2.0 }
+            } else {
+                // P0 folds → −1
+                -1.0
+            };
+
+            (1.0 - p_bet) * ev_cc + p_bet * ev_late
+        }
+    } else {
+        // br_player == 1
+        let p1_wins = c1 > c0;
+
+        // P0 acts first per strategy at info set c0[].
+        let is0 = KuhnInfoSet::new(c0, KuhnHistory::new());
+        let probs0 = strategy.action_probs(&is0);
+        let p0_bet = prob_of(probs0, KuhnAction::Bet);
+
+        // ── Case: P0 checks ──
+        // P1 responds with first[ci] at info set c1[Check].
+        let ev_after_check = if first[ci] {
+            // P1 bets → P0 responds per strategy at info set c0[Check, Bet].
+            let is0_late = KuhnInfoSet::new(c0, KuhnHistory::new().push(KuhnAction::Check).push(KuhnAction::Bet));
+            let probs0_late = strategy.action_probs(&is0_late);
+            let p0_call = prob_of(probs0_late, KuhnAction::Call);
+
+            // P0 folds → P1 wins pot=2 (+1); P0 calls → showdown pot=4
+            (1.0 - p0_call) * 1.0 + p0_call * if p1_wins { 2.0 } else { -2.0 }
+        } else {
+            // P1 checks → showdown pot=2
+            if p1_wins { 1.0 } else { -1.0 }
+        };
+
+        // ── Case: P0 bets ──
+        // P1 responds with second[ci] at info set c1[Bet].
+        let ev_after_bet = if second[ci] {
+            // P1 calls → showdown pot=4
+            if p1_wins { 2.0 } else { -2.0 }
+        } else {
+            // P1 folds → −1
+            -1.0
+        };
+
+        (1.0 - p0_bet) * ev_after_check + p0_bet * ev_after_bet
     }
 }
 
@@ -618,9 +1210,7 @@ mod kuhn_tests {
 
     #[test]
     fn test_kuhn_history_push_chain() {
-        let h = KuhnHistory::new()
-            .push(KuhnAction::Check)
-            .push(KuhnAction::Bet);
+        let h = KuhnHistory::new().push(KuhnAction::Check).push(KuhnAction::Bet);
         assert_eq!(h.len(), 2);
         assert_eq!(h.last(), Some(KuhnAction::Bet));
         assert_eq!(h.as_slice(), &[KuhnAction::Check, KuhnAction::Bet]);
@@ -658,11 +1248,7 @@ mod kuhn_tests {
     #[case(KuhnCard::Jack, KuhnHistory::new(), "J[]")]
     #[case(KuhnCard::Queen, KuhnHistory::new().push(KuhnAction::Check), "Q[Check]")]
     #[case(KuhnCard::King, KuhnHistory::new().push(KuhnAction::Bet).push(KuhnAction::Call), "K[Bet, Call]")]
-    fn test_kuhn_info_set_display(
-        #[case] card: KuhnCard,
-        #[case] history: KuhnHistory,
-        #[case] expected: &str,
-    ) {
+    fn test_kuhn_info_set_display(#[case] card: KuhnCard, #[case] history: KuhnHistory, #[case] expected: &str) {
         assert_eq!(KuhnInfoSet::new(card, history).to_string(), expected);
     }
 
@@ -688,10 +1274,7 @@ mod kuhn_tests {
     #[case(KuhnCard::Queen, KuhnCard::Queen)]
     #[case(KuhnCard::King, KuhnCard::King)]
     fn test_kuhn_state_new_duplicate_card(#[case] c0: KuhnCard, #[case] c1: KuhnCard) {
-        assert_eq!(
-            KuhnState::new(c0, c1).unwrap_err(),
-            PKError::DuplicateCard
-        );
+        assert_eq!(KuhnState::new(c0, c1).unwrap_err(), PKError::DuplicateCard);
     }
 
     // ── KuhnState::card / history ─────────────────────────────────────────────
@@ -849,14 +1432,8 @@ mod kuhn_tests {
     #[test]
     fn test_kuhn_state_apply_invalid_action() {
         let state = KuhnState::new(KuhnCard::Jack, KuhnCard::King).unwrap();
-        assert_eq!(
-            state.apply(KuhnAction::Fold).unwrap_err(),
-            PKError::InvalidAction
-        );
-        assert_eq!(
-            state.apply(KuhnAction::Call).unwrap_err(),
-            PKError::InvalidAction
-        );
+        assert_eq!(state.apply(KuhnAction::Fold).unwrap_err(), PKError::InvalidAction);
+        assert_eq!(state.apply(KuhnAction::Call).unwrap_err(), PKError::InvalidAction);
     }
 
     #[test]
@@ -884,11 +1461,7 @@ mod kuhn_tests {
     #[case(KuhnCard::Queen, KuhnCard::Jack, [1, -1])]
     #[case(KuhnCard::King, KuhnCard::Jack, [1, -1])]
     #[case(KuhnCard::King, KuhnCard::Queen, [1, -1])]
-    fn test_kuhn_state_payoff_check_check(
-        #[case] c0: KuhnCard,
-        #[case] c1: KuhnCard,
-        #[case] expected: [i32; 2],
-    ) {
+    fn test_kuhn_state_payoff_check_check(#[case] c0: KuhnCard, #[case] c1: KuhnCard, #[case] expected: [i32; 2]) {
         let terminal = KuhnState::new(c0, c1)
             .unwrap()
             .apply(KuhnAction::Check)
@@ -916,11 +1489,7 @@ mod kuhn_tests {
     #[case(KuhnCard::King, KuhnCard::Jack, [2, -2])]
     #[case(KuhnCard::Queen, KuhnCard::King, [-2, 2])]
     #[case(KuhnCard::King, KuhnCard::Queen, [2, -2])]
-    fn test_kuhn_state_payoff_bet_call(
-        #[case] c0: KuhnCard,
-        #[case] c1: KuhnCard,
-        #[case] expected: [i32; 2],
-    ) {
+    fn test_kuhn_state_payoff_bet_call(#[case] c0: KuhnCard, #[case] c1: KuhnCard, #[case] expected: [i32; 2]) {
         let terminal = KuhnState::new(c0, c1)
             .unwrap()
             .apply(KuhnAction::Bet)
@@ -948,11 +1517,7 @@ mod kuhn_tests {
     #[rstest]
     #[case(KuhnCard::Jack, KuhnCard::King, [-2, 2])]
     #[case(KuhnCard::King, KuhnCard::Jack, [2, -2])]
-    fn test_kuhn_state_payoff_check_bet_call(
-        #[case] c0: KuhnCard,
-        #[case] c1: KuhnCard,
-        #[case] expected: [i32; 2],
-    ) {
+    fn test_kuhn_state_payoff_check_bet_call(#[case] c0: KuhnCard, #[case] c1: KuhnCard, #[case] expected: [i32; 2]) {
         let terminal = KuhnState::new(c0, c1)
             .unwrap()
             .apply(KuhnAction::Check)
@@ -1012,5 +1577,239 @@ mod kuhn_tests {
             .apply(KuhnAction::Call)
             .unwrap();
         assert_eq!(state.to_string(), "P0:Q P1:J [Bet, Call]");
+    }
+
+    // ── KuhnStrategy ─────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_kuhn_strategy_gto_valid_bounds() {
+        assert!(KuhnStrategy::gto(0.0).is_ok());
+        assert!(KuhnStrategy::gto(1.0 / 3.0).is_ok());
+    }
+
+    #[rstest]
+    #[case(0.34)]
+    #[case(0.5)]
+    #[case(1.0)]
+    #[case(-0.1)]
+    fn test_kuhn_strategy_gto_invalid_alpha(#[case] alpha: f64) {
+        assert_eq!(KuhnStrategy::gto(alpha).unwrap_err(), PKError::InvalidAlpha);
+    }
+
+    #[test]
+    fn test_kuhn_strategy_table_has_12_entries() {
+        let strategy = KuhnStrategy::default();
+        // 3 cards × 4 decision points = 12
+        let count = [
+            KuhnHistory::new(),
+            KuhnHistory::new().push(KuhnAction::Check),
+            KuhnHistory::new().push(KuhnAction::Bet),
+            KuhnHistory::new().push(KuhnAction::Check).push(KuhnAction::Bet),
+        ]
+        .iter()
+        .flat_map(|h| {
+            [KuhnCard::Jack, KuhnCard::Queen, KuhnCard::King]
+                .iter()
+                .map(move |&c| KuhnInfoSet::new(c, h.clone()))
+        })
+        .filter(|info| !strategy.action_probs(info).is_empty())
+        .count();
+        assert_eq!(count, 12);
+    }
+
+    #[test]
+    fn test_kuhn_strategy_probabilities_sum_to_one() {
+        let strategy = KuhnStrategy::default();
+        for hist in [
+            KuhnHistory::new(),
+            KuhnHistory::new().push(KuhnAction::Check),
+            KuhnHistory::new().push(KuhnAction::Bet),
+            KuhnHistory::new().push(KuhnAction::Check).push(KuhnAction::Bet),
+        ] {
+            for card in [KuhnCard::Jack, KuhnCard::Queen, KuhnCard::King] {
+                let info = KuhnInfoSet::new(card, hist.clone());
+                let sum: f64 = strategy.action_probs(&info).iter().map(|(_, p)| p).sum();
+                assert!((sum - 1.0).abs() < 1e-10, "probs for {} don't sum to 1: {sum}", info);
+            }
+        }
+    }
+
+    #[test]
+    fn test_kuhn_strategy_default_king_bets_always() {
+        // King bets with probability 1 at alpha = 1/3 (3 * 1/3 = 1)
+        let strategy = KuhnStrategy::default();
+        let info = KuhnInfoSet::new(KuhnCard::King, KuhnHistory::new());
+        let probs = strategy.action_probs(&info);
+        assert!((probs[1].1 - 1.0).abs() < 1e-10, "King should always bet");
+    }
+
+    #[test]
+    fn test_kuhn_strategy_default_queen_always_checks_initial() {
+        let strategy = KuhnStrategy::default();
+        let info = KuhnInfoSet::new(KuhnCard::Queen, KuhnHistory::new());
+        let probs = strategy.action_probs(&info);
+        assert_eq!(probs[0].0, KuhnAction::Check);
+        assert!((probs[0].1 - 1.0).abs() < 1e-10, "Queen should always check");
+    }
+
+    #[test]
+    fn test_kuhn_strategy_alpha_zero_jack_never_bets() {
+        let strategy = KuhnStrategy::gto(0.0).unwrap();
+        let info = KuhnInfoSet::new(KuhnCard::Jack, KuhnHistory::new());
+        let probs = strategy.action_probs(&info);
+        assert!((probs[1].1 - 0.0).abs() < 1e-10, "Jack should never bet at alpha=0");
+    }
+
+    #[test]
+    fn test_kuhn_strategy_action_probs_empty_for_terminal() {
+        let strategy = KuhnStrategy::default();
+        // Check-Check is a terminal history — no decision point
+        let info = KuhnInfoSet::new(
+            KuhnCard::Jack,
+            KuhnHistory::new().push(KuhnAction::Check).push(KuhnAction::Check),
+        );
+        assert!(strategy.action_probs(&info).is_empty());
+    }
+
+    #[test]
+    fn test_kuhn_strategy_p1_facing_bet_king_always_calls() {
+        let strategy = KuhnStrategy::default();
+        let info = KuhnInfoSet::new(KuhnCard::King, KuhnHistory::new().push(KuhnAction::Bet));
+        let probs = strategy.action_probs(&info);
+        // [Fold, Call] — Call is index 1
+        assert_eq!(probs[1].0, KuhnAction::Call);
+        assert!((probs[1].1 - 1.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_kuhn_strategy_p1_facing_bet_jack_always_folds() {
+        let strategy = KuhnStrategy::default();
+        let info = KuhnInfoSet::new(KuhnCard::Jack, KuhnHistory::new().push(KuhnAction::Bet));
+        let probs = strategy.action_probs(&info);
+        assert_eq!(probs[0].0, KuhnAction::Fold);
+        assert!((probs[0].1 - 1.0).abs() < 1e-10);
+    }
+
+    // ── KuhnCfr ──────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_kuhn_cfr_nash_strategy_has_zero_exploitability() {
+        // The analytical Nash strategy must have exploitability ≈ 0.
+        // This verifies best_response_value is computing correctly.
+        let nash = KuhnStrategy::gto(1.0 / 3.0).unwrap();
+        let exploit = best_response_value(&nash, 0) + best_response_value(&nash, 1);
+        assert!(exploit.abs() < 0.001, "Nash exploitability: {exploit}");
+    }
+
+    #[test]
+    fn test_kuhn_cfr_new_default_equivalent() {
+        let a = KuhnCfr::new();
+        let b = KuhnCfr::default();
+        // Both start untrained; average strategy is uniform
+        let info = KuhnInfoSet::new(KuhnCard::Jack, KuhnHistory::new());
+        let pa = a.average_strategy().action_probs(&info).to_vec();
+        let pb = b.average_strategy().action_probs(&info).to_vec();
+        assert_eq!(pa, pb);
+    }
+
+    #[test]
+    fn test_kuhn_cfr_average_strategy_untrained_is_uniform() {
+        let cfr = KuhnCfr::new();
+        let strategy = cfr.average_strategy();
+        // Untrained: uniform over 2 legal actions
+        let info = KuhnInfoSet::new(KuhnCard::Queen, KuhnHistory::new());
+        let probs = strategy.action_probs(&info);
+        assert!((probs[0].1 - 0.5).abs() < 1e-10);
+        assert!((probs[1].1 - 0.5).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_kuhn_cfr_train_reduces_exploitability() {
+        let mut cfr = KuhnCfr::new();
+        let before = cfr.exploitability().abs();
+        cfr.train(100);
+        let after = cfr.exploitability().abs();
+        assert!(after < before, "exploitability should decrease: {before} -> {after}");
+    }
+
+    #[test]
+    fn test_kuhn_cfr_train_is_additive() {
+        let mut cfr_once = KuhnCfr::new();
+        cfr_once.train(1000);
+
+        let mut cfr_twice = KuhnCfr::new();
+        cfr_twice.train(500);
+        cfr_twice.train(500);
+
+        // Both should have the same exploitability (identical computation path)
+        let e1 = cfr_once.exploitability().abs();
+        let e2 = cfr_twice.exploitability().abs();
+        assert!((e1 - e2).abs() < 1e-10, "exploitability mismatch: {e1} vs {e2}");
+    }
+
+    #[test]
+    fn test_kuhn_cfr_converges_to_nash_exploitability() {
+        let mut cfr = KuhnCfr::new();
+        cfr.train(500_000);
+        let exploit = cfr.exploitability().abs();
+        assert!(exploit < 0.001, "exploitability after 500k iters: {exploit}");
+    }
+
+    #[test]
+    fn test_kuhn_cfr_converges_king_bets_more_than_jack() {
+        // King bets strictly more than Jack at any Nash equilibrium
+        // (K bets 3*alpha, J bets alpha, so K bet prob = 3 × J bet prob).
+        let mut cfr = KuhnCfr::new();
+        cfr.train(10_000);
+        let strategy = cfr.average_strategy();
+        let jack_info = KuhnInfoSet::new(KuhnCard::Jack, KuhnHistory::new());
+        let king_info = KuhnInfoSet::new(KuhnCard::King, KuhnHistory::new());
+        let jack_bet = strategy.action_probs(&jack_info)[1].1;
+        let king_bet = strategy.action_probs(&king_info)[1].1;
+        assert!(
+            king_bet > jack_bet + 0.1,
+            "King bet prob {king_bet:.3} should exceed Jack {jack_bet:.3}"
+        );
+    }
+
+    #[test]
+    fn test_kuhn_cfr_converges_queen_never_bets_initially() {
+        let mut cfr = KuhnCfr::new();
+        cfr.train(10_000);
+        let strategy = cfr.average_strategy();
+        let info = KuhnInfoSet::new(KuhnCard::Queen, KuhnHistory::new());
+        let probs = strategy.action_probs(&info);
+        // Queen never bets from initial position at any Nash alpha
+        assert!(probs[1].1 < 0.01, "Queen bet prob: {}", probs[1].1);
+    }
+
+    #[test]
+    fn test_kuhn_cfr_converges_p1_king_always_bets_after_check() {
+        let mut cfr = KuhnCfr::new();
+        cfr.train(10_000);
+        let strategy = cfr.average_strategy();
+        let info = KuhnInfoSet::new(KuhnCard::King, KuhnHistory::new().push(KuhnAction::Check));
+        let probs = strategy.action_probs(&info);
+        // P1 with King always bets after P0 checks
+        assert!(
+            (probs[1].1 - 1.0).abs() < 0.01,
+            "P1 King bet-after-check prob: {}",
+            probs[1].1
+        );
+    }
+
+    #[test]
+    fn test_kuhn_cfr_converges_p1_queen_call_prob_after_bet() {
+        let mut cfr = KuhnCfr::new();
+        cfr.train(10_000);
+        let strategy = cfr.average_strategy();
+        let info = KuhnInfoSet::new(KuhnCard::Queen, KuhnHistory::new().push(KuhnAction::Bet));
+        let probs = strategy.action_probs(&info);
+        // P1 Queen calls with prob ~1/3 when facing a bet
+        assert!(
+            (probs[1].1 - 1.0 / 3.0).abs() < 0.01,
+            "P1 Queen call prob: {}",
+            probs[1].1
+        );
     }
 }
