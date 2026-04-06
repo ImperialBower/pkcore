@@ -183,8 +183,9 @@ Elapsed: 484.90ms
 
 ### GTO
 
-Here's an example of a preliminary GTO combo string calculator
-that shows how a player would fare against an opponent with a common opening range.
+Here's an example of a preliminary GTO combo string calculator that shows how a player would fare against an opponent
+with a common opening range. You can find a pure client side, wasm based version of this demo @
+https://imperialbower.github.io/pkgto-web/ .
 
 ```rust
 use clap::Parser;
