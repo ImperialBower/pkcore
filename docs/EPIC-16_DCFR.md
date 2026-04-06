@@ -269,7 +269,7 @@ vanilla by iteration 20+.
 | Epic | Relationship |
 |------|-------------|
 | EPIC-15 (GTO Solver) | Direct prerequisite — all solver infrastructure comes from here |
-| EPIC-17 (future) | Monte Carlo CFR would be a separate `CfrVariant` arm, fitting naturally |
+| EPIC-18 (future) | Monte Carlo CFR would be a separate `CfrVariant` arm, fitting naturally |
 
 ---
 

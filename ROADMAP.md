@@ -110,7 +110,8 @@ workspace)
 | [EPIC-14](docs/EPIC-14_Equity.md) | Hand Equity — pot odds, EV, range equity, weighted ranges | Complete |
 | [EPIC-15](docs/EPIC-15_GTO_Solver.md) | GTO Solver — game tree, CFR, strategy profiles, exploitability | Complete |
 | [EPIC-16](docs/EPIC-16_DCFR.md) | CFR+ and Discounted CFR — faster convergence variants | Complete |
-| EPIC-17 | Range Frequencies — optional per-combo frequency in range strings (`AA:0.5`) | Planned |
+| [EPIC-17](docs/EPIC-17_Kuhn_Poker.md) | Kuhn Poker — minimal 3-card game, analytical Nash, CFR validator, interactive examples | Complete |
+| EPIC-18 | Range Frequencies — optional per-combo frequency in range strings (`AA:0.5`) | Planned |
 
 ---
 
@@ -122,7 +123,7 @@ preflop equity analyzer that runs entirely in the browser via a single
 
 ### Planned UI updates
 
-#### Range frequency display (depends on EPIC-17)
+#### Range frequency display (depends on EPIC-18)
 
 Once pkcore supports per-combo frequencies in range strings, the UI should
 surface them:
@@ -281,7 +282,7 @@ by the solver and bot logic.
   `1.0` (omit it otherwise to keep round-tripped strings clean)
 - Ensure `WeightedCombos` respects combo-level frequency when expanding
   ranges — a combo at frequency `0.5` contributes weight `0.5` per hand
-- Add a pkcore EPIC doc (`docs/EPIC-17_Range_Frequencies.md`) covering
+- Add a pkcore EPIC doc (`docs/EPIC-18_Range_Frequencies.md`) covering
   the full design and test plan
 
 **pkbot work (prerequisite for rule-based and GTO agents):**
