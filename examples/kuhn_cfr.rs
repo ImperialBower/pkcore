@@ -103,17 +103,16 @@ fn main() {
     );
 
     let mut cfr2 = KuhnCfr::new();
-    println!("  {:>12}   {:>14}   {:>10}", "Iterations", "Exploitability", "Δ from Nash");
+    println!(
+        "  {:>12}   {:>14}   {:>10}",
+        "Iterations", "Exploitability", "Δ from Nash"
+    );
     println!("  {}", "─".repeat(44));
     let mut prev_exploit = f64::INFINITY;
     for &iters in &[1u32, 10, 100, 1_000, 10_000] {
         let needed = iters - (iters / 10).max(if iters == 1 { 0 } else { iters / 10 });
         // Re-train on the fresh cfr2 to hit exactly `iters` total.
-        let run = if iters == 1 {
-            1
-        } else {
-            iters - iters / 10
-        };
+        let run = if iters == 1 { 1 } else { iters - iters / 10 };
         cfr2.train(run);
         let exploit = cfr2.exploitability();
         let reduction = if prev_exploit.is_finite() {
@@ -140,18 +139,23 @@ fn main() {
     let final_avg = cfr.average_strategy();
     let nash_ref = KuhnStrategy::default();
 
-    println!(
-        "  {:<30}  {:>8}  {:>8}  {:>8}",
-        "Info set", "CFR %", "Nash %", "Δ"
-    );
+    println!("  {:<30}  {:>8}  {:>8}  {:>8}", "Info set", "CFR %", "Nash %", "Δ");
     println!("  {}", "─".repeat(58));
 
     for_each_info_set(|info, action| {
         let cfr_probs = final_avg.action_probs(&info);
         let nash_probs = nash_ref.action_probs(&info);
 
-        let cfr_p = cfr_probs.iter().find(|(a, _)| *a == action).map(|(_, p)| *p).unwrap_or(0.0);
-        let nash_p = nash_probs.iter().find(|(a, _)| *a == action).map(|(_, p)| *p).unwrap_or(0.0);
+        let cfr_p = cfr_probs
+            .iter()
+            .find(|(a, _)| *a == action)
+            .map(|(_, p)| *p)
+            .unwrap_or(0.0);
+        let nash_p = nash_probs
+            .iter()
+            .find(|(a, _)| *a == action)
+            .map(|(_, p)| *p)
+            .unwrap_or(0.0);
         let delta = cfr_p - nash_p;
 
         let label = format!("{info} → {action}");
@@ -186,7 +190,11 @@ fn header(title: &str) {
     let width = 56;
     let pad = (width - title.len()).saturating_sub(2) / 2;
     println!("╔{}╗", "═".repeat(width));
-    println!("║{}{title}{}║", " ".repeat(pad + 1), " ".repeat(width - pad - title.len() - 1));
+    println!(
+        "║{}{title}{}║",
+        " ".repeat(pad + 1),
+        " ".repeat(width - pad - title.len() - 1)
+    );
     println!("╚{}╝", "═".repeat(width));
     println!();
 }
@@ -217,10 +225,22 @@ fn print_key_info_sets(strategy: &KuhnStrategy) {
         (KuhnCard::Jack, KuhnHistory::new(), KuhnAction::Bet),
         (KuhnCard::King, KuhnHistory::new(), KuhnAction::Bet),
         // P1 facing check
-        (KuhnCard::Jack, KuhnHistory::new().push(KuhnAction::Check), KuhnAction::Bet),
-        (KuhnCard::King, KuhnHistory::new().push(KuhnAction::Check), KuhnAction::Bet),
+        (
+            KuhnCard::Jack,
+            KuhnHistory::new().push(KuhnAction::Check),
+            KuhnAction::Bet,
+        ),
+        (
+            KuhnCard::King,
+            KuhnHistory::new().push(KuhnAction::Check),
+            KuhnAction::Bet,
+        ),
         // P1 facing bet
-        (KuhnCard::Queen, KuhnHistory::new().push(KuhnAction::Bet), KuhnAction::Call),
+        (
+            KuhnCard::Queen,
+            KuhnHistory::new().push(KuhnAction::Bet),
+            KuhnAction::Call,
+        ),
         // P0 facing check-bet
         (
             KuhnCard::Queen,

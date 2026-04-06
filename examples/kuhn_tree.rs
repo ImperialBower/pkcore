@@ -98,10 +98,7 @@ fn main() {
 
             println!(
                 "│  {actions_str:<30}  payoff [{:+},{:+}]  reach {:.4}  EV(P0) {:+.4}",
-                path.payoff[0],
-                path.payoff[1],
-                reach,
-                ev0,
+                path.payoff[0], path.payoff[1], reach, ev0,
             );
         }
 
@@ -147,9 +144,7 @@ fn main() {
         KuhnHistory::new(),
         KuhnHistory::new().push(KuhnAction::Check),
         KuhnHistory::new().push(KuhnAction::Bet),
-        KuhnHistory::new()
-            .push(KuhnAction::Check)
-            .push(KuhnAction::Bet),
+        KuhnHistory::new().push(KuhnAction::Check).push(KuhnAction::Bet),
     ];
 
     for card in [KuhnCard::Jack, KuhnCard::Queen, KuhnCard::King] {
@@ -162,11 +157,7 @@ fn main() {
             }
             let (a0, p0) = probs[0];
             let (a1, p1) = probs[1];
-            println!(
-                "  {info:<28}  {a0:<6}  {p0:.3}  {a1:<6}  {p1:.3}",
-                p0 = p0,
-                p1 = p1
-            );
+            println!("  {info:<28}  {a0:<6}  {p0:.3}  {a1:<6}  {p1:.3}", p0 = p0, p1 = p1);
         }
     }
     println!();
@@ -182,12 +173,7 @@ fn main() {
 /// player playing according to `strategy`. At terminal nodes a `TerminalPath`
 /// record is emitted. At decision nodes each legal action is explored with the
 /// reach probability multiplied by the acting player's strategy probability.
-fn collect_paths(
-    state: &KuhnState,
-    strategy: &KuhnStrategy,
-    p0: f64,
-    p1: f64,
-) -> Vec<TerminalPath> {
+fn collect_paths(state: &KuhnState, strategy: &KuhnStrategy, p0: f64, p1: f64) -> Vec<TerminalPath> {
     if state.is_terminal() {
         let payoff = state.payoff().expect("terminal state has payoff");
         return vec![TerminalPath {

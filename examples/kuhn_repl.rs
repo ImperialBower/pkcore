@@ -29,8 +29,8 @@
 use clap::Parser;
 use clap_repl::ClapEditor;
 use pkcore::games::kuhn::{KuhnAction, KuhnCard, KuhnState, KuhnStrategy};
-use rand::prelude::IndexedRandom;
 use rand::Rng;
+use rand::prelude::IndexedRandom;
 use reedline::{DefaultPrompt, DefaultPromptSegment, FileBackedHistory};
 
 // ── All possible Kuhn deals (ordered pairs of distinct cards) ─────────────────
@@ -220,8 +220,7 @@ fn main() {
         .with_prompt(Box::new(prompt))
         .with_editor_hook(|reed| {
             reed.with_history(Box::new(
-                FileBackedHistory::with_file(1_000, "./generated/kuhn-repl-history".into())
-                    .unwrap_or_default(),
+                FileBackedHistory::with_file(1_000, "./generated/kuhn-repl-history".into()).unwrap_or_default(),
             ))
         })
         .build();
@@ -347,7 +346,11 @@ fn apply_human(session: &mut Session, action: KuhnAction) {
         if state.current_player() == Some(0) && !state.is_terminal() {
             let card = session.p0_card.unwrap();
             let legal: Vec<String> = state.legal_actions().iter().map(|a| a.to_string()).collect();
-            println!("  Your card [{card}] | history: {} | legal: {}", state.history(), legal.join(", "));
+            println!(
+                "  Your card [{card}] | history: {} | legal: {}",
+                state.history(),
+                legal.join(", ")
+            );
         }
     }
 }
