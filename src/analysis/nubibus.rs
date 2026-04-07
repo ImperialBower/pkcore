@@ -12,9 +12,9 @@ use std::fs;
 use std::ops::Index;
 use std::path::Path;
 use std::str::FromStr;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(unix)]
 use termion::color;
-#[cfg(target_arch = "wasm32")]
+#[cfg(not(unix))]
 mod color {
     pub struct Fg<T>(pub T);
     impl<T> std::fmt::Display for Fg<T> {
