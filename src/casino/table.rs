@@ -21,9 +21,9 @@ use pkstate::act::Action;
 use seats::seat::Seat;
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(unix)]
 use termion::color;
-#[cfg(target_arch = "wasm32")]
+#[cfg(not(unix))]
 mod color {
     pub struct Fg<T>(pub T);
     impl<T> std::fmt::Display for Fg<T> {
