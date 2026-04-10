@@ -186,8 +186,12 @@ impl Pile for Four {
         for v in self.remaining().combinations(2) {
             let hole = Two::from(v);
             let six = Six::from([
-                hole.first(), hole.second(),
-                self.first(), self.second(), self.third(), self.forth(),
+                hole.first(),
+                hole.second(),
+                self.first(),
+                self.second(),
+                self.third(),
+                self.forth(),
             ]);
             the_nuts.push(six.eval());
         }
@@ -371,7 +375,10 @@ mod arrays__four_tests {
     #[test]
     fn pile__the_nuts__turn_board() {
         let four = Four::from([
-            Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS, Card::DEUCE_SPADES,
+            Card::NINE_CLUBS,
+            Card::SIX_DIAMONDS,
+            Card::FIVE_HEARTS,
+            Card::DEUCE_SPADES,
         ]);
         let the_nuts = four.the_nuts();
         // 31 distinct HandRankClass values achievable on this turn board

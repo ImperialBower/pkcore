@@ -319,10 +319,7 @@ impl Pile for Five {
 
         for v in self.remaining().combinations(2) {
             let hole = Two::from(v);
-            let seven = Seven::from([
-                hole.first(), hole.second(),
-                arr[0], arr[1], arr[2], arr[3], arr[4],
-            ]);
+            let seven = Seven::from([hole.first(), hole.second(), arr[0], arr[1], arr[2], arr[3], arr[4]]);
             the_nuts.push(seven.eval());
         }
         the_nuts.sort_in_place();
@@ -2620,7 +2617,13 @@ mod arrays__five_tests {
 
     #[test]
     fn pile__the_nuts__blank() {
-        let five = Five::from([Card::BLANK, Card::SIX_DIAMONDS, Card::FIVE_HEARTS, Card::FOUR_CLUBS, Card::TREY_SPADES]);
+        let five = Five::from([
+            Card::BLANK,
+            Card::SIX_DIAMONDS,
+            Card::FIVE_HEARTS,
+            Card::FOUR_CLUBS,
+            Card::TREY_SPADES,
+        ]);
 
         assert_eq!(TheNuts::default(), five.the_nuts());
     }

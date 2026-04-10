@@ -55,7 +55,10 @@ mod casino__table_split_pot_tests {
         );
 
         let winnings = table.end_hand().expect("hand should end successfully");
-        assert!(!winnings.is_empty(), "winnings should not be empty after a completed hand");
+        assert!(
+            !winnings.is_empty(),
+            "winnings should not be empty after a completed hand"
+        );
     }
 
     #[test]
@@ -65,7 +68,10 @@ mod casino__table_split_pot_tests {
         );
 
         let winnings = table.end_hand().expect("hand should end successfully");
-        assert!(!winnings.is_empty(), "winnings should not be empty after a completed hand");
+        assert!(
+            !winnings.is_empty(),
+            "winnings should not be empty after a completed hand"
+        );
     }
 
     #[test]
@@ -107,6 +113,9 @@ mod casino__table_split_pot_tests {
         assert_eq!(9_000, equity.ceiling(), "ceiling should be the short-stack threshold");
 
         let winnings = table.end_hand().expect("hand should end successfully");
-        assert!(!winnings.is_empty(), "winnings should not be empty after a completed hand");
+        assert!(
+            !winnings.is_empty(),
+            "winnings should not be empty after a completed hand"
+        );
     }
 }

@@ -547,15 +547,13 @@ impl Table {
     /// `PKError::InsufficientIncrement` if the raise amount is less than the minimum raise
     pub fn set_raise_increment(&self, seat_number: u8, amount: usize) -> Result<(), PKError> {
         match self.get_seat(seat_number) {
-            None => {}
-            Some(seat) => {
-                if !seat.is_all_in() {
-                    if amount < self.min_raise() {
-                        return Err(PKError::InsufficientIncrement);
-                    }
-                    self.raise_increment.set(amount);
+            Some(seat) if !seat.is_all_in() => {
+                if amount < self.min_raise() {
+                    return Err(PKError::InsufficientIncrement);
                 }
+                self.raise_increment.set(amount);
             }
+            None | Some(_) => {}
         }
 
         Ok(())

@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm generate-hups-bin test-debug-json
+.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm generate-hups-bin test-debug-json nextest
 
 # Default target
 default: ayce
@@ -10,8 +10,9 @@ help:
 	@echo "  make build           - Build the project"
 	@echo "  make clean           - Clean build artifacts"
 	@echo "  make test            - Run tests"
+	@echo "  make nextest         - Run tests with cargo-nextest (installs if missing)"
 	@echo "  make test-debug-json - Run tests with debug-json feature (save/load use JSON)"
-	@echo "  make build_test      - Clean once, then build and test"
+	@echo "  make build_test      - Clean, build, nextest, and doc tests"
 	@echo "  make fmt             - Format code"
 	@echo "  make clippy          - Run clippy linter"
 	@echo "  make create_docs     - Build documentation"
@@ -53,12 +54,28 @@ build:
 test:
 	cargo test
 
+# Run tests with cargo-nextest (installs if not present)
+nextest:
+	@if ! cargo nextest --version >/dev/null 2>&1; then \
+		echo "cargo-nextest is not installed."; \
+		printf "Would you like to install it now? [y/N] "; \
+		read answer; \
+		if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then \
+			cargo install --locked cargo-nextest; \
+		else \
+			echo "Skipping. Run 'cargo install cargo-nextest' to install manually."; \
+			exit 1; \
+		fi; \
+	fi
+	cargo nextest run
+
 # Run tests with the debug-json feature enabled (SolverResult::save/load use JSON)
 test-debug-json:
 	cargo test --features debug-json
 
-# Clean once, then run build + test
-build_test: clean build test
+# Clean once, then build, run nextest, and run doc tests
+build_test: clean build nextest
+	cargo test --doc
 
 # Format code
 fmt:
