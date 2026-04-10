@@ -54,10 +54,8 @@ mod casino__table_split_pot_tests {
             "K♠ Q♠ Q♥ Q♣ J♠ A♦ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣",
         );
 
-        println!("{table}");
-
-        let hand_result = table.end_hand().expect("hand should end successfully");
-        println!("{hand_result}");
+        let winnings = table.end_hand().expect("hand should end successfully");
+        assert!(!winnings.is_empty(), "winnings should not be empty after a completed hand");
     }
 
     #[test]
@@ -66,10 +64,8 @@ mod casino__table_split_pot_tests {
             "4♠ Q♠ 8♠ 4♥ J♠ A♣ A♦ T♠ K♠ 9♠ 7♠ 6♠ 5♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣",
         );
 
-        println!("{table}");
-
-        let hand_result = table.end_hand().expect("hand should end successfully");
-        println!("{hand_result}");
+        let winnings = table.end_hand().expect("hand should end successfully");
+        assert!(!winnings.is_empty(), "winnings should not be empty after a completed hand");
     }
 
     #[test]
@@ -77,7 +73,6 @@ mod casino__table_split_pot_tests {
         let table = preroll(
             "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣",
         );
-        println!("{table}");
 
         // Verify chips in play for each seat before resolving the hand
         let s0_chips_in_play = table.get_seat(0).unwrap().player.get_chips_in_play();
@@ -92,11 +87,11 @@ mod casino__table_split_pot_tests {
         assert_eq!(s1_chips_in_play, 5_000, "Seat 1 chips_in_play");
         assert_eq!(s2_chips_in_play, 9_000, "Seat 2 chips_in_play");
 
-        let hand_result = table.end_hand().expect("hand should end successfully");
+        let winnings = table.end_hand().expect("hand should end successfully");
 
-        println!("{}", table.event_log);
-
-        println!("{hand_result}");
+        assert!(!table.event_log.entries().is_empty(), "event log should have entries");
+        // Two separate pot wins: Poor Man takes the main pot, Rich Man takes the side pot.
+        assert!(winnings.len() >= 2, "split pot should produce at least two pot wins");
     }
 
     #[test]
@@ -105,8 +100,13 @@ mod casino__table_split_pot_tests {
             "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 6♣ 5♣ 3♣ 2♣",
         );
 
-        println!("{}", table.determine_hand_equity());
+        // Two equal stacks (seats 0 and 4 at 9_000), one short stack (seat 3 at 5_000),
+        // and folded blind chips (50 + 100 = 150) consolidated into NONE — three equity groups.
+        let equity = table.determine_hand_equity();
+        assert_eq!(3, equity.len(), "expected three equity groups");
+        assert_eq!(9_000, equity.ceiling(), "ceiling should be the short-stack threshold");
 
-        table.end_hand().expect("hand should end successfully");
+        let winnings = table.end_hand().expect("hand should end successfully");
+        assert!(!winnings.is_empty(), "winnings should not be empty after a completed hand");
     }
 }

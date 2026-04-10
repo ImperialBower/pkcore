@@ -2567,7 +2567,7 @@ mod arrays__five_tests {
         let hand = Five::try_from(Five::from_str("2♠ 2♦ 7♣ 6♠ 3♠").unwrap().cards().shuffle())
             .unwrap()
             .sort();
-        println!("Weighted Pair: {}", hand);
+
         assert_eq!(hand.to_string(), "2♠ 2♦ 7♣ 6♠ 3♠");
     }
 
@@ -2576,7 +2576,7 @@ mod arrays__five_tests {
         let hand = Five::try_from(Five::from_str("2♠ 2♦ 7♣ 7♠ 3♠").unwrap().cards().shuffle())
             .unwrap()
             .sort();
-        println!("Weighted Two Pair: {}", hand);
+
         assert_eq!(hand.to_string(), "7♠ 7♣ 2♠ 2♦ 3♠");
     }
 
@@ -2585,7 +2585,7 @@ mod arrays__five_tests {
         let hand = Five::try_from(Five::from_str("2♠ 2♦ 2♣ 6♠ 3♠").unwrap().cards().shuffle())
             .unwrap()
             .sort();
-        println!("Weighted Trips: {}", hand);
+
         assert_eq!(hand.to_string(), "2♠ 2♦ 2♣ 6♠ 3♠");
     }
 
@@ -2594,7 +2594,7 @@ mod arrays__five_tests {
         let hand = Five::try_from(Five::from_str("2♠ 2♦ 2♣ 6♠ 6♦").unwrap().cards().shuffle())
             .unwrap()
             .sort();
-        println!("Weighted Full House: {}", hand);
+
         assert_eq!(hand.to_string(), "2♠ 2♦ 2♣ 6♠ 6♦");
     }
 
@@ -2603,13 +2603,14 @@ mod arrays__five_tests {
         let hand = Five::try_from(Five::from_str("2♠ 2♦ 2♣ 2♥ 6♦").unwrap().cards().shuffle())
             .unwrap()
             .sort();
-        println!("Weighted Quads: {}", hand);
+
         assert_eq!(hand.to_string(), "2♠ 2♥ 2♦ 2♣ 6♦");
     }
 
     #[test]
     fn from_pluribus() {
         let expected = Five::from_str("9♣ 6♦ 5♥ 4♣ 2♠").unwrap();
+
         assert_eq!(expected, Five::from_pluribus("9c6d5h4c2s").unwrap());
         assert_eq!(expected, Five::from_pluribus(" 9c6d5h4c2s").unwrap());
         assert_eq!(expected, Five::from_pluribus("9c6d5h4c2s ").unwrap());
@@ -2620,6 +2621,7 @@ mod arrays__five_tests {
     #[test]
     fn pile__the_nuts__blank() {
         let five = Five::from([Card::BLANK, Card::SIX_DIAMONDS, Card::FIVE_HEARTS, Card::FOUR_CLUBS, Card::TREY_SPADES]);
+
         assert_eq!(TheNuts::default(), five.the_nuts());
     }
 
@@ -2627,6 +2629,7 @@ mod arrays__five_tests {
     fn pile__the_nuts__river_board() {
         let five = Five::from_str("9♣ 6♦ 5♥ 4♣ 2♠").unwrap();
         let the_nuts = five.the_nuts();
+
         // 35 distinct HandRankClass values achievable on this river board
         assert_eq!(35, the_nuts.len());
     }
