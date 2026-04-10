@@ -2,6 +2,7 @@ pub mod hands;
 
 use crate::analysis::hand_rank::{HandRankValue, NO_HAND_RANK_VALUE};
 use crate::arrays::HandRanker;
+use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
@@ -9,7 +10,8 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::games::razz::california::CaliforniaHandRank;
 use crate::play::board::Board;
-use crate::{PKError, Pile, TheNuts};
+use crate::util::Util;
+use crate::{PKError, Pile, Plurable, TheNuts};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -270,6 +272,17 @@ impl HandRanker for Five {
     }
 }
 
+impl Plurable for Five {
+    fn from_pluribus(s: &str) -> Result<Self, PKError> {
+        let s = s.trim();
+        match s.len() {
+            0..=9 => Err(PKError::NotEnoughCards),
+            10 => Self::from_str(Util::str_len_splitter(s, 2).as_str()),
+            _ => Err(PKError::TooManyCards),
+        }
+    }
+}
+
 impl Pile for Five {
     fn add<P: Pile>(&self, _other: P) -> Self
     where
@@ -297,7 +310,24 @@ impl Pile for Five {
     }
 
     fn the_nuts(&self) -> TheNuts {
-        todo!()
+        if !self.is_dealt() {
+            return TheNuts::default();
+        }
+
+        let mut the_nuts = TheNuts::default();
+        let arr = self.to_arr();
+
+        for v in self.remaining().combinations(2) {
+            let hole = Two::from(v);
+            let seven = Seven::from([
+                hole.first(), hole.second(),
+                arr[0], arr[1], arr[2], arr[3], arr[4],
+            ]);
+            the_nuts.push(seven.eval());
+        }
+        the_nuts.sort_in_place();
+
+        the_nuts
     }
 
     fn to_vec(&self) -> Vec<Card> {
@@ -320,11 +350,11 @@ impl TryFrom<Cards> for Five {
         match cards.len() {
             0..=4 => Err(PKError::NotEnoughCards),
             5 => Ok(Five::from([
-                *cards.get_index(0).unwrap_or(&Card::BLANK),
-                *cards.get_index(1).unwrap_or(&Card::BLANK),
-                *cards.get_index(2).unwrap_or(&Card::BLANK),
-                *cards.get_index(3).unwrap_or(&Card::BLANK),
-                *cards.get_index(4).unwrap_or(&Card::BLANK),
+                *cards.get_index(0).ok_or(PKError::InvalidCard)?,
+                *cards.get_index(1).ok_or(PKError::InvalidCard)?,
+                *cards.get_index(2).ok_or(PKError::InvalidCard)?,
+                *cards.get_index(3).ok_or(PKError::InvalidCard)?,
+                *cards.get_index(4).ok_or(PKError::InvalidCard)?,
             ])),
             _ => Err(PKError::TooManyCards),
         }
@@ -2575,5 +2605,29 @@ mod arrays__five_tests {
             .sort();
         println!("Weighted Quads: {}", hand);
         assert_eq!(hand.to_string(), "2♠ 2♥ 2♦ 2♣ 6♦");
+    }
+
+    #[test]
+    fn from_pluribus() {
+        let expected = Five::from_str("9♣ 6♦ 5♥ 4♣ 2♠").unwrap();
+        assert_eq!(expected, Five::from_pluribus("9c6d5h4c2s").unwrap());
+        assert_eq!(expected, Five::from_pluribus(" 9c6d5h4c2s").unwrap());
+        assert_eq!(expected, Five::from_pluribus("9c6d5h4c2s ").unwrap());
+        assert_eq!(PKError::NotEnoughCards, Five::from_pluribus("9c6d5h4c").unwrap_err());
+        assert_eq!(PKError::TooManyCards, Five::from_pluribus("9c6d5h4c2sAd").unwrap_err());
+    }
+
+    #[test]
+    fn pile__the_nuts__blank() {
+        let five = Five::from([Card::BLANK, Card::SIX_DIAMONDS, Card::FIVE_HEARTS, Card::FOUR_CLUBS, Card::TREY_SPADES]);
+        assert_eq!(TheNuts::default(), five.the_nuts());
+    }
+
+    #[test]
+    fn pile__the_nuts__river_board() {
+        let five = Five::from_str("9♣ 6♦ 5♥ 4♣ 2♠").unwrap();
+        let the_nuts = five.the_nuts();
+        // 35 distinct HandRankClass values achievable on this river board
+        assert_eq!(35, the_nuts.len());
     }
 }

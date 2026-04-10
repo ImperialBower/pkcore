@@ -3,6 +3,35 @@ use crate::analysis::hand_rank::{HandRank, HandRankValue};
 use crate::arrays::five::Five;
 use crate::games::razz::california::{CaliforniaHandRank, CaliforniaHandRankValue};
 
+/// Implements the three `HandRanker` methods that are identical across `Six` and `Seven`:
+/// `five_from_permutation`, `sort`, and `sort_in_place`.
+///
+/// `Five` is excluded because its `sort_in_place` has special wheel handling.
+macro_rules! impl_hand_ranker_sort_and_permutation {
+    () => {
+        fn five_from_permutation(&self, permutation: [usize; 5]) -> Five {
+            Five::from([
+                self.0[permutation[0]],
+                self.0[permutation[1]],
+                self.0[permutation[2]],
+                self.0[permutation[3]],
+                self.0[permutation[4]],
+            ])
+        }
+
+        fn sort(&self) -> Self {
+            let mut copy = *self;
+            copy.sort_in_place();
+            copy
+        }
+
+        fn sort_in_place(&mut self) {
+            self.0.sort_unstable();
+            self.0.reverse();
+        }
+    };
+}
+
 pub mod five;
 pub mod four;
 pub mod hole_cards;

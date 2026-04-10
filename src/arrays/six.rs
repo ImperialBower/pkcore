@@ -129,26 +129,7 @@ impl HandRanker for Six {
         (best_hrv, best_hand.sort())
     }
 
-    fn five_from_permutation(&self, permutation: [usize; 5]) -> Five {
-        Five::from([
-            self.0[permutation[0]],
-            self.0[permutation[1]],
-            self.0[permutation[2]],
-            self.0[permutation[3]],
-            self.0[permutation[4]],
-        ])
-    }
-
-    fn sort(&self) -> Self {
-        let mut array = *self;
-        array.sort_in_place();
-        array
-    }
-
-    fn sort_in_place(&mut self) {
-        self.0.sort_unstable();
-        self.0.reverse();
-    }
+    impl_hand_ranker_sort_and_permutation!();
 }
 
 impl Pile for Six {
@@ -172,7 +153,7 @@ impl Pile for Six {
     }
 
     fn the_nuts(&self) -> TheNuts {
-        todo!()
+        unimplemented!("Six combines hole cards and board cards; the_nuts() is not defined for this type")
     }
 
     fn to_vec(&self) -> Vec<Card> {
@@ -187,12 +168,12 @@ impl TryFrom<Cards> for Six {
         match cards.len() {
             0..=5 => Err(PKError::NotEnoughCards),
             6 => Ok(Six::from([
-                *cards.get_index(0).unwrap_or(&Card::BLANK),
-                *cards.get_index(1).unwrap_or(&Card::BLANK),
-                *cards.get_index(2).unwrap_or(&Card::BLANK),
-                *cards.get_index(3).unwrap_or(&Card::BLANK),
-                *cards.get_index(4).unwrap_or(&Card::BLANK),
-                *cards.get_index(5).unwrap_or(&Card::BLANK),
+                *cards.get_index(0).ok_or(PKError::InvalidCard)?,
+                *cards.get_index(1).ok_or(PKError::InvalidCard)?,
+                *cards.get_index(2).ok_or(PKError::InvalidCard)?,
+                *cards.get_index(3).ok_or(PKError::InvalidCard)?,
+                *cards.get_index(4).ok_or(PKError::InvalidCard)?,
+                *cards.get_index(5).ok_or(PKError::InvalidCard)?,
             ])),
             _ => Err(PKError::TooManyCards),
         }
