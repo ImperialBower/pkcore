@@ -1,5 +1,16 @@
 //! Game-theory optimal (GTO) analysis for heads-up poker.
 //!
+//! ```txt
+//!  ___________________________
+//! < WARNING Claude docs ahead >
+//!  ---------------------------
+//!         \   ^__^
+//!          \  (oo)\_______
+//!             (__)\       )\/\
+//!                 ||----w |
+//!                 ||     ||
+//! ```
+//!
 //! This module implements a complete counterfactual regret minimisation (CFR)
 //! pipeline: from hand range representation through game tree construction,
 //! iterative solving, and persistent result caching. The design follows the
