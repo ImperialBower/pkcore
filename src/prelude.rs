@@ -105,6 +105,7 @@ pub use crate::casino::table::position::Positions;
 pub use crate::casino::table::result::HandResult;
 pub use crate::casino::table::showdown::Showdown;
 pub use crate::casino::table::winnings::{PotWin, Winnings};
+pub use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
 
 // analysis/store
 #[cfg(not(target_arch = "wasm32"))]
