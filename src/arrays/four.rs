@@ -1,11 +1,13 @@
 use crate::analysis::eval::Eval;
 use crate::arrays::HandRanker;
 use crate::arrays::seven::Seven;
+use crate::arrays::six::Six;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::cards::Cards;
 use crate::play::board::Board;
-use crate::{Card, PKError, Pile, TheNuts};
+use crate::util::Util;
+use crate::{Card, PKError, Pile, Plurable, TheNuts};
 use std::fmt;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -99,6 +101,15 @@ impl Display for Four {
 }
 
 impl From<[Card; 4]> for Four {
+    /// Constructs a `Four` from a fixed array, sorting cards high-to-low.
+    ///
+    /// The sort normalizes the representation so that two `Four`s containing
+    /// the same cards compare equal regardless of the order they were passed in.
+    /// This matters for Omaha hole cards, where `[A♠ K♠ Q♠ J♠]` and
+    /// `[J♠ Q♠ K♠ A♠]` are the same hand.
+    ///
+    /// Use [`Four::from_turn`] when constructing a board representation where
+    /// insertion order is meaningful — that constructor bypasses this sort.
     fn from(array: [Card; 4]) -> Self {
         let mut array = array;
         array.sort();
@@ -108,30 +119,12 @@ impl From<[Card; 4]> for Four {
 }
 
 impl From<Vec<Card>> for Four {
-    /// I do want to test this baby, since it's the main reason we are here.
-    fn from(v: Vec<Card>) -> Self {
-        let mut v = v.clone();
+    fn from(mut v: Vec<Card>) -> Self {
         v.sort();
         v.reverse();
         match v.len() {
             4 => {
-                let one = match v.first() {
-                    Some(m) => *m,
-                    None => Card::BLANK,
-                };
-                let two = match v.get(1) {
-                    Some(m) => *m,
-                    None => Card::BLANK,
-                };
-                let three = match v.get(2) {
-                    Some(m) => *m,
-                    None => Card::BLANK,
-                };
-                let four = match v.get(3) {
-                    Some(m) => *m,
-                    None => Card::BLANK,
-                };
-                let four = Four([one, two, three, four]);
+                let four = Four([v[0], v[1], v[2], v[3]]);
                 if four.is_dealt() { four } else { Four::default() }
             }
             _ => Four::default(),
@@ -144,6 +137,17 @@ impl FromStr for Four {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Four::try_from(Cards::from_str(s)?)
+    }
+}
+
+impl Plurable for Four {
+    fn from_pluribus(s: &str) -> Result<Self, PKError> {
+        let s = s.trim();
+        match s.len() {
+            0..=7 => Err(PKError::NotEnoughCards),
+            8 => Self::from_str(Util::str_len_splitter(s, 2).as_str()),
+            _ => Err(PKError::TooManyCards),
+        }
     }
 }
 
@@ -173,7 +177,27 @@ impl Pile for Four {
     }
 
     fn the_nuts(&self) -> TheNuts {
-        todo!()
+        if !self.is_dealt() {
+            return TheNuts::default();
+        }
+
+        let mut the_nuts = TheNuts::default();
+
+        for v in self.remaining().combinations(2) {
+            let hole = Two::from(v);
+            let six = Six::from([
+                hole.first(),
+                hole.second(),
+                self.first(),
+                self.second(),
+                self.third(),
+                self.forth(),
+            ]);
+            the_nuts.push(six.eval());
+        }
+        the_nuts.sort_in_place();
+
+        the_nuts
     }
 
     fn to_vec(&self) -> Vec<Card> {
@@ -330,5 +354,34 @@ mod arrays__four_tests {
             PKError::TooManyCards,
             Four::try_from(Cards::from_str("AS KS QC JC TC").unwrap()).unwrap_err()
         );
+    }
+
+    #[test]
+    fn from_pluribus() {
+        let expected = Four::from_str("AS QS QD JC").unwrap();
+        assert_eq!(expected, Four::from_pluribus("AsQsQdJc").unwrap());
+        assert_eq!(expected, Four::from_pluribus(" AsQsQdJc").unwrap());
+        assert_eq!(expected, Four::from_pluribus("AsQsQdJc ").unwrap());
+        assert_eq!(PKError::NotEnoughCards, Four::from_pluribus("AsQsQd").unwrap_err());
+        assert_eq!(PKError::TooManyCards, Four::from_pluribus("AsQsQdJcTc").unwrap_err());
+    }
+
+    #[test]
+    fn pile__the_nuts__blank() {
+        let four = Four::from([Card::BLANK, Card::SIX_DIAMONDS, Card::FIVE_HEARTS, Card::FOUR_CLUBS]);
+        assert_eq!(TheNuts::default(), four.the_nuts());
+    }
+
+    #[test]
+    fn pile__the_nuts__turn_board() {
+        let four = Four::from([
+            Card::NINE_CLUBS,
+            Card::SIX_DIAMONDS,
+            Card::FIVE_HEARTS,
+            Card::DEUCE_SPADES,
+        ]);
+        let the_nuts = four.the_nuts();
+        // 31 distinct HandRankClass values achievable on this turn board
+        assert_eq!(31, the_nuts.len());
     }
 }

@@ -49,24 +49,10 @@ impl From<[Card; 3]> for Three {
 }
 
 impl From<Vec<Card>> for Three {
-    /// While this is not the most elegant solution to me, I do love it's straight-forward
-    /// simplicity. _Ship it!_
     fn from(v: Vec<Card>) -> Self {
         match v.len() {
             3 => {
-                let one = match v.first() {
-                    Some(m) => *m,
-                    None => Card::BLANK,
-                };
-                let two = match v.get(1) {
-                    Some(m) => *m,
-                    None => Card::BLANK,
-                };
-                let three = match v.get(2) {
-                    Some(m) => *m,
-                    None => Card::BLANK,
-                };
-                let three = Three([one, two, three]);
+                let three = Three([v[0], v[1], v[2]]);
                 if three.is_dealt() { three } else { Three::default() }
             }
             _ => Three::default(),
@@ -141,9 +127,9 @@ impl TryFrom<Cards> for Three {
         match cards.len() {
             0..=2 => Err(PKError::NotEnoughCards),
             3 => Ok(Three::from([
-                *cards.get_index(0).unwrap_or(&Card::BLANK),
-                *cards.get_index(1).unwrap_or(&Card::BLANK),
-                *cards.get_index(2).unwrap_or(&Card::BLANK),
+                *cards.get_index(0).ok_or(PKError::InvalidCard)?,
+                *cards.get_index(1).ok_or(PKError::InvalidCard)?,
+                *cards.get_index(2).ok_or(PKError::InvalidCard)?,
             ])),
             _ => Err(PKError::TooManyCards),
         }

@@ -210,13 +210,10 @@ mod games__omaha_high_tests {
         let actual = hand.permutations(&board);
 
         for permutation in &actual {
-            let common = hand.cards().common(&permutation.cards());
-            println!("{} - {} - {common}", hand.cards(), permutation);
             assert_eq!(2, hand.how_many(&permutation.cards()));
             assert_eq!(3, permutation.how_many(&board.cards()));
             assert!(hand.is_valid(&board, &permutation));
         }
-
         assert_eq!(60, actual.len());
     }
 
