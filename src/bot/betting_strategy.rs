@@ -50,8 +50,7 @@ mod bet_size_fractions {
                     .trim()
                     .parse()
                     .map_err(|_| serde::de::Error::custom(format!("bad denominator in {s:?}")))?;
-                BetSize::new(n, d)
-                    .map_err(|e| serde::de::Error::custom(e.to_string()))
+                BetSize::new(n, d).map_err(|e| serde::de::Error::custom(e.to_string()))
             })
             .collect()
     }

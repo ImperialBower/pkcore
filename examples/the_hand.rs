@@ -33,29 +33,20 @@ fn main() -> Result<(), PKError> {
     let turn_pot = turn(&table, flop_pot)?;
     river(&table, turn_pot)?;
 
-    println!("\nDump event logs? (y/n): ");
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input)?;
-
-    if input.trim().eq_ignore_ascii_case("y") {
-        // table.commentary_dump();
-        println!("{}", table.event_log);
-
-        let pk_state = pkstate::PKState::from(&table);
-        match serde_yaml_bw::to_string(&pk_state) {
-            Ok(yaml) => println!("\n=== PKState YAML ===\n{yaml}"),
-            Err(e) => eprintln!("Failed to serialize PKState: {e}"),
-        }
-    }
-
     Ok(())
+}
+
+fn print_street_header(name: &str) {
+    println!("\n{}", "═".repeat(56));
+    println!("  {name}");
+    println!("{}", "═".repeat(56));
 }
 
 fn setup(table: &Table) -> Result<(), PKError> {
     table.act_forced_bets().expect("ActForcedBets failed");
     table.deal_cards_to_seats().expect("Failed to deal cards to seats");
 
-    println!();
+    print_street_header("SETUP — Blinds & Hole Cards");
     table.commentary_dump();
     println!("\n{table}");
     commentary_action_to(table);
@@ -64,6 +55,8 @@ fn setup(table: &Table) -> Result<(), PKError> {
 }
 
 fn preflop(table: &Table) -> Result<usize, PKError> {
+    print_street_header("PREFLOP");
+
     let _gus = table.act_bet(3, 2100)?;
     commentary_action_to(table);
     let _daniel = table.act_raise(4, 5000)?;
@@ -91,12 +84,14 @@ fn preflop(table: &Table) -> Result<usize, PKError> {
     commentary_action_to(table);
 
     let pot = table.bring_it_in()?;
+    println!("  >>> Pot heading to flop: {} chips", pot);
 
     Ok(pot)
 }
 
 fn flop(table: &Table, _preflop_pot: usize) -> Result<usize, PKError> {
     table.deal_flop().expect("No flop");
+    print_street_header("FLOP");
 
     table.eval_flop_display();
 
@@ -105,16 +100,26 @@ fn flop(table: &Table, _preflop_pot: usize) -> Result<usize, PKError> {
     println!("{}", table.eval_flop_the_nuts()?);
 
     let _gus = table.act_check(3)?;
+    commentary_action_to(table);
+
     let _daniel = table.act_bet(4, 8_000)?;
+    commentary_action_to(table);
+
     let _gus = table.act_raise(3, 26_000)?;
+    commentary_action_to(table);
+
     let _daniel = table.act_call(4)?;
+    commentary_action_to(table);
+
     let pot = table.bring_it_in()?;
+    println!("  >>> Pot heading to turn: {} chips", pot);
 
     Ok(pot)
 }
 
 fn turn(table: &Table, _flop_pot: usize) -> Result<usize, PKError> {
     table.deal_turn().expect("No turn");
+    print_street_header("TURN");
     table.eval_turn_display();
 
     let _gus = table.act_bet(3, 24_000)?;
@@ -124,13 +129,14 @@ fn turn(table: &Table, _flop_pot: usize) -> Result<usize, PKError> {
     commentary_action_to(table);
 
     let pot = table.bring_it_in()?;
+    println!("  >>> Pot heading to river: {} chips", pot);
 
     Ok(pot)
 }
 
 fn river(table: &Table, turn_pot: usize) -> Result<(), PKError> {
     table.deal_river().expect("No river");
-
+    print_street_header("RIVER");
     table.eval_river_display();
 
     // ── River Hand Analysis ──────────────────────────────────────────────────

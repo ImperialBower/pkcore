@@ -76,8 +76,10 @@ fn main() {
         table.deck.shuffle_in_place();
 
         let btn_name = seat_name(table.button, &table, &profiles);
-        println!("\n─── Hand {:>2}  btn: seat {} ({})  players: {} ───",
-            hand, table.button, btn_name, remaining);
+        println!(
+            "\n─── Hand {:>2}  btn: seat {} ({})  players: {} ───",
+            hand, table.button, btn_name, remaining
+        );
 
         let winnings = run_hand(&mut table, &profiles, &mut rng);
         report_winners(&winnings, &profiles);
@@ -92,7 +94,9 @@ fn main() {
         .iter()
         .enumerate()
         .filter_map(|(i, p)| {
-            table.seats.get_seat(i as u8)
+            table
+                .seats
+                .get_seat(i as u8)
                 .filter(|s| !s.is_empty())
                 .map(|s| (s.player.chips, p.name.as_str()))
         })
@@ -106,42 +110,62 @@ fn main() {
 // ── Hand driver ───────────────────────────────────────────────────────────────
 
 /// Drives a complete hand from blinds through showdown and returns the winnings.
-fn run_hand(
-    table: &mut TableNoCell,
-    profiles: &[BotProfile],
-    rng: &mut impl Rng,
-) -> Winnings {
+fn run_hand(table: &mut TableNoCell, profiles: &[BotProfile], rng: &mut impl Rng) -> Winnings {
     table.act_forced_bets().expect("forced bets");
     table.deal_cards_to_seats().expect("deal hole cards");
 
-    // Preflop
+    // Preflop — pot shows blinds committed by players (not yet swept into table.pot)
+    println!("  Preflop  [pot: {}]", effective_pot(table));
+    print_hole_cards(table, profiles);
     run_street(table, profiles, rng);
     if table.is_game_over() {
         return table.end_hand().expect("end_hand");
     }
 
     // Flop
-    table.bring_it_in().expect("bring_it_in preflop");
+    let pot = table.bring_it_in().expect("bring_it_in preflop");
     table.deal_flop().expect("deal flop");
+    println!("  Flop: {}  [pot: {}]", table.board, pot);
     run_street(table, profiles, rng);
     if table.is_game_over() {
         return table.end_hand().expect("end_hand");
     }
 
     // Turn
-    table.bring_it_in().expect("bring_it_in flop");
+    let pot = table.bring_it_in().expect("bring_it_in flop");
     table.deal_turn().expect("deal turn");
+    println!("  Turn: {}  [pot: {}]", table.board, pot);
     run_street(table, profiles, rng);
     if table.is_game_over() {
         return table.end_hand().expect("end_hand");
     }
 
     // River
-    table.bring_it_in().expect("bring_it_in turn");
+    let pot = table.bring_it_in().expect("bring_it_in turn");
     table.deal_river().expect("deal river");
+    println!("  River: {}  [pot: {}]", table.board, pot);
     run_street(table, profiles, rng);
 
     table.end_hand().expect("end_hand")
+}
+
+/// Prints each active player's hole cards after the deal.
+fn print_hole_cards(table: &TableNoCell, profiles: &[BotProfile]) {
+    for (i, profile) in profiles.iter().enumerate() {
+        if let Some(seat) = table.seats.get_seat(i as u8) {
+            if seat.cards.has_cards() {
+                println!("    {:>20}  {}", profile.name, seat.cards);
+            }
+        }
+    }
+}
+
+/// Sum of `table.pot` and all chips currently committed by players this street.
+/// During a betting round, player bets live in `player.bet` fields until
+/// `bring_it_in()` sweeps them into the main pot — this gives the true total.
+fn effective_pot(table: &TableNoCell) -> usize {
+    let committed: usize = table.seats.0.iter().map(|s| s.player.bet).sum();
+    table.pot + committed
 }
 
 /// Loops through one betting street until betting is complete or the hand ends.
@@ -158,18 +182,30 @@ fn run_street(table: &mut TableNoCell, profiles: &[BotProfile], rng: &mut impl R
         let profile = &profiles[seat as usize];
         let to_call = table.to_call(seat);
         let chips = table.seats.get_seat(seat).map(|s| s.player.chips).unwrap_or(0);
+        let pot_before = effective_pot(table);
 
         let action = decide(
             profile,
             to_call,
-            table.pot.max(BIG_BLIND),
+            pot_before.max(BIG_BLIND),
             chips,
             table.bet,
             table.min_raise(),
             rng,
         );
 
-        apply_action(table, seat, action);
+        let cards = table
+            .seats
+            .get_seat(seat)
+            .filter(|s| s.cards.has_cards())
+            .map(|s| format!(" [{}]", s.cards))
+            .unwrap_or_default();
+        let desc = apply_action(table, seat, action);
+        let pot_after = effective_pot(table);
+        println!(
+            "    {:>20}{}  [pot: {}] {} [pot: {}]",
+            profile.name, cards, pot_before, desc, pot_after
+        );
     }
 }
 
@@ -184,22 +220,45 @@ enum BotAction {
     AllIn,
 }
 
-fn apply_action(table: &mut TableNoCell, seat: u8, action: BotAction) {
+/// Applies `action` for `seat` and returns a short human-readable description
+/// of what actually happened (accounting for fallbacks on rejected bets/raises).
+fn apply_action(table: &mut TableNoCell, seat: u8, action: BotAction) -> String {
     match action {
-        BotAction::Fold => { let _ = table.act_fold(seat); }
-        BotAction::Check => { let _ = table.act_check(seat); }
-        BotAction::Call => { let _ = table.act_call(seat); }
-        BotAction::AllIn => { let _ = table.act_all_in(seat); }
+        BotAction::Fold => {
+            let _ = table.act_fold(seat);
+            "folds".to_string()
+        }
+        BotAction::Check => {
+            let _ = table.act_check(seat);
+            "checks".to_string()
+        }
+        BotAction::Call => {
+            let amount = table.to_call(seat);
+            let _ = table.act_call(seat);
+            format!("calls {amount}")
+        }
+        BotAction::AllIn => {
+            let chips = table.seats.get_seat(seat).map(|s| s.player.chips).unwrap_or(0);
+            let _ = table.act_all_in(seat);
+            format!("ALL-IN ({chips} chips)")
+        }
         BotAction::Bet(amount) => {
             // Fall back to check if the bet is rejected (e.g. already bet this round).
-            if table.act_bet(seat, amount).is_err() {
+            if table.act_bet(seat, amount).is_ok() {
+                format!("bets {amount}")
+            } else {
                 let _ = table.act_check(seat);
+                "checks".to_string()
             }
         }
         BotAction::Raise(amount) => {
             // Fall back to call if the raise is too small.
-            if table.act_raise(seat, amount).is_err() {
+            if table.act_raise(seat, amount).is_ok() {
+                format!("raises to {amount}")
+            } else {
+                let call_amount = table.to_call(seat);
                 let _ = table.act_call(seat);
+                format!("calls {call_amount}")
             }
         }
     }
@@ -233,7 +292,11 @@ fn decide(
     if to_call > 0 {
         if to_call >= chips {
             // All-in or fold.
-            return if roll < aggr * 0.6 { BotAction::AllIn } else { BotAction::Fold };
+            return if roll < aggr * 0.6 {
+                BotAction::AllIn
+            } else {
+                BotAction::Fold
+            };
         }
 
         if roll < aggr * 0.25 {
@@ -281,7 +344,9 @@ fn eliminate_busted(table: &mut TableNoCell, profiles: &[BotProfile]) -> Vec<Str
     let mut busted = Vec::new();
     for (i, profile) in profiles.iter().enumerate() {
         let seat_idx = i as u8;
-        let is_bust = table.seats.get_seat(seat_idx)
+        let is_bust = table
+            .seats
+            .get_seat(seat_idx)
             .map(|s| !s.is_empty() && s.player.chips == 0)
             .unwrap_or(false);
         if is_bust {
@@ -296,7 +361,12 @@ fn eliminate_busted(table: &mut TableNoCell, profiles: &[BotProfile]) -> Vec<Str
 
 /// Number of seats that are still funded (non-empty and have chips).
 fn count_funded(table: &TableNoCell) -> usize {
-    table.seats.0.iter().filter(|s| !s.is_empty() && s.player.chips > 0).count()
+    table
+        .seats
+        .0
+        .iter()
+        .filter(|s| !s.is_empty() && s.player.chips > 0)
+        .count()
 }
 
 /// Returns the profile name for a given seat index, or "?" if the seat is empty.
@@ -304,7 +374,10 @@ fn seat_name(idx: u8, table: &TableNoCell, profiles: &[BotProfile]) -> String {
     if table.seats.get_seat(idx).map(|s| s.is_empty()).unwrap_or(true) {
         return "?".to_string();
     }
-    profiles.get(idx as usize).map(|p| p.name.clone()).unwrap_or_else(|| "?".to_string())
+    profiles
+        .get(idx as usize)
+        .map(|p| p.name.clone())
+        .unwrap_or_else(|| "?".to_string())
 }
 
 // ── Display helpers ───────────────────────────────────────────────────────────
