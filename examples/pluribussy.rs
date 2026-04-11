@@ -2,7 +2,7 @@ use pkcore::PKError;
 use pkcore::analysis::nubibus::Pluribus;
 use pkcore::prelude::Nubificus;
 
-/// `cargo run --example pluribus`
+/// `cargo run --example pluribussy`
 fn main() -> Result<(), PKError> {
     let logs = Nubificus::get_log_files("data/pluribus/raw/")?;
 
