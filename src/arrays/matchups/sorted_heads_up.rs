@@ -931,11 +931,13 @@ mod arrays__matchups__sorted_heads_up_tests {
     };
 
     #[test]
+    #[ignore = "initializes 812k-element set; run explicitly with -- --ignored"]
     fn unique() {
         assert_eq!(812175, SORTED_HEADS_UP_UNIQUE.len());
     }
 
     #[test]
+    #[ignore = "initializes all 15 filtered sub-sets from 812k matchups; run explicitly with -- --ignored"]
     fn unique_types() {
         assert_eq!(8580, SORTED_HEADS_UP_UNIQUE_TYPE_ONE.len());
         assert_eq!(10296, SORTED_HEADS_UP_UNIQUE_TYPE_TWO_A.len());

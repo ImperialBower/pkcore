@@ -111,7 +111,101 @@ workspace)
 | [EPIC-15](docs/EPIC-15_GTO_Solver.md) | GTO Solver — game tree, CFR, strategy profiles, exploitability | Complete |
 | [EPIC-16](docs/EPIC-16_DCFR.md) | CFR+ and Discounted CFR — faster convergence variants | Complete |
 | [EPIC-17](docs/EPIC-17_Kuhn_Poker.md) | Kuhn Poker — minimal 3-card game, analytical Nash, CFR validator, interactive examples | Complete |
-| EPIC-18 | Range Frequencies — optional per-combo frequency in range strings (`AA:0.5`) | Planned |
+| EPIC-18 | Bot Profiles — `BotProfile`, `Playbook`, `PositionRanges`, `PositionalBetting`; position- and table-size-aware YAML-serializable playing styles | Complete |
+| EPIC-19 | Bot Self-Play — drive `casino::table_no_cell::TableNoCell` with `BotProfile` agents; local simulation without gRPC | In Progress — working example in `examples/bot_selfplay.rs`; formal `BotDecider` trait and `SimTable` still planned |
+| EPIC-20 | Range Frequencies — optional per-combo frequency in range strings (`AA:0.5`) | Planned |
+
+---
+
+## EPIC-19: Bot Self-Play Simulation
+
+**Goal:** Run a full table of bots against each other *inside pkcore*, using
+the `casino::table_no_cell::TableNoCell` game loop — no gRPC, no network, no
+external services required.
+
+This is the bridge between the bot profile work (EPIC-18) and the full
+distributed platform (Phase 4). It validates that profiles produce realistic
+play, generates simulation data, and enables automated strategy comparison
+without standing up any infrastructure.
+
+See [`docs/EPIC-19_Bot_Self_Play.md`](docs/EPIC-19_Bot_Self_Play.md) for the
+full design and implementation status.
+
+### Current state — working example
+
+`examples/bot_selfplay.rs` is a complete working demonstration:
+
+```bash
+cargo run --features bot-profiles --example bot_selfplay
+```
+
+All 8 profiles from `data/bots/` compete over up to 50 hands at a single
+`TableNoCell`. Output includes per-street board state, per-action play-by-play
+with hole cards, and final standings.
+
+The example uses a probabilistic `decide()` free function (not a trait) driven
+by each `BotProfile`'s `aggression_factor` and `preferred_bet_sizes`. This is
+sufficient for simulation and manual validation but not yet wired to the
+gRPC layer.
+
+### Remaining work — formal library types
+
+The planned library-level types have not yet been built:
+
+**`BotDecider` trait** — maps table state to a `PlayerAction`:
+
+```rust
+pub trait BotDecider {
+    fn decide(&self, profile: &BotProfile, state: &TableSnapshot) -> PlayerAction;
+}
+```
+
+**`SimTable` runner** — drives a full hand (or many hands) using a list of
+`(BotProfile, seat)` pairs:
+
+```rust
+pub struct SimTable {
+    table: TableNoCell,
+    bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)>,
+}
+
+impl SimTable {
+    pub fn run_hand(&mut self) -> HandResult;
+    pub fn run_n_hands(&mut self, n: usize) -> SimResult;
+}
+```
+
+**`RuleBasedDecider`** — uses hand strength from `Eval`, pot odds, and
+`BotProfile` fields to make decisions. The current example's `decide()`
+function is the prototype for this.
+
+**`SimResult`** — per-seat profit/loss and action counts over a session:
+
+```rust
+pub struct SimResult {
+    pub hands_played: usize,
+    pub net_chips: HashMap<u8, i64>,
+    pub actions_taken: HashMap<u8, ActionCounts>,
+}
+```
+
+### How it connects to the larger platform
+
+The same `BotDecider` trait is what a gRPC agent binary will implement in
+Phase 4 — the decision logic is identical; only the transport changes. pkcore
+owns the logic; pkdealer owns the networking. Testing locally via `SimTable`
+before adding gRPC means distributed agents start from a validated foundation.
+
+### Relevant types
+
+| Type | File | Role |
+|------|------|------|
+| `TableNoCell` | `src/casino/table_no_cell.rs` | Game state owner |
+| `BotProfile` | `src/bot/profile.rs` | Strategy config |
+| `Playbook` | `src/bot/playbook.rs` | Position-aware dispatch |
+| `BettingStrategy` | `src/bot/betting_strategy.rs` | Aggression/sizing |
+| `PositionRanges` | `src/bot/position_ranges.rs` | Preflop range lookup |
+| `Eval` | `src/analysis/eval.rs` | Hand strength |
 
 ---
 

@@ -64,6 +64,25 @@ No other changes to this file.
 
 ### Step 1 — `src/bot/weighted_range.rs`: `ComboWeight` + `WeightedRange`
 
+> **Design note — consider reusing `WeightedCombos` instead.**
+>
+> `WeightedCombos` (`src/analysis/gto/weighted_combos.rs`) already does what
+> `WeightedRange` is planned to do: it stores per-combo frequencies and has
+> fully-tested methods for `weighted_twos()`, `after_action()`, and
+> `weighted_win_probability()`. The only thing it lacks is `Serialize, Deserialize`.
+>
+> Two options:
+>
+> | Option | Work | Trade-off |
+> |---|---|---|
+> | **Implement `WeightedRange` as planned** (stores raw strings) | Low — `from_flat` wraps `Combos::from_str` in ~10 lines | YAML stays human-readable (`"AJs+"` round-trips as a string); equity methods must be re-implemented or delegated |
+> | **Add `Serialize, Deserialize` to `Combo` + `WeightedCombos` and use directly in `ActionRanges`** | Low — two derive additions | Reuses all existing equity logic with no duplication; YAML serializes as expanded combo names rather than shorthand notation |
+>
+> The second option avoids a parallel type. If equity calculations against
+> `WeightedCombos` (e.g. via `RangeEquity`) are ever needed on bot ranges,
+> `WeightedCombos` already provides the full path. Choose based on whether
+> YAML readability of shorthand notation (`"AJs+"`) is a hard requirement.
+
 The foundational type for all range data in this EPIC.
 
 ```rust

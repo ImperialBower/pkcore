@@ -1,0 +1,14 @@
+name: tight_passive
+description: Plays strong hands only; rarely bluffs or raises without a strong holding.
+style: tight_passive
+range_strategy:
+  open_raise: QQ+, AKs
+  three_bet: AA, KK
+  call_three_bet: QQ, AKs
+  postflop_cbet_frequency: 30
+betting_strategy:
+  aggression_factor: 25
+  bluff_frequency: 5
+  check_raise_frequency: 3
+  preferred_bet_sizes:
+  - 1/2

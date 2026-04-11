@@ -1,0 +1,15 @@
+name: maniac
+description: Extreme aggressor — bets and raises relentlessly with a very high bluff frequency.
+style: maniac
+range_strategy:
+  open_raise: 22+, AT+, 54s+
+  three_bet: TT+, AQs, AQo+, KQs
+  call_three_bet: 88+, ATs+
+  postflop_cbet_frequency: 90
+betting_strategy:
+  aggression_factor: 90
+  bluff_frequency: 55
+  check_raise_frequency: 30
+  preferred_bet_sizes:
+  - 1/1
+  - 2/1

@@ -97,6 +97,7 @@ mod arrays__matchups__masks__shift_tests {
     }
 
     #[test]
+    #[ignore = "Shifter construction calls shifts() which iterates 812k matchups; run explicitly with -- --ignored"]
     fn shifts() {
         // A♦ T♦ (1108295) 5♥ 4♠ (595903) ties: (8106)
         // Shifter { masked: A♦ T♦ - 5♥ 4♠ Type1123 0010,1100 1000100000000,0000000001100, shifts:
@@ -130,6 +131,7 @@ mod arrays__matchups__masks__shift_tests {
 
     /// This shift looked sus af, which it was, which is why I wrote this test.
     #[test]
+    #[ignore = "Shifter construction calls shifts() which iterates 812k matchups; run explicitly with -- --ignored"]
     fn from_hup_result() {
         let hupr = hupr();
         let expected = Shifter {

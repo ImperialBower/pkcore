@@ -1,0 +1,15 @@
+name: short_stack_ninja
+description: Push-or-fold strategy optimized for short stack situations — all-in or nothing.
+style: short_stack_ninja
+range_strategy:
+  open_raise: 77+, ATs+, KQs, AJo+, KQo
+  three_bet: AA, KK, QQ
+  call_three_bet: ''
+  postflop_cbet_frequency: 100
+betting_strategy:
+  aggression_factor: 95
+  bluff_frequency: 45
+  check_raise_frequency: 40
+  preferred_bet_sizes:
+  - 1/1
+  - 2/1

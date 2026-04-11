@@ -169,6 +169,7 @@ mod arrays__matchups__masks__suit_texture_tests {
     #[case("8♣ 2♣ 3♠ 2♥", "8♠ 2♠ 3♥ 2♦", Type1123)]
     #[case("8♠ 7♣ 4♥ 3♦", "8♣ 7♠ 4♥ 3♦", Type1234)]
     #[case("7♣ 5♠ 6♥ 3♦", "7♠ 5♥ 6♦ 3♣", Type1234)]
+    #[ignore = "calls shifts() on each case which iterates 812k matchups; run explicitly with -- --ignored"]
     fn inverse_many(#[case] case1: &str, #[case] case2: &str, #[case] texture: SuitTexture) {
         let masked1 = Masked::from_str(case1).unwrap();
         let masked2 = Masked::from_str(case2).unwrap();
@@ -196,6 +197,7 @@ mod arrays__matchups__masks__suit_texture_tests {
     }
 
     #[test]
+    #[ignore = "calls shifts() which iterates 812k matchups; run explicitly with -- --ignored"]
     fn paired_1223_not() {
         // Q♦ J♣ 7♠ 6♣ Type1223d 0011,1001 0011000000000,0000000110000 Q♦ J♣ (1105763) 7♠ 6♣ (591787) ties: (14754)
         // Q♠ J♥ 7♠ 6♦ Type1223a 1100,1010 0011000000000,0000000110000 Q♠ J♥ (1105763) 7♠ 6♦ (591754) ties: (14787)

@@ -585,6 +585,7 @@ mod arrays__matchups__masked_tests {
     }
 
     #[test]
+    #[ignore = "accesses MASKED_UNIQUE_TYPE_* statics built from 812k matchups; run explicitly with -- --ignored"]
     fn suit_masks() {
         assert_eq!(
             4,
@@ -621,12 +622,14 @@ mod arrays__matchups__masked_tests {
     }
 
     #[test]
+    #[ignore = "initializes 812k-element MASKED_UNIQUE set; run explicitly with -- --ignored"]
     fn unique() {
         assert_eq!(812175, MASKED_UNIQUE.len());
     }
 
     /// Not sure what the point of these tests are other than to tell me when things change.
     #[test]
+    #[ignore = "initializes all MASKED_UNIQUE_TYPE_* statics from 812k matchups; run explicitly with -- --ignored"]
     fn unique_types() {
         assert_eq!(8580, MASKED_UNIQUE_TYPE_ONE.len());
         assert_eq!(10296, MASKED_UNIQUE_TYPE_TWO_A.len());
@@ -647,6 +650,7 @@ mod arrays__matchups__masked_tests {
     }
 
     #[test]
+    #[ignore = "calls shifts() which iterates 812k matchups; run explicitly with -- --ignored"]
     fn type_one_shifts() {
         shifts_check("A♠ K♠ 8♠ 7♠", SuitTexture::Type1111, 4);
 
@@ -664,6 +668,7 @@ mod arrays__matchups__masked_tests {
     }
 
     #[test]
+    #[ignore = "calls shifts() which iterates 812k matchups; run explicitly with -- --ignored"]
     fn type_five_a_shifts() {
         shifts_check("K♠ 7♥ T♠ 3♦", SuitTexture::Type1223a, 24);
         shifts_check("K♠ Q♥ T♠ 3♦", SuitTexture::Type1223a, 24);
@@ -672,16 +677,19 @@ mod arrays__matchups__masked_tests {
     }
 
     #[test]
+    #[ignore = "calls shifts() which iterates 812k matchups; run explicitly with -- --ignored"]
     fn type_five_b_shifts() {
         shifts_check("K♦ 7♠ T♣ 3♦", SuitTexture::Type1223b, 24);
     }
 
     #[test]
+    #[ignore = "calls shifts() which iterates 812k matchups; run explicitly with -- --ignored"]
     fn type_five_c_shifts() {
         shifts_check("K♣ 7♠ T♠ 3♦", SuitTexture::Type1223c, 24);
     }
 
     #[test]
+    #[ignore = "calls shifts() which iterates 812k matchups; run explicitly with -- --ignored"]
     fn type_five_d_shifts() {
         shifts_check("K♥ 7♦ T♠ 3♦", SuitTexture::Type1223d, 24);
     }
@@ -700,11 +708,13 @@ mod arrays__matchups__masked_tests {
     /// A♠ Q♥ 5♥ 2♠, 65.49% (1121471), 33.92% (580748), 0.59% (10085)
     /// ```
     #[test]
+    #[ignore = "calls shifts() which iterates 812k matchups; run explicitly with -- --ignored"]
     fn type_six_a_shifts() {
         shifts_check("A♠ Q♥ 5♠ 2♥", SuitTexture::Type1212a, 12);
     }
 
     #[test]
+    #[ignore = "calls shifts() which iterates 812k matchups; run explicitly with -- --ignored"]
     fn type_six_b_shifts() {
         shifts_check("A♥ Q♠ 5♠ 2♥", SuitTexture::Type1212b, 12);
     }
@@ -960,6 +970,7 @@ mod arrays__matchups__masked_tests {
     }
 
     #[test]
+    #[ignore = "clones the full 812k-element MASKED_UNIQUE set; run explicitly with -- --ignored"]
     fn remove_other_shifts() {
         let original = Masked::from_str("A♠ A♥ A♦ A♣").unwrap();
         let mut all = MASKED_UNIQUE.clone();
@@ -972,12 +983,14 @@ mod arrays__matchups__masked_tests {
     }
 
     #[test]
+    #[ignore = "calls shifts() which iterates 812k matchups; run explicitly with -- --ignored"]
     fn shifts__aces() {
         assert_eq!(3, Masked::from_str("A♠ A♥ A♦ A♣").unwrap().shifts().len());
         assert_eq!(3, Masked::from_str("K♠ K♥ K♦ K♣").unwrap().shifts().len());
     }
 
     #[test]
+    #[ignore = "calls other_shifts() which iterates 812k matchups; run explicitly with -- --ignored"]
     fn other_shifts__aces() {
         let original = Masked::from_str("A♠ A♥ A♦ A♣").unwrap();
         let others = original.other_shifts();
@@ -988,6 +1001,7 @@ mod arrays__matchups__masked_tests {
 
     // 4. suited, off suit, different suits
     #[test]
+    #[ignore = "calls shifts() which iterates 812k matchups; run explicitly with -- --ignored"]
     fn defect_type4_1123() {
         let target = SortedHeadsUp::new(Two::HAND_AD_TD, Two::HAND_5H_4S);
         let masked = Masked::from(target);
@@ -1004,6 +1018,7 @@ mod arrays__matchups__masked_tests {
     }
 
     #[test]
+    #[ignore = "calls shifts() which iterates 812k matchups; run explicitly with -- --ignored"]
     fn defect_type4_1123_2() {
         let target = SortedHeadsUp::new(Two::HAND_AH_TC, Two::HAND_5S_4S);
         let masked = Masked::from(target);

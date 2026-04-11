@@ -138,5 +138,10 @@ pub use crate::analysis::gto::weighted_combos::WeightedCombos;
 
 // bot
 pub use crate::bot::betting_strategy::BettingStrategy;
+pub use crate::bot::playbook::{Playbook, PlaybookEntry};
+pub use crate::bot::position_ranges::{ActionRanges, PositionRanges};
+pub use crate::bot::positional_betting::PositionalBetting;
 pub use crate::bot::profile::{BotProfile, PlayStyle};
 pub use crate::bot::range_strategy::RangeStrategy;
+pub use crate::bot::table_size::TableSize;
+pub use crate::bot::weighted_range::{ComboWeight, WeightedRange};
