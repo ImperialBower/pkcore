@@ -11,7 +11,5 @@ betting_strategy:
   bluff_frequency: 55
   check_raise_frequency: 30
   preferred_bet_sizes:
-  - numerator: 1
-    denominator: 1
-  - numerator: 2
-    denominator: 1
+  - 1/1
+  - 2/1

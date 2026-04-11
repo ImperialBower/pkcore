@@ -8,6 +8,55 @@
 use crate::analysis::gto::solver_config::BetSize;
 use serde::{Deserialize, Serialize};
 
+// ── Fraction serde helper ─────────────────────────────────────────────────────
+
+/// Serializes/deserializes `Vec<BetSize>` as human-readable fraction strings
+/// (`"1/2"`, `"2/3"`, `"1/1"`, `"2/1"`) rather than `{numerator, denominator}`
+/// mappings. Used only for the `preferred_bet_sizes` field so that YAML bot
+/// profile files remain easy to edit by hand.
+mod bet_size_fractions {
+    use crate::analysis::gto::solver_config::BetSize;
+    use serde::ser::SerializeSeq;
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<S>(sizes: &Vec<BetSize>, ser: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = ser.serialize_seq(Some(sizes.len()))?;
+        for size in sizes {
+            let (n, d) = size.as_fraction();
+            seq.serialize_element(&format!("{n}/{d}"))?;
+        }
+        seq.end()
+    }
+
+    pub fn deserialize<'de, D>(de: D) -> Result<Vec<BetSize>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let strings: Vec<String> = Vec::deserialize(de)?;
+        strings
+            .iter()
+            .map(|s| {
+                let (lhs, rhs) = s
+                    .split_once('/')
+                    .ok_or_else(|| serde::de::Error::custom(format!("expected N/D, got {s:?}")))?;
+                let n: u32 = lhs
+                    .trim()
+                    .parse()
+                    .map_err(|_| serde::de::Error::custom(format!("bad numerator in {s:?}")))?;
+                let d: u32 = rhs
+                    .trim()
+                    .parse()
+                    .map_err(|_| serde::de::Error::custom(format!("bad denominator in {s:?}")))?;
+                BetSize::new(n, d)
+                    .map_err(|e| serde::de::Error::custom(e.to_string()))
+            })
+            .collect()
+    }
+}
+
 // ── BettingStrategy ───────────────────────────────────────────────────────────
 
 /// Controls how a bot sizes bets and applies aggression at each decision point.
@@ -36,6 +85,10 @@ pub struct BettingStrategy {
     pub check_raise_frequency: u8,
     /// Preferred bet sizes as fractions of the pot. The bot will choose from
     /// these sizes when it decides to bet.
+    ///
+    /// Serializes as human-readable fraction strings (`"1/2"`, `"2/3"`, `"1/1"`)
+    /// rather than `{numerator, denominator}` mappings.
+    #[serde(with = "bet_size_fractions")]
     pub preferred_bet_sizes: Vec<BetSize>,
 }
 

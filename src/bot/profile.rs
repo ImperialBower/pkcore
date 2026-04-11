@@ -615,8 +615,7 @@ mod tests {
         ];
         for name in names {
             let path = format!("data/bots/{name}.yaml");
-            let loaded = BotProfile::from_file(&path)
-                .unwrap_or_else(|e| panic!("failed to load {path}: {e}"));
+            let loaded = BotProfile::from_file(&path).unwrap_or_else(|e| panic!("failed to load {path}: {e}"));
             assert_eq!(loaded.name, name, "{path}: name field mismatch");
         }
     }
@@ -632,8 +631,7 @@ mod tests {
             ("loose_aggressive", BotProfile::loose_aggressive()),
         ] {
             let path = format!("data/bots/{name}.yaml");
-            let from_file = BotProfile::from_file(&path)
-                .unwrap_or_else(|e| panic!("failed to load {path}: {e}"));
+            let from_file = BotProfile::from_file(&path).unwrap_or_else(|e| panic!("failed to load {path}: {e}"));
             assert_eq!(from_file, expected, "{path} does not match constructor output");
         }
     }
