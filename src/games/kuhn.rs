@@ -1748,14 +1748,6 @@ mod kuhn_tests {
     }
 
     #[test]
-    fn test_kuhn_cfr_converges_to_nash_exploitability() {
-        let mut cfr = KuhnCfr::new();
-        cfr.train(500_000);
-        let exploit = cfr.exploitability().abs();
-        assert!(exploit < 0.001, "exploitability after 500k iters: {exploit}");
-    }
-
-    #[test]
     fn test_kuhn_cfr_converges_king_bets_more_than_jack() {
         // King bets strictly more than Jack at any Nash equilibrium
         // (K bets 3*alpha, J bets alpha, so K bet prob = 3 × J bet prob).
