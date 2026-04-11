@@ -35,7 +35,7 @@ I want to see an entire simulated casino running based on it so I can demonstrat
 well as a playground for learning about the [game theory](https://github.com/ImperialBower/pkkuhn-web) and ML.
 I want something that I can play with, knowing that I can break things at will because the core is solid AF. It's a
 test of an architectural idea that I've believed in my entire career: domains should have a battle tested, rock solid
-kernel definition of truth. The problem is, it's rare when you have a blank canvas to paint on. For me it was 
+kernel definition of truth. The problem is, it's rare when you have a blank canvas to paint on. For me, it was 
 an early start-up where I created what I still feel is one of my best ideas. 
 
 [rs-poker](https://github.com/elliottneilclark/rs-poker) is solving a very specific problem, and it is a demonstration
@@ -51,6 +51,11 @@ heard about before.
 > Your code is the hero. Your tests tell the hero's journey.
 
 - My homage to Joseph Campbell
+
+As a rule, I decided to try to completely ignore the code, and not even try to run it, and stay on target with my
+own explorations, as an interesting test of just how far I can go, given how much I need to learn about GTO math
+and game theory. Let's see how well I do. It's hard not to run a really cool tui app. In the end, the premise of this
+exercise was "Rust for Failures," how to fail your way through creating complex systems. 
 
 [rs-poker](https://github.com/elliottneilclark/rs-poker) used some really cool shit, most of which I'd never heard of
 before. 
@@ -74,6 +79,81 @@ he was working](https://github.com/rubberduck203/duklog) on that had one very in
 make is a standard part of its build process. 
 
 In the end, I decided to use Make. I like the idea of using mise to handle the languages I use, but I don't want it to
-infuse everything I do. It's too niche, IMHO. But that's just me. Sure, Make's get off my lawn old, but it's universal, and TBH, do I really need another
-rewrite it in Rust version of an old standard? All of them work. I like, however, that I am setting on universal tools
-across the languages I code in, when they make sense. 
+infuse everything I do. It's too niche, IMHO. But that's just me. Sure, Make's get off my lawn old, but it's universal,
+and TBH, do I really need another rewrite it in Rust version of an old standard? All of them work. I like, however, that
+I am setting on universal tools across the languages I code in, when they make sense.
+
+In the grand scheme of things, none of that matters. It's what's between the covers that tell the story, and there was
+a lot to learn there. 
+
+The first thing that stood out was [nextest](https://nexte.st/), _a next-generation test runner for Rust_. I swapped it
+out for the standard `cargo test`, and it proved itself right away. It does just show you passes and fails, it also
+shows you how long each test takes and calls out ones that are particularly slow:
+
+```shell
+        PASS [   0.016s] pkcore::split_pots casino__table_split_pot_tests::deals_to_river_after_preflop_all_ins__rich_man
+        PASS [   0.025s] pkcore::split_pots casino__table_split_pot_tests::deals_to_river_after_preflop_all_ins__average
+        PASS [   0.013s] pkcore::split_pots casino__table_split_pot_tests::plus_blinds
+        PASS [   0.023s] pkcore::split_pots casino__table_split_pot_tests::deals_to_river_after_preflop_all_ins__poor_man_then_rich
+        PASS [   0.268s] pkcore::kuhn_poker tests::p1_jack_bluff_rate_bounded_above_by_one_third
+        PASS [   0.187s] pkcore::kuhn_poker tests::p2_king_always_bets_after_check
+        PASS [   0.148s] pkcore::kuhn_poker tests::p2_queen_calls_p1_bet_at_one_third
+        PASS [   0.157s] pkcore::kuhn_poker tests::p2_king_always_calls_bet
+        PASS [  19.158s] pkcore games::kuhn::kuhn_tests::test_kuhn_cfr_converges_to_nash_exploitability
+────────────
+     Summary [  66.253s] 8624 tests run: 8624 passed, 10 skipped
+```
+
+This allowed me to isolate out a few tests that were really slowing down the builds, but not delivering much value,
+since it's all code that is no longer in flux. If I really want to, I can tell cargo to run the tests flagged as ignore, 
+but for now, I want to skip them. 
+
+The next was [mutants](https://mutants.rs/), a `mutation testing tool for Rust`. This is some really cool shit. I started
+it 2 hours ago, and it's already found some interesting things.
+
+```shell
+MISSED   src/bard.rs:250:79: replace | with ^ in 9s build + 36s test
+MISSED   src/bard.rs:250:56: replace | with & in 9s build + 37s test
+MISSED   src/bard.rs:250:56: replace | with ^ in 9s build + 35s test
+MISSED   src/bard.rs:328:14: replace | with ^ in Bard::fold_in in 7s build + 35s test
+MISSED   src/bard.rs:344:9: replace Bard::to_pile -> Option<BasicPile> with None in 8s build + 35s test
+MISSED   src/bard.rs:344:9: replace Bard::to_pile -> Option<BasicPile> with Some(Default::default()) in 8s build + 34s test
+MISSED   src/bard.rs:379:21: replace | with ^ in <impl BitOr for Bard>::bitor in 7s build + 35s test
+MISSED   src/bard.rs:385:29: replace | with ^ in <impl BitOrAssign for Bard>::bitor_assign in 7s build + 36s test
+MISSED   src/bard.rs:485:9: replace <impl From<&Card> for Bard>::from -> Self with Default::default() in 8s build + 36s test
+MISSED   src/bard.rs:503:9: replace <impl From<CardsCell> for Bard>::from -> Self with Default::default() in 8s build + 37s test
+MISSED   src/bard.rs:509:9: replace <impl From<&CardsCell> for Bard>::from -> Self with Default::default() in 8s build + 37s test
+MISSED   src/bard.rs:515:28: replace | with ^ in <impl From<Two> for Bard>::from in 8s build + 36s test
+build    src/bard.rs:521:9: replace <impl From<Vec<Card>> for Bard>::from -> Self with Default::default() ... 8s
+└             Running `/Users/gaoler/.rustup/toolchains/nightly-aarch64-apple-darwin/bin/rustc --crate-name generate_bcm --edition=2024 examples/generate_bcm.rs --error-format=json`
+376/12502 mutants tested, 96 MISSED, 130 caught, 150 unviable, 2h elapsed, about 3d remaining
+```
+
+We'll have to wait until Monday or Tuesday to get all the
+answers, but I'm patient. Very cool.
+
+After that, [cargo fuzz](https://github.com/rust-fuzz/cargo-fuzz). Once mutants is done mutating, I will point it at the
+repo.
+
+And then there was [cargo llvm-cov](https://github.com/taiki-e/cargo-llvm-cov). I'll be honest with you, as insane as I 
+am about testing this sheit, I'm not that concerned about coverage reports, but a big part of that is that I am coding
+this sucker on my own. [rs-poker](https://github.com/elliottneilclark/rs-poker) is a grown up library with 10 other 
+contributors, and you want an easy way to see where you stand. My numbers weren't bad, all in all, and it's a good
+metric to have: 
+
+```shell
+Totals	  80.46% (2787/3464)	  81.07% (25636/31624)	  82.49% (42841/51937)	- (0/0)
+```
+
+## DANGER
+
+This is where I drop in my standard warning of the dangers in metrics like this. Many years ago, when I was working for 
+a very large institution evaluating their testing and development methods, I did a presentation of how developers were
+creating thousands of tests that did nothing more than a check that only did `assert not null`. Turns out that they
+were evaluated on code coverage metrics. Thousands and thousands of lines of bullshit, coded long before the code 
+projectile vomit machines of our present day, that did nothing of value. 
+
+When I did my presentation for senior leadership, they did nothing. Turns out their bonuses were partially based on
+this code coverage metric. As I like to say...
+
+> The unexamined test is not worth running. 
