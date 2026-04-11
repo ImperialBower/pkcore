@@ -1,0 +1,15 @@
+name: loose_passive
+description: Wide hand selection with passive betting — the classic calling station archetype.
+style: loose_passive
+range_strategy:
+  open_raise: 22+, Axs, KTs+, QTs+, J9s+, T8s+, 98s, ATo+, KTo+
+  three_bet: QQ+, AKs
+  call_three_bet: TT+, AJs+
+  postflop_cbet_frequency: 15
+betting_strategy:
+  aggression_factor: 15
+  bluff_frequency: 3
+  check_raise_frequency: 2
+  preferred_bet_sizes:
+  - numerator: 1
+    denominator: 2

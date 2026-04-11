@@ -598,4 +598,43 @@ mod tests {
         assert_eq!(p, loaded);
         let _ = std::fs::remove_file(&path);
     }
+
+    /// Each file in `data/bots/` must parse without error.
+    #[cfg(all(feature = "bot-profiles", not(target_arch = "wasm32")))]
+    #[test]
+    fn test_data_bots_all_load() {
+        let names = [
+            "gto",
+            "tight_passive",
+            "loose_aggressive",
+            "tight_aggressive",
+            "loose_passive",
+            "maniac",
+            "abc",
+            "short_stack_ninja",
+        ];
+        for name in names {
+            let path = format!("data/bots/{name}.yaml");
+            let loaded = BotProfile::from_file(&path)
+                .unwrap_or_else(|e| panic!("failed to load {path}: {e}"));
+            assert_eq!(loaded.name, name, "{path}: name field mismatch");
+        }
+    }
+
+    /// The three constructor-backed profiles must be byte-identical to their
+    /// YAML files after a round-trip through deserialization.
+    #[cfg(all(feature = "bot-profiles", not(target_arch = "wasm32")))]
+    #[test]
+    fn test_data_bots_constructors_match_files() {
+        for (name, expected) in [
+            ("gto", BotProfile::gto()),
+            ("tight_passive", BotProfile::tight_passive()),
+            ("loose_aggressive", BotProfile::loose_aggressive()),
+        ] {
+            let path = format!("data/bots/{name}.yaml");
+            let from_file = BotProfile::from_file(&path)
+                .unwrap_or_else(|e| panic!("failed to load {path}: {e}"));
+            assert_eq!(from_file, expected, "{path} does not match constructor output");
+        }
+    }
 }

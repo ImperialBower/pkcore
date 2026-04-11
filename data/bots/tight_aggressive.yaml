@@ -1,0 +1,17 @@
+name: tight_aggressive
+description: Selective hand selection with maximum postflop aggression — the baseline winning style.
+style: tight_aggressive
+range_strategy:
+  open_raise: JJ+, AQs+, KQs, AKo
+  three_bet: QQ+, AKs
+  call_three_bet: JJ+, AQs+
+  postflop_cbet_frequency: 65
+betting_strategy:
+  aggression_factor: 70
+  bluff_frequency: 20
+  check_raise_frequency: 15
+  preferred_bet_sizes:
+  - numerator: 2
+    denominator: 3
+  - numerator: 1
+    denominator: 1

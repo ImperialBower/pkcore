@@ -1,0 +1,17 @@
+name: loose_aggressive
+description: Wide ranges, frequent bets and bluffs — puts maximum pressure on opponents.
+style: loose_aggressive
+range_strategy:
+  open_raise: 22+, AT+, 54s+
+  three_bet: QQ+, AKs, AQs
+  call_three_bet: TT+, AQs+
+  postflop_cbet_frequency: 75
+betting_strategy:
+  aggression_factor: 75
+  bluff_frequency: 35
+  check_raise_frequency: 20
+  preferred_bet_sizes:
+  - numerator: 2
+    denominator: 3
+  - numerator: 1
+    denominator: 1

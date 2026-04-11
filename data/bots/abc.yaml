@@ -1,0 +1,15 @@
+name: abc
+description: By-the-book play — bets strong hands and folds weak ones with no deception or bluffing.
+style: abc
+range_strategy:
+  open_raise: QQ+, AKs, AKo
+  three_bet: AA, KK
+  call_three_bet: QQ, AKs
+  postflop_cbet_frequency: 60
+betting_strategy:
+  aggression_factor: 65
+  bluff_frequency: 0
+  check_raise_frequency: 5
+  preferred_bet_sizes:
+  - numerator: 2
+    denominator: 3
