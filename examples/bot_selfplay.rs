@@ -21,7 +21,7 @@ use rand::Rng;
 const STARTING_CHIPS: usize = 10_000;
 const SMALL_BLIND: usize = 50;
 const BIG_BLIND: usize = 100;
-const NUM_HANDS: usize = 50;
+const NUM_HANDS: usize = 500;
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
