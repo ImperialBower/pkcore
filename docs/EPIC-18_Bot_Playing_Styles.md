@@ -1,209 +1,371 @@
-# EPIC: Position- and Table-Size-Aware Bot Playing Styles
+# EPIC-18: Position- and Table-Size-Aware Bot Playing Styles
 
 ## Context
 
-`BotProfile` currently holds a single flat `RangeStrategy` (one `open_raise` string, one `three_bet` string, one c-bet frequency) and a single flat `BettingStrategy` — both position-agnostic and table-size-agnostic. Real poker strategy differs substantially by table size (UTG in a 9-max opens ~12%; BTN in a 6-max opens ~40%), so bots using the current flat profile play incorrectly in most positions.
+`BotProfile` currently holds a single flat `RangeStrategy` (one `open_raise` string, one `three_bet` string) and a flat `BettingStrategy`, both position-agnostic and table-size-agnostic.
 
-This EPIC introduces a `Playbook` — a layered structure that maps `(seat_count × Position) → (range_string, BettingStrategy)` — and hooks it into `BotProfile` as an optional override layer. The flat fields remain as a backward-compatible fallback.
+This EPIC introduces a `Playbook` — a layered structure that maps `(seat_count × Position × action) → WeightedRange` — and a `PositionalBetting` that maps `(seat_count × Position) → BettingStrategy`. Two gaps in the original draft are addressed:
+
+- **Multiple actions per position:** `PositionRanges` holds per-action range maps (`open_raise`, `three_bet`, etc.), not a single string.
+- **Per-combo frequencies:** `WeightedRange` represents mixed strategies (`AQs:0.8, KQs:0.6`) rather than flat binary ranges.
+
+Flat `BotProfile` fields remain as a backward-compatible fallback.
 
 ---
 
-## New Files (all under `src/bot/`)
+## New Type Hierarchy
 
-### 1. `src/bot/table_size.rs` — `TableSize` enum
-
-```rust
-pub enum TableSize { HeadsUp, ThreeMax, FourMax, FiveMax, SixMax, NineMax }
+```
+WeightedRange              ← core: combos with frequencies
+    └─ ActionRanges        ← maps action name → WeightedRange (for one position)
+        └─ PositionRanges  ← maps Position → ActionRanges
+PositionalBetting          ← maps Position → BettingStrategy (existing type)
+    └─ PlaybookEntry       ← holds PositionRanges + PositionalBetting for one seat count
+        └─ Playbook        ← maps seat_count (u8) → PlaybookEntry
+            └─ BotProfile.playbook: Option<Playbook>
 ```
 
-Key methods:
-- `TableSize::from_seats(n: u8) -> Option<TableSize>`
-- `TableSize::seat_count(&self) -> u8`
-- `TableSize::positions(&self) -> Vec<Position>` — delegates to the existing `Positions::heads_up()`, `::six_handed()`, etc. in `src/casino/table/position.rs`
+---
 
-Derives: `Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize`
+## Dependency Graph
+
+```
+position.rs ──(add Serialize/Deserialize)──►  PositionRanges
+                                               PositionalBetting
+betting_strategy.rs ─────────────────────►  PositionalBetting
+                                                    │
+WeightedRange ◄── ActionRanges ◄── PositionRanges  │
+                                         │          │
+                                   PlaybookEntry ◄──┘
+                                         │
+                                     Playbook
+                                         │
+                                    BotProfile
+                                         │
+                               mod.rs + prelude.rs
+```
 
 ---
 
-### 2. `src/bot/position_ranges.rs` — `PositionRanges`
+## Step-by-Step Implementation
 
-Maps `Position → open-raise range string` for a single table size.
+### Step 0 — `src/casino/table/position.rs`: Add `Serialize, Deserialize` to `Position`
+
+`Position` is used as a `HashMap` key. Serde serializes enum-keyed maps to/from string keys only when the key type serializes to a string — unit enum variants do this automatically with the derive.
 
 ```rust
-pub struct PositionRanges {
-    ranges: HashMap<Position, String>,
-    default: String,   // fallback for any unmapped position
+#[derive(/* existing */ Serialize, Deserialize)]
+pub enum Position { /* variants unchanged */ }
+```
+
+No other changes to this file.
+
+---
+
+### Step 1 — `src/bot/weighted_range.rs`: `ComboWeight` + `WeightedRange`
+
+The foundational type for all range data in this EPIC.
+
+```rust
+/// A single hand range entry with a mixed-strategy frequency.
+/// `range` uses the existing combo-string notation (e.g. "AKs", "QQ+", "JJ-TT").
+/// `frequency` is 0.0–1.0.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ComboWeight {
+    pub range: String,
+    pub frequency: f64,   // 0.0–1.0
+}
+
+/// An ordered list of hand-range/frequency pairs representing one action's range.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct WeightedRange {
+    combos: Vec<ComboWeight>,
+}
+
+impl WeightedRange {
+    pub fn new() -> Self { Default::default() }
+
+    /// Construct from a flat range string (all combos at frequency 1.0).
+    /// Uses the same comma-separated notation as RangeStrategy.open_raise.
+    pub fn from_flat(range_str: &str) -> Self { … }
+
+    pub fn push(&mut self, range: impl Into<String>, frequency: f64) -> &mut Self { … }
+
+    /// Returns the frequency for the first entry whose range string matches `combo`.
+    /// Returns 0.0 if the combo is not in the list.
+    pub fn frequency_for(&self, combo: &str) -> f64 { … }
+
+    pub fn combos(&self) -> &[ComboWeight] { &self.combos }
 }
 ```
 
-Key methods:
-- `PositionRanges::new(default: impl Into<String>) -> Self`
-- `for_position(&self, pos: Position) -> &str`
-- Named constructors with realistic GTO ranges for each position:
-  - `gto_six_max()` — UTG/LJ ~14%, HJ ~18%, CO ~25%, BTN ~40%, SB ~35%, BB defend
-  - `gto_nine_max()` — UTG ~12%, UTG+1 ~13%, EP ~14%, LJ ~16%, HJ ~20%, CO ~26%, BTN ~40%, SB ~33%, BB defend
-  - `tight_passive_six_max()`, `loose_aggressive_six_max()`
-
-Derives: `Clone, Debug, PartialEq, Eq, Serialize, Deserialize`
+`WeightedRange::from_flat` is the bridge that lets `BotProfile::range_for_or_default` construct a fallback from the existing `range_strategy.open_raise` string without cloning.
 
 ---
 
-### 3. `src/bot/positional_betting.rs` — `PositionalBetting`
-
-Maps `Position → BettingStrategy` for a single table size. Uses the existing `BettingStrategy` from `src/bot/betting_strategy.rs` as the value type.
+### Step 2 — `src/bot/position_ranges.rs`: `ActionRanges` + `PositionRanges`
 
 ```rust
+/// Per-action range map for a single position.
+/// Keys are action names: "open_raise", "three_bet", "four_bet", "limp", etc.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct ActionRanges {
+    actions: HashMap<String, WeightedRange>,
+}
+
+impl ActionRanges {
+    pub fn new() -> Self { Default::default() }
+    pub fn insert(&mut self, action: impl Into<String>, range: WeightedRange) -> &mut Self { … }
+    pub fn for_action(&self, action: &str) -> Option<&WeightedRange> {
+        self.actions.get(action)
+    }
+}
+
+/// Maps Position → ActionRanges for one table size.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PositionRanges {
+    ranges: HashMap<Position, ActionRanges>,
+    default: ActionRanges,   // fallback for unmapped positions
+}
+
+impl PositionRanges {
+    pub fn new(default: ActionRanges) -> Self { … }
+    pub fn insert(&mut self, pos: Position, ranges: ActionRanges) -> &mut Self { … }
+    pub fn for_position(&self, pos: Position) -> &ActionRanges {
+        self.ranges.get(&pos).unwrap_or(&self.default)
+    }
+}
+```
+
+Named constructors provide realistic GTO approximations with at minimum `"open_raise"` and `"three_bet"` actions per position:
+
+| Constructor | Coverage |
+|---|---|
+| `gto_six_max()` | UTG/LJ/HJ/CO/BTN/SB/BB — open + 3bet frequencies |
+| `gto_nine_max()` | 9 positions — open + 3bet frequencies |
+| `tight_passive_six_max()` | 6-max — tighter opens, rare 3bets |
+| `loose_aggressive_six_max()` | 6-max — wide opens, frequent 3bets with mixed frequencies |
+
+---
+
+### Step 3 — `src/bot/positional_betting.rs`: `PositionalBetting`
+
+Uses the existing `BettingStrategy` from `src/bot/betting_strategy.rs`.
+
+```rust
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PositionalBetting {
     betting: HashMap<Position, BettingStrategy>,
     default: BettingStrategy,
 }
+
+impl PositionalBetting {
+    pub fn new(default: BettingStrategy) -> Self { … }
+    pub fn insert(&mut self, pos: Position, bs: BettingStrategy) -> &mut Self { … }
+    pub fn for_position(&self, pos: Position) -> &BettingStrategy {
+        self.betting.get(&pos).unwrap_or(&self.default)
+    }
+}
 ```
 
-Key methods:
-- `PositionalBetting::new(default: BettingStrategy) -> Self`
-- `for_position(&self, pos: Position) -> &BettingStrategy`
-- Named constructors: `gto_six_max()`, `tight_passive_six_max()`, `loose_aggressive_six_max()`, `gto_nine_max()`
-
-Derives: `Clone, Debug, PartialEq, Serialize, Deserialize`
+Named constructors: `gto_six_max()`, `gto_nine_max()`, `tight_passive_six_max()`, `loose_aggressive_six_max()`.
 
 ---
 
-### 4. `src/bot/playbook.rs` — `PlaybookEntry` + `Playbook`
+### Step 4 — `src/bot/table_size.rs`: `TableSize`
+
+Informational enum; useful as a typed constructor and display helper. `Playbook` keys on raw `u8` to skip a conversion at runtime.
 
 ```rust
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum TableSize { HeadsUp, ThreeMax, FourMax, FiveMax, SixMax, NineMax }
+
+impl TableSize {
+    pub fn from_seats(n: u8) -> Option<Self> { … }
+    pub fn seat_count(&self) -> u8 { … }
+    /// Delegates to existing Positions helpers (Positions::heads_up(), ::six_handed(), etc.)
+    pub fn positions(&self) -> Vec<Position> { … }
+}
+```
+
+---
+
+### Step 5 — `src/bot/playbook.rs`: `PlaybookEntry` + `Playbook`
+
+```rust
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct PlaybookEntry {
     pub position_ranges: PositionRanges,
     pub positional_betting: PositionalBetting,
 }
 
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct Playbook {
-    entries: HashMap<u8, PlaybookEntry>,   // keyed by seat count (2–9)
+    entries: HashMap<u8, PlaybookEntry>,  // key = seat count
+}
+
+impl Playbook {
+    pub fn new() -> Self { Default::default() }
+    pub fn insert(&mut self, seats: u8, entry: PlaybookEntry) -> &mut Self { … }
+    pub fn for_seats(&self, seats: u8) -> Option<&PlaybookEntry> {
+        self.entries.get(&seats)
+    }
+    pub fn gto() -> Self { /* gto_six_max + gto_nine_max entries */ }
+    pub fn tight_passive() -> Self { … }
+    pub fn loose_aggressive() -> Self { … }
 }
 ```
 
-Key methods on `Playbook`:
-- `Playbook::new() -> Self`
-- `insert(seats: u8, entry: PlaybookEntry) -> &mut Self`
-- `for_seats(&self, seats: u8) -> Option<&PlaybookEntry>`
-- Named constructors: `Playbook::gto()`, `Playbook::tight_passive()`, `Playbook::loose_aggressive()` — each pre-populates entries for SixMax and NineMax (the two most common sizes)
+Named constructors pre-populate entries for 6-max and 9-max (most common sizes).
 
-Derives: `Clone, Debug, PartialEq, Serialize, Deserialize`
+> **Serde note:** `HashMap<u8, …>` serializes as integer keys in JSON and string keys in YAML — both round-trip correctly within their own format.
 
 ---
 
-## YAML Serialization (first-class requirement)
-
-All new types must round-trip cleanly through `serde_yaml_bw` (the same crate used by `BotProfile`). The `Serialize, Deserialize` derives are always compiled in; the YAML I/O helper methods (`to_yaml_string`, `from_yaml_str`) remain behind the **`bot-profiles`** feature flag, consistent with the existing pattern.
-
-### `Position` must gain `Serialize, Deserialize` (`src/casino/table/position.rs`)
-
-`Position` is currently used as a `HashMap` key in `PositionRanges` and `PositionalBetting`. Serde can only serialize enum-keyed maps when the key type serializes to a string. Unit enum variants do this automatically once `Serialize, Deserialize` are derived — `Position::BTN` becomes `"BTN"`, `Position::SB` becomes `"SB"`, etc.
-
-**Required change:** add `Serialize, Deserialize` to `Position`'s derive list.
-
-### Expected YAML shape
-
-A populated `BotProfile` with a playbook will serialize to:
-
-```yaml
-name: gto
-style: Gto
-playbook:
-  entries:
-    6:
-      position_ranges:
-        default: "TT+, AQ+"
-        ranges:
-          LJ: "TT+, AQs+, AQo+"
-          HJ: "99+, AJs+, AJo+"
-          CO: "77+, ATs+, ATo+"
-          BTN: "55+, A8s+, A9o+, KTs+"
-          SB: "55+, A5s+, A8o+"
-          BB: "22+, A2s+, A5o+"
-      positional_betting:
-        default:
-          aggression_factor: 50
-          bluff_frequency: 33
-          ...
-        betting:
-          BTN:
-            aggression_factor: 65
-            bluff_frequency: 40
-            ...
-```
-
-Profiles without a playbook serialize identically to today — the field is `skip_serializing_if = "Option::is_none"`.
-
----
-
-## Modified Files
-
-### `src/bot/profile.rs` — add `playbook` field + resolution helpers
+### Step 6 — `src/bot/profile.rs`: Add `playbook` field + resolution helpers
 
 ```rust
 pub struct BotProfile {
-    // existing fields unchanged …
-    /// Optional position- and table-size-aware strategy overrides.
-    /// When `Some`, takes precedence over `range_strategy` and `betting_strategy`.
+    // … all existing fields unchanged …
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub playbook: Option<Playbook>,
 }
+
+impl BotProfile {
+    /// Resolve the WeightedRange for (seats, position, action).
+    /// Returns None when the playbook is absent or the action is unmapped.
+    pub fn range_for(
+        &self,
+        seats: u8,
+        pos: Position,
+        action: &str,
+    ) -> Option<&WeightedRange> {
+        self.playbook
+            .as_ref()
+            .and_then(|pb| pb.for_seats(seats))
+            .and_then(|entry| entry.position_ranges.for_position(pos).for_action(action))
+    }
+
+    /// Convenience: returns the WeightedRange or a flat fallback built from
+    /// range_strategy.open_raise / three_bet. Other actions return an empty range.
+    pub fn range_for_or_default(
+        &self,
+        seats: u8,
+        pos: Position,
+        action: &str,
+    ) -> WeightedRange {
+        self.range_for(seats, pos, action)
+            .cloned()
+            .unwrap_or_else(|| match action {
+                "open_raise" => WeightedRange::from_flat(&self.range_strategy.open_raise),
+                "three_bet"  => WeightedRange::from_flat(&self.range_strategy.three_bet),
+                _            => WeightedRange::new(),
+            })
+    }
+
+    /// Resolve BettingStrategy for (seats, position).
+    /// Falls back to &self.betting_strategy when playbook is absent.
+    pub fn betting_for(&self, seats: u8, pos: Position) -> &BettingStrategy {
+        self.playbook
+            .as_ref()
+            .and_then(|pb| pb.for_seats(seats))
+            .map(|entry| entry.positional_betting.for_position(pos))
+            .unwrap_or(&self.betting_strategy)
+    }
+}
 ```
 
-New helper methods (no behavior change when `playbook` is `None`):
-- `range_for(&self, seats: u8, pos: Position) -> &str`
-  — looks up `playbook → entry for seats → PositionRanges → for_position(pos)`, falls back to `range_strategy.open_raise`
-- `betting_for(&self, seats: u8, pos: Position) -> &BettingStrategy`
-  — same resolution order, falls back to `&self.betting_strategy`
-
-### `src/casino/table/position.rs` — add `Serialize, Deserialize` to `Position`
-
-Add `serde::{Serialize, Deserialize}` to the derive list on `Position`. No other changes needed — unit variants already serialize as their name strings, which serde uses as map keys.
-
-### `src/bot/mod.rs` — declare new modules
-
-Add: `pub mod table_size; pub mod position_ranges; pub mod positional_betting; pub mod playbook;`
-
-### `src/prelude.rs` — export new public types
-
-Re-export: `TableSize`, `PositionRanges`, `PositionalBetting`, `Playbook`, `PlaybookEntry`
+Zero behavior change when `playbook` is `None`.
 
 ---
 
-## Implementation Order
+### Step 7 — `src/bot/mod.rs` and `src/prelude.rs`
 
-1. `table_size.rs` — no dependencies on new code
-2. `position_ranges.rs` — depends on `Position` (already exists)
-3. `positional_betting.rs` — depends on `BettingStrategy` (already exists)
-4. `playbook.rs` — depends on steps 2 & 3
-5. Update `profile.rs` — depends on step 4
-6. Update `mod.rs` and `prelude.rs`
+`mod.rs`:
+```rust
+pub mod weighted_range;
+pub mod table_size;
+pub mod position_ranges;
+pub mod positional_betting;
+pub mod playbook;
+```
+
+`prelude.rs`:
+```rust
+pub use crate::bot::{
+    weighted_range::{ComboWeight, WeightedRange},
+    table_size::TableSize,
+    position_ranges::{ActionRanges, PositionRanges},
+    positional_betting::PositionalBetting,
+    playbook::{Playbook, PlaybookEntry},
+};
+```
+
+---
+
+## Feature Flag Discipline
+
+`Serialize, Deserialize` derives are always compiled in. Any `load_from_yaml` / `save_to_yaml` helpers go behind `#[cfg(feature = "bot-profiles")]`, matching the existing `BotProfile` pattern. No deviation.
 
 ---
 
 ## Reused Existing Types
 
-| Type | File | How it's reused |
+| Type | File | How reused |
 |---|---|---|
-| `Position` | `src/casino/table/position.rs` | Key type for all position maps — **gains `Serialize, Deserialize`** |
+| `Position` | `src/casino/table/position.rs` | Map key in all position maps — **gains `Serialize, Deserialize`** |
 | `Positions` | `src/casino/table/position.rs` | `TableSize::positions()` delegates here |
 | `BettingStrategy` | `src/bot/betting_strategy.rs` | Value type in `PositionalBetting` |
 | `BetSize` | `src/analysis/gto/solver_config.rs` | Used inside `BettingStrategy` values |
-| `PlayStyle` | `src/bot/profile.rs` | Unchanged; labels the whole profile |
+| `RangeStrategy` | `src/bot/range_strategy.rs` | Fallback via `.open_raise` / `.three_bet` fields |
+
+---
+
+## Implementation Order
+
+1. `position.rs` — add derives (prerequisite for all map keys)
+2. `weighted_range.rs` — no new dependencies
+3. `position_ranges.rs` — depends on `Position` + `WeightedRange`
+4. `positional_betting.rs` — depends on `Position` + `BettingStrategy`
+5. `table_size.rs` — depends on `Position` / `Positions`
+6. `playbook.rs` — depends on steps 3 & 4
+7. `profile.rs` — depends on step 6
+8. `mod.rs` + `prelude.rs`
 
 ---
 
 ## Verification
 
 ```bash
-# All existing tests still pass (no breaking changes)
+# Baseline before any changes
 cargo test
 
-# New types serialize/deserialize correctly
-cargo test --doc
+# After Step 1 — Position still compiles everywhere
+cargo test casino::table
 
-# Spot-check resolution helpers work
+# After Steps 2–5 — new types compile and round-trip
+cargo test bot::weighted_range
+cargo test bot::position_ranges
+cargo test bot::positional_betting
+cargo test bot::playbook
+
+# After Step 7 — full integration
 cargo test bot::profile
+
+# Full suite — no regressions
+cargo test
+
+# YAML round-trips
+cargo test --features bot-profiles
 ```
 
-Expected: 0 regressions; new tests cover happy path, positional lookup, fallback to flat strategy, and **JSON + YAML round-trips for all four new types** plus the updated `Position` key serialization.
+### New unit tests per module
+
+| Module | Tests |
+|---|---|
+| `weighted_range` | `from_flat` parses comma-separated combos at freq 1.0; `frequency_for` returns correct value; `frequency_for` returns 0.0 for unknown combo |
+| `position_ranges` | `for_position` returns mapped `ActionRanges`; falls back to default; `for_action` returns `None` for unknown action |
+| `positional_betting` | `for_position` returns mapped strategy; falls back to default |
+| `playbook` | `for_seats` returns `None` for unmapped seat count; named constructors contain 6-max and 9-max entries |
+| `profile` | `range_for` returns `None` when playbook is `None`; `range_for_or_default` returns flat fallback from `range_strategy.open_raise`; `betting_for` falls back to `betting_strategy`; YAML round-trip of profile with and without playbook |
