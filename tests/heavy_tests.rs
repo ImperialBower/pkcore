@@ -1,4 +1,5 @@
 use pkcore::analysis::store::db::hup::HUPResult;
+use pkcore::games::kuhn::KuhnCfr;
 use pkcore::util::data::TestData;
 
 #[allow(non_snake_case)]
@@ -94,5 +95,52 @@ mod heavy_tests {
         let actual = HUPResult::from(&TestData::the_hand_sorted_headsup());
 
         assert_eq!(actual, TestData::the_hand_as_hup_result());
+    }
+
+    /// Trains CFR for 500k iterations and asserts exploitability converges below 0.001,
+    /// confirming the average strategy reaches the analytical Nash equilibrium.
+    #[test]
+    #[ignore]
+    fn kuhn_cfr__converges_to_nash_exploitability() {
+        let mut cfr = KuhnCfr::new();
+        cfr.train(500_000);
+        let exploit = cfr.exploitability().abs();
+        assert!(exploit < 0.001, "exploitability after 500k iters: {exploit}");
+    }
+
+    /// Replays all 10,000 Pluribus game logs in parallel and asserts every hand
+    /// completes without error. Produces no output on success; on failure prints
+    /// each failing game index and its error before panicking.
+    #[test]
+    // #[ignore]
+    fn pluribus__all_games_replay_without_errors() {
+        use pkcore::analysis::nubibus::Pluribus;
+        use pkcore::prelude::Nubificus;
+        use rayon::prelude::*;
+
+        let logs = Nubificus::get_log_files("data/pluribus/raw/").expect("failed to load log files");
+
+        let all_games: Vec<Pluribus> = logs
+            .iter()
+            .flat_map(|log| Pluribus::read_in_log(log.as_str()).expect("failed to parse log file"))
+            .collect();
+
+        let errors: Vec<String> = all_games
+            .into_par_iter()
+            .enumerate()
+            .filter_map(|(idx, plur)| {
+                Nubificus::try_from(&plur)
+                    .and_then(|n| n.play_hand())
+                    .err()
+                    .map(|e| format!("Game #{idx}: {e}"))
+            })
+            .collect();
+
+        assert!(
+            errors.is_empty(),
+            "{} game(s) failed:\n{}",
+            errors.len(),
+            errors.join("\n")
+        );
     }
 }

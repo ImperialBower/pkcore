@@ -27,7 +27,8 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:api.github.com)",
       "Bash(grep:*)",
-      "Bash(cargo clippy:*)"
+      "Bash(cargo clippy:*)",
+      "Bash(find /Users/christoph/src/github.com/ImperialBower/pkcore/src -name \"*.rs\" -exec grep -l \"PKError\" {} \\\\;)"
     ]
   }
 }

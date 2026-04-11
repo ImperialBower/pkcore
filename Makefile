@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm generate-hups-bin test-debug-json nextest
+.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm generate-hups-bin test-debug-json nextest heavy
 
 # Default target
 default: ayce
@@ -11,6 +11,7 @@ help:
 	@echo "  make clean           - Clean build artifacts"
 	@echo "  make test            - Run tests"
 	@echo "  make nextest         - Run tests with cargo-nextest (installs if missing)"
+	@echo "  make heavy           - Run ignored heavy tests"
 	@echo "  make test-debug-json - Run tests with debug-json feature (save/load use JSON)"
 	@echo "  make build_test      - Clean, build, nextest, and doc tests"
 	@echo "  make fmt             - Format code"
@@ -53,6 +54,10 @@ build:
 # Run tests
 test:
 	cargo test
+
+# Run ignored heavy tests
+heavy:
+	cargo test --test heavy_tests -- --ignored
 
 # Run tests with cargo-nextest (installs if not present)
 nextest:
