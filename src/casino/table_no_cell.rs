@@ -279,6 +279,43 @@ impl PlayerNoCell {
         self.act_bet_internal(PlayerState::Blind(amount))
     }
 
+    /// Posts a forced blind, going all-in for the remaining stack when chips are
+    /// insufficient to cover the full required amount.
+    ///
+    /// On success returns the amount actually posted.
+    ///
+    /// # Errors
+    ///
+    /// - `PKError::InsufficientChips` if the player has zero chips.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table_no_cell::PlayerNoCell;
+    /// use pkcore::prelude::PlayerState;
+    ///
+    /// // Short stack: 30 chips, required blind 100 — posts all 30 and goes all-in.
+    /// let mut p = PlayerNoCell::new_with_chips("Short".to_string(), 30);
+    /// let remaining = p.act_blind_or_all_in(100).unwrap();
+    /// assert_eq!(0, remaining);          // no chips left
+    /// assert_eq!(30, p.bet);             // 30 committed
+    /// assert_eq!(PlayerState::AllIn(30), p.state);
+    ///
+    /// // Full stack: 500 chips, required blind 100 — posts exactly 100.
+    /// let mut q = PlayerNoCell::new_with_chips("Full".to_string(), 500);
+    /// let remaining = q.act_blind_or_all_in(100).unwrap();
+    /// assert_eq!(400, remaining);
+    /// assert_eq!(PlayerState::Blind(100), q.state);
+    /// ```
+    pub fn act_blind_or_all_in(&mut self, required_amount: usize) -> Result<usize, PKError> {
+        let actual = required_amount.min(self.total_chip_count());
+        if actual == 0 {
+            return Err(PKError::InsufficientChips);
+        }
+        // act_bet_internal auto-transitions to AllIn(self.bet) when chips reach 0.
+        self.act_bet_internal(PlayerState::Blind(actual))
+    }
+
     /// Calls the current bet by committing `amount` total to the pot.
     ///
     /// # Errors
@@ -1005,7 +1042,7 @@ impl SeatsNoCell {
         self.get_seat_mut(idx)
             .ok_or(PKError::InvalidSeatNumber)?
             .player
-            .act_bet_blind(amount)
+            .act_blind_or_all_in(amount)
     }
 
     /// Marks all eligible seats as `YetToAct` for a new hand.
@@ -1154,7 +1191,7 @@ impl TableNoCell {
             board: Cards::default(),
             muck: Cards::default(),
             pot: 0,
-            bet: forced.big_blind,
+            bet: 0,
             raise_increment: 0,
             event_log,
         }
@@ -1530,7 +1567,10 @@ impl TableNoCell {
     /// ```
     #[must_use]
     pub fn to_call(&self, player: u8) -> usize {
-        self.seats.to_call(player)
+        // table.bet is the authoritative required-bet level (full BB even after a partial post).
+        // seats.current_bet() returns max(actually posted), which is wrong for short stacks.
+        let seat_bet = self.seats.get_seat(player).map_or(0, |s| s.player.bet);
+        self.bet.saturating_sub(seat_bet)
     }
 
     /// Number of times `action` appears in the event log.
@@ -1645,6 +1685,7 @@ impl TableNoCell {
         let bb = self.determine_big_blind();
         let amount = self.forced.big_blind;
         self.seats.act_forced_bet(bb, amount)?;
+        self.bet = self.forced.big_blind;
         self.log(TableAction::ForcedBetBigBlind(bb, amount));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(())
@@ -1762,7 +1803,15 @@ impl TableNoCell {
             self.log(err);
             return Err(PKError::TableActionOutOfOrder(err));
         }
-        let to_call = self.seats.act_call(seat_number)?;
+        let call_target = self.bet;
+        let seat_bet = self.seats.get_seat(seat_number).map_or(0, |s| s.player.bet);
+        let to_call = call_target.saturating_sub(seat_bet);
+        let seat = self.seats.get_seat_mut(seat_number).ok_or(PKError::InvalidSeatNumber)?;
+        if to_call == 0 {
+            seat.player.act_check()?;
+        } else {
+            seat.player.act_call(call_target)?;
+        }
         self.log(TableAction::Call(seat_number, to_call));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(to_call)
@@ -2192,7 +2241,7 @@ impl TableNoCell {
         self.log(audit);
 
         self.pot = 0;
-        self.bet = self.forced.big_blind;
+        self.bet = 0;
         self.raise_increment = 0;
         self.phase = GamePhase::NewHand;
     }
@@ -3016,5 +3065,100 @@ mod tests {
         assert!(s.contains("No Limit Hold'em Table"));
         assert!(s.contains("Alice"));
         assert!(s.contains("Bob"));
+    }
+
+    // ── act_blind_or_all_in / short-stack blind tests ─────────────────────────
+    // button = 0 for all new tables, so: seat 0 = button/UTG, seat 1 = SB, seat 2 = BB.
+
+    #[test]
+    fn player_no_cell_act_blind_or_all_in_partial() {
+        let mut p = PlayerNoCell::new_with_chips("Short".to_string(), 30);
+        let remaining = p.act_blind_or_all_in(50).unwrap();
+        assert_eq!(0, remaining);
+        assert_eq!(30, p.bet);
+        assert_eq!(PlayerState::AllIn(30), p.state);
+    }
+
+    #[test]
+    fn player_no_cell_act_blind_or_all_in_full() {
+        let mut p = PlayerNoCell::new_with_chips("Full".to_string(), 500);
+        let remaining = p.act_blind_or_all_in(100).unwrap();
+        assert_eq!(400, remaining);
+        assert_eq!(100, p.bet);
+        assert_eq!(PlayerState::Blind(100), p.state);
+    }
+
+    #[test]
+    fn player_no_cell_act_blind_or_all_in_zero_chips() {
+        let mut p = PlayerNoCell::new("Broke".to_string());
+        let result = p.act_blind_or_all_in(100);
+        assert_eq!(Err(PKError::InsufficientChips), result);
+    }
+
+    #[test]
+    fn table_no_cell_bet_is_zero_before_blinds() {
+        let table = make_two_player_table();
+        assert_eq!(0, table.bet);
+    }
+
+    #[test]
+    fn table_no_cell_to_call_zero_before_blinds() {
+        let table = make_two_player_table();
+        assert_eq!(0, table.to_call(0));
+        assert_eq!(0, table.to_call(1));
+    }
+
+    #[test]
+    fn table_no_cell_to_call_full_bb_after_forced_bets() {
+        // button=0: seat 0 = UTG/button, seat 1 = SB, seat 2 = BB
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 5_000)),
+        ]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        let utg = table.determine_utg();
+        assert_eq!(100, table.to_call(utg));
+    }
+
+    #[test]
+    fn table_no_cell_forced_bets_short_bb_to_call_full_amount() {
+        // BB (seat 2) has only 30 chips — posts all-in; UTG (seat 0) must still call 100.
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 30)),
+        ]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+
+        let bb_seat = table.determine_big_blind();
+        let bb = table.seats.get_seat(bb_seat).unwrap();
+        assert_eq!(PlayerState::AllIn(30), bb.player.state);
+        assert_eq!(30, bb.player.bet);
+        drop(bb);
+
+        let utg = table.determine_utg();
+        assert_eq!(100, table.to_call(utg));
+    }
+
+    #[test]
+    fn table_no_cell_act_call_after_short_blind() {
+        // BB (seat 2) short-stack; UTG (seat 0) calls — commits 100.
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 30)),
+        ]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        let utg = table.determine_utg();
+        table.act_call(utg).unwrap();
+
+        let utg_seat = table.seats.get_seat(utg).unwrap();
+        assert_eq!(100, utg_seat.player.bet);
     }
 }

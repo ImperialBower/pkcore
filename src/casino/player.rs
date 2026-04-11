@@ -217,6 +217,22 @@ impl Player {
         self.act_bet_internal(PlayerState::Blind(amount))
     }
 
+    /// Posts a forced blind, going all-in for the remaining stack when chips are
+    /// insufficient to cover the full required amount.
+    ///
+    /// On success returns the amount actually posted.
+    ///
+    /// # Errors
+    ///
+    /// * `PKError::InsufficientChips` if the player has zero chips.
+    pub fn act_blind_or_all_in(&self, required_amount: usize) -> Result<usize, PKError> {
+        let actual = required_amount.min(self.total_chip_count());
+        if actual == 0 {
+            return Err(PKError::InsufficientChips);
+        }
+        self.act_bet_internal(PlayerState::Blind(actual))
+    }
+
     /// Removes and returns the chips from the player's bet stack and sets their state to `YetToAct`.
     ///
     /// # Errors

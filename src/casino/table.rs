@@ -211,7 +211,7 @@ impl Table {
             board: CardsCell::default(),
             muck: CardsCell::default(),
             pot: Stack::default(),
-            bet: Cell::new(forced.big_blind),
+            bet: Cell::new(0),
             raise_increment: Cell::new(0),
             event_log,
         }
@@ -384,13 +384,21 @@ impl Table {
             return Err(PKError::TableActionOutOfOrder(err));
         }
 
-        match self.seats.act_call(seat_number) {
-            Ok((to_call, _remaining)) => {
-                self.log_info(TableAction::Call(seat_number, to_call));
-                // self.action_to.up();
-                Ok(to_call)
+        let call_target = self.bet.get();
+        let seat_bet = self.seats.get_seat(seat_number).map_or(0, |s| s.player.bet.count());
+        let to_call = call_target.saturating_sub(seat_bet);
+        // seat_bet Ref is dropped (map_or consumed it); safe to borrow mutably now.
+        if let Some(seat) = self.seats.get_seat_mut(seat_number) {
+            if to_call == 0 {
+                seat.player.act_check()?;
+            } else {
+                seat.player.act_call(call_target)?;
             }
-            Err(e) => Err(e),
+            drop(seat);
+            self.log_info(TableAction::Call(seat_number, to_call));
+            Ok(to_call)
+        } else {
+            Err(PKError::InvalidSeatNumber)
         }
     }
 
@@ -484,6 +492,7 @@ impl Table {
         let bb_seat_num = self.determine_big_blind();
         let big_blind = self.forced.big_blind;
         self.act_forced_bet(bb_seat_num, big_blind)?;
+        self.bet.set(self.forced.big_blind);
         self.log_info(TableAction::ForcedBetBigBlind(bb_seat_num, big_blind));
         self.action_to_next();
 
@@ -1338,6 +1347,7 @@ impl Table {
             }
             std::cmp::Ordering::Equal => self.log_warn(TableAction::DeckPassesAudit),
         }
+        self.bet.set(0);
     }
 
     /// ```
@@ -1401,7 +1411,8 @@ impl Table {
 
     #[must_use]
     pub fn to_call(&self, player: u8) -> usize {
-        self.seats.to_call(player)
+        let seat_bet = self.seats.get_seat(player).map_or(0, |s| s.player.bet.count());
+        self.bet.get().saturating_sub(seat_bet)
     }
 
     // utils
@@ -2216,5 +2227,73 @@ mod casino__table_tests {
 
         let bad_raise = table.act_raise(0, 802);
         assert!(bad_raise.is_err());
+    }
+
+    // ── Short-stack blind tests ───────────────────────────────────────────────
+
+    // Button starts at seat 0 (BintCell::new(n) initialises value to 0).
+    // So for a 3-seat table: seat 0 = button/UTG, seat 1 = SB, seat 2 = BB.
+    fn three_player_table_with_short_bb(bb_chips: usize) -> Table {
+        let seats = Seats::new(vec![
+            Seat::new_with_cards(
+                Player::new_with_chips("UTG".to_string(), 5_000), // seat 0 — button / UTG
+                BoxedCards::blanks(2),
+            ),
+            Seat::new_with_cards(
+                Player::new_with_chips("SB".to_string(), 5_000), // seat 1 — small blind
+                BoxedCards::blanks(2),
+            ),
+            Seat::new_with_cards(
+                Player::new_with_chips("BB".to_string(), bb_chips), // seat 2 — big blind
+                BoxedCards::blanks(2),
+            ),
+        ]);
+        Table::nlh_from_seats(seats, ForcedBets::new(50, 100))
+    }
+
+    #[test]
+    fn bet_is_zero_before_blinds() {
+        let table = three_player_table_with_short_bb(1_000);
+        assert_eq!(0, table.bet.get());
+    }
+
+    #[test]
+    fn to_call_zero_before_blinds() {
+        let table = three_player_table_with_short_bb(1_000);
+        assert_eq!(0, table.to_call(0));
+        assert_eq!(0, table.to_call(1));
+        assert_eq!(0, table.to_call(2));
+    }
+
+    #[test]
+    fn to_call_full_bb_after_forced_bets() {
+        let table = three_player_table_with_short_bb(1_000);
+        table.act_forced_bets().unwrap();
+        // Seat 0 is UTG (button); needs to call the full 100 BB.
+        assert_eq!(100, table.to_call(0));
+    }
+
+    #[test]
+    fn forced_bets_short_bb_to_call_full_amount() {
+        // BB (seat 2) has only 30 chips; UTG (seat 0) must still call the full 100 BB.
+        let table = three_player_table_with_short_bb(30);
+        table.act_forced_bets().unwrap();
+
+        let bb_seat = table.seats.get_seat(2).unwrap();
+        assert_eq!(PlayerState::AllIn(30), bb_seat.player.state.get());
+        assert_eq!(30, bb_seat.player.bet.count());
+        drop(bb_seat);
+
+        assert_eq!(100, table.to_call(0));
+    }
+
+    #[test]
+    fn act_call_after_short_blind() {
+        let table = three_player_table_with_short_bb(30);
+        table.act_forced_bets().unwrap();
+        // UTG (seat 0) calls — should commit 100 chips.
+        table.act_call(0).unwrap();
+        let utg = table.seats.get_seat(0).unwrap();
+        assert_eq!(100, utg.player.bet.count());
     }
 }
