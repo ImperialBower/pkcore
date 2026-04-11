@@ -19,39 +19,55 @@ use std::path::Path;
 
 // ── PlayStyle ─────────────────────────────────────────────────────────────────
 
-/// The broad playing archetype a bot profile represents.
+/// A free-form playing style label attached to a [`BotProfile`].
 ///
-/// Used for display and filtering; does not affect game logic directly —
-/// that is controlled by the [`RangeStrategy`] and [`BettingStrategy`] fields.
+/// `PlayStyle` is a transparent newtype over [`String`] so any label can be
+/// used in YAML profile files without requiring code changes. The named
+/// constructors on [`BotProfile`] (`gto()`, `tight_passive()`,
+/// `loose_aggressive()`) set conventional labels as examples, but callers are
+/// free to supply any name they choose.
+///
+/// Serializes as a bare string in YAML:
+///
+/// ```yaml
+/// style: tight_passive
+/// ```
 ///
 /// # Examples
 ///
 /// ```
 /// use pkcore::bot::profile::PlayStyle;
 ///
-/// let style = PlayStyle::TightPassive;
-/// assert_eq!(style.to_string(), "Tight Passive");
+/// let style = PlayStyle::new("tight_aggressive");
+/// assert_eq!(style.to_string(), "tight_aggressive");
+///
+/// // Any label works — no code changes needed for new styles
+/// let custom = PlayStyle::new("my_custom_style");
+/// assert_eq!(custom.to_string(), "my_custom_style");
 /// ```
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum PlayStyle {
-    /// Strong hands only; rarely bluffs or raises without the nuts.
-    TightPassive,
-    /// Wide ranges; frequent bets, raises, and bluffs.
-    LooseAggressive,
-    /// Balanced frequencies informed by GTO solver output.
-    Gto,
-    /// A hand-crafted style not matching a standard archetype.
-    Custom,
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PlayStyle(pub String);
+
+impl PlayStyle {
+    /// Creates a [`PlayStyle`] with the given label string.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::PlayStyle;
+    ///
+    /// let style = PlayStyle::new("lag");
+    /// assert_eq!(style.to_string(), "lag");
+    /// ```
+    #[must_use]
+    pub fn new(name: impl Into<String>) -> Self {
+        Self(name.into())
+    }
 }
 
 impl fmt::Display for PlayStyle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            PlayStyle::TightPassive => write!(f, "Tight Passive"),
-            PlayStyle::LooseAggressive => write!(f, "Loose Aggressive"),
-            PlayStyle::Gto => write!(f, "GTO"),
-            PlayStyle::Custom => write!(f, "Custom"),
-        }
+        write!(f, "{}", self.0)
     }
 }
 
@@ -138,11 +154,11 @@ impl From<std::io::Error> for BotError {
 /// let profile = BotProfile::new(
 ///     "tight_passive",
 ///     "Plays strong hands only.",
-///     PlayStyle::TightPassive,
+///     PlayStyle::new("tight_passive"),
 ///     RangeStrategy::tight_passive(),
 ///     BettingStrategy::tight_passive(),
 /// );
-/// assert_eq!(profile.style, PlayStyle::TightPassive);
+/// assert_eq!(profile.style, PlayStyle::new("tight_passive"));
 /// ```
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BotProfile {
@@ -179,7 +195,7 @@ impl BotProfile {
     /// let profile = BotProfile::new(
     ///     "gto",
     ///     "Balanced GTO strategy.",
-    ///     PlayStyle::Gto,
+    ///     PlayStyle::new("gto"),
     ///     RangeStrategy::gto(),
     ///     BettingStrategy::gto(),
     /// );
@@ -211,14 +227,14 @@ impl BotProfile {
     /// use pkcore::bot::profile::{BotProfile, PlayStyle};
     ///
     /// let p = BotProfile::tight_passive();
-    /// assert_eq!(p.style, PlayStyle::TightPassive);
+    /// assert_eq!(p.style, PlayStyle::new("tight_passive"));
     /// ```
     #[must_use]
     pub fn tight_passive() -> Self {
         Self::new(
             "tight_passive",
             "Plays strong hands only; rarely bluffs or raises without a strong holding.",
-            PlayStyle::TightPassive,
+            PlayStyle::new("tight_passive"),
             RangeStrategy::tight_passive(),
             BettingStrategy::tight_passive(),
         )
@@ -232,14 +248,14 @@ impl BotProfile {
     /// use pkcore::bot::profile::{BotProfile, PlayStyle};
     ///
     /// let p = BotProfile::loose_aggressive();
-    /// assert_eq!(p.style, PlayStyle::LooseAggressive);
+    /// assert_eq!(p.style, PlayStyle::new("loose_aggressive"));
     /// ```
     #[must_use]
     pub fn loose_aggressive() -> Self {
         Self::new(
             "loose_aggressive",
             "Wide ranges, frequent bets and bluffs — puts maximum pressure on opponents.",
-            PlayStyle::LooseAggressive,
+            PlayStyle::new("loose_aggressive"),
             RangeStrategy::loose_aggressive(),
             BettingStrategy::loose_aggressive(),
         )
@@ -253,14 +269,14 @@ impl BotProfile {
     /// use pkcore::bot::profile::{BotProfile, PlayStyle};
     ///
     /// let p = BotProfile::gto();
-    /// assert_eq!(p.style, PlayStyle::Gto);
+    /// assert_eq!(p.style, PlayStyle::new("gto"));
     /// ```
     #[must_use]
     pub fn gto() -> Self {
         Self::new(
             "gto",
             "Balanced frequencies informed by GTO solver output; unexploitable at equilibrium.",
-            PlayStyle::Gto,
+            PlayStyle::new("gto"),
             RangeStrategy::gto(),
             BettingStrategy::gto(),
         )
@@ -487,44 +503,44 @@ mod tests {
         let p = BotProfile::new(
             "test",
             "A test profile.",
-            PlayStyle::Custom,
+            PlayStyle::new("custom"),
             RangeStrategy::gto(),
             BettingStrategy::gto(),
         );
         assert_eq!(p.name, "test");
-        assert_eq!(p.style, PlayStyle::Custom);
+        assert_eq!(p.style, PlayStyle::new("custom"));
     }
 
     #[test]
     fn test_bot_profile_tight_passive() {
         let p = BotProfile::tight_passive();
-        assert_eq!(p.style, PlayStyle::TightPassive);
+        assert_eq!(p.style, PlayStyle::new("tight_passive"));
     }
 
     #[test]
     fn test_bot_profile_loose_aggressive() {
         let p = BotProfile::loose_aggressive();
-        assert_eq!(p.style, PlayStyle::LooseAggressive);
+        assert_eq!(p.style, PlayStyle::new("loose_aggressive"));
     }
 
     #[test]
     fn test_bot_profile_gto() {
         let p = BotProfile::gto();
-        assert_eq!(p.style, PlayStyle::Gto);
+        assert_eq!(p.style, PlayStyle::new("gto"));
     }
 
     #[test]
     fn test_play_style_display() {
-        assert_eq!(PlayStyle::TightPassive.to_string(), "Tight Passive");
-        assert_eq!(PlayStyle::LooseAggressive.to_string(), "Loose Aggressive");
-        assert_eq!(PlayStyle::Gto.to_string(), "GTO");
-        assert_eq!(PlayStyle::Custom.to_string(), "Custom");
+        assert_eq!(PlayStyle::new("tight_passive").to_string(), "tight_passive");
+        assert_eq!(PlayStyle::new("loose_aggressive").to_string(), "loose_aggressive");
+        assert_eq!(PlayStyle::new("gto").to_string(), "gto");
+        assert_eq!(PlayStyle::new("my_custom_style").to_string(), "my_custom_style");
     }
 
     #[test]
     fn test_bot_profile_display() {
         let p = BotProfile::gto();
-        assert_eq!(p.to_string(), "gto (GTO)");
+        assert_eq!(p.to_string(), "gto (gto)");
     }
 
     #[test]

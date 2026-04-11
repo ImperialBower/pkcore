@@ -7,7 +7,7 @@
 //!
 //! # Modules
 //!
-//! - [`profile`] — top-level [`profile::BotProfile`] type and [`profile::PlayStyle`] enum
+//! - [`profile`] — top-level [`profile::BotProfile`] type and [`profile::PlayStyle`] label type
 //! - [`range_strategy`] — flat preflop range charts and postflop frequencies (position-agnostic)
 //! - [`betting_strategy`] — aggression, bluff frequency, and bet sizing
 //! - [`weighted_range`] — [`weighted_range::WeightedRange`]: combo strings with mixed-strategy frequencies
@@ -38,7 +38,7 @@
 //! let profile = BotProfile::new(
 //!     "tight_passive",
 //!     "Plays a tight, passive style — strong hands only, rarely bluffs.",
-//!     PlayStyle::TightPassive,
+//!     PlayStyle::new("tight_passive"),
 //!     RangeStrategy::tight_passive(),
 //!     BettingStrategy::tight_passive(),
 //! );
