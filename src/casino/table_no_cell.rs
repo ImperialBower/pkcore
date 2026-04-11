@@ -249,9 +249,12 @@ impl PlayerNoCell {
 
     /// Posts a forced blind bet of `amount`.
     ///
+    /// If the player's total chip count is less than `amount`, they are posted
+    /// all-in for their remaining stack (short blind rule).
+    ///
     /// # Errors
     ///
-    /// - `PKError::InsufficientChips` if insufficient chips.
+    /// - `PKError::InvalidTableAction` if the player is not active.
     ///
     /// # Examples
     ///
@@ -259,11 +262,20 @@ impl PlayerNoCell {
     /// use pkcore::casino::table_no_cell::PlayerNoCell;
     /// use pkcore::prelude::PlayerState;
     ///
+    /// // Full blind — player has enough chips.
     /// let mut p = PlayerNoCell::new_with_chips("Frank".to_string(), 1_000);
     /// p.act_bet_blind(100).unwrap();
     /// assert_eq!(PlayerState::Blind(100), p.state);
+    ///
+    /// // Short blind — player goes all-in for their remaining stack.
+    /// let mut p = PlayerNoCell::new_with_chips("Short".to_string(), 20);
+    /// p.act_bet_blind(50).unwrap();
+    /// assert_eq!(PlayerState::AllIn(20), p.state);
     /// ```
     pub fn act_bet_blind(&mut self, amount: usize) -> Result<usize, PKError> {
+        if self.total_chip_count() < amount {
+            return self.act_all_in();
+        }
         self.act_bet_internal(PlayerState::Blind(amount))
     }
 

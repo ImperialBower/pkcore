@@ -490,8 +490,6 @@ impl Table {
         Ok(())
     }
 
-    /// TODO: Handle all in on forced bet.
-    ///
     /// # Errors
     ///
     /// Throws an `InvalidSeatNumber` if the seat number isn't or the seat is currently

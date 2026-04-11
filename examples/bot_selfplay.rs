@@ -10,10 +10,12 @@
 //! cargo run --features bot-profiles --example bot_selfplay
 //! ```
 
+use pkcore::arrays::sliced::BoxedCards;
 use pkcore::bot::profile::BotProfile;
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::table::winnings::Winnings;
 use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::prelude::Card;
 use rand::Rng;
 
 const STARTING_CHIPS: usize = 10_000;
@@ -149,12 +151,19 @@ fn run_hand(table: &mut TableNoCell, profiles: &[BotProfile], rng: &mut impl Rng
     table.end_hand().expect("end_hand")
 }
 
+/// Returns the dealt cards from `cards` as a sorted display string (high rank first).
+fn sorted_cards(cards: &BoxedCards) -> String {
+    let mut v: Vec<Card> = cards.as_slice().iter().copied().filter(|c| *c != Card::BLANK).collect();
+    v.sort_unstable_by(|a, b| b.cmp(a));
+    v.iter().map(|c| c.to_string()).collect::<Vec<_>>().join(" ")
+}
+
 /// Prints each active player's hole cards after the deal.
 fn print_hole_cards(table: &TableNoCell, profiles: &[BotProfile]) {
     for (i, profile) in profiles.iter().enumerate() {
         if let Some(seat) = table.seats.get_seat(i as u8) {
             if seat.cards.has_cards() {
-                println!("    {:>20}  {}", profile.name, seat.cards);
+                println!("    {:>20}  {}", profile.name, sorted_cards(&seat.cards));
             }
         }
     }
@@ -198,7 +207,7 @@ fn run_street(table: &mut TableNoCell, profiles: &[BotProfile], rng: &mut impl R
             .seats
             .get_seat(seat)
             .filter(|s| s.cards.has_cards())
-            .map(|s| format!(" [{}]", s.cards))
+            .map(|s| format!(" [{}]", sorted_cards(&s.cards)))
             .unwrap_or_default();
         let desc = apply_action(table, seat, action);
         let pot_after = effective_pot(table);
