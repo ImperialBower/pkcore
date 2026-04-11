@@ -1,0 +1,19 @@
+# cargo-mutants configuration
+# https://mutants.rs/configuration.html
+
+# Use cargo-nextest for faster parallel test runs
+test_tool = "nextest"
+
+# Multiply the auto-detected baseline test time by 2x for per-mutation timeout.
+# The baseline (~full nextest run) is measured automatically on first run.
+timeout_multiplier = 2.0
+
+# Absolute floor: no mutation gets less than 30 seconds regardless of baseline.
+minimum_test_timeout = 30.0
+
+# Exclude pure data lookup tables — no control flow here, mutations just corrupt
+# precomputed reference values without revealing logic gaps.
+exclude_globs = [
+    "src/lookups/**",
+    "src/arrays/**",
+]
