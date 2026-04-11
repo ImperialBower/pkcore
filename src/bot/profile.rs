@@ -7,7 +7,10 @@
 //! YAML support requires the **`bot-profiles`** feature flag.
 
 use crate::bot::betting_strategy::BettingStrategy;
+use crate::bot::playbook::Playbook;
 use crate::bot::range_strategy::RangeStrategy;
+use crate::bot::weighted_range::WeightedRange;
+use crate::casino::table::position::Position;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -153,6 +156,14 @@ pub struct BotProfile {
     pub range_strategy: RangeStrategy,
     /// Aggression, bluff frequency, and preferred bet sizing.
     pub betting_strategy: BettingStrategy,
+    /// Optional position- and table-size-aware strategy overrides.
+    ///
+    /// When `Some`, [`BotProfile::range_for`] and [`BotProfile::betting_for`]
+    /// prefer this over the flat `range_strategy` / `betting_strategy` fields.
+    /// Profiles without a playbook serialize identically to before this field
+    /// was added.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub playbook: Option<Playbook>,
 }
 
 impl BotProfile {
@@ -188,6 +199,7 @@ impl BotProfile {
             style,
             range_strategy,
             betting_strategy,
+            playbook: None,
         }
     }
 
@@ -252,6 +264,89 @@ impl BotProfile {
             RangeStrategy::gto(),
             BettingStrategy::gto(),
         )
+    }
+
+    // ── Playbook resolution helpers ───────────────────────────────────────────
+
+    /// Resolves the [`WeightedRange`] for a given `(seats, position, action)` triple.
+    ///
+    /// Returns `None` when the playbook is absent, the seat count has no entry,
+    /// or the action is not mapped for that position.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::BotProfile;
+    /// use pkcore::casino::table::position::Position;
+    ///
+    /// let profile = BotProfile::gto();
+    /// // No playbook on the base profile → returns None
+    /// assert!(profile.range_for(6, Position::BTN, "open_raise").is_none());
+    /// ```
+    #[must_use]
+    pub fn range_for(&self, seats: u8, pos: Position, action: &str) -> Option<&WeightedRange> {
+        self.playbook
+            .as_ref()
+            .and_then(|pb| pb.for_seats(seats))
+            .and_then(|entry| entry.position_ranges.for_position(pos).for_action(action))
+    }
+
+    /// Resolves the [`WeightedRange`] for `(seats, position, action)`, or
+    /// constructs a flat fallback from the profile's `range_strategy` fields.
+    ///
+    /// Fallback behaviour:
+    /// - `"open_raise"` → `WeightedRange::from_flat(&self.range_strategy.open_raise)`
+    /// - `"three_bet"`  → `WeightedRange::from_flat(&self.range_strategy.three_bet)`
+    /// - anything else  → empty [`WeightedRange`]
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::BotProfile;
+    /// use pkcore::casino::table::position::Position;
+    ///
+    /// let profile = BotProfile::gto();
+    /// // Falls back to range_strategy.open_raise
+    /// let wr = profile.range_for_or_default(6, Position::BTN, "open_raise");
+    /// assert!(!wr.is_empty());
+    /// ```
+    #[must_use]
+    pub fn range_for_or_default(&self, seats: u8, pos: Position, action: &str) -> WeightedRange {
+        self.range_for(seats, pos, action)
+            .cloned()
+            .unwrap_or_else(|| match action {
+                "open_raise" => WeightedRange::from_flat(&self.range_strategy.open_raise),
+                "three_bet" => WeightedRange::from_flat(&self.range_strategy.three_bet),
+                _ => WeightedRange::new(),
+            })
+    }
+
+    /// Resolves the [`BettingStrategy`] for `(seats, position)`.
+    ///
+    /// Falls back to `&self.betting_strategy` when the playbook is absent or
+    /// the seat count / position has no specific entry.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::BotProfile;
+    /// use pkcore::casino::table::position::Position;
+    ///
+    /// let profile = BotProfile::gto();
+    /// // No playbook → returns the flat betting_strategy
+    /// assert_eq!(
+    ///     profile.betting_for(6, Position::BTN).aggression_factor,
+    ///     profile.betting_strategy.aggression_factor,
+    /// );
+    /// ```
+    #[must_use]
+    pub fn betting_for(&self, seats: u8, pos: Position) -> &BettingStrategy {
+        self.playbook
+            .as_ref()
+            .and_then(|pb| pb.for_seats(seats))
+            .map_or(&self.betting_strategy, |entry| {
+                entry.positional_betting.for_position(pos)
+            })
     }
 
     // ── YAML serialization (requires bot-profiles feature) ────────────────────

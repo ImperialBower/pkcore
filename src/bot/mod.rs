@@ -41,5 +41,10 @@
 //! ```
 
 pub mod betting_strategy;
+pub mod playbook;
+pub mod position_ranges;
+pub mod positional_betting;
 pub mod profile;
 pub mod range_strategy;
+pub mod table_size;
+pub mod weighted_range;

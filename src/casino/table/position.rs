@@ -1,7 +1,10 @@
+use serde::{Deserialize, Serialize};
 use std::fmt::Formatter;
 use strum_macros::{EnumCount, EnumIter};
 
-#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, EnumCount, EnumIter, Eq, Hash, PartialEq)]
+#[derive(
+    Clone, Copy, Debug, Default, Ord, PartialOrd, EnumCount, EnumIter, Eq, Hash, PartialEq, Serialize, Deserialize,
+)]
 pub enum Position {
     #[default]
     SB = 1,
@@ -90,5 +93,11 @@ impl Positions {
             Position::SB,
             Position::BB,
         ])
+    }
+
+    /// Consumes this `Positions` and returns the inner `Vec<Position>`.
+    #[must_use]
+    pub fn into_inner(self) -> Vec<Position> {
+        self.0
     }
 }
