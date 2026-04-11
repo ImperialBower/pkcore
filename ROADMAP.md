@@ -112,7 +112,7 @@ workspace)
 | [EPIC-16](docs/EPIC-16_DCFR.md) | CFR+ and Discounted CFR — faster convergence variants | Complete |
 | [EPIC-17](docs/EPIC-17_Kuhn_Poker.md) | Kuhn Poker — minimal 3-card game, analytical Nash, CFR validator, interactive examples | Complete |
 | EPIC-18 | Bot Profiles — `BotProfile`, `Playbook`, `PositionRanges`, `PositionalBetting`; position- and table-size-aware YAML-serializable playing styles | Complete |
-| EPIC-19 | Bot Self-Play — drive `casino::table::Table` with `BotProfile` agents; local simulation without gRPC | Planned |
+| EPIC-19 | Bot Self-Play — drive `casino::table_no_cell::TableNoCell` with `BotProfile` agents; local simulation without gRPC | In Progress — working example in `examples/bot_selfplay.rs`; formal `BotDecider` trait and `SimTable` still planned |
 | EPIC-20 | Range Frequencies — optional per-combo frequency in range strings (`AA:0.5`) | Planned |
 
 ---
@@ -120,7 +120,7 @@ workspace)
 ## EPIC-19: Bot Self-Play Simulation
 
 **Goal:** Run a full table of bots against each other *inside pkcore*, using
-the existing `casino::table::Table` game loop — no gRPC, no network, no
+the `casino::table_no_cell::TableNoCell` game loop — no gRPC, no network, no
 external services required.
 
 This is the bridge between the bot profile work (EPIC-18) and the full
@@ -128,10 +128,31 @@ distributed platform (Phase 4). It validates that profiles produce realistic
 play, generates simulation data, and enables automated strategy comparison
 without standing up any infrastructure.
 
-### What it adds to pkcore
+See [`docs/EPIC-19_Bot_Self_Play.md`](docs/EPIC-19_Bot_Self_Play.md) for the
+full design and implementation status.
 
-**A `BotDecider` trait** (or equivalent free function) that maps table state
-to a `PlayerAction`:
+### Current state — working example
+
+`examples/bot_selfplay.rs` is a complete working demonstration:
+
+```bash
+cargo run --features bot-profiles --example bot_selfplay
+```
+
+All 8 profiles from `data/bots/` compete over up to 50 hands at a single
+`TableNoCell`. Output includes per-street board state, per-action play-by-play
+with hole cards, and final standings.
+
+The example uses a probabilistic `decide()` free function (not a trait) driven
+by each `BotProfile`'s `aggression_factor` and `preferred_bet_sizes`. This is
+sufficient for simulation and manual validation but not yet wired to the
+gRPC layer.
+
+### Remaining work — formal library types
+
+The planned library-level types have not yet been built:
+
+**`BotDecider` trait** — maps table state to a `PlayerAction`:
 
 ```rust
 pub trait BotDecider {
@@ -139,17 +160,13 @@ pub trait BotDecider {
 }
 ```
 
-`TableSnapshot` is a view of `Table` state visible to a single player: their
-hole cards, the board, pot size, stack sizes, position, and action history for
-the current street. It does **not** expose opponents' hole cards.
-
-**A `SimTable` runner** that drives a full hand (or many hands) using a list
-of `(BotProfile, seat)` pairs:
+**`SimTable` runner** — drives a full hand (or many hands) using a list of
+`(BotProfile, seat)` pairs:
 
 ```rust
 pub struct SimTable {
-    table: Table,
-    bots: Vec<(Seat, BotProfile, Box<dyn BotDecider>)>,
+    table: TableNoCell,
+    bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)>,
 }
 
 impl SimTable {
@@ -158,17 +175,17 @@ impl SimTable {
 }
 ```
 
-**A `RuleBasedDecider`** as the first concrete implementation — uses hand
-strength from `Eval`, pot odds, and `BotProfile` aggression/range fields to
-make decisions. This is the simplest bot that can play a legal, sensible game.
+**`RuleBasedDecider`** — uses hand strength from `Eval`, pot odds, and
+`BotProfile` fields to make decisions. The current example's `decide()`
+function is the prototype for this.
 
-**A `SimResult`** summary:
+**`SimResult`** — per-seat profit/loss and action counts over a session:
 
 ```rust
 pub struct SimResult {
     pub hands_played: usize,
-    pub net_chips: HashMap<Seat, i64>,   // profit/loss per seat
-    pub actions_taken: HashMap<Seat, ActionCounts>,
+    pub net_chips: HashMap<u8, i64>,
+    pub actions_taken: HashMap<u8, ActionCounts>,
 }
 ```
 
@@ -176,40 +193,19 @@ pub struct SimResult {
 
 The same `BotDecider` trait is what a gRPC agent binary will implement in
 Phase 4 — the decision logic is identical; only the transport changes. pkcore
-owns the logic; pkdealer owns the networking. Testing the logic locally via
-`SimTable` before adding gRPC means the distributed agents start from a
-validated foundation.
+owns the logic; pkdealer owns the networking. Testing locally via `SimTable`
+before adding gRPC means distributed agents start from a validated foundation.
 
-### Simulation scenarios
-
-**All-bot table** — `SimTable` filled entirely with `BotProfile` agents using
-`RuleBasedDecider`. Useful for strategy comparison, win-rate statistics, and
-regression testing bot profiles against each other.
-
-**Human vs. bots** — One seat uses a `HumanDecider` that reads from stdin (or
-a thin TUI prompt); the remaining seats use bots with different styles. The
-player sees their hole cards and the board, enters an action, and the bots
-respond automatically. This is the simplest possible interactive poker
-experience — no server, no browser, just `cargo run`.
-
-Because both modes use the same `BotDecider`/`HumanDecider` trait, `SimTable`
-doesn't need to know which seats are human and which are bots. Swapping a bot
-seat for a human seat is a one-liner.
-
-This local human-vs-bots mode also serves as a manual validation tool: a
-developer can sit at a table of known profiles and observe whether the bots
-behave as expected before any gRPC work begins.
-
-### Relevant existing types
+### Relevant types
 
 | Type | File | Role |
 |------|------|------|
-| `Table` | `src/casino/table/mod.rs` | Game state owner |
+| `TableNoCell` | `src/casino/table_no_cell.rs` | Game state owner |
 | `BotProfile` | `src/bot/profile.rs` | Strategy config |
 | `Playbook` | `src/bot/playbook.rs` | Position-aware dispatch |
 | `BettingStrategy` | `src/bot/betting_strategy.rs` | Aggression/sizing |
 | `PositionRanges` | `src/bot/position_ranges.rs` | Preflop range lookup |
-| `Eval` | `src/hands/eval.rs` | Hand strength |
+| `Eval` | `src/analysis/eval.rs` | Hand strength |
 
 ---
 
