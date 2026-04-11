@@ -8,8 +8,13 @@
 //! # Modules
 //!
 //! - [`profile`] — top-level [`profile::BotProfile`] type and [`profile::PlayStyle`] enum
-//! - [`range_strategy`] — preflop range charts and postflop frequencies
+//! - [`range_strategy`] — flat preflop range charts and postflop frequencies (position-agnostic)
 //! - [`betting_strategy`] — aggression, bluff frequency, and bet sizing
+//! - [`weighted_range`] — [`weighted_range::WeightedRange`]: combo strings with mixed-strategy frequencies
+//! - [`position_ranges`] — [`position_ranges::PositionRanges`]: per-position, per-action range maps
+//! - [`positional_betting`] — [`positional_betting::PositionalBetting`]: per-position betting strategies
+//! - [`table_size`] — [`table_size::TableSize`]: typed table-size enum (2–9 players)
+//! - [`playbook`] — [`playbook::Playbook`]: maps seat count to position-aware strategy
 //!
 //! # Feature flag
 //!

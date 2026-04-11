@@ -266,6 +266,28 @@ impl BotProfile {
         )
     }
 
+    // ── Playbook builder ──────────────────────────────────────────────────────
+
+    /// Attaches a [`Playbook`] to this profile, enabling position- and
+    /// table-size-aware strategy resolution via [`BotProfile::range_for`] and
+    /// [`BotProfile::betting_for`].
+    ///
+    /// Consumes `self` and returns the updated profile, making it easy to
+    /// chain onto a named constructor:
+    ///
+    /// ```rust
+    /// use pkcore::bot::playbook::Playbook;
+    /// use pkcore::bot::profile::BotProfile;
+    ///
+    /// let profile = BotProfile::gto().with_playbook(Playbook::gto());
+    /// assert!(profile.playbook.is_some());
+    /// ```
+    #[must_use]
+    pub fn with_playbook(mut self, playbook: Playbook) -> Self {
+        self.playbook = Some(playbook);
+        self
+    }
+
     // ── Playbook resolution helpers ───────────────────────────────────────────
 
     /// Resolves the [`WeightedRange`] for a given `(seats, position, action)` triple.
@@ -526,6 +548,28 @@ mod tests {
         let yaml = p.to_yaml_string().unwrap();
         let loaded = BotProfile::from_yaml_str(&yaml).unwrap();
         assert_eq!(p, loaded);
+    }
+
+    #[cfg(feature = "bot-profiles")]
+    #[test]
+    fn test_bot_profile_yaml_round_trip_with_playbook() {
+        use crate::bot::playbook::Playbook;
+        let p = BotProfile::gto().with_playbook(Playbook::gto());
+        assert!(p.playbook.is_some());
+        let yaml = p.to_yaml_string().unwrap();
+        let loaded = BotProfile::from_yaml_str(&yaml).unwrap();
+        assert_eq!(p, loaded);
+        assert!(loaded.playbook.is_some());
+    }
+
+    #[cfg(feature = "bot-profiles")]
+    #[test]
+    fn test_bot_profile_yaml_without_playbook_unchanged() {
+        // Profiles without a playbook must not gain a `playbook:` key in YAML,
+        // preserving backward compatibility with existing profile files.
+        let p = BotProfile::gto();
+        let yaml = p.to_yaml_string().unwrap();
+        assert!(!yaml.contains("playbook"), "flat profile should not emit playbook key");
     }
 
     #[cfg(all(feature = "bot-profiles", not(target_arch = "wasm32")))]
