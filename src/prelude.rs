@@ -138,8 +138,9 @@ pub use crate::analysis::gto::weighted_combos::WeightedCombos;
 
 // hand history
 pub use crate::hand_history::{
-    Action, ActionType, AnalysisContext, FORMAT_VERSION, FlopStreet, HandHistory, HandMeta, HandVariant, Outcome,
-    PlayerEntry, PostedBlind, PreflopStreet, ResultEntry, RiverStreet, Stakes, Streets, TableInfo, TurnStreet,
+    Action, ActionType, AnalysisContext, FORMAT_VERSION, FlopStreet, HandCollection, HandHistory, HandMeta,
+    HandVariant, Outcome, PlayerEntry, PostedBlind, PreflopStreet, ResultEntry, RiverStreet, Stakes, Streets,
+    TableInfo, TurnStreet,
 };
 
 // bot

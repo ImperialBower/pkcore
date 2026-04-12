@@ -820,6 +820,26 @@ impl Table {
     /// traversal wraps through the occupied seats cyclically (i.e. the result is
     /// the seat at position `n % occupied_count` after `start`).
     /// Falls back to raw arithmetic only when no occupied seats exist at all.
+    fn occupied_seat_at_or_after(&self, start: u8) -> u8 {
+        let size = self.seats.size() as usize;
+        if size == 0 {
+            return 0;
+        }
+        for step in 0..size {
+            let idx = u8::try_from((start as usize + step) % size).unwrap_or(0);
+            if let Some(seat) = self.get_seat(idx) {
+                if !seat.is_empty() {
+                    return idx;
+                }
+            }
+        }
+        start
+    }
+
+    fn count_occupied_seats(&self) -> usize {
+        self.seats.iter().filter(|s| !s.is_empty()).count()
+    }
+
     pub fn next_occupied_seat_after(&self, start: u8, n: usize) -> u8 {
         let size = self.seats.size() as usize;
         let start = start as usize;
@@ -857,7 +877,13 @@ impl Table {
     /// assert_eq!(table.determine_big_blind(), 2, "If seat 0 is the dealer, than seat 2 is the big blind");
     /// ```
     pub fn determine_big_blind(&self) -> u8 {
-        let bb_seat = self.next_occupied_seat_after(self.button.value(), 2);
+        let bb_seat = if self.count_occupied_seats() <= 2 {
+            // Heads-up: BB is the one seat after the SB/button.
+            let sb = self.occupied_seat_at_or_after(self.button.value());
+            self.next_occupied_seat_after(sb, 1)
+        } else {
+            self.next_occupied_seat_after(self.button.value(), 2)
+        };
         log::trace!("BB seat #{bb_seat} {}", self.get_seat_handle(bb_seat));
         bb_seat
     }
@@ -960,7 +986,12 @@ impl Table {
     /// assert_eq!(1, table.determine_small_blind(), "If seat 0 is the dealer, than seat 1 is the small blind");
     /// ```
     pub fn determine_small_blind(&self) -> u8 {
-        let sb_seat = self.next_occupied_seat_after(self.button.value(), 1);
+        let sb_seat = if self.count_occupied_seats() <= 2 {
+            // Heads-up rule: the button/dealer is the small blind.
+            self.occupied_seat_at_or_after(self.button.value())
+        } else {
+            self.next_occupied_seat_after(self.button.value(), 1)
+        };
         log::trace!("SB seat #{sb_seat} {}", self.get_seat_handle(sb_seat));
         sb_seat
     }
@@ -979,7 +1010,12 @@ impl Table {
     /// ```
     pub fn determine_utg(&self) -> u8 {
         if self.phase.borrow().is_preflop() {
-            self.next_occupied_seat_after(self.button.value(), 3)
+            if self.count_occupied_seats() <= 2 {
+                // Heads-up: SB (button) acts first preflop.
+                self.occupied_seat_at_or_after(self.button.value())
+            } else {
+                self.next_occupied_seat_after(self.button.value(), 3)
+            }
         } else {
             self.next_occupied_seat_after(self.button.value(), 1)
         }
@@ -1875,9 +1911,10 @@ mod casino__table_tests {
         table.act_new_hand();
         table.deal_cards_to_seats().unwrap();
 
-        assert_eq!(3, table.next_to_act());
+        // In HU, button (seat 0 / Alice) is SB and acts first preflop.
+        assert_eq!(0, table.next_to_act());
 
-        table.act_fold(3).unwrap();
+        table.act_fold(0).unwrap();
         assert!(table.is_game_over());
         table.end_hand().unwrap();
 

@@ -267,6 +267,246 @@ impl HandHistory {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Hand collection
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A versioned collection of [`HandHistory`] records, serializable as a
+/// single YAML file.
+///
+/// The top-level `pkcore_version` and `format_version` fields apply to the
+/// whole file. Individual hands do not need to repeat them (though when
+/// round-tripping via [`HandCollection::to_yaml`], each hand entry will
+/// include its own version fields because `HandHistory`'s serializer emits
+/// them — this is valid and round-trips correctly).
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::hand_history::HandCollection;
+///
+/// let collection = HandCollection::new();
+/// assert!(collection.is_empty());
+/// assert_eq!(collection.len(), 0);
+/// ```
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct HandCollection {
+    /// The pkcore crate version that produced this file.
+    #[serde(default = "default_pkcore_version")]
+    pub pkcore_version: String,
+
+    /// Schema version for forward-compatibility checks.
+    #[serde(default = "default_format_version")]
+    pub format_version: u32,
+
+    /// The hands contained in this collection.
+    pub hands: Vec<HandHistory>,
+}
+
+impl HandCollection {
+    /// Creates a new empty [`HandCollection`] with the current crate version
+    /// and format version.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::HandCollection;
+    ///
+    /// let collection = HandCollection::new();
+    /// assert!(collection.is_empty());
+    /// ```
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            pkcore_version: default_pkcore_version(),
+            format_version: default_format_version(),
+            hands: Vec::new(),
+        }
+    }
+
+    /// Appends a [`HandHistory`] to the end of this collection.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::{
+    ///     HandCollection, HandHistory, HandMeta, HandVariant, TableInfo, Stakes,
+    /// };
+    ///
+    /// let mut collection = HandCollection::new();
+    /// collection.push(HandHistory {
+    ///     pkcore_version: String::new(),
+    ///     format_version: 1,
+    ///     hand: HandMeta {
+    ///         id: "hand-001".to_string(),
+    ///         game: HandVariant::Holdem,
+    ///         timestamp: None,
+    ///         source: None,
+    ///         description: None,
+    ///     },
+    ///     table: TableInfo {
+    ///         name: None,
+    ///         seats: None,
+    ///         button: None,
+    ///         stakes: Stakes { small_blind: 1.0, big_blind: 2.0, ante: None, straddle: None },
+    ///     },
+    ///     players: vec![],
+    ///     board: None,
+    ///     streets: None,
+    ///     results: None,
+    ///     analysis: None,
+    /// });
+    /// assert_eq!(collection.len(), 1);
+    /// ```
+    pub fn push(&mut self, hand: HandHistory) {
+        self.hands.push(hand);
+    }
+
+    /// Returns the number of hands in this collection.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::HandCollection;
+    ///
+    /// let collection = HandCollection::new();
+    /// assert_eq!(collection.len(), 0);
+    /// ```
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.hands.len()
+    }
+
+    /// Returns `true` if the collection contains no hands.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::HandCollection;
+    ///
+    /// let collection = HandCollection::new();
+    /// assert!(collection.is_empty());
+    /// ```
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.hands.is_empty()
+    }
+
+    /// Returns an iterator over the [`HandHistory`] records in this collection.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::HandCollection;
+    ///
+    /// let collection = HandCollection::new();
+    /// assert_eq!(collection.iter().count(), 0);
+    /// ```
+    pub fn iter(&self) -> std::slice::Iter<'_, HandHistory> {
+        self.hands.iter()
+    }
+
+    /// Returns a slice of all [`HandHistory`] records in this collection.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::HandCollection;
+    ///
+    /// let collection = HandCollection::new();
+    /// assert!(collection.hands().is_empty());
+    /// ```
+    #[must_use]
+    pub fn hands(&self) -> &[HandHistory] {
+        &self.hands
+    }
+}
+
+impl Default for HandCollection {
+    /// Returns an empty [`HandCollection`] via [`HandCollection::new`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::HandCollection;
+    ///
+    /// let collection = HandCollection::default();
+    /// assert!(collection.is_empty());
+    /// ```
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[cfg(feature = "hand-histories")]
+impl HandCollection {
+    /// Deserialize a [`HandCollection`] from a YAML string.
+    ///
+    /// The top-level `pkcore_version` and `format_version` fields are optional;
+    /// they default to the current crate version and [`FORMAT_VERSION`]
+    /// respectively. Per-hand version fields, if present, are accepted but
+    /// ignored at the collection level.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`serde_yaml_bw::Error`] if the YAML is malformed or does not
+    /// match the expected schema.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "hand-histories")]
+    /// # {
+    /// use pkcore::hand_history::HandCollection;
+    ///
+    /// let yaml = r#"
+    /// hands:
+    ///   - hand:
+    ///       id: "hand-001"
+    ///       game: holdem
+    ///     table:
+    ///       stakes:
+    ///         small_blind: 1.0
+    ///         big_blind: 2.0
+    ///     players: []
+    /// "#;
+    ///
+    /// let collection = HandCollection::from_yaml(yaml).unwrap();
+    /// assert_eq!(collection.len(), 1);
+    /// # }
+    /// ```
+    pub fn from_yaml(yaml: &str) -> Result<Self, serde_yaml_bw::Error> {
+        serde_yaml_bw::from_str(yaml)
+    }
+
+    /// Serialize this [`HandCollection`] to a YAML string.
+    ///
+    /// Each embedded [`HandHistory`] will include its own `pkcore_version` and
+    /// `format_version` fields (emitted by `HandHistory`'s serializer). This is
+    /// valid; the file round-trips correctly and the collection-level version
+    /// fields remain authoritative.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`serde_yaml_bw::Error`] if serialization fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "hand-histories")]
+    /// # {
+    /// use pkcore::hand_history::HandCollection;
+    ///
+    /// let collection = HandCollection::new();
+    /// let yaml = collection.to_yaml().unwrap();
+    /// assert!(yaml.contains("hands:"));
+    /// # }
+    /// ```
+    pub fn to_yaml(&self) -> Result<String, serde_yaml_bw::Error> {
+        serde_yaml_bw::to_string(self)
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Hand metadata
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1313,5 +1553,205 @@ results:
     #[test]
     fn test_format_version_constant() {
         assert_eq!(FORMAT_VERSION, 1);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // HandCollection helpers and fixtures
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fn make_minimal_hand(id: &str, game: HandVariant) -> HandHistory {
+        HandHistory {
+            pkcore_version: String::new(),
+            format_version: 1,
+            hand: HandMeta {
+                id: id.to_string(),
+                game,
+                timestamp: None,
+                source: None,
+                description: None,
+            },
+            table: TableInfo {
+                name: None,
+                seats: None,
+                button: None,
+                stakes: Stakes {
+                    small_blind: 1.0,
+                    big_blind: 2.0,
+                    ante: None,
+                    straddle: None,
+                },
+            },
+            players: vec![],
+            board: None,
+            streets: None,
+            results: None,
+            analysis: None,
+        }
+    }
+
+    #[cfg(feature = "hand-histories")]
+    const TWO_HAND_COLLECTION_YAML: &str = r#"
+pkcore_version: "0.0.39"
+format_version: 1
+hands:
+  - hand:
+      id: "hand-001"
+      game: holdem
+    table:
+      stakes:
+        small_blind: 1.0
+        big_blind: 2.0
+    players:
+      - seat: 1
+        name: "Alice"
+        stack: 200.0
+  - hand:
+      id: "hand-002"
+      game: kuhn
+    table:
+      stakes:
+        small_blind: 1.0
+        big_blind: 1.0
+    players:
+      - seat: 1
+        name: "Agent-A"
+        stack: 100.0
+"#;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // HandCollection tests
+    // ─────────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_hand_collection_new() {
+        let collection = HandCollection::new();
+        assert!(collection.is_empty());
+        assert_eq!(collection.len(), 0);
+        assert!(!collection.pkcore_version.is_empty());
+        assert_eq!(collection.format_version, FORMAT_VERSION);
+    }
+
+    #[test]
+    fn test_hand_collection_default() {
+        let a = HandCollection::new();
+        let b = HandCollection::default();
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn test_hand_collection_push_and_len() {
+        let mut collection = HandCollection::new();
+        assert!(collection.is_empty());
+        collection.push(make_minimal_hand("h1", HandVariant::Holdem));
+        assert_eq!(collection.len(), 1);
+        assert!(!collection.is_empty());
+        collection.push(make_minimal_hand("h2", HandVariant::Kuhn));
+        assert_eq!(collection.len(), 2);
+    }
+
+    #[test]
+    fn test_hand_collection_iter() {
+        let mut collection = HandCollection::new();
+        collection.push(make_minimal_hand("h1", HandVariant::Holdem));
+        collection.push(make_minimal_hand("h2", HandVariant::Kuhn));
+        let ids: Vec<&str> = collection.iter().map(|h| h.hand.id.as_str()).collect();
+        assert_eq!(ids, vec!["h1", "h2"]);
+    }
+
+    #[test]
+    fn test_hand_collection_hands_slice() {
+        let mut collection = HandCollection::new();
+        collection.push(make_minimal_hand("h1", HandVariant::Holdem));
+        let slice = collection.hands();
+        assert_eq!(slice.len(), 1);
+        assert_eq!(slice[0].hand.id, "h1");
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn test_hand_collection_deserialize() {
+        let collection =
+            HandCollection::from_yaml(TWO_HAND_COLLECTION_YAML).expect("Failed to parse two-hand collection");
+        assert_eq!(collection.len(), 2);
+        assert_eq!(collection.hands[0].hand.id, "hand-001");
+        assert_eq!(collection.hands[0].hand.game, HandVariant::Holdem);
+        assert_eq!(collection.hands[1].hand.id, "hand-002");
+        assert_eq!(collection.hands[1].hand.game, HandVariant::Kuhn);
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn test_hand_collection_round_trip() {
+        let original = HandCollection::from_yaml(TWO_HAND_COLLECTION_YAML).expect("Failed to parse YAML");
+        let yaml_out = original.to_yaml().expect("Failed to serialize");
+        let restored = HandCollection::from_yaml(&yaml_out).expect("Failed to re-parse");
+        assert_eq!(original, restored);
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn test_hand_collection_empty_yaml() {
+        let yaml = "hands: []\n";
+        let collection = HandCollection::from_yaml(yaml).expect("Failed to parse empty collection");
+        assert!(collection.is_empty());
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn test_hand_collection_no_version_fields() {
+        let yaml = r#"
+hands:
+  - hand:
+      id: "h1"
+      game: holdem
+    table:
+      stakes:
+        small_blind: 1.0
+        big_blind: 2.0
+    players: []
+"#;
+        let collection = HandCollection::from_yaml(yaml).expect("Failed to parse");
+        assert_eq!(collection.format_version, FORMAT_VERSION);
+        assert!(!collection.pkcore_version.is_empty());
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn test_hand_collection_single_hand() {
+        let yaml = r#"
+hands:
+  - hand:
+      id: "solo-001"
+      game: holdem
+    table:
+      stakes:
+        small_blind: 5.0
+        big_blind: 10.0
+    players:
+      - seat: 1
+        name: "Player"
+        stack: 1000.0
+"#;
+        let collection = HandCollection::from_yaml(yaml).expect("Failed to parse single hand");
+        assert_eq!(collection.len(), 1);
+        assert_eq!(collection.hands[0].hand.id, "solo-001");
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn test_hand_collection_to_yaml_contains_hands_key() {
+        let mut collection = HandCollection::new();
+        collection.push(make_minimal_hand("h1", HandVariant::Holdem));
+        let yaml = collection.to_yaml().expect("Failed to serialize");
+        assert!(yaml.contains("hands:"));
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn test_hand_history_standalone_unaffected() {
+        let hh: HandHistory =
+            HandHistory::from_yaml(THE_HAND_YAML).expect("Existing single-hand YAML should still parse correctly");
+        assert_eq!(hh.hand.id, "hsp-s5-the-hand");
+        assert_eq!(hh.hand.game, HandVariant::Holdem);
     }
 }
