@@ -543,14 +543,12 @@ fn report_winners(winnings: &Winnings, profiles: &[BotProfile]) {
 
 fn print_stacks(table: &TableNoCell, profiles: &[BotProfile]) {
     print!("  Stacks:");
-    match table.seats.get_seat(HUMAN_SEAT) {
-        Some(seat) if !seat.is_empty() => print!("  {}={}", HUMAN_NAME, seat.player.chips),
-        _ => print!("  {}=OUT", HUMAN_NAME),
+    if let Some(seat) = table.seats.get_seat(HUMAN_SEAT).filter(|s| !s.is_empty()) {
+        print!("  {}={}", HUMAN_NAME, seat.player.chips);
     }
     for (i, profile) in profiles.iter().enumerate() {
-        match table.seats.get_seat(i as u8 + 1) {
-            Some(seat) if !seat.is_empty() => print!("  {}={}", profile.name, seat.player.chips),
-            _ => print!("  {}=OUT", profile.name),
+        if let Some(seat) = table.seats.get_seat(i as u8 + 1).filter(|s| !s.is_empty()) {
+            print!("  {}={}", profile.name, seat.player.chips);
         }
     }
     println!();
