@@ -490,7 +490,7 @@ impl BotProfile {
 
 #[cfg(feature = "bot-profiles")]
 impl BotProfile {
-    /// Decide a [`PlayerAction`] for the given seat using this profile's
+    /// Decide a [`crate::casino::action::PlayerAction`] for the given seat using this profile's
     /// aggression factor and preferred bet sizes.
     ///
     /// The decision is probabilistic:

@@ -2497,7 +2497,7 @@ impl TableNoCell {
 
 #[cfg(feature = "bot-profiles")]
 impl TableNoCell {
-    /// Apply a [`PlayerAction`] to the given seat.
+    /// Apply a [`crate::casino::action::PlayerAction`] to the given seat.
     ///
     /// Translates the action enum variant to the corresponding `act_*` method.
     /// Returns `Err` if the action is illegal at this point in the hand (e.g.
