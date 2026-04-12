@@ -9,6 +9,8 @@
 //! cargo run --features bot-profiles --example bot_selfplay
 //! ```
 
+use pkcore::analysis::eval::Eval;
+use pkcore::arrays::{seven::Seven, HandRanker};
 use pkcore::bot::profile::BotProfile;
 use pkcore::casino::action::PlayerAction;
 use pkcore::casino::game::ForcedBets;
@@ -16,6 +18,7 @@ use pkcore::casino::session::PokerSession;
 use pkcore::casino::table::winnings::Winnings;
 use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
 use rand::Rng;
+use std::str::FromStr;
 
 const STARTING_CHIPS: usize = 10_000;
 const SMALL_BLIND: usize = 50;
@@ -80,8 +83,7 @@ fn main() {
             hand, session.table.button, btn_name, remaining
         );
 
-        let winnings = run_hand(&mut session, &profiles, &mut rng);
-        report_winners(&winnings, &profiles);
+        let _winnings = run_hand(&mut session, &profiles, &mut rng);
 
         session.table.button_up();
         print_stacks(&session.table, &profiles);
@@ -112,7 +114,15 @@ fn main() {
 ///
 /// `next_actor` handles street advancement internally; board length changes
 /// are the signal to print "Flop / Turn / River" headers.
+#[allow(clippy::cast_precision_loss)]
 fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl Rng) -> Winnings {
+    // Capture stacks before forced bets so we can compute net chip change later.
+    let starting: Vec<usize> = profiles
+        .iter()
+        .enumerate()
+        .map(|(i, _)| session.table.seats.get_seat(i as u8).map_or(0, |s| s.player.chips))
+        .collect();
+
     session.start_hand().expect("start_hand");
 
     println!("  Preflop  [pot: {}]", session.table.effective_pot());
@@ -156,7 +166,37 @@ fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl 
         );
     }
 
-    session.end_hand().expect("end_hand")
+    // Show hand rankings if the hand reached a showdown (multiple players live).
+    let is_showdown = session.table.seats.active_in_hand().len() > 1;
+    if is_showdown {
+        let board = session.table.board.to_string();
+        print_showdown_hands(&session.table, profiles, &board);
+    }
+
+    let winnings = session.end_hand().expect("end_hand");
+
+    // Print each player's outcome and net chip change.
+    for (i, profile) in profiles.iter().enumerate() {
+        let seat = i as u8;
+        if session.table.seats.get_seat(seat).map(|s| s.is_empty()).unwrap_or(true) {
+            continue;
+        }
+        let ending = session.table.seats.get_seat(seat).map_or(0, |s| s.player.chips);
+        let net = ending as isize - starting[i] as isize;
+        let won: usize = winnings
+            .vec()
+            .iter()
+            .filter(|pw| pw.equity.seats.contains(seat))
+            .map(|pw| pw.equity.chips)
+            .sum();
+        if won > 0 {
+            println!("  {:>20}  wins {:>7} chips  (net {:+})", profile.name, won, net);
+        } else {
+            println!("  {:>20}  loses             (net {:+})", profile.name, net);
+        }
+    }
+
+    winnings
 }
 
 /// Returns a display string for a bot action (computed before applying it).
@@ -188,17 +228,31 @@ fn print_hole_cards(table: &TableNoCell, profiles: &[BotProfile]) {
     }
 }
 
-fn report_winners(winnings: &Winnings, profiles: &[BotProfile]) {
-    for pot_win in winnings.vec() {
-        let chips = pot_win.equity.chips;
-        let winners: Vec<&str> = (0..profiles.len() as u8)
-            .filter(|&s| pot_win.equity.seats.contains(s))
-            .map(|s| profiles[s as usize].name.as_str())
-            .collect();
-        if !winners.is_empty() {
-            println!("  {} wins {} chips", winners.join(" + "), chips);
+/// Prints each showdown player's hole cards and best-hand ranking.
+fn print_showdown_hands(table: &TableNoCell, profiles: &[BotProfile], board: &str) {
+    println!("  --- Showdown ---");
+    for (i, profile) in profiles.iter().enumerate() {
+        if let Some(seat) = table.seats.get_seat(i as u8) {
+            if seat.cards.has_cards() && seat.player.is_in_hand() {
+                let hole = seat.cards.sorted_display();
+                match rank_seven(&hole, board) {
+                    Some(r) => println!("    {:>20}  [{}]  →  {}  ({:?} #{})", profile.name, hole, r.hand, r.hand_rank.class, r.hand_rank.value),
+                    None => println!("    {:>20}  [{}]", profile.name, hole),
+                }
+            }
         }
     }
+}
+
+/// Returns the best-hand ranking for hole cards + a 5-card board.
+/// Returns `None` if the board is incomplete or the cards cannot be parsed.
+fn rank_seven(hole_cards: &str, board: &str) -> Option<Eval> {
+    if board.split_whitespace().count() < 5 {
+        return None;
+    }
+    let seven = Seven::from_str(&format!("{hole_cards} {board}")).ok()?;
+    let (hand_rank, hand) = seven.hand_rank_and_hand();
+    Some(Eval::new(hand_rank, hand))
 }
 
 fn print_stacks(table: &TableNoCell, profiles: &[BotProfile]) {

@@ -20,6 +20,8 @@
 //! cargo run --example interactive_play
 //! ```
 
+use pkcore::analysis::eval::Eval;
+use pkcore::arrays::{seven::Seven, HandRanker};
 use pkcore::bot::profile::BotProfile;
 use pkcore::casino::action::PlayerAction;
 use pkcore::casino::game::ForcedBets;
@@ -31,6 +33,7 @@ use pkcore::hand_history::{
 };
 use rand::Rng;
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
+use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const STARTING_CHIPS: usize = 10_000;
@@ -120,7 +123,10 @@ fn main() {
         );
 
         let (winnings, history) = run_hand(&mut table, &profiles, &mut rng, &mut editor, hand, &collection);
-        report_winners(&winnings, &profiles);
+        let _ = winnings;
+        if let Some(results) = history.results.as_deref() {
+            print_results(results, &profiles);
+        }
         collection.push(history);
         table.button_up();
         print_stacks(&table, &profiles);
@@ -219,6 +225,7 @@ fn run_hand(
     if table.is_game_over() {
         let board_str = table.board.to_string();
         let winnings = table.end_hand().expect("end_hand");
+        let ending_stacks = chip_counts(&table);
         let history = build_hand_history(
             hand_num,
             ts_secs,
@@ -227,6 +234,7 @@ fn run_hand(
             &board_str,
             &winnings,
             &table.event_log,
+            &ending_stacks,
         );
         return (winnings, history);
     }
@@ -239,6 +247,7 @@ fn run_hand(
     if table.is_game_over() {
         let board_str = table.board.to_string();
         let winnings = table.end_hand().expect("end_hand");
+        let ending_stacks = chip_counts(&table);
         let history = build_hand_history(
             hand_num,
             ts_secs,
@@ -247,6 +256,7 @@ fn run_hand(
             &board_str,
             &winnings,
             &table.event_log,
+            &ending_stacks,
         );
         return (winnings, history);
     }
@@ -259,6 +269,7 @@ fn run_hand(
     if table.is_game_over() {
         let board_str = table.board.to_string();
         let winnings = table.end_hand().expect("end_hand");
+        let ending_stacks = chip_counts(&table);
         let history = build_hand_history(
             hand_num,
             ts_secs,
@@ -267,6 +278,7 @@ fn run_hand(
             &board_str,
             &winnings,
             &table.event_log,
+            &ending_stacks,
         );
         return (winnings, history);
     }
@@ -280,6 +292,7 @@ fn run_hand(
     reveal_showdown(table, profiles);
     let board_str = table.board.to_string();
     let winnings = table.end_hand().expect("end_hand");
+    let ending_stacks = chip_counts(&table);
     let history = build_hand_history(
         hand_num,
         ts_secs,
@@ -288,6 +301,7 @@ fn run_hand(
         &board_str,
         &winnings,
         &table.event_log,
+        &ending_stacks,
     );
     (winnings, history)
 }
@@ -301,27 +315,46 @@ fn print_human_cards(table: &TableNoCell) {
     }
 }
 
-/// Reveals all remaining players' hole cards when a hand goes to showdown.
+/// Reveals all remaining players' hole cards and hand evaluations at showdown.
 fn reveal_showdown(table: &TableNoCell, profiles: &[BotProfile]) {
-    let active: Vec<(String, String)> = (0..table.seats.0.len() as u8)
+    let board = table.board.to_string();
+    let active: Vec<(String, String, Option<Eval>)> = (0..table.seats.0.len() as u8)
         .filter_map(|i| {
             table
                 .seats
                 .get_seat(i)
                 .filter(|s| !s.is_empty() && s.player.is_in_hand() && s.cards.has_cards())
-                .map(|s| (seat_label(i, profiles).to_string(), s.cards.sorted_display()))
+                .map(|s| {
+                    let hole = s.cards.sorted_display();
+                    let eval = rank_seven(&hole, &board);
+                    (seat_label(i, profiles).to_string(), hole, eval)
+                })
         })
         .collect();
 
     if active.len() > 1 {
         println!("  --- Showdown ---");
-        for (name, cards) in &active {
-            println!("    {:>20}  {}", name, cards);
+        for (name, hole, eval) in &active {
+            match eval {
+                Some(e) => println!("    {:>20}  [{}]  →  {}  ({:?} #{})", name, hole, e.hand, e.hand_rank.class, e.hand_rank.value),
+                None => println!("    {:>20}  [{}]", name, hole),
+            }
         }
     }
 }
 
 // ── Street driver ─────────────────────────────────────────────────────────────
+
+/// Returns the best-hand ranking for hole cards + a 5-card board.
+/// Returns `None` if the board is incomplete or the cards cannot be parsed.
+fn rank_seven(hole_cards: &str, board: &str) -> Option<Eval> {
+    if board.split_whitespace().count() < 5 {
+        return None;
+    }
+    let seven = Seven::from_str(&format!("{hole_cards} {board}")).ok()?;
+    let (hand_rank, hand) = seven.hand_rank_and_hand();
+    Some(Eval::new(hand_rank, hand))
+}
 
 fn run_street(
     table: &mut TableNoCell,
@@ -538,7 +571,9 @@ fn save_session(collection: &HandCollection) {
 ///
 /// `player_snapshot` holds `(seat, name, starting_stack, hole_cards)` where
 /// starting stack is captured before forced bets and hole cards immediately after
-/// the deal.
+/// the deal. `ending_stacks` holds `(seat, chips)` captured from `table.seats`
+/// immediately after `end_hand()`.
+#[allow(clippy::cast_precision_loss)]
 fn build_hand_history(
     hand_num: usize,
     ts_secs: u64,
@@ -547,22 +582,32 @@ fn build_hand_history(
     board_str: &str,
     winnings: &Winnings,
     event_log: &[pkcore::casino::table::event::TableAction],
+    ending_stacks: &[(u8, usize)],
 ) -> HandHistory {
     let results: Vec<ResultEntry> = player_snapshot
         .iter()
-        .map(|(seat, _, _, _)| {
+        .map(|(seat, _, starting_stack, hole_cards)| {
             let pot_won: f64 = winnings
                 .vec()
                 .iter()
                 .filter(|pw| pw.equity.seats.contains(*seat))
                 .map(|pw| pw.equity.chips as f64)
                 .sum();
+
+            let ending: Option<f64> = ending_stacks
+                .iter()
+                .find(|(s, _)| s == seat)
+                .map(|(_, c)| *c as f64);
+            let net = ending.map(|e| e - *starting_stack as f64);
+
+            let ranked = hole_cards.as_deref().and_then(|h| rank_seven(h, board_str));
+
             ResultEntry {
                 seat: *seat,
-                best_hand: None,
-                hand_rank: None,
+                best_hand: ranked.as_ref().map(|r| r.hand.to_string()),
+                hand_rank: ranked.as_ref().map(|r| r.hand_rank),
                 outcome: if pot_won > 0.0 { Outcome::Win } else { Outcome::Lose },
-                net: None,
+                net,
                 pot_won: if pot_won > 0.0 { Some(pot_won) } else { None },
                 mucked: None,
             }
@@ -625,18 +670,27 @@ fn seat_label<'a>(seat: u8, profiles: &'a [BotProfile]) -> &'a str {
     }
 }
 
-fn report_winners(winnings: &Winnings, profiles: &[BotProfile]) {
-    let total = profiles.len() + 1;
-    for pot_win in winnings.vec() {
-        let chips = pot_win.equity.chips;
-        let winners: Vec<&str> = (0..total as u8)
-            .filter(|&s| pot_win.equity.seats.contains(s))
-            .map(|s| seat_label(s, profiles))
-            .collect();
-        if !winners.is_empty() {
-            println!("  {} wins {} chips", winners.join(" + "), chips);
+/// Prints win/loss amounts for every player using the fully-populated results
+/// from the hand history (which carries `net` after serialization).
+fn print_results(results: &[ResultEntry], profiles: &[BotProfile]) {
+    for r in results {
+        let name = seat_label(r.seat, profiles);
+        match (r.net, r.pot_won) {
+            (Some(net), Some(won)) if net >= 0.0 => {
+                println!("  {:>20}  wins {:>7.0} chips  (net {:+.0})", name, won, net)
+            }
+            (Some(net), _) => println!("  {:>20}  loses             (net {:+.0})", name, net),
+            _ => {}
         }
     }
+}
+
+/// Returns `(seat, chips)` for every non-empty seat — used to compute net
+/// chip change after `end_hand()` distributes the pot.
+fn chip_counts(table: &TableNoCell) -> Vec<(u8, usize)> {
+    (0..table.seats.0.len() as u8)
+        .filter_map(|i| table.seats.get_seat(i).filter(|s| !s.is_empty()).map(|s| (i, s.player.chips)))
+        .collect()
 }
 
 fn print_stacks(table: &TableNoCell, profiles: &[BotProfile]) {
