@@ -11,12 +11,13 @@
 //! b <n>      — bet n chips
 //! r <n>      — raise to n chips total
 //! a          — all-in
+//! s          — save session to generated/
 //! q          — quit the session
 //! ```
 //!
 //! Run with:
 //! ```text
-//! cargo run --features bot-profiles --example interactive_play
+//! cargo run --example interactive_play
 //! ```
 
 use pkcore::bot::profile::BotProfile;
@@ -24,8 +25,13 @@ use pkcore::casino::action::PlayerAction;
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::table::winnings::Winnings;
 use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::hand_history::{
+    FORMAT_VERSION, HandCollection, HandHistory, HandMeta, HandVariant, Outcome, PlayerEntry, ResultEntry, Stakes,
+    TableInfo,
+};
 use rand::Rng;
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const STARTING_CHIPS: usize = 10_000;
 const SMALL_BLIND: usize = 50;
@@ -33,6 +39,7 @@ const BIG_BLIND: usize = 100;
 const NUM_HANDS: usize = 50;
 const HUMAN_SEAT: u8 = 0;
 const HUMAN_NAME: &str = "You";
+const RUN_NAME: &str = "interactive_play";
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -71,6 +78,7 @@ fn main() {
     let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(SMALL_BLIND, BIG_BLIND));
     let mut rng = rand::rng();
     let mut editor = Reedline::create();
+    let mut collection = HandCollection::new();
 
     println!(
         "=== Interactive Poker  |  You vs {} bots  |  blinds {}/{}  |  {} chips ===",
@@ -79,7 +87,7 @@ fn main() {
         BIG_BLIND,
         STARTING_CHIPS
     );
-    println!("  f=fold  ch=check  c=call  b <n>=bet  r <n>=raise to  a=all-in  q=quit");
+    println!("  f=fold  ch=check  c=call  b <n>=bet  r <n>=raise to  a=all-in  s=save  q=quit");
     println!();
     print_stacks(&table, &profiles);
 
@@ -111,11 +119,14 @@ fn main() {
             remaining
         );
 
-        let winnings = run_hand(&mut table, &profiles, &mut rng, &mut editor);
+        let (winnings, history) = run_hand(&mut table, &profiles, &mut rng, &mut editor, hand, &collection);
         report_winners(&winnings, &profiles);
+        collection.push(history);
         table.button_up();
         print_stacks(&table, &profiles);
     }
+
+    save_session(&collection);
 
     println!("\n=== Final standings ===");
     match table
@@ -144,9 +155,58 @@ fn main() {
 
 // ── Hand driver ───────────────────────────────────────────────────────────────
 
-fn run_hand(table: &mut TableNoCell, profiles: &[BotProfile], rng: &mut impl Rng, editor: &mut Reedline) -> Winnings {
+fn run_hand(
+    table: &mut TableNoCell,
+    profiles: &[BotProfile],
+    rng: &mut impl Rng,
+    editor: &mut Reedline,
+    hand_num: usize,
+    collection: &HandCollection,
+) -> (Winnings, HandHistory) {
+    let ts_secs = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let button = table.button;
+
+    // Snapshot starting stacks before forced bets (hand-history convention).
+    let stacks: Vec<(u8, String, usize)> = (0..table.seats.0.len() as u8)
+        .filter_map(|i| {
+            table
+                .seats
+                .get_seat(i)
+                .filter(|s| !s.is_empty())
+                .map(|s| (i, s.player.handle.clone(), s.player.chips))
+        })
+        .collect();
+
     table.act_forced_bets().expect("forced bets");
     table.deal_cards_to_seats().expect("deal hole cards");
+
+    // Capture hole cards immediately after deal.
+    let hole_cards: Vec<(u8, Option<String>)> = (0..table.seats.0.len() as u8)
+        .filter_map(|i| {
+            table.seats.get_seat(i).filter(|s| !s.is_empty()).map(|s| {
+                (
+                    i,
+                    if s.cards.has_cards() {
+                        Some(s.cards.sorted_display())
+                    } else {
+                        None
+                    },
+                )
+            })
+        })
+        .collect();
+
+    // Merge stacks + hole cards into a single snapshot.
+    let player_snapshot: Vec<(u8, String, usize, Option<String>)> = stacks
+        .into_iter()
+        .map(|(seat, name, stack)| {
+            let hole = hole_cards.iter().find(|(s, _)| *s == seat).and_then(|(_, h)| h.clone());
+            (seat, name, stack, hole)
+        })
+        .collect();
 
     if let Some(seat) = table.seats.get_seat(HUMAN_SEAT) {
         if seat.cards.has_cards() {
@@ -155,37 +215,49 @@ fn run_hand(table: &mut TableNoCell, profiles: &[BotProfile], rng: &mut impl Rng
     }
 
     println!("  Preflop  [pot: {}]", table.effective_pot());
-    run_street(table, profiles, rng, editor);
+    run_street(table, profiles, rng, editor, collection);
     if table.is_game_over() {
-        return table.end_hand().expect("end_hand");
+        let board_str = table.board.to_string();
+        let winnings = table.end_hand().expect("end_hand");
+        let history = build_hand_history(hand_num, ts_secs, button, &player_snapshot, &board_str, &winnings);
+        return (winnings, history);
     }
 
     let pot = table.bring_it_in().expect("bring_it_in preflop");
     table.deal_flop().expect("deal flop");
     println!("  Flop: {}  [pot: {}]", table.board, pot);
     print_human_cards(table);
-    run_street(table, profiles, rng, editor);
+    run_street(table, profiles, rng, editor, collection);
     if table.is_game_over() {
-        return table.end_hand().expect("end_hand");
+        let board_str = table.board.to_string();
+        let winnings = table.end_hand().expect("end_hand");
+        let history = build_hand_history(hand_num, ts_secs, button, &player_snapshot, &board_str, &winnings);
+        return (winnings, history);
     }
 
     let pot = table.bring_it_in().expect("bring_it_in flop");
     table.deal_turn().expect("deal turn");
     println!("  Turn: {}  [pot: {}]", table.board, pot);
     print_human_cards(table);
-    run_street(table, profiles, rng, editor);
+    run_street(table, profiles, rng, editor, collection);
     if table.is_game_over() {
-        return table.end_hand().expect("end_hand");
+        let board_str = table.board.to_string();
+        let winnings = table.end_hand().expect("end_hand");
+        let history = build_hand_history(hand_num, ts_secs, button, &player_snapshot, &board_str, &winnings);
+        return (winnings, history);
     }
 
     let pot = table.bring_it_in().expect("bring_it_in turn");
     table.deal_river().expect("deal river");
     println!("  River: {}  [pot: {}]", table.board, pot);
     print_human_cards(table);
-    run_street(table, profiles, rng, editor);
+    run_street(table, profiles, rng, editor, collection);
 
     reveal_showdown(table, profiles);
-    table.end_hand().expect("end_hand")
+    let board_str = table.board.to_string();
+    let winnings = table.end_hand().expect("end_hand");
+    let history = build_hand_history(hand_num, ts_secs, button, &player_snapshot, &board_str, &winnings);
+    (winnings, history)
 }
 
 /// Prints the human's hole cards as a reminder at the start of each post-flop street.
@@ -219,7 +291,13 @@ fn reveal_showdown(table: &TableNoCell, profiles: &[BotProfile]) {
 
 // ── Street driver ─────────────────────────────────────────────────────────────
 
-fn run_street(table: &mut TableNoCell, profiles: &[BotProfile], rng: &mut impl Rng, editor: &mut Reedline) {
+fn run_street(
+    table: &mut TableNoCell,
+    profiles: &[BotProfile],
+    rng: &mut impl Rng,
+    editor: &mut Reedline,
+    collection: &HandCollection,
+) {
     let max_iterations = (profiles.len() + 1) * 8;
 
     for _ in 0..max_iterations {
@@ -239,7 +317,7 @@ fn run_street(table: &mut TableNoCell, profiles: &[BotProfile], rng: &mut impl R
                 .filter(|s| s.cards.has_cards())
                 .map(|s| s.cards.sorted_display())
                 .unwrap_or_default();
-            read_human_action(table, seat, to_call, chips, pot_before, &hole, editor)
+            read_human_action(table, seat, to_call, chips, pot_before, &hole, editor, collection)
         } else {
             let profile = &profiles[(seat as usize) - 1];
             let action = profile.decide(table, seat, rng);
@@ -285,6 +363,7 @@ fn read_human_action(
     pot: usize,
     hole: &str,
     editor: &mut Reedline,
+    collection: &HandCollection,
 ) -> String {
     let prompt = DefaultPrompt {
         left_prompt: DefaultPromptSegment::Basic("  └> ".to_string()),
@@ -297,10 +376,10 @@ fn read_human_action(
         println!("  │  Cards: {}   Chips: {}   Pot: {}", hole, chips, pot);
         if to_call > 0 {
             println!("  │  To call: {}   Min raise: {}", to_call, table.min_raise());
-            println!("  │  f=fold  c=call {}  r <n>=raise to n  a=all-in", to_call);
+            println!("  │  f=fold  c=call {}  r <n>=raise to n  a=all-in  s=save", to_call);
         } else {
             println!("  │  Min bet: {}", BIG_BLIND);
-            println!("  │  ch=check  b <n>=bet n  a=all-in");
+            println!("  │  ch=check  b <n>=bet n  a=all-in  s=save");
         }
 
         let trimmed = match editor.read_line(&prompt) {
@@ -375,12 +454,127 @@ fn read_human_action(
                 }
                 None => println!("  Usage: r <chips>"),
             },
+            "s" | "save" => {
+                save_session(collection);
+                // Does not consume the turn — loop continues.
+            }
             "q" | "quit" | "exit" => {
+                save_session(collection);
                 println!("\nSession ended. Thanks for playing!");
                 std::process::exit(0);
             }
-            _ => println!("  Unknown command. Try: f, ch, c, b <n>, r <n>, a, q"),
+            _ => println!("  Unknown command. Try: f, ch, c, b <n>, r <n>, a, s, q"),
         }
+    }
+}
+
+// ── Save / history ────────────────────────────────────────────────────────────
+
+/// Writes the session's completed hands to `generated/<RUN_NAME>_<unix_ts>.yaml`.
+///
+/// Prints a confirmation line on success, or a notice if no hands have been
+/// completed yet.
+fn save_session(collection: &HandCollection) {
+    if collection.is_empty() {
+        println!("  No completed hands to save yet.");
+        return;
+    }
+    let ts = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let path = format!("generated/{}_{}.yaml", RUN_NAME, ts);
+    let yaml = match collection.to_yaml() {
+        Ok(y) => y,
+        Err(e) => {
+            println!("  Save failed (serialization): {e}");
+            return;
+        }
+    };
+    if let Err(e) = std::fs::create_dir_all("generated") {
+        println!("  Save failed (mkdir): {e}");
+        return;
+    }
+    if let Err(e) = std::fs::write(&path, &yaml) {
+        println!("  Save failed (write): {e}");
+        return;
+    }
+    println!("  Session saved → {path}  ({} hand(s))", collection.len());
+}
+
+/// Constructs a [`HandHistory`] from the state captured around a single completed hand.
+///
+/// `player_snapshot` holds `(seat, name, starting_stack, hole_cards)` where
+/// starting stack is captured before forced bets and hole cards immediately after
+/// the deal.
+fn build_hand_history(
+    hand_num: usize,
+    ts_secs: u64,
+    button: u8,
+    player_snapshot: &[(u8, String, usize, Option<String>)],
+    board_str: &str,
+    winnings: &Winnings,
+) -> HandHistory {
+    let results: Vec<ResultEntry> = player_snapshot
+        .iter()
+        .map(|(seat, _, _, _)| {
+            let pot_won: f64 = winnings
+                .vec()
+                .iter()
+                .filter(|pw| pw.equity.seats.contains(*seat))
+                .map(|pw| pw.equity.chips as f64)
+                .sum();
+            ResultEntry {
+                seat: *seat,
+                best_hand: None,
+                hand_rank: None,
+                outcome: if pot_won > 0.0 { Outcome::Win } else { Outcome::Lose },
+                net: None,
+                pot_won: if pot_won > 0.0 { Some(pot_won) } else { None },
+                mucked: None,
+            }
+        })
+        .collect();
+
+    HandHistory {
+        pkcore_version: env!("CARGO_PKG_VERSION").to_string(),
+        format_version: FORMAT_VERSION,
+        hand: HandMeta {
+            id: format!("interactive-hand-{hand_num:03}"),
+            game: HandVariant::Holdem,
+            timestamp: Some(ts_secs.to_string()),
+            source: Some(RUN_NAME.to_string()),
+            description: None,
+        },
+        table: TableInfo {
+            name: Some(RUN_NAME.to_string()),
+            seats: Some(player_snapshot.len() as u8),
+            button: Some(button),
+            stakes: Stakes {
+                small_blind: SMALL_BLIND as f64,
+                big_blind: BIG_BLIND as f64,
+                ante: None,
+                straddle: None,
+            },
+        },
+        players: player_snapshot
+            .iter()
+            .map(|(seat, name, stack, hole_cards)| PlayerEntry {
+                seat: *seat,
+                name: name.clone(),
+                stack: *stack as f64,
+                hole_cards: hole_cards.clone(),
+                posted: None,
+            })
+            .collect(),
+        board: if board_str.is_empty() {
+            None
+        } else {
+            Some(board_str.to_string())
+        },
+        streets: None,
+        results: Some(results),
+        analysis: None,
     }
 }
 

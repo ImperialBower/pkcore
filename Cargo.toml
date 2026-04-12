@@ -13,6 +13,9 @@ exclude = [".github/workflows/*", "data/*", "docs/*", "examples/*", "generated/h
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
+## Default features enable the bot-profiles and hand-histories YAML support so
+## that examples (e.g. interactive_play) work with a plain `cargo run --example`.
+default = ["bot-profiles", "hand-histories"]
 ## When enabled, `SolverResult::save` and `SolverResult::load` use human-readable
 ## JSON instead of the default compact binary (postcard) format. Useful for
 ## inspecting solver output during development. The explicit `save_json` /
@@ -69,7 +72,7 @@ required-features = ["bot-profiles"]
 
 [[example]]
 name = "interactive_play"
-required-features = ["bot-profiles"]
+required-features = ["bot-profiles", "hand-histories"]
 
 [dev-dependencies]
 serde_yaml_bw = "2.5"
