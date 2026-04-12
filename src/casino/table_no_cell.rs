@@ -1174,7 +1174,7 @@ impl TableNoCell {
         }
         for step in 0..size {
             let idx = u8::try_from((start as usize + step) % size).unwrap_or(0);
-            if self.seats.get_seat(idx).map(|s| !s.is_empty()).unwrap_or(false) {
+            if self.seats.get_seat(idx).is_some_and(|s| !s.is_empty()) {
                 return idx;
             }
         }
