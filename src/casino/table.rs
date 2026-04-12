@@ -827,10 +827,10 @@ impl Table {
         }
         for step in 0..size {
             let idx = u8::try_from((start as usize + step) % size).unwrap_or(0);
-            if let Some(seat) = self.get_seat(idx) {
-                if !seat.is_empty() {
-                    return idx;
-                }
+            if let Some(seat) = self.get_seat(idx)
+                && !seat.is_empty()
+            {
+                return idx;
             }
         }
         start

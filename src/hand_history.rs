@@ -275,7 +275,7 @@ impl HandHistory {
 ///
 /// The top-level `pkcore_version` and `format_version` fields apply to the
 /// whole file. Individual hands do not need to repeat them (though when
-/// round-tripping via [`HandCollection::to_yaml`], each hand entry will
+/// round-tripping via `to_yaml`, each hand entry will
 /// include its own version fields because `HandHistory`'s serializer emits
 /// them — this is valid and round-trips correctly).
 ///
