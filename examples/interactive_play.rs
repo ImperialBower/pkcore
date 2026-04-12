@@ -11,6 +11,7 @@
 //! b <n>      — bet n chips
 //! r <n>      — raise to n chips total
 //! a          — all-in
+//! q          — quit the session
 //! ```
 //!
 //! Run with:
@@ -79,7 +80,7 @@ fn main() {
         BIG_BLIND,
         STARTING_CHIPS
     );
-    println!("  f=fold  ch=check  c=call  b <n>=bet  r <n>=raise to  a=all-in");
+    println!("  f=fold  ch=check  c=call  b <n>=bet  r <n>=raise to  a=all-in  q=quit");
     println!();
     print_stacks(&table, &profiles);
 
@@ -365,7 +366,11 @@ fn read_human_action(
                 }
                 None => println!("  Usage: r <chips>"),
             },
-            _ => println!("  Unknown command. Try: f, ch, c, b <n>, r <n>, a"),
+            "q" | "quit" | "exit" => {
+                println!("\nSession ended. Thanks for playing!");
+                std::process::exit(0);
+            }
+            _ => println!("  Unknown command. Try: f, ch, c, b <n>, r <n>, a, q"),
         }
     }
 }

@@ -22,6 +22,9 @@ debug-json = []
 ## Enables YAML serialization/deserialization for `BotProfile` and related
 ## types in the `bot` module. Adds a `serde_yaml_bw` dependency.
 bot-profiles = ["dep:serde_yaml_bw"]
+## Enables YAML serialization/deserialization for `HandHistory` and related
+## types in the `hand_history` module. Adds a `serde_yaml_bw` dependency.
+hand-histories = ["dep:serde_yaml_bw"]
 
 [dependencies]
 bint = "0.1.15"

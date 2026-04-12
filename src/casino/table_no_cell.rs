@@ -858,7 +858,13 @@ impl SeatsNoCell {
 
     /// Collects all current-round bets into the pot amount (returned as `usize`).
     ///
-    /// If only one player has action remaining, their state is not changed (frozen).
+    /// Active players are reset to `YetToAct` so they can act on the next street,
+    /// unless the hand is effectively over (≤1 player still in), in which case
+    /// their state is left unchanged ("frozen") since no further streets are needed.
+    ///
+    /// Note: "frozen" is NOT used when `action_givers == 1` but all-in players
+    /// remain — in that case the non-all-in player still needs to act on future
+    /// streets and must be reset to `YetToAct`.
     ///
     /// # Errors
     ///
@@ -867,13 +873,16 @@ impl SeatsNoCell {
         if !self.is_betting_complete() {
             return Err(PKError::ActionIsntFinished);
         }
-        let action_givers = self.count_players_with_action_to_give();
+        // Use "frozen" only when ≤1 player is in the hand (everyone else folded).
+        // When players are all-in, the remaining non-all-in player still needs
+        // to act on future streets, so their state must be reset to YetToAct.
+        let use_frozen = self.count_active_in_hand() <= 1;
         let mut collected = 0usize;
         for seat in &mut self.0 {
             if !seat.player.has_bet() {
                 continue;
             }
-            let chips = if action_givers == 1 {
+            let chips = if use_frozen {
                 seat.player.act_bring_it_in_frozen()
             } else {
                 seat.player.act_bring_it_in()
@@ -2339,6 +2348,7 @@ impl Display for TableNoCell {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
+#[allow(non_snake_case)]
 mod tests {
     use super::*;
     use crate::casino::game::ForcedBets;

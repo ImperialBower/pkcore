@@ -1,0 +1,117 @@
+# pkcore Hand History Format v1
+# "The Hand" — Daniel Negreanu vs Gus Hansen
+# High Stakes Poker Season 5
+# https://www.youtube.com/watch?v=vjM60lqRhPg
+#
+# Card notation: pkcore's forgiving FromStr format.
+# Unicode suits (♠♥♦♣) or ASCII (s, h, d, c), case-insensitive.
+# Examples: "A♠", "Kd", "Ts", "9C" — all valid.
+#
+# hand_rank uses pkcore's HandRank type:
+#   name: HandRankName  — broad category (FullHouse, FourOfAKind, etc.)
+#   class: HandRankClass — specific hand (SixesOverFives, FourFives, etc.)
+#   value: HandRankValue — CKC integer (1 = Royal Flush, 7462 = worst high card)
+# game field maps to hand_history::HandVariant (serialized as snake_case)
+
+---
+pkcore_version: "0.0.39"
+format_version: 1
+
+hand:
+  id: "hsp-s5-the-hand"
+  game: holdem
+  timestamp: "2008-03-01T21:00:00Z"
+  source: "High Stakes Poker S5"
+  description: "The Hand - Negreanu vs Hansen, Quads vs Full House"
+
+table:
+  name: "HSP Table 1"
+  seats: 6
+  button: 1
+  stakes:
+    small_blind: 400.0
+    big_blind: 800.0
+    ante: 200.0
+
+players:
+  - seat: 1
+    name: "Gus Hansen"
+    stack: 468200.0
+    hole_cards: "6♠ 6♥"        # Two::from_str("6♠ 6♥")
+
+  - seat: 4
+    name: "Daniel Negreanu"
+    stack: 331400.0
+    hole_cards: "5♦ 5♣"        # Two::from_str("5♦ 5♣")
+
+# Full board: Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠")
+board: "9♣ 6♦ 5♥ 5♠ 8♠"
+
+streets:
+  preflop:
+    actions:
+      - { seat: 2, action: fold }
+      - { seat: 3, action: fold }
+      - { seat: 4, action: raise, amount: 3500.0 }
+      - { seat: 5, action: fold }
+      - { seat: 6, action: fold }
+      - { seat: 1, action: call, amount: 3500.0 }
+    pot: 8200.0
+
+  flop:
+    cards: "9♣ 6♦ 5♥"         # Three::from_str("9♣ 6♦ 5♥")
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 4, action: bet, amount: 8000.0 }
+      - { seat: 1, action: raise, amount: 26000.0 }
+      - { seat: 4, action: call, amount: 26000.0 }
+    pot: 60200.0
+
+  turn:
+    card: "5♠"                 # Card::from_str("5♠")
+    actions:
+      - { seat: 1, action: check }
+      - { seat: 4, action: bet, amount: 52000.0 }
+      - { seat: 1, action: raise, amount: 100000.0 }
+      - { seat: 4, action: call, amount: 100000.0 }
+    pot: 260200.0
+
+  river:
+    card: "8♠"                 # Card::from_str("8♠")
+    actions:
+      - { seat: 1, action: bet, amount: 205000.0 }
+      - { seat: 4, action: call, amount: 205000.0 }
+    pot: 670200.0
+
+# Showdown results.
+# hand_rank mirrors pkcore's HandRank struct:
+#   name = HandRankName (broad: FullHouse, FourOfAKind, ...)
+#   class = HandRankClass (specific: SixesOverFives, FourFives, ...)
+results:
+  - seat: 1
+    best_hand: "6♠ 6♥ 6♦ 5♥ 5♠"    # Five::from_str()
+    hand_rank:
+      value: 271
+      name: FullHouse
+      class: SixesOverFives
+    outcome: win
+    net: 335100.0
+
+  - seat: 4
+    best_hand: "5♥ 5♠ 5♦ 5♣ 9♣"
+    hand_rank:
+      value: 117
+      name: FourOfAKind
+      class: FourFives
+    outcome: lose
+    net: -335100.0
+
+# Optional GTO/solver context
+analysis:
+  villain_range: "66+,AJs+,KQs,AJo+,KQo"   # Combos::from_str()
+  hero_equity_preflop: 0.5083
+  notes: >
+    Negreanu had quad fives but Hansen's full house was the visual story.
+    At the flop, Hansen was a 95.7% favorite with trip sixes vs trip fives.
+    The turn 5♠ gave Negreanu quads and left Hansen drawing dead.
+    Final hand: quads beats the boat.

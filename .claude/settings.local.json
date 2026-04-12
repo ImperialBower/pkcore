@@ -31,7 +31,8 @@
       "Bash(find /Users/christoph/src/github.com/ImperialBower/pkcore/src -name \"*.rs\" -exec grep -l \"PKError\" {} \\\\;)",
       "Bash(find /Users/gaoler/src/github.com/ImperialBower/pkcore/src -type f -name \"*.rs\" -exec wc -l {} +)",
       "Bash(wc:*)",
-      "Bash(cargo nextest:*)"
+      "Bash(cargo nextest:*)",
+      "Bash(cargo doc:*)"
     ]
   }
 }

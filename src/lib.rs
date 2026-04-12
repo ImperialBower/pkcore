@@ -366,6 +366,7 @@ pub mod cards_cell;
 pub mod casino;
 pub mod deck;
 pub mod games;
+pub mod hand_history;
 mod lookups;
 pub mod play;
 pub mod prelude;
