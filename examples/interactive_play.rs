@@ -27,7 +27,7 @@ use pkcore::casino::table::winnings::Winnings;
 use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
 use pkcore::hand_history::{
     FORMAT_VERSION, HandCollection, HandHistory, HandMeta, HandVariant, Outcome, PlayerEntry, ResultEntry, Stakes,
-    TableInfo,
+    Streets, TableInfo,
 };
 use rand::Rng;
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
@@ -219,7 +219,15 @@ fn run_hand(
     if table.is_game_over() {
         let board_str = table.board.to_string();
         let winnings = table.end_hand().expect("end_hand");
-        let history = build_hand_history(hand_num, ts_secs, button, &player_snapshot, &board_str, &winnings);
+        let history = build_hand_history(
+            hand_num,
+            ts_secs,
+            button,
+            &player_snapshot,
+            &board_str,
+            &winnings,
+            &table.event_log,
+        );
         return (winnings, history);
     }
 
@@ -231,7 +239,15 @@ fn run_hand(
     if table.is_game_over() {
         let board_str = table.board.to_string();
         let winnings = table.end_hand().expect("end_hand");
-        let history = build_hand_history(hand_num, ts_secs, button, &player_snapshot, &board_str, &winnings);
+        let history = build_hand_history(
+            hand_num,
+            ts_secs,
+            button,
+            &player_snapshot,
+            &board_str,
+            &winnings,
+            &table.event_log,
+        );
         return (winnings, history);
     }
 
@@ -243,7 +259,15 @@ fn run_hand(
     if table.is_game_over() {
         let board_str = table.board.to_string();
         let winnings = table.end_hand().expect("end_hand");
-        let history = build_hand_history(hand_num, ts_secs, button, &player_snapshot, &board_str, &winnings);
+        let history = build_hand_history(
+            hand_num,
+            ts_secs,
+            button,
+            &player_snapshot,
+            &board_str,
+            &winnings,
+            &table.event_log,
+        );
         return (winnings, history);
     }
 
@@ -256,7 +280,15 @@ fn run_hand(
     reveal_showdown(table, profiles);
     let board_str = table.board.to_string();
     let winnings = table.end_hand().expect("end_hand");
-    let history = build_hand_history(hand_num, ts_secs, button, &player_snapshot, &board_str, &winnings);
+    let history = build_hand_history(
+        hand_num,
+        ts_secs,
+        button,
+        &player_snapshot,
+        &board_str,
+        &winnings,
+        &table.event_log,
+    );
     (winnings, history)
 }
 
@@ -514,6 +546,7 @@ fn build_hand_history(
     player_snapshot: &[(u8, String, usize, Option<String>)],
     board_str: &str,
     winnings: &Winnings,
+    event_log: &[pkcore::casino::table::event::TableAction],
 ) -> HandHistory {
     let results: Vec<ResultEntry> = player_snapshot
         .iter()
@@ -572,7 +605,7 @@ fn build_hand_history(
         } else {
             Some(board_str.to_string())
         },
-        streets: None,
+        streets: Streets::from_event_log(event_log),
         results: Some(results),
         analysis: None,
     }

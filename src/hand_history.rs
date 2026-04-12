@@ -54,6 +54,8 @@ use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::card::Card;
+use crate::cards::Cards;
+use crate::casino::table::event::TableAction;
 use crate::play::board::Board;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -792,6 +794,187 @@ pub struct Streets {
     /// River: one community card and actions.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub river: Option<RiverStreet>,
+}
+
+impl Streets {
+    /// Build a [`Streets`] record by parsing a `TableNoCell` event log.
+    ///
+    /// Walks `log` in a single forward pass, partitioning player-action events
+    /// into preflop / flop / turn / river buckets. [`TableAction::DealtFlop`],
+    /// [`TableAction::DealtTurn`], and [`TableAction::DealtRiver`] events act as
+    /// bucket boundaries and supply the community-card strings for post-flop
+    /// streets. The last [`TableAction::PotSize`] event within each bucket
+    /// becomes that street's `pot`.
+    ///
+    /// All amounts are stored as [`f64`] (the `HandHistory` convention) after
+    /// casting from the `usize` chip counts used internally by `TableNoCell`.
+    ///
+    /// Returns `None` only if `log` is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::Streets;
+    /// use pkcore::casino::table::event::TableAction;
+    ///
+    /// let log = vec![
+    ///     TableAction::ForcedBetSmallBlind(1, 50),
+    ///     TableAction::ForcedBetBigBlind(2, 100),
+    ///     TableAction::Fold(1),
+    ///     TableAction::Check(2),
+    ///     TableAction::PotSize(150),
+    /// ];
+    /// let streets = Streets::from_event_log(&log).unwrap();
+    /// assert_eq!(streets.preflop.as_ref().unwrap().actions.len(), 4);
+    /// assert_eq!(streets.preflop.as_ref().unwrap().pot, Some(150.0));
+    /// assert!(streets.flop.is_none());
+    /// ```
+    #[must_use]
+    pub fn from_event_log(log: &[TableAction]) -> Option<Self> {
+        if log.is_empty() {
+            return None;
+        }
+
+        #[derive(PartialEq)]
+        enum Street {
+            Preflop,
+            Flop,
+            Turn,
+            River,
+        }
+
+        let mut current = Street::Preflop;
+
+        let mut preflop_actions: Vec<Action> = Vec::new();
+        let mut flop_actions: Vec<Action> = Vec::new();
+        let mut turn_actions: Vec<Action> = Vec::new();
+        let mut river_actions: Vec<Action> = Vec::new();
+
+        let mut preflop_pot: Option<f64> = None;
+        let mut flop_pot: Option<f64> = None;
+        let mut turn_pot: Option<f64> = None;
+        let mut river_pot: Option<f64> = None;
+
+        let mut flop_cards: Option<String> = None;
+        let mut turn_card: Option<String> = None;
+        let mut river_card: Option<String> = None;
+
+        for event in log {
+            match event {
+                TableAction::DealtFlop(bard) => {
+                    flop_cards = Some(Cards::from(*bard).to_string());
+                    current = Street::Flop;
+                }
+                TableAction::DealtTurn(bard) => {
+                    turn_card = Some(Cards::from(*bard).to_string());
+                    current = Street::Turn;
+                }
+                TableAction::DealtRiver(bard) => {
+                    river_card = Some(Cards::from(*bard).to_string());
+                    current = Street::River;
+                }
+                TableAction::PotSize(amount) => {
+                    let pot = Some(*amount as f64);
+                    match current {
+                        Street::Preflop => preflop_pot = pot,
+                        Street::Flop => flop_pot = pot,
+                        Street::Turn => turn_pot = pot,
+                        Street::River => river_pot = pot,
+                    }
+                }
+                other => {
+                    if let Some(action) = table_action_to_hand_action(other) {
+                        match current {
+                            Street::Preflop => preflop_actions.push(action),
+                            Street::Flop => flop_actions.push(action),
+                            Street::Turn => turn_actions.push(action),
+                            Street::River => river_actions.push(action),
+                        }
+                    }
+                }
+            }
+        }
+
+        Some(Streets {
+            preflop: if preflop_actions.is_empty() && preflop_pot.is_none() {
+                None
+            } else {
+                Some(PreflopStreet {
+                    actions: preflop_actions,
+                    pot: preflop_pot,
+                })
+            },
+            flop: flop_cards.map(|cards| FlopStreet {
+                cards,
+                actions: flop_actions,
+                pot: flop_pot,
+            }),
+            turn: turn_card.map(|card| TurnStreet {
+                card,
+                actions: turn_actions,
+                pot: turn_pot,
+            }),
+            river: river_card.map(|card| RiverStreet {
+                card,
+                actions: river_actions,
+                pot: river_pot,
+            }),
+        })
+    }
+}
+
+/// Maps a single [`TableAction`] to a [`Action`] for the hand history.
+///
+/// Returns `None` for non-player-action events (deals, pot bookkeeping, etc.).
+fn table_action_to_hand_action(event: &TableAction) -> Option<Action> {
+    match event {
+        TableAction::ForcedBetSmallBlind(seat, amount)
+        | TableAction::ForcedBetBigBlind(seat, amount)
+        | TableAction::BetAnteForced(seat, amount)
+        | TableAction::ForcedBet(seat, amount) => Some(Action {
+            seat: *seat,
+            action: ActionType::Post,
+            amount: Some(*amount as f64),
+            all_in: None,
+        }),
+        TableAction::Check(seat) => Some(Action {
+            seat: *seat,
+            action: ActionType::Check,
+            amount: None,
+            all_in: None,
+        }),
+        TableAction::Bet(seat, amount) => Some(Action {
+            seat: *seat,
+            action: ActionType::Bet,
+            amount: Some(*amount as f64),
+            all_in: None,
+        }),
+        TableAction::Call(seat, amount) => Some(Action {
+            seat: *seat,
+            action: ActionType::Call,
+            amount: Some(*amount as f64),
+            all_in: None,
+        }),
+        TableAction::Raise(seat, amount) => Some(Action {
+            seat: *seat,
+            action: ActionType::Raise,
+            amount: Some(*amount as f64),
+            all_in: None,
+        }),
+        TableAction::AllIn(seat, amount) => Some(Action {
+            seat: *seat,
+            action: ActionType::AllIn,
+            amount: Some(*amount as f64),
+            all_in: Some(true),
+        }),
+        TableAction::Fold(seat) => Some(Action {
+            seat: *seat,
+            action: ActionType::Fold,
+            amount: None,
+            all_in: None,
+        }),
+        _ => None,
+    }
 }
 
 /// Preflop betting round (no community cards).
@@ -1757,5 +1940,121 @@ hands:
             HandHistory::from_yaml(THE_HAND_YAML).expect("Existing single-hand YAML should still parse correctly");
         assert_eq!(hh.hand.id, "hsp-s5-the-hand");
         assert_eq!(hh.hand.game, HandVariant::Holdem);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Streets::from_event_log
+    // ─────────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_streets_from_event_log_empty() {
+        assert!(Streets::from_event_log(&[]).is_none());
+    }
+
+    #[test]
+    fn test_streets_from_event_log_preflop_only() {
+        let log = vec![
+            TableAction::ForcedBetSmallBlind(1, 50),
+            TableAction::ForcedBetBigBlind(2, 100),
+            TableAction::Call(3, 100),
+            TableAction::Fold(1),
+            TableAction::Check(2),
+            TableAction::PotSize(300),
+        ];
+        let streets = Streets::from_event_log(&log).unwrap();
+        let preflop = streets.preflop.as_ref().unwrap();
+        assert_eq!(preflop.actions.len(), 5);
+        assert_eq!(preflop.actions[0].action, ActionType::Post);
+        assert_eq!(preflop.actions[0].amount, Some(50.0));
+        assert_eq!(preflop.actions[2].action, ActionType::Call);
+        assert_eq!(preflop.actions[3].action, ActionType::Fold);
+        assert_eq!(preflop.pot, Some(300.0));
+        assert!(streets.flop.is_none());
+        assert!(streets.turn.is_none());
+        assert!(streets.river.is_none());
+    }
+
+    #[test]
+    fn test_streets_from_event_log_pot_sizes() {
+        use crate::bard::Bard;
+        let log = vec![
+            TableAction::ForcedBetSmallBlind(1, 50),
+            TableAction::ForcedBetBigBlind(2, 100),
+            TableAction::Call(3, 100),
+            TableAction::PotSize(300),
+            TableAction::DealtFlop(Bard::ACE_SPADES | Bard::KING_HEARTS | Bard::QUEEN_CLUBS),
+            TableAction::Check(2),
+            TableAction::Bet(3, 200),
+            TableAction::Call(2, 200),
+            TableAction::PotSize(700),
+        ];
+        let streets = Streets::from_event_log(&log).unwrap();
+        assert_eq!(streets.preflop.as_ref().unwrap().pot, Some(300.0));
+        assert_eq!(streets.flop.as_ref().unwrap().pot, Some(700.0));
+    }
+
+    #[test]
+    fn test_streets_from_event_log_full_hand() {
+        use crate::bard::Bard;
+        let log = vec![
+            TableAction::ForcedBetSmallBlind(1, 50),
+            TableAction::ForcedBetBigBlind(2, 100),
+            TableAction::Raise(3, 300),
+            TableAction::Call(1, 300),
+            TableAction::Call(2, 200),
+            TableAction::PotSize(900),
+            TableAction::DealtFlop(Bard::ACE_SPADES | Bard::KING_HEARTS | Bard::QUEEN_CLUBS),
+            TableAction::Check(1),
+            TableAction::Bet(2, 400),
+            TableAction::Call(3, 400),
+            TableAction::Fold(1),
+            TableAction::PotSize(1700),
+            TableAction::DealtTurn(Bard::JACK_SPADES),
+            TableAction::Check(2),
+            TableAction::Check(3),
+            TableAction::PotSize(1700),
+            TableAction::DealtRiver(Bard::TEN_HEARTS),
+            TableAction::Bet(2, 800),
+            TableAction::Fold(3),
+            TableAction::PotSize(2500),
+        ];
+        let streets = Streets::from_event_log(&log).unwrap();
+
+        let preflop = streets.preflop.as_ref().unwrap();
+        assert_eq!(preflop.actions.len(), 5);
+        assert_eq!(preflop.pot, Some(900.0));
+
+        let flop = streets.flop.as_ref().unwrap();
+        assert_eq!(flop.actions.len(), 4);
+        assert_eq!(flop.actions[1].action, ActionType::Bet);
+        assert_eq!(flop.actions[1].amount, Some(400.0));
+        assert_eq!(flop.pot, Some(1700.0));
+
+        let turn = streets.turn.as_ref().unwrap();
+        assert_eq!(turn.actions.len(), 2);
+        assert_eq!(turn.actions[0].action, ActionType::Check);
+        assert_eq!(turn.pot, Some(1700.0));
+
+        let river = streets.river.as_ref().unwrap();
+        assert_eq!(river.actions.len(), 2);
+        assert_eq!(river.actions[0].action, ActionType::Bet);
+        assert_eq!(river.pot, Some(2500.0));
+    }
+
+    #[test]
+    fn test_streets_from_event_log_all_in() {
+        let log = vec![
+            TableAction::ForcedBetSmallBlind(1, 50),
+            TableAction::ForcedBetBigBlind(2, 100),
+            TableAction::AllIn(3, 5000),
+            TableAction::Fold(1),
+            TableAction::Fold(2),
+            TableAction::PotSize(5150),
+        ];
+        let streets = Streets::from_event_log(&log).unwrap();
+        let preflop = streets.preflop.as_ref().unwrap();
+        let all_in_action = preflop.actions.iter().find(|a| a.action == ActionType::AllIn).unwrap();
+        assert_eq!(all_in_action.amount, Some(5000.0));
+        assert_eq!(all_in_action.all_in, Some(true));
     }
 }
