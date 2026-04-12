@@ -1163,6 +1163,29 @@ impl TableNoCell {
 
     // ── Seat helpers ──────────────────────────────────────────────────────────
 
+    /// Returns the first occupied seat at or after `start`, wrapping around.
+    ///
+    /// Unlike `next_occupied_seat_after`, this includes `start` itself in the
+    /// search — used for heads-up where the button seat is the small blind.
+    fn occupied_seat_at_or_after(&self, start: u8) -> u8 {
+        let size = self.seats.0.len();
+        if size == 0 {
+            return 0;
+        }
+        for step in 0..size {
+            let idx = u8::try_from((start as usize + step) % size).unwrap_or(0);
+            if self.seats.get_seat(idx).map(|s| !s.is_empty()).unwrap_or(false) {
+                return idx;
+            }
+        }
+        start
+    }
+
+    /// Returns the number of non-empty (occupied) seats.
+    fn count_occupied_seats(&self) -> usize {
+        self.seats.0.iter().filter(|s| !s.is_empty()).count()
+    }
+
     /// Returns the index of the Nth occupied seat after `start`, wrapping.
     #[must_use]
     pub fn next_occupied_seat_after(&self, start: u8, n: usize) -> u8 {
@@ -1187,12 +1210,17 @@ impl TableNoCell {
 
     /// Seat index of the small blind.
     ///
+    /// In heads-up (≤2 occupied seats), the button/dealer is the small blind —
+    /// standard heads-up poker rules.  In full-ring play the small blind is the
+    /// first occupied seat clockwise after the button.
+    ///
     /// # Examples
     ///
     /// ```
     /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
     /// use pkcore::casino::game::ForcedBets;
     ///
+    /// // Full-ring: SB is seat 1 (one step after button at 0).
     /// let seats = SeatsNoCell::new(vec![
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
@@ -1200,13 +1228,30 @@ impl TableNoCell {
     /// ]);
     /// let t = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// assert_eq!(1, t.determine_small_blind());
+    ///
+    /// // Heads-up: button (seat 0) IS the small blind.
+    /// let hu_seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let t2 = TableNoCell::nlh_from_seats(hu_seats, ForcedBets::new(50, 100));
+    /// assert_eq!(0, t2.determine_small_blind());
     /// ```
     #[must_use]
     pub fn determine_small_blind(&self) -> u8 {
-        self.next_occupied_seat_after(self.button, 1)
+        if self.count_occupied_seats() <= 2 {
+            // Heads-up rule: the button/dealer is the small blind.
+            self.occupied_seat_at_or_after(self.button)
+        } else {
+            self.next_occupied_seat_after(self.button, 1)
+        }
     }
 
     /// Seat index of the big blind.
+    ///
+    /// In heads-up, the big blind is the only other occupied seat (one step
+    /// after the small blind).  In full-ring play it is two steps after the
+    /// button.
     ///
     /// # Examples
     ///
@@ -1214,6 +1259,7 @@ impl TableNoCell {
     /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
     /// use pkcore::casino::game::ForcedBets;
     ///
+    /// // Full-ring: BB is seat 2.
     /// let seats = SeatsNoCell::new(vec![
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
@@ -1221,17 +1267,39 @@ impl TableNoCell {
     /// ]);
     /// let t = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// assert_eq!(2, t.determine_big_blind());
+    ///
+    /// // Heads-up: BB is seat 1 (the non-button player).
+    /// let hu_seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let t2 = TableNoCell::nlh_from_seats(hu_seats, ForcedBets::new(50, 100));
+    /// assert_eq!(1, t2.determine_big_blind());
     /// ```
     #[must_use]
     pub fn determine_big_blind(&self) -> u8 {
-        self.next_occupied_seat_after(self.button, 2)
+        if self.count_occupied_seats() <= 2 {
+            // Heads-up: BB is the one seat after the SB/button.
+            let sb = self.occupied_seat_at_or_after(self.button);
+            self.next_occupied_seat_after(sb, 1)
+        } else {
+            self.next_occupied_seat_after(self.button, 2)
+        }
     }
 
-    /// Seat index of under-the-gun.
+    /// Seat index of under-the-gun (first to act preflop, or first after button postflop).
+    ///
+    /// In heads-up, the small blind (button) acts first preflop per standard
+    /// heads-up rules.
     #[must_use]
     pub fn determine_utg(&self) -> u8 {
         if self.phase.is_preflop() {
-            self.next_occupied_seat_after(self.button, 3)
+            if self.count_occupied_seats() <= 2 {
+                // Heads-up: SB (button) acts first preflop.
+                self.occupied_seat_at_or_after(self.button)
+            } else {
+                self.next_occupied_seat_after(self.button, 3)
+            }
         } else {
             self.next_occupied_seat_after(self.button, 1)
         }
@@ -2523,6 +2591,33 @@ mod tests {
         let bb = table.determine_big_blind();
         assert_eq!(50, table.seats.get_seat(sb).unwrap().player.bet);
         assert_eq!(100, table.seats.get_seat(bb).unwrap().player.bet);
+    }
+
+    /// In heads-up the button (seat 0) is the SB, the other player is BB.
+    #[test]
+    fn test_table_no_cell_hu_button_is_small_blind() {
+        let table = make_two_player_table(); // button = 0
+        assert_eq!(0, table.determine_small_blind(), "button should be SB in HU");
+        assert_eq!(1, table.determine_big_blind(), "non-button should be BB in HU");
+    }
+
+    /// In heads-up the SB (button) acts first preflop.
+    #[test]
+    fn test_table_no_cell_hu_utg_is_button() {
+        let mut table = make_two_player_table(); // button = 0
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        // UTG preflop must be the button (seat 0 = SB) in heads-up.
+        assert_eq!(0, table.determine_utg());
+    }
+
+    /// After button_up in HU the new button (seat 1) becomes SB.
+    #[test]
+    fn test_table_no_cell_hu_button_up_swaps_roles() {
+        let mut table = make_two_player_table();
+        table.button_up(); // button → 1
+        assert_eq!(1, table.determine_small_blind(), "new button (1) should be SB");
+        assert_eq!(0, table.determine_big_blind(), "seat 0 should now be BB");
     }
 
     #[test]
