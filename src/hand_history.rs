@@ -110,9 +110,13 @@ pub const FORMAT_VERSION: u32 = 1;
 /// [`board`]: HandHistory::board
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct HandHistory {
-    /// The pkcore crate version that produced this file (default: crate version).
-    #[serde(default = "default_pkcore_version")]
-    pub pkcore_version: String,
+    /// The pkcore crate version that produced this file.
+    ///
+    /// Present in standalone YAML files; `None` when the hand is embedded inside
+    /// a [`HandCollection`] (the collection carries the single authoritative
+    /// version at its root).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pkcore_version: Option<String>,
 
     /// Schema version for forward-compatibility checks.
     #[serde(default = "default_format_version")]
@@ -274,10 +278,8 @@ impl HandHistory {
 /// single YAML file.
 ///
 /// The top-level `pkcore_version` and `format_version` fields apply to the
-/// whole file. Individual hands do not need to repeat them (though when
-/// round-tripping via `to_yaml`, each hand entry will
-/// include its own version fields because `HandHistory`'s serializer emits
-/// them — this is valid and round-trips correctly).
+/// whole file. [`HandCollection::push`] automatically clears the per-hand
+/// `pkcore_version` so it is never repeated in the serialized output.
 ///
 /// # Examples
 ///
@@ -325,6 +327,9 @@ impl HandCollection {
 
     /// Appends a [`HandHistory`] to the end of this collection.
     ///
+    /// The hand's `pkcore_version` is cleared on insertion; the collection-level
+    /// version is authoritative and repeating it on every entry is noise.
+    ///
     /// # Examples
     ///
     /// ```
@@ -334,7 +339,7 @@ impl HandCollection {
     ///
     /// let mut collection = HandCollection::new();
     /// collection.push(HandHistory {
-    ///     pkcore_version: String::new(),
+    ///     pkcore_version: None,
     ///     format_version: 1,
     ///     hand: HandMeta {
     ///         id: "hand-001".to_string(),
@@ -357,7 +362,8 @@ impl HandCollection {
     /// });
     /// assert_eq!(collection.len(), 1);
     /// ```
-    pub fn push(&mut self, hand: HandHistory) {
+    pub fn push(&mut self, mut hand: HandHistory) {
+        hand.pkcore_version = None;
         self.hands.push(hand);
     }
 
@@ -443,8 +449,8 @@ impl HandCollection {
     ///
     /// The top-level `pkcore_version` and `format_version` fields are optional;
     /// they default to the current crate version and [`FORMAT_VERSION`]
-    /// respectively. Per-hand version fields, if present, are accepted but
-    /// ignored at the collection level.
+    /// respectively. Per-hand `pkcore_version` fields are accepted for
+    /// compatibility but will be `None` in newly written files.
     ///
     /// # Errors
     ///
@@ -480,10 +486,8 @@ impl HandCollection {
 
     /// Serialize this [`HandCollection`] to a YAML string.
     ///
-    /// Each embedded [`HandHistory`] will include its own `pkcore_version` and
-    /// `format_version` fields (emitted by `HandHistory`'s serializer). This is
-    /// valid; the file round-trips correctly and the collection-level version
-    /// fields remain authoritative.
+    /// Embedded [`HandHistory`] records will not repeat `pkcore_version`;
+    /// the single authoritative version lives at the collection root.
     ///
     /// # Errors
     ///
@@ -1483,7 +1487,7 @@ results:
     #[test]
     fn test_hand_history_bridge_no_board() {
         let hh = HandHistory {
-            pkcore_version: "0.0.39".to_string(),
+            pkcore_version: Some("0.0.39".to_string()),
             format_version: FORMAT_VERSION,
             hand: HandMeta {
                 id: "no-board".to_string(),
@@ -1561,7 +1565,7 @@ results:
 
     fn make_minimal_hand(id: &str, game: HandVariant) -> HandHistory {
         HandHistory {
-            pkcore_version: String::new(),
+            pkcore_version: None,
             format_version: 1,
             hand: HandMeta {
                 id: id.to_string(),

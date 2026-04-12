@@ -537,7 +537,7 @@ fn build_hand_history(
         .collect();
 
     HandHistory {
-        pkcore_version: env!("CARGO_PKG_VERSION").to_string(),
+        pkcore_version: None,
         format_version: FORMAT_VERSION,
         hand: HandMeta {
             id: format!("interactive-hand-{hand_num:03}"),
