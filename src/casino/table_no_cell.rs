@@ -879,9 +879,8 @@ impl SeatsNoCell {
         let use_frozen = self.count_active_in_hand() <= 1;
         let mut collected = 0usize;
         for seat in &mut self.0 {
-            if !seat.player.has_bet() {
-                continue;
-            }
+            // Process every seat — not just those with a bet — so that checked
+            // players (bet == 0) also have their state reset to YetToAct.
             let chips = if use_frozen {
                 seat.player.act_bring_it_in_frozen()
             } else {
@@ -1393,6 +1392,96 @@ impl TableNoCell {
     #[must_use]
     pub fn table_chip_count(&self) -> usize {
         self.seats.total_chip_count() + self.pot
+    }
+
+    /// The running pot plus all chips committed by players in the current betting
+    /// round.
+    ///
+    /// During a betting round, player bets live in `player.bet` and are only
+    /// swept into [`pot`](TableNoCell::pot) when [`bring_it_in`](TableNoCell::bring_it_in)
+    /// is called. This method sums both to give the true total available for
+    /// display and for sizing bot bets.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::game::ForcedBets;
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let mut t = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// t.act_forced_bets().unwrap();
+    /// // SB posted 50, BB posted 100 — both still in player.bet, not swept to pot yet.
+    /// assert_eq!(150, t.effective_pot());
+    /// ```
+    #[must_use]
+    pub fn effective_pot(&self) -> usize {
+        let committed: usize = self.seats.0.iter().map(|s| s.player.bet).sum();
+        self.pot + committed
+    }
+
+    /// Number of seats that have a non-zero chip stack (i.e. are still funded).
+    ///
+    /// Empty seats (no player) and players with exactly zero chips are excluded.
+    /// Useful for determining whether enough players remain to continue a session.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::game::ForcedBets;
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 0)),
+    /// ]);
+    /// let t = TableNoCell::nlh_from_seats(seats, ForcedBets::new(5, 10));
+    /// assert_eq!(1, t.count_funded());
+    /// ```
+    #[must_use]
+    pub fn count_funded(&self) -> usize {
+        self.seats.0.iter().filter(|s| !s.is_empty() && s.player.chips > 0).count()
+    }
+
+    /// Removes players whose chip stack has reached zero.
+    ///
+    /// For each occupied seat with `chips == 0`, the player's name is cleared
+    /// (marking the seat as empty for future hands). Returns the seat indices
+    /// that were eliminated so callers can display or log the events.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::game::ForcedBets;
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 1_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 0)),
+    /// ]);
+    /// let mut t = TableNoCell::nlh_from_seats(seats, ForcedBets::new(5, 10));
+    /// let busted = t.eliminate_busted();
+    /// assert_eq!(busted, vec![1]);
+    /// assert!(t.seats.get_seat(1).unwrap().is_empty());
+    /// ```
+    pub fn eliminate_busted(&mut self) -> Vec<u8> {
+        let mut eliminated = Vec::new();
+        for i in 0..self.seats.size() {
+            if let Some(seat) = self.seats.get_seat(i)
+                && !seat.is_empty() && seat.player.chips == 0
+            {
+                eliminated.push(i);
+            }
+        }
+        for &i in &eliminated {
+            if let Some(seat) = self.seats.get_seat_mut(i) {
+                seat.player.handle.clear();
+            }
+        }
+        eliminated
     }
 
     /// Minimum legal raise increment (big blind when no raise has been made).
@@ -2396,6 +2485,65 @@ impl TableNoCell {
 
         self.reset();
         Ok(winnings)
+    }
+}
+
+// ── Bot-driven action dispatch (bot-profiles feature) ─────────────────────────
+
+#[cfg(feature = "bot-profiles")]
+impl TableNoCell {
+    /// Apply a [`PlayerAction`] to the given seat.
+    ///
+    /// Translates the action enum variant to the corresponding `act_*` method.
+    /// Returns `Err` if the action is illegal at this point in the hand (e.g.
+    /// acting out of turn, invalid bet size).
+    ///
+    /// # Errors
+    ///
+    /// Propagates any [`PKError`] from the underlying `act_*` method.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "bot-profiles")]
+    /// # {
+    /// use pkcore::casino::action::PlayerAction;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let mut t = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// t.act_forced_bets().unwrap();
+    /// t.deal_cards_to_seats().unwrap();
+    /// let utg = t.determine_utg();
+    /// assert!(t.apply_action(utg, PlayerAction::Fold).is_ok());
+    /// # }
+    /// ```
+    pub fn apply_action(
+        &mut self,
+        seat: u8,
+        action: crate::casino::action::PlayerAction,
+    ) -> Result<(), PKError> {
+        use crate::casino::action::PlayerAction;
+        match action {
+            PlayerAction::Fold => { self.act_fold(seat)?; }
+            PlayerAction::Check => { self.act_check(seat)?; }
+            PlayerAction::Call => {
+                // Degrade to check when the player already matches the current bet.
+                if self.to_call(seat) == 0 {
+                    self.act_check(seat)?;
+                } else {
+                    self.act_call(seat)?;
+                }
+            }
+            PlayerAction::AllIn => { self.act_all_in(seat)?; }
+            PlayerAction::Bet(n) => { self.act_bet(seat, n)?; }
+            PlayerAction::Raise(n) => { self.act_raise(seat, n)?; }
+        }
+        Ok(())
     }
 }
 

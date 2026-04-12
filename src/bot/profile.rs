@@ -486,6 +486,104 @@ impl BotProfile {
     }
 }
 
+// ── Decision logic ────────────────────────────────────────────────────────────
+
+#[cfg(feature = "bot-profiles")]
+impl BotProfile {
+    /// Decide a [`PlayerAction`] for the given seat using this profile's
+    /// aggression factor and preferred bet sizes.
+    ///
+    /// The decision is probabilistic:
+    /// - When facing a bet (`to_call > 0`), `aggression_factor` controls the
+    ///   probability of raising (×0.25) or calling (×1.0) vs folding.
+    /// - When the action is checked to the bot (`to_call == 0`),
+    ///   `aggression_factor` controls whether to bet or check.
+    /// - Bet and raise sizes are sampled uniformly from `preferred_bet_sizes`
+    ///   as fractions of the effective pot.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "bot-profiles")]
+    /// # {
+    /// use pkcore::bot::profile::BotProfile;
+    /// use pkcore::casino::action::PlayerAction;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use rand::SeedableRng;
+    /// use rand::rngs::SmallRng;
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// table.act_forced_bets().unwrap();
+    /// table.deal_cards_to_seats().unwrap();
+    /// let profile = BotProfile::tight_passive();
+    /// let mut rng = SmallRng::seed_from_u64(0);
+    /// let utg = table.determine_utg();
+    /// let action = profile.decide(&table, utg, &mut rng);
+    /// // Tight-passive will fold or call — never raises preflop here
+    /// assert!(matches!(action, PlayerAction::Fold | PlayerAction::Call | PlayerAction::Check));
+    /// # }
+    /// ```
+    pub fn decide<R: rand::Rng>(
+        &self,
+        table: &crate::casino::table_no_cell::TableNoCell,
+        seat: u8,
+        rng: &mut R,
+    ) -> crate::casino::action::PlayerAction {
+        use crate::casino::action::PlayerAction;
+
+        let chips = table.seats.get_seat(seat).map_or(0, |s| s.player.chips);
+        if chips == 0 {
+            return PlayerAction::Check;
+        }
+
+        let to_call = table.to_call(seat);
+        let pot = table.effective_pot().max(table.forced.big_blind);
+        let current_bet = table.bet;
+        let min_raise = table.min_raise();
+        let aggr = f64::from(self.betting_strategy.aggression_factor) / 100.0;
+        let roll: f64 = rng.random();
+
+        if to_call > 0 {
+            if to_call >= chips {
+                return if roll < aggr * 0.6 { PlayerAction::AllIn } else { PlayerAction::Fold };
+            }
+            if roll < aggr * 0.25 {
+                let (n, d) = self.pick_bet_size(rng);
+                let raise_to = current_bet
+                    .saturating_add(pot.saturating_mul(n) / d)
+                    .max(current_bet.saturating_add(min_raise))
+                    .min(chips);
+                if raise_to > current_bet {
+                    return PlayerAction::Raise(raise_to);
+                }
+            }
+            if roll < aggr { PlayerAction::Call } else { PlayerAction::Fold }
+        } else if roll < aggr {
+            let (n, d) = self.pick_bet_size(rng);
+            let amount = (pot.saturating_mul(n) / d)
+                .max(table.forced.big_blind)
+                .min(chips);
+            PlayerAction::Bet(amount)
+        } else {
+            PlayerAction::Check
+        }
+    }
+
+    fn pick_bet_size<R: rand::Rng>(&self, rng: &mut R) -> (usize, usize) {
+        let sizes = &self.betting_strategy.preferred_bet_sizes;
+        if sizes.is_empty() {
+            return (1, 2);
+        }
+        let (n, d) = sizes[rng.random_range(0..sizes.len())].as_fraction();
+        (n as usize, d as usize)
+    }
+}
+
 impl fmt::Display for BotProfile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} ({})", self.name, self.style)

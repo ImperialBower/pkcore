@@ -143,6 +143,12 @@ pub use crate::hand_history::{
     TableInfo, TurnStreet,
 };
 
+// casino (bot-profiles feature)
+#[cfg(feature = "bot-profiles")]
+pub use crate::casino::action::PlayerAction;
+#[cfg(feature = "bot-profiles")]
+pub use crate::casino::session::PokerSession;
+
 // bot
 pub use crate::bot::betting_strategy::BettingStrategy;
 pub use crate::bot::playbook::{Playbook, PlaybookEntry};

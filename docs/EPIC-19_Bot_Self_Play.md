@@ -20,13 +20,16 @@ is written.
 | Component | Status |
 |---|---|
 | Working self-play example (`examples/bot_selfplay.rs`) | **Complete** |
+| Working interactive example (`examples/interactive_play.rs`) | **Complete** |
 | All 8 reference profiles loaded from YAML | **Complete** |
 | Per-action play-by-play with hole cards, pot tracking | **Complete** |
-| `BotDecider` trait | Planned |
-| `SimTable` library type | Planned |
-| `RuleBasedDecider` (hand-strength-aware) | Planned |
+| `PlayerAction` enum (`casino/action.rs`) | **In Progress** |
+| `PokerSession` runner (`casino/session.rs`) | **In Progress** |
+| `BotProfile::decide` method (`bot/profile.rs`) | **In Progress** |
+| `TableNoCell` utilities (`effective_pot`, `count_funded`, `eliminate_busted`) | **In Progress** |
+| `BoxedCards::sorted_display` | **In Progress** |
+| `BotDecider` trait (for gRPC Phase 4) | Planned |
 | `SimResult` (per-seat stats) | Planned |
-| Human-vs-bots TUI mode | Planned |
 
 ---
 
@@ -106,71 +109,160 @@ and for sizing bot bets.
 
 ---
 
-## Planned Library Types
+## Library Types Being Built
 
-The example's `decide()` function is a prototype. The goal is to promote it
-into proper library types that the gRPC agent layer (Phase 4) can reuse without
-reimplementing the decision logic.
+The example's `decide()` and `run_hand()` functions are prototypes. The
+implementation below extracts them into proper library types gated on
+`bot-profiles`. Applications like `pkkuhn-web` can then build on them
+without duplicating the session loop.
 
-### `BotDecider` trait
+### Feature gate
+
+Everything in this section requires `features = ["bot-profiles"]`.
+
+Pure table utilities (`effective_pot`, `count_funded`, `eliminate_busted`,
+`BoxedCards::sorted_display`) are ungated and always available.
+
+---
+
+### `PlayerAction` — `src/casino/action.rs`
+
+The decision type returned by `BotProfile::decide` and consumed by
+`TableNoCell::apply_action` and `PokerSession::apply_action`.
+
+Lives in `casino/` rather than `bot/` to avoid a circular import: `bot/`
+already imports `casino/`, so the shared type must be in `casino/`.
 
 ```rust
-pub trait BotDecider {
-    fn decide(&self, profile: &BotProfile, state: &TableSnapshot) -> PlayerAction;
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum PlayerAction {
+    Fold,
+    Check,
+    Call,
+    Bet(usize),
+    Raise(usize),   // raise *to* this total
+    AllIn,
 }
 ```
 
-`TableSnapshot` is a read-only view of the table from one player's perspective:
-their hole cards, the board, pot size, stack sizes, action history for the
-current street. It does **not** expose opponents' hole cards.
+---
 
-### `RuleBasedDecider`
+### `PokerSession` — `src/casino/session.rs`
 
-The first concrete `BotDecider`. Uses:
-- `BotProfile.aggression_factor` for the fold/call/bet/raise split
-- `BotProfile.preferred_bet_sizes` for sizing
-- `BotProfile.bluff_frequency` for bluff vs value decisions
-
-The example's `decide()` function is the direct prototype for this.
-
-### `SimTable`
+Replaces the planned `SimTable`. More general: the caller provides an
+action-resolution closure so the session works equally for all-bot play,
+human-vs-bot, and web apps receiving one action per HTTP request.
 
 ```rust
-pub struct SimTable {
-    table: TableNoCell,
-    bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)>,  // (seat, profile, decider)
+pub struct PokerSession {
+    pub table: TableNoCell,
+    pub hand_number: u32,
 }
 
-impl SimTable {
-    pub fn run_hand(&mut self) -> HandResult;
-    pub fn run_n_hands(&mut self, n: usize) -> SimResult;
+impl PokerSession {
+    pub fn new(table: TableNoCell) -> Self;
+
+    // Session management
+    pub fn eliminate_busted(&mut self) -> Vec<u8>;  // returns cleared seat indices
+    pub fn count_funded(&self) -> usize;
+
+    // Step-by-step API (web / async apps):
+    pub fn start_hand(&mut self) -> Result<(), PKError>;
+        // shuffles deck, posts forced bets, deals hole cards, increments hand_number
+    pub fn next_actor(&mut self) -> Option<u8>;
+        // None = hand complete. Internally calls bring_it_in + deals board card
+        // at end of each street.
+    pub fn apply_action(&mut self, seat: u8, action: PlayerAction) -> Result<(), PKError>;
+    pub fn is_hand_complete(&self) -> bool;
+    pub fn end_hand(&mut self) -> Result<Winnings, PKError>;
+
+    // Batch API (CLI / bot simulation):
+    pub fn run_hand<F>(&mut self, on_action: F) -> Result<Winnings, PKError>
+    where F: FnMut(&TableNoCell, u8) -> PlayerAction;
+        // = start_hand + while next_actor { on_action → apply_action } + end_hand
 }
 ```
 
-### `SimResult`
+**Web app pattern** (`pkkuhn-web`):
+```rust
+// On each HTTP/WS action received:
+session.apply_action(human_seat, PlayerAction::Call)?;
+while let Some(seat) = session.next_actor() {
+    if seat == bot_seat {
+        let action = bot_profile.decide(&session.table, seat, &mut rng);
+        session.apply_action(seat, action)?;
+    } else { break; }
+}
+if session.is_hand_complete() { session.end_hand()?; }
+```
+
+**Batch pattern** (bot self-play, replaces `examples/bot_selfplay.rs` logic):
+```rust
+session.run_hand(|table, seat| {
+    profiles[seat as usize].decide(table, seat, &mut rng)
+})?;
+```
+
+---
+
+### `BotProfile::decide` — `src/bot/profile.rs`
+
+Promotes the example's free `decide()` function to a method on `BotProfile`.
+Replaces the planned `RuleBasedDecider` concrete type.
+
+```rust
+#[cfg(feature = "bot-profiles")]
+impl BotProfile {
+    pub fn decide<R: Rng>(
+        &self,
+        table: &TableNoCell,
+        seat: u8,
+        rng: &mut R,
+    ) -> PlayerAction;
+}
+```
+
+Decision logic (same as the example):
+- Reads `to_call`, `chips`, `table.bet`, `table.min_raise()`,
+  `table.forced.big_blind`, and `table.effective_pot()` from the table
+- `aggression_factor` controls fold / call / raise probability split
+- Bet and raise sizes sampled from `preferred_bet_sizes` as pot fractions
+
+---
+
+### `TableNoCell` utilities (ungated)
+
+| Method | Replaces | Description |
+|---|---|---|
+| `effective_pot(&self) -> usize` | `effective_pot()` free fn | `pot + sum(player.bet)` |
+| `count_funded(&self) -> usize` | `count_funded()` free fn | seats with `chips > 0` |
+| `eliminate_busted(&mut self) -> Vec<u8>` | `eliminate_busted()` free fn | clears zero-chip occupied seats; returns their indices |
+| `apply_action(&mut self, seat, PlayerAction) -> Result<(), PKError>` | `apply_action()` free fn | dispatches `PlayerAction` to the right `act_*` method |
+
+`apply_action` is gated on `bot-profiles` (needs `PlayerAction`).
+The other three are always available.
+
+---
+
+### `BotDecider` trait (Phase 4 — still planned)
+
+The `BotDecider` trait remains on the roadmap for the gRPC agent layer.
+When a `pkdealer` agent binary needs to make decisions, it will implement
+`BotDecider`, which calls `BotProfile::decide` internally. This phase
+doesn't build `BotDecider` — `PokerSession`'s closure-based API is
+sufficient for local simulation and web apps.
+
+### `SimResult` (still planned)
 
 ```rust
 pub struct SimResult {
     pub hands_played: usize,
-    pub net_chips: HashMap<u8, i64>,          // profit/loss per seat
+    pub net_chips: HashMap<u8, i64>,
     pub actions_taken: HashMap<u8, ActionCounts>,
-}
-
-pub struct ActionCounts {
-    pub folds: usize,
-    pub checks: usize,
-    pub calls: usize,
-    pub bets: usize,
-    pub raises: usize,
-    pub all_ins: usize,
 }
 ```
 
-### Human-vs-bots TUI mode
-
-One seat uses a `HumanDecider` that reads from stdin. The remaining seats use
-bots. Because all deciders implement the same trait, `SimTable` doesn't need to
-distinguish between them — swapping a bot seat for a human seat is a one-liner.
+Out of scope for this iteration. Can be built on top of `PokerSession`.
 
 ---
 
