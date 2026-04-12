@@ -64,6 +64,10 @@ uuid = { version = "1.22", features = ["serde", "v4", "js"] }
 name = "bot_selfplay"
 required-features = ["bot-profiles"]
 
+[[example]]
+name = "interactive_play"
+required-features = ["bot-profiles"]
+
 [dev-dependencies]
 serde_yaml_bw = "2.5"
 clap = { version = "4.6", features = ["derive", "unicode"] }

@@ -519,21 +519,29 @@ impl Table {
 
     /// # Errors
     ///
+    /// - `PKError::TableActionOutOfOrder` if it is not this seat's turn.
+    /// - `PKError::InsufficientIncrement` if `amount` is below the minimum raise
+    ///   and the player is not going all-in.
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
-    /// - `PKError::InsufficientChips` if the player doesn't have enough chips to make the bet.
+    /// - `PKError::InsufficientChips` if the player doesn't have enough chips.
     pub fn act_raise(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
         if seat_number != self.next_to_act() {
             let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::Raise(amount));
             self.log_info(err);
             return Err(PKError::TableActionOutOfOrder(err));
         }
-
+        // Pre-validate before modifying state (same guard as TableNoCell::act_raise).
+        if let Some(seat) = self.get_seat(seat_number) {
+            let would_be_all_in = amount >= seat.player.total_chip_count();
+            if !would_be_all_in && amount.saturating_sub(self.bet.get()) < self.min_raise() {
+                return Err(PKError::InsufficientIncrement);
+            }
+        }
         match self.seats.act_raise(seat_number, amount) {
             Ok(remaining) => {
                 self.set_raise_increment(seat_number, amount - self.bet.get())?;
                 self.bet.set(amount);
                 self.log_info(TableAction::Raise(seat_number, amount));
-                // self.action_to.up();
                 Ok(remaining)
             }
             Err(e) => Err(e),

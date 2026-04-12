@@ -1634,9 +1634,15 @@ impl TableNoCell {
 
     /// Raises to `amount` for seat `seat_number`.
     ///
+    /// `amount` is the **total raise-to** value — the new table-level bet that all
+    /// other players must match.  It must be at least `table.bet + table.min_raise()`
+    /// unless the player is going all-in for less.
+    ///
     /// # Errors
     ///
     /// - `PKError::TableActionOutOfOrder` if it is not this seat's turn.
+    /// - `PKError::InsufficientIncrement` if `amount` is below the minimum raise
+    ///   and the player is not going all-in.
     /// - `PKError::InsufficientChips` if not enough chips.
     ///
     /// # Examples
@@ -1657,12 +1663,29 @@ impl TableNoCell {
     /// let utg = t.determine_utg();
     /// t.act_raise(utg, 300).unwrap();
     /// assert_eq!(PlayerState::Raise(300), t.seats.get_seat(utg).unwrap().player.state);
+    ///
+    /// // Under-minimum raise is rejected before any state changes.
+    /// let utg2 = t.next_to_act();
+    /// assert!(t.act_raise(utg2, 301).is_err()); // below min (300 + 100 = 400)
+    /// // The seat is still the active player — no state was corrupted.
+    /// assert_eq!(utg2, t.next_to_act());
     /// ```
     pub fn act_raise(&mut self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
         if seat_number != self.next_to_act() {
             let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::Raise(amount));
             self.log(err);
             return Err(PKError::TableActionOutOfOrder(err));
+        }
+        // Pre-validate the raise increment BEFORE any state is modified.
+        // Without this guard, act_bet_internal deducts chips for an under-sized
+        // raise and sets the seat to Raise(_); then set_raise_increment returns
+        // Err, leaving the seat in a corrupt state where it is no longer
+        // "next to act" — causing every subsequent raise attempt to fail.
+        if let Some(seat) = self.seats.get_seat(seat_number) {
+            let would_be_all_in = amount >= seat.player.total_chip_count();
+            if !would_be_all_in && amount.saturating_sub(self.bet) < self.min_raise() {
+                return Err(PKError::InsufficientIncrement);
+            }
         }
         let remaining = self.seats.act_raise(seat_number, amount)?;
         self.set_raise_increment(seat_number, amount.saturating_sub(self.bet))?;
@@ -2573,6 +2596,32 @@ mod tests {
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
         let utg = table.determine_utg();
+        table.act_raise(utg, 300).unwrap();
+        assert_eq!(PlayerState::Raise(300), table.seats.get_seat(utg).unwrap().player.state);
+    }
+
+    #[test]
+    fn test_table_no_cell_act_raise__under_minimum_does_not_corrupt_state() {
+        // Regression test: an under-minimum raise used to deduct chips and set the
+        // player to Raise(_) before the increment check failed. After corruption the
+        // seat was no longer "next to act", causing every subsequent raise to fail with
+        // TableActionOutOfOrder.  The fix pre-validates before touching any state.
+        let mut table = make_three_player_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        let utg = table.determine_utg();
+
+        // table.bet = 100 (BB), min_raise = 100, so minimum raise-to = 200.
+        // Raising to 150 is below the minimum.
+        let chips_before = table.seats.get_seat(utg).unwrap().player.chips;
+        let err = table.act_raise(utg, 150);
+        assert!(err.is_err(), "expected InsufficientIncrement but got Ok");
+
+        // Seat state must be unchanged — same chips, still next to act.
+        assert_eq!(chips_before, table.seats.get_seat(utg).unwrap().player.chips);
+        assert_eq!(utg, table.next_to_act());
+
+        // A valid raise to 300 must now succeed on the same seat.
         table.act_raise(utg, 300).unwrap();
         assert_eq!(PlayerState::Raise(300), table.seats.get_seat(utg).unwrap().player.state);
     }

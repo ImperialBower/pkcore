@@ -117,7 +117,7 @@ impl TryFrom<Vec<Card>> for IndexCardMap {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod analysis__store__bcm__binary_card_map_tests {
+mod analysis__store__bcm__index_card_map_tests {
     use super::*;
     use std::str::FromStr;
 
