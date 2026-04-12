@@ -550,7 +550,11 @@ impl BotProfile {
 
         if to_call > 0 {
             if to_call >= chips {
-                return if roll < aggr * 0.6 { PlayerAction::AllIn } else { PlayerAction::Fold };
+                return if roll < aggr * 0.6 {
+                    PlayerAction::AllIn
+                } else {
+                    PlayerAction::Fold
+                };
             }
             if roll < aggr * 0.25 {
                 let (n, d) = self.pick_bet_size(rng);
@@ -562,12 +566,14 @@ impl BotProfile {
                     return PlayerAction::Raise(raise_to);
                 }
             }
-            if roll < aggr { PlayerAction::Call } else { PlayerAction::Fold }
+            if roll < aggr {
+                PlayerAction::Call
+            } else {
+                PlayerAction::Fold
+            }
         } else if roll < aggr {
             let (n, d) = self.pick_bet_size(rng);
-            let amount = (pot.saturating_mul(n) / d)
-                .max(table.forced.big_blind)
-                .min(chips);
+            let amount = (pot.saturating_mul(n) / d).max(table.forced.big_blind).min(chips);
             PlayerAction::Bet(amount)
         } else {
             PlayerAction::Check

@@ -1443,7 +1443,11 @@ impl TableNoCell {
     /// ```
     #[must_use]
     pub fn count_funded(&self) -> usize {
-        self.seats.0.iter().filter(|s| !s.is_empty() && s.player.chips > 0).count()
+        self.seats
+            .0
+            .iter()
+            .filter(|s| !s.is_empty() && s.player.chips > 0)
+            .count()
     }
 
     /// Removes players whose chip stack has reached zero.
@@ -1471,7 +1475,8 @@ impl TableNoCell {
         let mut eliminated = Vec::new();
         for i in 0..self.seats.size() {
             if let Some(seat) = self.seats.get_seat(i)
-                && !seat.is_empty() && seat.player.chips == 0
+                && !seat.is_empty()
+                && seat.player.chips == 0
             {
                 eliminated.push(i);
             }
@@ -2522,15 +2527,15 @@ impl TableNoCell {
     /// assert!(t.apply_action(utg, PlayerAction::Fold).is_ok());
     /// # }
     /// ```
-    pub fn apply_action(
-        &mut self,
-        seat: u8,
-        action: crate::casino::action::PlayerAction,
-    ) -> Result<(), PKError> {
+    pub fn apply_action(&mut self, seat: u8, action: crate::casino::action::PlayerAction) -> Result<(), PKError> {
         use crate::casino::action::PlayerAction;
         match action {
-            PlayerAction::Fold => { self.act_fold(seat)?; }
-            PlayerAction::Check => { self.act_check(seat)?; }
+            PlayerAction::Fold => {
+                self.act_fold(seat)?;
+            }
+            PlayerAction::Check => {
+                self.act_check(seat)?;
+            }
             PlayerAction::Call => {
                 // Degrade to check when the player already matches the current bet.
                 if self.to_call(seat) == 0 {
@@ -2539,9 +2544,15 @@ impl TableNoCell {
                     self.act_call(seat)?;
                 }
             }
-            PlayerAction::AllIn => { self.act_all_in(seat)?; }
-            PlayerAction::Bet(n) => { self.act_bet(seat, n)?; }
-            PlayerAction::Raise(n) => { self.act_raise(seat, n)?; }
+            PlayerAction::AllIn => {
+                self.act_all_in(seat)?;
+            }
+            PlayerAction::Bet(n) => {
+                self.act_bet(seat, n)?;
+            }
+            PlayerAction::Raise(n) => {
+                self.act_raise(seat, n)?;
+            }
         }
         Ok(())
     }

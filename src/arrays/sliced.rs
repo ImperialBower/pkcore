@@ -172,7 +172,10 @@ impl BoxedCards {
     pub fn sorted_display(&self) -> String {
         let mut v: Vec<Card> = self.0.iter().copied().filter(|c| *c != Card::BLANK).collect();
         v.sort_unstable_by(|a, b| b.cmp(a));
-        v.iter().map(std::string::ToString::to_string).collect::<Vec<_>>().join(" ")
+        v.iter()
+            .map(std::string::ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(" ")
     }
 
     pub fn take(&mut self) -> Box<[Card]> {

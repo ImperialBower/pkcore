@@ -36,8 +36,8 @@
 
 use crate::PKError;
 use crate::casino::action::PlayerAction;
-use crate::casino::table_no_cell::TableNoCell;
 use crate::casino::table::winnings::Winnings;
+use crate::casino::table_no_cell::TableNoCell;
 
 /// A multi-hand game session wrapping a [`TableNoCell`].
 ///
@@ -502,9 +502,7 @@ mod tests {
             SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 0)),
         ]);
-        let mut session = PokerSession::new(
-            TableNoCell::nlh_from_seats(seats, ForcedBets::new(5, 10))
-        );
+        let mut session = PokerSession::new(TableNoCell::nlh_from_seats(seats, ForcedBets::new(5, 10)));
         let busted = session.eliminate_busted();
         assert_eq!(busted, vec![1]);
         assert!(session.table.seats.get_seat(1).unwrap().is_empty());
