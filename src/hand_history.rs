@@ -796,6 +796,15 @@ pub struct Streets {
     pub river: Option<RiverStreet>,
 }
 
+/// Street bucket used while parsing an event log in [`Streets::from_event_log`].
+#[derive(PartialEq)]
+enum EventStreet {
+    Preflop,
+    Flop,
+    Turn,
+    River,
+}
+
 impl Streets {
     /// Build a [`Streets`] record by parsing a `TableNoCell` event log.
     ///
@@ -830,20 +839,13 @@ impl Streets {
     /// assert!(streets.flop.is_none());
     /// ```
     #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn from_event_log(log: &[TableAction]) -> Option<Self> {
         if log.is_empty() {
             return None;
         }
 
-        #[derive(PartialEq)]
-        enum Street {
-            Preflop,
-            Flop,
-            Turn,
-            River,
-        }
-
-        let mut current = Street::Preflop;
+        let mut current = EventStreet::Preflop;
 
         let mut preflop_actions: Vec<Action> = Vec::new();
         let mut flop_actions: Vec<Action> = Vec::new();
@@ -863,32 +865,32 @@ impl Streets {
             match event {
                 TableAction::DealtFlop(bard) => {
                     flop_cards = Some(Cards::from(*bard).to_string());
-                    current = Street::Flop;
+                    current = EventStreet::Flop;
                 }
                 TableAction::DealtTurn(bard) => {
                     turn_card = Some(Cards::from(*bard).to_string());
-                    current = Street::Turn;
+                    current = EventStreet::Turn;
                 }
                 TableAction::DealtRiver(bard) => {
                     river_card = Some(Cards::from(*bard).to_string());
-                    current = Street::River;
+                    current = EventStreet::River;
                 }
                 TableAction::PotSize(amount) => {
                     let pot = Some(*amount as f64);
                     match current {
-                        Street::Preflop => preflop_pot = pot,
-                        Street::Flop => flop_pot = pot,
-                        Street::Turn => turn_pot = pot,
-                        Street::River => river_pot = pot,
+                        EventStreet::Preflop => preflop_pot = pot,
+                        EventStreet::Flop => flop_pot = pot,
+                        EventStreet::Turn => turn_pot = pot,
+                        EventStreet::River => river_pot = pot,
                     }
                 }
                 other => {
                     if let Some(action) = table_action_to_hand_action(other) {
                         match current {
-                            Street::Preflop => preflop_actions.push(action),
-                            Street::Flop => flop_actions.push(action),
-                            Street::Turn => turn_actions.push(action),
-                            Street::River => river_actions.push(action),
+                            EventStreet::Preflop => preflop_actions.push(action),
+                            EventStreet::Flop => flop_actions.push(action),
+                            EventStreet::Turn => turn_actions.push(action),
+                            EventStreet::River => river_actions.push(action),
                         }
                     }
                 }
@@ -926,6 +928,7 @@ impl Streets {
 /// Maps a single [`TableAction`] to a [`Action`] for the hand history.
 ///
 /// Returns `None` for non-player-action events (deals, pot bookkeeping, etc.).
+#[allow(clippy::cast_precision_loss)]
 fn table_action_to_hand_action(event: &TableAction) -> Option<Action> {
     match event {
         TableAction::ForcedBetSmallBlind(seat, amount)
