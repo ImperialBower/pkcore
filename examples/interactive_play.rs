@@ -33,6 +33,7 @@ use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+
 const STARTING_CHIPS: usize = 10_000;
 const SMALL_BLIND: usize = 50;
 const BIG_BLIND: usize = 100;
@@ -546,27 +547,10 @@ fn save_session(collection: &HandCollection) {
         println!("  No completed hands to save yet.");
         return;
     }
-    let ts = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    let path = format!("generated/{}_{}.yaml", RUN_NAME, ts);
-    let yaml = match collection.to_yaml() {
-        Ok(y) => y,
-        Err(e) => {
-            println!("  Save failed (serialization): {e}");
-            return;
-        }
-    };
-    if let Err(e) = std::fs::create_dir_all("generated") {
-        println!("  Save failed (mkdir): {e}");
-        return;
+    match collection.save(RUN_NAME) {
+        Ok(path) => println!("  Session saved → {path}  ({} hand(s))", collection.len()),
+        Err(e) => println!("  Save failed: {e}"),
     }
-    if let Err(e) = std::fs::write(&path, &yaml) {
-        println!("  Save failed (write): {e}");
-        return;
-    }
-    println!("  Session saved → {path}  ({} hand(s))", collection.len());
 }
 
 fn build_hand_history(

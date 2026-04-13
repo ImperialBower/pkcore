@@ -813,6 +813,40 @@ impl HandCollection {
     pub fn to_yaml(&self) -> Result<String, serde_yaml_bw::Error> {
         serde_yaml_bw::to_string(self)
     }
+
+    /// Serialize and save this collection to `generated/<run_name>_<unix_ts>.yaml`.
+    ///
+    /// Creates the `generated/` directory if it does not exist. Returns the path
+    /// written on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if serialization or the filesystem write fails.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # #[cfg(feature = "hand-histories")]
+    /// # {
+    /// use pkcore::hand_history::HandCollection;
+    ///
+    /// let collection = HandCollection::new();
+    /// let path = collection.save("my_session").unwrap();
+    /// assert!(path.starts_with("generated/my_session_"));
+    /// # }
+    /// ```
+    pub fn save(&self, run_name: &str) -> Result<String, Box<dyn std::error::Error>> {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        let ts = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        let path = format!("generated/{}_{}.yaml", run_name, ts);
+        let yaml = self.to_yaml()?;
+        std::fs::create_dir_all("generated")?;
+        std::fs::write(&path, &yaml)?;
+        Ok(path)
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

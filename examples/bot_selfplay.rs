@@ -6,7 +6,7 @@
 //!
 //! Run with:
 //! ```text
-//! cargo run --features bot-profiles --example bot_selfplay
+//! cargo run --example bot_selfplay
 //! ```
 
 use pkcore::analysis::eval::Eval;
@@ -15,15 +15,19 @@ use pkcore::bot::profile::BotProfile;
 use pkcore::casino::action::PlayerAction;
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::session::PokerSession;
+use pkcore::casino::table::event::TableAction;
 use pkcore::casino::table::winnings::Winnings;
 use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::hand_history::{HandCollection, HandHistory};
 use rand::Rng;
 use std::str::FromStr;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 const STARTING_CHIPS: usize = 10_000;
 const SMALL_BLIND: usize = 50;
 const BIG_BLIND: usize = 100;
 const NUM_HANDS: usize = 500;
+const RUN_NAME: &str = "bot_selfplay";
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -56,6 +60,7 @@ fn main() {
     let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(SMALL_BLIND, BIG_BLIND));
     let mut session = PokerSession::new(table);
     let mut rng = rand::rng();
+    let mut collection = HandCollection::new();
 
     println!(
         "=== Bot Self-Play: up to {} hands  |  blinds {}/{}  |  {} chips each ===",
@@ -83,11 +88,14 @@ fn main() {
             hand, session.table.button, btn_name, remaining
         );
 
-        let _winnings = run_hand(&mut session, &profiles, &mut rng);
+        let (_winnings, history) = run_hand(&mut session, &profiles, &mut rng);
+        collection.push(history);
 
         session.table.button_up();
         print_stacks(&session.table, &profiles);
     }
+
+    save_session(&collection);
 
     println!("\n=== Final standings ===");
     let mut standings: Vec<(usize, &str)> = profiles
@@ -110,13 +118,30 @@ fn main() {
 
 // ── Hand driver ───────────────────────────────────────────────────────────────
 
-/// Drives a complete hand using the step-by-step session API and returns the winnings.
+/// Drives a complete hand using the step-by-step session API and returns the winnings
+/// together with a fully-populated [`HandHistory`] for session saving.
 ///
 /// `next_actor` handles street advancement internally; board length changes
 /// are the signal to print "Flop / Turn / River" headers.
 #[allow(clippy::cast_precision_loss)]
-fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl Rng) -> Winnings {
-    // Capture stacks before forced bets so we can compute net chip change later.
+fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl Rng) -> (Winnings, HandHistory) {
+    let ts_secs = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0);
+    let button = session.table.button;
+
+    // Snapshot stacks before forced bets (hand-history convention).
+    let stacks: Vec<(u8, String, usize)> = (0..session.table.seats.0.len() as u8)
+        .filter_map(|i| {
+            session.table.seats.get_seat(i)
+                .filter(|s| !s.is_empty())
+                .map(|s| (i, s.player.handle.clone(), s.player.chips))
+        })
+        .collect();
+    let event_log_start = session.table.event_log.len();
+
+    // Also capture starting stacks by profile index for the printed outcome block below.
     let starting: Vec<usize> = profiles
         .iter()
         .enumerate()
@@ -124,6 +149,22 @@ fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl 
         .collect();
 
     session.start_hand().expect("start_hand");
+
+    // Capture hole cards immediately after deal.
+    let hole_cards: Vec<(u8, Option<String>)> = (0..session.table.seats.0.len() as u8)
+        .filter_map(|i| {
+            session.table.seats.get_seat(i).filter(|s| !s.is_empty()).map(|s| {
+                (i, if s.cards.has_cards() { Some(s.cards.sorted_display()) } else { None })
+            })
+        })
+        .collect();
+    let player_snapshot: Vec<(u8, String, usize, Option<String>)> = stacks
+        .into_iter()
+        .map(|(seat, name, stack)| {
+            let hole = hole_cards.iter().find(|(s, _)| *s == seat).and_then(|(_, h)| h.clone());
+            (seat, name, stack, hole)
+        })
+        .collect();
 
     println!("  Preflop  [pot: {}]", session.table.effective_pot());
     print_hole_cards(&session.table, profiles);
@@ -173,7 +214,9 @@ fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl 
         print_showdown_hands(&session.table, profiles, &board);
     }
 
+    let board_str = session.table.board.to_string();
     let winnings = session.end_hand().expect("end_hand");
+    let ending_stacks = chip_counts(&session.table);
 
     // Print each player's outcome and net chip change.
     for (i, profile) in profiles.iter().enumerate() {
@@ -196,7 +239,64 @@ fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl 
         }
     }
 
-    winnings
+    let history = build_hand_history(
+        session.hand_number as usize,
+        ts_secs,
+        button,
+        &player_snapshot,
+        &board_str,
+        &winnings,
+        &session.table.event_log[event_log_start..],
+        &ending_stacks,
+    );
+    (winnings, history)
+}
+
+// ── History helpers ───────────────────────────────────────────────────────────
+
+fn chip_counts(table: &TableNoCell) -> Vec<(u8, usize)> {
+    (0..table.seats.0.len() as u8)
+        .filter_map(|i| {
+            table.seats.get_seat(i)
+                .filter(|s| !s.is_empty())
+                .map(|s| (i, s.player.chips))
+        })
+        .collect()
+}
+
+fn build_hand_history(
+    hand_num: usize,
+    ts_secs: u64,
+    button: u8,
+    player_snapshot: &[(u8, String, usize, Option<String>)],
+    board_str: &str,
+    winnings: &Winnings,
+    event_log: &[TableAction],
+    ending_stacks: &[(u8, usize)],
+) -> HandHistory {
+    HandHistory::from_table_state(
+        hand_num,
+        ts_secs,
+        button,
+        &ForcedBets::new(SMALL_BLIND, BIG_BLIND),
+        player_snapshot,
+        board_str,
+        winnings,
+        event_log,
+        ending_stacks,
+        RUN_NAME,
+    )
+}
+
+fn save_session(collection: &HandCollection) {
+    if collection.is_empty() {
+        println!("  No completed hands to save yet.");
+        return;
+    }
+    match collection.save(RUN_NAME) {
+        Ok(path) => println!("\n  Session saved → {path}  ({} hand(s))", collection.len()),
+        Err(e) => println!("\n  Save failed: {e}"),
+    }
 }
 
 /// Returns a display string for a bot action (computed before applying it).
