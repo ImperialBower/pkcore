@@ -186,11 +186,51 @@ impl Player {
         self.act_bet_internal(PlayerState::Bet(amount))
     }
 
+    /// Posts a forced blind bet of `amount`.
+    ///
+    /// If the player's total chip count is less than `amount`, they are posted
+    /// all-in for their remaining stack (short blind rule).
+    ///
     /// # Errors
     ///
-    /// * `PKError::InsufficientChips` - if the player does not have enough chips to make the bet
+    /// * `PKError::InvalidTableAction` - if the player is not active.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// // Full blind.
+    /// let p = Player::new_with_chips("Frank".to_string(), 1_000);
+    /// p.act_bet_blind(100).unwrap();
+    /// assert_eq!(PlayerState::Blind(100), p.state.get());
+    ///
+    /// // Short blind — player goes all-in for their remaining stack.
+    /// let p = Player::new_with_chips("Short".to_string(), 20);
+    /// p.act_bet_blind(50).unwrap();
+    /// assert_eq!(PlayerState::AllIn(20), p.state.get());
+    /// ```
     pub fn act_bet_blind(&self, amount: usize) -> Result<usize, PKError> {
+        if self.total_chip_count() < amount {
+            return self.act_all_in();
+        }
         self.act_bet_internal(PlayerState::Blind(amount))
+    }
+
+    /// Posts a forced blind, going all-in for the remaining stack when chips are
+    /// insufficient to cover the full required amount.
+    ///
+    /// On success returns the amount actually posted.
+    ///
+    /// # Errors
+    ///
+    /// * `PKError::InsufficientChips` if the player has zero chips.
+    pub fn act_blind_or_all_in(&self, required_amount: usize) -> Result<usize, PKError> {
+        let actual = required_amount.min(self.total_chip_count());
+        if actual == 0 {
+            return Err(PKError::InsufficientChips);
+        }
+        self.act_bet_internal(PlayerState::Blind(actual))
     }
 
     /// Removes and returns the chips from the player's bet stack and sets their state to `YetToAct`.

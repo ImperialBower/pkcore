@@ -153,6 +153,31 @@ impl BoxedCards {
         &self.0
     }
 
+    /// Returns the non-blank cards sorted high-to-low as a space-separated string.
+    ///
+    /// Blank slots (`Card::BLANK`) are excluded from the output. Cards are
+    /// sorted in descending order (highest rank first), matching the conventional
+    /// display order for hole cards and board cards.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::arrays::sliced::BoxedCards;
+    /// use std::str::FromStr;
+    ///
+    /// let cards = BoxedCards::from_str("2♠ A♥").unwrap();
+    /// assert_eq!(cards.sorted_display(), "A♥ 2♠");
+    /// ```
+    #[must_use]
+    pub fn sorted_display(&self) -> String {
+        let mut v: Vec<Card> = self.0.iter().copied().filter(|c| *c != Card::BLANK).collect();
+        v.sort_unstable_by(|a, b| b.cmp(a));
+        v.iter()
+            .map(std::string::ToString::to_string)
+            .collect::<Vec<_>>()
+            .join(" ")
+    }
+
     pub fn take(&mut self) -> Box<[Card]> {
         let cards = std::mem::take(&mut self.0);
         self.0 = vec![Card::BLANK; cards.len()].into_boxed_slice();

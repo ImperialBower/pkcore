@@ -282,6 +282,171 @@ impl BotProfile {
         )
     }
 
+    /// Returns the `TightAggressive` reference profile.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::{BotProfile, PlayStyle};
+    ///
+    /// let p = BotProfile::tight_aggressive();
+    /// assert_eq!(p.style, PlayStyle::new("tight_aggressive"));
+    /// ```
+    #[must_use]
+    pub fn tight_aggressive() -> Self {
+        Self::new(
+            "tight_aggressive",
+            "Selective hand selection with maximum postflop aggression — the baseline winning style.",
+            PlayStyle::new("tight_aggressive"),
+            RangeStrategy::tight_aggressive(),
+            BettingStrategy::tight_aggressive(),
+        )
+    }
+
+    /// Returns the `LoosePassive` reference profile.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::{BotProfile, PlayStyle};
+    ///
+    /// let p = BotProfile::loose_passive();
+    /// assert_eq!(p.style, PlayStyle::new("loose_passive"));
+    /// ```
+    #[must_use]
+    pub fn loose_passive() -> Self {
+        Self::new(
+            "loose_passive",
+            "Wide hand selection with passive betting — the classic calling station archetype.",
+            PlayStyle::new("loose_passive"),
+            RangeStrategy::loose_passive(),
+            BettingStrategy::loose_passive(),
+        )
+    }
+
+    /// Returns the `Maniac` reference profile.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::{BotProfile, PlayStyle};
+    ///
+    /// let p = BotProfile::maniac();
+    /// assert_eq!(p.style, PlayStyle::new("maniac"));
+    /// ```
+    #[must_use]
+    pub fn maniac() -> Self {
+        Self::new(
+            "maniac",
+            "Extreme aggressor — bets and raises relentlessly with a very high bluff frequency.",
+            PlayStyle::new("maniac"),
+            RangeStrategy::maniac(),
+            BettingStrategy::maniac(),
+        )
+    }
+
+    /// Returns the `Abc` reference profile.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::{BotProfile, PlayStyle};
+    ///
+    /// let p = BotProfile::abc();
+    /// assert_eq!(p.style, PlayStyle::new("abc"));
+    /// ```
+    #[must_use]
+    pub fn abc() -> Self {
+        Self::new(
+            "abc",
+            "By-the-book play — bets strong hands and folds weak ones with no deception or bluffing.",
+            PlayStyle::new("abc"),
+            RangeStrategy::abc(),
+            BettingStrategy::abc(),
+        )
+    }
+
+    /// Returns the `ShortStackNinja` reference profile.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::{BotProfile, PlayStyle};
+    ///
+    /// let p = BotProfile::short_stack_ninja();
+    /// assert_eq!(p.style, PlayStyle::new("short_stack_ninja"));
+    /// ```
+    #[must_use]
+    pub fn short_stack_ninja() -> Self {
+        Self::new(
+            "short_stack_ninja",
+            "Push-or-fold strategy optimized for short stack situations — all-in or nothing.",
+            PlayStyle::new("short_stack_ninja"),
+            RangeStrategy::short_stack_ninja(),
+            BettingStrategy::short_stack_ninja(),
+        )
+    }
+
+    /// Returns the `Joker` placeholder profile.
+    ///
+    /// The joker profile acts as a seat-entry placeholder when pairing a seat
+    /// with a [`crate::bot::decider::JokerDecider`].  Its `range_strategy`
+    /// and `betting_strategy` fields are copied from [`BotProfile::gto`] and
+    /// are **never used in practice** — [`JokerDecider`] ignores the passed
+    /// profile and instead decides using whichever standard profile it randomly
+    /// selected at hand-start time.
+    ///
+    /// [`JokerDecider`]: crate::bot::decider::JokerDecider
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::{BotProfile, PlayStyle};
+    ///
+    /// let p = BotProfile::joker();
+    /// assert_eq!(p.name, "joker");
+    /// assert_eq!(p.style, PlayStyle::new("joker"));
+    /// ```
+    #[must_use]
+    pub fn joker() -> Self {
+        Self::new(
+            "joker",
+            "Randomly adopts a different playing style each hand — unpredictable by design.",
+            PlayStyle::new("joker"),
+            RangeStrategy::gto(),
+            BettingStrategy::gto(),
+        )
+    }
+
+    /// Returns all 8 standard reference profiles in a fixed order.
+    ///
+    /// This is the WASM-safe alternative to loading profiles from YAML files via
+    /// `from_file()`, which is not available on `wasm32`. Use this in web/WASM
+    /// contexts to get the full set of bot personalities.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::BotProfile;
+    ///
+    /// let profiles = BotProfile::default_profiles();
+    /// assert_eq!(profiles.len(), 8);
+    /// assert_eq!(profiles[0].name, "gto");
+    /// ```
+    #[must_use]
+    pub fn default_profiles() -> Vec<Self> {
+        vec![
+            Self::gto(),
+            Self::tight_passive(),
+            Self::loose_aggressive(),
+            Self::tight_aggressive(),
+            Self::loose_passive(),
+            Self::maniac(),
+            Self::abc(),
+            Self::short_stack_ninja(),
+        ]
+    }
+
     // ── Playbook builder ──────────────────────────────────────────────────────
 
     /// Attaches a [`Playbook`] to this profile, enabling position- and
@@ -486,6 +651,110 @@ impl BotProfile {
     }
 }
 
+// ── Decision logic ────────────────────────────────────────────────────────────
+
+#[cfg(feature = "bot-profiles")]
+impl BotProfile {
+    /// Decide a [`crate::casino::action::PlayerAction`] for the given seat using this profile's
+    /// aggression factor and preferred bet sizes.
+    ///
+    /// The decision is probabilistic:
+    /// - When facing a bet (`to_call > 0`), `aggression_factor` controls the
+    ///   probability of raising (×0.25) or calling (×1.0) vs folding.
+    /// - When the action is checked to the bot (`to_call == 0`),
+    ///   `aggression_factor` controls whether to bet or check.
+    /// - Bet and raise sizes are sampled uniformly from `preferred_bet_sizes`
+    ///   as fractions of the effective pot.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "bot-profiles")]
+    /// # {
+    /// use pkcore::bot::profile::BotProfile;
+    /// use pkcore::casino::action::PlayerAction;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use rand::SeedableRng;
+    /// use rand::rngs::SmallRng;
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// table.act_forced_bets().unwrap();
+    /// table.deal_cards_to_seats().unwrap();
+    /// let profile = BotProfile::tight_passive();
+    /// let mut rng = SmallRng::seed_from_u64(0);
+    /// let utg = table.determine_utg();
+    /// let action = profile.decide(&table, utg, &mut rng);
+    /// // Tight-passive will fold or call — never raises preflop here
+    /// assert!(matches!(action, PlayerAction::Fold | PlayerAction::Call | PlayerAction::Check));
+    /// # }
+    /// ```
+    pub fn decide<R: rand::Rng>(
+        &self,
+        table: &crate::casino::table_no_cell::TableNoCell,
+        seat: u8,
+        rng: &mut R,
+    ) -> crate::casino::action::PlayerAction {
+        use crate::casino::action::PlayerAction;
+
+        let chips = table.seats.get_seat(seat).map_or(0, |s| s.player.chips);
+        if chips == 0 {
+            return PlayerAction::Check;
+        }
+
+        let to_call = table.to_call(seat);
+        let pot = table.effective_pot().max(table.forced.big_blind);
+        let current_bet = table.bet;
+        let min_raise = table.min_raise();
+        let aggr = f64::from(self.betting_strategy.aggression_factor) / 100.0;
+        let roll: f64 = rng.random();
+
+        if to_call > 0 {
+            if to_call >= chips {
+                return if roll < aggr * 0.6 {
+                    PlayerAction::AllIn
+                } else {
+                    PlayerAction::Fold
+                };
+            }
+            if roll < aggr * 0.25 {
+                let (n, d) = self.pick_bet_size(rng);
+                let raise_to = current_bet
+                    .saturating_add(pot.saturating_mul(n) / d)
+                    .max(current_bet.saturating_add(min_raise))
+                    .min(chips);
+                if raise_to > current_bet {
+                    return PlayerAction::Raise(raise_to);
+                }
+            }
+            if roll < aggr {
+                PlayerAction::Call
+            } else {
+                PlayerAction::Fold
+            }
+        } else if roll < aggr {
+            let (n, d) = self.pick_bet_size(rng);
+            let amount = (pot.saturating_mul(n) / d).max(table.forced.big_blind).min(chips);
+            PlayerAction::Bet(amount)
+        } else {
+            PlayerAction::Check
+        }
+    }
+
+    fn pick_bet_size<R: rand::Rng>(&self, rng: &mut R) -> (usize, usize) {
+        let sizes = &self.betting_strategy.preferred_bet_sizes;
+        if sizes.is_empty() {
+            return (1, 2);
+        }
+        let (n, d) = sizes[rng.random_range(0..sizes.len())].as_fraction();
+        (n as usize, d as usize)
+    }
+}
+
 impl fmt::Display for BotProfile {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} ({})", self.name, self.style)
@@ -527,6 +796,61 @@ mod tests {
     fn test_bot_profile_gto() {
         let p = BotProfile::gto();
         assert_eq!(p.style, PlayStyle::new("gto"));
+    }
+
+    #[test]
+    fn test_bot_profile_tight_aggressive() {
+        let p = BotProfile::tight_aggressive();
+        assert_eq!(p.style, PlayStyle::new("tight_aggressive"));
+        assert_eq!(p.name, "tight_aggressive");
+    }
+
+    #[test]
+    fn test_bot_profile_loose_passive() {
+        let p = BotProfile::loose_passive();
+        assert_eq!(p.style, PlayStyle::new("loose_passive"));
+        assert_eq!(p.name, "loose_passive");
+    }
+
+    #[test]
+    fn test_bot_profile_maniac() {
+        let p = BotProfile::maniac();
+        assert_eq!(p.style, PlayStyle::new("maniac"));
+        assert_eq!(p.name, "maniac");
+    }
+
+    #[test]
+    fn test_bot_profile_abc() {
+        let p = BotProfile::abc();
+        assert_eq!(p.style, PlayStyle::new("abc"));
+        assert_eq!(p.betting_strategy.bluff_frequency, 0);
+    }
+
+    #[test]
+    fn test_bot_profile_short_stack_ninja() {
+        let p = BotProfile::short_stack_ninja();
+        assert_eq!(p.style, PlayStyle::new("short_stack_ninja"));
+        assert_eq!(p.betting_strategy.aggression_factor, 95);
+    }
+
+    #[test]
+    fn test_bot_profile_joker() {
+        let p = BotProfile::joker();
+        assert_eq!(p.name, "joker");
+        assert_eq!(p.style, PlayStyle::new("joker"));
+        assert!(p.description.contains("unpredictable"));
+    }
+
+    #[test]
+    fn test_bot_profile_default_profiles() {
+        let profiles = BotProfile::default_profiles();
+        assert_eq!(profiles.len(), 8);
+        assert_eq!(profiles[0].name, "gto");
+        assert_eq!(profiles[7].name, "short_stack_ninja");
+        let names: Vec<&str> = profiles.iter().map(|p| p.name.as_str()).collect();
+        assert!(names.contains(&"tight_aggressive"));
+        assert!(names.contains(&"maniac"));
+        assert!(names.contains(&"abc"));
     }
 
     #[test]

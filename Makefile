@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm generate-hups-bin test-debug-json nextest heavy
+.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm generate-hups-bin test-debug-json nextest heavy mutants mutants-diff coverage coverage-open
 
 # Default target
 default: ayce
@@ -38,9 +38,13 @@ help:
 	@echo "  make generate-hups-bin  - Generate generated/hups.bin for WASM embedded store"
 	@echo ""
 	@echo "Tools and Workflow:"
-	@echo "  make install-tools   - Install cargo-deny and cargo-udeps"
+	@echo "  make install-tools   - Install cargo-deny, cargo-udeps, cargo-mutants, and cargo-llvm-cov"
 	@echo "  make watch           - Run cargo-watch for check/test loop"
 	@echo "  make install-watch   - Install cargo-watch"
+	@echo "  make mutants         - Run cargo-mutants on the whole codebase (slow)"
+	@echo "  make mutants-diff    - Run cargo-mutants only on files changed vs main"
+	@echo "  make coverage        - Generate HTML code coverage report"
+	@echo "  make coverage-open   - Generate HTML coverage report and open in browser"
 	@echo ""
 
 # Clean build artifacts
@@ -148,6 +152,9 @@ install-tools:
 	@echo "Installing development tools..."
 	cargo install cargo-deny
 	cargo install cargo-udeps
+	cargo install --locked cargo-mutants
+	cargo install cargo-llvm-cov
+	rustup component add llvm-tools
 	@echo ""
 	@echo "✓ Tools installed!"
 	@echo ""
@@ -167,4 +174,58 @@ check-wasm:
 # Generate the embedded HUP binary store for WASM builds
 generate-hups-bin:
 	cargo run --example export_hups_bin
+
+# Run mutation testing on the full codebase (slow — can take hours)
+mutants:
+	@if ! cargo mutants --version >/dev/null 2>&1; then \
+		echo "cargo-mutants is not installed."; \
+		printf "Would you like to install it now? [y/N] "; \
+		read answer; \
+		if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then \
+			cargo install --locked cargo-mutants; \
+		else \
+			echo "Skipping. Run 'cargo install cargo-mutants' to install manually."; \
+			exit 1; \
+		fi; \
+	fi
+	cargo mutants
+
+# Run mutation testing only on files changed vs main (faster, good before pushing)
+mutants-diff:
+	@if ! cargo mutants --version >/dev/null 2>&1; then \
+		echo "cargo-mutants is not installed. Run 'make install-tools' first."; \
+		exit 1; \
+	fi
+	git diff main..HEAD > /tmp/pkcore-diff.txt
+	cargo mutants --in-diff /tmp/pkcore-diff.txt
+
+# Generate HTML code coverage report using cargo-llvm-cov
+coverage:
+	@if ! cargo llvm-cov --version >/dev/null 2>&1; then \
+		echo "cargo-llvm-cov is not installed."; \
+		printf "Would you like to install it now? [y/N] "; \
+		read answer; \
+		if [ "$$answer" = "y" ] || [ "$$answer" = "Y" ]; then \
+			cargo install cargo-llvm-cov; \
+			rustup component add llvm-tools; \
+		else \
+			echo "Skipping. Run 'cargo install cargo-llvm-cov && rustup component add llvm-tools' to install manually."; \
+			exit 1; \
+		fi; \
+	fi
+	cargo llvm-cov --html
+	@echo "Coverage report: target/llvm-cov/html/index.html"
+
+# Generate HTML coverage report and open in browser
+coverage-open: coverage
+	@COV_PATH="./target/llvm-cov/html/index.html"; \
+	if command -v xdg-open >/dev/null 2>&1; then \
+		xdg-open "$$COV_PATH"; \
+	elif command -v open >/dev/null 2>&1; then \
+		open "$$COV_PATH"; \
+	else \
+		echo "No supported opener found (tried xdg-open and open)."; \
+		echo "Open $$COV_PATH manually."; \
+		exit 1; \
+	fi
 

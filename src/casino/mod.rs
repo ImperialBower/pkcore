@@ -6,3 +6,8 @@ pub mod player;
 pub mod state;
 pub mod table;
 pub mod table_no_cell;
+
+#[cfg(feature = "bot-profiles")]
+pub mod action;
+#[cfg(feature = "bot-profiles")]
+pub mod session;

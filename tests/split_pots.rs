@@ -107,9 +107,11 @@ mod casino__table_split_pot_tests {
         );
 
         // Two equal stacks (seats 0 and 4 at 9_000), one short stack (seat 3 at 5_000),
-        // and folded blind chips (50 + 100 = 150) consolidated into NONE — three equity groups.
+        // and two separate folded-blind NONE entries (50 and 100) — four equity groups.
+        // NONE entries are intentionally kept separate so winnings() counts each
+        // as an independent contributor rather than a single combined pool.
         let equity = table.determine_hand_equity();
-        assert_eq!(3, equity.len(), "expected three equity groups");
+        assert_eq!(4, equity.len(), "expected four equity groups");
         assert_eq!(9_000, equity.ceiling(), "ceiling should be the short-stack threshold");
 
         let winnings = table.end_hand().expect("hand should end successfully");

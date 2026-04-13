@@ -1,7 +1,7 @@
 [package]
 name = "pkcore"
 description = "Prototype core poker library."
-version = "0.0.39"
+version = "0.0.40"
 rust-version = "1.91.0"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
@@ -13,6 +13,9 @@ exclude = [".github/workflows/*", "data/*", "docs/*", "examples/*", "generated/h
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
+## Default features enable the bot-profiles and hand-histories YAML support so
+## that examples (e.g. interactive_play) work with a plain `cargo run --example`.
+default = ["bot-profiles", "hand-histories"]
 ## When enabled, `SolverResult::save` and `SolverResult::load` use human-readable
 ## JSON instead of the default compact binary (postcard) format. Useful for
 ## inspecting solver output during development. The explicit `save_json` /
@@ -22,6 +25,9 @@ debug-json = []
 ## Enables YAML serialization/deserialization for `BotProfile` and related
 ## types in the `bot` module. Adds a `serde_yaml_bw` dependency.
 bot-profiles = ["dep:serde_yaml_bw"]
+## Enables YAML serialization/deserialization for `HandHistory` and related
+## types in the `hand_history` module. Adds a `serde_yaml_bw` dependency.
+hand-histories = ["dep:serde_yaml_bw"]
 
 [dependencies]
 bint = "0.1.15"
@@ -62,7 +68,19 @@ uuid = { version = "1.22", features = ["serde", "v4", "js"] }
 
 [[example]]
 name = "bot_selfplay"
-required-features = ["bot-profiles"]
+required-features = ["bot-profiles", "hand-histories"]
+
+[[example]]
+name = "interactive_play"
+required-features = ["bot-profiles", "hand-histories"]
+
+[[example]]
+name = "replay_play"
+required-features = ["hand-histories"]
+
+[[test]]
+name = "replay_consistency"
+required-features = ["hand-histories", "bot-profiles"]
 
 [dev-dependencies]
 serde_yaml_bw = "2.5"

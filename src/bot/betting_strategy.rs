@@ -162,6 +162,81 @@ impl BettingStrategy {
     pub fn gto() -> Self {
         Self::new(50, 33, 15, vec![BetSize::third_pot(), BetSize::pot()])
     }
+
+    /// A tight-aggressive archetype — high aggression, moderate bluffing, 2/3 and pot sizing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::betting_strategy::BettingStrategy;
+    ///
+    /// let s = BettingStrategy::tight_aggressive();
+    /// assert!(s.aggression_factor > 50);
+    /// ```
+    #[must_use]
+    pub fn tight_aggressive() -> Self {
+        Self::new(70, 20, 15, vec![BetSize::two_thirds_pot(), BetSize::pot()])
+    }
+
+    /// A loose-passive archetype — low aggression, rare bluffing, half-pot sizing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::betting_strategy::BettingStrategy;
+    ///
+    /// let s = BettingStrategy::loose_passive();
+    /// assert!(s.aggression_factor < 30);
+    /// ```
+    #[must_use]
+    pub fn loose_passive() -> Self {
+        Self::new(15, 3, 2, vec![BetSize::half_pot()])
+    }
+
+    /// A maniac archetype — extreme aggression and bluff frequency, large overbets.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::betting_strategy::BettingStrategy;
+    ///
+    /// let s = BettingStrategy::maniac();
+    /// assert_eq!(s.aggression_factor, 90);
+    /// ```
+    #[must_use]
+    pub fn maniac() -> Self {
+        Self::new(90, 55, 30, vec![BetSize::pot(), BetSize::two_pot()])
+    }
+
+    /// An ABC archetype — strong hands only, never bluffs, 2/3-pot sizing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::betting_strategy::BettingStrategy;
+    ///
+    /// let s = BettingStrategy::abc();
+    /// assert_eq!(s.bluff_frequency, 0);
+    /// ```
+    #[must_use]
+    pub fn abc() -> Self {
+        Self::new(65, 0, 5, vec![BetSize::two_thirds_pot()])
+    }
+
+    /// A short-stack-ninja archetype — near-maximum aggression, pot and overbet sizing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::betting_strategy::BettingStrategy;
+    ///
+    /// let s = BettingStrategy::short_stack_ninja();
+    /// assert_eq!(s.aggression_factor, 95);
+    /// ```
+    #[must_use]
+    pub fn short_stack_ninja() -> Self {
+        Self::new(95, 45, 40, vec![BetSize::pot(), BetSize::two_pot()])
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -199,6 +274,43 @@ mod tests {
     fn test_betting_strategy_gto() {
         let s = BettingStrategy::gto();
         assert_eq!(s.bluff_frequency, 33);
+        assert_eq!(s.preferred_bet_sizes.len(), 2);
+    }
+
+    #[test]
+    fn test_betting_strategy_tight_aggressive() {
+        let s = BettingStrategy::tight_aggressive();
+        assert!(s.aggression_factor > 50);
+        assert_eq!(s.preferred_bet_sizes.len(), 2);
+    }
+
+    #[test]
+    fn test_betting_strategy_loose_passive() {
+        let s = BettingStrategy::loose_passive();
+        assert!(s.aggression_factor < 30);
+        assert_eq!(s.bluff_frequency, 3);
+        assert_eq!(s.preferred_bet_sizes.len(), 1);
+    }
+
+    #[test]
+    fn test_betting_strategy_maniac() {
+        let s = BettingStrategy::maniac();
+        assert_eq!(s.aggression_factor, 90);
+        assert!(s.bluff_frequency > 50);
+        assert_eq!(s.preferred_bet_sizes.len(), 2);
+    }
+
+    #[test]
+    fn test_betting_strategy_abc() {
+        let s = BettingStrategy::abc();
+        assert_eq!(s.bluff_frequency, 0);
+        assert_eq!(s.preferred_bet_sizes.len(), 1);
+    }
+
+    #[test]
+    fn test_betting_strategy_short_stack_ninja() {
+        let s = BettingStrategy::short_stack_ninja();
+        assert_eq!(s.aggression_factor, 95);
         assert_eq!(s.preferred_bet_sizes.len(), 2);
     }
 

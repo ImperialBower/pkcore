@@ -112,7 +112,7 @@ workspace)
 | [EPIC-16](docs/EPIC-16_DCFR.md) | CFR+ and Discounted CFR — faster convergence variants | Complete |
 | [EPIC-17](docs/EPIC-17_Kuhn_Poker.md) | Kuhn Poker — minimal 3-card game, analytical Nash, CFR validator, interactive examples | Complete |
 | EPIC-18 | Bot Profiles — `BotProfile`, `Playbook`, `PositionRanges`, `PositionalBetting`; position- and table-size-aware YAML-serializable playing styles | Complete |
-| EPIC-19 | Bot Self-Play — drive `casino::table_no_cell::TableNoCell` with `BotProfile` agents; local simulation without gRPC | In Progress — working example in `examples/bot_selfplay.rs`; formal `BotDecider` trait and `SimTable` still planned |
+| EPIC-19 | Bot Self-Play — drive `casino::table_no_cell::TableNoCell` with `BotProfile` agents; local simulation without gRPC; YAML hand-history recording and replay | In Progress — `bot_selfplay`, `interactive_play`, `replay_play` examples complete; `HandHistory` replay engine complete; `BotDecider` trait and `SimResult` still planned |
 | EPIC-20 | Range Frequencies — optional per-combo frequency in range strings (`AA:0.5`) | Planned |
 
 ---
@@ -131,22 +131,42 @@ without standing up any infrastructure.
 See [`docs/EPIC-19_Bot_Self_Play.md`](docs/EPIC-19_Bot_Self_Play.md) for the
 full design and implementation status.
 
-### Current state — working example
+### Current state — working examples
 
-`examples/bot_selfplay.rs` is a complete working demonstration:
+Three working examples cover local simulation and session replay:
 
 ```bash
+# Run 50 hands of all-bot self-play (8 profiles)
 cargo run --features bot-profiles --example bot_selfplay
+
+# Play interactively vs bots; session saved to generated/*.yaml
+cargo run --features bot-profiles,hand-histories --example interactive_play
+
+# Replay a saved YAML session, validating every hand through the engine
+cargo run --features hand-histories --example replay_play
+cargo run --features hand-histories --example replay_play -- generated/session.yaml
 ```
 
-All 8 profiles from `data/bots/` compete over up to 50 hands at a single
-`TableNoCell`. Output includes per-street board state, per-action play-by-play
-with hole cards, and final standings.
+`bot_selfplay`: All 8 profiles from `data/bots/` compete over up to 50 hands
+at a single `TableNoCell`. Output includes per-street board state, per-action
+play-by-play with hole cards, and final standings.
 
-The example uses a probabilistic `decide()` free function (not a trait) driven
-by each `BotProfile`'s `aggression_factor` and `preferred_bet_sizes`. This is
-sufficient for simulation and manual validation but not yet wired to the
-gRPC layer.
+`interactive_play`: Human vs. bots with a REPL-style action prompt.  Each hand
+is recorded as a `HandHistory` and the session is serialized to YAML via
+`HandCollection::to_yaml()`.
+
+`replay_play`: Loads a saved YAML session, displays every hand with all hole
+cards visible, and calls `HandHistory::replay()` to verify that recorded
+actions reproduce the same chip results when re-fed through the engine.
+
+The replay engine (`HandHistory::replay()`, `HandCollection::replay_all()`,
+`TableNoCell::inject_hole_cards()`) all live in the library.  An integration
+test in `tests/replay_consistency.rs` verifies the full round-trip automatically
+(marked `#[ignore]`; run with `--include-ignored`).
+
+The examples use a probabilistic `decide()` method driven by each `BotProfile`'s
+`aggression_factor` and `preferred_bet_sizes`. This is sufficient for simulation
+and manual validation but not yet wired to the gRPC layer.
 
 ### Remaining work — formal library types
 
@@ -201,11 +221,15 @@ before adding gRPC means distributed agents start from a validated foundation.
 | Type | File | Role |
 |------|------|------|
 | `TableNoCell` | `src/casino/table_no_cell.rs` | Game state owner |
+| `PokerSession` | `src/casino/session.rs` | Multi-hand session runner |
 | `BotProfile` | `src/bot/profile.rs` | Strategy config |
 | `Playbook` | `src/bot/playbook.rs` | Position-aware dispatch |
 | `BettingStrategy` | `src/bot/betting_strategy.rs` | Aggression/sizing |
 | `PositionRanges` | `src/bot/position_ranges.rs` | Preflop range lookup |
 | `Eval` | `src/analysis/eval.rs` | Hand strength |
+| `HandHistory` | `src/hand_history.rs` | Per-hand YAML record + replay |
+| `HandCollection` | `src/hand_history.rs` | Session-level collection of hands |
+| `ReplayResult` | `src/hand_history.rs` | Replay consistency check output |
 
 ---
 

@@ -858,15 +858,8 @@ mod casino__dealer_tests {
     fn act_fold_removes_player_from_hand() {
         let mut dealer = two_player_dealer();
         dealer.start_hand().unwrap();
-        // Find the first occupied seat that is still in the hand.
-        let target = (0..dealer.table.seats.size())
-            .find(|&i| {
-                dealer
-                    .table
-                    .get_seat(i)
-                    .is_some_and(|s| !s.is_empty() && s.is_in_hand())
-            })
-            .unwrap();
+        // Fold whoever is next to act (in HU that is the SB/button).
+        let target = dealer.next_to_act();
         dealer.act(DealerAction::Fold { seat: target }).unwrap();
         // The folded seat is no longer in the hand
         let seat = dealer.table.get_seat(target).unwrap();

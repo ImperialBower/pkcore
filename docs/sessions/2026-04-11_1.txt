@@ -1,0 +1,919 @@
+cargo run --features bot-profiles --example bot_selfplay                                                ✔ ▓▒░
+    Blocking waiting for file lock on build directory
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.62s
+     Running `target/debug/examples/bot_selfplay`
+=== Bot Self-Play: up to 50 hands  |  blinds 50/100  |  10000 chips each ===
+
+  Stacks:  gto=10000  tight_passive=10000  loose_aggressive=10000  tight_aggressive=10000  loose_passive=10000  maniac=10000  abc=10000  short_stack_ninja=10000
+
+─── Hand  1  btn: seat 0 (gto)  players: 8 ───
+  Preflop  [pot: 150]
+                     gto  8♦ Q♣
+           tight_passive  7♥ K♥
+        loose_aggressive  7♦ Q♦
+        tight_aggressive  8♠ J♠
+           loose_passive  6♠ 9♠
+                  maniac  K♦ A♦
+                     abc  3♠ 5♥
+       short_stack_ninja  5♣ A♥
+        tight_aggressive [8♠ J♠]  [pot: 150] calls 100 [pot: 250]
+           loose_passive [6♠ 9♠]  [pot: 250] folds [pot: 250]
+                  maniac [K♦ A♦]  [pot: 250] calls 100 [pot: 350]
+                     abc [3♠ 5♥]  [pot: 350] calls 100 [pot: 450]
+       short_stack_ninja [5♣ A♥]  [pot: 450] calls 100 [pot: 550]
+                     gto [8♦ Q♣]  [pot: 550] folds [pot: 550]
+           tight_passive [7♥ K♥]  [pot: 550] calls 50 [pot: 600]
+        loose_aggressive [7♦ Q♦]  [pot: 600] bets 400 [pot: 900]
+        tight_aggressive [8♠ J♠]  [pot: 900] folds [pot: 900]
+                  maniac [K♦ A♦]  [pot: 900] folds [pot: 900]
+                     abc [3♠ 5♥]  [pot: 900] raises to 1000 [pot: 1800]
+       short_stack_ninja [5♣ A♥]  [pot: 1800] calls 900 [pot: 2700]
+           tight_passive [7♥ K♥]  [pot: 2700] folds [pot: 2700]
+        loose_aggressive [7♦ Q♦]  [pot: 2700] folds [pot: 2700]
+  Flop: 8♥ 3♥ J♣  [pot: 2700]
+                     abc [3♠ 5♥]  [pot: 2700] bets 1800 [pot: 4500]
+       short_stack_ninja [5♣ A♥]  [pot: 4500] calls 1800 [pot: 6300]
+  Turn: 8♥ 3♥ J♣ 7♣  [pot: 6300]
+                     abc [3♠ 5♥]  [pot: 6300] bets 4200 [pot: 10500]
+       short_stack_ninja [5♣ A♥]  [pot: 10500] calls 4200 [pot: 14700]
+  River: 8♥ 3♥ J♣ 7♣ 9♣  [pot: 14700]
+                     abc [3♠ 5♥]  [pot: 14700] bets 3000 [pot: 17700]
+       short_stack_ninja [5♣ A♥]  [pot: 17700] ALL-IN (3000 chips) [pot: 20700]
+  abc wins 20700 chips
+  Stacks:  gto=10000  tight_passive=9900  loose_aggressive=9600  tight_aggressive=9900  loose_passive=10000  maniac=9900  abc=20700  short_stack_ninja=0
+
+  *** short_stack_ninja is eliminated! ***
+
+─── Hand  2  btn: seat 1 (tight_passive)  players: 7 ───
+  Preflop  [pot: 150]
+                     gto  9♦ 2♦
+           tight_passive  Q♣ K♣
+        loose_aggressive  T♥ T♠
+        tight_aggressive  J♣ 4♥
+           loose_passive  J♦ 3♣
+                  maniac  4♣ Q♠
+                     abc  3♦ 2♣
+           loose_passive [J♦ 3♣]  [pot: 150] calls 100 [pot: 250]
+                  maniac [4♣ Q♠]  [pot: 250] raises to 350 [pot: 600]
+                     abc [3♦ 2♣]  [pot: 600] calls 350 [pot: 950]
+                     gto [9♦ 2♦]  [pot: 950] folds [pot: 950]
+           tight_passive [Q♣ K♣]  [pot: 950] calls 350 [pot: 1300]
+        loose_aggressive [T♥ T♠]  [pot: 1300] calls 300 [pot: 1600]
+        tight_aggressive [J♣ 4♥]  [pot: 1600] folds [pot: 1600]
+           loose_passive [J♦ 3♣]  [pot: 1600] folds [pot: 1600]
+  Flop: 3♥ 5♠ 7♣  [pot: 1600]
+        loose_aggressive [T♥ T♠]  [pot: 1600] checks [pot: 1600]
+                  maniac [4♣ Q♠]  [pot: 1600] bets 3200 [pot: 4800]
+                     abc [3♦ 2♣]  [pot: 4800] raises to 6400 [pot: 11200]
+           tight_passive [Q♣ K♣]  [pot: 11200] folds [pot: 11200]
+        loose_aggressive [T♥ T♠]  [pot: 11200] folds [pot: 11200]
+                  maniac [4♣ Q♠]  [pot: 11200] calls 3200 [pot: 14400]
+  Turn: 3♥ 5♠ 7♣ K♠  [pot: 14400]
+                  maniac [4♣ Q♠]  [pot: 14400] bets 3150 [pot: 17550]
+                     abc [3♦ 2♣]  [pot: 17550] calls 3150 [pot: 20700]
+  River: 3♥ 5♠ 7♣ K♠ 8♦  [pot: 20700]
+  abc wins 20700 chips
+  Stacks:  gto=10000  tight_passive=9550  loose_aggressive=9250  tight_aggressive=9800  loose_passive=9900  maniac=0  abc=31500  short_stack_ninja=OUT
+
+  *** maniac is eliminated! ***
+
+─── Hand  3  btn: seat 2 (loose_aggressive)  players: 6 ───
+  Preflop  [pot: 150]
+                     gto  4♦ J♦
+           tight_passive  8♠ 3♥
+        loose_aggressive  7♣ Q♦
+        tight_aggressive  5♦ T♥
+           loose_passive  3♦ T♦
+                     abc  9♥ 9♣
+                     abc [9♥ 9♣]  [pot: 150] calls 100 [pot: 250]
+                     gto [4♦ J♦]  [pot: 250] folds [pot: 250]
+           tight_passive [8♠ 3♥]  [pot: 250] folds [pot: 250]
+        loose_aggressive [7♣ Q♦]  [pot: 250] calls 100 [pot: 350]
+        tight_aggressive [5♦ T♥]  [pot: 350] calls 50 [pot: 400]
+           loose_passive [3♦ T♦]  [pot: 400] checks [pot: 400]
+  Flop: 5♣ T♠ Q♥  [pot: 400]
+        tight_aggressive [5♦ T♥]  [pot: 400] checks [pot: 400]
+           loose_passive [3♦ T♦]  [pot: 400] checks [pot: 400]
+                     abc [9♥ 9♣]  [pot: 400] bets 266 [pot: 666]
+        loose_aggressive [7♣ Q♦]  [pot: 666] calls 266 [pot: 932]
+        tight_aggressive [5♦ T♥]  [pot: 932] calls 266 [pot: 1198]
+           loose_passive [3♦ T♦]  [pot: 1198] folds [pot: 1198]
+  Turn: 5♣ T♠ Q♥ A♥  [pot: 1198]
+        tight_aggressive [5♦ T♥]  [pot: 1198] bets 798 [pot: 1996]
+                     abc [9♥ 9♣]  [pot: 1996] calls 798 [pot: 2794]
+        loose_aggressive [7♣ Q♦]  [pot: 2794] raises to 2660 [pot: 5454]
+        tight_aggressive [5♦ T♥]  [pot: 5454] calls 1862 [pot: 7316]
+                     abc [9♥ 9♣]  [pot: 7316] folds [pot: 7316]
+  River: 5♣ T♠ Q♥ A♥ A♣  [pot: 7316]
+        tight_aggressive [5♦ T♥]  [pot: 7316] bets 4877 [pot: 12193]
+        loose_aggressive [7♣ Q♦]  [pot: 12193] calls 4877 [pot: 17070]
+  loose_aggressive wins 17070 chips
+  Stacks:  gto=10000  tight_passive=9550  loose_aggressive=18417  tight_aggressive=1897  loose_passive=9800  maniac=OUT  abc=30336  short_stack_ninja=OUT
+
+─── Hand  4  btn: seat 3 (tight_aggressive)  players: 6 ───
+  Preflop  [pot: 150]
+                     gto  8♥ K♥
+           tight_passive  A♥ 6♦
+        loose_aggressive  6♠ K♠
+        tight_aggressive  7♣ Q♦
+           loose_passive  T♠ 4♥
+                     abc  3♠ 9♠
+                     gto [8♥ K♥]  [pot: 150] folds [pot: 150]
+           tight_passive [A♥ 6♦]  [pot: 150] folds [pot: 150]
+        loose_aggressive [6♠ K♠]  [pot: 150] calls 100 [pot: 250]
+        tight_aggressive [7♣ Q♦]  [pot: 250] calls 100 [pot: 350]
+           loose_passive [T♠ 4♥]  [pot: 350] folds [pot: 350]
+                     abc [3♠ 9♠]  [pot: 350] checks [pot: 350]
+  Flop: 2♥ Q♣ 2♦  [pot: 350]
+                     abc [3♠ 9♠]  [pot: 350] bets 233 [pot: 583]
+        loose_aggressive [6♠ K♠]  [pot: 583] folds [pot: 583]
+        tight_aggressive [7♣ Q♦]  [pot: 583] folds [pot: 583]
+  abc wins 583 chips
+  Stacks:  gto=10000  tight_passive=9550  loose_aggressive=18317  tight_aggressive=1797  loose_passive=9750  maniac=OUT  abc=30586  short_stack_ninja=OUT
+
+─── Hand  5  btn: seat 4 (loose_passive)  players: 6 ───
+  Preflop  [pot: 150]
+                     gto  2♣ 2♠
+           tight_passive  2♥ 3♣
+        loose_aggressive  A♦ 6♣
+        tight_aggressive  K♥ 4♦
+           loose_passive  4♣ 7♦
+                     abc  K♣ 8♦
+           tight_passive [2♥ 3♣]  [pot: 150] calls 100 [pot: 250]
+        loose_aggressive [A♦ 6♣]  [pot: 250] raises to 266 [pot: 516]
+        tight_aggressive [K♥ 4♦]  [pot: 516] raises to 782 [pot: 1298]
+           loose_passive [4♣ 7♦]  [pot: 1298] folds [pot: 1298]
+                     abc [K♣ 8♦]  [pot: 1298] calls 732 [pot: 2030]
+                     gto [2♣ 2♠]  [pot: 2030] raises to 1458 [pot: 3388]
+           tight_passive [2♥ 3♣]  [pot: 3388] folds [pot: 3388]
+        loose_aggressive [A♦ 6♣]  [pot: 3388] calls 1192 [pot: 4580]
+        tight_aggressive [K♥ 4♦]  [pot: 4580] folds [pot: 4580]
+                     abc [K♣ 8♦]  [pot: 4580] raises to 4511 [pot: 8309]
+        loose_aggressive [A♦ 6♣]  [pot: 8309] calls 3053 [pot: 11362]
+                     gto [2♣ 2♠]  [pot: 11362] folds [pot: 11362]
+  Flop: 4♥ 3♥ 5♥  [pot: 11362]
+                     abc [K♣ 8♦]  [pot: 11362] bets 7574 [pot: 18936]
+        loose_aggressive [A♦ 6♣]  [pot: 18936] raises to 13806 [pot: 32742]
+                     abc [K♣ 8♦]  [pot: 32742] calls 6232 [pot: 38974]
+  Turn: 4♥ 3♥ 5♥ 9♣  [pot: 38974]
+  River: 4♥ 3♥ 5♥ 9♣ 8♠  [pot: 38974]
+  abc wins 38974 chips
+  Stacks:  gto=8542  tight_passive=9450  loose_aggressive=0  tight_aggressive=1015  loose_passive=9750  maniac=OUT  abc=51243  short_stack_ninja=OUT
+
+  *** loose_aggressive is eliminated! ***
+
+─── Hand  6  btn: seat 5 (?)  players: 5 ───
+  Preflop  [pot: 150]
+                     gto  3♥ K♥
+           tight_passive  9♦ 2♥
+        tight_aggressive  K♠ 8♦
+           loose_passive  9♣ 7♦
+                     abc  6♥ 7♠
+           tight_passive [9♦ 2♥]  [pot: 150] folds [pot: 150]
+        tight_aggressive [K♠ 8♦]  [pot: 150] calls 100 [pot: 250]
+           loose_passive [9♣ 7♦]  [pot: 250] folds [pot: 250]
+                     abc [6♥ 7♠]  [pot: 250] folds [pot: 250]
+                     gto [3♥ K♥]  [pot: 250] checks [pot: 250]
+  Flop: 3♣ T♣ 9♥  [pot: 250]
+                     gto [3♥ K♥]  [pot: 250] checks [pot: 250]
+        tight_aggressive [K♠ 8♦]  [pot: 250] bets 166 [pot: 416]
+                     gto [3♥ K♥]  [pot: 416] folds [pot: 416]
+  tight_aggressive wins 416 chips
+  Stacks:  gto=8442  tight_passive=9450  loose_aggressive=OUT  tight_aggressive=1165  loose_passive=9750  maniac=OUT  abc=51193  short_stack_ninja=OUT
+
+─── Hand  7  btn: seat 6 (abc)  players: 5 ───
+  Preflop  [pot: 150]
+                     gto  T♥ 7♥
+           tight_passive  Q♥ 5♥
+        tight_aggressive  9♥ 6♠
+           loose_passive  5♦ 4♦
+                     abc  6♥ 3♣
+        tight_aggressive [9♥ 6♠]  [pot: 150] folds [pot: 150]
+           loose_passive [5♦ 4♦]  [pot: 150] folds [pot: 150]
+                     abc [6♥ 3♣]  [pot: 150] raises to 200 [pot: 350]
+                     gto [T♥ 7♥]  [pot: 350] calls 150 [pot: 500]
+           tight_passive [Q♥ 5♥]  [pot: 500] raises to 450 [pot: 850]
+                     abc [6♥ 3♣]  [pot: 850] folds [pot: 850]
+                     gto [T♥ 7♥]  [pot: 850] folds [pot: 850]
+  tight_passive wins 850 chips
+  Stacks:  gto=8242  tight_passive=9850  loose_aggressive=OUT  tight_aggressive=1165  loose_passive=9750  maniac=OUT  abc=50993  short_stack_ninja=OUT
+
+─── Hand  8  btn: seat 7 (?)  players: 5 ───
+  Preflop  [pot: 150]
+                     gto  5♥ 7♠
+           tight_passive  7♣ 3♦
+        tight_aggressive  T♠ 5♣
+           loose_passive  K♦ Q♥
+                     abc  4♦ K♣
+        tight_aggressive [T♠ 5♣]  [pot: 150] calls 100 [pot: 250]
+           loose_passive [K♦ Q♥]  [pot: 250] folds [pot: 250]
+                     abc [4♦ K♣]  [pot: 250] raises to 266 [pot: 516]
+                     gto [5♥ 7♠]  [pot: 516] folds [pot: 516]
+           tight_passive [7♣ 3♦]  [pot: 516] folds [pot: 516]
+        tight_aggressive [T♠ 5♣]  [pot: 516] folds [pot: 516]
+  abc wins 516 chips
+  Stacks:  gto=8192  tight_passive=9750  loose_aggressive=OUT  tight_aggressive=1065  loose_passive=9750  maniac=OUT  abc=51243  short_stack_ninja=OUT
+
+─── Hand  9  btn: seat 0 (gto)  players: 5 ───
+  Preflop  [pot: 150]
+                     gto  A♥ T♣
+           tight_passive  A♠ K♣
+        tight_aggressive  5♥ A♣
+           loose_passive  7♠ 5♠
+                     abc  T♥ 3♣
+           loose_passive [7♠ 5♠]  [pot: 150] folds [pot: 150]
+                     abc [T♥ 3♣]  [pot: 150] raises to 200 [pot: 350]
+                     gto [A♥ T♣]  [pot: 350] folds [pot: 350]
+           tight_passive [A♠ K♣]  [pot: 350] raises to 375 [pot: 675]
+        tight_aggressive [5♥ A♣]  [pot: 675] calls 275 [pot: 950]
+                     abc [T♥ 3♣]  [pot: 950] calls 175 [pot: 1125]
+  Flop: 9♦ Q♦ T♠  [pot: 1125]
+           tight_passive [A♠ K♣]  [pot: 1125] checks [pot: 1125]
+        tight_aggressive [5♥ A♣]  [pot: 1125] checks [pot: 1125]
+                     abc [T♥ 3♣]  [pot: 1125] bets 750 [pot: 1875]
+           tight_passive [A♠ K♣]  [pot: 1875] folds [pot: 1875]
+        tight_aggressive [5♥ A♣]  [pot: 1875] folds [pot: 1875]
+  abc wins 1875 chips
+  Stacks:  gto=8192  tight_passive=9375  loose_aggressive=OUT  tight_aggressive=690  loose_passive=9750  maniac=OUT  abc=51993  short_stack_ninja=OUT
+
+─── Hand 10  btn: seat 1 (tight_passive)  players: 5 ───
+  Preflop  [pot: 150]
+                     gto  K♥ 9♣
+           tight_passive  9♥ 8♣
+        tight_aggressive  K♣ 3♣
+           loose_passive  T♥ 4♦
+                     abc  5♣ 5♥
+                     abc [5♣ 5♥]  [pot: 150] calls 100 [pot: 250]
+                     gto [K♥ 9♣]  [pot: 250] folds [pot: 250]
+           tight_passive [9♥ 8♣]  [pot: 250] calls 100 [pot: 350]
+        tight_aggressive [K♣ 3♣]  [pot: 350] calls 50 [pot: 400]
+           loose_passive [T♥ 4♦]  [pot: 400] checks [pot: 400]
+  Flop: 7♥ 7♠ A♥  [pot: 400]
+        tight_aggressive [K♣ 3♣]  [pot: 400] bets 266 [pot: 666]
+           loose_passive [T♥ 4♦]  [pot: 666] folds [pot: 666]
+                     abc [5♣ 5♥]  [pot: 666] calls 266 [pot: 932]
+           tight_passive [9♥ 8♣]  [pot: 932] folds [pot: 932]
+  Turn: 7♥ 7♠ A♥ 6♠  [pot: 932]
+        tight_aggressive [K♣ 3♣]  [pot: 932] bets 324 [pot: 1256]
+                     abc [5♣ 5♥]  [pot: 1256] calls 324 [pot: 1580]
+  River: 7♥ 7♠ A♥ 6♠ Q♠  [pot: 1580]
+  abc wins 1580 chips
+  Stacks:  gto=8192  tight_passive=9275  loose_aggressive=OUT  tight_aggressive=0  loose_passive=9650  maniac=OUT  abc=52883  short_stack_ninja=OUT
+
+  *** tight_aggressive is eliminated! ***
+
+─── Hand 11  btn: seat 2 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  7♠ K♣
+           tight_passive  J♦ 3♠
+           loose_passive  6♠ 9♣
+                     abc  J♠ T♠
+                     gto [7♠ K♣]  [pot: 150] folds [pot: 150]
+           tight_passive [J♦ 3♠]  [pot: 150] folds [pot: 150]
+           loose_passive [6♠ 9♣]  [pot: 150] folds [pot: 150]
+  abc wins 150 chips
+  Stacks:  gto=8192  tight_passive=9275  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9600  maniac=OUT  abc=52933  short_stack_ninja=OUT
+
+─── Hand 12  btn: seat 3 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  3♠ 4♠
+           tight_passive  K♥ 3♦
+           loose_passive  Q♣ 5♦
+                     abc  K♦ 9♥
+                     gto [3♠ 4♠]  [pot: 150] folds [pot: 150]
+           tight_passive [K♥ 3♦]  [pot: 150] folds [pot: 150]
+           loose_passive [Q♣ 5♦]  [pot: 150] calls 50 [pot: 200]
+                     abc [K♦ 9♥]  [pot: 200] bets 133 [pot: 233]
+           loose_passive [Q♣ 5♦]  [pot: 233] folds [pot: 233]
+  abc wins 233 chips
+  Stacks:  gto=8192  tight_passive=9275  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9500  maniac=OUT  abc=53033  short_stack_ninja=OUT
+
+─── Hand 13  btn: seat 4 (loose_passive)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  Q♥ 3♣
+           tight_passive  8♠ J♠
+           loose_passive  5♣ 4♣
+                     abc  9♦ 4♠
+           tight_passive [8♠ J♠]  [pot: 150] calls 100 [pot: 250]
+           loose_passive [5♣ 4♣]  [pot: 250] folds [pot: 250]
+                     abc [9♦ 4♠]  [pot: 250] calls 50 [pot: 300]
+                     gto [Q♥ 3♣]  [pot: 300] bets 300 [pot: 500]
+           tight_passive [8♠ J♠]  [pot: 500] folds [pot: 500]
+                     abc [9♦ 4♠]  [pot: 500] folds [pot: 500]
+  gto wins 500 chips
+  Stacks:  gto=8392  tight_passive=9175  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9500  maniac=OUT  abc=52933  short_stack_ninja=OUT
+
+─── Hand 14  btn: seat 5 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  A♠ 6♣
+           tight_passive  6♥ 4♣
+           loose_passive  4♥ 5♠
+                     abc  K♦ K♥
+           tight_passive [6♥ 4♣]  [pot: 150] folds [pot: 150]
+           loose_passive [4♥ 5♠]  [pot: 150] folds [pot: 150]
+                     abc [K♦ K♥]  [pot: 150] folds [pot: 150]
+  gto wins 150 chips
+  Stacks:  gto=8442  tight_passive=9175  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9500  maniac=OUT  abc=52883  short_stack_ninja=OUT
+
+─── Hand 15  btn: seat 6 (abc)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  7♦ J♥
+           tight_passive  3♦ 3♣
+           loose_passive  4♦ 6♦
+                     abc  T♥ 9♠
+           loose_passive [4♦ 6♦]  [pot: 150] folds [pot: 150]
+                     abc [T♥ 9♠]  [pot: 150] calls 100 [pot: 250]
+                     gto [7♦ J♥]  [pot: 250] folds [pot: 250]
+           tight_passive [3♦ 3♣]  [pot: 250] bets 125 [pot: 275]
+                     abc [T♥ 9♠]  [pot: 275] calls 25 [pot: 300]
+  Flop: 5♦ 7♣ T♣  [pot: 300]
+           tight_passive [3♦ 3♣]  [pot: 300] checks [pot: 300]
+                     abc [T♥ 9♠]  [pot: 300] bets 200 [pot: 500]
+           tight_passive [3♦ 3♣]  [pot: 500] folds [pot: 500]
+  abc wins 500 chips
+  Stacks:  gto=8392  tight_passive=9050  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9500  maniac=OUT  abc=53058  short_stack_ninja=OUT
+
+─── Hand 16  btn: seat 7 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  3♠ 7♥
+           tight_passive  A♠ T♥
+           loose_passive  9♣ 3♦
+                     abc  4♣ 4♥
+           loose_passive [9♣ 3♦]  [pot: 150] folds [pot: 150]
+                     abc [4♣ 4♥]  [pot: 150] calls 100 [pot: 250]
+                     gto [3♠ 7♥]  [pot: 250] calls 50 [pot: 300]
+           tight_passive [A♠ T♥]  [pot: 300] bets 150 [pot: 350]
+                     abc [4♣ 4♥]  [pot: 350] calls 50 [pot: 400]
+                     gto [3♠ 7♥]  [pot: 400] raises to 550 [pot: 850]
+                     abc [4♣ 4♥]  [pot: 850] calls 400 [pot: 1250]
+           tight_passive [A♠ T♥]  [pot: 1250] folds [pot: 1250]
+  Flop: T♦ A♦ 5♠  [pot: 1250]
+                     gto [3♠ 7♥]  [pot: 1250] bets 416 [pot: 1666]
+                     abc [4♣ 4♥]  [pot: 1666] folds [pot: 1666]
+  gto wins 1666 chips
+  Stacks:  gto=9092  tight_passive=8900  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9500  maniac=OUT  abc=52508  short_stack_ninja=OUT
+
+─── Hand 17  btn: seat 0 (gto)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  T♣ 4♦
+           tight_passive  4♠ 8♦
+           loose_passive  9♠ 3♣
+                     abc  5♥ 2♥
+                     abc [5♥ 2♥]  [pot: 150] raises to 200 [pot: 350]
+                     gto [T♣ 4♦]  [pot: 350] calls 200 [pot: 550]
+           tight_passive [4♠ 8♦]  [pot: 550] folds [pot: 550]
+           loose_passive [9♠ 3♣]  [pot: 550] folds [pot: 550]
+  Flop: 4♣ A♥ 2♣  [pot: 550]
+                     abc [5♥ 2♥]  [pot: 550] bets 366 [pot: 916]
+                     gto [T♣ 4♦]  [pot: 916] folds [pot: 916]
+  abc wins 916 chips
+  Stacks:  gto=8892  tight_passive=8850  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9400  maniac=OUT  abc=52858  short_stack_ninja=OUT
+
+─── Hand 18  btn: seat 1 (tight_passive)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  3♠ 6♥
+           tight_passive  6♣ K♦
+           loose_passive  7♣ J♥
+                     abc  9♥ 6♠
+                     gto [3♠ 6♥]  [pot: 150] raises to 200 [pot: 350]
+           tight_passive [6♣ K♦]  [pot: 350] folds [pot: 350]
+           loose_passive [7♣ J♥]  [pot: 350] folds [pot: 350]
+                     abc [9♥ 6♠]  [pot: 350] calls 100 [pot: 450]
+  Flop: 8♦ K♠ A♠  [pot: 450]
+                     abc [9♥ 6♠]  [pot: 450] bets 300 [pot: 750]
+                     gto [3♠ 6♥]  [pot: 750] calls 300 [pot: 1050]
+  Turn: 8♦ K♠ A♠ 9♦  [pot: 1050]
+                     abc [9♥ 6♠]  [pot: 1050] bets 700 [pot: 1750]
+                     gto [3♠ 6♥]  [pot: 1750] folds [pot: 1750]
+  abc wins 1750 chips
+  Stacks:  gto=8392  tight_passive=8850  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9350  maniac=OUT  abc=53408  short_stack_ninja=OUT
+
+─── Hand 19  btn: seat 2 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  K♦ 2♥
+           tight_passive  J♥ A♦
+           loose_passive  6♥ A♥
+                     abc  Q♣ A♠
+                     gto [K♦ 2♥]  [pot: 150] raises to 200 [pot: 350]
+           tight_passive [J♥ A♦]  [pot: 350] folds [pot: 350]
+           loose_passive [6♥ A♥]  [pot: 350] folds [pot: 350]
+                     abc [Q♣ A♠]  [pot: 350] raises to 433 [pot: 683]
+                     gto [K♦ 2♥]  [pot: 683] folds [pot: 683]
+  abc wins 683 chips
+  Stacks:  gto=8192  tight_passive=8850  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9300  maniac=OUT  abc=53658  short_stack_ninja=OUT
+
+─── Hand 20  btn: seat 3 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  9♠ 8♣
+           tight_passive  6♦ 7♦
+           loose_passive  A♥ J♣
+                     abc  T♦ 4♠
+                     gto [9♠ 8♣]  [pot: 150] folds [pot: 150]
+           tight_passive [6♦ 7♦]  [pot: 150] folds [pot: 150]
+           loose_passive [A♥ J♣]  [pot: 150] folds [pot: 150]
+  abc wins 150 chips
+  Stacks:  gto=8192  tight_passive=8850  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9250  maniac=OUT  abc=53708  short_stack_ninja=OUT
+
+─── Hand 21  btn: seat 4 (loose_passive)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  2♣ 3♦
+           tight_passive  3♣ 3♠
+           loose_passive  6♥ 2♠
+                     abc  4♠ 6♣
+           tight_passive [3♣ 3♠]  [pot: 150] calls 100 [pot: 250]
+           loose_passive [6♥ 2♠]  [pot: 250] folds [pot: 250]
+                     abc [4♠ 6♣]  [pot: 250] calls 50 [pot: 300]
+                     gto [2♣ 3♦]  [pot: 300] checks [pot: 300]
+  Flop: K♦ Q♥ T♥  [pot: 300]
+                     abc [4♠ 6♣]  [pot: 300] bets 200 [pot: 500]
+                     gto [2♣ 3♦]  [pot: 500] folds [pot: 500]
+           tight_passive [3♣ 3♠]  [pot: 500] folds [pot: 500]
+  abc wins 500 chips
+  Stacks:  gto=8092  tight_passive=8750  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9250  maniac=OUT  abc=53908  short_stack_ninja=OUT
+
+─── Hand 22  btn: seat 5 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  5♥ K♣
+           tight_passive  J♠ K♠
+           loose_passive  2♥ 8♦
+                     abc  5♠ Q♣
+           tight_passive [J♠ K♠]  [pot: 150] raises to 200 [pot: 350]
+           loose_passive [2♥ 8♦]  [pot: 350] folds [pot: 350]
+                     abc [5♠ Q♣]  [pot: 350] folds [pot: 350]
+                     gto [5♥ K♣]  [pot: 350] calls 100 [pot: 450]
+  Flop: 3♦ 2♠ A♦  [pot: 450]
+                     gto [5♥ K♣]  [pot: 450] bets 450 [pot: 900]
+           tight_passive [J♠ K♠]  [pot: 900] folds [pot: 900]
+  gto wins 900 chips
+  Stacks:  gto=8342  tight_passive=8550  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9250  maniac=OUT  abc=53858  short_stack_ninja=OUT
+
+─── Hand 23  btn: seat 6 (abc)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  7♦ 3♦
+           tight_passive  8♥ 8♦
+           loose_passive  2♠ 7♣
+                     abc  8♣ 5♦
+           loose_passive [2♠ 7♣]  [pot: 150] folds [pot: 150]
+                     abc [8♣ 5♦]  [pot: 150] calls 100 [pot: 250]
+                     gto [7♦ 3♦]  [pot: 250] folds [pot: 250]
+           tight_passive [8♥ 8♦]  [pot: 250] bets 125 [pot: 275]
+                     abc [8♣ 5♦]  [pot: 275] folds [pot: 275]
+  tight_passive wins 275 chips
+  Stacks:  gto=8292  tight_passive=8700  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9250  maniac=OUT  abc=53758  short_stack_ninja=OUT
+
+─── Hand 24  btn: seat 7 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  T♣ 8♠
+           tight_passive  9♦ 6♥
+           loose_passive  T♦ 4♥
+                     abc  A♣ K♥
+           loose_passive [T♦ 4♥]  [pot: 150] folds [pot: 150]
+                     abc [A♣ K♥]  [pot: 150] calls 100 [pot: 250]
+                     gto [T♣ 8♠]  [pot: 250] calls 50 [pot: 300]
+           tight_passive [9♦ 6♥]  [pot: 300] checks [pot: 300]
+  Flop: Q♥ 5♠ Q♦  [pot: 300]
+                     gto [T♣ 8♠]  [pot: 300] bets 300 [pot: 600]
+           tight_passive [9♦ 6♥]  [pot: 600] calls 300 [pot: 900]
+                     abc [A♣ K♥]  [pot: 900] calls 300 [pot: 1200]
+  Turn: Q♥ 5♠ Q♦ 5♣  [pot: 1200]
+                     gto [T♣ 8♠]  [pot: 1200] bets 1200 [pot: 2400]
+           tight_passive [9♦ 6♥]  [pot: 2400] folds [pot: 2400]
+                     abc [A♣ K♥]  [pot: 2400] raises to 2800 [pot: 5200]
+                     gto [T♣ 8♠]  [pot: 5200] folds [pot: 5200]
+  abc wins 5200 chips
+  Stacks:  gto=6692  tight_passive=8300  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9250  maniac=OUT  abc=55758  short_stack_ninja=OUT
+
+─── Hand 25  btn: seat 0 (gto)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  4♥ 4♦
+           tight_passive  Q♣ 3♠
+           loose_passive  K♠ 5♥
+                     abc  9♥ 2♥
+                     abc [9♥ 2♥]  [pot: 150] calls 100 [pot: 250]
+                     gto [4♥ 4♦]  [pot: 250] calls 100 [pot: 350]
+           tight_passive [Q♣ 3♠]  [pot: 350] folds [pot: 350]
+           loose_passive [K♠ 5♥]  [pot: 350] checks [pot: 350]
+  Flop: 7♣ J♥ J♠  [pot: 350]
+           loose_passive [K♠ 5♥]  [pot: 350] checks [pot: 350]
+                     abc [9♥ 2♥]  [pot: 350] bets 233 [pot: 583]
+                     gto [4♥ 4♦]  [pot: 583] raises to 466 [pot: 1049]
+           loose_passive [K♠ 5♥]  [pot: 1049] folds [pot: 1049]
+                     abc [9♥ 2♥]  [pot: 1049] folds [pot: 1049]
+  gto wins 1049 chips
+  Stacks:  gto=7175  tight_passive=8250  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9150  maniac=OUT  abc=55425  short_stack_ninja=OUT
+
+─── Hand 26  btn: seat 1 (tight_passive)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  T♠ 7♠
+           tight_passive  A♦ 4♠
+           loose_passive  3♠ 4♣
+                     abc  8♥ 6♦
+                     gto [T♠ 7♠]  [pot: 150] folds [pot: 150]
+           tight_passive [A♦ 4♠]  [pot: 150] folds [pot: 150]
+           loose_passive [3♠ 4♣]  [pot: 150] folds [pot: 150]
+  abc wins 150 chips
+  Stacks:  gto=7175  tight_passive=8250  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9100  maniac=OUT  abc=55475  short_stack_ninja=OUT
+
+─── Hand 27  btn: seat 2 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  J♥ T♠
+           tight_passive  7♥ 7♣
+           loose_passive  9♥ 2♦
+                     abc  8♣ J♦
+                     gto [J♥ T♠]  [pot: 150] raises to 250 [pot: 400]
+           tight_passive [7♥ 7♣]  [pot: 400] folds [pot: 400]
+           loose_passive [9♥ 2♦]  [pot: 400] folds [pot: 400]
+                     abc [8♣ J♦]  [pot: 400] calls 150 [pot: 550]
+  Flop: 8♦ J♠ 4♥  [pot: 550]
+                     abc [8♣ J♦]  [pot: 550] bets 366 [pot: 916]
+                     gto [J♥ T♠]  [pot: 916] calls 366 [pot: 1282]
+  Turn: 8♦ J♠ 4♥ 5♥  [pot: 1282]
+                     abc [8♣ J♦]  [pot: 1282] checks [pot: 1282]
+                     gto [J♥ T♠]  [pot: 1282] bets 427 [pot: 1709]
+                     abc [8♣ J♦]  [pot: 1709] folds [pot: 1709]
+  gto wins 1709 chips
+  Stacks:  gto=7841  tight_passive=8250  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9050  maniac=OUT  abc=54859  short_stack_ninja=OUT
+
+─── Hand 28  btn: seat 3 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  3♠ 6♦
+           tight_passive  Q♠ 5♠
+           loose_passive  K♣ 3♥
+                     abc  J♣ Q♥
+                     gto [3♠ 6♦]  [pot: 150] folds [pot: 150]
+           tight_passive [Q♠ 5♠]  [pot: 150] folds [pot: 150]
+           loose_passive [K♣ 3♥]  [pot: 150] folds [pot: 150]
+  abc wins 150 chips
+  Stacks:  gto=7841  tight_passive=8250  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=9000  maniac=OUT  abc=54909  short_stack_ninja=OUT
+
+─── Hand 29  btn: seat 4 (loose_passive)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  6♦ J♦
+           tight_passive  T♦ 9♥
+           loose_passive  A♦ J♠
+                     abc  T♣ K♣
+           tight_passive [T♦ 9♥]  [pot: 150] folds [pot: 150]
+           loose_passive [A♦ J♠]  [pot: 150] raises to 200 [pot: 350]
+                     abc [T♣ K♣]  [pot: 350] calls 150 [pot: 500]
+                     gto [6♦ J♦]  [pot: 500] folds [pot: 500]
+  Flop: 2♠ Q♠ 5♥  [pot: 500]
+                     abc [T♣ K♣]  [pot: 500] checks [pot: 500]
+           loose_passive [A♦ J♠]  [pot: 500] bets 250 [pot: 750]
+                     abc [T♣ K♣]  [pot: 750] calls 250 [pot: 1000]
+  Turn: 2♠ Q♠ 5♥ T♠  [pot: 1000]
+                     abc [T♣ K♣]  [pot: 1000] bets 666 [pot: 1666]
+           loose_passive [A♦ J♠]  [pot: 1666] folds [pot: 1666]
+  abc wins 1666 chips
+  Stacks:  gto=7741  tight_passive=8250  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=8550  maniac=OUT  abc=55459  short_stack_ninja=OUT
+
+─── Hand 30  btn: seat 5 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  2♠ 6♠
+           tight_passive  3♥ 8♣
+           loose_passive  J♦ T♥
+                     abc  J♣ 6♥
+           tight_passive [3♥ 8♣]  [pot: 150] folds [pot: 150]
+           loose_passive [J♦ T♥]  [pot: 150] folds [pot: 150]
+                     abc [J♣ 6♥]  [pot: 150] calls 50 [pot: 200]
+                     gto [2♠ 6♠]  [pot: 200] checks [pot: 200]
+  Flop: 5♦ 4♠ 8♠  [pot: 200]
+                     abc [J♣ 6♥]  [pot: 200] checks [pot: 200]
+                     gto [2♠ 6♠]  [pot: 200] bets 100 [pot: 300]
+                     abc [J♣ 6♥]  [pot: 300] folds [pot: 300]
+  gto wins 300 chips
+  Stacks:  gto=7841  tight_passive=8250  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=8550  maniac=OUT  abc=55359  short_stack_ninja=OUT
+
+─── Hand 31  btn: seat 6 (abc)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  4♠ 3♠
+           tight_passive  5♦ 7♠
+           loose_passive  T♦ 5♣
+                     abc  T♥ 2♠
+           loose_passive [T♦ 5♣]  [pot: 150] folds [pot: 150]
+                     abc [T♥ 2♠]  [pot: 150] raises to 200 [pot: 350]
+                     gto [4♠ 3♠]  [pot: 350] calls 150 [pot: 500]
+           tight_passive [5♦ 7♠]  [pot: 500] folds [pot: 500]
+  Flop: 9♦ 6♦ J♣  [pot: 500]
+                     gto [4♠ 3♠]  [pot: 500] bets 500 [pot: 1000]
+                     abc [T♥ 2♠]  [pot: 1000] folds [pot: 1000]
+  gto wins 1000 chips
+  Stacks:  gto=8141  tight_passive=8150  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=8550  maniac=OUT  abc=55159  short_stack_ninja=OUT
+
+─── Hand 32  btn: seat 7 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  Q♠ A♥
+           tight_passive  9♣ Q♦
+           loose_passive  3♦ 7♠
+                     abc  4♠ 4♣
+           loose_passive [3♦ 7♠]  [pot: 150] folds [pot: 150]
+                     abc [4♠ 4♣]  [pot: 150] raises to 200 [pot: 350]
+                     gto [Q♠ A♥]  [pot: 350] calls 150 [pot: 500]
+           tight_passive [9♣ Q♦]  [pot: 500] calls 100 [pot: 600]
+  Flop: J♣ A♦ 7♣  [pot: 600]
+                     gto [Q♠ A♥]  [pot: 600] checks [pot: 600]
+           tight_passive [9♣ Q♦]  [pot: 600] checks [pot: 600]
+                     abc [4♠ 4♣]  [pot: 600] checks [pot: 600]
+  Turn: J♣ A♦ 7♣ 3♠  [pot: 600]
+  River: J♣ A♦ 7♣ 3♠ 2♠  [pot: 600]
+  gto wins 600 chips
+  Stacks:  gto=8541  tight_passive=7950  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=8550  maniac=OUT  abc=54959  short_stack_ninja=OUT
+
+─── Hand 33  btn: seat 0 (gto)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  A♠ 3♠
+           tight_passive  8♦ A♦
+           loose_passive  8♠ T♥
+                     abc  7♥ 4♣
+                     abc [7♥ 4♣]  [pot: 150] raises to 200 [pot: 350]
+                     gto [A♠ 3♠]  [pot: 350] folds [pot: 350]
+           tight_passive [8♦ A♦]  [pot: 350] raises to 375 [pot: 675]
+           loose_passive [8♠ T♥]  [pot: 675] folds [pot: 675]
+                     abc [7♥ 4♣]  [pot: 675] calls 175 [pot: 850]
+  Flop: 3♥ T♠ 4♥  [pot: 850]
+           tight_passive [8♦ A♦]  [pot: 850] bets 425 [pot: 1275]
+                     abc [7♥ 4♣]  [pot: 1275] folds [pot: 1275]
+  tight_passive wins 1275 chips
+  Stacks:  gto=8541  tight_passive=8425  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=8450  maniac=OUT  abc=54584  short_stack_ninja=OUT
+
+─── Hand 34  btn: seat 1 (tight_passive)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  A♣ 9♣
+           tight_passive  K♠ 8♥
+           loose_passive  A♥ T♠
+                     abc  6♥ 5♥
+                     gto [A♣ 9♣]  [pot: 150] folds [pot: 150]
+           tight_passive [K♠ 8♥]  [pot: 150] folds [pot: 150]
+           loose_passive [A♥ T♠]  [pot: 150] folds [pot: 150]
+  abc wins 150 chips
+  Stacks:  gto=8541  tight_passive=8425  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=8400  maniac=OUT  abc=54634  short_stack_ninja=OUT
+
+─── Hand 35  btn: seat 2 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  3♠ 3♣
+           tight_passive  K♦ 9♣
+           loose_passive  6♥ A♠
+                     abc  9♦ 6♠
+                     gto [3♠ 3♣]  [pot: 150] calls 100 [pot: 250]
+           tight_passive [K♦ 9♣]  [pot: 250] calls 100 [pot: 350]
+           loose_passive [6♥ A♠]  [pot: 350] calls 50 [pot: 400]
+                     abc [9♦ 6♠]  [pot: 400] bets 266 [pot: 566]
+                     gto [3♠ 3♣]  [pot: 566] folds [pot: 566]
+           tight_passive [K♦ 9♣]  [pot: 566] folds [pot: 566]
+           loose_passive [6♥ A♠]  [pot: 566] folds [pot: 566]
+  abc wins 566 chips
+  Stacks:  gto=8441  tight_passive=8325  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=8300  maniac=OUT  abc=54934  short_stack_ninja=OUT
+
+─── Hand 36  btn: seat 3 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  9♦ 8♠
+           tight_passive  J♣ Q♦
+           loose_passive  8♣ Q♠
+                     abc  3♣ 3♥
+                     gto [9♦ 8♠]  [pot: 150] calls 100 [pot: 250]
+           tight_passive [J♣ Q♦]  [pot: 250] folds [pot: 250]
+           loose_passive [8♣ Q♠]  [pot: 250] folds [pot: 250]
+                     abc [3♣ 3♥]  [pot: 250] checks [pot: 250]
+  Flop: K♥ 7♦ K♦  [pot: 250]
+                     abc [3♣ 3♥]  [pot: 250] checks [pot: 250]
+                     gto [9♦ 8♠]  [pot: 250] bets 100 [pot: 350]
+                     abc [3♣ 3♥]  [pot: 350] calls 100 [pot: 450]
+  Turn: K♥ 7♦ K♦ 9♥  [pot: 450]
+                     abc [3♣ 3♥]  [pot: 450] checks [pot: 450]
+                     gto [9♦ 8♠]  [pot: 450] checks [pot: 450]
+  River: K♥ 7♦ K♦ 9♥ J♠  [pot: 450]
+  gto wins 450 chips
+  Stacks:  gto=8691  tight_passive=8325  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=8250  maniac=OUT  abc=54734  short_stack_ninja=OUT
+
+─── Hand 37  btn: seat 4 (loose_passive)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  J♠ 6♣
+           tight_passive  A♥ 6♥
+           loose_passive  4♦ 5♦
+                     abc  2♥ 3♦
+           tight_passive [A♥ 6♥]  [pot: 150] folds [pot: 150]
+           loose_passive [4♦ 5♦]  [pot: 150] folds [pot: 150]
+                     abc [2♥ 3♦]  [pot: 150] folds [pot: 150]
+  gto wins 150 chips
+  Stacks:  gto=8741  tight_passive=8325  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=8250  maniac=OUT  abc=54684  short_stack_ninja=OUT
+
+─── Hand 38  btn: seat 5 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  K♥ J♥
+           tight_passive  7♠ 5♠
+           loose_passive  2♦ 6♣
+                     abc  Q♦ 5♥
+           tight_passive [7♠ 5♠]  [pot: 150] folds [pot: 150]
+           loose_passive [2♦ 6♣]  [pot: 150] folds [pot: 150]
+                     abc [Q♦ 5♥]  [pot: 150] calls 50 [pot: 200]
+                     gto [K♥ J♥]  [pot: 200] checks [pot: 200]
+  Flop: 5♦ 3♦ 7♣  [pot: 200]
+                     abc [Q♦ 5♥]  [pot: 200] bets 133 [pot: 333]
+                     gto [K♥ J♥]  [pot: 333] folds [pot: 333]
+  abc wins 333 chips
+  Stacks:  gto=8641  tight_passive=8325  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=8250  maniac=OUT  abc=54784  short_stack_ninja=OUT
+
+─── Hand 39  btn: seat 6 (abc)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  K♠ Q♣
+           tight_passive  5♦ J♠
+           loose_passive  4♠ A♦
+                     abc  5♣ 8♦
+           loose_passive [4♠ A♦]  [pot: 150] folds [pot: 150]
+                     abc [5♣ 8♦]  [pot: 150] raises to 200 [pot: 350]
+                     gto [K♠ Q♣]  [pot: 350] raises to 550 [pot: 850]
+           tight_passive [5♦ J♠]  [pot: 850] raises to 975 [pot: 1725]
+                     abc [5♣ 8♦]  [pot: 1725] raises to 2125 [pot: 3650]
+                     gto [K♠ Q♣]  [pot: 3650] raises to 3341 [pot: 6441]
+                     abc [5♣ 8♦]  [pot: 6441] folds [pot: 6441]
+           tight_passive [5♦ J♠]  [pot: 6441] calls 2366 [pot: 8807]
+  Flop: T♠ T♥ 9♥  [pot: 8807]
+                     gto [K♠ Q♣]  [pot: 8807] bets 5300 [pot: 14107]
+           tight_passive [5♦ J♠]  [pot: 14107] folds [pot: 14107]
+  gto wins 14107 chips
+  Stacks:  gto=14107  tight_passive=4984  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=8250  maniac=OUT  abc=52659  short_stack_ninja=OUT
+
+─── Hand 40  btn: seat 7 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  6♦ 8♦
+           tight_passive  4♠ 9♠
+           loose_passive  A♠ 2♠
+                     abc  3♦ 2♥
+           loose_passive [A♠ 2♠]  [pot: 150] folds [pot: 150]
+                     abc [3♦ 2♥]  [pot: 150] folds [pot: 150]
+                     gto [6♦ 8♦]  [pot: 150] folds [pot: 150]
+  tight_passive wins 150 chips
+  Stacks:  gto=14057  tight_passive=5034  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=8250  maniac=OUT  abc=52659  short_stack_ninja=OUT
+
+─── Hand 41  btn: seat 0 (gto)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  Q♦ 3♠
+           tight_passive  K♥ 6♣
+           loose_passive  4♠ 4♥
+                     abc  T♠ 8♣
+                     abc [T♠ 8♣]  [pot: 150] folds [pot: 150]
+                     gto [Q♦ 3♠]  [pot: 150] folds [pot: 150]
+           tight_passive [K♥ 6♣]  [pot: 150] calls 50 [pot: 200]
+           loose_passive [4♠ 4♥]  [pot: 200] checks [pot: 200]
+  Flop: 4♦ A♥ K♦  [pot: 200]
+           tight_passive [K♥ 6♣]  [pot: 200] bets 100 [pot: 300]
+           loose_passive [4♠ 4♥]  [pot: 300] folds [pot: 300]
+  tight_passive wins 300 chips
+  Stacks:  gto=14057  tight_passive=5134  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=8150  maniac=OUT  abc=52659  short_stack_ninja=OUT
+
+─── Hand 42  btn: seat 1 (tight_passive)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  7♠ 7♥
+           tight_passive  Q♣ 7♦
+           loose_passive  A♣ 5♠
+                     abc  T♦ 9♦
+                     gto [7♠ 7♥]  [pot: 150] raises to 250 [pot: 400]
+           tight_passive [Q♣ 7♦]  [pot: 400] folds [pot: 400]
+           loose_passive [A♣ 5♠]  [pot: 400] folds [pot: 400]
+                     abc [T♦ 9♦]  [pot: 400] calls 150 [pot: 550]
+  Flop: T♣ K♥ 5♥  [pot: 550]
+                     abc [T♦ 9♦]  [pot: 550] bets 366 [pot: 916]
+                     gto [7♠ 7♥]  [pot: 916] calls 366 [pot: 1282]
+  Turn: T♣ K♥ 5♥ 4♠  [pot: 1282]
+                     abc [T♦ 9♦]  [pot: 1282] bets 854 [pot: 2136]
+                     gto [7♠ 7♥]  [pot: 2136] folds [pot: 2136]
+  abc wins 2136 chips
+  Stacks:  gto=13441  tight_passive=5134  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=8100  maniac=OUT  abc=53325  short_stack_ninja=OUT
+
+─── Hand 43  btn: seat 2 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  Q♦ J♠
+           tight_passive  7♦ Q♣
+           loose_passive  7♠ 2♣
+                     abc  T♣ T♦
+                     gto [Q♦ J♠]  [pot: 150] calls 100 [pot: 250]
+           tight_passive [7♦ Q♣]  [pot: 250] folds [pot: 250]
+           loose_passive [7♠ 2♣]  [pot: 250] folds [pot: 250]
+                     abc [T♣ T♦]  [pot: 250] checks [pot: 250]
+  Flop: A♣ 4♣ 8♠  [pot: 250]
+                     abc [T♣ T♦]  [pot: 250] bets 166 [pot: 416]
+                     gto [Q♦ J♠]  [pot: 416] folds [pot: 416]
+  abc wins 416 chips
+  Stacks:  gto=13341  tight_passive=5134  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=8050  maniac=OUT  abc=53475  short_stack_ninja=OUT
+
+─── Hand 44  btn: seat 3 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  6♠ A♦
+           tight_passive  J♣ 2♠
+           loose_passive  K♠ 8♥
+                     abc  9♥ Q♠
+                     gto [6♠ A♦]  [pot: 150] folds [pot: 150]
+           tight_passive [J♣ 2♠]  [pot: 150] folds [pot: 150]
+           loose_passive [K♠ 8♥]  [pot: 150] folds [pot: 150]
+  abc wins 150 chips
+  Stacks:  gto=13341  tight_passive=5134  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=8000  maniac=OUT  abc=53525  short_stack_ninja=OUT
+
+─── Hand 45  btn: seat 4 (loose_passive)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  6♠ 2♣
+           tight_passive  A♠ K♣
+           loose_passive  7♦ 3♥
+                     abc  3♠ 5♣
+           tight_passive [A♠ K♣]  [pot: 150] folds [pot: 150]
+           loose_passive [7♦ 3♥]  [pot: 150] folds [pot: 150]
+                     abc [3♠ 5♣]  [pot: 150] raises to 200 [pot: 300]
+                     gto [6♠ 2♣]  [pot: 300] folds [pot: 300]
+  abc wins 300 chips
+  Stacks:  gto=13241  tight_passive=5134  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=8000  maniac=OUT  abc=53625  short_stack_ninja=OUT
+
+─── Hand 46  btn: seat 5 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  K♦ 6♦
+           tight_passive  3♥ 6♠
+           loose_passive  Q♦ J♦
+                     abc  Q♥ 9♦
+           tight_passive [3♥ 6♠]  [pot: 150] folds [pot: 150]
+           loose_passive [Q♦ J♦]  [pot: 150] calls 100 [pot: 250]
+                     abc [Q♥ 9♦]  [pot: 250] calls 50 [pot: 300]
+                     gto [K♦ 6♦]  [pot: 300] checks [pot: 300]
+  Flop: 8♥ 4♠ K♠  [pot: 300]
+                     abc [Q♥ 9♦]  [pot: 300] checks [pot: 300]
+                     gto [K♦ 6♦]  [pot: 300] bets 300 [pot: 600]
+           loose_passive [Q♦ J♦]  [pot: 600] folds [pot: 600]
+                     abc [Q♥ 9♦]  [pot: 600] calls 300 [pot: 900]
+  Turn: 8♥ 4♠ K♠ T♦  [pot: 900]
+                     abc [Q♥ 9♦]  [pot: 900] bets 600 [pot: 1500]
+                     gto [K♦ 6♦]  [pot: 1500] calls 600 [pot: 2100]
+  River: 8♥ 4♠ K♠ T♦ A♦  [pot: 2100]
+                     abc [Q♥ 9♦]  [pot: 2100] bets 1400 [pot: 3500]
+                     gto [K♦ 6♦]  [pot: 3500] calls 1400 [pot: 4900]
+  gto wins 4900 chips
+  Stacks:  gto=15741  tight_passive=5134  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=7900  maniac=OUT  abc=51225  short_stack_ninja=OUT
+
+─── Hand 47  btn: seat 6 (abc)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  K♥ T♥
+           tight_passive  4♣ 6♠
+           loose_passive  A♠ Q♥
+                     abc  3♥ 8♣
+           loose_passive [A♠ Q♥]  [pot: 150] folds [pot: 150]
+                     abc [3♥ 8♣]  [pot: 150] calls 100 [pot: 250]
+                     gto [K♥ T♥]  [pot: 250] raises to 200 [pot: 400]
+           tight_passive [4♣ 6♠]  [pot: 400] calls 100 [pot: 500]
+                     abc [3♥ 8♣]  [pot: 500] raises to 533 [pot: 933]
+                     gto [K♥ T♥]  [pot: 933] folds [pot: 933]
+           tight_passive [4♣ 6♠]  [pot: 933] folds [pot: 933]
+  abc wins 933 chips
+  Stacks:  gto=15541  tight_passive=4934  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=7900  maniac=OUT  abc=51625  short_stack_ninja=OUT
+
+─── Hand 48  btn: seat 7 (?)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  Q♥ 5♣
+           tight_passive  3♦ 2♣
+           loose_passive  9♦ 3♠
+                     abc  6♣ 7♠
+           loose_passive [9♦ 3♠]  [pot: 150] folds [pot: 150]
+                     abc [6♣ 7♠]  [pot: 150] calls 100 [pot: 250]
+                     gto [Q♥ 5♣]  [pot: 250] calls 50 [pot: 300]
+           tight_passive [3♦ 2♣]  [pot: 300] checks [pot: 300]
+  Flop: 3♣ 7♣ 8♠  [pot: 300]
+                     gto [Q♥ 5♣]  [pot: 300] checks [pot: 300]
+           tight_passive [3♦ 2♣]  [pot: 300] bets 150 [pot: 450]
+                     abc [6♣ 7♠]  [pot: 450] calls 150 [pot: 600]
+                     gto [Q♥ 5♣]  [pot: 600] folds [pot: 600]
+  Turn: 3♣ 7♣ 8♠ 5♠  [pot: 600]
+           tight_passive [3♦ 2♣]  [pot: 600] checks [pot: 600]
+                     abc [6♣ 7♠]  [pot: 600] checks [pot: 600]
+  River: 3♣ 7♣ 8♠ 5♠ Q♠  [pot: 600]
+  abc wins 600 chips
+  Stacks:  gto=15441  tight_passive=4684  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=7900  maniac=OUT  abc=51975  short_stack_ninja=OUT
+
+─── Hand 49  btn: seat 0 (gto)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  2♠ K♣
+           tight_passive  A♠ 5♦
+           loose_passive  8♦ A♣
+                     abc  8♠ Q♠
+                     abc [8♠ Q♠]  [pot: 150] raises to 200 [pot: 350]
+                     gto [2♠ K♣]  [pot: 350] calls 200 [pot: 550]
+           tight_passive [A♠ 5♦]  [pot: 550] folds [pot: 550]
+           loose_passive [8♦ A♣]  [pot: 550] folds [pot: 550]
+  Flop: T♥ A♦ 7♥  [pot: 550]
+                     abc [8♠ Q♠]  [pot: 550] bets 366 [pot: 916]
+                     gto [2♠ K♣]  [pot: 916] folds [pot: 916]
+  abc wins 916 chips
+  Stacks:  gto=15241  tight_passive=4634  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=7800  maniac=OUT  abc=52325  short_stack_ninja=OUT
+
+─── Hand 50  btn: seat 1 (tight_passive)  players: 4 ───
+  Preflop  [pot: 150]
+                     gto  5♦ K♦
+           tight_passive  4♦ J♣
+           loose_passive  2♣ 8♦
+                     abc  A♣ T♠
+                     gto [5♦ K♦]  [pot: 150] folds [pot: 150]
+           tight_passive [4♦ J♣]  [pot: 150] calls 100 [pot: 250]
+           loose_passive [2♣ 8♦]  [pot: 250] folds [pot: 250]
+                     abc [A♣ T♠]  [pot: 250] bets 166 [pot: 316]
+           tight_passive [4♦ J♣]  [pot: 316] folds [pot: 316]
+  abc wins 316 chips
+  Stacks:  gto=15241  tight_passive=4534  loose_aggressive=OUT  tight_aggressive=OUT  loose_passive=7750  maniac=OUT  abc=52475  short_stack_ninja=OUT
+
+=== Final standings ===
+                        abc: 52475 chips
+                        gto: 15241 chips
+              loose_passive: 7750 chips
+              tight_passive: 4534 chips

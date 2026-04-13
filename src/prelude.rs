@@ -136,6 +136,19 @@ pub use crate::analysis::gto::strategy_profile::{ActionFrequencies, StrategyProf
 pub use crate::analysis::gto::twos::Twos;
 pub use crate::analysis::gto::weighted_combos::WeightedCombos;
 
+// hand history
+pub use crate::hand_history::{
+    Action, ActionType, AnalysisContext, FORMAT_VERSION, FlopStreet, HandCollection, HandHistory, HandMeta,
+    HandVariant, Outcome, PlayerEntry, PostedBlind, PreflopStreet, ResultEntry, RiverStreet, Stakes, Streets,
+    TableInfo, TurnStreet,
+};
+
+// casino (bot-profiles feature)
+#[cfg(feature = "bot-profiles")]
+pub use crate::casino::action::PlayerAction;
+#[cfg(feature = "bot-profiles")]
+pub use crate::casino::session::PokerSession;
+
 // bot
 pub use crate::bot::betting_strategy::BettingStrategy;
 pub use crate::bot::playbook::{Playbook, PlaybookEntry};

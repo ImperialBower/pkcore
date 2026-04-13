@@ -1,4 +1,4 @@
-//! Bot personality types for building poker-playing agents.
+//! Bot personality types and simulation infrastructure for poker-playing agents.
 //!
 //! A [`profile::BotProfile`] is a fully serializable description of a poker bot's
 //! playing style — its preflop ranges, postflop tendencies, and betting
@@ -6,6 +6,8 @@
 //! making it easy to swap personalities without recompiling.
 //!
 //! # Modules
+//!
+//! ## Profile and strategy
 //!
 //! - [`profile`] — top-level [`profile::BotProfile`] type and [`profile::PlayStyle`] label type
 //! - [`range_strategy`] — flat preflop range charts and postflop frequencies (position-agnostic)
@@ -16,6 +18,13 @@
 //! - [`table_size`] — [`table_size::TableSize`]: typed table-size enum (2–9 players)
 //! - [`playbook`] — [`playbook::Playbook`]: maps seat count to position-aware strategy
 //!
+//! ## Decision-making and simulation (EPIC-19)
+//!
+//! - [`player_action`] — [`player_action::PlayerAction`]: concrete action output of a bot decision
+//! - [`table_snapshot`] — [`table_snapshot::TableSnapshot`]: read-only table view for one player
+//! - [`decider`] — [`decider::BotDecider`] trait + [`decider::RuleBasedDecider`] implementation
+//! - [`sim`] — [`sim::SimTable`] runner, [`sim::SimResult`], [`sim::ActionCounts`]
+//!
 //! # Feature flag
 //!
 //! YAML serialization (`from_yaml_str`, `to_yaml_string`, `from_file`,
@@ -25,8 +34,9 @@
 //! pkcore = { version = "...", features = ["bot-profiles"] }
 //! ```
 //!
-//! The core types (`BotProfile`, `RangeStrategy`, `BettingStrategy`) are
-//! always available regardless of the feature flag.
+//! The core types (`BotProfile`, `RangeStrategy`, `BettingStrategy`,
+//! `BotDecider`, `SimTable`, etc.) are always available regardless of the
+//! feature flag.
 //!
 //! # Examples
 //!
@@ -46,10 +56,14 @@
 //! ```
 
 pub mod betting_strategy;
+pub mod decider;
 pub mod playbook;
+pub mod player_action;
 pub mod position_ranges;
 pub mod positional_betting;
 pub mod profile;
 pub mod range_strategy;
+pub mod sim;
 pub mod table_size;
+pub mod table_snapshot;
 pub mod weighted_range;

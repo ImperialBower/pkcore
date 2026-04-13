@@ -1,0 +1,14 @@
+[profile.default]
+# BCM tests that access BC_RANK_HASHMAP (loads generated/bcm.zst, ~300-600 MB)
+# are slow by design. The `try_from__five` test in binary_card_map may show a
+# LEAK warning on systems where bcm.zst is present; this is likely caused by
+# OS-level thread initialization (e.g. macOS GCD dispatch queues) triggered
+# when the zstd decoder or rusqlite initialises for the first time in the
+# test-binary process. The test itself does not spawn threads.
+leak-timeout = "1s"
+
+[[profile.default.overrides]]
+# Give BCM-related tests a generous slow-timeout; loading bcm.zst can take
+# several seconds depending on the storage device.
+filter = 'test(analysis::store::bcm)'
+slow-timeout = { period = "120s", terminate-after = 2 }

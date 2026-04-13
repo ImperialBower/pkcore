@@ -366,6 +366,7 @@ pub mod cards_cell;
 pub mod casino;
 pub mod deck;
 pub mod games;
+pub mod hand_history;
 mod lookups;
 pub mod play;
 pub mod prelude;
@@ -466,6 +467,15 @@ pub enum PKError {
     TooManyCards,
     TooManyHands,
     InvalidTwo,
+    /// Chip conservation failed at the end of a hand.
+    ///
+    /// `expected` is the total recorded before forced bets; `actual` is the
+    /// total counted after the pot is distributed. Any non-zero difference
+    /// indicates chips were created or destroyed during the hand.
+    ChipAuditFailed {
+        expected: usize,
+        actual: usize,
+    },
 }
 
 impl Display for PKError {
@@ -519,6 +529,9 @@ impl Display for PKError {
             PKError::TooManyCards => "Too Many Cards Error",
             PKError::TooManyHands => "Too Many Hands Error",
             PKError::InvalidTwo => "Invalid Two Error",
+            PKError::ChipAuditFailed { expected, actual } => {
+                &*format!("Chip audit failed: expected {expected} chips, found {actual}")
+            }
         };
         write!(f, "{msg}")
     }
@@ -807,7 +820,7 @@ pub trait Pile {
     fn to_eight_or_better_bits(&self) -> u8 {
         self.cards()
             .iter()
-            .fold(0, |acc, card| acc | card.get_rank().to_eight_or_better_lo_bit() | acc)
+            .fold(0, |acc, card| acc | card.get_rank().to_eight_or_better_lo_bit())
     }
 
     fn evals(&self) -> Evals {
@@ -1168,4 +1181,92 @@ pub trait Shifty {
     fn shifts(&self) -> HashSet<Self>
     where
         Self: Sized;
+}
+
+#[cfg(test)]
+mod lib_tests {
+    use super::*;
+
+    // Minimal Betting implementor for testing the default is_empty method.
+    struct TestStack {
+        chips: usize,
+    }
+
+    impl Betting for TestStack {
+        fn all_in(&mut self) -> Result<Self, PKError>
+        where
+            Self: Sized,
+        {
+            let amount = self.chips;
+            self.chips = 0;
+            Ok(TestStack { chips: amount })
+        }
+
+        fn bet(&mut self, amount: usize) -> Result<Self, PKError>
+        where
+            Self: Sized,
+        {
+            if amount > self.chips {
+                return Err(PKError::InsufficientChips);
+            }
+            self.chips -= amount;
+            Ok(TestStack { chips: amount })
+        }
+
+        fn size(&self) -> usize {
+            self.chips
+        }
+
+        fn wins(&mut self, winnings: Self) -> usize {
+            self.chips += winnings.chips;
+            self.chips
+        }
+    }
+
+    #[test]
+    fn betting_is_empty_when_zero() {
+        assert!(TestStack { chips: 0 }.is_empty());
+    }
+
+    #[test]
+    fn betting_is_empty_when_nonzero() {
+        assert!(!TestStack { chips: 100 }.is_empty());
+    }
+
+    // Minimal Shifty implementor for testing the default is_shift method.
+    #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+    struct TestShifty(u8);
+
+    impl Shifty for TestShifty {
+        fn shifts(&self) -> HashSet<Self>
+        where
+            Self: Sized,
+        {
+            let mut hs = HashSet::new();
+            hs.insert(*self);
+            hs.insert(TestShifty(self.0.wrapping_add(1)));
+            hs
+        }
+    }
+
+    #[test]
+    fn shifty_is_shift_true() {
+        let a = TestShifty(5);
+        let b = TestShifty(6);
+        assert!(a.is_shift(Box::new(b)));
+    }
+
+    #[test]
+    fn shifty_is_shift_false() {
+        let a = TestShifty(5);
+        let c = TestShifty(0);
+        assert!(!a.is_shift(Box::new(c)));
+    }
+
+    #[test]
+    fn pkerror_display() {
+        assert_eq!("Too Many Cards Error", PKError::TooManyCards.to_string());
+        assert_eq!("Not Enough Cards Error", PKError::NotEnoughCards.to_string());
+        assert_eq!("Duplicate Card Error", PKError::DuplicateCard.to_string());
+    }
 }
