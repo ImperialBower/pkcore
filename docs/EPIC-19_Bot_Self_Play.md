@@ -23,11 +23,18 @@ is written.
 | Working interactive example (`examples/interactive_play.rs`) | **Complete** |
 | All 8 reference profiles loaded from YAML | **Complete** |
 | Per-action play-by-play with hole cards, pot tracking | **Complete** |
-| `PlayerAction` enum (`casino/action.rs`) | **In Progress** |
-| `PokerSession` runner (`casino/session.rs`) | **In Progress** |
-| `BotProfile::decide` method (`bot/profile.rs`) | **In Progress** |
-| `TableNoCell` utilities (`effective_pot`, `count_funded`, `eliminate_busted`) | **In Progress** |
-| `BoxedCards::sorted_display` | **In Progress** |
+| `PlayerAction` enum (`casino/action.rs`) | **Complete** |
+| `PokerSession` runner (`casino/session.rs`) | **Complete** |
+| `BotProfile::decide` method (`bot/profile.rs`) | **Complete** |
+| `TableNoCell` utilities (`effective_pot`, `count_funded`, `eliminate_busted`) | **Complete** |
+| `BoxedCards::sorted_display` | **Complete** |
+| `HandHistory` / `HandCollection` YAML serialization (`src/hand_history.rs`, `hand-histories` feature) | **Complete** |
+| `HandHistory::from_table_state()` — build history from live table state | **Complete** |
+| `TableNoCell::inject_hole_cards()` — card injection for replay | **Complete** |
+| `HandHistory::replay()` / `ReplayResult` — re-drive recorded actions through engine | **Complete** |
+| `HandCollection::replay_all()` — batch replay convenience | **Complete** |
+| Replay viewer example (`examples/replay_play.rs`) | **Complete** |
+| Bot self-play → YAML → replay integration test (`tests/replay_consistency.rs`) | **Complete** |
 | `BotDecider` trait (for gRPC Phase 4) | Planned |
 | `SimResult` (per-seat stats) | Planned |
 
@@ -241,6 +248,89 @@ Decision logic (same as the example):
 
 `apply_action` is gated on `bot-profiles` (needs `PlayerAction`).
 The other three are always available.
+
+---
+
+---
+
+## Hand History Replay
+
+### Motivation
+
+Debugging `interactive_play` bugs was painful because sessions are ephemeral.
+The YAML files saved to `generated/` contain full fidelity (hole cards, board,
+per-street actions, chip results), but there was no way to feed them back
+through the engine to verify correctness or reproduce a bug.
+
+The replay system adds that capability. All logic lives in the library; the
+example and test are thin consumers.
+
+### New library API (`src/hand_history.rs`)
+
+```rust
+// Build a HandHistory from a live table session — called after end_hand()
+pub fn HandHistory::from_table_state(
+    hand_num: usize, ts_secs: u64, button: u8,
+    forced: &ForcedBets,
+    player_snapshot: &[(u8, String, usize, Option<String>)],
+    board_str: &str, winnings: &Winnings,
+    event_log: &[TableAction],   // ← slice only this hand's events
+    ending_stacks: &[(u8, usize)],
+    source: &str,
+) -> Self
+
+// Re-drive all recorded actions through a fresh TableNoCell
+pub fn HandHistory::replay(&self) -> Result<ReplayResult, PKError>
+
+// Batch convenience wrapper
+pub fn HandCollection::replay_all(&self) -> Vec<Result<ReplayResult, PKError>>
+
+pub struct ReplayResult {
+    pub final_stacks: Vec<(u8, usize)>,
+    pub is_consistent: bool,   // replayed stacks match recorded results
+}
+```
+
+### New method on `TableNoCell` (`src/casino/table_no_cell.rs`)
+
+```rust
+// Assign pre-parsed hole cards directly to seats, bypassing deck dealing.
+// Used by HandHistory::replay() to restore the dealt state.
+pub fn inject_hole_cards(&mut self, entries: &[(u8, &str)]) -> Result<(), PKError>
+```
+
+### Replay viewer example (`examples/replay_play.rs`)
+
+```bash
+# replay most recent session file
+cargo run --features hand-histories --example replay_play
+
+# replay a specific file
+cargo run --features hand-histories --example replay_play -- generated/session.yaml
+```
+
+Displays every hand street-by-street with all hole cards visible, then runs
+`hand.replay()` and prints `✓ consistent` or `✗ MISMATCH`.  All display and
+file-resolution logic is in the example; all mechanics are in the library.
+
+### Integration test (`tests/replay_consistency.rs`)
+
+```bash
+cargo test --features hand-histories,bot-profiles --test replay_consistency -- --include-ignored
+```
+
+Marked `#[ignore]` (runs a full bot session). Verifies the full round-trip:
+1. Run 10 hands of bot self-play (3 bots, 50/100 blinds)
+2. Serialize `HandCollection` → YAML
+3. Deserialize YAML → `HandCollection`
+4. `replay_all()` every hand
+5. Assert `is_consistent` for each
+
+**Key implementation detail:** `TableNoCell::reset()` does not clear
+`event_log` — it accumulates across all hands. `Streets::from_event_log()`
+expects a single-hand slice. Both `interactive_play.rs` and
+`replay_consistency.rs` capture `event_log.len()` before `start_hand()` /
+`act_forced_bets()` and pass `&event_log[start..]` to `from_table_state()`.
 
 ---
 

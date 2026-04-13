@@ -110,6 +110,86 @@ impl RangeStrategy {
     pub fn gto() -> Self {
         Self::new("TT+, AQ+, KQs", "QQ+, AKs", "JJ+, AQs+", 50)
     }
+
+    /// A tight-aggressive archetype — selective ranges with strong postflop aggression.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::range_strategy::RangeStrategy;
+    ///
+    /// let s = RangeStrategy::tight_aggressive();
+    /// assert!(s.postflop_cbet_frequency > 50);
+    /// ```
+    #[must_use]
+    pub fn tight_aggressive() -> Self {
+        Self::new("JJ+, AQs+, KQs, AKo", "QQ+, AKs", "JJ+, AQs+", 65)
+    }
+
+    /// A loose-passive archetype — wide hand selection, infrequent c-bets.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::range_strategy::RangeStrategy;
+    ///
+    /// let s = RangeStrategy::loose_passive();
+    /// assert!(s.postflop_cbet_frequency < 30);
+    /// ```
+    #[must_use]
+    pub fn loose_passive() -> Self {
+        Self::new(
+            "22+, Axs, KTs+, QTs+, J9s+, T8s+, 98s, ATo+, KTo+",
+            "QQ+, AKs",
+            "TT+, AJs+",
+            15,
+        )
+    }
+
+    /// A maniac archetype — extremely wide ranges, maximum c-bet frequency.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::range_strategy::RangeStrategy;
+    ///
+    /// let s = RangeStrategy::maniac();
+    /// assert_eq!(s.postflop_cbet_frequency, 90);
+    /// ```
+    #[must_use]
+    pub fn maniac() -> Self {
+        Self::new("22+, AT+, 54s+", "TT+, AQs, AQo+, KQs", "88+, ATs+", 90)
+    }
+
+    /// An ABC archetype — very tight ranges, bets strong hands only.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::range_strategy::RangeStrategy;
+    ///
+    /// let s = RangeStrategy::abc();
+    /// assert!(s.postflop_cbet_frequency > 50);
+    /// ```
+    #[must_use]
+    pub fn abc() -> Self {
+        Self::new("QQ+, AKs, AKo", "AA, KK", "QQ, AKs", 60)
+    }
+
+    /// A short-stack-ninja archetype — push-or-fold ranges, 100% c-bet.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::range_strategy::RangeStrategy;
+    ///
+    /// let s = RangeStrategy::short_stack_ninja();
+    /// assert_eq!(s.postflop_cbet_frequency, 100);
+    /// ```
+    #[must_use]
+    pub fn short_stack_ninja() -> Self {
+        Self::new("77+, ATs+, KQs, AJo+, KQo", "AA, KK, QQ", "", 100)
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -144,6 +224,40 @@ mod tests {
     fn test_range_strategy_gto() {
         let s = RangeStrategy::gto();
         assert_eq!(s.postflop_cbet_frequency, 50);
+    }
+
+    #[test]
+    fn test_range_strategy_tight_aggressive() {
+        let s = RangeStrategy::tight_aggressive();
+        assert!(!s.open_raise.is_empty());
+        assert!(s.postflop_cbet_frequency > 50);
+    }
+
+    #[test]
+    fn test_range_strategy_loose_passive() {
+        let s = RangeStrategy::loose_passive();
+        assert!(!s.open_raise.is_empty());
+        assert!(s.postflop_cbet_frequency < 30);
+    }
+
+    #[test]
+    fn test_range_strategy_maniac() {
+        let s = RangeStrategy::maniac();
+        assert_eq!(s.postflop_cbet_frequency, 90);
+    }
+
+    #[test]
+    fn test_range_strategy_abc() {
+        let s = RangeStrategy::abc();
+        assert!(!s.open_raise.is_empty());
+        assert!(s.postflop_cbet_frequency > 50);
+    }
+
+    #[test]
+    fn test_range_strategy_short_stack_ninja() {
+        let s = RangeStrategy::short_stack_ninja();
+        assert_eq!(s.postflop_cbet_frequency, 100);
+        assert!(s.call_three_bet.is_empty());
     }
 
     #[test]

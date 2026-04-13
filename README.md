@@ -420,6 +420,40 @@ Consolidated odds:
 Elapsed: 2.72s
 ```
 
+### Bot Self-Play & Hand History Replay
+
+Three examples cover bot simulation and session replay.  They require the
+optional `bot-profiles` and/or `hand-histories` feature flags to be enabled.
+
+**`bot_selfplay`** — all-bot simulation (8 profiles, up to 50 hands):
+
+```shell
+cargo run --features bot-profiles --example bot_selfplay
+```
+
+**`interactive_play`** — play against bots in a REPL; session saved to
+`generated/*.yaml`:
+
+```shell
+cargo run --features bot-profiles,hand-histories --example interactive_play
+```
+
+**`replay_play`** — load a saved session and replay every hand through the
+engine to verify consistency:
+
+```shell
+# replay most recent file in generated/
+cargo run --features hand-histories --example replay_play
+
+# replay a specific file
+cargo run --features hand-histories --example replay_play -- generated/session.yaml
+```
+
+See [`docs/EPIC-19_Bot_Self_Play.md`](docs/EPIC-19_Bot_Self_Play.md) for the
+full design.
+
+---
+
 ## TODO:
 
 * Roadmap

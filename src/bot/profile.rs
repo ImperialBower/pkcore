@@ -282,6 +282,140 @@ impl BotProfile {
         )
     }
 
+    /// Returns the `TightAggressive` reference profile.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::{BotProfile, PlayStyle};
+    ///
+    /// let p = BotProfile::tight_aggressive();
+    /// assert_eq!(p.style, PlayStyle::new("tight_aggressive"));
+    /// ```
+    #[must_use]
+    pub fn tight_aggressive() -> Self {
+        Self::new(
+            "tight_aggressive",
+            "Selective hand selection with maximum postflop aggression — the baseline winning style.",
+            PlayStyle::new("tight_aggressive"),
+            RangeStrategy::tight_aggressive(),
+            BettingStrategy::tight_aggressive(),
+        )
+    }
+
+    /// Returns the `LoosePassive` reference profile.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::{BotProfile, PlayStyle};
+    ///
+    /// let p = BotProfile::loose_passive();
+    /// assert_eq!(p.style, PlayStyle::new("loose_passive"));
+    /// ```
+    #[must_use]
+    pub fn loose_passive() -> Self {
+        Self::new(
+            "loose_passive",
+            "Wide hand selection with passive betting — the classic calling station archetype.",
+            PlayStyle::new("loose_passive"),
+            RangeStrategy::loose_passive(),
+            BettingStrategy::loose_passive(),
+        )
+    }
+
+    /// Returns the `Maniac` reference profile.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::{BotProfile, PlayStyle};
+    ///
+    /// let p = BotProfile::maniac();
+    /// assert_eq!(p.style, PlayStyle::new("maniac"));
+    /// ```
+    #[must_use]
+    pub fn maniac() -> Self {
+        Self::new(
+            "maniac",
+            "Extreme aggressor — bets and raises relentlessly with a very high bluff frequency.",
+            PlayStyle::new("maniac"),
+            RangeStrategy::maniac(),
+            BettingStrategy::maniac(),
+        )
+    }
+
+    /// Returns the `Abc` reference profile.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::{BotProfile, PlayStyle};
+    ///
+    /// let p = BotProfile::abc();
+    /// assert_eq!(p.style, PlayStyle::new("abc"));
+    /// ```
+    #[must_use]
+    pub fn abc() -> Self {
+        Self::new(
+            "abc",
+            "By-the-book play — bets strong hands and folds weak ones with no deception or bluffing.",
+            PlayStyle::new("abc"),
+            RangeStrategy::abc(),
+            BettingStrategy::abc(),
+        )
+    }
+
+    /// Returns the `ShortStackNinja` reference profile.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::{BotProfile, PlayStyle};
+    ///
+    /// let p = BotProfile::short_stack_ninja();
+    /// assert_eq!(p.style, PlayStyle::new("short_stack_ninja"));
+    /// ```
+    #[must_use]
+    pub fn short_stack_ninja() -> Self {
+        Self::new(
+            "short_stack_ninja",
+            "Push-or-fold strategy optimized for short stack situations — all-in or nothing.",
+            PlayStyle::new("short_stack_ninja"),
+            RangeStrategy::short_stack_ninja(),
+            BettingStrategy::short_stack_ninja(),
+        )
+    }
+
+    /// Returns all 8 standard reference profiles in a fixed order.
+    ///
+    /// This is the WASM-safe alternative to loading profiles from YAML files via
+    /// `from_file()`, which is not available on `wasm32`. Use this in web/WASM
+    /// contexts to get the full set of bot personalities.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::BotProfile;
+    ///
+    /// let profiles = BotProfile::default_profiles();
+    /// assert_eq!(profiles.len(), 8);
+    /// assert_eq!(profiles[0].name, "gto");
+    /// ```
+    #[must_use]
+    pub fn default_profiles() -> Vec<Self> {
+        vec![
+            Self::gto(),
+            Self::tight_passive(),
+            Self::loose_aggressive(),
+            Self::tight_aggressive(),
+            Self::loose_passive(),
+            Self::maniac(),
+            Self::abc(),
+            Self::short_stack_ninja(),
+        ]
+    }
+
     // ── Playbook builder ──────────────────────────────────────────────────────
 
     /// Attaches a [`Playbook`] to this profile, enabling position- and
@@ -631,6 +765,53 @@ mod tests {
     fn test_bot_profile_gto() {
         let p = BotProfile::gto();
         assert_eq!(p.style, PlayStyle::new("gto"));
+    }
+
+    #[test]
+    fn test_bot_profile_tight_aggressive() {
+        let p = BotProfile::tight_aggressive();
+        assert_eq!(p.style, PlayStyle::new("tight_aggressive"));
+        assert_eq!(p.name, "tight_aggressive");
+    }
+
+    #[test]
+    fn test_bot_profile_loose_passive() {
+        let p = BotProfile::loose_passive();
+        assert_eq!(p.style, PlayStyle::new("loose_passive"));
+        assert_eq!(p.name, "loose_passive");
+    }
+
+    #[test]
+    fn test_bot_profile_maniac() {
+        let p = BotProfile::maniac();
+        assert_eq!(p.style, PlayStyle::new("maniac"));
+        assert_eq!(p.name, "maniac");
+    }
+
+    #[test]
+    fn test_bot_profile_abc() {
+        let p = BotProfile::abc();
+        assert_eq!(p.style, PlayStyle::new("abc"));
+        assert_eq!(p.betting_strategy.bluff_frequency, 0);
+    }
+
+    #[test]
+    fn test_bot_profile_short_stack_ninja() {
+        let p = BotProfile::short_stack_ninja();
+        assert_eq!(p.style, PlayStyle::new("short_stack_ninja"));
+        assert_eq!(p.betting_strategy.aggression_factor, 95);
+    }
+
+    #[test]
+    fn test_bot_profile_default_profiles() {
+        let profiles = BotProfile::default_profiles();
+        assert_eq!(profiles.len(), 8);
+        assert_eq!(profiles[0].name, "gto");
+        assert_eq!(profiles[7].name, "short_stack_ninja");
+        let names: Vec<&str> = profiles.iter().map(|p| p.name.as_str()).collect();
+        assert!(names.contains(&"tight_aggressive"));
+        assert!(names.contains(&"maniac"));
+        assert!(names.contains(&"abc"));
     }
 
     #[test]
