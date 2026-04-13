@@ -804,4 +804,44 @@ mod card_tests {
         assert!(Card::try_from(Bard::BLANK).is_err());
         assert!(Card::try_from(Bard::JACK_HEARTS | Bard::TEN_HEARTS).is_err());
     }
+
+    #[test]
+    fn frequency_tripped__idempotent() {
+        let once = Card::TREY_DIAMONDS.frequency_tripped();
+        let twice = once.frequency_tripped();
+        assert_eq!(once, twice);
+    }
+
+    #[test]
+    fn frequency_quaded__idempotent() {
+        let once = Card::TREY_HEARTS.frequency_quaded();
+        let twice = once.frequency_quaded();
+        assert_eq!(once, twice);
+    }
+
+    #[test]
+    fn pile__card_at() {
+        assert_eq!(Some(Card::TREY_CLUBS), Card::TREY_CLUBS.card_at(0));
+        assert_eq!(Some(Card::ACE_SPADES), Card::ACE_SPADES.card_at(5));
+    }
+
+    #[test]
+    fn pile__swap() {
+        let mut card = Card::ACE_SPADES;
+        let old = card.swap(0, Card::TREY_CLUBS);
+        assert_eq!(Some(Card::ACE_SPADES), old);
+        assert_eq!(Card::TREY_CLUBS, card);
+    }
+
+    #[test]
+    #[should_panic]
+    fn pile__add__panics() {
+        let _ = Card::TREY_CLUBS.add(Card::ACE_SPADES);
+    }
+
+    #[test]
+    #[should_panic]
+    fn pile__the_nuts__panics() {
+        let _ = Card::TREY_CLUBS.the_nuts();
+    }
 }

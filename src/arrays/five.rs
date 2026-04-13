@@ -557,6 +557,20 @@ mod arrays__five_tests {
     }
 
     #[test]
+    fn hand_ranker__razz_hand_rank() {
+        let five = Five::from_str("A♠ 2♠ 3♠ 4♠ 5♠").unwrap();
+        assert_eq!(CaliforniaHandRank::WHEEL, five.razz_hand_rank());
+    }
+
+    #[test]
+    fn hand_ranker__razz_hand_rank_value_and_hand__wrapper() {
+        let five = Five::from_str("A♠ 2♠ 3♠ 4♠ 5♠").unwrap();
+        let (rank_value, hand) = five.razz_hand_rank_value_and_hand();
+        assert_eq!(1, rank_value);
+        assert_eq!(five, hand);
+    }
+
+    #[test]
     fn hand_ranker__sort() {
         assert_eq!(
             "A♠ K♠ Q♠ J♠ T♠",

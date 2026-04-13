@@ -808,7 +808,7 @@ pub trait Pile {
     fn to_eight_or_better_bits(&self) -> u8 {
         self.cards()
             .iter()
-            .fold(0, |acc, card| acc | card.get_rank().to_eight_or_better_lo_bit() | acc)
+            .fold(0, |acc, card| acc | card.get_rank().to_eight_or_better_lo_bit())
     }
 
     fn evals(&self) -> Evals {
@@ -1169,4 +1169,92 @@ pub trait Shifty {
     fn shifts(&self) -> HashSet<Self>
     where
         Self: Sized;
+}
+
+#[cfg(test)]
+mod lib_tests {
+    use super::*;
+
+    // Minimal Betting implementor for testing the default is_empty method.
+    struct TestStack {
+        chips: usize,
+    }
+
+    impl Betting for TestStack {
+        fn all_in(&mut self) -> Result<Self, PKError>
+        where
+            Self: Sized,
+        {
+            let amount = self.chips;
+            self.chips = 0;
+            Ok(TestStack { chips: amount })
+        }
+
+        fn bet(&mut self, amount: usize) -> Result<Self, PKError>
+        where
+            Self: Sized,
+        {
+            if amount > self.chips {
+                return Err(PKError::InsufficientChips);
+            }
+            self.chips -= amount;
+            Ok(TestStack { chips: amount })
+        }
+
+        fn size(&self) -> usize {
+            self.chips
+        }
+
+        fn wins(&mut self, winnings: Self) -> usize {
+            self.chips += winnings.chips;
+            self.chips
+        }
+    }
+
+    #[test]
+    fn betting__is_empty__when_zero() {
+        assert!(TestStack { chips: 0 }.is_empty());
+    }
+
+    #[test]
+    fn betting__is_empty__when_nonzero() {
+        assert!(!TestStack { chips: 100 }.is_empty());
+    }
+
+    // Minimal Shifty implementor for testing the default is_shift method.
+    #[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+    struct TestShifty(u8);
+
+    impl Shifty for TestShifty {
+        fn shifts(&self) -> HashSet<Self>
+        where
+            Self: Sized,
+        {
+            let mut hs = HashSet::new();
+            hs.insert(*self);
+            hs.insert(TestShifty(self.0.wrapping_add(1)));
+            hs
+        }
+    }
+
+    #[test]
+    fn shifty__is_shift__true() {
+        let a = TestShifty(5);
+        let b = TestShifty(6);
+        assert!(a.is_shift(Box::new(b)));
+    }
+
+    #[test]
+    fn shifty__is_shift__false() {
+        let a = TestShifty(5);
+        let c = TestShifty(0);
+        assert!(!a.is_shift(Box::new(c)));
+    }
+
+    #[test]
+    fn pkerror__display() {
+        assert_eq!("Too Many Cards Error", PKError::TooManyCards.to_string());
+        assert_eq!("Not Enough Cards Error", PKError::NotEnoughCards.to_string());
+        assert_eq!("Duplicate Card Error", PKError::DuplicateCard.to_string());
+    }
 }

@@ -364,7 +364,6 @@ impl Cards {
             match mappy.get(rank) {
                 None => {}
                 Some(c) => match c.len() {
-                    0 => {}
                     1 => cards.insert_all(c),
                     2 => cards.insert_all(&c.flag_paired()),
                     3 => cards.insert_all(&c.flag_tripped()),
@@ -1443,6 +1442,13 @@ mod cards_tests {
     }
 
     #[test]
+    fn pile__ranks_index() {
+        assert_eq!("AKQ", Cards::from_str("A♦ K♦ Q♦").unwrap().ranks_index());
+        assert_eq!("A", Cards::from_str("A♦").unwrap().ranks_index());
+        assert_eq!("", Cards::default().ranks_index());
+    }
+
+    #[test]
     fn pile__to_eight_or_better_bits() {
         let pile = Cards::from_str("A♦ 2♦ 3♦ 4♦ 5♥").unwrap();
 
@@ -1515,5 +1521,226 @@ mod cards_tests {
         let cards = cards!("AS KH QC JD TC 9H 8D");
 
         assert_eq!("A♠ K♥ Q♣ J♦ T♣ 9♥ 8♦", cards.to_string());
+    }
+
+    #[test]
+    fn draw_from_the_bottom__exact_count() {
+        let mut deck = Cards::deck();
+        let drawn = deck.draw_from_the_bottom(52).unwrap();
+        assert_eq!(52, drawn.len());
+        assert_eq!(0, deck.len());
+    }
+
+    #[test]
+    fn dump__doesnt_panic() {
+        wheel().dump();
+    }
+
+    #[test]
+    fn index_set__returns_inner() {
+        let cards = wheel();
+        let set = cards.index_set();
+        assert_eq!(5, set.len());
+        assert!(set.contains(&Card::ACE_CLUBS));
+        assert!(!set.contains(&Card::ACE_SPADES));
+    }
+
+    #[test]
+    fn deal_from_the_bottom__returns_last_card() {
+        let mut cards = wheel();
+        let card = cards.deal_from_the_bottom();
+        assert_eq!(Some(Card::ACE_CLUBS), card);
+        assert_eq!(4, cards.len());
+    }
+
+    #[test]
+    fn shuffle_in_place__preserves_count() {
+        let mut deck = Cards::deck();
+        deck.shuffle_in_place();
+        assert_eq!(52, deck.len());
+    }
+
+    #[test]
+    #[should_panic]
+    fn bitand__panics() {
+        let _ = Cards::from_str("A♠").unwrap() & Cards::from_str("K♠").unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn bitand_assign__panics() {
+        let mut cards = Cards::from_str("A♠").unwrap();
+        cards &= Cards::from_str("K♠").unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn bitor__panics() {
+        let _ = Cards::from_str("A♠").unwrap() | Cards::from_str("K♠").unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn bitor_assign__panics() {
+        let mut cards = Cards::from_str("A♠").unwrap();
+        cards |= Cards::from_str("K♠").unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn bitxor__panics() {
+        let _ = Cards::from_str("A♠").unwrap() ^ Cards::from_str("K♠").unwrap();
+    }
+
+    #[test]
+    #[should_panic]
+    fn bitxor_assign__panics() {
+        let mut cards = Cards::from_str("A♠").unwrap();
+        cards ^= Cards::from_str("K♠").unwrap();
+    }
+
+    #[test]
+    fn from__array_2() {
+        let cards = Cards::from([Card::ACE_SPADES, Card::KING_SPADES]);
+        assert_eq!(2, cards.len());
+        assert_eq!("A♠ K♠", cards.to_string());
+    }
+
+    #[test]
+    fn from__array_3() {
+        let cards = Cards::from([Card::ACE_SPADES, Card::KING_SPADES, Card::QUEEN_SPADES]);
+        assert_eq!(3, cards.len());
+        assert_eq!("A♠ K♠ Q♠", cards.to_string());
+    }
+
+    #[test]
+    fn from__array_4() {
+        let cards = Cards::from([
+            Card::ACE_SPADES,
+            Card::KING_SPADES,
+            Card::QUEEN_SPADES,
+            Card::JACK_SPADES,
+        ]);
+        assert_eq!(4, cards.len());
+        assert_eq!("A♠ K♠ Q♠ J♠", cards.to_string());
+    }
+
+    #[test]
+    fn from__array_5() {
+        let cards = Cards::from([
+            Card::ACE_SPADES,
+            Card::KING_SPADES,
+            Card::QUEEN_SPADES,
+            Card::JACK_SPADES,
+            Card::TEN_SPADES,
+        ]);
+        assert_eq!(5, cards.len());
+        assert_eq!("A♠ K♠ Q♠ J♠ T♠", cards.to_string());
+    }
+
+    #[test]
+    fn from__array_7() {
+        let cards = Cards::from([
+            Card::ACE_SPADES,
+            Card::KING_SPADES,
+            Card::QUEEN_SPADES,
+            Card::JACK_SPADES,
+            Card::TEN_SPADES,
+            Card::NINE_SPADES,
+            Card::EIGHT_SPADES,
+        ]);
+        assert_eq!(7, cards.len());
+        assert_eq!("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠", cards.to_string());
+    }
+
+    #[test]
+    fn from__cards_cell() {
+        let cell = CardsCell::from(wheel());
+        let cards = Cards::from(cell);
+        assert_eq!(wheel(), cards);
+    }
+
+    #[test]
+    fn from__vec_ref_card() {
+        let v: Vec<&Card> = vec![&Card::ACE_SPADES, &Card::KING_SPADES];
+        let cards = Cards::from(v);
+        assert_eq!(2, cards.len());
+        assert_eq!("A♠ K♠", cards.to_string());
+    }
+
+    #[test]
+    fn from__ref_vec_card() {
+        let v = vec![Card::ACE_SPADES, Card::KING_SPADES];
+        let cards = Cards::from(&v);
+        assert_eq!(2, cards.len());
+        assert_eq!("A♠ K♠", cards.to_string());
+    }
+
+    #[test]
+    fn hash__differs_between_different_cards() {
+        use std::hash::{DefaultHasher, Hasher};
+        let mut h1 = DefaultHasher::new();
+        let mut h2 = DefaultHasher::new();
+        Cards::from_str("A♠").unwrap().hash(&mut h1);
+        Cards::from_str("2♣").unwrap().hash(&mut h2);
+        assert_ne!(h1.finish(), h2.finish());
+    }
+
+    #[test]
+    fn pile__add__combines_cards() {
+        let a = Cards::from_str("A♠ K♠").unwrap();
+        let b = Cards::from_str("Q♠ J♠").unwrap();
+        let combined = a.add(b);
+        assert_eq!(4, combined.len());
+        assert_eq!("A♠ K♠ Q♠ J♠", combined.to_string());
+    }
+
+    #[test]
+    fn pile__are_unique__always_true() {
+        assert!(wheel().are_unique());
+        assert!(Cards::default().are_unique());
+    }
+
+    #[test]
+    fn pile__card_at__returns_correct_card() {
+        assert_eq!(Some(Card::FIVE_CLUBS), wheel().card_at(0));
+        assert_eq!(Some(Card::ACE_CLUBS), wheel().card_at(4));
+        assert_eq!(None, wheel().card_at(5));
+    }
+
+    #[test]
+    #[should_panic]
+    fn pile__clean__panics() {
+        let _ = wheel().clean();
+    }
+
+    #[test]
+    fn pile__is_dealt__always_true() {
+        assert!(wheel().is_dealt());
+        assert!(Cards::default().is_dealt());
+    }
+
+    #[test]
+    #[should_panic]
+    fn pile__the_nuts__panics() {
+        let _ = wheel().the_nuts();
+    }
+
+    #[test]
+    fn suit_shift__down() {
+        let spades = Cards::from_str("A♠ K♠").unwrap();
+        assert_eq!(Cards::from_str("A♥ K♥").unwrap(), spades.shift_suit_down());
+    }
+
+    #[test]
+    fn suit_shift__up() {
+        let spades = Cards::from_str("A♠ K♠").unwrap();
+        assert_eq!(Cards::from_str("A♣ K♣").unwrap(), spades.shift_suit_up());
+    }
+
+    #[test]
+    fn suit_shift__opposite() {
+        let spades = Cards::from_str("A♠ K♠").unwrap();
+        assert_eq!(Cards::from_str("A♦ K♦").unwrap(), spades.opposite());
     }
 }

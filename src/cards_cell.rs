@@ -438,7 +438,9 @@ impl Pile for CardsCell {
 mod cards_cell_tests {
     use super::*;
     use crate::Forgiving;
+    use crate::prelude::HoleCards;
     use rstest::rstest;
+    use std::str::FromStr;
 
     #[test]
     fn draw_all() {
@@ -473,5 +475,108 @@ mod cards_cell_tests {
         let cards = cc!("AS KH QC JD TC 9H 8D");
 
         assert_eq!("A♠ K♥ Q♣ J♦ T♣ 9♥ 8♦", cards.to_string());
+    }
+
+    #[test]
+    fn deck_minus__excludes_given_cards() {
+        let excluded = cc!("A♠ A♥ A♦ A♣");
+        let result = CardsCell::deck_minus(&excluded);
+        assert_eq!(48, result.len());
+        assert!(!result.contains(&Card::ACE_SPADES));
+        assert!(!result.contains(&Card::ACE_HEARTS));
+    }
+
+    #[test]
+    fn dump__doesnt_panic() {
+        cc!("A♠ K♠").dump();
+    }
+
+    #[test]
+    fn force_draw__returns_card_and_removes_it() {
+        let cards = cc!("A♠ K♠ Q♠");
+        let result = cards.force_draw(Card::KING_SPADES);
+        assert_eq!(Ok(Card::KING_SPADES), result);
+        assert_eq!(2, cards.len());
+        assert!(!cards.contains(&Card::KING_SPADES));
+    }
+
+    #[test]
+    fn force_draw__error_when_not_found() {
+        let cards = cc!("A♠ K♠");
+        assert!(cards.force_draw(Card::QUEEN_SPADES).is_err());
+    }
+
+    #[test]
+    fn insert_at__inserts_card_at_position() {
+        let cards = cc!("A♠ Q♠");
+        cards.insert_at(1, Card::KING_SPADES);
+        assert_eq!(3, cards.len());
+        assert_eq!("A♠ K♠ Q♠", cards.to_string());
+    }
+
+    #[test]
+    fn shuffle_in_place__preserves_count() {
+        let deck = CardsCell::deck();
+        deck.shuffle_in_place();
+        assert_eq!(52, deck.len());
+    }
+
+    #[test]
+    #[should_panic]
+    fn swap__panics() {
+        let cards = cc!("A♠ K♠");
+        let _ = cards.swap(0, Card::QUEEN_SPADES);
+    }
+
+    #[test]
+    fn sort_in_place__produces_sorted_order() {
+        let cards = cc!("Q♠ A♠ K♠");
+        cards.sort_in_place();
+        assert_eq!("A♠ K♠ Q♠", cards.to_string());
+    }
+
+    #[test]
+    fn partial_eq__different_cells_are_not_equal() {
+        let a = cc!("A♠ K♠");
+        let b = cc!("Q♠ J♠");
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn from__hole_cards__is_non_empty() {
+        let hole_cards = HoleCards::from_str("A♠ K♠").unwrap();
+        let cell = CardsCell::from(&hole_cards);
+        assert_eq!(2, cell.len());
+        assert!(cell.contains(&Card::ACE_SPADES));
+        assert!(cell.contains(&Card::KING_SPADES));
+    }
+
+    #[test]
+    fn pile__add__combines_cards() {
+        let a = cc!("A♠ K♠");
+        let b = cc!("Q♠ J♠");
+        let combined = a.add(b);
+        assert_eq!(4, combined.len());
+    }
+
+    #[test]
+    #[should_panic]
+    fn pile__card_at__panics() {
+        let _ = cc!("A♠ K♠").card_at(0);
+    }
+
+    #[test]
+    fn pile__clean__strips_frequency_bits() {
+        let paired = CardsCell::from(Cards::from_str("A♠ K♠").unwrap().flag_paired());
+        let cleaned = paired.clean();
+        assert_eq!(2, cleaned.len());
+        assert_eq!("A♠ K♠", cleaned.to_string());
+    }
+
+    #[test]
+    #[should_panic]
+    fn pile__swap__panics() {
+        let mut cards = cc!("A♠ K♠");
+        let _ = cards.swap(0, Card::QUEEN_SPADES);
     }
 }

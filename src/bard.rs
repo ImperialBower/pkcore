@@ -831,4 +831,133 @@ mod bard_tests {
 
         assert_eq!(actual, expected);
     }
+
+    #[test]
+    fn const__all_ranks() {
+        assert_eq!(Bard::from(Cards::from_str("K♠ K♥ K♦ K♣").unwrap()), Bard::KINGS);
+        assert_eq!(Bard::from(Cards::from_str("Q♠ Q♥ Q♦ Q♣").unwrap()), Bard::QUEENS);
+        assert_eq!(Bard::from(Cards::from_str("J♠ J♥ J♦ J♣").unwrap()), Bard::JACKS);
+        assert_eq!(Bard::from(Cards::from_str("T♠ T♥ T♦ T♣").unwrap()), Bard::TENS);
+        assert_eq!(Bard::from(Cards::from_str("9♠ 9♥ 9♦ 9♣").unwrap()), Bard::NINES);
+        assert_eq!(Bard::from(Cards::from_str("8♠ 8♥ 8♦ 8♣").unwrap()), Bard::EIGHTS);
+        assert_eq!(Bard::from(Cards::from_str("7♠ 7♥ 7♦ 7♣").unwrap()), Bard::SEVENS);
+        assert_eq!(Bard::from(Cards::from_str("6♠ 6♥ 6♦ 6♣").unwrap()), Bard::SIXES);
+        assert_eq!(Bard::from(Cards::from_str("5♠ 5♥ 5♦ 5♣").unwrap()), Bard::FIVES);
+        assert_eq!(Bard::from(Cards::from_str("4♠ 4♥ 4♦ 4♣").unwrap()), Bard::FOURS);
+        assert_eq!(Bard::from(Cards::from_str("3♠ 3♥ 3♦ 3♣").unwrap()), Bard::TREYS);
+        assert_eq!(Bard::from(Cards::from_str("2♠ 2♥ 2♦ 2♣").unwrap()), Bard::DEUCES);
+    }
+
+    #[test]
+    fn fold_in__idempotent() {
+        let bard = Bard::ACE_SPADES.fold_in(Card::ACE_SPADES);
+        assert_eq!(Bard::ACE_SPADES, bard);
+    }
+
+    #[test]
+    fn to_pile__non_empty() {
+        let result = Bard::ACE_SPADES.to_pile();
+        assert!(result.is_some());
+        assert_eq!(1, result.unwrap().len());
+    }
+
+    #[test]
+    fn to_pile__blank__returns_none() {
+        assert!(Bard::BLANK.to_pile().is_none());
+    }
+
+    #[test]
+    fn bit_or__idempotent() {
+        assert_eq!(Bard::ACE_SPADES, Bard::ACE_SPADES | Bard::ACE_SPADES);
+    }
+
+    #[test]
+    fn bit_or_assign__idempotent() {
+        let mut bard = Bard::ACE_SPADES;
+        bard |= Bard::ACE_SPADES;
+        assert_eq!(Bard::ACE_SPADES, bard);
+    }
+
+    #[test]
+    fn from__ref_card() {
+        assert_eq!(Bard::ACE_SPADES, Bard::from(&Card::ACE_SPADES));
+        assert_eq!(Bard::TREY_CLUBS, Bard::from(&Card::TREY_CLUBS));
+    }
+
+    #[test]
+    fn from__cards_cell() {
+        let cell = CardsCell::from(Cards::from_str("T♣ 9♥").unwrap());
+        let expected = Bard::TEN_CLUBS | Bard::NINE_HEARTS;
+        assert_eq!(expected, Bard::from(cell));
+    }
+
+    #[test]
+    fn from__ref_cards_cell() {
+        let cell = CardsCell::from(Cards::from_str("T♣ 9♥").unwrap());
+        let expected = Bard::TEN_CLUBS | Bard::NINE_HEARTS;
+        assert_eq!(expected, Bard::from(&cell));
+    }
+
+    #[test]
+    fn pile__add() {
+        let a = Bard::ACE_SPADES | Bard::KING_SPADES;
+        let b = Bard::QUEEN_SPADES;
+        let result = a.add(b);
+        assert_eq!(Bard::ACE_SPADES | Bard::KING_SPADES | Bard::QUEEN_SPADES, result);
+    }
+
+    #[test]
+    fn pile__card_at() {
+        let bard = Bard::ACE_SPADES | Bard::KING_SPADES;
+        assert_eq!(Some(Card::ACE_SPADES), bard.card_at(0));
+        assert_eq!(Some(Card::KING_SPADES), bard.card_at(1));
+        assert_eq!(None, bard.card_at(2));
+    }
+
+    #[test]
+    fn pile__clean() {
+        // ACE_CLUBS is within the FREQUENCY_MASK_FILTER range; ACE_HEARTS is not.
+        let bard = Bard::ACE_CLUBS | Bard::ACE_HEARTS;
+        assert_eq!(Bard::ACE_CLUBS, bard.clean());
+    }
+
+    #[test]
+    fn pile__contains__true() {
+        let bard = Bard::ACE_SPADES | Bard::KING_CLUBS;
+        assert!(bard.contains(&Card::ACE_SPADES));
+        assert!(bard.contains(&Card::KING_CLUBS));
+    }
+
+    #[test]
+    fn pile__contains__false() {
+        let bard = Bard::ACE_SPADES | Bard::KING_CLUBS;
+        assert!(!bard.contains(&Card::KING_SPADES));
+    }
+
+    #[test]
+    #[should_panic]
+    fn pile__swap__panics() {
+        let mut bard = Bard::ACE_SPADES;
+        let _ = bard.swap(0, Card::KING_SPADES);
+    }
+
+    #[test]
+    #[should_panic]
+    fn pile__the_nuts__panics() {
+        let _ = Bard::ACE_SPADES.the_nuts();
+    }
+
+    #[test]
+    fn pile__to_vec() {
+        let bard = Bard::ACE_SPADES | Bard::KING_SPADES;
+        let v = bard.to_vec();
+        assert_eq!(2, v.len());
+        assert_eq!(Card::ACE_SPADES, v[0]);
+        assert_eq!(Card::KING_SPADES, v[1]);
+    }
+
+    #[test]
+    fn pile__to_vec__empty() {
+        assert!(Bard::BLANK.to_vec().is_empty());
+    }
 }
