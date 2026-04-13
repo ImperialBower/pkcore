@@ -259,7 +259,10 @@ impl PokerSession {
         if self.is_hand_complete() {
             return None;
         }
-        if self.table.seats.is_betting_complete() {
+        // Use a `while` loop so that an all-in run-out (all remaining players
+        // are AllIn on the flop, say) advances through every remaining street
+        // without ever returning a stale actor seat to the caller.
+        while self.table.seats.is_betting_complete() {
             if self.advance_street().is_err() {
                 return None;
             }
@@ -538,5 +541,41 @@ mod tests {
         // Both players call every street — hand runs to showdown.
         let winnings = session.run_hand(|_, _| PlayerAction::Call).unwrap();
         assert!(!winnings.vec().is_empty());
+    }
+
+    /// Regression test: when all active players go AllIn before the river,
+    /// `next_actor()` must return `None` (no stale actor) and the hand must
+    /// complete correctly via `end_hand()`.
+    ///
+    /// Previously, the `if`-guarded street advance in `next_actor()` would
+    /// deal the flop and then fall through to `Some(table.next_to_act())`,
+    /// which fell back to an arbitrary seat via `.unwrap_or(utg)` because
+    /// `SeatsNoCell::next_to_act()` found no player with action to give.
+    #[test]
+    fn test_next_actor_all_in_runout_no_stale_actor() {
+        // Equal stacks: both players can go all-in preflop so the board runs
+        // out without any player needing to act postflop.
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 200)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 200)),
+        ]);
+        let mut session = PokerSession::new(TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100)));
+        session.start_hand().unwrap();
+
+        // In heads-up, SB (button) acts first preflop. Both go all-in.
+        let seat_a = session.next_actor().unwrap();
+        session.apply_action(seat_a, PlayerAction::AllIn).unwrap();
+        let seat_b = session.next_actor().unwrap();
+        session.apply_action(seat_b, PlayerAction::AllIn).unwrap();
+
+        // Now both are all-in. next_actor() must return None — the run-out
+        // (flop → turn → river) happens internally without surfacing a stale
+        // actor to the caller.
+        let actor = session.next_actor();
+        assert!(actor.is_none(), "expected None for all-in run-out, got seat {actor:?}");
+
+        // The hand must still be completable.
+        let winnings = session.end_hand().unwrap();
+        assert!(!winnings.vec().is_empty(), "expected a winner");
     }
 }

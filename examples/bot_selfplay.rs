@@ -10,7 +10,7 @@
 //! ```
 
 use pkcore::analysis::eval::Eval;
-use pkcore::arrays::{seven::Seven, HandRanker};
+use pkcore::arrays::{HandRanker, seven::Seven};
 use pkcore::bot::profile::BotProfile;
 use pkcore::casino::action::PlayerAction;
 use pkcore::casino::game::ForcedBets;
@@ -236,7 +236,10 @@ fn print_showdown_hands(table: &TableNoCell, profiles: &[BotProfile], board: &st
             if seat.cards.has_cards() && seat.player.is_in_hand() {
                 let hole = seat.cards.sorted_display();
                 match rank_seven(&hole, board) {
-                    Some(r) => println!("    {:>20}  [{}]  →  {}  ({:?} #{})", profile.name, hole, r.hand, r.hand_rank.class, r.hand_rank.value),
+                    Some(r) => println!(
+                        "    {:>20}  [{}]  →  {}  ({:?} #{})",
+                        profile.name, hole, r.hand, r.hand_rank.class, r.hand_rank.value
+                    ),
                     None => println!("    {:>20}  [{}]", profile.name, hole),
                 }
             }

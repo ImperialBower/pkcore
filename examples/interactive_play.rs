@@ -21,7 +21,7 @@
 //! ```
 
 use pkcore::analysis::eval::Eval;
-use pkcore::arrays::{seven::Seven, HandRanker};
+use pkcore::arrays::{HandRanker, seven::Seven};
 use pkcore::bot::profile::BotProfile;
 use pkcore::casino::action::PlayerAction;
 use pkcore::casino::game::ForcedBets;
@@ -336,7 +336,10 @@ fn reveal_showdown(table: &TableNoCell, profiles: &[BotProfile]) {
         println!("  --- Showdown ---");
         for (name, hole, eval) in &active {
             match eval {
-                Some(e) => println!("    {:>20}  [{}]  →  {}  ({:?} #{})", name, hole, e.hand, e.hand_rank.class, e.hand_rank.value),
+                Some(e) => println!(
+                    "    {:>20}  [{}]  →  {}  ({:?} #{})",
+                    name, hole, e.hand, e.hand_rank.class, e.hand_rank.value
+                ),
                 None => println!("    {:>20}  [{}]", name, hole),
             }
         }
@@ -594,10 +597,7 @@ fn build_hand_history(
                 .map(|pw| pw.equity.chips as f64)
                 .sum();
 
-            let ending: Option<f64> = ending_stacks
-                .iter()
-                .find(|(s, _)| s == seat)
-                .map(|(_, c)| *c as f64);
+            let ending: Option<f64> = ending_stacks.iter().find(|(s, _)| s == seat).map(|(_, c)| *c as f64);
             let net = ending.map(|e| e - *starting_stack as f64);
 
             let ranked = hole_cards.as_deref().and_then(|h| rank_seven(h, board_str));
@@ -689,7 +689,13 @@ fn print_results(results: &[ResultEntry], profiles: &[BotProfile]) {
 /// chip change after `end_hand()` distributes the pot.
 fn chip_counts(table: &TableNoCell) -> Vec<(u8, usize)> {
     (0..table.seats.0.len() as u8)
-        .filter_map(|i| table.seats.get_seat(i).filter(|s| !s.is_empty()).map(|s| (i, s.player.chips)))
+        .filter_map(|i| {
+            table
+                .seats
+                .get_seat(i)
+                .filter(|s| !s.is_empty())
+                .map(|s| (i, s.player.chips))
+        })
         .collect()
 }
 
