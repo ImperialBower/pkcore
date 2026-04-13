@@ -387,6 +387,37 @@ impl BotProfile {
         )
     }
 
+    /// Returns the `Joker` placeholder profile.
+    ///
+    /// The joker profile acts as a seat-entry placeholder when pairing a seat
+    /// with a [`crate::bot::decider::JokerDecider`].  Its `range_strategy`
+    /// and `betting_strategy` fields are copied from [`BotProfile::gto`] and
+    /// are **never used in practice** — [`JokerDecider`] ignores the passed
+    /// profile and instead decides using whichever standard profile it randomly
+    /// selected at hand-start time.
+    ///
+    /// [`JokerDecider`]: crate::bot::decider::JokerDecider
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::{BotProfile, PlayStyle};
+    ///
+    /// let p = BotProfile::joker();
+    /// assert_eq!(p.name, "joker");
+    /// assert_eq!(p.style, PlayStyle::new("joker"));
+    /// ```
+    #[must_use]
+    pub fn joker() -> Self {
+        Self::new(
+            "joker",
+            "Randomly adopts a different playing style each hand — unpredictable by design.",
+            PlayStyle::new("joker"),
+            RangeStrategy::gto(),
+            BettingStrategy::gto(),
+        )
+    }
+
     /// Returns all 8 standard reference profiles in a fixed order.
     ///
     /// This is the WASM-safe alternative to loading profiles from YAML files via
@@ -800,6 +831,14 @@ mod tests {
         let p = BotProfile::short_stack_ninja();
         assert_eq!(p.style, PlayStyle::new("short_stack_ninja"));
         assert_eq!(p.betting_strategy.aggression_factor, 95);
+    }
+
+    #[test]
+    fn test_bot_profile_joker() {
+        let p = BotProfile::joker();
+        assert_eq!(p.name, "joker");
+        assert_eq!(p.style, PlayStyle::new("joker"));
+        assert!(p.description.contains("unpredictable"));
     }
 
     #[test]

@@ -281,6 +281,12 @@ impl SimTable {
         self.eliminate_busted();
         self.table.deck.shuffle_in_place();
 
+        // Notify every decider that a new hand is starting so that stateful
+        // deciders (e.g. JokerDecider) can re-roll their per-hand state.
+        for (_, _, decider) in &self.bots {
+            decider.on_new_hand();
+        }
+
         let mut actions: HashMap<u8, ActionCounts> = HashMap::new();
         let winnings = self.run_hand_inner(&mut actions)?;
 
