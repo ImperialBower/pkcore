@@ -48,14 +48,22 @@
 //! ```
 
 use crate::PKError;
+use crate::analysis::eval::Eval;
 use crate::analysis::gto::combos::Combos;
 use crate::analysis::hand_rank::HandRank;
 use crate::arrays::five::Five;
+use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
+use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
+use crate::casino::action::PlayerAction;
+use crate::casino::game::ForcedBets;
 use crate::casino::table::event::TableAction;
+use crate::casino::table::winnings::Winnings;
+use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use crate::games::GamePhase;
 use crate::play::board::Board;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -162,6 +170,287 @@ fn default_format_version() -> u32 {
 }
 
 impl HandHistory {
+    /// Constructs a [`HandHistory`] from live game state captured around a
+    /// completed hand.
+    ///
+    /// This is the canonical way to build a hand history from a live or
+    /// simulated game. Capture `player_snapshot` **before** forced bets and
+    /// hole cards immediately **after** the deal, then call this function
+    /// right after [`TableNoCell::end_hand`](crate::casino::table_no_cell::TableNoCell::end_hand).
+    ///
+    /// # Parameters
+    ///
+    /// - `hand_num` — sequential hand number within the session (used in the hand ID).
+    /// - `ts_secs` — Unix timestamp in seconds.
+    /// - `button` — 0-based seat index of the dealer button.
+    /// - `forced` — blinds/ante structure.
+    /// - `player_snapshot` — `(seat, name, starting_stack, hole_cards)` tuples.
+    /// - `board_str` — full community board string, or `""` when no board was dealt.
+    /// - `winnings` — post-`end_hand` pot distribution.
+    /// - `event_log` — `table.event_log` slice for deriving per-street actions.
+    /// - `ending_stacks` — `(seat, chips)` captured after `end_hand()`.
+    /// - `source` — provenance label (e.g. `"interactive_play"`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::HandHistory;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::winnings::Winnings;
+    /// use pkcore::casino::table::event::TableAction;
+    ///
+    /// let hh = HandHistory::from_table_state(
+    ///     1, 0, 0,
+    ///     &ForcedBets::new(50, 100),
+    ///     &[(0, "Alice".to_string(), 1000, Some("A♠ K♠".to_string()))],
+    ///     "", &Winnings::default(), &[], &[(0, 1000)], "test",
+    /// );
+    /// assert_eq!(hh.hand.id, "test-hand-001");
+    /// assert!(hh.results.is_some());
+    /// ```
+    #[allow(clippy::cast_precision_loss, clippy::too_many_arguments, clippy::cast_possible_truncation)]
+    #[must_use]
+    pub fn from_table_state(
+        hand_num: usize,
+        ts_secs: u64,
+        button: u8,
+        forced: &ForcedBets,
+        player_snapshot: &[(u8, String, usize, Option<String>)],
+        board_str: &str,
+        winnings: &Winnings,
+        event_log: &[TableAction],
+        ending_stacks: &[(u8, usize)],
+        source: &str,
+    ) -> Self {
+        let results: Vec<ResultEntry> = player_snapshot
+            .iter()
+            .map(|(seat, _, starting_stack, hole_cards)| {
+                let pot_won: f64 = winnings
+                    .vec()
+                    .iter()
+                    .filter(|pw| pw.equity.seats.contains(*seat))
+                    .map(|pw| pw.equity.chips as f64)
+                    .sum();
+
+                let ending =
+                    ending_stacks.iter().find(|(s, _)| s == seat).map(|(_, c)| *c as f64);
+                let net = ending.map(|e| e - *starting_stack as f64);
+
+                let ranked = hole_cards.as_deref().and_then(|h| rank_seven(h, board_str));
+
+                ResultEntry {
+                    seat: *seat,
+                    best_hand: ranked.as_ref().map(|r| r.hand.to_string()),
+                    hand_rank: ranked.as_ref().map(|r| r.hand_rank),
+                    outcome: if pot_won > 0.0 { Outcome::Win } else { Outcome::Lose },
+                    net,
+                    pot_won: if pot_won > 0.0 { Some(pot_won) } else { None },
+                    mucked: None,
+                }
+            })
+            .collect();
+
+        HandHistory {
+            pkcore_version: None,
+            format_version: FORMAT_VERSION,
+            hand: HandMeta {
+                id: format!("{source}-hand-{hand_num:03}"),
+                game: HandVariant::Holdem,
+                timestamp: Some(ts_secs.to_string()),
+                source: Some(source.to_string()),
+                description: None,
+            },
+            table: TableInfo {
+                name: Some(source.to_string()),
+                seats: Some(player_snapshot.len() as u8),
+                button: Some(button),
+                stakes: Stakes {
+                    small_blind: forced.small_blind as f64,
+                    big_blind: forced.big_blind as f64,
+                    ante: if forced.ante > 0 { Some(forced.ante as f64) } else { None },
+                    straddle: None,
+                },
+            },
+            players: player_snapshot
+                .iter()
+                .map(|(seat, name, stack, hole_cards)| PlayerEntry {
+                    seat: *seat,
+                    name: name.clone(),
+                    stack: *stack as f64,
+                    hole_cards: hole_cards.clone(),
+                    posted: None,
+                })
+                .collect(),
+            board: if board_str.is_empty() { None } else { Some(board_str.to_string()) },
+            streets: Streets::from_event_log(event_log),
+            results: Some(results),
+            analysis: None,
+        }
+    }
+
+    /// Replays all recorded actions from `streets` through a fresh [`TableNoCell`]
+    /// and verifies the final chip counts match the recorded [`results`].
+    ///
+    /// This is useful for testing hand-history consistency: generate a session,
+    /// serialize to YAML, deserialize, then call `replay()` on each hand to
+    /// confirm the recorded actions reproduce the same outcomes.
+    ///
+    /// Returns [`PKError::InvalidAction`] if the recorded action sequence is
+    /// inconsistent with the game rules (e.g., a player acts out of turn or
+    /// makes an illegal move).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PKError`] if table construction, card injection, action
+    /// application, or hand-end processing fails.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::{HandHistory, HandVariant, Outcome, ResultEntry,
+    ///     Action, ActionType, Streets, PreflopStreet, PlayerEntry, HandMeta,
+    ///     TableInfo, Stakes};
+    ///
+    /// let hh = HandHistory {
+    ///     pkcore_version: None,
+    ///     format_version: 1,
+    ///     hand: HandMeta {
+    ///         id: "test-001".to_string(),
+    ///         game: HandVariant::Holdem,
+    ///         timestamp: None,
+    ///         source: None,
+    ///         description: None,
+    ///     },
+    ///     table: TableInfo {
+    ///         name: None,
+    ///         seats: Some(2),
+    ///         button: Some(0),
+    ///         stakes: Stakes { small_blind: 50.0, big_blind: 100.0, ante: None, straddle: None },
+    ///     },
+    ///     players: vec![
+    ///         PlayerEntry { seat: 0, name: "A".to_string(), stack: 1000.0,
+    ///             hole_cards: Some("A♠ K♠".to_string()), posted: None },
+    ///         PlayerEntry { seat: 1, name: "B".to_string(), stack: 1000.0,
+    ///             hole_cards: Some("7♦ 2♣".to_string()), posted: None },
+    ///     ],
+    ///     board: None,
+    ///     streets: Some(Streets {
+    ///         preflop: Some(PreflopStreet {
+    ///             actions: vec![
+    ///                 Action { seat: 0, action: ActionType::Post, amount: Some(50.0), all_in: None },
+    ///                 Action { seat: 1, action: ActionType::Post, amount: Some(100.0), all_in: None },
+    ///                 Action { seat: 0, action: ActionType::Fold, amount: None, all_in: None },
+    ///             ],
+    ///             pot: Some(150.0),
+    ///         }),
+    ///         flop: None,
+    ///         turn: None,
+    ///         river: None,
+    ///     }),
+    ///     results: Some(vec![
+    ///         ResultEntry { seat: 0, best_hand: None, hand_rank: None,
+    ///             outcome: Outcome::Fold, net: Some(-50.0), pot_won: None, mucked: None },
+    ///         ResultEntry { seat: 1, best_hand: None, hand_rank: None,
+    ///             outcome: Outcome::Win, net: Some(50.0), pot_won: Some(150.0), mucked: None },
+    ///     ]),
+    ///     analysis: None,
+    /// };
+    ///
+    /// let result = hh.replay();
+    /// assert!(result.is_ok());
+    /// assert!(result.unwrap().is_consistent);
+    /// ```
+    #[allow(clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+    pub fn replay(&self) -> Result<ReplayResult, PKError> {
+        // ── Build table ──────────────────────────────────────────────────────
+        let sb = self.table.stakes.small_blind as usize;
+        let bb = self.table.stakes.big_blind as usize;
+        let button = self.table.button.unwrap_or(0);
+
+        let seats_vec: Vec<SeatNoCell> = self
+            .players
+            .iter()
+            .map(|p| SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), p.stack as usize)))
+            .collect();
+        let seats = SeatsNoCell::new(seats_vec);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(sb, bb));
+        table.button = button;
+
+        // ── Forced bets & hole cards ─────────────────────────────────────────
+        table.act_forced_bets()?;
+
+        let hole_entries: Vec<(u8, String)> = self
+            .players
+            .iter()
+            .filter_map(|p| p.hole_cards.as_ref().map(|h| (p.seat, h.clone())))
+            .collect();
+        let hole_refs: Vec<(u8, &str)> =
+            hole_entries.iter().map(|(s, h)| (*s, h.as_str())).collect();
+        table.inject_hole_cards(&hole_refs)?;
+
+        // ── Street replay helper ─────────────────────────────────────────────
+        let replay_actions = |table: &mut TableNoCell, actions: &[Action]| -> Result<(), PKError> {
+            for action in actions {
+                if let Some(pa) = action_to_player_action(action) {
+                    table.apply_action(action.seat, pa)?;
+                }
+            }
+            Ok(())
+        };
+
+        // ── Preflop ──────────────────────────────────────────────────────────
+        if let Some(ref streets) = self.streets
+            && let Some(ref pre) = streets.preflop
+        {
+            replay_actions(&mut table, &pre.actions)?;
+        }
+
+        if table.is_game_over() {
+            return build_replay_result(table, &self.players, self.results.as_deref());
+        }
+
+        table.bring_it_in()?;
+
+        // ── Flop ─────────────────────────────────────────────────────────────
+        if let Some(ref streets) = self.streets
+            && let Some(ref flop) = streets.flop
+        {
+            table.board = Cards::from_str(&flop.cards)?;
+            table.phase = GamePhase::DealFlop;
+            replay_actions(&mut table, &flop.actions)?;
+
+            if table.is_game_over() {
+                return build_replay_result(table, &self.players, self.results.as_deref());
+            }
+
+            table.bring_it_in()?;
+
+            // ── Turn ─────────────────────────────────────────────────────
+            if let Some(ref turn) = streets.turn {
+                let card = Card::from_str(&turn.card)?;
+                table.board.insert(card);
+                table.phase = GamePhase::DealTurn;
+                replay_actions(&mut table, &turn.actions)?;
+
+                if table.is_game_over() {
+                    return build_replay_result(table, &self.players, self.results.as_deref());
+                }
+
+                table.bring_it_in()?;
+
+                // ── River ─────────────────────────────────────────────────
+                if let Some(ref river) = streets.river {
+                    let card = Card::from_str(&river.card)?;
+                    table.board.insert(card);
+                    table.phase = GamePhase::DealRiver;
+                    replay_actions(&mut table, &river.actions)?;
+                }
+            }
+        }
+
+        build_replay_result(table, &self.players, self.results.as_deref())
+    }
+
     /// Convert the [`board`] string field to a pkcore [`Board`].
     ///
     /// Returns [`PKError::NotEnoughCards`] if the board field is absent.
@@ -1432,6 +1721,123 @@ impl AnalysisContext {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Replay
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Result of replaying a [`HandHistory`] through the game engine.
+///
+/// Returned by [`HandHistory::replay`].
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::hand_history::ReplayResult;
+///
+/// let r = ReplayResult { final_stacks: vec![(0, 1000)], is_consistent: true };
+/// assert!(r.is_consistent);
+/// ```
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReplayResult {
+    /// Final chip count per seat (0-based seat index → chips) after `end_hand`.
+    pub final_stacks: Vec<(u8, usize)>,
+    /// `true` when every seat's final stack matches the recorded `net` P&L
+    /// within a ±1 chip rounding tolerance.
+    pub is_consistent: bool,
+}
+
+impl HandCollection {
+    /// Replays every hand in this collection and returns one [`ReplayResult`]
+    /// per hand (in order).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::HandCollection;
+    ///
+    /// let collection = HandCollection::new();
+    /// let results = collection.replay_all();
+    /// assert!(results.is_empty());
+    /// ```
+    pub fn replay_all(&self) -> Vec<Result<ReplayResult, PKError>> {
+        self.hands.iter().map(HandHistory::replay).collect()
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Private helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Returns the best-hand evaluation for `hole_cards` on a completed 5-card
+/// `board`.  Returns `None` if the board is not yet complete or cards cannot
+/// be parsed.
+fn rank_seven(hole_cards: &str, board: &str) -> Option<Eval> {
+    if board.split_whitespace().count() < 5 {
+        return None;
+    }
+    let seven = Seven::from_str(&format!("{hole_cards} {board}")).ok()?;
+    let (hand_rank, hand) = seven.hand_rank_and_hand();
+    Some(Eval::new(hand_rank, hand))
+}
+
+/// Converts a hand-history [`Action`] to a [`PlayerAction`] understood by the
+/// game engine.  Returns `None` for `Post` entries (handled by
+/// `act_forced_bets`).
+fn action_to_player_action(action: &Action) -> Option<PlayerAction> {
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    match action.action {
+        ActionType::Fold => Some(PlayerAction::Fold),
+        ActionType::Check => Some(PlayerAction::Check),
+        ActionType::Call => Some(PlayerAction::Call),
+        ActionType::Bet => action.amount.map(|a| PlayerAction::Bet(a as usize)),
+        ActionType::Raise => action.amount.map(|a| PlayerAction::Raise(a as usize)),
+        ActionType::AllIn => Some(PlayerAction::AllIn),
+        ActionType::Post => None,
+    }
+}
+
+/// Calls `end_hand` on `table` and builds a [`ReplayResult`], comparing final
+/// chip counts against the recorded `results` when present.
+/// Chip amounts are stored as `f64` in the YAML schema (for forward-compat with
+/// fractional blinds), but represent whole-chip counts in practice.  The casts
+/// here are intentional: stacks fit in `usize` and net values are bounded by the
+/// starting stack.
+#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+fn build_replay_result(
+    mut table: TableNoCell,
+    players: &[PlayerEntry],
+    results: Option<&[ResultEntry]>,
+) -> Result<ReplayResult, PKError> {
+    let winnings = table.end_hand()?;
+    let _ = winnings;
+
+    let final_stacks: Vec<(u8, usize)> = players
+        .iter()
+        .filter_map(|p| {
+            table.seats.get_seat(p.seat).map(|s| (p.seat, s.player.chips))
+        })
+        .collect();
+
+    let is_consistent = match results {
+        None => true,
+        Some(entries) => entries.iter().all(|r| {
+            let Some(net) = r.net else { return true };
+            let Some(player) = players.iter().find(|p| p.seat == r.seat) else {
+                return false;
+            };
+            // Expected final stack: starting stack + net result, clamped to 0.
+            let expected = (player.stack + net).max(0.0).round() as usize;
+            let actual = final_stacks
+                .iter()
+                .find(|(s, _)| *s == r.seat)
+                .map_or(0, |(_, c)| *c);
+            expected.abs_diff(actual) <= 1
+        }),
+    };
+
+    Ok(ReplayResult { final_stacks, is_consistent })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Tests
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -2042,6 +2448,156 @@ hands:
         assert_eq!(river.actions.len(), 2);
         assert_eq!(river.actions[0].action, ActionType::Bet);
         assert_eq!(river.pot, Some(2500.0));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // from_table_state
+    // ─────────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_from_table_state_hand_id_and_source() {
+        use crate::casino::game::ForcedBets;
+        use crate::casino::table::winnings::Winnings;
+
+        let hh = HandHistory::from_table_state(
+            3,
+            0,
+            0,
+            &ForcedBets::new(50, 100),
+            &[(0, "Alice".to_string(), 1000, None)],
+            "",
+            &Winnings::default(),
+            &[],
+            &[(0, 1000)],
+            "test_source",
+        );
+        assert_eq!(hh.hand.id, "test_source-hand-003");
+        assert_eq!(hh.hand.source.as_deref(), Some("test_source"));
+        assert_eq!(hh.table.stakes.small_blind, 50.0);
+        assert_eq!(hh.table.stakes.big_blind, 100.0);
+    }
+
+    #[test]
+    fn test_from_table_state_net_calculation() {
+        use crate::casino::game::ForcedBets;
+        use crate::casino::table::winnings::Winnings;
+
+        let hh = HandHistory::from_table_state(
+            1,
+            0,
+            0,
+            &ForcedBets::new(50, 100),
+            &[(0, "A".to_string(), 1000, None), (1, "B".to_string(), 1000, None)],
+            "",
+            &Winnings::default(),
+            &[],
+            &[(0, 900), (1, 1100)],
+            "test",
+        );
+        let results = hh.results.unwrap();
+        let a = results.iter().find(|r| r.seat == 0).unwrap();
+        let b = results.iter().find(|r| r.seat == 1).unwrap();
+        assert_eq!(a.net, Some(-100.0));
+        assert_eq!(b.net, Some(100.0));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // HandHistory::replay
+    // ─────────────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_hand_history_replay_preflop_fold() {
+        // A 2-player hand where seat 0 folds preflop after posting SB.
+        let hh = HandHistory {
+            pkcore_version: None,
+            format_version: FORMAT_VERSION,
+            hand: HandMeta {
+                id: "replay-test-001".to_string(),
+                game: HandVariant::Holdem,
+                timestamp: None,
+                source: None,
+                description: None,
+            },
+            table: TableInfo {
+                name: None,
+                seats: Some(2),
+                button: Some(0),
+                stakes: Stakes {
+                    small_blind: 50.0,
+                    big_blind: 100.0,
+                    ante: None,
+                    straddle: None,
+                },
+            },
+            players: vec![
+                PlayerEntry {
+                    seat: 0,
+                    name: "A".to_string(),
+                    stack: 1000.0,
+                    hole_cards: Some("A♠ K♠".to_string()),
+                    posted: None,
+                },
+                PlayerEntry {
+                    seat: 1,
+                    name: "B".to_string(),
+                    stack: 1000.0,
+                    hole_cards: Some("7♦ 2♣".to_string()),
+                    posted: None,
+                },
+            ],
+            board: None,
+            streets: Some(Streets {
+                preflop: Some(PreflopStreet {
+                    actions: vec![
+                        Action { seat: 0, action: ActionType::Post, amount: Some(50.0), all_in: None },
+                        Action { seat: 1, action: ActionType::Post, amount: Some(100.0), all_in: None },
+                        Action { seat: 0, action: ActionType::Fold, amount: None, all_in: None },
+                    ],
+                    pot: Some(150.0),
+                }),
+                flop: None,
+                turn: None,
+                river: None,
+            }),
+            results: Some(vec![
+                ResultEntry {
+                    seat: 0,
+                    best_hand: None,
+                    hand_rank: None,
+                    outcome: Outcome::Lose,
+                    net: Some(-50.0),
+                    pot_won: None,
+                    mucked: None,
+                },
+                ResultEntry {
+                    seat: 1,
+                    best_hand: None,
+                    hand_rank: None,
+                    outcome: Outcome::Win,
+                    net: Some(50.0),
+                    pot_won: Some(150.0),
+                    mucked: None,
+                },
+            ]),
+            analysis: None,
+        };
+
+        let result = hh.replay().expect("replay should succeed");
+        assert!(result.is_consistent, "chip counts should match: {:?}", result.final_stacks);
+    }
+
+    #[test]
+    fn test_replay_result_struct() {
+        let r = ReplayResult { final_stacks: vec![(0, 500), (1, 1500)], is_consistent: true };
+        assert_eq!(r.final_stacks.len(), 2);
+        assert!(r.is_consistent);
+    }
+
+    #[test]
+    fn test_hand_collection_replay_all_empty() {
+        let collection = HandCollection::new();
+        let results = collection.replay_all();
+        assert!(results.is_empty());
     }
 
     #[test]

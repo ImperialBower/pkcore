@@ -74,6 +74,14 @@ required-features = ["bot-profiles"]
 name = "interactive_play"
 required-features = ["bot-profiles", "hand-histories"]
 
+[[example]]
+name = "replay_play"
+required-features = ["hand-histories"]
+
+[[test]]
+name = "replay_consistency"
+required-features = ["hand-histories", "bot-profiles"]
+
 [dev-dependencies]
 serde_yaml_bw = "2.5"
 clap = { version = "4.6", features = ["derive", "unicode"] }

@@ -1978,6 +1978,51 @@ impl TableNoCell {
         Ok(())
     }
 
+    /// Injects known hole cards into seats directly, bypassing deck dealing.
+    ///
+    /// Use this when replaying a recorded hand where hole cards are already
+    /// known (e.g., from a [`HandHistory`](crate::hand_history::HandHistory)).
+    /// Sets the phase to [`GamePhase::DealHoleCards`] and logs
+    /// [`TableAction::DealtPlayers`] exactly as [`Self::deal_cards_to_seats`]
+    /// would, so downstream code behaves identically.
+    ///
+    /// # Errors
+    ///
+    /// - [`PKError::InvalidSeatNumber`] if any seat index is not found.
+    /// - [`PKError::InvalidCardIndex`] if a card string cannot be parsed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::game::ForcedBets;
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let mut t = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// t.act_forced_bets().unwrap();
+    /// t.inject_hole_cards(&[(0, "A♠ K♠"), (1, "7♦ 2♣")]).unwrap();
+    /// assert!(t.seats.are_dealt());
+    /// ```
+    pub fn inject_hole_cards(&mut self, entries: &[(u8, &str)]) -> Result<(), PKError> {
+        use crate::arrays::sliced::BoxedCards;
+        use std::str::FromStr;
+
+        for (seat_idx, card_str) in entries {
+            let cards = BoxedCards::from_str(card_str)?;
+            let seat = self
+                .seats
+                .get_seat_mut(*seat_idx)
+                .ok_or(PKError::InvalidSeatNumber)?;
+            seat.cards = cards;
+        }
+        self.phase = GamePhase::DealHoleCards;
+        self.log(TableAction::DealtPlayers);
+        Ok(())
+    }
+
     /// Deals the flop (3 community cards).
     ///
     /// # Errors

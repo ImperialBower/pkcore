@@ -27,10 +27,7 @@ use pkcore::casino::action::PlayerAction;
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::table::winnings::Winnings;
 use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
-use pkcore::hand_history::{
-    FORMAT_VERSION, HandCollection, HandHistory, HandMeta, HandVariant, Outcome, PlayerEntry, ResultEntry, Stakes,
-    Streets, TableInfo,
-};
+use pkcore::hand_history::{HandCollection, HandHistory, ResultEntry};
 use rand::Rng;
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
 use std::str::FromStr;
@@ -186,6 +183,8 @@ fn run_hand(
         })
         .collect();
 
+    // Record log length before this hand so we can slice out only this hand's events.
+    let event_log_start = table.event_log.len();
     table.act_forced_bets().expect("forced bets");
     table.deal_cards_to_seats().expect("deal hole cards");
 
@@ -233,7 +232,7 @@ fn run_hand(
             &player_snapshot,
             &board_str,
             &winnings,
-            &table.event_log,
+            &table.event_log[event_log_start..],
             &ending_stacks,
         );
         return (winnings, history);
@@ -255,7 +254,7 @@ fn run_hand(
             &player_snapshot,
             &board_str,
             &winnings,
-            &table.event_log,
+            &table.event_log[event_log_start..],
             &ending_stacks,
         );
         return (winnings, history);
@@ -277,7 +276,7 @@ fn run_hand(
             &player_snapshot,
             &board_str,
             &winnings,
-            &table.event_log,
+            &table.event_log[event_log_start..],
             &ending_stacks,
         );
         return (winnings, history);
@@ -570,13 +569,6 @@ fn save_session(collection: &HandCollection) {
     println!("  Session saved → {path}  ({} hand(s))", collection.len());
 }
 
-/// Constructs a [`HandHistory`] from the state captured around a single completed hand.
-///
-/// `player_snapshot` holds `(seat, name, starting_stack, hole_cards)` where
-/// starting stack is captured before forced bets and hole cards immediately after
-/// the deal. `ending_stacks` holds `(seat, chips)` captured from `table.seats`
-/// immediately after `end_hand()`.
-#[allow(clippy::cast_precision_loss)]
 fn build_hand_history(
     hand_num: usize,
     ts_secs: u64,
@@ -587,73 +579,18 @@ fn build_hand_history(
     event_log: &[pkcore::casino::table::event::TableAction],
     ending_stacks: &[(u8, usize)],
 ) -> HandHistory {
-    let results: Vec<ResultEntry> = player_snapshot
-        .iter()
-        .map(|(seat, _, starting_stack, hole_cards)| {
-            let pot_won: f64 = winnings
-                .vec()
-                .iter()
-                .filter(|pw| pw.equity.seats.contains(*seat))
-                .map(|pw| pw.equity.chips as f64)
-                .sum();
-
-            let ending: Option<f64> = ending_stacks.iter().find(|(s, _)| s == seat).map(|(_, c)| *c as f64);
-            let net = ending.map(|e| e - *starting_stack as f64);
-
-            let ranked = hole_cards.as_deref().and_then(|h| rank_seven(h, board_str));
-
-            ResultEntry {
-                seat: *seat,
-                best_hand: ranked.as_ref().map(|r| r.hand.to_string()),
-                hand_rank: ranked.as_ref().map(|r| r.hand_rank),
-                outcome: if pot_won > 0.0 { Outcome::Win } else { Outcome::Lose },
-                net,
-                pot_won: if pot_won > 0.0 { Some(pot_won) } else { None },
-                mucked: None,
-            }
-        })
-        .collect();
-
-    HandHistory {
-        pkcore_version: None,
-        format_version: FORMAT_VERSION,
-        hand: HandMeta {
-            id: format!("interactive-hand-{hand_num:03}"),
-            game: HandVariant::Holdem,
-            timestamp: Some(ts_secs.to_string()),
-            source: Some(RUN_NAME.to_string()),
-            description: None,
-        },
-        table: TableInfo {
-            name: Some(RUN_NAME.to_string()),
-            seats: Some(player_snapshot.len() as u8),
-            button: Some(button),
-            stakes: Stakes {
-                small_blind: SMALL_BLIND as f64,
-                big_blind: BIG_BLIND as f64,
-                ante: None,
-                straddle: None,
-            },
-        },
-        players: player_snapshot
-            .iter()
-            .map(|(seat, name, stack, hole_cards)| PlayerEntry {
-                seat: *seat,
-                name: name.clone(),
-                stack: *stack as f64,
-                hole_cards: hole_cards.clone(),
-                posted: None,
-            })
-            .collect(),
-        board: if board_str.is_empty() {
-            None
-        } else {
-            Some(board_str.to_string())
-        },
-        streets: Streets::from_event_log(event_log),
-        results: Some(results),
-        analysis: None,
-    }
+    HandHistory::from_table_state(
+        hand_num,
+        ts_secs,
+        button,
+        &pkcore::casino::game::ForcedBets::new(SMALL_BLIND, BIG_BLIND),
+        player_snapshot,
+        board_str,
+        winnings,
+        event_log,
+        ending_stacks,
+        RUN_NAME,
+    )
 }
 
 // ── Display helpers ───────────────────────────────────────────────────────────
