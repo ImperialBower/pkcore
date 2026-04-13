@@ -240,11 +240,8 @@ impl fmt::Debug for JokerDecider {
         let name = self
             .active
             .lock()
-            .map(|g| g.name.clone())
-            .unwrap_or_else(|_| "poisoned".to_string());
-        f.debug_struct("JokerDecider")
-            .field("active", &name)
-            .finish()
+            .map_or_else(|_| "poisoned".to_string(), |g| g.name.clone());
+        f.debug_struct("JokerDecider").field("active", &name).finish()
     }
 }
 
@@ -268,8 +265,7 @@ impl BotDecider for JokerDecider {
         let active = self
             .active
             .lock()
-            .map(|g| g.clone())
-            .unwrap_or_else(|e| e.into_inner().clone());
+            .map_or_else(|e| e.into_inner().clone(), |g| g.clone());
         RuleBasedDecider.decide(&active, state)
     }
 }
@@ -372,7 +368,10 @@ mod tests {
             names.insert(active.name.clone());
         }
         // Statistically certain to see more than one distinct profile across 50 rolls.
-        assert!(names.len() > 1, "expected variety after 50 new-hand rolls, got: {names:?}");
+        assert!(
+            names.len() > 1,
+            "expected variety after 50 new-hand rolls, got: {names:?}"
+        );
         // Sanity-check that decide still works after multiple on_new_hand calls.
         let _ = decider.decide(&joker_profile, &snap);
     }

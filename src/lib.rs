@@ -472,7 +472,10 @@ pub enum PKError {
     /// `expected` is the total recorded before forced bets; `actual` is the
     /// total counted after the pot is distributed. Any non-zero difference
     /// indicates chips were created or destroyed during the hand.
-    ChipAuditFailed { expected: usize, actual: usize },
+    ChipAuditFailed {
+        expected: usize,
+        actual: usize,
+    },
 }
 
 impl Display for PKError {

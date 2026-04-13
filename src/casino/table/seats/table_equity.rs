@@ -527,10 +527,12 @@ mod casino__table__seats_seat_equities_tests {
         print!("{equities}");
 
         // Active seats at the same chip level are still OR-merged.
-        assert!(equities
-            .equities()
-            .iter()
-            .any(|e| e.seats == (Seatbit::SEAT_0 | Seatbit::SEAT_4) && e.chips == 9_000));
+        assert!(
+            equities
+                .equities()
+                .iter()
+                .any(|e| e.seats == (Seatbit::SEAT_0 | Seatbit::SEAT_4) && e.chips == 9_000)
+        );
 
         // Both NONE entries are preserved separately — summing them would cause
         // winnings() to count the combined entry as a single contributor,

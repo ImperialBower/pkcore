@@ -3272,6 +3272,10 @@ mod tests {
         assert!(result.is_ok(), "chip audit failed unexpectedly: {result:?}");
 
         // After reset, all chips must be redistributed (25_000 conserved).
-        assert_eq!(25_000, table.table_chip_count(), "chips were not conserved across the hand");
+        assert_eq!(
+            25_000,
+            table.table_chip_count(),
+            "chips were not conserved across the hand"
+        );
     }
 }
