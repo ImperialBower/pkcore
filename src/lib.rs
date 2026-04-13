@@ -467,6 +467,12 @@ pub enum PKError {
     TooManyCards,
     TooManyHands,
     InvalidTwo,
+    /// Chip conservation failed at the end of a hand.
+    ///
+    /// `expected` is the total recorded before forced bets; `actual` is the
+    /// total counted after the pot is distributed. Any non-zero difference
+    /// indicates chips were created or destroyed during the hand.
+    ChipAuditFailed { expected: usize, actual: usize },
 }
 
 impl Display for PKError {
@@ -520,6 +526,9 @@ impl Display for PKError {
             PKError::TooManyCards => "Too Many Cards Error",
             PKError::TooManyHands => "Too Many Hands Error",
             PKError::InvalidTwo => "Invalid Two Error",
+            PKError::ChipAuditFailed { expected, actual } => {
+                &*format!("Chip audit failed: expected {expected} chips, found {actual}")
+            }
         };
         write!(f, "{msg}")
     }

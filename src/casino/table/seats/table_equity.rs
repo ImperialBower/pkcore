@@ -138,8 +138,11 @@ impl TableEquity {
         let mut consolidated: Vec<SeatEquity> = Vec::with_capacity(self.0.len());
 
         for equity in self.0.iter().copied() {
-            // Never merge NONE entries here: NONE | NONE = NONE would drop chips.
-            // Let all NONE entries fall through to the summing block below.
+            // Never merge NONE entries: NONE | NONE = NONE silently drops chips,
+            // and combining them into a single summed entry causes winnings() to
+            // treat two contributors as one (halving their payout when
+            // winner_chips ≤ combined-NONE-chips). Each NONE entry is kept
+            // separate so winnings() counts it as its own contributor.
             if equity.seats != Seatbit::NONE
                 && let Some(last) = consolidated.last_mut()
                 && last.chips == equity.chips
@@ -151,43 +154,7 @@ impl TableEquity {
             }
         }
 
-        // Combine any entries that represent 'no seat' (Seatbit::NONE) into a
-        // single entry by summing their chips. This is useful for cases when
-        // blinds/antes are represented as Seatbit::NONE and should be treated
-        // as a single pool rather than separate entries.
-        let mut none_total: usize = 0;
-        consolidated.retain(|e| {
-            if e.seats == Seatbit::NONE {
-                none_total += e.chips;
-                false
-            } else {
-                true
-            }
-        });
-
-        if none_total > 0 {
-            consolidated.push(SeatEquity::new(none_total, Seatbit::NONE));
-        }
-
-        // It's possible the new combined NONE entry (or other additions) created
-        // duplicate chip counts. Re-sort and re-merge to ensure a normalized
-        // collection where equal chip counts are consolidated by OR'ing seats.
-        // Guard against merging NONE with a real seat entry of the same chip count.
-        consolidated.sort();
-        let mut final_vec: Vec<SeatEquity> = Vec::with_capacity(consolidated.len());
-        for equity in consolidated {
-            if let Some(last) = final_vec.last_mut()
-                && last.chips == equity.chips
-                && last.seats != Seatbit::NONE
-                && equity.seats != Seatbit::NONE
-            {
-                last.seats |= equity.seats;
-            } else {
-                final_vec.push(equity);
-            }
-        }
-
-        self.0 = final_vec;
+        self.0 = consolidated;
     }
 
     /// Returns a reference to the vector of `SeatEquity` instances.
@@ -545,15 +512,10 @@ mod casino__table__seats_seat_equities_tests {
         assert_eq!(equities.ceiling(), 7_000);
     }
 
+    /// NONE entries with *different* chip counts must NOT be summed — each folded
+    /// player is an independent contributor. `winnings()` processes each separately.
     #[test]
     fn consolidate__with_empties() {
-        let expected = TableEquity::new(vec![
-            SeatEquity::new(9_000, Seatbit::SEAT_0),
-            SeatEquity::new(9_000, Seatbit::SEAT_4),
-            SeatEquity::new(5_000, Seatbit::SEAT_3),
-            SeatEquity::new(150, Seatbit::NONE),
-        ]);
-
         let equities = TableEquity::new(vec![
             SeatEquity::new(9_000, Seatbit::SEAT_0),
             SeatEquity::new(9_000, Seatbit::SEAT_4),
@@ -564,7 +526,22 @@ mod casino__table__seats_seat_equities_tests {
 
         print!("{equities}");
 
-        assert_eq!(equities, expected);
+        // Active seats at the same chip level are still OR-merged.
+        assert!(equities
+            .equities()
+            .iter()
+            .any(|e| e.seats == (Seatbit::SEAT_0 | Seatbit::SEAT_4) && e.chips == 9_000));
+
+        // Both NONE entries are preserved separately — summing them would cause
+        // winnings() to count the combined entry as a single contributor,
+        // underpaying by up to one entrant's worth of chips.
+        let none_chips: usize = equities
+            .equities()
+            .iter()
+            .filter(|e| e.seats == Seatbit::NONE)
+            .map(|e| e.chips)
+            .sum();
+        assert_eq!(none_chips, 150);
     }
 
     /// Regression: two folded players who invested **equal** amounts both appear

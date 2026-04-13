@@ -65,6 +65,10 @@ pub enum TableAction {
     TooManyCards,
     InvalidSeatNumber,
     DeckPassesAudit,
+    /// Chip conservation check at end of hand.
+    ///
+    /// `(expected, actual)` — only logged when the counts differ.
+    ChipAuditFailed(usize, usize),
 }
 
 impl TableAction {
@@ -306,6 +310,9 @@ impl Display for TableAction {
             TableAction::TooManyCards => write!(f, "Too many cards to deal"),
             TableAction::InvalidSeatNumber => write!(f, "Invalid Seat Number"),
             TableAction::DeckPassesAudit => write!(f, "Deck passes audit"),
+            TableAction::ChipAuditFailed(expected, actual) => {
+                write!(f, "Chip audit failed: expected {expected} chips, found {actual}")
+            }
             TableAction::ResetTable => write!(f, "Table reset for next hand"),
         }
     }

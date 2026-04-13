@@ -1136,6 +1136,11 @@ pub struct TableNoCell {
     pub bet: usize,
     pub raise_increment: usize,
     pub event_log: Vec<TableAction>,
+    /// Total chips in the system (seats + bets + pot) snapshotted at the start
+    /// of each hand by [`act_forced_bets`](TableNoCell::act_forced_bets).
+    /// Compared against the post-distribution total in
+    /// [`end_hand`](TableNoCell::end_hand) to detect chip conservation failures.
+    pub hand_chip_total: usize,
 }
 
 impl TableNoCell {
@@ -1194,6 +1199,7 @@ impl TableNoCell {
             bet: 0,
             raise_increment: 0,
             event_log,
+            hand_chip_total: 0,
         }
     }
 
@@ -1656,6 +1662,8 @@ impl TableNoCell {
     ///
     /// - `PKError::InvalidSeatNumber` if the SB/BB seat cannot be found.
     pub fn act_forced_bets(&mut self) -> Result<(), PKError> {
+        // Snapshot before any chips move so end_hand() can verify conservation.
+        self.hand_chip_total = self.table_chip_count();
         self.act_forced_bet_small_blind()?;
         self.act_forced_bet_big_blind()?;
         self.phase = GamePhase::ForcedBets;
@@ -2579,7 +2587,19 @@ impl TableNoCell {
             _ => self.showdown_multiway()?,
         };
 
+        // Reset before the audit so the table is left in a clean state even if
+        // the audit fails and the caller decides to continue.
         self.reset();
+
+        let actual = self.table_chip_count();
+        if actual != self.hand_chip_total {
+            self.log(TableAction::ChipAuditFailed(self.hand_chip_total, actual));
+            return Err(PKError::ChipAuditFailed {
+                expected: self.hand_chip_total,
+                actual,
+            });
+        }
+
         Ok(winnings)
     }
 }
@@ -3157,5 +3177,101 @@ mod tests {
 
         let utg_seat = table.seats.get_seat(utg).unwrap();
         assert_eq!(100, utg_seat.player.bet);
+    }
+
+    // ── Chip audit ────────────────────────────────────────────────────────────
+
+    /// Regression test for the NONE-entry-merge bug in `TableEquity::consolidate`.
+    ///
+    /// Before the fix, two folded players who invested the **same** number of chips
+    /// produced two identical `SeatEquity(N, Seatbit::NONE)` entries. The merge
+    /// pass silently collapsed them into one, losing N chips from the payout pool.
+    ///
+    /// Setup: 5 players × 5,000 chips (25,000 total).
+    /// `button=0` → SB=1, BB=2, UTG=3.
+    /// Preflop: everyone calls 100 (pot = 500) then the flop is dealt.
+    /// Flop: seats 3 and 4 fold — both invested exactly 100 chips → two equal NONE
+    /// entries — while seats 0, 1, 2 check through to the river.
+    /// `end_hand()` must return `Ok` and leave 25,000 chips on the table.
+    #[test]
+    fn end_hand__chip_audit_passes_with_equal_fold_investments() {
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 5_000)), // 0 button
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 5_000)),   // 1 SB
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 5_000)), // 2 BB
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Dave".to_string(), 5_000)),  // 3 UTG
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Eve".to_string(), 5_000)),   // 4 UTG+1
+        ]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+
+        // ── Preflop ──
+        table.act_forced_bets().unwrap(); // hand_chip_total snapshotted = 25_000
+        assert_eq!(25_000, table.hand_chip_total);
+        table.deal_cards_to_seats().unwrap();
+
+        // button=0 → UTG = seat 3 (next_occupied_seat_after(0, 3))
+        let utg = table.determine_utg(); // seat 3
+        table.act_call(utg).unwrap(); // Dave calls 100
+        let seat = table.next_to_act(); // seat 4
+        table.act_call(seat).unwrap(); // Eve calls 100
+        let seat = table.next_to_act(); // seat 0 (button)
+        table.act_call(seat).unwrap(); // Alice calls 100
+        let seat = table.next_to_act(); // seat 1 (SB, posted 50 → calls 50 more)
+        table.act_call(seat).unwrap(); // Bob completes to 100
+        let seat = table.next_to_act(); // seat 2 (BB, already in for 100 → checks)
+        table.act_check(seat).unwrap(); // Carol checks
+
+        // All 5 players invested exactly 100 chips. Sweep bets → pot = 500.
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+        table.seats.reset_state_in_hand();
+
+        // ── Flop ── (post-flop UTG = seat after button = seat 1)
+        // Seats 3 (Dave) and 4 (Eve) fold — chips_in_play = 100 each → two equal NONE entries.
+        let seat = table.next_to_act(); // seat 1 (Bob/SB)
+        table.act_check(seat).unwrap();
+        let seat = table.next_to_act(); // seat 2 (Carol/BB)
+        table.act_check(seat).unwrap();
+        let seat = table.next_to_act(); // seat 3 (Dave) — fold, chips_in_play stays 100
+        table.act_fold(seat).unwrap();
+        let seat = table.next_to_act(); // seat 4 (Eve) — fold, chips_in_play stays 100
+        table.act_fold(seat).unwrap();
+        let seat = table.next_to_act(); // seat 0 (Alice/button)
+        table.act_check(seat).unwrap();
+
+        // 3 players remain (seats 0, 1, 2). Advance to turn.
+        table.bring_it_in().unwrap();
+        table.deal_turn().unwrap();
+        table.seats.reset_state_in_hand();
+
+        // ── Turn ── seats 1 → 2 → 0 check through
+        let seat = table.next_to_act();
+        table.act_check(seat).unwrap();
+        let seat = table.next_to_act();
+        table.act_check(seat).unwrap();
+        let seat = table.next_to_act();
+        table.act_check(seat).unwrap();
+
+        // Advance to river.
+        table.bring_it_in().unwrap();
+        table.deal_river().unwrap();
+        table.seats.reset_state_in_hand();
+
+        // ── River ── seats 1 → 2 → 0 check through
+        let seat = table.next_to_act();
+        table.act_check(seat).unwrap();
+        let seat = table.next_to_act();
+        table.act_check(seat).unwrap();
+        let seat = table.next_to_act();
+        table.act_check(seat).unwrap();
+
+        assert!(table.is_game_over(), "river + all-checked → game over");
+
+        // Must not return PKError::ChipAuditFailed.
+        let result = table.end_hand();
+        assert!(result.is_ok(), "chip audit failed unexpectedly: {result:?}");
+
+        // After reset, all chips must be redistributed (25_000 conserved).
+        assert_eq!(25_000, table.table_chip_count(), "chips were not conserved across the hand");
     }
 }
