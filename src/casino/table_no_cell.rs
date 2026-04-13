@@ -2061,10 +2061,7 @@ impl TableNoCell {
 
         for (seat_idx, card_str) in entries {
             let cards = BoxedCards::from_str(card_str)?;
-            let seat = self
-                .seats
-                .get_seat_mut(*seat_idx)
-                .ok_or(PKError::InvalidSeatNumber)?;
+            let seat = self.seats.get_seat_mut(*seat_idx).ok_or(PKError::InvalidSeatNumber)?;
             seat.cards = cards;
         }
         self.phase = GamePhase::DealHoleCards;

@@ -69,7 +69,9 @@ fn test_bot_selfplay_replay_roundtrip() {
         let event_log_start = session.table.event_log.len();
 
         // Shuffles deck, posts forced bets, deals hole cards.
-        session.start_hand().unwrap_or_else(|e| panic!("start_hand failed on hand {hand_num}: {e}"));
+        session
+            .start_hand()
+            .unwrap_or_else(|e| panic!("start_hand failed on hand {hand_num}: {e}"));
 
         // Capture hole cards immediately after deal.
         let hole_cards: Vec<(u8, Option<String>)> = (0..session.table.seats.0.len() as u8)
@@ -77,7 +79,11 @@ fn test_bot_selfplay_replay_roundtrip() {
                 session.table.seats.get_seat(i).filter(|s| !s.is_empty()).map(|s| {
                     (
                         i,
-                        if s.cards.has_cards() { Some(s.cards.sorted_display()) } else { None },
+                        if s.cards.has_cards() {
+                            Some(s.cards.sorted_display())
+                        } else {
+                            None
+                        },
                     )
                 })
             })
@@ -109,8 +115,9 @@ fn test_bot_selfplay_replay_roundtrip() {
 
         let board_str = session.table.board.to_string();
         let event_log = session.table.event_log[event_log_start..].to_vec();
-        let winnings =
-            session.end_hand().unwrap_or_else(|e| panic!("end_hand failed on hand {hand_num}: {e}"));
+        let winnings = session
+            .end_hand()
+            .unwrap_or_else(|e| panic!("end_hand failed on hand {hand_num}: {e}"));
 
         let ending_stacks: Vec<(u8, usize)> = (0..session.table.seats.0.len() as u8)
             .filter_map(|i| {
@@ -153,9 +160,8 @@ fn test_bot_selfplay_replay_roundtrip() {
 
     // Replay every hand and verify consistency.
     for (idx, result) in loaded.replay_all().into_iter().enumerate() {
-        let replay = result.unwrap_or_else(|e| {
-            panic!("replay() returned error for hand {}: {e}", loaded.hands()[idx].hand.id)
-        });
+        let replay =
+            result.unwrap_or_else(|e| panic!("replay() returned error for hand {}: {e}", loaded.hands()[idx].hand.id));
         assert!(
             replay.is_consistent,
             "replay mismatch for hand {}: final stacks = {:?}",

@@ -17,9 +17,7 @@
 //! When running in a terminal the viewer pauses between hands. Pipe the output
 //! or redirect to a file to print all hands without pausing.
 
-use pkcore::hand_history::{
-    Action, ActionType, HandCollection, HandHistory, PlayerEntry, ResultEntry,
-};
+use pkcore::hand_history::{Action, ActionType, HandCollection, HandHistory, PlayerEntry, ResultEntry};
 use std::io::{self, IsTerminal, Write};
 use std::path::PathBuf;
 
@@ -80,15 +78,15 @@ fn main() {
 
 fn print_hand(hand: &HandHistory) {
     // Header
-    let btn = hand.table.button.map(|b| b.to_string()).unwrap_or_else(|| "?".to_string());
+    let btn = hand
+        .table
+        .button
+        .map(|b| b.to_string())
+        .unwrap_or_else(|| "?".to_string());
     let ts = hand.hand.timestamp.as_deref().unwrap_or("");
     println!(
         "─── {}  btn={}  blinds={}/{}  {} ───",
-        hand.hand.id,
-        btn,
-        hand.table.stakes.small_blind as usize,
-        hand.table.stakes.big_blind as usize,
-        ts,
+        hand.hand.id, btn, hand.table.stakes.small_blind as usize, hand.table.stakes.big_blind as usize, ts,
     );
 
     // Starting stacks + hole cards
@@ -169,28 +167,13 @@ fn print_hand(hand: &HandHistory) {
 fn format_action(action: &Action, players: &[PlayerEntry]) -> String {
     let name = player_name(action.seat, players);
     let verb = match action.action {
-        ActionType::Post => format!(
-            "posts {}",
-            action.amount.map(|a| a as usize).unwrap_or(0)
-        ),
+        ActionType::Post => format!("posts {}", action.amount.map(|a| a as usize).unwrap_or(0)),
         ActionType::Fold => "folds".to_string(),
         ActionType::Check => "checks".to_string(),
-        ActionType::Call => format!(
-            "calls {}",
-            action.amount.map(|a| a as usize).unwrap_or(0)
-        ),
-        ActionType::Bet => format!(
-            "bets {}",
-            action.amount.map(|a| a as usize).unwrap_or(0)
-        ),
-        ActionType::Raise => format!(
-            "raises to {}",
-            action.amount.map(|a| a as usize).unwrap_or(0)
-        ),
-        ActionType::AllIn => format!(
-            "ALL-IN ({})",
-            action.amount.map(|a| a as usize).unwrap_or(0)
-        ),
+        ActionType::Call => format!("calls {}", action.amount.map(|a| a as usize).unwrap_or(0)),
+        ActionType::Bet => format!("bets {}", action.amount.map(|a| a as usize).unwrap_or(0)),
+        ActionType::Raise => format!("raises to {}", action.amount.map(|a| a as usize).unwrap_or(0)),
+        ActionType::AllIn => format!("ALL-IN ({})", action.amount.map(|a| a as usize).unwrap_or(0)),
     };
     let ai = if action.all_in == Some(true) { " [all-in]" } else { "" };
     format!("{name:<22}  {verb}{ai}")
@@ -247,8 +230,20 @@ mod tests {
 
     fn make_players() -> Vec<PlayerEntry> {
         vec![
-            PlayerEntry { seat: 0, name: "Alice".to_string(), stack: 1000.0, hole_cards: None, posted: None },
-            PlayerEntry { seat: 1, name: "Bob".to_string(), stack: 1000.0, hole_cards: None, posted: None },
+            PlayerEntry {
+                seat: 0,
+                name: "Alice".to_string(),
+                stack: 1000.0,
+                hole_cards: None,
+                posted: None,
+            },
+            PlayerEntry {
+                seat: 1,
+                name: "Bob".to_string(),
+                stack: 1000.0,
+                hole_cards: None,
+                posted: None,
+            },
         ]
     }
 

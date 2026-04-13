@@ -51,11 +51,11 @@ use crate::PKError;
 use crate::analysis::eval::Eval;
 use crate::analysis::gto::combos::Combos;
 use crate::analysis::hand_rank::HandRank;
+use crate::arrays::HandRanker;
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
-use crate::arrays::HandRanker;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::casino::action::PlayerAction;
@@ -208,7 +208,11 @@ impl HandHistory {
     /// assert_eq!(hh.hand.id, "test-hand-001");
     /// assert!(hh.results.is_some());
     /// ```
-    #[allow(clippy::cast_precision_loss, clippy::too_many_arguments, clippy::cast_possible_truncation)]
+    #[allow(
+        clippy::cast_precision_loss,
+        clippy::too_many_arguments,
+        clippy::cast_possible_truncation
+    )]
     #[must_use]
     pub fn from_table_state(
         hand_num: usize,
@@ -232,8 +236,7 @@ impl HandHistory {
                     .map(|pw| pw.equity.chips as f64)
                     .sum();
 
-                let ending =
-                    ending_stacks.iter().find(|(s, _)| s == seat).map(|(_, c)| *c as f64);
+                let ending = ending_stacks.iter().find(|(s, _)| s == seat).map(|(_, c)| *c as f64);
                 let net = ending.map(|e| e - *starting_stack as f64);
 
                 let ranked = hole_cards.as_deref().and_then(|h| rank_seven(h, board_str));
@@ -267,7 +270,11 @@ impl HandHistory {
                 stakes: Stakes {
                     small_blind: forced.small_blind as f64,
                     big_blind: forced.big_blind as f64,
-                    ante: if forced.ante > 0 { Some(forced.ante as f64) } else { None },
+                    ante: if forced.ante > 0 {
+                        Some(forced.ante as f64)
+                    } else {
+                        None
+                    },
                     straddle: None,
                 },
             },
@@ -281,7 +288,11 @@ impl HandHistory {
                     posted: None,
                 })
                 .collect(),
-            board: if board_str.is_empty() { None } else { Some(board_str.to_string()) },
+            board: if board_str.is_empty() {
+                None
+            } else {
+                Some(board_str.to_string())
+            },
             streets: Streets::from_event_log(event_log),
             results: Some(results),
             analysis: None,
@@ -289,7 +300,7 @@ impl HandHistory {
     }
 
     /// Replays all recorded actions from `streets` through a fresh [`TableNoCell`]
-    /// and verifies the final chip counts match the recorded [`results`].
+    /// and verifies the final chip counts match the recorded `results`.
     ///
     /// This is useful for testing hand-history consistency: generate a session,
     /// serialize to YAML, deserialize, then call `replay()` on each hand to
@@ -360,7 +371,11 @@ impl HandHistory {
     /// assert!(result.is_ok());
     /// assert!(result.unwrap().is_consistent);
     /// ```
-    #[allow(clippy::cast_precision_loss, clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+    #[allow(
+        clippy::cast_precision_loss,
+        clippy::cast_sign_loss,
+        clippy::cast_possible_truncation
+    )]
     pub fn replay(&self) -> Result<ReplayResult, PKError> {
         // ── Build table ──────────────────────────────────────────────────────
         let sb = self.table.stakes.small_blind as usize;
@@ -384,8 +399,7 @@ impl HandHistory {
             .iter()
             .filter_map(|p| p.hole_cards.as_ref().map(|h| (p.seat, h.clone())))
             .collect();
-        let hole_refs: Vec<(u8, &str)> =
-            hole_entries.iter().map(|(s, h)| (*s, h.as_str())).collect();
+        let hole_refs: Vec<(u8, &str)> = hole_entries.iter().map(|(s, h)| (*s, h.as_str())).collect();
         table.inject_hole_cards(&hole_refs)?;
 
         // ── Street replay helper ─────────────────────────────────────────────
@@ -1801,7 +1815,11 @@ fn action_to_player_action(action: &Action) -> Option<PlayerAction> {
 /// fractional blinds), but represent whole-chip counts in practice.  The casts
 /// here are intentional: stacks fit in `usize` and net values are bounded by the
 /// starting stack.
-#[allow(clippy::cast_precision_loss, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+#[allow(
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss
+)]
 fn build_replay_result(
     mut table: TableNoCell,
     players: &[PlayerEntry],
@@ -1812,9 +1830,7 @@ fn build_replay_result(
 
     let final_stacks: Vec<(u8, usize)> = players
         .iter()
-        .filter_map(|p| {
-            table.seats.get_seat(p.seat).map(|s| (p.seat, s.player.chips))
-        })
+        .filter_map(|p| table.seats.get_seat(p.seat).map(|s| (p.seat, s.player.chips)))
         .collect();
 
     let is_consistent = match results {
@@ -1826,15 +1842,15 @@ fn build_replay_result(
             };
             // Expected final stack: starting stack + net result, clamped to 0.
             let expected = (player.stack + net).max(0.0).round() as usize;
-            let actual = final_stacks
-                .iter()
-                .find(|(s, _)| *s == r.seat)
-                .map_or(0, |(_, c)| *c);
+            let actual = final_stacks.iter().find(|(s, _)| *s == r.seat).map_or(0, |(_, c)| *c);
             expected.abs_diff(actual) <= 1
         }),
     };
 
-    Ok(ReplayResult { final_stacks, is_consistent })
+    Ok(ReplayResult {
+        final_stacks,
+        is_consistent,
+    })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2549,9 +2565,24 @@ hands:
             streets: Some(Streets {
                 preflop: Some(PreflopStreet {
                     actions: vec![
-                        Action { seat: 0, action: ActionType::Post, amount: Some(50.0), all_in: None },
-                        Action { seat: 1, action: ActionType::Post, amount: Some(100.0), all_in: None },
-                        Action { seat: 0, action: ActionType::Fold, amount: None, all_in: None },
+                        Action {
+                            seat: 0,
+                            action: ActionType::Post,
+                            amount: Some(50.0),
+                            all_in: None,
+                        },
+                        Action {
+                            seat: 1,
+                            action: ActionType::Post,
+                            amount: Some(100.0),
+                            all_in: None,
+                        },
+                        Action {
+                            seat: 0,
+                            action: ActionType::Fold,
+                            amount: None,
+                            all_in: None,
+                        },
                     ],
                     pot: Some(150.0),
                 }),
@@ -2583,12 +2614,19 @@ hands:
         };
 
         let result = hh.replay().expect("replay should succeed");
-        assert!(result.is_consistent, "chip counts should match: {:?}", result.final_stacks);
+        assert!(
+            result.is_consistent,
+            "chip counts should match: {:?}",
+            result.final_stacks
+        );
     }
 
     #[test]
     fn test_replay_result_struct() {
-        let r = ReplayResult { final_stacks: vec![(0, 500), (1, 1500)], is_consistent: true };
+        let r = ReplayResult {
+            final_stacks: vec![(0, 500), (1, 1500)],
+            is_consistent: true,
+        };
         assert_eq!(r.final_stacks.len(), 2);
         assert!(r.is_consistent);
     }
