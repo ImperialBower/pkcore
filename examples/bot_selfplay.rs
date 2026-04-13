@@ -134,7 +134,10 @@ fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl 
     // Snapshot stacks before forced bets (hand-history convention).
     let stacks: Vec<(u8, String, usize)> = (0..session.table.seats.0.len() as u8)
         .filter_map(|i| {
-            session.table.seats.get_seat(i)
+            session
+                .table
+                .seats
+                .get_seat(i)
                 .filter(|s| !s.is_empty())
                 .map(|s| (i, s.player.handle.clone(), s.player.chips))
         })
@@ -154,7 +157,14 @@ fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl 
     let hole_cards: Vec<(u8, Option<String>)> = (0..session.table.seats.0.len() as u8)
         .filter_map(|i| {
             session.table.seats.get_seat(i).filter(|s| !s.is_empty()).map(|s| {
-                (i, if s.cards.has_cards() { Some(s.cards.sorted_display()) } else { None })
+                (
+                    i,
+                    if s.cards.has_cards() {
+                        Some(s.cards.sorted_display())
+                    } else {
+                        None
+                    },
+                )
             })
         })
         .collect();
@@ -257,7 +267,9 @@ fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl 
 fn chip_counts(table: &TableNoCell) -> Vec<(u8, usize)> {
     (0..table.seats.0.len() as u8)
         .filter_map(|i| {
-            table.seats.get_seat(i)
+            table
+                .seats
+                .get_seat(i)
                 .filter(|s| !s.is_empty())
                 .map(|s| (i, s.player.chips))
         })

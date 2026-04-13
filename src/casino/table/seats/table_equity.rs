@@ -138,13 +138,18 @@ impl TableEquity {
         let mut consolidated: Vec<SeatEquity> = Vec::with_capacity(self.0.len());
 
         for equity in self.0.iter().copied() {
-            if let Some(last) = consolidated.last_mut()
-                && last.chips == equity.chips
-            {
-                last.seats |= equity.seats;
-            } else {
-                consolidated.push(equity);
+            // Never merge NONE entries here: NONE | NONE = NONE would drop chips.
+            // Let all NONE entries fall through to the summing block below.
+            if equity.seats != Seatbit::NONE {
+                if let Some(last) = consolidated.last_mut()
+                    && last.chips == equity.chips
+                    && last.seats != Seatbit::NONE
+                {
+                    last.seats |= equity.seats;
+                    continue;
+                }
             }
+            consolidated.push(equity);
         }
 
         // Combine any entries that represent 'no seat' (Seatbit::NONE) into a
@@ -168,11 +173,14 @@ impl TableEquity {
         // It's possible the new combined NONE entry (or other additions) created
         // duplicate chip counts. Re-sort and re-merge to ensure a normalized
         // collection where equal chip counts are consolidated by OR'ing seats.
+        // Guard against merging NONE with a real seat entry of the same chip count.
         consolidated.sort();
         let mut final_vec: Vec<SeatEquity> = Vec::with_capacity(consolidated.len());
         for equity in consolidated {
             if let Some(last) = final_vec.last_mut()
                 && last.chips == equity.chips
+                && last.seats != Seatbit::NONE
+                && equity.seats != Seatbit::NONE
             {
                 last.seats |= equity.seats;
             } else {
@@ -558,6 +566,38 @@ mod casino__table__seats_seat_equities_tests {
         print!("{equities}");
 
         assert_eq!(equities, expected);
+    }
+
+    /// Regression: two folded players who invested **equal** amounts both appear
+    /// as `SeatEquity(N, NONE)`.  The first consolidation pass must not merge them
+    /// via `NONE | NONE = NONE` (which silently drops one entry's chips).
+    #[test]
+    fn consolidate__equal_none_entries_are_summed_not_merged() {
+        // Seats 2 and 7 have 7296 each (active), seat 5 has 1300 (all-in),
+        // seats 4 and 6 both folded after investing exactly 100 each (big blind).
+        let equities = TableEquity::new(vec![
+            SeatEquity::new(7_296, Seatbit::SEAT_2),
+            SeatEquity::new(7_296, Seatbit::SEAT_7),
+            SeatEquity::new(1_300, Seatbit::SEAT_5),
+            SeatEquity::new(100, Seatbit::NONE),
+            SeatEquity::new(100, Seatbit::NONE),
+        ]);
+
+        // The two 100-chip NONE entries must sum to 200, not collapse to 100.
+        let none_chips: usize = equities
+            .equities()
+            .iter()
+            .filter(|e| e.seats == Seatbit::NONE)
+            .map(|e| e.chips)
+            .sum();
+        assert_eq!(
+            none_chips, 200,
+            "two equal NONE entries must sum to 200, not be merged to 100"
+        );
+
+        // Winner (seat 2) must receive all 16_092 chips: 7296*2 + 1300 + 200.
+        let (winnings, _) = equities.winnings(Seatbit::SEAT_2).unwrap();
+        assert_eq!(winnings, 16_092);
     }
 
     #[test]

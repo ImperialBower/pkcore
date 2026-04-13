@@ -33,7 +33,6 @@ use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-
 const STARTING_CHIPS: usize = 10_000;
 const SMALL_BLIND: usize = 50;
 const BIG_BLIND: usize = 100;
