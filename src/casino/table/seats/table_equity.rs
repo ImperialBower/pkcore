@@ -140,16 +140,15 @@ impl TableEquity {
         for equity in self.0.iter().copied() {
             // Never merge NONE entries here: NONE | NONE = NONE would drop chips.
             // Let all NONE entries fall through to the summing block below.
-            if equity.seats != Seatbit::NONE {
-                if let Some(last) = consolidated.last_mut()
-                    && last.chips == equity.chips
-                    && last.seats != Seatbit::NONE
-                {
-                    last.seats |= equity.seats;
-                    continue;
-                }
+            if equity.seats != Seatbit::NONE
+                && let Some(last) = consolidated.last_mut()
+                && last.chips == equity.chips
+                && last.seats != Seatbit::NONE
+            {
+                last.seats |= equity.seats;
+            } else {
+                consolidated.push(equity);
             }
-            consolidated.push(equity);
         }
 
         // Combine any entries that represent 'no seat' (Seatbit::NONE) into a

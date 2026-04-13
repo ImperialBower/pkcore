@@ -841,7 +841,7 @@ impl HandCollection {
             .duration_since(UNIX_EPOCH)
             .map(|d| d.as_secs())
             .unwrap_or(0);
-        let path = format!("generated/{}_{}.yaml", run_name, ts);
+        let path = format!("generated/{run_name}_{ts}.yaml");
         let yaml = self.to_yaml()?;
         std::fs::create_dir_all("generated")?;
         std::fs::write(&path, &yaml)?;
