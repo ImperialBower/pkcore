@@ -3134,7 +3134,7 @@ mod tests {
         let bb = table.seats.get_seat(bb_seat).unwrap();
         assert_eq!(PlayerState::AllIn(30), bb.player.state);
         assert_eq!(30, bb.player.bet);
-        drop(bb);
+        let _ = bb;
 
         let utg = table.determine_utg();
         assert_eq!(100, table.to_call(utg));

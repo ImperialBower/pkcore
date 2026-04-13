@@ -576,7 +576,7 @@ mod cards_cell_tests {
     #[test]
     #[should_panic]
     fn pile__swap__panics() {
-        let mut cards = cc!("A♠ K♠");
+        let cards = cc!("A♠ K♠");
         let _ = cards.swap(0, Card::QUEEN_SPADES);
     }
 }

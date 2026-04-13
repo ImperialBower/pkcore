@@ -1212,12 +1212,12 @@ mod lib_tests {
     }
 
     #[test]
-    fn betting__is_empty__when_zero() {
+    fn betting_is_empty_when_zero() {
         assert!(TestStack { chips: 0 }.is_empty());
     }
 
     #[test]
-    fn betting__is_empty__when_nonzero() {
+    fn betting_is_empty_when_nonzero() {
         assert!(!TestStack { chips: 100 }.is_empty());
     }
 
@@ -1238,21 +1238,21 @@ mod lib_tests {
     }
 
     #[test]
-    fn shifty__is_shift__true() {
+    fn shifty_is_shift_true() {
         let a = TestShifty(5);
         let b = TestShifty(6);
         assert!(a.is_shift(Box::new(b)));
     }
 
     #[test]
-    fn shifty__is_shift__false() {
+    fn shifty_is_shift_false() {
         let a = TestShifty(5);
         let c = TestShifty(0);
         assert!(!a.is_shift(Box::new(c)));
     }
 
     #[test]
-    fn pkerror__display() {
+    fn pkerror_display() {
         assert_eq!("Too Many Cards Error", PKError::TooManyCards.to_string());
         assert_eq!("Not Enough Cards Error", PKError::NotEnoughCards.to_string());
         assert_eq!("Duplicate Card Error", PKError::DuplicateCard.to_string());
