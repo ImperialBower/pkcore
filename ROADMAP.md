@@ -112,7 +112,7 @@ workspace)
 | [EPIC-16](docs/EPIC-16_DCFR.md) | CFR+ and Discounted CFR — faster convergence variants | Complete |
 | [EPIC-17](docs/EPIC-17_Kuhn_Poker.md) | Kuhn Poker — minimal 3-card game, analytical Nash, CFR validator, interactive examples | Complete |
 | EPIC-18 | Bot Profiles — `BotProfile`, `Playbook`, `PositionRanges`, `PositionalBetting`; position- and table-size-aware YAML-serializable playing styles | Complete |
-| EPIC-19 | Bot Self-Play — drive `casino::table_no_cell::TableNoCell` with `BotProfile` agents; local simulation without gRPC; YAML hand-history recording and replay | In Progress — `bot_selfplay`, `interactive_play`, `replay_play` examples complete; `HandHistory` replay engine complete; `BotDecider` trait and `SimResult` still planned |
+| EPIC-19 | Bot Self-Play — drive `casino::table_no_cell::TableNoCell` with `BotProfile` agents; local simulation without gRPC; YAML hand-history recording and replay | Complete |
 | EPIC-20 | Range Frequencies — optional per-combo frequency in range strings (`AA:0.5`) | Planned |
 
 ---
@@ -168,46 +168,49 @@ The examples use a probabilistic `decide()` method driven by each `BotProfile`'s
 `aggression_factor` and `preferred_bet_sizes`. This is sufficient for simulation
 and manual validation but not yet wired to the gRPC layer.
 
-### Remaining work — formal library types
+### Library types built
 
-The planned library-level types have not yet been built:
+All formal library types are complete. The example's free functions have been
+promoted to proper public types gated on `bot-profiles`:
 
-**`BotDecider` trait** — maps table state to a `PlayerAction`:
+**`BotDecider` trait** (`src/bot/decider.rs`) — object-safe, `Send + Sync`,
+maps a `BotProfile` + `TableSnapshot` to a `PlayerAction`. The same trait is
+used by both the local `SimTable` and the future gRPC agent binaries in Phase 4.
+
+**`RuleBasedDecider`** (`src/bot/decider.rs`) — probabilistic, profile-driven
+concrete decider. Promoted directly from the example's `decide()` free function.
+
+**`JokerDecider`** (`src/bot/decider.rs`) — stateful decider that randomly
+adopts one of the standard reference profiles at the start of each hand,
+then plays it faithfully using `RuleBasedDecider` logic.
+
+**`TableSnapshot`** (`src/bot/table_snapshot.rs`) — read-only, seat-scoped
+view of the table state; the input to every `BotDecider::decide` call.
+
+**`PlayerAction`** (`src/bot/player_action.rs`) — the decision enum returned by
+`BotDecider::decide` and consumed by `TableNoCell::apply_action`.
+
+**`SimTable`** (`src/bot/sim.rs`) — drives a full hand (or many hands) using a
+list of `(seat, BotProfile, Box<dyn BotDecider>)` triples:
 
 ```rust
-pub trait BotDecider {
-    fn decide(&self, profile: &BotProfile, state: &TableSnapshot) -> PlayerAction;
-}
-```
-
-**`SimTable` runner** — drives a full hand (or many hands) using a list of
-`(BotProfile, seat)` pairs:
-
-```rust
-pub struct SimTable {
-    table: TableNoCell,
-    bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)>,
-}
-
+pub struct SimTable { … }
 impl SimTable {
-    pub fn run_hand(&mut self) -> HandResult;
-    pub fn run_n_hands(&mut self, n: usize) -> SimResult;
+    pub fn new(table: TableNoCell, bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)>) -> Self;
+    pub fn with_rule_based(table: TableNoCell, bots: Vec<(u8, BotProfile)>) -> Self;
+    pub fn run_hand(&mut self) -> Result<HandResult, PKError>;
+    pub fn run_n_hands(&mut self, n: usize) -> Result<SimResult, PKError>;
 }
 ```
 
-**`RuleBasedDecider`** — uses hand strength from `Eval`, pot odds, and
-`BotProfile` fields to make decisions. The current example's `decide()`
-function is the prototype for this.
+**`SimResult`** (`src/bot/sim.rs`) — cumulative per-seat profit/loss and action
+counts over a multi-hand session.
 
-**`SimResult`** — per-seat profit/loss and action counts over a session:
+**`ActionCounts`** (`src/bot/sim.rs`) — per-seat action histogram
+(folds, checks, calls, bets, raises, all-ins) with `total()` and `merge()`.
 
-```rust
-pub struct SimResult {
-    pub hands_played: usize,
-    pub net_chips: HashMap<u8, i64>,
-    pub actions_taken: HashMap<u8, ActionCounts>,
-}
-```
+**`HandResult`** (`src/bot/sim.rs`) — single-hand outcome: winnings and
+per-seat action counts.
 
 ### How it connects to the larger platform
 
@@ -221,12 +224,21 @@ before adding gRPC means distributed agents start from a validated foundation.
 | Type | File | Role |
 |------|------|------|
 | `TableNoCell` | `src/casino/table_no_cell.rs` | Game state owner |
-| `PokerSession` | `src/casino/session.rs` | Multi-hand session runner |
+| `PokerSession` | `src/casino/session.rs` | Step-by-step session API (web/async) |
 | `BotProfile` | `src/bot/profile.rs` | Strategy config |
 | `Playbook` | `src/bot/playbook.rs` | Position-aware dispatch |
 | `BettingStrategy` | `src/bot/betting_strategy.rs` | Aggression/sizing |
 | `PositionRanges` | `src/bot/position_ranges.rs` | Preflop range lookup |
 | `Eval` | `src/analysis/eval.rs` | Hand strength |
+| `BotDecider` | `src/bot/decider.rs` | Decision-making trait |
+| `RuleBasedDecider` | `src/bot/decider.rs` | Profile-driven concrete decider |
+| `JokerDecider` | `src/bot/decider.rs` | Random-profile-adopting decider |
+| `TableSnapshot` | `src/bot/table_snapshot.rs` | Read-only table view for decisions |
+| `PlayerAction` | `src/bot/player_action.rs` | Bot decision output enum |
+| `SimTable` | `src/bot/sim.rs` | All-bot batch simulation runner |
+| `SimResult` | `src/bot/sim.rs` | Cumulative session statistics |
+| `ActionCounts` | `src/bot/sim.rs` | Per-seat action histogram |
+| `HandResult` | `src/bot/sim.rs` | Single-hand outcome |
 | `HandHistory` | `src/hand_history.rs` | Per-hand YAML record + replay |
 | `HandCollection` | `src/hand_history.rs` | Session-level collection of hands |
 | `ReplayResult` | `src/hand_history.rs` | Replay consistency check output |

@@ -23,7 +23,6 @@ is written.
 | Working interactive example (`examples/interactive_play.rs`) | **Complete** |
 | All 8 reference profiles loaded from YAML | **Complete** |
 | Per-action play-by-play with hole cards, pot tracking | **Complete** |
-| `PlayerAction` enum (`casino/action.rs`) | **Complete** |
 | `PokerSession` runner (`casino/session.rs`) | **Complete** |
 | `BotProfile::decide` method (`bot/profile.rs`) | **Complete** |
 | `TableNoCell` utilities (`effective_pot`, `count_funded`, `eliminate_busted`) | **Complete** |
@@ -35,8 +34,14 @@ is written.
 | `HandCollection::replay_all()` — batch replay convenience | **Complete** |
 | Replay viewer example (`examples/replay_play.rs`) | **Complete** |
 | Bot self-play → YAML → replay integration test (`tests/replay_consistency.rs`) | **Complete** |
-| `BotDecider` trait (for gRPC Phase 4) | Planned |
-| `SimResult` (per-seat stats) | Planned |
+| `PlayerAction` enum (`bot/player_action.rs`) | **Complete** |
+| `TableSnapshot` (`bot/table_snapshot.rs`) | **Complete** |
+| `BotDecider` trait (`bot/decider.rs`) | **Complete** |
+| `RuleBasedDecider` (`bot/decider.rs`) | **Complete** |
+| `JokerDecider` (`bot/decider.rs`) | **Complete** |
+| `SimTable` runner (`bot/sim.rs`) | **Complete** |
+| `ActionCounts` / `HandResult` (`bot/sim.rs`) | **Complete** |
+| `SimResult` (per-seat stats) (`bot/sim.rs`) | **Complete** |
 
 ---
 
@@ -112,16 +117,19 @@ and for sizing bot bets.
 | `data/bots/*.yaml` | 8 reference profiles (gto, tight_passive, loose_aggressive, tight_aggressive, loose_passive, maniac, abc, short_stack_ninja) |
 | `src/bot/profile.rs` | `BotProfile`, `PlayStyle` newtype, `from_file()` |
 | `src/bot/betting_strategy.rs` | `BettingStrategy`, `bet_size_fractions` serde module |
-| `src/casino/table_no_cell.rs` | `TableNoCell` — the game engine used by the example |
+| `src/bot/player_action.rs` | `PlayerAction` enum |
+| `src/bot/table_snapshot.rs` | `TableSnapshot` — read-only table view for decisions |
+| `src/bot/decider.rs` | `BotDecider` trait, `RuleBasedDecider`, `JokerDecider` |
+| `src/bot/sim.rs` | `SimTable`, `SimResult`, `ActionCounts`, `HandResult` |
+| `src/casino/session.rs` | `PokerSession` — step-by-step API for web/async apps |
+| `src/casino/table_no_cell.rs` | `TableNoCell` — the game engine |
 
 ---
 
-## Library Types Being Built
+## Library Types
 
-The example's `decide()` and `run_hand()` functions are prototypes. The
-implementation below extracts them into proper library types gated on
-`bot-profiles`. Applications like `pkkuhn-web` can then build on them
-without duplicating the session loop.
+All formal library types have been promoted from example free functions into
+proper public types gated on `bot-profiles`.
 
 ### Feature gate
 
@@ -132,13 +140,10 @@ Pure table utilities (`effective_pot`, `count_funded`, `eliminate_busted`,
 
 ---
 
-### `PlayerAction` — `src/casino/action.rs`
+### `PlayerAction` — `src/bot/player_action.rs`
 
-The decision type returned by `BotProfile::decide` and consumed by
-`TableNoCell::apply_action` and `PokerSession::apply_action`.
-
-Lives in `casino/` rather than `bot/` to avoid a circular import: `bot/`
-already imports `casino/`, so the shared type must be in `casino/`.
+The decision type returned by `BotDecider::decide` and consumed by
+`SimTable::apply_action`.
 
 ```rust
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -156,9 +161,11 @@ pub enum PlayerAction {
 
 ### `PokerSession` — `src/casino/session.rs`
 
-Replaces the planned `SimTable`. More general: the caller provides an
-action-resolution closure so the session works equally for all-bot play,
-human-vs-bot, and web apps receiving one action per HTTP request.
+Step-by-step session API. The caller provides an action-resolution closure so
+the session works equally for all-bot play, human-vs-bot, and web apps
+receiving one action per HTTP request. Complements `SimTable` (which owns its
+bots internally) — use `PokerSession` when you need to drive the game loop
+from outside (e.g., a web handler or async task).
 
 ```rust
 pub struct PokerSession {
@@ -212,44 +219,72 @@ session.run_hand(|table, seat| {
 
 ---
 
-### `BotProfile::decide` — `src/bot/profile.rs`
+### `BotDecider` — `src/bot/decider.rs`
 
-Promotes the example's free `decide()` function to a method on `BotProfile`.
-Replaces the planned `RuleBasedDecider` concrete type.
+Object-safe, `Send + Sync` trait that maps a `BotProfile` + `TableSnapshot`
+to a `PlayerAction`. The same trait is used by `SimTable` locally and will
+be used by gRPC agent binaries in Phase 4 — only the transport differs.
 
 ```rust
-#[cfg(feature = "bot-profiles")]
-impl BotProfile {
-    pub fn decide<R: Rng>(
-        &self,
-        table: &TableNoCell,
-        seat: u8,
-        rng: &mut R,
-    ) -> PlayerAction;
+pub trait BotDecider: Send + Sync {
+    fn on_new_hand(&self) {}   // hook for per-hand state reset (e.g. JokerDecider)
+    fn decide(&self, profile: &BotProfile, state: &TableSnapshot) -> PlayerAction;
 }
 ```
 
-Decision logic (same as the example):
-- Reads `to_call`, `chips`, `table.bet`, `table.min_raise()`,
-  `table.forced.big_blind`, and `table.effective_pot()` from the table
-- `aggression_factor` controls fold / call / raise probability split
-- Bet and raise sizes sampled from `preferred_bet_sizes` as pot fractions
+**`RuleBasedDecider`** — `#[derive(Clone, Copy, Debug, Default)]` unit struct.
+Probabilistic decisions driven by `aggression_factor` and `preferred_bet_sizes`.
+Promoted directly from the example's `decide()` free function.
+
+**`JokerDecider`** — stateful decider (wraps a `Mutex<BotProfile>`) that
+randomly adopts one of the standard reference profiles on each `on_new_hand()`
+call, then delegates to `RuleBasedDecider` for in-hand decisions.
+
+---
+
+### `TableSnapshot` — `src/bot/table_snapshot.rs`
+
+Read-only, seat-scoped view of the table, consumed by every `BotDecider::decide`
+call. Constructed via `TableSnapshot::from_table(&table, seat)`.
+
+Key fields: `seat`, `phase`, `board`, `hole_cards`, `pot`, `to_call`,
+`current_bet`, `min_raise`, `my_chips`, `stacks`, `big_blind`.
+
+---
+
+### `SimTable` — `src/bot/sim.rs`
+
+All-bot batch simulation runner. Drives one or many hands using a list of
+`(seat, BotProfile, Box<dyn BotDecider>)` triples. No network, no gRPC.
+
+```rust
+pub struct SimTable { … }
+impl SimTable {
+    pub fn new(table: TableNoCell, bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)>) -> Self;
+    pub fn with_rule_based(table: TableNoCell, bots: Vec<(u8, BotProfile)>) -> Self;
+    pub fn run_hand(&mut self) -> Result<HandResult, PKError>;
+    pub fn run_n_hands(&mut self, n: usize) -> Result<SimResult, PKError>;
+}
+```
+
+**`HandResult`** — single-hand outcome: `winnings: Winnings` and
+`actions: HashMap<u8, ActionCounts>`.
+
+**`SimResult`** — cumulative session statistics: `hands_played`, `net_chips`
+(per-seat i64 profit/loss), `actions_taken` (per-seat `ActionCounts`).
+
+**`ActionCounts`** — per-seat histogram: `folds`, `checks`, `calls`, `bets`,
+`raises`, `all_ins`, with `total()` and `merge()` helpers.
 
 ---
 
 ### `TableNoCell` utilities (ungated)
 
-| Method | Replaces | Description |
-|---|---|---|
-| `effective_pot(&self) -> usize` | `effective_pot()` free fn | `pot + sum(player.bet)` |
-| `count_funded(&self) -> usize` | `count_funded()` free fn | seats with `chips > 0` |
-| `eliminate_busted(&mut self) -> Vec<u8>` | `eliminate_busted()` free fn | clears zero-chip occupied seats; returns their indices |
-| `apply_action(&mut self, seat, PlayerAction) -> Result<(), PKError>` | `apply_action()` free fn | dispatches `PlayerAction` to the right `act_*` method |
-
-`apply_action` is gated on `bot-profiles` (needs `PlayerAction`).
-The other three are always available.
-
----
+| Method | Description |
+|---|---|
+| `effective_pot(&self) -> usize` | `pot + sum(player.bet)` |
+| `count_funded(&self) -> usize` | seats with `chips > 0` |
+| `eliminate_busted(&mut self) -> Vec<u8>` | clears zero-chip seats; returns their indices |
 
 ---
 
@@ -334,52 +369,44 @@ expects a single-hand slice. Both `interactive_play.rs` and
 
 ---
 
-### `BotDecider` trait (Phase 4 — still planned)
-
-The `BotDecider` trait remains on the roadmap for the gRPC agent layer.
-When a `pkdealer` agent binary needs to make decisions, it will implement
-`BotDecider`, which calls `BotProfile::decide` internally. This phase
-doesn't build `BotDecider` — `PokerSession`'s closure-based API is
-sufficient for local simulation and web apps.
-
-### `SimResult` (still planned)
-
-```rust
-pub struct SimResult {
-    pub hands_played: usize,
-    pub net_chips: HashMap<u8, i64>,
-    pub actions_taken: HashMap<u8, ActionCounts>,
-}
-```
-
-Out of scope for this iteration. Can be built on top of `PokerSession`.
-
----
-
 ## Connection to Phase 4
 
-The `BotDecider` trait is what a gRPC agent binary will implement in Phase 4.
-The decision logic is identical; only the transport changes:
+`BotDecider` is the bridge to the gRPC agent layer. A `pkdealer` agent binary
+implements `BotDecider`, calls `decider.decide()`, and sends the result via the
+`Act` RPC. The decision logic is identical to the local simulation — only the
+transport changes:
 
 - **Local simulation**: `SimTable` calls `decider.decide()` directly
 - **gRPC agent**: the agent binary calls `decider.decide()` then sends the
   result via `pkdealer`'s `Act` RPC
 
-pkcore owns the logic. pkdealer owns the networking. Validating decisions
-locally via `SimTable` before adding gRPC means distributed agents start from
-a proven foundation.
+pkcore owns the logic. pkdealer owns the networking. The local `SimTable`
+validates that profiles produce legal, realistic play before any gRPC code
+is written.
 
 ---
 
 ## Verification
 
 ```bash
-# Run the working example
+# Run the self-play example (all 8 profiles over 50 hands)
 cargo run --features bot-profiles --example bot_selfplay
 
-# Confirm the example compiles correctly with the feature gate
-cargo build --features bot-profiles
+# Play interactively vs bots (saves session to generated/*.yaml)
+cargo run --features bot-profiles,hand-histories --example interactive_play
 
-# Confirm nextest still passes (example is excluded without the feature)
-cargo nextest run
+# Replay a saved session (validates every hand through the engine)
+cargo run --features hand-histories --example replay_play
+
+# Build with all EPIC-19 features
+cargo build --features bot-profiles,hand-histories
+
+# Run unit and integration tests
+cargo nextest run --features bot-profiles,hand-histories
+
+# Run doc tests
+cargo test --doc --features bot-profiles,hand-histories
+
+# Run the full replay round-trip integration test
+cargo test --features hand-histories,bot-profiles --test replay_consistency -- --include-ignored
 ```
