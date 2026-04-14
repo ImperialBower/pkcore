@@ -113,7 +113,12 @@ workspace)
 | [EPIC-17](docs/EPIC-17_Kuhn_Poker.md) | Kuhn Poker — minimal 3-card game, analytical Nash, CFR validator, interactive examples | Complete |
 | EPIC-18 | Bot Profiles — `BotProfile`, `Playbook`, `PositionRanges`, `PositionalBetting`; position- and table-size-aware YAML-serializable playing styles | Complete |
 | EPIC-19 | Bot Self-Play — drive `casino::table_no_cell::TableNoCell` with `BotProfile` agents; local simulation without gRPC; YAML hand-history recording and replay | Complete |
-| EPIC-20 | Range Frequencies — optional per-combo frequency in range strings (`AA:0.5`) | Planned |
+| [EPIC-20](docs/EPIC-20_Autonomous_Game_Loop.md) | *(pkdealer)* Autonomous Game Loop — migrate to `PokerSession`, auto-advance streets | Planned |
+| [EPIC-21](docs/EPIC-21_Spectator.md) | *(pkdealer)* Web Spectator — `pkdealer_spectator` Axum+SSE crate, React/Tailwind frontend | Planned |
+| [EPIC-22](docs/EPIC-22_OTel.md) | *(pkdealer)* OTel Instrumentation — spans/metrics, Jaeger + Prometheus + Grafana | Planned |
+| [EPIC-23](docs/EPIC-23_Bot_Agents.md) | *(pkdealer)* Bot Agent Clients — random, rule-based (`BotDecider`), Claude LLM | Planned |
+| [EPIC-24](docs/EPIC-24_Demo.md) | *(pkdealer)* Demo Packaging — Docker Compose, `demo.sh`, Grafana dashboards, Langfuse | Planned |
+| [EPIC-25](docs/EPIC-25_Range_Frequencies.md) | Range Frequencies — optional per-combo frequency in range strings (`AA:0.5`) | Planned |
 
 ---
 
@@ -284,6 +289,18 @@ The Rust side needs a corresponding update:
 A click-to-build range interface where each hand can be toggled between
 `0%`, `25%`, `50%`, `75%`, and `100%` frequency — outputting a
 frequency-annotated range string that feeds into `analyze_gto`.
+
+---
+
+## pkdealer Epics
+
+| Epic | Topic | Status |
+|------|-------|--------|
+| [EPIC-20](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-20_Autonomous_Game_Loop.md) | Autonomous Game Loop — migrate to `PokerSession`, auto-advance streets, remove `unsafe impl Send` | Planned |
+| [EPIC-21](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-21_Spectator.md) | Web Spectator — `pkdealer_spectator` Axum+SSE crate, React/Tailwind frontend, all cards visible | Planned |
+| [EPIC-22](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-22_OTel.md) | OTel Instrumentation — `tracing` + OTLP spans/metrics, Jaeger + Prometheus + Grafana compose stack | Planned |
+| [EPIC-23](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-23_Bot_Agents.md) | Bot Agent Clients — random baseline, rule-based (`BotProfile`+`BotDecider`), Claude LLM with `gen_ai.*` spans | Planned |
+| [EPIC-24](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-24_Demo.md) | Demo Packaging — Docker Compose full stack, `demo.sh`, Grafana dashboards, Langfuse, `DEMO.md` | Planned |
 
 ---
 
