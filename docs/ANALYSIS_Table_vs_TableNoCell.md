@@ -1,4 +1,4 @@
-# Analysis: `Table` vs. `TableNoCell` — Interior Mutability vs. `&mut self`
+# Analysis: `TableCelled` vs. `TableNoCell` — Interior Mutability vs. `&mut self`
 
 **Date:** April 2026  
 **Files:** `src/casino/table.rs`, `src/casino/table_no_cell.rs`  
@@ -8,7 +8,7 @@
 
 ## Background
 
-`casino::table::Table` is the core game engine for a poker hand. It manages the
+`casino::table::TableCelled` is the core game engine for a poker hand. It manages the
 deck, seat assignments, betting rounds, side pots, and showdown. It was built
 using **interior mutability** — a Rust pattern where a type is mutated through a
 shared `&self` reference rather than through `&mut self`.
@@ -24,7 +24,7 @@ exist to:
 
 ---
 
-## Interior Mutability in `Table`
+## Interior Mutability in `TableCelled`
 
 Rust's ownership rules normally require `&mut T` to mutate `T`. Interior
 mutability circumvents this with types from `std::cell` that perform a
@@ -35,10 +35,10 @@ runtime borrow check (or none at all, for `Cell<T: Copy>`):
 | `Cell<T>` | None (`T: Copy` only) | Cheap scalar mutations |
 | `RefCell<T>` | Panic on aliased `borrow_mut` | Heap-allocated mutations |
 
-`Table` wraps every mutable piece of state in one of these:
+`TableCelled` wraps every mutable piece of state in one of these:
 
 ```
-Table {
+TableCelled {
     phase:          RefCell<GamePhase>          // set_phase() via borrow_mut
     seats:          Seats(Box<[SeatCell]>)      // SeatCell = RefCell<Seat>
     button:         BintCell                    // Cell<u8> with bounds checking
@@ -63,7 +63,7 @@ Player {
 }
 ```
 
-The result: **every `Table` method can take `&self`**, even those that post
+The result: **every `TableCelled` method can take `&self`**, even those that post
 blinds, deal cards, log events, or collect bets.
 
 ---
@@ -72,7 +72,7 @@ blinds, deal cards, log events, or collect bets.
 
 Every wrapper is replaced with the plain type it wraps:
 
-| `Table` field type | `TableNoCell` field type |
+| `TableCelled` field type | `TableNoCell` field type |
 |---|---|
 | `RefCell<GamePhase>` | `GamePhase` |
 | `Seats(Box<[SeatCell]>)` | `SeatsNoCell(Vec<SeatNoCell>)` |
@@ -99,7 +99,7 @@ Two interior-mutability utilities were also replaced with explicit equivalents:
 
 The signature change is the most visible consequence of the design difference.
 
-### `Table` (interior mutability)
+### `TableCelled` (interior mutability)
 
 ```rust
 // All mutating methods still take &self:
@@ -110,7 +110,7 @@ pub fn bring_it_in(&self) -> Result<usize, PKError>
 pub fn end_hand(&self) -> Result<Winnings, PKError>
 ```
 
-A single `&Table` reference can be passed to any number of functions, and each
+A single `&TableCelled` reference can be passed to any number of functions, and each
 can independently mutate through Cells without conflict — as long as no
 `RefCell` is double-borrowed at runtime.
 
@@ -137,13 +137,13 @@ The most concrete illustration is the phase functions in the two example files.
 ### `examples/the_hand.rs`
 
 ```rust
-fn setup(table: &Table) -> Result<(), PKError> {
+fn setup(table: &TableCelled) -> Result<(), PKError> {
     table.act_forced_bets().expect("forced bets failed");
     table.deal_cards_to_seats().expect("failed to deal hole cards");
     // ...
 }
 
-fn preflop(table: &Table) -> Result<usize, PKError> {
+fn preflop(table: &TableCelled) -> Result<usize, PKError> {
     table.act_bet(3, 2_100)?;
     table.act_raise(4, 5_000)?;
     // ...
@@ -176,7 +176,7 @@ machine-verified annotation that this function will change the table's state.
 
 ## Borrow Checker Implications Inside `TableNoCell`
 
-The shift to `&mut self` introduces a friction pattern that `Table` avoids
+The shift to `&mut self` introduces a friction pattern that `TableCelled` avoids
 through Cells: **you cannot hold a mutable borrow on a sub-field while calling
 a method that also needs `&mut self`**.
 
@@ -197,18 +197,18 @@ pub fn player_mucks_cards(&mut self, seat_number: u8) {
 }
 ```
 
-`Table` avoids this entirely. Because `RefCell` borrows are dynamic, `Table`
+`TableCelled` avoids this entirely. Because `RefCell` borrows are dynamic, `TableCelled`
 uses `drop(seat)` as a convention rather than a requirement:
 
 ```rust
-// Table: drop() is idiomatic but the borrow checker doesn't require it
+// TableCelled: drop() is idiomatic but the borrow checker doesn't require it
 let seat = self.get_seat_mut(seat_number);
 // ... do work ...
 drop(seat); // explicit, but only for clarity
 self.event_log.log(TableAction::MuckPlayerCards(...));
 ```
 
-In `TableNoCell`, the compiler **enforces** the scope discipline. In `Table`,
+In `TableNoCell`, the compiler **enforces** the scope discipline. In `TableCelled`,
 it is a convention that can silently be forgotten without compilation failure —
 only a runtime `RefCell` panic would reveal the mistake.
 
@@ -218,7 +218,7 @@ only a runtime `RefCell` panic would reveal the mistake.
 
 ### The `DrainableBintCell` Replacement
 
-`Table::deal_cards_to_seats` uses a `DrainableBintCell` — a circular counter
+`TableCelled::deal_cards_to_seats` uses a `DrainableBintCell` — a circular counter
 that steps through seat indices and drains as it goes. `TableNoCell` replaces
 this with a direct double loop:
 
@@ -241,7 +241,7 @@ rather than encapsulated in a custom iterator type.
 
 ### Showdown Without Shared References
 
-`Table::end_hand` delegates to `Showdown::process(table)`, which can call back
+`TableCelled::end_hand` delegates to `Showdown::process(table)`, which can call back
 into `table.seats.bring_it_in()` and other `&self` methods freely because all
 mutations go through Cells.
 
@@ -253,7 +253,7 @@ inside `impl TableNoCell` rather than in a separate `Showdown` struct.
 
 ### Deck Injection
 
-`Table` has `nlh_primed(seats, &CardsCell, forced)` — a constructor that accepts
+`TableCelled` has `nlh_primed(seats, &CardsCell, forced)` — a constructor that accepts
 a pre-built deck wrapped in `CardsCell`. `TableNoCell` has no equivalent, but
 none is needed: because `deck` is a plain `pub Cards` field, the example simply
 assigns to it after construction:
@@ -263,7 +263,7 @@ let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
 table.deck = Cards::deck_primed(&TestData::the_hand_cards_dealable());
 ```
 
-This is impossible with `Table` because `deck: CardsCell` is private. Interior
+This is impossible with `TableCelled` because `deck: CardsCell` is private. Interior
 mutability required the private wrapper; plain mutability makes the field
 directly accessible.
 
@@ -273,7 +273,7 @@ directly accessible.
 
 ### Compile-time Safety
 
-| | `Table` | `TableNoCell` |
+| | `TableCelled` | `TableNoCell` |
 |---|---|---|
 | Aliased mutation | Allowed (Cells) | Prevented at compile time |
 | Double-borrow panics | Possible at runtime (`RefCell`) | Impossible |
@@ -284,25 +284,25 @@ no free-function showdown) for a stronger correctness guarantee.
 
 ### Flexibility
 
-| | `Table` | `TableNoCell` |
+| | `TableCelled` | `TableNoCell` |
 |---|---|---|
-| Multiple `&Table` references | Yes | No (only one `&mut` at a time) |
+| Multiple `&TableCelled` references | Yes | No (only one `&mut` at a time) |
 | Callbacks into table from closures | Straightforward | Requires borrow juggling |
 | Thread-safety | No (Cell/RefCell are `!Sync`) | No (would need `Mutex`/`RwLock`) |
 
 Interior mutability is not automatically thread-safe — `Cell` and `RefCell`
 are both `!Sync`. Neither design can be shared across threads without
-additional synchronisation. The `&self` API of `Table` looks shared-friendly,
+additional synchronisation. The `&self` API of `TableCelled` looks shared-friendly,
 but it is not.
 
 ### Observability
 
-`Table`'s `event_log: TableLog(RefCell<Vec<TableAction>>)` has a custom
+`TableCelled`'s `event_log: TableLog(RefCell<Vec<TableAction>>)` has a custom
 `Display` implementation. `TableNoCell`'s `event_log: Vec<TableAction>` does
 not — callers iterate directly:
 
 ```rust
-// Table
+// TableCelled
 println!("{}", table.event_log);
 
 // TableNoCell
@@ -342,8 +342,8 @@ hand.
 
 Neither design is universally superior.
 
-**Use `Table` when:**
-- The poker engine is embedded in a larger structure that holds `&Table`
+**Use `TableCelled` when:**
+- The poker engine is embedded in a larger structure that holds `&TableCelled`
   references across multiple components (e.g. an observer pattern where
   multiple readers watch the same table).
 - The API boundary requires `&self` for trait object compatibility.
@@ -369,6 +369,6 @@ runtime `RefCell` panics under aliased borrows.
 | Traditional mutability version | `src/casino/table_no_cell.rs` |
 | Interior mutability example | `examples/the_hand.rs` |
 | Traditional mutability example | `examples/the_hand_no_cell.rs` |
-| Showdown logic (for `Table`) | `src/casino/table/showdown.rs` |
+| Showdown logic (for `TableCelled`) | `src/casino/table/showdown.rs` |
 | Player with interior mutability | `src/casino/player.rs` |
 | Player without interior mutability | `src/casino/table_no_cell.rs` (`PlayerNoCell`) |

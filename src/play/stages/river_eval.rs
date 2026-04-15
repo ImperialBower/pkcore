@@ -12,7 +12,7 @@ use crate::analysis::eval::Eval;
 use crate::arrays::HandRanker;
 use crate::arrays::seven::Seven;
 use crate::play::game::Game;
-use crate::prelude::Table;
+use crate::prelude::TableCelled;
 use std::fmt::{Display, Formatter};
 use wincounter::results::WinResults;
 use wincounter::wins::Wins;
@@ -122,10 +122,10 @@ impl TryFrom<Game> for RiverEval {
     }
 }
 
-impl TryFrom<&Table> for RiverEval {
+impl TryFrom<&TableCelled> for RiverEval {
     type Error = PKError;
 
-    fn try_from(table: &Table) -> Result<Self, Self::Error> {
+    fn try_from(table: &TableCelled) -> Result<Self, Self::Error> {
         RiverEval::try_from(Game::try_from(table)?)
     }
 }

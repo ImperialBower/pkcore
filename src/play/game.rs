@@ -10,7 +10,7 @@ use crate::arrays::six::Six;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
 use crate::play::stages::turn_eval::TurnEval;
-use crate::prelude::Table;
+use crate::prelude::TableCelled;
 use crate::{Card, Cards, PKError, Pile, TheNuts};
 use std::fmt::{Display, Formatter};
 use wincounter::results::WinResults;
@@ -610,10 +610,10 @@ impl Display for Game {
     }
 }
 
-impl TryFrom<Table> for Game {
+impl TryFrom<TableCelled> for Game {
     type Error = PKError;
 
-    fn try_from(table: Table) -> Result<Self, Self::Error> {
+    fn try_from(table: TableCelled) -> Result<Self, Self::Error> {
         Ok(Game {
             hands: HoleCards::from(table.seats),
             board: Board::try_from(table.board)?,
@@ -621,10 +621,10 @@ impl TryFrom<Table> for Game {
     }
 }
 
-impl TryFrom<&Table> for Game {
+impl TryFrom<&TableCelled> for Game {
     type Error = PKError;
 
-    fn try_from(table: &Table) -> Result<Self, Self::Error> {
+    fn try_from(table: &TableCelled) -> Result<Self, Self::Error> {
         Ok(Game {
             hands: HoleCards::from(table.seats.clone()),
             board: Board::try_from(table.board.clone())?,

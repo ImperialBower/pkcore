@@ -37,7 +37,7 @@ the side pot.
 `bring_it_in()` collects the current round's **`bet`** field into the pot but
 **does not reset `chips_in_play`**.  `chips_in_play` is a running total of every
 chip a player has committed to the pot across all streets.  It is only cleared
-by `act_close_it_out()` (called from `Table::close_it_out()`).
+by `act_close_it_out()` (called from `TableCelled::close_it_out()`).
 
 Therefore `table.determine_hand_equity()` — which reads `chips_in_play` — can be
 called at any point before `close_it_out()` and will return the full cumulative

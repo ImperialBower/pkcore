@@ -49,7 +49,7 @@ pub use crate::casino::player::Player;
 pub use crate::casino::state::*;
 pub use crate::casino::table;
 pub use crate::casino::table::GameState;
-pub use crate::casino::table::Table;
+pub use crate::casino::table::TableCelled;
 pub use crate::casino::table::event::TableAction;
 pub use crate::casino::table::event::TableLog;
 pub use crate::casino::table::seats::Seats;

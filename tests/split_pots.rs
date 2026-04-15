@@ -2,7 +2,7 @@
 mod casino__table_split_pot_tests {
     use pkcore::prelude::*;
 
-    fn preroll(index: &str) -> Table {
+    fn preroll(index: &str) -> TableCelled {
         let table = TestData::split_pot_table(&cc!(index));
 
         assert_eq!(46, table.deck.len());

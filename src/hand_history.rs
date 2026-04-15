@@ -837,9 +837,7 @@ impl HandCollection {
     /// ```
     pub fn save(&self, run_name: &str) -> Result<String, Box<dyn std::error::Error>> {
         use std::time::{SystemTime, UNIX_EPOCH};
-        let ts = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map_or(0, |d| d.as_secs());
+        let ts = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs());
         let path = format!("generated/{run_name}_{ts}.yaml");
         let yaml = self.to_yaml()?;
         std::fs::create_dir_all("generated")?;

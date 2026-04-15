@@ -1,4 +1,4 @@
-//! A version of [`Table`](crate::casino::table::Table) that uses traditional
+//! A version of [`Table`](crate::casino::table::TableCelled) that uses traditional
 //! `&mut self` Rust mutability instead of interior mutability (`Cell`,
 //! `RefCell`, `BintCell`, `CardsCell`, etc.).
 //!
@@ -2265,7 +2265,7 @@ impl TableNoCell {
     /// Builds a [`Game`] from the current board and in-hand seat hole cards.
     ///
     /// Useful for invoking analysis (flop/turn/river evaluation) without the
-    /// `TryFrom<&Table>` infrastructure that [`Table`](crate::casino::table::Table) provides.
+    /// `TryFrom<&Table>` infrastructure that [`Table`](crate::casino::table::TableCelled) provides.
     ///
     /// # Errors
     ///

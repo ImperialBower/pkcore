@@ -56,7 +56,7 @@
 - `ForcedBets` (src/casino/game.rs) [already in prelude]
 - `Player` (src/casino/player.rs) [already in prelude]
 - `GameState` (src/casino/table.rs) [already in prelude]
-- `Table` (src/casino/table.rs) [already in prelude]
+- `TableCelled` (src/casino/table.rs) [already in prelude]
 - `TableAction` (src/casino/table/event.rs) [already in prelude]
 - `TableLog` (src/casino/table/event.rs) [already in prelude]
 - `Seats` (src/casino/table/seats.rs) [already in prelude]

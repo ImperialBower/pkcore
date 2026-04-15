@@ -15,7 +15,7 @@ fn main() {
     println!("=== GameState Demo ===\n");
 
     // Create a default 6-handed No Limit Hold'em table
-    let table = Table::default();
+    let table = TableCelled::default();
 
     // Get and display the initial game state
     println!("Initial State:");

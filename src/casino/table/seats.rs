@@ -1056,7 +1056,7 @@ mod casino__table__seats_tests {
     use super::*;
     use crate::casino::game::ForcedBets;
     use crate::casino::player::Player;
-    use crate::casino::table::Table;
+    use crate::casino::table::TableCelled;
     use crate::prelude::*;
     use crate::util::data::TestData;
 
@@ -1256,7 +1256,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn reset_state() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
         let _ = table.act_forced_bets();
         let _seat3_folded_amount = table.act_fold(3).unwrap();
         let _seat4_folded_amount = table.act_fold(4).unwrap();
@@ -1412,7 +1412,7 @@ mod casino__table__seats_tests {
             "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣"
         );
 
-        let table = Table::nlh_primed(seats, &cards, ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_primed(seats, &cards, ForcedBets::new(50, 100));
 
         table.act_forced_bets().expect("forced bets should post");
         assert_eq!(3, table.next_to_act());
@@ -1450,7 +1450,7 @@ mod casino__table__seats_tests {
             "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣"
         );
 
-        let table = Table::nlh_primed(seats, &cards, ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_primed(seats, &cards, ForcedBets::new(50, 100));
 
         table.act_forced_bets().expect("forced bets should post");
         assert_eq!(3, table.next_to_act());

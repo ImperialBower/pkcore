@@ -27,7 +27,7 @@ instance. A gRPC version would:
                                                ▼
                                         ┌──────────────┐
                                         │   Dealer     │
-                                        │   + Table    │
+                                        │   + TableCelled    │
                                         └──────────────┘
 ```
 

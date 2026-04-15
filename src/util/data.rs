@@ -15,7 +15,7 @@ use crate::casino::table::seats::seat::Seat;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
-use crate::prelude::{BoxedCards, ForcedBets, Forgiving, PlayerState, Seats, Table};
+use crate::prelude::{BoxedCards, ForcedBets, Forgiving, PlayerState, Seats, TableCelled};
 use crate::{Card, Cards, Pile};
 use std::str::FromStr;
 use wincounter::win::Win;
@@ -359,9 +359,9 @@ impl TestData {
     /// Player #3 45.4% (45.13%/0.29%) [618604/4035]
     /// ```
     #[must_use]
-    pub fn min_table() -> Table {
+    pub fn min_table() -> TableCelled {
         let primed = cards!("A♦ 5♦ 6♠ Q♣ 5♣ 6♥ 9♣ 6♦ 5♥ 5♠ 8♠");
-        Table::nlh_primed(
+        TableCelled::nlh_primed(
             Seats::new(TestData::min_players()),
             &CardsCell::from(Cards::deck_primed(&primed)),
             ForcedBets::new(50, 100),
@@ -369,8 +369,8 @@ impl TestData {
     }
 
     #[must_use]
-    pub fn the_hand_table() -> Table {
-        Table::nlh_primed(
+    pub fn the_hand_table() -> TableCelled {
+        TableCelled::nlh_primed(
             Seats::new(TestData::the_hand_players()),
             &CardsCell::from(Cards::deck_primed(&TestData::the_hand_cards_dealable())),
             ForcedBets::new(50, 100),
@@ -390,7 +390,7 @@ impl TestData {
         Vec::from(&TestData::the_hand_seats()[2..6])
     }
 
-    pub fn split_pot_table(cards: &CardsCell) -> Table {
+    pub fn split_pot_table(cards: &CardsCell) -> TableCelled {
         let rich = Seat {
             player: Player::new_with_chips("Rich Man".to_string(), 10_000),
             cards: boxed!("Q♦ Q♣"),
@@ -405,10 +405,10 @@ impl TestData {
         };
         let seats = Seats::new(vec![rich, poor, average]);
 
-        Table::nlh_primed(seats, cards, ForcedBets::new(50, 100))
+        TableCelled::nlh_primed(seats, cards, ForcedBets::new(50, 100))
     }
 
-    pub fn split_pot_table_with_blinds(cards: &CardsCell) -> Table {
+    pub fn split_pot_table_with_blinds(cards: &CardsCell) -> TableCelled {
         let small = Seat {
             player: Player::new_with_chips("Small Blind".to_string(), 6_000),
             cards: boxed!("2♦ 7♣"),
@@ -431,14 +431,14 @@ impl TestData {
         };
         let seats = Seats::new(vec![rich, small, big, poor, average]);
 
-        Table::nlh_primed(seats, cards, ForcedBets::new(50, 100))
+        TableCelled::nlh_primed(seats, cards, ForcedBets::new(50, 100))
     }
 
     /// # Panics
     ///
     /// Will crash if the created table can't do forced bets.
     #[must_use]
-    pub fn preroll_split_pot_with_blinds(index: &str) -> Table {
+    pub fn preroll_split_pot_with_blinds(index: &str) -> TableCelled {
         let table = TestData::split_pot_table_with_blinds(&cc!(index));
 
         table.act_forced_bets().expect("forced bets should post");
@@ -452,7 +452,7 @@ impl TestData {
     ///
     /// This being a test class I am OK with using expects.
     #[must_use]
-    pub fn preroll_split_pot_with_blinds__to_completion(index: &str) -> Table {
+    pub fn preroll_split_pot_with_blinds__to_completion(index: &str) -> TableCelled {
         let table = TestData::preroll_split_pot_with_blinds(index);
 
         table.act_all_in(3).expect("seat 3 should be able to go all-in");

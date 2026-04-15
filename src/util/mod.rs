@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::fs::File;
 
-use crate::prelude::Table;
+use crate::prelude::TableCelled;
 use std::io::{self, BufRead};
 use std::path::Path;
 use std::str::Utf8Error;
@@ -48,7 +48,7 @@ impl Util {
         }
     }
 
-    pub fn commentary_action_to(table: &Table) {
+    pub fn commentary_action_to(table: &TableCelled) {
         println!();
         if let Some(action) = table.commentary_last_player_action() {
             println!("{action}");

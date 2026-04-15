@@ -86,7 +86,7 @@ The difference is entirely in the dealer/game layer, not in card ranking.
 
 **Design notes:**
 - `pkcore` already handles hand ranking for NLHE; no new ranking structs needed
-- The change is in `Table` / `Dealer` betting logic:
+- The change is in `TableCelled` / `Dealer` betting logic:
   - Pre-flop and flop: bets/raises are fixed at one small bet (e.g. 2x BB)
   - Turn and river: bets/raises are fixed at one big bet (2x small bet)
   - Maximum 4 raises per street (cap), except heads-up where raises are unlimited
@@ -119,14 +119,14 @@ cards. Best 5-card hand from personal 7 cards wins.
   - Fourth–Sixth Street: 1 card dealt face-up per street
   - Seventh Street ("The River"): final card dealt face-down
   - Action order determined by best visible hand each street (not position)
-- The bring-in and up-card visibility rules mean `Table`/`Dealer` need a Stud
+- The bring-in and up-card visibility rules mean `TableCelled`/`Dealer` need a Stud
   mode — this is the significant complexity, not the hand ranking
 - `pkcore`'s `Board` type is Hold'em-centric (flop/turn/river); Stud needs a
   different state representation for per-player up-cards
 
 **Suggested phasing:**
 1. Implement `StudHand` ranking (easy — reuses existing `Seven` machinery)
-2. Stud street model and `Table` support (hard — new state machine)
+2. Stud street model and `TableCelled` support (hard — new state machine)
 
 ---
 

@@ -10,7 +10,7 @@ web spectator, OTel observability.
 ## Ecosystem Overview
 
 ```
-pkcore (Rust)          — core poker library (card eval, GTO, Table, Dealer)
+pkcore (Rust)          — core poker library (card eval, GTO, TableCelled, Dealer)
 ├── pkdealer           — gRPC poker table server + AI agent clients
 │   ├── pkdealer_proto         — protobuf definitions
 │   ├── pkdealer_service       — gRPC server
@@ -114,8 +114,8 @@ network calls.
 Before touching any code:
 
 1. What's actually in pkdealer today? (roadmap said "only Ping" — was this still true?)
-2. Which pkcore types drive the server? (`Table`, `Dealer`, `Manager`, `Player`)
-3. How does turn/action sequencing work in pkcore? Does `Table` enforce game phase ordering?
+2. Which pkcore types drive the server? (`TableCelled`, `Dealer`, `Manager`, `Player`)
+3. How does turn/action sequencing work in pkcore? Does `TableCelled` enforce game phase ordering?
 4. What's the broadcast event model? What events flow to spectators?
 5. Frontend framework? (React vs Vue listed as TBD in ROADMAP.md)
 6. Auth token strategy? Does pkdealer already have auth plumbing?

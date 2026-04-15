@@ -1,7 +1,7 @@
 use crate::PKError;
 use crate::casino::cashier::chips::Stack;
 use crate::casino::table::winnings::{PotWin, Winnings};
-use crate::prelude::{Eval, Pile, SeatEquity, Seatbit, Seven, Table, TableAction, TableEquity};
+use crate::prelude::{Eval, Pile, SeatEquity, Seatbit, Seven, TableAction, TableCelled, TableEquity};
 use std::collections::{HashMap, HashSet};
 
 pub struct Showdown;
@@ -10,7 +10,7 @@ impl Showdown {
     /// # Errors
     ///
     /// `PKError::Fubar` if noone is in hand
-    pub fn process(table: &Table) -> Result<Winnings, PKError> {
+    pub fn process(table: &TableCelled) -> Result<Winnings, PKError> {
         table.log_info(TableAction::EndHand);
 
         if !table.is_game_over() {
@@ -32,7 +32,7 @@ impl Showdown {
         Ok(winnings)
     }
 
-    fn process_single_seat_in_hand(table: &Table) -> Result<Winnings, PKError> {
+    fn process_single_seat_in_hand(table: &TableCelled) -> Result<Winnings, PKError> {
         // Keep the active seats Vec alive so we can reference its first element
         // without borrowing a temporary that gets dropped.
         let seats_alive = table.seats.active_in_hand();
@@ -74,7 +74,7 @@ impl Showdown {
         Ok(Winnings::from(PotWin { equity, eval }))
     }
 
-    fn process_headsup(table: &Table) -> Result<Winnings, PKError> {
+    fn process_headsup(table: &TableCelled) -> Result<Winnings, PKError> {
         // Heads-up is effectively the same flow as Table::end_hand for >1 players
         // Build a case eval, close out the bets into the pot, mark seats as in
         // showdown, split the pot between the winners and award chips. Return
@@ -154,7 +154,7 @@ impl Showdown {
 
     /// TODO: refactor me
     #[allow(clippy::too_many_lines)]
-    fn process_multiway(table: &Table) -> Result<Winnings, PKError> {
+    fn process_multiway(table: &TableCelled) -> Result<Winnings, PKError> {
         // Capture equity BEFORE close_it_out so chips_in_play still reflects
         // each seat's cumulative pot commitment (used to compute side pots).
         let mut equity: TableEquity = table.determine_hand_equity();

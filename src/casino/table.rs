@@ -121,7 +121,7 @@ impl std::fmt::Display for GameState {
 ///
 /// I have a strong love/hate relationship with this struct. In many ways it's a mutability hack
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Table {
+pub struct TableCelled {
     pub id: Uuid,
     pub name: String,
     pub game: GameType,
@@ -138,7 +138,7 @@ pub struct Table {
     pub event_log: TableLog,
 }
 
-impl Table {
+impl TableCelled {
     /// Factory method used to set up seats for a default instance.
     #[must_use]
     pub fn generate_seats(count: u8, cards_per: u8) -> Seats {
@@ -156,7 +156,7 @@ impl Table {
 
     #[must_use]
     pub fn nlh_primed(seats: Seats, dealt: &CardsCell, forced_bets: ForcedBets) -> Self {
-        let table = Table::nlh_from_seats(seats, forced_bets);
+        let table = TableCelled::nlh_from_seats(seats, forced_bets);
         table.deck.0.swap(&dealt.0);
         table
     }
@@ -199,7 +199,7 @@ impl Table {
 
         let number_players = seats.size();
 
-        Table {
+        TableCelled {
             id: uuid,
             name: "No Limit Hold'em Table".to_string(),
             game: GameType::NoLimitHoldem,
@@ -703,7 +703,7 @@ impl Table {
 
     /// Places a known set of `cards` directly into a seat, removing them from the deck.
     ///
-    /// Used when reconstructing a [`Table`] from a [`pkstate::PKState`] snapshot where
+    /// Used when reconstructing a [`TableCelled`] from a [`pkstate::PKState`] snapshot where
     /// the hole cards are already known rather than drawn randomly.
     pub fn force_deal_to_seat(&self, seat_number: u8, cards: Cards) {
         self.deck.remove_all(&CardsCell::from(&cards));
@@ -880,7 +880,7 @@ impl Table {
     /// use pkcore::prelude::*;
     ///
     /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
-    /// let table = Table::nlh_from_seats(seats.clone(), ForcedBets::new(50, 100));
+    /// let table = TableCelled::nlh_from_seats(seats.clone(), ForcedBets::new(50, 100));
     ///
     /// assert_eq!(8, seats.size());
     /// assert_eq!(table.determine_big_blind(), 2, "If seat 0 is the dealer, than seat 2 is the big blind");
@@ -989,7 +989,7 @@ impl Table {
     /// use pkcore::prelude::*;
     ///
     /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
-    /// let table = Table::nlh_from_seats(seats.clone(), ForcedBets::new(50, 100));
+    /// let table = TableCelled::nlh_from_seats(seats.clone(), ForcedBets::new(50, 100));
     ///
     /// assert_eq!(8, seats.size());
     /// assert_eq!(1, table.determine_small_blind(), "If seat 0 is the dealer, than seat 1 is the small blind");
@@ -1008,11 +1008,11 @@ impl Table {
     /// ```
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::table::seats::Seats;
-    /// use pkcore::casino::table::Table;
+    /// use pkcore::casino::table::TableCelled;
     /// use pkcore::util::data::TestData;
     ///
     /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
-    /// let table = Table::nlh_from_seats(seats.clone(), ForcedBets::new(50, 100));
+    /// let table = TableCelled::nlh_from_seats(seats.clone(), ForcedBets::new(50, 100));
     ///
     /// assert_eq!(8, seats.size());
     /// assert_eq!(3, table.determine_utg(), "If seat 0 is the dealer, than seat 3 is under the gun");
@@ -1439,12 +1439,12 @@ impl Table {
     }
 }
 
-impl Default for Table {
+impl Default for TableCelled {
     fn default() -> Self {
-        let seats = Table::generate_seats(6, GameType::NoLimitHoldem.cards_per_player());
+        let seats = TableCelled::generate_seats(6, GameType::NoLimitHoldem.cards_per_player());
         #[allow(clippy::pedantic)] // allow cast
         let player_count = seats.size();
-        Table {
+        TableCelled {
             id: Uuid::default(),
             name: "Default No Limit Hold'em Table".to_string(),
             game: GameType::NoLimitHoldem,
@@ -1463,7 +1463,7 @@ impl Default for Table {
     }
 }
 
-impl std::fmt::Display for Table {
+impl std::fmt::Display for TableCelled {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Table: {} [{}]", self.name, self.id)?;
         writeln!(f, "Game: {:?}", self.game)?;
@@ -1480,7 +1480,7 @@ impl std::fmt::Display for Table {
     }
 }
 
-impl TryFrom<&Pluribus> for Table {
+impl TryFrom<&Pluribus> for TableCelled {
     type Error = PKError;
 
     fn try_from(pluribus: &Pluribus) -> Result<Self, Self::Error> {
@@ -1492,7 +1492,7 @@ impl TryFrom<&Pluribus> for Table {
         let dealt = CardsCell::from(pluribus);
         let forced_bets = ForcedBets::new(50, 100);
 
-        let table = Table::nlh_primed(seats, &dealt, forced_bets);
+        let table = TableCelled::nlh_primed(seats, &dealt, forced_bets);
 
         table.button.set(5);
         for i in 0..table.seats.size() {
@@ -1504,8 +1504,8 @@ impl TryFrom<&Pluribus> for Table {
     }
 }
 
-impl From<&Table> for pkstate::PKState {
-    /// Converts a [`Table`] snapshot into a [`pkstate::PKState`].
+impl From<&TableCelled> for pkstate::PKState {
+    /// Converts a [`TableCelled`] snapshot into a [`pkstate::PKState`].
     ///
     /// Players are taken from the seats in order. The event log is walked once and
     /// split into [`pkstate::act::Round`]s whenever a street-dealing action is seen
@@ -1513,7 +1513,7 @@ impl From<&Table> for pkstate::PKState {
     /// `Call`, `Raise`, `AllIn`, `Fold`, `PlayerWins`, and `PlayerLoses` action is
     /// mapped to its corresponding [`pkstate::act::Action`] variant.
     #[allow(clippy::too_many_lines)]
-    fn from(table: &Table) -> Self {
+    fn from(table: &TableCelled) -> Self {
         // ── players ──────────────────────────────────────────────────────────
         let players: Vec<pkstate::seat::Seat> = table
             .seats
@@ -1560,7 +1560,7 @@ impl From<&Table> for pkstate::PKState {
 
                 // ── hole cards ────────────────────────────────────────────────────
                 TableAction::Dealt(seat, bard) | TableAction::ForceDealt(seat, bard) => {
-                    if let Some(a) = Table::dealt_action(seat, bard) {
+                    if let Some(a) = TableCelled::dealt_action(seat, bard) {
                         current.push(a);
                     }
                 }
@@ -1694,8 +1694,8 @@ impl From<&Table> for pkstate::PKState {
     }
 }
 
-impl From<Table> for pkstate::PKState {
-    fn from(table: Table) -> Self {
+impl From<TableCelled> for pkstate::PKState {
+    fn from(table: TableCelled) -> Self {
         pkstate::PKState::from(&table)
     }
 }
@@ -1709,9 +1709,9 @@ mod casino__table_tests {
     use crate::prelude::*;
     use crate::util::data::TestData;
 
-    fn sparse_six_seat_table() -> Table {
-        let table = Table::nlh_from_seats(
-            Table::generate_seats(6, GameType::NoLimitHoldem.cards_per_player()),
+    fn sparse_six_seat_table() -> TableCelled {
+        let table = TableCelled::nlh_from_seats(
+            TableCelled::generate_seats(6, GameType::NoLimitHoldem.cards_per_player()),
             ForcedBets::new(50, 100),
         );
 
@@ -1733,7 +1733,7 @@ mod casino__table_tests {
     #[test]
     fn nlh_primed() {
         let primed = Cards::deck_primed(&TestData::the_hand_cards());
-        let table = Table::nlh_primed(
+        let table = TableCelled::nlh_primed(
             Seats::new(TestData::the_hand_players()),
             &CardsCell::from(Cards::deck_primed(&TestData::the_hand_cards())),
             ForcedBets::new(50, 100),
@@ -1748,7 +1748,7 @@ mod casino__table_tests {
 
     #[test]
     fn nlh_from_seats() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
         assert_eq!("No Limit Hold'em Table", table.name);
         assert_eq!(GameType::NoLimitHoldem, table.game);
         // assert_eq!(GamePhase::NewHand, table.phase.);
@@ -1771,7 +1771,7 @@ mod casino__table_tests {
 
     #[test]
     fn nlh_from_seats__not_holding() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
         assert_eq!("No Limit Hold'em Table", table.name);
         assert_eq!(GameType::NoLimitHoldem, table.game);
         // assert_eq!(GamePhase::NewHand, table.phase.);
@@ -1790,7 +1790,7 @@ mod casino__table_tests {
 
     #[test]
     fn default() {
-        let table = Table::default();
+        let table = TableCelled::default();
         assert_eq!("Default No Limit Hold'em Table", table.name);
         assert_eq!(GameType::NoLimitHoldem, table.game);
         assert_eq!(6, table.seats.size());
@@ -1806,7 +1806,7 @@ mod casino__table_tests {
 
     #[test]
     fn act_fold() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
         let _ = table.act_forced_bets();
         assert_eq!(3, table.next_to_act());
         let seat3_folded_amount = table.act_fold(3).unwrap();
@@ -1825,7 +1825,7 @@ mod casino__table_tests {
 
     #[test]
     fn act_forced_bet_small_blind() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
         let _ = table.act_forced_bet_small_blind();
 
         let sb_seat = table.seats.get_seat(1).unwrap();
@@ -1836,7 +1836,7 @@ mod casino__table_tests {
 
     #[test]
     fn act_forced_bet_big_blind() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
         let _ = table.act_forced_bet_big_blind();
 
         let bb_seat = table.seats.get_seat(2).unwrap();
@@ -1847,7 +1847,7 @@ mod casino__table_tests {
 
     #[test]
     fn act_forced_bets() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
         let _ = table.act_forced_bets();
 
         let sb_seat = table.seats.get_seat(1).unwrap();
@@ -1864,7 +1864,7 @@ mod casino__table_tests {
     /// Adding a forth player who folds to catch that case in the test.
     #[test]
     fn bring_it_in() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 
         let _ = table.act_forced_bets();
         let _ = table.act_call(0).unwrap();
@@ -1893,7 +1893,7 @@ mod casino__table_tests {
 
     #[test]
     fn deal_card_to_seat() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
 
         table.deal_card_to_seat(1).expect("TODO: panic message");
 
@@ -1978,7 +1978,7 @@ mod casino__table_tests {
 
     #[test]
     fn is_betting_started_false_when_only_check_actions() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 
         table.act_check(0).unwrap();
 
@@ -1987,7 +1987,7 @@ mod casino__table_tests {
 
     #[test]
     fn is_betting_started_true_when_any_in_hand_player_has_bet() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 
         table.act_bet(0, 200).unwrap();
 
@@ -1996,7 +1996,7 @@ mod casino__table_tests {
 
     #[test]
     fn determine_round_equity_includes_forced_bets() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 
         table.act_forced_bets().unwrap();
 
@@ -2013,7 +2013,7 @@ mod casino__table_tests {
 
     #[test]
     fn determine_street_equity_consolidates_matching_commitments() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 
         table.act_forced_bets().unwrap();
         table.act_call(0).unwrap();
@@ -2033,7 +2033,7 @@ mod casino__table_tests {
 
     #[test]
     fn determine_street_equity_ignores_check_only_action() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 
         table.act_check(0).unwrap();
 
@@ -2044,7 +2044,7 @@ mod casino__table_tests {
 
     #[test]
     fn determine_street_equity_possible_happy_path_consolidates_all_in_hand_players() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 
         let equity = table.determine_street_equity_possible();
 
@@ -2059,7 +2059,7 @@ mod casino__table_tests {
 
     #[test]
     fn determine_street_equity_possible_excludes_folded_players() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 
         println!("{table}");
 
@@ -2076,7 +2076,7 @@ mod casino__table_tests {
 
     #[test]
     fn determine_street_equity_possible_uses_total_chips_not_current_bets() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 
         table.act_forced_bets().unwrap();
         table.act_call(0).unwrap();
@@ -2113,7 +2113,7 @@ mod casino__table_tests {
         };
         seat_2.player.state.set(PlayerState::YetToAct);
 
-        let table = Table::nlh_from_seats(Seats::new(vec![seat_0, seat_1, seat_2]), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(vec![seat_0, seat_1, seat_2]), ForcedBets::new(50, 100));
         let equity = table.determine_street_equity_possible();
 
         assert_eq!(
@@ -2128,7 +2128,7 @@ mod casino__table_tests {
 
     #[test]
     fn determine_street_equity_from_log_sums_commitments_across_hand() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 
         // Simulate forced bets then further betting actions
         table.act_forced_bets().unwrap();
@@ -2148,7 +2148,7 @@ mod casino__table_tests {
 
     #[test]
     fn act_bet_out_of_turn_throws_table_action_out_of_order_error() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 
         table.act_forced_bets().unwrap();
 
@@ -2163,7 +2163,7 @@ mod casino__table_tests {
 
     #[test]
     fn act_all_in_out_of_turn_throws_table_action_out_of_order_error() {
-        let table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
 
         table.act_forced_bets().unwrap();
 
@@ -2233,7 +2233,7 @@ mod casino__table_tests {
 
     // Button starts at seat 0 (BintCell::new(n) initialises value to 0).
     // So for a 3-seat table: seat 0 = button/UTG, seat 1 = SB, seat 2 = BB.
-    fn three_player_table_with_short_bb(bb_chips: usize) -> Table {
+    fn three_player_table_with_short_bb(bb_chips: usize) -> TableCelled {
         let seats = Seats::new(vec![
             Seat::new_with_cards(
                 Player::new_with_chips("UTG".to_string(), 5_000), // seat 0 — button / UTG
@@ -2248,7 +2248,7 @@ mod casino__table_tests {
                 BoxedCards::blanks(2),
             ),
         ]);
-        Table::nlh_from_seats(seats, ForcedBets::new(50, 100))
+        TableCelled::nlh_from_seats(seats, ForcedBets::new(50, 100))
     }
 
     #[test]
