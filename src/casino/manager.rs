@@ -1,11 +1,11 @@
 use crate::PKError;
-use crate::prelude::{ForcedBets, Seats, Table};
+use crate::prelude::{ForcedBets, Seats, TableCelled};
 use std::collections::HashMap;
 use uuid::Uuid;
 
 #[allow(dead_code)]
 pub struct TableManager {
-    pub tables: HashMap<Uuid, Table>,
+    pub tables: HashMap<Uuid, TableCelled>,
     pub event_queue: Vec<TableEvent>,
 }
 
@@ -35,7 +35,7 @@ impl TableManager {
     }
 
     pub fn create_table(&mut self, seats: Seats, forced_bets: ForcedBets) -> Uuid {
-        let table = Table::nlh_from_seats(seats, forced_bets);
+        let table = TableCelled::nlh_from_seats(seats, forced_bets);
         let id = table.id;
         self.tables.insert(id, table);
         id
@@ -117,11 +117,11 @@ impl TableManager {
     }
 
     #[must_use]
-    pub fn get_table(&self, id: Uuid) -> Option<&Table> {
+    pub fn get_table(&self, id: Uuid) -> Option<&TableCelled> {
         self.tables.get(&id)
     }
 
-    pub fn remove_table(&mut self, id: Uuid) -> Option<Table> {
+    pub fn remove_table(&mut self, id: Uuid) -> Option<TableCelled> {
         self.tables.remove(&id)
     }
 }

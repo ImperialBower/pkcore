@@ -1,7 +1,7 @@
 use crate::games::GamePhase;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
-use crate::prelude::{Table, TableLog};
+use crate::prelude::{TableCelled, TableLog};
 use crate::util::Util;
 use crate::util::terminal::Terminal;
 use crate::{PKError, Plurable};
@@ -40,7 +40,7 @@ mod color {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Nubificus {
     pub pluribus: Pluribus,
-    pub table: Table,
+    pub table: TableCelled,
     pub queue: VecDeque<PluribusEvent>,
 }
 
@@ -48,7 +48,7 @@ impl Nubificus {
     /// # Errors
     ///
     /// `PKError::InvalidPluribusIndex`
-    pub fn act(table: &Table, action: &PluribusEvent, seat_to_act: u8) -> Result<(), PKError> {
+    pub fn act(table: &TableCelled, action: &PluribusEvent, seat_to_act: u8) -> Result<(), PKError> {
         log::trace!("...Nubificus.act({action}, {seat_to_act});)");
         match action {
             PluribusEvent::Fold => {
@@ -309,7 +309,7 @@ impl TryFrom<Pluribus> for Nubificus {
 
     fn try_from(pluribus: Pluribus) -> Result<Self, Self::Error> {
         let queue = pluribus.actions.clone();
-        let table = Table::try_from(&pluribus)?;
+        let table = TableCelled::try_from(&pluribus)?;
         Ok(Nubificus { pluribus, table, queue })
     }
 }

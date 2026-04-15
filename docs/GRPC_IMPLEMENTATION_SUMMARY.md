@@ -97,7 +97,7 @@ Comprehensive documentation covering:
                                                 │
                                          ┌──────▼──────┐
                                          │   Dealer    │
-                                         │  + Table    │
+                                         │  + TableCelled    │
                                          └─────────────┘
 ```
 
@@ -153,7 +153,7 @@ dealer❯ start
 
 dealer❯ status
 ═══════════════════════════════════════════════════
-Table Status:
+TableCelled Status:
   Seat 0  Alice  →  10000 chips  [Active]
   Seat 1  Bob    →  9950 chips   [Blind]
   ...

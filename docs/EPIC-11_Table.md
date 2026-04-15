@@ -1,4 +1,4 @@
-# Table Epic
+# TableCelled Epic
 
 
 ## Final Boss: Split Pots
@@ -29,7 +29,7 @@ At first, feeling like shit, I decided to let AI take the wheel. I was trying to
 
 - Players are all all-in.
 - One player has more chips that all the others active in the hand.
-- Currently, the Table was counting all the richest players chips in the hand.
+- Currently, the TableCelled was counting all the richest players chips in the hand.
 - It needed to return the chips above the next richest player in the pot. 
 - Their state needed to switch from `AllIn` to `Bet`. 
 

@@ -1,4 +1,4 @@
-use crate::prelude::{SeatEquity, Seatbit, Table};
+use crate::prelude::{SeatEquity, Seatbit, TableCelled};
 use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display, Formatter};
 use std::sync::OnceLock;
@@ -288,8 +288,8 @@ impl Display for TableEquity {
     }
 }
 
-impl From<&Table> for TableEquity {
-    fn from(table: &Table) -> Self {
+impl From<&TableCelled> for TableEquity {
+    fn from(table: &TableCelled) -> Self {
         let mut v: Vec<SeatEquity> = Vec::new();
 
         for (i, seat_cell) in table.seats.iter().enumerate() {

@@ -345,7 +345,7 @@ The module doc for `table_no_cell.rs` is honest: these exist for comparison and 
 2. gRPC integration will want `&mut self` semantics for clean state handoff
 3. `TableNoCell` has cleaner borrow semantics for `async` (tokio-compatible)
 
-The next EPIC should formally designate `TableNoCell` as the primary path and begin migrating `Table`-only features. This doesn't need to be a "delete `table.rs`" event — it can be a documentation update and a commitment to implement new features only in `TableNoCell` first.
+The next EPIC should formally designate `TableNoCell` as the primary path and begin migrating `TableCelled`-only features. This doesn't need to be a "delete `table.rs`" event — it can be a documentation update and a commitment to implement new features only in `TableNoCell` first.
 
 ---
 
@@ -426,7 +426,7 @@ None of the integration tests exercise failure paths:
 - Invalid card strings in `Cards::from_str()`
 
 **2. Concurrency:**
-`Table` uses interior mutability (`RefCell`) which is `!Sync`. There are no tests verifying behavior under concurrent access. This matters if `pkdealer` ever uses `Table` across tokio tasks.
+`TableCelled` uses interior mutability (`RefCell`) which is `!Sync`. There are no tests verifying behavior under concurrent access. This matters if `pkdealer` ever uses `TableCelled` across tokio tasks.
 
 **3. Bot decision quality:**
 `SimTable` tests verify that bots complete hands without panicking. There are no tests validating that a `TightPassive` bot actually plays tighter than a `LooseAggressive` bot (behavioral invariants, not just structural correctness).
@@ -491,7 +491,7 @@ At `0.0.40`, API stability is not guaranteed by SemVer convention. However, `pkb
 Either split the trait (long-term correct) or add rustdoc to `Pile` clarifying which methods may panic on fixed-size types and why. The latter takes 30 minutes and makes the design intent explicit.
 
 **P3 — Complete or formally remove `act_pay_out()` in `table.rs`:**  
-`src/casino/table.rs:526`. The method has a doc comment and signature but is `todo!()`. Any code path that reaches it will panic silently. If `TableNoCell` is the primary engine, deprecate this method in `Table` and implement it in `TableNoCell`.
+`src/casino/table.rs:526`. The method has a doc comment and signature but is `todo!()`. Any code path that reaches it will panic silently. If `TableNoCell` is the primary engine, deprecate this method in `TableCelled` and implement it in `TableNoCell`.
 
 **P4 — Move narrative doc sections to DIARY.md:**  
 `src/bard.rs:130–160` and similar sections. One afternoon of editing. Makes the public docs professional-grade.
@@ -502,7 +502,7 @@ Enables source chaining for OTel/Langfuse integration (EPIC-22). Without this, d
 ### Medium-term (before EPIC-20 Autonomous Game Loop)
 
 **P6 — Designate `TableNoCell` as primary engine:**  
-Document formally in ROADMAP.md and `table_no_cell.rs`. New features go here first. `Table` becomes the "alternate for WASM/callback use cases" until deprecated.
+Document formally in ROADMAP.md and `table_no_cell.rs`. New features go here first. `TableCelled` becomes the "alternate for WASM/callback use cases" until deprecated.
 
 **P7 — Add `--no-default-features` CI test pass:**  
 Verifies feature flag boundary correctness. Add to CI workflow.

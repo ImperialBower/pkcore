@@ -19,7 +19,7 @@ The strongest conclusion from this audit is that **the repository is already del
 The main risks are not “does this work?” but rather:
 
 1. **public API consistency and panic safety are still uneven**, especially in older modules,
-2. **the codebase carries two table/player engine styles in parallel** (`Table` and `TableNoCell`), creating long-term divergence risk,
+2. **the codebase carries two table/player engine styles in parallel** (`TableCelled` and `TableNoCell`), creating long-term divergence risk,
 3. **documentation tone and module-level docs are inconsistent with the project’s own published standards**, and
 4. **a handful of runtime `unwrap`/`todo!`/`unimplemented!` paths remain in library code**, even though the repo policy explicitly aims to avoid them.
 
@@ -246,7 +246,7 @@ Pick a long-term primary engine and make the alternative explicitly legacy or ex
 My recommendation:
 
 - make `TableNoCell` the canonical engine for new work,
-- freeze `Table` except for critical bug fixes,
+- freeze `TableCelled` except for critical bug fixes,
 - extract shared pure logic into reusable helpers where practical,
 - and mark the public docs to steer users toward the chosen engine.
 

@@ -14,7 +14,7 @@ mod hands__the_hand_tests {
 
     /// Drives the table through the complete hand and returns it ready for
     /// assertions.  Mirrors the helper functions in `examples/the_hand.rs`.
-    fn run_the_hand() -> Result<(Table, Winnings), PKError> {
+    fn run_the_hand() -> Result<(TableCelled, Winnings), PKError> {
         let table = TestData::the_hand_table();
 
         // ── setup ──────────────────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 //! # Dealer
 //!
-//! The [`Dealer`] manages a single [`Table`]: seating players, running hands from
+//! The [`Dealer`] manages a single [`TableCelled`]: seating players, running hands from
 //! shuffle through showdown, and routing every player action through the table's
 //! validation layer so that illegal moves are caught and reported rather than
 //! panicked on.
@@ -23,7 +23,7 @@
 use crate::PKError;
 use crate::casino::game::ForcedBets;
 use crate::casino::player::Player;
-use crate::casino::table::Table;
+use crate::casino::table::TableCelled;
 use crate::casino::table::event::TableLog;
 use crate::casino::table::seats::Seats;
 use crate::casino::table::seats::seat::Seat;
@@ -77,7 +77,7 @@ impl DealerAction {
 /// Errors the [`Dealer`] can return.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DealerError {
-    /// The underlying [`Table`] returned a [`PKError`].
+    /// The underlying [`TableCelled`] returned a [`PKError`].
     TableError(PKError),
     /// The action is not legal in the current phase.
     IllegalAction {
@@ -127,7 +127,7 @@ impl From<PKError> for DealerError {
 
 // ── Dealer ───────────────────────────────────────────────────────────────────
 
-/// Manages a single [`Table`]: seating players, running hands from shuffle
+/// Manages a single [`TableCelled`]: seating players, running hands from shuffle
 /// through showdown, and routing every player action through the table's
 /// validation layer so that illegal moves are caught and reported rather
 /// than panicked on.
@@ -163,7 +163,7 @@ impl From<PKError> for DealerError {
 /// ```
 pub struct Dealer {
     /// The table being managed.
-    pub table: Table,
+    pub table: TableCelled,
     /// `true` once `start_hand` has been called and the hand is in progress.
     hand_in_progress: bool,
 }
@@ -188,7 +188,7 @@ impl Dealer {
                 .map(|_| Seat::new_with_cards(Player::default(), BoxedCards::blanks(2)))
                 .collect(),
         );
-        let table = Table::nlh_from_seats(seats, forced);
+        let table = TableCelled::nlh_from_seats(seats, forced);
         Dealer {
             table,
             hand_in_progress: false,
@@ -198,7 +198,7 @@ impl Dealer {
     /// Creates a `Dealer` wrapping an existing `Table` that has already been
     /// set up (e.g. from a [`pkstate::PKState`] snapshot).
     #[must_use]
-    pub fn from_table(table: Table) -> Self {
+    pub fn from_table(table: TableCelled) -> Self {
         Dealer {
             table,
             hand_in_progress: false,

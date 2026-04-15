@@ -5,7 +5,7 @@ use pkcore::analysis::gto::vs::Versus;
 use pkcore::analysis::pot_odds::PotOdds;
 use pkcore::analysis::range_equity::RangeEquity;
 use pkcore::arrays::two::Two;
-use pkcore::casino::table::Table;
+use pkcore::casino::table::TableCelled;
 use pkcore::play::board::Board;
 use pkcore::play::stages::river_eval::RiverEval;
 use pkcore::util::data::TestData;
@@ -42,7 +42,7 @@ fn print_street_header(name: &str) {
     println!("{}", "═".repeat(56));
 }
 
-fn setup(table: &Table) -> Result<(), PKError> {
+fn setup(table: &TableCelled) -> Result<(), PKError> {
     table.act_forced_bets().expect("ActForcedBets failed");
     table.deal_cards_to_seats().expect("Failed to deal cards to seats");
 
@@ -54,7 +54,7 @@ fn setup(table: &Table) -> Result<(), PKError> {
     Ok(())
 }
 
-fn preflop(table: &Table) -> Result<usize, PKError> {
+fn preflop(table: &TableCelled) -> Result<usize, PKError> {
     print_street_header("PREFLOP");
 
     let _gus = table.act_bet(3, 2100)?;
@@ -89,7 +89,7 @@ fn preflop(table: &Table) -> Result<usize, PKError> {
     Ok(pot)
 }
 
-fn flop(table: &Table, _preflop_pot: usize) -> Result<usize, PKError> {
+fn flop(table: &TableCelled, _preflop_pot: usize) -> Result<usize, PKError> {
     table.deal_flop().expect("No flop");
     print_street_header("FLOP");
 
@@ -117,7 +117,7 @@ fn flop(table: &Table, _preflop_pot: usize) -> Result<usize, PKError> {
     Ok(pot)
 }
 
-fn turn(table: &Table, _flop_pot: usize) -> Result<usize, PKError> {
+fn turn(table: &TableCelled, _flop_pot: usize) -> Result<usize, PKError> {
     table.deal_turn().expect("No turn");
     print_street_header("TURN");
     table.eval_turn_display();
@@ -134,7 +134,7 @@ fn turn(table: &Table, _flop_pot: usize) -> Result<usize, PKError> {
     Ok(pot)
 }
 
-fn river(table: &Table, turn_pot: usize) -> Result<(), PKError> {
+fn river(table: &TableCelled, turn_pot: usize) -> Result<(), PKError> {
     table.deal_river().expect("No river");
     print_street_header("RIVER");
     table.eval_river_display();
@@ -226,7 +226,7 @@ fn river(table: &Table, turn_pot: usize) -> Result<(), PKError> {
     Ok(())
 }
 
-fn commentary_action_to(table: &Table) {
+fn commentary_action_to(table: &TableCelled) {
     println!();
     if let Some(action) = table.commentary_last_player_action() {
         println!("{action}");

@@ -27,7 +27,7 @@ Take a step back, examine what you're trying to do, and focus on the work's goal
 > about Beethoven's 5th.
 
 For [pkcore](https://github.com/ImperialBower/pkcore) it was simple, which makes it very complex. I want a universal
-core poker library that I can use as a foundation for many different use cases: Table mechanics, hand evaluation, 
+core poker library that I can use as a foundation for many different use cases: TableCelled mechanics, hand evaluation, 
 poker solvers, [GTO tools](https://github.com/ImperialBower/pkgto-web), networked AI and other bot game play, and cheat
 detection. It should be able to run on servers, web pages, 
 on mobile devices etc. I want to use it to be able to play poker with my friends using nothing more than text messages. 
