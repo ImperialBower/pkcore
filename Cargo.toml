@@ -2,7 +2,7 @@
 name = "pkcore"
 description = "Prototype core poker library."
 version = "0.0.41"
-rust-version = "1.91.0"
+rust-version = "1.94.1"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
 license = "GPL-3.0-or-later"

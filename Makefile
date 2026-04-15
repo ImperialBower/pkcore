@@ -88,7 +88,7 @@ build_test: clean build nextest
 
 # Format code
 fmt:
-	cargo fmt
+	cargo fmt --all
 
 # Run clippy linter
 clippy:
