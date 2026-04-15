@@ -50,14 +50,22 @@ fn main() {
 
     println!("Input : \"{range_str}\"");
     println!();
-    println!("  AA  → {:.0}%  (played 50% — mixing with checks/folds)",
-        wc.frequency(&Combo::COMBO_AA).unwrap_or(0.0) * 100.0);
-    println!("  KK  → {:.0}%  (no suffix → defaults to 100%)",
-        wc.frequency(&Combo::COMBO_KK).unwrap_or(0.0) * 100.0);
-    println!("  QQ  → {:.0}%  (played 75% — balancing the betting range)",
-        wc.frequency(&Combo::COMBO_QQ).unwrap_or(0.0) * 100.0);
-    println!("  AKs → {:.0}%  (explicit 1.0 — same as omitting the suffix)",
-        wc.frequency(&Combo::COMBO_AKs).unwrap_or(0.0) * 100.0);
+    println!(
+        "  AA  → {:.0}%  (played 50% — mixing with checks/folds)",
+        wc.frequency(&Combo::COMBO_AA).unwrap_or(0.0) * 100.0
+    );
+    println!(
+        "  KK  → {:.0}%  (no suffix → defaults to 100%)",
+        wc.frequency(&Combo::COMBO_KK).unwrap_or(0.0) * 100.0
+    );
+    println!(
+        "  QQ  → {:.0}%  (played 75% — balancing the betting range)",
+        wc.frequency(&Combo::COMBO_QQ).unwrap_or(0.0) * 100.0
+    );
+    println!(
+        "  AKs → {:.0}%  (explicit 1.0 — same as omitting the suffix)",
+        wc.frequency(&Combo::COMBO_AKs).unwrap_or(0.0) * 100.0
+    );
     println!("  22  → not in range (frequency returns None)");
     println!("  22 present: {}", wc.frequency(&Combo::COMBO_22).is_some());
 
@@ -83,11 +91,19 @@ fn main() {
     println!();
     println!("  Pocket pairs (each at 80%):");
     for combo in [Combo::COMBO_JJ, Combo::COMBO_TT, Combo::COMBO_99] {
-        println!("    {} → {:.0}%", combo, range_wc.frequency(&combo).unwrap_or(0.0) * 100.0);
+        println!(
+            "    {} → {:.0}%",
+            combo,
+            range_wc.frequency(&combo).unwrap_or(0.0) * 100.0
+        );
     }
     println!("  Ace-X suited (each at 60%):");
     for combo in [Combo::COMBO_AKs, Combo::COMBO_AQs, Combo::COMBO_AJs] {
-        println!("    {} → {:.0}%", combo, range_wc.frequency(&combo).unwrap_or(0.0) * 100.0);
+        println!(
+            "    {} → {:.0}%",
+            combo,
+            range_wc.frequency(&combo).unwrap_or(0.0) * 100.0
+        );
     }
 
     // ── 4. Round-trip: to_range_str → from_str ───────────────────────────────
@@ -111,7 +127,10 @@ fn main() {
     for combo in [Combo::COMBO_AA, Combo::COMBO_KK, Combo::COMBO_QQ] {
         let orig_f = original.frequency(&combo).unwrap_or(0.0);
         let rest_f = restored.frequency(&combo).unwrap_or(0.0);
-        println!("  {combo} : original={orig_f:.2}  restored={rest_f:.2}  match={}", orig_f == rest_f);
+        println!(
+            "  {combo} : original={orig_f:.2}  restored={rest_f:.2}  match={}",
+            orig_f == rest_f
+        );
     }
 
     // ── 5. Backward compat: Combos::from_str accepts :f ──────────────────────
@@ -121,8 +140,8 @@ fn main() {
     // Combos is an unweighted HashSet<Combo>. It now tolerates the :f suffix
     // (strips and discards it) so that annotated strings don't cause parse errors
     // in code that only needs the combo identity.
-    let annotated  = Combos::from_str("AA:0.5, KK:0.9").expect("tolerated");
-    let plain      = Combos::from_str("AA, KK").expect("plain");
+    let annotated = Combos::from_str("AA:0.5, KK:0.9").expect("tolerated");
+    let plain = Combos::from_str("AA, KK").expect("plain");
     println!("\"AA:0.5, KK:0.9\" parsed by Combos::from_str");
     println!("Equals unweighted \"AA, KK\" : {}", annotated == plain);
     println!("(Frequencies are silently dropped — identity only.)");
@@ -134,9 +153,9 @@ fn main() {
     // weighted_twos() expands each combo to its specific Two hands,
     // pairing each with its combo's frequency. Zero-frequency combos are excluded.
     let mut wc2 = WeightedCombos::default();
-    wc2.insert(Combo::COMBO_AA, 1.0);  // 6 specific AA hands, each at 1.0
-    wc2.insert(Combo::COMBO_KK, 0.5);  // 6 specific KK hands, each at 0.5
-    wc2.insert(Combo::COMBO_QQ, 0.0);  // excluded (zero frequency)
+    wc2.insert(Combo::COMBO_AA, 1.0); // 6 specific AA hands, each at 1.0
+    wc2.insert(Combo::COMBO_KK, 0.5); // 6 specific KK hands, each at 0.5
+    wc2.insert(Combo::COMBO_QQ, 0.0); // excluded (zero frequency)
 
     let pairs = wc2.weighted_twos();
     println!("Range: AA(100%), KK(50%), QQ(0%)");
@@ -169,15 +188,29 @@ fn main() {
 
     // AA hands win 85% (8.5 out of 10 outcomes)
     for two in pkcore::analysis::gto::twos::Twos::from(Combo::COMBO_AA).to_vec() {
-        hand_odds.insert(two, WinLoseDraw { wins: 85, losses: 15, draws: 0 });
+        hand_odds.insert(
+            two,
+            WinLoseDraw {
+                wins: 85,
+                losses: 15,
+                draws: 0,
+            },
+        );
     }
     // KK hands win 65% (6.5 out of 10 outcomes)
     for two in pkcore::analysis::gto::twos::Twos::from(Combo::COMBO_KK).to_vec() {
-        hand_odds.insert(two, WinLoseDraw { wins: 65, losses: 35, draws: 0 });
+        hand_odds.insert(
+            two,
+            WinLoseDraw {
+                wins: 65,
+                losses: 35,
+                draws: 0,
+            },
+        );
     }
 
     let unweighted_avg = (0.85 + 0.65) / 2.0;
-    let weighted_prob  = wc3.weighted_win_probability(&hand_odds);
+    let weighted_prob = wc3.weighted_win_probability(&hand_odds);
 
     // With freq(AA)=1.0 and freq(KK)=0.5, AA is weighted 2× relative to KK.
     // Expected: (1.0×0.85 + 0.5×0.65) / (1.0 + 0.5) = 1.175/1.5 ≈ 0.7833
@@ -191,9 +224,9 @@ fn main() {
     separator("8. Error handling: PKError::InvalidFrequency");
 
     let cases = [
-        ("AA:1.5",  "above 1.0"),
+        ("AA:1.5", "above 1.0"),
         ("KK:-0.1", "below 0.0"),
-        ("QQ:abc",  "not a number"),
+        ("QQ:abc", "not a number"),
     ];
     for (input, reason) in cases {
         match WeightedCombos::from_str(input) {
@@ -201,7 +234,7 @@ fn main() {
                 println!("  \"{input}\" ({reason}) → PKError::InvalidFrequency  ✓");
             }
             Err(e) => println!("  \"{input}\" → unexpected error: {e}"),
-            Ok(_)  => println!("  \"{input}\" → unexpectedly parsed OK"),
+            Ok(_) => println!("  \"{input}\" → unexpectedly parsed OK"),
         }
     }
 
