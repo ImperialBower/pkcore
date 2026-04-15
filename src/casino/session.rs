@@ -38,6 +38,49 @@ use crate::PKError;
 use crate::casino::action::PlayerAction;
 use crate::casino::table::winnings::Winnings;
 use crate::casino::table_no_cell::TableNoCell;
+use crate::games::GamePhase;
+
+/// Describes the outcome of a single [`PokerSession::next_step`] call.
+///
+/// The caller loops: handle the result, call `next_step()` again — until
+/// `HandComplete` is returned. After `StreetAdvanced` emit an event and call
+/// again immediately; after `HandComplete` call [`PokerSession::end_hand`].
+///
+/// # Examples
+///
+/// ```
+/// # #[cfg(feature = "bot-profiles")]
+/// # {
+/// use pkcore::casino::action::PlayerAction;
+/// use pkcore::casino::game::ForcedBets;
+/// use pkcore::casino::session::{PokerSession, SessionStep};
+/// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+///
+/// let seats = SeatsNoCell::new(vec![
+///     SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 1_000)),
+///     SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 1_000)),
+/// ]);
+/// let mut session = PokerSession::new(
+///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(10, 20))
+/// );
+/// session.start_hand().unwrap();
+/// match session.next_step() {
+///     SessionStep::PlayerToAct(seat) => { /* player must act */ }
+///     SessionStep::StreetAdvanced    => { /* emit StreetAdvanced event */ }
+///     SessionStep::HandComplete      => { /* call end_hand() */ }
+/// }
+/// # }
+/// ```
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum SessionStep {
+    /// The player at this seat index must act next.
+    PlayerToAct(u8),
+    /// One street was dealt (flop, turn, or river). Emit a `StreetAdvanced`
+    /// event and call `next_step()` again.
+    StreetAdvanced,
+    /// The hand is over. Call `end_hand()` and emit a `HandEnded` event.
+    HandComplete,
+}
 
 /// A multi-hand game session wrapping a [`TableNoCell`].
 ///
@@ -226,6 +269,39 @@ impl PokerSession {
         self.table.is_game_over()
     }
 
+    /// Returns `true` after [`start_hand`](PokerSession::start_hand) and before
+    /// [`end_hand`](PokerSession::end_hand) completes.
+    ///
+    /// Implemented by checking that at least one hand has been started and that
+    /// the table phase is not `NewHand` (the reset state after every `end_hand`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "bot-profiles")]
+    /// # {
+    /// use pkcore::casino::action::PlayerAction;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::session::PokerSession;
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// ]);
+    /// let mut session = PokerSession::new(
+    ///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(10, 20))
+    /// );
+    /// assert!(!session.is_hand_in_progress());
+    /// session.start_hand().unwrap();
+    /// assert!(session.is_hand_in_progress());
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn is_hand_in_progress(&self) -> bool {
+        self.hand_number > 0 && !matches!(self.table.phase, GamePhase::NewHand)
+    }
+
     /// Returns the seat index of the next player to act, or `None` if the hand
     /// is complete.
     ///
@@ -310,6 +386,59 @@ impl PokerSession {
     /// ```
     pub fn apply_action(&mut self, seat: u8, action: PlayerAction) -> Result<(), PKError> {
         self.table.apply_action(seat, action)
+    }
+
+    /// Advances the hand by exactly **one** step and returns what happened.
+    ///
+    /// Unlike [`next_actor`](PokerSession::next_actor), at most one street is
+    /// dealt per call, giving the caller precise visibility into each transition:
+    ///
+    /// | Return value         | What to do                                          |
+    /// |----------------------|-----------------------------------------------------|
+    /// | `PlayerToAct(seat)`  | Call `apply_action(seat, …)` and wait for input     |
+    /// | `StreetAdvanced`     | Emit a `StreetAdvanced` event; call `next_step()` again |
+    /// | `HandComplete`       | Call `end_hand()`; emit a `HandEnded` event         |
+    ///
+    /// **All-in run-out:** successive calls return `StreetAdvanced` once per
+    /// street (flop → turn → river), then `HandComplete`.
+    ///
+    /// **River completion:** `StreetAdvanced` is returned when the river card is
+    /// dealt so the caller can emit that event. The next call then returns either
+    /// `PlayerToAct` (if river betting is needed) or `HandComplete` (all-in run-out).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "bot-profiles")]
+    /// # {
+    /// use pkcore::casino::action::PlayerAction;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::session::{PokerSession, SessionStep};
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// ]);
+    /// let mut session = PokerSession::new(
+    ///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(10, 20))
+    /// );
+    /// session.start_hand().unwrap();
+    /// // Preflop always starts with a player to act.
+    /// assert!(matches!(session.next_step(), SessionStep::PlayerToAct(_)));
+    /// # }
+    /// ```
+    pub fn next_step(&mut self) -> SessionStep {
+        if self.is_hand_complete() {
+            return SessionStep::HandComplete;
+        }
+        if self.table.seats.is_betting_complete() {
+            return match self.advance_street() {
+                Ok(()) => SessionStep::StreetAdvanced,
+                Err(_) => SessionStep::HandComplete,
+            };
+        }
+        SessionStep::PlayerToAct(self.table.next_to_act())
     }
 
     /// Resolves the hand, distributes the pot, and resets the table.
@@ -445,13 +574,13 @@ mod tests {
     }
 
     #[test]
-    fn test_poker_session_new() {
+    fn poker_session_new() {
         let session = two_player_session();
         assert_eq!(session.hand_number, 0);
     }
 
     #[test]
-    fn test_poker_session_start_hand() {
+    fn poker_session_start_hand() {
         let mut session = two_player_session();
         session.start_hand().unwrap();
         assert_eq!(session.hand_number, 1);
@@ -459,7 +588,7 @@ mod tests {
     }
 
     #[test]
-    fn test_poker_session_hand_number_increments() {
+    fn poker_session_hand_number_increments() {
         let mut session = two_player_session();
         session.run_hand(|_, _| PlayerAction::Fold).unwrap();
         assert_eq!(session.hand_number, 1);
@@ -469,14 +598,14 @@ mod tests {
     }
 
     #[test]
-    fn test_poker_session_run_hand_fold_preflop() {
+    fn poker_session_run_hand_fold_preflop() {
         let mut session = two_player_session();
         let winnings = session.run_hand(|_, _| PlayerAction::Fold).unwrap();
         assert!(!winnings.vec().is_empty());
     }
 
     #[test]
-    fn test_poker_session_is_hand_complete_false_before_start() {
+    fn poker_session_is_hand_complete_false_before_start() {
         let session = two_player_session();
         // Before starting, the table is in NewHand phase — is_game_over() = false
         // (no one is in-hand yet, count_active_in_hand() == 0 which is <= 1, so true).
@@ -485,7 +614,7 @@ mod tests {
     }
 
     #[test]
-    fn test_poker_session_is_hand_complete_after_fold() {
+    fn poker_session_is_hand_complete_after_fold() {
         let mut session = two_player_session();
         session.start_hand().unwrap();
         let seat = session.next_actor().unwrap();
@@ -494,13 +623,13 @@ mod tests {
     }
 
     #[test]
-    fn test_poker_session_count_funded() {
+    fn poker_session_count_funded() {
         let session = two_player_session();
         assert_eq!(session.count_funded(), 2);
     }
 
     #[test]
-    fn test_poker_session_eliminate_busted() {
+    fn poker_session_eliminate_busted() {
         let seats = SeatsNoCell::new(vec![
             SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 0)),
@@ -512,7 +641,7 @@ mod tests {
     }
 
     #[test]
-    fn test_poker_session_next_actor_advances_to_flop() {
+    fn poker_session_next_actor_advances_to_flop() {
         let mut session = three_player_session();
         session.start_hand().unwrap();
         // Run all preflop actors: everyone calls/checks until betting is complete.
@@ -536,7 +665,7 @@ mod tests {
     }
 
     #[test]
-    fn test_poker_session_run_hand_call_down() {
+    fn poker_session_run_hand_call_down() {
         let mut session = two_player_session();
         // Both players call every street — hand runs to showdown.
         let winnings = session.run_hand(|_, _| PlayerAction::Call).unwrap();
@@ -552,7 +681,7 @@ mod tests {
     /// which fell back to an arbitrary seat via `.unwrap_or(utg)` because
     /// `SeatsNoCell::next_to_act()` found no player with action to give.
     #[test]
-    fn test_next_actor_all_in_runout_no_stale_actor() {
+    fn next_actor_all_in_runout_no_stale_actor() {
         // Equal stacks: both players can go all-in preflop so the board runs
         // out without any player needing to act postflop.
         let seats = SeatsNoCell::new(vec![
@@ -577,5 +706,141 @@ mod tests {
         // The hand must still be completable.
         let winnings = session.end_hand().unwrap();
         assert!(!winnings.vec().is_empty(), "expected a winner");
+    }
+
+    // ── next_step() ───────────────────────────────────────────────────────────
+
+    #[test]
+    fn fold_gives_hand_complete_immediately() {
+        let mut session = two_player_session();
+        session.start_hand().unwrap();
+
+        let step = session.next_step();
+        let SessionStep::PlayerToAct(seat) = step else {
+            panic!("expected PlayerToAct, got {step:?}");
+        };
+        session.apply_action(seat, PlayerAction::Fold).unwrap();
+
+        assert_eq!(session.next_step(), SessionStep::HandComplete);
+        // Idempotent: repeated calls after hand is complete stay at HandComplete.
+        assert_eq!(session.next_step(), SessionStep::HandComplete);
+    }
+
+    #[test]
+    fn preflop_complete_advances_to_flop_then_player_to_act() {
+        let mut session = two_player_session();
+        session.start_hand().unwrap();
+
+        let mut advanced = false;
+        for _ in 0..10 {
+            match session.next_step() {
+                SessionStep::PlayerToAct(seat) => {
+                    session.apply_action(seat, PlayerAction::Call).unwrap();
+                }
+                SessionStep::StreetAdvanced => {
+                    assert_eq!(
+                        session.table.board.len(),
+                        3,
+                        "expected 3 board cards after StreetAdvanced, got {}",
+                        session.table.board.len()
+                    );
+                    assert!(
+                        matches!(session.next_step(), SessionStep::PlayerToAct(_)),
+                        "expected PlayerToAct after StreetAdvanced"
+                    );
+                    advanced = true;
+                    break;
+                }
+                SessionStep::HandComplete => panic!("unexpected HandComplete before flop"),
+            }
+        }
+        assert!(advanced, "StreetAdvanced was never returned");
+    }
+
+    #[test]
+    fn all_in_runout_emits_three_street_advanced() {
+        // Equal 200-chip stacks: both can go all-in preflop (SB=50, BB=100).
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 200)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 200)),
+        ]);
+        let mut session = PokerSession::new(TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100)));
+        session.start_hand().unwrap();
+
+        // Both players go all-in preflop.
+        let seat_a = match session.next_step() {
+            SessionStep::PlayerToAct(s) => s,
+            other => panic!("expected PlayerToAct, got {other:?}"),
+        };
+        session.apply_action(seat_a, PlayerAction::AllIn).unwrap();
+        let seat_b = match session.next_step() {
+            SessionStep::PlayerToAct(s) => s,
+            other => panic!("expected PlayerToAct, got {other:?}"),
+        };
+        session.apply_action(seat_b, PlayerAction::AllIn).unwrap();
+
+        // Expect exactly 3 StreetAdvanced (flop/turn/river), then HandComplete.
+        let mut street_count = 0u32;
+        loop {
+            match session.next_step() {
+                SessionStep::StreetAdvanced => {
+                    street_count += 1;
+                    assert!(street_count <= 3, "more than 3 StreetAdvanced in a run-out");
+                }
+                SessionStep::HandComplete => break,
+                SessionStep::PlayerToAct(s) => {
+                    panic!("unexpected PlayerToAct({s}) during all-in run-out");
+                }
+            }
+        }
+        assert_eq!(street_count, 3, "expected flop+turn+river, got {street_count}");
+
+        let winnings = session.end_hand().unwrap();
+        assert!(!winnings.vec().is_empty());
+    }
+
+    #[test]
+    fn river_call_gives_hand_complete() {
+        let mut session = two_player_session();
+        session.start_hand().unwrap();
+
+        let mut hand_complete = false;
+        for _ in 0..60 {
+            match session.next_step() {
+                SessionStep::PlayerToAct(seat) => {
+                    session.apply_action(seat, PlayerAction::Call).unwrap();
+                }
+                SessionStep::StreetAdvanced => {}
+                SessionStep::HandComplete => {
+                    hand_complete = true;
+                    break;
+                }
+            }
+        }
+        assert!(hand_complete, "hand never reached HandComplete");
+        let winnings = session.end_hand().unwrap();
+        assert!(!winnings.vec().is_empty());
+    }
+
+    // ── is_hand_in_progress() ─────────────────────────────────────────────────
+
+    #[test]
+    fn is_hand_in_progress_false_before_first_hand() {
+        let session = two_player_session();
+        assert!(!session.is_hand_in_progress());
+    }
+
+    #[test]
+    fn is_hand_in_progress_true_during_hand() {
+        let mut session = two_player_session();
+        session.start_hand().unwrap();
+        assert!(session.is_hand_in_progress());
+    }
+
+    #[test]
+    fn is_hand_in_progress_false_after_end_hand() {
+        let mut session = two_player_session();
+        session.run_hand(|_, _| PlayerAction::Fold).unwrap();
+        assert!(!session.is_hand_in_progress());
     }
 }
