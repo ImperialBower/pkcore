@@ -17,6 +17,7 @@
 //! where `freq_i = stored_i / 100.0`, `wins_i` is wins for that hand vs. the
 //! villain range, and `total_i` is total outcomes.
 
+use crate::PKError;
 use crate::analysis::gto::combo::Combo;
 use crate::analysis::gto::combos::Combos;
 use crate::analysis::gto::game_tree::NodeId;
@@ -25,7 +26,6 @@ use crate::analysis::gto::strategy_profile::StrategyProfile;
 use crate::analysis::gto::twos::Twos;
 use crate::arrays::two::Two;
 use crate::util::Util;
-use crate::PKError;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::str::FromStr;
@@ -392,9 +392,7 @@ impl FromStr for WeightedCombos {
             }
             let (combo_str, freq) = match token.find(':') {
                 Some(pos) => {
-                    let f: f64 = token[pos + 1..]
-                        .parse()
-                        .map_err(|_| PKError::InvalidFrequency)?;
+                    let f: f64 = token[pos + 1..].parse().map_err(|_| PKError::InvalidFrequency)?;
                     if !(0.0..=1.0).contains(&f) {
                         return Err(PKError::InvalidFrequency);
                     }
