@@ -442,6 +442,7 @@ pub enum PKError {
     InvalidCardNumber,
     InvalidCardCount,
     InvalidComboIndex,
+    InvalidFrequency,
     InvalidHand,
     InvalidCardIndex,
     InvalidIO,
@@ -503,6 +504,7 @@ impl Display for PKError {
             PKError::InvalidCardCount => "Invalid Card Count Error",
             PKError::InvalidCardIndex => "Invalid Card Index Error",
             PKError::InvalidComboIndex => "Invalid Combo Index Error",
+            PKError::InvalidFrequency => "Invalid frequency: must be in [0.0, 1.0]",
             PKError::InvalidHand => "Invalid Hand Error",
             PKError::InvalidIO => "Invalid IO Error",
             PKError::InvalidLength => "Invalid Length Error",
@@ -1268,5 +1270,9 @@ mod lib_tests {
         assert_eq!("Too Many Cards Error", PKError::TooManyCards.to_string());
         assert_eq!("Not Enough Cards Error", PKError::NotEnoughCards.to_string());
         assert_eq!("Duplicate Card Error", PKError::DuplicateCard.to_string());
+        assert_eq!(
+            "Invalid frequency: must be in [0.0, 1.0]",
+            PKError::InvalidFrequency.to_string()
+        );
     }
 }

@@ -3,7 +3,7 @@
 //! [`RangeStrategy`] holds the range strings a bot uses for preflop decisions
 //! (open-raise, 3-bet, call a 3-bet) and a postflop continuation-bet
 //! frequency. Range strings follow pkcore's standard format and will support
-//! per-combo frequencies (e.g. `"AA:1.0, KK:0.9"`) once EPIC-17 ships.
+//! per-combo frequencies (e.g. `"AA:1.0, KK:0.9"`) once EPIC-25 ships.
 
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 
 /// Preflop opening and response ranges, plus a postflop c-bet frequency.
 ///
-/// Range strings use pkcore's standard notation. When EPIC-17 (range
+/// Range strings use pkcore's standard notation. When EPIC-25 (range
 /// frequencies) is complete, per-combo frequencies can be included with the
 /// `:f` suffix, e.g. `"AA:1.0, KK:0.8, QQ:0.6"`.
 ///
