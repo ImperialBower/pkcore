@@ -4,11 +4,11 @@
 
 | Component | Status |
 |---|---|
-| `WeightedCombos::from_range_str` — parse `:f` frequency suffix | Planned |
-| `Combos::from_str` — accept (and strip) `:f` suffix for backward compatibility | Planned |
-| `WeightedCombos` range string serialization (emit `:f` only when `f != 1.0`) | Planned |
-| `WeightedRange` / `RangeStrategy` updated to use inline frequencies | Planned |
-| Equity calculations respect combo-level frequency | Planned |
+| `WeightedCombos::from_range_str` — parse `:f` frequency suffix | Complete |
+| `Combos::from_str` — accept (and strip) `:f` suffix for backward compatibility | Complete |
+| `WeightedCombos` range string serialization (emit `:f` only when `f != 1.0`) | Complete |
+| `WeightedRange` / `RangeStrategy` updated to use inline frequencies | Complete |
+| Equity calculations respect combo-level frequency | Complete |
 | Doc (`docs/EPIC-25_Range_Frequencies.md`) | This file |
 
 ---

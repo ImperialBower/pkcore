@@ -335,6 +335,11 @@ impl FromStr for Combos {
         let mut v: HashSet<Combo> = HashSet::new();
 
         for c in index.split(',') {
+            // Strip optional frequency suffix (e.g. "AA:0.5" → "AA")
+            let c = match c.find(':') {
+                Some(pos) => &c[..pos],
+                None => c,
+            };
             if c.contains('-') {
                 let combo_range = Combos::range(c)?;
                 let upwrapped_range = Combos::unwrap_range(combo_range);
@@ -360,6 +365,13 @@ mod arrays__ranges__combos_tests {
     use super::*;
     use crate::analysis::gto::combo_range::ComboRange;
     use crate::analysis::gto::twos::Twos;
+
+    #[test]
+    fn from_str_strips_frequency_suffix() {
+        let without = Combos::from_str("AA, KK").unwrap();
+        let with_freq = Combos::from_str("AA:0.5, KK:0.75").unwrap();
+        assert_eq!(without, with_freq);
+    }
 
     #[test]
     fn from_str() {
