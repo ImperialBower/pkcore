@@ -386,8 +386,15 @@ impl HandHistory {
         // physical seat index.  This ensures seat number == array index — the
         // invariant the engine assumes throughout.  Empty slots (e.g. a seat
         // that was vacated between hands) are filled with default (empty) seats.
+        //
+        // The array must also be large enough to hold the button seat, which
+        // can point past the last occupied seat when the button advanced to an
+        // eliminated player's position (dead-button scenario).  Without this,
+        // `act_forced_bets()` receives an out-of-range button and computes the
+        // wrong action order for the street.
         let max_seat = self.players.iter().map(|p| p.seat as usize).max().unwrap_or(0);
-        let table_size = max_seat + 1;
+        let button_seat = self.table.button.unwrap_or(0) as usize;
+        let table_size = max_seat.max(button_seat) + 1;
         let mut seats_vec: Vec<SeatNoCell> = (0..table_size)
             .map(|_| SeatNoCell::new(PlayerNoCell::default()))
             .collect();
