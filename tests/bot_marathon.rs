@@ -45,8 +45,7 @@ fn dump_and_panic(hand_num: usize, context: &str, msg: String, collection: &Hand
     let yaml = collection
         .to_yaml()
         .unwrap_or_else(|e| format!("(YAML serialization also failed: {e})"));
-    let path = std::env::var("MARATHON_DUMP_PATH")
-        .unwrap_or_else(|_| "marathon_failure.yaml".to_string());
+    let path = std::env::var("MARATHON_DUMP_PATH").unwrap_or_else(|_| "marathon_failure.yaml".to_string());
     let _ = std::fs::write(&path, &yaml);
     panic!(
         "bot_marathon FAILED at hand {hand_num} [{context}]: {msg}\n\
