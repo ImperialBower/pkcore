@@ -912,8 +912,7 @@ impl SeatsNoCell {
         }
         // Freeze when ≤1 player is in the hand (everyone else folded), OR when
         // at most 1 non-all-in player remains (no one can call any future bet).
-        let use_frozen = self.count_active_in_hand() <= 1
-            || self.count_players_with_action_to_give() <= 1;
+        let use_frozen = self.count_active_in_hand() <= 1 || self.count_players_with_action_to_give() <= 1;
         let mut collected = 0usize;
         for seat in &mut self.0 {
             // Process every seat — not just those with a bet — so that checked

@@ -15,8 +15,7 @@
 
 use pkcore::hand_history::HandCollection;
 
-const SESSION_YAML: &str =
-    include_str!("../data/hands/pkarena0-session_2026-04-15.yaml");
+const SESSION_YAML: &str = include_str!("../data/hands/pkarena0-session_2026-04-15.yaml");
 
 fn load_session() -> HandCollection {
     HandCollection::from_yaml(SESSION_YAML).expect("fixture YAML should parse")
@@ -80,12 +79,8 @@ fn pot_won_matches_final_pot() {
 fn all_hands_replay_consistently() {
     let collection = load_session();
     for (idx, result) in collection.replay_all().into_iter().enumerate() {
-        let replay = result.unwrap_or_else(|e| {
-            panic!(
-                "replay() failed for hand {}: {e}",
-                collection.hands()[idx].hand.id
-            )
-        });
+        let replay =
+            result.unwrap_or_else(|e| panic!("replay() failed for hand {}: {e}", collection.hands()[idx].hand.id));
         assert!(
             replay.is_consistent,
             "replay mismatch for hand {}: final stacks = {:?}",
