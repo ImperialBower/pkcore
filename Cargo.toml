@@ -1,7 +1,7 @@
 [package]
 name = "pkcore"
 description = "Prototype core poker library."
-version = "0.0.42"
+version = "0.0.43"
 rust-version = "1.94.1"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
@@ -76,6 +76,10 @@ required-features = ["bot-profiles", "hand-histories"]
 
 [[example]]
 name = "replay_play"
+required-features = ["hand-histories"]
+
+[[example]]
+name = "yaml_audit"
 required-features = ["hand-histories"]
 
 [[test]]
