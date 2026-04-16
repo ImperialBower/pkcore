@@ -439,6 +439,15 @@ impl HandHistory {
         {
             table.board = Cards::from_str(&flop.cards)?;
             table.phase = GamePhase::DealFlop;
+            // Backward-compat: pre-0.0.42 YAMLs recorded actions on all-in
+            // run-out streets (frozen bring_it_in didn't exist yet). Reset
+            // non-all-in players to YetToAct only when there are actions to
+            // apply; an empty list means the current frozen behavior applies,
+            // and the frozen state must be preserved so the next bring_it_in()
+            // sees is_betting_complete() == true.
+            if !flop.actions.is_empty() {
+                table.seats.reset_non_allin_to_yet_to_act();
+            }
             replay_actions(&mut table, &flop.actions)?;
 
             if table.is_game_over() {
@@ -452,6 +461,9 @@ impl HandHistory {
                 let card = Card::from_str(&turn.card)?;
                 table.board.insert(card);
                 table.phase = GamePhase::DealTurn;
+                if !turn.actions.is_empty() {
+                    table.seats.reset_non_allin_to_yet_to_act();
+                }
                 replay_actions(&mut table, &turn.actions)?;
 
                 if table.is_game_over() {
@@ -465,6 +477,9 @@ impl HandHistory {
                     let card = Card::from_str(&river.card)?;
                     table.board.insert(card);
                     table.phase = GamePhase::DealRiver;
+                    if !river.actions.is_empty() {
+                        table.seats.reset_non_allin_to_yet_to_act();
+                    }
                     replay_actions(&mut table, &river.actions)?;
                 }
             }
