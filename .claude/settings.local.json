@@ -32,7 +32,8 @@
       "Bash(find /Users/gaoler/src/github.com/ImperialBower/pkcore/src -type f -name \"*.rs\" -exec wc -l {} +)",
       "Bash(wc:*)",
       "Bash(cargo nextest:*)",
-      "Bash(cargo doc:*)"
+      "Bash(cargo doc:*)",
+      "Bash(git -C /Users/christoph/src/github.com/ImperialBower/pkcore tag)"
     ]
   }
 }
