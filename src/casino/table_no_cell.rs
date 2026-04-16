@@ -2442,6 +2442,7 @@ impl TableNoCell {
         });
 
         let mut processed_chip_levels: HashSet<usize> = HashSet::new();
+        let mut last_winner: Option<u8> = None;
 
         for &winner_seat in &overall_winners {
             if equity.is_empty() {
@@ -2497,6 +2498,7 @@ impl TableNoCell {
                     .entry(seat_num)
                     .or_insert_with(|| self.build_eval_for_seat(seat_num));
             }
+            last_winner = Some(winner_seat);
         }
 
         while !equity.is_empty() {
@@ -2507,6 +2509,28 @@ impl TableNoCell {
                 .flat_map(|e| (0u8..16u8).filter(move |&i| e.seats.contains(i)))
                 .collect();
             if eligible_seats.is_empty() {
+                // Only Seatbit::NONE (dead-money) chips remain — no active
+                // player can claim them.  Award them to the most recent pot
+                // winner to maintain chip conservation.
+                let orphaned: usize = equity
+                    .equities()
+                    .iter()
+                    .filter(|e| e.seats == Seatbit::NONE)
+                    .map(|e| e.chips)
+                    .sum();
+                if orphaned > 0 {
+                    let recipient = last_winner.or_else(|| overall_winners.first().copied());
+                    if let Some(seat_num) = recipient {
+                        if let Some(seat) = self.seats.get_seat_mut(seat_num) {
+                            seat.player.chips += orphaned;
+                        }
+                        *per_seat.entry(seat_num).or_insert(0) += orphaned;
+                        seat_evals
+                            .entry(seat_num)
+                            .or_insert_with(|| self.build_eval_for_seat(seat_num));
+                        self.log(TableAction::PlayerWinsSidePot(seat_num, orphaned));
+                    }
+                }
                 break;
             }
 
@@ -2565,6 +2589,7 @@ impl TableNoCell {
                     .entry(seat_num)
                     .or_insert_with(|| self.build_eval_for_seat(seat_num));
             }
+            last_winner = Some(winner_with_lowest);
         }
 
         self.pot = 0;
@@ -3305,6 +3330,63 @@ mod tests {
             25_000,
             table.table_chip_count(),
             "chips were not conserved across the hand"
+        );
+    }
+
+    /// Row 4 full-flow: an active all-in player who contributed more than any
+    /// opponent could match must have their unmatched excess returned to them.
+    ///
+    /// This exercises the second while-loop in `showdown_multiway()` where
+    /// `eligible_seats` is non-empty because the over-contributor is still an
+    /// active player (not folded) and becomes the sole claimant of their own
+    /// side pot.
+    ///
+    /// Setup: seat 0 (1 000 chips) goes all-in against two short stacks (200 each).
+    /// The contested pot is at most 600 (200 × 3); seat 0's unmatched 800 must
+    /// be returned regardless of who wins the contested pot.
+    #[test]
+    fn showdown_multiway__active_over_contributor_gets_excess_returned() {
+        use std::str::FromStr;
+
+        let mut seat0 = SeatNoCell::new(PlayerNoCell::new_with_chips("BigStack".to_string(), 1_000));
+        seat0.cards = BoxedCards::from_str("7♦ 2♣").unwrap();
+        let mut seat1 = SeatNoCell::new(PlayerNoCell::new_with_chips("Short1".to_string(), 200));
+        seat1.cards = BoxedCards::from_str("A♠ A♥").unwrap();
+        let mut seat2 = SeatNoCell::new(PlayerNoCell::new_with_chips("Short2".to_string(), 200));
+        seat2.cards = BoxedCards::from_str("K♠ K♥").unwrap();
+
+        let seats = SeatsNoCell::new(vec![seat0, seat1, seat2]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+
+        // button = 0 → SB = 1, BB = 2; UTG pre-flop = seat 0 (button in 3-handed)
+        table.act_forced_bets().unwrap();
+
+        let utg = table.next_to_act(); // seat 0
+        table.act_all_in(utg).unwrap(); // 1 000 total chips_in_play
+        let next = table.next_to_act(); // seat 1 (SB posted 50 → all-in for 150 more = 200)
+        table.act_all_in(next).unwrap();
+        let next = table.next_to_act(); // seat 2 (BB posted 100 → all-in for 100 more = 200)
+        table.act_all_in(next).unwrap();
+
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+        table.deal_turn().unwrap();
+        table.deal_river().unwrap();
+        assert!(table.is_game_over());
+
+        let result = table.end_hand();
+        assert!(result.is_ok(), "end_hand failed: {result:?}");
+
+        // All 1_400 chips (1_000 + 200 + 200) must be conserved.
+        assert_eq!(1_400, table.table_chip_count(), "chips must be conserved");
+
+        // Seat 0 over-contributed by 800 relative to what either opponent could match.
+        // If seat 0 lost: the while-loop must have returned the unmatched 800 to them.
+        // If seat 0 won everything: they hold all 1_400.
+        let s0 = table.seats.get_seat(0).unwrap().player.chips;
+        assert!(
+            s0 == 800 || s0 == 1_400,
+            "big-stack should hold 800 (excess returned after losing) or 1_400 (won all); got {s0}"
         );
     }
 }
