@@ -382,11 +382,19 @@ impl HandHistory {
         let bb = self.table.stakes.big_blind as usize;
         let button = self.table.button.unwrap_or(0);
 
-        let seats_vec: Vec<SeatNoCell> = self
-            .players
-            .iter()
-            .map(|p| SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), p.stack as usize)))
+        // Build a sparse seats array so that each player is placed at their
+        // physical seat index.  This ensures seat number == array index — the
+        // invariant the engine assumes throughout.  Empty slots (e.g. a seat
+        // that was vacated between hands) are filled with default (empty) seats.
+        let max_seat = self.players.iter().map(|p| p.seat as usize).max().unwrap_or(0);
+        let table_size = max_seat + 1;
+        let mut seats_vec: Vec<SeatNoCell> = (0..table_size)
+            .map(|_| SeatNoCell::new(PlayerNoCell::default()))
             .collect();
+        for p in &self.players {
+            seats_vec[p.seat as usize] =
+                SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), p.stack as usize));
+        }
         let seats = SeatsNoCell::new(seats_vec);
         let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(sb, bb));
         table.button = button;

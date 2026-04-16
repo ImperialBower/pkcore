@@ -899,9 +899,9 @@ impl SeatsNoCell {
     /// unless the hand is effectively over (≤1 player still in), in which case
     /// their state is left unchanged ("frozen") since no further streets are needed.
     ///
-    /// Note: "frozen" is NOT used when `action_givers == 1` but all-in players
-    /// remain — in that case the non-all-in player still needs to act on future
-    /// streets and must be reset to `YetToAct`.
+    /// "Frozen" is also used when at most 1 non-all-in player remains (all others
+    /// all-in): that player cannot meaningfully bet on subsequent streets because
+    /// no opponent can call them, so their state must not be reset to `YetToAct`.
     ///
     /// # Errors
     ///
@@ -910,10 +910,9 @@ impl SeatsNoCell {
         if !self.is_betting_complete() {
             return Err(PKError::ActionIsntFinished);
         }
-        // Use "frozen" only when ≤1 player is in the hand (everyone else folded).
-        // When players are all-in, the remaining non-all-in player still needs
-        // to act on future streets, so their state must be reset to YetToAct.
-        let use_frozen = self.count_active_in_hand() <= 1;
+        // Freeze when ≤1 player is in the hand (everyone else folded), OR when
+        // at most 1 non-all-in player remains (no one can call any future bet).
+        let use_frozen = self.count_active_in_hand() <= 1 || self.count_players_with_action_to_give() <= 1;
         let mut collected = 0usize;
         for seat in &mut self.0 {
             // Process every seat — not just those with a bet — so that checked
