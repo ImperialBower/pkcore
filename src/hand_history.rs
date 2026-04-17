@@ -2723,31 +2723,94 @@ hands:
                 name: None,
                 seats: Some(3),
                 button: Some(1),
-                stakes: Stakes { small_blind: 50.0, big_blind: 100.0, ante: None, straddle: None },
+                stakes: Stakes {
+                    small_blind: 50.0,
+                    big_blind: 100.0,
+                    ante: None,
+                    straddle: None,
+                },
             },
             players: vec![
-                PlayerEntry { seat: 2, name: "gto".to_string(), stack: 3675.0, hole_cards: None, posted: None },
-                PlayerEntry { seat: 4, name: "loose_passive".to_string(), stack: 9200.0, hole_cards: None, posted: None },
-                PlayerEntry { seat: 6, name: "maniac".to_string(), stack: 61075.0, hole_cards: Some("5♦ 9♥".to_string()), posted: None },
+                PlayerEntry {
+                    seat: 2,
+                    name: "gto".to_string(),
+                    stack: 3675.0,
+                    hole_cards: None,
+                    posted: None,
+                },
+                PlayerEntry {
+                    seat: 4,
+                    name: "loose_passive".to_string(),
+                    stack: 9200.0,
+                    hole_cards: None,
+                    posted: None,
+                },
+                PlayerEntry {
+                    seat: 6,
+                    name: "maniac".to_string(),
+                    stack: 61075.0,
+                    hole_cards: Some("5♦ 9♥".to_string()),
+                    posted: None,
+                },
             ],
             board: Some("7♠ Q♦ 8♣".to_string()),
             streets: Some(Streets {
                 preflop: Some(PreflopStreet {
                     actions: vec![
-                        Action { seat: 2, action: ActionType::Post, amount: Some(50.0), all_in: None },
-                        Action { seat: 4, action: ActionType::Post, amount: Some(100.0), all_in: None },
-                        Action { seat: 6, action: ActionType::Call, amount: Some(100.0), all_in: None },
-                        Action { seat: 2, action: ActionType::Fold, amount: None, all_in: None },
-                        Action { seat: 4, action: ActionType::Check, amount: None, all_in: None },
+                        Action {
+                            seat: 2,
+                            action: ActionType::Post,
+                            amount: Some(50.0),
+                            all_in: None,
+                        },
+                        Action {
+                            seat: 4,
+                            action: ActionType::Post,
+                            amount: Some(100.0),
+                            all_in: None,
+                        },
+                        Action {
+                            seat: 6,
+                            action: ActionType::Call,
+                            amount: Some(100.0),
+                            all_in: None,
+                        },
+                        Action {
+                            seat: 2,
+                            action: ActionType::Fold,
+                            amount: None,
+                            all_in: None,
+                        },
+                        Action {
+                            seat: 4,
+                            action: ActionType::Check,
+                            amount: None,
+                            all_in: None,
+                        },
                     ],
                     pot: Some(250.0),
                 }),
                 flop: Some(FlopStreet {
                     cards: "7♠ Q♦ 8♣".to_string(),
                     actions: vec![
-                        Action { seat: 4, action: ActionType::Check, amount: None, all_in: None },
-                        Action { seat: 6, action: ActionType::Bet, amount: Some(250.0), all_in: None },
-                        Action { seat: 4, action: ActionType::Fold, amount: None, all_in: None },
+                        Action {
+                            seat: 4,
+                            action: ActionType::Check,
+                            amount: None,
+                            all_in: None,
+                        },
+                        Action {
+                            seat: 6,
+                            action: ActionType::Bet,
+                            amount: Some(250.0),
+                            all_in: None,
+                        },
+                        Action {
+                            seat: 4,
+                            action: ActionType::Fold,
+                            amount: None,
+                            all_in: None,
+                        },
                     ],
                     pot: Some(250.0),
                 }),
@@ -2755,14 +2818,42 @@ hands:
                 river: None,
             }),
             results: Some(vec![
-                ResultEntry { seat: 2, best_hand: None, hand_rank: None, outcome: Outcome::Lose, net: Some(-50.0), pot_won: None, mucked: None },
-                ResultEntry { seat: 4, best_hand: None, hand_rank: None, outcome: Outcome::Lose, net: Some(-100.0), pot_won: None, mucked: None },
-                ResultEntry { seat: 6, best_hand: None, hand_rank: None, outcome: Outcome::Win, net: Some(150.0), pot_won: Some(500.0), mucked: None },
+                ResultEntry {
+                    seat: 2,
+                    best_hand: None,
+                    hand_rank: None,
+                    outcome: Outcome::Lose,
+                    net: Some(-50.0),
+                    pot_won: None,
+                    mucked: None,
+                },
+                ResultEntry {
+                    seat: 4,
+                    best_hand: None,
+                    hand_rank: None,
+                    outcome: Outcome::Lose,
+                    net: Some(-100.0),
+                    pot_won: None,
+                    mucked: None,
+                },
+                ResultEntry {
+                    seat: 6,
+                    best_hand: None,
+                    hand_rank: None,
+                    outcome: Outcome::Win,
+                    net: Some(150.0),
+                    pot_won: Some(500.0),
+                    mucked: None,
+                },
             ]),
             analysis: None,
         };
         let result = hh.replay().expect("check-bet-fold replay should succeed");
-        assert!(result.is_consistent, "chip counts should match: {:?}", result.final_stacks);
+        assert!(
+            result.is_consistent,
+            "chip counts should match: {:?}",
+            result.final_stacks
+        );
     }
 
     /// Same scenario as `replay_flop_check_then_bet_then_fold` but loaded via
@@ -2843,7 +2934,11 @@ hands:
         assert_eq!(collection.len(), 1);
         let hh = &collection.hands()[0];
         let result = hh.replay().expect("check-bet-fold replay from YAML should succeed");
-        assert!(result.is_consistent, "chip counts should match: {:?}", result.final_stacks);
+        assert!(
+            result.is_consistent,
+            "chip counts should match: {:?}",
+            result.final_stacks
+        );
     }
 
     #[test]
