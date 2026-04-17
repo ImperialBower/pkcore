@@ -121,3 +121,63 @@ mod casino__table_split_pot_tests {
         );
     }
 }
+
+#[allow(nonstandard_style)]
+mod casino__table_no_cell__split_pot_tests {
+    use pkcore::arrays::sliced::BoxedCards;
+    use pkcore::casino::game::ForcedBets;
+    use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    use std::str::FromStr;
+
+    /// Regression test: BB folds after posting 100 when all others go all-in for < 100.
+    ///
+    /// Trigger: BB's `chips_in_play` (100) exceeds every active (non-folded) player's
+    /// `chips_in_play` (max = 80).  Before the fix, `showdown_multiway()` would break
+    /// out of its side-pot loop with `eligible_seats.is_empty()`, leaving the orphaned
+    /// `Seatbit::NONE` chips undistributed and causing `end_hand()` to return
+    /// `Err(PKError::ChipAuditFailed)`.
+    ///
+    /// After the fix, orphaned NONE chips are drained to the most recent pot winner so
+    /// chip conservation holds and `end_hand()` returns `Ok(winnings)`.
+    #[test]
+    fn bb_folds_over_contribution_no_chip_loss() {
+        // Pre-set hole cards on seats so nlh_from_seats() removes them from the deck,
+        // preventing duplicates in community cards.
+        let mut seat0 = SeatNoCell::new(PlayerNoCell::new_with_chips("BTN".to_string(), 70));
+        seat0.cards = BoxedCards::from_str("7♦ 2♣").unwrap();
+        let mut seat1 = SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 80));
+        seat1.cards = BoxedCards::from_str("8♦ 3♣").unwrap();
+        let mut seat2 = SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 600));
+        seat2.cards = BoxedCards::from_str("9♠ 4♦").unwrap();
+        let mut seat3 = SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 30));
+        seat3.cards = BoxedCards::from_str("A♠ A♥").unwrap();
+
+        let seats = SeatsNoCell::new(vec![seat0, seat1, seat2, seat3]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+
+        // SB posts 50, BB posts 100; hand_chip_total = 280.
+        table.act_forced_bets().unwrap();
+
+        // Pre-flop action: UTG → BTN → SB → BB
+        let utg = table.next_to_act(); // seat 3: 30 chips_in_play
+        table.act_all_in(utg).unwrap();
+        let btn = table.next_to_act(); // seat 0: 70 chips_in_play
+        table.act_all_in(btn).unwrap();
+        let sb = table.next_to_act(); // seat 1: 80 chips_in_play
+        table.act_all_in(sb).unwrap();
+        let bb = table.next_to_act(); // seat 2: no full raise; BB folds
+        table.act_fold(bb).unwrap(); // chips_in_play=100 > max_active=80 → orphaned NONE entry
+
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+        table.deal_turn().unwrap();
+        table.deal_river().unwrap();
+        assert!(table.is_game_over());
+
+        let result = table.end_hand();
+        assert!(
+            result.is_ok(),
+            "end_hand should not fail with ChipAuditFailed when BB over-contributes and folds: {result:?}"
+        );
+    }
+}

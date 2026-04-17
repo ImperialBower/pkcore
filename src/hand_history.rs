@@ -386,8 +386,15 @@ impl HandHistory {
         // physical seat index.  This ensures seat number == array index — the
         // invariant the engine assumes throughout.  Empty slots (e.g. a seat
         // that was vacated between hands) are filled with default (empty) seats.
+        //
+        // The array must also be large enough to hold the button seat, which
+        // can point past the last occupied seat when the button advanced to an
+        // eliminated player's position (dead-button scenario).  Without this,
+        // `act_forced_bets()` receives an out-of-range button and computes the
+        // wrong action order for the street.
         let max_seat = self.players.iter().map(|p| p.seat as usize).max().unwrap_or(0);
-        let table_size = max_seat + 1;
+        let button_seat = self.table.button.unwrap_or(0) as usize;
+        let table_size = max_seat.max(button_seat) + 1;
         let mut seats_vec: Vec<SeatNoCell> = (0..table_size)
             .map(|_| SeatNoCell::new(PlayerNoCell::default()))
             .collect();
@@ -2690,6 +2697,248 @@ hands:
         let collection = HandCollection::new();
         let results = collection.replay_all();
         assert!(results.is_empty());
+    }
+
+    /// Regression test: 3-player flop where BB checks, BTN bets, BB folds.
+    ///
+    /// Seats 2/4/6 with button at 1 (empty). Seat 2 folds preflop; seats 4 and 6
+    /// see the flop. On the flop seat 4 checks, seat 6 opens for 250, seat 4
+    /// folds.  The second action by seat 4 was previously rejected as
+    /// "out of order" because `SeatsNoCell::next_to_act` skipped the checker when
+    /// `everyone_has_bet` was true but the current-bet comparison used the wrong
+    /// branch ordering.
+    #[test]
+    fn replay_flop_check_then_bet_then_fold() {
+        let hh = HandHistory {
+            pkcore_version: None,
+            format_version: 1,
+            hand: HandMeta {
+                id: "regression-check-bet-fold".to_string(),
+                game: HandVariant::Holdem,
+                timestamp: None,
+                source: None,
+                description: None,
+            },
+            table: TableInfo {
+                name: None,
+                seats: Some(3),
+                button: Some(1),
+                stakes: Stakes {
+                    small_blind: 50.0,
+                    big_blind: 100.0,
+                    ante: None,
+                    straddle: None,
+                },
+            },
+            players: vec![
+                PlayerEntry {
+                    seat: 2,
+                    name: "gto".to_string(),
+                    stack: 3675.0,
+                    hole_cards: None,
+                    posted: None,
+                },
+                PlayerEntry {
+                    seat: 4,
+                    name: "loose_passive".to_string(),
+                    stack: 9200.0,
+                    hole_cards: None,
+                    posted: None,
+                },
+                PlayerEntry {
+                    seat: 6,
+                    name: "maniac".to_string(),
+                    stack: 61075.0,
+                    hole_cards: Some("5♦ 9♥".to_string()),
+                    posted: None,
+                },
+            ],
+            board: Some("7♠ Q♦ 8♣".to_string()),
+            streets: Some(Streets {
+                preflop: Some(PreflopStreet {
+                    actions: vec![
+                        Action {
+                            seat: 2,
+                            action: ActionType::Post,
+                            amount: Some(50.0),
+                            all_in: None,
+                        },
+                        Action {
+                            seat: 4,
+                            action: ActionType::Post,
+                            amount: Some(100.0),
+                            all_in: None,
+                        },
+                        Action {
+                            seat: 6,
+                            action: ActionType::Call,
+                            amount: Some(100.0),
+                            all_in: None,
+                        },
+                        Action {
+                            seat: 2,
+                            action: ActionType::Fold,
+                            amount: None,
+                            all_in: None,
+                        },
+                        Action {
+                            seat: 4,
+                            action: ActionType::Check,
+                            amount: None,
+                            all_in: None,
+                        },
+                    ],
+                    pot: Some(250.0),
+                }),
+                flop: Some(FlopStreet {
+                    cards: "7♠ Q♦ 8♣".to_string(),
+                    actions: vec![
+                        Action {
+                            seat: 4,
+                            action: ActionType::Check,
+                            amount: None,
+                            all_in: None,
+                        },
+                        Action {
+                            seat: 6,
+                            action: ActionType::Bet,
+                            amount: Some(250.0),
+                            all_in: None,
+                        },
+                        Action {
+                            seat: 4,
+                            action: ActionType::Fold,
+                            amount: None,
+                            all_in: None,
+                        },
+                    ],
+                    pot: Some(250.0),
+                }),
+                turn: None,
+                river: None,
+            }),
+            results: Some(vec![
+                ResultEntry {
+                    seat: 2,
+                    best_hand: None,
+                    hand_rank: None,
+                    outcome: Outcome::Lose,
+                    net: Some(-50.0),
+                    pot_won: None,
+                    mucked: None,
+                },
+                ResultEntry {
+                    seat: 4,
+                    best_hand: None,
+                    hand_rank: None,
+                    outcome: Outcome::Lose,
+                    net: Some(-100.0),
+                    pot_won: None,
+                    mucked: None,
+                },
+                ResultEntry {
+                    seat: 6,
+                    best_hand: None,
+                    hand_rank: None,
+                    outcome: Outcome::Win,
+                    net: Some(150.0),
+                    pot_won: Some(500.0),
+                    mucked: None,
+                },
+            ]),
+            analysis: None,
+        };
+        let result = hh.replay().expect("check-bet-fold replay should succeed");
+        assert!(
+            result.is_consistent,
+            "chip counts should match: {:?}",
+            result.final_stacks
+        );
+    }
+
+    /// Same scenario as `replay_flop_check_then_bet_then_fold` but loaded via
+    /// YAML round-trip to catch any serde deserialization difference.
+    #[test]
+    #[cfg(feature = "hand-histories")]
+    fn replay_flop_check_then_bet_then_fold_from_yaml() {
+        let yaml = r#"
+pkcore_version: "0.0.43"
+format_version: 1
+hands:
+- format_version: 1
+  hand:
+    id: demo-hand-011
+    game: holdem
+    timestamp: '1776377436'
+    source: demo
+  table:
+    name: demo
+    seats: 3
+    button: 1
+    stakes:
+      small_blind: 50.0
+      big_blind: 100.0
+  players:
+  - seat: 2
+    name: gto
+    stack: 3675.0
+  - seat: 4
+    name: loose_passive
+    stack: 9200.0
+  - seat: 6
+    name: maniac
+    stack: 61075.0
+    hole_cards: 5♦ 9♥
+  board: 7♠ Q♦ 8♣
+  streets:
+    preflop:
+      actions:
+      - seat: 2
+        action: post
+        amount: 50.0
+      - seat: 4
+        action: post
+        amount: 100.0
+      - seat: 6
+        action: call
+        amount: 100.0
+      - seat: 2
+        action: fold
+      - seat: 4
+        action: check
+      pot: 250.0
+    flop:
+      cards: 7♠ Q♦ 8♣
+      actions:
+      - seat: 4
+        action: check
+      - seat: 6
+        action: bet
+        amount: 250.0
+      - seat: 4
+        action: fold
+      pot: 250.0
+  results:
+  - seat: 2
+    outcome: lose
+    net: -50.0
+  - seat: 4
+    outcome: lose
+    net: -100.0
+  - seat: 6
+    outcome: win
+    net: 150.0
+    pot_won: 500.0
+"#;
+        let collection = HandCollection::from_yaml(yaml).expect("YAML should parse");
+        assert_eq!(collection.len(), 1);
+        let hh = &collection.hands()[0];
+        let result = hh.replay().expect("check-bet-fold replay from YAML should succeed");
+        assert!(
+            result.is_consistent,
+            "chip counts should match: {:?}",
+            result.final_stacks
+        );
     }
 
     #[test]

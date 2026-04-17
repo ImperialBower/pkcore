@@ -627,4 +627,44 @@ mod casino__table__seats_seat_equities_tests {
         assert_eq!(None, remaining_equity.winnings(Seatbit::SEAT_9));
         assert_eq!(None, no_equity.winnings(Seatbit::SEAT_9));
     }
+
+    /// Row 3: a folded player's contribution (NONE = 100) exceeds the winning
+    /// active player's chip level (80).  `winnings()` must cap the NONE take at
+    /// the winner's level and leave the excess 20 as remaining `NONE` equity so
+    /// the caller can drain it to the pot winner.
+    #[test]
+    fn winnings__none_exceeds_winner_chip_level() {
+        let equities = TableEquity::new(vec![
+            SeatEquity::new(100, Seatbit::NONE),
+            SeatEquity::new(80, Seatbit::SEAT_1),
+            SeatEquity::new(70, Seatbit::SEAT_0),
+            SeatEquity::new(30, Seatbit::SEAT_3),
+        ]);
+        // winner_chips = 80
+        // NONE:   min(80, 100) = 80 taken, 20 left
+        // SEAT_1: min(80,  80) = 80 taken,  0 left
+        // SEAT_0: min(80,  70) = 70 taken,  0 left  (SEAT_0 only contributed 70)
+        // SEAT_3: min(80,  30) = 30 taken,  0 left
+        let (won, remaining) = equities.winnings(Seatbit::SEAT_1).unwrap();
+        assert_eq!(won, 260); // 80 + 80 + 70 + 30
+        assert_eq!(remaining, TableEquity::new(vec![SeatEquity::new(20, Seatbit::NONE)]));
+    }
+
+    /// Row 4: an active player (SEAT_0) contributed more chips than any opponent
+    /// could match.  After the winner (SEAT_1) takes their share, SEAT_0's
+    /// unmatched excess must appear in the remaining equity so the caller can
+    /// return those chips to SEAT_0.
+    #[test]
+    fn winnings__active_over_contributor_excess_remains() {
+        let equities = TableEquity::new(vec![
+            SeatEquity::new(1_000, Seatbit::SEAT_0),
+            SeatEquity::new(200, Seatbit::SEAT_1),
+        ]);
+        // winner_chips = 200
+        // SEAT_0: min(200, 1000) = 200 taken, 800 left
+        // SEAT_1: min(200,  200) = 200 taken,   0 left
+        let (won, remaining) = equities.winnings(Seatbit::SEAT_1).unwrap();
+        assert_eq!(won, 400);
+        assert_eq!(remaining, TableEquity::new(vec![SeatEquity::new(800, Seatbit::SEAT_0)]));
+    }
 }

@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm generate-hups-bin test-debug-json nextest heavy mutants mutants-diff coverage coverage-open
+.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open
 
 # Default target
 default: ayce
@@ -12,6 +12,7 @@ help:
 	@echo "  make test            - Run tests"
 	@echo "  make nextest         - Run tests with cargo-nextest (installs if missing)"
 	@echo "  make heavy           - Run ignored heavy tests"
+	@echo "  make marathon        - Run 1000-hand bot marathon stress test"
 	@echo "  make test-debug-json - Run tests with debug-json feature (save/load use JSON)"
 	@echo "  make build_test      - Clean, build, nextest, and doc tests"
 	@echo "  make fmt             - Format code"
@@ -62,6 +63,10 @@ test:
 # Run ignored heavy tests
 heavy:
 	cargo test --test heavy_tests -- --ignored
+
+# Run the 1000-hand bot marathon stress test
+marathon:
+	cargo test --test bot_marathon -- --include-ignored --nocapture
 
 # Run tests with cargo-nextest (installs if not present)
 nextest:
