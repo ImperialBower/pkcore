@@ -230,7 +230,7 @@ impl CaseEval {
     #[allow(clippy::cast_possible_truncation)]
     pub fn winning_seats(&self) -> Vec<u8> {
         let flags = self.flags_win();
-        (0..u8::BITS as u8).filter(|i| (flags & (1 << i)) != 0).collect()
+        (0..self.0.len() as u8).filter(|i| (flags & (1 << i)) != 0).collect()
     }
 
     /// Pure TDD would have me make our first test green by simply having it return
@@ -888,5 +888,20 @@ mod hand_rank__case_eval_tests {
 
         assert_eq!(0b110, ce.flags_win());
         assert_eq!(expected, actual);
+    }
+
+    /// Regression test: seat index 8 (the 9th player in a 9-player table) was
+    /// never returned by `winning_seats()` because the old implementation used
+    /// `0..u8::BITS as u8` (= `0..8`), which stops at bit 7 and misses bit 8.
+    /// `Win::NINTH = 0b1_0000_0000` occupies bit 8, so the sole winner at seat
+    /// 8 produced an empty vector — the pot was zeroed without being distributed.
+    #[test]
+    fn winning_seats_seat_8_regression() {
+        let the_nuts = Eval::from(Five::from_2and3(Two::HAND_8S_7S, TestData::the_flop()));
+        let blank = Eval::default();
+        // 9-element CaseEval: seats 0-7 have blank (folded) hands, seat 8 has the nuts.
+        let ce = CaseEval::from(vec![blank, blank, blank, blank, blank, blank, blank, blank, the_nuts]);
+        let actual = ce.winning_seats();
+        assert_eq!(vec![8], actual, "seat 8 must be recognised as winner");
     }
 }
