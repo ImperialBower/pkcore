@@ -2096,6 +2096,7 @@ impl TableNoCell {
     /// - `PKError::NotEnoughCards`
     pub fn deal_flop(&mut self) -> Result<(), PKError> {
         self.phase = GamePhase::DealFlop;
+        let _burn = self.deck.draw_one()?;
         let flop = self.deck.draw(3)?;
         for card in flop {
             self.board.insert(card);
@@ -2111,6 +2112,7 @@ impl TableNoCell {
     /// - `PKError::NotEnoughCards`
     pub fn deal_turn(&mut self) -> Result<(), PKError> {
         self.phase = GamePhase::DealTurn;
+        let _burn = self.deck.draw_one()?;
         let turn = self.deck.draw_one()?;
         self.board.insert(turn);
         self.log(TableAction::DealtTurn(Bard::from(&turn)));
@@ -2124,6 +2126,7 @@ impl TableNoCell {
     /// - `PKError::NotEnoughCards`
     pub fn deal_river(&mut self) -> Result<(), PKError> {
         self.phase = GamePhase::DealRiver;
+        let _burn = self.deck.draw_one()?;
         let river = self.deck.draw_one()?;
         self.board.insert(river);
         self.log(TableAction::DealtRiver(Bard::from(&river)));
@@ -3387,6 +3390,88 @@ mod tests {
         assert!(
             s0 == 800 || s0 == 1_400,
             "big-stack should hold 800 (excess returned after losing) or 1_400 (won all); got {s0}"
+        );
+    }
+
+    // ── Burn card tests ───────────────────────────────────────────────────────
+
+    /// deal_flop must burn one card before dealing the three community cards.
+    /// After dealing hole cards to 2 players (4 cards consumed), then flop:
+    /// deck should have 52 - 4 (hole) - 1 (burn) - 3 (flop) = 44 cards.
+    #[test]
+    fn test_deal_flop_burns_a_card() {
+        let mut table = make_two_player_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        let sb = table.determine_small_blind();
+        let bb = table.determine_big_blind();
+        table.act_call(sb).unwrap();
+        table.seats.get_seat_mut(bb).unwrap().player.state = PlayerState::Check;
+        table.bring_it_in().unwrap();
+
+        table.deal_flop().unwrap();
+
+        assert_eq!(44, table.deck.len(), "deck should have 44 cards after burn + flop deal");
+    }
+
+    /// deal_turn must burn one card before dealing the turn card.
+    /// After flop (deck at 44), turn should leave deck at 44 - 1 (burn) - 1 (turn) = 42.
+    #[test]
+    fn test_deal_turn_burns_a_card() {
+        let mut table = make_two_player_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        let sb = table.determine_small_blind();
+        let bb = table.determine_big_blind();
+        table.act_call(sb).unwrap();
+        table.seats.get_seat_mut(bb).unwrap().player.state = PlayerState::Check;
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+        table.seats.reset_state_in_hand();
+        table.seats.0[0].player.state = PlayerState::Check;
+        table.seats.0[1].player.state = PlayerState::Check;
+        table.bring_it_in().unwrap();
+
+        let before = table.deck.len();
+        table.deal_turn().unwrap();
+
+        assert_eq!(
+            before - 2,
+            table.deck.len(),
+            "turn should consume burn + turn card (2 total)"
+        );
+    }
+
+    /// deal_river must burn one card before dealing the river card.
+    /// After turn (deck at 42), river should leave deck at 42 - 1 (burn) - 1 (river) = 40.
+    #[test]
+    fn test_deal_river_burns_a_card() {
+        let mut table = make_two_player_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        let sb = table.determine_small_blind();
+        let bb = table.determine_big_blind();
+        table.act_call(sb).unwrap();
+        table.seats.get_seat_mut(bb).unwrap().player.state = PlayerState::Check;
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+        table.seats.reset_state_in_hand();
+        table.seats.0[0].player.state = PlayerState::Check;
+        table.seats.0[1].player.state = PlayerState::Check;
+        table.bring_it_in().unwrap();
+        table.deal_turn().unwrap();
+        table.seats.reset_state_in_hand();
+        table.seats.0[0].player.state = PlayerState::Check;
+        table.seats.0[1].player.state = PlayerState::Check;
+        table.bring_it_in().unwrap();
+
+        let before = table.deck.len();
+        table.deal_river().unwrap();
+
+        assert_eq!(
+            before - 2,
+            table.deck.len(),
+            "river should consume burn + river card (2 total)"
         );
     }
 }
