@@ -534,8 +534,10 @@ mod casino__table__showdown_tests {
 
     #[test]
     fn process_split_pot() {
+        // Layout: [burn1=T♠] [flop: K♠ Q♠ A♦] [burn2=9♠] [turn: J♠] [burn3=8♠] [river: A♣] ...
+        // T♠, 9♠, 8♠ are moved to burn positions; board cards (K♠ Q♠ A♦ J♠ A♣) unchanged.
         let table = TestData::preroll_split_pot_with_blinds__to_completion(
-            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣",
+            "T♠ K♠ Q♠ A♦ 9♠ J♠ 8♠ A♣ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣",
         );
 
         assert!(table.is_betting_complete());

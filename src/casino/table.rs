@@ -1,5 +1,6 @@
 use crate::analysis::case_eval::CaseEval;
 use crate::analysis::nubibus::Pluribus;
+use crate::card::Card;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
@@ -757,11 +758,8 @@ impl TableCelled {
     ///
     /// - `PKError::NotEnoughCards`
     pub fn deal_flop(&self) -> Result<(), PKError> {
-        // Burn a card
-        // TODO: FIX ME
-        // let _burn = self.deck.draw_one()?;
-
         self.set_phase(GamePhase::DealFlop);
+        let _burn = self.deck.draw_one()?;
 
         let flop = self.deck.draw(3)?;
         self.set_board(flop.cards());
@@ -775,11 +773,8 @@ impl TableCelled {
     ///
     /// - `PKError::NotEnoughCards`
     pub fn deal_turn(&self) -> Result<(), PKError> {
-        // Burn a card
-        // TODO: FIX ME
-        // let _burn = self.deck.draw_one()?;
-
         self.set_phase(GamePhase::DealTurn);
+        let _burn = self.deck.draw_one()?;
 
         let turn = self.deck.draw_one()?;
         self.board.insert(turn);
@@ -793,11 +788,8 @@ impl TableCelled {
     ///
     /// - `PKError::NotEnoughCards`
     pub fn deal_river(&self) -> Result<(), PKError> {
-        // Burn a card
-        // TODO: FIX ME
-        // let _burn = self.deck.draw_one()?;
-
         self.set_phase(GamePhase::DealRiver);
+        let _burn = self.deck.draw_one()?;
 
         let river = self.deck.draw_one()?;
         self.board.insert(river);
@@ -1489,7 +1481,34 @@ impl TryFrom<&Pluribus> for TableCelled {
             seat.borrow_mut().player.chips.add_to(Stack::new(10_000));
             seat.borrow_mut().cards = BoxedCards::blanks(2);
         }
-        let dealt = CardsCell::from(pluribus);
+
+        // Build the primed deck with burn card slots interleaved between streets.
+        // Without burn slots the deck runs out when deal_flop/turn/river each
+        // consume one extra card.  Three arbitrary cards from the complement are
+        // used as burns; their identity doesn't affect hand evaluation.
+        let holecards = pluribus.hole_cards.cards();
+        let board_cards = pluribus.board.cards();
+        let all_known = holecards.clone() + board_cards.clone();
+        let complement = Cards::deck_minus(&all_known);
+        let mut comp_iter = complement.into_iter();
+
+        let board_vec: Vec<Card> = board_cards.into_iter().collect();
+        let mut dealt_vec: Vec<Card> = holecards.into_iter().collect();
+
+        if board_vec.len() >= 3 {
+            dealt_vec.push(comp_iter.next().ok_or(PKError::NotEnoughCards)?); // burn before flop
+            dealt_vec.extend_from_slice(&board_vec[0..3]);
+        }
+        if board_vec.len() >= 4 {
+            dealt_vec.push(comp_iter.next().ok_or(PKError::NotEnoughCards)?); // burn before turn
+            dealt_vec.push(board_vec[3]);
+        }
+        if board_vec.len() >= 5 {
+            dealt_vec.push(comp_iter.next().ok_or(PKError::NotEnoughCards)?); // burn before river
+            dealt_vec.push(board_vec[4]);
+        }
+
+        let dealt = CardsCell::from(Cards::from(dealt_vec));
         let forced_bets = ForcedBets::new(50, 100);
 
         let table = TableCelled::nlh_primed(seats, &dealt, forced_bets);
@@ -2271,6 +2290,117 @@ mod casino__table_tests {
         table.act_forced_bets().unwrap();
         // Seat 0 is UTG (button); needs to call the full 100 BB.
         assert_eq!(100, table.to_call(0));
+    }
+
+    // ── Burn card tests ───────────────────────────────────────────────────────
+
+    fn two_player_celled_table() -> TableCelled {
+        let seats = Seats::new(vec![
+            Seat::new_with_cards(
+                Player::new_with_chips("Alice".to_string(), 10_000),
+                BoxedCards::blanks(2),
+            ),
+            Seat::new_with_cards(Player::new_with_chips("Bob".to_string(), 10_000), BoxedCards::blanks(2)),
+        ]);
+        TableCelled::nlh_from_seats(seats, ForcedBets::new(50, 100))
+    }
+
+    /// deal_flop must burn one card before dealing the three community cards.
+    /// 2 players × 2 hole cards = 4 drawn; then burn + 3 flop = 4 more.
+    /// After flop: deck should have 52 - 4 (hole) - 1 (burn) - 3 (flop) = 44 cards.
+    #[test]
+    fn test_deal_flop_burns_a_card() -> Result<(), PKError> {
+        let table = two_player_celled_table();
+        table.act_forced_bets()?;
+        table.deal_cards_to_seats()?;
+        let sb = table.determine_small_blind();
+        let bb = table.determine_big_blind();
+        table.act_call(sb)?;
+        if let Some(seat) = table.seats.get_seat(bb) {
+            seat.player.state.set(PlayerState::Check);
+        }
+        table.bring_it_in()?;
+
+        table.deal_flop()?;
+
+        assert_eq!(44, table.deck.len(), "deck should have 44 cards after burn + flop deal");
+        Ok(())
+    }
+
+    /// deal_turn must burn one card before dealing the turn card.
+    /// After flop (deck at 44), turn should leave deck at 44 - 1 (burn) - 1 (turn) = 42.
+    #[test]
+    fn test_deal_turn_burns_a_card() -> Result<(), PKError> {
+        let table = two_player_celled_table();
+        table.act_forced_bets()?;
+        table.deal_cards_to_seats()?;
+        let sb = table.determine_small_blind();
+        let bb = table.determine_big_blind();
+        table.act_call(sb)?;
+        if let Some(seat) = table.seats.get_seat(bb) {
+            seat.player.state.set(PlayerState::Check);
+        }
+        table.bring_it_in()?;
+        table.deal_flop()?;
+        table.seats.reset_state_in_hand();
+        for i in 0u8..2 {
+            if let Some(seat) = table.seats.get_seat(i) {
+                seat.player.state.set(PlayerState::Check);
+            }
+        }
+        table.bring_it_in()?;
+
+        let before = table.deck.len();
+        table.deal_turn()?;
+
+        assert_eq!(
+            before - 2,
+            table.deck.len(),
+            "turn should consume burn + turn card (2 total)"
+        );
+        Ok(())
+    }
+
+    /// deal_river must burn one card before dealing the river card.
+    /// After turn (deck at 42), river should leave deck at 42 - 1 (burn) - 1 (river) = 40.
+    #[test]
+    fn test_deal_river_burns_a_card() -> Result<(), PKError> {
+        let table = two_player_celled_table();
+        table.act_forced_bets()?;
+        table.deal_cards_to_seats()?;
+        let sb = table.determine_small_blind();
+        let bb = table.determine_big_blind();
+        table.act_call(sb)?;
+        if let Some(seat) = table.seats.get_seat(bb) {
+            seat.player.state.set(PlayerState::Check);
+        }
+        table.bring_it_in()?;
+        table.deal_flop()?;
+        table.seats.reset_state_in_hand();
+        for i in 0u8..2 {
+            if let Some(seat) = table.seats.get_seat(i) {
+                seat.player.state.set(PlayerState::Check);
+            }
+        }
+        table.bring_it_in()?;
+        table.deal_turn()?;
+        table.seats.reset_state_in_hand();
+        for i in 0u8..2 {
+            if let Some(seat) = table.seats.get_seat(i) {
+                seat.player.state.set(PlayerState::Check);
+            }
+        }
+        table.bring_it_in()?;
+
+        let before = table.deck.len();
+        table.deal_river()?;
+
+        assert_eq!(
+            before - 2,
+            table.deck.len(),
+            "river should consume burn + river card (2 total)"
+        );
+        Ok(())
     }
 
     #[test]
