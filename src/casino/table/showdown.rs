@@ -269,7 +269,7 @@ impl Showdown {
                 .equities()
                 .iter()
                 .filter(|e| e.seats != Seatbit::NONE)
-                .flat_map(|e| (0u8..16u8).filter(move |&i| e.seats.contains(i)))
+                .flat_map(|e| (0u8..Seatbit::CAPACITY).filter(move |&i| e.seats.contains(i)))
                 .collect();
 
             if eligible_seats.is_empty() {
@@ -499,7 +499,8 @@ mod casino__table__showdown_tests {
             .map(|s| s.player.chips.count())
             .sum();
         assert_eq!(
-            780, total,
+            780,
+            total,
             "chip conservation violated: expected 780, got {total} (dropped {} chips)",
             780usize.saturating_sub(total)
         );

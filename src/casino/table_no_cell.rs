@@ -2506,7 +2506,7 @@ impl TableNoCell {
                 .equities()
                 .iter()
                 .filter(|e| e.seats != Seatbit::NONE)
-                .flat_map(|e| (0u8..16u8).filter(move |&i| e.seats.contains(i)))
+                .flat_map(|e| (0u8..Seatbit::CAPACITY).filter(move |&i| e.seats.contains(i)))
                 .collect();
             if eligible_seats.is_empty() {
                 // Only Seatbit::NONE (dead-money) chips remain — no active

@@ -6,6 +6,11 @@ use std::ops::{Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor,
 pub struct Seatbit(pub u16);
 
 impl Seatbit {
+    /// Number of seat positions this bitmask can represent —
+    /// one per bit of the `u16` backing field.
+    #[allow(clippy::cast_possible_truncation)] // 16 fits in u8
+    pub const CAPACITY: u8 = u16::BITS as u8;
+
     pub const NONE: Seatbit = Seatbit(0b0000_0000_0000_0000);
     pub const SEAT_0: Seatbit = Seatbit(0b0000_0000_0000_0001);
     pub const SEAT_1: Seatbit = Seatbit(0b0000_0000_0000_0010);
