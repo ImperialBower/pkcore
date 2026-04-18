@@ -573,6 +573,7 @@ fn build_hand_history(
         event_log,
         ending_stacks,
         RUN_NAME,
+        None,
     )
 }
 

@@ -258,6 +258,7 @@ fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl 
         &winnings,
         &session.table.event_log[event_log_start..],
         &ending_stacks,
+        session.shuffled_deck_str.clone(),
     );
     (winnings, history)
 }
@@ -285,6 +286,7 @@ fn build_hand_history(
     winnings: &Winnings,
     event_log: &[TableAction],
     ending_stacks: &[(u8, usize)],
+    shuffled_deck_str: Option<String>,
 ) -> HandHistory {
     HandHistory::from_table_state(
         hand_num,
@@ -297,6 +299,7 @@ fn build_hand_history(
         event_log,
         ending_stacks,
         RUN_NAME,
+        shuffled_deck_str,
     )
 }
 

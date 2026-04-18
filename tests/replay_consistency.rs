@@ -141,6 +141,7 @@ fn test_bot_selfplay_replay_roundtrip() {
             &event_log,
             &ending_stacks,
             SOURCE,
+            session.shuffled_deck_str.clone(),
         );
         collection.push(history);
         session.table.button_up();
