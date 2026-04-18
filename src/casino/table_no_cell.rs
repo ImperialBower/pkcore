@@ -3442,6 +3442,44 @@ mod tests {
         );
     }
 
+    /// After a full hand (hole cards + burn+flop + burn+turn + burn+river) the
+    /// deck must be fully restored to 52 cards after reset().
+    /// Fails if burn cards are discarded rather than mucked.
+    #[test]
+    fn test_reset_restores_deck_to_52_after_burns() -> Result<(), crate::PKError> {
+        let mut table = make_two_player_table();
+        table.act_forced_bets()?;
+        table.deal_cards_to_seats()?;
+        let sb = table.determine_small_blind();
+        let bb = table.determine_big_blind();
+        table.act_call(sb)?;
+        table.seats.get_seat_mut(bb).unwrap().player.state = PlayerState::Check;
+        table.bring_it_in()?;
+        table.deal_flop()?;
+        table.seats.reset_state_in_hand();
+        table.seats.0[0].player.state = PlayerState::Check;
+        table.seats.0[1].player.state = PlayerState::Check;
+        table.bring_it_in()?;
+        table.deal_turn()?;
+        table.seats.reset_state_in_hand();
+        table.seats.0[0].player.state = PlayerState::Check;
+        table.seats.0[1].player.state = PlayerState::Check;
+        table.bring_it_in()?;
+        table.deal_river()?;
+        table.seats.reset_state_in_hand();
+        table.seats.0[0].player.state = PlayerState::Check;
+        table.seats.0[1].player.state = PlayerState::Check;
+
+        table.reset();
+
+        assert_eq!(
+            52,
+            table.deck.len(),
+            "reset() must return all 52 cards including burn cards to the deck"
+        );
+        Ok(())
+    }
+
     /// deal_river must burn one card before dealing the river card.
     /// After turn (deck at 42), river should leave deck at 42 - 1 (burn) - 1 (river) = 40.
     #[test]
