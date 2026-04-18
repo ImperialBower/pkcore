@@ -121,6 +121,20 @@ impl std::fmt::Display for GameState {
 /// turn, or river, the dealer is required to take the top card from the deck and burn (discard) it.
 ///
 /// I have a strong love/hate relationship with this struct. In many ways it's a mutability hack
+///
+/// This Struct has mainly been replaced with the much simpler `TableNoCell` which uses traditional
+/// mutability. I asked the question: `is there every a use case for TableCelled?`
+///
+/// > Yes — `TableCelled` (`table.rs`) exists for the `Pluribus`/analysis path. Its defining characteristic is that all mutations go through `RefCell` interior
+/// > mutability, which lets the borrow checker allow shared &self references to mutate state. This is needed in two places:
+/// >
+/// > 1. `TryFrom<&Pluribus>` — reconstructs a table from a parsed game state string (the `Nubibus/Pluribus` analysis format). The analysis code traverses a game
+/// > treewhere it needs to hold multiple references into the table simultaneously while still mutating it.
+/// > 2. interactive_play.rs — the human-vs-bots example uses TableCelled directly, though this is arguably historical rather than a strong requirement.
+/// >
+/// > The `TableNoCell` path (`table_no_cell.rs`) is the one the active session/bot loop uses, and it's the cleaner design — normal &mut self methods, no `RefCell`
+/// > overhead. The plan has been to converge on `TableNoCell` over time (as noted in the ROADMAP.md), with `TableCelled` kept alive only as long as the Pluribus
+/// > analysis path needs it.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TableCelled {
     pub id: Uuid,
@@ -759,7 +773,8 @@ impl TableCelled {
     /// - `PKError::NotEnoughCards`
     pub fn deal_flop(&self) -> Result<(), PKError> {
         self.set_phase(GamePhase::DealFlop);
-        let _burn = self.deck.draw_one()?;
+        let burn = self.deck.draw_one()?;
+        self.muck.insert(burn);
 
         let flop = self.deck.draw(3)?;
         self.set_board(flop.cards());
@@ -774,7 +789,8 @@ impl TableCelled {
     /// - `PKError::NotEnoughCards`
     pub fn deal_turn(&self) -> Result<(), PKError> {
         self.set_phase(GamePhase::DealTurn);
-        let _burn = self.deck.draw_one()?;
+        let burn = self.deck.draw_one()?;
+        self.muck.insert(burn);
 
         let turn = self.deck.draw_one()?;
         self.board.insert(turn);
@@ -789,7 +805,8 @@ impl TableCelled {
     /// - `PKError::NotEnoughCards`
     pub fn deal_river(&self) -> Result<(), PKError> {
         self.set_phase(GamePhase::DealRiver);
-        let _burn = self.deck.draw_one()?;
+        let burn = self.deck.draw_one()?;
+        self.muck.insert(burn);
 
         let river = self.deck.draw_one()?;
         self.board.insert(river);

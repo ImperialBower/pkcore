@@ -2096,7 +2096,8 @@ impl TableNoCell {
     /// - `PKError::NotEnoughCards`
     pub fn deal_flop(&mut self) -> Result<(), PKError> {
         self.phase = GamePhase::DealFlop;
-        let _burn = self.deck.draw_one()?;
+        let burn = self.deck.draw_one()?;
+        self.muck.insert(burn);
         let flop = self.deck.draw(3)?;
         for card in flop {
             self.board.insert(card);
@@ -2112,7 +2113,8 @@ impl TableNoCell {
     /// - `PKError::NotEnoughCards`
     pub fn deal_turn(&mut self) -> Result<(), PKError> {
         self.phase = GamePhase::DealTurn;
-        let _burn = self.deck.draw_one()?;
+        let burn = self.deck.draw_one()?;
+        self.muck.insert(burn);
         let turn = self.deck.draw_one()?;
         self.board.insert(turn);
         self.log(TableAction::DealtTurn(Bard::from(&turn)));
@@ -2126,7 +2128,8 @@ impl TableNoCell {
     /// - `PKError::NotEnoughCards`
     pub fn deal_river(&mut self) -> Result<(), PKError> {
         self.phase = GamePhase::DealRiver;
-        let _burn = self.deck.draw_one()?;
+        let burn = self.deck.draw_one()?;
+        self.muck.insert(burn);
         let river = self.deck.draw_one()?;
         self.board.insert(river);
         self.log(TableAction::DealtRiver(Bard::from(&river)));
