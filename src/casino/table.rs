@@ -513,7 +513,7 @@ impl TableCelled {
     pub fn act_forced_bet_big_blind(&self) -> Result<(), PKError> {
         let bb_seat_num = self.determine_big_blind();
         let actual = self.act_forced_bet(bb_seat_num, self.forced.big_blind)?;
-        self.bet.set(self.forced.big_blind);
+        self.bet.set(actual);
         self.log_info(TableAction::ForcedBetBigBlind(bb_seat_num, actual));
         self.action_to_next();
 
@@ -2472,7 +2472,8 @@ mod casino__table_tests {
 
     #[test]
     fn forced_bets_short_bb_to_call_full_amount() {
-        // BB (seat 2) has only 30 chips; UTG (seat 0) must still call the full 100 BB.
+        // BB (seat 2) has only 30 chips; UTG (seat 0) calls only what BB posted (30),
+        // not the configured blind (100).
         let table = three_player_table_with_short_bb(30);
         table.act_forced_bets().unwrap();
 
@@ -2481,16 +2482,16 @@ mod casino__table_tests {
         assert_eq!(30, bb_seat.player.bet.count());
         drop(bb_seat);
 
-        assert_eq!(100, table.to_call(0));
+        assert_eq!(30, table.to_call(0));
     }
 
     #[test]
     fn act_call_after_short_blind() {
         let table = three_player_table_with_short_bb(30);
         table.act_forced_bets().unwrap();
-        // UTG (seat 0) calls — should commit 100 chips.
+        // UTG (seat 0) calls — commits only what BB actually posted (30).
         table.act_call(0).unwrap();
         let utg = table.seats.get_seat(0).unwrap();
-        assert_eq!(100, utg.player.bet.count());
+        assert_eq!(30, utg.player.bet.count());
     }
 }

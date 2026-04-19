@@ -1711,7 +1711,7 @@ impl TableNoCell {
     pub fn act_forced_bet_big_blind(&mut self) -> Result<(), PKError> {
         let bb = self.determine_big_blind();
         let actual = self.seats.act_forced_bet(bb, self.forced.big_blind)?;
-        self.bet = self.forced.big_blind;
+        self.bet = actual;
         self.log(TableAction::ForcedBetBigBlind(bb, actual));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(())
@@ -3258,6 +3258,23 @@ mod tests {
         );
     }
 
+    // Regression: when BB is short-stacked, other players should only need to call
+    // what the BB actually posted, not the configured blind amount.
+    #[test]
+    fn table_no_cell_to_call_capped_at_short_stack_bb() {
+        // button=0: seat 0 = UTG/button, seat 1 = SB, seat 2 = BB (short-stacked)
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 60)), // short-stacked
+        ]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        let utg = table.determine_utg();
+        // UTG should call 60 (what BB actually posted), not 100 (the configured blind).
+        assert_eq!(60, table.to_call(utg));
+    }
+
     #[test]
     fn table_no_cell_bet_is_zero_before_blinds() {
         let table = make_two_player_table();
@@ -3287,7 +3304,8 @@ mod tests {
 
     #[test]
     fn table_no_cell_forced_bets_short_bb_to_call_full_amount() {
-        // BB (seat 2) has only 30 chips — posts all-in; UTG (seat 0) must still call 100.
+        // BB (seat 2) has only 30 chips — posts all-in; UTG (seat 0) needs to call
+        // only what BB actually posted (30), not the configured blind (100).
         let seats = SeatsNoCell::new(vec![
             SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
@@ -3303,12 +3321,12 @@ mod tests {
         let _ = bb;
 
         let utg = table.determine_utg();
-        assert_eq!(100, table.to_call(utg));
+        assert_eq!(30, table.to_call(utg));
     }
 
     #[test]
     fn table_no_cell_act_call_after_short_blind() {
-        // BB (seat 2) short-stack; UTG (seat 0) calls — commits 100.
+        // BB (seat 2) short-stack; UTG (seat 0) calls — commits only what BB posted (30).
         let seats = SeatsNoCell::new(vec![
             SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
@@ -3322,7 +3340,7 @@ mod tests {
         table.act_call(utg).unwrap();
 
         let utg_seat = table.seats.get_seat(utg).unwrap();
-        assert_eq!(100, utg_seat.player.bet);
+        assert_eq!(30, utg_seat.player.bet);
     }
 
     // ── Chip audit ────────────────────────────────────────────────────────────
