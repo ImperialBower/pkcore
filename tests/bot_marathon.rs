@@ -207,6 +207,7 @@ fn bot_marathon__1000_hands_without_error() {
             &event_log,
             &ending_stacks,
             SOURCE,
+            session.shuffled_deck_str.clone(),
         );
         collection.push(history);
 

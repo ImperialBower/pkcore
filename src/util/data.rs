@@ -360,7 +360,9 @@ impl TestData {
     /// ```
     #[must_use]
     pub fn min_table() -> TableCelled {
-        let primed = cards!("A♦ 5♦ 6♠ Q♣ 5♣ 6♥ 9♣ 6♦ 5♥ 5♠ 8♠");
+        // Layout: [hole×6] [burn1] [flop×3] [burn2] [turn] [burn3] [river]
+        // Burns 2♦ 3♦ 4♦ are arbitrary cards not in hole cards or the board.
+        let primed = cards!("A♦ 5♦ 6♠ Q♣ 5♣ 6♥ 2♦ 9♣ 6♦ 5♥ 3♦ 5♠ 4♦ 8♠");
         TableCelled::nlh_primed(
             Seats::new(TestData::min_players()),
             &CardsCell::from(Cards::deck_primed(&primed)),
@@ -481,6 +483,56 @@ impl TestData {
         assert!(table.is_betting_complete());
         assert!(table.is_game_over());
 
+        table
+    }
+
+    /// Builds a 4-player `TableCelled` for the BB-over-contributes-and-folds scenario:
+    ///
+    /// | Seat | Name | Stack | Role |
+    /// |------|------|-------|------|
+    /// | 0    | BTN  | 70    | Button |
+    /// | 1    | SB   | 80    | Small Blind (50) |
+    /// | 2    | BB   | 600   | Big Blind (100) — will fold |
+    /// | 3    | UTG  | 30    | UTG — holds A♠ A♥ |
+    ///
+    /// BB's 100-chip blind contribution exceeds the max active stack (SB = 80), so
+    /// 20 chips become `Seatbit::NONE` dead money when BB folds after over-contributing.
+    pub fn bb_folds_over_contribution_table(cards: &CardsCell) -> TableCelled {
+        let btn = Seat {
+            player: Player::new_with_chips("BTN".to_string(), 70),
+            cards: boxed!("7♦ 2♣"),
+        };
+        let sb = Seat {
+            player: Player::new_with_chips("SB".to_string(), 80),
+            cards: boxed!("8♦ 3♣"),
+        };
+        let bb = Seat {
+            player: Player::new_with_chips("BB".to_string(), 600),
+            cards: boxed!("9♠ 4♦"),
+        };
+        let utg = Seat {
+            player: Player::new_with_chips("UTG".to_string(), 30),
+            cards: boxed!("A♠ A♥"),
+        };
+        // BTN=0, SB=1, BB=2, UTG=3; button at seat 0.
+        let seats = Seats::new(vec![btn, sb, bb, utg]);
+        TableCelled::nlh_primed(seats, cards, ForcedBets::new(50, 100))
+    }
+
+    /// Returns the BB-over-contributes-and-folds table with forced bets already posted
+    /// and the board pre-rolled.  The table is ready for pre-flop action starting at UTG.
+    ///
+    /// Board: K♣ Q♥ J♠ T♦ 6♦ (no card conflicts with any pre-set hole card).
+    ///
+    /// # Panics
+    ///
+    /// Panics if forced bets fail to post (test fixture, not library code).
+    #[must_use]
+    pub fn preroll_bb_folds_over_contribution() -> TableCelled {
+        // Layout: [burn1] [flop×3] [burn2] [turn] [burn3] [river]
+        // Burns 2♥ 3♥ 4♥ do not conflict with any hole card or board card.
+        let table = TestData::bb_folds_over_contribution_table(&cc!("2♥ K♣ Q♥ J♠ 3♥ T♦ 4♥ 6♦"));
+        table.act_forced_bets().expect("forced bets should post");
         table
     }
 }

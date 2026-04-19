@@ -159,6 +159,15 @@ pub struct HandHistory {
     /// Optional GTO/analysis metadata: ranges, equity, solver notes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub analysis: Option<AnalysisContext>,
+
+    /// The full 52-card shuffled deck at the start of this hand, as a
+    /// space-separated card string (e.g. `"A♠ K♠ Q♠ ..."`).
+    ///
+    /// When present, the hand can be fully replayed from this deck alone.
+    /// Cards are consumed in order: hole cards dealt clockwise from the button,
+    /// then burn+flop, burn+turn, burn+river.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shuffled_deck: Option<String>,
 }
 
 fn default_pkcore_version() -> String {
@@ -203,7 +212,7 @@ impl HandHistory {
     ///     1, 0, 0,
     ///     &ForcedBets::new(50, 100),
     ///     &[(0, "Alice".to_string(), 1000, Some("A♠ K♠".to_string()))],
-    ///     "", &Winnings::default(), &[], &[(0, 1000)], "test",
+    ///     "", &Winnings::default(), &[], &[(0, 1000)], "test", None,
     /// );
     /// assert_eq!(hh.hand.id, "test-hand-001");
     /// assert!(hh.results.is_some());
@@ -225,6 +234,7 @@ impl HandHistory {
         event_log: &[TableAction],
         ending_stacks: &[(u8, usize)],
         source: &str,
+        shuffled_deck: Option<String>,
     ) -> Self {
         let results: Vec<ResultEntry> = player_snapshot
             .iter()
@@ -296,6 +306,7 @@ impl HandHistory {
             streets: Streets::from_event_log(event_log),
             results: Some(results),
             analysis: None,
+            shuffled_deck,
         }
     }
 
@@ -365,6 +376,7 @@ impl HandHistory {
     ///             outcome: Outcome::Win, net: Some(50.0), pot_won: Some(150.0), mucked: None },
     ///     ]),
     ///     analysis: None,
+    ///     shuffled_deck: None,
     /// };
     ///
     /// let result = hh.replay();
@@ -694,6 +706,7 @@ impl HandCollection {
     ///     streets: None,
     ///     results: None,
     ///     analysis: None,
+    ///     shuffled_deck: None,
     /// });
     /// assert_eq!(collection.len(), 1);
     /// ```
@@ -2181,6 +2194,7 @@ results:
             streets: None,
             results: None,
             analysis: None,
+            shuffled_deck: None,
         };
         assert_eq!(hh.to_board(), Err(PKError::NotEnoughCards));
     }
@@ -2259,6 +2273,7 @@ results:
             streets: None,
             results: None,
             analysis: None,
+            shuffled_deck: None,
         }
     }
 
@@ -2547,6 +2562,7 @@ hands:
             &[],
             &[(0, 1000)],
             "test_source",
+            None,
         );
         assert_eq!(hh.hand.id, "test_source-hand-003");
         assert_eq!(hh.hand.source.as_deref(), Some("test_source"));
@@ -2570,6 +2586,7 @@ hands:
             &[],
             &[(0, 900), (1, 1100)],
             "test",
+            None,
         );
         let results = hh.results.unwrap();
         let a = results.iter().find(|r| r.seat == 0).unwrap();
@@ -2672,6 +2689,7 @@ hands:
                 },
             ]),
             analysis: None,
+            shuffled_deck: None,
         };
 
         let result = hh.replay().expect("replay should succeed");
@@ -2847,6 +2865,7 @@ hands:
                 },
             ]),
             analysis: None,
+            shuffled_deck: None,
         };
         let result = hh.replay().expect("check-bet-fold replay should succeed");
         assert!(
@@ -2939,6 +2958,100 @@ hands:
             "chip counts should match: {:?}",
             result.final_stacks
         );
+    }
+
+    // ── shuffled_deck field ───────────────────────────────────────────────────
+
+    /// shuffled_deck round-trips through YAML and is omitted when None.
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn test_hand_history_shuffled_deck_round_trips() {
+        use crate::casino::game::ForcedBets;
+        use crate::casino::table::winnings::Winnings;
+
+        let deck_str = "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣";
+
+        let hh = HandHistory::from_table_state(
+            1,
+            0,
+            0,
+            &ForcedBets::new(50, 100),
+            &[(1, "Alice".to_string(), 1000, None)],
+            "",
+            &Winnings::default(),
+            &[],
+            &[(1, 1000)],
+            "test",
+            Some(deck_str.to_string()),
+        );
+
+        let yaml = hh.to_yaml().expect("should serialize");
+        assert!(
+            yaml.contains("shuffled_deck"),
+            "YAML should include shuffled_deck field"
+        );
+
+        let restored: HandHistory = HandHistory::from_yaml(&yaml).expect("should deserialize");
+        assert_eq!(restored.shuffled_deck, Some(deck_str.to_string()));
+
+        // A HandHistory without shuffled_deck should not emit the field.
+        let hh_no_deck = HandHistory::from_table_state(
+            2,
+            0,
+            0,
+            &ForcedBets::new(50, 100),
+            &[(1, "Alice".to_string(), 1000, None)],
+            "",
+            &Winnings::default(),
+            &[],
+            &[(1, 1000)],
+            "test",
+            None,
+        );
+        let yaml_no_deck = hh_no_deck.to_yaml().expect("should serialize");
+        assert!(
+            !yaml_no_deck.contains("shuffled_deck"),
+            "YAML should omit shuffled_deck when None"
+        );
+    }
+
+    /// Passing a deck string to from_table_state wires it into the HandHistory.
+    #[test]
+    fn test_from_table_state_stores_shuffled_deck() {
+        use crate::casino::game::ForcedBets;
+        use crate::casino::table::winnings::Winnings;
+
+        let deck_str = "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣";
+
+        let hh = HandHistory::from_table_state(
+            1,
+            0,
+            0,
+            &ForcedBets::new(50, 100),
+            &[(1, "Alice".to_string(), 1000, None)],
+            "",
+            &Winnings::default(),
+            &[],
+            &[(1, 1000)],
+            "test",
+            Some(deck_str.to_string()),
+        );
+        assert_eq!(hh.shuffled_deck, Some(deck_str.to_string()));
+
+        let hh_none = HandHistory::from_table_state(
+            2,
+            0,
+            0,
+            &ForcedBets::new(50, 100),
+            &[(1, "Alice".to_string(), 1000, None)],
+            "",
+            &Winnings::default(),
+            &[],
+            &[(1, 1000)],
+            "test",
+            None,
+        );
+        assert_eq!(hh_none.shuffled_deck, None);
     }
 
     #[test]

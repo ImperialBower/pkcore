@@ -193,6 +193,7 @@ impl Showdown {
         });
 
         let mut processed_chip_levels: HashSet<usize> = HashSet::new();
+        let mut last_winner: Option<u8> = None;
 
         for &winner_seat in &overall_winners {
             if equity.is_empty() {
@@ -254,6 +255,7 @@ impl Showdown {
                 *per_seat.entry(seat).or_insert(0) += share_amount;
                 evals.entry(seat).or_insert_with(|| build_eval(seat));
             }
+            last_winner = Some(winner_seat);
         }
 
         // ── Phase 2: distribute remaining side pots ───────────────────────
@@ -267,10 +269,30 @@ impl Showdown {
                 .equities()
                 .iter()
                 .filter(|e| e.seats != Seatbit::NONE)
-                .flat_map(|e| (0u8..16u8).filter(move |&i| e.seats.contains(i)))
+                .flat_map(|e| (0u8..Seatbit::CAPACITY).filter(move |&i| e.seats.contains(i)))
                 .collect();
 
             if eligible_seats.is_empty() {
+                // Only Seatbit::NONE (dead-money) chips remain — no active player
+                // can claim them.  Award them to the most recent pot winner to
+                // maintain chip conservation.
+                let orphaned: usize = equity
+                    .equities()
+                    .iter()
+                    .filter(|e| e.seats == Seatbit::NONE)
+                    .map(|e| e.chips)
+                    .sum();
+                if orphaned > 0 {
+                    let recipient = last_winner.or_else(|| overall_winners.first().copied());
+                    if let Some(seat_num) = recipient {
+                        if let Some(s) = table.get_seat_mut(seat_num) {
+                            let _ = s.player.chips.wins(Stack::new(orphaned));
+                        }
+                        *per_seat.entry(seat_num).or_insert(0) += orphaned;
+                        evals.entry(seat_num).or_insert_with(|| build_eval(seat_num));
+                        table.log_info(TableAction::PlayerWinsSidePot(seat_num, orphaned));
+                    }
+                }
                 break;
             }
 
@@ -346,6 +368,7 @@ impl Showdown {
                 *per_seat.entry(seat).or_insert(0) += share_amount;
                 evals.entry(seat).or_insert_with(|| build_eval(seat));
             }
+            last_winner = Some(winner_with_lowest);
         }
 
         // ── Build result vector ────────────────────────────────────────────
@@ -432,10 +455,89 @@ mod casino__table__showdown_tests {
         println!("{table}");
     }
 
+    /// Regression test: BB over-contributes (posts 100) then folds.  All active players
+    /// are all-in for ≤ 80, so 20 chips (100 − 80) become `Seatbit::NONE` dead money.
+    /// Before the fix, `process_multiway()` broke out of the Phase 2 loop without draining
+    /// those chips, silently dropping 20 chips and violating chip conservation.
+    ///
+    /// Starting stacks: BTN 70 + SB 80 + BB 600 + UTG 30 = 780 chips.
+    /// After `end_hand()` all 780 chips must still be present across all seats.
+    #[test]
+    fn process_multiway__bb_folds_over_contribution_no_chip_loss() {
+        let table = TestData::preroll_bb_folds_over_contribution();
+
+        // Pre-flop: UTG all-in (30), BTN all-in (70), SB all-in (80), BB folds (100 posted).
+        // None of the all-ins constitute a full raise over the BB (100), so BB's option is
+        // not reopened; BB may fold, leaving 20 orphaned Seatbit::NONE chips.
+        table.act_all_in(3).expect("UTG all-in should succeed");
+        table.act_all_in(0).expect("BTN all-in should succeed");
+        table.act_all_in(1).expect("SB all-in should succeed");
+        table.act_fold(2).expect("BB fold should succeed");
+
+        assert!(table.is_betting_complete());
+        assert!(!table.is_game_over());
+
+        // Deal the board (K♣ Q♥ J♠ T♦ 6♦ pre-rolled in the fixture).
+        table.bring_it_in().expect("bring_it_in before flop");
+        table.deal_flop().expect("deal flop");
+        table.bring_it_in().expect("bring_it_in before turn");
+        table.deal_turn().expect("deal turn");
+        table.bring_it_in().expect("bring_it_in before river");
+        table.deal_river().expect("deal river");
+
+        assert!(table.is_game_over());
+
+        let result = table.end_hand();
+        assert!(
+            result.is_ok(),
+            "end_hand must not fail when BB over-contributes and folds: {result:?}"
+        );
+
+        // Chip conservation: all 780 starting chips must be present after the hand.
+        let total: usize = (0u8..4)
+            .filter_map(|i| table.get_seat(i))
+            .map(|s| s.player.chips.count())
+            .sum();
+        assert_eq!(
+            780,
+            total,
+            "chip conservation violated: expected 780, got {total} (dropped {} chips)",
+            780usize.saturating_sub(total)
+        );
+    }
+
+    /// Companion test: verifies the `Winnings` result from the BB-folds scenario is
+    /// well-formed — at least one winner recorded, every payout positive.
+    #[test]
+    fn process_multiway__bb_folds_over_contribution_winnings_non_empty() {
+        let table = TestData::preroll_bb_folds_over_contribution();
+
+        table.act_all_in(3).expect("UTG all-in should succeed");
+        table.act_all_in(0).expect("BTN all-in should succeed");
+        table.act_all_in(1).expect("SB all-in should succeed");
+        table.act_fold(2).expect("BB fold should succeed");
+
+        table.bring_it_in().expect("bring_it_in before flop");
+        table.deal_flop().expect("deal flop");
+        table.bring_it_in().expect("bring_it_in before turn");
+        table.deal_turn().expect("deal turn");
+        table.bring_it_in().expect("bring_it_in before river");
+        table.deal_river().expect("deal river");
+
+        let winnings = table.end_hand().expect("end_hand should succeed");
+
+        assert!(!winnings.is_empty(), "winnings must not be empty");
+        for pw in winnings.vec() {
+            assert!(pw.equity.chips > 0, "every recorded payout must be positive");
+        }
+    }
+
     #[test]
     fn process_split_pot() {
+        // Layout: [burn1=T♠] [flop: K♠ Q♠ A♦] [burn2=9♠] [turn: J♠] [burn3=8♠] [river: A♣] ...
+        // T♠, 9♠, 8♠ are moved to burn positions; board cards (K♠ Q♠ A♦ J♠ A♣) unchanged.
         let table = TestData::preroll_split_pot_with_blinds__to_completion(
-            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣",
+            "T♠ K♠ Q♠ A♦ 9♠ J♠ 8♠ A♣ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣",
         );
 
         assert!(table.is_betting_complete());

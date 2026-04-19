@@ -113,6 +113,10 @@ pub struct PokerSession {
     pub table: TableNoCell,
     /// Number of hands started so far (incremented by [`start_hand`](PokerSession::start_hand)).
     pub hand_number: u32,
+    /// The full 52-card deck string captured immediately after shuffling at the
+    /// start of each hand, before any cards are drawn.  `None` until the first
+    /// call to [`start_hand`](PokerSession::start_hand).
+    pub shuffled_deck_str: Option<String>,
 }
 
 impl PokerSession {
@@ -139,7 +143,11 @@ impl PokerSession {
     /// ```
     #[must_use]
     pub fn new(table: TableNoCell) -> Self {
-        Self { table, hand_number: 0 }
+        Self {
+            table,
+            hand_number: 0,
+            shuffled_deck_str: None,
+        }
     }
 
     /// Removes players whose chip stack has reached zero and returns their seat
@@ -232,6 +240,7 @@ impl PokerSession {
     /// ```
     pub fn start_hand(&mut self) -> Result<(), PKError> {
         self.table.deck.shuffle_in_place();
+        self.shuffled_deck_str = Some(self.table.deck.to_string());
         self.table.act_forced_bets()?;
         self.table.deal_cards_to_seats()?;
         self.hand_number += 1;
@@ -842,5 +851,24 @@ mod tests {
         let mut session = two_player_session();
         session.run_hand(|_, _| PlayerAction::Fold).unwrap();
         assert!(!session.is_hand_in_progress());
+    }
+
+    /// start_hand must capture the full shuffled deck as a space-separated string
+    /// immediately after shuffling — before any cards are drawn for the hand.
+    #[test]
+    fn test_start_hand_captures_shuffled_deck_str() -> Result<(), crate::PKError> {
+        let mut session = two_player_session();
+        session.start_hand()?;
+
+        let deck_str = session
+            .shuffled_deck_str
+            .as_ref()
+            .expect("shuffled_deck_str should be set after start_hand");
+        let token_count = deck_str.split_whitespace().count();
+        assert_eq!(
+            52, token_count,
+            "shuffled deck string should contain exactly 52 card tokens"
+        );
+        Ok(())
     }
 }
