@@ -14,12 +14,15 @@ use csv::{Reader, WriterBuilder};
 #[cfg(not(target_arch = "wasm32"))]
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
+#[cfg(not(target_arch = "wasm32"))]
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::str::FromStr;
+#[cfg(not(target_arch = "wasm32"))]
 use wincounter::win::Win;
+#[cfg(not(target_arch = "wasm32"))]
 use wincounter::wins::Wins;
 
 pub static SORTED_HEADS_UP_UNIQUE: std::sync::LazyLock<HashSet<SortedHeadsUp>> = std::sync::LazyLock::new(|| {

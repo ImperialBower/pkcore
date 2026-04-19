@@ -22,6 +22,7 @@ use pkstate::act::Action;
 use seats::seat::Seat;
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
+use std::collections::HashMap;
 #[cfg(unix)]
 use termion::color;
 #[cfg(not(unix))]
@@ -151,6 +152,11 @@ pub struct TableCelled {
     pub bet: Cell<usize>,
     pub raise_increment: Cell<usize>,
     pub event_log: TableLog,
+    /// Hole cards as dealt at the start of the hand, keyed by seat index.
+    /// Populated by [`deal_cards_to_seats`](TableCelled::deal_cards_to_seats);
+    /// cleared by [`reset`](TableCelled::reset). Survives folds so hand
+    /// histories always have complete hole card data for every player.
+    pub dealt_hole_cards: RefCell<HashMap<u8, BoxedCards>>,
 }
 
 impl TableCelled {
@@ -229,6 +235,7 @@ impl TableCelled {
             bet: Cell::new(0),
             raise_increment: Cell::new(0),
             event_log,
+            dealt_hole_cards: RefCell::new(HashMap::new()),
         }
     }
 
@@ -762,6 +769,19 @@ impl TableCelled {
                 None => return Err(PKError::AlreadyDealt),
             }
         }
+        let mut dealt = self.dealt_hole_cards.borrow_mut();
+        dealt.clear();
+        for (idx, seat_cell) in self.seats.borrow_all().iter().enumerate() {
+            let seat = seat_cell.borrow();
+            if !seat.is_empty()
+                && seat.cards.is_dealt()
+                && let Ok(i) = u8::try_from(idx)
+            {
+                dealt.insert(i, seat.cards.clone());
+            }
+        }
+        drop(dealt);
+
         self.set_phase(GamePhase::DealHoleCards);
         self.log_info(TableAction::DealtPlayers);
 
@@ -1357,6 +1377,7 @@ impl TableCelled {
             std::cmp::Ordering::Equal => self.log_warn(TableAction::DeckPassesAudit),
         }
         self.bet.set(0);
+        self.dealt_hole_cards.borrow_mut().clear();
     }
 
     /// ```
@@ -1468,6 +1489,7 @@ impl Default for TableCelled {
             bet: Cell::new(0),
             raise_increment: Cell::new(0),
             event_log: TableLog::default(),
+            dealt_hole_cards: RefCell::new(HashMap::new()),
         }
     }
 }
@@ -1857,6 +1879,35 @@ mod casino__table_tests {
         assert_eq!(0, seat4.player.bet.count());
         assert_eq!(PlayerState::Fold, seat4.player.state.get());
         assert_eq!(0, seat4_folded_amount);
+    }
+
+    #[test]
+    fn test_celled_dealt_hole_cards_survive_fold() {
+        let table = two_player_celled_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        assert_eq!(2, table.dealt_hole_cards.borrow().len());
+
+        let utg = table.next_to_act();
+        let cards_before = table.dealt_hole_cards.borrow().get(&utg).cloned().unwrap();
+
+        table.act_fold(utg).unwrap();
+
+        // Seat cards are blanked.
+        assert!(!table.seats.get_seat(utg).unwrap().cards.is_dealt());
+        // dealt_hole_cards still holds the original.
+        assert_eq!(Some(cards_before), table.dealt_hole_cards.borrow().get(&utg).cloned());
+    }
+
+    #[test]
+    fn test_celled_dealt_hole_cards_cleared_on_reset() {
+        let table = two_player_celled_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        assert!(!table.dealt_hole_cards.borrow().is_empty());
+        table.reset();
+        assert!(table.dealt_hole_cards.borrow().is_empty());
     }
 
     #[test]

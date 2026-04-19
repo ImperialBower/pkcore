@@ -14,7 +14,7 @@ use crate::casino::table::position::Position;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[cfg(feature = "bot-profiles")]
+#[cfg(all(feature = "bot-profiles", not(target_arch = "wasm32")))]
 use std::path::Path;
 
 // ── PlayStyle ─────────────────────────────────────────────────────────────────

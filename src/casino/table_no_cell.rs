@@ -1153,6 +1153,12 @@ pub struct TableNoCell {
     /// Compared against the post-distribution total in
     /// [`end_hand`](TableNoCell::end_hand) to detect chip conservation failures.
     pub hand_chip_total: usize,
+    /// Hole cards as dealt at the start of the hand, keyed by seat index.
+    /// Populated by [`deal_cards_to_seats`](TableNoCell::deal_cards_to_seats)
+    /// and [`inject_hole_cards`](TableNoCell::inject_hole_cards); cleared by
+    /// [`reset`](TableNoCell::reset). Survives folds so hand histories always
+    /// have complete hole card data for every player.
+    pub dealt_hole_cards: HashMap<u8, BoxedCards>,
 }
 
 impl TableNoCell {
@@ -1212,6 +1218,7 @@ impl TableNoCell {
             raise_increment: 0,
             event_log,
             hand_chip_total: 0,
+            dealt_hole_cards: HashMap::new(),
         }
     }
 
@@ -2042,6 +2049,16 @@ impl TableNoCell {
             }
         }
 
+        self.dealt_hole_cards.clear();
+        for (idx, seat) in self.seats.0.iter().enumerate() {
+            if !seat.is_empty()
+                && seat.cards.is_dealt()
+                && let Ok(i) = u8::try_from(idx)
+            {
+                self.dealt_hole_cards.insert(i, seat.cards.clone());
+            }
+        }
+
         self.phase = GamePhase::DealHoleCards;
         self.log(TableAction::DealtPlayers);
         Ok(())
@@ -2079,10 +2096,12 @@ impl TableNoCell {
         use crate::arrays::sliced::BoxedCards;
         use std::str::FromStr;
 
+        self.dealt_hole_cards.clear();
         for (seat_idx, card_str) in entries {
             let cards = BoxedCards::from_str(card_str)?;
             let seat = self.seats.get_seat_mut(*seat_idx).ok_or(PKError::InvalidSeatNumber)?;
-            seat.cards = cards;
+            seat.cards = cards.clone();
+            self.dealt_hole_cards.insert(*seat_idx, cards);
         }
         self.phase = GamePhase::DealHoleCards;
         self.log(TableAction::DealtPlayers);
@@ -2267,6 +2286,7 @@ impl TableNoCell {
         self.bet = 0;
         self.raise_increment = 0;
         self.phase = GamePhase::NewHand;
+        self.dealt_hole_cards.clear();
     }
 
     // ── Card helpers ──────────────────────────────────────────────────────────
@@ -3002,6 +3022,48 @@ mod tests {
         let utg = table.determine_utg();
         table.act_fold(utg).unwrap();
         assert_eq!(PlayerState::Fold, table.seats.get_seat(utg).unwrap().player.state);
+    }
+
+    #[test]
+    fn test_dealt_hole_cards_survive_fold() {
+        let mut table = make_three_player_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        // All 3 seats should have their dealt cards recorded.
+        assert_eq!(3, table.dealt_hole_cards.len());
+
+        let utg = table.determine_utg();
+        let utg_cards_before = table.dealt_hole_cards.get(&utg).cloned().unwrap();
+
+        table.act_fold(utg).unwrap();
+
+        // Seat's live cards are blanked after fold.
+        assert!(!table.seats.get_seat(utg).unwrap().cards.is_dealt());
+        // But dealt_hole_cards still has the original cards.
+        assert_eq!(Some(&utg_cards_before), table.dealt_hole_cards.get(&utg));
+    }
+
+    #[test]
+    fn test_dealt_hole_cards_cleared_on_reset() {
+        let mut table = make_three_player_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        assert!(!table.dealt_hole_cards.is_empty());
+        table.reset();
+        assert!(table.dealt_hole_cards.is_empty());
+    }
+
+    #[test]
+    fn test_dealt_hole_cards_inject() {
+        let mut table = make_two_player_table();
+        table.act_forced_bets().unwrap();
+        table.inject_hole_cards(&[(0, "A♠ K♠"), (1, "7♦ 2♣")]).unwrap();
+        assert_eq!(2, table.dealt_hole_cards.len());
+        let seat0 = table.dealt_hole_cards.get(&0).unwrap();
+        let seat1 = table.dealt_hole_cards.get(&1).unwrap();
+        assert_eq!("A♠ K♠", seat0.to_string());
+        assert_eq!("7♦ 2♣", seat1.to_string());
     }
 
     #[test]
