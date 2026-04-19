@@ -487,9 +487,9 @@ impl TableCelled {
 
     fn act_forced_bet(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
         match self.seats.act_forced_bet(seat_number, amount) {
-            Ok(remaining) => {
-                self.log_info(TableAction::ForcedBet(seat_number, amount));
-                Ok(remaining)
+            Ok(actual) => {
+                self.log_info(TableAction::ForcedBet(seat_number, actual));
+                Ok(actual)
             }
             Err(e) => Err(e),
         }
@@ -500,8 +500,8 @@ impl TableCelled {
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     pub fn act_forced_bet_small_blind(&self) -> Result<(), PKError> {
         let sb_seat_num = self.determine_small_blind();
-        self.act_forced_bet(sb_seat_num, self.forced.small_blind)?;
-        self.log_info(TableAction::ForcedBetSmallBlind(sb_seat_num, self.forced.small_blind));
+        let actual = self.act_forced_bet(sb_seat_num, self.forced.small_blind)?;
+        self.log_info(TableAction::ForcedBetSmallBlind(sb_seat_num, actual));
         self.action_to_next();
 
         Ok(())
@@ -512,10 +512,9 @@ impl TableCelled {
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     pub fn act_forced_bet_big_blind(&self) -> Result<(), PKError> {
         let bb_seat_num = self.determine_big_blind();
-        let big_blind = self.forced.big_blind;
-        self.act_forced_bet(bb_seat_num, big_blind)?;
+        let actual = self.act_forced_bet(bb_seat_num, self.forced.big_blind)?;
         self.bet.set(self.forced.big_blind);
-        self.log_info(TableAction::ForcedBetBigBlind(bb_seat_num, big_blind));
+        self.log_info(TableAction::ForcedBetBigBlind(bb_seat_num, actual));
         self.action_to_next();
 
         Ok(())

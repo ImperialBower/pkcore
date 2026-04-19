@@ -296,15 +296,15 @@ impl PlayerNoCell {
     ///
     /// // Short stack: 30 chips, required blind 100 — posts all 30 and goes all-in.
     /// let mut p = PlayerNoCell::new_with_chips("Short".to_string(), 30);
-    /// let remaining = p.act_blind_or_all_in(100).unwrap();
-    /// assert_eq!(0, remaining);          // no chips left
+    /// let actual = p.act_blind_or_all_in(100).unwrap();
+    /// assert_eq!(30, actual);            // 30 chips actually posted
     /// assert_eq!(30, p.bet);             // 30 committed
     /// assert_eq!(PlayerState::AllIn(30), p.state);
     ///
     /// // Full stack: 500 chips, required blind 100 — posts exactly 100.
     /// let mut q = PlayerNoCell::new_with_chips("Full".to_string(), 500);
-    /// let remaining = q.act_blind_or_all_in(100).unwrap();
-    /// assert_eq!(400, remaining);
+    /// let actual = q.act_blind_or_all_in(100).unwrap();
+    /// assert_eq!(100, actual);
     /// assert_eq!(PlayerState::Blind(100), q.state);
     /// ```
     pub fn act_blind_or_all_in(&mut self, required_amount: usize) -> Result<usize, PKError> {
@@ -313,7 +313,8 @@ impl PlayerNoCell {
             return Err(PKError::InsufficientChips);
         }
         // act_bet_internal auto-transitions to AllIn(self.bet) when chips reach 0.
-        self.act_bet_internal(PlayerState::Blind(actual))
+        self.act_bet_internal(PlayerState::Blind(actual))?;
+        Ok(actual)
     }
 
     /// Calls the current bet by committing `amount` total to the pot.
@@ -1696,9 +1697,8 @@ impl TableNoCell {
     /// - `PKError::InvalidSeatNumber` if the seat is not found.
     pub fn act_forced_bet_small_blind(&mut self) -> Result<(), PKError> {
         let sb = self.determine_small_blind();
-        let amount = self.forced.small_blind;
-        self.seats.act_forced_bet(sb, amount)?;
-        self.log(TableAction::ForcedBetSmallBlind(sb, amount));
+        let actual = self.seats.act_forced_bet(sb, self.forced.small_blind)?;
+        self.log(TableAction::ForcedBetSmallBlind(sb, actual));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(())
     }
@@ -1710,10 +1710,9 @@ impl TableNoCell {
     /// - `PKError::InvalidSeatNumber` if the seat is not found.
     pub fn act_forced_bet_big_blind(&mut self) -> Result<(), PKError> {
         let bb = self.determine_big_blind();
-        let amount = self.forced.big_blind;
-        self.seats.act_forced_bet(bb, amount)?;
+        let actual = self.seats.act_forced_bet(bb, self.forced.big_blind)?;
         self.bet = self.forced.big_blind;
-        self.log(TableAction::ForcedBetBigBlind(bb, amount));
+        self.log(TableAction::ForcedBetBigBlind(bb, actual));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(())
     }
@@ -3212,8 +3211,8 @@ mod tests {
     #[test]
     fn player_no_cell_act_blind_or_all_in_partial() {
         let mut p = PlayerNoCell::new_with_chips("Short".to_string(), 30);
-        let remaining = p.act_blind_or_all_in(50).unwrap();
-        assert_eq!(0, remaining);
+        let actual = p.act_blind_or_all_in(50).unwrap();
+        assert_eq!(30, actual); // 30 chips posted (all-in), not the intended 50
         assert_eq!(30, p.bet);
         assert_eq!(PlayerState::AllIn(30), p.state);
     }
@@ -3221,8 +3220,8 @@ mod tests {
     #[test]
     fn player_no_cell_act_blind_or_all_in_full() {
         let mut p = PlayerNoCell::new_with_chips("Full".to_string(), 500);
-        let remaining = p.act_blind_or_all_in(100).unwrap();
-        assert_eq!(400, remaining);
+        let actual = p.act_blind_or_all_in(100).unwrap();
+        assert_eq!(100, actual); // 100 chips posted (full blind)
         assert_eq!(100, p.bet);
         assert_eq!(PlayerState::Blind(100), p.state);
     }
@@ -3232,6 +3231,31 @@ mod tests {
         let mut p = PlayerNoCell::new("Broke".to_string());
         let result = p.act_blind_or_all_in(100);
         assert_eq!(Err(PKError::InsufficientChips), result);
+    }
+
+    // Regression: act_forced_bet_big_blind previously logged the intended blind (100) rather
+    // than the actual chips posted (60) when the BB seat was short-stacked.
+    #[test]
+    fn table_no_cell_short_stack_bb_logs_actual_amount() {
+        // button=0: seat 0 = UTG/button, seat 1 = SB, seat 2 = BB
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 60)), // short-stacked
+        ]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+
+        // The logged event must carry 60 (actual chips posted), not 100 (intended blind).
+        assert!(
+            table.event_log.contains(&TableAction::ForcedBetBigBlind(2, 60)),
+            "expected ForcedBetBigBlind(2, 60) in log, got: {:?}",
+            table.event_log
+        );
+        assert!(
+            !table.event_log.contains(&TableAction::ForcedBetBigBlind(2, 100)),
+            "ForcedBetBigBlind should not record intended blind when player is short-stacked"
+        );
     }
 
     #[test]

@@ -230,7 +230,8 @@ impl Player {
         if actual == 0 {
             return Err(PKError::InsufficientChips);
         }
-        self.act_bet_internal(PlayerState::Blind(actual))
+        self.act_bet_internal(PlayerState::Blind(actual))?;
+        Ok(actual)
     }
 
     /// Removes and returns the chips from the player's bet stack and sets their state to `YetToAct`.
