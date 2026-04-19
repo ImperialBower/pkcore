@@ -135,9 +135,9 @@ impl Seats {
     /// `PKError::InvalidSeatNumber` error if the `seat_number` is not valid.
     pub fn act_forced_bet(&self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
         if let Some(seat) = self.get_seat_mut(seat_number) {
-            let remaining = seat.player.act_blind_or_all_in(amount)?;
+            let actual = seat.player.act_blind_or_all_in(amount)?;
             drop(seat);
-            Ok(remaining)
+            Ok(actual)
         } else {
             log::error!("Failed to act forced bet for seat #{seat_number}");
             Err(PKError::InvalidSeatNumber)

@@ -296,15 +296,15 @@ impl PlayerNoCell {
     ///
     /// // Short stack: 30 chips, required blind 100 — posts all 30 and goes all-in.
     /// let mut p = PlayerNoCell::new_with_chips("Short".to_string(), 30);
-    /// let remaining = p.act_blind_or_all_in(100).unwrap();
-    /// assert_eq!(0, remaining);          // no chips left
+    /// let actual = p.act_blind_or_all_in(100).unwrap();
+    /// assert_eq!(30, actual);            // 30 chips actually posted
     /// assert_eq!(30, p.bet);             // 30 committed
     /// assert_eq!(PlayerState::AllIn(30), p.state);
     ///
     /// // Full stack: 500 chips, required blind 100 — posts exactly 100.
     /// let mut q = PlayerNoCell::new_with_chips("Full".to_string(), 500);
-    /// let remaining = q.act_blind_or_all_in(100).unwrap();
-    /// assert_eq!(400, remaining);
+    /// let actual = q.act_blind_or_all_in(100).unwrap();
+    /// assert_eq!(100, actual);
     /// assert_eq!(PlayerState::Blind(100), q.state);
     /// ```
     pub fn act_blind_or_all_in(&mut self, required_amount: usize) -> Result<usize, PKError> {
@@ -313,7 +313,8 @@ impl PlayerNoCell {
             return Err(PKError::InsufficientChips);
         }
         // act_bet_internal auto-transitions to AllIn(self.bet) when chips reach 0.
-        self.act_bet_internal(PlayerState::Blind(actual))
+        self.act_bet_internal(PlayerState::Blind(actual))?;
+        Ok(actual)
     }
 
     /// Calls the current bet by committing `amount` total to the pot.
@@ -1153,6 +1154,12 @@ pub struct TableNoCell {
     /// Compared against the post-distribution total in
     /// [`end_hand`](TableNoCell::end_hand) to detect chip conservation failures.
     pub hand_chip_total: usize,
+    /// Hole cards as dealt at the start of the hand, keyed by seat index.
+    /// Populated by [`deal_cards_to_seats`](TableNoCell::deal_cards_to_seats)
+    /// and [`inject_hole_cards`](TableNoCell::inject_hole_cards); cleared by
+    /// [`reset`](TableNoCell::reset). Survives folds so hand histories always
+    /// have complete hole card data for every player.
+    pub dealt_hole_cards: HashMap<u8, BoxedCards>,
 }
 
 impl TableNoCell {
@@ -1212,6 +1219,7 @@ impl TableNoCell {
             raise_increment: 0,
             event_log,
             hand_chip_total: 0,
+            dealt_hole_cards: HashMap::new(),
         }
     }
 
@@ -1689,9 +1697,8 @@ impl TableNoCell {
     /// - `PKError::InvalidSeatNumber` if the seat is not found.
     pub fn act_forced_bet_small_blind(&mut self) -> Result<(), PKError> {
         let sb = self.determine_small_blind();
-        let amount = self.forced.small_blind;
-        self.seats.act_forced_bet(sb, amount)?;
-        self.log(TableAction::ForcedBetSmallBlind(sb, amount));
+        let actual = self.seats.act_forced_bet(sb, self.forced.small_blind)?;
+        self.log(TableAction::ForcedBetSmallBlind(sb, actual));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(())
     }
@@ -1703,10 +1710,9 @@ impl TableNoCell {
     /// - `PKError::InvalidSeatNumber` if the seat is not found.
     pub fn act_forced_bet_big_blind(&mut self) -> Result<(), PKError> {
         let bb = self.determine_big_blind();
-        let amount = self.forced.big_blind;
-        self.seats.act_forced_bet(bb, amount)?;
+        let actual = self.seats.act_forced_bet(bb, self.forced.big_blind)?;
         self.bet = self.forced.big_blind;
-        self.log(TableAction::ForcedBetBigBlind(bb, amount));
+        self.log(TableAction::ForcedBetBigBlind(bb, actual));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(())
     }
@@ -2042,6 +2048,16 @@ impl TableNoCell {
             }
         }
 
+        self.dealt_hole_cards.clear();
+        for (idx, seat) in self.seats.0.iter().enumerate() {
+            if !seat.is_empty()
+                && seat.cards.is_dealt()
+                && let Ok(i) = u8::try_from(idx)
+            {
+                self.dealt_hole_cards.insert(i, seat.cards.clone());
+            }
+        }
+
         self.phase = GamePhase::DealHoleCards;
         self.log(TableAction::DealtPlayers);
         Ok(())
@@ -2079,10 +2095,12 @@ impl TableNoCell {
         use crate::arrays::sliced::BoxedCards;
         use std::str::FromStr;
 
+        self.dealt_hole_cards.clear();
         for (seat_idx, card_str) in entries {
             let cards = BoxedCards::from_str(card_str)?;
             let seat = self.seats.get_seat_mut(*seat_idx).ok_or(PKError::InvalidSeatNumber)?;
-            seat.cards = cards;
+            seat.cards = cards.clone();
+            self.dealt_hole_cards.insert(*seat_idx, cards);
         }
         self.phase = GamePhase::DealHoleCards;
         self.log(TableAction::DealtPlayers);
@@ -2267,6 +2285,7 @@ impl TableNoCell {
         self.bet = 0;
         self.raise_increment = 0;
         self.phase = GamePhase::NewHand;
+        self.dealt_hole_cards.clear();
     }
 
     // ── Card helpers ──────────────────────────────────────────────────────────
@@ -3005,6 +3024,48 @@ mod tests {
     }
 
     #[test]
+    fn test_dealt_hole_cards_survive_fold() {
+        let mut table = make_three_player_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        // All 3 seats should have their dealt cards recorded.
+        assert_eq!(3, table.dealt_hole_cards.len());
+
+        let utg = table.determine_utg();
+        let utg_cards_before = table.dealt_hole_cards.get(&utg).cloned().unwrap();
+
+        table.act_fold(utg).unwrap();
+
+        // Seat's live cards are blanked after fold.
+        assert!(!table.seats.get_seat(utg).unwrap().cards.is_dealt());
+        // But dealt_hole_cards still has the original cards.
+        assert_eq!(Some(&utg_cards_before), table.dealt_hole_cards.get(&utg));
+    }
+
+    #[test]
+    fn test_dealt_hole_cards_cleared_on_reset() {
+        let mut table = make_three_player_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        assert!(!table.dealt_hole_cards.is_empty());
+        table.reset();
+        assert!(table.dealt_hole_cards.is_empty());
+    }
+
+    #[test]
+    fn test_dealt_hole_cards_inject() {
+        let mut table = make_two_player_table();
+        table.act_forced_bets().unwrap();
+        table.inject_hole_cards(&[(0, "A♠ K♠"), (1, "7♦ 2♣")]).unwrap();
+        assert_eq!(2, table.dealt_hole_cards.len());
+        let seat0 = table.dealt_hole_cards.get(&0).unwrap();
+        let seat1 = table.dealt_hole_cards.get(&1).unwrap();
+        assert_eq!("A♠ K♠", seat0.to_string());
+        assert_eq!("7♦ 2♣", seat1.to_string());
+    }
+
+    #[test]
     fn test_table_no_cell_act_bet() {
         let mut table = make_three_player_table();
         table.act_forced_bets().unwrap();
@@ -3150,8 +3211,8 @@ mod tests {
     #[test]
     fn player_no_cell_act_blind_or_all_in_partial() {
         let mut p = PlayerNoCell::new_with_chips("Short".to_string(), 30);
-        let remaining = p.act_blind_or_all_in(50).unwrap();
-        assert_eq!(0, remaining);
+        let actual = p.act_blind_or_all_in(50).unwrap();
+        assert_eq!(30, actual); // 30 chips posted (all-in), not the intended 50
         assert_eq!(30, p.bet);
         assert_eq!(PlayerState::AllIn(30), p.state);
     }
@@ -3159,8 +3220,8 @@ mod tests {
     #[test]
     fn player_no_cell_act_blind_or_all_in_full() {
         let mut p = PlayerNoCell::new_with_chips("Full".to_string(), 500);
-        let remaining = p.act_blind_or_all_in(100).unwrap();
-        assert_eq!(400, remaining);
+        let actual = p.act_blind_or_all_in(100).unwrap();
+        assert_eq!(100, actual); // 100 chips posted (full blind)
         assert_eq!(100, p.bet);
         assert_eq!(PlayerState::Blind(100), p.state);
     }
@@ -3170,6 +3231,31 @@ mod tests {
         let mut p = PlayerNoCell::new("Broke".to_string());
         let result = p.act_blind_or_all_in(100);
         assert_eq!(Err(PKError::InsufficientChips), result);
+    }
+
+    // Regression: act_forced_bet_big_blind previously logged the intended blind (100) rather
+    // than the actual chips posted (60) when the BB seat was short-stacked.
+    #[test]
+    fn table_no_cell_short_stack_bb_logs_actual_amount() {
+        // button=0: seat 0 = UTG/button, seat 1 = SB, seat 2 = BB
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 60)), // short-stacked
+        ]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+
+        // The logged event must carry 60 (actual chips posted), not 100 (intended blind).
+        assert!(
+            table.event_log.contains(&TableAction::ForcedBetBigBlind(2, 60)),
+            "expected ForcedBetBigBlind(2, 60) in log, got: {:?}",
+            table.event_log
+        );
+        assert!(
+            !table.event_log.contains(&TableAction::ForcedBetBigBlind(2, 100)),
+            "ForcedBetBigBlind should not record intended blind when player is short-stacked"
+        );
     }
 
     #[test]
