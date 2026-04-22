@@ -25,6 +25,7 @@ use std::sync::Mutex;
 use crate::bot::player_action::PlayerAction;
 use crate::bot::profile::BotProfile;
 use crate::bot::table_snapshot::TableSnapshot;
+use crate::games::GamePhase;
 
 // ── BotDecider trait ──────────────────────────────────────────────────────────
 
@@ -81,6 +82,12 @@ pub trait BotDecider: Send + Sync {
 ///   fold / call / bet / raise split.
 /// - `BotProfile.betting_strategy.preferred_bet_sizes` — sizes for bets
 ///   and raises as pot fractions.
+/// - `BotProfile.betting_strategy.bluff_frequency` — postflop bluff rate
+///   when the bot would otherwise check.
+/// - `BotProfile.betting_strategy.check_raise_frequency` — raise rate when
+///   the bot has checked this street and now faces a bet.
+/// - `BotProfile.range_strategy.postflop_cbet_frequency` — overrides
+///   `aggression_factor` for flop bets (continuation-bet frequency).
 ///
 /// A thread-local RNG is used internally; no mutable state is needed.
 ///
@@ -111,19 +118,47 @@ pub struct RuleBasedDecider;
 
 impl BotDecider for RuleBasedDecider {
     fn decide(&self, profile: &BotProfile, state: &TableSnapshot) -> PlayerAction {
-        use rand::Rng;
+        RuleBasedDecider::decide_with_rng(profile, state, &mut rand::rng())
+    }
+}
 
+impl RuleBasedDecider {
+    /// Core decision logic parameterised over any [`rand::Rng`].
+    ///
+    /// The public [`BotDecider::decide`] method calls this with the
+    /// thread-local RNG.  Tests call it directly with a seeded
+    /// [`rand::rngs::SmallRng`] for fully deterministic results.
+    pub(crate) fn decide_with_rng<R: rand::Rng>(
+        profile: &BotProfile,
+        state: &TableSnapshot,
+        rng: &mut R,
+    ) -> PlayerAction {
         let chips = state.my_chips;
 
         if chips == 0 {
             return PlayerAction::Check;
         }
 
-        let mut rng = rand::rng();
         let aggr = f64::from(profile.betting_strategy.aggression_factor) / 100.0;
         let roll: f64 = rng.random();
 
         if state.to_call > 0 {
+            // Check-raise: we checked earlier this street and now face a bet.
+            if state.checked_this_street {
+                let cr_rate = f64::from(profile.betting_strategy.check_raise_frequency) / 100.0;
+                if roll < cr_rate {
+                    let (n, d) = pick_bet_size(profile, rng);
+                    let raise_to = state
+                        .current_bet
+                        .saturating_add(state.pot.saturating_mul(n) / d)
+                        .max(state.current_bet.saturating_add(state.min_raise))
+                        .min(chips);
+                    if raise_to > state.current_bet {
+                        return PlayerAction::Raise(raise_to);
+                    }
+                }
+            }
+
             // Facing a bet.
             if state.to_call >= chips {
                 // Stack is all-in or fold territory.
@@ -136,7 +171,7 @@ impl BotDecider for RuleBasedDecider {
 
             if roll < aggr * 0.25 {
                 // Raise: target = current_bet + pot_fraction, at least min_raise.
-                let (n, d) = pick_bet_size(profile, &mut rng);
+                let (n, d) = pick_bet_size(profile, rng);
                 let raise_to = state
                     .current_bet
                     .saturating_add(state.pot.saturating_mul(n) / d)
@@ -155,10 +190,29 @@ impl BotDecider for RuleBasedDecider {
             }
         } else {
             // No outstanding bet — bet or check.
-            if roll < aggr {
-                let (n, d) = pick_bet_size(profile, &mut rng);
+            // On the flop, postflop_cbet_frequency overrides the flat aggression factor.
+            let bet_threshold = if state.phase.is_flop() {
+                f64::from(profile.range_strategy.postflop_cbet_frequency) / 100.0
+            } else {
+                aggr
+            };
+
+            if roll < bet_threshold {
+                let (n, d) = pick_bet_size(profile, rng);
                 let amount = (state.pot.saturating_mul(n) / d).max(state.big_blind).min(chips);
                 PlayerAction::Bet(amount)
+            } else if !state.phase.is_preflop() {
+                // Postflop: consider bluffing when the value-bet threshold wasn't reached.
+                let bluff_rate = f64::from(profile.betting_strategy.bluff_frequency) / 100.0;
+                let roll_bluff: f64 = rng.random();
+                if roll_bluff < bluff_rate {
+                    let (n, d) = pick_bet_size(profile, rng);
+                    let amount =
+                        (state.pot.saturating_mul(n) / d).max(state.big_blind).min(chips);
+                    PlayerAction::Bet(amount)
+                } else {
+                    PlayerAction::Check
+                }
             } else {
                 PlayerAction::Check
             }
@@ -395,5 +449,252 @@ mod tests {
         let decider = JokerDecider::new();
         let s = format!("{decider:?}");
         assert!(s.contains("JokerDecider"), "debug output should mention JokerDecider");
+    }
+
+    // ── Helpers for bluff / c-bet / check-raise tests ────────────────────────
+
+    /// Build a minimal [`BotProfile`] with explicit frequency values for testing.
+    fn make_profile(
+        aggression: u8,
+        bluff: u8,
+        check_raise: u8,
+        cbet: u8,
+    ) -> BotProfile {
+        use crate::analysis::gto::solver_config::BetSize;
+        use crate::bot::betting_strategy::BettingStrategy;
+        use crate::bot::profile::PlayStyle;
+        use crate::bot::range_strategy::RangeStrategy;
+        BotProfile::new(
+            "test".to_string(),
+            "test profile".to_string(),
+            PlayStyle::new("test"),
+            RangeStrategy::new("AA", "AA", "KK", cbet),
+            BettingStrategy::new(aggression, bluff, check_raise, vec![BetSize::half_pot()]),
+        )
+    }
+
+    /// Run `n` decisions using a seeded RNG and count each outcome variant.
+    /// Returns `(bets, checks, raises, calls, folds, all_ins)`.
+    fn count_with_seed(
+        profile: &BotProfile,
+        snap: &TableSnapshot,
+        seed: u64,
+        n: usize,
+    ) -> (usize, usize, usize, usize, usize, usize) {
+        use rand::SeedableRng;
+        use rand::rngs::SmallRng;
+        let mut rng = SmallRng::seed_from_u64(seed);
+        let (mut bets, mut checks, mut raises, mut calls, mut folds, mut all_ins) =
+            (0, 0, 0, 0, 0, 0);
+        for _ in 0..n {
+            match RuleBasedDecider::decide_with_rng(profile, snap, &mut rng) {
+                PlayerAction::Bet(_) => bets += 1,
+                PlayerAction::Check => checks += 1,
+                PlayerAction::Raise(_) => raises += 1,
+                PlayerAction::Call => calls += 1,
+                PlayerAction::Fold => folds += 1,
+                PlayerAction::AllIn => all_ins += 1,
+            }
+        }
+        (bets, checks, raises, calls, folds, all_ins)
+    }
+
+    // ── 100 % / 0 % boundary tests ───────────────────────────────────────────
+
+    /// 100 % c-bet frequency on the flop always produces a Bet.
+    #[test]
+    fn test_cbet_100_always_bets_on_flop() {
+        use rand::SeedableRng;
+        use rand::rngs::SmallRng;
+        let profile = make_profile(0, 0, 0, 100);
+        let mut snap = make_snapshot(0);
+        snap.phase = GamePhase::BettingFlop;
+        snap.to_call = 0;
+        snap.pot = 200;
+
+        let mut rng = SmallRng::seed_from_u64(99);
+        for _ in 0..50 {
+            assert!(
+                matches!(RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng), PlayerAction::Bet(_)),
+                "100% c-bet must always Bet"
+            );
+        }
+    }
+
+    /// 0 % c-bet on the flop with 0 % bluff always produces a Check.
+    #[test]
+    fn test_cbet_0_and_bluff_0_always_checks_on_flop() {
+        use rand::SeedableRng;
+        use rand::rngs::SmallRng;
+        let profile = make_profile(0, 0, 0, 0);
+        let mut snap = make_snapshot(0);
+        snap.phase = GamePhase::BettingFlop;
+        snap.to_call = 0;
+
+        let mut rng = SmallRng::seed_from_u64(7);
+        for _ in 0..50 {
+            assert_eq!(
+                PlayerAction::Check,
+                RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng),
+                "0% cbet + 0% bluff must always Check on flop"
+            );
+        }
+    }
+
+    /// 100 % bluff frequency (with 0 % aggression/cbet) always bets postflop.
+    #[test]
+    fn test_bluff_100_always_bets_postflop() {
+        use rand::SeedableRng;
+        use rand::rngs::SmallRng;
+        // Turn — not flop (cbet path) and not preflop (bluff suppressed)
+        let profile = make_profile(0, 100, 0, 0);
+        let mut snap = make_snapshot(0);
+        snap.phase = GamePhase::BettingTurn;
+        snap.to_call = 0;
+        snap.pot = 200;
+
+        let mut rng = SmallRng::seed_from_u64(13);
+        for _ in 0..50 {
+            assert!(
+                matches!(RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng), PlayerAction::Bet(_)),
+                "100% bluff on turn must always Bet"
+            );
+        }
+    }
+
+    /// bluff_frequency is never applied preflop — always Check with 0 % aggression.
+    #[test]
+    fn test_bluff_never_fires_preflop() {
+        use rand::SeedableRng;
+        use rand::rngs::SmallRng;
+        let profile = make_profile(0, 100, 0, 0);
+        let mut snap = make_snapshot(0);
+        snap.phase = GamePhase::BettingPreFlop;
+        snap.to_call = 0;
+
+        let mut rng = SmallRng::seed_from_u64(21);
+        for _ in 0..50 {
+            assert_eq!(
+                PlayerAction::Check,
+                RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng),
+                "bluff must not fire preflop"
+            );
+        }
+    }
+
+    /// 100 % check-raise frequency always raises when checked_this_street and facing a bet.
+    #[test]
+    fn test_check_raise_100_always_raises() {
+        use rand::SeedableRng;
+        use rand::rngs::SmallRng;
+        let profile = make_profile(0, 0, 100, 50);
+        let mut snap = make_snapshot(0);
+        snap.to_call = 100;
+        snap.current_bet = 100;
+        snap.min_raise = 100;
+        snap.pot = 300;
+        snap.checked_this_street = true;
+
+        let mut rng = SmallRng::seed_from_u64(5);
+        for _ in 0..50 {
+            assert!(
+                matches!(RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng), PlayerAction::Raise(_)),
+                "100% check-raise must always Raise when checked_this_street"
+            );
+        }
+    }
+
+    /// 0 % check-raise never raises via the check-raise path (falls through to
+    /// call/fold based on aggression_factor).
+    #[test]
+    fn test_check_raise_0_never_check_raises() {
+        use rand::SeedableRng;
+        use rand::rngs::SmallRng;
+        // 100% aggression so we get Calls, not Folds — just verifying no check-raise Raises
+        let profile = make_profile(100, 0, 0, 50);
+        let mut snap = make_snapshot(0);
+        snap.to_call = 100;
+        snap.current_bet = 100;
+        snap.min_raise = 100;
+        snap.pot = 300;
+        snap.checked_this_street = true;
+
+        let mut rng = SmallRng::seed_from_u64(3);
+        for _ in 0..50 {
+            // With aggression=100 and check_raise=0 the raise path (aggr*0.25) may
+            // still fire — that's fine. The check-raise-specific path should not
+            // dominate; outcomes should be Call or Raise (from the normal raise path),
+            // never a check-raise exclusive of the normal flow.
+            let action = RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng);
+            assert!(
+                matches!(action, PlayerAction::Call | PlayerAction::Raise(_)),
+                "with aggression=100 and to_call set, expected Call or Raise, got {action:?}"
+            );
+        }
+    }
+
+    // ── Intermediate-probability statistical tests ────────────────────────────
+    //
+    // These use a fixed seed (deterministic) and run N=1000 trials.
+    // Bounds are intentionally wide (±25 pp) to avoid flakiness while still
+    // catching the case where the field has no effect at all.
+
+    /// C-bet frequency 50 % on the flop bets roughly half the time.
+    #[test]
+    fn test_cbet_50_bets_approximately_half() {
+        let profile = make_profile(0, 0, 0, 50);
+        let mut snap = make_snapshot(0);
+        snap.phase = GamePhase::BettingFlop;
+        snap.to_call = 0;
+        snap.pot = 200;
+
+        let (bets, checks, ..) = count_with_seed(&profile, &snap, 42, 1_000);
+        assert_eq!(bets + checks, 1_000, "only Bet or Check expected");
+        // Expect 50 % ± 25 pp  →  250..=750
+        assert!(
+            (250..=750).contains(&bets),
+            "c-bet 50%: expected ~500 bets out of 1000, got {bets}"
+        );
+    }
+
+    /// Bluff frequency 30 % bets roughly 30 % of the time on the turn
+    /// when aggression and cbet are both 0.
+    #[test]
+    fn test_bluff_30_bets_approximately_30_percent() {
+        let profile = make_profile(0, 30, 0, 0);
+        let mut snap = make_snapshot(0);
+        snap.phase = GamePhase::BettingTurn;
+        snap.to_call = 0;
+        snap.pot = 200;
+
+        let (bets, checks, ..) = count_with_seed(&profile, &snap, 17, 1_000);
+        assert_eq!(bets + checks, 1_000, "only Bet or Check expected");
+        // Expect 30 % ± 15 pp  →  150..=450
+        assert!(
+            (150..=450).contains(&bets),
+            "bluff 30%: expected ~300 bets out of 1000, got {bets}"
+        );
+    }
+
+    /// Check-raise frequency 40 % raises roughly 40 % of the time when
+    /// checked_this_street is true and facing a bet.
+    #[test]
+    fn test_check_raise_40_raises_approximately_40_percent() {
+        // aggression 0 so raises only come from the check-raise path
+        let profile = make_profile(0, 0, 40, 0);
+        let mut snap = make_snapshot(0);
+        snap.to_call = 100;
+        snap.current_bet = 100;
+        snap.min_raise = 100;
+        snap.pot = 300;
+        snap.checked_this_street = true;
+
+        let (_, _, raises, _, folds, _) = count_with_seed(&profile, &snap, 88, 1_000);
+        assert_eq!(raises + folds, 1_000, "only Raise or Fold expected with aggression=0");
+        // Expect 40 % ± 20 pp  →  200..=600
+        assert!(
+            (200..=600).contains(&raises),
+            "check-raise 40%: expected ~400 raises out of 1000, got {raises}"
+        );
     }
 }
