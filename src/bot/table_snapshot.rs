@@ -186,8 +186,7 @@ impl TableSnapshot {
                         | TableAction::DealtRiver(_)
                 )
             })
-            .map(|i| i + 1)
-            .unwrap_or(0);
+            .map_or(0, |i| i + 1);
         let checked_this_street = table.event_log[street_start..]
             .iter()
             .any(|a| matches!(a, TableAction::Check(s) if *s == seat));
