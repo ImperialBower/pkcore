@@ -118,7 +118,13 @@ if state.to_call > 0 && state.checked_this_street {
 
 ## Status
 
-Planned. No code changes yet.
+**Complete.** All three branches are implemented and tested.
 
-This is the lowest-risk entry point into BotProfile sophistication — no new types are required
-and the fields already exist in the YAML profiles.
+- `checked_this_street: bool` added to `TableSnapshot`; `from_table()` scans the event log
+  from the last street-boundary marker to detect a prior `Check` by this seat.
+- `RuleBasedDecider::decide_with_rng()` uses `postflop_cbet_frequency`, `bluff_frequency`,
+  and `check_raise_frequency` exactly as described above.
+- Tests: `checked_this_street` detection (4 cases across streets), decider boundary tests
+  (0%/100% frequencies), and statistical tests for bluff/check-raise at realistic rates.
+
+Implemented in commits `7090e93` (TableSnapshot) and `51be96a` (decider + profile wiring).
