@@ -206,8 +206,7 @@ impl RuleBasedDecider {
                 let roll_bluff: f64 = rng.random();
                 if roll_bluff < bluff_rate {
                     let (n, d) = pick_bet_size(profile, rng);
-                    let amount =
-                        (state.pot.saturating_mul(n) / d).max(state.big_blind).min(chips);
+                    let amount = (state.pot.saturating_mul(n) / d).max(state.big_blind).min(chips);
                     PlayerAction::Bet(amount)
                 } else {
                     PlayerAction::Check
@@ -344,6 +343,7 @@ mod tests {
     use super::*;
     use crate::casino::game::ForcedBets;
     use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    use crate::games::GamePhase;
 
     fn make_snapshot(seat: u8) -> TableSnapshot {
         let seats = SeatsNoCell::new(vec![
@@ -453,12 +453,7 @@ mod tests {
     // ── Helpers for bluff / c-bet / check-raise tests ────────────────────────
 
     /// Build a minimal [`BotProfile`] with explicit frequency values for testing.
-    fn make_profile(
-        aggression: u8,
-        bluff: u8,
-        check_raise: u8,
-        cbet: u8,
-    ) -> BotProfile {
+    fn make_profile(aggression: u8, bluff: u8, check_raise: u8, cbet: u8) -> BotProfile {
         use crate::analysis::gto::solver_config::BetSize;
         use crate::bot::betting_strategy::BettingStrategy;
         use crate::bot::profile::PlayStyle;
@@ -483,8 +478,7 @@ mod tests {
         use rand::SeedableRng;
         use rand::rngs::SmallRng;
         let mut rng = SmallRng::seed_from_u64(seed);
-        let (mut bets, mut checks, mut raises, mut calls, mut folds, mut all_ins) =
-            (0, 0, 0, 0, 0, 0);
+        let (mut bets, mut checks, mut raises, mut calls, mut folds, mut all_ins) = (0, 0, 0, 0, 0, 0);
         for _ in 0..n {
             match RuleBasedDecider::decide_with_rng(profile, snap, &mut rng) {
                 PlayerAction::Bet(_) => bets += 1,
@@ -514,7 +508,10 @@ mod tests {
         let mut rng = SmallRng::seed_from_u64(99);
         for _ in 0..50 {
             assert!(
-                matches!(RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng), PlayerAction::Bet(_)),
+                matches!(
+                    RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng),
+                    PlayerAction::Bet(_)
+                ),
                 "100% c-bet must always Bet"
             );
         }
@@ -555,7 +552,10 @@ mod tests {
         let mut rng = SmallRng::seed_from_u64(13);
         for _ in 0..50 {
             assert!(
-                matches!(RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng), PlayerAction::Bet(_)),
+                matches!(
+                    RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng),
+                    PlayerAction::Bet(_)
+                ),
                 "100% bluff on turn must always Bet"
             );
         }
@@ -597,7 +597,10 @@ mod tests {
         let mut rng = SmallRng::seed_from_u64(5);
         for _ in 0..50 {
             assert!(
-                matches!(RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng), PlayerAction::Raise(_)),
+                matches!(
+                    RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng),
+                    PlayerAction::Raise(_)
+                ),
                 "100% check-raise must always Raise when checked_this_street"
             );
         }

@@ -362,7 +362,10 @@ mod tests {
         // Snapshot for the OTHER seat — it has not checked this street.
         let other = if first == 0 { 1 } else { 0 };
         let snap = TableSnapshot::from_table(&table, other);
-        assert!(!snap.checked_this_street, "seat {other} has not checked, expected false");
+        assert!(
+            !snap.checked_this_street,
+            "seat {other} has not checked, expected false"
+        );
     }
 
     #[test]
