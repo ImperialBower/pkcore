@@ -19,55 +19,86 @@ use std::path::Path;
 
 // ── PlayStyle ─────────────────────────────────────────────────────────────────
 
-/// A free-form playing style label attached to a [`BotProfile`].
+/// A typed playing style label attached to a [`BotProfile`].
 ///
-/// `PlayStyle` is a transparent newtype over [`String`] so any label can be
-/// used in YAML profile files without requiring code changes. The named
-/// constructors on [`BotProfile`] (`gto()`, `tight_passive()`,
-/// `loose_aggressive()`) set conventional labels as examples, but callers are
-/// free to supply any name they choose.
-///
-/// Serializes as a bare string in YAML:
-///
-/// ```yaml
-/// style: tight_passive
-/// ```
+/// Known archetypes map to named variants; any other label maps to
+/// [`PlayStyle::Custom`]. YAML serialization uses `snake_case` strings
+/// (`"tight_passive"`, `"gto"`, etc.) so existing profile files need no changes.
 ///
 /// # Examples
 ///
 /// ```
 /// use pkcore::bot::profile::PlayStyle;
 ///
-/// let style = PlayStyle::new("tight_aggressive");
-/// assert_eq!(style.to_string(), "tight_aggressive");
+/// // Known archetypes use named variants
+/// assert_eq!(PlayStyle::TightPassive.to_string(), "tight_passive");
+/// assert_eq!(PlayStyle::Gto.to_string(), "gto");
 ///
-/// // Any label works — no code changes needed for new styles
-/// let custom = PlayStyle::new("my_custom_style");
-/// assert_eq!(custom.to_string(), "my_custom_style");
+/// // Unknown labels become Custom — PlayStyle::new() handles both
+/// let lag = PlayStyle::new("lag");
+/// assert_eq!(lag.to_string(), "lag");
+/// assert_eq!(PlayStyle::new("tight_passive"), PlayStyle::TightPassive);
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PlayStyle(pub String);
+#[serde(rename_all = "snake_case")]
+pub enum PlayStyle {
+    TightPassive,
+    LooseAggressive,
+    Gto,
+    TightAggressive,
+    LoosePassive,
+    Maniac,
+    Abc,
+    ShortStackNinja,
+    #[serde(untagged)]
+    Custom(String),
+}
 
 impl PlayStyle {
-    /// Creates a [`PlayStyle`] with the given label string.
+    /// Returns the named variant for known archetype strings, otherwise
+    /// `Custom(name)`.
+    ///
+    /// This allows existing code that passes string literals to keep working
+    /// while also accepting the enum variant syntax.
     ///
     /// # Examples
     ///
     /// ```
     /// use pkcore::bot::profile::PlayStyle;
     ///
-    /// let style = PlayStyle::new("lag");
-    /// assert_eq!(style.to_string(), "lag");
+    /// assert_eq!(PlayStyle::new("tight_passive"), PlayStyle::TightPassive);
+    /// assert_eq!(PlayStyle::new("gto"),           PlayStyle::Gto);
+    /// assert_eq!(PlayStyle::new("my_style"),      PlayStyle::Custom("my_style".into()));
     /// ```
     #[must_use]
     pub fn new(name: impl Into<String>) -> Self {
-        Self(name.into())
+        match name.into().as_str() {
+            "tight_passive" => Self::TightPassive,
+            "loose_aggressive" => Self::LooseAggressive,
+            "gto" => Self::Gto,
+            "tight_aggressive" => Self::TightAggressive,
+            "loose_passive" => Self::LoosePassive,
+            "maniac" => Self::Maniac,
+            "abc" => Self::Abc,
+            "short_stack_ninja" => Self::ShortStackNinja,
+            other => Self::Custom(other.to_string()),
+        }
     }
 }
 
 impl fmt::Display for PlayStyle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
+        match self {
+            Self::TightPassive => write!(f, "tight_passive"),
+            Self::LooseAggressive => write!(f, "loose_aggressive"),
+            Self::Gto => write!(f, "gto"),
+            Self::TightAggressive => write!(f, "tight_aggressive"),
+            Self::LoosePassive => write!(f, "loose_passive"),
+            Self::Maniac => write!(f, "maniac"),
+            Self::Abc => write!(f, "abc"),
+            Self::ShortStackNinja => write!(f, "short_stack_ninja"),
+            Self::Custom(s) => write!(f, "{s}"),
+        }
     }
 }
 
@@ -234,7 +265,7 @@ impl BotProfile {
         Self::new(
             "tight_passive",
             "Plays strong hands only; rarely bluffs or raises without a strong holding.",
-            PlayStyle::new("tight_passive"),
+            PlayStyle::TightPassive,
             RangeStrategy::tight_passive(),
             BettingStrategy::tight_passive(),
         )
@@ -256,7 +287,7 @@ impl BotProfile {
         Self::new(
             "loose_aggressive",
             "Wide ranges, frequent bets and bluffs — puts maximum pressure on opponents.",
-            PlayStyle::new("loose_aggressive"),
+            PlayStyle::LooseAggressive,
             RangeStrategy::loose_aggressive(),
             BettingStrategy::loose_aggressive(),
         )
@@ -278,7 +309,7 @@ impl BotProfile {
         Self::new(
             "gto",
             "Balanced frequencies informed by GTO solver output; unexploitable at equilibrium.",
-            PlayStyle::new("gto"),
+            PlayStyle::Gto,
             RangeStrategy::gto(),
             BettingStrategy::gto(),
         )
@@ -300,7 +331,7 @@ impl BotProfile {
         Self::new(
             "tight_aggressive",
             "Selective hand selection with maximum postflop aggression — the baseline winning style.",
-            PlayStyle::new("tight_aggressive"),
+            PlayStyle::TightAggressive,
             RangeStrategy::tight_aggressive(),
             BettingStrategy::tight_aggressive(),
         )
@@ -321,7 +352,7 @@ impl BotProfile {
         Self::new(
             "loose_passive",
             "Wide hand selection with passive betting — the classic calling station archetype.",
-            PlayStyle::new("loose_passive"),
+            PlayStyle::LoosePassive,
             RangeStrategy::loose_passive(),
             BettingStrategy::loose_passive(),
         )
@@ -342,7 +373,7 @@ impl BotProfile {
         Self::new(
             "maniac",
             "Extreme aggressor — bets and raises relentlessly with a very high bluff frequency.",
-            PlayStyle::new("maniac"),
+            PlayStyle::Maniac,
             RangeStrategy::maniac(),
             BettingStrategy::maniac(),
         )
@@ -363,7 +394,7 @@ impl BotProfile {
         Self::new(
             "abc",
             "By-the-book play — bets strong hands and folds weak ones with no deception or bluffing.",
-            PlayStyle::new("abc"),
+            PlayStyle::Abc,
             RangeStrategy::abc(),
             BettingStrategy::abc(),
         )
@@ -384,7 +415,7 @@ impl BotProfile {
         Self::new(
             "short_stack_ninja",
             "Push-or-fold strategy optimized for short stack situations — all-in or nothing.",
-            PlayStyle::new("short_stack_ninja"),
+            PlayStyle::ShortStackNinja,
             RangeStrategy::short_stack_ninja(),
             BettingStrategy::short_stack_ninja(),
         )
@@ -730,11 +761,12 @@ impl fmt::Display for BotProfile {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
-mod tests {
+#[allow(non_snake_case)]
+mod bot__profile_tests {
     use super::*;
 
     #[test]
-    fn test_bot_profile_new_fields() {
+    fn bot_profile_new_fields() {
         let p = BotProfile::new(
             "test",
             "A test profile.",
@@ -747,60 +779,60 @@ mod tests {
     }
 
     #[test]
-    fn test_bot_profile_tight_passive() {
+    fn bot_profile_tight_passive() {
         let p = BotProfile::tight_passive();
         assert_eq!(p.style, PlayStyle::new("tight_passive"));
     }
 
     #[test]
-    fn test_bot_profile_loose_aggressive() {
+    fn bot_profile_loose_aggressive() {
         let p = BotProfile::loose_aggressive();
         assert_eq!(p.style, PlayStyle::new("loose_aggressive"));
     }
 
     #[test]
-    fn test_bot_profile_gto() {
+    fn bot_profile_gto() {
         let p = BotProfile::gto();
         assert_eq!(p.style, PlayStyle::new("gto"));
     }
 
     #[test]
-    fn test_bot_profile_tight_aggressive() {
+    fn bot_profile_tight_aggressive() {
         let p = BotProfile::tight_aggressive();
         assert_eq!(p.style, PlayStyle::new("tight_aggressive"));
         assert_eq!(p.name, "tight_aggressive");
     }
 
     #[test]
-    fn test_bot_profile_loose_passive() {
+    fn bot_profile_loose_passive() {
         let p = BotProfile::loose_passive();
         assert_eq!(p.style, PlayStyle::new("loose_passive"));
         assert_eq!(p.name, "loose_passive");
     }
 
     #[test]
-    fn test_bot_profile_maniac() {
+    fn bot_profile_maniac() {
         let p = BotProfile::maniac();
         assert_eq!(p.style, PlayStyle::new("maniac"));
         assert_eq!(p.name, "maniac");
     }
 
     #[test]
-    fn test_bot_profile_abc() {
+    fn bot_profile_abc() {
         let p = BotProfile::abc();
         assert_eq!(p.style, PlayStyle::new("abc"));
         assert_eq!(p.betting_strategy.bluff_frequency, 0);
     }
 
     #[test]
-    fn test_bot_profile_short_stack_ninja() {
+    fn bot_profile_short_stack_ninja() {
         let p = BotProfile::short_stack_ninja();
         assert_eq!(p.style, PlayStyle::new("short_stack_ninja"));
         assert_eq!(p.betting_strategy.aggression_factor, 95);
     }
 
     #[test]
-    fn test_bot_profile_joker() {
+    fn bot_profile_joker() {
         let p = BotProfile::joker();
         assert_eq!(p.name, "joker");
         assert_eq!(p.style, PlayStyle::new("joker"));
@@ -808,7 +840,7 @@ mod tests {
     }
 
     #[test]
-    fn test_bot_profile_default_profiles() {
+    fn bot_profile_default_profiles() {
         let profiles = BotProfile::default_profiles();
         assert_eq!(profiles.len(), 8);
         assert_eq!(profiles[0].name, "gto");
@@ -820,7 +852,7 @@ mod tests {
     }
 
     #[test]
-    fn test_play_style_display() {
+    fn play_style_display() {
         assert_eq!(PlayStyle::new("tight_passive").to_string(), "tight_passive");
         assert_eq!(PlayStyle::new("loose_aggressive").to_string(), "loose_aggressive");
         assert_eq!(PlayStyle::new("gto").to_string(), "gto");
@@ -828,19 +860,19 @@ mod tests {
     }
 
     #[test]
-    fn test_bot_profile_display() {
+    fn bot_profile_display() {
         let p = BotProfile::gto();
         assert_eq!(p.to_string(), "gto (gto)");
     }
 
     #[test]
-    fn test_bot_error_display() {
+    fn bot_error_display() {
         let e = BotError::InvalidProfile("bad data".into());
         assert!(e.to_string().contains("bad data"));
     }
 
     #[test]
-    fn test_bot_profile_serde_json_round_trip() {
+    fn bot_profile_serde_json_round_trip() {
         let p = BotProfile::gto();
         let json = serde_json::to_string(&p).unwrap();
         let loaded: BotProfile = serde_json::from_str(&json).unwrap();
@@ -849,7 +881,7 @@ mod tests {
 
     #[cfg(feature = "bot-profiles")]
     #[test]
-    fn test_bot_profile_yaml_round_trip() {
+    fn bot_profile_yaml_round_trip() {
         let p = BotProfile::tight_passive();
         let yaml = p.to_yaml_string().unwrap();
         let loaded = BotProfile::from_yaml_str(&yaml).unwrap();
@@ -858,7 +890,7 @@ mod tests {
 
     #[cfg(feature = "bot-profiles")]
     #[test]
-    fn test_bot_profile_yaml_round_trip_with_playbook() {
+    fn bot_profile_yaml_round_trip_with_playbook() {
         use crate::bot::playbook::Playbook;
         let p = BotProfile::gto().with_playbook(Playbook::gto());
         assert!(p.playbook.is_some());
@@ -870,7 +902,7 @@ mod tests {
 
     #[cfg(feature = "bot-profiles")]
     #[test]
-    fn test_bot_profile_yaml_without_playbook_unchanged() {
+    fn bot_profile_yaml_without_playbook_unchanged() {
         // Profiles without a playbook must not gain a `playbook:` key in YAML,
         // preserving backward compatibility with existing profile files.
         let p = BotProfile::maniac();
@@ -880,7 +912,7 @@ mod tests {
 
     #[cfg(all(feature = "bot-profiles", not(target_arch = "wasm32")))]
     #[test]
-    fn test_bot_profile_file_round_trip() {
+    fn bot_profile_file_round_trip() {
         let p = BotProfile::loose_aggressive();
         let path = std::env::temp_dir().join("pkcore_test_bot_profile.yaml");
         p.to_file(&path).unwrap();
@@ -892,7 +924,7 @@ mod tests {
     /// Each file in `data/bots/` must parse without error.
     #[cfg(all(feature = "bot-profiles", not(target_arch = "wasm32")))]
     #[test]
-    fn test_data_bots_all_load() {
+    fn data_bots_all_load() {
         let names = [
             "gto",
             "tight_passive",
@@ -914,7 +946,7 @@ mod tests {
     /// YAML files after a round-trip through deserialization.
     #[cfg(all(feature = "bot-profiles", not(target_arch = "wasm32")))]
     #[test]
-    fn test_data_bots_constructors_match_files() {
+    fn data_bots_constructors_match_files() {
         for (name, expected) in [
             ("gto", BotProfile::gto()),
             ("tight_passive", BotProfile::tight_passive()),

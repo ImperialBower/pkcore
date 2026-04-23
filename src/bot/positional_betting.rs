@@ -273,11 +273,12 @@ impl PositionalBetting {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
-mod tests {
+#[allow(non_snake_case)]
+mod bot__positional_betting_tests {
     use super::*;
 
     #[test]
-    fn test_positional_betting_fallback_to_default() {
+    fn positional_betting_fallback_to_default() {
         let pb = PositionalBetting::new(BettingStrategy::tight_passive());
         assert_eq!(
             pb.for_position(Position::UTGP2).aggression_factor,
@@ -286,7 +287,7 @@ mod tests {
     }
 
     #[test]
-    fn test_positional_betting_insert_overrides_default() {
+    fn positional_betting_insert_overrides_default() {
         let mut pb = PositionalBetting::new(BettingStrategy::tight_passive());
         pb.insert(Position::BTN, BettingStrategy::loose_aggressive());
         assert!(pb.for_position(Position::BTN).aggression_factor > 50);
@@ -295,19 +296,19 @@ mod tests {
     }
 
     #[test]
-    fn test_gto_six_max_btn_more_aggressive_than_lj() {
+    fn gto_six_max_btn_more_aggressive_than_lj() {
         let pb = PositionalBetting::gto_six_max();
         assert!(pb.for_position(Position::BTN).aggression_factor >= pb.for_position(Position::LJ).aggression_factor);
     }
 
     #[test]
-    fn test_gto_nine_max_btn_more_aggressive_than_utg() {
+    fn gto_nine_max_btn_more_aggressive_than_utg() {
         let pb = PositionalBetting::gto_nine_max();
         assert!(pb.for_position(Position::BTN).aggression_factor >= pb.for_position(Position::UTG).aggression_factor);
     }
 
     #[test]
-    fn test_tight_passive_six_max_all_below_50() {
+    fn tight_passive_six_max_all_below_50() {
         let pb = PositionalBetting::tight_passive_six_max();
         for pos in [
             Position::LJ,
@@ -325,7 +326,7 @@ mod tests {
     }
 
     #[test]
-    fn test_loose_aggressive_six_max_all_above_50() {
+    fn loose_aggressive_six_max_all_above_50() {
         let pb = PositionalBetting::loose_aggressive_six_max();
         for pos in [
             Position::LJ,
@@ -343,7 +344,7 @@ mod tests {
     }
 
     #[test]
-    fn test_positional_betting_serde_round_trip() {
+    fn positional_betting_serde_round_trip() {
         let pb = PositionalBetting::gto_six_max();
         let json = serde_json::to_string(&pb).unwrap();
         let loaded: PositionalBetting = serde_json::from_str(&json).unwrap();

@@ -171,8 +171,19 @@ impl<'de> Deserialize<'de> for Percentage {
 
 ## Status
 
-Planned. No code changes yet.
+**Complete.**
 
-This is a refactoring feature — it improves ergonomics and safety without changing bot
-behavior. It is a good prerequisite for hand-strength decisions because `Percentage::as_f64()`
-cleans up the `f64::from(field) / 100.0` pattern that appears in four places in `decider.rs`.
+### What was implemented
+
+- `PlayStyle` enum with 8 named variants + `Custom(String)` fallback (`src/bot/profile.rs`)
+  - `PlayStyle::new()` smart constructor preserved for ergonomics; maps known strings → variants
+  - `#[serde(rename_all = "snake_case")]` + `#[serde(untagged)]` on `Custom` — YAML files unchanged
+  - `Display` impl; all 8 `BotProfile` named constructors updated to use enum variants directly
+- `Percentage` newtype in `src/bot/betting_strategy.rs`
+  - `Percentage::new(u8) -> Option<Self>`, `.value()`, `.as_f64()`, `Display`
+  - `PartialEq<u8>` and `PartialOrd<u8>` preserve existing test assertions
+  - Custom serde: serializes as plain `u8`, deserializes with 0–100 validation
+- `BettingStrategy` fields `aggression_factor`, `bluff_frequency`, `check_raise_frequency` → `Percentage`
+- `RangeStrategy.postflop_cbet_frequency` → `Percentage`
+- `RuleBasedDecider` updated to use `.as_f64()` at all four sites in `decider.rs`
+- Test module names aligned to `module__path_tests` convention in all touched files

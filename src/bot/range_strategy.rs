@@ -5,6 +5,7 @@
 //! frequency. Range strings follow pkcore's standard format and will support
 //! per-combo frequencies (e.g. `"AA:1.0, KK:0.9"`) once EPIC-25 ships.
 
+use crate::bot::betting_strategy::Percentage;
 use serde::{Deserialize, Serialize};
 
 // ── RangeStrategy ─────────────────────────────────────────────────────────────
@@ -35,8 +36,8 @@ pub struct RangeStrategy {
     /// Hands the bot calls a 3-bet with.
     pub call_three_bet: String,
     /// How often the bot continuation-bets on the flop after raising preflop,
-    /// expressed as a whole-number percentage in `1..=100`.
-    pub postflop_cbet_frequency: u8,
+    /// expressed as a whole-number percentage in `0..=100`.
+    pub postflop_cbet_frequency: Percentage,
 }
 
 impl RangeStrategy {
@@ -62,7 +63,7 @@ impl RangeStrategy {
             open_raise: open_raise.into(),
             three_bet: three_bet.into(),
             call_three_bet: call_three_bet.into(),
-            postflop_cbet_frequency,
+            postflop_cbet_frequency: Percentage(postflop_cbet_frequency.min(100)),
         }
     }
 
@@ -195,11 +196,12 @@ impl RangeStrategy {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
-mod tests {
+#[allow(non_snake_case)]
+mod bot__range_strategy_tests {
     use super::*;
 
     #[test]
-    fn test_range_strategy_new_fields() {
+    fn range_strategy_new_fields() {
         let s = RangeStrategy::new("AA,KK", "AA", "KK", 50);
         assert_eq!(s.open_raise, "AA,KK");
         assert_eq!(s.three_bet, "AA");
@@ -208,60 +210,60 @@ mod tests {
     }
 
     #[test]
-    fn test_range_strategy_tight_passive() {
+    fn tight_passive() {
         let s = RangeStrategy::tight_passive();
         assert!(!s.open_raise.is_empty());
         assert!(s.postflop_cbet_frequency < 50);
     }
 
     #[test]
-    fn test_range_strategy_loose_aggressive() {
+    fn loose_aggressive() {
         let s = RangeStrategy::loose_aggressive();
         assert!(s.postflop_cbet_frequency > 50);
     }
 
     #[test]
-    fn test_range_strategy_gto() {
+    fn gto() {
         let s = RangeStrategy::gto();
         assert_eq!(s.postflop_cbet_frequency, 50);
     }
 
     #[test]
-    fn test_range_strategy_tight_aggressive() {
+    fn tight_aggressive() {
         let s = RangeStrategy::tight_aggressive();
         assert!(!s.open_raise.is_empty());
         assert!(s.postflop_cbet_frequency > 50);
     }
 
     #[test]
-    fn test_range_strategy_loose_passive() {
+    fn loose_passive() {
         let s = RangeStrategy::loose_passive();
         assert!(!s.open_raise.is_empty());
         assert!(s.postflop_cbet_frequency < 30);
     }
 
     #[test]
-    fn test_range_strategy_maniac() {
+    fn maniac() {
         let s = RangeStrategy::maniac();
         assert_eq!(s.postflop_cbet_frequency, 90);
     }
 
     #[test]
-    fn test_range_strategy_abc() {
+    fn abc() {
         let s = RangeStrategy::abc();
         assert!(!s.open_raise.is_empty());
         assert!(s.postflop_cbet_frequency > 50);
     }
 
     #[test]
-    fn test_range_strategy_short_stack_ninja() {
+    fn short_stack_ninja() {
         let s = RangeStrategy::short_stack_ninja();
         assert_eq!(s.postflop_cbet_frequency, 100);
         assert!(s.call_three_bet.is_empty());
     }
 
     #[test]
-    fn test_range_strategy_serde_round_trip() {
+    fn serde_round_trip() {
         let s = RangeStrategy::gto();
         let json = serde_json::to_string(&s).unwrap();
         let loaded: RangeStrategy = serde_json::from_str(&json).unwrap();

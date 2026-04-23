@@ -145,13 +145,13 @@ impl RuleBasedDecider {
             profile.betting_for(state.seat_count, pos)
         });
 
-        let aggr = f64::from(strategy.aggression_factor) / 100.0;
+        let aggr = strategy.aggression_factor.as_f64();
         let roll: f64 = rng.random();
 
         if state.to_call > 0 {
             // Check-raise: we checked earlier this street and now face a bet.
             if state.checked_this_street {
-                let cr_rate = f64::from(strategy.check_raise_frequency) / 100.0;
+                let cr_rate = strategy.check_raise_frequency.as_f64();
                 if roll < cr_rate {
                     let (n, d) = pick_bet_size(strategy, rng);
                     let raise_to = state
@@ -198,7 +198,7 @@ impl RuleBasedDecider {
             // No outstanding bet — bet or check.
             // On the flop, postflop_cbet_frequency overrides the flat aggression factor.
             let bet_threshold = if state.phase.is_flop() {
-                f64::from(profile.range_strategy.postflop_cbet_frequency) / 100.0
+                profile.range_strategy.postflop_cbet_frequency.as_f64()
             } else {
                 aggr
             };
@@ -209,7 +209,7 @@ impl RuleBasedDecider {
                 PlayerAction::Bet(amount)
             } else if !state.phase.is_preflop() {
                 // Postflop: consider bluffing when the value-bet threshold wasn't reached.
-                let bluff_rate = f64::from(strategy.bluff_frequency) / 100.0;
+                let bluff_rate = strategy.bluff_frequency.as_f64();
                 let roll_bluff: f64 = rng.random();
                 if roll_bluff < bluff_rate {
                     let (n, d) = pick_bet_size(strategy, rng);
