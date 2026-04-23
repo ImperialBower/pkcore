@@ -238,6 +238,7 @@ impl BotProfile {
             RangeStrategy::tight_passive(),
             BettingStrategy::tight_passive(),
         )
+        .with_playbook(Playbook::tight_passive())
     }
 
     /// Returns the `LooseAggressive` reference profile.
@@ -259,6 +260,7 @@ impl BotProfile {
             RangeStrategy::loose_aggressive(),
             BettingStrategy::loose_aggressive(),
         )
+        .with_playbook(Playbook::loose_aggressive())
     }
 
     /// Returns the `Gto` reference profile.
@@ -280,6 +282,7 @@ impl BotProfile {
             RangeStrategy::gto(),
             BettingStrategy::gto(),
         )
+        .with_playbook(Playbook::gto())
     }
 
     /// Returns the `TightAggressive` reference profile.
@@ -483,8 +486,10 @@ impl BotProfile {
     /// use pkcore::casino::table::position::Position;
     ///
     /// let profile = BotProfile::gto();
-    /// // No playbook on the base profile → returns None
-    /// assert!(profile.range_for(6, Position::BTN, "open_raise").is_none());
+    /// // GTO playbook has a 6-max BTN open_raise entry
+    /// assert!(profile.range_for(6, Position::BTN, "open_raise").is_some());
+    /// // No entry for 3-max → returns None
+    /// assert!(profile.range_for(3, Position::BTN, "open_raise").is_none());
     /// ```
     #[must_use]
     pub fn range_for(&self, seats: u8, pos: Position, action: &str) -> Option<&WeightedRange> {
@@ -536,9 +541,12 @@ impl BotProfile {
     /// use pkcore::casino::table::position::Position;
     ///
     /// let profile = BotProfile::gto();
-    /// // No playbook → returns the flat betting_strategy
+    /// // GTO playbook: BTN plays more aggressively than the flat default
+    /// assert!(profile.betting_for(6, Position::BTN).aggression_factor >
+    ///     profile.betting_strategy.aggression_factor);
+    /// // No playbook entry for 3-max → falls back to flat betting_strategy
     /// assert_eq!(
-    ///     profile.betting_for(6, Position::BTN).aggression_factor,
+    ///     profile.betting_for(3, Position::BTN).aggression_factor,
     ///     profile.betting_strategy.aggression_factor,
     /// );
     /// ```
@@ -699,59 +707,17 @@ impl BotProfile {
         seat: u8,
         rng: &mut R,
     ) -> crate::casino::action::PlayerAction {
+        use crate::bot::player_action::PlayerAction as BotAction;
         use crate::casino::action::PlayerAction;
-
-        let chips = table.seats.get_seat(seat).map_or(0, |s| s.player.chips);
-        if chips == 0 {
-            return PlayerAction::Check;
+        let snapshot = crate::bot::table_snapshot::TableSnapshot::from_table(table, seat);
+        match crate::bot::decider::RuleBasedDecider::decide_with_rng(self, &snapshot, rng) {
+            BotAction::Fold => PlayerAction::Fold,
+            BotAction::Check => PlayerAction::Check,
+            BotAction::Call => PlayerAction::Call,
+            BotAction::Bet(n) => PlayerAction::Bet(n),
+            BotAction::Raise(n) => PlayerAction::Raise(n),
+            BotAction::AllIn => PlayerAction::AllIn,
         }
-
-        let to_call = table.to_call(seat);
-        let pot = table.effective_pot().max(table.forced.big_blind);
-        let current_bet = table.bet;
-        let min_raise = table.min_raise();
-        let aggr = f64::from(self.betting_strategy.aggression_factor) / 100.0;
-        let roll: f64 = rng.random();
-
-        if to_call > 0 {
-            if to_call >= chips {
-                return if roll < aggr * 0.6 {
-                    PlayerAction::AllIn
-                } else {
-                    PlayerAction::Fold
-                };
-            }
-            if roll < aggr * 0.25 {
-                let (n, d) = self.pick_bet_size(rng);
-                let raise_to = current_bet
-                    .saturating_add(pot.saturating_mul(n) / d)
-                    .max(current_bet.saturating_add(min_raise))
-                    .min(chips);
-                if raise_to > current_bet {
-                    return PlayerAction::Raise(raise_to);
-                }
-            }
-            if roll < aggr {
-                PlayerAction::Call
-            } else {
-                PlayerAction::Fold
-            }
-        } else if roll < aggr {
-            let (n, d) = self.pick_bet_size(rng);
-            let amount = (pot.saturating_mul(n) / d).max(table.forced.big_blind).min(chips);
-            PlayerAction::Bet(amount)
-        } else {
-            PlayerAction::Check
-        }
-    }
-
-    fn pick_bet_size<R: rand::Rng>(&self, rng: &mut R) -> (usize, usize) {
-        let sizes = &self.betting_strategy.preferred_bet_sizes;
-        if sizes.is_empty() {
-            return (1, 2);
-        }
-        let (n, d) = sizes[rng.random_range(0..sizes.len())].as_fraction();
-        (n as usize, d as usize)
     }
 }
 
@@ -907,7 +873,7 @@ mod tests {
     fn test_bot_profile_yaml_without_playbook_unchanged() {
         // Profiles without a playbook must not gain a `playbook:` key in YAML,
         // preserving backward compatibility with existing profile files.
-        let p = BotProfile::gto();
+        let p = BotProfile::maniac();
         let yaml = p.to_yaml_string().unwrap();
         assert!(!yaml.contains("playbook"), "flat profile should not emit playbook key");
     }

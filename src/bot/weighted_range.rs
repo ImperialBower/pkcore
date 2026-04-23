@@ -10,7 +10,11 @@
 //! (all combos at frequency 1.0) and [`WeightedRange::push`] to build a
 //! mixed-strategy range entry by entry.
 
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize, Deserializer, Serialize, Serializer,
+    de::{self, MapAccess, Visitor},
+};
+use std::fmt;
 
 // ── ComboWeight ───────────────────────────────────────────────────────────────
 
@@ -22,6 +26,8 @@ use serde::{Deserialize, Serialize};
 ///
 /// `frequency` is clamped to `[0.0, 1.0]` on construction.
 ///
+/// Serializes as a compact string `"AKs:0.8"` — no spaces.
+///
 /// # Examples
 ///
 /// ```
@@ -31,12 +37,64 @@ use serde::{Deserialize, Serialize};
 /// assert_eq!(cw.range, "AQs");
 /// assert_eq!(cw.frequency, 0.8);
 /// ```
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ComboWeight {
     /// The range token, e.g. `"AJs+"` or `"66+"`.
     pub range: String,
     /// How often this range is played: `0.0` = never, `1.0` = always.
     pub frequency: f64,
+}
+
+impl Serialize for ComboWeight {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        if (self.frequency - 1.0).abs() < f64::EPSILON {
+            return self.range.serialize(s);
+        }
+        let freq = if self.frequency.fract() == 0.0 {
+            format!("{:.1}", self.frequency)
+        } else {
+            format!("{}", self.frequency)
+        };
+        format!("{}:{}", self.range, freq).serialize(s)
+    }
+}
+
+impl<'de> Deserialize<'de> for ComboWeight {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct ComboWeightVisitor;
+
+        impl<'de> Visitor<'de> for ComboWeightVisitor {
+            type Value = ComboWeight;
+
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                write!(f, "a string \"AKs:1.0\" or a single-entry map {{\"AKs\": 1.0}}")
+            }
+
+            // string form: "AKs" (implicit 1.0), "AKs:0.75", or "AKs: 0.75"
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<ComboWeight, E> {
+                match v.rsplit_once(':') {
+                    None => Ok(ComboWeight::new(v, 1.0)),
+                    Some((range, freq_str)) => {
+                        let frequency = freq_str
+                            .trim()
+                            .parse::<f64>()
+                            .map_err(|e| E::custom(format!("invalid frequency: {e}")))?;
+                        Ok(ComboWeight::new(range, frequency))
+                    }
+                }
+            }
+
+            // single-entry map form: {AKs: 1.0}
+            fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<ComboWeight, A::Error> {
+                let (range, frequency) = map
+                    .next_entry::<String, f64>()?
+                    .ok_or_else(|| de::Error::custom("expected one entry"))?;
+                Ok(ComboWeight::new(range, frequency))
+            }
+        }
+
+        d.deserialize_any(ComboWeightVisitor)
+    }
 }
 
 impl ComboWeight {
@@ -288,5 +346,38 @@ mod tests {
         let json = serde_json::to_string(&wr).unwrap();
         let loaded: WeightedRange = serde_json::from_str(&json).unwrap();
         assert_eq!(wr, loaded);
+    }
+
+    #[test]
+    fn test_combo_weight_deserialize_bare_string_is_full_frequency() {
+        let cw: ComboWeight = serde_yaml_bw::from_str("AA").unwrap();
+        assert_eq!(cw.range, "AA");
+        assert_eq!(cw.frequency, 1.0);
+    }
+
+    #[test]
+    fn test_combo_weight_deserialize_compact_with_frequency() {
+        let cw: ComboWeight = serde_yaml_bw::from_str("AKs:0.75").unwrap();
+        assert_eq!(cw.range, "AKs");
+        assert_eq!(cw.frequency, 0.75);
+    }
+
+    #[test]
+    fn test_combo_weight_deserialize_map_with_space() {
+        let cw: ComboWeight = serde_yaml_bw::from_str("AA: 0.75").unwrap();
+        assert_eq!(cw.range, "AA");
+        assert_eq!(cw.frequency, 0.75);
+    }
+
+    #[test]
+    fn test_combo_weight_serialize_full_frequency_is_bare() {
+        let yaml = serde_yaml_bw::to_string(&ComboWeight::new("AKs", 1.0)).unwrap();
+        assert!(yaml.trim() == "AKs", "expected bare string, got: {yaml}");
+    }
+
+    #[test]
+    fn test_combo_weight_serialize_partial_frequency_has_value() {
+        let yaml = serde_yaml_bw::to_string(&ComboWeight::new("AKs", 0.75)).unwrap();
+        assert!(yaml.contains("AKs:0.75"), "expected compact form, got: {yaml}");
     }
 }
