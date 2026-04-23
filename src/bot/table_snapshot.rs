@@ -10,6 +10,7 @@
 use crate::Pile;
 use crate::cards::Cards;
 use crate::casino::table::event::TableAction;
+use crate::casino::table::position::Position;
 use crate::casino::table_no_cell::TableNoCell;
 use crate::games::GamePhase;
 
@@ -110,6 +111,10 @@ pub struct TableSnapshot {
     /// street.  Used by [`crate::bot::decider::RuleBasedDecider`] to detect
     /// check-raise opportunities (checked, faced a bet, now can raise).
     pub checked_this_street: bool,
+    /// Zero-based seat index of the dealer button, if set.
+    pub dealer_button: Option<u8>,
+    /// Number of occupied (non-empty) seats at this table.
+    pub seat_count: u8,
 }
 
 impl TableSnapshot {
@@ -191,6 +196,8 @@ impl TableSnapshot {
             .iter()
             .any(|a| matches!(a, TableAction::Check(s) if *s == seat));
 
+        let seat_count = u8::try_from(table.seats.0.iter().filter(|s| !s.is_empty()).count()).unwrap_or(0);
+
         TableSnapshot {
             seat,
             phase: table.phase,
@@ -204,14 +211,45 @@ impl TableSnapshot {
             stacks,
             big_blind: table.forced.big_blind,
             checked_this_street,
+            dealer_button: Some(table.button),
+            seat_count,
         }
+    }
+
+    /// Returns this player's table position relative to the dealer button.
+    ///
+    /// Returns `None` when the dealer button is unset or the table size is not
+    /// one of the supported formats (2, 3, 4, 5, 6, 9 seats).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::table_snapshot::TableSnapshot;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// ]);
+    /// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// // Button starts at seat 0 → seat 0 is BTN, seat 1 is BB.
+    /// assert_eq!(Some(Position::BTN), TableSnapshot::from_table(&table, 0).position());
+    /// assert_eq!(Some(Position::BB),  TableSnapshot::from_table(&table, 1).position());
+    /// ```
+    #[must_use]
+    pub fn position(&self) -> Option<Position> {
+        let btn = self.dealer_button?;
+        Position::from_seat(self.seat, btn, self.seat_count)
     }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
-mod tests {
+#[allow(non_snake_case)]
+mod bot__table_snapshot_tests {
     use super::*;
     use crate::casino::game::ForcedBets;
     use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
@@ -225,7 +263,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_snapshot_from_table_seat_zero() {
+    fn from_table_seat_zero() {
         let table = two_player_table();
         let snap = TableSnapshot::from_table(&table, 0);
         assert_eq!(0, snap.seat);
@@ -235,7 +273,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_snapshot_from_table_seat_one() {
+    fn from_table_seat_one() {
         let table = two_player_table();
         let snap = TableSnapshot::from_table(&table, 1);
         assert_eq!(1, snap.seat);
@@ -243,7 +281,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_snapshot_hole_cards_empty_before_deal() {
+    fn hole_cards_empty_before_deal() {
         let table = two_player_table();
         let snap = TableSnapshot::from_table(&table, 0);
         // No cards dealt yet
@@ -252,7 +290,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_snapshot_pot_includes_committed() {
+    fn pot_includes_committed() {
         let table = two_player_table();
         let snap = TableSnapshot::from_table(&table, 0);
         // Before any bets, pot is 0 and no committed chips
@@ -260,7 +298,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_snapshot_stacks_all_seats() {
+    fn stacks_all_seats() {
         let table = two_player_table();
         let snap = TableSnapshot::from_table(&table, 0);
         let seats: Vec<u8> = snap.stacks.iter().map(|s| s.seat).collect();
@@ -269,7 +307,7 @@ mod tests {
     }
 
     #[test]
-    fn test_seat_info_fields() {
+    fn seat_info_fields() {
         let info = SeatInfo {
             seat: 3,
             name: "Dave".to_string(),
@@ -284,7 +322,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_snapshot_min_raise_is_big_blind() {
+    fn min_raise_is_big_blind() {
         let table = two_player_table();
         let snap = TableSnapshot::from_table(&table, 0);
         // Before any raises, min_raise == big_blind
@@ -292,7 +330,7 @@ mod tests {
     }
 
     #[test]
-    fn test_checked_this_street_false_on_fresh_table() {
+    fn checked_this_street_false_on_fresh_table() {
         // No actions taken yet — no one has checked.
         let table = two_player_table();
         let snap = TableSnapshot::from_table(&table, 0);
@@ -300,7 +338,7 @@ mod tests {
     }
 
     #[test]
-    fn test_checked_this_street_true_after_flop_check() {
+    fn checked_this_street_true_after_flop_check() {
         use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell};
         use crate::prelude::PlayerState;
 
@@ -335,7 +373,7 @@ mod tests {
     }
 
     #[test]
-    fn test_checked_this_street_false_for_other_seat_after_flop_check() {
+    fn checked_this_street_false_for_other_seat_after_flop_check() {
         use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell};
         use crate::prelude::PlayerState;
 
@@ -369,7 +407,31 @@ mod tests {
     }
 
     #[test]
-    fn test_checked_this_street_resets_across_streets() {
+    fn snapshot_position_btn_seat_zero() {
+        // 2-player table, button starts at seat 0 → seat 0 is BTN.
+        let table = two_player_table();
+        let snap = TableSnapshot::from_table(&table, 0);
+        assert_eq!(Some(Position::BTN), snap.position());
+    }
+
+    #[test]
+    fn snapshot_position_bb_seat_one() {
+        // 2-player table, button at seat 0 → seat 1 is BB.
+        let table = two_player_table();
+        let snap = TableSnapshot::from_table(&table, 1);
+        assert_eq!(Some(Position::BB), snap.position());
+    }
+
+    #[test]
+    fn snapshot_position_none_when_dealer_button_unset() {
+        let table = two_player_table();
+        let mut snap = TableSnapshot::from_table(&table, 0);
+        snap.dealer_button = None;
+        assert_eq!(None, snap.position());
+    }
+
+    #[test]
+    fn checked_this_street_resets_across_streets() {
         use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell};
         use crate::prelude::PlayerState;
 

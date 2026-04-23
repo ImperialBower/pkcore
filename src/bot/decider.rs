@@ -22,6 +22,7 @@
 use std::fmt;
 use std::sync::Mutex;
 
+use crate::bot::betting_strategy::BettingStrategy;
 use crate::bot::player_action::PlayerAction;
 use crate::bot::profile::BotProfile;
 use crate::bot::table_snapshot::TableSnapshot;
@@ -138,15 +139,21 @@ impl RuleBasedDecider {
             return PlayerAction::Check;
         }
 
-        let aggr = f64::from(profile.betting_strategy.aggression_factor) / 100.0;
+        // Resolve position-aware strategy; falls back to flat betting_strategy when
+        // no Playbook entry exists for this table size / position.
+        let strategy = state.position().map_or(&profile.betting_strategy, |pos| {
+            profile.betting_for(state.seat_count, pos)
+        });
+
+        let aggr = f64::from(strategy.aggression_factor) / 100.0;
         let roll: f64 = rng.random();
 
         if state.to_call > 0 {
             // Check-raise: we checked earlier this street and now face a bet.
             if state.checked_this_street {
-                let cr_rate = f64::from(profile.betting_strategy.check_raise_frequency) / 100.0;
+                let cr_rate = f64::from(strategy.check_raise_frequency) / 100.0;
                 if roll < cr_rate {
-                    let (n, d) = pick_bet_size(profile, rng);
+                    let (n, d) = pick_bet_size(strategy, rng);
                     let raise_to = state
                         .current_bet
                         .saturating_add(state.pot.saturating_mul(n) / d)
@@ -170,7 +177,7 @@ impl RuleBasedDecider {
 
             if roll < aggr * 0.25 {
                 // Raise: target = current_bet + pot_fraction, at least min_raise.
-                let (n, d) = pick_bet_size(profile, rng);
+                let (n, d) = pick_bet_size(strategy, rng);
                 let raise_to = state
                     .current_bet
                     .saturating_add(state.pot.saturating_mul(n) / d)
@@ -197,15 +204,15 @@ impl RuleBasedDecider {
             };
 
             if roll < bet_threshold {
-                let (n, d) = pick_bet_size(profile, rng);
+                let (n, d) = pick_bet_size(strategy, rng);
                 let amount = (state.pot.saturating_mul(n) / d).max(state.big_blind).min(chips);
                 PlayerAction::Bet(amount)
             } else if !state.phase.is_preflop() {
                 // Postflop: consider bluffing when the value-bet threshold wasn't reached.
-                let bluff_rate = f64::from(profile.betting_strategy.bluff_frequency) / 100.0;
+                let bluff_rate = f64::from(strategy.bluff_frequency) / 100.0;
                 let roll_bluff: f64 = rng.random();
                 if roll_bluff < bluff_rate {
-                    let (n, d) = pick_bet_size(profile, rng);
+                    let (n, d) = pick_bet_size(strategy, rng);
                     let amount = (state.pot.saturating_mul(n) / d).max(state.big_blind).min(chips);
                     PlayerAction::Bet(amount)
                 } else {
@@ -324,11 +331,10 @@ impl BotDecider for JokerDecider {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/// Returns a random `(numerator, denominator)` pair from the profile's
-/// `preferred_bet_sizes`, falling back to half-pot `(1, 2)` when the list
-/// is empty.
-fn pick_bet_size(profile: &BotProfile, rng: &mut impl rand::Rng) -> (usize, usize) {
-    let sizes = &profile.betting_strategy.preferred_bet_sizes;
+/// Returns a random `(numerator, denominator)` pair from `strategy.preferred_bet_sizes`,
+/// falling back to half-pot `(1, 2)` when the list is empty.
+fn pick_bet_size(strategy: &BettingStrategy, rng: &mut impl rand::Rng) -> (usize, usize) {
+    let sizes = &strategy.preferred_bet_sizes;
     if sizes.is_empty() {
         return (1, 2);
     }
@@ -339,7 +345,8 @@ fn pick_bet_size(profile: &BotProfile, rng: &mut impl rand::Rng) -> (usize, usiz
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
-mod tests {
+#[allow(non_snake_case)]
+mod bot__decider_tests {
     use super::*;
     use crate::casino::game::ForcedBets;
     use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
@@ -355,7 +362,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rule_based_decider_returns_action() {
+    fn rule_based_decider_returns_action() {
         let snap = make_snapshot(0);
         let profile = BotProfile::gto();
         let action = RuleBasedDecider.decide(&profile, &snap);
@@ -363,7 +370,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rule_based_decider_zero_chips_checks() {
+    fn rule_based_decider_zero_chips_checks() {
         let mut snap = make_snapshot(0);
         snap.my_chips = 0;
         let profile = BotProfile::gto();
@@ -372,7 +379,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rule_based_decider_all_reference_profiles() {
+    fn rule_based_decider_all_reference_profiles() {
         for profile in [
             BotProfile::gto(),
             BotProfile::tight_passive(),
@@ -384,13 +391,13 @@ mod tests {
     }
 
     #[test]
-    fn test_rule_based_decider_is_send_sync() {
+    fn rule_based_decider_is_send_sync() {
         fn assert_send_sync<T: Send + Sync>() {}
         assert_send_sync::<RuleBasedDecider>();
     }
 
     #[test]
-    fn test_bot_decider_as_trait_object() {
+    fn bot_decider_as_trait_object() {
         let decider: Box<dyn BotDecider> = Box::new(RuleBasedDecider);
         let snap = make_snapshot(0);
         let profile = BotProfile::gto();
@@ -398,7 +405,7 @@ mod tests {
     }
 
     #[test]
-    fn test_joker_decider_returns_action() {
+    fn joker_decider_returns_action() {
         let decider = JokerDecider::new();
         let snap = make_snapshot(0);
         let profile = BotProfile::joker();
@@ -407,7 +414,7 @@ mod tests {
     }
 
     #[test]
-    fn test_joker_decider_on_new_hand_changes_profile() {
+    fn joker_decider_on_new_hand_changes_profile() {
         // Run on_new_hand many times and collect the names of the chosen profiles.
         // With 8 possible profiles and enough trials, we expect to see at least 2 distinct names.
         let decider = JokerDecider::new();
@@ -430,13 +437,13 @@ mod tests {
     }
 
     #[test]
-    fn test_joker_decider_is_send_sync() {
+    fn joker_decider_is_send_sync() {
         fn assert_send_sync<T: Send + Sync>() {}
         assert_send_sync::<JokerDecider>();
     }
 
     #[test]
-    fn test_joker_decider_as_trait_object() {
+    fn joker_decider_as_trait_object() {
         let decider: Box<dyn BotDecider> = Box::new(JokerDecider::new());
         let snap = make_snapshot(0);
         let profile = BotProfile::joker();
@@ -444,7 +451,7 @@ mod tests {
     }
 
     #[test]
-    fn test_joker_decider_debug() {
+    fn joker_decider_debug() {
         let decider = JokerDecider::new();
         let s = format!("{decider:?}");
         assert!(s.contains("JokerDecider"), "debug output should mention JokerDecider");
@@ -496,7 +503,7 @@ mod tests {
 
     /// 100 % c-bet frequency on the flop always produces a Bet.
     #[test]
-    fn test_cbet_100_always_bets_on_flop() {
+    fn cbet_100_always_bets_on_flop() {
         use rand::SeedableRng;
         use rand::rngs::SmallRng;
         let profile = make_profile(0, 0, 0, 100);
@@ -519,7 +526,7 @@ mod tests {
 
     /// 0 % c-bet on the flop with 0 % bluff always produces a Check.
     #[test]
-    fn test_cbet_0_and_bluff_0_always_checks_on_flop() {
+    fn cbet_0_and_bluff_0_always_checks_on_flop() {
         use rand::SeedableRng;
         use rand::rngs::SmallRng;
         let profile = make_profile(0, 0, 0, 0);
@@ -539,7 +546,7 @@ mod tests {
 
     /// 100 % bluff frequency (with 0 % aggression/cbet) always bets postflop.
     #[test]
-    fn test_bluff_100_always_bets_postflop() {
+    fn bluff_100_always_bets_postflop() {
         use rand::SeedableRng;
         use rand::rngs::SmallRng;
         // Turn — not flop (cbet path) and not preflop (bluff suppressed)
@@ -563,7 +570,7 @@ mod tests {
 
     /// bluff_frequency is never applied preflop — always Check with 0 % aggression.
     #[test]
-    fn test_bluff_never_fires_preflop() {
+    fn bluff_never_fires_preflop() {
         use rand::SeedableRng;
         use rand::rngs::SmallRng;
         let profile = make_profile(0, 100, 0, 0);
@@ -583,7 +590,7 @@ mod tests {
 
     /// 100 % check-raise frequency always raises when checked_this_street and facing a bet.
     #[test]
-    fn test_check_raise_100_always_raises() {
+    fn check_raise_100_always_raises() {
         use rand::SeedableRng;
         use rand::rngs::SmallRng;
         let profile = make_profile(0, 0, 100, 50);
@@ -609,7 +616,7 @@ mod tests {
     /// 0 % check-raise never raises via the check-raise path (falls through to
     /// call/fold based on aggression_factor).
     #[test]
-    fn test_check_raise_0_never_check_raises() {
+    fn check_raise_0_never_check_raises() {
         use rand::SeedableRng;
         use rand::rngs::SmallRng;
         // 100% aggression so we get Calls, not Folds — just verifying no check-raise Raises
@@ -643,7 +650,7 @@ mod tests {
 
     /// C-bet frequency 50 % on the flop bets roughly half the time.
     #[test]
-    fn test_cbet_50_bets_approximately_half() {
+    fn cbet_50_bets_approximately_half() {
         let profile = make_profile(0, 0, 0, 50);
         let mut snap = make_snapshot(0);
         snap.phase = GamePhase::BettingFlop;
@@ -662,7 +669,7 @@ mod tests {
     /// Bluff frequency 30 % bets roughly 30 % of the time on the turn
     /// when aggression and cbet are both 0.
     #[test]
-    fn test_bluff_30_bets_approximately_30_percent() {
+    fn bluff_30_bets_approximately_30_percent() {
         let profile = make_profile(0, 30, 0, 0);
         let mut snap = make_snapshot(0);
         snap.phase = GamePhase::BettingTurn;
@@ -681,7 +688,7 @@ mod tests {
     /// Check-raise frequency 40 % raises roughly 40 % of the time when
     /// checked_this_street is true and facing a bet.
     #[test]
-    fn test_check_raise_40_raises_approximately_40_percent() {
+    fn check_raise_40_raises_approximately_40_percent() {
         // aggression 0 so raises only come from the check-raise path
         let profile = make_profile(0, 0, 40, 0);
         let mut snap = make_snapshot(0);
@@ -698,5 +705,46 @@ mod tests {
             (200..=600).contains(&raises),
             "check-raise 40%: expected ~400 raises out of 1000, got {raises}"
         );
+    }
+
+    // ── Position-aware routing tests ─────────────────────────────────────────
+
+    /// GTO profile has a Playbook giving BTN higher aggression than the flat default.
+    /// With 100 % BTN aggression from the Playbook (verified via betting_for), the
+    /// decider should bet on every turn when seat == button and seat_count == 6.
+    #[test]
+    fn rule_based_decider_uses_playbook_aggression_for_btn() {
+        use crate::casino::table::position::Position;
+
+        let profile = BotProfile::gto();
+
+        // Verify the Playbook actually gives BTN different aggression than the flat default.
+        let btn_aggr = profile.betting_for(6, Position::BTN).aggression_factor;
+        let flat_aggr = profile.betting_strategy.aggression_factor;
+        assert!(
+            btn_aggr > flat_aggr,
+            "GTO BTN aggression ({btn_aggr}) should exceed flat ({flat_aggr})"
+        );
+
+        // Build a snapshot where seat_count == 6, dealer_button == Some(0), seat == 0 (BTN).
+        let mut snap = make_snapshot(0);
+        snap.seat_count = 6;
+        snap.dealer_button = Some(0);
+        snap.phase = crate::games::GamePhase::BettingTurn;
+        snap.to_call = 0;
+        snap.pot = 200;
+
+        let (bets_btn, checks_btn, ..) = count_with_seed(&profile, &snap, 55, 1_000);
+
+        // Same profile but with dealer_button = None → falls back to flat aggression.
+        snap.dealer_button = None;
+        let (bets_flat, checks_flat, ..) = count_with_seed(&profile, &snap, 55, 1_000);
+
+        // BTN path should produce more bets than the flat fallback.
+        assert!(
+            bets_btn > bets_flat,
+            "BTN bets ({bets_btn}) should exceed flat bets ({bets_flat}) given higher BTN aggression"
+        );
+        let _ = (checks_btn, checks_flat);
     }
 }

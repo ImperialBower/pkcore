@@ -124,8 +124,18 @@ The same `strategy` reference should be passed to `pick_bet_size` (currently rea
 
 ## Status
 
-Planned. No code changes yet.
+**Complete.**
 
-Depends on `TableNoCell` exposing a `dealer_button()` accessor (may already exist — verify
-before implementation). The Playbook infrastructure is complete; this feature is purely
-wiring.
+- `Position::from_seat(seat, button, seat_count) -> Option<Position>` added to
+  `src/casino/table/position.rs`; uses clockwise offset arithmetic with merged `|`-pattern
+  arms for all supported table sizes (2, 3, 4, 5, 6, 9).
+- `TableSnapshot` gained `dealer_button: Option<u8>` (always `Some(table.button)`) and
+  `seat_count: u8` (occupied seat count); `position()` method derives caller's `Position`.
+- `RuleBasedDecider::decide_with_rng()` now resolves strategy via
+  `profile.betting_for(seat_count, pos)` through `state.position().map_or(...)`;
+  falls back to flat `betting_strategy` when the Playbook has no entry for the table size.
+- `pick_bet_size()` now takes `&BettingStrategy` directly so sizing is also position-aware.
+
+Note: `table.button` is a public field — no accessor needed. `dealer_button` is
+`Option<u8>` for forward compatibility (e.g., pre-game state), not because the field is
+ever absent in practice.
