@@ -196,7 +196,7 @@ impl PositionRanges {
         // LJ (~14% open)
         let mut lj = ActionRanges::new();
         lj.insert("open_raise", WeightedRange::from_flat("TT+, AQs+, KQs, AQo+"));
-        lj.insert("three_bet", WeightedRange::from_flat("AA, KK, QQ, AKs"));
+        lj.insert("three_bet", WeightedRange::from_flat("QQ+, AKs"));
         pr.insert(Position::LJ, lj);
 
         // HJ (~18% open)
@@ -205,7 +205,7 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("88+, ATs+, KJs+, QJs, AJo+, KQo"),
         );
-        hj.insert("three_bet", WeightedRange::from_flat("AA, KK, QQ, AKs, AKo"));
+        hj.insert("three_bet", WeightedRange::from_flat("QQ+, AKs, AKo"));
         pr.insert(Position::HJ, hj);
 
         // CO (~25% open)
@@ -214,7 +214,7 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("66+, A9s+, KTs+, QTs+, JTs, T9s, ATo+, KJo+"),
         );
-        co.insert("three_bet", WeightedRange::from_flat("AA, KK, QQ, AKs, AQs, AKo"));
+        co.insert("three_bet", WeightedRange::from_flat("QQ+, AQs+, AKo"));
         pr.insert(Position::CO, co);
 
         // BTN (~40% open)
@@ -225,7 +225,7 @@ impl PositionRanges {
         );
         btn.insert(
             "three_bet",
-            WeightedRange::from_flat("AA, KK, QQ, AKs, AQs, AJs, KQs, AKo, AQo"),
+            WeightedRange::from_flat("QQ+, AJs+, KQs, AQo+"),
         );
         pr.insert(Position::BTN, btn);
 
@@ -237,7 +237,7 @@ impl PositionRanges {
         );
         sb.insert(
             "three_bet",
-            WeightedRange::from_flat("AA, KK, QQ, JJ, AKs, AQs, AJs, KQs, AKo, AQo"),
+            WeightedRange::from_flat("JJ+, AJs+, KQs, AQo+"),
         );
         pr.insert(Position::SB, sb);
 
@@ -247,7 +247,7 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("22+, A2s+, K2s+, Q8s+, J8s+, T7s+, 97s+, A2o+, K8o+, Q9o+, J9o+"),
         );
-        bb.insert("three_bet", WeightedRange::from_flat("AA, KK, QQ, AKs, AQs, AKo"));
+        bb.insert("three_bet", WeightedRange::from_flat("QQ+, AQs+, AKo"));
         pr.insert(Position::BB, bb);
 
         pr
@@ -274,19 +274,19 @@ impl PositionRanges {
         // UTG (~8% open)
         let mut utg = ActionRanges::new();
         utg.insert("open_raise", WeightedRange::from_flat("JJ+, AKs, AKo"));
-        utg.insert("three_bet", WeightedRange::from_flat("AA, KK"));
+        utg.insert("three_bet", WeightedRange::from_flat("KK+"));
         pr.insert(Position::UTG, utg);
 
         // UTG+1 (~10% open)
         let mut utg1 = ActionRanges::new();
         utg1.insert("open_raise", WeightedRange::from_flat("TT+, AQs+, KQs, AKo"));
-        utg1.insert("three_bet", WeightedRange::from_flat("AA, KK, QQ, AKs"));
+        utg1.insert("three_bet", WeightedRange::from_flat("QQ+, AKs"));
         pr.insert(Position::UTGP1, utg1);
 
         // EP (~12% open)
         let mut ep = ActionRanges::new();
         ep.insert("open_raise", WeightedRange::from_flat("99+, AJs+, KQs, AQo+"));
-        ep.insert("three_bet", WeightedRange::from_flat("AA, KK, QQ, AKs, AKo"));
+        ep.insert("three_bet", WeightedRange::from_flat("QQ+, AKs, AKo"));
         pr.insert(Position::EP, ep);
 
         // LJ (~15% open)
@@ -295,7 +295,7 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("88+, ATs+, KJs+, QJs, AJo+, KQo"),
         );
-        lj.insert("three_bet", WeightedRange::from_flat("AA, KK, QQ, AKs, AKo"));
+        lj.insert("three_bet", WeightedRange::from_flat("QQ+, AKs, AKo"));
         pr.insert(Position::LJ, lj);
 
         // HJ (~18% open)
@@ -304,7 +304,7 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("77+, A9s+, KTs+, QTs+, JTs, ATo+, KJo+"),
         );
-        hj.insert("three_bet", WeightedRange::from_flat("AA, KK, QQ, AKs, AQs, AKo"));
+        hj.insert("three_bet", WeightedRange::from_flat("QQ+, AQs+, AKo"));
         pr.insert(Position::HJ, hj);
 
         // CO (~24% open)
@@ -313,7 +313,7 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("55+, A8s+, K9s+, Q9s+, JTs, T9s, 98s, ATo+, KJo+"),
         );
-        co.insert("three_bet", WeightedRange::from_flat("AA, KK, QQ, AKs, AQs, AKo"));
+        co.insert("three_bet", WeightedRange::from_flat("QQ+, AQs+, AKo"));
         pr.insert(Position::CO, co);
 
         // BTN (~38% open)
@@ -324,7 +324,7 @@ impl PositionRanges {
         );
         btn.insert(
             "three_bet",
-            WeightedRange::from_flat("AA, KK, QQ, AKs, AQs, AJs, KQs, AKo, AQo"),
+            WeightedRange::from_flat("QQ+, AJs+, KQs, AQo+"),
         );
         pr.insert(Position::BTN, btn);
 
@@ -336,7 +336,7 @@ impl PositionRanges {
         );
         sb.insert(
             "three_bet",
-            WeightedRange::from_flat("AA, KK, QQ, JJ, AKs, AQs, AKo, AQo"),
+            WeightedRange::from_flat("JJ+, AQs+, AQo+"),
         );
         pr.insert(Position::SB, sb);
 
@@ -346,7 +346,7 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("22+, A2s+, K2s+, Q8s+, J8s+, T7s+, 97s+, A2o+, K8o+, Q9o+"),
         );
-        bb.insert("three_bet", WeightedRange::from_flat("AA, KK, QQ, AKs, AKo"));
+        bb.insert("three_bet", WeightedRange::from_flat("QQ+, AKs, AKo"));
         pr.insert(Position::BB, bb);
 
         pr
@@ -372,17 +372,17 @@ impl PositionRanges {
 
         let mut lj = ActionRanges::new();
         lj.insert("open_raise", WeightedRange::from_flat("QQ+, AKs, AKo"));
-        lj.insert("three_bet", WeightedRange::from_flat("AA, KK"));
+        lj.insert("three_bet", WeightedRange::from_flat("KK+"));
         pr.insert(Position::LJ, lj);
 
         let mut hj = ActionRanges::new();
         hj.insert("open_raise", WeightedRange::from_flat("QQ+, AKs, AKo"));
-        hj.insert("three_bet", WeightedRange::from_flat("AA, KK"));
+        hj.insert("three_bet", WeightedRange::from_flat("KK+"));
         pr.insert(Position::HJ, hj);
 
         let mut co = ActionRanges::new();
         co.insert("open_raise", WeightedRange::from_flat("TT+, AQs+, AQo+"));
-        co.insert("three_bet", WeightedRange::from_flat("AA, KK, QQ, AKs"));
+        co.insert("three_bet", WeightedRange::from_flat("QQ+, AKs"));
         pr.insert(Position::CO, co);
 
         let mut btn = ActionRanges::new();
@@ -390,17 +390,17 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("88+, ATs+, KJs+, QJs, AJo+, KQo"),
         );
-        btn.insert("three_bet", WeightedRange::from_flat("AA, KK, QQ, AKs, AKo"));
+        btn.insert("three_bet", WeightedRange::from_flat("QQ+, AKs, AKo"));
         pr.insert(Position::BTN, btn);
 
         let mut sb = ActionRanges::new();
         sb.insert("open_raise", WeightedRange::from_flat("TT+, AQs+, AQo+"));
-        sb.insert("three_bet", WeightedRange::from_flat("AA, KK, QQ, AKs"));
+        sb.insert("three_bet", WeightedRange::from_flat("QQ+, AKs"));
         pr.insert(Position::SB, sb);
 
         let mut bb = ActionRanges::new();
         bb.insert("open_raise", WeightedRange::from_flat("22+, A2s+, K8s+, Q9s+, ATo+"));
-        bb.insert("three_bet", WeightedRange::from_flat("AA, KK, QQ, AKs"));
+        bb.insert("three_bet", WeightedRange::from_flat("QQ+, AKs"));
         pr.insert(Position::BB, bb);
 
         pr
@@ -429,7 +429,7 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("55+, ATs+, KJs+, QJs, JTs, AJo+, KQo"),
         );
-        lj.insert("three_bet", WeightedRange::from_flat("AA, KK, QQ, AKs, AQs, AKo"));
+        lj.insert("three_bet", WeightedRange::from_flat("QQ+, AQs+, AKo"));
         pr.insert(Position::LJ, lj);
 
         let mut hj = ActionRanges::new();
@@ -439,7 +439,7 @@ impl PositionRanges {
         );
         hj.insert(
             "three_bet",
-            WeightedRange::from_flat("AA, KK, QQ, AKs, AQs, AJs, AKo, AQo"),
+            WeightedRange::from_flat("QQ+, AJs+, AQo+"),
         );
         pr.insert(Position::HJ, hj);
 
@@ -450,7 +450,7 @@ impl PositionRanges {
         );
         co.insert(
             "three_bet",
-            WeightedRange::from_flat("AA, KK, QQ, AKs, AQs, AJs, KQs, AKo, AQo"),
+            WeightedRange::from_flat("QQ+, AJs+, KQs, AQo+"),
         );
         pr.insert(Position::CO, co);
 
@@ -461,7 +461,7 @@ impl PositionRanges {
         );
         btn.insert(
             "three_bet",
-            WeightedRange::from_flat("AA, KK, QQ, AKs, AQs, AJs, KQs, A5s, A4s, AKo, AQo"),
+            WeightedRange::from_flat("QQ+, AJs+, KQs, A5s, A4s, AQo+"),
         );
         pr.insert(Position::BTN, btn);
 
@@ -472,7 +472,7 @@ impl PositionRanges {
         );
         sb.insert(
             "three_bet",
-            WeightedRange::from_flat("AA, KK, QQ, JJ, AKs, AQs, AJs, KQs, A5s, AKo, AQo"),
+            WeightedRange::from_flat("JJ+, AJs+, KQs, A5s, AQo+"),
         );
         pr.insert(Position::SB, sb);
 
@@ -483,7 +483,7 @@ impl PositionRanges {
         );
         bb.insert(
             "three_bet",
-            WeightedRange::from_flat("AA, KK, QQ, AKs, AQs, A5s, A4s, AKo, AQo"),
+            WeightedRange::from_flat("QQ+, AQs+, A5s, A4s, AQo+"),
         );
         pr.insert(Position::BB, bb);
 

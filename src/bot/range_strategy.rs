@@ -83,7 +83,7 @@ impl RangeStrategy {
     /// ```
     #[must_use]
     pub fn tight_passive() -> Self {
-        Self::new("QQ+, AKs", "AA, KK", "QQ, AKs", 30)
+        Self::new("QQ+, AKs", "KK+", "QQ, AKs", 30)
     }
 
     /// A loose-aggressive archetype — wide ranges, frequent c-bets.

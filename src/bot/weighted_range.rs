@@ -12,7 +12,8 @@
 
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
-    de::{self, MapAccess, Visitor},
+    de::{self, MapAccess, SeqAccess, Visitor},
+    ser::SerializeSeq,
 };
 use std::fmt;
 
@@ -135,9 +136,87 @@ impl ComboWeight {
 /// assert_eq!(wr.frequency_for("AA"), 1.0);
 /// assert_eq!(wr.frequency_for("22"), 0.0);
 /// ```
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct WeightedRange {
     combos: Vec<ComboWeight>,
+}
+
+impl Serialize for WeightedRange {
+    fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        let all_full = self
+            .combos
+            .iter()
+            .all(|cw| (cw.frequency - 1.0).abs() < f64::EPSILON);
+        if all_full {
+            let joined = self
+                .combos
+                .iter()
+                .map(|cw| cw.range.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            joined.serialize(s)
+        } else {
+            let mut seq = s.serialize_seq(Some(self.combos.len()))?;
+            for cw in &self.combos {
+                seq.serialize_element(cw)?;
+            }
+            seq.end()
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for WeightedRange {
+    fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        struct WRVisitor;
+
+        impl<'de> Visitor<'de> for WRVisitor {
+            type Value = WeightedRange;
+
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                write!(
+                    f,
+                    "a range string \"AA, KK\", a sequence of combo weights, \
+                     or a map with a \"combos\" key"
+                )
+            }
+
+            // compact string form: "AA, KK, QQ, AKs"
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<WeightedRange, E> {
+                Ok(WeightedRange::from_flat(v))
+            }
+
+            // sequence form: ["AA", "KK:0.75"]
+            fn visit_seq<A: SeqAccess<'de>>(
+                self,
+                mut seq: A,
+            ) -> Result<WeightedRange, A::Error> {
+                let mut wr = WeightedRange::new();
+                while let Some(cw) = seq.next_element::<ComboWeight>()? {
+                    wr.combos.push(cw);
+                }
+                Ok(wr)
+            }
+
+            // legacy map form: {combos: [AA, KK]}
+            fn visit_map<A: MapAccess<'de>>(
+                self,
+                mut map: A,
+            ) -> Result<WeightedRange, A::Error> {
+                let key: String = map
+                    .next_key()?
+                    .ok_or_else(|| de::Error::custom("expected \"combos\" key"))?;
+                if key != "combos" {
+                    return Err(de::Error::custom(format!(
+                        "expected key \"combos\", got \"{key}\""
+                    )));
+                }
+                let combos: Vec<ComboWeight> = map.next_value()?;
+                Ok(WeightedRange { combos })
+            }
+        }
+
+        d.deserialize_any(WRVisitor)
+    }
 }
 
 impl WeightedRange {
@@ -379,5 +458,61 @@ mod tests {
     fn test_combo_weight_serialize_partial_frequency_has_value() {
         let yaml = serde_yaml_bw::to_string(&ComboWeight::new("AKs", 0.75)).unwrap();
         assert!(yaml.contains("AKs:0.75"), "expected compact form, got: {yaml}");
+    }
+
+    // ── WeightedRange serde — new forms ──────────────────────────────────────
+
+    #[test]
+    fn weighted_range_deserializes_from_compact_string() {
+        let wr: WeightedRange = serde_yaml_bw::from_str("AA, KK, QQ, AKs").unwrap();
+        assert_eq!(wr.len(), 4);
+        assert_eq!(wr.frequency_for("AA"), 1.0);
+        assert_eq!(wr.frequency_for("AKs"), 1.0);
+        assert_eq!(wr.frequency_for("22"), 0.0);
+    }
+
+    #[test]
+    fn weighted_range_deserializes_from_sequence() {
+        let yaml = "- AA\n- KK:0.75\n";
+        let wr: WeightedRange = serde_yaml_bw::from_str(yaml).unwrap();
+        assert_eq!(wr.len(), 2);
+        assert_eq!(wr.frequency_for("AA"), 1.0);
+        assert_eq!(wr.frequency_for("KK"), 0.75);
+    }
+
+    #[test]
+    fn weighted_range_deserializes_from_map_combos_key() {
+        let yaml = "combos:\n- AA\n- KK\n";
+        let wr: WeightedRange = serde_yaml_bw::from_str(yaml).unwrap();
+        assert_eq!(wr.len(), 2);
+        assert_eq!(wr.frequency_for("AA"), 1.0);
+        assert_eq!(wr.frequency_for("KK"), 1.0);
+    }
+
+    #[test]
+    fn weighted_range_serializes_all_full_freq_as_string() {
+        let wr = WeightedRange::from_flat("AA, KK, QQ");
+        let yaml = serde_yaml_bw::to_string(&wr).unwrap();
+        assert!(
+            yaml.trim() == "AA, KK, QQ",
+            "expected compact string, got: {yaml}"
+        );
+    }
+
+    #[test]
+    fn weighted_range_serializes_mixed_freq_as_seq() {
+        let mut wr = WeightedRange::new();
+        wr.push("AA", 1.0).push("KK", 0.75);
+        let yaml = serde_yaml_bw::to_string(&wr).unwrap();
+        assert!(yaml.contains("KK:0.75"), "expected sequence form, got: {yaml}");
+        assert!(!yaml.contains("combos"), "should not have 'combos' key, got: {yaml}");
+    }
+
+    #[test]
+    fn weighted_range_compact_string_round_trips() {
+        let original = WeightedRange::from_flat("TT+, AQs+, KQs");
+        let yaml = serde_yaml_bw::to_string(&original).unwrap();
+        let loaded: WeightedRange = serde_yaml_bw::from_str(&yaml).unwrap();
+        assert_eq!(original, loaded);
     }
 }

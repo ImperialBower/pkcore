@@ -3,7 +3,7 @@ description: Plays strong hands only; rarely bluffs or raises without a strong h
 style: tight_passive
 range_strategy:
   open_raise: QQ+, AKs
-  three_bet: AA, KK
+  three_bet: KK+
   call_three_bet: QQ, AKs
   postflop_cbet_frequency: 30
 betting_strategy:
@@ -19,171 +19,40 @@ playbook:
         ranges:
           LJ:
             actions:
-              open_raise:
-                combos:
-                - 88+
-                - ATs+
-                - KJs+
-                - QJs
-                - AJo+
-                - KQo
-              three_bet:
-                combos:
-                - AA
-                - KK
-                - QQ
-                - AKs
-                - AKo
+              open_raise: 88+, ATs+, KJs+, QJs, AJo+, KQo
+              three_bet: QQ+, AKs, AKo
           UTGP1:
             actions:
-              three_bet:
-                combos:
-                - AA
-                - KK
-                - QQ
-                - AKs
-              open_raise:
-                combos:
-                - TT+
-                - AQs+
-                - KQs
-                - AKo
+              three_bet: QQ+, AKs
+              open_raise: TT+, AQs+, KQs, AKo
           BTN:
             actions:
-              open_raise:
-                combos:
-                - 22+
-                - A2s+
-                - K7s+
-                - Q8s+
-                - J7s+
-                - T8s+
-                - 97s+
-                - 87s
-                - A7o+
-                - KTo+
-                - QJo
-              three_bet:
-                combos:
-                - AA
-                - KK
-                - QQ
-                - AKs
-                - AQs
-                - AJs
-                - KQs
-                - AKo
-                - AQo
+              open_raise: 22+, A2s+, K7s+, Q8s+, J7s+, T8s+, 97s+, 87s, A7o+, KTo+, QJo
+              three_bet: QQ+, AJs+, KQs, AQo+
           HJ:
             actions:
-              open_raise:
-                combos:
-                - 77+
-                - A9s+
-                - KTs+
-                - QTs+
-                - JTs
-                - ATo+
-                - KJo+
-              three_bet:
-                combos:
-                - AA
-                - KK
-                - QQ
-                - AKs
-                - AQs
-                - AKo
+              open_raise: 77+, A9s+, KTs+, QTs+, JTs, ATo+, KJo+
+              three_bet: QQ+, AQs+, AKo
           SB:
             actions:
-              open_raise:
-                combos:
-                - 33+
-                - A3s+
-                - K8s+
-                - Q9s+
-                - J9s+
-                - T9s
-                - A7o+
-                - KTo+
-                - QJo
-              three_bet:
-                combos:
-                - AA
-                - KK
-                - QQ
-                - JJ
-                - AKs
-                - AQs
-                - AKo
-                - AQo
+              open_raise: 33+, A3s+, K8s+, Q9s+, J9s+, T9s, A7o+, KTo+, QJo
+              three_bet: JJ+, AQs+, AQo+
           CO:
             actions:
-              three_bet:
-                combos:
-                - AA
-                - KK
-                - QQ
-                - AKs
-                - AQs
-                - AKo
-              open_raise:
-                combos:
-                - 55+
-                - A8s+
-                - K9s+
-                - Q9s+
-                - JTs
-                - T9s
-                - 98s
-                - ATo+
-                - KJo+
+              three_bet: QQ+, AQs+, AKo
+              open_raise: 55+, A8s+, K9s+, Q9s+, JTs, T9s, 98s, ATo+, KJo+
           UTG:
             actions:
-              three_bet:
-                combos:
-                - AA
-                - KK
-              open_raise:
-                combos:
-                - JJ+
-                - AKs
-                - AKo
+              three_bet: KK+
+              open_raise: JJ+, AKs, AKo
           EP:
             actions:
-              three_bet:
-                combos:
-                - AA
-                - KK
-                - QQ
-                - AKs
-                - AKo
-              open_raise:
-                combos:
-                - 99+
-                - AJs+
-                - KQs
-                - AQo+
+              three_bet: QQ+, AKs, AKo
+              open_raise: 99+, AJs+, KQs, AQo+
           BB:
             actions:
-              three_bet:
-                combos:
-                - AA
-                - KK
-                - QQ
-                - AKs
-                - AKo
-              open_raise:
-                combos:
-                - 22+
-                - A2s+
-                - K2s+
-                - Q8s+
-                - J8s+
-                - T7s+
-                - 97s+
-                - A2o+
-                - K8o+
-                - Q9o+
+              three_bet: QQ+, AKs, AKo
+              open_raise: 22+, A2s+, K2s+, Q8s+, J8s+, T7s+, 97s+, A2o+, K8o+, Q9o+
         default:
           actions: {}
       positional_betting:
@@ -199,84 +68,28 @@ playbook:
         ranges:
           CO:
             actions:
-              three_bet:
-                combos:
-                - AA
-                - KK
-                - QQ
-                - AKs
-              open_raise:
-                combos:
-                - TT+
-                - AQs+
-                - AQo+
+              three_bet: QQ+, AKs
+              open_raise: TT+, AQs+, AQo+
           BB:
             actions:
-              open_raise:
-                combos:
-                - 22+
-                - A2s+
-                - K8s+
-                - Q9s+
-                - ATo+
-              three_bet:
-                combos:
-                - AA
-                - KK
-                - QQ
-                - AKs
+              open_raise: 22+, A2s+, K8s+, Q9s+, ATo+
+              three_bet: QQ+, AKs
           HJ:
             actions:
-              open_raise:
-                combos:
-                - QQ+
-                - AKs
-                - AKo
-              three_bet:
-                combos:
-                - AA
-                - KK
+              open_raise: QQ+, AKs, AKo
+              three_bet: KK+
           LJ:
             actions:
-              three_bet:
-                combos:
-                - AA
-                - KK
-              open_raise:
-                combos:
-                - QQ+
-                - AKs
-                - AKo
+              three_bet: KK+
+              open_raise: QQ+, AKs, AKo
           SB:
             actions:
-              three_bet:
-                combos:
-                - AA
-                - KK
-                - QQ
-                - AKs
-              open_raise:
-                combos:
-                - TT+
-                - AQs+
-                - AQo+
+              three_bet: QQ+, AKs
+              open_raise: TT+, AQs+, AQo+
           BTN:
             actions:
-              three_bet:
-                combos:
-                - AA
-                - KK
-                - QQ
-                - AKs
-                - AKo
-              open_raise:
-                combos:
-                - 88+
-                - ATs+
-                - KJs+
-                - QJs
-                - AJo+
-                - KQo
+              three_bet: QQ+, AKs, AKo
+              open_raise: 88+, ATs+, KJs+, QJs, AJo+, KQo
         default:
           actions: {}
       positional_betting:
