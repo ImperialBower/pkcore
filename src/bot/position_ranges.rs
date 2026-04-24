@@ -223,10 +223,7 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("22+, A2s+, K9s+, Q9s+, J8s+, T8s+, 98s, A8o+, KTo+"),
         );
-        btn.insert(
-            "three_bet",
-            WeightedRange::from_flat("QQ+, AJs+, KQs, AQo+"),
-        );
+        btn.insert("three_bet", WeightedRange::from_flat("QQ+, AJs+, KQs, AQo+"));
         pr.insert(Position::BTN, btn);
 
         // SB (~33% RFI vs BB only)
@@ -235,10 +232,7 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("33+, A4s+, K9s+, Q9s+, J9s+, T9s, A8o+, KJo+"),
         );
-        sb.insert(
-            "three_bet",
-            WeightedRange::from_flat("JJ+, AJs+, KQs, AQo+"),
-        );
+        sb.insert("three_bet", WeightedRange::from_flat("JJ+, AJs+, KQs, AQo+"));
         pr.insert(Position::SB, sb);
 
         // BB (defend range vs BTN open)
@@ -322,10 +316,7 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("22+, A2s+, K7s+, Q8s+, J7s+, T8s+, 97s+, 87s, A7o+, KTo+, QJo"),
         );
-        btn.insert(
-            "three_bet",
-            WeightedRange::from_flat("QQ+, AJs+, KQs, AQo+"),
-        );
+        btn.insert("three_bet", WeightedRange::from_flat("QQ+, AJs+, KQs, AQo+"));
         pr.insert(Position::BTN, btn);
 
         // SB (~30% RFI)
@@ -334,10 +325,7 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("33+, A3s+, K8s+, Q9s+, J9s+, T9s, A7o+, KTo+, QJo"),
         );
-        sb.insert(
-            "three_bet",
-            WeightedRange::from_flat("JJ+, AQs+, AQo+"),
-        );
+        sb.insert("three_bet", WeightedRange::from_flat("JJ+, AQs+, AQo+"));
         pr.insert(Position::SB, sb);
 
         // BB (defend vs BTN)
@@ -437,10 +425,7 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("44+, A9s+, K9s+, Q9s+, J9s+, T9s, ATo+, KJo+"),
         );
-        hj.insert(
-            "three_bet",
-            WeightedRange::from_flat("QQ+, AJs+, AQo+"),
-        );
+        hj.insert("three_bet", WeightedRange::from_flat("QQ+, AJs+, AQo+"));
         pr.insert(Position::HJ, hj);
 
         let mut co = ActionRanges::new();
@@ -448,10 +433,7 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("22+, A7s+, K8s+, Q8s+, J8s+, T8s+, 98s, A9o+, KTo+"),
         );
-        co.insert(
-            "three_bet",
-            WeightedRange::from_flat("QQ+, AJs+, KQs, AQo+"),
-        );
+        co.insert("three_bet", WeightedRange::from_flat("QQ+, AJs+, KQs, AQo+"));
         pr.insert(Position::CO, co);
 
         let mut btn = ActionRanges::new();
@@ -459,10 +441,7 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("22+, A2s+, K5s+, Q7s+, J7s+, T7s+, 97s+, 87s, A6o+, K9o+, QTo+"),
         );
-        btn.insert(
-            "three_bet",
-            WeightedRange::from_flat("QQ+, AJs+, KQs, A5s, A4s, AQo+"),
-        );
+        btn.insert("three_bet", WeightedRange::from_flat("QQ+, AJs+, KQs, A5s, A4s, AQo+"));
         pr.insert(Position::BTN, btn);
 
         let mut sb = ActionRanges::new();
@@ -470,10 +449,7 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("22+, A2s+, K7s+, Q8s+, J8s+, A5o+, KTo+"),
         );
-        sb.insert(
-            "three_bet",
-            WeightedRange::from_flat("JJ+, AJs+, KQs, A5s, AQo+"),
-        );
+        sb.insert("three_bet", WeightedRange::from_flat("JJ+, AJs+, KQs, A5s, AQo+"));
         pr.insert(Position::SB, sb);
 
         let mut bb = ActionRanges::new();
@@ -481,10 +457,7 @@ impl PositionRanges {
             "open_raise",
             WeightedRange::from_flat("22+, A2s+, K2s+, Q6s+, J7s+, T7s+, A2o+, K7o+, Q8o+"),
         );
-        bb.insert(
-            "three_bet",
-            WeightedRange::from_flat("QQ+, AQs+, A5s, A4s, AQo+"),
-        );
+        bb.insert("three_bet", WeightedRange::from_flat("QQ+, AQs+, A5s, A4s, AQo+"));
         pr.insert(Position::BB, bb);
 
         pr

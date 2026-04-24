@@ -8,6 +8,9 @@
 | `Combos::from_str` — accept (and strip) `:f` suffix for backward compatibility | Complete |
 | `WeightedCombos` range string serialization (emit `:f` only when `f != 1.0`) | Complete |
 | `WeightedRange` / `RangeStrategy` updated to use inline frequencies | Complete |
+| `RangeStrategy::open_raise_frequency` — returns combo's `:f` weight | Complete |
+| `hand_equity` in `decider.rs` — probabilistic preflop roll via `open_raise_frequency` | Complete |
+| `data/bots/gto.yaml` — mixed-strategy open-raise range with `:f` suffixes | Complete |
 | Equity calculations respect combo-level frequency | Complete |
 | Doc (`docs/EPIC-25_Range_Frequencies.md`) | This file |
 

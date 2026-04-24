@@ -170,7 +170,7 @@ impl RuleBasedDecider {
         }
 
         // When hole cards are available, use equity-based decisions.
-        if let Some(equity) = hand_equity(profile, state) {
+        if let Some(equity) = hand_equity(profile, state, rng) {
             if state.to_call > 0 {
                 if state.to_call >= chips {
                     return if equity > 0.5 {
@@ -406,19 +406,20 @@ impl BotDecider for JokerDecider {
 /// Returns `None` when hole cards have not been dealt yet, which triggers the
 /// aggression-factor fallback path in `decide_with_rng`.
 ///
-/// **Preflop:** returns `1.0` when the hole cards are within the profile's
-/// `open_raise` range, and `0.0` otherwise.
+/// **Preflop:** rolls against the combo's `:f` frequency weight from the
+/// `open_raise` range. A hand at weight `0.7` plays as `1.0` equity 70% of
+/// the time and `0.0` the other 30%, producing a mixed strategy.
 ///
 /// **Postflop:** evaluates the best 5-of-N hand from the combined hole cards
 /// and board, then normalises the `hand_rank_value` to `[0.0, 1.0]` where
 /// `1.0` is a royal flush and `0.0` is 7-high nothing.
-fn hand_equity(profile: &BotProfile, state: &TableSnapshot) -> Option<f64> {
+fn hand_equity<R: rand::Rng>(profile: &BotProfile, state: &TableSnapshot, rng: &mut R) -> Option<f64> {
     if state.hole_cards.is_empty() {
         return None;
     }
     if state.phase.is_preflop() {
-        let in_range = profile.range_strategy.open_raise_contains(&state.hole_cards);
-        return Some(if in_range { 1.0 } else { 0.0 });
+        let freq = profile.range_strategy.open_raise_frequency(&state.hole_cards);
+        return Some(if rng.random::<f64>() < freq { 1.0 } else { 0.0 });
     }
     let combined = format!("{} {}", state.hole_cards, state.board);
     let total = state.hole_cards.len() + state.board.len();

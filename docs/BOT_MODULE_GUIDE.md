@@ -256,7 +256,7 @@ name: gto                         # must match filename stem
 description: Balanced frequencies informed by GTO solver output; unexploitable at equilibrium.
 style: gto                        # PlayStyle label
 range_strategy:
-  open_raise: TT+, AQ+, KQs      # preflop open-raise range
+  open_raise: QQ+, JJ:0.95, TT:0.8, AKs, AQs, AJs:0.7, AKo, AQo:0.85, KQs:0.9  # mixed-strategy open range
   three_bet: QQ+, AKs             # 3-bet range when facing an open
   call_three_bet: JJ+, AQs+       # call-3-bet range
   postflop_cbet_frequency: 50     # c-bet % on the flop (overrides aggr on that street)
@@ -343,7 +343,7 @@ strings plus the flop c-bet frequency.
 | `tight_passive` | `QQ+, AKs` | `AA, KK` | `QQ, AKs` |
 | `loose_passive` | `22+, AKs-A2s, KTs+, QTs+, J9s+, T8s+, 98s, ATo+, KTo+` | `QQ+, AKs` | `TT+, AJs+` |
 | abc | `QQ+, AKs, AKo` | `AA, KK` | `QQ, AKs` |
-| gto | `TT+, AQ+, KQs` | `QQ+, AKs` | `JJ+, AQs+` |
+| gto | `QQ+, JJ:0.95, TT:0.8, AKs, AQs, AJs:0.7, AKo, AQo:0.85, KQs:0.9` | `QQ+, AKs` | `JJ+, AQs+` |
 | `tight_aggressive` | `JJ+, AQs+, KQs, AKo` | `QQ+, AKs` | `JJ+, AQs+` |
 | `loose_aggressive` | `22+, AT+, 54s+` | `QQ+, AKs, AQs` | `TT+, AQs+` |
 | maniac | `22+, AT+, 54s+` | `TT+, AQs, AQo+, KQs` | `88+, ATs+` |
@@ -598,10 +598,13 @@ flowchart TD
 
 #### Equity path — when hole cards are present
 
-**Preflop equity** is a binary proxy: `1.0` if the hole cards are within the
-profile's `open_raise` range (via `RangeStrategy::open_raise_contains`),
-`0.0` otherwise. Range strings are case-insensitive; `+` notation is fully
-expanded via `Twos::from(Combos)` before membership is checked.
+**Preflop equity** is a probabilistic proxy driven by `RangeStrategy::open_raise_frequency`.
+The method returns the combo's `:f` weight from the range string (`1.0` for
+hands without a suffix, `0.0` for absent hands). A random roll is then compared
+against this weight: if `roll < freq`, equity is `1.0`; otherwise `0.0`. This
+implements mixed strategies — a JJ at `0.95` folds preflop 5% of the time.
+Range strings are case-insensitive; `+` notation is expanded via `Twos::from(Combos)`
+before the lookup.
 
 **Postflop equity** is derived from the best 5-of-N hand formed by combining
 hole cards and board, evaluated by `Five`/`Six`/`Seven::hand_rank_value()` and
@@ -615,7 +618,7 @@ nothing → `0.0`.
 | `to_call ≥ chips` and `equity > 0.5` | `AllIn` |
 | `to_call ≥ chips` and `equity ≤ 0.5` | `Fold` |
 | `equity > pot_odds × 2.0` and `raise_roll < aggr.max(0.5)` | `Raise` |
-| `equity > pot_odds × 2.0` (raise_roll failed) | `Call` |
+| `equity > pot_odds × 2.0` (`raise_roll` failed) | `Call` |
 | `equity > pot_odds` | `Call` |
 | `equity ≤ pot_odds` and `bluff_roll < bluff_freq` | `Raise` (bluff) |
 | `equity ≤ pot_odds` | `Fold` |

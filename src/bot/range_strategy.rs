@@ -2,11 +2,12 @@
 //!
 //! [`RangeStrategy`] holds the range strings a bot uses for preflop decisions
 //! (open-raise, 3-bet, call a 3-bet) and a postflop continuation-bet
-//! frequency. Range strings follow pkcore's standard format and will support
-//! per-combo frequencies (e.g. `"AA:1.0, KK:0.9"`) once EPIC-25 ships.
+//! frequency. Range strings follow pkcore's standard format, including
+//! per-combo frequencies via the `:f` suffix (e.g. `"AA:1.0, KK:0.9"`).
 
 use crate::analysis::gto::combos::Combos;
 use crate::analysis::gto::twos::Twos;
+use crate::analysis::gto::weighted_combos::WeightedCombos;
 use crate::arrays::two::Two;
 use crate::bot::betting_strategy::Percentage;
 use crate::cards::Cards;
@@ -113,7 +114,12 @@ impl RangeStrategy {
     /// ```
     #[must_use]
     pub fn gto() -> Self {
-        Self::new("TT+, AQ+, KQs", "QQ+, AKs", "JJ+, AQs+", 50)
+        Self::new(
+            "QQ+, JJ:0.95, TT:0.8, AKs, AQs, AJs:0.7, AKo, AQo:0.85, KQs:0.9",
+            "QQ+, AKs",
+            "JJ+, AQs+",
+            50,
+        )
     }
 
     /// A tight-aggressive archetype — selective ranges with strong postflop aggression.
@@ -229,6 +235,52 @@ impl RangeStrategy {
             return false;
         };
         Twos::from(combos).contains(&two)
+    }
+
+    /// Returns the play-frequency `[0.0, 1.0]` for `hole_cards` in the open-raise range.
+    ///
+    /// When the range string includes per-combo `:f` suffixes (e.g. `"KQo:0.6"`),
+    /// the stored weight is returned directly. Hands without a suffix default to
+    /// `1.0`. Hands absent from the range return `0.0`.
+    ///
+    /// An empty `open_raise` string returns `1.0` (any hand opens). A parse
+    /// failure also returns `1.0` (fail-open). Returns `0.0` when
+    /// `hole_cards` cannot be converted to a two-card hand.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::range_strategy::RangeStrategy;
+    /// use pkcore::cards::Cards;
+    /// use std::str::FromStr;
+    ///
+    /// let s = RangeStrategy::new("QQ+, JJ:0.7, AKo:0.5", "AA", "KK", 50);
+    /// let qq = Cards::from_str("Q♠ Q♥").unwrap();
+    /// let jj = Cards::from_str("J♠ J♥").unwrap();
+    /// let junk = Cards::from_str("7♠ 2♦").unwrap();
+    ///
+    /// assert_eq!(s.open_raise_frequency(&qq), 1.0);
+    /// assert_eq!(s.open_raise_frequency(&jj), 0.7);
+    /// assert_eq!(s.open_raise_frequency(&junk), 0.0);
+    /// ```
+    #[must_use]
+    pub fn open_raise_frequency(&self, hole_cards: &Cards) -> f64 {
+        if self.open_raise.is_empty() {
+            return 1.0;
+        }
+        let Ok(wc) = self.open_raise.parse::<WeightedCombos>() else {
+            return 1.0;
+        };
+        let Ok(two) = Two::try_from(hole_cards.clone()) else {
+            return 0.0;
+        };
+        // weighted_twos() expands plus-notation combos (e.g. QQ+) to specific
+        // hands before comparing, matching the same expansion used by
+        // open_raise_contains via Twos::from(combos).
+        wc.weighted_twos()
+            .into_iter()
+            .find(|(t, _)| t == &two)
+            .map_or(0.0, |(_, f)| f)
     }
 }
 
@@ -393,5 +445,52 @@ mod bot__range_strategy_tests {
             assert_eq!(upper.open_raise_contains(&cards), lower.open_raise_contains(&cards));
             assert_eq!(upper.open_raise_contains(&cards), mixed.open_raise_contains(&cards));
         }
+    }
+
+    // ── open_raise_frequency tests ────────────────────────────────────────────
+
+    #[test]
+    fn open_raise_frequency__full_weight() {
+        use crate::cards::Cards;
+        use std::str::FromStr;
+        let s = RangeStrategy::new("QQ+", "AA", "KK", 50);
+        let qq = Cards::from_str("Q♠ Q♥").unwrap();
+        assert_eq!(s.open_raise_frequency(&qq), 1.0);
+    }
+
+    #[test]
+    fn open_raise_frequency__partial_weight() {
+        use crate::cards::Cards;
+        use std::str::FromStr;
+        let s = RangeStrategy::new("QQ+, JJ:0.7", "AA", "KK", 50);
+        let jj = Cards::from_str("J♠ J♥").unwrap();
+        assert_eq!(s.open_raise_frequency(&jj), 0.7);
+    }
+
+    #[test]
+    fn open_raise_frequency__not_in_range() {
+        use crate::cards::Cards;
+        use std::str::FromStr;
+        let s = RangeStrategy::new("QQ+", "AA", "KK", 50);
+        let junk = Cards::from_str("7♠ 2♦").unwrap();
+        assert_eq!(s.open_raise_frequency(&junk), 0.0);
+    }
+
+    #[test]
+    fn open_raise_frequency__empty_range() {
+        use crate::cards::Cards;
+        use std::str::FromStr;
+        let s = RangeStrategy::new("", "", "", 50);
+        let junk = Cards::from_str("7♠ 2♦").unwrap();
+        assert_eq!(s.open_raise_frequency(&junk), 1.0);
+    }
+
+    #[test]
+    fn open_raise_frequency__zero_weight_is_out_of_range() {
+        use crate::cards::Cards;
+        use std::str::FromStr;
+        let s = RangeStrategy::new("QQ+, JJ:0.0", "AA", "KK", 50);
+        let jj = Cards::from_str("J♠ J♥").unwrap();
+        assert_eq!(s.open_raise_frequency(&jj), 0.0);
     }
 }

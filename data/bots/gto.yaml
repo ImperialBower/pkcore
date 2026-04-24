@@ -2,7 +2,7 @@ name: gto
 description: Balanced frequencies informed by GTO solver output; unexploitable at equilibrium.
 style: gto
 range_strategy:
-  open_raise: TT+, AQ+, KQs
+  open_raise: QQ+, JJ:0.95, TT:0.8, AKs, AQs, AJs:0.7, AKo, AQo:0.85, KQs:0.9
   three_bet: QQ+, AKs
   call_three_bet: JJ+, AQs+
   postflop_cbet_frequency: 50

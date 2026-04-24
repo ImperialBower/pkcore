@@ -143,10 +143,7 @@ pub struct WeightedRange {
 
 impl Serialize for WeightedRange {
     fn serialize<S: Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
-        let all_full = self
-            .combos
-            .iter()
-            .all(|cw| (cw.frequency - 1.0).abs() < f64::EPSILON);
+        let all_full = self.combos.iter().all(|cw| (cw.frequency - 1.0).abs() < f64::EPSILON);
         if all_full {
             let joined = self
                 .combos
@@ -186,10 +183,7 @@ impl<'de> Deserialize<'de> for WeightedRange {
             }
 
             // sequence form: ["AA", "KK:0.75"]
-            fn visit_seq<A: SeqAccess<'de>>(
-                self,
-                mut seq: A,
-            ) -> Result<WeightedRange, A::Error> {
+            fn visit_seq<A: SeqAccess<'de>>(self, mut seq: A) -> Result<WeightedRange, A::Error> {
                 let mut wr = WeightedRange::new();
                 while let Some(cw) = seq.next_element::<ComboWeight>()? {
                     wr.combos.push(cw);
@@ -198,17 +192,12 @@ impl<'de> Deserialize<'de> for WeightedRange {
             }
 
             // legacy map form: {combos: [AA, KK]}
-            fn visit_map<A: MapAccess<'de>>(
-                self,
-                mut map: A,
-            ) -> Result<WeightedRange, A::Error> {
+            fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<WeightedRange, A::Error> {
                 let key: String = map
                     .next_key()?
                     .ok_or_else(|| de::Error::custom("expected \"combos\" key"))?;
                 if key != "combos" {
-                    return Err(de::Error::custom(format!(
-                        "expected key \"combos\", got \"{key}\""
-                    )));
+                    return Err(de::Error::custom(format!("expected key \"combos\", got \"{key}\"")));
                 }
                 let combos: Vec<ComboWeight> = map.next_value()?;
                 Ok(WeightedRange { combos })
@@ -493,10 +482,7 @@ mod tests {
     fn weighted_range_serializes_all_full_freq_as_string() {
         let wr = WeightedRange::from_flat("AA, KK, QQ");
         let yaml = serde_yaml_bw::to_string(&wr).unwrap();
-        assert!(
-            yaml.trim() == "AA, KK, QQ",
-            "expected compact string, got: {yaml}"
-        );
+        assert!(yaml.trim() == "AA, KK, QQ", "expected compact string, got: {yaml}");
     }
 
     #[test]
