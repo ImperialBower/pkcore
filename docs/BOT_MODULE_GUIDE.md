@@ -221,14 +221,17 @@ all strategy data and is the argument passed to every `BotDecider::decide` call.
 |-------|------|---------|
 | `name` | `String` | Filename stem, e.g. `"gto"` |
 | `description` | `String` | Human-readable style description |
-| `style` | `PlayStyle` | Archetype label, a transparent `String` newtype |
+| `style` | `PlayStyle` | Archetype label — named enum variant or `Custom(String)` |
 | `range_strategy` | `RangeStrategy` | Preflop ranges + c-bet frequency |
 | `betting_strategy` | `BettingStrategy` | Aggression, bluff, bet sizing |
 | `playbook` | `Option<Playbook>` | Position-aware overrides (optional) |
 
-`PlayStyle` is deliberately a newtype rather than an enum so YAML files can
-use any label without code changes. The `FEATURE_BotProfile_TypeSafety` backlog
-item describes promoting it to a proper enum with a `Custom(String)` fallback.
+`PlayStyle` is a proper enum with named variants for all eight reference
+archetypes (`TightPassive`, `LooseAggressive`, `Gto`, etc.) and a
+`Custom(String)` catch-all for any other label. YAML serialization uses
+`snake_case` strings so existing profile files need no changes. Use
+`PlayStyle::new("tight_passive")` as a drop-in replacement for the old
+`PlayStyle("tight_passive".into())` tuple constructor.
 
 **Named constructors (8 archetypes):**
 
@@ -268,15 +271,25 @@ betting_strategy:
 
 ### 4.2 `BettingStrategy`
 
-`BettingStrategy` (`src/bot/betting_strategy.rs`) controls the three
-independent probability knobs that drive `RuleBasedDecider`.
+`BettingStrategy` (`src/bot/betting_strategy.rs`) controls the probability
+knobs that drive `RuleBasedDecider`. All frequency fields use the `Percentage`
+newtype — a validated `u8` in `0..=100` that exposes `.value()` and `.as_f64()`
+and compares directly against `u8` literals via `PartialEq<u8>`.
 
 | Field | Type | Meaning |
 |-------|------|---------|
-| `aggression_factor` | `u8` | Primary probability of betting/calling vs checking/folding |
-| `bluff_frequency` | `u8` | Postflop-only: probability of bluffing when value-bet fails |
-| `check_raise_frequency` | `u8` | Probability of check-raising when the bot checked this street |
+| `aggression_factor` | `Percentage` | Primary probability of betting/calling vs checking/folding (fallback path) |
+| `bluff_frequency` | `Percentage` | Postflop-only: probability of bluffing when value-bet threshold not reached |
+| `check_raise_frequency` | `Percentage` | Probability of check-raising when the bot checked this street |
 | `preferred_bet_sizes` | `Vec<BetSize>` | Sampled uniformly for any Bet or Raise action |
+| `street_aggression` | `Option<StreetAggression>` | Per-street aggression overrides; `None` fields fall back to `aggression_factor` |
+| `value_threshold` | `Option<f64>` | Equity floor for value-betting when unchallenged; defaults to `0.55` |
+
+`aggression_for_phase(phase: GamePhase) -> Percentage` returns the street
+override when set, otherwise `aggression_factor`. `effective_value_threshold()`
+returns `value_threshold.unwrap_or(0.55)`. `BettingStrategy::new(u8, u8, u8, …)`
+still accepts plain `u8` arguments — call sites using the constructor are
+unaffected by the `Percentage` change.
 
 **Bet size fractions.** `BetSize` serializes as a human-readable `"N/D"` string
 via the private `bet_size_fractions` serde module. Available values:
@@ -328,7 +341,7 @@ strings plus the flop c-bet frequency.
 | Profile | `open_raise` | `three_bet` | `call_three_bet` |
 |---------|-----------|-----------|---------------|
 | `tight_passive` | `QQ+, AKs` | `AA, KK` | `QQ, AKs` |
-| `loose_passive` | `22+, Axs, KTs+, QTs+, J9s+, T8s+, 98s, ATo+, KTo+` | `QQ+, AKs` | `TT+, AJs+` |
+| `loose_passive` | `22+, AKs-A2s, KTs+, QTs+, J9s+, T8s+, 98s, ATo+, KTo+` | `QQ+, AKs` | `TT+, AJs+` |
 | abc | `QQ+, AKs, AKo` | `AA, KK` | `QQ, AKs` |
 | gto | `TT+, AQ+, KQs` | `QQ+, AKs` | `JJ+, AQs+` |
 | `tight_aggressive` | `JJ+, AQs+, KQs, AKo` | `QQ+, AKs` | `JJ+, AQs+` |
@@ -411,9 +424,9 @@ A frequency of 0.75 for KK means: "a solver determined that raising KK 75% of
 the time and calling 25% of the time is the unexploitable equilibrium at this
 node." Pure strategies (0 or 1) are exploitable by observant opponents.
 
-**EPIC-25 preview.** The range string format will support inline frequency
-suffixes — `"AA:1.0, KK:0.75, QQ:0.5"` — so playbook YAML files can directly
-encode solver-generated mixed strategies without writing Rust code.
+**EPIC-25 (complete).** Range strings support inline frequency suffixes —
+`"AA:1.0, KK:0.75, QQ:0.5"` — so playbook YAML files can directly encode
+solver-generated mixed strategies without writing Rust code.
 
 ---
 
@@ -446,29 +459,96 @@ Two implementations ship in pkcore:
 
 ### 5.2 Complete Decision Flowchart
 
-#### Diagram 4 — `decide_with_rng` Decision Tree
+`decide_with_rng` operates in two modes depending on whether hole cards are
+available. When `hole_cards` is non-empty, an equity proxy drives the decision
+(equity path). When cards are absent — e.g. in tests that do not inject cards,
+or in future gRPC scenarios where cards have not yet been dealt — the original
+aggression-factor random-roll path is used as a fallback.
+
+#### Diagram 4a — Equity Path (hole cards present)
 
 ```mermaid
 flowchart TD
-    start(["decide_with_rng(profile, state, rng)"])
-    zero_chips{"my_chips == 0?"}
-    check_path["return Check"]
-    compute["aggr = aggression_factor / 100.0\nroll = rng.random()"]
+    start(["decide_with_rng(profile, state, rng)\nhole_cards non-empty"])
+    compute["resolve strategy (position-aware or flat)\naggr = aggression_for_phase(phase)\nroll = rng.random()"]
+    cr_gate{"to_call > 0 &&\nchecked_this_street?"}
+    cr_roll{"roll < cr_rate?"}
+    cr_raise["return Raise(raise_to)\n(check-raise)"]
+    equity["equity = hand_equity(profile, state)\n(preflop: 1.0 if in open_raise, else 0.0)\n(postflop: 1 − hand_rank_value / 7462)"]
     facing_bet{"to_call > 0?"}
 
-    %% Check-raise path
-    cr_check{"checked_this_street?"}
-    cr_roll{"roll < cr_rate?"}
-    cr_valid{"raise_to > current_bet?"}
-    cr_raise["return Raise(raise_to)\n(check-raise)"]
+    allin_gate{"to_call >= chips?"}
+    allin_eq{"equity > 0.5?"}
+    allin["return AllIn"]
+    fold_allin["return Fold"]
 
-    %% Short stack
+    pot_odds["pot_odds = to_call / (pot + to_call)"]
+    strong{"equity >\npot_odds × 2.0?"}
+    raise_roll{"raise_roll < aggr.max(0.5)?"}
+    raise_eq["return Raise(raise_to)"]
+    call_strong["return Call"]
+    marginal{"equity > pot_odds?"}
+    call_marginal["return Call"]
+    bluff_roll{"bluff_roll < bluff_freq?"}
+    bluff_raise["return Raise(raise_to)\n(bluff)"]
+    fold_eq["return Fold"]
+
+    no_bet_eq{"equity >\nvalue_threshold?\n(default 0.55)"}
+    bet_value["return Bet(amount)\n(value-bet)"]
+    preflop_eq{"phase.is_preflop()?"}
+    check_preflop["return Check"]
+    bluff_roll2{"bluff_roll < bluff_freq?"}
+    bluff_bet["return Bet(amount)\n(bluff)"]
+    check_eq["return Check"]
+
+    start --> compute
+    compute --> cr_gate
+    cr_gate -- "yes" --> cr_roll
+    cr_roll -- "yes" --> cr_raise
+    cr_roll -- "no" --> equity
+    cr_gate -- "no" --> equity
+    equity --> facing_bet
+
+    facing_bet -- "yes" --> allin_gate
+    allin_gate -- "yes" --> allin_eq
+    allin_eq -- "yes" --> allin
+    allin_eq -- "no" --> fold_allin
+    allin_gate -- "no" --> pot_odds
+    pot_odds --> strong
+    strong -- "yes" --> raise_roll
+    raise_roll -- "yes" --> raise_eq
+    raise_roll -- "no" --> call_strong
+    strong -- "no" --> marginal
+    marginal -- "yes" --> call_marginal
+    marginal -- "no" --> bluff_roll
+    bluff_roll -- "yes" --> bluff_raise
+    bluff_roll -- "no" --> fold_eq
+
+    facing_bet -- "no" --> no_bet_eq
+    no_bet_eq -- "yes" --> bet_value
+    no_bet_eq -- "no" --> preflop_eq
+    preflop_eq -- "yes" --> check_preflop
+    preflop_eq -- "no" --> bluff_roll2
+    bluff_roll2 -- "yes" --> bluff_bet
+    bluff_roll2 -- "no" --> check_eq
+```
+
+#### Diagram 4b — Fallback Path (no hole cards)
+
+```mermaid
+flowchart TD
+    start(["decide_with_rng(profile, state, rng)\nhole_cards empty"])
+    compute["resolve strategy (position-aware or flat)\naggr = aggression_for_phase(phase)\nroll = rng.random()"]
+    cr_gate{"to_call > 0 &&\nchecked_this_street?"}
+    cr_roll{"roll < cr_rate?"}
+    cr_raise["return Raise(raise_to)\n(check-raise)"]
+    facing_bet{"to_call > 0?"}
+
     short_stack{"to_call >= chips?"}
     allin_roll{"roll < aggr × 0.6?"}
     allin["return AllIn"]
     fold_ss["return Fold"]
 
-    %% Facing bet, not short
     raise_roll{"roll < aggr × 0.25?"}
     raise_valid{"raise_to > current_bet?"}
     raise_action["return Raise(raise_to)"]
@@ -476,33 +556,26 @@ flowchart TD
     call_action["return Call"]
     fold_action["return Fold"]
 
-    %% No outstanding bet
     bet_threshold{"phase == flop?\n→ threshold = cbet_freq\nelse threshold = aggr"}
     bet_roll{"roll < threshold?"}
-    bet_action["return Bet(amount)\n(value / c-bet)"]
+    bet_action["return Bet(amount)"]
     preflop_check{"phase.is_preflop()?"}
     check_final["return Check"]
     bluff_roll{"rng.random() < bluff_rate?"}
     bluff_action["return Bet(amount)\n(bluff)"]
     check_bluff_miss["return Check"]
 
-    start --> zero_chips
-    zero_chips -- "yes" --> check_path
-    zero_chips -- "no" --> compute
-    compute --> facing_bet
+    start --> compute
+    compute --> cr_gate
+    cr_gate -- "yes" --> cr_roll
+    cr_roll -- "yes" --> cr_raise
+    cr_roll -- "no" --> facing_bet
+    cr_gate -- "no" --> facing_bet
 
-    facing_bet -- "yes" --> cr_check
-    cr_check -- "yes" --> cr_roll
-    cr_roll -- "yes" --> cr_valid
-    cr_valid -- "yes" --> cr_raise
-    cr_valid -- "no" --> short_stack
-    cr_roll -- "no" --> short_stack
-    cr_check -- "no" --> short_stack
-
-    short_stack -- "yes (all-in territory)" --> allin_roll
+    facing_bet -- "yes" --> short_stack
+    short_stack -- "yes" --> allin_roll
     allin_roll -- "yes" --> allin
     allin_roll -- "no" --> fold_ss
-
     short_stack -- "no" --> raise_roll
     raise_roll -- "yes" --> raise_valid
     raise_valid -- "yes" --> raise_action
@@ -515,17 +588,60 @@ flowchart TD
     bet_threshold --> bet_roll
     bet_roll -- "yes" --> bet_action
     bet_roll -- "no" --> preflop_check
-    preflop_check -- "yes (preflop)" --> check_final
-    preflop_check -- "no (flop/turn/river)" --> bluff_roll
+    preflop_check -- "yes" --> check_final
+    preflop_check -- "no" --> bluff_roll
     bluff_roll -- "yes" --> bluff_action
     bluff_roll -- "no" --> check_bluff_miss
 ```
 
 ### 5.3 The Math
 
-#### Probability bands when facing a bet (normal stack)
+#### Equity path — when hole cards are present
 
-For a given `aggression_factor` value `a`:
+**Preflop equity** is a binary proxy: `1.0` if the hole cards are within the
+profile's `open_raise` range (via `RangeStrategy::open_raise_contains`),
+`0.0` otherwise. Range strings are case-insensitive; `+` notation is fully
+expanded via `Twos::from(Combos)` before membership is checked.
+
+**Postflop equity** is derived from the best 5-of-N hand formed by combining
+hole cards and board, evaluated by `Five`/`Six`/`Seven::hand_rank_value()` and
+normalized: `equity = 1.0 − hrv / 7462.0`. A royal flush → `1.0`; 7-high
+nothing → `0.0`.
+
+**Decision bands when facing a bet (equity path):**
+
+| Condition | Outcome |
+|-----------|---------|
+| `to_call ≥ chips` and `equity > 0.5` | `AllIn` |
+| `to_call ≥ chips` and `equity ≤ 0.5` | `Fold` |
+| `equity > pot_odds × 2.0` and `raise_roll < aggr.max(0.5)` | `Raise` |
+| `equity > pot_odds × 2.0` (raise_roll failed) | `Call` |
+| `equity > pot_odds` | `Call` |
+| `equity ≤ pot_odds` and `bluff_roll < bluff_freq` | `Raise` (bluff) |
+| `equity ≤ pot_odds` | `Fold` |
+
+where `pot_odds = to_call / (pot + to_call)`.
+
+**Why a probabilistic raise gate?** When two bots both hold in-range preflop
+hands (`equity = 1.0`), a deterministic raise creates an unconditional raise
+war — each bot raises every action until one is all-in, collapsing chip stacks
+in a few hands. The gate `raise_roll < aggr.max(0.5)` introduces variance:
+with GTO's 50% gate, two bots have only a 25% chance of both raising on the
+next action, 6.25% on the one after that — geometrically decaying escalation.
+See `docs/DEFECT_bot-escalation.md`.
+
+**Decision when no bet is outstanding (equity path):**
+
+| Condition | Outcome |
+|-----------|---------|
+| `equity > value_threshold` (default `0.55`) | `Bet` (value) |
+| `equity ≤ threshold` and postflop and `bluff_roll < bluff_freq` | `Bet` (bluff) |
+| `equity ≤ threshold` and preflop | `Check` |
+| `equity ≤ threshold` and postflop | `Check` |
+
+#### Fallback path — aggression-factor bands (no hole cards)
+
+For a given `aggression_factor` value `a`, when facing a bet (normal stack):
 
 | Outcome | Roll range | GTO (a=50) | TAG (a=70) | Maniac (a=90) |
 |---------|-----------|-----------|-----------|--------------|
@@ -534,26 +650,18 @@ For a given `aggression_factor` value `a`:
 | Fold | `[a, 1.0)` | 50.0% | 30.0% | 10.0% |
 
 **Why 0.25 for raises?** A player who raises about one-quarter of their
-"call range" while folding the rest mirrors real-world VPIP/PFR stats for
-solid winning regulars — their aggression percentage (PFR) is roughly
-one-quarter of the hands they enter (VPIP). It's a rough approximation, not
-a solver output; the `StreetAggression` feature in the backlog would allow
-per-street tuning.
+"call range" mirrors real-world VPIP/PFR stats for solid winning regulars —
+PFR is roughly one-quarter of VPIP. It's a rough approximation, not a solver
+output; `StreetAggression` allows per-street tuning.
 
-#### Short-stack territory (`to_call` ≥ chips)
+Short-stack territory (`to_call ≥ chips`):
 
 | Outcome | Roll range | GTO (a=50) | TAG (a=70) | Maniac (a=90) |
 |---------|-----------|-----------|-----------|--------------|
 | `AllIn` | `[0, a×0.6)` | 30.0% | 42.0% | 54.0% |
 | Fold | `[a×0.6, 1.0)` | 70.0% | 58.0% | 46.0% |
 
-**Why 0.6 for all-in?** When the call price is your entire stack, the
-effective pot odds are dramatically better — the bet-to-stack ratio is small.
-Pot odds theory says you should call at a lower equity threshold than a
-normal-sized bet requires, hence a higher all-in frequency relative to the
-plain aggression factor.
-
-#### When no bet is outstanding (bet or check)
+When no bet is outstanding (fallback path):
 
 | Phase | Threshold | Outcome if roll ≥ threshold |
 |-------|-----------|---------------------------|
@@ -561,19 +669,11 @@ plain aggression factor.
 | Turn / River | `aggr / 100` | Second roll vs. `bluff_rate` |
 | Preflop | `aggr / 100` | Check (no bluff on preflop) |
 
-The c-bet override on the flop means `aggression_factor` is bypassed entirely
-for flop bets. A GTO profile (aggr=50, cbet=50) bets the flop at 50%
-regardless of aggression; a tight-passive profile (aggr=25, cbet=30) bets the
-flop at 30% rather than the 25% that its flat aggression would produce.
-
 **Independence of the bluff roll.** The bluff path draws a *second*
 independent `roll_bluff` after the first roll fails the value-bet threshold.
-This is important: without the second roll, the probability of bluffing would
-be `(1 − threshold) × bluff_rate` — a combined probability that couples the
-bluff rate to the aggression setting. With a fresh roll, P(bluff) = `bluff_rate`
-exactly, and the bluff decision is statistically independent of the
-value-bet decision. Two independent 33% rolls produce independent outcomes;
-one roll tested against two sequential thresholds does not.
+Without the second roll, P(bluff) would be `(1 − threshold) × bluff_rate`,
+coupling the bluff rate to the aggression setting. With a fresh roll,
+P(bluff) = `bluff_rate` exactly.
 
 #### Bet sizing arithmetic
 
@@ -672,6 +772,9 @@ lifetime ties it to the live table.
 | `stacks` | `Vec<SeatInfo>` | All seats: seat index, name, chips, bet, `is_active` |
 | `big_blind` | `usize` | BB amount — baseline sizing unit |
 | `checked_this_street` | `bool` | True if this player checked earlier this street |
+| `dealer_button` | `Option<u8>` | Seat index of the dealer button; `None` if not set |
+| `seat_count` | `u8` | Total number of seats at the table — used by `Playbook::for_seats` |
+| `logical_seat` | `Option<u8>` | This player's logical seat index within a smaller active-player range; used by `Position::from_seat` for position-aware dispatch |
 
 **Visibility rule.** Opponents' `hole_cards` are never included in
 `stacks` — `SeatInfo` only exposes chip counts and bet amounts. Only
@@ -911,7 +1014,7 @@ Full comparison of all 8 reference profiles:
 | Profile | style | aggr | bluff | cr | cbet | Bet sizes | `open_raise` |
 |---------|-------|------|-------|-----|------|-----------|-----------|
 | `tight_passive` | Nit | 25 | 5 | 3 | 30 | `1/2` | `QQ+, AKs` |
-| `loose_passive` | Calling station | 15 | 3 | 2 | 15 | `1/2` | `22+, Axs, KTs+, …` |
+| `loose_passive` | Calling station | 15 | 3 | 2 | 15 | `1/2` | `22+, AKs-A2s, KTs+, …` |
 | abc | By-the-book | 65 | 0 | 5 | 60 | `2/3` | `QQ+, AKs, AKo` |
 | gto | Balanced | 50 | 33 | 15 | 50 | `1/3`, `1/1` | `TT+, AQ+, KQs` |
 | `tight_aggressive` | TAG | 70 | 20 | 15 | 65 | `2/3`, `1/1` | `JJ+, AQs+, KQs, AKo` |
@@ -967,8 +1070,10 @@ break_even = 100 / (300 + 100) = 100 / 400 = 25%
 ```
 
 If your hand wins more than 25% of the time at showdown, calling is
-mathematically correct. `RuleBasedDecider` does not compute equity — it uses
-`aggression_factor` as a proxy.
+mathematically correct. `RuleBasedDecider` computes an equity proxy when hole
+cards are present — binary preflop (1.0/0.0 based on `open_raise` range membership)
+or normalized hand-rank-value postflop — and compares it against pot odds directly.
+When hole cards are absent, `aggression_factor` serves as a coarse substitute.
 
 **Alpha (bluff-catching threshold).** The fraction of the time you need to be
 winning when you call a bet on the river to break even:
@@ -1040,5 +1145,5 @@ the simplest way to find the exploit.
 
 ---
 
-*Guide current as of pkcore `profiles` branch, April 2026.*
-*See `docs/FEATURE_BotProfile_*.md` for planned enhancements.*
+*Guide current as of pkcore `profiles` branch, April 2026 (v0.0.49).*
+*All EPIC-19/25 bot features are complete. See `ROADMAP.md` for Phase 4 (gRPC agent service) plans.*
