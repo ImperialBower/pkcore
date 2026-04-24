@@ -9,6 +9,8 @@
 
 use crate::Pile;
 use crate::cards::Cards;
+use crate::casino::table::event::TableAction;
+use crate::casino::table::position::Position;
 use crate::casino::table_no_cell::TableNoCell;
 use crate::games::GamePhase;
 
@@ -105,6 +107,21 @@ pub struct TableSnapshot {
     pub stacks: Vec<SeatInfo>,
     /// Big blind amount — the baseline bet unit for sizing decisions.
     pub big_blind: usize,
+    /// `true` when this player has already checked during the current betting
+    /// street.  Used by [`crate::bot::decider::RuleBasedDecider`] to detect
+    /// check-raise opportunities (checked, faced a bet, now can raise).
+    pub checked_this_street: bool,
+    /// Logical position of the dealer button within the sorted list of
+    /// occupied seats (`0` = earliest occupied seat is the button).
+    /// `None` when the table has not started a hand yet.
+    pub dealer_button: Option<u8>,
+    /// Number of occupied (non-empty) seats at this table.
+    pub seat_count: u8,
+    /// Logical position of this player within the sorted list of occupied
+    /// seats (`0` = earliest occupied seat). Used by [`Self::position`].
+    /// `None` when the seat is not in the occupied list (should not occur
+    /// during normal play).
+    pub logical_seat: Option<u8>,
 }
 
 impl TableSnapshot {
@@ -165,6 +182,50 @@ impl TableSnapshot {
             })
             .collect();
 
+        // Find the start of the current betting street in the event log.
+        // ForcedBetBigBlind is the last event before the first preflop action;
+        // DealtFlop/Turn/River mark postflop street starts.
+        // Using rposition handles multi-hand simulations where the log is cumulative.
+        let street_start = table
+            .event_log
+            .iter()
+            .rposition(|a| {
+                matches!(
+                    a,
+                    TableAction::ForcedBetBigBlind(_, _)
+                        | TableAction::DealtFlop(_)
+                        | TableAction::DealtTurn(_)
+                        | TableAction::DealtRiver(_)
+                )
+            })
+            .map_or(0, |i| i + 1);
+        let checked_this_street = table.event_log[street_start..]
+            .iter()
+            .any(|a| matches!(a, TableAction::Check(s) if *s == seat));
+
+        // Build a sorted list of occupied physical seat indices so we can
+        // translate the physical button index and our own seat to logical
+        // positions (0-based within occupied seats). This avoids unsigned
+        // underflow when the physical button index exceeds the occupied count
+        // after player eliminations create gaps in the seat numbering.
+        let occupied: Vec<u8> = table
+            .seats
+            .0
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| !s.is_empty())
+            .filter_map(|(i, _)| u8::try_from(i).ok())
+            .collect();
+        let seat_count = u8::try_from(occupied.len()).unwrap_or(0);
+        let dealer_button = occupied
+            .iter()
+            .position(|&s| s == table.button)
+            .and_then(|p| u8::try_from(p).ok());
+        let logical_seat = occupied
+            .iter()
+            .position(|&s| s == seat)
+            .and_then(|p| u8::try_from(p).ok());
+
         TableSnapshot {
             seat,
             phase: table.phase,
@@ -177,14 +238,48 @@ impl TableSnapshot {
             my_chips,
             stacks,
             big_blind: table.forced.big_blind,
+            checked_this_street,
+            dealer_button,
+            seat_count,
+            logical_seat,
         }
+    }
+
+    /// Returns this player's table position relative to the dealer button.
+    ///
+    /// Returns `None` when the dealer button is unset or the table size is not
+    /// one of the supported formats (2, 3, 4, 5, 6, 9 seats).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::table_snapshot::TableSnapshot;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// ]);
+    /// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// // Button starts at seat 0 → seat 0 is BTN, seat 1 is BB.
+    /// assert_eq!(Some(Position::BTN), TableSnapshot::from_table(&table, 0).position());
+    /// assert_eq!(Some(Position::BB),  TableSnapshot::from_table(&table, 1).position());
+    /// ```
+    #[must_use]
+    pub fn position(&self) -> Option<Position> {
+        let btn = self.dealer_button?;
+        let logical = self.logical_seat?;
+        Position::from_seat(logical, btn, self.seat_count)
     }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
-mod tests {
+#[allow(non_snake_case)]
+mod bot__table_snapshot_tests {
     use super::*;
     use crate::casino::game::ForcedBets;
     use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
@@ -198,7 +293,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_snapshot_from_table_seat_zero() {
+    fn from_table_seat_zero() {
         let table = two_player_table();
         let snap = TableSnapshot::from_table(&table, 0);
         assert_eq!(0, snap.seat);
@@ -208,7 +303,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_snapshot_from_table_seat_one() {
+    fn from_table_seat_one() {
         let table = two_player_table();
         let snap = TableSnapshot::from_table(&table, 1);
         assert_eq!(1, snap.seat);
@@ -216,7 +311,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_snapshot_hole_cards_empty_before_deal() {
+    fn hole_cards_empty_before_deal() {
         let table = two_player_table();
         let snap = TableSnapshot::from_table(&table, 0);
         // No cards dealt yet
@@ -225,7 +320,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_snapshot_pot_includes_committed() {
+    fn pot_includes_committed() {
         let table = two_player_table();
         let snap = TableSnapshot::from_table(&table, 0);
         // Before any bets, pot is 0 and no committed chips
@@ -233,7 +328,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_snapshot_stacks_all_seats() {
+    fn stacks_all_seats() {
         let table = two_player_table();
         let snap = TableSnapshot::from_table(&table, 0);
         let seats: Vec<u8> = snap.stacks.iter().map(|s| s.seat).collect();
@@ -242,7 +337,7 @@ mod tests {
     }
 
     #[test]
-    fn test_seat_info_fields() {
+    fn seat_info_fields() {
         let info = SeatInfo {
             seat: 3,
             name: "Dave".to_string(),
@@ -257,10 +352,151 @@ mod tests {
     }
 
     #[test]
-    fn test_table_snapshot_min_raise_is_big_blind() {
+    fn min_raise_is_big_blind() {
         let table = two_player_table();
         let snap = TableSnapshot::from_table(&table, 0);
         // Before any raises, min_raise == big_blind
         assert_eq!(snap.big_blind, snap.min_raise);
+    }
+
+    #[test]
+    fn checked_this_street_false_on_fresh_table() {
+        // No actions taken yet — no one has checked.
+        let table = two_player_table();
+        let snap = TableSnapshot::from_table(&table, 0);
+        assert!(!snap.checked_this_street);
+    }
+
+    #[test]
+    fn checked_this_street_true_after_flop_check() {
+        use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell};
+        use crate::prelude::PlayerState;
+
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+        ]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        // Complete preflop: SB calls, BB is set to Check state manually
+        // (acts as "BB option closes action" without going through act_check which
+        // requires it to be BB's turn in the exact sequence).
+        let sb = table.determine_small_blind();
+        let bb = table.determine_big_blind();
+        table.act_call(sb).unwrap();
+        table.seats.get_seat_mut(bb).unwrap().player.state = PlayerState::Check;
+        table.bring_it_in().unwrap();
+
+        // Deal flop — this logs DealtFlop, which becomes the new street boundary.
+        table.deal_flop().unwrap();
+        table.seats.reset_state_in_hand();
+
+        // First player on the flop checks.
+        let first = table.next_to_act();
+        table.act_check(first).unwrap();
+
+        // Snapshot for the player who just checked → checked_this_street should be true.
+        let snap = TableSnapshot::from_table(&table, first);
+        assert!(snap.checked_this_street, "seat {first} checked on flop, expected true");
+    }
+
+    #[test]
+    fn checked_this_street_false_for_other_seat_after_flop_check() {
+        use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell};
+        use crate::prelude::PlayerState;
+
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+        ]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        let sb = table.determine_small_blind();
+        let bb = table.determine_big_blind();
+        table.act_call(sb).unwrap();
+        table.seats.get_seat_mut(bb).unwrap().player.state = PlayerState::Check;
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+        table.seats.reset_state_in_hand();
+
+        // Only the first player checks.
+        let first = table.next_to_act();
+        table.act_check(first).unwrap();
+
+        // Snapshot for the OTHER seat — it has not checked this street.
+        let other = if first == 0 { 1 } else { 0 };
+        let snap = TableSnapshot::from_table(&table, other);
+        assert!(
+            !snap.checked_this_street,
+            "seat {other} has not checked, expected false"
+        );
+    }
+
+    #[test]
+    fn snapshot_position_btn_seat_zero() {
+        // 2-player table, button starts at seat 0 → seat 0 is BTN.
+        let table = two_player_table();
+        let snap = TableSnapshot::from_table(&table, 0);
+        assert_eq!(Some(Position::BTN), snap.position());
+    }
+
+    #[test]
+    fn snapshot_position_bb_seat_one() {
+        // 2-player table, button at seat 0 → seat 1 is BB.
+        let table = two_player_table();
+        let snap = TableSnapshot::from_table(&table, 1);
+        assert_eq!(Some(Position::BB), snap.position());
+    }
+
+    #[test]
+    fn snapshot_position_none_when_dealer_button_unset() {
+        let table = two_player_table();
+        let mut snap = TableSnapshot::from_table(&table, 0);
+        snap.dealer_button = None;
+        assert_eq!(None, snap.position());
+    }
+
+    #[test]
+    fn checked_this_street_resets_across_streets() {
+        use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell};
+        use crate::prelude::PlayerState;
+
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+        ]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        // Complete preflop (BB checks option via state mutation).
+        let sb = table.determine_small_blind();
+        let bb = table.determine_big_blind();
+        table.act_call(sb).unwrap();
+        table.seats.get_seat_mut(bb).unwrap().player.state = PlayerState::Check;
+        table.bring_it_in().unwrap();
+
+        // Flop: both players check.
+        table.deal_flop().unwrap();
+        table.seats.reset_state_in_hand();
+        let first = table.next_to_act();
+        table.act_check(first).unwrap();
+        let second = table.next_to_act();
+        table.act_check(second).unwrap();
+        table.bring_it_in().unwrap();
+
+        // Turn dealt — new street boundary; neither player has checked the turn yet.
+        table.deal_turn().unwrap();
+        table.seats.reset_state_in_hand();
+
+        let snap_first = TableSnapshot::from_table(&table, first);
+        assert!(
+            !snap_first.checked_this_street,
+            "new street: checked_this_street should reset to false"
+        );
     }
 }

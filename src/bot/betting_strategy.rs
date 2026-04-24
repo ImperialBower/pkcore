@@ -6,7 +6,109 @@
 //! means never.
 
 use crate::analysis::gto::solver_config::BetSize;
-use serde::{Deserialize, Serialize};
+use crate::games::GamePhase;
+use serde::{Deserialize, Serialize, Serializer};
+
+// ── Percentage ────────────────────────────────────────────────────────────────
+
+/// A whole-number percentage in `0..=100`.
+///
+/// Used for bot frequency fields (`aggression_factor`, `bluff_frequency`,
+/// `check_raise_frequency`, `postflop_cbet_frequency`). Serializes as a plain
+/// integer so YAML profile files remain unchanged.
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::bot::betting_strategy::Percentage;
+///
+/// let p = Percentage::new(50).unwrap();
+/// assert_eq!(p.value(), 50);
+/// assert_eq!(p.as_f64(), 0.5);
+///
+/// assert!(Percentage::new(101).is_none());
+/// ```
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Percentage(pub(crate) u8);
+
+impl Percentage {
+    /// Returns `None` when `value > 100`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::betting_strategy::Percentage;
+    ///
+    /// assert!(Percentage::new(0).is_some());
+    /// assert!(Percentage::new(100).is_some());
+    /// assert!(Percentage::new(101).is_none());
+    /// ```
+    #[must_use]
+    pub fn new(value: u8) -> Option<Self> {
+        if value <= 100 { Some(Self(value)) } else { None }
+    }
+
+    /// Returns the raw percentage value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::betting_strategy::Percentage;
+    ///
+    /// assert_eq!(Percentage::new(75).unwrap().value(), 75);
+    /// ```
+    #[must_use]
+    pub fn value(self) -> u8 {
+        self.0
+    }
+
+    /// Returns the percentage as a probability in `0.0..=1.0`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::betting_strategy::Percentage;
+    ///
+    /// assert_eq!(Percentage::new(50).unwrap().as_f64(), 0.5);
+    /// assert_eq!(Percentage::new(0).unwrap().as_f64(), 0.0);
+    /// assert_eq!(Percentage::new(100).unwrap().as_f64(), 1.0);
+    /// ```
+    #[must_use]
+    pub fn as_f64(self) -> f64 {
+        f64::from(self.0) / 100.0
+    }
+}
+
+impl std::fmt::Display for Percentage {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl PartialEq<u8> for Percentage {
+    fn eq(&self, other: &u8) -> bool {
+        self.0 == *other
+    }
+}
+
+impl PartialOrd<u8> for Percentage {
+    fn partial_cmp(&self, other: &u8) -> Option<std::cmp::Ordering> {
+        self.0.partial_cmp(other)
+    }
+}
+
+impl Serialize for Percentage {
+    fn serialize<S: Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
+        ser.serialize_u8(self.0)
+    }
+}
+
+impl<'de> Deserialize<'de> for Percentage {
+    fn deserialize<D: serde::Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
+        let v = u8::deserialize(de)?;
+        Self::new(v).ok_or_else(|| serde::de::Error::custom(format!("percentage must be 0..=100, got {v}")))
+    }
+}
 
 // ── Fraction serde helper ─────────────────────────────────────────────────────
 
@@ -56,6 +158,46 @@ mod bet_size_fractions {
     }
 }
 
+// ── StreetAggression ─────────────────────────────────────────────────────────
+
+/// Optional per-street aggression overrides for a [`BettingStrategy`].
+///
+/// Any `None` field falls back to the flat `BettingStrategy::aggression_factor`.
+/// Profiles without a `street_aggression` block serialize identically to before
+/// this field was added — the field is omitted from YAML when absent.
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::bot::betting_strategy::{BettingStrategy, Percentage, StreetAggression};
+/// use pkcore::games::GamePhase;
+///
+/// let mut s = BettingStrategy::tight_passive();
+/// s.street_aggression = Some(StreetAggression {
+///     preflop: Percentage::new(70),
+///     flop:    Percentage::new(55),
+///     turn:    Percentage::new(40),
+///     river:   Percentage::new(30),
+/// });
+/// assert_eq!(s.aggression_for_phase(GamePhase::BettingPreFlop), 70);
+/// assert_eq!(s.aggression_for_phase(GamePhase::BettingFlop), 55);
+/// ```
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StreetAggression {
+    /// Aggression on the preflop betting round.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preflop: Option<Percentage>,
+    /// Aggression on the flop betting round.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub flop: Option<Percentage>,
+    /// Aggression on the turn betting round.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub turn: Option<Percentage>,
+    /// Aggression on the river betting round.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub river: Option<Percentage>,
+}
+
 // ── BettingStrategy ───────────────────────────────────────────────────────────
 
 /// Controls how a bot sizes bets and applies aggression at each decision point.
@@ -72,16 +214,16 @@ mod bet_size_fractions {
 /// let strategy = BettingStrategy::tight_passive();
 /// assert!(strategy.aggression_factor < 50);
 /// ```
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BettingStrategy {
     /// Overall aggression level — how often the bot bets or raises rather
     /// than checks or calls. `0` = always passive, `100` = always aggressive.
-    pub aggression_factor: u8,
+    pub aggression_factor: Percentage,
     /// Frequency with which the bot bluffs (bets or raises with a weak hand).
     /// `0` = never bluffs, `100` = bluffs at every opportunity.
-    pub bluff_frequency: u8,
+    pub bluff_frequency: Percentage,
     /// Frequency with which the bot check-raises when it checks and faces a bet.
-    pub check_raise_frequency: u8,
+    pub check_raise_frequency: Percentage,
     /// Preferred bet sizes as fractions of the pot. The bot will choose from
     /// these sizes when it decides to bet.
     ///
@@ -89,6 +231,17 @@ pub struct BettingStrategy {
     /// rather than `{numerator, denominator}` mappings.
     #[serde(with = "bet_size_fractions")]
     pub preferred_bet_sizes: Vec<BetSize>,
+    /// Optional per-street aggression overrides. When `Some`, the relevant
+    /// street value is used instead of `aggression_factor` for that round.
+    /// Omitted from serialization when absent so existing YAML files are
+    /// unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub street_aggression: Option<StreetAggression>,
+    /// Minimum equity fraction `[0.0, 1.0]` at which the bot considers a hand
+    /// strong enough to value-bet when no bet is outstanding. Falls back to
+    /// `0.55` when `None`. Omitted from YAML when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value_threshold: Option<f64>,
 }
 
 impl BettingStrategy {
@@ -111,10 +264,12 @@ impl BettingStrategy {
         preferred_bet_sizes: Vec<BetSize>,
     ) -> Self {
         Self {
-            aggression_factor,
-            bluff_frequency,
-            check_raise_frequency,
+            aggression_factor: Percentage(aggression_factor.min(100)),
+            bluff_frequency: Percentage(bluff_frequency.min(100)),
+            check_raise_frequency: Percentage(check_raise_frequency.min(100)),
             preferred_bet_sizes,
+            street_aggression: None,
+            value_threshold: None,
         }
     }
 
@@ -237,16 +392,83 @@ impl BettingStrategy {
     pub fn short_stack_ninja() -> Self {
         Self::new(95, 45, 40, vec![BetSize::pot(), BetSize::two_pot()])
     }
+
+    /// Returns the effective aggression factor for a given game phase.
+    ///
+    /// Checks `street_aggression` for a phase-specific override first;
+    /// falls back to `aggression_factor` when no override is set.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::betting_strategy::{BettingStrategy, StreetAggression};
+    /// use pkcore::bot::betting_strategy::Percentage;
+    /// use pkcore::games::GamePhase;
+    ///
+    /// let mut s = BettingStrategy::gto();
+    /// s.street_aggression = Some(StreetAggression {
+    ///     preflop: Some(Percentage::new(80).unwrap()),
+    ///     flop:    None,
+    ///     turn:    None,
+    ///     river:   Some(Percentage::new(30).unwrap()),
+    /// });
+    /// assert_eq!(s.aggression_for_phase(GamePhase::BettingPreFlop), 80);
+    /// // flop has no override → falls back to flat aggression_factor (50 for gto)
+    /// assert_eq!(s.aggression_for_phase(GamePhase::BettingFlop), 50);
+    /// assert_eq!(s.aggression_for_phase(GamePhase::BettingRiver), 30);
+    /// ```
+    /// Returns the minimum equity at which the bot value-bets when unchallenged.
+    ///
+    /// Returns `value_threshold` when set; falls back to `0.55`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::betting_strategy::BettingStrategy;
+    ///
+    /// let s = BettingStrategy::gto();
+    /// assert_eq!(s.effective_value_threshold(), 0.55);
+    ///
+    /// let mut s2 = BettingStrategy::tight_passive();
+    /// s2.value_threshold = Some(0.65);
+    /// assert_eq!(s2.effective_value_threshold(), 0.65);
+    /// ```
+    #[must_use]
+    pub fn effective_value_threshold(&self) -> f64 {
+        self.value_threshold.unwrap_or(0.55)
+    }
+
+    #[must_use]
+    pub fn aggression_for_phase(&self, phase: GamePhase) -> Percentage {
+        if let Some(sa) = &self.street_aggression {
+            let override_val = if phase.is_preflop() {
+                sa.preflop
+            } else if phase.is_flop() {
+                sa.flop
+            } else if phase.is_turn() {
+                sa.turn
+            } else if phase.is_river() {
+                sa.river
+            } else {
+                None
+            };
+            if let Some(v) = override_val {
+                return v;
+            }
+        }
+        self.aggression_factor
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
-mod tests {
+#[allow(non_snake_case)]
+mod bot__betting_strategy_tests {
     use super::*;
 
     #[test]
-    fn test_betting_strategy_new_fields() {
+    fn betting_strategy_new_fields() {
         use crate::analysis::gto::solver_config::BetSize;
         let s = BettingStrategy::new(50, 20, 10, vec![BetSize::half_pot()]);
         assert_eq!(s.aggression_factor, 50);
@@ -256,7 +478,7 @@ mod tests {
     }
 
     #[test]
-    fn test_betting_strategy_tight_passive() {
+    fn tight_passive() {
         let s = BettingStrategy::tight_passive();
         assert!(s.aggression_factor < 50);
         assert!(s.bluff_frequency < 10);
@@ -264,28 +486,28 @@ mod tests {
     }
 
     #[test]
-    fn test_betting_strategy_loose_aggressive() {
+    fn loose_aggressive() {
         let s = BettingStrategy::loose_aggressive();
         assert!(s.aggression_factor > 50);
         assert!(s.bluff_frequency > 20);
     }
 
     #[test]
-    fn test_betting_strategy_gto() {
+    fn gto() {
         let s = BettingStrategy::gto();
         assert_eq!(s.bluff_frequency, 33);
         assert_eq!(s.preferred_bet_sizes.len(), 2);
     }
 
     #[test]
-    fn test_betting_strategy_tight_aggressive() {
+    fn tight_aggressive() {
         let s = BettingStrategy::tight_aggressive();
         assert!(s.aggression_factor > 50);
         assert_eq!(s.preferred_bet_sizes.len(), 2);
     }
 
     #[test]
-    fn test_betting_strategy_loose_passive() {
+    fn loose_passive() {
         let s = BettingStrategy::loose_passive();
         assert!(s.aggression_factor < 30);
         assert_eq!(s.bluff_frequency, 3);
@@ -293,7 +515,7 @@ mod tests {
     }
 
     #[test]
-    fn test_betting_strategy_maniac() {
+    fn maniac() {
         let s = BettingStrategy::maniac();
         assert_eq!(s.aggression_factor, 90);
         assert!(s.bluff_frequency > 50);
@@ -301,24 +523,132 @@ mod tests {
     }
 
     #[test]
-    fn test_betting_strategy_abc() {
+    fn abc() {
         let s = BettingStrategy::abc();
         assert_eq!(s.bluff_frequency, 0);
         assert_eq!(s.preferred_bet_sizes.len(), 1);
     }
 
     #[test]
-    fn test_betting_strategy_short_stack_ninja() {
+    fn short_stack_ninja() {
         let s = BettingStrategy::short_stack_ninja();
         assert_eq!(s.aggression_factor, 95);
         assert_eq!(s.preferred_bet_sizes.len(), 2);
     }
 
     #[test]
-    fn test_betting_strategy_serde_round_trip() {
+    fn serde_round_trip() {
         let s = BettingStrategy::gto();
         let json = serde_json::to_string(&s).unwrap();
         let loaded: BettingStrategy = serde_json::from_str(&json).unwrap();
         assert_eq!(s, loaded);
+    }
+
+    // ── StreetAggression tests ────────────────────────────────────────────────
+
+    #[test]
+    fn aggression_for_phase_preflop_override() {
+        use crate::games::GamePhase;
+        let mut s = BettingStrategy::gto();
+        s.street_aggression = Some(StreetAggression {
+            preflop: Percentage::new(80),
+            flop: Percentage::new(55),
+            turn: Percentage::new(40),
+            river: Percentage::new(30),
+        });
+        assert_eq!(s.aggression_for_phase(GamePhase::BettingPreFlop), 80);
+        assert_eq!(s.aggression_for_phase(GamePhase::BettingFlop), 55);
+        assert_eq!(s.aggression_for_phase(GamePhase::BettingTurn), 40);
+        assert_eq!(s.aggression_for_phase(GamePhase::BettingRiver), 30);
+    }
+
+    #[test]
+    fn aggression_for_phase_falls_back_to_flat() {
+        use crate::games::GamePhase;
+        let mut s = BettingStrategy::gto();
+        // Only preflop is set; all other streets fall back to aggression_factor (50).
+        s.street_aggression = Some(StreetAggression {
+            preflop: Percentage::new(80),
+            flop: None,
+            turn: None,
+            river: None,
+        });
+        assert_eq!(s.aggression_for_phase(GamePhase::BettingPreFlop), 80);
+        assert_eq!(s.aggression_for_phase(GamePhase::BettingFlop), 50);
+        assert_eq!(s.aggression_for_phase(GamePhase::BettingTurn), 50);
+        assert_eq!(s.aggression_for_phase(GamePhase::BettingRiver), 50);
+    }
+
+    #[test]
+    fn aggression_for_phase_none_always_returns_flat() {
+        use crate::games::GamePhase;
+        let s = BettingStrategy::tight_passive(); // aggression_factor = 25
+        assert_eq!(s.aggression_for_phase(GamePhase::BettingPreFlop), 25);
+        assert_eq!(s.aggression_for_phase(GamePhase::BettingFlop), 25);
+        assert_eq!(s.aggression_for_phase(GamePhase::BettingTurn), 25);
+        assert_eq!(s.aggression_for_phase(GamePhase::BettingRiver), 25);
+    }
+
+    #[test]
+    fn serde_round_trip_with_street_aggression() {
+        let mut s = BettingStrategy::tight_aggressive();
+        s.street_aggression = Some(StreetAggression {
+            preflop: Percentage::new(80),
+            flop: Percentage::new(65),
+            turn: Percentage::new(45),
+            river: Percentage::new(35),
+        });
+        let json = serde_json::to_string(&s).unwrap();
+        let loaded: BettingStrategy = serde_json::from_str(&json).unwrap();
+        assert_eq!(s, loaded);
+    }
+
+    #[test]
+    fn serde_no_street_aggression_key_when_absent() {
+        let s = BettingStrategy::gto();
+        let json = serde_json::to_string(&s).unwrap();
+        assert!(
+            !json.contains("street_aggression"),
+            "flat profile should not emit street_aggression key"
+        );
+    }
+
+    // ── value_threshold tests ─────────────────────────────────────────────────
+
+    #[test]
+    fn value_threshold_defaults_to_55() {
+        assert_eq!(BettingStrategy::gto().effective_value_threshold(), 0.55);
+        assert_eq!(BettingStrategy::tight_passive().effective_value_threshold(), 0.55);
+        assert_eq!(BettingStrategy::maniac().effective_value_threshold(), 0.55);
+    }
+
+    #[test]
+    fn value_threshold_explicit_value_returned() {
+        let mut s = BettingStrategy::tight_passive();
+        s.value_threshold = Some(0.65);
+        assert_eq!(s.effective_value_threshold(), 0.65);
+
+        let mut s2 = BettingStrategy::loose_aggressive();
+        s2.value_threshold = Some(0.40);
+        assert!((s2.effective_value_threshold() - 0.40).abs() < 1e-10);
+    }
+
+    #[test]
+    fn value_threshold_serde_omitted_when_none() {
+        let s = BettingStrategy::gto();
+        let json = serde_json::to_string(&s).unwrap();
+        assert!(
+            !json.contains("value_threshold"),
+            "None value_threshold must not appear in JSON"
+        );
+    }
+
+    #[test]
+    fn value_threshold_serde_round_trip() {
+        let mut s = BettingStrategy::gto();
+        s.value_threshold = Some(0.70);
+        let json = serde_json::to_string(&s).unwrap();
+        let loaded: BettingStrategy = serde_json::from_str(&json).unwrap();
+        assert!((loaded.effective_value_threshold() - 0.70).abs() < 1e-10);
     }
 }

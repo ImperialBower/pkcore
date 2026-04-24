@@ -3,7 +3,7 @@ description: Plays strong hands only; rarely bluffs or raises without a strong h
 style: tight_passive
 range_strategy:
   open_raise: QQ+, AKs
-  three_bet: AA, KK
+  three_bet: KK+
   call_three_bet: QQ, AKs
   postflop_cbet_frequency: 30
 betting_strategy:
@@ -12,3 +12,91 @@ betting_strategy:
   check_raise_frequency: 3
   preferred_bet_sizes:
   - 1/2
+playbook:
+  entries:
+    9:
+      position_ranges:
+        ranges:
+          LJ:
+            actions:
+              open_raise: 88+, ATs+, KJs+, QJs, AJo+, KQo
+              three_bet: QQ+, AKs, AKo
+          UTGP1:
+            actions:
+              three_bet: QQ+, AKs
+              open_raise: TT+, AQs+, KQs, AKo
+          BTN:
+            actions:
+              open_raise: 22+, A2s+, K7s+, Q8s+, J7s+, T8s+, 97s+, 87s, A7o+, KTo+, QJo
+              three_bet: QQ+, AJs+, KQs, AQo+
+          HJ:
+            actions:
+              open_raise: 77+, A9s+, KTs+, QTs+, JTs, ATo+, KJo+
+              three_bet: QQ+, AQs+, AKo
+          SB:
+            actions:
+              open_raise: 33+, A3s+, K8s+, Q9s+, J9s+, T9s, A7o+, KTo+, QJo
+              three_bet: JJ+, AQs+, AQo+
+          CO:
+            actions:
+              three_bet: QQ+, AQs+, AKo
+              open_raise: 55+, A8s+, K9s+, Q9s+, JTs, T9s, 98s, ATo+, KJo+
+          UTG:
+            actions:
+              three_bet: KK+
+              open_raise: JJ+, AKs, AKo
+          EP:
+            actions:
+              three_bet: QQ+, AKs, AKo
+              open_raise: 99+, AJs+, KQs, AQo+
+          BB:
+            actions:
+              three_bet: QQ+, AKs, AKo
+              open_raise: 22+, A2s+, K2s+, Q8s+, J8s+, T7s+, 97s+, A2o+, K8o+, Q9o+
+        default:
+          actions: {}
+      positional_betting:
+        betting: {}
+        default:
+          aggression_factor: 25
+          bluff_frequency: 5
+          check_raise_frequency: 3
+          preferred_bet_sizes:
+          - 1/2
+    6:
+      position_ranges:
+        ranges:
+          CO:
+            actions:
+              three_bet: QQ+, AKs
+              open_raise: TT+, AQs+, AQo+
+          BB:
+            actions:
+              open_raise: 22+, A2s+, K8s+, Q9s+, ATo+
+              three_bet: QQ+, AKs
+          HJ:
+            actions:
+              open_raise: QQ+, AKs, AKo
+              three_bet: KK+
+          LJ:
+            actions:
+              three_bet: KK+
+              open_raise: QQ+, AKs, AKo
+          SB:
+            actions:
+              three_bet: QQ+, AKs
+              open_raise: TT+, AQs+, AQo+
+          BTN:
+            actions:
+              three_bet: QQ+, AKs, AKo
+              open_raise: 88+, ATs+, KJs+, QJs, AJo+, KQo
+        default:
+          actions: {}
+      positional_betting:
+        betting: {}
+        default:
+          aggression_factor: 25
+          bluff_frequency: 5
+          check_raise_frequency: 3
+          preferred_bet_sizes:
+          - 1/2
