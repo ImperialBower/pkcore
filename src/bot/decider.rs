@@ -22,6 +22,10 @@
 use std::fmt;
 use std::sync::Mutex;
 
+use crate::arrays::HandRanker;
+use crate::arrays::five::Five;
+use crate::arrays::seven::Seven;
+use crate::arrays::six::Six;
 use crate::bot::betting_strategy::BettingStrategy;
 use crate::bot::player_action::PlayerAction;
 use crate::bot::profile::BotProfile;
@@ -128,6 +132,7 @@ impl RuleBasedDecider {
     /// The public [`BotDecider::decide`] method calls this with the
     /// thread-local RNG.  Tests call it directly with a seeded
     /// [`rand::rngs::SmallRng`] for fully deterministic results.
+    #[allow(clippy::too_many_lines)]
     pub(crate) fn decide_with_rng<R: rand::Rng>(
         profile: &BotProfile,
         state: &TableSnapshot,
@@ -148,35 +153,10 @@ impl RuleBasedDecider {
         let aggr = strategy.aggression_for_phase(state.phase).as_f64();
         let roll: f64 = rng.random();
 
-        if state.to_call > 0 {
-            // Check-raise: we checked earlier this street and now face a bet.
-            if state.checked_this_street {
-                let cr_rate = strategy.check_raise_frequency.as_f64();
-                if roll < cr_rate {
-                    let (n, d) = pick_bet_size(strategy, rng);
-                    let raise_to = state
-                        .current_bet
-                        .saturating_add(state.pot.saturating_mul(n) / d)
-                        .max(state.current_bet.saturating_add(state.min_raise))
-                        .min(chips);
-                    if raise_to > state.current_bet {
-                        return PlayerAction::Raise(raise_to);
-                    }
-                }
-            }
-
-            // Facing a bet.
-            if state.to_call >= chips {
-                // Stack is all-in or fold territory.
-                return if roll < aggr * 0.6 {
-                    PlayerAction::AllIn
-                } else {
-                    PlayerAction::Fold
-                };
-            }
-
-            if roll < aggr * 0.25 {
-                // Raise: target = current_bet + pot_fraction, at least min_raise.
+        // Check-raise: we checked earlier this street and now face a bet.
+        if state.to_call > 0 && state.checked_this_street {
+            let cr_rate = strategy.check_raise_frequency.as_f64();
+            if roll < cr_rate {
                 let (n, d) = pick_bet_size(strategy, rng);
                 let raise_to = state
                     .current_bet
@@ -187,39 +167,125 @@ impl RuleBasedDecider {
                     return PlayerAction::Raise(raise_to);
                 }
             }
+        }
 
-            // Call or fold.
-            if roll < aggr {
-                PlayerAction::Call
-            } else {
-                PlayerAction::Fold
-            }
-        } else {
-            // No outstanding bet — bet or check.
-            // On the flop, postflop_cbet_frequency overrides the flat aggression factor.
-            let bet_threshold = if state.phase.is_flop() {
-                profile.range_strategy.postflop_cbet_frequency.as_f64()
-            } else {
-                aggr
-            };
+        // When hole cards are available, use equity-based decisions.
+        if let Some(equity) = hand_equity(profile, state) {
+            if state.to_call > 0 {
+                if state.to_call >= chips {
+                    return if equity > 0.5 {
+                        PlayerAction::AllIn
+                    } else {
+                        PlayerAction::Fold
+                    };
+                }
 
-            if roll < bet_threshold {
-                let (n, d) = pick_bet_size(strategy, rng);
-                let amount = (state.pot.saturating_mul(n) / d).max(state.big_blind).min(chips);
-                PlayerAction::Bet(amount)
-            } else if !state.phase.is_preflop() {
-                // Postflop: consider bluffing when the value-bet threshold wasn't reached.
-                let bluff_rate = strategy.bluff_frequency.as_f64();
-                let roll_bluff: f64 = rng.random();
-                if roll_bluff < bluff_rate {
+                #[allow(clippy::cast_precision_loss)]
+                let pot_odds = state.to_call as f64 / (state.pot + state.to_call) as f64;
+
+                if equity > pot_odds * 2.0 {
+                    // Strong hand: raise.
+                    let (n, d) = pick_bet_size(strategy, rng);
+                    let raise_to = state
+                        .current_bet
+                        .saturating_add(state.pot.saturating_mul(n) / d)
+                        .max(state.current_bet.saturating_add(state.min_raise))
+                        .min(chips);
+                    if raise_to > state.current_bet {
+                        return PlayerAction::Raise(raise_to);
+                    }
+                    PlayerAction::Call
+                } else if equity > pot_odds {
+                    PlayerAction::Call
+                } else {
+                    // Weak hand: bluff-raise or fold.
+                    let bluff_roll: f64 = rng.random();
+                    if bluff_roll < strategy.bluff_frequency.as_f64() {
+                        let (n, d) = pick_bet_size(strategy, rng);
+                        let raise_to = state
+                            .current_bet
+                            .saturating_add(state.pot.saturating_mul(n) / d)
+                            .max(state.current_bet.saturating_add(state.min_raise))
+                            .min(chips);
+                        if raise_to > state.current_bet {
+                            return PlayerAction::Raise(raise_to);
+                        }
+                    }
+                    PlayerAction::Fold
+                }
+            } else {
+                // No outstanding bet: value-bet or bluff.
+                let value_threshold = strategy.effective_value_threshold();
+                if equity > value_threshold {
                     let (n, d) = pick_bet_size(strategy, rng);
                     let amount = (state.pot.saturating_mul(n) / d).max(state.big_blind).min(chips);
                     PlayerAction::Bet(amount)
+                } else if !state.phase.is_preflop() {
+                    let bluff_roll: f64 = rng.random();
+                    if bluff_roll < strategy.bluff_frequency.as_f64() {
+                        let (n, d) = pick_bet_size(strategy, rng);
+                        let amount = (state.pot.saturating_mul(n) / d).max(state.big_blind).min(chips);
+                        PlayerAction::Bet(amount)
+                    } else {
+                        PlayerAction::Check
+                    }
                 } else {
                     PlayerAction::Check
                 }
+            }
+        } else {
+            // Fallback: aggression-factor-based logic when hole cards are unknown.
+            if state.to_call > 0 {
+                if state.to_call >= chips {
+                    return if roll < aggr * 0.6 {
+                        PlayerAction::AllIn
+                    } else {
+                        PlayerAction::Fold
+                    };
+                }
+
+                if roll < aggr * 0.25 {
+                    let (n, d) = pick_bet_size(strategy, rng);
+                    let raise_to = state
+                        .current_bet
+                        .saturating_add(state.pot.saturating_mul(n) / d)
+                        .max(state.current_bet.saturating_add(state.min_raise))
+                        .min(chips);
+                    if raise_to > state.current_bet {
+                        return PlayerAction::Raise(raise_to);
+                    }
+                }
+
+                if roll < aggr {
+                    PlayerAction::Call
+                } else {
+                    PlayerAction::Fold
+                }
             } else {
-                PlayerAction::Check
+                // On the flop, postflop_cbet_frequency overrides the flat aggression factor.
+                let bet_threshold = if state.phase.is_flop() {
+                    profile.range_strategy.postflop_cbet_frequency.as_f64()
+                } else {
+                    aggr
+                };
+
+                if roll < bet_threshold {
+                    let (n, d) = pick_bet_size(strategy, rng);
+                    let amount = (state.pot.saturating_mul(n) / d).max(state.big_blind).min(chips);
+                    PlayerAction::Bet(amount)
+                } else if !state.phase.is_preflop() {
+                    let bluff_rate = strategy.bluff_frequency.as_f64();
+                    let roll_bluff: f64 = rng.random();
+                    if roll_bluff < bluff_rate {
+                        let (n, d) = pick_bet_size(strategy, rng);
+                        let amount = (state.pot.saturating_mul(n) / d).max(state.big_blind).min(chips);
+                        PlayerAction::Bet(amount)
+                    } else {
+                        PlayerAction::Check
+                    }
+                } else {
+                    PlayerAction::Check
+                }
             }
         }
     }
@@ -330,6 +396,36 @@ impl BotDecider for JokerDecider {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/// Computes a normalized equity proxy for the bot's hand.
+///
+/// Returns `None` when hole cards have not been dealt yet, which triggers the
+/// aggression-factor fallback path in `decide_with_rng`.
+///
+/// **Preflop:** returns `1.0` when the hole cards are within the profile's
+/// `open_raise` range, and `0.0` otherwise.
+///
+/// **Postflop:** evaluates the best 5-of-N hand from the combined hole cards
+/// and board, then normalises the `hand_rank_value` to `[0.0, 1.0]` where
+/// `1.0` is a royal flush and `0.0` is 7-high nothing.
+fn hand_equity(profile: &BotProfile, state: &TableSnapshot) -> Option<f64> {
+    if state.hole_cards.is_empty() {
+        return None;
+    }
+    if state.phase.is_preflop() {
+        let in_range = profile.range_strategy.open_raise_contains(&state.hole_cards);
+        return Some(if in_range { 1.0 } else { 0.0 });
+    }
+    let combined = format!("{} {}", state.hole_cards, state.board);
+    let total = state.hole_cards.len() + state.board.len();
+    let hrv = match total {
+        5 => combined.parse::<Five>().ok().map(|h| h.hand_rank_value()),
+        6 => combined.parse::<Six>().ok().map(|h| h.hand_rank_value()),
+        7 => combined.parse::<Seven>().ok().map(|h| h.hand_rank_value()),
+        _ => None,
+    }?;
+    Some(1.0 - f64::from(hrv) / 7462.0)
+}
 
 /// Returns a random `(numerator, denominator)` pair from `strategy.preferred_bet_sizes`,
 /// falling back to half-pot `(1, 2)` when the list is empty.
@@ -778,6 +874,91 @@ mod bot__decider_tests {
                     PlayerAction::Bet(_)
                 ),
                 "100% preflop street aggression must always Bet preflop"
+            );
+        }
+    }
+
+    // ── HandStrengthDecisions tests ──────────────────────────────────────────
+
+    /// Helper: build a snapshot with specific hole cards and board.
+    fn make_snapshot_with_cards(
+        hole: &str,
+        board: &str,
+        to_call: usize,
+        pot: usize,
+        phase: crate::games::GamePhase,
+    ) -> TableSnapshot {
+        use crate::cards::Cards;
+        use std::str::FromStr;
+        let mut snap = make_snapshot(0);
+        snap.hole_cards = Cards::from_str(hole).unwrap();
+        snap.board = if board.is_empty() {
+            Cards::default()
+        } else {
+            Cards::from_str(board).unwrap()
+        };
+        snap.to_call = to_call;
+        snap.current_bet = to_call;
+        snap.min_raise = 100;
+        snap.pot = pot;
+        snap.phase = phase;
+        snap
+    }
+
+    /// AA preflop facing a bet: equity(1.0) > pot_odds * 2 → always Raise or Call.
+    #[test]
+    fn calls_with_equity_above_pot_odds() {
+        use rand::SeedableRng;
+        use rand::rngs::SmallRng;
+        // open_raise = "AA" so AA is in range → equity = 1.0
+        let profile = make_profile(50, 10, 0, 50);
+        // pot_odds = 100 / (300 + 100) = 0.25; equity(1.0) > 0.5 → raise
+        let snap = make_snapshot_with_cards("A♠ A♥", "", 100, 300, crate::games::GamePhase::BettingPreFlop);
+        let mut rng = SmallRng::seed_from_u64(42);
+        for _ in 0..20 {
+            let action = RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng);
+            assert!(
+                matches!(action, PlayerAction::Raise(_) | PlayerAction::Call),
+                "AA vs pot_odds=0.25 should Raise or Call, got {action:?}"
+            );
+        }
+    }
+
+    /// 72o preflop facing a bet with bluff_frequency=0: equity(0.0) < pot_odds → always Fold.
+    #[test]
+    fn folds_below_pot_odds_no_bluff() {
+        use rand::SeedableRng;
+        use rand::rngs::SmallRng;
+        // open_raise = "AA" so 72o is NOT in range → equity = 0.0
+        let profile = make_profile(50, 0, 0, 50);
+        // pot_odds = 100/400 = 0.25; equity(0.0) < pot_odds → fold
+        let snap = make_snapshot_with_cards("7♠ 2♦", "", 100, 300, crate::games::GamePhase::BettingPreFlop);
+        let mut rng = SmallRng::seed_from_u64(7);
+        for _ in 0..50 {
+            assert_eq!(
+                PlayerAction::Fold,
+                RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng),
+                "72o vs pot_odds=0.25 with bluff=0 must Fold"
+            );
+        }
+    }
+
+    /// 72o on K-Q-J flop with bluff_frequency=100 and no outstanding bet: always Bet.
+    #[test]
+    fn bluffs_despite_weak_hand() {
+        use rand::SeedableRng;
+        use rand::rngs::SmallRng;
+        // open_raise = "AA", 72o is out of range; postflop equity of 72o on KQJ ≈ 0.06
+        let profile = make_profile(0, 100, 0, 0);
+        let snap = make_snapshot_with_cards("7♠ 2♦", "K♠ Q♦ J♣", 0, 200, crate::games::GamePhase::BettingFlop);
+        let mut rng = SmallRng::seed_from_u64(13);
+        for _ in 0..50 {
+            assert!(
+                matches!(
+                    RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng),
+                    PlayerAction::Bet(_)
+                ),
+                "bluff_freq=100 with weak hand must always Bet"
             );
         }
     }

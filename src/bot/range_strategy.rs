@@ -5,7 +5,11 @@
 //! frequency. Range strings follow pkcore's standard format and will support
 //! per-combo frequencies (e.g. `"AA:1.0, KK:0.9"`) once EPIC-25 ships.
 
+use crate::analysis::gto::combos::Combos;
+use crate::analysis::gto::twos::Twos;
+use crate::arrays::two::Two;
 use crate::bot::betting_strategy::Percentage;
+use crate::cards::Cards;
 use serde::{Deserialize, Serialize};
 
 // ── RangeStrategy ─────────────────────────────────────────────────────────────
@@ -191,6 +195,41 @@ impl RangeStrategy {
     pub fn short_stack_ninja() -> Self {
         Self::new("77+, ATs+, KQs, AJo+, KQo", "AA, KK, QQ", "", 100)
     }
+
+    /// Returns `true` when `hole_cards` fall within the `open_raise` range.
+    ///
+    /// An empty `open_raise` string is treated as "any hand opens" and always
+    /// returns `true`. A parse failure on the range string also returns `true`
+    /// (fail-open). Returns `false` when `hole_cards` cannot be converted to a
+    /// two-card hand (e.g. if cards have not been dealt yet).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::range_strategy::RangeStrategy;
+    /// use pkcore::cards::Cards;
+    /// use std::str::FromStr;
+    ///
+    /// let s = RangeStrategy::new("QQ+, AKs", "AA", "KK", 50);
+    /// let qq = Cards::from_str("Q♠ Q♥").unwrap();
+    /// let junk = Cards::from_str("7♠ 2♦").unwrap();
+    ///
+    /// assert!(s.open_raise_contains(&qq));
+    /// assert!(!s.open_raise_contains(&junk));
+    /// ```
+    #[must_use]
+    pub fn open_raise_contains(&self, hole_cards: &Cards) -> bool {
+        if self.open_raise.is_empty() {
+            return true;
+        }
+        let Ok(combos) = self.open_raise.parse::<Combos>() else {
+            return true;
+        };
+        let Ok(two) = Two::try_from(hole_cards.clone()) else {
+            return false;
+        };
+        Twos::from(combos).contains(&two)
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -268,5 +307,53 @@ mod bot__range_strategy_tests {
         let json = serde_json::to_string(&s).unwrap();
         let loaded: RangeStrategy = serde_json::from_str(&json).unwrap();
         assert_eq!(s, loaded);
+    }
+
+    // ── open_raise_contains tests ─────────────────────────────────────────────
+
+    #[test]
+    fn open_raise_contains_in_range() {
+        use crate::cards::Cards;
+        use std::str::FromStr;
+        let s = RangeStrategy::new("QQ+, AKs", "AA", "KK", 50);
+        // QQ is in the range
+        let qq = Cards::from_str("Q♠ Q♥").unwrap();
+        assert!(s.open_raise_contains(&qq));
+        // AA is covered by QQ+ expansion
+        let aa = Cards::from_str("A♠ A♥").unwrap();
+        assert!(s.open_raise_contains(&aa));
+        // AKs is explicitly listed
+        let aks = Cards::from_str("A♠ K♠").unwrap();
+        assert!(s.open_raise_contains(&aks));
+    }
+
+    #[test]
+    fn open_raise_contains_out_of_range() {
+        use crate::cards::Cards;
+        use std::str::FromStr;
+        let s = RangeStrategy::new("QQ+, AKs", "AA", "KK", 50);
+        let junk = Cards::from_str("7♠ 2♦").unwrap();
+        assert!(!s.open_raise_contains(&junk));
+        // JJ is below QQ+
+        let jj = Cards::from_str("J♠ J♥").unwrap();
+        assert!(!s.open_raise_contains(&jj));
+    }
+
+    #[test]
+    fn open_raise_contains_empty_range_always_true() {
+        use crate::cards::Cards;
+        use std::str::FromStr;
+        let s = RangeStrategy::new("", "", "", 50);
+        let junk = Cards::from_str("7♠ 2♦").unwrap();
+        // Empty open_raise → any hand opens
+        assert!(s.open_raise_contains(&junk));
+    }
+
+    #[test]
+    fn open_raise_contains_empty_cards_returns_false() {
+        let s = RangeStrategy::new("QQ+", "", "", 50);
+        let empty = Cards::default();
+        // No cards dealt → cannot determine membership → false
+        assert!(!s.open_raise_contains(&empty));
     }
 }

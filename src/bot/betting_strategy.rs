@@ -214,7 +214,7 @@ pub struct StreetAggression {
 /// let strategy = BettingStrategy::tight_passive();
 /// assert!(strategy.aggression_factor < 50);
 /// ```
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct BettingStrategy {
     /// Overall aggression level — how often the bot bets or raises rather
     /// than checks or calls. `0` = always passive, `100` = always aggressive.
@@ -237,6 +237,11 @@ pub struct BettingStrategy {
     /// unchanged.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub street_aggression: Option<StreetAggression>,
+    /// Minimum equity fraction `[0.0, 1.0]` at which the bot considers a hand
+    /// strong enough to value-bet when no bet is outstanding. Falls back to
+    /// `0.55` when `None`. Omitted from YAML when absent.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub value_threshold: Option<f64>,
 }
 
 impl BettingStrategy {
@@ -264,6 +269,7 @@ impl BettingStrategy {
             check_raise_frequency: Percentage(check_raise_frequency.min(100)),
             preferred_bet_sizes,
             street_aggression: None,
+            value_threshold: None,
         }
     }
 
@@ -411,6 +417,27 @@ impl BettingStrategy {
     /// assert_eq!(s.aggression_for_phase(GamePhase::BettingFlop), 50);
     /// assert_eq!(s.aggression_for_phase(GamePhase::BettingRiver), 30);
     /// ```
+    /// Returns the minimum equity at which the bot value-bets when unchallenged.
+    ///
+    /// Returns `value_threshold` when set; falls back to `0.55`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::betting_strategy::BettingStrategy;
+    ///
+    /// let s = BettingStrategy::gto();
+    /// assert_eq!(s.effective_value_threshold(), 0.55);
+    ///
+    /// let mut s2 = BettingStrategy::tight_passive();
+    /// s2.value_threshold = Some(0.65);
+    /// assert_eq!(s2.effective_value_threshold(), 0.65);
+    /// ```
+    #[must_use]
+    pub fn effective_value_threshold(&self) -> f64 {
+        self.value_threshold.unwrap_or(0.55)
+    }
+
     #[must_use]
     pub fn aggression_for_phase(&self, phase: GamePhase) -> Percentage {
         if let Some(sa) = &self.street_aggression {
@@ -584,5 +611,44 @@ mod bot__betting_strategy_tests {
             !json.contains("street_aggression"),
             "flat profile should not emit street_aggression key"
         );
+    }
+
+    // ── value_threshold tests ─────────────────────────────────────────────────
+
+    #[test]
+    fn value_threshold_defaults_to_55() {
+        assert_eq!(BettingStrategy::gto().effective_value_threshold(), 0.55);
+        assert_eq!(BettingStrategy::tight_passive().effective_value_threshold(), 0.55);
+        assert_eq!(BettingStrategy::maniac().effective_value_threshold(), 0.55);
+    }
+
+    #[test]
+    fn value_threshold_explicit_value_returned() {
+        let mut s = BettingStrategy::tight_passive();
+        s.value_threshold = Some(0.65);
+        assert_eq!(s.effective_value_threshold(), 0.65);
+
+        let mut s2 = BettingStrategy::loose_aggressive();
+        s2.value_threshold = Some(0.40);
+        assert!((s2.effective_value_threshold() - 0.40).abs() < 1e-10);
+    }
+
+    #[test]
+    fn value_threshold_serde_omitted_when_none() {
+        let s = BettingStrategy::gto();
+        let json = serde_json::to_string(&s).unwrap();
+        assert!(
+            !json.contains("value_threshold"),
+            "None value_threshold must not appear in JSON"
+        );
+    }
+
+    #[test]
+    fn value_threshold_serde_round_trip() {
+        let mut s = BettingStrategy::gto();
+        s.value_threshold = Some(0.70);
+        let json = serde_json::to_string(&s).unwrap();
+        let loaded: BettingStrategy = serde_json::from_str(&json).unwrap();
+        assert!((loaded.effective_value_threshold() - 0.70).abs() < 1e-10);
     }
 }

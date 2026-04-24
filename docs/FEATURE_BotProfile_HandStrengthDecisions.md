@@ -175,7 +175,25 @@ support, but a simple set-membership check can be added earlier).
 
 ## Status
 
-Planned. No code changes yet.
+**Complete.**
+
+### What was implemented
+
+- `RangeStrategy::open_raise_contains(hole_cards: &Cards) -> bool` — expands range via
+  `Twos::from(Combos)` (handles `+` notation correctly), checks `Twos::contains(&Two)`;
+  empty range always returns `true`, unparseable range fails open, empty hole cards returns
+  `false`
+- `BettingStrategy.value_threshold: Option<f64>` — `#[serde(default, skip_serializing_if =
+  "Option::is_none")]`; backward-compatible with existing YAML
+- `BettingStrategy::effective_value_threshold() -> f64` — returns field or `0.55`
+- `hand_equity(profile, state) -> Option<f64>` — free function in `decider.rs`; preflop:
+  binary 1.0/0.0 via `open_raise_contains`; postflop: `Five/Six/Seven` hand rank normalised
+  to `[0,1]`; `None` when hole cards absent → aggression-factor fallback path unchanged
+- `RuleBasedDecider::decide_with_rng` rewritten: equity-gated path when `hand_equity` returns
+  `Some`, original aggression-factor path preserved when `None`
+- `BettingStrategy` `Eq` derive removed (required by `Option<f64>` field); `PartialEq` retained
+- 4 new tests in `betting_strategy.rs`, 4 new tests in `range_strategy.rs`, 3 new tests in
+  `decider.rs` — all pass; full suite 715+ tests green
 
 This is the highest-impact feature — it makes simulation results meaningful as strategic
 proxies — but also the largest implementation. It depends on range parsing from EPIC-25 for
