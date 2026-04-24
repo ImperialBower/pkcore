@@ -145,7 +145,7 @@ impl RuleBasedDecider {
             profile.betting_for(state.seat_count, pos)
         });
 
-        let aggr = strategy.aggression_factor.as_f64();
+        let aggr = strategy.aggression_for_phase(state.phase).as_f64();
         let roll: f64 = rng.random();
 
         if state.to_call > 0 {
@@ -746,5 +746,69 @@ mod bot__decider_tests {
             "BTN bets ({bets_btn}) should exceed flat bets ({bets_flat}) given higher BTN aggression"
         );
         let _ = (checks_btn, checks_flat);
+    }
+
+    // ── StreetAggression routing tests ───────────────────────────────────────
+
+    /// 100% preflop street aggression always bets preflop.
+    #[test]
+    fn street_aggression_100_preflop_always_bets() {
+        use crate::bot::betting_strategy::{Percentage, StreetAggression};
+        use rand::SeedableRng;
+        use rand::rngs::SmallRng;
+
+        let mut profile = make_profile(0, 0, 0, 0);
+        profile.betting_strategy.street_aggression = Some(StreetAggression {
+            preflop: Percentage::new(100),
+            flop: None,
+            turn: None,
+            river: None,
+        });
+
+        let mut snap = make_snapshot(0);
+        snap.phase = crate::games::GamePhase::BettingPreFlop;
+        snap.to_call = 0;
+        snap.pot = 200;
+
+        let mut rng = SmallRng::seed_from_u64(7);
+        for _ in 0..50 {
+            assert!(
+                matches!(
+                    RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng),
+                    PlayerAction::Bet(_)
+                ),
+                "100% preflop street aggression must always Bet preflop"
+            );
+        }
+    }
+
+    /// 0% river street aggression always checks on the river with no outstanding bet.
+    #[test]
+    fn street_aggression_0_river_always_checks() {
+        use crate::bot::betting_strategy::{Percentage, StreetAggression};
+        use rand::SeedableRng;
+        use rand::rngs::SmallRng;
+
+        // Use aggression_factor=100 so only the river override brings it to zero.
+        let mut profile = make_profile(100, 0, 0, 0);
+        profile.betting_strategy.street_aggression = Some(StreetAggression {
+            preflop: None,
+            flop: None,
+            turn: None,
+            river: Percentage::new(0),
+        });
+
+        let mut snap = make_snapshot(0);
+        snap.phase = crate::games::GamePhase::BettingRiver;
+        snap.to_call = 0;
+
+        let mut rng = SmallRng::seed_from_u64(13);
+        for _ in 0..50 {
+            assert_eq!(
+                PlayerAction::Check,
+                RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng),
+                "0% river street aggression must always Check on river"
+            );
+        }
     }
 }

@@ -111,10 +111,17 @@ pub struct TableSnapshot {
     /// street.  Used by [`crate::bot::decider::RuleBasedDecider`] to detect
     /// check-raise opportunities (checked, faced a bet, now can raise).
     pub checked_this_street: bool,
-    /// Zero-based seat index of the dealer button, if set.
+    /// Logical position of the dealer button within the sorted list of
+    /// occupied seats (`0` = earliest occupied seat is the button).
+    /// `None` when the table has not started a hand yet.
     pub dealer_button: Option<u8>,
     /// Number of occupied (non-empty) seats at this table.
     pub seat_count: u8,
+    /// Logical position of this player within the sorted list of occupied
+    /// seats (`0` = earliest occupied seat). Used by [`Self::position`].
+    /// `None` when the seat is not in the occupied list (should not occur
+    /// during normal play).
+    pub logical_seat: Option<u8>,
 }
 
 impl TableSnapshot {
@@ -196,7 +203,28 @@ impl TableSnapshot {
             .iter()
             .any(|a| matches!(a, TableAction::Check(s) if *s == seat));
 
-        let seat_count = u8::try_from(table.seats.0.iter().filter(|s| !s.is_empty()).count()).unwrap_or(0);
+        // Build a sorted list of occupied physical seat indices so we can
+        // translate the physical button index and our own seat to logical
+        // positions (0-based within occupied seats). This avoids unsigned
+        // underflow when the physical button index exceeds the occupied count
+        // after player eliminations create gaps in the seat numbering.
+        let occupied: Vec<u8> = table
+            .seats
+            .0
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| !s.is_empty())
+            .filter_map(|(i, _)| u8::try_from(i).ok())
+            .collect();
+        let seat_count = u8::try_from(occupied.len()).unwrap_or(0);
+        let dealer_button = occupied
+            .iter()
+            .position(|&s| s == table.button)
+            .and_then(|p| u8::try_from(p).ok());
+        let logical_seat = occupied
+            .iter()
+            .position(|&s| s == seat)
+            .and_then(|p| u8::try_from(p).ok());
 
         TableSnapshot {
             seat,
@@ -211,8 +239,9 @@ impl TableSnapshot {
             stacks,
             big_blind: table.forced.big_blind,
             checked_this_street,
-            dealer_button: Some(table.button),
+            dealer_button,
             seat_count,
+            logical_seat,
         }
     }
 
@@ -241,7 +270,8 @@ impl TableSnapshot {
     #[must_use]
     pub fn position(&self) -> Option<Position> {
         let btn = self.dealer_button?;
-        Position::from_seat(self.seat, btn, self.seat_count)
+        let logical = self.logical_seat?;
+        Position::from_seat(logical, btn, self.seat_count)
     }
 }
 

@@ -173,8 +173,17 @@ serialization and defaults to `None` on deserialization.
 
 ## Status
 
-Planned. No code changes yet.
+**Complete.**
 
-Backward-compatible via `serde` defaults. Can be implemented independently of position-aware
-decisions and hand-strength decisions, though combining all three produces the most realistic
-behavior.
+### What was implemented
+
+- `StreetAggression` struct in `src/bot/betting_strategy.rs` — four `Option<Percentage>` fields
+  with `#[serde(default, skip_serializing_if = "Option::is_none")]` on each
+- `BettingStrategy.street_aggression: Option<StreetAggression>` field added with same serde
+  attributes — omitted from YAML when absent; existing profile files unchanged
+- `BettingStrategy::aggression_for_phase(phase: GamePhase) -> Percentage` resolver
+- `RuleBasedDecider::decide_with_rng()` uses `strategy.aggression_for_phase(state.phase)`
+  instead of the flat `aggression_factor`
+- Fields use `Percentage` (not raw `u8`) for consistency with the rest of the API (TypeSafety)
+- 7 new tests: preflop override, per-street fallback, all-None fallback, serde round-trip,
+  no YAML key when absent, 100% preflop always bets, 0% river always checks
