@@ -184,15 +184,19 @@ impl RuleBasedDecider {
                 let pot_odds = state.to_call as f64 / (state.pot + state.to_call) as f64;
 
                 if equity > pot_odds * 2.0 {
-                    // Strong hand: raise.
-                    let (n, d) = pick_bet_size(strategy, rng);
-                    let raise_to = state
-                        .current_bet
-                        .saturating_add(state.pot.saturating_mul(n) / d)
-                        .max(state.current_bet.saturating_add(state.min_raise))
-                        .min(chips);
-                    if raise_to > state.current_bet {
-                        return PlayerAction::Raise(raise_to);
+                    // Strong hand: raise with probability proportional to aggression so
+                    // that two bots with strong hands don't raise each other indefinitely.
+                    let raise_roll: f64 = rng.random();
+                    if raise_roll < aggr.max(0.5) {
+                        let (n, d) = pick_bet_size(strategy, rng);
+                        let raise_to = state
+                            .current_bet
+                            .saturating_add(state.pot.saturating_mul(n) / d)
+                            .max(state.current_bet.saturating_add(state.min_raise))
+                            .min(chips);
+                        if raise_to > state.current_bet {
+                            return PlayerAction::Raise(raise_to);
+                        }
                     }
                     PlayerAction::Call
                 } else if equity > pot_odds {
@@ -961,6 +965,43 @@ mod bot__decider_tests {
                 "bluff_freq=100 with weak hand must always Bet"
             );
         }
+    }
+
+    /// The raise gate must be probabilistic: with AA preflop (equity=1.0) and
+    /// pot_odds=0.25, the bot enters the strong-hand branch but should sometimes
+    /// Raise and sometimes Call across different RNG seeds.
+    ///
+    /// This test catches the regression where two bots with strong hands escalate
+    /// indefinitely because the raise branch was unconditional.
+    #[test]
+    fn raise_gate_is_probabilistic_not_deterministic() {
+        use rand::SeedableRng;
+        use rand::rngs::SmallRng;
+        // GTO open_raise includes AA → preflop equity = 1.0
+        // pot_odds = 100 / (300+100) = 0.25; equity (1.0) > pot_odds*2 (0.5) → raise branch
+        let profile = BotProfile::gto();
+        let snap = make_snapshot_with_cards("A♠ A♥", "", 100, 300, crate::games::GamePhase::BettingPreFlop);
+
+        let mut saw_raise = false;
+        let mut saw_call = false;
+
+        for seed in 0u64..200 {
+            let mut rng = SmallRng::seed_from_u64(seed);
+            match RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng) {
+                PlayerAction::Raise(_) => saw_raise = true,
+                PlayerAction::Call => saw_call = true,
+                _ => {}
+            }
+            if saw_raise && saw_call {
+                break;
+            }
+        }
+
+        assert!(saw_raise, "raise gate must sometimes raise when equity is strong");
+        assert!(
+            saw_call,
+            "raise gate must sometimes call to prevent bot escalation loops"
+        );
     }
 
     /// 0% river street aggression always checks on the river with no outstanding bet.

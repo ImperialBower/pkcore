@@ -144,7 +144,7 @@ impl RangeStrategy {
     #[must_use]
     pub fn loose_passive() -> Self {
         Self::new(
-            "22+, Axs, KTs+, QTs+, J9s+, T8s+, 98s, ATo+, KTo+",
+            "22+, AKs-A2s, KTs+, QTs+, J9s+, T8s+, 98s, ATo+, KTo+",
             "QQ+, AKs",
             "TT+, AJs+",
             15,
@@ -355,5 +355,43 @@ mod bot__range_strategy_tests {
         let empty = Cards::default();
         // No cards dealt → cannot determine membership → false
         assert!(!s.open_raise_contains(&empty));
+    }
+
+    // ── Case-insensitivity tests ──────────────────────────────────────────────
+
+    #[test]
+    fn open_raise_contains_lowercase_range() {
+        use crate::cards::Cards;
+        use std::str::FromStr;
+        let s = RangeStrategy::new("qq+, aks", "aa", "kk", 50);
+        let qq = Cards::from_str("Q♠ Q♥").unwrap();
+        assert!(s.open_raise_contains(&qq));
+        let junk = Cards::from_str("7♠ 2♦").unwrap();
+        assert!(!s.open_raise_contains(&junk));
+    }
+
+    #[test]
+    fn open_raise_contains_mixed_case_range() {
+        use crate::cards::Cards;
+        use std::str::FromStr;
+        let s = RangeStrategy::new("Qq+, AkS", "Aa", "Kk", 50);
+        let qq = Cards::from_str("Q♠ Q♥").unwrap();
+        assert!(s.open_raise_contains(&qq));
+        let junk = Cards::from_str("7♠ 2♦").unwrap();
+        assert!(!s.open_raise_contains(&junk));
+    }
+
+    #[test]
+    fn open_raise_contains_case_does_not_change_membership() {
+        use crate::cards::Cards;
+        use std::str::FromStr;
+        let upper = RangeStrategy::new("QQ+, AKs", "AA", "KK", 50);
+        let lower = RangeStrategy::new("qq+, aks", "aa", "kk", 50);
+        let mixed = RangeStrategy::new("Qq+, Aks", "Aa", "Kk", 50);
+        for raw in &["Q♠ Q♥", "A♠ K♠", "7♠ 2♦", "J♠ J♥"] {
+            let cards = Cards::from_str(raw).unwrap();
+            assert_eq!(upper.open_raise_contains(&cards), lower.open_raise_contains(&cards));
+            assert_eq!(upper.open_raise_contains(&cards), mixed.open_raise_contains(&cards));
+        }
     }
 }
