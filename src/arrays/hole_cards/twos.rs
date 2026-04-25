@@ -88,10 +88,7 @@ impl StartingHands {
         drop(tx);
 
         for received in rx {
-            match received {
-                Ok(case_eval) => case_evals.push(case_eval),
-                Err(e) => return Err(e),
-            }
+            case_evals.push(received?);
         }
 
         Ok(case_evals)

@@ -332,10 +332,7 @@ impl TableLog {
     }
 
     pub fn commentary(&self, seats: &Seats, index: u8) -> Option<String> {
-        let player: String = match seats.get_seat(index) {
-            None => return None,
-            Some(s) => s.player.handle.clone(),
-        };
+        let player: String = seats.get_seat(index)?.player.handle.clone();
 
         let last = self.last()?;
 
