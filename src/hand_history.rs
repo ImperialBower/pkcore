@@ -1339,10 +1339,7 @@ impl Streets {
 /// `TableAction::PlayerSeated`; missing entries leave `Action.player_id` as
 /// `None` (e.g. legacy event logs that pre-date EPIC-26).
 #[allow(clippy::cast_precision_loss)]
-fn table_action_to_hand_action(
-    event: &TableAction,
-    seat_to_id: &HashMap<u8, Uuid>,
-) -> Option<Action> {
+fn table_action_to_hand_action(event: &TableAction, seat_to_id: &HashMap<u8, Uuid>) -> Option<Action> {
     let make = |seat: u8, action: ActionType, amount: Option<f64>, all_in: Option<bool>| Action {
         seat,
         player_id: seat_to_id.get(&seat).copied(),
@@ -1354,25 +1351,12 @@ fn table_action_to_hand_action(
         TableAction::ForcedBetSmallBlind(seat, amount)
         | TableAction::ForcedBetBigBlind(seat, amount)
         | TableAction::BetAnteForced(seat, amount)
-        | TableAction::ForcedBet(seat, amount) => {
-            Some(make(*seat, ActionType::Post, Some(*amount as f64), None))
-        }
+        | TableAction::ForcedBet(seat, amount) => Some(make(*seat, ActionType::Post, Some(*amount as f64), None)),
         TableAction::Check(seat) => Some(make(*seat, ActionType::Check, None, None)),
-        TableAction::Bet(seat, amount) => {
-            Some(make(*seat, ActionType::Bet, Some(*amount as f64), None))
-        }
-        TableAction::Call(seat, amount) => {
-            Some(make(*seat, ActionType::Call, Some(*amount as f64), None))
-        }
-        TableAction::Raise(seat, amount) => {
-            Some(make(*seat, ActionType::Raise, Some(*amount as f64), None))
-        }
-        TableAction::AllIn(seat, amount) => Some(make(
-            *seat,
-            ActionType::AllIn,
-            Some(*amount as f64),
-            Some(true),
-        )),
+        TableAction::Bet(seat, amount) => Some(make(*seat, ActionType::Bet, Some(*amount as f64), None)),
+        TableAction::Call(seat, amount) => Some(make(*seat, ActionType::Call, Some(*amount as f64), None)),
+        TableAction::Raise(seat, amount) => Some(make(*seat, ActionType::Raise, Some(*amount as f64), None)),
+        TableAction::AllIn(seat, amount) => Some(make(*seat, ActionType::AllIn, Some(*amount as f64), Some(true))),
         TableAction::Fold(seat) => Some(make(*seat, ActionType::Fold, None, None)),
         _ => None,
     }
