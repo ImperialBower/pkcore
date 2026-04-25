@@ -23,14 +23,16 @@ A running poker table service where:
 | Repo | Status | Notes |
 |------|--------|-------|
 | [pkcore](https://github.com/folkengine/pkcore) | Active | Full poker library: `Table`, `Dealer`, `Player`, `Game`, card evaluation, GTO analysis |
-| [pkdealer](https://github.com/ImperialBower/pkdealer) | Skeleton | gRPC proto fully defined; only `Ping` is implemented; workspace has `proto`, `service`, `client` crates |
+| [pkdealer](https://github.com/ImperialBower/pkdealer) | Active (Phase 1 complete) | All 15 `DealerService` RPCs (`SeatPlayer`, `StartHand`, `Act`, `GetStatus`, `StreamEvents`, etc.) wired to `pkcore::Dealer`; `tokio::sync::broadcast` event streaming working; depends on pkcore 0.0.48; workspace = `proto`, `service`, `client` crates |
 | [pkbot](https://github.com/ImperialBower/pkbot) | Skeleton | Bot personality library; YAML-serializable range and betting strategies for use by pkdealer agent clients |
 | [pkgto-web](https://github.com/ImperialBower/pkgto-web) | Active | WASM preflop equity analyzer; single `analyze_gto` function, deployed to GitHub Pages |
 
-The `dealer.proto` in pkdealer already defines all the RPCs needed:
-`SeatPlayer`, `StartHand`, `Act`, `AdvanceStreet`, `EndHand`,
-`StreamEvents`, `GetStatus`, etc. The foundation is solid — it just needs
-to be wired up.
+**pkdealer Phase 1 is complete:** the full `DealerService` is implemented
+on top of `pkcore::Dealer` and two clients can play a hand end-to-end
+with live event streaming. Phases 2–5 (EPICs 20–24) are designed but not
+yet started. EPIC-20 specifically still owes the `Dealer` →
+`PokerSession` migration and auto-advancing streets; EPICs 21–24
+(spectator, OTel, agents, demo) have no implementation yet.
 
 ---
 
