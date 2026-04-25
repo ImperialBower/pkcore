@@ -15,6 +15,8 @@ pub mod name;
 pub mod nubibus;
 pub mod omaha;
 pub mod outs;
+#[cfg(feature = "player-stats")]
+pub mod player_stats;
 pub mod player_wins;
 pub mod pot_odds;
 pub mod range_equity;

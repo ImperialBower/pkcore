@@ -13,9 +13,9 @@ exclude = [".github/workflows/*", "data/*", "docs/*", "examples/*", "generated/h
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-## Default features enable the bot-profiles and hand-histories YAML support so
+## Default features enable bot-profiles, hand-histories, and player-stats so
 ## that examples (e.g. interactive_play) work with a plain `cargo run --example`.
-default = ["bot-profiles", "hand-histories"]
+default = ["bot-profiles", "hand-histories", "player-stats"]
 ## When enabled, `SolverResult::save` and `SolverResult::load` use human-readable
 ## JSON instead of the default compact binary (postcard) format. Useful for
 ## inspecting solver output during development. The explicit `save_json` /
@@ -28,6 +28,9 @@ bot-profiles = ["dep:serde_yaml_bw"]
 ## Enables YAML serialization/deserialization for `HandHistory` and related
 ## types in the `hand_history` module. Adds a `serde_yaml_bw` dependency.
 hand-histories = ["dep:serde_yaml_bw"]
+## Enables the per-player aggregator in `analysis::player_stats`
+## (`PlayerStats`, `StatsRegistry`, `Confidence`, derived ratios). EPIC-26.
+player-stats = []
 
 [dependencies]
 bint = "0.1.15"
