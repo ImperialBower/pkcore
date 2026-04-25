@@ -6,6 +6,10 @@
 //! point: their own hole cards, the community board, pot size, stack sizes,
 //! and the current betting context.  Opponents' hole cards are **never**
 //! included.
+//!
+//! When the `player-stats` feature is enabled, snapshots may also carry an
+//! optional borrow on a [`StatsRegistry`](crate::analysis::player_stats::StatsRegistry)
+//! via [`TableSnapshot::from_table_with_stats`].  See EPIC-26 for design.
 
 use crate::Pile;
 use crate::cards::Cards;
@@ -13,6 +17,9 @@ use crate::casino::table::event::TableAction;
 use crate::casino::table::position::Position;
 use crate::casino::table_no_cell::TableNoCell;
 use crate::games::GamePhase;
+
+#[cfg(feature = "player-stats")]
+use crate::analysis::player_stats::StatsRegistry;
 
 // ── SeatInfo ──────────────────────────────────────────────────────────────────
 
@@ -54,8 +61,11 @@ pub struct SeatInfo {
 /// A point-in-time snapshot of the table from one player's perspective.
 ///
 /// Constructed by [`TableSnapshot::from_table`] and passed to
-/// [`BotDecider::decide`](crate::bot::decider::BotDecider::decide).  All
-/// fields are owned values — no lifetime binds this struct to the live table.
+/// [`BotDecider::decide`](crate::bot::decider::BotDecider::decide).  Most
+/// fields are owned values; the snapshot's lifetime parameter `'a` exists
+/// solely to carry the optional [`Self::opponent_stats`] borrow added in
+/// EPIC-26 Phase 3.  Snapshots constructed without stats can use any
+/// lifetime (e.g. `TableSnapshot<'static>`).
 ///
 /// # Visibility rules
 ///
@@ -63,6 +73,9 @@ pub struct SeatInfo {
 /// - **`board`** — full community cards.
 /// - **`stacks`** — chip counts and bets for every seated player (no hole
 ///   cards for opponents).
+/// - **`opponent_stats`** *(feature `player-stats`)* — optional borrow on a
+///   [`StatsRegistry`] for exploitative deciders.  `None` for snapshots
+///   built via [`Self::from_table`].
 ///
 /// # Examples
 ///
@@ -83,7 +96,7 @@ pub struct SeatInfo {
 /// assert_eq!(100, snap.big_blind);
 /// ```
 #[derive(Clone, Debug)]
-pub struct TableSnapshot {
+pub struct TableSnapshot<'a> {
     /// The seat index this snapshot was built for.
     pub seat: u8,
     /// Current game phase (preflop, flop, turn, river, …).
@@ -122,14 +135,27 @@ pub struct TableSnapshot {
     /// `None` when the seat is not in the occupied list (should not occur
     /// during normal play).
     pub logical_seat: Option<u8>,
+    /// Optional borrow on the per-player aggregator. `None` for snapshots
+    /// built via [`Self::from_table`]; `Some(_)` when built via
+    /// [`Self::from_table_with_stats`]. Reserved for future exploitative
+    /// deciders — the shipped `RuleBasedDecider` and `JokerDecider` ignore
+    /// this field and produce identical decisions whether it is set or not.
+    #[cfg(feature = "player-stats")]
+    pub opponent_stats: Option<&'a StatsRegistry>,
+    /// Holds the lifetime parameter when the `player-stats` feature is off.
+    /// Zero-sized; not exposed publicly.
+    #[cfg(not(feature = "player-stats"))]
+    _stats_lifetime: std::marker::PhantomData<&'a ()>,
 }
 
-impl TableSnapshot {
+impl<'a> TableSnapshot<'a> {
     /// Constructs a `TableSnapshot` from a live `TableNoCell` from `seat`'s
     /// perspective.
     ///
-    /// The `board` and `hole_cards` fields are cloned from the table; no
-    /// lifetime ties this snapshot to the original table reference.
+    /// The `board` and `hole_cards` fields are cloned from the table; the
+    /// returned snapshot does not borrow from the table itself.  Built with
+    /// `opponent_stats: None` — use [`Self::from_table_with_stats`] to
+    /// attach an opponent stats registry.
     ///
     /// # Examples
     ///
@@ -242,7 +268,46 @@ impl TableSnapshot {
             dealer_button,
             seat_count,
             logical_seat,
+            #[cfg(feature = "player-stats")]
+            opponent_stats: None,
+            #[cfg(not(feature = "player-stats"))]
+            _stats_lifetime: std::marker::PhantomData,
         }
+    }
+
+    /// Constructs a snapshot with an attached [`StatsRegistry`] borrow.
+    ///
+    /// Equivalent to [`Self::from_table`] followed by setting
+    /// `opponent_stats = Some(registry)`.  The shipped deciders ignore this
+    /// field — see EPIC-26 Phase 3 for the non-behavior-changing contract.
+    ///
+    /// Only available when the `player-stats` feature is enabled.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "player-stats")] {
+    /// use pkcore::analysis::player_stats::StatsRegistry;
+    /// use pkcore::bot::table_snapshot::TableSnapshot;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("X".to_string(), 500)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("Y".to_string(), 500)),
+    /// ]);
+    /// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(5, 10));
+    /// let registry = StatsRegistry::new();
+    /// let snap = TableSnapshot::from_table_with_stats(&table, 0, &registry);
+    /// assert!(snap.opponent_stats.is_some());
+    /// # }
+    /// ```
+    #[cfg(feature = "player-stats")]
+    #[must_use]
+    pub fn from_table_with_stats(table: &TableNoCell, seat: u8, registry: &'a StatsRegistry) -> Self {
+        let mut snap = Self::from_table(table, seat);
+        snap.opponent_stats = Some(registry);
+        snap
     }
 
     /// Returns this player's table position relative to the dealer button.
@@ -458,6 +523,44 @@ mod bot__table_snapshot_tests {
         let mut snap = TableSnapshot::from_table(&table, 0);
         snap.dealer_button = None;
         assert_eq!(None, snap.position());
+    }
+
+    #[cfg(feature = "player-stats")]
+    #[test]
+    fn from_table_sets_opponent_stats_none() {
+        let table = two_player_table();
+        let snap = TableSnapshot::from_table(&table, 0);
+        assert!(snap.opponent_stats.is_none());
+    }
+
+    #[cfg(feature = "player-stats")]
+    #[test]
+    fn from_table_with_stats_attaches_registry() {
+        use crate::analysis::player_stats::StatsRegistry;
+        let table = two_player_table();
+        let registry = StatsRegistry::new();
+        let snap = TableSnapshot::from_table_with_stats(&table, 0, &registry);
+        assert!(snap.opponent_stats.is_some());
+        // Same scalar fields as from_table — only opponent_stats changes.
+        let plain = TableSnapshot::from_table(&table, 0);
+        assert_eq!(plain.seat, snap.seat);
+        assert_eq!(plain.my_chips, snap.my_chips);
+        assert_eq!(plain.big_blind, snap.big_blind);
+    }
+
+    #[cfg(feature = "player-stats")]
+    #[test]
+    fn from_table_with_stats_borrows_existing_registry() {
+        // Tripwire: the registry borrow shows the *same* state the caller
+        // populated, not a clone — so future ingestions are visible to any
+        // decider holding the snapshot in the same scope.
+        use crate::analysis::player_stats::StatsRegistry;
+        let table = two_player_table();
+        let registry = StatsRegistry::new();
+        let snap = TableSnapshot::from_table_with_stats(&table, 0, &registry);
+        let borrowed = snap.opponent_stats.expect("just attached");
+        assert_eq!(0, borrowed.len());
+        assert!(borrowed.is_empty());
     }
 
     #[test]

@@ -1313,10 +1313,7 @@ impl Streets {
     /// ```
     #[must_use]
     #[allow(clippy::cast_precision_loss)]
-    pub fn from_event_log_with_seat_ids(
-        log: &[TableAction],
-        seat_to_id: &HashMap<u8, Uuid>,
-    ) -> Option<Self> {
+    pub fn from_event_log_with_seat_ids(log: &[TableAction], seat_to_id: &HashMap<u8, Uuid>) -> Option<Self> {
         if log.is_empty() {
             return None;
         }
@@ -2669,7 +2666,10 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(0, "A".to_string(), 1000, None, None), (1, "B".to_string(), 1000, None, None)],
+            &[
+                (0, "A".to_string(), 1000, None, None),
+                (1, "B".to_string(), 1000, None, None),
+            ],
             "",
             &Winnings::default(),
             &[],
