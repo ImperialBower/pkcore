@@ -1,4 +1,4 @@
-#![doc = include_str!("../../docs/BOT_MODULE_GUIDE.md")]
+#![doc = include_str!("BOT_MODULE_GUIDE.md")]
 
 pub mod betting_strategy;
 pub mod decider;
