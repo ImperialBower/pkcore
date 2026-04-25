@@ -8,8 +8,8 @@
 //! included.
 //!
 //! When the `player-stats` feature is enabled, snapshots may also carry an
-//! optional borrow on a [`StatsRegistry`](crate::analysis::player_stats::StatsRegistry)
-//! via [`TableSnapshot::from_table_with_stats`].  See EPIC-26 for design.
+//! optional borrow on a [`StatsRegistry`] via
+//! [`TableSnapshot::from_table_with_stats`].  See EPIC-26 for design.
 
 use crate::Pile;
 use crate::cards::Cards;
