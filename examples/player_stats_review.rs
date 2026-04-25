@@ -18,10 +18,9 @@ use pkcore::analysis::player_stats::{Confidence, PlayerStats, StatsRegistry};
 use pkcore::bot::profile::BotProfile;
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::session::PokerSession;
-use pkcore::casino::table::event::TableAction;
 use pkcore::casino::table::winnings::Winnings;
 use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
-use pkcore::hand_history::HandHistory;
+use pkcore::hand_history::{HandHistory, PlayerSnapshot};
 use rand::Rng;
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -125,14 +124,14 @@ fn run_one_hand(
         .unwrap_or(0);
     let button = session.table.button;
 
-    let stacks: Vec<(u8, String, usize)> = (0..session.table.seats.0.len() as u8)
+    let stacks: Vec<(u8, String, usize, Uuid)> = (0..session.table.seats.0.len() as u8)
         .filter_map(|i| {
             session
                 .table
                 .seats
                 .get_seat(i)
                 .filter(|s| !s.is_empty())
-                .map(|s| (i, s.player.handle.clone(), s.player.chips))
+                .map(|s| (i, s.player.handle.clone(), s.player.chips, s.player.id))
         })
         .collect();
     let event_log_start = session.table.event_log.len();
@@ -155,11 +154,11 @@ fn run_one_hand(
             })
         })
         .collect();
-    let player_snapshot: Vec<(u8, String, usize, Option<String>)> = stacks
+    let player_snapshot: Vec<PlayerSnapshot> = stacks
         .into_iter()
-        .map(|(seat, name, stack)| {
+        .map(|(seat, name, stack, id)| {
             let hole = hole_cards.iter().find(|(s, _)| *s == seat).and_then(|(_, h)| h.clone());
-            (seat, name, stack, hole)
+            (seat, name, stack, hole, Some(id))
         })
         .collect();
 
@@ -182,19 +181,6 @@ fn run_one_hand(
         })
         .collect();
 
-    // `from_table_state` derives every Action's `player_id` from
-    // `TableAction::PlayerSeated` events found in `event_log`, but those events
-    // were emitted at *table construction* — long before this hand's slice
-    // begins. Prepend them so the EPIC-26 identity threading kicks in.
-    let mut event_log_for_hh: Vec<TableAction> = session
-        .table
-        .event_log
-        .iter()
-        .filter(|e| matches!(e, TableAction::PlayerSeated(_, _)))
-        .cloned()
-        .collect();
-    event_log_for_hh.extend_from_slice(&session.table.event_log[event_log_start..]);
-
     Some(HandHistory::from_table_state(
         hand_num,
         ts_secs,
@@ -203,7 +189,7 @@ fn run_one_hand(
         &player_snapshot,
         &board_str,
         &winnings,
-        &event_log_for_hh,
+        &session.table.event_log[event_log_start..],
         &ending_stacks,
         RUN_NAME,
         session.shuffled_deck_str.clone(),

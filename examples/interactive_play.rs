@@ -32,6 +32,7 @@ use rand::Rng;
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
+use uuid::Uuid;
 
 const STARTING_CHIPS: usize = 10_000;
 const SMALL_BLIND: usize = 50;
@@ -173,13 +174,13 @@ fn run_hand(
     let button = table.button;
 
     // Snapshot starting stacks before forced bets (hand-history convention).
-    let stacks: Vec<(u8, String, usize)> = (0..table.seats.0.len() as u8)
+    let stacks: Vec<(u8, String, usize, Uuid)> = (0..table.seats.0.len() as u8)
         .filter_map(|i| {
             table
                 .seats
                 .get_seat(i)
                 .filter(|s| !s.is_empty())
-                .map(|s| (i, s.player.handle.clone(), s.player.chips))
+                .map(|s| (i, s.player.handle.clone(), s.player.chips, s.player.id))
         })
         .collect();
 
@@ -205,11 +206,11 @@ fn run_hand(
         .collect();
 
     // Merge stacks + hole cards into a single snapshot.
-    let player_snapshot: Vec<(u8, String, usize, Option<String>)> = stacks
+    let player_snapshot: Vec<(u8, String, usize, Option<String>, Option<Uuid>)> = stacks
         .into_iter()
-        .map(|(seat, name, stack)| {
+        .map(|(seat, name, stack, id)| {
             let hole = hole_cards.iter().find(|(s, _)| *s == seat).and_then(|(_, h)| h.clone());
-            (seat, name, stack, hole)
+            (seat, name, stack, hole, Some(id))
         })
         .collect();
 
@@ -556,7 +557,7 @@ fn build_hand_history(
     hand_num: usize,
     ts_secs: u64,
     button: u8,
-    player_snapshot: &[(u8, String, usize, Option<String>)],
+    player_snapshot: &[(u8, String, usize, Option<String>, Option<Uuid>)],
     board_str: &str,
     winnings: &Winnings,
     event_log: &[pkcore::casino::table::event::TableAction],

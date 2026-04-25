@@ -180,6 +180,13 @@ fn default_format_version() -> u32 {
     FORMAT_VERSION
 }
 
+/// Per-seat snapshot tuple consumed by [`HandHistory::from_table_state`].
+///
+/// `(seat, name, starting_stack, hole_cards, player_id)` — `player_id` is
+/// the per-player [`Uuid`] (typically `PlayerNoCell.id`); pass `None` for
+/// callers that pre-date EPIC-26's identity threading.
+pub type PlayerSnapshot = (u8, String, usize, Option<String>, Option<Uuid>);
+
 impl HandHistory {
     /// Constructs a [`HandHistory`] from live game state captured around a
     /// completed hand.
@@ -195,10 +202,15 @@ impl HandHistory {
     /// - `ts_secs` — Unix timestamp in seconds.
     /// - `button` — 0-based seat index of the dealer button.
     /// - `forced` — blinds/ante structure.
-    /// - `player_snapshot` — `(seat, name, starting_stack, hole_cards)` tuples.
+    /// - `player_snapshot` — `(seat, name, starting_stack, hole_cards, player_id)`
+    ///   tuples. `player_id` is the per-player [`Uuid`] (typically
+    ///   `PlayerNoCell.id`); pass `None` for legacy callers without identity.
     /// - `board_str` — full community board string, or `""` when no board was dealt.
     /// - `winnings` — post-`end_hand` pot distribution.
-    /// - `event_log` — `table.event_log` slice for deriving per-street actions.
+    /// - `event_log` — per-hand slice of `table.event_log` for deriving per-street
+    ///   actions. The slice does **not** need to contain
+    ///   [`TableAction::PlayerSeated`] events; identity threading uses
+    ///   `player_snapshot.player_id` directly.
     /// - `ending_stacks` — `(seat, chips)` captured after `end_hand()`.
     /// - `source` — provenance label (e.g. `"interactive_play"`).
     ///
@@ -213,7 +225,7 @@ impl HandHistory {
     /// let hh = HandHistory::from_table_state(
     ///     1, 0, 0,
     ///     &ForcedBets::new(50, 100),
-    ///     &[(0, "Alice".to_string(), 1000, Some("A♠ K♠".to_string()))],
+    ///     &[(0, "Alice".to_string(), 1000, Some("A♠ K♠".to_string()), None)],
     ///     "", &Winnings::default(), &[], &[(0, 1000)], "test", None,
     /// );
     /// assert_eq!(hh.hand.id, "test-hand-001");
@@ -230,7 +242,7 @@ impl HandHistory {
         ts_secs: u64,
         button: u8,
         forced: &ForcedBets,
-        player_snapshot: &[(u8, String, usize, Option<String>)],
+        player_snapshot: &[PlayerSnapshot],
         board_str: &str,
         winnings: &Winnings,
         event_log: &[TableAction],
@@ -238,9 +250,19 @@ impl HandHistory {
         source: &str,
         shuffled_deck: Option<String>,
     ) -> Self {
+        // Folded seats — used to emit `Outcome::Fold` instead of conflating
+        // "folded" with "lost at showdown".
+        let folded_seats: std::collections::HashSet<u8> = event_log
+            .iter()
+            .filter_map(|e| match e {
+                TableAction::Fold(seat) => Some(*seat),
+                _ => None,
+            })
+            .collect();
+
         let results: Vec<ResultEntry> = player_snapshot
             .iter()
-            .map(|(seat, _, starting_stack, hole_cards)| {
+            .map(|(seat, _, starting_stack, hole_cards, _player_id)| {
                 let pot_won: f64 = winnings
                     .vec()
                     .iter()
@@ -253,11 +275,19 @@ impl HandHistory {
 
                 let ranked = hole_cards.as_deref().and_then(|h| rank_seven(h, board_str));
 
+                let outcome = if folded_seats.contains(seat) {
+                    Outcome::Fold
+                } else if pot_won > 0.0 {
+                    Outcome::Win
+                } else {
+                    Outcome::Lose
+                };
+
                 ResultEntry {
                     seat: *seat,
                     best_hand: ranked.as_ref().map(|r| r.hand.to_string()),
                     hand_rank: ranked.as_ref().map(|r| r.hand_rank),
-                    outcome: if pot_won > 0.0 { Outcome::Win } else { Outcome::Lose },
+                    outcome,
                     net,
                     pot_won: if pot_won > 0.0 { Some(pot_won) } else { None },
                     mucked: None,
@@ -290,32 +320,29 @@ impl HandHistory {
                     straddle: None,
                 },
             },
-            players: {
-                let seat_to_id: HashMap<u8, Uuid> = event_log
-                    .iter()
-                    .filter_map(|ev| match ev {
-                        TableAction::PlayerSeated(seat, id) => Some((*seat, *id)),
-                        _ => None,
-                    })
-                    .collect();
-                player_snapshot
-                    .iter()
-                    .map(|(seat, name, stack, hole_cards)| PlayerEntry {
-                        seat: *seat,
-                        name: name.clone(),
-                        stack: *stack as f64,
-                        player_id: seat_to_id.get(seat).copied(),
-                        hole_cards: hole_cards.clone(),
-                        posted: None,
-                    })
-                    .collect()
-            },
+            players: player_snapshot
+                .iter()
+                .map(|(seat, name, stack, hole_cards, player_id)| PlayerEntry {
+                    seat: *seat,
+                    name: name.clone(),
+                    stack: *stack as f64,
+                    player_id: *player_id,
+                    hole_cards: hole_cards.clone(),
+                    posted: None,
+                })
+                .collect(),
             board: if board_str.is_empty() {
                 None
             } else {
                 Some(board_str.to_string())
             },
-            streets: Streets::from_event_log(event_log),
+            streets: {
+                let seat_to_id: HashMap<u8, Uuid> = player_snapshot
+                    .iter()
+                    .filter_map(|(seat, _, _, _, id)| id.map(|id| (*seat, id)))
+                    .collect();
+                Streets::from_event_log_with_seat_ids(event_log, &seat_to_id)
+            },
             results: Some(results),
             analysis: None,
             shuffled_deck,
@@ -1238,8 +1265,58 @@ impl Streets {
     /// assert!(streets.flop.is_none());
     /// ```
     #[must_use]
-    #[allow(clippy::cast_precision_loss)]
     pub fn from_event_log(log: &[TableAction]) -> Option<Self> {
+        let seat_to_id: HashMap<u8, Uuid> = log
+            .iter()
+            .filter_map(|ev| match ev {
+                TableAction::PlayerSeated(seat, id) => Some((*seat, *id)),
+                _ => None,
+            })
+            .collect();
+        Self::from_event_log_with_seat_ids(log, &seat_to_id)
+    }
+
+    /// Variant of [`Streets::from_event_log`] that takes the seat → [`Uuid`]
+    /// mapping explicitly instead of scanning `log` for
+    /// [`TableAction::PlayerSeated`] events.
+    ///
+    /// Use this when `log` is a *per-hand slice* of a longer-running session's
+    /// event log — `PlayerSeated` events fire at table construction and are
+    /// not present in subsequent per-hand slices, so the implicit scan would
+    /// leave every `Action.player_id` as `None`.
+    ///
+    /// Returns `None` only if `log` is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::collections::HashMap;
+    /// use pkcore::hand_history::Streets;
+    /// use pkcore::casino::table::event::TableAction;
+    /// use uuid::Uuid;
+    ///
+    /// let alice = Uuid::new_v4();
+    /// let bob = Uuid::new_v4();
+    /// let mut seat_to_id = HashMap::new();
+    /// seat_to_id.insert(1, alice);
+    /// seat_to_id.insert(2, bob);
+    ///
+    /// // Slice does NOT contain PlayerSeated events.
+    /// let log = vec![
+    ///     TableAction::ForcedBetSmallBlind(1, 50),
+    ///     TableAction::ForcedBetBigBlind(2, 100),
+    ///     TableAction::Fold(1),
+    /// ];
+    /// let streets = Streets::from_event_log_with_seat_ids(&log, &seat_to_id).unwrap();
+    /// let action = &streets.preflop.as_ref().unwrap().actions[2];
+    /// assert_eq!(action.player_id, Some(alice));
+    /// ```
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)]
+    pub fn from_event_log_with_seat_ids(
+        log: &[TableAction],
+        seat_to_id: &HashMap<u8, Uuid>,
+    ) -> Option<Self> {
         if log.is_empty() {
             return None;
         }
@@ -1259,14 +1336,6 @@ impl Streets {
         let mut flop_cards: Option<String> = None;
         let mut turn_card: Option<String> = None;
         let mut river_card: Option<String> = None;
-
-        let seat_to_id: HashMap<u8, Uuid> = log
-            .iter()
-            .filter_map(|ev| match ev {
-                TableAction::PlayerSeated(seat, id) => Some((*seat, *id)),
-                _ => None,
-            })
-            .collect();
 
         for event in log {
             match event {
@@ -1292,7 +1361,7 @@ impl Streets {
                     }
                 }
                 other => {
-                    if let Some(action) = table_action_to_hand_action(other, &seat_to_id) {
+                    if let Some(action) = table_action_to_hand_action(other, seat_to_id) {
                         match current {
                             EventStreet::Preflop => preflop_actions.push(action),
                             EventStreet::Flop => flop_actions.push(action),
@@ -2576,7 +2645,7 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(0, "Alice".to_string(), 1000, None)],
+            &[(0, "Alice".to_string(), 1000, None, None)],
             "",
             &Winnings::default(),
             &[],
@@ -2600,7 +2669,7 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(0, "A".to_string(), 1000, None), (1, "B".to_string(), 1000, None)],
+            &[(0, "A".to_string(), 1000, None, None), (1, "B".to_string(), 1000, None, None)],
             "",
             &Winnings::default(),
             &[],
@@ -3012,7 +3081,7 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(1, "Alice".to_string(), 1000, None)],
+            &[(1, "Alice".to_string(), 1000, None, None)],
             "",
             &Winnings::default(),
             &[],
@@ -3036,7 +3105,7 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(1, "Alice".to_string(), 1000, None)],
+            &[(1, "Alice".to_string(), 1000, None, None)],
             "",
             &Winnings::default(),
             &[],
@@ -3064,7 +3133,7 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(1, "Alice".to_string(), 1000, None)],
+            &[(1, "Alice".to_string(), 1000, None, None)],
             "",
             &Winnings::default(),
             &[],
@@ -3079,7 +3148,7 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(1, "Alice".to_string(), 1000, None)],
+            &[(1, "Alice".to_string(), 1000, None, None)],
             "",
             &Winnings::default(),
             &[],

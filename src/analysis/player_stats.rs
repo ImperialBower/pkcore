@@ -353,29 +353,12 @@ impl StatsRegistry {
 
         // ── Showdown ───────────────────────────────────────────────────────
         if let Some(results) = &hand.results {
-            // Determine which seats folded by walking the street actions —
-            // `from_table_state` only emits Win/Lose outcomes (never Fold), so
-            // the result enum alone can't distinguish "won uncontested" from
-            // "won at showdown".
-            let folded_seats: HashSet<u8> = streets
-                .preflop
-                .iter()
-                .flat_map(|s| s.actions.iter())
-                .chain(streets.flop.iter().flat_map(|s| s.actions.iter()))
-                .chain(streets.turn.iter().flat_map(|s| s.actions.iter()))
-                .chain(streets.river.iter().flat_map(|s| s.actions.iter()))
-                .filter(|a| a.action == ActionType::Fold)
-                .map(|a| a.seat)
-                .collect();
-
-            let contested = results
-                .iter()
-                .filter(|r| r.outcome != Outcome::Fold && !folded_seats.contains(&r.seat))
-                .count()
-                >= 2;
+            // A real showdown requires ≥ 2 non-folded contestants; otherwise
+            // the hand was won uncontested.
+            let contested = results.iter().filter(|r| r.outcome != Outcome::Fold).count() >= 2;
             if contested {
                 for r in results {
-                    if folded_seats.contains(&r.seat) || r.outcome == Outcome::Fold {
+                    if r.outcome == Outcome::Fold {
                         continue;
                     }
                     let Some(id) = seat_to_id.get(&r.seat).copied() else {
