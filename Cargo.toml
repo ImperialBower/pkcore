@@ -85,6 +85,10 @@ required-features = ["hand-histories"]
 name = "yaml_audit"
 required-features = ["hand-histories"]
 
+[[example]]
+name = "player_stats_review"
+required-features = ["bot-profiles", "hand-histories", "player-stats"]
+
 [[test]]
 name = "replay_consistency"
 required-features = ["hand-histories", "bot-profiles"]
