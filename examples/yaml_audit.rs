@@ -223,6 +223,7 @@ mod tests {
     fn make_player(seat: u8, name: &str, stack: f64) -> PlayerEntry {
         PlayerEntry {
             seat,
+            player_id: None,
             name: name.to_string(),
             stack,
             hole_cards: None,

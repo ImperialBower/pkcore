@@ -232,6 +232,7 @@ mod tests {
         vec![
             PlayerEntry {
                 seat: 0,
+                player_id: None,
                 name: "Alice".to_string(),
                 stack: 1000.0,
                 hole_cards: None,
@@ -239,6 +240,7 @@ mod tests {
             },
             PlayerEntry {
                 seat: 1,
+                player_id: None,
                 name: "Bob".to_string(),
                 stack: 1000.0,
                 hole_cards: None,

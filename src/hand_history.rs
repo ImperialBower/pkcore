@@ -66,7 +66,9 @@ use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableN
 use crate::games::GamePhase;
 use crate::play::board::Board;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::str::FromStr;
+use uuid::Uuid;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Format version constant
@@ -288,16 +290,26 @@ impl HandHistory {
                     straddle: None,
                 },
             },
-            players: player_snapshot
-                .iter()
-                .map(|(seat, name, stack, hole_cards)| PlayerEntry {
-                    seat: *seat,
-                    name: name.clone(),
-                    stack: *stack as f64,
-                    hole_cards: hole_cards.clone(),
-                    posted: None,
-                })
-                .collect(),
+            players: {
+                let seat_to_id: HashMap<u8, Uuid> = event_log
+                    .iter()
+                    .filter_map(|ev| match ev {
+                        TableAction::PlayerSeated(seat, id) => Some((*seat, *id)),
+                        _ => None,
+                    })
+                    .collect();
+                player_snapshot
+                    .iter()
+                    .map(|(seat, name, stack, hole_cards)| PlayerEntry {
+                        seat: *seat,
+                        name: name.clone(),
+                        stack: *stack as f64,
+                        player_id: seat_to_id.get(seat).copied(),
+                        hole_cards: hole_cards.clone(),
+                        posted: None,
+                    })
+                    .collect()
+            },
             board: if board_str.is_empty() {
                 None
             } else {
@@ -351,17 +363,17 @@ impl HandHistory {
     ///     },
     ///     players: vec![
     ///         PlayerEntry { seat: 0, name: "A".to_string(), stack: 1000.0,
-    ///             hole_cards: Some("A♠ K♠".to_string()), posted: None },
+    ///             player_id: None, hole_cards: Some("A♠ K♠".to_string()), posted: None },
     ///         PlayerEntry { seat: 1, name: "B".to_string(), stack: 1000.0,
-    ///             hole_cards: Some("7♦ 2♣".to_string()), posted: None },
+    ///             player_id: None, hole_cards: Some("7♦ 2♣".to_string()), posted: None },
     ///     ],
     ///     board: None,
     ///     streets: Some(Streets {
     ///         preflop: Some(PreflopStreet {
     ///             actions: vec![
-    ///                 Action { seat: 0, action: ActionType::Post, amount: Some(50.0), all_in: None },
-    ///                 Action { seat: 1, action: ActionType::Post, amount: Some(100.0), all_in: None },
-    ///                 Action { seat: 0, action: ActionType::Fold, amount: None, all_in: None },
+    ///                 Action { seat: 0, player_id: None, action: ActionType::Post, amount: Some(50.0), all_in: None },
+    ///                 Action { seat: 1, player_id: None, action: ActionType::Post, amount: Some(100.0), all_in: None },
+    ///                 Action { seat: 0, player_id: None, action: ActionType::Fold, amount: None, all_in: None },
     ///             ],
     ///             pot: Some(150.0),
     ///         }),
@@ -1044,6 +1056,7 @@ pub struct Stakes {
 ///     seat: 1,
 ///     name: "Alice".to_string(),
 ///     stack: 500.0,
+///     player_id: None,
 ///     hole_cards: Some("A♠ K♠".to_string()),
 ///     posted: None,
 /// };
@@ -1059,6 +1072,14 @@ pub struct PlayerEntry {
 
     /// Starting stack in chips/currency units.
     pub stack: f64,
+
+    /// Stable per-player identity carried through `TableAction::PlayerSeated`.
+    ///
+    /// `None` when the entry comes from a legacy YAML file that was written
+    /// before EPIC-26 added identity propagation. New sessions populate it
+    /// from `PlayerNoCell::uuid`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player_id: Option<Uuid>,
 
     /// Hole cards as a card string (e.g., `"6♠ 6♥"` or `"6s6h"`).
     ///
@@ -1091,6 +1112,7 @@ impl PlayerEntry {
     ///     seat: 1,
     ///     name: "Alice".to_string(),
     ///     stack: 200.0,
+    ///     player_id: None,
     ///     hole_cards: Some("A♠ K♠".to_string()),
     ///     posted: None,
     /// };
@@ -1145,7 +1167,7 @@ pub enum PostedBlind {
 ///
 /// let streets = Streets {
 ///     preflop: Some(PreflopStreet {
-///         actions: vec![Action { seat: 1, action: ActionType::Fold, amount: None, all_in: None }],
+///         actions: vec![Action { seat: 1, player_id: None, action: ActionType::Fold, amount: None, all_in: None }],
 ///         pot: Some(3.0),
 ///     }),
 ///     flop: None,
@@ -1238,6 +1260,14 @@ impl Streets {
         let mut turn_card: Option<String> = None;
         let mut river_card: Option<String> = None;
 
+        let seat_to_id: HashMap<u8, Uuid> = log
+            .iter()
+            .filter_map(|ev| match ev {
+                TableAction::PlayerSeated(seat, id) => Some((*seat, *id)),
+                _ => None,
+            })
+            .collect();
+
         for event in log {
             match event {
                 TableAction::DealtFlop(bard) => {
@@ -1262,7 +1292,7 @@ impl Streets {
                     }
                 }
                 other => {
-                    if let Some(action) = table_action_to_hand_action(other) {
+                    if let Some(action) = table_action_to_hand_action(other, &seat_to_id) {
                         match current {
                             EventStreet::Preflop => preflop_actions.push(action),
                             EventStreet::Flop => flop_actions.push(action),
@@ -1305,54 +1335,45 @@ impl Streets {
 /// Maps a single [`TableAction`] to a [`Action`] for the hand history.
 ///
 /// Returns `None` for non-player-action events (deals, pot bookkeeping, etc.).
+/// `seat_to_id` supplies the per-seat `Uuid` previously announced via
+/// `TableAction::PlayerSeated`; missing entries leave `Action.player_id` as
+/// `None` (e.g. legacy event logs that pre-date EPIC-26).
 #[allow(clippy::cast_precision_loss)]
-fn table_action_to_hand_action(event: &TableAction) -> Option<Action> {
+fn table_action_to_hand_action(
+    event: &TableAction,
+    seat_to_id: &HashMap<u8, Uuid>,
+) -> Option<Action> {
+    let make = |seat: u8, action: ActionType, amount: Option<f64>, all_in: Option<bool>| Action {
+        seat,
+        player_id: seat_to_id.get(&seat).copied(),
+        action,
+        amount,
+        all_in,
+    };
     match event {
         TableAction::ForcedBetSmallBlind(seat, amount)
         | TableAction::ForcedBetBigBlind(seat, amount)
         | TableAction::BetAnteForced(seat, amount)
-        | TableAction::ForcedBet(seat, amount) => Some(Action {
-            seat: *seat,
-            action: ActionType::Post,
-            amount: Some(*amount as f64),
-            all_in: None,
-        }),
-        TableAction::Check(seat) => Some(Action {
-            seat: *seat,
-            action: ActionType::Check,
-            amount: None,
-            all_in: None,
-        }),
-        TableAction::Bet(seat, amount) => Some(Action {
-            seat: *seat,
-            action: ActionType::Bet,
-            amount: Some(*amount as f64),
-            all_in: None,
-        }),
-        TableAction::Call(seat, amount) => Some(Action {
-            seat: *seat,
-            action: ActionType::Call,
-            amount: Some(*amount as f64),
-            all_in: None,
-        }),
-        TableAction::Raise(seat, amount) => Some(Action {
-            seat: *seat,
-            action: ActionType::Raise,
-            amount: Some(*amount as f64),
-            all_in: None,
-        }),
-        TableAction::AllIn(seat, amount) => Some(Action {
-            seat: *seat,
-            action: ActionType::AllIn,
-            amount: Some(*amount as f64),
-            all_in: Some(true),
-        }),
-        TableAction::Fold(seat) => Some(Action {
-            seat: *seat,
-            action: ActionType::Fold,
-            amount: None,
-            all_in: None,
-        }),
+        | TableAction::ForcedBet(seat, amount) => {
+            Some(make(*seat, ActionType::Post, Some(*amount as f64), None))
+        }
+        TableAction::Check(seat) => Some(make(*seat, ActionType::Check, None, None)),
+        TableAction::Bet(seat, amount) => {
+            Some(make(*seat, ActionType::Bet, Some(*amount as f64), None))
+        }
+        TableAction::Call(seat, amount) => {
+            Some(make(*seat, ActionType::Call, Some(*amount as f64), None))
+        }
+        TableAction::Raise(seat, amount) => {
+            Some(make(*seat, ActionType::Raise, Some(*amount as f64), None))
+        }
+        TableAction::AllIn(seat, amount) => Some(make(
+            *seat,
+            ActionType::AllIn,
+            Some(*amount as f64),
+            Some(true),
+        )),
+        TableAction::Fold(seat) => Some(make(*seat, ActionType::Fold, None, None)),
         _ => None,
     }
 }
@@ -1365,7 +1386,7 @@ fn table_action_to_hand_action(event: &TableAction) -> Option<Action> {
 /// use pkcore::hand_history::{PreflopStreet, Action, ActionType};
 ///
 /// let preflop = PreflopStreet {
-///     actions: vec![Action { seat: 1, action: ActionType::Check, amount: None, all_in: None }],
+///     actions: vec![Action { seat: 1, player_id: None, action: ActionType::Check, amount: None, all_in: None }],
 ///     pot: None,
 /// };
 /// assert_eq!(preflop.actions.len(), 1);
@@ -1389,7 +1410,7 @@ pub struct PreflopStreet {
 ///
 /// let flop = FlopStreet {
 ///     cards: "9♣ 6♦ 5♥".to_string(),
-///     actions: vec![Action { seat: 1, action: ActionType::Check, amount: None, all_in: None }],
+///     actions: vec![Action { seat: 1, player_id: None, action: ActionType::Check, amount: None, all_in: None }],
 ///     pot: Some(60200.0),
 /// };
 /// assert!(flop.to_three().is_ok());
@@ -1536,13 +1557,27 @@ impl RiverStreet {
 /// ```
 /// use pkcore::hand_history::{Action, ActionType};
 ///
-/// let action = Action { seat: 3, action: ActionType::Raise, amount: Some(100.0), all_in: None };
+/// let action = Action {
+///     seat: 3,
+///     player_id: None,
+///     action: ActionType::Raise,
+///     amount: Some(100.0),
+///     all_in: None,
+/// };
 /// assert_eq!(action.seat, 3);
 /// ```
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Action {
     /// Seat number of the acting player (1-indexed).
     pub seat: u8,
+
+    /// Stable per-player identity stamped from `TableAction::PlayerSeated`.
+    ///
+    /// `None` for actions parsed from legacy YAML files written before
+    /// EPIC-26 added identity propagation. Live event logs always populate
+    /// this from the seat's `PlayerSeated` Uuid.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player_id: Option<Uuid>,
 
     /// The action taken.
     pub action: ActionType,
@@ -2203,6 +2238,7 @@ results:
     fn test_player_entry_no_hole_cards() {
         let player = PlayerEntry {
             seat: 1,
+            player_id: None,
             name: "Alice".to_string(),
             stack: 200.0,
             hole_cards: None,
@@ -2626,6 +2662,7 @@ hands:
             players: vec![
                 PlayerEntry {
                     seat: 0,
+                    player_id: None,
                     name: "A".to_string(),
                     stack: 1000.0,
                     hole_cards: Some("A♠ K♠".to_string()),
@@ -2633,6 +2670,7 @@ hands:
                 },
                 PlayerEntry {
                     seat: 1,
+                    player_id: None,
                     name: "B".to_string(),
                     stack: 1000.0,
                     hole_cards: Some("7♦ 2♣".to_string()),
@@ -2645,18 +2683,21 @@ hands:
                     actions: vec![
                         Action {
                             seat: 0,
+                            player_id: None,
                             action: ActionType::Post,
                             amount: Some(50.0),
                             all_in: None,
                         },
                         Action {
                             seat: 1,
+                            player_id: None,
                             action: ActionType::Post,
                             amount: Some(100.0),
                             all_in: None,
                         },
                         Action {
                             seat: 0,
+                            player_id: None,
                             action: ActionType::Fold,
                             amount: None,
                             all_in: None,
@@ -2751,6 +2792,7 @@ hands:
             players: vec![
                 PlayerEntry {
                     seat: 2,
+                    player_id: None,
                     name: "gto".to_string(),
                     stack: 3675.0,
                     hole_cards: None,
@@ -2758,6 +2800,7 @@ hands:
                 },
                 PlayerEntry {
                     seat: 4,
+                    player_id: None,
                     name: "loose_passive".to_string(),
                     stack: 9200.0,
                     hole_cards: None,
@@ -2765,6 +2808,7 @@ hands:
                 },
                 PlayerEntry {
                     seat: 6,
+                    player_id: None,
                     name: "maniac".to_string(),
                     stack: 61075.0,
                     hole_cards: Some("5♦ 9♥".to_string()),
@@ -2777,30 +2821,35 @@ hands:
                     actions: vec![
                         Action {
                             seat: 2,
+                            player_id: None,
                             action: ActionType::Post,
                             amount: Some(50.0),
                             all_in: None,
                         },
                         Action {
                             seat: 4,
+                            player_id: None,
                             action: ActionType::Post,
                             amount: Some(100.0),
                             all_in: None,
                         },
                         Action {
                             seat: 6,
+                            player_id: None,
                             action: ActionType::Call,
                             amount: Some(100.0),
                             all_in: None,
                         },
                         Action {
                             seat: 2,
+                            player_id: None,
                             action: ActionType::Fold,
                             amount: None,
                             all_in: None,
                         },
                         Action {
                             seat: 4,
+                            player_id: None,
                             action: ActionType::Check,
                             amount: None,
                             all_in: None,
@@ -2813,18 +2862,21 @@ hands:
                     actions: vec![
                         Action {
                             seat: 4,
+                            player_id: None,
                             action: ActionType::Check,
                             amount: None,
                             all_in: None,
                         },
                         Action {
                             seat: 6,
+                            player_id: None,
                             action: ActionType::Bet,
                             amount: Some(250.0),
                             all_in: None,
                         },
                         Action {
                             seat: 4,
+                            player_id: None,
                             action: ActionType::Fold,
                             amount: None,
                             all_in: None,
@@ -3069,5 +3121,122 @@ hands:
         let all_in_action = preflop.actions.iter().find(|a| a.action == ActionType::AllIn).unwrap();
         assert_eq!(all_in_action.amount, Some(5000.0));
         assert_eq!(all_in_action.all_in, Some(true));
+    }
+
+    #[test]
+    fn streets_from_event_log_stamps_player_id() {
+        let alice = Uuid::new_v4();
+        let bob = Uuid::new_v4();
+        let log = vec![
+            TableAction::PlayerSeated(1, alice),
+            TableAction::PlayerSeated(2, bob),
+            TableAction::ForcedBetSmallBlind(1, 50),
+            TableAction::ForcedBetBigBlind(2, 100),
+            TableAction::Fold(1),
+            TableAction::Check(2),
+            TableAction::PotSize(150),
+        ];
+        let streets = Streets::from_event_log(&log).expect("streets parse");
+        let preflop = streets.preflop.as_ref().expect("preflop street");
+        for action in &preflop.actions {
+            let expected = match action.seat {
+                1 => Some(alice),
+                2 => Some(bob),
+                other => panic!("unexpected seat {other}"),
+            };
+            assert_eq!(
+                action.player_id, expected,
+                "action {action:?} should carry stamped player_id"
+            );
+        }
+    }
+
+    #[test]
+    fn streets_from_event_log_no_seated_yields_none() {
+        // No PlayerSeated events — legacy event-log shape from before EPIC-26.
+        let log = vec![
+            TableAction::ForcedBetSmallBlind(1, 50),
+            TableAction::ForcedBetBigBlind(2, 100),
+            TableAction::Fold(1),
+        ];
+        let streets = Streets::from_event_log(&log).expect("streets parse");
+        let preflop = streets.preflop.as_ref().expect("preflop street");
+        assert!(preflop.actions.iter().all(|a| a.player_id.is_none()));
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn action_serde_round_trip_omits_none_player_id() {
+        let action = Action {
+            seat: 4,
+            player_id: None,
+            action: ActionType::Fold,
+            amount: None,
+            all_in: None,
+        };
+        let yaml = serde_yaml_bw::to_string(&action).expect("serialize");
+        assert!(
+            !yaml.contains("player_id"),
+            "absent field should be skipped, got: {yaml}"
+        );
+        let parsed: Action = serde_yaml_bw::from_str(&yaml).expect("deserialize");
+        assert_eq!(parsed, action);
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn action_serde_round_trip_emits_some_player_id() {
+        let id = Uuid::new_v4();
+        let action = Action {
+            seat: 4,
+            player_id: Some(id),
+            action: ActionType::Raise,
+            amount: Some(300.0),
+            all_in: None,
+        };
+        let yaml = serde_yaml_bw::to_string(&action).expect("serialize");
+        assert!(yaml.contains("player_id"));
+        assert!(yaml.contains(&id.to_string()));
+        let parsed: Action = serde_yaml_bw::from_str(&yaml).expect("deserialize");
+        assert_eq!(parsed, action);
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn player_entry_serde_round_trip_omits_none_player_id() {
+        let entry = PlayerEntry {
+            seat: 1,
+            name: "Alice".to_string(),
+            stack: 500.0,
+            player_id: None,
+            hole_cards: Some("A♠ K♠".to_string()),
+            posted: None,
+        };
+        let yaml = serde_yaml_bw::to_string(&entry).expect("serialize");
+        assert!(
+            !yaml.contains("player_id"),
+            "absent field should be skipped, got: {yaml}"
+        );
+        let parsed: PlayerEntry = serde_yaml_bw::from_str(&yaml).expect("deserialize");
+        assert_eq!(parsed, entry);
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn player_entry_serde_round_trip_emits_some_player_id() {
+        let id = Uuid::new_v4();
+        let entry = PlayerEntry {
+            seat: 1,
+            name: "Alice".to_string(),
+            stack: 500.0,
+            player_id: Some(id),
+            hole_cards: Some("A♠ K♠".to_string()),
+            posted: None,
+        };
+        let yaml = serde_yaml_bw::to_string(&entry).expect("serialize");
+        assert!(yaml.contains("player_id"));
+        assert!(yaml.contains(&id.to_string()));
+        let parsed: PlayerEntry = serde_yaml_bw::from_str(&yaml).expect("deserialize");
+        assert_eq!(parsed, entry);
     }
 }
