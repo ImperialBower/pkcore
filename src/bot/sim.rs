@@ -753,7 +753,7 @@ impl SimTable {
 
         self.hand_count += 1;
         let event_log_slice = &self.table.event_log[pre.event_log_start..];
-        let hh = HandHistory::from_table_state(
+        let hh = HandHistory::from_table_state_with_ids(
             self.hand_count,
             ts_secs,
             pre.button,

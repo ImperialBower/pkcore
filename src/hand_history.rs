@@ -184,11 +184,13 @@ fn default_format_version() -> u32 {
     FORMAT_VERSION
 }
 
-/// Per-seat snapshot tuple consumed by [`HandHistory::from_table_state`].
+/// Per-seat snapshot tuple consumed by
+/// [`HandHistory::from_table_state_with_ids`].
 ///
 /// `(seat, name, starting_stack, hole_cards, player_id)` — `player_id` is
-/// the per-player [`Uuid`] (typically `PlayerNoCell.id`); pass `None` for
-/// callers that pre-date EPIC-26's identity threading.
+/// the per-player [`Uuid`] (typically `PlayerNoCell.id`); pass `None` when
+/// identity threading is not needed (or use the simpler 4-tuple
+/// [`HandHistory::from_table_state`] entry point).
 pub type PlayerSnapshot = (u8, String, usize, Option<String>, Option<Uuid>);
 
 impl HandHistory {
@@ -200,21 +202,22 @@ impl HandHistory {
     /// hole cards immediately **after** the deal, then call this function
     /// right after [`TableNoCell::end_hand`](crate::casino::table_no_cell::TableNoCell::end_hand).
     ///
+    /// Snapshots produced by this entry point carry no per-player [`Uuid`].
+    /// Callers that need identity threading (player-stats aggregation,
+    /// cross-session correlation) should use [`Self::from_table_state_with_ids`]
+    /// instead.
+    ///
     /// # Parameters
     ///
     /// - `hand_num` — sequential hand number within the session (used in the hand ID).
     /// - `ts_secs` — Unix timestamp in seconds.
     /// - `button` — 0-based seat index of the dealer button.
     /// - `forced` — blinds/ante structure.
-    /// - `player_snapshot` — `(seat, name, starting_stack, hole_cards, player_id)`
-    ///   tuples. `player_id` is the per-player [`Uuid`] (typically
-    ///   `PlayerNoCell.id`); pass `None` for legacy callers without identity.
+    /// - `player_snapshot` — `(seat, name, starting_stack, hole_cards)` tuples.
     /// - `board_str` — full community board string, or `""` when no board was dealt.
     /// - `winnings` — post-`end_hand` pot distribution.
     /// - `event_log` — per-hand slice of `table.event_log` for deriving per-street
-    ///   actions. The slice does **not** need to contain
-    ///   [`TableAction::PlayerSeated`] events; identity threading uses
-    ///   `player_snapshot.player_id` directly.
+    ///   actions.
     /// - `ending_stacks` — `(seat, chips)` captured after `end_hand()`.
     /// - `source` — provenance label (e.g. `"interactive_play"`).
     ///
@@ -224,16 +227,80 @@ impl HandHistory {
     /// use pkcore::hand_history::HandHistory;
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::table::winnings::Winnings;
-    /// use pkcore::casino::table::event::TableAction;
     ///
     /// let hh = HandHistory::from_table_state(
     ///     1, 0, 0,
     ///     &ForcedBets::new(50, 100),
-    ///     &[(0, "Alice".to_string(), 1000, Some("A♠ K♠".to_string()), None)],
+    ///     &[(0, "Alice".to_string(), 1000, Some("A♠ K♠".to_string()))],
     ///     "", &Winnings::default(), &[], &[(0, 1000)], "test", None,
     /// );
     /// assert_eq!(hh.hand.id, "test-hand-001");
     /// assert!(hh.results.is_some());
+    /// ```
+    #[allow(clippy::too_many_arguments)]
+    #[must_use]
+    pub fn from_table_state(
+        hand_num: usize,
+        ts_secs: u64,
+        button: u8,
+        forced: &ForcedBets,
+        player_snapshot: &[(u8, String, usize, Option<String>)],
+        board_str: &str,
+        winnings: &Winnings,
+        event_log: &[TableAction],
+        ending_stacks: &[(u8, usize)],
+        source: &str,
+        shuffled_deck: Option<String>,
+    ) -> Self {
+        let lifted: Vec<PlayerSnapshot> = player_snapshot
+            .iter()
+            .map(|(seat, name, stack, hole)| (*seat, name.clone(), *stack, hole.clone(), None))
+            .collect();
+        Self::from_table_state_with_ids(
+            hand_num,
+            ts_secs,
+            button,
+            forced,
+            &lifted,
+            board_str,
+            winnings,
+            event_log,
+            ending_stacks,
+            source,
+            shuffled_deck,
+        )
+    }
+
+    /// Variant of [`Self::from_table_state`] that threads a per-player [`Uuid`]
+    /// through each seat's `PlayerEntry` and every emitted `Action`.
+    ///
+    /// Use this when downstream analysis (e.g.
+    /// [`crate::analysis::player_stats::StatsRegistry`]) needs to correlate
+    /// the same player across multiple hands or sessions. The 5-tuple form
+    /// of `player_snapshot` is the canonical [`PlayerSnapshot`] type alias.
+    ///
+    /// # Parameters
+    ///
+    /// Same as [`Self::from_table_state`] except `player_snapshot` carries an
+    /// extra `Option<Uuid>` element per seat (typically `Some(player.id)`
+    /// where `player.id` is the [`Uuid`] from `PlayerNoCell`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::HandHistory;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::winnings::Winnings;
+    /// use uuid::Uuid;
+    ///
+    /// let alice = Uuid::new_v4();
+    /// let hh = HandHistory::from_table_state_with_ids(
+    ///     1, 0, 0,
+    ///     &ForcedBets::new(50, 100),
+    ///     &[(0, "Alice".to_string(), 1000, Some("A♠ K♠".to_string()), Some(alice))],
+    ///     "", &Winnings::default(), &[], &[(0, 1000)], "test", None,
+    /// );
+    /// assert_eq!(hh.players[0].player_id, Some(alice));
     /// ```
     #[allow(
         clippy::cast_precision_loss,
@@ -241,7 +308,7 @@ impl HandHistory {
         clippy::cast_possible_truncation
     )]
     #[must_use]
-    pub fn from_table_state(
+    pub fn from_table_state_with_ids(
         hand_num: usize,
         ts_secs: u64,
         button: u8,
@@ -2907,7 +2974,7 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(0, "Alice".to_string(), 1000, None, None)],
+            &[(0, "Alice".to_string(), 1000, None)],
             "",
             &Winnings::default(),
             &[],
@@ -2931,10 +2998,7 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[
-                (0, "A".to_string(), 1000, None, None),
-                (1, "B".to_string(), 1000, None, None),
-            ],
+            &[(0, "A".to_string(), 1000, None), (1, "B".to_string(), 1000, None)],
             "",
             &Winnings::default(),
             &[],
@@ -3349,7 +3413,7 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(1, "Alice".to_string(), 1000, None, None)],
+            &[(1, "Alice".to_string(), 1000, None)],
             "",
             &Winnings::default(),
             &[],
@@ -3373,7 +3437,7 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(1, "Alice".to_string(), 1000, None, None)],
+            &[(1, "Alice".to_string(), 1000, None)],
             "",
             &Winnings::default(),
             &[],
@@ -3401,7 +3465,7 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(1, "Alice".to_string(), 1000, None, None)],
+            &[(1, "Alice".to_string(), 1000, None)],
             "",
             &Winnings::default(),
             &[],
@@ -3416,7 +3480,7 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(1, "Alice".to_string(), 1000, None, None)],
+            &[(1, "Alice".to_string(), 1000, None)],
             "",
             &Winnings::default(),
             &[],

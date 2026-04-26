@@ -17,7 +17,6 @@ use pkcore::casino::game::ForcedBets;
 use pkcore::casino::session::PokerSession;
 use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
 use pkcore::hand_history::{HandCollection, HandHistory};
-use uuid::Uuid;
 
 const SB: usize = 50;
 const BB: usize = 100;
@@ -55,14 +54,14 @@ fn test_bot_selfplay_replay_roundtrip() {
         let button = session.table.button;
 
         // Capture starting stacks before forced bets.
-        let stacks: Vec<(u8, String, usize, Uuid)> = (0..session.table.seats.0.len() as u8)
+        let stacks: Vec<(u8, String, usize)> = (0..session.table.seats.0.len() as u8)
             .filter_map(|i| {
                 session
                     .table
                     .seats
                     .get_seat(i)
                     .filter(|s| !s.is_empty())
-                    .map(|s| (i, s.player.handle.clone(), s.player.chips, s.player.id))
+                    .map(|s| (i, s.player.handle.clone(), s.player.chips))
             })
             .collect();
 
@@ -90,11 +89,11 @@ fn test_bot_selfplay_replay_roundtrip() {
             })
             .collect();
 
-        let player_snapshot: Vec<(u8, String, usize, Option<String>, Option<Uuid>)> = stacks
+        let player_snapshot: Vec<(u8, String, usize, Option<String>)> = stacks
             .iter()
-            .map(|(seat, name, stack, id)| {
+            .map(|(seat, name, stack)| {
                 let hole = hole_cards.iter().find(|(s, _)| s == seat).and_then(|(_, h)| h.clone());
-                (*seat, name.clone(), *stack, hole, Some(*id))
+                (*seat, name.clone(), *stack, hole)
             })
             .collect();
 

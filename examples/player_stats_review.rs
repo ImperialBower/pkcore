@@ -177,7 +177,7 @@ fn run_one_hand(
         })
         .collect();
 
-    Some(HandHistory::from_table_state(
+    Some(HandHistory::from_table_state_with_ids(
         hand_num,
         ts_secs,
         button,

@@ -15,12 +15,12 @@
 | Query helpers on `HandCollection` (`hands_by_player`, `hands_by_position`, `showdowns_only`) | ✅ Done |
 | Review example `examples/player_stats_review.rs` | ✅ Done |
 | Round-trip test `tests/player_stats_consistency.rs` | ✅ Done |
-| Optional persistence: `PlayerStatsStore` trait + `YamlPlayerStatsStore` | ✅ Done (gated on `player-stats-persistence`, off by default) |
+| Optional persistence: `PlayerStatsStore` trait + `YamlPlayerStatsStore` | ✅ Done (gated on `player-stats-persistence`, default-on; opt out via `default-features = false`) |
 | Doc (`docs/EPIC-26_Player_Stats.md`) | ✅ Done (this file) |
 
 **Phase summary:** Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ✅ · Phase 5a (query helpers) ✅ · Phase 5b (example) ✅ · Phase 5c (consistency test) ✅
 
-**EPIC-26 is complete.** All five phases shipped, including the optional on-disk persistence layer (default-off; opt in with `--features player-stats-persistence`).
+**EPIC-26 is complete.** All five phases shipped, including the on-disk persistence layer. Persistence is in the default feature set (so `examples/player_stats_session.rs` runs with a plain `cargo run --example`); downstream consumers who don't want it can opt out with `default-features = false` and re-enable just what they need.
 
 ---
 
@@ -231,8 +231,11 @@ registry afterwards.
 
 ### Persistence (Phase 4) — ✅ Shipped
 
-Gated on the `player-stats-persistence` feature (off by default; depends
-on `player-stats` and pulls in `serde_yaml_bw`).
+Gated on the `player-stats-persistence` feature (in the default feature
+set so the demo example works without flags; depends on `player-stats`
+and pulls in `serde_yaml_bw`, both already in defaults via
+`bot-profiles` / `hand-histories`).  Downstream consumers who don't
+need persistence can opt out with `default-features = false`.
 
 ```rust
 pub trait PlayerStatsStore: std::fmt::Debug + Send + Sync {
@@ -373,8 +376,8 @@ maniac            |   50  | 71.0% | 55.0% | 24.3% | 5.7  | 38.0% | 44.0%
 
 ### Phase 4 — Persistence (separately gated) — ✅ Done
 
-20. ✅ Feature flag `player-stats-persistence` in `Cargo.toml` (off by default;
-    depends on `player-stats` and `dep:serde_yaml_bw`)
+20. ✅ Feature flag `player-stats-persistence` in `Cargo.toml` (in the
+    default set; depends on `player-stats` and `dep:serde_yaml_bw`)
 21. ✅ `PlayerStatsStore` trait (with `Debug + Send + Sync` supertraits) +
     `YamlPlayerStatsStore` impl in `src/analysis/player_stats_store.rs`
     (one YAML file per player Uuid; `load_all` skips files whose stem
