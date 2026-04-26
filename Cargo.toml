@@ -13,9 +13,18 @@ exclude = [".github/workflows/*", "data/*", "docs/*", "examples/*", "generated/h
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-## Default features enable bot-profiles, hand-histories, and player-stats so
-## that examples (e.g. interactive_play) work with a plain `cargo run --example`.
-default = ["bot-profiles", "hand-histories", "player-stats"]
+## Default features enable the full EPIC-26 stack (player-stats and the
+## optional persistence layer) plus bot-profiles and hand-histories so that
+## examples (e.g. interactive_play, player_stats_session) work with a plain
+## `cargo run --example`.  Downstream consumers who don't need persistence
+## can opt out with `default-features = false` and re-enable just what they
+## want.
+default = [
+    "bot-profiles",
+    "hand-histories",
+    "player-stats",
+    "player-stats-persistence",
+]
 ## When enabled, `SolverResult::save` and `SolverResult::load` use human-readable
 ## JSON instead of the default compact binary (postcard) format. Useful for
 ## inspecting solver output during development. The explicit `save_json` /
@@ -92,6 +101,10 @@ required-features = ["hand-histories", "bot-profiles"]
 [[example]]
 name = "player_stats_review"
 required-features = ["bot-profiles", "hand-histories", "player-stats"]
+
+[[example]]
+name = "player_stats_session"
+required-features = ["bot-profiles", "hand-histories", "player-stats-persistence"]
 
 [[test]]
 name = "replay_consistency"

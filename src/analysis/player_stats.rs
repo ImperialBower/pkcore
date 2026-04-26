@@ -636,7 +636,7 @@ impl StatsRegistry {
     ///
     /// # Errors
     ///
-    /// Returns [`PKError`] from
+    /// Returns [`crate::PKError`] from
     /// [`PlayerStatsStore::load_all`](crate::analysis::player_stats_store::PlayerStatsStore::load_all)
     /// when the backend fails to enumerate or deserialize existing records.
     pub fn with_store(
@@ -656,7 +656,7 @@ impl StatsRegistry {
     ///
     /// # Errors
     ///
-    /// Returns [`PKError`] on the first failed save or flush.
+    /// Returns [`crate::PKError`] on the first failed save or flush.
     pub fn flush(&self) -> Result<(), crate::PKError> {
         let Some(store) = self.store.as_ref() else {
             return Ok(());
