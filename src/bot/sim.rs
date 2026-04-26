@@ -42,6 +42,7 @@ use crate::bot::profile::BotProfile;
 use crate::bot::table_snapshot::TableSnapshot;
 use crate::casino::table::winnings::Winnings;
 use crate::casino::table_no_cell::TableNoCell;
+use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "player-stats")]
 use crate::analysis::player_stats::StatsRegistry;
@@ -62,7 +63,7 @@ use crate::hand_history::{HandHistory, PlayerSnapshot};
 /// counts.folds += 2;
 /// assert_eq!(3, counts.total());
 /// ```
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ActionCounts {
     /// Number of folds.
     pub folds: usize,

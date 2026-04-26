@@ -31,6 +31,10 @@ hand-histories = ["dep:serde_yaml_bw"]
 ## Enables the per-player aggregator in `analysis::player_stats`
 ## (`PlayerStats`, `StatsRegistry`, `Confidence`, derived ratios). EPIC-26.
 player-stats = []
+## Enables on-disk persistence for `StatsRegistry` via `PlayerStatsStore` and
+## `YamlPlayerStatsStore` (one YAML file per player Uuid). Off by default; opt
+## in for multi-session experiments. EPIC-26 Phase 4.
+player-stats-persistence = ["player-stats", "dep:serde_yaml_bw"]
 
 [dependencies]
 bint = "0.1.15"
@@ -108,6 +112,10 @@ required-features = ["hand-histories"]
 [[test]]
 name = "player_stats_consistency"
 required-features = ["bot-profiles", "hand-histories", "player-stats"]
+
+[[test]]
+name = "player_stats_persistence"
+required-features = ["bot-profiles", "hand-histories", "player-stats-persistence"]
 
 [dev-dependencies]
 serde_yaml_bw = "2.5"

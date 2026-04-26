@@ -109,3 +109,4 @@ jobs:
       - run: cargo check --no-default-features --features hand-histories --lib --tests
       - run: cargo check --no-default-features --features bot-profiles --lib --tests
       - run: cargo check --no-default-features --features player-stats --lib --tests
+      - run: cargo check --no-default-features --features player-stats-persistence --lib --tests

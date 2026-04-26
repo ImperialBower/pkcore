@@ -25,6 +25,7 @@
 use crate::bot::sim::ActionCounts;
 use crate::casino::table::position::Position;
 use crate::hand_history::{Action, ActionType, HandCollection, HandHistory, Outcome};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
@@ -50,7 +51,7 @@ pub const POSITION_COUNT: usize = 11;
 /// assert_eq!(Confidence::Low, stats.confidence());
 /// assert_eq!(None, stats.vpip());
 /// ```
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PlayerStats {
     /// Number of hands the player was dealt into.
     pub hands_dealt: u64,
@@ -215,7 +216,7 @@ impl PlayerStats {
 /// assert_eq!(Confidence::Medium, Confidence::from_sample_size(100));
 /// assert_eq!(Confidence::High,   Confidence::from_sample_size(500));
 /// ```
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Confidence {
     /// Fewer than 50 hands of sample.
     #[default]
@@ -251,9 +252,15 @@ impl Confidence {
 /// let registry = StatsRegistry::new();
 /// assert!(registry.iter().next().is_none());
 /// ```
-#[derive(Clone, Debug, Default)]
+#[derive(Debug, Default)]
 pub struct StatsRegistry {
     players: HashMap<Uuid, PlayerStats>,
+    /// Optional persistence backend.  Populated by
+    /// [`Self::with_store`]; eagerly read at construction and flushed on
+    /// `Drop` and on explicit [`Self::flush`]. Only available when the
+    /// `player-stats-persistence` feature is enabled.
+    #[cfg(feature = "player-stats-persistence")]
+    store: Option<Box<dyn crate::analysis::player_stats_store::PlayerStatsStore>>,
 }
 
 impl StatsRegistry {
@@ -610,6 +617,68 @@ impl StatsRegistry {
                 }
                 _ => {}
             }
+        }
+    }
+}
+
+// ── Persistence (Phase 4) ──────────────────────────────────────────────────
+
+#[cfg(feature = "player-stats-persistence")]
+impl StatsRegistry {
+    /// Constructs a registry backed by `store`, eagerly loading every record
+    /// the store knows about into the in-memory cache.
+    ///
+    /// On `Drop`, the registry calls [`Self::flush`] best-effort (errors are
+    /// logged via `log::warn!` and otherwise swallowed — `Drop` cannot
+    /// return).
+    ///
+    /// Only available when the `player-stats-persistence` feature is enabled.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PKError`] from
+    /// [`PlayerStatsStore::load_all`](crate::analysis::player_stats_store::PlayerStatsStore::load_all)
+    /// when the backend fails to enumerate or deserialize existing records.
+    pub fn with_store(
+        store: Box<dyn crate::analysis::player_stats_store::PlayerStatsStore>,
+    ) -> Result<Self, crate::PKError> {
+        let players = store.load_all()?;
+        Ok(Self {
+            players,
+            store: Some(store),
+        })
+    }
+
+    /// Writes every cached player record to the attached store, then calls
+    /// [`PlayerStatsStore::flush`](crate::analysis::player_stats_store::PlayerStatsStore::flush).
+    ///
+    /// No-op when no store is attached.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PKError`] on the first failed save or flush.
+    pub fn flush(&self) -> Result<(), crate::PKError> {
+        let Some(store) = self.store.as_ref() else {
+            return Ok(());
+        };
+        for (id, stats) in &self.players {
+            store.save(*id, stats)?;
+        }
+        store.flush()
+    }
+}
+
+#[cfg(feature = "player-stats-persistence")]
+impl Drop for StatsRegistry {
+    /// Best-effort flush on drop. Errors are logged but otherwise swallowed
+    /// — Drop cannot return errors. For guaranteed durability, call
+    /// [`Self::flush`] explicitly before letting the registry go out of scope.
+    fn drop(&mut self) {
+        if self.store.is_none() {
+            return;
+        }
+        if let Err(e) = self.flush() {
+            log::warn!("StatsRegistry: flush-on-drop failed: {e:?}");
         }
     }
 }

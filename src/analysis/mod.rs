@@ -17,6 +17,8 @@ pub mod omaha;
 pub mod outs;
 #[cfg(feature = "player-stats")]
 pub mod player_stats;
+#[cfg(feature = "player-stats-persistence")]
+pub mod player_stats_store;
 pub mod player_wins;
 pub mod pot_odds;
 pub mod range_equity;
