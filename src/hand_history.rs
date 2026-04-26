@@ -58,11 +58,14 @@ use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
+#[cfg(feature = "bot-profiles")]
 use crate::casino::action::PlayerAction;
 use crate::casino::game::ForcedBets;
 use crate::casino::table::event::TableAction;
 use crate::casino::table::winnings::Winnings;
+#[cfg(feature = "bot-profiles")]
 use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+#[cfg(feature = "bot-profiles")]
 use crate::games::GamePhase;
 use crate::play::board::Board;
 use serde::{Deserialize, Serialize};
@@ -422,6 +425,7 @@ impl HandHistory {
     /// assert!(result.is_ok());
     /// assert!(result.unwrap().is_consistent);
     /// ```
+    #[cfg(feature = "bot-profiles")]
     #[allow(
         clippy::cast_precision_loss,
         clippy::cast_sign_loss,
@@ -1931,6 +1935,7 @@ impl HandCollection {
     /// let results = collection.replay_all();
     /// assert!(results.is_empty());
     /// ```
+    #[cfg(feature = "bot-profiles")]
     pub fn replay_all(&self) -> Vec<Result<ReplayResult, PKError>> {
         self.hands.iter().map(HandHistory::replay).collect()
     }
@@ -1955,6 +1960,7 @@ fn rank_seven(hole_cards: &str, board: &str) -> Option<Eval> {
 /// Converts a hand-history [`Action`] to a [`PlayerAction`] understood by the
 /// game engine.  Returns `None` for `Post` entries (handled by
 /// `act_forced_bets`).
+#[cfg(feature = "bot-profiles")]
 fn action_to_player_action(action: &Action) -> Option<PlayerAction> {
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     match action.action {
@@ -1974,6 +1980,7 @@ fn action_to_player_action(action: &Action) -> Option<PlayerAction> {
 /// fractional blinds), but represent whole-chip counts in practice.  The casts
 /// here are intentional: stacks fit in `usize` and net values are bounded by the
 /// starting stack.
+#[cfg(feature = "bot-profiles")]
 #[allow(
     clippy::cast_precision_loss,
     clippy::cast_possible_truncation,
@@ -2688,6 +2695,7 @@ hands:
     // HandHistory::replay
     // ─────────────────────────────────────────────────────────────────────────
 
+    #[cfg(feature = "bot-profiles")]
     #[test]
     fn test_hand_history_replay_preflop_fold() {
         // A 2-player hand where seat 0 folds preflop after posting SB.
@@ -2804,6 +2812,7 @@ hands:
         assert!(r.is_consistent);
     }
 
+    #[cfg(feature = "bot-profiles")]
     #[test]
     fn test_hand_collection_replay_all_empty() {
         let collection = HandCollection::new();
@@ -2819,6 +2828,7 @@ hands:
     /// "out of order" because `SeatsNoCell::next_to_act` skipped the checker when
     /// `everyone_has_bet` was true but the current-bet comparison used the wrong
     /// branch ordering.
+    #[cfg(feature = "bot-profiles")]
     #[test]
     fn replay_flop_check_then_bet_then_fold() {
         let hh = HandHistory {
@@ -2983,7 +2993,7 @@ hands:
     /// Same scenario as `replay_flop_check_then_bet_then_fold` but loaded via
     /// YAML round-trip to catch any serde deserialization difference.
     #[test]
-    #[cfg(feature = "hand-histories")]
+    #[cfg(all(feature = "hand-histories", feature = "bot-profiles"))]
     fn replay_flop_check_then_bet_then_fold_from_yaml() {
         let yaml = r#"
 pkcore_version: "0.0.43"

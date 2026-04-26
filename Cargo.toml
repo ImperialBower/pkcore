@@ -79,11 +79,11 @@ required-features = ["bot-profiles", "hand-histories"]
 
 [[example]]
 name = "replay_play"
-required-features = ["hand-histories"]
+required-features = ["hand-histories", "bot-profiles"]
 
 [[example]]
 name = "yaml_audit"
-required-features = ["hand-histories"]
+required-features = ["hand-histories", "bot-profiles"]
 
 [[example]]
 name = "player_stats_review"
@@ -96,6 +96,14 @@ required-features = ["hand-histories", "bot-profiles"]
 [[test]]
 name = "bot_marathon"
 required-features = ["hand-histories", "bot-profiles"]
+
+[[test]]
+name = "pkarena0_session"
+required-features = ["hand-histories", "bot-profiles"]
+
+[[test]]
+name = "hand_history_legacy_yaml"
+required-features = ["hand-histories"]
 
 [dev-dependencies]
 serde_yaml_bw = "2.5"
