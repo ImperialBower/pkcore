@@ -22,7 +22,6 @@ use pkcore::hand_history::{HandCollection, HandHistory};
 use rand::Rng;
 use std::str::FromStr;
 use std::time::{SystemTime, UNIX_EPOCH};
-use uuid::Uuid;
 
 const STARTING_CHIPS: usize = 10_000;
 const SMALL_BLIND: usize = 50;
@@ -133,14 +132,14 @@ fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl 
     let button = session.table.button;
 
     // Snapshot stacks before forced bets (hand-history convention).
-    let stacks: Vec<(u8, String, usize, Uuid)> = (0..session.table.seats.0.len() as u8)
+    let stacks: Vec<(u8, String, usize)> = (0..session.table.seats.0.len() as u8)
         .filter_map(|i| {
             session
                 .table
                 .seats
                 .get_seat(i)
                 .filter(|s| !s.is_empty())
-                .map(|s| (i, s.player.handle.clone(), s.player.chips, s.player.id))
+                .map(|s| (i, s.player.handle.clone(), s.player.chips))
         })
         .collect();
     let event_log_start = session.table.event_log.len();
@@ -169,11 +168,11 @@ fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl 
             })
         })
         .collect();
-    let player_snapshot: Vec<(u8, String, usize, Option<String>, Option<Uuid>)> = stacks
+    let player_snapshot: Vec<(u8, String, usize, Option<String>)> = stacks
         .into_iter()
-        .map(|(seat, name, stack, id)| {
+        .map(|(seat, name, stack)| {
             let hole = hole_cards.iter().find(|(s, _)| *s == seat).and_then(|(_, h)| h.clone());
-            (seat, name, stack, hole, Some(id))
+            (seat, name, stack, hole)
         })
         .collect();
 
@@ -282,7 +281,7 @@ fn build_hand_history(
     hand_num: usize,
     ts_secs: u64,
     button: u8,
-    player_snapshot: &[(u8, String, usize, Option<String>, Option<Uuid>)],
+    player_snapshot: &[(u8, String, usize, Option<String>)],
     board_str: &str,
     winnings: &Winnings,
     event_log: &[TableAction],
