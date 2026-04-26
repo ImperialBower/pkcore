@@ -62,6 +62,7 @@ use crate::cards::Cards;
 use crate::casino::action::PlayerAction;
 use crate::casino::game::ForcedBets;
 use crate::casino::table::event::TableAction;
+use crate::casino::table::position::Position;
 use crate::casino::table::winnings::Winnings;
 #[cfg(feature = "bot-profiles")]
 use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
@@ -816,6 +817,113 @@ impl HandCollection {
     pub fn hands(&self) -> &[HandHistory] {
         &self.hands
     }
+
+    /// Returns an iterator over hands in which the given player participated.
+    ///
+    /// A "participated" hand is one whose [`HandHistory::players`] list contains
+    /// a [`PlayerEntry`] with `player_id == Some(id)`. Hands written by older
+    /// pkcore versions that did not stamp `player_id` are silently skipped
+    /// (their entries carry `player_id: None`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::HandCollection;
+    /// use uuid::Uuid;
+    ///
+    /// let collection = HandCollection::new();
+    /// let count = collection.hands_by_player(Uuid::nil()).count();
+    /// assert_eq!(0, count);
+    /// ```
+    pub fn hands_by_player(&self, id: Uuid) -> impl Iterator<Item = &HandHistory> {
+        self.hands
+            .iter()
+            .filter(move |h| h.players.iter().any(|p| p.player_id == Some(id)))
+    }
+
+    /// Returns an iterator over hands whose table size and button placement
+    /// would seat at least one player at the given [`Position`].
+    ///
+    /// Useful for excluding short-handed hands when computing position-specific
+    /// stats — e.g. `hands_by_position(Position::CO)` strips heads-up and
+    /// 3-handed hands that have no cutoff. To filter to a specific player at a
+    /// specific position, chain with [`Self::hands_by_player`] and then
+    /// reapply.
+    ///
+    /// Returns no matches when the hand omits a button or its `players` list
+    /// is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::hand_history::HandCollection;
+    ///
+    /// let collection = HandCollection::new();
+    /// assert_eq!(0, collection.hands_by_position(Position::CO).count());
+    /// ```
+    pub fn hands_by_position(&self, pos: Position) -> impl Iterator<Item = &HandHistory> {
+        self.hands.iter().filter(move |h| hand_has_position(h, pos))
+    }
+
+    /// Returns an iterator over hands that reached showdown — i.e. at least
+    /// two players' [`ResultEntry::outcome`] is anything other than
+    /// [`Outcome::Fold`].
+    ///
+    /// Hands without a `results` block (legacy YAMLs from before `from_table_state`
+    /// emitted them) are skipped.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::HandCollection;
+    ///
+    /// let collection = HandCollection::new();
+    /// assert_eq!(0, collection.showdowns_only().count());
+    /// ```
+    pub fn showdowns_only(&self) -> impl Iterator<Item = &HandHistory> {
+        self.hands.iter().filter(|h| {
+            h.results
+                .as_ref()
+                .is_some_and(|results| results.iter().filter(|r| r.outcome != Outcome::Fold).count() >= 2)
+        })
+    }
+}
+
+/// Returns `true` when `hand` would seat at least one player at `pos` given
+/// the recorded button and the count of occupied seats in `hand.players`.
+///
+/// Translates physical seat indices to logical (button-relative) positions
+/// the same way [`crate::bot::table_snapshot::TableSnapshot::from_table`]
+/// does, so sparse seat numbering after eliminations doesn't desync the
+/// position math.
+fn hand_has_position(hand: &HandHistory, pos: Position) -> bool {
+    let Some(button_phys) = hand.table.button else {
+        return false;
+    };
+    let mut occupied: Vec<u8> = hand.players.iter().map(|p| p.seat).collect();
+    if occupied.is_empty() {
+        return false;
+    }
+    occupied.sort_unstable();
+    let Ok(seat_count) = u8::try_from(occupied.len()) else {
+        return false;
+    };
+    let Some(button_logical_idx) = occupied.iter().position(|&s| s == button_phys) else {
+        return false;
+    };
+    let Ok(button_logical) = u8::try_from(button_logical_idx) else {
+        return false;
+    };
+    hand.players.iter().any(|p| {
+        let Some(logical_idx) = occupied.iter().position(|&s| s == p.seat) else {
+            return false;
+        };
+        let Ok(logical) = u8::try_from(logical_idx) else {
+            return false;
+        };
+        Position::from_seat(logical, button_logical, seat_count) == Some(pos)
+    })
 }
 
 impl Default for HandCollection {
@@ -2446,6 +2554,156 @@ hands:
         let slice = collection.hands();
         assert_eq!(slice.len(), 1);
         assert_eq!(slice[0].hand.id, "h1");
+    }
+
+    // ── EPIC-26 Phase 5a: HandCollection query helpers ──────────────────────
+
+    /// Builds a hand with a custom button + the given player entries.
+    fn hand_with_players(id: &str, button: u8, players: Vec<PlayerEntry>) -> HandHistory {
+        let mut hh = make_minimal_hand(id, HandVariant::Holdem);
+        hh.table.button = Some(button);
+        hh.players = players;
+        hh
+    }
+
+    fn entry(seat: u8, name: &str, player_id: Option<Uuid>) -> PlayerEntry {
+        PlayerEntry {
+            seat,
+            name: name.to_string(),
+            stack: 1_000.0,
+            player_id,
+            hole_cards: None,
+            posted: None,
+        }
+    }
+
+    fn result(seat: u8, outcome: Outcome) -> ResultEntry {
+        ResultEntry {
+            seat,
+            best_hand: None,
+            hand_rank: None,
+            outcome,
+            net: None,
+            pot_won: None,
+            mucked: None,
+        }
+    }
+
+    #[test]
+    fn hands_by_player_returns_only_matching() {
+        let alice = Uuid::new_v4();
+        let bob = Uuid::new_v4();
+        let mut collection = HandCollection::new();
+        collection.push(hand_with_players(
+            "h1",
+            0,
+            vec![entry(0, "Alice", Some(alice)), entry(1, "Bob", Some(bob))],
+        ));
+        collection.push(hand_with_players("h2", 0, vec![entry(0, "Bob", Some(bob))]));
+        collection.push(hand_with_players("h3", 0, vec![entry(0, "Alice", Some(alice))]));
+
+        let alice_hands: Vec<&HandHistory> = collection.hands_by_player(alice).collect();
+        assert_eq!(2, alice_hands.len());
+        assert_eq!("h1", alice_hands[0].hand.id);
+        assert_eq!("h3", alice_hands[1].hand.id);
+    }
+
+    #[test]
+    fn hands_by_player_skips_legacy_entries_without_id() {
+        // A pre-EPIC-26 YAML file has player_id: None on every entry. Querying
+        // by any Uuid should return nothing — there's no identity to match on.
+        let some_id = Uuid::new_v4();
+        let mut collection = HandCollection::new();
+        collection.push(hand_with_players("legacy", 0, vec![entry(0, "Anon", None)]));
+        assert_eq!(0, collection.hands_by_player(some_id).count());
+    }
+
+    #[test]
+    fn hands_by_player_empty_collection() {
+        let collection = HandCollection::new();
+        assert_eq!(0, collection.hands_by_player(Uuid::new_v4()).count());
+    }
+
+    #[test]
+    fn hands_by_position_excludes_short_handed() {
+        // Heads-up has only BTN/BB; querying CO must skip it. A 6-handed hand
+        // does have a CO (offset 5 from button). Mixed collection → only the
+        // 6-handed hand matches.
+        let mut collection = HandCollection::new();
+        collection.push(hand_with_players(
+            "headsup",
+            0,
+            vec![entry(0, "A", None), entry(1, "B", None)],
+        ));
+        let six_handed: Vec<PlayerEntry> = (0..6).map(|i| entry(i, "P", None)).collect();
+        collection.push(hand_with_players("six", 0, six_handed));
+
+        let cos: Vec<&HandHistory> = collection.hands_by_position(Position::CO).collect();
+        assert_eq!(1, cos.len(), "only the 6-handed hand has a CO");
+        assert_eq!("six", cos[0].hand.id);
+    }
+
+    #[test]
+    fn hands_by_position_handles_sparse_seat_indices() {
+        // Seats 2/4/6 occupied, button at seat 4 (button is at the second
+        // logical seat among occupied). Logical mapping: occupied=[2,4,6],
+        // button_logical=1. With seat_count=3 and button at logical 1, the
+        // BB lives at logical offset 2 → physical seat 6.
+        let mut collection = HandCollection::new();
+        collection.push(hand_with_players(
+            "sparse",
+            4,
+            vec![entry(2, "A", None), entry(4, "B", None), entry(6, "C", None)],
+        ));
+        // BB is present in any 3-handed hand.
+        assert_eq!(1, collection.hands_by_position(Position::BB).count());
+    }
+
+    #[test]
+    fn hands_by_position_skips_when_button_missing() {
+        let mut collection = HandCollection::new();
+        let mut hh = make_minimal_hand("no-btn", HandVariant::Holdem);
+        hh.players = vec![entry(0, "A", None), entry(1, "B", None)];
+        // Leave hh.table.button = None.
+        collection.push(hh);
+        assert_eq!(0, collection.hands_by_position(Position::BTN).count());
+    }
+
+    #[test]
+    fn showdowns_only_requires_two_non_folders() {
+        let mut collection = HandCollection::new();
+
+        // Hand A: one Win + one Fold = won by all-folds, NOT a showdown.
+        let mut a = make_minimal_hand("walk", HandVariant::Holdem);
+        a.results = Some(vec![result(0, Outcome::Win), result(1, Outcome::Fold)]);
+        collection.push(a);
+
+        // Hand B: one Win + one Lose = both saw it through to showdown.
+        let mut b = make_minimal_hand("showdown", HandVariant::Holdem);
+        b.results = Some(vec![result(0, Outcome::Win), result(1, Outcome::Lose)]);
+        collection.push(b);
+
+        // Hand C: three-way with two Folds and one Win = walk, NOT showdown.
+        let mut c = make_minimal_hand("3way-walk", HandVariant::Holdem);
+        c.results = Some(vec![
+            result(0, Outcome::Win),
+            result(1, Outcome::Fold),
+            result(2, Outcome::Fold),
+        ]);
+        collection.push(c);
+
+        let sds: Vec<&HandHistory> = collection.showdowns_only().collect();
+        assert_eq!(1, sds.len());
+        assert_eq!("showdown", sds[0].hand.id);
+    }
+
+    #[test]
+    fn showdowns_only_skips_hands_without_results() {
+        let mut collection = HandCollection::new();
+        let mut hh = make_minimal_hand("no-results", HandVariant::Holdem);
+        hh.results = None;
+        collection.push(hh);
+        assert_eq!(0, collection.showdowns_only().count());
     }
 
     #[cfg(feature = "hand-histories")]

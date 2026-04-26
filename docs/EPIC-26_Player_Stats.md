@@ -10,17 +10,17 @@
 | `StatsRegistry` keyed by `Uuid`; ingest from `HandHistory` / `HandCollection` | ✅ Done |
 | Derived ratios: VPIP, PFR, 3-bet%, 4-bet%, c-bet%, fold-to-cbet, AF, aggression freq, WTSD, W$SD | ✅ Done (all return `Option<f64>` — see [Design](#design)) |
 | `Confidence` enum thresholded on sample size | ✅ Done |
-| `TableSnapshot::opponent_stats` borrow exposed to `BotDecider` (no logic changes) | ⏳ Planned — Phase 3 |
-| `SimTable::with_stats_registry` constructor variant | ⏳ Planned — Phase 3 |
-| Query helpers on `HandCollection` (`hands_by_player`, `hands_by_position`, `showdowns_only`) | ⏳ Planned — Phase 5 |
+| `TableSnapshot::opponent_stats` borrow exposed to `BotDecider` (no logic changes) | ✅ Done |
+| `SimTable::with_stats_registry` constructor variant | ✅ Done |
+| Query helpers on `HandCollection` (`hands_by_player`, `hands_by_position`, `showdowns_only`) | ✅ Done |
 | Review example `examples/player_stats_review.rs` | ✅ Done |
-| Round-trip test `tests/player_stats_consistency.rs` | ⏳ Planned — Phase 5 |
-| Optional persistence: `PlayerStatsStore` trait + `YamlPlayerStatsStore` | ⏳ Planned — Phase 4 (gated separately) |
+| Round-trip test `tests/player_stats_consistency.rs` | ✅ Done |
+| Optional persistence: `PlayerStatsStore` trait + `YamlPlayerStatsStore` | ⏳ Deferred — Phase 4 (gated separately) |
 | Doc (`docs/EPIC-26_Player_Stats.md`) | ✅ Done (this file) |
 
-**Phase summary:** Phase 1 ✅ · Phase 2 ✅ · Phase 3 ⏳ · Phase 4 ⏳ (deferred) · Phase 5a (query helpers) ⏳ · Phase 5b (example) ✅ · Phase 5c (consistency test) ⏳
+**Phase summary:** Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ⏳ (deferred) · Phase 5a (query helpers) ✅ · Phase 5b (example) ✅ · Phase 5c (consistency test) ✅
 
-Per the [phase ordering](#phase-ordering-rationale) (`1 → 2 → 3 → 5 → 4`), **Phase 3** is the next unit of work.
+The EPIC's in-memory work is complete. **Phase 4 (persistence)** remains deferred per the [phase ordering](#phase-ordering-rationale) (`1 → 2 → 3 → 5 → 4`) until a multi-session experiment use case justifies the trait + YAML store.
 
 ---
 
@@ -177,28 +177,57 @@ impl Confidence {
 numbers. `from_sample_size` is exposed publicly so tests and docs can
 assert thresholds without constructing a `PlayerStats`.
 
-### Exposing stats to `BotDecider` (Phase 3)
+### Exposing stats to `BotDecider` (Phase 3) — ✅ Shipped
 
-`TableSnapshot` (`src/bot/table_snapshot.rs`) gains an optional borrow:
+`TableSnapshot` (`src/bot/table_snapshot.rs`) gained an `'a` lifetime
+parameter and an optional borrow:
 
 ```rust
 pub struct TableSnapshot<'a> {
     // existing fields ...
+    #[cfg(feature = "player-stats")]
     pub opponent_stats: Option<&'a StatsRegistry>,
+    #[cfg(not(feature = "player-stats"))]
+    _stats_lifetime: std::marker::PhantomData<&'a ()>,
 }
 ```
 
 A new constructor `TableSnapshot::from_table_with_stats(&table, seat,
 &registry)` populates it; the existing `from_table(&table, seat)` keeps
-`opponent_stats: None` for callers that don't track stats.
+`opponent_stats: None` for callers that don't track stats. When the
+feature is off, a private `PhantomData` field consumes the lifetime
+parameter so the struct stays well-formed.
 
 **Decider behavior is unchanged in this Epic.** `RuleBasedDecider` and
-`JokerDecider` ignore the new field. A regression test seeds the same
-RNG and verifies decisions are identical with and without a registry
-attached. Future exploitative deciders are deferred to a follow-on Epic.
+`JokerDecider` ignore the new field. The regression test
+`rule_based_decider_ignores_opponent_stats`
+(`src/bot/decider.rs`) sweeps 64 RNG seeds and verifies decisions are
+byte-identical with and without a registry attached. Future
+exploitative deciders are deferred to a follow-on Epic.
 
-`SimTable` gains `with_stats_registry(table, bots, registry)` that
-wires one in and ingests every completed `HandHistory` after each hand.
+`SimTable::with_stats_registry(table, bots, registry)` wires the
+registry into every snapshot built by `run_street` (via
+`from_table_with_stats`) and ingests every completed `HandHistory`
+after each `run_hand` and before `button_up`. The `run_hand_inner`
+internal helper was refactored to no longer call `end_hand` itself —
+hole cards must be captured before `end_hand` mucks them, so `run_hand`
+now drives the settle-and-ingest sequence directly. A `pub fn
+stats(&self) -> Option<&StatsRegistry>` accessor exposes the populated
+registry afterwards.
+
+> **Implementation note — `Position::from_seat` defense fix.** Phase 3's
+> first integration test (`tests/player_stats_consistency.rs`) surfaced
+> a latent bug in `analysis::player_stats::ingest_hand` that had
+> existed since Phase 2: it called `Position::from_seat(physical_seat,
+> physical_button, occupied_count)` directly, which underflows
+> `usize` when `physical_button > physical_seat + occupied_count` —
+> exactly the configuration produced by 2+ eliminations on a 6-max
+> table. The fix translates physical seat indices to logical
+> (button-relative) ones the same way `TableSnapshot::from_table` and
+> `HandCollection::hands_by_position` do. As defense in depth,
+> `Position::from_seat` itself was switched from raw `-` to
+> `checked_sub()?` so future callers that forget the conversion get
+> `None` instead of a panic.
 
 ### Persistence (Phase 4 — designed now, shipped after the in-memory layer)
 
@@ -221,7 +250,7 @@ impl StatsRegistry {
 
 Lazy load on first `get`; flush on `Drop` and on explicit `flush()`.
 
-### Review API + example (Phase 5)
+### Review API + example (Phase 5) — ✅ Shipped
 
 Query helpers on `HandCollection`:
 
@@ -232,6 +261,18 @@ impl HandCollection {
     pub fn showdowns_only(&self) -> impl Iterator<Item = &HandHistory>;
 }
 ```
+
+These are unconditional (not gated on `player-stats`) — useful for any
+consumer of `HandCollection`, not just the stats use case. A private
+`hand_has_position` helper translates physical seat indices to logical
+ones to handle sparse seating safely after eliminations.
+
+`tests/player_stats_consistency.rs` runs a 100-hand 6-handed bot
+self-play session through `SimTable::with_stats_registry`, asserts that
+`tight_passive` VPIP < `loose_aggressive` VPIP (the load-bearing
+relative-ordering check), and runs an opportunistic `maniac` check when
+they survive the assertion threshold. Stacks are 1B chips so per-hand
+losses cannot bust a player within the test horizon.
 
 New example `examples/player_stats_review.rs` (gated on
 `bot-profiles,hand-histories,player-stats`):
@@ -289,31 +330,42 @@ maniac            |   50  | 71.0% | 55.0% | 24.3% | 5.7  | 38.0% | 44.0%
     multi-hand ingestion, every derived ratio, and zero-opportunity
     "no data" returns
 
-### Phase 3 — Expose to `BotDecider` — ⏳ Next
+### Phase 3 — Expose to `BotDecider` — ✅ Done
 
-14. Extend `TableSnapshot` with `opponent_stats: Option<&StatsRegistry>`
-15. New `TableSnapshot::from_table_with_stats` constructor
-16. `SimTable::with_stats_registry` constructor variant in
-    `src/bot/sim.rs`; ingest each `HandHistory` after `run_hand`
-17. Regression test: same RNG seed, identical decisions with /
-    without registry attached
+14. ✅ Extended `TableSnapshot<'a>` with `opponent_stats: Option<&'a StatsRegistry>`
+    (gated on `player-stats`; private `PhantomData` placeholder when off)
+15. ✅ New `TableSnapshot::from_table_with_stats(table, seat, registry)` constructor
+16. ✅ `SimTable::with_stats_registry(table, bots, registry)` constructor variant
+    in `src/bot/sim.rs`; ingests each `HandHistory` after every `run_hand` and
+    routes snapshots through `from_table_with_stats` so deciders see the borrow
+17. ✅ `pub fn stats(&self) -> Option<&StatsRegistry>` accessor on `SimTable`
+18. ✅ Regression test `rule_based_decider_ignores_opponent_stats` in
+    `src/bot/decider.rs` — sweeps 64 RNG seeds, asserts byte-identical decisions
+    with vs. without an attached registry
+19. ✅ Defense-in-depth fix: `Position::from_seat` switched from raw `-` to
+    `checked_sub()?` to turn future "physical-as-logical" misuses into `None`
+    instead of panics
 
 ### Phase 4 — Persistence (separately gated) — ⏳ Deferred
 
-18. New feature flag `player-stats-persistence` (off by default)
-19. `PlayerStatsStore` trait + `YamlPlayerStatsStore` impl in
+20. New feature flag `player-stats-persistence` (off by default)
+21. `PlayerStatsStore` trait + `YamlPlayerStatsStore` impl in
     `src/analysis/player_stats_store.rs`
-20. `StatsRegistry::with_store` + lazy load + flush-on-drop
-21. Round-trip test: ingest → flush → fresh registry → reload → diff
+22. `StatsRegistry::with_store` + lazy load + flush-on-drop
+23. Round-trip test: ingest → flush → fresh registry → reload → diff
 
-### Phase 5 — Review API + example
+### Phase 5 — Review API + example — ✅ Done
 
-22. ⏳ Query helpers on `HandCollection` in `src/hand_history.rs`
-    (`hands_by_player`, `hands_by_position`, `showdowns_only`)
-23. ✅ `examples/player_stats_review.rs`
-24. ⏳ `tests/player_stats_consistency.rs` — run a 50-hand bot session,
-    build a registry, assert per-style ratio bands (e.g.
-    `tight_passive` VPIP < 25%, `maniac` VPIP > 60%)
+24. ✅ Query helpers on `HandCollection` in `src/hand_history.rs`
+    (`hands_by_player`, `hands_by_position`, `showdowns_only`) plus a
+    private `hand_has_position` helper that translates physical seat indices
+    to logical ones for sparse-seating safety
+25. ✅ `examples/player_stats_review.rs`
+26. ✅ `tests/player_stats_consistency.rs` — runs a 100-hand 6-handed bot
+    self-play session through `SimTable::with_stats_registry`, asserts
+    `tight_passive` VPIP < `loose_aggressive` VPIP (load-bearing relative
+    ordering), with an opportunistic `maniac` check that fires only when
+    they survive the assertion threshold
 
 ---
 

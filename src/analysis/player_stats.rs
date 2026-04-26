@@ -306,13 +306,29 @@ impl StatsRegistry {
             return;
         }
 
-        let button = hand.table.button.unwrap_or(0);
-        #[allow(clippy::cast_possible_truncation)]
-        let seat_count = hand.players.len() as u8;
+        // Translate physical seat indices to logical (button-relative) ones
+        // before handing to `Position::from_seat`, which assumes contiguous
+        // logical seating. Sparse `players` (e.g. after seat 3 was eliminated)
+        // would otherwise underflow when `button > seat + seat_count`.
+        // Same pattern as `TableSnapshot::from_table` and `hand_has_position`.
+        let button_phys = hand.table.button.unwrap_or(0);
+        let mut occupied: Vec<u8> = hand.players.iter().map(|p| p.seat).collect();
+        occupied.sort_unstable();
+        let Ok(seat_count) = u8::try_from(occupied.len()) else {
+            return;
+        };
+        let button_logical: Option<u8> = occupied
+            .iter()
+            .position(|&s| s == button_phys)
+            .and_then(|p| u8::try_from(p).ok());
         let seat_to_pos: HashMap<u8, Position> = hand
             .players
             .iter()
-            .filter_map(|p| Position::from_seat(p.seat, button, seat_count).map(|pos| (p.seat, pos)))
+            .filter_map(|p| {
+                let logical_idx = occupied.iter().position(|&s| s == p.seat)?;
+                let logical = u8::try_from(logical_idx).ok()?;
+                Position::from_seat(logical, button_logical?, seat_count).map(|pos| (p.seat, pos))
+            })
             .collect();
 
         // Hands dealt + PFR opportunity per seated player with an id.
@@ -1132,5 +1148,103 @@ mod tests {
         assert!((s.aggression_factor().unwrap() - 3.0).abs() < 1e-9);
         // Aggression freq = 3 / (3+1+0) = 0.75
         assert!((s.aggression_freq().unwrap() - 0.75).abs() < 1e-9);
+    }
+
+    /// Regression: a hand recorded after eliminations leaves sparse physical
+    /// seat indices (e.g. seats 0, 3, 5 occupied) with the button at a
+    /// physical index that exceeds the count of remaining occupied seats.
+    /// Pre-fix this panicked inside `Position::from_seat` with `attempt to
+    /// subtract with overflow`. Post-fix, ingest must complete normally and
+    /// stamp `hands_dealt` for every seated player.
+    #[test]
+    fn ingest_hand_with_sparse_seating_after_eliminations() {
+        let p0 = id();
+        let p3 = id();
+        let p5 = id();
+        let hand = HandHistory {
+            pkcore_version: None,
+            format_version: 1,
+            hand: HandMeta {
+                id: "sparse-after-bust".to_string(),
+                game: HandVariant::Holdem,
+                timestamp: None,
+                source: None,
+                description: None,
+            },
+            table: TableInfo {
+                name: None,
+                seats: Some(6),
+                // Physical button = 5. Without the logical-mapping fix in
+                // ingest_hand, `Position::from_seat(0, 5, 3)` underflows.
+                button: Some(5),
+                stakes: Stakes {
+                    small_blind: 50.0,
+                    big_blind: 100.0,
+                    ante: None,
+                    straddle: None,
+                },
+            },
+            // Three survivors at sparse physical seats 0, 3, 5.
+            players: vec![
+                entry(0, "P0", 1000.0, Some(p0)),
+                entry(3, "P3", 1000.0, Some(p3)),
+                entry(5, "P5", 1000.0, Some(p5)),
+            ],
+            board: None,
+            streets: Some(Streets {
+                preflop: Some(PreflopStreet {
+                    actions: vec![
+                        act(0, Some(p0), ActionType::Post, Some(50.0)),
+                        act(3, Some(p3), ActionType::Post, Some(100.0)),
+                        act(5, Some(p5), ActionType::Fold, None),
+                        act(0, Some(p0), ActionType::Fold, None),
+                    ],
+                    pot: Some(150.0),
+                }),
+                flop: None,
+                turn: None,
+                river: None,
+            }),
+            results: Some(vec![
+                ResultEntry {
+                    seat: 3,
+                    best_hand: None,
+                    hand_rank: None,
+                    outcome: crate::hand_history::Outcome::Win,
+                    net: Some(50.0),
+                    pot_won: None,
+                    mucked: None,
+                },
+                ResultEntry {
+                    seat: 0,
+                    best_hand: None,
+                    hand_rank: None,
+                    outcome: crate::hand_history::Outcome::Fold,
+                    net: Some(-50.0),
+                    pot_won: None,
+                    mucked: None,
+                },
+                ResultEntry {
+                    seat: 5,
+                    best_hand: None,
+                    hand_rank: None,
+                    outcome: crate::hand_history::Outcome::Fold,
+                    net: Some(0.0),
+                    pot_won: None,
+                    mucked: None,
+                },
+            ]),
+            analysis: None,
+            shuffled_deck: None,
+        };
+
+        let mut r = StatsRegistry::new();
+        // Must not panic.
+        r.ingest_hand(&hand);
+
+        // All three sparse-seated players got their hand counted.
+        assert_eq!(1, r.get(p0).expect("p0 ingested").hands_dealt);
+        assert_eq!(1, r.get(p3).expect("p3 ingested").hands_dealt);
+        assert_eq!(1, r.get(p5).expect("p5 ingested").hands_dealt);
     }
 }

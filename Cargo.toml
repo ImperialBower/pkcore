@@ -105,6 +105,10 @@ required-features = ["hand-histories", "bot-profiles"]
 name = "hand_history_legacy_yaml"
 required-features = ["hand-histories"]
 
+[[test]]
+name = "player_stats_consistency"
+required-features = ["bot-profiles", "hand-histories", "player-stats"]
+
 [dev-dependencies]
 serde_yaml_bw = "2.5"
 clap = { version = "4.6", features = ["derive", "unicode"] }

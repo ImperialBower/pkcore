@@ -46,7 +46,11 @@ impl Position {
         if seat_count == 0 {
             return None;
         }
-        let offset = (seat as usize + seat_count as usize - button as usize) % seat_count as usize;
+        // Defense-in-depth: caller must pass logical (button-relative) indices
+        // — `seat` and `button` should both be in `0..seat_count`. If `button`
+        // exceeds `seat + seat_count` (the caller forgot to translate physical
+        // → logical for sparse seating), return None instead of panicking.
+        let offset = (seat as usize + seat_count as usize).checked_sub(button as usize)? % seat_count as usize;
         match (seat_count, offset) {
             (2 | 3 | 4 | 5 | 6 | 9, 0) => Some(Position::BTN),
             (3 | 4 | 5 | 6 | 9, 1) => Some(Position::SB),
@@ -204,5 +208,20 @@ mod casino__table__position_tests {
         assert_eq!(None, Position::from_seat(0, 0, 0));
         assert_eq!(None, Position::from_seat(0, 0, 7));
         assert_eq!(None, Position::from_seat(0, 0, 8));
+    }
+
+    #[test]
+    fn from_seat_button_overflow_returns_none() {
+        // Tripwire: a caller passing physical seat indices into an API that
+        // expects logical (button-relative) indices used to panic with
+        // `attempt to subtract with overflow`. The checked_sub guard turns
+        // that class of bug into a None return so consumers can detect &
+        // recover rather than crash. Concrete trigger: seat=0, seat_count=3,
+        // button=5 (e.g. a 6-max table where the BB and CO were eliminated
+        // and the caller forgot to translate physical→logical).
+        assert_eq!(None, Position::from_seat(0, 5, 3));
+        assert_eq!(None, Position::from_seat(1, 9, 2));
+        // Boundary: button == seat + seat_count is fine (subtracts to zero).
+        assert_eq!(Some(Position::BTN), Position::from_seat(1, 3, 2));
     }
 }
