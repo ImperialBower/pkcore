@@ -43,6 +43,11 @@ use crate::bot::table_snapshot::TableSnapshot;
 use crate::casino::table::winnings::Winnings;
 use crate::casino::table_no_cell::TableNoCell;
 
+#[cfg(feature = "player-stats")]
+use crate::analysis::player_stats::StatsRegistry;
+#[cfg(feature = "player-stats")]
+use crate::hand_history::{HandHistory, PlayerSnapshot};
+
 // ── ActionCounts ──────────────────────────────────────────────────────────────
 
 /// Per-seat counts of each action type over one or more hands.
@@ -178,6 +183,17 @@ pub struct SimResult {
 pub struct SimTable {
     table: TableNoCell,
     bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)>,
+    /// Optional opponent stats aggregator. When `Some`, every snapshot built
+    /// for `decide()` borrows this registry, and every completed hand is
+    /// ingested via [`StatsRegistry::ingest_hand`] before `button_up`.
+    /// Attached only via [`Self::with_stats_registry`].
+    #[cfg(feature = "player-stats")]
+    stats_registry: Option<StatsRegistry>,
+    /// Monotonic per-`SimTable` hand counter, used to populate
+    /// `HandHistory.hand_num` when ingesting into the stats registry. Always
+    /// `0` when no registry is attached.
+    #[cfg(feature = "player-stats")]
+    hand_count: usize,
 }
 
 impl SimTable {
@@ -210,7 +226,14 @@ impl SimTable {
     /// ```
     #[must_use]
     pub fn new(table: TableNoCell, bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)>) -> Self {
-        Self { table, bots }
+        Self {
+            table,
+            bots,
+            #[cfg(feature = "player-stats")]
+            stats_registry: None,
+            #[cfg(feature = "player-stats")]
+            hand_count: 0,
+        }
     }
 
     /// Creates a `SimTable` where every seat uses a [`RuleBasedDecider`].
@@ -243,7 +266,93 @@ impl SimTable {
                 (seat, profile, Box::new(RuleBasedDecider))
             })
             .collect();
-        Self { table, bots }
+        Self {
+            table,
+            bots,
+            #[cfg(feature = "player-stats")]
+            stats_registry: None,
+            #[cfg(feature = "player-stats")]
+            hand_count: 0,
+        }
+    }
+
+    /// Creates a `SimTable` with [`RuleBasedDecider`] for every seat AND an
+    /// attached opponent stats registry.
+    ///
+    /// Every completed hand is automatically ingested into `registry` via
+    /// [`StatsRegistry::ingest_hand`] after `end_hand` and before
+    /// `button_up`.  Snapshots passed to `decide()` carry an
+    /// `opponent_stats: Some(&registry)` borrow — the shipped deciders ignore
+    /// it (per EPIC-26 Phase 3's non-behavior-changing contract); future
+    /// exploitative deciders may read it.
+    ///
+    /// Retrieve the populated registry afterwards via [`Self::stats`].
+    ///
+    /// Only available when the `player-stats` feature is enabled.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// # #[cfg(all(feature = "player-stats", not(target_arch = "wasm32")))] {
+    /// use pkcore::analysis::player_stats::StatsRegistry;
+    /// use pkcore::bot::profile::BotProfile;
+    /// use pkcore::bot::sim::SimTable;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// let bots = vec![(0_u8, BotProfile::tight_passive()), (1_u8, BotProfile::loose_aggressive())];
+    /// let registry = StatsRegistry::new();
+    ///
+    /// let mut sim = SimTable::with_stats_registry(table, bots, registry);
+    /// let _ = sim.run_n_hands(5).unwrap();
+    ///
+    /// let stats = sim.stats().expect("registry attached");
+    /// assert!(!stats.is_empty(), "registry should hold per-player stats after running hands");
+    /// # }
+    /// ```
+    #[cfg(feature = "player-stats")]
+    #[must_use]
+    pub fn with_stats_registry(table: TableNoCell, bots: Vec<(u8, BotProfile)>, registry: StatsRegistry) -> Self {
+        let mut sim = Self::with_rule_based(table, bots);
+        sim.stats_registry = Some(registry);
+        sim
+    }
+
+    /// Borrows the attached [`StatsRegistry`], if any.
+    ///
+    /// Returns `None` when the `SimTable` was constructed without a registry
+    /// (via [`Self::new`] or [`Self::with_rule_based`]).
+    ///
+    /// Only available when the `player-stats` feature is enabled.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "player-stats")] {
+    /// use pkcore::bot::profile::BotProfile;
+    /// use pkcore::bot::sim::SimTable;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// ]);
+    /// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// let bots = vec![(0_u8, BotProfile::gto()), (1_u8, BotProfile::tight_passive())];
+    /// let sim = SimTable::with_rule_based(table, bots);
+    /// assert!(sim.stats().is_none());
+    /// # }
+    /// ```
+    #[cfg(feature = "player-stats")]
+    #[must_use]
+    pub fn stats(&self) -> Option<&StatsRegistry> {
+        self.stats_registry.as_ref()
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
@@ -287,8 +396,24 @@ impl SimTable {
             decider.on_new_hand();
         }
 
+        // Pre-hand state for stats ingestion. `None` when no registry attached.
+        #[cfg(feature = "player-stats")]
+        let stats_pre = self.capture_stats_pre_hand();
+
         let mut actions: HashMap<u8, ActionCounts> = HashMap::new();
-        let winnings = self.run_hand_inner(&mut actions)?;
+        self.run_hand_inner(&mut actions)?;
+
+        // Capture hole cards + board *before* `end_hand` mucks them.
+        #[cfg(feature = "player-stats")]
+        let stats_mid = stats_pre.as_ref().map(|_| self.capture_stats_mid_hand());
+
+        let winnings = self.table.end_hand()?;
+
+        // Ingest the completed hand into the registry, if attached.
+        #[cfg(feature = "player-stats")]
+        if let (Some(pre), Some(mid)) = (stats_pre, stats_mid) {
+            self.ingest_completed_hand(pre, &mid, &winnings);
+        }
 
         self.table.button_up();
 
@@ -405,16 +530,18 @@ impl SimTable {
             .count()
     }
 
-    /// Runs a full hand from forced bets through showdown, recording action
-    /// counts into `actions`.
-    fn run_hand_inner(&mut self, actions: &mut HashMap<u8, ActionCounts>) -> Result<Winnings, PKError> {
+    /// Runs a full hand from forced bets through the river — does NOT call
+    /// `end_hand`.  The caller (`run_hand`) is responsible for invoking
+    /// `end_hand` after capturing any mid-hand state needed for stats
+    /// ingestion (hole cards in particular, since `end_hand` mucks them).
+    fn run_hand_inner(&mut self, actions: &mut HashMap<u8, ActionCounts>) -> Result<(), PKError> {
         self.table.act_forced_bets()?;
         self.table.deal_cards_to_seats()?;
 
         // Preflop
         self.run_street(actions);
         if self.table.is_game_over() {
-            return self.table.end_hand();
+            return Ok(());
         }
 
         // Flop
@@ -422,7 +549,7 @@ impl SimTable {
         self.table.deal_flop()?;
         self.run_street(actions);
         if self.table.is_game_over() {
-            return self.table.end_hand();
+            return Ok(());
         }
 
         // Turn
@@ -430,7 +557,7 @@ impl SimTable {
         self.table.deal_turn()?;
         self.run_street(actions);
         if self.table.is_game_over() {
-            return self.table.end_hand();
+            return Ok(());
         }
 
         // River
@@ -438,7 +565,7 @@ impl SimTable {
         self.table.deal_river()?;
         self.run_street(actions);
 
-        self.table.end_hand()
+        Ok(())
     }
 
     /// Runs one betting street to completion, recording each action taken.
@@ -457,7 +584,18 @@ impl SimTable {
                 continue;
             };
 
-            // Build snapshot (borrows self.table briefly; snapshot owns all data).
+            // Build snapshot. When a stats registry is attached, route through
+            // `from_table_with_stats` so the snapshot carries an
+            // `opponent_stats: Some(&registry)` borrow for any decider that
+            // wants to read it. Shipped deciders ignore it (per Unit A's
+            // regression test); the wiring exists for future exploitative
+            // deciders.
+            #[cfg(feature = "player-stats")]
+            let snapshot = match self.stats_registry.as_ref() {
+                Some(reg) => TableSnapshot::from_table_with_stats(&self.table, seat, reg),
+                None => TableSnapshot::from_table(&self.table, seat),
+            };
+            #[cfg(not(feature = "player-stats"))]
             let snapshot = TableSnapshot::from_table(&self.table, seat);
 
             // Clone profile so we can release the bots borrow before the decide call.
@@ -512,6 +650,139 @@ impl SimTable {
             }
         }
     }
+
+    // ── Stats ingestion helpers (player-stats only) ──────────────────────────
+
+    /// Captures pre-hand state needed to build a `HandHistory` for ingestion.
+    ///
+    /// Returns `None` when no [`StatsRegistry`] is attached, so callers pay
+    /// no allocation cost on the no-stats path.
+    #[cfg(feature = "player-stats")]
+    fn capture_stats_pre_hand(&self) -> Option<StatsPreHand> {
+        self.stats_registry.as_ref()?;
+        let stacks: Vec<(u8, String, usize, uuid::Uuid)> = self
+            .table
+            .seats
+            .0
+            .iter()
+            .enumerate()
+            .filter_map(|(i, s)| {
+                if s.is_empty() {
+                    None
+                } else {
+                    u8::try_from(i)
+                        .ok()
+                        .map(|seat| (seat, s.player.handle.clone(), s.player.chips, s.player.id))
+                }
+            })
+            .collect();
+        Some(StatsPreHand {
+            stacks,
+            event_log_start: self.table.event_log.len(),
+            button: self.table.button,
+        })
+    }
+
+    /// Captures hole cards + board after the river and before `end_hand`
+    /// mucks them.  `end_hand` calls `reset()` which clears `seat.cards`.
+    #[cfg(feature = "player-stats")]
+    fn capture_stats_mid_hand(&self) -> StatsMidHand {
+        let hole_cards: Vec<(u8, Option<String>)> = self
+            .table
+            .seats
+            .0
+            .iter()
+            .enumerate()
+            .filter_map(|(i, s)| {
+                if s.is_empty() {
+                    None
+                } else {
+                    u8::try_from(i).ok().map(|seat| {
+                        let hc = if s.cards.has_cards() {
+                            Some(s.cards.sorted_display())
+                        } else {
+                            None
+                        };
+                        (seat, hc)
+                    })
+                }
+            })
+            .collect();
+        StatsMidHand {
+            hole_cards,
+            board_str: self.table.board.to_string(),
+        }
+    }
+
+    /// Builds a `HandHistory` from captured pre/mid-hand state plus post-hand
+    /// `winnings` and ending stacks, then feeds it into the attached registry.
+    #[cfg(feature = "player-stats")]
+    fn ingest_completed_hand(&mut self, pre: StatsPreHand, mid: &StatsMidHand, winnings: &Winnings) {
+        use std::time::{SystemTime, UNIX_EPOCH};
+
+        let ts_secs = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs());
+
+        let player_snapshot: Vec<PlayerSnapshot> = pre
+            .stacks
+            .into_iter()
+            .map(|(seat, name, stack, id)| {
+                let hole = mid
+                    .hole_cards
+                    .iter()
+                    .find(|(s, _)| *s == seat)
+                    .and_then(|(_, h)| h.clone());
+                (seat, name, stack, hole, Some(id))
+            })
+            .collect();
+
+        let ending_stacks: Vec<(u8, usize)> = self
+            .table
+            .seats
+            .0
+            .iter()
+            .enumerate()
+            .filter_map(|(i, s)| {
+                if s.is_empty() {
+                    None
+                } else {
+                    u8::try_from(i).ok().map(|seat| (seat, s.player.chips))
+                }
+            })
+            .collect();
+
+        self.hand_count += 1;
+        let event_log_slice = &self.table.event_log[pre.event_log_start..];
+        let hh = HandHistory::from_table_state(
+            self.hand_count,
+            ts_secs,
+            pre.button,
+            &self.table.forced,
+            &player_snapshot,
+            &mid.board_str,
+            winnings,
+            event_log_slice,
+            &ending_stacks,
+            "sim_table",
+            None,
+        );
+
+        if let Some(reg) = self.stats_registry.as_mut() {
+            reg.ingest_hand(&hh);
+        }
+    }
+}
+
+#[cfg(feature = "player-stats")]
+struct StatsPreHand {
+    stacks: Vec<(u8, String, usize, uuid::Uuid)>,
+    event_log_start: usize,
+    button: u8,
+}
+
+#[cfg(feature = "player-stats")]
+struct StatsMidHand {
+    hole_cards: Vec<(u8, Option<String>)>,
+    board_str: String,
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -652,5 +923,93 @@ mod tests {
         // Should not return InsufficientChips; B goes all-in as blind.
         let result = sim.run_n_hands(5);
         assert!(result.is_ok(), "Expected Ok, got {:?}", result);
+    }
+
+    // ── EPIC-26 Phase 3 (Unit B): stats registry wiring ─────────────────────
+
+    #[cfg(feature = "player-stats")]
+    #[test]
+    fn stats_returns_none_when_no_registry() {
+        let sim = two_player_sim();
+        assert!(sim.stats().is_none());
+    }
+
+    #[cfg(feature = "player-stats")]
+    #[test]
+    fn with_stats_registry_attaches_empty_registry() {
+        use crate::analysis::player_stats::StatsRegistry;
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+        ]);
+        let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let bots = vec![(0_u8, BotProfile::gto()), (1_u8, BotProfile::tight_passive())];
+        let registry = StatsRegistry::new();
+        let sim = SimTable::with_stats_registry(table, bots, registry);
+        let stats = sim.stats().expect("registry attached");
+        assert!(stats.is_empty(), "fresh registry should have no players");
+        assert_eq!(0, stats.len());
+    }
+
+    #[cfg(feature = "player-stats")]
+    #[test]
+    fn run_n_hands_with_registry_ingests_each_completed_hand() {
+        use crate::analysis::player_stats::StatsRegistry;
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 10_000)),
+        ]);
+        let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let bots = vec![
+            (0_u8, BotProfile::tight_passive()),
+            (1_u8, BotProfile::loose_aggressive()),
+        ];
+        let registry = StatsRegistry::new();
+        let mut sim = SimTable::with_stats_registry(table, bots, registry);
+
+        let n = 8usize;
+        let result = sim.run_n_hands(n).unwrap();
+        assert!(result.hands_played > 0, "at least one hand must complete");
+
+        let stats = sim.stats().expect("registry attached");
+        assert_eq!(2, stats.len(), "both seats should have stats entries");
+
+        // Every player should have hands_dealt == result.hands_played: every
+        // hand deals to every active seat. (Both started with 10k chips, no
+        // eliminations expected within 8 hands at 50/100 blinds.)
+        let hands_played = result.hands_played as u64;
+        for (uuid, ps) in stats.iter() {
+            assert_eq!(
+                hands_played, ps.hands_dealt,
+                "player {uuid} should have been dealt every hand"
+            );
+        }
+    }
+
+    #[cfg(feature = "player-stats")]
+    #[test]
+    fn run_hand_with_registry_does_not_break_winnings_or_actions() {
+        // SimTable with a registry should produce the same shape of HandResult
+        // as one without — we don't claim byte-identical behavior (the
+        // thread-local RNG used by RuleBasedDecider can't be seeded), only
+        // that the wiring doesn't break the existing return contract.
+        use crate::analysis::player_stats::StatsRegistry;
+
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+        ]);
+        let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let bots = vec![(0_u8, BotProfile::gto()), (1_u8, BotProfile::gto())];
+        let registry = StatsRegistry::new();
+        let mut sim = SimTable::with_stats_registry(table, bots, registry);
+
+        let result = sim.run_hand().unwrap();
+        assert!(!result.winnings.is_empty(), "winnings must be reported");
+
+        // Net chip flow across all seats must still sum to zero (no chips
+        // created or destroyed by stats ingestion).
+        let total_chips_after: usize = sim.table.seats.0.iter().map(|s| s.player.chips).sum();
+        assert_eq!(10_000, total_chips_after, "stats ingestion must not affect chip totals");
     }
 }
