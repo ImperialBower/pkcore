@@ -15,12 +15,12 @@
 | Query helpers on `HandCollection` (`hands_by_player`, `hands_by_position`, `showdowns_only`) | ✅ Done |
 | Review example `examples/player_stats_review.rs` | ✅ Done |
 | Round-trip test `tests/player_stats_consistency.rs` | ✅ Done |
-| Optional persistence: `PlayerStatsStore` trait + `YamlPlayerStatsStore` | ⏳ Deferred — Phase 4 (gated separately) |
+| Optional persistence: `PlayerStatsStore` trait + `YamlPlayerStatsStore` | ✅ Done (gated on `player-stats-persistence`, off by default) |
 | Doc (`docs/EPIC-26_Player_Stats.md`) | ✅ Done (this file) |
 
-**Phase summary:** Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ⏳ (deferred) · Phase 5a (query helpers) ✅ · Phase 5b (example) ✅ · Phase 5c (consistency test) ✅
+**Phase summary:** Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ✅ · Phase 5a (query helpers) ✅ · Phase 5b (example) ✅ · Phase 5c (consistency test) ✅
 
-The EPIC's in-memory work is complete. **Phase 4 (persistence)** remains deferred per the [phase ordering](#phase-ordering-rationale) (`1 → 2 → 3 → 5 → 4`) until a multi-session experiment use case justifies the trait + YAML store.
+**EPIC-26 is complete.** All five phases shipped, including the optional on-disk persistence layer (default-off; opt in with `--features player-stats-persistence`).
 
 ---
 
@@ -229,26 +229,51 @@ registry afterwards.
 > `checked_sub()?` so future callers that forget the conversion get
 > `None` instead of a panic.
 
-### Persistence (Phase 4 — designed now, shipped after the in-memory layer)
+### Persistence (Phase 4) — ✅ Shipped
 
-Gated on `player-stats-persistence` (off by default).
+Gated on the `player-stats-persistence` feature (off by default; depends
+on `player-stats` and pulls in `serde_yaml_bw`).
 
 ```rust
-pub trait PlayerStatsStore: Send + Sync {
+pub trait PlayerStatsStore: std::fmt::Debug + Send + Sync {
     fn load(&self, id: Uuid) -> Result<Option<PlayerStats>, PKError>;
+    fn load_all(&self) -> Result<HashMap<Uuid, PlayerStats>, PKError>;
     fn save(&self, id: Uuid, stats: &PlayerStats) -> Result<(), PKError>;
     fn flush(&self) -> Result<(), PKError> { Ok(()) }
 }
 
 pub struct YamlPlayerStatsStore { dir: PathBuf }
-// writes generated/players/<uuid>.yaml mirroring HandCollection conventions
+// writes <dir>/<uuid>.yaml — one file per player Uuid
 
 impl StatsRegistry {
-    pub fn with_store(store: Box<dyn PlayerStatsStore>) -> Self;
+    pub fn with_store(store: Box<dyn PlayerStatsStore>) -> Result<Self, PKError>;
+    pub fn flush(&self) -> Result<(), PKError>;
 }
 ```
 
-Lazy load on first `get`; flush on `Drop` and on explicit `flush()`.
+> **Implementation note — eager load instead of lazy.** The original
+> spec called for "lazy load on first `get`," but `StatsRegistry::get(&self)`
+> would need interior mutability (`RefCell`/`Mutex`) to populate cache
+> from a `&self` method, and that would ripple through Phase 3's
+> `TableSnapshot::from_table_with_stats(&registry)` borrow pattern.
+> The shipped implementation goes eager: `with_store(store)` calls
+> `store.load_all()` once at construction, in-memory ops stay
+> `&self`/`&mut self` exactly as before, and `flush` writes everything
+> out at the end. Net cost: one extra directory scan at session start.
+> Net benefit: zero downstream API churn. Matches the typical
+> "session-start load, session-end save" workflow.
+
+Two additional shape changes from the original spec: (1) the trait grew
+a `load_all` method (used by `with_store` for eager load); (2)
+`PlayerStatsStore` requires a `Debug` supertrait so `StatsRegistry`
+keeps its `#[derive(Debug)]`. `StatsRegistry` itself dropped its
+`Clone` derive — `Box<dyn PlayerStatsStore>` isn't clonable, and
+nothing in-tree cloned the registry.
+
+`Drop` calls `flush()` best-effort (errors are logged via
+`log::warn!` rather than panicking — `Drop` cannot return). Callers
+who need durability guarantees should call `flush()` explicitly before
+letting the registry go out of scope.
 
 ### Review API + example (Phase 5) — ✅ Shipped
 
@@ -346,13 +371,29 @@ maniac            |   50  | 71.0% | 55.0% | 24.3% | 5.7  | 38.0% | 44.0%
     `checked_sub()?` to turn future "physical-as-logical" misuses into `None`
     instead of panics
 
-### Phase 4 — Persistence (separately gated) — ⏳ Deferred
+### Phase 4 — Persistence (separately gated) — ✅ Done
 
-20. New feature flag `player-stats-persistence` (off by default)
-21. `PlayerStatsStore` trait + `YamlPlayerStatsStore` impl in
-    `src/analysis/player_stats_store.rs`
-22. `StatsRegistry::with_store` + lazy load + flush-on-drop
-23. Round-trip test: ingest → flush → fresh registry → reload → diff
+20. ✅ Feature flag `player-stats-persistence` in `Cargo.toml` (off by default;
+    depends on `player-stats` and `dep:serde_yaml_bw`)
+21. ✅ `PlayerStatsStore` trait (with `Debug + Send + Sync` supertraits) +
+    `YamlPlayerStatsStore` impl in `src/analysis/player_stats_store.rs`
+    (one YAML file per player Uuid; `load_all` skips files whose stem
+    isn't a UUID, so foreign files are tolerated)
+22. ✅ `StatsRegistry::with_store(Box<dyn PlayerStatsStore>) -> Result<Self>`
+    constructor — eager load on construction (deviated from the spec's
+    lazy model; see implementation note above), `flush()` method, and
+    `Drop` impl that flushes best-effort with `log::warn!` on error
+23. ✅ Re-export `PlayerStatsStore` and `YamlPlayerStatsStore` from
+    `src/prelude.rs` under the feature flag
+24. ✅ 7 unit tests in `src/analysis/player_stats_store.rs` — directory
+    creation, save/load round-trip, missing-UUID, `load_all`, non-YAML
+    file filtering, overwrites, default-flush no-op
+25. ✅ 3 integration tests in `tests/player_stats_persistence.rs` —
+    ingest → drop → reload (asserts in-memory state matches on-disk
+    state), explicit `flush` works without drop, store-less registry
+    flush-and-drop are safe no-ops
+26. ✅ CI: `--features player-stats-persistence` added to the
+    `no-default-features` job in `.github/workflows/basic.yaml`
 
 ### Phase 5 — Review API + example — ✅ Done
 
@@ -441,12 +482,14 @@ cargo nextest run --features player-stats,player-stats-persistence
 
 ## Phase ordering rationale
 
-`1 → 2 → 3 → 5 → 4`. Identity propagation (1) is a hard prerequisite
-for every per-player stat. The aggregator (2) is the core value. Wiring
-it into `BotDecider` (3) costs little once 2 exists and unblocks future
-exploit deciders. The example + query API (5) is what makes the Epic
-demo-able and is small. Persistence (4) is the largest piece and only
-matters once people are running multi-session experiments — defer it.
+Shipped in `1 → 2 → 3 → 5 → 4` order. Identity propagation (1) is a
+hard prerequisite for every per-player stat. The aggregator (2) is the
+core value. Wiring it into `BotDecider` (3) cost little once 2
+existed and unblocks future exploit deciders. The example + query API
+(5) is what made the Epic demo-able. Persistence (4) was always the
+largest piece, deferred until the in-memory layer was solid — landing
+it last meant `with_store` only had to be a save/load shim around an
+already-validated registry, not a redesign vector.
 
 ---
 
