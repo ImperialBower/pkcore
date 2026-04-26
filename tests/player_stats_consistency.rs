@@ -91,8 +91,8 @@ fn vpip_differentiates_styles_after_self_play() {
 
     // tight_passive folds frequently and reliably survives all 100 hands;
     // it's the test's load-bearing anchor.
-    let tight_passive = vpip_if_seasoned("tight_passive")
-        .expect("tight_passive should survive 100 hands at deep stacks");
+    let tight_passive =
+        vpip_if_seasoned("tight_passive").expect("tight_passive should survive 100 hands at deep stacks");
 
     // EPIC-26 design rationale: tight_passive plays modestly. Bands are
     // deliberately wide to absorb thread-local RNG variability — this is a
