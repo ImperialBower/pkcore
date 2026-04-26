@@ -143,6 +143,14 @@ pub use crate::hand_history::{
     TableInfo, TurnStreet,
 };
 
+// player stats (player-stats feature)
+#[cfg(feature = "player-stats")]
+pub use crate::analysis::player_stats::{Confidence, PlayerStats, StatsRegistry};
+
+// player stats persistence (player-stats-persistence feature)
+#[cfg(feature = "player-stats-persistence")]
+pub use crate::analysis::player_stats_store::{PlayerStatsStore, YamlPlayerStatsStore};
+
 // casino (bot-profiles feature)
 #[cfg(feature = "bot-profiles")]
 pub use crate::casino::action::PlayerAction;

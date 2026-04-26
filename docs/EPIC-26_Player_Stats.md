@@ -4,19 +4,23 @@
 
 | Component | Status |
 |---|---|
-| Identity propagation: `Action.player_id`, `PlayerEntry.player_id` (`src/hand_history.rs`) | Planned |
-| `Streets::from_event_log` stamps every `Action` with the actor's `Uuid` | Planned |
-| `PlayerStats` aggregator with per-street + per-position counters (`src/analysis/player_stats.rs`) | Planned |
-| `StatsRegistry` keyed by `Uuid`; ingest from `HandHistory` / `HandCollection` | Planned |
-| Derived ratios: VPIP, PFR, 3-bet%, 4-bet%, c-bet%, fold-to-cbet, AF, aggression freq, WTSD, W$SD | Planned |
-| `Confidence` enum thresholded on sample size | Planned |
-| `TableSnapshot::opponent_stats` borrow exposed to `BotDecider` (no logic changes) | Planned |
-| `SimTable::with_stats_registry` constructor variant | Planned |
-| Query helpers on `HandCollection` (`hands_by_player`, `hands_by_position`, `showdowns_only`) | Planned |
-| Review example `examples/player_stats_review.rs` | Planned |
-| Round-trip test `tests/player_stats_consistency.rs` | Planned |
-| Optional persistence: `PlayerStatsStore` trait + `YamlPlayerStatsStore` | Planned (Phase 4 — gated separately) |
-| Doc (`docs/EPIC-26_Player_Stats.md`) | This file |
+| Identity propagation: `Action.player_id`, `PlayerEntry.player_id` (`src/hand_history.rs`) | ✅ Done |
+| `Streets::from_event_log_with_seat_ids` stamps every `Action` with the actor's `Uuid` | ✅ Done |
+| `PlayerStats` aggregator with per-street + per-position counters (`src/analysis/player_stats.rs`) | ✅ Done |
+| `StatsRegistry` keyed by `Uuid`; ingest from `HandHistory` / `HandCollection` | ✅ Done |
+| Derived ratios: VPIP, PFR, 3-bet%, 4-bet%, c-bet%, fold-to-cbet, AF, aggression freq, WTSD, W$SD | ✅ Done (all return `Option<f64>` — see [Design](#design)) |
+| `Confidence` enum thresholded on sample size | ✅ Done |
+| `TableSnapshot::opponent_stats` borrow exposed to `BotDecider` (no logic changes) | ✅ Done |
+| `SimTable::with_stats_registry` constructor variant | ✅ Done |
+| Query helpers on `HandCollection` (`hands_by_player`, `hands_by_position`, `showdowns_only`) | ✅ Done |
+| Review example `examples/player_stats_review.rs` | ✅ Done |
+| Round-trip test `tests/player_stats_consistency.rs` | ✅ Done |
+| Optional persistence: `PlayerStatsStore` trait + `YamlPlayerStatsStore` | ✅ Done (gated on `player-stats-persistence`, off by default) |
+| Doc (`docs/EPIC-26_Player_Stats.md`) | ✅ Done (this file) |
+
+**Phase summary:** Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ✅ · Phase 5a (query helpers) ✅ · Phase 5b (example) ✅ · Phase 5c (consistency test) ✅
+
+**EPIC-26 is complete.** All five phases shipped, including the optional on-disk persistence layer (default-off; opt in with `--features player-stats-persistence`).
 
 ---
 
@@ -51,17 +55,23 @@ EPIC-26 owns the aggregation, identity, and insight layer on top.
 
 ## Design
 
-### Identity propagation (Phase 1)
+### Identity propagation (Phase 1) — ✅ Shipped
 
-`TableAction::PlayerSeated(u8, Uuid)` is emitted at the start of every
-hand. `Streets::from_event_log` already walks the per-hand event slice;
-extend it to build a `HashMap<u8, Uuid>` from those seated events and
-stamp every `Action` it produces with the actor's `Uuid`.
+> **Implementation note:** the original spec had `Streets::from_event_log`
+> build a `HashMap<u8, Uuid>` internally from the `PlayerSeated` events
+> in its slice. The shipped design instead introduces a `PlayerSnapshot`
+> tuple — `(seat, name, stack, hole_cards_str, player_id)` — captured at
+> hand start, and a sibling `Streets::from_event_log_with_seat_ids(log,
+> &seat_to_id)` that takes the map explicitly. `from_table_state` builds
+> the map from snapshots and threads it in. The original
+> `from_event_log` is kept and delegates to the new variant for back-compat
+> with legacy YAML. Snapshot-as-source-of-truth turned out cleaner than
+> rescanning events.
 
 ```rust
 pub struct Action {
     pub seat: u8,
-    pub player_id: Option<Uuid>,   // NEW — None for legacy YAML
+    pub player_id: Option<Uuid>,   // None for legacy YAML
     pub action: ActionType,
     pub amount: Option<f64>,
     pub all_in: Option<bool>,
@@ -70,29 +80,34 @@ pub struct Action {
 pub struct PlayerEntry {
     pub seat: u8,
     pub name: String,
-    pub player_id: Option<Uuid>,   // NEW — None for legacy YAML
+    pub player_id: Option<Uuid>,   // None for legacy YAML
     // ...
 }
+
+/// Single source of truth for per-hand seat ↔ identity ↔ stack ↔ hole-cards.
+pub type PlayerSnapshot = (u8, String, usize, Option<String>, Option<Uuid>);
 ```
 
 `Option<Uuid>` keeps the existing YAML files in `generated/` round-trip
 cleanly; new sessions always populate it.
 
-### Aggregator (Phase 2)
+### Aggregator (Phase 2) — ✅ Shipped
 
-New module `src/analysis/player_stats.rs`, gated on a new feature flag
-`player-stats` (default-on, mirroring `bot-profiles` /
-`hand-histories`).
+Module `src/analysis/player_stats.rs`, gated on the `player-stats` feature
+flag (default-on, mirroring `bot-profiles` / `hand-histories`).
 
 ```rust
+pub const STREET_COUNT: usize = 4;
+pub const POSITION_COUNT: usize = 11; // sized to the full Position enum range
+
 pub struct PlayerStats {
     pub hands_dealt: u64,
     pub hands_voluntarily_played: u64,
     pub went_to_showdown: u64,
     pub won_at_showdown: u64,
 
-    pub by_street: [ActionCounts; 4],          // preflop, flop, turn, river
-    pub by_position: [ActionCounts; 6],        // UTG, MP, CO, BTN, SB, BB
+    pub by_street: [ActionCounts; STREET_COUNT],     // preflop, flop, turn, river
+    pub by_position: [ActionCounts; POSITION_COUNT], // indexed by `Position as usize - 1`
 
     pub pfr_opportunities: u64,
     pub pfr_count: u64,
@@ -121,78 +136,146 @@ impl StatsRegistry {
     pub fn ingest_collection(&mut self, hands: &HandCollection);
     pub fn get(&self, id: Uuid) -> Option<&PlayerStats>;
     pub fn iter(&self) -> impl Iterator<Item = (&Uuid, &PlayerStats)>;
+    pub fn len(&self) -> usize;
+    pub fn is_empty(&self) -> bool;
 }
 ```
 
-`ActionCounts` is reused unchanged from `src/bot/sim.rs:61`. Derived
-ratios are computed on read — no caching needed at this scale:
+`ActionCounts` is reused unchanged from `src/bot/sim.rs`. `by_position`
+is sized to the full `Position` enum range so `Position as usize - 1` is
+always a safe index — no compression mapping or panic surface.
+
+Derived ratios are computed on read — no caching needed at this scale.
+**All ratio methods return `Option<f64>`** so callers can distinguish
+"0% out of N opportunities" from "no data" (zero opportunities):
 
 ```rust
 impl PlayerStats {
-    pub fn vpip(&self) -> f64;
-    pub fn pfr(&self) -> f64;
-    pub fn three_bet_pct(&self) -> f64;
-    pub fn four_bet_pct(&self) -> f64;
-    pub fn cbet_pct(&self) -> f64;
-    pub fn fold_to_cbet_pct(&self) -> f64;
-    pub fn aggression_factor(&self) -> f64;   // (bets+raises) / calls
-    pub fn aggression_freq(&self) -> f64;     // (bets+raises) / (bets+raises+calls+checks)
-    pub fn wtsd(&self) -> f64;                 // went to showdown %
-    pub fn w_at_sd(&self) -> f64;              // won at showdown %
+    pub fn vpip(&self) -> Option<f64>;
+    pub fn pfr(&self) -> Option<f64>;
+    pub fn three_bet_pct(&self) -> Option<f64>;
+    pub fn four_bet_pct(&self) -> Option<f64>;
+    pub fn fold_to_three_bet_pct(&self) -> Option<f64>;
+    pub fn cbet_pct(&self) -> Option<f64>;
+    pub fn fold_to_cbet_pct(&self) -> Option<f64>;
+    pub fn aggression_factor(&self) -> Option<f64>;  // (bets+raises) / calls
+    pub fn aggression_freq(&self) -> Option<f64>;    // (bets+raises) / (bets+raises+calls+checks)
+    pub fn wtsd(&self) -> Option<f64>;                // went to showdown %
+    pub fn w_at_sd(&self) -> Option<f64>;             // won at showdown %
     pub fn confidence(&self) -> Confidence;
 }
 
 pub enum Confidence { Low, Medium, High }
+
+impl Confidence {
+    pub fn from_sample_size(hands: u64) -> Self;
+}
 ```
 
-`Confidence` thresholds on `hands_dealt` (Low <50, Medium <200, High
-otherwise) so consumers can suppress flaky early-session numbers.
+`Confidence` thresholds on `hands_dealt` — `Low` for `<50`, `Medium` for
+`<200`, `High` otherwise — so consumers can suppress flaky early-session
+numbers. `from_sample_size` is exposed publicly so tests and docs can
+assert thresholds without constructing a `PlayerStats`.
 
-### Exposing stats to `BotDecider` (Phase 3)
+### Exposing stats to `BotDecider` (Phase 3) — ✅ Shipped
 
-`TableSnapshot` (`src/bot/table_snapshot.rs`) gains an optional borrow:
+`TableSnapshot` (`src/bot/table_snapshot.rs`) gained an `'a` lifetime
+parameter and an optional borrow:
 
 ```rust
 pub struct TableSnapshot<'a> {
     // existing fields ...
+    #[cfg(feature = "player-stats")]
     pub opponent_stats: Option<&'a StatsRegistry>,
+    #[cfg(not(feature = "player-stats"))]
+    _stats_lifetime: std::marker::PhantomData<&'a ()>,
 }
 ```
 
 A new constructor `TableSnapshot::from_table_with_stats(&table, seat,
 &registry)` populates it; the existing `from_table(&table, seat)` keeps
-`opponent_stats: None` for callers that don't track stats.
+`opponent_stats: None` for callers that don't track stats. When the
+feature is off, a private `PhantomData` field consumes the lifetime
+parameter so the struct stays well-formed.
 
 **Decider behavior is unchanged in this Epic.** `RuleBasedDecider` and
-`JokerDecider` ignore the new field. A regression test seeds the same
-RNG and verifies decisions are identical with and without a registry
-attached. Future exploitative deciders are deferred to a follow-on Epic.
+`JokerDecider` ignore the new field. The regression test
+`rule_based_decider_ignores_opponent_stats`
+(`src/bot/decider.rs`) sweeps 64 RNG seeds and verifies decisions are
+byte-identical with and without a registry attached. Future
+exploitative deciders are deferred to a follow-on Epic.
 
-`SimTable` gains `with_stats_registry(table, bots, registry)` that
-wires one in and ingests every completed `HandHistory` after each hand.
+`SimTable::with_stats_registry(table, bots, registry)` wires the
+registry into every snapshot built by `run_street` (via
+`from_table_with_stats`) and ingests every completed `HandHistory`
+after each `run_hand` and before `button_up`. The `run_hand_inner`
+internal helper was refactored to no longer call `end_hand` itself —
+hole cards must be captured before `end_hand` mucks them, so `run_hand`
+now drives the settle-and-ingest sequence directly. A `pub fn
+stats(&self) -> Option<&StatsRegistry>` accessor exposes the populated
+registry afterwards.
 
-### Persistence (Phase 4 — designed now, shipped after the in-memory layer)
+> **Implementation note — `Position::from_seat` defense fix.** Phase 3's
+> first integration test (`tests/player_stats_consistency.rs`) surfaced
+> a latent bug in `analysis::player_stats::ingest_hand` that had
+> existed since Phase 2: it called `Position::from_seat(physical_seat,
+> physical_button, occupied_count)` directly, which underflows
+> `usize` when `physical_button > physical_seat + occupied_count` —
+> exactly the configuration produced by 2+ eliminations on a 6-max
+> table. The fix translates physical seat indices to logical
+> (button-relative) ones the same way `TableSnapshot::from_table` and
+> `HandCollection::hands_by_position` do. As defense in depth,
+> `Position::from_seat` itself was switched from raw `-` to
+> `checked_sub()?` so future callers that forget the conversion get
+> `None` instead of a panic.
 
-Gated on `player-stats-persistence` (off by default).
+### Persistence (Phase 4) — ✅ Shipped
+
+Gated on the `player-stats-persistence` feature (off by default; depends
+on `player-stats` and pulls in `serde_yaml_bw`).
 
 ```rust
-pub trait PlayerStatsStore: Send + Sync {
+pub trait PlayerStatsStore: std::fmt::Debug + Send + Sync {
     fn load(&self, id: Uuid) -> Result<Option<PlayerStats>, PKError>;
+    fn load_all(&self) -> Result<HashMap<Uuid, PlayerStats>, PKError>;
     fn save(&self, id: Uuid, stats: &PlayerStats) -> Result<(), PKError>;
     fn flush(&self) -> Result<(), PKError> { Ok(()) }
 }
 
 pub struct YamlPlayerStatsStore { dir: PathBuf }
-// writes generated/players/<uuid>.yaml mirroring HandCollection conventions
+// writes <dir>/<uuid>.yaml — one file per player Uuid
 
 impl StatsRegistry {
-    pub fn with_store(store: Box<dyn PlayerStatsStore>) -> Self;
+    pub fn with_store(store: Box<dyn PlayerStatsStore>) -> Result<Self, PKError>;
+    pub fn flush(&self) -> Result<(), PKError>;
 }
 ```
 
-Lazy load on first `get`; flush on `Drop` and on explicit `flush()`.
+> **Implementation note — eager load instead of lazy.** The original
+> spec called for "lazy load on first `get`," but `StatsRegistry::get(&self)`
+> would need interior mutability (`RefCell`/`Mutex`) to populate cache
+> from a `&self` method, and that would ripple through Phase 3's
+> `TableSnapshot::from_table_with_stats(&registry)` borrow pattern.
+> The shipped implementation goes eager: `with_store(store)` calls
+> `store.load_all()` once at construction, in-memory ops stay
+> `&self`/`&mut self` exactly as before, and `flush` writes everything
+> out at the end. Net cost: one extra directory scan at session start.
+> Net benefit: zero downstream API churn. Matches the typical
+> "session-start load, session-end save" workflow.
 
-### Review API + example (Phase 5)
+Two additional shape changes from the original spec: (1) the trait grew
+a `load_all` method (used by `with_store` for eager load); (2)
+`PlayerStatsStore` requires a `Debug` supertrait so `StatsRegistry`
+keeps its `#[derive(Debug)]`. `StatsRegistry` itself dropped its
+`Clone` derive — `Box<dyn PlayerStatsStore>` isn't clonable, and
+nothing in-tree cloned the registry.
+
+`Drop` calls `flush()` best-effort (errors are logged via
+`log::warn!` rather than panicking — `Drop` cannot return). Callers
+who need durability guarantees should call `flush()` explicitly before
+letting the registry go out of scope.
+
+### Review API + example (Phase 5) — ✅ Shipped
 
 Query helpers on `HandCollection`:
 
@@ -203,6 +286,18 @@ impl HandCollection {
     pub fn showdowns_only(&self) -> impl Iterator<Item = &HandHistory>;
 }
 ```
+
+These are unconditional (not gated on `player-stats`) — useful for any
+consumer of `HandCollection`, not just the stats use case. A private
+`hand_has_position` helper translates physical seat indices to logical
+ones to handle sparse seating safely after eliminations.
+
+`tests/player_stats_consistency.rs` runs a 100-hand 6-handed bot
+self-play session through `SimTable::with_stats_registry`, asserts that
+`tight_passive` VPIP < `loose_aggressive` VPIP (the load-bearing
+relative-ordering check), and runs an opportunistic `maniac` check when
+they survive the assertion threshold. Stacks are 1B chips so per-hand
+losses cannot bust a player within the test horizon.
 
 New example `examples/player_stats_review.rs` (gated on
 `bot-profiles,hand-histories,player-stats`):
@@ -227,56 +322,91 @@ maniac            |   50  | 71.0% | 55.0% | 24.3% | 5.7  | 38.0% | 44.0%
 
 ## Work Items
 
-### Phase 1 — Identity propagation
+### Phase 1 — Identity propagation — ✅ Done
 
-1. Add `player_id: Option<Uuid>` to `Action` (`src/hand_history.rs:1543`)
-2. Add `player_id: Option<Uuid>` to `PlayerEntry`
-3. Build seat→Uuid map from `PlayerSeated` events in
-   `Streets::from_event_log` (`src/hand_history.rs:1220-1302`)
-4. Update `table_action_to_hand_action` (`src/hand_history.rs:1309-1343`)
-   to thread the Uuid through
-5. Re-load every `generated/*.yaml` and assert clean parse
-   (back-compat round-trip)
+1. ✅ Add `player_id: Option<Uuid>` to `Action` and `PlayerEntry`
+2. ✅ Introduce `pub type PlayerSnapshot = (u8, String, usize, Option<String>, Option<Uuid>)`
+   as the single source of truth for per-hand identity
+3. ✅ `from_table_state` derives `PlayerEntry.player_id` from the
+   snapshot, builds a `seat_to_id` map from it, and threads that map
+   into the new `Streets::from_event_log_with_seat_ids(log, &seat_to_id)`
+4. ✅ Original `Streets::from_event_log` delegates after building the
+   map from `PlayerSeated` events in its slice (back-compat for legacy YAML)
+5. ✅ `from_table_state` also emits `Outcome::Fold` for any seat that has
+   a `TableAction::Fold(seat)` in the per-hand event log (no longer
+   conflated with `Lose`)
+6. ✅ Call-site updates: `bot_selfplay`, `interactive_play`, `bot_marathon`,
+   `replay_consistency`, `player_stats_review` extended their snapshot
+   tuples to carry `s.player.id`
+7. ✅ Every `generated/*.yaml` re-loads cleanly via `Option<Uuid>`
 
-### Phase 2 — `PlayerStats` aggregator
+### Phase 2 — `PlayerStats` aggregator — ✅ Done
 
-6. New feature flag `player-stats` in `Cargo.toml` (default-on)
-7. New module `src/analysis/player_stats.rs` with `PlayerStats`,
+8. ✅ Feature flag `player-stats` in `Cargo.toml` (default-on)
+9. ✅ Module `src/analysis/player_stats.rs` with `PlayerStats`,
    `StatsRegistry`, `Confidence`
-8. `StatsRegistry::ingest_hand` walks `Streets`, classifies each
-   `Action` by street + position, increments per-Uuid counters,
-   detects voluntary play, 3-bet, c-bet, check-raise opportunities
-9. Derived-ratio methods on `PlayerStats`
-10. Re-export `PlayerStats`, `StatsRegistry` from `src/analysis/mod.rs`
-    and `src/prelude.rs` under the feature flag
-11. Unit + doc tests covering: empty registry, single-hand ingestion,
-    multi-hand ingestion, every derived ratio, division-by-zero on
-    zero-opportunity stats
+10. ✅ `StatsRegistry::ingest_hand` walks `Streets`, classifies each
+    `Action` by street + position, increments per-Uuid counters, detects
+    voluntary play, 3-bet, c-bet, check-raise opportunities
+11. ✅ Derived-ratio methods on `PlayerStats` (all returning `Option<f64>`)
+12. ✅ Re-export `PlayerStats`, `StatsRegistry`, `Confidence` from
+    `src/analysis/mod.rs` and `src/prelude.rs` under the feature flag
+13. ✅ Unit + doc tests covering empty registry, single-hand ingestion,
+    multi-hand ingestion, every derived ratio, and zero-opportunity
+    "no data" returns
 
-### Phase 3 — Expose to `BotDecider`
+### Phase 3 — Expose to `BotDecider` — ✅ Done
 
-12. Extend `TableSnapshot` with `opponent_stats: Option<&StatsRegistry>`
-13. New `TableSnapshot::from_table_with_stats` constructor
-14. `SimTable::with_stats_registry` constructor variant in
-    `src/bot/sim.rs`; ingest each `HandHistory` after `run_hand`
-15. Regression test: same RNG seed, identical decisions with /
-    without registry
+14. ✅ Extended `TableSnapshot<'a>` with `opponent_stats: Option<&'a StatsRegistry>`
+    (gated on `player-stats`; private `PhantomData` placeholder when off)
+15. ✅ New `TableSnapshot::from_table_with_stats(table, seat, registry)` constructor
+16. ✅ `SimTable::with_stats_registry(table, bots, registry)` constructor variant
+    in `src/bot/sim.rs`; ingests each `HandHistory` after every `run_hand` and
+    routes snapshots through `from_table_with_stats` so deciders see the borrow
+17. ✅ `pub fn stats(&self) -> Option<&StatsRegistry>` accessor on `SimTable`
+18. ✅ Regression test `rule_based_decider_ignores_opponent_stats` in
+    `src/bot/decider.rs` — sweeps 64 RNG seeds, asserts byte-identical decisions
+    with vs. without an attached registry
+19. ✅ Defense-in-depth fix: `Position::from_seat` switched from raw `-` to
+    `checked_sub()?` to turn future "physical-as-logical" misuses into `None`
+    instead of panics
 
-### Phase 4 — Persistence (separately gated)
+### Phase 4 — Persistence (separately gated) — ✅ Done
 
-16. New feature flag `player-stats-persistence` (off by default)
-17. `PlayerStatsStore` trait + `YamlPlayerStatsStore` impl in
-    `src/analysis/player_stats_store.rs`
-18. `StatsRegistry::with_store` + lazy load + flush-on-drop
-19. Round-trip test: ingest → flush → fresh registry → reload → diff
+20. ✅ Feature flag `player-stats-persistence` in `Cargo.toml` (off by default;
+    depends on `player-stats` and `dep:serde_yaml_bw`)
+21. ✅ `PlayerStatsStore` trait (with `Debug + Send + Sync` supertraits) +
+    `YamlPlayerStatsStore` impl in `src/analysis/player_stats_store.rs`
+    (one YAML file per player Uuid; `load_all` skips files whose stem
+    isn't a UUID, so foreign files are tolerated)
+22. ✅ `StatsRegistry::with_store(Box<dyn PlayerStatsStore>) -> Result<Self>`
+    constructor — eager load on construction (deviated from the spec's
+    lazy model; see implementation note above), `flush()` method, and
+    `Drop` impl that flushes best-effort with `log::warn!` on error
+23. ✅ Re-export `PlayerStatsStore` and `YamlPlayerStatsStore` from
+    `src/prelude.rs` under the feature flag
+24. ✅ 7 unit tests in `src/analysis/player_stats_store.rs` — directory
+    creation, save/load round-trip, missing-UUID, `load_all`, non-YAML
+    file filtering, overwrites, default-flush no-op
+25. ✅ 3 integration tests in `tests/player_stats_persistence.rs` —
+    ingest → drop → reload (asserts in-memory state matches on-disk
+    state), explicit `flush` works without drop, store-less registry
+    flush-and-drop are safe no-ops
+26. ✅ CI: `--features player-stats-persistence` added to the
+    `no-default-features` job in `.github/workflows/basic.yaml`
 
-### Phase 5 — Review API + example
+### Phase 5 — Review API + example — ✅ Done
 
-20. Query helpers on `HandCollection` in `src/hand_history.rs`
-21. `examples/player_stats_review.rs`
-22. `tests/player_stats_consistency.rs` — run a 50-hand bot session,
-    build a registry, assert per-style ratio bands (e.g.
-    `tight_passive` VPIP < 25%, `maniac` VPIP > 60%)
+24. ✅ Query helpers on `HandCollection` in `src/hand_history.rs`
+    (`hands_by_player`, `hands_by_position`, `showdowns_only`) plus a
+    private `hand_has_position` helper that translates physical seat indices
+    to logical ones for sparse-seating safety
+25. ✅ `examples/player_stats_review.rs`
+26. ✅ `tests/player_stats_consistency.rs` — runs a 100-hand 6-handed bot
+    self-play session through `SimTable::with_stats_registry`, asserts
+    `tight_passive` VPIP < `loose_aggressive` VPIP (load-bearing relative
+    ordering), with an opportunistic `maniac` check that fires only when
+    they survive the assertion threshold
 
 ---
 
@@ -352,12 +482,14 @@ cargo nextest run --features player-stats,player-stats-persistence
 
 ## Phase ordering rationale
 
-`1 → 2 → 3 → 5 → 4`. Identity propagation (1) is a hard prerequisite
-for every per-player stat. The aggregator (2) is the core value. Wiring
-it into `BotDecider` (3) costs little once 2 exists and unblocks future
-exploit deciders. The example + query API (5) is what makes the Epic
-demo-able and is small. Persistence (4) is the largest piece and only
-matters once people are running multi-session experiments — defer it.
+Shipped in `1 → 2 → 3 → 5 → 4` order. Identity propagation (1) is a
+hard prerequisite for every per-player stat. The aggregator (2) is the
+core value. Wiring it into `BotDecider` (3) cost little once 2
+existed and unblocks future exploit deciders. The example + query API
+(5) is what made the Epic demo-able. Persistence (4) was always the
+largest piece, deferred until the in-memory layer was solid — landing
+it last meant `with_store` only had to be a save/load shim around an
+already-validated registry, not a redesign vector.
 
 ---
 

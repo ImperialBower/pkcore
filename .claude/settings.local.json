@@ -37,7 +37,15 @@
       "Read(//Users/christoph/src/github.com/ImperialBower/pkpy/**)",
       "Read(//Users/christoph/src/github.com/ImperialBower/pkgto-web/**)",
       "Read(//Users/christoph/src/github.com/ImperialBower/pkkuhn-web/**)",
-      "Read(//Users/christoph/src/github.com/ImperialBower/pkarena0-web/**)"
+      "Read(//Users/christoph/src/github.com/ImperialBower/pkarena0-web/**)",
+      "Bash(TableNoCell)",
+      "Bash(RUSTFLAGS=-Dwarnings cargo check --no-default-features --features bot-profiles --lib --tests)",
+      "Bash(RUSTFLAGS=-Dwarnings cargo check --no-default-features --features player-stats --lib --tests)",
+      "Bash(RUSTFLAGS=-Dwarnings cargo check --all-targets)",
+      "Bash(RUSTFLAGS=-Dwarnings cargo check --no-default-features --features bot-profiles,hand-histories --lib --tests)",
+      "Bash(RUSTFLAGS=-Dwarnings cargo check --no-default-features --lib --tests)",
+      "Bash(RUSTDOCFLAGS=-Dwarnings cargo doc --no-deps --lib)",
+      "Bash(RUSTFLAGS=-Dwarnings cargo check --no-default-features --features hand-histories --lib --tests)"
     ]
   }
 }

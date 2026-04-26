@@ -121,7 +121,7 @@ workspace)
 | [EPIC-23](docs/EPIC-23_Bot_Agents.md) | *(pkdealer)* Bot Agent Clients — random, rule-based (`BotDecider`), Claude LLM | Planned |
 | [EPIC-24](docs/EPIC-24_Demo.md) | *(pkdealer)* Demo Packaging — Docker Compose, `demo.sh`, Grafana dashboards, Langfuse | Planned |
 | [EPIC-25](docs/EPIC-25_Range_Frequencies.md) | Range Frequencies — optional per-combo frequency in range strings (`AA:0.5`) | Complete |
-| [EPIC-26](docs/EPIC-26_Player_Stats.md) | Player Action Tracking & Opponent Insights — `PlayerStats` / `StatsRegistry` keyed by `Uuid`, derived ratios (VPIP/PFR/AF/WTSD/c-bet/...), exposed to `BotDecider` (no behavior change), optional persistence | Planned |
+| [EPIC-26](docs/EPIC-26_Player_Stats.md) | Player Action Tracking & Opponent Insights — `PlayerStats` / `StatsRegistry` keyed by `Uuid`, derived ratios (VPIP/PFR/AF/WTSD/c-bet/...), exposed to `BotDecider` (no behavior change), optional persistence | Complete |
 | [FEATURE: Activate Bluff Fields](docs/FEATURE_BotProfile_ActivateBluffFields.md) | Wire `bluff_frequency`, `check_raise_frequency`, `postflop_cbet_frequency` into `RuleBasedDecider` | Complete |
 | [FEATURE: Position-Aware Decisions](docs/FEATURE_BotProfile_PositionAwareDecisions.md) | Route decisions through `Playbook` position-specific `BettingStrategy` | Complete |
 | [FEATURE: BotProfile Type Safety](docs/FEATURE_BotProfile_TypeSafety.md) | `PlayStyle` enum, `Percentage` newtype for frequency fields | Complete |

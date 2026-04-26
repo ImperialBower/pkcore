@@ -58,15 +58,21 @@ use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
+#[cfg(feature = "bot-profiles")]
 use crate::casino::action::PlayerAction;
 use crate::casino::game::ForcedBets;
 use crate::casino::table::event::TableAction;
+use crate::casino::table::position::Position;
 use crate::casino::table::winnings::Winnings;
+#[cfg(feature = "bot-profiles")]
 use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+#[cfg(feature = "bot-profiles")]
 use crate::games::GamePhase;
 use crate::play::board::Board;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::str::FromStr;
+use uuid::Uuid;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Format version constant
@@ -178,6 +184,13 @@ fn default_format_version() -> u32 {
     FORMAT_VERSION
 }
 
+/// Per-seat snapshot tuple consumed by [`HandHistory::from_table_state`].
+///
+/// `(seat, name, starting_stack, hole_cards, player_id)` — `player_id` is
+/// the per-player [`Uuid`] (typically `PlayerNoCell.id`); pass `None` for
+/// callers that pre-date EPIC-26's identity threading.
+pub type PlayerSnapshot = (u8, String, usize, Option<String>, Option<Uuid>);
+
 impl HandHistory {
     /// Constructs a [`HandHistory`] from live game state captured around a
     /// completed hand.
@@ -193,10 +206,15 @@ impl HandHistory {
     /// - `ts_secs` — Unix timestamp in seconds.
     /// - `button` — 0-based seat index of the dealer button.
     /// - `forced` — blinds/ante structure.
-    /// - `player_snapshot` — `(seat, name, starting_stack, hole_cards)` tuples.
+    /// - `player_snapshot` — `(seat, name, starting_stack, hole_cards, player_id)`
+    ///   tuples. `player_id` is the per-player [`Uuid`] (typically
+    ///   `PlayerNoCell.id`); pass `None` for legacy callers without identity.
     /// - `board_str` — full community board string, or `""` when no board was dealt.
     /// - `winnings` — post-`end_hand` pot distribution.
-    /// - `event_log` — `table.event_log` slice for deriving per-street actions.
+    /// - `event_log` — per-hand slice of `table.event_log` for deriving per-street
+    ///   actions. The slice does **not** need to contain
+    ///   [`TableAction::PlayerSeated`] events; identity threading uses
+    ///   `player_snapshot.player_id` directly.
     /// - `ending_stacks` — `(seat, chips)` captured after `end_hand()`.
     /// - `source` — provenance label (e.g. `"interactive_play"`).
     ///
@@ -211,7 +229,7 @@ impl HandHistory {
     /// let hh = HandHistory::from_table_state(
     ///     1, 0, 0,
     ///     &ForcedBets::new(50, 100),
-    ///     &[(0, "Alice".to_string(), 1000, Some("A♠ K♠".to_string()))],
+    ///     &[(0, "Alice".to_string(), 1000, Some("A♠ K♠".to_string()), None)],
     ///     "", &Winnings::default(), &[], &[(0, 1000)], "test", None,
     /// );
     /// assert_eq!(hh.hand.id, "test-hand-001");
@@ -228,7 +246,7 @@ impl HandHistory {
         ts_secs: u64,
         button: u8,
         forced: &ForcedBets,
-        player_snapshot: &[(u8, String, usize, Option<String>)],
+        player_snapshot: &[PlayerSnapshot],
         board_str: &str,
         winnings: &Winnings,
         event_log: &[TableAction],
@@ -236,9 +254,19 @@ impl HandHistory {
         source: &str,
         shuffled_deck: Option<String>,
     ) -> Self {
+        // Folded seats — used to emit `Outcome::Fold` instead of conflating
+        // "folded" with "lost at showdown".
+        let folded_seats: std::collections::HashSet<u8> = event_log
+            .iter()
+            .filter_map(|e| match e {
+                TableAction::Fold(seat) => Some(*seat),
+                _ => None,
+            })
+            .collect();
+
         let results: Vec<ResultEntry> = player_snapshot
             .iter()
-            .map(|(seat, _, starting_stack, hole_cards)| {
+            .map(|(seat, _, starting_stack, hole_cards, _player_id)| {
                 let pot_won: f64 = winnings
                     .vec()
                     .iter()
@@ -251,11 +279,19 @@ impl HandHistory {
 
                 let ranked = hole_cards.as_deref().and_then(|h| rank_seven(h, board_str));
 
+                let outcome = if folded_seats.contains(seat) {
+                    Outcome::Fold
+                } else if pot_won > 0.0 {
+                    Outcome::Win
+                } else {
+                    Outcome::Lose
+                };
+
                 ResultEntry {
                     seat: *seat,
                     best_hand: ranked.as_ref().map(|r| r.hand.to_string()),
                     hand_rank: ranked.as_ref().map(|r| r.hand_rank),
-                    outcome: if pot_won > 0.0 { Outcome::Win } else { Outcome::Lose },
+                    outcome,
                     net,
                     pot_won: if pot_won > 0.0 { Some(pot_won) } else { None },
                     mucked: None,
@@ -290,10 +326,11 @@ impl HandHistory {
             },
             players: player_snapshot
                 .iter()
-                .map(|(seat, name, stack, hole_cards)| PlayerEntry {
+                .map(|(seat, name, stack, hole_cards, player_id)| PlayerEntry {
                     seat: *seat,
                     name: name.clone(),
                     stack: *stack as f64,
+                    player_id: *player_id,
                     hole_cards: hole_cards.clone(),
                     posted: None,
                 })
@@ -303,7 +340,13 @@ impl HandHistory {
             } else {
                 Some(board_str.to_string())
             },
-            streets: Streets::from_event_log(event_log),
+            streets: {
+                let seat_to_id: HashMap<u8, Uuid> = player_snapshot
+                    .iter()
+                    .filter_map(|(seat, _, _, _, id)| id.map(|id| (*seat, id)))
+                    .collect();
+                Streets::from_event_log_with_seat_ids(event_log, &seat_to_id)
+            },
             results: Some(results),
             analysis: None,
             shuffled_deck,
@@ -351,17 +394,17 @@ impl HandHistory {
     ///     },
     ///     players: vec![
     ///         PlayerEntry { seat: 0, name: "A".to_string(), stack: 1000.0,
-    ///             hole_cards: Some("A♠ K♠".to_string()), posted: None },
+    ///             player_id: None, hole_cards: Some("A♠ K♠".to_string()), posted: None },
     ///         PlayerEntry { seat: 1, name: "B".to_string(), stack: 1000.0,
-    ///             hole_cards: Some("7♦ 2♣".to_string()), posted: None },
+    ///             player_id: None, hole_cards: Some("7♦ 2♣".to_string()), posted: None },
     ///     ],
     ///     board: None,
     ///     streets: Some(Streets {
     ///         preflop: Some(PreflopStreet {
     ///             actions: vec![
-    ///                 Action { seat: 0, action: ActionType::Post, amount: Some(50.0), all_in: None },
-    ///                 Action { seat: 1, action: ActionType::Post, amount: Some(100.0), all_in: None },
-    ///                 Action { seat: 0, action: ActionType::Fold, amount: None, all_in: None },
+    ///                 Action { seat: 0, player_id: None, action: ActionType::Post, amount: Some(50.0), all_in: None },
+    ///                 Action { seat: 1, player_id: None, action: ActionType::Post, amount: Some(100.0), all_in: None },
+    ///                 Action { seat: 0, player_id: None, action: ActionType::Fold, amount: None, all_in: None },
     ///             ],
     ///             pot: Some(150.0),
     ///         }),
@@ -383,6 +426,7 @@ impl HandHistory {
     /// assert!(result.is_ok());
     /// assert!(result.unwrap().is_consistent);
     /// ```
+    #[cfg(feature = "bot-profiles")]
     #[allow(
         clippy::cast_precision_loss,
         clippy::cast_sign_loss,
@@ -773,6 +817,113 @@ impl HandCollection {
     pub fn hands(&self) -> &[HandHistory] {
         &self.hands
     }
+
+    /// Returns an iterator over hands in which the given player participated.
+    ///
+    /// A "participated" hand is one whose [`HandHistory::players`] list contains
+    /// a [`PlayerEntry`] with `player_id == Some(id)`. Hands written by older
+    /// pkcore versions that did not stamp `player_id` are silently skipped
+    /// (their entries carry `player_id: None`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::HandCollection;
+    /// use uuid::Uuid;
+    ///
+    /// let collection = HandCollection::new();
+    /// let count = collection.hands_by_player(Uuid::nil()).count();
+    /// assert_eq!(0, count);
+    /// ```
+    pub fn hands_by_player(&self, id: Uuid) -> impl Iterator<Item = &HandHistory> {
+        self.hands
+            .iter()
+            .filter(move |h| h.players.iter().any(|p| p.player_id == Some(id)))
+    }
+
+    /// Returns an iterator over hands whose table size and button placement
+    /// would seat at least one player at the given [`Position`].
+    ///
+    /// Useful for excluding short-handed hands when computing position-specific
+    /// stats — e.g. `hands_by_position(Position::CO)` strips heads-up and
+    /// 3-handed hands that have no cutoff. To filter to a specific player at a
+    /// specific position, chain with [`Self::hands_by_player`] and then
+    /// reapply.
+    ///
+    /// Returns no matches when the hand omits a button or its `players` list
+    /// is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::hand_history::HandCollection;
+    ///
+    /// let collection = HandCollection::new();
+    /// assert_eq!(0, collection.hands_by_position(Position::CO).count());
+    /// ```
+    pub fn hands_by_position(&self, pos: Position) -> impl Iterator<Item = &HandHistory> {
+        self.hands.iter().filter(move |h| hand_has_position(h, pos))
+    }
+
+    /// Returns an iterator over hands that reached showdown — i.e. at least
+    /// two players' [`ResultEntry::outcome`] is anything other than
+    /// [`Outcome::Fold`].
+    ///
+    /// Hands without a `results` block (legacy YAMLs from before `from_table_state`
+    /// emitted them) are skipped.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::HandCollection;
+    ///
+    /// let collection = HandCollection::new();
+    /// assert_eq!(0, collection.showdowns_only().count());
+    /// ```
+    pub fn showdowns_only(&self) -> impl Iterator<Item = &HandHistory> {
+        self.hands.iter().filter(|h| {
+            h.results
+                .as_ref()
+                .is_some_and(|results| results.iter().filter(|r| r.outcome != Outcome::Fold).count() >= 2)
+        })
+    }
+}
+
+/// Returns `true` when `hand` would seat at least one player at `pos` given
+/// the recorded button and the count of occupied seats in `hand.players`.
+///
+/// Translates physical seat indices to logical (button-relative) positions
+/// the same way [`crate::bot::table_snapshot::TableSnapshot::from_table`]
+/// does, so sparse seat numbering after eliminations doesn't desync the
+/// position math.
+fn hand_has_position(hand: &HandHistory, pos: Position) -> bool {
+    let Some(button_phys) = hand.table.button else {
+        return false;
+    };
+    let mut occupied: Vec<u8> = hand.players.iter().map(|p| p.seat).collect();
+    if occupied.is_empty() {
+        return false;
+    }
+    occupied.sort_unstable();
+    let Ok(seat_count) = u8::try_from(occupied.len()) else {
+        return false;
+    };
+    let Some(button_logical_idx) = occupied.iter().position(|&s| s == button_phys) else {
+        return false;
+    };
+    let Ok(button_logical) = u8::try_from(button_logical_idx) else {
+        return false;
+    };
+    hand.players.iter().any(|p| {
+        let Some(logical_idx) = occupied.iter().position(|&s| s == p.seat) else {
+            return false;
+        };
+        let Ok(logical) = u8::try_from(logical_idx) else {
+            return false;
+        };
+        Position::from_seat(logical, button_logical, seat_count) == Some(pos)
+    })
 }
 
 impl Default for HandCollection {
@@ -1044,6 +1195,7 @@ pub struct Stakes {
 ///     seat: 1,
 ///     name: "Alice".to_string(),
 ///     stack: 500.0,
+///     player_id: None,
 ///     hole_cards: Some("A♠ K♠".to_string()),
 ///     posted: None,
 /// };
@@ -1059,6 +1211,14 @@ pub struct PlayerEntry {
 
     /// Starting stack in chips/currency units.
     pub stack: f64,
+
+    /// Stable per-player identity carried through `TableAction::PlayerSeated`.
+    ///
+    /// `None` when the entry comes from a legacy YAML file that was written
+    /// before EPIC-26 added identity propagation. New sessions populate it
+    /// from `PlayerNoCell::uuid`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player_id: Option<Uuid>,
 
     /// Hole cards as a card string (e.g., `"6♠ 6♥"` or `"6s6h"`).
     ///
@@ -1091,6 +1251,7 @@ impl PlayerEntry {
     ///     seat: 1,
     ///     name: "Alice".to_string(),
     ///     stack: 200.0,
+    ///     player_id: None,
     ///     hole_cards: Some("A♠ K♠".to_string()),
     ///     posted: None,
     /// };
@@ -1145,7 +1306,7 @@ pub enum PostedBlind {
 ///
 /// let streets = Streets {
 ///     preflop: Some(PreflopStreet {
-///         actions: vec![Action { seat: 1, action: ActionType::Fold, amount: None, all_in: None }],
+///         actions: vec![Action { seat: 1, player_id: None, action: ActionType::Fold, amount: None, all_in: None }],
 ///         pot: Some(3.0),
 ///     }),
 ///     flop: None,
@@ -1216,8 +1377,55 @@ impl Streets {
     /// assert!(streets.flop.is_none());
     /// ```
     #[must_use]
-    #[allow(clippy::cast_precision_loss)]
     pub fn from_event_log(log: &[TableAction]) -> Option<Self> {
+        let seat_to_id: HashMap<u8, Uuid> = log
+            .iter()
+            .filter_map(|ev| match ev {
+                TableAction::PlayerSeated(seat, id) => Some((*seat, *id)),
+                _ => None,
+            })
+            .collect();
+        Self::from_event_log_with_seat_ids(log, &seat_to_id)
+    }
+
+    /// Variant of [`Streets::from_event_log`] that takes the seat → [`Uuid`]
+    /// mapping explicitly instead of scanning `log` for
+    /// [`TableAction::PlayerSeated`] events.
+    ///
+    /// Use this when `log` is a *per-hand slice* of a longer-running session's
+    /// event log — `PlayerSeated` events fire at table construction and are
+    /// not present in subsequent per-hand slices, so the implicit scan would
+    /// leave every `Action.player_id` as `None`.
+    ///
+    /// Returns `None` only if `log` is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::collections::HashMap;
+    /// use pkcore::hand_history::Streets;
+    /// use pkcore::casino::table::event::TableAction;
+    /// use uuid::Uuid;
+    ///
+    /// let alice = Uuid::new_v4();
+    /// let bob = Uuid::new_v4();
+    /// let mut seat_to_id = HashMap::new();
+    /// seat_to_id.insert(1, alice);
+    /// seat_to_id.insert(2, bob);
+    ///
+    /// // Slice does NOT contain PlayerSeated events.
+    /// let log = vec![
+    ///     TableAction::ForcedBetSmallBlind(1, 50),
+    ///     TableAction::ForcedBetBigBlind(2, 100),
+    ///     TableAction::Fold(1),
+    /// ];
+    /// let streets = Streets::from_event_log_with_seat_ids(&log, &seat_to_id).unwrap();
+    /// let action = &streets.preflop.as_ref().unwrap().actions[2];
+    /// assert_eq!(action.player_id, Some(alice));
+    /// ```
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)]
+    pub fn from_event_log_with_seat_ids(log: &[TableAction], seat_to_id: &HashMap<u8, Uuid>) -> Option<Self> {
         if log.is_empty() {
             return None;
         }
@@ -1262,7 +1470,7 @@ impl Streets {
                     }
                 }
                 other => {
-                    if let Some(action) = table_action_to_hand_action(other) {
+                    if let Some(action) = table_action_to_hand_action(other, seat_to_id) {
                         match current {
                             EventStreet::Preflop => preflop_actions.push(action),
                             EventStreet::Flop => flop_actions.push(action),
@@ -1305,54 +1513,29 @@ impl Streets {
 /// Maps a single [`TableAction`] to a [`Action`] for the hand history.
 ///
 /// Returns `None` for non-player-action events (deals, pot bookkeeping, etc.).
+/// `seat_to_id` supplies the per-seat `Uuid` previously announced via
+/// `TableAction::PlayerSeated`; missing entries leave `Action.player_id` as
+/// `None` (e.g. legacy event logs that pre-date EPIC-26).
 #[allow(clippy::cast_precision_loss)]
-fn table_action_to_hand_action(event: &TableAction) -> Option<Action> {
+fn table_action_to_hand_action(event: &TableAction, seat_to_id: &HashMap<u8, Uuid>) -> Option<Action> {
+    let make = |seat: u8, action: ActionType, amount: Option<f64>, all_in: Option<bool>| Action {
+        seat,
+        player_id: seat_to_id.get(&seat).copied(),
+        action,
+        amount,
+        all_in,
+    };
     match event {
         TableAction::ForcedBetSmallBlind(seat, amount)
         | TableAction::ForcedBetBigBlind(seat, amount)
         | TableAction::BetAnteForced(seat, amount)
-        | TableAction::ForcedBet(seat, amount) => Some(Action {
-            seat: *seat,
-            action: ActionType::Post,
-            amount: Some(*amount as f64),
-            all_in: None,
-        }),
-        TableAction::Check(seat) => Some(Action {
-            seat: *seat,
-            action: ActionType::Check,
-            amount: None,
-            all_in: None,
-        }),
-        TableAction::Bet(seat, amount) => Some(Action {
-            seat: *seat,
-            action: ActionType::Bet,
-            amount: Some(*amount as f64),
-            all_in: None,
-        }),
-        TableAction::Call(seat, amount) => Some(Action {
-            seat: *seat,
-            action: ActionType::Call,
-            amount: Some(*amount as f64),
-            all_in: None,
-        }),
-        TableAction::Raise(seat, amount) => Some(Action {
-            seat: *seat,
-            action: ActionType::Raise,
-            amount: Some(*amount as f64),
-            all_in: None,
-        }),
-        TableAction::AllIn(seat, amount) => Some(Action {
-            seat: *seat,
-            action: ActionType::AllIn,
-            amount: Some(*amount as f64),
-            all_in: Some(true),
-        }),
-        TableAction::Fold(seat) => Some(Action {
-            seat: *seat,
-            action: ActionType::Fold,
-            amount: None,
-            all_in: None,
-        }),
+        | TableAction::ForcedBet(seat, amount) => Some(make(*seat, ActionType::Post, Some(*amount as f64), None)),
+        TableAction::Check(seat) => Some(make(*seat, ActionType::Check, None, None)),
+        TableAction::Bet(seat, amount) => Some(make(*seat, ActionType::Bet, Some(*amount as f64), None)),
+        TableAction::Call(seat, amount) => Some(make(*seat, ActionType::Call, Some(*amount as f64), None)),
+        TableAction::Raise(seat, amount) => Some(make(*seat, ActionType::Raise, Some(*amount as f64), None)),
+        TableAction::AllIn(seat, amount) => Some(make(*seat, ActionType::AllIn, Some(*amount as f64), Some(true))),
+        TableAction::Fold(seat) => Some(make(*seat, ActionType::Fold, None, None)),
         _ => None,
     }
 }
@@ -1365,7 +1548,7 @@ fn table_action_to_hand_action(event: &TableAction) -> Option<Action> {
 /// use pkcore::hand_history::{PreflopStreet, Action, ActionType};
 ///
 /// let preflop = PreflopStreet {
-///     actions: vec![Action { seat: 1, action: ActionType::Check, amount: None, all_in: None }],
+///     actions: vec![Action { seat: 1, player_id: None, action: ActionType::Check, amount: None, all_in: None }],
 ///     pot: None,
 /// };
 /// assert_eq!(preflop.actions.len(), 1);
@@ -1389,7 +1572,7 @@ pub struct PreflopStreet {
 ///
 /// let flop = FlopStreet {
 ///     cards: "9♣ 6♦ 5♥".to_string(),
-///     actions: vec![Action { seat: 1, action: ActionType::Check, amount: None, all_in: None }],
+///     actions: vec![Action { seat: 1, player_id: None, action: ActionType::Check, amount: None, all_in: None }],
 ///     pot: Some(60200.0),
 /// };
 /// assert!(flop.to_three().is_ok());
@@ -1536,13 +1719,27 @@ impl RiverStreet {
 /// ```
 /// use pkcore::hand_history::{Action, ActionType};
 ///
-/// let action = Action { seat: 3, action: ActionType::Raise, amount: Some(100.0), all_in: None };
+/// let action = Action {
+///     seat: 3,
+///     player_id: None,
+///     action: ActionType::Raise,
+///     amount: Some(100.0),
+///     all_in: None,
+/// };
 /// assert_eq!(action.seat, 3);
 /// ```
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Action {
     /// Seat number of the acting player (1-indexed).
     pub seat: u8,
+
+    /// Stable per-player identity stamped from `TableAction::PlayerSeated`.
+    ///
+    /// `None` for actions parsed from legacy YAML files written before
+    /// EPIC-26 added identity propagation. Live event logs always populate
+    /// this from the seat's `PlayerSeated` Uuid.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player_id: Option<Uuid>,
 
     /// The action taken.
     pub action: ActionType,
@@ -1846,6 +2043,7 @@ impl HandCollection {
     /// let results = collection.replay_all();
     /// assert!(results.is_empty());
     /// ```
+    #[cfg(feature = "bot-profiles")]
     pub fn replay_all(&self) -> Vec<Result<ReplayResult, PKError>> {
         self.hands.iter().map(HandHistory::replay).collect()
     }
@@ -1870,6 +2068,7 @@ fn rank_seven(hole_cards: &str, board: &str) -> Option<Eval> {
 /// Converts a hand-history [`Action`] to a [`PlayerAction`] understood by the
 /// game engine.  Returns `None` for `Post` entries (handled by
 /// `act_forced_bets`).
+#[cfg(feature = "bot-profiles")]
 fn action_to_player_action(action: &Action) -> Option<PlayerAction> {
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     match action.action {
@@ -1889,6 +2088,7 @@ fn action_to_player_action(action: &Action) -> Option<PlayerAction> {
 /// fractional blinds), but represent whole-chip counts in practice.  The casts
 /// here are intentional: stacks fit in `usize` and net values are bounded by the
 /// starting stack.
+#[cfg(feature = "bot-profiles")]
 #[allow(
     clippy::cast_precision_loss,
     clippy::cast_possible_truncation,
@@ -2203,6 +2403,7 @@ results:
     fn test_player_entry_no_hole_cards() {
         let player = PlayerEntry {
             seat: 1,
+            player_id: None,
             name: "Alice".to_string(),
             stack: 200.0,
             hole_cards: None,
@@ -2353,6 +2554,156 @@ hands:
         let slice = collection.hands();
         assert_eq!(slice.len(), 1);
         assert_eq!(slice[0].hand.id, "h1");
+    }
+
+    // ── EPIC-26 Phase 5a: HandCollection query helpers ──────────────────────
+
+    /// Builds a hand with a custom button + the given player entries.
+    fn hand_with_players(id: &str, button: u8, players: Vec<PlayerEntry>) -> HandHistory {
+        let mut hh = make_minimal_hand(id, HandVariant::Holdem);
+        hh.table.button = Some(button);
+        hh.players = players;
+        hh
+    }
+
+    fn entry(seat: u8, name: &str, player_id: Option<Uuid>) -> PlayerEntry {
+        PlayerEntry {
+            seat,
+            name: name.to_string(),
+            stack: 1_000.0,
+            player_id,
+            hole_cards: None,
+            posted: None,
+        }
+    }
+
+    fn result(seat: u8, outcome: Outcome) -> ResultEntry {
+        ResultEntry {
+            seat,
+            best_hand: None,
+            hand_rank: None,
+            outcome,
+            net: None,
+            pot_won: None,
+            mucked: None,
+        }
+    }
+
+    #[test]
+    fn hands_by_player_returns_only_matching() {
+        let alice = Uuid::new_v4();
+        let bob = Uuid::new_v4();
+        let mut collection = HandCollection::new();
+        collection.push(hand_with_players(
+            "h1",
+            0,
+            vec![entry(0, "Alice", Some(alice)), entry(1, "Bob", Some(bob))],
+        ));
+        collection.push(hand_with_players("h2", 0, vec![entry(0, "Bob", Some(bob))]));
+        collection.push(hand_with_players("h3", 0, vec![entry(0, "Alice", Some(alice))]));
+
+        let alice_hands: Vec<&HandHistory> = collection.hands_by_player(alice).collect();
+        assert_eq!(2, alice_hands.len());
+        assert_eq!("h1", alice_hands[0].hand.id);
+        assert_eq!("h3", alice_hands[1].hand.id);
+    }
+
+    #[test]
+    fn hands_by_player_skips_legacy_entries_without_id() {
+        // A pre-EPIC-26 YAML file has player_id: None on every entry. Querying
+        // by any Uuid should return nothing — there's no identity to match on.
+        let some_id = Uuid::new_v4();
+        let mut collection = HandCollection::new();
+        collection.push(hand_with_players("legacy", 0, vec![entry(0, "Anon", None)]));
+        assert_eq!(0, collection.hands_by_player(some_id).count());
+    }
+
+    #[test]
+    fn hands_by_player_empty_collection() {
+        let collection = HandCollection::new();
+        assert_eq!(0, collection.hands_by_player(Uuid::new_v4()).count());
+    }
+
+    #[test]
+    fn hands_by_position_excludes_short_handed() {
+        // Heads-up has only BTN/BB; querying CO must skip it. A 6-handed hand
+        // does have a CO (offset 5 from button). Mixed collection → only the
+        // 6-handed hand matches.
+        let mut collection = HandCollection::new();
+        collection.push(hand_with_players(
+            "headsup",
+            0,
+            vec![entry(0, "A", None), entry(1, "B", None)],
+        ));
+        let six_handed: Vec<PlayerEntry> = (0..6).map(|i| entry(i, "P", None)).collect();
+        collection.push(hand_with_players("six", 0, six_handed));
+
+        let cos: Vec<&HandHistory> = collection.hands_by_position(Position::CO).collect();
+        assert_eq!(1, cos.len(), "only the 6-handed hand has a CO");
+        assert_eq!("six", cos[0].hand.id);
+    }
+
+    #[test]
+    fn hands_by_position_handles_sparse_seat_indices() {
+        // Seats 2/4/6 occupied, button at seat 4 (button is at the second
+        // logical seat among occupied). Logical mapping: occupied=[2,4,6],
+        // button_logical=1. With seat_count=3 and button at logical 1, the
+        // BB lives at logical offset 2 → physical seat 6.
+        let mut collection = HandCollection::new();
+        collection.push(hand_with_players(
+            "sparse",
+            4,
+            vec![entry(2, "A", None), entry(4, "B", None), entry(6, "C", None)],
+        ));
+        // BB is present in any 3-handed hand.
+        assert_eq!(1, collection.hands_by_position(Position::BB).count());
+    }
+
+    #[test]
+    fn hands_by_position_skips_when_button_missing() {
+        let mut collection = HandCollection::new();
+        let mut hh = make_minimal_hand("no-btn", HandVariant::Holdem);
+        hh.players = vec![entry(0, "A", None), entry(1, "B", None)];
+        // Leave hh.table.button = None.
+        collection.push(hh);
+        assert_eq!(0, collection.hands_by_position(Position::BTN).count());
+    }
+
+    #[test]
+    fn showdowns_only_requires_two_non_folders() {
+        let mut collection = HandCollection::new();
+
+        // Hand A: one Win + one Fold = won by all-folds, NOT a showdown.
+        let mut a = make_minimal_hand("walk", HandVariant::Holdem);
+        a.results = Some(vec![result(0, Outcome::Win), result(1, Outcome::Fold)]);
+        collection.push(a);
+
+        // Hand B: one Win + one Lose = both saw it through to showdown.
+        let mut b = make_minimal_hand("showdown", HandVariant::Holdem);
+        b.results = Some(vec![result(0, Outcome::Win), result(1, Outcome::Lose)]);
+        collection.push(b);
+
+        // Hand C: three-way with two Folds and one Win = walk, NOT showdown.
+        let mut c = make_minimal_hand("3way-walk", HandVariant::Holdem);
+        c.results = Some(vec![
+            result(0, Outcome::Win),
+            result(1, Outcome::Fold),
+            result(2, Outcome::Fold),
+        ]);
+        collection.push(c);
+
+        let sds: Vec<&HandHistory> = collection.showdowns_only().collect();
+        assert_eq!(1, sds.len());
+        assert_eq!("showdown", sds[0].hand.id);
+    }
+
+    #[test]
+    fn showdowns_only_skips_hands_without_results() {
+        let mut collection = HandCollection::new();
+        let mut hh = make_minimal_hand("no-results", HandVariant::Holdem);
+        hh.results = None;
+        collection.push(hh);
+        assert_eq!(0, collection.showdowns_only().count());
     }
 
     #[cfg(feature = "hand-histories")]
@@ -2556,7 +2907,7 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(0, "Alice".to_string(), 1000, None)],
+            &[(0, "Alice".to_string(), 1000, None, None)],
             "",
             &Winnings::default(),
             &[],
@@ -2580,7 +2931,10 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(0, "A".to_string(), 1000, None), (1, "B".to_string(), 1000, None)],
+            &[
+                (0, "A".to_string(), 1000, None, None),
+                (1, "B".to_string(), 1000, None, None),
+            ],
             "",
             &Winnings::default(),
             &[],
@@ -2599,6 +2953,7 @@ hands:
     // HandHistory::replay
     // ─────────────────────────────────────────────────────────────────────────
 
+    #[cfg(feature = "bot-profiles")]
     #[test]
     fn test_hand_history_replay_preflop_fold() {
         // A 2-player hand where seat 0 folds preflop after posting SB.
@@ -2626,6 +2981,7 @@ hands:
             players: vec![
                 PlayerEntry {
                     seat: 0,
+                    player_id: None,
                     name: "A".to_string(),
                     stack: 1000.0,
                     hole_cards: Some("A♠ K♠".to_string()),
@@ -2633,6 +2989,7 @@ hands:
                 },
                 PlayerEntry {
                     seat: 1,
+                    player_id: None,
                     name: "B".to_string(),
                     stack: 1000.0,
                     hole_cards: Some("7♦ 2♣".to_string()),
@@ -2645,18 +3002,21 @@ hands:
                     actions: vec![
                         Action {
                             seat: 0,
+                            player_id: None,
                             action: ActionType::Post,
                             amount: Some(50.0),
                             all_in: None,
                         },
                         Action {
                             seat: 1,
+                            player_id: None,
                             action: ActionType::Post,
                             amount: Some(100.0),
                             all_in: None,
                         },
                         Action {
                             seat: 0,
+                            player_id: None,
                             action: ActionType::Fold,
                             amount: None,
                             all_in: None,
@@ -2710,6 +3070,7 @@ hands:
         assert!(r.is_consistent);
     }
 
+    #[cfg(feature = "bot-profiles")]
     #[test]
     fn test_hand_collection_replay_all_empty() {
         let collection = HandCollection::new();
@@ -2725,6 +3086,7 @@ hands:
     /// "out of order" because `SeatsNoCell::next_to_act` skipped the checker when
     /// `everyone_has_bet` was true but the current-bet comparison used the wrong
     /// branch ordering.
+    #[cfg(feature = "bot-profiles")]
     #[test]
     fn replay_flop_check_then_bet_then_fold() {
         let hh = HandHistory {
@@ -2751,6 +3113,7 @@ hands:
             players: vec![
                 PlayerEntry {
                     seat: 2,
+                    player_id: None,
                     name: "gto".to_string(),
                     stack: 3675.0,
                     hole_cards: None,
@@ -2758,6 +3121,7 @@ hands:
                 },
                 PlayerEntry {
                     seat: 4,
+                    player_id: None,
                     name: "loose_passive".to_string(),
                     stack: 9200.0,
                     hole_cards: None,
@@ -2765,6 +3129,7 @@ hands:
                 },
                 PlayerEntry {
                     seat: 6,
+                    player_id: None,
                     name: "maniac".to_string(),
                     stack: 61075.0,
                     hole_cards: Some("5♦ 9♥".to_string()),
@@ -2777,30 +3142,35 @@ hands:
                     actions: vec![
                         Action {
                             seat: 2,
+                            player_id: None,
                             action: ActionType::Post,
                             amount: Some(50.0),
                             all_in: None,
                         },
                         Action {
                             seat: 4,
+                            player_id: None,
                             action: ActionType::Post,
                             amount: Some(100.0),
                             all_in: None,
                         },
                         Action {
                             seat: 6,
+                            player_id: None,
                             action: ActionType::Call,
                             amount: Some(100.0),
                             all_in: None,
                         },
                         Action {
                             seat: 2,
+                            player_id: None,
                             action: ActionType::Fold,
                             amount: None,
                             all_in: None,
                         },
                         Action {
                             seat: 4,
+                            player_id: None,
                             action: ActionType::Check,
                             amount: None,
                             all_in: None,
@@ -2813,18 +3183,21 @@ hands:
                     actions: vec![
                         Action {
                             seat: 4,
+                            player_id: None,
                             action: ActionType::Check,
                             amount: None,
                             all_in: None,
                         },
                         Action {
                             seat: 6,
+                            player_id: None,
                             action: ActionType::Bet,
                             amount: Some(250.0),
                             all_in: None,
                         },
                         Action {
                             seat: 4,
+                            player_id: None,
                             action: ActionType::Fold,
                             amount: None,
                             all_in: None,
@@ -2878,7 +3251,7 @@ hands:
     /// Same scenario as `replay_flop_check_then_bet_then_fold` but loaded via
     /// YAML round-trip to catch any serde deserialization difference.
     #[test]
-    #[cfg(feature = "hand-histories")]
+    #[cfg(all(feature = "hand-histories", feature = "bot-profiles"))]
     fn replay_flop_check_then_bet_then_fold_from_yaml() {
         let yaml = r#"
 pkcore_version: "0.0.43"
@@ -2976,7 +3349,7 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(1, "Alice".to_string(), 1000, None)],
+            &[(1, "Alice".to_string(), 1000, None, None)],
             "",
             &Winnings::default(),
             &[],
@@ -3000,7 +3373,7 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(1, "Alice".to_string(), 1000, None)],
+            &[(1, "Alice".to_string(), 1000, None, None)],
             "",
             &Winnings::default(),
             &[],
@@ -3028,7 +3401,7 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(1, "Alice".to_string(), 1000, None)],
+            &[(1, "Alice".to_string(), 1000, None, None)],
             "",
             &Winnings::default(),
             &[],
@@ -3043,7 +3416,7 @@ hands:
             0,
             0,
             &ForcedBets::new(50, 100),
-            &[(1, "Alice".to_string(), 1000, None)],
+            &[(1, "Alice".to_string(), 1000, None, None)],
             "",
             &Winnings::default(),
             &[],
@@ -3069,5 +3442,122 @@ hands:
         let all_in_action = preflop.actions.iter().find(|a| a.action == ActionType::AllIn).unwrap();
         assert_eq!(all_in_action.amount, Some(5000.0));
         assert_eq!(all_in_action.all_in, Some(true));
+    }
+
+    #[test]
+    fn streets_from_event_log_stamps_player_id() {
+        let alice = Uuid::new_v4();
+        let bob = Uuid::new_v4();
+        let log = vec![
+            TableAction::PlayerSeated(1, alice),
+            TableAction::PlayerSeated(2, bob),
+            TableAction::ForcedBetSmallBlind(1, 50),
+            TableAction::ForcedBetBigBlind(2, 100),
+            TableAction::Fold(1),
+            TableAction::Check(2),
+            TableAction::PotSize(150),
+        ];
+        let streets = Streets::from_event_log(&log).expect("streets parse");
+        let preflop = streets.preflop.as_ref().expect("preflop street");
+        for action in &preflop.actions {
+            let expected = match action.seat {
+                1 => Some(alice),
+                2 => Some(bob),
+                other => panic!("unexpected seat {other}"),
+            };
+            assert_eq!(
+                action.player_id, expected,
+                "action {action:?} should carry stamped player_id"
+            );
+        }
+    }
+
+    #[test]
+    fn streets_from_event_log_no_seated_yields_none() {
+        // No PlayerSeated events — legacy event-log shape from before EPIC-26.
+        let log = vec![
+            TableAction::ForcedBetSmallBlind(1, 50),
+            TableAction::ForcedBetBigBlind(2, 100),
+            TableAction::Fold(1),
+        ];
+        let streets = Streets::from_event_log(&log).expect("streets parse");
+        let preflop = streets.preflop.as_ref().expect("preflop street");
+        assert!(preflop.actions.iter().all(|a| a.player_id.is_none()));
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn action_serde_round_trip_omits_none_player_id() {
+        let action = Action {
+            seat: 4,
+            player_id: None,
+            action: ActionType::Fold,
+            amount: None,
+            all_in: None,
+        };
+        let yaml = serde_yaml_bw::to_string(&action).expect("serialize");
+        assert!(
+            !yaml.contains("player_id"),
+            "absent field should be skipped, got: {yaml}"
+        );
+        let parsed: Action = serde_yaml_bw::from_str(&yaml).expect("deserialize");
+        assert_eq!(parsed, action);
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn action_serde_round_trip_emits_some_player_id() {
+        let id = Uuid::new_v4();
+        let action = Action {
+            seat: 4,
+            player_id: Some(id),
+            action: ActionType::Raise,
+            amount: Some(300.0),
+            all_in: None,
+        };
+        let yaml = serde_yaml_bw::to_string(&action).expect("serialize");
+        assert!(yaml.contains("player_id"));
+        assert!(yaml.contains(&id.to_string()));
+        let parsed: Action = serde_yaml_bw::from_str(&yaml).expect("deserialize");
+        assert_eq!(parsed, action);
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn player_entry_serde_round_trip_omits_none_player_id() {
+        let entry = PlayerEntry {
+            seat: 1,
+            name: "Alice".to_string(),
+            stack: 500.0,
+            player_id: None,
+            hole_cards: Some("A♠ K♠".to_string()),
+            posted: None,
+        };
+        let yaml = serde_yaml_bw::to_string(&entry).expect("serialize");
+        assert!(
+            !yaml.contains("player_id"),
+            "absent field should be skipped, got: {yaml}"
+        );
+        let parsed: PlayerEntry = serde_yaml_bw::from_str(&yaml).expect("deserialize");
+        assert_eq!(parsed, entry);
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn player_entry_serde_round_trip_emits_some_player_id() {
+        let id = Uuid::new_v4();
+        let entry = PlayerEntry {
+            seat: 1,
+            name: "Alice".to_string(),
+            stack: 500.0,
+            player_id: Some(id),
+            hole_cards: Some("A♠ K♠".to_string()),
+            posted: None,
+        };
+        let yaml = serde_yaml_bw::to_string(&entry).expect("serialize");
+        assert!(yaml.contains("player_id"));
+        assert!(yaml.contains(&id.to_string()));
+        let parsed: PlayerEntry = serde_yaml_bw::from_str(&yaml).expect("deserialize");
+        assert_eq!(parsed, entry);
     }
 }

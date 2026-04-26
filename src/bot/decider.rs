@@ -453,7 +453,7 @@ mod bot__decider_tests {
     use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
     use crate::games::GamePhase;
 
-    fn make_snapshot(seat: u8) -> TableSnapshot {
+    fn make_snapshot(seat: u8) -> TableSnapshot<'static> {
         let seats = SeatsNoCell::new(vec![
             SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
@@ -892,7 +892,7 @@ mod bot__decider_tests {
         to_call: usize,
         pot: usize,
         phase: crate::games::GamePhase,
-    ) -> TableSnapshot {
+    ) -> TableSnapshot<'static> {
         use crate::cards::Cards;
         use std::str::FromStr;
         let mut snap = make_snapshot(0);
@@ -1031,6 +1031,48 @@ mod bot__decider_tests {
                 PlayerAction::Check,
                 RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng),
                 "0% river street aggression must always Check on river"
+            );
+        }
+    }
+
+    // ── EPIC-26 Phase 3 regression: deciders ignore opponent_stats ──────────
+
+    /// Tripwire for EPIC-26 Phase 3's "non-behavior-changing" contract.
+    ///
+    /// Future exploitative deciders are expected to *read* `opponent_stats`,
+    /// at which point this test should be removed or updated. As long as the
+    /// shipped `RuleBasedDecider` ignores it, two snapshots identical except
+    /// for the registry borrow must produce the same action under the same
+    /// RNG seed.
+    #[cfg(feature = "player-stats")]
+    #[test]
+    fn rule_based_decider_ignores_opponent_stats() {
+        use crate::analysis::player_stats::StatsRegistry;
+        use rand::SeedableRng;
+        use rand::rngs::SmallRng;
+
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+        ]);
+        let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let registry = StatsRegistry::new();
+        let profile = BotProfile::tight_passive();
+
+        let snap_no_stats = TableSnapshot::from_table(&table, 0);
+        let snap_with_stats = TableSnapshot::from_table_with_stats(&table, 0, &registry);
+
+        // 64 trials each with a fresh seed pair — independent RNGs reseeded
+        // identically per trial. Locks in determinism over a sweep, not just
+        // a single arbitrary seed.
+        for seed in 0u64..64 {
+            let mut rng_a = SmallRng::seed_from_u64(seed);
+            let mut rng_b = SmallRng::seed_from_u64(seed);
+            let action_a = RuleBasedDecider::decide_with_rng(&profile, &snap_no_stats, &mut rng_a);
+            let action_b = RuleBasedDecider::decide_with_rng(&profile, &snap_with_stats, &mut rng_b);
+            assert_eq!(
+                action_a, action_b,
+                "seed {seed}: decider must produce identical actions with vs without registry"
             );
         }
     }

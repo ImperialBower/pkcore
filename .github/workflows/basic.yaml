@@ -88,3 +88,25 @@ jobs:
       - run: cargo doc --no-deps
         env:
           RUSTDOCFLAGS: -Dwarnings
+
+  no-default-features:
+    name: No-default-features
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - name: Read toolchain from rust-toolchain.toml
+        id: toolchain
+        run: |
+          version=$(grep '^channel' rust-toolchain.toml | tr -d ' "' | cut -d= -f2)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ steps.toolchain.outputs.version }}
+          components: rust-src
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --no-default-features --lib --tests
+      - run: cargo check --no-default-features --features hand-histories --lib --tests
+      - run: cargo check --no-default-features --features bot-profiles --lib --tests
+      - run: cargo check --no-default-features --features player-stats --lib --tests
+      - run: cargo check --no-default-features --features player-stats-persistence --lib --tests
