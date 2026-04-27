@@ -46,7 +46,8 @@
       "Bash(RUSTFLAGS=-Dwarnings cargo check --no-default-features --lib --tests)",
       "Bash(RUSTDOCFLAGS=-Dwarnings cargo doc --no-deps --lib)",
       "Bash(RUSTFLAGS=-Dwarnings cargo check --no-default-features --features hand-histories --lib --tests)",
-      "Skill(audit-release)"
+      "Skill(audit-release)",
+      "Skill(release-notes)"
     ]
   }
 }
