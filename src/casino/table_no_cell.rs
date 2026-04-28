@@ -2337,6 +2337,24 @@ impl TableNoCell {
         Ok(Game { hands, board })
     }
 
+    /// True when every seat that contributed to the pot has the same
+    /// `chips_in_play`. The simple `divvy_up(pot, winners.len())` payout in
+    /// `showdown_headsup` is only correct under this condition; otherwise
+    /// side-pot stratification is required and the hand must be routed
+    /// through `showdown_multiway`.
+    fn heads_up_is_symmetric(&self) -> bool {
+        let mut iter = self
+            .seats
+            .0
+            .iter()
+            .filter(|s| s.player.chips_in_play > 0)
+            .map(|s| s.player.chips_in_play);
+        let Some(first) = iter.next() else {
+            return true;
+        };
+        iter.all(|c| c == first)
+    }
+
     fn compute_hand_equity(&self) -> TableEquity {
         let mut v: Vec<SeatEquity> = Vec::new();
         for (i, seat) in self.seats.0.iter().enumerate() {
@@ -2392,6 +2410,15 @@ impl TableNoCell {
     }
 
     fn showdown_headsup(&mut self) -> Result<Winnings, PKError> {
+        // When contributors put in unequal amounts (mismatched all-ins, or folded
+        // players who left chips in the pot), the simple even-split below is
+        // wrong: it ignores side-pot caps and uncalled-bet returns. Delegate
+        // to the multiway path, which handles side-pot stratification via
+        // TableEquity::winnings.
+        if !self.heads_up_is_symmetric() {
+            return self.showdown_multiway();
+        }
+
         let game = self.build_game()?;
         let case_result = game.river_case_eval()?;
         let winners = case_result.winning_seats();
@@ -2489,13 +2516,19 @@ impl TableNoCell {
             }
             processed_chip_levels.insert(winner_chip_level);
 
+            // Tied winners eligible for THIS pot layer = every overall winner
+            // whose current commitment can cover the layer's cap. The earlier
+            // `== winner_chip_level` form excluded tied winners with deeper
+            // commitments (their entry has higher `chips`), causing the lower
+            // stack to take the entire main pot uncontested when tied with a
+            // deeper stack.
             let tied_at_level: Vec<u8> = overall_winners
                 .iter()
                 .filter(|&&s| {
                     equity.equities().iter().any(|e| {
                         e.seats != Seatbit::NONE
                             && (e.seats & Seatbit::from(s)) != Seatbit::NONE
-                            && e.chips == winner_chip_level
+                            && e.chips >= winner_chip_level
                     })
                 })
                 .copied()

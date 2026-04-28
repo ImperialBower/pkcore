@@ -81,13 +81,18 @@ mod hands__the_hand_tests {
 
         assert!(!winnings.is_empty(), "winnings should not be empty");
 
-        // At least one PlayerWins event must record seat 3 (Gus Hansen).
-        let gus_won = table
-            .event_log
-            .entries()
-            .iter()
-            .any(|e| matches!(e, TableAction::PlayerWins(seat, _, _, _, _) if seat == &3));
-        assert!(gus_won, "expected a PlayerWins entry for seat 3 (Gus Hansen)");
+        // At least one win event must record seat 3 (Gus Hansen). The exact
+        // event kind depends on whether the hand routed through symmetric
+        // heads-up (`PlayerWins`) or the side-pot-aware multiway path
+        // (`PlayerWinsMainPot` / `PlayerWinsSidePot`). Mismatched all-ins
+        // route to multiway, so accept any of the three.
+        let gus_won = table.event_log.entries().iter().any(|e| match e {
+            TableAction::PlayerWins(seat, _, _, _, _)
+            | TableAction::PlayerWinsMainPot(seat, _)
+            | TableAction::PlayerWinsSidePot(seat, _) => *seat == 3,
+            _ => false,
+        });
+        assert!(gus_won, "expected a win event for seat 3 (Gus Hansen)");
     }
 
     /// The event log must contain entries for every street (deal, flop, turn,

@@ -125,6 +125,7 @@ mod casino__table_split_pot_tests {
 #[allow(nonstandard_style)]
 mod casino__table_no_cell__split_pot_tests {
     use pkcore::arrays::sliced::BoxedCards;
+    use pkcore::cards::Cards;
     use pkcore::casino::game::ForcedBets;
     use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
     use std::str::FromStr;
@@ -178,6 +179,208 @@ mod casino__table_no_cell__split_pot_tests {
         assert!(
             result.is_ok(),
             "end_hand should not fail with ChipAuditFailed when BB over-contributes and folds: {result:?}"
+        );
+    }
+
+    /// Replaces `table.deck` with a deck whose first 8 cards drive the burn / flop /
+    /// turn / river deal in deterministic order, and whose remaining 40 cards are
+    /// any cards not already used as hole cards or in the rigged top.
+    ///
+    /// The pre-set hole cards must already have been removed from the table's deck
+    /// by `nlh_from_seats`; this helper just re-orders so that draws are
+    /// deterministic.
+    fn rig_deck(table: &mut TableNoCell, top: &str, hole_and_top: &str) {
+        let used = Cards::from_str(hole_and_top).expect("used cards parse");
+        let mut deck = Cards::from_str(top).expect("top cards parse");
+        let rest = Cards::deck_minus(&used);
+        deck.insert_all(&rest);
+        table.deck = deck;
+    }
+
+    /// Heads-up showdown with mismatched all-ins and a tied result.
+    ///
+    /// Seat 0 (deep, 1000) and seat 1 (short, 200) both go all-in pre-flop.
+    /// A rigged board (`A♥ A♦ A♣ A♠ K♥`) gives both players four-aces with a
+    /// king kicker — playing the board, identical hand strength, exact tie.
+    ///
+    /// Correct payout (per side-pot semantics):
+    /// - Main pot capped at the short stack (200 from each player) = 400, split
+    ///   50/50 → 200 each
+    /// - Uncalled portion (800 chips of seat 0's bet that nobody could match)
+    ///   returned to seat 0
+    /// - Final stacks: seat 0 = 1000 (no change), seat 1 = 200 (no change)
+    ///
+    /// Defect (pre-fix) `showdown_headsup` simply does
+    /// `divvy_up(self.pot, winners.len())` = `divvy_up(1200, 2) = [600, 600]`,
+    /// giving seat 0 only 600 (a 400-chip loss on a tied hand) and seat 1 600
+    /// (a 400-chip win on a tied hand). The chips are conserved but allocated
+    /// to the wrong winner.
+    #[test]
+    fn heads_up_tied_with_short_all_in_returns_uncalled_excess() {
+        let mut seat0 = SeatNoCell::new(PlayerNoCell::new_with_chips("Deep".to_string(), 1_000));
+        seat0.cards = BoxedCards::from_str("7♦ 2♣").unwrap();
+        let mut seat1 = SeatNoCell::new(PlayerNoCell::new_with_chips("Short".to_string(), 200));
+        seat1.cards = BoxedCards::from_str("4♦ 5♦").unwrap();
+
+        let seats = SeatsNoCell::new(vec![seat0, seat1]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+
+        // Burn-flop-burn-turn-burn-river: 6♣, [A♥ A♦ A♣], 6♦, A♠, 6♥, K♥.
+        // Both players play four aces from the board → exact tie.
+        rig_deck(
+            &mut table,
+            "6♣ A♥ A♦ A♣ 6♦ A♠ 6♥ K♥",
+            "7♦ 2♣ 4♦ 5♦ 6♣ A♥ A♦ A♣ 6♦ A♠ 6♥ K♥",
+        );
+
+        // Heads-up: button (seat 0) is SB, seat 1 is BB. SB acts first preflop.
+        table.act_forced_bets().unwrap();
+        let utg = table.next_to_act(); // seat 0 (SB)
+        table.act_all_in(utg).unwrap();
+        let next = table.next_to_act(); // seat 1 (BB)
+        table.act_all_in(next).unwrap();
+
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+        table.deal_turn().unwrap();
+        table.deal_river().unwrap();
+        assert!(table.is_game_over());
+
+        let result = table.end_hand();
+        assert!(result.is_ok(), "end_hand failed: {result:?}");
+
+        let s0 = table.seats.get_seat(0).unwrap().player.chips;
+        let s1 = table.seats.get_seat(1).unwrap().player.chips;
+        assert_eq!(
+            1_200,
+            table.table_chip_count(),
+            "chips must be conserved across the hand"
+        );
+        assert_eq!(
+            1_000, s0,
+            "tied heads-up: deep stack must end at starting stack (200 won from main + 800 uncalled returned), got {s0}"
+        );
+        assert_eq!(
+            200, s1,
+            "tied heads-up: short stack must end at starting stack (200 won from main, no eligibility for uncalled), got {s1}"
+        );
+    }
+
+    /// Heads-up showdown where the short stack wins outright. The deep stack's
+    /// uncalled excess (the chips nobody could match) must be returned, not
+    /// awarded to the short winner.
+    ///
+    /// Seat 0 (deep, 1000) is dealt 7♦ 2♣ → garbage. Seat 1 (short, 200) is
+    /// dealt A♠ A♥ → premium. Rigged board K♠ K♣ 9♦ 8♠ 4♥ leaves seat 1 with
+    /// AAKK9 (two pair, aces and kings) and seat 0 with KK987 (one pair). Seat 1
+    /// wins.
+    ///
+    /// Correct payout: seat 1 wins the main pot (400 = 200 from each), seat 0
+    /// gets back the 800 uncalled excess. Final: seat 0 = 800, seat 1 = 400.
+    ///
+    /// Defect (pre-fix): `divvy_up(1200, 1) = [1200]` awards the entire pot to
+    /// the short winner — seat 1 ends with 1200 (a 1000-chip win on a 200-chip
+    /// stack), seat 0 ends with 0 (their uncalled 800 absorbed by the winner).
+    #[test]
+    fn heads_up_short_winner_excess_returned_to_deep_stack() {
+        let mut seat0 = SeatNoCell::new(PlayerNoCell::new_with_chips("Deep".to_string(), 1_000));
+        seat0.cards = BoxedCards::from_str("7♦ 2♣").unwrap();
+        let mut seat1 = SeatNoCell::new(PlayerNoCell::new_with_chips("Short".to_string(), 200));
+        seat1.cards = BoxedCards::from_str("A♠ A♥").unwrap();
+
+        let seats = SeatsNoCell::new(vec![seat0, seat1]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+
+        // Burn-flop-burn-turn-burn-river: 3♣, [K♠ K♣ 9♦], 3♥, 8♠, 3♦, 4♥.
+        // Seat 1 (AA) makes two pair AAKK with 9 kicker.
+        // Seat 0 (72) makes one pair KK with 9-8-7 kickers. Seat 1 wins.
+        rig_deck(
+            &mut table,
+            "3♣ K♠ K♣ 9♦ 3♥ 8♠ 3♦ 4♥",
+            "7♦ 2♣ A♠ A♥ 3♣ K♠ K♣ 9♦ 3♥ 8♠ 3♦ 4♥",
+        );
+
+        table.act_forced_bets().unwrap();
+        let utg = table.next_to_act();
+        table.act_all_in(utg).unwrap();
+        let next = table.next_to_act();
+        table.act_all_in(next).unwrap();
+
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+        table.deal_turn().unwrap();
+        table.deal_river().unwrap();
+        assert!(table.is_game_over());
+
+        let result = table.end_hand();
+        assert!(result.is_ok(), "end_hand failed: {result:?}");
+
+        let s0 = table.seats.get_seat(0).unwrap().player.chips;
+        let s1 = table.seats.get_seat(1).unwrap().player.chips;
+        assert_eq!(
+            1_200,
+            table.table_chip_count(),
+            "chips must be conserved across the hand"
+        );
+        assert_eq!(
+            800, s0,
+            "deep stack lost main pot but must reclaim uncalled 800, got {s0}"
+        );
+        assert_eq!(
+            400, s1,
+            "short winner only eligible for matched 200+200 main pot, got {s1}"
+        );
+    }
+
+    /// Regression guard: heads-up with **equal** stacks and tied hands must
+    /// produce an even split via the existing fast path. This protects against
+    /// over-correcting the asymmetric fix and breaking the symmetric case.
+    #[test]
+    fn heads_up_symmetric_tied_split_50_50() {
+        let mut seat0 = SeatNoCell::new(PlayerNoCell::new_with_chips("Equal0".to_string(), 1_000));
+        seat0.cards = BoxedCards::from_str("7♦ 2♣").unwrap();
+        let mut seat1 = SeatNoCell::new(PlayerNoCell::new_with_chips("Equal1".to_string(), 1_000));
+        seat1.cards = BoxedCards::from_str("4♦ 5♦").unwrap();
+
+        let seats = SeatsNoCell::new(vec![seat0, seat1]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+
+        // Same four-aces-on-board rig as the asymmetric tied test → exact tie.
+        rig_deck(
+            &mut table,
+            "6♣ A♥ A♦ A♣ 6♦ A♠ 6♥ K♥",
+            "7♦ 2♣ 4♦ 5♦ 6♣ A♥ A♦ A♣ 6♦ A♠ 6♥ K♥",
+        );
+
+        table.act_forced_bets().unwrap();
+        let utg = table.next_to_act();
+        table.act_all_in(utg).unwrap();
+        let next = table.next_to_act();
+        table.act_all_in(next).unwrap();
+
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+        table.deal_turn().unwrap();
+        table.deal_river().unwrap();
+        assert!(table.is_game_over());
+
+        let result = table.end_hand();
+        assert!(result.is_ok(), "end_hand failed: {result:?}");
+
+        let s0 = table.seats.get_seat(0).unwrap().player.chips;
+        let s1 = table.seats.get_seat(1).unwrap().player.chips;
+        assert_eq!(
+            2_000,
+            table.table_chip_count(),
+            "chips must be conserved across the hand"
+        );
+        assert_eq!(
+            1_000, s0,
+            "symmetric tied heads-up: each gets back their stack, got s0={s0}"
+        );
+        assert_eq!(
+            1_000, s1,
+            "symmetric tied heads-up: each gets back their stack, got s1={s1}"
         );
     }
 }
