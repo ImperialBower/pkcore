@@ -36,6 +36,7 @@
 
 use crate::PKError;
 use crate::casino::action::PlayerAction;
+use crate::casino::game::ForcedBets;
 use crate::casino::table::winnings::Winnings;
 use crate::casino::table_no_cell::TableNoCell;
 use crate::games::GamePhase;
@@ -117,6 +118,13 @@ pub struct PokerSession {
     /// start of each hand, before any cards are drawn.  `None` until the first
     /// call to [`start_hand`](PokerSession::start_hand).
     pub shuffled_deck_str: Option<String>,
+    /// Snapshot of the table's [`ForcedBets`] taken at the moment the current
+    /// (or most recent) hand was started. Used by hand-history serializers so
+    /// recorded `stakes` always match the blinds the engine actually posted.
+    forced_at_hand_start: ForcedBets,
+    /// A blinds change requested mid-hand via [`set_blinds`](PokerSession::set_blinds);
+    /// applied to `table.forced` on the next [`start_hand`](PokerSession::start_hand).
+    pending_forced: Option<ForcedBets>,
 }
 
 impl PokerSession {
@@ -143,10 +151,84 @@ impl PokerSession {
     /// ```
     #[must_use]
     pub fn new(table: TableNoCell) -> Self {
+        let forced_at_hand_start = table.forced;
         Self {
             table,
             hand_number: 0,
             shuffled_deck_str: None,
+            forced_at_hand_start,
+            pending_forced: None,
+        }
+    }
+
+    /// Returns the [`ForcedBets`] that were in effect when the current (or most
+    /// recent) hand started.
+    ///
+    /// Hand-history serializers should record this rather than `table.forced`
+    /// so that recorded `stakes` always match the blinds the engine actually
+    /// posted, even if [`set_blinds`](PokerSession::set_blinds) was invoked
+    /// during the hand.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "bot-profiles")]
+    /// # {
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::session::PokerSession;
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// ]);
+    /// let session = PokerSession::new(
+    ///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100))
+    /// );
+    /// assert_eq!(session.forced_at_hand_start().small_blind, 50);
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn forced_at_hand_start(&self) -> ForcedBets {
+        self.forced_at_hand_start
+    }
+
+    /// Updates the blinds for upcoming hands.
+    ///
+    /// If no hand is currently in progress, the change takes effect immediately
+    /// (the next [`start_hand`](PokerSession::start_hand) posts the new blinds).
+    /// If a hand is already in flight, the change is **deferred** until that
+    /// hand ends — the next `start_hand` after `end_hand` applies it. This
+    /// preserves two invariants critical for the hand-history pipeline:
+    ///
+    /// 1. The engine's `min_raise()` validation cannot be rebased mid-hand.
+    /// 2. The recorded `stakes` always match the actual posts.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "bot-profiles")]
+    /// # {
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::session::PokerSession;
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// ]);
+    /// let mut session = PokerSession::new(
+    ///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100))
+    /// );
+    /// session.set_blinds(ForcedBets::new(100, 200));
+    /// assert_eq!(session.table.forced.big_blind, 200);
+    /// # }
+    /// ```
+    pub fn set_blinds(&mut self, forced: ForcedBets) {
+        if self.is_hand_in_progress() {
+            self.pending_forced = Some(forced);
+        } else {
+            self.table.forced = forced;
         }
     }
 
@@ -239,6 +321,10 @@ impl PokerSession {
     /// # }
     /// ```
     pub fn start_hand(&mut self) -> Result<(), PKError> {
+        if let Some(pending) = self.pending_forced.take() {
+            self.table.forced = pending;
+        }
+        self.forced_at_hand_start = self.table.forced;
         self.table.deck.shuffle_in_place();
         self.shuffled_deck_str = Some(self.table.deck.to_string());
         self.table.act_forced_bets()?;
@@ -870,5 +956,65 @@ mod tests {
             "shuffled deck string should contain exactly 52 card tokens"
         );
         Ok(())
+    }
+
+    // ── set_blinds deferral ──────────────────────────────────────────────────
+    //
+    // Regression tests for the pkarena0-web "stakes drift" defect: invoking
+    // `set_blinds` while a hand is in progress used to immediately rewrite
+    // `table.forced`, which (a) rebased mid-hand `min_raise()` validation
+    // against new blinds, and (b) caused the next hand-history snapshot to
+    // record stakes that no longer matched the actual posts.
+
+    #[test]
+    fn set_blinds_between_hands_applies_immediately() {
+        let mut session = two_player_session();
+        session.set_blinds(ForcedBets::new(100, 200));
+        assert_eq!(100, session.table.forced.small_blind);
+        assert_eq!(200, session.table.forced.big_blind);
+    }
+
+    #[test]
+    fn set_blinds_during_hand_defers_to_next_hand() {
+        let mut session = two_player_session();
+        session.start_hand().unwrap();
+        // Mid-hand: caller asks to bump blinds.
+        session.set_blinds(ForcedBets::new(100, 200));
+        // Current hand still uses the original blinds — the engine's
+        // `min_raise()` and any subsequent post must not see the new values.
+        assert_eq!(50, session.table.forced.small_blind);
+        assert_eq!(100, session.table.forced.big_blind);
+    }
+
+    #[test]
+    fn deferred_blinds_take_effect_on_next_start_hand() {
+        let mut session = two_player_session();
+        session.start_hand().unwrap();
+        session.set_blinds(ForcedBets::new(100, 200));
+        // Finish the hand by folding the next actor.
+        let actor = session.next_actor().unwrap();
+        session.apply_action(actor, PlayerAction::Fold).unwrap();
+        session.end_hand().unwrap();
+        // Next hand picks up the deferred blinds.
+        session.start_hand().unwrap();
+        assert_eq!(100, session.table.forced.small_blind);
+        assert_eq!(200, session.table.forced.big_blind);
+        assert_eq!(100, session.forced_at_hand_start().small_blind);
+    }
+
+    #[test]
+    fn forced_at_hand_start_snapshot_is_stable_during_hand() {
+        let mut session = two_player_session();
+        session.start_hand().unwrap();
+        let captured = session.forced_at_hand_start();
+        assert_eq!(50, captured.small_blind);
+        assert_eq!(100, captured.big_blind);
+
+        // Even an unconditional direct write to table.forced must not affect
+        // the captured-at-start snapshot — that's what hand-history needs.
+        session.table.forced = ForcedBets::new(400, 800);
+        let still_captured = session.forced_at_hand_start();
+        assert_eq!(50, still_captured.small_blind);
+        assert_eq!(100, still_captured.big_blind);
     }
 }
