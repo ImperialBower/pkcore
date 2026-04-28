@@ -2,7 +2,7 @@ use crate::PKError;
 use crate::casino::cashier::chips::Stack;
 use crate::casino::table::winnings::{PotWin, Winnings};
 use crate::prelude::{Eval, Pile, SeatEquity, Seatbit, Seven, TableAction, TableCelled, TableEquity};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 pub struct Showdown;
 
@@ -217,8 +217,8 @@ impl Showdown {
             rank_b.cmp(&rank_a) // descending rank index = ascending chip level
         });
 
-        let mut processed_chip_levels: HashSet<usize> = HashSet::new();
         let mut last_winner: Option<u8> = None;
+        let mut main_pot_paid = false;
 
         for &winner_seat in &overall_winners {
             if equity.is_empty() {
@@ -227,7 +227,17 @@ impl Showdown {
 
             let winner_sb = Seatbit::from(winner_seat);
 
-            // Find this winner's chip level in the current equity.
+            // Find this winner's chip level in the current equity. If their
+            // entry was already consumed by a prior layer's `winnings()` call
+            // (because they were a tied co-winner included in `tied_at_level`
+            // for that layer), `find` returns None and we move on. The earlier
+            // implementation also tracked a `processed_chip_levels` set keyed
+            // on the raw chip-count value to skip "already-processed" levels;
+            // that set was removed because in 3+-way asymmetric ties a later
+            // iteration's winner can legitimately share the same numeric chip
+            // level as an earlier iteration after side-pot subtraction (e.g.,
+            // A=100/B=200/C=500 tied: iter 2 sees B with chips=100 — a
+            // *different* layer than iter 1's, even though the value collides).
             let Some(winner_chip_level) = equity
                 .equities()
                 .iter()
@@ -236,11 +246,6 @@ impl Showdown {
             else {
                 continue;
             };
-
-            if processed_chip_levels.contains(&winner_chip_level) {
-                continue; // already handled this level (tied winners)
-            }
-            processed_chip_levels.insert(winner_chip_level);
 
             // Tied winners eligible for THIS pot layer = every overall winner
             // whose current commitment can cover the layer's cap. The earlier
@@ -266,7 +271,8 @@ impl Showdown {
             equity = remaining;
 
             let shares = Stack::new(total).divvy_up(tied_at_level.len());
-            let is_main_pot = processed_chip_levels.len() == 1;
+            let is_main_pot = !main_pot_paid;
+            main_pot_paid = true;
 
             for (i, &seat) in tied_at_level.iter().enumerate() {
                 let share = shares.get(i).cloned().unwrap_or_default();
@@ -420,7 +426,11 @@ impl Showdown {
 #[allow(non_snake_case)]
 mod casino__table__showdown_tests {
     use super::*;
-    use crate::prelude::{Five, TestData};
+    use crate::Forgiving;
+    use crate::arrays::sliced::BoxedCards;
+    use crate::cards::Cards;
+    use crate::cards_cell::CardsCell;
+    use crate::prelude::{Five, ForcedBets, Player, Seat, Seats, TestData};
     use std::str::FromStr;
 
     #[test]
@@ -615,5 +625,130 @@ mod casino__table__showdown_tests {
         assert_eq!(6_900, table.get_seat(2).expect("Seat 2").player.chips.count());
         assert_eq!(15_150, table.get_seat(3).expect("Seat 3").player.chips.count());
         assert_eq!(0, table.get_seat(4).expect("Seat 4").player.chips.count());
+    }
+
+    /// Builds a 2-player heads-up `TableCelled` with the given stacks, hole
+    /// cards, and a deterministic 8-card community deal (burn / flop×3 / burn /
+    /// turn / burn / river). Used by the heads-up regression tests below.
+    fn build_headsup_table(
+        s0_chips: usize,
+        s0_hole: &str,
+        s1_chips: usize,
+        s1_hole: &str,
+        community_top_8: &str,
+    ) -> TableCelled {
+        let s0 = Seat {
+            player: Player::new_with_chips("Deep".to_string(), s0_chips),
+            cards: boxed!(s0_hole),
+        };
+        let s1 = Seat {
+            player: Player::new_with_chips("Short".to_string(), s1_chips),
+            cards: boxed!(s1_hole),
+        };
+        let seats = Seats::new(vec![s0, s1]);
+        TableCelled::nlh_primed(seats, &cc!(community_top_8), ForcedBets::new(50, 100))
+    }
+
+    /// Heads-up showdown with mismatched all-ins and a tied result (cell-based).
+    /// Mirror of `tests/split_pots.rs::heads_up_tied_with_short_all_in_returns_uncalled_excess`.
+    ///
+    /// Both players play four-aces-on-board → tie. With correct side-pot
+    /// accounting the deep stack reclaims the 800 chips no one could match,
+    /// so each ends at their starting stack.
+    #[test]
+    fn process_headsup_tied_with_short_all_in_returns_uncalled_excess() {
+        let table = build_headsup_table(1_000, "7♦ 2♣", 200, "4♦ 5♦", "6♣ A♥ A♦ A♣ 6♦ A♠ 6♥ K♥");
+
+        // Heads-up: button (seat 0) is SB; SB acts first preflop.
+        table.act_forced_bets().unwrap();
+        let utg = table.next_to_act();
+        table.act_all_in(utg).unwrap();
+        let next = table.next_to_act();
+        table.act_all_in(next).unwrap();
+
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+        table.deal_turn().unwrap();
+        table.deal_river().unwrap();
+
+        let winnings = Showdown::process(&table).expect("end_hand should succeed");
+        assert!(!winnings.is_empty());
+
+        let s0 = table.get_seat(0).unwrap().player.chips.count();
+        let s1 = table.get_seat(1).unwrap().player.chips.count();
+        assert_eq!(
+            1_000, s0,
+            "tied heads-up: deep stack must end at starting stack (200 from main + 800 uncalled), got {s0}"
+        );
+        assert_eq!(
+            200, s1,
+            "tied heads-up: short stack must end at starting stack (200 from main, no eligibility for uncalled), got {s1}"
+        );
+    }
+
+    /// Heads-up showdown where the short stack wins outright (cell-based).
+    /// Deep stack must reclaim its 800 uncalled excess; short winner only
+    /// takes the matched 400 from the main pot.
+    #[test]
+    fn process_headsup_short_winner_excess_returned_to_deep_stack() {
+        let table = build_headsup_table(1_000, "7♦ 2♣", 200, "A♠ A♥", "3♣ K♠ K♣ 9♦ 3♥ 8♠ 3♦ 4♥");
+
+        table.act_forced_bets().unwrap();
+        let utg = table.next_to_act();
+        table.act_all_in(utg).unwrap();
+        let next = table.next_to_act();
+        table.act_all_in(next).unwrap();
+
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+        table.deal_turn().unwrap();
+        table.deal_river().unwrap();
+
+        let winnings = Showdown::process(&table).expect("end_hand should succeed");
+        assert!(!winnings.is_empty());
+
+        let s0 = table.get_seat(0).unwrap().player.chips.count();
+        let s1 = table.get_seat(1).unwrap().player.chips.count();
+        assert_eq!(
+            800, s0,
+            "deep stack lost main pot but must reclaim uncalled 800, got {s0}"
+        );
+        assert_eq!(
+            400, s1,
+            "short winner only eligible for matched 200+200 main pot, got {s1}"
+        );
+    }
+
+    /// Regression guard: equal-stack heads-up tied showdown still produces an
+    /// even split via the symmetric fast path (cell-based). Protects
+    /// `TableAction::PlayerWins` event shape for the unchanged path.
+    #[test]
+    fn process_headsup_symmetric_tied_split_50_50() {
+        let table = build_headsup_table(1_000, "7♦ 2♣", 1_000, "4♦ 5♦", "6♣ A♥ A♦ A♣ 6♦ A♠ 6♥ K♥");
+
+        table.act_forced_bets().unwrap();
+        let utg = table.next_to_act();
+        table.act_all_in(utg).unwrap();
+        let next = table.next_to_act();
+        table.act_all_in(next).unwrap();
+
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+        table.deal_turn().unwrap();
+        table.deal_river().unwrap();
+
+        let winnings = Showdown::process(&table).expect("end_hand should succeed");
+        assert!(!winnings.is_empty());
+
+        let s0 = table.get_seat(0).unwrap().player.chips.count();
+        let s1 = table.get_seat(1).unwrap().player.chips.count();
+        assert_eq!(
+            1_000, s0,
+            "symmetric tied heads-up: each gets back their stack, got s0={s0}"
+        );
+        assert_eq!(
+            1_000, s1,
+            "symmetric tied heads-up: each gets back their stack, got s1={s1}"
+        );
     }
 }
