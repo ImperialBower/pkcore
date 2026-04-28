@@ -1,0 +1,5985 @@
+pkcore_version: 0.0.52
+format_version: 1
+hands:
+- format_version: 1
+  hand:
+    id: pkarena0-hand-001
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 9
+    button: 0
+    stakes:
+      small_blind: 50.0
+      big_blind: 100.0
+  players:
+  - seat: 0
+    name: You
+    stack: 10000.0
+    hole_cards: 9♦ 5♣
+  - seat: 1
+    name: joker
+    stack: 10000.0
+    hole_cards: 3♣ K♠
+  - seat: 2
+    name: maniac
+    stack: 10000.0
+    hole_cards: 6♣ T♥
+  - seat: 3
+    name: gto
+    stack: 10000.0
+    hole_cards: 4♠ 3♠
+  - seat: 4
+    name: tight_passive
+    stack: 10000.0
+    hole_cards: 7♦ T♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 10000.0
+    hole_cards: K♣ J♦
+  - seat: 6
+    name: abc
+    stack: 10000.0
+    hole_cards: Q♥ 7♠
+  - seat: 7
+    name: loose_aggressive
+    stack: 10000.0
+    hole_cards: 2♥ A♣
+  - seat: 8
+    name: short_stack_ninja
+    stack: 10000.0
+    hole_cards: Q♦ 4♦
+  streets:
+    preflop:
+      actions:
+      - seat: 1
+        action: post
+        amount: 50.0
+      - seat: 2
+        action: post
+        amount: 100.0
+      - seat: 3
+        action: raise
+        amount: 250.0
+      - seat: 4
+        action: raise
+        amount: 450.0
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: raise
+        amount: 1016.0
+      - seat: 8
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: raise
+        amount: 1638.0
+      - seat: 2
+        action: raise
+        amount: 8546.0
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 1
+        action: fold
+      pot: 3354.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    outcome: fold
+    net: -1638.0
+  - seat: 2
+    outcome: win
+    net: 3354.0
+    pot_won: 11900.0
+  - seat: 3
+    outcome: fold
+    net: -250.0
+  - seat: 4
+    outcome: fold
+    net: -450.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: -1016.0
+  - seat: 8
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 3♣ 6♣ 4♠ 7♦ K♣ Q♥ 2♥ Q♦ 9♦ K♠ T♥ 3♠ T♣ J♦ 7♠ A♣ 4♦ 5♣ Q♠ 2♣ Q♣ 5♠ 6♥ J♠ 8♠ 8♥ 9♥ 4♣ J♣ T♠ K♦ 9♠ 8♣ 4♥ 2♦ A♥ T♦ 9♣ 6♠ A♦ 5♥ J♥ 5♦ 6♦ 8♦ 3♥ A♠ 7♣ 3♦ 7♥ 2♠ K♥
+- format_version: 1
+  hand:
+    id: pkarena0-hand-002
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 9
+    button: 1
+    stakes:
+      small_blind: 50.0
+      big_blind: 100.0
+  players:
+  - seat: 0
+    name: You
+    stack: 10000.0
+    hole_cards: J♣ 2♣
+  - seat: 1
+    name: joker
+    stack: 8362.0
+    hole_cards: A♣ 7♠
+  - seat: 2
+    name: maniac
+    stack: 13354.0
+    hole_cards: K♥ 6♠
+  - seat: 3
+    name: gto
+    stack: 9750.0
+    hole_cards: 9♦ 2♦
+  - seat: 4
+    name: tight_passive
+    stack: 9550.0
+    hole_cards: T♥ T♠
+  - seat: 5
+    name: tight_aggressive
+    stack: 10000.0
+    hole_cards: 6♣ 9♥
+  - seat: 6
+    name: abc
+    stack: 10000.0
+    hole_cards: 4♠ 4♥
+  - seat: 7
+    name: loose_aggressive
+    stack: 8984.0
+    hole_cards: K♠ 8♦
+  - seat: 8
+    name: short_stack_ninja
+    stack: 10000.0
+    hole_cards: 4♦ Q♦
+  streets:
+    preflop:
+      actions:
+      - seat: 2
+        action: post
+        amount: 50.0
+      - seat: 3
+        action: post
+        amount: 100.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: raise
+        amount: 400.0
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: fold
+      - seat: 2
+        action: fold
+      - seat: 3
+        action: fold
+      pot: 150.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    outcome: fold
+    net: 0.0
+  - seat: 2
+    outcome: fold
+    net: -50.0
+  - seat: 3
+    outcome: fold
+    net: -100.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: 0.0
+  - seat: 8
+    outcome: win
+    net: 150.0
+    pot_won: 550.0
+  shuffled_deck: K♥ 9♦ T♥ 6♣ 4♠ K♠ 4♦ J♣ A♣ 6♠ 2♦ T♠ 9♥ 4♥ 8♦ Q♦ 2♣ 7♠ Q♥ Q♣ 3♥ J♠ J♥ Q♠ K♦ 8♣ A♦ A♥ 7♥ 5♠ 6♦ J♦ 5♣ T♦ 7♣ 7♦ 4♣ 9♣ 2♠ 2♥ A♠ 3♣ K♣ T♣ 5♦ 5♥ 6♥ 3♦ 8♠ 3♠ 8♥ 9♠
+- format_version: 1
+  hand:
+    id: pkarena0-hand-003
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 9
+    button: 2
+    stakes:
+      small_blind: 50.0
+      big_blind: 100.0
+  players:
+  - seat: 0
+    name: You
+    stack: 10000.0
+    hole_cards: 5♥ 3♦
+  - seat: 1
+    name: joker
+    stack: 8362.0
+    hole_cards: 2♠ A♣
+  - seat: 2
+    name: maniac
+    stack: 13304.0
+    hole_cards: T♣ 8♠
+  - seat: 3
+    name: gto
+    stack: 9650.0
+    hole_cards: K♣ Q♥
+  - seat: 4
+    name: tight_passive
+    stack: 9550.0
+    hole_cards: T♥ 6♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 10000.0
+    hole_cards: 3♥ 7♣
+  - seat: 6
+    name: abc
+    stack: 10000.0
+    hole_cards: 5♠ Q♠
+  - seat: 7
+    name: loose_aggressive
+    stack: 8984.0
+    hole_cards: 3♣ J♦
+  - seat: 8
+    name: short_stack_ninja
+    stack: 10150.0
+    hole_cards: 2♣ 7♦
+  streets:
+    preflop:
+      actions:
+      - seat: 3
+        action: post
+        amount: 50.0
+      - seat: 4
+        action: post
+        amount: 100.0
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: raise
+        amount: 200.0
+      - seat: 8
+        action: raise
+        amount: 550.0
+      - seat: 0
+        action: call
+        amount: 550.0
+      - seat: 1
+        action: fold
+      - seat: 2
+        action: raise
+        amount: 3450.0
+      - seat: 3
+        action: raise
+        amount: 8350.0
+      - seat: 4
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 2
+        action: fold
+      pot: 4850.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: -550.0
+  - seat: 1
+    outcome: fold
+    net: 0.0
+  - seat: 2
+    outcome: fold
+    net: -3450.0
+  - seat: 3
+    outcome: win
+    net: 4850.0
+    pot_won: 13200.0
+  - seat: 4
+    outcome: fold
+    net: -100.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: -200.0
+  - seat: 8
+    outcome: fold
+    net: -550.0
+  shuffled_deck: K♣ T♥ 3♥ 5♠ 3♣ 2♣ 5♥ 2♠ T♣ Q♥ 6♣ 7♣ Q♠ J♦ 7♦ 3♦ A♣ 8♠ K♥ T♠ 5♦ 9♥ J♠ 7♠ 8♥ 4♣ 9♦ 4♠ 6♥ Q♦ 4♦ 9♣ T♦ 6♦ 5♣ A♠ A♥ 2♥ 8♣ K♠ J♣ J♥ 4♥ K♦ 6♠ 2♦ Q♣ 3♠ 8♦ A♦ 7♥ 9♠
+- format_version: 1
+  hand:
+    id: pkarena0-hand-004
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 9
+    button: 3
+    stakes:
+      small_blind: 50.0
+      big_blind: 100.0
+  players:
+  - seat: 0
+    name: You
+    stack: 9450.0
+    hole_cards: 4♥ 9♥
+  - seat: 1
+    name: joker
+    stack: 8362.0
+    hole_cards: 6♠ 4♦
+  - seat: 2
+    name: maniac
+    stack: 9854.0
+    hole_cards: K♦ T♠
+  - seat: 3
+    name: gto
+    stack: 14500.0
+    hole_cards: 9♦ K♠
+  - seat: 4
+    name: tight_passive
+    stack: 9450.0
+    hole_cards: 2♣ A♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 10000.0
+    hole_cards: 8♦ 3♦
+  - seat: 6
+    name: abc
+    stack: 10000.0
+    hole_cards: 7♣ K♣
+  - seat: 7
+    name: loose_aggressive
+    stack: 8784.0
+    hole_cards: 4♣ J♥
+  - seat: 8
+    name: short_stack_ninja
+    stack: 9600.0
+    hole_cards: 2♥ A♥
+  streets:
+    preflop:
+      actions:
+      - seat: 4
+        action: post
+        amount: 50.0
+      - seat: 5
+        action: post
+        amount: 100.0
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: fold
+      - seat: 2
+        action: raise
+        amount: 250.0
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      pot: 150.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    outcome: fold
+    net: 0.0
+  - seat: 2
+    outcome: win
+    net: 150.0
+    pot_won: 400.0
+  - seat: 3
+    outcome: fold
+    net: 0.0
+  - seat: 4
+    outcome: fold
+    net: -50.0
+  - seat: 5
+    outcome: fold
+    net: -100.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: 0.0
+  - seat: 8
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 2♣ 8♦ 7♣ 4♣ 2♥ 4♥ 6♠ K♦ 9♦ A♣ 3♦ K♣ J♥ A♥ 9♥ 4♦ T♠ K♠ 5♦ K♥ Q♠ 9♣ 5♥ 3♠ 6♣ Q♦ A♠ T♦ J♣ 7♥ T♥ 5♣ 2♦ 3♣ Q♥ Q♣ 8♥ 6♦ T♣ 7♠ 7♦ A♦ 8♠ 2♠ J♦ 4♠ 9♠ 3♥ 5♠ 8♣ J♠ 6♥
+- format_version: 1
+  hand:
+    id: pkarena0-hand-005
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 9
+    button: 4
+    stakes:
+      small_blind: 50.0
+      big_blind: 100.0
+  players:
+  - seat: 0
+    name: You
+    stack: 9450.0
+    hole_cards: 5♠ 4♥
+  - seat: 1
+    name: joker
+    stack: 8362.0
+    hole_cards: T♠ 9♦
+  - seat: 2
+    name: maniac
+    stack: 10004.0
+    hole_cards: 4♠ A♦
+  - seat: 3
+    name: gto
+    stack: 14500.0
+    hole_cards: 3♠ A♣
+  - seat: 4
+    name: tight_passive
+    stack: 9400.0
+    hole_cards: K♠ J♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 9900.0
+    hole_cards: 7♠ 2♠
+  - seat: 6
+    name: abc
+    stack: 10000.0
+    hole_cards: 3♦ 8♠
+  - seat: 7
+    name: loose_aggressive
+    stack: 8784.0
+    hole_cards: 8♦ 5♦
+  - seat: 8
+    name: short_stack_ninja
+    stack: 9600.0
+    hole_cards: 6♣ J♦
+  streets:
+    preflop:
+      actions:
+      - seat: 5
+        action: post
+        amount: 50.0
+      - seat: 6
+        action: post
+        amount: 100.0
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: raise
+        amount: 200.0
+      - seat: 2
+        action: fold
+      - seat: 3
+        action: raise
+        amount: 550.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: raise
+        amount: 1150.0
+      - seat: 6
+        action: fold
+      - seat: 1
+        action: fold
+      - seat: 3
+        action: fold
+      pot: 850.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    outcome: fold
+    net: -200.0
+  - seat: 2
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: fold
+    net: -550.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: win
+    net: 850.0
+    pot_won: 2000.0
+  - seat: 6
+    outcome: fold
+    net: -100.0
+  - seat: 7
+    outcome: fold
+    net: 0.0
+  - seat: 8
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 7♠ 3♦ 8♦ 6♣ 5♠ T♠ 4♠ 3♠ K♠ 2♠ 8♠ 5♦ J♦ 4♥ 9♦ A♦ A♣ J♣ 5♥ 5♣ J♥ 2♦ 7♣ 8♣ 6♠ 9♠ Q♣ 3♣ T♥ A♠ Q♥ T♣ A♥ 4♣ 6♥ K♦ 8♥ 9♥ 3♥ 2♣ 9♣ 7♦ J♠ 4♦ K♥ Q♠ 6♦ Q♦ 2♥ 7♥ K♣ T♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-006
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 9
+    button: 5
+    stakes:
+      small_blind: 50.0
+      big_blind: 100.0
+  players:
+  - seat: 0
+    name: You
+    stack: 9450.0
+    hole_cards: 4♠ 3♥
+  - seat: 1
+    name: joker
+    stack: 8162.0
+    hole_cards: 8♠ 4♦
+  - seat: 2
+    name: maniac
+    stack: 10004.0
+    hole_cards: T♥ 9♣
+  - seat: 3
+    name: gto
+    stack: 13950.0
+    hole_cards: J♥ 2♣
+  - seat: 4
+    name: tight_passive
+    stack: 9400.0
+    hole_cards: 7♦ T♠
+  - seat: 5
+    name: tight_aggressive
+    stack: 10750.0
+    hole_cards: T♦ 6♦
+  - seat: 6
+    name: abc
+    stack: 9900.0
+    hole_cards: 5♥ Q♣
+  - seat: 7
+    name: loose_aggressive
+    stack: 8784.0
+    hole_cards: 8♦ A♣
+  - seat: 8
+    name: short_stack_ninja
+    stack: 9600.0
+    hole_cards: 9♥ 5♦
+  streets:
+    preflop:
+      actions:
+      - seat: 6
+        action: post
+        amount: 50.0
+      - seat: 7
+        action: post
+        amount: 100.0
+      - seat: 8
+        action: raise
+        amount: 250.0
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: fold
+      - seat: 2
+        action: fold
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      pot: 150.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    outcome: fold
+    net: 0.0
+  - seat: 2
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: fold
+    net: 0.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: -50.0
+  - seat: 7
+    outcome: fold
+    net: -100.0
+  - seat: 8
+    outcome: win
+    net: 150.0
+    pot_won: 400.0
+  shuffled_deck: 5♥ 8♦ 9♥ 4♠ 8♠ T♥ J♥ 7♦ T♦ Q♣ A♣ 5♦ 3♥ 4♦ 9♣ 2♣ T♠ 6♦ Q♥ J♦ 6♥ 9♦ J♣ 6♠ 5♠ 3♦ 7♥ 4♣ A♥ 6♣ A♦ K♠ 8♣ 9♠ K♣ 3♠ J♠ 7♠ Q♠ K♦ A♠ 5♣ 8♥ 3♣ 7♣ 4♥ T♣ K♥ 2♦ 2♠ 2♥ Q♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-007
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 9
+    button: 6
+    stakes:
+      small_blind: 50.0
+      big_blind: 100.0
+  players:
+  - seat: 0
+    name: You
+    stack: 9450.0
+    hole_cards: 2♠ Q♥
+  - seat: 1
+    name: joker
+    stack: 8162.0
+    hole_cards: 7♥ 4♠
+  - seat: 2
+    name: maniac
+    stack: 10004.0
+    hole_cards: T♠ 2♦
+  - seat: 3
+    name: gto
+    stack: 13950.0
+    hole_cards: 6♠ K♣
+  - seat: 4
+    name: tight_passive
+    stack: 9400.0
+    hole_cards: 4♣ 3♦
+  - seat: 5
+    name: tight_aggressive
+    stack: 10750.0
+    hole_cards: A♠ 2♣
+  - seat: 6
+    name: abc
+    stack: 9850.0
+    hole_cards: 8♣ Q♣
+  - seat: 7
+    name: loose_aggressive
+    stack: 8684.0
+    hole_cards: 9♠ J♠
+  - seat: 8
+    name: short_stack_ninja
+    stack: 9750.0
+    hole_cards: K♠ 6♦
+  streets:
+    preflop:
+      actions:
+      - seat: 7
+        action: post
+        amount: 50.0
+      - seat: 8
+        action: post
+        amount: 100.0
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: fold
+      - seat: 2
+        action: fold
+      - seat: 3
+        action: raise
+        amount: 250.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: fold
+      pot: 150.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    outcome: fold
+    net: 0.0
+  - seat: 2
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: win
+    net: 150.0
+    pot_won: 400.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: -50.0
+  - seat: 8
+    outcome: fold
+    net: -100.0
+  shuffled_deck: 9♠ K♠ 2♠ 7♥ T♠ 6♠ 4♣ A♠ 8♣ J♠ 6♦ Q♥ 4♠ 2♦ K♣ 3♦ 2♣ Q♣ 9♥ T♦ 5♣ 9♣ K♦ 3♥ 4♥ 7♠ 3♠ 2♥ 6♥ J♥ 8♠ J♣ 3♣ J♦ 4♦ A♦ A♣ 8♥ 5♥ 7♦ Q♦ T♣ 8♦ 9♦ T♥ Q♠ A♥ 6♣ K♥ 7♣ 5♦ 5♠
+- format_version: 1
+  hand:
+    id: pkarena0-hand-008
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 9
+    button: 7
+    stakes:
+      small_blind: 50.0
+      big_blind: 100.0
+  players:
+  - seat: 0
+    name: You
+    stack: 9450.0
+    hole_cards: 4♥ 5♠
+  - seat: 1
+    name: joker
+    stack: 8162.0
+    hole_cards: 5♥ 9♥
+  - seat: 2
+    name: maniac
+    stack: 10004.0
+    hole_cards: Q♦ J♠
+  - seat: 3
+    name: gto
+    stack: 14100.0
+    hole_cards: 5♣ 9♦
+  - seat: 4
+    name: tight_passive
+    stack: 9400.0
+    hole_cards: J♦ A♥
+  - seat: 5
+    name: tight_aggressive
+    stack: 10750.0
+    hole_cards: T♦ 4♦
+  - seat: 6
+    name: abc
+    stack: 9850.0
+    hole_cards: J♣ T♣
+  - seat: 7
+    name: loose_aggressive
+    stack: 8634.0
+    hole_cards: 6♠ Q♠
+  - seat: 8
+    name: short_stack_ninja
+    stack: 9650.0
+    hole_cards: 9♠ 7♦
+  streets:
+    preflop:
+      actions:
+      - seat: 8
+        action: post
+        amount: 50.0
+      - seat: 0
+        action: post
+        amount: 100.0
+      - seat: 1
+        action: fold
+      - seat: 2
+        action: fold
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: raise
+        amount: 200.0
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: raise
+        amount: 433.0
+      - seat: 8
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 5
+        action: fold
+      pot: 350.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: -100.0
+  - seat: 1
+    outcome: fold
+    net: 0.0
+  - seat: 2
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: fold
+    net: 0.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: -200.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: win
+    net: 350.0
+    pot_won: 783.0
+  - seat: 8
+    outcome: fold
+    net: -50.0
+  shuffled_deck: 9♠ 4♥ 5♥ Q♦ 5♣ J♦ T♦ J♣ 6♠ 7♦ 5♠ 9♥ J♠ 9♦ A♥ 4♦ T♣ Q♠ 2♥ 3♦ 6♣ A♠ 8♠ 6♦ T♥ 8♥ 7♠ 9♣ K♣ K♥ 8♦ T♠ 7♣ A♦ Q♣ Q♥ 2♠ 3♥ 8♣ 3♠ J♥ 2♦ A♣ 7♥ 2♣ 5♦ 3♣ 6♥ 4♠ K♠ 4♣ K♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-009
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 9
+    button: 8
+    stakes:
+      small_blind: 50.0
+      big_blind: 100.0
+  players:
+  - seat: 0
+    name: You
+    stack: 9350.0
+    hole_cards: 4♦ 8♦
+  - seat: 1
+    name: joker
+    stack: 8162.0
+    hole_cards: 3♠ 5♥
+  - seat: 2
+    name: maniac
+    stack: 10004.0
+    hole_cards: J♥ 9♣
+  - seat: 3
+    name: gto
+    stack: 14100.0
+    hole_cards: 8♠ 7♥
+  - seat: 4
+    name: tight_passive
+    stack: 9400.0
+    hole_cards: A♥ 7♦
+  - seat: 5
+    name: tight_aggressive
+    stack: 10550.0
+    hole_cards: K♦ 5♣
+  - seat: 6
+    name: abc
+    stack: 9850.0
+    hole_cards: J♠ 4♥
+  - seat: 7
+    name: loose_aggressive
+    stack: 8984.0
+    hole_cards: Q♠ T♦
+  - seat: 8
+    name: short_stack_ninja
+    stack: 9600.0
+    hole_cards: T♠ Q♣
+  streets:
+    preflop:
+      actions:
+      - seat: 0
+        action: post
+        amount: 50.0
+      - seat: 1
+        action: post
+        amount: 100.0
+      - seat: 2
+        action: raise
+        amount: 400.0
+      - seat: 3
+        action: raise
+        amount: 700.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: raise
+        amount: 1533.0
+      - seat: 8
+        action: raise
+        amount: 7099.0
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: fold
+      - seat: 2
+        action: fold
+      - seat: 3
+        action: fold
+      - seat: 7
+        action: fold
+      pot: 2783.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: -50.0
+  - seat: 1
+    outcome: fold
+    net: -100.0
+  - seat: 2
+    outcome: fold
+    net: -400.0
+  - seat: 3
+    outcome: fold
+    net: -700.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: -1533.0
+  - seat: 8
+    outcome: win
+    net: 2783.0
+    pot_won: 9882.0
+  shuffled_deck: 4♦ 3♠ J♥ 8♠ A♥ K♦ J♠ Q♠ T♠ 8♦ 5♥ 9♣ 7♥ 7♦ 5♣ 4♥ T♦ Q♣ 5♦ K♠ Q♦ J♣ A♠ 5♠ 9♥ Q♥ 3♦ K♣ 6♣ T♣ T♥ 2♠ 4♣ 4♠ 9♦ 2♣ 6♥ 8♣ 6♦ A♦ 7♠ 9♠ 6♠ 2♦ 3♥ 3♣ K♥ 8♥ A♣ 7♣ J♦ 2♥
+- format_version: 1
+  hand:
+    id: pkarena0-hand-010
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 9
+    button: 0
+    stakes:
+      small_blind: 100.0
+      big_blind: 200.0
+  players:
+  - seat: 0
+    name: You
+    stack: 9300.0
+    hole_cards: 4♦ K♠
+  - seat: 1
+    name: joker
+    stack: 8062.0
+    hole_cards: 3♠ 7♥
+  - seat: 2
+    name: maniac
+    stack: 9604.0
+    hole_cards: 2♦ T♣
+  - seat: 3
+    name: gto
+    stack: 13400.0
+    hole_cards: T♠ 6♠
+  - seat: 4
+    name: tight_passive
+    stack: 9400.0
+    hole_cards: 4♠ A♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 10550.0
+    hole_cards: Q♠ T♦
+  - seat: 6
+    name: abc
+    stack: 9850.0
+    hole_cards: 7♠ A♠
+  - seat: 7
+    name: loose_aggressive
+    stack: 7451.0
+    hole_cards: K♥ 6♦
+  - seat: 8
+    name: short_stack_ninja
+    stack: 12383.0
+    hole_cards: J♦ 8♦
+  streets:
+    preflop:
+      actions:
+      - seat: 1
+        action: post
+        amount: 50.0
+      - seat: 2
+        action: post
+        amount: 100.0
+      - seat: 3
+        action: raise
+        amount: 250.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: raise
+        amount: 650.0
+      - seat: 2
+        action: raise
+        amount: 2650.0
+      - seat: 3
+        action: fold
+      - seat: 1
+        action: fold
+      pot: 900.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    outcome: fold
+    net: -650.0
+  - seat: 2
+    outcome: win
+    net: 900.0
+    pot_won: 3550.0
+  - seat: 3
+    outcome: fold
+    net: -250.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: 0.0
+  - seat: 8
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 3♠ 2♦ T♠ 4♠ Q♠ 7♠ K♥ J♦ 4♦ 7♥ T♣ 6♠ A♣ T♦ A♠ 6♦ 8♦ K♠ J♠ 2♠ 6♣ Q♣ A♦ 5♣ K♦ 7♦ 7♣ Q♥ Q♦ 4♥ 8♣ 3♥ 5♦ 8♠ T♥ K♣ 9♥ 2♣ 9♣ 9♦ 9♠ 5♥ 2♥ J♣ 8♥ A♥ 3♦ 4♣ 6♥ 5♠ J♥ 3♣
+- format_version: 1
+  hand:
+    id: pkarena0-hand-011
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 9
+    button: 1
+    stakes:
+      small_blind: 100.0
+      big_blind: 200.0
+  players:
+  - seat: 0
+    name: You
+    stack: 9300.0
+    hole_cards: 3♦ 9♦
+  - seat: 1
+    name: joker
+    stack: 7412.0
+    hole_cards: 5♣ 5♦
+  - seat: 2
+    name: maniac
+    stack: 10504.0
+    hole_cards: 6♥ 8♦
+  - seat: 3
+    name: gto
+    stack: 13150.0
+    hole_cards: T♣ 7♣
+  - seat: 4
+    name: tight_passive
+    stack: 9400.0
+    hole_cards: Q♣ 5♥
+  - seat: 5
+    name: tight_aggressive
+    stack: 10550.0
+    hole_cards: 6♣ 9♥
+  - seat: 6
+    name: abc
+    stack: 9850.0
+    hole_cards: 3♣ A♠
+  - seat: 7
+    name: loose_aggressive
+    stack: 7451.0
+    hole_cards: 9♣ K♦
+  - seat: 8
+    name: short_stack_ninja
+    stack: 12383.0
+    hole_cards: T♦ 7♥
+  streets:
+    preflop:
+      actions:
+      - seat: 2
+        action: post
+        amount: 100.0
+      - seat: 3
+        action: post
+        amount: 200.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: raise
+        amount: 400.0
+      - seat: 2
+        action: raise
+        amount: 1100.0
+      - seat: 3
+        action: raise
+        amount: 2800.0
+      - seat: 1
+        action: fold
+      - seat: 2
+        action: fold
+      pot: 1500.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    outcome: fold
+    net: -400.0
+  - seat: 2
+    outcome: fold
+    net: -1100.0
+  - seat: 3
+    outcome: win
+    net: 1500.0
+    pot_won: 4300.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: 0.0
+  - seat: 8
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 6♥ T♣ Q♣ 6♣ 3♣ 9♣ T♦ 3♦ 5♣ 8♦ 7♣ 5♥ 9♥ A♠ K♦ 7♥ 9♦ 5♦ 6♦ 2♣ A♥ A♣ J♠ 3♠ 7♦ T♥ 8♥ 3♥ Q♦ T♠ 5♠ 2♠ 8♠ 4♠ J♥ 2♦ J♦ 6♠ 4♥ 4♣ 4♦ K♠ J♣ A♦ 9♠ 2♥ K♥ 8♣ Q♥ K♣ Q♠ 7♠
+- format_version: 1
+  hand:
+    id: pkarena0-hand-012
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 9
+    button: 2
+    stakes:
+      small_blind: 100.0
+      big_blind: 200.0
+  players:
+  - seat: 0
+    name: You
+    stack: 9300.0
+    hole_cards: 7♦ T♣
+  - seat: 1
+    name: joker
+    stack: 7012.0
+    hole_cards: A♥ 4♦
+  - seat: 2
+    name: maniac
+    stack: 9404.0
+    hole_cards: 9♣ 2♦
+  - seat: 3
+    name: gto
+    stack: 14650.0
+    hole_cards: 5♠ 5♣
+  - seat: 4
+    name: tight_passive
+    stack: 9400.0
+    hole_cards: 3♦ 9♠
+  - seat: 5
+    name: tight_aggressive
+    stack: 10550.0
+    hole_cards: T♥ 8♥
+  - seat: 6
+    name: abc
+    stack: 9850.0
+    hole_cards: A♠ K♦
+  - seat: 7
+    name: loose_aggressive
+    stack: 7451.0
+    hole_cards: 3♥ 5♥
+  - seat: 8
+    name: short_stack_ninja
+    stack: 12383.0
+    hole_cards: 5♦ A♦
+  board: Q♦ 6♣ 4♠ 3♣ 7♣
+  streets:
+    preflop:
+      actions:
+      - seat: 3
+        action: post
+        amount: 100.0
+      - seat: 4
+        action: post
+        amount: 200.0
+      - seat: 5
+        action: raise
+        amount: 400.0
+      - seat: 6
+        action: raise
+        amount: 866.0
+      - seat: 7
+        action: raise
+        amount: 2432.0
+      - seat: 8
+        action: raise
+        amount: 6430.0
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: fold
+      - seat: 2
+        action: raise
+        amount: 9404.0
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: call
+        amount: 8538.0
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: fold
+      pot: 28370.0
+    flop:
+      cards: 4♠ Q♦ 6♣
+      actions: []
+      pot: 28370.0
+    turn:
+      card: 3♣
+      actions: []
+      pot: 28370.0
+    river:
+      card: 7♣
+      actions: []
+  results:
+  - seat: 0
+    best_hand: 7♦ 7♣ Q♦ T♣ 6♣
+    hand_rank:
+      value: 4976
+      name: Pair
+      class: PairOfSevens
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    best_hand: 4♠ 4♦ A♥ Q♦ 7♣
+    hand_rank:
+      value: 5540
+      name: Pair
+      class: PairOfFours
+    outcome: fold
+    net: 0.0
+  - seat: 2
+    best_hand: Q♦ 9♣ 7♣ 6♣ 4♠
+    hand_rank:
+      value: 7163
+      name: HighCard
+      class: QueenHigh
+    outcome: lose
+    net: -9404.0
+  - seat: 3
+    best_hand: 7♣ 6♣ 5♠ 4♠ 3♣
+    hand_rank:
+      value: 1607
+      name: Straight
+      class: SevenHighStraight
+    outcome: fold
+    net: -100.0
+  - seat: 4
+    best_hand: 3♦ 3♣ Q♦ 9♠ 7♣
+    hand_rank:
+      value: 5862
+      name: Pair
+      class: PairOfTreys
+    outcome: fold
+    net: -200.0
+  - seat: 5
+    best_hand: Q♦ T♥ 8♥ 7♣ 6♣
+    hand_rank:
+      value: 7112
+      name: HighCard
+      class: QueenHigh
+    outcome: fold
+    net: -400.0
+  - seat: 6
+    best_hand: A♠ K♦ Q♦ 7♣ 6♣
+    hand_rank:
+      value: 6215
+      name: HighCard
+      class: AceHigh
+    outcome: win
+    net: 18966.0
+    pot_won: 28370.0
+  - seat: 7
+    best_hand: 7♣ 6♣ 5♥ 4♠ 3♥
+    hand_rank:
+      value: 1607
+      name: Straight
+      class: SevenHighStraight
+    outcome: fold
+    net: -2432.0
+  - seat: 8
+    best_hand: 7♣ 6♣ 5♦ 4♠ 3♣
+    hand_rank:
+      value: 1607
+      name: Straight
+      class: SevenHighStraight
+    outcome: fold
+    net: -6430.0
+  shuffled_deck: 5♠ 3♦ T♥ A♠ 3♥ 5♦ 7♦ A♥ 9♣ 5♣ 9♠ 8♥ K♦ 5♥ A♦ T♣ 4♦ 2♦ 2♥ Q♦ 6♣ 4♠ K♣ 3♣ 4♥ 7♣ 8♦ 7♥ 2♣ J♠ 6♦ 8♠ 8♣ J♣ Q♣ 9♥ 6♠ 3♠ 4♣ Q♠ 2♠ 6♥ Q♥ T♦ T♠ 9♦ J♥ A♣ K♠ 7♠ K♥ J♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-013
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 8
+    button: 3
+    stakes:
+      small_blind: 100.0
+      big_blind: 200.0
+  players:
+  - seat: 0
+    name: You
+    stack: 9300.0
+    hole_cards: T♠ T♥
+  - seat: 1
+    name: joker
+    stack: 7012.0
+    hole_cards: 2♥ 7♥
+  - seat: 3
+    name: gto
+    stack: 14550.0
+    hole_cards: 8♦ 6♥
+  - seat: 4
+    name: tight_passive
+    stack: 9200.0
+    hole_cards: T♣ 3♥
+  - seat: 5
+    name: tight_aggressive
+    stack: 10150.0
+    hole_cards: Q♦ 5♥
+  - seat: 6
+    name: abc
+    stack: 28816.0
+    hole_cards: Q♥ A♥
+  - seat: 7
+    name: loose_aggressive
+    stack: 5019.0
+    hole_cards: A♣ 7♦
+  - seat: 8
+    name: short_stack_ninja
+    stack: 5953.0
+    hole_cards: 2♦ 8♣
+  board: K♥ 8♠ 4♦ 3♣ 4♣
+  streets:
+    preflop:
+      actions:
+      - seat: 4
+        action: post
+        amount: 100.0
+      - seat: 5
+        action: post
+        amount: 200.0
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: raise
+        amount: 500.0
+      - seat: 8
+        action: raise
+        amount: 1300.0
+      - seat: 0
+        action: raise
+        amount: 2100.0
+      - seat: 1
+        action: fold
+      - seat: 3
+        action: raise
+        amount: 3500.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: raise
+        amount: 8633.0
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: fold
+      - seat: 0
+        action: call
+        amount: 6533.0
+      - seat: 3
+        action: fold
+      pot: 22666.0
+    flop:
+      cards: 8♠ K♥ 4♦
+      actions:
+      - seat: 5
+        action: check
+      - seat: 0
+        action: all_in
+        amount: 667.0
+        all_in: true
+      - seat: 5
+        action: raise
+        amount: 1517.0
+      pot: 24850.0
+    turn:
+      card: 3♣
+      actions: []
+      pot: 24850.0
+    river:
+      card: 4♣
+      actions: []
+  results:
+  - seat: 0
+    best_hand: T♠ T♥ 4♦ 4♣ K♥
+    hand_rank:
+      value: 2986
+      name: TwoPair
+      class: TensAndFours
+    outcome: win
+    net: 14700.0
+    pot_won: 24000.0
+  - seat: 1
+    best_hand: 4♦ 4♣ K♥ 8♠ 7♥
+    hand_rank:
+      value: 5611
+      name: Pair
+      class: PairOfFours
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    best_hand: 8♠ 8♦ 4♦ 4♣ K♥
+    hand_rank:
+      value: 3129
+      name: TwoPair
+      class: EightsAndFours
+    outcome: fold
+    net: -3500.0
+  - seat: 4
+    best_hand: 4♦ 4♣ 3♥ 3♣ K♥
+    hand_rank:
+      value: 3294
+      name: TwoPair
+      class: FoursAndTreys
+    outcome: fold
+    net: -100.0
+  - seat: 5
+    best_hand: 4♦ 4♣ K♥ Q♦ 8♠
+    hand_rank:
+      value: 5584
+      name: Pair
+      class: PairOfFours
+    outcome: win
+    net: -9300.0
+    pot_won: 850.0
+  - seat: 6
+    best_hand: 4♦ 4♣ A♥ K♥ Q♥
+    hand_rank:
+      value: 5526
+      name: Pair
+      class: PairOfFours
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    best_hand: 4♦ 4♣ A♣ K♥ 8♠
+    hand_rank:
+      value: 5530
+      name: Pair
+      class: PairOfFours
+    outcome: fold
+    net: -500.0
+  - seat: 8
+    best_hand: 8♠ 8♣ 4♦ 4♣ K♥
+    hand_rank:
+      value: 3129
+      name: TwoPair
+      class: EightsAndFours
+    outcome: fold
+    net: -1300.0
+  shuffled_deck: T♣ Q♦ Q♥ A♣ 2♦ T♠ 2♥ 8♦ 3♥ 5♥ A♥ 7♦ 8♣ T♥ 7♥ 6♥ K♦ K♥ 8♠ 4♦ 3♦ 3♣ J♠ 4♣ J♦ 5♣ Q♣ 9♠ 4♠ 2♣ 7♣ 6♣ 2♠ 9♦ Q♠ J♥ T♦ 9♣ 3♠ 9♥ 7♠ A♦ K♣ 6♠ 5♠ 6♦ J♣ K♠ A♠ 4♥ 8♥ 5♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-014
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 8
+    button: 4
+    stakes:
+      small_blind: 100.0
+      big_blind: 200.0
+  players:
+  - seat: 0
+    name: You
+    stack: 24000.0
+    hole_cards: J♠ 7♦
+  - seat: 1
+    name: joker
+    stack: 7012.0
+    hole_cards: A♣ T♦
+  - seat: 3
+    name: gto
+    stack: 11050.0
+    hole_cards: Q♥ 7♠
+  - seat: 4
+    name: tight_passive
+    stack: 9100.0
+    hole_cards: 8♥ K♥
+  - seat: 5
+    name: tight_aggressive
+    stack: 850.0
+    hole_cards: K♠ 5♥
+  - seat: 6
+    name: abc
+    stack: 28816.0
+    hole_cards: J♦ 3♣
+  - seat: 7
+    name: loose_aggressive
+    stack: 4519.0
+    hole_cards: 2♦ 8♠
+  - seat: 8
+    name: short_stack_ninja
+    stack: 4653.0
+    hole_cards: 2♣ J♥
+  streets:
+    preflop:
+      actions:
+      - seat: 5
+        action: post
+        amount: 100.0
+      - seat: 6
+        action: post
+        amount: 200.0
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: raise
+        amount: 800.0
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: fold
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      pot: 300.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: fold
+    net: 0.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: -100.0
+  - seat: 6
+    outcome: fold
+    net: -200.0
+  - seat: 7
+    outcome: fold
+    net: 0.0
+  - seat: 8
+    outcome: win
+    net: 300.0
+    pot_won: 1100.0
+  shuffled_deck: K♠ J♦ 2♦ 2♣ J♠ A♣ Q♥ 8♥ 5♥ 3♣ 8♠ J♥ 7♦ T♦ 7♠ K♥ 6♦ 4♥ T♥ 8♦ 5♦ 3♦ J♣ A♠ 5♣ K♣ 4♠ T♠ 3♠ 7♣ 9♣ A♥ 4♦ 8♣ Q♦ 4♣ Q♣ A♦ 6♥ K♦ 2♠ 9♦ 3♥ 9♥ 9♠ 5♠ Q♠ 6♣ 7♥ 6♠ 2♥ T♣
+- format_version: 1
+  hand:
+    id: pkarena0-hand-015
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 8
+    button: 5
+    stakes:
+      small_blind: 100.0
+      big_blind: 200.0
+  players:
+  - seat: 0
+    name: You
+    stack: 24000.0
+    hole_cards: J♦ 3♠
+  - seat: 1
+    name: joker
+    stack: 7012.0
+    hole_cards: 4♦ K♦
+  - seat: 3
+    name: gto
+    stack: 11050.0
+    hole_cards: J♠ 4♠
+  - seat: 4
+    name: tight_passive
+    stack: 9100.0
+    hole_cards: 8♥ 8♠
+  - seat: 5
+    name: tight_aggressive
+    stack: 750.0
+    hole_cards: 7♣ K♠
+  - seat: 6
+    name: abc
+    stack: 28616.0
+    hole_cards: 2♠ A♦
+  - seat: 7
+    name: loose_aggressive
+    stack: 4519.0
+    hole_cards: 5♠ A♣
+  - seat: 8
+    name: short_stack_ninja
+    stack: 4953.0
+    hole_cards: 6♦ T♦
+  streets:
+    preflop:
+      actions:
+      - seat: 6
+        action: post
+        amount: 100.0
+      - seat: 7
+        action: post
+        amount: 200.0
+      - seat: 8
+        action: raise
+        amount: 500.0
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: raise
+        amount: 800.0
+      - seat: 3
+        action: raise
+        amount: 1333.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: raise
+        amount: 4266.0
+      - seat: 1
+        action: fold
+      - seat: 3
+        action: fold
+      pot: 2433.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    outcome: fold
+    net: -800.0
+  - seat: 3
+    outcome: fold
+    net: -1333.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: -100.0
+  - seat: 7
+    outcome: fold
+    net: -200.0
+  - seat: 8
+    outcome: win
+    net: 2433.0
+    pot_won: 6699.0
+  shuffled_deck: 2♠ 5♠ 6♦ J♦ 4♦ J♠ 8♥ 7♣ A♦ A♣ T♦ 3♠ K♦ 4♠ 8♠ K♠ J♣ 4♣ 4♥ K♣ 9♣ T♣ A♥ A♠ 3♥ J♥ 9♦ Q♣ 5♦ 6♠ 7♠ 7♥ 5♥ 8♦ K♥ Q♠ 2♦ T♠ 6♥ Q♥ Q♦ 2♥ 3♣ 7♦ 2♣ 8♣ 5♣ 9♥ 3♦ 6♣ 9♠ T♥
+- format_version: 1
+  hand:
+    id: pkarena0-hand-016
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 8
+    button: 6
+    stakes:
+      small_blind: 100.0
+      big_blind: 200.0
+  players:
+  - seat: 0
+    name: You
+    stack: 24000.0
+    hole_cards: 5♥ 5♦
+  - seat: 1
+    name: joker
+    stack: 6212.0
+    hole_cards: T♦ 8♠
+  - seat: 3
+    name: gto
+    stack: 9717.0
+    hole_cards: 3♠ K♠
+  - seat: 4
+    name: tight_passive
+    stack: 9100.0
+    hole_cards: 3♦ 6♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 750.0
+    hole_cards: 2♥ K♦
+  - seat: 6
+    name: abc
+    stack: 28516.0
+    hole_cards: Q♣ Q♠
+  - seat: 7
+    name: loose_aggressive
+    stack: 4319.0
+    hole_cards: 5♣ 4♥
+  - seat: 8
+    name: short_stack_ninja
+    stack: 7386.0
+    hole_cards: J♣ 2♠
+  streets:
+    preflop:
+      actions:
+      - seat: 7
+        action: post
+        amount: 100.0
+      - seat: 8
+        action: post
+        amount: 200.0
+      - seat: 0
+        action: call
+        amount: 200.0
+      - seat: 1
+        action: fold
+      - seat: 3
+        action: raise
+        amount: 400.0
+      - seat: 4
+        action: raise
+        amount: 850.0
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: raise
+        amount: 2016.0
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: raise
+        amount: 7186.0
+      - seat: 0
+        action: fold
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 6
+        action: raise
+        amount: 14354.0
+      - seat: 8
+        action: fold
+      pot: 8736.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: -200.0
+  - seat: 1
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: fold
+    net: -400.0
+  - seat: 4
+    outcome: fold
+    net: -850.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: win
+    net: 8736.0
+    pot_won: 23090.0
+  - seat: 7
+    outcome: fold
+    net: -100.0
+  - seat: 8
+    outcome: fold
+    net: -7186.0
+  shuffled_deck: 5♣ J♣ 5♥ T♦ 3♠ 3♦ 2♥ Q♣ 4♥ 2♠ 5♦ 8♠ K♠ 6♣ K♦ Q♠ 8♦ 8♥ K♥ 4♣ A♠ 2♦ 7♠ 4♠ T♣ 3♥ 6♠ 8♣ 5♠ 7♦ 7♥ 9♦ T♠ 9♠ T♥ 6♥ 4♦ 9♥ 3♣ Q♥ K♣ A♦ 9♣ A♣ J♠ 7♣ J♥ A♥ 6♦ Q♦ 2♣ J♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-017
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 8
+    button: 7
+    stakes:
+      small_blind: 100.0
+      big_blind: 200.0
+  players:
+  - seat: 0
+    name: You
+    stack: 23800.0
+    hole_cards: 6♠ 8♠
+  - seat: 1
+    name: joker
+    stack: 6212.0
+    hole_cards: 5♥ 9♥
+  - seat: 3
+    name: gto
+    stack: 9317.0
+    hole_cards: K♦ J♦
+  - seat: 4
+    name: tight_passive
+    stack: 8250.0
+    hole_cards: 7♥ 4♠
+  - seat: 5
+    name: tight_aggressive
+    stack: 750.0
+    hole_cards: A♣ 7♠
+  - seat: 6
+    name: abc
+    stack: 37252.0
+    hole_cards: 9♦ J♥
+  - seat: 7
+    name: loose_aggressive
+    stack: 4219.0
+    hole_cards: T♦ 7♦
+  - seat: 8
+    name: short_stack_ninja
+    stack: 200.0
+    hole_cards: K♥ 9♣
+  streets:
+    preflop:
+      actions:
+      - seat: 8
+        action: post
+        amount: 100.0
+      - seat: 0
+        action: post
+        amount: 200.0
+      - seat: 1
+        action: raise
+        amount: 400.0
+      - seat: 3
+        action: raise
+        amount: 1100.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: raise
+        amount: 2900.0
+      - seat: 3
+        action: raise
+        amount: 7200.0
+      - seat: 1
+        action: fold
+      pot: 3200.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: -200.0
+  - seat: 1
+    outcome: fold
+    net: -2900.0
+  - seat: 3
+    outcome: win
+    net: 3200.0
+    pot_won: 10400.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: 0.0
+  - seat: 8
+    outcome: fold
+    net: -100.0
+  shuffled_deck: K♥ 6♠ 5♥ K♦ 7♥ A♣ 9♦ T♦ 9♣ 8♠ 9♥ J♦ 4♠ 7♠ J♥ 7♦ 6♥ A♠ T♣ 2♠ Q♦ 3♣ 2♥ 8♥ K♣ J♣ Q♣ 3♦ 4♣ 8♦ 7♣ Q♠ 3♥ 3♠ K♠ J♠ 5♠ 2♣ 4♦ Q♥ 6♦ 4♥ 6♣ T♠ 5♣ T♥ 8♣ 9♠ 5♦ 2♦ A♥ A♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-018
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 8
+    button: 8
+    stakes:
+      small_blind: 100.0
+      big_blind: 200.0
+  players:
+  - seat: 0
+    name: You
+    stack: 23600.0
+    hole_cards: 5♠ 2♣
+  - seat: 1
+    name: joker
+    stack: 3312.0
+    hole_cards: T♦ 4♥
+  - seat: 3
+    name: gto
+    stack: 12517.0
+    hole_cards: 3♦ Q♣
+  - seat: 4
+    name: tight_passive
+    stack: 8250.0
+    hole_cards: 8♦ Q♠
+  - seat: 5
+    name: tight_aggressive
+    stack: 750.0
+    hole_cards: 3♥ K♦
+  - seat: 6
+    name: abc
+    stack: 37252.0
+    hole_cards: K♠ 8♥
+  - seat: 7
+    name: loose_aggressive
+    stack: 4219.0
+    hole_cards: 8♣ Q♥
+  - seat: 8
+    name: short_stack_ninja
+    stack: 100.0
+    hole_cards: 8♠ 3♣
+  streets:
+    preflop:
+      actions:
+      - seat: 0
+        action: post
+        amount: 100.0
+      - seat: 1
+        action: post
+        amount: 200.0
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: fold
+      - seat: 0
+        action: fold
+      pot: 100.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: -100.0
+  - seat: 1
+    outcome: win
+    net: 100.0
+    pot_won: 300.0
+  - seat: 3
+    outcome: fold
+    net: 0.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: 0.0
+  - seat: 8
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 5♠ T♦ 3♦ 8♦ 3♥ K♠ 8♣ 8♠ 2♣ 4♥ Q♣ Q♠ K♦ 8♥ Q♥ 3♣ 7♦ 9♦ J♣ T♠ 6♣ T♥ J♥ 2♦ A♣ 5♦ K♣ 7♣ 4♦ 5♥ A♦ T♣ 5♣ 4♣ K♥ 3♠ 4♠ 7♠ 9♥ 7♥ 9♠ 9♣ 6♥ 6♦ A♥ 2♥ A♠ Q♦ 6♠ J♠ 2♠ J♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-019
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 8
+    button: 0
+    stakes:
+      small_blind: 100.0
+      big_blind: 200.0
+  players:
+  - seat: 0
+    name: You
+    stack: 23500.0
+    hole_cards: J♦ K♠
+  - seat: 1
+    name: joker
+    stack: 3412.0
+    hole_cards: 4♣ 4♥
+  - seat: 3
+    name: gto
+    stack: 12517.0
+    hole_cards: Q♠ 7♦
+  - seat: 4
+    name: tight_passive
+    stack: 8250.0
+    hole_cards: 6♣ 5♥
+  - seat: 5
+    name: tight_aggressive
+    stack: 750.0
+    hole_cards: 7♥ 2♥
+  - seat: 6
+    name: abc
+    stack: 37252.0
+    hole_cards: 8♥ K♥
+  - seat: 7
+    name: loose_aggressive
+    stack: 4219.0
+    hole_cards: A♣ J♥
+  - seat: 8
+    name: short_stack_ninja
+    stack: 100.0
+    hole_cards: T♠ 3♣
+  board: 3♦ 9♦ 6♠ T♣ 4♠
+  streets:
+    preflop:
+      actions:
+      - seat: 1
+        action: post
+        amount: 100.0
+      - seat: 3
+        action: post
+        amount: 200.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: raise
+        amount: 400.0
+      - seat: 8
+        action: fold
+      - seat: 0
+        action: call
+        amount: 400.0
+      - seat: 1
+        action: fold
+      - seat: 3
+        action: fold
+      pot: 1100.0
+    flop:
+      cards: 6♠ 9♦ 3♦
+      actions:
+      - seat: 7
+        action: check
+      - seat: 0
+        action: check
+      pot: 1100.0
+    turn:
+      card: T♣
+      actions:
+      - seat: 7
+        action: bet
+        amount: 733.0
+      - seat: 0
+        action: call
+        amount: 733.0
+      pot: 2566.0
+    river:
+      card: 4♠
+      actions:
+      - seat: 7
+        action: check
+      - seat: 0
+        action: bet
+        amount: 1283.0
+      - seat: 7
+        action: raise
+        amount: 3086.0
+      - seat: 0
+        action: fold
+      pot: 3849.0
+  results:
+  - seat: 0
+    best_hand: K♠ J♦ T♣ 9♦ 6♠
+    hand_rank:
+      value: 6800
+      name: HighCard
+      class: KingHigh
+    outcome: fold
+    net: -2416.0
+  - seat: 1
+    best_hand: 4♠ 4♥ 4♣ T♣ 9♦
+    hand_rank:
+      value: 2308
+      name: ThreeOfAKind
+      class: ThreeFours
+    outcome: fold
+    net: -100.0
+  - seat: 3
+    best_hand: Q♠ T♣ 9♦ 7♦ 6♠
+    hand_rank:
+      value: 7097
+      name: HighCard
+      class: QueenHigh
+    outcome: fold
+    net: -200.0
+  - seat: 4
+    best_hand: 6♠ 6♣ T♣ 9♦ 5♥
+    hand_rank:
+      value: 5252
+      name: Pair
+      class: PairOfSixes
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    best_hand: T♣ 9♦ 7♥ 6♠ 4♠
+    hand_rank:
+      value: 7357
+      name: HighCard
+      class: TenHigh
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    best_hand: K♥ T♣ 9♦ 8♥ 6♠
+    hand_rank:
+      value: 6883
+      name: HighCard
+      class: KingHigh
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    best_hand: A♣ J♥ T♣ 9♦ 6♠
+    hand_rank:
+      value: 6472
+      name: HighCard
+      class: AceHigh
+    outcome: win
+    net: 2716.0
+    pot_won: 6935.0
+  - seat: 8
+    best_hand: T♠ T♣ 3♦ 3♣ 9♦
+    hand_rank:
+      value: 3000
+      name: TwoPair
+      class: TensAndTreys
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 4♣ Q♠ 6♣ 7♥ 8♥ A♣ T♠ J♦ 4♥ 7♦ 5♥ 2♥ K♥ J♥ 3♣ K♠ 5♦ 3♦ 9♦ 6♠ T♥ T♣ 6♥ 4♠ 5♣ 8♦ 8♣ 5♠ 3♠ 3♥ 9♠ T♦ K♦ 8♠ J♣ A♥ 7♠ Q♥ 2♦ 2♠ 6♦ 9♣ Q♦ Q♣ 7♣ 2♣ K♣ A♠ 9♥ 4♦ A♦ J♠
+- format_version: 1
+  hand:
+    id: pkarena0-hand-020
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 8
+    button: 1
+    stakes:
+      small_blind: 150.0
+      big_blind: 300.0
+  players:
+  - seat: 0
+    name: You
+    stack: 21084.0
+    hole_cards: A♠ K♣
+  - seat: 1
+    name: joker
+    stack: 3312.0
+    hole_cards: 7♦ 8♣
+  - seat: 3
+    name: gto
+    stack: 12317.0
+    hole_cards: 8♠ 2♥
+  - seat: 4
+    name: tight_passive
+    stack: 8250.0
+    hole_cards: 8♥ 4♥
+  - seat: 5
+    name: tight_aggressive
+    stack: 750.0
+    hole_cards: 7♣ 3♦
+  - seat: 6
+    name: abc
+    stack: 37252.0
+    hole_cards: 9♥ 5♠
+  - seat: 7
+    name: loose_aggressive
+    stack: 6935.0
+    hole_cards: 5♥ 2♦
+  - seat: 8
+    name: short_stack_ninja
+    stack: 100.0
+    hole_cards: J♦ 8♦
+  streets:
+    preflop:
+      actions:
+      - seat: 3
+        action: post
+        amount: 100.0
+      - seat: 4
+        action: post
+        amount: 200.0
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: fold
+      - seat: 0
+        action: all_in
+        amount: 21084.0
+        all_in: true
+      - seat: 1
+        action: fold
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      pot: 300.0
+  results:
+  - seat: 0
+    outcome: win
+    net: 300.0
+    pot_won: 21384.0
+  - seat: 1
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: fold
+    net: -100.0
+  - seat: 4
+    outcome: fold
+    net: -200.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: 0.0
+  - seat: 8
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 8♠ 8♥ 7♣ 9♥ 5♥ J♦ A♠ 7♦ 2♥ 4♥ 3♦ 5♠ 2♦ 8♦ K♣ 8♣ 4♦ 5♦ 7♠ K♥ Q♥ 3♥ T♦ 6♦ J♥ 3♣ T♣ 3♠ Q♣ Q♠ 2♣ A♦ 4♣ J♠ 5♣ 6♠ 6♣ T♠ 7♥ K♦ J♣ K♠ Q♦ 9♣ 9♦ 9♠ 2♠ 4♠ A♣ A♥ T♥ 6♥
+- format_version: 1
+  hand:
+    id: pkarena0-hand-021
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 8
+    button: 2
+    stakes:
+      small_blind: 150.0
+      big_blind: 300.0
+  players:
+  - seat: 0
+    name: You
+    stack: 21384.0
+    hole_cards: 9♠ 6♠
+  - seat: 1
+    name: joker
+    stack: 3312.0
+    hole_cards: T♦ 2♠
+  - seat: 3
+    name: gto
+    stack: 12217.0
+    hole_cards: 9♦ 3♥
+  - seat: 4
+    name: tight_passive
+    stack: 8050.0
+    hole_cards: J♦ 4♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 750.0
+    hole_cards: K♥ T♠
+  - seat: 6
+    name: abc
+    stack: 37252.0
+    hole_cards: 2♦ A♠
+  - seat: 7
+    name: loose_aggressive
+    stack: 6935.0
+    hole_cards: K♣ 9♣
+  - seat: 8
+    name: short_stack_ninja
+    stack: 100.0
+    hole_cards: K♠ 3♣
+  streets:
+    preflop:
+      actions:
+      - seat: 3
+        action: post
+        amount: 150.0
+      - seat: 4
+        action: post
+        amount: 300.0
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: fold
+      - seat: 3
+        action: fold
+      pot: 150.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: fold
+    net: -150.0
+  - seat: 4
+    outcome: win
+    net: 150.0
+    pot_won: 450.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: 0.0
+  - seat: 8
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 9♦ J♦ K♥ 2♦ K♣ K♠ 9♠ T♦ 3♥ 4♣ T♠ A♠ 9♣ 3♣ 6♠ 2♠ T♣ Q♦ 5♥ 4♦ K♦ J♣ 9♥ 4♥ 8♦ 6♣ 7♣ 8♣ 7♠ 3♠ T♥ J♥ Q♥ A♥ 7♦ J♠ 4♠ A♣ 8♥ Q♣ 7♥ 5♣ 5♦ A♦ 6♥ 5♠ 3♦ 2♥ 8♠ 6♦ 2♣ Q♠
+- format_version: 1
+  hand:
+    id: pkarena0-hand-022
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 8
+    button: 3
+    stakes:
+      small_blind: 150.0
+      big_blind: 300.0
+  players:
+  - seat: 0
+    name: You
+    stack: 21384.0
+    hole_cards: A♠ A♣
+  - seat: 1
+    name: joker
+    stack: 3312.0
+    hole_cards: 5♠ T♥
+  - seat: 3
+    name: gto
+    stack: 12067.0
+    hole_cards: Q♥ 6♦
+  - seat: 4
+    name: tight_passive
+    stack: 8200.0
+    hole_cards: J♠ Q♠
+  - seat: 5
+    name: tight_aggressive
+    stack: 750.0
+    hole_cards: 6♣ 9♥
+  - seat: 6
+    name: abc
+    stack: 37252.0
+    hole_cards: 5♦ 3♦
+  - seat: 7
+    name: loose_aggressive
+    stack: 6935.0
+    hole_cards: T♣ 3♠
+  - seat: 8
+    name: short_stack_ninja
+    stack: 100.0
+    hole_cards: Q♣ 7♠
+  board: 2♣ 3♥ 8♥
+  streets:
+    preflop:
+      actions:
+      - seat: 4
+        action: post
+        amount: 150.0
+      - seat: 5
+        action: post
+        amount: 300.0
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: fold
+      - seat: 0
+        action: call
+        amount: 300.0
+      - seat: 1
+        action: raise
+        amount: 600.0
+      - seat: 3
+        action: raise
+        amount: 1050.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 0
+        action: call
+        amount: 750.0
+      - seat: 1
+        action: fold
+      pot: 3150.0
+    flop:
+      cards: 8♥ 3♥ 2♣
+      actions:
+      - seat: 0
+        action: bet
+        amount: 1575.0
+      - seat: 3
+        action: raise
+        amount: 6300.0
+      - seat: 0
+        action: all_in
+        amount: 20334.0
+        all_in: true
+      - seat: 3
+        action: fold
+      pot: 9450.0
+  results:
+  - seat: 0
+    outcome: win
+    net: 8400.0
+    pot_won: 29784.0
+  - seat: 1
+    outcome: fold
+    net: -600.0
+  - seat: 3
+    outcome: fold
+    net: -7350.0
+  - seat: 4
+    outcome: fold
+    net: -150.0
+  - seat: 5
+    outcome: fold
+    net: -300.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: 0.0
+  - seat: 8
+    outcome: fold
+    net: 0.0
+  shuffled_deck: J♠ 6♣ 5♦ T♣ Q♣ A♠ 5♠ Q♥ Q♠ 9♥ 3♦ 3♠ 7♠ A♣ T♥ 6♦ J♣ 2♣ 3♥ 8♥ K♥ 8♣ 5♣ 9♣ 2♠ K♦ T♠ 9♠ 6♠ 8♠ 6♥ 7♣ 2♥ Q♦ 8♦ A♥ 4♠ 5♥ 4♣ A♦ J♥ K♠ K♣ 2♦ 4♦ 9♦ 7♥ J♦ 4♥ 7♦ T♦ 3♣
+- format_version: 1
+  hand:
+    id: pkarena0-hand-023
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 8
+    button: 4
+    stakes:
+      small_blind: 150.0
+      big_blind: 300.0
+  players:
+  - seat: 0
+    name: You
+    stack: 29784.0
+    hole_cards: 6♦ 4♣
+  - seat: 1
+    name: joker
+    stack: 2712.0
+    hole_cards: Q♣ Q♥
+  - seat: 3
+    name: gto
+    stack: 4717.0
+    hole_cards: 2♣ 6♠
+  - seat: 4
+    name: tight_passive
+    stack: 8050.0
+    hole_cards: 5♦ 6♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 450.0
+    hole_cards: 8♥ 7♠
+  - seat: 6
+    name: abc
+    stack: 37252.0
+    hole_cards: 3♥ 7♥
+  - seat: 7
+    name: loose_aggressive
+    stack: 6935.0
+    hole_cards: T♥ 2♦
+  - seat: 8
+    name: short_stack_ninja
+    stack: 100.0
+    hole_cards: 3♦ J♣
+  board: 7♣ 9♣ A♣ J♠ T♦
+  streets:
+    preflop:
+      actions:
+      - seat: 5
+        action: post
+        amount: 150.0
+      - seat: 6
+        action: post
+        amount: 300.0
+      - seat: 7
+        action: fold
+      - seat: 8
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: call
+        amount: 300.0
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: check
+      pot: 750.0
+    flop:
+      cards: A♣ 9♣ 7♣
+      actions:
+      - seat: 6
+        action: check
+      - seat: 1
+        action: bet
+        amount: 300.0
+      - seat: 6
+        action: call
+        amount: 300.0
+      pot: 1350.0
+    turn:
+      card: J♠
+      actions:
+      - seat: 6
+        action: check
+      - seat: 1
+        action: check
+      pot: 1350.0
+    river:
+      card: T♦
+      actions:
+      - seat: 6
+        action: check
+      - seat: 1
+        action: check
+  results:
+  - seat: 0
+    best_hand: A♣ J♠ T♦ 9♣ 7♣
+    hand_rank:
+      value: 6471
+      name: HighCard
+      class: AceHigh
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    best_hand: Q♥ Q♣ A♣ J♠ T♦
+    hand_rank:
+      value: 3776
+      name: Pair
+      class: PairOfQueens
+    outcome: win
+    net: 750.0
+    pot_won: 1350.0
+  - seat: 3
+    best_hand: A♣ J♠ T♦ 9♣ 7♣
+    hand_rank:
+      value: 6471
+      name: HighCard
+      class: AceHigh
+    outcome: fold
+    net: 0.0
+  - seat: 4
+    best_hand: A♣ J♠ T♦ 9♣ 7♣
+    hand_rank:
+      value: 6471
+      name: HighCard
+      class: AceHigh
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    best_hand: J♠ T♦ 9♣ 8♥ 7♠
+    hand_rank:
+      value: 1603
+      name: Straight
+      class: JackHighStraight
+    outcome: fold
+    net: -150.0
+  - seat: 6
+    best_hand: 7♥ 7♣ A♣ J♠ T♦
+    hand_rank:
+      value: 4885
+      name: Pair
+      class: PairOfSevens
+    outcome: lose
+    net: -600.0
+  - seat: 7
+    best_hand: T♥ T♦ A♣ J♠ 9♣
+    hand_rank:
+      value: 4225
+      name: Pair
+      class: PairOfTens
+    outcome: fold
+    net: 0.0
+  - seat: 8
+    best_hand: J♠ J♣ A♣ T♦ 9♣
+    hand_rank:
+      value: 4005
+      name: Pair
+      class: PairOfJacks
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 8♥ 3♥ T♥ 3♦ 6♦ Q♣ 2♣ 5♦ 7♠ 7♥ 2♦ J♣ 4♣ Q♥ 6♠ 6♣ 9♥ 7♣ 9♣ A♣ T♣ J♠ A♠ T♦ 9♦ 2♥ J♦ 5♥ 8♦ 9♠ Q♦ K♥ K♦ K♠ 3♠ 7♦ 3♣ 5♠ T♠ 8♠ 8♣ 4♦ 2♠ J♥ 6♥ Q♠ 4♥ K♣ A♥ 5♣ A♦ 4♠
+- format_version: 1
+  hand:
+    id: pkarena0-hand-024
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 8
+    button: 5
+    stakes:
+      small_blind: 150.0
+      big_blind: 300.0
+  players:
+  - seat: 0
+    name: You
+    stack: 29784.0
+    hole_cards: 4♣ A♥
+  - seat: 1
+    name: joker
+    stack: 3462.0
+    hole_cards: Q♦ 6♠
+  - seat: 3
+    name: gto
+    stack: 4717.0
+    hole_cards: Q♣ 6♣
+  - seat: 4
+    name: tight_passive
+    stack: 8050.0
+    hole_cards: 3♥ 9♦
+  - seat: 5
+    name: tight_aggressive
+    stack: 300.0
+    hole_cards: 8♠ 7♣
+  - seat: 6
+    name: abc
+    stack: 36652.0
+    hole_cards: 5♦ 7♥
+  - seat: 7
+    name: loose_aggressive
+    stack: 6935.0
+    hole_cards: 5♥ 2♥
+  - seat: 8
+    name: short_stack_ninja
+    stack: 100.0
+    hole_cards: 6♦ A♣
+  streets:
+    preflop:
+      actions:
+      - seat: 6
+        action: post
+        amount: 150.0
+      - seat: 7
+        action: post
+        amount: 300.0
+      - seat: 8
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: fold
+      - seat: 3
+        action: raise
+        amount: 750.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: raise
+        amount: 1550.0
+      - seat: 3
+        action: raise
+        amount: 2366.0
+      - seat: 7
+        action: fold
+      pot: 1700.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: win
+    net: 1700.0
+    pot_won: 4066.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: -150.0
+  - seat: 7
+    outcome: fold
+    net: -1550.0
+  - seat: 8
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 5♦ 5♥ 6♦ 4♣ Q♦ Q♣ 3♥ 8♠ 7♥ 2♥ A♣ A♥ 6♠ 6♣ 9♦ 7♣ 9♥ 8♥ 3♣ 5♣ 7♠ 9♠ K♣ 2♠ Q♠ A♦ 4♥ K♦ 4♦ J♦ A♠ 6♥ 9♣ T♣ K♥ K♠ 7♦ 5♠ Q♥ 8♦ J♣ 2♦ 3♦ 8♣ 3♠ J♥ J♠ T♥ T♦ 2♣ 4♠ T♠
+- format_version: 1
+  hand:
+    id: pkarena0-hand-025
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 8
+    button: 6
+    stakes:
+      small_blind: 150.0
+      big_blind: 300.0
+  players:
+  - seat: 0
+    name: You
+    stack: 29784.0
+    hole_cards: T♠ K♦
+  - seat: 1
+    name: joker
+    stack: 3462.0
+    hole_cards: 6♥ 3♠
+  - seat: 3
+    name: gto
+    stack: 6417.0
+    hole_cards: A♦ 6♦
+  - seat: 4
+    name: tight_passive
+    stack: 8050.0
+    hole_cards: 8♦ Q♦
+  - seat: 5
+    name: tight_aggressive
+    stack: 300.0
+    hole_cards: 7♠ Q♣
+  - seat: 6
+    name: abc
+    stack: 36502.0
+    hole_cards: 7♥ 7♣
+  - seat: 7
+    name: loose_aggressive
+    stack: 5385.0
+    hole_cards: 3♦ 4♠
+  - seat: 8
+    name: short_stack_ninja
+    stack: 100.0
+    hole_cards: T♥ Q♠
+  board: 5♣ K♠ 4♦ 3♣ 6♣
+  streets:
+    preflop:
+      actions:
+      - seat: 7
+        action: post
+        amount: 150.0
+      - seat: 8
+        action: post
+        amount: 100.0
+      - seat: 0
+        action: call
+        amount: 100.0
+      - seat: 1
+        action: raise
+        amount: 450.0
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: raise
+        amount: 1250.0
+      - seat: 0
+        action: call
+        amount: 1150.0
+      - seat: 1
+        action: fold
+      pot: 3050.0
+    flop:
+      cards: K♠ 4♦ 5♣
+      actions:
+      - seat: 7
+        action: check
+      - seat: 0
+        action: check
+      pot: 3050.0
+    turn:
+      card: 3♣
+      actions:
+      - seat: 7
+        action: bet
+        amount: 2033.0
+      - seat: 0
+        action: call
+        amount: 2033.0
+      pot: 7116.0
+    river:
+      card: 6♣
+      actions:
+      - seat: 7
+        action: bet
+        amount: 2102.0
+      - seat: 0
+        action: call
+        amount: 2102.0
+  results:
+  - seat: 0
+    best_hand: K♠ K♦ T♠ 6♣ 5♣
+    hand_rank:
+      value: 3700
+      name: Pair
+      class: PairOfKings
+    outcome: lose
+    net: -5385.0
+  - seat: 1
+    best_hand: 6♥ 6♣ 3♠ 3♣ K♠
+    hand_rank:
+      value: 3239
+      name: TwoPair
+      class: SixesAndTreys
+    outcome: fold
+    net: -450.0
+  - seat: 3
+    best_hand: 6♦ 6♣ A♦ K♠ 5♣
+    hand_rank:
+      value: 5092
+      name: Pair
+      class: PairOfSixes
+    outcome: fold
+    net: 0.0
+  - seat: 4
+    best_hand: K♠ Q♦ 8♦ 6♣ 5♣
+    hand_rank:
+      value: 6768
+      name: HighCard
+      class: KingHigh
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    best_hand: 7♠ 6♣ 5♣ 4♦ 3♣
+    hand_rank:
+      value: 1607
+      name: Straight
+      class: SevenHighStraight
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    best_hand: 7♥ 6♣ 5♣ 4♦ 3♣
+    hand_rank:
+      value: 1607
+      name: Straight
+      class: SevenHighStraight
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    best_hand: 4♠ 4♦ 3♦ 3♣ K♠
+    hand_rank:
+      value: 3294
+      name: TwoPair
+      class: FoursAndTreys
+    outcome: win
+    net: 5935.0
+    pot_won: 11320.0
+  - seat: 8
+    best_hand: K♠ Q♠ T♥ 6♣ 5♣
+    hand_rank:
+      value: 6732
+      name: HighCard
+      class: KingHigh
+    outcome: lose
+    net: -100.0
+  shuffled_deck: 3♦ T♥ T♠ 6♥ A♦ 8♦ 7♠ 7♥ 4♠ Q♠ K♦ 3♠ 6♦ Q♦ Q♣ 7♣ 6♠ 5♣ K♠ 4♦ 4♣ 3♣ 5♥ 6♣ 8♣ 2♠ 8♠ 9♠ 7♦ K♣ J♠ T♦ 3♥ 4♥ J♦ 2♦ 9♥ 5♦ T♣ J♥ 8♥ J♣ A♠ 2♣ 9♣ 9♦ 2♥ Q♥ A♥ K♥ 5♠ A♣
+- format_version: 1
+  hand:
+    id: pkarena0-hand-026
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 7
+    button: 7
+    stakes:
+      small_blind: 150.0
+      big_blind: 300.0
+  players:
+  - seat: 0
+    name: You
+    stack: 24399.0
+    hole_cards: 7♣ 8♥
+  - seat: 1
+    name: joker
+    stack: 3012.0
+    hole_cards: A♠ 3♥
+  - seat: 3
+    name: gto
+    stack: 6417.0
+    hole_cards: 3♣ K♥
+  - seat: 4
+    name: tight_passive
+    stack: 8050.0
+    hole_cards: T♣ A♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 300.0
+    hole_cards: K♣ 9♣
+  - seat: 6
+    name: abc
+    stack: 36502.0
+    hole_cards: 7♦ 7♥
+  - seat: 7
+    name: loose_aggressive
+    stack: 11320.0
+    hole_cards: 9♠ 9♦
+  streets:
+    preflop:
+      actions:
+      - seat: 0
+        action: post
+        amount: 150.0
+      - seat: 1
+        action: post
+        amount: 300.0
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: raise
+        amount: 600.0
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: fold
+      pot: 450.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: -150.0
+  - seat: 1
+    outcome: fold
+    net: -300.0
+  - seat: 3
+    outcome: fold
+    net: 0.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: win
+    net: 450.0
+    pot_won: 1050.0
+  shuffled_deck: 7♣ A♠ 3♣ T♣ K♣ 7♦ 9♠ 8♥ 3♥ K♥ A♣ 9♣ 7♥ 9♦ 7♠ 6♠ 6♥ 4♣ 2♦ J♦ 8♦ 9♥ 3♠ J♣ K♦ 5♥ 2♥ 6♣ Q♥ 3♦ 5♣ 8♠ T♦ 4♦ 6♦ 8♣ Q♠ 2♣ J♥ J♠ 4♠ 5♦ T♥ K♠ A♦ Q♣ Q♦ 5♠ 2♠ T♠ A♥ 4♥
+- format_version: 1
+  hand:
+    id: pkarena0-hand-027
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 7
+    button: 8
+    stakes:
+      small_blind: 150.0
+      big_blind: 300.0
+  players:
+  - seat: 0
+    name: You
+    stack: 24249.0
+    hole_cards: 5♥ 6♦
+  - seat: 1
+    name: joker
+    stack: 2712.0
+    hole_cards: 9♥ 8♥
+  - seat: 3
+    name: gto
+    stack: 6417.0
+    hole_cards: 8♦ T♣
+  - seat: 4
+    name: tight_passive
+    stack: 8050.0
+    hole_cards: K♦ 9♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 300.0
+    hole_cards: K♣ J♥
+  - seat: 6
+    name: abc
+    stack: 36502.0
+    hole_cards: 5♠ 9♠
+  - seat: 7
+    name: loose_aggressive
+    stack: 11770.0
+    hole_cards: 6♥ A♥
+  board: 7♣ 2♠ 3♣
+  streets:
+    preflop:
+      actions:
+      - seat: 0
+        action: post
+        amount: 150.0
+      - seat: 1
+        action: post
+        amount: 300.0
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 0
+        action: call
+        amount: 150.0
+      - seat: 1
+        action: check
+      pot: 600.0
+    flop:
+      cards: 2♠ 7♣ 3♣
+      actions:
+      - seat: 0
+        action: bet
+        amount: 600.0
+      - seat: 1
+        action: raise
+        amount: 1800.0
+      - seat: 0
+        action: all_in
+        amount: 23949.0
+        all_in: true
+      - seat: 1
+        action: fold
+      pot: 2400.0
+  results:
+  - seat: 0
+    outcome: win
+    net: 2100.0
+    pot_won: 26349.0
+  - seat: 1
+    outcome: fold
+    net: -2100.0
+  - seat: 3
+    outcome: fold
+    net: 0.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 5♥ 9♥ 8♦ K♦ K♣ 5♠ 6♥ 6♦ 8♥ T♣ 9♣ J♥ 9♠ A♥ 3♠ 7♣ 2♠ 3♣ 7♥ 8♠ 6♣ 6♠ J♣ K♠ 7♠ 2♥ 5♦ 3♦ A♦ J♠ T♠ Q♠ 4♦ Q♦ 4♠ A♣ 8♣ J♦ 7♦ T♥ 9♦ 2♦ 5♣ K♥ 4♥ A♠ 2♣ 4♣ 3♥ Q♥ T♦ Q♣
+- format_version: 1
+  hand:
+    id: pkarena0-hand-028
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 7
+    button: 0
+    stakes:
+      small_blind: 150.0
+      big_blind: 300.0
+  players:
+  - seat: 0
+    name: You
+    stack: 26349.0
+    hole_cards: 6♠ 3♠
+  - seat: 1
+    name: joker
+    stack: 612.0
+    hole_cards: A♥ 7♥
+  - seat: 3
+    name: gto
+    stack: 6417.0
+    hole_cards: J♣ 3♦
+  - seat: 4
+    name: tight_passive
+    stack: 8050.0
+    hole_cards: 5♦ 2♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 300.0
+    hole_cards: 5♠ 3♥
+  - seat: 6
+    name: abc
+    stack: 36502.0
+    hole_cards: 4♣ J♠
+  - seat: 7
+    name: loose_aggressive
+    stack: 11770.0
+    hole_cards: A♦ 8♣
+  streets:
+    preflop:
+      actions:
+      - seat: 1
+        action: post
+        amount: 150.0
+      - seat: 3
+        action: post
+        amount: 300.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: fold
+      pot: 150.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    outcome: fold
+    net: -150.0
+  - seat: 3
+    outcome: win
+    net: 150.0
+    pot_won: 450.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: 0.0
+  shuffled_deck: A♥ J♣ 5♦ 5♠ 4♣ A♦ 6♠ 7♥ 3♦ 2♣ 3♥ J♠ 8♣ 3♠ 2♦ 8♥ 4♥ Q♥ 5♥ A♣ K♣ 4♦ K♦ 6♣ 5♣ Q♣ J♦ 2♠ 6♥ 8♠ A♠ T♠ 2♥ 9♠ 7♦ J♥ T♥ 9♥ 7♠ 7♣ 9♦ T♣ Q♦ 9♣ 3♣ 4♠ K♥ T♦ K♠ Q♠ 6♦ 8♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-029
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 7
+    button: 1
+    stakes:
+      small_blind: 150.0
+      big_blind: 300.0
+  players:
+  - seat: 0
+    name: You
+    stack: 26349.0
+    hole_cards: 2♣ K♥
+  - seat: 1
+    name: joker
+    stack: 462.0
+    hole_cards: 8♦ 5♦
+  - seat: 3
+    name: gto
+    stack: 6567.0
+    hole_cards: Q♠ 5♠
+  - seat: 4
+    name: tight_passive
+    stack: 8050.0
+    hole_cards: 6♣ 8♥
+  - seat: 5
+    name: tight_aggressive
+    stack: 300.0
+    hole_cards: 4♠ 7♠
+  - seat: 6
+    name: abc
+    stack: 36502.0
+    hole_cards: 3♦ Q♥
+  - seat: 7
+    name: loose_aggressive
+    stack: 11770.0
+    hole_cards: 4♣ 9♣
+  streets:
+    preflop:
+      actions:
+      - seat: 3
+        action: post
+        amount: 150.0
+      - seat: 4
+        action: post
+        amount: 300.0
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: raise
+        amount: 750.0
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: fold
+      - seat: 3
+        action: raise
+        amount: 1200.0
+      - seat: 4
+        action: fold
+      - seat: 7
+        action: fold
+      pot: 1050.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: win
+    net: 1050.0
+    pot_won: 2250.0
+  - seat: 4
+    outcome: fold
+    net: -300.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: -750.0
+  shuffled_deck: Q♠ 6♣ 4♠ 3♦ 4♣ 2♣ 8♦ 5♠ 8♥ 7♠ Q♥ 9♣ K♥ 5♦ 3♥ 8♣ 5♥ T♥ 8♠ J♥ 5♣ 9♠ 3♠ T♠ 2♦ 6♠ 7♦ 6♥ 3♣ 2♠ A♣ 2♥ K♣ 4♦ 4♥ 7♥ K♠ 6♦ 9♦ A♥ J♦ T♣ Q♣ J♣ 9♥ A♦ J♠ K♦ Q♦ A♠ 7♣ T♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-030
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 7
+    button: 2
+    stakes:
+      small_blind: 200.0
+      big_blind: 400.0
+  players:
+  - seat: 0
+    name: You
+    stack: 26349.0
+    hole_cards: 6♣ Q♦
+  - seat: 1
+    name: joker
+    stack: 462.0
+    hole_cards: 9♣ 2♥
+  - seat: 3
+    name: gto
+    stack: 7617.0
+    hole_cards: 7♠ K♦
+  - seat: 4
+    name: tight_passive
+    stack: 7750.0
+    hole_cards: 7♣ K♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 300.0
+    hole_cards: 5♦ Q♥
+  - seat: 6
+    name: abc
+    stack: 36502.0
+    hole_cards: 3♥ Q♣
+  - seat: 7
+    name: loose_aggressive
+    stack: 11020.0
+    hole_cards: T♣ 5♠
+  streets:
+    preflop:
+      actions:
+      - seat: 3
+        action: post
+        amount: 150.0
+      - seat: 4
+        action: post
+        amount: 300.0
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: fold
+      - seat: 3
+        action: raise
+        amount: 600.0
+      - seat: 4
+        action: fold
+      pot: 300.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: win
+    net: 300.0
+    pot_won: 900.0
+  - seat: 4
+    outcome: fold
+    net: -300.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 7♠ 7♣ 5♦ 3♥ T♣ 6♣ 9♣ K♦ K♣ Q♥ Q♣ 5♠ Q♦ 2♥ 2♠ 9♥ J♦ 3♠ T♦ 2♦ A♥ 9♦ J♠ K♥ J♣ A♣ 8♥ K♠ 4♥ 9♠ 6♦ 3♣ A♦ 7♦ 2♣ T♥ 4♣ 6♠ T♠ 4♠ 7♥ Q♠ 5♣ 3♦ 4♦ A♠ 8♣ J♥ 6♥ 8♦ 8♠ 5♥
+- format_version: 1
+  hand:
+    id: pkarena0-hand-031
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 7
+    button: 3
+    stakes:
+      small_blind: 200.0
+      big_blind: 400.0
+  players:
+  - seat: 0
+    name: You
+    stack: 26349.0
+    hole_cards: J♦ T♥
+  - seat: 1
+    name: joker
+    stack: 462.0
+    hole_cards: K♥ A♦
+  - seat: 3
+    name: gto
+    stack: 7917.0
+    hole_cards: 8♥ T♣
+  - seat: 4
+    name: tight_passive
+    stack: 7450.0
+    hole_cards: 3♣ 2♥
+  - seat: 5
+    name: tight_aggressive
+    stack: 300.0
+    hole_cards: J♠ 7♠
+  - seat: 6
+    name: abc
+    stack: 36502.0
+    hole_cards: 3♦ 7♦
+  - seat: 7
+    name: loose_aggressive
+    stack: 11020.0
+    hole_cards: 4♥ 6♦
+  board: K♣ 2♠ 8♣ 6♠ 4♠
+  streets:
+    preflop:
+      actions:
+      - seat: 4
+        action: post
+        amount: 200.0
+      - seat: 5
+        action: post
+        amount: 300.0
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 0
+        action: call
+        amount: 300.0
+      - seat: 1
+        action: raise
+        amount: 462.0
+      - seat: 3
+        action: raise
+        amount: 882.0
+      - seat: 4
+        action: fold
+      - seat: 0
+        action: call
+        amount: 582.0
+      pot: 2726.0
+    flop:
+      cards: 2♠ K♣ 8♣
+      actions:
+      - seat: 0
+        action: check
+      - seat: 3
+        action: bet
+        amount: 908.0
+      - seat: 0
+        action: fold
+      pot: 3634.0
+    turn:
+      card: 6♠
+      actions: []
+      pot: 3634.0
+    river:
+      card: 4♠
+      actions: []
+  results:
+  - seat: 0
+    best_hand: K♣ J♦ T♥ 8♣ 6♠
+    hand_rank:
+      value: 6806
+      name: HighCard
+      class: KingHigh
+    outcome: fold
+    net: -882.0
+  - seat: 1
+    best_hand: K♥ K♣ A♦ 8♣ 6♠
+    hand_rank:
+      value: 3581
+      name: Pair
+      class: PairOfKings
+    outcome: win
+    net: 24.0
+    pot_won: 486.0
+  - seat: 3
+    best_hand: 8♥ 8♣ K♣ T♣ 6♠
+    hand_rank:
+      value: 4720
+      name: Pair
+      class: PairOfEights
+    outcome: win
+    net: -42.0
+    pot_won: 1748.0
+  - seat: 4
+    best_hand: 2♠ 2♥ K♣ 8♣ 6♠
+    hand_rank:
+      value: 6052
+      name: Pair
+      class: PairOfDeuces
+    outcome: fold
+    net: -200.0
+  - seat: 5
+    best_hand: J♠ 7♠ 6♠ 4♠ 2♠
+    hand_rank:
+      value: 1468
+      name: Flush
+      class: JackHighFlush
+    outcome: win
+    net: 1100.0
+    pot_won: 1400.0
+  - seat: 6
+    best_hand: K♣ 8♣ 7♦ 6♠ 4♠
+    hand_rank:
+      value: 6974
+      name: HighCard
+      class: KingHigh
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    best_hand: 6♠ 6♦ 4♠ 4♥ K♣
+    hand_rank:
+      value: 3228
+      name: TwoPair
+      class: SixesAndFours
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 3♣ J♠ 3♦ 4♥ J♦ K♥ 8♥ 2♥ 7♠ 7♦ 6♦ T♥ A♦ T♣ Q♣ K♣ 2♠ 8♣ 3♠ 6♠ 5♣ 4♠ K♦ J♥ Q♠ K♠ 6♥ 7♥ 8♠ 7♣ 9♣ 2♦ J♣ A♣ 4♦ 2♣ 5♥ Q♦ 5♦ 8♦ A♥ A♠ Q♥ 9♠ T♠ 9♥ T♦ 3♥ 6♣ 4♣ 5♠ 9♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-032
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 7
+    button: 4
+    stakes:
+      small_blind: 200.0
+      big_blind: 400.0
+  players:
+  - seat: 0
+    name: You
+    stack: 25467.0
+    hole_cards: 4♠ 5♥
+  - seat: 1
+    name: joker
+    stack: 486.0
+    hole_cards: Q♥ 2♥
+  - seat: 3
+    name: gto
+    stack: 7875.0
+    hole_cards: J♣ A♥
+  - seat: 4
+    name: tight_passive
+    stack: 7250.0
+    hole_cards: A♦ Q♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 1400.0
+    hole_cards: A♠ J♥
+  - seat: 6
+    name: abc
+    stack: 36502.0
+    hole_cards: T♠ A♣
+  - seat: 7
+    name: loose_aggressive
+    stack: 11020.0
+    hole_cards: 5♦ K♥
+  streets:
+    preflop:
+      actions:
+      - seat: 5
+        action: post
+        amount: 200.0
+      - seat: 6
+        action: post
+        amount: 400.0
+      - seat: 7
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: raise
+        amount: 486.0
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      pot: 600.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 1
+    outcome: win
+    net: 600.0
+    pot_won: 1086.0
+  - seat: 3
+    outcome: fold
+    net: 0.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: -200.0
+  - seat: 6
+    outcome: fold
+    net: -400.0
+  - seat: 7
+    outcome: fold
+    net: 0.0
+  shuffled_deck: A♠ T♠ 5♦ 4♠ Q♥ J♣ A♦ J♥ A♣ K♥ 5♥ 2♥ A♥ Q♣ 8♠ 9♦ 9♠ 3♦ K♦ 2♦ 5♣ J♦ K♣ 4♣ K♠ T♥ 4♦ 7♠ 6♠ 8♥ 8♣ 6♣ 2♣ Q♠ 7♦ 6♦ 7♣ 2♠ T♣ Q♦ 9♥ 9♣ 5♠ 7♥ 8♦ 3♣ 3♠ 6♥ J♠ T♦ 3♥ 4♥
+- format_version: 1
+  hand:
+    id: pkarena0-hand-033
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 7
+    button: 5
+    stakes:
+      small_blind: 200.0
+      big_blind: 400.0
+  players:
+  - seat: 0
+    name: You
+    stack: 25467.0
+    hole_cards: Q♣ T♠
+  - seat: 1
+    name: joker
+    stack: 1086.0
+    hole_cards: T♦ 6♣
+  - seat: 3
+    name: gto
+    stack: 7875.0
+    hole_cards: J♣ 3♣
+  - seat: 4
+    name: tight_passive
+    stack: 7250.0
+    hole_cards: 3♦ 9♥
+  - seat: 5
+    name: tight_aggressive
+    stack: 1200.0
+    hole_cards: 6♥ 3♥
+  - seat: 6
+    name: abc
+    stack: 36102.0
+    hole_cards: 4♠ 7♣
+  - seat: 7
+    name: loose_aggressive
+    stack: 11020.0
+    hole_cards: 2♦ 6♠
+  streets:
+    preflop:
+      actions:
+      - seat: 6
+        action: post
+        amount: 200.0
+      - seat: 7
+        action: post
+        amount: 400.0
+      - seat: 0
+        action: raise
+        amount: 800.0
+      - seat: 1
+        action: fold
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      pot: 600.0
+  results:
+  - seat: 0
+    outcome: win
+    net: 600.0
+    pot_won: 1400.0
+  - seat: 1
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: fold
+    net: 0.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: -200.0
+  - seat: 7
+    outcome: fold
+    net: -400.0
+  shuffled_deck: 4♠ 2♦ Q♣ T♦ J♣ 3♦ 6♥ 7♣ 6♠ T♠ 6♣ 3♣ 9♥ 3♥ Q♠ 5♣ 9♦ K♥ K♦ J♦ J♥ A♣ Q♦ 4♦ 8♥ A♦ 7♦ A♥ 5♦ 6♦ 5♠ A♠ K♠ 8♣ 9♠ 4♥ 7♠ K♣ 2♠ 8♠ 2♣ 7♥ 2♥ 5♥ 8♦ 4♣ 9♣ Q♥ T♣ J♠ 3♠ T♥
+- format_version: 1
+  hand:
+    id: pkarena0-hand-034
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 7
+    button: 6
+    stakes:
+      small_blind: 200.0
+      big_blind: 400.0
+  players:
+  - seat: 0
+    name: You
+    stack: 26067.0
+    hole_cards: K♠ 9♠
+  - seat: 1
+    name: joker
+    stack: 1086.0
+    hole_cards: 9♥ 5♦
+  - seat: 3
+    name: gto
+    stack: 7875.0
+    hole_cards: 3♦ 2♠
+  - seat: 4
+    name: tight_passive
+    stack: 7250.0
+    hole_cards: 4♣ 2♦
+  - seat: 5
+    name: tight_aggressive
+    stack: 1200.0
+    hole_cards: 3♠ 7♥
+  - seat: 6
+    name: abc
+    stack: 35902.0
+    hole_cards: A♦ 5♣
+  - seat: 7
+    name: loose_aggressive
+    stack: 10620.0
+    hole_cards: 6♦ 6♠
+  streets:
+    preflop:
+      actions:
+      - seat: 7
+        action: post
+        amount: 200.0
+      - seat: 0
+        action: post
+        amount: 400.0
+      - seat: 1
+        action: raise
+        amount: 1000.0
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: raise
+        amount: 2066.0
+      - seat: 0
+        action: fold
+      - seat: 1
+        action: fold
+      pot: 1400.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: -400.0
+  - seat: 1
+    outcome: fold
+    net: -1000.0
+  - seat: 3
+    outcome: fold
+    net: 0.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: win
+    net: 1400.0
+    pot_won: 3466.0
+  shuffled_deck: 6♦ K♠ 9♥ 3♦ 4♣ 3♠ A♦ 6♠ 9♠ 5♦ 2♠ 2♦ 7♥ 5♣ 8♠ K♦ Q♦ 6♥ 8♣ J♠ J♦ 8♦ J♥ Q♣ A♥ 2♥ 9♦ 6♣ K♥ K♣ 5♠ Q♠ 7♣ 4♦ Q♥ 2♣ 4♠ T♣ 5♥ A♠ 8♥ 4♥ T♠ T♥ 7♦ A♣ 9♣ J♣ 3♥ 7♠ T♦ 3♣
+- format_version: 1
+  hand:
+    id: pkarena0-hand-035
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 7
+    button: 7
+    stakes:
+      small_blind: 200.0
+      big_blind: 400.0
+  players:
+  - seat: 0
+    name: You
+    stack: 25667.0
+    hole_cards: 7♦ 8♦
+  - seat: 1
+    name: joker
+    stack: 86.0
+    hole_cards: 2♣ 2♥
+  - seat: 3
+    name: gto
+    stack: 7875.0
+    hole_cards: 4♣ 5♣
+  - seat: 4
+    name: tight_passive
+    stack: 7250.0
+    hole_cards: A♣ 8♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 1200.0
+    hole_cards: 9♦ Q♥
+  - seat: 6
+    name: abc
+    stack: 35902.0
+    hole_cards: 4♠ K♦
+  - seat: 7
+    name: loose_aggressive
+    stack: 12020.0
+    hole_cards: 7♠ 4♥
+  board: 7♣ 5♥ T♠ J♦ K♣
+  streets:
+    preflop:
+      actions:
+      - seat: 0
+        action: post
+        amount: 200.0
+      - seat: 1
+        action: post
+        amount: 86.0
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 0
+        action: bet
+        amount: 486.0
+      pot: 572.0
+    flop:
+      cards: T♠ 5♥ 7♣
+      actions: []
+      pot: 572.0
+    turn:
+      card: J♦
+      actions: []
+      pot: 572.0
+    river:
+      card: K♣
+      actions: []
+  results:
+  - seat: 0
+    best_hand: 7♦ 7♣ K♣ J♦ T♠
+    hand_rank:
+      value: 4930
+      name: Pair
+      class: PairOfSevens
+    outcome: win
+    net: 86.0
+    pot_won: 572.0
+  - seat: 1
+    best_hand: 2♥ 2♣ K♣ J♦ T♠
+    hand_rank:
+      value: 6030
+      name: Pair
+      class: PairOfDeuces
+    outcome: lose
+    net: -86.0
+  - seat: 3
+    best_hand: 5♥ 5♣ K♣ J♦ T♠
+    hand_rank:
+      value: 5370
+      name: Pair
+      class: PairOfFives
+    outcome: fold
+    net: 0.0
+  - seat: 4
+    best_hand: A♣ K♣ J♦ T♠ 8♣
+    hand_rank:
+      value: 6231
+      name: HighCard
+      class: AceHigh
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    best_hand: K♣ Q♥ J♦ T♠ 9♦
+    hand_rank:
+      value: 1601
+      name: Straight
+      class: KingHighStraight
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    best_hand: K♦ K♣ J♦ T♠ 7♣
+    hand_rank:
+      value: 3648
+      name: Pair
+      class: PairOfKings
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    best_hand: 7♠ 7♣ K♣ J♦ T♠
+    hand_rank:
+      value: 4930
+      name: Pair
+      class: PairOfSevens
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 7♦ 2♣ 4♣ A♣ 9♦ 4♠ 7♠ 8♦ 2♥ 5♣ 8♣ Q♥ K♦ 4♥ 3♠ 7♣ 5♥ T♠ T♥ J♦ 9♣ K♣ A♥ J♠ 6♥ 9♥ K♥ 3♥ K♠ 5♠ 6♣ 3♣ 9♠ Q♦ 6♦ 6♠ A♦ 8♠ 8♥ Q♠ 5♦ T♦ J♥ J♣ 3♦ 2♦ 4♦ Q♣ 7♥ T♣ A♠ 2♠
+- format_version: 1
+  hand:
+    id: pkarena0-hand-036
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 6
+    button: 8
+    stakes:
+      small_blind: 200.0
+      big_blind: 400.0
+  players:
+  - seat: 0
+    name: You
+    stack: 25753.0
+    hole_cards: 6♠ T♣
+  - seat: 3
+    name: gto
+    stack: 7875.0
+    hole_cards: 9♥ 7♠
+  - seat: 4
+    name: tight_passive
+    stack: 7250.0
+    hole_cards: 9♣ 6♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 1200.0
+    hole_cards: 4♣ Q♦
+  - seat: 6
+    name: abc
+    stack: 35902.0
+    hole_cards: 4♦ 5♣
+  - seat: 7
+    name: loose_aggressive
+    stack: 12020.0
+    hole_cards: J♣ 8♣
+  streets:
+    preflop:
+      actions:
+      - seat: 0
+        action: post
+        amount: 200.0
+      - seat: 3
+        action: post
+        amount: 400.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: raise
+        amount: 1000.0
+      - seat: 0
+        action: fold
+      - seat: 3
+        action: raise
+        amount: 1600.0
+      - seat: 7
+        action: raise
+        amount: 4400.0
+      - seat: 3
+        action: fold
+      pot: 1800.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: -200.0
+  - seat: 3
+    outcome: fold
+    net: -1600.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: win
+    net: 1800.0
+    pot_won: 6200.0
+  shuffled_deck: 6♠ 9♥ 9♣ 4♣ 4♦ J♣ T♣ 7♠ 6♣ Q♦ 5♣ 8♣ 4♥ 6♦ 9♠ A♦ K♥ K♣ 2♠ J♠ A♠ 2♦ K♦ 8♦ 4♠ 3♣ 7♦ 9♦ Q♠ T♦ Q♣ 3♦ 7♥ K♠ 3♥ 2♥ 3♠ 5♥ 5♠ 7♣ T♥ J♥ Q♥ J♦ A♥ 2♣ T♠ 5♦ 8♠ A♣ 6♥ 8♥
+- format_version: 1
+  hand:
+    id: pkarena0-hand-037
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 6
+    button: 0
+    stakes:
+      small_blind: 200.0
+      big_blind: 400.0
+  players:
+  - seat: 0
+    name: You
+    stack: 25553.0
+    hole_cards: Q♥ A♦
+  - seat: 3
+    name: gto
+    stack: 6275.0
+    hole_cards: 9♥ 5♦
+  - seat: 4
+    name: tight_passive
+    stack: 7250.0
+    hole_cards: K♥ A♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 1200.0
+    hole_cards: 7♥ Q♠
+  - seat: 6
+    name: abc
+    stack: 35902.0
+    hole_cards: 5♥ K♣
+  - seat: 7
+    name: loose_aggressive
+    stack: 13820.0
+    hole_cards: 8♥ J♠
+  board: K♠ 9♠ J♣
+  streets:
+    preflop:
+      actions:
+      - seat: 3
+        action: post
+        amount: 200.0
+      - seat: 4
+        action: post
+        amount: 400.0
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: raise
+        amount: 800.0
+      - seat: 0
+        action: raise
+        amount: 1200.0
+      - seat: 3
+        action: raise
+        amount: 2066.0
+      - seat: 4
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 0
+        action: call
+        amount: 866.0
+      pot: 5332.0
+    flop:
+      cards: K♠ 9♠ J♣
+      actions:
+      - seat: 3
+        action: bet
+        amount: 1777.0
+      - seat: 0
+        action: all_in
+        amount: 23487.0
+        all_in: true
+      - seat: 3
+        action: fold
+      pot: 7109.0
+  results:
+  - seat: 0
+    outcome: win
+    net: 5043.0
+    pot_won: 30596.0
+  - seat: 3
+    outcome: fold
+    net: -3843.0
+  - seat: 4
+    outcome: fold
+    net: -400.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: -800.0
+  shuffled_deck: 9♥ K♥ 7♥ 5♥ 8♥ Q♥ 5♦ A♣ Q♠ K♣ J♠ A♦ 7♣ K♠ 9♠ J♣ 4♠ 8♠ 7♦ A♥ 6♥ 8♣ 4♣ Q♣ 8♦ 2♠ 3♣ Q♦ 3♦ 2♥ T♦ 9♣ 2♦ T♥ J♥ 6♣ 9♦ 6♦ 7♠ A♠ 2♣ 4♥ 5♠ T♠ T♣ 3♠ 6♠ 3♥ J♦ K♦ 5♣ 4♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-038
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 6
+    button: 1
+    stakes:
+      small_blind: 200.0
+      big_blind: 400.0
+  players:
+  - seat: 0
+    name: You
+    stack: 30596.0
+    hole_cards: J♥ 4♥
+  - seat: 3
+    name: gto
+    stack: 2432.0
+    hole_cards: K♠ 7♥
+  - seat: 4
+    name: tight_passive
+    stack: 6850.0
+    hole_cards: K♥ 4♦
+  - seat: 5
+    name: tight_aggressive
+    stack: 1200.0
+    hole_cards: 7♦ 6♣
+  - seat: 6
+    name: abc
+    stack: 35902.0
+    hole_cards: 6♥ 6♦
+  - seat: 7
+    name: loose_aggressive
+    stack: 13020.0
+    hole_cards: 7♠ 2♠
+  streets:
+    preflop:
+      actions:
+      - seat: 3
+        action: post
+        amount: 200.0
+      - seat: 4
+        action: post
+        amount: 400.0
+      - seat: 5
+        action: raise
+        amount: 800.0
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: raise
+        amount: 1500.0
+      - seat: 5
+        action: fold
+      pot: 1000.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: fold
+    net: -200.0
+  - seat: 4
+    outcome: win
+    net: 1000.0
+    pot_won: 2500.0
+  - seat: 5
+    outcome: fold
+    net: -800.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    outcome: fold
+    net: 0.0
+  shuffled_deck: K♠ K♥ 7♦ 6♥ 7♠ J♥ 7♥ 4♦ 6♣ 6♦ 2♠ 4♥ J♣ 9♠ Q♠ 3♣ A♥ 4♣ 8♠ 5♥ 3♠ A♠ 2♣ T♦ A♣ 5♦ 5♠ 8♣ 8♥ 3♥ 2♦ A♦ T♥ T♠ 9♥ K♣ Q♦ 3♦ J♦ Q♣ T♣ Q♥ 2♥ 8♦ 9♦ K♦ 4♠ 9♣ J♠ 6♠ 5♣ 7♣
+- format_version: 1
+  hand:
+    id: pkarena0-hand-039
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 6
+    button: 2
+    stakes:
+      small_blind: 200.0
+      big_blind: 400.0
+  players:
+  - seat: 0
+    name: You
+    stack: 30596.0
+    hole_cards: A♥ 6♥
+  - seat: 3
+    name: gto
+    stack: 2232.0
+    hole_cards: 5♣ Q♦
+  - seat: 4
+    name: tight_passive
+    stack: 7850.0
+    hole_cards: 7♦ J♥
+  - seat: 5
+    name: tight_aggressive
+    stack: 400.0
+    hole_cards: 4♣ 8♥
+  - seat: 6
+    name: abc
+    stack: 35902.0
+    hole_cards: 5♦ K♣
+  - seat: 7
+    name: loose_aggressive
+    stack: 13020.0
+    hole_cards: A♣ K♥
+  board: 4♥ 3♥ 3♦ 9♥ A♦
+  streets:
+    preflop:
+      actions:
+      - seat: 3
+        action: post
+        amount: 200.0
+      - seat: 4
+        action: post
+        amount: 400.0
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 7
+        action: raise
+        amount: 800.0
+      - seat: 0
+        action: call
+        amount: 800.0
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      pot: 2200.0
+    flop:
+      cards: 4♥ 3♥ 3♦
+      actions:
+      - seat: 7
+        action: bet
+        amount: 2200.0
+      - seat: 0
+        action: call
+        amount: 2200.0
+      pot: 6600.0
+    turn:
+      card: 9♥
+      actions:
+      - seat: 7
+        action: bet
+        amount: 6600.0
+      - seat: 0
+        action: call
+        amount: 6600.0
+      pot: 19800.0
+    river:
+      card: A♦
+      actions:
+      - seat: 7
+        action: bet
+        amount: 3420.0
+      - seat: 0
+        action: all_in
+        amount: 20996.0
+        all_in: true
+  results:
+  - seat: 0
+    best_hand: A♥ 9♥ 6♥ 4♥ 3♥
+    hand_rank:
+      value: 775
+      name: Flush
+      class: AceHighFlush
+    outcome: win
+    net: 13620.0
+    pot_won: 44216.0
+  - seat: 3
+    best_hand: 3♥ 3♦ A♦ Q♦ 9♥
+    hand_rank:
+      value: 5758
+      name: Pair
+      class: PairOfTreys
+    outcome: fold
+    net: -200.0
+  - seat: 4
+    best_hand: 3♥ 3♦ A♦ J♥ 9♥
+    hand_rank:
+      value: 5766
+      name: Pair
+      class: PairOfTreys
+    outcome: fold
+    net: -400.0
+  - seat: 5
+    best_hand: 4♥ 4♣ 3♥ 3♦ A♦
+    hand_rank:
+      value: 3293
+      name: TwoPair
+      class: FoursAndTreys
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    best_hand: 3♥ 3♦ A♦ K♣ 9♥
+    hand_rank:
+      value: 5749
+      name: Pair
+      class: PairOfTreys
+    outcome: fold
+    net: 0.0
+  - seat: 7
+    best_hand: A♦ A♣ 3♥ 3♦ K♥
+    hand_rank:
+      value: 2578
+      name: TwoPair
+      class: AcesAndTreys
+    outcome: lose
+    net: -13020.0
+  shuffled_deck: 5♣ 7♦ 4♣ 5♦ A♣ A♥ Q♦ J♥ 8♥ K♣ K♥ 6♥ 6♣ 4♥ 3♥ 3♦ 8♠ 9♥ 9♠ A♦ 2♣ 8♣ 8♦ 9♣ 2♥ 5♠ Q♥ 2♠ 4♠ Q♠ 3♣ 7♣ T♦ Q♣ T♠ 6♦ J♠ 3♠ 6♠ T♣ 7♥ 4♦ K♦ 7♠ 5♥ J♣ K♠ T♥ 9♦ A♠ J♦ 2♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-040
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 5
+    button: 3
+    stakes:
+      small_blind: 300.0
+      big_blind: 600.0
+  players:
+  - seat: 0
+    name: You
+    stack: 44216.0
+    hole_cards: T♥ 6♣
+  - seat: 3
+    name: gto
+    stack: 2032.0
+    hole_cards: A♣ 3♠
+  - seat: 4
+    name: tight_passive
+    stack: 7450.0
+    hole_cards: 8♣ 2♠
+  - seat: 5
+    name: tight_aggressive
+    stack: 400.0
+    hole_cards: 9♠ 6♥
+  - seat: 6
+    name: abc
+    stack: 35902.0
+    hole_cards: K♥ 4♠
+  streets:
+    preflop:
+      actions:
+      - seat: 4
+        action: post
+        amount: 200.0
+      - seat: 5
+        action: post
+        amount: 400.0
+      - seat: 6
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      pot: 200.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: fold
+    net: 0.0
+  - seat: 4
+    outcome: fold
+    net: -200.0
+  - seat: 5
+    outcome: win
+    net: 200.0
+    pot_won: 600.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 8♣ 9♠ K♥ T♥ A♣ 2♠ 6♥ 4♠ 6♣ 3♠ 2♣ 5♥ 2♥ J♣ T♦ J♠ K♣ 7♥ K♦ J♥ 9♦ 9♥ 8♥ Q♥ 5♣ 7♠ Q♦ 4♣ Q♠ 3♦ 4♥ 3♥ 5♦ A♥ 4♦ 6♠ T♠ J♦ 3♣ 8♠ 5♠ T♣ 9♣ 6♦ Q♣ A♠ 8♦ 7♣ 2♦ K♠ A♦ 7♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-041
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 5
+    button: 4
+    stakes:
+      small_blind: 300.0
+      big_blind: 600.0
+  players:
+  - seat: 0
+    name: You
+    stack: 44216.0
+    hole_cards: 5♥ 9♦
+  - seat: 3
+    name: gto
+    stack: 2032.0
+    hole_cards: 7♠ 3♣
+  - seat: 4
+    name: tight_passive
+    stack: 7250.0
+    hole_cards: 8♥ 5♦
+  - seat: 5
+    name: tight_aggressive
+    stack: 600.0
+    hole_cards: 7♣ Q♣
+  - seat: 6
+    name: abc
+    stack: 35902.0
+    hole_cards: A♦ 2♦
+  streets:
+    preflop:
+      actions:
+      - seat: 5
+        action: post
+        amount: 300.0
+      - seat: 6
+        action: post
+        amount: 600.0
+      - seat: 0
+        action: fold
+      - seat: 3
+        action: raise
+        amount: 1200.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      pot: 900.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: win
+    net: 900.0
+    pot_won: 2100.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: -300.0
+  - seat: 6
+    outcome: fold
+    net: -600.0
+  shuffled_deck: 7♣ A♦ 5♥ 7♠ 8♥ Q♣ 2♦ 9♦ 3♣ 5♦ A♠ 4♠ T♣ 2♠ 9♠ 3♠ T♦ A♥ Q♦ 4♥ K♣ 9♣ 9♥ 8♠ 4♣ K♥ K♠ J♣ 4♦ A♣ 7♥ J♥ K♦ 5♣ 2♥ 8♣ T♠ Q♠ 5♠ Q♥ 7♦ 6♦ 2♣ T♥ 6♣ 6♥ J♠ 3♥ 8♦ J♦ 6♠ 3♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-042
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 5
+    button: 5
+    stakes:
+      small_blind: 300.0
+      big_blind: 600.0
+  players:
+  - seat: 0
+    name: You
+    stack: 44216.0
+    hole_cards: A♠ 6♦
+  - seat: 3
+    name: gto
+    stack: 2932.0
+    hole_cards: T♣ A♣
+  - seat: 4
+    name: tight_passive
+    stack: 7250.0
+    hole_cards: 3♥ J♦
+  - seat: 5
+    name: tight_aggressive
+    stack: 300.0
+    hole_cards: 8♠ 6♠
+  - seat: 6
+    name: abc
+    stack: 35302.0
+    hole_cards: 6♥ K♠
+  streets:
+    preflop:
+      actions:
+      - seat: 6
+        action: post
+        amount: 300.0
+      - seat: 0
+        action: post
+        amount: 600.0
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      pot: 300.0
+  results:
+  - seat: 0
+    outcome: win
+    net: 300.0
+    pot_won: 900.0
+  - seat: 3
+    outcome: fold
+    net: 0.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: -300.0
+  shuffled_deck: 6♥ A♠ T♣ 3♥ 8♠ K♠ 6♦ A♣ J♦ 6♠ T♥ J♣ Q♦ 7♥ Q♣ J♠ 7♣ 4♣ A♥ 9♣ 7♦ K♣ 5♠ 5♣ 3♠ 9♦ 2♠ 9♥ Q♥ 6♣ 2♥ 8♣ K♦ 4♦ 5♦ 8♥ T♦ Q♠ J♥ 9♠ 3♦ 2♣ 5♥ A♦ 8♦ 4♥ 3♣ T♠ K♥ 2♦ 7♠ 4♠
+- format_version: 1
+  hand:
+    id: pkarena0-hand-043
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 5
+    button: 6
+    stakes:
+      small_blind: 300.0
+      big_blind: 600.0
+  players:
+  - seat: 0
+    name: You
+    stack: 44516.0
+    hole_cards: 6♣ Q♠
+  - seat: 3
+    name: gto
+    stack: 2932.0
+    hole_cards: 9♦ T♣
+  - seat: 4
+    name: tight_passive
+    stack: 7250.0
+    hole_cards: J♠ 9♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 300.0
+    hole_cards: 7♦ K♣
+  - seat: 6
+    name: abc
+    stack: 35002.0
+    hole_cards: 2♠ 2♥
+  streets:
+    preflop:
+      actions:
+      - seat: 0
+        action: post
+        amount: 300.0
+      - seat: 3
+        action: post
+        amount: 600.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 0
+        action: fold
+      pot: 300.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: -300.0
+  - seat: 3
+    outcome: win
+    net: 300.0
+    pot_won: 900.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 6♣ 9♦ J♠ 7♦ 2♠ Q♠ T♣ 9♣ K♣ 2♥ 5♥ J♣ 6♠ 2♣ K♥ T♥ 5♣ 2♦ 7♥ 9♥ T♦ J♦ 9♠ 4♦ 5♦ Q♥ 6♥ 7♣ 4♣ K♦ A♥ 6♦ 8♥ 4♥ T♠ 4♠ 3♥ 3♣ A♣ 8♦ A♠ Q♦ Q♣ J♥ A♦ 5♠ K♠ 8♠ 8♣ 3♠ 7♠ 3♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-044
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 5
+    button: 7
+    stakes:
+      small_blind: 300.0
+      big_blind: 600.0
+  players:
+  - seat: 0
+    name: You
+    stack: 44216.0
+    hole_cards: Q♠ 7♠
+  - seat: 3
+    name: gto
+    stack: 3232.0
+    hole_cards: 9♦ 5♣
+  - seat: 4
+    name: tight_passive
+    stack: 7250.0
+    hole_cards: A♠ 3♦
+  - seat: 5
+    name: tight_aggressive
+    stack: 300.0
+    hole_cards: 8♠ 6♥
+  - seat: 6
+    name: abc
+    stack: 35002.0
+    hole_cards: Q♥ 9♥
+  streets:
+    preflop:
+      actions:
+      - seat: 0
+        action: post
+        amount: 300.0
+      - seat: 3
+        action: post
+        amount: 600.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 0
+        action: fold
+      pot: 300.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: -300.0
+  - seat: 3
+    outcome: win
+    net: 300.0
+    pot_won: 900.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  shuffled_deck: Q♠ 9♦ A♠ 8♠ Q♥ 7♠ 5♣ 3♦ 6♥ 9♥ 8♣ 7♦ K♦ 4♠ 5♥ K♥ 2♥ 6♣ J♥ Q♣ 3♠ 8♦ J♠ Q♦ A♥ J♦ 4♦ 2♣ 2♠ 9♠ T♦ 4♥ 9♣ A♣ 2♦ J♣ T♠ 6♠ 5♦ 7♣ 3♥ 6♦ 7♥ 4♣ 8♥ 3♣ 5♠ K♠ A♦ T♥ T♣ K♣
+- format_version: 1
+  hand:
+    id: pkarena0-hand-045
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 5
+    button: 8
+    stakes:
+      small_blind: 300.0
+      big_blind: 600.0
+  players:
+  - seat: 0
+    name: You
+    stack: 43916.0
+    hole_cards: K♦ A♣
+  - seat: 3
+    name: gto
+    stack: 3532.0
+    hole_cards: J♦ 7♣
+  - seat: 4
+    name: tight_passive
+    stack: 7250.0
+    hole_cards: 2♦ T♠
+  - seat: 5
+    name: tight_aggressive
+    stack: 300.0
+    hole_cards: T♥ 5♠
+  - seat: 6
+    name: abc
+    stack: 35002.0
+    hole_cards: 4♠ 4♣
+  streets:
+    preflop:
+      actions:
+      - seat: 0
+        action: post
+        amount: 300.0
+      - seat: 3
+        action: post
+        amount: 600.0
+      - seat: 4
+        action: fold
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 0
+        action: raise
+        amount: 1200.0
+      - seat: 3
+        action: raise
+        amount: 2932.0
+      - seat: 0
+        action: all_in
+        amount: 43916.0
+        all_in: true
+      - seat: 3
+        action: fold
+      pot: 2932.0
+  results:
+  - seat: 0
+    outcome: win
+    net: 2932.0
+    pot_won: 46848.0
+  - seat: 3
+    outcome: fold
+    net: -2932.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  shuffled_deck: K♦ J♦ 2♦ T♥ 4♠ A♣ 7♣ T♠ 5♠ 4♣ Q♦ T♣ A♠ 9♣ 8♠ Q♥ 3♥ A♥ J♠ A♦ J♥ 2♥ 9♠ 5♥ 6♠ 8♦ J♣ 7♠ K♠ Q♠ 3♠ 9♥ Q♣ 4♦ 4♥ 7♦ K♥ 2♣ 8♥ 6♥ 7♥ 9♦ 3♦ 5♦ 6♣ 5♣ 2♠ K♣ 8♣ 3♣ T♦ 6♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-046
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 5
+    button: 0
+    stakes:
+      small_blind: 300.0
+      big_blind: 600.0
+  players:
+  - seat: 0
+    name: You
+    stack: 46848.0
+    hole_cards: 7♠ 6♦
+  - seat: 3
+    name: gto
+    stack: 600.0
+    hole_cards: A♣ A♥
+  - seat: 4
+    name: tight_passive
+    stack: 7250.0
+    hole_cards: T♣ Q♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 300.0
+    hole_cards: T♠ 2♥
+  - seat: 6
+    name: abc
+    stack: 35002.0
+    hole_cards: 9♣ 9♠
+  board: 2♦ Q♦ 3♥ 9♥ 2♠
+  streets:
+    preflop:
+      actions:
+      - seat: 3
+        action: post
+        amount: 300.0
+      - seat: 4
+        action: post
+        amount: 600.0
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 0
+        action: raise
+        amount: 1200.0
+      - seat: 3
+        action: all_in
+        amount: 600.0
+        all_in: true
+      - seat: 4
+        action: fold
+      pot: 2400.0
+    flop:
+      cards: 3♥ Q♦ 2♦
+      actions: []
+      pot: 2400.0
+    turn:
+      card: 9♥
+      actions: []
+      pot: 2400.0
+    river:
+      card: 2♠
+      actions: []
+  results:
+  - seat: 0
+    best_hand: 2♠ 2♦ Q♦ 9♥ 7♠
+    hand_rank:
+      value: 6082
+      name: Pair
+      class: PairOfDeuces
+    outcome: win
+    net: -600.0
+    pot_won: 600.0
+  - seat: 3
+    best_hand: A♥ A♣ 2♠ 2♦ Q♦
+    hand_rank:
+      value: 2590
+      name: TwoPair
+      class: AcesAndDeuces
+    outcome: win
+    net: 1200.0
+    pot_won: 1800.0
+  - seat: 4
+    best_hand: Q♦ Q♣ 2♠ 2♦ T♣
+    hand_rank:
+      value: 2823
+      name: TwoPair
+      class: QueensAndDeuces
+    outcome: fold
+    net: -600.0
+  - seat: 5
+    best_hand: 2♠ 2♥ 2♦ Q♦ T♠
+    hand_rank:
+      value: 2424
+      name: ThreeOfAKind
+      class: ThreeDeuces
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    best_hand: 9♠ 9♥ 9♣ 2♠ 2♦
+    hand_rank:
+      value: 238
+      name: FullHouse
+      class: NinesOverDeuces
+    outcome: fold
+    net: 0.0
+  shuffled_deck: A♣ T♣ T♠ 9♣ 7♠ A♥ Q♣ 2♥ 9♠ 6♦ J♦ 2♦ Q♦ 3♥ J♥ 9♥ K♦ 2♠ 5♣ A♦ 6♥ 5♥ 6♣ 7♦ 8♠ 2♣ 3♦ 7♣ 4♣ 8♥ T♦ K♣ J♠ 4♠ K♥ 3♠ 8♣ 6♠ 5♠ J♣ T♥ K♠ Q♥ 5♦ 8♦ 4♦ 3♣ 7♥ Q♠ 9♦ A♠ 4♥
+- format_version: 1
+  hand:
+    id: pkarena0-hand-047
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 5
+    button: 1
+    stakes:
+      small_blind: 300.0
+      big_blind: 600.0
+  players:
+  - seat: 0
+    name: You
+    stack: 46248.0
+    hole_cards: K♦ 7♠
+  - seat: 3
+    name: gto
+    stack: 1800.0
+    hole_cards: Q♠ J♥
+  - seat: 4
+    name: tight_passive
+    stack: 6650.0
+    hole_cards: 4♣ T♥
+  - seat: 5
+    name: tight_aggressive
+    stack: 300.0
+    hole_cards: 2♦ 2♣
+  - seat: 6
+    name: abc
+    stack: 35002.0
+    hole_cards: A♥ Q♣
+  streets:
+    preflop:
+      actions:
+      - seat: 3
+        action: post
+        amount: 300.0
+      - seat: 4
+        action: post
+        amount: 600.0
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 3
+        action: raise
+        amount: 1500.0
+      - seat: 4
+        action: fold
+      pot: 600.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: win
+    net: 600.0
+    pot_won: 2100.0
+  - seat: 4
+    outcome: fold
+    net: -600.0
+  - seat: 5
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  shuffled_deck: Q♠ 4♣ 2♦ A♥ K♦ J♥ T♥ 2♣ Q♣ 7♠ 3♠ 3♦ 9♣ K♠ 9♠ 8♠ T♣ 8♦ A♠ 5♣ Q♥ 7♦ K♣ A♦ K♥ 4♦ 3♥ 2♥ 7♣ 6♦ 9♦ 6♥ T♦ 5♠ Q♦ 3♣ 5♦ 4♥ 6♠ 4♠ J♦ J♠ T♠ 5♥ 8♣ 9♥ 7♥ 2♠ J♣ A♣ 6♣ 8♥
+- format_version: 1
+  hand:
+    id: pkarena0-hand-048
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 5
+    button: 2
+    stakes:
+      small_blind: 300.0
+      big_blind: 600.0
+  players:
+  - seat: 0
+    name: You
+    stack: 46248.0
+    hole_cards: A♦ 6♠
+  - seat: 3
+    name: gto
+    stack: 2400.0
+    hole_cards: 7♥ 7♣
+  - seat: 4
+    name: tight_passive
+    stack: 6050.0
+    hole_cards: Q♥ T♥
+  - seat: 5
+    name: tight_aggressive
+    stack: 300.0
+    hole_cards: K♥ 5♦
+  - seat: 6
+    name: abc
+    stack: 35002.0
+    hole_cards: 8♠ A♣
+  board: K♣ 5♣ J♠ 8♦ 6♥
+  streets:
+    preflop:
+      actions:
+      - seat: 3
+        action: post
+        amount: 300.0
+      - seat: 4
+        action: post
+        amount: 600.0
+      - seat: 5
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 0
+        action: call
+        amount: 600.0
+      - seat: 3
+        action: raise
+        amount: 2100.0
+      - seat: 4
+        action: fold
+      - seat: 0
+        action: call
+        amount: 1500.0
+      pot: 4800.0
+    flop:
+      cards: J♠ K♣ 5♣
+      actions:
+      - seat: 3
+        action: bet
+        amount: 300.0
+      - seat: 0
+        action: call
+        amount: 300.0
+      pot: 5400.0
+    turn:
+      card: 8♦
+      actions: []
+      pot: 5400.0
+    river:
+      card: 6♥
+      actions: []
+  results:
+  - seat: 0
+    best_hand: 6♠ 6♥ A♦ K♣ J♠
+    hand_rank:
+      value: 5087
+      name: Pair
+      class: PairOfSixes
+    outcome: lose
+    net: -2400.0
+  - seat: 3
+    best_hand: 7♥ 7♣ K♣ J♠ 8♦
+    hand_rank:
+      value: 4932
+      name: Pair
+      class: PairOfSevens
+    outcome: win
+    net: 3000.0
+    pot_won: 5400.0
+  - seat: 4
+    best_hand: K♣ Q♥ J♠ T♥ 8♦
+    hand_rank:
+      value: 6679
+      name: HighCard
+      class: KingHigh
+    outcome: fold
+    net: -600.0
+  - seat: 5
+    best_hand: K♥ K♣ 5♦ 5♣ J♠
+    hand_rank:
+      value: 2679
+      name: TwoPair
+      class: KingsAndFives
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    best_hand: 8♠ 8♦ A♣ K♣ J♠
+    hand_rank:
+      value: 4647
+      name: Pair
+      class: PairOfEights
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 7♥ Q♥ K♥ 8♠ A♦ 7♣ T♥ 5♦ A♣ 6♠ 3♣ K♣ 5♣ J♠ 2♥ 8♦ 7♦ 6♥ 3♦ K♠ A♥ T♦ Q♦ 8♣ 2♠ J♦ K♦ 3♥ A♠ 6♣ T♣ 2♦ 9♥ 9♠ J♥ 5♥ Q♠ 3♠ 4♣ 6♦ J♣ 9♦ 2♣ Q♣ 8♥ 5♠ 4♥ 4♦ 9♣ 7♠ T♠ 4♠
+- format_version: 1
+  hand:
+    id: pkarena0-hand-049
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 5
+    button: 3
+    stakes:
+      small_blind: 300.0
+      big_blind: 600.0
+  players:
+  - seat: 0
+    name: You
+    stack: 43848.0
+    hole_cards: 8♦ J♠
+  - seat: 3
+    name: gto
+    stack: 5400.0
+    hole_cards: K♣ K♦
+  - seat: 4
+    name: tight_passive
+    stack: 5450.0
+    hole_cards: 6♠ 5♣
+  - seat: 5
+    name: tight_aggressive
+    stack: 300.0
+    hole_cards: T♠ A♣
+  - seat: 6
+    name: abc
+    stack: 35002.0
+    hole_cards: 5♦ J♣
+  board: 7♠ 4♠ 6♥ 3♥ 8♣
+  streets:
+    preflop:
+      actions:
+      - seat: 4
+        action: post
+        amount: 300.0
+      - seat: 5
+        action: post
+        amount: 300.0
+      - seat: 6
+        action: fold
+      - seat: 0
+        action: fold
+      - seat: 3
+        action: call
+        amount: 300.0
+      - seat: 4
+        action: check
+      pot: 900.0
+    flop:
+      cards: 7♠ 4♠ 6♥
+      actions:
+      - seat: 4
+        action: check
+      - seat: 3
+        action: check
+      pot: 900.0
+    turn:
+      card: 3♥
+      actions:
+      - seat: 4
+        action: bet
+        amount: 600.0
+      - seat: 3
+        action: call
+        amount: 600.0
+      pot: 2100.0
+    river:
+      card: 8♣
+      actions:
+      - seat: 4
+        action: bet
+        amount: 1050.0
+      - seat: 3
+        action: call
+        amount: 1050.0
+  results:
+  - seat: 0
+    best_hand: 8♦ 8♣ J♠ 7♠ 6♥
+    hand_rank:
+      value: 4795
+      name: Pair
+      class: PairOfEights
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    best_hand: K♦ K♣ 8♣ 7♠ 6♥
+    hand_rank:
+      value: 3731
+      name: Pair
+      class: PairOfKings
+    outcome: lose
+    net: -1950.0
+  - seat: 4
+    best_hand: 8♣ 7♠ 6♠ 5♣ 4♠
+    hand_rank:
+      value: 1606
+      name: Straight
+      class: EightHighStraight
+    outcome: win
+    net: 2250.0
+    pot_won: 4200.0
+  - seat: 5
+    best_hand: A♣ T♠ 8♣ 7♠ 6♥
+    hand_rank:
+      value: 6575
+      name: HighCard
+      class: AceHigh
+    outcome: lose
+    net: -300.0
+  - seat: 6
+    best_hand: 8♣ 7♠ 6♥ 5♦ 4♠
+    hand_rank:
+      value: 1606
+      name: Straight
+      class: EightHighStraight
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 6♠ T♠ 5♦ 8♦ K♣ 5♣ A♣ J♣ J♠ K♦ 6♦ 7♠ 4♠ 6♥ Q♦ 3♥ Q♥ 8♣ K♥ 8♥ 8♠ 5♠ J♥ 9♠ A♦ 3♠ A♠ K♠ 3♦ Q♠ T♦ 9♥ A♥ 7♣ 2♣ T♣ 3♣ 9♦ Q♣ 7♥ 4♥ 7♦ 2♠ 4♣ T♥ 6♣ 4♦ 2♦ 5♥ 2♥ 9♣ J♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-050
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 4
+    button: 4
+    stakes:
+      small_blind: 400.0
+      big_blind: 800.0
+  players:
+  - seat: 0
+    name: You
+    stack: 43848.0
+    hole_cards: 6♠ 8♥
+  - seat: 3
+    name: gto
+    stack: 3450.0
+    hole_cards: 2♦ T♥
+  - seat: 4
+    name: tight_passive
+    stack: 7700.0
+    hole_cards: 8♠ 3♠
+  - seat: 6
+    name: abc
+    stack: 35002.0
+    hole_cards: 5♥ T♦
+  streets:
+    preflop:
+      actions:
+      - seat: 6
+        action: post
+        amount: 300.0
+      - seat: 0
+        action: post
+        amount: 600.0
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: fold
+      - seat: 6
+        action: fold
+      pot: 300.0
+  results:
+  - seat: 0
+    outcome: win
+    net: 300.0
+    pot_won: 900.0
+  - seat: 3
+    outcome: fold
+    net: 0.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: -300.0
+  shuffled_deck: 5♥ 6♠ 2♦ 8♠ T♦ 8♥ T♥ 3♠ 5♣ J♠ 5♦ 7♦ K♣ 9♠ 6♥ 5♠ 3♣ 4♥ A♥ 7♠ 3♥ A♠ A♦ 9♣ 9♦ T♠ 2♠ 7♣ 2♥ T♣ 2♣ 4♣ Q♠ 7♥ J♦ Q♦ Q♣ A♣ 3♦ 8♦ J♣ 4♠ 6♣ 6♦ Q♥ 4♦ 9♥ J♥ K♦ K♥ K♠ 8♣
+- format_version: 1
+  hand:
+    id: pkarena0-hand-051
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 4
+    button: 5
+    stakes:
+      small_blind: 400.0
+      big_blind: 800.0
+  players:
+  - seat: 0
+    name: You
+    stack: 44148.0
+    hole_cards: J♥ Q♠
+  - seat: 3
+    name: gto
+    stack: 3450.0
+    hole_cards: Q♣ K♠
+  - seat: 4
+    name: tight_passive
+    stack: 7700.0
+    hole_cards: 3♦ 8♣
+  - seat: 6
+    name: abc
+    stack: 34702.0
+    hole_cards: Q♥ A♥
+  board: 3♠ 7♥ 7♣
+  streets:
+    preflop:
+      actions:
+      - seat: 6
+        action: post
+        amount: 400.0
+      - seat: 0
+        action: post
+        amount: 800.0
+      - seat: 3
+        action: raise
+        amount: 1600.0
+      - seat: 4
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 0
+        action: call
+        amount: 800.0
+      pot: 3600.0
+    flop:
+      cards: 3♠ 7♥ 7♣
+      actions:
+      - seat: 0
+        action: all_in
+        amount: 42548.0
+        all_in: true
+      - seat: 3
+        action: fold
+      pot: 3600.0
+  results:
+  - seat: 0
+    outcome: win
+    net: 2000.0
+    pot_won: 46148.0
+  - seat: 3
+    outcome: fold
+    net: -1600.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: -400.0
+  shuffled_deck: Q♥ J♥ Q♣ 3♦ A♥ Q♠ K♠ 8♣ 6♠ 3♠ 7♥ 7♣ 9♣ 9♥ 3♣ 6♦ A♦ 9♦ 8♥ K♣ J♠ K♦ T♥ 8♠ A♠ 7♦ 4♥ Q♦ 8♦ A♣ 4♦ 3♥ 4♠ 5♥ 5♠ T♣ 2♦ 2♥ J♣ T♦ 2♠ J♦ 4♣ 2♣ 7♠ 5♦ K♥ 6♣ 6♥ 5♣ 9♠ T♠
+- format_version: 1
+  hand:
+    id: pkarena0-hand-052
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 4
+    button: 6
+    stakes:
+      small_blind: 400.0
+      big_blind: 800.0
+  players:
+  - seat: 0
+    name: You
+    stack: 46148.0
+    hole_cards: 4♦ A♠
+  - seat: 3
+    name: gto
+    stack: 1850.0
+    hole_cards: A♦ 3♦
+  - seat: 4
+    name: tight_passive
+    stack: 7700.0
+    hole_cards: 3♠ Q♣
+  - seat: 6
+    name: abc
+    stack: 34302.0
+    hole_cards: J♣ K♠
+  board: T♥ 2♦ 4♥
+  streets:
+    preflop:
+      actions:
+      - seat: 0
+        action: post
+        amount: 400.0
+      - seat: 3
+        action: post
+        amount: 800.0
+      - seat: 4
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 0
+        action: call
+        amount: 400.0
+      - seat: 3
+        action: check
+      pot: 1600.0
+    flop:
+      cards: T♥ 4♥ 2♦
+      actions:
+      - seat: 0
+        action: all_in
+        amount: 45348.0
+        all_in: true
+      - seat: 3
+        action: fold
+      pot: 1600.0
+  results:
+  - seat: 0
+    outcome: win
+    net: 800.0
+    pot_won: 46948.0
+  - seat: 3
+    outcome: fold
+    net: -800.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 4♦ A♦ 3♠ J♣ A♠ 3♦ Q♣ K♠ T♦ T♥ 2♦ 4♥ Q♦ 8♣ T♣ Q♥ J♦ 6♣ 3♥ 7♥ 5♦ J♠ Q♠ K♣ 8♦ 5♥ J♥ A♥ K♦ 8♠ 5♣ 8♥ 6♠ 9♦ 3♣ 9♠ 2♥ 9♥ 9♣ A♣ 7♠ 4♣ 6♥ 7♣ 4♠ 2♠ K♥ 5♠ 7♦ T♠ 6♦ 2♣
+- format_version: 1
+  hand:
+    id: pkarena0-hand-053
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 4
+    button: 7
+    stakes:
+      small_blind: 400.0
+      big_blind: 800.0
+  players:
+  - seat: 0
+    name: You
+    stack: 46948.0
+    hole_cards: 4♦ 4♥
+  - seat: 3
+    name: gto
+    stack: 1050.0
+    hole_cards: 7♣ 6♠
+  - seat: 4
+    name: tight_passive
+    stack: 7700.0
+    hole_cards: 4♠ 9♥
+  - seat: 6
+    name: abc
+    stack: 34302.0
+    hole_cards: 2♣ K♥
+  streets:
+    preflop:
+      actions:
+      - seat: 0
+        action: post
+        amount: 400.0
+      - seat: 3
+        action: post
+        amount: 800.0
+      - seat: 4
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 0
+        action: raise
+        amount: 1600.0
+      - seat: 3
+        action: fold
+      pot: 800.0
+  results:
+  - seat: 0
+    outcome: win
+    net: 800.0
+    pot_won: 2400.0
+  - seat: 3
+    outcome: fold
+    net: -800.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 4♦ 7♣ 4♠ 2♣ 4♥ 6♠ 9♥ K♥ K♦ Q♦ A♣ 5♥ 6♦ 5♠ 3♥ T♣ Q♠ 9♣ 6♥ T♥ 7♥ A♠ J♣ 3♦ 6♣ T♦ J♦ 8♥ 8♣ 5♦ 9♦ J♥ 9♠ 2♠ T♠ J♠ 3♣ A♦ 7♠ 4♣ 2♦ 8♦ K♠ Q♣ 5♣ K♣ 3♠ 8♠ 7♦ 2♥ Q♥ A♥
+- format_version: 1
+  hand:
+    id: pkarena0-hand-054
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 4
+    button: 8
+    stakes:
+      small_blind: 400.0
+      big_blind: 800.0
+  players:
+  - seat: 0
+    name: You
+    stack: 47748.0
+    hole_cards: 8♦ 4♠
+  - seat: 3
+    name: gto
+    stack: 250.0
+    hole_cards: 8♠ J♥
+  - seat: 4
+    name: tight_passive
+    stack: 7700.0
+    hole_cards: A♥ Q♣
+  - seat: 6
+    name: abc
+    stack: 34302.0
+    hole_cards: 9♥ 8♣
+  board: 5♣ K♣ 9♣ Q♥ T♥
+  streets:
+    preflop:
+      actions:
+      - seat: 0
+        action: post
+        amount: 400.0
+      - seat: 3
+        action: post
+        amount: 250.0
+      - seat: 4
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 0
+        action: all_in
+        amount: 47748.0
+        all_in: true
+      pot: 47998.0
+    flop:
+      cards: K♣ 9♣ 5♣
+      actions: []
+      pot: 47998.0
+    turn:
+      card: Q♥
+      actions: []
+      pot: 47998.0
+    river:
+      card: T♥
+      actions: []
+  results:
+  - seat: 0
+    best_hand: K♣ Q♥ T♥ 9♣ 8♦
+    hand_rank:
+      value: 6714
+      name: HighCard
+      class: KingHigh
+    outcome: win
+    net: -250.0
+    pot_won: 47498.0
+  - seat: 3
+    best_hand: K♣ Q♥ J♥ T♥ 9♣
+    hand_rank:
+      value: 1601
+      name: Straight
+      class: KingHighStraight
+    outcome: win
+    net: 250.0
+    pot_won: 500.0
+  - seat: 4
+    best_hand: Q♥ Q♣ A♥ K♣ T♥
+    hand_rank:
+      value: 3767
+      name: Pair
+      class: PairOfQueens
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    best_hand: 9♥ 9♣ K♣ Q♥ T♥
+    hand_rank:
+      value: 4482
+      name: Pair
+      class: PairOfNines
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 8♦ 8♠ A♥ 9♥ 4♠ J♥ Q♣ 8♣ 7♠ 5♣ K♣ 9♣ 2♥ Q♥ T♦ T♥ J♠ 5♦ Q♦ 3♣ A♦ A♠ 7♣ 7♦ 5♠ 6♣ T♣ 8♥ 3♠ 4♣ 3♥ 9♠ Q♠ 3♦ A♣ 4♦ K♠ J♦ 2♠ T♠ 2♦ J♣ 6♦ 7♥ 4♥ 2♣ 9♦ K♥ 6♥ 5♥ 6♠ K♦
+- format_version: 1
+  hand:
+    id: pkarena0-hand-055
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 4
+    button: 0
+    stakes:
+      small_blind: 400.0
+      big_blind: 800.0
+  players:
+  - seat: 0
+    name: You
+    stack: 47498.0
+    hole_cards: 4♠ 8♣
+  - seat: 3
+    name: gto
+    stack: 500.0
+    hole_cards: 4♥ A♥
+  - seat: 4
+    name: tight_passive
+    stack: 7700.0
+    hole_cards: 4♦ A♦
+  - seat: 6
+    name: abc
+    stack: 34302.0
+    hole_cards: 8♥ 2♥
+  board: 5♦ T♣ 3♦ 3♥ 6♦
+  streets:
+    preflop:
+      actions:
+      - seat: 3
+        action: post
+        amount: 400.0
+      - seat: 4
+        action: post
+        amount: 800.0
+      - seat: 6
+        action: fold
+      - seat: 0
+        action: call
+        amount: 800.0
+      - seat: 3
+        action: fold
+      - seat: 4
+        action: check
+      pot: 2000.0
+    flop:
+      cards: 5♦ 3♦ T♣
+      actions:
+      - seat: 4
+        action: check
+      - seat: 0
+        action: check
+      pot: 2000.0
+    turn:
+      card: 3♥
+      actions:
+      - seat: 4
+        action: check
+      - seat: 0
+        action: check
+      pot: 2000.0
+    river:
+      card: 6♦
+      actions:
+      - seat: 4
+        action: bet
+        amount: 1000.0
+      - seat: 0
+        action: fold
+      pot: 2000.0
+  results:
+  - seat: 0
+    best_hand: 3♥ 3♦ T♣ 8♣ 6♦
+    hand_rank:
+      value: 5917
+      name: Pair
+      class: PairOfTreys
+    outcome: fold
+    net: -800.0
+  - seat: 3
+    best_hand: 3♥ 3♦ A♥ T♣ 6♦
+    hand_rank:
+      value: 5776
+      name: Pair
+      class: PairOfTreys
+    outcome: fold
+    net: -400.0
+  - seat: 4
+    best_hand: A♦ 6♦ 5♦ 4♦ 3♦
+    hand_rank:
+      value: 812
+      name: Flush
+      class: AceHighFlush
+    outcome: win
+    net: 1200.0
+    pot_won: 3000.0
+  - seat: 6
+    best_hand: 3♥ 3♦ T♣ 8♥ 6♦
+    hand_rank:
+      value: 5917
+      name: Pair
+      class: PairOfTreys
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 4♥ 4♦ 8♥ 4♠ A♥ A♦ 2♥ 8♣ 7♣ 5♦ T♣ 3♦ K♦ 3♥ J♦ 6♦ 3♠ 6♣ Q♠ 7♦ 9♣ 2♣ 7♥ 5♥ 4♣ 9♦ 2♦ 7♠ 8♦ J♥ 5♣ Q♦ 8♠ J♠ 6♥ 6♠ 9♠ T♦ 2♠ J♣ T♥ K♣ 5♠ K♥ T♠ Q♥ A♠ A♣ K♠ Q♣ 9♥ 3♣
+- format_version: 1
+  hand:
+    id: pkarena0-hand-056
+    game: holdem
+    timestamp: '0'
+    source: pkarena0
+  table:
+    name: pkarena0
+    seats: 4
+    button: 1
+    stakes:
+      small_blind: 400.0
+      big_blind: 800.0
+  players:
+  - seat: 0
+    name: You
+    stack: 46698.0
+    hole_cards: Q♦ 2♥
+  - seat: 3
+    name: gto
+    stack: 100.0
+    hole_cards: 5♣ Q♥
+  - seat: 4
+    name: tight_passive
+    stack: 8900.0
+    hole_cards: J♣ 5♠
+  - seat: 6
+    name: abc
+    stack: 34302.0
+    hole_cards: 9♥ 8♣
+  board: 7♠ 7♥ 8♦ T♠ 3♥
+  streets:
+    preflop:
+      actions:
+      - seat: 3
+        action: post
+        amount: 100.0
+      - seat: 4
+        action: post
+        amount: 800.0
+      - seat: 6
+        action: fold
+      - seat: 0
+        action: call
+        amount: 800.0
+      - seat: 4
+        action: check
+      pot: 1700.0
+    flop:
+      cards: 7♠ 7♥ 8♦
+      actions:
+      - seat: 4
+        action: check
+      - seat: 0
+        action: all_in
+        amount: 45898.0
+        all_in: true
+      - seat: 4
+        action: fold
+      pot: 47598.0
+    turn:
+      card: T♠
+      actions: []
+      pot: 47598.0
+    river:
+      card: 3♥
+      actions: []
+  results:
+  - seat: 0
+    best_hand: 7♠ 7♥ Q♦ T♠ 8♦
+    hand_rank:
+      value: 4975
+      name: Pair
+      class: PairOfSevens
+    outcome: win
+    net: 750.0
+    pot_won: 47448.0
+  - seat: 3
+    best_hand: 7♠ 7♥ Q♥ T♠ 8♦
+    hand_rank:
+      value: 4975
+      name: Pair
+      class: PairOfSevens
+    outcome: win
+    net: 50.0
+    pot_won: 150.0
+  - seat: 4
+    best_hand: 7♠ 7♥ J♣ T♠ 8♦
+    hand_rank:
+      value: 5003
+      name: Pair
+      class: PairOfSevens
+    outcome: fold
+    net: -800.0
+  - seat: 6
+    best_hand: 8♦ 8♣ 7♠ 7♥ T♠
+    hand_rank:
+      value: 3099
+      name: TwoPair
+      class: EightsAndSevens
+    outcome: fold
+    net: 0.0
+  shuffled_deck: 5♣ J♣ 9♥ Q♦ Q♥ 5♠ 8♣ 2♥ 6♦ 7♠ 7♥ 8♦ 2♣ T♠ K♠ 3♥ T♥ 5♦ Q♣ T♦ 4♠ 6♠ 7♦ 3♣ 4♥ K♥ 4♣ 4♦ A♦ A♥ 6♥ 5♥ 7♣ A♣ J♦ T♣ J♥ A♠ 8♥ J♠ 9♠ K♣ 3♠ Q♠ 9♦ 3♦ 8♠ 9♣ 2♠ 2♦ 6♣ K♦

@@ -23,7 +23,7 @@ use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
 use crate::{Agency, PKError, Pile};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;
 
@@ -2494,8 +2494,8 @@ impl TableNoCell {
             rank_b.cmp(&rank_a)
         });
 
-        let mut processed_chip_levels: HashSet<usize> = HashSet::new();
         let mut last_winner: Option<u8> = None;
+        let mut main_pot_paid = false;
 
         for &winner_seat in &overall_winners {
             if equity.is_empty() {
@@ -2508,20 +2508,22 @@ impl TableNoCell {
                 .find(|e| e.seats != Seatbit::NONE && (e.seats & winner_sb) != Seatbit::NONE)
                 .map(|e| e.chips)
             else {
+                // This winner's entry was already consumed by a prior layer's
+                // `equity.winnings()` call — they were paid then. Continue.
                 continue;
             };
-
-            if processed_chip_levels.contains(&winner_chip_level) {
-                continue;
-            }
-            processed_chip_levels.insert(winner_chip_level);
 
             // Tied winners eligible for THIS pot layer = every overall winner
             // whose current commitment can cover the layer's cap. The earlier
             // `== winner_chip_level` form excluded tied winners with deeper
             // commitments (their entry has higher `chips`), causing the lower
             // stack to take the entire main pot uncontested when tied with a
-            // deeper stack.
+            // deeper stack. Note: we no longer skip on a `processed_chip_levels`
+            // set, because in 3+-way asymmetric ties a later iteration's winner
+            // may legitimately have the same raw chip-level value as an earlier
+            // iteration after side-pot subtraction (e.g., A=100, B=200, C=500
+            // tied: iter 2 sees B with chips=100 — that's a *different* layer
+            // than iter 1's level, even though the numeric value collides).
             let tied_at_level: Vec<u8> = overall_winners
                 .iter()
                 .filter(|&&s| {
@@ -2540,7 +2542,8 @@ impl TableNoCell {
             equity = remaining;
 
             let shares = divvy_up(total, tied_at_level.len());
-            let is_main_pot = processed_chip_levels.len() == 1;
+            let is_main_pot = !main_pot_paid;
+            main_pot_paid = true;
 
             for (i, &seat_num) in tied_at_level.iter().enumerate() {
                 let share = shares.get(i).copied().unwrap_or(0);

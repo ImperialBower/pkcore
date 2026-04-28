@@ -200,11 +200,38 @@ A longer-term simplification — eliminating `showdown_headsup` / `process_heads
 
 ---
 
-## Follow-ups
+## Follow-ups (closed in this same release)
 
-- **Cell-based parallel tests not yet added.** The cell-based fix in `src/casino/table/showdown.rs` is structurally identical to the no-cell fix and all 8,941 + 570 doc tests pass, but no test directly exercises the cell-based heads-up asymmetric path. The cell-based test infrastructure (`TestData`) does not currently include a 2-player heads-up convenience helper; adding one was deemed out of scope for this fix. Defer to a follow-up PR.
-- **Downstream audit.** Run the `audit-release` skill against `pkarena0-web`, `pkdealer`, `pkpy`, and `pknotebook` before tagging the fix release. The reported `pot_won` and `net` numbers in YAML hand histories will change for any prior buggy hand; any consumer that hard-coded buggy distribution as expected output will need to be re-baselined. The Gus Hansen test fix in this PR (broadened to accept `PlayerWinsMainPot`) is the same kind of update those consumers will likely need.
-- **Three-way-asymmetric tied edge case.** The `processed_chip_levels` set in `showdown_multiway` keys on the raw chip-count value, which can incorrectly skip an iteration when three winners are tied with three different chip levels (the second iteration's "after subtraction" remaining can collide with the first iteration's chip level). Not relevant to the user's reported defect (which is two-way) and not currently triggered by any existing test, but worth investigating before relying on multiway for higher-arity tied splits.
+All three originally-deferred coverage gaps were addressed in 0.0.52
+before tagging:
+
+- **Cell-based parallel tests added.** Three new tests now live in
+  `src/casino/table/showdown.rs`'s `casino__table__showdown_tests`
+  module (`process_headsup_tied_with_short_all_in_returns_uncalled_excess`,
+  `process_headsup_short_winner_excess_returned_to_deep_stack`,
+  `process_headsup_symmetric_tied_split_50_50`) plus a private
+  `build_headsup_table` helper. Cell-based fix is now directly
+  exercised, not just structurally inferred.
+- **Three-way-asymmetric tied edge case fixed.** What was originally
+  noted as a latent edge case turned out to be straightforwardly
+  reproducible: three players tied with chip levels 100/200/500
+  produced 100/100/600 instead of the correct 100/200/500. The
+  `processed_chip_levels` set was dropped entirely in both
+  `showdown_multiway` and `process_multiway` because each overall
+  winner is iterated once and the natural `find → continue` path
+  already handles consumed-entry cases. The `is_main_pot` flag (used
+  to choose between `PlayerWinsMainPot` and `PlayerWinsSidePot`
+  events) now toggles on a `main_pot_paid: bool` instead of
+  `processed_chip_levels.len() == 1`. New regression test:
+  `tests/split_pots.rs::three_way_asymmetric_tied_chops_correctly`.
+- **Downstream audit completed.** See
+  [`RELEASE_AUDIT_0.0.52.md`](./RELEASE_AUDIT_0.0.52.md). All six
+  audited downstream repos (pkpy, pknotebook, pkdealer×2, pkgto-web,
+  pkkuhn-web, pkarena0-web) compile cleanly against local pkcore
+  0.0.52 with path overrides. Zero downstream uses
+  `TableAction::PlayerWins`-only matching. Zero downstream has
+  hard-coded buggy `pot_won`/`net` values. Action items reduce to
+  Cargo.toml version bumps where consumers want the fix.
 
 ## Affected Code
 

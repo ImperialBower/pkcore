@@ -383,4 +383,65 @@ mod casino__table_no_cell__split_pot_tests {
             "symmetric tied heads-up: each gets back their stack, got s1={s1}"
         );
     }
+
+    /// Three-way all-in with **asymmetric** chip commitments and all three
+    /// players tied at showdown. This exercises a `showdown_multiway` edge
+    /// case: when overall winners have different commitments, processing
+    /// must distribute each pot layer in turn to all winners eligible for
+    /// it. Layer 1 (cap 100) splits 3 ways; layer 2 (cap 100→200) splits 2
+    /// ways between the two deeper winners; layer 3 (cap 200→500) goes
+    /// solo to the deepest winner. Expected: every player ends at their
+    /// starting stack (chop).
+    ///
+    /// Buggy form (`processed_chip_levels` keying on raw chip count): the
+    /// second-layer iteration sees `chip_level == 100` after subtraction
+    /// and incorrectly matches the first iteration's processed value,
+    /// skipping layer 2 distribution and absorbing those chips into a
+    /// later iteration. The medium stack ends short and the deepest stack
+    /// ends long.
+    #[test]
+    fn three_way_asymmetric_tied_chops_correctly() {
+        let mut seat_a = SeatNoCell::new(PlayerNoCell::new_with_chips("Short".to_string(), 100));
+        seat_a.cards = BoxedCards::from_str("7♦ 2♣").unwrap();
+        let mut seat_b = SeatNoCell::new(PlayerNoCell::new_with_chips("Mid".to_string(), 200));
+        seat_b.cards = BoxedCards::from_str("4♦ 5♦").unwrap();
+        let mut seat_c = SeatNoCell::new(PlayerNoCell::new_with_chips("Deep".to_string(), 500));
+        seat_c.cards = BoxedCards::from_str("8♥ 9♥").unwrap();
+
+        let seats = SeatsNoCell::new(vec![seat_a, seat_b, seat_c]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+
+        // Same four-aces-on-board rig — all three players play the board.
+        rig_deck(
+            &mut table,
+            "6♣ A♥ A♦ A♣ 6♦ A♠ 6♥ K♥",
+            "7♦ 2♣ 4♦ 5♦ 8♥ 9♥ 6♣ A♥ A♦ A♣ 6♦ A♠ 6♥ K♥",
+        );
+
+        table.act_forced_bets().unwrap();
+        // 3-handed: button=0 → SB=1, BB=2; UTG (first to act preflop) = seat 0.
+        let utg = table.next_to_act();
+        table.act_all_in(utg).unwrap();
+        let next = table.next_to_act();
+        table.act_all_in(next).unwrap();
+        let next = table.next_to_act();
+        table.act_all_in(next).unwrap();
+
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+        table.deal_turn().unwrap();
+        table.deal_river().unwrap();
+        assert!(table.is_game_over());
+
+        let result = table.end_hand();
+        assert!(result.is_ok(), "end_hand failed: {result:?}");
+
+        let s0 = table.seats.get_seat(0).unwrap().player.chips;
+        let s1 = table.seats.get_seat(1).unwrap().player.chips;
+        let s2 = table.seats.get_seat(2).unwrap().player.chips;
+        assert_eq!(800, table.table_chip_count(), "chips must be conserved across the hand");
+        assert_eq!(100, s0, "short tied chop: must end at starting stack 100, got {s0}");
+        assert_eq!(200, s1, "mid tied chop: must end at starting stack 200, got {s1}");
+        assert_eq!(500, s2, "deep tied chop: must end at starting stack 500, got {s2}");
+    }
 }
