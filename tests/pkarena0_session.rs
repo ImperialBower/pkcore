@@ -20,8 +20,7 @@ const SESSION_YAML: &str = include_str!("../data/hands/pkarena0-session_2026-04-
 /// Session captured by a user reporting "GTO bot is out of chips but keeps
 /// playing". 56 hands, blinds escalate from 50/100 → 400/800, gto's stack
 /// drops to 100 chips for the final hand and goes all-in for less than the SB.
-const SESSION_2026_04_28_YAML: &str =
-    include_str!("../data/hands/pkarena0-session_2026-04-28.yaml");
+const SESSION_2026_04_28_YAML: &str = include_str!("../data/hands/pkarena0-session_2026-04-28.yaml");
 
 fn load_session() -> HandCollection {
     HandCollection::from_yaml(SESSION_YAML).expect("fixture YAML should parse")
@@ -183,9 +182,7 @@ fn session_2026_04_28_stakes_match_post_amounts() {
         let (sb_seat, sb_post) = post_actions[0];
         let (bb_seat, bb_post) = post_actions[1];
 
-        let stack_for = |seat: u8| -> Option<f64> {
-            hand.players.iter().find(|p| p.seat == seat).map(|p| p.stack)
-        };
+        let stack_for = |seat: u8| -> Option<f64> { hand.players.iter().find(|p| p.seat == seat).map(|p| p.stack) };
 
         let sb_could_post = stack_for(sb_seat).is_none_or(|s| s >= recorded_sb - 0.01);
         let bb_could_post = stack_for(bb_seat).is_none_or(|s| s >= recorded_bb - 0.01);
@@ -230,11 +227,7 @@ fn list_drift_hands() {
         {
             println!(
                 "DRIFT {}: stakes={}/{}, posts={}/{}",
-                hand.hand.id,
-                hand.table.stakes.small_blind,
-                hand.table.stakes.big_blind,
-                posts[0],
-                posts[1],
+                hand.hand.id, hand.table.stakes.small_blind, hand.table.stakes.big_blind, posts[0], posts[1],
             );
         }
     }
