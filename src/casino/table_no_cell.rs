@@ -3774,10 +3774,10 @@ mod tests {
 
         let utg = table.determine_utg();
         assert_eq!(100, table.to_call(utg));
-        table.act_call(utg).unwrap();   // UTG commits 100
+        table.act_call(utg).unwrap(); // UTG commits 100
 
         let sb = table.determine_small_blind();
-        table.act_fold(sb).unwrap();    // SB folds with 50 already in pot
+        table.act_fold(sb).unwrap(); // SB folds with 50 already in pot
 
         // BB is all-in, UTG is the only active non-all-in player. Preflop closes.
         table.bring_it_in().unwrap();
