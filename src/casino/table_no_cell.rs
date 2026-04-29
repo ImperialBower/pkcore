@@ -1712,7 +1712,7 @@ impl TableNoCell {
     pub fn act_forced_bet_big_blind(&mut self) -> Result<(), PKError> {
         let bb = self.determine_big_blind();
         let actual = self.seats.act_forced_bet(bb, self.forced.big_blind)?;
-        self.bet = actual;
+        self.bet = self.forced.big_blind;
         self.log(TableAction::ForcedBetBigBlind(bb, actual));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(())
@@ -1834,14 +1834,22 @@ impl TableNoCell {
         let seat_bet = self.seats.get_seat(seat_number).map_or(0, |s| s.player.bet);
         let to_call = call_target.saturating_sub(seat_bet);
         let seat = self.seats.get_seat_mut(seat_number).ok_or(PKError::InvalidSeatNumber)?;
-        if to_call == 0 {
+        let actual_added = if to_call == 0 {
             seat.player.act_check()?;
+            0
+        } else if seat.player.chips < to_call {
+            // Caller cannot cover the full call target — go all-in for partial.
+            // Side pots and uncalled-bet returns at showdown reconcile the difference
+            // (see docs/BUGFIX_short_blind_call_target.md).
+            let total_bet = seat.player.act_all_in()?;
+            total_bet.saturating_sub(seat_bet)
         } else {
             seat.player.act_call(call_target)?;
-        }
-        self.log(TableAction::Call(seat_number, to_call));
+            to_call
+        };
+        self.log(TableAction::Call(seat_number, actual_added));
         self.log(TableAction::ActionTo(self.next_to_act()));
-        Ok(to_call)
+        Ok(actual_added)
     }
 
     /// Checks for seat `seat_number`.
@@ -3296,10 +3304,12 @@ mod tests {
         );
     }
 
-    // Regression: when BB is short-stacked, other players should only need to call
-    // what the BB actually posted, not the configured blind amount.
+    // Regression: when BB is short-stacked, other players must still call the configured
+    // blind amount (the call target stays anchored at full BB). The BB's short post caps
+    // what the all-in BB can win at showdown via side-pot stratification, but the call
+    // amount itself does not drop. See docs/BUGFIX_short_blind_call_target.md.
     #[test]
-    fn table_no_cell_to_call_capped_at_short_stack_bb() {
+    fn table_no_cell_to_call_uses_full_bb_when_bb_short() {
         // button=0: seat 0 = UTG/button, seat 1 = SB, seat 2 = BB (short-stacked)
         let seats = SeatsNoCell::new(vec![
             SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
@@ -3309,8 +3319,8 @@ mod tests {
         let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
         table.act_forced_bets().unwrap();
         let utg = table.determine_utg();
-        // UTG should call 60 (what BB actually posted), not 100 (the configured blind).
-        assert_eq!(60, table.to_call(utg));
+        // UTG must call the full configured 100, not the 60 BB actually posted.
+        assert_eq!(100, table.to_call(utg));
     }
 
     #[test]
@@ -3342,8 +3352,9 @@ mod tests {
 
     #[test]
     fn table_no_cell_forced_bets_short_bb_to_call_full_amount() {
-        // BB (seat 2) has only 30 chips — posts all-in; UTG (seat 0) needs to call
-        // only what BB actually posted (30), not the configured blind (100).
+        // BB (seat 2) has only 30 chips — posts all-in; UTG (seat 0) must still call the
+        // full 100 BB. The 70 excess will form a side pot at showdown that BB cannot win,
+        // or be returned to UTG as uncalled if no other player matches it.
         let seats = SeatsNoCell::new(vec![
             SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
@@ -3359,12 +3370,14 @@ mod tests {
         let _ = bb;
 
         let utg = table.determine_utg();
-        assert_eq!(30, table.to_call(utg));
+        assert_eq!(100, table.to_call(utg));
     }
 
     #[test]
     fn table_no_cell_act_call_after_short_blind() {
-        // BB (seat 2) short-stack; UTG (seat 0) calls — commits only what BB posted (30).
+        // BB (seat 2) short-stack; UTG (seat 0) calls — commits the full 100 BB even
+        // though BB only posted 30. Side pots / uncalled returns at showdown reconcile
+        // the difference.
         let seats = SeatsNoCell::new(vec![
             SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
@@ -3378,7 +3391,7 @@ mod tests {
         table.act_call(utg).unwrap();
 
         let utg_seat = table.seats.get_seat(utg).unwrap();
-        assert_eq!(30, utg_seat.player.bet);
+        assert_eq!(100, utg_seat.player.bet);
     }
 
     // ── Chip audit ────────────────────────────────────────────────────────────
@@ -3656,5 +3669,226 @@ mod tests {
             table.deck.len(),
             "river should consume burn + river card (2 total)"
         );
+    }
+
+    // ── Short-stack BB chip-conservation regression tests ────────────────────
+    //
+    // See docs/BUGFIX_short_blind_call_target.md. Under standard cardroom rules,
+    // when the BB is all-in for less than the configured blind, other players
+    // must still call the full configured BB. Chip conservation is preserved
+    // through side-pot stratification (multiway) or uncalled-bet returns
+    // (heads-up, or when no second contestant exists at a tier).
+
+    /// Scenario A — multiway: both SB and UTG call. BB all-in for 60 of 100.
+    /// Total committed = 260 = main pot 180 (cap 60, all eligible) + side pot
+    /// 80 (cap 40, SB and UTG eligible). Chip conservation must hold across
+    /// every showdown outcome.
+    #[test]
+    fn table_no_cell_short_bb_chip_conservation_multiway_showdown() {
+        let starting_total = 5_000 + 5_000 + 60;
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 60)),
+        ]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        // After forced bets, UTG must call the full configured 100, not the
+        // 60 BB physically posted.
+        let utg = table.determine_utg();
+        assert_eq!(100, table.to_call(utg));
+        table.act_call(utg).unwrap();
+
+        // SB needs to call 50 more to complete to 100.
+        let sb = table.determine_small_blind();
+        assert_eq!(50, table.to_call(sb));
+        table.act_call(sb).unwrap();
+
+        // BB is all-in (skipped). UTG and SB still active — must check through
+        // each post-flop street. bring_it_in already resets state correctly
+        // (preserves AllIn for tapped-out seats); calling reset_state_in_hand
+        // here would clobber BB's AllIn flag and break round-completion checks.
+        table.bring_it_in().unwrap();
+
+        // ── Flop ──
+        table.deal_flop().unwrap();
+        let s = table.next_to_act();
+        table.act_check(s).unwrap();
+        let s = table.next_to_act();
+        table.act_check(s).unwrap();
+
+        // ── Turn ──
+        table.bring_it_in().unwrap();
+        table.deal_turn().unwrap();
+        let s = table.next_to_act();
+        table.act_check(s).unwrap();
+        let s = table.next_to_act();
+        table.act_check(s).unwrap();
+
+        // ── River ──
+        table.bring_it_in().unwrap();
+        table.deal_river().unwrap();
+        let s = table.next_to_act();
+        table.act_check(s).unwrap();
+        let s = table.next_to_act();
+        table.act_check(s).unwrap();
+
+        assert!(table.is_game_over());
+
+        let result = table.end_hand();
+        assert!(result.is_ok(), "end_hand failed: {result:?}");
+
+        // Chip conservation: total chips on the table after the hand must equal
+        // the sum of starting stacks. The pot construction (main 180 + side 80)
+        // and all distribution paths must preserve this invariant.
+        assert_eq!(
+            starting_total,
+            table.table_chip_count(),
+            "chips not conserved across multiway short-BB showdown"
+        );
+    }
+
+    /// Scenario B — heads-up after fold (REQUIRED case). Only UTG calls; SB
+    /// folds. UTG's 40 chips above BB's all-in cap have no second contestant
+    /// and must be returned as an uncalled bet. No awardable side pot exists.
+    ///
+    /// Chip conservation:
+    ///   If BB wins:  BB=170, UTG=4940 (lost only 60), SB=4950. Total 10_060.
+    ///   If UTG wins: BB=0, UTG=5110 (won 110), SB=4950. Total 10_060.
+    ///
+    /// The critical assertion is that UTG's ending stack is in {4940, 5110} —
+    /// any other value (e.g. 4900 or 5070) means the 40 was not returned.
+    #[test]
+    fn table_no_cell_short_bb_uncalled_excess_returned_to_sole_caller() {
+        let starting_total = 5_000 + 5_000 + 60;
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 60)),
+        ]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        let utg = table.determine_utg();
+        assert_eq!(100, table.to_call(utg));
+        table.act_call(utg).unwrap();   // UTG commits 100
+
+        let sb = table.determine_small_blind();
+        table.act_fold(sb).unwrap();    // SB folds with 50 already in pot
+
+        // BB is all-in, UTG is the only active non-all-in player. Preflop closes.
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+        table.deal_turn().unwrap();
+        table.deal_river().unwrap();
+        assert!(table.is_game_over());
+
+        let result = table.end_hand();
+        assert!(result.is_ok(), "end_hand failed: {result:?}");
+
+        // Chip conservation across the entire hand.
+        assert_eq!(
+            starting_total,
+            table.table_chip_count(),
+            "chips not conserved when SB folds short-BB scenario"
+        );
+
+        // Specifically verify UTG's 40-chip uncalled excess was returned.
+        // UTG ends at 4940 (lost only 60) or 5110 (won 170 main + 40 returned − 100 committed).
+        // Any other value means the uncalled-bet-return mechanism failed.
+        let utg_chips = table.seats.get_seat(utg).unwrap().player.chips;
+        assert!(
+            utg_chips == 4_940 || utg_chips == 5_110,
+            "UTG ending stack must be 4940 (BB wins) or 5110 (UTG wins); got {utg_chips} \
+             — uncalled 40 was not returned"
+        );
+    }
+
+    /// Scenario C — caller also short. BB all-in for 60, UTG all-in for 80,
+    /// SB calls full 100. Three-tier stratification with main pot 180, side
+    /// pot 40, and SB's excess 20 returned (no third contestant for that tier).
+    ///
+    /// Total committed = 60 + 100 + 80 = 240. Awardable = 220, returned = 20.
+    #[test]
+    fn table_no_cell_short_bb_caller_also_short_chip_conservation() {
+        let starting_total = 80 + 5_000 + 60;
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 80)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 60)),
+        ]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        // UTG cannot cover the 100 call target — must convert to all-in for 80.
+        let utg = table.determine_utg();
+        table.act_call(utg).unwrap();
+
+        // SB calls 50 more to complete to 100.
+        let sb = table.determine_small_blind();
+        table.act_call(sb).unwrap();
+
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+        table.deal_turn().unwrap();
+        table.deal_river().unwrap();
+        assert!(table.is_game_over());
+
+        let result = table.end_hand();
+        assert!(result.is_ok(), "end_hand failed: {result:?}");
+
+        assert_eq!(
+            starting_total,
+            table.table_chip_count(),
+            "chips not conserved across three-tier short-stack showdown"
+        );
+
+        // SB's 20 excess (over UTG's 80 all-in cap) must be returned regardless
+        // of outcome, since no third party committed at that level. SB's ending
+        // stack therefore must be at least 4_920 (5000 − 100 + 20 returned)
+        // even if SB lost both contested pots.
+        let sb_chips = table.seats.get_seat(sb).unwrap().player.chips;
+        assert!(
+            sb_chips >= 4_920,
+            "SB's 20 excess uncalled chips were not returned; SB ended at {sb_chips}"
+        );
+    }
+
+    /// Min-raise validation must remain anchored to the configured BB even when
+    /// the BB is all-in for less. A raise to 130 over a short BB of 30 has an
+    /// increment of 30 — less than min_raise (100) — and must be rejected.
+    /// A raise to 200 has increment 100 = min_raise and must be accepted.
+    #[test]
+    fn table_no_cell_short_bb_min_raise_anchors_to_full_blind() {
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 30)),
+        ]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        // self.bet should be 100 (configured BB) under standard rules.
+        assert_eq!(100, table.bet);
+        // min_raise stays at the configured BB even though BB physically posted 30.
+        assert_eq!(100, table.min_raise());
+
+        let utg = table.determine_utg();
+        // Raise to 130 — increment 30 < min_raise 100 → reject.
+        let bad = table.act_raise(utg, 130);
+        assert!(
+            bad.is_err(),
+            "raise to 130 over short-30 BB must be rejected (increment < min_raise)"
+        );
+
+        // Raise to 200 — increment 100 = min_raise → accept.
+        table
+            .act_raise(utg, 200)
+            .expect("raise to 200 must be accepted (increment = min_raise)");
     }
 }

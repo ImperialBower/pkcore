@@ -411,14 +411,22 @@ impl TableCelled {
         let to_call = call_target.saturating_sub(seat_bet);
         // seat_bet Ref is dropped (map_or consumed it); safe to borrow mutably now.
         if let Some(seat) = self.seats.get_seat_mut(seat_number) {
-            if to_call == 0 {
+            let actual_added = if to_call == 0 {
                 seat.player.act_check()?;
+                0
+            } else if seat.player.chips.count() < to_call {
+                // Caller cannot cover the full call target — go all-in for partial.
+                // Side pots and uncalled-bet returns at showdown reconcile the difference
+                // (see docs/BUGFIX_short_blind_call_target.md).
+                let total_bet = seat.player.act_all_in()?;
+                total_bet.saturating_sub(seat_bet)
             } else {
                 seat.player.act_call(call_target)?;
-            }
+                to_call
+            };
             drop(seat);
-            self.log_info(TableAction::Call(seat_number, to_call));
-            Ok(to_call)
+            self.log_info(TableAction::Call(seat_number, actual_added));
+            Ok(actual_added)
         } else {
             Err(PKError::InvalidSeatNumber)
         }
@@ -513,7 +521,7 @@ impl TableCelled {
     pub fn act_forced_bet_big_blind(&self) -> Result<(), PKError> {
         let bb_seat_num = self.determine_big_blind();
         let actual = self.act_forced_bet(bb_seat_num, self.forced.big_blind)?;
-        self.bet.set(actual);
+        self.bet.set(self.forced.big_blind);
         self.log_info(TableAction::ForcedBetBigBlind(bb_seat_num, actual));
         self.action_to_next();
 
@@ -2472,8 +2480,7 @@ mod casino__table_tests {
 
     #[test]
     fn forced_bets_short_bb_to_call_full_amount() {
-        // BB (seat 2) has only 30 chips; UTG (seat 0) calls only what BB posted (30),
-        // not the configured blind (100).
+        // BB (seat 2) has only 30 chips; UTG (seat 0) must still call the full 100 BB.
         let table = three_player_table_with_short_bb(30);
         table.act_forced_bets().unwrap();
 
@@ -2482,16 +2489,18 @@ mod casino__table_tests {
         assert_eq!(30, bb_seat.player.bet.count());
         drop(bb_seat);
 
-        assert_eq!(30, table.to_call(0));
+        assert_eq!(100, table.to_call(0));
     }
 
     #[test]
     fn act_call_after_short_blind() {
         let table = three_player_table_with_short_bb(30);
         table.act_forced_bets().unwrap();
-        // UTG (seat 0) calls — commits only what BB actually posted (30).
+        // UTG (seat 0) calls — commits the full 100 BB even though BB went all-in for 30.
+        // The 70 excess will form a side pot at showdown that BB cannot win, or be returned
+        // to UTG as uncalled if no other player matches it.
         table.act_call(0).unwrap();
         let utg = table.seats.get_seat(0).unwrap();
-        assert_eq!(30, utg.player.bet.count());
+        assert_eq!(100, utg.player.bet.count());
     }
 }
