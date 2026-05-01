@@ -29,7 +29,7 @@ jobs:
         run: cargo test --test bot_marathon -- --include-ignored --nocapture
       - name: Upload failure YAML
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: marathon-failure-${{ github.run_id }}
           path: marathon_failure.yaml
