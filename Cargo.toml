@@ -111,6 +111,10 @@ name = "player_stats_session"
 required-features = ["bot-profiles", "hand-histories", "player-stats-persistence"]
 
 [[example]]
+name = "exploitative_play"
+required-features = ["bot-profiles", "player-stats"]
+
+[[example]]
 name = "train_exploit_config"
 required-features = ["bot-training"]
 
@@ -137,6 +141,10 @@ required-features = ["bot-profiles", "hand-histories", "player-stats"]
 [[test]]
 name = "player_stats_persistence"
 required-features = ["bot-profiles", "hand-histories", "player-stats-persistence"]
+
+[[test]]
+name = "exploitative_play_smoke"
+required-features = ["bot-profiles", "player-stats"]
 
 [[test]]
 name = "training_integration"
