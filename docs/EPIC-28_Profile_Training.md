@@ -1,5 +1,10 @@
 # EPIC-28: Cross-Session Profile Training
 
+> **Math tutorial:** [`TUTORIAL_EPIC28_ES_Math.md`](TUTORIAL_EPIC28_ES_Math.md)
+> covers the (1+λ)-ES algorithm, the 1/5 success rule, Box-Muller transform,
+> BB/100 as a noisy fitness signal, and the relationship to CMA-ES — with
+> full references.
+
 ## Status
 
 | Component | Status |
