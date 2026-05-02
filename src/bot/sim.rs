@@ -324,6 +324,56 @@ impl SimTable {
         sim
     }
 
+    /// Creates a `SimTable` with explicit per-seat deciders **and** an attached
+    /// [`StatsRegistry`].
+    ///
+    /// Combines the flexibility of [`Self::new`] (any `Box<dyn BotDecider>`,
+    /// including [`crate::bot::exploitative_decider::ExploitativeDecider`]) with
+    /// the registry ingestion behaviour of [`Self::with_stats_registry`]: every
+    /// completed hand is ingested and every snapshot is built with the registry
+    /// borrow so exploit-aware deciders can read it.
+    ///
+    /// Only available when the `player-stats` feature is enabled.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(all(feature = "player-stats", feature = "bot-profiles"))] {
+    /// use pkcore::analysis::player_stats::StatsRegistry;
+    /// use pkcore::bot::decider::{BotDecider, RuleBasedDecider};
+    /// use pkcore::bot::exploit::ExploitConfig;
+    /// use pkcore::bot::exploitative_decider::ExploitativeDecider;
+    /// use pkcore::bot::profile::BotProfile;
+    /// use pkcore::bot::sim::SimTable;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000_000)),
+    /// ]);
+    /// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// let bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)> = vec![
+    ///     (0, BotProfile::tight_aggressive(), Box::new(ExploitativeDecider::wrap(RuleBasedDecider))),
+    ///     (1, BotProfile::loose_passive(),    Box::new(RuleBasedDecider)),
+    /// ];
+    /// let mut sim = SimTable::new_with_registry(table, bots, StatsRegistry::new());
+    /// let result = sim.run_n_hands(10).unwrap();
+    /// assert!(result.hands_played > 0);
+    /// # }
+    /// ```
+    #[cfg(feature = "player-stats")]
+    #[must_use]
+    pub fn new_with_registry(
+        table: TableNoCell,
+        bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)>,
+        registry: StatsRegistry,
+    ) -> Self {
+        let mut sim = Self::new(table, bots);
+        sim.stats_registry = Some(registry);
+        sim
+    }
+
     /// Borrows the attached [`StatsRegistry`], if any.
     ///
     /// Returns `None` when the `SimTable` was constructed without a registry
