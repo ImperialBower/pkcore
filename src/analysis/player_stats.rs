@@ -713,6 +713,17 @@ fn increment(counts: &mut ActionCounts, action: &ActionType) {
     }
 }
 
+// ── Test helpers ──────────────────────────────────────────────────────────────
+
+#[cfg(test)]
+impl StatsRegistry {
+    /// Inserts `stats` directly for `id`, bypassing ingestion.
+    /// Only available in test builds; used by exploit-layer tests.
+    pub fn insert_for_test(&mut self, id: Uuid, stats: PlayerStats) {
+        self.players.insert(id, stats);
+    }
+}
+
 // ── Tests ──────────────────────────────────────────────────────────────────
 
 #[cfg(test)]

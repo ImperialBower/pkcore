@@ -146,6 +146,10 @@ pub use crate::hand_history::{
 // player stats (player-stats feature)
 #[cfg(feature = "player-stats")]
 pub use crate::analysis::player_stats::{Confidence, PlayerStats, StatsRegistry};
+#[cfg(feature = "player-stats")]
+pub use crate::bot::exploit::ExploitConfig;
+#[cfg(feature = "player-stats")]
+pub use crate::bot::exploitative_decider::ExploitativeDecider;
 
 // player stats persistence (player-stats-persistence feature)
 #[cfg(feature = "player-stats-persistence")]

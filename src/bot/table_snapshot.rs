@@ -17,6 +17,7 @@ use crate::casino::table::event::TableAction;
 use crate::casino::table::position::Position;
 use crate::casino::table_no_cell::TableNoCell;
 use crate::games::GamePhase;
+use uuid::Uuid;
 
 #[cfg(feature = "player-stats")]
 use crate::analysis::player_stats::StatsRegistry;
@@ -31,8 +32,10 @@ use crate::analysis::player_stats::StatsRegistry;
 ///
 /// ```
 /// use pkcore::bot::table_snapshot::SeatInfo;
+/// use uuid::Uuid;
 ///
 /// let info = SeatInfo {
+///     id: Uuid::default(),
 ///     seat: 2,
 ///     name: "Carol".to_string(),
 ///     chips: 800,
@@ -44,6 +47,8 @@ use crate::analysis::player_stats::StatsRegistry;
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SeatInfo {
+    /// Unique player identifier, used to look up entries in [`StatsRegistry`].
+    pub id: Uuid,
     /// Zero-based seat index.
     pub seat: u8,
     /// Player handle / display name.
@@ -198,6 +203,7 @@ impl<'a> TableSnapshot<'a> {
                     None
                 } else {
                     u8::try_from(i).ok().map(|idx| SeatInfo {
+                        id: s.player.id,
                         seat: idx,
                         name: s.player.handle.clone(),
                         chips: s.player.chips,
@@ -348,6 +354,7 @@ mod bot__table_snapshot_tests {
     use super::*;
     use crate::casino::game::ForcedBets;
     use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    use uuid::Uuid;
 
     fn two_player_table() -> TableNoCell {
         let seats = SeatsNoCell::new(vec![
@@ -404,6 +411,7 @@ mod bot__table_snapshot_tests {
     #[test]
     fn seat_info_fields() {
         let info = SeatInfo {
+            id: Uuid::default(),
             seat: 3,
             name: "Dave".to_string(),
             chips: 2_500,

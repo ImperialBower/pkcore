@@ -2,6 +2,10 @@
 
 pub mod betting_strategy;
 pub mod decider;
+#[cfg(feature = "player-stats")]
+pub mod exploit;
+#[cfg(feature = "player-stats")]
+pub mod exploitative_decider;
 pub mod playbook;
 pub mod player_action;
 pub mod position_ranges;
