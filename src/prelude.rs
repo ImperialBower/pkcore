@@ -155,6 +155,10 @@ pub use crate::bot::exploitative_decider::ExploitativeDecider;
 #[cfg(feature = "player-stats-persistence")]
 pub use crate::analysis::player_stats_store::{PlayerStatsStore, YamlPlayerStatsStore};
 
+// bot training (bot-training feature)
+#[cfg(feature = "bot-training")]
+pub use crate::bot::training::{ExploitTrainer, GenerationRecord, TrainingConfig, TrainingResult};
+
 // casino (bot-profiles feature)
 #[cfg(feature = "bot-profiles")]
 pub use crate::casino::action::PlayerAction;

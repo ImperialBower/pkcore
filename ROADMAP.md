@@ -123,6 +123,7 @@ workspace)
 | [EPIC-25](docs/EPIC-25_Range_Frequencies.md) | Range Frequencies — optional per-combo frequency in range strings (`AA:0.5`) | Complete |
 | [EPIC-26](docs/EPIC-26_Player_Stats.md) | Player Action Tracking & Opponent Insights — `PlayerStats` / `StatsRegistry` keyed by `Uuid`, derived ratios (VPIP/PFR/AF/WTSD/c-bet/...), exposed to `BotDecider` (no behavior change), optional persistence | Complete |
 | [EPIC-27](docs/EPIC-27_Exploitative_Decider.md) | Adaptive Bot Framework — `ExploitativeDecider<D>` wrapper that converts opponent stats into runtime profile deviations; `ExploitConfig` with 8 deviation rules; `SimTable::new_with_registry`; demo + smoke tests | Complete |
+| [EPIC-28](docs/EPIC-28_Profile_Training.md) | Cross-Session Profile Training — `ExploitTrainer` (1+λ)-ES loop tunes `ExploitConfig` parameters against a static field; `bot-training` feature; YAML serialisation for trained configs; `train_exploit_config` example | Complete |
 | [FEATURE: Activate Bluff Fields](docs/FEATURE_BotProfile_ActivateBluffFields.md) | Wire `bluff_frequency`, `check_raise_frequency`, `postflop_cbet_frequency` into `RuleBasedDecider` | Complete |
 | [FEATURE: Position-Aware Decisions](docs/FEATURE_BotProfile_PositionAwareDecisions.md) | Route decisions through `Playbook` position-specific `BettingStrategy` | Complete |
 | [FEATURE: BotProfile Type Safety](docs/FEATURE_BotProfile_TypeSafety.md) | `PlayStyle` enum, `Percentage` newtype for frequency fields | Complete |

@@ -44,6 +44,10 @@ player-stats = []
 ## `YamlPlayerStatsStore` (one YAML file per player Uuid). Off by default; opt
 ## in for multi-session experiments. EPIC-26 Phase 4.
 player-stats-persistence = ["player-stats", "dep:serde_yaml_bw"]
+## Enables `ExploitConfig` YAML serialisation and the `ExploitTrainer`
+## gradient-free optimisation loop (EPIC-28).  Requires player-stats and
+## bot-profiles; adds no external optimiser dependency.
+bot-training = ["player-stats", "bot-profiles", "dep:serde_yaml_bw"]
 
 [dependencies]
 bint = "0.1.15"
@@ -106,6 +110,10 @@ required-features = ["bot-profiles", "hand-histories", "player-stats"]
 name = "player_stats_session"
 required-features = ["bot-profiles", "hand-histories", "player-stats-persistence"]
 
+[[example]]
+name = "train_exploit_config"
+required-features = ["bot-training"]
+
 [[test]]
 name = "replay_consistency"
 required-features = ["hand-histories", "bot-profiles"]
@@ -129,6 +137,10 @@ required-features = ["bot-profiles", "hand-histories", "player-stats"]
 [[test]]
 name = "player_stats_persistence"
 required-features = ["bot-profiles", "hand-histories", "player-stats-persistence"]
+
+[[test]]
+name = "training_integration"
+required-features = ["bot-training"]
 
 [dev-dependencies]
 serde_yaml_bw = "2.5"

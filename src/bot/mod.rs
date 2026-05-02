@@ -15,4 +15,6 @@ pub mod range_strategy;
 pub mod sim;
 pub mod table_size;
 pub mod table_snapshot;
+#[cfg(feature = "bot-training")]
+pub mod training;
 pub mod weighted_range;

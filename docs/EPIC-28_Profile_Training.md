@@ -4,19 +4,19 @@
 
 | Component | Status |
 |---|---|
-| Feature gate `bot-training` in `Cargo.toml` | ☐ Todo |
-| `ExploitConfig` serde support (YAML serialisation) | ☐ Todo |
-| Parameter encoding/decoding: `ExploitConfig ↔ Vec<f64>` | ☐ Todo |
-| `FitnessEvaluator` — fixed-seed BB/100 evaluation against the field | ☐ Todo |
-| `ExploitTrainer` struct and `train` method | ☐ Todo |
-| `TrainingConfig` struct with iteration budget, replicates, field definition | ☐ Todo |
-| `TrainingResult` struct with convergence history and per-opponent breakdown | ☐ Todo |
-| Module wiring: `src/bot/training/mod.rs`, `src/bot/mod.rs`, `src/prelude.rs` | ☐ Todo |
-| Unit tests: parameter round-trip, fitness monotonicity, default-config is valid | ☐ Todo |
-| Integration test: trainer improves over baseline on a 200-generation run | ☐ Todo |
-| Example: `examples/train_exploit_config.rs` — end-to-end training run | ☐ Todo |
-| Checked-in trained configs: `data/exploit_configs/tag_trained.yaml` | ☐ Todo |
-| `ROADMAP.md` Epics row | ☐ Todo |
+| Feature gate `bot-training` in `Cargo.toml` | ✅ Done |
+| `ExploitConfig` serde support (YAML serialisation) | ✅ Done |
+| Parameter encoding/decoding: `ExploitConfig ↔ Vec<f64>` | ✅ Done |
+| `FitnessEvaluator` — BB/100 evaluation against the field | ✅ Done |
+| `ExploitTrainer` struct and `train` method | ✅ Done |
+| `TrainingConfig` struct with iteration budget, replicates, field definition | ✅ Done |
+| `TrainingResult` struct with convergence history and per-opponent breakdown | ✅ Done |
+| Module wiring: `src/bot/training/mod.rs`, `src/bot/mod.rs`, `src/prelude.rs` | ✅ Done |
+| Unit tests: parameter round-trip, fitness monotonicity, default-config is valid | ✅ Done |
+| Integration test: trainer improves over baseline on a 200-generation run | ✅ Done |
+| Example: `examples/train_exploit_config.rs` — end-to-end training run | ✅ Done |
+| Checked-in trained configs: `data/exploit_configs/tag_trained.yaml` | ✅ Done |
+| `ROADMAP.md` Epics row | ✅ Done |
 
 ---
 
