@@ -23,8 +23,8 @@ playbook:
               three_bet: QQ+, AKs, AKo
           UTGP1:
             actions:
-              three_bet: QQ+, AKs
               open_raise: TT+, AQs+, KQs, AKo
+              three_bet: QQ+, AKs
           BTN:
             actions:
               open_raise: 22+, A2s+, K7s+, Q8s+, J7s+, T8s+, 97s+, 87s, A7o+, KTo+, QJo
@@ -39,20 +39,20 @@ playbook:
               three_bet: JJ+, AQs+, AQo+
           CO:
             actions:
-              three_bet: QQ+, AQs+, AKo
               open_raise: 55+, A8s+, K9s+, Q9s+, JTs, T9s, 98s, ATo+, KJo+
+              three_bet: QQ+, AQs+, AKo
           UTG:
             actions:
-              three_bet: KK+
               open_raise: JJ+, AKs, AKo
+              three_bet: KK+
           EP:
             actions:
-              three_bet: QQ+, AKs, AKo
               open_raise: 99+, AJs+, KQs, AQo+
+              three_bet: QQ+, AKs, AKo
           BB:
             actions:
-              three_bet: QQ+, AKs, AKo
               open_raise: 22+, A2s+, K2s+, Q8s+, J8s+, T7s+, 97s+, A2o+, K8o+, Q9o+
+              three_bet: QQ+, AKs, AKo
         default:
           actions: {}
       positional_betting:
@@ -68,8 +68,8 @@ playbook:
         ranges:
           CO:
             actions:
-              three_bet: QQ+, AKs
               open_raise: TT+, AQs+, AQo+
+              three_bet: QQ+, AKs
           BB:
             actions:
               open_raise: 22+, A2s+, K8s+, Q9s+, ATo+
@@ -80,16 +80,16 @@ playbook:
               three_bet: KK+
           LJ:
             actions:
-              three_bet: KK+
               open_raise: QQ+, AKs, AKo
+              three_bet: KK+
           SB:
             actions:
-              three_bet: QQ+, AKs
               open_raise: TT+, AQs+, AQo+
+              three_bet: QQ+, AKs
           BTN:
             actions:
-              three_bet: QQ+, AKs, AKo
               open_raise: 88+, ATs+, KJs+, QJs, AJo+, KQo
+              three_bet: QQ+, AKs, AKo
         default:
           actions: {}
       positional_betting:

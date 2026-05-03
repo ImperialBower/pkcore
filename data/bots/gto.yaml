@@ -28,12 +28,12 @@ playbook:
               three_bet: QQ+, AJs+, KQs, AQo+
           HJ:
             actions:
-              three_bet: QQ+, AKs, AKo
               open_raise: 88+, ATs+, KJs+, QJs, AJo+, KQo
+              three_bet: QQ+, AKs, AKo
           BB:
             actions:
-              three_bet: QQ+, AQs+, AKo
               open_raise: 22+, A2s+, K2s+, Q8s+, J8s+, T7s+, 97s+, A2o+, K8o+, Q9o+, J9o+
+              three_bet: QQ+, AQs+, AKo
           SB:
             actions:
               open_raise: 33+, A4s+, K9s+, Q9s+, J9s+, T9s, A8o+, KJo+
@@ -128,12 +128,12 @@ playbook:
               three_bet: QQ+, AJs+, KQs, AQo+
           HJ:
             actions:
-              three_bet: QQ+, AQs+, AKo
               open_raise: 77+, A9s+, KTs+, QTs+, JTs, ATo+, KJo+
+              three_bet: QQ+, AQs+, AKo
           SB:
             actions:
-              three_bet: JJ+, AQs+, AQo+
               open_raise: 33+, A3s+, K8s+, Q9s+, J9s+, T9s, A7o+, KTo+, QJo
+              three_bet: JJ+, AQs+, AQo+
         default:
           actions: {}
       positional_betting:
