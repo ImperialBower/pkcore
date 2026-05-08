@@ -49,7 +49,8 @@
       "Skill(audit-release)",
       "Skill(release-notes)",
       "Bash([ -d \"$BASE/$repo\" ])",
-      "Bash(cargo fmt *)"
+      "Bash(cargo fmt *)",
+      "WebSearch"
     ]
   }
 }
