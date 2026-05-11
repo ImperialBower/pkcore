@@ -1,9 +1,10 @@
-# pkcore AKA Spawn of [Fudd](https://github.com/ImperialBower/fudd)
+# pkcore
 
 [![Crates.io](https://img.shields.io/crates/v/pkcore.svg)](https://crates.io/crates/pkcore)
 [![CI](https://github.com/ImperialBower/pkcore/actions/workflows/basic.yaml/badge.svg)](https://github.com/ImperialBower/pkcore/actions/workflows/basic.yaml)
 [![Security audit](https://github.com/ImperialBower/pkcore/actions/workflows/audit.yml/badge.svg)](https://github.com/ImperialBower/pkcore/actions/workflows/audit.yml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![AI BOM](https://img.shields.io/badge/AI--BOM-tracked-blueviolet)](./AI-BOM.md)
 
 🚧 **Work In Progress** 🚧
 
