@@ -276,15 +276,20 @@ NLHE/PLO always deal `Down`. Stud/Razz interleave `Down` and `Up`.
 `HandHistory` spectator output uses `visible_to(viewer)` for non-broadcast
 rendering.
 
-**Migration note:** today `src/play/hole_cards.rs:50` defines `HoleCards`
-as a table-level `Vec<Two>` (all seats' 2-card hands together). After this
-epic, `HoleCards` is **per-seat**. The table-level collection moves to a
-`BTreeMap<u8, HoleCards>` (or equivalent) on `TableNoCell`. This is a
-breaking change to the existing `HoleCards` type and will surface in the
-release audit — downstream consumers that read `HoleCards` directly need
-to migrate to the per-seat shape via the new `TableNoCell::seat_cards(seat)`
-accessor (introduced in EPIC-34 for WASM rendering and added here for
-completeness).
+**Implementation note (post-Phase 5):** the per-seat collection ships as
+a **new type** named `SeatHand` (`src/play/seat_hand.rs`), not as a
+rename of the existing `HoleCards`. The existing
+`HoleCards(Vec<Two>)` at `src/play/hole_cards.rs:51` is an
+*equity-analysis* type with ~21 callers in `analysis/` and
+`play/stages/`; it is **retained unchanged** to avoid churning analysis
+code that has no need for visibility. `SeatHand` is added as a new
+field alongside (not replacing) `SeatNoCell.cards: BoxedCards`; NLHE
+dealing populates both in lockstep, and stud-family variants
+(EPIC-32 / EPIC-33) use `SeatHand` for visibility-aware operations. The
+API of `SeatHand` matches the description above verbatim; only its name
+and the migration strategy differ from the original proposal. See the
+"Implementation corrigendum" section at the end of this doc for the
+full list of design-vs-actual deltas.
 
 ### `Board` — optional
 
@@ -419,3 +424,108 @@ Exit criteria:
 3. The `RELEASE_AUDIT_X.Y.Z.md` for the foundation release reports no
    breaking changes for pkpy, pknotebook, pkdealer, pkgto-web, pkkuhn-web,
    or pkarena0-web.
+
+---
+
+## Implementation corrigendum
+
+The phased implementation surfaced four meaningful deltas from the original
+design. Each was decided in-session with user agreement; the goal in
+every case was to ship the foundation with **smaller blast radius and
+identical NLHE behavior**.
+
+### 1. Per-seat collection is named `SeatHand`, not `HoleCards`
+
+The design proposed renaming the existing
+`HoleCards(Vec<Two>)` into a per-seat visibility-aware type. Phase 1
+exploration found that `HoleCards` has ~21 callers in `analysis/` and
+`play/stages/`, all of which treat it as an *equity-analysis* multi-seat
+collection. Renaming would have forced a mechanical churn across all 21
+files for no semantic gain.
+
+**Resolution:** ship the new per-seat type under a fresh name —
+`SeatHand` (`src/play/seat_hand.rs`). The legacy `HoleCards` keeps its
+existing shape and call sites. `SeatHand`'s API matches the spec.
+
+### 2. `SeatHand` is additive on `SeatNoCell`, not a replacement
+
+`SeatNoCell.cards: BoxedCards` carries slot-oriented semantics
+(`blanks`, `deal` with `Card::BLANK` placeholders, `is_dealt`,
+`sorted_display`) that don't fit `SeatHand`'s append-only,
+visibility-aware model. Replacing the field would have forced `SeatHand`
+to absorb those semantics (a poor type fit) and updated ~15 call sites
+with regression risk.
+
+**Resolution:** add `hand: SeatHand` as a new field alongside
+`cards: BoxedCards`. NLHE dealing populates both (`seat.cards.deal(card)`
++ `seat.hand.push(card, Visibility::Down)`). Stud-family variants
+(EPIC-32 / EPIC-33) will use `seat.hand` as the source of truth for
+visibility. A future cleanup pass may remove the duplicate `cards`
+field once `SeatHand` covers all consumer needs.
+
+### 3. `Board` enum migration was deferred (Phase 4 skipped)
+
+The design proposed `Board { Community(...), None }` to make stud-family
+variants representable. Phase 4 exploration found that today's `Board`
+struct is used **only by analysis code paths** (equity, solver,
+range-equity) and never as runtime state on `TableNoCell` (which carries
+`board: Cards`, not `board: Board`). Stud-family games don't construct
+`Board` at all because they have no community board, so there's no
+generic-over-Board code path to disambiguate.
+
+**Resolution:** Phase 4 was skipped. `Board` stays as today's
+community-board struct. The migration can still be done later for
+future-proofing if a Board-generic call site ever appears, but no v1
+variant epic needs it.
+
+### 4. `ForcedBets` extension is additive (no enum split)
+
+The design considered converting `ForcedBets` to an enum
+(`Blinds { .. } | AnteAndBringIn { .. }`). User confirmation in-session
+chose the additive option for minimal blast radius.
+
+**Resolution (Phase 6):** add `bring_in: usize` to the existing flat
+struct. NLHE callers pass `0`; stud-family constructors set it
+explicitly via `ForcedBets::new_with_ante_and_bring_in`. No existing
+caller updates required.
+
+### 5. Phase 7's `max_raise` validation is deferred
+
+`Phase 7` originally added a `max_raise` validation to
+`TableNoCell::act_raise`. For NLHE the check is a no-op (max equals
+stack, and oversized raises are already treated as all-in). For
+fixed-limit and pot-limit it requires per-street tier dispatch
+(`BetTier::Small` vs `Big`) and committed-this-street accounting that
+neither exists today nor has any NLHE caller.
+
+**Resolution:** Phase 7 shipped the `betting: BettingStructure` field
+and refactored `TableNoCell::min_raise` to delegate to
+`BettingStructure::min_raise` (verified mathematically identical to the
+prior inline math). The `max_raise` validation lands with EPIC-30 (FLHE)
+and EPIC-31 (PLO), where it has concrete callers and concrete
+street-aware tier dispatch.
+
+### Pre-existing clippy debt
+
+`cargo clippy --all-features -- -D warnings` was already failing at
+HEAD with 16 errors in `src/bot/training/*` (precision-loss casts and
+related). These are out of scope for EPIC-29. None of the new files
+introduced by this epic add to that count; my Phase 1 fixes left clippy
+clean on every touched file. A future cleanup pass should resolve the
+pre-existing 16.
+
+### Phase status summary
+
+| Phase | Status | Notes |
+|---|---|---|
+| 1 (pure-additive types) | Shipped | `Visibility`, `HoleCard`, `SeatHand`, `BettingStructure`, `BetTier`, `GameFamily` |
+| 2 (`GameType` variants + PLO `cards_on_board` fix) | Shipped | `LimitHoldem`, `StudHi` added; `family()` / `betting()` accessors |
+| 3 (street descriptors) | Shipped | `street.rs` with `HOLDEM_STREETS` / `OMAHA_STREETS` / `STUD_HI_STREETS` / `RAZZ_STREETS` |
+| 4 (`Board` enum) | **Deferred** | See corrigendum item 3 |
+| 5 (`SeatHand` on `SeatNoCell`) | Shipped additively | See corrigendum item 2 |
+| 6 (`ForcedBets` `bring_in`) | Shipped additively | See corrigendum item 4 |
+| 7 (`BettingStructure` dispatch) | Shipped (min_raise only) | `max_raise` deferred to per-variant epics; see corrigendum item 5 |
+| 8 (generic `from_seats`) | Shipped | `nlh_from_seats` delegates |
+| 9 (`first_to_act_this_street` hook) | Shipped | Stud / Razz bodies are placeholder; EPIC-32 / EPIC-33 fill them in |
+| 10 (prelude re-exports) | Shipped | All new types available via `pkcore::prelude::*` |
+| 11 (corrigendum) | This section | |

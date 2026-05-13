@@ -18,10 +18,13 @@ use crate::casino::table::seats::seat_equity::SeatEquity;
 use crate::casino::table::seats::seatbit::Seatbit;
 use crate::casino::table::seats::table_equity::TableEquity;
 use crate::casino::table::winnings::{PotWin, Winnings};
-use crate::games::{GamePhase, GameType};
+use crate::games::betting_structure::BettingStructure;
+use crate::games::{GameFamily, GamePhase, GameType};
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
+use crate::play::seat_hand::SeatHand;
+use crate::play::visibility::Visibility;
 use crate::{Agency, PKError, Pile};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -551,6 +554,11 @@ impl Display for PlayerNoCell {
 pub struct SeatNoCell {
     pub player: PlayerNoCell,
     pub cards: BoxedCards,
+    /// Visibility-aware per-seat hand introduced by EPIC-29 Phase 5.
+    /// Populated in parallel with `cards` for NLHE/PLO (every card
+    /// `Visibility::Down`); stud-family variants (EPIC-32/33) will use
+    /// this field as the source of truth for per-card visibility.
+    pub hand: SeatHand,
 }
 
 impl Default for SeatNoCell {
@@ -558,6 +566,7 @@ impl Default for SeatNoCell {
         SeatNoCell {
             player: PlayerNoCell::default(),
             cards: BoxedCards::blanks(2),
+            hand: SeatHand::new(0),
         }
     }
 }
@@ -578,6 +587,7 @@ impl SeatNoCell {
         SeatNoCell {
             player,
             cards: BoxedCards::blanks(2),
+            hand: SeatHand::new(0),
         }
     }
 
@@ -617,10 +627,13 @@ impl SeatNoCell {
         self.player.is_clear()
     }
 
-    /// Discards the player's cards, returning them as `Cards`.
+    /// Discards the player's cards, returning them as `Cards`. Clears
+    /// both the legacy `cards: BoxedCards` storage and the new
+    /// visibility-aware `hand: SeatHand`.
     pub fn discard_cards(&mut self) -> Cards {
         let cards = self.cards.cards();
         let _ = self.cards.take();
+        self.hand.clear();
         cards
     }
 }
@@ -1161,6 +1174,11 @@ pub struct TableNoCell {
     /// [`reset`](TableNoCell::reset). Survives folds so hand histories always
     /// have complete hole card data for every player.
     pub dealt_hole_cards: HashMap<u8, BoxedCards>,
+    /// Betting structure (no-limit / pot-limit / fixed-limit) introduced by
+    /// EPIC-29 Phase 7. NLHE always carries [`BettingStructure::NoLimit`];
+    /// per-variant constructors in EPIC-30 / EPIC-31 / EPIC-32 / EPIC-33
+    /// will set this to the variant's structure at table construction.
+    pub betting: BettingStructure,
 }
 
 impl TableNoCell {
@@ -1184,6 +1202,36 @@ impl TableNoCell {
     /// ```
     #[must_use]
     pub fn nlh_from_seats(seats: SeatsNoCell, forced: ForcedBets) -> Self {
+        Self::from_seats(seats, GameType::NoLimitHoldem, forced)
+    }
+
+    /// Generic table constructor parameterised by [`GameType`] (EPIC-29
+    /// Phase 8). Per-variant epics (EPIC-30 FLHE, EPIC-31 PLO, EPIC-32
+    /// Stud Hi, EPIC-33 Razz) add thin wrappers (`limit_holdem_from_seats`,
+    /// `plo_from_seats`, `stud_hi_from_seats`, `razz_from_seats`) that
+    /// delegate to this constructor.
+    ///
+    /// The deck is initialised as a standard 52-card deck with any cards
+    /// already held by seated players removed. The `betting` field is
+    /// initialised from `game.betting()`; variant constructors that want
+    /// concrete fixed-limit bet sizes can override afterward.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::games::GameType;
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let t = TableNoCell::from_seats(seats, GameType::NoLimitHoldem, ForcedBets::new(50, 100));
+    /// assert_eq!(GameType::NoLimitHoldem, t.game);
+    /// ```
+    #[must_use]
+    pub fn from_seats(seats: SeatsNoCell, game: GameType, forced: ForcedBets) -> Self {
         let id = Uuid::new_v4();
         let mut event_log = Vec::new();
         event_log.push(TableAction::TableOpen(id));
@@ -1204,10 +1252,13 @@ impl TableNoCell {
             }
         }
 
+        let name = format!("{game} Table");
+        let betting = game.betting();
+
         TableNoCell {
             id,
-            name: "No Limit Hold'em Table".to_string(),
-            game: GameType::NoLimitHoldem,
+            name,
+            game,
             forced,
             phase: GamePhase::NewHand,
             seats,
@@ -1221,6 +1272,7 @@ impl TableNoCell {
             event_log,
             hand_chip_total: 0,
             dealt_hole_cards: HashMap::new(),
+            betting,
         }
     }
 
@@ -1389,6 +1441,55 @@ impl TableNoCell {
     pub fn next_to_act(&self) -> u8 {
         let utg = self.determine_utg();
         self.seats.next_to_act(utg).unwrap_or(utg)
+    }
+
+    /// Returns the seat that acts first on the current street, dispatched
+    /// by [`GameFamily`] (EPIC-29 Phase 9). For Hold'em and Omaha this
+    /// delegates to [`determine_utg`](TableNoCell::determine_utg). For
+    /// stud-family games (`StudHi`, `Razz`) the implementation in this
+    /// epic returns the position-based seat as a placeholder; EPIC-32
+    /// and EPIC-33 will replace those bodies with bring-in selection on
+    /// 3rd street and best/worst-visible-hand ordering on later streets.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::game::ForcedBets;
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let t = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// // For NLHE, first-to-act-this-street equals determine_utg.
+    /// assert_eq!(t.determine_utg(), t.first_to_act_this_street());
+    /// ```
+    #[must_use]
+    pub fn first_to_act_this_street(&self) -> u8 {
+        match self.game.family() {
+            GameFamily::Holdem | GameFamily::Omaha => self.determine_utg(),
+            GameFamily::StudHi => self.first_to_act_stud_hi(),
+            GameFamily::Razz => self.first_to_act_razz(),
+        }
+    }
+
+    /// Placeholder Stud Hi first-to-act seam. EPIC-32 replaces this body
+    /// with: 3rd street → bring-in seat (lowest upcard); 4th+ → best
+    /// visible hand acts first. Until then this returns the position-based
+    /// seat so the hook compiles and integrates without behavior changes.
+    #[must_use]
+    fn first_to_act_stud_hi(&self) -> u8 {
+        self.determine_utg()
+    }
+
+    /// Placeholder Razz first-to-act seam. EPIC-33 replaces this body
+    /// with: 3rd street → bring-in seat (highest upcard); 4th+ → worst
+    /// visible hand acts first. Until then this returns the position-based
+    /// seat so the hook compiles and integrates without behavior changes.
+    #[must_use]
+    fn first_to_act_razz(&self) -> u8 {
+        self.determine_utg()
     }
 
     // ── Phase helpers ─────────────────────────────────────────────────────────
@@ -1570,11 +1671,11 @@ impl TableNoCell {
     /// ```
     #[must_use]
     pub fn min_raise(&self) -> usize {
-        if self.raise_increment > 0 {
-            self.raise_increment
-        } else {
-            self.forced.big_blind
-        }
+        // EPIC-29 Phase 7: delegate to `BettingStructure::min_raise`.
+        // For `NoLimit` (today's NLHE behavior) this is mathematically
+        // identical to the previous inline math: returns
+        // `raise_increment` when non-zero, else `big_blind`.
+        self.betting.min_raise(self.raise_increment, self.forced.big_blind)
     }
 
     /// Chips needed for seat `player` to call the current bet.
@@ -2015,6 +2116,10 @@ impl TableNoCell {
         self.log(TableAction::Dealt(seat_number, Bard::from(&card)));
         let seat = self.seats.get_seat_mut(seat_number).ok_or(PKError::InvalidSeatNumber)?;
         seat.cards.deal(card)?;
+        // EPIC-29 Phase 5: mirror into the visibility-aware hand. NLHE
+        // deals every card down; variant epics (EPIC-32/33) introduce
+        // variant-specific street-driven visibility.
+        seat.hand.push(card, Visibility::Down);
         Ok(seat.cards.is_dealt())
     }
 
@@ -2109,6 +2214,15 @@ impl TableNoCell {
             let cards = BoxedCards::from_str(card_str)?;
             let seat = self.seats.get_seat_mut(*seat_idx).ok_or(PKError::InvalidSeatNumber)?;
             seat.cards = cards.clone();
+            // EPIC-29 Phase 5: rebuild the visibility-aware hand from
+            // the injected cards (every card Down, consistent with how
+            // NLHE replays work). Stud-family replay will need to carry
+            // visibility from the hand-history payload; that lands with
+            // EPIC-32 / EPIC-33 once those variants exist.
+            seat.hand.clear();
+            for card in cards.cards().to_vec() {
+                seat.hand.push(card, Visibility::Down);
+            }
             self.dealt_hole_cards.insert(*seat_idx, cards);
         }
         self.phase = GamePhase::DealHoleCards;
