@@ -473,9 +473,11 @@ pub enum PKError {
     /// where typically 3 raises after the opening bet are permitted).
     RaiseCapReached,
     /// EPIC-30 Phase 3: a raise was attempted to an amount that exceeds
-    /// the maximum permitted by the table's [`BettingStructure`] — e.g., a
-    /// FLHE raise that would overshoot the tier increment, or a PLO raise
-    /// that exceeds the pot-limit ceiling. All-in raises bypass this check.
+    /// the maximum permitted by the table's
+    /// [`BettingStructure`][crate::games::betting_structure::BettingStructure]
+    /// — e.g., a FLHE raise that would overshoot the tier increment, or
+    /// a PLO raise that exceeds the pot-limit ceiling. All-in raises
+    /// bypass this check.
     ExceedsBettingCap,
     /// Chip conservation failed at the end of a hand.
     ///

@@ -422,9 +422,7 @@ fn pick_bet_size(strategy: &BettingStrategy, rng: &mut impl rand::Rng) -> (usize
 /// back to pot-fraction sizing.
 fn fixed_limit_increment(state: &TableSnapshot) -> Option<usize> {
     match state.betting_structure {
-        BettingStructure::FixedLimit {
-            small_bet, big_bet, ..
-        } => Some(match state.bet_tier {
+        BettingStructure::FixedLimit { small_bet, big_bet, .. } => Some(match state.bet_tier {
             BetTier::Small => small_bet,
             BetTier::Big => big_bet,
         }),
@@ -436,16 +434,9 @@ fn fixed_limit_increment(state: &TableSnapshot) -> Option<usize> {
 /// legal under the current betting structure. For Fixed-Limit, returns
 /// `current_bet + tier_increment` clamped to the player's stack. For
 /// No-Limit / Pot-Limit, preserves the existing pot-fraction logic.
-fn sized_raise_to(
-    state: &TableSnapshot,
-    strategy: &BettingStrategy,
-    rng: &mut impl rand::Rng,
-) -> usize {
+fn sized_raise_to(state: &TableSnapshot, strategy: &BettingStrategy, rng: &mut impl rand::Rng) -> usize {
     if let Some(increment) = fixed_limit_increment(state) {
-        return state
-            .current_bet
-            .saturating_add(increment)
-            .min(state.my_chips);
+        return state.current_bet.saturating_add(increment).min(state.my_chips);
     }
     let (n, d) = pick_bet_size(strategy, rng);
     state
@@ -459,11 +450,7 @@ fn sized_raise_to(
 /// legal under the current betting structure. For Fixed-Limit, returns
 /// the tier increment clamped to the player's stack. For No-Limit /
 /// Pot-Limit, preserves the existing pot-fraction logic.
-fn sized_bet_amount(
-    state: &TableSnapshot,
-    strategy: &BettingStrategy,
-    rng: &mut impl rand::Rng,
-) -> usize {
+fn sized_bet_amount(state: &TableSnapshot, strategy: &BettingStrategy, rng: &mut impl rand::Rng) -> usize {
     if let Some(increment) = fixed_limit_increment(state) {
         return increment.min(state.my_chips);
     }

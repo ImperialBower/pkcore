@@ -85,13 +85,7 @@ fn main() {
     for (seat, counts) in acts {
         println!(
             "  Seat {}: folds={} checks={} calls={} bets={} raises={} all_ins={}",
-            seat,
-            counts.folds,
-            counts.checks,
-            counts.calls,
-            counts.bets,
-            counts.raises,
-            counts.all_ins,
+            seat, counts.folds, counts.checks, counts.calls, counts.bets, counts.raises, counts.all_ins,
         );
     }
 }
