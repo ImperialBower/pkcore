@@ -435,11 +435,22 @@ impl HandHistory {
     ///     .with_betting_structure(table.betting);
     /// ```
     #[must_use]
-    pub fn with_betting_structure(
-        mut self,
-        betting: crate::games::betting_structure::BettingStructure,
-    ) -> Self {
+    pub fn with_betting_structure(mut self, betting: crate::games::betting_structure::BettingStructure) -> Self {
         self.table.betting_structure = betting;
+        self
+    }
+
+    /// Fluent setter for the hand's [`HandVariant`] (EPIC-31 Phase 4).
+    ///
+    /// `from_table_state` hardcodes `HandVariant::Holdem`; callers
+    /// recording a non-Holdem variant chain this to override:
+    ///
+    /// ```ignore
+    /// let hh = HandHistory::from_table_state(...).with_variant(HandVariant::Omaha);
+    /// ```
+    #[must_use]
+    pub fn with_variant(mut self, variant: HandVariant) -> Self {
+        self.hand.game = variant;
         self
     }
 
@@ -550,17 +561,23 @@ impl HandHistory {
                 SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), p.stack as usize));
         }
         let seats = SeatsNoCell::new(seats_vec);
-        // EPIC-30 Phase 9: dispatch on recorded betting structure so FLHE
-        // hand histories replay through `limit_holdem_from_seats` (which
-        // sets `BettingStructure::FixedLimit` on the replay table) rather
-        // than the NLHE constructor.
-        let mut table = match self.table.betting_structure {
-            crate::games::betting_structure::BettingStructure::FixedLimit {
-                small_bet,
-                big_bet,
-                raise_cap,
-            } => TableNoCell::limit_holdem_from_seats(seats, small_bet, big_bet, raise_cap),
-            _ => TableNoCell::nlh_from_seats(seats, ForcedBets::new(sb, bb)),
+        // EPIC-30 Phase 9 / EPIC-31 Phase 5: dispatch on recorded
+        // variant + structure so PLO replays through `plo_from_seats`,
+        // FLHE replays through `limit_holdem_from_seats`, and everything
+        // else falls back to NLHE. PLO takes precedence over
+        // `betting_structure` dispatch because the variant determines the
+        // showdown evaluator (the betting structure only affects sizing).
+        let mut table = if self.hand.game == HandVariant::Omaha {
+            TableNoCell::plo_from_seats(seats, (sb, bb))
+        } else {
+            match self.table.betting_structure {
+                crate::games::betting_structure::BettingStructure::FixedLimit {
+                    small_bet,
+                    big_bet,
+                    raise_cap,
+                } => TableNoCell::limit_holdem_from_seats(seats, small_bet, big_bet, raise_cap),
+                _ => TableNoCell::nlh_from_seats(seats, ForcedBets::new(sb, bb)),
+            }
         };
         table.button = button;
 
@@ -1372,6 +1389,36 @@ impl PlayerEntry {
     pub fn to_two(&self) -> Result<Two, PKError> {
         match &self.hole_cards {
             Some(s) => Two::from_str(s),
+            None => Err(PKError::NotEnoughCards),
+        }
+    }
+
+    /// Parses `hole_cards` as a 4-card Omaha hand (EPIC-31 Phase 4).
+    ///
+    /// # Errors
+    ///
+    /// Returns `PKError::NotEnoughCards` when there are no hole cards
+    /// recorded, or an `Err` from `Four::from_str` if the string is
+    /// malformed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::PlayerEntry;
+    ///
+    /// let player = PlayerEntry {
+    ///     seat: 0,
+    ///     name: "A".to_string(),
+    ///     stack: 1000.0,
+    ///     player_id: None,
+    ///     hole_cards: Some("A♠ K♠ Q♠ J♠".to_string()),
+    ///     posted: None,
+    /// };
+    /// assert!(player.to_four().is_ok());
+    /// ```
+    pub fn to_four(&self) -> Result<crate::arrays::four::Four, PKError> {
+        match &self.hole_cards {
+            Some(s) => crate::arrays::four::Four::from_str(s),
             None => Err(PKError::NotEnoughCards),
         }
     }

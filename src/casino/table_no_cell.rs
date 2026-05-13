@@ -5,7 +5,10 @@
 //! The two implementations are functionally equivalent and exist so they can
 //! be compared ergonomically and in benchmarks.
 
+use crate::analysis::case_eval::CaseEval;
 use crate::analysis::eval::Eval;
+use crate::arrays::five::Five;
+use crate::arrays::four::Four;
 use crate::arrays::seven::Seven;
 use crate::arrays::sliced::BoxedCards;
 use crate::arrays::two::Two;
@@ -19,6 +22,7 @@ use crate::casino::table::seats::seatbit::Seatbit;
 use crate::casino::table::seats::table_equity::TableEquity;
 use crate::casino::table::winnings::{PotWin, Winnings};
 use crate::games::betting_structure::{BetTier, BettingStructure};
+use crate::games::omaha::OmahaHigh;
 use crate::games::{GameFamily, GamePhase, GameType};
 use crate::play::board::Board;
 use crate::play::game::Game;
@@ -1244,12 +1248,7 @@ impl TableNoCell {
     /// ));
     /// ```
     #[must_use]
-    pub fn limit_holdem_from_seats(
-        seats: SeatsNoCell,
-        small_bet: usize,
-        big_bet: usize,
-        raise_cap: u8,
-    ) -> Self {
+    pub fn limit_holdem_from_seats(seats: SeatsNoCell, small_bet: usize, big_bet: usize, raise_cap: u8) -> Self {
         let forced = ForcedBets::new(small_bet / 2, small_bet);
         let mut t = Self::from_seats(seats, GameType::LimitHoldem, forced);
         t.betting = BettingStructure::FixedLimit {
@@ -1258,6 +1257,41 @@ impl TableNoCell {
             raise_cap,
         };
         t
+    }
+
+    /// Constructs a Pot-Limit Omaha (Hi) table (EPIC-31 Phase 3).
+    ///
+    /// 4 hole cards per player (resized automatically by
+    /// [`Self::from_seats`] per EPIC-31 Phase 1); 5-card community board
+    /// (flop/turn/river); blinds posted at construction-time amounts.
+    /// `BettingStructure::PotLimit` is set via `GameType::PLO.betting()` —
+    /// no override required. Showdown uses
+    /// [`crate::games::omaha::OmahaHigh`]'s must-use-2 + must-use-3 rule
+    /// via the Omaha-family dispatch in `showdown_*`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::games::GameType;
+    /// use pkcore::games::betting_structure::BettingStructure;
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let t = TableNoCell::plo_from_seats(seats, (5, 10));
+    /// assert_eq!(GameType::PLO, t.game);
+    /// assert_eq!(5, t.forced.small_blind);
+    /// assert_eq!(10, t.forced.big_blind);
+    /// assert_eq!(BettingStructure::PotLimit, t.betting);
+    /// // Seats are pre-allocated for 4 hole cards (EPIC-31 Phase 1).
+    /// assert_eq!(4, t.seats.get_seat(0).unwrap().cards.len());
+    /// ```
+    #[must_use]
+    pub fn plo_from_seats(seats: SeatsNoCell, blinds: (usize, usize)) -> Self {
+        let forced = ForcedBets::new(blinds.0, blinds.1);
+        Self::from_seats(seats, GameType::PLO, forced)
     }
 
     /// Generic table constructor parameterised by [`GameType`] (EPIC-29
@@ -1286,7 +1320,7 @@ impl TableNoCell {
     /// assert_eq!(GameType::NoLimitHoldem, t.game);
     /// ```
     #[must_use]
-    pub fn from_seats(seats: SeatsNoCell, game: GameType, forced: ForcedBets) -> Self {
+    pub fn from_seats(mut seats: SeatsNoCell, game: GameType, forced: ForcedBets) -> Self {
         let id = Uuid::new_v4();
         let mut event_log = Vec::new();
         event_log.push(TableAction::TableOpen(id));
@@ -1304,6 +1338,20 @@ impl TableNoCell {
                     }
                     event_log.push(TableAction::Dealt(num, Bard::from(hole)));
                 }
+            }
+        }
+
+        // EPIC-31 Phase 1: resize each seat's blank-card storage to match
+        // `game.cards_per_player()`. `SeatNoCell::new` and `Default` both
+        // hardcode `BoxedCards::blanks(2)`, which works for Holdem-family
+        // variants but causes `deal_card_to_seat` to fail with
+        // `PKError::NoBlankSlots` for PLO (4 cards) and Stud/Razz (7).
+        // Seats with pre-dealt cards (used by hand-history replay and the
+        // deck-removal path above) are preserved.
+        let cards_per = game.cards_per_player() as usize;
+        for seat in &mut seats.0 {
+            if !seat.is_empty() && !seat.cards.has_cards() && seat.cards.len() != cards_per {
+                seat.cards = BoxedCards::blanks(cards_per);
             }
         }
 
@@ -1741,9 +1789,7 @@ impl TableNoCell {
             BettingStructure::FixedLimit { .. } => self
                 .betting
                 .min_raise_for_tier(self.raise_increment, self.current_bet_tier()),
-            _ => self
-                .betting
-                .min_raise(self.raise_increment, self.forced.big_blind),
+            _ => self.betting.min_raise(self.raise_increment, self.forced.big_blind),
         }
     }
 
@@ -2170,9 +2216,7 @@ impl TableNoCell {
                 }
                 let tier = self.current_bet_tier();
                 let stack = seat.player.total_chip_count();
-                let max = self
-                    .betting
-                    .max_raise(self.pot, self.bet, seat.player.bet, stack, tier);
+                let max = self.betting.max_raise(self.pot, self.bet, seat.player.bet, stack, tier);
                 if amount > max {
                     return Err(PKError::ExceedsBettingCap);
                 }
@@ -2605,6 +2649,49 @@ impl TableNoCell {
         Ok(Game { hands, board })
     }
 
+    /// EPIC-31 Phase 2: builds a per-seat [`CaseEval`] for Omaha-family
+    /// games. Uses `OmahaHigh::permutations` to enumerate all 60 valid
+    /// (2 hole + 3 board) five-card combinations and picks the best by
+    /// `Eval` value. Mirrors the structure of
+    /// `build_game().river_case_eval()` for the Holdem family — one
+    /// `Eval` per seat slot, with `Eval::default()` for empty / folded
+    /// seats.
+    fn omaha_river_case_eval(&self) -> Result<CaseEval, PKError> {
+        let board_five = Five::try_from(self.board.clone())?;
+        let mut case_eval = CaseEval::new(Cards::default());
+        for seat in &self.seats.0 {
+            if seat.is_in_hand() && seat.cards.is_dealt() {
+                match Four::try_from(seat.cards.cards()) {
+                    Ok(four) => {
+                        let omaha = OmahaHigh { hand: four };
+                        let best = omaha
+                            .permutations(&board_five)
+                            .into_iter()
+                            .map(Eval::from)
+                            .max()
+                            .unwrap_or_default();
+                        case_eval.push(best);
+                    }
+                    Err(_) => case_eval.push(Eval::default()),
+                }
+            } else {
+                case_eval.push(Eval::default());
+            }
+        }
+        Ok(case_eval)
+    }
+
+    /// EPIC-31 Phase 2: dispatch helper that returns the right `CaseEval`
+    /// for the current variant. Holdem-family games use the existing
+    /// `build_game().river_case_eval()` path; Omaha-family games use
+    /// `omaha_river_case_eval`.
+    fn river_case_eval_for_variant(&self) -> Result<CaseEval, PKError> {
+        match self.game.family() {
+            crate::games::GameFamily::Omaha => self.omaha_river_case_eval(),
+            _ => self.build_game()?.river_case_eval(),
+        }
+    }
+
     /// True when every seat that contributed to the pot has the same
     /// `chips_in_play`. The simple `divvy_up(pot, winners.len())` payout in
     /// `showdown_headsup` is only correct under this condition; otherwise
@@ -2642,6 +2729,12 @@ impl TableNoCell {
     }
 
     fn build_eval_for_seat(&self, seat_number: u8) -> Eval {
+        // EPIC-31 Phase 2: route Omaha-family per-seat scoring through
+        // the must-use-2 + must-use-3 path. Holdem family keeps the
+        // existing 7-card best-of-7 logic.
+        if self.game.family() == crate::games::GameFamily::Omaha {
+            return self.build_eval_for_seat_omaha(seat_number);
+        }
         match self.effective_player_cards(seat_number) {
             Some(cards) => match Seven::try_from(cards) {
                 Ok(seven) => Eval::from(seven),
@@ -2649,6 +2742,30 @@ impl TableNoCell {
             },
             None => Eval::default(),
         }
+    }
+
+    /// EPIC-31 Phase 2: per-seat Omaha eval used by post-showdown logging
+    /// to remember each seat's best 5-card hand.
+    fn build_eval_for_seat_omaha(&self, seat_number: u8) -> Eval {
+        let Some(seat) = self.seats.get_seat(seat_number) else {
+            return Eval::default();
+        };
+        if !seat.cards.is_dealt() {
+            return Eval::default();
+        }
+        let Ok(four) = Four::try_from(seat.cards.cards()) else {
+            return Eval::default();
+        };
+        let Ok(board_five) = Five::try_from(self.board.clone()) else {
+            return Eval::default();
+        };
+        let omaha = OmahaHigh { hand: four };
+        omaha
+            .permutations(&board_five)
+            .into_iter()
+            .map(Eval::from)
+            .max()
+            .unwrap_or_default()
     }
 
     fn showdown_single_seat(&mut self) -> Result<Winnings, PKError> {
@@ -2687,8 +2804,9 @@ impl TableNoCell {
             return self.showdown_multiway();
         }
 
-        let game = self.build_game()?;
-        let case_result = game.river_case_eval()?;
+        // EPIC-31 Phase 2: dispatch on family so Omaha uses the
+        // must-use-2 + must-use-3 path via `omaha_river_case_eval`.
+        let case_result = self.river_case_eval_for_variant()?;
         let winners = case_result.winning_seats();
 
         self.close_it_out()?;
@@ -2747,8 +2865,9 @@ impl TableNoCell {
 
         self.close_it_out()?;
 
-        let game = self.build_game()?;
-        let case_result = game.river_case_eval()?;
+        // EPIC-31 Phase 2: dispatch on family so Omaha uses the
+        // must-use-2 + must-use-3 path via `omaha_river_case_eval`.
+        let case_result = self.river_case_eval_for_variant()?;
 
         self.seats.showdown(self.pot);
 
