@@ -782,6 +782,7 @@ mod tests {
                     ante: None,
                     straddle: None,
                 },
+                betting_structure: crate::games::betting_structure::BettingStructure::NoLimit,
             },
             players: vec![
                 entry(0, "Btn", 1000.0, Some(btn_id)),
@@ -928,6 +929,7 @@ mod tests {
                     ante: None,
                     straddle: None,
                 },
+                betting_structure: crate::games::betting_structure::BettingStructure::NoLimit,
             },
             players: vec![
                 entry(0, "Btn", 5000.0, Some(btn)),
@@ -996,6 +998,7 @@ mod tests {
                     ante: None,
                     straddle: None,
                 },
+                betting_structure: crate::games::betting_structure::BettingStructure::NoLimit,
             },
             players: vec![entry(0, "Btn", 5000.0, Some(btn)), entry(1, "Bb", 5000.0, Some(bb))],
             board: Some("9♣ 6♦ 5♥".to_string()),
@@ -1066,6 +1069,7 @@ mod tests {
                     ante: None,
                     straddle: None,
                 },
+                betting_structure: crate::games::betting_structure::BettingStructure::NoLimit,
             },
             players: vec![entry(0, "Btn", 5000.0, Some(a)), entry(1, "Bb", 5000.0, Some(b))],
             board: Some("Q♠ J♦ 4♣".to_string()),
@@ -1157,6 +1161,7 @@ mod tests {
                     ante: None,
                     straddle: None,
                 },
+                betting_structure: crate::games::betting_structure::BettingStructure::NoLimit,
             },
             players: vec![entry(0, "Btn", 5000.0, Some(btn)), entry(1, "Bb", 5000.0, Some(bb))],
             board: Some("Q♠ J♦ 4♣ 2♥ 7♠".to_string()),
@@ -1263,6 +1268,7 @@ mod tests {
                     ante: None,
                     straddle: None,
                 },
+                betting_structure: crate::games::betting_structure::BettingStructure::NoLimit,
             },
             // Three survivors at sparse physical seats 0, 3, 5.
             players: vec![

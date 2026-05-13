@@ -124,11 +124,60 @@ workspace)
 | [EPIC-26](docs/EPIC-26_Player_Stats.md) | Player Action Tracking & Opponent Insights — `PlayerStats` / `StatsRegistry` keyed by `Uuid`, derived ratios (VPIP/PFR/AF/WTSD/c-bet/...), exposed to `BotDecider` (no behavior change), optional persistence | Complete |
 | [EPIC-27](docs/EPIC-27_Exploitative_Decider.md) | Adaptive Bot Framework — `ExploitativeDecider<D>` wrapper that converts opponent stats into runtime profile deviations; `ExploitConfig` with 8 deviation rules; `SimTable::new_with_registry`; demo + smoke tests | Complete |
 | [EPIC-28](docs/EPIC-28_Profile_Training.md) | Cross-Session Profile Training — `ExploitTrainer` (1+λ)-ES loop tunes `ExploitConfig` parameters against a static field; `bot-training` feature; YAML serialisation for trained configs; `train_exploit_config` example | Complete |
+| [EPIC-29](docs/EPIC-29_Variant_Engine_Foundation.md) | Variant Engine Foundation — `BettingStructure` and `GameFamily` enums; data-driven street descriptors; per-card visibility; optional board; `ForcedBets::AnteAndBringIn`; existing NLHE behavior unchanged | Planned |
+| [EPIC-30](docs/EPIC-30_Limit_Holdem.md) | Fixed-Limit Hold'em — `GameType::LimitHoldem`; small-bet/big-bet street tiers; raise cap; `limit_holdem_from_seats` constructor; FLHE-tuned bot profiles | Planned |
+| [EPIC-31](docs/EPIC-31_Pot_Limit_Omaha.md) | Pot-Limit Omaha (Hi) — wire `OmahaHigh` (from EPIC-09) into showdown; 4-card hole; pot-limit sizing; fix `cards_on_board` for PLO; `plo_from_seats` constructor | Planned |
+| [EPIC-32](docs/EPIC-32_Stud_Hi.md) | Seven-Card Stud Hi — no community board; ante + bring-in (lowest upcard); 5 streets with upcards; action-by-best-visible-hand; fixed-limit small/big-bet tiers; `stud_hi_from_seats` constructor | Planned |
+| [EPIC-33](docs/EPIC-33_Razz.md) | Razz — A-5 lowball on the Stud engine; bring-in by highest upcard; action by worst visible hand; finishes the integration EPIC-10 left open; `razz_from_seats` constructor | Planned |
+| [EPIC-34](docs/EPIC-34_Variant_Web_Selection.md) | pkarena0-web Variant Selection — surface GameType selector in the web app; per-variant table rendering (no-community for Stud/Razz, 4-card hole for PLO, per-seat upcard reveal); per-variant `BotProfile` bundles | Planned |
 | [FEATURE: Activate Bluff Fields](docs/FEATURE_BotProfile_ActivateBluffFields.md) | Wire `bluff_frequency`, `check_raise_frequency`, `postflop_cbet_frequency` into `RuleBasedDecider` | Complete |
 | [FEATURE: Position-Aware Decisions](docs/FEATURE_BotProfile_PositionAwareDecisions.md) | Route decisions through `Playbook` position-specific `BettingStrategy` | Complete |
 | [FEATURE: BotProfile Type Safety](docs/FEATURE_BotProfile_TypeSafety.md) | `PlayStyle` enum, `Percentage` newtype for frequency fields | Complete |
 | [FEATURE: Street Aggression](docs/FEATURE_BotProfile_StreetAggression.md) | Per-street aggression overrides in `BettingStrategy` | Complete |
 | [FEATURE: Hand-Strength Decisions](docs/FEATURE_BotProfile_HandStrengthDecisions.md) | Equity + pot-odds aware calldown/bluff logic in `RuleBasedDecider` | Complete |
+
+---
+
+## Variant Initiative (EPIC-29 – EPIC-34)
+
+**Goal:** make four additional poker variants — Fixed-Limit Hold'em,
+Pot-Limit Omaha (Hi), Seven-Card Stud Hi, and Razz — fully playable through
+the `pkcore` engine and through the interactive `pkarena0-web` UI, with
+variant-aware bot profiles that don't blunder.
+
+The initiative is structured foundation-first:
+
+- [**EPIC-29 — Variant Engine Foundation**](docs/EPIC-29_Variant_Engine_Foundation.md):
+  introduces `BettingStructure` (no-limit / pot-limit / fixed-limit) as
+  **orthogonal** to `GameFamily` (Hold'em / Omaha / Stud / Razz); replaces
+  the hardcoded preflop/flop/turn/river `GamePhase` with data-driven street
+  descriptors; adds per-card visibility and an optional board model;
+  extends `ForcedBets` to cover ante + bring-in. Existing NLHE behavior
+  must remain identical after this epic ships.
+- [**EPIC-30 — Fixed-Limit Hold'em**](docs/EPIC-30_Limit_Holdem.md):
+  first variant exercising `BettingStructure`. Same dealing and showdown
+  as NLHE; only bet sizes and raise cap differ.
+- [**EPIC-31 — Pot-Limit Omaha (Hi)**](docs/EPIC-31_Pot_Limit_Omaha.md):
+  wires `OmahaHigh` (the must-use-2 + must-use-3 evaluator from EPIC-09)
+  into showdown; 4-card hole; pot-limit bet sizing; fixes the
+  `cards_on_board` bug for PLO.
+- [**EPIC-32 — Stud Hi**](docs/EPIC-32_Stud_Hi.md): the structurally
+  distinct variant — no community board, ante + bring-in, 5 streets with
+  upcards, action by best visible hand, fixed-limit small/big-bet tiers.
+  Showdown reuses the existing `Seven::eval` evaluator unchanged.
+- [**EPIC-33 — Razz**](docs/EPIC-33_Razz.md): A-5 lowball on the Stud
+  engine. Bring-in by highest upcard; action by worst visible hand;
+  finishes the evaluator integration that EPIC-10 left open.
+- [**EPIC-34 — pkarena0-web Variant Selection**](docs/EPIC-34_Variant_Web_Selection.md):
+  exposes all four new variants through the web app — per-`GameType`
+  selector, per-family table renderer (no-community for stud-family,
+  4-card hole for PLO, per-seat upcard reveal for Stud/Razz), and
+  per-variant `BotProfile` bundles.
+
+**Deferred to a follow-on epic** (not in v1): split-pot / 8-or-better
+machinery for Omaha Hi-Lo (O8) and Stud Hi-Lo (Stud8). That work would
+become a "Hi-Lo & HORSE" epic (likely EPIC-35) and unlock full HORSE
+coverage when combined with the v1 variants.
 
 ---
 

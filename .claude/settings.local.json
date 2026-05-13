@@ -50,7 +50,8 @@
       "Skill(release-notes)",
       "Bash([ -d \"$BASE/$repo\" ])",
       "Bash(cargo fmt *)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(git symbolic-ref *)"
     ]
   }
 }

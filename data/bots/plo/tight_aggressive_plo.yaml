@@ -1,0 +1,17 @@
+name: tight_aggressive_plo
+description: Tight-aggressive PLO archetype — premium hand selection, pot-control on dry boards, big bets on coordinated boards. NLHE-style range placeholders; runtime sizing uses pot-limit ceiling.
+style: tight_aggressive
+range_strategy:
+  open_raise: TT+, AJs+, KQs, QJs, JTs, T9s, AQo+
+  three_bet: JJ+, AKs, AKo
+  call_three_bet: 99+, AQs+, KQs, AKo
+  postflop_cbet_frequency: 60
+betting_strategy:
+  aggression_factor: 70
+  bluff_frequency: 15
+  check_raise_frequency: 12
+  preferred_bet_sizes:
+  - 2/3
+  - 1/1
+betting_structure:
+  kind: pot_limit

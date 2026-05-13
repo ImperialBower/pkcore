@@ -1,0 +1,19 @@
+name: loose_passive_flhe
+description: FLHE calling-station counter — wide cold-calling range, infrequent raises, lots of postflop chasing because the small bets price it in.
+style: loose_passive
+range_strategy:
+  open_raise: 77+, ATs+, KQs, AJo+
+  three_bet: QQ+, AKs
+  call_three_bet: 22+, A2s+, KTs+, QTs+, J9s+, T8s+, 98s, ATo+, KJo+, QJo
+  postflop_cbet_frequency: 20
+betting_strategy:
+  aggression_factor: 20
+  bluff_frequency: 4
+  check_raise_frequency: 3
+  preferred_bet_sizes:
+  - 1/1
+betting_structure:
+  kind: fixed_limit
+  small_bet: 0
+  big_bet: 0
+  raise_cap: 3

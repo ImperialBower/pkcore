@@ -17,6 +17,7 @@ use crate::casino::table::event::TableAction;
 use crate::casino::table::position::Position;
 use crate::casino::table_no_cell::TableNoCell;
 use crate::games::GamePhase;
+use crate::games::betting_structure::{BetTier, BettingStructure};
 use uuid::Uuid;
 
 #[cfg(feature = "player-stats")]
@@ -125,6 +126,15 @@ pub struct TableSnapshot<'a> {
     pub stacks: Vec<SeatInfo>,
     /// Big blind amount — the baseline bet unit for sizing decisions.
     pub big_blind: usize,
+    /// Betting structure for the table (EPIC-30 Phase 5). Deciders that
+    /// need to size raises differently for Fixed-Limit / Pot-Limit
+    /// variants consult this field instead of computing pot fractions.
+    pub betting_structure: BettingStructure,
+    /// Bet tier for the *current* street (EPIC-30 Phase 5). Fixed-Limit
+    /// variants need this to choose between the small-bet and big-bet
+    /// increment; No-Limit / Pot-Limit ignore it. Sourced from
+    /// [`TableNoCell::current_bet_tier`].
+    pub bet_tier: BetTier,
     /// `true` when this player has already checked during the current betting
     /// street.  Used by [`crate::bot::decider::RuleBasedDecider`] to detect
     /// check-raise opportunities (checked, faced a bet, now can raise).
@@ -270,6 +280,8 @@ impl<'a> TableSnapshot<'a> {
             my_chips,
             stacks,
             big_blind: table.forced.big_blind,
+            betting_structure: table.betting,
+            bet_tier: table.current_bet_tier(),
             checked_this_street,
             dealer_button,
             seat_count,

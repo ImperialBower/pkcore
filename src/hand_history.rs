@@ -390,6 +390,7 @@ impl HandHistory {
                     },
                     straddle: None,
                 },
+                betting_structure: crate::games::betting_structure::BettingStructure::NoLimit,
             },
             players: player_snapshot
                 .iter()
@@ -418,6 +419,39 @@ impl HandHistory {
             analysis: None,
             shuffled_deck,
         }
+    }
+
+    /// Fluent setter for the table's
+    /// [`BettingStructure`][crate::games::betting_structure::BettingStructure]
+    /// (EPIC-30 Phase 9).
+    ///
+    /// `HandHistory::from_table_state` and friends construct a `TableInfo`
+    /// whose `betting_structure` defaults to `NoLimit`. Callers recording
+    /// a Fixed-Limit or Pot-Limit hand chain this after `from_table_state`
+    /// to record the variant:
+    ///
+    /// ```ignore
+    /// let hh = HandHistory::from_table_state(...)
+    ///     .with_betting_structure(table.betting);
+    /// ```
+    #[must_use]
+    pub fn with_betting_structure(mut self, betting: crate::games::betting_structure::BettingStructure) -> Self {
+        self.table.betting_structure = betting;
+        self
+    }
+
+    /// Fluent setter for the hand's [`HandVariant`] (EPIC-31 Phase 4).
+    ///
+    /// `from_table_state` hardcodes `HandVariant::Holdem`; callers
+    /// recording a non-Holdem variant chain this to override:
+    ///
+    /// ```ignore
+    /// let hh = HandHistory::from_table_state(...).with_variant(HandVariant::Omaha);
+    /// ```
+    #[must_use]
+    pub fn with_variant(mut self, variant: HandVariant) -> Self {
+        self.hand.game = variant;
+        self
     }
 
     /// Replays all recorded actions from `streets` through a fresh [`TableNoCell`]
@@ -458,6 +492,7 @@ impl HandHistory {
     ///         seats: Some(2),
     ///         button: Some(0),
     ///         stakes: Stakes { small_blind: 50.0, big_blind: 100.0, ante: None, straddle: None },
+    ///         betting_structure: Default::default(),
     ///     },
     ///     players: vec![
     ///         PlayerEntry { seat: 0, name: "A".to_string(), stack: 1000.0,
@@ -526,7 +561,24 @@ impl HandHistory {
                 SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), p.stack as usize));
         }
         let seats = SeatsNoCell::new(seats_vec);
-        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(sb, bb));
+        // EPIC-30 Phase 9 / EPIC-31 Phase 5: dispatch on recorded
+        // variant + structure so PLO replays through `plo_from_seats`,
+        // FLHE replays through `limit_holdem_from_seats`, and everything
+        // else falls back to NLHE. PLO takes precedence over
+        // `betting_structure` dispatch because the variant determines the
+        // showdown evaluator (the betting structure only affects sizing).
+        let mut table = if self.hand.game == HandVariant::Omaha {
+            TableNoCell::plo_from_seats(seats, (sb, bb))
+        } else {
+            match self.table.betting_structure {
+                crate::games::betting_structure::BettingStructure::FixedLimit {
+                    small_bet,
+                    big_bet,
+                    raise_cap,
+                } => TableNoCell::limit_holdem_from_seats(seats, small_bet, big_bet, raise_cap),
+                _ => TableNoCell::nlh_from_seats(seats, ForcedBets::new(sb, bb)),
+            }
+        };
         table.button = button;
 
         // ── Forced bets & hole cards ─────────────────────────────────────────
@@ -811,6 +863,7 @@ impl HandCollection {
     ///         seats: None,
     ///         button: None,
     ///         stakes: Stakes { small_blind: 1.0, big_blind: 2.0, ante: None, straddle: None },
+    ///         betting_structure: Default::default(),
     ///     },
     ///     players: vec![],
     ///     board: None,
@@ -1199,6 +1252,7 @@ pub enum HandVariant {
 ///     seats: Some(9),
 ///     button: Some(1),
 ///     stakes: Stakes { small_blind: 100.0, big_blind: 200.0, ante: None, straddle: None },
+///     betting_structure: Default::default(),
 /// };
 /// assert_eq!(table.stakes.big_blind, 200.0);
 /// ```
@@ -1218,6 +1272,14 @@ pub struct TableInfo {
 
     /// Blind and ante structure.
     pub stakes: Stakes,
+
+    /// Betting structure — no-limit / pot-limit / fixed-limit (EPIC-30
+    /// Phase 9). Older YAML hand histories (recorded before this field
+    /// existed) deserialize as
+    /// [`BettingStructure::NoLimit`][crate::games::betting_structure::BettingStructure::NoLimit]
+    /// via `#[serde(default)]`.
+    #[serde(default)]
+    pub betting_structure: crate::games::betting_structure::BettingStructure,
 }
 
 /// Blind and ante structure for a hand.
@@ -1327,6 +1389,36 @@ impl PlayerEntry {
     pub fn to_two(&self) -> Result<Two, PKError> {
         match &self.hole_cards {
             Some(s) => Two::from_str(s),
+            None => Err(PKError::NotEnoughCards),
+        }
+    }
+
+    /// Parses `hole_cards` as a 4-card Omaha hand (EPIC-31 Phase 4).
+    ///
+    /// # Errors
+    ///
+    /// Returns `PKError::NotEnoughCards` when there are no hole cards
+    /// recorded, or an `Err` from `Four::from_str` if the string is
+    /// malformed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::PlayerEntry;
+    ///
+    /// let player = PlayerEntry {
+    ///     seat: 0,
+    ///     name: "A".to_string(),
+    ///     stack: 1000.0,
+    ///     player_id: None,
+    ///     hole_cards: Some("A♠ K♠ Q♠ J♠".to_string()),
+    ///     posted: None,
+    /// };
+    /// assert!(player.to_four().is_ok());
+    /// ```
+    pub fn to_four(&self) -> Result<crate::arrays::four::Four, PKError> {
+        match &self.hole_cards {
+            Some(s) => crate::arrays::four::Four::from_str(s),
             None => Err(PKError::NotEnoughCards),
         }
     }
@@ -2455,6 +2547,7 @@ results:
                     ante: None,
                     straddle: None,
                 },
+                betting_structure: crate::games::betting_structure::BettingStructure::NoLimit,
             },
             players: vec![],
             board: None,
@@ -2535,6 +2628,7 @@ results:
                     ante: None,
                     straddle: None,
                 },
+                betting_structure: crate::games::betting_structure::BettingStructure::NoLimit,
             },
             players: vec![],
             board: None,
@@ -3041,6 +3135,7 @@ hands:
                     ante: None,
                     straddle: None,
                 },
+                betting_structure: crate::games::betting_structure::BettingStructure::NoLimit,
             },
             players: vec![
                 PlayerEntry {
@@ -3173,6 +3268,7 @@ hands:
                     ante: None,
                     straddle: None,
                 },
+                betting_structure: crate::games::betting_structure::BettingStructure::NoLimit,
             },
             players: vec![
                 PlayerEntry {
