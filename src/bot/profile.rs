@@ -592,6 +592,53 @@ impl BotProfile {
         }
     }
 
+    /// Returns a Stud Hi flavored profile built on top of one of the
+    /// base reference profiles (EPIC-32 Phase 10).
+    ///
+    /// Sets `betting_structure = Some(BettingStructure::FixedLimit { .. })`
+    /// as a provenance marker. The decider's range lookup uses the
+    /// top-2-of-3 hole cards on 3rd street (NLHE-style range notation as
+    /// placeholders); EPIC-32 Phase 8 added a coarse partial-hand
+    /// equity heuristic so mid-hand decisions are pair/trips-aware.
+    /// Stronger Stud ranges + Monte Carlo equity are v1.1 polish items.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::{BotProfile, PlayStyle};
+    /// use pkcore::games::betting_structure::BettingStructure;
+    ///
+    /// let p = BotProfile::for_stud_hi(&PlayStyle::TightAggressive);
+    /// assert_eq!("tight_aggressive_stud", p.name);
+    /// assert!(matches!(
+    ///     p.betting_structure,
+    ///     Some(BettingStructure::FixedLimit { .. })
+    /// ));
+    /// ```
+    #[must_use]
+    pub fn for_stud_hi(style: &PlayStyle) -> Self {
+        let base = match style {
+            PlayStyle::TightPassive => Self::tight_passive(),
+            PlayStyle::LooseAggressive => Self::loose_aggressive(),
+            PlayStyle::TightAggressive => Self::tight_aggressive(),
+            PlayStyle::LoosePassive => Self::loose_passive(),
+            PlayStyle::Maniac => Self::maniac(),
+            PlayStyle::Abc => Self::abc(),
+            PlayStyle::ShortStackNinja => Self::short_stack_ninja(),
+            PlayStyle::Gto | PlayStyle::Custom(_) => Self::gto(),
+        };
+        Self {
+            name: format!("{}_stud", base.name),
+            description: format!("{} (Stud Hi-tuned)", base.description),
+            betting_structure: Some(BettingStructure::FixedLimit {
+                small_bet: 0,
+                big_bet: 0,
+                raise_cap: 3,
+            }),
+            ..base
+        }
+    }
+
     // ── Playbook builder ──────────────────────────────────────────────────────
 
     /// Attaches a [`Playbook`] to this profile, enabling position- and
@@ -935,6 +982,42 @@ mod bot__profile_tests {
         let p = BotProfile::from_yaml_str(&yaml).expect("PLO TAG must deserialize");
         assert_eq!("tight_aggressive_plo", p.name);
         assert_eq!(Some(BettingStructure::PotLimit), p.betting_structure);
+    }
+
+    // ---- EPIC-32 Phase 10: for_stud_hi factory + reference profiles ----
+
+    #[test]
+    fn for_stud_hi_marker() {
+        let p = BotProfile::for_stud_hi(&PlayStyle::TightAggressive);
+        assert_eq!("tight_aggressive_stud", p.name);
+        assert!(matches!(
+            p.betting_structure,
+            Some(BettingStructure::FixedLimit { raise_cap: 3, .. })
+        ));
+    }
+
+    #[test]
+    fn stud_hi_tight_aggressive_yaml_loads() {
+        let yaml = std::fs::read_to_string("data/bots/stud_hi/tight_aggressive_stud_hi.yaml")
+            .expect("Stud Hi TAG profile YAML must exist");
+        let p = BotProfile::from_yaml_str(&yaml).expect("Stud Hi TAG must deserialize");
+        assert_eq!("tight_aggressive_stud_hi", p.name);
+        assert!(matches!(
+            p.betting_structure,
+            Some(BettingStructure::FixedLimit { raise_cap: 3, .. })
+        ));
+    }
+
+    #[test]
+    fn stud_hi_loose_passive_yaml_loads() {
+        let yaml = std::fs::read_to_string("data/bots/stud_hi/loose_passive_stud_hi.yaml")
+            .expect("Stud Hi LP profile YAML must exist");
+        let p = BotProfile::from_yaml_str(&yaml).expect("Stud Hi LP must deserialize");
+        assert_eq!("loose_passive_stud_hi", p.name);
+        assert!(matches!(
+            p.betting_structure,
+            Some(BettingStructure::FixedLimit { raise_cap: 3, .. })
+        ));
     }
 
     #[test]

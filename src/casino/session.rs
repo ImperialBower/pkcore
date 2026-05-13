@@ -328,7 +328,18 @@ impl PokerSession {
         self.table.deck.shuffle_in_place();
         self.shuffled_deck_str = Some(self.table.deck.to_string());
         self.table.act_forced_bets()?;
-        self.table.deal_cards_to_seats()?;
+        // EPIC-32 Phase 6: dispatch on family. Hold'em-family games deal
+        // all hole cards at once; stud-family games deal 3rd street (2
+        // down + 1 up) and post the bring-in before 3rd-street betting.
+        match self.table.game.family() {
+            crate::games::GameFamily::StudHi | crate::games::GameFamily::Razz => {
+                self.table.deal_stud_3rd_street()?;
+                self.table.act_bring_in()?;
+            }
+            _ => {
+                self.table.deal_cards_to_seats()?;
+            }
+        }
         self.hand_number += 1;
         Ok(())
     }
@@ -623,7 +634,25 @@ impl PokerSession {
 
     /// Advances to the next street by collecting bets and dealing the next
     /// board card. Returns `Err` if no more streets remain.
+    ///
+    /// EPIC-32 Phase 6: dispatches on game family. Hold'em / Omaha use
+    /// the existing community-board path (driven by `board.len()`);
+    /// stud-family games step through `Stud3rd → Stud4th → ... → Stud7th`
+    /// dealing one card per active seat at each transition.
     fn advance_street(&mut self) -> Result<(), PKError> {
+        if matches!(
+            self.table.game.family(),
+            crate::games::GameFamily::StudHi | crate::games::GameFamily::Razz
+        ) {
+            let next = self
+                .table
+                .phase
+                .next_stud_street()
+                .ok_or(PKError::InvalidAction)?;
+            self.table.bring_it_in()?;
+            self.table.deal_stud_street(next)?;
+            return Ok(());
+        }
         match self.table.board.len() {
             0 => {
                 self.table.bring_it_in()?;

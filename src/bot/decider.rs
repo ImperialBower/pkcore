@@ -396,6 +396,14 @@ fn hand_equity<R: rand::Rng>(profile: &BotProfile, state: &TableSnapshot, rng: &
     }
     let combined = format!("{} {}", state.hole_cards, state.board);
     let total = state.hole_cards.len() + state.board.len();
+    // EPIC-32 Phase 8: partial-hand heuristic for Stud-family mid-hand
+    // (3rd / 4th street) where total is 3 or 4. Returns a coarse strength
+    // bucket so the bot doesn't fall through to aggression-only logic.
+    // Gated on `stud_street_index().is_some()` so NLHE/FLHE/PLO are
+    // unaffected.
+    if state.phase.stud_street_index().is_some() && matches!(total, 3 | 4) {
+        return Some(stud_partial_equity(state));
+    }
     let hrv = match total {
         5 => combined.parse::<Five>().ok().map(|h| h.hand_rank_value()),
         6 => combined.parse::<Six>().ok().map(|h| h.hand_rank_value()),
@@ -403,6 +411,50 @@ fn hand_equity<R: rand::Rng>(profile: &BotProfile, state: &TableSnapshot, rng: &
         _ => None,
     }?;
     Some(1.0 - f64::from(hrv) / 7462.0)
+}
+
+/// EPIC-32 Phase 8: discrete partial-hand strength bucket for Stud
+/// mid-hand (3rd / 4th street). Returns a value in `[0.0, 1.0]`. Not a
+/// real Monte Carlo equity — coarse "pair / trips / high cards"
+/// classification. v1.1 polish item.
+fn stud_partial_equity(state: &TableSnapshot) -> f64 {
+    use std::collections::HashMap;
+    use std::str::FromStr;
+    // Parse the bot's hole cards into Card values.
+    let cards_str = state.hole_cards.to_string();
+    let cards: Vec<crate::card::Card> = cards_str
+        .split_whitespace()
+        .filter_map(|tok| crate::card::Card::from_str(tok).ok())
+        .collect();
+    if cards.is_empty() {
+        return 0.25;
+    }
+    let mut rank_count: HashMap<u8, u8> = HashMap::new();
+    for c in &cards {
+        *rank_count.entry(c.get_rank() as u8).or_insert(0) += 1;
+    }
+    let max_count = rank_count.values().copied().max().unwrap_or(0);
+    let pair_count = rank_count.values().filter(|&&v| v == 2).count();
+    match (cards.len(), max_count) {
+        (3, 3) => 0.90, // trips on 3rd street — premium
+        (3, 2) => 0.65, // pair on 3rd
+        (4, 4) => 0.98, // quads on 4th — virtual lock
+        (4, 3) => 0.85, // trips on 4th
+        (4, 2) if pair_count >= 2 => 0.75, // two pair on 4th
+        (4, 2) => 0.55, // single pair on 4th
+        _ => {
+            // No pair: rank by highest card present. Aces ≈ 0.45,
+            // 2-rank ≈ 0.25. Linear interpolation keeps the value tame.
+            let top = cards
+                .iter()
+                .map(|c| c.get_rank() as u8)
+                .max()
+                .unwrap_or(2);
+            // top is 2..=14
+            let t = f64::from(top.saturating_sub(2)) / 12.0; // 0.0..=1.0
+            0.20 + 0.25 * t
+        }
+    }
 }
 
 /// Returns a random `(numerator, denominator)` pair from `strategy.preferred_bet_sizes`,

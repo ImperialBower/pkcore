@@ -13,7 +13,53 @@ use crate::arrays::seven::Seven;
 use crate::arrays::sliced::BoxedCards;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
+use crate::card::Card;
 use crate::cards::Cards;
+use crate::rank::Rank;
+
+/// EPIC-32 Phase 5: discriminates Stud-family first-to-act selection.
+/// `HighStud` picks the seat with the *best* visible hand (used by Stud
+/// Hi on 4th+); `LowRazz` picks the seat with the *worst* visible hand
+/// (used by Razz, EPIC-33).
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum VisibleHandMode {
+    HighStud,
+    LowRazz,
+}
+
+/// Pair-aware strength score for an unordered slice of visible cards
+/// (EPIC-32 Phase 5). Higher = stronger. Tier dominates ranks:
+/// quads(7) > trips(6) > two-pair(2) > pair(1) > high card(0). Within a
+/// tier, the four highest ranks (descending) tie-break.
+fn visible_strength(cards: &[Card]) -> u64 {
+    if cards.is_empty() {
+        return 0;
+    }
+    let mut ranks: Vec<u8> = cards.iter().map(|c| c.get_rank() as u8).collect();
+    ranks.sort_unstable_by(|a, b| b.cmp(a));
+    let mut rank_count: std::collections::HashMap<u8, u8> = std::collections::HashMap::new();
+    for &r in &ranks {
+        *rank_count.entry(r).or_insert(0) += 1;
+    }
+    let max_count = rank_count.values().copied().max().unwrap_or(0);
+    let pair_count = rank_count.values().filter(|&&v| v == 2).count();
+    let tier: u64 = match max_count {
+        4 => 7,
+        3 => 6,
+        2 if pair_count >= 2 => 2,
+        2 => 1,
+        _ => 0,
+    };
+    let r0 = u64::from(ranks.first().copied().unwrap_or(0));
+    let r1 = u64::from(ranks.get(1).copied().unwrap_or(0));
+    let r2 = u64::from(ranks.get(2).copied().unwrap_or(0));
+    let r3 = u64::from(ranks.get(3).copied().unwrap_or(0));
+    tier * 100_000_000
+        + r0 * 1_000_000
+        + r1 * 10_000
+        + r2 * 100
+        + r3
+}
 use crate::casino::game::ForcedBets;
 use crate::casino::state::PlayerState;
 use crate::casino::table::event::TableAction;
@@ -1294,6 +1340,56 @@ impl TableNoCell {
         Self::from_seats(seats, GameType::PLO, forced)
     }
 
+    /// Constructs a Seven-Card Stud Hi table (EPIC-32 Phase 6).
+    ///
+    /// Stud Hi uses fixed-limit betting with separate small-bet and
+    /// big-bet tiers (the latter applies from 5th street onward). Antes
+    /// are posted by every active seat at the start of every hand
+    /// ([`Self::act_forced_bets`] dispatches on `GameFamily::StudHi`).
+    /// The bring-in is posted by the lowest upcard after 3rd street is
+    /// dealt ([`Self::act_bring_in`]); session-level dispatch routes the
+    /// hand-loop accordingly.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::games::GameType;
+    /// use pkcore::games::betting_structure::BettingStructure;
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let t = TableNoCell::stud_hi_from_seats(seats, 2, 5, 20, 40);
+    /// assert_eq!(GameType::StudHi, t.game);
+    /// assert_eq!(2, t.forced.ante);
+    /// assert_eq!(5, t.forced.bring_in);
+    /// assert!(matches!(
+    ///     t.betting,
+    ///     BettingStructure::FixedLimit { small_bet: 20, big_bet: 40, raise_cap: 3 }
+    /// ));
+    /// // Seats pre-allocated for 7 hole cards.
+    /// assert_eq!(7, t.seats.get_seat(0).unwrap().cards.len());
+    /// ```
+    #[must_use]
+    pub fn stud_hi_from_seats(
+        seats: SeatsNoCell,
+        ante: usize,
+        bring_in: usize,
+        small_bet: usize,
+        big_bet: usize,
+    ) -> Self {
+        let forced = ForcedBets::new_with_ante_and_bring_in(0, 0, ante, bring_in);
+        let mut t = Self::from_seats(seats, GameType::StudHi, forced);
+        t.betting = BettingStructure::FixedLimit {
+            small_bet,
+            big_bet,
+            raise_cap: 3,
+        };
+        t
+    }
+
     /// Generic table constructor parameterised by [`GameType`] (EPIC-29
     /// Phase 8). Per-variant epics (EPIC-30 FLHE, EPIC-31 PLO, EPIC-32
     /// Stud Hi, EPIC-33 Razz) add thin wrappers (`limit_holdem_from_seats`,
@@ -1578,22 +1674,102 @@ impl TableNoCell {
         }
     }
 
-    /// Placeholder Stud Hi first-to-act seam. EPIC-32 replaces this body
-    /// with: 3rd street → bring-in seat (lowest upcard); 4th+ → best
-    /// visible hand acts first. Until then this returns the position-based
-    /// seat so the hook compiles and integrates without behavior changes.
+    /// EPIC-32 Phase 5: Stud Hi first-to-act resolver.
+    ///
+    /// - **3rd street** (`GamePhase::Stud3rd`): the seat **left of
+    ///   bring-in** acts first. The bring-in seat has effectively
+    ///   already acted by posting the forced bet.
+    /// - **4th–7th street**: the seat showing the **best visible hand**
+    ///   acts first (pair > high cards; suit breaks rank ties).
+    /// - **Anything else** (e.g. `NewHand`, `Showdown`): falls back to
+    ///   position-based UTG so the seam never panics.
     #[must_use]
     fn first_to_act_stud_hi(&self) -> u8 {
-        self.determine_utg()
+        match self.phase.stud_street_index() {
+            Some(0) => {
+                // 3rd street: action proceeds left of bring-in. Use the
+                // 3rd-street-only upcard scan so live and replay agree
+                // even when seat.hand carries later-street upcards.
+                match self.third_street_extreme_upcard_seat(false) {
+                    Some(bring_in_seat) => self.next_occupied_seat_after(bring_in_seat, 1),
+                    None => self.determine_utg(),
+                }
+            }
+            Some(_) => self
+                .best_visible_hand_seat(VisibleHandMode::HighStud)
+                .unwrap_or_else(|| self.determine_utg()),
+            None => self.determine_utg(),
+        }
     }
 
-    /// Placeholder Razz first-to-act seam. EPIC-33 replaces this body
-    /// with: 3rd street → bring-in seat (highest upcard); 4th+ → worst
-    /// visible hand acts first. Until then this returns the position-based
-    /// seat so the hook compiles and integrates without behavior changes.
+    /// EPIC-33: Razz first-to-act resolver. Mirrors Stud Hi but with
+    /// inverted modes: 3rd street uses *highest* upcard for bring-in,
+    /// and 4th+ uses *worst* visible hand (lowest unpaired cards win
+    /// the right to act first).
     #[must_use]
     fn first_to_act_razz(&self) -> u8 {
-        self.determine_utg()
+        match self.phase.stud_street_index() {
+            Some(0) => match self.third_street_extreme_upcard_seat(true) {
+                Some(bring_in_seat) => self.next_occupied_seat_after(bring_in_seat, 1),
+                None => self.determine_utg(),
+            },
+            Some(_) => self
+                .best_visible_hand_seat(VisibleHandMode::LowRazz)
+                .unwrap_or_else(|| self.determine_utg()),
+            None => self.determine_utg(),
+        }
+    }
+
+    /// EPIC-32 Phase 5: returns the seat with the strongest visible
+    /// hand (`HighStud`) or weakest (`LowRazz`) across all active seats.
+    /// `None` if no seat has any face-up cards.
+    ///
+    /// Strength is a pair-aware ranking on each seat's `up_cards()`:
+    /// quads > trips > two-pair > pair > high cards; rank-then-suit
+    /// breaks ties.
+    #[must_use]
+    pub fn best_visible_hand_seat(&self, mode: VisibleHandMode) -> Option<u8> {
+        // EPIC-32 Phase 12: scope to the upcards visible on the CURRENT
+        // street. During live play seat.hand only holds upcards dealt so
+        // far. During replay all 7 cards are injected up-front, so we
+        // must truncate to the count appropriate for the current street.
+        let up_card_limit: Option<usize> = match self.phase.stud_street_index() {
+            Some(0) => Some(1), // 3rd street: 1 upcard
+            Some(1) => Some(2),       // 4th street: 2 upcards
+            Some(2) => Some(3),       // 5th street: 3 upcards
+            Some(3 | 4) => Some(4),   // 6th: 4 upcards; 7th: still 4 (dealt down)
+            _ => None,
+        };
+        let mut best: Option<(u8, u64)> = None;
+        for (idx, seat) in self.seats.0.iter().enumerate() {
+            if seat.is_empty() || !seat.is_in_hand() {
+                continue;
+            }
+            let Ok(seat_idx) = u8::try_from(idx) else {
+                continue;
+            };
+            let mut up: Vec<crate::card::Card> = seat.hand.up_cards().collect();
+            if let Some(limit) = up_card_limit {
+                up.truncate(limit);
+            }
+            if up.is_empty() {
+                continue;
+            }
+            let strength = visible_strength(&up);
+            let candidate_score = match mode {
+                VisibleHandMode::HighStud => strength,
+                // For Razz, "best" first-to-act is the LOWEST hand —
+                // invert so higher score below wins the comparison.
+                VisibleHandMode::LowRazz => u64::MAX - strength,
+            };
+            let candidate = (seat_idx, candidate_score);
+            match best {
+                None => best = Some(candidate),
+                Some((_, bs)) if candidate_score > bs => best = Some(candidate),
+                _ => {}
+            }
+        }
+        best.map(|(seat, _)| seat)
     }
 
     // ── Phase helpers ─────────────────────────────────────────────────────────
@@ -1638,7 +1814,9 @@ impl TableNoCell {
         if self.seats.count_active_in_hand() <= 1 {
             return true;
         }
-        self.is_river() && self.seats.is_betting_complete()
+        // EPIC-32 Phase 12: Stud hands end after 7th-street betting.
+        let last_street = self.is_river() || self.phase == GamePhase::Stud7th;
+        last_street && self.seats.is_betting_complete()
     }
 
     // ── Chip helpers ──────────────────────────────────────────────────────────
@@ -1832,7 +2010,9 @@ impl TableNoCell {
         } else if self.phase.is_river() {
             Some(3)
         } else {
-            None
+            // EPIC-32 Phase 1: stud-family phases consult
+            // `stud_street_index` (0..=4 for 3rd..7th street).
+            self.phase.stud_street_index().map(usize::from)
         };
         match idx_opt.and_then(|i| streets.get(i)) {
             Some(descriptor) => descriptor.bet_tier,
@@ -1940,18 +2120,190 @@ impl TableNoCell {
         }
     }
 
-    /// Posts small and big blinds.
+    /// Posts forced bets for the start of a hand.
+    ///
+    /// Dispatches on [`GameFamily`] (EPIC-32 Phase 2):
+    /// - Hold'em / Omaha: posts SB + BB. Optional antes if `forced.ante > 0`.
+    /// - Stud / Razz: posts antes for every active seat. The bring-in is
+    ///   posted later by [`Self::act_bring_in`] after 3rd-street dealing.
     ///
     /// # Errors
     ///
-    /// - `PKError::InvalidSeatNumber` if the SB/BB seat cannot be found.
+    /// - `PKError::InvalidSeatNumber` if a posting seat cannot be found.
     pub fn act_forced_bets(&mut self) -> Result<(), PKError> {
         // Snapshot before any chips move so end_hand() can verify conservation.
         self.hand_chip_total = self.table_chip_count();
-        self.act_forced_bet_small_blind()?;
-        self.act_forced_bet_big_blind()?;
+        match self.game.family() {
+            crate::games::GameFamily::StudHi | crate::games::GameFamily::Razz => {
+                self.act_antes()?;
+            }
+            _ => {
+                if self.forced.ante > 0 {
+                    self.act_antes()?;
+                }
+                self.act_forced_bet_small_blind()?;
+                self.act_forced_bet_big_blind()?;
+            }
+        }
         self.phase = GamePhase::ForcedBets;
         Ok(())
+    }
+
+    /// Posts the ante for every non-empty seat with chips (EPIC-32 Phase 2).
+    /// Used by stud-family hands at the start of every hand, and optionally
+    /// by Hold'em/Omaha when `forced.ante > 0`.
+    ///
+    /// # Errors
+    ///
+    /// - `PKError::InvalidSeatNumber` if a seat lookup fails.
+    pub fn act_antes(&mut self) -> Result<(), PKError> {
+        let ante = self.forced.ante;
+        if ante == 0 {
+            return Ok(());
+        }
+        let count = self.seats.size();
+        for idx in 0..count {
+            let should_post = self
+                .seats
+                .get_seat(idx)
+                .is_some_and(|s| !s.is_empty() && s.player.total_chip_count() > 0);
+            if !should_post {
+                continue;
+            }
+            let actual = self.seats.act_forced_bet(idx, ante)?;
+            self.log(TableAction::BetAnteForced(idx, actual));
+        }
+        Ok(())
+    }
+
+    /// EPIC-32 Phase 4: scans every active seat's face-up cards (after
+    /// 3rd-street dealing) and returns the seat showing the lowest-ranked
+    /// upcard. Ties broken by suit (`♣ < ♦ < ♥ < ♠`). Returns `None` when
+    /// no seat has any visible card.
+    ///
+    /// Stud Hi convention: the lowest upcard pays the bring-in.
+    #[must_use]
+    pub fn lowest_upcard_seat(&self) -> Option<u8> {
+        self.extreme_upcard_seat(/*highest=*/ false)
+    }
+
+    /// EPIC-32 Phase 4: companion of [`Self::lowest_upcard_seat`].
+    /// Returns the seat showing the highest-ranked face-up card. Used by
+    /// Razz (EPIC-33), where the highest upcard pays the bring-in.
+    #[must_use]
+    pub fn highest_upcard_seat(&self) -> Option<u8> {
+        self.extreme_upcard_seat(/*highest=*/ true)
+    }
+
+    fn extreme_upcard_seat(&self, highest: bool) -> Option<u8> {
+        let mut best: Option<(u8, Rank, u8)> = None;
+        for (idx, seat) in self.seats.0.iter().enumerate() {
+            if seat.is_empty() || !seat.is_in_hand() {
+                continue;
+            }
+            let Ok(seat_idx) = u8::try_from(idx) else {
+                continue;
+            };
+            for hole_card in seat.hand.iter() {
+                if !hole_card.is_up() {
+                    continue;
+                }
+                let card = hole_card.card();
+                let rank = card.get_rank();
+                let suit = card.get_suit() as u8;
+                let candidate = (seat_idx, rank, suit);
+                match best {
+                    None => best = Some(candidate),
+                    Some((_, br, bs)) => {
+                        let better = if highest {
+                            rank > br || (rank == br && suit > bs)
+                        } else {
+                            rank < br || (rank == br && suit < bs)
+                        };
+                        if better {
+                            best = Some(candidate);
+                        }
+                    }
+                }
+            }
+        }
+        best.map(|(seat, _, _)| seat)
+    }
+
+    /// Posts the stud bring-in (EPIC-32 Phase 4). Dispatches on
+    /// `game.family()`:
+    /// - `StudHi`: lowest 3rd-street upcard pays.
+    /// - `Razz`: highest 3rd-street upcard pays (EPIC-33).
+    /// - Other families: returns `PKError::InvalidAction`.
+    ///
+    /// Uses only the **first** upcard in dealing order per seat (the
+    /// 3rd-street upcard). This matters during hand-history replay where
+    /// all 7 cards may already be present in `seat.hand`: bring-in
+    /// selection must consider only the card visible at 3rd street, not
+    /// all four eventual upcards.
+    ///
+    /// # Errors
+    ///
+    /// - `PKError::InvalidAction` if called on a non-stud-family game.
+    /// - `PKError::NotDealt` if no seat has a face-up 3rd-street card.
+    /// - `PKError::InvalidSeatNumber` if the chosen seat can't be found.
+    pub fn act_bring_in(&mut self) -> Result<(), PKError> {
+        let highest = matches!(self.game.family(), crate::games::GameFamily::Razz);
+        let in_stud_family = matches!(
+            self.game.family(),
+            crate::games::GameFamily::StudHi | crate::games::GameFamily::Razz
+        );
+        if !in_stud_family {
+            return Err(PKError::InvalidAction);
+        }
+        let seat_idx = self
+            .third_street_extreme_upcard_seat(highest)
+            .ok_or(PKError::NotDealt)?;
+        let amount = self.forced.bring_in;
+        let actual = self.seats.act_forced_bet(seat_idx, amount)?;
+        self.bet = self.bet.max(amount);
+        self.log(TableAction::StudBringInPost(seat_idx, actual));
+        Ok(())
+    }
+
+    /// EPIC-32 Phase 12: like [`Self::extreme_upcard_seat`] but only
+    /// considers each seat's **first** up-tagged card in dealing order
+    /// — i.e. the 3rd-street upcard. Used by [`Self::act_bring_in`] so
+    /// that replay (which has all 7 cards present) picks the same
+    /// bring-in seat as the live session (which had only one upcard
+    /// per seat when bring-in was selected).
+    fn third_street_extreme_upcard_seat(&self, highest: bool) -> Option<u8> {
+        let mut best: Option<(u8, Rank, u8)> = None;
+        for (idx, seat) in self.seats.0.iter().enumerate() {
+            if seat.is_empty() || !seat.is_in_hand() {
+                continue;
+            }
+            let Ok(seat_idx) = u8::try_from(idx) else {
+                continue;
+            };
+            // First up-tagged card in dealing order.
+            let Some(hole_card) = seat.hand.iter().find(|hc| hc.is_up()) else {
+                continue;
+            };
+            let card = hole_card.card();
+            let rank = card.get_rank();
+            let suit = card.get_suit() as u8;
+            let candidate = (seat_idx, rank, suit);
+            match best {
+                None => best = Some(candidate),
+                Some((_, br, bs)) => {
+                    let better = if highest {
+                        rank > br || (rank == br && suit > bs)
+                    } else {
+                        rank < br || (rank == br && suit < bs)
+                    };
+                    if better {
+                        best = Some(candidate);
+                    }
+                }
+            }
+        }
+        best.map(|(seat, _, _)| seat)
     }
 
     /// Posts the small blind.
@@ -2295,15 +2647,120 @@ impl TableNoCell {
     /// - `PKError::NotEnoughCards` if the deck is empty.
     /// - `PKError::InvalidSeatNumber` if the seat is not found.
     pub fn deal_card_to_seat(&mut self, seat_number: u8) -> Result<bool, PKError> {
+        self.deal_card_to_seat_with_visibility(seat_number, Visibility::Down)
+    }
+
+    /// Deals one card to `seat_number` with explicit visibility (EPIC-32
+    /// Phase 3). The legacy [`Self::deal_card_to_seat`] now delegates here
+    /// with `Visibility::Down`, preserving NLHE/FLHE/PLO behavior. Stud
+    /// dealing paths supply `Visibility::Up` for face-up cards on 4th–6th
+    /// streets.
+    ///
+    /// # Errors
+    ///
+    /// - `PKError::NotEnoughCards` if the deck is empty.
+    /// - `PKError::InvalidSeatNumber` if the seat is not found.
+    /// - `PKError::NoBlankSlots` if the seat's `cards` storage is full.
+    pub fn deal_card_to_seat_with_visibility(
+        &mut self,
+        seat_number: u8,
+        visibility: Visibility,
+    ) -> Result<bool, PKError> {
         let card = self.deck.draw_one()?;
         self.log(TableAction::Dealt(seat_number, Bard::from(&card)));
         let seat = self.seats.get_seat_mut(seat_number).ok_or(PKError::InvalidSeatNumber)?;
         seat.cards.deal(card)?;
-        // EPIC-29 Phase 5: mirror into the visibility-aware hand. NLHE
-        // deals every card down; variant epics (EPIC-32/33) introduce
-        // variant-specific street-driven visibility.
-        seat.hand.push(card, Visibility::Down);
+        seat.hand.push(card, visibility);
         Ok(seat.cards.is_dealt())
+    }
+
+    /// Deals Stud 3rd street to every active seat (EPIC-32 Phase 3):
+    /// 2 cards Down then 1 card Up, dealt clockwise from left of button.
+    /// Sets `phase = GamePhase::Stud3rd`.
+    ///
+    /// # Errors
+    ///
+    /// - `PKError::NotEnoughCards` if the deck runs dry.
+    /// - `PKError::InvalidSeatNumber` if a seat lookup fails.
+    pub fn deal_stud_3rd_street(&mut self) -> Result<(), PKError> {
+        let seat_count = self.seats.size() as usize;
+        let button = self.button;
+        // 2 down + 1 up = 3 cards per seat.
+        let in_hand_count = (0..seat_count)
+            .filter(|&i| u8::try_from(i).is_ok_and(|idx| self.seats.is_seat_in_hand(idx)))
+            .count();
+        self.log(TableAction::DealingXCards(
+            u8::try_from(in_hand_count * 3).unwrap_or_default(),
+        ));
+        // First round: 2 down cards per seat (deals 2 passes around the table).
+        for _ in 0..2 {
+            for step in 0..seat_count {
+                let idx = u8::try_from((button as usize + 1 + step) % seat_count).unwrap_or(0);
+                if self.seats.is_seat_in_hand(idx) {
+                    self.deal_card_to_seat_with_visibility(idx, Visibility::Down)?;
+                }
+            }
+        }
+        // Second round: 1 up card per seat.
+        for step in 0..seat_count {
+            let idx = u8::try_from((button as usize + 1 + step) % seat_count).unwrap_or(0);
+            if self.seats.is_seat_in_hand(idx) {
+                self.deal_card_to_seat_with_visibility(idx, Visibility::Up)?;
+            }
+        }
+        // Mirror dealt_hole_cards for hand-history replay (3 cards on 3rd
+        // street).
+        self.dealt_hole_cards.clear();
+        for (idx, seat) in self.seats.0.iter().enumerate() {
+            if !seat.is_empty()
+                && seat.cards.has_cards()
+                && let Ok(i) = u8::try_from(idx)
+            {
+                self.dealt_hole_cards.insert(i, seat.cards.clone());
+            }
+        }
+        self.phase = GamePhase::Stud3rd;
+        self.log(TableAction::DealtPlayers);
+        Ok(())
+    }
+
+    /// Deals one additional Stud street to every active seat (EPIC-32
+    /// Phase 3). The visibility for the dealt card comes from
+    /// [`STUD_HI_STREETS`]'s `hole_dealt_up` flag: Up for 4th/5th/6th,
+    /// Down for 7th. Sets `phase = next_street`.
+    ///
+    /// # Errors
+    ///
+    /// - `PKError::InvalidAction` if `next_street` is not a stud-street
+    ///   phase or not advanceable (e.g. calling with `Stud3rd`).
+    /// - `PKError::NotEnoughCards` if the deck runs dry.
+    pub fn deal_stud_street(&mut self, next_street: GamePhase) -> Result<(), PKError> {
+        let next_idx = next_street.stud_street_index().ok_or(PKError::InvalidAction)?;
+        let streets = self.game.streets();
+        let descriptor = streets
+            .get(next_idx as usize)
+            .ok_or(PKError::InvalidAction)?;
+        let visibility = if descriptor.hole_dealt_up > 0 {
+            Visibility::Up
+        } else {
+            Visibility::Down
+        };
+        let seat_count = self.seats.size() as usize;
+        let button = self.button;
+        let in_hand_count = (0..seat_count)
+            .filter(|&i| u8::try_from(i).is_ok_and(|idx| self.seats.is_seat_in_hand(idx)))
+            .count();
+        self.log(TableAction::DealingXCards(
+            u8::try_from(in_hand_count).unwrap_or_default(),
+        ));
+        for step in 0..seat_count {
+            let idx = u8::try_from((button as usize + 1 + step) % seat_count).unwrap_or(0);
+            if self.seats.is_seat_in_hand(idx) {
+                self.deal_card_to_seat_with_visibility(idx, visibility)?;
+            }
+        }
+        self.phase = next_street;
+        Ok(())
     }
 
     /// Deals hole cards clockwise to all in-hand seats.
@@ -2681,14 +3138,36 @@ impl TableNoCell {
         Ok(case_eval)
     }
 
-    /// EPIC-31 Phase 2: dispatch helper that returns the right `CaseEval`
-    /// for the current variant. Holdem-family games use the existing
-    /// `build_game().river_case_eval()` path; Omaha-family games use
-    /// `omaha_river_case_eval`.
+    /// EPIC-32 Phase 12: builds a per-seat [`CaseEval`] for Stud-family
+    /// games. Stud has no community board — each seat's 7 hole cards
+    /// stand alone. Wraps `Seven::try_from(seat.cards.cards())` and
+    /// `Eval::from(seven)` per seat, mirroring the Holdem `CaseEval`
+    /// shape (one Eval per seat slot; `Eval::default()` for empty /
+    /// folded seats).
+    fn stud_river_case_eval(&self) -> CaseEval {
+        let mut case_eval = CaseEval::new(Cards::default());
+        for seat in &self.seats.0 {
+            if seat.is_in_hand() && seat.cards.is_dealt() {
+                match Seven::try_from(seat.cards.cards()) {
+                    Ok(seven) => case_eval.push(Eval::from(seven)),
+                    Err(_) => case_eval.push(Eval::default()),
+                }
+            } else {
+                case_eval.push(Eval::default());
+            }
+        }
+        case_eval
+    }
+
+    /// EPIC-31 Phase 2 / EPIC-32 Phase 12: dispatch helper for the
+    /// per-variant showdown eval shape.
     fn river_case_eval_for_variant(&self) -> Result<CaseEval, PKError> {
         match self.game.family() {
             crate::games::GameFamily::Omaha => self.omaha_river_case_eval(),
-            _ => self.build_game()?.river_case_eval(),
+            crate::games::GameFamily::StudHi | crate::games::GameFamily::Razz => {
+                Ok(self.stud_river_case_eval())
+            }
+            crate::games::GameFamily::Holdem => self.build_game()?.river_case_eval(),
         }
     }
 

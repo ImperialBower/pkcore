@@ -22,6 +22,11 @@ pub enum TableAction {
     ForcedBetSmallBlind(u8, usize),
     ForcedBetBigBlind(u8, usize),
     BetAnteForced(u8, usize),
+    /// EPIC-32: stud-family bring-in post. The seat with the lowest
+    /// (Stud Hi) or highest (Razz) upcard on 3rd street pays this amount.
+    /// Distinct from `BringItIn(usize)` which consolidates bets at the
+    /// end of a betting street.
+    StudBringInPost(u8, usize),
     DealingXCards(u8),
     Dealt(u8, Bard),
     DealtFlop(Bard),
@@ -133,6 +138,7 @@ impl TableAction {
             | TableAction::ForcedBetSmallBlind(_, amount)
             | TableAction::ForcedBetBigBlind(_, amount)
             | TableAction::BetAnteForced(_, amount)
+            | TableAction::StudBringInPost(_, amount)
             | TableAction::BringItIn(amount)
             | TableAction::Bet(_, amount)
             | TableAction::Call(_, amount)
@@ -162,6 +168,7 @@ impl TableAction {
             | TableAction::ForcedBetSmallBlind(seat, _)
             | TableAction::ForcedBetBigBlind(seat, _)
             | TableAction::BetAnteForced(seat, _)
+            | TableAction::StudBringInPost(seat, _)
             | TableAction::Dealt(seat, _)
             | TableAction::ForceDealt(seat, _)
             | TableAction::ActionTo(seat)
@@ -243,6 +250,9 @@ impl Display for TableAction {
             }
             TableAction::BetAnteForced(seat, amount) => {
                 write!(f, "Seat {seat} Antes {amount}")
+            }
+            TableAction::StudBringInPost(seat, amount) => {
+                write!(f, "Seat {seat} posts {amount} bring-in")
             }
             TableAction::DealingXCards(x) => write!(f, "Dealing out {x} cards"),
             TableAction::Dealt(seat, cards) => write!(f, "Seat {seat} is dealt {}", Cards::from(*cards)),

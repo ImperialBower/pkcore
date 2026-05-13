@@ -389,6 +389,11 @@ impl HandHistory {
                         None
                     },
                     straddle: None,
+                    bring_in: if forced.bring_in > 0 {
+                        Some(forced.bring_in as f64)
+                    } else {
+                        None
+                    },
                 },
                 betting_structure: crate::games::betting_structure::BettingStructure::NoLimit,
             },
@@ -401,6 +406,7 @@ impl HandHistory {
                     player_id: *player_id,
                     hole_cards: hole_cards.clone(),
                     posted: None,
+                    hole_cards_visibility: None,
                 })
                 .collect(),
             board: if board_str.is_empty() {
@@ -491,14 +497,16 @@ impl HandHistory {
     ///         name: None,
     ///         seats: Some(2),
     ///         button: Some(0),
-    ///         stakes: Stakes { small_blind: 50.0, big_blind: 100.0, ante: None, straddle: None },
+    ///         stakes: Stakes { small_blind: 50.0, big_blind: 100.0, ante: None, straddle: None, bring_in: None },
     ///         betting_structure: Default::default(),
     ///     },
     ///     players: vec![
     ///         PlayerEntry { seat: 0, name: "A".to_string(), stack: 1000.0,
-    ///             player_id: None, hole_cards: Some("A♠ K♠".to_string()), posted: None },
+    ///             player_id: None, hole_cards: Some("A♠ K♠".to_string()),
+    ///             posted: None, hole_cards_visibility: None },
     ///         PlayerEntry { seat: 1, name: "B".to_string(), stack: 1000.0,
-    ///             player_id: None, hole_cards: Some("7♦ 2♣".to_string()), posted: None },
+    ///             player_id: None, hole_cards: Some("7♦ 2♣".to_string()),
+    ///             posted: None, hole_cards_visibility: None },
     ///     ],
     ///     board: None,
     ///     streets: Some(Streets {
@@ -532,7 +540,8 @@ impl HandHistory {
     #[allow(
         clippy::cast_precision_loss,
         clippy::cast_sign_loss,
-        clippy::cast_possible_truncation
+        clippy::cast_possible_truncation,
+        clippy::too_many_lines
     )]
     pub fn replay(&self) -> Result<ReplayResult, PKError> {
         // ── Build table ──────────────────────────────────────────────────────
@@ -567,7 +576,22 @@ impl HandHistory {
         // else falls back to NLHE. PLO takes precedence over
         // `betting_structure` dispatch because the variant determines the
         // showdown evaluator (the betting structure only affects sizing).
-        let mut table = if self.hand.game == HandVariant::Omaha {
+        // EPIC-32 Phase 9: route Stud through `stud_hi_from_seats` with
+        // recorded ante/bring_in + FixedLimit bet sizes. Falls back to
+        // sensible defaults when fields are missing from older records.
+        let mut table = if self.hand.game == HandVariant::Stud {
+            let ante = self.table.stakes.ante.map_or(0, |x| x as usize);
+            let bring_in = self.table.stakes.bring_in.map_or(0, |x| x as usize);
+            let (small_bet, big_bet) = match self.table.betting_structure {
+                crate::games::betting_structure::BettingStructure::FixedLimit {
+                    small_bet,
+                    big_bet,
+                    ..
+                } => (small_bet, big_bet),
+                _ => (sb.max(20), bb.max(40)),
+            };
+            TableNoCell::stud_hi_from_seats(seats, ante, bring_in, small_bet, big_bet)
+        } else if self.hand.game == HandVariant::Omaha {
             TableNoCell::plo_from_seats(seats, (sb, bb))
         } else {
             match self.table.betting_structure {
@@ -591,6 +615,42 @@ impl HandHistory {
             .collect();
         let hole_refs: Vec<(u8, &str)> = hole_entries.iter().map(|(s, h)| (*s, h.as_str())).collect();
         table.inject_hole_cards(&hole_refs)?;
+
+        // EPIC-32 Phase 9: for Stud-family replays, restore per-card
+        // visibility from `hole_cards_visibility` (if recorded) and post
+        // the bring-in.
+        if self.hand.game == HandVariant::Stud {
+            for p in &self.players {
+                if let Some(vis_tokens) = &p.hole_cards_visibility
+                    && let Some(seat) = table.seats.get_seat_mut(p.seat)
+                {
+                    let visibilities: Vec<crate::play::visibility::Visibility> = vis_tokens
+                        .iter()
+                        .map(|s| {
+                            if s.eq_ignore_ascii_case("up") {
+                                crate::play::visibility::Visibility::Up
+                            } else {
+                                crate::play::visibility::Visibility::Down
+                            }
+                        })
+                        .collect();
+                    let cards: Vec<crate::card::Card> =
+                        seat.hand.iter().map(crate::play::hole_card::HoleCard::card).collect();
+                    seat.hand.clear();
+                    for (i, card) in cards.iter().enumerate() {
+                        let v = visibilities
+                            .get(i)
+                            .copied()
+                            .unwrap_or(crate::play::visibility::Visibility::Down);
+                        seat.hand.push(*card, v);
+                    }
+                }
+            }
+            // Bring-in is posted after 3rd-street dealing in Stud Hi /
+            // Razz. inject_hole_cards represents the full hand, so we
+            // post bring-in here before betting actions are replayed.
+            table.act_bring_in()?;
+        }
 
         // ── Street replay helper ─────────────────────────────────────────────
         let replay_actions = |table: &mut TableNoCell, actions: &[Action]| -> Result<(), PKError> {
@@ -862,7 +922,7 @@ impl HandCollection {
     ///         name: None,
     ///         seats: None,
     ///         button: None,
-    ///         stakes: Stakes { small_blind: 1.0, big_blind: 2.0, ante: None, straddle: None },
+    ///         stakes: Stakes { small_blind: 1.0, big_blind: 2.0, ante: None, straddle: None, bring_in: None },
     ///         betting_structure: Default::default(),
     ///     },
     ///     players: vec![],
@@ -1251,7 +1311,7 @@ pub enum HandVariant {
 ///     name: Some("Main Event".to_string()),
 ///     seats: Some(9),
 ///     button: Some(1),
-///     stakes: Stakes { small_blind: 100.0, big_blind: 200.0, ante: None, straddle: None },
+///     stakes: Stakes { small_blind: 100.0, big_blind: 200.0, ante: None, straddle: None, bring_in: None },
 ///     betting_structure: Default::default(),
 /// };
 /// assert_eq!(table.stakes.big_blind, 200.0);
@@ -1289,7 +1349,7 @@ pub struct TableInfo {
 /// ```
 /// use pkcore::hand_history::Stakes;
 ///
-/// let stakes = Stakes { small_blind: 5.0, big_blind: 10.0, ante: Some(2.0), straddle: None };
+/// let stakes = Stakes { small_blind: 5.0, big_blind: 10.0, ante: Some(2.0), straddle: None, bring_in: None };
 /// assert_eq!(stakes.small_blind, 5.0);
 /// ```
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -1307,6 +1367,11 @@ pub struct Stakes {
     /// Straddle amount, if applicable.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub straddle: Option<f64>,
+
+    /// Stud-family bring-in amount (EPIC-32 Phase 9). `None` for Hold'em
+    /// and Omaha; non-`None` for Stud Hi and Razz when known.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bring_in: Option<f64>,
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1327,6 +1392,7 @@ pub struct Stakes {
 ///     player_id: None,
 ///     hole_cards: Some("A♠ K♠".to_string()),
 ///     posted: None,
+///     hole_cards_visibility: None,
 /// };
 /// assert!(player.to_two().is_ok());
 /// ```
@@ -1361,6 +1427,19 @@ pub struct PlayerEntry {
     /// Which blind or ante this player posted, if any.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub posted: Option<PostedBlind>,
+
+    /// Per-card visibility tags (EPIC-32 Phase 9). Length matches the
+    /// number of cards in `hole_cards` when non-`None`; each entry is
+    /// `"up"` or `"down"`. Used by Stud Hi and Razz to record which
+    /// cards were dealt face-up on each street; Hold'em/Omaha records
+    /// leave this `None` (cards are implicitly all Down).
+    ///
+    /// Replay (via [`crate::casino::table_no_cell::TableNoCell::inject_hole_cards`])
+    /// reads this field when present and pushes each card to the seat's
+    /// `SeatHand` with the recorded visibility. When `None`, all cards
+    /// are pushed as `Visibility::Down`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hole_cards_visibility: Option<Vec<String>>,
 }
 
 impl PlayerEntry {
@@ -1383,6 +1462,7 @@ impl PlayerEntry {
     ///     player_id: None,
     ///     hole_cards: Some("A♠ K♠".to_string()),
     ///     posted: None,
+    ///     hole_cards_visibility: None,
     /// };
     /// assert!(player.to_two().is_ok());
     /// ```
@@ -1413,12 +1493,44 @@ impl PlayerEntry {
     ///     player_id: None,
     ///     hole_cards: Some("A♠ K♠ Q♠ J♠".to_string()),
     ///     posted: None,
+    ///     hole_cards_visibility: None,
     /// };
     /// assert!(player.to_four().is_ok());
     /// ```
     pub fn to_four(&self) -> Result<crate::arrays::four::Four, PKError> {
         match &self.hole_cards {
             Some(s) => crate::arrays::four::Four::from_str(s),
+            None => Err(PKError::NotEnoughCards),
+        }
+    }
+
+    /// Parses `hole_cards` as a 7-card Stud hand (EPIC-32 Phase 9).
+    ///
+    /// # Errors
+    ///
+    /// Returns `PKError::NotEnoughCards` when there are no hole cards
+    /// recorded, or an `Err` from `Seven::from_str` if the string is
+    /// malformed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::PlayerEntry;
+    ///
+    /// let player = PlayerEntry {
+    ///     seat: 0,
+    ///     name: "A".to_string(),
+    ///     stack: 1000.0,
+    ///     player_id: None,
+    ///     hole_cards: Some("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠".to_string()),
+    ///     posted: None,
+    ///     hole_cards_visibility: None,
+    /// };
+    /// assert!(player.to_seven().is_ok());
+    /// ```
+    pub fn to_seven(&self) -> Result<crate::arrays::seven::Seven, PKError> {
+        match &self.hole_cards {
+            Some(s) => crate::arrays::seven::Seven::from_str(s),
             None => Err(PKError::NotEnoughCards),
         }
     }
@@ -2546,6 +2658,7 @@ results:
                     big_blind: 2.0,
                     ante: None,
                     straddle: None,
+                    bring_in: None,
                 },
                 betting_structure: crate::games::betting_structure::BettingStructure::NoLimit,
             },
@@ -2568,6 +2681,7 @@ results:
             stack: 200.0,
             hole_cards: None,
             posted: None,
+            hole_cards_visibility: None,
         };
         assert_eq!(player.to_two(), Err(PKError::NotEnoughCards));
     }
@@ -2627,6 +2741,7 @@ results:
                     big_blind: 2.0,
                     ante: None,
                     straddle: None,
+                    bring_in: None,
                 },
                 betting_structure: crate::games::betting_structure::BettingStructure::NoLimit,
             },
@@ -2735,6 +2850,7 @@ hands:
             player_id,
             hole_cards: None,
             posted: None,
+            hole_cards_visibility: None,
         }
     }
 
@@ -3134,6 +3250,7 @@ hands:
                     big_blind: 100.0,
                     ante: None,
                     straddle: None,
+                    bring_in: None,
                 },
                 betting_structure: crate::games::betting_structure::BettingStructure::NoLimit,
             },
@@ -3145,6 +3262,7 @@ hands:
                     stack: 1000.0,
                     hole_cards: Some("A♠ K♠".to_string()),
                     posted: None,
+                    hole_cards_visibility: None,
                 },
                 PlayerEntry {
                     seat: 1,
@@ -3153,6 +3271,7 @@ hands:
                     stack: 1000.0,
                     hole_cards: Some("7♦ 2♣".to_string()),
                     posted: None,
+                    hole_cards_visibility: None,
                 },
             ],
             board: None,
@@ -3267,6 +3386,7 @@ hands:
                     big_blind: 100.0,
                     ante: None,
                     straddle: None,
+                    bring_in: None,
                 },
                 betting_structure: crate::games::betting_structure::BettingStructure::NoLimit,
             },
@@ -3278,6 +3398,7 @@ hands:
                     stack: 3675.0,
                     hole_cards: None,
                     posted: None,
+                    hole_cards_visibility: None,
                 },
                 PlayerEntry {
                     seat: 4,
@@ -3286,6 +3407,7 @@ hands:
                     stack: 9200.0,
                     hole_cards: None,
                     posted: None,
+                    hole_cards_visibility: None,
                 },
                 PlayerEntry {
                     seat: 6,
@@ -3294,6 +3416,7 @@ hands:
                     stack: 61075.0,
                     hole_cards: Some("5♦ 9♥".to_string()),
                     posted: None,
+                    hole_cards_visibility: None,
                 },
             ],
             board: Some("7♠ Q♦ 8♣".to_string()),
@@ -3692,6 +3815,7 @@ hands:
             player_id: None,
             hole_cards: Some("A♠ K♠".to_string()),
             posted: None,
+            hole_cards_visibility: None,
         };
         let yaml = serde_yaml_bw::to_string(&entry).expect("serialize");
         assert!(
@@ -3713,6 +3837,7 @@ hands:
             player_id: Some(id),
             hole_cards: Some("A♠ K♠".to_string()),
             posted: None,
+            hole_cards_visibility: None,
         };
         let yaml = serde_yaml_bw::to_string(&entry).expect("serialize");
         assert!(yaml.contains("player_id"));

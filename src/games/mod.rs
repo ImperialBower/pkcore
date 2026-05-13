@@ -245,6 +245,20 @@ pub enum GamePhase {
     BurnCardBeforeRiver,
     DealRiver,
     BettingRiver,
+    /// EPIC-32: Seven-Card Stud / Razz 3rd street. Each active player has
+    /// 2 down + 1 up; bring-in is posted by the lowest (Stud Hi) or
+    /// highest (Razz) upcard. Betting at the small tier.
+    Stud3rd,
+    /// EPIC-32: Stud / Razz 4th street. One more upcard. Small tier.
+    Stud4th,
+    /// EPIC-32: Stud / Razz 5th street. One more upcard. Betting
+    /// transitions to the big tier for the rest of the hand.
+    Stud5th,
+    /// EPIC-32: Stud / Razz 6th street. One more upcard. Big tier.
+    Stud6th,
+    /// EPIC-32: Stud / Razz 7th street ("river"). One card dealt face-down.
+    /// Big tier.
+    Stud7th,
     Showdown,
     PayWinners,
 }
@@ -293,6 +307,56 @@ impl GamePhase {
         )
     }
 
+    /// EPIC-32: returns the 0-based stud street index (3rd=0 .. 7th=4)
+    /// for stud-family phases, `None` otherwise. Used by
+    /// `TableNoCell::current_bet_tier` and street-aware dispatch in the
+    /// session loop.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::games::GamePhase;
+    ///
+    /// assert_eq!(Some(0), GamePhase::Stud3rd.stud_street_index());
+    /// assert_eq!(Some(2), GamePhase::Stud5th.stud_street_index());
+    /// assert_eq!(Some(4), GamePhase::Stud7th.stud_street_index());
+    /// assert_eq!(None, GamePhase::Flop.stud_street_index());
+    /// ```
+    #[must_use]
+    pub fn stud_street_index(&self) -> Option<u8> {
+        match self {
+            GamePhase::Stud3rd => Some(0),
+            GamePhase::Stud4th => Some(1),
+            GamePhase::Stud5th => Some(2),
+            GamePhase::Stud6th => Some(3),
+            GamePhase::Stud7th => Some(4),
+            _ => None,
+        }
+    }
+
+    /// EPIC-32: returns the next Stud street phase given a current one.
+    /// Returns `None` when called on `Stud7th` (the hand is complete).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::games::GamePhase;
+    ///
+    /// assert_eq!(Some(GamePhase::Stud4th), GamePhase::Stud3rd.next_stud_street());
+    /// assert_eq!(Some(GamePhase::Stud7th), GamePhase::Stud6th.next_stud_street());
+    /// assert_eq!(None, GamePhase::Stud7th.next_stud_street());
+    /// ```
+    #[must_use]
+    pub fn next_stud_street(&self) -> Option<GamePhase> {
+        match self {
+            GamePhase::Stud3rd => Some(GamePhase::Stud4th),
+            GamePhase::Stud4th => Some(GamePhase::Stud5th),
+            GamePhase::Stud5th => Some(GamePhase::Stud6th),
+            GamePhase::Stud6th => Some(GamePhase::Stud7th),
+            _ => None,
+        }
+    }
+
     #[must_use]
     pub fn next(&self) -> GamePhase {
         match self {
@@ -312,7 +376,11 @@ impl GamePhase {
             GamePhase::ConsolidateTurnBets | GamePhase::River => GamePhase::BurnCardBeforeRiver,
             GamePhase::BurnCardBeforeRiver => GamePhase::DealRiver,
             GamePhase::DealRiver => GamePhase::BettingRiver,
-            GamePhase::BettingRiver => GamePhase::Showdown,
+            GamePhase::BettingRiver | GamePhase::Stud7th => GamePhase::Showdown,
+            GamePhase::Stud3rd => GamePhase::Stud4th,
+            GamePhase::Stud4th => GamePhase::Stud5th,
+            GamePhase::Stud5th => GamePhase::Stud6th,
+            GamePhase::Stud6th => GamePhase::Stud7th,
             GamePhase::Showdown => GamePhase::PayWinners,
             GamePhase::Break | GamePhase::PayWinners => GamePhase::NewHand,
         }
@@ -344,6 +412,11 @@ impl std::fmt::Display for GamePhase {
             GamePhase::BurnCardBeforeRiver => write!(f, "Burn Card Before River"),
             GamePhase::DealRiver => write!(f, "Deal River"),
             GamePhase::BettingRiver => write!(f, "River Betting"),
+            GamePhase::Stud3rd => write!(f, "Stud 3rd Street"),
+            GamePhase::Stud4th => write!(f, "Stud 4th Street"),
+            GamePhase::Stud5th => write!(f, "Stud 5th Street"),
+            GamePhase::Stud6th => write!(f, "Stud 6th Street"),
+            GamePhase::Stud7th => write!(f, "Stud 7th Street"),
             GamePhase::Showdown => write!(f, "Award Winners"),
             GamePhase::PayWinners => write!(f, "Pay Winners"),
         }
