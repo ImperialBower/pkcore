@@ -18,7 +18,7 @@ use crate::casino::table::seats::seat_equity::SeatEquity;
 use crate::casino::table::seats::seatbit::Seatbit;
 use crate::casino::table::seats::table_equity::TableEquity;
 use crate::casino::table::winnings::{PotWin, Winnings};
-use crate::games::betting_structure::BettingStructure;
+use crate::games::betting_structure::{BetTier, BettingStructure};
 use crate::games::{GameFamily, GamePhase, GameType};
 use crate::play::board::Board;
 use crate::play::game::Game;
@@ -1179,6 +1179,12 @@ pub struct TableNoCell {
     /// per-variant constructors in EPIC-30 / EPIC-31 / EPIC-32 / EPIC-33
     /// will set this to the variant's structure at table construction.
     pub betting: BettingStructure,
+    /// Number of raises that have occurred on the current betting street
+    /// (EPIC-30 Phase 2). Reset to 0 at every street boundary
+    /// ([`bring_it_in`](TableNoCell::bring_it_in)) and at every fresh hand
+    /// ([`reset`](TableNoCell::reset)). Used by Fixed-Limit variants to
+    /// enforce the per-street raise cap; `NoLimit` and `PotLimit` ignore it.
+    pub raises_this_street: u8,
 }
 
 impl TableNoCell {
@@ -1203,6 +1209,55 @@ impl TableNoCell {
     #[must_use]
     pub fn nlh_from_seats(seats: SeatsNoCell, forced: ForcedBets) -> Self {
         Self::from_seats(seats, GameType::NoLimitHoldem, forced)
+    }
+
+    /// Constructs a Fixed-Limit Hold'em table (EPIC-30 Phase 4).
+    ///
+    /// The convention is: small blind = `small_bet / 2`, big blind =
+    /// `small_bet`. The first two streets (preflop, flop) bet and raise in
+    /// `small_bet` increments; the turn and river bet in `big_bet`
+    /// increments. `raise_cap` is the number of raises permitted per
+    /// street after the opening bet (typical: 3, giving a "4-bet cap").
+    ///
+    /// For tables where the SB isn't exactly half the `small_bet`, call
+    /// [`Self::from_seats`] directly with a custom `ForcedBets` and then
+    /// assign `table.betting`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::games::GameType;
+    /// use pkcore::games::betting_structure::BettingStructure;
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let t = TableNoCell::limit_holdem_from_seats(seats, 100, 200, 3);
+    /// assert_eq!(GameType::LimitHoldem, t.game);
+    /// assert_eq!(50, t.forced.small_blind);
+    /// assert_eq!(100, t.forced.big_blind);
+    /// assert!(matches!(
+    ///     t.betting,
+    ///     BettingStructure::FixedLimit { small_bet: 100, big_bet: 200, raise_cap: 3 }
+    /// ));
+    /// ```
+    #[must_use]
+    pub fn limit_holdem_from_seats(
+        seats: SeatsNoCell,
+        small_bet: usize,
+        big_bet: usize,
+        raise_cap: u8,
+    ) -> Self {
+        let forced = ForcedBets::new(small_bet / 2, small_bet);
+        let mut t = Self::from_seats(seats, GameType::LimitHoldem, forced);
+        t.betting = BettingStructure::FixedLimit {
+            small_bet,
+            big_bet,
+            raise_cap,
+        };
+        t
     }
 
     /// Generic table constructor parameterised by [`GameType`] (EPIC-29
@@ -1273,6 +1328,7 @@ impl TableNoCell {
             hand_chip_total: 0,
             dealt_hole_cards: HashMap::new(),
             betting,
+            raises_this_street: 0,
         }
     }
 
@@ -1671,11 +1727,71 @@ impl TableNoCell {
     /// ```
     #[must_use]
     pub fn min_raise(&self) -> usize {
-        // EPIC-29 Phase 7: delegate to `BettingStructure::min_raise`.
-        // For `NoLimit` (today's NLHE behavior) this is mathematically
-        // identical to the previous inline math: returns
-        // `raise_increment` when non-zero, else `big_blind`.
-        self.betting.min_raise(self.raise_increment, self.forced.big_blind)
+        // EPIC-29 Phase 7 + EPIC-30 Phase 1: dispatch on betting structure.
+        // - `NoLimit` / `PotLimit`: previous behavior unchanged — returns
+        //   `raise_increment` if non-zero, else `big_blind`.
+        // - `FixedLimit`: returns the small_bet or big_bet for the current
+        //   street's bet tier (`current_bet_tier()`).
+        //
+        // Note: `BettingStructure::min_raise_for_tier` is buggy for the
+        // NoLimit/PotLimit fallthrough (it hardcodes `big_blind = 0`), so we
+        // explicitly route NoLimit/PotLimit through the original two-arg
+        // method here instead.
+        match self.betting {
+            BettingStructure::FixedLimit { .. } => self
+                .betting
+                .min_raise_for_tier(self.raise_increment, self.current_bet_tier()),
+            _ => self
+                .betting
+                .min_raise(self.raise_increment, self.forced.big_blind),
+        }
+    }
+
+    /// Returns the [`BetTier`] for the current `phase` based on the
+    /// game's street-descriptor table (EPIC-30 Phase 1).
+    ///
+    /// Hold'em / Omaha: preflop and flop are `Small`; turn and river are
+    /// `Big`. Stud-family variants (EPIC-32 / EPIC-33) will extend this
+    /// once their phases are added.
+    ///
+    /// Off-street phases (`NewHand`, `ShuffleNewDeck`, `Showdown`, …) fall
+    /// through to `Big`; callers that care should only invoke this during
+    /// the active betting phases.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::games::betting_structure::BetTier;
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let t = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// // Fresh table is at `NewHand` phase, classified as preflop —
+    /// // the tier is `Small`.
+    /// assert!(matches!(t.current_bet_tier(), BetTier::Small));
+    /// ```
+    #[must_use]
+    pub fn current_bet_tier(&self) -> BetTier {
+        let streets = self.game.streets();
+        let idx_opt: Option<usize> = if self.phase.is_preflop() {
+            Some(0)
+        } else if self.phase.is_flop() {
+            Some(1)
+        } else if self.phase.is_turn() {
+            Some(2)
+        } else if self.phase.is_river() {
+            Some(3)
+        } else {
+            None
+        };
+        match idx_opt.and_then(|i| streets.get(i)) {
+            Some(descriptor) => descriptor.bet_tier,
+            None => BetTier::Big,
+        }
     }
 
     /// Chips needed for seat `player` to call the current bet.
@@ -2039,13 +2155,36 @@ impl TableNoCell {
         // "next to act" — causing every subsequent raise attempt to fail.
         if let Some(seat) = self.seats.get_seat(seat_number) {
             let would_be_all_in = amount >= seat.player.total_chip_count();
-            if !would_be_all_in && amount.saturating_sub(self.bet) < self.min_raise() {
-                return Err(PKError::InsufficientIncrement);
+            if !would_be_all_in {
+                if amount.saturating_sub(self.bet) < self.min_raise() {
+                    return Err(PKError::InsufficientIncrement);
+                }
+                // EPIC-30 Phase 3: enforce Fixed-Limit raise cap and
+                // BettingStructure max-raise ceiling. All-in bypasses both
+                // checks (a short stack can always go all-in for less).
+                // NoLimit's max_raise == stack, so this check is a no-op
+                // for NLHE (oversized amounts already routed through the
+                // all-in branch above).
+                if self.betting.cap_reached(self.raises_this_street) {
+                    return Err(PKError::RaiseCapReached);
+                }
+                let tier = self.current_bet_tier();
+                let stack = seat.player.total_chip_count();
+                let max = self
+                    .betting
+                    .max_raise(self.pot, self.bet, seat.player.bet, stack, tier);
+                if amount > max {
+                    return Err(PKError::ExceedsBettingCap);
+                }
             }
         }
         let remaining = self.seats.act_raise(seat_number, amount)?;
         self.set_raise_increment(seat_number, amount.saturating_sub(self.bet))?;
         self.bet = amount;
+        // EPIC-30 Phase 3: count this raise toward the per-street cap.
+        // Saturating add so a misconfigured raise_cap can't panic via
+        // overflow (the cap_reached guard above prevents this anyway).
+        self.raises_this_street = self.raises_this_street.saturating_add(1);
         self.log(TableAction::Raise(seat_number, amount));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(remaining)
@@ -2291,6 +2430,10 @@ impl TableNoCell {
         self.bet = 0;
         let collected = self.seats.bring_it_in()?;
         self.raise_increment = 0;
+        // EPIC-30 Phase 2: reset per-street raise counter at the street
+        // boundary so Fixed-Limit raise-cap accounting starts fresh on the
+        // next street.
+        self.raises_this_street = 0;
         self.pot += collected;
         self.log(TableAction::BringItIn(collected));
         self.log(TableAction::PotSize(self.pot));
@@ -2407,6 +2550,9 @@ impl TableNoCell {
         self.pot = 0;
         self.bet = 0;
         self.raise_increment = 0;
+        // EPIC-30 Phase 2: reset per-street raise counter when starting
+        // a fresh hand.
+        self.raises_this_street = 0;
         self.phase = GamePhase::NewHand;
         self.dealt_hole_cards.clear();
     }

@@ -12,6 +12,7 @@
 //! the `NoLimit` arm and runnable placeholder semantics on the `PotLimit`
 //! and `FixedLimit` arms. Phase 7 wires it into `TableNoCell::act_raise`.
 
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
 /// Per-street betting tier for variants that use small-bet / big-bet
@@ -21,7 +22,7 @@ use std::fmt::{Display, Formatter};
 /// `Big`. In Stud variants, 3rd–4th streets use `Small`; 5th onward use
 /// `Big`. No-Limit and Pot-Limit games ignore this tier; pass `Small` as
 /// a default.
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub enum BetTier {
     /// Small-bet increment (early streets).
     #[default]
@@ -44,7 +45,8 @@ pub enum BetTier {
 /// // Subsequent raise: increment is the previous raise.
 /// assert_eq!(200, nl.min_raise(200, 100));
 /// ```
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case", tag = "kind")]
 pub enum BettingStructure {
     /// No-Limit: any size between min-raise (last raise or BB) and stack.
     #[default]

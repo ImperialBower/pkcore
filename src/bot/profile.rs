@@ -11,6 +11,7 @@ use crate::bot::playbook::Playbook;
 use crate::bot::range_strategy::RangeStrategy;
 use crate::bot::weighted_range::WeightedRange;
 use crate::casino::table::position::Position;
+use crate::games::betting_structure::BettingStructure;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -211,6 +212,19 @@ pub struct BotProfile {
     /// was added.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub playbook: Option<Playbook>,
+    /// Optional betting structure marker (EPIC-30 Phase 7).
+    ///
+    /// Carries a marker `BettingStructure` for profiles authored for a
+    /// specific variant (e.g. `BettingStructure::FixedLimit { .. }` for
+    /// FLHE-tuned profiles). The runtime decider does *not* consult this
+    /// field — the authoritative betting structure comes from the
+    /// [`crate::bot::table_snapshot::TableSnapshot`] supplied by the
+    /// table. This field is for serde clarity ("this profile was tuned
+    /// for FLHE") and for the [`BotProfile::for_limit_holdem`] factory
+    /// to encode its provenance. Defaults to `None` for variant-agnostic
+    /// profiles; existing NLHE YAML round-trips unchanged.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub betting_structure: Option<BettingStructure>,
 }
 
 impl BotProfile {
@@ -247,6 +261,7 @@ impl BotProfile {
             range_strategy,
             betting_strategy,
             playbook: None,
+            betting_structure: None,
         }
     }
 
@@ -479,6 +494,62 @@ impl BotProfile {
             Self::abc(),
             Self::short_stack_ninja(),
         ]
+    }
+
+    // ── EPIC-30 Phase 7: FLHE factory ─────────────────────────────────────────
+
+    /// Returns a Fixed-Limit Hold'em flavored profile built on top of one
+    /// of the base reference profiles (EPIC-30 Phase 7).
+    ///
+    /// The returned profile carries
+    /// `betting_structure = Some(BettingStructure::FixedLimit { 0, 0, 3 })`
+    /// as a provenance marker — runtime sizing reads concrete amounts
+    /// from the table's [`crate::games::betting_structure::BettingStructure`]
+    /// via the snapshot, so the placeholder zeros here are intentional.
+    /// Name and description are tagged with `_flhe` for clarity.
+    ///
+    /// Aggression and range tuning beyond the marker are left to
+    /// hand-authored YAML in `data/bots/flhe/`. The decider's FLHE-aware
+    /// sizing (Phase 6) already clamps any raise to the legal tier
+    /// increment regardless of the profile's `preferred_bet_sizes`, so
+    /// using `for_limit_holdem` on a vanilla NLHE base produces valid
+    /// FLHE play out of the box.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::{BotProfile, PlayStyle};
+    /// use pkcore::games::betting_structure::BettingStructure;
+    ///
+    /// let p = BotProfile::for_limit_holdem(&PlayStyle::TightAggressive);
+    /// assert_eq!("tight_aggressive_flhe", p.name);
+    /// assert!(matches!(
+    ///     p.betting_structure,
+    ///     Some(BettingStructure::FixedLimit { .. })
+    /// ));
+    /// ```
+    #[must_use]
+    pub fn for_limit_holdem(style: &PlayStyle) -> Self {
+        let base = match style {
+            PlayStyle::TightPassive => Self::tight_passive(),
+            PlayStyle::LooseAggressive => Self::loose_aggressive(),
+            PlayStyle::TightAggressive => Self::tight_aggressive(),
+            PlayStyle::LoosePassive => Self::loose_passive(),
+            PlayStyle::Maniac => Self::maniac(),
+            PlayStyle::Abc => Self::abc(),
+            PlayStyle::ShortStackNinja => Self::short_stack_ninja(),
+            PlayStyle::Gto | PlayStyle::Custom(_) => Self::gto(),
+        };
+        Self {
+            name: format!("{}_flhe", base.name),
+            description: format!("{} (FLHE-tuned)", base.description),
+            betting_structure: Some(BettingStructure::FixedLimit {
+                small_bet: 0,
+                big_bet: 0,
+                raise_cap: 3,
+            }),
+            ..base
+        }
     }
 
     // ── Playbook builder ──────────────────────────────────────────────────────
@@ -776,6 +847,58 @@ mod bot__profile_tests {
         );
         assert_eq!(p.name, "test");
         assert_eq!(p.style, PlayStyle::new("custom"));
+    }
+
+    // ---- EPIC-30 Phase 7 + 8: FLHE factory + reference profiles ----
+
+    #[test]
+    fn for_limit_holdem_marker() {
+        let p = BotProfile::for_limit_holdem(&PlayStyle::TightAggressive);
+        assert_eq!("tight_aggressive_flhe", p.name);
+        assert!(matches!(
+            p.betting_structure,
+            Some(BettingStructure::FixedLimit { .. })
+        ));
+    }
+
+    #[test]
+    fn for_limit_holdem_falls_back_to_gto_for_custom() {
+        let p = BotProfile::for_limit_holdem(&PlayStyle::Custom("unknown".into()));
+        assert_eq!("gto_flhe", p.name);
+    }
+
+    #[test]
+    fn flhe_tight_aggressive_yaml_loads() {
+        let yaml = std::fs::read_to_string("data/bots/flhe/tight_aggressive_flhe.yaml")
+            .expect("FLHE TAG profile YAML must exist");
+        let p = BotProfile::from_yaml_str(&yaml).expect("FLHE TAG profile must deserialize");
+        assert_eq!("tight_aggressive_flhe", p.name);
+        assert!(matches!(
+            p.betting_structure,
+            Some(BettingStructure::FixedLimit { raise_cap: 3, .. })
+        ));
+    }
+
+    #[test]
+    fn flhe_loose_passive_yaml_loads() {
+        let yaml = std::fs::read_to_string("data/bots/flhe/loose_passive_flhe.yaml")
+            .expect("FLHE LP profile YAML must exist");
+        let p = BotProfile::from_yaml_str(&yaml).expect("FLHE LP profile must deserialize");
+        assert_eq!("loose_passive_flhe", p.name);
+        assert!(matches!(
+            p.betting_structure,
+            Some(BettingStructure::FixedLimit { raise_cap: 3, .. })
+        ));
+    }
+
+    #[test]
+    fn existing_nlhe_profile_yaml_round_trips_without_betting_structure() {
+        // Backward compatibility: existing NLHE YAML files must continue
+        // to deserialize cleanly with `betting_structure = None`.
+        let yaml = std::fs::read_to_string("data/bots/tight_aggressive.yaml")
+            .expect("NLHE TAG profile YAML must exist");
+        let p = BotProfile::from_yaml_str(&yaml).expect("NLHE TAG must deserialize");
+        assert!(p.betting_structure.is_none());
     }
 
     #[test]
