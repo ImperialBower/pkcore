@@ -25,16 +25,16 @@ wired into any table. This epic finishes the job.
 
 | Component | Status |
 |---|---|
-| `GameType::Razz` integrated with new structure (variant already exists) | Planned |
-| `Razz::STREETS` static (defined in EPIC-29) | Planned |
-| A-5 lowball evaluator for 7-card hands | Planned |
-| Bring-in: highest 3rd-street upcard pays bring-in | Planned |
-| Action order: worst visible hand acts first (4th onward) | Planned |
-| Showdown via A-5 low evaluator | Planned |
-| `TableNoCell::razz_from_seats` constructor | Planned |
-| `BotProfile::for_razz` factory | Planned |
-| `examples/interactive_play_razz.rs` | Planned |
-| Hand-history YAML round-trip (`game: razz`) | Planned |
+| `GameType::Razz` integrated with new structure (variant already exists) | Complete |
+| `Razz::STREETS` static (defined in EPIC-29) | Complete |
+| A-5 lowball evaluator for 7-card hands | Complete |
+| Bring-in: highest 3rd-street upcard pays bring-in | Complete |
+| Action order: worst visible hand acts first (4th onward) | Complete |
+| Showdown via A-5 low evaluator | Complete |
+| `TableNoCell::razz_from_seats` constructor | Complete |
+| `BotProfile::for_razz` factory | Complete |
+| `examples/interactive_play_razz.rs` | Complete |
+| Hand-history YAML round-trip (`game: razz`) | Complete |
 
 ---
 
@@ -213,3 +213,107 @@ Exit criteria:
    - Straights and flushes do not count against low hands.
 3. Hand-history YAML round-trips with `game: razz`.
 4. NLHE / FLHE / PLO / Stud Hi behavior unchanged.
+
+---
+
+## Implementation Notes (Corrigendum)
+
+EPIC-33 shipped in 7 phases. Final pin metrics:
+
+- **9065 lib tests** pass (+8 from EPIC-32 — Razz Eval unit tests,
+  `for_razz` factory tests, YAML load tests for both Razz profiles).
+- **661 doc tests** pass (+2: `Eval::from_razz_rank`,
+  `Eval::from_seven_razz`, and the `razz_from_seats` doc test).
+- **5/5 replay-consistency** tests green (NLHE, FLHE, PLO, Stud, Razz).
+- **`interactive_play_razz`** runs 20 hands with chips conserved.
+  `interactive_play_stud_hi` and `bot_selfplay` regression-clean.
+- **Clippy** clean on all EPIC-33 files; baseline 13 errors in
+  `src/bot/training/*` unchanged.
+
+### Deltas from the plan
+
+1. **No inversion math needed for the Razz Eval bridge.** The plan
+   prescribed `RAZZ_RANK_CEILING - rank_value` so wheel (rank 1) would
+   produce the highest Eval. While reading `src/analysis/hand_rank.rs`,
+   `HandRank::cmp` turned out to be **already inverted** — lower
+   `value` already sorts as a higher hand. Combined with
+   `CaliforniaHandRank`'s "lower ordinal = better low," the two
+   inversions cancel: storing the rank value directly in
+   `HandRank.value` produces the correct comparison. Phase 1 dropped
+   the ceiling formula entirely and uses `rank.get_hand_rank_value()`
+   verbatim. `Eval::from_razz_rank`'s doc comment explains this.
+
+2. **`HandRankName::RazzLow` + `HandRankClass::Lowball` added.** New
+   enum variants tag Razz Evals so `salright()` returns true. The
+   existing value-driven `From<HandRankValue>` constructors are
+   untouched — Razz Evals are built via direct struct construction in
+   `Eval::from_razz_rank`, bypassing the lookups (which would map a
+   Razz value=1 to RoyalFlush etc.).
+
+3. **`build_eval_for_seat_razz` added** alongside `build_eval_for_seat`
+   for post-showdown logging, mirroring the existing Omaha helper. The
+   plan didn't call it out separately; it emerged naturally from the
+   Omaha-pattern parallel.
+
+4. **HandHistory replay path uses a shared `is_stud_family` boolean.**
+   The plan said "add a Razz arm" — in practice the cleanest factoring
+   was a single `is_stud_family` flag that routes both `Stud` and
+   `Razz` through the shared ante/bring-in/visibility-restore block,
+   then branches only on which `*_from_seats` constructor sets the
+   `GameType` tag.
+
+5. **`from_table_state` default-variant unchanged.** The plan called
+   for `from_table_state` to default to `HandVariant::Razz` for
+   `GameFamily::Razz`. The function has no `GameType` parameter (only
+   `ForcedBets` + event log), so it can't detect family. Callers use
+   `.with_variant(HandVariant::Razz)` — same pattern as Stud Hi.
+
+6. **Razz mid-hand bot equity reuses Stud-family path verbatim.** Pair
+   detection happens to give the right signal on 3rd/4th street in
+   both variants (paired holdings are bad in both — for high-hand
+   reasons in Stud Hi, for low-hand reasons in Razz). The 20-hand
+   `interactive_play_razz` smoke confirms the LP bot folds frequently
+   because its NLHE-shape range overlaps poorly with paired Razz
+   starts. True Razz-specific equity (rewarding pair-free low draws
+   over paired holdings) is v1.1 polish.
+
+7. **Razz replay round-trip status:** same v1.1 deferral as Stud Hi.
+   `test_razz_bot_selfplay_replay_roundtrip` is **live-smoke only** —
+   it records hands, verifies YAML round-trip of `HandVariant::Razz` +
+   `hole_cards_visibility` + chip conservation, but does **not** call
+   `replay_all()`. The incremental-dealing gap (all 7 cards present at
+   once during replay breaks per-street visibility-aware action
+   ordering) is shared with Stud Hi and scheduled together as v1.1
+   polish.
+
+8. **EPIC-33 was 7 phases vs EPIC-32's 13.** Razz reused EPIC-32's
+   bring-in / action-order / dealing / `is_game_over` machinery
+   verbatim — the family dispatch already accommodated
+   `GameFamily::Razz` at every site. The only load-bearing work was
+   the `CaliforniaHandRank → Eval` bridge (Phase 1) plus the thin
+   constructor / factory / example / replay-test ergonomics
+   (Phases 3–6).
+
+### Files modified
+
+- `src/analysis/name.rs` — added `HandRankName::RazzLow` variant.
+- `src/analysis/class.rs` — added `HandRankClass::Lowball` variant.
+- `src/analysis/eval.rs` — added `Eval::from_razz_rank` and
+  `Eval::from_seven_razz` + 4 unit tests + 2 doc tests.
+- `src/casino/table_no_cell.rs` — added `razz_river_case_eval`,
+  `build_eval_for_seat_razz`, `razz_from_seats`. Split the
+  `StudHi | Razz` arm in `river_case_eval_for_variant`. Added Razz
+  branch to `build_eval_for_seat`.
+- `src/bot/profile.rs` — added `BotProfile::for_razz` factory + 4
+  pin tests.
+- `src/hand_history.rs` — extended replay dispatch with
+  `is_stud_family` to route Razz through `razz_from_seats` and share
+  the Stud-family visibility/bring-in post-injection block.
+- `tests/replay_consistency.rs` — added
+  `test_razz_bot_selfplay_replay_roundtrip`.
+
+### Files added
+
+- `data/bots/razz/tight_aggressive_razz.yaml`
+- `data/bots/razz/loose_passive_razz.yaml`
+- `examples/interactive_play_razz.rs`

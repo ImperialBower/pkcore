@@ -639,6 +639,55 @@ impl BotProfile {
         }
     }
 
+    /// Returns a Razz flavored profile built on top of one of the base
+    /// reference profiles (EPIC-33 Phase 4).
+    ///
+    /// Sets `betting_structure = Some(BettingStructure::FixedLimit { .. })`
+    /// as a provenance marker; appends a `_razz` suffix to the base
+    /// name. The decider currently reuses the Stud-family mid-hand
+    /// equity heuristic (pair detection happens to give the right
+    /// signal in both variants on 3rd/4th street, since paired
+    /// holdings are bad in both Stud Hi and Razz). True Razz-specific
+    /// equity (rewarding pair-free low hands) and Razz GTO ranges are
+    /// v1.1 polish items.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::{BotProfile, PlayStyle};
+    /// use pkcore::games::betting_structure::BettingStructure;
+    ///
+    /// let p = BotProfile::for_razz(&PlayStyle::TightAggressive);
+    /// assert_eq!("tight_aggressive_razz", p.name);
+    /// assert!(matches!(
+    ///     p.betting_structure,
+    ///     Some(BettingStructure::FixedLimit { .. })
+    /// ));
+    /// ```
+    #[must_use]
+    pub fn for_razz(style: &PlayStyle) -> Self {
+        let base = match style {
+            PlayStyle::TightPassive => Self::tight_passive(),
+            PlayStyle::LooseAggressive => Self::loose_aggressive(),
+            PlayStyle::TightAggressive => Self::tight_aggressive(),
+            PlayStyle::LoosePassive => Self::loose_passive(),
+            PlayStyle::Maniac => Self::maniac(),
+            PlayStyle::Abc => Self::abc(),
+            PlayStyle::ShortStackNinja => Self::short_stack_ninja(),
+            PlayStyle::Gto | PlayStyle::Custom(_) => Self::gto(),
+        };
+        Self {
+            name: format!("{}_razz", base.name),
+            description: format!("{} (Razz-tuned)", base.description),
+            betting_structure: Some(BettingStructure::FixedLimit {
+                small_bet: 0,
+                big_bet: 0,
+                raise_cap: 3,
+            }),
+            ..base
+        }
+    }
+
     // ── Playbook builder ──────────────────────────────────────────────────────
 
     /// Attaches a [`Playbook`] to this profile, enabling position- and
@@ -1014,6 +1063,48 @@ mod bot__profile_tests {
             .expect("Stud Hi LP profile YAML must exist");
         let p = BotProfile::from_yaml_str(&yaml).expect("Stud Hi LP must deserialize");
         assert_eq!("loose_passive_stud_hi", p.name);
+        assert!(matches!(
+            p.betting_structure,
+            Some(BettingStructure::FixedLimit { raise_cap: 3, .. })
+        ));
+    }
+
+    // ---- EPIC-33 Phase 4: for_razz factory + reference profiles ----
+
+    #[test]
+    fn for_razz_marker() {
+        let p = BotProfile::for_razz(&PlayStyle::TightAggressive);
+        assert_eq!("tight_aggressive_razz", p.name);
+        assert!(matches!(
+            p.betting_structure,
+            Some(BettingStructure::FixedLimit { raise_cap: 3, .. })
+        ));
+    }
+
+    #[test]
+    fn for_razz_falls_back_to_gto_for_custom() {
+        let p = BotProfile::for_razz(&PlayStyle::Custom("unknown".into()));
+        assert_eq!("gto_razz", p.name);
+    }
+
+    #[test]
+    fn razz_tight_aggressive_yaml_loads() {
+        let yaml = std::fs::read_to_string("data/bots/razz/tight_aggressive_razz.yaml")
+            .expect("Razz TAG profile YAML must exist");
+        let p = BotProfile::from_yaml_str(&yaml).expect("Razz TAG must deserialize");
+        assert_eq!("tight_aggressive_razz", p.name);
+        assert!(matches!(
+            p.betting_structure,
+            Some(BettingStructure::FixedLimit { raise_cap: 3, .. })
+        ));
+    }
+
+    #[test]
+    fn razz_loose_passive_yaml_loads() {
+        let yaml =
+            std::fs::read_to_string("data/bots/razz/loose_passive_razz.yaml").expect("Razz LP profile YAML must exist");
+        let p = BotProfile::from_yaml_str(&yaml).expect("Razz LP must deserialize");
+        assert_eq!("loose_passive_razz", p.name);
         assert!(matches!(
             p.betting_structure,
             Some(BettingStructure::FixedLimit { raise_cap: 3, .. })

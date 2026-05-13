@@ -436,20 +436,16 @@ fn stud_partial_equity(state: &TableSnapshot) -> f64 {
     let max_count = rank_count.values().copied().max().unwrap_or(0);
     let pair_count = rank_count.values().filter(|&&v| v == 2).count();
     match (cards.len(), max_count) {
-        (3, 3) => 0.90, // trips on 3rd street — premium
-        (3, 2) => 0.65, // pair on 3rd
-        (4, 4) => 0.98, // quads on 4th — virtual lock
-        (4, 3) => 0.85, // trips on 4th
+        (3, 3) => 0.90,                    // trips on 3rd street — premium
+        (3, 2) => 0.65,                    // pair on 3rd
+        (4, 4) => 0.98,                    // quads on 4th — virtual lock
+        (4, 3) => 0.85,                    // trips on 4th
         (4, 2) if pair_count >= 2 => 0.75, // two pair on 4th
-        (4, 2) => 0.55, // single pair on 4th
+        (4, 2) => 0.55,                    // single pair on 4th
         _ => {
             // No pair: rank by highest card present. Aces ≈ 0.45,
             // 2-rank ≈ 0.25. Linear interpolation keeps the value tame.
-            let top = cards
-                .iter()
-                .map(|c| c.get_rank() as u8)
-                .max()
-                .unwrap_or(2);
+            let top = cards.iter().map(|c| c.get_rank() as u8).max().unwrap_or(2);
             // top is 2..=14
             let t = f64::from(top.saturating_sub(2)) / 12.0; // 0.0..=1.0
             0.20 + 0.25 * t

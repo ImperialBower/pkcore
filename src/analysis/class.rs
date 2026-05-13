@@ -316,6 +316,11 @@ pub enum HandRankClass {
     NineHigh,
     EightHigh,
     SevenHigh,
+    /// Razz / A-5 lowball — used by `Eval::from_seven_razz`. The
+    /// specific Razz hand class (wheel, 6-low, etc.) is identified by
+    /// the numeric `HandRank.value` carrying the `CaliforniaHandRank`
+    /// ordinal, not by sub-variants of this enum.
+    Lowball,
     #[default]
     None,
 }

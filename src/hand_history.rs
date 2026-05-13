@@ -576,21 +576,29 @@ impl HandHistory {
         // else falls back to NLHE. PLO takes precedence over
         // `betting_structure` dispatch because the variant determines the
         // showdown evaluator (the betting structure only affects sizing).
-        // EPIC-32 Phase 9: route Stud through `stud_hi_from_seats` with
-        // recorded ante/bring_in + FixedLimit bet sizes. Falls back to
-        // sensible defaults when fields are missing from older records.
-        let mut table = if self.hand.game == HandVariant::Stud {
+        // EPIC-32 Phase 9 / EPIC-33 Phase 6: route Stud and Razz
+        // through their respective constructors with recorded
+        // ante/bring_in + FixedLimit bet sizes. Falls back to sensible
+        // defaults when fields are missing from older records. Stud and
+        // Razz share the same hand-loop / visibility / bring-in
+        // semantics — the only difference at replay time is which
+        // `*_from_seats` constructor sets the `GameType` tag, which
+        // drives the showdown evaluator dispatch.
+        let is_stud_family = self.hand.game == HandVariant::Stud || self.hand.game == HandVariant::Razz;
+        let mut table = if is_stud_family {
             let ante = self.table.stakes.ante.map_or(0, |x| x as usize);
             let bring_in = self.table.stakes.bring_in.map_or(0, |x| x as usize);
             let (small_bet, big_bet) = match self.table.betting_structure {
-                crate::games::betting_structure::BettingStructure::FixedLimit {
-                    small_bet,
-                    big_bet,
-                    ..
-                } => (small_bet, big_bet),
+                crate::games::betting_structure::BettingStructure::FixedLimit { small_bet, big_bet, .. } => {
+                    (small_bet, big_bet)
+                }
                 _ => (sb.max(20), bb.max(40)),
             };
-            TableNoCell::stud_hi_from_seats(seats, ante, bring_in, small_bet, big_bet)
+            if self.hand.game == HandVariant::Razz {
+                TableNoCell::razz_from_seats(seats, ante, bring_in, small_bet, big_bet)
+            } else {
+                TableNoCell::stud_hi_from_seats(seats, ante, bring_in, small_bet, big_bet)
+            }
         } else if self.hand.game == HandVariant::Omaha {
             TableNoCell::plo_from_seats(seats, (sb, bb))
         } else {
@@ -616,10 +624,10 @@ impl HandHistory {
         let hole_refs: Vec<(u8, &str)> = hole_entries.iter().map(|(s, h)| (*s, h.as_str())).collect();
         table.inject_hole_cards(&hole_refs)?;
 
-        // EPIC-32 Phase 9: for Stud-family replays, restore per-card
-        // visibility from `hole_cards_visibility` (if recorded) and post
-        // the bring-in.
-        if self.hand.game == HandVariant::Stud {
+        // EPIC-32 Phase 9 / EPIC-33 Phase 6: for Stud-family replays
+        // (Stud Hi + Razz), restore per-card visibility from
+        // `hole_cards_visibility` (if recorded) and post the bring-in.
+        if is_stud_family {
             for p in &self.players {
                 if let Some(vis_tokens) = &p.hole_cards_visibility
                     && let Some(seat) = table.seats.get_seat_mut(p.seat)

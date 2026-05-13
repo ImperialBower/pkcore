@@ -644,11 +644,7 @@ impl PokerSession {
             self.table.game.family(),
             crate::games::GameFamily::StudHi | crate::games::GameFamily::Razz
         ) {
-            let next = self
-                .table
-                .phase
-                .next_stud_street()
-                .ok_or(PKError::InvalidAction)?;
+            let next = self.table.phase.next_stud_street().ok_or(PKError::InvalidAction)?;
             self.table.bring_it_in()?;
             self.table.deal_stud_street(next)?;
             return Ok(());

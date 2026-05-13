@@ -54,11 +54,7 @@ fn visible_strength(cards: &[Card]) -> u64 {
     let r1 = u64::from(ranks.get(1).copied().unwrap_or(0));
     let r2 = u64::from(ranks.get(2).copied().unwrap_or(0));
     let r3 = u64::from(ranks.get(3).copied().unwrap_or(0));
-    tier * 100_000_000
-        + r0 * 1_000_000
-        + r1 * 10_000
-        + r2 * 100
-        + r3
+    tier * 100_000_000 + r0 * 1_000_000 + r1 * 10_000 + r2 * 100 + r3
 }
 use crate::casino::game::ForcedBets;
 use crate::casino::state::PlayerState;
@@ -1390,6 +1386,51 @@ impl TableNoCell {
         t
     }
 
+    /// Constructs a Razz table (EPIC-33 Phase 3). Razz is Seven-Card
+    /// Stud with A-5 lowball at showdown and **highest** upcard paying
+    /// the bring-in. The engine and dealing semantics are identical to
+    /// Stud Hi — the variant-specific dispatch lives in
+    /// [`Self::act_bring_in`], `first_to_act_razz`, and
+    /// `razz_river_case_eval`.
+    ///
+    /// Identical signature and body to [`Self::stud_hi_from_seats`]
+    /// except the `GameType::Razz` tag drives all the family-aware
+    /// dispatch points.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::games::GameType;
+    /// use pkcore::games::betting_structure::BettingStructure;
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let t = TableNoCell::razz_from_seats(seats, 2, 5, 20, 40);
+    /// assert_eq!(GameType::Razz, t.game);
+    /// assert_eq!(2, t.forced.ante);
+    /// assert_eq!(5, t.forced.bring_in);
+    /// assert!(matches!(
+    ///     t.betting,
+    ///     BettingStructure::FixedLimit { small_bet: 20, big_bet: 40, raise_cap: 3 }
+    /// ));
+    /// // Seats pre-allocated for 7 hole cards.
+    /// assert_eq!(7, t.seats.get_seat(0).unwrap().cards.len());
+    /// ```
+    #[must_use]
+    pub fn razz_from_seats(seats: SeatsNoCell, ante: usize, bring_in: usize, small_bet: usize, big_bet: usize) -> Self {
+        let forced = ForcedBets::new_with_ante_and_bring_in(0, 0, ante, bring_in);
+        let mut t = Self::from_seats(seats, GameType::Razz, forced);
+        t.betting = BettingStructure::FixedLimit {
+            small_bet,
+            big_bet,
+            raise_cap: 3,
+        };
+        t
+    }
+
     /// Generic table constructor parameterised by [`GameType`] (EPIC-29
     /// Phase 8). Per-variant epics (EPIC-30 FLHE, EPIC-31 PLO, EPIC-32
     /// Stud Hi, EPIC-33 Razz) add thin wrappers (`limit_holdem_from_seats`,
@@ -1734,10 +1775,10 @@ impl TableNoCell {
         // far. During replay all 7 cards are injected up-front, so we
         // must truncate to the count appropriate for the current street.
         let up_card_limit: Option<usize> = match self.phase.stud_street_index() {
-            Some(0) => Some(1), // 3rd street: 1 upcard
-            Some(1) => Some(2),       // 4th street: 2 upcards
-            Some(2) => Some(3),       // 5th street: 3 upcards
-            Some(3 | 4) => Some(4),   // 6th: 4 upcards; 7th: still 4 (dealt down)
+            Some(0) => Some(1),     // 3rd street: 1 upcard
+            Some(1) => Some(2),     // 4th street: 2 upcards
+            Some(2) => Some(3),     // 5th street: 3 upcards
+            Some(3 | 4) => Some(4), // 6th: 4 upcards; 7th: still 4 (dealt down)
             _ => None,
         };
         let mut best: Option<(u8, u64)> = None;
@@ -2726,7 +2767,7 @@ impl TableNoCell {
 
     /// Deals one additional Stud street to every active seat (EPIC-32
     /// Phase 3). The visibility for the dealt card comes from
-    /// [`STUD_HI_STREETS`]'s `hole_dealt_up` flag: Up for 4th/5th/6th,
+    /// `STUD_HI_STREETS`'s `hole_dealt_up` flag: Up for 4th/5th/6th,
     /// Down for 7th. Sets `phase = next_street`.
     ///
     /// # Errors
@@ -2737,9 +2778,7 @@ impl TableNoCell {
     pub fn deal_stud_street(&mut self, next_street: GamePhase) -> Result<(), PKError> {
         let next_idx = next_street.stud_street_index().ok_or(PKError::InvalidAction)?;
         let streets = self.game.streets();
-        let descriptor = streets
-            .get(next_idx as usize)
-            .ok_or(PKError::InvalidAction)?;
+        let descriptor = streets.get(next_idx as usize).ok_or(PKError::InvalidAction)?;
         let visibility = if descriptor.hole_dealt_up > 0 {
             Visibility::Up
         } else {
@@ -3159,14 +3198,38 @@ impl TableNoCell {
         case_eval
     }
 
-    /// EPIC-31 Phase 2 / EPIC-32 Phase 12: dispatch helper for the
-    /// per-variant showdown eval shape.
+    /// EPIC-33 Phase 2: builds a per-seat [`CaseEval`] for Razz (A-5
+    /// lowball). Mirrors `stud_river_case_eval` but routes each seat's
+    /// 7 cards through `Eval::from_seven_razz`, which produces an Eval
+    /// whose `hand_rank.value` carries the `CaliforniaHandRank` ordinal
+    /// (wheel = 1 = best). Because `HandRank::cmp` already treats lower
+    /// `value` as a higher hand, the same `CaseEval::winning_seats()`
+    /// (max picker) selects the best Razz low.
+    fn razz_river_case_eval(&self) -> CaseEval {
+        let mut case_eval = CaseEval::new(Cards::default());
+        for seat in &self.seats.0 {
+            if seat.is_in_hand() && seat.cards.is_dealt() {
+                match Seven::try_from(seat.cards.cards()) {
+                    Ok(seven) => match Eval::from_seven_razz(&seven) {
+                        Ok(eval) => case_eval.push(eval),
+                        Err(_) => case_eval.push(Eval::default()),
+                    },
+                    Err(_) => case_eval.push(Eval::default()),
+                }
+            } else {
+                case_eval.push(Eval::default());
+            }
+        }
+        case_eval
+    }
+
+    /// EPIC-31 Phase 2 / EPIC-32 Phase 12 / EPIC-33 Phase 2: dispatch
+    /// helper for the per-variant showdown eval shape.
     fn river_case_eval_for_variant(&self) -> Result<CaseEval, PKError> {
         match self.game.family() {
             crate::games::GameFamily::Omaha => self.omaha_river_case_eval(),
-            crate::games::GameFamily::StudHi | crate::games::GameFamily::Razz => {
-                Ok(self.stud_river_case_eval())
-            }
+            crate::games::GameFamily::StudHi => Ok(self.stud_river_case_eval()),
+            crate::games::GameFamily::Razz => Ok(self.razz_river_case_eval()),
             crate::games::GameFamily::Holdem => self.build_game()?.river_case_eval(),
         }
     }
@@ -3210,9 +3273,14 @@ impl TableNoCell {
     fn build_eval_for_seat(&self, seat_number: u8) -> Eval {
         // EPIC-31 Phase 2: route Omaha-family per-seat scoring through
         // the must-use-2 + must-use-3 path. Holdem family keeps the
-        // existing 7-card best-of-7 logic.
-        if self.game.family() == crate::games::GameFamily::Omaha {
-            return self.build_eval_for_seat_omaha(seat_number);
+        // existing 7-card best-of-7 logic. EPIC-33 Phase 2: route Razz
+        // through the A-5 lowball evaluator.
+        match self.game.family() {
+            crate::games::GameFamily::Omaha => return self.build_eval_for_seat_omaha(seat_number),
+            crate::games::GameFamily::Razz => {
+                return self.build_eval_for_seat_razz(seat_number);
+            }
+            _ => {}
         }
         match self.effective_player_cards(seat_number) {
             Some(cards) => match Seven::try_from(cards) {
@@ -3221,6 +3289,23 @@ impl TableNoCell {
             },
             None => Eval::default(),
         }
+    }
+
+    /// EPIC-33 Phase 2: per-seat Razz eval used by post-showdown
+    /// logging. Calls `Eval::from_seven_razz` so the resulting
+    /// `hand_rank.value` is the `CaliforniaHandRank` ordinal (wheel =
+    /// 1 = best low).
+    fn build_eval_for_seat_razz(&self, seat_number: u8) -> Eval {
+        let Some(seat) = self.seats.get_seat(seat_number) else {
+            return Eval::default();
+        };
+        if !seat.cards.is_dealt() {
+            return Eval::default();
+        }
+        let Ok(seven) = Seven::try_from(seat.cards.cards()) else {
+            return Eval::default();
+        };
+        Eval::from_seven_razz(&seven).unwrap_or_default()
     }
 
     /// EPIC-31 Phase 2: per-seat Omaha eval used by post-showdown logging

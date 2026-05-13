@@ -17,6 +17,11 @@ pub enum HandRankName {
     TwoPair,
     Pair,
     HighCard,
+    /// Razz / A-5 lowball ranking. Used when an `Eval` is produced via
+    /// `Eval::from_seven_razz`; the `value` field carries the
+    /// `CaliforniaHandRank` ordinal (wheel = 1, worst pair-free low =
+    /// 1287, paired hands above that).
+    RazzLow,
     #[default]
     Invalid,
 }
