@@ -621,13 +621,22 @@ fn chip_counts(table: &TableNoCell) -> Vec<(u8, usize)> {
 }
 
 fn print_stacks(table: &TableNoCell, profiles: &[BotProfile]) {
+    let btn = table.button;
+    let sb = table.determine_small_blind();
+    let bb = table.determine_big_blind();
+    let tag_for = |seat: u8| match position_tag(seat, btn, sb, bb) {
+        Some(t) => format!(" ({t})"),
+        None => String::new(),
+    };
+
     print!("  Stacks:");
     if let Some(seat) = table.seats.get_seat(HUMAN_SEAT).filter(|s| !s.is_empty()) {
-        print!("  {}={}", HUMAN_NAME, seat.player.chips);
+        print!("  {}={}{}", HUMAN_NAME, seat.player.chips, tag_for(HUMAN_SEAT));
     }
     for (i, profile) in profiles.iter().enumerate() {
-        if let Some(seat) = table.seats.get_seat(i as u8 + 1).filter(|s| !s.is_empty()) {
-            print!("  {}={}", profile.name, seat.player.chips);
+        let seat_idx = i as u8 + 1;
+        if let Some(seat) = table.seats.get_seat(seat_idx).filter(|s| !s.is_empty()) {
+            print!("  {}={}{}", profile.name, seat.player.chips, tag_for(seat_idx));
         }
     }
     println!();
