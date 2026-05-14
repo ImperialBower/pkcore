@@ -3279,9 +3279,9 @@ impl FromStr for Combo {
             "a2s" => Ok(Combo::COMBO_A2s),
             "a2o" => Ok(Combo::COMBO_A2o),
             "a2" => Ok(Combo::COMBO_A2),
-            "a2s+" => Ok(Combo::COMBO_A2s_PLUS),
-            "a2o+" => Ok(Combo::COMBO_A2o_PLUS),
-            "a2+" => Ok(Combo::COMBO_A2_PLUS),
+            "a2s+" | "axs" => Ok(Combo::COMBO_A2s_PLUS),
+            "a2o+" | "axo" => Ok(Combo::COMBO_A2o_PLUS),
+            "a2+" | "ax" => Ok(Combo::COMBO_A2_PLUS),
             "kqs" => Ok(Combo::COMBO_KQs),
             "kqo" => Ok(Combo::COMBO_KQo),
             "kq" => Ok(Combo::COMBO_KQ),
@@ -3966,6 +3966,14 @@ mod arrays__ranges__combo_tests {
     #[case("A2s+", Combo::COMBO_A2s_PLUS)]
     #[case("A2o+", Combo::COMBO_A2o_PLUS)]
     #[case("A2+", Combo::COMBO_A2_PLUS)]
+    // Aliases for any-Ace shorthand (Axs / Axo / Ax) — same expansion
+    // as A2s+ / A2o+ / A2+ respectively.
+    #[case("Axs", Combo::COMBO_A2s_PLUS)]
+    #[case("Axo", Combo::COMBO_A2o_PLUS)]
+    #[case("Ax", Combo::COMBO_A2_PLUS)]
+    #[case("axs", Combo::COMBO_A2s_PLUS)]
+    #[case("axo", Combo::COMBO_A2o_PLUS)]
+    #[case("ax", Combo::COMBO_A2_PLUS)]
     #[case("KQs", Combo::COMBO_KQs)]
     #[case("KQo", Combo::COMBO_KQo)]
     #[case("KQ", Combo::COMBO_KQ)]
