@@ -8,7 +8,7 @@
 //!
 //! Run with:
 //! ```text
-//! cargo run --features bot-profiles,hand-histories --example interactive_play_plo
+//! cargo run --example interactive_play_plo
 //! ```
 
 use pkcore::bot::decider::{BotDecider, RuleBasedDecider};

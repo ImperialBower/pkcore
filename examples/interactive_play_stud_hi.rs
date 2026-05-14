@@ -9,7 +9,7 @@
 //!
 //! Run with:
 //! ```text
-//! cargo run --features bot-profiles,hand-histories --example interactive_play_stud_hi
+//! cargo run --example interactive_play_stud_hi
 //! ```
 
 use pkcore::bot::decider::{BotDecider, RuleBasedDecider};

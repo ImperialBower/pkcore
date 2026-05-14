@@ -11,7 +11,7 @@
 //!
 //! Run with:
 //! ```text
-//! cargo run --features bot-profiles,hand-histories --example interactive_play_razz
+//! cargo run --example interactive_play_razz
 //! ```
 
 use pkcore::bot::decider::{BotDecider, RuleBasedDecider};
