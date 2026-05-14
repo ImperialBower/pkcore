@@ -632,3 +632,48 @@ fn print_stacks(table: &TableNoCell, profiles: &[BotProfile]) {
     }
     println!();
 }
+
+/// Returns a position role tag for `seat`, or `None` if the seat is
+/// neither the button nor a blind. Heads-up collapses BTN+SB onto a
+/// single seat (the button is the small blind in HU).
+fn position_tag(seat: u8, btn: u8, sb: u8, bb: u8) -> Option<&'static str> {
+    match (seat == btn, seat == sb, seat == bb) {
+        (true, true, _) => Some("BTN/SB"),
+        (true, _, _) => Some("BTN"),
+        (_, true, _) => Some("SB"),
+        (_, _, true) => Some("BB"),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn position_tag_button_only() {
+        assert_eq!(position_tag(3, 3, 4, 5), Some("BTN"));
+    }
+
+    #[test]
+    fn position_tag_small_blind() {
+        assert_eq!(position_tag(4, 3, 4, 5), Some("SB"));
+    }
+
+    #[test]
+    fn position_tag_big_blind() {
+        assert_eq!(position_tag(5, 3, 4, 5), Some("BB"));
+    }
+
+    #[test]
+    fn position_tag_heads_up_collapses_btn_and_sb() {
+        // Heads-up: button IS the small blind. Same seat, both flags set.
+        assert_eq!(position_tag(0, 0, 0, 1), Some("BTN/SB"));
+        assert_eq!(position_tag(1, 0, 0, 1), Some("BB"));
+    }
+
+    #[test]
+    fn position_tag_middle_position_returns_none() {
+        assert_eq!(position_tag(7, 3, 4, 5), None);
+    }
+}
