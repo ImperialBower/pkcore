@@ -366,6 +366,9 @@ fn run_street(
     collection: &HandCollection,
 ) {
     let max_iterations = (profiles.len() + 1) * 8;
+    let btn = table.button;
+    let sb = table.determine_small_blind();
+    let bb = table.determine_big_blind();
 
     for _ in 0..max_iterations {
         if table.seats.is_betting_complete() || table.is_game_over() {
@@ -394,8 +397,12 @@ fn run_street(
         };
 
         let pot_after = table.effective_pot();
+        let tag = position_tag(seat, btn, sb, bb)
+            .map(|t| format!("[{t}]"))
+            .unwrap_or_default();
         println!(
-            "    {:>20}  [pot: {}] {} [pot: {}]",
+            "    {:>8} {:<20}  [pot: {}] {} [pot: {}]",
+            tag,
             seat_label(seat, profiles),
             pot_before,
             desc,
