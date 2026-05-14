@@ -142,12 +142,14 @@ tag and only appends when `Some(_)`.
 
 ## Files affected
 
-- `examples/interactive_play.rs` (NLHE — primary)
-- `examples/interactive_play_plo.rs` (PLO — same blind structure)
-- `examples/interactive_play_flhe.rs` (Fixed-Limit Hold'em — same)
+- `examples/interactive_play.rs` (NLHE — sole target)
 
-The three files duplicate a similar shape; each gets the same helper and the
-same three call-site changes.
+PLO and FLHE were considered during brainstorming but dropped: their
+"interactive_play" siblings are misnamed bot-vs-bot smoke demos that use
+`SimTable::run_n_hands()` and have no per-action printing, no Stacks line in
+the same shape, and no human-input box to enhance. Adding position
+indicators there would first require porting the NLHE driver shape into
+each — that's its own feature, not a UX tweak.
 
 ## Edge cases
 
@@ -188,6 +190,14 @@ Manual verification:
 
 ## Out of scope (for future work)
 
+- **Building interactive PLO and interactive FLHE examples.** The current
+  `interactive_play_plo.rs` and `interactive_play_flhe.rs` are bot-vs-bot
+  demos. Promoting them to true interactive examples is a multi-day port
+  per game (human input loop, multi-hand session driver, busted-player
+  handling, button rotation, per-street action printing, save/quit, hand
+  history, plus game-specific UI for 4-card holes and bet-tier prompts).
+  Each warrants its own brainstorm and spec; position indicators fall out
+  for free as part of that port.
 - A bring-in indicator for `interactive_play_stud_hi` and `interactive_play_razz`.
   Different design (single seat, single street, computed from up-cards).
 - Showing position roles in `bot_selfplay.rs` and `replay_play.rs`.
