@@ -444,10 +444,21 @@ fn read_human_action(
         right_prompt: DefaultPromptSegment::Empty,
     };
 
+    let btn = table.button;
+    let sb = table.determine_small_blind();
+    let bb = table.determine_big_blind();
+    let position_suffix = match position_tag(seat, btn, sb, bb) {
+        Some(t) => format!("   Position: {t}"),
+        None => String::new(),
+    };
+
     println!();
     loop {
         println!("  ┌─ Your turn ─────────────────────────────────────");
-        println!("  │  Cards: {}   Chips: {}   Pot: {}", hole, chips, pot);
+        println!(
+            "  │  Cards: {}   Chips: {}   Pot: {}{}",
+            hole, chips, pot, position_suffix
+        );
         if to_call > 0 {
             println!("  │  To call: {}   Min raise: {}", to_call, table.min_raise());
             println!("  │  f=fold  c=call {}  r <n>=raise to n  a=all-in  s=save", to_call);
