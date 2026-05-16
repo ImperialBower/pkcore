@@ -25,28 +25,26 @@ ignore = [
 # List of explicitly allowed licenses
 # See https://spdx.org/licenses/ for list of possible licenses
 #
-# This project is GPL-3.0-or-later, so we only allow licenses that are:
-# 1. GPL-compatible (can be combined with GPL code)
-# 2. More permissive than GPL (allow relicensing under GPL)
-#
-# IMPORTANT: GPL-2.0-only is NOT compatible with GPL-3.0!
+# This project is dual-licensed under MIT OR Apache-2.0. We accept any
+# dependency license that is compatible with both — i.e. permissive
+# licenses without copyleft obligations.
 #
 # NOTE: To avoid warnings, only actively used licenses are listed below.
 # Uncomment additional licenses as you add dependencies that need them.
 
 allow = [
-    # Your project's license
-    "GPL-3.0-or-later",
-    "Apache-2.0",
-    "BSD-3-Clause",
+    # This project's licenses
     "MIT",
+    "Apache-2.0",
+    # Other permissive licenses already pulled in by transitive deps
+    "BSD-3-Clause",
     "MPL-2.0",
     "Unicode-3.0",
     "Zlib",
 ]
 
 # ============================================================================
-# GPL-COMPATIBLE LICENSES - Uncomment as needed when adding dependencies
+# PERMISSIVE LICENSES - Uncomment as needed when adding dependencies
 # ============================================================================
 #
 # Most Common in Rust (90% of crates use these):
@@ -60,25 +58,19 @@ allow = [
 #   "0BSD",
 #   "ISC",
 #
-# GPL Family:
-#   "GPL-3.0-only",
-#   "LGPL-3.0",
-#   "LGPL-2.1",
-#   "LGPL-2.1-or-later",
-#   "LGPL-3.0-or-later",
-#   "AGPL-3.0",
-#
 # Public Domain / Highly Permissive:
 #   "CC0-1.0",
 #   "Unlicense",
 #   "BSL-1.0",
 #   "Zlib",
 #
-# Other Compatible:
+# Other Permissive:
 #   "MPL-2.0",
 #   "Unicode-DFS-2016",
 #
-# For a complete list and explanations, see GPL_LICENSE_COMPATIBILITY.md
+# Avoid adding copyleft licenses (GPL/LGPL/AGPL) — they would force this
+# crate's downstream consumers to adopt those terms, breaking the
+# MIT/Apache dual-license guarantee.
 
 # The confidence threshold for detecting a license from license text.
 confidence-threshold = 0.8
