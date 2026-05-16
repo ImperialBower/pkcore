@@ -659,44 +659,103 @@ impl SimTable {
             let counts = actions.entry(seat).or_default();
             self.apply_action(seat, action, counts);
         }
+
+        // STALL DIAGNOSTIC (investigation aid for the rare CI flake where
+        // `bring_it_in()` returns `ActionIsntFinished`). If we exited the
+        // action loop with betting still incomplete and the hand not over,
+        // dump the state that caused it. Eprintln so cargo test surfaces it
+        // under the failing test's captured stderr.
+        if !self.table.seats.is_betting_complete() && !self.table.is_game_over() {
+            let street = match self.table.board.len() {
+                0 => "preflop",
+                3 => "flop",
+                4 => "turn",
+                5 => "river",
+                _ => "unknown",
+            };
+            eprintln!(
+                "[pkcore::sim] STALL run_street exhausted {max_iterations} iterations on {street} \
+                 (board_len={}, button={}, next_to_act={})",
+                self.table.board.len(),
+                self.table.button,
+                self.table.next_to_act(),
+            );
+            for (i, seat) in self.table.seats.0.iter().enumerate() {
+                if seat.is_empty() {
+                    continue;
+                }
+                eprintln!(
+                    "[pkcore::sim] STALL   seat {i} ({}): state={:?} chips={} bet={} chips_in_play={}",
+                    seat.player.handle,
+                    seat.player.state,
+                    seat.player.chips,
+                    seat.player.bet,
+                    seat.player.chips_in_play,
+                );
+            }
+        }
     }
 
     /// Applies `action` for `seat` to the live table and increments the
     /// appropriate counter in `counts`.
+    ///
+    /// **Instrumentation note:** action-rejection paths used to silently
+    /// swallow errors via `let _ = ...`, which masked a rare CI flake
+    /// (`ActionIsntFinished` from `bring_it_in()` after `run_street`
+    /// stalled). The eprintln!s below fire only on the smoking-gun paths —
+    /// primary action rejected for Fold/Check/Call/AllIn, or BOTH the
+    /// primary and fallback rejected for Bet/Raise. Routine `Bet → Check`
+    /// fallback (e.g. when a bet already exists, the legitimate case) stays
+    /// silent.
     fn apply_action(&mut self, seat: u8, action: PlayerAction, counts: &mut ActionCounts) {
         match action {
             PlayerAction::Fold => {
-                let _ = self.table.act_fold(seat);
+                if let Err(e) = self.table.act_fold(seat) {
+                    eprintln!("[pkcore::sim] WARN seat {seat} act_fold rejected: {e:?}");
+                }
                 counts.folds += 1;
             }
             PlayerAction::Check => {
-                let _ = self.table.act_check(seat);
+                if let Err(e) = self.table.act_check(seat) {
+                    eprintln!("[pkcore::sim] WARN seat {seat} act_check rejected: {e:?}");
+                }
                 counts.checks += 1;
             }
             PlayerAction::Call => {
-                let _ = self.table.act_call(seat);
+                if let Err(e) = self.table.act_call(seat) {
+                    eprintln!("[pkcore::sim] WARN seat {seat} act_call rejected: {e:?}");
+                }
                 counts.calls += 1;
             }
             PlayerAction::Bet(amount) => {
                 if self.table.act_bet(seat, amount).is_ok() {
                     counts.bets += 1;
+                } else if self.table.act_check(seat).is_ok() {
+                    // Legitimate fallback: Bet rejected because a bet already exists.
+                    counts.checks += 1;
                 } else {
-                    // Bet rejected (e.g. a bet already exists) — fall back to check.
-                    let _ = self.table.act_check(seat);
+                    eprintln!(
+                        "[pkcore::sim] WARN seat {seat} Bet({amount}) AND fallback Check both rejected — table state will not advance"
+                    );
                     counts.checks += 1;
                 }
             }
             PlayerAction::Raise(amount) => {
                 if self.table.act_raise(seat, amount).is_ok() {
                     counts.raises += 1;
+                } else if self.table.act_call(seat).is_ok() {
+                    counts.calls += 1;
                 } else {
-                    // Raise too small or invalid — fall back to call.
-                    let _ = self.table.act_call(seat);
+                    eprintln!(
+                        "[pkcore::sim] WARN seat {seat} Raise({amount}) AND fallback Call both rejected — table state will not advance"
+                    );
                     counts.calls += 1;
                 }
             }
             PlayerAction::AllIn => {
-                let _ = self.table.act_all_in(seat);
+                if let Err(e) = self.table.act_all_in(seat) {
+                    eprintln!("[pkcore::sim] WARN seat {seat} act_all_in rejected: {e:?}");
+                }
                 counts.all_ins += 1;
             }
         }
