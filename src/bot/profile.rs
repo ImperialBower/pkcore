@@ -1015,6 +1015,7 @@ mod bot__profile_tests {
         assert_eq!("gto_plo", p.name);
     }
 
+    #[cfg(feature = "bot-profiles")]
     #[test]
     fn plo_loose_aggressive_yaml_loads() {
         let yaml = std::fs::read_to_string("data/bots/plo/loose_aggressive_plo.yaml")
@@ -1024,6 +1025,7 @@ mod bot__profile_tests {
         assert_eq!(Some(BettingStructure::PotLimit), p.betting_structure);
     }
 
+    #[cfg(feature = "bot-profiles")]
     #[test]
     fn plo_tight_aggressive_yaml_loads() {
         let yaml = std::fs::read_to_string("data/bots/plo/tight_aggressive_plo.yaml")
@@ -1045,6 +1047,7 @@ mod bot__profile_tests {
         ));
     }
 
+    #[cfg(feature = "bot-profiles")]
     #[test]
     fn stud_hi_tight_aggressive_yaml_loads() {
         let yaml = std::fs::read_to_string("data/bots/stud_hi/tight_aggressive_stud_hi.yaml")
@@ -1057,6 +1060,7 @@ mod bot__profile_tests {
         ));
     }
 
+    #[cfg(feature = "bot-profiles")]
     #[test]
     fn stud_hi_loose_passive_yaml_loads() {
         let yaml = std::fs::read_to_string("data/bots/stud_hi/loose_passive_stud_hi.yaml")
@@ -1087,6 +1091,7 @@ mod bot__profile_tests {
         assert_eq!("gto_razz", p.name);
     }
 
+    #[cfg(feature = "bot-profiles")]
     #[test]
     fn razz_tight_aggressive_yaml_loads() {
         let yaml = std::fs::read_to_string("data/bots/razz/tight_aggressive_razz.yaml")
@@ -1099,6 +1104,7 @@ mod bot__profile_tests {
         ));
     }
 
+    #[cfg(feature = "bot-profiles")]
     #[test]
     fn razz_loose_passive_yaml_loads() {
         let yaml =
@@ -1111,6 +1117,7 @@ mod bot__profile_tests {
         ));
     }
 
+    #[cfg(feature = "bot-profiles")]
     #[test]
     fn flhe_tight_aggressive_yaml_loads() {
         let yaml = std::fs::read_to_string("data/bots/flhe/tight_aggressive_flhe.yaml")
@@ -1123,6 +1130,7 @@ mod bot__profile_tests {
         ));
     }
 
+    #[cfg(feature = "bot-profiles")]
     #[test]
     fn flhe_loose_passive_yaml_loads() {
         let yaml =
@@ -1135,6 +1143,7 @@ mod bot__profile_tests {
         ));
     }
 
+    #[cfg(feature = "bot-profiles")]
     #[test]
     fn existing_nlhe_profile_yaml_round_trips_without_betting_structure() {
         // Backward compatibility: existing NLHE YAML files must continue
