@@ -5,10 +5,13 @@ use strum_macros::{EnumCount, EnumIter};
 pub mod actions;
 pub mod board;
 pub mod game;
+pub mod hole_card;
 pub mod hole_cards;
 pub mod phases;
 pub mod positions;
+pub mod seat_hand;
 pub mod stages;
+pub mod visibility;
 
 #[derive(Clone, Copy, Debug, Default, EnumCount, EnumIter, Eq, Hash, PartialEq)]
 pub enum Position6Max {

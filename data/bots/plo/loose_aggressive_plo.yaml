@@ -1,0 +1,17 @@
+name: loose_aggressive_plo
+description: Classic PLO loose-aggressive — wide preflop selection, frequent pot-sized aggression, looking for big multiway pots. Range notation is NLHE-style; the engine clamps raise sizes to the pot-limit ceiling at runtime.
+style: loose_aggressive
+range_strategy:
+  open_raise: 22+, A2s+, K9s+, Q9s+, J9s+, T8s+, 97s+, 86s+, 75s+, 65s, 54s, A9o+, KTo+, QTo+, JTo
+  three_bet: TT+, AJs+, KQs, AQo+
+  call_three_bet: 22+, A2s+, KTs+, QTs+, JTs, T9s, ATo+, KQo
+  postflop_cbet_frequency: 55
+betting_strategy:
+  aggression_factor: 65
+  bluff_frequency: 25
+  check_raise_frequency: 18
+  preferred_bet_sizes:
+  - 2/3
+  - 1/1
+betting_structure:
+  kind: pot_limit

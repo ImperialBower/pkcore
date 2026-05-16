@@ -1,0 +1,19 @@
+name: tight_aggressive_razz
+description: Classic Razz TAG — opens only with three pair-free cards 8-or-lower (premium low draws), folds anything paired or T+ on 3rd street, presses aggressively when an opponent's upcard pairs or shows high.
+style: tight_aggressive
+range_strategy:
+  open_raise: TT+, AJs+, KQs, AQo+
+  three_bet: JJ+, AKs, AKo
+  call_three_bet: 99+, AQs+, AKo
+  postflop_cbet_frequency: 65
+betting_strategy:
+  aggression_factor: 70
+  bluff_frequency: 12
+  check_raise_frequency: 15
+  preferred_bet_sizes:
+  - 1/1
+betting_structure:
+  kind: fixed_limit
+  small_bet: 0
+  big_bet: 0
+  raise_cap: 3

@@ -97,6 +97,16 @@ pub use crate::play::stages::turn_eval::TurnEval;
 // games
 pub use crate::games::omaha::OmahaHigh;
 
+// games (EPIC-29 Phase 10 — variant foundation)
+pub use crate::games::betting_structure::{BetTier, BettingStructure};
+pub use crate::games::street::{StreetDescriptor, StreetIndex};
+pub use crate::games::{GameFamily, GamePhase, GameType};
+
+// play (EPIC-29 Phase 10 — visibility-aware hole-card model)
+pub use crate::play::hole_card::HoleCard;
+pub use crate::play::seat_hand::SeatHand;
+pub use crate::play::visibility::Visibility;
+
 // casino
 pub use crate::casino::cashier::chips::Stack;
 pub use crate::casino::dealer::Dealer;

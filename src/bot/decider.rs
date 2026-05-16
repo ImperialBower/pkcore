@@ -30,6 +30,7 @@ use crate::bot::betting_strategy::BettingStrategy;
 use crate::bot::player_action::PlayerAction;
 use crate::bot::profile::BotProfile;
 use crate::bot::table_snapshot::TableSnapshot;
+use crate::games::betting_structure::{BetTier, BettingStructure};
 
 // ── BotDecider trait ──────────────────────────────────────────────────────────
 
@@ -157,12 +158,7 @@ impl RuleBasedDecider {
         if state.to_call > 0 && state.checked_this_street {
             let cr_rate = strategy.check_raise_frequency.as_f64();
             if roll < cr_rate {
-                let (n, d) = pick_bet_size(strategy, rng);
-                let raise_to = state
-                    .current_bet
-                    .saturating_add(state.pot.saturating_mul(n) / d)
-                    .max(state.current_bet.saturating_add(state.min_raise))
-                    .min(chips);
+                let raise_to = sized_raise_to(state, strategy, rng);
                 if raise_to > state.current_bet {
                     return PlayerAction::Raise(raise_to);
                 }
@@ -188,12 +184,7 @@ impl RuleBasedDecider {
                     // that two bots with strong hands don't raise each other indefinitely.
                     let raise_roll: f64 = rng.random();
                     if raise_roll < aggr.max(0.5) {
-                        let (n, d) = pick_bet_size(strategy, rng);
-                        let raise_to = state
-                            .current_bet
-                            .saturating_add(state.pot.saturating_mul(n) / d)
-                            .max(state.current_bet.saturating_add(state.min_raise))
-                            .min(chips);
+                        let raise_to = sized_raise_to(state, strategy, rng);
                         if raise_to > state.current_bet {
                             return PlayerAction::Raise(raise_to);
                         }
@@ -205,12 +196,7 @@ impl RuleBasedDecider {
                     // Weak hand: bluff-raise or fold.
                     let bluff_roll: f64 = rng.random();
                     if bluff_roll < strategy.bluff_frequency.as_f64() {
-                        let (n, d) = pick_bet_size(strategy, rng);
-                        let raise_to = state
-                            .current_bet
-                            .saturating_add(state.pot.saturating_mul(n) / d)
-                            .max(state.current_bet.saturating_add(state.min_raise))
-                            .min(chips);
+                        let raise_to = sized_raise_to(state, strategy, rng);
                         if raise_to > state.current_bet {
                             return PlayerAction::Raise(raise_to);
                         }
@@ -221,15 +207,11 @@ impl RuleBasedDecider {
                 // No outstanding bet: value-bet or bluff.
                 let value_threshold = strategy.effective_value_threshold();
                 if equity > value_threshold {
-                    let (n, d) = pick_bet_size(strategy, rng);
-                    let amount = (state.pot.saturating_mul(n) / d).max(state.big_blind).min(chips);
-                    PlayerAction::Bet(amount)
+                    PlayerAction::Bet(sized_bet_amount(state, strategy, rng))
                 } else if !state.phase.is_preflop() {
                     let bluff_roll: f64 = rng.random();
                     if bluff_roll < strategy.bluff_frequency.as_f64() {
-                        let (n, d) = pick_bet_size(strategy, rng);
-                        let amount = (state.pot.saturating_mul(n) / d).max(state.big_blind).min(chips);
-                        PlayerAction::Bet(amount)
+                        PlayerAction::Bet(sized_bet_amount(state, strategy, rng))
                     } else {
                         PlayerAction::Check
                     }
@@ -249,12 +231,7 @@ impl RuleBasedDecider {
                 }
 
                 if roll < aggr * 0.25 {
-                    let (n, d) = pick_bet_size(strategy, rng);
-                    let raise_to = state
-                        .current_bet
-                        .saturating_add(state.pot.saturating_mul(n) / d)
-                        .max(state.current_bet.saturating_add(state.min_raise))
-                        .min(chips);
+                    let raise_to = sized_raise_to(state, strategy, rng);
                     if raise_to > state.current_bet {
                         return PlayerAction::Raise(raise_to);
                     }
@@ -274,16 +251,12 @@ impl RuleBasedDecider {
                 };
 
                 if roll < bet_threshold {
-                    let (n, d) = pick_bet_size(strategy, rng);
-                    let amount = (state.pot.saturating_mul(n) / d).max(state.big_blind).min(chips);
-                    PlayerAction::Bet(amount)
+                    PlayerAction::Bet(sized_bet_amount(state, strategy, rng))
                 } else if !state.phase.is_preflop() {
                     let bluff_rate = strategy.bluff_frequency.as_f64();
                     let roll_bluff: f64 = rng.random();
                     if roll_bluff < bluff_rate {
-                        let (n, d) = pick_bet_size(strategy, rng);
-                        let amount = (state.pot.saturating_mul(n) / d).max(state.big_blind).min(chips);
-                        PlayerAction::Bet(amount)
+                        PlayerAction::Bet(sized_bet_amount(state, strategy, rng))
                     } else {
                         PlayerAction::Check
                     }
@@ -423,6 +396,14 @@ fn hand_equity<R: rand::Rng>(profile: &BotProfile, state: &TableSnapshot, rng: &
     }
     let combined = format!("{} {}", state.hole_cards, state.board);
     let total = state.hole_cards.len() + state.board.len();
+    // EPIC-32 Phase 8: partial-hand heuristic for Stud-family mid-hand
+    // (3rd / 4th street) where total is 3 or 4. Returns a coarse strength
+    // bucket so the bot doesn't fall through to aggression-only logic.
+    // Gated on `stud_street_index().is_some()` so NLHE/FLHE/PLO are
+    // unaffected.
+    if state.phase.stud_street_index().is_some() && matches!(total, 3 | 4) {
+        return Some(stud_partial_equity(state));
+    }
     let hrv = match total {
         5 => combined.parse::<Five>().ok().map(|h| h.hand_rank_value()),
         6 => combined.parse::<Six>().ok().map(|h| h.hand_rank_value()),
@@ -430,6 +411,46 @@ fn hand_equity<R: rand::Rng>(profile: &BotProfile, state: &TableSnapshot, rng: &
         _ => None,
     }?;
     Some(1.0 - f64::from(hrv) / 7462.0)
+}
+
+/// EPIC-32 Phase 8: discrete partial-hand strength bucket for Stud
+/// mid-hand (3rd / 4th street). Returns a value in `[0.0, 1.0]`. Not a
+/// real Monte Carlo equity — coarse "pair / trips / high cards"
+/// classification. v1.1 polish item.
+fn stud_partial_equity(state: &TableSnapshot) -> f64 {
+    use std::collections::HashMap;
+    use std::str::FromStr;
+    // Parse the bot's hole cards into Card values.
+    let cards_str = state.hole_cards.to_string();
+    let cards: Vec<crate::card::Card> = cards_str
+        .split_whitespace()
+        .filter_map(|tok| crate::card::Card::from_str(tok).ok())
+        .collect();
+    if cards.is_empty() {
+        return 0.25;
+    }
+    let mut rank_count: HashMap<u8, u8> = HashMap::new();
+    for c in &cards {
+        *rank_count.entry(c.get_rank() as u8).or_insert(0) += 1;
+    }
+    let max_count = rank_count.values().copied().max().unwrap_or(0);
+    let pair_count = rank_count.values().filter(|&&v| v == 2).count();
+    match (cards.len(), max_count) {
+        (3, 3) => 0.90,                    // trips on 3rd street — premium
+        (3, 2) => 0.65,                    // pair on 3rd
+        (4, 4) => 0.98,                    // quads on 4th — virtual lock
+        (4, 3) => 0.85,                    // trips on 4th
+        (4, 2) if pair_count >= 2 => 0.75, // two pair on 4th
+        (4, 2) => 0.55,                    // single pair on 4th
+        _ => {
+            // No pair: rank by highest card present. Aces ≈ 0.45,
+            // 2-rank ≈ 0.25. Linear interpolation keeps the value tame.
+            let top = cards.iter().map(|c| c.get_rank() as u8).max().unwrap_or(2);
+            // top is 2..=14
+            let t = f64::from(top.saturating_sub(2)) / 12.0; // 0.0..=1.0
+            0.20 + 0.25 * t
+        }
+    }
 }
 
 /// Returns a random `(numerator, denominator)` pair from `strategy.preferred_bet_sizes`,
@@ -441,6 +462,50 @@ fn pick_bet_size(strategy: &BettingStrategy, rng: &mut impl rand::Rng) -> (usize
     }
     let (n, d) = sizes[rng.random_range(0..sizes.len())].as_fraction();
     (n as usize, d as usize)
+}
+
+/// EPIC-30 Phase 6: returns the tier increment (`small_bet` or `big_bet`)
+/// for the current street if the table runs a Fixed-Limit structure.
+/// `None` for No-Limit and Pot-Limit, indicating the caller should fall
+/// back to pot-fraction sizing.
+fn fixed_limit_increment(state: &TableSnapshot) -> Option<usize> {
+    match state.betting_structure {
+        BettingStructure::FixedLimit { small_bet, big_bet, .. } => Some(match state.bet_tier {
+            BetTier::Small => small_bet,
+            BetTier::Big => big_bet,
+        }),
+        _ => None,
+    }
+}
+
+/// EPIC-30 Phase 6: computes a raise target ("raise to N total") that's
+/// legal under the current betting structure. For Fixed-Limit, returns
+/// `current_bet + tier_increment` clamped to the player's stack. For
+/// No-Limit / Pot-Limit, preserves the existing pot-fraction logic.
+fn sized_raise_to(state: &TableSnapshot, strategy: &BettingStrategy, rng: &mut impl rand::Rng) -> usize {
+    if let Some(increment) = fixed_limit_increment(state) {
+        return state.current_bet.saturating_add(increment).min(state.my_chips);
+    }
+    let (n, d) = pick_bet_size(strategy, rng);
+    state
+        .current_bet
+        .saturating_add(state.pot.saturating_mul(n) / d)
+        .max(state.current_bet.saturating_add(state.min_raise))
+        .min(state.my_chips)
+}
+
+/// EPIC-30 Phase 6: computes a bet amount (no current bet to call) that's
+/// legal under the current betting structure. For Fixed-Limit, returns
+/// the tier increment clamped to the player's stack. For No-Limit /
+/// Pot-Limit, preserves the existing pot-fraction logic.
+fn sized_bet_amount(state: &TableSnapshot, strategy: &BettingStrategy, rng: &mut impl rand::Rng) -> usize {
+    if let Some(increment) = fixed_limit_increment(state) {
+        return increment.min(state.my_chips);
+    }
+    let (n, d) = pick_bet_size(strategy, rng);
+    (state.pot.saturating_mul(n) / d)
+        .max(state.big_blind)
+        .min(state.my_chips)
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

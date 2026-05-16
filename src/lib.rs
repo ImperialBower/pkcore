@@ -468,6 +468,17 @@ pub enum PKError {
     TooManyCards,
     TooManyHands,
     InvalidTwo,
+    /// EPIC-30 Phase 3: a raise was attempted on a betting street that has
+    /// already hit its per-street raise cap (used by Fixed-Limit variants
+    /// where typically 3 raises after the opening bet are permitted).
+    RaiseCapReached,
+    /// EPIC-30 Phase 3: a raise was attempted to an amount that exceeds
+    /// the maximum permitted by the table's
+    /// [`BettingStructure`][crate::games::betting_structure::BettingStructure]
+    /// — e.g., a FLHE raise that would overshoot the tier increment, or
+    /// a PLO raise that exceeds the pot-limit ceiling. All-in raises
+    /// bypass this check.
+    ExceedsBettingCap,
     /// Chip conservation failed at the end of a hand.
     ///
     /// `expected` is the total recorded before forced bets; `actual` is the
@@ -531,6 +542,8 @@ impl Display for PKError {
             PKError::TooManyCards => "Too Many Cards Error",
             PKError::TooManyHands => "Too Many Hands Error",
             PKError::InvalidTwo => "Invalid Two Error",
+            PKError::RaiseCapReached => "Raise cap reached for this street",
+            PKError::ExceedsBettingCap => "Raise exceeds betting structure cap",
             PKError::ChipAuditFailed { expected, actual } => {
                 &*format!("Chip audit failed: expected {expected} chips, found {actual}")
             }

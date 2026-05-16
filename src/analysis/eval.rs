@@ -1,10 +1,13 @@
 use crate::PKError;
+use crate::analysis::class::HandRankClass;
 use crate::analysis::hand_rank::HandRank;
+use crate::analysis::name::HandRankName;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::analysis::store::bcm::binary_card_map::FiveBCM;
 use crate::arrays::HandRanker;
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
+use crate::games::razz::california::CaliforniaHandRank;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
@@ -208,6 +211,75 @@ impl Eval {
     pub fn new(hand_rank: HandRank, hand: Five) -> Self {
         Eval { hand_rank, hand }
     }
+
+    /// Construct a Razz / A-5 lowball `Eval` from a `CaliforniaHandRank`
+    /// and the best 5-card low it identifies.
+    ///
+    /// The `CaliforniaHandRank` ordinal is stored directly in
+    /// `HandRank.value`: wheel = 1, worst pair-free low (`RAZZ_9TJQK`) =
+    /// 1287, paired-hand variants above that. Because `HandRank::cmp`
+    /// already treats *lower* `value` as a *higher* hand, this
+    /// directly gives the Razz semantics ("lower low wins") without any
+    /// inversion math.
+    ///
+    /// # Errors
+    /// Returns `PKError::NoLow` if `rank == CaliforniaHandRank::Unknown`
+    /// — i.e., the evaluator could not classify the supplied hand. In
+    /// practice `Seven::razz_hand_rank_and_hand` never returns
+    /// `Unknown` for a real seven-card hand, so this is a defensive
+    /// guard.
+    ///
+    /// # Examples
+    /// ```
+    /// use std::str::FromStr;
+    /// use pkcore::analysis::eval::Eval;
+    /// use pkcore::arrays::five::Five;
+    /// use pkcore::games::razz::california::CaliforniaHandRank;
+    ///
+    /// let wheel = Five::from_str("5♠ 4♠ 3♠ 2♠ A♠").unwrap();
+    /// let eval = Eval::from_razz_rank(CaliforniaHandRank::WHEEL, wheel).unwrap();
+    /// assert_eq!(eval.hand_rank.value, 1);
+    /// ```
+    pub fn from_razz_rank(rank: CaliforniaHandRank, best_five: Five) -> Result<Self, PKError> {
+        if rank.is_unknown() {
+            return Err(PKError::NoLow);
+        }
+        Ok(Eval {
+            hand_rank: HandRank {
+                value: rank.get_hand_rank_value(),
+                name: HandRankName::RazzLow,
+                class: HandRankClass::Lowball,
+            },
+            hand: best_five,
+        })
+    }
+
+    /// Razz analogue of `Eval::from(seven: Seven)`. Evaluates the
+    /// 7-card hand under A-5 lowball — picking the best 5 of 7 — and
+    /// returns the resulting `Eval`.
+    ///
+    /// # Errors
+    /// Returns `PKError::NoLow` if the evaluator yields
+    /// `CaliforniaHandRank::Unknown` (only possible for malformed
+    /// inputs in practice).
+    ///
+    /// # Examples
+    /// ```
+    /// use std::str::FromStr;
+    /// use pkcore::analysis::eval::Eval;
+    /// use pkcore::arrays::seven::Seven;
+    ///
+    /// let wheel_seven = Seven::from_str("5♠ 4♥ 3♦ 2♣ A♠ K♥ Q♦").unwrap();
+    /// let six_low_seven = Seven::from_str("6♠ 4♥ 3♦ 2♣ A♠ K♥ Q♦").unwrap();
+    /// let wheel = Eval::from_seven_razz(&wheel_seven).unwrap();
+    /// let six_low = Eval::from_seven_razz(&six_low_seven).unwrap();
+    /// // Wheel beats 6-low.
+    /// assert!(wheel > six_low);
+    /// ```
+    pub fn from_seven_razz(seven: &Seven) -> Result<Self, PKError> {
+        let (rank, best_five) = seven.razz_hand_rank_and_hand();
+        Self::from_razz_rank(rank, best_five)
+    }
 }
 
 impl Display for Eval {
@@ -402,6 +474,62 @@ impl PartialEq for SevenEval {
     }
 }
 impl Eq for SevenEval {}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod razz_eval_tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn wheel_beats_six_low() {
+        let wheel = Seven::from_str("5♠ 4♥ 3♦ 2♣ A♠ K♥ Q♦").unwrap();
+        let six_low = Seven::from_str("6♠ 4♥ 3♦ 2♣ A♠ K♥ Q♦").unwrap();
+
+        let wheel_eval = Eval::from_seven_razz(&wheel).unwrap();
+        let six_low_eval = Eval::from_seven_razz(&six_low).unwrap();
+
+        assert!(wheel_eval > six_low_eval);
+        assert_eq!(wheel_eval.hand_rank.value, 1);
+        assert_eq!(wheel_eval.hand_rank.name, HandRankName::RazzLow);
+        assert_eq!(wheel_eval.hand_rank.class, HandRankClass::Lowball);
+    }
+
+    #[test]
+    fn any_pair_free_beats_any_paired() {
+        // 7-high low (pair-free): 7-6-5-4-3-2-A available, best is 7-5-4-3-2.
+        let pair_free = Seven::from_str("7♠ 6♥ 5♦ 4♣ 3♠ 2♥ A♦").unwrap();
+        // Pair of deuces, rest is a low draw — but any paired 5-card
+        // hand ranks worse than any pair-free low.
+        let paired = Seven::from_str("2♠ 2♥ 3♦ 4♣ 5♠ 9♥ K♦").unwrap();
+
+        let pair_free_eval = Eval::from_seven_razz(&pair_free).unwrap();
+        let paired_eval = Eval::from_seven_razz(&paired).unwrap();
+
+        assert!(
+            pair_free_eval > paired_eval,
+            "pair-free Razz eval ({:?}) should beat paired ({:?})",
+            pair_free_eval.hand_rank,
+            paired_eval.hand_rank
+        );
+    }
+
+    #[test]
+    fn straights_and_flushes_do_not_penalize_wheel() {
+        // Wheel + flush — straights and flushes do not count against a
+        // Razz low. This should still score as the nut low (wheel).
+        let wheel_flush = Seven::from_str("5♠ 4♠ 3♠ 2♠ A♠ K♥ Q♦").unwrap();
+        let eval = Eval::from_seven_razz(&wheel_flush).unwrap();
+        assert_eq!(eval.hand_rank.value, 1);
+        assert_eq!(eval.hand_rank.class, HandRankClass::Lowball);
+    }
+
+    #[test]
+    fn unknown_rank_errors() {
+        let result = Eval::from_razz_rank(CaliforniaHandRank::Unknown, Five::default());
+        assert!(matches!(result, Err(PKError::NoLow)));
+    }
+}
 
 #[cfg(test)]
 #[allow(non_snake_case)]

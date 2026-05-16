@@ -366,6 +366,9 @@ fn run_street(
     collection: &HandCollection,
 ) {
     let max_iterations = (profiles.len() + 1) * 8;
+    let btn = table.button;
+    let sb = table.determine_small_blind();
+    let bb = table.determine_big_blind();
 
     for _ in 0..max_iterations {
         if table.seats.is_betting_complete() || table.is_game_over() {
@@ -394,8 +397,12 @@ fn run_street(
         };
 
         let pot_after = table.effective_pot();
+        let tag = position_tag(seat, btn, sb, bb)
+            .map(|t| format!("[{t}]"))
+            .unwrap_or_default();
         println!(
-            "    {:>20}  [pot: {}] {} [pot: {}]",
+            "    {:>8} {:<20}  [pot: {}] {} [pot: {}]",
+            tag,
             seat_label(seat, profiles),
             pot_before,
             desc,
@@ -437,10 +444,21 @@ fn read_human_action(
         right_prompt: DefaultPromptSegment::Empty,
     };
 
+    let btn = table.button;
+    let sb = table.determine_small_blind();
+    let bb = table.determine_big_blind();
+    let position_suffix = match position_tag(seat, btn, sb, bb) {
+        Some(t) => format!("   Position: {t}"),
+        None => String::new(),
+    };
+
     println!();
     loop {
         println!("  ┌─ Your turn ─────────────────────────────────────");
-        println!("  │  Cards: {}   Chips: {}   Pot: {}", hole, chips, pot);
+        println!(
+            "  │  Cards: {}   Chips: {}   Pot: {}{}",
+            hole, chips, pot, position_suffix
+        );
         if to_call > 0 {
             println!("  │  To call: {}   Min raise: {}", to_call, table.min_raise());
             println!("  │  f=fold  c=call {}  r <n>=raise to n  a=all-in  s=save", to_call);
@@ -621,14 +639,68 @@ fn chip_counts(table: &TableNoCell) -> Vec<(u8, usize)> {
 }
 
 fn print_stacks(table: &TableNoCell, profiles: &[BotProfile]) {
+    let btn = table.button;
+    let sb = table.determine_small_blind();
+    let bb = table.determine_big_blind();
+    let tag_for = |seat: u8| match position_tag(seat, btn, sb, bb) {
+        Some(t) => format!(" ({t})"),
+        None => String::new(),
+    };
+
     print!("  Stacks:");
     if let Some(seat) = table.seats.get_seat(HUMAN_SEAT).filter(|s| !s.is_empty()) {
-        print!("  {}={}", HUMAN_NAME, seat.player.chips);
+        print!("  {}={}{}", HUMAN_NAME, seat.player.chips, tag_for(HUMAN_SEAT));
     }
     for (i, profile) in profiles.iter().enumerate() {
-        if let Some(seat) = table.seats.get_seat(i as u8 + 1).filter(|s| !s.is_empty()) {
-            print!("  {}={}", profile.name, seat.player.chips);
+        let seat_idx = i as u8 + 1;
+        if let Some(seat) = table.seats.get_seat(seat_idx).filter(|s| !s.is_empty()) {
+            print!("  {}={}{}", profile.name, seat.player.chips, tag_for(seat_idx));
         }
     }
     println!();
+}
+
+/// Returns a position role tag for `seat`, or `None` if the seat is
+/// neither the button nor a blind. Heads-up collapses BTN+SB onto a
+/// single seat (the button is the small blind in HU).
+fn position_tag(seat: u8, btn: u8, sb: u8, bb: u8) -> Option<&'static str> {
+    match (seat == btn, seat == sb, seat == bb) {
+        (true, true, _) => Some("BTN/SB"),
+        (true, _, _) => Some("BTN"),
+        (_, true, _) => Some("SB"),
+        (_, _, true) => Some("BB"),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn position_tag_button_only() {
+        assert_eq!(position_tag(3, 3, 4, 5), Some("BTN"));
+    }
+
+    #[test]
+    fn position_tag_small_blind() {
+        assert_eq!(position_tag(4, 3, 4, 5), Some("SB"));
+    }
+
+    #[test]
+    fn position_tag_big_blind() {
+        assert_eq!(position_tag(5, 3, 4, 5), Some("BB"));
+    }
+
+    #[test]
+    fn position_tag_heads_up_collapses_btn_and_sb() {
+        // Heads-up: button IS the small blind. Same seat, both flags set.
+        assert_eq!(position_tag(0, 0, 0, 1), Some("BTN/SB"));
+        assert_eq!(position_tag(1, 0, 0, 1), Some("BB"));
+    }
+
+    #[test]
+    fn position_tag_middle_position_returns_none() {
+        assert_eq!(position_tag(7, 3, 4, 5), None);
+    }
 }

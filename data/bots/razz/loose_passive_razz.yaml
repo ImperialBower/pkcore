@@ -1,0 +1,19 @@
+name: loose_passive_razz
+description: Razz calling-station — wide 3rd-street range that includes 9-low draws and even some paired starts, frequent calls down with marginal lows, rarely raises until rivered.
+style: loose_passive
+range_strategy:
+  open_raise: 99+, ATs+, KQs, AJo+
+  three_bet: QQ+, AKs
+  call_three_bet: 22+, A8s+, KTs+, QTs+, J9s+, T9s, ATo+, KJo+, QJo
+  postflop_cbet_frequency: 20
+betting_strategy:
+  aggression_factor: 18
+  bluff_frequency: 4
+  check_raise_frequency: 3
+  preferred_bet_sizes:
+  - 1/1
+betting_structure:
+  kind: fixed_limit
+  small_bet: 0
+  big_bet: 0
+  raise_cap: 3
