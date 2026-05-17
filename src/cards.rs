@@ -465,8 +465,17 @@ impl Cards {
 
     pub fn shuffle_in_place(&mut self) {
         let mut rng = rng();
+        self.shuffle_in_place_with(&mut rng);
+    }
+
+    /// Shuffle in place using the supplied RNG, for reproducible runs.
+    ///
+    /// `shuffle_in_place` delegates here with [`rand::rng()`]; callers that
+    /// need a deterministic shuffle (e.g. seeded `SimTable` integration tests)
+    /// call this directly with a `SmallRng` seeded from a known value.
+    pub fn shuffle_in_place_with<R: rand::Rng + ?Sized>(&mut self, rng: &mut R) {
         let mut vec: Vec<_> = self.0.drain(..).collect();
-        vec.shuffle(&mut rng);
+        vec.shuffle(rng);
         self.0.extend(vec);
     }
 

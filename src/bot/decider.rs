@@ -74,8 +74,30 @@ pub trait BotDecider: Send + Sync {
     /// a new playing style for the upcoming hand.
     fn on_new_hand(&self) {}
 
+    /// Seeded variant of [`Self::on_new_hand`].
+    ///
+    /// The default implementation ignores `rng` and delegates to
+    /// [`Self::on_new_hand`].  Override when per-hand state needs to be
+    /// deterministic under a seeded [`crate::bot::sim::SimTable`].
+    fn on_new_hand_with_rng(&self, _rng: &mut dyn rand::RngCore) {
+        self.on_new_hand();
+    }
+
     /// Choose a [`PlayerAction`] for the given `profile` and table `state`.
     fn decide(&self, profile: &BotProfile, state: &TableSnapshot) -> PlayerAction;
+
+    /// Seeded variant of [`Self::decide`].
+    ///
+    /// The default implementation ignores `rng` and delegates to
+    /// [`Self::decide`] (which typically uses a thread-local RNG).
+    /// Override to make decisions reproducible under a seeded
+    /// [`crate::bot::sim::SimTable`]. The three shipped deciders
+    /// ([`RuleBasedDecider`], [`JokerDecider`],
+    /// [`crate::bot::exploitative_decider::ExploitativeDecider`]) all
+    /// override this so seeded sim runs are fully deterministic.
+    fn decide_seeded(&self, profile: &BotProfile, state: &TableSnapshot, _rng: &mut dyn rand::RngCore) -> PlayerAction {
+        self.decide(profile, state)
+    }
 }
 
 // ── RuleBasedDecider ──────────────────────────────────────────────────────────
@@ -125,6 +147,10 @@ impl BotDecider for RuleBasedDecider {
     fn decide(&self, profile: &BotProfile, state: &TableSnapshot) -> PlayerAction {
         RuleBasedDecider::decide_with_rng(profile, state, &mut rand::rng())
     }
+
+    fn decide_seeded(&self, profile: &BotProfile, state: &TableSnapshot, rng: &mut dyn rand::RngCore) -> PlayerAction {
+        RuleBasedDecider::decide_with_rng(profile, state, rng)
+    }
 }
 
 impl RuleBasedDecider {
@@ -134,7 +160,7 @@ impl RuleBasedDecider {
     /// thread-local RNG.  Tests call it directly with a seeded
     /// [`rand::rngs::SmallRng`] for fully deterministic results.
     #[allow(clippy::too_many_lines)]
-    pub(crate) fn decide_with_rng<R: rand::Rng>(
+    pub(crate) fn decide_with_rng<R: rand::Rng + ?Sized>(
         profile: &BotProfile,
         state: &TableSnapshot,
         rng: &mut R,
@@ -321,9 +347,29 @@ impl JokerDecider {
     /// ```
     #[must_use]
     pub fn new() -> Self {
-        use rand::Rng as _;
+        Self::new_with_rng(&mut rand::rng())
+    }
+
+    /// Like [`Self::new`] but uses the supplied RNG to pick the initial
+    /// profile.  Use this when constructing a `JokerDecider` that will run
+    /// inside a seeded [`crate::bot::sim::SimTable`] and you want the very
+    /// first hand to be reproducible.  Subsequent hands re-roll via
+    /// [`BotDecider::on_new_hand_with_rng`] using the sim's RNG.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::decider::JokerDecider;
+    /// use rand::SeedableRng;
+    /// use rand::rngs::SmallRng;
+    ///
+    /// let mut rng = SmallRng::seed_from_u64(42);
+    /// let decider = JokerDecider::new_with_rng(&mut rng);
+    /// let _ = decider;
+    /// ```
+    #[must_use]
+    pub fn new_with_rng<R: rand::Rng + ?Sized>(rng: &mut R) -> Self {
         let profiles = BotProfile::default_profiles();
-        let mut rng = rand::rng();
         let idx = rng.random_range(0..profiles.len());
         Self {
             active: Mutex::new(profiles[idx].clone()),
@@ -351,9 +397,13 @@ impl BotDecider for JokerDecider {
     /// Randomly picks a new profile from [`BotProfile::default_profiles`] for
     /// the upcoming hand.
     fn on_new_hand(&self) {
+        self.on_new_hand_with_rng(&mut rand::rng());
+    }
+
+    /// Seeded variant — picks the next per-hand profile using the supplied RNG.
+    fn on_new_hand_with_rng(&self, rng: &mut dyn rand::RngCore) {
         use rand::Rng as _;
         let profiles = BotProfile::default_profiles();
-        let mut rng = rand::rng();
         let idx = rng.random_range(0..profiles.len());
         if let Ok(mut guard) = self.active.lock() {
             *guard = profiles[idx].clone();
@@ -369,6 +419,14 @@ impl BotDecider for JokerDecider {
             .lock()
             .map_or_else(|e| e.into_inner().clone(), |g| g.clone());
         RuleBasedDecider.decide(&active, state)
+    }
+
+    fn decide_seeded(&self, _profile: &BotProfile, state: &TableSnapshot, rng: &mut dyn rand::RngCore) -> PlayerAction {
+        let active = self
+            .active
+            .lock()
+            .map_or_else(|e| e.into_inner().clone(), |g| g.clone());
+        RuleBasedDecider.decide_seeded(&active, state, rng)
     }
 }
 
@@ -386,7 +444,7 @@ impl BotDecider for JokerDecider {
 /// **Postflop:** evaluates the best 5-of-N hand from the combined hole cards
 /// and board, then normalises the `hand_rank_value` to `[0.0, 1.0]` where
 /// `1.0` is a royal flush and `0.0` is 7-high nothing.
-fn hand_equity<R: rand::Rng>(profile: &BotProfile, state: &TableSnapshot, rng: &mut R) -> Option<f64> {
+fn hand_equity<R: rand::Rng + ?Sized>(profile: &BotProfile, state: &TableSnapshot, rng: &mut R) -> Option<f64> {
     if state.hole_cards.is_empty() {
         return None;
     }
@@ -455,7 +513,7 @@ fn stud_partial_equity(state: &TableSnapshot) -> f64 {
 
 /// Returns a random `(numerator, denominator)` pair from `strategy.preferred_bet_sizes`,
 /// falling back to half-pot `(1, 2)` when the list is empty.
-fn pick_bet_size(strategy: &BettingStrategy, rng: &mut impl rand::Rng) -> (usize, usize) {
+fn pick_bet_size<R: rand::Rng + ?Sized>(strategy: &BettingStrategy, rng: &mut R) -> (usize, usize) {
     let sizes = &strategy.preferred_bet_sizes;
     if sizes.is_empty() {
         return (1, 2);
@@ -482,7 +540,7 @@ fn fixed_limit_increment(state: &TableSnapshot) -> Option<usize> {
 /// legal under the current betting structure. For Fixed-Limit, returns
 /// `current_bet + tier_increment` clamped to the player's stack. For
 /// No-Limit / Pot-Limit, preserves the existing pot-fraction logic.
-fn sized_raise_to(state: &TableSnapshot, strategy: &BettingStrategy, rng: &mut impl rand::Rng) -> usize {
+fn sized_raise_to<R: rand::Rng + ?Sized>(state: &TableSnapshot, strategy: &BettingStrategy, rng: &mut R) -> usize {
     if let Some(increment) = fixed_limit_increment(state) {
         return state.current_bet.saturating_add(increment).min(state.my_chips);
     }
@@ -498,7 +556,7 @@ fn sized_raise_to(state: &TableSnapshot, strategy: &BettingStrategy, rng: &mut i
 /// legal under the current betting structure. For Fixed-Limit, returns
 /// the tier increment clamped to the player's stack. For No-Limit /
 /// Pot-Limit, preserves the existing pot-fraction logic.
-fn sized_bet_amount(state: &TableSnapshot, strategy: &BettingStrategy, rng: &mut impl rand::Rng) -> usize {
+fn sized_bet_amount<R: rand::Rng + ?Sized>(state: &TableSnapshot, strategy: &BettingStrategy, rng: &mut R) -> usize {
     if let Some(increment) = fixed_limit_increment(state) {
         return increment.min(state.my_chips);
     }
