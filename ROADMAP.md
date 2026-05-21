@@ -22,9 +22,9 @@ A running poker table service where:
 
 | Repo | Status | Notes |
 |------|--------|-------|
-| [pkcore](https://github.com/folkengine/pkcore) | Active | Full poker library: `Table`, `Dealer`, `Player`, `Game`, card evaluation, GTO analysis |
-| [pkdealer](https://github.com/ImperialBower/pkdealer) | Active (Phase 1 complete) | All 15 `DealerService` RPCs (`SeatPlayer`, `StartHand`, `Act`, `GetStatus`, `StreamEvents`, etc.) wired to `pkcore::Dealer`; `tokio::sync::broadcast` event streaming working; depends on pkcore 0.0.48; workspace = `proto`, `service`, `client` crates |
-| [pkbot](https://github.com/ImperialBower/pkbot) | Skeleton | Bot personality library; YAML-serializable range and betting strategies for use by pkdealer agent clients |
+| [pkcore](https://github.com/folkengine/pkcore) | Active | Full poker library: `Table`, `Dealer`, `Player`, `Game`, card evaluation, GTO analysis, bot profiles, five poker variants (NLHE/FLHE/PLO/Stud Hi/Razz) |
+| [pkdealer](https://github.com/ImperialBower/pkdealer) | Active (Phase 1 complete) | All 15 `DealerService` RPCs (`SeatPlayer`, `StartHand`, `Act`, `GetStatus`, `StreamEvents`, etc.) wired to `pkcore::Dealer`; `tokio::sync::broadcast` event streaming working; workspace = `proto`, `service`, `client` crates |
+| pkbot | Consolidated into pkcore | Bot personality work (originally planned as a standalone crate) lives in `pkcore::bot` — `BotProfile`, `Playbook`, `RuleBasedDecider`, `ExploitativeDecider`, `SimTable`, YAML profiles in `data/bots/` |
 | [pkgto-web](https://github.com/ImperialBower/pkgto-web) | Active | WASM preflop equity analyzer; single `analyze_gto` function, deployed to GitHub Pages |
 
 **pkdealer Phase 1 is complete:** the full `DealerService` is implemented
@@ -85,21 +85,25 @@ workspace)
   (broadcast/spectator mode)
 - Shows pot, board, action log, chip counts in real time
 
-**`pkbot`** — Bot personality library ([ImperialBower/pkbot](https://github.com/ImperialBower/pkbot))
-- Standalone Rust library (not part of the pkdealer workspace)
+**`pkcore::bot`** — Bot personality module (consolidated into pkcore;
+originally planned as a standalone `pkbot` crate)
 - Defines `BotProfile` — a fully serializable bot personality combining a
   GTO range strategy and a betting strategy
-- Profiles are stored as YAML and loaded via `serde` + `serde_yaml`
+- Profiles are stored as YAML in `data/bots/` and loaded via `serde` +
+  `serde_yaml`
 - Covers preflop range charts, postflop betting tendencies, aggression
   factors, and bluff frequencies
 - Different profiles produce different player archetypes: tight-passive,
   loose-aggressive, GTO-solver-driven, etc.
-- Agent binaries in pkdealer load a `BotProfile` from a YAML file at
-  startup and use it to drive decisions via the gRPC `Act` RPC
+- `RuleBasedDecider`, `JokerDecider`, and `ExploitativeDecider` consume
+  `BotProfile` to drive in-process and (eventually) gRPC agents
+- Agent binaries in pkdealer will depend on pkcore and load a
+  `BotProfile` from a YAML file at startup to drive decisions via the
+  gRPC `Act` RPC
 
-**AI Agent clients** — Separate binaries/crates
+**AI Agent clients** — Separate binaries/crates in pkdealer
 - Each implements the same gRPC client interface
-- Each loads a `BotProfile` from pkbot to drive decision-making
+- Each loads a `BotProfile` from pkcore to drive decision-making
 - Connects as a player, receives its own hole cards and table state, acts
   via gRPC
 
@@ -124,11 +128,11 @@ workspace)
 | [EPIC-26](docs/EPIC-26_Player_Stats.md) | Player Action Tracking & Opponent Insights — `PlayerStats` / `StatsRegistry` keyed by `Uuid`, derived ratios (VPIP/PFR/AF/WTSD/c-bet/...), exposed to `BotDecider` (no behavior change), optional persistence | Complete |
 | [EPIC-27](docs/EPIC-27_Exploitative_Decider.md) | Adaptive Bot Framework — `ExploitativeDecider<D>` wrapper that converts opponent stats into runtime profile deviations; `ExploitConfig` with 8 deviation rules; `SimTable::new_with_registry`; demo + smoke tests | Complete |
 | [EPIC-28](docs/EPIC-28_Profile_Training.md) | Cross-Session Profile Training — `ExploitTrainer` (1+λ)-ES loop tunes `ExploitConfig` parameters against a static field; `bot-training` feature; YAML serialisation for trained configs; `train_exploit_config` example | Complete |
-| [EPIC-29](docs/EPIC-29_Variant_Engine_Foundation.md) | Variant Engine Foundation — `BettingStructure` and `GameFamily` enums; data-driven street descriptors; per-card visibility; optional board; `ForcedBets::AnteAndBringIn`; existing NLHE behavior unchanged | Planned |
-| [EPIC-30](docs/EPIC-30_Limit_Holdem.md) | Fixed-Limit Hold'em — `GameType::LimitHoldem`; small-bet/big-bet street tiers; raise cap; `limit_holdem_from_seats` constructor; FLHE-tuned bot profiles | Planned |
-| [EPIC-31](docs/EPIC-31_Pot_Limit_Omaha.md) | Pot-Limit Omaha (Hi) — wire `OmahaHigh` (from EPIC-09) into showdown; 4-card hole; pot-limit sizing; fix `cards_on_board` for PLO; `plo_from_seats` constructor | Planned |
-| [EPIC-32](docs/EPIC-32_Stud_Hi.md) | Seven-Card Stud Hi — no community board; ante + bring-in (lowest upcard); 5 streets with upcards; action-by-best-visible-hand; fixed-limit small/big-bet tiers; `stud_hi_from_seats` constructor | Planned |
-| [EPIC-33](docs/EPIC-33_Razz.md) | Razz — A-5 lowball on the Stud engine; bring-in by highest upcard; action by worst visible hand; finishes the integration EPIC-10 left open; `razz_from_seats` constructor | Planned |
+| [EPIC-29](docs/EPIC-29_Variant_Engine_Foundation.md) | Variant Engine Foundation — `BettingStructure` and `GameFamily` enums; data-driven street descriptors; per-card visibility; optional board; `ForcedBets::AnteAndBringIn`; existing NLHE behavior unchanged | Complete |
+| [EPIC-30](docs/EPIC-30_Limit_Holdem.md) | Fixed-Limit Hold'em — `GameType::LimitHoldem`; small-bet/big-bet street tiers; raise cap; `limit_holdem_from_seats` constructor; FLHE-tuned bot profiles | Complete |
+| [EPIC-31](docs/EPIC-31_Pot_Limit_Omaha.md) | Pot-Limit Omaha (Hi) — wire `OmahaHigh` (from EPIC-09) into showdown; 4-card hole; pot-limit sizing; fix `cards_on_board` for PLO; `plo_from_seats` constructor | Complete |
+| [EPIC-32](docs/EPIC-32_Stud_Hi.md) | Seven-Card Stud Hi — no community board; ante + bring-in (lowest upcard); 5 streets with upcards; action-by-best-visible-hand; fixed-limit small/big-bet tiers; `stud_hi_from_seats` constructor | Complete (replay round-trip deferred to v1.1) |
+| [EPIC-33](docs/EPIC-33_Razz.md) | Razz — A-5 lowball on the Stud engine; bring-in by highest upcard; action by worst visible hand; finishes the integration EPIC-10 left open; `razz_from_seats` constructor | Complete |
 | [EPIC-34](docs/EPIC-34_Variant_Web_Selection.md) | pkarena0-web Variant Selection — surface GameType selector in the web app; per-variant table rendering (no-community for Stud/Razz, 4-card hole for PLO, per-seat upcard reveal); per-variant `BotProfile` bundles | Planned |
 | [FEATURE: Activate Bluff Fields](docs/FEATURE_BotProfile_ActivateBluffFields.md) | Wire `bluff_frequency`, `check_raise_frequency`, `postflop_cbet_frequency` into `RuleBasedDecider` | Complete |
 | [FEATURE: Position-Aware Decisions](docs/FEATURE_BotProfile_PositionAwareDecisions.md) | Route decisions through `Playbook` position-specific `BettingStrategy` | Complete |
@@ -317,10 +321,11 @@ preflop equity analyzer that runs entirely in the browser via a single
 
 ### Planned UI updates
 
-#### Range frequency display (depends on EPIC-18)
+#### Range frequency display (pkcore support shipped in EPIC-25)
 
-Once pkcore supports per-combo frequencies in range strings, the UI should
-surface them:
+Per-combo frequencies in range strings (`AA:0.5, KK, QQ:0.75`) are
+already supported by `WeightedCombos::from_str` / `to_range_str` in
+pkcore. The UI work to surface them is what remains:
 
 - **Range input** — accept the `:f` suffix in the villain range text field
   (e.g. `AA:0.5, KK, QQ:0.75`); show a validation error if the value is
@@ -465,40 +470,21 @@ spans. Open Grafana and see a live game stats dashboard.
 ### Phase 4 — Bot Personalities & AI Agent Clients
 
 **Goal:** Multiple AI personalities playing at the same table, each with
-observable decision-making. Bot profiles are defined in pkbot and loaded
-by agent binaries in pkdealer.
+observable decision-making. Bot profiles are defined in `pkcore::bot`
+and loaded by agent binaries in pkdealer.
 
-**pkcore work (prerequisite for pkbot):**
+**pkcore prerequisites — shipped:**
 
-Extend the range string format to support optional per-combo frequencies
-using a colon followed by a value in `[0.0, 1.0]`:
-
-```
-AA:0.5, KK, QQ:0.75, AKs:1.0
-```
-
-A combo with no frequency suffix defaults to `1.0` (played 100% of the
-time). This affects how range charts are stored, displayed, and consumed
-by the solver and bot logic.
-
-- Extend `Combo` to carry an optional `frequency: Option<f64>` field
-- Update the range string parser (`FromStr` for `Combos`) to recognise the
-  `:f` suffix and validate that the value is in `[0.0, 1.0]`
-- Update `Display` for `Combo` to emit the suffix when frequency is not
-  `1.0` (omit it otherwise to keep round-tripped strings clean)
-- Ensure `WeightedCombos` respects combo-level frequency when expanding
-  ranges — a combo at frequency `0.5` contributes weight `0.5` per hand
-- Add a pkcore EPIC doc (`docs/EPIC-18_Range_Frequencies.md`) covering
-  the full design and test plan
-
-**pkbot work (prerequisite for rule-based and GTO agents):**
-1. Define `BotProfile` struct with preflop range charts (using frequency-
-   annotated range strings), postflop betting tendencies, aggression
-   factor, and bluff frequency
-2. Add `serde` + `serde_yaml` — serialize/deserialize profiles to YAML
-3. Ship a set of named reference profiles: `tight_passive.yaml`,
-   `loose_aggressive.yaml`, `gto_river.yaml`
-4. Publish to crates.io so pkdealer agent binaries can depend on it
+- **Range-string frequencies (EPIC-25, complete):** range strings accept
+  an optional `:f` suffix (`AA:0.5, KK, QQ:0.75, AKs:1.0`); a combo with
+  no suffix defaults to `1.0`. `WeightedCombos::from_str` /
+  `to_range_str` round-trip cleanly and the solver/bot layers honour
+  per-combo weight.
+- **Bot personality system (EPIC-18 + EPIC-27 + EPIC-28, complete):**
+  `pkcore::bot` defines `BotProfile`, `Playbook`, `PositionRanges`,
+  `BettingStrategy`, `RuleBasedDecider`, `JokerDecider`, and
+  `ExploitativeDecider`; named reference profiles live in `data/bots/`
+  (NLHE, FLHE, PLO, Stud Hi, Razz).
 
 **Approach:** Define a shared `PokerAgent` trait (or just a convention)
 that each agent implements:
@@ -630,8 +616,8 @@ blog post.
 
 | Layer | Technology | Rationale |
 |-------|-----------|-----------|
-| Game engine | pkcore (Rust) | Already exists, battle-tested |
-| Bot personalities | pkbot (Rust) | YAML-serializable profiles; decoupled from agent transport layer |
+| Game engine | pkcore (Rust) | Already exists, battle-tested; five variants playable (NLHE/FLHE/PLO/Stud Hi/Razz) |
+| Bot personalities | `pkcore::bot` (Rust) | YAML-serializable profiles in-tree; same `BotDecider` trait used by `SimTable` and (future) gRPC agents |
 | RPC | gRPC / Tonic | Proto already defined in pkdealer; type-safe, streaming |
 | Web server | Axum | Idiomatic async Rust, SSE support |
 | Frontend | React or Vue + Tailwind | Polished UI with animations; framework TBD |
@@ -646,17 +632,15 @@ blog post.
 ## Repo Structure (end state)
 
 ```
-pkbot/                         # Bot personality library (standalone crate)
+pkcore/                        # Game engine + bot personality library
 ├── src/
-│   ├── lib.rs
-│   ├── profile.rs             # BotProfile — top-level serializable type
-│   ├── range_strategy.rs      # Preflop range charts + postflop tendencies
-│   └── betting_strategy.rs    # Aggression factor, bluff freq, sizing rules
-├── profiles/
-│   ├── tight_passive.yaml
-│   ├── loose_aggressive.yaml
-│   └── gto_river.yaml
-└── Cargo.toml
+│   ├── bot/                   # BotProfile, Playbook, deciders, SimTable
+│   ├── casino/                # Table, Dealer, PokerSession
+│   ├── games/                 # GameType, BettingStructure, GameFamily, streets
+│   ├── analysis/              # Eval, Outs, TheNuts, GTO solver, PlayerStats
+│   └── ...
+└── data/
+    └── bots/                  # YAML profiles per variant (nlhe, flhe, plo, stud_hi, razz)
 
 pkdealer/
 ├── crates/
@@ -664,7 +648,7 @@ pkdealer/
 │   ├── pkdealer_service/      # gRPC server + game engine (expand)
 │   ├── pkdealer_spectator/    # Axum web app + SSE (new)
 │   ├── pkdealer_agent_random/ # Random baseline agent (new)
-│   ├── pkdealer_agent_rules/  # Rule-based agent using pkbot profiles (new)
+│   ├── pkdealer_agent_rules/  # Rule-based agent using pkcore profiles (new)
 │   ├── pkdealer_agent_claude/ # Claude AI agent (new)
 │   ├── pkdealer_agent_openai/ # OpenAI agent (new)
 │   └── pkdealer_client_human/ # Interactive TUI client for human players (new)
