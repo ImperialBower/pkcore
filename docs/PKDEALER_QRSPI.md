@@ -1,5 +1,12 @@
 # pkdealer Platform — QRSPI Session Notes
 
+> **Historical snapshot — superseded.** This document captures the planning state on 2026-03-30.
+> Most items listed below as *(planned)* have since shipped: EPIC-20 (autonomous loop),
+> EPIC-22 (OTel), EPIC-23 (random/rules/Claude agents), EPIC-24 (Docker demo stack),
+> and pkdealer EPIC-25 (Local-LLM backend + Ollama agent). The spectator was extracted
+> to a separate repo: [ImperialBower/pkspectator](https://github.com/ImperialBower/pkspectator).
+> For current status see [`ROADMAP.md`](../ROADMAP.md) and the individual EPIC docs.
+
 **Date:** 2026-03-30
 **Framework:** Question → Research → Structure → Plan → Implement
 **Scope:** Client-server poker platform built on pkcore — AI agents, gRPC service,

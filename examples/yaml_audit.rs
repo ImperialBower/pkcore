@@ -228,6 +228,8 @@ mod tests {
             stack,
             hole_cards: None,
             posted: None,
+            hole_cards_visibility: None,
+            withdrawn: None,
         }
     }
 

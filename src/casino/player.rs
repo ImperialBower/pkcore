@@ -13,6 +13,10 @@ pub struct Player {
     pub chips: Stack,
     pub bet: Stack,
     pub chips_in_play: Cell<usize>,
+    /// Cumulative chips this player has taken out of cash — the initial buy-in
+    /// plus every subsequent [`Player::reload`]. Pairs with `chips` to support
+    /// the profit/loss calc `chips + chips_in_play - withdrawn`.
+    pub withdrawn: Cell<usize>,
     pub state: PlayerStateCell,
 }
 
@@ -27,6 +31,7 @@ impl Player {
             chips: Stack::default(),
             bet: Stack::default(),
             chips_in_play: Cell::new(0),
+            withdrawn: Cell::new(0),
             state: PlayerStateCell::new(PlayerState::YetToAct),
         }
     }
@@ -39,6 +44,7 @@ impl Player {
             chips: Stack::new(stack),
             bet: Stack::default(),
             chips_in_play: Cell::new(0),
+            withdrawn: Cell::new(stack),
             state: PlayerStateCell::new(PlayerState::YetToAct),
         }
     }
@@ -485,8 +491,39 @@ impl Player {
             chips: Stack::new(stack),
             bet: Stack::default(),
             chips_in_play: Cell::new(0),
+            withdrawn: Cell::new(stack),
             state: PlayerStateCell::default(),
         }
+    }
+
+    /// Adds `amount` to the player's stack and records it in the cumulative
+    /// `withdrawn` ledger.
+    ///
+    /// Use this when a player buys more chips mid-session — e.g., after busting,
+    /// or as a top-up. Both `chips` and `withdrawn` are incremented by the same
+    /// amount, keeping the `profit = chips + chips_in_play - withdrawn` invariant
+    /// intact. Returns the new chip count after the reload.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let player = Player::new_with_chips("Bob".to_string(), 1_000);
+    /// let _ = player.act_all_in();
+    /// assert_eq!(0, player.chips.count());
+    ///
+    /// let new_total = player.reload(500);
+    /// assert_eq!(500, new_total);
+    /// assert_eq!(500, player.chips.count());
+    /// assert_eq!(1_500, player.withdrawn.get());
+    /// ```
+    pub fn reload(&self, amount: usize) -> usize {
+        if amount > 0 {
+            self.chips.add_to(Stack::new(amount));
+            self.withdrawn.set(self.withdrawn.get() + amount);
+        }
+        self.chips.count()
     }
 
     /// Resets the player's state and chips in play for a new hand. NOTE: Does not reset chips
@@ -718,5 +755,59 @@ mod casino__players__player_tests {
 
         player.state.set(PlayerState::Fold);
         assert!(!player.is_ready());
+    }
+
+    #[test]
+    fn new_with_chips_initializes_withdrawn() {
+        let player = Player::new_with_chips("Buy-In Betty".to_string(), 1_000);
+        assert_eq!(1_000, player.withdrawn.get());
+    }
+
+    #[test]
+    fn new_initializes_withdrawn_to_zero() {
+        let player = Player::new("Empty Eddie".to_string());
+        assert_eq!(0, player.chips.count());
+        assert_eq!(0, player.withdrawn.get());
+    }
+
+    #[test]
+    fn default_withdrawn_is_zero() {
+        let player = Player::default();
+        assert_eq!(0, player.withdrawn.get());
+    }
+
+    #[test]
+    fn reload_increments_chips_and_withdrawn() {
+        let player = Player::new_with_chips("Reload Ron".to_string(), 1_000);
+
+        let new_total = player.reload(500);
+
+        assert_eq!(1_500, new_total);
+        assert_eq!(1_500, player.chips.count());
+        assert_eq!(1_500, player.withdrawn.get());
+    }
+
+    #[test]
+    fn reload_after_bust() {
+        let player = Player::new_with_chips("Busted Bart".to_string(), 1_000);
+        let _ = player.act_all_in();
+        assert_eq!(0, player.chips.count());
+
+        let new_total = player.reload(800);
+
+        assert_eq!(800, new_total);
+        assert_eq!(800, player.chips.count());
+        assert_eq!(1_800, player.withdrawn.get());
+    }
+
+    #[test]
+    fn reload_zero_is_noop() {
+        let player = Player::new_with_chips("Stingy Stan".to_string(), 1_000);
+
+        let new_total = player.reload(0);
+
+        assert_eq!(1_000, new_total);
+        assert_eq!(1_000, player.chips.count());
+        assert_eq!(1_000, player.withdrawn.get());
     }
 }

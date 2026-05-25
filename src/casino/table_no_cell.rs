@@ -119,6 +119,10 @@ pub struct PlayerNoCell {
     pub bet: usize,
     /// Cumulative chips committed across all rounds of the current hand.
     pub chips_in_play: usize,
+    /// Cumulative chips this player has taken out of cash — the initial buy-in
+    /// plus every subsequent [`PlayerNoCell::reload`]. Pairs with `chips` to
+    /// support the profit/loss calc `chips + chips_in_play - withdrawn`.
+    pub withdrawn: usize,
     pub state: PlayerState,
 }
 
@@ -130,6 +134,7 @@ impl Default for PlayerNoCell {
             chips: 0,
             bet: 0,
             chips_in_play: 0,
+            withdrawn: 0,
             state: PlayerState::Out,
         }
     }
@@ -155,6 +160,7 @@ impl PlayerNoCell {
             chips: 0,
             bet: 0,
             chips_in_play: 0,
+            withdrawn: 0,
             state: PlayerState::YetToAct,
         }
     }
@@ -177,8 +183,38 @@ impl PlayerNoCell {
             chips: stack,
             bet: 0,
             chips_in_play: 0,
+            withdrawn: stack,
             state: PlayerState::YetToAct,
         }
+    }
+
+    /// Adds `amount` to the player's stack and records it in the cumulative
+    /// `withdrawn` ledger.
+    ///
+    /// Use this when a player buys more chips mid-session — e.g., after busting,
+    /// or as a top-up. Both `chips` and `withdrawn` are incremented by the same
+    /// amount, keeping the `profit = chips + chips_in_play - withdrawn` invariant
+    /// intact. Returns the new chip count after the reload.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table_no_cell::PlayerNoCell;
+    ///
+    /// let mut p = PlayerNoCell::new_with_chips("Bob".to_string(), 1_000);
+    /// p.chips = 0; // simulate bust
+    ///
+    /// let new_total = p.reload(500);
+    /// assert_eq!(500, new_total);
+    /// assert_eq!(500, p.chips);
+    /// assert_eq!(1_500, p.withdrawn);
+    /// ```
+    pub fn reload(&mut self, amount: usize) -> usize {
+        if amount > 0 {
+            self.chips += amount;
+            self.withdrawn += amount;
+        }
+        self.chips
     }
 
     /// Total chips the player controls: stack + amount already bet this round.
@@ -3772,6 +3808,59 @@ mod tests {
     fn test_player_no_cell_new_with_chips() {
         let p = PlayerNoCell::new_with_chips("Rich".to_string(), 5_000);
         assert_eq!(5_000, p.total_chip_count());
+    }
+
+    #[test]
+    fn test_player_no_cell_new_with_chips_initializes_withdrawn() {
+        let p = PlayerNoCell::new_with_chips("Buy-In Betty".to_string(), 1_000);
+        assert_eq!(1_000, p.withdrawn);
+    }
+
+    #[test]
+    fn test_player_no_cell_new_initializes_withdrawn_to_zero() {
+        let p = PlayerNoCell::new("Empty Eddie".to_string());
+        assert_eq!(0, p.chips);
+        assert_eq!(0, p.withdrawn);
+    }
+
+    #[test]
+    fn test_player_no_cell_default_withdrawn_is_zero() {
+        let p = PlayerNoCell::default();
+        assert_eq!(0, p.withdrawn);
+    }
+
+    #[test]
+    fn test_player_no_cell_reload_increments_chips_and_withdrawn() {
+        let mut p = PlayerNoCell::new_with_chips("Reload Ron".to_string(), 1_000);
+
+        let new_total = p.reload(500);
+
+        assert_eq!(1_500, new_total);
+        assert_eq!(1_500, p.chips);
+        assert_eq!(1_500, p.withdrawn);
+    }
+
+    #[test]
+    fn test_player_no_cell_reload_after_bust() {
+        let mut p = PlayerNoCell::new_with_chips("Busted Bart".to_string(), 1_000);
+        p.chips = 0;
+
+        let new_total = p.reload(800);
+
+        assert_eq!(800, new_total);
+        assert_eq!(800, p.chips);
+        assert_eq!(1_800, p.withdrawn);
+    }
+
+    #[test]
+    fn test_player_no_cell_reload_zero_is_noop() {
+        let mut p = PlayerNoCell::new_with_chips("Stingy Stan".to_string(), 1_000);
+
+        let new_total = p.reload(0);
+
+        assert_eq!(1_000, new_total);
+        assert_eq!(1_000, p.chips);
+        assert_eq!(1_000, p.withdrawn);
     }
 
     #[test]

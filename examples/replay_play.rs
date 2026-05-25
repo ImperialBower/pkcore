@@ -237,6 +237,8 @@ mod tests {
                 stack: 1000.0,
                 hole_cards: None,
                 posted: None,
+                hole_cards_visibility: None,
+                withdrawn: None,
             },
             PlayerEntry {
                 seat: 1,
@@ -245,6 +247,8 @@ mod tests {
                 stack: 1000.0,
                 hole_cards: None,
                 posted: None,
+                hole_cards_visibility: None,
+                withdrawn: None,
             },
         ]
     }

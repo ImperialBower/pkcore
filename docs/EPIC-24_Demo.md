@@ -12,6 +12,7 @@ bot agent containers (rule-based + Claude), Jaeger, Prometheus, Grafana, and
 self-hosted Langfuse. Committed Grafana dashboard JSON and a `DEMO.md`
 presenter guide complete the package.
 
-**Status:** Planned  
+**Status:** Complete (shipped in pkdealer — PR [#13](https://github.com/ImperialBower/pkdealer/pull/13))  
 **Repo:** [ImperialBower/pkdealer](https://github.com/ImperialBower/pkdealer)  
-**Depends on:** EPIC-20, EPIC-21, EPIC-22, EPIC-23
+**Depends on:** EPIC-20, EPIC-21, EPIC-22, EPIC-23  
+**Runbook:** [`pkdealer/DEMO.md`](https://github.com/ImperialBower/pkdealer/blob/main/DEMO.md) · launcher [`demo.sh`](https://github.com/ImperialBower/pkdealer/blob/main/demo.sh) · five-agent stack in [`docker-compose.yml`](https://github.com/ImperialBower/pkdealer/blob/main/docker-compose.yml) (gto/lag/tag rules bots + random + ollama)
