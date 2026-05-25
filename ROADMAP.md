@@ -365,7 +365,17 @@ frequency-annotated range string that feeds into `analyze_gto`.
 | [EPIC-22](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-22_OTel.md) | OTel Instrumentation — `tracing` + OTLP spans/metrics, Jaeger + Prometheus + Grafana compose stack | Complete |
 | [EPIC-23](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-23_Bot_Agents.md) | Bot Agent Clients — random baseline, rule-based (`BotProfile`+`BotDecider`), Claude LLM with `gen_ai.*` spans | Complete |
 | [EPIC-24](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-24_Demo.md) | Demo Packaging — Docker Compose full stack, `demo.sh`, Grafana dashboards, Langfuse, `DEMO.md` | Complete |
-| [EPIC-25 *(pkdealer)*](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-25_Local_LLM_Backend.md) | Local-LLM Backend & Multi-Model Agents — shared `LlmBackend` trait, `pkdealer_agent_ollama`, mock-HTTP backend tests (distinct from pkcore's EPIC-25 Range Frequencies) | Complete |
+| [EPIC-40 *(pkdealer)*](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-40_Local_LLM_Backend.md) | Local-LLM Backend & Multi-Model Agents — shared `LlmBackend` trait, `pkdealer_agent_ollama`, mock-HTTP backend tests | Complete |
+
+### EPIC Numbering Policy
+
+To prevent number collisions across repos, EPICs are namespaced by ten-block:
+
+- **EPIC-00 through EPIC-39** — pkcore-rooted EPICs. Includes pkcore-internal work (`EPIC-25 Range Frequencies`, `EPIC-26 Player Stats`, ...) and cross-repo EPICs where pkcore owns a pointer/contract doc and the downstream repo (pkdealer, pkspectator, pkpy) hosts the implementation (`EPIC-20`–`EPIC-24`).
+- **EPIC-40+** — pkdealer-internal EPICs that don't have a pkcore-side counterpart. `EPIC-40 Local-LLM Backend` is the first; the next pkdealer-internal EPIC is `EPIC-41`.
+- Future downstream repos (`pkspectator`, etc.) get their own ten-block if/when they accumulate internal EPICs — claim the next free block here.
+
+The split keeps `EPIC-NN` unambiguous in any commit message, branch name, or PR title without requiring repo context. Historical note: `EPIC-25` briefly collided (pkcore = Range Frequencies, pkdealer = Local-LLM Backend); pkdealer's was renumbered to EPIC-40 on 2026-05-25.
 
 ---
 

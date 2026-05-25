@@ -17,4 +17,4 @@ events, and call `Act` on their turn:
 **Repo:** [ImperialBower/pkdealer](https://github.com/ImperialBower/pkdealer)  
 **pkcore dependency:** `BotProfile` (`src/bot/profile.rs`), `BotDecider` (`src/bot/decider.rs`), `TableSnapshot` (`src/bot/table_snapshot.rs`)  
 **Depends on:** EPIC-20, EPIC-22  
-**Follow-on:** [EPIC-25 *(pkdealer)*](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-25_Local_LLM_Backend.md) extracted a shared `LlmBackend` trait and added `pkdealer_agent_ollama`
+**Follow-on:** [EPIC-40 *(pkdealer)*](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-40_Local_LLM_Backend.md) extracted a shared `LlmBackend` trait and added `pkdealer_agent_ollama`
