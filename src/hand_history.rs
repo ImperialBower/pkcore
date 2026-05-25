@@ -407,6 +407,7 @@ impl HandHistory {
                     hole_cards: hole_cards.clone(),
                     posted: None,
                     hole_cards_visibility: None,
+                    withdrawn: None,
                 })
                 .collect(),
             board: if board_str.is_empty() {
@@ -503,10 +504,10 @@ impl HandHistory {
     ///     players: vec![
     ///         PlayerEntry { seat: 0, name: "A".to_string(), stack: 1000.0,
     ///             player_id: None, hole_cards: Some("A♠ K♠".to_string()),
-    ///             posted: None, hole_cards_visibility: None },
+    ///             posted: None, hole_cards_visibility: None, withdrawn: None },
     ///         PlayerEntry { seat: 1, name: "B".to_string(), stack: 1000.0,
     ///             player_id: None, hole_cards: Some("7♦ 2♣".to_string()),
-    ///             posted: None, hole_cards_visibility: None },
+    ///             posted: None, hole_cards_visibility: None, withdrawn: None },
     ///     ],
     ///     board: None,
     ///     streets: Some(Streets {
@@ -1401,6 +1402,7 @@ pub struct Stakes {
 ///     hole_cards: Some("A♠ K♠".to_string()),
 ///     posted: None,
 ///     hole_cards_visibility: None,
+///     withdrawn: None,
 /// };
 /// assert!(player.to_two().is_ok());
 /// ```
@@ -1448,6 +1450,15 @@ pub struct PlayerEntry {
     /// are pushed as `Visibility::Down`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hole_cards_visibility: Option<Vec<String>>,
+
+    /// Cumulative chips this player has taken out of cash — the initial buy-in
+    /// plus every subsequent reload — at the time the hand was recorded.
+    /// `None` for legacy YAML files written before this field existed, and
+    /// for any session that wasn't tracking reloads. Pairs with
+    /// `Player::withdrawn` / `PlayerNoCell::withdrawn` at the player level
+    /// and feeds the profit/loss calc `stack + chips_in_pot - withdrawn`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub withdrawn: Option<f64>,
 }
 
 impl PlayerEntry {
@@ -1471,6 +1482,7 @@ impl PlayerEntry {
     ///     hole_cards: Some("A♠ K♠".to_string()),
     ///     posted: None,
     ///     hole_cards_visibility: None,
+    ///     withdrawn: None,
     /// };
     /// assert!(player.to_two().is_ok());
     /// ```
@@ -1502,6 +1514,7 @@ impl PlayerEntry {
     ///     hole_cards: Some("A♠ K♠ Q♠ J♠".to_string()),
     ///     posted: None,
     ///     hole_cards_visibility: None,
+    ///     withdrawn: None,
     /// };
     /// assert!(player.to_four().is_ok());
     /// ```
@@ -1533,6 +1546,7 @@ impl PlayerEntry {
     ///     hole_cards: Some("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠".to_string()),
     ///     posted: None,
     ///     hole_cards_visibility: None,
+    ///     withdrawn: None,
     /// };
     /// assert!(player.to_seven().is_ok());
     /// ```
@@ -2690,6 +2704,7 @@ results:
             hole_cards: None,
             posted: None,
             hole_cards_visibility: None,
+            withdrawn: None,
         };
         assert_eq!(player.to_two(), Err(PKError::NotEnoughCards));
     }
@@ -2859,6 +2874,7 @@ hands:
             hole_cards: None,
             posted: None,
             hole_cards_visibility: None,
+            withdrawn: None,
         }
     }
 
@@ -3271,6 +3287,7 @@ hands:
                     hole_cards: Some("A♠ K♠".to_string()),
                     posted: None,
                     hole_cards_visibility: None,
+                    withdrawn: None,
                 },
                 PlayerEntry {
                     seat: 1,
@@ -3280,6 +3297,7 @@ hands:
                     hole_cards: Some("7♦ 2♣".to_string()),
                     posted: None,
                     hole_cards_visibility: None,
+                    withdrawn: None,
                 },
             ],
             board: None,
@@ -3407,6 +3425,7 @@ hands:
                     hole_cards: None,
                     posted: None,
                     hole_cards_visibility: None,
+                    withdrawn: None,
                 },
                 PlayerEntry {
                     seat: 4,
@@ -3416,6 +3435,7 @@ hands:
                     hole_cards: None,
                     posted: None,
                     hole_cards_visibility: None,
+                    withdrawn: None,
                 },
                 PlayerEntry {
                     seat: 6,
@@ -3425,6 +3445,7 @@ hands:
                     hole_cards: Some("5♦ 9♥".to_string()),
                     posted: None,
                     hole_cards_visibility: None,
+                    withdrawn: None,
                 },
             ],
             board: Some("7♠ Q♦ 8♣".to_string()),
@@ -3824,6 +3845,7 @@ hands:
             hole_cards: Some("A♠ K♠".to_string()),
             posted: None,
             hole_cards_visibility: None,
+            withdrawn: None,
         };
         let yaml = serde_yaml_bw::to_string(&entry).expect("serialize");
         assert!(
@@ -3846,11 +3868,62 @@ hands:
             hole_cards: Some("A♠ K♠".to_string()),
             posted: None,
             hole_cards_visibility: None,
+            withdrawn: None,
         };
         let yaml = serde_yaml_bw::to_string(&entry).expect("serialize");
         assert!(yaml.contains("player_id"));
         assert!(yaml.contains(&id.to_string()));
         let parsed: PlayerEntry = serde_yaml_bw::from_str(&yaml).expect("deserialize");
         assert_eq!(parsed, entry);
+    }
+
+    #[test]
+    fn player_entry_round_trip_with_withdrawn() {
+        let entry = PlayerEntry {
+            seat: 1,
+            name: "Reload Rita".to_string(),
+            stack: 500.0,
+            player_id: None,
+            hole_cards: None,
+            posted: None,
+            hole_cards_visibility: None,
+            withdrawn: Some(2_500.0),
+        };
+        let yaml = serde_yaml_bw::to_string(&entry).expect("serialize");
+        assert!(yaml.contains("withdrawn"));
+        assert!(yaml.contains("2500"));
+        let parsed: PlayerEntry = serde_yaml_bw::from_str(&yaml).expect("deserialize");
+        assert_eq!(parsed, entry);
+        assert_eq!(Some(2_500.0), parsed.withdrawn);
+    }
+
+    #[test]
+    fn player_entry_legacy_yaml_without_withdrawn_parses() {
+        // Pre-`withdrawn` YAML file omits the field entirely.
+        let yaml = "seat: 1\nname: Alice\nstack: 1000.0\n";
+        let parsed: PlayerEntry = serde_yaml_bw::from_str(yaml).expect("deserialize legacy");
+        assert_eq!(1, parsed.seat);
+        assert_eq!("Alice", parsed.name);
+        assert_eq!(1_000.0, parsed.stack);
+        assert_eq!(None, parsed.withdrawn);
+    }
+
+    #[test]
+    fn player_entry_yaml_omits_withdrawn_when_none() {
+        let entry = PlayerEntry {
+            seat: 1,
+            name: "Anon".to_string(),
+            stack: 100.0,
+            player_id: None,
+            hole_cards: None,
+            posted: None,
+            hole_cards_visibility: None,
+            withdrawn: None,
+        };
+        let yaml = serde_yaml_bw::to_string(&entry).expect("serialize");
+        assert!(
+            !yaml.contains("withdrawn"),
+            "yaml unexpectedly contained `withdrawn`: {yaml}"
+        );
     }
 }
