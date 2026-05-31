@@ -4432,10 +4432,9 @@ hands:
         assert_eq!(hh.attach_agent_fidelity(&entries), 6);
     }
 
-    #[test]
-    fn agent_fidelity_round_trips_yaml_and_json() {
-        let mut hh = af_two_street();
-        let full = AgentFidelity {
+    /// A fully-populated `AgentFidelity` for round-trip fixtures.
+    fn af_full() -> AgentFidelity {
+        AgentFidelity {
             raw_response: Some("raise to 250".to_string()),
             was_coerced: Some(true),
             intended_action: Some(ActionType::Raise),
@@ -4443,47 +4442,58 @@ hands:
             input_tokens: Some(1200),
             output_tokens: Some(8),
             model: Some("claude-test".to_string()),
-        };
-        // Annotate the first voluntary action (the seat-3 preflop call).
-        assert_eq!(hh.attach_agent_fidelity(&[(3, full.clone())]), 1);
+        }
+    }
 
+    /// JSON-side back-compat, feature-independent (`serde_json` is always built):
+    /// metadata survives a round trip, absent metadata emits no key, and a
+    /// legacy action lacking the key deserializes to `agent: None`.
+    #[test]
+    fn agent_fidelity_json_round_trips_and_omits_key_when_absent() {
+        // Absent ⇒ no `agent` key.
+        let plain = af_two_street();
+        let plain_json = serde_json::to_string(&plain).expect("to_json");
+        assert!(
+            !plain_json.contains("\"agent\""),
+            "json emitted agent key: {plain_json}"
+        );
+
+        // Legacy action (pre-EPIC-40, no `agent` key) ⇒ `None`.
+        let legacy: Action = serde_json::from_str(r#"{"seat":4,"action":"raise","amount":250.0}"#).expect("legacy");
+        assert_eq!(legacy.seat, 4);
+        assert_eq!(legacy.agent, None);
+
+        // Present ⇒ survives the round trip.
+        let mut hh = af_two_street();
+        let full = af_full();
+        assert_eq!(hh.attach_agent_fidelity(&[(3, full.clone())]), 1);
+        let json = serde_json::to_string(&hh).expect("to_json");
+        assert_eq!(serde_json::from_str::<HandHistory>(&json).expect("from_json"), hh);
+    }
+
+    /// YAML-side equivalents, gated on the `hand-histories` feature that supplies
+    /// `to_yaml`/`from_yaml` (and the optional `serde_yaml_bw` dependency).
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn agent_fidelity_yaml_round_trips_and_omits_key_when_absent() {
+        // Absent ⇒ no `agent:` key.
+        let plain_yaml = af_two_street().to_yaml().expect("to_yaml");
+        assert!(!plain_yaml.contains("agent:"), "yaml emitted agent key: {plain_yaml}");
+
+        // Present ⇒ survives the round trip, metadata intact.
+        let mut hh = af_two_street();
+        let full = af_full();
+        assert_eq!(hh.attach_agent_fidelity(&[(3, full.clone())]), 1);
         let yaml = hh.to_yaml().expect("to_yaml");
         assert_eq!(HandHistory::from_yaml(&yaml).expect("from_yaml"), hh);
 
-        let json = serde_json::to_string(&hh).expect("to_json");
-        assert_eq!(serde_json::from_str::<HandHistory>(&json).expect("from_json"), hh);
-
-        // The metadata actually survived the round trip.
         let call = hh
             .streets
             .as_ref()
-            .unwrap()
-            .preflop
-            .as_ref()
-            .unwrap()
-            .actions
-            .iter()
-            .find(|a| a.seat == 3)
-            .unwrap();
+            .and_then(|s| s.preflop.as_ref())
+            .and_then(|p| p.actions.iter().find(|a| a.seat == 3))
+            .expect("seat-3 preflop action");
         assert_eq!(call.agent.as_ref(), Some(&full));
-    }
-
-    #[test]
-    fn hand_without_agent_omits_key() {
-        let hh = af_two_street();
-        let yaml = hh.to_yaml().expect("to_yaml");
-        assert!(!yaml.contains("agent:"), "yaml emitted an agent key: {yaml}");
-        let json = serde_json::to_string(&hh).expect("to_json");
-        assert!(!json.contains("\"agent\""), "json emitted an agent key: {json}");
-    }
-
-    #[test]
-    fn legacy_action_without_agent_field_deserializes_to_none() {
-        // Pre-EPIC-40 action block: no `agent:` key present.
-        let yaml = "seat: 4\naction: raise\namount: 250.0\n";
-        let action: Action = serde_yaml_bw::from_str(yaml).expect("parse legacy action");
-        assert_eq!(action.seat, 4);
-        assert_eq!(action.agent, None);
     }
 
     /// 2-player hand where seat 0 folds preflop after posting SB — a valid,
