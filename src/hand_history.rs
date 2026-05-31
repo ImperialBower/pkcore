@@ -4498,6 +4498,10 @@ hands:
 
     /// 2-player hand where seat 0 folds preflop after posting SB — a valid,
     /// replay-consistent hand used to prove replay ignores agent metadata.
+    ///
+    /// Gated with its sole consumer ([`replay_ignores_agent_fidelity`]) so it is
+    /// not dead code when `bot-profiles` (and thus `replay`) is disabled.
+    #[cfg(feature = "bot-profiles")]
     fn af_replayable_preflop_fold() -> HandHistory {
         HandHistory {
             pkcore_version: None,
