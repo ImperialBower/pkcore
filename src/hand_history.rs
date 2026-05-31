@@ -513,9 +513,9 @@ impl HandHistory {
     ///     streets: Some(Streets {
     ///         preflop: Some(PreflopStreet {
     ///             actions: vec![
-    ///                 Action { seat: 0, player_id: None, action: ActionType::Post, amount: Some(50.0), all_in: None },
-    ///                 Action { seat: 1, player_id: None, action: ActionType::Post, amount: Some(100.0), all_in: None },
-    ///                 Action { seat: 0, player_id: None, action: ActionType::Fold, amount: None, all_in: None },
+    ///                 Action { seat: 0, player_id: None, action: ActionType::Post, amount: Some(50.0), all_in: None, agent: None },
+    ///                 Action { seat: 1, player_id: None, action: ActionType::Post, amount: Some(100.0), all_in: None, agent: None },
+    ///                 Action { seat: 0, player_id: None, action: ActionType::Fold, amount: None, all_in: None, agent: None },
     ///             ],
     ///             pot: Some(150.0),
     ///         }),
@@ -1599,7 +1599,7 @@ pub enum PostedBlind {
 ///
 /// let streets = Streets {
 ///     preflop: Some(PreflopStreet {
-///         actions: vec![Action { seat: 1, player_id: None, action: ActionType::Fold, amount: None, all_in: None }],
+///         actions: vec![Action { seat: 1, player_id: None, action: ActionType::Fold, amount: None, all_in: None, agent: None }],
 ///         pot: Some(3.0),
 ///     }),
 ///     flop: None,
@@ -1817,6 +1817,7 @@ fn table_action_to_hand_action(event: &TableAction, seat_to_id: &HashMap<u8, Uui
         action,
         amount,
         all_in,
+        agent: None,
     };
     match event {
         TableAction::ForcedBetSmallBlind(seat, amount)
@@ -1841,7 +1842,7 @@ fn table_action_to_hand_action(event: &TableAction, seat_to_id: &HashMap<u8, Uui
 /// use pkcore::hand_history::{PreflopStreet, Action, ActionType};
 ///
 /// let preflop = PreflopStreet {
-///     actions: vec![Action { seat: 1, player_id: None, action: ActionType::Check, amount: None, all_in: None }],
+///     actions: vec![Action { seat: 1, player_id: None, action: ActionType::Check, amount: None, all_in: None, agent: None }],
 ///     pot: None,
 /// };
 /// assert_eq!(preflop.actions.len(), 1);
@@ -1865,7 +1866,7 @@ pub struct PreflopStreet {
 ///
 /// let flop = FlopStreet {
 ///     cards: "9♣ 6♦ 5♥".to_string(),
-///     actions: vec![Action { seat: 1, player_id: None, action: ActionType::Check, amount: None, all_in: None }],
+///     actions: vec![Action { seat: 1, player_id: None, action: ActionType::Check, amount: None, all_in: None, agent: None }],
 ///     pot: Some(60200.0),
 /// };
 /// assert!(flop.to_three().is_ok());
@@ -2002,8 +2003,219 @@ impl RiverStreet {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Agent fidelity injection
+// ─────────────────────────────────────────────────────────────────────────────
+
+impl HandHistory {
+    /// Attaches agent-fidelity metadata to this hand's **voluntary** actions in
+    /// canonical order (preflop → flop → turn → river, in recorded order),
+    /// skipping forced `Post` actions (blinds/antes).
+    ///
+    /// `entries` must be in that same canonical voluntary-action order; each is
+    /// `(expected_seat, fidelity)`. This is a **strict positional pairing**:
+    /// `entries[i]` is matched against the `i`-th voluntary action. If the
+    /// seats agree the fidelity is assigned; if they disagree that slot is
+    /// skipped (action left `None`) so a corrupted entry is never misattributed
+    /// at its own position.
+    ///
+    /// The seat check is a per-slot guard, **not** a resynchronizer. It does not
+    /// recover alignment after a length change: if `entries` has an extra or
+    /// missing element relative to the voluntary actions, every later pair is
+    /// offset, and any later same-seat collision will misattribute silently.
+    /// Callers whose recorder can drop or duplicate entries should detect this
+    /// via the return value (see below) or match by hand through
+    /// [`HandHistory::voluntary_actions_mut`] using a key unique per decision.
+    ///
+    /// Returns the number of actions successfully annotated. In the intended
+    /// 1:1 case this equals both `entries.len()` and the voluntary-action count;
+    /// **any inequality signals drift** and should be treated as an error by the
+    /// caller. Never panics, and never reorders or drops actions. This data is
+    /// analysis-only: [`HandHistory::replay`] ignores it entirely.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::{HandHistory, HandVariant, AgentFidelity, Action,
+    ///     ActionType, Streets, PreflopStreet, PlayerEntry, HandMeta, TableInfo, Stakes};
+    ///
+    /// let mut hh = HandHistory {
+    ///     pkcore_version: None, format_version: 1,
+    ///     hand: HandMeta { id: "ex".to_string(), game: HandVariant::Holdem,
+    ///         timestamp: None, source: None, description: None },
+    ///     table: TableInfo { name: None, seats: Some(2), button: Some(0),
+    ///         stakes: Stakes { small_blind: 50.0, big_blind: 100.0, ante: None, straddle: None, bring_in: None },
+    ///         betting_structure: Default::default() },
+    ///     players: vec![],
+    ///     board: None,
+    ///     streets: Some(Streets {
+    ///         preflop: Some(PreflopStreet { actions: vec![
+    ///             Action { seat: 0, player_id: None, action: ActionType::Post, amount: Some(50.0), all_in: None, agent: None },
+    ///             Action { seat: 1, player_id: None, action: ActionType::Post, amount: Some(100.0), all_in: None, agent: None },
+    ///             Action { seat: 0, player_id: None, action: ActionType::Raise, amount: Some(300.0), all_in: None, agent: None },
+    ///             Action { seat: 1, player_id: None, action: ActionType::Fold, amount: None, all_in: None, agent: None },
+    ///         ], pot: None }),
+    ///         flop: None, turn: None, river: None,
+    ///     }),
+    ///     results: None, analysis: None, shuffled_deck: None,
+    /// };
+    ///
+    /// let entries = [
+    ///     (0, AgentFidelity { was_coerced: Some(true), ..Default::default() }),
+    ///     (1, AgentFidelity::default()),
+    /// ];
+    /// assert_eq!(hh.attach_agent_fidelity(&entries), 2);
+    /// assert!(hh.voluntary_actions_mut()[0].agent.is_some());
+    /// ```
+    pub fn attach_agent_fidelity(&mut self, entries: &[(u8, AgentFidelity)]) -> usize {
+        let mut annotated = 0usize;
+        // Strict positional pairing: entry[i] ↔ i-th voluntary action (`zip`
+        // stops at the shorter). The seat check guards each slot against
+        // misattribution but does NOT resynchronize — a length difference
+        // offsets every later pair. Callers detect that via the returned count
+        // (see the doc comment); robust matching belongs to the caller.
+        for (action, (expected_seat, fidelity)) in self.voluntary_actions_mut().into_iter().zip(entries) {
+            if *expected_seat == action.seat {
+                action.agent = Some(fidelity.clone());
+                annotated += 1;
+            }
+        }
+        annotated
+    }
+
+    /// Mutable references to every voluntary (`!= Post`) action across all
+    /// streets, in canonical order (preflop → flop → turn → river, in recorded
+    /// order).
+    ///
+    /// Forced blind/ante `Post` actions are excluded. This is the low-level
+    /// escape hatch behind [`HandHistory::attach_agent_fidelity`]; use it to
+    /// implement bespoke matching when positional zipping is not enough.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::hand_history::{HandHistory, HandVariant, Action, ActionType,
+    ///     Streets, PreflopStreet, HandMeta, TableInfo, Stakes};
+    ///
+    /// let mut hh = HandHistory {
+    ///     pkcore_version: None, format_version: 1,
+    ///     hand: HandMeta { id: "ex".to_string(), game: HandVariant::Holdem,
+    ///         timestamp: None, source: None, description: None },
+    ///     table: TableInfo { name: None, seats: Some(2), button: Some(0),
+    ///         stakes: Stakes { small_blind: 50.0, big_blind: 100.0, ante: None, straddle: None, bring_in: None },
+    ///         betting_structure: Default::default() },
+    ///     players: vec![],
+    ///     board: None,
+    ///     streets: Some(Streets {
+    ///         preflop: Some(PreflopStreet { actions: vec![
+    ///             Action { seat: 0, player_id: None, action: ActionType::Post, amount: Some(50.0), all_in: None, agent: None },
+    ///             Action { seat: 0, player_id: None, action: ActionType::Raise, amount: Some(300.0), all_in: None, agent: None },
+    ///         ], pot: None }),
+    ///         flop: None, turn: None, river: None,
+    ///     }),
+    ///     results: None, analysis: None, shuffled_deck: None,
+    /// };
+    ///
+    /// let voluntary = hh.voluntary_actions_mut();
+    /// assert_eq!(voluntary.len(), 1); // the Post is excluded
+    /// assert_eq!(voluntary[0].action, ActionType::Raise);
+    /// ```
+    pub fn voluntary_actions_mut(&mut self) -> Vec<&mut Action> {
+        let mut out: Vec<&mut Action> = Vec::new();
+        let Some(streets) = self.streets.as_mut() else {
+            return out;
+        };
+        if let Some(s) = streets.preflop.as_mut() {
+            out.extend(s.actions.iter_mut().filter(|a| a.action != ActionType::Post));
+        }
+        if let Some(s) = streets.flop.as_mut() {
+            out.extend(s.actions.iter_mut().filter(|a| a.action != ActionType::Post));
+        }
+        if let Some(s) = streets.turn.as_mut() {
+            out.extend(s.actions.iter_mut().filter(|a| a.action != ActionType::Post));
+        }
+        if let Some(s) = streets.river.as_mut() {
+            out.extend(s.actions.iter_mut().filter(|a| a.action != ActionType::Post));
+        }
+        out
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Actions
 // ─────────────────────────────────────────────────────────────────────────────
+
+/// Per-action provenance describing what an agent *produced* versus what the
+/// table *applied*.
+///
+/// Optional and analysis-only: [`HandHistory::replay`] ignores it entirely, the
+/// same way it ignores [`HandHistory::shuffled_deck`]. It is populated by arena
+/// recorders (pkdealer EPIC-40) and is absent for hand histories imported from
+/// other sources.
+///
+/// The *applied* action stays in the surrounding [`Action`] fields; this struct
+/// records only the agent-side story: the raw response, whether the table had
+/// to coerce the action, what the agent originally intended, and (for LLM
+/// agents) token usage and model id.
+///
+/// Every field is `Option` and skips serialization when `None`, so a default
+/// `AgentFidelity` emits as an empty map and never adds noise to a hand history.
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::hand_history::{AgentFidelity, ActionType};
+///
+/// // An LLM agent whose bet was clamped to a legal size.
+/// let fidelity = AgentFidelity {
+///     raw_response: Some("I'll raise to 250".to_string()),
+///     was_coerced: Some(true),
+///     intended_action: Some(ActionType::Raise),
+///     intended_amount: Some(250.0),
+///     input_tokens: Some(1200),
+///     output_tokens: Some(8),
+///     model: Some("claude-sonnet".to_string()),
+/// };
+/// assert_eq!(fidelity.was_coerced, Some(true));
+/// assert_eq!(fidelity.intended_action, Some(ActionType::Raise));
+///
+/// // A structured agent (rules/random) leaves the LLM-only fields empty.
+/// let plain = AgentFidelity { model: Some("rules-v1".to_string()), ..Default::default() };
+/// assert_eq!(plain.raw_response, None);
+/// ```
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Default)]
+pub struct AgentFidelity {
+    /// Raw, unparsed model/agent response text (LLM agents). `None` for agents
+    /// that produce a structured decision directly (rules/random).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_response: Option<String>,
+
+    /// True when the applied action differs from what the agent intended —
+    /// e.g. unparseable model output, a bet/raise clamped to a legal size, or a
+    /// server-rejected action replaced by a safe fallback.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub was_coerced: Option<bool>,
+
+    /// The action the agent originally intended, when it differs from the
+    /// applied [`Action::action`]. Pairs with [`Self::intended_amount`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intended_action: Option<ActionType>,
+
+    /// Intended wager amount for an intended bet/raise/call.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub intended_amount: Option<f64>,
+
+    /// Prompt/input tokens reported by the backend (LLM agents).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub input_tokens: Option<u32>,
+
+    /// Completion/output tokens reported by the backend (LLM agents).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output_tokens: Option<u32>,
+
+    /// Model / agent identifier (e.g. `"claude-..."`, `"rules-v1"`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+}
 
 /// A single player action within a betting round.
 ///
@@ -2018,6 +2230,7 @@ impl RiverStreet {
 ///     action: ActionType::Raise,
 ///     amount: Some(100.0),
 ///     all_in: None,
+///     agent: None,
 /// };
 /// assert_eq!(action.seat, 3);
 /// ```
@@ -2044,6 +2257,15 @@ pub struct Action {
     /// Whether the player is all-in after this action.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub all_in: Option<bool>,
+
+    /// Optional agent-fidelity provenance: what an agent produced versus what
+    /// the table applied.
+    ///
+    /// Analysis-only and ignored by [`HandHistory::replay`]. Populated by arena
+    /// recorders via [`HandHistory::attach_agent_fidelity`]; `None` for forced
+    /// `Post` actions and for hand histories imported from other sources.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent: Option<AgentFidelity>,
 }
 
 /// The set of possible player actions in a betting round.
@@ -3310,6 +3532,7 @@ hands:
                             action: ActionType::Post,
                             amount: Some(50.0),
                             all_in: None,
+                            agent: None,
                         },
                         Action {
                             seat: 1,
@@ -3317,6 +3540,7 @@ hands:
                             action: ActionType::Post,
                             amount: Some(100.0),
                             all_in: None,
+                            agent: None,
                         },
                         Action {
                             seat: 0,
@@ -3324,6 +3548,7 @@ hands:
                             action: ActionType::Fold,
                             amount: None,
                             all_in: None,
+                            agent: None,
                         },
                     ],
                     pot: Some(150.0),
@@ -3458,6 +3683,7 @@ hands:
                             action: ActionType::Post,
                             amount: Some(50.0),
                             all_in: None,
+                            agent: None,
                         },
                         Action {
                             seat: 4,
@@ -3465,6 +3691,7 @@ hands:
                             action: ActionType::Post,
                             amount: Some(100.0),
                             all_in: None,
+                            agent: None,
                         },
                         Action {
                             seat: 6,
@@ -3472,6 +3699,7 @@ hands:
                             action: ActionType::Call,
                             amount: Some(100.0),
                             all_in: None,
+                            agent: None,
                         },
                         Action {
                             seat: 2,
@@ -3479,6 +3707,7 @@ hands:
                             action: ActionType::Fold,
                             amount: None,
                             all_in: None,
+                            agent: None,
                         },
                         Action {
                             seat: 4,
@@ -3486,6 +3715,7 @@ hands:
                             action: ActionType::Check,
                             amount: None,
                             all_in: None,
+                            agent: None,
                         },
                     ],
                     pot: Some(250.0),
@@ -3499,6 +3729,7 @@ hands:
                             action: ActionType::Check,
                             amount: None,
                             all_in: None,
+                            agent: None,
                         },
                         Action {
                             seat: 6,
@@ -3506,6 +3737,7 @@ hands:
                             action: ActionType::Bet,
                             amount: Some(250.0),
                             all_in: None,
+                            agent: None,
                         },
                         Action {
                             seat: 4,
@@ -3513,6 +3745,7 @@ hands:
                             action: ActionType::Fold,
                             amount: None,
                             all_in: None,
+                            agent: None,
                         },
                     ],
                     pot: Some(250.0),
@@ -3806,6 +4039,7 @@ hands:
             action: ActionType::Fold,
             amount: None,
             all_in: None,
+            agent: None,
         };
         let yaml = serde_yaml_bw::to_string(&action).expect("serialize");
         assert!(
@@ -3826,6 +4060,7 @@ hands:
             action: ActionType::Raise,
             amount: Some(300.0),
             all_in: None,
+            agent: None,
         };
         let yaml = serde_yaml_bw::to_string(&action).expect("serialize");
         assert!(yaml.contains("player_id"));
@@ -3925,5 +4160,423 @@ hands:
             !yaml.contains("withdrawn"),
             "yaml unexpectedly contained `withdrawn`: {yaml}"
         );
+    }
+
+    // ── Agent fidelity (EPIC-40 Phase 4) ──────────────────────────────────
+
+    /// A single action with no agent metadata, for terse hand construction.
+    fn af_act(seat: u8, action: ActionType, amount: Option<f64>, all_in: Option<bool>) -> Action {
+        Action {
+            seat,
+            player_id: None,
+            action,
+            amount,
+            all_in,
+            agent: None,
+        }
+    }
+
+    /// An `AgentFidelity` carrying just a raw response, to tag entries by id.
+    fn af(raw: &str) -> AgentFidelity {
+        AgentFidelity {
+            raw_response: Some(raw.to_string()),
+            ..Default::default()
+        }
+    }
+
+    /// Minimal hand with a preflop and optional flop street. Not necessarily
+    /// replay-valid — used to exercise voluntary-action iteration/attachment.
+    fn af_hand(preflop: Vec<Action>, flop: Option<Vec<Action>>) -> HandHistory {
+        let mut hh = make_minimal_hand("fidelity-test", HandVariant::Holdem);
+        hh.streets = Some(Streets {
+            preflop: Some(PreflopStreet {
+                actions: preflop,
+                pot: None,
+            }),
+            flop: flop.map(|actions| FlopStreet {
+                cards: "7♠ Q♦ 8♣".to_string(),
+                actions,
+                pot: None,
+            }),
+            turn: None,
+            river: None,
+        });
+        hh
+    }
+
+    /// Canonical two-street hand. Voluntary seats in order: `[3, 1, 2, 2, 3, 2]`.
+    fn af_two_street() -> HandHistory {
+        af_hand(
+            vec![
+                af_act(1, ActionType::Post, Some(50.0), None),
+                af_act(2, ActionType::Post, Some(100.0), None),
+                af_act(3, ActionType::Call, Some(100.0), None),
+                af_act(1, ActionType::Fold, None, None),
+                af_act(2, ActionType::Check, None, None),
+            ],
+            Some(vec![
+                af_act(2, ActionType::Check, None, None),
+                af_act(3, ActionType::Bet, Some(250.0), None),
+                af_act(2, ActionType::Fold, None, None),
+            ]),
+        )
+    }
+
+    #[test]
+    fn voluntary_actions_mut_skips_posts_in_canonical_order() {
+        let mut hh = af_two_street();
+        let seats: Vec<u8> = hh.voluntary_actions_mut().iter().map(|a| a.seat).collect();
+        assert_eq!(seats, vec![3, 1, 2, 2, 3, 2]);
+        assert!(hh.voluntary_actions_mut().iter().all(|a| a.action != ActionType::Post));
+    }
+
+    #[test]
+    fn attach_agent_fidelity_aligned_annotates_every_voluntary_action() {
+        let mut hh = af_two_street();
+        let entries = vec![
+            (3, af("a")),
+            (1, af("b")),
+            (2, af("c")),
+            (2, af("d")),
+            (3, af("e")),
+            (2, af("f")),
+        ];
+        assert_eq!(hh.attach_agent_fidelity(&entries), 6);
+        {
+            let v = hh.voluntary_actions_mut();
+            assert_eq!(v[0].agent.as_ref().and_then(|a| a.raw_response.as_deref()), Some("a"));
+            assert_eq!(v[5].agent.as_ref().and_then(|a| a.raw_response.as_deref()), Some("f"));
+        }
+        // Forced Post actions are never annotated.
+        let pre = hh.streets.as_ref().unwrap().preflop.as_ref().unwrap();
+        assert!(pre.actions[0].agent.is_none());
+    }
+
+    /// Same-length *substitution*: one entry has a corrupted seat but the list
+    /// length is unchanged, so the per-slot guard drops only that slot and every
+    /// later pair stays aligned. This is NOT drift — see the insertion/deletion
+    /// tests below for the cascade behavior under a length change.
+    #[test]
+    fn attach_agent_fidelity_same_length_substitution_skips_only_that_slot() {
+        let mut hh = af_two_street(); // voluntary seats [3, 1, 2, 2, 3, 2]
+        let entries = vec![
+            (3, af("a")),
+            (9, af("b")), // wrong seat for the second voluntary action (seat 1)
+            (2, af("c")),
+            (2, af("d")),
+            (3, af("e")),
+            (2, af("f")),
+        ];
+        assert_eq!(hh.attach_agent_fidelity(&entries), 5);
+        let v = hh.voluntary_actions_mut();
+        assert!(v[1].agent.is_none(), "seat-1 action left None after mismatch");
+        assert_eq!(v[2].agent.as_ref().and_then(|a| a.raw_response.as_deref()), Some("c"));
+    }
+
+    /// Characterization test for a **missing entry** (the recorder dropped one).
+    /// Documents the real, degraded contract: positional pairing does not
+    /// resynchronize, so the deletion offsets every later pair — silently
+    /// misattributing one same-seat slot and dropping the rest. Pins the
+    /// limitation called out in the docs so any future change is deliberate.
+    #[test]
+    fn attach_agent_fidelity_missing_entry_cascades_after_the_gap() {
+        let mut hh = af_two_street(); // voluntary seats [3, 1, 2, 2, 3, 2]
+        // Aligned would be [a@3, b@1, c@2, d@2, e@3, f@2]; the seat-1 entry `b`
+        // was dropped, leaving five entries.
+        let entries = vec![(3, af("a")), (2, af("c")), (2, af("d")), (3, af("e")), (2, af("f"))];
+        let annotated = hh.attach_agent_fidelity(&entries);
+        assert_eq!(annotated, 2);
+        // Return value is below entries.len() (5): the caller can detect drift.
+        assert_ne!(annotated, entries.len());
+
+        let v = hh.voluntary_actions_mut();
+        let raw = |a: &Action| a.agent.as_ref().and_then(|f| f.raw_response.clone());
+        assert_eq!(raw(v[0]).as_deref(), Some("a")); // still correct
+        assert!(v[1].agent.is_none()); // its entry was the dropped one
+        // MISATTRIBUTION: slot 2 should be "c" but the offset hands it "d".
+        assert_eq!(raw(v[2]).as_deref(), Some("d"));
+        // Everything after the gap is dropped, even though entries remained.
+        assert!(v[3].agent.is_none());
+        assert!(v[4].agent.is_none());
+        assert!(v[5].agent.is_none());
+    }
+
+    /// Characterization test for an **extra applied action** with no entry — the
+    /// drift the spec explicitly cites (a server-rejection retry that produced a
+    /// duplicate applied action). Pins the cascade: after the orphan action,
+    /// pairing is offset and most later annotations are lost/misattributed.
+    #[test]
+    fn attach_agent_fidelity_extra_action_cascades_after_the_orphan() {
+        // Voluntary seats [3, 1, 1, 2, 2, 3, 2] — the second seat-1 action is the
+        // duplicate retry. (Legality is irrelevant; this hand is never replayed.)
+        let mut hh = af_hand(
+            vec![
+                af_act(1, ActionType::Post, Some(50.0), None),
+                af_act(2, ActionType::Post, Some(100.0), None),
+                af_act(3, ActionType::Call, Some(100.0), None),
+                af_act(1, ActionType::Raise, Some(300.0), None),
+                af_act(1, ActionType::Raise, Some(300.0), None), // duplicate retry
+                af_act(2, ActionType::Call, Some(300.0), None),
+                af_act(2, ActionType::Bet, Some(150.0), None),
+                af_act(3, ActionType::Raise, Some(600.0), None),
+                af_act(2, ActionType::Call, Some(600.0), None),
+            ],
+            None,
+        );
+        // Clean six entries, one per intended decision (no entry for the retry).
+        let entries = vec![
+            (3, af("a")),
+            (1, af("b")),
+            (2, af("c")),
+            (2, af("d")),
+            (3, af("e")),
+            (2, af("f")),
+        ];
+        let annotated = hh.attach_agent_fidelity(&entries);
+        assert_eq!(annotated, 3);
+        assert_ne!(annotated, entries.len()); // detectable drift
+
+        let v = hh.voluntary_actions_mut();
+        let raw = |a: &Action| a.agent.as_ref().and_then(|f| f.raw_response.clone());
+        assert_eq!(raw(v[0]).as_deref(), Some("a")); // correct
+        assert_eq!(raw(v[1]).as_deref(), Some("b")); // correct
+        assert!(v[2].agent.is_none()); // the orphan retry action
+        // MISATTRIBUTION: slot 3 should be "c" but the offset hands it "d".
+        assert_eq!(raw(v[3]).as_deref(), Some("d"));
+        // The orphan cascades: the tail is dropped despite remaining entries.
+        assert!(v[4].agent.is_none());
+        assert!(v[5].agent.is_none());
+        assert!(v[6].agent.is_none());
+    }
+
+    #[test]
+    fn attach_agent_fidelity_all_fold_hand() {
+        let mut hh = af_hand(
+            vec![
+                af_act(1, ActionType::Post, Some(50.0), None),
+                af_act(2, ActionType::Post, Some(100.0), None),
+                af_act(3, ActionType::Fold, None, None),
+                af_act(1, ActionType::Fold, None, None),
+            ],
+            None,
+        );
+        assert_eq!(hh.attach_agent_fidelity(&[(3, af("x")), (1, af("y"))]), 2);
+    }
+
+    #[test]
+    fn attach_agent_fidelity_all_in_action_is_voluntary() {
+        let mut hh = af_hand(
+            vec![
+                af_act(1, ActionType::Post, Some(50.0), None),
+                af_act(2, ActionType::Post, Some(100.0), None),
+                af_act(3, ActionType::AllIn, Some(1000.0), Some(true)),
+                af_act(1, ActionType::Fold, None, None),
+            ],
+            None,
+        );
+        assert_eq!(hh.attach_agent_fidelity(&[(3, af("shove")), (1, af("fold"))]), 2);
+        let v = hh.voluntary_actions_mut();
+        assert_eq!(v[0].action, ActionType::AllIn);
+        assert!(v[0].agent.is_some());
+    }
+
+    #[test]
+    fn attach_agent_fidelity_multi_raise_street() {
+        let mut hh = af_hand(
+            vec![
+                af_act(1, ActionType::Post, Some(50.0), None),
+                af_act(2, ActionType::Post, Some(100.0), None),
+                af_act(3, ActionType::Raise, Some(300.0), None),
+                af_act(1, ActionType::Raise, Some(900.0), None),
+                af_act(2, ActionType::Raise, Some(2700.0), None),
+                af_act(3, ActionType::Call, Some(2700.0), None),
+                af_act(1, ActionType::Fold, None, None),
+            ],
+            None,
+        );
+        let entries = vec![
+            (3, af("r1")),
+            (1, af("r2")),
+            (2, af("r3")),
+            (3, af("call")),
+            (1, af("fold")),
+        ];
+        assert_eq!(hh.attach_agent_fidelity(&entries), 5);
+    }
+
+    #[test]
+    fn attach_agent_fidelity_dead_button_hand() {
+        // Button on empty seat 1; seats 2/4/6 in play (mirrors the replay regression).
+        let mut hh = af_hand(
+            vec![
+                af_act(2, ActionType::Post, Some(50.0), None),
+                af_act(4, ActionType::Post, Some(100.0), None),
+                af_act(6, ActionType::Call, Some(100.0), None),
+                af_act(2, ActionType::Fold, None, None),
+                af_act(4, ActionType::Check, None, None),
+            ],
+            Some(vec![
+                af_act(4, ActionType::Check, None, None),
+                af_act(6, ActionType::Bet, Some(250.0), None),
+                af_act(4, ActionType::Fold, None, None),
+            ]),
+        );
+        let entries = vec![
+            (6, af("c")),
+            (2, af("f")),
+            (4, af("k")),
+            (4, af("k2")),
+            (6, af("b")),
+            (4, af("f2")),
+        ];
+        assert_eq!(hh.attach_agent_fidelity(&entries), 6);
+    }
+
+    /// A fully-populated `AgentFidelity` for round-trip fixtures.
+    fn af_full() -> AgentFidelity {
+        AgentFidelity {
+            raw_response: Some("raise to 250".to_string()),
+            was_coerced: Some(true),
+            intended_action: Some(ActionType::Raise),
+            intended_amount: Some(250.0),
+            input_tokens: Some(1200),
+            output_tokens: Some(8),
+            model: Some("claude-test".to_string()),
+        }
+    }
+
+    /// JSON-side back-compat, feature-independent (`serde_json` is always built):
+    /// metadata survives a round trip, absent metadata emits no key, and a
+    /// legacy action lacking the key deserializes to `agent: None`.
+    #[test]
+    fn agent_fidelity_json_round_trips_and_omits_key_when_absent() {
+        // Absent ⇒ no `agent` key.
+        let plain = af_two_street();
+        let plain_json = serde_json::to_string(&plain).expect("to_json");
+        assert!(
+            !plain_json.contains("\"agent\""),
+            "json emitted agent key: {plain_json}"
+        );
+
+        // Legacy action (pre-EPIC-40, no `agent` key) ⇒ `None`.
+        let legacy: Action = serde_json::from_str(r#"{"seat":4,"action":"raise","amount":250.0}"#).expect("legacy");
+        assert_eq!(legacy.seat, 4);
+        assert_eq!(legacy.agent, None);
+
+        // Present ⇒ survives the round trip.
+        let mut hh = af_two_street();
+        let full = af_full();
+        assert_eq!(hh.attach_agent_fidelity(&[(3, full.clone())]), 1);
+        let json = serde_json::to_string(&hh).expect("to_json");
+        assert_eq!(serde_json::from_str::<HandHistory>(&json).expect("from_json"), hh);
+    }
+
+    /// YAML-side equivalents, gated on the `hand-histories` feature that supplies
+    /// `to_yaml`/`from_yaml` (and the optional `serde_yaml_bw` dependency).
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn agent_fidelity_yaml_round_trips_and_omits_key_when_absent() {
+        // Absent ⇒ no `agent:` key.
+        let plain_yaml = af_two_street().to_yaml().expect("to_yaml");
+        assert!(!plain_yaml.contains("agent:"), "yaml emitted agent key: {plain_yaml}");
+
+        // Present ⇒ survives the round trip, metadata intact.
+        let mut hh = af_two_street();
+        let full = af_full();
+        assert_eq!(hh.attach_agent_fidelity(&[(3, full.clone())]), 1);
+        let yaml = hh.to_yaml().expect("to_yaml");
+        assert_eq!(HandHistory::from_yaml(&yaml).expect("from_yaml"), hh);
+
+        let call = hh
+            .streets
+            .as_ref()
+            .and_then(|s| s.preflop.as_ref())
+            .and_then(|p| p.actions.iter().find(|a| a.seat == 3))
+            .expect("seat-3 preflop action");
+        assert_eq!(call.agent.as_ref(), Some(&full));
+    }
+
+    /// 2-player hand where seat 0 folds preflop after posting SB — a valid,
+    /// replay-consistent hand used to prove replay ignores agent metadata.
+    ///
+    /// Gated with its sole consumer ([`replay_ignores_agent_fidelity`]) so it is
+    /// not dead code when `bot-profiles` (and thus `replay`) is disabled.
+    #[cfg(feature = "bot-profiles")]
+    fn af_replayable_preflop_fold() -> HandHistory {
+        HandHistory {
+            pkcore_version: None,
+            format_version: FORMAT_VERSION,
+            hand: HandMeta {
+                id: "fidelity-replay-001".to_string(),
+                game: HandVariant::Holdem,
+                timestamp: None,
+                source: None,
+                description: None,
+            },
+            table: TableInfo {
+                name: None,
+                seats: Some(2),
+                button: Some(0),
+                stakes: Stakes {
+                    small_blind: 50.0,
+                    big_blind: 100.0,
+                    ante: None,
+                    straddle: None,
+                    bring_in: None,
+                },
+                betting_structure: crate::games::betting_structure::BettingStructure::NoLimit,
+            },
+            players: vec![
+                PlayerEntry {
+                    seat: 0,
+                    player_id: None,
+                    name: "A".to_string(),
+                    stack: 1000.0,
+                    hole_cards: Some("A♠ K♠".to_string()),
+                    posted: None,
+                    hole_cards_visibility: None,
+                    withdrawn: None,
+                },
+                PlayerEntry {
+                    seat: 1,
+                    player_id: None,
+                    name: "B".to_string(),
+                    stack: 1000.0,
+                    hole_cards: Some("7♦ 2♣".to_string()),
+                    posted: None,
+                    hole_cards_visibility: None,
+                    withdrawn: None,
+                },
+            ],
+            board: None,
+            streets: Some(Streets {
+                preflop: Some(PreflopStreet {
+                    actions: vec![
+                        af_act(0, ActionType::Post, Some(50.0), None),
+                        af_act(1, ActionType::Post, Some(100.0), None),
+                        af_act(0, ActionType::Fold, None, None),
+                    ],
+                    pot: Some(150.0),
+                }),
+                flop: None,
+                turn: None,
+                river: None,
+            }),
+            results: None,
+            analysis: None,
+            shuffled_deck: None,
+        }
+    }
+
+    #[cfg(feature = "bot-profiles")]
+    #[test]
+    fn replay_ignores_agent_fidelity() {
+        let mut hh = af_replayable_preflop_fold();
+        let before = hh.replay().expect("replay before attach");
+        // The only voluntary action is seat 0's fold.
+        assert_eq!(hh.attach_agent_fidelity(&[(0, af("i fold"))]), 1);
+        let after = hh.replay().expect("replay after attach");
+        assert_eq!(before.is_consistent, after.is_consistent);
+        assert_eq!(before.final_stacks, after.final_stacks);
     }
 }
