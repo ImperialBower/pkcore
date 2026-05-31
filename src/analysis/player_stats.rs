@@ -745,6 +745,7 @@ mod tests {
             action: kind,
             amount,
             all_in: None,
+            agent: None,
         }
     }
 
