@@ -2012,15 +2012,25 @@ impl HandHistory {
     /// skipping forced `Post` actions (blinds/antes).
     ///
     /// `entries` must be in that same canonical voluntary-action order; each is
-    /// `(expected_seat, fidelity)`. For every voluntary action the next
-    /// unconsumed entry is inspected: if its `expected_seat` matches the
-    /// action's seat the fidelity is assigned; on a seat mismatch the entry is
-    /// **skipped** and the action is left `None` rather than misattributed.
-    /// Either way the entry is consumed, so a single drift never cascades.
+    /// `(expected_seat, fidelity)`. This is a **strict positional pairing**:
+    /// `entries[i]` is matched against the `i`-th voluntary action. If the
+    /// seats agree the fidelity is assigned; if they disagree that slot is
+    /// skipped (action left `None`) so a corrupted entry is never misattributed
+    /// at its own position.
     ///
-    /// Returns the number of actions successfully annotated. Never panics, and
-    /// never reorders or drops actions. This data is analysis-only:
-    /// [`HandHistory::replay`] ignores it entirely.
+    /// The seat check is a per-slot guard, **not** a resynchronizer. It does not
+    /// recover alignment after a length change: if `entries` has an extra or
+    /// missing element relative to the voluntary actions, every later pair is
+    /// offset, and any later same-seat collision will misattribute silently.
+    /// Callers whose recorder can drop or duplicate entries should detect this
+    /// via the return value (see below) or match by hand through
+    /// [`HandHistory::voluntary_actions_mut`] using a key unique per decision.
+    ///
+    /// Returns the number of actions successfully annotated. In the intended
+    /// 1:1 case this equals both `entries.len()` and the voluntary-action count;
+    /// **any inequality signals drift** and should be treated as an error by the
+    /// caller. Never panics, and never reorders or drops actions. This data is
+    /// analysis-only: [`HandHistory::replay`] ignores it entirely.
     ///
     /// # Examples
     ///
@@ -2058,12 +2068,12 @@ impl HandHistory {
     /// ```
     pub fn attach_agent_fidelity(&mut self, entries: &[(u8, AgentFidelity)]) -> usize {
         let mut annotated = 0usize;
-        // Each entry is consumed in lockstep with one voluntary action (`zip`
-        // stops at the shorter). A seat mismatch consumes the entry but leaves
-        // the action `None`, so a single drift never cascades into the rest.
-        for (action, (expected_seat, fidelity)) in
-            self.voluntary_actions_mut().into_iter().zip(entries)
-        {
+        // Strict positional pairing: entry[i] ↔ i-th voluntary action (`zip`
+        // stops at the shorter). The seat check guards each slot against
+        // misattribution but does NOT resynchronize — a length difference
+        // offsets every later pair. Callers detect that via the returned count
+        // (see the doc comment); robust matching belongs to the caller.
+        for (action, (expected_seat, fidelity)) in self.voluntary_actions_mut().into_iter().zip(entries) {
             if *expected_seat == action.seat {
                 action.agent = Some(fidelity.clone());
                 annotated += 1;
@@ -4156,12 +4166,22 @@ hands:
 
     /// A single action with no agent metadata, for terse hand construction.
     fn af_act(seat: u8, action: ActionType, amount: Option<f64>, all_in: Option<bool>) -> Action {
-        Action { seat, player_id: None, action, amount, all_in, agent: None }
+        Action {
+            seat,
+            player_id: None,
+            action,
+            amount,
+            all_in,
+            agent: None,
+        }
     }
 
     /// An `AgentFidelity` carrying just a raw response, to tag entries by id.
     fn af(raw: &str) -> AgentFidelity {
-        AgentFidelity { raw_response: Some(raw.to_string()), ..Default::default() }
+        AgentFidelity {
+            raw_response: Some(raw.to_string()),
+            ..Default::default()
+        }
     }
 
     /// Minimal hand with a preflop and optional flop street. Not necessarily
@@ -4169,7 +4189,10 @@ hands:
     fn af_hand(preflop: Vec<Action>, flop: Option<Vec<Action>>) -> HandHistory {
         let mut hh = make_minimal_hand("fidelity-test", HandVariant::Holdem);
         hh.streets = Some(Streets {
-            preflop: Some(PreflopStreet { actions: preflop, pot: None }),
+            preflop: Some(PreflopStreet {
+                actions: preflop,
+                pot: None,
+            }),
             flop: flop.map(|actions| FlopStreet {
                 cards: "7♠ Q♦ 8♣".to_string(),
                 actions,
@@ -4229,8 +4252,12 @@ hands:
         assert!(pre.actions[0].agent.is_none());
     }
 
+    /// Same-length *substitution*: one entry has a corrupted seat but the list
+    /// length is unchanged, so the per-slot guard drops only that slot and every
+    /// later pair stays aligned. This is NOT drift — see the insertion/deletion
+    /// tests below for the cascade behavior under a length change.
     #[test]
-    fn attach_agent_fidelity_seat_mismatch_skips_entry_and_lowers_count() {
+    fn attach_agent_fidelity_same_length_substitution_skips_only_that_slot() {
         let mut hh = af_two_street(); // voluntary seats [3, 1, 2, 2, 3, 2]
         let entries = vec![
             (3, af("a")),
@@ -4244,6 +4271,82 @@ hands:
         let v = hh.voluntary_actions_mut();
         assert!(v[1].agent.is_none(), "seat-1 action left None after mismatch");
         assert_eq!(v[2].agent.as_ref().and_then(|a| a.raw_response.as_deref()), Some("c"));
+    }
+
+    /// Characterization test for a **missing entry** (the recorder dropped one).
+    /// Documents the real, degraded contract: positional pairing does not
+    /// resynchronize, so the deletion offsets every later pair — silently
+    /// misattributing one same-seat slot and dropping the rest. Pins the
+    /// limitation called out in the docs so any future change is deliberate.
+    #[test]
+    fn attach_agent_fidelity_missing_entry_cascades_after_the_gap() {
+        let mut hh = af_two_street(); // voluntary seats [3, 1, 2, 2, 3, 2]
+        // Aligned would be [a@3, b@1, c@2, d@2, e@3, f@2]; the seat-1 entry `b`
+        // was dropped, leaving five entries.
+        let entries = vec![(3, af("a")), (2, af("c")), (2, af("d")), (3, af("e")), (2, af("f"))];
+        let annotated = hh.attach_agent_fidelity(&entries);
+        assert_eq!(annotated, 2);
+        // Return value is below entries.len() (5): the caller can detect drift.
+        assert_ne!(annotated, entries.len());
+
+        let v = hh.voluntary_actions_mut();
+        let raw = |a: &Action| a.agent.as_ref().and_then(|f| f.raw_response.clone());
+        assert_eq!(raw(v[0]).as_deref(), Some("a")); // still correct
+        assert!(v[1].agent.is_none()); // its entry was the dropped one
+        // MISATTRIBUTION: slot 2 should be "c" but the offset hands it "d".
+        assert_eq!(raw(v[2]).as_deref(), Some("d"));
+        // Everything after the gap is dropped, even though entries remained.
+        assert!(v[3].agent.is_none());
+        assert!(v[4].agent.is_none());
+        assert!(v[5].agent.is_none());
+    }
+
+    /// Characterization test for an **extra applied action** with no entry — the
+    /// drift the spec explicitly cites (a server-rejection retry that produced a
+    /// duplicate applied action). Pins the cascade: after the orphan action,
+    /// pairing is offset and most later annotations are lost/misattributed.
+    #[test]
+    fn attach_agent_fidelity_extra_action_cascades_after_the_orphan() {
+        // Voluntary seats [3, 1, 1, 2, 2, 3, 2] — the second seat-1 action is the
+        // duplicate retry. (Legality is irrelevant; this hand is never replayed.)
+        let mut hh = af_hand(
+            vec![
+                af_act(1, ActionType::Post, Some(50.0), None),
+                af_act(2, ActionType::Post, Some(100.0), None),
+                af_act(3, ActionType::Call, Some(100.0), None),
+                af_act(1, ActionType::Raise, Some(300.0), None),
+                af_act(1, ActionType::Raise, Some(300.0), None), // duplicate retry
+                af_act(2, ActionType::Call, Some(300.0), None),
+                af_act(2, ActionType::Bet, Some(150.0), None),
+                af_act(3, ActionType::Raise, Some(600.0), None),
+                af_act(2, ActionType::Call, Some(600.0), None),
+            ],
+            None,
+        );
+        // Clean six entries, one per intended decision (no entry for the retry).
+        let entries = vec![
+            (3, af("a")),
+            (1, af("b")),
+            (2, af("c")),
+            (2, af("d")),
+            (3, af("e")),
+            (2, af("f")),
+        ];
+        let annotated = hh.attach_agent_fidelity(&entries);
+        assert_eq!(annotated, 3);
+        assert_ne!(annotated, entries.len()); // detectable drift
+
+        let v = hh.voluntary_actions_mut();
+        let raw = |a: &Action| a.agent.as_ref().and_then(|f| f.raw_response.clone());
+        assert_eq!(raw(v[0]).as_deref(), Some("a")); // correct
+        assert_eq!(raw(v[1]).as_deref(), Some("b")); // correct
+        assert!(v[2].agent.is_none()); // the orphan retry action
+        // MISATTRIBUTION: slot 3 should be "c" but the offset hands it "d".
+        assert_eq!(raw(v[3]).as_deref(), Some("d"));
+        // The orphan cascades: the tail is dropped despite remaining entries.
+        assert!(v[4].agent.is_none());
+        assert!(v[5].agent.is_none());
+        assert!(v[6].agent.is_none());
     }
 
     #[test]
@@ -4348,10 +4451,7 @@ hands:
         assert_eq!(HandHistory::from_yaml(&yaml).expect("from_yaml"), hh);
 
         let json = serde_json::to_string(&hh).expect("to_json");
-        assert_eq!(
-            serde_json::from_str::<HandHistory>(&json).expect("from_json"),
-            hh
-        );
+        assert_eq!(serde_json::from_str::<HandHistory>(&json).expect("from_json"), hh);
 
         // The metadata actually survived the round trip.
         let call = hh
