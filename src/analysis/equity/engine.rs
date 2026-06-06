@@ -71,8 +71,9 @@ pub fn compute(req: &EquityRequest) -> Result<EquityReport, PKError> {
     }
 
     let board_vec = req.board.cards().to_vec();
-    if board_vec.len() > 5 {
-        return Err(PKError::InvalidCardCount);
+    match board_vec.len() {
+        0 | 3 | 4 | 5 => {}
+        _ => return Err(PKError::InvalidCardCount),
     }
     let unknown_board = 5 - board_vec.len();
 
