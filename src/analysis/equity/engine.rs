@@ -66,8 +66,10 @@ enum Resolved {
 /// ```
 pub fn compute(req: &EquityRequest) -> Result<EquityReport, PKError> {
     let n = req.players.len();
-    if !(MIN_PLAYERS..=MAX_PLAYERS).contains(&n) {
-        return Err(PKError::NotEnoughHands);
+    match n {
+        0..=1 => return Err(PKError::NotEnoughHands),
+        MIN_PLAYERS..=MAX_PLAYERS => {}
+        _ => return Err(PKError::TooManyHands),
     }
 
     let board_vec = req.board.cards().to_vec();
