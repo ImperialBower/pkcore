@@ -5,9 +5,8 @@ use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::play::hole_cards::HoleCards;
 use log::info;
+use rayon::iter::{ParallelBridge, ParallelIterator};
 use std::slice::Iter;
-use std::sync::mpsc;
-use std::thread;
 use wincounter::wins::Wins;
 
 /// Now that we have validated that we can handle a single case, aka one possible result from
@@ -25,93 +24,53 @@ use wincounter::wins::Wins;
 pub struct CaseEvals(Vec<CaseEval>);
 
 impl CaseEvals {
+    /// Enumerates every turn/river runout from the flop and evaluates all `hands`
+    /// against each one, returning the resulting `CaseEvals`.
+    ///
+    /// The runouts are independent, so they are evaluated in parallel via a
+    /// `rayon` bridge over the underlying combinations iterator. This replaces an
+    /// earlier implementation that spawned one OS thread per runout. The order of
+    /// the returned `CaseEvals` is unspecified; all downstream consumers
+    /// (`CaseEvals::wins`, etc.) aggregate order-independently.
     #[must_use]
     pub fn from_holdem_at_flop(board: Three, hands: &HoleCards) -> CaseEvals {
-        let mut case_evals = CaseEvals::default();
-
-        for v in hands.combinations_after(2, &board.cards()) {
-            let case = Two::from(v);
-            if let Ok(ce) = CaseEval::from_holdem_at_flop(board, case, hands) {
-                case_evals.push(ce);
-            }
-        }
-
-        case_evals
+        hands
+            .combinations_after(2, &board.cards())
+            .par_bridge()
+            .filter_map(|v| CaseEval::from_holdem_at_flop(board, Two::from(v), hands).ok())
+            .collect::<Vec<CaseEval>>()
+            .into()
     }
 
-    /// # Panics
-    /// ¯\_ (ツ)_/¯
+    /// Enumerates every five-card runout from the deal (preflop) and evaluates
+    /// all `hands` against each one.
+    ///
+    /// Heads-up this is `C(48, 5)` = 1,712,304 runouts. They are evaluated in
+    /// parallel via a `rayon` bridge over the combinations iterator, which keeps
+    /// the work on a bounded thread pool instead of spawning one OS thread per
+    /// runout. The order of the returned `CaseEvals` is unspecified.
     #[must_use]
     pub fn from_holdem_at_deal(hands: &HoleCards) -> CaseEvals {
-        let mut case_evals = CaseEvals::default();
-
-        let (tx, rx) = mpsc::channel();
-
-        for v in hands.combinations_remaining(5) {
-            let tx = tx.clone();
-            let my_hands = hands.clone();
-
-            thread::spawn(move || {
-                let five = Five::try_from(v);
-                if let Ok(case) = five
-                    && let Ok(ce) = CaseEval::from_holdem_at_deal(case, &my_hands)
-                    && let Err(e) = tx.send(ce)
-                {
-                    log::error!("Failed to send CaseEval: {e}");
-                }
-            });
-        }
-
-        drop(tx);
-
-        for received in rx {
-            case_evals.push(received);
-        }
-
-        case_evals
+        hands
+            .combinations_remaining(5)
+            .par_bridge()
+            .filter_map(|v| {
+                let case = Five::try_from(v).ok()?;
+                CaseEval::from_holdem_at_deal(case, hands).ok()
+            })
+            .collect::<Vec<CaseEval>>()
+            .into()
     }
 
-    /// Experimental concurrent version of this calculation.
-    ///
-    /// Calc here takes: `cargo run --example calc -- -d  "6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"`
-    /// `Elapsed: 633.92ms` compared to the original of `2.48s`
-    ///
-    /// # Panics
-    ///
-    /// Oopsie
+    /// Concurrent flop evaluation. Retained as a named entry point for existing
+    /// callers (e.g. `FlopEval::new`); it now delegates to
+    /// [`CaseEvals::from_holdem_at_flop`], which is itself parallelized via a
+    /// `rayon` bridge. The earlier implementation spawned one OS thread per
+    /// runout (`thread::spawn` + `mpsc`); the bounded `rayon` pool is both faster
+    /// and far lighter on the scheduler.
     #[must_use]
     pub fn from_holdem_at_flop_mpsc(board: Three, hands: &HoleCards) -> CaseEvals {
-        let mut case_evals = CaseEvals::default();
-
-        let (tx, rx) = mpsc::channel();
-
-        // for hand in hands.iter() {
-        //     if hand.is_dealt() {
-        //
-        //     }
-        // }
-
-        for v in hands.combinations_after(2, &board.cards()) {
-            let tx = tx.clone();
-            let my_hands = hands.clone();
-
-            thread::spawn(move || {
-                let case = Two::from(v);
-                if let Ok(ce) = CaseEval::from_holdem_at_flop(board, case, &my_hands)
-                    && let Err(e) = tx.send(ce)
-                {
-                    log::error!("Failed to send CaseEval: {e}");
-                }
-            });
-        }
-
-        drop(tx);
-
-        for received in rx {
-            case_evals.push(received);
-        }
-
-        case_evals
+        Self::from_holdem_at_flop(board, hands)
     }
 
     #[must_use]
