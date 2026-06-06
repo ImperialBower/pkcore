@@ -148,6 +148,9 @@ pub fn compute(req: &EquityRequest) -> Result<EquityReport, PKError> {
         )
     };
 
+    if tally.count == 0 {
+        return Err(PKError::InvalidHand);
+    }
     Ok(tally.into_report(method))
 }
 
