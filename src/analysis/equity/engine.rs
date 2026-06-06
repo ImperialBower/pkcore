@@ -14,7 +14,7 @@ use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::play::board::Board;
-use crate::{Cards, PKError, Pile};
+use crate::{Cards, PKError};
 use itertools::Itertools;
 use rand::rngs::SmallRng;
 use rand::{Rng, SeedableRng};
