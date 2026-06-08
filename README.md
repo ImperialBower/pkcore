@@ -515,6 +515,12 @@ full design.
     * [Texas Hold’em Poker Odds (over 100 Poker Probabilities)](https://www.primedope.com/texas-holdem-poker-probabilities-odds/)
     * Heads up
       * [Mathmatrucker > Preflop High Hand Equity and Tie Percentages](https://www.mathematrucker.com/poker/matchups.php)
+  * [Mental Poker](https://en.wikipedia.org/wiki/Mental_poker)
+    * Implementations
+      * [geometryxyz/mental-poker](https://github.com/geometryxyz/mental-poker)
+      * [akonradi/mental-poker](https://github.com/akonradi/mental-poker)
+      * [zkShuffle: Mental Poker on SNARK for Ethereum](https://hackmd.io/@ZDZ-B3ktQlOiBE4iqOXVlg/BJA7Zoqns)
+      * [LibTMCG](https://www.nongnu.org/libtmcg/) **LOTS OF GOOD RESOURCES HERE!!!**
   * Cheating
     * [FTX’s ‘chief regulatory officer’ Dan Friedberg tied to online poker scandal](https://nypost.com/2022/11/20/ftxs-ex-chief-regulatory-officer-tied-to-online-poker-scandal/)
   * Cool Resources
