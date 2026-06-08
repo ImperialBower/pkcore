@@ -1,0 +1,11 @@
+[package]
+name = "tricktaking"
+version = "0.0.1"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Shared trick-taking engine (follow-suit, trump resolution, bidding/scoring hooks) for bridge, spades, hearts, euchre."
+
+# Real integration: depend on cardpack and map its Rank/Suit/Card to the local
+# ones in src/card.rs. Kept dep-free here so the core logic builds on any rustc.
+# [dependencies]
+# cardpack = "0.7.0"
