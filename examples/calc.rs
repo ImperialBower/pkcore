@@ -116,9 +116,7 @@ fn main() -> Result<(), PKError> {
     env_logger::init();
 
     let args = Args::parse();
-
     let game = Game::new(HoleCards::from_str(&args.dealt)?, Board::from_str(&args.board)?);
-
     println!("{}", game);
 
     println!();
@@ -134,9 +132,9 @@ fn main() -> Result<(), PKError> {
     game.turn_display_odds()?;
 
     // too slow
-    // if args.nuts {
-    //     game.display_evals_at_turn();
-    // }
+    if args.nuts {
+        println!("{}", game.turn_eval()?);
+    }
 
     game.turn_display_evals();
 
@@ -146,7 +144,6 @@ fn main() -> Result<(), PKError> {
     println!("{}", command(game));
 
     println!("Elapsed: {:.2?}", now.elapsed());
-
     Ok(())
 }
 
