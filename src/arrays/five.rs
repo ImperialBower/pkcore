@@ -555,6 +555,23 @@ mod arrays__five_tests {
         assert_eq!(PKError::TooManyCards, Five::from_str("AD KD QD JD TD 9D").unwrap_err());
     }
 
+    #[rstest]
+    #[case("A♠ K♠ Q♠ J♠ T♠", 1)]
+    #[case("5♠ 4♠ 3♠ 2♠ A♠", 10)]
+    #[case("5♠ 4♠ 3♠ 2♥ A♠", 1609)]
+    #[case("9S 9H 9D 9C AH", 71)]
+    #[case("9C 8D 6C 5S 2D", 7422)]
+    fn hand_ranker__hand_rank_value(#[case] index: &'static str,
+                                    #[case] expected_value: usize) {
+        let five = Five::from_str(index).unwrap();
+        assert_eq!(expected_value as HandRankValue, five.hand_rank_value());
+    }
+
+    #[test]
+    fn hand_ranker__hand_rank_value__unknown() {
+        assert_eq!(0 as HandRankValue, Five::default().hand_rank_value());
+    }
+
     #[test]
     fn hand_ranker__razz_hand_rank_value_and_hand() {
         let five = Five::from_str("A♠ 2♠ 3♠ 4♠ 5♠").unwrap();
