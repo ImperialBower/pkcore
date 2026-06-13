@@ -59,3 +59,188 @@ Verified safety facts:
 - 7-card perfect-hash evaluator (two-plus-two/OMPEval style) replacing the 21-permutation loop.
 - Caching `CaseEvals` keyed by board state (mused at turn_eval.rs:120-124).
 - De-allocating `Five::sort_in_place()` itself (the "TODO RF for all that is sacred" at five.rs:244).
+
+## Diary
+
+Here's the back and forth after running `/dog docs/superpowers/plans/2026-06-11_SIDEQUEST_speedup_turneval.md use graphify`.
+[/dog is my Claude skill](https://github.com/folkengine/.claude/blob/main/skills/dog/SKILL.md) that prevents Claude from
+writing any code at all, instead, making me do the work; sorta like as if we were doing pair programming and I was driving. 
+
+```bash
+I've verified the plan against the live code — it's accurate:
+
+- five.rs:215-231 — hand_rank_value_and_hand() computes the rank cheaply, then unconditionally pays (rank, self.sort().clean()).
+- mod.rs:78-81 — the trait default hand_rank_value() just calls hand_rank_value_and_hand() and throws away the Five. That's the waste: every permutation in Six/Seven pays for a
+  sorted Five nobody reads.
+- five.rs:245-259 — sort_in_place() is where frequency_weighted() (the heap-allocating culprit) lives, plus the wheel hack. We leave this function completely alone.
+
+The route
+
+We'll walk the four phases in plan order:
+
+1. five.rs — extract the rank math into a private compute_hand_rank_value() helper, then override hand_rank_value() to call it directly (no sort). This is the biggest win because
+   Six/Seven's permutation loops pick it up via static dispatch.
+2. six.rs + seven.rs — override hand_rank_value() in each to run a rank-only permutation loop (track best_hrv only, no best_hand, no final sort).
+3. turn_eval.rs — parallelize case_evals() with an indexed par_iter (order-preserving), update the stale doc comment.
+4. Cargo.toml + benches/turn_eval.rs — criterion benchmark to measure it.
+
+Tests are our safety net at every step: each override must produce a value byte-identical to hand_rank_value_and_hand().0.
+
+One note on ordering: the plan says to capture a benchmark baseline before changes. We have green tests as the correctness net regardless, so I recommend starting with Phase 1 now
+(highest learning value, lowest risk) and building the benchmark in Phase 4 — but if you'd rather prove the speedup with a true before/after, say so and we'll do Phase 4 first.
+
+  ---
+Step 1
+
+In src/arrays/five.rs, inside impl HandRanker for Five (the block starting at line 210), add a private helper method that contains only the rank computation — the guts of
+hand_rank_value_and_hand() minus the sort.
+
+Write a method fn compute_hand_rank_value(&self) -> HandRankValue that returns just the u16 rank. Take the body of the current hand_rank_value_and_hand() (lines 216–230), but
+instead of returning the tuple (rank, self.sort().clean()), return just rank; and in the else branch return just NO_HAND_RANK_VALUE instead of the tuple.
+
+Why: This isolates the cheap part (table lookups) from the expensive part (self.sort().clean() → frequency_weighted() → heap allocations). Once the rank math lives on its own,
+both hand_rank_value_and_hand() and a new fast hand_rank_value() override can share it — no duplicated logic, no behavior drift.
+
+A couple of details:
+- Note that a method inside a trait impl block can't be marked pub/private the usual way — it inherits the trait's visibility. To keep it genuinely private and avoid an
+  "associated function not part of trait" issue, it's cleanest to put compute_hand_rank_value in a separate impl Five { ... } block (an inherent impl), not inside impl HandRanker
+  for Five. That keeps it a private inherent method.
+- Don't wire anything up to it yet — just define the helper. We'll point hand_rank_value_and_hand() and the new override at it in the next steps.
+
+Go ahead and add that helper, then let me know — I'll re-read the file and check it before we wire it in.
+```
+
+_OK, there is an issue with this recommentation. This is implementing the HandRanker Trait, and there is already a function that is designed to do this in the trait: fn
+hand_rank_value(&self) -> HandRankValue
+
+The problem is that it just uses the results of the hand_rank_value_and_hand function and discards the sort by default. I've implemented the hand_rank_value() function in the
+Five trait now so we get the same result._
+
+```bash
+This is good — and reusing hand_rank_value() inside hand_rank_value_and_hand() keeps the two paths from ever drifting. One semantic thing I want to verify before we move on, plus
+  a couple of cosmetics.
+
+  The one thing to check: the original guarded the tuple branch on self.is_dealt(). Yours guards on hrv == NO_HAND_RANK_VALUE. Those are only equivalent if a dealt five-card hand
+  can never legitimately compute to NO_HAND_RANK_VALUE. Let me confirm that value.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+⏺ NO_HAND_RANK_VALUE = 0, and valid hand ranks are 1..=7462, so a dealt hand never computes to 0. Your match hrv guard is equivalent to the old is_dealt() guard for every real
+  input.
+
+  Two cosmetics before we verify:
+  - Line 236: NO_HAND_RANK_VALUE =>(NO_HAND_RANK_VALUE, is missing a space after =>. cargo fmt will fix it.
+  - The match with a wildcard arm is fine, but rustfmt may also collapse the _ => { (...) } braces.
+
+  Step 2 — verify Phase 1
+
+  Let's lock in the refactor before adding the new tests. Run:
+
+  cargo fmt && cargo test --lib arrays::five
+
+  This runs fmt then the existing Five unit tests. The key assurance: hand_rank_value_and_hand() still returns the same tuple it always did (it now routes through your new
+  hand_rank_value()), so every existing five-card test is the regression net. Tell me what it reports — paste failures if any.
+
+✻ Cogitated for 30s
+
+※ recap: Goal: speed up TurnEval by removing wasted sorts in hand ranking. You've finished Phase 1, overriding `hand_rank_value()` in Five to skip the sort. Next: run `cargo fmt &&
+
+  Two cosmetics before we verify:
+  - Line 236: NO_HAND_RANK_VALUE =>(NO_HAND_RANK_VALUE, is missing a space after =>. cargo fmt will fix it.
+  - The match with a wildcard arm is fine, but rustfmt may also collapse the _ => { (...) } braces.
+  - The match with a wildcard arm is fine, but rustfmt may also collapse the _ => { (...) } braces.
+
+  Step 2 — verify Phase 1
+
+  Let's lock in the refactor before adding the new tests. Run:
+
+  cargo fmt && cargo test --lib arrays::five
+
+  This runs fmt then the existing Five unit tests. The key assurance: hand_rank_value_and_hand() still returns the same tuple it always did (it now routes through your new
+  hand_rank_value()), so every existing five-card test is the regression net. Tell me what it reports — paste failures if any.
+
+✻ Cogitated for 30s
+
+※ recap: Goal: speed up TurnEval by removing wasted sorts in hand ranking. You've finished Phase 1, overriding `hand_rank_value()` in Five to skip the sort. Next: run `cargo fmt &&
+  cargo test --lib arrays::five` and tell me the result. (disable recaps in /config)
+
+❯ Step 1 and 2 done.
+
+⏺ Bash(cargo test --lib arrays::five 2>&1 | tail -20)
+  ⎿  test arrays::five::arrays__five_tests::try_from__cards__not_enough ... ok
+     test arrays::five::arrays__five_tests::try_from__cards__too_many ... ok
+     test arrays::five::arrays__five_tests::unique_rank ... ok
+     … +16 lines (ctrl+o to expand)
+
+⏺ All 1846 Five tests green — the refactor is byte-identical to before. Phase 1's behavior is locked in.
+
+  Step 3 — add the Phase 1 rank-only tests
+
+  Now we add the tests the plan calls for: proving the new fast path agrees with the slow path. In src/arrays/five.rs, find the test module (mod arrays__five_tests) and add one test
+  asserting hand_rank_value() == hand_rank_value_and_hand().0 across the distinct code paths.
+
+  Add a single test — name it something like hand_rank_value__matches_value_and_hand (no test_ prefix, per project convention) — that builds a Five for each of these cases and
+  asserts the two methods return the same rank:
+
+  - royal flush — flush path (FLUSHES table)
+  - wheel (5♠4♠3♠2♠A♠... actually a non-flush wheel 5h4d3c2sAh) and wheel straight flush — the wheel is the special case sort_in_place() treats specially, so it's the one most
+  likely to expose a divergence
+  - quads or full house — the not_unique() path (unique == 0)
+  - unpaired non-flush — the unique_rank path (unique != 0)
+  - blank Five::default() — must return NO_HAND_RANK_VALUE
+
+  Why these specifically: they're the five branches in your new hand_rank_value() — flush, not-unique, unique, and the not-dealt guard, plus the wheel because the and-hand variant
+  sorts it specially and we need to prove that special sorting doesn't change the rank.
+
+  The pattern for each assertion:
+  let five = Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
+  assert_eq!(five.hand_rank_value(), five.hand_rank_value_and_hand().0);
+
+  (unwrap() is fine here — it's test code, where the project allows it.) Use whatever Five construction the neighboring tests already use — check how weighted__quads and friends
+  build their hands and match that style. Write it, then tell me.
+```
+
+_This is done. What's next?_
+
+```bash
+On to Phase 2 — rank-only overrides on Six and Seven. This is where the real speedup lands: these permutation loops currently build and sort a Five for every permutation, then
+  throw all but one away. Let me read both impls so I give you the exact shape.
+
+  Read 2 files (ctrl+o to expand)
+
+⏺ Now I see the full picture — and there's a nice subtlety worth calling out.
+
+  Notice line 177 / 122: the hand_rank_value_and_hand() loop calls hand.hand_rank_value() on each Five. Phase 1 already sped this up — those per-permutation calls now hit your fast
+  Five override instead of sorting 21 (or 15) times. So the dominant waste is already gone even on the _and_hand path.
+
+  What Phase 2 cleans up is narrower but still real: the trait-default hand_rank_value() for Six/Seven still routes through hand_rank_value_and_hand(), which tracks best_hand and
+  pays one final best_hand.sort().clean() allocation per call. In the GTO solver and bot decider hot loops — which only want the value — that final sort is pure waste. We kill it
+  with a dedicated override.
+
+  Step 4 — rank-only hand_rank_value() on Six and Seven
+
+  In both src/arrays/six.rs (in impl HandRanker for Six) and src/arrays/seven.rs (in impl HandRanker for Seven), add a hand_rank_value() override: the same permutation loop, but
+  tracking only best_hrv — no best_hand, no final sort().
+
+  For Seven:
+  fn hand_rank_value(&self) -> HandRankValue {
+      let mut best_hrv: HandRankValue = NO_HAND_RANK_VALUE;
+      for perm in Seven::FIVE_CARD_PERMUTATIONS {
+          let hrv = self.five_from_permutation(perm).hand_rank_value();
+          if (best_hrv == 0) || hrv != 0 && hrv < best_hrv {
+              best_hrv = hrv;
+          }
+      }
+      best_hrv
+  }
+
+  And the identical shape in Six with Six::FIVE_CARD_PERMUTATIONS.
+
+  Two things that matter:
+  - Keep the comparison byte-identical: (best_hrv == 0) || hrv != 0 && hrv < best_hrv. This is the exact tie/blank-handling logic the existing code uses; the plan explicitly warns
+  not to "clean it up." Clippy might suggest parenthesizing the &&/|| precedence — if it does, add the parens it asks for rather than reordering.
+  - Don't touch hand_rank_value_and_hand() in either file, and don't "fix" the Six-vs-Seven asymmetry (sort() on Six line 129 vs sort().clean() on Seven line 184). That asymmetry is
+  pre-existing and out of scope.
+
+  Add both overrides, then tell me — I'll run the six and seven suites.
+```
