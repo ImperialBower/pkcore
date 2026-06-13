@@ -212,7 +212,7 @@ impl HandRanker for Five {
         (CaliforniaHandRank::from(*self), *self)
     }
 
-    fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
+    fn hand_rank_value(&self) -> HandRankValue {
         if self.is_dealt() {
             let i = self.or_rank_bits() as usize;
             let rank: u16 = if self.is_flush() {
@@ -224,9 +224,17 @@ impl HandRanker for Five {
                     _ => unique,
                 }
             };
-            (rank, self.sort().clean())
+            rank
         } else {
-            (NO_HAND_RANK_VALUE, Five::default())
+            NO_HAND_RANK_VALUE
+        }
+    }
+
+    fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
+        let hrv = self.hand_rank_value();
+        match hrv {
+            NO_HAND_RANK_VALUE => (NO_HAND_RANK_VALUE, Five::default()),
+            _ => (hrv, self.sort().clean()),
         }
     }
 
