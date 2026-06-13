@@ -51,7 +51,8 @@
       "Bash([ -d \"$BASE/$repo\" ])",
       "Bash(cargo fmt *)",
       "WebSearch",
-      "Bash(git symbolic-ref *)"
+      "Bash(git symbolic-ref *)",
+      "Bash(graphify export *)"
     ]
   }
 }
