@@ -10,6 +10,7 @@ use crate::{PKError, Pile, TheNuts};
 use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
+use crate::prelude::Seven;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Six([Card; 6]);
@@ -111,6 +112,19 @@ impl HandRanker for Six {
         }
 
         (CaliforniaHandRank::from(best_hrv), best_hand.sort())
+    }
+
+    fn hand_rank_value(&self) -> HandRankValue {
+        let mut best_hrv = NO_HAND_RANK_VALUE;
+
+        for perm in Six::FIVE_CARD_PERMUTATIONS {
+            let hand = self.five_from_permutation(perm);
+            let hrv = hand.hand_rank_value();
+            if (best_hrv == 0) || hrv != 0 && hrv < best_hrv {
+                best_hrv = hrv;
+            }
+        }
+        best_hrv
     }
 
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
