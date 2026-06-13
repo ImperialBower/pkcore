@@ -244,3 +244,40 @@ On to Phase 2 — rank-only overrides on Six and Seven. This is where the real s
 
   Add both overrides, then tell me — I'll run the six and seven suites.
 ```
+
+```bash
+Everything checks out:
+  - turn_remaining() returns an owned Cards, which has into_iter() → so game.turn_remaining().into_iter().collect::<Vec<Card>>() gives us the ordered Vec<Card>.
+  - Note line 248 in cards.rs uses par_bridge elsewhere — that's exactly the unordered primitive the plan warns against. We do not use it. Vec::par_iter() + collect() preserves
+  index order.
+  - rayon::prelude::* is already imported (line 13), and turn_case_eval(&Game, &Card) takes a &Card, which is what par_iter() yields.
+
+  Step 6 — parallelize case_evals()
+
+  Rewrite the body of case_evals() (lines 50–71) so the per-case work runs in parallel. Keep the early return and the top-level trace! exactly as they are. Replace the sequential
+  for loop with:
+
+  1. Collect the cases first, preserving order:
+  let cases: Vec<Card> = game.turn_remaining().into_iter().collect();
+  2. Build the results with an indexed parallel iterator, moving the per-case trace! inside the map:
+  let case_evals: Vec<CaseEval> = cases
+      .par_iter()
+      .enumerate()
+      .map(|(j, case)| {
+          trace!(
+              "{}: FLOP: {} TURN: {} RIVER: {} -------",
+              j, game.board.flop, game.board.turn, case
+          );
+          TurnEval::turn_case_eval(game, case)
+      })
+      .collect();
+  CaseEvals::from(case_evals)
+
+  Why this shape:
+  - par_iter().enumerate().map(...).collect::<Vec<_>>() distributes the work but rayon reassembles the Vec in index order, so Outs/Wins/Display stay byte-identical. This is the
+  whole reason we avoid par_bridge (which interleaves results and is the documented cause of the historical flaky evals.get(61) test).
+  - We collect into Vec<CaseEval> then CaseEvals::from(...) because FromParallelIterator is deliberately not implemented (the commented-out line 141).
+  - game is shared &Game across threads — fine, it's read-only here.
+
+  Card is already imported (line 9). Make the change, then tell me and I'll run the order-regression tests.
+```
