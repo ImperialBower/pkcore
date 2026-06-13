@@ -122,7 +122,7 @@ impl Five {
         let mut mid;
 
         while low <= high {
-            mid = (high + low) >> 1; // divide by two
+            mid = usize::midpoint(high, low); // divide by two
 
             let product = crate::lookups::products::PRODUCTS[mid] as usize;
             if key < product {

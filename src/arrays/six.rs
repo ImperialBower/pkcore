@@ -10,7 +10,6 @@ use crate::{PKError, Pile, TheNuts};
 use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
-use crate::prelude::Seven;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Six([Card; 6]);
