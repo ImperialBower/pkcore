@@ -561,8 +561,7 @@ mod arrays__five_tests {
     #[case("5♠ 4♠ 3♠ 2♥ A♠", 1609)]
     #[case("9S 9H 9D 9C AH", 71)]
     #[case("9C 8D 6C 5S 2D", 7422)]
-    fn hand_ranker__hand_rank_value(#[case] index: &'static str,
-                                    #[case] expected_value: usize) {
+    fn hand_ranker__hand_rank_value(#[case] index: &'static str, #[case] expected_value: usize) {
         let five = Five::from_str(index).unwrap();
         assert_eq!(expected_value as HandRankValue, five.hand_rank_value());
     }
