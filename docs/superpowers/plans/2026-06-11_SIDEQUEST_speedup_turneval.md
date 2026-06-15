@@ -281,3 +281,131 @@ Everything checks out:
 
   Card is already imported (line 9). Make the change, then tell me and I'll run the order-regression tests.
 ```
+
+_Switched to a different computer..._
+
+```bash
+Here's where the sidequest stands. The diary in the plan cuts off mid–Phase 3 (Step 6 was proposed but the diary doesn't record it being applied), so I
+  checked the live code to be sure.
+
+  Status by phase
+
+  ┌───────┬────────────────────────────────────────────┬───────────────────────────────────────────────────────────────┐
+  │ Phase │                    What                    │                             State                             │
+  ├───────┼────────────────────────────────────────────┼───────────────────────────────────────────────────────────────┤
+  │ 1     │ Five::hand_rank_value() rank-only override │ ✅ Done (five.rs:215), tests added (commits c0a9a97, 133e9d8) │
+  ├───────┼────────────────────────────────────────────┼───────────────────────────────────────────────────────────────┤
+  │ 2     │ Six + Seven rank-only overrides            │ ✅ Done (six.rs:116, seven.rs:171, commit aceb52d)            │
+  ├───────┼────────────────────────────────────────────┼───────────────────────────────────────────────────────────────┤
+  │ 3     │ Parallelize TurnEval::case_evals()         │ ❌ Not done — still a sequential for loop at turn_eval.rs:61  │
+  ├───────┼────────────────────────────────────────────┼───────────────────────────────────────────────────────────────┤
+  │ 4     │ Criterion benchmark                        │ ❌ Not done — no benches/ dir, no criterion in Cargo.toml     │
+  └───────┴────────────────────────────────────────────┴───────────────────────────────────────────────────────────────┘
+
+  ★ Insight ─────────────────────────────────────
+  - The biggest win is already banked. Phases 1–2 attacked the dominant cost the plan identified — the discarded self.sort().clean() heap allocations inside
+  the 21-permutation (Seven) and 15-permutation (Six) loops. Because Six/Seven call Five::hand_rank_value() via static dispatch, the Phase 1 override sped up
+  every permutation evaluation automatically, even on the _and_hand path.
+  - Phase 3 is pure latency, not throughput-of-work. Parallelizing case_evals() doesn't remove any computation — it spreads the ~44 independent river cases
+  across rayon threads. The catch the plan flags repeatedly: it must use indexed par_iter().collect(), never par_bridge, because Outs/Display assert on
+  insertion order (analysis/outs.rs:479).
+  ─────────────────────────────────────────────────
+
+  What's left
+
+  Phase 3 — turn_eval.rs:59-70 is the unchanged sequential loop. The diary's Step 6 sketched the exact replacement (collect turn_remaining() into a Vec<Card>,
+  then par_iter().enumerate().map(...).collect::<Vec<CaseEval>>() → CaseEvals::from(...)), plus updating the stale doc comment at turn_eval.rs:81-93.
+
+  Phase 4 — no benchmark exists yet, so there's currently no measurement of what Phases 1–2 actually bought. The plan wanted a baseline captured before
+  changes, which has now sailed — but a criterion bench would still validate Phase 3 and give a post-hoc anchor.
+
+  Want me to pick up Phase 3 (the parallelization, which is fully specced in the diary)? Note your /dog workflow had you driving the keyboard — so I can
+  either walk you through it dog-style, or implement it directly if you'd rather I take this one. Which do you prefer?
+
+✻ Crunched for 41s
+
+❯ doggie-style
+
+⏺ Skill(dog)
+  ⎿  Successfully loaded skill
+
+⏺ Bash(mkdir -p .claude && touch .claude/dog-mode && echo "dog mode on")
+  ⎿  dog mode on
+
+⏺ 🐕 Dog mode is on. You're driving — I read and verify, you type every line.
+
+  Let me sniff around before we set off. I want to verify the exact shape of the pieces we'll touch.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ Now let me verify the two facts the diary's Step 6 relies on: what turn_remaining() returns, and whether CaseEvals::from(Vec<CaseEval>) exists.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+⏺ Let me look at the existing rayon-parallelized sibling (from_holdem_at_flop) as our reference model, plus confirm turn_remaining's return:
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ ★ Insight ─────────────────────────────────────
+  Notice line 39/56: the sibling methods use par_bridge() and their docs literally say "order is unspecified" — fine for flop/deal runouts that have no order
+  contract. Our case is the opposite: Outs/Display assert on insertion order, so we deliberately can't copy that pattern. We need Vec::par_iter() (ordered
+  collect), not a bridge.
+  ─────────────────────────────────────────────────
+
+  Last sniff — confirm turn_remaining() hands back an ordered Cards and how it iterates:
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+⏺ All verified. Cards implements consuming IntoIterator (cards.rs:854), and turn_remaining() returns an owned, deterministically-ordered Cards (deck order
+  minus removed cards).
+
+  The route
+
+  One file: src/play/stages/turn_eval.rs. Three stops:
+
+  1. Rewrite the body of case_evals() (lines 59–70) — swap the sequential for loop for an ordered parallel par_iter().collect().
+  2. Update the stale doc comment (the # Refactor note around lines 81–93) — it currently wishes for concurrency and complains about a floppy test; once we
+  parallelize with ordered collect, that note is out of date.
+  3. Add a regression test in the test module asserting case_evals length and first/last card match turn_remaining() order — the safety net that proves we
+  preserved order.
+
+  Tests are the net at every stop: the existing analysis__outs_tests::from__case_evals* tests already assert on output order, so if our parallel collect
+  reorders anything, they go red.
+
+  ---
+  Step 1
+
+  In src/play/stages/turn_eval.rs, replace the body of case_evals() — specifically lines 59–70 (the let mut case_evals = ... through the for loop and the
+  final case_evals). Keep the early-return guard (51–53) and the top-level trace! (54–57) exactly as they are.
+
+  What to write, in two moves:
+
+  a) Collect the cases into an ordered Vec<Card> first:
+  let cases: Vec<Card> = game.turn_remaining().into_iter().collect();
+  Why collect first: par_iter() needs to borrow a slice. turn_remaining() returns an owned Cards; materializing it into a Vec gives us an indexable container
+  whose order rayon will preserve on collect.
+
+  b) Build the results with an indexed parallel iterator, moving the per-case trace! inside the closure, then convert:
+  let case_evals: Vec<CaseEval> = cases
+      .par_iter()
+      .enumerate()
+      .map(|(j, case)| {
+          trace!(/* the existing "{}: FLOP ... RIVER ..." line, with j and case */);
+          TurnEval::turn_case_eval(game, case)
+      })
+      .collect();
+  CaseEvals::from(case_evals)
+
+  Three reasons this exact shape:
+  - par_iter().enumerate().map().collect::<Vec<_>>() distributes the work but rayon reassembles the Vec in index order — so Outs/Wins/Display stay
+  byte-identical. This is precisely why we avoid par_bridge (the unordered primitive the sibling methods use, and the documented cause of the historical
+  floppy evals.get(61) test).
+  - CaseEvals::from(case_evals) — we collect into Vec<CaseEval> then convert because FromParallelIterator is deliberately not implemented for CaseEvals (the
+  commented-out block at case_evals.rs:128-145). From<Vec<CaseEval>> exists at line 112.
+  - game is shared &Game across threads — fine, it's read-only here, and turn_case_eval(&Game, &Card) takes both by reference.
+
+  Note case is now &&Card inside the closure (par_iter yields &Card, you don't deref it), and turn_case_eval wants &Card — so passing case directly works
+  because of auto-deref coercion. If the compiler complains, that's the place to look.
+
+  Make the change, then tell me — I'll re-read it and run cargo check.
+```
