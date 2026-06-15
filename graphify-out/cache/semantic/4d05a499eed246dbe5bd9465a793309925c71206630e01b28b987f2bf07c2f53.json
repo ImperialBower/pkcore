@@ -1,1 +1,0 @@
-{"nodes": [{"id": "table_seats_is_betting_complete", "label": "Seats::is_betting_complete", "file_type": "code", "source_file": "src/casino/table/seats.rs", "source_location": "lines 807-830", "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

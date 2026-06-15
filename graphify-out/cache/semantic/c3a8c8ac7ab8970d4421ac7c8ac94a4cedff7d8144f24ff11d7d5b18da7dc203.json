@@ -1,1 +1,0 @@
-{"nodes": [{"id": "util_name_namer", "label": "NAMER (LazyLock RNG name generator)", "file_type": "code", "source_file": "src/util/name.rs", "source_location": "line 6", "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}
