@@ -53,7 +53,9 @@
       "WebSearch",
       "Bash(git symbolic-ref *)",
       "Bash(graphify export *)",
-      "Bash(graphify query *)"
+      "Bash(graphify query *)",
+      "Bash(mkdir -p .claude)",
+      "Bash(touch .claude/dog-mode)"
     ]
   }
 }
