@@ -25,6 +25,37 @@ common heads-up case into an instant lookup.
 - **Out:** ranges / random seats; GTO *strategy* (fold/call/raise frequencies,
   equilibrium ranges); per-runout detail (outs, the nuts) at preflop.
 
+## Feature gating & wasm (decided during execution)
+
+The whole `analysis::equity` module — including `EquityReport`, `Method`, and
+the engine — is behind `#[cfg(feature = "equity")]`, which was **not** a default
+feature (it was kept off "so library builds stay lean", and is the engine for
+the `pkodds` service). Because `DealEval` lives in the always-compiled
+`play::stages` and our unified result reuses `EquityReport`, the dispatch (and
+even `Method::Hup`) depends on that gated module.
+
+**Decision: add `"equity"` to the crate's default features (Option A).**
+
+- **Cost is small:** the engine adds *no new dependencies* (`rayon`/`rand` are
+  already required); only compile time and code surface.
+- **wasm is safe at compile time (verified):** `cargo build --lib --features
+  equity --target wasm32-unknown-unknown` compiles clean. `engine.rs` uses
+  nothing wasm-hostile beyond `rayon` (no threads/mpsc/time/fs/net), and `rayon`
+  already compiles for the crate's wasm target.
+- **wasm runtime caveat:** the multi-way path executes `rayon` parallel
+  iterators, which must not be *called* on `wasm32-unknown-unknown` (no
+  threads). The heads-up HUP path is rayon-free and always safe. A wasm consumer
+  that wants to exclude the engine entirely can still set
+  `default-features = false`.
+
+### Prerequisite bugfix (already required)
+
+The `equity` feature did **not compile** before this work: `engine.rs` was
+missing `use crate::Pile;` (a trait reorg moved `cards()`/`to_vec()` onto
+`Pile`, and the off-by-default module never got the import). This is fixed as a
+standalone commit before the dispatch work. CI does not currently build
+`--features equity`, which is why the drift went unnoticed — see "Verification".
+
 ## Existing pieces reused (no new engines)
 
 | Piece | Location | Role |
@@ -177,7 +208,13 @@ A criterion benchmark proves the heads-up win (~1.7M runouts → O(1) lookup).
 
 ## Verification
 
-- `cargo test` and `cargo test --doc`
-- `cargo clippy --all-targets -- -Dclippy::all -Dclippy::pedantic`
+- `cargo test --features equity` and `cargo test --doc --features equity`
+  (the engine and these new tests only compile with the feature). Once `equity`
+  is in the default set, plain `cargo test` covers them too.
+- `cargo clippy --all-targets --features equity -- -Dclippy::all -Dclippy::pedantic`
+- `cargo build --lib --features equity --target wasm32-unknown-unknown` — must
+  stay green (guards the wasm compile).
 - `cargo bench` before/after to quantify the heads-up speedup.
+- **CI gap to close (follow-up):** add a `--features equity` job so the engine
+  can't silently drift out of sync with the core API again.
 - **No git state changes by Claude** — the user commits.

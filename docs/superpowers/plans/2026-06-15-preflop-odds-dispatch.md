@@ -14,11 +14,68 @@
 
 ## File map
 
+- **Modify** `src/analysis/equity/engine.rs` — add missing `use crate::Pile;` (Task 0 bugfix).
+- **Modify** `Cargo.toml` — add `"equity"` to default features (Task 0); plus `criterion` dev-dep, `[[bench]]`, exclude `benches/*` (Task 2).
 - **Modify** `src/analysis/equity/result.rs` — add `Method::Hup`.
 - **Modify** `src/play/stages/deal_eval.rs` — reshape `DealEval`, dispatch in `new`, two private report builders, new `Display`, tests.
 - **Modify** `examples/bcrepl.rs` — handle the now-`Result`-returning `new`.
-- **Modify** `Cargo.toml` — add `criterion` dev-dep, `[[bench]]`, exclude `benches/*`.
 - **Create** `benches/preflop_odds.rs` — criterion benchmark.
+
+> **Feature note:** the `analysis::equity` module is behind `#[cfg(feature = "equity")]`. Task 0 makes `equity` a default feature (decision recorded in the spec), so the rest of the plan's plain `cargo test` / `clippy` commands compile the engine. Until Task 0 lands, append `--features equity` to any cargo command that touches the engine. wasm guard: `cargo build --lib --features equity --target wasm32-unknown-unknown` must stay green.
+
+---
+
+## Task 0: Make the equity feature compile and turn it on by default
+
+The `analysis::equity` module did not compile (missing `Pile` import) and is off by default. `DealEval`'s dispatch and `Method::Hup` both live behind that gate, so fix and enable it first. See the spec's "Feature gating & wasm" section.
+
+**Files:**
+- Modify: `src/analysis/equity/engine.rs` (imports, ~line 17)
+- Modify: `Cargo.toml` (`[features]` default list, ~line 40)
+
+- [ ] **Step 1: Add the missing trait import**
+
+In `src/analysis/equity/engine.rs`, alongside `use crate::{Cards, PKError};`, add:
+
+```rust
+use crate::Pile;
+```
+
+(`cards()` and `to_vec()` are `Pile` trait methods; without this the engine fails with `E0599: no method named cards/to_vec`.)
+
+- [ ] **Step 2: Verify the feature now compiles, native and wasm**
+
+Run: `cargo build --lib --features equity`
+Expected: Finished, no errors.
+
+Run: `cargo build --lib --features equity --target wasm32-unknown-unknown`
+Expected: Finished, no errors (proves Option A is wasm-safe at compile time).
+
+- [ ] **Step 3: Add `"equity"` to the default features**
+
+In `Cargo.toml`, add `"equity"` to the `default = [...]` array:
+
+```toml
+default = [
+    "bot-profiles",
+    "hand-histories",
+    "player-stats",
+    "player-stats-persistence",
+    "equity",
+]
+```
+
+- [ ] **Step 4: Verify the engine now compiles under a plain build**
+
+Run: `cargo build --lib`
+Expected: Finished — the engine is now in the default build.
+
+- [ ] **Step 5: Commit (two logical commits)**
+
+```bash
+git add src/analysis/equity/engine.rs && git commit -m "fix: add missing Pile import so the equity feature compiles"
+git add Cargo.toml && git commit -m "build: enable the equity feature by default"
+```
 
 ---
 
