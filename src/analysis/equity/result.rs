@@ -7,6 +7,8 @@ pub enum Method {
     Exact,
     /// The result was estimated by Monte Carlo sampling.
     MonteCarlo,
+    /// exact, precomputed heads-up preflop table lookup
+    Hup,
 }
 
 /// Equity for a single seat, all expressed as fractions in `0.0..=1.0`.
@@ -55,4 +57,16 @@ pub struct EquityReport {
     pub method: Method,
     /// Number of cases evaluated (runouts enumerated, or samples drawn).
     pub samples: u64,
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod analysis__equity__result_tests {
+    use super::*;
+
+    #[test]
+    fn method__hup_is_distinct() {
+        assert_ne!(Method::Hup, Method::Exact);
+        assert_ne!(Method::Hup, Method::MonteCarlo);
+    }
 }
