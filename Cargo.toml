@@ -24,6 +24,7 @@ default = [
     "hand-histories",
     "player-stats",
     "player-stats-persistence",
+    "equity",
 ]
 ## When enabled, `SolverResult::save` and `SolverResult::load` use human-readable
 ## JSON instead of the default compact binary (postcard) format. Useful for
