@@ -215,6 +215,13 @@ use wincounter::wins::Wins;
 /// I'm feeling like this struct is getting too bloated with analysis, and it's getting
 /// hard to refactor things. The idea here is to move each phase of the game over to
 /// their own struct where we can optimize the code through things like concurrency.
+///
+/// # Diary 2026-06-11
+///
+/// Hear hear! Not only that but it's also locked into Hold'em.
+///
+/// We are here to take up the mantle, and return to close out the proflop work. The work!
+/// must not stop te work!!!
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Game {
     pub hands: HoleCards,
@@ -262,14 +269,10 @@ impl Game {
         TurnEval::case_evals(self)
     }
 
-    fn turn_cards(&self) -> Cards {
-        self.board.turn_cards()
-    }
-
     /// Returns the Cards remaining after you remove the flop, the turn, and the
     /// cards held by all the players.
     pub(crate) fn turn_remaining(&self) -> Cards {
-        let mut cards = self.turn_cards();
+        let mut cards = self.board.turn_cards();
         cards.insert_all(&self.hands.cards());
         Cards::deck_minus(&cards)
     }
@@ -278,7 +281,7 @@ impl Game {
     /// `possible_evals_at_turn()`.
     #[must_use]
     pub fn turn_remaining_board(&self) -> Cards {
-        Cards::deck_minus(&self.turn_cards())
+        Cards::deck_minus(&self.board.turn_cards())
     }
 
     /// This function is insanely slow.
@@ -900,7 +903,7 @@ mod play__game_tests {
 
     #[test]
     fn turn_cards() {
-        let cards = TestData::the_hand().turn_cards();
+        let cards = TestData::the_hand().board.turn_cards();
 
         assert_eq!("9♣ 6♦ 5♥ 5♠", cards.to_string());
     }
@@ -968,7 +971,7 @@ mod play__game_tests {
         table.bring_it_in().expect("WOOPSIE!!!");
         table.deal_flop().expect("No flop");
 
-        println!("{table}");
+        // println!("{table}");
 
         assert_eq!(1, table.next_to_act());
         let _ = table.act_check(1).unwrap();

@@ -63,7 +63,7 @@ impl SuitMask {
         let bits = v.view_bits_mut::<Msb0>();
         bits.reverse();
         let mut bv = bits.to_bitvec();
-        bv.shift_right(4);
+        bv.shift_end(4);
         bv.load_be::<u8>()
     }
 

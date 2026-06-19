@@ -168,6 +168,19 @@ impl HandRanker for Seven {
         (CaliforniaHandRank::from(best_hrv), best_hand.sort())
     }
 
+    fn hand_rank_value(&self) -> HandRankValue {
+        let mut best_hrv = NO_HAND_RANK_VALUE;
+
+        for perm in Seven::FIVE_CARD_PERMUTATIONS {
+            let hand = self.five_from_permutation(perm);
+            let hrv = hand.hand_rank_value();
+            if (best_hrv == 0) || hrv != 0 && hrv < best_hrv {
+                best_hrv = hrv;
+            }
+        }
+        best_hrv
+    }
+
     fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
         let mut best_hrv: HandRankValue = NO_HAND_RANK_VALUE;
         let mut best_hand = Five::default();

@@ -51,7 +51,12 @@
       "Bash([ -d \"$BASE/$repo\" ])",
       "Bash(cargo fmt *)",
       "WebSearch",
-      "Bash(git symbolic-ref *)"
+      "Bash(git symbolic-ref *)",
+      "Bash(graphify export *)",
+      "Bash(graphify query *)",
+      "Bash(mkdir -p .claude)",
+      "Bash(touch .claude/dog-mode)",
+      "Bash(cargo bench *)"
     ]
   }
 }

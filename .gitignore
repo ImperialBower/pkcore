@@ -19,3 +19,6 @@ Cargo.lock
 .env
 /mutants.out
 marathon_failure.yaml
+
+graphify-out/
+.claude/dog-mode

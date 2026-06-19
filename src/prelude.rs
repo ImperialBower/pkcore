@@ -89,6 +89,7 @@ pub use crate::{
 };
 
 // play
+#[cfg(feature = "equity")]
 pub use crate::play::stages::deal_eval::DealEval;
 pub use crate::play::stages::flop_eval::FlopEval;
 pub use crate::play::stages::river_eval::RiverEval;

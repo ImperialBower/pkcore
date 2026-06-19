@@ -56,18 +56,50 @@ impl TurnEval {
             game.hands, game.board.flop, game.board.turn
         );
 
-        let mut case_evals = CaseEvals::default();
+        //\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\
+        // What to write, in two moves:
+        //
+        //   a) Collect the cases into an ordered Vec<Card> first:
+        //   let cases: Vec<Card> = game.turn_remaining().into_iter().collect();
+        //   Why collect first: par_iter() needs to borrow a slice. turn_remaining() returns an owned Cards; materializing it into a Vec gives us an indexable container
+        //   whose order rayon will preserve on collect.
 
-        for (j, case) in game.turn_remaining().iter().enumerate() {
-            trace!(
-                "{}: FLOP: {} TURN: {} RIVER: {} -------",
-                j, game.board.flop, game.board.turn, case
-            );
+        //   b) Build the results with an indexed parallel iterator, moving the per-case trace! inside the closure, then convert:
+        //   let case_evals: Vec<CaseEval> = cases
+        //       .par_iter()
+        //       .enumerate()
+        //       .map(|(j, case)| {
+        //           trace!(/* the existing "{}: FLOP ... RIVER ..." line, with j and case */);
+        //           TurnEval::turn_case_eval(game, case)
+        //       })
+        //       .collect();
+        //   CaseEvals::from(case_evals)
 
-            case_evals.push(TurnEval::turn_case_eval(game, case));
-        }
+        //   Three reasons this exact shape:
+        //   - par_iter().enumerate().map().collect::<Vec<_>>() distributes the work but rayon reassembles the Vec in index order — so Outs/Wins/Display stay
+        //   byte-identical. This is precisely why we avoid par_bridge (the unordered primitive the sibling methods use, and the documented cause of the historical
+        //   floppy evals.get(61) test).
+        //   - CaseEvals::from(case_evals) — we collect into Vec<CaseEval> then convert because FromParallelIterator is deliberately not implemented for CaseEvals (the
+        //   commented-out block at case_evals.rs:128-145). From<Vec<CaseEval>> exists at line 112.
+        //   - game is shared &Game across threads — fine, it's read-only here, and turn_case_eval(&Game, &Card) takes both by reference.
+        //
+        //   Note case is now &&Card inside the closure (par_iter yields &Card, you don't deref it), and turn_case_eval wants &Card — so passing case directly works
+        //   because of auto-deref coercion. If the compiler complains, that's the place to look.
+        let cases: Vec<Card> = game.turn_remaining().into_iter().collect();
 
-        case_evals
+        let case_evals: Vec<CaseEval> = cases
+            .par_iter()
+            .enumerate()
+            .map(|(j, case)| {
+                trace!(
+                    "{}: FLOP: {} TURN: {} RIVER: {} -------",
+                    j, game.board.flop, game.board.turn, case
+                );
+                TurnEval::turn_case_eval(game, case)
+            })
+            .collect();
+
+        CaseEvals::from(case_evals)
     }
 
     /// I don't think I am doing this right. The nuts at the turn shouldn't have any idea what the
@@ -91,6 +123,15 @@ impl TurnEval {
     /// The only problem is, that the test is floppy, with the test line
     /// `assert_eq!(5306, evals.get(61).unwrap().hand_rank.value);` not always returning
     /// the same result. This is an issue that needs to be tracked down.
+    ///
+    /// # Refactor UPDATE
+    ///
+    /// 'Tis done in 🐕`/dog mode`🐕
+    ///
+    /// - `case_evals()` now evaluates river cases in parallel via rayon (`par_iter().enumerate()`), down from the original sequential loop.
+    /// - The historical floppiness (evals.get(61) not stable) was caused by unordered parallelism; it's avoided here by collecting through an indexed `par_iter`,
+    ///   which rayon reassembles in input order — so Outs/Wins/Display stay deterministic.
+    /// - You can keep the "19s → 4s" historical data point if you like it as a record — your call.
     ///
     /// # Panics
     ///

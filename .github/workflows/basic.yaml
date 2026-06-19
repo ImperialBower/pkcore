@@ -110,3 +110,7 @@ jobs:
       - run: cargo check --no-default-features --features bot-profiles --lib --tests
       - run: cargo check --no-default-features --features player-stats --lib --tests
       - run: cargo check --no-default-features --features player-stats-persistence --lib --tests
+      # Equity in isolation: the `pkodds` service builds pkcore with just this
+      # feature. Guards against the equity engine bit-rotting or coupling to the
+      # default stack (it silently broke once because nothing on CI built it).
+      - run: cargo check --no-default-features --features equity --lib --tests

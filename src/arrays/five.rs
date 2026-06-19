@@ -122,7 +122,7 @@ impl Five {
         let mut mid;
 
         while low <= high {
-            mid = (high + low) >> 1; // divide by two
+            mid = usize::midpoint(high, low); // divide by two
 
             let product = crate::lookups::products::PRODUCTS[mid] as usize;
             if key < product {
@@ -212,7 +212,7 @@ impl HandRanker for Five {
         (CaliforniaHandRank::from(*self), *self)
     }
 
-    fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
+    fn hand_rank_value(&self) -> HandRankValue {
         if self.is_dealt() {
             let i = self.or_rank_bits() as usize;
             let rank: u16 = if self.is_flush() {
@@ -224,9 +224,17 @@ impl HandRanker for Five {
                     _ => unique,
                 }
             };
-            (rank, self.sort().clean())
+            rank
         } else {
-            (NO_HAND_RANK_VALUE, Five::default())
+            NO_HAND_RANK_VALUE
+        }
+    }
+
+    fn hand_rank_value_and_hand(&self) -> (HandRankValue, Five) {
+        let hrv = self.hand_rank_value();
+        match hrv {
+            NO_HAND_RANK_VALUE => (NO_HAND_RANK_VALUE, Five::default()),
+            _ => (hrv, self.sort().clean()),
         }
     }
 
@@ -545,6 +553,22 @@ mod arrays__five_tests {
         assert_eq!(PKError::NotEnoughCards, Five::from_str("AC").unwrap_err());
         assert!(Five::from_str("AD KD QD JD TD 9D").is_err());
         assert_eq!(PKError::TooManyCards, Five::from_str("AD KD QD JD TD 9D").unwrap_err());
+    }
+
+    #[rstest]
+    #[case("A♠ K♠ Q♠ J♠ T♠", 1)]
+    #[case("5♠ 4♠ 3♠ 2♠ A♠", 10)]
+    #[case("5♠ 4♠ 3♠ 2♥ A♠", 1609)]
+    #[case("9S 9H 9D 9C AH", 71)]
+    #[case("9C 8D 6C 5S 2D", 7422)]
+    fn hand_ranker__hand_rank_value(#[case] index: &'static str, #[case] expected_value: usize) {
+        let five = Five::from_str(index).unwrap();
+        assert_eq!(expected_value as HandRankValue, five.hand_rank_value());
+    }
+
+    #[test]
+    fn hand_ranker__hand_rank_value__unknown() {
+        assert_eq!(0 as HandRankValue, Five::default().hand_rank_value());
     }
 
     #[test]

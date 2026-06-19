@@ -7,6 +7,7 @@
 
 use super::result::{EquityReport, Method, PlayerEquity};
 use super::spec::{EquityRequest, PlayerSpec};
+use crate::Pile;
 use crate::analysis::eval::Eval;
 use crate::analysis::gto::twos::Twos;
 use crate::analysis::hand_rank::HandRank;

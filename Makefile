@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open
+.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh
 
 # Default target
 default: ayce
@@ -10,6 +10,8 @@ help:
 	@echo "  make build           - Build the project"
 	@echo "  make clean           - Clean build artifacts"
 	@echo "  make test            - Run tests"
+	@echo "  make ci              - Mirror GitHub Actions test job (RUSTFLAGS=-Dwarnings)"
+	@echo "  make ci-fresh        - Like ci, but 'cargo update' first to match CI's fresh deps"
 	@echo "  make nextest         - Run tests with cargo-nextest (installs if missing)"
 	@echo "  make heavy           - Run ignored heavy tests"
 	@echo "  make marathon        - Run 1000-hand bot marathon stress test"
@@ -59,6 +61,19 @@ build:
 # Run tests
 test:
 	cargo test
+
+# Mirror the GitHub Actions test job exactly: warnings are hard errors and
+# incremental compilation is off. Uses the CURRENT Cargo.lock.
+ci:
+	RUSTFLAGS="-Dwarnings" CARGO_INCREMENTAL=0 cargo test --all
+
+# Like `ci`, but first re-resolves dependencies to the latest compatible
+# versions. CI has no committed Cargo.lock and resolves fresh on every run,
+# so this is what catches breakage from newer deps (e.g. a method deprecated
+# in a point release) before it reaches GitHub.
+ci-fresh:
+	cargo update
+	RUSTFLAGS="-Dwarnings" CARGO_INCREMENTAL=0 cargo test --all
 
 # Run ignored heavy tests
 heavy:
@@ -149,7 +164,12 @@ docs: create_docs
 		exit 1; \
 	fi
 
-# All You Can Eat - Run all checks
+# All You Can Eat - Run all checks at CI strictness.
+# Target-specific exports propagate to every prerequisite recipe (build,
+# nextest, doc tests, clippy), so warnings become hard errors exactly like
+# the GitHub Actions job. Standalone targets (e.g. `make test`) stay lenient.
+ayce: export RUSTFLAGS := -Dwarnings
+ayce: export CARGO_INCREMENTAL := 0
 ayce: fmt build_test clippy create_docs
 
 # Install required tools
