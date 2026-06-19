@@ -97,6 +97,10 @@ name = "equity"
 required-features = ["equity"]
 
 [[example]]
+name = "bcrepl"
+required-features = ["equity"]
+
+[[example]]
 name = "bot_selfplay"
 required-features = ["bot-profiles", "hand-histories"]
 
@@ -178,3 +182,4 @@ test-log = "0.2.19"
 [[bench]]
 name = "preflop_odds"
 harness = false
+required-features = ["equity"]
