@@ -120,6 +120,11 @@ fn main() -> Result<(), PKError> {
     println!("{}", game);
 
     println!();
+    println!("Preflop Odds:");
+    let deal_eval = DealEval::new(game.hands.clone())?;
+    println!("{deal_eval}");
+
+    println!();
     let flop_eval = FlopEval::try_from(game.clone()).unwrap();
     println!("{}", flop_eval);
 
