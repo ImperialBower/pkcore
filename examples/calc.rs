@@ -129,6 +129,8 @@ fn main() -> Result<(), PKError> {
         println!("{}", game.board.flop.evals());
     }
 
+    println!();
+
     game.turn_display_odds()?;
 
     // too slow
@@ -136,7 +138,13 @@ fn main() -> Result<(), PKError> {
         println!("{}", game.turn_eval()?);
     }
 
-    game.turn_display_evals();
+    let turn_nuts = game.turn_the_nuts().to_evals().sort();
+    println!("The Nuts @ Turn (top 10):");
+    for i in 0..turn_nuts.len().min(10) {
+        if let Some(eval) = turn_nuts.get(i) {
+            println!("  #{}: {eval}", i + 1);
+        }
+    }
 
     game.river_display_results();
 
