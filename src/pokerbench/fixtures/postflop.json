@@ -1,0 +1,10 @@
+[
+  {
+    "instruction": "You are a specialist in playing 6-handed No Limit Texas Holdem. The small blind is 0.5 chips and the big blind is 1 chips. Everyone started with 100 chips. The player positions involved in this game are UTG, HJ, CO, BTN, SB, BB. In this hand, your position is BTN, and your holding is [King of Heart and Three of Heart]. Before the flop, BTN raise 2.5 chips, and BB call. The flop comes Ten Of Heart, Three Of Spade, and Two Of Diamond, then BB bet 4 chips, and BTN call. The turn comes Five Of Diamond, then BB check. Now it is your turn to make a move. To remind you, the current pot size is 13.0 chips.",
+    "output": "check"
+  },
+  {
+    "instruction": "You are a specialist in playing 6-handed No Limit Texas Holdem. The small blind is 0.5 chips and the big blind is 1 chips. Everyone started with 100 chips. The player positions involved in this game are UTG, HJ, CO, BTN, SB, BB. In this hand, your position is HJ, and your holding is [Eight of Heart and Eight of Club]. Before the flop, HJ raise 2 chips, and BB call. The flop comes King Of Spade, Seven Of Heart, and Two Of Diamond, then BB check, and HJ bet 5 chips, and BB raise 14 chips, and HJ call. The turn comes Jack Of Club, then BB check. The river comes Seven Of Club, then BB check. Now it is your turn to make a move. To remind you, the current pot size is 32.0 chips.",
+    "output": "bet 18"
+  }
+]

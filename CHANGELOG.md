@@ -5,6 +5,29 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `pokerbench` module (behind a new `pokerbench` cargo feature, off by default):
+  a [PokerBench](https://github.com/pokerllm/pokerbench) (HuggingFace
+  `RZ412/PokerBench`) scenario model and scoring for benchmarking LLM poker
+  agents against solver-optimal labels (EPIC-43 Phase 1).
+  - `PokerBenchScenario`, `PokerBenchAction`, `PokerBenchSplit`: a parsed 6-max
+    No-Limit Hold'em decision point plus the solver-optimal action.
+  - `PokerBenchScenario::load_csv` / `load_json`: loaders for the dataset's
+    structured CSV columns and natural-language JSON `instruction` forms.
+  - `PokerBenchScenario::canonical_seating`: resolves PokerBench position labels
+    to 0-based seats (button at seat 0) with the hero seat identified, so a
+    downstream seat-indexed state maps directly.
+  - `score_action` / `ActionScore`: action-accuracy and pot-normalized size
+    error against the optimal label (`ev_loss` reserved for a later equity pass).
+  - `PB_BIG_BLIND` / `PB_EFFECTIVE_STACK`: documented conventions for fields the
+    dataset does not carry (stacks, big blind).
+
+  Analysis-only and additive: pulls in no new dependencies, changes no existing
+  type, and the default build is unaffected.
+
 ## [0.1.3] - 2026-05-31
 
 ### Added

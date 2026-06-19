@@ -1,0 +1,2 @@
+# Proper nouns that look like code identifiers to clippy::doc_markdown but aren't.
+doc-valid-idents = ["PokerBench", ".."]
