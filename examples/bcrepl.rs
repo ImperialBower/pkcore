@@ -3,6 +3,7 @@ use pkcore::play::stages::deal_eval::DealEval;
 use pkcore::prelude::HoleCards;
 use pkcore::util::terminal::Terminal;
 use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 
 /// OK, this makes me sad. My new shiny pkcore library takes over twice as long to run a single calc
 ///
@@ -49,7 +50,13 @@ fn read_input(cache: &mut HashMap<HoleCards, DealEval>) {
 fn work(hands: HoleCards, cache: &mut HashMap<HoleCards, DealEval>) -> Result<(), PKError> {
     let now = std::time::Instant::now();
 
-    let results = cache.entry(hands).or_insert_with_key(|h| DealEval::new(h.clone()));
+    let results = match cache.entry(hands) {
+        Entry::Occupied(e) => e.into_mut(),
+        Entry::Vacant(e) => {
+            let eval = DealEval::new(e.key().clone())?;
+            e.insert(eval)
+        }
+    };
 
     println!("{results}");
     println!("Elapsed: {:.2?}", now.elapsed());

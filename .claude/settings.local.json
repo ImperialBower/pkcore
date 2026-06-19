@@ -55,7 +55,8 @@
       "Bash(graphify export *)",
       "Bash(graphify query *)",
       "Bash(mkdir -p .claude)",
-      "Bash(touch .claude/dog-mode)"
+      "Bash(touch .claude/dog-mode)",
+      "Bash(cargo bench *)"
     ]
   }
 }
