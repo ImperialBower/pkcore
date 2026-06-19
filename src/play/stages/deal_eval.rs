@@ -177,11 +177,18 @@ mod play__stages__deal_eval_tests {
 
     #[test]
     fn new__multiway_is_deterministic() {
+        // A fixed seed draws the same samples, so the integer win/tie counts are
+        // bit-stable. The `equity` float is NOT: it is summed across rayon
+        // threads whose reduction order varies, and float addition is not
+        // associative. So we assert on the counts, matching the engine's own
+        // `compute__seed_is_deterministic` test.
         let h = hands(vec![Two::HAND_AS_AH, Two::HAND_KS_KH, Two::HAND_QS_QH]);
         let a = DealEval::new(h.clone()).unwrap();
         let b = DealEval::new(h).unwrap();
-        assert_eq!(a.report.players[0].equity, b.report.players[0].equity);
-        assert_eq!(a.report.players[1].equity, b.report.players[1].equity);
+        assert_eq!(a.report.players[0].wins, b.report.players[0].wins);
+        assert_eq!(a.report.players[0].ties, b.report.players[0].ties);
+        assert_eq!(a.report.players[1].wins, b.report.players[1].wins);
+        assert_eq!(a.report.players[1].ties, b.report.players[1].ties);
     }
 
     #[test]
