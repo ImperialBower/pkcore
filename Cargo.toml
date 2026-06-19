@@ -109,6 +109,22 @@ name = "interactive_play"
 required-features = ["bot-profiles", "hand-histories"]
 
 [[example]]
+name = "interactive_play_flhe"
+required-features = ["bot-profiles"]
+
+[[example]]
+name = "interactive_play_plo"
+required-features = ["bot-profiles"]
+
+[[example]]
+name = "interactive_play_razz"
+required-features = ["bot-profiles"]
+
+[[example]]
+name = "interactive_play_stud_hi"
+required-features = ["bot-profiles"]
+
+[[example]]
 name = "replay_play"
 required-features = ["hand-histories", "bot-profiles"]
 
