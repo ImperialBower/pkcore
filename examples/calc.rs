@@ -125,7 +125,7 @@ fn main() -> Result<(), PKError> {
     println!("{deal_eval}");
 
     println!();
-    let flop_eval = FlopEval::try_from(game.clone()).unwrap();
+    let flop_eval = FlopEval::try_from(game.clone())?;
     println!("{}", flop_eval);
 
     if args.nuts {
