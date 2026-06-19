@@ -58,7 +58,7 @@ bot-training = ["player-stats", "bot-profiles", "dep:serde_yaml_bw"]
 [dependencies]
 bint = "0.1.15"
 cardpack = "0.6.9"
-bitvec = { version = "1.0.1", features = ["alloc",  "atomic", "std", "serde", "testing" ] }
+bitvec = { version = "1.1", features = ["alloc",  "atomic", "std", "serde", "testing" ] }
 csv = "1.4"
 dotenvy = "0.15"
 indexmap = { version = "2.12", features = ["rayon"] }
