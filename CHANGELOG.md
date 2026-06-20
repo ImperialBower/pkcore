@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2026-06-20
+
+### Added
+
+- `Game::street_equities()` and `StreetEquity` (behind the `equity` feature):
+  a unified per-seat odds normalizer that dispatches across `DealEval`,
+  `FlopEval`, `TurnEval`, and `RiverEval`, returning split-pot equity
+  (`win + tie/2`) as fractions for every street.
+
 ## [0.1.7] - 2026-06-20
 
 ### Added
