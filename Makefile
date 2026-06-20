@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh
+.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data
 
 # Default target
 default: ayce
@@ -39,6 +39,9 @@ help:
 	@echo "WebAssembly:"
 	@echo "  make check-wasm         - Check the library compiles for wasm32-unknown-unknown"
 	@echo "  make generate-hups-bin  - Generate generated/hups.bin for WASM embedded store"
+	@echo ""
+	@echo "Datasets:"
+	@echo "  make pokerbench-data    - Download the full PokerBench dataset (EPIC-43, ~720MB)"
 	@echo ""
 	@echo "Tools and Workflow:"
 	@echo "  make install-tools   - Install cargo-deny, cargo-udeps, cargo-mutants, and cargo-llvm-cov"
@@ -199,6 +202,34 @@ check-wasm:
 # Generate the embedded HUP binary store for WASM builds
 generate-hups-bin:
 	cargo run --example export_hups_bin
+
+# Download the full PokerBench dataset (EPIC-43) — both the test and train
+# splits, CSV + JSON (~720 MB total) — into POKERBENCH_DATA_DIR (default
+# ./data/pokerbench, which is gitignored). Re-runnable: existing files are
+# skipped, so an interrupted run can simply be re-invoked. Used by the
+# `pokerbench` feature's loaders and the ignored real-data integration tests.
+pokerbench-data:
+	@dir="$${POKERBENCH_DATA_DIR:-data/pokerbench}"; \
+	base="https://huggingface.co/datasets/RZ412/PokerBench/resolve/main"; \
+	mkdir -p "$$dir"; \
+	for f in \
+		preflop_1k_test_set_game_scenario_information.csv \
+		preflop_1k_test_set_prompt_and_label.json \
+		preflop_60k_train_set_game_scenario_information.csv \
+		preflop_60k_train_set_prompt_and_label.json \
+		postflop_10k_test_set_game_scenario_information.csv \
+		postflop_10k_test_set_prompt_and_label.json \
+		postflop_500k_train_set_game_scenario_information.csv \
+		postflop_500k_train_set_prompt_and_label.json ; do \
+		if [ -f "$$dir/$$f" ]; then \
+			echo "exists, skipping: $$f"; \
+		else \
+			echo "downloading:    $$f"; \
+			curl -fL --progress-bar -o "$$dir/$$f" "$$base/$$f" \
+				|| { echo "FAILED: $$f"; rm -f "$$dir/$$f"; exit 1; }; \
+		fi; \
+	done; \
+	echo "PokerBench dataset ready in $$dir"
 
 # Run mutation testing on the full codebase (slow — can take hours)
 mutants:
