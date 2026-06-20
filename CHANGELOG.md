@@ -5,6 +5,15 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] - 2026-06-20
+
+### Added
+
+- `AgentFidelity.prompt: Option<String>` — the reconstructed prompt text sent to
+  the model, captured by arena recorders so offline cost analysis can re-tokenize
+  it against a target model's tokenizer (pkdealer EPIC-44 Phase 3). Optional and
+  serde-skipped when absent, so existing hand histories are unaffected.
+
 ## [0.1.6] - 2026-06-19
 
 ### Added

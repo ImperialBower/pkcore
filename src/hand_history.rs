@@ -2174,6 +2174,7 @@ impl HandHistory {
 ///     input_tokens: Some(1200),
 ///     output_tokens: Some(8),
 ///     model: Some("claude-sonnet".to_string()),
+///     prompt: Some("Hero holds AhKh on a Qd7s2c flop...".to_string()),
 /// };
 /// assert_eq!(fidelity.was_coerced, Some(true));
 /// assert_eq!(fidelity.intended_action, Some(ActionType::Raise));
@@ -2215,6 +2216,11 @@ pub struct AgentFidelity {
     /// Model / agent identifier (e.g. `"claude-..."`, `"rules-v1"`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
+
+    /// Reconstructed prompt text sent to the model, analysis-only,
+    /// populated by arena recorders for LLM agents.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
 }
 
 /// A single player action within a betting round.
@@ -4442,6 +4448,7 @@ hands:
             input_tokens: Some(1200),
             output_tokens: Some(8),
             model: Some("claude-test".to_string()),
+            prompt: Some("test prompt".to_string()),
         }
     }
 
@@ -4494,6 +4501,34 @@ hands:
             .and_then(|p| p.actions.iter().find(|a| a.seat == 3))
             .expect("seat-3 preflop action");
         assert_eq!(call.agent.as_ref(), Some(&full));
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn agent_fidelity_prompt_round_trips() {
+        let full = af_full();
+
+        let yaml = serde_yaml_bw::to_string(&full).expect("to_yaml");
+        let parsed: AgentFidelity = serde_yaml_bw::from_str(&yaml).expect("from_yaml");
+        assert_eq!(parsed, full);
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn agent_fidelity_prompt_omits_when_absent() {
+        let full = af_full();
+        let no_prompt = AgentFidelity {
+            prompt: None,
+            ..full.clone()
+        };
+
+        let no_prompt_yaml = serde_yaml_bw::to_string(&no_prompt).expect("to_yaml");
+        assert!(
+            !no_prompt_yaml.contains("prompt:"),
+            "yaml should omit prompt when None: {no_prompt_yaml}"
+        );
+        let parsed_no_prompt: AgentFidelity = serde_yaml_bw::from_str(&no_prompt_yaml).expect("from_yaml");
+        assert_eq!(parsed_no_prompt, no_prompt);
     }
 
     /// 2-player hand where seat 0 folds preflop after posting SB — a valid,
