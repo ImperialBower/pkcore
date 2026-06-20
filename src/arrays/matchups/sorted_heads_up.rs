@@ -1010,7 +1010,7 @@ mod arrays__matchups__sorted_heads_up_tests {
     /// This has now stopped dumping on `Build #CL-232.8660.186, built on July 25, 2023`. Removing
     /// the ignore.
     #[test]
-    #[ignore]
+    #[ignore = "too slow"]
     fn distinct() {
         let distinct = SortedHeadsUp::distinct().unwrap();
         let mut holding = HashSet::new();
