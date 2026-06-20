@@ -56,7 +56,9 @@
       "Bash(graphify query *)",
       "Bash(mkdir -p .claude)",
       "Bash(touch .claude/dog-mode)",
-      "Bash(cargo bench *)"
+      "Bash(cargo bench *)",
+      "Read(//Users/christoph/.claude/skills/**)",
+      "Read(//Users/christoph/.claude/skills/graphify/**)"
     ]
   }
 }
