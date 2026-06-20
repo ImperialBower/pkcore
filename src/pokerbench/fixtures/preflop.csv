@@ -1,0 +1,3 @@
+,prev_line,hero_pos,hero_holding,correct_decision,num_players,num_bets,available_moves,pot_size
+0,,SB,Th9h,3.0bb,6,1,"['3.0bb', 'call', 'fold']",1.5
+1,UTG/2.0bb/BTN/call,BB,7d6d,call,3,2,"['call', 'fold']",5.5

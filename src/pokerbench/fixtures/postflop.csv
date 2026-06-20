@@ -1,0 +1,3 @@
+,preflop_action,board_flop,board_turn,board_river,aggressor_position,postflop_action,evaluation_at,available_moves,pot_size,hero_position,holding,correct_decision
+0,BTN/2.5bb/BB/call,Th3s2d,5d,,OOP,OOP_BET_4/IP_CALL/dealcards/5d/OOP_CHECK,Turn,"['Check', 'Bet 9']",13,IP,Kh3h,Check
+1,HJ/2.0bb/BB/call,Ks7h2d,Jc,7c,OOP,OOP_CHECK/IP_BET_5/OOP_RAISE_14/IP_CALL/dealcards/Jc/OOP_CHECK/dealcards/7c/OOP_CHECK,River,"['Check', 'Bet 24']",32,IP,8h8c,Bet 18

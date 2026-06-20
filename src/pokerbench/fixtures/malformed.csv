@@ -1,0 +1,2 @@
+,prev_line,hero_pos,hero_holding,correct_decision,num_players,num_bets,available_moves,pot_size
+0,,ZZ,AhKs,call,2,1,"['call', 'fold']",7

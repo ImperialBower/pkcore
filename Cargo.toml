@@ -1,7 +1,7 @@
 [package]
 name = "pkcore"
 description = "Prototype core poker library."
-version = "0.1.5"
+version = "0.1.6"
 rust-version = "1.94.1"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
@@ -54,6 +54,11 @@ player-stats-persistence = ["player-stats", "dep:serde_yaml_bw"]
 ## gradient-free optimisation loop (EPIC-28).  Requires player-stats and
 ## bot-profiles; adds no external optimiser dependency.
 bot-training = ["player-stats", "bot-profiles", "dep:serde_yaml_bw"]
+## Enables the `pokerbench` module: PokerBench (HuggingFace `RZ412/Pokerbench`
+## scenario model, CSV/JSON loaders, canonical seating, and solver-label scoring.
+## Analysis-only and additive (EPIC-43 Phase 1). Pure parsing — `csv`, `serde`,
+## and `serde_json` are already required, so it adds no new dependencies.
+pokerbench = []
 
 [dependencies]
 bint = "0.1.15"

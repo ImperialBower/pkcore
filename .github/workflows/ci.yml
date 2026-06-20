@@ -16,6 +16,19 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test
 
+  pokerbench:
+    name: PokerBench feature (EPIC-43)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # The pokerbench module is gated off by default, so the plain `test` job
+      # never compiles it. Exercise it explicitly here (tests, doc tests, lints).
+      # clippy comes from rust-toolchain.toml's components on the pinned toolchain.
+      - run: cargo test --features pokerbench
+      - run: cargo clippy --features pokerbench -- -D warnings
+
   marathon:
     name: Bot Marathon (1 000 hands)
     runs-on: ubuntu-latest

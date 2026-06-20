@@ -369,6 +369,8 @@ pub mod games;
 pub mod hand_history;
 mod lookups;
 pub mod play;
+#[cfg(feature = "pokerbench")]
+pub mod pokerbench;
 pub mod prelude;
 pub mod rank;
 pub mod ranks;
