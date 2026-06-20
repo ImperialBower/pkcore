@@ -16,6 +16,44 @@ use std::fmt::{Display, Formatter};
 use wincounter::results::WinResults;
 use wincounter::wins::Wins;
 
+/// Per-seat odds at the current street, as fractions in `0.0..=1.0`.
+///
+/// `equity` is the split-pot value `win + tie / 2.0` (a two-way chop counts
+/// as half a win). `win` and `tie` are kept separate so callers can show a
+/// breakdown.
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::play::game::StreetEquity;
+/// let e = StreetEquity { win: 0.80, tie: 0.04, equity: 0.82 };
+/// assert!((e.equity - (e.win + e.tie / 2.0)).abs() < 1e-9);
+/// ```
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct StreetEquity {
+    pub win: f64,
+    pub tie: f64,
+    pub equity: f64,
+}
+
+/// Normalizes a `WinResults` (percent 0–100) into per-seat split-pot
+/// `StreetEquity` fractions for `n` seats.
+#[cfg(feature = "equity")]
+fn street_equities_from_results(results: &WinResults, n: usize) -> Vec<StreetEquity> {
+    (0..n)
+        .map(|i| {
+            let (w, t) = results.wins_and_ties_percentages(i);
+            let win = f64::from(w) / 100.0;
+            let tie = f64::from(t) / 100.0;
+            StreetEquity {
+                win,
+                tie,
+                equity: win + tie / 2.0,
+            }
+        })
+        .collect()
+}
+
 /// A `Game` is a type that represents a single, abstraction of a game of `Texas hold 'em`.
 ///
 /// ## PHASE 2.2: Display winning percentages
@@ -237,6 +275,64 @@ impl Game {
     #[must_use]
     pub fn has_dealt_turn(&self) -> bool {
         self.board.flop.is_dealt() && self.board.turn.is_dealt()
+    }
+
+    /// Returns per-seat double-dummy odds for the current street, one entry
+    /// per hand in `self.hands` order.
+    ///
+    /// Dispatches on how much of the board is dealt:
+    /// - no flop  → preflop ([`DealEval`](crate::play::stages::deal_eval::DealEval):
+    ///   heads-up table lookup, 3–10 seats seeded Monte Carlo)
+    /// - flop only → [`FlopEval`](crate::play::stages::flop_eval::FlopEval)
+    /// - flop+turn → [`TurnEval`]
+    /// - complete  → [`RiverEval`](crate::play::stages::river_eval::RiverEval)
+    ///
+    /// Every street is normalized to split-pot equity (`win + tie / 2`).
+    ///
+    /// # Errors
+    ///
+    /// Propagates the underlying eval errors — e.g. [`PKError::NotEnoughHands`]
+    /// preflop with fewer than two seats, or duplicate-card errors.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::TestData;
+    ///
+    /// let game = TestData::the_hand();
+    /// let eq = game.street_equities().unwrap();
+    /// assert_eq!(eq.len(), game.hands.len());
+    /// ```
+    #[cfg(feature = "equity")]
+    pub fn street_equities(&self) -> Result<Vec<StreetEquity>, PKError> {
+        use crate::play::stages::deal_eval::DealEval;
+        use crate::play::stages::flop_eval::FlopEval;
+        use crate::play::stages::river_eval::RiverEval;
+        use crate::play::stages::turn_eval::TurnEval;
+
+        let n = self.hands.len();
+        if !self.board.flop.is_dealt() {
+            let eval = DealEval::new(self.hands.clone())?;
+            Ok(eval
+                .report
+                .players
+                .iter()
+                .map(|p| StreetEquity {
+                    win: p.win,
+                    tie: p.tie,
+                    equity: p.equity,
+                })
+                .collect())
+        } else if !self.board.turn.is_dealt() {
+            let eval = FlopEval::try_from(self.clone())?;
+            Ok(street_equities_from_results(&eval.results, n))
+        } else if !self.board.river.is_dealt() {
+            let eval = TurnEval::try_from(self)?;
+            Ok(street_equities_from_results(&eval.results, n))
+        } else {
+            let eval = RiverEval::try_from(self.clone())?;
+            Ok(street_equities_from_results(&eval.results, n))
+        }
     }
 
     // region The Turn
@@ -632,6 +728,50 @@ impl TryFrom<&TableCelled> for Game {
             hands: HoleCards::from(table.seats.clone()),
             board: Board::try_from(table.board.clone())?,
         })
+    }
+}
+
+#[cfg(all(test, feature = "equity"))]
+#[allow(non_snake_case, clippy::unwrap_used)]
+mod street_equities_tests {
+    use super::*;
+    use crate::play::board::Board;
+    use crate::play::hole_cards::HoleCards;
+    use std::str::FromStr;
+
+    fn game(hands: &str, board: &str) -> Game {
+        let board = if board.is_empty() {
+            Board::default()
+        } else {
+            Board::from_str(board).unwrap()
+        };
+        Game::new(HoleCards::from_str(hands).unwrap(), board)
+    }
+
+    #[test]
+    fn street_equities__preflop_aces_are_favorite() {
+        // AA vs KK heads-up preflop ≈ 0.82 / 0.18.
+        let eq = game("As Ah Ks Kh", "").street_equities().unwrap();
+        assert_eq!(eq.len(), 2);
+        assert!(eq[0].equity > 0.80 && eq[0].equity < 0.84, "AA equity {}", eq[0].equity);
+        assert!(eq[1].equity < 0.20, "KK equity {}", eq[1].equity);
+    }
+
+    #[test]
+    fn street_equities__sum_to_about_one_each_street() {
+        for board in ["", "9c 6d 5h", "9c 6d 5h 5s", "9c 6d 5h 5s 8s"] {
+            let eq = game("6s 6h 5d 5c", board).street_equities().unwrap();
+            let sum: f64 = eq.iter().map(|e| e.equity).sum();
+            assert!((sum - 1.0).abs() < 0.02, "board '{board}' summed to {sum}");
+        }
+    }
+
+    #[test]
+    fn street_equities__river_is_deterministic() {
+        // Complete board: exactly one outcome, winner equity == 1.0.
+        let eq = game("As Ks Qd Jd", "Ah Kh Qh 2c 3d").street_equities().unwrap();
+        let total_full: usize = eq.iter().filter(|e| e.equity >= 0.999).count();
+        assert_eq!(total_full, 1, "exactly one river winner: {eq:?}");
     }
 }
 
