@@ -58,7 +58,15 @@
       "Bash(touch .claude/dog-mode)",
       "Bash(cargo bench *)",
       "Read(//Users/christoph/.claude/skills/**)",
-      "Read(//Users/christoph/.claude/skills/graphify/**)"
+      "Read(//Users/christoph/.claude/skills/graphify/**)",
+      "Bash(command -v cargo-deny)",
+      "Bash(cargo deny *)",
+      "Bash(awk -F: '{print $1}')",
+      "Bash(git check-ignore *)",
+      "Bash(awk -F: '$2>0')",
+      "Bash(sort -t: -k2 -rn)",
+      "Bash(cargo tree *)",
+      "Bash(awk 'NR>=425 && NR<=493' src/lib.rs)"
     ]
   }
 }
