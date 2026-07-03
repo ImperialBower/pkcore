@@ -21,6 +21,9 @@ use crate::rank::Rank;
 /// `HighStud` picks the seat with the *best* visible hand (used by Stud
 /// Hi on 4th+); `LowRazz` picks the seat with the *worst* visible hand
 /// (used by Razz, EPIC-33).
+///
+/// TODO: This file is getting to bloated. Need to split it out into smaller topical files
+/// with probs a cleaner structure.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum VisibleHandMode {
     HighStud,
@@ -2645,7 +2648,9 @@ impl TableNoCell {
                 }
                 let tier = self.current_bet_tier();
                 let stack = seat.player.total_chip_count();
-                let max = self.betting.max_raise(self.pot, self.bet, seat.player.bet, stack, tier);
+                let max = self
+                    .betting
+                    .max_raise(self.effective_pot(), self.bet, seat.player.bet, stack, tier);
                 if amount > max {
                     return Err(PKError::ExceedsBettingCap);
                 }
@@ -2696,7 +2701,23 @@ impl TableNoCell {
             self.log(err);
             return Err(PKError::TableActionOutOfOrder(err));
         }
+
+        // Guard for capped betting structures to make sure they don't go over the cap
+        if !self.betting.is_no_limit()
+            && let Some(seat) = self.seats.get_seat(seat_number)
+        {
+            let stack = seat.player.total_chip_count();
+            let tier = self.current_bet_tier();
+            let max = self
+                .betting
+                .max_raise(self.effective_pot(), self.bet, seat.player.bet, stack, tier);
+            if stack > max {
+                return self.act_raise(seat_number, max);
+            }
+        }
+
         let amount = self.seats.act_all_in(seat_number)?;
+
         self.bet = self.bet.max(amount);
         self.log(TableAction::AllIn(seat_number, amount));
         self.log(TableAction::ActionTo(self.next_to_act()));
@@ -3769,8 +3790,6 @@ impl Display for TableNoCell {
     }
 }
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod tests {
@@ -3794,10 +3813,17 @@ mod tests {
         TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100))
     }
 
-    // ── PlayerNoCell ──────────────────────────────────────────────────────────
+    fn make_three_player_plo_table() -> TableNoCell {
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 10_000)),
+        ]);
+        TableNoCell::plo_from_seats(seats, (50, 100))
+    }
 
     #[test]
-    fn test_player_no_cell_new() {
+    fn player_no_cell_new() {
         let p = PlayerNoCell::new("TestPlayer".to_string());
         assert_eq!("TestPlayer", p.handle);
         assert_eq!(0, p.chips);
@@ -3805,32 +3831,32 @@ mod tests {
     }
 
     #[test]
-    fn test_player_no_cell_new_with_chips() {
+    fn player_no_cell_new_with_chips() {
         let p = PlayerNoCell::new_with_chips("Rich".to_string(), 5_000);
         assert_eq!(5_000, p.total_chip_count());
     }
 
     #[test]
-    fn test_player_no_cell_new_with_chips_initializes_withdrawn() {
+    fn player_no_cell_new_with_chips_initializes_withdrawn() {
         let p = PlayerNoCell::new_with_chips("Buy-In Betty".to_string(), 1_000);
         assert_eq!(1_000, p.withdrawn);
     }
 
     #[test]
-    fn test_player_no_cell_new_initializes_withdrawn_to_zero() {
+    fn player_no_cell_new_initializes_withdrawn_to_zero() {
         let p = PlayerNoCell::new("Empty Eddie".to_string());
         assert_eq!(0, p.chips);
         assert_eq!(0, p.withdrawn);
     }
 
     #[test]
-    fn test_player_no_cell_default_withdrawn_is_zero() {
+    fn player_no_cell_default_withdrawn_is_zero() {
         let p = PlayerNoCell::default();
         assert_eq!(0, p.withdrawn);
     }
 
     #[test]
-    fn test_player_no_cell_reload_increments_chips_and_withdrawn() {
+    fn player_no_cell_reload_increments_chips_and_withdrawn() {
         let mut p = PlayerNoCell::new_with_chips("Reload Ron".to_string(), 1_000);
 
         let new_total = p.reload(500);
@@ -3841,7 +3867,7 @@ mod tests {
     }
 
     #[test]
-    fn test_player_no_cell_reload_after_bust() {
+    fn player_no_cell_reload_after_bust() {
         let mut p = PlayerNoCell::new_with_chips("Busted Bart".to_string(), 1_000);
         p.chips = 0;
 
@@ -3853,7 +3879,7 @@ mod tests {
     }
 
     #[test]
-    fn test_player_no_cell_reload_zero_is_noop() {
+    fn player_no_cell_reload_zero_is_noop() {
         let mut p = PlayerNoCell::new_with_chips("Stingy Stan".to_string(), 1_000);
 
         let new_total = p.reload(0);
@@ -3864,7 +3890,7 @@ mod tests {
     }
 
     #[test]
-    fn test_player_no_cell_act_bet_happy_path() {
+    fn player_no_cell_act_bet_happy_path() {
         let mut p = PlayerNoCell::new_with_chips("Bettor".to_string(), 1_000);
         let remaining = p.act_bet(200).unwrap();
         assert_eq!(800, remaining);
@@ -3873,14 +3899,14 @@ mod tests {
     }
 
     #[test]
-    fn test_player_no_cell_act_bet_insufficient_chips() {
+    fn player_no_cell_act_bet_insufficient_chips() {
         let mut p = PlayerNoCell::new_with_chips("Broke".to_string(), 100);
         let err = p.act_bet(200).unwrap_err();
         assert_eq!(PKError::InsufficientChips, err);
     }
 
     #[test]
-    fn test_player_no_cell_act_fold() {
+    fn player_no_cell_act_fold() {
         let mut p = PlayerNoCell::new_with_chips("Folder".to_string(), 1_000);
         p.act_bet(300).unwrap();
         let folded = p.act_fold().unwrap();
@@ -3890,7 +3916,7 @@ mod tests {
     }
 
     #[test]
-    fn test_player_no_cell_act_all_in() {
+    fn player_no_cell_act_all_in() {
         let mut p = PlayerNoCell::new_with_chips("AllIn".to_string(), 500);
         let amount = p.act_all_in().unwrap();
         assert_eq!(500, amount);
@@ -3899,14 +3925,14 @@ mod tests {
     }
 
     #[test]
-    fn test_player_no_cell_act_check() {
+    fn player_no_cell_act_check() {
         let mut p = PlayerNoCell::new_with_chips("Checker".to_string(), 1_000);
         p.act_check().unwrap();
         assert_eq!(PlayerState::Check, p.state);
     }
 
     #[test]
-    fn test_player_no_cell_act_bring_it_in() {
+    fn player_no_cell_act_bring_it_in() {
         let mut p = PlayerNoCell::new_with_chips("Bringer".to_string(), 1_000);
         p.act_bet(400).unwrap();
         let collected = p.act_bring_it_in();
@@ -3917,7 +3943,7 @@ mod tests {
     }
 
     #[test]
-    fn test_player_no_cell_act_close_it_out() {
+    fn player_no_cell_act_close_it_out() {
         let mut p = PlayerNoCell::new_with_chips("Closer".to_string(), 1_000);
         p.act_bet(200).unwrap();
         let collected = p.act_close_it_out().unwrap();
@@ -3925,10 +3951,8 @@ mod tests {
         assert!(matches!(p.state, PlayerState::Showdown(_)));
     }
 
-    // ── SeatNoCell ────────────────────────────────────────────────────────────
-
     #[test]
-    fn test_seat_no_cell_new() {
+    fn seat_no_cell_new() {
         let player = PlayerNoCell::new_with_chips("Seat0".to_string(), 1_000);
         let seat = SeatNoCell::new(player);
         assert!(!seat.is_empty());
@@ -3936,15 +3960,13 @@ mod tests {
     }
 
     #[test]
-    fn test_seat_no_cell_default_is_empty() {
+    fn seat_no_cell_default_is_empty() {
         let seat = SeatNoCell::default();
         assert!(seat.is_empty());
     }
 
-    // ── SeatsNoCell ───────────────────────────────────────────────────────────
-
     #[test]
-    fn test_seats_no_cell_size() {
+    fn seats_no_cell_size() {
         let seats = SeatsNoCell::new(vec![
             SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
@@ -3953,7 +3975,7 @@ mod tests {
     }
 
     #[test]
-    fn test_seats_no_cell_current_bet() {
+    fn seats_no_cell_current_bet() {
         let mut seats = SeatsNoCell::new(vec![
             SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
@@ -3963,7 +3985,7 @@ mod tests {
     }
 
     #[test]
-    fn test_seats_no_cell_bring_it_in() {
+    fn seats_no_cell_bring_it_in() {
         let mut seats = SeatsNoCell::new(vec![
             SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
@@ -3998,10 +4020,8 @@ mod tests {
         assert_eq!(seats.0[1].player.state, PlayerState::YetToAct);
     }
 
-    // ── TableNoCell ───────────────────────────────────────────────────────────
-
     #[test]
-    fn test_table_no_cell_nlh_from_seats() {
+    fn table_no_cell_nlh_from_seats() {
         let table = make_two_player_table();
         assert_eq!(2, table.seats.size());
         assert_eq!(0, table.pot);
@@ -4010,7 +4030,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_no_cell_act_forced_bets() {
+    fn table_no_cell_act_forced_bets() {
         let mut table = make_two_player_table();
         table.act_forced_bets().unwrap();
 
@@ -4022,7 +4042,7 @@ mod tests {
 
     /// In heads-up the button (seat 0) is the SB, the other player is BB.
     #[test]
-    fn test_table_no_cell_hu_button_is_small_blind() {
+    fn table_no_cell_hu_button_is_small_blind() {
         let table = make_two_player_table(); // button = 0
         assert_eq!(0, table.determine_small_blind(), "button should be SB in HU");
         assert_eq!(1, table.determine_big_blind(), "non-button should be BB in HU");
@@ -4030,7 +4050,7 @@ mod tests {
 
     /// In heads-up the SB (button) acts first preflop.
     #[test]
-    fn test_table_no_cell_hu_utg_is_button() {
+    fn table_no_cell_hu_utg_is_button() {
         let mut table = make_two_player_table(); // button = 0
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4040,7 +4060,7 @@ mod tests {
 
     /// After button_up in HU the new button (seat 1) becomes SB.
     #[test]
-    fn test_table_no_cell_hu_button_up_swaps_roles() {
+    fn table_no_cell_hu_button_up_swaps_roles() {
         let mut table = make_two_player_table();
         table.button_up(); // button → 1
         assert_eq!(1, table.determine_small_blind(), "new button (1) should be SB");
@@ -4048,7 +4068,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_no_cell_deal_cards_to_seats() {
+    fn table_no_cell_deal_cards_to_seats() {
         let mut table = make_two_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4056,7 +4076,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_no_cell_deal_flop() {
+    fn table_no_cell_deal_flop() {
         let mut table = make_two_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4072,7 +4092,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_no_cell_deal_turn() {
+    fn table_no_cell_deal_turn() {
         let mut table = make_two_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4092,7 +4112,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_no_cell_act_fold() {
+    fn table_no_cell_act_fold() {
         let mut table = make_three_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4102,7 +4122,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dealt_hole_cards_survive_fold() {
+    fn dealt_hole_cards_survive_fold() {
         let mut table = make_three_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4122,7 +4142,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dealt_hole_cards_cleared_on_reset() {
+    fn dealt_hole_cards_cleared_on_reset() {
         let mut table = make_three_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4132,7 +4152,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dealt_hole_cards_inject() {
+    fn dealt_hole_cards_inject() {
         let mut table = make_two_player_table();
         table.act_forced_bets().unwrap();
         table.inject_hole_cards(&[(0, "A♠ K♠"), (1, "7♦ 2♣")]).unwrap();
@@ -4144,7 +4164,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_no_cell_act_bet() {
+    fn table_no_cell_act_bet() {
         let mut table = make_three_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4155,7 +4175,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_no_cell_act_call() {
+    fn table_no_cell_act_call() {
         let mut table = make_three_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4165,7 +4185,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_no_cell_act_raise() {
+    fn table_no_cell_act_raise() {
         let mut table = make_three_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4175,7 +4195,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_no_cell_act_raise__under_minimum_does_not_corrupt_state() {
+    fn table_no_cell_act_raise__under_minimum_does_not_corrupt_state() {
         // Regression test: an under-minimum raise used to deduct chips and set the
         // player to Raise(_) before the increment check failed. After corruption the
         // seat was no longer "next to act", causing every subsequent raise to fail with
@@ -4201,7 +4221,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_no_cell_act_all_in() {
+    fn table_no_cell_act_all_in() {
         let mut table = make_two_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4211,7 +4231,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_no_cell_end_hand_single_winner() {
+    fn table_no_cell_end_hand_single_winner() {
         let mut table = make_three_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4226,19 +4246,19 @@ mod tests {
     }
 
     #[test]
-    fn test_table_no_cell_table_chip_count() {
+    fn table_no_cell_table_chip_count() {
         let table = make_two_player_table();
         assert_eq!(20_000, table.table_chip_count());
     }
 
     #[test]
-    fn test_table_no_cell_min_raise() {
+    fn table_no_cell_min_raise() {
         let table = make_two_player_table();
         assert_eq!(100, table.min_raise());
     }
 
     #[test]
-    fn test_table_no_cell_to_call() {
+    fn table_no_cell_to_call() {
         let mut table = make_three_player_table();
         table.act_forced_bets().unwrap();
         let utg = table.determine_utg();
@@ -4246,7 +4266,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_no_cell_reset() {
+    fn table_no_cell_reset() {
         let mut table = make_two_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4257,7 +4277,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_no_cell_button_up() {
+    fn table_no_cell_button_up() {
         let mut table = make_two_player_table();
         assert_eq!(0, table.button);
         table.button_up();
@@ -4267,7 +4287,7 @@ mod tests {
     }
 
     #[test]
-    fn test_divvy_up_helper() {
+    fn divvy_up_helper() {
         assert_eq!(vec![100], divvy_up(100, 1));
         assert_eq!(vec![50, 50], divvy_up(100, 2));
         assert_eq!(vec![33, 33, 34], divvy_up(100, 3));
@@ -4275,7 +4295,7 @@ mod tests {
     }
 
     #[test]
-    fn test_table_no_cell_display() {
+    fn table_no_cell_display() {
         let table = make_two_player_table();
         let s = table.to_string();
         assert!(s.contains("No Limit Hold'em Table"));
@@ -4589,7 +4609,7 @@ mod tests {
     /// After dealing hole cards to 2 players (4 cards consumed), then flop:
     /// deck should have 52 - 4 (hole) - 1 (burn) - 3 (flop) = 44 cards.
     #[test]
-    fn test_deal_flop_burns_a_card() {
+    fn deal_flop_burns_a_card() {
         let mut table = make_two_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4607,7 +4627,7 @@ mod tests {
     /// deal_turn must burn one card before dealing the turn card.
     /// After flop (deck at 44), turn should leave deck at 44 - 1 (burn) - 1 (turn) = 42.
     #[test]
-    fn test_deal_turn_burns_a_card() {
+    fn deal_turn_burns_a_card() {
         let mut table = make_two_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4636,7 +4656,7 @@ mod tests {
     /// deck must be fully restored to 52 cards after reset().
     /// Fails if burn cards are discarded rather than mucked.
     #[test]
-    fn test_reset_restores_deck_to_52_after_burns() -> Result<(), crate::PKError> {
+    fn reset_restores_deck_to_52_after_burns() -> Result<(), crate::PKError> {
         let mut table = make_two_player_table();
         table.act_forced_bets()?;
         table.deal_cards_to_seats()?;
@@ -4673,7 +4693,7 @@ mod tests {
     /// deal_river must burn one card before dealing the river card.
     /// After turn (deck at 42), river should leave deck at 42 - 1 (burn) - 1 (river) = 40.
     #[test]
-    fn test_deal_river_burns_a_card() {
+    fn deal_river_burns_a_card() {
         let mut table = make_two_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4923,4 +4943,45 @@ mod tests {
             .act_raise(utg, 200)
             .expect("raise to 200 must be accepted (increment = min_raise)");
     }
+
+    // region PLO
+
+    #[test]
+    fn plo_pot_open() {
+        let mut table = make_three_player_plo_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        let utg = table.determine_utg();
+
+        assert!(table.act_raise(utg, 350).is_ok());
+    }
+
+    #[test]
+    fn plo_raise_above_pot_is_rejected() {
+        let mut table = make_three_player_plo_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        let utg = table.determine_utg();
+
+        assert!(matches!(table.act_raise(utg, 351), Err(PKError::ExceedsBettingCap)));
+    }
+
+    #[test]
+    fn plo_over_pot_all_in_clamps_to_pot() {
+        let mut table = make_three_player_plo_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        let utg = table.determine_utg();
+        let act = table.act_all_in(utg);
+        let seat = table.seats.get_seat(utg).unwrap();
+
+        assert!(act.is_ok());
+        assert!(!seat.player.is_all_in());
+        assert_eq!(9_650, seat.player.chips);
+    }
+
+    // endregion PLO
 }
