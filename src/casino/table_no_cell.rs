@@ -1110,6 +1110,26 @@ impl SeatsNoCell {
             .act_blind_or_all_in(amount)
     }
 
+    /// Posts a *dead* ante for seat `idx`: deducts up to `ante` from the
+    /// player's stack (capped at their chips) into `chips_in_play` **without**
+    /// touching `player.bet`, and returns the amount actually posted (0 if the
+    /// seat is empty or out of chips). The caller adds the returned amount to
+    /// the pot. Because the ante never enters `bet`, it stays dead money — it
+    /// does not credit calls or shrink the bring-in — while `chips_in_play`
+    /// preserves the `pot == Σ chips_in_play` showdown invariant.
+    pub(crate) fn post_dead_ante(&mut self, idx: u8, ante: usize) -> usize {
+        let Some(seat) = self.get_seat_mut(idx) else {
+            return 0;
+        };
+        if seat.is_empty() {
+            return 0;
+        }
+        let actual = ante.min(seat.player.chips);
+        seat.player.chips -= actual;
+        seat.player.chips_in_play += actual;
+        actual
+    }
+
     /// Marks all eligible seats as `YetToAct` for a new hand.
     pub fn set_eligible_to_yet_to_act(&mut self) {
         for seat in &mut self.0 {
@@ -2274,9 +2294,18 @@ impl TableNoCell {
     /// Used by stud-family hands at the start of every hand, and optionally
     /// by Hold'em/Omaha when `forced.ante > 0`.
     ///
+    /// Antes are **dead money**: each ante goes straight into the pot rather
+    /// than into `player.bet`. This matches standard rules — the ante does not
+    /// count toward matching a bet (no caller gets ante credit) and the
+    /// bring-in posts its full amount instead of only the difference above the
+    /// ante. Chip conservation and the `pot == Σ chips_in_play` showdown
+    /// invariant are preserved because the ante moves through `chips_in_play`
+    /// rather than `bet`.
+    ///
     /// # Errors
     ///
-    /// - `PKError::InvalidSeatNumber` if a seat lookup fails.
+    /// This method does not currently return an error; the `Result` is kept
+    /// for signature stability with the rest of the forced-bet API.
     pub fn act_antes(&mut self) -> Result<(), PKError> {
         let ante = self.forced.ante;
         if ante == 0 {
@@ -2284,15 +2313,11 @@ impl TableNoCell {
         }
         let count = self.seats.size();
         for idx in 0..count {
-            let should_post = self
-                .seats
-                .get_seat(idx)
-                .is_some_and(|s| !s.is_empty() && s.player.total_chip_count() > 0);
-            if !should_post {
-                continue;
+            let actual = self.seats.post_dead_ante(idx, ante);
+            if actual > 0 {
+                self.pot += actual;
+                self.log(TableAction::BetAnteForced(idx, actual));
             }
-            let actual = self.seats.act_forced_bet(idx, ante)?;
-            self.log(TableAction::BetAnteForced(idx, actual));
         }
         Ok(())
     }
@@ -3893,10 +3918,35 @@ mod tests {
         let completer = table.next_to_act();
         // Fixed-limit allows exactly one raise-to (completion to 20); an
         // in-between amount like 22 — which NLHE/PLO would accept — is illegal.
-        assert!(matches!(table.act_raise(completer, 22), Err(PKError::ExceedsBettingCap)));
+        assert!(matches!(
+            table.act_raise(completer, 22),
+            Err(PKError::ExceedsBettingCap)
+        ));
         // The rejected raise left state intact (pre-validation before mutation),
         // so the exact completion still succeeds.
         assert!(table.act_raise(completer, 20).is_ok());
+    }
+
+    #[test]
+    fn stud_antes_are_dead_money() {
+        let mut table = make_three_player_stud_table(); // ante 2, bring-in 5
+        table.act_forced_bets().unwrap();
+        // Three antes of 2 go straight to the pot; none sits in a street bet.
+        assert_eq!(6, table.pot);
+        for i in 0..3 {
+            let seat = table.seats.get_seat(i).unwrap();
+            assert_eq!(0, seat.player.bet, "ante must not sit in the street bet");
+            assert_eq!(9_998, seat.player.chips); // 10_000 - ante 2
+        }
+        // Chip conservation: nothing created or destroyed by the antes.
+        assert_eq!(30_000, table.table_chip_count());
+        // The bring-in posts the FULL 5 (not 5 - 2), and a non-bring-in seat
+        // owes the full bring-in with no ante credit.
+        table.deal_stud_3rd_street().unwrap();
+        table.act_bring_in().unwrap();
+        assert_eq!(5, table.bet);
+        let actor = table.next_to_act();
+        assert_eq!(5, table.to_call(actor));
     }
 
     #[test]
@@ -5122,7 +5172,7 @@ mod tests {
             seat.player.state = PlayerState::YetToAct;
             seat.hand.push(card, Visibility::Up);
         }
-        
+
         assert_eq!(2, table.next_to_act());
     }
 
