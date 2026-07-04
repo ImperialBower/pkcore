@@ -674,6 +674,27 @@ The wasm consumers need no change.
 `hand_history`, `BotError`, `SolverError`, `Sqlable`. Copy the
 `PokerBenchError` pattern. *Mechanism:* `clippy.toml` `disallowed-types`.
 
+**Status (0.1.9): done.** All three format-crate leaks stringified onto owned
+error types, following the `PokerBenchError` template:
+- `HandHistory`/`HandCollection::{from,to}_yaml` now return a new owned
+  `HandHistoryError` (was `serde_yaml_bw::Error`) — the surface that previously
+  had *no* owned error type at all.
+- `BotError::Yaml(serde_yaml_bw::Error)` → `Yaml(String)`.
+- `SolverError::{Json(serde_json::Error), Binary(postcard::Error)}` →
+  `Json(String)` / `Binary(String)` (its `Io(std::io::Error)` stays — std is not
+  a format-crate leak and keeps the `source()` chain).
+- `Sqlable`'s `rusqlite` surface is resolved by the P2 route: the trait is now
+  gated behind the `store` feature (III.6.1's "or gate it into the `store`
+  feature"), so the storage crate is opt-in rather than always-public.
+
+The existing `From` impls remain the blessed seams (each carries a local
+`#[allow(clippy::disallowed_types)]`). *Mechanism landed:* `clippy.toml`
+`disallowed-types` for `serde_yaml_bw::Error`, `serde_json::Error`, and
+`postcard::Error` — under `-Dclippy::all` any new use in a non-`#[allow]`ed
+(i.e. public) position fails the build. **Source-breaking only** for a consumer
+that named a format-crate error type in a `match`/signature; none of the in-tree
+consumers do (they use `?`/`unwrap`).
+
 ### P4 — Close the P0s of the last three audits, this time with gates
 
 Implement the six `Cards` bit-operators (transcribe from `Bard`) and delete

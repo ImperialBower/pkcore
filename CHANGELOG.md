@@ -71,6 +71,20 @@ published-crate panic boundary (P1), and the first kernel-purity step (P2).
 - Packaging hygiene (audit P1): fixed the `CLAUDE.md` exclude casing so internal
   docs no longer ship, and excluded `DIARY.md`, `marathon_failure.yaml`, and
   `generated/kuhn-repl-history` from the published crate.
+- **Public error surfaces no longer leak format-crate types (audit P3 /
+  III.6.2).** Following the `PokerBenchError` template, the serialization crates'
+  error types are stringified onto owned errors:
+  - `HandHistory`/`HandCollection::{from,to}_yaml` now return a new owned
+    `HandHistoryError` instead of `serde_yaml_bw::Error`.
+  - `BotError::Yaml` and `SolverError::{Json, Binary}` now carry `String`
+    instead of `serde_yaml_bw::Error` / `serde_json::Error` / `postcard::Error`.
+    (`SolverError::Io(std::io::Error)` is unchanged — std is not a leak.)
+  The `From` impls remain the conversion seams, and a new `clippy.toml`
+  `disallowed-types` gate keeps these format-crate error types out of public
+  signatures going forward. `Sqlable`'s `rusqlite` surface is covered by the
+  `store` feature gate from this same release. This is *source-breaking only*
+  for callers that named one of those format-crate error types directly; callers
+  using `?`/`unwrap` are unaffected.
 
 ### Removed
 
@@ -79,12 +93,20 @@ published-crate panic boundary (P1), and the first kernel-purity step (P2).
 
 ### Compatibility
 
-- **Non-breaking for all current consumers.** Every in-tree dependant
-  (`pkarena0-web`, the `pkdealer` crates, `pkgto-web`, `pkkuhn-web`, `pkpy`,
-  `exgto`) takes the default feature set, so nothing they compile changed. The
-  *breaking* half — flipping `default` to drop `store`/`terminal` — is
-  deferred to 0.2.0 and will ship with companion PRs; see the P2 status note in
-  `docs/AUDIT_Fable_5.md`.
+- **Non-breaking for all current consumers**, verified against every in-tree
+  dependant (`pkarena0-web`, the `pkdealer` crates, `pkgto-web`, `pkkuhn-web`,
+  `pkpy`, `exgto`):
+  - The feature work (P2) is safe because they all take the default feature
+    set, which still includes `store` + `terminal` — nothing they compile
+    changed.
+  - The error-surface work (P3) is *source-breaking in principle* only for a
+    caller that named a format-crate error type (`serde_yaml_bw::Error`, etc.)
+    in a `match` arm or a typed `From`/`?` seam. None do — the consumers that
+    call `from_yaml`/`to_yaml` propagate through `Box<dyn Error>`, `match`, or
+    `Display`, all of which are agnostic to the concrete error type.
+- The *breaking* half of P2 — flipping `default` to drop `store`/`terminal` —
+  remains deferred to 0.2.0 and will ship with companion PRs; see the P2 status
+  note in `docs/AUDIT_Fable_5.md`.
 
 ## [0.1.8] - 2026-06-20
 

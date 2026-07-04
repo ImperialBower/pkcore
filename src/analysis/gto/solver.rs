@@ -118,9 +118,15 @@ pub enum SolverError {
     /// An I/O error reading or writing the file.
     Io(std::io::Error),
     /// A JSON serialization or deserialization error.
-    Json(serde_json::Error),
+    ///
+    /// The `serde_json` cause is stringified so the format crate does not leak
+    /// into pkcore's public API; the `From<serde_json::Error>` impl is the
+    /// blessed conversion seam (`docs/AUDIT_Fable_5.md` III.2).
+    Json(String),
     /// A binary (postcard) serialization or deserialization error.
-    Binary(postcard::Error),
+    ///
+    /// The `postcard` cause is stringified for the same reason as [`SolverError::Json`].
+    Binary(String),
 }
 
 impl fmt::Display for SolverError {
@@ -137,8 +143,8 @@ impl std::error::Error for SolverError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             SolverError::Io(e) => Some(e),
-            SolverError::Json(e) => Some(e),
-            SolverError::Binary(e) => Some(e),
+            // Json/Binary carry stringified causes (no live source to chain).
+            SolverError::Json(_) | SolverError::Binary(_) => None,
         }
     }
 }
@@ -149,15 +155,17 @@ impl From<std::io::Error> for SolverError {
     }
 }
 
+#[allow(clippy::disallowed_types)] // blessed seam: format error stringified, never re-exposed
 impl From<serde_json::Error> for SolverError {
     fn from(e: serde_json::Error) -> Self {
-        SolverError::Json(e)
+        SolverError::Json(e.to_string())
     }
 }
 
+#[allow(clippy::disallowed_types)] // blessed seam: format error stringified, never re-exposed
 impl From<postcard::Error> for SolverError {
     fn from(e: postcard::Error) -> Self {
-        SolverError::Binary(e)
+        SolverError::Binary(e.to_string())
     }
 }
 

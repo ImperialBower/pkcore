@@ -154,6 +154,9 @@ pub use crate::hand_history::{
     HandVariant, Outcome, PlayerEntry, PostedBlind, PreflopStreet, ResultEntry, RiverStreet, Stakes, Streets,
     TableInfo, TurnStreet,
 };
+// The YAML I/O error type only exists with the `hand-histories` feature.
+#[cfg(feature = "hand-histories")]
+pub use crate::hand_history::HandHistoryError;
 
 // player stats (player-stats feature)
 #[cfg(feature = "player-stats")]

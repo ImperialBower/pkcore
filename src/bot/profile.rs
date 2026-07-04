@@ -120,8 +120,12 @@ pub enum BotError {
     /// The profile data is structurally invalid.
     InvalidProfile(String),
     /// A YAML parse or serialization error (requires `bot-profiles` feature).
+    ///
+    /// The `serde_yaml_bw` cause is stringified so the format crate does not leak
+    /// into pkcore's public API; the `From<serde_yaml_bw::Error>` impl is the
+    /// blessed conversion seam (`docs/AUDIT_Fable_5.md` III.2).
     #[cfg(feature = "bot-profiles")]
-    Yaml(serde_yaml_bw::Error),
+    Yaml(String),
     /// An I/O error reading or writing a profile file.
     #[cfg(not(target_arch = "wasm32"))]
     Io(std::io::Error),
@@ -144,7 +148,7 @@ impl std::error::Error for BotError {
         match self {
             BotError::InvalidProfile(_) => None,
             #[cfg(feature = "bot-profiles")]
-            BotError::Yaml(e) => Some(e),
+            BotError::Yaml(_) => None,
             #[cfg(not(target_arch = "wasm32"))]
             BotError::Io(e) => Some(e),
         }
@@ -152,9 +156,10 @@ impl std::error::Error for BotError {
 }
 
 #[cfg(feature = "bot-profiles")]
+#[allow(clippy::disallowed_types)] // blessed seam: format error stringified, never re-exposed
 impl From<serde_yaml_bw::Error> for BotError {
     fn from(e: serde_yaml_bw::Error) -> Self {
-        BotError::Yaml(e)
+        BotError::Yaml(e.to_string())
     }
 }
 

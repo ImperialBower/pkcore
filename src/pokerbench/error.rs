@@ -64,6 +64,7 @@ impl From<csv::Error> for PokerBenchError {
     }
 }
 
+#[allow(clippy::disallowed_types)] // blessed seam: format error stringified, never re-exposed
 impl From<serde_json::Error> for PokerBenchError {
     fn from(err: serde_json::Error) -> Self {
         PokerBenchError::Json(err.to_string())

@@ -786,13 +786,58 @@ impl HandHistory {
 // YAML I/O (feature-gated)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Error returned by [`HandHistory`] / [`HandCollection`] YAML (de)serialization.
+///
+/// The underlying `serde_yaml_bw` error is stringified so the format crate does
+/// not leak into pkcore's public API — keeping the domain-kernel boundary narrow
+/// (see `docs/AUDIT_Fable_5.md` III.2). The `From<serde_yaml_bw::Error>` impl is
+/// the blessed conversion seam.
+///
+/// # Examples
+///
+/// ```
+/// # #[cfg(feature = "hand-histories")]
+/// # {
+/// use pkcore::hand_history::HandHistoryError;
+///
+/// let err = HandHistoryError::Yaml("bad indentation".to_string());
+/// assert!(err.to_string().contains("bad indentation"));
+/// # }
+/// ```
+#[cfg(feature = "hand-histories")]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum HandHistoryError {
+    /// A YAML parse or serialization failure, carrying the stringified cause.
+    Yaml(String),
+}
+
+#[cfg(feature = "hand-histories")]
+impl std::fmt::Display for HandHistoryError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HandHistoryError::Yaml(msg) => write!(f, "HandHistoryError::Yaml YAML (de)serialization failed: {msg}"),
+        }
+    }
+}
+
+#[cfg(feature = "hand-histories")]
+impl std::error::Error for HandHistoryError {}
+
+#[cfg(feature = "hand-histories")]
+#[allow(clippy::disallowed_types)] // blessed seam: format error stringified, never re-exposed
+impl From<serde_yaml_bw::Error> for HandHistoryError {
+    fn from(e: serde_yaml_bw::Error) -> Self {
+        HandHistoryError::Yaml(e.to_string())
+    }
+}
+
 #[cfg(feature = "hand-histories")]
 impl HandHistory {
     /// Deserialize a [`HandHistory`] from a YAML string.
     ///
     /// # Errors
     ///
-    /// Returns [`serde_yaml_bw::Error`] if the YAML is malformed or required
+    /// Returns [`HandHistoryError::Yaml`] if the YAML is malformed or required
     /// fields are missing.
     ///
     /// # Examples
@@ -814,15 +859,15 @@ impl HandHistory {
     /// let hh = HandHistory::from_yaml(yaml).unwrap();
     /// assert_eq!(hh.hand.id, "ex-002");
     /// ```
-    pub fn from_yaml(yaml: &str) -> Result<Self, serde_yaml_bw::Error> {
-        serde_yaml_bw::from_str(yaml)
+    pub fn from_yaml(yaml: &str) -> Result<Self, HandHistoryError> {
+        Ok(serde_yaml_bw::from_str(yaml)?)
     }
 
     /// Serialize this [`HandHistory`] to a YAML string.
     ///
     /// # Errors
     ///
-    /// Returns [`serde_yaml_bw::Error`] if serialization fails.
+    /// Returns [`HandHistoryError::Yaml`] if serialization fails.
     ///
     /// # Examples
     ///
@@ -844,8 +889,8 @@ impl HandHistory {
     /// let out = hh.to_yaml().unwrap();
     /// assert!(out.contains("rt-001"));
     /// ```
-    pub fn to_yaml(&self) -> Result<String, serde_yaml_bw::Error> {
-        serde_yaml_bw::to_string(self)
+    pub fn to_yaml(&self) -> Result<String, HandHistoryError> {
+        Ok(serde_yaml_bw::to_string(self)?)
     }
 }
 
@@ -1142,7 +1187,7 @@ impl HandCollection {
     ///
     /// # Errors
     ///
-    /// Returns a [`serde_yaml_bw::Error`] if the YAML is malformed or does not
+    /// Returns a [`HandHistoryError::Yaml`] if the YAML is malformed or does not
     /// match the expected schema.
     ///
     /// # Examples
@@ -1168,8 +1213,8 @@ impl HandCollection {
     /// assert_eq!(collection.len(), 1);
     /// # }
     /// ```
-    pub fn from_yaml(yaml: &str) -> Result<Self, serde_yaml_bw::Error> {
-        serde_yaml_bw::from_str(yaml)
+    pub fn from_yaml(yaml: &str) -> Result<Self, HandHistoryError> {
+        Ok(serde_yaml_bw::from_str(yaml)?)
     }
 
     /// Serialize this [`HandCollection`] to a YAML string.
@@ -1179,7 +1224,7 @@ impl HandCollection {
     ///
     /// # Errors
     ///
-    /// Returns a [`serde_yaml_bw::Error`] if serialization fails.
+    /// Returns a [`HandHistoryError::Yaml`] if serialization fails.
     ///
     /// # Examples
     ///
@@ -1193,8 +1238,8 @@ impl HandCollection {
     /// assert!(yaml.contains("hands:"));
     /// # }
     /// ```
-    pub fn to_yaml(&self) -> Result<String, serde_yaml_bw::Error> {
-        serde_yaml_bw::to_string(self)
+    pub fn to_yaml(&self) -> Result<String, HandHistoryError> {
+        Ok(serde_yaml_bw::to_string(self)?)
     }
 
     /// Serialize and save this collection to `generated/<run_name>_<unix_ts>.yaml`.

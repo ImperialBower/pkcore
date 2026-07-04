@@ -1,2 +1,15 @@
 # Proper nouns that look like code identifiers to clippy::doc_markdown but aren't.
 doc-valid-idents = ["PokerBench", ".."]
+
+# Format-crate error types must not leak into pkcore's public API — the
+# domain-kernel boundary (AUDIT_Fable_5.md III.2 / P3). Each is stringified into
+# an owned error type (`HandHistoryError`, `BotError`, `SolverError`,
+# `PokerBenchError`); the only sanctioned uses are the blessed `From` conversion
+# seams, which carry a local `#[allow(clippy::disallowed_types)]`. This gate is
+# the mechanism that keeps a future format-crate type from silently re-entering a
+# public signature.
+disallowed-types = [
+    { path = "serde_yaml_bw::Error", reason = "stringify at the From seam; keep it out of public signatures" },
+    { path = "serde_json::Error", reason = "stringify at the From seam; keep it out of public signatures" },
+    { path = "postcard::Error", reason = "stringify at the From seam; keep it out of public signatures" },
+]
