@@ -11,7 +11,6 @@ use strum_macros::AsRefStr;
 ///
 /// This type intentionally carries no data and is used as a namespace for
 /// variant-specific utility methods.
-/// ```
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct California;
 

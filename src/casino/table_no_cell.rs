@@ -1672,7 +1672,7 @@ impl TableNoCell {
     /// ```
     #[must_use]
     pub fn next_to_act(&self) -> u8 {
-        let utg = self.determine_utg();
+        let utg = self.first_to_act_this_street();
         self.seats.next_to_act(utg).unwrap_or(utg)
     }
 
@@ -1680,9 +1680,11 @@ impl TableNoCell {
     /// by [`GameFamily`] (EPIC-29 Phase 9). For Hold'em and Omaha this
     /// delegates to [`determine_utg`](TableNoCell::determine_utg). For
     /// stud-family games (`StudHi`, `Razz`) the implementation in this
-    /// epic returns the position-based seat as a placeholder; EPIC-32
-    /// and EPIC-33 will replace those bodies with bring-in selection on
-    /// 3rd street and best/worst-visible-hand ordering on later streets.
+    /// epic returns the position-based seat as a placeholder;
+    ///
+    /// Hold'em/Omaha -> UTG
+    /// Stud Hi       -> Left of bring in on 3rd, best visible hand after
+    /// Razz          -> Highest up card bring in lowest hand after
     ///
     /// # Examples
     ///
@@ -1788,7 +1790,7 @@ impl TableNoCell {
             if up.is_empty() {
                 continue;
             }
-            let strength = TableNoCell::visible_strength(&up);
+            let strength = TableNoCell::visible_strength(&up, matches!(mode, VisibleHandMode::LowRazz));
             let candidate_score = match mode {
                 VisibleHandMode::HighStud => strength,
                 // For Razz, "best" first-to-act is the LOWEST hand —
@@ -1809,11 +1811,22 @@ impl TableNoCell {
     /// (EPIC-32 Phase 5). Higher = stronger. Tier dominates ranks:
     /// quads(7) > trips(6) > two-pair(2) > pair(1) > high card(0). Within a
     /// tier, the four highest ranks (descending) tie-break.
-    fn visible_strength(cards: &[Card]) -> u64 {
+    fn visible_strength(cards: &[Card], ace_low: bool) -> u64 {
         if cards.is_empty() {
             return 0;
         }
-        let mut ranks: Vec<u8> = cards.iter().map(|c| c.get_rank() as u8).collect();
+
+        let mut ranks: Vec<u8> = cards
+            .iter()
+            .map(|c| {
+                if ace_low {
+                    California::ace_low_rank(c.get_rank())
+                } else {
+                    c.get_rank() as u8
+                }
+            })
+            .collect();
+
         ranks.sort_unstable_by(|a, b| b.cmp(a));
         let mut rank_count: std::collections::HashMap<u8, u8> = std::collections::HashMap::new();
         for &r in &ranks {
@@ -4964,6 +4977,51 @@ mod tests {
 
         // Ace is low in Razz so the King should bring it in.
         assert_eq!(Some(0), table.third_street_extreme_upcard_seat(true));
+    }
+
+    #[test]
+    fn razz_visible_order_prefers_ace_low() {
+        let mut table = make_three_player_razz_table();
+        let hands = [
+            (0u8, [Card::ACE_SPADES, Card::DEUCE_HEARTS, Card::TREY_CLUBS]),
+            (1, [Card::EIGHT_SPADES, Card::SEVEN_HEARTS, Card::SIX_CLUBS]),
+            (2, [Card::KING_SPADES, Card::QUEEN_HEARTS, Card::JACK_CLUBS]),
+        ];
+        for (i, cards) in hands {
+            let seat = table.seats.get_seat_mut(i).unwrap();
+            seat.player.state = PlayerState::YetToAct;
+            for c in cards {
+                seat.hand.push(c, Visibility::Up);
+            }
+        }
+
+        // In Razz the best (lowest) visible hand acts first, and the ace is low,
+        // so A-2-3 leads over 8-7-6.
+        assert_eq!(Some(0), table.best_visible_hand_seat(VisibleHandMode::LowRazz));
+    }
+
+    #[test]
+    fn razz_next_to_act_follows_bring_in_not_position() {
+        let mut table = make_three_player_razz_table();
+        table.button = 0;
+        table.phase = GamePhase::Stud3rd;
+
+        // Upcards: seat 1 shows the King — the highest under ace-low, so it brings
+        // in. Action then opens to its left (seat 2), NOT to position-based UTG
+        // (which, with button 0, would be seat 1).
+        let hands = [
+            (0u8, Card::SEVEN_DIAMONDS),
+            (1, Card::KING_HEARTS),
+            (2, Card::SIX_CLUBS),
+        ];
+
+        for (i, card) in hands {
+            let seat = table.seats.get_seat_mut(i).unwrap();
+            seat.player.state = PlayerState::YetToAct;
+            seat.hand.push(card, Visibility::Up);
+        }
+        
+        assert_eq!(2, table.next_to_act());
     }
 
     // endregion Razz
