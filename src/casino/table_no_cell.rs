@@ -15,7 +15,6 @@ use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
-use crate::rank::Rank;
 
 /// EPIC-32 Phase 5: discriminates Stud-family first-to-act selection.
 /// `HighStud` picks the seat with the *best* visible hand (used by Stud
@@ -30,35 +29,6 @@ pub enum VisibleHandMode {
     LowRazz,
 }
 
-/// Pair-aware strength score for an unordered slice of visible cards
-/// (EPIC-32 Phase 5). Higher = stronger. Tier dominates ranks:
-/// quads(7) > trips(6) > two-pair(2) > pair(1) > high card(0). Within a
-/// tier, the four highest ranks (descending) tie-break.
-fn visible_strength(cards: &[Card]) -> u64 {
-    if cards.is_empty() {
-        return 0;
-    }
-    let mut ranks: Vec<u8> = cards.iter().map(|c| c.get_rank() as u8).collect();
-    ranks.sort_unstable_by(|a, b| b.cmp(a));
-    let mut rank_count: std::collections::HashMap<u8, u8> = std::collections::HashMap::new();
-    for &r in &ranks {
-        *rank_count.entry(r).or_insert(0) += 1;
-    }
-    let max_count = rank_count.values().copied().max().unwrap_or(0);
-    let pair_count = rank_count.values().filter(|&&v| v == 2).count();
-    let tier: u64 = match max_count {
-        4 => 7,
-        3 => 6,
-        2 if pair_count >= 2 => 2,
-        2 => 1,
-        _ => 0,
-    };
-    let r0 = u64::from(ranks.first().copied().unwrap_or(0));
-    let r1 = u64::from(ranks.get(1).copied().unwrap_or(0));
-    let r2 = u64::from(ranks.get(2).copied().unwrap_or(0));
-    let r3 = u64::from(ranks.get(3).copied().unwrap_or(0));
-    tier * 100_000_000 + r0 * 1_000_000 + r1 * 10_000 + r2 * 100 + r3
-}
 use crate::casino::game::ForcedBets;
 use crate::casino::state::PlayerState;
 use crate::casino::table::event::TableAction;
@@ -68,6 +38,7 @@ use crate::casino::table::seats::table_equity::TableEquity;
 use crate::casino::table::winnings::{PotWin, Winnings};
 use crate::games::betting_structure::{BetTier, BettingStructure};
 use crate::games::omaha::OmahaHigh;
+use crate::games::razz::california::California;
 use crate::games::{GameFamily, GamePhase, GameType};
 use crate::play::board::Board;
 use crate::play::game::Game;
@@ -78,24 +49,6 @@ use crate::{Agency, PKError, Pile};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;
-
-// ── helpers ───────────────────────────────────────────────────────────────────
-
-/// Splits `total` chips into `by` roughly equal shares, distributing any
-/// remainder one chip at a time to the last shares.
-fn divvy_up(total: usize, by: usize) -> Vec<usize> {
-    match by {
-        0 | 1 => vec![total],
-        _ => {
-            let share = total / by;
-            let remainder = total % by;
-            (0..by)
-                .map(|i| if i >= by - remainder { share + 1 } else { share })
-                .collect()
-        }
-    }
-}
-
 // ── PlayerNoCell ──────────────────────────────────────────────────────────────
 
 /// A poker player whose mutable state is stored as plain fields instead of
@@ -1835,7 +1788,7 @@ impl TableNoCell {
             if up.is_empty() {
                 continue;
             }
-            let strength = visible_strength(&up);
+            let strength = TableNoCell::visible_strength(&up);
             let candidate_score = match mode {
                 VisibleHandMode::HighStud => strength,
                 // For Razz, "best" first-to-act is the LOWEST hand —
@@ -1850,6 +1803,36 @@ impl TableNoCell {
             }
         }
         best.map(|(seat, _)| seat)
+    }
+
+    /// Pair-aware strength score for an unordered slice of visible cards
+    /// (EPIC-32 Phase 5). Higher = stronger. Tier dominates ranks:
+    /// quads(7) > trips(6) > two-pair(2) > pair(1) > high card(0). Within a
+    /// tier, the four highest ranks (descending) tie-break.
+    fn visible_strength(cards: &[Card]) -> u64 {
+        if cards.is_empty() {
+            return 0;
+        }
+        let mut ranks: Vec<u8> = cards.iter().map(|c| c.get_rank() as u8).collect();
+        ranks.sort_unstable_by(|a, b| b.cmp(a));
+        let mut rank_count: std::collections::HashMap<u8, u8> = std::collections::HashMap::new();
+        for &r in &ranks {
+            *rank_count.entry(r).or_insert(0) += 1;
+        }
+        let max_count = rank_count.values().copied().max().unwrap_or(0);
+        let pair_count = rank_count.values().filter(|&&v| v == 2).count();
+        let tier: u64 = match max_count {
+            4 => 7,
+            3 => 6,
+            2 if pair_count >= 2 => 2,
+            2 => 1,
+            _ => 0,
+        };
+        let r0 = u64::from(ranks.first().copied().unwrap_or(0));
+        let r1 = u64::from(ranks.get(1).copied().unwrap_or(0));
+        let r2 = u64::from(ranks.get(2).copied().unwrap_or(0));
+        let r3 = u64::from(ranks.get(3).copied().unwrap_or(0));
+        tier * 100_000_000 + r0 * 1_000_000 + r1 * 10_000 + r2 * 100 + r3
     }
 
     // ── Phase helpers ─────────────────────────────────────────────────────────
@@ -2256,60 +2239,6 @@ impl TableNoCell {
         Ok(())
     }
 
-    /// EPIC-32 Phase 4: scans every active seat's face-up cards (after
-    /// 3rd-street dealing) and returns the seat showing the lowest-ranked
-    /// upcard. Ties broken by suit (`♣ < ♦ < ♥ < ♠`). Returns `None` when
-    /// no seat has any visible card.
-    ///
-    /// Stud Hi convention: the lowest upcard pays the bring-in.
-    #[must_use]
-    pub fn lowest_upcard_seat(&self) -> Option<u8> {
-        self.extreme_upcard_seat(/*highest=*/ false)
-    }
-
-    /// EPIC-32 Phase 4: companion of [`Self::lowest_upcard_seat`].
-    /// Returns the seat showing the highest-ranked face-up card. Used by
-    /// Razz (EPIC-33), where the highest upcard pays the bring-in.
-    #[must_use]
-    pub fn highest_upcard_seat(&self) -> Option<u8> {
-        self.extreme_upcard_seat(/*highest=*/ true)
-    }
-
-    fn extreme_upcard_seat(&self, highest: bool) -> Option<u8> {
-        let mut best: Option<(u8, Rank, u8)> = None;
-        for (idx, seat) in self.seats.0.iter().enumerate() {
-            if seat.is_empty() || !seat.is_in_hand() {
-                continue;
-            }
-            let Ok(seat_idx) = u8::try_from(idx) else {
-                continue;
-            };
-            for hole_card in seat.hand.iter() {
-                if !hole_card.is_up() {
-                    continue;
-                }
-                let card = hole_card.card();
-                let rank = card.get_rank();
-                let suit = card.get_suit() as u8;
-                let candidate = (seat_idx, rank, suit);
-                match best {
-                    None => best = Some(candidate),
-                    Some((_, br, bs)) => {
-                        let better = if highest {
-                            rank > br || (rank == br && suit > bs)
-                        } else {
-                            rank < br || (rank == br && suit < bs)
-                        };
-                        if better {
-                            best = Some(candidate);
-                        }
-                    }
-                }
-            }
-        }
-        best.map(|(seat, _, _)| seat)
-    }
-
     /// Posts the stud bring-in (EPIC-32 Phase 4). Dispatches on
     /// `game.family()`:
     /// - `StudHi`: lowest 3rd-street upcard pays.
@@ -2346,14 +2275,16 @@ impl TableNoCell {
         Ok(())
     }
 
-    /// EPIC-32 Phase 12: like [`Self::extreme_upcard_seat`] but only
-    /// considers each seat's **first** up-tagged card in dealing order
-    /// — i.e. the 3rd-street upcard. Used by [`Self::act_bring_in`] so
+    /// EPIC-32 Phase 12: returns the active seat with the extreme
+    /// 3rd-street upcard — highest for Razz (`highest = true`, ace ranked
+    /// low), lowest for Stud Hi (`highest = false`, ace ranked high).
+    /// Considers only each seat's **first** up-tagged card in dealing
+    /// order — i.e. the 3rd-street upcard. Used by [`Self::act_bring_in`] so
     /// that replay (which has all 7 cards present) picks the same
     /// bring-in seat as the live session (which had only one upcard
     /// per seat when bring-in was selected).
     fn third_street_extreme_upcard_seat(&self, highest: bool) -> Option<u8> {
-        let mut best: Option<(u8, Rank, u8)> = None;
+        let mut best: Option<(u8, u8, u8)> = None;
         for (idx, seat) in self.seats.0.iter().enumerate() {
             if seat.is_empty() || !seat.is_in_hand() {
                 continue;
@@ -2366,16 +2297,23 @@ impl TableNoCell {
                 continue;
             };
             let card = hole_card.card();
-            let rank = card.get_rank();
+            // let rank = card.get_rank();
+
+            let rank_key = if highest {
+                California::ace_low_rank(card.get_rank())
+            } else {
+                card.get_rank() as u8
+            };
+
             let suit = card.get_suit() as u8;
-            let candidate = (seat_idx, rank, suit);
+            let candidate = (seat_idx, rank_key, suit);
             match best {
                 None => best = Some(candidate),
                 Some((_, br, bs)) => {
                     let better = if highest {
-                        rank > br || (rank == br && suit > bs)
+                        rank_key > br || (rank_key == br && suit > bs)
                     } else {
-                        rank < br || (rank == br && suit < bs)
+                        rank_key < br || (rank_key == br && suit < bs)
                     };
                     if better {
                         best = Some(candidate);
@@ -3291,6 +3229,21 @@ impl TableNoCell {
         }
     }
 
+    /// Splits `total` chips into `by` roughly equal shares, distributing any
+    /// remainder one chip at a time to the last shares.
+    fn divvy_up(total: usize, by: usize) -> Vec<usize> {
+        match by {
+            0 | 1 => vec![total],
+            _ => {
+                let share = total / by;
+                let remainder = total % by;
+                (0..by)
+                    .map(|i| if i >= by - remainder { share + 1 } else { share })
+                    .collect()
+            }
+        }
+    }
+
     /// True when every seat that contributed to the pot has the same
     /// `chips_in_play`. The simple `divvy_up(pot, winners.len())` payout in
     /// `showdown_headsup` is only correct under this condition; otherwise
@@ -3435,7 +3388,7 @@ impl TableNoCell {
 
         let pot = self.pot;
         self.pot = 0;
-        let shares = divvy_up(pot, winners.len());
+        let shares = TableNoCell::divvy_up(pot, winners.len());
 
         let mut results: Vec<PotWin> = Vec::new();
 
@@ -3549,7 +3502,7 @@ impl TableNoCell {
             };
             equity = remaining;
 
-            let shares = divvy_up(total, tied_at_level.len());
+            let shares = TableNoCell::divvy_up(total, tied_at_level.len());
             let is_main_pot = !main_pot_paid;
             main_pot_paid = true;
 
@@ -3647,7 +3600,7 @@ impl TableNoCell {
             };
             equity = remaining;
 
-            let shares = divvy_up(total, tied_side.len());
+            let shares = TableNoCell::divvy_up(total, tied_side.len());
             for (i, &seat_num) in tied_side.iter().enumerate() {
                 let share = shares.get(i).copied().unwrap_or(0);
                 if let Some(seat) = self.seats.get_seat_mut(seat_num) {
@@ -3820,6 +3773,15 @@ mod tests {
             SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 10_000)),
         ]);
         TableNoCell::plo_from_seats(seats, (50, 100))
+    }
+
+    fn make_three_player_razz_table() -> TableNoCell {
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 10_000)),
+        ]);
+        TableNoCell::razz_from_seats(seats, 2, 5, 20, 40)
     }
 
     #[test]
@@ -4288,10 +4250,10 @@ mod tests {
 
     #[test]
     fn divvy_up_helper() {
-        assert_eq!(vec![100], divvy_up(100, 1));
-        assert_eq!(vec![50, 50], divvy_up(100, 2));
-        assert_eq!(vec![33, 33, 34], divvy_up(100, 3));
-        assert_eq!(vec![100], divvy_up(100, 0));
+        assert_eq!(vec![100], TableNoCell::divvy_up(100, 1));
+        assert_eq!(vec![50, 50], TableNoCell::divvy_up(100, 2));
+        assert_eq!(vec![33, 33, 34], TableNoCell::divvy_up(100, 3));
+        assert_eq!(vec![100], TableNoCell::divvy_up(100, 0));
     }
 
     #[test]
@@ -4984,4 +4946,25 @@ mod tests {
     }
 
     // endregion PLO
+
+    // region Razz
+
+    #[test]
+    fn razz_bring_in_is_highest_ace_low() {
+        let mut table = make_three_player_razz_table();
+        for (i, card) in [
+            (0u8, Card::KING_HEARTS),
+            (1, Card::ACE_SPADES),
+            (2, Card::SEVEN_DIAMONDS),
+        ] {
+            let seat = table.seats.get_seat_mut(i).unwrap();
+            seat.player.state = PlayerState::YetToAct;
+            seat.hand.push(card, Visibility::Up);
+        }
+
+        // Ace is low in Razz so the King should bring it in.
+        assert_eq!(Some(0), table.third_street_extreme_upcard_seat(true));
+    }
+
+    // endregion Razz
 }
