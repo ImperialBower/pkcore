@@ -27,7 +27,7 @@ const SOURCE: &str = "replay_consistency_test";
 
 #[test]
 #[ignore = "runs a full bot-selfplay session; use --include-ignored to enable"]
-fn test_bot_selfplay_replay_roundtrip() {
+fn bot_selfplay_replay_roundtrip() {
     let profile_names = ["gto", "tight_passive", "loose_aggressive"];
     let profiles: Vec<BotProfile> = profile_names
         .iter()
@@ -186,7 +186,7 @@ const FLHE_SOURCE: &str = "replay_consistency_flhe";
 
 #[test]
 #[ignore = "runs a full FLHE bot session; use --include-ignored to enable"]
-fn test_flhe_bot_selfplay_replay_roundtrip() {
+fn flhe_bot_selfplay_replay_roundtrip() {
     let profile_names = ["tight_aggressive_flhe", "loose_passive_flhe"];
     let profiles: Vec<BotProfile> = profile_names
         .iter()
@@ -347,7 +347,7 @@ const PLO_SOURCE: &str = "replay_consistency_plo";
 
 #[test]
 #[ignore = "runs a full PLO bot session; use --include-ignored to enable"]
-fn test_plo_bot_selfplay_replay_roundtrip() {
+fn plo_bot_selfplay_replay_roundtrip() {
     let profile_names = ["loose_aggressive_plo", "tight_aggressive_plo"];
     let profiles: Vec<BotProfile> = profile_names
         .iter()
@@ -526,7 +526,7 @@ const STUD_SOURCE: &str = "replay_consistency_stud_hi";
 
 #[test]
 #[ignore = "runs a full Stud Hi bot session; use --include-ignored to enable"]
-fn test_stud_hi_bot_selfplay_replay_roundtrip() {
+fn stud_hi_bot_selfplay_replay_roundtrip() {
     let profile_names = ["tight_aggressive_stud_hi", "loose_passive_stud_hi"];
     let profiles: Vec<BotProfile> = profile_names
         .iter()
@@ -760,7 +760,7 @@ const RAZZ_SOURCE: &str = "replay_consistency_razz";
 
 #[test]
 #[ignore = "runs a full Razz bot session; use --include-ignored to enable"]
-fn test_razz_bot_selfplay_replay_roundtrip() {
+fn razz_bot_selfplay_replay_roundtrip() {
     let profile_names = ["tight_aggressive_razz", "loose_passive_razz"];
     let profiles: Vec<BotProfile> = profile_names
         .iter()

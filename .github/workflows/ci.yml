@@ -47,3 +47,19 @@ jobs:
           name: marathon-failure-${{ github.run_id }}
           path: marathon_failure.yaml
           if-no-files-found: ignore
+
+  variant-replays:
+    name: Variant replays (FLHE/PLO/Stud/Razz)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # The marathon job above is NLHE-only. These round-trips drive a full
+      # bot-selfplay hand of each non-hold'em variant through the engine and
+      # replay it — the only CI coverage that exercises the II.1–II.6 betting
+      # rules (PLO pot cap, stud completion, Razz ace-low bring-in, antes as
+      # dead money) end to end. They are `#[ignore]`d for local speed, so run
+      # them explicitly here.
+      - name: Run variant replay round-trips
+        run: cargo test --test replay_consistency -- --include-ignored --nocapture
