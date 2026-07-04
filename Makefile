@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data
+.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data
 
 # Default target
 default: ayce
@@ -38,6 +38,7 @@ help:
 	@echo ""
 	@echo "WebAssembly:"
 	@echo "  make check-wasm         - Check the library compiles for wasm32-unknown-unknown"
+	@echo "  make check-purity       - Assert no rusqlite/zstd/termion/dotenvy with --no-default-features"
 	@echo "  make generate-hups-bin  - Generate generated/hups.bin for WASM embedded store"
 	@echo ""
 	@echo "Datasets:"
@@ -198,6 +199,20 @@ install-watch:
 # Check that the library compiles for WebAssembly
 check-wasm:
 	cargo check --target wasm32-unknown-unknown
+
+# Kernel purity gate (AUDIT_Fable_5.md III.1 / III.6.1): assert that with default
+# features off, the storage/terminal layers drop out and no rusqlite/zstd/termion/
+# dotenvy remains in the dependency tree. serde_yaml_bw is a documented exception
+# (it arrives transitively via pkstate). Mirrors the CI job in basic.yaml.
+check-purity:
+	@leaked=$$(cargo tree --no-default-features -e no-dev | grep -iE 'rusqlite|zstd|termion|dotenvy' || true); \
+	if [ -n "$$leaked" ]; then \
+		echo "Purity gate FAILED — these deps must be feature-gated behind store/terminal:"; \
+		echo "$$leaked"; \
+		exit 1; \
+	fi; \
+	echo "Purity gate passed: no rusqlite/zstd/termion/dotenvy with --no-default-features."; \
+	echo "(serde_yaml_bw remains via pkstate — documented ceiling, see AUDIT_Fable_5.md III.1.)"
 
 # Generate the embedded HUP binary store for WASM builds
 generate-hups-bin:

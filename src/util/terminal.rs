@@ -12,9 +12,9 @@ use crate::prelude::HoleCards;
 use rand::prelude::*;
 #[cfg(not(target_arch = "wasm32"))]
 use std::io::{Write, stdin, stdout};
-#[cfg(unix)]
+#[cfg(all(unix, feature = "terminal"))]
 use termion::input::TermRead;
-#[cfg(unix)]
+#[cfg(all(unix, feature = "terminal"))]
 use termion::raw::IntoRawMode;
 
 pub struct Terminal;
@@ -41,7 +41,7 @@ impl Terminal {
     /// # Errors
     ///
     /// If unable to read input.
-    #[cfg(unix)]
+    #[cfg(all(unix, feature = "terminal"))]
     pub fn pause(prompt: &str) -> std::io::Result<()> {
         let mut stdout = stdout().into_raw_mode()?;
         write!(stdout, "{prompt}")?;

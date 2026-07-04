@@ -1,4 +1,4 @@
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use crate::analysis::store::bcm::binary_card_map::bc_rank_hashmap;
 use crate::analysis::store::db::hup::HUPResult;
 use crate::analysis::the_nuts::TheNuts;
@@ -11,18 +11,18 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::{PKError, Pile, Shifty, SuitShift};
 use csv::{Reader, WriterBuilder};
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::str::FromStr;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use wincounter::win::Win;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use wincounter::wins::Wins;
 
 pub static SORTED_HEADS_UP_UNIQUE: std::sync::LazyLock<HashSet<SortedHeadsUp>> = std::sync::LazyLock::new(|| {
@@ -113,7 +113,7 @@ impl SortedHeadsUp {
     /// # Errors
     ///
     /// Throws `PKError::SqlError` if unable to select from db.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn hup_result_from_db(&self, conn: &Connection) -> Result<HUPResult, PKError> {
         HUPResult::from_db(conn, &self.higher, &self.lower)
     }
@@ -128,7 +128,7 @@ impl SortedHeadsUp {
     /// # Errors
     ///
     /// If the connection to the database fails, or if the query fails.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn hup_result_from_shift(&self, _conn: &Connection) -> Result<HUPResult, PKError> {
         let _shifts = self.shifts();
         todo!()
@@ -727,7 +727,7 @@ impl SortedHeadsUp {
     /// # Errors
     ///
     /// Throws `PKError` when unable to cast cards correctly.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn wins(&self) -> Result<Wins, PKError> {
         let mut wins = Wins::default();
         let map = bc_rank_hashmap()?;
@@ -1221,7 +1221,7 @@ mod arrays__matchups__sorted_heads_up_tests {
         );
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     #[test]
     fn try_from__hup_result() {}
 }

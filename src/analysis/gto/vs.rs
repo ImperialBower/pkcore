@@ -13,7 +13,7 @@ use crate::{GTO, PKError, Pile, SOK};
 use std::collections::HashMap;
 
 use crate::analysis::store::db::hup::HUPResult;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use rusqlite::Connection;
 use std::fmt::Display;
 
@@ -126,7 +126,7 @@ impl Versus {
     /// Returns `PKError::SqlError` if any matchup is missing from the database.
     /// A missing entry indicates a corrupt or incomplete database, so the entire operation fails
     /// rather than returning a partial result that would silently produce wrong equity calculations.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn hups_at_deal_from_db(&self, conn: &Connection) -> Result<HashMap<Two, HUPResult>, PKError> {
         let mut hm: HashMap<Two, HUPResult> = HashMap::new();
 

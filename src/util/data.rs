@@ -1,10 +1,11 @@
 use crate::analysis::eval::Eval;
 use crate::analysis::gto::odds::WinLoseDraw;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use crate::analysis::store::bcm::binary_card_map::SevenFiveBCM;
 use crate::analysis::store::db::hup::HUPResult;
 use crate::arrays::five::Five;
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
@@ -146,7 +147,7 @@ impl TestData {
     ///
     /// ¯\_(ツ)_/¯
     #[must_use]
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn spades_royal_flush_bcm() -> SevenFiveBCM {
         SevenFiveBCM::try_from(Seven::from_str("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠").unwrap_or_default()).unwrap_or_default()
     }
@@ -155,7 +156,7 @@ impl TestData {
     ///
     /// ¯\_(ツ)_/¯
     #[must_use]
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn spades_king_high_flush_bcm() -> SevenFiveBCM {
         SevenFiveBCM::try_from(Seven::from_str("K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠").unwrap_or_default()).unwrap_or_default()
     }

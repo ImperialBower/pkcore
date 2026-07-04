@@ -32,7 +32,24 @@ default = [
     "player-stats",
     "player-stats-persistence",
     "equity",
+    "store",
+    "terminal",
 ]
+## Enables the on-disk storage layer: SQLite-backed HUP results (the `Sqlable`
+## trait, `HUPResult`'s DB query/insert methods, `Connect`) and the
+## zstd-compressed binary card map (`FiveBCM`/`SevenFiveBCM`, `bc_rank_hashmap`,
+## and `SortedHeadsUp::wins`). Pulls in `rusqlite` (bundled SQLite) and `zstd`.
+## Non-wasm only — those dependencies are target-gated, so the store code is
+## always inert on wasm regardless of this flag. On by default; turn it off with
+## `default-features = false` for a storage-free (pure) build. The pure `HUPResult`
+## data type and its CSV/`Display` helpers remain available without the feature.
+store = ["dep:rusqlite", "dep:zstd"]
+## Enables the interactive terminal layer: `Terminal::pause` (raw-mode key
+## reads) and ANSI colour output in `casino::table` and `analysis::nubibus`.
+## Pulls in `termion` (unix only). With the feature off, colour output falls
+## back to the existing no-op shims and `pause` is unavailable — giving a
+## delivery-agnostic (headless) build. On by default.
+terminal = ["dep:termion"]
 ## When enabled, `SolverResult::save` and `SolverResult::load` use human-readable
 ## JSON instead of the default compact binary (postcard) format. Useful for
 ## inspecting solver output during development. The explicit `save_json` /
@@ -76,7 +93,6 @@ bint = "0.1.15"
 cardpack = "0.6.9"
 bitvec = { version = "1.1", features = ["alloc",  "atomic", "std", "serde", "testing" ] }
 csv = "1.4"
-dotenvy = "0.15"
 indexmap = { version = "2.12", features = ["rayon"] }
 itertools = "0.14"
 log = "0.4"
@@ -97,11 +113,11 @@ uuid = { version = "1.22", features = ["serde", "v4"] }
 wincounter = "0.1.5"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rusqlite = { version = "0.34", features = ["bundled"] } # 0.35 breaks HUPResult https://github.com/rusqlite/rusqlite/releases#reactions--reaction_button_component-a0702b
-zstd = "0.13"
+rusqlite = { version = "0.34", optional = true, features = ["bundled"] } # 0.35 breaks HUPResult https://github.com/rusqlite/rusqlite/releases#reactions--reaction_button_component-a0702b
+zstd = { version = "0.13", optional = true }
 
 [target.'cfg(unix)'.dependencies]
-termion = "4.0"
+termion = { version = "4.0", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom_v2 = { package = "getrandom", version = "0.2", features = ["js"] }

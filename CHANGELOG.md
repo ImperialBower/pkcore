@@ -5,6 +5,87 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.9] - unreleased
+
+This release closes the P0–P2 items of the Fable 5 audit
+(`docs/AUDIT_Fable_5.md`): the confirmed variant-engine rule bugs (Part II), the
+published-crate panic boundary (P1), and the first kernel-purity step (P2).
+
+### Fixed
+
+- **PLO pot-limit betting (audit II.1 / II.2).** `act_raise` now sizes the max
+  raise off `effective_pot()` (pot + all live wagers) instead of `self.pot`, so
+  the standard pot-open — e.g. to 350 in a 50/100 game — is legal again rather
+  than rejected as `ExceedsBettingCap`. Over-pot all-ins now clamp to the pot
+  (routed through `act_raise`) instead of bypassing the cap entirely.
+- **Razz bring-in treated the ace as high (audit II.4).**
+  `third_street_extreme_upcard_seat` now ranks the ace low (new
+  `California::ace_low_rank()`), so a King correctly brings in over an Ace.
+- **Stud/Razz action order followed the button, not the upcards (audit II.5).**
+  `next_to_act` now seeds from `first_to_act_this_street`, so Stud/Razz action
+  follows the upcards (bring-in-relative on 3rd street, best-visible thereafter).
+  NLHE is provably unchanged (that resolver still returns UTG for Hold'em).
+- **Fixed-limit completion / stud betting ladder (audit II.3)** and **stud antes
+  are now dead money (audit II.6)** rather than being credited toward the
+  bring-in seat's call.
+- Regression tests added for each of the above (`plo_pot_open`,
+  `plo_over_pot_all_in_clamps_to_pot`, `razz_bring_in_is_highest_ace_low`, …),
+  and a CI gate now runs the variant replay-consistency round-trips (FLHE / PLO /
+  stud / razz) that were previously `#[ignore]`d.
+
+### Added
+
+- **`PKError::BcmUnavailable` + a non-panicking BCM loader (audit P1).** The
+  binary-card-map statics no longer `unwrap()` on a missing `bcm.zst`: a new pure
+  `load_bc_rank_map(path) -> Result<…, PKError>` and blessed `bc_rank_hashmap()`
+  accessor return `Err(PKError::BcmUnavailable)` instead of aborting. This fixes
+  the hard panic that hit every crates.io consumer of `SortedHeadsUp::wins()` and
+  the `StartingHands` BCM case-evals.
+- `keywords`, `categories`, and `[package.metadata.docs.rs] all-features = true`
+  to the manifest, so docs.rs renders the feature-gated items with their
+  "available on feature X" banners.
+- Two new cargo features that make the kernel's storage and terminal layers
+  optional (audit P2 / III.6.1):
+  - `store` — the SQLite-backed HUP store (`Sqlable`, `Connect`, `HUPResult`'s
+    DB methods) and the zstd-compressed binary card map (`FiveBCM`,
+    `SevenFiveBCM`, `bc_rank_hashmap`, `SortedHeadsUp::wins`). Pulls in
+    `rusqlite` (bundled SQLite) and `zstd`.
+  - `terminal` — `Terminal::pause` (raw-mode key reads) and ANSI colour output
+    in `casino::table` / `analysis::nubibus`. Pulls in `termion`.
+  Both are **on by default**, so a plain `cargo add pkcore` and every existing
+  consumer are unaffected — the compiled API is identical. Building with
+  `default-features = false` now produces a storage-free, headless (pure) build;
+  opt back in with `features = ["store", "terminal"]`.
+
+### Changed
+
+- `rusqlite`, `zstd`, and `termion` are now optional dependencies, gated behind
+  `store`/`terminal`. With default features off they no longer appear in the
+  dependency tree — enforced by a new CI purity gate and `make check-purity`.
+  (`serde_yaml_bw` still arrives transitively via `pkstate`; that is the
+  documented upstream ceiling, `AUDIT_Fable_5.md` III.1.)
+- The `UNIQUE_HANDS` five-card distinct-hands enumeration (which silently
+  degraded to empty when its generated input file was absent) now lives behind a
+  new non-default `generators` feature, keeping the self-generated-data path out
+  of the default published API.
+- Packaging hygiene (audit P1): fixed the `CLAUDE.md` exclude casing so internal
+  docs no longer ship, and excluded `DIARY.md`, `marathon_failure.yaml`, and
+  `generated/kuhn-repl-history` from the published crate.
+
+### Removed
+
+- The `dotenvy` dependency. `HUPResult::db_path` now reads `HUPS_DB_PATH` via
+  `std::env::var` directly (no `.env` file auto-loading).
+
+### Compatibility
+
+- **Non-breaking for all current consumers.** Every in-tree dependant
+  (`pkarena0-web`, the `pkdealer` crates, `pkgto-web`, `pkkuhn-web`, `pkpy`,
+  `exgto`) takes the default feature set, so nothing they compile changed. The
+  *breaking* half — flipping `default` to drop `store`/`terminal` — is
+  deferred to 0.2.0 and will ship with companion PRs; see the P2 status note in
+  `docs/AUDIT_Fable_5.md`.
+
 ## [0.1.8] - 2026-06-20
 
 ### Added

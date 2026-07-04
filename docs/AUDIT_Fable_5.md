@@ -636,6 +636,39 @@ Feature-gate rusqlite/zstd/termion, delete dotenvy, flip defaults with a
 `pkstate` YAML-optionality fix upstream. *Mechanism:* CI purity gate on
 `cargo tree --no-default-features`.
 
+**Status (0.1.9): "reachable" half done; default-flip deferred.** Landed:
+`store = ["dep:rusqlite", "dep:zstd"]` and `terminal = ["dep:termion"]`, both
+**added to `default`** (so no consumer sees a change); `dotenvy` deleted
+(`std::env::var`); store code re-gated to
+`all(feature = "store", not(target_arch = "wasm32"))`, terminal code to
+`all(unix, feature = "terminal")`; the CI purity gate + `make check-purity`
+enforce that `cargo tree --no-default-features -e no-dev` is free of
+rusqlite/zstd/termion/dotenvy (`serde_yaml_bw` allowlisted — the pkstate
+ceiling, III.1). `--no-default-features` now yields a pure build.
+
+**The default-flip is the breaking half — deferred to 0.2.0.** Adding the
+features to `default` is *non-breaking*: every current consumer takes the
+default set, so the compiled API is byte-for-byte identical. Verified against
+every in-tree dependant — **none uses `default-features = false`**, so none is
+affected by 0.1.9:
+
+| Consumer | pkcore declaration | Needs `["store"]`/`["terminal"]` when defaults flip? |
+|---|---|---|
+| `pkarena0-web` | `features = ["bot-profiles", "hand-histories"]` | Yes if it uses `Terminal::pause`/BCM — audit at flip time |
+| `pkdealer_client` | `"0.1.3"` (plain default) | Yes if it uses store/terminal APIs |
+| `pkdealer_service` | `"0.1.3"` (plain default) | Yes if it uses store/terminal APIs |
+| `pkdealer_agent_rules` | `features = ["bot-profiles"]` | Likely no (profile-only) — confirm at flip |
+| `pkgto-web` | `"0.0.28"` (wasm) | No — wasm never had these deps |
+| `pkkuhn-web` | `"0.0.39"` (wasm) | No — wasm never had these deps |
+| `pkpy` | `"0.0.35"` | Yes if it exposes store/terminal APIs |
+| `exgto` | `"0.0.25"` | Yes if it uses store/terminal APIs |
+
+When flipping `default = ["equity"]` (+ a `full` umbrella): bump to 0.2.0, and
+land companion PRs adding explicit `features = [...]` to any consumer above that
+actually calls a store (`wins()`, `Sqlable`/`Connect`, `FiveBCM`/`SevenFiveBCM`,
+`HUPResult` SQLite methods) or terminal (`Terminal::pause`, ANSI colour) API.
+The wasm consumers need no change.
+
 ### P3 — Kernel step 2: de-leak the four public error surfaces (III.6.2)
 
 `hand_history`, `BotError`, `SolverError`, `Sqlable`. Copy the

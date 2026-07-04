@@ -23,9 +23,9 @@ use seats::seat::Seat;
 use std::cell::{Cell, Ref};
 use std::cell::{RefCell, RefMut};
 use std::collections::HashMap;
-#[cfg(unix)]
+#[cfg(all(unix, feature = "terminal"))]
 use termion::color;
-#[cfg(not(unix))]
+#[cfg(not(all(unix, feature = "terminal")))]
 mod color {
     pub struct Fg<T>(pub T);
     impl<T> std::fmt::Display for Fg<T> {

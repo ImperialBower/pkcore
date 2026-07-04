@@ -120,10 +120,10 @@ pub use crate::casino::table::winnings::{PotWin, Winnings};
 pub use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
 
 // analysis/store
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 pub use crate::analysis::store::bcm::binary_card_map::{FiveBCM, SevenFiveBCM};
 pub use crate::analysis::store::db::hup::HUPResult;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 pub use crate::analysis::store::db::sqlite::Connect;
 pub use crate::analysis::store::heads_up::HUP;
 

@@ -2,7 +2,7 @@ use crate::PKError;
 use crate::analysis::class::HandRankClass;
 use crate::analysis::hand_rank::HandRank;
 use crate::analysis::name::HandRankName;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use crate::analysis::store::bcm::binary_card_map::FiveBCM;
 use crate::arrays::HandRanker;
 use crate::arrays::five::Five;
@@ -296,7 +296,7 @@ impl From<Five> for Eval {
     }
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 impl TryFrom<FiveBCM> for Eval {
     type Error = PKError;
 

@@ -180,7 +180,7 @@ fn process(conn: &Connection, shu: &SortedHeadsUp) {
 }
 
 fn reader() -> Reader<File> {
-    let distinct_key_path = dotenvy::var("DISTINCT_KEY_PATH").unwrap();
+    let distinct_key_path = std::env::var("DISTINCT_KEY_PATH").unwrap();
     let file = File::open(distinct_key_path).unwrap();
     Reader::from_reader(file)
 }

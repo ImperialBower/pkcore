@@ -12,9 +12,9 @@ use std::fs;
 use std::ops::Index;
 use std::path::Path;
 use std::str::FromStr;
-#[cfg(unix)]
+#[cfg(all(unix, feature = "terminal"))]
 use termion::color;
-#[cfg(not(unix))]
+#[cfg(not(all(unix, feature = "terminal")))]
 mod color {
     pub struct Fg<T>(pub T);
     impl<T> std::fmt::Display for Fg<T> {

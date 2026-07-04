@@ -114,3 +114,23 @@ jobs:
       # feature. Guards against the equity engine bit-rotting or coupling to the
       # default stack (it silently broke once because nothing on CI built it).
       - run: cargo check --no-default-features --features equity --lib --tests
+      # Kernel purity gate (AUDIT_Fable_5.md III.1 / III.6.1): with default
+      # features off, the storage (`store`) and terminal (`terminal`) layers must
+      # drop out entirely — no rusqlite/zstd/termion/dotenvy in the dependency
+      # tree. This is the mechanism that keeps purity reachable; without it, a new
+      # non-optional dependency would silently re-cap the kernel.
+      # NOTE: `serde_yaml_bw` is a *documented exception* — it arrives
+      # transitively through `pkstate`, so pkcore cannot drop it until pkstate
+      # makes its YAML optional upstream. Remove it from the allowlist once that
+      # lands.
+      - name: Kernel purity gate (no-default-features)
+        run: |
+          tree=$(cargo tree --no-default-features -e no-dev)
+          leaked=$(echo "$tree" | grep -iE 'rusqlite|zstd|termion|dotenvy' || true)
+          if [ -n "$leaked" ]; then
+            echo "::error::Purity gate failed — these deps must be feature-gated behind store/terminal:"
+            echo "$leaked"
+            exit 1
+          fi
+          echo "Purity gate passed: no rusqlite/zstd/termion/dotenvy with --no-default-features."
+          echo "(serde_yaml_bw remains via pkstate — documented ceiling, see AUDIT_Fable_5.md III.1.)"

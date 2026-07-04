@@ -1,4 +1,5 @@
 use crate::analysis::case_eval::CaseEval;
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
 use crate::analysis::the_nuts::TheNuts;
@@ -12,13 +13,13 @@ use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use crate::analysis::store::bcm::binary_card_map::bc_rank_hashmap;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use rayon::iter::ParallelIterator;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use std::sync::mpsc;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use std::thread;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -32,7 +33,7 @@ impl StartingHands {
     /// # Errors
     ///
     /// If `BC_RANK_HASHMAP` is incapable of parsing the cards passed in.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn bcm_case_eval(&self, case: Five) -> Result<CaseEval, PKError> {
         let mut case_eval = CaseEval::default();
         let map = bc_rank_hashmap()?;
@@ -48,7 +49,7 @@ impl StartingHands {
         Ok(case_eval)
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     fn process_case(twos: StartingHands, v: Vec<Card>) -> Result<CaseEval, PKError> {
         let case = Five::try_from(v)?;
         let mut case_eval = CaseEval::default();
@@ -72,7 +73,7 @@ impl StartingHands {
     /// # Panics
     ///
     /// If unable to process case
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn bcm_mpsc_case_evals(&self) -> Result<CaseEvals, PKError> {
         let mut case_evals = CaseEvals::default();
         let twos = *self;
@@ -140,7 +141,7 @@ impl StartingHands {
     ///
     /// Returns [`PKError::BcmUnavailable`] if the BCM data file is absent, or a
     /// cast error if a card combination is invalid.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn bcm_rayon_case_evals(&self) -> Result<CaseEvals, PKError> {
         let v: Vec<CaseEval> = self
             .par_combinations_remaining(5)
