@@ -490,6 +490,14 @@ pub enum PKError {
         expected: usize,
         actual: usize,
     },
+    /// The Binary Card Map (`generated/bcm.zst`, ~403 MB) could not be loaded —
+    /// it is self-generated data that is absent from the published crate.
+    ///
+    /// Returned by BCM-backed APIs ([`SortedHeadsUp::wins`][crate::arrays::matchups::sorted_heads_up::SortedHeadsUp::wins]
+    /// and `StartingHands` case evals) instead of panicking. Generate the file
+    /// with [`SevenFiveBCM::generate_bin`][crate::analysis::store::bcm::binary_card_map::SevenFiveBCM::generate_bin]
+    /// and point `PKCORE_75BCM_PATH` at it.
+    BcmUnavailable,
 }
 
 impl Display for PKError {
@@ -549,6 +557,7 @@ impl Display for PKError {
             PKError::ChipAuditFailed { expected, actual } => {
                 &*format!("Chip audit failed: expected {expected} chips, found {actual}")
             }
+            PKError::BcmUnavailable => "Binary Card Map data unavailable (set PKCORE_75BCM_PATH)",
         };
         write!(f, "{msg}")
     }

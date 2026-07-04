@@ -13,7 +13,7 @@ use std::fmt::Formatter;
 use std::str::FromStr;
 
 #[cfg(not(target_arch = "wasm32"))]
-use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
+use crate::analysis::store::bcm::binary_card_map::bc_rank_hashmap;
 #[cfg(not(target_arch = "wasm32"))]
 use rayon::iter::ParallelIterator;
 #[cfg(not(target_arch = "wasm32"))]
@@ -35,11 +35,12 @@ impl StartingHands {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn bcm_case_eval(&self, case: Five) -> Result<CaseEval, PKError> {
         let mut case_eval = CaseEval::default();
+        let map = bc_rank_hashmap()?;
 
         for player in &self.vec() {
             if let Ok(seven) = Seven::from_case_at_deal(*player, case) {
                 let bard = seven.bard();
-                let bcm = BC_RANK_HASHMAP.get(&bard).ok_or(PKError::Incomplete)?;
+                let bcm = map.get(&bard).ok_or(PKError::Incomplete)?;
                 case_eval.push(Eval::try_from(*bcm)?);
             }
         }
@@ -51,11 +52,12 @@ impl StartingHands {
     fn process_case(twos: StartingHands, v: Vec<Card>) -> Result<CaseEval, PKError> {
         let case = Five::try_from(v)?;
         let mut case_eval = CaseEval::default();
+        let map = bc_rank_hashmap()?;
 
         for player in twos.vec() {
             if let Ok(seven) = Seven::from_case_at_deal(player, case) {
                 let bard = seven.bard();
-                let bcm = BC_RANK_HASHMAP.get(&bard).ok_or(PKError::Incomplete)?;
+                let bcm = map.get(&bard).ok_or(PKError::Incomplete)?;
                 case_eval.push(Eval::try_from(*bcm)?);
             }
         }
@@ -134,19 +136,19 @@ impl StartingHands {
     ///     // Ok(CaseEvals::from(v))
     /// }
     /// ```
-    /// # Panics
+    /// # Errors
     ///
-    /// Should not be possible. Fingers crossed
+    /// Returns [`PKError::BcmUnavailable`] if the BCM data file is absent, or a
+    /// cast error if a card combination is invalid.
     #[cfg(not(target_arch = "wasm32"))]
-    #[allow(clippy::unwrap_used)]
     pub fn bcm_rayon_case_evals(&self) -> Result<CaseEvals, PKError> {
         let v: Vec<CaseEval> = self
             .par_combinations_remaining(5)
             .map(|v| {
-                let five = Five::try_from(v).unwrap();
-                self.bcm_case_eval(five).unwrap()
+                let five = Five::try_from(v)?;
+                self.bcm_case_eval(five)
             })
-            .collect();
+            .collect::<Result<Vec<CaseEval>, PKError>>()?;
         Ok(CaseEvals::from(v))
     }
 

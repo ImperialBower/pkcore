@@ -1,7 +1,9 @@
 use crate::arrays::HandRanker;
 use crate::arrays::five::Five;
 use crate::deck::POKER_DECK;
+#[cfg(feature = "generators")]
 use std::fs::read_to_string;
+#[cfg(feature = "generators")]
 use std::str::FromStr;
 
 /// The big difference between this and `FIVE_CARD_COMBOS` is that the hands are sorted
@@ -16,13 +18,18 @@ pub static DISTINCT_HANDS: std::sync::LazyLock<Hands> = std::sync::LazyLock::new
     Hands::from(hands)
 });
 
+/// Historical generator input: the distinct 5-card hands read from an offline,
+/// self-generated file (`generated/5card_distinct_hands.txt`). Too large to
+/// commit, it was used to *produce* other artifacts offline and has no runtime
+/// callers, so it is gated behind the non-default `generators` feature and does
+/// not ship as part of the default published API. The read is anchored to the
+/// crate root, and is empty unless the file has been generated.
+#[cfg(feature = "generators")]
 pub static UNIQUE_HANDS: std::sync::LazyLock<Hands> = std::sync::LazyLock::new(|| {
     let mut hands: Vec<Five> = Vec::new();
 
-    for line in read_to_string("generated/5card_distinct_hands.txt")
-        .unwrap_or_default()
-        .lines()
-    {
+    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/generated/5card_distinct_hands.txt");
+    for line in read_to_string(path).unwrap_or_default().lines() {
         if line.is_empty() {
             continue; // Skip empty lines
         }

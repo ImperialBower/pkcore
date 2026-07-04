@@ -63,3 +63,18 @@ jobs:
       # them explicitly here.
       - name: Run variant replay round-trips
         run: cargo test --test replay_consistency -- --include-ignored --nocapture
+
+  package:
+    name: Package smoke (published-crate build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # Publish-honesty gate (audit P1): verify-build the crate exactly as it
+      # ships from the packaged tarball — the ~403 MB generated/bcm.zst is absent
+      # here, so this proves the BCM-backed APIs degrade to Err(BcmUnavailable)
+      # rather than failing the build, and that no excluded internal files are
+      # required to compile.
+      - name: cargo package (verify build of packaged crate)
+        run: cargo package

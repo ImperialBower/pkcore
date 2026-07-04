@@ -1,5 +1,5 @@
 #[cfg(not(target_arch = "wasm32"))]
-use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
+use crate::analysis::store::bcm::binary_card_map::bc_rank_hashmap;
 use crate::analysis::store::db::hup::HUPResult;
 use crate::analysis::the_nuts::TheNuts;
 use crate::arrays::five::Five;
@@ -730,12 +730,13 @@ impl SortedHeadsUp {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn wins(&self) -> Result<Wins, PKError> {
         let mut wins = Wins::default();
+        let map = bc_rank_hashmap()?;
 
         for combo in self.remaining().combinations(5) {
             let (high7, low7) = self.sevens(Five::try_from(combo)?)?;
 
-            let high_rank = BC_RANK_HASHMAP.get(&high7.bard()).ok_or(PKError::InvalidHand)?;
-            let low_rank = BC_RANK_HASHMAP.get(&low7.bard()).ok_or(PKError::InvalidHand)?;
+            let high_rank = map.get(&high7.bard()).ok_or(PKError::InvalidHand)?;
+            let low_rank = map.get(&low7.bard()).ok_or(PKError::InvalidHand)?;
 
             match high_rank.rank.cmp(&low_rank.rank) {
                 Ordering::Less => wins.add(Win::FIRST),
