@@ -1,11 +1,11 @@
 use crate::Pile;
 use crate::arrays::five::Five;
+use crate::prelude::Rank;
 use std::fmt;
 use std::fmt::Display;
 use std::fmt::Formatter;
 use strum::{EnumIter, IntoEnumIterator};
 use strum_macros::AsRefStr;
-use crate::prelude::Rank;
 
 /// Empty marker type for California lowball evaluation helpers.
 ///
@@ -27,31 +27,14 @@ impl California {
     ///
     /// assert_eq!(1, California::ace_low_rank(Rank::ACE));
     /// assert_eq!(2, California::ace_low_rank(Rank::DEUCE));
+    /// assert_eq!(13, California::ace_low_rank(Rank::KING));
     /// ```
+    #[must_use]
     pub fn ace_low_rank(rank: Rank) -> u8 {
         match rank {
             Rank::ACE => 1,
             other => other as u8,
         }
-    }
-}
-
-#[cfg(test)]
-mod california_tests {
-    use super::*;
-
-    #[test]
-    fn test_california_happy_path() {
-        let california = California;
-        let california_default = California::default();
-        assert_eq!(california, california_default);
-    }
-
-    #[test]
-    fn test_ace_low_rank_happy_path() {
-        assert_eq!(1, California::ace_low_rank(Rank::ACE));
-        assert_eq!(2, California::ace_low_rank(Rank::DEUCE));
-        assert_eq!(13, California::ace_low_rank(Rank::KING));
     }
 }
 
