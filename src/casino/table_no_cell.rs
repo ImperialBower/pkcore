@@ -2047,6 +2047,51 @@ impl TableNoCell {
         }
     }
 
+    /// Minimum legal *absolute* raise-to amount (not the delta over the
+    /// current bet).
+    ///
+    /// Normally this is `self.bet + min_raise()`. The exception is
+    /// **completion** (EPIC-32): in Seven-Card Stud the bring-in is a
+    /// partial forced bet smaller than the full small bet, so the first
+    /// voluntary raise *completes* the bet to one full bet for the street's
+    /// tier rather than adding a whole increment on top of the bring-in.
+    /// With a 5 bring-in and a 20 small bet, real stud plays
+    /// 5 → 20 → 40 → 60 (complete, then full-bet raises), not
+    /// 5 → 25 → 45 → 65. Hold'em/Omaha are unaffected because the big blind
+    /// already equals a full bet, so `self.bet` is never below `min_raise()`
+    /// when action opens.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::games::GamePhase;
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let mut t = TableNoCell::stud_hi_from_seats(seats, 2, 5, 20, 40);
+    /// t.phase = GamePhase::Stud3rd;
+    /// t.bet = 5; // bring-in posted
+    /// // Completing the bring-in means raising to the full small bet (20).
+    /// assert_eq!(20, t.min_raise_to());
+    /// t.bet = 20; // bet completed
+    /// assert_eq!(40, t.min_raise_to()); // now a full-bet raise
+    /// ```
+    #[must_use]
+    pub fn min_raise_to(&self) -> usize {
+        let full = self.min_raise();
+        if self.bet < full {
+            // Completion: only a partial forced bet (the stud bring-in) is on
+            // the table, so the minimum legal raise is to one full bet for the
+            // street, not a full increment on top of the bring-in.
+            full
+        } else {
+            self.bet.saturating_add(full)
+        }
+    }
+
     /// Returns the [`BetTier`] for the current `phase` based on the
     /// game's street-descriptor table (EPIC-30 Phase 1).
     ///
@@ -2585,7 +2630,7 @@ impl TableNoCell {
         if let Some(seat) = self.seats.get_seat(seat_number) {
             let would_be_all_in = amount >= seat.player.total_chip_count();
             if !would_be_all_in {
-                if amount.saturating_sub(self.bet) < self.min_raise() {
+                if amount < self.min_raise_to() {
                     return Err(PKError::InsufficientIncrement);
                 }
                 // EPIC-30 Phase 3: enforce Fixed-Limit raise cap and
@@ -2676,13 +2721,16 @@ impl TableNoCell {
     }
 
     fn set_raise_increment(&mut self, seat_number: u8, amount: usize) -> Result<(), PKError> {
-        if let Some(seat) = self.seats.get_seat(seat_number) {
-            if !seat.is_all_in() && amount < self.min_raise() {
-                return Err(PKError::InsufficientIncrement);
-            }
-            if !seat.is_all_in() {
-                self.raise_increment = amount;
-            }
+        let is_all_in = self.seats.get_seat(seat_number).is_some_and(SeatNoCell::is_all_in);
+        // `amount` is the raise delta over the current bet; reconstruct the
+        // absolute raise-to and validate it against `min_raise_to()` so the
+        // stud completion (a sub-increment delta up to one full bet) is legal.
+        // `self.bet` is still the pre-raise level at this point.
+        if !is_all_in && self.bet.saturating_add(amount) < self.min_raise_to() {
+            return Err(PKError::InsufficientIncrement);
+        }
+        if !is_all_in {
+            self.raise_increment = amount;
         }
         Ok(())
     }
@@ -3795,6 +3843,60 @@ mod tests {
             SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 10_000)),
         ]);
         TableNoCell::razz_from_seats(seats, 2, 5, 20, 40)
+    }
+
+    fn make_three_player_stud_table() -> TableNoCell {
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 10_000)),
+        ]);
+        // ante 2, bring-in 5, small bet 20, big bet 40.
+        TableNoCell::stud_hi_from_seats(seats, 2, 5, 20, 40)
+    }
+
+    #[test]
+    fn min_raise_to_completes_stud_bring_in() {
+        let mut table = make_three_player_stud_table();
+        table.phase = GamePhase::Stud3rd;
+        // With only the 5 bring-in posted, the minimum legal raise completes
+        // to one full small bet (20), NOT bring-in + small bet (25).
+        table.bet = 5;
+        assert_eq!(20, table.min_raise_to());
+        // Once completed, raises step by the full small bet: 20 -> 40 -> 60.
+        table.bet = 20;
+        assert_eq!(40, table.min_raise_to());
+        table.bet = 40;
+        assert_eq!(60, table.min_raise_to());
+    }
+
+    #[test]
+    fn stud_completion_to_small_bet_is_legal() {
+        let mut table = make_three_player_stud_table();
+        table.act_forced_bets().unwrap();
+        table.deal_stud_3rd_street().unwrap();
+        table.act_bring_in().unwrap();
+        // The bring-in posted the partial 5; the next actor completes to the
+        // full small bet (20). Before the fix this failed with
+        // InsufficientIncrement (the engine demanded 25).
+        let completer = table.next_to_act();
+        assert!(table.act_raise(completer, 20).is_ok());
+        assert_eq!(20, table.bet);
+    }
+
+    #[test]
+    fn stud_fixed_limit_raise_must_be_exact() {
+        let mut table = make_three_player_stud_table();
+        table.act_forced_bets().unwrap();
+        table.deal_stud_3rd_street().unwrap();
+        table.act_bring_in().unwrap();
+        let completer = table.next_to_act();
+        // Fixed-limit allows exactly one raise-to (completion to 20); an
+        // in-between amount like 22 — which NLHE/PLO would accept — is illegal.
+        assert!(matches!(table.act_raise(completer, 22), Err(PKError::ExceedsBettingCap)));
+        // The rejected raise left state intact (pre-validation before mutation),
+        // so the exact completion still succeeds.
+        assert!(table.act_raise(completer, 20).is_ok());
     }
 
     #[test]

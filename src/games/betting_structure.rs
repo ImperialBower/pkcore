@@ -133,8 +133,12 @@ impl BettingStructure {
     /// - `NoLimit`: returns `stack` (player can move all-in).
     /// - `PotLimit`: returns `min(stack, current_bet + pot_after_call)`
     ///   where `pot_after_call = pot + call_amount`.
-    /// - `FixedLimit`: returns `current_bet + tier_increment`, capped at
-    ///   `stack`.
+    /// - `FixedLimit`: returns the single legal raise-to for the tier —
+    ///   `current_bet + tier_increment`, except when `current_bet` is a
+    ///   partial forced bet below one full bet (the stud bring-in), where it
+    ///   returns one full `tier_increment` (completion). Capped at `stack`.
+    ///   In fixed-limit this equals the *minimum* legal raise, so there is
+    ///   exactly one legal amount.
     ///
     /// # Examples
     ///
@@ -149,6 +153,13 @@ impl BettingStructure {
     /// // Pot-Limit: max raise = current_bet + pot + call_amount, capped at stack.
     /// // pot=1000, current_bet=100, my_committed=0 → call=100, max=100+1000+100=1200
     /// assert_eq!(1_200, pl.max_raise(1_000, 100, 0, 5_000, BetTier::Small));
+    ///
+    /// let fl = BettingStructure::FixedLimit { small_bet: 20, big_bet: 40, raise_cap: 4 };
+    /// // Completion: only the 5 bring-in is in, so the raise-to is one full
+    /// // small bet (20), not 5 + 20.
+    /// assert_eq!(20, fl.max_raise(0, 5, 0, 5_000, BetTier::Small));
+    /// // Once a full bet is in, the raise-to steps by the tier increment.
+    /// assert_eq!(40, fl.max_raise(0, 20, 0, 5_000, BetTier::Small));
     /// ```
     #[must_use]
     pub fn max_raise(&self, pot: usize, current_bet: usize, my_committed: usize, stack: usize, tier: BetTier) -> usize {
@@ -164,7 +175,16 @@ impl BettingStructure {
                     BetTier::Small => *small_bet,
                     BetTier::Big => *big_bet,
                 };
-                current_bet.saturating_add(increment).min(stack)
+                // Completion: a partial forced bet (stud bring-in) below one
+                // full bet is raised *to* one full bet, not current_bet +
+                // increment. Otherwise the raise-to steps by the increment.
+                // Either way this is the sole legal fixed-limit raise amount.
+                let raise_to = if current_bet < increment {
+                    increment
+                } else {
+                    current_bet.saturating_add(increment)
+                };
+                raise_to.min(stack)
             }
         }
     }
