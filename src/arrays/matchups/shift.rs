@@ -13,7 +13,7 @@ pub struct Shifter {
 impl Shifter {
     #[must_use]
     pub fn shifts(&self, _hupr: &HUPResult) -> Vec<HUPResult> {
-        todo!()
+        unimplemented!("Shifter::shifts is not yet implemented")
     }
 }
 

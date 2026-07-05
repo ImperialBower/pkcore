@@ -122,7 +122,7 @@ impl Pile for OmahaHigh {
     }
 
     fn card_at(self, _index: usize) -> Option<Card> {
-        todo!()
+        unimplemented!("OmahaHigh is a fixed 4-card hand; use `.cards().card_at(index)` for positional access")
     }
 
     fn clean(&self) -> Self {
@@ -130,11 +130,11 @@ impl Pile for OmahaHigh {
     }
 
     fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
-        todo!()
+        unimplemented!("OmahaHigh is a fixed 4-card hand; use `.cards()` for a swappable set")
     }
 
     fn the_nuts(&self) -> TheNuts {
-        todo!()
+        unimplemented!("the_nuts is undefined for OmahaHigh hole cards alone; evaluate against a board")
     }
 
     fn to_vec(&self) -> Vec<Card> {

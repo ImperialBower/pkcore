@@ -285,19 +285,19 @@ impl Pile for HoleCards {
     }
 
     fn card_at(self, _index: usize) -> Option<Card> {
-        todo!()
+        unimplemented!("HoleCards is a fixed holding; use `.cards().card_at(index)` for positional access")
     }
 
     fn clean(&self) -> Self {
-        todo!()
+        unimplemented!("HoleCards clean is not yet implemented; use `.cards().clean()` to strip card metadata")
     }
 
     fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
-        todo!()
+        unimplemented!("HoleCards is a fixed holding; use `.cards()` for a swappable set")
     }
 
     fn the_nuts(&self) -> TheNuts {
-        todo!()
+        unimplemented!("the_nuts is undefined for HoleCards alone; evaluate against a board")
     }
 
     fn to_vec(&self) -> Vec<Card> {

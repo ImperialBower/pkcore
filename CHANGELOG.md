@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.9] - unreleased
 
-This release closes the P0–P2 items of the Fable 5 audit
+This release closes the P0–P4 items of the Fable 5 audit
 (`docs/AUDIT_Fable_5.md`): the confirmed variant-engine rule bugs (Part II), the
-published-crate panic boundary (P1), and the first kernel-purity step (P2).
+published-crate panic boundary (P1), the first kernel-purity step (P2), the
+format-crate error de-leak (P3), and the long-standing `todo!()`/operator
+cleanup with a lint gate (P4). The breaking halves of P2 and P4 are deferred to
+0.2.0.
 
 ### Fixed
 
@@ -44,6 +47,16 @@ published-crate panic boundary (P1), and the first kernel-purity step (P2).
 - `keywords`, `categories`, and `[package.metadata.docs.rs] all-features = true`
   to the manifest, so docs.rs renders the feature-gated items with their
   "available on feature X" banners.
+- **The six `Cards` bit-operators are implemented (audit P4 / Part I #1)** — the
+  unanimous P0 of all three prior audits. Because `Cards` is an
+  `IndexSet<Card>`, `&`/`|`/`^` (and their `*Assign` forms) are the set
+  operations `Bard`'s bitmask operators correspond to: intersection, union, and
+  symmetric difference. Doc examples + colocated unit tests included.
+- **`PKError::NotImplemented`** — a recoverable "recognised but unfinished"
+  error. `TableCelled::act_pay_out` and `SortedHeadsUp::hup_result_from_shift`
+  now return it instead of panicking through `todo!()`, fixing the
+  doc-contradicts-body defect where `act_pay_out`'s `# Errors` named a variant
+  that did not exist (audit Part I #4).
 - Two new cargo features that make the kernel's storage and terminal layers
   optional (audit P2 / III.6.1):
   - `store` — the SQLite-backed HUP store (`Sqlable`, `Connect`, `HUPResult`'s
@@ -86,6 +99,19 @@ published-crate panic boundary (P1), and the first kernel-purity step (P2).
   for callers that named one of those format-crate error types directly; callers
   using `?`/`unwrap` are unaffected.
 
+- **No unfinished `todo!()` may ship (audit P4).** Every reachable `todo!()` in
+  `src/` was eliminated: `Cards::clean` is now implemented (element-wise
+  `Card::clean`); the structurally-undefined `Pile` stubs
+  (`card_at`/`clean`/`swap`/`the_nuts`/`add` on fixed-size hands) and the
+  deliberately-deferred methods became messaged `unimplemented!("…")` that
+  explain the absence and point at the `.cards()` workaround. A new
+  `clippy.toml` `disallowed-macros = [std::todo]` gate — enforced by CI's
+  existing `-Dclippy::all` / `-D warnings` — keeps `todo!()` out of lib/bin code
+  going forward, the same mechanism the `unwrap` cleanup used.
+  (`unimplemented!` is intentionally not gated: it is the sanctioned marker for
+  an operation undefined-for-a-type, which is why the `Pile` over-specification
+  can stay deferred.)
+
 ### Removed
 
 - The `dotenvy` dependency. `HUPResult::db_path` now reads `HUPS_DB_PATH` via
@@ -104,9 +130,16 @@ published-crate panic boundary (P1), and the first kernel-purity step (P2).
     in a `match` arm or a typed `From`/`?` seam. None do — the consumers that
     call `from_yaml`/`to_yaml` propagate through `Box<dyn Error>`, `match`, or
     `Display`, all of which are agnostic to the concrete error type.
-- The *breaking* half of P2 — flipping `default` to drop `store`/`terminal` —
-  remains deferred to 0.2.0 and will ship with companion PRs; see the P2 status
-  note in `docs/AUDIT_Fable_5.md`.
+  - The P4 work is additive: new `Cards` operators, a new `PKError` variant, and
+    `todo!()`→`unimplemented!()`/`Err` swaps behind methods that previously
+    panicked. `act_pay_out` and `hup_result_from_shift` return
+    `Err(PKError::NotImplemented)` where they used to abort — strictly more
+    recoverable, and no in-tree consumer calls them.
+- The *breaking* halves — flipping `default` to drop `store`/`terminal` (P2),
+  and deprecating `TableCelled` + removing
+  `CardsCell`/`SeatCell`/`TableLog`/`TableCelled` from the prelude (P4) — remain
+  deferred to 0.2.0 and will ship with companion PRs; see the P2 and P4 status
+  notes in `docs/AUDIT_Fable_5.md`.
 
 ## [0.1.8] - 2026-06-20
 

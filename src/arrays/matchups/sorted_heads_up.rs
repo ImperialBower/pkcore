@@ -127,11 +127,13 @@ impl SortedHeadsUp {
     ///
     /// # Errors
     ///
-    /// If the connection to the database fails, or if the query fails.
+    /// Always returns [`PKError::NotImplemented`]: the shift-to-`HUPResult`
+    /// resolution is not yet built. It returns a recoverable error rather than
+    /// panicking.
     #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn hup_result_from_shift(&self, _conn: &Connection) -> Result<HUPResult, PKError> {
         let _shifts = self.shifts();
-        todo!()
+        Err(PKError::NotImplemented)
     }
 
     #[must_use]
@@ -797,22 +799,22 @@ impl Pile for SortedHeadsUp {
     }
 
     fn card_at(self, _index: usize) -> Option<Card> {
-        todo!()
+        unimplemented!("SortedHeadsUp is a fixed two-hand comparison, not a card sequence; access the hands directly")
     }
 
     /// Shoot. Forgot about my frequency mask idea. Still has potential, but later.
     fn clean(&self) -> Self {
-        todo!()
+        unimplemented!("clean is not yet implemented for SortedHeadsUp (frequency-mask idea pending)")
     }
 
     fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
-        todo!()
+        unimplemented!("SortedHeadsUp is an immutable two-hand comparison; construct a new one instead")
     }
 
     /// Implementing this would be interesting. What's the best possible hand from either of these
     /// two hands?
     fn the_nuts(&self) -> TheNuts {
-        todo!()
+        unimplemented!("the_nuts is not yet implemented for SortedHeadsUp (best hand across both holdings)")
     }
 
     /// This is the only one we need to implement for what we want. Maybe this interface is doing

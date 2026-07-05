@@ -599,9 +599,7 @@ impl Seats {
     pub fn is_seat_all_in(&self, seat_number: u8) -> bool {
         if let Some(_seat) = self.get_seat(seat_number) {
             // Is every other player all in?
-
-            todo!()
-            // !seat.is_empty() && seat.is_in_hand()
+            unimplemented!("is_seat_all_in is not yet implemented")
         } else {
             false
         }

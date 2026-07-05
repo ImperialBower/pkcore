@@ -706,6 +706,60 @@ method. *Mechanism:* `clippy.toml` `disallowed-macros` for
 `todo!`/`unimplemented!` in non-test code — the same trick that fixed
 `unwrap`.
 
+**Status (0.1.9): non-breaking half done; the two breaking pieces deferred to
+0.2.0** (same split as P2's default-flip). What landed:
+
+- **The six `Cards` bit-operators are implemented** — not a literal transcribe
+  from `Bard` (which is a `u64` bitmask), but the *set* operations its bitwise
+  ops correspond to, since `Cards` is an `IndexSet<Card>`: `&` intersection,
+  `|` union, `^` symmetric difference (plus the three `*Assign` forms). Doc
+  examples + 10 colocated unit tests; the old six `#[should_panic]` `*__panics`
+  stubs (which asserted the `todo!()`) are gone.
+- **`Cards::clean` is implemented** (element-wise `Card::clean`, mirroring
+  `Two::clean`); `Cards::the_nuts` is now a messaged `unimplemented!` (it needs
+  board context — even `Bard::the_nuts` punts).
+- **`act_pay_out`'s doc-contradicts-body defect (Part I #4) is fixed.** It named
+  a `PKError::NotImplemented` that did not exist, over a panicking body. That
+  variant now exists and the method returns it (`Err(PKError::NotImplemented)`)
+  — recoverable, not a panic — with a doctest asserting exactly that.
+  `SortedHeadsUp::hup_result_from_shift` got the same treatment.
+- **Every remaining reachable `todo!()` in `src/` is eliminated** (64 bare +
+  1 messaged `todo!("Doesn't apply")` the gate caught on first run). The
+  structurally-undefined `Pile` stubs (`card_at`/`clean`/`swap`/`the_nuts`/`add`
+  on fixed-size hands — the deferred finding #3 population) became messaged
+  `unimplemented!("…")` that point at the `.cards()` workaround; the genuinely
+  unfinished non-`Result` methods (`percentage`, `generate_player_loses`,
+  `Shifter::shifts`, `is_seat_all_in`, `deck_the_hand_dealable`, the `Sqlable`
+  bulk stubs) became messaged `unimplemented!("… not yet implemented")`. Zero
+  `#[allow(clippy::disallowed_macros)]` were needed — the gate is unqualified.
+
+*Mechanism landed:* `clippy.toml` now carries
+`disallowed-macros = [{ path = "std::todo" }]`. Under CI's existing
+`-Dclippy::all` (basic.yaml) and `-D warnings` (ci.yml) this makes any `todo!()`
+in lib/bin code a hard error — verified: the gate fired on the one messaged
+`todo!` a plain-`grep` had missed. **`unimplemented!` is deliberately *not*
+gated**: the enforced convention is that no unfinished spot may be a *silent*
+`todo!()` — it must be a *messaged* `unimplemented!("why + workaround")` or a
+returned `PKError::NotImplemented`. This is the pragmatic substitute for the
+literal proposal (one gate over both macros), which is unreachable while the
+`Pile` over-specification (#3) is deferred — ~50 of the stubs are `Pile`
+methods that are structurally undefined for their types, and gating
+`unimplemented!` too would force the trait split.
+
+**The two breaking pieces are deferred to 0.2.0** (bundled with the P6 semver
+work): `#[deprecated]` on `TableCelled` (104 in-crate references would each need
+`#[allow(deprecated)]` — noisy, and deprecation is a public-API signal that
+belongs with the 0.2.0 legacy-engine sunset) and removing
+`CardsCell`/`SeatCell`/`TableLog`/`TableCelled` from the prelude (a
+source-breaking change). Both are the "legacy `TableCelled` sunset" and are
+naturally a single 0.2.0 change; nothing about them blocks the gate that P4
+came for.
+
+*Verification:* `cargo build --lib` ok; `cargo test --lib` **9,132 passed, 0
+failed**; `cargo test --doc` 0 failed; `cargo clippy -- -Dclippy::all
+-Dclippy::pedantic` and `cargo clippy --features pokerbench -- -D warnings` both
+clean.
+
 ### P5 — Trainer determinism and stats-store durability (II.8, II.9, II.10)
 
 Thread `TrainingConfig.seed` into both the mutation RNG and

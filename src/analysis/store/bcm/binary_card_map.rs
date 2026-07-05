@@ -276,7 +276,7 @@ impl Sqlable<SevenFiveBCM, Bard> for SevenFiveBCM {
     }
 
     fn exists(_conn: &Connection, _record: &Bard) -> bool {
-        todo!()
+        unimplemented!("SevenFiveBCM::exists is not implemented; use `select(...).is_some()`")
     }
 
     fn insert(conn: &Connection, bcm: &SevenFiveBCM) -> rusqlite::Result<bool> {
@@ -290,7 +290,7 @@ impl Sqlable<SevenFiveBCM, Bard> for SevenFiveBCM {
     }
 
     fn insert_many(_conn: &Connection, _records: Vec<&SevenFiveBCM>) -> rusqlite::Result<usize> {
-        todo!()
+        unimplemented!("SevenFiveBCM::insert_many is not implemented; insert rows individually via `insert()`")
     }
 
     fn select(conn: &Connection, bc: &Bard) -> Option<SevenFiveBCM> {
@@ -315,7 +315,9 @@ impl Sqlable<SevenFiveBCM, Bard> for SevenFiveBCM {
     }
 
     fn select_all(_conn: &Connection) -> Vec<SevenFiveBCM> {
-        todo!()
+        unimplemented!(
+            "SevenFiveBCM::select_all is not implemented; the BCM table is huge — query specific rows via `select()`"
+        )
     }
 }
 

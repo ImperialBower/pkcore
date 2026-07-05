@@ -239,13 +239,7 @@ impl TestData {
     /// Because of `draw_from_the_bottom`, but this is test data so... ¯\_(ツ)_/¯
     #[must_use]
     pub fn deck_the_hand_dealable() -> Cards {
-        // let mut dealt = TestData::the_hand_cards_dealable();
-        // let mut minus = Cards::deck_minus(&dealt).shuffle();
-        // let river = dealt.draw_from_the_bottom(1).unwrap();
-        // let turn = dealt.draw_from_the_bottom(1).unwrap();
-        // let flop = dealt.draw_from_the_bottom(3).unwrap();
-
-        todo!()
+        unimplemented!("deck_the_hand_dealable is not yet implemented")
     }
 
     /// # Panics

@@ -154,15 +154,15 @@ impl Pile for Six {
     }
 
     fn card_at(self, _index: usize) -> Option<Card> {
-        todo!()
+        unimplemented!("Six is a fixed-length collection; use `.cards().card_at(index)` for positional access")
     }
 
     fn clean(&self) -> Self {
-        todo!()
+        unimplemented!("Six is a fixed-length collection; use `.cards().clean()` to strip card metadata")
     }
 
     fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
-        todo!()
+        unimplemented!("Six is a fixed-length collection; use `.cards()` for a swappable set")
     }
 
     fn the_nuts(&self) -> TheNuts {

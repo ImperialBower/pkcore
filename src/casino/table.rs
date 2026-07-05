@@ -548,11 +548,26 @@ impl TableCelled {
         self.log_info(TableAction::NewHand);
     }
 
+    /// Payout is driven through the showdown/`end_hand` path on
+    /// [`TableNoCell`](crate::casino::table_no_cell::TableNoCell); the legacy
+    /// [`TableCelled`] engine never implemented a standalone payout step.
+    ///
     /// # Errors
     ///
-    /// - `PKError::NotImplemented` if payout logic is not implemented.
+    /// - Always returns [`PKError::NotImplemented`]: this engine has no
+    ///   standalone payout logic. It returns an error rather than panicking so
+    ///   callers can recover.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let table = TableCelled::default();
+    /// assert_eq!(table.act_pay_out(), Err(PKError::NotImplemented));
+    /// ```
     pub fn act_pay_out(&self) -> Result<(), PKError> {
-        todo!()
+        Err(PKError::NotImplemented)
     }
 
     /// # Errors

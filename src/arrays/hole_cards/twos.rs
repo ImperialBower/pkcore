@@ -351,7 +351,7 @@ impl Pile for StartingHands {
     }
 
     fn card_at(self, _index: usize) -> Option<Card> {
-        todo!()
+        unimplemented!("StartingHands holds hole-card pairs, not a flat card sequence; iterate with `.vec()` instead")
     }
 
     fn clean(&self) -> Self {
@@ -359,11 +359,11 @@ impl Pile for StartingHands {
     }
 
     fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
-        todo!()
+        unimplemented!("StartingHands is not positionally mutable; rebuild the collection instead")
     }
 
     fn the_nuts(&self) -> TheNuts {
-        todo!()
+        unimplemented!("the_nuts is undefined for a StartingHands collection; evaluate individual hands")
     }
 
     fn to_vec(&self) -> Vec<Card> {

@@ -498,6 +498,13 @@ pub enum PKError {
     /// with [`SevenFiveBCM::generate_bin`][crate::analysis::store::bcm::binary_card_map::SevenFiveBCM::generate_bin]
     /// and point `PKCORE_75BCM_PATH` at it.
     BcmUnavailable,
+    /// The requested operation is recognised but not yet implemented.
+    ///
+    /// Returned by methods whose behaviour is deliberately unfinished (rather
+    /// than structurally undefined) so that callers receive a recoverable error
+    /// instead of a panic. Contrast with a `todo!()` body — this variant is the
+    /// non-panicking replacement for one.
+    NotImplemented,
 }
 
 impl Display for PKError {
@@ -558,6 +565,7 @@ impl Display for PKError {
                 &*format!("Chip audit failed: expected {expected} chips, found {actual}")
             }
             PKError::BcmUnavailable => "Binary Card Map data unavailable (set PKCORE_75BCM_PATH)",
+            PKError::NotImplemented => "Operation not yet implemented",
         };
         write!(f, "{msg}")
     }

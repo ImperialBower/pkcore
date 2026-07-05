@@ -485,7 +485,7 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
     }
 
     fn insert_many(_conn: &Connection, _records: Vec<&HUPResult>) -> rusqlite::Result<usize> {
-        todo!()
+        unimplemented!("HUPResult::insert_many is not implemented; insert rows individually via `insert()`")
     }
 
     fn select(conn: &Connection, key: &SortedHeadsUp) -> Option<HUPResult> {

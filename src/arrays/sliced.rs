@@ -260,7 +260,7 @@ impl Pile for BoxedCards {
     where
         Self: Sized,
     {
-        todo!()
+        unimplemented!("BoxedCards addition is not implemented; use `Cards` for set-style combination")
     }
 
     /// ```
@@ -292,7 +292,7 @@ impl Pile for BoxedCards {
     }
 
     fn the_nuts(&self) -> TheNuts {
-        todo!("Doesn't apply")
+        unimplemented!("the_nuts is undefined for a bare BoxedCards; evaluate through a hand ranker")
     }
 
     fn to_vec(&self) -> Vec<Card> {

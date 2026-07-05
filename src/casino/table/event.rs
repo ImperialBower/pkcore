@@ -128,7 +128,7 @@ impl TableAction {
 
     #[must_use]
     pub fn generate_player_loses(&self) -> TableAction {
-        todo!()
+        unimplemented!("generate_player_loses is not yet implemented")
     }
 
     #[must_use]
