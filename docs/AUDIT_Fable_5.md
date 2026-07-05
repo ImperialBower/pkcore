@@ -767,6 +767,45 @@ Thread `TrainingConfig.seed` into both the mutation RNG and
 `save`; skip-and-log in `load_all`. *Mechanism:* a train-twice-compare test
 and a corrupt-file test.
 
+**Status (0.1.9): done.** All three fixes landed with their mechanism tests:
+
+- **Trainer reproducibility (II.9).** `TrainingConfig` gained a `seed: u64`
+  field (default `42`). It now seeds *both* the Gaussian mutation stream
+  (`SmallRng::seed_from_u64(self.config.seed)`, was a hardcoded `42`) *and*
+  every fitness session: `evaluator::evaluate` takes a `seed` and derives a
+  distinct per-`(opponent, replicate)` session seed from it, which
+  `run_session` feeds to `SimTable::with_seed`. The derivation is independent
+  of the candidate config, so every candidate is scored on the **same hands**
+  (common random numbers) — this both removes the thread-local-RNG noise that
+  made `train()` irreproducible and cuts the between-candidate variance the
+  optimiser sees. Test: `train_twice_with_same_seed_is_reproducible` asserts a
+  byte-identical `best_config` (via `encoding::encode`) across two runs, plus
+  `evaluate_is_deterministic_for_fixed_seed`.
+- **Sigma early-exit (II.8).** The convergence check is now
+  `if sigma <= self.config.sigma_tol` (was `<`). Because `sigma` clamps *at*
+  `sigma_tol` via the `.max(sigma_tol)` floor, the strict `<` could never fire,
+  so a fully-converged run burned every generation (~3M simulated hands at the
+  defaults). Test: `converged_run_terminates_before_max_generations` sets
+  `initial_sigma_fraction == sigma_tol` and asserts `generations_run == 0` —
+  which fails under the old `<`.
+- **Stats-store durability (II.10).** `YamlPlayerStatsStore::save` is now atomic
+  (serialise to a `.yaml.tmp` sibling, then `fs::rename` over the target — the
+  `.tmp` extension keeps it out of `load_all`'s `.yaml`-only scan). `load_all`
+  now **skips-and-logs** an unreadable or malformed file (`log::warn!` with the
+  path) instead of mapping the first bad file to `PKError::InvalidIO` for the
+  whole directory. Tests: `load_all_skips_corrupt_yaml_file` and
+  `save_leaves_no_temp_file_behind`.
+
+Not addressed here (out of the II.8–II.10 scope, noted for later): the
+(1+λ)-ES still never re-evaluates the retained parent, and `run_session` still
+maps any sim error to `0.0` fitness — both called out in II.9 as *compounding*
+factors. Common-random-numbers scoring makes the parent's score stable, which
+defuses the "noise-lucky parent stalls progress" case the re-evaluation gap
+caused; the error→`0.0` mapping is a smaller latent issue left for a follow-up.
+
+*Verification:* `cargo test --features bot-training --lib bot__training` **16
+passed**; stats-store suite green; `cargo clippy` clean (below).
+
 ### P6 — Semver posture for 0.2.0
 
 `#[non_exhaustive]` on `PKError`, `TableAction`, `GameType`, `ActionType`

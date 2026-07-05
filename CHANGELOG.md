@@ -7,12 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.9] - unreleased
 
-This release closes the P0–P4 items of the Fable 5 audit
+This release closes the P0–P5 items of the Fable 5 audit
 (`docs/AUDIT_Fable_5.md`): the confirmed variant-engine rule bugs (Part II), the
 published-crate panic boundary (P1), the first kernel-purity step (P2), the
-format-crate error de-leak (P3), and the long-standing `todo!()`/operator
-cleanup with a lint gate (P4). The breaking halves of P2 and P4 are deferred to
-0.2.0.
+format-crate error de-leak (P3), the long-standing `todo!()`/operator cleanup
+with a lint gate (P4), and trainer determinism plus stats-store durability (P5).
+The breaking halves of P2 and P4 are deferred to 0.2.0.
 
 ### Fixed
 
@@ -35,6 +35,23 @@ cleanup with a lint gate (P4). The breaking halves of P2 and P4 are deferred to
   `plo_over_pot_all_in_clamps_to_pot`, `razz_bring_in_is_highest_ace_low`, …),
   and a CI gate now runs the variant replay-consistency round-trips (FLHE / PLO /
   stud / razz) that were previously `#[ignore]`d.
+- **`ExploitTrainer` was irreproducible despite a fixed seed (audit II.9).**
+  `TrainingConfig` gained a `seed: u64` field (default `42`) that now seeds both
+  the Gaussian mutation stream *and* every fitness session:
+  `evaluator::evaluate` takes a seed and threads a deterministic
+  per-`(opponent, replicate)` seed into `SimTable::with_seed`. The derivation is
+  independent of the candidate, so every candidate is scored on identical hands
+  (common random numbers). Two `train()` calls with the same config now produce
+  a byte-identical `best_config`.
+- **`ExploitTrainer`'s convergence early-exit could never fire (audit II.8).**
+  The check is now `sigma <= sigma_tol` (was `<`); since `sigma` clamps *at*
+  `sigma_tol`, the strict comparison meant a converged run burned every
+  generation (~3M simulated hands at the defaults).
+- **A single truncated file bricked the whole player-stats directory (audit
+  II.10).** `YamlPlayerStatsStore::save` is now atomic (temp-file +
+  `fs::rename`), and `load_all` skips-and-logs an unreadable/malformed file
+  (via `log::warn!`) instead of failing every player's load on the first bad
+  file.
 
 ### Added
 

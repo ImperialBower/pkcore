@@ -161,14 +161,32 @@ impl PlayerStatsStore for YamlPlayerStatsStore {
             if path.extension().and_then(|s| s.to_str()) != Some("yaml") {
                 continue;
             }
-            let stem = path.file_stem().and_then(|s| s.to_str()).ok_or(PKError::InvalidIO)?;
+            let Some(stem) = path.file_stem().and_then(|s| s.to_str()) else {
+                continue;
+            };
             // Skip files whose stem isn't a UUID — they're not ours to read.
             let Ok(id) = Uuid::parse_str(stem) else {
                 continue;
             };
-            let yaml = fs::read_to_string(&path).map_err(|_| PKError::InvalidIO)?;
-            let stats = serde_yaml_bw::from_str::<PlayerStats>(&yaml).map_err(|_| PKError::InvalidIO)?;
-            out.insert(id, stats);
+            // II.10: skip-and-log a single bad file rather than failing the
+            // whole directory. A crash mid-flush can leave one truncated YAML;
+            // that must not brick *every* player's stats on the next load. The
+            // offending file is logged (with its path) and left in place.
+            let yaml = match fs::read_to_string(&path) {
+                Ok(yaml) => yaml,
+                Err(e) => {
+                    log::warn!("player-stats: skipping unreadable {}: {e}", path.display());
+                    continue;
+                }
+            };
+            match serde_yaml_bw::from_str::<PlayerStats>(&yaml) {
+                Ok(stats) => {
+                    out.insert(id, stats);
+                }
+                Err(e) => {
+                    log::warn!("player-stats: skipping malformed {}: {e}", path.display());
+                }
+            }
         }
         Ok(out)
     }
@@ -176,7 +194,15 @@ impl PlayerStatsStore for YamlPlayerStatsStore {
     fn save(&self, id: Uuid, stats: &PlayerStats) -> Result<(), PKError> {
         let yaml = serde_yaml_bw::to_string(stats).map_err(|_| PKError::InvalidIO)?;
         let path = self.path_for(id);
-        fs::write(&path, yaml).map_err(|_| PKError::InvalidIO)?;
+        // II.10: atomic write. Serialise to a sibling temp file, then rename it
+        // over the target — an atomic operation within a directory on the
+        // supported (unix) filesystems. A crash mid-write leaves either the
+        // untouched previous file or the temp file, never a truncated target
+        // that `load_all` would choke on. The `.yaml.tmp` extension keeps the
+        // temp file out of `load_all`'s `.yaml`-only scan.
+        let tmp = path.with_extension("yaml.tmp");
+        fs::write(&tmp, yaml).map_err(|_| PKError::InvalidIO)?;
+        fs::rename(&tmp, &path).map_err(|_| PKError::InvalidIO)?;
         Ok(())
     }
 }
@@ -264,6 +290,41 @@ mod analysis__player_stats_store_tests {
         let all = store.load_all().expect("load_all");
         assert_eq!(1, all.len());
         assert!(all.contains_key(&id));
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn load_all_skips_corrupt_yaml_file() {
+        // II.10: one truncated/malformed file (e.g. a crash mid-flush) must not
+        // fail the whole directory — the good records still load.
+        let dir = unique_temp_dir("corrupt");
+        let store = YamlPlayerStatsStore::new(&dir).unwrap();
+        let good = Uuid::new_v4();
+        store.save(good, &sample_stats(70)).unwrap();
+        // A UUID-named YAML that will not parse as PlayerStats.
+        let bad = Uuid::new_v4();
+        fs::write(dir.join(format!("{bad}.yaml")), "[unterminated").unwrap();
+        let all = store.load_all().expect("load_all must not fail on one bad file");
+        assert_eq!(1, all.len(), "only the good record loads");
+        assert!(all.contains_key(&good));
+        assert!(!all.contains_key(&bad));
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn save_leaves_no_temp_file_behind() {
+        // The atomic temp+rename must not leave a `.yaml.tmp` sibling.
+        let dir = unique_temp_dir("atomic");
+        let store = YamlPlayerStatsStore::new(&dir).unwrap();
+        let id = Uuid::new_v4();
+        store.save(id, &sample_stats(30)).unwrap();
+        let has_tmp = fs::read_dir(&dir)
+            .unwrap()
+            .filter_map(Result::ok)
+            .any(|e| e.path().extension().and_then(|s| s.to_str()) == Some("tmp"));
+        assert!(!has_tmp, "no .tmp file should remain after save");
+        // The final file landed and round-trips.
+        assert_eq!(30, store.load(id).unwrap().unwrap().hands_dealt);
         fs::remove_dir_all(&dir).ok();
     }
 

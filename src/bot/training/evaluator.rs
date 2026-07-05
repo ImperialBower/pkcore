@@ -48,6 +48,13 @@ pub fn default_field() -> Vec<FieldEntry> {
 /// returns the mean BB/100 over the full matrix.  A positive return value
 /// means the exploit bot profited on average.
 ///
+/// `seed` makes the result deterministic: each (opponent, replicate) session
+/// gets a distinct seed derived from `seed`, but that derivation does *not*
+/// depend on `config`. Every candidate config is therefore scored on the
+/// *same* hands (common random numbers), which both removes the RNG noise that
+/// made training irreproducible (audit II.9) and reduces the variance the
+/// optimiser sees between candidates.
+///
 /// # Examples
 ///
 /// ```no_run
@@ -55,26 +62,43 @@ pub fn default_field() -> Vec<FieldEntry> {
 /// use pkcore::bot::training::evaluator::{default_field, evaluate};
 ///
 /// let field = default_field();
-/// let bb100 = evaluate(&ExploitConfig::default(), &field, 200, 1);
+/// let bb100 = evaluate(&ExploitConfig::default(), &field, 200, 1, 42);
 /// // No assertion — poker variance means any value is possible in 200 hands.
 /// let _ = bb100;
 /// ```
 #[must_use]
-pub fn evaluate(config: &ExploitConfig, field: &[FieldEntry], hands_per_eval: usize, replicates: usize) -> f64 {
+pub fn evaluate(
+    config: &ExploitConfig,
+    field: &[FieldEntry],
+    hands_per_eval: usize,
+    replicates: usize,
+    seed: u64,
+) -> f64 {
     let mut total = 0.0_f64;
     let mut count = 0_usize;
-    for (_, opp) in field {
-        for _ in 0..replicates {
-            total += run_session(config, opp, hands_per_eval);
+    for (opp_idx, (_, opp)) in field.iter().enumerate() {
+        for replicate in 0..replicates {
+            total += run_session(config, opp, hands_per_eval, session_seed(seed, opp_idx, replicate));
             count += 1;
         }
     }
     if count == 0 { 0.0 } else { total / count as f64 }
 }
 
+/// Derives a deterministic per-session seed from the master `seed`.
+///
+/// Distinct per `(opp_idx, replicate)` so different opponents and replicates
+/// play different hands, but independent of the candidate config so every
+/// candidate faces an identical hand distribution (common random numbers).
+fn session_seed(seed: u64, opp_idx: usize, replicate: usize) -> u64 {
+    seed.wrapping_add((opp_idx as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15))
+        .wrapping_add((replicate as u64).wrapping_mul(0xD1B5_4A32_D192_ED03))
+}
+
 /// Runs a single heads-up session of `hands` hands and returns the exploit
-/// bot's BB/100 (seat 0 vs seat 1).
-fn run_session(config: &ExploitConfig, opp_profile: &BotProfile, hands: usize) -> f64 {
+/// bot's BB/100 (seat 0 vs seat 1). `seed` fixes the deck shuffle and every
+/// seeded decider draw, so the session is fully reproducible.
+fn run_session(config: &ExploitConfig, opp_profile: &BotProfile, hands: usize, seed: u64) -> f64 {
     let exploit = PlayerNoCell::new_with_chips("exploit".to_string(), STARTING_CHIPS);
     let opp = PlayerNoCell::new_with_chips("opp".to_string(), STARTING_CHIPS);
     let seats = SeatsNoCell::new(vec![SeatNoCell::new(exploit), SeatNoCell::new(opp)]);
@@ -89,7 +113,7 @@ fn run_session(config: &ExploitConfig, opp_profile: &BotProfile, hands: usize) -
         (1, opp_profile.clone(), Box::new(RuleBasedDecider)),
     ];
 
-    let mut sim = SimTable::new_with_registry(table, bots, StatsRegistry::new());
+    let mut sim = SimTable::new_with_registry(table, bots, StatsRegistry::new()).with_seed(seed);
     match sim.run_n_hands(hands) {
         Err(_) => 0.0,
         Ok(result) if result.hands_played == 0 => 0.0,
@@ -119,13 +143,32 @@ mod bot__training__evaluator_tests {
     #[test]
     fn evaluate_returns_finite_value() {
         let field = vec![("lp".to_string(), BotProfile::loose_passive())];
-        let bb100 = evaluate(&ExploitConfig::default(), &field, 100, 1);
+        let bb100 = evaluate(&ExploitConfig::default(), &field, 100, 1, 42);
         assert!(bb100.is_finite(), "evaluate must return a finite value; got {bb100}");
     }
 
     #[test]
     fn evaluate_empty_field_returns_zero() {
-        let bb100 = evaluate(&ExploitConfig::default(), &[], 100, 1);
+        let bb100 = evaluate(&ExploitConfig::default(), &[], 100, 1, 42);
         assert_eq!(bb100, 0.0);
+    }
+
+    #[test]
+    fn evaluate_is_deterministic_for_fixed_seed() {
+        // II.9: identical (config, field, seed) → identical score.
+        let field = vec![("lp".to_string(), BotProfile::loose_passive())];
+        let a = evaluate(&ExploitConfig::default(), &field, 200, 2, 7);
+        let b = evaluate(&ExploitConfig::default(), &field, 200, 2, 7);
+        assert_eq!(a, b, "seeded evaluate must be reproducible");
+    }
+
+    #[test]
+    fn session_seed_is_distinct_per_opponent_and_replicate() {
+        let s0 = session_seed(42, 0, 0);
+        let s1 = session_seed(42, 1, 0);
+        let s2 = session_seed(42, 0, 1);
+        assert_ne!(s0, s1);
+        assert_ne!(s0, s2);
+        assert_ne!(s1, s2);
     }
 }
