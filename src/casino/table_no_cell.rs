@@ -1025,19 +1025,6 @@ impl SeatsNoCell {
             .act_bet(amount)
     }
 
-    /// Raises on behalf of seat `idx`.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidSeatNumber` if seat not found.
-    /// - `PKError::InsufficientChips` if not enough chips.
-    pub fn act_raise(&mut self, idx: u8, amount: usize) -> Result<usize, PKError> {
-        self.get_seat_mut(idx)
-            .ok_or(PKError::InvalidSeatNumber)?
-            .player
-            .act_raise(amount)
-    }
-
     /// Calls on behalf of seat `idx`.
     ///
     /// # Errors
@@ -1108,6 +1095,19 @@ impl SeatsNoCell {
             .ok_or(PKError::InvalidSeatNumber)?
             .player
             .act_blind_or_all_in(amount)
+    }
+
+    /// Raises on behalf of seat `idx`.
+    ///
+    /// # Errors
+    ///
+    /// - `PKError::InvalidSeatNumber` if seat not found.
+    /// - `PKError::InsufficientChips` if not enough chips.
+    pub fn act_raise(&mut self, idx: u8, amount: usize) -> Result<usize, PKError> {
+        self.get_seat_mut(idx)
+            .ok_or(PKError::InvalidSeatNumber)?
+            .player
+            .act_raise(amount)
     }
 
     /// Posts a *dead* ante for seat `idx`: deducts up to `ante` from the
