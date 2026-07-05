@@ -620,6 +620,38 @@ dedicated job, like the pokerbench one).
 **P0c. Decide the stud completion and ante-as-dead-money semantics** (II.3,
 II.6) — these are rules decisions, then one-line-ish fixes.
 
+**Status (0.1.9): done.** All six confirmed variant bugs (II.1–II.6) fixed:
+
+- **P0a — PLO (II.1, II.2).** `act_raise` now sizes the max raise off
+  `effective_pot()` (pot + all live wagers) rather than `self.pot`, so the
+  standard 50/100 pot-open to 350 is legal again; over-pot all-ins clamp to the
+  pot (routed through `act_raise`) instead of bypassing the cap. Tests:
+  `plo_pot_open`, `plo_raise_above_pot_is_rejected`,
+  `plo_over_pot_all_in_clamps_to_pot`.
+- **P0b — Razz (II.4) + action order (II.5).**
+  `third_street_extreme_upcard_seat` ranks the ace low (new
+  `California::ace_low_rank()`), so a King brings in over an Ace; and the
+  EPIC-32/33 action-order machinery was **wired in, not deleted** —
+  `next_to_act` seeds from `first_to_act_this_street`, so Stud/Razz action
+  follows the upcards (bring-in-relative on 3rd, best-visible after) with NLHE
+  provably unchanged (that resolver still returns UTG for Hold'em). Tests:
+  `razz_bring_in_is_highest_ace_low`, `razz_visible_order_prefers_ace_low`,
+  `razz_next_to_act_follows_bring_in_not_position`.
+- **P0c — Stud rules (II.3, II.6).** Fixed-limit completion is legal and the
+  raise increment is exact (5→20→40→60, not the bring-in-shifted 5→25→45);
+  antes are now dead money (a `post_dead_ante` path) rather than credited toward
+  the bring-in seat's call. Tests: `stud_completion_to_small_bet_is_legal`,
+  `stud_fixed_limit_raise_must_be_exact`, `stud_antes_are_dead_money`.
+
+*Mechanism (with one deviation).* The audit proposed a dedicated table-driven
+`tests/betting_rules.rs`; the tests instead landed **colocated** in
+`src/casino/table_no_cell.rs`'s unit-test module (same probe scenarios, next to
+the code they guard) — the house convention favours colocated tests, so this
+was the deliberate call. The CI half landed as proposed: a `variant-replays`
+job (`ci.yml`) un-`#[ignore]`s the four FLHE/PLO/stud/razz replay round-trips
+(`cargo test --test replay_consistency -- --include-ignored`), the first CI
+coverage that drives the II.1–II.6 rules end to end.
+
 ### P1 — Published-crate honesty (one afternoon, real consumer impact)
 
 Make `BC_RANK_HASHMAP` fallible (`PKError::BcmUnavailable(String)` or an
@@ -628,6 +660,39 @@ fix the `Claude.md` exclude casing, add `keywords`/`categories` and
 `[package.metadata.docs.rs] all-features = true`, and README-document what
 requires self-generated data. *Mechanism:* a CI smoke job that installs the
 packaged crate in a temp project and calls the headline APIs.
+
+**Status (0.1.9): done.** The published crate no longer panics or silently
+degrades on first touch:
+
+- **BCM panic boundary.** `BC_RANK_HASHMAP` is backed by a pure, testable
+  `load_bc_rank_map(path) -> Result<_, PKError>`; the blessed `bc_rank_hashmap()`
+  accessor returns `Err(PKError::BcmUnavailable)` instead of the old
+  `File::open(...).unwrap()` that aborted every crates.io consumer of
+  `SortedHeadsUp::wins()` and the `StartingHands` case-evals. (Landed as a
+  payload-free `BcmUnavailable` variant + a `Result`-returning accessor rather
+  than the `BcmUnavailable(String)`/`try_bc_rank_hashmap()` shapes the audit
+  floated — same guarantee, simpler surface.)
+- **`UNIQUE_HANDS` silent-empty.** Rather than patch the `unwrap_or_default()`
+  fallback, the whole distinct-5-card enumeration moved behind a non-default
+  `generators` feature — it has no runtime callers and needs self-generated
+  data, so it's out of the default published API entirely (the stronger fix).
+- **Packaging.** `Cargo.toml`'s exclude now uses the correct `CLAUDE.md` casing
+  (the internal doc, `DIARY.md`, and `marathon_failure.yaml` no longer ship);
+  `keywords`/`categories` and `[package.metadata.docs.rs] all-features = true`
+  are in place, so docs.rs renders the feature-gated items with their banners;
+  and the README now has a table documenting the two self-generated-data APIs
+  (BCM → `SevenFiveBCM::generate_bin` + `PKCORE_75BCM_PATH`; `UNIQUE_HANDS` →
+  `--features generators`) and that BCM calls otherwise return
+  `Err(PKError::BcmUnavailable)`.
+
+*Mechanism (with one deviation).* The audit proposed a CI job that installs the
+packaged crate in a temp project and calls the headline APIs. What landed is a
+lighter `package` job (`ci.yml`) that runs `cargo package` — a verify-build of
+the exact shipped tarball (with the ~403 MB `generated/bcm.zst` absent), which
+proves the BCM APIs degrade to `Err(BcmUnavailable)` rather than failing the
+build and that no excluded internal file is needed to compile. It does not yet
+*call* the headline APIs from a downstream project; promoting it to a true
+install-and-call smoke test remains open.
 
 ### P2 — Kernel step 1: make purity reachable, then default (III.6.1)
 
