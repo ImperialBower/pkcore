@@ -105,7 +105,12 @@ jobs:
           toolchain: ${{ steps.toolchain.outputs.version }}
           components: rust-src
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check --no-default-features --lib --tests
+      # Full test run with default features off: compiles lib, tests, AND
+      # examples (which `--lib --tests` skips) and runs the non-gated suite.
+      # Building examples is what surfaces one that uses a feature-gated API
+      # without a `required-features` entry (audit II.11 / P7) — the reason a
+      # plain `cargo check --lib --tests` never caught it. ~9,600 tests run here.
+      - run: cargo test --no-default-features
       - run: cargo check --no-default-features --features hand-histories --lib --tests
       - run: cargo check --no-default-features --features bot-profiles --lib --tests
       - run: cargo check --no-default-features --features player-stats --lib --tests
@@ -134,3 +139,26 @@ jobs:
           fi
           echo "Purity gate passed: no rusqlite/zstd/termion/dotenvy with --no-default-features."
           echo "(serde_yaml_bw remains via pkstate — documented ceiling, see AUDIT_Fable_5.md III.1.)"
+
+  wasm:
+    name: WASM build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Read toolchain from rust-toolchain.toml
+        id: toolchain
+        run: |
+          version=$(grep '^channel' rust-toolchain.toml | tr -d ' "' | cut -d= -f2)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ steps.toolchain.outputs.version }}
+          targets: wasm32-unknown-unknown
+          components: rust-src
+      - uses: Swatinem/rust-cache@v2
+      # Two production WASM apps (pkgto-web, pkkuhn-web) depend on pkcore
+      # building for wasm32; nothing else in CI checked it (audit VI.4). The
+      # store/terminal deps are target-gated off on wasm, so `--lib` is the
+      # meaningful surface. Runs under the global RUSTFLAGS=-Dwarnings.
+      - run: cargo check --target wasm32-unknown-unknown --lib

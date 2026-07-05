@@ -7,12 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.1.9] - unreleased
 
-This release closes the P0–P5 items of the Fable 5 audit
+This release closes the P0–P5 and P7 items of the Fable 5 audit
 (`docs/AUDIT_Fable_5.md`): the confirmed variant-engine rule bugs (Part II), the
 published-crate panic boundary (P1), the first kernel-purity step (P2), the
 format-crate error de-leak (P3), the long-standing `todo!()`/operator cleanup
-with a lint gate (P4), and trainer determinism plus stats-store durability (P5).
-The breaking halves of P2 and P4 are deferred to 0.2.0.
+with a lint gate (P4), trainer determinism plus stats-store durability (P5), and
+the CI coverage gaps (P7). P6 (semver posture) and the breaking halves of P2/P4
+are deferred to 0.2.0.
 
 ### Fixed
 
@@ -52,6 +53,17 @@ The breaking halves of P2 and P4 are deferred to 0.2.0.
   `fs::rename`), and `load_all` skips-and-logs an unreadable/malformed file
   (via `log::warn!`) instead of failing every player's load on the first bad
   file.
+- **Examples missing `required-features` broke `cargo test
+  --no-default-features` (audit II.11 / P7).** Not just the `calc` example the
+  audit named — seven examples (`calc`, `audit`, `export_hups_bin`,
+  `generate_bcm`, `hup_dump`, `insert_distinct`, `preflop`, `pluripop`) used
+  `equity`/`store`/`terminal` APIs with no `[[example]]` entry, so they were
+  built unconditionally and failed to compile without those features. Each now
+  declares its `required-features`. The full `cargo test --no-default-features`
+  suite (9,634 tests) is green.
+- An unconditional `use crate::PKError` in `util/terminal.rs` warned on wasm
+  (it is only used by non-wasm functions); now gated to match, so the wasm
+  build is warning-clean.
 
 ### Added
 

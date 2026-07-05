@@ -125,6 +125,42 @@ getrandom_v3 = { package = "getrandom", version = "0.3", features = ["wasm_js"] 
 uuid = { version = "1.22", features = ["serde", "v4", "js"] }
 
 [[example]]
+name = "calc"
+required-features = ["equity"]
+
+# Storage-backed tools: SQLite HUP store + zstd binary card map (audit II.11 /
+# P7). Without `store`, `rusqlite`/`Sqlable`/`HUPResult` DB methods / BCM
+# generation are absent, so these must not build under `--no-default-features`.
+[[example]]
+name = "audit"
+required-features = ["store"]
+
+[[example]]
+name = "export_hups_bin"
+required-features = ["store"]
+
+[[example]]
+name = "generate_bcm"
+required-features = ["store"]
+
+[[example]]
+name = "hup_dump"
+required-features = ["store"]
+
+[[example]]
+name = "insert_distinct"
+required-features = ["store"]
+
+[[example]]
+name = "preflop"
+required-features = ["store"]
+
+# Uses `Terminal::pause` (raw-mode key reads), which is gated behind `terminal`.
+[[example]]
+name = "pluripop"
+required-features = ["terminal"]
+
+[[example]]
 name = "equity"
 required-features = ["equity"]
 

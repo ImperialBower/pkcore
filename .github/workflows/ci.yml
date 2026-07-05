@@ -29,6 +29,20 @@ jobs:
       - run: cargo test --features pokerbench
       - run: cargo clippy --features pokerbench -- -D warnings
 
+  optional-features:
+    name: Optional features (bot-training, debug-json)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # bot-training and debug-json compile today but nothing on CI built them,
+      # so they could silently rot (audit VI.4 / P7). Exercise both explicitly.
+      # The heavy `training_integration` run stays #[ignore]d (release-only), so
+      # this only compiles the feature + runs the fast unit/doc tests.
+      - run: cargo test --features bot-training
+      - run: cargo test --features debug-json
+
   marathon:
     name: Bot Marathon (1 000 hands)
     runs-on: ubuntu-latest

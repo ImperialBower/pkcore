@@ -819,6 +819,43 @@ encodings. *Mechanism:* semver-checks in CI is the mechanism.
 Add wasm32 build job, `bot-training`/`debug-json` checks,
 `cargo test --no-default-features`. *Mechanism:* it is CI.
 
+**Status (0.1.9): done.** All three gaps closed, each verified locally before
+wiring so no job lands red:
+
+- **wasm32 build job** (`basic.yaml`). Runs `cargo check --target
+  wasm32-unknown-unknown --lib` under the workflow's `RUSTFLAGS=-Dwarnings`.
+  Getting it warning-clean required one fix: `src/util/terminal.rs`'s
+  `use crate::PKError` was unconditional but only used by
+  `#[cfg(not(target_arch = "wasm32"))]` functions, so it warned on wasm — now
+  gated to match. (The audit's "3 unused-import warnings" had already dropped to
+  1 by 0.1.9; that 1 is gone.) Guards the two production WASM consumers
+  (`pkgto-web`, `pkkuhn-web`).
+- **`bot-training` / `debug-json` coverage** (`ci.yml`, new `optional-features`
+  job, mirroring the `pokerbench` one). `cargo test --features bot-training`
+  and `cargo test --features debug-json` — both compiled today but nothing on
+  CI built them (VI.4), so they could silently rot. The heavy
+  `training_integration` run stays `#[ignore]`d.
+- **`cargo test --no-default-features`** (`basic.yaml`, upgraded from the prior
+  `cargo check --no-default-features --lib --tests`). The check form skipped
+  *examples*, which is exactly why II.11 hid: **seven** examples — not just the
+  one `calc.rs` the audit named — used feature-gated (`store`/`terminal`) APIs
+  with no `[[example]]` `required-features` entry, so `cargo test
+  --no-default-features` failed to compile them. All eight now carry entries
+  (`calc` → `equity`; `audit`/`export_hups_bin`/`generate_bcm`/`hup_dump`/
+  `insert_distinct`/`preflop` → `store`; `pluripop` → `terminal`). The full
+  no-default suite now runs **9,634 tests, 0 failed**.
+
+*Verification:* `cargo test --no-default-features` 9,634 passed / 0 failed;
+`cargo check --target wasm32-unknown-unknown --lib` clean under `-Dwarnings`;
+`cargo test --features bot-training` and `--features debug-json` green;
+`cargo build --examples` (default) still builds all gated examples; `cargo fmt
+--all --check` clean.
+
+Left for **P6**: the CI vs Makefile gap list (VI.4) still omits `--all-features`,
+`cargo-semver-checks`, `cargo-udeps`, mutants, coverage, and full `cargo deny`.
+Semver-checks belongs with the 0.2.0 semver work (P6); the rest are optional
+depth, not correctness gates.
+
 ### P8 — Kernel step 3 (strategic): the transition surface
 
 `legal_actions(seat)` + `apply(action)` on `TableNoCell`, promoting
