@@ -8,6 +8,7 @@ use std::fmt::Display;
 use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq)]
+#[non_exhaustive] // 0.2.0: this is a serialized wire enum; adding a variant must stay non-breaking.
 pub enum TableAction {
     #[default]
     Pause,

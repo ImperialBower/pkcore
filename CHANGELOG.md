@@ -5,15 +5,18 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.9] - unreleased
+## [0.2.0] - unreleased
 
-This release closes the P0–P5 and P7 items of the Fable 5 audit
+This release closes the P0–P7 items of the Fable 5 audit
 (`docs/AUDIT_Fable_5.md`): the confirmed variant-engine rule bugs (Part II), the
 published-crate panic boundary (P1), the first kernel-purity step (P2), the
 format-crate error de-leak (P3), the long-standing `todo!()`/operator cleanup
-with a lint gate (P4), trainer determinism plus stats-store durability (P5), and
-the CI coverage gaps (P7). P6 (semver posture) and the breaking halves of P2/P4
-are deferred to 0.2.0.
+with a lint gate (P4), trainer determinism plus stats-store durability (P5), the
+semver posture for 0.2.0 (P6), and the CI coverage gaps (P7). The major bump to
+0.2.0 reflects the accumulated breaking changes (the P3 error-type de-leak and
+the P6 `#[non_exhaustive]` additions). The breaking half of P2 — flipping the
+default feature set to drop `store`/`terminal` — remains deferred to a later
+release.
 
 ### Fixed
 
@@ -141,6 +144,23 @@ are deferred to 0.2.0.
   an operation undefined-for-a-type, which is why the `Pile` over-specification
   can stay deferred.)
 
+- **Semver posture hardened for 0.2.0 (audit P6).**
+  - `PKError`, `TableAction`, `ActionType`, and `GameType` are now
+    `#[non_exhaustive]`. Downstream `match`es on them must add a wildcard arm,
+    but adding a variant is henceforth a non-breaking (minor) change — important
+    for the two serialized wire enums (`TableAction`, `ActionType`) and for the
+    growing `PKError`/`GameType`.
+  - `From<std::io::Error> for PKError` now maps to `InvalidIO` instead of
+    `DBConnectionError`, so a filesystem error no longer masquerades as a
+    database outage (the `rusqlite` seam keeps `DBConnectionError`).
+  - Re-enabled `cargo-semver-checks` in CI as a dedicated `Semver` job — the
+    mechanism that forces future breaking changes to take a deliberate version
+    bump.
+  - Documented the **card `Display` ↔ `FromStr` wire-format stability promise**
+    (crate-root docs): `"6♠ 6♥"`-style encodings and the wire-enum `serde`
+    representations are a public contract that `pkpy` and hand-history YAML rely
+    on.
+
 ### Removed
 
 - The `dotenvy` dependency. `HUPResult::db_path` now reads `HUPS_DB_PATH` via
@@ -148,27 +168,32 @@ are deferred to 0.2.0.
 
 ### Compatibility
 
-- **Non-breaking for all current consumers**, verified against every in-tree
-  dependant (`pkarena0-web`, the `pkdealer` crates, `pkgto-web`, `pkkuhn-web`,
-  `pkpy`, `exgto`):
-  - The feature work (P2) is safe because they all take the default feature
-    set, which still includes `store` + `terminal` — nothing they compile
-    changed.
-  - The error-surface work (P3) is *source-breaking in principle* only for a
-    caller that named a format-crate error type (`serde_yaml_bw::Error`, etc.)
-    in a `match` arm or a typed `From`/`?` seam. None do — the consumers that
-    call `from_yaml`/`to_yaml` propagate through `Box<dyn Error>`, `match`, or
-    `Display`, all of which are agnostic to the concrete error type.
-  - The P4 work is additive: new `Cards` operators, a new `PKError` variant, and
-    `todo!()`→`unimplemented!()`/`Err` swaps behind methods that previously
-    panicked. `act_pay_out` and `hup_result_from_shift` return
-    `Err(PKError::NotImplemented)` where they used to abort — strictly more
-    recoverable, and no in-tree consumer calls them.
-- The *breaking* halves — flipping `default` to drop `store`/`terminal` (P2),
-  and deprecating `TableCelled` + removing
-  `CardsCell`/`SeatCell`/`TableLog`/`TableCelled` from the prelude (P4) — remain
-  deferred to 0.2.0 and will ship with companion PRs; see the P2 and P4 status
-  notes in `docs/AUDIT_Fable_5.md`.
+0.2.0 is a **deliberate breaking release** (hence the minor bump in 0.x). The
+break is narrow, and assessed against every in-tree dependant (`pkarena0-web`,
+the `pkdealer` crates, `pkgto-web`, `pkkuhn-web`, `pkpy`, `exgto`):
+
+- **The one broad break: the `#[non_exhaustive]` enums (P6).** Any downstream
+  `match` on `PKError`, `TableAction`, `ActionType`, or `GameType` without a
+  wildcard arm will no longer compile and must add `_ => …`. This is the intended
+  protective change; the fix is mechanical. (One in-repo example, `replay_play`,
+  needed exactly this arm.)
+- The feature work (P2) is safe: consumers all take the default feature set,
+  which still includes `store` + `terminal` — nothing they compile changed.
+- The error-surface work (P3) is *source-breaking in principle* only for a
+  caller that named a format-crate error type (`serde_yaml_bw::Error`, etc.) in a
+  `match` arm or a typed `From`/`?` seam. None do — the consumers that call
+  `from_yaml`/`to_yaml` propagate through `Box<dyn Error>`, `match`, or
+  `Display`, all agnostic to the concrete error type.
+- The P4 work is additive (new `Cards` operators, a new `PKError` variant, and
+  `todo!()`→`unimplemented!()`/`Err` swaps behind previously-panicking methods).
+- `From<io::Error>`'s new `InvalidIO` target (P6) changes which `PKError` a
+  filesystem failure produces; only a consumer asserting the exact old
+  `DBConnectionError` value would notice, and none do.
+
+Still deferred to a **later** release (not in 0.2.0): flipping `default` to drop
+`store`/`terminal` (P2), and deprecating `TableCelled` + pruning
+`CardsCell`/`SeatCell`/`TableLog`/`TableCelled` from the prelude (P4). See the P2
+and P4 status notes in `docs/AUDIT_Fable_5.md`.
 
 ## [0.1.8] - 2026-06-20
 

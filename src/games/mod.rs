@@ -83,6 +83,7 @@ impl std::fmt::Display for GameFamily {
 }
 
 #[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq)]
+#[non_exhaustive] // 0.2.0: new poker variants can be added without breaking downstream matches.
 pub enum GameType {
     #[default]
     NoLimitHoldem,

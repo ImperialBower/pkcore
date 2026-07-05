@@ -190,7 +190,26 @@
 //! - **System Errors**: `DBConnectionError`, `SqlError`
 //! - **Parsing Errors**: `InvalidCardNumber`, `InvalidRangeIndex`
 //!
-//! All errors implement `std::error::Error` and can be converted from `rusqlite::Error`.
+//! All errors implement `std::error::Error`. `PKError` converts from
+//! `std::io::Error` (→ `InvalidIO`) and, with the `store` feature, from
+//! `rusqlite::Error` (→ `DBConnectionError`).
+//!
+//! ## API Stability
+//!
+//! **The `Display` encodings of cards and hands are a stable wire format.** A
+//! card renders as its rank+suit glyph (e.g. `A♠`), and a multi-card hand as
+//! space-separated glyphs (e.g. `6♠ 6♥`); every such type round-trips through
+//! its `FromStr` (`Two::from_str("6♠ 6♥")`, `Card::from_str("A♠")`, …). These
+//! strings are load-bearing: hand-history YAML and the `pkpy` notebooks parse
+//! them, so their format is treated as a public contract and will not change
+//! within a `0.x` line except in a version that documents the break.
+//!
+//! The serialized enums (`TableAction`, `ActionType`, `GameType`) and `PKError`
+//! are `#[non_exhaustive]` as of 0.2.0: new variants may be added in a minor
+//! release, so downstream `match`es on them must include a wildcard arm. Adding
+//! a variant is therefore **not** a breaking change; removing or renaming one
+//! is. The `serde` representations of the wire enums are part of the same
+//! stability promise.
 //!
 //! ## Database Integration
 //!
@@ -422,6 +441,7 @@ pub const POSSIBLE_UNIQUE_HOLDEM_HUP_MATCHUPS: usize = 1_624_350;
 // endregion
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Ord, PartialOrd, Eq, Hash, PartialEq)]
+#[non_exhaustive] // 0.2.0: adding a variant is no longer a breaking change for downstream matches.
 pub enum PKError {
     ActionIsntFinished,
     AlreadyDealt,
@@ -583,8 +603,11 @@ impl From<rusqlite::Error> for PKError {
 
 impl From<std::io::Error> for PKError {
     fn from(err: std::io::Error) -> Self {
+        // Filesystem/IO failures map to `InvalidIO`, not `DBConnectionError` —
+        // the latter is reserved for the `rusqlite` seam above. Conflating the
+        // two made a missing YAML file read as a database outage (audit #6 / P6).
         log::error!("{err}");
-        PKError::DBConnectionError
+        PKError::InvalidIO
     }
 }
 

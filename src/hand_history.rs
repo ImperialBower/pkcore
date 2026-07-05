@@ -2331,6 +2331,7 @@ pub struct Action {
 /// ```
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive] // 0.2.0: this is a serialized wire enum; adding a variant must stay non-breaking.
 pub enum ActionType {
     /// Discard hand and exit the pot.
     Fold,

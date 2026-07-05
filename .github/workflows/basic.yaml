@@ -43,8 +43,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-#      - name: Check semver
-#        uses: obi1kenobi/cargo-semver-checks-action@v2
       - name: Read toolchain from rust-toolchain.toml
         id: toolchain
         run: |
@@ -56,6 +54,21 @@ jobs:
           components: clippy, rust-src
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy -- -Dclippy::all -Dclippy::pedantic
+
+  # Semver posture (AUDIT_Fable_5.md P6): compares the crate's public API against
+  # the last version published to crates.io and fails if the change is breaking
+  # without a matching version bump. This is the mechanism that keeps the
+  # `#[non_exhaustive]` / error-type contract honest — a breaking change now
+  # forces a deliberate 0.x minor bump instead of slipping out in a patch.
+  semver:
+    name: Semver
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Check semver
+        uses: obi1kenobi/cargo-semver-checks-action@v2
 
   fmt:
     name: Fmt

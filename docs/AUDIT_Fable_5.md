@@ -879,6 +879,20 @@ passed**; stats-store suite green; `cargo clippy` clean (below).
 mapping; write the one-paragraph stability promise for Display-based card
 encodings. *Mechanism:* semver-checks in CI is the mechanism.
 
+**Status: done — crate bumped to 0.2.0.** All four enums are now
+`#[non_exhaustive]` (the one in-repo exhaustive `match`, `examples/replay_play`,
+got a wildcard arm). `From<std::io::Error> for PKError` now maps to `InvalidIO`
+instead of `DBConnectionError` — filesystem failures no longer read as DB
+outages, and the `rusqlite` seam retains `DBConnectionError`. The card
+`Display` ↔ `FromStr` wire-format stability promise (and the wire-enum `serde`
+contract) is written into the crate-root docs (`## API Stability`).
+*Mechanism landed:* a dedicated `Semver` job in `basic.yaml` runs
+`cargo-semver-checks` against the last crates.io release; the 0.2.0 bump is what
+makes it green (the P3 error-type and P6 `#[non_exhaustive]` changes are breaking
+and require the minor bump in 0.x). This is a deliberate breaking release; only
+the P2 default-flip and the P4 prelude-pruning remain deferred to a later
+version.
+
 ### P7 — CI completes its own Makefile
 
 Add wasm32 build job, `bot-training`/`debug-json` checks,
