@@ -209,6 +209,13 @@ the `pkdealer` crates, `pkgto-web`, `pkkuhn-web`, `pkpy`, `exgto`):
 - `From<io::Error>`'s new `InvalidIO` target (P6) changes which `PKError` a
   filesystem failure produces; only a consumer asserting the exact old
   `DBConnectionError` value would notice, and none do.
+- **Replay compatibility (variants).** The 0.1.9 variant rule fixes — the Razz
+  ace-low bring-in seat, fixed-limit stud raise exactness, and dead antes —
+  change replay semantics, so a stud/razz/FLHE/PLO hand history recorded under an
+  earlier 0.1.x may not replay identically (or at all) under 0.2.0. The
+  `Display` ↔ `FromStr` card wire-format promise is unchanged; this is about
+  *engine* replay, not the card encoding. No committed fixtures break — the only
+  replayed archive is NLHE, which is unaffected.
 
 Still deferred to a **later** release (not in 0.2.0): flipping `default` to drop
 `store`/`terminal` (P2), and deprecating `TableCelled` + pruning

@@ -221,9 +221,10 @@
 //! - **Persistence**: Efficient bulk loading and querying
 //! - **Features**: Split pot tracking, win/loss counts
 //!
-//! Add to `.env`:
-//! ```env
-//! HUPS_DB_PATH=generated/hups.db
+//! Export the variable in your environment (as of 0.2.0 `pkcore` reads it
+//! directly with `std::env::var` — the `dotenvy` `.env` loader was removed):
+//! ```sh
+//! export HUPS_DB_PATH=generated/hups.db
 //! ```
 //!
 //! ## Examples

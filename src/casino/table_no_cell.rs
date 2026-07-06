@@ -268,6 +268,59 @@ impl PlayerNoCell {
         Ok(self.chips)
     }
 
+    /// Posts `amount` of *dead* money (a stud/razz ante) for an active player.
+    ///
+    /// Sibling of [`Self::act_bet_internal`] for money that must **not** enter
+    /// `bet`: it caps at the remaining stack, moves the chips from `chips` into
+    /// `chips_in_play` (preserving the `pot == Σ chips_in_play` showdown
+    /// invariant) while leaving `bet` untouched — so the ante never credits a
+    /// call or shrinks a bring-in. Crucially it mirrors `act_bet_internal`'s
+    /// all-in transition: when the post takes the player's **last** chip it sets
+    /// `state = AllIn(..)`. Because the ante lives in `chips_in_play` rather than
+    /// `bet`, the `(chips == 0 && bet > 0)` heuristic in [`Self::is_all_in`]
+    /// cannot fire, so the transition is applied explicitly. Without it an
+    /// ante-felted seat is stranded chips=0/bet=0/`YetToAct` and betting never
+    /// completes (audit P9a).
+    ///
+    /// Returns the amount actually posted (0 for an inactive seat — folded, out,
+    /// or not dealt in — or one already out of chips). The inactive-seat guard
+    /// also means an occupied seat sitting `Out` with chips is never charged
+    /// (audit P9h).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table_no_cell::PlayerNoCell;
+    /// use pkcore::prelude::PlayerState;
+    ///
+    /// // Whole 2-chip stack goes to a 2-chip ante → all-in for the dead money.
+    /// let mut p = PlayerNoCell::new_with_chips("Shorty".to_string(), 2);
+    /// let posted = p.post_dead(2);
+    /// assert_eq!(2, posted);
+    /// assert_eq!(0, p.chips);
+    /// assert_eq!(2, p.chips_in_play);
+    /// assert_eq!(0, p.bet); // dead money never enters the street bet
+    /// assert!(p.is_all_in());
+    /// ```
+    pub fn post_dead(&mut self, amount: usize) -> usize {
+        if !self.is_active() {
+            return 0;
+        }
+        let actual = amount.min(self.chips);
+        if actual == 0 {
+            return 0;
+        }
+        self.chips -= actual;
+        self.chips_in_play += actual;
+        // Mirror act_bet_internal: taking the player's last chip is an all-in.
+        // The dead money sits in chips_in_play, not bet, so is_all_in()'s
+        // `(chips == 0 && bet > 0)` heuristic can't fire — set state explicitly.
+        if self.chips == 0 {
+            self.state = PlayerState::AllIn(self.bet);
+        }
+        actual
+    }
+
     /// Posts a voluntary bet of `amount`.
     ///
     /// # Errors
@@ -1114,24 +1167,19 @@ impl SeatsNoCell {
             .act_raise(amount)
     }
 
-    /// Posts a *dead* ante for seat `idx`: deducts up to `ante` from the
-    /// player's stack (capped at their chips) into `chips_in_play` **without**
-    /// touching `player.bet`, and returns the amount actually posted (0 if the
-    /// seat is empty or out of chips). The caller adds the returned amount to
-    /// the pot. Because the ante never enters `bet`, it stays dead money — it
-    /// does not credit calls or shrink the bring-in — while `chips_in_play`
-    /// preserves the `pot == Σ chips_in_play` showdown invariant.
+    /// Posts a *dead* ante for seat `idx`, delegating to
+    /// [`PlayerNoCell::post_dead`] which owns the cap-deduct-track sequence and
+    /// the all-in transition when the ante takes the player's last chip. Returns
+    /// the amount actually posted (0 if the seat is empty, inactive, or out of
+    /// chips). The caller adds the returned amount to the pot. Because the ante
+    /// moves through `chips_in_play` rather than `bet`, it stays dead money — it
+    /// does not credit calls or shrink the bring-in — while preserving the
+    /// `pot == Σ chips_in_play` showdown invariant.
     pub(crate) fn post_dead_ante(&mut self, idx: u8, ante: usize) -> usize {
         let Some(seat) = self.get_seat_mut(idx) else {
             return 0;
         };
-        if seat.is_empty() {
-            return 0;
-        }
-        let actual = ante.min(seat.player.chips);
-        seat.player.chips -= actual;
-        seat.player.chips_in_play += actual;
-        actual
+        seat.player.post_dead(ante)
     }
 
     /// Marks all eligible seats as `YetToAct` for a new hand.
@@ -2105,15 +2153,10 @@ impl TableNoCell {
     /// ```
     #[must_use]
     pub fn min_raise_to(&self) -> usize {
-        let full = self.min_raise();
-        if self.bet < full {
-            // Completion: only a partial forced bet (the stud bring-in) is on
-            // the table, so the minimum legal raise is to one full bet for the
-            // street, not a full increment on top of the bring-in.
-            full
-        } else {
-            self.bet.saturating_add(full)
-        }
+        // Delegates the completion-vs-step rule to `BettingStructure` so the
+        // minimum and the fixed-limit maximum are computed from one source and
+        // cannot drift (audit P9j.2).
+        BettingStructure::completion_raise_to(self.bet, self.min_raise())
     }
 
     /// Returns the [`BetTier`] for the current `phase` based on the
@@ -2371,6 +2414,12 @@ impl TableNoCell {
     /// bring-in seat as the live session (which had only one upcard
     /// per seat when bring-in was selected).
     fn third_street_extreme_upcard_seat(&self, highest: bool) -> Option<u8> {
+        // `highest` is the scan *direction* (does the extreme upcard bring in?);
+        // the ace-high-vs-low rank order is an independent property owned by the
+        // game family (audit P9j.5). Today Razz is the only family that both
+        // scans highest and ranks the ace low, but keeping the axes separate
+        // means a deuce-to-seven variant (highest, ace-high) stays expressible.
+        let ace_low = self.game.family().ranks_ace_low();
         let mut best: Option<(u8, u8, u8)> = None;
         for (idx, seat) in self.seats.0.iter().enumerate() {
             if seat.is_empty() || !seat.is_in_hand() {
@@ -2384,9 +2433,8 @@ impl TableNoCell {
                 continue;
             };
             let card = hole_card.card();
-            // let rank = card.get_rank();
 
-            let rank_key = if highest {
+            let rank_key = if ace_low {
                 California::ace_low_rank(card.get_rank())
             } else {
                 card.get_rank() as u8
@@ -2480,11 +2528,84 @@ impl TableNoCell {
         Ok(folded_chips)
     }
 
+    /// The maximum legal raise-to `amount` for `seat` under the current betting
+    /// structure — the single-sourced form of the 5-argument
+    /// [`BettingStructure::max_raise`] incantation (audit P9j.1). Returns 0 for
+    /// an unknown seat.
+    ///
+    /// This is the *ceiling* only; a full raise must also clear
+    /// [`Self::min_raise_to`] and the per-street cap — see [`Self::validate_raise`].
+    #[must_use]
+    fn max_raise_for(&self, seat_number: u8) -> usize {
+        let Some(seat) = self.seats.get_seat(seat_number) else {
+            return 0;
+        };
+        let stack = seat.player.total_chip_count();
+        self.betting.max_raise(
+            self.effective_pot(),
+            self.bet,
+            seat.player.bet,
+            stack,
+            self.current_bet_tier(),
+        )
+    }
+
+    /// Validates a would-be *non-all-in* raise-to `amount` for `seat`: the
+    /// minimum increment, the per-street raise cap, and the structure ceiling.
+    ///
+    /// This is the single source of truth for raise legality, executed by
+    /// [`Self::act_raise`] before it mutates and queried by [`Self::raise_bounds`]
+    /// / [`Self::legal_actions`]. Because the advisory surface and the mutating
+    /// surface call the *same* function, they cannot drift (audit P9b, P9j.1).
+    /// The all-in bypass is intentionally *not* applied here — callers handle
+    /// all-in separately.
+    ///
+    /// # Errors
+    ///
+    /// - `PKError::InsufficientIncrement` if `amount` is below `min_raise_to()`.
+    /// - `PKError::RaiseCapReached` if the per-street cap is hit.
+    /// - `PKError::ExceedsBettingCap` if `amount` exceeds the structure ceiling.
+    fn validate_raise(&self, seat_number: u8, amount: usize) -> Result<(), PKError> {
+        if amount < self.min_raise_to() {
+            return Err(PKError::InsufficientIncrement);
+        }
+        if self.betting.cap_reached(self.raises_this_street) {
+            return Err(PKError::RaiseCapReached);
+        }
+        if amount > self.max_raise_for(seat_number) {
+            return Err(PKError::ExceedsBettingCap);
+        }
+        Ok(())
+    }
+
+    /// The legal raise-to range `[min, max]` for `seat`, or `None` when no
+    /// voluntary (non-all-in) raise is legal right now — the cap is reached, or
+    /// the stack cannot cover the minimum raise. In fixed-limit `min == max`
+    /// (one legal amount). Derived entirely from [`Self::validate_raise`] and
+    /// [`Self::max_raise_for`], so it agrees with `act_raise` by construction.
+    ///
+    /// Used by [`Self::legal_actions`] to advertise `Raise(min)` and by the sim
+    /// to clamp a decider's oversize raise deterministically. All-in-for-less is
+    /// not a raise and is not represented here.
+    #[must_use]
+    pub fn raise_bounds(&self, seat_number: u8) -> Option<(usize, usize)> {
+        let min = self.min_raise_to();
+        // validate_raise(min) folds every reason a raise could be illegal (cap
+        // reached, min above the structure ceiling because the stack is short)
+        // into one check.
+        if self.validate_raise(seat_number, min).is_err() {
+            return None;
+        }
+        Some((min, self.max_raise_for(seat_number)))
+    }
+
     /// Places a bet of `amount` for seat `seat_number`.
     ///
     /// # Errors
     ///
     /// - `PKError::TableActionOutOfOrder` if it is not this seat's turn.
+    /// - `PKError::InsufficientIncrement` if `amount` is below the minimum
+    ///   opening bet and the player is not going all-in for less.
     /// - `PKError::InsufficientChips` if not enough chips.
     ///
     /// # Examples
@@ -2511,8 +2632,20 @@ impl TableNoCell {
             self.log(err);
             return Err(PKError::TableActionOutOfOrder(err));
         }
+        // Pre-validate BEFORE any mutation (mirror act_raise; audit P9d). An
+        // opening bet is a raise-from-zero: it must clear the minimum and the
+        // structure ceiling unless the player is betting their whole stack
+        // (all-in for less). Without this guard `seats.act_bet` mutated the seat
+        // and then `set_raise_increment` rejected, stranding a live Bet with
+        // `table.bet` still 0 and the seat no longer next to act.
+        if let Some(seat) = self.seats.get_seat(seat_number) {
+            let would_be_all_in = amount >= seat.player.total_chip_count();
+            if !would_be_all_in {
+                self.validate_raise(seat_number, amount)?;
+            }
+        }
         let remaining = self.seats.act_bet(seat_number, amount)?;
-        self.set_raise_increment(seat_number, amount)?;
+        self.set_raise_increment(seat_number, amount);
         self.bet = amount;
         self.log(TableAction::Bet(seat_number, amount));
         self.log(TableAction::ActionTo(self.next_to_act()));
@@ -2651,38 +2784,22 @@ impl TableNoCell {
             self.log(err);
             return Err(PKError::TableActionOutOfOrder(err));
         }
-        // Pre-validate the raise increment BEFORE any state is modified.
-        // Without this guard, act_bet_internal deducts chips for an under-sized
-        // raise and sets the seat to Raise(_); then set_raise_increment returns
-        // Err, leaving the seat in a corrupt state where it is no longer
-        // "next to act" — causing every subsequent raise attempt to fail.
+        // Pre-validate the raise BEFORE any state is modified. Without this
+        // guard, act_bet_internal deducts chips for an under-sized raise and
+        // sets the seat to Raise(_); then the seat is corrupt and no longer
+        // "next to act". Validation is delegated to `validate_raise` — the same
+        // check `legal_actions`/`raise_bounds` query, so the advisory and
+        // mutating surfaces cannot drift (audit P9b/P9j.1). All-in bypasses it
+        // (a short stack can always shove for less; NoLimit's max_raise == stack,
+        // so oversized amounts route through the all-in branch above anyway).
         if let Some(seat) = self.seats.get_seat(seat_number) {
             let would_be_all_in = amount >= seat.player.total_chip_count();
             if !would_be_all_in {
-                if amount < self.min_raise_to() {
-                    return Err(PKError::InsufficientIncrement);
-                }
-                // EPIC-30 Phase 3: enforce Fixed-Limit raise cap and
-                // BettingStructure max-raise ceiling. All-in bypasses both
-                // checks (a short stack can always go all-in for less).
-                // NoLimit's max_raise == stack, so this check is a no-op
-                // for NLHE (oversized amounts already routed through the
-                // all-in branch above).
-                if self.betting.cap_reached(self.raises_this_street) {
-                    return Err(PKError::RaiseCapReached);
-                }
-                let tier = self.current_bet_tier();
-                let stack = seat.player.total_chip_count();
-                let max = self
-                    .betting
-                    .max_raise(self.effective_pot(), self.bet, seat.player.bet, stack, tier);
-                if amount > max {
-                    return Err(PKError::ExceedsBettingCap);
-                }
+                self.validate_raise(seat_number, amount)?;
             }
         }
         let remaining = self.seats.act_raise(seat_number, amount)?;
-        self.set_raise_increment(seat_number, amount.saturating_sub(self.bet))?;
+        self.set_raise_increment(seat_number, amount.saturating_sub(self.bet));
         self.bet = amount;
         // EPIC-30 Phase 3: count this raise toward the per-street cap.
         // Saturating add so a misconfigured raise_cap can't panic via
@@ -2693,7 +2810,21 @@ impl TableNoCell {
         Ok(remaining)
     }
 
-    /// Goes all-in for seat `seat_number`.
+    /// Commits seat `seat_number`'s whole stack, returning the chips **committed**.
+    ///
+    /// In No-Limit this is an unconditional all-in for the full stack. In a
+    /// **capped** structure (Fixed-Limit / Pot-Limit) a deep stack has no true
+    /// "all-in raise", so the shove is degraded to the largest legal action and
+    /// the player is *not* left all-in:
+    /// - a legal raise exists and the stack overflows its ceiling → raise to the
+    ///   max (e.g. the pot-limit clamp), returning the amount committed;
+    /// - no legal raise remains (the cap is reached, or the bet is already
+    ///   matched) → a plain call;
+    /// - the stack is smaller than the max legal raise → a genuine all-in for less.
+    ///
+    /// This keeps the `AllIn` that [`Self::legal_actions`] advertises always
+    /// acceptable by [`Self::apply_action`] (audit P9b), and the return value is
+    /// chips-committed on every path (audit P9e).
     ///
     /// # Errors
     ///
@@ -2713,6 +2844,7 @@ impl TableNoCell {
     /// t.act_forced_bets().unwrap();
     /// t.deal_cards_to_seats().unwrap();
     /// let utg = t.determine_utg();
+    /// // No-Limit: a real all-in for the whole stack.
     /// t.act_all_in(utg).unwrap();
     /// assert!(t.seats.get_seat(utg).unwrap().player.is_all_in());
     /// ```
@@ -2727,41 +2859,69 @@ impl TableNoCell {
             return Err(PKError::TableActionOutOfOrder(err));
         }
 
-        // Guard for capped betting structures to make sure they don't go over the cap
-        if !self.betting.is_no_limit()
-            && let Some(seat) = self.seats.get_seat(seat_number)
-        {
-            let stack = seat.player.total_chip_count();
-            let tier = self.current_bet_tier();
-            let max = self
-                .betting
-                .max_raise(self.effective_pot(), self.bet, seat.player.bet, stack, tier);
-            if stack > max {
-                return self.act_raise(seat_number, max);
+        // Capped structures (Fixed-Limit, Pot-Limit) have no true "all-in raise"
+        // for a deep stack: the most it can commit voluntarily is one legal
+        // raise. Degrade a deep-stack shove to the largest legal action so the
+        // AllIn that `legal_actions` advertises is always accepted (audit P9b).
+        // NoLimit's max_raise == stack, so this whole branch is a no-op for NLHE.
+        if !self.betting.is_no_limit() {
+            let stack = self
+                .seats
+                .get_seat(seat_number)
+                .map_or(0, |s| s.player.total_chip_count());
+            match self.raise_bounds(seat_number) {
+                // A legal raise exists and the stack overflows its ceiling: raise
+                // to the max. Normalize the return to chips *committed*
+                // (`act_raise` reports chips remaining), matching every other
+                // all-in path (audit P9e).
+                Some((_, max)) if stack > max => {
+                    self.act_raise(seat_number, max)?;
+                    let committed = self.seats.get_seat(seat_number).map_or(max, |s| s.player.bet);
+                    return Ok(committed);
+                }
+                // Stack fits within the max raise: fall through to a true all-in.
+                Some(_) => {}
+                // No voluntary raise is legal (cap reached, or the bet is already
+                // matched). A deep stack can then only call; a stack that cannot
+                // cover the call is the genuine all-in-for-less handled below.
+                None => {
+                    if stack > self.to_call(seat_number) {
+                        return self.act_call(seat_number);
+                    }
+                }
             }
         }
 
+        let old_bet = self.bet;
         let amount = self.seats.act_all_in(seat_number)?;
-
         self.bet = self.bet.max(amount);
+
+        // A shove that is at least a full raise re-opens the betting: record the
+        // new increment so the next player's minimum re-raise is measured from it
+        // (audit P9f). A sub-min all-in does NOT re-open — leave the increment
+        // untouched so players who already acted may only call the extra (Part V).
+        let raise_delta = self.bet.saturating_sub(old_bet);
+        if raise_delta >= self.min_raise() {
+            self.raise_increment = raise_delta;
+            self.raises_this_street = self.raises_this_street.saturating_add(1);
+        }
+
         self.log(TableAction::AllIn(seat_number, amount));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(amount)
     }
 
-    fn set_raise_increment(&mut self, seat_number: u8, amount: usize) -> Result<(), PKError> {
+    /// Stores the raise increment (the delta over the previous bet) after a
+    /// bet/raise has already been applied. A pure store now that both
+    /// [`Self::act_bet`] and [`Self::act_raise`] pre-validate the amount against
+    /// [`Self::min_raise_to`] before mutating (audit P9j.3). An all-in never
+    /// updates the increment here: a sub-min all-in must not re-open the action,
+    /// and a full-raise all-in is handled in [`Self::act_all_in`].
+    fn set_raise_increment(&mut self, seat_number: u8, amount: usize) {
         let is_all_in = self.seats.get_seat(seat_number).is_some_and(SeatNoCell::is_all_in);
-        // `amount` is the raise delta over the current bet; reconstruct the
-        // absolute raise-to and validate it against `min_raise_to()` so the
-        // stud completion (a sub-increment delta up to one full bet) is legal.
-        // `self.bet` is still the pre-raise level at this point.
-        if !is_all_in && self.bet.saturating_add(amount) < self.min_raise_to() {
-            return Err(PKError::InsufficientIncrement);
-        }
         if !is_all_in {
             self.raise_increment = amount;
         }
-        Ok(())
     }
 
     // ── Dealing ───────────────────────────────────────────────────────────────
@@ -3829,25 +3989,11 @@ impl TableNoCell {
 
         let to_call = self.to_call(seat_id);
         let stack = seat.player.total_chip_count();
-        let cap_reached = self.betting.cap_reached(self.raises_this_street);
         let min_bet = self.min_raise();
-        let min_raise_to = self.min_raise_to();
-
-        // A raise-to `amount` is legal only when the cap is not hit, the stack
-        // covers it, and it sits within the structure's ceiling — the exact checks
-        // `act_raise` enforces before mutating.
-        let can_raise_to = |amount: usize| {
-            !cap_reached
-                && stack >= amount
-                && amount
-                    <= self.betting.max_raise(
-                        self.effective_pot(),
-                        self.bet,
-                        seat.player.bet,
-                        stack,
-                        self.current_bet_tier(),
-                    )
-        };
+        // Single source of raise legality: the same `validate_raise` check
+        // `act_raise` runs, so what we advertise here can never be rejected there
+        // (audit P9b/P9j.1). `None` means no voluntary raise is legal.
+        let raise_bounds = self.raise_bounds(seat_id);
 
         if to_call == 0 {
             // No live bet faces this seat, so it may check.
@@ -3858,7 +4004,7 @@ impl TableNoCell {
                 if stack >= min_bet {
                     actions.push(PlayerAction::Bet(min_bet));
                 }
-            } else if can_raise_to(min_raise_to) {
+            } else if let Some((min_raise_to, _)) = raise_bounds {
                 // Big-blind option: the live bet is already matched, so re-opening
                 // it is a Raise rather than a Bet.
                 actions.push(PlayerAction::Raise(min_raise_to));
@@ -3868,13 +4014,14 @@ impl TableNoCell {
             // converts a short stack into a partial all-in call).
             actions.push(PlayerAction::Fold);
             actions.push(PlayerAction::Call);
-            if can_raise_to(min_raise_to) {
+            if let Some((min_raise_to, _)) = raise_bounds {
                 actions.push(PlayerAction::Raise(min_raise_to));
             }
         }
 
-        // A short stack can always shove, even when a full min-raise is illegal:
-        // all-in bypasses the betting-structure cap (see `act_raise`).
+        // A short stack can always shove, even when a full min-raise is illegal;
+        // a deep stack's shove degrades to the largest legal action inside
+        // `act_all_in` (never an error), so AllIn is always accepted (audit P9b).
         if stack > 0 {
             actions.push(PlayerAction::AllIn);
         }
@@ -4072,6 +4219,51 @@ mod tests {
         assert_eq!(5, table.bet);
         let actor = table.next_to_act();
         assert_eq!(5, table.to_call(actor));
+    }
+
+    // P9a — an ante large enough to felt a seat must transition it to all-in,
+    // otherwise it ends chips=0/bet=0/YetToAct: is_all_in() stays false, betting
+    // never completes, and run_street stalls. The old post_dead_ante path only
+    // moved chips and dropped the all-in transition that act_bet_internal owns.
+    #[test]
+    fn stud_ante_that_felts_a_seat_transitions_it_all_in() {
+        let seats = SeatsNoCell::new(vec![
+            // Shorty's entire 2-chip stack goes to the 2-chip ante.
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Shorty".to_string(), 2)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 10_000)),
+        ]);
+        let mut table = TableNoCell::stud_hi_from_seats(seats, 2, 5, 20, 40);
+        table.act_forced_bets().unwrap();
+        let shorty = table.seats.get_seat(0).unwrap();
+        assert_eq!(0, shorty.player.chips, "the whole stack went to the ante");
+        assert_eq!(2, shorty.player.chips_in_play, "ante tracked as dead money");
+        assert!(
+            shorty.player.is_all_in(),
+            "an ante-felted seat must be all-in so betting can complete"
+        );
+        // Chip conservation still holds across the felting.
+        assert_eq!(20_002, table.table_chip_count());
+    }
+
+    // P9h — an occupied seat sitting Out with chips must not be charged the ante
+    // (it is never dealt into the hand). Only reachable by setting the pub state
+    // field directly; the is_active() guard in post_dead handles it.
+    #[test]
+    fn post_dead_ante_does_not_charge_an_out_seat_with_chips() {
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
+        ]);
+        let mut table = TableNoCell::stud_hi_from_seats(seats, 2, 5, 20, 40);
+        table.seats.get_seat_mut(1).unwrap().player.state = PlayerState::Out;
+        table.act_antes().unwrap();
+        assert_eq!(
+            10_000,
+            table.seats.get_seat(1).unwrap().player.chips,
+            "an Out seat must not be charged the ante"
+        );
+        assert_eq!(2, table.pot, "only the one active seat antes");
     }
 
     #[test]
@@ -5239,7 +5431,142 @@ mod tests {
         assert_eq!(9_650, seat.player.chips);
     }
 
+    // P9e — a deep PLO shove clamps to the pot raise. act_all_in's contract is
+    // to return chips *committed* (like every other all-in path), not the stack
+    // remaining that the internal act_raise reports.
+    #[test]
+    fn plo_clamped_all_in_returns_chips_committed_not_remaining() {
+        let mut table = make_three_player_plo_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        let utg = table.determine_utg();
+        let committed = table.act_all_in(utg).unwrap();
+        assert_eq!(
+            350, committed,
+            "clamped shove committed the 350 pot-raise, not the stack remaining"
+        );
+        assert_eq!(350, table.seats.get_seat(utg).unwrap().player.bet);
+        // The player is intentionally NOT all-in — the shove was clamped.
+        assert!(!table.seats.get_seat(utg).unwrap().player.is_all_in());
+    }
+
     // endregion PLO
+
+    // region P9d/P9f — engine betting guards
+
+    // P9d — act_bet must pre-validate like act_raise: an undersized opening bet
+    // is rejected BEFORE the seat mutates, so the seat's chips/state stay intact
+    // and it remains next to act. The old path mutated then rejected in
+    // set_raise_increment, stranding a live Bet(50) with table.bet still 0.
+    #[test]
+    fn act_bet_below_minimum_is_rejected_without_mutating_state() {
+        let mut table = make_three_player_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        // Limp/​check to a postflop no-bet state.
+        let utg = table.next_to_act();
+        table.act_call(utg).unwrap();
+        let sb = table.next_to_act();
+        table.act_call(sb).unwrap();
+        let bb = table.next_to_act();
+        table.act_check(bb).unwrap();
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+
+        let actor = table.next_to_act();
+        let before_state = table.seats.get_seat(actor).unwrap().player.state;
+        let before_chips = table.seats.get_seat(actor).unwrap().player.chips;
+        // Opening bet of 50 is below the 100 minimum (postflop min open == BB).
+        assert!(matches!(table.act_bet(actor, 50), Err(PKError::InsufficientIncrement)));
+        assert_eq!(0, table.bet, "rejected bet must not raise the table bet");
+        assert_eq!(
+            before_state,
+            table.seats.get_seat(actor).unwrap().player.state,
+            "rejected bet must not mutate the seat's state"
+        );
+        assert_eq!(before_chips, table.seats.get_seat(actor).unwrap().player.chips);
+        assert_eq!(actor, table.next_to_act(), "the seat is still to act");
+    }
+
+    // P9f — an all-in that constitutes at least a full raise must re-open the
+    // betting by updating raise_increment. NL 50/100: A raises to 300 (increment
+    // 200), B shoves 900 — a full 600 raise — so C's minimum re-raise is 1500,
+    // not 900+200=1100. Before the fix, act_all_in never touched raise_increment.
+    #[test]
+    fn all_in_full_raise_reopens_min_raise() {
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 900)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 10_000)),
+        ]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        let a = table.next_to_act();
+        table.act_raise(a, 300).unwrap();
+        let b = table.next_to_act();
+        table.act_all_in(b).unwrap(); // B shoves total 900 (a full 600 raise)
+
+        assert_eq!(
+            1500,
+            table.min_raise_to(),
+            "a full-raise shove re-opens the action by the full 600 increment"
+        );
+        let c = table.next_to_act();
+        assert!(
+            matches!(table.act_raise(c, 1100), Err(PKError::InsufficientIncrement)),
+            "1100 is 400 short of the re-opened minimum"
+        );
+        table
+            .act_raise(c, 1500)
+            .expect("the re-opened minimum re-raise is accepted");
+    }
+
+    // P9f (companion) — a sub-minimum all-in does NOT re-open the betting: a
+    // player who already acted may only call the extra, not re-raise. Confirms
+    // the raise_increment update is gated on "at least a full raise".
+    #[test]
+    fn sub_min_all_in_does_not_reopen_min_raise() {
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 450)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 10_000)),
+        ]);
+        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        let a = table.next_to_act();
+        table.act_raise(a, 300).unwrap(); // increment 200
+        let b = table.next_to_act();
+        table.act_all_in(b).unwrap(); // B shoves total 450 — only 150 over, sub-min
+        // The raise increment stays anchored to A's full 200 raise; the sub-min
+        // shove does not re-open the action (its delta of 150 < the 200 min).
+        assert_eq!(
+            200, table.raise_increment,
+            "a sub-min all-in must not update the raise increment"
+        );
+    }
+
+    // P9j.2 — min_raise_to and the fixed-limit max_raise both go through
+    // BettingStructure::completion_raise_to, so in fixed-limit the sole legal
+    // raise amount is simultaneously the min and the max. This guards the two
+    // altitudes against drifting apart (a drift would make min > max and every FL
+    // raise illegal).
+    #[test]
+    fn fixed_limit_min_and_max_raise_agree_at_completion() {
+        let mut table = make_three_player_stud_table();
+        table.act_forced_bets().unwrap();
+        table.deal_stud_3rd_street().unwrap();
+        table.act_bring_in().unwrap();
+        let actor = table.next_to_act();
+        // Completion state: only the 5 bring-in is in; the one legal raise is to 20.
+        assert_eq!(20, table.min_raise_to());
+        assert_eq!(table.min_raise_to(), table.max_raise_for(actor));
+    }
+
+    // endregion P9d/P9f
 
     // region Razz
 
@@ -5440,5 +5767,38 @@ mod transition_surface_tests {
                 "legal_actions reported {action:?} but apply_action rejected it in stud"
             );
         }
+    }
+
+    // P9b — fidelity at the fixed-limit raise cap. When no further raise is legal,
+    // legal_actions must not offer Raise, but AllIn is still offered — and applying
+    // it must NOT error. A deep-stacked "all-in" at the cap degrades to a call,
+    // not a rerouted act_raise that trips RaiseCapReached (the pre-fix bug that
+    // broke the crown-jewel invariant for capped structures).
+    #[test]
+    fn fixed_limit_all_in_at_cap_degrades_to_call_not_error() {
+        let mut t = stud_at_completer();
+        let completer = t.next_to_act();
+        t.apply_action(completer, PlayerAction::Raise(20)).unwrap(); // complete to small bet
+        t.raises_this_street = 99; // force the per-street raise cap
+
+        let actor = t.next_to_act();
+        let actions = t.legal_actions(actor);
+        assert!(
+            !actions.iter().any(|a| matches!(a, PlayerAction::Raise(_))),
+            "no raise may be offered once the cap is reached"
+        );
+        assert!(
+            actions.contains(&PlayerAction::AllIn),
+            "all-in is still offered (fidelity requires it be accepted)"
+        );
+
+        assert!(
+            t.apply_action(actor, PlayerAction::AllIn).is_ok(),
+            "a deep-stack all-in at the FL cap must degrade to a call, not error"
+        );
+        assert!(
+            !t.seats.get_seat(actor).unwrap().player.is_all_in(),
+            "the deep stack called; it did not actually go all-in"
+        );
     }
 }

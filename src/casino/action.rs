@@ -100,4 +100,17 @@ mod tests {
         assert_eq!(a, b);
         assert_eq!(a, c);
     }
+
+    // P9j.6 — the six-variant Display test lost when src/bot/player_action.rs was
+    // deleted (only a one-variant doctest survived). Restored here on the canonical
+    // type so every arm of the Display impl is covered.
+    #[test]
+    fn player_action_display_all_six_variants() {
+        assert_eq!("Fold", PlayerAction::Fold.to_string());
+        assert_eq!("Check", PlayerAction::Check.to_string());
+        assert_eq!("Call", PlayerAction::Call.to_string());
+        assert_eq!("Bet(200)", PlayerAction::Bet(200).to_string());
+        assert_eq!("Raise(600)", PlayerAction::Raise(600).to_string());
+        assert_eq!("AllIn", PlayerAction::AllIn.to_string());
+    }
 }

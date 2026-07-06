@@ -69,6 +69,32 @@ impl GameFamily {
     pub fn is_stud_family(&self) -> bool {
         matches!(self, GameFamily::StudHi | GameFamily::Razz)
     }
+
+    /// True for variants where the ace ranks **low** when comparing upcards and
+    /// visible hands — Razz (ace-to-five low). Every other family ranks the ace
+    /// high.
+    ///
+    /// This lives here, beside [`Self::is_stud_family`] /
+    /// [`Self::uses_community_board`], so the razz-specific ace-low mapping is
+    /// not hard-coded into shared table code as a side effect of the bring-in's
+    /// scan-direction flag. Decoupling the two keeps a future deuce-to-seven
+    /// variant — highest upcard brings in, but the ace is *high* — expressible
+    /// (audit P9j.5).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::games::GameFamily;
+    ///
+    /// assert!(GameFamily::Razz.ranks_ace_low());
+    /// assert!(!GameFamily::StudHi.ranks_ace_low());
+    /// assert!(!GameFamily::Holdem.ranks_ace_low());
+    /// assert!(!GameFamily::Omaha.ranks_ace_low());
+    /// ```
+    #[must_use]
+    pub fn ranks_ace_low(&self) -> bool {
+        matches!(self, GameFamily::Razz)
+    }
 }
 
 impl std::fmt::Display for GameFamily {

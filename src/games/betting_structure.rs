@@ -175,17 +175,42 @@ impl BettingStructure {
                     BetTier::Small => *small_bet,
                     BetTier::Big => *big_bet,
                 };
-                // Completion: a partial forced bet (stud bring-in) below one
-                // full bet is raised *to* one full bet, not current_bet +
-                // increment. Otherwise the raise-to steps by the increment.
-                // Either way this is the sole legal fixed-limit raise amount.
-                let raise_to = if current_bet < increment {
-                    increment
-                } else {
-                    current_bet.saturating_add(increment)
-                };
-                raise_to.min(stack)
+                // The sole legal fixed-limit raise amount is the completion-aware
+                // target — shared with `min_raise_to` via `completion_raise_to`
+                // so min and max cannot drift (audit P9j.2).
+                Self::completion_raise_to(current_bet, increment).min(stack)
             }
+        }
+    }
+
+    /// The completion-aware minimum raise-*to* target given the bet currently on
+    /// the table and one full `increment` for the street.
+    ///
+    /// With only a partial forced bet (a stud bring-in) below one full increment
+    /// in front of the actor, the raise **completes** to one full increment;
+    /// otherwise it steps *by* the increment on top of the current bet. This one
+    /// rule is shared by
+    /// [`TableNoCell::min_raise_to`](crate::casino::table_no_cell::TableNoCell::min_raise_to)
+    /// and the fixed-limit arm of [`Self::max_raise`], so the minimum and the
+    /// (fixed-limit) maximum are computed from the same source and cannot drift
+    /// (audit P9j.2).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::games::betting_structure::BettingStructure;
+    ///
+    /// // Only a 5 bring-in is in: completion targets one full 20 small bet.
+    /// assert_eq!(20, BettingStructure::completion_raise_to(5, 20));
+    /// // A full bet is already in: step up by the increment.
+    /// assert_eq!(40, BettingStructure::completion_raise_to(20, 20));
+    /// ```
+    #[must_use]
+    pub fn completion_raise_to(current_bet: usize, increment: usize) -> usize {
+        if current_bet < increment {
+            increment
+        } else {
+            current_bet.saturating_add(increment)
         }
     }
 

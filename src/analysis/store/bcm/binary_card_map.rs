@@ -31,6 +31,17 @@ use std::io::{BufReader, BufWriter, Read, Write};
 /// Returns [`PKError::BcmUnavailable`] if the file cannot be opened or the zstd
 /// stream cannot be decoded — most commonly because `generated/bcm.zst` is
 /// self-generated data absent from a published-crate install.
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::analysis::store::bcm::binary_card_map::load_bc_rank_map;
+/// use pkcore::prelude::PKError;
+///
+/// // A path with no BCM file reports the absence instead of panicking.
+/// let result = load_bc_rank_map("nonexistent/bcm.zst");
+/// assert!(matches!(result, Err(PKError::BcmUnavailable)));
+/// ```
 pub fn load_bc_rank_map(path: &str) -> Result<HashMap<Bard, FiveBCM>, PKError> {
     let file = File::open(path).map_err(|e| {
         log::error!("BCM file unavailable at {path}: {e}");
@@ -74,6 +85,19 @@ pub static BC_RANK_HASHMAP: std::sync::LazyLock<Option<HashMap<Bard, FiveBCM>>> 
 ///
 /// Returns [`PKError::BcmUnavailable`] if the BCM data file could not be loaded
 /// (see [`load_bc_rank_map`]).
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::analysis::store::bcm::binary_card_map::bc_rank_hashmap;
+///
+/// // Returns the loaded map, or Err(BcmUnavailable) on a published-crate
+/// // install where the self-generated data file is absent — never panics.
+/// match bc_rank_hashmap() {
+///     Ok(map) => { let _ = map.len(); }
+///     Err(e) => { let _ = e; }
+/// }
+/// ```
 pub fn bc_rank_hashmap() -> Result<&'static HashMap<Bard, FiveBCM>, PKError> {
     BC_RANK_HASHMAP.as_ref().ok_or(PKError::BcmUnavailable)
 }
@@ -380,6 +404,17 @@ mod analysis__store__bcm__binary_card_map_tests {
             load_bc_rank_map("nonexistent/definitely-not-here.zst"),
             Err(PKError::BcmUnavailable)
         ));
+    }
+
+    /// P9j.6 — the blessed accessor is consistent with the lazy static it wraps,
+    /// deterministically on any machine: it returns `Ok` exactly when the static
+    /// loaded, and `Err(BcmUnavailable)` otherwise. Never panics either way.
+    #[test]
+    fn bc_rank_hashmap__matches_the_lazy_static() {
+        assert_eq!(BC_RANK_HASHMAP.is_some(), bc_rank_hashmap().is_ok());
+        if BC_RANK_HASHMAP.is_none() {
+            assert!(matches!(bc_rank_hashmap(), Err(PKError::BcmUnavailable)));
+        }
     }
 
     #[test]

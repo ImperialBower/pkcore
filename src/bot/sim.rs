@@ -778,52 +778,64 @@ impl SimTable {
     /// — replacing the old "try an `act_*` method and fall back on rejection"
     /// dispatch (audit III.5 / P8). Legality is now *asked*, not *tried*.
     ///
-    /// A reconciled aggressive action can still be rejected on its **amount**
-    /// alone (a decider may propose an over-stack size — a dimension
-    /// `legal_actions` reports only the minimum of); that residual case falls
-    /// back once to a guaranteed-legal passive action so the hand always
-    /// advances. Both-rejected is logged as the genuine smoking gun.
+    /// [`reconcile`](Self::reconcile) now clamps every amount into the legal
+    /// range and resolves shoves to a concrete legal action, so the dispatched
+    /// action is guaranteed acceptable — no trial-and-fallback is needed. If the
+    /// engine still rejects it, that is a genuine wedge: it is logged and **no**
+    /// action is counted, because the table did not mutate (audit P9i). The
+    /// `run_street` stall diagnostic surfaces the wedge for investigation.
     fn apply_action(&mut self, seat: u8, action: PlayerAction, counts: &mut ActionCounts) {
         let chosen = self.reconcile(seat, action);
-        let applied = if self.table.apply_action(seat, chosen).is_ok() {
-            chosen
-        } else {
-            let net = self.safe_passive(seat);
-            if let Err(e) = self.table.apply_action(seat, net) {
-                eprintln!(
-                    "[pkcore::sim] WARN seat {seat}: reconciled {chosen:?} (from {action:?}) and \
-                     fallback {net:?} both rejected: {e:?} — table state will not advance"
+        match self.table.apply_action(seat, chosen) {
+            Ok(()) => match chosen {
+                PlayerAction::Fold => counts.folds += 1,
+                PlayerAction::Check => counts.checks += 1,
+                PlayerAction::Call => counts.calls += 1,
+                PlayerAction::Bet(_) => counts.bets += 1,
+                PlayerAction::Raise(_) => counts.raises += 1,
+                PlayerAction::AllIn => counts.all_ins += 1,
+            },
+            Err(e) => {
+                log::warn!(
+                    "[pkcore::sim] seat {seat}: reconciled {chosen:?} (from {action:?}) rejected: \
+                     {e:?} — table will not advance"
                 );
             }
-            net
-        };
-        match applied {
-            PlayerAction::Fold => counts.folds += 1,
-            PlayerAction::Check => counts.checks += 1,
-            PlayerAction::Call => counts.calls += 1,
-            PlayerAction::Bet(_) => counts.bets += 1,
-            PlayerAction::Raise(_) => counts.raises += 1,
-            PlayerAction::AllIn => counts.all_ins += 1,
         }
     }
 
-    /// Maps a decider's intended `action` onto one the engine will accept in the
-    /// current state, consulting
-    /// [`legal_actions`](crate::casino::table_no_cell::TableNoCell::legal_actions)
-    /// instead of trial dispatch. Aggression that is illegal here (a bet already
-    /// stands, the raise cap is hit) degrades to the passive action, preserving
-    /// the sim's historical `Bet → Check` / `Raise → Call` behaviour. `Fold` and
-    /// `AllIn` are always available in turn, independent of the advisory set.
+    /// Maps a decider's intended `action` onto a **guaranteed-legal** one for the
+    /// current state, consulting the engine's advisory surface
+    /// ([`legal_actions`](crate::casino::table_no_cell::TableNoCell::legal_actions)
+    /// and [`raise_bounds`](crate::casino::table_no_cell::TableNoCell::raise_bounds))
+    /// rather than trial dispatch.
+    ///
+    /// Behaviour:
+    /// - Aggression whose *amount* overflows the stack becomes a jam via
+    ///   [`Self::resolve_shove`] — so a short stack can actually jam instead of
+    ///   being flattened to a call (audit P9c).
+    /// - A bet/raise within the legal range is clamped into `[min, max]`, so the
+    ///   dispatched amount is always accepted and no residual fallback is needed.
+    /// - Aggression that is illegal in kind (a bet already stands, the raise cap
+    ///   is hit) degrades to the passive action.
+    /// - An explicit `AllIn` intent is resolved to what the engine will actually
+    ///   do (a max raise / call / true all-in), so the sim classifies it the same
+    ///   way the event log records it (audit P9e).
     fn reconcile(&self, seat: u8, action: PlayerAction) -> PlayerAction {
         let legal = self.table.legal_actions(seat);
         let has_check = legal.contains(&PlayerAction::Check);
         let has_call = legal.contains(&PlayerAction::Call);
         let has_bet = legal.iter().any(|a| matches!(a, PlayerAction::Bet(_)));
-        let has_raise = legal.iter().any(|a| matches!(a, PlayerAction::Raise(_)));
+        let stack = self
+            .table
+            .seats
+            .get_seat(seat)
+            .map_or(0, |s| s.player.total_chip_count());
+        let bounds = self.table.raise_bounds(seat);
 
         match action {
             PlayerAction::Fold => PlayerAction::Fold,
-            PlayerAction::AllIn => PlayerAction::AllIn,
+            PlayerAction::AllIn => self.resolve_shove(seat),
             PlayerAction::Check => {
                 if has_check {
                     PlayerAction::Check
@@ -839,17 +851,32 @@ impl SimTable {
                 }
             }
             PlayerAction::Bet(n) => {
-                if has_bet {
-                    PlayerAction::Bet(n)
-                } else if has_check {
-                    PlayerAction::Check
+                if !has_bet {
+                    // Can't open a bet (one already stands, or the stack can't
+                    // cover the minimum): degrade to the passive action.
+                    if has_check {
+                        PlayerAction::Check
+                    } else {
+                        PlayerAction::Call
+                    }
+                } else if n >= stack {
+                    self.resolve_shove(seat)
+                } else if let Some((min, max)) = bounds {
+                    PlayerAction::Bet(n.clamp(min, max))
                 } else {
-                    PlayerAction::Call
+                    self.resolve_shove(seat)
                 }
             }
             PlayerAction::Raise(n) => {
-                if has_raise {
-                    PlayerAction::Raise(n)
+                if let Some((min, max)) = bounds {
+                    if n >= stack {
+                        self.resolve_shove(seat)
+                    } else {
+                        PlayerAction::Raise(n.clamp(min, max))
+                    }
+                } else if n >= stack && stack > 0 {
+                    // Wants to commit everything but cannot make a min raise: jam.
+                    self.resolve_shove(seat)
                 } else if has_call {
                     PlayerAction::Call
                 } else if has_check {
@@ -861,17 +888,37 @@ impl SimTable {
         }
     }
 
-    /// A guaranteed-legal passive action for `seat`: call if a bet is faced, else
-    /// check, else shove. Used as the last-resort fallback when even a reconciled
-    /// aggressive action is rejected on its amount, so the hand still advances.
-    fn safe_passive(&self, seat: u8) -> PlayerAction {
-        let legal = self.table.legal_actions(seat);
-        if legal.contains(&PlayerAction::Call) {
-            PlayerAction::Call
-        } else if legal.contains(&PlayerAction::Check) {
-            PlayerAction::Check
-        } else {
-            PlayerAction::AllIn
+    /// Resolves an all-in intent for `seat` to the concrete action the engine
+    /// will actually take, mirroring
+    /// [`TableNoCell::act_all_in`](crate::casino::table_no_cell::TableNoCell::act_all_in)'s
+    /// degradation for capped structures. This keeps the sim's `ActionCounts`
+    /// classification in step with the event log the engine writes (audit P9e):
+    /// a deep capped shove is a max raise, a shove with no legal raise left is a
+    /// call, and everything else is a true all-in. Derived from the shared
+    /// [`raise_bounds`](crate::casino::table_no_cell::TableNoCell::raise_bounds),
+    /// so it cannot disagree with `act_all_in` on the bounds.
+    fn resolve_shove(&self, seat: u8) -> PlayerAction {
+        let stack = self
+            .table
+            .seats
+            .get_seat(seat)
+            .map_or(0, |s| s.player.total_chip_count());
+        if stack == 0 {
+            return PlayerAction::Fold;
+        }
+        if self.table.betting.is_no_limit() {
+            return PlayerAction::AllIn;
+        }
+        match self.table.raise_bounds(seat) {
+            Some((_, max)) if stack > max => PlayerAction::Raise(max),
+            Some(_) => PlayerAction::AllIn,
+            None => {
+                if stack > self.table.to_call(seat) {
+                    PlayerAction::Call
+                } else {
+                    PlayerAction::AllIn
+                }
+            }
         }
     }
 
@@ -1235,5 +1282,84 @@ mod tests {
         // created or destroyed by stats ingestion).
         let total_chips_after: usize = sim.table.seats.0.iter().map(|s| s.player.chips).sum();
         assert_eq!(10_000, total_chips_after, "stats ingestion must not affect chip totals");
+    }
+
+    // ── P9c / P9e / P9i: reconcile + apply_action classification ─────────────
+
+    /// P9c — a short stack facing a bet must be able to jam. When a decider
+    /// proposes a raise it cannot afford the minimum of, reconcile degrades it to
+    /// AllIn (a real jam), NOT to a flat Call. Before the fix, short stacks could
+    /// never jam via Bet/Raise, systematically skewing trainer BB/100.
+    #[test]
+    fn reconcile_degrades_oversize_raise_to_all_in_for_short_stack() {
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 10_000)),
+        ]);
+        let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let bots = vec![
+            (0u8, BotProfile::gto()),
+            (1u8, BotProfile::gto()),
+            (2u8, BotProfile::gto()),
+        ];
+        let mut sim = SimTable::with_rule_based(table, bots);
+        sim.table.act_forced_bets().unwrap();
+        sim.table.deal_cards_to_seats().unwrap();
+
+        // The actor faces the BB (to_call 100) but has only 150 chips: a min
+        // raise (to 200) is unaffordable, so the only aggression is a jam.
+        let actor = sim.table.next_to_act();
+        sim.table.seats.get_seat_mut(actor).unwrap().player.chips = 150;
+
+        assert_eq!(
+            PlayerAction::AllIn,
+            sim.reconcile(actor, PlayerAction::Raise(150)),
+            "a short stack's oversize raise must become a jam, not a call"
+        );
+    }
+
+    /// P9e — a deep shove in a capped structure is really a max raise, so
+    /// reconcile classifies it as Raise(max), matching how the engine logs it.
+    /// This keeps sim ActionCounts and log-derived player stats in agreement.
+    #[test]
+    fn reconcile_classifies_capped_deep_shove_as_raise_not_all_in() {
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 10_000)),
+        ]);
+        let table = TableNoCell::plo_from_seats(seats, (50, 100));
+        let bots = vec![
+            (0u8, BotProfile::gto()),
+            (1u8, BotProfile::gto()),
+            (2u8, BotProfile::gto()),
+        ];
+        let mut sim = SimTable::with_rule_based(table, bots);
+        sim.table.act_forced_bets().unwrap();
+        sim.table.deal_cards_to_seats().unwrap();
+
+        let utg = sim.table.next_to_act();
+        assert_eq!(
+            PlayerAction::Raise(350),
+            sim.reconcile(utg, PlayerAction::AllIn),
+            "a deep capped shove is a max (pot) raise, not an all-in"
+        );
+    }
+
+    /// P9i — a rejected action must not be counted. Driving a seat that is not
+    /// next-to-act makes every act_* reject on turn order; the counter must not
+    /// record a phantom action for a table that never mutated.
+    #[test]
+    fn apply_action_does_not_count_a_rejected_action() {
+        let mut sim = two_player_sim();
+        sim.table.act_forced_bets().unwrap();
+        sim.table.deal_cards_to_seats().unwrap();
+
+        let turn = sim.table.next_to_act();
+        let not_turn = (turn + 1) % 2;
+        let mut counts = ActionCounts::default();
+        sim.apply_action(not_turn, PlayerAction::Fold, &mut counts);
+        assert_eq!(0, counts.total(), "a rejected action must not be counted");
     }
 }

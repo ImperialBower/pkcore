@@ -1183,6 +1183,72 @@ branch and two break invariants this branch itself introduced); P9d–P9f ride
 along or immediately after; P9g is a pre-release doc pass; P9j opportunistic,
 with items 1–3 naturally falling out of the P9b/P9c deep fixes.
 
+**Status (branch `exec-fabio`): done — all ten findings fixed, deep-first.** The
+recurring root cause the review named — *advisory and invariant-owning code paths
+that mirror each other by eyeball* — was retired by construction rather than
+re-policed:
+
+- **P9a + P9h — ante felting & the Out-seat charge.** Dead-money posting moved
+  onto a new `PlayerNoCell::post_dead(amount)` sibling of `act_bet_internal`,
+  which owns the cap-deduct-track sequence *and* the all-in transition when the
+  ante takes the last chip; its `is_active()` guard skips an occupied `Out` seat
+  for free (P9h). `SeatsNoCell::post_dead_ante` now just delegates. Tests:
+  `stud_ante_that_felts_a_seat_transitions_it_all_in`,
+  `post_dead_ante_does_not_charge_an_out_seat_with_chips`.
+- **P9b + P9j.1 — cap fidelity & the duplicated max-raise math.** Three shared
+  primitives now single-source raise legality: `max_raise_for(seat)` (the 5-arg
+  incantation), `validate_raise(seat, amount)` (the granular checks), and
+  `raise_bounds(seat)` (the legal `[min,max]` range). `act_raise`, `act_bet`,
+  `act_all_in`, and `legal_actions` all derive from them, so the advisory surface
+  cannot drift from the mutating one. `act_all_in` degrades a capped-structure
+  deep shove to the largest legal action (raise-to-max / call / true all-in), so
+  the advertised `AllIn` is always accepted. Test:
+  `fixed_limit_all_in_at_cap_degrades_to_call_not_error`.
+- **P9c + P9i + P9j.3 — sim short-stack jams, phantom counts, one degradation
+  ladder.** `reconcile` now clamps every bet/raise amount into the legal range
+  and resolves shoves via `resolve_shove` (mirroring `act_all_in` off the shared
+  `raise_bounds`), so a short stack jams instead of flattening to a call; the
+  `safe_passive` fallback is deleted, and `apply_action` counts only on a
+  successful apply. Tests:
+  `reconcile_degrades_oversize_raise_to_all_in_for_short_stack`,
+  `reconcile_classifies_capped_deep_shove_as_raise_not_all_in`,
+  `apply_action_does_not_count_a_rejected_action`.
+- **P9d — `act_bet` pre-validation.** `act_bet` now runs `validate_raise` before
+  mutating, so an undersized bet is rejected with the seat state intact; with
+  both `act_bet` and `act_raise` pre-validating, `set_raise_increment` collapsed
+  to a pure store. Test:
+  `act_bet_below_minimum_is_rejected_without_mutating_state`.
+- **P9e — clamped all-in contract.** The clamped shove returns chips *committed*
+  on every path, its rustdoc documents the degrade-not-all-in behaviour, and the
+  sim classifies it as `Raise` (via `resolve_shove`) to match the event log.
+  Test: `plo_clamped_all_in_returns_chips_committed_not_remaining`.
+- **P9f — re-opening after a full-raise shove.** `act_all_in` updates
+  `raise_increment` (and the per-street raise count) when the shove is at least a
+  full raise, leaving the sub-min case untouched. Tests:
+  `all_in_full_raise_reopens_min_raise`,
+  `sub_min_all_in_does_not_reopen_min_raise`.
+- **P9g — docs.** The `.env` instructions in `README.md` and `lib.rs` now say
+  *export the variable* (no `dotenvy`), and the CHANGELOG Compatibility section
+  gained a variant-replay-compat bullet.
+- **P9j.2 — completion rule ownership.** `BettingStructure::completion_raise_to`
+  is the single owner of the completion-vs-step formula, shared by `min_raise_to`
+  and the fixed-limit `max_raise`. Drift guard:
+  `fixed_limit_min_and_max_raise_agree_at_completion`.
+- **P9j.4 — one purity gate.** CI's step now runs `make check-purity`; the
+  Makefile target carries the `::error::` annotation.
+- **P9j.5 — rank order on the family.** `GameFamily::ranks_ace_low()` decouples
+  the ace-low ordinal from the bring-in's scan-direction flag, keeping a future
+  deuce-to-seven variant expressible.
+- **P9j.6 — restored house-rule tests.** Six-variant `PlayerAction::Display`,
+  `California::ace_low_rank`, `bc_rank_hashmap`/`load_bc_rank_map` (`# Examples` +
+  accessor test), and `HandHistoryError`'s `Display`/`Error`/`From` impls.
+
+*Verification:* `cargo test` (lib + integration + doctests) 0 failed (doctests
+680 passed); `cargo test --lib` 9,147 passed / 0 failed; the ignored NLHE
+`bot_marathon` (1,000-hand chip audit) and all five `replay_consistency`
+round-trips (FLHE / PLO / stud / razz) pass, so the betting rewrite perturbs no
+invariant.
+
 ---
 
 ## Comparative Scoring

@@ -50,10 +50,18 @@ To open the generated docs in your browser:
 ❯ cargo make docs
 ```
 
-### .env
+### Configuration
 
-Some of the library and examples will be looking for a `.env` file in the root of the project. Simply copy
-`.env.example` to `.env` and modify as needed.
+The optional SQLite HUP store reads its path from the `HUPS_DB_PATH` environment
+variable (default: `generated/hups.db`). Export it in your shell before running
+the examples that use the store:
+
+```shell
+export HUPS_DB_PATH=generated/hups.db
+```
+
+(`pkcore` no longer loads a `.env` file — the `dotenvy` dependency was dropped in
+0.2.0, so set the variable in your environment directly.)
 
 ## Data files
 

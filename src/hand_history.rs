@@ -2702,6 +2702,36 @@ fn build_replay_result(
 mod tests {
     use super::*;
 
+    // P9j.6 — the owned HandHistoryError's Display/Error/From impls were untested.
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn hand_history_error_display_includes_the_cause() {
+        let err = HandHistoryError::Yaml("bad indentation".to_string());
+        let shown = err.to_string();
+        assert!(
+            shown.contains("bad indentation"),
+            "Display must surface the cause: {shown}"
+        );
+        assert!(shown.contains("YAML"));
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn hand_history_error_is_a_std_error_with_no_source() {
+        let err = HandHistoryError::Yaml("boom".to_string());
+        let as_dyn: &dyn std::error::Error = &err;
+        assert!(as_dyn.source().is_none());
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn hand_history_error_from_serde_yaml_error_stringifies() {
+        // A real serde_yaml_bw failure (a mapping where an integer is expected)
+        // converts through the blessed From seam into the owned Yaml variant.
+        let yaml_err = serde_yaml_bw::from_str::<i32>("foo: bar").unwrap_err();
+        assert!(matches!(HandHistoryError::from(yaml_err), HandHistoryError::Yaml(_)));
+    }
+
     // Embedded YAML for "The Hand" so tests run without filesystem access.
     #[cfg(feature = "hand-histories")]
     const THE_HAND_YAML: &str = r#"

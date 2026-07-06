@@ -203,11 +203,14 @@ check-wasm:
 # Kernel purity gate (AUDIT_Fable_5.md III.1 / III.6.1): assert that with default
 # features off, the storage/terminal layers drop out and no rusqlite/zstd/termion/
 # dotenvy remains in the dependency tree. serde_yaml_bw is a documented exception
-# (it arrives transitively via pkstate). Mirrors the CI job in basic.yaml.
+# (it arrives transitively via pkstate). This target is the single source of the
+# purity gate — the CI job in basic.yaml invokes `make check-purity` rather than
+# re-inlining the pipeline (audit P9j.4). The `::error::` prefix is a GitHub
+# Actions annotation in CI and a harmless plain line locally.
 check-purity:
 	@leaked=$$(cargo tree --no-default-features -e no-dev | grep -iE 'rusqlite|zstd|termion|dotenvy' || true); \
 	if [ -n "$$leaked" ]; then \
-		echo "Purity gate FAILED — these deps must be feature-gated behind store/terminal:"; \
+		echo "::error::Purity gate failed — these deps must be feature-gated behind store/terminal:"; \
 		echo "$$leaked"; \
 		exit 1; \
 	fi; \

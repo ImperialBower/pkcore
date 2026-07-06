@@ -37,6 +37,28 @@ impl California {
     }
 }
 
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod games__razz__california__ace_low_tests {
+    use super::*;
+
+    // P9j.6 — unit coverage for the ace-low ordinal that drives Razz upcard
+    // ordering (previously only a doctest existed).
+    #[test]
+    fn ace_low_rank__ace_is_below_the_deuce() {
+        assert_eq!(1, California::ace_low_rank(Rank::ACE));
+        assert_eq!(2, California::ace_low_rank(Rank::DEUCE));
+    }
+
+    #[test]
+    fn ace_low_rank__non_ace_ranks_keep_natural_value() {
+        assert_eq!(13, California::ace_low_rank(Rank::KING));
+        assert_eq!(10, California::ace_low_rank(Rank::TEN));
+        // A King therefore outranks an Ace under ace-low ordering.
+        assert!(California::ace_low_rank(Rank::KING) > California::ace_low_rank(Rank::ACE));
+    }
+}
+
 pub type CaliforniaHandRankValue = u16;
 
 pub const NO_RAZZ_HAND_RANK_VALUE: CaliforniaHandRankValue = 0;
