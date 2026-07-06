@@ -4,12 +4,13 @@
 //! [`ExploitConfig`] performs against every opponent in the field over
 //! `replicates` independent sessions of `hands_per_eval` hands each.
 
+use crate::PKError;
 use crate::analysis::player_stats::StatsRegistry;
 use crate::bot::decider::{BotDecider, RuleBasedDecider};
 use crate::bot::exploit::ExploitConfig;
 use crate::bot::exploitative_decider::ExploitativeDecider;
 use crate::bot::profile::BotProfile;
-use crate::bot::sim::SimTable;
+use crate::bot::sim::{SimResult, SimTable};
 use crate::casino::game::ForcedBets;
 use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
 
@@ -19,6 +20,15 @@ const BB: usize = 100;
 // Deep-stack 1B-chip sessions produce astronomical BB/100 from single all-ins,
 // which swamps the fitness signal the optimizer needs.
 const STARTING_CHIPS: usize = BB * 1_000;
+
+/// Fitness assigned to a session that produced **no valid measurement** — a sim
+/// error, or a session that completed zero hands. Set far below the legitimate
+/// ±~1,000 BB/100 range so the (1+λ)-ES decisively selects *against* an
+/// error-prone candidate instead of retaining it as break-even (audit II.9
+/// follow-up: mapping errors to `0.0` let engine failures masquerade as neutral
+/// candidates). It stays finite so the per-generation mean-BB/100 diagnostic and
+/// the σ-adaptation arithmetic never see `NaN`/`-inf`.
+const NO_RESULT_FITNESS: f64 = -1_000_000.0;
 
 /// A labelled opponent entry: `(display_name, profile)`.
 pub type FieldEntry = (String, BotProfile);
@@ -114,9 +124,26 @@ fn run_session(config: &ExploitConfig, opp_profile: &BotProfile, hands: usize, s
     ];
 
     let mut sim = SimTable::new_with_registry(table, bots, StatsRegistry::new()).with_seed(seed);
-    match sim.run_n_hands(hands) {
-        Err(_) => 0.0,
-        Ok(result) if result.hands_played == 0 => 0.0,
+    session_bb100(sim.run_n_hands(hands))
+}
+
+/// Maps a session outcome to seat 0's BB/100.
+///
+/// A sim error or a zero-hand session yields no usable measurement; rather than
+/// scoring it break-even (`0.0`, which the optimiser would retain over a
+/// legitimately-losing candidate), it is logged and scored [`NO_RESULT_FITNESS`]
+/// so error-prone configs are selected against (audit II.9 follow-up). A real
+/// result returns the exploit bot's BB/100 for seat 0.
+fn session_bb100(outcome: Result<SimResult, PKError>) -> f64 {
+    match outcome {
+        Err(e) => {
+            log::warn!("[pkcore::training] session errored, scoring as failure: {e:?}");
+            NO_RESULT_FITNESS
+        }
+        Ok(result) if result.hands_played == 0 => {
+            log::warn!("[pkcore::training] session completed 0 hands, scoring as failure");
+            NO_RESULT_FITNESS
+        }
         Ok(result) => {
             let net = result.net_chips.get(&0).copied().unwrap_or(0);
             (net as f64 / BB as f64) / result.hands_played as f64 * 100.0
@@ -160,6 +187,38 @@ mod bot__training__evaluator_tests {
         let a = evaluate(&ExploitConfig::default(), &field, 200, 2, 7);
         let b = evaluate(&ExploitConfig::default(), &field, 200, 2, 7);
         assert_eq!(a, b, "seeded evaluate must be reproducible");
+    }
+
+    // ── Audit II.9 follow-up: a failed session must not score as break-even ──
+
+    #[test]
+    fn session_bb100_errors_score_as_a_failure_not_break_even() {
+        // A sim error mapped to 0.0 (break-even) would be retained by the
+        // (1+λ)-ES over a legitimately-losing candidate. It must score as a
+        // decisive failure instead.
+        let score = session_bb100(Err(crate::PKError::InvalidAction));
+        assert_eq!(NO_RESULT_FITNESS, score);
+        assert!(score < -1_000.0, "an errored session must sort below any real BB/100");
+    }
+
+    #[test]
+    fn session_bb100_zero_hands_scores_as_a_failure() {
+        // A session that completes no hands is as uninformative as an error.
+        let score = session_bb100(Ok(crate::bot::sim::SimResult::default()));
+        assert_eq!(NO_RESULT_FITNESS, score);
+    }
+
+    #[test]
+    fn session_bb100_computes_real_bb100_for_seat_zero() {
+        // Seat 0 net +10 BB over 100 hands → +10 BB/100.
+        let mut net = std::collections::HashMap::new();
+        net.insert(0u8, (BB as i64) * 10);
+        let result = crate::bot::sim::SimResult {
+            hands_played: 100,
+            net_chips: net,
+            ..Default::default()
+        };
+        assert!((session_bb100(Ok(result)) - 10.0).abs() < f64::EPSILON);
     }
 
     #[test]

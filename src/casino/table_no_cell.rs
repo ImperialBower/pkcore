@@ -270,7 +270,7 @@ impl PlayerNoCell {
 
     /// Posts `amount` of *dead* money (a stud/razz ante) for an active player.
     ///
-    /// Sibling of [`Self::act_bet_internal`] for money that must **not** enter
+    /// Sibling of `act_bet_internal` for money that must **not** enter
     /// `bet`: it caps at the remaining stack, moves the chips from `chips` into
     /// `chips_in_play` (preserving the `pot == Σ chips_in_play` showdown
     /// invariant) while leaving `bet` untouched — so the ante never credits a
@@ -2581,8 +2581,8 @@ impl TableNoCell {
     /// The legal raise-to range `[min, max]` for `seat`, or `None` when no
     /// voluntary (non-all-in) raise is legal right now — the cap is reached, or
     /// the stack cannot cover the minimum raise. In fixed-limit `min == max`
-    /// (one legal amount). Derived entirely from [`Self::validate_raise`] and
-    /// [`Self::max_raise_for`], so it agrees with `act_raise` by construction.
+    /// (one legal amount). Derived entirely from `validate_raise` and
+    /// `max_raise_for`, so it agrees with `act_raise` by construction.
     ///
     /// Used by [`Self::legal_actions`] to advertise `Raise(min)` and by the sim
     /// to clamp a decider's oversize raise deterministically. All-in-for-less is
