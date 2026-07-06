@@ -988,6 +988,201 @@ an over-stack *amount* (which `legal_actions` reports only the minimum of). The
 did not perturb the invariant. The probe-and-fallback pattern the audit flagged
 in III.5 is fully retired.
 
+### P9 — Findings from the implementation review (branch `exec-fabio`, 2026-07-05)
+
+_A high-effort adversarially-verified code review of the P0–P8 implementation
+branch itself (8 finder angles × 1-vote verification; 45 candidates → 15
+confirmed / 4 plausible / 1 refuted). The P0–P8 work stands — but the review
+found that two of its new mechanisms (`post_dead_ante` and the `act_all_in`
+clamp) re-implement slices of invariant-owning code instead of calling it, and
+that is where the new bugs live. Same rule as everything above: each item
+carries its gate._
+
+| # | Finding | Severity | Introduced by |
+|---|---------|----------|---------------|
+| P9a | Ante-felting stall: `post_dead_ante` can zero a stack without the all-in transition | **High** | This branch (II.6 fix) |
+| P9b | `legal_actions` advertises AllIn that `apply_action` rejects at the FL raise cap | **High** | This branch (P8 + II.2 clamp) |
+| P9c | Sim short-stack jams silently degraded to Call | **High** (training skew) | This branch (P8 dispatch) |
+| P9d | `act_bet` mutates before validating — undersized bet corrupts table state | Medium | Pre-existing; `act_raise` got the guard, `act_bet` didn't |
+| P9e | Clamped all-in: inconsistent return contract, stale doc, diverging stats | Medium | This branch (II.2 clamp) |
+| P9f | `act_all_in` never updates `raise_increment` — illegal small re-raise accepted after a full-raise shove | Medium | Pre-existing, untested |
+| P9g | Stale `.env` docs (README, lib.rs) after the dotenvy deletion; CHANGELOG omits replay-compat break | Low (docs) | This branch (P2, P6) |
+| P9h | `post_dead_ante` charges an Out-with-chips seat | Low (edge) | This branch (II.6 fix) |
+| P9i | `ActionCounts` records the fallback action even when it was rejected | Low | Pre-existing, carried forward |
+| P9j | Cleanup batch: duplicated betting math, missing tests on new public items | Low | This branch |
+
+**P9a — Ante-felting stall (HIGH).** `post_dead_ante`
+(`table_no_cell.rs:1124-1135`) mutates only `chips`/`chips_in_play`, never
+`bet` or `state`. A seat whose whole stack goes to the ante ends chips=0 /
+bet=0 / `YetToAct`: `is_all_in()` (`state.is_all_in() || (chips==0 && bet>0)`)
+is false, `is_betting_complete()` never completes, `next_to_act` keeps
+returning the seat while `legal_actions` returns empty (the chips==0 guard) —
+`run_street` exhausts `max_iterations` with the STALL diagnostic and
+`bring_it_in()` errors `ActionIsntFinished`. The old path
+(`act_blind_or_all_in` → `act_bet_internal`) auto-transitioned to `AllIn`; the
+dead-money rewrite dropped that invariant. *Fix direction:* make dead-ante
+posting a `PlayerNoCell` method (e.g. `post_dead(amount)`) that owns the
+cap-deduct-track sequence next to `act_bet_internal` and applies the all-in
+transition when chips hit 0 — the P9h state guard then comes for free.
+*Mechanism:* a colocated test with `ante >= stack` (the new
+`stud_antes_are_dead_money` uses 10,000-chip stacks, which is why this
+survived).
+
+**P9b — Fidelity invariant violated at the FL raise cap (HIGH).** The new
+capped-structure guard in `act_all_in` (`:2731-2742`) reroutes any
+`stack > max` shove to `act_raise(max)` with **no `cap_reached` check**; since
+`max < stack`, `would_be_all_in` is false inside `act_raise` and the cap check
+fires → `Err(RaiseCapReached)`. Meanwhile `legal_actions` (`:3878-3880`)
+unconditionally pushes `AllIn` whenever `stack > 0`, under a now-false comment
+("all-in bypasses the betting-structure cap"). This breaks P8's crown-jewel
+invariant — an advertised action is rejected — and the
+`every_legal_action_is_accepted_by_apply_action` tests miss it because they
+only cover NLHE-at-UTG and pre-cap stud. *Fix direction:* this is first a
+rules decision (at the cap, a deep-stack "all-in" should degrade to a call,
+not an error), then: derive AllIn's advertised legality from the same
+dispatch path `act_all_in` actually takes. The deeper fix (also closes P9j.1):
+extract a shared `validate_raise(seat, amount)` that `act_raise` executes and
+`legal_actions` queries, so the mirror cannot drift — the current
+`can_raise_to` closure maintains parity by eyeball ("mirror those in
+act_raise exactly"), not by construction. *Mechanism:* extend the fidelity
+test to a capped FLHE state with a deep-stacked actor, and property-style
+sweep every seat/street state the replay suite visits.
+
+**P9c — Short-stack jams pacified in sims (HIGH for training).** The retired
+try/fallback dispatch let `act_raise` accept all-in-sized amounts via the
+`would_be_all_in` bypass. The new `reconcile` (`sim.rs:850-859`) consults
+`legal_actions`, which omits `Raise` when `stack < min_raise_to` (AllIn is
+listed separately), and degrades to **Call — never AllIn**. NLH 50/100, 150
+chips facing the BB: `RuleBasedDecider` emits `Raise(150)` (`sized_raise_to`
+clamps to `my_chips`), which main accepted as an all-in raise and this branch
+converts to a flat call. Short stacks can never jam via Bet/Raise, which
+systematically skews trainer/evaluator BB/100 and every trained `BotProfile`.
+*Fix direction:* `reconcile`'s Bet/Raise arms should degrade to `AllIn` (not
+Call) when `amount >= stack` and AllIn is legal — or, deeper (the P8
+follow-up the review endorsed): have `legal_actions` expose the legal amount
+*range* (min from `min_raise_to`, max from `max_raise` — both already computed
+inside it) so `reconcile` clamps deterministically and the residual
+`safe_passive` fallback plus its `eprintln!` can be deleted. *Mechanism:* a
+sim test asserting a sub-min-raise stack facing a bet ends the hand all-in,
+plus a trainer smoke assertion that `all_ins > 0` over a short-stack scenario.
+
+**P9d — `act_bet` mutates before validating (MEDIUM, pre-existing).**
+`act_bet` (`:2508-2515`) goes turn-order check → `seats.act_bet` (chips
+deducted, state=`Bet`) → `set_raise_increment`, which then rejects an
+undersized bet (`InsufficientIncrement`) **after** the seat mutated:
+`table.bet` stays 0 while the seat shows a live bet and is no longer
+next-to-act. `act_raise` has exactly this pre-mutation guard (its comment at
+`:2654-2658` describes this exact hazard); `act_bet` was left exposed, and the
+new `reconcile` passes decider `Bet(n)` amounts through unvalidated (stock
+deciders clamp to ≥ BB; custom deciders and direct API callers don't).
+*Fix:* the same pre-validation `act_raise` got, before `seats.act_bet`. This
+also retires the double-validation in `set_raise_increment` (P9j.3): with both
+`act_bet` and `act_raise` pre-validating, `set_raise_increment` reduces to a
+pure store. *Mechanism:* an undersized-bet test asserting `Err` + seat state
+intact (the no-state-corruption pattern already used for `act_raise`).
+
+**P9e — Clamped all-in: three contracts diverge (MEDIUM).** The rerouted
+path returns `act_raise`'s `Ok(chips_remaining)` where every other
+`act_all_in` path returns `Ok(chips_committed)` — an inconsistent return
+contract within one function. The player is intentionally not all-in (the
+clamp is documented, and `plo_over_pot_all_in_clamps_to_pot` asserts it), but
+`act_all_in`'s own rustdoc ("Goes all-in", example asserting `is_all_in()`)
+was not updated; the log records `TableAction::Raise` while
+`SimTable::apply_action` still increments `counts.all_ins` — so log-derived
+player stats and sim `ActionCounts` disagree on every clamped shove. *Fix:*
+normalize the return to chips-committed, update the doc, and pick one
+classification for the clamped action (Raise, per the log) so both stats
+surfaces agree. *Mechanism:* doctest on the clamped path + an assertion that
+sim counts match log-derived counts over a PLO session.
+
+**P9f — Stale `raise_increment` after an NL full-raise shove (MEDIUM,
+pre-existing).** In the NL path `act_all_in` only does
+`self.bet = self.bet.max(amount)` and never calls `set_raise_increment`
+(only `act_bet`/`act_raise` do). NLH 100 BB: A raises to 300 (increment 200),
+B shoves 900 — a full 600 raise that should re-open with min re-raise 1500 —
+but `min_raise_to()` = 900 + 200 = 1100, and `act_raise(C, 1100)` succeeds,
+400 short of legal. Main has the identical body; this branch reworked
+`act_all_in` without fixing it, and no test asserts min-raise after a shove.
+*Fix:* when the shove ≥ a full raise, update the increment (the sub-min case
+is already handled correctly — Part V praised it). *Mechanism:* a
+min-raise-after-shove test for both the full-raise and sub-min shove cases.
+
+**P9g — Doc/behavior mismatches from P2/P6 (LOW, docs only).** (1) The
+dotenvy deletion is done and CHANGELOG'd, but README.md:53-56 still instructs
+copying `.env.example` to `.env`, and `lib.rs:224-226` still says "Add to
+`.env`: HUPS_DB_PATH=…" — nothing loads `.env` anymore, so a user following
+the docs gets a silently-empty default DB (`hup.rs`) or a panic
+(`examples/preflop.rs`). (2) The 0.2.0 Compatibility section meticulously
+lists source breaks but never states that stud/razz/FLHE/PLO hand histories
+recorded under 0.1.x may not replay (the razz bring-in seat, FL exactness,
+and dead antes all change replay semantics — each a deliberate rule fix), and
+line 181's wire-format-stability promise reads as a replay-stability promise.
+No committed fixture breaks (the only replayed archive is NLHE). *Fix:*
+update both doc sites to "export the variable" and add one Compatibility
+bullet on replay. *Mechanism:* none needed beyond the edit; these are
+one-liners.
+
+**P9h — Out seat pays the ante (LOW, edge).** `post_dead_ante` checks only
+`seat.is_empty()`; an occupied seat with `state == Out` and chips > 0 is
+charged for a hand it is never dealt into (the old `act_bet_internal` path
+rejected non-active players). Not producible by in-repo flows today — `Out`
+is only assigned to empty seats — but the state is representable through the
+`pub` field. Subsumed by the P9a fix if dead-ante posting moves into
+`PlayerNoCell` behind the `is_active()` guard.
+
+**P9i — Phantom `ActionCounts` (LOW, pre-existing).** In
+`SimTable::apply_action` (`sim.rs:788-807`), when the reconciled action is
+rejected, `applied` is set to the fallback *before* the fallback's
+`apply_action` runs; if that also fails (eprintln only), the `match applied`
+still bumps the counter — stats record an action that never mutated the
+table, on exactly the hands where the engine wedged. Main did the same.
+*Fix:* bump counts only on a successful apply. *Mechanism:* covered by the
+P9a test (the stall scenario is the reachable both-rejected case).
+
+**P9j — Cleanup batch (confirmed by review, no behavior change).**
+
+1. The 5-arg `self.betting.max_raise(self.effective_pot(), self.bet,
+   seat.player.bet, stack, tier)` incantation is now copy-pasted at three
+   sites (`act_raise` :2678, the `act_all_in` guard :2738, `legal_actions`
+   :3843) — exactly how the II.1 `self.pot`-vs-`effective_pot` bug happened.
+   Extract `max_raise_for(&self, seat)`; the P9b `validate_raise` subsumes it.
+2. The stud completion rule lives at two altitudes: `min_raise_to()`
+   (`table_no_cell.rs:2107`) and `BettingStructure::max_raise`'s FixedLimit
+   arm (`betting_structure.rs:182`) encode the same conditional; if they
+   drift, min > max makes every FL raise illegal. `BettingStructure` should
+   own it.
+3. `reconcile` and `safe_passive` each call `legal_actions` and encode
+   overlapping degradation ladders with *different orderings* (Raise arm:
+   Call→Check→Fold; safe_passive: Call→Check→AllIn). Compute the legal set
+   once in `apply_action`, single degradation function. (Folds into P9c.)
+4. The CI "Kernel purity gate" step inlines the same cargo-tree|grep pipeline
+   as `make check-purity` (Makefile:207, whose comment says it mirrors CI).
+   One should invoke the other; keep the `::error::` annotation.
+5. The razz ace-low fix conflates two independent properties in one flag:
+   `third_street_extreme_upcard_seat`'s `highest: bool` selects both scan
+   direction *and* rank order (`if highest { California::ace_low_rank(...) }`),
+   importing the razz-specific `California` into shared table code. A
+   deuce-to-seven variant (highest upcard, ace-high) is inexpressible. Rank
+   order belongs on `GameFamily`/`GameType` (alongside
+   `uses_community_board()`/`is_stud_family()`).
+6. House-rule gaps on new public items (each a CLAUDE.md requirement):
+   `bc_rank_hashmap()` has neither doc test nor unit test;
+   `load_bc_rank_map` lacks `# Examples`; `California::ace_low_rank` has no
+   unit test; `HandHistoryError`'s `Display`/`Error`/`From` impls are
+   untested; and `PlayerAction`'s `Display` lost its six-variant test when
+   `src/bot/player_action.rs` was deleted (only a one-variant doctest
+   remains).
+
+**One refuted candidate, for the record:** "a rejected Fold can fall back to
+Call and commit chips the decider never chose" — provably unreachable:
+`act_fold` and every `safe_passive` fallback share the same `is_active()`
+guard, so any state rejecting Fold rejects the fallback too.
+
+*Sequencing:* P9a–P9c before the 0.2.0 release (all three are new in this
+branch and two break invariants this branch itself introduced); P9d–P9f ride
+along or immediately after; P9g is a pre-release doc pass; P9j opportunistic,
+with items 1–3 naturally falling out of the P9b/P9c deep fixes.
+
 ---
 
 ## Comparative Scoring
