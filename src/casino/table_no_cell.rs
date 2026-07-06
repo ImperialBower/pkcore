@@ -224,6 +224,8 @@ impl PlayerNoCell {
         self.bet > 0
     }
 
+    // region Core bet logic
+
     /// Core bet logic shared by all bet-like actions.
     ///
     /// # Errors
@@ -560,6 +562,8 @@ impl PlayerNoCell {
         self.chips_in_play = 0;
         self.state = PlayerState::YetToAct;
     }
+
+    // end region
 }
 
 impl Display for PlayerNoCell {
@@ -3754,6 +3758,127 @@ impl TableNoCell {
 
 #[cfg(feature = "bot-profiles")]
 impl TableNoCell {
+    /// Returns the [`PlayerAction`](crate::casino::action::PlayerAction)s that are
+    /// legal for `seat_id` in the current betting state.
+    ///
+    /// This is the *advisory* half of the engine's transition surface (the
+    /// dispatching half is [`Self::apply_action`]): it answers "what can this
+    /// seat do now?" **without** mutating the table or trying-then-rolling-back an
+    /// action. `Bet` and `Raise` are reported at their **minimum** legal size; any
+    /// larger amount up to the structure's ceiling is also legal and is validated
+    /// by [`Self::act_bet`] / [`Self::act_raise`] when applied.
+    ///
+    /// The raise checks mirror those in [`Self::act_raise`] exactly, so an action
+    /// this method reports as legal will not then be rejected by the matching
+    /// `act_*` method — that fidelity is the whole point of the surface, and is
+    /// what lets betting-rule correctness be table-driven rather than probed.
+    ///
+    /// Returns an empty `Vec` for a seat with no decision: an unknown seat, or one
+    /// that is all-in, folded, or busted — analogous to the empty action set at a
+    /// terminal node in [`games::kuhn`](crate::games::kuhn).
+    ///
+    /// # Note
+    ///
+    /// Covers hold'em-family betting (fold / check / call / bet / raise / all-in).
+    /// Stud-family bring-in on 3rd street is not yet modelled here.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "bot-profiles")]
+    /// # {
+    /// use pkcore::casino::action::PlayerAction;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    ///
+    /// let seats = SeatsNoCell::new(vec![
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 5_000)),
+    /// ]);
+    /// let mut t = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// t.act_forced_bets().unwrap();
+    /// t.deal_cards_to_seats().unwrap();
+    ///
+    /// // UTG faces the big blind: fold, call, raise, or shove — but never check.
+    /// let utg = t.determine_utg();
+    /// let actions = t.legal_actions(utg);
+    /// assert!(actions.contains(&PlayerAction::Fold));
+    /// assert!(actions.contains(&PlayerAction::Call));
+    /// assert!(!actions.contains(&PlayerAction::Check));
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn legal_actions(&self, seat_id: u8) -> Vec<crate::casino::action::PlayerAction> {
+        use crate::casino::action::PlayerAction;
+
+        let mut actions = Vec::new();
+
+        let Some(seat) = self.seats.get_seat(seat_id) else {
+            return actions;
+        };
+        // An all-in, folded, or busted seat has no decision to make. `is_in_hand`
+        // is false once a seat has folded or been eliminated; an all-in seat is
+        // still in the hand but has nothing left to decide.
+        if !seat.player.is_in_hand() || seat.player.is_all_in() || seat.player.chips == 0 {
+            return actions;
+        }
+
+        let to_call = self.to_call(seat_id);
+        let stack = seat.player.total_chip_count();
+        let cap_reached = self.betting.cap_reached(self.raises_this_street);
+        let min_bet = self.min_raise();
+        let min_raise_to = self.min_raise_to();
+
+        // A raise-to `amount` is legal only when the cap is not hit, the stack
+        // covers it, and it sits within the structure's ceiling — the exact checks
+        // `act_raise` enforces before mutating.
+        let can_raise_to = |amount: usize| {
+            !cap_reached
+                && stack >= amount
+                && amount
+                    <= self.betting.max_raise(
+                        self.effective_pot(),
+                        self.bet,
+                        seat.player.bet,
+                        stack,
+                        self.current_bet_tier(),
+                    )
+        };
+
+        if to_call == 0 {
+            // No live bet faces this seat, so it may check.
+            actions.push(PlayerAction::Check);
+            if self.bet == 0 {
+                // Opening the betting is a Bet; the minimum open is `min_raise()`
+                // (the big blind before any raise this street).
+                if stack >= min_bet {
+                    actions.push(PlayerAction::Bet(min_bet));
+                }
+            } else if can_raise_to(min_raise_to) {
+                // Big-blind option: the live bet is already matched, so re-opening
+                // it is a Raise rather than a Bet.
+                actions.push(PlayerAction::Raise(min_raise_to));
+            }
+        } else {
+            // Facing a bet: fold and call are always available (`act_call`
+            // converts a short stack into a partial all-in call).
+            actions.push(PlayerAction::Fold);
+            actions.push(PlayerAction::Call);
+            if can_raise_to(min_raise_to) {
+                actions.push(PlayerAction::Raise(min_raise_to));
+            }
+        }
+
+        // A short stack can always shove, even when a full min-raise is illegal:
+        // all-in bypasses the betting-structure cap (see `act_raise`).
+        if stack > 0 {
+            actions.push(PlayerAction::AllIn);
+        }
+
+        actions
+    }
+
     /// Apply a [`crate::casino::action::PlayerAction`] to the given seat.
     ///
     /// Translates the action enum variant to the corresponding `act_*` method.
@@ -4237,6 +4362,10 @@ mod tests {
         table.deal_turn().unwrap();
         assert_eq!(4, table.board.len());
     }
+
+    // `legal_actions` is exercised in the bot-profiles-gated
+    // `transition_surface_tests` module at the end of this file, alongside
+    // `apply_action` (both require `casino::action::PlayerAction`).
 
     #[test]
     fn table_no_cell_act_fold() {
@@ -5177,4 +5306,89 @@ mod tests {
     }
 
     // endregion Razz
+}
+
+// ── Transition-surface tests (legal_actions / apply_action) ───────────────────
+//
+// P8: the audit's payoff — betting-rule correctness expressed as table-driven
+// assertions instead of probe archaeology. Gated with the rest of the
+// bot-profiles action surface.
+#[cfg(all(test, feature = "bot-profiles"))]
+#[allow(non_snake_case)]
+mod transition_surface_tests {
+    use super::*;
+    use crate::casino::action::PlayerAction;
+    use crate::casino::game::ForcedBets;
+
+    /// A 3-handed 50/100 NL table advanced to the first preflop decision (UTG
+    /// facing the big blind).
+    fn nlh_at_utg() -> TableNoCell {
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 10_000)),
+        ]);
+        let mut t = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        t.act_forced_bets().expect("forced bets");
+        t.deal_cards_to_seats().expect("deal");
+        t
+    }
+
+    #[test]
+    fn legal_actions__utg_facing_bb_is_fold_call_raise_allin_no_check() {
+        let t = nlh_at_utg();
+        let utg = t.next_to_act();
+        let actions = t.legal_actions(utg);
+
+        assert!(actions.contains(&PlayerAction::Fold));
+        assert!(actions.contains(&PlayerAction::Call));
+        assert!(actions.contains(&PlayerAction::Raise(t.min_raise_to())));
+        assert!(actions.contains(&PlayerAction::AllIn));
+        // Facing a live bet, checking is illegal, and there is no *opening* bet.
+        assert!(!actions.contains(&PlayerAction::Check));
+        assert!(!actions.iter().any(|a| matches!(a, PlayerAction::Bet(_))));
+    }
+
+    #[test]
+    fn legal_actions__empty_for_folded_seat() {
+        let mut t = nlh_at_utg();
+        let utg = t.next_to_act();
+        t.act_fold(utg).expect("fold");
+        // A folded seat has no decision to make.
+        assert!(t.legal_actions(utg).is_empty());
+    }
+
+    #[test]
+    fn legal_actions__empty_for_unknown_seat() {
+        let t = nlh_at_utg();
+        assert!(t.legal_actions(99).is_empty());
+    }
+
+    #[test]
+    fn apply_action__fold_advances_and_folds_the_seat() {
+        let mut t = nlh_at_utg();
+        let utg = t.next_to_act();
+        t.apply_action(utg, PlayerAction::Fold).expect("apply fold");
+
+        assert_eq!(PlayerState::Fold, t.seats.get_seat(utg).unwrap().player.state);
+        assert_ne!(utg, t.next_to_act(), "action should have advanced to the next seat");
+    }
+
+    /// The crown-jewel invariant of the transition surface: an action reported
+    /// as legal is never rejected when applied. Each action is applied to a fresh
+    /// table so the mutations do not interfere.
+    #[test]
+    fn every_legal_action_is_accepted_by_apply_action() {
+        let seat = nlh_at_utg().next_to_act();
+        let actions = nlh_at_utg().legal_actions(seat);
+        assert!(!actions.is_empty());
+
+        for action in actions {
+            let mut t = nlh_at_utg();
+            assert!(
+                t.apply_action(seat, action).is_ok(),
+                "legal_actions reported {action:?} but apply_action rejected it"
+            );
+        }
+    }
 }

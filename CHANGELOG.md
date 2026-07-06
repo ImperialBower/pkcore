@@ -7,16 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.2.0] - unreleased
 
-This release closes the P0–P7 items of the Fable 5 audit
+This release closes the P0–P8 items of the Fable 5 audit
 (`docs/AUDIT_Fable_5.md`): the confirmed variant-engine rule bugs (Part II), the
 published-crate panic boundary (P1), the first kernel-purity step (P2), the
 format-crate error de-leak (P3), the long-standing `todo!()`/operator cleanup
 with a lint gate (P4), trainer determinism plus stats-store durability (P5), the
-semver posture for 0.2.0 (P6), and the CI coverage gaps (P7). The major bump to
-0.2.0 reflects the accumulated breaking changes (the P3 error-type de-leak and
-the P6 `#[non_exhaustive]` additions). The breaking half of P2 — flipping the
-default feature set to drop `store`/`terminal` — remains deferred to a later
-release.
+semver posture for 0.2.0 (P6), the CI coverage gaps (P7), and the engine
+transition surface (P8). The major bump to 0.2.0 reflects the accumulated
+breaking changes (the P3 error-type de-leak and the P6 `#[non_exhaustive]`
+additions). The breaking half of P2 — flipping the default feature set to drop
+`store`/`terminal` — remains deferred to a later release.
 
 ### Fixed
 
@@ -144,6 +144,17 @@ release.
   an operation undefined-for-a-type, which is why the `Pile` over-specification
   can stay deferred.)
 
+- **Engine transition surface (audit P8).** `TableNoCell` now exposes the
+  Kuhn-shaped pair `legal_actions(seat) -> Vec<PlayerAction>` (advisory,
+  non-mutating — reports the legal fold/check/call/bet/raise/all-in with
+  `Bet`/`Raise` at minimum legal size) and `apply_action(seat, action)` (a single
+  dispatch point to the `act_*` methods). `legal_actions`' raise checks mirror
+  `act_raise` exactly, so it never reports an action the engine would then
+  reject — a fidelity invariant covered by table-driven tests. Both live behind
+  the `bot-profiles` feature (with `casino::action::PlayerAction`). This is the
+  WIT-mappable boundary the kernel program targets, and it lets betting-rule
+  correctness be asserted directly rather than probed. Stud/razz bring-in and
+  routing `sim.rs` through `apply_action` are noted follow-ups.
 - **Semver posture hardened for 0.2.0 (audit P6).**
   - `PKError`, `TableAction`, `ActionType`, and `GameType` are now
     `#[non_exhaustive]`. Downstream `match`es on them must add a wildcard arm,

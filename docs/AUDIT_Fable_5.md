@@ -943,6 +943,28 @@ of shape; this is what makes the WIT/component boundary (and EPIC-79's
 privacy layer) possible — and it converts betting-rules correctness from
 probe archaeology into table-driven tests, which is how Part II stays fixed.
 
+**Status: done (hold'em betting).** `TableNoCell::legal_actions(seat) ->
+Vec<PlayerAction>` and `TableNoCell::apply_action(seat, action)` now exist
+(`casino::action::PlayerAction`, behind the `bot-profiles` feature alongside the
+rest of the action surface). `legal_actions` is the *advisory, non-mutating*
+query — it reports fold/check/call/bet/raise/all-in with `Bet`/`Raise` at their
+minimum legal size, and its raise checks mirror `act_raise`'s (`min_raise_to`,
+`cap_reached`, `max_raise`) exactly so it never reports an action the `act_*`
+method would reject. `apply_action` is the single Kuhn-style dispatch point to
+the `act_*` methods (it also degrades `Call`→`Check` when nothing is owed). The
+payoff landed as table-driven tests, including the crown-jewel fidelity
+invariant `every_legal_action_is_accepted_by_apply_action`, which is exactly the
+"legality by asking, not by trying" property that retires the
+`sim.rs::apply_action` probe-and-fallback pattern (III.5).
+
+Deferred follow-ups: stud/razz 3rd-street bring-in is not yet modelled in
+`legal_actions`; the surface lives behind `bot-profiles` because
+`casino::action::PlayerAction` is gated there (un-gating it — or unifying it with
+the identical `bot::player_action::PlayerAction` — would make the transition
+surface a truly feature-free kernel boundary); and `sim.rs::apply_action` still
+carries its try/fallback dispatch (it can now route through
+`TableNoCell::apply_action`). None blocks the WIT boundary; they refine it.
+
 ---
 
 ## Comparative Scoring
