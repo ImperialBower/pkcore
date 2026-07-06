@@ -768,68 +768,110 @@ impl SimTable {
         }
     }
 
-    /// Applies `action` for `seat` to the live table and increments the
-    /// appropriate counter in `counts`.
+    /// Applies `action` for `seat` and increments the counter for whatever was
+    /// actually played.
     ///
-    /// **Instrumentation note:** action-rejection paths used to silently
-    /// swallow errors via `let _ = ...`, which masked a rare CI flake
-    /// (`ActionIsntFinished` from `bring_it_in()` after `run_street`
-    /// stalled). The eprintln!s below fire only on the smoking-gun paths —
-    /// primary action rejected for Fold/Check/Call/AllIn, or BOTH the
-    /// primary and fallback rejected for Bet/Raise. Routine `Bet → Check`
-    /// fallback (e.g. when a bet already exists, the legitimate case) stays
-    /// silent.
+    /// The *kind* of action is reconciled against the engine's
+    /// [`legal_actions`](crate::casino::table_no_cell::TableNoCell::legal_actions)
+    /// and dispatched through a single
+    /// [`apply_action`](crate::casino::table_no_cell::TableNoCell::apply_action)
+    /// — replacing the old "try an `act_*` method and fall back on rejection"
+    /// dispatch (audit III.5 / P8). Legality is now *asked*, not *tried*.
+    ///
+    /// A reconciled aggressive action can still be rejected on its **amount**
+    /// alone (a decider may propose an over-stack size — a dimension
+    /// `legal_actions` reports only the minimum of); that residual case falls
+    /// back once to a guaranteed-legal passive action so the hand always
+    /// advances. Both-rejected is logged as the genuine smoking gun.
     fn apply_action(&mut self, seat: u8, action: PlayerAction, counts: &mut ActionCounts) {
-        match action {
-            PlayerAction::Fold => {
-                if let Err(e) = self.table.act_fold(seat) {
-                    eprintln!("[pkcore::sim] WARN seat {seat} act_fold rejected: {e:?}");
-                }
-                counts.folds += 1;
+        let chosen = self.reconcile(seat, action);
+        let applied = if self.table.apply_action(seat, chosen).is_ok() {
+            chosen
+        } else {
+            let net = self.safe_passive(seat);
+            if let Err(e) = self.table.apply_action(seat, net) {
+                eprintln!(
+                    "[pkcore::sim] WARN seat {seat}: reconciled {chosen:?} (from {action:?}) and \
+                     fallback {net:?} both rejected: {e:?} — table state will not advance"
+                );
             }
+            net
+        };
+        match applied {
+            PlayerAction::Fold => counts.folds += 1,
+            PlayerAction::Check => counts.checks += 1,
+            PlayerAction::Call => counts.calls += 1,
+            PlayerAction::Bet(_) => counts.bets += 1,
+            PlayerAction::Raise(_) => counts.raises += 1,
+            PlayerAction::AllIn => counts.all_ins += 1,
+        }
+    }
+
+    /// Maps a decider's intended `action` onto one the engine will accept in the
+    /// current state, consulting
+    /// [`legal_actions`](crate::casino::table_no_cell::TableNoCell::legal_actions)
+    /// instead of trial dispatch. Aggression that is illegal here (a bet already
+    /// stands, the raise cap is hit) degrades to the passive action, preserving
+    /// the sim's historical `Bet → Check` / `Raise → Call` behaviour. `Fold` and
+    /// `AllIn` are always available in turn, independent of the advisory set.
+    fn reconcile(&self, seat: u8, action: PlayerAction) -> PlayerAction {
+        let legal = self.table.legal_actions(seat);
+        let has_check = legal.contains(&PlayerAction::Check);
+        let has_call = legal.contains(&PlayerAction::Call);
+        let has_bet = legal.iter().any(|a| matches!(a, PlayerAction::Bet(_)));
+        let has_raise = legal.iter().any(|a| matches!(a, PlayerAction::Raise(_)));
+
+        match action {
+            PlayerAction::Fold => PlayerAction::Fold,
+            PlayerAction::AllIn => PlayerAction::AllIn,
             PlayerAction::Check => {
-                if let Err(e) = self.table.act_check(seat) {
-                    eprintln!("[pkcore::sim] WARN seat {seat} act_check rejected: {e:?}");
+                if has_check {
+                    PlayerAction::Check
+                } else {
+                    PlayerAction::Call
                 }
-                counts.checks += 1;
             }
             PlayerAction::Call => {
-                if let Err(e) = self.table.act_call(seat) {
-                    eprintln!("[pkcore::sim] WARN seat {seat} act_call rejected: {e:?}");
-                }
-                counts.calls += 1;
-            }
-            PlayerAction::Bet(amount) => {
-                if self.table.act_bet(seat, amount).is_ok() {
-                    counts.bets += 1;
-                } else if self.table.act_check(seat).is_ok() {
-                    // Legitimate fallback: Bet rejected because a bet already exists.
-                    counts.checks += 1;
+                if has_call {
+                    PlayerAction::Call
                 } else {
-                    eprintln!(
-                        "[pkcore::sim] WARN seat {seat} Bet({amount}) AND fallback Check both rejected — table state will not advance"
-                    );
-                    counts.checks += 1;
+                    PlayerAction::Check
                 }
             }
-            PlayerAction::Raise(amount) => {
-                if self.table.act_raise(seat, amount).is_ok() {
-                    counts.raises += 1;
-                } else if self.table.act_call(seat).is_ok() {
-                    counts.calls += 1;
+            PlayerAction::Bet(n) => {
+                if has_bet {
+                    PlayerAction::Bet(n)
+                } else if has_check {
+                    PlayerAction::Check
                 } else {
-                    eprintln!(
-                        "[pkcore::sim] WARN seat {seat} Raise({amount}) AND fallback Call both rejected — table state will not advance"
-                    );
-                    counts.calls += 1;
+                    PlayerAction::Call
                 }
             }
-            PlayerAction::AllIn => {
-                if let Err(e) = self.table.act_all_in(seat) {
-                    eprintln!("[pkcore::sim] WARN seat {seat} act_all_in rejected: {e:?}");
+            PlayerAction::Raise(n) => {
+                if has_raise {
+                    PlayerAction::Raise(n)
+                } else if has_call {
+                    PlayerAction::Call
+                } else if has_check {
+                    PlayerAction::Check
+                } else {
+                    PlayerAction::Fold
                 }
-                counts.all_ins += 1;
             }
+        }
+    }
+
+    /// A guaranteed-legal passive action for `seat`: call if a bet is faced, else
+    /// check, else shove. Used as the last-resort fallback when even a reconciled
+    /// aggressive action is rejected on its amount, so the hand still advances.
+    fn safe_passive(&self, seat: u8) -> PlayerAction {
+        let legal = self.table.legal_actions(seat);
+        if legal.contains(&PlayerAction::Call) {
+            PlayerAction::Call
+        } else if legal.contains(&PlayerAction::Check) {
+            PlayerAction::Check
+        } else {
+            PlayerAction::AllIn
         }
     }
 

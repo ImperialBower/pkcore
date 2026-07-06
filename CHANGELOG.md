@@ -160,8 +160,10 @@ additions). The breaking half of P2 — flipping the default feature set to drop
   `apply_action` compile and are tested with `--no-default-features`. Stud/razz
   voluntary betting (bring-in completion via `Raise(small_bet)`) is covered and
   tested; the bring-in itself stays a forced post (`act_bring_in`), like blinds.
-  Routing `sim.rs::apply_action` through the engine's `apply_action` is a noted
-  cleanup.
+  `SimTable`'s action dispatch was rewritten to reconcile the decider's choice
+  against `legal_actions` and route through the engine's `apply_action` — the
+  old "try an `act_*` and fall back on rejection" pattern (III.5) is gone, and
+  the 1000-hand chip-conservation marathon still passes.
 - **Semver posture hardened for 0.2.0 (audit P6).**
   - `PKError`, `TableAction`, `ActionType`, and `GameType` are now
     `#[non_exhaustive]`. Downstream `match`es on them must add a wildcard arm,

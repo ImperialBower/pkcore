@@ -978,9 +978,15 @@ Two of the three follow-ups are now also done:
   `legal_actions__stud_completer_can_fold_call_and_complete` and a stud fidelity
   test. The `legal_actions` doc states this forced-vs-voluntary boundary.
 
-Remaining: `sim.rs::apply_action` still carries its own try/fallback dispatch and
-could now route through `TableNoCell::apply_action`. It does not block the WIT
-boundary; it is a cleanup.
+And the last cleanup is done too: `sim.rs::apply_action` no longer determines
+legality by trying an `act_*` method and catching the rejection. It now
+`reconcile`s the decider's action against `legal_actions` (kind chosen by asking,
+not trying), dispatches through the engine's `apply_action`, and keeps only a
+single guaranteed-legal passive fallback for the residual case a decider proposes
+an over-stack *amount* (which `legal_actions` reports only the minimum of). The
+1000-hand chip-conservation marathon still passes, so the more-robust dispatch
+did not perturb the invariant. The probe-and-fallback pattern the audit flagged
+in III.5 is fully retired.
 
 ---
 
