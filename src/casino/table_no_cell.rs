@@ -3754,9 +3754,8 @@ impl TableNoCell {
     }
 }
 
-// ── Bot-driven action dispatch (bot-profiles feature) ─────────────────────────
+// ── Transition surface: legal_actions / apply_action (feature-free) ───────────
 
-#[cfg(feature = "bot-profiles")]
 impl TableNoCell {
     /// Returns the [`PlayerAction`](crate::casino::action::PlayerAction)s that are
     /// legal for `seat_id` in the current betting state.
@@ -3777,16 +3776,21 @@ impl TableNoCell {
     /// that is all-in, folded, or busted — analogous to the empty action set at a
     /// terminal node in [`games::kuhn`](crate::games::kuhn).
     ///
-    /// # Note
+    /// # Forced posts vs. voluntary betting
     ///
-    /// Covers hold'em-family betting (fold / check / call / bet / raise / all-in).
-    /// Stud-family bring-in on 3rd street is not yet modelled here.
+    /// This surface models *voluntary* betting only. Forced posts — blinds,
+    /// antes, and the stud/razz 3rd-street bring-in — are posted by their own
+    /// methods ([`Self::act_forced_bets`] / [`Self::act_bring_in`], driven by
+    /// [`PokerSession`](crate::casino::session::PokerSession) at hand start), not
+    /// chosen here, exactly as blinds are not a `PlayerAction`. Stud/razz
+    /// voluntary betting *is* covered: once the bring-in is posted, the
+    /// completer's `Raise(small_bet)` (completion) and the subsequent fixed-limit
+    /// raises surface here like any other bet, because they flow through
+    /// [`Self::to_call`] / [`Self::min_raise_to`].
     ///
     /// # Examples
     ///
     /// ```
-    /// # #[cfg(feature = "bot-profiles")]
-    /// # {
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
@@ -3806,7 +3810,6 @@ impl TableNoCell {
     /// assert!(actions.contains(&PlayerAction::Fold));
     /// assert!(actions.contains(&PlayerAction::Call));
     /// assert!(!actions.contains(&PlayerAction::Check));
-    /// # }
     /// ```
     #[must_use]
     pub fn legal_actions(&self, seat_id: u8) -> Vec<crate::casino::action::PlayerAction> {
@@ -3892,8 +3895,6 @@ impl TableNoCell {
     /// # Examples
     ///
     /// ```
-    /// # #[cfg(feature = "bot-profiles")]
-    /// # {
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
@@ -3907,7 +3908,6 @@ impl TableNoCell {
     /// t.deal_cards_to_seats().unwrap();
     /// let utg = t.determine_utg();
     /// assert!(t.apply_action(utg, PlayerAction::Fold).is_ok());
-    /// # }
     /// ```
     pub fn apply_action(&mut self, seat: u8, action: crate::casino::action::PlayerAction) -> Result<(), PKError> {
         use crate::casino::action::PlayerAction;
@@ -5311,9 +5311,8 @@ mod tests {
 // ── Transition-surface tests (legal_actions / apply_action) ───────────────────
 //
 // P8: the audit's payoff — betting-rule correctness expressed as table-driven
-// assertions instead of probe archaeology. Gated with the rest of the
-// bot-profiles action surface.
-#[cfg(all(test, feature = "bot-profiles"))]
+// assertions instead of probe archaeology. Feature-free, like the surface itself.
+#[cfg(test)]
 #[allow(non_snake_case)]
 mod transition_surface_tests {
     use super::*;
@@ -5388,6 +5387,57 @@ mod transition_surface_tests {
             assert!(
                 t.apply_action(seat, action).is_ok(),
                 "legal_actions reported {action:?} but apply_action rejected it"
+            );
+        }
+    }
+
+    // ── Stud/razz: voluntary betting after the forced bring-in ────────────────
+
+    /// A 3-handed fixed-limit stud table (ante 2, bring-in 5, small bet 20, big
+    /// bet 40) advanced past the forced bring-in to the first voluntary actor
+    /// (the "completer"), mirroring `PokerSession::start_hand`'s setup order.
+    fn stud_at_completer() -> TableNoCell {
+        let seats = SeatsNoCell::new(vec![
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
+            SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 10_000)),
+        ]);
+        let mut t = TableNoCell::stud_hi_from_seats(seats, 2, 5, 20, 40);
+        t.act_forced_bets().expect("antes");
+        t.deal_stud_3rd_street().expect("deal 3rd");
+        t.act_bring_in().expect("bring-in"); // forced post, like blinds
+        t
+    }
+
+    #[test]
+    fn legal_actions__stud_completer_can_fold_call_and_complete() {
+        let t = stud_at_completer();
+        let completer = t.next_to_act();
+        let actions = t.legal_actions(completer);
+
+        // Facing the partial bring-in: fold or call, and *complete* to the full
+        // small bet — which surfaces as a Raise to `min_raise_to()` (== 20).
+        assert!(actions.contains(&PlayerAction::Fold));
+        assert!(actions.contains(&PlayerAction::Call));
+        assert!(actions.contains(&PlayerAction::Raise(t.min_raise_to())));
+        assert_eq!(20, t.min_raise_to(), "completion should target one small bet");
+        assert!(actions.contains(&PlayerAction::AllIn));
+        assert!(!actions.contains(&PlayerAction::Check));
+    }
+
+    /// Fidelity holds in the fixed-limit stud completion state too: every action
+    /// `legal_actions` reports for the completer is accepted by `apply_action`.
+    #[test]
+    fn every_legal_action_is_accepted_by_apply_action__stud() {
+        let completer = stud_at_completer().next_to_act();
+        let actions = stud_at_completer().legal_actions(completer);
+        assert!(!actions.is_empty());
+
+        for action in actions {
+            let mut t = stud_at_completer();
+            assert!(
+                t.apply_action(completer, action).is_ok(),
+                "legal_actions reported {action:?} but apply_action rejected it in stud"
             );
         }
     }

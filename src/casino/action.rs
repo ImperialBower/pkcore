@@ -1,17 +1,19 @@
-//! Player action decisions for bot-driven game sessions.
+//! The canonical player-action type for the engine's transition surface.
 //!
-//! [`PlayerAction`] is the decision type returned by
-//! [`BotProfile::decide`](crate::bot::profile::BotProfile::decide) and consumed
-//! by [`TableNoCell::apply_action`](crate::casino::table_no_cell::TableNoCell::apply_action).
-//!
-//! This module requires the **`bot-profiles`** feature flag.
+//! [`PlayerAction`] is what
+//! [`TableNoCell::legal_actions`](crate::casino::table_no_cell::TableNoCell::legal_actions)
+//! reports and [`TableNoCell::apply_action`](crate::casino::table_no_cell::TableNoCell::apply_action)
+//! consumes; it is also the decision type bot deciders produce (via the
+//! re-export `crate::bot::player_action::PlayerAction`). It has no feature
+//! requirement — the transition surface is a feature-free kernel boundary.
 
 /// A player's chosen action at their turn.
 ///
-/// Returned by [`BotProfile::decide`](crate::bot::profile::BotProfile::decide) and
-/// applied to the table via
-/// [`TableNoCell::apply_action`](crate::casino::table_no_cell::TableNoCell::apply_action)
-/// or [`PokerSession::apply_action`](crate::casino::session::PokerSession::apply_action).
+/// Reported by
+/// [`TableNoCell::legal_actions`](crate::casino::table_no_cell::TableNoCell::legal_actions)
+/// and applied via
+/// [`TableNoCell::apply_action`](crate::casino::table_no_cell::TableNoCell::apply_action);
+/// also the value bot deciders produce.
 ///
 /// # Examples
 ///
@@ -20,6 +22,7 @@
 ///
 /// let action = PlayerAction::Bet(200);
 /// assert_eq!(action, PlayerAction::Bet(200));
+/// assert_eq!(action.to_string(), "Bet(200)");
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PlayerAction {
@@ -36,6 +39,19 @@ pub enum PlayerAction {
     Raise(usize),
     /// Commit all remaining chips.
     AllIn,
+}
+
+impl std::fmt::Display for PlayerAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Fold => write!(f, "Fold"),
+            Self::Check => write!(f, "Check"),
+            Self::Call => write!(f, "Call"),
+            Self::Bet(n) => write!(f, "Bet({n})"),
+            Self::Raise(n) => write!(f, "Raise({n})"),
+            Self::AllIn => write!(f, "AllIn"),
+        }
+    }
 }
 
 #[cfg(test)]

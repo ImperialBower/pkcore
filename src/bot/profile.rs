@@ -950,17 +950,10 @@ impl BotProfile {
         seat: u8,
         rng: &mut R,
     ) -> crate::casino::action::PlayerAction {
-        use crate::bot::player_action::PlayerAction as BotAction;
-        use crate::casino::action::PlayerAction;
+        // `bot::player_action::PlayerAction` and `casino::action::PlayerAction`
+        // are the same type now, so the decider's output needs no translation.
         let snapshot = crate::bot::table_snapshot::TableSnapshot::from_table(table, seat);
-        match crate::bot::decider::RuleBasedDecider::decide_with_rng(self, &snapshot, rng) {
-            BotAction::Fold => PlayerAction::Fold,
-            BotAction::Check => PlayerAction::Check,
-            BotAction::Call => PlayerAction::Call,
-            BotAction::Bet(n) => PlayerAction::Bet(n),
-            BotAction::Raise(n) => PlayerAction::Raise(n),
-            BotAction::AllIn => PlayerAction::AllIn,
-        }
+        crate::bot::decider::RuleBasedDecider::decide_with_rng(self, &snapshot, rng)
     }
 }
 

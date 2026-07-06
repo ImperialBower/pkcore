@@ -150,11 +150,18 @@ additions). The breaking half of P2 — flipping the default feature set to drop
   `Bet`/`Raise` at minimum legal size) and `apply_action(seat, action)` (a single
   dispatch point to the `act_*` methods). `legal_actions`' raise checks mirror
   `act_raise` exactly, so it never reports an action the engine would then
-  reject — a fidelity invariant covered by table-driven tests. Both live behind
-  the `bot-profiles` feature (with `casino::action::PlayerAction`). This is the
+  reject — a fidelity invariant covered by table-driven tests. This is the
   WIT-mappable boundary the kernel program targets, and it lets betting-rule
-  correctness be asserted directly rather than probed. Stud/razz bring-in and
-  routing `sim.rs` through `apply_action` are noted follow-ups.
+  correctness be asserted directly rather than probed. The surface is
+  **feature-free**: `casino::action::PlayerAction` is now the single canonical
+  action enum — un-gated, `Display`-able, and re-exported from
+  `bot::player_action` (unifying the two formerly-identical enums and collapsing
+  the `BotProfile::decide` bridge to an identity) — so `legal_actions` /
+  `apply_action` compile and are tested with `--no-default-features`. Stud/razz
+  voluntary betting (bring-in completion via `Raise(small_bet)`) is covered and
+  tested; the bring-in itself stays a forced post (`act_bring_in`), like blinds.
+  Routing `sim.rs::apply_action` through the engine's `apply_action` is a noted
+  cleanup.
 - **Semver posture hardened for 0.2.0 (audit P6).**
   - `PKError`, `TableAction`, `ActionType`, and `GameType` are now
     `#[non_exhaustive]`. Downstream `match`es on them must add a wildcard arm,

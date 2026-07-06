@@ -957,13 +957,30 @@ invariant `every_legal_action_is_accepted_by_apply_action`, which is exactly the
 "legality by asking, not by trying" property that retires the
 `sim.rs::apply_action` probe-and-fallback pattern (III.5).
 
-Deferred follow-ups: stud/razz 3rd-street bring-in is not yet modelled in
-`legal_actions`; the surface lives behind `bot-profiles` because
-`casino::action::PlayerAction` is gated there (un-gating it — or unifying it with
-the identical `bot::player_action::PlayerAction` — would make the transition
-surface a truly feature-free kernel boundary); and `sim.rs::apply_action` still
-carries its try/fallback dispatch (it can now route through
-`TableNoCell::apply_action`). None blocks the WIT boundary; they refine it.
+Two of the three follow-ups are now also done:
+
+- **Feature-free surface + unified action type.** `casino::action::PlayerAction`
+  is now the single canonical action enum: un-gated (no `bot-profiles`
+  requirement), given a `Display` impl, and re-exported from
+  `bot::player_action` so the two formerly-identical enums are one type. The
+  bridge `match` in `BotProfile::decide` collapsed to an identity return, and
+  `legal_actions` / `apply_action` (and their tests) moved to an ungated `impl`
+  — the transition surface now compiles and is tested with
+  `--no-default-features`, making it the truly feature-free kernel boundary the
+  WIT/component story needs.
+- **Stud/razz covered and its boundary documented.** The bring-in is a *forced
+  post* (`act_bring_in`, driven by `PokerSession::start_hand` alongside blinds /
+  antes), not a voluntary choice — so it correctly sits outside the surface, like
+  blinds. What the surface *does* owe stud is the voluntary betting after the
+  bring-in, and that is covered by the existing `to_call` / `min_raise_to` logic
+  (the II.3 completion fix): the completer's `Raise(small_bet)` and the
+  fixed-limit ladder surface here like any other bet, now proven by
+  `legal_actions__stud_completer_can_fold_call_and_complete` and a stud fidelity
+  test. The `legal_actions` doc states this forced-vs-voluntary boundary.
+
+Remaining: `sim.rs::apply_action` still carries its own try/fallback dispatch and
+could now route through `TableNoCell::apply_action`. It does not block the WIT
+boundary; it is a cleanup.
 
 ---
 

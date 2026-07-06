@@ -174,8 +174,7 @@ pub use crate::analysis::player_stats_store::{PlayerStatsStore, YamlPlayerStatsS
 #[cfg(feature = "bot-training")]
 pub use crate::bot::training::{ExploitTrainer, GenerationRecord, TrainingConfig, TrainingResult};
 
-// casino (bot-profiles feature)
-#[cfg(feature = "bot-profiles")]
+// casino
 pub use crate::casino::action::PlayerAction;
 #[cfg(feature = "bot-profiles")]
 pub use crate::casino::session::PokerSession;
