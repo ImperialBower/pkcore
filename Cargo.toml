@@ -1,16 +1,23 @@
 [package]
 name = "pkcore"
 description = "Prototype core poker library."
-version = "0.1.8"
+version = "0.2.0"
 rust-version = "1.94.1"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/ImperialBower/pkcore.git"
 homepage = "https://github.com/ImperialBower/pkcore"
-exclude = [".github/workflows/*", "data/*", "docs/*", "benches/*", "examples/*", "generated/hups.db", "generated/old/*", "proto/*", "scripts/*", ".gitignore", "Cargo.lock", ".claude", "Claude.md"]
+keywords = ["poker", "holdem", "omaha", "equity", "cards"]
+categories = ["games", "algorithms", "simulation"]
+exclude = [".github/workflows/*", "data/*", "docs/*", "benches/*", "examples/*", "generated/hups.db", "generated/old/*", "generated/kuhn-repl-history", "proto/*", "scripts/*", ".gitignore", "Cargo.lock", ".claude", "CLAUDE.md", "DIARY.md", "marathon_failure.yaml"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+# docs.rs builds with all features so gated items (pokerbench, bot-training,
+# debug-json, generators) render with their "available on feature X" banners.
+[package.metadata.docs.rs]
+all-features = true
 
 [features]
 ## Default features enable the full EPIC-26 stack (player-stats and the
@@ -25,7 +32,24 @@ default = [
     "player-stats",
     "player-stats-persistence",
     "equity",
+    "store",
+    "terminal",
 ]
+## Enables the on-disk storage layer: SQLite-backed HUP results (the `Sqlable`
+## trait, `HUPResult`'s DB query/insert methods, `Connect`) and the
+## zstd-compressed binary card map (`FiveBCM`/`SevenFiveBCM`, `bc_rank_hashmap`,
+## and `SortedHeadsUp::wins`). Pulls in `rusqlite` (bundled SQLite) and `zstd`.
+## Non-wasm only — those dependencies are target-gated, so the store code is
+## always inert on wasm regardless of this flag. On by default; turn it off with
+## `default-features = false` for a storage-free (pure) build. The pure `HUPResult`
+## data type and its CSV/`Display` helpers remain available without the feature.
+store = ["dep:rusqlite", "dep:zstd"]
+## Enables the interactive terminal layer: `Terminal::pause` (raw-mode key
+## reads) and ANSI colour output in `casino::table` and `analysis::nubibus`.
+## Pulls in `termion` (unix only). With the feature off, colour output falls
+## back to the existing no-op shims and `pause` is unavailable — giving a
+## delivery-agnostic (headless) build. On by default.
+terminal = ["dep:termion"]
 ## When enabled, `SolverResult::save` and `SolverResult::load` use human-readable
 ## JSON instead of the default compact binary (postcard) format. Useful for
 ## inspecting solver output during development. The explicit `save_json` /
@@ -59,13 +83,16 @@ bot-training = ["player-stats", "bot-profiles", "dep:serde_yaml_bw"]
 ## Analysis-only and additive (EPIC-43 Phase 1). Pure parsing — `csv`, `serde`,
 ## and `serde_json` are already required, so it adds no new dependencies.
 pokerbench = []
+## Enables historical offline generator inputs (e.g. `UNIQUE_HANDS`, the distinct
+## 5-card hand enumeration read from a self-generated file). These have no runtime
+## callers and require self-generated data; kept out of the default published API.
+generators = []
 
 [dependencies]
 bint = "0.1.15"
 cardpack = "0.6.9"
 bitvec = { version = "1.1", features = ["alloc",  "atomic", "std", "serde", "testing" ] }
 csv = "1.4"
-dotenvy = "0.15"
 indexmap = { version = "2.12", features = ["rayon"] }
 itertools = "0.14"
 log = "0.4"
@@ -86,16 +113,52 @@ uuid = { version = "1.22", features = ["serde", "v4"] }
 wincounter = "0.1.5"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rusqlite = { version = "0.34", features = ["bundled"] } # 0.35 breaks HUPResult https://github.com/rusqlite/rusqlite/releases#reactions--reaction_button_component-a0702b
-zstd = "0.13"
+rusqlite = { version = "0.34", optional = true, features = ["bundled"] } # 0.35 breaks HUPResult https://github.com/rusqlite/rusqlite/releases#reactions--reaction_button_component-a0702b
+zstd = { version = "0.13", optional = true }
 
 [target.'cfg(unix)'.dependencies]
-termion = "4.0"
+termion = { version = "4.0", optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom_v2 = { package = "getrandom", version = "0.2", features = ["js"] }
 getrandom_v3 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
 uuid = { version = "1.22", features = ["serde", "v4", "js"] }
+
+[[example]]
+name = "calc"
+required-features = ["equity"]
+
+# Storage-backed tools: SQLite HUP store + zstd binary card map (audit II.11 /
+# P7). Without `store`, `rusqlite`/`Sqlable`/`HUPResult` DB methods / BCM
+# generation are absent, so these must not build under `--no-default-features`.
+[[example]]
+name = "audit"
+required-features = ["store"]
+
+[[example]]
+name = "export_hups_bin"
+required-features = ["store"]
+
+[[example]]
+name = "generate_bcm"
+required-features = ["store"]
+
+[[example]]
+name = "hup_dump"
+required-features = ["store"]
+
+[[example]]
+name = "insert_distinct"
+required-features = ["store"]
+
+[[example]]
+name = "preflop"
+required-features = ["store"]
+
+# Uses `Terminal::pause` (raw-mode key reads), which is gated behind `terminal`.
+[[example]]
+name = "pluripop"
+required-features = ["terminal"]
 
 [[example]]
 name = "equity"

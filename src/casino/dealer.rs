@@ -23,11 +23,11 @@
 use crate::PKError;
 use crate::casino::game::ForcedBets;
 use crate::casino::player::Player;
-use crate::casino::table::TableCelled;
-use crate::casino::table::event::TableLog;
-use crate::casino::table::seats::Seats;
-use crate::casino::table::seats::seat::Seat;
-use crate::casino::table::winnings::Winnings;
+use crate::casino::table_celled::TableCelled;
+use crate::casino::table_celled::event::TableLog;
+use crate::casino::table_celled::seats::SeatsCell;
+use crate::casino::table_celled::seats::seat::Seat;
+use crate::casino::winnings::Winnings;
 use crate::prelude::{BoxedCards, PlayerState};
 use std::fmt;
 use uuid::Uuid;
@@ -175,15 +175,15 @@ impl Dealer {
     ///
     /// # Panics
     ///
-    /// Panics if `seats` is 0 or greater than [`Seats::MAX_NUMBER_SEATS`].
+    /// Panics if `seats` is 0 or greater than [`SeatsCell::MAX_NUMBER_SEATS`].
     #[must_use]
     pub fn new(forced: ForcedBets, seat_count: u8) -> Self {
         assert!(
-            seat_count > 0 && seat_count <= Seats::MAX_NUMBER_SEATS,
+            seat_count > 0 && seat_count <= SeatsCell::MAX_NUMBER_SEATS,
             "seats must be 1–10"
         );
         // Build the requested number of truly empty seats (nil UUID → is_empty() == true).
-        let seats = Seats::new(
+        let seats = SeatsCell::new(
             (0..seat_count)
                 .map(|_| Seat::new_with_cards(Player::default(), BoxedCards::blanks(2)))
                 .collect(),

@@ -15,7 +15,7 @@
 use pkcore::bot::profile::BotProfile;
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::session::PokerSession;
-use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::casino::table::{Player, Seat, Seats, Table};
 use pkcore::games::betting_structure::BettingStructure;
 use pkcore::hand_history::{HandCollection, HandHistory, HandVariant};
 
@@ -27,7 +27,7 @@ const SOURCE: &str = "replay_consistency_test";
 
 #[test]
 #[ignore = "runs a full bot-selfplay session; use --include-ignored to enable"]
-fn test_bot_selfplay_replay_roundtrip() {
+fn bot_selfplay_replay_roundtrip() {
     let profile_names = ["gto", "tight_passive", "loose_aggressive"];
     let profiles: Vec<BotProfile> = profile_names
         .iter()
@@ -37,11 +37,11 @@ fn test_bot_selfplay_replay_roundtrip() {
         })
         .collect();
 
-    let seats_vec: Vec<SeatNoCell> = profiles
+    let seats_vec: Vec<Seat> = profiles
         .iter()
-        .map(|p| SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), STARTING_CHIPS)))
+        .map(|p| Seat::new(Player::new_with_chips(p.name.clone(), STARTING_CHIPS)))
         .collect();
-    let table = TableNoCell::nlh_from_seats(SeatsNoCell::new(seats_vec), ForcedBets::new(SB, BB));
+    let table = Table::nlh_from_seats(Seats::new(seats_vec), ForcedBets::new(SB, BB));
     let mut session = PokerSession::new(table);
     let mut rng = rand::rng();
     let mut collection = HandCollection::new();
@@ -186,7 +186,7 @@ const FLHE_SOURCE: &str = "replay_consistency_flhe";
 
 #[test]
 #[ignore = "runs a full FLHE bot session; use --include-ignored to enable"]
-fn test_flhe_bot_selfplay_replay_roundtrip() {
+fn flhe_bot_selfplay_replay_roundtrip() {
     let profile_names = ["tight_aggressive_flhe", "loose_passive_flhe"];
     let profiles: Vec<BotProfile> = profile_names
         .iter()
@@ -196,12 +196,11 @@ fn test_flhe_bot_selfplay_replay_roundtrip() {
         })
         .collect();
 
-    let seats_vec: Vec<SeatNoCell> = profiles
+    let seats_vec: Vec<Seat> = profiles
         .iter()
-        .map(|p| SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), STARTING_CHIPS)))
+        .map(|p| Seat::new(Player::new_with_chips(p.name.clone(), STARTING_CHIPS)))
         .collect();
-    let table =
-        TableNoCell::limit_holdem_from_seats(SeatsNoCell::new(seats_vec), FL_SMALL_BET, FL_BIG_BET, FL_RAISE_CAP);
+    let table = Table::limit_holdem_from_seats(Seats::new(seats_vec), FL_SMALL_BET, FL_BIG_BET, FL_RAISE_CAP);
     let table_betting = table.betting;
     let mut session = PokerSession::new(table);
     let mut rng = rand::rng();
@@ -347,7 +346,7 @@ const PLO_SOURCE: &str = "replay_consistency_plo";
 
 #[test]
 #[ignore = "runs a full PLO bot session; use --include-ignored to enable"]
-fn test_plo_bot_selfplay_replay_roundtrip() {
+fn plo_bot_selfplay_replay_roundtrip() {
     let profile_names = ["loose_aggressive_plo", "tight_aggressive_plo"];
     let profiles: Vec<BotProfile> = profile_names
         .iter()
@@ -357,11 +356,11 @@ fn test_plo_bot_selfplay_replay_roundtrip() {
         })
         .collect();
 
-    let seats_vec: Vec<SeatNoCell> = profiles
+    let seats_vec: Vec<Seat> = profiles
         .iter()
-        .map(|p| SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), STARTING_CHIPS)))
+        .map(|p| Seat::new(Player::new_with_chips(p.name.clone(), STARTING_CHIPS)))
         .collect();
-    let table = TableNoCell::plo_from_seats(SeatsNoCell::new(seats_vec), (PLO_SMALL_BLIND, PLO_BIG_BLIND));
+    let table = Table::plo_from_seats(Seats::new(seats_vec), (PLO_SMALL_BLIND, PLO_BIG_BLIND));
     let table_betting = table.betting;
     let mut session = PokerSession::new(table);
     let mut rng = rand::rng();
@@ -526,7 +525,7 @@ const STUD_SOURCE: &str = "replay_consistency_stud_hi";
 
 #[test]
 #[ignore = "runs a full Stud Hi bot session; use --include-ignored to enable"]
-fn test_stud_hi_bot_selfplay_replay_roundtrip() {
+fn stud_hi_bot_selfplay_replay_roundtrip() {
     let profile_names = ["tight_aggressive_stud_hi", "loose_passive_stud_hi"];
     let profiles: Vec<BotProfile> = profile_names
         .iter()
@@ -536,12 +535,12 @@ fn test_stud_hi_bot_selfplay_replay_roundtrip() {
         })
         .collect();
 
-    let seats_vec: Vec<SeatNoCell> = profiles
+    let seats_vec: Vec<Seat> = profiles
         .iter()
-        .map(|p| SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), STARTING_CHIPS)))
+        .map(|p| Seat::new(Player::new_with_chips(p.name.clone(), STARTING_CHIPS)))
         .collect();
-    let table = TableNoCell::stud_hi_from_seats(
-        SeatsNoCell::new(seats_vec),
+    let table = Table::stud_hi_from_seats(
+        Seats::new(seats_vec),
         STUD_ANTE,
         STUD_BRING_IN,
         STUD_SMALL_BET,
@@ -760,7 +759,7 @@ const RAZZ_SOURCE: &str = "replay_consistency_razz";
 
 #[test]
 #[ignore = "runs a full Razz bot session; use --include-ignored to enable"]
-fn test_razz_bot_selfplay_replay_roundtrip() {
+fn razz_bot_selfplay_replay_roundtrip() {
     let profile_names = ["tight_aggressive_razz", "loose_passive_razz"];
     let profiles: Vec<BotProfile> = profile_names
         .iter()
@@ -770,12 +769,12 @@ fn test_razz_bot_selfplay_replay_roundtrip() {
         })
         .collect();
 
-    let seats_vec: Vec<SeatNoCell> = profiles
+    let seats_vec: Vec<Seat> = profiles
         .iter()
-        .map(|p| SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), STARTING_CHIPS)))
+        .map(|p| Seat::new(Player::new_with_chips(p.name.clone(), STARTING_CHIPS)))
         .collect();
-    let table = TableNoCell::razz_from_seats(
-        SeatsNoCell::new(seats_vec),
+    let table = Table::razz_from_seats(
+        Seats::new(seats_vec),
         RAZZ_ANTE,
         RAZZ_BRING_IN,
         RAZZ_SMALL_BET,

@@ -313,7 +313,7 @@ impl From<&TableCelled> for TableEquity {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod casino__table__seats_seat_equities_tests {
+mod casino__equity__table_equity_tests {
     use super::*;
     use crate::prelude::Seatbit;
 

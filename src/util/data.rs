@@ -1,21 +1,22 @@
 use crate::analysis::eval::Eval;
 use crate::analysis::gto::odds::WinLoseDraw;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use crate::analysis::store::bcm::binary_card_map::SevenFiveBCM;
 use crate::analysis::store::db::hup::HUPResult;
 use crate::arrays::five::Five;
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::cards_cell::CardsCell;
 use crate::casino::player::Player;
-use crate::casino::table::seats::seat::Seat;
+use crate::casino::table_celled::seats::seat::Seat;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
-use crate::prelude::{BoxedCards, ForcedBets, Forgiving, PlayerState, Seats, TableCelled};
+use crate::prelude::{BoxedCards, ForcedBets, Forgiving, PlayerState, SeatsCell, TableCelled};
 use crate::{Card, Cards, Pile};
 use std::str::FromStr;
 use wincounter::win::Win;
@@ -146,7 +147,7 @@ impl TestData {
     ///
     /// ¯\_(ツ)_/¯
     #[must_use]
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn spades_royal_flush_bcm() -> SevenFiveBCM {
         SevenFiveBCM::try_from(Seven::from_str("A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠").unwrap_or_default()).unwrap_or_default()
     }
@@ -155,7 +156,7 @@ impl TestData {
     ///
     /// ¯\_(ツ)_/¯
     #[must_use]
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn spades_king_high_flush_bcm() -> SevenFiveBCM {
         SevenFiveBCM::try_from(Seven::from_str("K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠").unwrap_or_default()).unwrap_or_default()
     }
@@ -238,13 +239,7 @@ impl TestData {
     /// Because of `draw_from_the_bottom`, but this is test data so... ¯\_(ツ)_/¯
     #[must_use]
     pub fn deck_the_hand_dealable() -> Cards {
-        // let mut dealt = TestData::the_hand_cards_dealable();
-        // let mut minus = Cards::deck_minus(&dealt).shuffle();
-        // let river = dealt.draw_from_the_bottom(1).unwrap();
-        // let turn = dealt.draw_from_the_bottom(1).unwrap();
-        // let flop = dealt.draw_from_the_bottom(3).unwrap();
-
-        todo!()
+        unimplemented!("deck_the_hand_dealable is not yet implemented")
     }
 
     /// # Panics
@@ -364,7 +359,7 @@ impl TestData {
         // Burns 2♦ 3♦ 4♦ are arbitrary cards not in hole cards or the board.
         let primed = cards!("A♦ 5♦ 6♠ Q♣ 5♣ 6♥ 2♦ 9♣ 6♦ 5♥ 3♦ 5♠ 4♦ 8♠");
         TableCelled::nlh_primed(
-            Seats::new(TestData::min_players()),
+            SeatsCell::new(TestData::min_players()),
             &CardsCell::from(Cards::deck_primed(&primed)),
             ForcedBets::new(50, 100),
         )
@@ -373,7 +368,7 @@ impl TestData {
     #[must_use]
     pub fn the_hand_table() -> TableCelled {
         TableCelled::nlh_primed(
-            Seats::new(TestData::the_hand_players()),
+            SeatsCell::new(TestData::the_hand_players()),
             &CardsCell::from(Cards::deck_primed(&TestData::the_hand_cards_dealable())),
             ForcedBets::new(50, 100),
         )
@@ -405,7 +400,7 @@ impl TestData {
             player: Player::new_with_chips("Average Person".to_string(), 9_000),
             cards: boxed!("4♣ 4♦"),
         };
-        let seats = Seats::new(vec![rich, poor, average]);
+        let seats = SeatsCell::new(vec![rich, poor, average]);
 
         TableCelled::nlh_primed(seats, cards, ForcedBets::new(50, 100))
     }
@@ -431,7 +426,7 @@ impl TestData {
             player: Player::new_with_chips("Average Person".to_string(), 9_000),
             cards: boxed!("4♣ 4♦"),
         };
-        let seats = Seats::new(vec![rich, small, big, poor, average]);
+        let seats = SeatsCell::new(vec![rich, small, big, poor, average]);
 
         TableCelled::nlh_primed(seats, cards, ForcedBets::new(50, 100))
     }
@@ -515,7 +510,7 @@ impl TestData {
             cards: boxed!("A♠ A♥"),
         };
         // BTN=0, SB=1, BB=2, UTG=3; button at seat 0.
-        let seats = Seats::new(vec![btn, sb, bb, utg]);
+        let seats = SeatsCell::new(vec![btn, sb, bb, utg]);
         TableCelled::nlh_primed(seats, cards, ForcedBets::new(50, 100))
     }
 

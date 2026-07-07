@@ -1,5 +1,5 @@
-#[cfg(not(target_arch = "wasm32"))]
-use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
+use crate::analysis::store::bcm::binary_card_map::bc_rank_hashmap;
 use crate::analysis::store::db::hup::HUPResult;
 use crate::analysis::the_nuts::TheNuts;
 use crate::arrays::five::Five;
@@ -11,18 +11,18 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::{PKError, Pile, Shifty, SuitShift};
 use csv::{Reader, WriterBuilder};
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use std::cmp::Ordering;
 use std::collections::HashSet;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::str::FromStr;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use wincounter::win::Win;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use wincounter::wins::Wins;
 
 pub static SORTED_HEADS_UP_UNIQUE: std::sync::LazyLock<HashSet<SortedHeadsUp>> = std::sync::LazyLock::new(|| {
@@ -113,7 +113,7 @@ impl SortedHeadsUp {
     /// # Errors
     ///
     /// Throws `PKError::SqlError` if unable to select from db.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn hup_result_from_db(&self, conn: &Connection) -> Result<HUPResult, PKError> {
         HUPResult::from_db(conn, &self.higher, &self.lower)
     }
@@ -127,11 +127,13 @@ impl SortedHeadsUp {
     ///
     /// # Errors
     ///
-    /// If the connection to the database fails, or if the query fails.
-    #[cfg(not(target_arch = "wasm32"))]
+    /// Always returns [`PKError::NotImplemented`]: the shift-to-`HUPResult`
+    /// resolution is not yet built. It returns a recoverable error rather than
+    /// panicking.
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn hup_result_from_shift(&self, _conn: &Connection) -> Result<HUPResult, PKError> {
         let _shifts = self.shifts();
-        todo!()
+        Err(PKError::NotImplemented)
     }
 
     #[must_use]
@@ -727,15 +729,16 @@ impl SortedHeadsUp {
     /// # Errors
     ///
     /// Throws `PKError` when unable to cast cards correctly.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn wins(&self) -> Result<Wins, PKError> {
         let mut wins = Wins::default();
+        let map = bc_rank_hashmap()?;
 
         for combo in self.remaining().combinations(5) {
             let (high7, low7) = self.sevens(Five::try_from(combo)?)?;
 
-            let high_rank = BC_RANK_HASHMAP.get(&high7.bard()).ok_or(PKError::InvalidHand)?;
-            let low_rank = BC_RANK_HASHMAP.get(&low7.bard()).ok_or(PKError::InvalidHand)?;
+            let high_rank = map.get(&high7.bard()).ok_or(PKError::InvalidHand)?;
+            let low_rank = map.get(&low7.bard()).ok_or(PKError::InvalidHand)?;
 
             match high_rank.rank.cmp(&low_rank.rank) {
                 Ordering::Less => wins.add(Win::FIRST),
@@ -796,22 +799,22 @@ impl Pile for SortedHeadsUp {
     }
 
     fn card_at(self, _index: usize) -> Option<Card> {
-        todo!()
+        unimplemented!("SortedHeadsUp is a fixed two-hand comparison, not a card sequence; access the hands directly")
     }
 
     /// Shoot. Forgot about my frequency mask idea. Still has potential, but later.
     fn clean(&self) -> Self {
-        todo!()
+        unimplemented!("clean is not yet implemented for SortedHeadsUp (frequency-mask idea pending)")
     }
 
     fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
-        todo!()
+        unimplemented!("SortedHeadsUp is an immutable two-hand comparison; construct a new one instead")
     }
 
     /// Implementing this would be interesting. What's the best possible hand from either of these
     /// two hands?
     fn the_nuts(&self) -> TheNuts {
-        todo!()
+        unimplemented!("the_nuts is not yet implemented for SortedHeadsUp (best hand across both holdings)")
     }
 
     /// This is the only one we need to implement for what we want. Maybe this interface is doing
@@ -1220,7 +1223,7 @@ mod arrays__matchups__sorted_heads_up_tests {
         );
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     #[test]
     fn try_from__hup_result() {}
 }

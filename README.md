@@ -12,8 +12,9 @@
 [Rust](https://www.rust-lang.org/) poker library. Code inspired by [Cactus Kev's](https://suffe.cool)
 [work in C](https://suffe.cool/poker/code/). An isolated version of the core hand evaluation library is available at [ckc-rs](https://github.com/ContractBridge/ckc-rs).
 
-Currently only supports [hold'em](https://en.wikipedia.org/wiki/Texas_hold_%27em), but working on [Omaha](https://en.wikipedia.org/wiki/Omaha_hold_%27em) and want to add more types of games. Supporting
-things like [Razz](https://en.wikipedia.org/wiki/Razz_(poker)) would be a total kick.
+Supports No-Limit and Fixed-Limit [Hold'em](https://en.wikipedia.org/wiki/Texas_hold_%27em),
+[Pot-Limit Omaha](https://en.wikipedia.org/wiki/Omaha_hold_%27em), Seven-Card Stud Hi, and
+[Razz](https://en.wikipedia.org/wiki/Razz_(poker)), with more variants planned.
 
 This code is a complete rewrite from scratch of my [Fudd](https://github.com/ImperialBower/fudd) crate. Changes:
 
@@ -35,7 +36,7 @@ The default `cargo make` runs the following tasks:
 * `cargo fmt`
 * `cargo clean`
 * `cargo build`
-* `carg test`
+* `cargo test`
 * `cargo clippy` with `clippy::pedantic` lint settings
 * `cargo doc --no-deps`
 
@@ -49,10 +50,32 @@ To open the generated docs in your browser:
 ❯ cargo make docs
 ```
 
-### .env
+### Configuration
 
-Some of the library and examples will be looking for a `.env` file in the root of the project. Simply copy
-`.env.example` to `.env` and modify as needed.
+The optional SQLite HUP store reads its path from the `HUPS_DB_PATH` environment
+variable (default: `generated/hups.db`). Export it in your shell before running
+the examples that use the store:
+
+```shell
+export HUPS_DB_PATH=generated/hups.db
+```
+
+(`pkcore` no longer loads a `.env` file — the `dotenvy` dependency was dropped in
+0.2.0, so set the variable in your environment directly.)
+
+## Data files
+
+Most of `pkcore` works out of the box from a plain `cargo add pkcore`: hand evaluation,
+heads-up preflop odds, and the equity engine all rely on lookup tables that ship embedded in
+the crate. A couple of APIs are backed by large, self-generated data files that are **not**
+published — those APIs report the absence explicitly instead of panicking.
+
+| API surface | Backing data | Ships in the crate? | How to enable |
+| --- | --- | --- | --- |
+| 5/7-card evaluation, equity engine | `src/lookups/*` | Yes | works out of the box |
+| Heads-up preflop odds / GTO | `generated/hups.bin` (embedded) | Yes | works out of the box |
+| BCM APIs (`SortedHeadsUp::wins`, `StartingHands` case evals) | `generated/bcm.zst` (~403 MB) | No | self-generate with `SevenFiveBCM::generate_bin(path)` and point `PKCORE_75BCM_PATH` at it — otherwise the calls return `Err(PKError::BcmUnavailable)` |
+| Distinct 5-card hand enumeration (`UNIQUE_HANDS`) | `generated/5card_distinct_hands.txt` | No | historical generator input; build with `--features generators` and self-generate the file |
 
 ## Documentation
 

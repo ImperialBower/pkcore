@@ -43,8 +43,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-#      - name: Check semver
-#        uses: obi1kenobi/cargo-semver-checks-action@v2
       - name: Read toolchain from rust-toolchain.toml
         id: toolchain
         run: |
@@ -56,6 +54,21 @@ jobs:
           components: clippy, rust-src
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy -- -Dclippy::all -Dclippy::pedantic
+
+  # Semver posture (AUDIT_Fable_5.md P6): compares the crate's public API against
+  # the last version published to crates.io and fails if the change is breaking
+  # without a matching version bump. This is the mechanism that keeps the
+  # `#[non_exhaustive]` / error-type contract honest — a breaking change now
+  # forces a deliberate 0.x minor bump instead of slipping out in a patch.
+  semver:
+    name: Semver
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Check semver
+        uses: obi1kenobi/cargo-semver-checks-action@v2
 
   fmt:
     name: Fmt
@@ -105,7 +118,12 @@ jobs:
           toolchain: ${{ steps.toolchain.outputs.version }}
           components: rust-src
       - uses: Swatinem/rust-cache@v2
-      - run: cargo check --no-default-features --lib --tests
+      # Full test run with default features off: compiles lib, tests, AND
+      # examples (which `--lib --tests` skips) and runs the non-gated suite.
+      # Building examples is what surfaces one that uses a feature-gated API
+      # without a `required-features` entry (audit II.11 / P7) — the reason a
+      # plain `cargo check --lib --tests` never caught it. ~9,600 tests run here.
+      - run: cargo test --no-default-features
       - run: cargo check --no-default-features --features hand-histories --lib --tests
       - run: cargo check --no-default-features --features bot-profiles --lib --tests
       - run: cargo check --no-default-features --features player-stats --lib --tests
@@ -114,3 +132,40 @@ jobs:
       # feature. Guards against the equity engine bit-rotting or coupling to the
       # default stack (it silently broke once because nothing on CI built it).
       - run: cargo check --no-default-features --features equity --lib --tests
+      # Kernel purity gate (AUDIT_Fable_5.md III.1 / III.6.1): with default
+      # features off, the storage (`store`) and terminal (`terminal`) layers must
+      # drop out entirely — no rusqlite/zstd/termion/dotenvy in the dependency
+      # tree. This is the mechanism that keeps purity reachable; without it, a new
+      # non-optional dependency would silently re-cap the kernel.
+      # NOTE: `serde_yaml_bw` is a *documented exception* — it arrives
+      # transitively through `pkstate`, so pkcore cannot drop it until pkstate
+      # makes its YAML optional upstream. Remove it from the allowlist once that
+      # lands.
+      # Single source: the gate lives in the Makefile (`check-purity`) so CI and
+      # local runs cannot drift (audit P9j.4). The `::error::` annotation is
+      # emitted by the Makefile target itself.
+      - name: Kernel purity gate (no-default-features)
+        run: make check-purity
+
+  wasm:
+    name: WASM build
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Read toolchain from rust-toolchain.toml
+        id: toolchain
+        run: |
+          version=$(grep '^channel' rust-toolchain.toml | tr -d ' "' | cut -d= -f2)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ steps.toolchain.outputs.version }}
+          targets: wasm32-unknown-unknown
+          components: rust-src
+      - uses: Swatinem/rust-cache@v2
+      # Two production WASM apps (pkgto-web, pkkuhn-web) depend on pkcore
+      # building for wasm32; nothing else in CI checked it (audit VI.4). The
+      # store/terminal deps are target-gated off on wasm, so `--lib` is the
+      # meaningful surface. Runs under the global RUSTFLAGS=-Dwarnings.
+      - run: cargo check --target wasm32-unknown-unknown --lib

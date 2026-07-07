@@ -33,7 +33,7 @@ impl Seatbit {
     ///
     /// # Examples
     /// ```
-    /// use pkcore::casino::table::seats::seatbit::Seatbit;
+    /// use pkcore::casino::equity::seatbit::Seatbit;
     ///
     /// let seats = Seatbit::SEAT_0 | Seatbit::SEAT_3;
     /// assert!(seats.contains(0));
@@ -174,7 +174,7 @@ impl Not for Seatbit {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod casino__table__seats_seatbits_tests {
+mod casino__equity__seatbit_tests {
     use super::*;
 
     #[test]

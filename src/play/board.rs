@@ -105,19 +105,21 @@ impl Pile for Board {
     }
 
     fn card_at(self, _index: usize) -> Option<Card> {
-        todo!()
+        unimplemented!("Board is a fixed 5-card hand; use `.cards().card_at(index)` for positional access")
     }
 
     fn clean(&self) -> Self {
-        todo!()
+        unimplemented!("Board is a fixed 5-card hand; use `.cards().clean()` to strip card metadata")
     }
 
     fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
-        todo!()
+        unimplemented!("Board is a fixed 5-card hand; use `.cards()` for a swappable set")
     }
 
     fn the_nuts(&self) -> TheNuts {
-        todo!()
+        unimplemented!(
+            "the_nuts is not yet implemented for Board; evaluate the best possible hand through a hand ranker"
+        )
     }
 
     fn to_vec(&self) -> Vec<Card> {

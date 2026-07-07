@@ -117,10 +117,10 @@ type ShowdownMap = HashMap<(Two, Two, Option<Card>), Ordering>;
 pub enum SolverError {
     /// An I/O error reading or writing the file.
     Io(std::io::Error),
-    /// A JSON serialization or deserialization error.
-    Json(serde_json::Error),
-    /// A binary (postcard) serialization or deserialization error.
-    Binary(postcard::Error),
+    /// Stringify `serde_json` errors. `docs/AUDIT_Fable_5.md III.2`
+    Json(String),
+    /// Stringify `postcard` errors for the same reason
+    Binary(String),
 }
 
 impl fmt::Display for SolverError {
@@ -137,8 +137,8 @@ impl std::error::Error for SolverError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             SolverError::Io(e) => Some(e),
-            SolverError::Json(e) => Some(e),
-            SolverError::Binary(e) => Some(e),
+            // Json/Binary carry stringified causes (no live source to chain).
+            SolverError::Json(_) | SolverError::Binary(_) => None,
         }
     }
 }
@@ -149,15 +149,17 @@ impl From<std::io::Error> for SolverError {
     }
 }
 
+#[allow(clippy::disallowed_types)] // blessed seam: format error stringified, never re-exposed
 impl From<serde_json::Error> for SolverError {
     fn from(e: serde_json::Error) -> Self {
-        SolverError::Json(e)
+        SolverError::Json(e.to_string())
     }
 }
 
+#[allow(clippy::disallowed_types)] // blessed seam: format error stringified, never re-exposed
 impl From<postcard::Error> for SolverError {
     fn from(e: postcard::Error) -> Self {
-        SolverError::Binary(e)
+        SolverError::Binary(e.to_string())
     }
 }
 
@@ -379,6 +381,7 @@ impl SolverResult {
     ///     Board::from_str("2h 3d 4c 5s 6h").unwrap_or_default(),
     ///     1_000, 200,
     /// ).with_max_iterations(5);
+    ///
     /// let result = Solver::new(config).solve();
     /// result.save("/tmp/my_solve.bin").unwrap();
     /// ```
@@ -609,7 +612,7 @@ impl Solver {
     pub fn new(config: SolverConfig) -> Self {
         let tree = GameTree::build_river(&config);
         let regrets = RegretAccumulator::new(&tree, &config.hero_range, &config.villain_range);
-        let strategy_sum = build_strategy_sum(&tree, &config.hero_range, &config.villain_range);
+        let strategy_sum = Solver::build_strategy_sum(&tree, &config.hero_range, &config.villain_range);
         let board_cards: Vec<Card> = vec![
             config.board.flop.first(),
             config.board.flop.second(),
@@ -617,8 +620,8 @@ impl Solver {
             config.board.turn,
             config.board.river,
         ];
-        let hand_pairs = build_hand_pairs(&config.hero_range, &config.villain_range, &board_cards);
-        let showdown_map = build_showdown_map(&hand_pairs, &config.board);
+        let hand_pairs = Solver::build_hand_pairs(&config.hero_range, &config.villain_range, &board_cards);
+        let showdown_map = Solver::build_showdown_map(&hand_pairs, &config.board);
         Self {
             config,
             tree,
@@ -664,7 +667,7 @@ impl Solver {
     pub fn new_turn(config: SolverConfig) -> Self {
         let tree = GameTree::build_turn(&config);
         let regrets = RegretAccumulator::new(&tree, &config.hero_range, &config.villain_range);
-        let strategy_sum = build_strategy_sum(&tree, &config.hero_range, &config.villain_range);
+        let strategy_sum = Solver::build_strategy_sum(&tree, &config.hero_range, &config.villain_range);
 
         // For a turn tree the river card is unknown, so hand pairs are filtered
         // only against the 4 known board cards (flop + turn).
@@ -674,7 +677,7 @@ impl Solver {
             config.board.flop.third(),
             config.board.turn,
         ];
-        let hand_pairs = build_hand_pairs(&config.hero_range, &config.villain_range, &board_cards);
+        let hand_pairs = Solver::build_hand_pairs(&config.hero_range, &config.villain_range, &board_cards);
 
         // Enumerate all river runout candidates: 52 cards minus the 4 known.
         let known: HashSet<Card> = board_cards.iter().copied().collect();
@@ -682,7 +685,7 @@ impl Solver {
             .into_iter()
             .filter(|c| !known.contains(c))
             .collect();
-        let showdown_map = build_turn_showdown_map(&hand_pairs, &config.board, &runout_cards);
+        let showdown_map = Solver::build_turn_showdown_map(&hand_pairs, &config.board, &runout_cards);
 
         Self {
             config,
@@ -756,7 +759,7 @@ impl Solver {
             self.regrets.scale_all(regret_factor);
         }
         if (strategy_factor - 1.0).abs() > f64::EPSILON {
-            scale_strategy_sum(&mut self.strategy_sum, strategy_factor);
+            Solver::scale_strategy_sum(&mut self.strategy_sum, strategy_factor);
         }
 
         // Clone the pair list so we can mutably borrow `self.regrets` and
@@ -779,7 +782,7 @@ impl Solver {
             let showdown_map = &self.showdown_map;
             let regrets = &mut self.regrets;
             let strategy_sum = &mut self.strategy_sum;
-            total_ev += traverse(
+            total_ev += Solver::traverse(
                 root,
                 oop_hand,
                 ip_hand,
@@ -1031,496 +1034,508 @@ impl Solver {
         for &(oop_hand, ip_hand) in &self.hand_pairs {
             let tree = &self.tree;
             let showdown_map = &self.showdown_map;
-            total_br_oop += best_response_oop(root, oop_hand, ip_hand, tree, showdown_map, profile);
-            total_br_ip += best_response_ip(root, oop_hand, ip_hand, tree, showdown_map, profile);
+            total_br_oop += Solver::best_response_oop(root, oop_hand, ip_hand, tree, showdown_map, profile);
+            total_br_ip += Solver::best_response_ip(root, oop_hand, ip_hand, tree, showdown_map, profile);
         }
         #[allow(clippy::cast_precision_loss)]
         let n_f = n as f64;
         (total_br_oop / n_f - total_br_ip / n_f) / 2.0
     }
-}
 
-// ── Private helpers ───────────────────────────────────────────────────────────
+    // region Private helpers
 
-/// Initialises the zeroed strategy-sum table from the tree and player ranges.
-///
-/// Structure mirrors [`RegretAccumulator`]: `NodeId → Two → Vec<f64>` where
-/// the inner `Vec` has one zero entry per action. Values accumulate
-/// `reach × strategy[a]` during each iteration and are normalised by
-/// [`Solver::equilibrium`] to produce the average strategy.
-fn build_strategy_sum(
-    tree: &GameTree,
-    oop_range: &Combos,
-    ip_range: &Combos,
-) -> HashMap<NodeId, HashMap<Two, Vec<f64>>> {
-    let oop_hands: Vec<Two> = oop_range.iter().flat_map(|combo| Twos::from(*combo).to_vec()).collect();
-    let ip_hands: Vec<Two> = ip_range.iter().flat_map(|combo| Twos::from(*combo).to_vec()).collect();
+    /// Initialises the zeroed strategy-sum table from the tree and player ranges.
+    ///
+    /// Structure mirrors [`RegretAccumulator`]: `NodeId → Two → Vec<f64>` where
+    /// the inner `Vec` has one zero entry per action. Values accumulate
+    /// `reach × strategy[a]` during each iteration and are normalised by
+    /// [`Solver::equilibrium`] to produce the average strategy.
+    fn build_strategy_sum(
+        tree: &GameTree,
+        oop_range: &Combos,
+        ip_range: &Combos,
+    ) -> HashMap<NodeId, HashMap<Two, Vec<f64>>> {
+        let oop_hands: Vec<Two> = oop_range.iter().flat_map(|combo| Twos::from(*combo).to_vec()).collect();
+        let ip_hands: Vec<Two> = ip_range.iter().flat_map(|combo| Twos::from(*combo).to_vec()).collect();
 
-    let mut outer: HashMap<NodeId, HashMap<Two, Vec<f64>>> = HashMap::new();
-    for idx in 0..tree.len() {
-        let node_id = NodeId::new(idx);
-        if let Some(Node::Action(action_node)) = tree.get(node_id) {
-            let n_actions = action_node.actions.len();
-            let hands = match action_node.player {
-                Player::Oop => &oop_hands,
-                Player::Ip => &ip_hands,
-            };
-            let inner: HashMap<Two, Vec<f64>> = hands.iter().map(|&hand| (hand, vec![0.0; n_actions])).collect();
-            outer.insert(node_id, inner);
+        let mut outer: HashMap<NodeId, HashMap<Two, Vec<f64>>> = HashMap::new();
+        for idx in 0..tree.len() {
+            let node_id = NodeId::new(idx);
+            if let Some(Node::Action(action_node)) = tree.get(node_id) {
+                let n_actions = action_node.actions.len();
+                let hands = match action_node.player {
+                    Player::Oop => &oop_hands,
+                    Player::Ip => &ip_hands,
+                };
+                let inner: HashMap<Two, Vec<f64>> = hands.iter().map(|&hand| (hand, vec![0.0; n_actions])).collect();
+                outer.insert(node_id, inner);
+            }
         }
+        outer
     }
-    outer
-}
 
-/// Pre-computes all valid `(oop_hand, ip_hand)` pairs given a set of known board cards.
-///
-/// A pair is valid if none of the 4 hole cards appears among `board_cards`
-/// and the two hands share no card. Filtering once at construction avoids
-/// repeating the conflict check on every traversal in every iteration.
-///
-/// `board_cards` is a slice so the same function works for 5-card boards
-/// (river trees) and 4-card boards (turn trees where the river is unknown).
-fn build_hand_pairs(oop_range: &Combos, ip_range: &Combos, board_cards: &[Card]) -> Vec<(Two, Two)> {
-    let oop_hands: Vec<Two> = oop_range
-        .iter()
-        .flat_map(|combo| Twos::from(*combo).to_vec())
-        .filter(|&h| !conflicts_with_board(h, board_cards))
-        .collect();
-    let ip_hands: Vec<Two> = ip_range
-        .iter()
-        .flat_map(|combo| Twos::from(*combo).to_vec())
-        .filter(|&h| !conflicts_with_board(h, board_cards))
-        .collect();
+    /// Pre-computes all valid `(oop_hand, ip_hand)` pairs given a set of known board cards.
+    ///
+    /// A pair is valid if none of the 4 hole cards appears among `board_cards`
+    /// and the two hands share no card. Filtering once at construction avoids
+    /// repeating the conflict check on every traversal in every iteration.
+    ///
+    /// `board_cards` is a slice so the same function works for 5-card boards
+    /// (river trees) and 4-card boards (turn trees where the river is unknown).
+    fn build_hand_pairs(oop_range: &Combos, ip_range: &Combos, board_cards: &[Card]) -> Vec<(Two, Two)> {
+        let oop_hands: Vec<Two> = oop_range
+            .iter()
+            .flat_map(|combo| Twos::from(*combo).to_vec())
+            .filter(|&h| !Solver::conflicts_with_board(h, board_cards))
+            .collect();
+        let ip_hands: Vec<Two> = ip_range
+            .iter()
+            .flat_map(|combo| Twos::from(*combo).to_vec())
+            .filter(|&h| !Solver::conflicts_with_board(h, board_cards))
+            .collect();
 
-    oop_hands
-        .iter()
-        .flat_map(|&oop| {
-            ip_hands
-                .iter()
-                .filter(move |&&ip| !hands_conflict(oop, ip))
-                .map(move |&ip| (oop, ip))
-        })
-        .collect()
-}
+        oop_hands
+            .iter()
+            .flat_map(|&oop| {
+                ip_hands
+                    .iter()
+                    .filter(move |&&ip| !Solver::hands_conflict(oop, ip))
+                    .map(move |&ip| (oop, ip))
+            })
+            .collect()
+    }
 
-/// Returns `true` if either card in `hand` appears among the given board cards.
-///
-/// Accepts a slice so the same function works for both 5-card boards (river
-/// trees) and 4-card boards (turn trees, where the river is not yet known).
-fn conflicts_with_board(hand: Two, board: &[Card]) -> bool {
-    board.contains(&hand.first()) || board.contains(&hand.second())
-}
+    /// Returns `true` if either card in `hand` appears among the given board cards.
+    ///
+    /// Accepts a slice so the same function works for both 5-card boards (river
+    /// trees) and 4-card boards (turn trees, where the river is not yet known).
+    fn conflicts_with_board(hand: Two, board: &[Card]) -> bool {
+        board.contains(&hand.first()) || board.contains(&hand.second())
+    }
 
-/// Returns `true` if `oop` and `ip` share at least one card.
-fn hands_conflict(oop: Two, ip: Two) -> bool {
-    oop.first() == ip.first() || oop.first() == ip.second() || oop.second() == ip.first() || oop.second() == ip.second()
-}
+    /// Returns `true` if `oop` and `ip` share at least one card.
+    fn hands_conflict(oop: Two, ip: Two) -> bool {
+        oop.first() == ip.first()
+            || oop.first() == ip.second()
+            || oop.second() == ip.first()
+            || oop.second() == ip.second()
+    }
 
-/// Multiplies every entry in `strategy_sum` by `factor`.
-///
-/// Used by DCFR's β-discounting step: before accumulating this iteration's
-/// strategy contribution, existing sums are scaled by `β_t = t^β / (t^β + 1)`.
-/// With `β = 0` this equals `0.5` every iteration, which is equivalent in
-/// expectation to CFR+'s linear strategy weighting.
-fn scale_strategy_sum(strategy_sum: &mut HashMap<NodeId, HashMap<Two, Vec<f64>>>, factor: f64) {
-    for hand_map in strategy_sum.values_mut() {
-        for sums in hand_map.values_mut() {
-            for s in sums.iter_mut() {
-                *s *= factor;
+    /// Multiplies every entry in `strategy_sum` by `factor`.
+    ///
+    /// Used by DCFR's β-discounting step: before accumulating this iteration's
+    /// strategy contribution, existing sums are scaled by `β_t = t^β / (t^β + 1)`.
+    /// With `β = 0` this equals `0.5` every iteration, which is equivalent in
+    /// expectation to CFR+'s linear strategy weighting.
+    fn scale_strategy_sum(strategy_sum: &mut HashMap<NodeId, HashMap<Two, Vec<f64>>>, factor: f64) {
+        for hand_map in strategy_sum.values_mut() {
+            for sums in hand_map.values_mut() {
+                for s in sums.iter_mut() {
+                    *s *= factor;
+                }
             }
         }
     }
-}
 
-/// Recursive CFR traversal. Returns the counterfactual value to OOP.
-///
-/// - `oop_reach` — cumulative probability of OOP's actions reaching this node.
-/// - `ip_reach`  — cumulative probability of IP's actions reaching this node.
-///
-/// **Counterfactual weighting**: regret updates are multiplied by the
-/// *opponent's* reach probability, not the acting player's. This is the key
-/// insight that makes CFR work under hidden information: each player's regret
-/// reflects how much better they could have done if they had *always* played
-/// action `a`, ignoring their own past play.
-///
-/// The CFR+ floor (`max(0, accumulated + delta)`) is applied inside
-/// [`RegretAccumulator::update`], so callers pass the raw delta.
-///
-/// `showdown_map` holds pre-computed hand strength comparisons for every valid
-/// `(oop_hand, ip_hand)` pair, avoiding repeated seven-card evaluations at
-/// every showdown terminal.
-#[allow(clippy::too_many_arguments)] // seven game-state params + two mutable accumulators; no natural grouping reduces this
-fn traverse(
-    node_id: NodeId,
-    oop_hand: Two,
-    ip_hand: Two,
-    oop_reach: f64,
-    ip_reach: f64,
-    strategy_weight: f64,
-    tree: &GameTree,
-    showdown_map: &ShowdownMap,
-    regrets: &mut RegretAccumulator,
-    strategy_sum: &mut HashMap<NodeId, HashMap<Two, Vec<f64>>>,
-) -> f64 {
-    match tree.get(node_id) {
-        Some(Node::Terminal(t)) => terminal_payoff(t, oop_hand, ip_hand, showdown_map),
+    /// Recursive CFR traversal. Returns the counterfactual value to OOP.
+    ///
+    /// - `oop_reach` — cumulative probability of OOP's actions reaching this node.
+    /// - `ip_reach`  — cumulative probability of IP's actions reaching this node.
+    ///
+    /// **Counterfactual weighting**: regret updates are multiplied by the
+    /// *opponent's* reach probability, not the acting player's. This is the key
+    /// insight that makes CFR work under hidden information: each player's regret
+    /// reflects how much better they could have done if they had *always* played
+    /// action `a`, ignoring their own past play.
+    ///
+    /// The CFR+ floor (`max(0, accumulated + delta)`) is applied inside
+    /// [`RegretAccumulator::update`], so callers pass the raw delta.
+    ///
+    /// `showdown_map` holds pre-computed hand strength comparisons for every valid
+    /// `(oop_hand, ip_hand)` pair, avoiding repeated seven-card evaluations at
+    /// every showdown terminal.
+    #[allow(clippy::too_many_arguments)] // seven game-state params + two mutable accumulators; no natural grouping reduces this
+    fn traverse(
+        node_id: NodeId,
+        oop_hand: Two,
+        ip_hand: Two,
+        oop_reach: f64,
+        ip_reach: f64,
+        strategy_weight: f64,
+        tree: &GameTree,
+        showdown_map: &ShowdownMap,
+        regrets: &mut RegretAccumulator,
+        strategy_sum: &mut HashMap<NodeId, HashMap<Two, Vec<f64>>>,
+    ) -> f64 {
+        match tree.get(node_id) {
+            Some(Node::Terminal(t)) => Solver::terminal_payoff(t, oop_hand, ip_hand, showdown_map),
 
-        None => 0.0,
+            None => 0.0,
 
-        Some(Node::Chance(chance_node)) => {
-            // Average the values of all non-conflicting river runout branches.
-            //
-            // Each runout card is equi-probable conditional on neither player
-            // holding it. Cards already in oop_hand or ip_hand have zero
-            // probability for this specific hand pair and are skipped. The
-            // remaining branches are averaged uniformly — their relative
-            // probabilities are equal given the 4-card known board.
-            //
-            // The tree stores all 48 candidate runout cards (hand-agnostic).
-            // Conflict filtering here is per-traversal (per hand pair), not
-            // baked into the tree structure.
-            let children: Vec<(Card, NodeId)> = chance_node.children.clone();
-            let valid: Vec<(Card, NodeId)> = children
-                .into_iter()
-                .filter(|(card, _)| !oop_hand.contains_card(*card) && !ip_hand.contains_card(*card))
-                .collect();
-            if valid.is_empty() {
-                return 0.0;
+            Some(Node::Chance(chance_node)) => {
+                // Average the values of all non-conflicting river runout branches.
+                //
+                // Each runout card is equi-probable conditional on neither player
+                // holding it. Cards already in oop_hand or ip_hand have zero
+                // probability for this specific hand pair and are skipped. The
+                // remaining branches are averaged uniformly — their relative
+                // probabilities are equal given the 4-card known board.
+                //
+                // The tree stores all 48 candidate runout cards (hand-agnostic).
+                // Conflict filtering here is per-traversal (per hand pair), not
+                // baked into the tree structure.
+                let children: Vec<(Card, NodeId)> = chance_node.children.clone();
+                let valid: Vec<(Card, NodeId)> = children
+                    .into_iter()
+                    .filter(|(card, _)| !oop_hand.contains_card(*card) && !ip_hand.contains_card(*card))
+                    .collect();
+                if valid.is_empty() {
+                    return 0.0;
+                }
+                #[allow(clippy::cast_precision_loss)]
+                let n = valid.len() as f64;
+                let sum: f64 = valid
+                    .iter()
+                    .map(|(_, child_id)| {
+                        Solver::traverse(
+                            *child_id,
+                            oop_hand,
+                            ip_hand,
+                            oop_reach,
+                            ip_reach,
+                            strategy_weight,
+                            tree,
+                            showdown_map,
+                            regrets,
+                            strategy_sum,
+                        )
+                    })
+                    .sum();
+                sum / n
             }
-            #[allow(clippy::cast_precision_loss)]
-            let n = valid.len() as f64;
-            let sum: f64 = valid
-                .iter()
-                .map(|(_, child_id)| {
-                    traverse(
-                        *child_id,
+
+            Some(Node::Action(action_node)) => {
+                let player = action_node.player;
+                let acting_hand = match player {
+                    Player::Oop => oop_hand,
+                    Player::Ip => ip_hand,
+                };
+                let n_actions = action_node.actions.len();
+
+                // Clone child list before releasing the borrow on `action_node`
+                // (and therefore `tree`), so `tree` can be re-borrowed inside the
+                // recursive calls below.
+                let children: Vec<NodeId> = action_node.children.clone();
+
+                // Derive current mixed strategy via regret-matching.
+                // Clone the probabilities out before the recursive calls so we
+                // release the immutable borrow on `regrets` — mutable borrows
+                // happen inside `traverse` and in `regrets.update` below.
+                let strategy: Vec<f64> = regrets.current_strategy(node_id, &acting_hand).map_or_else(
+                    || {
+                        #[allow(clippy::cast_precision_loss)]
+                        let p = 1.0 / n_actions as f64;
+                        vec![p; n_actions]
+                    },
+                    |af| af.as_slice().to_vec(),
+                );
+
+                // Accumulate strategy sum weighted by the acting player's reach.
+                // The average strategy is: sum[a] / Σ sum[a] across all iterations.
+                let acting_reach = match player {
+                    Player::Oop => oop_reach,
+                    Player::Ip => ip_reach,
+                };
+                if let Some(hand_map) = strategy_sum.get_mut(&node_id)
+                    && let Some(sums) = hand_map.get_mut(&acting_hand)
+                {
+                    for (s, &p) in sums.iter_mut().zip(strategy.iter()) {
+                        *s += strategy_weight * acting_reach * p;
+                    }
+                }
+
+                // Recurse into each action's subtree.
+                let mut child_values = vec![0.0_f64; n_actions];
+                for (a, &child_id) in children.iter().enumerate() {
+                    let (new_oop, new_ip) = match player {
+                        Player::Oop => (oop_reach * strategy[a], ip_reach),
+                        Player::Ip => (oop_reach, ip_reach * strategy[a]),
+                    };
+                    child_values[a] = Solver::traverse(
+                        child_id,
                         oop_hand,
                         ip_hand,
-                        oop_reach,
-                        ip_reach,
+                        new_oop,
+                        new_ip,
                         strategy_weight,
                         tree,
                         showdown_map,
                         regrets,
                         strategy_sum,
-                    )
-                })
-                .sum();
-            sum / n
-        }
-
-        Some(Node::Action(action_node)) => {
-            let player = action_node.player;
-            let acting_hand = match player {
-                Player::Oop => oop_hand,
-                Player::Ip => ip_hand,
-            };
-            let n_actions = action_node.actions.len();
-
-            // Clone child list before releasing the borrow on `action_node`
-            // (and therefore `tree`), so `tree` can be re-borrowed inside the
-            // recursive calls below.
-            let children: Vec<NodeId> = action_node.children.clone();
-
-            // Derive current mixed strategy via regret-matching.
-            // Clone the probabilities out before the recursive calls so we
-            // release the immutable borrow on `regrets` — mutable borrows
-            // happen inside `traverse` and in `regrets.update` below.
-            let strategy: Vec<f64> = regrets.current_strategy(node_id, &acting_hand).map_or_else(
-                || {
-                    #[allow(clippy::cast_precision_loss)]
-                    let p = 1.0 / n_actions as f64;
-                    vec![p; n_actions]
-                },
-                |af| af.as_slice().to_vec(),
-            );
-
-            // Accumulate strategy sum weighted by the acting player's reach.
-            // The average strategy is: sum[a] / Σ sum[a] across all iterations.
-            let acting_reach = match player {
-                Player::Oop => oop_reach,
-                Player::Ip => ip_reach,
-            };
-            if let Some(hand_map) = strategy_sum.get_mut(&node_id)
-                && let Some(sums) = hand_map.get_mut(&acting_hand)
-            {
-                for (s, &p) in sums.iter_mut().zip(strategy.iter()) {
-                    *s += strategy_weight * acting_reach * p;
+                    );
                 }
-            }
 
-            // Recurse into each action's subtree.
-            let mut child_values = vec![0.0_f64; n_actions];
-            for (a, &child_id) in children.iter().enumerate() {
-                let (new_oop, new_ip) = match player {
-                    Player::Oop => (oop_reach * strategy[a], ip_reach),
-                    Player::Ip => (oop_reach, ip_reach * strategy[a]),
+                // Node value = expected payoff to OOP under the current strategy.
+                let node_value: f64 = strategy.iter().zip(child_values.iter()).map(|(&p, &v)| p * v).sum();
+
+                // Counterfactual regret update, weighted by the *opponent's* reach.
+                //
+                // OOP regret for action a = child_value[a] - node_value
+                //   (OOP maximises OOP utility — positive regret = should play a more)
+                // IP regret for action a  = node_value - child_value[a]
+                //   (IP minimises OOP utility — positive regret = a lowered OOP value,
+                //    so IP should play it more)
+                let opp_reach = match player {
+                    Player::Oop => ip_reach,
+                    Player::Ip => oop_reach,
                 };
-                child_values[a] = traverse(
-                    child_id,
-                    oop_hand,
-                    ip_hand,
-                    new_oop,
-                    new_ip,
-                    strategy_weight,
-                    tree,
-                    showdown_map,
-                    regrets,
-                    strategy_sum,
-                );
-            }
+                let deltas: Vec<f64> = child_values
+                    .iter()
+                    .map(|&cv| match player {
+                        Player::Oop => opp_reach * (cv - node_value),
+                        Player::Ip => opp_reach * (node_value - cv),
+                    })
+                    .collect();
+                regrets.update(node_id, acting_hand, &deltas);
 
-            // Node value = expected payoff to OOP under the current strategy.
-            let node_value: f64 = strategy.iter().zip(child_values.iter()).map(|(&p, &v)| p * v).sum();
-
-            // Counterfactual regret update, weighted by the *opponent's* reach.
-            //
-            // OOP regret for action a = child_value[a] - node_value
-            //   (OOP maximises OOP utility — positive regret = should play a more)
-            // IP regret for action a  = node_value - child_value[a]
-            //   (IP minimises OOP utility — positive regret = a lowered OOP value,
-            //    so IP should play it more)
-            let opp_reach = match player {
-                Player::Oop => ip_reach,
-                Player::Ip => oop_reach,
-            };
-            let deltas: Vec<f64> = child_values
-                .iter()
-                .map(|&cv| match player {
-                    Player::Oop => opp_reach * (cv - node_value),
-                    Player::Ip => opp_reach * (node_value - cv),
-                })
-                .collect();
-            regrets.update(node_id, acting_hand, &deltas);
-
-            node_value
-        }
-    }
-}
-
-/// Payoff to OOP at a terminal node, in chips relative to the pot.
-///
-/// Both players contribute symmetrically to the pot — each call or bet
-/// matches the opponent's wager — so OOP's net payoff is always ± `pot / 2`.
-/// The winner nets `+pot/2`; the loser nets `−pot/2`; a showdown tie pays 0.
-///
-/// At showdown, the result is looked up from `showdown_map` rather than
-/// re-evaluating hands, since the board is fixed for the entire solve.
-fn terminal_payoff(terminal: &TerminalNode, oop_hand: Two, ip_hand: Two, showdown_map: &ShowdownMap) -> f64 {
-    // Pot sizes in a river tree are always small relative to 2^52, so the
-    // precision loss from u64→f64 is not meaningful for chip-level arithmetic.
-    #[allow(clippy::cast_precision_loss)]
-    let half_pot = terminal.pot as f64 / 2.0;
-    match terminal.outcome {
-        TerminalOutcome::Fold { winner: Player::Oop } => half_pot,
-        TerminalOutcome::Fold { winner: Player::Ip } => -half_pot,
-        TerminalOutcome::Showdown => {
-            // Key includes `runout_river`: `None` for river trees (fixed board),
-            // `Some(card)` for turn trees (river card from the chance node).
-            // `Less` = oop_rank < ip_rank = OOP has stronger hand = OOP wins.
-            match showdown_map.get(&(oop_hand, ip_hand, terminal.runout_river)) {
-                Some(Ordering::Less) => half_pot,
-                Some(Ordering::Greater) => -half_pot,
-                _ => 0.0, // tie or entry not in map (shouldn't happen in practice)
+                node_value
             }
         }
     }
-}
 
-/// Best-response value for OOP against a fixed equilibrium IP strategy.
-///
-/// OOP plays greedily — it takes the child action with the highest value at its
-/// own nodes. IP follows the fixed `profile` strategy (weighted average of child
-/// values). Returns the OOP payoff in chips for this specific hand matchup.
-///
-/// Unlike CFR's [`traverse`], no reach probabilities are tracked: the
-/// best-responder simply selects the argmax child at its decision nodes. This
-/// makes the recursion simpler and stateless — only the tree structure, the
-/// showdown map, and the fixed opponent strategy are needed.
-fn best_response_oop(
-    node_id: NodeId,
-    oop_hand: Two,
-    ip_hand: Two,
-    tree: &GameTree,
-    showdown_map: &ShowdownMap,
-    profile: &StrategyProfile,
-) -> f64 {
-    match tree.get(node_id) {
-        Some(Node::Terminal(t)) => terminal_payoff(t, oop_hand, ip_hand, showdown_map),
-        None => 0.0,
-        Some(Node::Chance(chance_node)) => {
-            let children: Vec<(Card, NodeId)> = chance_node.children.clone();
-            let valid: Vec<(Card, NodeId)> = children
-                .into_iter()
-                .filter(|(card, _)| !oop_hand.contains_card(*card) && !ip_hand.contains_card(*card))
-                .collect();
-            if valid.is_empty() {
-                return 0.0;
-            }
-            #[allow(clippy::cast_precision_loss)]
-            let n = valid.len() as f64;
-            let sum: f64 = valid
-                .iter()
-                .map(|(_, child_id)| best_response_oop(*child_id, oop_hand, ip_hand, tree, showdown_map, profile))
-                .sum();
-            sum / n
-        }
-        Some(Node::Action(action_node)) => {
-            let player = action_node.player;
-            let children: Vec<NodeId> = action_node.children.clone();
-            if children.is_empty() {
-                return 0.0;
-            }
-            let n_actions = children.len();
-            let child_values: Vec<f64> = children
-                .iter()
-                .map(|&child_id| best_response_oop(child_id, oop_hand, ip_hand, tree, showdown_map, profile))
-                .collect();
-            match player {
-                // OOP plays best-response: choose the action with the highest value.
-                Player::Oop => child_values.iter().copied().fold(f64::NEG_INFINITY, f64::max),
-                // IP plays the fixed equilibrium strategy: weighted average.
-                Player::Ip => {
-                    let strategy: Vec<f64> = profile.get(node_id, &ip_hand).map_or_else(
-                        || {
-                            #[allow(clippy::cast_precision_loss)]
-                            let p = 1.0 / n_actions as f64;
-                            vec![p; n_actions]
-                        },
-                        |af| af.as_slice().to_vec(),
-                    );
-                    strategy.iter().zip(child_values.iter()).map(|(&p, &v)| p * v).sum()
+    /// Payoff to OOP at a terminal node, in chips relative to the pot.
+    ///
+    /// Both players contribute symmetrically to the pot — each call or bet
+    /// matches the opponent's wager — so OOP's net payoff is always ± `pot / 2`.
+    /// The winner nets `+pot/2`; the loser nets `−pot/2`; a showdown tie pays 0.
+    ///
+    /// At showdown, the result is looked up from `showdown_map` rather than
+    /// re-evaluating hands, since the board is fixed for the entire solve.
+    fn terminal_payoff(terminal: &TerminalNode, oop_hand: Two, ip_hand: Two, showdown_map: &ShowdownMap) -> f64 {
+        // Pot sizes in a river tree are always small relative to 2^52, so the
+        // precision loss from u64→f64 is not meaningful for chip-level arithmetic.
+        #[allow(clippy::cast_precision_loss)]
+        let half_pot = terminal.pot as f64 / 2.0;
+        match terminal.outcome {
+            TerminalOutcome::Fold { winner: Player::Oop } => half_pot,
+            TerminalOutcome::Fold { winner: Player::Ip } => -half_pot,
+            TerminalOutcome::Showdown => {
+                // Key includes `runout_river`: `None` for river trees (fixed board),
+                // `Some(card)` for turn trees (river card from the chance node).
+                // `Less` = oop_rank < ip_rank = OOP has stronger hand = OOP wins.
+                match showdown_map.get(&(oop_hand, ip_hand, terminal.runout_river)) {
+                    Some(Ordering::Less) => half_pot,
+                    Some(Ordering::Greater) => -half_pot,
+                    _ => 0.0, // tie or entry not in map (shouldn't happen in practice)
                 }
             }
         }
     }
-}
 
-/// Best-response value for IP against a fixed equilibrium OOP strategy.
-///
-/// IP plays greedily — it takes the child action that *minimises* OOP's payoff
-/// at its own nodes. OOP follows the fixed `profile` strategy (weighted average
-/// of child values). Returns the OOP payoff in chips (which IP is trying to
-/// minimise) for this specific hand matchup.
-///
-/// The relationship between the two passes:
-/// - [`best_response_oop`] gives the ceiling: most OOP can earn against a
-///   non-adapting IP.
-/// - [`best_response_ip`] gives the floor: least IP allows OOP to earn against
-///   a non-adapting OOP.
-/// - At Nash equilibrium the ceiling and floor meet; their gap is the
-///   exploitability.
-fn best_response_ip(
-    node_id: NodeId,
-    oop_hand: Two,
-    ip_hand: Two,
-    tree: &GameTree,
-    showdown_map: &ShowdownMap,
-    profile: &StrategyProfile,
-) -> f64 {
-    match tree.get(node_id) {
-        Some(Node::Terminal(t)) => terminal_payoff(t, oop_hand, ip_hand, showdown_map),
-        None => 0.0,
-        Some(Node::Chance(chance_node)) => {
-            let children: Vec<(Card, NodeId)> = chance_node.children.clone();
-            let valid: Vec<(Card, NodeId)> = children
-                .into_iter()
-                .filter(|(card, _)| !oop_hand.contains_card(*card) && !ip_hand.contains_card(*card))
-                .collect();
-            if valid.is_empty() {
-                return 0.0;
-            }
-            #[allow(clippy::cast_precision_loss)]
-            let n = valid.len() as f64;
-            let sum: f64 = valid
-                .iter()
-                .map(|(_, child_id)| best_response_ip(*child_id, oop_hand, ip_hand, tree, showdown_map, profile))
-                .sum();
-            sum / n
-        }
-        Some(Node::Action(action_node)) => {
-            let player = action_node.player;
-            let children: Vec<NodeId> = action_node.children.clone();
-            if children.is_empty() {
-                return 0.0;
-            }
-            let n_actions = children.len();
-            let child_values: Vec<f64> = children
-                .iter()
-                .map(|&child_id| best_response_ip(child_id, oop_hand, ip_hand, tree, showdown_map, profile))
-                .collect();
-            match player {
-                // OOP plays the fixed equilibrium strategy: weighted average.
-                Player::Oop => {
-                    let strategy: Vec<f64> = profile.get(node_id, &oop_hand).map_or_else(
-                        || {
-                            #[allow(clippy::cast_precision_loss)]
-                            let p = 1.0 / n_actions as f64;
-                            vec![p; n_actions]
-                        },
-                        |af| af.as_slice().to_vec(),
-                    );
-                    strategy.iter().zip(child_values.iter()).map(|(&p, &v)| p * v).sum()
+    /// Best-response value for OOP against a fixed equilibrium IP strategy.
+    ///
+    /// OOP plays greedily — it takes the child action with the highest value at its
+    /// own nodes. IP follows the fixed `profile` strategy (weighted average of child
+    /// values). Returns the OOP payoff in chips for this specific hand matchup.
+    ///
+    /// Unlike CFR's [`traverse`], no reach probabilities are tracked: the
+    /// best-responder simply selects the argmax child at its decision nodes. This
+    /// makes the recursion simpler and stateless — only the tree structure, the
+    /// showdown map, and the fixed opponent strategy are needed.
+    fn best_response_oop(
+        node_id: NodeId,
+        oop_hand: Two,
+        ip_hand: Two,
+        tree: &GameTree,
+        showdown_map: &ShowdownMap,
+        profile: &StrategyProfile,
+    ) -> f64 {
+        match tree.get(node_id) {
+            Some(Node::Terminal(t)) => Solver::terminal_payoff(t, oop_hand, ip_hand, showdown_map),
+            None => 0.0,
+            Some(Node::Chance(chance_node)) => {
+                let children: Vec<(Card, NodeId)> = chance_node.children.clone();
+                let valid: Vec<(Card, NodeId)> = children
+                    .into_iter()
+                    .filter(|(card, _)| !oop_hand.contains_card(*card) && !ip_hand.contains_card(*card))
+                    .collect();
+                if valid.is_empty() {
+                    return 0.0;
                 }
-                // IP plays best-response: choose the action that minimises OOP value.
-                Player::Ip => child_values.iter().copied().fold(f64::INFINITY, f64::min),
+                #[allow(clippy::cast_precision_loss)]
+                let n = valid.len() as f64;
+                let sum: f64 = valid
+                    .iter()
+                    .map(|(_, child_id)| {
+                        Solver::best_response_oop(*child_id, oop_hand, ip_hand, tree, showdown_map, profile)
+                    })
+                    .sum();
+                sum / n
+            }
+            Some(Node::Action(action_node)) => {
+                let player = action_node.player;
+                let children: Vec<NodeId> = action_node.children.clone();
+                if children.is_empty() {
+                    return 0.0;
+                }
+                let n_actions = children.len();
+                let child_values: Vec<f64> = children
+                    .iter()
+                    .map(|&child_id| {
+                        Solver::best_response_oop(child_id, oop_hand, ip_hand, tree, showdown_map, profile)
+                    })
+                    .collect();
+                match player {
+                    // OOP plays best-response: choose the action with the highest value.
+                    Player::Oop => child_values.iter().copied().fold(f64::NEG_INFINITY, f64::max),
+                    // IP plays the fixed equilibrium strategy: weighted average.
+                    Player::Ip => {
+                        let strategy: Vec<f64> = profile.get(node_id, &ip_hand).map_or_else(
+                            || {
+                                #[allow(clippy::cast_precision_loss)]
+                                let p = 1.0 / n_actions as f64;
+                                vec![p; n_actions]
+                            },
+                            |af| af.as_slice().to_vec(),
+                        );
+                        strategy.iter().zip(child_values.iter()).map(|(&p, &v)| p * v).sum()
+                    }
+                }
             }
         }
     }
-}
 
-/// Builds the pre-computed showdown outcome map for a river-only solve.
-///
-/// For each `(oop_hand, ip_hand)` pair, evaluates both seven-card hands and
-/// stores `oop_rank.cmp(&ip_rank)` under the key `(oop, ip, None)`. Called
-/// once in [`Solver::new`].
-///
-/// The board is fixed for the entire river solve, so the matchup result is a
-/// pure function of the two hands and never changes across iterations.
-fn build_showdown_map(hand_pairs: &[(Two, Two)], board: &Board) -> ShowdownMap {
-    hand_pairs
-        .iter()
-        .map(|&(oop, ip)| {
-            let oop_rank = Seven::from_case_and_board(&oop, board).hand_rank_value();
-            let ip_rank = Seven::from_case_and_board(&ip, board).hand_rank_value();
-            ((oop, ip, None), oop_rank.cmp(&ip_rank))
-        })
-        .collect()
-}
+    /// Best-response value for IP against a fixed equilibrium OOP strategy.
+    ///
+    /// IP plays greedily — it takes the child action that *minimises* OOP's payoff
+    /// at its own nodes. OOP follows the fixed `profile` strategy (weighted average
+    /// of child values). Returns the OOP payoff in chips (which IP is trying to
+    /// minimise) for this specific hand matchup.
+    ///
+    /// The relationship between the two passes:
+    /// - [`best_response_oop`] gives the ceiling: most OOP can earn against a
+    ///   non-adapting IP.
+    /// - [`best_response_ip`] gives the floor: least IP allows OOP to earn against
+    ///   a non-adapting OOP.
+    /// - At Nash equilibrium the ceiling and floor meet; their gap is the
+    ///   exploitability.
+    fn best_response_ip(
+        node_id: NodeId,
+        oop_hand: Two,
+        ip_hand: Two,
+        tree: &GameTree,
+        showdown_map: &ShowdownMap,
+        profile: &StrategyProfile,
+    ) -> f64 {
+        match tree.get(node_id) {
+            Some(Node::Terminal(t)) => Solver::terminal_payoff(t, oop_hand, ip_hand, showdown_map),
+            None => 0.0,
+            Some(Node::Chance(chance_node)) => {
+                let children: Vec<(Card, NodeId)> = chance_node.children.clone();
+                let valid: Vec<(Card, NodeId)> = children
+                    .into_iter()
+                    .filter(|(card, _)| !oop_hand.contains_card(*card) && !ip_hand.contains_card(*card))
+                    .collect();
+                if valid.is_empty() {
+                    return 0.0;
+                }
+                #[allow(clippy::cast_precision_loss)]
+                let n = valid.len() as f64;
+                let sum: f64 = valid
+                    .iter()
+                    .map(|(_, child_id)| {
+                        Solver::best_response_ip(*child_id, oop_hand, ip_hand, tree, showdown_map, profile)
+                    })
+                    .sum();
+                sum / n
+            }
+            Some(Node::Action(action_node)) => {
+                let player = action_node.player;
+                let children: Vec<NodeId> = action_node.children.clone();
+                if children.is_empty() {
+                    return 0.0;
+                }
+                let n_actions = children.len();
+                let child_values: Vec<f64> = children
+                    .iter()
+                    .map(|&child_id| Solver::best_response_ip(child_id, oop_hand, ip_hand, tree, showdown_map, profile))
+                    .collect();
+                match player {
+                    // OOP plays the fixed equilibrium strategy: weighted average.
+                    Player::Oop => {
+                        let strategy: Vec<f64> = profile.get(node_id, &oop_hand).map_or_else(
+                            || {
+                                #[allow(clippy::cast_precision_loss)]
+                                let p = 1.0 / n_actions as f64;
+                                vec![p; n_actions]
+                            },
+                            |af| af.as_slice().to_vec(),
+                        );
+                        strategy.iter().zip(child_values.iter()).map(|(&p, &v)| p * v).sum()
+                    }
+                    // IP plays best-response: choose the action that minimises OOP value.
+                    Player::Ip => child_values.iter().copied().fold(f64::INFINITY, f64::min),
+                }
+            }
+        }
+    }
 
-/// Builds the pre-computed showdown outcome map for a turn solve.
-///
-/// For each `(oop_hand, ip_hand)` pair and each non-conflicting river runout
-/// card, evaluates the seven-card hands using the flop + turn + runout river
-/// and stores the result under key `(oop, ip, Some(river_card))`.
-///
-/// Hand–card conflicts (runout card already in a player's hole cards) are
-/// filtered out here — those branches will never be visited by `traverse` for
-/// that hand pair anyway, so omitting their entries is harmless and saves
-/// memory.
-///
-/// `runout_cards` is the set of all candidate river cards (52 minus the 4
-/// known board cards), computed once in [`Solver::new_turn`].
-fn build_turn_showdown_map(hand_pairs: &[(Two, Two)], board: &Board, runout_cards: &[Card]) -> ShowdownMap {
-    hand_pairs
-        .iter()
-        .flat_map(|&(oop, ip)| {
-            runout_cards
-                .iter()
-                .filter(move |&&card| !oop.contains_card(card) && !ip.contains_card(card))
-                .map(move |&card| {
-                    let oop_rank = Seven::from_case_at_turn(oop, board.flop, board.turn, card).hand_rank_value();
-                    let ip_rank = Seven::from_case_at_turn(ip, board.flop, board.turn, card).hand_rank_value();
-                    ((oop, ip, Some(card)), oop_rank.cmp(&ip_rank))
-                })
-        })
-        .collect()
+    /// Builds the pre-computed showdown outcome map for a river-only solve.
+    ///
+    /// For each `(oop_hand, ip_hand)` pair, evaluates both seven-card hands and
+    /// stores `oop_rank.cmp(&ip_rank)` under the key `(oop, ip, None)`. Called
+    /// once in [`Solver::new`].
+    ///
+    /// The board is fixed for the entire river solve, so the matchup result is a
+    /// pure function of the two hands and never changes across iterations.
+    fn build_showdown_map(hand_pairs: &[(Two, Two)], board: &Board) -> ShowdownMap {
+        hand_pairs
+            .iter()
+            .map(|&(oop, ip)| {
+                let oop_rank = Seven::from_case_and_board(&oop, board).hand_rank_value();
+                let ip_rank = Seven::from_case_and_board(&ip, board).hand_rank_value();
+                ((oop, ip, None), oop_rank.cmp(&ip_rank))
+            })
+            .collect()
+    }
+
+    /// Builds the pre-computed showdown outcome map for a turn solve.
+    ///
+    /// For each `(oop_hand, ip_hand)` pair and each non-conflicting river runout
+    /// card, evaluates the seven-card hands using the flop + turn + runout river
+    /// and stores the result under key `(oop, ip, Some(river_card))`.
+    ///
+    /// Hand–card conflicts (runout card already in a player's hole cards) are
+    /// filtered out here — those branches will never be visited by `traverse` for
+    /// that hand pair anyway, so omitting their entries is harmless and saves
+    /// memory.
+    ///
+    /// `runout_cards` is the set of all candidate river cards (52 minus the 4
+    /// known board cards), computed once in [`Solver::new_turn`].
+    fn build_turn_showdown_map(hand_pairs: &[(Two, Two)], board: &Board, runout_cards: &[Card]) -> ShowdownMap {
+        hand_pairs
+            .iter()
+            .flat_map(|&(oop, ip)| {
+                runout_cards
+                    .iter()
+                    .filter(move |&&card| !oop.contains_card(card) && !ip.contains_card(card))
+                    .map(move |&card| {
+                        let oop_rank = Seven::from_case_at_turn(oop, board.flop, board.turn, card).hand_rank_value();
+                        let ip_rank = Seven::from_case_at_turn(ip, board.flop, board.turn, card).hand_rank_value();
+                        ((oop, ip, Some(card)), oop_rank.cmp(&ip_rank))
+                    })
+            })
+            .collect()
+    }
+
+    // end region Private helpers
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
-mod tests {
+#[allow(non_snake_case)]
+mod analysis__gto__solver__tests {
     use super::*;
     use crate::analysis::gto::solver_config::SolverConfig;
     use crate::play::board::Board;
@@ -1554,9 +1569,9 @@ mod tests {
             solver.config.board.river,
         ];
         for &(oop, ip) in &solver.hand_pairs {
-            assert!(!conflicts_with_board(oop, &board_cards));
-            assert!(!conflicts_with_board(ip, &board_cards));
-            assert!(!hands_conflict(oop, ip));
+            assert!(!Solver::conflicts_with_board(oop, &board_cards));
+            assert!(!Solver::conflicts_with_board(ip, &board_cards));
+            assert!(!Solver::hands_conflict(oop, ip));
         }
     }
 

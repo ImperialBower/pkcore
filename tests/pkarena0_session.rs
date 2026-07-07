@@ -8,7 +8,7 @@
 //! 3. Replay consistency: every hand replays without error and final stacks match.
 //!
 //! Test 3 is the **regression gate** for the uncalled-turn-bet bug
-//! (fixed in `SeatsNoCell::bring_it_in`). If that bug returns, the engine sets
+//! (fixed in `Seats::bring_it_in`). If that bug returns, the engine sets
 //! the lone non-all-in player to `YetToAct` at the start of the turn; `replay()`
 //! then calls `bring_it_in()` which fails with `PKError::ActionIsntFinished`
 //! because there is no recorded action in the turn to resolve that state.

@@ -23,7 +23,7 @@
 //! ```
 
 use crate::bot::sim::ActionCounts;
-use crate::casino::table::position::Position;
+use crate::casino::position::Position;
 use crate::hand_history::{Action, ActionType, HandCollection, HandHistory, Outcome};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};

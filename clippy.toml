@@ -1,2 +1,28 @@
 # Proper nouns that look like code identifiers to clippy::doc_markdown but aren't.
 doc-valid-idents = ["PokerBench", ".."]
+
+# Format-crate error types must not leak into pkcore's public API — the
+# domain-kernel boundary (AUDIT_Fable_5.md III.2 / P3). Each is stringified into
+# an owned error type (`HandHistoryError`, `BotError`, `SolverError`,
+# `PokerBenchError`); the only sanctioned uses are the blessed `From` conversion
+# seams, which carry a local `#[allow(clippy::disallowed_types)]`. This gate is
+# the mechanism that keeps a future format-crate type from silently re-entering a
+# public signature.
+disallowed-types = [
+    { path = "serde_yaml_bw::Error", reason = "stringify at the From seam; keep it out of public signatures" },
+    { path = "serde_json::Error", reason = "stringify at the From seam; keep it out of public signatures" },
+    { path = "postcard::Error", reason = "stringify at the From seam; keep it out of public signatures" },
+]
+
+# Unfinished-work macros must not ship (AUDIT_Fable_5.md P4). `todo!()` is the
+# bare "I'll do it later" marker — the same class of latent panic the `unwrap`
+# cleanup gated with `#![warn(clippy::unwrap_used)]`. Under CI's `-Dclippy::all`
+# this makes any `todo!()` in lib/bin code a hard error. `unimplemented!("...")`
+# is intentionally NOT gated: it is the sanctioned way to mark an operation that
+# is structurally undefined for a type (e.g. `Pile::swap` on a fixed-size hand)
+# or a deliberately-deferred method — the message documents *why* it is absent.
+# The rule, then, is: no unfinished spot may be a *silent* `todo!()`; it must be
+# a messaged `unimplemented!("...")` or a returned `PKError::NotImplemented`.
+disallowed-macros = [
+    { path = "std::todo", reason = "no unfinished todo!() may ship; use a messaged unimplemented!(\"...\") or return PKError::NotImplemented" },
+]

@@ -1,4 +1,5 @@
 use crate::analysis::case_eval::CaseEval;
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
 use crate::analysis::the_nuts::TheNuts;
@@ -12,13 +13,13 @@ use std::fmt;
 use std::fmt::Formatter;
 use std::str::FromStr;
 
-#[cfg(not(target_arch = "wasm32"))]
-use crate::analysis::store::bcm::binary_card_map::BC_RANK_HASHMAP;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
+use crate::analysis::store::bcm::binary_card_map::bc_rank_hashmap;
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use rayon::iter::ParallelIterator;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use std::sync::mpsc;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use std::thread;
 
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -32,14 +33,15 @@ impl StartingHands {
     /// # Errors
     ///
     /// If `BC_RANK_HASHMAP` is incapable of parsing the cards passed in.
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn bcm_case_eval(&self, case: Five) -> Result<CaseEval, PKError> {
         let mut case_eval = CaseEval::default();
+        let map = bc_rank_hashmap()?;
 
         for player in &self.vec() {
             if let Ok(seven) = Seven::from_case_at_deal(*player, case) {
                 let bard = seven.bard();
-                let bcm = BC_RANK_HASHMAP.get(&bard).ok_or(PKError::Incomplete)?;
+                let bcm = map.get(&bard).ok_or(PKError::Incomplete)?;
                 case_eval.push(Eval::try_from(*bcm)?);
             }
         }
@@ -47,15 +49,16 @@ impl StartingHands {
         Ok(case_eval)
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     fn process_case(twos: StartingHands, v: Vec<Card>) -> Result<CaseEval, PKError> {
         let case = Five::try_from(v)?;
         let mut case_eval = CaseEval::default();
+        let map = bc_rank_hashmap()?;
 
         for player in twos.vec() {
             if let Ok(seven) = Seven::from_case_at_deal(player, case) {
                 let bard = seven.bard();
-                let bcm = BC_RANK_HASHMAP.get(&bard).ok_or(PKError::Incomplete)?;
+                let bcm = map.get(&bard).ok_or(PKError::Incomplete)?;
                 case_eval.push(Eval::try_from(*bcm)?);
             }
         }
@@ -70,7 +73,7 @@ impl StartingHands {
     /// # Panics
     ///
     /// If unable to process case
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn bcm_mpsc_case_evals(&self) -> Result<CaseEvals, PKError> {
         let mut case_evals = CaseEvals::default();
         let twos = *self;
@@ -134,19 +137,19 @@ impl StartingHands {
     ///     // Ok(CaseEvals::from(v))
     /// }
     /// ```
-    /// # Panics
+    /// # Errors
     ///
-    /// Should not be possible. Fingers crossed
-    #[cfg(not(target_arch = "wasm32"))]
-    #[allow(clippy::unwrap_used)]
+    /// Returns [`PKError::BcmUnavailable`] if the BCM data file is absent, or a
+    /// cast error if a card combination is invalid.
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     pub fn bcm_rayon_case_evals(&self) -> Result<CaseEvals, PKError> {
         let v: Vec<CaseEval> = self
             .par_combinations_remaining(5)
             .map(|v| {
-                let five = Five::try_from(v).unwrap();
-                self.bcm_case_eval(five).unwrap()
+                let five = Five::try_from(v)?;
+                self.bcm_case_eval(five)
             })
-            .collect();
+            .collect::<Result<Vec<CaseEval>, PKError>>()?;
         Ok(CaseEvals::from(v))
     }
 
@@ -348,7 +351,7 @@ impl Pile for StartingHands {
     }
 
     fn card_at(self, _index: usize) -> Option<Card> {
-        todo!()
+        unimplemented!("StartingHands holds hole-card pairs, not a flat card sequence; iterate with `.vec()` instead")
     }
 
     fn clean(&self) -> Self {
@@ -356,11 +359,11 @@ impl Pile for StartingHands {
     }
 
     fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
-        todo!()
+        unimplemented!("StartingHands is not positionally mutable; rebuild the collection instead")
     }
 
     fn the_nuts(&self) -> TheNuts {
-        todo!()
+        unimplemented!("the_nuts is undefined for a StartingHands collection; evaluate individual hands")
     }
 
     fn to_vec(&self) -> Vec<Card> {

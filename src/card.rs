@@ -332,7 +332,7 @@ impl Pile for Card {
     }
 
     fn the_nuts(&self) -> TheNuts {
-        todo!()
+        unimplemented!("the_nuts is undefined for a single Card; evaluate a complete hand instead")
     }
 
     fn to_vec(&self) -> Vec<Card> {

@@ -13,7 +13,7 @@ use pkcore::analysis::player_stats_store::{PlayerStatsStore, YamlPlayerStatsStor
 use pkcore::bot::profile::BotProfile;
 use pkcore::bot::sim::SimTable;
 use pkcore::casino::game::ForcedBets;
-use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::casino::table::{Player, Seat, Seats, Table};
 
 const STARTING_CHIPS: usize = 1_000_000_000;
 const SMALL_BLIND: usize = 50;
@@ -32,14 +32,14 @@ fn drop_flushes_then_with_store_reloads() {
     // Two seats so we get two distinct UUIDs to track.
     let dir = unique_temp_dir("drop_flushes");
 
-    let mut seats: Vec<SeatNoCell> = Vec::new();
+    let mut seats: Vec<Seat> = Vec::new();
     let mut uuids: Vec<Uuid> = Vec::new();
     for name in ["A", "B"] {
-        let p = PlayerNoCell::new_with_chips(name.to_string(), STARTING_CHIPS);
+        let p = Player::new_with_chips(name.to_string(), STARTING_CHIPS);
         uuids.push(p.id);
-        seats.push(SeatNoCell::new(p));
+        seats.push(Seat::new(p));
     }
-    let table = TableNoCell::nlh_from_seats(SeatsNoCell::new(seats), ForcedBets::new(SMALL_BLIND, BIG_BLIND));
+    let table = Table::nlh_from_seats(Seats::new(seats), ForcedBets::new(SMALL_BLIND, BIG_BLIND));
     let bots = vec![
         (0_u8, BotProfile::tight_passive()),
         (1_u8, BotProfile::loose_aggressive()),

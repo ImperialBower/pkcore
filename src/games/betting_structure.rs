@@ -1,7 +1,7 @@
 //! Betting-rule abstraction orthogonal to [`crate::games::GameType`].
 //!
 //! `BettingStructure` lifts the inline min-raise / max-raise math out of
-//! [`crate::casino::table_no_cell::TableNoCell::act_raise`] into an enum
+//! [`crate::casino::table::Table::act_raise`] into an enum
 //! dispatch so Fixed-Limit (EPIC-30) and Pot-Limit (EPIC-31) variants can
 //! plug in without forking the betting loop. The `NoLimit` arm preserves
 //! today's NLHE behavior verbatim: `min_raise` returns the previous raise
@@ -10,7 +10,7 @@
 //!
 //! Phase 1 of EPIC-29 introduces the type with NLHE-correct semantics on
 //! the `NoLimit` arm and runnable placeholder semantics on the `PotLimit`
-//! and `FixedLimit` arms. Phase 7 wires it into `TableNoCell::act_raise`.
+//! and `FixedLimit` arms. Phase 7 wires it into `Table::act_raise`.
 
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
@@ -68,7 +68,7 @@ impl BettingStructure {
     /// Minimum legal raise increment (delta above the current bet) given
     /// the previous raise size on this street.
     ///
-    /// - `NoLimit`: matches today's `TableNoCell::min_raise` inline math:
+    /// - `NoLimit`: matches today's `Table::min_raise` inline math:
     ///   returns `last_raise` if non-zero, else `big_blind`.
     /// - `PotLimit`: same min-raise rule as `NoLimit`; pot-limit only caps
     ///   the *maximum*, not the minimum.
@@ -133,8 +133,12 @@ impl BettingStructure {
     /// - `NoLimit`: returns `stack` (player can move all-in).
     /// - `PotLimit`: returns `min(stack, current_bet + pot_after_call)`
     ///   where `pot_after_call = pot + call_amount`.
-    /// - `FixedLimit`: returns `current_bet + tier_increment`, capped at
-    ///   `stack`.
+    /// - `FixedLimit`: returns the single legal raise-to for the tier —
+    ///   `current_bet + tier_increment`, except when `current_bet` is a
+    ///   partial forced bet below one full bet (the stud bring-in), where it
+    ///   returns one full `tier_increment` (completion). Capped at `stack`.
+    ///   In fixed-limit this equals the *minimum* legal raise, so there is
+    ///   exactly one legal amount.
     ///
     /// # Examples
     ///
@@ -149,6 +153,13 @@ impl BettingStructure {
     /// // Pot-Limit: max raise = current_bet + pot + call_amount, capped at stack.
     /// // pot=1000, current_bet=100, my_committed=0 → call=100, max=100+1000+100=1200
     /// assert_eq!(1_200, pl.max_raise(1_000, 100, 0, 5_000, BetTier::Small));
+    ///
+    /// let fl = BettingStructure::FixedLimit { small_bet: 20, big_bet: 40, raise_cap: 4 };
+    /// // Completion: only the 5 bring-in is in, so the raise-to is one full
+    /// // small bet (20), not 5 + 20.
+    /// assert_eq!(20, fl.max_raise(0, 5, 0, 5_000, BetTier::Small));
+    /// // Once a full bet is in, the raise-to steps by the tier increment.
+    /// assert_eq!(40, fl.max_raise(0, 20, 0, 5_000, BetTier::Small));
     /// ```
     #[must_use]
     pub fn max_raise(&self, pot: usize, current_bet: usize, my_committed: usize, stack: usize, tier: BetTier) -> usize {
@@ -164,8 +175,42 @@ impl BettingStructure {
                     BetTier::Small => *small_bet,
                     BetTier::Big => *big_bet,
                 };
-                current_bet.saturating_add(increment).min(stack)
+                // The sole legal fixed-limit raise amount is the completion-aware
+                // target — shared with `min_raise_to` via `completion_raise_to`
+                // so min and max cannot drift (audit P9j.2).
+                Self::completion_raise_to(current_bet, increment).min(stack)
             }
+        }
+    }
+
+    /// The completion-aware minimum raise-*to* target given the bet currently on
+    /// the table and one full `increment` for the street.
+    ///
+    /// With only a partial forced bet (a stud bring-in) below one full increment
+    /// in front of the actor, the raise **completes** to one full increment;
+    /// otherwise it steps *by* the increment on top of the current bet. This one
+    /// rule is shared by
+    /// [`Table::min_raise_to`](crate::casino::table::Table::min_raise_to)
+    /// and the fixed-limit arm of [`Self::max_raise`], so the minimum and the
+    /// (fixed-limit) maximum are computed from the same source and cannot drift
+    /// (audit P9j.2).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::games::betting_structure::BettingStructure;
+    ///
+    /// // Only a 5 bring-in is in: completion targets one full 20 small bet.
+    /// assert_eq!(20, BettingStructure::completion_raise_to(5, 20));
+    /// // A full bet is already in: step up by the increment.
+    /// assert_eq!(40, BettingStructure::completion_raise_to(20, 20));
+    /// ```
+    #[must_use]
+    pub fn completion_raise_to(current_bet: usize, increment: usize) -> usize {
+        if current_bet < increment {
+            increment
+        } else {
+            current_bet.saturating_add(increment)
         }
     }
 
@@ -229,7 +274,7 @@ mod games__betting_structure__tests {
 
     #[test]
     fn no_limit_min_raise_first_raise_returns_big_blind() {
-        // Mirrors TableNoCell::min_raise at table_no_cell.rs:1572-1578
+        // Mirrors Table::min_raise in casino::table
         // when raise_increment == 0: returns forced.big_blind.
         let nl = BettingStructure::NoLimit;
         assert_eq!(100, nl.min_raise(0, 100));
@@ -237,7 +282,7 @@ mod games__betting_structure__tests {
 
     #[test]
     fn no_limit_min_raise_subsequent_returns_last_raise() {
-        // Mirrors TableNoCell::min_raise when raise_increment > 0.
+        // Mirrors Table::min_raise when raise_increment > 0.
         let nl = BettingStructure::NoLimit;
         assert_eq!(200, nl.min_raise(200, 100));
         assert_eq!(50, nl.min_raise(50, 100));

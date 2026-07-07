@@ -80,7 +80,7 @@ impl PlaybookEntry {
 ///
 /// ```
 /// use pkcore::bot::playbook::Playbook;
-/// use pkcore::casino::table::position::Position;
+/// use pkcore::casino::position::Position;
 ///
 /// let pb = Playbook::gto();
 /// let entry = pb.for_seats(6).expect("6-max entry should exist");
@@ -181,7 +181,7 @@ impl Playbook {
     ///
     /// ```
     /// use pkcore::bot::playbook::Playbook;
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::position::Position;
     ///
     /// let pb = Playbook::tight_passive();
     /// let entry = pb.for_seats(6).unwrap();
@@ -214,7 +214,7 @@ impl Playbook {
     ///
     /// ```
     /// use pkcore::bot::playbook::Playbook;
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::position::Position;
     ///
     /// let pb = Playbook::loose_aggressive();
     /// let entry = pb.for_seats(6).unwrap();
@@ -295,7 +295,7 @@ mod tests {
 
     #[test]
     fn test_playbook_gto_six_max_btn_has_open_raise() {
-        use crate::casino::table::position::Position;
+        use crate::casino::position::Position;
         let pb = Playbook::gto();
         let entry = pb.for_seats(6).unwrap();
         assert!(

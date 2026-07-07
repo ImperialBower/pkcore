@@ -160,7 +160,7 @@ impl Pile for Four {
     }
 
     fn card_at(self, _index: usize) -> Option<Card> {
-        todo!()
+        unimplemented!("Four is a fixed 4-card hand; use `.cards().card_at(index)` for positional access")
     }
 
     fn clean(&self) -> Self {
@@ -173,7 +173,7 @@ impl Pile for Four {
     }
 
     fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
-        todo!()
+        unimplemented!("Four is a fixed 4-card hand; use `.cards()` for a swappable set")
     }
 
     fn the_nuts(&self) -> TheNuts {

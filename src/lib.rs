@@ -190,7 +190,26 @@
 //! - **System Errors**: `DBConnectionError`, `SqlError`
 //! - **Parsing Errors**: `InvalidCardNumber`, `InvalidRangeIndex`
 //!
-//! All errors implement `std::error::Error` and can be converted from `rusqlite::Error`.
+//! All errors implement `std::error::Error`. `PKError` converts from
+//! `std::io::Error` (→ `InvalidIO`) and, with the `store` feature, from
+//! `rusqlite::Error` (→ `DBConnectionError`).
+//!
+//! ## API Stability
+//!
+//! **The `Display` encodings of cards and hands are a stable wire format.** A
+//! card renders as its rank+suit glyph (e.g. `A♠`), and a multi-card hand as
+//! space-separated glyphs (e.g. `6♠ 6♥`); every such type round-trips through
+//! its `FromStr` (`Two::from_str("6♠ 6♥")`, `Card::from_str("A♠")`, …). These
+//! strings are load-bearing: hand-history YAML and the `pkpy` notebooks parse
+//! them, so their format is treated as a public contract and will not change
+//! within a `0.x` line except in a version that documents the break.
+//!
+//! The serialized enums (`TableAction`, `ActionType`, `GameType`) and `PKError`
+//! are `#[non_exhaustive]` as of 0.2.0: new variants may be added in a minor
+//! release, so downstream `match`es on them must include a wildcard arm. Adding
+//! a variant is therefore **not** a breaking change; removing or renaming one
+//! is. The `serde` representations of the wire enums are part of the same
+//! stability promise.
 //!
 //! ## Database Integration
 //!
@@ -202,9 +221,10 @@
 //! - **Persistence**: Efficient bulk loading and querying
 //! - **Features**: Split pot tracking, win/loss counts
 //!
-//! Add to `.env`:
-//! ```env
-//! HUPS_DB_PATH=generated/hups.db
+//! Export the variable in your environment (as of 0.2.0 `pkcore` reads it
+//! directly with `std::env::var` — the `dotenvy` `.env` loader was removed):
+//! ```sh
+//! export HUPS_DB_PATH=generated/hups.db
 //! ```
 //!
 //! ## Examples
@@ -422,6 +442,7 @@ pub const POSSIBLE_UNIQUE_HOLDEM_HUP_MATCHUPS: usize = 1_624_350;
 // endregion
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Ord, PartialOrd, Eq, Hash, PartialEq)]
+#[non_exhaustive] // 0.2.0: adding a variant is no longer a breaking change for downstream matches.
 pub enum PKError {
     ActionIsntFinished,
     AlreadyDealt,
@@ -490,6 +511,21 @@ pub enum PKError {
         expected: usize,
         actual: usize,
     },
+    /// The Binary Card Map (`generated/bcm.zst`, ~403 MB) could not be loaded —
+    /// it is self-generated data that is absent from the published crate.
+    ///
+    /// Returned by BCM-backed APIs ([`SortedHeadsUp::wins`][crate::arrays::matchups::sorted_heads_up::SortedHeadsUp::wins]
+    /// and `StartingHands` case evals) instead of panicking. Generate the file
+    /// with [`SevenFiveBCM::generate_bin`][crate::analysis::store::bcm::binary_card_map::SevenFiveBCM::generate_bin]
+    /// and point `PKCORE_75BCM_PATH` at it.
+    BcmUnavailable,
+    /// The requested operation is recognised but not yet implemented.
+    ///
+    /// Returned by methods whose behaviour is deliberately unfinished (rather
+    /// than structurally undefined) so that callers receive a recoverable error
+    /// instead of a panic. Contrast with a `todo!()` body — this variant is the
+    /// non-panicking replacement for one.
+    NotImplemented,
 }
 
 impl Display for PKError {
@@ -549,6 +585,8 @@ impl Display for PKError {
             PKError::ChipAuditFailed { expected, actual } => {
                 &*format!("Chip audit failed: expected {expected} chips, found {actual}")
             }
+            PKError::BcmUnavailable => "Binary Card Map data unavailable (set PKCORE_75BCM_PATH)",
+            PKError::NotImplemented => "Operation not yet implemented",
         };
         write!(f, "{msg}")
     }
@@ -556,7 +594,7 @@ impl Display for PKError {
 
 impl Error for PKError {}
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 impl From<rusqlite::Error> for PKError {
     fn from(err: rusqlite::Error) -> Self {
         log::error!("{err}");
@@ -566,8 +604,11 @@ impl From<rusqlite::Error> for PKError {
 
 impl From<std::io::Error> for PKError {
     fn from(err: std::io::Error) -> Self {
+        // Filesystem/IO failures map to `InvalidIO`, not `DBConnectionError` —
+        // the latter is reserved for the `rusqlite` seam above. Conflating the
+        // two made a missing YAML file read as a database outage (audit #6 / P6).
         log::error!("{err}");
-        PKError::DBConnectionError
+        PKError::InvalidIO
     }
 }
 

@@ -15,7 +15,7 @@
 use pkcore::bot::decider::{BotDecider, RuleBasedDecider};
 use pkcore::bot::profile::BotProfile;
 use pkcore::bot::sim::SimTable;
-use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::casino::table::{Player, Seat, Seats, Table};
 
 const STARTING_CHIPS: usize = 10_000;
 const ANTE: usize = 2;
@@ -41,11 +41,11 @@ fn main() {
     println!("  Seat 1: {}", lp.name);
     println!();
 
-    let seats = SeatsNoCell::new(vec![
-        SeatNoCell::new(PlayerNoCell::new_with_chips(tag.name.clone(), STARTING_CHIPS)),
-        SeatNoCell::new(PlayerNoCell::new_with_chips(lp.name.clone(), STARTING_CHIPS)),
+    let seats = Seats::new(vec![
+        Seat::new(Player::new_with_chips(tag.name.clone(), STARTING_CHIPS)),
+        Seat::new(Player::new_with_chips(lp.name.clone(), STARTING_CHIPS)),
     ]);
-    let table = TableNoCell::stud_hi_from_seats(seats, ANTE, BRING_IN, SMALL_BET, BIG_BET);
+    let table = Table::stud_hi_from_seats(seats, ANTE, BRING_IN, SMALL_BET, BIG_BET);
 
     let bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)> = vec![
         (0, tag, Box::new(RuleBasedDecider)),

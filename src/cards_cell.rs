@@ -267,9 +267,7 @@ impl CardsCell {
     }
 
     pub fn swap(&self, _index: usize, _card: Card) -> Option<Card> {
-        // let mut internal = self.0.borrow_mut();
-        // internal.
-        todo!()
+        unimplemented!("CardsCell::swap is not yet implemented; borrow the inner Cards and swap there")
     }
 
     /// ```
@@ -405,7 +403,7 @@ impl Pile for CardsCell {
     }
 
     fn card_at(self, _index: usize) -> Option<Card> {
-        todo!()
+        unimplemented!("CardsCell::card_at is not yet implemented; borrow the inner Cards for positional access")
     }
 
     fn clean(&self) -> Self {
@@ -419,12 +417,12 @@ impl Pile for CardsCell {
         internal.contains(card)
     }
 
-    fn swap(&mut self, _tttttttttindex: usize, _card: Card) -> Option<Card> {
-        todo!()
+    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
+        unimplemented!("CardsCell::swap is not yet implemented; borrow the inner Cards and swap there")
     }
 
     fn the_nuts(&self) -> TheNuts {
-        todo!()
+        unimplemented!("the_nuts is undefined for a bare CardsCell; evaluate through a hand ranker")
     }
 
     fn to_vec(&self) -> Vec<Card> {

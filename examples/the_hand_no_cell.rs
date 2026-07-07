@@ -1,7 +1,7 @@
-//! Recreation of "The Hand" (Negreanu vs. Hansen) using [`TableNoCell`].
+//! Recreation of "The Hand" (Negreanu vs. Hansen) using [`Table`].
 //!
 //! This is a direct parallel to `examples/the_hand.rs` — same game logic, same
-//! assertions — but every function receives `&mut TableNoCell` instead of `&Table`.
+//! assertions — but every function receives `&mut Table` instead of `&Table`.
 //! The difference makes the mutability contract explicit at every call site: the
 //! Rust compiler enforces exclusive access rather than hiding it behind `Cell`/`RefCell`.
 //!
@@ -23,7 +23,7 @@ use pkcore::analysis::range_equity::RangeEquity;
 use pkcore::arrays::two::Two;
 use pkcore::cards::Cards;
 use pkcore::casino::game::ForcedBets;
-use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::casino::table::{Player, Seat, Seats, Table};
 use pkcore::play::board::Board;
 use pkcore::play::stages::flop_eval::FlopEval;
 use pkcore::play::stages::river_eval::RiverEval;
@@ -34,7 +34,7 @@ use std::str::FromStr;
 fn main() -> Result<(), PKError> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    let mut table = the_hand_table_no_cell();
+    let mut table = the_hand_table();
 
     setup(&mut table)?;
     let preflop_pot = preflop(&mut table)?;
@@ -55,30 +55,27 @@ fn main() -> Result<(), PKError> {
     Ok(())
 }
 
-/// Constructs a [`TableNoCell`] primed with the exact deck order used in The Hand.
+/// Constructs a [`Table`] primed with the exact deck order used in The Hand.
 ///
-/// The key difference from `Table::nlh_primed`: because `TableNoCell.deck` is a
+/// The key difference from `Table::nlh_primed`: because `Table.deck` is a
 /// plain `pub` field, we can inject the pre-ordered deck with a direct assignment
 /// after construction rather than through a specialised constructor.
-fn the_hand_table_no_cell() -> TableNoCell {
-    let seats = SeatsNoCell::new(vec![
-        SeatNoCell::new(PlayerNoCell::new_with_chips("Doyle Brunson".to_string(), 1_000_000)),
-        SeatNoCell::new(PlayerNoCell::new_with_chips("Eli Elezra".to_string(), 1_000_000)),
-        SeatNoCell::new(PlayerNoCell::new_with_chips(
-            "Antonio Esfandiari".to_string(),
-            1_000_000,
-        )),
-        SeatNoCell::new(PlayerNoCell::new_with_chips("Gus Hansen".to_string(), 1_000_000)),
-        SeatNoCell::new(PlayerNoCell::new_with_chips("Daniel Negreanu".to_string(), 1_000_000)),
-        SeatNoCell::new(PlayerNoCell::new_with_chips("Cory Zeidman".to_string(), 1_000_000)),
-        SeatNoCell::new(PlayerNoCell::new_with_chips("Barry Greenstein".to_string(), 1_000_000)),
-        SeatNoCell::new(PlayerNoCell::new_with_chips("Amnon Filippi".to_string(), 1_000_000)),
+fn the_hand_table() -> Table {
+    let seats = Seats::new(vec![
+        Seat::new(Player::new_with_chips("Doyle Brunson".to_string(), 1_000_000)),
+        Seat::new(Player::new_with_chips("Eli Elezra".to_string(), 1_000_000)),
+        Seat::new(Player::new_with_chips("Antonio Esfandiari".to_string(), 1_000_000)),
+        Seat::new(Player::new_with_chips("Gus Hansen".to_string(), 1_000_000)),
+        Seat::new(Player::new_with_chips("Daniel Negreanu".to_string(), 1_000_000)),
+        Seat::new(Player::new_with_chips("Cory Zeidman".to_string(), 1_000_000)),
+        Seat::new(Player::new_with_chips("Barry Greenstein".to_string(), 1_000_000)),
+        Seat::new(Player::new_with_chips("Amnon Filippi".to_string(), 1_000_000)),
     ]);
 
-    let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 
     // Inject the pre-ordered deck so cards deal in the documented order.
-    // With TableNoCell, `deck` is a plain public field — no wrapper needed.
+    // With Table, `deck` is a plain public field — no wrapper needed.
     table.deck = Cards::deck_primed(&TestData::the_hand_cards_dealable());
 
     table
@@ -86,7 +83,7 @@ fn the_hand_table_no_cell() -> TableNoCell {
 
 // ── Phases ────────────────────────────────────────────────────────────────────
 
-fn setup(table: &mut TableNoCell) -> Result<(), PKError> {
+fn setup(table: &mut Table) -> Result<(), PKError> {
     table.act_forced_bets().expect("forced bets failed");
     table.deal_cards_to_seats().expect("failed to deal hole cards");
 
@@ -108,7 +105,7 @@ fn setup(table: &mut TableNoCell) -> Result<(), PKError> {
     Ok(())
 }
 
-fn preflop(table: &mut TableNoCell) -> Result<usize, PKError> {
+fn preflop(table: &mut Table) -> Result<usize, PKError> {
     let _gus = table.act_bet(3, 2_100)?;
     commentary_action_to(table);
 
@@ -140,7 +137,7 @@ fn preflop(table: &mut TableNoCell) -> Result<usize, PKError> {
     Ok(pot)
 }
 
-fn flop(table: &mut TableNoCell, _preflop_pot: usize) -> Result<usize, PKError> {
+fn flop(table: &mut Table, _preflop_pot: usize) -> Result<usize, PKError> {
     table.deal_flop().expect("no flop");
 
     // Evaluation via build_game — the NoCell equivalent of table.eval_flop_display().
@@ -165,7 +162,7 @@ fn flop(table: &mut TableNoCell, _preflop_pot: usize) -> Result<usize, PKError> 
     Ok(pot)
 }
 
-fn turn(table: &mut TableNoCell, _flop_pot: usize) -> Result<usize, PKError> {
+fn turn(table: &mut Table, _flop_pot: usize) -> Result<usize, PKError> {
     table.deal_turn().expect("no turn");
 
     // Evaluation via build_game — the NoCell equivalent of table.eval_turn_display().
@@ -185,7 +182,7 @@ fn turn(table: &mut TableNoCell, _flop_pot: usize) -> Result<usize, PKError> {
     Ok(pot)
 }
 
-fn river(table: &mut TableNoCell, turn_pot: usize) -> Result<(), PKError> {
+fn river(table: &mut Table, turn_pot: usize) -> Result<(), PKError> {
     table.deal_river().expect("no river");
 
     // Evaluation via build_game — the NoCell equivalent of table.eval_river_display().
@@ -277,7 +274,7 @@ fn river(table: &mut TableNoCell, turn_pot: usize) -> Result<(), PKError> {
 ///
 /// Equivalent to `Table::commentary_last_player_action` + `Table::commentary_action_to`,
 /// implemented by reading `table.event_log` and `table.seats` directly.
-fn commentary_action_to(table: &TableNoCell) {
+fn commentary_action_to(table: &Table) {
     println!();
 
     // Last player action: walk the log backwards for the first player-action event.

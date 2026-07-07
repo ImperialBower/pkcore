@@ -44,20 +44,18 @@ pub use crate::cards;
 pub use crate::cards::Cards;
 pub use crate::cards_cell::CardsCell;
 pub use crate::casino;
+pub use crate::casino::action::TableAction;
+pub use crate::casino::equity::seat_equity::SeatEquity;
+pub use crate::casino::equity::seatbit::Seatbit;
+pub use crate::casino::equity::table_equity::TableEquity;
 pub use crate::casino::game::ForcedBets;
-pub use crate::casino::player::Player;
 pub use crate::casino::state::*;
-pub use crate::casino::table;
-pub use crate::casino::table::GameState;
-pub use crate::casino::table::TableCelled;
-pub use crate::casino::table::event::TableAction;
-pub use crate::casino::table::event::TableLog;
-pub use crate::casino::table::seats::Seats;
-pub use crate::casino::table::seats::seat::Seat;
-pub use crate::casino::table::seats::seat_cell::SeatCell;
-pub use crate::casino::table::seats::seat_equity::SeatEquity;
-pub use crate::casino::table::seats::seatbit::Seatbit;
-pub use crate::casino::table::seats::table_equity::TableEquity;
+pub use crate::casino::table_celled;
+pub use crate::casino::table_celled::GameState;
+pub use crate::casino::table_celled::TableCelled;
+pub use crate::casino::table_celled::event::TableLog;
+pub use crate::casino::table_celled::seats::SeatsCell;
+pub use crate::casino::table_celled::seats::seat_cell::SeatCell;
 pub use crate::cc;
 pub use crate::deck;
 pub use crate::deck::Deck;
@@ -113,17 +111,17 @@ pub use crate::play::visibility::Visibility;
 pub use crate::casino::cashier::chips::Stack;
 pub use crate::casino::dealer::Dealer;
 pub use crate::casino::manager::TableManager;
-pub use crate::casino::table::position::Positions;
-pub use crate::casino::table::result::HandResult;
-pub use crate::casino::table::showdown::Showdown;
-pub use crate::casino::table::winnings::{PotWin, Winnings};
-pub use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+pub use crate::casino::position::Positions;
+pub use crate::casino::table::{Player, Seat, Seats, Table};
+pub use crate::casino::table_celled::result::HandResult;
+pub use crate::casino::table_celled::showdown::Showdown;
+pub use crate::casino::winnings::{PotWin, Winnings};
 
 // analysis/store
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 pub use crate::analysis::store::bcm::binary_card_map::{FiveBCM, SevenFiveBCM};
 pub use crate::analysis::store::db::hup::HUPResult;
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 pub use crate::analysis::store::db::sqlite::Connect;
 pub use crate::analysis::store::heads_up::HUP;
 
@@ -154,6 +152,9 @@ pub use crate::hand_history::{
     HandVariant, Outcome, PlayerEntry, PostedBlind, PreflopStreet, ResultEntry, RiverStreet, Stakes, Streets,
     TableInfo, TurnStreet,
 };
+// The YAML I/O error type only exists with the `hand-histories` feature.
+#[cfg(feature = "hand-histories")]
+pub use crate::hand_history::HandHistoryError;
 
 // player stats (player-stats feature)
 #[cfg(feature = "player-stats")]
@@ -171,8 +172,7 @@ pub use crate::analysis::player_stats_store::{PlayerStatsStore, YamlPlayerStatsS
 #[cfg(feature = "bot-training")]
 pub use crate::bot::training::{ExploitTrainer, GenerationRecord, TrainingConfig, TrainingResult};
 
-// casino (bot-profiles feature)
-#[cfg(feature = "bot-profiles")]
+// casino
 pub use crate::casino::action::PlayerAction;
 #[cfg(feature = "bot-profiles")]
 pub use crate::casino::session::PokerSession;

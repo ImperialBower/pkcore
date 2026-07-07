@@ -52,13 +52,13 @@ use crate::games::betting_structure::{BetTier, BettingStructure};
 /// use pkcore::bot::profile::BotProfile;
 /// use pkcore::bot::table_snapshot::TableSnapshot;
 /// use pkcore::casino::game::ForcedBets;
-/// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+/// use pkcore::casino::table::{Player, Seat, Seats, Table};
 ///
-/// let seats = SeatsNoCell::new(vec![
-///     SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 1_000)),
-///     SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 1_000)),
+/// let seats = Seats::new(vec![
+///     Seat::new(Player::new_with_chips("Alice".to_string(), 1_000)),
+///     Seat::new(Player::new_with_chips("Bob".to_string(), 1_000)),
 /// ]);
-/// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+/// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 /// let snap = TableSnapshot::from_table(&table, 0);
 /// let profile = BotProfile::gto();
 /// let action = RuleBasedDecider.decide(&profile, &snap);
@@ -128,13 +128,13 @@ pub trait BotDecider: Send + Sync {
 /// use pkcore::bot::profile::BotProfile;
 /// use pkcore::bot::table_snapshot::TableSnapshot;
 /// use pkcore::casino::game::ForcedBets;
-/// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+/// use pkcore::casino::table::{Player, Seat, Seats, Table};
 ///
-/// let seats = SeatsNoCell::new(vec![
-///     SeatNoCell::new(PlayerNoCell::new_with_chips("X".to_string(), 500)),
-///     SeatNoCell::new(PlayerNoCell::new_with_chips("Y".to_string(), 500)),
+/// let seats = Seats::new(vec![
+///     Seat::new(Player::new_with_chips("X".to_string(), 500)),
+///     Seat::new(Player::new_with_chips("Y".to_string(), 500)),
 /// ]);
-/// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(5, 10));
+/// let table = Table::nlh_from_seats(seats, ForcedBets::new(5, 10));
 /// let snap = TableSnapshot::from_table(&table, 0);
 /// let profile = BotProfile::tight_passive();
 /// let action = RuleBasedDecider.decide(&profile, &snap);
@@ -312,13 +312,13 @@ impl RuleBasedDecider {
 /// use pkcore::bot::profile::BotProfile;
 /// use pkcore::bot::sim::SimTable;
 /// use pkcore::casino::game::ForcedBets;
-/// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+/// use pkcore::casino::table::{Player, Seat, Seats, Table};
 ///
-/// let seats = SeatsNoCell::new(vec![
-///     SeatNoCell::new(PlayerNoCell::new_with_chips("joker".to_string(), 5_000)),
-///     SeatNoCell::new(PlayerNoCell::new_with_chips("gto".to_string(), 5_000)),
+/// let seats = Seats::new(vec![
+///     Seat::new(Player::new_with_chips("joker".to_string(), 5_000)),
+///     Seat::new(Player::new_with_chips("gto".to_string(), 5_000)),
 /// ]);
-/// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+/// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 /// let bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)> = vec![
 ///     (0, BotProfile::joker(), Box::new(JokerDecider::new())),
 ///     (1, BotProfile::gto(),   Box::new(pkcore::bot::decider::RuleBasedDecider)),
@@ -573,15 +573,15 @@ fn sized_bet_amount<R: rand::Rng + ?Sized>(state: &TableSnapshot, strategy: &Bet
 mod bot__decider_tests {
     use super::*;
     use crate::casino::game::ForcedBets;
-    use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    use crate::casino::table::{Player, Seat, Seats, Table};
     use crate::games::GamePhase;
 
     fn make_snapshot(seat: u8) -> TableSnapshot<'static> {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
         ]);
-        let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         TableSnapshot::from_table(&table, seat)
     }
 
@@ -938,7 +938,7 @@ mod bot__decider_tests {
     /// decider should bet on every turn when seat == button and seat_count == 6.
     #[test]
     fn rule_based_decider_uses_playbook_aggression_for_btn() {
-        use crate::casino::table::position::Position;
+        use crate::casino::position::Position;
 
         let profile = BotProfile::gto();
 
@@ -1174,11 +1174,11 @@ mod bot__decider_tests {
         use rand::SeedableRng;
         use rand::rngs::SmallRng;
 
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
         ]);
-        let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         let registry = StatsRegistry::new();
         let profile = BotProfile::tight_passive();
 

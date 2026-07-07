@@ -13,11 +13,11 @@ use pkcore::analysis::eval::Eval;
 use pkcore::arrays::{HandRanker, seven::Seven};
 use pkcore::bot::profile::BotProfile;
 use pkcore::casino::action::PlayerAction;
+use pkcore::casino::action::TableAction;
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::session::PokerSession;
-use pkcore::casino::table::event::TableAction;
-use pkcore::casino::table::winnings::Winnings;
-use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::casino::table::{Player, Seat, Seats, Table};
+use pkcore::casino::winnings::Winnings;
 use pkcore::hand_history::{HandCollection, HandHistory};
 use rand::Rng;
 use std::str::FromStr;
@@ -51,13 +51,13 @@ fn main() {
         })
         .collect();
 
-    let seats = SeatsNoCell::new(
+    let seats = Seats::new(
         profiles
             .iter()
-            .map(|p| SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), STARTING_CHIPS)))
+            .map(|p| Seat::new(Player::new_with_chips(p.name.clone(), STARTING_CHIPS)))
             .collect(),
     );
-    let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(SMALL_BLIND, BIG_BLIND));
+    let table = Table::nlh_from_seats(seats, ForcedBets::new(SMALL_BLIND, BIG_BLIND));
     let mut session = PokerSession::new(table);
     let mut rng = rand::rng();
     let mut collection = HandCollection::new();
@@ -265,7 +265,7 @@ fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl 
 
 // ── History helpers ───────────────────────────────────────────────────────────
 
-fn chip_counts(table: &TableNoCell) -> Vec<(u8, usize)> {
+fn chip_counts(table: &Table) -> Vec<(u8, usize)> {
     (0..table.seats.0.len() as u8)
         .filter_map(|i| {
             table
@@ -315,7 +315,7 @@ fn save_session(collection: &HandCollection) {
 }
 
 /// Returns a display string for a bot action (computed before applying it).
-fn action_desc(table: &TableNoCell, seat: u8, action: PlayerAction) -> String {
+fn action_desc(table: &Table, seat: u8, action: PlayerAction) -> String {
     match action {
         PlayerAction::Fold => "folds".to_string(),
         PlayerAction::Check => "checks".to_string(),
@@ -333,7 +333,7 @@ fn action_desc(table: &TableNoCell, seat: u8, action: PlayerAction) -> String {
 // ── Display helpers ───────────────────────────────────────────────────────────
 
 /// Prints each active player's hole cards after the deal.
-fn print_hole_cards(table: &TableNoCell, profiles: &[BotProfile]) {
+fn print_hole_cards(table: &Table, profiles: &[BotProfile]) {
     for (i, profile) in profiles.iter().enumerate() {
         if let Some(seat) = table.seats.get_seat(i as u8) {
             if seat.cards.has_cards() && seat.player.is_in_hand() {
@@ -344,7 +344,7 @@ fn print_hole_cards(table: &TableNoCell, profiles: &[BotProfile]) {
 }
 
 /// Prints each showdown player's hole cards and best-hand ranking.
-fn print_showdown_hands(table: &TableNoCell, profiles: &[BotProfile], board: &str) {
+fn print_showdown_hands(table: &Table, profiles: &[BotProfile], board: &str) {
     println!("  --- Showdown ---");
     for (i, profile) in profiles.iter().enumerate() {
         if let Some(seat) = table.seats.get_seat(i as u8) {
@@ -373,7 +373,7 @@ fn rank_seven(hole_cards: &str, board: &str) -> Option<Eval> {
     Some(Eval::new(hand_rank, hand))
 }
 
-fn print_stacks(table: &TableNoCell, profiles: &[BotProfile]) {
+fn print_stacks(table: &Table, profiles: &[BotProfile]) {
     print!("  Stacks:");
     for (i, profile) in profiles.iter().enumerate() {
         match table.seats.get_seat(i as u8) {
@@ -385,7 +385,7 @@ fn print_stacks(table: &TableNoCell, profiles: &[BotProfile]) {
 }
 
 /// Returns the profile name for a given seat index, or "?" if the seat is empty.
-fn seat_name(idx: u8, table: &TableNoCell, profiles: &[BotProfile]) -> String {
+fn seat_name(idx: u8, table: &Table, profiles: &[BotProfile]) -> String {
     if table.seats.get_seat(idx).map(|s| s.is_empty()).unwrap_or(true) {
         return "?".to_string();
     }

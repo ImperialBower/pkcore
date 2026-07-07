@@ -37,8 +37,8 @@ fn trained_config_outperforms_default_baseline() {
 
     // Evaluate both configs at higher fidelity for a reliable comparison.
     let field = default_field();
-    let baseline_score = evaluate(&ExploitConfig::default(), &field, 1_000, 5);
-    let trained_score = evaluate(&result.best_config, &field, 1_000, 5);
+    let baseline_score = evaluate(&ExploitConfig::default(), &field, 1_000, 5, 42);
+    let trained_score = evaluate(&result.best_config, &field, 1_000, 5, 42);
 
     assert!(
         trained_score >= baseline_score - 10.0,

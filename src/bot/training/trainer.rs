@@ -38,7 +38,7 @@ use crate::bot::training::evaluator::{self, FieldEntry};
 #[derive(Clone, Debug)]
 pub struct TrainingConfig {
     /// Maximum number of optimisation generations.  Training also terminates
-    /// early when `sigma` drops below `sigma_tol`.
+    /// early when `sigma` reaches (or falls to) `sigma_tol`.
     pub max_generations: usize,
     /// Hands per single heads-up session (one candidate × one opponent × one
     /// replicate).
@@ -50,8 +50,13 @@ pub struct TrainingConfig {
     pub lambda: usize,
     /// Initial step size as a fraction of each parameter's range.
     pub initial_sigma_fraction: f64,
-    /// Minimum sigma fraction; training halts when `sigma` falls below this.
+    /// Minimum sigma fraction; training halts once `sigma` reaches this floor.
     pub sigma_tol: f64,
+    /// Master RNG seed. Drives both the Gaussian mutation stream *and* every
+    /// fitness session's deck/decider RNG, so two `train()` calls with the same
+    /// `TrainingConfig` produce byte-identical `best_config`s. Change it to
+    /// explore a different (but still reproducible) trajectory.
+    pub seed: u64,
 }
 
 impl Default for TrainingConfig {
@@ -63,6 +68,7 @@ impl Default for TrainingConfig {
             lambda: 10,
             initial_sigma_fraction: 0.15,
             sigma_tol: 1e-4,
+            seed: 42,
         }
     }
 }
@@ -200,11 +206,14 @@ impl ExploitTrainer {
         // 1/5 success rule threshold: sigma increases when ≥ 1/5 of offspring improve.
         let success_threshold = ((lambda as f64 / 5.0).ceil() as usize).max(1);
 
-        let mut rng = SmallRng::seed_from_u64(42);
+        let mut rng = SmallRng::seed_from_u64(self.config.seed);
         let mut history = Vec::with_capacity(self.config.max_generations);
 
         for generation in 0..self.config.max_generations {
-            if sigma < self.config.sigma_tol {
+            // II.8: `<=`, not `<`. `sigma` clamps *at* `sigma_tol` (see the
+            // `.max(sigma_tol)` floor below), so a strict `<` could never fire
+            // and a converged run burned every generation.
+            if sigma <= self.config.sigma_tol {
                 break;
             }
 
@@ -264,7 +273,13 @@ impl ExploitTrainer {
     }
 
     fn fitness(&self, config: &ExploitConfig) -> f64 {
-        evaluator::evaluate(config, &self.field, self.config.hands_per_eval, self.config.replicates)
+        evaluator::evaluate(
+            config,
+            &self.field,
+            self.config.hands_per_eval,
+            self.config.replicates,
+            self.config.seed,
+        )
     }
 }
 
@@ -323,6 +338,47 @@ mod bot__training__trainer_tests {
         let result = trainer.train(&ExploitConfig::default());
         assert!(result.generations_run > 0);
         assert!(result.best_fitness.is_finite());
+    }
+
+    #[test]
+    fn train_twice_with_same_seed_is_reproducible() {
+        // II.9: identical TrainingConfig (hence identical seed) must produce a
+        // byte-identical best_config — the mutation stream and every fitness
+        // session are now seeded, so nothing rides the thread-local RNG.
+        let field = vec![("lp".to_string(), BotProfile::loose_passive())];
+        let trainer = ExploitTrainer::with_field(mini_config(), field);
+        let a = trainer.train(&ExploitConfig::default());
+        let b = trainer.train(&ExploitConfig::default());
+        assert_eq!(a.generations_run, b.generations_run);
+        assert_eq!(a.best_fitness, b.best_fitness, "seeded training must be reproducible");
+        assert_eq!(
+            encoding::encode(&a.best_config),
+            encoding::encode(&b.best_config),
+            "same seed must yield the same best_config"
+        );
+    }
+
+    #[test]
+    fn converged_run_terminates_before_max_generations() {
+        // II.8: with sigma already at the tolerance, the loop must exit at the
+        // top of generation 0 rather than burning all max_generations. Before
+        // the `<=` fix the strict `<` never fired (sigma clamps *at* sigma_tol).
+        let field = vec![("lp".to_string(), BotProfile::loose_passive())];
+        let config = TrainingConfig {
+            max_generations: 50,
+            hands_per_eval: 50,
+            replicates: 1,
+            lambda: 2,
+            initial_sigma_fraction: 1e-4,
+            sigma_tol: 1e-4,
+            ..TrainingConfig::default()
+        };
+        let trainer = ExploitTrainer::with_field(config, field);
+        let result = trainer.train(&ExploitConfig::default());
+        assert_eq!(
+            result.generations_run, 0,
+            "a run starting at sigma_tol must exit before generation 0"
+        );
     }
 
     #[test]

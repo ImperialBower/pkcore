@@ -1572,7 +1572,7 @@ impl Pile for Two {
     }
 
     fn card_at(self, _index: usize) -> Option<Card> {
-        todo!()
+        unimplemented!("Two is a fixed 2-card hand; use `.first()`/`.second()`, or `.cards().card_at(index)`")
     }
 
     fn clean(&self) -> Self {
@@ -1580,7 +1580,7 @@ impl Pile for Two {
     }
 
     fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
-        todo!()
+        unimplemented!("Two is a fixed 2-card hand; use `.cards()` for a swappable set")
     }
 
     /// When I look at the traits I've coded, they don't feel particularly rusty to me. One of my

@@ -10,7 +10,7 @@ use crate::bot::betting_strategy::BettingStrategy;
 use crate::bot::playbook::Playbook;
 use crate::bot::range_strategy::RangeStrategy;
 use crate::bot::weighted_range::WeightedRange;
-use crate::casino::table::position::Position;
+use crate::casino::position::Position;
 use crate::games::betting_structure::BettingStructure;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -120,8 +120,12 @@ pub enum BotError {
     /// The profile data is structurally invalid.
     InvalidProfile(String),
     /// A YAML parse or serialization error (requires `bot-profiles` feature).
+    ///
+    /// The `serde_yaml_bw` cause is stringified so the format crate does not leak
+    /// into pkcore's public API; the `From<serde_yaml_bw::Error>` impl is the
+    /// blessed conversion seam (`docs/AUDIT_Fable_5.md` III.2).
     #[cfg(feature = "bot-profiles")]
-    Yaml(serde_yaml_bw::Error),
+    Yaml(String),
     /// An I/O error reading or writing a profile file.
     #[cfg(not(target_arch = "wasm32"))]
     Io(std::io::Error),
@@ -144,7 +148,7 @@ impl std::error::Error for BotError {
         match self {
             BotError::InvalidProfile(_) => None,
             #[cfg(feature = "bot-profiles")]
-            BotError::Yaml(e) => Some(e),
+            BotError::Yaml(_) => None,
             #[cfg(not(target_arch = "wasm32"))]
             BotError::Io(e) => Some(e),
         }
@@ -152,9 +156,10 @@ impl std::error::Error for BotError {
 }
 
 #[cfg(feature = "bot-profiles")]
+#[allow(clippy::disallowed_types)] // blessed seam: format error stringified, never re-exposed
 impl From<serde_yaml_bw::Error> for BotError {
     fn from(e: serde_yaml_bw::Error) -> Self {
-        BotError::Yaml(e)
+        BotError::Yaml(e.to_string())
     }
 }
 
@@ -721,7 +726,7 @@ impl BotProfile {
     ///
     /// ```
     /// use pkcore::bot::profile::BotProfile;
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::position::Position;
     ///
     /// let profile = BotProfile::gto();
     /// // GTO playbook has a 6-max BTN open_raise entry
@@ -749,7 +754,7 @@ impl BotProfile {
     ///
     /// ```
     /// use pkcore::bot::profile::BotProfile;
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::position::Position;
     ///
     /// let profile = BotProfile::gto();
     /// // Falls back to range_strategy.open_raise
@@ -776,7 +781,7 @@ impl BotProfile {
     ///
     /// ```
     /// use pkcore::bot::profile::BotProfile;
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::position::Position;
     ///
     /// let profile = BotProfile::gto();
     /// // GTO playbook: BTN plays more aggressively than the flat default
@@ -920,15 +925,15 @@ impl BotProfile {
     /// use pkcore::bot::profile::BotProfile;
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use rand::SeedableRng;
     /// use rand::rngs::SmallRng;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
-    /// let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// table.act_forced_bets().unwrap();
     /// table.deal_cards_to_seats().unwrap();
     /// let profile = BotProfile::tight_passive();
@@ -941,21 +946,14 @@ impl BotProfile {
     /// ```
     pub fn decide<R: rand::Rng>(
         &self,
-        table: &crate::casino::table_no_cell::TableNoCell,
+        table: &crate::casino::table::Table,
         seat: u8,
         rng: &mut R,
     ) -> crate::casino::action::PlayerAction {
-        use crate::bot::player_action::PlayerAction as BotAction;
-        use crate::casino::action::PlayerAction;
+        // `bot::player_action::PlayerAction` and `casino::action::PlayerAction`
+        // are the same type now, so the decider's output needs no translation.
         let snapshot = crate::bot::table_snapshot::TableSnapshot::from_table(table, seat);
-        match crate::bot::decider::RuleBasedDecider::decide_with_rng(self, &snapshot, rng) {
-            BotAction::Fold => PlayerAction::Fold,
-            BotAction::Check => PlayerAction::Check,
-            BotAction::Call => PlayerAction::Call,
-            BotAction::Bet(n) => PlayerAction::Bet(n),
-            BotAction::Raise(n) => PlayerAction::Raise(n),
-            BotAction::AllIn => PlayerAction::AllIn,
-        }
+        crate::bot::decider::RuleBasedDecider::decide_with_rng(self, &snapshot, rng)
     }
 }
 

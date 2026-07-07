@@ -29,6 +29,20 @@ jobs:
       - run: cargo test --features pokerbench
       - run: cargo clippy --features pokerbench -- -D warnings
 
+  optional-features:
+    name: Optional features (bot-training, debug-json)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # bot-training and debug-json compile today but nothing on CI built them,
+      # so they could silently rot (audit VI.4 / P7). Exercise both explicitly.
+      # The heavy `training_integration` run stays #[ignore]d (release-only), so
+      # this only compiles the feature + runs the fast unit/doc tests.
+      - run: cargo test --features bot-training
+      - run: cargo test --features debug-json
+
   marathon:
     name: Bot Marathon (1 000 hands)
     runs-on: ubuntu-latest
@@ -47,3 +61,34 @@ jobs:
           name: marathon-failure-${{ github.run_id }}
           path: marathon_failure.yaml
           if-no-files-found: ignore
+
+  variant-replays:
+    name: Variant replays (FLHE/PLO/Stud/Razz)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # The marathon job above is NLHE-only. These round-trips drive a full
+      # bot-selfplay hand of each non-hold'em variant through the engine and
+      # replay it — the only CI coverage that exercises the II.1–II.6 betting
+      # rules (PLO pot cap, stud completion, Razz ace-low bring-in, antes as
+      # dead money) end to end. They are `#[ignore]`d for local speed, so run
+      # them explicitly here.
+      - name: Run variant replay round-trips
+        run: cargo test --test replay_consistency -- --include-ignored --nocapture
+
+  package:
+    name: Package smoke (published-crate build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # Publish-honesty gate (audit P1): verify-build the crate exactly as it
+      # ships from the packaged tarball — the ~403 MB generated/bcm.zst is absent
+      # here, so this proves the BCM-backed APIs degrade to Err(BcmUnavailable)
+      # rather than failing the build, and that no excluded internal files are
+      # required to compile.
+      - name: cargo package (verify build of packaged crate)
+        run: cargo package

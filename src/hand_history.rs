@@ -60,12 +60,12 @@ use crate::card::Card;
 use crate::cards::Cards;
 #[cfg(feature = "bot-profiles")]
 use crate::casino::action::PlayerAction;
+use crate::casino::action::TableAction;
 use crate::casino::game::ForcedBets;
-use crate::casino::table::event::TableAction;
-use crate::casino::table::position::Position;
-use crate::casino::table::winnings::Winnings;
+use crate::casino::position::Position;
 #[cfg(feature = "bot-profiles")]
-use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use crate::casino::table::{Player, Seat, Seats, Table};
+use crate::casino::winnings::Winnings;
 #[cfg(feature = "bot-profiles")]
 use crate::games::GamePhase;
 use crate::play::board::Board;
@@ -188,7 +188,7 @@ fn default_format_version() -> u32 {
 /// [`HandHistory::from_table_state_with_ids`].
 ///
 /// `(seat, name, starting_stack, hole_cards, player_id)` — `player_id` is
-/// the per-player [`Uuid`] (typically `PlayerNoCell.id`); pass `None` when
+/// the per-player [`Uuid`] (typically `Player.id`); pass `None` when
 /// identity threading is not needed (or use the simpler 4-tuple
 /// [`HandHistory::from_table_state`] entry point).
 pub type PlayerSnapshot = (u8, String, usize, Option<String>, Option<Uuid>);
@@ -200,7 +200,7 @@ impl HandHistory {
     /// This is the canonical way to build a hand history from a live or
     /// simulated game. Capture `player_snapshot` **before** forced bets and
     /// hole cards immediately **after** the deal, then call this function
-    /// right after [`TableNoCell::end_hand`](crate::casino::table_no_cell::TableNoCell::end_hand).
+    /// right after [`Table::end_hand`](crate::casino::table::Table::end_hand).
     ///
     /// Snapshots produced by this entry point carry no per-player [`Uuid`].
     /// Callers that need identity threading (player-stats aggregation,
@@ -226,7 +226,7 @@ impl HandHistory {
     /// ```
     /// use pkcore::hand_history::HandHistory;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table::winnings::Winnings;
+    /// use pkcore::casino::winnings::Winnings;
     ///
     /// let hh = HandHistory::from_table_state(
     ///     1, 0, 0,
@@ -283,14 +283,14 @@ impl HandHistory {
     ///
     /// Same as [`Self::from_table_state`] except `player_snapshot` carries an
     /// extra `Option<Uuid>` element per seat (typically `Some(player.id)`
-    /// where `player.id` is the [`Uuid`] from `PlayerNoCell`).
+    /// where `player.id` is the [`Uuid`] from `Player`).
     ///
     /// # Examples
     ///
     /// ```
     /// use pkcore::hand_history::HandHistory;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table::winnings::Winnings;
+    /// use pkcore::casino::winnings::Winnings;
     /// use uuid::Uuid;
     ///
     /// let alice = Uuid::new_v4();
@@ -461,7 +461,7 @@ impl HandHistory {
         self
     }
 
-    /// Replays all recorded actions from `streets` through a fresh [`TableNoCell`]
+    /// Replays all recorded actions from `streets` through a fresh [`Table`]
     /// and verifies the final chip counts match the recorded `results`.
     ///
     /// This is useful for testing hand-history consistency: generate a session,
@@ -563,14 +563,11 @@ impl HandHistory {
         let max_seat = self.players.iter().map(|p| p.seat as usize).max().unwrap_or(0);
         let button_seat = self.table.button.unwrap_or(0) as usize;
         let table_size = max_seat.max(button_seat) + 1;
-        let mut seats_vec: Vec<SeatNoCell> = (0..table_size)
-            .map(|_| SeatNoCell::new(PlayerNoCell::default()))
-            .collect();
+        let mut seats_vec: Vec<Seat> = (0..table_size).map(|_| Seat::new(Player::default())).collect();
         for p in &self.players {
-            seats_vec[p.seat as usize] =
-                SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), p.stack as usize));
+            seats_vec[p.seat as usize] = Seat::new(Player::new_with_chips(p.name.clone(), p.stack as usize));
         }
-        let seats = SeatsNoCell::new(seats_vec);
+        let seats = Seats::new(seats_vec);
         // EPIC-30 Phase 9 / EPIC-31 Phase 5: dispatch on recorded
         // variant + structure so PLO replays through `plo_from_seats`,
         // FLHE replays through `limit_holdem_from_seats`, and everything
@@ -596,20 +593,20 @@ impl HandHistory {
                 _ => (sb.max(20), bb.max(40)),
             };
             if self.hand.game == HandVariant::Razz {
-                TableNoCell::razz_from_seats(seats, ante, bring_in, small_bet, big_bet)
+                Table::razz_from_seats(seats, ante, bring_in, small_bet, big_bet)
             } else {
-                TableNoCell::stud_hi_from_seats(seats, ante, bring_in, small_bet, big_bet)
+                Table::stud_hi_from_seats(seats, ante, bring_in, small_bet, big_bet)
             }
         } else if self.hand.game == HandVariant::Omaha {
-            TableNoCell::plo_from_seats(seats, (sb, bb))
+            Table::plo_from_seats(seats, (sb, bb))
         } else {
             match self.table.betting_structure {
                 crate::games::betting_structure::BettingStructure::FixedLimit {
                     small_bet,
                     big_bet,
                     raise_cap,
-                } => TableNoCell::limit_holdem_from_seats(seats, small_bet, big_bet, raise_cap),
-                _ => TableNoCell::nlh_from_seats(seats, ForcedBets::new(sb, bb)),
+                } => Table::limit_holdem_from_seats(seats, small_bet, big_bet, raise_cap),
+                _ => Table::nlh_from_seats(seats, ForcedBets::new(sb, bb)),
             }
         };
         table.button = button;
@@ -662,7 +659,7 @@ impl HandHistory {
         }
 
         // ── Street replay helper ─────────────────────────────────────────────
-        let replay_actions = |table: &mut TableNoCell, actions: &[Action]| -> Result<(), PKError> {
+        let replay_actions = |table: &mut Table, actions: &[Action]| -> Result<(), PKError> {
             for action in actions {
                 if let Some(pa) = action_to_player_action(action) {
                     table.apply_action(action.seat, pa)?;
@@ -786,13 +783,58 @@ impl HandHistory {
 // YAML I/O (feature-gated)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// Error returned by [`HandHistory`] / [`HandCollection`] YAML (de)serialization.
+///
+/// The underlying `serde_yaml_bw` error is stringified so the format crate does
+/// not leak into pkcore's public API — keeping the domain-kernel boundary narrow
+/// (see `docs/AUDIT_Fable_5.md` III.2). The `From<serde_yaml_bw::Error>` impl is
+/// the blessed conversion seam.
+///
+/// # Examples
+///
+/// ```
+/// # #[cfg(feature = "hand-histories")]
+/// # {
+/// use pkcore::hand_history::HandHistoryError;
+///
+/// let err = HandHistoryError::Yaml("bad indentation".to_string());
+/// assert!(err.to_string().contains("bad indentation"));
+/// # }
+/// ```
+#[cfg(feature = "hand-histories")]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub enum HandHistoryError {
+    /// A YAML parse or serialization failure, carrying the stringified cause.
+    Yaml(String),
+}
+
+#[cfg(feature = "hand-histories")]
+impl std::fmt::Display for HandHistoryError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HandHistoryError::Yaml(msg) => write!(f, "HandHistoryError::Yaml YAML (de)serialization failed: {msg}"),
+        }
+    }
+}
+
+#[cfg(feature = "hand-histories")]
+impl std::error::Error for HandHistoryError {}
+
+#[cfg(feature = "hand-histories")]
+#[allow(clippy::disallowed_types)] // blessed seam: format error stringified, never re-exposed
+impl From<serde_yaml_bw::Error> for HandHistoryError {
+    fn from(e: serde_yaml_bw::Error) -> Self {
+        HandHistoryError::Yaml(e.to_string())
+    }
+}
+
 #[cfg(feature = "hand-histories")]
 impl HandHistory {
     /// Deserialize a [`HandHistory`] from a YAML string.
     ///
     /// # Errors
     ///
-    /// Returns [`serde_yaml_bw::Error`] if the YAML is malformed or required
+    /// Returns [`HandHistoryError::Yaml`] if the YAML is malformed or required
     /// fields are missing.
     ///
     /// # Examples
@@ -814,15 +856,15 @@ impl HandHistory {
     /// let hh = HandHistory::from_yaml(yaml).unwrap();
     /// assert_eq!(hh.hand.id, "ex-002");
     /// ```
-    pub fn from_yaml(yaml: &str) -> Result<Self, serde_yaml_bw::Error> {
-        serde_yaml_bw::from_str(yaml)
+    pub fn from_yaml(yaml: &str) -> Result<Self, HandHistoryError> {
+        Ok(serde_yaml_bw::from_str(yaml)?)
     }
 
     /// Serialize this [`HandHistory`] to a YAML string.
     ///
     /// # Errors
     ///
-    /// Returns [`serde_yaml_bw::Error`] if serialization fails.
+    /// Returns [`HandHistoryError::Yaml`] if serialization fails.
     ///
     /// # Examples
     ///
@@ -844,8 +886,8 @@ impl HandHistory {
     /// let out = hh.to_yaml().unwrap();
     /// assert!(out.contains("rt-001"));
     /// ```
-    pub fn to_yaml(&self) -> Result<String, serde_yaml_bw::Error> {
-        serde_yaml_bw::to_string(self)
+    pub fn to_yaml(&self) -> Result<String, HandHistoryError> {
+        Ok(serde_yaml_bw::to_string(self)?)
     }
 }
 
@@ -1045,7 +1087,7 @@ impl HandCollection {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::position::Position;
     /// use pkcore::hand_history::HandCollection;
     ///
     /// let collection = HandCollection::new();
@@ -1142,7 +1184,7 @@ impl HandCollection {
     ///
     /// # Errors
     ///
-    /// Returns a [`serde_yaml_bw::Error`] if the YAML is malformed or does not
+    /// Returns a [`HandHistoryError::Yaml`] if the YAML is malformed or does not
     /// match the expected schema.
     ///
     /// # Examples
@@ -1168,8 +1210,8 @@ impl HandCollection {
     /// assert_eq!(collection.len(), 1);
     /// # }
     /// ```
-    pub fn from_yaml(yaml: &str) -> Result<Self, serde_yaml_bw::Error> {
-        serde_yaml_bw::from_str(yaml)
+    pub fn from_yaml(yaml: &str) -> Result<Self, HandHistoryError> {
+        Ok(serde_yaml_bw::from_str(yaml)?)
     }
 
     /// Serialize this [`HandCollection`] to a YAML string.
@@ -1179,7 +1221,7 @@ impl HandCollection {
     ///
     /// # Errors
     ///
-    /// Returns a [`serde_yaml_bw::Error`] if serialization fails.
+    /// Returns a [`HandHistoryError::Yaml`] if serialization fails.
     ///
     /// # Examples
     ///
@@ -1193,8 +1235,8 @@ impl HandCollection {
     /// assert!(yaml.contains("hands:"));
     /// # }
     /// ```
-    pub fn to_yaml(&self) -> Result<String, serde_yaml_bw::Error> {
-        serde_yaml_bw::to_string(self)
+    pub fn to_yaml(&self) -> Result<String, HandHistoryError> {
+        Ok(serde_yaml_bw::to_string(self)?)
     }
 
     /// Serialize and save this collection to `generated/<run_name>_<unix_ts>.yaml`.
@@ -1421,7 +1463,7 @@ pub struct PlayerEntry {
     ///
     /// `None` when the entry comes from a legacy YAML file that was written
     /// before EPIC-26 added identity propagation. New sessions populate it
-    /// from `PlayerNoCell::uuid`.
+    /// from `Player::uuid`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub player_id: Option<Uuid>,
 
@@ -1444,7 +1486,7 @@ pub struct PlayerEntry {
     /// cards were dealt face-up on each street; Hold'em/Omaha records
     /// leave this `None` (cards are implicitly all Down).
     ///
-    /// Replay (via [`crate::casino::table_no_cell::TableNoCell::inject_hole_cards`])
+    /// Replay (via [`crate::casino::table::Table::inject_hole_cards`])
     /// reads this field when present and pushes each card to the seat's
     /// `SeatHand` with the recorded visibility. When `None`, all cards
     /// are pushed as `Visibility::Down`.
@@ -1455,7 +1497,7 @@ pub struct PlayerEntry {
     /// plus every subsequent reload — at the time the hand was recorded.
     /// `None` for legacy YAML files written before this field existed, and
     /// for any session that wasn't tracking reloads. Pairs with
-    /// `Player::withdrawn` / `PlayerNoCell::withdrawn` at the player level
+    /// `Player::withdrawn` / `Player::withdrawn` at the player level
     /// and feeds the profit/loss calc `stack + chips_in_pot - withdrawn`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub withdrawn: Option<f64>,
@@ -1637,7 +1679,7 @@ enum EventStreet {
 }
 
 impl Streets {
-    /// Build a [`Streets`] record by parsing a `TableNoCell` event log.
+    /// Build a [`Streets`] record by parsing a `Table` event log.
     ///
     /// Walks `log` in a single forward pass, partitioning player-action events
     /// into preflop / flop / turn / river buckets. [`TableAction::DealtFlop`],
@@ -1647,7 +1689,7 @@ impl Streets {
     /// becomes that street's `pot`.
     ///
     /// All amounts are stored as [`f64`] (the `HandHistory` convention) after
-    /// casting from the `usize` chip counts used internally by `TableNoCell`.
+    /// casting from the `usize` chip counts used internally by `Table`.
     ///
     /// Returns `None` only if `log` is empty.
     ///
@@ -1655,7 +1697,7 @@ impl Streets {
     ///
     /// ```
     /// use pkcore::hand_history::Streets;
-    /// use pkcore::casino::table::event::TableAction;
+    /// use pkcore::casino::action::TableAction;
     ///
     /// let log = vec![
     ///     TableAction::ForcedBetSmallBlind(1, 50),
@@ -1697,7 +1739,7 @@ impl Streets {
     /// ```
     /// use std::collections::HashMap;
     /// use pkcore::hand_history::Streets;
-    /// use pkcore::casino::table::event::TableAction;
+    /// use pkcore::casino::action::TableAction;
     /// use uuid::Uuid;
     ///
     /// let alice = Uuid::new_v4();
@@ -2286,6 +2328,7 @@ pub struct Action {
 /// ```
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive] // 0.2.0: this is a serialized wire enum; adding a variant must stay non-breaking.
 pub enum ActionType {
     /// Discard hand and exit the pot.
     Fold,
@@ -2616,7 +2659,7 @@ fn action_to_player_action(action: &Action) -> Option<PlayerAction> {
     clippy::cast_sign_loss
 )]
 fn build_replay_result(
-    mut table: TableNoCell,
+    mut table: Table,
     players: &[PlayerEntry],
     results: Option<&[ResultEntry]>,
 ) -> Result<ReplayResult, PKError> {
@@ -2655,6 +2698,36 @@ fn build_replay_result(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // P9j.6 — the owned HandHistoryError's Display/Error/From impls were untested.
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn hand_history_error_display_includes_the_cause() {
+        let err = HandHistoryError::Yaml("bad indentation".to_string());
+        let shown = err.to_string();
+        assert!(
+            shown.contains("bad indentation"),
+            "Display must surface the cause: {shown}"
+        );
+        assert!(shown.contains("YAML"));
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn hand_history_error_is_a_std_error_with_no_source() {
+        let err = HandHistoryError::Yaml("boom".to_string());
+        let as_dyn: &dyn std::error::Error = &err;
+        assert!(as_dyn.source().is_none());
+    }
+
+    #[cfg(feature = "hand-histories")]
+    #[test]
+    fn hand_history_error_from_serde_yaml_error_stringifies() {
+        // A real serde_yaml_bw failure (a mapping where an integer is expected)
+        // converts through the blessed From seam into the owned Yaml variant.
+        let yaml_err = serde_yaml_bw::from_str::<i32>("foo: bar").unwrap_err();
+        assert!(matches!(HandHistoryError::from(yaml_err), HandHistoryError::Yaml(_)));
+    }
 
     // Embedded YAML for "The Hand" so tests run without filesystem access.
     #[cfg(feature = "hand-histories")]
@@ -3429,7 +3502,7 @@ hands:
     #[test]
     fn test_from_table_state_hand_id_and_source() {
         use crate::casino::game::ForcedBets;
-        use crate::casino::table::winnings::Winnings;
+        use crate::casino::winnings::Winnings;
 
         let hh = HandHistory::from_table_state(
             3,
@@ -3453,7 +3526,7 @@ hands:
     #[test]
     fn test_from_table_state_net_calculation() {
         use crate::casino::game::ForcedBets;
-        use crate::casino::table::winnings::Winnings;
+        use crate::casino::winnings::Winnings;
 
         let hh = HandHistory::from_table_state(
             1,
@@ -3618,7 +3691,7 @@ hands:
     /// Seats 2/4/6 with button at 1 (empty). Seat 2 folds preflop; seats 4 and 6
     /// see the flop. On the flop seat 4 checks, seat 6 opens for 250, seat 4
     /// folds.  The second action by seat 4 was previously rejected as
-    /// "out of order" because `SeatsNoCell::next_to_act` skipped the checker when
+    /// "out of order" because `Seats::next_to_act` skipped the checker when
     /// `everyone_has_bet` was true but the current-bet comparison used the wrong
     /// branch ordering.
     #[cfg(feature = "bot-profiles")]
@@ -3891,7 +3964,7 @@ hands:
     #[test]
     fn test_hand_history_shuffled_deck_round_trips() {
         use crate::casino::game::ForcedBets;
-        use crate::casino::table::winnings::Winnings;
+        use crate::casino::winnings::Winnings;
 
         let deck_str = "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣";
 
@@ -3943,7 +4016,7 @@ hands:
     #[test]
     fn test_from_table_state_stores_shuffled_deck() {
         use crate::casino::game::ForcedBets;
-        use crate::casino::table::winnings::Winnings;
+        use crate::casino::winnings::Winnings;
 
         let deck_str = "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣";
 

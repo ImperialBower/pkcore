@@ -22,7 +22,7 @@ use pkcore::bot::profile::BotProfile;
 use pkcore::casino::action::PlayerAction;
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::session::PokerSession;
-use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::casino::table::{Player, Seat, Seats, Table};
 use pkcore::hand_history::{HandCollection, HandHistory};
 
 const SB: usize = 50;
@@ -102,11 +102,11 @@ fn validate_last_hand(hand_num: usize, collection: &HandCollection) {
 fn bot_marathon__1000_hands_without_error() {
     let profiles = BotProfile::default_profiles();
 
-    let seats_vec: Vec<SeatNoCell> = profiles
+    let seats_vec: Vec<Seat> = profiles
         .iter()
-        .map(|p| SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), STARTING_CHIPS)))
+        .map(|p| Seat::new(Player::new_with_chips(p.name.clone(), STARTING_CHIPS)))
         .collect();
-    let table = TableNoCell::nlh_from_seats(SeatsNoCell::new(seats_vec), ForcedBets::new(SB, BB));
+    let table = Table::nlh_from_seats(Seats::new(seats_vec), ForcedBets::new(SB, BB));
     let mut session = PokerSession::new(table);
     let mut rng = rand::rng();
     let mut collection = HandCollection::new();

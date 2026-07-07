@@ -15,30 +15,96 @@ use std::error::Error;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Write};
 
+/// Loads the Binary Card Map from a zstd-compressed binary file of 18-byte
+/// records: 8 bytes bc (u64 LE) + 8 bytes best (u64 LE) + 2 bytes rank (u16 LE).
+///
 /// This code is brutal, heavy, and wonderful. It is an optimization that makes things much slower
 /// in the short term, and MUCH faster in the long term. Eventually, we will want containers that
 /// have all this stuff loaded for bear. We're not there yet.
 ///
-/// Reads from a zstd-compressed binary file (`generated/bcm.zst`) containing 18-byte records:
-/// 8 bytes bc (u64 LE) + 8 bytes best (u64 LE) + 2 bytes rank (u16 LE).
+/// This is the pure, testable core behind [`BC_RANK_HASHMAP`]: it takes an
+/// explicit `path` so callers (and tests) can exercise the missing-data branch
+/// deterministically, independent of the process-wide lazy cache.
 ///
-/// TODO TD: Add logging
-#[allow(clippy::unwrap_used)]
-pub static BC_RANK_HASHMAP: std::sync::LazyLock<HashMap<Bard, FiveBCM>> = std::sync::LazyLock::new(|| {
-    let mut m = HashMap::new();
-    let file = File::open(SevenFiveBCM::get_filepath()).unwrap();
-    let decoder = zstd::stream::read::Decoder::new(file).unwrap();
+/// # Errors
+///
+/// Returns [`PKError::BcmUnavailable`] if the file cannot be opened or the zstd
+/// stream cannot be decoded — most commonly because `generated/bcm.zst` is
+/// self-generated data absent from a published-crate install.
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::analysis::store::bcm::binary_card_map::load_bc_rank_map;
+/// use pkcore::prelude::PKError;
+///
+/// // A path with no BCM file reports the absence instead of panicking.
+/// let result = load_bc_rank_map("nonexistent/bcm.zst");
+/// assert!(matches!(result, Err(PKError::BcmUnavailable)));
+/// ```
+pub fn load_bc_rank_map(path: &str) -> Result<HashMap<Bard, FiveBCM>, PKError> {
+    let file = File::open(path).map_err(|e| {
+        log::error!("BCM file unavailable at {path}: {e}");
+        PKError::BcmUnavailable
+    })?;
+    let decoder = zstd::stream::read::Decoder::new(file).map_err(|e| {
+        log::error!("BCM zstd decode failed for {path}: {e}");
+        PKError::BcmUnavailable
+    })?;
     let mut reader = BufReader::new(decoder);
 
+    let mut m = HashMap::new();
     let mut buf = [0u8; 18];
     while reader.read_exact(&mut buf).is_ok() {
-        let bc = Bard::from(u64::from_le_bytes(buf[0..8].try_into().unwrap()));
-        let best = Bard::from(u64::from_le_bytes(buf[8..16].try_into().unwrap()));
+        let (mut lo, mut hi) = ([0u8; 8], [0u8; 8]);
+        lo.copy_from_slice(&buf[0..8]);
+        hi.copy_from_slice(&buf[8..16]);
+        let bc = Bard::from(u64::from_le_bytes(lo));
+        let best = Bard::from(u64::from_le_bytes(hi));
         let rank = u16::from_le_bytes([buf[16], buf[17]]);
         m.insert(bc, FiveBCM::new(best, rank));
     }
-    m
-});
+    Ok(m)
+}
+
+/// Lazily-loaded Binary Card Map, or `None` when the backing data is absent.
+///
+/// Loaded once on first access from [`SevenFiveBCM::get_filepath`]. Prefer the
+/// [`bc_rank_hashmap`] accessor, which surfaces a [`PKError::BcmUnavailable`]
+/// rather than exposing the `Option` directly. Absence is logged, never panicked.
+pub static BC_RANK_HASHMAP: std::sync::LazyLock<Option<HashMap<Bard, FiveBCM>>> =
+    std::sync::LazyLock::new(|| load_bc_rank_map(&SevenFiveBCM::get_filepath()).ok());
+
+/// Returns the process-wide Binary Card Map, loading it once on first call.
+///
+/// This is the honest entry point for BCM-backed APIs: on a published-crate
+/// install (where `generated/bcm.zst` is absent) it returns an error instead of
+/// panicking.
+///
+/// # Errors
+///
+/// Returns [`PKError::BcmUnavailable`] if the BCM data file could not be loaded
+/// (see [`load_bc_rank_map`]).
+///
+/// # Examples
+///
+/// `no_run`: the first call forces the `LazyLock` to decode the full ~403 MB
+/// `generated/bcm.zst` (all C(52,7) entries), which is far too slow for a test.
+/// The example is compiled for correctness but not executed.
+///
+/// ```no_run
+/// use pkcore::analysis::store::bcm::binary_card_map::bc_rank_hashmap;
+///
+/// // Returns the loaded map, or Err(BcmUnavailable) on a published-crate
+/// // install where the self-generated data file is absent — never panics.
+/// match bc_rank_hashmap() {
+///     Ok(map) => { let _ = map.len(); }
+///     Err(e) => { let _ = e; }
+/// }
+/// ```
+pub fn bc_rank_hashmap() -> Result<&'static HashMap<Bard, FiveBCM>, PKError> {
+    BC_RANK_HASHMAP.as_ref().ok_or(PKError::BcmUnavailable)
+}
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct FiveBCM {
@@ -238,7 +304,7 @@ impl Sqlable<SevenFiveBCM, Bard> for SevenFiveBCM {
     }
 
     fn exists(_conn: &Connection, _record: &Bard) -> bool {
-        todo!()
+        unimplemented!("SevenFiveBCM::exists is not implemented; use `select(...).is_some()`")
     }
 
     fn insert(conn: &Connection, bcm: &SevenFiveBCM) -> rusqlite::Result<bool> {
@@ -252,7 +318,7 @@ impl Sqlable<SevenFiveBCM, Bard> for SevenFiveBCM {
     }
 
     fn insert_many(_conn: &Connection, _records: Vec<&SevenFiveBCM>) -> rusqlite::Result<usize> {
-        todo!()
+        unimplemented!("SevenFiveBCM::insert_many is not implemented; insert rows individually via `insert()`")
     }
 
     fn select(conn: &Connection, bc: &Bard) -> Option<SevenFiveBCM> {
@@ -277,7 +343,9 @@ impl Sqlable<SevenFiveBCM, Bard> for SevenFiveBCM {
     }
 
     fn select_all(_conn: &Connection) -> Vec<SevenFiveBCM> {
-        todo!()
+        unimplemented!(
+            "SevenFiveBCM::select_all is not implemented; the BCM table is huge — query specific rows via `select()`"
+        )
     }
 }
 
@@ -329,6 +397,26 @@ mod analysis__store__bcm__binary_card_map_tests {
     use crate::analysis::store::db::sqlite::Connect;
     use crate::util::data::TestData;
     use std::str::FromStr;
+
+    /// Published-crate honesty gate: with no BCM data present, the loader must
+    /// return `Err(BcmUnavailable)` — never panic. A bogus path exercises the
+    /// missing-data branch deterministically, regardless of whether this machine
+    /// has generated the real ~403 MB `generated/bcm.zst`.
+    #[test]
+    fn load_bc_rank_map__missing_file_is_err() {
+        assert!(matches!(
+            load_bc_rank_map("nonexistent/definitely-not-here.zst"),
+            Err(PKError::BcmUnavailable)
+        ));
+    }
+
+    // NOTE: `bc_rank_hashmap()` is deliberately NOT unit-tested. Any access to
+    // the `BC_RANK_HASHMAP` static forces the `LazyLock` to decode the full
+    // ~403 MB `generated/bcm.zst` on machines where it exists (400s+, past the
+    // nextest timeout), and on CI where it is absent the accessor's `ok_or`
+    // wrapper is trivial. Coverage lives in `load_bc_rank_map__missing_file_is_err`
+    // (the pure, path-injectable core) instead; the accessor carries a `no_run`
+    // doctest.
 
     #[test]
     fn try_from__five() {

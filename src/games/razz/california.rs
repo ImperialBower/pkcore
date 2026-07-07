@@ -1,10 +1,63 @@
 use crate::Pile;
 use crate::arrays::five::Five;
+use crate::prelude::Rank;
 use std::fmt;
 use std::fmt::Display;
 use std::fmt::Formatter;
 use strum::{EnumIter, IntoEnumIterator};
 use strum_macros::AsRefStr;
+
+/// Empty marker type for California lowball evaluation helpers.
+///
+/// This type intentionally carries no data and is used as a namespace for
+/// variant-specific utility methods.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct California;
+
+impl California {
+    /// Ace-low ordinal for a rank: the ace ranks below the deuce (Razz/lowball),
+    /// every other rank keeps its natural value. Used for Razz upcard ordering,
+    /// where a King outranks an Ace.
+    ///
+    /// # Examples
+    /// ```rust
+    /// use pkcore::games::razz::california::California;
+    /// use pkcore::prelude::Rank;
+    ///
+    /// assert_eq!(1, California::ace_low_rank(Rank::ACE));
+    /// assert_eq!(2, California::ace_low_rank(Rank::DEUCE));
+    /// assert_eq!(13, California::ace_low_rank(Rank::KING));
+    /// ```
+    #[must_use]
+    pub fn ace_low_rank(rank: Rank) -> u8 {
+        match rank {
+            Rank::ACE => 1,
+            other => other as u8,
+        }
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod games__razz__california__ace_low_tests {
+    use super::*;
+
+    // P9j.6 — unit coverage for the ace-low ordinal that drives Razz upcard
+    // ordering (previously only a doctest existed).
+    #[test]
+    fn ace_low_rank__ace_is_below_the_deuce() {
+        assert_eq!(1, California::ace_low_rank(Rank::ACE));
+        assert_eq!(2, California::ace_low_rank(Rank::DEUCE));
+    }
+
+    #[test]
+    fn ace_low_rank__non_ace_ranks_keep_natural_value() {
+        assert_eq!(13, California::ace_low_rank(Rank::KING));
+        assert_eq!(10, California::ace_low_rank(Rank::TEN));
+        // A King therefore outranks an Ace under ace-low ordering.
+        assert!(California::ace_low_rank(Rank::KING) > California::ace_low_rank(Rank::ACE));
+    }
+}
 
 pub type CaliforniaHandRankValue = u16;
 

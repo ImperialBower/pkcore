@@ -1,10 +1,13 @@
+#[cfg(feature = "store")]
 use pkcore::analysis::store::db::hup::HUPResult;
 use pkcore::games::kuhn::KuhnCfr;
+#[cfg(feature = "store")]
 use pkcore::util::data::TestData;
 
 #[allow(non_snake_case)]
 mod heavy_tests {
     use super::*;
+    #[cfg(feature = "store")]
     use wincounter::win::Win;
 
     /// Wow, this test caused a panic:
@@ -45,6 +48,7 @@ mod heavy_tests {
     /// Luckily it passed. 🎉
     ///
     /// Now, a test of the same data against `impl From<&SortedHeadsUp> for HUPResult`.
+    #[cfg(feature = "store")]
     #[test]
     #[ignore]
     fn sorted_heads_up__wins() {
@@ -89,6 +93,7 @@ mod heavy_tests {
     ///
     /// Subtracting times from each wins makes the test pass. Now, we're going to lock it in the
     /// vault with an ignore.
+    #[cfg(feature = "store")]
     #[test]
     #[ignore]
     fn hup_result__from__sorted_heads_up() {

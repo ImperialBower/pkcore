@@ -8,7 +8,7 @@ use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::cards::Cards;
 use crate::play::board::Board;
-use crate::prelude::Seats;
+use crate::prelude::SeatsCell;
 use crate::util::Util;
 use crate::{Card, PKError, Pile, Plurable, TheNuts};
 use itertools::Itertools;
@@ -229,8 +229,8 @@ impl fmt::Display for HoleCards {
     }
 }
 
-impl From<Seats> for HoleCards {
-    fn from(seats: Seats) -> Self {
+impl From<SeatsCell> for HoleCards {
+    fn from(seats: SeatsCell) -> Self {
         let mut hands = HoleCards::with_capacity(seats.size() as usize);
         for seat in seats.iter() {
             if seat.is_in_hand() {
@@ -285,19 +285,19 @@ impl Pile for HoleCards {
     }
 
     fn card_at(self, _index: usize) -> Option<Card> {
-        todo!()
+        unimplemented!("HoleCards is a fixed holding; use `.cards().card_at(index)` for positional access")
     }
 
     fn clean(&self) -> Self {
-        todo!()
+        unimplemented!("HoleCards clean is not yet implemented; use `.cards().clean()` to strip card metadata")
     }
 
     fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
-        todo!()
+        unimplemented!("HoleCards is a fixed holding; use `.cards()` for a swappable set")
     }
 
     fn the_nuts(&self) -> TheNuts {
-        todo!()
+        unimplemented!("the_nuts is undefined for HoleCards alone; evaluate against a board")
     }
 
     fn to_vec(&self) -> Vec<Card> {
@@ -495,7 +495,7 @@ mod play__hold_cards_tests {
 
     #[test]
     fn from__seats() {
-        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
         let expected = "[T♠ 2♥, 8♠ 3♥, A♦ Q♣, 5♦ 5♣, 6♠ 6♥, K♠ J♦, 4♦ 4♣, 7♣ 2♣]";
 
         let hands = HoleCards::from(seats);

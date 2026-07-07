@@ -579,42 +579,115 @@ impl AddAssign for Cards {
 impl BitAnd for Cards {
     type Output = Self;
 
-    fn bitand(self, _rhs: Self) -> Self::Output {
-        todo!()
+    /// Set **intersection** (`&`): the cards present in *both* collections,
+    /// preserving the order in which they appear in `self`.
+    ///
+    /// `Cards` is a set (`IndexSet<Card>`), so `&`/`|`/`^` are the set
+    /// operations, mirroring [`Bard`]'s bitmask operators on the packed
+    /// representation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let a = Cards::forgiving_from_str("A♠ K♠ Q♠");
+    /// let b = Cards::forgiving_from_str("K♠ Q♠ J♠");
+    /// assert_eq!((a & b).to_string(), "K♠ Q♠");
+    /// ```
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Cards(self.0.intersection(&rhs.0).copied().collect())
     }
 }
 
 impl BitAndAssign for Cards {
-    fn bitand_assign(&mut self, _rhs: Self) {
-        todo!()
+    /// In-place set intersection; see [`BitAnd`](Cards::bitand).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let mut a = Cards::forgiving_from_str("A♠ K♠ Q♠");
+    /// a &= Cards::forgiving_from_str("K♠ Q♠ J♠");
+    /// assert_eq!(a.to_string(), "K♠ Q♠");
+    /// ```
+    fn bitand_assign(&mut self, rhs: Self) {
+        self.0 = self.0.intersection(&rhs.0).copied().collect();
     }
 }
 
 impl BitOr for Cards {
     type Output = Self;
 
-    fn bitor(self, _rhs: Self) -> Self::Output {
-        todo!()
+    /// Set **union** (`|`): every card in *either* collection, `self`'s cards
+    /// first (in order), then `rhs`'s cards that are not already present.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let a = Cards::forgiving_from_str("A♠ K♠");
+    /// let b = Cards::forgiving_from_str("K♠ Q♠");
+    /// assert_eq!((a | b).to_string(), "A♠ K♠ Q♠");
+    /// ```
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Cards(self.0.union(&rhs.0).copied().collect())
     }
 }
 
 impl BitOrAssign for Cards {
-    fn bitor_assign(&mut self, _rhs: Self) {
-        todo!()
+    /// In-place set union; see [`BitOr`](Cards::bitor).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let mut a = Cards::forgiving_from_str("A♠ K♠");
+    /// a |= Cards::forgiving_from_str("K♠ Q♠");
+    /// assert_eq!(a.to_string(), "A♠ K♠ Q♠");
+    /// ```
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 = self.0.union(&rhs.0).copied().collect();
     }
 }
 
 impl BitXor for Cards {
     type Output = Self;
 
-    fn bitxor(self, _rhs: Self) -> Self::Output {
-        todo!()
+    /// Set **symmetric difference** (`^`): the cards in exactly one of the two
+    /// collections (present in one but not both), `self`'s uniques first.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let a = Cards::forgiving_from_str("A♠ K♠ Q♠");
+    /// let b = Cards::forgiving_from_str("Q♠ J♠");
+    /// assert_eq!((a ^ b).to_string(), "A♠ K♠ J♠");
+    /// ```
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        Cards(self.0.symmetric_difference(&rhs.0).copied().collect())
     }
 }
 
 impl BitXorAssign for Cards {
-    fn bitxor_assign(&mut self, _rhs: Self) {
-        todo!()
+    /// In-place set symmetric difference; see [`BitXor`](Cards::bitxor).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    ///
+    /// let mut a = Cards::forgiving_from_str("A♠ K♠ Q♠");
+    /// a ^= Cards::forgiving_from_str("Q♠ J♠");
+    /// assert_eq!(a.to_string(), "A♠ K♠ J♠");
+    /// ```
+    fn bitxor_assign(&mut self, rhs: Self) {
+        self.0 = self.0.symmetric_difference(&rhs.0).copied().collect();
     }
 }
 
@@ -879,8 +952,12 @@ impl Pile for Cards {
         self.0.get_index(index).copied()
     }
 
+    /// Returns a copy with every card's frequency/metadata bits stripped, in
+    /// the same order. Mirrors [`Two::clean`](crate::arrays::two::Two) applied
+    /// element-wise; the `IndexSet` collapses any cards that become equal once
+    /// their metadata is removed.
     fn clean(&self) -> Self {
-        todo!()
+        Cards(self.0.iter().map(Card::clean).collect())
     }
 
     /// `Cards` always filters out blank cards, and inherently enforces uniqueness, so this should
@@ -902,7 +979,9 @@ impl Pile for Cards {
     }
 
     fn the_nuts(&self) -> TheNuts {
-        todo!()
+        unimplemented!(
+            "the_nuts is undefined for a bare Cards set: the nuts depends on board context — evaluate through a hand ranker instead"
+        )
     }
 
     /// The idea to implement the `Pile` trait came to me when I was looking through the code for
@@ -968,6 +1047,62 @@ mod cards_tests {
     use super::*;
     use crate::util::data::TestData;
     use rstest::rstest;
+
+    #[test]
+    fn bitand_is_intersection() {
+        let a = Cards::forgiving_from_str("A♠ K♠ Q♠");
+        let b = Cards::forgiving_from_str("K♠ Q♠ J♠");
+        assert_eq!((a & b).to_string(), "K♠ Q♠");
+    }
+
+    #[test]
+    fn bitand_disjoint_is_empty() {
+        let a = Cards::forgiving_from_str("A♠ K♠");
+        let b = Cards::forgiving_from_str("Q♦ J♦");
+        assert!((a & b).is_empty());
+    }
+
+    #[test]
+    fn bitand_assign_matches_bitand() {
+        let mut a = Cards::forgiving_from_str("A♠ K♠ Q♠");
+        a &= Cards::forgiving_from_str("K♠ Q♠ J♠");
+        assert_eq!(a.to_string(), "K♠ Q♠");
+    }
+
+    #[test]
+    fn bitor_is_union_self_first() {
+        let a = Cards::forgiving_from_str("A♠ K♠");
+        let b = Cards::forgiving_from_str("K♠ Q♠");
+        assert_eq!((a | b).to_string(), "A♠ K♠ Q♠");
+    }
+
+    #[test]
+    fn bitor_assign_matches_bitor() {
+        let mut a = Cards::forgiving_from_str("A♠ K♠");
+        a |= Cards::forgiving_from_str("K♠ Q♠");
+        assert_eq!(a.to_string(), "A♠ K♠ Q♠");
+    }
+
+    #[test]
+    fn bitxor_is_symmetric_difference() {
+        let a = Cards::forgiving_from_str("A♠ K♠ Q♠");
+        let b = Cards::forgiving_from_str("Q♠ J♠");
+        assert_eq!((a ^ b).to_string(), "A♠ K♠ J♠");
+    }
+
+    #[test]
+    fn bitxor_identical_is_empty() {
+        let a = Cards::forgiving_from_str("A♠ K♠ Q♠");
+        let b = Cards::forgiving_from_str("A♠ K♠ Q♠");
+        assert!((a ^ b).is_empty());
+    }
+
+    #[test]
+    fn bitxor_assign_matches_bitxor() {
+        let mut a = Cards::forgiving_from_str("A♠ K♠ Q♠");
+        a ^= Cards::forgiving_from_str("Q♠ J♠");
+        assert_eq!(a.to_string(), "A♠ K♠ J♠");
+    }
 
     #[test]
     fn deck_macro() {
@@ -1569,43 +1704,22 @@ mod cards_tests {
         assert_eq!(52, deck.len());
     }
 
+    // The bit-operators are now implemented as set operations (intersection /
+    // union / symmetric-difference); behavior is covered by the `bitand_*`,
+    // `bitor_*`, and `bitxor_*` tests at the top of this module. The former
+    // `*__panics` should_panic stubs (which asserted the old `todo!()`) are
+    // gone.
+
     #[test]
-    #[should_panic]
-    fn bitand__panics() {
-        let _ = Cards::from_str("A♠").unwrap() & Cards::from_str("K♠").unwrap();
+    fn bitor_disjoint_keeps_both() {
+        let both = Cards::from_str("A♠").unwrap() | Cards::from_str("K♠").unwrap();
+        assert_eq!(both.to_string(), "A♠ K♠");
     }
 
     #[test]
-    #[should_panic]
-    fn bitand_assign__panics() {
-        let mut cards = Cards::from_str("A♠").unwrap();
-        cards &= Cards::from_str("K♠").unwrap();
-    }
-
-    #[test]
-    #[should_panic]
-    fn bitor__panics() {
-        let _ = Cards::from_str("A♠").unwrap() | Cards::from_str("K♠").unwrap();
-    }
-
-    #[test]
-    #[should_panic]
-    fn bitor_assign__panics() {
-        let mut cards = Cards::from_str("A♠").unwrap();
-        cards |= Cards::from_str("K♠").unwrap();
-    }
-
-    #[test]
-    #[should_panic]
-    fn bitxor__panics() {
-        let _ = Cards::from_str("A♠").unwrap() ^ Cards::from_str("K♠").unwrap();
-    }
-
-    #[test]
-    #[should_panic]
-    fn bitxor_assign__panics() {
-        let mut cards = Cards::from_str("A♠").unwrap();
-        cards ^= Cards::from_str("K♠").unwrap();
+    fn bitxor_disjoint_keeps_both() {
+        let both = Cards::from_str("A♠").unwrap() ^ Cards::from_str("K♠").unwrap();
+        assert_eq!(both.to_string(), "A♠ K♠");
     }
 
     #[test]
@@ -1718,9 +1832,12 @@ mod cards_tests {
     }
 
     #[test]
-    #[should_panic]
-    fn pile__clean__panics() {
-        let _ = wheel().clean();
+    fn pile__clean__strips_metadata_and_is_idempotent() {
+        let cleaned = wheel().clean();
+        // clean() maps each card through Card::clean; distinct base cards stay distinct.
+        assert_eq!(cleaned.len(), wheel().len());
+        // Cleaning already-clean cards changes nothing further.
+        assert_eq!(cleaned.clean().to_string(), cleaned.to_string());
     }
 
     #[test]

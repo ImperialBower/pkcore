@@ -79,8 +79,8 @@ mod tests {
     use super::*;
     use crate::analysis::eval::Eval;
     use crate::arrays::five::Five;
-    use crate::casino::table::seats::seat_equity::SeatEquity;
-    use crate::casino::table::seats::seatbit::Seatbit;
+    use crate::casino::equity::seat_equity::SeatEquity;
+    use crate::casino::equity::seatbit::Seatbit;
     use std::str::FromStr;
 
     #[test]

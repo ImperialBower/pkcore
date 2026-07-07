@@ -367,8 +367,9 @@ impl Twos {
         if total == 0 {
             return Percentage::default();
         }
-        // let count = self.0.iter().filter(|two| combo.contains(*two)).count();
-        todo!()
+        unimplemented!(
+            "percentage is not yet implemented; count self's twos that fall in `combo`, then divide by `total`"
+        )
     }
 
     /// Returns a sorted, deduplicated [`Vec<Two>`] in descending order (strongest hand first).

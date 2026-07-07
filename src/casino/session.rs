@@ -1,6 +1,6 @@
-//! Multi-hand poker session runner built on [`TableNoCell`].
+//! Multi-hand poker session runner built on [`Table`].
 //!
-//! [`PokerSession`] wraps a [`TableNoCell`] and orchestrates the hand lifecycle —
+//! [`PokerSession`] wraps a [`Table`] and orchestrates the hand lifecycle —
 //! dealing, street progression, and session management (eliminating busted players,
 //! advancing the button). It exposes two APIs:
 //!
@@ -19,13 +19,13 @@
 //! use pkcore::casino::action::PlayerAction;
 //! use pkcore::casino::game::ForcedBets;
 //! use pkcore::casino::session::PokerSession;
-//! use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+//! use pkcore::casino::table::{Player, Seat, Seats, Table};
 //!
-//! let seats = SeatsNoCell::new(vec![
-//!     SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 1_000)),
-//!     SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 1_000)),
+//! let seats = Seats::new(vec![
+//!     Seat::new(Player::new_with_chips("Alice".to_string(), 1_000)),
+//!     Seat::new(Player::new_with_chips("Bob".to_string(), 1_000)),
 //! ]);
-//! let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(10, 20));
+//! let table = Table::nlh_from_seats(seats, ForcedBets::new(10, 20));
 //! let mut session = PokerSession::new(table);
 //!
 //! // Run a hand where the first actor always folds.
@@ -37,8 +37,8 @@
 use crate::PKError;
 use crate::casino::action::PlayerAction;
 use crate::casino::game::ForcedBets;
-use crate::casino::table::winnings::Winnings;
-use crate::casino::table_no_cell::TableNoCell;
+use crate::casino::table::Table;
+use crate::casino::winnings::Winnings;
 use crate::games::GamePhase;
 
 /// Describes the outcome of a single [`PokerSession::next_step`] call.
@@ -55,14 +55,14 @@ use crate::games::GamePhase;
 /// use pkcore::casino::action::PlayerAction;
 /// use pkcore::casino::game::ForcedBets;
 /// use pkcore::casino::session::{PokerSession, SessionStep};
-/// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+/// use pkcore::casino::table::{Player, Seat, Seats, Table};
 ///
-/// let seats = SeatsNoCell::new(vec![
-///     SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 1_000)),
-///     SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 1_000)),
+/// let seats = Seats::new(vec![
+///     Seat::new(Player::new_with_chips("Alice".to_string(), 1_000)),
+///     Seat::new(Player::new_with_chips("Bob".to_string(), 1_000)),
 /// ]);
 /// let mut session = PokerSession::new(
-///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(10, 20))
+///     Table::nlh_from_seats(seats, ForcedBets::new(10, 20))
 /// );
 /// session.start_hand().unwrap();
 /// match session.next_step() {
@@ -83,7 +83,7 @@ pub enum SessionStep {
     HandComplete,
 }
 
-/// A multi-hand game session wrapping a [`TableNoCell`].
+/// A multi-hand game session wrapping a [`Table`].
 ///
 /// Handles hand lifecycle (deal, streets, showdown) and session management
 /// (busted player removal, button progression). See the [module-level
@@ -97,21 +97,21 @@ pub enum SessionStep {
 /// use pkcore::casino::action::PlayerAction;
 /// use pkcore::casino::game::ForcedBets;
 /// use pkcore::casino::session::PokerSession;
-/// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+/// use pkcore::casino::table::{Player, Seat, Seats, Table};
 ///
-/// let seats = SeatsNoCell::new(vec![
-///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 500)),
-///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 500)),
+/// let seats = Seats::new(vec![
+///     Seat::new(Player::new_with_chips("A".to_string(), 500)),
+///     Seat::new(Player::new_with_chips("B".to_string(), 500)),
 /// ]);
 /// let mut session = PokerSession::new(
-///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(5, 10))
+///     Table::nlh_from_seats(seats, ForcedBets::new(5, 10))
 /// );
 /// assert_eq!(session.hand_number, 0);
 /// # }
 /// ```
 pub struct PokerSession {
     /// The underlying game table.
-    pub table: TableNoCell,
+    pub table: Table,
     /// Number of hands started so far (incremented by [`start_hand`](PokerSession::start_hand)).
     pub hand_number: u32,
     /// The full 52-card deck string captured immediately after shuffling at the
@@ -137,20 +137,20 @@ impl PokerSession {
     /// # {
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
     /// ]);
     /// let session = PokerSession::new(
-    ///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(10, 20))
+    ///     Table::nlh_from_seats(seats, ForcedBets::new(10, 20))
     /// );
     /// assert_eq!(session.hand_number, 0);
     /// # }
     /// ```
     #[must_use]
-    pub fn new(table: TableNoCell) -> Self {
+    pub fn new(table: Table) -> Self {
         let forced_at_hand_start = table.forced;
         Self {
             table,
@@ -176,14 +176,14 @@ impl PokerSession {
     /// # {
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
     /// ]);
     /// let session = PokerSession::new(
-    ///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100))
+    ///     Table::nlh_from_seats(seats, ForcedBets::new(50, 100))
     /// );
     /// assert_eq!(session.forced_at_hand_start().small_blind, 50);
     /// # }
@@ -211,14 +211,14 @@ impl PokerSession {
     /// # {
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
     /// ]);
     /// let mut session = PokerSession::new(
-    ///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100))
+    ///     Table::nlh_from_seats(seats, ForcedBets::new(50, 100))
     /// );
     /// session.set_blinds(ForcedBets::new(100, 200));
     /// assert_eq!(session.table.forced.big_blind, 200);
@@ -235,7 +235,7 @@ impl PokerSession {
     /// Removes players whose chip stack has reached zero and returns their seat
     /// indices.
     ///
-    /// Delegates to [`TableNoCell::eliminate_busted`]. Call this before
+    /// Delegates to [`Table::eliminate_busted`]. Call this before
     /// [`start_hand`](PokerSession::start_hand) at the top of each hand loop.
     ///
     /// # Examples
@@ -245,14 +245,14 @@ impl PokerSession {
     /// # {
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 100)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 0)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 100)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 0)),
     /// ]);
     /// let mut session = PokerSession::new(
-    ///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(5, 10))
+    ///     Table::nlh_from_seats(seats, ForcedBets::new(5, 10))
     /// );
     /// let busted = session.eliminate_busted();
     /// assert_eq!(busted, vec![1]);
@@ -271,14 +271,14 @@ impl PokerSession {
     /// # {
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
     /// ]);
     /// let session = PokerSession::new(
-    ///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(10, 20))
+    ///     Table::nlh_from_seats(seats, ForcedBets::new(10, 20))
     /// );
     /// assert_eq!(session.count_funded(), 2);
     /// # }
@@ -306,14 +306,14 @@ impl PokerSession {
     /// # {
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
     /// ]);
     /// let mut session = PokerSession::new(
-    ///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(10, 20))
+    ///     Table::nlh_from_seats(seats, ForcedBets::new(10, 20))
     /// );
     /// session.start_hand().unwrap();
     /// assert_eq!(session.hand_number, 1);
@@ -346,7 +346,7 @@ impl PokerSession {
 
     /// Returns `true` if the current hand has ended.
     ///
-    /// Delegates to [`TableNoCell::is_game_over`]. When this returns `true`,
+    /// Delegates to [`Table::is_game_over`]. When this returns `true`,
     /// call [`end_hand`](PokerSession::end_hand) to collect winnings and reset.
     ///
     /// # Examples
@@ -357,14 +357,14 @@ impl PokerSession {
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
     /// ]);
     /// let mut session = PokerSession::new(
-    ///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(10, 20))
+    ///     Table::nlh_from_seats(seats, ForcedBets::new(10, 20))
     /// );
     /// session.start_hand().unwrap();
     /// assert!(!session.is_hand_complete());
@@ -389,14 +389,14 @@ impl PokerSession {
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
     /// ]);
     /// let mut session = PokerSession::new(
-    ///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(10, 20))
+    ///     Table::nlh_from_seats(seats, ForcedBets::new(10, 20))
     /// );
     /// assert!(!session.is_hand_in_progress());
     /// session.start_hand().unwrap();
@@ -412,7 +412,7 @@ impl PokerSession {
     /// is complete.
     ///
     /// Automatically advances streets when a betting round ends: calls
-    /// [`bring_it_in`](TableNoCell::bring_it_in) and deals the next board card
+    /// [`bring_it_in`](Table::bring_it_in) and deals the next board card
     /// (`deal_flop` / `deal_turn` / `deal_river`) before returning the first
     /// actor of the new street.
     ///
@@ -424,14 +424,14 @@ impl PokerSession {
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
     /// ]);
     /// let mut session = PokerSession::new(
-    ///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(10, 20))
+    ///     Table::nlh_from_seats(seats, ForcedBets::new(10, 20))
     /// );
     /// session.start_hand().unwrap();
     /// assert!(session.next_actor().is_some());
@@ -476,14 +476,14 @@ impl PokerSession {
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
     /// ]);
     /// let mut session = PokerSession::new(
-    ///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(10, 20))
+    ///     Table::nlh_from_seats(seats, ForcedBets::new(10, 20))
     /// );
     /// session.start_hand().unwrap();
     /// let seat = session.next_actor().unwrap();
@@ -520,14 +520,14 @@ impl PokerSession {
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::{PokerSession, SessionStep};
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
     /// ]);
     /// let mut session = PokerSession::new(
-    ///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(10, 20))
+    ///     Table::nlh_from_seats(seats, ForcedBets::new(10, 20))
     /// );
     /// session.start_hand().unwrap();
     /// // Preflop always starts with a player to act.
@@ -564,14 +564,14 @@ impl PokerSession {
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
     /// ]);
     /// let mut session = PokerSession::new(
-    ///     TableNoCell::nlh_from_seats(seats, ForcedBets::new(10, 20))
+    ///     Table::nlh_from_seats(seats, ForcedBets::new(10, 20))
     /// );
     /// let winnings = session.run_hand(|_t, _s| PlayerAction::Fold).unwrap();
     /// assert!(!winnings.vec().is_empty());
@@ -603,13 +603,13 @@ impl PokerSession {
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 2_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 2_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("Alice".to_string(), 2_000)),
+    ///     Seat::new(Player::new_with_chips("Bob".to_string(), 2_000)),
     /// ]);
-    /// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(10, 20));
+    /// let table = Table::nlh_from_seats(seats, ForcedBets::new(10, 20));
     /// let mut session = PokerSession::new(table);
     ///
     /// // Every player calls or checks — hand runs to showdown.
@@ -620,7 +620,7 @@ impl PokerSession {
     /// ```
     pub fn run_hand<F>(&mut self, mut on_action: F) -> Result<Winnings, PKError>
     where
-        F: FnMut(&TableNoCell, u8) -> PlayerAction,
+        F: FnMut(&Table, u8) -> PlayerAction,
     {
         self.start_hand()?;
         while let Some(seat) = self.next_actor() {
@@ -674,23 +674,23 @@ impl PokerSession {
 mod tests {
     use super::*;
     use crate::casino::game::ForcedBets;
-    use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell};
+    use crate::casino::table::{Player, Seat, Seats};
 
     fn two_player_session() -> PokerSession {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Alice".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
         ]);
-        PokerSession::new(TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100)))
+        PokerSession::new(Table::nlh_from_seats(seats, ForcedBets::new(50, 100)))
     }
 
     fn three_player_session() -> PokerSession {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 10_000)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Alice".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Carol".to_string(), 10_000)),
         ]);
-        PokerSession::new(TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100)))
+        PokerSession::new(Table::nlh_from_seats(seats, ForcedBets::new(50, 100)))
     }
 
     #[test]
@@ -750,11 +750,11 @@ mod tests {
 
     #[test]
     fn poker_session_eliminate_busted() {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 0)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 0)),
         ]);
-        let mut session = PokerSession::new(TableNoCell::nlh_from_seats(seats, ForcedBets::new(5, 10)));
+        let mut session = PokerSession::new(Table::nlh_from_seats(seats, ForcedBets::new(5, 10)));
         let busted = session.eliminate_busted();
         assert_eq!(busted, vec![1]);
         assert!(session.table.seats.get_seat(1).unwrap().is_empty());
@@ -799,16 +799,16 @@ mod tests {
     /// Previously, the `if`-guarded street advance in `next_actor()` would
     /// deal the flop and then fall through to `Some(table.next_to_act())`,
     /// which fell back to an arbitrary seat via `.unwrap_or(utg)` because
-    /// `SeatsNoCell::next_to_act()` found no player with action to give.
+    /// `Seats::next_to_act()` found no player with action to give.
     #[test]
     fn next_actor_all_in_runout_no_stale_actor() {
         // Equal stacks: both players can go all-in preflop so the board runs
         // out without any player needing to act postflop.
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 200)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 200)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 200)),
+            Seat::new(Player::new_with_chips("B".to_string(), 200)),
         ]);
-        let mut session = PokerSession::new(TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100)));
+        let mut session = PokerSession::new(Table::nlh_from_seats(seats, ForcedBets::new(50, 100)));
         session.start_hand().unwrap();
 
         // In heads-up, SB (button) acts first preflop. Both go all-in.
@@ -880,11 +880,11 @@ mod tests {
     #[test]
     fn all_in_runout_emits_three_street_advanced() {
         // Equal 200-chip stacks: both can go all-in preflop (SB=50, BB=100).
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 200)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 200)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 200)),
+            Seat::new(Player::new_with_chips("B".to_string(), 200)),
         ]);
-        let mut session = PokerSession::new(TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100)));
+        let mut session = PokerSession::new(Table::nlh_from_seats(seats, ForcedBets::new(50, 100)));
         session.start_hand().unwrap();
 
         // Both players go all-in preflop.

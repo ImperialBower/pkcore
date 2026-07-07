@@ -174,6 +174,8 @@ fn format_action(action: &Action, players: &[PlayerEntry]) -> String {
         ActionType::Bet => format!("bets {}", action.amount.map(|a| a as usize).unwrap_or(0)),
         ActionType::Raise => format!("raises to {}", action.amount.map(|a| a as usize).unwrap_or(0)),
         ActionType::AllIn => format!("ALL-IN ({})", action.amount.map(|a| a as usize).unwrap_or(0)),
+        // ActionType is #[non_exhaustive] as of 0.2.0.
+        _ => "acts".to_string(),
     };
     let ai = if action.all_in == Some(true) { " [all-in]" } else { "" };
     format!("{name:<22}  {verb}{ai}")

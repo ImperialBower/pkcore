@@ -620,6 +620,38 @@ dedicated job, like the pokerbench one).
 **P0c. Decide the stud completion and ante-as-dead-money semantics** (II.3,
 II.6) — these are rules decisions, then one-line-ish fixes.
 
+**Status (0.1.9): done.** All six confirmed variant bugs (II.1–II.6) fixed:
+
+- **P0a — PLO (II.1, II.2).** `act_raise` now sizes the max raise off
+  `effective_pot()` (pot + all live wagers) rather than `self.pot`, so the
+  standard 50/100 pot-open to 350 is legal again; over-pot all-ins clamp to the
+  pot (routed through `act_raise`) instead of bypassing the cap. Tests:
+  `plo_pot_open`, `plo_raise_above_pot_is_rejected`,
+  `plo_over_pot_all_in_clamps_to_pot`.
+- **P0b — Razz (II.4) + action order (II.5).**
+  `third_street_extreme_upcard_seat` ranks the ace low (new
+  `California::ace_low_rank()`), so a King brings in over an Ace; and the
+  EPIC-32/33 action-order machinery was **wired in, not deleted** —
+  `next_to_act` seeds from `first_to_act_this_street`, so Stud/Razz action
+  follows the upcards (bring-in-relative on 3rd, best-visible after) with NLHE
+  provably unchanged (that resolver still returns UTG for Hold'em). Tests:
+  `razz_bring_in_is_highest_ace_low`, `razz_visible_order_prefers_ace_low`,
+  `razz_next_to_act_follows_bring_in_not_position`.
+- **P0c — Stud rules (II.3, II.6).** Fixed-limit completion is legal and the
+  raise increment is exact (5→20→40→60, not the bring-in-shifted 5→25→45);
+  antes are now dead money (a `post_dead_ante` path) rather than credited toward
+  the bring-in seat's call. Tests: `stud_completion_to_small_bet_is_legal`,
+  `stud_fixed_limit_raise_must_be_exact`, `stud_antes_are_dead_money`.
+
+*Mechanism (with one deviation).* The audit proposed a dedicated table-driven
+`tests/betting_rules.rs`; the tests instead landed **colocated** in
+`src/casino/table_no_cell.rs`'s unit-test module (same probe scenarios, next to
+the code they guard) — the house convention favours colocated tests, so this
+was the deliberate call. The CI half landed as proposed: a `variant-replays`
+job (`ci.yml`) un-`#[ignore]`s the four FLHE/PLO/stud/razz replay round-trips
+(`cargo test --test replay_consistency -- --include-ignored`), the first CI
+coverage that drives the II.1–II.6 rules end to end.
+
 ### P1 — Published-crate honesty (one afternoon, real consumer impact)
 
 Make `BC_RANK_HASHMAP` fallible (`PKError::BcmUnavailable(String)` or an
@@ -629,6 +661,39 @@ fix the `Claude.md` exclude casing, add `keywords`/`categories` and
 requires self-generated data. *Mechanism:* a CI smoke job that installs the
 packaged crate in a temp project and calls the headline APIs.
 
+**Status (0.1.9): done.** The published crate no longer panics or silently
+degrades on first touch:
+
+- **BCM panic boundary.** `BC_RANK_HASHMAP` is backed by a pure, testable
+  `load_bc_rank_map(path) -> Result<_, PKError>`; the blessed `bc_rank_hashmap()`
+  accessor returns `Err(PKError::BcmUnavailable)` instead of the old
+  `File::open(...).unwrap()` that aborted every crates.io consumer of
+  `SortedHeadsUp::wins()` and the `StartingHands` case-evals. (Landed as a
+  payload-free `BcmUnavailable` variant + a `Result`-returning accessor rather
+  than the `BcmUnavailable(String)`/`try_bc_rank_hashmap()` shapes the audit
+  floated — same guarantee, simpler surface.)
+- **`UNIQUE_HANDS` silent-empty.** Rather than patch the `unwrap_or_default()`
+  fallback, the whole distinct-5-card enumeration moved behind a non-default
+  `generators` feature — it has no runtime callers and needs self-generated
+  data, so it's out of the default published API entirely (the stronger fix).
+- **Packaging.** `Cargo.toml`'s exclude now uses the correct `CLAUDE.md` casing
+  (the internal doc, `DIARY.md`, and `marathon_failure.yaml` no longer ship);
+  `keywords`/`categories` and `[package.metadata.docs.rs] all-features = true`
+  are in place, so docs.rs renders the feature-gated items with their banners;
+  and the README now has a table documenting the two self-generated-data APIs
+  (BCM → `SevenFiveBCM::generate_bin` + `PKCORE_75BCM_PATH`; `UNIQUE_HANDS` →
+  `--features generators`) and that BCM calls otherwise return
+  `Err(PKError::BcmUnavailable)`.
+
+*Mechanism (with one deviation).* The audit proposed a CI job that installs the
+packaged crate in a temp project and calls the headline APIs. What landed is a
+lighter `package` job (`ci.yml`) that runs `cargo package` — a verify-build of
+the exact shipped tarball (with the ~403 MB `generated/bcm.zst` absent), which
+proves the BCM APIs degrade to `Err(BcmUnavailable)` rather than failing the
+build and that no excluded internal file is needed to compile. It does not yet
+*call* the headline APIs from a downstream project; promoting it to a true
+install-and-call smoke test remains open.
+
 ### P2 — Kernel step 1: make purity reachable, then default (III.6.1)
 
 Feature-gate rusqlite/zstd/termion, delete dotenvy, flip defaults with a
@@ -636,10 +701,64 @@ Feature-gate rusqlite/zstd/termion, delete dotenvy, flip defaults with a
 `pkstate` YAML-optionality fix upstream. *Mechanism:* CI purity gate on
 `cargo tree --no-default-features`.
 
+**Status (0.1.9): "reachable" half done; default-flip deferred.** Landed:
+`store = ["dep:rusqlite", "dep:zstd"]` and `terminal = ["dep:termion"]`, both
+**added to `default`** (so no consumer sees a change); `dotenvy` deleted
+(`std::env::var`); store code re-gated to
+`all(feature = "store", not(target_arch = "wasm32"))`, terminal code to
+`all(unix, feature = "terminal")`; the CI purity gate + `make check-purity`
+enforce that `cargo tree --no-default-features -e no-dev` is free of
+rusqlite/zstd/termion/dotenvy (`serde_yaml_bw` allowlisted — the pkstate
+ceiling, III.1). `--no-default-features` now yields a pure build.
+
+**The default-flip is the breaking half — deferred to 0.2.0.** Adding the
+features to `default` is *non-breaking*: every current consumer takes the
+default set, so the compiled API is byte-for-byte identical. Verified against
+every in-tree dependant — **none uses `default-features = false`**, so none is
+affected by 0.1.9:
+
+| Consumer | pkcore declaration | Needs `["store"]`/`["terminal"]` when defaults flip? |
+|---|---|---|
+| `pkarena0-web` | `features = ["bot-profiles", "hand-histories"]` | Yes if it uses `Terminal::pause`/BCM — audit at flip time |
+| `pkdealer_client` | `"0.1.3"` (plain default) | Yes if it uses store/terminal APIs |
+| `pkdealer_service` | `"0.1.3"` (plain default) | Yes if it uses store/terminal APIs |
+| `pkdealer_agent_rules` | `features = ["bot-profiles"]` | Likely no (profile-only) — confirm at flip |
+| `pkgto-web` | `"0.0.28"` (wasm) | No — wasm never had these deps |
+| `pkkuhn-web` | `"0.0.39"` (wasm) | No — wasm never had these deps |
+| `pkpy` | `"0.0.35"` | Yes if it exposes store/terminal APIs |
+| `exgto` | `"0.0.25"` | Yes if it uses store/terminal APIs |
+
+When flipping `default = ["equity"]` (+ a `full` umbrella): bump to 0.2.0, and
+land companion PRs adding explicit `features = [...]` to any consumer above that
+actually calls a store (`wins()`, `Sqlable`/`Connect`, `FiveBCM`/`SevenFiveBCM`,
+`HUPResult` SQLite methods) or terminal (`Terminal::pause`, ANSI colour) API.
+The wasm consumers need no change.
+
 ### P3 — Kernel step 2: de-leak the four public error surfaces (III.6.2)
 
 `hand_history`, `BotError`, `SolverError`, `Sqlable`. Copy the
 `PokerBenchError` pattern. *Mechanism:* `clippy.toml` `disallowed-types`.
+
+**Status (0.1.9): done.** All three format-crate leaks stringified onto owned
+error types, following the `PokerBenchError` template:
+- `HandHistory`/`HandCollection::{from,to}_yaml` now return a new owned
+  `HandHistoryError` (was `serde_yaml_bw::Error`) — the surface that previously
+  had *no* owned error type at all.
+- `BotError::Yaml(serde_yaml_bw::Error)` → `Yaml(String)`.
+- `SolverError::{Json(serde_json::Error), Binary(postcard::Error)}` →
+  `Json(String)` / `Binary(String)` (its `Io(std::io::Error)` stays — std is not
+  a format-crate leak and keeps the `source()` chain).
+- `Sqlable`'s `rusqlite` surface is resolved by the P2 route: the trait is now
+  gated behind the `store` feature (III.6.1's "or gate it into the `store`
+  feature"), so the storage crate is opt-in rather than always-public.
+
+The existing `From` impls remain the blessed seams (each carries a local
+`#[allow(clippy::disallowed_types)]`). *Mechanism landed:* `clippy.toml`
+`disallowed-types` for `serde_yaml_bw::Error`, `serde_json::Error`, and
+`postcard::Error` — under `-Dclippy::all` any new use in a non-`#[allow]`ed
+(i.e. public) position fails the build. **Source-breaking only** for a consumer
+that named a format-crate error type in a `match`/signature; none of the in-tree
+consumers do (they use `?`/`unwrap`).
 
 ### P4 — Close the P0s of the last three audits, this time with gates
 
@@ -652,12 +771,105 @@ method. *Mechanism:* `clippy.toml` `disallowed-macros` for
 `todo!`/`unimplemented!` in non-test code — the same trick that fixed
 `unwrap`.
 
+**Status (0.1.9): non-breaking half done; the two breaking pieces deferred to
+0.2.0** (same split as P2's default-flip). What landed:
+
+- **The six `Cards` bit-operators are implemented** — not a literal transcribe
+  from `Bard` (which is a `u64` bitmask), but the *set* operations its bitwise
+  ops correspond to, since `Cards` is an `IndexSet<Card>`: `&` intersection,
+  `|` union, `^` symmetric difference (plus the three `*Assign` forms). Doc
+  examples + 10 colocated unit tests; the old six `#[should_panic]` `*__panics`
+  stubs (which asserted the `todo!()`) are gone.
+- **`Cards::clean` is implemented** (element-wise `Card::clean`, mirroring
+  `Two::clean`); `Cards::the_nuts` is now a messaged `unimplemented!` (it needs
+  board context — even `Bard::the_nuts` punts).
+- **`act_pay_out`'s doc-contradicts-body defect (Part I #4) is fixed.** It named
+  a `PKError::NotImplemented` that did not exist, over a panicking body. That
+  variant now exists and the method returns it (`Err(PKError::NotImplemented)`)
+  — recoverable, not a panic — with a doctest asserting exactly that.
+  `SortedHeadsUp::hup_result_from_shift` got the same treatment.
+- **Every remaining reachable `todo!()` in `src/` is eliminated** (64 bare +
+  1 messaged `todo!("Doesn't apply")` the gate caught on first run). The
+  structurally-undefined `Pile` stubs (`card_at`/`clean`/`swap`/`the_nuts`/`add`
+  on fixed-size hands — the deferred finding #3 population) became messaged
+  `unimplemented!("…")` that point at the `.cards()` workaround; the genuinely
+  unfinished non-`Result` methods (`percentage`, `generate_player_loses`,
+  `Shifter::shifts`, `is_seat_all_in`, `deck_the_hand_dealable`, the `Sqlable`
+  bulk stubs) became messaged `unimplemented!("… not yet implemented")`. Zero
+  `#[allow(clippy::disallowed_macros)]` were needed — the gate is unqualified.
+
+*Mechanism landed:* `clippy.toml` now carries
+`disallowed-macros = [{ path = "std::todo" }]`. Under CI's existing
+`-Dclippy::all` (basic.yaml) and `-D warnings` (ci.yml) this makes any `todo!()`
+in lib/bin code a hard error — verified: the gate fired on the one messaged
+`todo!` a plain-`grep` had missed. **`unimplemented!` is deliberately *not*
+gated**: the enforced convention is that no unfinished spot may be a *silent*
+`todo!()` — it must be a *messaged* `unimplemented!("why + workaround")` or a
+returned `PKError::NotImplemented`. This is the pragmatic substitute for the
+literal proposal (one gate over both macros), which is unreachable while the
+`Pile` over-specification (#3) is deferred — ~50 of the stubs are `Pile`
+methods that are structurally undefined for their types, and gating
+`unimplemented!` too would force the trait split.
+
+**The two breaking pieces are deferred to 0.2.0** (bundled with the P6 semver
+work): `#[deprecated]` on `TableCelled` (104 in-crate references would each need
+`#[allow(deprecated)]` — noisy, and deprecation is a public-API signal that
+belongs with the 0.2.0 legacy-engine sunset) and removing
+`CardsCell`/`SeatCell`/`TableLog`/`TableCelled` from the prelude (a
+source-breaking change). Both are the "legacy `TableCelled` sunset" and are
+naturally a single 0.2.0 change; nothing about them blocks the gate that P4
+came for.
+
+*Verification:* `cargo build --lib` ok; `cargo test --lib` **9,132 passed, 0
+failed**; `cargo test --doc` 0 failed; `cargo clippy -- -Dclippy::all
+-Dclippy::pedantic` and `cargo clippy --features pokerbench -- -D warnings` both
+clean.
+
 ### P5 — Trainer determinism and stats-store durability (II.8, II.9, II.10)
 
 Thread `TrainingConfig.seed` into both the mutation RNG and
 `SimTable::with_seed`; fix the sigma-tol comparison; temp-file + rename in
 `save`; skip-and-log in `load_all`. *Mechanism:* a train-twice-compare test
 and a corrupt-file test.
+
+**Status (0.1.9): done.** All three fixes landed with their mechanism tests:
+
+- **Trainer reproducibility (II.9).** `TrainingConfig` gained a `seed: u64`
+  field (default `42`). It now seeds *both* the Gaussian mutation stream
+  (`SmallRng::seed_from_u64(self.config.seed)`, was a hardcoded `42`) *and*
+  every fitness session: `evaluator::evaluate` takes a `seed` and derives a
+  distinct per-`(opponent, replicate)` session seed from it, which
+  `run_session` feeds to `SimTable::with_seed`. The derivation is independent
+  of the candidate config, so every candidate is scored on the **same hands**
+  (common random numbers) — this both removes the thread-local-RNG noise that
+  made `train()` irreproducible and cuts the between-candidate variance the
+  optimiser sees. Test: `train_twice_with_same_seed_is_reproducible` asserts a
+  byte-identical `best_config` (via `encoding::encode`) across two runs, plus
+  `evaluate_is_deterministic_for_fixed_seed`.
+- **Sigma early-exit (II.8).** The convergence check is now
+  `if sigma <= self.config.sigma_tol` (was `<`). Because `sigma` clamps *at*
+  `sigma_tol` via the `.max(sigma_tol)` floor, the strict `<` could never fire,
+  so a fully-converged run burned every generation (~3M simulated hands at the
+  defaults). Test: `converged_run_terminates_before_max_generations` sets
+  `initial_sigma_fraction == sigma_tol` and asserts `generations_run == 0` —
+  which fails under the old `<`.
+- **Stats-store durability (II.10).** `YamlPlayerStatsStore::save` is now atomic
+  (serialise to a `.yaml.tmp` sibling, then `fs::rename` over the target — the
+  `.tmp` extension keeps it out of `load_all`'s `.yaml`-only scan). `load_all`
+  now **skips-and-logs** an unreadable or malformed file (`log::warn!` with the
+  path) instead of mapping the first bad file to `PKError::InvalidIO` for the
+  whole directory. Tests: `load_all_skips_corrupt_yaml_file` and
+  `save_leaves_no_temp_file_behind`.
+
+Not addressed here (out of the II.8–II.10 scope, noted for later): the
+(1+λ)-ES still never re-evaluates the retained parent, and `run_session` still
+maps any sim error to `0.0` fitness — both called out in II.9 as *compounding*
+factors. Common-random-numbers scoring makes the parent's score stable, which
+defuses the "noise-lucky parent stalls progress" case the re-evaluation gap
+caused; the error→`0.0` mapping is a smaller latent issue left for a follow-up.
+
+*Verification:* `cargo test --features bot-training --lib bot__training` **16
+passed**; stats-store suite green; `cargo clippy` clean (below).
 
 ### P6 — Semver posture for 0.2.0
 
@@ -667,10 +879,61 @@ and a corrupt-file test.
 mapping; write the one-paragraph stability promise for Display-based card
 encodings. *Mechanism:* semver-checks in CI is the mechanism.
 
+**Status: done — crate bumped to 0.2.0.** All four enums are now
+`#[non_exhaustive]` (the one in-repo exhaustive `match`, `examples/replay_play`,
+got a wildcard arm). `From<std::io::Error> for PKError` now maps to `InvalidIO`
+instead of `DBConnectionError` — filesystem failures no longer read as DB
+outages, and the `rusqlite` seam retains `DBConnectionError`. The card
+`Display` ↔ `FromStr` wire-format stability promise (and the wire-enum `serde`
+contract) is written into the crate-root docs (`## API Stability`).
+*Mechanism landed:* a dedicated `Semver` job in `basic.yaml` runs
+`cargo-semver-checks` against the last crates.io release; the 0.2.0 bump is what
+makes it green (the P3 error-type and P6 `#[non_exhaustive]` changes are breaking
+and require the minor bump in 0.x). This is a deliberate breaking release; only
+the P2 default-flip and the P4 prelude-pruning remain deferred to a later
+version.
+
 ### P7 — CI completes its own Makefile
 
 Add wasm32 build job, `bot-training`/`debug-json` checks,
 `cargo test --no-default-features`. *Mechanism:* it is CI.
+
+**Status (0.1.9): done.** All three gaps closed, each verified locally before
+wiring so no job lands red:
+
+- **wasm32 build job** (`basic.yaml`). Runs `cargo check --target
+  wasm32-unknown-unknown --lib` under the workflow's `RUSTFLAGS=-Dwarnings`.
+  Getting it warning-clean required one fix: `src/util/terminal.rs`'s
+  `use crate::PKError` was unconditional but only used by
+  `#[cfg(not(target_arch = "wasm32"))]` functions, so it warned on wasm — now
+  gated to match. (The audit's "3 unused-import warnings" had already dropped to
+  1 by 0.1.9; that 1 is gone.) Guards the two production WASM consumers
+  (`pkgto-web`, `pkkuhn-web`).
+- **`bot-training` / `debug-json` coverage** (`ci.yml`, new `optional-features`
+  job, mirroring the `pokerbench` one). `cargo test --features bot-training`
+  and `cargo test --features debug-json` — both compiled today but nothing on
+  CI built them (VI.4), so they could silently rot. The heavy
+  `training_integration` run stays `#[ignore]`d.
+- **`cargo test --no-default-features`** (`basic.yaml`, upgraded from the prior
+  `cargo check --no-default-features --lib --tests`). The check form skipped
+  *examples*, which is exactly why II.11 hid: **seven** examples — not just the
+  one `calc.rs` the audit named — used feature-gated (`store`/`terminal`) APIs
+  with no `[[example]]` `required-features` entry, so `cargo test
+  --no-default-features` failed to compile them. All eight now carry entries
+  (`calc` → `equity`; `audit`/`export_hups_bin`/`generate_bcm`/`hup_dump`/
+  `insert_distinct`/`preflop` → `store`; `pluripop` → `terminal`). The full
+  no-default suite now runs **9,634 tests, 0 failed**.
+
+*Verification:* `cargo test --no-default-features` 9,634 passed / 0 failed;
+`cargo check --target wasm32-unknown-unknown --lib` clean under `-Dwarnings`;
+`cargo test --features bot-training` and `--features debug-json` green;
+`cargo build --examples` (default) still builds all gated examples; `cargo fmt
+--all --check` clean.
+
+Left for **P6**: the CI vs Makefile gap list (VI.4) still omits `--all-features`,
+`cargo-semver-checks`, `cargo-udeps`, mutants, coverage, and full `cargo deny`.
+Semver-checks belongs with the 0.2.0 semver work (P6); the rest are optional
+depth, not correctness gates.
 
 ### P8 — Kernel step 3 (strategic): the transition surface
 
@@ -679,6 +942,312 @@ Add wasm32 build job, `bot-training`/`debug-json` checks,
 of shape; this is what makes the WIT/component boundary (and EPIC-79's
 privacy layer) possible — and it converts betting-rules correctness from
 probe archaeology into table-driven tests, which is how Part II stays fixed.
+
+**Status: done (hold'em betting).** `TableNoCell::legal_actions(seat) ->
+Vec<PlayerAction>` and `TableNoCell::apply_action(seat, action)` now exist
+(`casino::action::PlayerAction`, behind the `bot-profiles` feature alongside the
+rest of the action surface). `legal_actions` is the *advisory, non-mutating*
+query — it reports fold/check/call/bet/raise/all-in with `Bet`/`Raise` at their
+minimum legal size, and its raise checks mirror `act_raise`'s (`min_raise_to`,
+`cap_reached`, `max_raise`) exactly so it never reports an action the `act_*`
+method would reject. `apply_action` is the single Kuhn-style dispatch point to
+the `act_*` methods (it also degrades `Call`→`Check` when nothing is owed). The
+payoff landed as table-driven tests, including the crown-jewel fidelity
+invariant `every_legal_action_is_accepted_by_apply_action`, which is exactly the
+"legality by asking, not by trying" property that retires the
+`sim.rs::apply_action` probe-and-fallback pattern (III.5).
+
+Two of the three follow-ups are now also done:
+
+- **Feature-free surface + unified action type.** `casino::action::PlayerAction`
+  is now the single canonical action enum: un-gated (no `bot-profiles`
+  requirement), given a `Display` impl, and re-exported from
+  `bot::player_action` so the two formerly-identical enums are one type. The
+  bridge `match` in `BotProfile::decide` collapsed to an identity return, and
+  `legal_actions` / `apply_action` (and their tests) moved to an ungated `impl`
+  — the transition surface now compiles and is tested with
+  `--no-default-features`, making it the truly feature-free kernel boundary the
+  WIT/component story needs.
+- **Stud/razz covered and its boundary documented.** The bring-in is a *forced
+  post* (`act_bring_in`, driven by `PokerSession::start_hand` alongside blinds /
+  antes), not a voluntary choice — so it correctly sits outside the surface, like
+  blinds. What the surface *does* owe stud is the voluntary betting after the
+  bring-in, and that is covered by the existing `to_call` / `min_raise_to` logic
+  (the II.3 completion fix): the completer's `Raise(small_bet)` and the
+  fixed-limit ladder surface here like any other bet, now proven by
+  `legal_actions__stud_completer_can_fold_call_and_complete` and a stud fidelity
+  test. The `legal_actions` doc states this forced-vs-voluntary boundary.
+
+And the last cleanup is done too: `sim.rs::apply_action` no longer determines
+legality by trying an `act_*` method and catching the rejection. It now
+`reconcile`s the decider's action against `legal_actions` (kind chosen by asking,
+not trying), dispatches through the engine's `apply_action`, and keeps only a
+single guaranteed-legal passive fallback for the residual case a decider proposes
+an over-stack *amount* (which `legal_actions` reports only the minimum of). The
+1000-hand chip-conservation marathon still passes, so the more-robust dispatch
+did not perturb the invariant. The probe-and-fallback pattern the audit flagged
+in III.5 is fully retired.
+
+### P9 — Findings from the implementation review (branch `exec-fabio`, 2026-07-05)
+
+_A high-effort adversarially-verified code review of the P0–P8 implementation
+branch itself (8 finder angles × 1-vote verification; 45 candidates → 15
+confirmed / 4 plausible / 1 refuted). The P0–P8 work stands — but the review
+found that two of its new mechanisms (`post_dead_ante` and the `act_all_in`
+clamp) re-implement slices of invariant-owning code instead of calling it, and
+that is where the new bugs live. Same rule as everything above: each item
+carries its gate._
+
+| # | Finding | Severity | Introduced by |
+|---|---------|----------|---------------|
+| P9a | Ante-felting stall: `post_dead_ante` can zero a stack without the all-in transition | **High** | This branch (II.6 fix) |
+| P9b | `legal_actions` advertises AllIn that `apply_action` rejects at the FL raise cap | **High** | This branch (P8 + II.2 clamp) |
+| P9c | Sim short-stack jams silently degraded to Call | **High** (training skew) | This branch (P8 dispatch) |
+| P9d | `act_bet` mutates before validating — undersized bet corrupts table state | Medium | Pre-existing; `act_raise` got the guard, `act_bet` didn't |
+| P9e | Clamped all-in: inconsistent return contract, stale doc, diverging stats | Medium | This branch (II.2 clamp) |
+| P9f | `act_all_in` never updates `raise_increment` — illegal small re-raise accepted after a full-raise shove | Medium | Pre-existing, untested |
+| P9g | Stale `.env` docs (README, lib.rs) after the dotenvy deletion; CHANGELOG omits replay-compat break | Low (docs) | This branch (P2, P6) |
+| P9h | `post_dead_ante` charges an Out-with-chips seat | Low (edge) | This branch (II.6 fix) |
+| P9i | `ActionCounts` records the fallback action even when it was rejected | Low | Pre-existing, carried forward |
+| P9j | Cleanup batch: duplicated betting math, missing tests on new public items | Low | This branch |
+
+**P9a — Ante-felting stall (HIGH).** `post_dead_ante`
+(`table_no_cell.rs:1124-1135`) mutates only `chips`/`chips_in_play`, never
+`bet` or `state`. A seat whose whole stack goes to the ante ends chips=0 /
+bet=0 / `YetToAct`: `is_all_in()` (`state.is_all_in() || (chips==0 && bet>0)`)
+is false, `is_betting_complete()` never completes, `next_to_act` keeps
+returning the seat while `legal_actions` returns empty (the chips==0 guard) —
+`run_street` exhausts `max_iterations` with the STALL diagnostic and
+`bring_it_in()` errors `ActionIsntFinished`. The old path
+(`act_blind_or_all_in` → `act_bet_internal`) auto-transitioned to `AllIn`; the
+dead-money rewrite dropped that invariant. *Fix direction:* make dead-ante
+posting a `PlayerNoCell` method (e.g. `post_dead(amount)`) that owns the
+cap-deduct-track sequence next to `act_bet_internal` and applies the all-in
+transition when chips hit 0 — the P9h state guard then comes for free.
+*Mechanism:* a colocated test with `ante >= stack` (the new
+`stud_antes_are_dead_money` uses 10,000-chip stacks, which is why this
+survived).
+
+**P9b — Fidelity invariant violated at the FL raise cap (HIGH).** The new
+capped-structure guard in `act_all_in` (`:2731-2742`) reroutes any
+`stack > max` shove to `act_raise(max)` with **no `cap_reached` check**; since
+`max < stack`, `would_be_all_in` is false inside `act_raise` and the cap check
+fires → `Err(RaiseCapReached)`. Meanwhile `legal_actions` (`:3878-3880`)
+unconditionally pushes `AllIn` whenever `stack > 0`, under a now-false comment
+("all-in bypasses the betting-structure cap"). This breaks P8's crown-jewel
+invariant — an advertised action is rejected — and the
+`every_legal_action_is_accepted_by_apply_action` tests miss it because they
+only cover NLHE-at-UTG and pre-cap stud. *Fix direction:* this is first a
+rules decision (at the cap, a deep-stack "all-in" should degrade to a call,
+not an error), then: derive AllIn's advertised legality from the same
+dispatch path `act_all_in` actually takes. The deeper fix (also closes P9j.1):
+extract a shared `validate_raise(seat, amount)` that `act_raise` executes and
+`legal_actions` queries, so the mirror cannot drift — the current
+`can_raise_to` closure maintains parity by eyeball ("mirror those in
+act_raise exactly"), not by construction. *Mechanism:* extend the fidelity
+test to a capped FLHE state with a deep-stacked actor, and property-style
+sweep every seat/street state the replay suite visits.
+
+**P9c — Short-stack jams pacified in sims (HIGH for training).** The retired
+try/fallback dispatch let `act_raise` accept all-in-sized amounts via the
+`would_be_all_in` bypass. The new `reconcile` (`sim.rs:850-859`) consults
+`legal_actions`, which omits `Raise` when `stack < min_raise_to` (AllIn is
+listed separately), and degrades to **Call — never AllIn**. NLH 50/100, 150
+chips facing the BB: `RuleBasedDecider` emits `Raise(150)` (`sized_raise_to`
+clamps to `my_chips`), which main accepted as an all-in raise and this branch
+converts to a flat call. Short stacks can never jam via Bet/Raise, which
+systematically skews trainer/evaluator BB/100 and every trained `BotProfile`.
+*Fix direction:* `reconcile`'s Bet/Raise arms should degrade to `AllIn` (not
+Call) when `amount >= stack` and AllIn is legal — or, deeper (the P8
+follow-up the review endorsed): have `legal_actions` expose the legal amount
+*range* (min from `min_raise_to`, max from `max_raise` — both already computed
+inside it) so `reconcile` clamps deterministically and the residual
+`safe_passive` fallback plus its `eprintln!` can be deleted. *Mechanism:* a
+sim test asserting a sub-min-raise stack facing a bet ends the hand all-in,
+plus a trainer smoke assertion that `all_ins > 0` over a short-stack scenario.
+
+**P9d — `act_bet` mutates before validating (MEDIUM, pre-existing).**
+`act_bet` (`:2508-2515`) goes turn-order check → `seats.act_bet` (chips
+deducted, state=`Bet`) → `set_raise_increment`, which then rejects an
+undersized bet (`InsufficientIncrement`) **after** the seat mutated:
+`table.bet` stays 0 while the seat shows a live bet and is no longer
+next-to-act. `act_raise` has exactly this pre-mutation guard (its comment at
+`:2654-2658` describes this exact hazard); `act_bet` was left exposed, and the
+new `reconcile` passes decider `Bet(n)` amounts through unvalidated (stock
+deciders clamp to ≥ BB; custom deciders and direct API callers don't).
+*Fix:* the same pre-validation `act_raise` got, before `seats.act_bet`. This
+also retires the double-validation in `set_raise_increment` (P9j.3): with both
+`act_bet` and `act_raise` pre-validating, `set_raise_increment` reduces to a
+pure store. *Mechanism:* an undersized-bet test asserting `Err` + seat state
+intact (the no-state-corruption pattern already used for `act_raise`).
+
+**P9e — Clamped all-in: three contracts diverge (MEDIUM).** The rerouted
+path returns `act_raise`'s `Ok(chips_remaining)` where every other
+`act_all_in` path returns `Ok(chips_committed)` — an inconsistent return
+contract within one function. The player is intentionally not all-in (the
+clamp is documented, and `plo_over_pot_all_in_clamps_to_pot` asserts it), but
+`act_all_in`'s own rustdoc ("Goes all-in", example asserting `is_all_in()`)
+was not updated; the log records `TableAction::Raise` while
+`SimTable::apply_action` still increments `counts.all_ins` — so log-derived
+player stats and sim `ActionCounts` disagree on every clamped shove. *Fix:*
+normalize the return to chips-committed, update the doc, and pick one
+classification for the clamped action (Raise, per the log) so both stats
+surfaces agree. *Mechanism:* doctest on the clamped path + an assertion that
+sim counts match log-derived counts over a PLO session.
+
+**P9f — Stale `raise_increment` after an NL full-raise shove (MEDIUM,
+pre-existing).** In the NL path `act_all_in` only does
+`self.bet = self.bet.max(amount)` and never calls `set_raise_increment`
+(only `act_bet`/`act_raise` do). NLH 100 BB: A raises to 300 (increment 200),
+B shoves 900 — a full 600 raise that should re-open with min re-raise 1500 —
+but `min_raise_to()` = 900 + 200 = 1100, and `act_raise(C, 1100)` succeeds,
+400 short of legal. Main has the identical body; this branch reworked
+`act_all_in` without fixing it, and no test asserts min-raise after a shove.
+*Fix:* when the shove ≥ a full raise, update the increment (the sub-min case
+is already handled correctly — Part V praised it). *Mechanism:* a
+min-raise-after-shove test for both the full-raise and sub-min shove cases.
+
+**P9g — Doc/behavior mismatches from P2/P6 (LOW, docs only).** (1) The
+dotenvy deletion is done and CHANGELOG'd, but README.md:53-56 still instructs
+copying `.env.example` to `.env`, and `lib.rs:224-226` still says "Add to
+`.env`: HUPS_DB_PATH=…" — nothing loads `.env` anymore, so a user following
+the docs gets a silently-empty default DB (`hup.rs`) or a panic
+(`examples/preflop.rs`). (2) The 0.2.0 Compatibility section meticulously
+lists source breaks but never states that stud/razz/FLHE/PLO hand histories
+recorded under 0.1.x may not replay (the razz bring-in seat, FL exactness,
+and dead antes all change replay semantics — each a deliberate rule fix), and
+line 181's wire-format-stability promise reads as a replay-stability promise.
+No committed fixture breaks (the only replayed archive is NLHE). *Fix:*
+update both doc sites to "export the variable" and add one Compatibility
+bullet on replay. *Mechanism:* none needed beyond the edit; these are
+one-liners.
+
+**P9h — Out seat pays the ante (LOW, edge).** `post_dead_ante` checks only
+`seat.is_empty()`; an occupied seat with `state == Out` and chips > 0 is
+charged for a hand it is never dealt into (the old `act_bet_internal` path
+rejected non-active players). Not producible by in-repo flows today — `Out`
+is only assigned to empty seats — but the state is representable through the
+`pub` field. Subsumed by the P9a fix if dead-ante posting moves into
+`PlayerNoCell` behind the `is_active()` guard.
+
+**P9i — Phantom `ActionCounts` (LOW, pre-existing).** In
+`SimTable::apply_action` (`sim.rs:788-807`), when the reconciled action is
+rejected, `applied` is set to the fallback *before* the fallback's
+`apply_action` runs; if that also fails (eprintln only), the `match applied`
+still bumps the counter — stats record an action that never mutated the
+table, on exactly the hands where the engine wedged. Main did the same.
+*Fix:* bump counts only on a successful apply. *Mechanism:* covered by the
+P9a test (the stall scenario is the reachable both-rejected case).
+
+**P9j — Cleanup batch (confirmed by review, no behavior change).**
+
+1. The 5-arg `self.betting.max_raise(self.effective_pot(), self.bet,
+   seat.player.bet, stack, tier)` incantation is now copy-pasted at three
+   sites (`act_raise` :2678, the `act_all_in` guard :2738, `legal_actions`
+   :3843) — exactly how the II.1 `self.pot`-vs-`effective_pot` bug happened.
+   Extract `max_raise_for(&self, seat)`; the P9b `validate_raise` subsumes it.
+2. The stud completion rule lives at two altitudes: `min_raise_to()`
+   (`table_no_cell.rs:2107`) and `BettingStructure::max_raise`'s FixedLimit
+   arm (`betting_structure.rs:182`) encode the same conditional; if they
+   drift, min > max makes every FL raise illegal. `BettingStructure` should
+   own it.
+3. `reconcile` and `safe_passive` each call `legal_actions` and encode
+   overlapping degradation ladders with *different orderings* (Raise arm:
+   Call→Check→Fold; safe_passive: Call→Check→AllIn). Compute the legal set
+   once in `apply_action`, single degradation function. (Folds into P9c.)
+4. The CI "Kernel purity gate" step inlines the same cargo-tree|grep pipeline
+   as `make check-purity` (Makefile:207, whose comment says it mirrors CI).
+   One should invoke the other; keep the `::error::` annotation.
+5. The razz ace-low fix conflates two independent properties in one flag:
+   `third_street_extreme_upcard_seat`'s `highest: bool` selects both scan
+   direction *and* rank order (`if highest { California::ace_low_rank(...) }`),
+   importing the razz-specific `California` into shared table code. A
+   deuce-to-seven variant (highest upcard, ace-high) is inexpressible. Rank
+   order belongs on `GameFamily`/`GameType` (alongside
+   `uses_community_board()`/`is_stud_family()`).
+6. House-rule gaps on new public items (each a CLAUDE.md requirement):
+   `bc_rank_hashmap()` has neither doc test nor unit test;
+   `load_bc_rank_map` lacks `# Examples`; `California::ace_low_rank` has no
+   unit test; `HandHistoryError`'s `Display`/`Error`/`From` impls are
+   untested; and `PlayerAction`'s `Display` lost its six-variant test when
+   `src/bot/player_action.rs` was deleted (only a one-variant doctest
+   remains).
+
+**One refuted candidate, for the record:** "a rejected Fold can fall back to
+Call and commit chips the decider never chose" — provably unreachable:
+`act_fold` and every `safe_passive` fallback share the same `is_active()`
+guard, so any state rejecting Fold rejects the fallback too.
+
+*Sequencing:* P9a–P9c before the 0.2.0 release (all three are new in this
+branch and two break invariants this branch itself introduced); P9d–P9f ride
+along or immediately after; P9g is a pre-release doc pass; P9j opportunistic,
+with items 1–3 naturally falling out of the P9b/P9c deep fixes.
+
+**Status (branch `exec-fabio`): done — all ten findings fixed, deep-first.** The
+recurring root cause the review named — *advisory and invariant-owning code paths
+that mirror each other by eyeball* — was retired by construction rather than
+re-policed:
+
+- **P9a + P9h — ante felting & the Out-seat charge.** Dead-money posting moved
+  onto a new `PlayerNoCell::post_dead(amount)` sibling of `act_bet_internal`,
+  which owns the cap-deduct-track sequence *and* the all-in transition when the
+  ante takes the last chip; its `is_active()` guard skips an occupied `Out` seat
+  for free (P9h). `SeatsNoCell::post_dead_ante` now just delegates. Tests:
+  `stud_ante_that_felts_a_seat_transitions_it_all_in`,
+  `post_dead_ante_does_not_charge_an_out_seat_with_chips`.
+- **P9b + P9j.1 — cap fidelity & the duplicated max-raise math.** Three shared
+  primitives now single-source raise legality: `max_raise_for(seat)` (the 5-arg
+  incantation), `validate_raise(seat, amount)` (the granular checks), and
+  `raise_bounds(seat)` (the legal `[min,max]` range). `act_raise`, `act_bet`,
+  `act_all_in`, and `legal_actions` all derive from them, so the advisory surface
+  cannot drift from the mutating one. `act_all_in` degrades a capped-structure
+  deep shove to the largest legal action (raise-to-max / call / true all-in), so
+  the advertised `AllIn` is always accepted. Test:
+  `fixed_limit_all_in_at_cap_degrades_to_call_not_error`.
+- **P9c + P9i + P9j.3 — sim short-stack jams, phantom counts, one degradation
+  ladder.** `reconcile` now clamps every bet/raise amount into the legal range
+  and resolves shoves via `resolve_shove` (mirroring `act_all_in` off the shared
+  `raise_bounds`), so a short stack jams instead of flattening to a call; the
+  `safe_passive` fallback is deleted, and `apply_action` counts only on a
+  successful apply. Tests:
+  `reconcile_degrades_oversize_raise_to_all_in_for_short_stack`,
+  `reconcile_classifies_capped_deep_shove_as_raise_not_all_in`,
+  `apply_action_does_not_count_a_rejected_action`.
+- **P9d — `act_bet` pre-validation.** `act_bet` now runs `validate_raise` before
+  mutating, so an undersized bet is rejected with the seat state intact; with
+  both `act_bet` and `act_raise` pre-validating, `set_raise_increment` collapsed
+  to a pure store. Test:
+  `act_bet_below_minimum_is_rejected_without_mutating_state`.
+- **P9e — clamped all-in contract.** The clamped shove returns chips *committed*
+  on every path, its rustdoc documents the degrade-not-all-in behaviour, and the
+  sim classifies it as `Raise` (via `resolve_shove`) to match the event log.
+  Test: `plo_clamped_all_in_returns_chips_committed_not_remaining`.
+- **P9f — re-opening after a full-raise shove.** `act_all_in` updates
+  `raise_increment` (and the per-street raise count) when the shove is at least a
+  full raise, leaving the sub-min case untouched. Tests:
+  `all_in_full_raise_reopens_min_raise`,
+  `sub_min_all_in_does_not_reopen_min_raise`.
+- **P9g — docs.** The `.env` instructions in `README.md` and `lib.rs` now say
+  *export the variable* (no `dotenvy`), and the CHANGELOG Compatibility section
+  gained a variant-replay-compat bullet.
+- **P9j.2 — completion rule ownership.** `BettingStructure::completion_raise_to`
+  is the single owner of the completion-vs-step formula, shared by `min_raise_to`
+  and the fixed-limit `max_raise`. Drift guard:
+  `fixed_limit_min_and_max_raise_agree_at_completion`.
+- **P9j.4 — one purity gate.** CI's step now runs `make check-purity`; the
+  Makefile target carries the `::error::` annotation.
+- **P9j.5 — rank order on the family.** `GameFamily::ranks_ace_low()` decouples
+  the ace-low ordinal from the bring-in's scan-direction flag, keeping a future
+  deuce-to-seven variant expressible.
+- **P9j.6 — restored house-rule tests.** Six-variant `PlayerAction::Display`,
+  `California::ace_low_rank`, `bc_rank_hashmap`/`load_bc_rank_map` (`# Examples` +
+  accessor test), and `HandHistoryError`'s `Display`/`Error`/`From` impls.
+
+*Verification:* `cargo test` (lib + integration + doctests) 0 failed (doctests
+680 passed); `cargo test --lib` 9,147 passed / 0 failed; the ignored NLHE
+`bot_marathon` (1,000-hand chip audit) and all five `replay_consistency`
+round-trips (FLHE / PLO / stud / razz) pass, so the betting rewrite perturbs no
+invariant.
 
 ---
 

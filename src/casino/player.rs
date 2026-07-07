@@ -111,6 +111,7 @@ impl Player {
     }
 
     /// ```
+    /// use pkcore::casino::player::Player;
     /// use pkcore::prelude::*;
     ///
     /// let player = Player::new_with_chips("The Russian".to_string(), 1_000);
@@ -164,6 +165,7 @@ impl Player {
     /// NOTE: At the
     ///
     /// ```
+    /// use pkcore::casino::player::Player;
     /// use pkcore::prelude::*;
     ///
     /// let player = Player::new_with_chips("The Russian".to_string(), 1_000);
@@ -204,6 +206,7 @@ impl Player {
     /// # Examples
     ///
     /// ```
+    /// use pkcore::casino::player::Player;
     /// use pkcore::prelude::*;
     ///
     /// // Full blind.
@@ -270,6 +273,7 @@ impl Player {
     }
 
     /// ```
+    /// use pkcore::casino::player::Player;
     /// use pkcore::prelude::*;
     ///
     /// let player = Player::new_with_chips("The Russian".to_string(), 1_000);
@@ -314,6 +318,7 @@ impl Player {
     }
 
     /// ```
+    /// use pkcore::casino::player::Player;
     /// use pkcore::prelude::*;
     ///
     /// let player = Player::new_with_chips("The Russian".to_string(), 1_000);
@@ -345,6 +350,7 @@ impl Player {
     }
 
     /// ```
+    /// use pkcore::casino::player::Player;
     /// use pkcore::prelude::*;
     ///
     /// let player = Player::new_with_chips("The Russian".to_string(), 1_000);
@@ -376,6 +382,7 @@ impl Player {
     }
 
     /// ```
+    /// use pkcore::casino::player::Player;
     /// use pkcore::prelude::*;
     ///
     /// let player = Player::new_with_chips("The Russian".to_string(), 1_000);
@@ -402,6 +409,7 @@ impl Player {
     /// The only difference between the different bets from a logic perspective is the stored state.
     ///
     /// ```
+    /// use pkcore::casino::player::Player;
     /// use pkcore::prelude::*;
     ///
     /// let player = Player::new_with_chips("The Russian".to_string(), 1_000);
@@ -436,6 +444,7 @@ impl Player {
     /// Returns `true` when the player is marked as ready for a hand.
     ///
     /// ```
+    /// use pkcore::casino::player::Player;
     /// use pkcore::prelude::*;
     ///
     /// let player = Player::new("Bugsy".to_string());
@@ -507,6 +516,7 @@ impl Player {
     /// # Examples
     ///
     /// ```
+    /// use pkcore::casino::player::Player;
     /// use pkcore::prelude::*;
     ///
     /// let player = Player::new_with_chips("Bob".to_string(), 1_000);

@@ -12,7 +12,7 @@ use pkcore::analysis::player_stats::StatsRegistry;
 use pkcore::bot::profile::BotProfile;
 use pkcore::bot::sim::SimTable;
 use pkcore::casino::game::ForcedBets;
-use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::casino::table::{Player, Seat, Seats, Table};
 use uuid::Uuid;
 
 /// Deep stacks reduce — but don't eliminate — the chance an aggressive bot
@@ -49,14 +49,14 @@ fn vpip_differentiates_styles_after_self_play() {
 
     // Build seats and capture each player's Uuid *before* moving them into
     // the table so we can look up their stats afterwards.
-    let mut seats: Vec<SeatNoCell> = Vec::with_capacity(styles.len());
+    let mut seats: Vec<Seat> = Vec::with_capacity(styles.len());
     let mut style_to_uuid: Vec<(&'static str, Uuid)> = Vec::with_capacity(styles.len());
     for (name, _) in &styles {
-        let player = PlayerNoCell::new_with_chips((*name).to_string(), STARTING_CHIPS);
+        let player = Player::new_with_chips((*name).to_string(), STARTING_CHIPS);
         style_to_uuid.push((*name, player.id));
-        seats.push(SeatNoCell::new(player));
+        seats.push(Seat::new(player));
     }
-    let table = TableNoCell::nlh_from_seats(SeatsNoCell::new(seats), ForcedBets::new(SMALL_BLIND, BIG_BLIND));
+    let table = Table::nlh_from_seats(Seats::new(seats), ForcedBets::new(SMALL_BLIND, BIG_BLIND));
 
     let bots: Vec<(u8, BotProfile)> = styles
         .iter()
@@ -131,14 +131,14 @@ fn registry_records_one_hand_per_active_seat() {
     // or skipping. Complements the unit test in `bot::sim::tests` by
     // exercising the full SimTable + HandHistory + StatsRegistry pipeline
     // end-to-end through the public API only.
-    let mut seats: Vec<SeatNoCell> = Vec::new();
+    let mut seats: Vec<Seat> = Vec::new();
     let mut uuids: Vec<Uuid> = Vec::new();
     for name in ["A", "B", "C"] {
-        let p = PlayerNoCell::new_with_chips(name.to_string(), STARTING_CHIPS);
+        let p = Player::new_with_chips(name.to_string(), STARTING_CHIPS);
         uuids.push(p.id);
-        seats.push(SeatNoCell::new(p));
+        seats.push(Seat::new(p));
     }
-    let table = TableNoCell::nlh_from_seats(SeatsNoCell::new(seats), ForcedBets::new(SMALL_BLIND, BIG_BLIND));
+    let table = Table::nlh_from_seats(Seats::new(seats), ForcedBets::new(SMALL_BLIND, BIG_BLIND));
     let bots = vec![
         (0_u8, BotProfile::gto()),
         (1_u8, BotProfile::tight_passive()),
