@@ -30,7 +30,7 @@ impl Position {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table_celled::position::Position;
+    /// use pkcore::casino::position::Position;
     ///
     /// // 6-max, button at seat 0
     /// assert_eq!(Some(Position::BTN), Position::from_seat(0, 0, 6));
@@ -155,7 +155,7 @@ impl Positions {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod casino__table__position_tests {
+mod casino__position_tests {
     use super::*;
 
     #[test]

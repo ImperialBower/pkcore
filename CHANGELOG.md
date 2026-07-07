@@ -43,6 +43,36 @@ The two poker-engine implementations were renamed so the primary,
 Breaking for downstream code importing `TableNoCell`, `casino::table::TableCelled`,
 or `Seats` — folded into the 0.2.0 major bump.
 
+#### `casino` package reorganization (follow-up to the table rename)
+
+The rename's leftovers were cleaned up and the module tree reorganized
+(`docs/superpowers/specs/2026-07-06-casino-reorg-design.md`):
+
+- **`NoCell` suffixes dropped.** `PlayerNoCell` → `casino::table::Player`,
+  `SeatNoCell` → `casino::table::Seat`, `SeatsNoCell` → `casino::table::Seats`.
+  The interior-mutability twins keep their names (`casino::player::Player`,
+  `casino::table_celled::seats::seat::Seat`).
+- **Prelude flat names now mean the primary engine.** `prelude::Player` and
+  `prelude::Seat` refer to the `casino::table` types; the celled `Player` and
+  `Seat` lost their flat prelude exports and are reachable via module paths.
+  Non-colliding celled types (`TableCelled`, `SeatCell`, `SeatsCell`,
+  `TableLog`, `GameState`, …) keep their flat exports.
+- **Shared vocabulary types moved out of `table_celled`** to casino-level
+  modules, so neither engine imports from the other:
+  `casino::position` (`Position`, `Positions`), `casino::winnings`
+  (`Winnings`, `PotWin`), `casino::equity` (`Seatbit`, `SeatEquity`,
+  `TableEquity`), and `TableAction` joined `PlayerAction` in
+  `casino::action`. `TableLog` stays in `casino::table_celled::event`.
+- **`casino/table.rs` split** (was 5,800 lines) into `table/player.rs`,
+  `table/seat.rs`, `table/seats.rs`, `table/actions.rs` (betting actions),
+  and `table/transition.rs` (`legal_actions`/`apply_action`); public paths
+  are unchanged.
+
+Breaking for downstream code importing the `*NoCell` names, the old
+`table_celled` paths of the moved vocabulary types, or relying on
+`prelude::Player`/`prelude::Seat` meaning the celled types — folded into the
+0.2.0 major bump.
+
 ### Fixed
 
 #### PLO pot-limit betting (audit II.1 / II.2)

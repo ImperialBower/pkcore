@@ -34,7 +34,7 @@ use pkcore::analysis::player_stats_store::YamlPlayerStatsStore;
 use pkcore::bot::profile::BotProfile;
 use pkcore::bot::sim::SimTable;
 use pkcore::casino::game::ForcedBets;
-use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+use pkcore::casino::table::{Player, Seat, Seats, Table};
 
 const SMALL_BLIND: usize = 50;
 const BIG_BLIND: usize = 100;
@@ -99,11 +99,11 @@ fn run_session(dir: &PathBuf, style_uuids: &[(&str, Uuid)], session_label: u32) 
     // Build seats with stable Uuids so cross-session lookup works.
     let mut seats = Vec::new();
     for (name, uuid) in style_uuids {
-        let mut player = PlayerNoCell::new_with_chips((*name).to_string(), STARTING_CHIPS);
+        let mut player = Player::new_with_chips((*name).to_string(), STARTING_CHIPS);
         player.id = *uuid;
-        seats.push(SeatNoCell::new(player));
+        seats.push(Seat::new(player));
     }
-    let table = Table::nlh_from_seats(SeatsNoCell::new(seats), ForcedBets::new(SMALL_BLIND, BIG_BLIND));
+    let table = Table::nlh_from_seats(Seats::new(seats), ForcedBets::new(SMALL_BLIND, BIG_BLIND));
     let bots: Vec<(u8, BotProfile)> = style_uuids
         .iter()
         .enumerate()

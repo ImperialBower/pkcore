@@ -13,9 +13,9 @@
 
 use crate::Pile;
 use crate::cards::Cards;
+use crate::casino::action::TableAction;
+use crate::casino::position::Position;
 use crate::casino::table::Table;
-use crate::casino::table_celled::event::TableAction;
-use crate::casino::table_celled::position::Position;
 use crate::games::GamePhase;
 use crate::games::betting_structure::{BetTier, BettingStructure};
 use uuid::Uuid;
@@ -88,11 +88,11 @@ pub struct SeatInfo {
 /// ```
 /// use pkcore::bot::table_snapshot::TableSnapshot;
 /// use pkcore::casino::game::ForcedBets;
-/// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+/// use pkcore::casino::table::{Player, Seat, Seats, Table};
 ///
-/// let seats = SeatsNoCell::new(vec![
-///     SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 1_000)),
-///     SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 1_000)),
+/// let seats = Seats::new(vec![
+///     Seat::new(Player::new_with_chips("Alice".to_string(), 1_000)),
+///     Seat::new(Player::new_with_chips("Bob".to_string(), 1_000)),
 /// ]);
 /// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 /// let snap = TableSnapshot::from_table(&table, 0);
@@ -164,7 +164,7 @@ pub struct TableSnapshot<'a> {
 }
 
 impl<'a> TableSnapshot<'a> {
-    /// Constructs a `TableSnapshot` from a live `TableNoCell` from `seat`'s
+    /// Constructs a `TableSnapshot` from a live `Table` from `seat`'s
     /// perspective.
     ///
     /// The `board` and `hole_cards` fields are cloned from the table; the
@@ -177,11 +177,11 @@ impl<'a> TableSnapshot<'a> {
     /// ```
     /// use pkcore::bot::table_snapshot::TableSnapshot;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("X".to_string(), 500)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("Y".to_string(), 500)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("X".to_string(), 500)),
+    ///     Seat::new(Player::new_with_chips("Y".to_string(), 500)),
     /// ]);
     /// let table = Table::nlh_from_seats(seats, ForcedBets::new(5, 10));
     /// let snap = TableSnapshot::from_table(&table, 1);
@@ -308,11 +308,11 @@ impl<'a> TableSnapshot<'a> {
     /// use pkcore::analysis::player_stats::StatsRegistry;
     /// use pkcore::bot::table_snapshot::TableSnapshot;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("X".to_string(), 500)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("Y".to_string(), 500)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("X".to_string(), 500)),
+    ///     Seat::new(Player::new_with_chips("Y".to_string(), 500)),
     /// ]);
     /// let table = Table::nlh_from_seats(seats, ForcedBets::new(5, 10));
     /// let registry = StatsRegistry::new();
@@ -338,12 +338,12 @@ impl<'a> TableSnapshot<'a> {
     /// ```
     /// use pkcore::bot::table_snapshot::TableSnapshot;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table_celled::position::Position;
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::position::Position;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
     /// ]);
     /// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// // Button starts at seat 0 → seat 0 is BTN, seat 1 is BB.
@@ -365,13 +365,13 @@ impl<'a> TableSnapshot<'a> {
 mod bot__table_snapshot_tests {
     use super::*;
     use crate::casino::game::ForcedBets;
-    use crate::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    use crate::casino::table::{Player, Seat, Seats, Table};
     use uuid::Uuid;
 
     fn two_player_table() -> Table {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 1_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 1_000)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Alice".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("Bob".to_string(), 1_000)),
         ]);
         Table::nlh_from_seats(seats, ForcedBets::new(50, 100))
     }
@@ -454,12 +454,12 @@ mod bot__table_snapshot_tests {
 
     #[test]
     fn checked_this_street_true_after_flop_check() {
-        use crate::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell};
+        use crate::casino::table::{Player, Seat, Seats};
         use crate::prelude::PlayerState;
 
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
         ]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         table.act_forced_bets().unwrap();
@@ -489,12 +489,12 @@ mod bot__table_snapshot_tests {
 
     #[test]
     fn checked_this_street_false_for_other_seat_after_flop_check() {
-        use crate::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell};
+        use crate::casino::table::{Player, Seat, Seats};
         use crate::prelude::PlayerState;
 
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
         ]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         table.act_forced_bets().unwrap();
@@ -585,12 +585,12 @@ mod bot__table_snapshot_tests {
 
     #[test]
     fn checked_this_street_resets_across_streets() {
-        use crate::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell};
+        use crate::casino::table::{Player, Seat, Seats};
         use crate::prelude::PlayerState;
 
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
         ]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         table.act_forced_bets().unwrap();

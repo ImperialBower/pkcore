@@ -1,4 +1,4 @@
-use crate::prelude::Seat;
+use crate::casino::table_celled::seats::seat::Seat;
 use std::cell::{BorrowMutError, Ref, RefCell, RefMut};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]

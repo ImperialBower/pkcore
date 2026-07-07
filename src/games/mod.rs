@@ -336,7 +336,7 @@ impl GamePhase {
 
     /// EPIC-32: returns the 0-based stud street index (3rd=0 .. 7th=4)
     /// for stud-family phases, `None` otherwise. Used by
-    /// `TableNoCell::current_bet_tier` and street-aware dispatch in the
+    /// `Table::current_bet_tier` and street-aware dispatch in the
     /// session loop.
     ///
     /// # Examples

@@ -69,7 +69,7 @@ impl std::fmt::Display for HandResult {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod casino__table__result_tests {
+mod casino__table_celled__result_tests {
     // use super::*;
     // use crate::prelude::*;
 }

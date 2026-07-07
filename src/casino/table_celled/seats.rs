@@ -3,19 +3,16 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
+use crate::casino::table_celled::seats::seat::Seat;
 use crate::casino::table_celled::seats::seat_cell::SeatCell;
-use crate::prelude::{PlayerState, Seat, Seatbit};
+use crate::prelude::{PlayerState, Seatbit};
 use log;
 use std::cell::{Ref, RefMut};
 use wincounter::PlayerFlag;
 use wincounter::win::Win;
 
-pub mod action;
 pub mod seat;
 pub mod seat_cell;
-pub mod seat_equity;
-pub mod seatbit;
-pub mod table_equity;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct SeatsCell(Box<[SeatCell]>);
@@ -1050,11 +1047,12 @@ impl TryFrom<Vec<SeatCell>> for SeatsCell {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod casino__table__seats_tests {
+mod casino__table_celled__seats_tests {
     use super::*;
     use crate::casino::game::ForcedBets;
     use crate::casino::player::Player;
     use crate::casino::table_celled::TableCelled;
+    use crate::casino::table_celled::seats::seat::Seat;
     use crate::prelude::*;
     use crate::util::data::TestData;
 

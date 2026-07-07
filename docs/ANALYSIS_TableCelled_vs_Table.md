@@ -4,6 +4,17 @@
 **Files:** `src/casino/table_celled.rs`, `src/casino/table.rs`  
 **Examples:** `examples/the_hand.rs`, `examples/the_hand_no_cell.rs`
 
+> **Naming update (July 2026):** the casino package reorganization finished
+> what the `TableNoCell` → `Table` rename started. The companion structs
+> dropped their suffixes (`PlayerNoCell`/`SeatNoCell`/`SeatsNoCell` →
+> `casino::table::{Player, Seat, Seats}`), the shared vocabulary types
+> (`Position`, `Winnings`, `Seatbit`, `SeatEquity`, `TableEquity`,
+> `TableAction`) moved out of `table_celled` to casino-level modules, and
+> `table.rs` was split into a `table/` directory. Unmarked prelude names
+> (`Player`, `Seat`, `Seats`, `Table`) now consistently mean the primary
+> `&mut self` engine; the celled family is reachable via `casino::player` and
+> `casino::table_celled` paths. Code excerpts below predate the reorganization.
+
 ---
 
 ## Background

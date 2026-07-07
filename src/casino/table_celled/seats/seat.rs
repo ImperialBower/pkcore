@@ -73,8 +73,10 @@ impl From<String> for Seat {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod casino__table__seat_tests {
-    use super::*;
+mod casino__table_celled__seat_tests {
+
+    use crate::casino::player::Player;
+    use crate::casino::table_celled::seats::seat::Seat;
     use crate::prelude::*;
 
     #[test]

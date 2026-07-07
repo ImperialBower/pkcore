@@ -10,7 +10,7 @@ use crate::bot::betting_strategy::BettingStrategy;
 use crate::bot::playbook::Playbook;
 use crate::bot::range_strategy::RangeStrategy;
 use crate::bot::weighted_range::WeightedRange;
-use crate::casino::table_celled::position::Position;
+use crate::casino::position::Position;
 use crate::games::betting_structure::BettingStructure;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -726,7 +726,7 @@ impl BotProfile {
     ///
     /// ```
     /// use pkcore::bot::profile::BotProfile;
-    /// use pkcore::casino::table_celled::position::Position;
+    /// use pkcore::casino::position::Position;
     ///
     /// let profile = BotProfile::gto();
     /// // GTO playbook has a 6-max BTN open_raise entry
@@ -754,7 +754,7 @@ impl BotProfile {
     ///
     /// ```
     /// use pkcore::bot::profile::BotProfile;
-    /// use pkcore::casino::table_celled::position::Position;
+    /// use pkcore::casino::position::Position;
     ///
     /// let profile = BotProfile::gto();
     /// // Falls back to range_strategy.open_raise
@@ -781,7 +781,7 @@ impl BotProfile {
     ///
     /// ```
     /// use pkcore::bot::profile::BotProfile;
-    /// use pkcore::casino::table_celled::position::Position;
+    /// use pkcore::casino::position::Position;
     ///
     /// let profile = BotProfile::gto();
     /// // GTO playbook: BTN plays more aggressively than the flat default
@@ -925,13 +925,13 @@ impl BotProfile {
     /// use pkcore::bot::profile::BotProfile;
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use rand::SeedableRng;
     /// use rand::rngs::SmallRng;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// table.act_forced_bets().unwrap();

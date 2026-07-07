@@ -60,12 +60,12 @@ use crate::card::Card;
 use crate::cards::Cards;
 #[cfg(feature = "bot-profiles")]
 use crate::casino::action::PlayerAction;
+use crate::casino::action::TableAction;
 use crate::casino::game::ForcedBets;
+use crate::casino::position::Position;
 #[cfg(feature = "bot-profiles")]
-use crate::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
-use crate::casino::table_celled::event::TableAction;
-use crate::casino::table_celled::position::Position;
-use crate::casino::table_celled::winnings::Winnings;
+use crate::casino::table::{Player, Seat, Seats, Table};
+use crate::casino::winnings::Winnings;
 #[cfg(feature = "bot-profiles")]
 use crate::games::GamePhase;
 use crate::play::board::Board;
@@ -188,7 +188,7 @@ fn default_format_version() -> u32 {
 /// [`HandHistory::from_table_state_with_ids`].
 ///
 /// `(seat, name, starting_stack, hole_cards, player_id)` — `player_id` is
-/// the per-player [`Uuid`] (typically `PlayerNoCell.id`); pass `None` when
+/// the per-player [`Uuid`] (typically `Player.id`); pass `None` when
 /// identity threading is not needed (or use the simpler 4-tuple
 /// [`HandHistory::from_table_state`] entry point).
 pub type PlayerSnapshot = (u8, String, usize, Option<String>, Option<Uuid>);
@@ -200,7 +200,7 @@ impl HandHistory {
     /// This is the canonical way to build a hand history from a live or
     /// simulated game. Capture `player_snapshot` **before** forced bets and
     /// hole cards immediately **after** the deal, then call this function
-    /// right after [`TableNoCell::end_hand`](crate::casino::table::Table::end_hand).
+    /// right after [`Table::end_hand`](crate::casino::table::Table::end_hand).
     ///
     /// Snapshots produced by this entry point carry no per-player [`Uuid`].
     /// Callers that need identity threading (player-stats aggregation,
@@ -226,7 +226,7 @@ impl HandHistory {
     /// ```
     /// use pkcore::hand_history::HandHistory;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table_celled::winnings::Winnings;
+    /// use pkcore::casino::winnings::Winnings;
     ///
     /// let hh = HandHistory::from_table_state(
     ///     1, 0, 0,
@@ -283,14 +283,14 @@ impl HandHistory {
     ///
     /// Same as [`Self::from_table_state`] except `player_snapshot` carries an
     /// extra `Option<Uuid>` element per seat (typically `Some(player.id)`
-    /// where `player.id` is the [`Uuid`] from `PlayerNoCell`).
+    /// where `player.id` is the [`Uuid`] from `Player`).
     ///
     /// # Examples
     ///
     /// ```
     /// use pkcore::hand_history::HandHistory;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table_celled::winnings::Winnings;
+    /// use pkcore::casino::winnings::Winnings;
     /// use uuid::Uuid;
     ///
     /// let alice = Uuid::new_v4();
@@ -563,14 +563,11 @@ impl HandHistory {
         let max_seat = self.players.iter().map(|p| p.seat as usize).max().unwrap_or(0);
         let button_seat = self.table.button.unwrap_or(0) as usize;
         let table_size = max_seat.max(button_seat) + 1;
-        let mut seats_vec: Vec<SeatNoCell> = (0..table_size)
-            .map(|_| SeatNoCell::new(PlayerNoCell::default()))
-            .collect();
+        let mut seats_vec: Vec<Seat> = (0..table_size).map(|_| Seat::new(Player::default())).collect();
         for p in &self.players {
-            seats_vec[p.seat as usize] =
-                SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), p.stack as usize));
+            seats_vec[p.seat as usize] = Seat::new(Player::new_with_chips(p.name.clone(), p.stack as usize));
         }
-        let seats = SeatsNoCell::new(seats_vec);
+        let seats = Seats::new(seats_vec);
         // EPIC-30 Phase 9 / EPIC-31 Phase 5: dispatch on recorded
         // variant + structure so PLO replays through `plo_from_seats`,
         // FLHE replays through `limit_holdem_from_seats`, and everything
@@ -1090,7 +1087,7 @@ impl HandCollection {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table_celled::position::Position;
+    /// use pkcore::casino::position::Position;
     /// use pkcore::hand_history::HandCollection;
     ///
     /// let collection = HandCollection::new();
@@ -1466,7 +1463,7 @@ pub struct PlayerEntry {
     ///
     /// `None` when the entry comes from a legacy YAML file that was written
     /// before EPIC-26 added identity propagation. New sessions populate it
-    /// from `PlayerNoCell::uuid`.
+    /// from `Player::uuid`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub player_id: Option<Uuid>,
 
@@ -1500,7 +1497,7 @@ pub struct PlayerEntry {
     /// plus every subsequent reload — at the time the hand was recorded.
     /// `None` for legacy YAML files written before this field existed, and
     /// for any session that wasn't tracking reloads. Pairs with
-    /// `Player::withdrawn` / `PlayerNoCell::withdrawn` at the player level
+    /// `Player::withdrawn` / `Player::withdrawn` at the player level
     /// and feeds the profit/loss calc `stack + chips_in_pot - withdrawn`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub withdrawn: Option<f64>,
@@ -1682,7 +1679,7 @@ enum EventStreet {
 }
 
 impl Streets {
-    /// Build a [`Streets`] record by parsing a `TableNoCell` event log.
+    /// Build a [`Streets`] record by parsing a `Table` event log.
     ///
     /// Walks `log` in a single forward pass, partitioning player-action events
     /// into preflop / flop / turn / river buckets. [`TableAction::DealtFlop`],
@@ -1692,7 +1689,7 @@ impl Streets {
     /// becomes that street's `pot`.
     ///
     /// All amounts are stored as [`f64`] (the `HandHistory` convention) after
-    /// casting from the `usize` chip counts used internally by `TableNoCell`.
+    /// casting from the `usize` chip counts used internally by `Table`.
     ///
     /// Returns `None` only if `log` is empty.
     ///
@@ -1700,7 +1697,7 @@ impl Streets {
     ///
     /// ```
     /// use pkcore::hand_history::Streets;
-    /// use pkcore::casino::table_celled::event::TableAction;
+    /// use pkcore::casino::action::TableAction;
     ///
     /// let log = vec![
     ///     TableAction::ForcedBetSmallBlind(1, 50),
@@ -1742,7 +1739,7 @@ impl Streets {
     /// ```
     /// use std::collections::HashMap;
     /// use pkcore::hand_history::Streets;
-    /// use pkcore::casino::table_celled::event::TableAction;
+    /// use pkcore::casino::action::TableAction;
     /// use uuid::Uuid;
     ///
     /// let alice = Uuid::new_v4();
@@ -3505,7 +3502,7 @@ hands:
     #[test]
     fn test_from_table_state_hand_id_and_source() {
         use crate::casino::game::ForcedBets;
-        use crate::casino::table_celled::winnings::Winnings;
+        use crate::casino::winnings::Winnings;
 
         let hh = HandHistory::from_table_state(
             3,
@@ -3529,7 +3526,7 @@ hands:
     #[test]
     fn test_from_table_state_net_calculation() {
         use crate::casino::game::ForcedBets;
-        use crate::casino::table_celled::winnings::Winnings;
+        use crate::casino::winnings::Winnings;
 
         let hh = HandHistory::from_table_state(
             1,
@@ -3694,7 +3691,7 @@ hands:
     /// Seats 2/4/6 with button at 1 (empty). Seat 2 folds preflop; seats 4 and 6
     /// see the flop. On the flop seat 4 checks, seat 6 opens for 250, seat 4
     /// folds.  The second action by seat 4 was previously rejected as
-    /// "out of order" because `SeatsNoCell::next_to_act` skipped the checker when
+    /// "out of order" because `Seats::next_to_act` skipped the checker when
     /// `everyone_has_bet` was true but the current-bet comparison used the wrong
     /// branch ordering.
     #[cfg(feature = "bot-profiles")]
@@ -3967,7 +3964,7 @@ hands:
     #[test]
     fn test_hand_history_shuffled_deck_round_trips() {
         use crate::casino::game::ForcedBets;
-        use crate::casino::table_celled::winnings::Winnings;
+        use crate::casino::winnings::Winnings;
 
         let deck_str = "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣";
 
@@ -4019,7 +4016,7 @@ hands:
     #[test]
     fn test_from_table_state_stores_shuffled_deck() {
         use crate::casino::game::ForcedBets;
-        use crate::casino::table_celled::winnings::Winnings;
+        use crate::casino::winnings::Winnings;
 
         let deck_str = "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣";
 

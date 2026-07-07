@@ -25,8 +25,8 @@ use pkcore::arrays::{HandRanker, seven::Seven};
 use pkcore::bot::profile::BotProfile;
 use pkcore::casino::action::PlayerAction;
 use pkcore::casino::game::ForcedBets;
-use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
-use pkcore::casino::table_celled::winnings::Winnings;
+use pkcore::casino::table::{Player, Seat, Seats, Table};
+use pkcore::casino::winnings::Winnings;
 use pkcore::hand_history::{HandCollection, HandHistory, ResultEntry};
 use rand::Rng;
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
@@ -64,17 +64,14 @@ fn main() {
         .collect();
 
     // Seat 0 = human; seats 1..=8 = bots (profiles[seat-1]).
-    let mut seats_vec = vec![SeatNoCell::new(PlayerNoCell::new_with_chips(
+    let mut seats_vec = vec![Seat::new(Player::new_with_chips(
         HUMAN_NAME.to_string(),
         STARTING_CHIPS,
     ))];
     for profile in &profiles {
-        seats_vec.push(SeatNoCell::new(PlayerNoCell::new_with_chips(
-            profile.name.clone(),
-            STARTING_CHIPS,
-        )));
+        seats_vec.push(Seat::new(Player::new_with_chips(profile.name.clone(), STARTING_CHIPS)));
     }
-    let seats = SeatsNoCell::new(seats_vec);
+    let seats = Seats::new(seats_vec);
     let mut table = Table::nlh_from_seats(seats, ForcedBets::new(SMALL_BLIND, BIG_BLIND));
     let mut rng = rand::rng();
     let mut editor = Reedline::create();
@@ -577,7 +574,7 @@ fn build_hand_history(
     player_snapshot: &[(u8, String, usize, Option<String>)],
     board_str: &str,
     winnings: &Winnings,
-    event_log: &[pkcore::casino::table_celled::event::TableAction],
+    event_log: &[pkcore::casino::action::TableAction],
     ending_stacks: &[(u8, usize)],
 ) -> HandHistory {
     HandHistory::from_table_state(

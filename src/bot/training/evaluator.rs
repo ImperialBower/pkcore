@@ -12,7 +12,7 @@ use crate::bot::exploitative_decider::ExploitativeDecider;
 use crate::bot::profile::BotProfile;
 use crate::bot::sim::{SimResult, SimTable};
 use crate::casino::game::ForcedBets;
-use crate::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+use crate::casino::table::{Player, Seat, Seats, Table};
 
 const SB: usize = 50;
 const BB: usize = 100;
@@ -109,9 +109,9 @@ fn session_seed(seed: u64, opp_idx: usize, replicate: usize) -> u64 {
 /// bot's BB/100 (seat 0 vs seat 1). `seed` fixes the deck shuffle and every
 /// seeded decider draw, so the session is fully reproducible.
 fn run_session(config: &ExploitConfig, opp_profile: &BotProfile, hands: usize, seed: u64) -> f64 {
-    let exploit = PlayerNoCell::new_with_chips("exploit".to_string(), STARTING_CHIPS);
-    let opp = PlayerNoCell::new_with_chips("opp".to_string(), STARTING_CHIPS);
-    let seats = SeatsNoCell::new(vec![SeatNoCell::new(exploit), SeatNoCell::new(opp)]);
+    let exploit = Player::new_with_chips("exploit".to_string(), STARTING_CHIPS);
+    let opp = Player::new_with_chips("opp".to_string(), STARTING_CHIPS);
+    let seats = Seats::new(vec![Seat::new(exploit), Seat::new(opp)]);
     let table = Table::nlh_from_seats(seats, ForcedBets::new(SB, BB));
 
     let bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)> = vec![

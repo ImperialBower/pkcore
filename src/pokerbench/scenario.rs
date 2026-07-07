@@ -1,5 +1,5 @@
 use crate::card::Card;
-use crate::casino::table_celled::position::Position;
+use crate::casino::position::Position;
 use crate::pokerbench::action::PokerBenchAction;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -58,7 +58,7 @@ impl fmt::Display for PokerBenchSplit {
 /// # Examples
 /// ```
 /// use pkcore::pokerbench::{PokerBenchAction, PokerBenchScenario, PokerBenchSplit};
-/// use pkcore::casino::table_celled::position::Position;
+/// use pkcore::casino::position::Position;
 ///
 /// let scenario = PokerBenchScenario {
 ///     instruction: "...".to_string(),
@@ -159,7 +159,7 @@ impl PokerBenchScenario {
     ///
     /// Resolves each position in [`stacks`](PokerBenchScenario::stacks) to a
     /// 0-based seat (button at seat 0, mirroring pkcore's
-    /// [`Position::from_seat`](crate::casino::table_celled::position::Position::from_seat)
+    /// [`Position::from_seat`](crate::casino::position::Position::from_seat)
     /// convention), synthesizes a player name from the position, and identifies
     /// the hero's seat. Positions outside the 6-max PokerBench set are skipped.
     /// This decides the position→seat mapping once, in the library, so a
@@ -169,7 +169,7 @@ impl PokerBenchScenario {
     /// # Examples
     /// ```
     /// use pkcore::pokerbench::{PokerBenchAction, PokerBenchScenario, PokerBenchSplit};
-    /// use pkcore::casino::table_celled::position::Position;
+    /// use pkcore::casino::position::Position;
     ///
     /// let scenario = PokerBenchScenario {
     ///     instruction: String::new(),

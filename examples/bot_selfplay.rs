@@ -13,11 +13,11 @@ use pkcore::analysis::eval::Eval;
 use pkcore::arrays::{HandRanker, seven::Seven};
 use pkcore::bot::profile::BotProfile;
 use pkcore::casino::action::PlayerAction;
+use pkcore::casino::action::TableAction;
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::session::PokerSession;
-use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
-use pkcore::casino::table_celled::event::TableAction;
-use pkcore::casino::table_celled::winnings::Winnings;
+use pkcore::casino::table::{Player, Seat, Seats, Table};
+use pkcore::casino::winnings::Winnings;
 use pkcore::hand_history::{HandCollection, HandHistory};
 use rand::Rng;
 use std::str::FromStr;
@@ -51,10 +51,10 @@ fn main() {
         })
         .collect();
 
-    let seats = SeatsNoCell::new(
+    let seats = Seats::new(
         profiles
             .iter()
-            .map(|p| SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), STARTING_CHIPS)))
+            .map(|p| Seat::new(Player::new_with_chips(p.name.clone(), STARTING_CHIPS)))
             .collect(),
     );
     let table = Table::nlh_from_seats(seats, ForcedBets::new(SMALL_BLIND, BIG_BLIND));

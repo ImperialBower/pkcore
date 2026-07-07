@@ -10,7 +10,7 @@
 //!
 //! Phase 1 of EPIC-29 introduces the type with NLHE-correct semantics on
 //! the `NoLimit` arm and runnable placeholder semantics on the `PotLimit`
-//! and `FixedLimit` arms. Phase 7 wires it into `TableNoCell::act_raise`.
+//! and `FixedLimit` arms. Phase 7 wires it into `Table::act_raise`.
 
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
@@ -68,7 +68,7 @@ impl BettingStructure {
     /// Minimum legal raise increment (delta above the current bet) given
     /// the previous raise size on this street.
     ///
-    /// - `NoLimit`: matches today's `TableNoCell::min_raise` inline math:
+    /// - `NoLimit`: matches today's `Table::min_raise` inline math:
     ///   returns `last_raise` if non-zero, else `big_blind`.
     /// - `PotLimit`: same min-raise rule as `NoLimit`; pot-limit only caps
     ///   the *maximum*, not the minimum.
@@ -190,7 +190,7 @@ impl BettingStructure {
     /// in front of the actor, the raise **completes** to one full increment;
     /// otherwise it steps *by* the increment on top of the current bet. This one
     /// rule is shared by
-    /// [`TableNoCell::min_raise_to`](crate::casino::table::Table::min_raise_to)
+    /// [`Table::min_raise_to`](crate::casino::table::Table::min_raise_to)
     /// and the fixed-limit arm of [`Self::max_raise`], so the minimum and the
     /// (fixed-limit) maximum are computed from the same source and cannot drift
     /// (audit P9j.2).
@@ -274,7 +274,7 @@ mod games__betting_structure__tests {
 
     #[test]
     fn no_limit_min_raise_first_raise_returns_big_blind() {
-        // Mirrors TableNoCell::min_raise at table_no_cell.rs:1572-1578
+        // Mirrors Table::min_raise in casino::table
         // when raise_increment == 0: returns forced.big_blind.
         let nl = BettingStructure::NoLimit;
         assert_eq!(100, nl.min_raise(0, 100));
@@ -282,7 +282,7 @@ mod games__betting_structure__tests {
 
     #[test]
     fn no_limit_min_raise_subsequent_returns_last_raise() {
-        // Mirrors TableNoCell::min_raise when raise_increment > 0.
+        // Mirrors Table::min_raise when raise_increment > 0.
         let nl = BettingStructure::NoLimit;
         assert_eq!(200, nl.min_raise(200, 100));
         assert_eq!(50, nl.min_raise(50, 100));

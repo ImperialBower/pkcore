@@ -1,9 +1,10 @@
-//! A version of [`Table`](crate::casino::table_celled::TableCelled) that uses traditional
-//! `&mut self` Rust mutability instead of interior mutability (`Cell`,
-//! `RefCell`, `BintCell`, `CardsCell`, etc.).
+//! The primary `&mut self` poker table engine.
 //!
-//! The two implementations are functionally equivalent and exist so they can
-//! be compared ergonomically and in benchmarks.
+//! Uses traditional Rust mutability instead of the interior mutability
+//! (`Cell`, `RefCell`, `BintCell`, `CardsCell`, …) of its teaching/benchmark
+//! twin [`TableCelled`](crate::casino::table_celled::TableCelled). The two
+//! implementations are functionally equivalent and exist so they can be
+//! compared ergonomically and in benchmarks.
 
 use crate::analysis::case_eval::CaseEval;
 use crate::analysis::eval::Eval;
@@ -15,27 +16,12 @@ use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::card::Card;
 use crate::cards::Cards;
-
-/// EPIC-32 Phase 5: discriminates Stud-family first-to-act selection.
-/// `HighStud` picks the seat with the *best* visible hand (used by Stud
-/// Hi on 4th+); `LowRazz` picks the seat with the *worst* visible hand
-/// (used by Razz, EPIC-33).
-///
-/// TODO: This file is getting to bloated. Need to split it out into smaller topical files
-/// with probs a cleaner structure.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum VisibleHandMode {
-    HighStud,
-    LowRazz,
-}
-
+use crate::casino::action::TableAction;
+use crate::casino::equity::seat_equity::SeatEquity;
+use crate::casino::equity::seatbit::Seatbit;
+use crate::casino::equity::table_equity::TableEquity;
 use crate::casino::game::ForcedBets;
-use crate::casino::state::PlayerState;
-use crate::casino::table_celled::event::TableAction;
-use crate::casino::table_celled::seats::seat_equity::SeatEquity;
-use crate::casino::table_celled::seats::seatbit::Seatbit;
-use crate::casino::table_celled::seats::table_equity::TableEquity;
-use crate::casino::table_celled::winnings::{PotWin, Winnings};
+use crate::casino::winnings::{PotWin, Winnings};
 use crate::games::betting_structure::{BetTier, BettingStructure};
 use crate::games::omaha::OmahaHigh;
 use crate::games::razz::california::California;
@@ -43,1192 +29,30 @@ use crate::games::{GameFamily, GamePhase, GameType};
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
-use crate::play::seat_hand::SeatHand;
 use crate::play::visibility::Visibility;
-use crate::{Agency, PKError, Pile};
+use crate::{PKError, Pile};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;
-// ── PlayerNoCell ──────────────────────────────────────────────────────────────
 
-/// A poker player whose mutable state is stored as plain fields instead of
-/// `Cell`/`RefCell` wrappers.
-///
-/// Compare with [`crate::casino::player::Player`] which achieves mutation
-/// through interior mutability so that `&self` methods can alter state.
-///
-/// # Examples
-///
-/// ```
-/// use pkcore::casino::table::PlayerNoCell;
-///
-/// let mut p = PlayerNoCell::new_with_chips("Alice".to_string(), 1_000);
-/// assert_eq!(1_000, p.total_chip_count());
-/// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PlayerNoCell {
-    pub id: Uuid,
-    pub handle: String,
-    /// Remaining stack (chips not yet committed this round).
-    pub chips: usize,
-    /// Chips committed to the current betting round.
-    pub bet: usize,
-    /// Cumulative chips committed across all rounds of the current hand.
-    pub chips_in_play: usize,
-    /// Cumulative chips this player has taken out of cash — the initial buy-in
-    /// plus every subsequent [`PlayerNoCell::reload`]. Pairs with `chips` to
-    /// support the profit/loss calc `chips + chips_in_play - withdrawn`.
-    pub withdrawn: usize,
-    pub state: PlayerState,
-}
-
-impl Default for PlayerNoCell {
-    fn default() -> Self {
-        PlayerNoCell {
-            id: Uuid::default(),
-            handle: String::new(),
-            chips: 0,
-            bet: 0,
-            chips_in_play: 0,
-            withdrawn: 0,
-            state: PlayerState::Out,
-        }
-    }
-}
-
-impl PlayerNoCell {
-    /// Creates a player with no chips, ready to receive chips before the hand.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::PlayerNoCell;
-    ///
-    /// let p = PlayerNoCell::new("Bob".to_string());
-    /// assert_eq!("Bob", p.handle);
-    /// assert_eq!(0, p.chips);
-    /// ```
-    #[must_use]
-    pub fn new(handle: String) -> Self {
-        PlayerNoCell {
-            id: Uuid::new_v4(),
-            handle,
-            chips: 0,
-            bet: 0,
-            chips_in_play: 0,
-            withdrawn: 0,
-            state: PlayerState::YetToAct,
-        }
-    }
-
-    /// Creates a player pre-loaded with `stack` chips.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::PlayerNoCell;
-    ///
-    /// let p = PlayerNoCell::new_with_chips("Carol".to_string(), 5_000);
-    /// assert_eq!(5_000, p.total_chip_count());
-    /// ```
-    #[must_use]
-    pub fn new_with_chips(handle: String, stack: usize) -> Self {
-        PlayerNoCell {
-            id: Uuid::new_v4(),
-            handle,
-            chips: stack,
-            bet: 0,
-            chips_in_play: 0,
-            withdrawn: stack,
-            state: PlayerState::YetToAct,
-        }
-    }
-
-    /// Adds `amount` to the player's stack and records it in the cumulative
-    /// `withdrawn` ledger.
-    ///
-    /// Use this when a player buys more chips mid-session — e.g., after busting,
-    /// or as a top-up. Both `chips` and `withdrawn` are incremented by the same
-    /// amount, keeping the `profit = chips + chips_in_play - withdrawn` invariant
-    /// intact. Returns the new chip count after the reload.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::PlayerNoCell;
-    ///
-    /// let mut p = PlayerNoCell::new_with_chips("Bob".to_string(), 1_000);
-    /// p.chips = 0; // simulate bust
-    ///
-    /// let new_total = p.reload(500);
-    /// assert_eq!(500, new_total);
-    /// assert_eq!(500, p.chips);
-    /// assert_eq!(1_500, p.withdrawn);
-    /// ```
-    pub fn reload(&mut self, amount: usize) -> usize {
-        if amount > 0 {
-            self.chips += amount;
-            self.withdrawn += amount;
-        }
-        self.chips
-    }
-
-    /// Total chips the player controls: stack + amount already bet this round.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::PlayerNoCell;
-    ///
-    /// let mut p = PlayerNoCell::new_with_chips("Dave".to_string(), 1_000);
-    /// let _ = p.act_bet(200);
-    /// assert_eq!(1_000, p.total_chip_count());
-    /// ```
-    #[must_use]
-    pub fn total_chip_count(&self) -> usize {
-        self.chips + self.bet
-    }
-
-    #[must_use]
-    pub fn is_active(&self) -> bool {
-        self.state.is_active()
-    }
-
-    #[must_use]
-    pub fn is_all_in(&self) -> bool {
-        self.state.is_all_in() || (self.chips == 0 && self.bet > 0)
-    }
-
-    #[must_use]
-    pub fn is_in_hand(&self) -> bool {
-        self.state.is_in_hand()
-    }
-
-    #[must_use]
-    pub fn is_out(&self) -> bool {
-        self.state.is_out()
-    }
-
-    #[must_use]
-    pub fn is_tapped_out(&self) -> bool {
-        self.chips == 0 && self.bet == 0
-    }
-
-    #[must_use]
-    pub fn is_clear(&self) -> bool {
-        self.state.is_yet_to_act() && self.bet == 0 && self.chips_in_play == 0
-    }
-
-    #[must_use]
-    pub fn has_bet(&self) -> bool {
-        self.bet > 0
-    }
-
-    // region Core bet logic
-
-    /// Core bet logic shared by all bet-like actions.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidAction` if `bet_type.amount()` is zero.
-    /// - `PKError::InsufficientChips` if the player cannot cover the additional bet.
-    /// - `PKError::InvalidTableAction` if the player is not active.
-    fn act_bet_internal(&mut self, bet_type: PlayerState) -> Result<usize, PKError> {
-        if bet_type.amount() == 0 {
-            return Err(PKError::InvalidAction);
-        }
-        if bet_type.amount() > self.total_chip_count() {
-            return Err(PKError::InsufficientChips);
-        }
-        if !self.state.is_active() {
-            return Err(PKError::InvalidTableAction);
-        }
-
-        let additional_bet = bet_type.amount().saturating_sub(self.bet);
-        if additional_bet == 0 {
-            return Err(PKError::InsufficientChips);
-        }
-        if self.chips < additional_bet {
-            return Err(PKError::InsufficientChips);
-        }
-
-        self.chips -= additional_bet;
-        self.bet += additional_bet;
-        self.chips_in_play += additional_bet;
-
-        if self.is_all_in() {
-            self.state = PlayerState::AllIn(self.bet);
-        } else {
-            if matches!(bet_type, PlayerState::AllIn(_)) {
-                return Err(PKError::InvalidTableAction);
-            }
-            self.state = bet_type;
-        }
-
-        Ok(self.chips)
-    }
-
-    /// Posts `amount` of *dead* money (a stud/razz ante) for an active player.
-    ///
-    /// Sibling of `act_bet_internal` for money that must **not** enter
-    /// `bet`: it caps at the remaining stack, moves the chips from `chips` into
-    /// `chips_in_play` (preserving the `pot == Σ chips_in_play` showdown
-    /// invariant) while leaving `bet` untouched — so the ante never credits a
-    /// call or shrinks a bring-in. Crucially it mirrors `act_bet_internal`'s
-    /// all-in transition: when the post takes the player's **last** chip it sets
-    /// `state = AllIn(..)`. Because the ante lives in `chips_in_play` rather than
-    /// `bet`, the `(chips == 0 && bet > 0)` heuristic in [`Self::is_all_in`]
-    /// cannot fire, so the transition is applied explicitly. Without it an
-    /// ante-felted seat is stranded chips=0/bet=0/`YetToAct` and betting never
-    /// completes (audit P9a).
-    ///
-    /// Returns the amount actually posted (0 for an inactive seat — folded, out,
-    /// or not dealt in — or one already out of chips). The inactive-seat guard
-    /// also means an occupied seat sitting `Out` with chips is never charged
-    /// (audit P9h).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::PlayerNoCell;
-    /// use pkcore::prelude::PlayerState;
-    ///
-    /// // Whole 2-chip stack goes to a 2-chip ante → all-in for the dead money.
-    /// let mut p = PlayerNoCell::new_with_chips("Shorty".to_string(), 2);
-    /// let posted = p.post_dead(2);
-    /// assert_eq!(2, posted);
-    /// assert_eq!(0, p.chips);
-    /// assert_eq!(2, p.chips_in_play);
-    /// assert_eq!(0, p.bet); // dead money never enters the street bet
-    /// assert!(p.is_all_in());
-    /// ```
-    pub fn post_dead(&mut self, amount: usize) -> usize {
-        if !self.is_active() {
-            return 0;
-        }
-        let actual = amount.min(self.chips);
-        if actual == 0 {
-            return 0;
-        }
-        self.chips -= actual;
-        self.chips_in_play += actual;
-        // Mirror act_bet_internal: taking the player's last chip is an all-in.
-        // The dead money sits in chips_in_play, not bet, so is_all_in()'s
-        // `(chips == 0 && bet > 0)` heuristic can't fire — set state explicitly.
-        if self.chips == 0 {
-            self.state = PlayerState::AllIn(self.bet);
-        }
-        actual
-    }
-
-    /// Posts a voluntary bet of `amount`.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InsufficientChips` if insufficient chips.
-    /// - `PKError::InvalidTableAction` if not active.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::PlayerNoCell;
-    /// use pkcore::prelude::PlayerState;
-    ///
-    /// let mut p = PlayerNoCell::new_with_chips("Eve".to_string(), 1_000);
-    /// let remaining = p.act_bet(300).unwrap();
-    /// assert_eq!(700, remaining);
-    /// assert_eq!(PlayerState::Bet(300), p.state);
-    /// ```
-    pub fn act_bet(&mut self, amount: usize) -> Result<usize, PKError> {
-        self.act_bet_internal(PlayerState::Bet(amount))
-    }
-
-    /// Posts a forced blind bet of `amount`.
-    ///
-    /// If the player's total chip count is less than `amount`, they are posted
-    /// all-in for their remaining stack (short blind rule).
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidTableAction` if the player is not active.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::PlayerNoCell;
-    /// use pkcore::prelude::PlayerState;
-    ///
-    /// // Full blind — player has enough chips.
-    /// let mut p = PlayerNoCell::new_with_chips("Frank".to_string(), 1_000);
-    /// p.act_bet_blind(100).unwrap();
-    /// assert_eq!(PlayerState::Blind(100), p.state);
-    ///
-    /// // Short blind — player goes all-in for their remaining stack.
-    /// let mut p = PlayerNoCell::new_with_chips("Short".to_string(), 20);
-    /// p.act_bet_blind(50).unwrap();
-    /// assert_eq!(PlayerState::AllIn(20), p.state);
-    /// ```
-    pub fn act_bet_blind(&mut self, amount: usize) -> Result<usize, PKError> {
-        if self.total_chip_count() < amount {
-            return self.act_all_in();
-        }
-        self.act_bet_internal(PlayerState::Blind(amount))
-    }
-
-    /// Posts a forced blind, going all-in for the remaining stack when chips are
-    /// insufficient to cover the full required amount.
-    ///
-    /// On success returns the amount actually posted.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InsufficientChips` if the player has zero chips.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::PlayerNoCell;
-    /// use pkcore::prelude::PlayerState;
-    ///
-    /// // Short stack: 30 chips, required blind 100 — posts all 30 and goes all-in.
-    /// let mut p = PlayerNoCell::new_with_chips("Short".to_string(), 30);
-    /// let actual = p.act_blind_or_all_in(100).unwrap();
-    /// assert_eq!(30, actual);            // 30 chips actually posted
-    /// assert_eq!(30, p.bet);             // 30 committed
-    /// assert_eq!(PlayerState::AllIn(30), p.state);
-    ///
-    /// // Full stack: 500 chips, required blind 100 — posts exactly 100.
-    /// let mut q = PlayerNoCell::new_with_chips("Full".to_string(), 500);
-    /// let actual = q.act_blind_or_all_in(100).unwrap();
-    /// assert_eq!(100, actual);
-    /// assert_eq!(PlayerState::Blind(100), q.state);
-    /// ```
-    pub fn act_blind_or_all_in(&mut self, required_amount: usize) -> Result<usize, PKError> {
-        let actual = required_amount.min(self.total_chip_count());
-        if actual == 0 {
-            return Err(PKError::InsufficientChips);
-        }
-        // act_bet_internal auto-transitions to AllIn(self.bet) when chips reach 0.
-        self.act_bet_internal(PlayerState::Blind(actual))?;
-        Ok(actual)
-    }
-
-    /// Calls the current bet by committing `amount` total to the pot.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InsufficientChips` if insufficient chips.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::PlayerNoCell;
-    /// use pkcore::prelude::PlayerState;
-    ///
-    /// let mut p = PlayerNoCell::new_with_chips("Grace".to_string(), 1_000);
-    /// p.act_call(500).unwrap();
-    /// assert_eq!(PlayerState::Call(500), p.state);
-    /// ```
-    pub fn act_call(&mut self, amount: usize) -> Result<usize, PKError> {
-        self.act_bet_internal(PlayerState::Call(amount))
-    }
-
-    /// Raises to `amount` total.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InsufficientChips` if insufficient chips.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::PlayerNoCell;
-    /// use pkcore::prelude::PlayerState;
-    ///
-    /// let mut p = PlayerNoCell::new_with_chips("Hank".to_string(), 1_000);
-    /// p.act_bet(100).unwrap();
-    /// p.act_raise(300).unwrap();
-    /// assert_eq!(PlayerState::Raise(300), p.state);
-    /// ```
-    pub fn act_raise(&mut self, amount: usize) -> Result<usize, PKError> {
-        self.act_bet_internal(PlayerState::Raise(amount))
-    }
-
-    /// Goes all-in, committing the entire stack.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidTableAction` if already all-in.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::PlayerNoCell;
-    /// use pkcore::prelude::PlayerState;
-    ///
-    /// let mut p = PlayerNoCell::new_with_chips("Iris".to_string(), 500);
-    /// let amount = p.act_all_in().unwrap();
-    /// assert_eq!(500, amount);
-    /// assert_eq!(PlayerState::AllIn(500), p.state);
-    /// ```
-    pub fn act_all_in(&mut self) -> Result<usize, PKError> {
-        if self.is_all_in() {
-            return Err(PKError::InvalidTableAction);
-        }
-        let amount = self.total_chip_count();
-        self.act_bet_internal(PlayerState::AllIn(amount))?;
-        Ok(amount)
-    }
-
-    /// Checks (passes action without adding chips).
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidTableAction` if not active or state transition is invalid.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::PlayerNoCell;
-    /// use pkcore::prelude::PlayerState;
-    ///
-    /// let mut p = PlayerNoCell::new_with_chips("Jack".to_string(), 1_000);
-    /// p.act_check().unwrap();
-    /// assert_eq!(PlayerState::Check, p.state);
-    /// ```
-    pub fn act_check(&mut self) -> Result<(), PKError> {
-        if !self.state.is_active() {
-            return Err(PKError::InvalidTableAction);
-        }
-        if !self.state.can_given(&PlayerState::Check) {
-            return Err(PKError::InvalidTableAction);
-        }
-        self.state = PlayerState::Check;
-        Ok(())
-    }
-
-    /// Folds, returning the chips already bet this round.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidTableAction` if not active.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::PlayerNoCell;
-    /// use pkcore::prelude::PlayerState;
-    ///
-    /// let mut p = PlayerNoCell::new_with_chips("Kate".to_string(), 1_000);
-    /// p.act_bet(200).unwrap();
-    /// let folded = p.act_fold().unwrap();
-    /// assert_eq!(200, folded);
-    /// assert_eq!(PlayerState::Fold, p.state);
-    /// ```
-    pub fn act_fold(&mut self) -> Result<usize, PKError> {
-        if !self.state.is_active() {
-            return Err(PKError::InvalidTableAction);
-        }
-        self.state = PlayerState::Fold;
-        let bet = self.bet;
-        self.bet = 0;
-        Ok(bet)
-    }
-
-    /// Collects the current round bet back to the pot and resets to `YetToAct`
-    /// (if the player still has chips and is active).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::PlayerNoCell;
-    ///
-    /// let mut p = PlayerNoCell::new_with_chips("Lena".to_string(), 1_000);
-    /// p.act_bet(200).unwrap();
-    /// let collected = p.act_bring_it_in();
-    /// assert_eq!(200, collected);
-    /// assert_eq!(0, p.bet);
-    /// ```
-    pub fn act_bring_it_in(&mut self) -> usize {
-        let bet = self.bet;
-        self.bet = 0;
-        if self.state.is_active() && self.chips > 0 {
-            self.state = PlayerState::YetToAct;
-        }
-        bet
-    }
-
-    /// Like `act_bring_it_in` but does **not** change the player's state.
-    ///
-    /// Used when there is only one player remaining with action to give, so
-    /// their state should stay as-is for the showdown.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::PlayerNoCell;
-    /// use pkcore::prelude::PlayerState;
-    ///
-    /// let mut p = PlayerNoCell::new_with_chips("Max".to_string(), 1_000);
-    /// p.act_bet(300).unwrap();
-    /// let collected = p.act_bring_it_in_frozen();
-    /// assert_eq!(300, collected);
-    /// assert_eq!(PlayerState::Bet(300), p.state); // unchanged
-    /// ```
-    pub fn act_bring_it_in_frozen(&mut self) -> usize {
-        let bet = self.bet;
-        self.bet = 0;
-        bet
-    }
-
-    /// Closes out the betting round: sets state to `Showdown(chips_in_play)` and
-    /// collects the remaining bet.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidTableAction` if not active.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::PlayerNoCell;
-    /// use pkcore::prelude::PlayerState;
-    ///
-    /// let mut p = PlayerNoCell::new_with_chips("Nina".to_string(), 1_000);
-    /// p.act_bet(400).unwrap();
-    /// let collected = p.act_close_it_out().unwrap();
-    /// assert_eq!(400, collected);
-    /// assert!(matches!(p.state, PlayerState::Showdown(_)));
-    /// ```
-    pub fn act_close_it_out(&mut self) -> Result<usize, PKError> {
-        if !self.state.is_active() {
-            return Err(PKError::InvalidTableAction);
-        }
-        self.state = PlayerState::Showdown(self.chips_in_play);
-        let bet = self.bet;
-        self.bet = 0;
-        Ok(bet)
-    }
-
-    /// Resets per-hand state, clearing `chips_in_play` and returning to `YetToAct`.
-    pub fn reset(&mut self) {
-        self.chips_in_play = 0;
-        self.state = PlayerState::YetToAct;
-    }
-
-    // end region
-}
-
-impl Display for PlayerNoCell {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}: {} chips / {} in play [{}]",
-            self.handle, self.chips, self.chips_in_play, self.state
-        )
-    }
-}
-
-// ── SeatNoCell ────────────────────────────────────────────────────────────────
-
-/// A single seat at the table holding a [`PlayerNoCell`] and their hole cards.
-///
-/// Replaces `SeatCell(RefCell<Seat>)` with a plain struct whose fields are
-/// directly mutable via `&mut self`.
-///
-/// # Examples
-///
-/// ```
-/// use pkcore::casino::table::{PlayerNoCell, SeatNoCell};
-///
-/// let player = PlayerNoCell::new_with_chips("Oliver".to_string(), 1_000);
-/// let seat = SeatNoCell::new(player);
-/// assert!(!seat.is_empty());
-/// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct SeatNoCell {
-    pub player: PlayerNoCell,
-    pub cards: BoxedCards,
-    /// Visibility-aware per-seat hand introduced by EPIC-29 Phase 5.
-    /// Populated in parallel with `cards` for NLHE/PLO (every card
-    /// `Visibility::Down`); stud-family variants (EPIC-32/33) will use
-    /// this field as the source of truth for per-card visibility.
-    pub hand: SeatHand,
-}
-
-impl Default for SeatNoCell {
-    fn default() -> Self {
-        SeatNoCell {
-            player: PlayerNoCell::default(),
-            cards: BoxedCards::blanks(2),
-            hand: SeatHand::new(0),
-        }
-    }
-}
-
-impl SeatNoCell {
-    /// Creates a seat for `player` with two blank card slots.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell};
-    ///
-    /// let seat = SeatNoCell::new(PlayerNoCell::new_with_chips("Pat".to_string(), 500));
-    /// assert!(!seat.is_empty());
-    /// ```
-    #[must_use]
-    pub fn new(player: PlayerNoCell) -> Self {
-        SeatNoCell {
-            player,
-            cards: BoxedCards::blanks(2),
-            hand: SeatHand::new(0),
-        }
-    }
-
-    /// True when no player is seated (nil UUID / empty handle).
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.player.id == Uuid::default() || self.player.handle.is_empty()
-    }
-
-    #[must_use]
-    pub fn is_active(&self) -> bool {
-        !self.is_empty() && self.player.is_active()
-    }
-
-    #[must_use]
-    pub fn is_all_in(&self) -> bool {
-        self.player.is_all_in()
-    }
-
-    #[must_use]
-    pub fn is_in_hand(&self) -> bool {
-        !self.is_empty() && self.player.is_in_hand()
-    }
-
-    #[must_use]
-    pub fn is_yet_to_act(&self) -> bool {
-        self.player.state.is_yet_to_act()
-    }
-
-    #[must_use]
-    pub fn is_yet_to_act_or_blind(&self) -> bool {
-        self.player.state.is_yet_to_act_or_blind()
-    }
-
-    #[must_use]
-    pub fn is_clear(&self) -> bool {
-        self.player.is_clear()
-    }
-
-    /// Discards the player's cards, returning them as `Cards`. Clears
-    /// both the legacy `cards: BoxedCards` storage and the new
-    /// visibility-aware `hand: SeatHand`.
-    pub fn discard_cards(&mut self) -> Cards {
-        let cards = self.cards.cards();
-        let _ = self.cards.take();
-        self.hand.clear();
-        cards
-    }
-}
-
-impl Display for SeatNoCell {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        if self.is_empty() {
-            write!(f, "[Empty]")
-        } else {
-            write!(f, "Cards: {}, Player: {}", self.cards, self.player)
-        }
-    }
-}
-
-// ── SeatsNoCell ───────────────────────────────────────────────────────────────
-
-/// The collection of seats at a `TableNoCell`, backed by a plain `Vec`.
-///
-/// Replaces `Seats(Box<[SeatCell]>)` where `SeatCell(RefCell<Seat>)` required
-/// runtime borrow-checking. Mutation here goes through `&mut self` instead.
-///
-/// # Examples
-///
-/// ```
-/// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell};
-///
-/// let seats = SeatsNoCell::new(vec![
-///     SeatNoCell::new(PlayerNoCell::new_with_chips("Q".to_string(), 1_000)),
-///     SeatNoCell::new(PlayerNoCell::new_with_chips("R".to_string(), 1_000)),
-/// ]);
-/// assert_eq!(2, seats.size());
-/// ```
-#[derive(Clone, Debug, Eq, PartialEq, Default)]
-pub struct SeatsNoCell(pub Vec<SeatNoCell>);
-
-impl SeatsNoCell {
-    /// Wraps the given seats.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell};
-    ///
-    /// let s = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("S".to_string(), 1_000)),
-    /// ]);
-    /// assert_eq!(1, s.size());
-    /// ```
-    #[must_use]
-    pub fn new(seats: Vec<SeatNoCell>) -> Self {
-        SeatsNoCell(seats)
-    }
-
-    /// Number of seats (including empty ones).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::{SeatNoCell, SeatsNoCell};
-    ///
-    /// let s = SeatsNoCell::new(vec![SeatNoCell::default(), SeatNoCell::default()]);
-    /// assert_eq!(2, s.size());
-    /// ```
-    #[must_use]
-    pub fn size(&self) -> u8 {
-        u8::try_from(self.0.len()).unwrap_or(0)
-    }
-
-    /// Immutable access to a seat by index.
-    #[must_use]
-    pub fn get_seat(&self, idx: u8) -> Option<&SeatNoCell> {
-        self.0.get(idx as usize)
-    }
-
-    /// Mutable access to a seat by index.
-    #[must_use]
-    pub fn get_seat_mut(&mut self, idx: u8) -> Option<&mut SeatNoCell> {
-        self.0.get_mut(idx as usize)
-    }
-
-    /// True if the seat at `idx` is occupied and in the current hand.
-    #[must_use]
-    pub fn is_seat_in_hand(&self, idx: u8) -> bool {
-        self.get_seat(idx).is_some_and(|s| !s.is_empty() && s.is_in_hand())
-    }
-
-    /// Maximum bet committed by any active player this round.
-    #[must_use]
-    pub fn current_bet(&self) -> usize {
-        self.0.iter().map(|s| s.player.bet).max().unwrap_or(0)
-    }
-
-    /// Chips needed for `player_idx` to match the current highest bet.
-    #[must_use]
-    pub fn to_call(&self, player_idx: u8) -> usize {
-        let highest = self.current_bet();
-        if let Some(seat) = self.get_seat(player_idx) {
-            highest.saturating_sub(seat.player.bet)
-        } else {
-            0
-        }
-    }
-
-    /// Total chips held by all non-empty seats (stack + current bet).
-    #[must_use]
-    pub fn total_chip_count(&self) -> usize {
-        self.0
-            .iter()
-            .filter(|s| !s.is_empty())
-            .map(|s| s.player.total_chip_count())
-            .sum()
-    }
-
-    /// Count of seats that are active (in-hand, not all-in, not empty).
-    #[must_use]
-    pub fn count_active_in_hand(&self) -> usize {
-        self.0.iter().filter(|s| !s.is_empty() && s.is_active()).count()
-    }
-
-    /// Count of seats that are active and not all-in (can still give action).
-    #[must_use]
-    pub fn count_players_with_action_to_give(&self) -> usize {
-        self.0
-            .iter()
-            .filter(|s| !s.is_empty() && s.is_active() && !s.is_all_in())
-            .count()
-    }
-
-    /// Seat indices for all active (in-hand) seats.
-    #[must_use]
-    pub fn active_in_hand(&self) -> Vec<u8> {
-        self.0
-            .iter()
-            .enumerate()
-            .filter(|(_, s)| !s.is_empty() && s.is_active())
-            .filter_map(|(i, _)| u8::try_from(i).ok())
-            .collect()
-    }
-
-    /// Returns `true` when all bets have been brought in (no player holds a
-    /// non-zero current-round bet).
-    #[must_use]
-    pub fn are_brought_in(&self) -> bool {
-        self.0.iter().all(|s| s.player.bet == 0)
-    }
-
-    /// Returns `true` when all in-hand players have been dealt their cards.
-    #[must_use]
-    pub fn are_dealt(&self) -> bool {
-        self.0
-            .iter()
-            .all(|s| s.is_empty() || !s.is_in_hand() || s.cards.is_dealt())
-    }
-
-    /// Returns `true` when all in-hand players are `YetToAct`.
-    #[must_use]
-    pub fn are_ready_to_act(&self) -> bool {
-        self.0
-            .iter()
-            .all(|s| s.is_empty() || !s.is_in_hand() || s.is_yet_to_act())
-    }
-
-    /// Returns `true` when all in-hand fields are clear.
-    #[must_use]
-    pub fn are_clear(&self) -> bool {
-        self.0.iter().all(|s| s.is_empty() || s.is_clear())
-    }
-
-    /// True when there is no more betting action required this round.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell};
-    ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("T".to_string(), 1_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("U".to_string(), 1_000)),
-    /// ]);
-    /// // Only 2 active; no one has acted yet, so not complete.
-    /// assert!(!seats.is_betting_complete());
-    /// ```
-    #[must_use]
-    pub fn is_betting_complete(&self) -> bool {
-        if self.count_active_in_hand() <= 1 {
-            return true;
-        }
-        if self.count_players_with_action_to_give() < 1 {
-            return true;
-        }
-        let current_bet = self.current_bet();
-        for seat in &self.0 {
-            if seat.is_empty() {
-                continue;
-            }
-            if seat.is_yet_to_act_or_blind() {
-                return false;
-            }
-            if seat.is_all_in() {
-                continue;
-            }
-            if seat.is_active() && seat.player.bet != current_bet {
-                return false;
-            }
-        }
-        true
-    }
-
-    /// Whether every in-hand player has taken at least one action this street.
-    #[must_use]
-    pub fn has_everyone_acted(&self) -> bool {
-        !self
-            .0
-            .iter()
-            .any(|s| !s.is_empty() && s.is_in_hand() && s.is_yet_to_act())
-    }
-
-    /// Whether every in-hand player has placed a bet or checked.
-    #[must_use]
-    pub fn has_everyone_bet(&self) -> bool {
-        !self
-            .0
-            .iter()
-            .any(|s| !s.is_empty() && s.is_in_hand() && s.is_yet_to_act_or_blind())
-    }
-
-    /// Find the next seat that still needs to act, starting the search at `utg`.
-    ///
-    /// # Errors
-    ///
-    /// Returns `PKError::InvalidSeatNumber` if no seat is found.
-    pub fn next_to_act(&self, utg: u8) -> Result<u8, PKError> {
-        let size = self.0.len();
-        if size == 0 {
-            return Err(PKError::InvalidSeatNumber);
-        }
-        let current_bet = self.current_bet();
-        let everyone_has_bet = self.has_everyone_bet();
-
-        // First pass: find the next seat needing to act.
-        for step in 0..size {
-            let idx = (utg as usize + step) % size;
-            let seat = &self.0[idx];
-            if seat.is_empty() || !seat.is_in_hand() || seat.is_all_in() {
-                continue;
-            }
-            if seat.player.state.is_blind() {
-                return u8::try_from(idx).map_err(|_| PKError::InvalidSeatNumber);
-            }
-            if seat.is_yet_to_act() {
-                return u8::try_from(idx).map_err(|_| PKError::InvalidSeatNumber);
-            }
-            if seat.player.state.is_check() && current_bet == 0 {
-                continue;
-            }
-            if seat.player.state.is_in_hand() && everyone_has_bet && seat.player.bet < current_bet {
-                return u8::try_from(idx).map_err(|_| PKError::InvalidSeatNumber);
-            }
-        }
-
-        // Fallback: return the first non-empty in-hand seat.
-        for step in 0..size {
-            let idx = (utg as usize + step) % size;
-            let seat = &self.0[idx];
-            if seat.is_empty() || !seat.is_in_hand() || seat.is_all_in() {
-                continue;
-            }
-            return u8::try_from(idx).map_err(|_| PKError::InvalidSeatNumber);
-        }
-
-        Err(PKError::InvalidSeatNumber)
-    }
-
-    /// Collects all current-round bets into the pot amount (returned as `usize`).
-    ///
-    /// Active players are reset to `YetToAct` so they can act on the next street,
-    /// unless the hand is effectively over (≤1 player still in), in which case
-    /// their state is left unchanged ("frozen") since no further streets are needed.
-    ///
-    /// "Frozen" is also used when at most 1 non-all-in player remains (all others
-    /// all-in): that player cannot meaningfully bet on subsequent streets because
-    /// no opponent can call them, so their state must not be reset to `YetToAct`.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::ActionIsntFinished` if betting is not yet complete.
-    pub fn bring_it_in(&mut self) -> Result<usize, PKError> {
-        if !self.is_betting_complete() {
-            return Err(PKError::ActionIsntFinished);
-        }
-        // Freeze when ≤1 player is in the hand (everyone else folded), OR when
-        // at most 1 non-all-in player remains (no one can call any future bet).
-        let use_frozen = self.count_active_in_hand() <= 1 || self.count_players_with_action_to_give() <= 1;
-        let mut collected = 0usize;
-        for seat in &mut self.0 {
-            // Process every seat — not just those with a bet — so that checked
-            // players (bet == 0) also have their state reset to YetToAct.
-            let chips = if use_frozen {
-                seat.player.act_bring_it_in_frozen()
-            } else {
-                seat.player.act_bring_it_in()
-            };
-            collected += chips;
-        }
-        Ok(collected)
-    }
-
-    /// Resets state to `YetToAct` for every in-hand, non-all-in player.
-    ///
-    /// Used by hand replay to ensure YAML files generated by pkcore versions
-    /// that always reset state between streets replay correctly under the
-    /// current frozen-`bring_it_in` logic.
-    #[cfg(feature = "bot-profiles")]
-    pub(crate) fn reset_non_allin_to_yet_to_act(&mut self) {
-        for seat in &mut self.0 {
-            if !seat.is_empty() && seat.is_in_hand() && !seat.is_all_in() {
-                seat.player.state = PlayerState::YetToAct;
-            }
-        }
-    }
-
-    /// Like `bring_it_in` but sets all active seats to `Showdown(chips_in_play)`.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::ActionIsntFinished` if betting is not yet complete.
-    pub fn close_it_out(&mut self) -> Result<usize, PKError> {
-        if !self.is_betting_complete() {
-            return Err(PKError::ActionIsntFinished);
-        }
-        let mut collected = 0usize;
-        for seat in &mut self.0 {
-            if !seat.player.has_bet() {
-                continue;
-            }
-            collected += seat.player.act_close_it_out()?;
-        }
-        Ok(collected)
-    }
-
-    /// Places a bet on behalf of seat `idx`.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidSeatNumber` if seat not found.
-    /// - `PKError::InsufficientChips` if not enough chips.
-    pub fn act_bet(&mut self, idx: u8, amount: usize) -> Result<usize, PKError> {
-        self.get_seat_mut(idx)
-            .ok_or(PKError::InvalidSeatNumber)?
-            .player
-            .act_bet(amount)
-    }
-
-    /// Calls on behalf of seat `idx`.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidSeatNumber` if seat not found.
-    pub fn act_call(&mut self, idx: u8) -> Result<usize, PKError> {
-        let to_call = self.current_bet();
-        let seat = self.get_seat_mut(idx).ok_or(PKError::InvalidSeatNumber)?;
-        if to_call == 0 {
-            seat.player.act_check()?;
-            Ok(0)
-        } else {
-            // Pass current_bet as the total target; PlayerNoCell computes the delta internally.
-            // Discard the remaining-chips return and return to_call (the call amount) instead,
-            // matching the convention in the original Seats::act_call.
-            seat.player.act_call(to_call)?;
-            Ok(to_call)
-        }
-    }
-
-    /// Checks on behalf of seat `idx`.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidSeatNumber` if seat not found.
-    /// - `PKError::InvalidTableAction` if player cannot check.
-    pub fn act_check(&mut self, idx: u8) -> Result<usize, PKError> {
-        let current_bet = self.current_bet();
-        let seat = self.get_seat_mut(idx).ok_or(PKError::InvalidSeatNumber)?;
-        if seat.player.bet < current_bet {
-            return Err(PKError::InvalidTableAction);
-        }
-        seat.player.act_check()?;
-        Ok(seat.player.chips)
-    }
-
-    /// Folds on behalf of seat `idx`, returning the chips bet this round.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidSeatNumber` if seat not found.
-    pub fn act_fold(&mut self, idx: u8) -> Result<usize, PKError> {
-        self.get_seat_mut(idx)
-            .ok_or(PKError::InvalidSeatNumber)?
-            .player
-            .act_fold()
-    }
-
-    /// Goes all-in on behalf of seat `idx`.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidSeatNumber` if seat not found.
-    pub fn act_all_in(&mut self, idx: u8) -> Result<usize, PKError> {
-        self.get_seat_mut(idx)
-            .ok_or(PKError::InvalidSeatNumber)?
-            .player
-            .act_all_in()
-    }
-
-    /// Posts a forced bet on behalf of seat `idx`.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidSeatNumber` if seat not found.
-    pub fn act_forced_bet(&mut self, idx: u8, amount: usize) -> Result<usize, PKError> {
-        self.get_seat_mut(idx)
-            .ok_or(PKError::InvalidSeatNumber)?
-            .player
-            .act_blind_or_all_in(amount)
-    }
-
-    /// Raises on behalf of seat `idx`.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidSeatNumber` if seat not found.
-    /// - `PKError::InsufficientChips` if not enough chips.
-    pub fn act_raise(&mut self, idx: u8, amount: usize) -> Result<usize, PKError> {
-        self.get_seat_mut(idx)
-            .ok_or(PKError::InvalidSeatNumber)?
-            .player
-            .act_raise(amount)
-    }
-
-    /// Posts a *dead* ante for seat `idx`, delegating to
-    /// [`PlayerNoCell::post_dead`] which owns the cap-deduct-track sequence and
-    /// the all-in transition when the ante takes the player's last chip. Returns
-    /// the amount actually posted (0 if the seat is empty, inactive, or out of
-    /// chips). The caller adds the returned amount to the pot. Because the ante
-    /// moves through `chips_in_play` rather than `bet`, it stays dead money — it
-    /// does not credit calls or shrink the bring-in — while preserving the
-    /// `pot == Σ chips_in_play` showdown invariant.
-    pub(crate) fn post_dead_ante(&mut self, idx: u8, ante: usize) -> usize {
-        let Some(seat) = self.get_seat_mut(idx) else {
-            return 0;
-        };
-        seat.player.post_dead(ante)
-    }
-
-    /// Marks all eligible seats as `YetToAct` for a new hand.
-    pub fn set_eligible_to_yet_to_act(&mut self) {
-        for seat in &mut self.0 {
-            if seat.is_empty() || seat.player.is_out() || seat.player.is_tapped_out() {
-                continue;
-            }
-            seat.player.state = PlayerState::YetToAct;
-        }
-    }
-
-    /// Resets state for all seats (empty → `Out`, occupied → `YetToAct`).
-    pub fn reset_state(&mut self) {
-        for seat in &mut self.0 {
-            if seat.is_empty() {
-                seat.player.state = PlayerState::Out;
-            } else {
-                seat.player.reset();
-            }
-        }
-    }
-
-    /// Resets state only for seats currently in the hand.
-    pub fn reset_state_in_hand(&mut self) {
-        for seat in &mut self.0 {
-            if seat.is_in_hand() {
-                seat.player.state = PlayerState::YetToAct;
-            }
-        }
-    }
-
-    /// Marks all active seats as `Showdown(pot_size)`.
-    pub fn showdown(&mut self, pot_size: usize) {
-        for seat in &mut self.0 {
-            if seat.is_active() {
-                seat.player.state = PlayerState::Showdown(pot_size);
-            }
-        }
-    }
-}
-
-impl Display for SeatsNoCell {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        for (i, seat) in self.0.iter().enumerate() {
-            writeln!(f, "Seat {i}: {seat}")?;
-        }
-        Ok(())
-    }
+mod actions;
+mod player;
+mod seat;
+mod seats;
+mod transition;
+
+pub use player::Player;
+pub use seat::Seat;
+pub use seats::Seats;
+
+/// EPIC-32 Phase 5: discriminates Stud-family first-to-act selection.
+/// `HighStud` picks the seat with the *best* visible hand (used by Stud
+/// Hi on 4th+); `LowRazz` picks the seat with the *worst* visible hand
+/// (used by Razz, EPIC-33).
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum VisibleHandMode {
+    HighStud,
+    LowRazz,
 }
 
 // ── Table ───────────────────────────────────────────────────────────────
@@ -1246,11 +70,11 @@ impl Display for SeatsNoCell {
 /// ```
 /// use pkcore::casino::table::Table;
 /// use pkcore::casino::game::ForcedBets;
-/// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell};
+/// use pkcore::casino::table::{Player, Seat, Seats};
 ///
-/// let seats = SeatsNoCell::new(vec![
-///     SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 10_000)),
-///     SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
+/// let seats = Seats::new(vec![
+///     Seat::new(Player::new_with_chips("Alice".to_string(), 10_000)),
+///     Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
 /// ]);
 /// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 /// assert_eq!(2, table.seats.size());
@@ -1262,7 +86,7 @@ pub struct Table {
     pub game: GameType,
     pub forced: ForcedBets,
     pub phase: GamePhase,
-    pub seats: SeatsNoCell,
+    pub seats: Seats,
     /// Current dealer button position (0-based seat index).
     pub button: u8,
     pub deck: Cards,
@@ -1298,7 +122,7 @@ pub struct Table {
 }
 
 impl Table {
-    /// Constructs a No-Limit Hold'em table from an existing `SeatsNoCell`.
+    /// Constructs a No-Limit Hold'em table from an existing `Seats`.
     ///
     /// The deck is initialised as a standard 52-card deck with any cards
     /// already held by seated players removed.
@@ -1306,18 +130,18 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("V".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("W".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("V".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("W".to_string(), 5_000)),
     /// ]);
     /// let t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// assert_eq!(0, t.pot);
     /// ```
     #[must_use]
-    pub fn nlh_from_seats(seats: SeatsNoCell, forced: ForcedBets) -> Self {
+    pub fn nlh_from_seats(seats: Seats, forced: ForcedBets) -> Self {
         Self::from_seats(seats, GameType::NoLimitHoldem, forced)
     }
 
@@ -1336,13 +160,13 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::games::GameType;
     /// use pkcore::games::betting_structure::BettingStructure;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let t = Table::limit_holdem_from_seats(seats, 100, 200, 3);
     /// assert_eq!(GameType::LimitHoldem, t.game);
@@ -1354,7 +178,7 @@ impl Table {
     /// ));
     /// ```
     #[must_use]
-    pub fn limit_holdem_from_seats(seats: SeatsNoCell, small_bet: usize, big_bet: usize, raise_cap: u8) -> Self {
+    pub fn limit_holdem_from_seats(seats: Seats, small_bet: usize, big_bet: usize, raise_cap: u8) -> Self {
         let forced = ForcedBets::new(small_bet / 2, small_bet);
         let mut t = Self::from_seats(seats, GameType::LimitHoldem, forced);
         t.betting = BettingStructure::FixedLimit {
@@ -1378,13 +202,13 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::games::GameType;
     /// use pkcore::games::betting_structure::BettingStructure;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let t = Table::plo_from_seats(seats, (5, 10));
     /// assert_eq!(GameType::PLO, t.game);
@@ -1395,7 +219,7 @@ impl Table {
     /// assert_eq!(4, t.seats.get_seat(0).unwrap().cards.len());
     /// ```
     #[must_use]
-    pub fn plo_from_seats(seats: SeatsNoCell, blinds: (usize, usize)) -> Self {
+    pub fn plo_from_seats(seats: Seats, blinds: (usize, usize)) -> Self {
         let forced = ForcedBets::new(blinds.0, blinds.1);
         Self::from_seats(seats, GameType::PLO, forced)
     }
@@ -1413,13 +237,13 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::games::GameType;
     /// use pkcore::games::betting_structure::BettingStructure;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let t = Table::stud_hi_from_seats(seats, 2, 5, 20, 40);
     /// assert_eq!(GameType::StudHi, t.game);
@@ -1433,13 +257,7 @@ impl Table {
     /// assert_eq!(7, t.seats.get_seat(0).unwrap().cards.len());
     /// ```
     #[must_use]
-    pub fn stud_hi_from_seats(
-        seats: SeatsNoCell,
-        ante: usize,
-        bring_in: usize,
-        small_bet: usize,
-        big_bet: usize,
-    ) -> Self {
+    pub fn stud_hi_from_seats(seats: Seats, ante: usize, bring_in: usize, small_bet: usize, big_bet: usize) -> Self {
         let forced = ForcedBets::new_with_ante_and_bring_in(0, 0, ante, bring_in);
         let mut t = Self::from_seats(seats, GameType::StudHi, forced);
         t.betting = BettingStructure::FixedLimit {
@@ -1464,13 +282,13 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::games::GameType;
     /// use pkcore::games::betting_structure::BettingStructure;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let t = Table::razz_from_seats(seats, 2, 5, 20, 40);
     /// assert_eq!(GameType::Razz, t.game);
@@ -1484,7 +302,7 @@ impl Table {
     /// assert_eq!(7, t.seats.get_seat(0).unwrap().cards.len());
     /// ```
     #[must_use]
-    pub fn razz_from_seats(seats: SeatsNoCell, ante: usize, bring_in: usize, small_bet: usize, big_bet: usize) -> Self {
+    pub fn razz_from_seats(seats: Seats, ante: usize, bring_in: usize, small_bet: usize, big_bet: usize) -> Self {
         let forced = ForcedBets::new_with_ante_and_bring_in(0, 0, ante, bring_in);
         let mut t = Self::from_seats(seats, GameType::Razz, forced);
         t.betting = BettingStructure::FixedLimit {
@@ -1509,19 +327,19 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::games::GameType;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let t = Table::from_seats(seats, GameType::NoLimitHoldem, ForcedBets::new(50, 100));
     /// assert_eq!(GameType::NoLimitHoldem, t.game);
     /// ```
     #[must_use]
-    pub fn from_seats(mut seats: SeatsNoCell, game: GameType, forced: ForcedBets) -> Self {
+    pub fn from_seats(mut seats: Seats, game: GameType, forced: ForcedBets) -> Self {
         let id = Uuid::new_v4();
         let mut event_log = Vec::new();
         event_log.push(TableAction::TableOpen(id));
@@ -1543,7 +361,7 @@ impl Table {
         }
 
         // EPIC-31 Phase 1: resize each seat's blank-card storage to match
-        // `game.cards_per_player()`. `SeatNoCell::new` and `Default` both
+        // `game.cards_per_player()`. `Seat::new` and `Default` both
         // hardcode `BoxedCards::blanks(2)`, which works for Holdem-family
         // variants but causes `deal_card_to_seat` to fail with
         // `PKError::NoBlankSlots` for PLO (4 cards) and Stud/Razz (7).
@@ -1637,22 +455,22 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     ///
     /// // Full-ring: SB is seat 1 (one step after button at 0).
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("C".to_string(), 5_000)),
     /// ]);
     /// let t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// assert_eq!(1, t.determine_small_blind());
     ///
     /// // Heads-up: button (seat 0) IS the small blind.
-    /// let hu_seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let hu_seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let t2 = Table::nlh_from_seats(hu_seats, ForcedBets::new(50, 100));
     /// assert_eq!(0, t2.determine_small_blind());
@@ -1676,22 +494,22 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     ///
     /// // Full-ring: BB is seat 2.
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("C".to_string(), 5_000)),
     /// ]);
     /// let t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// assert_eq!(2, t.determine_big_blind());
     ///
     /// // Heads-up: BB is seat 1 (the non-button player).
-    /// let hu_seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let hu_seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let t2 = Table::nlh_from_seats(hu_seats, ForcedBets::new(50, 100));
     /// assert_eq!(1, t2.determine_big_blind());
@@ -1730,13 +548,13 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("C".to_string(), 5_000)),
     /// ]);
     /// let t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// // Pre-blinds, UTG is seat 0 (3rd after button at 0 in a 3-player game wraps to 0).
@@ -1761,12 +579,12 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// // For NLHE, first-to-act-this-street equals determine_utg.
@@ -1947,12 +765,12 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// assert!(!t.is_game_over());
@@ -1974,12 +792,12 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// assert_eq!(10_000, t.table_chip_count());
@@ -2000,12 +818,12 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// t.act_forced_bets().unwrap();
@@ -2026,12 +844,12 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 0)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 0)),
     /// ]);
     /// let t = Table::nlh_from_seats(seats, ForcedBets::new(5, 10));
     /// assert_eq!(1, t.count_funded());
@@ -2054,12 +872,12 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 1_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 0)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("Alice".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("Bob".to_string(), 0)),
     /// ]);
     /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(5, 10));
     /// let busted = t.eliminate_busted();
@@ -2089,12 +907,12 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// assert_eq!(100, t.min_raise());
@@ -2136,12 +954,12 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::games::GamePhase;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let mut t = Table::stud_hi_from_seats(seats, 2, 5, 20, 40);
     /// t.phase = GamePhase::Stud3rd;
@@ -2173,13 +991,13 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::games::betting_structure::BetTier;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// // Fresh table is at `NewHand` phase, classified as preflop —
@@ -2213,12 +1031,12 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// assert_eq!(0, t.to_call(0)); // no bets placed yet
@@ -2256,671 +1074,6 @@ impl Table {
             4 => GamePhase::BettingTurn,
             5 => GamePhase::BettingRiver,
             _ => GamePhase::Showdown,
-        }
-    }
-
-    // ── Table actions ─────────────────────────────────────────────────────────
-
-    /// Universal action regulator: advances the table through whatever step is
-    /// needed next.
-    ///
-    /// # Errors
-    ///
-    /// Propagates any error from the sub-action called.
-    pub fn act(&mut self) -> Result<(), PKError> {
-        match self.determine_betting_phase() {
-            GamePhase::BettingPreFlop => {
-                if !self.have_posted_blinds() {
-                    self.act_forced_bets()?;
-                }
-                if !self.seats.are_dealt() {
-                    self.deal_cards_to_seats()?;
-                }
-                if self.seats.is_betting_complete() {
-                    self.bring_it_in()?;
-                    self.deal_flop()?;
-                }
-                Ok(())
-            }
-            GamePhase::BettingFlop => {
-                if self.seats.is_betting_complete() {
-                    self.bring_it_in()?;
-                    self.deal_turn()?;
-                    self.seats.reset_state_in_hand();
-                }
-                Ok(())
-            }
-            GamePhase::BettingTurn => {
-                if self.seats.is_betting_complete() {
-                    self.bring_it_in()?;
-                    self.deal_river()?;
-                    self.seats.reset_state_in_hand();
-                }
-                Ok(())
-            }
-            GamePhase::BettingRiver => {
-                if self.is_game_over() {
-                    self.end_hand()?;
-                }
-                Ok(())
-            }
-            _ => Ok(()),
-        }
-    }
-
-    /// Posts forced bets for the start of a hand.
-    ///
-    /// Dispatches on [`GameFamily`] (EPIC-32 Phase 2):
-    /// - Hold'em / Omaha: posts SB + BB. Optional antes if `forced.ante > 0`.
-    /// - Stud / Razz: posts antes for every active seat. The bring-in is
-    ///   posted later by [`Self::act_bring_in`] after 3rd-street dealing.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidSeatNumber` if a posting seat cannot be found.
-    pub fn act_forced_bets(&mut self) -> Result<(), PKError> {
-        // Snapshot before any chips move so end_hand() can verify conservation.
-        self.hand_chip_total = self.table_chip_count();
-        match self.game.family() {
-            crate::games::GameFamily::StudHi | crate::games::GameFamily::Razz => {
-                self.act_antes()?;
-            }
-            _ => {
-                if self.forced.ante > 0 {
-                    self.act_antes()?;
-                }
-                self.act_forced_bet_small_blind()?;
-                self.act_forced_bet_big_blind()?;
-            }
-        }
-        self.phase = GamePhase::ForcedBets;
-        Ok(())
-    }
-
-    /// Posts the ante for every non-empty seat with chips (EPIC-32 Phase 2).
-    /// Used by stud-family hands at the start of every hand, and optionally
-    /// by Hold'em/Omaha when `forced.ante > 0`.
-    ///
-    /// Antes are **dead money**: each ante goes straight into the pot rather
-    /// than into `player.bet`. This matches standard rules — the ante does not
-    /// count toward matching a bet (no caller gets ante credit) and the
-    /// bring-in posts its full amount instead of only the difference above the
-    /// ante. Chip conservation and the `pot == Σ chips_in_play` showdown
-    /// invariant are preserved because the ante moves through `chips_in_play`
-    /// rather than `bet`.
-    ///
-    /// # Errors
-    ///
-    /// This method does not currently return an error; the `Result` is kept
-    /// for signature stability with the rest of the forced-bet API.
-    pub fn act_antes(&mut self) -> Result<(), PKError> {
-        let ante = self.forced.ante;
-        if ante == 0 {
-            return Ok(());
-        }
-        let count = self.seats.size();
-        for idx in 0..count {
-            let actual = self.seats.post_dead_ante(idx, ante);
-            if actual > 0 {
-                self.pot += actual;
-                self.log(TableAction::BetAnteForced(idx, actual));
-            }
-        }
-        Ok(())
-    }
-
-    /// Posts the stud bring-in (EPIC-32 Phase 4). Dispatches on
-    /// `game.family()`:
-    /// - `StudHi`: lowest 3rd-street upcard pays.
-    /// - `Razz`: highest 3rd-street upcard pays (EPIC-33).
-    /// - Other families: returns `PKError::InvalidAction`.
-    ///
-    /// Uses only the **first** upcard in dealing order per seat (the
-    /// 3rd-street upcard). This matters during hand-history replay where
-    /// all 7 cards may already be present in `seat.hand`: bring-in
-    /// selection must consider only the card visible at 3rd street, not
-    /// all four eventual upcards.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidAction` if called on a non-stud-family game.
-    /// - `PKError::NotDealt` if no seat has a face-up 3rd-street card.
-    /// - `PKError::InvalidSeatNumber` if the chosen seat can't be found.
-    pub fn act_bring_in(&mut self) -> Result<(), PKError> {
-        let highest = matches!(self.game.family(), crate::games::GameFamily::Razz);
-        let in_stud_family = matches!(
-            self.game.family(),
-            crate::games::GameFamily::StudHi | crate::games::GameFamily::Razz
-        );
-        if !in_stud_family {
-            return Err(PKError::InvalidAction);
-        }
-        let seat_idx = self
-            .third_street_extreme_upcard_seat(highest)
-            .ok_or(PKError::NotDealt)?;
-        let amount = self.forced.bring_in;
-        let actual = self.seats.act_forced_bet(seat_idx, amount)?;
-        self.bet = self.bet.max(amount);
-        self.log(TableAction::StudBringInPost(seat_idx, actual));
-        Ok(())
-    }
-
-    /// EPIC-32 Phase 12: returns the active seat with the extreme
-    /// 3rd-street upcard — highest for Razz (`highest = true`, ace ranked
-    /// low), lowest for Stud Hi (`highest = false`, ace ranked high).
-    /// Considers only each seat's **first** up-tagged card in dealing
-    /// order — i.e. the 3rd-street upcard. Used by [`Self::act_bring_in`] so
-    /// that replay (which has all 7 cards present) picks the same
-    /// bring-in seat as the live session (which had only one upcard
-    /// per seat when bring-in was selected).
-    fn third_street_extreme_upcard_seat(&self, highest: bool) -> Option<u8> {
-        // `highest` is the scan *direction* (does the extreme upcard bring in?);
-        // the ace-high-vs-low rank order is an independent property owned by the
-        // game family (audit P9j.5). Today Razz is the only family that both
-        // scans highest and ranks the ace low, but keeping the axes separate
-        // means a deuce-to-seven variant (highest, ace-high) stays expressible.
-        let ace_low = self.game.family().ranks_ace_low();
-        let mut best: Option<(u8, u8, u8)> = None;
-        for (idx, seat) in self.seats.0.iter().enumerate() {
-            if seat.is_empty() || !seat.is_in_hand() {
-                continue;
-            }
-            let Ok(seat_idx) = u8::try_from(idx) else {
-                continue;
-            };
-            // First up-tagged card in dealing order.
-            let Some(hole_card) = seat.hand.iter().find(|hc| hc.is_up()) else {
-                continue;
-            };
-            let card = hole_card.card();
-
-            let rank_key = if ace_low {
-                California::ace_low_rank(card.get_rank())
-            } else {
-                card.get_rank() as u8
-            };
-
-            let suit = card.get_suit() as u8;
-            let candidate = (seat_idx, rank_key, suit);
-            match best {
-                None => best = Some(candidate),
-                Some((_, br, bs)) => {
-                    let better = if highest {
-                        rank_key > br || (rank_key == br && suit > bs)
-                    } else {
-                        rank_key < br || (rank_key == br && suit < bs)
-                    };
-                    if better {
-                        best = Some(candidate);
-                    }
-                }
-            }
-        }
-        best.map(|(seat, _, _)| seat)
-    }
-
-    /// Posts the small blind.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidSeatNumber` if the seat is not found.
-    pub fn act_forced_bet_small_blind(&mut self) -> Result<(), PKError> {
-        let sb = self.determine_small_blind();
-        let actual = self.seats.act_forced_bet(sb, self.forced.small_blind)?;
-        self.log(TableAction::ForcedBetSmallBlind(sb, actual));
-        self.log(TableAction::ActionTo(self.next_to_act()));
-        Ok(())
-    }
-
-    /// Posts the big blind.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InvalidSeatNumber` if the seat is not found.
-    pub fn act_forced_bet_big_blind(&mut self) -> Result<(), PKError> {
-        let bb = self.determine_big_blind();
-        let actual = self.seats.act_forced_bet(bb, self.forced.big_blind)?;
-        self.bet = self.forced.big_blind;
-        self.log(TableAction::ForcedBetBigBlind(bb, actual));
-        self.log(TableAction::ActionTo(self.next_to_act()));
-        Ok(())
-    }
-
-    /// Folds the seat identified by `seat_number`.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::TableActionOutOfOrder` if it is not this seat's turn.
-    /// - `PKError::InvalidSeatNumber` if the seat is not found.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
-    /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::prelude::PlayerState;
-    ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 5_000)),
-    /// ]);
-    /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
-    /// t.act_forced_bets().unwrap();
-    /// t.deal_cards_to_seats().unwrap();
-    /// let utg = t.determine_utg();
-    /// t.act_fold(utg).unwrap();
-    /// assert_eq!(PlayerState::Fold, t.seats.get_seat(utg).unwrap().player.state);
-    /// ```
-    pub fn act_fold(&mut self, seat_number: u8) -> Result<usize, PKError> {
-        if seat_number != self.next_to_act() {
-            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::Fold);
-            self.log(err);
-            return Err(PKError::TableActionOutOfOrder(err));
-        }
-        let folded_chips = self.seats.act_fold(seat_number)?;
-        self.pot += folded_chips;
-        self.log(TableAction::Fold(seat_number));
-        self.log(TableAction::BringItIn(folded_chips));
-        self.log(TableAction::PotSize(self.pot));
-        self.player_mucks_cards(seat_number);
-        self.log(TableAction::ActionTo(self.next_to_act()));
-        Ok(folded_chips)
-    }
-
-    /// The maximum legal raise-to `amount` for `seat` under the current betting
-    /// structure — the single-sourced form of the 5-argument
-    /// [`BettingStructure::max_raise`] incantation (audit P9j.1). Returns 0 for
-    /// an unknown seat.
-    ///
-    /// This is the *ceiling* only; a full raise must also clear
-    /// [`Self::min_raise_to`] and the per-street cap — see [`Self::validate_raise`].
-    #[must_use]
-    fn max_raise_for(&self, seat_number: u8) -> usize {
-        let Some(seat) = self.seats.get_seat(seat_number) else {
-            return 0;
-        };
-        let stack = seat.player.total_chip_count();
-        self.betting.max_raise(
-            self.effective_pot(),
-            self.bet,
-            seat.player.bet,
-            stack,
-            self.current_bet_tier(),
-        )
-    }
-
-    /// Validates a would-be *non-all-in* raise-to `amount` for `seat`: the
-    /// minimum increment, the per-street raise cap, and the structure ceiling.
-    ///
-    /// This is the single source of truth for raise legality, executed by
-    /// [`Self::act_raise`] before it mutates and queried by [`Self::raise_bounds`]
-    /// / [`Self::legal_actions`]. Because the advisory surface and the mutating
-    /// surface call the *same* function, they cannot drift (audit P9b, P9j.1).
-    /// The all-in bypass is intentionally *not* applied here — callers handle
-    /// all-in separately.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::InsufficientIncrement` if `amount` is below `min_raise_to()`.
-    /// - `PKError::RaiseCapReached` if the per-street cap is hit.
-    /// - `PKError::ExceedsBettingCap` if `amount` exceeds the structure ceiling.
-    fn validate_raise(&self, seat_number: u8, amount: usize) -> Result<(), PKError> {
-        if amount < self.min_raise_to() {
-            return Err(PKError::InsufficientIncrement);
-        }
-        if self.betting.cap_reached(self.raises_this_street) {
-            return Err(PKError::RaiseCapReached);
-        }
-        if amount > self.max_raise_for(seat_number) {
-            return Err(PKError::ExceedsBettingCap);
-        }
-        Ok(())
-    }
-
-    /// The legal raise-to range `[min, max]` for `seat`, or `None` when no
-    /// voluntary (non-all-in) raise is legal right now — the cap is reached, or
-    /// the stack cannot cover the minimum raise. In fixed-limit `min == max`
-    /// (one legal amount). Derived entirely from `validate_raise` and
-    /// `max_raise_for`, so it agrees with `act_raise` by construction.
-    ///
-    /// Used by [`Self::legal_actions`] to advertise `Raise(min)` and by the sim
-    /// to clamp a decider's oversize raise deterministically. All-in-for-less is
-    /// not a raise and is not represented here.
-    #[must_use]
-    pub fn raise_bounds(&self, seat_number: u8) -> Option<(usize, usize)> {
-        let min = self.min_raise_to();
-        // validate_raise(min) folds every reason a raise could be illegal (cap
-        // reached, min above the structure ceiling because the stack is short)
-        // into one check.
-        if self.validate_raise(seat_number, min).is_err() {
-            return None;
-        }
-        Some((min, self.max_raise_for(seat_number)))
-    }
-
-    /// Places a bet of `amount` for seat `seat_number`.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::TableActionOutOfOrder` if it is not this seat's turn.
-    /// - `PKError::InsufficientIncrement` if `amount` is below the minimum
-    ///   opening bet and the player is not going all-in for less.
-    /// - `PKError::InsufficientChips` if not enough chips.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
-    /// use pkcore::casino::game::ForcedBets;
-    ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 5_000)),
-    /// ]);
-    /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
-    /// t.act_forced_bets().unwrap();
-    /// t.deal_cards_to_seats().unwrap();
-    /// let utg = t.determine_utg();
-    /// t.act_bet(utg, 200).unwrap();
-    /// assert_eq!(200, t.bet);
-    /// ```
-    pub fn act_bet(&mut self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
-        if seat_number != self.next_to_act() {
-            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::Bet(amount));
-            self.log(err);
-            return Err(PKError::TableActionOutOfOrder(err));
-        }
-        // Pre-validate BEFORE any mutation (mirror act_raise; audit P9d). An
-        // opening bet is a raise-from-zero: it must clear the minimum and the
-        // structure ceiling unless the player is betting their whole stack
-        // (all-in for less). Without this guard `seats.act_bet` mutated the seat
-        // and then `set_raise_increment` rejected, stranding a live Bet with
-        // `table.bet` still 0 and the seat no longer next to act.
-        if let Some(seat) = self.seats.get_seat(seat_number) {
-            let would_be_all_in = amount >= seat.player.total_chip_count();
-            if !would_be_all_in {
-                self.validate_raise(seat_number, amount)?;
-            }
-        }
-        let remaining = self.seats.act_bet(seat_number, amount)?;
-        self.set_raise_increment(seat_number, amount);
-        self.bet = amount;
-        self.log(TableAction::Bet(seat_number, amount));
-        self.log(TableAction::ActionTo(self.next_to_act()));
-        Ok(remaining)
-    }
-
-    /// Calls the current bet for seat `seat_number`.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::TableActionOutOfOrder` if it is not this seat's turn.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
-    /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::prelude::PlayerState;
-    ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 5_000)),
-    /// ]);
-    /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
-    /// t.act_forced_bets().unwrap();
-    /// t.deal_cards_to_seats().unwrap();
-    /// let utg = t.determine_utg();
-    /// t.act_call(utg).unwrap();
-    /// assert_eq!(PlayerState::Call(100), t.seats.get_seat(utg).unwrap().player.state);
-    /// ```
-    pub fn act_call(&mut self, seat_number: u8) -> Result<usize, PKError> {
-        if seat_number != self.next_to_act() {
-            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::Call(0));
-            self.log(err);
-            return Err(PKError::TableActionOutOfOrder(err));
-        }
-        let call_target = self.bet;
-        let seat_bet = self.seats.get_seat(seat_number).map_or(0, |s| s.player.bet);
-        let to_call = call_target.saturating_sub(seat_bet);
-        let seat = self.seats.get_seat_mut(seat_number).ok_or(PKError::InvalidSeatNumber)?;
-        let actual_added = if to_call == 0 {
-            seat.player.act_check()?;
-            0
-        } else if seat.player.chips < to_call {
-            // Caller cannot cover the full call target — go all-in for partial.
-            // Side pots and uncalled-bet returns at showdown reconcile the difference
-            // (see docs/BUGFIX_short_blind_call_target.md).
-            let total_bet = seat.player.act_all_in()?;
-            total_bet.saturating_sub(seat_bet)
-        } else {
-            seat.player.act_call(call_target)?;
-            to_call
-        };
-        self.log(TableAction::Call(seat_number, actual_added));
-        self.log(TableAction::ActionTo(self.next_to_act()));
-        Ok(actual_added)
-    }
-
-    /// Checks for seat `seat_number`.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::TableActionOutOfOrder` if it is not this seat's turn.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
-    /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::prelude::PlayerState;
-    ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 5_000)),
-    /// ]);
-    /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
-    /// // Force everyone to 0 bet with no active blind by resetting state.
-    /// // (doc-test only shows the API; actual game flow requires proper sequencing)
-    /// let _ = t; // just verify it compiles
-    /// ```
-    pub fn act_check(&mut self, seat_number: u8) -> Result<usize, PKError> {
-        if seat_number != self.next_to_act() {
-            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::Check);
-            self.log(err);
-            return Err(PKError::TableActionOutOfOrder(err));
-        }
-        let remaining = self.seats.act_check(seat_number)?;
-        self.log(TableAction::Check(seat_number));
-        self.log(TableAction::ActionTo(self.next_to_act()));
-        Ok(remaining)
-    }
-
-    /// Raises to `amount` for seat `seat_number`.
-    ///
-    /// `amount` is the **total raise-to** value — the new table-level bet that all
-    /// other players must match.  It must be at least `table.bet + table.min_raise()`
-    /// unless the player is going all-in for less.
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::TableActionOutOfOrder` if it is not this seat's turn.
-    /// - `PKError::InsufficientIncrement` if `amount` is below the minimum raise
-    ///   and the player is not going all-in.
-    /// - `PKError::InsufficientChips` if not enough chips.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
-    /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::prelude::PlayerState;
-    ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 5_000)),
-    /// ]);
-    /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
-    /// t.act_forced_bets().unwrap();
-    /// t.deal_cards_to_seats().unwrap();
-    /// let utg = t.determine_utg();
-    /// t.act_raise(utg, 300).unwrap();
-    /// assert_eq!(PlayerState::Raise(300), t.seats.get_seat(utg).unwrap().player.state);
-    ///
-    /// // Under-minimum raise is rejected before any state changes.
-    /// let utg2 = t.next_to_act();
-    /// assert!(t.act_raise(utg2, 301).is_err()); // below min (300 + 100 = 400)
-    /// // The seat is still the active player — no state was corrupted.
-    /// assert_eq!(utg2, t.next_to_act());
-    /// ```
-    pub fn act_raise(&mut self, seat_number: u8, amount: usize) -> Result<usize, PKError> {
-        if seat_number != self.next_to_act() {
-            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::Raise(amount));
-            self.log(err);
-            return Err(PKError::TableActionOutOfOrder(err));
-        }
-        // Pre-validate the raise BEFORE any state is modified. Without this
-        // guard, act_bet_internal deducts chips for an under-sized raise and
-        // sets the seat to Raise(_); then the seat is corrupt and no longer
-        // "next to act". Validation is delegated to `validate_raise` — the same
-        // check `legal_actions`/`raise_bounds` query, so the advisory and
-        // mutating surfaces cannot drift (audit P9b/P9j.1). All-in bypasses it
-        // (a short stack can always shove for less; NoLimit's max_raise == stack,
-        // so oversized amounts route through the all-in branch above anyway).
-        if let Some(seat) = self.seats.get_seat(seat_number) {
-            let would_be_all_in = amount >= seat.player.total_chip_count();
-            if !would_be_all_in {
-                self.validate_raise(seat_number, amount)?;
-            }
-        }
-        let remaining = self.seats.act_raise(seat_number, amount)?;
-        self.set_raise_increment(seat_number, amount.saturating_sub(self.bet));
-        self.bet = amount;
-        // EPIC-30 Phase 3: count this raise toward the per-street cap.
-        // Saturating add so a misconfigured raise_cap can't panic via
-        // overflow (the cap_reached guard above prevents this anyway).
-        self.raises_this_street = self.raises_this_street.saturating_add(1);
-        self.log(TableAction::Raise(seat_number, amount));
-        self.log(TableAction::ActionTo(self.next_to_act()));
-        Ok(remaining)
-    }
-
-    /// Commits seat `seat_number`'s whole stack, returning the chips **committed**.
-    ///
-    /// In No-Limit this is an unconditional all-in for the full stack. In a
-    /// **capped** structure (Fixed-Limit / Pot-Limit) a deep stack has no true
-    /// "all-in raise", so the shove is degraded to the largest legal action and
-    /// the player is *not* left all-in:
-    /// - a legal raise exists and the stack overflows its ceiling → raise to the
-    ///   max (e.g. the pot-limit clamp), returning the amount committed;
-    /// - no legal raise remains (the cap is reached, or the bet is already
-    ///   matched) → a plain call;
-    /// - the stack is smaller than the max legal raise → a genuine all-in for less.
-    ///
-    /// This keeps the `AllIn` that [`Self::legal_actions`] advertises always
-    /// acceptable by [`Self::apply_action`] (audit P9b), and the return value is
-    /// chips-committed on every path (audit P9e).
-    ///
-    /// # Errors
-    ///
-    /// - `PKError::TableActionOutOfOrder` if it is not this seat's turn.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
-    /// use pkcore::casino::game::ForcedBets;
-    ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
-    /// ]);
-    /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
-    /// t.act_forced_bets().unwrap();
-    /// t.deal_cards_to_seats().unwrap();
-    /// let utg = t.determine_utg();
-    /// // No-Limit: a real all-in for the whole stack.
-    /// t.act_all_in(utg).unwrap();
-    /// assert!(t.seats.get_seat(utg).unwrap().player.is_all_in());
-    /// ```
-    pub fn act_all_in(&mut self, seat_number: u8) -> Result<usize, PKError> {
-        if seat_number != self.next_to_act() {
-            let available = self
-                .seats
-                .get_seat(seat_number)
-                .map_or(0, |s| s.player.total_chip_count());
-            let err = TableAction::InvalidPlayerAction(seat_number, PlayerState::AllIn(available));
-            self.log(err);
-            return Err(PKError::TableActionOutOfOrder(err));
-        }
-
-        // Capped structures (Fixed-Limit, Pot-Limit) have no true "all-in raise"
-        // for a deep stack: the most it can commit voluntarily is one legal
-        // raise. Degrade a deep-stack shove to the largest legal action so the
-        // AllIn that `legal_actions` advertises is always accepted (audit P9b).
-        // NoLimit's max_raise == stack, so this whole branch is a no-op for NLHE.
-        if !self.betting.is_no_limit() {
-            let stack = self
-                .seats
-                .get_seat(seat_number)
-                .map_or(0, |s| s.player.total_chip_count());
-            match self.raise_bounds(seat_number) {
-                // A legal raise exists and the stack overflows its ceiling: raise
-                // to the max. Normalize the return to chips *committed*
-                // (`act_raise` reports chips remaining), matching every other
-                // all-in path (audit P9e).
-                Some((_, max)) if stack > max => {
-                    self.act_raise(seat_number, max)?;
-                    let committed = self.seats.get_seat(seat_number).map_or(max, |s| s.player.bet);
-                    return Ok(committed);
-                }
-                // Stack fits within the max raise: fall through to a true all-in.
-                Some(_) => {}
-                // No voluntary raise is legal (cap reached, or the bet is already
-                // matched). A deep stack can then only call; a stack that cannot
-                // cover the call is the genuine all-in-for-less handled below.
-                None => {
-                    if stack > self.to_call(seat_number) {
-                        return self.act_call(seat_number);
-                    }
-                }
-            }
-        }
-
-        let old_bet = self.bet;
-        let amount = self.seats.act_all_in(seat_number)?;
-        self.bet = self.bet.max(amount);
-
-        // A shove that is at least a full raise re-opens the betting: record the
-        // new increment so the next player's minimum re-raise is measured from it
-        // (audit P9f). A sub-min all-in does NOT re-open — leave the increment
-        // untouched so players who already acted may only call the extra (Part V).
-        let raise_delta = self.bet.saturating_sub(old_bet);
-        if raise_delta >= self.min_raise() {
-            self.raise_increment = raise_delta;
-            self.raises_this_street = self.raises_this_street.saturating_add(1);
-        }
-
-        self.log(TableAction::AllIn(seat_number, amount));
-        self.log(TableAction::ActionTo(self.next_to_act()));
-        Ok(amount)
-    }
-
-    /// Stores the raise increment (the delta over the previous bet) after a
-    /// bet/raise has already been applied. A pure store now that both
-    /// [`Self::act_bet`] and [`Self::act_raise`] pre-validate the amount against
-    /// [`Self::min_raise_to`] before mutating (audit P9j.3). An all-in never
-    /// updates the increment here: a sub-min all-in must not re-open the action,
-    /// and a full-raise all-in is handled in [`Self::act_all_in`].
-    fn set_raise_increment(&mut self, seat_number: u8, amount: usize) {
-        let is_all_in = self.seats.get_seat(seat_number).is_some_and(SeatNoCell::is_all_in);
-        if !is_all_in {
-            self.raise_increment = amount;
         }
     }
 
@@ -3056,12 +1209,12 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// t.act_forced_bets().unwrap();
@@ -3117,12 +1270,12 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// t.act_forced_bets().unwrap();
@@ -3293,12 +1446,12 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
     /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// assert_eq!(0, t.button);
@@ -3365,12 +1518,12 @@ impl Table {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
     /// use pkcore::casino::game::ForcedBets;
     ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
     /// ]);
     /// let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// // build_game requires at least 3 board cards; returns Err before the flop is dealt.
@@ -3914,179 +2067,6 @@ impl Table {
     }
 }
 
-// ── Transition surface: legal_actions / apply_action (feature-free) ───────────
-
-impl Table {
-    /// Returns the [`PlayerAction`](crate::casino::action::PlayerAction)s that are
-    /// legal for `seat_id` in the current betting state.
-    ///
-    /// This is the *advisory* half of the engine's transition surface (the
-    /// dispatching half is [`Self::apply_action`]): it answers "what can this
-    /// seat do now?" **without** mutating the table or trying-then-rolling-back an
-    /// action. `Bet` and `Raise` are reported at their **minimum** legal size; any
-    /// larger amount up to the structure's ceiling is also legal and is validated
-    /// by [`Self::act_bet`] / [`Self::act_raise`] when applied.
-    ///
-    /// The raise checks mirror those in [`Self::act_raise`] exactly, so an action
-    /// this method reports as legal will not then be rejected by the matching
-    /// `act_*` method — that fidelity is the whole point of the surface, and is
-    /// what lets betting-rule correctness be table-driven rather than probed.
-    ///
-    /// Returns an empty `Vec` for a seat with no decision: an unknown seat, or one
-    /// that is all-in, folded, or busted — analogous to the empty action set at a
-    /// terminal node in [`games::kuhn`](crate::games::kuhn).
-    ///
-    /// # Forced posts vs. voluntary betting
-    ///
-    /// This surface models *voluntary* betting only. Forced posts — blinds,
-    /// antes, and the stud/razz 3rd-street bring-in — are posted by their own
-    /// methods ([`Self::act_forced_bets`] / [`Self::act_bring_in`], driven by
-    /// [`PokerSession`](crate::casino::session::PokerSession) at hand start), not
-    /// chosen here, exactly as blinds are not a `PlayerAction`. Stud/razz
-    /// voluntary betting *is* covered: once the bring-in is posted, the
-    /// completer's `Raise(small_bet)` (completion) and the subsequent fixed-limit
-    /// raises surface here like any other bet, because they flow through
-    /// [`Self::to_call`] / [`Self::min_raise_to`].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::action::PlayerAction;
-    /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
-    ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 5_000)),
-    /// ]);
-    /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
-    /// t.act_forced_bets().unwrap();
-    /// t.deal_cards_to_seats().unwrap();
-    ///
-    /// // UTG faces the big blind: fold, call, raise, or shove — but never check.
-    /// let utg = t.determine_utg();
-    /// let actions = t.legal_actions(utg);
-    /// assert!(actions.contains(&PlayerAction::Fold));
-    /// assert!(actions.contains(&PlayerAction::Call));
-    /// assert!(!actions.contains(&PlayerAction::Check));
-    /// ```
-    #[must_use]
-    pub fn legal_actions(&self, seat_id: u8) -> Vec<crate::casino::action::PlayerAction> {
-        use crate::casino::action::PlayerAction;
-
-        let mut actions = Vec::new();
-
-        let Some(seat) = self.seats.get_seat(seat_id) else {
-            return actions;
-        };
-        // An all-in, folded, or busted seat has no decision to make. `is_in_hand`
-        // is false once a seat has folded or been eliminated; an all-in seat is
-        // still in the hand but has nothing left to decide.
-        if !seat.player.is_in_hand() || seat.player.is_all_in() || seat.player.chips == 0 {
-            return actions;
-        }
-
-        let to_call = self.to_call(seat_id);
-        let stack = seat.player.total_chip_count();
-        let min_bet = self.min_raise();
-        // Single source of raise legality: the same `validate_raise` check
-        // `act_raise` runs, so what we advertise here can never be rejected there
-        // (audit P9b/P9j.1). `None` means no voluntary raise is legal.
-        let raise_bounds = self.raise_bounds(seat_id);
-
-        if to_call == 0 {
-            // No live bet faces this seat, so it may check.
-            actions.push(PlayerAction::Check);
-            if self.bet == 0 {
-                // Opening the betting is a Bet; the minimum open is `min_raise()`
-                // (the big blind before any raise this street).
-                if stack >= min_bet {
-                    actions.push(PlayerAction::Bet(min_bet));
-                }
-            } else if let Some((min_raise_to, _)) = raise_bounds {
-                // Big-blind option: the live bet is already matched, so re-opening
-                // it is a Raise rather than a Bet.
-                actions.push(PlayerAction::Raise(min_raise_to));
-            }
-        } else {
-            // Facing a bet: fold and call are always available (`act_call`
-            // converts a short stack into a partial all-in call).
-            actions.push(PlayerAction::Fold);
-            actions.push(PlayerAction::Call);
-            if let Some((min_raise_to, _)) = raise_bounds {
-                actions.push(PlayerAction::Raise(min_raise_to));
-            }
-        }
-
-        // A short stack can always shove, even when a full min-raise is illegal;
-        // a deep stack's shove degrades to the largest legal action inside
-        // `act_all_in` (never an error), so AllIn is always accepted (audit P9b).
-        if stack > 0 {
-            actions.push(PlayerAction::AllIn);
-        }
-
-        actions
-    }
-
-    /// Apply a [`crate::casino::action::PlayerAction`] to the given seat.
-    ///
-    /// Translates the action enum variant to the corresponding `act_*` method.
-    /// Returns `Err` if the action is illegal at this point in the hand (e.g.
-    /// acting out of turn, invalid bet size).
-    ///
-    /// # Errors
-    ///
-    /// Propagates any [`PKError`] from the underlying `act_*` method.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::action::PlayerAction;
-    /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
-    ///
-    /// let seats = SeatsNoCell::new(vec![
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
-    ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
-    /// ]);
-    /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
-    /// t.act_forced_bets().unwrap();
-    /// t.deal_cards_to_seats().unwrap();
-    /// let utg = t.determine_utg();
-    /// assert!(t.apply_action(utg, PlayerAction::Fold).is_ok());
-    /// ```
-    pub fn apply_action(&mut self, seat: u8, action: crate::casino::action::PlayerAction) -> Result<(), PKError> {
-        use crate::casino::action::PlayerAction;
-        match action {
-            PlayerAction::Fold => {
-                self.act_fold(seat)?;
-            }
-            PlayerAction::Check => {
-                self.act_check(seat)?;
-            }
-            PlayerAction::Call => {
-                // Degrade to check when the player already matches the current bet.
-                if self.to_call(seat) == 0 {
-                    self.act_check(seat)?;
-                } else {
-                    self.act_call(seat)?;
-                }
-            }
-            PlayerAction::AllIn => {
-                self.act_all_in(seat)?;
-            }
-            PlayerAction::Bet(n) => {
-                self.act_bet(seat, n)?;
-            }
-            PlayerAction::Raise(n) => {
-                self.act_raise(seat, n)?;
-            }
-        }
-        Ok(())
-    }
-}
-
 impl Display for Table {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Table: {} [{}]", self.name, self.id)?;
@@ -4103,50 +2083,51 @@ impl Display for Table {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod tests {
+mod casino__table_tests {
     use super::*;
     use crate::casino::game::ForcedBets;
+    use crate::casino::state::PlayerState;
 
     fn make_two_player_table() -> Table {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Alice".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
         ]);
         Table::nlh_from_seats(seats, ForcedBets::new(50, 100))
     }
 
     fn make_three_player_table() -> Table {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 10_000)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Alice".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Carol".to_string(), 10_000)),
         ]);
         Table::nlh_from_seats(seats, ForcedBets::new(50, 100))
     }
 
     fn make_three_player_plo_table() -> Table {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 10_000)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Alice".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Carol".to_string(), 10_000)),
         ]);
         Table::plo_from_seats(seats, (50, 100))
     }
 
     fn make_three_player_razz_table() -> Table {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 10_000)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Alice".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Carol".to_string(), 10_000)),
         ]);
         Table::razz_from_seats(seats, 2, 5, 20, 40)
     }
 
     fn make_three_player_stud_table() -> Table {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 10_000)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Alice".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Carol".to_string(), 10_000)),
         ]);
         // ante 2, bring-in 5, small bet 20, big bet 40.
         Table::stud_hi_from_seats(seats, 2, 5, 20, 40)
@@ -4227,11 +2208,11 @@ mod tests {
     // moved chips and dropped the all-in transition that act_bet_internal owns.
     #[test]
     fn stud_ante_that_felts_a_seat_transitions_it_all_in() {
-        let seats = SeatsNoCell::new(vec![
+        let seats = Seats::new(vec![
             // Shorty's entire 2-chip stack goes to the 2-chip ante.
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Shorty".to_string(), 2)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Shorty".to_string(), 2)),
+            Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Carol".to_string(), 10_000)),
         ]);
         let mut table = Table::stud_hi_from_seats(seats, 2, 5, 20, 40);
         table.act_forced_bets().unwrap();
@@ -4251,9 +2232,9 @@ mod tests {
     // field directly; the is_active() guard in post_dead handles it.
     #[test]
     fn post_dead_ante_does_not_charge_an_out_seat_with_chips() {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Alice".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
         ]);
         let mut table = Table::stud_hi_from_seats(seats, 2, 5, 20, 40);
         table.seats.get_seat_mut(1).unwrap().player.state = PlayerState::Out;
@@ -4267,205 +2248,7 @@ mod tests {
     }
 
     #[test]
-    fn player_no_cell_new() {
-        let p = PlayerNoCell::new("TestPlayer".to_string());
-        assert_eq!("TestPlayer", p.handle);
-        assert_eq!(0, p.chips);
-        assert_eq!(PlayerState::YetToAct, p.state);
-    }
-
-    #[test]
-    fn player_no_cell_new_with_chips() {
-        let p = PlayerNoCell::new_with_chips("Rich".to_string(), 5_000);
-        assert_eq!(5_000, p.total_chip_count());
-    }
-
-    #[test]
-    fn player_no_cell_new_with_chips_initializes_withdrawn() {
-        let p = PlayerNoCell::new_with_chips("Buy-In Betty".to_string(), 1_000);
-        assert_eq!(1_000, p.withdrawn);
-    }
-
-    #[test]
-    fn player_no_cell_new_initializes_withdrawn_to_zero() {
-        let p = PlayerNoCell::new("Empty Eddie".to_string());
-        assert_eq!(0, p.chips);
-        assert_eq!(0, p.withdrawn);
-    }
-
-    #[test]
-    fn player_no_cell_default_withdrawn_is_zero() {
-        let p = PlayerNoCell::default();
-        assert_eq!(0, p.withdrawn);
-    }
-
-    #[test]
-    fn player_no_cell_reload_increments_chips_and_withdrawn() {
-        let mut p = PlayerNoCell::new_with_chips("Reload Ron".to_string(), 1_000);
-
-        let new_total = p.reload(500);
-
-        assert_eq!(1_500, new_total);
-        assert_eq!(1_500, p.chips);
-        assert_eq!(1_500, p.withdrawn);
-    }
-
-    #[test]
-    fn player_no_cell_reload_after_bust() {
-        let mut p = PlayerNoCell::new_with_chips("Busted Bart".to_string(), 1_000);
-        p.chips = 0;
-
-        let new_total = p.reload(800);
-
-        assert_eq!(800, new_total);
-        assert_eq!(800, p.chips);
-        assert_eq!(1_800, p.withdrawn);
-    }
-
-    #[test]
-    fn player_no_cell_reload_zero_is_noop() {
-        let mut p = PlayerNoCell::new_with_chips("Stingy Stan".to_string(), 1_000);
-
-        let new_total = p.reload(0);
-
-        assert_eq!(1_000, new_total);
-        assert_eq!(1_000, p.chips);
-        assert_eq!(1_000, p.withdrawn);
-    }
-
-    #[test]
-    fn player_no_cell_act_bet_happy_path() {
-        let mut p = PlayerNoCell::new_with_chips("Bettor".to_string(), 1_000);
-        let remaining = p.act_bet(200).unwrap();
-        assert_eq!(800, remaining);
-        assert_eq!(200, p.bet);
-        assert_eq!(PlayerState::Bet(200), p.state);
-    }
-
-    #[test]
-    fn player_no_cell_act_bet_insufficient_chips() {
-        let mut p = PlayerNoCell::new_with_chips("Broke".to_string(), 100);
-        let err = p.act_bet(200).unwrap_err();
-        assert_eq!(PKError::InsufficientChips, err);
-    }
-
-    #[test]
-    fn player_no_cell_act_fold() {
-        let mut p = PlayerNoCell::new_with_chips("Folder".to_string(), 1_000);
-        p.act_bet(300).unwrap();
-        let folded = p.act_fold().unwrap();
-        assert_eq!(300, folded);
-        assert_eq!(0, p.bet);
-        assert_eq!(PlayerState::Fold, p.state);
-    }
-
-    #[test]
-    fn player_no_cell_act_all_in() {
-        let mut p = PlayerNoCell::new_with_chips("AllIn".to_string(), 500);
-        let amount = p.act_all_in().unwrap();
-        assert_eq!(500, amount);
-        assert_eq!(PlayerState::AllIn(500), p.state);
-        assert_eq!(0, p.chips);
-    }
-
-    #[test]
-    fn player_no_cell_act_check() {
-        let mut p = PlayerNoCell::new_with_chips("Checker".to_string(), 1_000);
-        p.act_check().unwrap();
-        assert_eq!(PlayerState::Check, p.state);
-    }
-
-    #[test]
-    fn player_no_cell_act_bring_it_in() {
-        let mut p = PlayerNoCell::new_with_chips("Bringer".to_string(), 1_000);
-        p.act_bet(400).unwrap();
-        let collected = p.act_bring_it_in();
-        assert_eq!(400, collected);
-        assert_eq!(0, p.bet);
-        assert_eq!(400, p.chips_in_play);
-        assert_eq!(PlayerState::YetToAct, p.state);
-    }
-
-    #[test]
-    fn player_no_cell_act_close_it_out() {
-        let mut p = PlayerNoCell::new_with_chips("Closer".to_string(), 1_000);
-        p.act_bet(200).unwrap();
-        let collected = p.act_close_it_out().unwrap();
-        assert_eq!(200, collected);
-        assert!(matches!(p.state, PlayerState::Showdown(_)));
-    }
-
-    #[test]
-    fn seat_no_cell_new() {
-        let player = PlayerNoCell::new_with_chips("Seat0".to_string(), 1_000);
-        let seat = SeatNoCell::new(player);
-        assert!(!seat.is_empty());
-        assert!(seat.is_in_hand());
-    }
-
-    #[test]
-    fn seat_no_cell_default_is_empty() {
-        let seat = SeatNoCell::default();
-        assert!(seat.is_empty());
-    }
-
-    #[test]
-    fn seats_no_cell_size() {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
-        ]);
-        assert_eq!(2, seats.size());
-    }
-
-    #[test]
-    fn seats_no_cell_current_bet() {
-        let mut seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
-        ]);
-        seats.get_seat_mut(0).unwrap().player.act_bet(200).unwrap();
-        assert_eq!(200, seats.current_bet());
-    }
-
-    #[test]
-    fn seats_no_cell_bring_it_in() {
-        let mut seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
-        ]);
-        // Both players post equal amounts so bets match and betting is complete.
-        seats.get_seat_mut(0).unwrap().player.act_bet_blind(100).unwrap();
-        seats.get_seat_mut(1).unwrap().player.act_bet_blind(100).unwrap();
-        seats.get_seat_mut(0).unwrap().player.state = PlayerState::Check;
-        seats.get_seat_mut(1).unwrap().player.state = PlayerState::Check;
-
-        let collected = seats.bring_it_in().unwrap();
-        assert_eq!(200, collected);
-        assert_eq!(0, seats.0[0].player.bet);
-        assert_eq!(0, seats.0[1].player.bet);
-    }
-
-    #[cfg(feature = "bot-profiles")]
-    #[test]
-    fn reset_non_allin_to_yet_to_act_leaves_all_ins_unchanged() {
-        let mut seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 0)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 500)),
-        ]);
-        // Manually force Alice into AllIn and Bob into Call(100) state.
-        seats.0[0].player.state = PlayerState::AllIn(200);
-        seats.0[1].player.state = PlayerState::Call(100);
-
-        seats.reset_non_allin_to_yet_to_act();
-
-        // Alice (all-in) stays AllIn(200); Bob resets to YetToAct.
-        assert_eq!(seats.0[0].player.state, PlayerState::AllIn(200));
-        assert_eq!(seats.0[1].player.state, PlayerState::YetToAct);
-    }
-
-    #[test]
-    fn table_no_cell_nlh_from_seats() {
+    fn table_nlh_from_seats() {
         let table = make_two_player_table();
         assert_eq!(2, table.seats.size());
         assert_eq!(0, table.pot);
@@ -4474,7 +2257,7 @@ mod tests {
     }
 
     #[test]
-    fn table_no_cell_act_forced_bets() {
+    fn table_act_forced_bets() {
         let mut table = make_two_player_table();
         table.act_forced_bets().unwrap();
 
@@ -4486,7 +2269,7 @@ mod tests {
 
     /// In heads-up the button (seat 0) is the SB, the other player is BB.
     #[test]
-    fn table_no_cell_hu_button_is_small_blind() {
+    fn table_hu_button_is_small_blind() {
         let table = make_two_player_table(); // button = 0
         assert_eq!(0, table.determine_small_blind(), "button should be SB in HU");
         assert_eq!(1, table.determine_big_blind(), "non-button should be BB in HU");
@@ -4494,7 +2277,7 @@ mod tests {
 
     /// In heads-up the SB (button) acts first preflop.
     #[test]
-    fn table_no_cell_hu_utg_is_button() {
+    fn table_hu_utg_is_button() {
         let mut table = make_two_player_table(); // button = 0
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4504,7 +2287,7 @@ mod tests {
 
     /// After button_up in HU the new button (seat 1) becomes SB.
     #[test]
-    fn table_no_cell_hu_button_up_swaps_roles() {
+    fn table_hu_button_up_swaps_roles() {
         let mut table = make_two_player_table();
         table.button_up(); // button → 1
         assert_eq!(1, table.determine_small_blind(), "new button (1) should be SB");
@@ -4512,7 +2295,7 @@ mod tests {
     }
 
     #[test]
-    fn table_no_cell_deal_cards_to_seats() {
+    fn table_deal_cards_to_seats() {
         let mut table = make_two_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4520,7 +2303,7 @@ mod tests {
     }
 
     #[test]
-    fn table_no_cell_deal_flop() {
+    fn table_deal_flop() {
         let mut table = make_two_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4536,7 +2319,7 @@ mod tests {
     }
 
     #[test]
-    fn table_no_cell_deal_turn() {
+    fn table_deal_turn() {
         let mut table = make_two_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4560,7 +2343,7 @@ mod tests {
     // `apply_action` (both require `casino::action::PlayerAction`).
 
     #[test]
-    fn table_no_cell_act_fold() {
+    fn table_act_fold() {
         let mut table = make_three_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4612,7 +2395,7 @@ mod tests {
     }
 
     #[test]
-    fn table_no_cell_act_bet() {
+    fn table_act_bet() {
         let mut table = make_three_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4623,7 +2406,7 @@ mod tests {
     }
 
     #[test]
-    fn table_no_cell_act_call() {
+    fn table_act_call() {
         let mut table = make_three_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4633,7 +2416,7 @@ mod tests {
     }
 
     #[test]
-    fn table_no_cell_act_raise() {
+    fn table_act_raise() {
         let mut table = make_three_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4643,7 +2426,7 @@ mod tests {
     }
 
     #[test]
-    fn table_no_cell_act_raise__under_minimum_does_not_corrupt_state() {
+    fn table_act_raise__under_minimum_does_not_corrupt_state() {
         // Regression test: an under-minimum raise used to deduct chips and set the
         // player to Raise(_) before the increment check failed. After corruption the
         // seat was no longer "next to act", causing every subsequent raise to fail with
@@ -4669,7 +2452,7 @@ mod tests {
     }
 
     #[test]
-    fn table_no_cell_act_all_in() {
+    fn table_act_all_in() {
         let mut table = make_two_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4679,7 +2462,7 @@ mod tests {
     }
 
     #[test]
-    fn table_no_cell_end_hand_single_winner() {
+    fn table_end_hand_single_winner() {
         let mut table = make_three_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4694,19 +2477,19 @@ mod tests {
     }
 
     #[test]
-    fn table_no_cell_table_chip_count() {
+    fn table_table_chip_count() {
         let table = make_two_player_table();
         assert_eq!(20_000, table.table_chip_count());
     }
 
     #[test]
-    fn table_no_cell_min_raise() {
+    fn table_min_raise() {
         let table = make_two_player_table();
         assert_eq!(100, table.min_raise());
     }
 
     #[test]
-    fn table_no_cell_to_call() {
+    fn table_to_call() {
         let mut table = make_three_player_table();
         table.act_forced_bets().unwrap();
         let utg = table.determine_utg();
@@ -4714,7 +2497,7 @@ mod tests {
     }
 
     #[test]
-    fn table_no_cell_reset() {
+    fn table_reset() {
         let mut table = make_two_player_table();
         table.act_forced_bets().unwrap();
         table.deal_cards_to_seats().unwrap();
@@ -4725,7 +2508,7 @@ mod tests {
     }
 
     #[test]
-    fn table_no_cell_button_up() {
+    fn table_button_up() {
         let mut table = make_two_player_table();
         assert_eq!(0, table.button);
         table.button_up();
@@ -4743,7 +2526,7 @@ mod tests {
     }
 
     #[test]
-    fn table_no_cell_display() {
+    fn table_display() {
         let table = make_two_player_table();
         let s = table.to_string();
         assert!(s.contains("No Limit Hold'em Table"));
@@ -4754,40 +2537,15 @@ mod tests {
     // ── act_blind_or_all_in / short-stack blind tests ─────────────────────────
     // button = 0 for all new tables, so: seat 0 = button/UTG, seat 1 = SB, seat 2 = BB.
 
-    #[test]
-    fn player_no_cell_act_blind_or_all_in_partial() {
-        let mut p = PlayerNoCell::new_with_chips("Short".to_string(), 30);
-        let actual = p.act_blind_or_all_in(50).unwrap();
-        assert_eq!(30, actual); // 30 chips posted (all-in), not the intended 50
-        assert_eq!(30, p.bet);
-        assert_eq!(PlayerState::AllIn(30), p.state);
-    }
-
-    #[test]
-    fn player_no_cell_act_blind_or_all_in_full() {
-        let mut p = PlayerNoCell::new_with_chips("Full".to_string(), 500);
-        let actual = p.act_blind_or_all_in(100).unwrap();
-        assert_eq!(100, actual); // 100 chips posted (full blind)
-        assert_eq!(100, p.bet);
-        assert_eq!(PlayerState::Blind(100), p.state);
-    }
-
-    #[test]
-    fn player_no_cell_act_blind_or_all_in_zero_chips() {
-        let mut p = PlayerNoCell::new("Broke".to_string());
-        let result = p.act_blind_or_all_in(100);
-        assert_eq!(Err(PKError::InsufficientChips), result);
-    }
-
     // Regression: act_forced_bet_big_blind previously logged the intended blind (100) rather
     // than the actual chips posted (60) when the BB seat was short-stacked.
     #[test]
-    fn table_no_cell_short_stack_bb_logs_actual_amount() {
+    fn table_short_stack_bb_logs_actual_amount() {
         // button=0: seat 0 = UTG/button, seat 1 = SB, seat 2 = BB
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 60)), // short-stacked
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("UTG".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("SB".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("BB".to_string(), 60)), // short-stacked
         ]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         table.act_forced_bets().unwrap();
@@ -4809,12 +2567,12 @@ mod tests {
     // what the all-in BB can win at showdown via side-pot stratification, but the call
     // amount itself does not drop. See docs/BUGFIX_short_blind_call_target.md.
     #[test]
-    fn table_no_cell_to_call_uses_full_bb_when_bb_short() {
+    fn table_to_call_uses_full_bb_when_bb_short() {
         // button=0: seat 0 = UTG/button, seat 1 = SB, seat 2 = BB (short-stacked)
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 60)), // short-stacked
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("UTG".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("SB".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("BB".to_string(), 60)), // short-stacked
         ]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         table.act_forced_bets().unwrap();
@@ -4824,25 +2582,25 @@ mod tests {
     }
 
     #[test]
-    fn table_no_cell_bet_is_zero_before_blinds() {
+    fn table_bet_is_zero_before_blinds() {
         let table = make_two_player_table();
         assert_eq!(0, table.bet);
     }
 
     #[test]
-    fn table_no_cell_to_call_zero_before_blinds() {
+    fn table_to_call_zero_before_blinds() {
         let table = make_two_player_table();
         assert_eq!(0, table.to_call(0));
         assert_eq!(0, table.to_call(1));
     }
 
     #[test]
-    fn table_no_cell_to_call_full_bb_after_forced_bets() {
+    fn table_to_call_full_bb_after_forced_bets() {
         // button=0: seat 0 = UTG/button, seat 1 = SB, seat 2 = BB
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 5_000)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("UTG".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("SB".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("BB".to_string(), 5_000)),
         ]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         table.act_forced_bets().unwrap();
@@ -4851,14 +2609,14 @@ mod tests {
     }
 
     #[test]
-    fn table_no_cell_forced_bets_short_bb_to_call_full_amount() {
+    fn table_forced_bets_short_bb_to_call_full_amount() {
         // BB (seat 2) has only 30 chips — posts all-in; UTG (seat 0) must still call the
         // full 100 BB. The 70 excess will form a side pot at showdown that BB cannot win,
         // or be returned to UTG as uncalled if no other player matches it.
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 30)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("UTG".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("SB".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("BB".to_string(), 30)),
         ]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         table.act_forced_bets().unwrap();
@@ -4874,14 +2632,14 @@ mod tests {
     }
 
     #[test]
-    fn table_no_cell_act_call_after_short_blind() {
+    fn table_act_call_after_short_blind() {
         // BB (seat 2) short-stack; UTG (seat 0) calls — commits the full 100 BB even
         // though BB only posted 30. Side pots / uncalled returns at showdown reconcile
         // the difference.
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 30)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("UTG".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("SB".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("BB".to_string(), 30)),
         ]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         table.act_forced_bets().unwrap();
@@ -4910,12 +2668,12 @@ mod tests {
     /// `end_hand()` must return `Ok` and leave 25,000 chips on the table.
     #[test]
     fn end_hand__chip_audit_passes_with_equal_fold_investments() {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 5_000)), // 0 button
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 5_000)),   // 1 SB
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 5_000)), // 2 BB
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Dave".to_string(), 5_000)),  // 3 UTG
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Eve".to_string(), 5_000)),   // 4 UTG+1
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Alice".to_string(), 5_000)), // 0 button
+            Seat::new(Player::new_with_chips("Bob".to_string(), 5_000)),   // 1 SB
+            Seat::new(Player::new_with_chips("Carol".to_string(), 5_000)), // 2 BB
+            Seat::new(Player::new_with_chips("Dave".to_string(), 5_000)),  // 3 UTG
+            Seat::new(Player::new_with_chips("Eve".to_string(), 5_000)),   // 4 UTG+1
         ]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 
@@ -5009,14 +2767,14 @@ mod tests {
     fn showdown_multiway__active_over_contributor_gets_excess_returned() {
         use std::str::FromStr;
 
-        let mut seat0 = SeatNoCell::new(PlayerNoCell::new_with_chips("BigStack".to_string(), 1_000));
+        let mut seat0 = Seat::new(Player::new_with_chips("BigStack".to_string(), 1_000));
         seat0.cards = BoxedCards::from_str("7♦ 2♣").unwrap();
-        let mut seat1 = SeatNoCell::new(PlayerNoCell::new_with_chips("Short1".to_string(), 200));
+        let mut seat1 = Seat::new(Player::new_with_chips("Short1".to_string(), 200));
         seat1.cards = BoxedCards::from_str("A♠ A♥").unwrap();
-        let mut seat2 = SeatNoCell::new(PlayerNoCell::new_with_chips("Short2".to_string(), 200));
+        let mut seat2 = Seat::new(Player::new_with_chips("Short2".to_string(), 200));
         seat2.cards = BoxedCards::from_str("K♠ K♥").unwrap();
 
-        let seats = SeatsNoCell::new(vec![seat0, seat1, seat2]);
+        let seats = Seats::new(vec![seat0, seat1, seat2]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 
         // button = 0 → SB = 1, BB = 2; UTG pre-flop = seat 0 (button in 3-handed)
@@ -5184,12 +2942,12 @@ mod tests {
     /// 80 (cap 40, SB and UTG eligible). Chip conservation must hold across
     /// every showdown outcome.
     #[test]
-    fn table_no_cell_short_bb_chip_conservation_multiway_showdown() {
+    fn table_short_bb_chip_conservation_multiway_showdown() {
         let starting_total = 5_000 + 5_000 + 60;
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 60)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("UTG".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("SB".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("BB".to_string(), 60)),
         ]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         table.act_forced_bets().unwrap();
@@ -5261,12 +3019,12 @@ mod tests {
     /// The critical assertion is that UTG's ending stack is in {4940, 5110} —
     /// any other value (e.g. 4900 or 5070) means the 40 was not returned.
     #[test]
-    fn table_no_cell_short_bb_uncalled_excess_returned_to_sole_caller() {
+    fn table_short_bb_uncalled_excess_returned_to_sole_caller() {
         let starting_total = 5_000 + 5_000 + 60;
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 60)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("UTG".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("SB".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("BB".to_string(), 60)),
         ]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         table.act_forced_bets().unwrap();
@@ -5313,12 +3071,12 @@ mod tests {
     ///
     /// Total committed = 60 + 100 + 80 = 240. Awardable = 220, returned = 20.
     #[test]
-    fn table_no_cell_short_bb_caller_also_short_chip_conservation() {
+    fn table_short_bb_caller_also_short_chip_conservation() {
         let starting_total = 80 + 5_000 + 60;
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 80)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 60)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("UTG".to_string(), 80)),
+            Seat::new(Player::new_with_chips("SB".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("BB".to_string(), 60)),
         ]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         table.act_forced_bets().unwrap();
@@ -5363,11 +3121,11 @@ mod tests {
     /// increment of 30 — less than min_raise (100) — and must be rejected.
     /// A raise to 200 has increment 100 = min_raise and must be accepted.
     #[test]
-    fn table_no_cell_short_bb_min_raise_anchors_to_full_blind() {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 5_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 5_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 30)),
+    fn table_short_bb_min_raise_anchors_to_full_blind() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("UTG".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("SB".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("BB".to_string(), 30)),
         ]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         table.act_forced_bets().unwrap();
@@ -5494,10 +3252,10 @@ mod tests {
     // not 900+200=1100. Before the fix, act_all_in never touched raise_increment.
     #[test]
     fn all_in_full_raise_reopens_min_raise() {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 900)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 10_000)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 900)),
+            Seat::new(Player::new_with_chips("C".to_string(), 10_000)),
         ]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         table.act_forced_bets().unwrap();
@@ -5528,10 +3286,10 @@ mod tests {
     // the raise_increment update is gated on "at least a full raise".
     #[test]
     fn sub_min_all_in_does_not_reopen_min_raise() {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 450)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 10_000)),
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 450)),
+            Seat::new(Player::new_with_chips("C".to_string(), 10_000)),
         ]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         table.act_forced_bets().unwrap();
@@ -5633,172 +3391,4 @@ mod tests {
     }
 
     // endregion Razz
-}
-
-// ── Transition-surface tests (legal_actions / apply_action) ───────────────────
-//
-// P8: the audit's payoff — betting-rule correctness expressed as table-driven
-// assertions instead of probe archaeology. Feature-free, like the surface itself.
-#[cfg(test)]
-#[allow(non_snake_case)]
-mod transition_surface_tests {
-    use super::*;
-    use crate::casino::action::PlayerAction;
-    use crate::casino::game::ForcedBets;
-
-    /// A 3-handed 50/100 NL table advanced to the first preflop decision (UTG
-    /// facing the big blind).
-    fn nlh_at_utg() -> Table {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 10_000)),
-        ]);
-        let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
-        t.act_forced_bets().expect("forced bets");
-        t.deal_cards_to_seats().expect("deal");
-        t
-    }
-
-    #[test]
-    fn legal_actions__utg_facing_bb_is_fold_call_raise_allin_no_check() {
-        let t = nlh_at_utg();
-        let utg = t.next_to_act();
-        let actions = t.legal_actions(utg);
-
-        assert!(actions.contains(&PlayerAction::Fold));
-        assert!(actions.contains(&PlayerAction::Call));
-        assert!(actions.contains(&PlayerAction::Raise(t.min_raise_to())));
-        assert!(actions.contains(&PlayerAction::AllIn));
-        // Facing a live bet, checking is illegal, and there is no *opening* bet.
-        assert!(!actions.contains(&PlayerAction::Check));
-        assert!(!actions.iter().any(|a| matches!(a, PlayerAction::Bet(_))));
-    }
-
-    #[test]
-    fn legal_actions__empty_for_folded_seat() {
-        let mut t = nlh_at_utg();
-        let utg = t.next_to_act();
-        t.act_fold(utg).expect("fold");
-        // A folded seat has no decision to make.
-        assert!(t.legal_actions(utg).is_empty());
-    }
-
-    #[test]
-    fn legal_actions__empty_for_unknown_seat() {
-        let t = nlh_at_utg();
-        assert!(t.legal_actions(99).is_empty());
-    }
-
-    #[test]
-    fn apply_action__fold_advances_and_folds_the_seat() {
-        let mut t = nlh_at_utg();
-        let utg = t.next_to_act();
-        t.apply_action(utg, PlayerAction::Fold).expect("apply fold");
-
-        assert_eq!(PlayerState::Fold, t.seats.get_seat(utg).unwrap().player.state);
-        assert_ne!(utg, t.next_to_act(), "action should have advanced to the next seat");
-    }
-
-    /// The crown-jewel invariant of the transition surface: an action reported
-    /// as legal is never rejected when applied. Each action is applied to a fresh
-    /// table so the mutations do not interfere.
-    #[test]
-    fn every_legal_action_is_accepted_by_apply_action() {
-        let seat = nlh_at_utg().next_to_act();
-        let actions = nlh_at_utg().legal_actions(seat);
-        assert!(!actions.is_empty());
-
-        for action in actions {
-            let mut t = nlh_at_utg();
-            assert!(
-                t.apply_action(seat, action).is_ok(),
-                "legal_actions reported {action:?} but apply_action rejected it"
-            );
-        }
-    }
-
-    // ── Stud/razz: voluntary betting after the forced bring-in ────────────────
-
-    /// A 3-handed fixed-limit stud table (ante 2, bring-in 5, small bet 20, big
-    /// bet 40) advanced past the forced bring-in to the first voluntary actor
-    /// (the "completer"), mirroring `PokerSession::start_hand`'s setup order.
-    fn stud_at_completer() -> Table {
-        let seats = SeatsNoCell::new(vec![
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Alice".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Bob".to_string(), 10_000)),
-            SeatNoCell::new(PlayerNoCell::new_with_chips("Carol".to_string(), 10_000)),
-        ]);
-        let mut t = Table::stud_hi_from_seats(seats, 2, 5, 20, 40);
-        t.act_forced_bets().expect("antes");
-        t.deal_stud_3rd_street().expect("deal 3rd");
-        t.act_bring_in().expect("bring-in"); // forced post, like blinds
-        t
-    }
-
-    #[test]
-    fn legal_actions__stud_completer_can_fold_call_and_complete() {
-        let t = stud_at_completer();
-        let completer = t.next_to_act();
-        let actions = t.legal_actions(completer);
-
-        // Facing the partial bring-in: fold or call, and *complete* to the full
-        // small bet — which surfaces as a Raise to `min_raise_to()` (== 20).
-        assert!(actions.contains(&PlayerAction::Fold));
-        assert!(actions.contains(&PlayerAction::Call));
-        assert!(actions.contains(&PlayerAction::Raise(t.min_raise_to())));
-        assert_eq!(20, t.min_raise_to(), "completion should target one small bet");
-        assert!(actions.contains(&PlayerAction::AllIn));
-        assert!(!actions.contains(&PlayerAction::Check));
-    }
-
-    /// Fidelity holds in the fixed-limit stud completion state too: every action
-    /// `legal_actions` reports for the completer is accepted by `apply_action`.
-    #[test]
-    fn every_legal_action_is_accepted_by_apply_action__stud() {
-        let completer = stud_at_completer().next_to_act();
-        let actions = stud_at_completer().legal_actions(completer);
-        assert!(!actions.is_empty());
-
-        for action in actions {
-            let mut t = stud_at_completer();
-            assert!(
-                t.apply_action(completer, action).is_ok(),
-                "legal_actions reported {action:?} but apply_action rejected it in stud"
-            );
-        }
-    }
-
-    // P9b — fidelity at the fixed-limit raise cap. When no further raise is legal,
-    // legal_actions must not offer Raise, but AllIn is still offered — and applying
-    // it must NOT error. A deep-stacked "all-in" at the cap degrades to a call,
-    // not a rerouted act_raise that trips RaiseCapReached (the pre-fix bug that
-    // broke the crown-jewel invariant for capped structures).
-    #[test]
-    fn fixed_limit_all_in_at_cap_degrades_to_call_not_error() {
-        let mut t = stud_at_completer();
-        let completer = t.next_to_act();
-        t.apply_action(completer, PlayerAction::Raise(20)).unwrap(); // complete to small bet
-        t.raises_this_street = 99; // force the per-street raise cap
-
-        let actor = t.next_to_act();
-        let actions = t.legal_actions(actor);
-        assert!(
-            !actions.iter().any(|a| matches!(a, PlayerAction::Raise(_))),
-            "no raise may be offered once the cap is reached"
-        );
-        assert!(
-            actions.contains(&PlayerAction::AllIn),
-            "all-in is still offered (fidelity requires it be accepted)"
-        );
-
-        assert!(
-            t.apply_action(actor, PlayerAction::AllIn).is_ok(),
-            "a deep-stack all-in at the FL cap must degrade to a call, not error"
-        );
-        assert!(
-            !t.seats.get_seat(actor).unwrap().player.is_all_in(),
-            "the deep stack called; it did not actually go all-in"
-        );
-    }
 }

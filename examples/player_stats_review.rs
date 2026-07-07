@@ -18,8 +18,8 @@ use pkcore::analysis::player_stats::{Confidence, PlayerStats, StatsRegistry};
 use pkcore::bot::profile::BotProfile;
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::session::PokerSession;
-use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
-use pkcore::casino::table_celled::winnings::Winnings;
+use pkcore::casino::table::{Player, Seat, Seats, Table};
+use pkcore::casino::winnings::Winnings;
 use pkcore::hand_history::{HandHistory, PlayerSnapshot};
 use rand::Rng;
 use std::collections::HashMap;
@@ -52,9 +52,9 @@ fn run_session(num_hands: usize, rng: &mut impl Rng) {
 
     let profiles = [BotProfile::tight_passive(), BotProfile::gto(), BotProfile::maniac()];
 
-    let players: Vec<PlayerNoCell> = profiles
+    let players: Vec<Player> = profiles
         .iter()
-        .map(|p| PlayerNoCell::new_with_chips(p.name.clone(), STARTING_CHIPS))
+        .map(|p| Player::new_with_chips(p.name.clone(), STARTING_CHIPS))
         .collect();
     let id_to_name: HashMap<Uuid, String> = players
         .iter()
@@ -62,7 +62,7 @@ fn run_session(num_hands: usize, rng: &mut impl Rng) {
         .map(|(player, profile)| (player.id, profile.name.clone()))
         .collect();
 
-    let seats = SeatsNoCell::new(players.into_iter().map(SeatNoCell::new).collect());
+    let seats = Seats::new(players.into_iter().map(Seat::new).collect());
     let table = Table::nlh_from_seats(seats, ForcedBets::new(SMALL_BLIND, BIG_BLIND));
     let mut session = PokerSession::new(table);
     let mut registry = StatsRegistry::new();

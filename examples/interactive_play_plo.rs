@@ -14,7 +14,7 @@
 use pkcore::bot::decider::{BotDecider, RuleBasedDecider};
 use pkcore::bot::profile::BotProfile;
 use pkcore::bot::sim::SimTable;
-use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+use pkcore::casino::table::{Player, Seat, Seats, Table};
 
 const STARTING_CHIPS: usize = 10_000;
 const SMALL_BLIND: usize = 5;
@@ -37,9 +37,9 @@ fn main() {
     println!("  Seat 1: {}", tag.name);
     println!();
 
-    let seats = SeatsNoCell::new(vec![
-        SeatNoCell::new(PlayerNoCell::new_with_chips(lag.name.clone(), STARTING_CHIPS)),
-        SeatNoCell::new(PlayerNoCell::new_with_chips(tag.name.clone(), STARTING_CHIPS)),
+    let seats = Seats::new(vec![
+        Seat::new(Player::new_with_chips(lag.name.clone(), STARTING_CHIPS)),
+        Seat::new(Player::new_with_chips(tag.name.clone(), STARTING_CHIPS)),
     ]);
     let table = Table::plo_from_seats(seats, (SMALL_BLIND, BIG_BLIND));
 

@@ -1,7 +1,7 @@
 //! Recreation of "The Hand" (Negreanu vs. Hansen) using [`Table`].
 //!
 //! This is a direct parallel to `examples/the_hand.rs` — same game logic, same
-//! assertions — but every function receives `&mut TableNoCell` instead of `&Table`.
+//! assertions — but every function receives `&mut Table` instead of `&Table`.
 //! The difference makes the mutability contract explicit at every call site: the
 //! Rust compiler enforces exclusive access rather than hiding it behind `Cell`/`RefCell`.
 //!
@@ -23,7 +23,7 @@ use pkcore::analysis::range_equity::RangeEquity;
 use pkcore::arrays::two::Two;
 use pkcore::cards::Cards;
 use pkcore::casino::game::ForcedBets;
-use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+use pkcore::casino::table::{Player, Seat, Seats, Table};
 use pkcore::play::board::Board;
 use pkcore::play::stages::flop_eval::FlopEval;
 use pkcore::play::stages::river_eval::RiverEval;
@@ -34,7 +34,7 @@ use std::str::FromStr;
 fn main() -> Result<(), PKError> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    let mut table = the_hand_table_no_cell();
+    let mut table = the_hand_table();
 
     setup(&mut table)?;
     let preflop_pot = preflop(&mut table)?;
@@ -57,28 +57,25 @@ fn main() -> Result<(), PKError> {
 
 /// Constructs a [`Table`] primed with the exact deck order used in The Hand.
 ///
-/// The key difference from `Table::nlh_primed`: because `TableNoCell.deck` is a
+/// The key difference from `Table::nlh_primed`: because `Table.deck` is a
 /// plain `pub` field, we can inject the pre-ordered deck with a direct assignment
 /// after construction rather than through a specialised constructor.
-fn the_hand_table_no_cell() -> Table {
-    let seats = SeatsNoCell::new(vec![
-        SeatNoCell::new(PlayerNoCell::new_with_chips("Doyle Brunson".to_string(), 1_000_000)),
-        SeatNoCell::new(PlayerNoCell::new_with_chips("Eli Elezra".to_string(), 1_000_000)),
-        SeatNoCell::new(PlayerNoCell::new_with_chips(
-            "Antonio Esfandiari".to_string(),
-            1_000_000,
-        )),
-        SeatNoCell::new(PlayerNoCell::new_with_chips("Gus Hansen".to_string(), 1_000_000)),
-        SeatNoCell::new(PlayerNoCell::new_with_chips("Daniel Negreanu".to_string(), 1_000_000)),
-        SeatNoCell::new(PlayerNoCell::new_with_chips("Cory Zeidman".to_string(), 1_000_000)),
-        SeatNoCell::new(PlayerNoCell::new_with_chips("Barry Greenstein".to_string(), 1_000_000)),
-        SeatNoCell::new(PlayerNoCell::new_with_chips("Amnon Filippi".to_string(), 1_000_000)),
+fn the_hand_table() -> Table {
+    let seats = Seats::new(vec![
+        Seat::new(Player::new_with_chips("Doyle Brunson".to_string(), 1_000_000)),
+        Seat::new(Player::new_with_chips("Eli Elezra".to_string(), 1_000_000)),
+        Seat::new(Player::new_with_chips("Antonio Esfandiari".to_string(), 1_000_000)),
+        Seat::new(Player::new_with_chips("Gus Hansen".to_string(), 1_000_000)),
+        Seat::new(Player::new_with_chips("Daniel Negreanu".to_string(), 1_000_000)),
+        Seat::new(Player::new_with_chips("Cory Zeidman".to_string(), 1_000_000)),
+        Seat::new(Player::new_with_chips("Barry Greenstein".to_string(), 1_000_000)),
+        Seat::new(Player::new_with_chips("Amnon Filippi".to_string(), 1_000_000)),
     ]);
 
     let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 
     // Inject the pre-ordered deck so cards deal in the documented order.
-    // With TableNoCell, `deck` is a plain public field — no wrapper needed.
+    // With Table, `deck` is a plain public field — no wrapper needed.
     table.deck = Cards::deck_primed(&TestData::the_hand_cards_dealable());
 
     table

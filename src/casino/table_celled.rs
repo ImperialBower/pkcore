@@ -3,13 +3,14 @@ use crate::analysis::nubibus::Pluribus;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
+use crate::casino::action::TableAction;
 use crate::casino::cashier::chips::Stack;
 use crate::casino::game::ForcedBets;
 use crate::casino::player::Player;
-use crate::casino::table_celled::event::{TableAction, TableLog};
+use crate::casino::table_celled::event::TableLog;
 use crate::casino::table_celled::seats::SeatsCell;
 use crate::casino::table_celled::showdown::Showdown;
-use crate::casino::table_celled::winnings::Winnings;
+use crate::casino::winnings::Winnings;
 use crate::games::{GamePhase, GameType};
 use crate::play::game::Game;
 use crate::play::stages::flop_eval::FlopEval;
@@ -39,11 +40,9 @@ mod color {
 use uuid::Uuid;
 
 pub mod event;
-pub mod position;
 pub mod result;
 pub mod seats;
 pub mod showdown;
-pub mod winnings;
 
 /// Represents a snapshot of the current game state at the table.
 ///
@@ -123,7 +122,7 @@ impl std::fmt::Display for GameState {
 ///
 /// I have a strong love/hate relationship with this struct. In many ways it's a mutability hack
 ///
-/// This Struct has mainly been replaced with the much simpler `TableNoCell` which uses traditional
+/// This Struct has mainly been replaced with the much simpler `Table` which uses traditional
 /// mutability. I asked the question: `is there every a use case for TableCelled?`
 ///
 /// > Yes — `TableCelled` (`table.rs`) exists for the `Pluribus`/analysis path. Its defining characteristic is that all mutations go through `RefCell` interior
@@ -133,8 +132,8 @@ impl std::fmt::Display for GameState {
 /// > treewhere it needs to hold multiple references into the table simultaneously while still mutating it.
 /// > 2. interactive_play.rs — the human-vs-bots example uses TableCelled directly, though this is arguably historical rather than a strong requirement.
 /// >
-/// > The `TableNoCell` path (`table_no_cell.rs`) is the one the active session/bot loop uses, and it's the cleaner design — normal &mut self methods, no `RefCell`
-/// > overhead. The plan has been to converge on `TableNoCell` over time (as noted in the ROADMAP.md), with `TableCelled` kept alive only as long as the Pluribus
+/// > The `Table` path (`casino::table`) is the one the active session/bot loop uses, and it's the cleaner design — normal &mut self methods, no `RefCell`
+/// > overhead. The plan has been to converge on `Table` over time (as noted in the ROADMAP.md), with `TableCelled` kept alive only as long as the Pluribus
 /// > analysis path needs it.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TableCelled {
@@ -549,7 +548,7 @@ impl TableCelled {
     }
 
     /// Payout is driven through the showdown/`end_hand` path on
-    /// [`TableNoCell`](crate::casino::table::Table); the legacy
+    /// [`Table`](crate::casino::table::Table); the legacy
     /// [`TableCelled`] engine never implemented a standalone payout step.
     ///
     /// # Errors
@@ -583,7 +582,7 @@ impl TableCelled {
             self.log_info(err);
             return Err(PKError::TableActionOutOfOrder(err));
         }
-        // Pre-validate before modifying state (same guard as TableNoCell::act_raise).
+        // Pre-validate before modifying state (same guard as Table::act_raise).
         if let Some(seat) = self.get_seat(seat_number) {
             let would_be_all_in = amount >= seat.player.total_chip_count();
             if !would_be_all_in && amount.saturating_sub(self.bet.get()) < self.min_raise() {
@@ -1378,7 +1377,7 @@ impl TableCelled {
         log::trace!("Table.reset()");
         // Emit an explicit table reset action so callers and logs can detect
         // when the table lifecycle moves from a finished hand to the next.
-        self.log_info(crate::casino::table_celled::event::TableAction::ResetTable);
+        self.log_info(crate::casino::action::TableAction::ResetTable);
         self.muck_cards_in_play();
         self.seats.reset_state();
 
@@ -1782,10 +1781,11 @@ impl From<TableCelled> for pkstate::PKState {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-mod casino__table_tests {
+mod casino__table_celled_tests {
     use super::*;
     use crate::cards::Cards;
     use crate::casino::player::Player;
+    use crate::casino::table_celled::seats::seat::Seat;
     use crate::prelude::*;
     use crate::util::data::TestData;
 

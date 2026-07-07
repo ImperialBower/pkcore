@@ -123,11 +123,11 @@ mod casino__table_split_pot_tests {
 }
 
 #[allow(nonstandard_style)]
-mod casino__table_no_cell__split_pot_tests {
+mod casino__table__split_pot_tests {
     use pkcore::arrays::sliced::BoxedCards;
     use pkcore::cards::Cards;
     use pkcore::casino::game::ForcedBets;
-    use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+    use pkcore::casino::table::{Player, Seat, Seats, Table};
     use std::str::FromStr;
 
     /// Regression test: BB folds after posting 100 when all others go all-in for < 100.
@@ -144,16 +144,16 @@ mod casino__table_no_cell__split_pot_tests {
     fn bb_folds_over_contribution_no_chip_loss() {
         // Pre-set hole cards on seats so nlh_from_seats() removes them from the deck,
         // preventing duplicates in community cards.
-        let mut seat0 = SeatNoCell::new(PlayerNoCell::new_with_chips("BTN".to_string(), 70));
+        let mut seat0 = Seat::new(Player::new_with_chips("BTN".to_string(), 70));
         seat0.cards = BoxedCards::from_str("7♦ 2♣").unwrap();
-        let mut seat1 = SeatNoCell::new(PlayerNoCell::new_with_chips("SB".to_string(), 80));
+        let mut seat1 = Seat::new(Player::new_with_chips("SB".to_string(), 80));
         seat1.cards = BoxedCards::from_str("8♦ 3♣").unwrap();
-        let mut seat2 = SeatNoCell::new(PlayerNoCell::new_with_chips("BB".to_string(), 600));
+        let mut seat2 = Seat::new(Player::new_with_chips("BB".to_string(), 600));
         seat2.cards = BoxedCards::from_str("9♠ 4♦").unwrap();
-        let mut seat3 = SeatNoCell::new(PlayerNoCell::new_with_chips("UTG".to_string(), 30));
+        let mut seat3 = Seat::new(Player::new_with_chips("UTG".to_string(), 30));
         seat3.cards = BoxedCards::from_str("A♠ A♥").unwrap();
 
-        let seats = SeatsNoCell::new(vec![seat0, seat1, seat2, seat3]);
+        let seats = Seats::new(vec![seat0, seat1, seat2, seat3]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 
         // SB posts 50, BB posts 100; hand_chip_total = 280.
@@ -217,12 +217,12 @@ mod casino__table_no_cell__split_pot_tests {
     /// to the wrong winner.
     #[test]
     fn heads_up_tied_with_short_all_in_returns_uncalled_excess() {
-        let mut seat0 = SeatNoCell::new(PlayerNoCell::new_with_chips("Deep".to_string(), 1_000));
+        let mut seat0 = Seat::new(Player::new_with_chips("Deep".to_string(), 1_000));
         seat0.cards = BoxedCards::from_str("7♦ 2♣").unwrap();
-        let mut seat1 = SeatNoCell::new(PlayerNoCell::new_with_chips("Short".to_string(), 200));
+        let mut seat1 = Seat::new(Player::new_with_chips("Short".to_string(), 200));
         seat1.cards = BoxedCards::from_str("4♦ 5♦").unwrap();
 
-        let seats = SeatsNoCell::new(vec![seat0, seat1]);
+        let seats = Seats::new(vec![seat0, seat1]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 
         // Burn-flop-burn-turn-burn-river: 6♣, [A♥ A♦ A♣], 6♦, A♠, 6♥, K♥.
@@ -283,12 +283,12 @@ mod casino__table_no_cell__split_pot_tests {
     /// stack), seat 0 ends with 0 (their uncalled 800 absorbed by the winner).
     #[test]
     fn heads_up_short_winner_excess_returned_to_deep_stack() {
-        let mut seat0 = SeatNoCell::new(PlayerNoCell::new_with_chips("Deep".to_string(), 1_000));
+        let mut seat0 = Seat::new(Player::new_with_chips("Deep".to_string(), 1_000));
         seat0.cards = BoxedCards::from_str("7♦ 2♣").unwrap();
-        let mut seat1 = SeatNoCell::new(PlayerNoCell::new_with_chips("Short".to_string(), 200));
+        let mut seat1 = Seat::new(Player::new_with_chips("Short".to_string(), 200));
         seat1.cards = BoxedCards::from_str("A♠ A♥").unwrap();
 
-        let seats = SeatsNoCell::new(vec![seat0, seat1]);
+        let seats = Seats::new(vec![seat0, seat1]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 
         // Burn-flop-burn-turn-burn-river: 3♣, [K♠ K♣ 9♦], 3♥, 8♠, 3♦, 4♥.
@@ -337,12 +337,12 @@ mod casino__table_no_cell__split_pot_tests {
     /// over-correcting the asymmetric fix and breaking the symmetric case.
     #[test]
     fn heads_up_symmetric_tied_split_50_50() {
-        let mut seat0 = SeatNoCell::new(PlayerNoCell::new_with_chips("Equal0".to_string(), 1_000));
+        let mut seat0 = Seat::new(Player::new_with_chips("Equal0".to_string(), 1_000));
         seat0.cards = BoxedCards::from_str("7♦ 2♣").unwrap();
-        let mut seat1 = SeatNoCell::new(PlayerNoCell::new_with_chips("Equal1".to_string(), 1_000));
+        let mut seat1 = Seat::new(Player::new_with_chips("Equal1".to_string(), 1_000));
         seat1.cards = BoxedCards::from_str("4♦ 5♦").unwrap();
 
-        let seats = SeatsNoCell::new(vec![seat0, seat1]);
+        let seats = Seats::new(vec![seat0, seat1]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 
         // Same four-aces-on-board rig as the asymmetric tied test → exact tie.
@@ -401,14 +401,14 @@ mod casino__table_no_cell__split_pot_tests {
     /// ends long.
     #[test]
     fn three_way_asymmetric_tied_chops_correctly() {
-        let mut seat_a = SeatNoCell::new(PlayerNoCell::new_with_chips("Short".to_string(), 100));
+        let mut seat_a = Seat::new(Player::new_with_chips("Short".to_string(), 100));
         seat_a.cards = BoxedCards::from_str("7♦ 2♣").unwrap();
-        let mut seat_b = SeatNoCell::new(PlayerNoCell::new_with_chips("Mid".to_string(), 200));
+        let mut seat_b = Seat::new(Player::new_with_chips("Mid".to_string(), 200));
         seat_b.cards = BoxedCards::from_str("4♦ 5♦").unwrap();
-        let mut seat_c = SeatNoCell::new(PlayerNoCell::new_with_chips("Deep".to_string(), 500));
+        let mut seat_c = Seat::new(Player::new_with_chips("Deep".to_string(), 500));
         seat_c.cards = BoxedCards::from_str("8♥ 9♥").unwrap();
 
-        let seats = SeatsNoCell::new(vec![seat_a, seat_b, seat_c]);
+        let seats = Seats::new(vec![seat_a, seat_b, seat_c]);
         let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 
         // Same four-aces-on-board rig — all three players play the board.

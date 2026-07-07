@@ -27,7 +27,7 @@ use crate::casino::table_celled::TableCelled;
 use crate::casino::table_celled::event::TableLog;
 use crate::casino::table_celled::seats::SeatsCell;
 use crate::casino::table_celled::seats::seat::Seat;
-use crate::casino::table_celled::winnings::Winnings;
+use crate::casino::winnings::Winnings;
 use crate::prelude::{BoxedCards, PlayerState};
 use std::fmt;
 use uuid::Uuid;

@@ -69,11 +69,11 @@ The simplest possible simulation: two bots, ten hands.
 use pkcore::bot::profile::BotProfile;
 use pkcore::bot::sim::SimTable;
 use pkcore::casino::game::ForcedBets;
-use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+use pkcore::casino::table::{Player, Seat, Seats, Table};
 
-let seats = SeatsNoCell::new(vec![
-    SeatNoCell::new(PlayerNoCell::new_with_chips("gto".to_string(), 10_000)),
-    SeatNoCell::new(PlayerNoCell::new_with_chips("lag".to_string(), 10_000)),
+let seats = Seats::new(vec![
+    Seat::new(Player::new_with_chips("gto".to_string(), 10_000)),
+    Seat::new(Player::new_with_chips("lag".to_string(), 10_000)),
 ]);
 let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 
