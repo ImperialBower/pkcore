@@ -127,7 +127,7 @@ mod casino__table_no_cell__split_pot_tests {
     use pkcore::arrays::sliced::BoxedCards;
     use pkcore::cards::Cards;
     use pkcore::casino::game::ForcedBets;
-    use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
     use std::str::FromStr;
 
     /// Regression test: BB folds after posting 100 when all others go all-in for < 100.
@@ -154,7 +154,7 @@ mod casino__table_no_cell__split_pot_tests {
         seat3.cards = BoxedCards::from_str("A♠ A♥").unwrap();
 
         let seats = SeatsNoCell::new(vec![seat0, seat1, seat2, seat3]);
-        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 
         // SB posts 50, BB posts 100; hand_chip_total = 280.
         table.act_forced_bets().unwrap();
@@ -189,7 +189,7 @@ mod casino__table_no_cell__split_pot_tests {
     /// The pre-set hole cards must already have been removed from the table's deck
     /// by `nlh_from_seats`; this helper just re-orders so that draws are
     /// deterministic.
-    fn rig_deck(table: &mut TableNoCell, top: &str, hole_and_top: &str) {
+    fn rig_deck(table: &mut Table, top: &str, hole_and_top: &str) {
         let used = Cards::from_str(hole_and_top).expect("used cards parse");
         let mut deck = Cards::from_str(top).expect("top cards parse");
         let rest = Cards::deck_minus(&used);
@@ -223,7 +223,7 @@ mod casino__table_no_cell__split_pot_tests {
         seat1.cards = BoxedCards::from_str("4♦ 5♦").unwrap();
 
         let seats = SeatsNoCell::new(vec![seat0, seat1]);
-        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 
         // Burn-flop-burn-turn-burn-river: 6♣, [A♥ A♦ A♣], 6♦, A♠, 6♥, K♥.
         // Both players play four aces from the board → exact tie.
@@ -289,7 +289,7 @@ mod casino__table_no_cell__split_pot_tests {
         seat1.cards = BoxedCards::from_str("A♠ A♥").unwrap();
 
         let seats = SeatsNoCell::new(vec![seat0, seat1]);
-        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 
         // Burn-flop-burn-turn-burn-river: 3♣, [K♠ K♣ 9♦], 3♥, 8♠, 3♦, 4♥.
         // Seat 1 (AA) makes two pair AAKK with 9 kicker.
@@ -343,7 +343,7 @@ mod casino__table_no_cell__split_pot_tests {
         seat1.cards = BoxedCards::from_str("4♦ 5♦").unwrap();
 
         let seats = SeatsNoCell::new(vec![seat0, seat1]);
-        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 
         // Same four-aces-on-board rig as the asymmetric tied test → exact tie.
         rig_deck(
@@ -409,7 +409,7 @@ mod casino__table_no_cell__split_pot_tests {
         seat_c.cards = BoxedCards::from_str("8♥ 9♥").unwrap();
 
         let seats = SeatsNoCell::new(vec![seat_a, seat_b, seat_c]);
-        let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 
         // Same four-aces-on-board rig — all three players play the board.
         rig_deck(

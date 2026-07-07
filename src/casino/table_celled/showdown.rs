@@ -1,6 +1,6 @@
 use crate::PKError;
 use crate::casino::cashier::chips::Stack;
-use crate::casino::table::winnings::{PotWin, Winnings};
+use crate::casino::table_celled::winnings::{PotWin, Winnings};
 use crate::prelude::{Eval, Pile, SeatEquity, Seatbit, Seven, TableAction, TableCelled, TableEquity};
 use std::collections::HashMap;
 
@@ -430,7 +430,7 @@ mod casino__table__showdown_tests {
     use crate::arrays::sliced::BoxedCards;
     use crate::cards::Cards;
     use crate::cards_cell::CardsCell;
-    use crate::prelude::{Five, ForcedBets, Player, Seat, Seats, TestData};
+    use crate::prelude::{Five, ForcedBets, Player, Seat, SeatsCell, TestData};
     use std::str::FromStr;
 
     #[test]
@@ -645,7 +645,7 @@ mod casino__table__showdown_tests {
             player: Player::new_with_chips("Short".to_string(), s1_chips),
             cards: boxed!(s1_hole),
         };
-        let seats = Seats::new(vec![s0, s1]);
+        let seats = SeatsCell::new(vec![s0, s1]);
         TableCelled::nlh_primed(seats, &cc!(community_top_8), ForcedBets::new(50, 100))
     }
 

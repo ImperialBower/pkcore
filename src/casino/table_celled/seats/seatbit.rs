@@ -33,7 +33,7 @@ impl Seatbit {
     ///
     /// # Examples
     /// ```
-    /// use pkcore::casino::table::seats::seatbit::Seatbit;
+    /// use pkcore::casino::table_celled::seats::seatbit::Seatbit;
     ///
     /// let seats = Seatbit::SEAT_0 | Seatbit::SEAT_3;
     /// assert!(seats.contains(0));

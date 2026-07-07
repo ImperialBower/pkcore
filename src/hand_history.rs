@@ -61,11 +61,11 @@ use crate::cards::Cards;
 #[cfg(feature = "bot-profiles")]
 use crate::casino::action::PlayerAction;
 use crate::casino::game::ForcedBets;
-use crate::casino::table::event::TableAction;
-use crate::casino::table::position::Position;
-use crate::casino::table::winnings::Winnings;
 #[cfg(feature = "bot-profiles")]
-use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use crate::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+use crate::casino::table_celled::event::TableAction;
+use crate::casino::table_celled::position::Position;
+use crate::casino::table_celled::winnings::Winnings;
 #[cfg(feature = "bot-profiles")]
 use crate::games::GamePhase;
 use crate::play::board::Board;
@@ -200,7 +200,7 @@ impl HandHistory {
     /// This is the canonical way to build a hand history from a live or
     /// simulated game. Capture `player_snapshot` **before** forced bets and
     /// hole cards immediately **after** the deal, then call this function
-    /// right after [`TableNoCell::end_hand`](crate::casino::table_no_cell::TableNoCell::end_hand).
+    /// right after [`TableNoCell::end_hand`](crate::casino::table::Table::end_hand).
     ///
     /// Snapshots produced by this entry point carry no per-player [`Uuid`].
     /// Callers that need identity threading (player-stats aggregation,
@@ -226,7 +226,7 @@ impl HandHistory {
     /// ```
     /// use pkcore::hand_history::HandHistory;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table::winnings::Winnings;
+    /// use pkcore::casino::table_celled::winnings::Winnings;
     ///
     /// let hh = HandHistory::from_table_state(
     ///     1, 0, 0,
@@ -290,7 +290,7 @@ impl HandHistory {
     /// ```
     /// use pkcore::hand_history::HandHistory;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table::winnings::Winnings;
+    /// use pkcore::casino::table_celled::winnings::Winnings;
     /// use uuid::Uuid;
     ///
     /// let alice = Uuid::new_v4();
@@ -461,7 +461,7 @@ impl HandHistory {
         self
     }
 
-    /// Replays all recorded actions from `streets` through a fresh [`TableNoCell`]
+    /// Replays all recorded actions from `streets` through a fresh [`Table`]
     /// and verifies the final chip counts match the recorded `results`.
     ///
     /// This is useful for testing hand-history consistency: generate a session,
@@ -596,20 +596,20 @@ impl HandHistory {
                 _ => (sb.max(20), bb.max(40)),
             };
             if self.hand.game == HandVariant::Razz {
-                TableNoCell::razz_from_seats(seats, ante, bring_in, small_bet, big_bet)
+                Table::razz_from_seats(seats, ante, bring_in, small_bet, big_bet)
             } else {
-                TableNoCell::stud_hi_from_seats(seats, ante, bring_in, small_bet, big_bet)
+                Table::stud_hi_from_seats(seats, ante, bring_in, small_bet, big_bet)
             }
         } else if self.hand.game == HandVariant::Omaha {
-            TableNoCell::plo_from_seats(seats, (sb, bb))
+            Table::plo_from_seats(seats, (sb, bb))
         } else {
             match self.table.betting_structure {
                 crate::games::betting_structure::BettingStructure::FixedLimit {
                     small_bet,
                     big_bet,
                     raise_cap,
-                } => TableNoCell::limit_holdem_from_seats(seats, small_bet, big_bet, raise_cap),
-                _ => TableNoCell::nlh_from_seats(seats, ForcedBets::new(sb, bb)),
+                } => Table::limit_holdem_from_seats(seats, small_bet, big_bet, raise_cap),
+                _ => Table::nlh_from_seats(seats, ForcedBets::new(sb, bb)),
             }
         };
         table.button = button;
@@ -662,7 +662,7 @@ impl HandHistory {
         }
 
         // ── Street replay helper ─────────────────────────────────────────────
-        let replay_actions = |table: &mut TableNoCell, actions: &[Action]| -> Result<(), PKError> {
+        let replay_actions = |table: &mut Table, actions: &[Action]| -> Result<(), PKError> {
             for action in actions {
                 if let Some(pa) = action_to_player_action(action) {
                     table.apply_action(action.seat, pa)?;
@@ -1090,7 +1090,7 @@ impl HandCollection {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::table_celled::position::Position;
     /// use pkcore::hand_history::HandCollection;
     ///
     /// let collection = HandCollection::new();
@@ -1489,7 +1489,7 @@ pub struct PlayerEntry {
     /// cards were dealt face-up on each street; Hold'em/Omaha records
     /// leave this `None` (cards are implicitly all Down).
     ///
-    /// Replay (via [`crate::casino::table_no_cell::TableNoCell::inject_hole_cards`])
+    /// Replay (via [`crate::casino::table::Table::inject_hole_cards`])
     /// reads this field when present and pushes each card to the seat's
     /// `SeatHand` with the recorded visibility. When `None`, all cards
     /// are pushed as `Visibility::Down`.
@@ -1700,7 +1700,7 @@ impl Streets {
     ///
     /// ```
     /// use pkcore::hand_history::Streets;
-    /// use pkcore::casino::table::event::TableAction;
+    /// use pkcore::casino::table_celled::event::TableAction;
     ///
     /// let log = vec![
     ///     TableAction::ForcedBetSmallBlind(1, 50),
@@ -1742,7 +1742,7 @@ impl Streets {
     /// ```
     /// use std::collections::HashMap;
     /// use pkcore::hand_history::Streets;
-    /// use pkcore::casino::table::event::TableAction;
+    /// use pkcore::casino::table_celled::event::TableAction;
     /// use uuid::Uuid;
     ///
     /// let alice = Uuid::new_v4();
@@ -2662,7 +2662,7 @@ fn action_to_player_action(action: &Action) -> Option<PlayerAction> {
     clippy::cast_sign_loss
 )]
 fn build_replay_result(
-    mut table: TableNoCell,
+    mut table: Table,
     players: &[PlayerEntry],
     results: Option<&[ResultEntry]>,
 ) -> Result<ReplayResult, PKError> {
@@ -3505,7 +3505,7 @@ hands:
     #[test]
     fn test_from_table_state_hand_id_and_source() {
         use crate::casino::game::ForcedBets;
-        use crate::casino::table::winnings::Winnings;
+        use crate::casino::table_celled::winnings::Winnings;
 
         let hh = HandHistory::from_table_state(
             3,
@@ -3529,7 +3529,7 @@ hands:
     #[test]
     fn test_from_table_state_net_calculation() {
         use crate::casino::game::ForcedBets;
-        use crate::casino::table::winnings::Winnings;
+        use crate::casino::table_celled::winnings::Winnings;
 
         let hh = HandHistory::from_table_state(
             1,
@@ -3967,7 +3967,7 @@ hands:
     #[test]
     fn test_hand_history_shuffled_deck_round_trips() {
         use crate::casino::game::ForcedBets;
-        use crate::casino::table::winnings::Winnings;
+        use crate::casino::table_celled::winnings::Winnings;
 
         let deck_str = "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣";
 
@@ -4019,7 +4019,7 @@ hands:
     #[test]
     fn test_from_table_state_stores_shuffled_deck() {
         use crate::casino::game::ForcedBets;
-        use crate::casino::table::winnings::Winnings;
+        use crate::casino::table_celled::winnings::Winnings;
 
         let deck_str = "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣";
 

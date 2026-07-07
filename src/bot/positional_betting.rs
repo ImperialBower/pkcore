@@ -6,7 +6,7 @@
 //! early position, for example.
 
 use crate::bot::betting_strategy::BettingStrategy;
-use crate::casino::table::position::Position;
+use crate::casino::table_celled::position::Position;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -24,7 +24,7 @@ use std::collections::HashMap;
 ///
 /// ```
 /// use pkcore::bot::positional_betting::PositionalBetting;
-/// use pkcore::casino::table::position::Position;
+/// use pkcore::casino::table_celled::position::Position;
 ///
 /// let pb = PositionalBetting::gto_six_max();
 /// let btn = pb.for_position(Position::BTN);
@@ -65,7 +65,7 @@ impl PositionalBetting {
     /// ```
     /// use pkcore::bot::betting_strategy::BettingStrategy;
     /// use pkcore::bot::positional_betting::PositionalBetting;
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::table_celled::position::Position;
     ///
     /// let mut pb = PositionalBetting::new(BettingStrategy::gto());
     /// pb.insert(Position::BTN, BettingStrategy::loose_aggressive());
@@ -84,7 +84,7 @@ impl PositionalBetting {
     /// ```
     /// use pkcore::bot::betting_strategy::BettingStrategy;
     /// use pkcore::bot::positional_betting::PositionalBetting;
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::table_celled::position::Position;
     ///
     /// let pb = PositionalBetting::new(BettingStrategy::tight_passive());
     /// // UTGP2 not inserted → returns the default
@@ -109,7 +109,7 @@ impl PositionalBetting {
     ///
     /// ```
     /// use pkcore::bot::positional_betting::PositionalBetting;
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::table_celled::position::Position;
     ///
     /// let pb = PositionalBetting::gto_six_max();
     /// assert!(pb.for_position(Position::BTN).aggression_factor
@@ -156,7 +156,7 @@ impl PositionalBetting {
     ///
     /// ```
     /// use pkcore::bot::positional_betting::PositionalBetting;
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::table_celled::position::Position;
     ///
     /// let pb = PositionalBetting::gto_nine_max();
     /// assert!(pb.for_position(Position::BTN).aggression_factor
@@ -217,7 +217,7 @@ impl PositionalBetting {
     /// use pkcore::bot::positional_betting::PositionalBetting;
     ///
     /// let pb = PositionalBetting::tight_passive_six_max();
-    /// assert!(pb.for_position(pkcore::casino::table::position::Position::BTN).aggression_factor < 50);
+    /// assert!(pb.for_position(pkcore::casino::table_celled::position::Position::BTN).aggression_factor < 50);
     /// ```
     #[must_use]
     pub fn tight_passive_six_max() -> Self {
@@ -234,7 +234,7 @@ impl PositionalBetting {
     /// use pkcore::bot::positional_betting::PositionalBetting;
     ///
     /// let pb = PositionalBetting::loose_aggressive_six_max();
-    /// assert!(pb.for_position(pkcore::casino::table::position::Position::BTN).aggression_factor > 50);
+    /// assert!(pb.for_position(pkcore::casino::table_celled::position::Position::BTN).aggression_factor > 50);
     /// ```
     #[must_use]
     pub fn loose_aggressive_six_max() -> Self {

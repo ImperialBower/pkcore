@@ -13,7 +13,7 @@ use pkcore::analysis::player_stats_store::{PlayerStatsStore, YamlPlayerStatsStor
 use pkcore::bot::profile::BotProfile;
 use pkcore::bot::sim::SimTable;
 use pkcore::casino::game::ForcedBets;
-use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
 
 const STARTING_CHIPS: usize = 1_000_000_000;
 const SMALL_BLIND: usize = 50;
@@ -39,7 +39,7 @@ fn drop_flushes_then_with_store_reloads() {
         uuids.push(p.id);
         seats.push(SeatNoCell::new(p));
     }
-    let table = TableNoCell::nlh_from_seats(SeatsNoCell::new(seats), ForcedBets::new(SMALL_BLIND, BIG_BLIND));
+    let table = Table::nlh_from_seats(SeatsNoCell::new(seats), ForcedBets::new(SMALL_BLIND, BIG_BLIND));
     let bots = vec![
         (0_u8, BotProfile::tight_passive()),
         (1_u8, BotProfile::loose_aggressive()),

@@ -12,7 +12,7 @@ use crate::bot::exploitative_decider::ExploitativeDecider;
 use crate::bot::profile::BotProfile;
 use crate::bot::sim::{SimResult, SimTable};
 use crate::casino::game::ForcedBets;
-use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use crate::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
 
 const SB: usize = 50;
 const BB: usize = 100;
@@ -112,7 +112,7 @@ fn run_session(config: &ExploitConfig, opp_profile: &BotProfile, hands: usize, s
     let exploit = PlayerNoCell::new_with_chips("exploit".to_string(), STARTING_CHIPS);
     let opp = PlayerNoCell::new_with_chips("opp".to_string(), STARTING_CHIPS);
     let seats = SeatsNoCell::new(vec![SeatNoCell::new(exploit), SeatNoCell::new(opp)]);
-    let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(SB, BB));
+    let table = Table::nlh_from_seats(seats, ForcedBets::new(SB, BB));
 
     let bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)> = vec![
         (

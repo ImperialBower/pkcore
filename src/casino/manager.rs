@@ -1,5 +1,5 @@
 use crate::PKError;
-use crate::prelude::{ForcedBets, Seats, TableCelled};
+use crate::prelude::{ForcedBets, SeatsCell, TableCelled};
 use std::collections::HashMap;
 use uuid::Uuid;
 
@@ -34,7 +34,7 @@ impl TableManager {
         }
     }
 
-    pub fn create_table(&mut self, seats: Seats, forced_bets: ForcedBets) -> Uuid {
+    pub fn create_table(&mut self, seats: SeatsCell, forced_bets: ForcedBets) -> Uuid {
         let table = TableCelled::nlh_from_seats(seats, forced_bets);
         let id = table.id;
         self.tables.insert(id, table);

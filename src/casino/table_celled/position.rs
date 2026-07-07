@@ -30,7 +30,7 @@ impl Position {
     /// # Examples
     ///
     /// ```
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::table_celled::position::Position;
     ///
     /// // 6-max, button at seat 0
     /// assert_eq!(Some(Position::BTN), Position::from_seat(0, 0, 6));

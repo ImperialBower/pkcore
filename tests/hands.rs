@@ -8,8 +8,8 @@
 /// still held when those helpers were invoked, causing a panic at runtime.
 #[allow(nonstandard_style)]
 mod hands__the_hand_tests {
-    use pkcore::casino::table::event::TableAction;
-    use pkcore::casino::table::winnings::Winnings;
+    use pkcore::casino::table_celled::event::TableAction;
+    use pkcore::casino::table_celled::winnings::Winnings;
     use pkcore::prelude::*;
 
     /// Drives the table through the complete hand and returns it ready for

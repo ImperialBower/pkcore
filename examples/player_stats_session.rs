@@ -34,7 +34,7 @@ use pkcore::analysis::player_stats_store::YamlPlayerStatsStore;
 use pkcore::bot::profile::BotProfile;
 use pkcore::bot::sim::SimTable;
 use pkcore::casino::game::ForcedBets;
-use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
 
 const SMALL_BLIND: usize = 50;
 const BIG_BLIND: usize = 100;
@@ -103,7 +103,7 @@ fn run_session(dir: &PathBuf, style_uuids: &[(&str, Uuid)], session_label: u32) 
         player.id = *uuid;
         seats.push(SeatNoCell::new(player));
     }
-    let table = TableNoCell::nlh_from_seats(SeatsNoCell::new(seats), ForcedBets::new(SMALL_BLIND, BIG_BLIND));
+    let table = Table::nlh_from_seats(SeatsNoCell::new(seats), ForcedBets::new(SMALL_BLIND, BIG_BLIND));
     let bots: Vec<(u8, BotProfile)> = style_uuids
         .iter()
         .enumerate()

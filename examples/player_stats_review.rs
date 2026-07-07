@@ -18,8 +18,8 @@ use pkcore::analysis::player_stats::{Confidence, PlayerStats, StatsRegistry};
 use pkcore::bot::profile::BotProfile;
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::session::PokerSession;
-use pkcore::casino::table::winnings::Winnings;
-use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+use pkcore::casino::table_celled::winnings::Winnings;
 use pkcore::hand_history::{HandHistory, PlayerSnapshot};
 use rand::Rng;
 use std::collections::HashMap;
@@ -63,7 +63,7 @@ fn run_session(num_hands: usize, rng: &mut impl Rng) {
         .collect();
 
     let seats = SeatsNoCell::new(players.into_iter().map(SeatNoCell::new).collect());
-    let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(SMALL_BLIND, BIG_BLIND));
+    let table = Table::nlh_from_seats(seats, ForcedBets::new(SMALL_BLIND, BIG_BLIND));
     let mut session = PokerSession::new(table);
     let mut registry = StatsRegistry::new();
 
@@ -96,7 +96,7 @@ fn run_session(num_hands: usize, rng: &mut impl Rng) {
 
 /// Resets every seated player's chip stack to `chips`. Called before each
 /// hand so the session never truncates from busts.
-fn refill_chips(table: &mut TableNoCell, chips: usize) {
+fn refill_chips(table: &mut Table, chips: usize) {
     for i in 0..table.seats.0.len() as u8 {
         if let Some(seat) = table.seats.get_seat_mut(i)
             && !seat.is_empty()

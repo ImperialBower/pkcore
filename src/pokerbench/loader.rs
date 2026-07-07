@@ -187,7 +187,7 @@ impl PokerBenchScenario {
 #[allow(non_snake_case)]
 mod pokerbench__tests {
     use super::*;
-    use crate::casino::table::position::Position;
+    use crate::casino::table_celled::position::Position;
 
     fn fixture(name: &str) -> std::path::PathBuf {
         Path::new(env!("CARGO_MANIFEST_DIR"))

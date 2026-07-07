@@ -118,7 +118,7 @@ originally planned as a standalone `pkbot` crate)
 | [EPIC-16](docs/EPIC-16_DCFR.md) | CFR+ and Discounted CFR — faster convergence variants | Complete |
 | [EPIC-17](docs/EPIC-17_Kuhn_Poker.md) | Kuhn Poker — minimal 3-card game, analytical Nash, CFR validator, interactive examples | Complete |
 | EPIC-18 | Bot Profiles — `BotProfile`, `Playbook`, `PositionRanges`, `PositionalBetting`; position- and table-size-aware YAML-serializable playing styles | Complete |
-| EPIC-19 | Bot Self-Play — drive `casino::table_no_cell::TableNoCell` with `BotProfile` agents; local simulation without gRPC; YAML hand-history recording and replay | Complete |
+| EPIC-19 | Bot Self-Play — drive `casino::table::Table` with `BotProfile` agents; local simulation without gRPC; YAML hand-history recording and replay | Complete |
 | [EPIC-20](docs/EPIC-20_Autonomous_Game_Loop.md) | *(pkdealer)* Autonomous Game Loop — migrate to `PokerSession`, auto-advance streets | Complete |
 | [EPIC-21](docs/EPIC-21_Spectator.md) | *(pkspectator)* Web Spectator — extracted to standalone [`pkspectator`](https://github.com/ImperialBower/pkspectator) repo; Axum+SSE, gRPC `StreamEvents` subscriber | Complete |
 | [EPIC-22](docs/EPIC-22_OTel.md) | *(pkdealer)* OTel Instrumentation — spans/metrics, Jaeger + Prometheus + Grafana | Complete |
@@ -189,7 +189,7 @@ coverage when combined with the v1 variants.
 ## EPIC-19: Bot Self-Play Simulation
 
 **Goal:** Run a full table of bots against each other *inside pkcore*, using
-the `casino::table_no_cell::TableNoCell` game loop — no gRPC, no network, no
+the `casino::table::Table` game loop — no gRPC, no network, no
 external services required.
 
 This is the bridge between the bot profile work (EPIC-18) and the full
@@ -217,7 +217,7 @@ cargo run --features hand-histories --example replay_play -- generated/session.y
 ```
 
 `bot_selfplay`: All 8 profiles from `data/bots/` compete over up to 50 hands
-at a single `TableNoCell`. Output includes per-street board state, per-action
+at a single `Table`. Output includes per-street board state, per-action
 play-by-play with hole cards, and final standings.
 
 `interactive_play`: Human vs. bots with a REPL-style action prompt.  Each hand
@@ -229,7 +229,7 @@ cards visible, and calls `HandHistory::replay()` to verify that recorded
 actions reproduce the same chip results when re-fed through the engine.
 
 The replay engine (`HandHistory::replay()`, `HandCollection::replay_all()`,
-`TableNoCell::inject_hole_cards()`) all live in the library.  An integration
+`Table::inject_hole_cards()`) all live in the library.  An integration
 test in `tests/replay_consistency.rs` verifies the full round-trip automatically
 (marked `#[ignore]`; run with `--include-ignored`).
 
@@ -257,7 +257,7 @@ then plays it faithfully using `RuleBasedDecider` logic.
 view of the table state; the input to every `BotDecider::decide` call.
 
 **`PlayerAction`** (`src/bot/player_action.rs`) — the decision enum returned by
-`BotDecider::decide` and consumed by `TableNoCell::apply_action`.
+`BotDecider::decide` and consumed by `Table::apply_action`.
 
 **`SimTable`** (`src/bot/sim.rs`) — drives a full hand (or many hands) using a
 list of `(seat, BotProfile, Box<dyn BotDecider>)` triples:
@@ -265,8 +265,8 @@ list of `(seat, BotProfile, Box<dyn BotDecider>)` triples:
 ```rust
 pub struct SimTable { … }
 impl SimTable {
-    pub fn new(table: TableNoCell, bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)>) -> Self;
-    pub fn with_rule_based(table: TableNoCell, bots: Vec<(u8, BotProfile)>) -> Self;
+    pub fn new(table: Table, bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)>) -> Self;
+    pub fn with_rule_based(table: Table, bots: Vec<(u8, BotProfile)>) -> Self;
     pub fn run_hand(&mut self) -> Result<HandResult, PKError>;
     pub fn run_n_hands(&mut self, n: usize) -> Result<SimResult, PKError>;
 }
@@ -292,7 +292,7 @@ before adding gRPC means distributed agents start from a validated foundation.
 
 | Type | File | Role |
 |------|------|------|
-| `TableNoCell` | `src/casino/table_no_cell.rs` | Game state owner |
+| `Table` | `src/casino/table.rs` | Game state owner |
 | `PokerSession` | `src/casino/session.rs` | Step-by-step session API (web/async) |
 | `BotProfile` | `src/bot/profile.rs` | Strategy config |
 | `Playbook` | `src/bot/playbook.rs` | Position-aware dispatch |

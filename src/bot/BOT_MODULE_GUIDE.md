@@ -24,7 +24,7 @@ A comprehensive tutorial, architecture reference, and theory primer for the
 
 The `src/bot/` module provides a self-contained poker bot personality system.
 Given a `BotProfile`, a bot can decide a legal `PlayerAction` at any
-decision point on a `TableNoCell` — with no network, no external solver, and
+decision point on a `Table` — with no network, no external solver, and
 no hand-strength analysis.
 
 ### Design Goals
@@ -69,13 +69,13 @@ The simplest possible simulation: two bots, ten hands.
 use pkcore::bot::profile::BotProfile;
 use pkcore::bot::sim::SimTable;
 use pkcore::casino::game::ForcedBets;
-use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
 
 let seats = SeatsNoCell::new(vec![
     SeatNoCell::new(PlayerNoCell::new_with_chips("gto".to_string(), 10_000)),
     SeatNoCell::new(PlayerNoCell::new_with_chips("lag".to_string(), 10_000)),
 ]);
-let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 
 let bots = vec![
     (0_u8, BotProfile::gto()),
@@ -188,7 +188,7 @@ flowchart LR
     pos_ranges["bot/position_ranges.rs\nPositionRanges"]
     weighted["bot/weighted_range.rs\nWeightedRange"]
     action["bot/player_action.rs\nPlayerAction"]
-    table["casino/table_no_cell.rs\nTableNoCell"]
+    table["casino/table.rs\nTable"]
 
     sim --> decider
     sim --> snapshot
@@ -815,7 +815,7 @@ scan always anchors to the current hand's current street.
 ```mermaid
 sequenceDiagram
     participant Sim as SimTable
-    participant Table as TableNoCell
+    participant Table
     participant Snap as TableSnapshot
     participant Dec as BotDecider
     participant Profile as BotProfile

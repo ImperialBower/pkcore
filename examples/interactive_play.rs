@@ -25,8 +25,8 @@ use pkcore::arrays::{HandRanker, seven::Seven};
 use pkcore::bot::profile::BotProfile;
 use pkcore::casino::action::PlayerAction;
 use pkcore::casino::game::ForcedBets;
-use pkcore::casino::table::winnings::Winnings;
-use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
+use pkcore::casino::table_celled::winnings::Winnings;
 use pkcore::hand_history::{HandCollection, HandHistory, ResultEntry};
 use rand::Rng;
 use reedline::{DefaultPrompt, DefaultPromptSegment, Reedline, Signal};
@@ -75,7 +75,7 @@ fn main() {
         )));
     }
     let seats = SeatsNoCell::new(seats_vec);
-    let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(SMALL_BLIND, BIG_BLIND));
+    let mut table = Table::nlh_from_seats(seats, ForcedBets::new(SMALL_BLIND, BIG_BLIND));
     let mut rng = rand::rng();
     let mut editor = Reedline::create();
     let mut collection = HandCollection::new();
@@ -159,7 +159,7 @@ fn main() {
 // ── Hand driver ───────────────────────────────────────────────────────────────
 
 fn run_hand(
-    table: &mut TableNoCell,
+    table: &mut Table,
     profiles: &[BotProfile],
     rng: &mut impl Rng,
     editor: &mut Reedline,
@@ -306,7 +306,7 @@ fn run_hand(
 }
 
 /// Prints the human's hole cards as a reminder at the start of each post-flop street.
-fn print_human_cards(table: &TableNoCell) {
+fn print_human_cards(table: &Table) {
     if let Some(seat) = table.seats.get_seat(HUMAN_SEAT) {
         if seat.cards.has_cards() && seat.player.is_in_hand() {
             println!("  (your cards: {})", seat.cards.sorted_display());
@@ -315,7 +315,7 @@ fn print_human_cards(table: &TableNoCell) {
 }
 
 /// Reveals all remaining players' hole cards and hand evaluations at showdown.
-fn reveal_showdown(table: &TableNoCell, profiles: &[BotProfile]) {
+fn reveal_showdown(table: &Table, profiles: &[BotProfile]) {
     let board = table.board.to_string();
     let active: Vec<(String, String, Option<Eval>)> = (0..table.seats.0.len() as u8)
         .filter_map(|i| {
@@ -359,7 +359,7 @@ fn rank_seven(hole_cards: &str, board: &str) -> Option<Eval> {
 }
 
 fn run_street(
-    table: &mut TableNoCell,
+    table: &mut Table,
     profiles: &[BotProfile],
     rng: &mut impl Rng,
     editor: &mut Reedline,
@@ -412,7 +412,7 @@ fn run_street(
 }
 
 /// Returns a display string for a bot action (computed before applying it).
-fn action_desc(table: &TableNoCell, seat: u8, action: PlayerAction) -> String {
+fn action_desc(table: &Table, seat: u8, action: PlayerAction) -> String {
     match action {
         PlayerAction::Fold => "folds".to_string(),
         PlayerAction::Check => "checks".to_string(),
@@ -430,7 +430,7 @@ fn action_desc(table: &TableNoCell, seat: u8, action: PlayerAction) -> String {
 // ── Human input ───────────────────────────────────────────────────────────────
 
 fn read_human_action(
-    table: &mut TableNoCell,
+    table: &mut Table,
     seat: u8,
     to_call: usize,
     chips: usize,
@@ -577,7 +577,7 @@ fn build_hand_history(
     player_snapshot: &[(u8, String, usize, Option<String>)],
     board_str: &str,
     winnings: &Winnings,
-    event_log: &[pkcore::casino::table::event::TableAction],
+    event_log: &[pkcore::casino::table_celled::event::TableAction],
     ending_stacks: &[(u8, usize)],
 ) -> HandHistory {
     HandHistory::from_table_state(
@@ -626,7 +626,7 @@ fn print_results(results: &[ResultEntry], profiles: &[BotProfile]) {
 
 /// Returns `(seat, chips)` for every non-empty seat — used to compute net
 /// chip change after `end_hand()` distributes the pot.
-fn chip_counts(table: &TableNoCell) -> Vec<(u8, usize)> {
+fn chip_counts(table: &Table) -> Vec<(u8, usize)> {
     (0..table.seats.0.len() as u8)
         .filter_map(|i| {
             table
@@ -638,7 +638,7 @@ fn chip_counts(table: &TableNoCell) -> Vec<(u8, usize)> {
         .collect()
 }
 
-fn print_stacks(table: &TableNoCell, profiles: &[BotProfile]) {
+fn print_stacks(table: &Table, profiles: &[BotProfile]) {
     let btn = table.button;
     let sb = table.determine_small_blind();
     let bb = table.determine_big_blind();

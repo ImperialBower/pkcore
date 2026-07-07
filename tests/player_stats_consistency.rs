@@ -12,7 +12,7 @@ use pkcore::analysis::player_stats::StatsRegistry;
 use pkcore::bot::profile::BotProfile;
 use pkcore::bot::sim::SimTable;
 use pkcore::casino::game::ForcedBets;
-use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
 use uuid::Uuid;
 
 /// Deep stacks reduce — but don't eliminate — the chance an aggressive bot
@@ -56,7 +56,7 @@ fn vpip_differentiates_styles_after_self_play() {
         style_to_uuid.push((*name, player.id));
         seats.push(SeatNoCell::new(player));
     }
-    let table = TableNoCell::nlh_from_seats(SeatsNoCell::new(seats), ForcedBets::new(SMALL_BLIND, BIG_BLIND));
+    let table = Table::nlh_from_seats(SeatsNoCell::new(seats), ForcedBets::new(SMALL_BLIND, BIG_BLIND));
 
     let bots: Vec<(u8, BotProfile)> = styles
         .iter()
@@ -138,7 +138,7 @@ fn registry_records_one_hand_per_active_seat() {
         uuids.push(p.id);
         seats.push(SeatNoCell::new(p));
     }
-    let table = TableNoCell::nlh_from_seats(SeatsNoCell::new(seats), ForcedBets::new(SMALL_BLIND, BIG_BLIND));
+    let table = Table::nlh_from_seats(SeatsNoCell::new(seats), ForcedBets::new(SMALL_BLIND, BIG_BLIND));
     let bots = vec![
         (0_u8, BotProfile::gto()),
         (1_u8, BotProfile::tight_passive()),

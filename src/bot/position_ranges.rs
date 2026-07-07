@@ -10,7 +10,7 @@
 //! sizes. Ranges are based on standard 6-max and 9-max opening frequencies.
 
 use crate::bot::weighted_range::WeightedRange;
-use crate::casino::table::position::Position;
+use crate::casino::table_celled::position::Position;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -102,7 +102,7 @@ impl ActionRanges {
 ///
 /// ```
 /// use pkcore::bot::position_ranges::PositionRanges;
-/// use pkcore::casino::table::position::Position;
+/// use pkcore::casino::table_celled::position::Position;
 ///
 /// let pr = PositionRanges::gto_six_max();
 /// let ar = pr.for_position(Position::BTN);
@@ -142,7 +142,7 @@ impl PositionRanges {
     /// ```
     /// use pkcore::bot::position_ranges::{ActionRanges, PositionRanges};
     /// use pkcore::bot::weighted_range::WeightedRange;
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::table_celled::position::Position;
     ///
     /// let mut pr = PositionRanges::new(ActionRanges::new());
     /// let mut ar = ActionRanges::new();
@@ -161,7 +161,7 @@ impl PositionRanges {
     ///
     /// ```
     /// use pkcore::bot::position_ranges::PositionRanges;
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::table_celled::position::Position;
     ///
     /// let pr = PositionRanges::gto_six_max();
     /// // BTN is explicitly mapped
@@ -183,7 +183,7 @@ impl PositionRanges {
     ///
     /// ```
     /// use pkcore::bot::position_ranges::PositionRanges;
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::table_celled::position::Position;
     ///
     /// let pr = PositionRanges::gto_six_max();
     /// let co_open = pr.for_position(Position::CO).for_action("open_raise");
@@ -255,7 +255,7 @@ impl PositionRanges {
     ///
     /// ```
     /// use pkcore::bot::position_ranges::PositionRanges;
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::table_celled::position::Position;
     ///
     /// let pr = PositionRanges::gto_nine_max();
     /// let utg_open = pr.for_position(Position::UTG).for_action("open_raise");
@@ -348,7 +348,7 @@ impl PositionRanges {
     ///
     /// ```
     /// use pkcore::bot::position_ranges::PositionRanges;
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::table_celled::position::Position;
     ///
     /// let pr = PositionRanges::tight_passive_six_max();
     /// let lj_open = pr.for_position(Position::LJ).for_action("open_raise");
@@ -402,7 +402,7 @@ impl PositionRanges {
     ///
     /// ```
     /// use pkcore::bot::position_ranges::PositionRanges;
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::table_celled::position::Position;
     ///
     /// let pr = PositionRanges::loose_aggressive_six_max();
     /// let btn_open = pr.for_position(Position::BTN).for_action("open_raise");

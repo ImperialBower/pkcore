@@ -1,7 +1,7 @@
 use crate::PKError;
 use crate::card::Card;
 use crate::cards_cell::CardsCell;
-use crate::prelude::{Seats, TheNuts};
+use crate::prelude::{SeatsCell, TheNuts};
 use crate::util::terminal::Terminal;
 use crate::{Cards, Forgiving, Pile};
 use std::fmt::Display;
@@ -766,8 +766,8 @@ impl Display for Boxes {
     }
 }
 
-impl From<&Seats> for Boxes {
-    fn from(seats: &Seats) -> Self {
+impl From<&SeatsCell> for Boxes {
+    fn from(seats: &SeatsCell) -> Self {
         Boxes::from(
             seats
                 .borrow_all()

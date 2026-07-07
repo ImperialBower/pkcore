@@ -7,7 +7,7 @@
 //! instruction text using its fixed phrasing.
 
 use crate::card::Card;
-use crate::casino::table::position::Position;
+use crate::casino::table_celled::position::Position;
 use crate::pokerbench::action::{PokerBenchAction, parse_chips};
 use crate::pokerbench::error::PokerBenchError;
 use std::str::FromStr;

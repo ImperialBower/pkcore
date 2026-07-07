@@ -30,7 +30,7 @@ pub struct ActionScore {
 /// # Examples
 /// ```
 /// use pkcore::pokerbench::{score_action, PokerBenchAction, PokerBenchScenario, PokerBenchSplit};
-/// use pkcore::casino::table::position::Position;
+/// use pkcore::casino::table_celled::position::Position;
 ///
 /// let scenario = PokerBenchScenario {
 ///     instruction: String::new(),
@@ -76,7 +76,7 @@ pub fn score_action(scenario: &PokerBenchScenario, predicted: PokerBenchAction) 
 #[allow(non_snake_case)]
 mod pokerbench__tests {
     use super::*;
-    use crate::casino::table::position::Position;
+    use crate::casino::table_celled::position::Position;
     use crate::pokerbench::scenario::PokerBenchSplit;
 
     fn scenario_with(optimal: PokerBenchAction, pot: u32) -> PokerBenchScenario {

@@ -1,6 +1,6 @@
 use crate::bard::Bard;
 use crate::cards::Cards;
-use crate::casino::table::seats::Seats;
+use crate::casino::table_celled::seats::SeatsCell;
 use crate::prelude::PlayerState;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
@@ -221,7 +221,7 @@ impl TableAction {
 impl Display for TableAction {
     /// ```
     /// use pkcore::bard::Bard;
-    /// use pkcore::casino::table::event::TableAction;
+    /// use pkcore::casino::table_celled::event::TableAction;
     /// use std::str::FromStr;
     ///
     /// let dealt = TableAction::Dealt(1, Bard::from_str("AS KS").unwrap());
@@ -342,7 +342,7 @@ impl TableLog {
         self.0.borrow_mut().clear();
     }
 
-    pub fn commentary(&self, seats: &Seats, index: u8) -> Option<String> {
+    pub fn commentary(&self, seats: &SeatsCell, index: u8) -> Option<String> {
         let player: String = seats.get_seat(index)?.player.handle.clone();
 
         let last = self.last()?;
@@ -369,7 +369,7 @@ impl TableLog {
     /// Returns the first occurrence of a specific `TableAction` variant that matches the predicate.
     ///
     /// ```
-    /// use pkcore::casino::table::event::{TableAction, TableLog};
+    /// use pkcore::casino::table_celled::event::{TableAction, TableLog};
     ///
     /// let log = TableLog::new();
     /// log.log(TableAction::Bet(0, 200));
@@ -387,7 +387,7 @@ impl TableLog {
     }
 
     /// ```
-    /// use pkcore::casino::table::event::{TableAction, TableLog};
+    /// use pkcore::casino::table_celled::event::{TableAction, TableLog};
     ///
     /// let log = TableLog::new();
     /// log.log(TableAction::ForcedBetBigBlind(0, 500));
@@ -400,7 +400,7 @@ impl TableLog {
     }
 
     /// ```
-    /// use pkcore::casino::table::event::{TableAction, TableLog};
+    /// use pkcore::casino::table_celled::event::{TableAction, TableLog};
     ///
     /// let log = TableLog::new();
     /// log.log(TableAction::ForcedBetSmallBlind(0, 500));
@@ -417,7 +417,7 @@ impl TableLog {
     }
 
     /// ```
-    /// use pkcore::casino::table::event::{TableAction, TableLog};
+    /// use pkcore::casino::table_celled::event::{TableAction, TableLog};
     ///
     /// let log = TableLog::new();
     /// assert!(!log.have_posted_blinds());

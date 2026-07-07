@@ -15,7 +15,7 @@
 use pkcore::bot::profile::BotProfile;
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::session::PokerSession;
-use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
 use pkcore::games::betting_structure::BettingStructure;
 use pkcore::hand_history::{HandCollection, HandHistory, HandVariant};
 
@@ -41,7 +41,7 @@ fn bot_selfplay_replay_roundtrip() {
         .iter()
         .map(|p| SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), STARTING_CHIPS)))
         .collect();
-    let table = TableNoCell::nlh_from_seats(SeatsNoCell::new(seats_vec), ForcedBets::new(SB, BB));
+    let table = Table::nlh_from_seats(SeatsNoCell::new(seats_vec), ForcedBets::new(SB, BB));
     let mut session = PokerSession::new(table);
     let mut rng = rand::rng();
     let mut collection = HandCollection::new();
@@ -200,8 +200,7 @@ fn flhe_bot_selfplay_replay_roundtrip() {
         .iter()
         .map(|p| SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), STARTING_CHIPS)))
         .collect();
-    let table =
-        TableNoCell::limit_holdem_from_seats(SeatsNoCell::new(seats_vec), FL_SMALL_BET, FL_BIG_BET, FL_RAISE_CAP);
+    let table = Table::limit_holdem_from_seats(SeatsNoCell::new(seats_vec), FL_SMALL_BET, FL_BIG_BET, FL_RAISE_CAP);
     let table_betting = table.betting;
     let mut session = PokerSession::new(table);
     let mut rng = rand::rng();
@@ -361,7 +360,7 @@ fn plo_bot_selfplay_replay_roundtrip() {
         .iter()
         .map(|p| SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), STARTING_CHIPS)))
         .collect();
-    let table = TableNoCell::plo_from_seats(SeatsNoCell::new(seats_vec), (PLO_SMALL_BLIND, PLO_BIG_BLIND));
+    let table = Table::plo_from_seats(SeatsNoCell::new(seats_vec), (PLO_SMALL_BLIND, PLO_BIG_BLIND));
     let table_betting = table.betting;
     let mut session = PokerSession::new(table);
     let mut rng = rand::rng();
@@ -540,7 +539,7 @@ fn stud_hi_bot_selfplay_replay_roundtrip() {
         .iter()
         .map(|p| SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), STARTING_CHIPS)))
         .collect();
-    let table = TableNoCell::stud_hi_from_seats(
+    let table = Table::stud_hi_from_seats(
         SeatsNoCell::new(seats_vec),
         STUD_ANTE,
         STUD_BRING_IN,
@@ -774,7 +773,7 @@ fn razz_bot_selfplay_replay_roundtrip() {
         .iter()
         .map(|p| SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), STARTING_CHIPS)))
         .collect();
-    let table = TableNoCell::razz_from_seats(
+    let table = Table::razz_from_seats(
         SeatsNoCell::new(seats_vec),
         RAZZ_ANTE,
         RAZZ_BRING_IN,

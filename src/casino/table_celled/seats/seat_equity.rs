@@ -21,8 +21,8 @@ impl SeatEquity {
     ///
     /// # Examples
     /// ```rust
-    /// use pkcore::casino::table::seats::seat_equity::SeatEquity;
-    /// use pkcore::casino::table::seats::seatbit::Seatbit;
+    /// use pkcore::casino::table_celled::seats::seat_equity::SeatEquity;
+    /// use pkcore::casino::table_celled::seats::seatbit::Seatbit;
     ///
     /// let mut equities = vec![
     ///     SeatEquity::new(5, Seatbit::SEAT_0),
@@ -58,8 +58,8 @@ impl SeatEquity {
     ///
     /// # Examples
     /// ```rust
-    /// use pkcore::casino::table::seats::seat_equity::SeatEquity;
-    /// use pkcore::casino::table::seats::seatbit::Seatbit;
+    /// use pkcore::casino::table_celled::seats::seat_equity::SeatEquity;
+    /// use pkcore::casino::table_celled::seats::seatbit::Seatbit;
     ///
     /// let empty = SeatEquity::default();
     /// assert!(empty.is_nada());

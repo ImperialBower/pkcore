@@ -15,13 +15,13 @@
 //! use pkcore::bot::profile::BotProfile;
 //! use pkcore::bot::sim::SimTable;
 //! use pkcore::casino::game::ForcedBets;
-//! use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+//! use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
 //!
 //! let seats = SeatsNoCell::new(vec![
 //!     SeatNoCell::new(PlayerNoCell::new_with_chips("gto".to_string(), 10_000)),
 //!     SeatNoCell::new(PlayerNoCell::new_with_chips("lag".to_string(), 10_000)),
 //! ]);
-//! let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+//! let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 //!
 //! let bots = vec![
 //!     (0_u8, BotProfile::gto()),
@@ -40,8 +40,8 @@ use crate::bot::decider::{BotDecider, RuleBasedDecider};
 use crate::bot::player_action::PlayerAction;
 use crate::bot::profile::BotProfile;
 use crate::bot::table_snapshot::TableSnapshot;
-use crate::casino::table::winnings::Winnings;
-use crate::casino::table_no_cell::TableNoCell;
+use crate::casino::table::Table;
+use crate::casino::table_celled::winnings::Winnings;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "player-stats")]
@@ -114,7 +114,7 @@ impl ActionCounts {
 ///
 /// ```
 /// use pkcore::bot::sim::HandResult;
-/// use pkcore::casino::table::winnings::Winnings;
+/// use pkcore::casino::table_celled::winnings::Winnings;
 ///
 /// let result = HandResult::default();
 /// assert_eq!(0, result.actions.len());
@@ -169,20 +169,20 @@ pub struct SimResult {
 /// use pkcore::bot::profile::BotProfile;
 /// use pkcore::bot::sim::SimTable;
 /// use pkcore::casino::game::ForcedBets;
-/// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+/// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
 ///
 /// let seats = SeatsNoCell::new(vec![
 ///     SeatNoCell::new(PlayerNoCell::new_with_chips("gto".to_string(), 5_000)),
 ///     SeatNoCell::new(PlayerNoCell::new_with_chips("lag".to_string(), 5_000)),
 /// ]);
-/// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+/// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 /// let bots = vec![(0_u8, BotProfile::gto()), (1_u8, BotProfile::loose_aggressive())];
 /// let mut sim = SimTable::with_rule_based(table, bots);
 /// let result = sim.run_n_hands(5).unwrap();
 /// assert!(result.hands_played <= 5);
 /// ```
 pub struct SimTable {
-    table: TableNoCell,
+    table: Table,
     bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)>,
     /// Optional seeded RNG. When `Some`, the deck shuffle and every decider
     /// dispatch route through this generator instead of the thread-local
@@ -216,13 +216,13 @@ impl SimTable {
     /// use pkcore::bot::profile::BotProfile;
     /// use pkcore::bot::sim::SimTable;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
     ///
     /// let seats = SeatsNoCell::new(vec![
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
     /// ]);
-    /// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// let bots: Vec<(u8, BotProfile, Box<dyn pkcore::bot::decider::BotDecider>)> = vec![
     ///     (0, BotProfile::gto(), Box::new(RuleBasedDecider)),
     ///     (1, BotProfile::tight_passive(), Box::new(RuleBasedDecider)),
@@ -231,7 +231,7 @@ impl SimTable {
     /// let _ = sim;
     /// ```
     #[must_use]
-    pub fn new(table: TableNoCell, bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)>) -> Self {
+    pub fn new(table: Table, bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)>) -> Self {
         Self {
             table,
             bots,
@@ -254,19 +254,19 @@ impl SimTable {
     /// use pkcore::bot::profile::BotProfile;
     /// use pkcore::bot::sim::SimTable;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
     ///
     /// let seats = SeatsNoCell::new(vec![
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("P1".to_string(), 2_000)),
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("P2".to_string(), 2_000)),
     /// ]);
-    /// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(25, 50));
+    /// let table = Table::nlh_from_seats(seats, ForcedBets::new(25, 50));
     /// let bots = vec![(0_u8, BotProfile::gto()), (1_u8, BotProfile::tight_passive())];
     /// let sim = SimTable::with_rule_based(table, bots);
     /// let _ = sim;
     /// ```
     #[must_use]
-    pub fn with_rule_based(table: TableNoCell, bots: Vec<(u8, BotProfile)>) -> Self {
+    pub fn with_rule_based(table: Table, bots: Vec<(u8, BotProfile)>) -> Self {
         let bots = bots
             .into_iter()
             .map(|(seat, profile)| -> (u8, BotProfile, Box<dyn BotDecider>) {
@@ -306,13 +306,13 @@ impl SimTable {
     /// use pkcore::bot::profile::BotProfile;
     /// use pkcore::bot::sim::SimTable;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
     ///
     /// let seats = SeatsNoCell::new(vec![
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
     /// ]);
-    /// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// let bots = vec![(0_u8, BotProfile::tight_passive()), (1_u8, BotProfile::loose_aggressive())];
     /// let registry = StatsRegistry::new();
     ///
@@ -325,7 +325,7 @@ impl SimTable {
     /// ```
     #[cfg(feature = "player-stats")]
     #[must_use]
-    pub fn with_stats_registry(table: TableNoCell, bots: Vec<(u8, BotProfile)>, registry: StatsRegistry) -> Self {
+    pub fn with_stats_registry(table: Table, bots: Vec<(u8, BotProfile)>, registry: StatsRegistry) -> Self {
         let mut sim = Self::with_rule_based(table, bots);
         sim.stats_registry = Some(registry);
         sim
@@ -353,13 +353,13 @@ impl SimTable {
     /// use pkcore::bot::profile::BotProfile;
     /// use pkcore::bot::sim::SimTable;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
     ///
     /// let seats = SeatsNoCell::new(vec![
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000_000)),
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000_000)),
     /// ]);
-    /// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// let bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)> = vec![
     ///     (0, BotProfile::tight_aggressive(), Box::new(ExploitativeDecider::wrap(RuleBasedDecider))),
     ///     (1, BotProfile::loose_passive(),    Box::new(RuleBasedDecider)),
@@ -372,7 +372,7 @@ impl SimTable {
     #[cfg(feature = "player-stats")]
     #[must_use]
     pub fn new_with_registry(
-        table: TableNoCell,
+        table: Table,
         bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)>,
         registry: StatsRegistry,
     ) -> Self {
@@ -400,13 +400,13 @@ impl SimTable {
     /// use pkcore::bot::profile::BotProfile;
     /// use pkcore::bot::sim::SimTable;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
     ///
     /// let seats = SeatsNoCell::new(vec![
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
     /// ]);
-    /// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// let bots = vec![(0_u8, BotProfile::gto()), (1_u8, BotProfile::tight_passive())];
     /// let mut sim = SimTable::with_rule_based(table, bots).with_seed(42);
     /// let result = sim.run_n_hands(10).unwrap();
@@ -445,13 +445,13 @@ impl SimTable {
     /// use pkcore::bot::profile::BotProfile;
     /// use pkcore::bot::sim::SimTable;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
     ///
     /// let seats = SeatsNoCell::new(vec![
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
     /// ]);
-    /// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// let bots = vec![(0_u8, BotProfile::gto()), (1_u8, BotProfile::tight_passive())];
     /// let sim = SimTable::with_rule_based(table, bots);
     /// assert!(sim.stats().is_none());
@@ -482,13 +482,13 @@ impl SimTable {
     /// use pkcore::bot::profile::BotProfile;
     /// use pkcore::bot::sim::SimTable;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
     ///
     /// let seats = SeatsNoCell::new(vec![
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 1_000)),
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 1_000)),
     /// ]);
-    /// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// let bots = vec![(0_u8, BotProfile::gto()), (1_u8, BotProfile::tight_passive())];
     /// let mut sim = SimTable::with_rule_based(table, bots);
     /// let result = sim.run_hand().unwrap();
@@ -551,13 +551,13 @@ impl SimTable {
     /// use pkcore::bot::profile::BotProfile;
     /// use pkcore::bot::sim::SimTable;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    /// use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
     ///
     /// let seats = SeatsNoCell::new(vec![
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
     ///     SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
     /// ]);
-    /// let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
     /// let bots = vec![(0_u8, BotProfile::gto()), (1_u8, BotProfile::loose_aggressive())];
     /// let mut sim = SimTable::with_rule_based(table, bots);
     /// let result = sim.run_n_hands(20).unwrap();
@@ -772,9 +772,9 @@ impl SimTable {
     /// actually played.
     ///
     /// The *kind* of action is reconciled against the engine's
-    /// [`legal_actions`](crate::casino::table_no_cell::TableNoCell::legal_actions)
+    /// [`legal_actions`](crate::casino::table::Table::legal_actions)
     /// and dispatched through a single
-    /// [`apply_action`](crate::casino::table_no_cell::TableNoCell::apply_action)
+    /// [`apply_action`](crate::casino::table::Table::apply_action)
     /// — replacing the old "try an `act_*` method and fall back on rejection"
     /// dispatch (audit III.5 / P8). Legality is now *asked*, not *tried*.
     ///
@@ -806,8 +806,8 @@ impl SimTable {
 
     /// Maps a decider's intended `action` onto a **guaranteed-legal** one for the
     /// current state, consulting the engine's advisory surface
-    /// ([`legal_actions`](crate::casino::table_no_cell::TableNoCell::legal_actions)
-    /// and [`raise_bounds`](crate::casino::table_no_cell::TableNoCell::raise_bounds))
+    /// ([`legal_actions`](crate::casino::table::Table::legal_actions)
+    /// and [`raise_bounds`](crate::casino::table::Table::raise_bounds))
     /// rather than trial dispatch.
     ///
     /// Behaviour:
@@ -890,12 +890,12 @@ impl SimTable {
 
     /// Resolves an all-in intent for `seat` to the concrete action the engine
     /// will actually take, mirroring
-    /// [`TableNoCell::act_all_in`](crate::casino::table_no_cell::TableNoCell::act_all_in)'s
+    /// [`TableNoCell::act_all_in`](crate::casino::table::Table::act_all_in)'s
     /// degradation for capped structures. This keeps the sim's `ActionCounts`
     /// classification in step with the event log the engine writes (audit P9e):
     /// a deep capped shove is a max raise, a shove with no legal raise left is a
     /// call, and everything else is a true all-in. Derived from the shared
-    /// [`raise_bounds`](crate::casino::table_no_cell::TableNoCell::raise_bounds),
+    /// [`raise_bounds`](crate::casino::table::Table::raise_bounds),
     /// so it cannot disagree with `act_all_in` on the bounds.
     fn resolve_shove(&self, seat: u8) -> PlayerAction {
         let stack = self
@@ -1062,14 +1062,14 @@ struct StatsMidHand {
 mod tests {
     use super::*;
     use crate::casino::game::ForcedBets;
-    use crate::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+    use crate::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
 
     fn two_player_sim() -> SimTable {
         let seats = SeatsNoCell::new(vec![
             SeatNoCell::new(PlayerNoCell::new_with_chips("gto".to_string(), 5_000)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("lag".to_string(), 5_000)),
         ]);
-        let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         let bots = vec![(0_u8, BotProfile::gto()), (1_u8, BotProfile::loose_aggressive())];
         SimTable::with_rule_based(table, bots)
     }
@@ -1171,7 +1171,7 @@ mod tests {
             SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 0)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 30)), // < SB=50 but > 0
         ]);
-        let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         let bots = vec![(0_u8, BotProfile::gto()), (1_u8, BotProfile::gto())];
         let mut sim = SimTable::with_rule_based(table, bots);
         sim.eliminate_busted();
@@ -1188,7 +1188,7 @@ mod tests {
             SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 30)), // < SB=50
         ]);
-        let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         let bots = vec![(0_u8, BotProfile::gto()), (1_u8, BotProfile::gto())];
         let mut sim = SimTable::with_rule_based(table, bots);
         // Should not return InsufficientChips; B goes all-in as blind.
@@ -1213,7 +1213,7 @@ mod tests {
             SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
         ]);
-        let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         let bots = vec![(0_u8, BotProfile::gto()), (1_u8, BotProfile::tight_passive())];
         let registry = StatsRegistry::new();
         let sim = SimTable::with_stats_registry(table, bots, registry);
@@ -1230,7 +1230,7 @@ mod tests {
             SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 10_000)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 10_000)),
         ]);
-        let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         let bots = vec![
             (0_u8, BotProfile::tight_passive()),
             (1_u8, BotProfile::loose_aggressive()),
@@ -1270,7 +1270,7 @@ mod tests {
             SeatNoCell::new(PlayerNoCell::new_with_chips("A".to_string(), 5_000)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 5_000)),
         ]);
-        let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         let bots = vec![(0_u8, BotProfile::gto()), (1_u8, BotProfile::gto())];
         let registry = StatsRegistry::new();
         let mut sim = SimTable::with_stats_registry(table, bots, registry);
@@ -1297,7 +1297,7 @@ mod tests {
             SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 10_000)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 10_000)),
         ]);
-        let table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         let bots = vec![
             (0u8, BotProfile::gto()),
             (1u8, BotProfile::gto()),
@@ -1329,7 +1329,7 @@ mod tests {
             SeatNoCell::new(PlayerNoCell::new_with_chips("B".to_string(), 10_000)),
             SeatNoCell::new(PlayerNoCell::new_with_chips("C".to_string(), 10_000)),
         ]);
-        let table = TableNoCell::plo_from_seats(seats, (50, 100));
+        let table = Table::plo_from_seats(seats, (50, 100));
         let bots = vec![
             (0u8, BotProfile::gto()),
             (1u8, BotProfile::gto()),

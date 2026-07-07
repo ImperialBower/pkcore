@@ -2,7 +2,7 @@
 //!
 //! Today's engine hard-codes preflop/flop/turn/river streets inside
 //! [`crate::games::GamePhase`] and walks them with direct phase assignments
-//! in [`crate::casino::table_no_cell::TableNoCell`] (no use of
+//! in [`crate::casino::table::Table`] (no use of
 //! `GamePhase::next`). This module introduces a **data-driven** description
 //! of each variant's street layout so future engine work (and the
 //! per-variant epics EPIC-30 through EPIC-33) can iterate streets without

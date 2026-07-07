@@ -1,84 +1,207 @@
 # pkcore public struct prelude coverage report
 
+_Regenerated 2026-07-06 from the current `src/` tree (after the `casino` table
+module rename: `table` → `table_celled`, `table_no_cell` → `table`,
+`TableNoCell` → `Table`, `Seats` → `SeatsCell`)._
+
 ## Methodology
-- All `pub struct` definitions in `src/` were collected.
-- All re-exports in `src/prelude.rs` were collected.
-- The following list shows public structs that are NOT re-exported in the prelude, excluding those that are clearly internal, private, or not intended for general use.
+- Every top-level `pub struct` in `src/` was collected (172 structs).
+- Every re-export in `src/prelude.rs` was collected, including the two glob
+  re-exports (`crate::arrays::sliced::*` and `crate::casino::state::*`, whose
+  public structs are counted as in-prelude) and the multi-line
+  `crate::hand_history::{…}` block.
+- A struct counts as "in prelude" only if the prelude re-exports **that exact
+  path** — so of the two same-named `HandResult` structs, only
+  `casino::table_celled::result::HandResult` is in the prelude (the `bot::sim`
+  one is not), and likewise only `util::Percentage` (not
+  `bot::betting_strategy::Percentage`).
+- ANSI color-helper structs generated inside the `nubibus` / `table_celled`
+  color macros (`Fg`, `Cyan`, `Reset`, …) are internal and excluded.
 
-## Public structs NOT in prelude
+## Public structs NOT in prelude (39)
 
-- `PhaseHoldemTracker` (src/play/phases.rs)
-- `Position6MaxPointer` (src/play/positions.rs)
-- `Actor` (src/play/actions.rs)
+- `ActionCounts` (src/bot/sim.rs)
+- `ActionNode` (src/analysis/gto/game_tree.rs)
+- `ActionScore` (src/pokerbench/score.rs)
 - `ActionTracker` (src/play/actions.rs)
-- `DealEval` (src/play/stages/deal_eval.rs)
-- `TurnEval` (src/play/stages/turn_eval.rs)
-- `OmahaHigh` (src/games/omaha.rs)
-- `PotInfo` (src/casino/table/pot.rs)
-- `PotManager` (src/casino/table/pot.rs)
-- `HandResult` (src/casino/table/result.rs)
-- `Showdown` (src/casino/table/showdown.rs)
-- `TableManager` (src/casino/manager.rs)
+- `Actor` (src/play/actions.rs)
+- `AgentFidelity` (src/hand_history.rs)
+- `California` (src/games/razz/california.rs)
+- `CanonicalSeat` (src/pokerbench/scenario.rs)
+- `CanonicalSeating` (src/pokerbench/scenario.rs)
+- `ChanceNode` (src/analysis/gto/game_tree.rs)
+- `ComboRange` (src/analysis/gto/combo_range.rs)
+- `EquityOptions` (src/analysis/equity/spec.rs)
+- `EquityReport` (src/analysis/equity/result.rs)
+- `EquityRequest` (src/analysis/equity/spec.rs)
+- `HandResult` (src/bot/sim.rs)
+- `IndexCardMap` (src/analysis/store/bcm/index_card_map.rs)
+- `JokerDecider` (src/bot/decider.rs)
+- `KuhnCfr` (src/games/kuhn.rs)
+- `KuhnHistory` (src/games/kuhn.rs)
+- `KuhnInfoSet` (src/games/kuhn.rs)
+- `KuhnState` (src/games/kuhn.rs)
+- `KuhnStrategy` (src/games/kuhn.rs)
+- `Percentage` (src/bot/betting_strategy.rs)
+- `PhaseHoldemTracker` (src/play/phases.rs)
+- `PlayerEquity` (src/analysis/equity/result.rs)
+- `PokerBenchScenario` (src/pokerbench/scenario.rs)
+- `Position6MaxPointer` (src/play/positions.rs)
 - `PreflopRow` (src/analysis/store/heads_up.rs)
 - `PreflopRowHash` (src/analysis/store/heads_up.rs)
-- `HUP` (src/analysis/store/heads_up.rs)
-- `IndexCardMap` (src/analysis/store/bcm/index_card_map.rs)
-- `HUPResult` (src/analysis/store/db/hup.rs)
+- `RandomOrdering` (src/util/random_ordering.rs)
+- `ReplayResult` (src/hand_history.rs)
+- `RuleBasedDecider` (src/bot/decider.rs)
+- `SeatInfo` (src/bot/table_snapshot.rs)
+- `Shifter` (src/arrays/matchups/shift.rs)
+- `SimResult` (src/bot/sim.rs)
+- `SimTable` (src/bot/sim.rs)
+- `StartingHands` (src/arrays/hole_cards/twos.rs)
+- `StreetAggression` (src/bot/betting_strategy.rs)
+- `TableSnapshot` (src/bot/table_snapshot.rs)
+
+## Public structs in prelude (133)
+
+- `Action` (src/hand_history.rs)
+- `ActionFrequencies` (src/analysis/gto/strategy_profile.rs)
+- `ActionRanges` (src/bot/position_ranges.rs)
+- `AnalysisContext` (src/hand_history.rs)
+- `Bard` (src/bard.rs)
+- `BetSize` (src/analysis/gto/solver_config.rs)
+- `BetSizings` (src/analysis/gto/solver_config.rs)
+- `BettingStrategy` (src/bot/betting_strategy.rs)
+- `Board` (src/play/board.rs)
+- `BotProfile` (src/bot/profile.rs)
+- `BoxedCards` (src/arrays/sliced.rs)
+- `Boxes` (src/arrays/sliced.rs)
+- `Card` (src/card.rs)
+- `Cards` (src/cards.rs)
+- `CardsCell` (src/cards_cell.rs)
+- `CaseEval` (src/analysis/case_eval.rs)
+- `CaseEvals` (src/analysis/case_evals.rs)
+- `Combo` (src/analysis/gto/combo.rs)
+- `ComboPairs` (src/analysis/gto/combo_pairs.rs)
+- `Combos` (src/analysis/gto/combos.rs)
+- `ComboWeight` (src/bot/weighted_range.rs)
 - `Connect` (src/analysis/store/db/sqlite.rs)
+- `Dealer` (src/casino/dealer.rs)
+- `DealEval` (src/play/stages/deal_eval.rs)
+- `Deck` (src/deck.rs)
+- `Ev` (src/analysis/ev.rs)
+- `Eval` (src/analysis/eval.rs)
+- `Evals` (src/analysis/evals.rs)
+- `ExploitativeDecider` (src/bot/exploitative_decider.rs)
+- `ExploitConfig` (src/bot/exploit.rs)
+- `ExploitTrainer` (src/bot/training/trainer.rs)
+- `Five` (src/arrays/five.rs)
 - `FiveBCM` (src/analysis/store/bcm/binary_card_map.rs)
-- `SevenFiveBCM` (src/analysis/store/bcm/binary_card_map.rs)
-- `SevenEval` (src/analysis/eval.rs)
+- `FlopEval` (src/play/stages/flop_eval.rs)
+- `FlopStreet` (src/hand_history.rs)
+- `ForcedBets` (src/casino/game.rs)
+- `Four` (src/arrays/four.rs)
+- `Game` (src/play/game.rs)
+- `GameState` (src/casino/table_celled.rs)
+- `GameTree` (src/analysis/gto/game_tree.rs)
+- `GenerationRecord` (src/bot/training/trainer.rs)
+- `HandCollection` (src/hand_history.rs)
+- `HandHistory` (src/hand_history.rs)
+- `HandMeta` (src/hand_history.rs)
+- `HandRank` (src/analysis/hand_rank.rs)
+- `HandResult` (src/casino/table_celled/result.rs)
+- `Hands` (src/arrays/five/hands.rs)
+- `HoleCard` (src/play/hole_card.rs)
+- `HoleCards` (src/play/hole_cards.rs)
+- `HUP` (src/analysis/store/heads_up.rs)
+- `HUPResult` (src/analysis/store/db/hup.rs)
+- `Mask` (src/arrays/matchups/masks/mod.rs)
+- `Masked` (src/arrays/matchups/masked.rs)
+- `Name` (src/util/name.rs)
+- `NodeId` (src/analysis/gto/game_tree.rs)
+- `Nubificus` (src/analysis/nubibus.rs)
+- `OmahaHigh` (src/games/omaha.rs)
+- `Outs` (src/analysis/outs.rs)
+- `Percentage` (src/util/mod.rs)
+- `Playbook` (src/bot/playbook.rs)
+- `PlaybookEntry` (src/bot/playbook.rs)
+- `Player` (src/casino/player.rs)
+- `PlayerEntry` (src/hand_history.rs)
+- `PlayerNoCell` (src/casino/table.rs)
+- `PlayerStateCell` (src/casino/state.rs)
+- `PlayerStats` (src/analysis/player_stats.rs)
 - `PlayerWins` (src/analysis/player_wins.rs)
+- `Pluribus` (src/analysis/nubibus.rs)
+- `PokerSession` (src/casino/session.rs)
+- `PositionalBetting` (src/bot/positional_betting.rs)
+- `PositionRanges` (src/bot/position_ranges.rs)
+- `Positions` (src/casino/table_celled/position.rs)
+- `PotOdds` (src/analysis/pot_odds.rs)
+- `PotWin` (src/casino/table_celled/winnings.rs)
+- `PreflopStreet` (src/hand_history.rs)
+- `RangeEquity` (src/analysis/range_equity.rs)
+- `RangeStrategy` (src/bot/range_strategy.rs)
+- `RankMask` (src/arrays/matchups/masks/rank_mask.rs)
+- `Ranks` (src/ranks.rs)
+- `RegretAccumulator` (src/analysis/gto/regret.rs)
+- `ResultEntry` (src/hand_history.rs)
+- `RiverEval` (src/play/stages/river_eval.rs)
+- `RiverStreet` (src/hand_history.rs)
+- `Seat` (src/casino/table_celled/seats/seat.rs)
+- `Seatbit` (src/casino/table_celled/seats/seatbit.rs)
+- `SeatCell` (src/casino/table_celled/seats/seat_cell.rs)
+- `SeatEquity` (src/casino/table_celled/seats/seat_equity.rs)
+- `SeatHand` (src/play/seat_hand.rs)
+- `SeatNoCell` (src/casino/table.rs)
+- `SeatsCell` (src/casino/table_celled/seats.rs)
+- `SeatsNoCell` (src/casino/table.rs)
+- `Seven` (src/arrays/seven.rs)
+- `SevenEval` (src/analysis/eval.rs)
+- `SevenFiveBCM` (src/analysis/store/bcm/binary_card_map.rs)
+- `Showdown` (src/casino/table_celled/showdown.rs)
+- `Six` (src/arrays/six.rs)
+- `Solver` (src/analysis/gto/solver.rs)
+- `SolverCache` (src/analysis/gto/solver_cache.rs)
+- `SolverConfig` (src/analysis/gto/solver_config.rs)
+- `SolverResult` (src/analysis/gto/solver.rs)
+- `SortedHeadsUp` (src/arrays/matchups/sorted_heads_up.rs)
+- `Stack` (src/casino/cashier/chips.rs)
+- `Stakes` (src/hand_history.rs)
+- `StatsRegistry` (src/analysis/player_stats.rs)
+- `StrategyProfile` (src/analysis/gto/strategy_profile.rs)
+- `StreetDescriptor` (src/games/street.rs)
+- `StreetEquity` (src/play/game.rs)
+- `StreetIndex` (src/games/street.rs)
+- `Streets` (src/hand_history.rs)
+- `SuitMask` (src/arrays/matchups/masks/suit_mask.rs)
+- `Table` (src/casino/table.rs)
+- `TableCelled` (src/casino/table_celled.rs)
+- `TableEquity` (src/casino/table_celled/seats/table_equity.rs)
+- `TableInfo` (src/hand_history.rs)
+- `TableLog` (src/casino/table_celled/event.rs)
+- `TableManager` (src/casino/manager.rs)
+- `Terminal` (src/util/terminal.rs)
+- `TerminalNode` (src/analysis/gto/game_tree.rs)
+- `TheNuts` (src/analysis/the_nuts.rs)
+- `Three` (src/arrays/three.rs)
+- `TrainingConfig` (src/bot/training/trainer.rs)
+- `TrainingResult` (src/bot/training/trainer.rs)
+- `TurnEval` (src/play/stages/turn_eval.rs)
+- `TurnStreet` (src/hand_history.rs)
+- `Two` (src/arrays/two.rs)
+- `Twos` (src/analysis/gto/twos.rs)
+- `Util` (src/util/mod.rs)
 - `Versus` (src/analysis/gto/vs.rs)
+- `WeightedCombos` (src/analysis/gto/weighted_combos.rs)
+- `WeightedRange` (src/bot/weighted_range.rs)
 - `WinLoseDraw` (src/analysis/gto/odds.rs)
-- `Ranger` (src/analysis/gto/ranger.rs)
-- `Outs` (src/analysis/outs.rs) [already in prelude]
-- `ComboPairs` (src/analysis/gto/combo_pairs.rs) [already in prelude]
-- `CaseEvals` (src/analysis/case_evals.rs) [already in prelude]
-- `CaseEval` (src/analysis/case_eval.rs) [already in prelude]
-- `Eval` (src/analysis/eval.rs) [already in prelude]
-- `Evals` (src/analysis/evals.rs) [already in prelude]
-- `Combo` (src/analysis/gto/combo.rs) [already in prelude]
-- `Nubificus` (src/analysis/nubibus.rs) [already in prelude]
-- `Pluribus` (src/analysis/nubibus.rs) [already in prelude]
-- `PluribusEvent` (src/analysis/nubibus.rs) [already in prelude]
-- `TheNuts` (src/analysis/the_nuts.rs) [already in prelude]
-- `Five` (src/arrays/five.rs) [already in prelude]
-- `Four` (src/arrays/four.rs) [already in prelude]
-- `Seven` (src/arrays/seven.rs) [already in prelude]
-- `Three` (src/arrays/three.rs) [already in prelude]
-- `Two` (src/arrays/two.rs) [already in prelude]
-- `SortedHeadsUp` (src/arrays/matchups/sorted_heads_up.rs) [already in prelude]
-- `Bard` (src/bard.rs) [already in prelude]
-- `Card` (src/card.rs) [already in prelude]
-- `Cards` (src/cards.rs) [already in prelude]
-- `CardsCell` (src/cards_cell.rs) [already in prelude]
-- `ForcedBets` (src/casino/game.rs) [already in prelude]
-- `Player` (src/casino/player.rs) [already in prelude]
-- `GameState` (src/casino/table.rs) [already in prelude]
-- `TableCelled` (src/casino/table.rs) [already in prelude]
-- `TableAction` (src/casino/table/event.rs) [already in prelude]
-- `TableLog` (src/casino/table/event.rs) [already in prelude]
-- `Seats` (src/casino/table/seats.rs) [already in prelude]
-- `Seat` (src/casino/table/seats/seat.rs) [already in prelude]
-- `SeatCell` (src/casino/table/seats/seat_cell.rs) [already in prelude]
-- `SeatEquity` (src/casino/table/seats/seat_equity.rs) [already in prelude]
-- `Seatbit` (src/casino/table/seats/seatbit.rs) [already in prelude]
-- `TableEquity` (src/casino/table/seats/table_equity.rs) [already in prelude]
-- `Deck` (src/deck.rs) [already in prelude]
-- `Board` (src/play/board.rs) [already in prelude]
-- `Game` (src/play/game.rs) [already in prelude]
-- `HoleCards` (src/play/hole_cards.rs) [already in prelude]
-- `Rank` (src/rank.rs) [already in prelude]
-- `Ranks` (src/ranks.rs) [already in prelude]
-- `Suit` (src/suit.rs) [already in prelude]
-- `Percentage` (src/util/mod.rs) [already in prelude]
-- `Util` (src/util/mod.rs) [already in prelude]
-- `TestData` (src/util/data.rs) [already in prelude]
-- `Name` (src/util/name.rs) [already in prelude]
-- `Terminal` (src/util/terminal.rs) [already in prelude]
+- `Winnings` (src/casino/table_celled/winnings.rs)
+- `YamlPlayerStatsStore` (src/analysis/player_stats_store.rs)
 
 ## Notes
-- Some structs are intentionally not in the prelude (e.g., internal managers, test helpers, or types with specialized use).
-- If you want to add any of the above to the prelude, let me know which ones.
-
+- Some structs are intentionally not in the prelude (e.g. internal managers,
+  test/bench helpers, per-game or pokerbench-only types, and the equity-request
+  surface from EPIC-41 that is still consumed via its module path).
+- The `bot` decider/sim types (`SimTable`, `TableSnapshot`, `RuleBasedDecider`,
+  `JokerDecider`, …) are reached through `pkcore::bot::…` rather than the
+  prelude.
+- If any of the above should be promoted into the prelude, add the
+  corresponding `pub use` to `src/prelude.rs`.

@@ -1,19 +1,19 @@
-# Analysis: `TableCelled` vs. `TableNoCell` — Interior Mutability vs. `&mut self`
+# Analysis: `TableCelled` vs. `Table` — Interior Mutability vs. `&mut self`
 
 **Date:** April 2026  
-**Files:** `src/casino/table.rs`, `src/casino/table_no_cell.rs`  
+**Files:** `src/casino/table_celled.rs`, `src/casino/table.rs`  
 **Examples:** `examples/the_hand.rs`, `examples/the_hand_no_cell.rs`
 
 ---
 
 ## Background
 
-`casino::table::TableCelled` is the core game engine for a poker hand. It manages the
+`casino::table_celled::TableCelled` is the core game engine for a poker hand. It manages the
 deck, seat assignments, betting rounds, side pots, and showdown. It was built
 using **interior mutability** — a Rust pattern where a type is mutated through a
 shared `&self` reference rather than through `&mut self`.
 
-`casino::table::TableNoCell` is a structurally identical reimplementation that
+`casino::table::Table` is a structurally identical reimplementation that
 replaces every interior-mutability wrapper with plain fields and uses
 conventional `&mut self` for every method that changes state. The two versions
 exist to:
@@ -40,7 +40,7 @@ runtime borrow check (or none at all, for `Cell<T: Copy>`):
 ```
 TableCelled {
     phase:          RefCell<GamePhase>          // set_phase() via borrow_mut
-    seats:          Seats(Box<[SeatCell]>)      // SeatCell = RefCell<Seat>
+    seats:          SeatsCell(Box<[SeatCell]>)      // SeatCell = RefCell<Seat>
     button:         BintCell                    // Cell<u8> with bounds checking
     deck:           CardsCell                   // RefCell<Cards>
     board:          CardsCell
@@ -68,14 +68,14 @@ blinds, deal cards, log events, or collect bets.
 
 ---
 
-## What `TableNoCell` Changes
+## What `Table` Changes
 
 Every wrapper is replaced with the plain type it wraps:
 
-| `TableCelled` field type | `TableNoCell` field type |
+| `TableCelled` field type | `Table` field type |
 |---|---|
 | `RefCell<GamePhase>` | `GamePhase` |
-| `Seats(Box<[SeatCell]>)` | `SeatsNoCell(Vec<SeatNoCell>)` |
+| `SeatsCell(Box<[SeatCell]>)` | `SeatsNoCell(Vec<SeatNoCell>)` |
 | `BintCell` | `u8` |
 | `CardsCell` (deck/board/muck) | `Cards` |
 | `Stack(Cell<usize>)` (pot/bet) | `usize` |
@@ -114,7 +114,7 @@ A single `&TableCelled` reference can be passed to any number of functions, and 
 can independently mutate through Cells without conflict — as long as no
 `RefCell` is double-borrowed at runtime.
 
-### `TableNoCell` (traditional mutability)
+### `Table` (traditional mutability)
 
 ```rust
 // Mutating methods require &mut self:
@@ -156,13 +156,13 @@ Cell wrappers.
 ### `examples/the_hand_no_cell.rs`
 
 ```rust
-fn setup(table: &mut TableNoCell) -> Result<(), PKError> {
+fn setup(table: &mut Table) -> Result<(), PKError> {
     table.act_forced_bets().expect("forced bets failed");
     table.deal_cards_to_seats().expect("failed to deal hole cards");
     // ...
 }
 
-fn preflop(table: &mut TableNoCell) -> Result<usize, PKError> {
+fn preflop(table: &mut Table) -> Result<usize, PKError> {
     table.act_bet(3, 2_100)?;
     table.act_raise(4, 5_000)?;
     // ...
@@ -174,7 +174,7 @@ machine-verified annotation that this function will change the table's state.
 
 ---
 
-## Borrow Checker Implications Inside `TableNoCell`
+## Borrow Checker Implications Inside `Table`
 
 The shift to `&mut self` introduces a friction pattern that `TableCelled` avoids
 through Cells: **you cannot hold a mutable borrow on a sub-field while calling
@@ -183,7 +183,7 @@ a method that also needs `&mut self`**.
 This arises most visibly in `player_mucks_cards`:
 
 ```rust
-// TableNoCell must scope the borrow tightly:
+// Table must scope the borrow tightly:
 pub fn player_mucks_cards(&mut self, seat_number: u8) {
     let result = {
         let seat = self.seats.get_seat_mut(seat_number)?;
@@ -208,7 +208,7 @@ drop(seat); // explicit, but only for clarity
 self.event_log.log(TableAction::MuckPlayerCards(...));
 ```
 
-In `TableNoCell`, the compiler **enforces** the scope discipline. In `TableCelled`,
+In `Table`, the compiler **enforces** the scope discipline. In `TableCelled`,
 it is a convention that can silently be forgotten without compilation failure —
 only a runtime `RefCell` panic would reveal the mistake.
 
@@ -219,11 +219,11 @@ only a runtime `RefCell` panic would reveal the mistake.
 ### The `DrainableBintCell` Replacement
 
 `TableCelled::deal_cards_to_seats` uses a `DrainableBintCell` — a circular counter
-that steps through seat indices and drains as it goes. `TableNoCell` replaces
+that steps through seat indices and drains as it goes. `Table` replaces
 this with a direct double loop:
 
 ```rust
-// TableNoCell deal_cards_to_seats
+// Table deal_cards_to_seats
 for _ in 0..cards_per {
     for step in 0..seat_count {
         let idx = u8::try_from(
@@ -245,21 +245,21 @@ rather than encapsulated in a custom iterator type.
 into `table.seats.bring_it_in()` and other `&self` methods freely because all
 mutations go through Cells.
 
-`TableNoCell::end_hand` inlines the three showdown cases as private methods:
+`Table::end_hand` inlines the three showdown cases as private methods:
 `showdown_single_seat`, `showdown_headsup`, and `showdown_multiway`. The
 borrow checker prevents passing `&mut self` into a free function that also
 needs to call other `&mut self` methods on the same value — so the logic lives
-inside `impl TableNoCell` rather than in a separate `Showdown` struct.
+inside `impl Table` rather than in a separate `Showdown` struct.
 
 ### Deck Injection
 
 `TableCelled` has `nlh_primed(seats, &CardsCell, forced)` — a constructor that accepts
-a pre-built deck wrapped in `CardsCell`. `TableNoCell` has no equivalent, but
+a pre-built deck wrapped in `CardsCell`. `Table` has no equivalent, but
 none is needed: because `deck` is a plain `pub Cards` field, the example simply
 assigns to it after construction:
 
 ```rust
-let mut table = TableNoCell::nlh_from_seats(seats, ForcedBets::new(50, 100));
+let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 table.deck = Cards::deck_primed(&TestData::the_hand_cards_dealable());
 ```
 
@@ -273,18 +273,18 @@ directly accessible.
 
 ### Compile-time Safety
 
-| | `TableCelled` | `TableNoCell` |
+| | `TableCelled` | `Table` |
 |---|---|---|
 | Aliased mutation | Allowed (Cells) | Prevented at compile time |
 | Double-borrow panics | Possible at runtime (`RefCell`) | Impossible |
 | Borrow scope discipline | Convention | Enforced |
 
-`TableNoCell` trades a small amount of implementation friction (scoped borrows,
+`Table` trades a small amount of implementation friction (scoped borrows,
 no free-function showdown) for a stronger correctness guarantee.
 
 ### Flexibility
 
-| | `TableCelled` | `TableNoCell` |
+| | `TableCelled` | `Table` |
 |---|---|---|
 | Multiple `&TableCelled` references | Yes | No (only one `&mut` at a time) |
 | Callbacks into table from closures | Straightforward | Requires borrow juggling |
@@ -298,19 +298,19 @@ but it is not.
 ### Observability
 
 `TableCelled`'s `event_log: TableLog(RefCell<Vec<TableAction>>)` has a custom
-`Display` implementation. `TableNoCell`'s `event_log: Vec<TableAction>` does
+`Display` implementation. `Table`'s `event_log: Vec<TableAction>` does
 not — callers iterate directly:
 
 ```rust
 // TableCelled
 println!("{}", table.event_log);
 
-// TableNoCell
+// Table
 for action in &table.event_log { println!("{action}"); }
 ```
 
 The `TableLog` wrapper also provides `entries()`, `last()`, and
-`last_player_action()` helper methods. Without it, `TableNoCell` callers use
+`last_player_action()` helper methods. Without it, `Table` callers use
 iterator adapters directly (`iter().rev().find(...)`). This is less convenient
 but no less capable.
 
@@ -325,14 +325,14 @@ The Cell-based approach has costs:
   borrow guard decrements it on drop. For hot paths (inner loops over seats),
   this adds measurable overhead.
 
-`TableNoCell` eliminates all of these: field reads and writes are direct memory
+`Table` eliminates all of these: field reads and writes are direct memory
 accesses that the compiler can freely hoist, eliminate, or register-allocate.
 For the event-logging path (`Vec::push`) vs. `TableLog::log` (which goes
 through `RefCell::borrow_mut()`), the plain `Vec::push` on `&mut self` is
 strictly cheaper.
 
 A formal benchmark has not yet been written. The expectation is that
-`TableNoCell` will be faster on hot paths (dealing, bet collection, event
+`Table` will be faster on hot paths (dealing, bet collection, event
 logging) with the margin depending on how many `RefCell` borrows occur per
 hand.
 
@@ -348,14 +348,14 @@ Neither design is universally superior.
   multiple readers watch the same table).
 - The API boundary requires `&self` for trait object compatibility.
 
-**Use `TableNoCell` when:**
+**Use `Table` when:**
 - Correctness guarantees at compile time are preferred over runtime flexibility.
 - The table is owned and mutated by a single controller (the most common case
   for a game loop or simulation).
 - Performance on hot paths matters and profiling confirms Cell overhead.
 
 For a straightforward game loop — which is the primary use case in this codebase
-— `TableNoCell` is the cleaner design. The `&mut self` discipline makes every
+— `Table` is the cleaner design. The `&mut self` discipline makes every
 mutation site visible and prevents the class of bugs that only appear as
 runtime `RefCell` panics under aliased borrows.
 
@@ -365,10 +365,10 @@ runtime `RefCell` panics under aliased borrows.
 
 | Purpose | Path |
 |---|---|
-| Interior mutability version | `src/casino/table.rs` |
-| Traditional mutability version | `src/casino/table_no_cell.rs` |
+| Interior mutability version | `src/casino/table_celled.rs` |
+| Traditional mutability version | `src/casino/table.rs` |
 | Interior mutability example | `examples/the_hand.rs` |
 | Traditional mutability example | `examples/the_hand_no_cell.rs` |
-| Showdown logic (for `TableCelled`) | `src/casino/table/showdown.rs` |
+| Showdown logic (for `TableCelled`) | `src/casino/table_celled/showdown.rs` |
 | Player with interior mutability | `src/casino/player.rs` |
-| Player without interior mutability | `src/casino/table_no_cell.rs` (`PlayerNoCell`) |
+| Player without interior mutability | `src/casino/table.rs` (`PlayerNoCell`) |

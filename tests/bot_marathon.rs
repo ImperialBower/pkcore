@@ -22,7 +22,7 @@ use pkcore::bot::profile::BotProfile;
 use pkcore::casino::action::PlayerAction;
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::session::PokerSession;
-use pkcore::casino::table_no_cell::{PlayerNoCell, SeatNoCell, SeatsNoCell, TableNoCell};
+use pkcore::casino::table::{PlayerNoCell, SeatNoCell, SeatsNoCell, Table};
 use pkcore::hand_history::{HandCollection, HandHistory};
 
 const SB: usize = 50;
@@ -106,7 +106,7 @@ fn bot_marathon__1000_hands_without_error() {
         .iter()
         .map(|p| SeatNoCell::new(PlayerNoCell::new_with_chips(p.name.clone(), STARTING_CHIPS)))
         .collect();
-    let table = TableNoCell::nlh_from_seats(SeatsNoCell::new(seats_vec), ForcedBets::new(SB, BB));
+    let table = Table::nlh_from_seats(SeatsNoCell::new(seats_vec), ForcedBets::new(SB, BB));
     let mut session = PokerSession::new(table);
     let mut rng = rand::rng();
     let mut collection = HandCollection::new();

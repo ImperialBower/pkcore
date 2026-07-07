@@ -12,11 +12,11 @@ use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::cards_cell::CardsCell;
 use crate::casino::player::Player;
-use crate::casino::table::seats::seat::Seat;
+use crate::casino::table_celled::seats::seat::Seat;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
-use crate::prelude::{BoxedCards, ForcedBets, Forgiving, PlayerState, Seats, TableCelled};
+use crate::prelude::{BoxedCards, ForcedBets, Forgiving, PlayerState, SeatsCell, TableCelled};
 use crate::{Card, Cards, Pile};
 use std::str::FromStr;
 use wincounter::win::Win;
@@ -359,7 +359,7 @@ impl TestData {
         // Burns 2♦ 3♦ 4♦ are arbitrary cards not in hole cards or the board.
         let primed = cards!("A♦ 5♦ 6♠ Q♣ 5♣ 6♥ 2♦ 9♣ 6♦ 5♥ 3♦ 5♠ 4♦ 8♠");
         TableCelled::nlh_primed(
-            Seats::new(TestData::min_players()),
+            SeatsCell::new(TestData::min_players()),
             &CardsCell::from(Cards::deck_primed(&primed)),
             ForcedBets::new(50, 100),
         )
@@ -368,7 +368,7 @@ impl TestData {
     #[must_use]
     pub fn the_hand_table() -> TableCelled {
         TableCelled::nlh_primed(
-            Seats::new(TestData::the_hand_players()),
+            SeatsCell::new(TestData::the_hand_players()),
             &CardsCell::from(Cards::deck_primed(&TestData::the_hand_cards_dealable())),
             ForcedBets::new(50, 100),
         )
@@ -400,7 +400,7 @@ impl TestData {
             player: Player::new_with_chips("Average Person".to_string(), 9_000),
             cards: boxed!("4♣ 4♦"),
         };
-        let seats = Seats::new(vec![rich, poor, average]);
+        let seats = SeatsCell::new(vec![rich, poor, average]);
 
         TableCelled::nlh_primed(seats, cards, ForcedBets::new(50, 100))
     }
@@ -426,7 +426,7 @@ impl TestData {
             player: Player::new_with_chips("Average Person".to_string(), 9_000),
             cards: boxed!("4♣ 4♦"),
         };
-        let seats = Seats::new(vec![rich, small, big, poor, average]);
+        let seats = SeatsCell::new(vec![rich, small, big, poor, average]);
 
         TableCelled::nlh_primed(seats, cards, ForcedBets::new(50, 100))
     }
@@ -510,7 +510,7 @@ impl TestData {
             cards: boxed!("A♠ A♥"),
         };
         // BTN=0, SB=1, BB=2, UTG=3; button at seat 0.
-        let seats = Seats::new(vec![btn, sb, bb, utg]);
+        let seats = SeatsCell::new(vec![btn, sb, bb, utg]);
         TableCelled::nlh_primed(seats, cards, ForcedBets::new(50, 100))
     }
 

@@ -3,7 +3,7 @@ use crate::card::Card;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
 use crate::casino::cashier::chips::Stack;
-use crate::casino::table::seats::seat_cell::SeatCell;
+use crate::casino::table_celled::seats::seat_cell::SeatCell;
 use crate::prelude::{PlayerState, Seat, Seatbit};
 use log;
 use std::cell::{Ref, RefMut};
@@ -18,9 +18,9 @@ pub mod seatbit;
 pub mod table_equity;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Seats(Box<[SeatCell]>);
+pub struct SeatsCell(Box<[SeatCell]>);
 
-impl Seats {
+impl SeatsCell {
     pub const DEFAULT_NUMBER_SEATS: u8 = 6;
     pub const MAX_NUMBER_SEATS: u8 = 10;
 
@@ -28,7 +28,7 @@ impl Seats {
     #[must_use]
     pub fn new(seats: Vec<Seat>) -> Self {
         let seat_cells: Vec<SeatCell> = seats.into_iter().map(SeatCell::new).collect();
-        Seats(seat_cells.into_boxed_slice())
+        SeatsCell(seat_cells.into_boxed_slice())
     }
 
     /// # Errors
@@ -335,11 +335,11 @@ impl Seats {
     ///
     /// ```
     /// use pkcore::cards_cell::CardsCell;
-    /// use pkcore::casino::table::seats::Seats;
+    /// use pkcore::casino::table_celled::seats::SeatsCell;
     /// use pkcore::util::data::TestData;
     ///
     /// // Seat eight players without any cards.
-    /// let seats = Seats::try_from(TestData::the_hand_players()).unwrap();
+    /// let seats = SeatsCell::try_from(TestData::the_hand_players()).unwrap();
     /// assert_eq!(0, seats.count_cards_dealt());
     /// assert_eq!(16, seats.count_cards_in_play());
     ///
@@ -376,7 +376,7 @@ impl Seats {
     /// use pkcore::prelude::*;
     /// use pkcore::util::data::TestData;
     ///
-    /// let seats = Seats::try_from(TestData::the_hand_players()).unwrap();
+    /// let seats = SeatsCell::try_from(TestData::the_hand_players()).unwrap();
     ///
     /// assert!(seats.deal_card(2, Card::ACE_HEARTS).is_ok());
     /// assert_eq!("__ __, __ __, A♥ __, __ __, __ __, __ __, __ __, __ __", seats.cards_string());
@@ -639,7 +639,7 @@ impl Seats {
     /// use pkcore::prelude::*;
     /// use pkcore::util::data::TestData;
     ///
-    /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+    /// let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
     ///
     /// let gus = seats.next_to_act(3).unwrap();
     /// assert_eq!(3, gus);
@@ -725,10 +725,10 @@ impl Seats {
     /// ```rust
     /// use pkcore::casino::player::Player;
     /// use pkcore::casino::state::PlayerState;
-    /// use pkcore::casino::table::seats::seat::Seat;
-    /// use pkcore::casino::table::seats::Seats;
+    /// use pkcore::casino::table_celled::seats::seat::Seat;
+    /// use pkcore::casino::table_celled::seats::SeatsCell;
     ///
-    /// let seats = Seats::new(vec![
+    /// let seats = SeatsCell::new(vec![
     ///     Seat::new(Player::new_with_chips("Alice".to_string(), 1_000)),
     ///     Seat::new(Player::new_with_chips("Bob".to_string(), 1_000)),
     /// ]);
@@ -799,10 +799,10 @@ impl Seats {
     /// Takes all the cards from all the seats and returns them as a single `CardsCell`.
     ///
     /// ```
-    /// use pkcore::casino::table::seats::Seats;
+    /// use pkcore::casino::table_celled::seats::SeatsCell;
     /// use pkcore::util::data::TestData;
     ///
-    /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+    /// let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
     /// let cards = seats.take_cards();
     /// assert_eq!(cards.to_string(), "T♠ 2♥ 8♠ 3♥ A♦ Q♣ 5♦ 5♣ 6♠ 6♥ K♠ J♦ 4♣ 4♦ 7♣ 2♣");
     ///
@@ -825,13 +825,13 @@ impl Seats {
 
     /// Returns a non-destructive snapshot of all cards currently held by seated players.
     ///
-    /// Unlike [`Seats::take_cards`], this method does not remove cards from seats.
+    /// Unlike [`SeatsCell::take_cards`], this method does not remove cards from seats.
     ///
     /// ```
-    /// use pkcore::casino::table::seats::Seats;
+    /// use pkcore::casino::table_celled::seats::SeatsCell;
     /// use pkcore::util::data::TestData;
     ///
-    /// let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+    /// let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
     /// let before = seats.cards_string();
     ///
     /// let snapshot = seats.cards_snapshot();
@@ -970,7 +970,7 @@ impl Seats {
     // endregion
 }
 
-impl Default for Seats {
+impl Default for SeatsCell {
     fn default() -> Self {
         let mut seats = Vec::with_capacity(Self::DEFAULT_NUMBER_SEATS as usize);
         for _ in 0..Self::DEFAULT_NUMBER_SEATS {
@@ -980,7 +980,7 @@ impl Default for Seats {
     }
 }
 
-impl std::fmt::Display for Seats {
+impl std::fmt::Display for SeatsCell {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for (i, seat) in self.0.iter().enumerate() {
             if seat.is_empty() {
@@ -994,38 +994,38 @@ impl std::fmt::Display for Seats {
 }
 
 /// TODO: Why do I need these?
-impl From<Box<[SeatCell; 6]>> for Seats {
+impl From<Box<[SeatCell; 6]>> for SeatsCell {
     fn from(value: Box<[SeatCell; 6]>) -> Self {
         Self(value)
     }
 }
 
-impl From<Box<[SeatCell; 7]>> for Seats {
+impl From<Box<[SeatCell; 7]>> for SeatsCell {
     fn from(value: Box<[SeatCell; 7]>) -> Self {
         Self(value)
     }
 }
 
-impl From<Box<[SeatCell; 8]>> for Seats {
+impl From<Box<[SeatCell; 8]>> for SeatsCell {
     fn from(value: Box<[SeatCell; 8]>) -> Self {
         Self(value)
     }
 }
 
-impl From<Box<[SeatCell; 9]>> for Seats {
+impl From<Box<[SeatCell; 9]>> for SeatsCell {
     fn from(value: Box<[SeatCell; 9]>) -> Self {
         Self(value)
     }
 }
 
-impl From<Vec<String>> for Seats {
+impl From<Vec<String>> for SeatsCell {
     fn from(value: Vec<String>) -> Self {
         let seats: Vec<Seat> = value.into_iter().map(Seat::from).collect();
         Self::new(seats)
     }
 }
 
-impl TryFrom<Vec<Seat>> for Seats {
+impl TryFrom<Vec<Seat>> for SeatsCell {
     type Error = PKError;
 
     fn try_from(value: Vec<Seat>) -> Result<Self, Self::Error> {
@@ -1037,7 +1037,7 @@ impl TryFrom<Vec<Seat>> for Seats {
 }
 
 /// TODO: This feels like stupid over architecting.
-impl TryFrom<Vec<SeatCell>> for Seats {
+impl TryFrom<Vec<SeatCell>> for SeatsCell {
     type Error = PKError;
 
     fn try_from(value: Vec<SeatCell>) -> Result<Self, Self::Error> {
@@ -1054,13 +1054,13 @@ mod casino__table__seats_tests {
     use super::*;
     use crate::casino::game::ForcedBets;
     use crate::casino::player::Player;
-    use crate::casino::table::TableCelled;
+    use crate::casino::table_celled::TableCelled;
     use crate::prelude::*;
     use crate::util::data::TestData;
 
     #[test]
     fn act_all_in() {
-        let seats = Seats::try_from(TestData::min_seats()).unwrap();
+        let seats = SeatsCell::try_from(TestData::min_seats()).unwrap();
 
         let all_in = seats.act_all_in(0).unwrap();
         assert_eq!(1_000_000, all_in);
@@ -1068,7 +1068,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn bring_check() {
-        let seats = Seats::new(TestData::min_players());
+        let seats = SeatsCell::new(TestData::min_players());
 
         seats.act_forced_bet(1, 50).expect("Should be able to act");
         seats.act_forced_bet(2, 100).expect("Should be able to act");
@@ -1080,7 +1080,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn all_players_have_acted() {
-        let seats = Seats::try_from(TestData::min_seats()).unwrap();
+        let seats = SeatsCell::try_from(TestData::min_seats()).unwrap();
         assert!(!seats.is_betting_complete());
 
         for seat_cell in seats.borrow_all() {
@@ -1093,14 +1093,14 @@ mod casino__table__seats_tests {
 
     #[test]
     fn are_clear() {
-        assert!(Seats::new(TestData::min_players()).are_clear());
-        assert!(!Seats::default().are_clear());
-        assert!(!Seats::try_from(TestData::the_hand_seats()).unwrap().are_clear());
+        assert!(SeatsCell::new(TestData::min_players()).are_clear());
+        assert!(!SeatsCell::default().are_clear());
+        assert!(!SeatsCell::try_from(TestData::the_hand_seats()).unwrap().are_clear());
     }
 
     #[test]
     fn assign() {
-        let seats = Seats::default();
+        let seats = SeatsCell::default();
         let antonio_esfandiari = Seat {
             player: crate::casino::player::Player::new_with_chips("Antonio Esfandari".to_string(), 1_000_000),
             cards: boxed!("A♦ Q♣"),
@@ -1117,7 +1117,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn bring_it_in() {
-        let seats = Seats::new(TestData::min_players());
+        let seats = SeatsCell::new(TestData::min_players());
 
         seats.act_forced_bet(1, 50).expect("Should be able to act");
         seats.act_forced_bet(2, 100).expect("Should be able to act");
@@ -1132,13 +1132,13 @@ mod casino__table__seats_tests {
 
     #[test]
     fn count_cards_in_play() {
-        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
         assert_eq!(16, seats.count_cards_in_play());
     }
 
     #[test]
     fn current_bet() {
-        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
         let _ = seats.act_forced_bet(0, 100);
         assert_eq!(100, seats.current_bet());
 
@@ -1154,7 +1154,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn first_yet_to_act() {
-        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
         seats.act_forced_bet(1, 50).expect("Should be able to act");
         seats.act_forced_bet(2, 100).expect("Should be able to act");
 
@@ -1163,7 +1163,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn get_seat_number_from_handle() {
-        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
 
         assert_eq!(3, seats.get_seat_number_from_handle("Gus Hansen").unwrap());
         assert_eq!(4, seats.get_seat_number_from_handle("Daniel Negreanu").unwrap());
@@ -1172,7 +1172,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn has_everyone_acted() {
-        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
         assert!(!seats.has_everyone_acted());
 
         for seat_cell in seats.borrow_all() {
@@ -1185,7 +1185,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn next_to_act() {
-        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
 
         let seat = seats.next_to_act(3).unwrap();
         assert_eq!(3, seat);
@@ -1206,7 +1206,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn next_to_act__long_play_defect() {
-        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
         let pot = Stack::default();
 
         seats.act_forced_bet(1, 50).expect("Should be able to act");
@@ -1254,7 +1254,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn reset_state() {
-        let table = TableCelled::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+        let table = TableCelled::nlh_from_seats(SeatsCell::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
         let _ = table.act_forced_bets();
         let _seat3_folded_amount = table.act_fold(3).unwrap();
         let _seat4_folded_amount = table.act_fold(4).unwrap();
@@ -1269,7 +1269,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn reset_state_keeps_empty_seat_out() {
-        let seats = Seats::new(vec![
+        let seats = SeatsCell::new(vec![
             Seat::new(Player::new_with_chips("Alice".to_string(), 1_000)),
             Seat::default(),
         ]);
@@ -1285,7 +1285,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn is_seat_in_hand_false_for_empty_seat_even_if_state_is_yet_to_act() {
-        let seats = Seats::new(vec![Seat::default()]);
+        let seats = SeatsCell::new(vec![Seat::default()]);
         seats.get_seat_mut(0).unwrap().player.state.set(PlayerState::YetToAct);
 
         assert!(!seats.is_seat_in_hand(0));
@@ -1293,7 +1293,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn seat() {
-        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
         // Gab the seat, change the player's handle, and then return it.
         let mut seat = seats.get_seat_mut(0).unwrap();
         assert_eq!("Doyle Brunson", seat.player.handle);
@@ -1307,7 +1307,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn get() {
-        let seats = Seats::default();
+        let seats = SeatsCell::default();
         let seat = seats.get(0).unwrap();
         let gus_hansen = Seat {
             player: crate::casino::player::Player::new_with_chips("Gus Hansen".to_string(), 1_000_000),
@@ -1328,7 +1328,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn iter_from_wraps_in_order() {
-        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
         let order: Vec<usize> = seats.indices_from(6).take(4).collect();
         assert_eq!(order, vec![6, 7, 0, 1]);
 
@@ -1339,7 +1339,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn iter_from_wraps_confirm_next_to_act() {
-        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
 
         let utg: u8 = 3;
 
@@ -1358,7 +1358,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn iterror() {
-        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
 
         let gus = seats.next_to_act(3).unwrap();
         assert_eq!(3, gus);
@@ -1405,7 +1405,7 @@ mod casino__table__seats_tests {
             player: Player::new_with_chips("Folded".to_string(), 19_000),
             cards: boxed!("3♣ 2♣"),
         };
-        let seats = Seats::new(vec![rich, poor, average, folder]);
+        let seats = SeatsCell::new(vec![rich, poor, average, folder]);
         let cards = cc!(
             "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣"
         );
@@ -1443,7 +1443,7 @@ mod casino__table__seats_tests {
             player: Player::new_with_chips("Folded".to_string(), 19_000),
             cards: boxed!("3♣ 2♣"),
         };
-        let seats = Seats::new(vec![rich, poor, average, folder]);
+        let seats = SeatsCell::new(vec![rich, poor, average, folder]);
         let cards = cc!(
             "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣"
         );
@@ -1467,7 +1467,7 @@ mod casino__table__seats_tests {
     /// Matches test in `Table`
     #[test]
     fn validate__tiny_table() {
-        let seats = Seats::try_from(TestData::min_seats()).unwrap();
+        let seats = SeatsCell::try_from(TestData::min_seats()).unwrap();
 
         let _ = seats.act_forced_bet(1, 50);
         let _ = seats.act_forced_bet(2, 100);
@@ -1491,7 +1491,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn set_eligible_to_yet_to_act_sets_only_eligible_players() {
-        let seats = Seats::new(vec![
+        let seats = SeatsCell::new(vec![
             Seat::new(Player::new_with_chips("Alice".to_string(), 1_000)),
             Seat::new(Player::new_with_chips("Bob".to_string(), 1_000)),
             Seat::new(Player::new_with_chips("Cara".to_string(), 0)),
@@ -1536,7 +1536,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn cards_snapshot_happy_path_non_destructive() {
-        let seats = Seats::try_from(TestData::the_hand_seats()).unwrap();
+        let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
         let before = seats.cards_string();
 
         let snapshot = seats.cards_snapshot();
@@ -1548,7 +1548,7 @@ mod casino__table__seats_tests {
 
     #[test]
     fn cards_snapshot_empty_seats_returns_empty_cards() {
-        let seats = Seats::default();
+        let seats = SeatsCell::default();
 
         let snapshot = seats.cards_snapshot();
 
@@ -1559,7 +1559,7 @@ mod casino__table__seats_tests {
     /// to instantiate state.
     #[test]
     fn pluribus_445_defect() {
-        let seats = Seats::new(vec![
+        let seats = SeatsCell::new(vec![
             Seat::new(Player::new_with_chips("MrBrown".to_string(), 10_000)),
             Seat::new(Player::new_with_chips("Pluribus".to_string(), 10_000)),
             Seat::new(Player::new_with_chips("MrBlue".to_string(), 10_000)),

@@ -5,7 +5,7 @@ use pkcore::analysis::gto::vs::Versus;
 use pkcore::analysis::pot_odds::PotOdds;
 use pkcore::analysis::range_equity::RangeEquity;
 use pkcore::arrays::two::Two;
-use pkcore::casino::table::TableCelled;
+use pkcore::casino::table_celled::TableCelled;
 use pkcore::play::board::Board;
 use pkcore::play::stages::river_eval::RiverEval;
 use pkcore::util::data::TestData;

@@ -1,7 +1,7 @@
 //! Betting-rule abstraction orthogonal to [`crate::games::GameType`].
 //!
 //! `BettingStructure` lifts the inline min-raise / max-raise math out of
-//! [`crate::casino::table_no_cell::TableNoCell::act_raise`] into an enum
+//! [`crate::casino::table::Table::act_raise`] into an enum
 //! dispatch so Fixed-Limit (EPIC-30) and Pot-Limit (EPIC-31) variants can
 //! plug in without forking the betting loop. The `NoLimit` arm preserves
 //! today's NLHE behavior verbatim: `min_raise` returns the previous raise
@@ -190,7 +190,7 @@ impl BettingStructure {
     /// in front of the actor, the raise **completes** to one full increment;
     /// otherwise it steps *by* the increment on top of the current bet. This one
     /// rule is shared by
-    /// [`TableNoCell::min_raise_to`](crate::casino::table_no_cell::TableNoCell::min_raise_to)
+    /// [`TableNoCell::min_raise_to`](crate::casino::table::Table::min_raise_to)
     /// and the fixed-limit arm of [`Self::max_raise`], so the minimum and the
     /// (fixed-limit) maximum are computed from the same source and cannot drift
     /// (audit P9j.2).

@@ -4,7 +4,7 @@
 //! provides a bridge to the [`Position`]
 //! system via [`TableSize::positions`].
 
-use crate::casino::table::position::{Position, Positions};
+use crate::casino::table_celled::position::{Position, Positions};
 use serde::{Deserialize, Serialize};
 
 // ── TableSize ─────────────────────────────────────────────────────────────────
@@ -98,7 +98,7 @@ impl TableSize {
     ///
     /// ```
     /// use pkcore::bot::table_size::TableSize;
-    /// use pkcore::casino::table::position::Position;
+    /// use pkcore::casino::table_celled::position::Position;
     ///
     /// let positions = TableSize::SixMax.positions();
     /// assert!(positions.contains(&Position::BTN));
