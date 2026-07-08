@@ -31,7 +31,6 @@ consumers only break where they name a renamed symbol directly.
 | `casino::table_no_cell::PlayerNoCell` | `casino::table::Player` |
 | `casino::table_no_cell::SeatNoCell` | `casino::table::Seat` |
 | `casino::table_no_cell::SeatsNoCell` | `casino::table::Seats` |
-| `casino::player::Player` | `casino::table::Player` |
 | `casino::table::event::TableAction` | `casino::action::TableAction` |
 | `casino::table::event::TableLog` | `casino::table_celled::event::TableLog` |
 | `casino::table::{GameState, TableCelled}` | `casino::table_celled::{GameState, TableCelled}` |
@@ -99,7 +98,9 @@ Three crates depend on pkcore: `pkdealer_service`, `pkdealer_client`,
 
 ### `pkpy` — 0.0.35 → 0.2.0 *(Python bindings; largest deep-import surface)*
 - [ ] Bump `pkcore = "0.2.0"`; add `features = ["store"]` (uses BCM + HUP).
-- [ ] `casino::player::Player` → `casino::table::Player`.
+- [ ] **Do NOT change** `casino::player::Player` — the celled `Player` is unchanged in
+      0.2.0 and pkpy's `Player` wrapper genuinely uses it (`get_chips_in_play`, `is_ready`,
+      `Dealer::remove_player`). Only `PlayerNoCell` (the `&mut self` twin) moved.
 - [ ] `casino::table::event::TableAction` → `casino::action::TableAction`.
 - [ ] `casino::table::event::TableLog` → `casino::table_celled::event::TableLog`.
 - [ ] `casino::table::seats::seat_equity::SeatEquity` → `casino::equity::seat_equity::SeatEquity`.
