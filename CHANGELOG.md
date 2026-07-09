@@ -5,7 +5,37 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - unreleased
+## [0.2.1] - 2026-07-09
+
+Dependency-hygiene patch release. No public API, behavior, or wire-format changes:
+the postcard binary encoding is byte-identical (verified by the solver
+`test_solver_result_binary_round_trip` / `_bytes_round_trip` / `_default_save_load_round_trip`
+tests), so solver caches and hand-history YAML written under 0.2.0 still load.
+
+### Security
+
+- **`crossbeam-epoch` 0.9.18 → 0.9.20 (RUSTSEC-2026-0204).** Fixes an invalid pointer
+  dereference in the `fmt::Pointer`/`Display` impl for `Atomic`/`Shared` when the
+  underlying pointer is null/invalid. Pulled in transitively via `rayon`; the bump is
+  a lockfile-only change.
+
+### Changed
+
+- **`postcard` no longer drags in `heapless` / `atomic-polyfill`.** The dependency now
+  sets `default-features = false` (keeping only `alloc` + `use-std`), dropping
+  postcard's default `heapless-cas` feature. This removes the unmaintained
+  `atomic-polyfill` crate (**RUSTSEC-2023-0089**) from the dependency tree of *every*
+  pkcore consumer. pkcore only calls `to_allocvec`/`from_bytes`, neither of which needs
+  `heapless`, so the binary format is unchanged. Downstream crates that added a
+  `RUSTSEC-2023-0089` ignore to their `deny.toml` can drop it once they upgrade to
+  0.2.1.
+
+### Removed
+
+- The `RUSTSEC-2023-0089` entry from pkcore's own `deny.toml` ignore list — no longer
+  needed now that `atomic-polyfill` is absent from the tree.
+
+## [0.2.0] - 2026-07-07
 
 This release closes the P0–P8 items of the Fable 5 audit
 (`docs/AUDIT_Fable_5.md`): 
@@ -341,4 +371,6 @@ on the wire, and `replay` behavior is unaffected by the new metadata. Driven by
 `ImperialBower/pkdealer` EPIC-40 Phase 4 (arena recorder agent-fidelity
 annotations).
 
+[0.2.1]: https://github.com/ImperialBower/pkcore/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/ImperialBower/pkcore/compare/v0.1.8...v0.2.0
 [0.1.3]: https://github.com/ImperialBower/pkcore/releases/tag/v0.1.3
