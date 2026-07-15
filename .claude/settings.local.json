@@ -66,7 +66,13 @@
       "Bash(awk -F: '$2>0')",
       "Bash(sort -t: -k2 -rn)",
       "Bash(cargo tree *)",
-      "Bash(awk 'NR>=425 && NR<=493' src/lib.rs)"
+      "Bash(awk 'NR>=425 && NR<=493' src/lib.rs)",
+      "Bash(awk 'NR<=50' src/lookups/mod.rs)",
+      "Bash(awk 'NR<=20' src/lookups/flushes.rs)",
+      "Bash(awk 'NR<=60' src/casino/cashier/chips.rs)",
+      "Bash(awk 'NR>=25 && NR<=50' src/games/mod.rs)",
+      "Bash(awk 'NR>=105 && NR<=135' src/games/mod.rs)",
+      "Bash(awk 'NR>=2325 && NR<=2360' src/hand_history.rs)"
     ]
   }
 }
