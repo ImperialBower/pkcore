@@ -18,12 +18,12 @@ own downstream EPIC later.
 
 ## Status
 
-*As of 2026-07-15, branch `mobile` @ `4b4e2e7` (no code landed yet).*
+*As of 2026-07-15, branch `epic-37-phase0` @ `f17a522` (Phase 0 landed).*
 
 | Component | Status |
 |---|---|
-| `mobile` umbrella feature + documented build profile | Planned |
-| CI: `cargo check` for `aarch64-apple-ios` / `aarch64-linux-android` | Planned |
+| `mobile` umbrella feature + documented build profile | **Complete** (`f17a522`) |
+| CI: `cargo check` for `aarch64-apple-ios` / `aarch64-linux-android` | **Complete** (`f17a522`; both targets verified locally — first hosted run lands with the push) |
 | Stdout hygiene — stray `println!` in engine paths → `log` | Planned |
 | `SessionView` / `SeatView` serializable read-out | Planned |
 | `PlayerAction` serde | Planned |
