@@ -72,7 +72,8 @@
       "Bash(awk 'NR<=60' src/casino/cashier/chips.rs)",
       "Bash(awk 'NR>=25 && NR<=50' src/games/mod.rs)",
       "Bash(awk 'NR>=105 && NR<=135' src/games/mod.rs)",
-      "Bash(awk 'NR>=2325 && NR<=2360' src/hand_history.rs)"
+      "Bash(awk 'NR>=2325 && NR<=2360' src/hand_history.rs)",
+      "Bash(rustup target *)"
     ]
   }
 }

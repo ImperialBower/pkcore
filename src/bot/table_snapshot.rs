@@ -163,7 +163,7 @@ pub struct TableSnapshot<'a> {
     _stats_lifetime: std::marker::PhantomData<&'a ()>,
 }
 
-impl<'a> TableSnapshot<'a> {
+impl TableSnapshot<'_> {
     /// Constructs a `TableSnapshot` from a live `Table` from `seat`'s
     /// perspective.
     ///
@@ -293,41 +293,6 @@ impl<'a> TableSnapshot<'a> {
         }
     }
 
-    /// Constructs a snapshot with an attached [`StatsRegistry`] borrow.
-    ///
-    /// Equivalent to [`Self::from_table`] followed by setting
-    /// `opponent_stats = Some(registry)`.  The shipped deciders ignore this
-    /// field — see EPIC-26 Phase 3 for the non-behavior-changing contract.
-    ///
-    /// Only available when the `player-stats` feature is enabled.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # #[cfg(feature = "player-stats")] {
-    /// use pkcore::analysis::player_stats::StatsRegistry;
-    /// use pkcore::bot::table_snapshot::TableSnapshot;
-    /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
-    ///
-    /// let seats = Seats::new(vec![
-    ///     Seat::new(Player::new_with_chips("X".to_string(), 500)),
-    ///     Seat::new(Player::new_with_chips("Y".to_string(), 500)),
-    /// ]);
-    /// let table = Table::nlh_from_seats(seats, ForcedBets::new(5, 10));
-    /// let registry = StatsRegistry::new();
-    /// let snap = TableSnapshot::from_table_with_stats(&table, 0, &registry);
-    /// assert!(snap.opponent_stats.is_some());
-    /// # }
-    /// ```
-    #[cfg(feature = "player-stats")]
-    #[must_use]
-    pub fn from_table_with_stats(table: &Table, seat: u8, registry: &'a StatsRegistry) -> Self {
-        let mut snap = Self::from_table(table, seat);
-        snap.opponent_stats = Some(registry);
-        snap
-    }
-
     /// Returns this player's table position relative to the dealer button.
     ///
     /// Returns `None` when the dealer button is unset or the table size is not
@@ -355,6 +320,46 @@ impl<'a> TableSnapshot<'a> {
         let btn = self.dealer_button?;
         let logical = self.logical_seat?;
         Position::from_seat(logical, btn, self.seat_count)
+    }
+}
+
+// The only method that names `'a`; kept in its own impl so that builds
+// without `player-stats` (e.g. the `mobile` profile) can elide the main
+// impl's lifetime.
+#[cfg(feature = "player-stats")]
+impl<'a> TableSnapshot<'a> {
+    /// Constructs a snapshot with an attached [`StatsRegistry`] borrow.
+    ///
+    /// Equivalent to [`Self::from_table`] followed by setting
+    /// `opponent_stats = Some(registry)`.  The shipped deciders ignore this
+    /// field — see EPIC-26 Phase 3 for the non-behavior-changing contract.
+    ///
+    /// Only available when the `player-stats` feature is enabled.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "player-stats")] {
+    /// use pkcore::analysis::player_stats::StatsRegistry;
+    /// use pkcore::bot::table_snapshot::TableSnapshot;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("X".to_string(), 500)),
+    ///     Seat::new(Player::new_with_chips("Y".to_string(), 500)),
+    /// ]);
+    /// let table = Table::nlh_from_seats(seats, ForcedBets::new(5, 10));
+    /// let registry = StatsRegistry::new();
+    /// let snap = TableSnapshot::from_table_with_stats(&table, 0, &registry);
+    /// assert!(snap.opponent_stats.is_some());
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn from_table_with_stats(table: &Table, seat: u8, registry: &'a StatsRegistry) -> Self {
+        let mut snap = Self::from_table(table, seat);
+        snap.opponent_stats = Some(registry);
+        snap
     }
 }
 

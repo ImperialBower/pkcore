@@ -87,6 +87,11 @@ pokerbench = []
 ## 5-card hand enumeration read from a self-generated file). These have no runtime
 ## callers and require self-generated data; kept out of the default published API.
 generators = []
+## Named build profile for embedding pkcore in mobile apps (EPIC-37).
+## Use with `default-features = false`. Pulls the on-device game stack
+## (bots, hand histories, multi-way equity) and nothing that touches
+## disk or terminal: no store, no terminal, no persistence.
+mobile = ["bot-profiles", "hand-histories", "equity"]
 
 [dependencies]
 bint = "0.1.15"

@@ -63,6 +63,24 @@ export HUPS_DB_PATH=generated/hups.db
 (`pkcore` no longer loads a `.env` file — the `dotenvy` dependency was dropped in
 0.2.0, so set the variable in your environment directly.)
 
+### Mobile build (EPIC-37)
+
+The `mobile` feature names the lean build profile for embedding pkcore in
+mobile apps: the on-device game stack (bots, hand histories, multi-way
+equity) with nothing that touches disk or terminal. Features are additive,
+so it only means "lean" when defaults are off — always pair it with
+`default-features = false`:
+
+```toml
+[dependencies]
+pkcore = { version = "0.2", default-features = false, features = ["mobile"] }
+```
+
+CI proves the profile cross-compiles for `aarch64-apple-ios` and
+`aarch64-linux-android` (`cargo check` only — linking real static libraries
+is the future binding repo's job). See
+[`docs/EPIC-37_Mobile_Engine.md`](docs/EPIC-37_Mobile_Engine.md).
+
 ## Data files
 
 Most of `pkcore` works out of the box from a plain `cargo add pkcore`: hand evaluation,

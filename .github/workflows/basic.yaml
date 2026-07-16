@@ -169,3 +169,27 @@ jobs:
       # store/terminal deps are target-gated off on wasm, so `--lib` is the
       # meaningful surface. Runs under the global RUSTFLAGS=-Dwarnings.
       - run: cargo check --target wasm32-unknown-unknown --lib
+
+  mobile:
+    name: Mobile targets
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Read toolchain from rust-toolchain.toml
+        id: toolchain
+        run: |
+          version=$(grep '^channel' rust-toolchain.toml | tr -d ' "' | cut -d= -f2)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ steps.toolchain.outputs.version }}
+          targets: aarch64-apple-ios, aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+      # EPIC-37: prove the `mobile` profile (default-features off) resolves on
+      # both mobile targets. `cargo check` compiles without linking, so neither
+      # the Android NDK nor an iOS SDK is needed — the job pins the dependency
+      # graph and cfg gates only. Linked .a artifacts are the future binding
+      # repo's job. Runs under the global RUSTFLAGS=-Dwarnings.
+      - run: cargo check --target aarch64-apple-ios     --no-default-features --features mobile --lib
+      - run: cargo check --target aarch64-linux-android --no-default-features --features mobile --lib
