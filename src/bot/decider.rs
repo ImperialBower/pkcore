@@ -483,12 +483,8 @@ fn hand_equity<R: rand::Rng + ?Sized>(profile: &BotProfile, state: &TableSnapsho
     // active villain, non-NLHE hole size, or the `equity` feature is disabled).
     match profile.decision.equity {
         EquityMode::Off => proxy_equity(state),
-        EquityMode::Fast { samples } => {
-            real_equity(state, u64::from(samples), rng).or_else(|| proxy_equity(state))
-        }
-        EquityMode::Exact => {
-            real_equity(state, EXACT_EQUITY_SAMPLES, rng).or_else(|| proxy_equity(state))
-        }
+        EquityMode::Fast { samples } => real_equity(state, u64::from(samples), rng).or_else(|| proxy_equity(state)),
+        EquityMode::Exact => real_equity(state, EXACT_EQUITY_SAMPLES, rng).or_else(|| proxy_equity(state)),
     }
 }
 
@@ -1423,7 +1419,16 @@ mod bot__decider_tests {
         pa.decision.ranges = RangeMode::PositionAware;
 
         let hands = [
-            "A♠ 5♠", "K♠ 9♠", "Q♠ 8♠", "J♠ 7♠", "7♠ 6♠", "5♠ 4♠", "T♠ 8♠", "9♦ 8♦", "A♦ 2♦", "K♥ T♠",
+            "A♠ 5♠",
+            "K♠ 9♠",
+            "Q♠ 8♠",
+            "J♠ 7♠",
+            "7♠ 6♠",
+            "5♠ 4♠",
+            "T♠ 8♠",
+            "9♦ 8♦",
+            "A♦ 2♦",
+            "K♥ T♠",
         ];
         let mut differs = false;
         for h in hands {
@@ -1459,7 +1464,10 @@ mod bot__decider_tests {
             snap.hole_cards = Cards::from_str(h).unwrap();
             let f = preflop_open_frequency(&flat, &snap);
             let p = preflop_open_frequency(&pa, &snap);
-            assert!((f - p).abs() < 1e-9, "no playbook: position_aware must match flat for {h}");
+            assert!(
+                (f - p).abs() < 1e-9,
+                "no playbook: position_aware must match flat for {h}"
+            );
         }
     }
 

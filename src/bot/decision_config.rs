@@ -168,11 +168,7 @@ mod decision_config_tests {
 
     #[test]
     fn equity_mode_json_round_trips() {
-        for mode in [
-            EquityMode::Off,
-            EquityMode::Fast { samples: 2000 },
-            EquityMode::Exact,
-        ] {
+        for mode in [EquityMode::Off, EquityMode::Fast { samples: 2000 }, EquityMode::Exact] {
             let json = serde_json::to_string(&mode).unwrap();
             let back: EquityMode = serde_json::from_str(&json).unwrap();
             assert_eq!(mode, back);

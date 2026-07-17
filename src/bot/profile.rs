@@ -1343,7 +1343,10 @@ mod bot__profile_tests {
         // Backward compatibility: a profile with a default DecisionConfig must
         // not gain a `decision:` key in its YAML.
         let yaml = BotProfile::maniac().to_yaml_string().unwrap();
-        assert!(!yaml.contains("decision"), "default-decision profile should not emit decision key");
+        assert!(
+            !yaml.contains("decision"),
+            "default-decision profile should not emit decision key"
+        );
     }
 
     #[cfg(feature = "bot-profiles")]

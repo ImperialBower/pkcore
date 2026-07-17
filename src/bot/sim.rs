@@ -1475,7 +1475,10 @@ mod tests {
 
         let result = sim.run_n_hands(300).unwrap();
 
-        assert_eq!(result.hands_played, 300, "cash mode must play the full run without elimination");
+        assert_eq!(
+            result.hands_played, 300,
+            "cash mode must play the full run without elimination"
+        );
         let sum: i64 = result.net_chips.values().sum();
         assert_eq!(sum, 0, "cash-mode chip deltas must conserve to zero");
     }
