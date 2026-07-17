@@ -189,6 +189,13 @@ pub struct SimTable {
     /// [`rand::rng()`]. Attached via [`Self::with_seed`] / [`Self::with_rng`].
     /// Lets integration tests reproduce a 1,000-hand run deterministically.
     seed_rng: Option<rand::rngs::SmallRng>,
+    /// Optional cash-game buy-in. When `Some(buy_in)`, [`Self::run_n_hands`]
+    /// resets every stack to `buy_in` before each hand and accumulates the
+    /// per-hand chip delta, so no player is eliminated and strategy strength is
+    /// measured cleanly as chips per 100 hands (EPIC-36). When `None`, the run
+    /// is tournament-style (carry-over stacks, stops at fewer than 2 funded
+    /// players). Attached via [`Self::with_cash_mode`].
+    cash_mode: Option<usize>,
     /// Optional opponent stats aggregator. When `Some`, every snapshot built
     /// for `decide()` borrows this registry, and every completed hand is
     /// ingested via [`StatsRegistry::ingest_hand`] before `button_up`.
@@ -236,6 +243,7 @@ impl SimTable {
             table,
             bots,
             seed_rng: None,
+            cash_mode: None,
             #[cfg(feature = "player-stats")]
             stats_registry: None,
             #[cfg(feature = "player-stats")]
@@ -277,6 +285,7 @@ impl SimTable {
             table,
             bots,
             seed_rng: None,
+            cash_mode: None,
             #[cfg(feature = "player-stats")]
             stats_registry: None,
             #[cfg(feature = "player-stats")]
@@ -431,6 +440,39 @@ impl SimTable {
         self
     }
 
+    /// Enables cash-game mode with a fixed buy-in.
+    ///
+    /// In cash mode [`Self::run_n_hands`] resets every stack to `buy_in` before
+    /// each hand and accumulates the per-hand chip delta into
+    /// [`SimResult::net_chips`], instead of carrying stacks over and eliminating
+    /// busted players. This keeps every seat in every hand, so a strategy
+    /// comparison measures skill as chips per 100 hands without survivorship
+    /// bias. Pair with [`Self::with_seed`] for reproducible benches.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::profile::BotProfile;
+    /// use pkcore::bot::sim::SimTable;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 10_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 10_000)),
+    /// ]);
+    /// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// let bots = vec![(0_u8, BotProfile::gto()), (1_u8, BotProfile::maniac())];
+    /// let mut sim = SimTable::with_rule_based(table, bots).with_cash_mode(10_000).with_seed(1);
+    /// let result = sim.run_n_hands(100).unwrap();
+    /// assert_eq!(result.hands_played, 100);
+    /// ```
+    #[must_use]
+    pub fn with_cash_mode(mut self, buy_in: usize) -> Self {
+        self.cash_mode = Some(buy_in);
+        self
+    }
+
     /// Borrows the attached [`StatsRegistry`], if any.
     ///
     /// Returns `None` when the `SimTable` was constructed without a registry
@@ -565,6 +607,9 @@ impl SimTable {
     /// assert!(result.hands_played <= 20);
     /// ```
     pub fn run_n_hands(&mut self, n: usize) -> Result<SimResult, PKError> {
+        if let Some(buy_in) = self.cash_mode {
+            return self.run_n_hands_cash(n, buy_in);
+        }
         let starting_chips: HashMap<u8, usize> = self
             .table
             .seats
@@ -603,6 +648,51 @@ impl SimTable {
                 (seat, final_i64 - start_i64)
             })
             .collect();
+
+        Ok(SimResult {
+            hands_played,
+            net_chips,
+            actions_taken: total_actions,
+        })
+    }
+
+    /// Cash-mode run: resets every stack to `buy_in` before each hand and
+    /// accumulates the per-hand chip delta, so no player is eliminated and the
+    /// full `n` hands play out. `net_chips` is the sum of per-hand deltas —
+    /// the chips-per-run signal used for chips/100 comparisons.
+    fn run_n_hands_cash(&mut self, n: usize, buy_in: usize) -> Result<SimResult, PKError> {
+        let seats: Vec<u8> = self.bots.iter().map(|(seat, _, _)| *seat).collect();
+
+        let mut total_actions: HashMap<u8, ActionCounts> = HashMap::new();
+        let mut net_chips: HashMap<u8, i64> = seats.iter().map(|&s| (s, 0i64)).collect();
+        let mut hands_played: usize = 0;
+        let buy_in_i64 = i64::try_from(buy_in).unwrap_or(i64::MAX);
+
+        for _ in 0..n {
+            // Fixed-stack reset: restore every seat to the buy-in. Because this
+            // runs before `run_hand` (which eliminates busted seats first), no
+            // seat is ever emptied, so the match never stops early.
+            for &seat in &seats {
+                if let Some(s) = self.table.seats.get_seat_mut(seat) {
+                    s.player.chips = buy_in;
+                }
+            }
+            if self.count_funded() < 2 {
+                break;
+            }
+
+            let result = self.run_hand()?;
+            hands_played += 1;
+            for (seat, counts) in result.actions {
+                total_actions.entry(seat).or_default().merge(&counts);
+            }
+
+            for &seat in &seats {
+                let chips = self.table.seats.get_seat(seat).map_or(0, |s| s.player.chips);
+                let delta = i64::try_from(chips).unwrap_or(i64::MAX) - buy_in_i64;
+                *net_chips.entry(seat).or_default() += delta;
+            }
+        }
 
         Ok(SimResult {
             hands_played,
@@ -1361,5 +1451,95 @@ mod tests {
         let mut counts = ActionCounts::default();
         sim.apply_action(not_turn, PlayerAction::Fold, &mut counts);
         assert_eq!(0, counts.total(), "a rejected action must not be counted");
+    }
+
+    // ── EPIC-36 Phase 3: cash mode (fixed-stack reset per hand) ──────────────
+
+    /// Cash mode resets every stack to the buy-in each hand, so no player is
+    /// eliminated and the full run plays out — even when one bot would bust in
+    /// a tournament. Per-hand chip deltas still conserve to zero.
+    #[test]
+    fn cash_mode_runs_all_hands_and_conserves_chips() {
+        use crate::bot::profile::BotProfile;
+        // 1_000-chip buy-in = 10 BB at 50/100. maniac vs nit would bust fast in
+        // a tournament; cash mode must keep both seated for the whole run.
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+        ]);
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let bots = vec![(0u8, BotProfile::maniac()), (1u8, BotProfile::tight_passive())];
+        let mut sim = SimTable::with_rule_based(table, bots)
+            .with_cash_mode(1_000)
+            .with_seed(7);
+
+        let result = sim.run_n_hands(300).unwrap();
+
+        assert_eq!(result.hands_played, 300, "cash mode must play the full run without elimination");
+        let sum: i64 = result.net_chips.values().sum();
+        assert_eq!(sum, 0, "cash-mode chip deltas must conserve to zero");
+    }
+
+    /// Without cash mode, the same short-stacked maniac-vs-nit match is a
+    /// tournament: someone busts and the run stops before all 300 hands.
+    #[test]
+    fn tournament_mode_stops_when_a_player_busts() {
+        use crate::bot::profile::BotProfile;
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+        ]);
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let bots = vec![(0u8, BotProfile::maniac()), (1u8, BotProfile::tight_passive())];
+        let mut sim = SimTable::with_rule_based(table, bots).with_seed(7);
+
+        let result = sim.run_n_hands(300).unwrap();
+
+        assert!(
+            result.hands_played < 300,
+            "tournament mode should stop early on a bust, played {}",
+            result.hands_played
+        );
+    }
+
+    /// EPIC-36 acceptance #3: an all-knobs-on config must beat an all-off config
+    /// in a seeded cash-mode arena, reproducibly. Strong pairs real equity with
+    /// position-aware ranges and strict pot-odds discipline; weak keeps the
+    /// proxy, flat ranges, and ignores pot odds (calling far too much).
+    #[cfg(feature = "equity")]
+    #[test]
+    fn strong_decision_config_beats_weak_in_cash_bench() {
+        use crate::bot::decision_config::{EquityMode, RangeMode};
+        use crate::bot::profile::BotProfile;
+
+        let mut strong = BotProfile::gto();
+        strong.name = "strong".into();
+        strong.decision.equity = EquityMode::Fast { samples: 500 };
+        strong.decision.ranges = RangeMode::PositionAware;
+        strong.decision.pot_odds.discipline = 1.0;
+
+        let mut weak = BotProfile::gto();
+        weak.name = "weak".into();
+        weak.decision.pot_odds.discipline = 0.0;
+
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("strong".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("weak".to_string(), 10_000)),
+        ]);
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let bots = vec![(0u8, strong), (1u8, weak)];
+        let mut sim = SimTable::with_rule_based(table, bots)
+            .with_cash_mode(10_000)
+            .with_seed(42);
+
+        let result = sim.run_n_hands(1_000).unwrap();
+
+        let strong_net = result.net_chips[&0];
+        let weak_net = result.net_chips[&1];
+        assert_eq!(strong_net + weak_net, 0, "cash deltas must conserve");
+        assert!(
+            strong_net > weak_net,
+            "all-on config must beat all-off: strong={strong_net} weak={weak_net}"
+        );
     }
 }

@@ -27,8 +27,10 @@ use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::six::Six;
 use crate::bot::betting_strategy::BettingStrategy;
+use crate::bot::decision_config::{EquityMode, RangeMode};
 use crate::bot::player_action::PlayerAction;
 use crate::bot::profile::BotProfile;
+use crate::bot::range_strategy::RangeStrategy;
 use crate::bot::table_snapshot::TableSnapshot;
 use crate::games::betting_structure::{BetTier, BettingStructure};
 
@@ -171,6 +173,15 @@ impl RuleBasedDecider {
             return PlayerAction::Check;
         }
 
+        // Exploit knob: when enabled and an opponent-stats registry is attached,
+        // adjust the profile from aggregate opponent tendencies before deciding.
+        // A no-op when the knob is Off or no registry is present, so opponent
+        // identity never leaks into the decision.
+        #[cfg(feature = "player-stats")]
+        let exploit_adjusted = exploit_profile(profile, state);
+        #[cfg(feature = "player-stats")]
+        let profile: &BotProfile = exploit_adjusted.as_deref().unwrap_or(profile);
+
         // Resolve position-aware strategy; falls back to flat betting_strategy when
         // no Playbook entry exists for this table size / position.
         let strategy = state.position().map_or(&profile.betting_strategy, |pos| {
@@ -205,6 +216,11 @@ impl RuleBasedDecider {
                 #[allow(clippy::cast_precision_loss)]
                 let pot_odds = state.to_call as f64 / (state.pot + state.to_call) as f64;
 
+                // pot_odds knob: `discipline` scales the call threshold. 1.0 is
+                // the strict break-even call (historical behavior); 0.0 ignores
+                // pot odds entirely (looser, weaker).
+                let call_threshold = pot_odds * profile.decision.pot_odds.discipline;
+
                 if equity > pot_odds * 2.0 {
                     // Strong hand: raise with probability proportional to aggression so
                     // that two bots with strong hands don't raise each other indefinitely.
@@ -216,7 +232,7 @@ impl RuleBasedDecider {
                         }
                     }
                     PlayerAction::Call
-                } else if equity > pot_odds {
+                } else if equity > call_threshold {
                     PlayerAction::Call
                 } else {
                     // Weak hand: bluff-raise or fold.
@@ -449,10 +465,10 @@ fn hand_equity<R: rand::Rng + ?Sized>(profile: &BotProfile, state: &TableSnapsho
         return None;
     }
     if state.phase.is_preflop() {
-        let freq = profile.range_strategy.open_raise_frequency(&state.hole_cards);
+        // Ranges knob: position-aware playbook lookup or the flat range.
+        let freq = preflop_open_frequency(profile, state);
         return Some(if rng.random::<f64>() < freq { 1.0 } else { 0.0 });
     }
-    let combined = format!("{} {}", state.hole_cards, state.board);
     let total = state.hole_cards.len() + state.board.len();
     // EPIC-32 Phase 8: partial-hand heuristic for Stud-family mid-hand
     // (3rd / 4th street) where total is 3 or 4. Returns a coarse strength
@@ -462,13 +478,141 @@ fn hand_equity<R: rand::Rng + ?Sized>(profile: &BotProfile, state: &TableSnapsho
     if state.phase.stud_street_index().is_some() && matches!(total, 3 | 4) {
         return Some(stud_partial_equity(state));
     }
-    let hrv = match total {
+    // Equity knob: real multi-way engine (fast / exact) or the hand-rank proxy.
+    // Fast/Exact fall back to the proxy when the real engine can't answer (no
+    // active villain, non-NLHE hole size, or the `equity` feature is disabled).
+    match profile.decision.equity {
+        EquityMode::Off => proxy_equity(state),
+        EquityMode::Fast { samples } => {
+            real_equity(state, u64::from(samples), rng).or_else(|| proxy_equity(state))
+        }
+        EquityMode::Exact => {
+            real_equity(state, EXACT_EQUITY_SAMPLES, rng).or_else(|| proxy_equity(state))
+        }
+    }
+}
+
+/// Sample budget used for `EquityMode::Exact`.
+///
+/// With unknown (`Random`) villains the engine cannot enumerate exactly, so
+/// "exact" is realised as a high-budget seeded Monte Carlo that approaches the
+/// true multi-way equity. See the EPIC-36 corrigendum.
+const EXACT_EQUITY_SAMPLES: u64 = 100_000;
+
+/// Postflop hand-rank proxy: normalise the best 5-of-N `hand_rank_value` to
+/// `[0.0, 1.0]` where `1.0` is a royal flush and `0.0` is 7-high nothing. This
+/// is the pre-EPIC-36 postflop equity.
+fn proxy_equity(state: &TableSnapshot) -> Option<f64> {
+    let combined = format!("{} {}", state.hole_cards, state.board);
+    let hrv = match state.hole_cards.len() + state.board.len() {
         5 => combined.parse::<Five>().ok().map(|h| h.hand_rank_value()),
         6 => combined.parse::<Six>().ok().map(|h| h.hand_rank_value()),
         7 => combined.parse::<Seven>().ok().map(|h| h.hand_rank_value()),
         _ => None,
     }?;
     Some(1.0 - f64::from(hrv) / 7462.0)
+}
+
+/// Resolves the preflop open-raise frequency for the hero's hole cards.
+///
+/// With `ranges = position_aware` and a playbook entry for the current seat
+/// count and position, the frequency comes from the position-aware range;
+/// otherwise it falls back to the flat `range_strategy.open_raise`. The
+/// position-aware range is reconstructed into a range string and evaluated
+/// through the proven [`RangeStrategy::open_raise_frequency`] so that
+/// plus-notation expansion (`QQ+`) and mixed-frequency suffixes (`JJ:0.95`)
+/// are handled identically to the flat path.
+fn preflop_open_frequency(profile: &BotProfile, state: &TableSnapshot) -> f64 {
+    if matches!(profile.decision.ranges, RangeMode::PositionAware)
+        && let Some(pos) = state.position()
+        && let Some(range) = profile.range_for(state.seat_count, pos, "open_raise")
+    {
+        let range_str = range
+            .combos()
+            .iter()
+            .map(|cw| {
+                if (cw.frequency - 1.0).abs() < f64::EPSILON {
+                    cw.range.clone()
+                } else {
+                    format!("{}:{}", cw.range, cw.frequency)
+                }
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        return RangeStrategy::new(range_str, "", "", 0).open_raise_frequency(&state.hole_cards);
+    }
+    profile.range_strategy.open_raise_frequency(&state.hole_cards)
+}
+
+/// Real multi-way equity for the hero via the [`crate::analysis::equity`]
+/// engine: hero as `Exact`, each active villain as `Random`. Returns `None`
+/// (so the caller falls back to the proxy) when the hero is not a 2-card NLHE
+/// hand, no active villain remains, or the seat count is out of range.
+#[cfg(feature = "equity")]
+fn real_equity<R: rand::Rng + ?Sized>(state: &TableSnapshot, max_samples: u64, rng: &mut R) -> Option<f64> {
+    use crate::analysis::equity::{EquityOptions, EquityRequest, PlayerSpec};
+    use crate::arrays::two::Two;
+    use crate::play::board::Board;
+    use std::str::FromStr;
+
+    if state.hole_cards.len() != 2 {
+        return None;
+    }
+    let hero = Two::from_str(&state.hole_cards.to_string()).ok()?;
+    let board = Board::try_from(state.board.clone()).ok()?;
+    let villains = state
+        .stacks
+        .iter()
+        .filter(|s| s.is_active && s.seat != state.seat)
+        .count();
+    let total = villains + 1;
+    if !(2..=10).contains(&total) {
+        return None;
+    }
+    let mut players = Vec::with_capacity(total);
+    players.push(PlayerSpec::Exact(hero));
+    players.extend(std::iter::repeat_with(|| PlayerSpec::Random).take(villains));
+    let opts = EquityOptions {
+        max_samples,
+        seed: Some(rng.random::<u64>()),
+        ..EquityOptions::default()
+    };
+    let report = EquityRequest { players, board, opts }.compute().ok()?;
+    report.players.first().map(|p| p.equity)
+}
+
+/// Feature-off stub: without the `equity` feature the real engine is absent,
+/// so the equity knob transparently falls back to the proxy.
+#[cfg(not(feature = "equity"))]
+fn real_equity<R: rand::Rng + ?Sized>(_state: &TableSnapshot, _max_samples: u64, _rng: &mut R) -> Option<f64> {
+    None
+}
+
+/// Exploit knob: returns an opponent-adjusted profile when the knob is enabled
+/// **and** an opponent-stats registry is attached, otherwise `None`.
+///
+/// `Light` uses the default sample gates (adjusts only once opponents are
+/// well-sampled); `Heavy` lowers the gates so it adjusts sooner and more
+/// readily. The adjustment reads only aggregate opponent tendencies via
+/// [`crate::bot::exploit::adjust_profile`] — never opponent identity — so the
+/// knob is safe on any run path. The `DecisionConfig` is carried through the
+/// clone, so the other knobs are preserved on the adjusted profile.
+#[cfg(feature = "player-stats")]
+fn exploit_profile(profile: &BotProfile, state: &TableSnapshot) -> Option<Box<BotProfile>> {
+    use crate::bot::decision_config::ExploitMode;
+    use crate::bot::exploit::{ExploitConfig, adjust_profile};
+
+    let config = match profile.decision.exploit {
+        ExploitMode::Off => return None,
+        ExploitMode::Light => ExploitConfig::default(),
+        ExploitMode::Heavy => ExploitConfig {
+            min_hands_light: 15,
+            min_hands_heavy: 25,
+            ..ExploitConfig::default()
+        },
+    };
+    state.opponent_stats?;
+    Some(Box::new(adjust_profile(profile, state, &config)))
 }
 
 /// EPIC-32 Phase 8: discrete partial-hand strength bucket for Stud
@@ -1198,5 +1342,159 @@ mod bot__decider_tests {
                 "seed {seed}: decider must produce identical actions with vs without registry"
             );
         }
+    }
+
+    // ── EPIC-36 Phase 2: graded decision-capability knobs ────────────────────
+
+    use crate::bot::decision_config::{EquityMode, RangeMode};
+
+    /// pot_odds discipline scales the call threshold. With `discipline = 1.0`
+    /// (default) a weak made hand below break-even folds; with `discipline = 0.0`
+    /// pot odds are ignored and the same hand calls.
+    #[test]
+    fn pot_odds_discipline_zero_calls_where_strict_folds() {
+        use rand::SeedableRng;
+        use rand::rngs::SmallRng;
+        // 72o on KQJ: proxy equity ≈ 0.06; pot_odds = 100/400 = 0.25. bluff = 0.
+        let snap = make_snapshot_with_cards("7♠ 2♦", "K♠ Q♦ J♣", 100, 300, crate::games::GamePhase::BettingFlop);
+
+        let mut strict = make_profile(50, 0, 0, 50);
+        strict.decision.pot_odds.discipline = 1.0;
+        let mut loose = make_profile(50, 0, 0, 50);
+        loose.decision.pot_odds.discipline = 0.0;
+
+        for seed in 0u64..40 {
+            let mut rng_s = SmallRng::seed_from_u64(seed);
+            assert_eq!(
+                PlayerAction::Fold,
+                RuleBasedDecider::decide_with_rng(&strict, &snap, &mut rng_s),
+                "discipline 1.0: equity 0.06 < pot_odds 0.25 with bluff 0 must Fold"
+            );
+            let mut rng_l = SmallRng::seed_from_u64(seed);
+            assert_eq!(
+                PlayerAction::Call,
+                RuleBasedDecider::decide_with_rng(&loose, &snap, &mut rng_l),
+                "discipline 0.0: pot odds ignored, equity 0.06 > 0 must Call"
+            );
+        }
+    }
+
+    /// The equity knob replaces the hand-rank proxy with the real multi-way
+    /// engine. An overpair's proxy strength (absolute rank vs a random full
+    /// hand) understates its true equity vs a single opponent's unknown hand.
+    #[cfg(feature = "equity")]
+    #[test]
+    fn equity_exact_exceeds_proxy_for_overpair() {
+        use rand::SeedableRng;
+        use rand::rngs::SmallRng;
+        let snap = make_snapshot_with_cards("A♠ A♥", "2♦ 7♣ 9♠", 0, 200, crate::games::GamePhase::BettingFlop);
+
+        let mut off = make_profile(50, 0, 0, 50);
+        off.decision.equity = EquityMode::Off;
+        let mut exact = make_profile(50, 0, 0, 50);
+        exact.decision.equity = EquityMode::Exact;
+
+        let mut rng = SmallRng::seed_from_u64(42);
+        let proxy = hand_equity(&off, &snap, &mut rng).expect("proxy equity");
+        let mut rng2 = SmallRng::seed_from_u64(42);
+        let real = hand_equity(&exact, &snap, &mut rng2).expect("real equity");
+
+        assert!(proxy < 0.65, "overpair proxy should understate: {proxy}");
+        assert!(real > 0.75, "real overpair equity vs 1 villain should be high: {real}");
+        assert!(real > proxy, "equity knob must raise the estimate: {real} !> {proxy}");
+    }
+
+    /// Position-aware ranges must consult the playbook, producing a different
+    /// open frequency than the flat range for at least one hand.
+    #[test]
+    fn position_aware_ranges_differ_from_flat() {
+        use crate::cards::Cards;
+        use std::str::FromStr;
+        // gto ships a 6-max playbook; seat 0 on the button in 6-max.
+        let mut snap = make_snapshot(0);
+        snap.seat_count = 6;
+        snap.dealer_button = Some(0);
+        snap.logical_seat = Some(0);
+        snap.phase = crate::games::GamePhase::BettingPreFlop;
+
+        let mut flat = BotProfile::gto();
+        flat.decision.ranges = RangeMode::Flat;
+        let mut pa = BotProfile::gto();
+        pa.decision.ranges = RangeMode::PositionAware;
+
+        let hands = [
+            "A♠ 5♠", "K♠ 9♠", "Q♠ 8♠", "J♠ 7♠", "7♠ 6♠", "5♠ 4♠", "T♠ 8♠", "9♦ 8♦", "A♦ 2♦", "K♥ T♠",
+        ];
+        let mut differs = false;
+        for h in hands {
+            snap.hole_cards = Cards::from_str(h).unwrap();
+            let f = preflop_open_frequency(&flat, &snap);
+            let p = preflop_open_frequency(&pa, &snap);
+            if (f - p).abs() > 1e-9 {
+                differs = true;
+                break;
+            }
+        }
+        assert!(differs, "position-aware ranges must differ from flat for some hand");
+    }
+
+    /// A profile with no playbook falls back to the flat range even when
+    /// `ranges = position_aware`, so its open frequencies are unchanged.
+    #[test]
+    fn position_aware_without_playbook_matches_flat() {
+        use crate::cards::Cards;
+        use std::str::FromStr;
+        let mut snap = make_snapshot(0);
+        snap.seat_count = 6;
+        snap.dealer_button = Some(0);
+        snap.logical_seat = Some(0);
+        snap.phase = crate::games::GamePhase::BettingPreFlop;
+
+        // maniac() has no playbook.
+        let flat = BotProfile::maniac();
+        let mut pa = BotProfile::maniac();
+        pa.decision.ranges = RangeMode::PositionAware;
+
+        for h in ["A♠ A♥", "7♠ 2♦", "K♠ Q♦"] {
+            snap.hole_cards = Cards::from_str(h).unwrap();
+            let f = preflop_open_frequency(&flat, &snap);
+            let p = preflop_open_frequency(&pa, &snap);
+            assert!((f - p).abs() < 1e-9, "no playbook: position_aware must match flat for {h}");
+        }
+    }
+
+    #[cfg(feature = "player-stats")]
+    #[test]
+    fn exploit_off_returns_none_and_heavy_engages_with_stats() {
+        use crate::analysis::player_stats::StatsRegistry;
+        use crate::bot::decision_config::ExploitMode;
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+        ]);
+        let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        let registry = StatsRegistry::new();
+        let snap = TableSnapshot::from_table_with_stats(&table, 0, &registry);
+
+        let mut p = BotProfile::tight_passive();
+        assert!(exploit_profile(&p, &snap).is_none(), "exploit Off must not adjust");
+        p.decision.exploit = ExploitMode::Heavy;
+        assert!(
+            exploit_profile(&p, &snap).is_some(),
+            "exploit Heavy with a registry attached must engage the adjust path"
+        );
+    }
+
+    #[cfg(feature = "player-stats")]
+    #[test]
+    fn exploit_heavy_without_stats_returns_none() {
+        use crate::bot::decision_config::ExploitMode;
+        let snap = make_snapshot(0); // no opponent_stats attached
+        let mut p = BotProfile::tight_passive();
+        p.decision.exploit = ExploitMode::Heavy;
+        assert!(
+            exploit_profile(&p, &snap).is_none(),
+            "exploit knob must no-op when no stats registry is attached"
+        );
     }
 }

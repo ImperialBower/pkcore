@@ -7,6 +7,7 @@
 //! YAML support requires the **`bot-profiles`** feature flag.
 
 use crate::bot::betting_strategy::BettingStrategy;
+use crate::bot::decision_config::DecisionConfig;
 use crate::bot::playbook::Playbook;
 use crate::bot::range_strategy::RangeStrategy;
 use crate::bot::weighted_range::WeightedRange;
@@ -230,6 +231,14 @@ pub struct BotProfile {
     /// profiles; existing NLHE YAML round-trips unchanged.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub betting_structure: Option<BettingStructure>,
+    /// Graded decision-capability knobs (EPIC-36).
+    ///
+    /// Each knob defaults to the historical decider behavior, so a profile
+    /// that omits `decision:` — or sets every knob to its default — plays
+    /// exactly as it did before this field was added. Profiles with a default
+    /// [`DecisionConfig`] serialize identically to before this field existed.
+    #[serde(default, skip_serializing_if = "DecisionConfig::is_default")]
+    pub decision: DecisionConfig,
 }
 
 impl BotProfile {
@@ -267,6 +276,7 @@ impl BotProfile {
             betting_strategy,
             playbook: None,
             betting_structure: None,
+            decision: DecisionConfig::default(),
         }
     }
 
@@ -1318,6 +1328,50 @@ mod bot__profile_tests {
 
     /// The three constructor-backed profiles must be byte-identical to their
     /// YAML files after a round-trip through deserialization.
+    #[test]
+    fn decision_defaults_to_config_default() {
+        // A profile built from a named constructor carries the default
+        // (all-off) DecisionConfig, so its decisions are unchanged by EPIC-36.
+        use crate::bot::decision_config::DecisionConfig;
+        assert_eq!(BotProfile::gto().decision, DecisionConfig::default());
+        assert!(BotProfile::maniac().decision.is_default());
+    }
+
+    #[cfg(feature = "bot-profiles")]
+    #[test]
+    fn profile_without_decision_omits_yaml_key() {
+        // Backward compatibility: a profile with a default DecisionConfig must
+        // not gain a `decision:` key in its YAML.
+        let yaml = BotProfile::maniac().to_yaml_string().unwrap();
+        assert!(!yaml.contains("decision"), "default-decision profile should not emit decision key");
+    }
+
+    #[cfg(feature = "bot-profiles")]
+    #[test]
+    fn profile_with_decision_round_trips() {
+        use crate::bot::decision_config::{DecisionConfig, EquityMode, RangeMode};
+        let mut p = BotProfile::gto();
+        p.decision = DecisionConfig {
+            equity: EquityMode::Exact,
+            ranges: RangeMode::PositionAware,
+            ..DecisionConfig::default()
+        };
+        let yaml = p.to_yaml_string().unwrap();
+        assert!(yaml.contains("decision"), "non-default decision must be emitted");
+        let loaded = BotProfile::from_yaml_str(&yaml).unwrap();
+        assert_eq!(p, loaded);
+    }
+
+    #[cfg(all(feature = "bot-profiles", not(target_arch = "wasm32")))]
+    #[test]
+    fn existing_yaml_without_decision_deserializes_to_default() {
+        // Every existing profile file omits `decision:`; it must load with the
+        // default config, leaving behavior unchanged.
+        use crate::bot::decision_config::DecisionConfig;
+        let p = BotProfile::from_file("data/bots/tight_aggressive.yaml").unwrap();
+        assert_eq!(p.decision, DecisionConfig::default());
+    }
+
     #[cfg(all(feature = "bot-profiles", not(target_arch = "wasm32")))]
     #[test]
     fn data_bots_constructors_match_files() {
