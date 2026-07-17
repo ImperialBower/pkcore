@@ -2,6 +2,7 @@
 
 pub mod betting_strategy;
 pub mod decider;
+pub mod decision_config;
 #[cfg(feature = "player-stats")]
 pub mod exploit;
 #[cfg(feature = "player-stats")]

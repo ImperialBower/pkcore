@@ -5,6 +5,32 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-07-17
+
+EPIC-36: configurable bot capabilities. Adds graded decision-capability knobs to
+`BotProfile` and a seeded cash-game bench for ranking profiles by result.
+
+### Added
+
+- **`BotProfile.decision: DecisionConfig` — graded decision-capability knobs.** New
+  `bot::decision_config` module (`DecisionConfig`, `EquityMode`, `RangeMode`,
+  `PotOddsConfig`) lets a profile dial equity estimation (proxy / Monte-Carlo /
+  exact), range awareness (flat / position-aware), and pot-odds discipline
+  independently. Every knob defaults to the historical decider behavior.
+- **`examples/bot_capability_bench.rs`** — seeded, fixed-stack cash game that ranks
+  YAML-configured profiles by chips per 100 hands, plus reference
+  `data/bots/strong_all_on.yaml` and `data/bots/weak_all_off.yaml` configs
+  (`cargo run --example bot_capability_bench` for the built-in strong-vs-weak pair).
+
+### Changed (breaking)
+
+- **`BotProfile` gained the public `decision` field.** Because `BotProfile` is
+  constructible with a struct literal, downstream code that builds one field-by-field
+  must now supply `decision` (or spread `..Default::default()` / use `BotProfile::new`,
+  which fills it with the default). **Wire format is unchanged**: the field is
+  `#[serde(default, skip_serializing_if = "DecisionConfig::is_default")]`, so existing
+  profile YAML round-trips identically and a default `decision` serializes to nothing.
+
 ## [0.2.1] - 2026-07-09
 
 Dependency-hygiene patch release. No public API, behavior, or wire-format changes:

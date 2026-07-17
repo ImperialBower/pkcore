@@ -179,6 +179,9 @@ pub use crate::casino::session::PokerSession;
 
 // bot
 pub use crate::bot::betting_strategy::BettingStrategy;
+pub use crate::bot::decision_config::{
+    DecisionConfig, EquityMode, ExploitMode, PotOddsConfig, PreflopCharts, RangeMode, Toggle,
+};
 pub use crate::bot::playbook::{Playbook, PlaybookEntry};
 pub use crate::bot::position_ranges::{ActionRanges, PositionRanges};
 pub use crate::bot::positional_betting::PositionalBetting;
