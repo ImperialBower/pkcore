@@ -1342,7 +1342,7 @@ mod bot__decider_tests {
 
     // ── EPIC-36 Phase 2: graded decision-capability knobs ────────────────────
 
-    use crate::bot::decision_config::{EquityMode, RangeMode};
+    use crate::bot::decision_config::RangeMode;
 
     /// pot_odds discipline scales the call threshold. With `discipline = 1.0`
     /// (default) a weak made hand below break-even folds; with `discipline = 0.0`
@@ -1381,6 +1381,7 @@ mod bot__decider_tests {
     #[cfg(feature = "equity")]
     #[test]
     fn equity_exact_exceeds_proxy_for_overpair() {
+        use crate::bot::decision_config::EquityMode;
         use rand::SeedableRng;
         use rand::rngs::SmallRng;
         let snap = make_snapshot_with_cards("A♠ A♥", "2♦ 7♣ 9♠", 0, 200, crate::games::GamePhase::BettingFlop);

@@ -172,6 +172,10 @@ name = "bcrepl"
 required-features = ["equity"]
 
 [[example]]
+name = "bot_capability_bench"
+required-features = ["bot-profiles"]
+
+[[example]]
 name = "bot_selfplay"
 required-features = ["bot-profiles", "hand-histories"]
 
