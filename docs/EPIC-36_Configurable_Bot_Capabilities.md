@@ -267,6 +267,36 @@ chips/100 comparison toward survivors. EPIC-36 adds an opt-in cash mode
 (fixed-stack reset per hand) to `SimTable` so strategy comparisons are clean, or
 aggregates many short tournaments if a reset proves invasive.
 
+### Reference profiles: `strong_all_on` / `weak_all_off`
+
+The two configs under `data/bots/` are not general-purpose personas — they are the
+matched control pair that anchors the strength-ordering verification. Both start
+from the **same `gto` base** (identical `range_strategy` / `betting_strategy`), and
+differ *only* in their `decision:` block, with every knob pinned to opposite
+extremes:
+
+| knob | `strong_all_on` | `weak_all_off` |
+|------|-----------------|----------------|
+| `equity` | `fast` (real multi-way Monte Carlo) | `off` (hand-rank proxy) |
+| `ranges` | `position_aware` (playbook lookup) | `flat` |
+| `pot_odds.discipline` | `1.0` (fold below break-even) | `0.0` (pot odds ignored) |
+
+Holding the base strategy fixed is the point: because the *only* variable between the
+two bots is the decision-capability layer, any chips/100 gap the bench reports is
+attributable to the knobs in aggregate, not to different opening ranges or bet
+sizing. That makes the pair a clean upper/lower bound — "every capability on" vs
+"every capability off" over one strategy — rather than two hand-tuned opponents whose
+edge could come from anywhere. The built-in `tight_passive` / `loose_aggressive` /
+`gto` profiles vary base strategy *and* would carry default knobs, so they can't
+isolate the knobs' effect the way this pair does.
+
+The profiles are emitted (not hand-written) by the bench itself
+(`cargo run --example bot_capability_bench -- --emit`), so they always reflect the
+`strong_profile()` / `weak_profile()` constructors in the example and never drift
+from them. Their range numbers are inherited verbatim from `BotProfile::gto()` and
+carry no independent tuning intent — only the `decision:` block is meaningful for
+this comparison.
+
 ---
 
 ## Work Items
