@@ -242,7 +242,16 @@ impl Confidence {
 /// Per-`Uuid` registry of [`PlayerStats`].
 ///
 /// Build it up by feeding completed hands via [`StatsRegistry::ingest_hand`]
-/// or whole sessions via [`StatsRegistry::ingest_collection`].
+/// or whole sessions via [`StatsRegistry::ingest_collection`], or reconstruct
+/// one from precomputed stats via [`StatsRegistry::insert`] /
+/// `FromIterator<(Uuid, PlayerStats)>`.
+///
+/// The registry is `Serialize`/`Deserialize`, so it can be transported across
+/// a process or network boundary and rebuilt into an observationally equal
+/// value on the other side. Only the per-player stats travel: the optional
+/// persistence backend (`player-stats-persistence` feature) is skipped, so a
+/// deserialized registry has no attached store — persistence stays an
+/// explicit [`Self::with_store`] opt-in on the receiving side.
 ///
 /// # Examples
 ///
@@ -252,14 +261,18 @@ impl Confidence {
 /// let registry = StatsRegistry::new();
 /// assert!(registry.iter().next().is_none());
 /// ```
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct StatsRegistry {
     players: HashMap<Uuid, PlayerStats>,
     /// Optional persistence backend.  Populated by
     /// [`Self::with_store`]; eagerly read at construction and flushed on
     /// `Drop` and on explicit [`Self::flush`]. Only available when the
     /// `player-stats-persistence` feature is enabled.
+    ///
+    /// Never serialized: a live trait object has no meaningful wire form,
+    /// and a deserialized registry deliberately arrives store-less.
     #[cfg(feature = "player-stats-persistence")]
+    #[serde(skip)]
     store: Option<Box<dyn crate::analysis::player_stats_store::PlayerStatsStore>>,
 }
 
@@ -274,6 +287,38 @@ impl StatsRegistry {
     #[must_use]
     pub fn get(&self, id: Uuid) -> Option<&PlayerStats> {
         self.players.get(&id)
+    }
+
+    /// Inserts (or replaces) the stats for `id`, bypassing ingestion.
+    ///
+    /// This is the row-level reconstruction path: use it to rebuild a
+    /// registry from precomputed [`PlayerStats`] — e.g. rows loaded from a
+    /// database, produced by a batch aggregation, or received one player at
+    /// a time across a process boundary. For whole-registry transport,
+    /// serialize the registry itself; for bulk reconstruction from pairs,
+    /// collect into a registry via `FromIterator`.
+    ///
+    /// Returns the previous stats for `id`, if any were present.
+    ///
+    /// # Examples
+    ///
+    /// Ship stats across a boundary and rebuild on the other side:
+    ///
+    /// ```
+    /// use pkcore::analysis::player_stats::{PlayerStats, StatsRegistry};
+    /// use uuid::Uuid;
+    ///
+    /// // Recording side: stats computed elsewhere (ingest, DB, aggregation…).
+    /// let villain = Uuid::new_v4();
+    /// let stats = PlayerStats { hands_dealt: 120, hands_voluntarily_played: 40, ..Default::default() };
+    ///
+    /// // Deciding side: rebuild the registry without re-ingesting hands.
+    /// let mut registry = StatsRegistry::new();
+    /// assert_eq!(None, registry.insert(villain, stats.clone()));
+    /// assert_eq!(Some(&stats), registry.get(villain));
+    /// ```
+    pub fn insert(&mut self, id: Uuid, stats: PlayerStats) -> Option<PlayerStats> {
+        self.players.insert(id, stats)
     }
 
     /// Iterates over `(id, stats)` pairs.
@@ -621,6 +666,37 @@ impl StatsRegistry {
     }
 }
 
+/// Builds a registry from `(Uuid, PlayerStats)` pairs — the inverse of
+/// [`StatsRegistry::iter`].
+///
+/// The result is indistinguishable from a registry whose stats were reached
+/// via ingestion: same `len()`, same `get(id)` for every pair. Later pairs
+/// with a duplicate `Uuid` replace earlier ones, matching
+/// [`StatsRegistry::insert`] semantics.
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::analysis::player_stats::{PlayerStats, StatsRegistry};
+/// use uuid::Uuid;
+///
+/// let rows = vec![
+///     (Uuid::new_v4(), PlayerStats { hands_dealt: 50, ..Default::default() }),
+///     (Uuid::new_v4(), PlayerStats { hands_dealt: 75, ..Default::default() }),
+/// ];
+/// let registry: StatsRegistry = rows.into_iter().collect();
+/// assert_eq!(2, registry.len());
+/// ```
+impl FromIterator<(Uuid, PlayerStats)> for StatsRegistry {
+    fn from_iter<I: IntoIterator<Item = (Uuid, PlayerStats)>>(iter: I) -> Self {
+        let mut registry = Self::new();
+        for (id, stats) in iter {
+            registry.insert(id, stats);
+        }
+        registry
+    }
+}
+
 // ── Persistence (Phase 4) ──────────────────────────────────────────────────
 
 #[cfg(feature = "player-stats-persistence")]
@@ -710,17 +786,6 @@ fn increment(counts: &mut ActionCounts, action: &ActionType) {
         ActionType::Raise => counts.raises += 1,
         ActionType::AllIn => counts.all_ins += 1,
         ActionType::Post => {} // forced bets not counted in voluntary stats
-    }
-}
-
-// ── Test helpers ──────────────────────────────────────────────────────────────
-
-#[cfg(test)]
-impl StatsRegistry {
-    /// Inserts `stats` directly for `id`, bypassing ingestion.
-    /// Only available in test builds; used by exploit-layer tests.
-    pub fn insert_for_test(&mut self, id: Uuid, stats: PlayerStats) {
-        self.players.insert(id, stats);
     }
 }
 
@@ -841,6 +906,77 @@ mod tests {
             analysis: None,
             shuffled_deck: None,
         }
+    }
+
+    #[test]
+    fn stats_registry_serde_round_trip() {
+        let btn = id();
+        let sb = id();
+        let bb = id();
+        let mut original = StatsRegistry::new();
+        original.ingest_hand(&build_simple_hand(btn, sb, bb));
+        original.ingest_hand(&build_simple_hand(bb, btn, sb));
+
+        let json = serde_json::to_string(&original).expect("serialize registry");
+        let rebuilt: StatsRegistry = serde_json::from_str(&json).expect("deserialize registry");
+
+        assert_eq!(original.len(), rebuilt.len());
+        for (uuid, stats) in original.iter() {
+            assert_eq!(Some(stats), rebuilt.get(*uuid));
+        }
+    }
+
+    #[cfg(feature = "player-stats-persistence")]
+    #[test]
+    fn stats_registry_deserialized_has_no_store() {
+        let btn = id();
+        let sb = id();
+        let bb = id();
+        let mut original = StatsRegistry::new();
+        original.ingest_hand(&build_simple_hand(btn, sb, bb));
+
+        let json = serde_json::to_string(&original).expect("serialize registry");
+        let rebuilt: StatsRegistry = serde_json::from_str(&json).expect("deserialize registry");
+
+        assert!(rebuilt.store.is_none());
+        assert!(rebuilt.flush().is_ok());
+    }
+
+    #[test]
+    fn stats_registry_from_iter_matches_ingest() {
+        let btn = id();
+        let sb = id();
+        let bb = id();
+        let mut ingested = StatsRegistry::new();
+        ingested.ingest_hand(&build_simple_hand(btn, sb, bb));
+
+        let rows: Vec<(Uuid, PlayerStats)> = ingested.iter().map(|(uuid, stats)| (*uuid, stats.clone())).collect();
+        let rebuilt: StatsRegistry = rows.into_iter().collect();
+
+        assert_eq!(ingested.len(), rebuilt.len());
+        for (uuid, stats) in ingested.iter() {
+            assert_eq!(Some(stats), rebuilt.get(*uuid));
+        }
+    }
+
+    #[test]
+    fn stats_registry_insert_overwrites() {
+        let player = id();
+        let mut registry = StatsRegistry::new();
+
+        let first = PlayerStats {
+            hands_dealt: 10,
+            ..Default::default()
+        };
+        let second = PlayerStats {
+            hands_dealt: 99,
+            ..Default::default()
+        };
+
+        assert_eq!(None, registry.insert(player, first.clone()));
+        assert_eq!(Some(first), registry.insert(player, second.clone()));
+        assert_eq!(Some(&second), registry.get(player));
+        assert_eq!(1, registry.len());
     }
 
     #[test]
