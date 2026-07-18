@@ -58,12 +58,21 @@ with no re-ingestion and no full hand-history transfer.
 
 | Component | Status |
 |---|---|
-| `Serialize`/`Deserialize` on `StatsRegistry` (`#[serde(skip)]` store) | Planned |
-| `pub fn insert(&mut self, Uuid, PlayerStats)` | Planned |
-| `impl FromIterator<(Uuid, PlayerStats)>` | Planned |
-| Round-trip + reconstruction tests | Planned |
-| Doc-test + rustdoc on the new surface | Planned |
-| Feature-gating audit (`player-stats` on/off, persistence on/off) | Planned |
+| `Serialize`/`Deserialize` on `StatsRegistry` (`#[serde(skip)]` store) | ✅ Done |
+| `pub fn insert(&mut self, Uuid, PlayerStats)` | ✅ Done |
+| `impl FromIterator<(Uuid, PlayerStats)>` | ✅ Done |
+| Round-trip + reconstruction tests | ✅ Done |
+| Doc-test + rustdoc on the new surface | ✅ Done |
+| Feature-gating audit (`player-stats` on/off, persistence on/off) | ✅ Done |
+
+> **Implementation note (deviation from the Design sketch):** the
+> `#[cfg_attr(feature = "player-stats", …)]` gating turned out to be
+> unnecessary — the whole `player_stats` module is already
+> `#[cfg(feature = "player-stats")]` (`src/analysis/mod.rs:20`), so the
+> derives are written plainly (matching `PlayerStats` at `:54`) and the
+> `store` field carries a plain `#[serde(skip)]`. Same semantics, less
+> attribute noise. `insert_for_test` was deleted outright; its five
+> exploit-layer callers now use the public `insert`.
 
 ---
 
@@ -167,40 +176,40 @@ field that is itself persistence-gated, so it is never emitted in a
 
 ### Phase 0 — Prerequisites & feature gating
 
-- [ ] **0a.** Confirm `serde` (with `derive`) is a non-optional dep available
+- [x] **0a.** Confirm `serde` (with `derive`) is a non-optional dep available
   under `player-stats` — it already backs `PlayerStats` derives
   (`src/analysis/player_stats.rs:54`); no `Cargo.toml` change expected.
-- [ ] **0b.** Confirm the field-level `#[cfg_attr(feature = "player-stats", serde(skip))]`
+- [x] **0b.** Confirm the field-level `#[cfg_attr(feature = "player-stats", serde(skip))]`
   on `store` compiles with `--features player-stats` and with
   `--features player-stats-persistence`.
 
 ### Phase 1 — Serialize / Deserialize the registry
 
-- [ ] **1.** Add the `#[cfg_attr(feature = "player-stats", derive(Serialize, Deserialize))]`
+- [x] **1.** Add the `#[cfg_attr(feature = "player-stats", derive(Serialize, Deserialize))]`
   to `StatsRegistry` and the `serde(skip)` on `store`
   (`src/analysis/player_stats.rs:255`).
-- [ ] **2.** Unit test `stats_registry_serde_round_trip`: ingest ≥2 players'
+- [x] **2.** Unit test `stats_registry_serde_round_trip`: ingest ≥2 players'
   hands, serialize to JSON, deserialize, assert `len()` and every `get(id)`
   match the original.
-- [ ] **3.** Unit test `stats_registry_deserialized_has_no_store` (persistence
+- [x] **3.** Unit test `stats_registry_deserialized_has_no_store` (persistence
   build): a deserialized registry has `store == None` and `flush()` is a no-op.
 
 ### Phase 2 — Public reconstruction
 
-- [ ] **4.** Add `pub fn insert` and `impl FromIterator<(Uuid, PlayerStats)>`
+- [x] **4.** Add `pub fn insert` and `impl FromIterator<(Uuid, PlayerStats)>`
   (`src/analysis/player_stats.rs`).
-- [ ] **5.** Point `insert_for_test` (`:722`) at `insert` (delegate) or delete it
+- [x] **5.** Point `insert_for_test` (`:722`) at `insert` (delegate) or delete it
   and migrate its callers in the exploit-layer tests.
-- [ ] **6.** Unit test `stats_registry_from_iter_matches_ingest`: build a
+- [x] **6.** Unit test `stats_registry_from_iter_matches_ingest`: build a
   registry by ingesting hands, collect `iter()` into a `Vec`, rebuild via
   `FromIterator`, assert the two are observationally equal.
 
 ### Phase 3 — Docs & downstream note
 
-- [ ] **7.** Rustdoc + a doc-test on `insert` / the serde round-trip showing the
+- [x] **7.** Rustdoc + a doc-test on `insert` / the serde round-trip showing the
   transport use case (serialize on one side, deserialize + `from_table_with_stats`
   on the other).
-- [ ] **8.** Note in `docs/EPIC-26_Player_Stats.md` (or its Status) that the
+- [x] **8.** Note in `docs/EPIC-26_Player_Stats.md` (or its Status) that the
   registry is now transportable; flip this EPIC's Status rows as work lands.
 
 ---

@@ -17,6 +17,7 @@
 | Round-trip test `tests/player_stats_consistency.rs` | ✅ Done |
 | Optional persistence: `PlayerStatsStore` trait + `YamlPlayerStatsStore` | ✅ Done (gated on `player-stats-persistence`, default-on; opt out via `default-features = false`) |
 | Doc (`docs/EPIC-26_Player_Stats.md`) | ✅ Done (this file) |
+| `StatsRegistry` transportable: `Serialize`/`Deserialize` (store skipped) + `insert` + `FromIterator<(Uuid, PlayerStats)>` | ✅ Done (EPIC-26a — registry round-trips as a value across process boundaries) |
 
 **Phase summary:** Phase 1 ✅ · Phase 2 ✅ · Phase 3 ✅ · Phase 4 ✅ · Phase 5a (query helpers) ✅ · Phase 5b (example) ✅ · Phase 5c (consistency test) ✅
 
