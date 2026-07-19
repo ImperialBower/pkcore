@@ -26,6 +26,7 @@ A running poker table service where:
 | [pkdealer](https://github.com/ImperialBower/pkdealer) | Active (Phase 1 complete) | All 15 `DealerService` RPCs (`SeatPlayer`, `StartHand`, `Act`, `GetStatus`, `StreamEvents`, etc.) wired to `pkcore::Dealer`; `tokio::sync::broadcast` event streaming working; workspace = `proto`, `service`, `client` crates |
 | pkbot | Consolidated into pkcore | Bot personality work (originally planned as a standalone crate) lives in `pkcore::bot` — `BotProfile`, `Playbook`, `RuleBasedDecider`, `ExploitativeDecider`, `SimTable`, YAML profiles in `data/bots/` |
 | [pkgto-web](https://github.com/ImperialBower/pkgto-web) | Active | WASM preflop equity analyzer; single `analyze_gto` function, deployed to GitHub Pages |
+| [pkgate](https://github.com/ImperialBower/pkgate) | Planned | Networking & security wrapper (EPIC-50–59): `pkgate_tower` (Connect-RPC/`tonic-web` auth middleware), `pkgate_tokens` (`TokenVerifier`: shared-secret + OIDC), `pkgate_client` (universal PKCE/device-code/client-credentials login for native/WASM/mobile). Consumes pkcore's `Principal` seam |
 
 **pkdealer Phase 1 is complete:** the full `DealerService` is implemented
 on top of `pkcore::Dealer` and two clients can play a hand end-to-end
@@ -371,12 +372,29 @@ frequency-annotated range string that feeds into `analyze_gto`.
 | [EPIC-24](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-24_Demo.md) | Demo Packaging — Docker Compose full stack, `demo.sh`, Grafana dashboards, Langfuse, `DEMO.md` | Complete |
 | [EPIC-40 *(pkdealer)*](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-40_Local_LLM_Backend.md) | Local-LLM Backend & Multi-Model Agents — shared `LlmBackend` trait, `pkdealer_agent_ollama`, mock-HTTP backend tests | Complete |
 
+## pkgate Epics
+
+The networking & security wrapper suite. Contract/pointer docs live in
+`pkcore/docs/` (pkcore owns the `Principal` seam, EPIC-20–24 style);
+implementation lives in the [`pkgate`](https://github.com/ImperialBower/pkgate)
+workspace. The suite is a **layered trust progression**: demo-grade
+shared-secret → real OIDC identity on a trusted server → the trustless
+EPIC-79 horizon.
+
+| Epic | Topic | Status |
+|------|-------|--------|
+| [EPIC-50](docs/EPIC-50_Transport_Gateway.md) | Transport Unification & Gateway Foundation — Connect RPC (or `tonic-web` fallback) on one port with one `Bearer` header; `pkgate_tower` auth middleware; the pkcore `Principal` newtype + `uuid/v5` + `SessionView::for_principal` redaction seam | Planned |
+| [EPIC-51](docs/EPIC-51_Authentication.md) | Authentication — `TokenVerifier` trait; `SharedSecretVerifier` (POC) + `OidcVerifier` (JWKS, any IdP); `sub → Principal` via `Uuid::new_v5`; PKCE/client-credentials/device-code flow matrix; dual Zitadel + Keycloak compose profiles | Planned |
+| [EPIC-52](docs/EPIC-52_Authorization_Session.md) | Authorization & Session Security — `player`/`spectator`/`table:admin` scopes; coarse edge gate + fine in-kernel visibility gate; seat binding to `Principal` (retires `client_secret`); per-principal rate limiting; rustls TLS | Planned |
+| [EPIC-53](docs/EPIC-53_Platform_Reach.md) | Platform Reach — `pkgate_client` tri-platform (native/WASM/mobile) token acquisition & refresh; one secure-storage rule for tokens + snapshots (Keychain/Keystore, in-memory on web); cross-target CI | Planned |
+
 ### EPIC Numbering Policy
 
 To prevent number collisions across repos, EPICs are namespaced by ten-block:
 
 - **EPIC-00 through EPIC-39** — pkcore-rooted EPICs. Includes pkcore-internal work (`EPIC-25 Range Frequencies`, `EPIC-26 Player Stats`, ...) and cross-repo EPICs where pkcore owns a pointer/contract doc and the downstream repo (pkdealer, pkspectator, pkpy) hosts the implementation (`EPIC-20`–`EPIC-24`).
-- **EPIC-40+** — pkdealer-internal EPICs that don't have a pkcore-side counterpart. `EPIC-40 Local-LLM Backend` is the first; the next pkdealer-internal EPIC is `EPIC-41`.
+- **EPIC-40 through EPIC-49** — pkdealer-internal EPICs that don't have a pkcore-side counterpart. `EPIC-40 Local-LLM Backend` is the first; the next pkdealer-internal EPIC is `EPIC-41`.
+- **EPIC-50 through EPIC-59** — `pkgate`-rooted EPICs (networking & security wrapper). pkcore owns the `Principal`/redaction contract docs (`EPIC-50`–`EPIC-53`); the `pkgate` workspace hosts `pkgate_tower`/`pkgate_tokens`/`pkgate_client`. Next free `pkgate` number: `EPIC-54`.
 - Future downstream repos (`pkspectator`, etc.) get their own ten-block if/when they accumulate internal EPICs — claim the next free block here.
 
 The split keeps `EPIC-NN` unambiguous in any commit message, branch name, or PR title without requiring repo context. Historical note: `EPIC-25` briefly collided (pkcore = Range Frequencies, pkdealer = Local-LLM Backend); pkdealer's was renumbered to EPIC-40 on 2026-05-25.
