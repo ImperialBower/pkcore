@@ -5,6 +5,24 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+EPIC-50 Phase 3: the `Principal` identity seam. A pure, additive newtype that lets
+the future `pkgate` gateway name *who* is acting without the domain kernel learning
+what a token is. Authentication stays entirely at the transport edge; constructing a
+`Principal` verifies nothing. No transport, crypto, or token dependency enters pkcore.
+
+### Added
+
+- **`casino::principal::Principal`** — a `Principal(pub Uuid)` newtype, re-exported
+  from the prelude. It wraps the same `Uuid` that already identifies a `Player` and
+  keys `StatsRegistry`, so it drops into the existing seating, stats, and
+  hand-history machinery without a second identity space. `From` converts both ways,
+  and the serde wire form is byte-identical to that of the bare `Uuid`.
+- **`uuid`'s `v5` feature**, on both the default and wasm32 dependency lines.
+  Nothing in pkcore calls it yet; EPIC-51 uses it to map an OIDC `issuer + sub`
+  pair to a stable `Principal` deterministically, so stats accumulate across logins.
+
 ## [0.3.0] - 2026-07-17
 
 EPIC-36: configurable bot capabilities. Adds graded decision-capability knobs to
