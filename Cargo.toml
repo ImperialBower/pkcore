@@ -35,57 +35,29 @@ default = [
     "store",
     "terminal",
 ]
-## Enables the on-disk storage layer: SQLite-backed HUP results (the `Sqlable`
-## trait, `HUPResult`'s DB query/insert methods, `Connect`) and the
-## zstd-compressed binary card map (`FiveBCM`/`SevenFiveBCM`, `bc_rank_hashmap`,
-## and `SortedHeadsUp::wins`). Pulls in `rusqlite` (bundled SQLite) and `zstd`.
-## Non-wasm only — those dependencies are target-gated, so the store code is
-## always inert on wasm regardless of this flag. On by default; turn it off with
-## `default-features = false` for a storage-free (pure) build. The pure `HUPResult`
-## data type and its CSV/`Display` helpers remain available without the feature.
+## Enables the on-disk storage layer.
 store = ["dep:rusqlite", "dep:zstd"]
-## Enables the interactive terminal layer: `Terminal::pause` (raw-mode key
-## reads) and ANSI colour output in `casino::table` and `analysis::nubibus`.
-## Pulls in `termion` (unix only). With the feature off, colour output falls
-## back to the existing no-op shims and `pause` is unavailable — giving a
-## delivery-agnostic (headless) build. On by default.
+## Enables the interactive terminal layer.
 terminal = ["dep:termion"]
-## When enabled, `SolverResult::save` and `SolverResult::load` use human-readable
-## JSON instead of the default compact binary (postcard) format. Useful for
-## inspecting solver output during development. The explicit `save_json` /
-## `load_json` and `save_binary` / `load_binary` methods are always available
-## regardless of this flag.
+## When enabled, `SolverResult::save` and `SolverResult::load` use human-readable JSON
 debug-json = []
-## Enables the multi-way equity engine in `analysis::equity` (exact enumeration
-## plus seeded Monte Carlo, parallelized with rayon). Pure compute — adds no new
-## dependencies (`rayon` and `rand` are already required). Off by default so
-## library builds stay lean; enable it for the `pkodds` equity service.
+## Enables the pure compute multi-way equity engine in `analysis::equity`
+## (exact enumeration plus seeded Monte Carlo, parallelized with rayon).
 equity = []
-## Enables YAML serialization/deserialization for `BotProfile` and related
-## types in the `bot` module. Adds a `serde_yaml_bw` dependency.
+## Enables YAML serialization/deserialization for `BotProfile` etc
 bot-profiles = ["dep:serde_yaml_bw"]
-## Enables YAML serialization/deserialization for `HandHistory` and related
-## types in the `hand_history` module. Adds a `serde_yaml_bw` dependency.
+## Enables YAML serialization/deserialization for `HandHistory` etc
 hand-histories = ["dep:serde_yaml_bw"]
 ## Enables the per-player aggregator in `analysis::player_stats`
-## (`PlayerStats`, `StatsRegistry`, `Confidence`, derived ratios). EPIC-26.
 player-stats = []
-## Enables on-disk persistence for `StatsRegistry` via `PlayerStatsStore` and
-## `YamlPlayerStatsStore` (one YAML file per player Uuid). Off by default; opt
-## in for multi-session experiments. EPIC-26 Phase 4.
+## Enables on-disk persistence for `StatsRegistry`
 player-stats-persistence = ["player-stats", "dep:serde_yaml_bw"]
-## Enables `ExploitConfig` YAML serialisation and the `ExploitTrainer`
-## gradient-free optimisation loop (EPIC-28).  Requires player-stats and
-## bot-profiles; adds no external optimiser dependency.
+## Enables `ExploitConfig` YAML serialisation
 bot-training = ["player-stats", "bot-profiles", "dep:serde_yaml_bw"]
-## Enables the `pokerbench` module: PokerBench (HuggingFace `RZ412/Pokerbench`
-## scenario model, CSV/JSON loaders, canonical seating, and solver-label scoring.
-## Analysis-only and additive (EPIC-43 Phase 1). Pure parsing — `csv`, `serde`,
-## and `serde_json` are already required, so it adds no new dependencies.
+## Enables the HuggingFace `pokerbench` module.
 pokerbench = []
 ## Enables historical offline generator inputs (e.g. `UNIQUE_HANDS`, the distinct
-## 5-card hand enumeration read from a self-generated file). These have no runtime
-## callers and require self-generated data; kept out of the default published API.
+## 5-card hand enumeration read from a self-generated file).
 generators = []
 
 [dependencies]
@@ -112,7 +84,7 @@ serde_json = "1.0"
 strum = { version = "0.28", features = ["derive"] }
 strum_macros = "0.28"
 thousands = "0.2.0"
-uuid = { version = "1.22", features = ["serde", "v4"] }
+uuid = { version = "1.22", features = ["serde", "v4", "v5"] }
 wincounter = "0.1.5"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -125,7 +97,7 @@ termion = { version = "4.0", optional = true }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 getrandom_v2 = { package = "getrandom", version = "0.2", features = ["js"] }
 getrandom_v3 = { package = "getrandom", version = "0.3", features = ["wasm_js"] }
-uuid = { version = "1.22", features = ["serde", "v4", "js"] }
+uuid = { version = "1.22", features = ["serde", "v4", "v5", "js"] }
 
 [[example]]
 name = "calc"
