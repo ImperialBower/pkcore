@@ -388,14 +388,30 @@ EPIC-79 horizon.
 | [EPIC-52](docs/EPIC-52_Authorization_Session.md) | Authorization & Session Security — `player`/`spectator`/`table:admin` scopes; coarse edge gate + fine in-kernel visibility gate; seat binding to `Principal` (retires `client_secret`); per-principal rate limiting; rustls TLS | Planned |
 | [EPIC-53](docs/EPIC-53_Platform_Reach.md) | Platform Reach — `pkgate_client` tri-platform (native/WASM/mobile) token acquisition & refresh; one secure-storage rule for tokens + snapshots (Keychain/Keystore, in-memory on web); cross-target CI | Planned |
 
+## Showcase & AI-Native Observability Epics
+
+The platform-wide capstone suite (EPIC-60 block). pkcore owns the docs
+(EPIC-20–24 style); implementations land across pkdealer / pktui /
+pkarena0-web. EPIC-60 is the presentation itself — the domain-kernel
+architecture demonstrated live as LLM-risk mitigation, one kernel driving
+three delivery surfaces, and the arena economics of programmatic vs
+AI-driven bots. EPIC-61 supplies its instrumentation: GenAI-semconv spans,
+decision-quality telemetry, and the chips-vs-dollars economic join.
+
+| Epic | Topic | Status |
+|------|-------|--------|
+| [EPIC-60](docs/EPIC-60_Showcase.md) | Platform Showcase — three-act presentation (kernel purity gates + break-it-live; one kernel on browser/terminal/service; the arena ledger of rule bots vs LLM bots); version alignment across pktui/pkarena0-web/pkdealer; timed runbooks + fallback recordings | Planned |
+| [EPIC-61](docs/EPIC-61_AI_Observability.md) | AI-Native Observability — GenAI semconv audit & alignment in `LlmBackend` spans; opt-in content capture; `AgentFidelity` clamp/retry metrics; shadow `BotDecider` baseline divergence; `chip_value_micro_usd` economic join (`net_micro_usd`); House Ledger Grafana dashboard; gated Langfuse eval profile | Planned |
+
 ### EPIC Numbering Policy
 
 To prevent number collisions across repos, EPICs are namespaced by ten-block:
 
 - **EPIC-00 through EPIC-39** — pkcore-rooted EPICs. Includes pkcore-internal work (`EPIC-25 Range Frequencies`, `EPIC-26 Player Stats`, ...) and cross-repo EPICs where pkcore owns a pointer/contract doc and the downstream repo (pkdealer, pkspectator, pkpy) hosts the implementation (`EPIC-20`–`EPIC-24`).
-- **EPIC-40 through EPIC-49** — pkdealer-internal EPICs that don't have a pkcore-side counterpart. `EPIC-40 Local-LLM Backend` is the first; the next pkdealer-internal EPIC is `EPIC-41`.
+- **EPIC-40 through EPIC-49** — downstream-app-internal EPICs. **Block full** as of 2026-07-19: EPIC-40–45 live in pkdealer (Local-LLM Backend, Reproducible Scenarios, Dynamic Arena Runner, PokerBench, Token Accounting, Bot Evaluation Format); EPIC-46–49 live in pkarena0-web (Decider Integration, Adaptive Bots, Real Equity WASM, Bot Lineup Difficulty). Note: `EPIC-41` is doubly used — pkdealer's Reproducible Scenarios and pkodds' equity epic (`docs/RELEASE_AUDIT_0.1.4.md:29`) — the second historical collision.
 - **EPIC-50 through EPIC-59** — `pkgate`-rooted EPICs (networking & security wrapper). pkcore owns the `Principal`/redaction contract docs (`EPIC-50`–`EPIC-53`); the `pkgate` workspace hosts `pkgate_tower`/`pkgate_tokens`/`pkgate_client`. Next free `pkgate` number: `EPIC-54`.
-- Future downstream repos (`pkspectator`, etc.) get their own ten-block if/when they accumulate internal EPICs — claim the next free block here.
+- **EPIC-60 through EPIC-65** — platform-wide showcase & AI-observability EPICs rooted in pkcore (`EPIC-60 Showcase`, `EPIC-61 AI-Native Observability`); docs live here, implementations land across pkdealer/pktui/pkarena0-web. Next free: `EPIC-62`. (`EPIC-66 Serialization` and `EPIC-67 Demons` predate the block policy as pkcore specials and stay put.)
+- Future downstream repos (`pkspectator`, `pktui`, etc.) get their own ten-block if/when they accumulate internal EPICs — claim the next free block here.
 
 The split keeps `EPIC-NN` unambiguous in any commit message, branch name, or PR title without requiring repo context. Historical note: `EPIC-25` briefly collided (pkcore = Range Frequencies, pkdealer = Local-LLM Backend); pkdealer's was renumbered to EPIC-40 on 2026-05-25.
 
