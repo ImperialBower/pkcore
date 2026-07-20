@@ -32,6 +32,14 @@ variant engine and bot/AI tracks. Open `docs/EPIC-NN_*.md` for the status table.
 - EPIC-24 — Demo Packaging
 - EPIC-66 — Serialization
 
+**Showcase / AI observability (60-block, added 2026-07-19)**
+- EPIC-60 — Platform Showcase — the three-act presentation: domain kernel as
+  LLM-risk mitigation, one kernel on three surfaces (pkarena0-web / pktui /
+  pkdealer), and the arena ledger of programmatic vs AI bots
+- EPIC-61 — AI-Native Observability — GenAI semconv spans, decision
+  fidelity/divergence telemetry, chips-vs-dollars economic join, House
+  Ledger dashboard (implementation in pkdealer)
+
 > Narrative/reference EPICs (95–99, 999, Philosophy, Glossary, References,
 > Ramblings, The Answers) are documentation, not actionable work — excluded here.
 
