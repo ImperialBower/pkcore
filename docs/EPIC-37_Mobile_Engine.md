@@ -25,7 +25,7 @@ own downstream EPIC later.
 | `mobile` umbrella feature + documented build profile | Planned |
 | CI: `cargo check` for `aarch64-apple-ios` / `aarch64-linux-android` | Planned |
 | Stdout hygiene — stray `println!` in engine paths → `log` | Planned |
-| `SessionView` / `SeatView` serializable read-out | Planned |
+| `SessionView` / `SeatView` serializable read-out (`view` keyed on `Principal`, per EPIC-50) | ✅ `src/casino/session.rs` — `view(Option<Principal>)`, serde round-trip + redaction tests green |
 | `PlayerAction` serde | Planned |
 | `PokerSession::snapshot` / `restore` (mid-hand suspend/resume) | Planned |
 | `SolveJob` — steppable, cancellable on-device solver | Planned |
@@ -255,14 +255,15 @@ pub struct SeatView {
     pub min_raise_to: usize,
     pub folded: bool,
     pub all_in: bool,
-    /// Populated only when `viewer` matches this seat (or reveal-all).
+    /// Populated only when `viewer` owns this seat (or reveal-all).
     pub hole_cards: Option<String>,
 }
 
 impl PokerSession {
-    /// Render the table from one seat's perspective. `None` = spectator
-    /// (all hole cards hidden); dedicated reveal-all is NOT offered here.
-    pub fn view(&self, viewer: Option<u8>) -> SessionView { /* … */ }
+    /// Render the table from one principal's perspective. `None` =
+    /// spectator (all hole cards hidden); dedicated reveal-all is NOT
+    /// offered here.
+    pub fn view(&self, viewer: Option<Principal>) -> SessionView { /* … */ }
 }
 ```
 
@@ -274,6 +275,21 @@ cards with the already-stable string form (`lib.rs:197-212`,
 visibility in at the source — the same per-seat privacy rule pkdealer's
 `GetStatus` enforces server-side (ROADMAP.md:398-400). Exposing `Table`'s
 public fields through FFI would freeze internal layout into the ABI.
+
+**`view` is keyed on `Principal`, not seat index (EPIC-50 dependency).**
+An earlier draft of this sketch took `Option<u8>`. EPIC-50
+(`docs/EPIC-50_Transport_Gateway.md:240-254`) requires
+`Option<Principal>` — the `Uuid` newtype already landed at
+`src/casino/principal.rs`. A network client presents an identity, not a
+seat index; the function looks up which seat (if any) that principal
+owns via `SeatView::player_id`. This is the *fine* tier of EPIC-50's
+two-tier authorization split: the gateway decides "does this token carry
+`player` scope at all?", pkcore decides "which cards may this principal
+see". Authoring it as `Option<u8>` would force a breaking change the
+moment EPIC-50 Phase 4 lands, so it takes `Principal` from the start.
+EPIC-50 Phase 4a additionally adds `SessionView::for_principal(viewer)`
+on top of this type; a local mobile caller with no gateway simply passes
+the seated player's own id.
 
 Alongside it, add the two one-line derives the boundary needs:
 `PlayerAction` (`src/casino/action.rs:41`) gains
@@ -429,14 +445,23 @@ wrapper — recorded here as the contract the downstream repo consumes:
 - [ ] **2a.** Derive `Serialize, Deserialize` on `PlayerAction`
       (`src/casino/action.rs:41`) and `Winnings`
       (`src/casino/winnings.rs:6`); serde round-trip tests for both.
-- [ ] **2b.** Implement `SeatView`, `SessionView`, and
-      `PokerSession::view(viewer)` composing the existing getters
-      (`table.rs:564,1045,973,834`); hole cards populated only for the
-      viewer's seat.
-- [ ] **2c.** Unit tests: `view_hides_other_seats_hole_cards`,
+- [x] **2b.** Implement `SeatView`, `SessionView`, and
+      `PokerSession::view(viewer: Option<Principal>)` composing the
+      existing getters (`table.rs:564,1045,973,834`); hole cards
+      populated only on the seat whose `player_id` the viewer owns.
+      Signature is fixed by EPIC-50 (see the design note above) — do
+      **not** key it on `Option<u8>`. **Done** (`src/casino/session.rs`):
+      `game_type`/`phase` gained `Serialize, Deserialize` on the source
+      enums (`src/games/mod.rs`), closing the `GameType` serde gap
+      `lib.rs:207` already promised; DTOs re-exported from the prelude.
+- [x] **2c.** Unit tests: `view_reveals_only_owned_seat_hole_cards`,
+      `view_hides_other_principals_hole_cards`,
       `view_spectator_hides_all_hole_cards`,
-      `view_reports_to_call_and_min_raise_mid_street`,
-      `session_view_serde_round_trip`.
+      `view_unseated_principal_sees_no_hole_cards`,
+      `view_never_contains_deck` (the EPIC-50 secrecy invariant),
+      `session_view_serde_round_trip`. **Done.** The original sketch's
+      `view_reports_to_call_and_min_raise_mid_street` still owes a
+      mid-street assertion (deferred with 2d).
 - [ ] **2d.** Verify each variant constructs and completes a hand purely
       through `PokerSession` + `view()` (five smoke tests, one per
       `GameType`, seeded decks via the `rig_deck` pattern from
@@ -561,6 +586,10 @@ wrapper — recorded here as the contract the downstream repo consumes:
   track; unaffected), EPIC-34 (web variant selection — same per-seat
   visibility rule `SessionView` encodes), EPIC-66 (serialization
   policy).
+- **Blocks:** EPIC-50 Phase 4 (`SessionView::for_principal`,
+  `docs/EPIC-50_Transport_Gateway.md:330-339`) — gated until Phase 2b
+  lands `SessionView`. `Principal` itself already exists
+  (`src/casino/principal.rs`), so Phase 2b can consume it today.
 
 ## Verification
 

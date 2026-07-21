@@ -22,6 +22,16 @@ what a token is. Authentication stays entirely at the transport edge; constructi
 - **`uuid`'s `v5` feature**, on both the default and wasm32 dependency lines.
   Nothing in pkcore calls it yet; EPIC-51 uses it to map an OIDC `issuer + sub`
   pair to a stable `Principal` deterministically, so stats accumulate across logins.
+- **`casino::session::SessionView` / `SeatView`** — owned, serializable per-viewer
+  table read-outs (EPIC-37 Phase 2b), re-exported from the prelude.
+  `PokerSession::view(viewer: Option<Principal>)` is the single kernel point where
+  hole-card redaction happens: cards survive only on the seat the viewer's
+  `Principal` owns, `None` is a spectator, and no view ever carries the undealt
+  deck. This is EPIC-50's fine-grained authorization gate, testable with zero
+  network.
+- **`serde::{Serialize, Deserialize}` on `GameType` and `GamePhase`** — needed by
+  `SessionView`; also makes good on the `GameType` wire-stability promise in
+  `lib.rs`.
 
 ## [0.3.0] - 2026-07-17
 

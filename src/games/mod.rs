@@ -1,6 +1,7 @@
 use crate::cards_cell::CardsCell;
 use crate::games::betting_structure::BettingStructure;
 use crate::games::street::{HOLDEM_STREETS, OMAHA_STREETS, RAZZ_STREETS, STUD_HI_STREETS, StreetDescriptor};
+use serde::{Deserialize, Serialize};
 
 pub mod betting_structure;
 pub mod kuhn;
@@ -108,7 +109,7 @@ impl std::fmt::Display for GameFamily {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq, Serialize, Deserialize)]
 #[non_exhaustive] // 0.2.0: new poker variants can be added without breaking downstream matches.
 pub enum GameType {
     #[default]
@@ -247,7 +248,7 @@ impl std::fmt::Display for GameType {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Ord, PartialOrd, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub enum GamePhase {
     #[default]
     Break,

@@ -38,7 +38,7 @@ crate.*
 | pkdealer / pkspectator adopt the layer (behavior-preserving) | Planned | pkdealer, pkspectator |
 | **`Principal` newtype** (pure identity seam) | ✅ Done — `src/casino/principal.rs` | **pkcore** |
 | **`uuid` `v5` feature** (deterministic IdP-sub mapping, EPIC-51) | ✅ Done — both dep lines | **pkcore** |
-| **Per-viewer redaction** `for_principal` on the EPIC-37 `SessionView` | 🔒 Gated — blocked on EPIC-37 | **pkcore** |
+| **Per-viewer redaction** keyed on `Principal` | ✅ Rule landed — `PokerSession::view(Option<Principal>)` (`src/casino/session.rs`, EPIC-37 Phase 2b); DTO-level `SessionView::for_principal` still owed | **pkcore** |
 
 ---
 
@@ -329,14 +329,23 @@ touch this crate.
 
 ### Phase 4 — Redaction seam (pkcore, with EPIC-37)
 
-- [ ] **4a.** Author EPIC-37's `SessionView::view` as
-      `view(&self, viewer: Option<Principal>)` (not `Option<u8>`); add
-      `SessionView::for_principal(viewer)`.
-- [ ] **4b.** Tests: `for_principal_reveals_only_owned_seat_hole_cards`,
+- [x] **4a.** Author EPIC-37's `SessionView::view` as
+      `view(&self, viewer: Option<Principal>)` (not `Option<u8>`).
+      **Done** in EPIC-37 Phase 2b — `PokerSession::view(Option<Principal>)`
+      (`src/casino/session.rs`) is the single point where the hole-card
+      redaction rule now lives in the kernel, keyed on `Principal`. The
+      **remaining** 4a item is a `SessionView::for_principal(&self, viewer)`
+      method **on the DTO itself** — re-redacting an already-materialized
+      view, for a server that holds one full view and fans it out per
+      subscriber. It composes trivially now that the rule exists; the seat
+      ownership it consults is `SeatView::player_id`.
+- [x] **4b.** Tests: the redaction rule is covered where it lives —
+      `view_reveals_only_owned_seat_hole_cards`,
+      `view_spectator_hides_all_hole_cards`, and `view_never_contains_deck`
+      (`src/casino/session.rs`) green. When the DTO-level `for_principal`
+      lands, add its mirror tests (`for_principal_reveals_only_owned_seat_hole_cards`,
       `for_principal_none_is_spectator_hides_all`,
-      `for_principal_never_contains_deck` (structural: the view type has
-      no deck field — a compile-time-adjacent assertion plus a runtime
-      check that no serialized field carries undealt cards).
+      `for_principal_never_contains_deck`).
 
 ### Phase 5 — Registration
 
