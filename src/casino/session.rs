@@ -37,9 +37,12 @@
 use crate::PKError;
 use crate::casino::action::PlayerAction;
 use crate::casino::game::ForcedBets;
+use crate::casino::principal::Principal;
 use crate::casino::table::Table;
 use crate::casino::winnings::Winnings;
-use crate::games::GamePhase;
+use crate::games::{GamePhase, GameType};
+use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 /// Describes the outcome of a single [`PokerSession::next_step`] call.
 ///
@@ -666,6 +669,179 @@ impl PokerSession {
         }
         Ok(())
     }
+
+    /// Renders the table as an owned, serializable [`SessionView`] from the
+    /// perspective of `viewer` (EPIC-37 Phase 2b).
+    ///
+    /// Hole cards survive redaction **only** on the seat whose player the
+    /// `viewer` [`Principal`] owns; every other seat's `hole_cards` is
+    /// `None`. A `None` `viewer` is a spectator, so all hole cards are
+    /// hidden. There is no reveal-all: even at showdown this method never
+    /// exposes another player's cards, and the returned view carries the
+    /// board and seats only — never the undealt deck.
+    ///
+    /// The `viewer` is keyed on [`Principal`], not seat index, so a network
+    /// client's settled identity (EPIC-50) maps to whichever seat it
+    /// currently occupies. A local, single-process caller simply passes the
+    /// seated player's own id.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::principal::Principal;
+    /// use pkcore::casino::session::PokerSession;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+    /// ]);
+    /// let session = PokerSession::new(
+    ///     Table::nlh_from_seats(seats, ForcedBets::new(10, 20))
+    /// );
+    ///
+    /// // A spectator sees no hole cards on any seat.
+    /// let spectator = session.view(None);
+    /// assert!(spectator.seats.iter().all(|s| s.hole_cards.is_none()));
+    /// assert_eq!(spectator.seats.len(), 2);
+    /// ```
+    #[must_use]
+    pub fn view(&self, viewer: Option<Principal>) -> SessionView {
+        let viewer_id = viewer.map(|principal| principal.id());
+
+        let seats = self
+            .table
+            .seats
+            .0
+            .iter()
+            .enumerate()
+            .map(|(index, seat)| {
+                let seat_index = u8::try_from(index).unwrap_or(u8::MAX);
+                let owns_seat = viewer_id.is_some_and(|id| id == seat.player.id);
+
+                SeatView {
+                    seat: seat_index,
+                    player_id: seat.player.id,
+                    chips: seat.player.chips,
+                    to_call: self.table.to_call(seat_index),
+                    min_raise_to: self.table.min_raise_to(),
+                    folded: seat.player.state.is_fold(),
+                    all_in: seat.player.is_all_in(),
+                    hole_cards: if owns_seat { Some(seat.cards.to_string()) } else { None },
+                }
+            })
+            .collect();
+
+        let next_to_act = if self.is_hand_in_progress() && !self.is_hand_complete() {
+            Some(self.table.next_to_act())
+        } else {
+            None
+        };
+
+        SessionView {
+            game_type: self.table.game,
+            phase: self.table.phase,
+            board: self.table.board.to_string(),
+            pot: self.table.effective_pot(),
+            bet: self.table.bet,
+            next_to_act,
+            seats,
+        }
+    }
+}
+
+/// One owned, serializable snapshot of everything a UI renders for a single
+/// seat (EPIC-37 Phase 2b).
+///
+/// `hole_cards` is populated only when the view was rendered for the
+/// principal that owns this seat (see [`PokerSession::view`]); for every
+/// other viewer it is `None`. All card fields use the crate's stable glyph
+/// string encoding (the `lib.rs` wire contract), so the view is transport-
+/// and language-agnostic.
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::casino::session::SeatView;
+///
+/// let hidden = SeatView {
+///     seat: 3,
+///     player_id: uuid::Uuid::nil(),
+///     chips: 1_000,
+///     to_call: 20,
+///     min_raise_to: 40,
+///     folded: false,
+///     all_in: false,
+///     hole_cards: None,
+/// };
+/// assert!(hidden.hole_cards.is_none());
+/// ```
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SeatView {
+    /// Zero-based seat index at the table.
+    pub seat: u8,
+    /// Stable player identity — the same [`Uuid`] a [`Principal`] wraps.
+    pub player_id: Uuid,
+    /// Remaining stack (chips not yet committed this round).
+    pub chips: usize,
+    /// Chips this seat must post to match the current bet.
+    pub to_call: usize,
+    /// Smallest legal raise-to amount for this seat.
+    pub min_raise_to: usize,
+    /// True when this seat has folded out of the current hand.
+    pub folded: bool,
+    /// True when this seat is all-in.
+    pub all_in: bool,
+    /// The stable glyph string of this seat's hole cards, populated only
+    /// for the viewer that owns the seat; `None` for everyone else.
+    pub hole_cards: Option<String>,
+}
+
+/// One owned, serializable snapshot of everything a UI renders for the
+/// whole table, redacted for one viewer (EPIC-37 Phase 2b).
+///
+/// Produced by [`PokerSession::view`]. It composes the existing table
+/// getters into a flat DTO rather than serializing [`Table`] directly, so
+/// internal engine layout never leaks across an FFI or network boundary —
+/// and, critically, the type carries no deck field, so no view of any
+/// principal can ever reveal an undealt card.
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::casino::game::ForcedBets;
+/// use pkcore::casino::session::PokerSession;
+/// use pkcore::casino::table::{Player, Seat, Seats, Table};
+///
+/// let seats = Seats::new(vec![
+///     Seat::new(Player::new_with_chips("A".to_string(), 500)),
+///     Seat::new(Player::new_with_chips("B".to_string(), 500)),
+/// ]);
+/// let session = PokerSession::new(
+///     Table::nlh_from_seats(seats, ForcedBets::new(5, 10))
+/// );
+/// let view = session.view(None);
+/// assert_eq!(view.seats.len(), 2);
+/// ```
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SessionView {
+    /// The poker variant in play.
+    pub game_type: GameType,
+    /// The current phase of the hand.
+    pub phase: GamePhase,
+    /// Community board in the stable glyph string encoding (empty before
+    /// the flop).
+    pub board: String,
+    /// Total pot (including committed bets this street).
+    pub pot: usize,
+    /// Highest bet on the current street.
+    pub bet: usize,
+    /// Seat index of the next player to act, or `None` when no hand is in
+    /// progress.
+    pub next_to_act: Option<u8>,
+    /// One [`SeatView`] per seat, in seat-index order.
+    pub seats: Vec<SeatView>,
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -1041,5 +1217,119 @@ mod tests {
         let still_captured = session.forced_at_hand_start();
         assert_eq!(50, still_captured.small_blind);
         assert_eq!(100, still_captured.big_blind);
+    }
+
+    // ── SessionView / SeatView redaction (EPIC-37 Phase 2b, EPIC-50 Phase 4) ──
+
+    /// The `Principal` owning seat 0, once a hand has been dealt.
+    fn principal_for_seat(session: &PokerSession, seat: u8) -> Principal {
+        let id = session.table.seats.0[seat as usize].player.id;
+        Principal::new(id)
+    }
+
+    #[test]
+    fn view_reveals_only_owned_seat_hole_cards() {
+        let mut session = two_player_session();
+        session.start_hand().unwrap();
+
+        let viewer = principal_for_seat(&session, 0);
+        let view = session.view(Some(viewer));
+
+        // The owned seat's cards are revealed and non-empty...
+        let own = view.seats.iter().find(|s| s.seat == 0).unwrap();
+        assert!(own.hole_cards.is_some());
+        assert!(!own.hole_cards.as_deref().unwrap().is_empty());
+
+        // ...and no other seat's are.
+        assert!(
+            view.seats
+                .iter()
+                .filter(|s| s.seat != 0)
+                .all(|s| s.hole_cards.is_none())
+        );
+    }
+
+    #[test]
+    fn view_hides_other_principals_hole_cards() {
+        let mut session = three_player_session();
+        session.start_hand().unwrap();
+
+        // Seat 1's principal must not see seats 0 or 2.
+        let viewer = principal_for_seat(&session, 1);
+        let view = session.view(Some(viewer));
+
+        assert!(view.seats.iter().find(|s| s.seat == 1).unwrap().hole_cards.is_some());
+        assert!(view.seats.iter().find(|s| s.seat == 0).unwrap().hole_cards.is_none());
+        assert!(view.seats.iter().find(|s| s.seat == 2).unwrap().hole_cards.is_none());
+    }
+
+    #[test]
+    fn view_spectator_hides_all_hole_cards() {
+        let mut session = three_player_session();
+        session.start_hand().unwrap();
+
+        let view = session.view(None);
+
+        assert_eq!(view.seats.len(), 3);
+        assert!(view.seats.iter().all(|s| s.hole_cards.is_none()));
+    }
+
+    #[test]
+    fn view_unseated_principal_sees_no_hole_cards() {
+        let mut session = three_player_session();
+        session.start_hand().unwrap();
+
+        // A valid principal who owns no seat at this table — an authorization
+        // case the old seat-index key could not express.
+        let stranger = Principal::new(uuid::Uuid::new_v4());
+        let view = session.view(Some(stranger));
+
+        assert!(view.seats.iter().all(|s| s.hole_cards.is_none()));
+    }
+
+    #[test]
+    fn view_never_contains_deck() {
+        let mut session = two_player_session();
+        session.start_hand().unwrap();
+
+        // Structural secrecy invariant: the view type has no deck field, so no
+        // serialized view — for any principal — can carry an undealt card.
+        let owner = principal_for_seat(&session, 0);
+        let json = serde_json::to_string(&session.view(Some(owner))).unwrap();
+        assert!(!json.contains("deck"));
+
+        // The full 52-card shuffled deck exists on the session, but none of its
+        // undealt cards leak: the only cards a viewer sees are their own hole
+        // cards and the (still empty) board.
+        let field_keys: serde_json::Value = serde_json::from_str(&json).unwrap();
+        let keys: Vec<&str> = field_keys.as_object().unwrap().keys().map(String::as_str).collect();
+        assert!(!keys.contains(&"deck"));
+        assert!(keys.contains(&"board"));
+    }
+
+    #[test]
+    fn view_spectator_reports_board_and_pot() {
+        let mut session = two_player_session();
+        session.start_hand().unwrap();
+
+        let view = session.view(None);
+
+        assert_eq!(view.game_type, crate::games::GameType::NoLimitHoldem);
+        // A pot has been seeded by the blinds.
+        assert!(view.pot > 0);
+        // Preflop: the board is still empty.
+        assert!(view.board.is_empty());
+    }
+
+    #[test]
+    fn session_view_serde_round_trip() {
+        let mut session = two_player_session();
+        session.start_hand().unwrap();
+
+        let view = session.view(Some(principal_for_seat(&session, 0)));
+        let json = serde_json::to_string(&view).unwrap();
+        let restored: SessionView = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(view, restored);
     }
 }

@@ -73,7 +73,13 @@
       "Bash(awk 'NR>=25 && NR<=50' src/games/mod.rs)",
       "Bash(awk 'NR>=105 && NR<=135' src/games/mod.rs)",
       "Bash(awk 'NR>=2325 && NR<=2360' src/hand_history.rs)",
-      "Bash(cargo semver-checks *)"
+      "Bash(cargo semver-checks *)",
+      "Bash(mkdir -p /Users/christoph/src/github.com/ImperialBower/pkcore/.claude)",
+      "Bash(touch /Users/christoph/src/github.com/ImperialBower/pkcore/.claude/dog-mode)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(curl -s https://crates.io/api/v1/crates/pkcore)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d['crate']['max_version'], [v['num'] for v in d.get\\('versions',[]\\)][:6]\\)\")",
+      "Bash(echo \"--- purity grep exit: $? \\(1 = clean\\) ---\")"
     ]
   }
 }

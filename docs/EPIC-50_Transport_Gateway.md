@@ -26,18 +26,19 @@ other layer (verification, scopes, TLS) is pgate's, downstream.
 
 ## Status
 
-*As of 2026-07-19, crate `0.3.1` (`Cargo.toml:4`). No pkgate repo exists
-yet; no code has landed. pkcore-side rows are the only ones that touch
-this crate.*
+*As of 2026-07-20, crate `0.3.1` (`Cargo.toml:4`). No pkgate repo exists
+yet. Phase 3 (the pkcore identity seam) has landed; everything else is
+still design only. pkcore-side rows are the only ones that touch this
+crate.*
 
 | Component | Status | Repo |
 |---|---|---|
 | Transport decision (Connect RPC vs. Tonic + `tonic-web` fallback) | Planned — Phase 0 spike | pkgate |
 | `pkgate_tower` — Tower auth/observability `Layer` stack | Planned | pkgate |
 | pkdealer / pkspectator adopt the layer (behavior-preserving) | Planned | pkdealer, pkspectator |
-| **`Principal` newtype** (pure identity seam) | 🔒 Gated (design only) | **pkcore** |
-| **`uuid` `v5` feature** (deterministic IdP-sub mapping, EPIC-51) | 🔒 Gated (design only) | **pkcore** |
-| **Per-viewer redaction** `for_principal` on the EPIC-37 `SessionView` | 🔒 Gated — blocked on EPIC-37 | **pkcore** |
+| **`Principal` newtype** (pure identity seam) | ✅ Done — `src/casino/principal.rs` | **pkcore** |
+| **`uuid` `v5` feature** (deterministic IdP-sub mapping, EPIC-51) | ✅ Done — both dep lines | **pkcore** |
+| **Per-viewer redaction** keyed on `Principal` | ✅ Rule landed — `PokerSession::view(Option<Principal>)` (`src/casino/session.rs`, EPIC-37 Phase 2b); DTO-level `SessionView::for_principal` still owed | **pkcore** |
 
 ---
 
@@ -312,35 +313,49 @@ touch this crate.
 
 ### Phase 3 — `Principal` seam (pkcore)
 
-- [ ] **3a.** Add `src/casino/principal.rs` with `Principal` as above;
+- [x] **3a.** Add `src/casino/principal.rs` with `Principal` as above;
       declare `pub mod principal;` in `src/casino/mod.rs` and re-export
       from `src/prelude.rs` beside the casino block (`:175-178`). Doc test
       on every public item (house rule).
-- [ ] **3b.** Enable `uuid`'s `v5` feature in `Cargo.toml:115` and the
-      wasm variant `:128`; confirm `cargo build` and
+- [x] **3b.** Enable `uuid`'s `v5` feature in `Cargo.toml:87` and the
+      wasm variant `:100`; confirm `cargo build` and
       `cargo check --target wasm32-unknown-unknown --no-default-features`
       stay green.
-- [ ] **3c.** Unit tests: `principal_round_trips_uuid` (`From`/`Into`
-      both ways), `principal_serde_round_trip`, `principal_hashes_as_uuid`
+- [x] **3c.** Unit tests: `principal_round_trips_uuid` (`From`/`Into`
+      both ways), `principal_serde_round_trip` (which also pins the wire
+      form to that of the bare `Uuid`), `principal_hashes_as_uuid`
       (a `HashMap<Principal, _>` and `HashMap<Uuid, _>` agree on the same
       id — proves it drops into `StatsRegistry` unchanged).
 
 ### Phase 4 — Redaction seam (pkcore, with EPIC-37)
 
-- [ ] **4a.** Author EPIC-37's `SessionView::view` as
-      `view(&self, viewer: Option<Principal>)` (not `Option<u8>`); add
-      `SessionView::for_principal(viewer)`.
-- [ ] **4b.** Tests: `for_principal_reveals_only_owned_seat_hole_cards`,
+- [x] **4a.** Author EPIC-37's `SessionView::view` as
+      `view(&self, viewer: Option<Principal>)` (not `Option<u8>`).
+      **Done** in EPIC-37 Phase 2b — `PokerSession::view(Option<Principal>)`
+      (`src/casino/session.rs`) is the single point where the hole-card
+      redaction rule now lives in the kernel, keyed on `Principal`. The
+      **remaining** 4a item is a `SessionView::for_principal(&self, viewer)`
+      method **on the DTO itself** — re-redacting an already-materialized
+      view, for a server that holds one full view and fans it out per
+      subscriber. It composes trivially now that the rule exists; the seat
+      ownership it consults is `SeatView::player_id`.
+- [x] **4b.** Tests: the redaction rule is covered where it lives —
+      `view_reveals_only_owned_seat_hole_cards`,
+      `view_spectator_hides_all_hole_cards`, and `view_never_contains_deck`
+      (`src/casino/session.rs`) green. When the DTO-level `for_principal`
+      lands, add its mirror tests (`for_principal_reveals_only_owned_seat_hole_cards`,
       `for_principal_none_is_spectator_hides_all`,
-      `for_principal_never_contains_deck` (structural: the view type has
-      no deck field — a compile-time-adjacent assertion plus a runtime
-      check that no serialized field carries undealt cards).
+      `for_principal_never_contains_deck`).
 
 ### Phase 5 — Registration
 
-- [ ] **5a.** Register `pkgate` and the EPIC-50–59 block in `ROADMAP.md`
+- [x] **5a.** Register `pkgate` and the EPIC-50–59 block in `ROADMAP.md`
       (repo table + Numbering Policy `:374-382`); add the EPIC-50–53 rows.
-- [ ] **5b.** Flip this EPIC's pkcore Status rows as Phases 3–4 land.
+      Satisfied by the prior ROADMAP commit: repo row `ROADMAP.md:29`,
+      `## pkgate Epics` table `:375-389`, Numbering Policy `:391-397`.
+- [x] **5b.** Flip this EPIC's pkcore Status rows as Phases 3–4 land.
+      Phase 3 rows flipped; the `for_principal` row stays gated until
+      EPIC-37 lands `SessionView`.
 
 ---
 
