@@ -23,9 +23,9 @@ behavior the heads-up-after-fold scenario depends on for the uncalled
 return to fire.
 
 Full diagnosis, worked scenarios, and chip-conservation math are in
-[`docs/BUGFIX_short_blind_call_target.md`](./BUGFIX_short_blind_call_target.md);
+[`docs/BUGFIX_short_blind_call_target.md`](../BUGFIX_short_blind_call_target.md);
 the cross-repo impact assessment is in
-[`docs/RELEASE_AUDIT_0.0.55.md`](./RELEASE_AUDIT_0.0.55.md).
+[`docs/RELEASE_AUDIT_0.0.55.md`](RELEASE_AUDIT_0.0.55.md).
 
 ---
 
@@ -126,14 +126,14 @@ accurate again under the revert.
 
 | File | Description |
 |------|-------------|
-| [`docs/BUGFIX_short_blind_call_target.md`](./BUGFIX_short_blind_call_target.md) | Full bugfix design: rule statement (TDA Rule 41), three worked scenarios (multiway, heads-up after fold, three-tier all-in), the two-line code revert, the internal-consistency table for every subsystem that reads `self.bet`, the test plan, and the audit heuristic on conflating "what-actually-happened" fields with "what-the-rules-require" fields. |
-| [`docs/RELEASE_AUDIT_0.0.55.md`](./RELEASE_AUDIT_0.0.55.md) | Cross-repo audit covering pkpy, pknotebook, pkdealer, pkgto-web, pkkuhn-web, pkarena0-web. **Headline:** zero source-level breakage in any audited downstream. All `to_call` / `act_call` / forced-bet usages in downstream code are runtime-adaptive — they consume whatever the API returns and don't pin specific values for short-BB scenarios. No test fixtures lock in the 0.0.48-era short-BB semantics. Action items reduce to `Cargo.toml` version bumps. |
+| [`docs/BUGFIX_short_blind_call_target.md`](../BUGFIX_short_blind_call_target.md) | Full bugfix design: rule statement (TDA Rule 41), three worked scenarios (multiway, heads-up after fold, three-tier all-in), the two-line code revert, the internal-consistency table for every subsystem that reads `self.bet`, the test plan, and the audit heuristic on conflating "what-actually-happened" fields with "what-the-rules-require" fields. |
+| [`docs/RELEASE_AUDIT_0.0.55.md`](RELEASE_AUDIT_0.0.55.md) | Cross-repo audit covering pkpy, pknotebook, pkdealer, pkgto-web, pkkuhn-web, pkarena0-web. **Headline:** zero source-level breakage in any audited downstream. All `to_call` / `act_call` / forced-bet usages in downstream code are runtime-adaptive — they consume whatever the API returns and don't pin specific values for short-BB scenarios. No test fixtures lock in the 0.0.48-era short-BB semantics. Action items reduce to `Cargo.toml` version bumps. |
 
 ### Updated docs
 
 | File | What changed |
 |------|--------------|
-| [`docs/DEFECT_ShortStack_BB_Call_Amount.md`](./DEFECT_ShortStack_BB_Call_Amount.md) | Reframed as historical record of the misinterpretation. The original rule statement is preserved (now explicitly marked as the rejected interpretation) and a corrected rule statement is added at the top, cross-referencing the bugfix doc. The four reverted-and-renamed tests are catalogued. The "Why It Took Until Reviewer Feedback to Catch This" section explains how the 0.0.48 release flipped pre-existing standard-rules tests, leaving no test that exercised the standard path until the revert. |
+| [`docs/DEFECT_ShortStack_BB_Call_Amount.md`](../DEFECT_ShortStack_BB_Call_Amount.md) | Reframed as historical record of the misinterpretation. The original rule statement is preserved (now explicitly marked as the rejected interpretation) and a corrected rule statement is added at the top, cross-referencing the bugfix doc. The four reverted-and-renamed tests are catalogued. The "Why It Took Until Reviewer Feedback to Catch This" section explains how the 0.0.48 release flipped pre-existing standard-rules tests, leaving no test that exercised the standard path until the revert. |
 
 ---
 
@@ -159,7 +159,7 @@ right source. They should not be conflated.
 
 ## Downstream Bumps Required
 
-Per [`docs/RELEASE_AUDIT_0.0.55.md`](./RELEASE_AUDIT_0.0.55.md), no
+Per [`docs/RELEASE_AUDIT_0.0.55.md`](RELEASE_AUDIT_0.0.55.md), no
 downstream repo needs source edits. Manifest bumps only:
 
 | Repo | Currently pinned | Action |

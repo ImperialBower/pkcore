@@ -27,9 +27,9 @@ commitments to be silently excluded from each other's pot layers.
 Both bugs are fixed in this release.
 
 Full diagnosis, root-cause analysis, and the discovery sequence are
-recorded in [`docs/DEFECT_heads-up-side-pot.md`](./DEFECT_heads-up-side-pot.md);
+recorded in [`docs/DEFECT_heads-up-side-pot.md`](../DEFECT_heads-up-side-pot.md);
 the broader process insights are captured in the new
-[`docs/LESSONS_LEARNED.md`](./LESSONS_LEARNED.md).
+[`docs/LESSONS_LEARNED.md`](../LESSONS_LEARNED.md).
 
 ---
 
@@ -200,12 +200,12 @@ the public API; documented here for reviewers.
 
 ### New docs
 
-- **[`docs/DEFECT_heads-up-side-pot.md`](./DEFECT_heads-up-side-pot.md)** —
+- **[`docs/DEFECT_heads-up-side-pot.md`](../DEFECT_heads-up-side-pot.md)** —
   full defect report: symptom (with the user-supplied YAML), the
   correct-distribution math, root cause for both bugs, the as-implemented
   fix, tests added, coverage gap analysis, prevention notes,
   follow-ups, and an affected-code summary.
-- **[`docs/LESSONS_LEARNED.md`](./LESSONS_LEARNED.md)** — new running
+- **[`docs/LESSONS_LEARNED.md`](../LESSONS_LEARNED.md)** — new running
   log of insights from notable bugs and design changes. The first
   entry covers this defect with nine concrete lessons (TDD's
   intermediate-failure signal, consolidation-as-bug-mask, dispatch on
@@ -257,7 +257,7 @@ side-pot fix were closed in this same release:
   `main_pot_paid: bool` instead. New regression test:
   `tests/split_pots.rs::three_way_asymmetric_tied_chops_correctly`.
 - **Downstream audit completed.** See
-  [`RELEASE_AUDIT_0.0.52.md`](./RELEASE_AUDIT_0.0.52.md). All six
+  [`RELEASE_AUDIT_0.0.52.md`](RELEASE_AUDIT_0.0.52.md). All six
   audited repos (pkpy, pknotebook, pkdealer × 2, pkgto-web, pkkuhn-web,
   pkarena0-web) compile cleanly against the local pkcore 0.0.52 path
   override. Zero downstreams use `TableAction::PlayerWins`-only

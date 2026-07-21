@@ -178,7 +178,7 @@ the map from `PlayerSeated` events in its slice (legacy YAMLs without
 
 Gated on the `player-stats` feature (in the default set; opt out via
 `default-features = false`). See
-[`docs/EPIC-26_Player_Stats.md`](EPIC-26_Player_Stats.md) for the full
+[`docs/EPIC-26_Player_Stats.md`](../EPIC-26_Player_Stats.md) for the full
 design.
 
 #### `PlayerStats`

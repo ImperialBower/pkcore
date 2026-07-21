@@ -23,9 +23,9 @@ Formal code reviews performed by AI models. Full reports in `docs/`.
 
 | Date | Model | Report | Version |
 |------|-------|--------|---------|
-| 2026-04-13 | Claude Sonnet 4.6 (max effort) | [`docs/AUDIT_Claude_Code_max.md`](./docs/AUDIT_Claude_Code_max.md) | v0.0.40 |
-| 2026-04-13 | GPT-5.4 | [`docs/AUDIT_GPT-5.4.md`](./docs/AUDIT_GPT-5.4.md) | v0.0.40 |
-| 2026-04-13 | Gemini 3.1 | [`docs/AUDIT_Gemini_3.1.md`](./docs/AUDIT_Gemini_3.1.md) | v0.0.40 |
+| 2026-04-13 | Claude Sonnet 4.6 (max effort) | [`docs/AUDIT_Claude_Code_max.md`](docs/audits/AUDIT_Claude_Code_max.mdax.md) | v0.0.40 |
+| 2026-04-13 | GPT-5.4 | [`docs/AUDIT_GPT-5.4.md`](docs/audits/AUDIT_GPT-5.4.md.4.md) | v0.0.40 |
+| 2026-04-13 | Gemini 3.1 | [`docs/AUDIT_Gemini_3.1.md`](docs/audits/AUDIT_Gemini_3.1.md.1.md) | v0.0.40 |
 
 ---
 

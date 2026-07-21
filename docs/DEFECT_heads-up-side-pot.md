@@ -225,7 +225,7 @@ before tagging:
   `processed_chip_levels.len() == 1`. New regression test:
   `tests/split_pots.rs::three_way_asymmetric_tied_chops_correctly`.
 - **Downstream audit completed.** See
-  [`RELEASE_AUDIT_0.0.52.md`](./RELEASE_AUDIT_0.0.52.md). All six
+  [`RELEASE_AUDIT_0.0.52.md`](releases/RELEASE_AUDIT_0.0.52.md). All six
   audited downstream repos (pkpy, pknotebook, pkdealer×2, pkgto-web,
   pkkuhn-web, pkarena0-web) compile cleanly against local pkcore
   0.0.52 with path overrides. Zero downstream uses

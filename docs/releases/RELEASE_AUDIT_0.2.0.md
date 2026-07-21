@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-08
 **Release notes:** [RELEASE_0.2.0.md](RELEASE_0.2.0.md)
-**Migration guide:** [DOWNSTREAM_MIGRATION_0.2.0.md](DOWNSTREAM_MIGRATION_0.2.0.md)
+**Migration guide:** [DOWNSTREAM_MIGRATION_0.2.0.md](../DOWNSTREAM_MIGRATION_0.2.0.md)
 
 0.2.0 is a **breaking** release (Casino package reorg + Fable 5 audit). It is
 **published to crates.io** (`cargo search pkcore` → `0.2.0`), so every consumer can
