@@ -225,6 +225,13 @@ impl std::fmt::Display for MyError {
 impl std::error::Error for MyError {}
 ```
 
+## Knowledge Base & Agent Automation (OKF)
+
+- This project leverages the Open Knowledge Format (OKF) specification for repository context.
+- System documentation, architecture maps, and schemas live in the `.okf/` directory.
+- Rules & Extension: For specific automated upkeep patterns and verification constraints, Claude must read and conform to `.okf/index.md` before executing project-wide refactors.
+- Validation Gate: Always execute `/okf:validate .okf --strict` to verify link mapping integrity before declaring a documentation task complete.
+
 ## References
 
 - [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/)
@@ -232,4 +239,6 @@ impl std::error::Error for MyError {}
 - [Rust by Example: Documentation](https://doc.rust-lang.org/rust-by-example/meta/doc.html)
 - [Writing Unsafe Rust](https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html)
 - [Effective Rust](https://effective-rust.dev/)
+- [Open Knowledge Format (OKF)](https://okf.org/)
+  - [OKF Skills](https://github.com/scaccogatto/okf-skills)
 

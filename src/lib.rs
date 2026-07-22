@@ -33,7 +33,7 @@
 //! ### Cards and Ranks
 //!
 //! - [`card::Card`] - A single playing card with rank and suit
-//!   - Represented internally as a `u8` for efficient bitwise operations
+//!   - Represented internally as a `u32` for efficient bitwise operations
 //!   - Supports parsing from strings like "As" and "a♠" for (Ace of Spades) or "2h" for (Two of Hearts)
 //!
 //! - [`cards::Cards`] - An ordered, deduplicated collection of cards (hands, boards, etc.)
