@@ -77,9 +77,11 @@ analytic gradient.
 
 ### Parameter encoding
 
-`ExploitConfig` must round-trip through a `Vec<f64>` for the optimiser. A
-dedicated encoder/decoder pair converts the struct to a fixed-length vector and
-back, applying bounds clamping on decode so the optimiser can explore freely
+`ExploitConfig` must round-trip through a fixed-length `[f64; DIM]` (`DIM = 16`)
+for the optimiser. `encode` writes each field into the vector in canonical
+order at its native scale (no [0,1] normalisation); `decode` clamps every
+element to its `[LO[i], HI[i]]` bound and enforces
+`min_hands_heavy >= min_hands_light`, so the optimiser can explore freely
 without producing invalid configs.
 
 **Parameter vector layout (16 dimensions):**
@@ -103,9 +105,9 @@ without producing invalid configs.
 | 14 | `min_hands_light` (continuous) | [5.0, 100.0] | rounded to `u64` on decode |
 | 15 | `min_hands_heavy` (continuous) | [10.0, 200.0] | rounded to `u64` on decode; clamped ≥ light |
 
-The encoder and decoder live in `src/bot/training/encoding.rs` alongside
-`ParamBounds` (the bounds table) and are the only place that knows about the
-vector layout.
+The encoder and decoder live in `src/bot/training/encoding.rs` alongside the
+`LO`/`HI` bound constants and `ranges()` (the per-dimension spans used for
+sigma scaling), and are the only place that knows about the vector layout.
 
 ### Fitness evaluation
 
@@ -137,19 +139,34 @@ comparative fairness).
 
 ### Optimiser
 
-`ExploitTrainer` uses **CMA-ES** (via the `cmaes` crate, added behind the
-`bot-training` feature gate) with:
+`ExploitTrainer` uses a hand-rolled **(1+λ)-evolution strategy** with
+isotropic Gaussian mutation and the **1/5 success rule** for step-size
+adaptation. No external optimiser crate is pulled in — N(0,1) samples come
+from the Box-Muller transform over the `rand` crate's uniform RNG, so the
+training stack stays dependency-free (see
+[`TUTORIAL_EPIC28_ES_Math.md`](TUTORIAL_EPIC28_ES_Math.md) for the full
+derivation).
 
-- Initial mean: `ExploitConfig::default()` encoded as `Vec<f64>`.
-- Initial sigma: 0.1 × (upper bound − lower bound) per dimension.
-- Fitness: negated BB/100 (CMA-ES minimises; we maximise BB/100).
-- Termination: `max_generations` (default 500) or `stagnation_tolerance`
-  (< 1e-6 improvement over 50 generations, whichever comes first).
+- Parent: `ExploitConfig::default()` (or any supplied baseline) encoded as
+  `[f64; DIM]`.
+- Each generation draws `lambda` offspring by perturbing the parent with
+  Gaussian noise scaled per dimension by `sigma × ranges[i]` (where
+  `ranges[i] = HI[i] − LO[i]`). The fittest offspring replaces the parent
+  when it improves the score.
+- Step size: `sigma` starts at `initial_sigma_fraction` (default 0.15) and
+  adapts each generation — multiplied by 1.22 when ≥ 1/5 of offspring
+  improve the parent, else by 0.90 (floored at `sigma_tol`).
+- Termination: `max_generations` (default 200) or `sigma` reaching
+  `sigma_tol` (default 1e-4), whichever comes first.
+- Fitness is BB/100 directly (higher is better); the strategy maximises,
+  so no sign flip is needed.
 
-The `ExploitTrainer` itself is optimiser-agnostic — it depends on a
-`BoxedOptimiser` trait (single method: `step(fitness_fn) → Vec<f64>`) so
-the CMA-ES impl can be swapped for a simple hill-climber in unit tests
-without touching test logic.
+> **Design note.** An earlier draft of this EPIC specified CMA-ES via the
+> `cmaes` crate behind a `BoxedOptimiser` trait. The shipped implementation
+> instead uses a self-contained (1+λ)-ES: for a ~16-dimensional bounded,
+> noisy problem it converges adequately, keeps the dependency graph clean,
+> and is small enough to unit-test end to end. There is no `BoxedOptimiser`
+> abstraction — the ES is inlined in `ExploitTrainer::train`.
 
 ### Training loop (pseudocode)
 
@@ -175,10 +192,10 @@ generation are evaluated in parallel across CPU cores.
 
 ```
 src/bot/training/
-├── mod.rs          — re-exports: ExploitTrainer, TrainingConfig, TrainingResult
-├── encoding.rs     — ExploitConfig ↔ Vec<f64> + ParamBounds
-├── evaluator.rs    — FitnessEvaluator, field construction, BB/100 computation
-└── trainer.rs      — ExploitTrainer, TrainingConfig, TrainingResult, BoxedOptimiser trait
+├── mod.rs          — re-exports: ExploitTrainer, TrainingConfig, TrainingResult, GenerationRecord
+├── encoding.rs     — ExploitConfig ↔ [f64; DIM]; LO/HI bounds, ranges()
+├── evaluator.rs    — default_field(), evaluate(), session BB/100 computation
+└── trainer.rs      — ExploitTrainer, TrainingConfig, TrainingResult, GenerationRecord, (1+λ)-ES loop
 ```
 
 All files gated `#[cfg(feature = "bot-training")]`.
@@ -199,10 +216,10 @@ optional in the manifest) is sufficient; no new crate needed.
 
 - [ ] **0a.** Add `bot-training` feature to `Cargo.toml`:
   ```toml
-  bot-training = ["player-stats", "bot-profiles", "dep:cmaes", "dep:serde_yaml_bw"]
+  bot-training = ["player-stats", "bot-profiles", "dep:serde_yaml_bw"]
   ```
-  Add `cmaes = { version = "0.5", optional = true }` (or current stable) to
-  `[dependencies]`.
+  No external optimiser crate is needed — the (1+λ)-ES is self-contained and
+  draws its Gaussian noise via Box-Muller over the existing `rand` dependency.
 - [ ] **0b.** Gate `#[cfg_attr(feature = "bot-training", derive(Serialize, Deserialize))]`
   on `ExploitConfig` (additive — existing `#[derive(Clone, Debug, PartialEq)]`
   unchanged). No feature flag needed on struct definition itself.
@@ -213,20 +230,24 @@ optional in the manifest) is sufficient; no new crate needed.
 ### Phase 1 — Parameter encoding
 
 - [ ] **1.** Create `src/bot/training/encoding.rs`:
-  - `ParamBounds` struct — parallel arrays `lo: [f64; 16]`, `hi: [f64; 16]`.
-  - `encode(config: &ExploitConfig) -> Vec<f64>` — reads each field in the
-    canonical order and normalises to `[0.0, 1.0]` for the optimiser.
-  - `decode(params: &[f64]) -> ExploitConfig` — clamps each dimension to
-    `[lo, hi]`, rounds `min_hands_light`/`heavy` to `u64`, enforces
+  - `DIM: usize = 16` and the bound constants `LO: [f64; DIM]`, `HI: [f64; DIM]`
+    with the values from the design table above.
+  - `encode(c: &ExploitConfig) -> [f64; DIM]` — reads each field in the
+    canonical order at its native scale (no normalisation).
+  - `decode(p: &[f64; DIM]) -> ExploitConfig` — clamps each dimension to
+    `[LO[i], HI[i]]`, rounds `min_hands_light`/`heavy` to `u64`, enforces
     `min_hands_heavy >= min_hands_light`.
-  - `BOUNDS: ParamBounds` — public constant with the values from the design
-    table above.
+  - `ranges() -> [f64; DIM]` — per-dimension `HI[i] - LO[i]`, used for sigma
+    scaling in the trainer.
 - [ ] **2.** Unit tests (in `encoding.rs`):
   - `encode_default_roundtrips` — `decode(encode(&default)) == default` within
     f64 rounding of the `u64` gates.
-  - `decode_clamps_out_of_bounds` — params outside `[lo, hi]` are clamped.
+  - `decode_clamps_out_of_bounds` — params outside `[LO, HI]` are clamped.
   - `decode_enforces_hands_order` — `min_hands_heavy < min_hands_light` in
     the raw vector is corrected by decode.
+  - `bounds_cover_default` — every dimension of `encode(default)` falls
+    strictly inside `(LO[i], HI[i])`.
+  - `ranges_are_all_positive` — every `ranges()[i]` is > 0.
 
 ### Phase 2 — Fitness evaluator
 
@@ -234,11 +255,11 @@ optional in the manifest) is sufficient; no new crate needed.
   - `FieldEntry` — `(String, BotProfile)` tuple for one field opponent.
   - `default_field() -> Vec<FieldEntry>` — all 8 `BotProfile` archetypes,
     each labelled by profile name.
-  - `evaluate(config: &ExploitConfig, field: &[FieldEntry], eval_cfg: &EvalConfig) -> f64` —
-    runs K × |field| `SimTable::new_with_registry` sessions; returns mean BB/100.
-  - `EvalConfig` — `{ hands_per_eval: usize, replicates: usize, generation: u64 }`;
-    seeds derived from `generation * replicates + replicate_index` for
-    deterministic reproducibility.
+  - `evaluate(config: &ExploitConfig, field: &[FieldEntry], hands_per_eval: usize, replicates: usize, seed: u64) -> f64` —
+    runs `replicates × |field|` heads-up sessions (each seeded deterministically
+    from `seed`); returns mean BB/100. No `EvalConfig` struct — the evaluation
+    knobs are passed positionally, and the trainer supplies the per-generation
+    seed.
 - [ ] **4.** Unit test: `evaluate_default_config_positive_bb100_vs_lp` — `ExploitConfig::default()` against `BotProfile::loose_passive()` over 3 × 1,000 hands should produce mean BB/100 > −200 (loose sanity floor, not a win requirement).
 
 ### Phase 3 — Trainer
