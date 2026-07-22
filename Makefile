@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data
+.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf
 
 # Default target
 default: ayce
@@ -35,6 +35,7 @@ help:
 	@echo "  make tree-duplicates - Show duplicate dependencies"
 	@echo "  make deny            - Run full cargo-deny checks"
 	@echo "  make audit           - Run advisory-only security audit"
+	@echo "  make validate-okf    - Check .okf/ knowledge bundle conformance (OKF v0.1, strict)"
 	@echo ""
 	@echo "WebAssembly:"
 	@echo "  make check-wasm         - Check the library compiles for wasm32-unknown-unknown"
@@ -145,6 +146,19 @@ deny:
 audit:
 	@echo "Running security audit..."
 	cargo deny check advisories
+
+# Validate the .okf/ knowledge bundle against the OKF v0.1 spec (strict: warnings fail too).
+# scripts/okf_validate.py is vendored verbatim from the okf skill
+# (github.com/scaccogatto/okf-skills, plugin v0.4.0); it carries PEP 723
+# metadata, so uv runs it dependency-free. Falls back to python3 + pyyaml.
+validate-okf:
+	@echo "Validating .okf/ bundle (OKF v0.1, strict)..."
+	@if command -v uv >/dev/null 2>&1; then \
+		uv run scripts/okf_validate.py .okf --strict; \
+	else \
+		python3 -c 'import yaml' 2>/dev/null || python3 -m pip install --quiet pyyaml; \
+		python3 scripts/okf_validate.py .okf --strict; \
+	fi
 
 # Check for unused dependencies (requires nightly)
 unused-deps:
