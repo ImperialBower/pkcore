@@ -1,6 +1,7 @@
 # Update Log
 
 ## 2026-07-22
+* **Creation**: Added the [Stud rules](/stud-rules.md) and [Razz rules](/razz-rules.md) root concepts (companions to [PLO rules](/plo-rules.md)) covering the EPIC-32/33 stud-family engine — street tables, ante + bring-in, visible-hand action order, and the A-5 lowball evaluator; registered both in the root [index](/index.md).
 * **Update**: Restored the full bundle after an accidental working-tree reset deleted everything except the data and pitfalls groups; all concepts rebuilt verbatim.
 * **Creation**: Added the [data](/data/index.md) group — [HUP equity databases](/data/hup-databases.md) (schema + snapshot-family caveat), [bot profiles](/data/bot-profiles.md), [hand histories](/data/hand-histories.md), and [Pluribus logs](/data/pluribus-logs.md).
 * **Creation**: Added the [pitfalls](/pitfalls/index.md) group distilling the docs/ defect corpus — [side-pot stratification](/pitfalls/side-pot-stratification.md), [short-blind call target](/pitfalls/short-blind-call-target.md), [bot raise escalation](/pitfalls/bot-raise-escalation.md), [showdown invariants](/pitfalls/showdown-invariants.md), and the open [betting-completion flake](/pitfalls/betting-completion-flake.md).
