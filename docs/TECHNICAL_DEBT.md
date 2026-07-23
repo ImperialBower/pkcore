@@ -17,6 +17,14 @@ _Sourced from `TODO TD` / `TODO DEFECT` / `HACK` comments in the codebase._
 - [ ] **HUP width audit** — decide whether HUP should use `u64` vs `usize`. (`src/analysis/store/db/hup.rs:23`)
 - [ ] **Masked matchups defect** — `TODO DEFECT` marker with no detail; needs triage. (`src/arrays/matchups/masked.rs:67`)
 
+_Added by the 2026-07-23 refresh (new untracked code comments):_
+
+- [ ] **`heads_up.rs` has no tests** — "TODO: Write tests!!!" on the store's heads-up module. (`src/analysis/store/heads_up.rs:150`)
+- [ ] **`TableCelled` Stud/Razz gap** — "Alternative logic for Stud and Razz games" never written; variants shipped on `Table`, so decide whether `TableCelled` should support them or explicitly reject those `GameType`s. (`src/casino/table_celled.rs:764`)
+- [ ] **Betting-completion edge cases** — "edge cases that I fear these checks won't catch"; wants adversarial tests. (`src/casino/table_celled.rs:1258`)
+- [ ] **Unvalidated combinatorics constants** — `UNIQUE_PER_SUIT_2_CARD_HANDS = 585` marked "Need to validate"; write the on-demand `#[ignore]` validation tests the comment asks for. (`src/lib.rs:404`, `:432`)
+- [ ] **`nubibus.rs` error docs** — four public fns have "TODO: Fill in errors" placeholder `# Errors` sections. (`src/analysis/nubibus.rs:81`, `:93`, `:108`, `:144`)
+
 ### Refactor backlog (`TODO RF`)
 
 _11 `TODO RF` markers in source. The author flagged these as restructuring work; most are localized clean-ups, not behavior changes._
@@ -28,6 +36,7 @@ _11 `TODO RF` markers in source. The author flagged these as restructuring work;
 - [ ] **`flop_eval.rs` → trait** — extract into a trait. (`src/play/stages/flop_eval.rs:226`)
 - [ ] **`case_eval.rs` case param** — change case parameter to `Two` to facilitate range calculations. (`src/analysis/case_eval.rs:99`)
 - [ ] Misc `cards.rs` markers. (`src/cards.rs:80`, `:795`)
+- [ ] **`suit_texture.rs` rewrite** — "HARRANGE - This code is an abomination. No wonder there are so many gaps in it"; also carries the `Type1223a–d` defect-watch markers. (`src/arrays/matchups/masks/suit_texture.rs:36`, `:20-23`) _(added 2026-07-23)_
 
 ## 🤖 Automated review findings
 

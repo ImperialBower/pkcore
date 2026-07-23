@@ -346,6 +346,13 @@ impl TableCelled {
         } else {
             match self.seats.act_all_in(seat_number) {
                 Ok(amount) => {
+                    // A shove of at least a full raise re-opens the betting;
+                    // a sub-minimum shove leaves the increment anchored to
+                    // the last full raise.
+                    let increment = amount.saturating_sub(self.bet.get());
+                    if increment >= self.min_raise() {
+                        self.raise_increment.set(increment);
+                    }
                     self.bet.set(amount);
                     self.log_info(TableAction::AllIn(seat_number, amount));
                     // self.action_to.up();
@@ -600,9 +607,16 @@ impl TableCelled {
         }
     }
 
+    /// Records the raise increment that anchors [`TableCelled::min_raise`].
+    ///
+    /// An all-in seat is exempt from the minimum (a shove may legally be
+    /// short); its increment is recorded only when it amounts to a full
+    /// raise, which re-opens the betting.
+    ///
     /// # Errors
     ///
-    /// `PKError::InsufficientIncrement` if the raise amount is less than the minimum raise
+    /// `PKError::InsufficientIncrement` if a seat that is not all-in raises
+    /// by less than the minimum raise.
     pub fn set_raise_increment(&self, seat_number: u8, amount: usize) -> Result<(), PKError> {
         match self.get_seat(seat_number) {
             Some(seat) if !seat.is_all_in() => {
@@ -611,7 +625,12 @@ impl TableCelled {
                 }
                 self.raise_increment.set(amount);
             }
-            None | Some(_) => {}
+            // An all-in actor may legally be short of the minimum; only a
+            // shove of at least a full raise re-opens the betting.
+            Some(_) if amount >= self.min_raise() => {
+                self.raise_increment.set(amount);
+            }
+            _ => {}
         }
 
         Ok(())
@@ -2336,6 +2355,66 @@ mod casino__table_celled_tests {
 
         let bad_raise = table.act_raise(0, 802);
         assert!(bad_raise.is_err());
+    }
+
+    // P9f (ported from Table) — an all-in that constitutes at least a full
+    // raise must re-open the betting by updating raise_increment. NL 50/100:
+    // A raises to 300 (increment 200), B shoves 900 — a full 600 raise — so
+    // C's minimum re-raise is 1500, not 900+200=1100.
+    #[test]
+    fn all_in_full_raise_reopens_min_raise() {
+        let seats = SeatsCell::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 900)),
+            Seat::new(Player::new_with_chips("C".to_string(), 10_000)),
+        ]);
+        let table = TableCelled::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+
+        let a = table.next_to_act();
+        table.act_raise(a, 300).unwrap();
+        let b = table.next_to_act();
+        table.act_all_in(b).unwrap(); // B shoves total 900 (a full 600 raise)
+
+        assert_eq!(
+            600,
+            table.min_raise(),
+            "a full-raise shove re-opens the action by the full 600 increment"
+        );
+        let c = table.next_to_act();
+        assert!(
+            matches!(table.act_raise(c, 1100), Err(PKError::InsufficientIncrement)),
+            "1100 is 400 short of the re-opened minimum"
+        );
+        table
+            .act_raise(c, 1500)
+            .expect("the re-opened minimum re-raise is accepted");
+    }
+
+    // P9f (companion, ported from Table) — a sub-minimum all-in does NOT
+    // re-open the betting: a player who already acted may only call the
+    // extra. Confirms the raise_increment update is gated on "at least a
+    // full raise".
+    #[test]
+    fn sub_min_all_in_does_not_reopen_min_raise() {
+        let seats = SeatsCell::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 450)),
+            Seat::new(Player::new_with_chips("C".to_string(), 10_000)),
+        ]);
+        let table = TableCelled::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+
+        let a = table.next_to_act();
+        table.act_raise(a, 300).unwrap(); // increment 200
+        let b = table.next_to_act();
+        table.act_all_in(b).unwrap(); // B shoves total 450 — only 150 over, sub-min
+
+        assert_eq!(
+            200,
+            table.raise_increment.get(),
+            "a sub-min all-in must not update the raise increment"
+        );
     }
 
     // ── Short-stack blind tests ───────────────────────────────────────────────
