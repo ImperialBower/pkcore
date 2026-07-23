@@ -78,6 +78,17 @@ jobs:
       - name: Run variant replay round-trips
         run: cargo test --test replay_consistency -- --include-ignored --nocapture
 
+  okf:
+    name: OKF bundle conformance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v5
+      # Deterministic checker (no LLM): keeps the .okf/ knowledge bundle
+      # conformant with the OKF v0.1 spec (frontmatter parseable, non-empty
+      # `type`, strict: warnings fail too).
+      - run: make validate-okf
+
   package:
     name: Package smoke (published-crate build)
     runs-on: ubuntu-latest

@@ -1,6 +1,6 @@
 # AI Bill of Materials — pkcore
 
-_Last updated: 2026-05-07 · pkcore v0.0.56_
+_Last updated: 2026-07-22 · pkcore v0.3.2_
 
 An inventory of every AI component in this repository — development tools used to build it, algorithms implemented within it, and external AI services it integrates with (current or planned). Modeled on the SBOM concept applied to AI systems.
 
@@ -17,7 +17,21 @@ AI tools used to author this codebase. Not part of the shipped library, but rele
 
 ---
 
-## 2. AI Audits
+## 2. AI Context Infrastructure
+
+Machine-readable knowledge that AI development tools consume — and maintain — when working on this repository. Unlike the tools in §1, part of this ships with the crate.
+
+| Component | Format | In published crate? | Notes |
+|-----------|--------|---------------------|-------|
+| [`CLAUDE.md`](./CLAUDE.md) | Markdown instructions | No (excluded in `Cargo.toml`) | Coding standards, testing gates, OKF validation gate |
+| [`.okf/`](./.okf/index.md) | OKF v0.1 knowledge bundle (27 concepts) | **Yes** — not in the `exclude` list, so it travels in the `.crate` source tarball | Variant rules frameworks (PLO, Stud, Razz), module maps, architecture decisions, pitfalls, processes |
+| OKF skills plugin | `scaccogatto/okf` v0.4.0 (Claude Code plugin) | No | Authors, maintains, and validates the bundle (`/okf:validate --strict`) |
+
+The bundle is **source-distribution only**: nothing embeds it into compiled artifacts (no `include_str!` / `include_dir!` usage), so it adds zero bytes to downstream binaries and the WASM target. Runtime embedding, if ever wanted, belongs in a binary crate (e.g. a future table service self-describing to agents), not in this library.
+
+---
+
+## 3. AI Audits
 
 Formal code reviews performed by AI models. Full reports in `docs/`.
 
@@ -29,7 +43,7 @@ Formal code reviews performed by AI models. Full reports in `docs/`.
 
 ---
 
-## 3. Algorithms Implemented
+## 4. Algorithms Implemented
 
 Game-theory and AI/ML algorithms built directly into pkcore. **No external ML dependencies** — all computation is in-process.
 
@@ -44,7 +58,7 @@ Game-theory and AI/ML algorithms built directly into pkcore. **No external ML de
 
 ---
 
-## 4. Agent Architecture
+## 5. Agent Architecture
 
 Autonomous decision-making components shipped in the library.
 
@@ -61,7 +75,7 @@ Autonomous decision-making components shipped in the library.
 
 ---
 
-## 5. External AI Integrations
+## 6. External AI Integrations
 
 pkcore currently ships **zero external AI service dependencies**. The following integrations are planned in the `pkdealer` repository (EPIC-23, EPIC-24).
 
@@ -74,7 +88,7 @@ pkcore currently ships **zero external AI service dependencies**. The following 
 
 ---
 
-## 6. Observability Plan
+## 7. Observability Plan
 
 OpenTelemetry semantic conventions planned for LLM agent decision spans (EPIC-23/24, implemented in `pkdealer`):
 
@@ -93,7 +107,7 @@ No vendor SDK required — ingested via OTLP into Langfuse/Jaeger.
 
 ---
 
-## 7. References
+## 8. References
 
 | Document | Purpose |
 |----------|---------|
