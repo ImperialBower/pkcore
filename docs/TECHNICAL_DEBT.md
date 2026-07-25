@@ -25,6 +25,16 @@ _Added by the 2026-07-23 refresh (new untracked code comments):_
 - [ ] **Unvalidated combinatorics constants** — `UNIQUE_PER_SUIT_2_CARD_HANDS = 585` marked "Need to validate"; write the on-demand `#[ignore]` validation tests the comment asks for. (`src/lib.rs:404`, `:432`)
 - [ ] **`nubibus.rs` error docs** — four public fns have "TODO: Fill in errors" placeholder `# Errors` sections. (`src/analysis/nubibus.rs:81`, `:93`, `:108`, `:144`)
 
+_Added by the 2026-07-25 refresh (new untracked code comments):_
+
+- [ ] **Cards API cleanup** — `Cards` still has scattered `RF` / `Hack` TODOs and a boxed-return refactor note. (`src/cards.rs:80`, `:202`, `:868`)
+- [ ] **HoleCards type narrowing** — `HoleCards` still wants to be refactored to `Two`. (`src/play/hole_cards.rs:49`)
+- [ ] **Terminal input cleanup** — `receive_range` still has a bare `TODO`, and `receive_usize` still wants a Rustyline-backed path. (`src/util/terminal.rs:119`, `:129`)
+- [ ] **Arrayable trait design** — `Arrayable` still has an unresolved "How can we make this work?" plus a direct-from-trait question. (`src/arrays/mod.rs:45`, `:88`)
+- [ ] **Primitive parameter style** — `Seven` still wants a consistent by-ref/by-value decision for primitive parameters. (`src/arrays/seven.rs:121`)
+- [ ] **StartingHands BCM fixture** — `bcm_case_eval` still asks for the smaller BCM subset test harness. (`src/arrays/hole_cards/twos.rs:31`)
+- [ ] **SortedHeadsUp cleanup** — the struct-space pollution refactor is still open. (`src/arrays/matchups/sorted_heads_up.rs:126`)
+
 ### Refactor backlog (`TODO RF`)
 
 _11 `TODO RF` markers in source. The author flagged these as restructuring work; most are localized clean-ups, not behavior changes._

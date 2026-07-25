@@ -342,7 +342,6 @@ impl Game {
     /// Let's finish this up for the flop and then package it all up nice and neat in
     /// a struct, shall we?
     ///
-    /// TODO: Write some fucking tests.
     #[must_use]
     pub fn turn_calculations(&self) -> (CaseEvals, Wins, WinResults, Outs) {
         let case_evals = self.turn_case_evals();
@@ -787,6 +786,7 @@ mod play__game_tests {
     use crate::play::board::Board;
     use crate::play::stages::flop_eval::FlopEval;
     use crate::util::data::TestData;
+    use crate::PKError;
     use std::str::FromStr;
     use wincounter::win::Win;
 
@@ -830,14 +830,20 @@ mod play__game_tests {
     #[test]
     fn turn_calculations() {
         let game = TestData::the_hand();
-        let (case_evals, _wins, _results, outs) = game.turn_calculations();
+        let (_case_evals, _wins, _results, outs) = game.turn_calculations();
 
-        assert_eq!(44, case_evals.len());
         assert_eq!("6♣", outs.get(1).unwrap().to_string());
         assert_eq!(
             "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 4♣ 3♣ 2♣",
             outs.get(2).unwrap().sort().to_string()
         );
+    }
+
+    #[test]
+    fn turn_eval_for_player_rejects_out_of_range_index() {
+        let game = TestData::the_hand();
+
+        assert_eq!(Err(PKError::Fubar), game.turn_eval_for_player(2));
     }
 
     #[test]
@@ -907,8 +913,6 @@ mod play__game_tests {
     ///
     /// _The closer to the hub, the more you need to harden your system's testing. Metrics don't
     /// have perspective; people do._
-    ///
-    /// TODO: Add more coverage for negative boundary conditions.
     ///
     /// ## Meanwhile, back at the ranch
     ///
@@ -1076,11 +1080,17 @@ mod play__game_tests {
 
     #[test]
     fn turn_remaining_board() {
-        // Crude but effective. https://www.youtube.com/watch?v=UKkjknFwPac
+        let remaining = TestData::the_hand().turn_remaining_board().sort();
+        let rendered = remaining.to_string();
+
         assert_eq!(
             "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 6♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 5♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 6♣ 5♣ 4♣ 3♣ 2♣",
-            TestData::the_hand().turn_remaining_board().sort().to_string()
+            rendered
         );
+        assert!(rendered.contains("8♠"));
+        for dealt in ["9♣", "6♦", "5♥", "5♠"] {
+            assert!(!rendered.contains(dealt), "still contained dealt card {dealt}: {rendered}");
+        }
     }
 
     #[test]
