@@ -784,6 +784,7 @@ mod play__game_tests {
     use crate::analysis::name::HandRankName;
     use crate::arrays::three::Three;
     use crate::arrays::two::Two;
+    use crate::play::board::Board;
     use crate::play::stages::flop_eval::FlopEval;
     use crate::util::data::TestData;
     use std::str::FromStr;
@@ -824,6 +825,31 @@ mod play__game_tests {
         let actual = Game::flop_get_seven(board, &v);
 
         assert_eq!(expected, actual.unwrap());
+    }
+
+    #[test]
+    fn turn_calculations() {
+        let game = TestData::the_hand();
+        let (case_evals, _wins, _results, outs) = game.turn_calculations();
+
+        assert_eq!(44, case_evals.len());
+        assert_eq!("6♣", outs.get(1).unwrap().to_string());
+        assert_eq!(
+            "A♠ K♠ Q♠ J♠ T♠ 9♠ 8♠ 7♠ 4♠ 3♠ 2♠ A♥ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 4♥ 3♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦ 4♦ 3♦ 2♦ A♣ K♣ Q♣ J♣ T♣ 8♣ 7♣ 4♣ 3♣ 2♣",
+            outs.get(2).unwrap().sort().to_string()
+        );
+    }
+
+    #[test]
+    fn turn_display_odds_returns_ok_when_turn_is_dealt() {
+        assert!(TestData::the_hand().turn_display_odds().is_ok());
+    }
+
+    #[test]
+    fn turn_display_odds_returns_ok_before_turn_is_dealt() {
+        let game = Game::new(TestData::the_hand().hands.clone(), Board::from_str("9♣ 6♦ 5♥").unwrap());
+
+        assert!(game.turn_display_odds().is_ok());
     }
 
     /// TBH, we could do more with the negative tests. We'll add it as something to watch for

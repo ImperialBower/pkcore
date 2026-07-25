@@ -2417,6 +2417,50 @@ mod casino__table_celled_tests {
         );
     }
 
+    #[test]
+    fn is_betting_complete_stays_open_after_a_full_raise_shove() {
+        let table = three_player_table_with_short_bb(10_000);
+        table.act_forced_bets().unwrap();
+
+        let a = table.next_to_act();
+        table.act_raise(a, 300).unwrap();
+        let b = table.next_to_act();
+        table.act_all_in(b).unwrap();
+
+        assert!(!table.is_betting_complete());
+
+        let c = table.next_to_act();
+        table.act_call(c).unwrap();
+        assert!(!table.is_betting_complete());
+
+        let a_again = table.next_to_act();
+        assert_eq!(a, a_again);
+        table.act_call(a_again).unwrap();
+        assert!(table.is_betting_complete());
+    }
+
+    #[test]
+    fn is_betting_complete_closes_after_a_sub_minimum_all_in() {
+        let table = three_player_table_with_short_bb(10_000);
+        table.act_forced_bets().unwrap();
+
+        let a = table.next_to_act();
+        table.act_raise(a, 300).unwrap();
+        let b = table.next_to_act();
+        table.act_all_in(b).unwrap();
+
+        assert!(!table.is_betting_complete());
+
+        let c = table.next_to_act();
+        table.act_call(c).unwrap();
+        assert!(!table.is_betting_complete());
+
+        let a_again = table.next_to_act();
+        assert_eq!(a, a_again);
+        table.act_call(a_again).unwrap();
+        assert!(table.is_betting_complete());
+    }
+
     // ── Short-stack blind tests ───────────────────────────────────────────────
 
     // Button starts at seat 0 (BintCell::new(n) initialises value to 0).

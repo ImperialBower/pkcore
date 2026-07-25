@@ -21,7 +21,7 @@ _Added by the 2026-07-23 refresh (new untracked code comments):_
 
 - [ ] **`heads_up.rs` has no tests** — "TODO: Write tests!!!" on the store's heads-up module. (`src/analysis/store/heads_up.rs:150`)
 - [ ] **`TableCelled` Stud/Razz gap** — "Alternative logic for Stud and Razz games" never written; variants shipped on `Table`, so decide whether `TableCelled` should support them or explicitly reject those `GameType`s. (`src/casino/table_celled.rs:783`)
-- [ ] **Betting-completion edge cases** — "edge cases that I fear these checks won't catch"; wants adversarial tests. One such case (full all-in shove re-opening the min-raise) was found and fixed 2026-07-23, which argues the rest of the marker is live. (`src/casino/table_celled.rs:1277`)
+- [ ] **Betting-completion edge cases** — "edge cases that I fear these checks won't catch"; adversarial coverage now includes both the full-raise shove re-open and the sub-minimum all-in paths, but the broader marker still stands until the remaining edge cases are retired or the TODO is removed. (`src/casino/table_celled.rs:1277`)
 - [ ] **Unvalidated combinatorics constants** — `UNIQUE_PER_SUIT_2_CARD_HANDS = 585` marked "Need to validate"; write the on-demand `#[ignore]` validation tests the comment asks for. (`src/lib.rs:404`, `:432`)
 - [ ] **`nubibus.rs` error docs** — four public fns have "TODO: Fill in errors" placeholder `# Errors` sections. (`src/analysis/nubibus.rs:81`, `:93`, `:108`, `:144`)
 

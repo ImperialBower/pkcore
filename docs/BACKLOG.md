@@ -136,10 +136,7 @@ re-raised next pass.
    downstream repos that EPIC-34 and EPIC-60 both need on a current pkcore.
 4. **EPIC-34** — closes the variant-v1 arc end-to-end, if you're ready to
    coordinate a pkarena0-web release.
-5. **Adversarial tests for `is_betting_complete`** — the min-raise defect was
-   exactly the class of bug the `table_celled.rs:1277` marker predicts. One
-   focused test session either retires the marker or finds the next one.
-6. **Decide whether `TableCelled` has a future.** It carries the crate's whole
+5. **Decide whether `TableCelled` has a future.** It carries the crate's whole
    doc-test deficit, the surviving silent-seat-0 defaults, and the Stud/Razz
    logic gap — and `ANALYSIS_TableCelled_vs_Table.md` already leans toward the
    no-cell `Table`. Answering keep-or-retire retires or schedules a large
