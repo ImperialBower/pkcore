@@ -68,6 +68,11 @@ pub const DECK_ARRAY: [Card; 52] = [
 pub const POKER_DECK: Deck = Deck(DECK_ARRAY);
 
 impl Deck {
+    /// Returns the card at `index` in the standard 52-card deck array.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `index >= 52`.
     #[must_use]
     pub fn get(index: usize) -> Card {
         POKER_DECK.0[index]

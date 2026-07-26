@@ -69,15 +69,15 @@ positives._
 - [ ] 🤖 **`select_all` raw `.unwrap()`** — `stmt.query(())` and `hups.next()` will panic if SQLite errors mid-iteration; suppressed by `#[allow(clippy::unwrap_used)]` at `:563`. Suggested: propagate via `?`, return `Result<Vec<HUPResult>, rusqlite::Error>`. (`src/analysis/store/db/hup.rs:576-577`)
 - [ ] 🤖 **`from_sorted_heads_up` assert** — `assert_eq!(first_ties, second_ties)` panics on asymmetric tie counters. Suggested: return `Result<Self, PKError>`. (`src/analysis/store/db/hup.rs:185`)
 - [ ] 🤖 **`From<&SortedHeadsUp>` assert** — `assert_eq!(higher_ties, lower_ties)` inside a `From` impl panics in production. Suggested: make it `TryFrom`. (`src/analysis/store/db/hup.rs:406`)
-- [ ] 🤖 **`NAMER` static `unwrap()`** — `LazyLock` init panics at first use if `RNG::new` fails. Suggested: fallback or `Result`-valued `LazyLock`; at minimum a `# Panics` doc. (`src/util/name.rs:5-6`)
+- ✅ 🤖 **`NAMER` static `unwrap()`** — `# Panics` doc added 2026-07-25. (`src/util/name.rs`)
 - [ ] 🤖 **`receive_usize` `expect()`** — public fn panics on stdin read error (`#[allow(clippy::expect_used)]` at `:136`). Suggested: return `Result<usize, std::io::Error>`. (`src/util/terminal.rs:141`)
-- [ ] 🤖 **`Deck::get` unchecked index** — `POKER_DECK.0[index]` panics out of bounds, and the fn carries **no doc comment at all**. Suggested: document the panic and/or return `Option<Card>`. (`src/deck.rs:72-73`)
+- ✅ 🤖 **`Deck::get` unchecked index** — `# Panics` doc added 2026-07-25. (`src/deck.rs`)
 
 ### New this pass (2026-07-24)
 
 - [ ] 🤖 **`From<&HUPResult> for Masked` unwraps a fallible conversion** — `Masked::from(SortedHeadsUp::try_from(hup).unwrap())` inside a `From` impl, suppressed by a local `#[allow(clippy::unwrap_used)]`. Identical class to the `hup.rs:406` finding: an infallible-by-signature conversion that can panic on malformed DB rows. Suggested: `TryFrom<&HUPResult> for Masked`. (`src/arrays/matchups/masked.rs:465-467`)
-- [ ] 🤖 **`parse_cards` recompiles a regex per call** — `Regex::new(r"^(?<dealt>...)/(?<board>.+)$").unwrap()` runs on every invocation. The compile is infallible for this literal, so the `unwrap` is cosmetic, but the recompilation is not: this is on the Pluribus-log parse path. Suggested: hoist to a `LazyLock<Regex>`, which removes both the cost and the `unwrap`. (`src/analysis/nubibus.rs:433-436`)
-- [ ] 🤖 **Stale `#[allow(clippy::missing_panics_doc)]`** — `TestData::the_board()` carries the allow, but its body uses `Board::from_str(...).unwrap_or_default()` and cannot panic. Suggested: delete the attribute. (`src/util/data.rs:64`)
+- ✅ 🤖 **`parse_cards` recompiles a regex per call** — hoisted to `LazyLock<Regex>` 2026-07-25. (`src/analysis/nubibus.rs`)
+- ✅ 🤖 **Stale `#[allow(clippy::missing_panics_doc)]`** — deleted from `TestData::the_board()` 2026-07-25. (`src/util/data.rs`)
 
 ### Doc-test coverage — the largest single debt mass
 

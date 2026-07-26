@@ -2,6 +2,12 @@ use rnglib::{Language, RNG};
 
 pub struct Name;
 
+/// Random name generator using Demonic language.
+///
+/// # Panics
+///
+/// Panics at first use if `RNG::new(&Language::Demonic)` fails (i.e., the
+/// underlying entropy source is unavailable at startup).
 #[allow(clippy::unwrap_used)]
 pub static NAMER: std::sync::LazyLock<RNG> = std::sync::LazyLock::new(|| RNG::new(&Language::Demonic).unwrap());
 

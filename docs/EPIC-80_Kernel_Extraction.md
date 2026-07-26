@@ -422,7 +422,7 @@ only `std` usage in the kernel set that is not a `String`/`Vec` helper.
 
 - [ ] **4a.** ckc-rs CI: `cargo build --no-default-features --target thumbv7em-none-eabi`
       and `--target wasm32-unknown-unknown`.
-- [ ] **4b.** ckc-rs CI: assert `cargo tree --no-default-features` reports exactly
+- [ ] **4b.** ckc-rs CI: assert `cargo tree --no-default-features -e normal` reports exactly
       one crate, so the zero-dependency property cannot silently regress.
 - [ ] **4c.** ckc-rs CI: `cargo clippy --all-features -- -D warnings` at pedantic.
 
@@ -519,7 +519,7 @@ cargo test --release -- --ignored            # the 7-card marathon
 cargo build --no-default-features --target thumbv7em-none-eabi
 cargo build --no-default-features --target wasm32-unknown-unknown
 cargo clippy --all-features -- -D warnings
-test "$(cargo tree --no-default-features | wc -l)" -eq 1
+test "$(cargo tree --no-default-features -e normal | wc -l)" -eq 1
 
 # pkcore
 cargo test --all-features

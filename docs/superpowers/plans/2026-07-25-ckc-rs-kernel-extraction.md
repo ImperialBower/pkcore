@@ -16,7 +16,7 @@
 
 - **Repo for all work in this plan:** `/Users/christoph/src/github.com/ImperialBower/ckc-rs`. Source files are copied *from* `/Users/christoph/src/github.com/ImperialBower/pkcore` but pkcore is **never modified** in this plan.
 - **Version:** `ckc-rs` 0.2.0. Edition 2024. `rust-version = "1.85"`.
-- **Zero default dependencies.** After Task 2, `cargo tree --no-default-features` must report exactly 1 line. `strum` is removed entirely; `serde` is optional and off by default.
+- **Zero default dependencies.** After Task 2, `cargo tree --no-default-features -e normal` must report exactly 1 line (the `-e normal` flag is required: plain `cargo tree` includes dev-dependency edges, and `rstest` pulls ~47 transitive crates). `strum` is removed entirely; `serde` is optional and off by default.
 - **`no_std`.** `#![no_std]` in `lib.rs`. Evaluation is pure `core`. `alloc` gates only `String`/`Vec` helpers. `Display` uses `core::fmt` and is always available.
 - **Formatting:** `max_width = 120` (`.rustfmt.toml:37`). Run `cargo fmt` before every commit.
 - **Clippy:** pedantic, `-D warnings`.
@@ -339,7 +339,7 @@ git rm -r src/cards src/deck.rs src/parse.rs src/hand_rank.rs
 ```bash
 cargo build --no-default-features
 cargo build --all-features
-test "$(cargo tree --no-default-features | wc -l)" -eq 1 && echo "ZERO DEPS OK"
+test "$(cargo tree --no-default-features -e normal | wc -l)" -eq 1 && echo "ZERO DEPS OK"
 ```
 
 Expected: both builds succeed; `ZERO DEPS OK` prints.
@@ -1644,7 +1644,7 @@ cd /Users/christoph/src/github.com/ImperialBower/ckc-rs
 rustup target add thumbv7em-none-eabi wasm32-unknown-unknown
 cargo build --no-default-features --target thumbv7em-none-eabi
 cargo build --no-default-features --target wasm32-unknown-unknown
-test "$(cargo tree --no-default-features | wc -l)" -eq 1 && echo "ZERO DEPS OK"
+test "$(cargo tree --no-default-features -e normal | wc -l)" -eq 1 && echo "ZERO DEPS OK"
 cargo clippy --all-features -- -D warnings
 ```
 
@@ -1676,7 +1676,7 @@ Append to `.github/workflows/CI.yaml`:
       - uses: dtolnay/rust-toolchain@1.85
       - name: Assert the dependency tree is just ckc-rs
         run: |
-          COUNT=$(cargo tree --no-default-features | wc -l)
+          COUNT=$(cargo tree --no-default-features -e normal | wc -l)
           echo "dependency tree lines: $COUNT"
           test "$COUNT" -eq 1
 
@@ -1752,7 +1752,7 @@ cargo build --no-default-features --target thumbv7em-none-eabi
 cargo build --no-default-features --target wasm32-unknown-unknown
 cargo clippy --all-features -- -D warnings
 cargo fmt --check
-test "$(cargo tree --no-default-features | wc -l)" -eq 1
+test "$(cargo tree --no-default-features -e normal | wc -l)" -eq 1
 ```
 
 Exit criteria:
@@ -1761,7 +1761,7 @@ Exit criteria:
 2. `tests/invalid_hands.rs` passes — the one deliberate behavior change is pinned.
 3. `tests/table_identity.rs` passes — no lookup table byte changed.
 4. `ckc-rs` builds `no_std` for bare-metal and wasm32.
-5. `cargo tree --no-default-features` reports exactly one crate.
+5. `cargo tree --no-default-features -e normal` reports exactly one crate.
 6. clippy pedantic is silent; `cargo fmt --check` is clean.
 7. `pkcore`'s **source is unmodified** by this plan. The only pkcore changes are
    documentation: the EPIC-80 Status rows and the `ROADMAP.md` block registration

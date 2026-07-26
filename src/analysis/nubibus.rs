@@ -12,6 +12,7 @@ use std::fs;
 use std::ops::Index;
 use std::path::Path;
 use std::str::FromStr;
+use std::sync::LazyLock;
 #[cfg(all(unix, feature = "terminal"))]
 use termion::color;
 #[cfg(not(all(unix, feature = "terminal")))]
@@ -32,6 +33,9 @@ mod color {
     pub struct Magenta;
     pub struct Reset;
 }
+
+static PARSE_CARDS_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?<dealt>[0-9a-zA-Z|]+)/(?<board>.+)$").expect("hard-coded regex is valid"));
 
 /// `nūbĭfĭcus , a, um nubes-facio, - producing clouds`
 ///
@@ -437,11 +441,9 @@ impl Pluribus {
     }
 
     // FirstPass { index: 27, bets: ["r200ffcfc", "cr850cf", "cr1825r3775c", "r10000c"], cards: ["Qc4h", "Tc9c", "8sAs", "Qh7c", "JcQd", "5h5d/3h7s5c/Qs/6c"], winnings: [], players: [] }
-    #[allow(clippy::unwrap_used)]
     fn parse_cards(s: &str) -> (HoleCards, Board) {
         if s.contains('/') {
-            let re = Regex::new(r"^(?<dealt>[0-9a-zA-Z|]+)/(?<board>.+)$").unwrap();
-            let mut res = re.captures_iter(s);
+            let mut res = PARSE_CARDS_RE.captures_iter(s);
 
             let Some(caps) = res.next() else {
                 return (HoleCards::default(), Board::default());
