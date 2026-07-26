@@ -400,8 +400,8 @@ pub mod util;
 // region CONSTANTS
 
 /// See Cactus Kev's explanation of [unique vs. distinct](https://suffe.cool/poker/evaluator.html)
-/// Poker hands.
-/// TODO: Write on demand tests (ignore) to validate these numbers against our code.
+/// Poker hands. Validation tests for these constants live in `lib_tests` under
+/// `validate_unique_*` (run with `cargo test validate -- --ignored`).
 pub const UNIQUE_STRAIGHT_FLUSHES: i32 = 40;
 pub const DISTINCT_STRAIGHT_FLUSHES: i32 = 10;
 pub const UNIQUE_FOUR_OF_A_KIND: i32 = 624;
@@ -429,7 +429,7 @@ pub const DISTINCT_PER_RANK_2_CARD_HANDS: usize = 25; // 1 + (2 x 12) = 25
 pub const UNIQUE_POCKET_PAIRS: usize = 78; // 13 x 6 = 78
 pub const UNIQUE_NON_POCKET_PAIRS: usize = 1_248; // 13 x 6 = 78
 
-pub const UNIQUE_PER_SUIT_2_CARD_HANDS: usize = 585; // TODO: Need to validate
+pub const UNIQUE_PER_SUIT_2_CARD_HANDS: usize = 585; // C(52,2) - C(39,2) = 1326 - 741 = 585
 
 pub const UNIQUE_PER_CARD_2_CARD_HANDS: usize = 198; // 6 + (16 x 12) = 198
 
@@ -1331,4 +1331,60 @@ mod lib_tests {
             PKError::InvalidFrequency.to_string()
         );
     }
+
+    // region Combinatorics constant validation tests (run with: cargo test validate -- --ignored)
+
+    #[test]
+    #[ignore]
+    fn validate_unique_2_card_hands() {
+        // C(52, 2) = 1326
+        let count = cards::Cards::deck().combinations(2).count();
+        assert_eq!(UNIQUE_2_CARD_HANDS, count);
+    }
+
+    #[test]
+    #[ignore]
+    fn validate_unique_suited_2_card_hands() {
+        // 4 suits × C(13, 2) = 4 × 78 = 312
+        let count = cards::Cards::deck()
+            .combinations(2)
+            .filter(|combo| combo[0].get_suit() == combo[1].get_suit() && combo[0].get_suit() != suit::Suit::BLANK)
+            .count();
+        assert_eq!(UNIQUE_SUITED_2_CARD_HANDS, count);
+    }
+
+    #[test]
+    #[ignore]
+    fn validate_unique_pocket_pairs() {
+        // 13 ranks × C(4, 2) = 13 × 6 = 78
+        let count = cards::Cards::deck()
+            .combinations(2)
+            .filter(|combo| combo[0].get_rank() == combo[1].get_rank())
+            .count();
+        assert_eq!(UNIQUE_POCKET_PAIRS, count);
+    }
+
+    #[test]
+    #[ignore]
+    fn validate_unique_per_suit_2_card_hands() {
+        // Hands with ≥1 Spade: C(52,2) - C(39,2) = 1326 - 741 = 585
+        let count = cards::Cards::deck()
+            .combinations(2)
+            .filter(|combo| combo.iter().any(|c| c.get_suit() == suit::Suit::SPADES))
+            .count();
+        assert_eq!(UNIQUE_PER_SUIT_2_CARD_HANDS, count);
+    }
+
+    #[test]
+    #[ignore]
+    fn validate_unique_per_rank_2_card_hands() {
+        // Hands with ≥1 Ace: C(4,2) + 4×48 = 6 + 192 = 198
+        let count = cards::Cards::deck()
+            .combinations(2)
+            .filter(|combo| combo.iter().any(|c| c.get_rank() == rank::Rank::ACE))
+            .count();
+        assert_eq!(UNIQUE_PER_RANK_2_CARD_HANDS, count);
+    }
+
+    // endregion
 }

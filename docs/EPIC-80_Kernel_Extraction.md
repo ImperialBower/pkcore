@@ -420,7 +420,7 @@ only `std` usage in the kernel set that is not a `String`/`Vec` helper.
 
 ### Phase 4 — CI gates
 
-- [ ] **4a.** ckc-rs CI: `cargo build --no-default-features --target thumbv7em-none-eabi`
+- [ ] **4a.** ckc-rs CI: `cargo build --no-default-features --features standard52 --target thumbv7em-none-eabi`
       and `--target wasm32-unknown-unknown`.
 - [ ] **4b.** ckc-rs CI: assert `cargo tree --no-default-features -e normal` reports exactly
       one crate, so the zero-dependency property cannot silently regress.
@@ -516,8 +516,8 @@ only `std` usage in the kernel set that is not a `String`/`Vec` helper.
 cargo test                                   # 2,542 inherited + new kernel tests
 cargo test --release five_card_golden_oracle # all 2,598,960 hands
 cargo test --release -- --ignored            # the 7-card marathon
-cargo build --no-default-features --target thumbv7em-none-eabi
-cargo build --no-default-features --target wasm32-unknown-unknown
+cargo build --no-default-features --features standard52 --target thumbv7em-none-eabi
+cargo build --no-default-features --features standard52 --target wasm32-unknown-unknown
 cargo clippy --all-features -- -D warnings
 test "$(cargo tree --no-default-features -e normal | wc -l)" -eq 1
 
@@ -525,7 +525,7 @@ test "$(cargo tree --no-default-features -e normal | wc -l)" -eq 1
 cargo test --all-features
 cargo test --doc --all-features
 cargo clippy --all-features -- -D warnings
-cargo build --no-default-features
+cargo build --no-default-features --features standard52
 ```
 
 Exit criteria:

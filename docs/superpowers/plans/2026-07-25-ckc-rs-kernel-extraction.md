@@ -337,7 +337,7 @@ git rm -r src/cards src/deck.rs src/parse.rs src/hand_rank.rs
 - [ ] **Step 7: Verify it builds clean and depends on nothing**
 
 ```bash
-cargo build --no-default-features
+cargo build --no-default-features --features standard52
 cargo build --all-features
 test "$(cargo tree --no-default-features -e normal | wc -l)" -eq 1 && echo "ZERO DEPS OK"
 ```
@@ -760,7 +760,7 @@ Add `pub mod rank;`, `pub mod suit;`, `pub use rank::Rank;`, `pub use suit::{Sui
 
 ```bash
 cargo test --lib standard52::rank standard52::suit
-cargo build --no-default-features
+cargo build --no-default-features --features standard52
 ```
 
 Expected: tests PASS and the `no_std` build succeeds — proving the `HashSet` removal worked.
@@ -902,7 +902,7 @@ Add `pub mod card;` and `pub use card::Card;` to `src/standard52/mod.rs`, then:
 
 ```bash
 cargo test --lib standard52::card
-cargo build --no-default-features
+cargo build --no-default-features --features standard52
 cargo build --all-features
 ```
 
@@ -1642,8 +1642,8 @@ Do not write CI for something you have not seen go green:
 ```bash
 cd /Users/christoph/src/github.com/ImperialBower/ckc-rs
 rustup target add thumbv7em-none-eabi wasm32-unknown-unknown
-cargo build --no-default-features --target thumbv7em-none-eabi
-cargo build --no-default-features --target wasm32-unknown-unknown
+cargo build --no-default-features --features standard52 --target thumbv7em-none-eabi
+cargo build --no-default-features --features standard52 --target wasm32-unknown-unknown
 test "$(cargo tree --no-default-features -e normal | wc -l)" -eq 1 && echo "ZERO DEPS OK"
 cargo clippy --all-features -- -D warnings
 ```
@@ -1664,9 +1664,9 @@ Append to `.github/workflows/CI.yaml`:
         with:
           targets: thumbv7em-none-eabi, wasm32-unknown-unknown
       - name: Build bare-metal
-        run: cargo build --no-default-features --target thumbv7em-none-eabi
+        run: cargo build --no-default-features --features standard52 --target thumbv7em-none-eabi
       - name: Build wasm32
-        run: cargo build --no-default-features --target wasm32-unknown-unknown
+        run: cargo build --no-default-features --features standard52 --target wasm32-unknown-unknown
 
   zero_deps:
     name: zero default dependencies
@@ -1748,8 +1748,8 @@ cd /Users/christoph/src/github.com/ImperialBower/ckc-rs
 cargo test                                          # unit + integration
 cargo test --release --test golden_oracle           # all 2,598,960 hands
 cargo test --release -- --ignored seven_exhaustive  # the marathon
-cargo build --no-default-features --target thumbv7em-none-eabi
-cargo build --no-default-features --target wasm32-unknown-unknown
+cargo build --no-default-features --features standard52 --target thumbv7em-none-eabi
+cargo build --no-default-features --features standard52 --target wasm32-unknown-unknown
 cargo clippy --all-features -- -D warnings
 cargo fmt --check
 test "$(cargo tree --no-default-features -e normal | wc -l)" -eq 1
