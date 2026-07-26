@@ -116,21 +116,21 @@ impl Terminal {
 
     /// # Errors
     ///
-    /// TODO
+    /// Returns `PKError::InvalidRangeIndex` if the input string is not a valid
+    /// range notation (e.g. `"AA,KK"`, `"AKs-ATs"`).
+    /// Returns `PKError::InvalidComboIndex` for an unrecognised individual combo token.
     #[cfg(not(target_arch = "wasm32"))]
     pub fn receive_range(prompt: &str) -> Result<Combos, PKError> {
         print!("{prompt}");
         Combos::from_str(prompt)
     }
 
-    /// Then goal of the functions in this module is to isolate and standardize the patterns we've been
-    /// using in our example files.
-    ///
-    /// TODO use [RustyLine](https://github.com/kkawakam/rustyline)
+    /// Reads a `usize` from stdin after displaying `prompt`. Returns `0` if
+    /// the input cannot be parsed as a non-negative integer.
     ///
     /// # Panics
     ///
-    /// If it somehow wigs out on the input.
+    /// Panics if the underlying stdin read fails (e.g. the stream is closed).
     #[cfg(not(target_arch = "wasm32"))]
     #[must_use]
     #[allow(clippy::expect_used)]

@@ -78,7 +78,8 @@ impl Nubificus {
 
     /// # Errors
     ///
-    /// TODO: Fill in errors
+    /// - `PKError::InvalidSeatNumber` if the table's forced-bet sequencing is wrong (via `table.act()`).
+    /// - Any error returned by [`Self::do_action`] while replaying the queued events.
     pub fn ff(&mut self, number_of_actions: usize, display: bool) -> Result<(), PKError> {
         self.table.act()?;
 
@@ -90,7 +91,9 @@ impl Nubificus {
 
     /// # Errors
     ///
-    /// TODO: Fill in errors
+    /// - `PKError::NotDealt` or a deal-related error if `deal_cards_to_seats` fails.
+    /// - `PKError::InvalidSeatNumber` propagated from `table.act()`.
+    /// - Any error returned by [`Self::do_action`] while replaying the action log.
     pub fn play_hand(&self) -> Result<(), PKError> {
         if !self.table.seats.are_dealt() {
             self.table.deal_cards_to_seats()?;
@@ -105,7 +108,9 @@ impl Nubificus {
 
     /// # Errors
     ///
-    /// TODO: Fill in errors
+    /// - `PKError::NotDealt` or a deal-related error if `deal_cards_to_seats` fails.
+    /// - `PKError::InvalidSeatNumber` propagated from `table.act()`.
+    /// - Any error returned by [`Self::do_action`] while stepping through the action log.
     pub fn play_hand_display(&self) -> Result<(), PKError> {
         log::trace!("Nubibus.play_hand_display()");
         if !self.table.seats.are_dealt() {
@@ -141,7 +146,9 @@ impl Nubificus {
 
     /// # Errors
     ///
-    /// TODO: Fill in errors
+    /// - `PKError::InvalidPluribusIndex` if `Nubificus::act` cannot route the action.
+    /// - `PKError::Fubar` or a game-state error from `table.end_hand()` when the hand is over.
+    /// - `PKError::InvalidSeatNumber` propagated from `table.act()` when dealing a new street.
     #[allow(clippy::too_many_lines)]
     pub fn do_action(&self, action: &PluribusEvent, display: bool) -> Result<(), PKError> {
         let seat_to_act = self.table.next_to_act();

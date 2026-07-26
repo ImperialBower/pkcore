@@ -22,7 +22,6 @@
 
 ## Tech debt
 
-- [ ] **Terminal input cleanup** — `receive_range` still has a bare `TODO`, and `receive_usize` still wants a Rustyline-backed path. (`src/util/terminal.rs:119`, `:129`)
 - [ ] **StartingHands BCM fixture** — build the smaller BCM subset test harness the comment asks for. (`src/arrays/hole_cards/twos.rs:31`)
 
 ## Docs / Note

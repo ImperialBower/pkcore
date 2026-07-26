@@ -23,13 +23,13 @@ _Added by the 2026-07-23 refresh (new untracked code comments):_
 - [ ] **`TableCelled` Stud/Razz gap** — "Alternative logic for Stud and Razz games" never written; variants shipped on `Table`, so decide whether `TableCelled` should support them or explicitly reject those `GameType`s. (`src/casino/table_celled.rs:783`)
 - [ ] **Betting-completion edge cases** — "edge cases that I fear these checks won't catch"; adversarial coverage now includes both the full-raise shove re-open and the sub-minimum all-in paths, but the broader marker still stands until the remaining edge cases are retired or the TODO is removed. (`src/casino/table_celled.rs:1277`)
 - [ ] **Unvalidated combinatorics constants** — `UNIQUE_PER_SUIT_2_CARD_HANDS = 585` marked "Need to validate"; write the on-demand `#[ignore]` validation tests the comment asks for. (`src/lib.rs:404`, `:432`)
-- [ ] **`nubibus.rs` error docs** — four public fns have "TODO: Fill in errors" placeholder `# Errors` sections. (`src/analysis/nubibus.rs:81`, `:93`, `:108`, `:144`)
+- ✅ **`nubibus.rs` error docs** — filled in 2026-07-25. (`src/analysis/nubibus.rs`)
 
 _Added by the 2026-07-25 refresh (new untracked code comments):_
 
 - [ ] **Cards API cleanup** — `Cards` still has scattered `RF` / `Hack` TODOs and a boxed-return refactor note. (`src/cards.rs:80`, `:202`, `:868`)
 - [ ] **HoleCards type narrowing** — `HoleCards` still wants to be refactored to `Two`. (`src/play/hole_cards.rs:49`)
-- [ ] **Terminal input cleanup** — `receive_range` still has a bare `TODO`, and `receive_usize` still wants a Rustyline-backed path. (`src/util/terminal.rs:119`, `:129`)
+- ✅ **Terminal input cleanup** — filled in 2026-07-25. (`src/util/terminal.rs`)
 - [ ] **Arrayable trait design** — `Arrayable` still has an unresolved "How can we make this work?" plus a direct-from-trait question. (`src/arrays/mod.rs:45`, `:88`)
 - [ ] **Primitive parameter style** — `Seven` still wants a consistent by-ref/by-value decision for primitive parameters. (`src/arrays/seven.rs:121`)
 - [ ] **StartingHands BCM fixture** — `bcm_case_eval` still asks for the smaller BCM subset test harness. (`src/arrays/hole_cards/twos.rs:31`)
