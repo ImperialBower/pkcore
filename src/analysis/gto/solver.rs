@@ -61,6 +61,7 @@ use crate::analysis::gto::solver_config::{CfrVariant, SolverConfig};
 use crate::analysis::gto::strategy_profile::{ActionFrequencies, StrategyProfile};
 use crate::analysis::gto::twos::Twos;
 use crate::arrays::HandRanker;
+use crate::arrays::ext::SevenExt;
 use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
 use crate::card::Card;

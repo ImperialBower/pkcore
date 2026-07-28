@@ -3,6 +3,7 @@ use crate::analysis::gto::odds::WinLoseDraw;
 #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use crate::analysis::store::bcm::binary_card_map::SevenFiveBCM;
 use crate::analysis::store::db::hup::HUPResult;
+use crate::arrays::ext::FiveExt;
 use crate::arrays::five::Five;
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
 #[cfg(all(feature = "store", not(target_arch = "wasm32")))]

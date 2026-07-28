@@ -63,6 +63,7 @@ generators = []
 [dependencies]
 bint = "0.1.15"
 cardpack = "0.6.9"
+ckc-rs = { path = "../ckc-rs", features = ["serde"] }
 bitvec = { version = "1.1", features = ["alloc",  "atomic", "std", "serde", "testing" ] }
 csv = "1.4"
 indexmap = { version = "2.12", features = ["rayon"] }

@@ -5,6 +5,7 @@ use crate::analysis::name::HandRankName;
 #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 use crate::analysis::store::bcm::binary_card_map::FiveBCM;
 use crate::arrays::HandRanker;
+use crate::arrays::RazzRanker;
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::games::razz::california::CaliforniaHandRank;
@@ -303,7 +304,7 @@ impl TryFrom<FiveBCM> for Eval {
     fn try_from(bcm: FiveBCM) -> Result<Self, Self::Error> {
         Ok(Eval {
             hand_rank: HandRank::from(bcm.rank),
-            hand: Five::try_from(bcm.bc)?,
+            hand: bcm.bc.to_five()?,
         })
     }
 }

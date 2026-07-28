@@ -1,6 +1,8 @@
 use crate::analysis::eval::Eval;
 use crate::analysis::the_nuts::TheNuts;
+use crate::arrays::Evaluable;
 use crate::arrays::HandRanker;
+use crate::arrays::ext::SevenExt;
 use crate::arrays::five::Five;
 use crate::arrays::four::Four;
 use crate::arrays::seven::Seven;
@@ -70,13 +72,14 @@ impl OmahaHigh {
     #[must_use]
     pub fn permutations(&self, board: &Five) -> Vec<Five> {
         let mut permutations = Vec::new();
+        let board_arr = board.to_arr();
         for hand_perm in &OMAHA_HAND_PERMUTATIONS {
             for board_perm in &OMAHA_BOARD_PERMUTATIONS {
                 let card1 = self.hand.0[hand_perm[0]];
                 let card2 = self.hand.0[hand_perm[1]];
-                let card3 = board.0[board_perm[0]];
-                let card4 = board.0[board_perm[1]];
-                let card5 = board.0[board_perm[2]];
+                let card3 = board_arr[board_perm[0]];
+                let card4 = board_arr[board_perm[1]];
+                let card5 = board_arr[board_perm[2]];
                 let five = Five::from([card1, card2, card3, card4, card5]).sort();
                 permutations.push(five);
             }

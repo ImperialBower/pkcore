@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+EPIC-80 Phase 3: pkcore now consumes `ckc-rs` 0.2.0 as its Cactus Kev evaluation
+kernel instead of carrying its own copy of the lookup tables and `Card`/`Five`/
+`Six`/`Seven` evaluators. Every valid-hand evaluation result is unchanged, proven
+by the C(52,5) golden oracle (2,598,960 hands) plus pkcore's full suite run
+through the kernel unchanged. **The public-API changes below are why Phase 5
+(tracked in `docs/EPIC-80_Kernel_Extraction.md`) will ship as pkcore 0.4.0, not a
+patch release** — nothing here is released yet. **This branch is not mergeable to
+`main` until Phase 5**: `Cargo.toml`'s `ckc-rs = { path = "../ckc-rs", ... }` is
+unresolvable in CI or a fresh clone until `ckc-rs` 0.2.0 is published and the
+dependency becomes version-based (Work Item 5a).
+
+### Changed (pending 0.4.0 — not yet released)
+
+- **`Card`, `CardNumber`, `Rank`, `Suit`, `HandRank`, `HandRankName`,
+  `HandRankClass`, `Five`, `Six`, `Seven`** are now re-exports of
+  `ckc_rs::standard52::*` at their existing `crate::…` paths, rather than
+  pkcore-owned types. All 2,598,960 five-card hands evaluate bit-identically to
+  before the swap.
+- **`HandRanker` split.** pkcore's old `HandRanker` mixed poker ranking with Razz;
+  it is now `ckc_rs::standard52::HandRanker` (poker only, re-exported at
+  `crate::arrays::HandRanker`) plus two new pkcore traits: `RazzRanker` (the A-5
+  lowball half) and `Evaluable` (blanket-implemented for any `HandRanker`,
+  providing `.eval() -> Eval`).
+- **6 `TryFrom`/`From` impls on kernel types replaced by `to_*` methods**, since a
+  foreign trait on a foreign type is no longer legal once `Five`/`Six`/`Seven`/
+  `Card` are re-exports: `TryFrom<Bard> for Card` → `Bard::to_card()`;
+  `TryFrom<Bard> for Five` → `Bard::to_five()`; `TryFrom<Cards> for Five/Six/Seven`
+  → `Cards::to_five()`/`to_six()`/`to_seven()`; `From<Board> for Five` →
+  `Board::to_five()`.
+- **7 inherent constructors become extension traits** (`src/arrays/ext.rs`, new):
+  `Five::from_2and3`, `Six::from_2and3and1`, and `Seven`'s five `from_case_*`
+  constructors are now `FiveExt`/`SixExt`/`SevenExt` methods — call sites need only
+  a `use` added, no logic changes.
+- **`FromStr`/`TryFrom<Vec<…>>` on `Card`/`Five`/`Six`/`Seven` now return
+  `ckc_rs::CkcError`** instead of `PKError`, converted at call sites via the new
+  `impl From<CkcError> for PKError`.
+- **`src/lookups/` (four Cactus Kev tables + `LICENSE`) deleted.** The tables now
+  exist in exactly one place, `ckc-rs/src/standard52/lookups/`.
+
+### Fixed
+
+- **`Five::unique_rank`'s bounds guard** (`index > POSSIBLE_COMBINATIONS` →
+  `index >= POSSIBLE_COMBINATIONS`) — an inherited off-by-one that could panic on
+  a raw out-of-range index; unreachable via the evaluator itself.
+- A flagged-flush hand (built via the public `Card::frequency_paired`/`tripped`/
+  `quaded` transformations) previously indexed the `FLUSHES` table out of bounds
+  and panicked; the kernel's `HandValidator::is_valid()` gate now rejects it and
+  returns `NO_HAND_RANK_VALUE` instead. This is the one intentional
+  externally-visible behavior change EPIC-80 ships (see
+  `docs/EPIC-80_Kernel_Extraction.md` § Context and corrigendum #4); it is pinned
+  by `ckc-rs/tests/invalid_hands.rs`.
+- That same `is_valid()`-vs-`is_dealt()` gate delta surfaced in exactly one existing
+  test: `hand_ranker__hand_rank__frequency_weighted` built a `Five` via pkcore's own
+  `Cards::flag_paired()` frequency-weighting bits, which the kernel's stricter
+  `is_valid()` now rejects (`is_corrupt()`) where the old `is_dealt()` tolerated
+  them. Adapted by calling `.clean()` before `.hand_rank()` in that one test; no
+  other test and no production call site is affected — the blast radius is nil.
+
+### Chore
+
+- A pre-existing `collapsible_if` pedantic clippy error in
+  `src/bot/training/trainer.rs`, invisible to CI's actual gate (`--features
+  pokerbench -- -D warnings`, which doesn't enable the `bot-training` feature this
+  file is gated on), was fixed as a one-line, behavior-preserving `if let ... &&
+  cond` let-chain collapse. It surfaced only because this plan's exit criterion,
+  `cargo clippy --all-features -- -Dclippy::all -Dclippy::pedantic`, is stricter
+  than CI's; unrelated to the Five/Six/Seven kernel swap, rides along in the same
+  commit.
+
 EPIC-50 Phase 3: the `Principal` identity seam. A pure, additive newtype that lets
 the future `pkgate` gateway name *who* is acting without the domain kernel learning
 what a token is. Authentication stays entirely at the transport edge; constructing a

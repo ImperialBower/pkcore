@@ -1,3 +1,4 @@
+use crate::arrays::five::Five;
 use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
@@ -348,6 +349,74 @@ impl Bard {
             CPile::<Standard52>::from_str(&s).ok().map(|p| BasicPile::from(&p))
         }
     }
+
+    /// # Errors
+    ///
+    /// `PKError::CardCast` if the `Bard` does not hold exactly one valid card flag.
+    pub fn to_card(self) -> Result<Card, PKError> {
+        match self {
+            Bard::ACE_SPADES => Ok(Card::ACE_SPADES),
+            Bard::KING_SPADES => Ok(Card::KING_SPADES),
+            Bard::QUEEN_SPADES => Ok(Card::QUEEN_SPADES),
+            Bard::JACK_SPADES => Ok(Card::JACK_SPADES),
+            Bard::TEN_SPADES => Ok(Card::TEN_SPADES),
+            Bard::NINE_SPADES => Ok(Card::NINE_SPADES),
+            Bard::EIGHT_SPADES => Ok(Card::EIGHT_SPADES),
+            Bard::SEVEN_SPADES => Ok(Card::SEVEN_SPADES),
+            Bard::SIX_SPADES => Ok(Card::SIX_SPADES),
+            Bard::FIVE_SPADES => Ok(Card::FIVE_SPADES),
+            Bard::FOUR_SPADES => Ok(Card::FOUR_SPADES),
+            Bard::TREY_SPADES => Ok(Card::TREY_SPADES),
+            Bard::DEUCE_SPADES => Ok(Card::DEUCE_SPADES),
+            Bard::ACE_HEARTS => Ok(Card::ACE_HEARTS),
+            Bard::KING_HEARTS => Ok(Card::KING_HEARTS),
+            Bard::QUEEN_HEARTS => Ok(Card::QUEEN_HEARTS),
+            Bard::JACK_HEARTS => Ok(Card::JACK_HEARTS),
+            Bard::TEN_HEARTS => Ok(Card::TEN_HEARTS),
+            Bard::NINE_HEARTS => Ok(Card::NINE_HEARTS),
+            Bard::EIGHT_HEARTS => Ok(Card::EIGHT_HEARTS),
+            Bard::SEVEN_HEARTS => Ok(Card::SEVEN_HEARTS),
+            Bard::SIX_HEARTS => Ok(Card::SIX_HEARTS),
+            Bard::FIVE_HEARTS => Ok(Card::FIVE_HEARTS),
+            Bard::FOUR_HEARTS => Ok(Card::FOUR_HEARTS),
+            Bard::TREY_HEARTS => Ok(Card::TREY_HEARTS),
+            Bard::DEUCE_HEARTS => Ok(Card::DEUCE_HEARTS),
+            Bard::ACE_DIAMONDS => Ok(Card::ACE_DIAMONDS),
+            Bard::KING_DIAMONDS => Ok(Card::KING_DIAMONDS),
+            Bard::QUEEN_DIAMONDS => Ok(Card::QUEEN_DIAMONDS),
+            Bard::JACK_DIAMONDS => Ok(Card::JACK_DIAMONDS),
+            Bard::TEN_DIAMONDS => Ok(Card::TEN_DIAMONDS),
+            Bard::NINE_DIAMONDS => Ok(Card::NINE_DIAMONDS),
+            Bard::EIGHT_DIAMONDS => Ok(Card::EIGHT_DIAMONDS),
+            Bard::SEVEN_DIAMONDS => Ok(Card::SEVEN_DIAMONDS),
+            Bard::SIX_DIAMONDS => Ok(Card::SIX_DIAMONDS),
+            Bard::FIVE_DIAMONDS => Ok(Card::FIVE_DIAMONDS),
+            Bard::FOUR_DIAMONDS => Ok(Card::FOUR_DIAMONDS),
+            Bard::TREY_DIAMONDS => Ok(Card::TREY_DIAMONDS),
+            Bard::DEUCE_DIAMONDS => Ok(Card::DEUCE_DIAMONDS),
+            Bard::ACE_CLUBS => Ok(Card::ACE_CLUBS),
+            Bard::KING_CLUBS => Ok(Card::KING_CLUBS),
+            Bard::QUEEN_CLUBS => Ok(Card::QUEEN_CLUBS),
+            Bard::JACK_CLUBS => Ok(Card::JACK_CLUBS),
+            Bard::TEN_CLUBS => Ok(Card::TEN_CLUBS),
+            Bard::NINE_CLUBS => Ok(Card::NINE_CLUBS),
+            Bard::EIGHT_CLUBS => Ok(Card::EIGHT_CLUBS),
+            Bard::SEVEN_CLUBS => Ok(Card::SEVEN_CLUBS),
+            Bard::SIX_CLUBS => Ok(Card::SIX_CLUBS),
+            Bard::FIVE_CLUBS => Ok(Card::FIVE_CLUBS),
+            Bard::FOUR_CLUBS => Ok(Card::FOUR_CLUBS),
+            Bard::TREY_CLUBS => Ok(Card::TREY_CLUBS),
+            Bard::DEUCE_CLUBS => Ok(Card::DEUCE_CLUBS),
+            _ => Err(PKError::CardCast),
+        }
+    }
+
+    /// # Errors
+    ///
+    /// `PKError::NotEnoughCards`/`TooManyCards` if the bard does not hold exactly five bits.
+    pub fn to_five(self) -> Result<Five, PKError> {
+        Cards::from(self).to_five()
+    }
 }
 
 impl fmt::Binary for Bard {
@@ -580,7 +649,7 @@ impl Pile for Bard {
 
         for b in Bard::DECK {
             if b & *self == b {
-                let c = Card::try_from(b);
+                let c = b.to_card();
                 if let Ok(c) = c {
                     let () = v.push(c);
                 }
@@ -959,5 +1028,83 @@ mod bard_tests {
     #[test]
     fn pile__to_vec__empty() {
         assert!(Bard::BLANK.to_vec().is_empty());
+    }
+
+    #[rstest]
+    #[case(Bard::ACE_SPADES, Card::ACE_SPADES)]
+    #[case(Bard::KING_SPADES, Card::KING_SPADES)]
+    #[case(Bard::QUEEN_SPADES, Card::QUEEN_SPADES)]
+    #[case(Bard::JACK_SPADES, Card::JACK_SPADES)]
+    #[case(Bard::TEN_SPADES, Card::TEN_SPADES)]
+    #[case(Bard::NINE_SPADES, Card::NINE_SPADES)]
+    #[case(Bard::EIGHT_SPADES, Card::EIGHT_SPADES)]
+    #[case(Bard::SEVEN_SPADES, Card::SEVEN_SPADES)]
+    #[case(Bard::SIX_SPADES, Card::SIX_SPADES)]
+    #[case(Bard::FIVE_SPADES, Card::FIVE_SPADES)]
+    #[case(Bard::FOUR_SPADES, Card::FOUR_SPADES)]
+    #[case(Bard::TREY_SPADES, Card::TREY_SPADES)]
+    #[case(Bard::DEUCE_SPADES, Card::DEUCE_SPADES)]
+    #[case(Bard::ACE_HEARTS, Card::ACE_HEARTS)]
+    #[case(Bard::KING_HEARTS, Card::KING_HEARTS)]
+    #[case(Bard::QUEEN_HEARTS, Card::QUEEN_HEARTS)]
+    #[case(Bard::JACK_HEARTS, Card::JACK_HEARTS)]
+    #[case(Bard::TEN_HEARTS, Card::TEN_HEARTS)]
+    #[case(Bard::NINE_HEARTS, Card::NINE_HEARTS)]
+    #[case(Bard::EIGHT_HEARTS, Card::EIGHT_HEARTS)]
+    #[case(Bard::SEVEN_HEARTS, Card::SEVEN_HEARTS)]
+    #[case(Bard::SIX_HEARTS, Card::SIX_HEARTS)]
+    #[case(Bard::FIVE_HEARTS, Card::FIVE_HEARTS)]
+    #[case(Bard::FOUR_HEARTS, Card::FOUR_HEARTS)]
+    #[case(Bard::TREY_HEARTS, Card::TREY_HEARTS)]
+    #[case(Bard::DEUCE_HEARTS, Card::DEUCE_HEARTS)]
+    #[case(Bard::ACE_DIAMONDS, Card::ACE_DIAMONDS)]
+    #[case(Bard::KING_DIAMONDS, Card::KING_DIAMONDS)]
+    #[case(Bard::QUEEN_DIAMONDS, Card::QUEEN_DIAMONDS)]
+    #[case(Bard::JACK_DIAMONDS, Card::JACK_DIAMONDS)]
+    #[case(Bard::TEN_DIAMONDS, Card::TEN_DIAMONDS)]
+    #[case(Bard::NINE_DIAMONDS, Card::NINE_DIAMONDS)]
+    #[case(Bard::EIGHT_DIAMONDS, Card::EIGHT_DIAMONDS)]
+    #[case(Bard::SEVEN_DIAMONDS, Card::SEVEN_DIAMONDS)]
+    #[case(Bard::SIX_DIAMONDS, Card::SIX_DIAMONDS)]
+    #[case(Bard::FIVE_DIAMONDS, Card::FIVE_DIAMONDS)]
+    #[case(Bard::FOUR_DIAMONDS, Card::FOUR_DIAMONDS)]
+    #[case(Bard::TREY_DIAMONDS, Card::TREY_DIAMONDS)]
+    #[case(Bard::DEUCE_DIAMONDS, Card::DEUCE_DIAMONDS)]
+    #[case(Bard::ACE_CLUBS, Card::ACE_CLUBS)]
+    #[case(Bard::KING_CLUBS, Card::KING_CLUBS)]
+    #[case(Bard::QUEEN_CLUBS, Card::QUEEN_CLUBS)]
+    #[case(Bard::JACK_CLUBS, Card::JACK_CLUBS)]
+    #[case(Bard::TEN_CLUBS, Card::TEN_CLUBS)]
+    #[case(Bard::NINE_CLUBS, Card::NINE_CLUBS)]
+    #[case(Bard::EIGHT_CLUBS, Card::EIGHT_CLUBS)]
+    #[case(Bard::SEVEN_CLUBS, Card::SEVEN_CLUBS)]
+    #[case(Bard::SIX_CLUBS, Card::SIX_CLUBS)]
+    #[case(Bard::FIVE_CLUBS, Card::FIVE_CLUBS)]
+    #[case(Bard::FOUR_CLUBS, Card::FOUR_CLUBS)]
+    #[case(Bard::TREY_CLUBS, Card::TREY_CLUBS)]
+    #[case(Bard::DEUCE_CLUBS, Card::DEUCE_CLUBS)]
+    fn to_card__bard(#[case] from: Bard, #[case] to: Card) {
+        assert_eq!(from.to_card().unwrap(), to);
+    }
+
+    #[test]
+    fn to_card() {
+        assert_eq!(Bard::ACE_SPADES.to_card().unwrap(), Card::ACE_SPADES);
+        assert!(Bard::BLANK.to_card().is_err());
+        assert!((Bard::JACK_HEARTS | Bard::TEN_HEARTS).to_card().is_err());
+    }
+
+    #[test]
+    fn to_five() {
+        let bard = Bard::from(Cards::from_str("A♦ K♦ Q♦ J♦ T♦").unwrap());
+        assert_eq!(bard.to_five().unwrap(), Five::from_str("A♦ K♦ Q♦ J♦ T♦").unwrap());
+        assert_eq!(
+            Bard::from(Cards::from_str("A♦ K♦ Q♦ J♦").unwrap()).to_five(),
+            Err(PKError::NotEnoughCards)
+        );
+        assert_eq!(
+            Bard::from(Cards::from_str("A♦ K♦ Q♦ J♦ T♦ 9♦").unwrap()).to_five(),
+            Err(PKError::TooManyCards)
+        );
     }
 }

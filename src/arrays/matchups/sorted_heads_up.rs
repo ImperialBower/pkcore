@@ -2,6 +2,7 @@
 use crate::analysis::store::bcm::binary_card_map::bc_rank_hashmap;
 use crate::analysis::store::db::hup::HUPResult;
 use crate::analysis::the_nuts::TheNuts;
+use crate::arrays::ext::SevenExt;
 use crate::arrays::five::Five;
 use crate::arrays::matchups::masked::{MASKED_UNIQUE, Masked};
 use crate::arrays::seven::Seven;

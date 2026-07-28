@@ -1,5 +1,6 @@
 use crate::analysis::eval::Eval;
-use crate::arrays::HandRanker;
+use crate::arrays::Evaluable;
+use crate::arrays::ext::SevenExt;
 use crate::arrays::seven::Seven;
 use crate::arrays::six::Six;
 use crate::arrays::three::Three;

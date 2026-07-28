@@ -8,9 +8,7 @@
 
 use crate::analysis::case_eval::CaseEval;
 use crate::analysis::eval::Eval;
-use crate::arrays::five::Five;
 use crate::arrays::four::Four;
-use crate::arrays::seven::Seven;
 use crate::arrays::sliced::BoxedCards;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
@@ -1551,7 +1549,7 @@ impl Table {
     /// `Eval` per seat slot, with `Eval::default()` for empty / folded
     /// seats.
     fn omaha_river_case_eval(&self) -> Result<CaseEval, PKError> {
-        let board_five = Five::try_from(self.board.clone())?;
+        let board_five = self.board.to_five()?;
         let mut case_eval = CaseEval::new(Cards::default());
         for seat in &self.seats.0 {
             if seat.is_in_hand() && seat.cards.is_dealt() {
@@ -1577,7 +1575,7 @@ impl Table {
 
     /// EPIC-32 Phase 12: builds a per-seat [`CaseEval`] for Stud-family
     /// games. Stud has no community board — each seat's 7 hole cards
-    /// stand alone. Wraps `Seven::try_from(seat.cards.cards())` and
+    /// stand alone. Wraps `seat.cards.cards().to_seven()` and
     /// `Eval::from(seven)` per seat, mirroring the Holdem `CaseEval`
     /// shape (one Eval per seat slot; `Eval::default()` for empty /
     /// folded seats).
@@ -1585,7 +1583,7 @@ impl Table {
         let mut case_eval = CaseEval::new(Cards::default());
         for seat in &self.seats.0 {
             if seat.is_in_hand() && seat.cards.is_dealt() {
-                match Seven::try_from(seat.cards.cards()) {
+                match seat.cards.cards().to_seven() {
                     Ok(seven) => case_eval.push(Eval::from(seven)),
                     Err(_) => case_eval.push(Eval::default()),
                 }
@@ -1607,7 +1605,7 @@ impl Table {
         let mut case_eval = CaseEval::new(Cards::default());
         for seat in &self.seats.0 {
             if seat.is_in_hand() && seat.cards.is_dealt() {
-                match Seven::try_from(seat.cards.cards()) {
+                match seat.cards.cards().to_seven() {
                     Ok(seven) => match Eval::from_seven_razz(&seven) {
                         Ok(eval) => case_eval.push(eval),
                         Err(_) => case_eval.push(Eval::default()),
@@ -1696,7 +1694,7 @@ impl Table {
             _ => {}
         }
         match self.effective_player_cards(seat_number) {
-            Some(cards) => match Seven::try_from(cards) {
+            Some(cards) => match cards.to_seven() {
                 Ok(seven) => Eval::from(seven),
                 Err(_) => Eval::default(),
             },
@@ -1715,7 +1713,7 @@ impl Table {
         if !seat.cards.is_dealt() {
             return Eval::default();
         }
-        let Ok(seven) = Seven::try_from(seat.cards.cards()) else {
+        let Ok(seven) = seat.cards.cards().to_seven() else {
             return Eval::default();
         };
         Eval::from_seven_razz(&seven).unwrap_or_default()
@@ -1733,7 +1731,7 @@ impl Table {
         let Ok(four) = Four::try_from(seat.cards.cards()) else {
             return Eval::default();
         };
-        let Ok(board_five) = Five::try_from(self.board.clone()) else {
+        let Ok(board_five) = self.board.to_five() else {
             return Eval::default();
         };
         let omaha = OmahaHigh { hand: four };

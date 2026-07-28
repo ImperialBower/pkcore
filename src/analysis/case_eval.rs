@@ -1,5 +1,6 @@
 use crate::analysis::eval::Eval;
 use crate::analysis::hand_rank::HandRank;
+use crate::arrays::ext::SevenExt;
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
@@ -325,6 +326,7 @@ impl CaseEval {
     ///
     /// ```
     /// use pkcore::arrays::five::Five;
+    /// use pkcore::arrays::ext::FiveExt;
     /// use pkcore::arrays::two::Two;
     /// use pkcore::analysis::case_eval::CaseEval;
     /// use pkcore::analysis::eval::Eval;
@@ -603,6 +605,7 @@ impl From<Vec<Eval>> for CaseEval {
 #[allow(non_snake_case)]
 mod hand_rank__case_eval_tests {
     use super::*;
+    use crate::arrays::ext::FiveExt;
     use crate::util::data::TestData;
     use std::str::FromStr;
 

@@ -3,6 +3,7 @@ use crate::analysis::case_eval::CaseEval;
 use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
 use crate::analysis::the_nuts::TheNuts;
+use crate::arrays::ext::SevenExt;
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;

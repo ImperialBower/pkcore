@@ -2,9 +2,6 @@ use clap::Parser;
 use itertools::Itertools;
 use pkcore::PKError;
 use pkcore::arrays::HandRanker;
-use pkcore::arrays::five::Five;
-use pkcore::arrays::seven::Seven;
-use pkcore::arrays::six::Six;
 use pkcore::cards::Cards;
 use std::fmt::Display;
 use std::str::FromStr;
@@ -32,9 +29,9 @@ fn main() -> Result<(), PKError> {
     // TODO NOTE: This incarnation eats errors in card indexes
     // For example: `❯ cargo run --example repl -- -c "AS KS QS JS TS 9S 9s"`
     match cards.len() {
-        5 => show(Five::try_from(cards)?),
-        6 => show(Six::try_from(cards)?),
-        7 => show(Seven::try_from(cards)?),
+        5 => show(cards.to_five()?),
+        6 => show(cards.to_six()?),
+        7 => show(cards.to_seven()?),
         _ => println!("{}", cards), // https://stackoverflow.com/a/23977218/1245251
     };
 

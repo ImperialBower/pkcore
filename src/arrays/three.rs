@@ -1,4 +1,5 @@
-use crate::arrays::HandRanker;
+use crate::arrays::Evaluable;
+use crate::arrays::ext::FiveExt;
 use crate::arrays::five::Five;
 use crate::arrays::two::Two;
 use crate::card::Card;

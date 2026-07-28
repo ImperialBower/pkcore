@@ -12,7 +12,7 @@ fn main() {
         let cards = Cards::from(c);
         let bits = EightOrBetter::get_low_bits(&cards);
         if bits.count_ones() == 5
-            && let Ok(five) = Five::try_from(cards)
+            && let Ok(five) = cards.to_five()
         {
             mappy.insert(bits, five);
         }

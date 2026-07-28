@@ -1,4 +1,5 @@
-use crate::arrays::HandRanker;
+use crate::arrays::Evaluable;
+use crate::arrays::ext::FiveExt;
 use crate::arrays::five::Five;
 use crate::arrays::matchups::masks::Masked;
 use crate::arrays::three::Three;
@@ -1596,7 +1597,8 @@ impl Pile for Two {
     ///
     /// ```
     /// use pkcore::arrays::five::Five;
-    /// use pkcore::arrays::HandRanker;
+    /// use pkcore::arrays::Evaluable;
+    /// use pkcore::arrays::ext::FiveExt;
     /// use pkcore::arrays::three::Three;
     /// use pkcore::arrays::two::Two;
     /// use pkcore::cards::Cards;

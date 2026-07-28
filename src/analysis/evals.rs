@@ -86,6 +86,7 @@ mod hand_rank__evals_tests {
     use super::*;
     use crate::Card;
     use crate::analysis::class::HandRankClass;
+    use crate::arrays::ext::FiveExt;
     use crate::arrays::three::Three;
     use crate::arrays::two::Two;
     use crate::util::data::TestData;

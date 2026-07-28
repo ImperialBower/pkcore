@@ -1594,7 +1594,7 @@ impl PlayerEntry {
     /// ```
     pub fn to_seven(&self) -> Result<crate::arrays::seven::Seven, PKError> {
         match &self.hole_cards {
-            Some(s) => crate::arrays::seven::Seven::from_str(s),
+            Some(s) => crate::arrays::seven::Seven::from_str(s).map_err(PKError::from),
             None => Err(PKError::NotEnoughCards),
         }
     }
@@ -1993,7 +1993,7 @@ impl TurnStreet {
     /// assert!(turn.to_card().is_ok());
     /// ```
     pub fn to_card(&self) -> Result<Card, PKError> {
-        Card::from_str(&self.card)
+        Card::from_str(&self.card).map_err(PKError::from)
     }
 }
 
@@ -2040,7 +2040,7 @@ impl RiverStreet {
     /// assert!(river.to_card().is_ok());
     /// ```
     pub fn to_card(&self) -> Result<Card, PKError> {
-        Card::from_str(&self.card)
+        Card::from_str(&self.card).map_err(PKError::from)
     }
 }
 
@@ -2432,7 +2432,7 @@ impl ResultEntry {
     /// ```
     pub fn to_five(&self) -> Result<Five, PKError> {
         match &self.best_hand {
-            Some(s) => Five::from_str(s),
+            Some(s) => Five::from_str(s).map_err(PKError::from),
             None => Err(PKError::NotEnoughCards),
         }
     }

@@ -282,7 +282,8 @@ use std::fmt::Display;
 /// ```
 /// use std::collections::HashSet;
 /// use pkcore::arrays::five::Five;
-/// use pkcore::arrays::HandRanker;
+/// use pkcore::arrays::Evaluable;
+/// use pkcore::arrays::ext::FiveExt;
 /// use pkcore::arrays::three::Three;
 /// use pkcore::arrays::two::Two;
 /// use pkcore::card::Card;

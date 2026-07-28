@@ -8,11 +8,26 @@
 
 ## Status
 
-**Phases 0, 1, 2 and 4 are complete; Phases 3 and 5 are outstanding.** The kernel
-lives in `ckc-rs` 0.2.0 and is proven against the frozen 0.1.18 on all 2,598,960
-five-card hands; pkcore does **not** yet depend on it, and still holds its own copy
-of the moved code. This EPIC claims the **EPIC-80–89 block** as pkcore's second
-number block (the 00–39 block is exhausted; see `ROADMAP.md:407-418`).
+**Not mergeable to `main` until Phase 5.** `Cargo.toml`'s `ckc-rs = { path =
+"../ckc-rs", ... }` is unresolvable in CI or from a fresh clone — CI checks out
+pkcore alone, and there is no workspace, `[patch]`, or version fallback. This
+branch cannot merge until Phase 5 Work Item **5a** publishes `ckc-rs` 0.2.0 and
+the dependency flips to `{ version = "0.2.0" }`. Separately, the `basic.yaml`
+semver-checks job will stay red against the last crates.io release until Work
+Item **5d** bumps pkcore to 0.4.0 — this branch's breaking API changes (`TryFrom`
+impls removed, constructors moved behind extension traits, `CKCNumber` dropped,
+`FromStr::Err` changed) are real semver breaks against 0.3.x. Both are known-red
+gates, tracked below and in Phase 5, not defects to chase before then.
+
+**Phases 0–4 complete; Phase 5 outstanding.** The kernel lives in `ckc-rs` 0.2.0,
+is proven against the frozen 0.1.18 on all 2,598,960 five-card hands, and pkcore
+now depends on it as a path dependency: the adapter layer (Phase 3) shipped across
+Tasks 1–6 of `docs/superpowers/plans/2026-07-28-epic-80-plan-2-pkcore-adapter.md`.
+pkcore's own copy of the moved code (`src/lookups/`, the old `Card`/`Five`/`Six`/
+`Seven` inherent impls) is deleted; only Phase 5 (publish `ckc-rs` 0.2.0, migrate
+cardpack.rs/fudd/pokerhand, release pkcore 0.4.0) remains. This EPIC claims the
+**EPIC-80–89 block** as pkcore's second number block (the 00–39 block is
+exhausted; see `ROADMAP.md:407-418`).
 
 | Component | Status |
 |---|---|
@@ -20,11 +35,11 @@ number block (the 00–39 block is exhausted; see `ROADMAP.md:407-418`).
 | `ckc_rs::standard52` namespace — `Card`, `CardNumber`, `Rank`, `Suit` | **Complete** |
 | `ckc_rs::standard52::hand_rank` — `HandRank`, `HandRankName`, `HandRankClass` | **Complete** |
 | `ckc_rs::standard52::arrays` — `Five`, `Six`, `Seven`, `HandRanker`, `HandValidator` | **Complete** |
-| `lookups` privatized behind `#[inline]` accessors; `LICENSE` single-sourced | **Partial** — privatization done; the Supalov `LICENSE` is still duplicated in `pkcore/src/lookups/`, single-sourced only when Phase 3a deletes it |
-| `CkcError` + `impl From<CkcError> for PKError` | **Partial** — the type exists in `ckc-rs/src/error.rs`; the `From` impl is Phase 3b |
+| `lookups` privatized behind `#[inline]` accessors; `LICENSE` single-sourced | **Complete** — `pkcore/src/lookups/` (tables + `LICENSE`) deleted in Task 5; the four tables and the Supalov MIT notice now exist in exactly one repo |
+| `CkcError` + `impl From<CkcError> for PKError` | **Complete** — `ckc-rs/src/error.rs` + pkcore's `impl From<CkcError> for PKError` (Task 1) |
 | strum dropped; serde feature-gated; **zero default dependencies** | **Complete** — `cargo tree -e normal` reports exactly 1 crate |
-| pkcore adapter layer — 6 direction inversions, 7 extension constructors | Planned |
-| `HandRanker` / `RazzRanker` split | Planned |
+| pkcore adapter layer — 6 direction inversions, 7 extension constructors | **Complete** |
+| `HandRanker` / `RazzRanker` split | **Complete** |
 | C(52,5) golden-oracle differential test vs frozen `ckc-rs` 0.1.18 | **Complete** — all 2,598,960 hands bit-identical |
 | `no_std` + `wasm32` CI jobs; zero-dep regression assertion | **Complete** |
 | Downstream migration — cardpack.rs, fudd, pokerhand off the 0.1.x pins | Planned |
@@ -481,13 +496,13 @@ only `std` usage in the kernel set that is not a `String`/`Vec` helper.
 
 ### Phase 3 — pkcore adapter layer
 
-- [ ] **3a.** Add `ckc-rs = { path = "../ckc-rs" }`; delete the moved files.
-- [ ] **3b.** Add `impl From<CkcError> for PKError`.
-- [ ] **3c.** Apply the 6 direction inversions; update call sites.
-- [ ] **3d.** Create `src/arrays/ext.rs` with `FiveExt`/`SixExt`/`SevenExt`; update
+- [x] **3a.** Add `ckc-rs = { path = "../ckc-rs" }`; delete the moved files.
+- [x] **3b.** Add `impl From<CkcError> for PKError`.
+- [x] **3c.** Apply the 6 direction inversions; update call sites.
+- [x] **3d.** Create `src/arrays/ext.rs` with `FiveExt`/`SixExt`/`SevenExt`; update
       call sites.
-- [ ] **3e.** Add `RazzRanker` + the blanket `Evaluable` impl.
-- [ ] **3f.** Confirm `cargo test --all-features` is green with no result changes.
+- [x] **3e.** Add `RazzRanker` + the blanket `Evaluable` impl.
+- [x] **3f.** Confirm `cargo test --all-features` is green with no result changes.
 
 ### Phase 4 — CI gates
 
@@ -506,11 +521,19 @@ only `std` usage in the kernel set that is not a `String`/`Vec` helper.
 ### Phase 5 — Publish & migrate downstream
 
 - [ ] **5a.** Publish `ckc-rs` 0.2.0; flip pkcore's path dep to a version dep.
+      **Blocking:** until this lands, `Cargo.toml`'s `ckc-rs = { path = "../ckc-rs" }`
+      is unresolvable in CI or any fresh clone (no workspace/patch/version
+      fallback exists) — this branch must not merge to `main` before this task.
 - [ ] **5b.** Migrate cardpack.rs's dev-dependency (`cardpack.rs/Cargo.toml:74`)
       and `examples/poker_eval.rs` to the 0.2 API.
 - [ ] **5c.** Migrate fudd (`fudd/Cargo.toml:20`) and pokerhand
       (`pokerhand/Cargo.toml:20`) off the 0.1.14 pins.
 - [ ] **5d.** Release pkcore 0.4.0 (public API changes — not a patch).
+      **Known-red gate until this lands:** `basic.yaml`'s semver-checks job is red
+      by design against the last crates.io release — this branch's `TryFrom`
+      removals, extension-trait constructors, dropped `CKCNumber`, and changed
+      `FromStr::Err` are genuine breaking changes that only stop tripping semver
+      once the version bumps to 0.4.0.
 - [ ] **5e.** `ROADMAP.md` Epics row; `CHANGELOG.md` entries in both repos.
 
 ---
@@ -608,10 +631,11 @@ cargo doc --no-deps                          # must be warning-free
 cargo fmt --check
 test "$(cargo tree -e normal --no-default-features --features standard52 | wc -l)" -eq 1
 
-# pkcore — Phase 3 only; nothing to run until the adapter layer lands
-cargo test --all-features
-cargo test --doc --all-features
+# pkcore — Phase 3, as actually run (Tasks 1-6)
+cargo test --all-features        # 7252 lib + integration binaries, 0 failed
+cargo test --doc --all-features  # 709 passed, 0 failed
 cargo clippy --all-features -- -Dclippy::all -Dclippy::pedantic
+cargo fmt --check
 ```
 
 Exit criteria:
@@ -630,8 +654,10 @@ Exit criteria:
 ## Implementation corrigendum
 
 Phases 0, 1, 2 and 4 shipped across Tasks 1–11 of
-`docs/superpowers/plans/2026-07-25-ckc-rs-kernel-extraction.md`. Phases 3 and 5
-remain outstanding. What follows is what the design above did **not** anticipate.
+`docs/superpowers/plans/2026-07-25-ckc-rs-kernel-extraction.md`. Phase 3 shipped
+across Tasks 1–6 of `docs/superpowers/plans/2026-07-28-epic-80-plan-2-pkcore-adapter.md`
+(Plan 2). Phase 5 remains outstanding. What follows is what the design above did
+**not** anticipate.
 
 ### 1. The `Pile`-dependency cascade — five separate plan bugs
 
@@ -840,3 +866,84 @@ exercised against the one known example of the failure mode it is weakest agains
 coverage there is unproven rather than merely limited. Provenance and power are
 independent questions, and a sweep that asks only the first should be re-run asking the
 second before anyone treats this as closed.
+
+### 11. Plan 2 (pkcore adapter, Phase 3) surprises
+
+- **The `is_dealt` → `is_valid` delta (corrigendum #4) went from theoretical to
+  observed.** It first surfaced live in Task 5:
+  `arrays::five::arrays__five_tests::hand_ranker__hand_rank__frequency_weighted`
+  failed on the first `cargo test --lib` run inside pkcore, because the test built
+  a `Five` from cards manually tagged via pkcore's own `Cards::flag_paired()` (a
+  frequency-weighting metadata bit used for display sort ordering elsewhere). That
+  bit makes the card's raw `u32` fail `CardNumber::try_from` — `is_corrupt()` — so
+  the kernel's `HandValidator::is_valid()` gate now rejects it, where pkcore's old
+  `Pile::is_dealt()` tolerated it. Fixed by calling `.clean()` before `.hand_rank()`
+  in that one test, with a comment recording why; no other test and no production
+  call site was affected (the frequency bits sit outside the rank/suit/prime fields
+  the evaluator reads), so the blast radius of the one behavior change EPIC-80
+  ships is nil in practice.
+- **Task 5's stricter clippy gate found a pre-existing, CI-invisible error — and
+  the original write-up of *why* it blocked the gate was wrong.** The task's own
+  exit criterion, `cargo clippy --all-features -- -Dclippy::all
+  -Dclippy::pedantic`, is stricter than the repo's actual CI gate
+  (`.github/workflows/ci.yml`, `cargo clippy --features pokerbench -- -D
+  warnings`), which does not enable the `bot-training` feature gating
+  `src/bot/training/trainer.rs`. That file carried a pre-existing `collapsible_if`
+  error, untouched by any of this plan's edits, that only surfaced once the
+  stricter gate ran. This was **not**, as first recorded, "required for the
+  `--all-features -Dclippy::pedantic` gate to exit clean" — `src/lib.rs:1`'s
+  crate-level `#![warn(clippy::pedantic, ...)]` overrides the CLI's `-D`, so
+  pedantic lints only *warn* under this invocation and exit 0 regardless; 15
+  pre-existing pedantic warnings survive today in `src/bot/training/{encoding,
+  evaluator,trainer}.rs` as a result, recorded here as pre-existing tech debt, not
+  fixed by this plan. `collapsible_if` blocked the gate because it sits in
+  `clippy::all` (the style group), which the same invocation *does* deny. Fixed as
+  a one-line, behavior-preserving `if let ... && cond` let-chain collapse (Rust
+  2024) — out of scope for the Five/Six/Seven swap, but required for the gate
+  specified in the task to exit clean.
+- **Five `unused_imports` warnings outlived Task 5 because the lint isn't a
+  `clippy::` lint.** Each import (`five.rs`'s `HandRanker`; `six.rs`/`seven.rs`'s
+  `std::str::FromStr`; `case_eval.rs`/`evals.rs`'s `FiveExt`) was load-bearing only
+  inside a `#[cfg(test)]` submodule reached via `use super::*`, which rustc's
+  `unused_imports` flags on the lib target even though `-Dclippy::*` does not deny
+  it (it is a `rustc` lint, not a `clippy::` one). Task 6 moved all five into the
+  test modules that actually use them; `cargo check --all-features` (no `--tests`)
+  went from 5 warnings to 0 with no behavior change.
+- **Trimming the kernel-duplicated tests surfaced an unplanned double-keep.**
+  `five.rs`/`six.rs`/`seven.rs`'s `try_from__cards`/`try_from__cards__not_enough`/
+  `try_from__cards__too_many` tests (9 total, on the pkcore-only `Cards::to_five`/
+  `to_six`/`to_seven` methods, not kernel `FromStr`) had already been re-derived,
+  assertion-for-assertion, as `to_five`/`to_six`/`to_seven` tests in `src/cards.rs`
+  during Task 2. Task 6 deleted the nine originals rather than double-keeping them.
+- **`five.rs`'s `from__array` test degraded into a tautology.** Once the kernel
+  swap removed `Five`'s tuple constructor,
+  `assert_eq!(Five::from(ROYAL_FLUSH), Five::from(ROYAL_FLUSH))` compared the same
+  expression to itself. It was deleted (not re-grounded) as part of the
+  kernel-duplicated-test trim, since the behavior it once exercised
+  (`Display`/`FromStr` round-tripping) is covered by the retained `display` and
+  `from_str` tests and by `ckc-rs`'s own suite.
+- **Correction to the plan's Test Plan: the "no longer dedup through `Cards`
+  first" delta does not exist.** `docs/superpowers/plans/2026-07-28-epic-80-plan-2-pkcore-adapter.md:805`
+  listed "the `Vec` conversions no longer dedup through `Cards` first" as a known
+  intended behavioral delta. Verified false: the kernel's `collect_hand`
+  (`ckc-rs/src/standard52/arrays.rs:162`) skips blank cards and dedups each
+  incoming card against the accumulated prefix (`acc[..len.min(N)].contains(&card)`),
+  the same filtering `Cards`' `IndexSet` did. The one place counts can diverge —
+  a duplicate arriving after `N` distinct cards are already collected — resolves
+  to the same `TooManyCards`-equivalent verdict either way: pkcore's old path
+  ultimately surfaced an over-count error from `Cards`, and the kernel's
+  `collect_hand` returns `CkcError::InvalidCardCount`, mapped 1:1 to
+  `PKError::InvalidCardCount` (`src/lib.rs:605`). No call site observes a
+  difference.
+- **Deleting ~1,830 kernel-duplicated test cases across the three shim files was
+  provably safe only because Task 5 ran the full suite *before* any deletion.** The
+  ~1,813-case brute-force `hand_ranker__hand_rank` table in `five.rs` (1,813
+  total − 10 rows retained as the smoke test = 1,803 deleted outright; and the
+  smaller `six.rs`/`seven.rs` equivalents) passed unchanged through pkcore's own
+  paths in Task 5, which is the oracle this trim relies on — the count reconciles
+  exactly: pkcore's lib suite went from 9,082 tests (Task 5) to 7,252 (Task 6), a
+  delta of 1,830, matching the sum of every test enumerated as deleted across
+  `five.rs` (1,818), `six.rs` (7), and `seven.rs` (5). A 10-case
+  `hand_ranker__hand_rank__smoke` rstest, one row per `HandRankName` category
+  pulled from the deleted table, stands in as the end-to-end proof that pkcore's
+  paths still reach the kernel correctly.

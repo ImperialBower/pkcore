@@ -1,7 +1,8 @@
 use crate::analysis::case_eval::CaseEval;
 use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
-use crate::arrays::HandRanker;
+use crate::arrays::Evaluable;
+use crate::arrays::ext::{FiveExt, SevenExt};
 use crate::arrays::five::Five;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;

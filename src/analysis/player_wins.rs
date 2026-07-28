@@ -2,6 +2,7 @@ use crate::analysis::PlayOut;
 use crate::analysis::case_eval::CaseEval;
 use crate::analysis::case_evals::CaseEvals;
 use crate::analysis::eval::Eval;
+use crate::arrays::ext::SevenExt;
 use crate::arrays::four::Four;
 use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;

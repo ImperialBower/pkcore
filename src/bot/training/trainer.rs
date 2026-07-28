@@ -239,11 +239,10 @@ impl ExploitTrainer {
                 .iter()
                 .enumerate()
                 .max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+                && score > best_fitness
             {
-                if score > best_fitness {
-                    best_params = candidates[idx];
-                    best_fitness = score;
-                }
+                best_params = candidates[idx];
+                best_fitness = score;
             }
 
             // Adapt sigma: 1/5 success rule.

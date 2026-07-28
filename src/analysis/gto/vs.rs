@@ -2,6 +2,7 @@ use crate::analysis::eval::Eval;
 use crate::analysis::gto::combos::Combos;
 use crate::analysis::gto::odds::WinLoseDraw;
 use crate::analysis::gto::twos::Twos;
+use crate::arrays::ext::SevenExt;
 use crate::arrays::seven::Seven;
 use crate::arrays::two::Two;
 use crate::bard::Bard;

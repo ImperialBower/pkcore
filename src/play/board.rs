@@ -32,6 +32,17 @@ impl Board {
         }
         Cards::from(cards)
     }
+
+    #[must_use]
+    pub fn to_five(&self) -> Five {
+        Five::from([
+            self.flop.first(),
+            self.flop.second(),
+            self.flop.third(),
+            self.turn,
+            self.river,
+        ])
+    }
 }
 
 impl Display for Board {
@@ -191,6 +202,15 @@ mod play_board_tests {
         let turn_cards = board.turn_cards();
 
         assert_eq!("9♣ 6♦ 5♥ 5♠", turn_cards.to_string());
+    }
+
+    #[test]
+    fn to_five() {
+        let board = Board::from_str("9♣ 6♦ 5♥ 5♠ 8♠").unwrap();
+
+        let five = board.to_five();
+
+        assert_eq!(board.cards().to_string(), five.to_string());
     }
 
     #[test]

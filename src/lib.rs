@@ -387,7 +387,6 @@ pub mod casino;
 pub mod deck;
 pub mod games;
 pub mod hand_history;
-mod lookups;
 pub mod play;
 #[cfg(feature = "pokerbench")]
 pub mod pokerbench;
@@ -593,6 +592,21 @@ impl Display for PKError {
 }
 
 impl Error for PKError {}
+
+impl From<ckc_rs::CkcError> for PKError {
+    fn from(e: ckc_rs::CkcError) -> Self {
+        match e {
+            ckc_rs::CkcError::BlankCard => PKError::BlankCard,
+            ckc_rs::CkcError::DuplicateCard => PKError::DuplicateCard,
+            ckc_rs::CkcError::Incomplete => PKError::Incomplete,
+            ckc_rs::CkcError::InvalidBinaryFormat => PKError::InvalidBinaryFormat,
+            ckc_rs::CkcError::InvalidCard => PKError::InvalidCard,
+            ckc_rs::CkcError::InvalidCardNumber => PKError::InvalidCardNumber,
+            ckc_rs::CkcError::InvalidCardCount => PKError::InvalidCardCount,
+            ckc_rs::CkcError::InvalidIndex => PKError::InvalidCardIndex,
+        }
+    }
+}
 
 #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
 impl From<rusqlite::Error> for PKError {
@@ -901,26 +915,8 @@ pub trait Plurable {
 }
 
 // https://en.wikipedia.org/wiki/Se%C3%B1or_Wences#Catchphrases
-/// The more I think about this, the more I feel like this is me avoiding the best practice
-/// of returning `Result` and `Option`. I'm worried about speed, but that's probably Knuth's
-/// dreaded [premature optimization](http://wiki.c2.com/?PrematureOptimization).
-pub trait SOK {
-    fn salright(&self) -> bool;
-}
-
-/// Spades to Hearts to Diamonds to Clubs.
-pub trait SuitShift {
-    #[must_use]
-    fn shift_suit_down(&self) -> Self;
-
-    #[must_use]
-    fn shift_suit_up(&self) -> Self;
-
-    /// I don't trust this concept. Up and down are straightforward, but not this
-    /// I need to do a deep dive into unique and distinct patterns.
-    #[must_use]
-    fn opposite(&self) -> Self;
-}
+/// `SOK` and `SuitShift` moved to the ckc-rs kernel (EPIC-80).
+pub use ckc_rs::standard52::{SOK, SuitShift};
 
 pub trait Shifty {
     #[must_use]
@@ -1330,5 +1326,21 @@ mod lib_tests {
             "Invalid frequency: must be in [0.0, 1.0]",
             PKError::InvalidFrequency.to_string()
         );
+    }
+
+    #[test]
+    fn pkerror_from_ckcerror() {
+        use ckc_rs::CkcError;
+        assert_eq!(PKError::from(CkcError::BlankCard), PKError::BlankCard);
+        assert_eq!(PKError::from(CkcError::DuplicateCard), PKError::DuplicateCard);
+        assert_eq!(PKError::from(CkcError::Incomplete), PKError::Incomplete);
+        assert_eq!(
+            PKError::from(CkcError::InvalidBinaryFormat),
+            PKError::InvalidBinaryFormat
+        );
+        assert_eq!(PKError::from(CkcError::InvalidCard), PKError::InvalidCard);
+        assert_eq!(PKError::from(CkcError::InvalidCardNumber), PKError::InvalidCardNumber);
+        assert_eq!(PKError::from(CkcError::InvalidCardCount), PKError::InvalidCardCount);
+        assert_eq!(PKError::from(CkcError::InvalidIndex), PKError::InvalidCardIndex);
     }
 }

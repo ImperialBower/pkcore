@@ -1,4 +1,7 @@
 use crate::analysis::nubibus::Pluribus;
+use crate::arrays::five::Five;
+use crate::arrays::seven::Seven;
+use crate::arrays::six::Six;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::card::Card;
@@ -21,7 +24,6 @@ use std::fmt::Formatter;
 use std::hash::Hash;
 use std::ops::{Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign};
 use std::str::FromStr;
-use strum::IntoEnumIterator;
 
 pub static FIVE_CARD_COMBOS: std::sync::LazyLock<Combinations<IntoIter<Card>>> =
     std::sync::LazyLock::new(|| Cards::deck().combinations(5));
@@ -71,7 +73,7 @@ impl Cards {
     #[must_use]
     pub fn deck() -> Cards {
         let mut cards = Cards::default();
-        for card_number in CardNumber::iter() {
+        for card_number in CardNumber::ALL {
             cards.insert(Card::from(card_number as u32));
         }
         cards
@@ -530,6 +532,60 @@ impl Cards {
         self.0 = sorted.0;
     }
 
+    /// # Errors
+    ///
+    /// `PKError::NotEnoughCards` / `PKError::TooManyCards` on wrong count.
+    pub fn to_five(&self) -> Result<Five, PKError> {
+        match self.len() {
+            0..=4 => Err(PKError::NotEnoughCards),
+            5 => Ok(Five::from([
+                *self.get_index(0).ok_or(PKError::InvalidCard)?,
+                *self.get_index(1).ok_or(PKError::InvalidCard)?,
+                *self.get_index(2).ok_or(PKError::InvalidCard)?,
+                *self.get_index(3).ok_or(PKError::InvalidCard)?,
+                *self.get_index(4).ok_or(PKError::InvalidCard)?,
+            ])),
+            _ => Err(PKError::TooManyCards),
+        }
+    }
+
+    /// # Errors
+    ///
+    /// `PKError::NotEnoughCards` / `PKError::TooManyCards` on wrong count.
+    pub fn to_six(&self) -> Result<Six, PKError> {
+        match self.len() {
+            0..=5 => Err(PKError::NotEnoughCards),
+            6 => Ok(Six::from([
+                *self.get_index(0).ok_or(PKError::InvalidCard)?,
+                *self.get_index(1).ok_or(PKError::InvalidCard)?,
+                *self.get_index(2).ok_or(PKError::InvalidCard)?,
+                *self.get_index(3).ok_or(PKError::InvalidCard)?,
+                *self.get_index(4).ok_or(PKError::InvalidCard)?,
+                *self.get_index(5).ok_or(PKError::InvalidCard)?,
+            ])),
+            _ => Err(PKError::TooManyCards),
+        }
+    }
+
+    /// # Errors
+    ///
+    /// `PKError::NotEnoughCards` / `PKError::TooManyCards` on wrong count.
+    pub fn to_seven(&self) -> Result<Seven, PKError> {
+        match self.len() {
+            0..=6 => Err(PKError::NotEnoughCards),
+            7 => Ok(Seven::from([
+                *self.get_index(0).ok_or(PKError::InvalidCard)?,
+                *self.get_index(1).ok_or(PKError::InvalidCard)?,
+                *self.get_index(2).ok_or(PKError::InvalidCard)?,
+                *self.get_index(3).ok_or(PKError::InvalidCard)?,
+                *self.get_index(4).ok_or(PKError::InvalidCard)?,
+                *self.get_index(5).ok_or(PKError::InvalidCard)?,
+                *self.get_index(6).ok_or(PKError::InvalidCard)?,
+            ])),
+            _ => Err(PKError::TooManyCards),
+        }
+    }
+
     //region private functions
 
     fn map_by_rank(&self) -> HashMap<Rank, Cards> {
@@ -547,7 +603,7 @@ impl Cards {
         // then stop by Toy Boat ice cream for dessert. No, they're not the shop with the
         // video games, which closed a while ago, but they are great.
         let mut mappy: HashMap<Rank, Cards> = HashMap::new();
-        for rank in Rank::iter() {
+        for rank in Rank::ALL {
             let pile: Vec<Card> = self.iter().copied().filter(|card| card.get_rank() == rank).collect();
             mappy.insert(rank, Cards::from(pile));
         }
@@ -741,7 +797,7 @@ impl From<Bard> for Cards {
 
         for b in Bard::DECK {
             if b & bard == b {
-                let c = Card::try_from(b);
+                let c = b.to_card();
                 if let Ok(c) = c {
                     let _ = cards.insert(c);
                 }
@@ -1578,9 +1634,11 @@ mod cards_tests {
             .filter(|c| c.get_suit() == Suit::CLUBS)
             .collect::<Cards>();
 
+        let all_suits: std::collections::HashSet<Suit> = Suit::ALL.iter().copied().collect();
+
         assert_eq!(4, suits.len());
-        assert_eq!(Suit::all(), suits);
-        assert_eq!(Suit::all(), deck.suits());
+        assert_eq!(all_suits, suits);
+        assert_eq!(all_suits, deck.suits());
         assert_eq!(13, clubs.len());
         assert_eq!(1, clubs.suits().len());
     }
@@ -1868,5 +1926,50 @@ mod cards_tests {
     fn suit_shift__opposite() {
         let spades = Cards::from_str("A♠ K♠").unwrap();
         assert_eq!(Cards::from_str("A♦ K♦").unwrap(), spades.opposite());
+    }
+
+    #[test]
+    fn to_five() {
+        let cards = Cards::from_str("A♦ K♦ Q♦ J♦ T♦").unwrap();
+        assert_eq!(cards.to_five().unwrap(), Five::from_str("A♦ K♦ Q♦ J♦ T♦").unwrap());
+        assert_eq!(
+            Cards::from_str("A♦ K♦ Q♦ J♦").unwrap().to_five(),
+            Err(PKError::NotEnoughCards)
+        );
+        assert_eq!(
+            Cards::from_str("A♦ K♦ Q♦ J♦ T♦ 9♦").unwrap().to_five(),
+            Err(PKError::TooManyCards)
+        );
+    }
+
+    #[test]
+    fn to_six() {
+        let cards = Cards::from_str("A♦ 2♦ 3♦ 4♦ 5♦ 6♦").unwrap();
+        assert_eq!(cards.to_six().unwrap(), Six::from_str("A♦ 2♦ 3♦ 4♦ 5♦ 6♦").unwrap());
+        assert_eq!(
+            Cards::from_str("A♦ K♦ Q♦ J♦").unwrap().to_six(),
+            Err(PKError::NotEnoughCards)
+        );
+        assert_eq!(
+            Cards::from_str("A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦").unwrap().to_six(),
+            Err(PKError::TooManyCards)
+        );
+    }
+
+    #[test]
+    fn to_seven() {
+        let cards = Cards::from_str("A♦ 6♠ 4♠ A♠ 5♦ 3♣ 2♠").unwrap();
+        assert_eq!(
+            cards.to_seven().unwrap(),
+            Seven::from_str("A♦ 6♠ 4♠ A♠ 5♦ 3♣ 2♠").unwrap()
+        );
+        assert_eq!(
+            Cards::from_str("A♦ K♦ Q♦ J♦").unwrap().to_seven(),
+            Err(PKError::NotEnoughCards)
+        );
+        assert_eq!(
+            Cards::from_str("A♦ K♦ Q♦ J♦ T♦ 9♦ 8♦ 7♦").unwrap().to_seven(),
+            Err(PKError::TooManyCards)
+        );
     }
 }

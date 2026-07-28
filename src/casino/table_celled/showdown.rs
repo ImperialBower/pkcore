@@ -1,7 +1,7 @@
 use crate::PKError;
 use crate::casino::cashier::chips::Stack;
 use crate::casino::winnings::{PotWin, Winnings};
-use crate::prelude::{Eval, Pile, SeatEquity, Seatbit, Seven, TableAction, TableCelled, TableEquity};
+use crate::prelude::{Eval, Pile, SeatEquity, Seatbit, TableAction, TableCelled, TableEquity};
 use std::collections::HashMap;
 
 pub struct Showdown;
@@ -64,7 +64,7 @@ impl Showdown {
         let equity = SeatEquity::new(pot.count(), Seatbit::from(*seat));
 
         let eval = match table.effective_player_cards(*seat) {
-            Some(cards) => match Seven::try_from(cards) {
+            Some(cards) => match cards.to_seven() {
                 Ok(seven) => Eval::from(seven),
                 Err(_) => Eval::default(),
             },
@@ -135,7 +135,7 @@ impl Showdown {
 
                 // Build eval for the seat (calls get_seat internally)
                 let eval = match table.effective_player_cards(*winner_seat_number) {
-                    Some(cards) => match Seven::try_from(cards) {
+                    Some(cards) => match cards.to_seven() {
                         Ok(seven) => Eval::from(seven),
                         Err(_) => Eval::default(),
                     },
@@ -194,7 +194,7 @@ impl Showdown {
         // Helper: build an Eval for a seat from its effective cards.
         let build_eval = |seat: u8| -> Eval {
             match table.effective_player_cards(seat) {
-                Some(cards) => match Seven::try_from(cards) {
+                Some(cards) => match cards.to_seven() {
                     Ok(seven) => Eval::from(seven),
                     Err(_) => Eval::default(),
                 },
