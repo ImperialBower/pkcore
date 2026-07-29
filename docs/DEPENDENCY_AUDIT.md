@@ -1,13 +1,18 @@
 # Dependency Audit
 
-**Audited:** 2026-07-28 at `1fe55b8` · rustc 1.97.1 / cargo 1.97.1 (crate MSRV 1.94.1)
-**Scope:** 26 direct dependencies (21 third-party, 5 first-party), resolved
-normal (non-dev) tree of **172 crates** across all targets — **140 on the host
-target** (`aarch64-apple-darwin`), default features. Dev-dependencies add a
-further 85 crates on host that never ship.
+**Audited:** 2026-07-28 at `baa919e` · rustc 1.97.1 / cargo 1.97.1 (crate MSRV 1.94.1)
+**Scope:** 26 direct shipping dependencies (21 third-party, 5 first-party),
+shipping graph of **140 crates** (host target `aarch64-apple-darwin`; **172**
+across all targets), default features. Dev-dependencies add **85** crates on
+host that never ship.
 **Method:** /untangle — evidence commands in the appendix; scores use the 1–5
 anchors, verdicts use the controlled vocabulary. Host license is
 `MIT OR Apache-2.0`, so every permissive upstream is copy-compatible.
+**Δ since last audit (`1fe55b8`, same day):** census re-based to the
+shipping/dev split (call sites classified by region — `src/` outside
+`#[cfg(test)]` vs test modules + `tests/`/`examples/`/`benches/`; comment and
+doc-prose lines no longer counted). **No score or verdict changed**; the only
+repo change since is the audit document itself.
 
 > **Headline:** `random_name_generator` drags **31 crates that nothing else in
 > the graph needs** — including all of `clap` — into pkcore's *shipping*
@@ -22,9 +27,14 @@ anchors, verdicts use the controlled vocabulary. Host license is
 
 ## Summary
 
-Unique baggage = crates that leave the resolved graph if this dependency's node
+Unique baggage = crates that leave the shipping graph if this dependency's node
 vanishes entirely, measured on the host target. `0 via <holder>` means another
 dependency still holds the same subtree, so removal buys ownership, not size.
+
+The *does-it-actually-ship?* check ran for all 26: **no `demote-to-dev`
+candidates.** Every shipping dependency has shipping call sites except the two
+wasm `getrandom` shims, which are manifest-level feature activators used by no
+code at all (see their dossier for why that is correct rather than dead).
 
 | Dependency | Version | License | Score | Unique baggage | Effort | Verdict |
 |---|---|---|---|---|---|---|
@@ -63,7 +73,7 @@ see the dossier.
 
 ## Cross-cutting findings
 
-### 1. `clap` ships in pkcore's normal dependency graph (highest-value fix)
+### 1. `clap` ships in pkcore's shipping dependency graph (highest-value fix)
 
 `clap v4.6.1` enters the **non-dev** graph through exactly one edge:
 
@@ -80,10 +90,10 @@ CLI binary is not feature-gated. pkcore uses the crate for a single
 lists `clap ^4.6.2` as a normal dep and moves to `rand ^0.10`, which would add
 a *third* `rand` major to the graph.
 
-### 2. Every duplicate version in the normal graph traces to two edges
+### 2. Every duplicate version in the shipping graph traces to two edges
 
 `cargo tree -d` reports many duplicates, but most are dev-only (`reedline`,
-`clap-repl`, `criterion`). In the **normal** graph there are exactly seven:
+`clap-repl`, `criterion`). In the **shipping** graph there are exactly seven:
 
 | Crate | Versions | Cause |
 |---|---|---|
@@ -214,7 +224,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 
 - **License:** MIT OR Apache-2.0 · **Last release:** unchecked (1.0.229 available) · **Advisories:** none (`cargo deny`)
 - **Features used:** `derive`
-- **Usage census:** 53 files, 168 references, **172 derive sites** (83 `Serialize`, 89 `Deserialize`), 96 `#[serde(...)]` attributes, 55 imports
+- **Usage census:** shipping: 53 files, 157 call sites, **171 derive-macro sites** (+96 `#[serde(...)]` attributes), 55 imports (`src/` outside `#[cfg(test)]`); dev: 3 call sites in test modules — every derive sits in shipping code
 - **Public API leakage:** pervasive — the `Serialize`/`Deserialize` impls on ~86 public types *are* part of pkcore's contract; e.g. `src/card.rs:30` uses `#[serde(deserialize_with = "deserialize_card_index")]` to fix the on-disk representation of the crate's most fundamental type
 - **Contract exposure:** total. Hand-history YAML, bot-profile YAML, `StatsRegistry` persistence, postcard solver caches, pokerbench JSON — all downstream repos (pkpy, pknotebook, pkdealer, pkarena0-web) read formats defined by these derives
 - **Unique baggage:** 0 (`serde_core`, `serde_derive` also held via `cardpack`)
@@ -227,7 +237,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 
 - **License:** Apache-2.0 OR MIT · **Last release:** unchecked · **Advisories:** none
 - **Features used:** `rayon`
-- **Usage census:** 5 files, 7 references, 4 imports, 0 derive sites
+- **Usage census:** shipping: 3 files, 5 call sites, 0 derive sites, 4 imports (`src/` outside `#[cfg(test)]`); dev: 1 call site in tests/examples/benches
 - **Public API leakage:** **yes, load-bearing** — `src/cards.rs:35` `pub struct Cards(pub IndexSet<Card>)` exposes the type as a **public tuple field** on the library's central collection; `src/cards.rs:390` `pub fn index_set(&self) -> &IndexSet<Card>`; `src/analysis/outs.rs:10` `pub struct Outs(IndexMap<usize, Cards>)`; `src/lib.rs:356` imports `indexmap::set::IntoIter` for the public `combinations` return types
 - **Contract exposure:** indirect — insertion order determines serialized card order in every persisted format
 - **Unique baggage:** 0 on host (also held by `serde_yaml_bw`)
@@ -240,7 +250,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 
 - **License:** Apache-2.0 OR MIT · **Last release:** unchecked (1.24.0 available) · **Advisories:** none
 - **Features used:** `serde`, `v4`, `v5`; plus `js` on `wasm32`
-- **Usage census:** 18 files, 42 references, 16 imports, 61 constructor/parse call sites
+- **Usage census:** shipping: 16 files, 88 call sites, 0 derive sites, 14 imports (`src/` outside `#[cfg(test)]`; the census now counts the `Uuid` type name, not just the crate path); dev: 101 call sites in test modules, tests/ and examples/
 - **Public API leakage:** `src/casino/principal.rs:29` `pub struct Principal(pub Uuid)` (public field), `:33` `pub fn new(id: Uuid)`, `:38` `pub fn id(&self) -> Uuid`; `src/casino/manager.rs:37,120,124` `create_table → Uuid`, `get_table(id: Uuid)`, `remove_table(id: Uuid)`; `src/casino/dealer.rs:631` `pub fn table_id(&self) -> Uuid`; `src/analysis/player_stats.rs:288` `pub fn get(&self, id: Uuid)`
 - **Contract exposure:** yes — player and table IDs are serialized into hand-history YAML and the stats registry; `v5` means some IDs are *derived* and must stay reproducible
 - **Unique baggage:** 3 (`getrandom 0.4`, `sha1_smol`)
@@ -253,7 +263,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 
 - **License:** MIT OR Apache-2.0 · **Last release:** unchecked · **Advisories:** none
 - **Features used:** default. **Optional**, activated by `bot-profiles`, `hand-histories`, `player-stats-persistence`, `bot-training` — all but `bot-training` are in `default`
-- **Usage census:** 4 files, 48 references, 0 bare imports (fully-qualified paths)
+- **Usage census:** shipping: 3 files, 13 call sites, 0 derive sites, 0 imports (fully-qualified paths; `src/` outside `#[cfg(test)]`); dev: 33 call sites in test modules and tests/
 - **Public API leakage:** `src/hand_history.rs:825` `impl From<serde_yaml_bw::Error> for HandHistoryError` — a public trait impl downstream error handling can pattern-match through
 - **Contract exposure:** **highest in the crate.** Every `.yaml` hand history, bot profile, and stats-registry file on disk is this crate's output, and those files are read by pkpy, pknotebook, pkarena0-web and the replay tests. `docs/AUDIT_Fable_5.md` III.2 already records a prior migration cost here
 - **Unique baggage:** 0 (its `serde_norway` subtree is shared with `cardpack`)
@@ -266,7 +276,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 
 - **License:** MIT OR Apache-2.0 · **Last release:** unchecked · **Advisories:** none
 - **Features used:** `alloc`, `use-std`, `default-features = false` — the manifest comment at `Cargo.toml:77–79` documents that dropping `heapless-cas` is what removed `atomic-polyfill` / RUSTSEC-2023-0089. That decision is still correct and should not be reverted
-- **Usage census:** 4 files, 14 references, 0 bare imports
+- **Usage census:** shipping: 2 files, 5 call sites, 0 derive sites, 0 imports (fully-qualified; `src/` outside `#[cfg(test)]`); dev: 3 call sites in test modules and examples/
 - **Public API leakage:** `src/analysis/gto/solver.rs:160` `impl From<postcard::Error> for SolverError`
 - **Contract exposure:** yes — `SolverResult::save`/`load` (`solver.rs:250,283`) is the default binary format for solver caches, and `analysis/store/embedded/hup_cache.rs:9` decodes the **compiled-in** `HUPS_BIN` blob. Changing serializer breaks both on-disk caches and the embedded artifact
 - **Unique baggage:** 2 (`cobs`)
@@ -278,7 +288,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 ### itertools 0.14.0
 
 - **License:** MIT OR Apache-2.0 · **Last release:** unchecked (0.15.0 available) · **Advisories:** none
-- **Usage census:** 6 files, 6 references, 5 imports
+- **Usage census:** shipping: 5 files, 5 call sites, 0 derive sites, 5 imports (`src/` outside `#[cfg(test)]`); dev: 2 call sites in tests/examples/benches
 - **Public API leakage:** **yes** — `src/cards.rs:242` `pub fn combinations(&self, k: usize) -> Combinations<IntoIter<Card>>` and `src/deck.rs:95` `pub fn combinations(&self, k: usize) -> Combinations<IntoIter<Card, 52>>` return the upstream iterator type directly
 - **Contract exposure:** none (iterators are not persisted)
 - **Unique baggage:** 0 (`either` also held via `cardpack`/`rayon`)
@@ -290,7 +300,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 ### rayon 1.12.0
 
 - **License:** MIT OR Apache-2.0 · **Last release:** unchecked · **Advisories:** none
-- **Usage census:** 12 files, 28 references, 10 imports
+- **Usage census:** shipping: 9 files, 11 call sites, 0 derive sites, 10 imports (`src/` outside `#[cfg(test)]`); dev: 9 call sites in test modules and benches/
 - **Public API leakage:** `src/cards.rs:247` `pub fn par_combinations(&self, k) -> IterBridge<Combinations<IntoIter<Card>>>` — leaks `rayon` *and* `itertools` types in one signature
 - **Contract exposure:** none directly; the `equity` feature's Monte Carlo determinism depends on seeding, not on rayon
 - **Unique baggage:** 0 (also held via `indexmap`'s `rayon` feature)
@@ -302,7 +312,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 ### rand 0.9.4
 
 - **License:** MIT OR Apache-2.0 · **Last release:** unchecked (0.10.2 available) · **Advisories:** none
-- **Usage census:** 10 files, 84 references, 46 imports
+- **Usage census:** shipping: 9 files, 38 call sites, 0 derive sites, 10 imports (`src/` outside `#[cfg(test)]`); dev: 58 call sites — 36 in `#[cfg(test)]` modules (seeded-decider assertions), the rest in tests/ and examples/
 - **Public API leakage:** none found in signatures — `SmallRng`/`SeedableRng` are used behind `SimTable::seeded` and decider internals rather than exposed
 - **Contract exposure:** **behavioural** — `bot::sim` and `training::trainer` promise *reproducible* seeded runs (`src/bot/sim.rs:187,393,434`), and the replay/marathon tests assert on them. A `rand` major that changes generator output invalidates recorded fixtures even though no type signature changes
 - **Unique baggage:** 0 (also held via `cardpack`)
@@ -315,7 +325,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 
 - **License:** MIT · **Last release:** unchecked (0.40.1 available) · **Advisories:** none
 - **Features used:** `bundled` (compiles SQLite from source — the heaviest build-time item in the tree)
-- **Usage census:** 6 files, 30 references, 5 imports, plus 26 files in `examples/`+`tests/`
+- **Usage census:** shipping: 6 files, 20 call sites, 0 derive sites, 5 imports (`src/` outside `#[cfg(test)]`, all behind `store`); dev: 27 call sites across 26 files in `examples/`+`tests/`
 - **Public API leakage:** `Connection` in eight public signatures — `src/analysis/store/db/hup.rs:39,50,65,253,259`, `src/arrays/matchups/sorted_heads_up.rs:117,134`, and `hup.rs:228` returns `rusqlite::Result<Connection>`. All are behind `#[cfg(feature = "store")]`
 - **Contract exposure:** yes — the `generated/hups.db` SQLite schema
 - **Unique baggage:** 7 (`libsqlite3-sys`, `hashlink`, `fallible-iterator`, `fallible-streaming-iterator`, `foldhash`, `hashbrown 0.17`, `vcpkg`)
@@ -327,7 +337,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 ### csv 1.4.0
 
 - **License:** Unlicense/MIT · **Last release:** unchecked · **Advisories:** none
-- **Usage census:** 10 files, 36 references, 4 imports; **4 production call sites** (`analysis/store/bcm/index_card_map.rs:55`, `binary_card_map.rs:272`, `analysis/store/db/hup.rs:211,307`, `arrays/matchups/sorted_heads_up.rs:582,597`, `pokerbench/loader.rs:142`) — the remainder are doc examples and tests
+- **Usage census:** shipping: 6 files, 7 call sites, 0 derive sites, 4 imports (`src/` outside `#[cfg(test)]` — `analysis/store/bcm/index_card_map.rs:55`, `binary_card_map.rs:272`, `analysis/store/db/hup.rs:211,307`, `arrays/matchups/sorted_heads_up.rs:582,597`, `pokerbench/loader.rs:142`); dev: 12 call sites in test modules, tests/ and examples/. Census pattern is `csv::` paths, so the in-repo `util::csv` module no longer contaminates the count
 - **Public API leakage:** `src/pokerbench/error.rs:61` `impl From<csv::Error> for PokerBenchError` (gated behind the non-default `pokerbench` feature)
 - **Contract exposure:** the CSV export format for BCM/HUP generator artifacts in `generated/`
 - **Unique baggage:** 2 (`csv-core`)
@@ -339,7 +349,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 ### serde_json 1.0.150
 
 - **License:** MIT OR Apache-2.0 · **Last release:** unchecked (1.0.151 available) · **Advisories:** none
-- **Usage census:** 18 files, 71 references — but only **11 lines outside `#[cfg(test)]`**, in two modules. The other 60 are round-trip assertions in unit tests
+- **Usage census:** shipping: 3 files, **8 call sites**, 0 derive sites, 0 imports (`src/` outside `#[cfg(test)]` — `analysis/gto/solver.rs` plus the `pokerbench` pair); dev: **60 call sites**, all round-trip assertions in `#[cfg(test)]` modules
 - **Public API leakage:** `src/analysis/gto/solver.rs:153` `impl From<serde_json::Error> for SolverError` and `src/pokerbench/error.rs:68` `impl From<serde_json::Error> for PokerBenchError`. The `SolverError` impl is **not** feature-gated, so it compiles unconditionally
 - **Contract exposure:** minimal — JSON is the *debug* solver format (`debug-json`, non-default; `solver.rs:390,422` switch on it) and the pokerbench input format
 - **Unique baggage:** 1
@@ -351,7 +361,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 ### log 0.4.30
 
 - **License:** MIT OR Apache-2.0 · **Last release:** unchecked (0.4.33 available) · **Advisories:** none
-- **Usage census:** 32 files, 320 references, 8 imports, **148 macro call sites** (39 `trace!`, 44 `debug!`, 17 `info!`, 21 `warn!`, 27 `error!`)
+- **Usage census:** shipping: 27 files, 207 call sites, 0 derive sites, 8 imports, **144 leveled macro calls** (38 `trace!`, 43 `debug!`, 17 `info!`, 19 `warn!`, 27 `error!` — none in test modules); dev: 66 call sites in test modules, tests/ and examples/
 - **Public API leakage:** none — pkcore emits records, it does not expose `log` types
 - **Contract exposure:** none. `testing_logger` and `test-log` (dev-deps) assert on emitted records, which is an internal test contract only
 - **Unique baggage:** 1 (itself; it is a pure facade with no dependencies)
@@ -364,7 +374,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 
 - **License:** MIT (both) · **Last release:** unchecked · **Advisories:** none
 - **Features used:** `strum` with `derive`
-- **Usage census:** `strum` 7 files / 10 references / 9 imports; `strum_macros` 5 files / 6 references / 5 imports. **12 derive sites**: 8 `EnumIter`, 3 `EnumCount`, 1 `AsRefStr`, 1 `strum_macros::Display` — on `Rank`, `Suit`, `CardNumber`, `Position`, `Phases`, `Actions`, and the Razz `California` ranks
+- **Usage census:** shipping: `strum` 7 files / 8 call sites / 8 imports, `strum_macros` 5 files / 6 call sites / 5 imports, **13 derive sites** (8 `EnumIter`, 3 `EnumCount`, 1 `AsRefStr`, 1 `strum_macros::Display` — the previous audit's "12" summed its own enumeration wrong) — on `Rank`, `Suit`, `CardNumber`, `Position`, `Phases`, `Actions`, and the Razz `California` ranks, all shipping code; dev: 3 `strum` call sites in test modules, 0 for `strum_macros`
 - **Public API leakage:** the generated `IntoEnumIterator` / `EnumCount` impls are visible on public enums (`src/rank.rs:11`, `src/suit.rs:7`, `src/casino/position.rs:6`); consumers can and do call `Rank::iter()`
 - **Contract exposure:** `strum_macros::Display` on `Phases` (`src/play/phases.rs:7`) and `AsRefStr` on `California` (`src/games/razz/california.rs:66`) produce **user-visible and serialized strings**
 - **Unique baggage:** 1 for `strum`; 0 for `strum_macros` (held by `strum`'s `derive` feature)
@@ -377,7 +387,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 
 - **License:** MIT · **Last release:** unchecked · **Advisories:** none
 - **Features used:** `alloc`, `atomic`, `std`, `serde`, **`testing`** (see finding 5)
-- **Usage census:** 2 files, 4 references, 4 imports, 0 derive sites
+- **Usage census:** shipping: 2 files, 4 call sites, 0 derive sites, 4 imports (`src/` outside `#[cfg(test)]`); dev: 1 call site in tests/examples/benches
 - **Public API leakage:** **none** — no `BitVec`/`BitArray` appears in any public signature
 - **Contract exposure:** none
 - **Unique baggage:** **5** (`funty`, `radium`, `tap`, `wyz`)
@@ -392,7 +402,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 
 - **License:** MIT OR Apache-2.0 · **Last release:** unchecked (1.13.1 available) · **Advisories:** none
 - **Features used:** `features = []` — already trimmed to no defaults
-- **Usage census:** **1 production file**, 1 `Regex::new` call, 1 import (`src/analysis/nubibus.rs:8,436`). One further use in `examples/retired/pluribus.rs`, which is retired
+- **Usage census:** shipping: 1 file, 2 call sites (import at `src/analysis/nubibus.rs:8`, `Regex::new` at `:436`), 0 derive sites, 1 import; dev: 3 call sites in `examples/retired/pluribus.rs`, which is retired
 - **Public API leakage:** none
 - **Contract exposure:** none — it parses the Pluribus research dataset's card strings
 - **Unique baggage:** **0 via `cardpack`** — `regex-syntax`, `regex-automata`, `aho-corasick` and `memchr` are all held anyway by `cardpack → fluent-templates → ignore → globset`. Direct-edge removal drops **zero** crates from the graph. *(If cross-cutting finding 8 ever lands and cardpack's i18n subtree goes, this number becomes 5.)*
@@ -404,7 +414,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 ### percent-encoding 2.3.2 — `drop`
 
 - **License:** MIT OR Apache-2.0 · **Last release:** unchecked · **Advisories:** none
-- **Usage census:** **1 file, 1 reference, 0 imports** — `src/util/mod.rs:65–67`, the entire body of `Util::percent_decode`
+- **Usage census:** shipping: 1 file, 1 call site, 0 derive sites, 0 imports — `src/util/mod.rs:66`, the entire body of `Util::percent_decode`; dev: 0 call sites in tests/examples/benches (which is exactly what makes the function dead)
 - **Public API leakage:** `pub fn percent_decode(s: &str) -> Result<String, Utf8Error>` is public, but returns std's `Utf8Error`, so **no upstream type escapes**
 - **Contract exposure:** none
 - **Unique baggage:** **0 via `wincounter`** — the first-party `wincounter 0.1.6` depends on `percent-encoding` too, so cutting pkcore's direct edge removes nothing from the graph. This is an ownership and dead-code win only
@@ -418,7 +428,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 ### thousands 0.2.0 — `rewrite`
 
 - **License:** MIT/Apache-2.0 · **Last release:** unchecked (no version newer than 0.2.0 exists) · **Advisories:** none
-- **Usage census:** 1 production file, 1 import — `src/casino/cashier/chips.rs:5` `use thousands::Separable`, used to render chip stacks with comma grouping
+- **Usage census:** shipping: 1 file, 2 call sites (`use thousands::Separable` at `src/casino/cashier/chips.rs:5`, `separate_with_commas()` at `:149` inside `Display for Chips`), 0 derive sites, 1 import; dev: 0 call sites — used to render chip stacks with comma grouping
 - **Public API leakage:** none — `Separable` is consumed inside `Display for Chips`, not re-exported
 - **Contract exposure:** **user-visible output only** — the formatted string appears in terminal play and commentary. A rewrite must match `separate_with_commas` exactly for the existing display tests to pass
 - **Unique baggage:** 1 (itself; no transitive deps)
@@ -430,7 +440,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 ### zstd 0.13.3 *(optional, `store`, non-wasm)*
 
 - **License:** MIT · **Last release:** unchecked · **Advisories:** none
-- **Usage census:** 1 file, 8 references, 0 bare imports — `src/analysis/store/bcm/binary_card_map.rs:50` (`stream::read::Decoder`) and `:240` (`stream::write::Encoder`)
+- **Usage census:** shipping: 1 file, 3 call sites, 0 derive sites, 0 imports (fully-qualified) — `src/analysis/store/bcm/binary_card_map.rs:50` (`stream::read::Decoder`), `:240` (`stream::write::Encoder`), plus the error-map line; dev: 0 call sites
 - **Public API leakage:** none — errors are mapped to `PKError::BcmUnavailable` at the boundary (`binary_card_map.rs:31,51`)
 - **Contract exposure:** yes — the compressed BCM artifact format (~300–600 MB uncompressed, per `binary_card_map.rs:208`)
 - **Unique baggage:** 3 (`zstd-safe`, `zstd-sys`)
@@ -442,7 +452,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 ### termion 4.0.6 *(optional, unix)*
 
 - **License:** MIT · **Last release:** unchecked · **Advisories:** none
-- **Usage census:** 3 files, 4 references, 4 imports — `color` in `table_celled.rs:28` and `nubibus.rs:16`, `TermRead`/`IntoRawMode` in `util/terminal.rs:17,19`
+- **Usage census:** shipping: 3 files, 4 call sites, 0 derive sites, 4 imports — `color` in `table_celled.rs:28` and `nubibus.rs:16`, `TermRead`/`IntoRawMode` in `util/terminal.rs:17,19`; dev: 0 call sites
 - **Public API leakage:** none
 - **Contract exposure:** none
 - **Unique baggage:** 2 (`numtoa`)
@@ -455,7 +465,7 @@ in `docs/VENDORED.md` alone would not reach consumers.
 
 - **License:** MIT OR Apache-2.0 · **Last release:** unchecked · **Advisories:** none
 - **Features used:** `js` (0.2 alias `getrandom_v2`), `wasm_js` (0.3 alias `getrandom_v3`) — `Cargo.toml:98–99`
-- **Usage census:** **0 files, 0 references** — these are pure feature-activation shims, not code dependencies. They exist so transitive `getrandom` copies pick a browser entropy backend on `wasm32`
+- **Usage census:** shipping: 0 files, 0 call sites, 0 derive sites, 0 imports; dev: 0 call sites — pure feature-activation shims consumed by the manifest, not by code. Zero dev usage is why this is `keep` and not `demote-to-dev`: they exist so transitive `getrandom` copies pick a browser entropy backend on `wasm32`
 - **Public API leakage:** none
 - **Contract exposure:** none
 - **Unique baggage:** 0
@@ -479,11 +489,12 @@ and whether the boundary itself is drawn in the right place.
   `https://github.com/folkengine/random_name_generator_rs`. BSD-3-Clause.
   Library name is `rnglib`, which is why a naive `rg random_name_generator`
   census returns zero source hits
-- **Usage census:** **1 file, 1 import, 1 production call site.**
-  `src/util/name.rs:1` `use rnglib::{Language, RNG}`; `:6` a `LazyLock<RNG>`
-  built with `Language::Demonic`; `:11` `Name::generate()` joins two generated
-  names. The single production caller is `src/casino/player.rs:499`
-  (`handle: Name::generate()`), which fills in a default player handle
+- **Usage census:** shipping: 1 file, 1 call site, 0 derive sites, 1 import;
+  dev: 0 call sites. `src/util/name.rs:1` `use rnglib::{Language, RNG}`; `:6`
+  a `LazyLock<RNG>` built with `Language::Demonic`; `:11` `Name::generate()`
+  joins two generated names. The single shipping caller is
+  `src/casino/player.rs:499` (`handle: Name::generate()`), which fills in a
+  default player handle
 - **Public API leakage:** **none of `rnglib`'s types** — `Name` is re-exported
   from `src/prelude.rs:72`, but its surface is `fn generate() -> String`.
   Removal changes no signature
@@ -536,7 +547,7 @@ and whether the boundary itself is drawn in the right place.
 ### wincounter 0.1.6 (first-party)
 
 - **Relationship:** `ImperialBower/wincounter` — same org. MIT
-- **Usage census:** 13 files, 35 references, 28 imports
+- **Usage census:** shipping: 13 files, 26 call sites, 0 derive sites, 26 imports (`src/` outside `#[cfg(test)]`); dev: 10 call sites in test modules and tests/
 - **Public API leakage:** **maximal, and deliberate** — `src/prelude.rs:9–12`
   re-exports `PlayerFlag`, `WinResults`, `Win`, and `Wins` wholesale. They then
   appear in public signatures: `src/play/game.rs:347` `turn_calculations(&self)
@@ -572,7 +583,7 @@ and whether the boundary itself is drawn in the right place.
 ### pkstate 0.1.2 (first-party)
 
 - **Relationship:** `ImperialBower/pkstate` — same org. MIT OR Apache-2.0
-- **Usage census:** 3 files, 19 references, 1 import
+- **Usage census:** shipping: 1 file, 12 call sites, 0 derive sites, 1 import (all in `table_celled.rs`); dev: 0 call sites — the 7 mentions in `bard.rs`/`dealer.rs` are doc-comment prose, no longer counted
 - **Public API leakage:** two public trait impls — `src/casino/table_celled.rs:1586`
   `impl From<&TableCelled> for pkstate::PKState` and `:1776`
   `impl From<TableCelled> for pkstate::PKState`. The conversion body reaches
@@ -604,11 +615,12 @@ and whether the boundary itself is drawn in the right place.
 
 - **Relationship:** `ImperialBower/cardpack.rs` (docs also reference
   `ContractBridge/cardpack.rs`) — same org. Apache-2.0
-- **Usage census:** **2 production sites.** `src/bard.rs:7,343,348` —
-  `Bard::to_pile()` parses via `CPile::<Standard52>::from_str` and returns
-  `Option<BasicPile>`; `src/casino/table_celled.rs:1615–1619` — parses a board
-  string as `Pile<Standard52>` inside the `PKState` conversion. The remaining
-  hits are doc-comment references (`cards.rs:345`, `analysis/eval.rs:65`)
+- **Usage census:** shipping: 2 files, 3 call sites, 0 derive sites, 1
+  import; dev: 0 call sites. `src/bard.rs:7,348` — `Bard::to_pile()` parses
+  via `CPile::<Standard52>::from_str` and returns `Option<BasicPile>`;
+  `src/casino/table_celled.rs:1615–1619` — parses a board string as
+  `Pile<Standard52>` inside the `PKState` conversion. Doc-comment references
+  (`cards.rs:345`, `analysis/eval.rs:65`) are prose, no longer counted
 - **Public API leakage:** `src/bard.rs:343` `pub fn to_pile(&self) ->
   Option<BasicPile>` returns an upstream type
 - **Contract exposure:** none directly — pkcore has its own `Card`/`Cards`
@@ -651,8 +663,10 @@ and whether the boundary itself is drawn in the right place.
 
 - **Relationship:** `electronicpanopticon/bint-rs` — this crate's own author.
   MIT
-- **Usage census:** **1 file, 1 import** — `src/casino/table_celled.rs:20`
-  `use bint::{BintCell, DrainableBintCell}`
+- **Usage census:** shipping: 1 file, 1 call site, 0 derive sites, 1 import —
+  `src/casino/table_celled.rs:20` `use bint::{BintCell, DrainableBintCell}`
+  (the constructors below reference the imported types, not the crate path);
+  dev: 0 call sites
 - **Public API leakage:** `src/casino/table_celled.rs:146` `pub button:
   BintCell` — a **public field** on `TableCelled`. Also constructed at `:229`,
   `:774`, `:1346`, `:1505`
@@ -716,7 +730,7 @@ Raw outputs for diffing against the next audit run.
 | Tool | Status |
 |---|---|
 | `cargo metadata --format-version 1` | ran — 308 packages (unfiltered: all targets, all optional edges) |
-| `cargo tree -e normal` | ran — 172 normal-graph crates all-targets, **140 host**, default features |
+| `cargo tree -e normal` | ran — shipping graph: 172 crates all-targets, **140 host**, default features |
 | `cargo tree -d` | ran — see below |
 | `cargo tree -i <dep>` / per-dep subtree diff | ran for all 25 host direct deps |
 | `cargo check --target wasm32-unknown-unknown --lib` | ran — **clean**, 57.03s |
@@ -729,7 +743,7 @@ Raw outputs for diffing against the next audit run.
 ### Duplicate versions
 
 Full `cargo tree -d` includes many dev-only duplicates. Filtered to the
-**normal (non-dev) graph, all targets**:
+**shipping (non-dev) graph, all targets**:
 
 ```
 getrandom:    v0.2.17  v0.3.4  v0.4.2
@@ -746,7 +760,7 @@ Dev-only duplicates (ignore for shipping purposes): `clap_lex` 0.7.7/1.1.0,
 `strum_macros` 0.26.4/0.28.0, `thiserror` 1.0.69/2.0.18, `unicode-width`
 0.1.14/0.2.2.
 
-Attribution of the normal-graph duplicates:
+Attribution of the shipping-graph duplicates:
 
 ```
 clap v4.6.1
@@ -765,39 +779,50 @@ getrandom v0.4.2
 └── uuid v1.23.2 → pkcore                          # absent on wasm32 (target-gated)
 ```
 
-### Per-dependency census
+### Per-dependency census (shipping/dev split)
 
-`hits` = all textual references in `src/`; `prod` distinguishes call sites
-outside `#[cfg(test)]` where the two differ materially.
+Methodology (re-based this run): a call site is a **code line** matching the
+dep's pattern — comment and doc-comment lines are excluded (doc-test fences
+live in doc comments, so they fall out of shipping automatically).
+Shipping = `src/` outside `#[cfg(test)]` modules; dev = `#[cfg(test)]`
+modules + `tests/` + `examples/` + `benches/`. Pattern changes vs the
+`1fe55b8` run, for the next diff: `uuid` now also matches the `Uuid` type
+name; `regex` matches `Regex`; `csv` matches `csv::` paths only (the in-repo
+`util::csv` module no longer contaminates); `thousands` includes its
+`separate_with_commas` call site. Doc-prose mentions count in neither half.
 
-| Dependency | Files | References | Imports | Derive sites | Notes |
-|---|---|---|---|---|---|
-| serde | 53 | 168 | 55 | **172** (+96 `#[serde(…)]` attrs) | 83 `Serialize`, 89 `Deserialize` |
-| log | 32 | 320 | 8 | 0 | 148 macro calls: 39/44/17/21/27 t/d/i/w/e |
-| uuid | 18 | 42 | 16 | 0 | 61 constructor/parse sites |
-| serde_json | 18 | 71 | 0 | 0 | **11 prod lines**; rest are tests |
-| wincounter | 13 | 35 | 28 | 0 | 4 types re-exported from prelude |
-| rayon | 12 | 28 | 10 | 0 | |
-| csv | 10 | 36 | 4 | 0 | **4 prod sites**; +21 files in examples/tests |
-| rand | 10 | 84 | 46 | 0 | |
-| strum | 7 | 10 | 9 | 12 | shared derive count with strum_macros |
-| itertools | 6 | 6 | 5 | 0 | |
-| rusqlite | 6 | 30 | 5 | 0 | +26 files in examples/tests |
-| indexmap | 5 | 7 | 4 | 0 | |
-| strum_macros | 5 | 6 | 5 | — | |
-| cardpack | 4 | 6 | 1 | 0 | **2 prod sites**; rest doc comments |
-| postcard | 4 | 14 | 0 | 0 | |
-| serde_yaml_bw | 4 | 48 | 0 | 0 | |
-| pkstate | 3 | 19 | 1 | 0 | |
-| termion | 3 | 4 | 4 | 0 | |
-| bitvec | 2 | 4 | 4 | 0 | **2 real usages** |
-| thousands | 2 | 2 | 1 | 0 | **1 real usage** |
-| bint | 1 | 1 | 1 | 0 | |
-| percent-encoding | 1 | 1 | 0 | 0 | **0 callers of its only consumer** |
-| regex | 1 | 1 | 1 | 0 | +1 retired example |
-| zstd | 1 | 8 | 0 | 0 | |
-| random_name_generator | 1 | 2 | 1 | 0 | imported as `rnglib`; **1 prod caller** |
-| getrandom_v2 / getrandom_v3 | 0 | 0 | 0 | 0 | feature shims only |
+| Dependency | Shipping files | Shipping call sites | Derives | Dev-side count |
+|---|---|---|---|---|
+| serde | 53 | 157 | **171** (+96 `#[serde(…)]` attrs) | 3 |
+| log | 27 | 207 (144 leveled macro calls) | 0 | 66 |
+| uuid | 16 | 88 | 0 | 101 |
+| wincounter | 13 | 26 | 0 | 10 |
+| rand | 9 | 38 | 0 | 58 |
+| rayon | 9 | 11 | 0 | 9 |
+| strum | 7 | 8 | 13 (shared with strum_macros) | 3 |
+| rusqlite | 6 | 20 | 0 | 27 |
+| csv | 6 | 7 | 0 | 12 |
+| strum_macros | 5 | 6 | — | 0 |
+| itertools | 5 | 5 | 0 | 2 |
+| serde_yaml_bw | 3 | 13 | 0 | 33 |
+| serde_json | 3 | 8 | 0 | 60 |
+| indexmap | 3 | 5 | 0 | 1 |
+| termion | 3 | 4 | 0 | 0 |
+| postcard | 2 | 5 | 0 | 3 |
+| bitvec | 2 | 4 | 0 | 1 |
+| cardpack | 2 | 3 | 0 | 0 |
+| pkstate | 1 | 12 | 0 | 0 |
+| zstd | 1 | 3 | 0 | 0 |
+| regex | 1 | 2 | 0 | 3 (retired example) |
+| thousands | 1 | 2 | 0 | 0 |
+| bint | 1 | 1 | 0 | 0 |
+| percent-encoding | 1 | 1 (dead `pub fn`) | 0 | 0 |
+| random_name_generator | 1 | 1 (as `rnglib`) | 0 | 0 |
+| getrandom_v2 / getrandom_v3 | 0 | 0 | 0 | 0 |
+
+Deps with **shipping = 0**: only the two `getrandom` wasm shims, which are
+manifest-level feature activators with zero dev usage too — `keep`, not
+`demote-to-dev`. No dependency in this crate is dev-misclassified.
 
 ### Unique baggage (host target, `aarch64-apple-darwin`)
 
@@ -834,8 +859,8 @@ All counts exclude `pkcore` itself, default features, `cargo tree` (not
 optional-edge activation and is **not** comparable):
 
 ```
-normal (non-dev) graph, all targets : 172 crates
-normal graph, host target           : 140 crates
+shipping (non-dev) graph, all targets : 172 crates
+shipping graph, host target         : 140 crates
 with dev-dependencies, host         : 225 crates  (dev-only adds  85)
 with dev-dependencies, all targets  : 284 crates  (dev-only adds 112)
 src/ Rust files                     : 170
