@@ -36,5 +36,5 @@ enforcement has history in both engines.
 
 # Citations
 
-[1] [BUGFIX_short_blind_call_target](https://github.com/ImperialBower/pkcore/blob/main/docs/defects/BUGFIX_short_blind_call_target.md)
-[2] [DEFECT_ShortStack_BB_Call_Amount](https://github.com/ImperialBower/pkcore/blob/main/docs/defects/DEFECT_ShortStack_BB_Call_Amount.md) — preserved record of the rejected interpretation
+[1] [DEFECT_001_BUGFIX_short_blind_call_target](https://github.com/ImperialBower/pkcore/blob/main/docs/defects/DEFECT_001_BUGFIX_short_blind_call_target.md)
+[2] [DEFECT_001_shortstack_bb_call_amount](https://github.com/ImperialBower/pkcore/blob/main/docs/defects/DEFECT_001_shortstack_bb_call_amount.md) — preserved record of the rejected interpretation

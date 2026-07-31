@@ -8,7 +8,7 @@ reader can follow the trail back to concrete code and tests.
 
 ## 2026-04-27 — Heads-up side-pot defect
 
-**Reference:** [`DEFECT_heads-up-side-pot.md`](./DEFECT_heads-up-side-pot.md)
+**Reference:** [`DEFECT_003_heads_up_side_pot.md`](./defects/DEFECT_003_heads_up_side_pot.md)
 **Surface symptom:** Two tied players in a 2-active-at-showdown hand received an even split of the entire pot (21,222 / 21,223 of 42,445), instead of the correct 7,460 / 34,985 distribution that side-pot accounting produces.
 **What was actually broken:** Two separate bugs sharing the same observable. Diagnosis caught one; TDD caught the other. Both had been latent for the entire lifetime of the corresponding code path (since `aededd6` for `TableNoCell`, since `414e974` for `TableCelled`).
 

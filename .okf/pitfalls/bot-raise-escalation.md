@@ -33,4 +33,4 @@ Profile data lives in [bot profiles](/data/bot-profiles.md).
 
 # Citations
 
-[1] [DEFECT_bot-escalation](https://github.com/ImperialBower/pkcore/blob/main/docs/defects/DEFECT_bot-escalation.md)
+[1] [DEFECT_002_bot_escalation](https://github.com/ImperialBower/pkcore/blob/main/docs/defects/DEFECT_002_bot_escalation.md)

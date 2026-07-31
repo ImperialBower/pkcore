@@ -3,7 +3,7 @@
 **Date:** 2026-04-29
 **Branch:** `adjust` (commit `2902e33`)
 **Release notes:** _(not yet written — `RELEASE_0.0.55.md` does not exist)_
-**Cross-reference:** [`BUGFIX_short_blind_call_target.md`](../BUGFIX_short_blind_call_target.md), [`DEFECT_ShortStack_BB_Call_Amount.md`](../DEFECT_ShortStack_BB_Call_Amount.md)
+**Cross-reference:** [`DEFECT_001_BUGFIX_short_blind_call_target.md`](../defects/DEFECT_001_BUGFIX_short_blind_call_target.md), [`DEFECT_001_shortstack_bb_call_amount.md`](../defects/DEFECT_001_shortstack_bb_call_amount.md)
 
 ## Breaking Changes Audited
 

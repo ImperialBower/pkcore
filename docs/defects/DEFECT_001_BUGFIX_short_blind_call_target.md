@@ -1,12 +1,12 @@
 # Bugfix: Short-Stacked BB Set Call Target to Actual Posted Amount Instead of Configured Blind
 
-**File:** `docs/defects/BUGFIX_short_blind_call_target.md`
+**File:** `docs/defects/DEFECT_001_BUGFIX_short_blind_call_target.md`
 **Date:** 2026-04-28
 **Severity:** High (chip-conservation-adjacent — pot sizes wrong, raise validation incorrect)
 **Status:** Fix in progress
 **Versions affected:** 0.0.48 – 0.0.54
 **Fixed in:** 0.0.55 (PR pending)
-**Files changed:** `src/casino/table.rs`, `src/casino/table_no_cell.rs`, `docs/defects/DEFECT_ShortStack_BB_Call_Amount.md`
+**Files changed:** `src/casino/table.rs`, `src/casino/table_no_cell.rs`, `docs/defects/DEFECT_001_shortstack_bb_call_amount.md`
 
 ---
 
@@ -14,7 +14,7 @@
 
 When the big blind cannot cover the configured BB and posts all-in for less, `act_forced_bet_big_blind` was setting the table-level call target (`self.bet`) to the *actual posted amount* rather than the *configured BB amount*. This caused other players' `to_call()` to return the short amount, allowing them to "limp" for less than a full big blind — a violation of standard cardroom rules (TDA, Robert's Rules, WSOP). The same field is also read by `act_raise` increment validation, so min-raise checks were silently incorrect during short-blind hands as well.
 
-Commit `076e36d` (released as 0.0.48) introduced this behavior intentionally, framing it as a fix and documenting the rationale in `docs/defects/DEFECT_ShortStack_BB_Call_Amount.md`. On review, the documented rule interpretation is non-standard: it conflates "BB can only win the all-in amount from each caller" (correct, achieved through side pots / uncalled-bet returns) with "callers commit only the all-in amount" (incorrect under standard rules). Reverting to `self.bet = self.forced.big_blind` restores standard behavior, and the existing per-seat `chips_in_play` infrastructure already handles the pot stratification needed to keep chip conservation intact.
+Commit `076e36d` (released as 0.0.48) introduced this behavior intentionally, framing it as a fix and documenting the rationale in `docs/defects/DEFECT_001_shortstack_bb_call_amount.md`. On review, the documented rule interpretation is non-standard: it conflates "BB can only win the all-in amount from each caller" (correct, achieved through side pots / uncalled-bet returns) with "callers commit only the all-in amount" (incorrect under standard rules). Reverting to `self.bet = self.forced.big_blind` restores standard behavior, and the existing per-seat `chips_in_play` infrastructure already handles the pot stratification needed to keep chip conservation intact.
 
 ---
 
@@ -238,7 +238,7 @@ Three new tests guard the chip-conservation invariant under the standard rule. T
 
 ---
 
-## Relationship to `docs/defects/DEFECT_ShortStack_BB_Call_Amount.md`
+## Relationship to `docs/defects/DEFECT_001_shortstack_bb_call_amount.md`
 
 That document, written for the 0.0.48 release, framed the *opposite* direction as the fix: it argued that callers should commit only the BB's actual posted amount (the now-rejected interpretation). The rule statement in that doc — "a call is always capped at what the opposing player actually put into the pot" — is a misapplication of the side-pot invariant: under standard rules, the call amount stays at the configured BB, and the side-pot / uncalled-bet-return mechanism handles the actual chip-conservation guarantee.
 

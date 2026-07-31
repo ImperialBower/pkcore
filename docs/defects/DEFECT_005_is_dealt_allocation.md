@@ -1,16 +1,23 @@
 # Defect: `is_dealt()` heap allocation dominates hand evaluation
 
-**File:** `docs/defects/DEFECT_is_dealt_allocation.md`
+**File:** `docs/defects/DEFECT_005_is_dealt_allocation.md`
 **Date:** 2026-07-31
 **Severity:** Medium
 **Status:** Fixed
 **Introduced in:** `2f7a398` (2022-07-02, "Pile.is_dealt()") — present for just over four years
 **Fixed in:** `dac7f67` (2026-07-31)
 
-> Severity note: the rubric places performance-only defects at Low. This is
-> rated Medium because no result was ever wrong, but the affected code is the
+> Severity note: no result was ever wrong, so this is not a correctness defect.
+> It is rated Medium on the performance axis because the affected code is the
 > innermost loop of the entire library — every equity enumeration, every
-> self-play showdown, and every solver iteration paid it.
+> self-play showdown, and every solver iteration paid it. Measured at 7.9x on
+> `eval.five.hand_rank_value` and 2.7x on `eval.seven.hand_rank_value`
+> (medians, `make perf-native`, Apple M1).
+>
+> This report is the reference case for the performance-severity guidance in
+> `.claude/skills/defect-report/SKILL.md`, which was amended off the back of
+> it: performance defects are rated by magnitude times blast radius rather than
+> defaulting to Low.
 
 ---
 

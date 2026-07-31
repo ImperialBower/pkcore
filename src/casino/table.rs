@@ -2565,7 +2565,7 @@ mod casino__table_tests {
     // Regression: when BB is short-stacked, other players must still call the configured
     // blind amount (the call target stays anchored at full BB). The BB's short post caps
     // what the all-in BB can win at showdown via side-pot stratification, but the call
-    // amount itself does not drop. See docs/defects/BUGFIX_short_blind_call_target.md.
+    // amount itself does not drop. See docs/defects/DEFECT_001_BUGFIX_short_blind_call_target.md.
     #[test]
     fn table_to_call_uses_full_bb_when_bb_short() {
         // button=0: seat 0 = UTG/button, seat 1 = SB, seat 2 = BB (short-stacked)
@@ -2931,7 +2931,7 @@ mod casino__table_tests {
 
     // ── Short-stack BB chip-conservation regression tests ────────────────────
     //
-    // See docs/defects/BUGFIX_short_blind_call_target.md. Under standard cardroom rules,
+    // See docs/defects/DEFECT_001_BUGFIX_short_blind_call_target.md. Under standard cardroom rules,
     // when the BB is all-in for less than the configured blind, other players
     // must still call the full configured BB. Chip conservation is preserved
     // through side-pot stratification (multiway) or uncalled-bet returns

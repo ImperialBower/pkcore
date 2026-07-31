@@ -271,7 +271,7 @@ When no bet is outstanding:
 - `equity ≤ value_threshold` and postflop → bluff at `bluff_frequency`, else `Check`
 
 The probabilistic raise gate (`aggr.max(0.5)`) prevents two bots both holding strong hands
-from escalating into an unconditional raise loop. See `docs/defects/DEFECT_bot-escalation.md`.
+from escalating into an unconditional raise loop. See `docs/defects/DEFECT_002_bot_escalation.md`.
 
 ---
 
@@ -300,8 +300,8 @@ the `pkarena0-web` WASM client without Rust compilation:
 | `docs/FEATURE_BotProfile_TypeSafety.md` | Feature spec: `PlayStyle` enum, `Percentage` newtype |
 | `docs/FEATURE_BotProfile_StreetAggression.md` | Feature spec: `StreetAggression`, `aggression_for_phase()` |
 | `docs/FEATURE_BotProfile_HandStrengthDecisions.md` | Feature spec: equity proxy, pot-odds calldown, `open_raise_contains`, `value_threshold` |
-| `docs/defects/DEFECT_bot-escalation.md` | Post-mortem: deterministic raise-war escalation under equity-based decisions; probabilistic gate fix |
-| `docs/defects/DEFECT_ShortStack_BB_Call_Amount.md` | Post-mortem: short-stack BB setting incorrect call target for other players |
+| `docs/defects/DEFECT_002_bot_escalation.md` | Post-mortem: deterministic raise-war escalation under equity-based decisions; probabilistic gate fix |
+| `docs/defects/DEFECT_001_shortstack_bb_call_amount.md` | Post-mortem: short-stack BB setting incorrect call target for other players |
 | `docs/EPIC_FEATURE_wasm_wamr.md` | Planning doc: WASM bot profile integration for `pkarena0-web` |
 
 ### Updated docs
@@ -350,8 +350,8 @@ the `pkarena0-web` WASM client without Rust compilation:
 `docs/FEATURE_BotProfile_PositionAwareDecisions.md` *(new)*,
 `docs/FEATURE_BotProfile_StreetAggression.md` *(new)*,
 `docs/FEATURE_BotProfile_TypeSafety.md` *(new)*,
-`docs/defects/DEFECT_ShortStack_BB_Call_Amount.md` *(new)*,
-`docs/defects/DEFECT_bot-escalation.md` *(new)*,
+`docs/defects/DEFECT_001_shortstack_bb_call_amount.md` *(new)*,
+`docs/defects/DEFECT_002_bot_escalation.md` *(new)*,
 `docs/EPIC_FEATURE_wasm_wamr.md` *(new)*,
 `ROADMAP.md` *(updated)*
 

@@ -2,7 +2,7 @@
 
 **Date:** 2026-04-28
 **Release notes:** [RELEASE_0.0.52.md](RELEASE_0.0.52.md)
-**Defect ref:** [DEFECT_heads-up-side-pot.md](../DEFECT_heads-up-side-pot.md)
+**Defect ref:** [DEFECT_003_heads_up_side_pot.md](../defects/DEFECT_003_heads_up_side_pot.md)
 
 ---
 
