@@ -63,10 +63,6 @@ fn main() {
     time("unique_rank(or_rank_bits)", &hands, |h| {
         u64::from(Five::unique_rank(h.or_rank_bits() as usize))
     });
-    time("not_unique (binary search)", &hands, |h| {
-        u64::from(h.not_unique())
-    });
-    time("hand_rank_value (total)", &hands, |h| {
-        u64::from(h.hand_rank_value())
-    });
+    time("not_unique (binary search)", &hands, |h| u64::from(h.not_unique()));
+    time("hand_rank_value (total)", &hands, |h| u64::from(h.hand_rank_value()));
 }
