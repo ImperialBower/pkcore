@@ -5,6 +5,8 @@
 //! See `docs/superpowers/specs/2026-07-30-kernel-performance-harness-design.md`.
 
 pub mod catalog;
+#[cfg(feature = "equity")]
+pub mod catalog_equity;
 pub mod report;
 pub mod results;
 pub mod runner;

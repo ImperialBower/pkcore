@@ -170,7 +170,8 @@ fn make_five_from_str() -> Result<HotFn, PerfError> {
 /// ```
 #[must_use]
 pub fn catalog() -> Vec<Workload> {
-    vec![
+    #[allow(unused_mut)]
+    let mut workloads = vec![
         Workload {
             name: "eval.five.hand_rank_value",
             band: Band::Nano,
@@ -206,7 +207,12 @@ pub fn catalog() -> Vec<Workload> {
             features: &[],
             make: make_five_from_str,
         },
-    ]
+    ];
+
+    #[cfg(feature = "equity")]
+    workloads.extend(crate::catalog_equity::equity_workloads());
+
+    workloads
 }
 
 #[cfg(test)]
@@ -261,9 +267,8 @@ mod perf__catalog_tests {
     }
 
     #[test]
-    fn every_workload_is_pure_kernel_and_nano_band() {
-        for workload in catalog() {
-            assert_eq!(workload.band, Band::Nano, "{}", workload.name);
+    fn every_nano_workload_is_pure_kernel() {
+        for workload in catalog().into_iter().filter(|w| w.band == Band::Nano) {
             assert!(
                 workload.features.is_empty(),
                 "{} should need no features",
@@ -286,10 +291,22 @@ mod perf__catalog_tests {
     }
 
     /// Smoke test: every workload's setup succeeds and one iteration runs.
+    ///
+    /// Macro-band workloads (e.g. `equity.exact.hu_preflop`, a true
+    /// 1.7M-runout enumeration) are setup-only here: actually running one can
+    /// take minutes. Do not "helpfully" restore the timed call for those —
+    /// that is what made `cargo test` hang. Note that "setup" is not
+    /// necessarily a proof of correctness for a macro workload the way it is
+    /// for the others: `equity.exact.hu_preflop`'s `make` deliberately skips
+    /// the validate-by-computing step precisely because that step is the
+    /// expensive part (see `catalog_equity::make_hu_preflop`'s doc comment).
     #[test]
     fn every_workload_sets_up_and_runs() {
         for workload in catalog() {
             let hot = (workload.make)().unwrap_or_else(|e| panic!("{} setup failed: {e}", workload.name));
+            if workload.band == Band::Macro {
+                continue;
+            }
             let _ = hot(1);
         }
     }
@@ -297,10 +314,24 @@ mod perf__catalog_tests {
     /// The dead-code-elimination guard. If the optimizer deleted the work, the
     /// checksum would be a constant 0; if the work were unstable, trials would
     /// disagree. Both show up here.
+    ///
+    /// Macro-band workloads are excluded from the timed run for the same
+    /// reason as `every_workload_sets_up_and_runs` above.
+    ///
+    /// Uses each workload's own declared `inner_iters` rather than a fixed
+    /// count: a nano-band table lookup and one equity `compute()` call are
+    /// different orders of magnitude of real work, and only the workload
+    /// itself knows which. A fixed count borrowed from the nano band (512)
+    /// multiplied one equity workload's per-call cost into a multi-minute
+    /// smoke test before this was scaled per workload.
     #[test]
     fn every_workload_is_deterministic_and_does_real_work() {
         for workload in catalog() {
-            let sample = measure(&workload, 1, 3, 512);
+            if workload.band == Band::Macro {
+                let _ = (workload.make)().unwrap_or_else(|e| panic!("{} setup failed: {e}", workload.name));
+                continue;
+            }
+            let sample = measure(&workload, 1, 3, workload.inner_iters);
             assert_eq!(
                 sample.status,
                 Status::Ok,
