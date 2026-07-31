@@ -12,31 +12,31 @@
 //! cargo run --example decon_dump --features equity,bot-profiles,hand-histories,player-stats
 //! ```
 
+use pkcore::SuitShift;
 use pkcore::analysis::class::HandRankClass;
+use pkcore::analysis::equity::{EquityOptions, EquityRequest, PlayerSpec};
 use pkcore::analysis::gto::combos::Combos;
+use pkcore::analysis::gto::weighted_combos::WeightedCombos;
 use pkcore::analysis::hand_rank::{HandRank, HandRankValue};
 use pkcore::analysis::name::HandRankName;
-use pkcore::analysis::equity::{EquityOptions, EquityRequest, PlayerSpec};
 use pkcore::analysis::omaha::EightOrBetter;
 use pkcore::analysis::player_stats::{Confidence, PlayerStats};
 use pkcore::analysis::pot_odds::PotOdds;
 use pkcore::arrays::HandRanker;
-use pkcore::analysis::gto::weighted_combos::WeightedCombos;
 use pkcore::bot::decider::{BotDecider, RuleBasedDecider};
 use pkcore::bot::profile::BotProfile;
 use pkcore::bot::table_snapshot::TableSnapshot;
-use rand::SeedableRng;
-use rand::rngs::SmallRng;
 use pkcore::casino::cashier::chips::Stack;
-use pkcore::casino::table::{Player, Seat, Seats, Table};
 use pkcore::casino::position::Position;
+use pkcore::casino::table::{Player, Seat, Seats, Table};
 use pkcore::games::GameType;
-use pkcore::games::omaha::OmahaHigh;
-use pkcore::hand_history::HandHistory;
 use pkcore::games::betting_structure::{BetTier, BettingStructure};
 use pkcore::games::kuhn::{KuhnAction, KuhnCard, KuhnCfr, KuhnHistory, KuhnInfoSet, KuhnState, KuhnStrategy};
+use pkcore::games::omaha::OmahaHigh;
+use pkcore::hand_history::HandHistory;
 use pkcore::prelude::*;
-use pkcore::SuitShift;
+use rand::SeedableRng;
+use rand::rngs::SmallRng;
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
 
@@ -305,17 +305,11 @@ fn high_hand_ranking() -> usize {
     // (category, class). This is the complete observable ranking taxonomy.
     let mut runs: Vec<Value> = Vec::new();
     let mut start: HandRankValue = 1;
-    let mut current = (
-        HandRankName::from(1u16),
-        format!("{:?}", HandRankClass::from(1u16)),
-    );
+    let mut current = (HandRankName::from(1u16), format!("{:?}", HandRankClass::from(1u16)));
 
     for value in 2..=7463u16 {
         let here = if value <= 7462 {
-            (
-                HandRankName::from(value),
-                format!("{:?}", HandRankClass::from(value)),
-            )
+            (HandRankName::from(value), format!("{:?}", HandRankClass::from(value)))
         } else {
             (HandRankName::Invalid, String::from("__end__"))
         };
@@ -527,7 +521,10 @@ fn lowball_ranking() -> usize {
         ("6♠ 5♥ 4♦ 3♣ 2♠", "six-five low"),
         ("7♠ 5♥ 4♦ 3♣ 2♠", "seven-five low"),
         ("8♠ 6♥ 4♦ 3♣ 2♠", "eight-six low"),
-        ("5♠ 4♠ 3♠ 2♠ A♠", "the wheel, all one suit — a flush does not count against a low"),
+        (
+            "5♠ 4♠ 3♠ 2♠ A♠",
+            "the wheel, all one suit — a flush does not count against a low",
+        ),
         ("A♠ K♥ Q♦ J♣ T♠", "broadway — a terrible low"),
         ("A♠ A♥ 3♦ 2♣ 4♠", "paired — does not qualify as a low in this path"),
     ];
@@ -994,7 +991,12 @@ fn hand_history() -> usize {
         .iter()
         .enumerate()
         .map(|(i, (handle, stack, hole))| {
-            (u8::try_from(i).unwrap_or(0), (*handle).to_string(), *stack, Some((*hole).to_string()))
+            (
+                u8::try_from(i).unwrap_or(0),
+                (*handle).to_string(),
+                *stack,
+                Some((*hole).to_string()),
+            )
         })
         .collect();
 
@@ -1145,7 +1147,10 @@ fn player_statistics() -> usize {
 
     let empty = PlayerStats::default();
 
-    let rows = [("a player with 100 hands recorded", &populated), ("a player with no hands recorded", &empty)];
+    let rows = [
+        ("a player with 100 hands recorded", &populated),
+        ("a player with no hands recorded", &empty),
+    ];
     let derived: Vec<Value> = rows
         .iter()
         .map(|(label, stats)| {
@@ -1352,9 +1357,7 @@ fn range_notation() -> usize {
     let slug = "range-notation";
     let mut n = 0;
 
-    let classes = [
-        "AA", "KK", "22", "AKs", "AKo", "AK", "T9s", "72o", "JTs",
-    ];
+    let classes = ["AA", "KK", "22", "AKs", "AKo", "AK", "T9s", "72o", "JTs"];
     let counts: Vec<Value> = classes
         .iter()
         .filter_map(|s| {
@@ -1383,9 +1386,7 @@ fn range_notation() -> usize {
         }),
     );
 
-    let ranges = [
-        "AA", "QQ+", "AKs", "AJo+", "QQ+, AKs", "22+", "AT+",
-    ];
+    let ranges = ["AA", "QQ+", "AKs", "AJo+", "QQ+, AKs", "22+", "AT+"];
     let parsed: Vec<Value> = ranges
         .iter()
         .filter_map(|s| {
@@ -1444,18 +1445,25 @@ fn range_notation() -> usize {
             weighted.insert(combo, frequency);
         }
     }
-    let mut entries: Vec<Value> = [("AA", 6usize), ("KK", 6), ("AKs", 4), ("AJo", 12), ("T9s", 4), ("QQ", 6)]
-        .iter()
-        .filter_map(|(notation, combinations)| {
-            let combo = Combo::from_str(notation).ok()?;
-            Some(json!({
-                "class": notation,
-                "combinations_in_class": combinations,
-                "frequency": weighted.frequency(&combo),
-                "in_range": weighted.frequency(&combo).is_some(),
-            }))
-        })
-        .collect();
+    let mut entries: Vec<Value> = [
+        ("AA", 6usize),
+        ("KK", 6),
+        ("AKs", 4),
+        ("AJo", 12),
+        ("T9s", 4),
+        ("QQ", 6),
+    ]
+    .iter()
+    .filter_map(|(notation, combinations)| {
+        let combo = Combo::from_str(notation).ok()?;
+        Some(json!({
+            "class": notation,
+            "combinations_in_class": combinations,
+            "frequency": weighted.frequency(&combo),
+            "in_range": weighted.frequency(&combo).is_some(),
+        }))
+    })
+    .collect();
     entries.sort_by(|a, b| a["class"].as_str().cmp(&b["class"].as_str()));
 
     n += write_vector(
@@ -1592,8 +1600,22 @@ fn variants_and_betting() -> usize {
         .collect();
 
     let max_raises: Vec<Value> = [
-        ("pot-limit: pot 100, no bet to call, 1000 behind", pl, 100usize, 0usize, 0usize, 1000usize),
-        ("pot-limit: pot 300, facing a 100 bet, 1000 behind", pl, 300, 100, 0, 1000),
+        (
+            "pot-limit: pot 100, no bet to call, 1000 behind",
+            pl,
+            100usize,
+            0usize,
+            0usize,
+            1000usize,
+        ),
+        (
+            "pot-limit: pot 300, facing a 100 bet, 1000 behind",
+            pl,
+            300,
+            100,
+            0,
+            1000,
+        ),
         ("no-limit: the whole stack is always available", nl, 300, 100, 0, 1000),
         ("fixed-limit: capped at the tier increment", fl, 300, 100, 0, 1000),
         ("pot-limit: short stack caps the maximum", pl, 300, 100, 0, 150),
@@ -1760,7 +1782,12 @@ fn equity_and_odds() -> usize {
     let exact_cases = [
         ("A♠ A♥", "K♦ K♣", "Q♠ J♦ 2♣", "aces against kings on a dry flop"),
         ("A♠ K♠", "Q♥ Q♦", "J♠ T♠ 2♥", "big draw against an overpair"),
-        ("A♠ A♥", "K♦ K♣", "K♠ J♦ 2♣ 7♥ 3♠", "a completed board — one runout, so certainty"),
+        (
+            "A♠ A♥",
+            "K♦ K♣",
+            "K♠ J♦ 2♣ 7♥ 3♠",
+            "a completed board — one runout, so certainty",
+        ),
     ];
     let exact: Vec<Value> = exact_cases
         .iter()
@@ -2092,11 +2119,7 @@ fn suit_isomorphism() -> usize {
         }),
     );
 
-    let matchups = [
-        ("A♠ K♠", "Q♥ Q♦"),
-        ("Q♥ Q♦", "A♠ K♠"),
-        ("7♦ 2♣", "A♠ A♥"),
-    ];
+    let matchups = [("A♠ K♠", "Q♥ Q♦"), ("Q♥ Q♦", "A♠ K♠"), ("7♦ 2♣", "A♠ A♥")];
     let canonical: Vec<Value> = matchups
         .iter()
         .filter_map(|(a, b)| {
