@@ -128,11 +128,13 @@ fn make_three_way() -> Result<HotFn, PerfError> {
     make_from_request(three_way_request)
 }
 
+/// One known hand against a random opponent, heads up.
+///
 /// Ported from the `benches/preflop_odds.rs` heads-up case that Phase 5
 /// deletes. Kept distinct from `equity.exact.hu_preflop` because it fixes the
 /// sample count rather than the threshold.
-fn make_dealeval_hu() -> Result<HotFn, PerfError> {
-    make_from_request(|| EquityRequest {
+fn dealeval_hu_request() -> EquityRequest {
+    EquityRequest {
         players: vec![PlayerSpec::Exact(Two::HAND_AS_KS), PlayerSpec::Random],
         board: Board::default(),
         opts: EquityOptions {
@@ -140,15 +142,21 @@ fn make_dealeval_hu() -> Result<HotFn, PerfError> {
             max_samples: 10_000,
             seed: Some(7),
         },
-    })
+    }
 }
 
+fn make_dealeval_hu() -> Result<HotFn, PerfError> {
+    make_from_request(dealeval_hu_request)
+}
+
+/// One known hand against two random opponents.
+///
 /// Ported from the `benches/preflop_odds.rs` three-way case. One known hand
 /// against two unknowns is the shape a hand-history replayer asks for, and the
 /// extra seat roughly doubles the per-sample showdown work relative to
-/// [`make_dealeval_hu`].
-fn make_dealeval_three_way() -> Result<HotFn, PerfError> {
-    make_from_request(|| EquityRequest {
+/// [`dealeval_hu_request`].
+fn dealeval_three_way_request() -> EquityRequest {
+    EquityRequest {
         players: vec![
             PlayerSpec::Exact(Two::HAND_AS_KS),
             PlayerSpec::Random,
@@ -160,7 +168,11 @@ fn make_dealeval_three_way() -> Result<HotFn, PerfError> {
             max_samples: 10_000,
             seed: Some(7),
         },
-    })
+    }
+}
+
+fn make_dealeval_three_way() -> Result<HotFn, PerfError> {
+    make_from_request(dealeval_three_way_request)
 }
 
 /// Every equity-engine workload.
@@ -237,6 +249,82 @@ mod perf__catalog_equity_tests {
                 "{} must declare the equity feature",
                 workload.name
             );
+        }
+    }
+
+    /// A workload's name paired with the function that builds its request.
+    type NamedRequestBuilder = (&'static str, fn() -> EquityRequest);
+
+    /// Every named request builder, paired with the workload name it backs.
+    /// A single list so a sixth fixture is automatically covered by every
+    /// structural check below, instead of hardcoding five blocks.
+    fn request_builders() -> [NamedRequestBuilder; 5] {
+        [
+            ("equity.exact.hu_flop", hu_flop_request),
+            ("equity.exact.hu_preflop", hu_preflop_request),
+            ("equity.mc.three_way", three_way_request),
+            ("dealeval.hu", dealeval_hu_request),
+            ("dealeval.three_way", dealeval_three_way_request),
+        ]
+    }
+
+    /// Validates every equity request fixture *without running the engine* —
+    /// deliberately fast, so it catches the class of mistake `make_hu_preflop`
+    /// can no longer catch by computing (see its doc comment) before a bad
+    /// fixture ever reaches a timed loop or a smoke test.
+    ///
+    /// Checks, per fixture:
+    /// - No card appears twice across the known hole cards and the board —
+    ///   exactly the duplicate-ace mistake that once broke
+    ///   `equity.mc.three_way` (`Two::HAND_AS_KS` collided with the ace of
+    ///   spades in `Two::HAND_AS_AH`).
+    /// - An `equity.exact.*` fixture has every seat `Exact` and a nonzero
+    ///   `exact_threshold`; every other fixture has `exact_threshold: 0` — a
+    ///   fixture's name must never lie about which path it takes.
+    /// - Every fixture that takes the Monte Carlo path is seeded; an
+    ///   unseeded one would only surface as `Status::Nondeterministic` at
+    ///   measurement time, which is a more expensive way to find out.
+    #[test]
+    fn every_equity_request_is_structurally_sound() {
+        use pkcore::prelude::{Card, Pile};
+        use std::collections::HashSet;
+
+        for (name, build) in request_builders() {
+            let request = build();
+
+            let mut cards: Vec<Card> = request.board.cards().to_vec();
+            for player in &request.players {
+                if let PlayerSpec::Exact(two) = player {
+                    cards.push(two.first());
+                    cards.push(two.second());
+                }
+            }
+            let unique: HashSet<Card> = cards.iter().copied().collect();
+            assert_eq!(
+                unique.len(),
+                cards.len(),
+                "{name} has a duplicate card among its known hands/board: {cards:?}"
+            );
+
+            let is_exact_named = name.starts_with("equity.exact.");
+            if is_exact_named {
+                assert!(
+                    request.players.iter().all(PlayerSpec::is_exact),
+                    "{name} is named exact. but has a non-Exact seat, which forces Monte Carlo \
+                     regardless of exact_threshold"
+                );
+                assert!(
+                    request.opts.exact_threshold > 0,
+                    "{name} is named exact. but has exact_threshold: 0, which forces Monte Carlo"
+                );
+            } else {
+                assert_eq!(
+                    request.opts.exact_threshold, 0,
+                    "{name} is not named exact. but has a nonzero exact_threshold; a small enough \
+                     runout space could silently enumerate instead of sampling"
+                );
+                assert!(request.opts.seed.is_some(), "{name} runs Monte Carlo but has no seed");
+            }
         }
     }
 
