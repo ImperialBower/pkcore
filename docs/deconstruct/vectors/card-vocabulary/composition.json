@@ -1,0 +1,374 @@
+{
+  "behavior": "composition",
+  "data": {
+    "cards": [
+      {
+        "glyph_form": "A♠",
+        "index": 0,
+        "letter_form": "AS",
+        "rank": "A",
+        "suit": "S"
+      },
+      {
+        "glyph_form": "K♠",
+        "index": 1,
+        "letter_form": "KS",
+        "rank": "K",
+        "suit": "S"
+      },
+      {
+        "glyph_form": "Q♠",
+        "index": 2,
+        "letter_form": "QS",
+        "rank": "Q",
+        "suit": "S"
+      },
+      {
+        "glyph_form": "J♠",
+        "index": 3,
+        "letter_form": "JS",
+        "rank": "J",
+        "suit": "S"
+      },
+      {
+        "glyph_form": "T♠",
+        "index": 4,
+        "letter_form": "TS",
+        "rank": "T",
+        "suit": "S"
+      },
+      {
+        "glyph_form": "9♠",
+        "index": 5,
+        "letter_form": "9S",
+        "rank": "9",
+        "suit": "S"
+      },
+      {
+        "glyph_form": "8♠",
+        "index": 6,
+        "letter_form": "8S",
+        "rank": "8",
+        "suit": "S"
+      },
+      {
+        "glyph_form": "7♠",
+        "index": 7,
+        "letter_form": "7S",
+        "rank": "7",
+        "suit": "S"
+      },
+      {
+        "glyph_form": "6♠",
+        "index": 8,
+        "letter_form": "6S",
+        "rank": "6",
+        "suit": "S"
+      },
+      {
+        "glyph_form": "5♠",
+        "index": 9,
+        "letter_form": "5S",
+        "rank": "5",
+        "suit": "S"
+      },
+      {
+        "glyph_form": "4♠",
+        "index": 10,
+        "letter_form": "4S",
+        "rank": "4",
+        "suit": "S"
+      },
+      {
+        "glyph_form": "3♠",
+        "index": 11,
+        "letter_form": "3S",
+        "rank": "3",
+        "suit": "S"
+      },
+      {
+        "glyph_form": "2♠",
+        "index": 12,
+        "letter_form": "2S",
+        "rank": "2",
+        "suit": "S"
+      },
+      {
+        "glyph_form": "A♥",
+        "index": 13,
+        "letter_form": "AH",
+        "rank": "A",
+        "suit": "H"
+      },
+      {
+        "glyph_form": "K♥",
+        "index": 14,
+        "letter_form": "KH",
+        "rank": "K",
+        "suit": "H"
+      },
+      {
+        "glyph_form": "Q♥",
+        "index": 15,
+        "letter_form": "QH",
+        "rank": "Q",
+        "suit": "H"
+      },
+      {
+        "glyph_form": "J♥",
+        "index": 16,
+        "letter_form": "JH",
+        "rank": "J",
+        "suit": "H"
+      },
+      {
+        "glyph_form": "T♥",
+        "index": 17,
+        "letter_form": "TH",
+        "rank": "T",
+        "suit": "H"
+      },
+      {
+        "glyph_form": "9♥",
+        "index": 18,
+        "letter_form": "9H",
+        "rank": "9",
+        "suit": "H"
+      },
+      {
+        "glyph_form": "8♥",
+        "index": 19,
+        "letter_form": "8H",
+        "rank": "8",
+        "suit": "H"
+      },
+      {
+        "glyph_form": "7♥",
+        "index": 20,
+        "letter_form": "7H",
+        "rank": "7",
+        "suit": "H"
+      },
+      {
+        "glyph_form": "6♥",
+        "index": 21,
+        "letter_form": "6H",
+        "rank": "6",
+        "suit": "H"
+      },
+      {
+        "glyph_form": "5♥",
+        "index": 22,
+        "letter_form": "5H",
+        "rank": "5",
+        "suit": "H"
+      },
+      {
+        "glyph_form": "4♥",
+        "index": 23,
+        "letter_form": "4H",
+        "rank": "4",
+        "suit": "H"
+      },
+      {
+        "glyph_form": "3♥",
+        "index": 24,
+        "letter_form": "3H",
+        "rank": "3",
+        "suit": "H"
+      },
+      {
+        "glyph_form": "2♥",
+        "index": 25,
+        "letter_form": "2H",
+        "rank": "2",
+        "suit": "H"
+      },
+      {
+        "glyph_form": "A♦",
+        "index": 26,
+        "letter_form": "AD",
+        "rank": "A",
+        "suit": "D"
+      },
+      {
+        "glyph_form": "K♦",
+        "index": 27,
+        "letter_form": "KD",
+        "rank": "K",
+        "suit": "D"
+      },
+      {
+        "glyph_form": "Q♦",
+        "index": 28,
+        "letter_form": "QD",
+        "rank": "Q",
+        "suit": "D"
+      },
+      {
+        "glyph_form": "J♦",
+        "index": 29,
+        "letter_form": "JD",
+        "rank": "J",
+        "suit": "D"
+      },
+      {
+        "glyph_form": "T♦",
+        "index": 30,
+        "letter_form": "TD",
+        "rank": "T",
+        "suit": "D"
+      },
+      {
+        "glyph_form": "9♦",
+        "index": 31,
+        "letter_form": "9D",
+        "rank": "9",
+        "suit": "D"
+      },
+      {
+        "glyph_form": "8♦",
+        "index": 32,
+        "letter_form": "8D",
+        "rank": "8",
+        "suit": "D"
+      },
+      {
+        "glyph_form": "7♦",
+        "index": 33,
+        "letter_form": "7D",
+        "rank": "7",
+        "suit": "D"
+      },
+      {
+        "glyph_form": "6♦",
+        "index": 34,
+        "letter_form": "6D",
+        "rank": "6",
+        "suit": "D"
+      },
+      {
+        "glyph_form": "5♦",
+        "index": 35,
+        "letter_form": "5D",
+        "rank": "5",
+        "suit": "D"
+      },
+      {
+        "glyph_form": "4♦",
+        "index": 36,
+        "letter_form": "4D",
+        "rank": "4",
+        "suit": "D"
+      },
+      {
+        "glyph_form": "3♦",
+        "index": 37,
+        "letter_form": "3D",
+        "rank": "3",
+        "suit": "D"
+      },
+      {
+        "glyph_form": "2♦",
+        "index": 38,
+        "letter_form": "2D",
+        "rank": "2",
+        "suit": "D"
+      },
+      {
+        "glyph_form": "A♣",
+        "index": 39,
+        "letter_form": "AC",
+        "rank": "A",
+        "suit": "C"
+      },
+      {
+        "glyph_form": "K♣",
+        "index": 40,
+        "letter_form": "KC",
+        "rank": "K",
+        "suit": "C"
+      },
+      {
+        "glyph_form": "Q♣",
+        "index": 41,
+        "letter_form": "QC",
+        "rank": "Q",
+        "suit": "C"
+      },
+      {
+        "glyph_form": "J♣",
+        "index": 42,
+        "letter_form": "JC",
+        "rank": "J",
+        "suit": "C"
+      },
+      {
+        "glyph_form": "T♣",
+        "index": 43,
+        "letter_form": "TC",
+        "rank": "T",
+        "suit": "C"
+      },
+      {
+        "glyph_form": "9♣",
+        "index": 44,
+        "letter_form": "9C",
+        "rank": "9",
+        "suit": "C"
+      },
+      {
+        "glyph_form": "8♣",
+        "index": 45,
+        "letter_form": "8C",
+        "rank": "8",
+        "suit": "C"
+      },
+      {
+        "glyph_form": "7♣",
+        "index": 46,
+        "letter_form": "7C",
+        "rank": "7",
+        "suit": "C"
+      },
+      {
+        "glyph_form": "6♣",
+        "index": 47,
+        "letter_form": "6C",
+        "rank": "6",
+        "suit": "C"
+      },
+      {
+        "glyph_form": "5♣",
+        "index": 48,
+        "letter_form": "5C",
+        "rank": "5",
+        "suit": "C"
+      },
+      {
+        "glyph_form": "4♣",
+        "index": 49,
+        "letter_form": "4C",
+        "rank": "4",
+        "suit": "C"
+      },
+      {
+        "glyph_form": "3♣",
+        "index": 50,
+        "letter_form": "3C",
+        "rank": "3",
+        "suit": "C"
+      },
+      {
+        "glyph_form": "2♣",
+        "index": 51,
+        "letter_form": "2C",
+        "rank": "2",
+        "suit": "C"
+      }
+    ],
+    "deck_size": 52,
+    "description": "The canonical 52-card deck in the order the library defines it."
+  },
+  "epic": "DECON-01"
+}

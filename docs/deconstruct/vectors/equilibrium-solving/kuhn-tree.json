@@ -1,0 +1,256 @@
+{
+  "behavior": "kuhn-tree",
+  "data": {
+    "deck": [
+      "Jack",
+      "Queen",
+      "King"
+    ],
+    "description": "The toy game: a three-card deck, two players, one ante each, and a single betting round. Its full tree is small enough to enumerate exhaustively, which is what makes it a correctness oracle for any equilibrium solver. Payoffs are from each player's perspective and always sum to zero.",
+    "distinct_deals": 6,
+    "terminal_count": 30,
+    "terminals": [
+      {
+        "first_player_card": "Jack",
+        "history": "[Check, Check]",
+        "payoff_first_player": -1,
+        "payoff_second_player": 1,
+        "second_player_card": "Queen",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Jack",
+        "history": "[Check, Bet, Fold]",
+        "payoff_first_player": -1,
+        "payoff_second_player": 1,
+        "second_player_card": "Queen",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Jack",
+        "history": "[Check, Bet, Call]",
+        "payoff_first_player": -2,
+        "payoff_second_player": 2,
+        "second_player_card": "Queen",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Jack",
+        "history": "[Bet, Fold]",
+        "payoff_first_player": 1,
+        "payoff_second_player": -1,
+        "second_player_card": "Queen",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Jack",
+        "history": "[Bet, Call]",
+        "payoff_first_player": -2,
+        "payoff_second_player": 2,
+        "second_player_card": "Queen",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Jack",
+        "history": "[Check, Check]",
+        "payoff_first_player": -1,
+        "payoff_second_player": 1,
+        "second_player_card": "King",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Jack",
+        "history": "[Check, Bet, Fold]",
+        "payoff_first_player": -1,
+        "payoff_second_player": 1,
+        "second_player_card": "King",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Jack",
+        "history": "[Check, Bet, Call]",
+        "payoff_first_player": -2,
+        "payoff_second_player": 2,
+        "second_player_card": "King",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Jack",
+        "history": "[Bet, Fold]",
+        "payoff_first_player": 1,
+        "payoff_second_player": -1,
+        "second_player_card": "King",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Jack",
+        "history": "[Bet, Call]",
+        "payoff_first_player": -2,
+        "payoff_second_player": 2,
+        "second_player_card": "King",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Queen",
+        "history": "[Check, Check]",
+        "payoff_first_player": 1,
+        "payoff_second_player": -1,
+        "second_player_card": "Jack",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Queen",
+        "history": "[Check, Bet, Fold]",
+        "payoff_first_player": -1,
+        "payoff_second_player": 1,
+        "second_player_card": "Jack",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Queen",
+        "history": "[Check, Bet, Call]",
+        "payoff_first_player": 2,
+        "payoff_second_player": -2,
+        "second_player_card": "Jack",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Queen",
+        "history": "[Bet, Fold]",
+        "payoff_first_player": 1,
+        "payoff_second_player": -1,
+        "second_player_card": "Jack",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Queen",
+        "history": "[Bet, Call]",
+        "payoff_first_player": 2,
+        "payoff_second_player": -2,
+        "second_player_card": "Jack",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Queen",
+        "history": "[Check, Check]",
+        "payoff_first_player": -1,
+        "payoff_second_player": 1,
+        "second_player_card": "King",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Queen",
+        "history": "[Check, Bet, Fold]",
+        "payoff_first_player": -1,
+        "payoff_second_player": 1,
+        "second_player_card": "King",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Queen",
+        "history": "[Check, Bet, Call]",
+        "payoff_first_player": -2,
+        "payoff_second_player": 2,
+        "second_player_card": "King",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Queen",
+        "history": "[Bet, Fold]",
+        "payoff_first_player": 1,
+        "payoff_second_player": -1,
+        "second_player_card": "King",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "Queen",
+        "history": "[Bet, Call]",
+        "payoff_first_player": -2,
+        "payoff_second_player": 2,
+        "second_player_card": "King",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "King",
+        "history": "[Check, Check]",
+        "payoff_first_player": 1,
+        "payoff_second_player": -1,
+        "second_player_card": "Jack",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "King",
+        "history": "[Check, Bet, Fold]",
+        "payoff_first_player": -1,
+        "payoff_second_player": 1,
+        "second_player_card": "Jack",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "King",
+        "history": "[Check, Bet, Call]",
+        "payoff_first_player": 2,
+        "payoff_second_player": -2,
+        "second_player_card": "Jack",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "King",
+        "history": "[Bet, Fold]",
+        "payoff_first_player": 1,
+        "payoff_second_player": -1,
+        "second_player_card": "Jack",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "King",
+        "history": "[Bet, Call]",
+        "payoff_first_player": 2,
+        "payoff_second_player": -2,
+        "second_player_card": "Jack",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "King",
+        "history": "[Check, Check]",
+        "payoff_first_player": 1,
+        "payoff_second_player": -1,
+        "second_player_card": "Queen",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "King",
+        "history": "[Check, Bet, Fold]",
+        "payoff_first_player": -1,
+        "payoff_second_player": 1,
+        "second_player_card": "Queen",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "King",
+        "history": "[Check, Bet, Call]",
+        "payoff_first_player": 2,
+        "payoff_second_player": -2,
+        "second_player_card": "Queen",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "King",
+        "history": "[Bet, Fold]",
+        "payoff_first_player": 1,
+        "payoff_second_player": -1,
+        "second_player_card": "Queen",
+        "sums_to_zero": true
+      },
+      {
+        "first_player_card": "King",
+        "history": "[Bet, Call]",
+        "payoff_first_player": 2,
+        "payoff_second_player": -2,
+        "second_player_card": "Queen",
+        "sums_to_zero": true
+      }
+    ]
+  },
+  "epic": "DECON-13"
+}

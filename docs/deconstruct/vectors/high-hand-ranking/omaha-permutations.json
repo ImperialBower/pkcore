@@ -1,0 +1,117 @@
+{
+  "behavior": "omaha-permutations",
+  "data": {
+    "board_combinations": 10,
+    "board_permutation_table": [
+      [
+        0,
+        1,
+        2
+      ],
+      [
+        0,
+        1,
+        3
+      ],
+      [
+        0,
+        2,
+        3
+      ],
+      [
+        1,
+        2,
+        3
+      ],
+      [
+        0,
+        1,
+        4
+      ],
+      [
+        0,
+        2,
+        4
+      ],
+      [
+        0,
+        3,
+        4
+      ],
+      [
+        1,
+        2,
+        4
+      ],
+      [
+        1,
+        3,
+        4
+      ],
+      [
+        2,
+        3,
+        4
+      ]
+    ],
+    "description": "Omaha requires exactly two cards from the hand and exactly three from the board, giving 6 x 10 = 60 candidate five-card hands. A board flush or board quads therefore does NOT automatically play.",
+    "hands": [
+      {
+        "best_five": "A♠ K♠ Q♠ J♠ T♠",
+        "board": "Q♠ J♠ T♠ 2♥ 3♦",
+        "category": "StraightFlush",
+        "class": "RoyalFlush",
+        "hole_cards": "A♠ A♥ K♦ K♠",
+        "note": "board is a broadway flush draw",
+        "value": 1
+      },
+      {
+        "best_five": "A♠ K♠ Q♠ J♠ T♠",
+        "board": "Q♠ J♠ T♠ 9♠ 8♠",
+        "category": "StraightFlush",
+        "class": "RoyalFlush",
+        "hole_cards": "A♠ K♠ 2♥ 3♦",
+        "note": "board is a made flush",
+        "value": 1
+      },
+      {
+        "best_five": "A♠ A♥ A♦ A♣ K♠",
+        "board": "A♦ A♣ K♠ K♥ 2♠",
+        "category": "FourOfAKind",
+        "class": "FourAces",
+        "hole_cards": "A♠ A♥ 2♣ 3♦",
+        "note": "quads on the board",
+        "value": 11
+      }
+    ],
+    "hole_combinations": 6,
+    "hole_permutation_table": [
+      [
+        0,
+        1
+      ],
+      [
+        0,
+        2
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        1,
+        3
+      ],
+      [
+        2,
+        3
+      ]
+    ],
+    "total_candidates": 60
+  },
+  "epic": "DECON-02"
+}

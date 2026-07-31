@@ -1,0 +1,170 @@
+{
+  "behavior": "ordering",
+  "data": {
+    "comparison": {
+      "invalid_vs_worst": "Less",
+      "note": "A numerically lower value compares as the STRONGER hand. The out-of-band sentinel compares as weaker than every real hand, despite being numerically lowest.",
+      "royal_vs_invalid": "Greater",
+      "royal_vs_worst": "Greater",
+      "worst_vs_royal": "Less"
+    },
+    "description": "Representative hands with the exact rank each receives, plus the comparison semantics that order them.",
+    "hands": [
+      {
+        "category": "StraightFlush",
+        "class": "RoyalFlush",
+        "hand": "A♠ K♠ Q♠ J♠ T♠",
+        "is_flush": true,
+        "is_straight": true,
+        "is_straight_flush": true,
+        "is_wheel": false,
+        "note": "royal flush",
+        "value": 1
+      },
+      {
+        "category": "StraightFlush",
+        "class": "KingHighStraightFlush",
+        "hand": "K♠ Q♠ J♠ T♠ 9♠",
+        "is_flush": true,
+        "is_straight": true,
+        "is_straight_flush": true,
+        "is_wheel": false,
+        "note": "king-high straight flush",
+        "value": 2
+      },
+      {
+        "category": "StraightFlush",
+        "class": "FiveHighStraightFlush",
+        "hand": "5♠ 4♠ 3♠ 2♠ A♠",
+        "is_flush": true,
+        "is_straight": true,
+        "is_straight_flush": true,
+        "is_wheel": true,
+        "note": "the wheel, suited — weakest straight flush",
+        "value": 10
+      },
+      {
+        "category": "FourOfAKind",
+        "class": "FourAces",
+        "hand": "A♠ A♥ A♦ A♣ K♠",
+        "is_flush": false,
+        "is_straight": false,
+        "is_straight_flush": false,
+        "is_wheel": false,
+        "note": "four aces",
+        "value": 11
+      },
+      {
+        "category": "FullHouse",
+        "class": "AcesOverKings",
+        "hand": "A♠ A♥ A♦ K♠ K♥",
+        "is_flush": false,
+        "is_straight": false,
+        "is_straight_flush": false,
+        "is_wheel": false,
+        "note": "aces full of kings",
+        "value": 167
+      },
+      {
+        "category": "Flush",
+        "class": "AceHighFlush",
+        "hand": "A♠ K♠ Q♠ J♠ 9♠",
+        "is_flush": true,
+        "is_straight": false,
+        "is_straight_flush": false,
+        "is_wheel": false,
+        "note": "ace-high flush",
+        "value": 323
+      },
+      {
+        "category": "Straight",
+        "class": "AceHighStraight",
+        "hand": "A♠ K♥ Q♦ J♣ T♠",
+        "is_flush": false,
+        "is_straight": true,
+        "is_straight_flush": false,
+        "is_wheel": false,
+        "note": "ace-high straight",
+        "value": 1600
+      },
+      {
+        "category": "Straight",
+        "class": "FiveHighStraight",
+        "hand": "5♠ 4♥ 3♦ 2♣ A♠",
+        "is_flush": false,
+        "is_straight": true,
+        "is_straight_flush": false,
+        "is_wheel": true,
+        "note": "the wheel — weakest straight",
+        "value": 1609
+      },
+      {
+        "category": "Straight",
+        "class": "JackHighStraight",
+        "hand": "J♣ T♣ 9♣ 8♠ 7♣",
+        "is_flush": false,
+        "is_straight": true,
+        "is_straight_flush": false,
+        "is_wheel": false,
+        "note": "jack-high straight, mixed suits",
+        "value": 1603
+      },
+      {
+        "category": "ThreeOfAKind",
+        "class": "ThreeAces",
+        "hand": "A♠ A♥ A♦ K♠ Q♥",
+        "is_flush": false,
+        "is_straight": false,
+        "is_straight_flush": false,
+        "is_wheel": false,
+        "note": "three aces",
+        "value": 1610
+      },
+      {
+        "category": "TwoPair",
+        "class": "AcesAndKings",
+        "hand": "A♠ A♥ K♦ K♠ Q♥",
+        "is_flush": false,
+        "is_straight": false,
+        "is_straight_flush": false,
+        "is_wheel": false,
+        "note": "aces and kings",
+        "value": 2468
+      },
+      {
+        "category": "Pair",
+        "class": "PairOfAces",
+        "hand": "A♠ A♥ K♦ Q♠ J♥",
+        "is_flush": false,
+        "is_straight": false,
+        "is_straight_flush": false,
+        "is_wheel": false,
+        "note": "pair of aces",
+        "value": 3326
+      },
+      {
+        "category": "HighCard",
+        "class": "AceHigh",
+        "hand": "A♠ K♥ Q♦ J♣ 9♠",
+        "is_flush": false,
+        "is_straight": false,
+        "is_straight_flush": false,
+        "is_wheel": false,
+        "note": "ace-high",
+        "value": 6186
+      },
+      {
+        "category": "HighCard",
+        "class": "SevenHigh",
+        "hand": "7♠ 5♥ 4♦ 3♣ 2♠",
+        "is_flush": false,
+        "is_straight": false,
+        "is_straight_flush": false,
+        "is_wheel": false,
+        "note": "seven-high — the weakest hand in poker",
+        "value": 7462
+      }
+    ]
+  },
+  "epic": "DECON-02"
+}

@@ -1,0 +1,25 @@
+{
+  "behavior": "replay",
+  "data": {
+    "chip_conservation": {
+      "ending_total": 1200,
+      "starting_total": 1200
+    },
+    "description": "The determinism promise at the centre of this epic: a recorded hand replayed through the engine reproduces the recorded final stacks EXACTLY. This is what makes a hand record lossless rather than merely descriptive.",
+    "recorded_ending_stacks": [
+      {
+        "chips": 800,
+        "seat": 0
+      },
+      {
+        "chips": 400,
+        "seat": 1
+      }
+    ],
+    "replay": {
+      "replays_without_error": true,
+      "reproduces_recorded_stacks": true
+    }
+  },
+  "epic": "DECON-08"
+}

@@ -1,0 +1,49 @@
+{
+  "behavior": "confidence",
+  "data": {
+    "bands": [
+      {
+        "confidence": "Low",
+        "sample_size": 0
+      },
+      {
+        "confidence": "Low",
+        "sample_size": 1
+      },
+      {
+        "confidence": "Low",
+        "sample_size": 25
+      },
+      {
+        "confidence": "Low",
+        "sample_size": 49
+      },
+      {
+        "confidence": "Medium",
+        "sample_size": 50
+      },
+      {
+        "confidence": "Medium",
+        "sample_size": 100
+      },
+      {
+        "confidence": "Medium",
+        "sample_size": 199
+      },
+      {
+        "confidence": "High",
+        "sample_size": 200
+      },
+      {
+        "confidence": "High",
+        "sample_size": 201
+      },
+      {
+        "confidence": "High",
+        "sample_size": 1000
+      }
+    ],
+    "description": "How much to trust a player's statistics is a function of how many hands they are drawn from. The bands are observable and matter because consumers gate decisions on them."
+  },
+  "epic": "DECON-12"
+}

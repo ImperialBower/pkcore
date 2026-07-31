@@ -1,0 +1,140 @@
+{
+  "behavior": "raise-sizing",
+  "data": {
+    "description": "Minimum and maximum raise sizing across the three betting structures. No-limit and pot-limit share a minimum rule (the previous raise, or the big blind if none); they differ only in the maximum. Fixed-limit uses tier increments and enforces a raise cap.",
+    "fixed_limit_tiers": [
+      {
+        "fixed_limit_increment": 100,
+        "tier": "Small"
+      },
+      {
+        "fixed_limit_increment": 200,
+        "tier": "Big"
+      }
+    ],
+    "maximum_raises": [
+      {
+        "already_committed": 0,
+        "current_bet": 0,
+        "max_raise_to": 100,
+        "note": "pot-limit: pot 100, no bet to call, 1000 behind",
+        "pot": 100,
+        "stack_remaining": 1000,
+        "structure": "PotLimit"
+      },
+      {
+        "already_committed": 0,
+        "current_bet": 100,
+        "max_raise_to": 500,
+        "note": "pot-limit: pot 300, facing a 100 bet, 1000 behind",
+        "pot": 300,
+        "stack_remaining": 1000,
+        "structure": "PotLimit"
+      },
+      {
+        "already_committed": 0,
+        "current_bet": 100,
+        "max_raise_to": 1000,
+        "note": "no-limit: the whole stack is always available",
+        "pot": 300,
+        "stack_remaining": 1000,
+        "structure": "NoLimit"
+      },
+      {
+        "already_committed": 0,
+        "current_bet": 100,
+        "max_raise_to": 200,
+        "note": "fixed-limit: capped at the tier increment",
+        "pot": 300,
+        "stack_remaining": 1000,
+        "structure": "FixedLimit { small_bet: 100, big_bet: 200, raise_cap: 4 }"
+      },
+      {
+        "already_committed": 0,
+        "current_bet": 100,
+        "max_raise_to": 150,
+        "note": "pot-limit: short stack caps the maximum",
+        "pot": 300,
+        "stack_remaining": 150,
+        "structure": "PotLimit"
+      }
+    ],
+    "minimum_raises": [
+      {
+        "big_blind": 100,
+        "last_raise": 0,
+        "min_raise_increment": 100,
+        "note": "no-limit, first raise of the street",
+        "structure": "NoLimit"
+      },
+      {
+        "big_blind": 100,
+        "last_raise": 200,
+        "min_raise_increment": 200,
+        "note": "no-limit, after a 200 raise",
+        "structure": "NoLimit"
+      },
+      {
+        "big_blind": 100,
+        "last_raise": 0,
+        "min_raise_increment": 100,
+        "note": "pot-limit, first raise of the street",
+        "structure": "PotLimit"
+      },
+      {
+        "big_blind": 100,
+        "last_raise": 200,
+        "min_raise_increment": 200,
+        "note": "pot-limit, after a 200 raise",
+        "structure": "PotLimit"
+      },
+      {
+        "big_blind": 100,
+        "last_raise": 0,
+        "min_raise_increment": 100,
+        "note": "fixed-limit, first raise of the street",
+        "structure": "FixedLimit { small_bet: 100, big_bet: 200, raise_cap: 4 }"
+      },
+      {
+        "big_blind": 100,
+        "last_raise": 200,
+        "min_raise_increment": 100,
+        "note": "fixed-limit, after a 200 raise",
+        "structure": "FixedLimit { small_bet: 100, big_bet: 200, raise_cap: 4 }"
+      }
+    ],
+    "raise_caps": [
+      {
+        "fixed_limit_cap_reached": false,
+        "no_limit_cap_reached": false,
+        "raises_this_street": 0
+      },
+      {
+        "fixed_limit_cap_reached": false,
+        "no_limit_cap_reached": false,
+        "raises_this_street": 1
+      },
+      {
+        "fixed_limit_cap_reached": false,
+        "no_limit_cap_reached": false,
+        "raises_this_street": 2
+      },
+      {
+        "fixed_limit_cap_reached": false,
+        "no_limit_cap_reached": false,
+        "raises_this_street": 3
+      },
+      {
+        "fixed_limit_cap_reached": true,
+        "no_limit_cap_reached": false,
+        "raises_this_street": 4
+      },
+      {
+        "fixed_limit_cap_reached": true,
+        "no_limit_cap_reached": false,
+        "raises_this_street": 5
+      }
+    ]
+  },
+  "epic": "DECON-05"
+}

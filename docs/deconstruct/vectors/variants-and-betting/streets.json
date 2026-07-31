@@ -1,0 +1,277 @@
+{
+  "behavior": "streets",
+  "data": {
+    "description": "Each variant is a game family paired with a betting structure. The street table drives dealing: how many community and hole cards are dealt, how many hole cards are face up, whether a card is burned first, and which bet tier applies. Razz's street table is identical to Seven-Card Stud Hi's.",
+    "variants": [
+      {
+        "betting_structure": "NoLimit",
+        "cards_on_board": 5,
+        "cards_per_player": 2,
+        "deck_size": 52,
+        "family": "Holdem",
+        "is_stud_family": false,
+        "ranks_ace_low": false,
+        "street_count": 4,
+        "streets": [
+          {
+            "bet_tier": "Small",
+            "burn_first": false,
+            "community_dealt": 0,
+            "hole_dealt": 2,
+            "hole_dealt_up": 0,
+            "index": 0,
+            "name": "preflop"
+          },
+          {
+            "bet_tier": "Small",
+            "burn_first": true,
+            "community_dealt": 3,
+            "hole_dealt": 0,
+            "hole_dealt_up": 0,
+            "index": 1,
+            "name": "flop"
+          },
+          {
+            "bet_tier": "Big",
+            "burn_first": true,
+            "community_dealt": 1,
+            "hole_dealt": 0,
+            "hole_dealt_up": 0,
+            "index": 2,
+            "name": "turn"
+          },
+          {
+            "bet_tier": "Big",
+            "burn_first": true,
+            "community_dealt": 1,
+            "hole_dealt": 0,
+            "hole_dealt_up": 0,
+            "index": 3,
+            "name": "river"
+          }
+        ],
+        "uses_community_board": true,
+        "variant": "NoLimitHoldem"
+      },
+      {
+        "betting_structure": "FixedLimit { small_bet: 0, big_bet: 0, raise_cap: 3 }",
+        "cards_on_board": 5,
+        "cards_per_player": 2,
+        "deck_size": 52,
+        "family": "Holdem",
+        "is_stud_family": false,
+        "ranks_ace_low": false,
+        "street_count": 4,
+        "streets": [
+          {
+            "bet_tier": "Small",
+            "burn_first": false,
+            "community_dealt": 0,
+            "hole_dealt": 2,
+            "hole_dealt_up": 0,
+            "index": 0,
+            "name": "preflop"
+          },
+          {
+            "bet_tier": "Small",
+            "burn_first": true,
+            "community_dealt": 3,
+            "hole_dealt": 0,
+            "hole_dealt_up": 0,
+            "index": 1,
+            "name": "flop"
+          },
+          {
+            "bet_tier": "Big",
+            "burn_first": true,
+            "community_dealt": 1,
+            "hole_dealt": 0,
+            "hole_dealt_up": 0,
+            "index": 2,
+            "name": "turn"
+          },
+          {
+            "bet_tier": "Big",
+            "burn_first": true,
+            "community_dealt": 1,
+            "hole_dealt": 0,
+            "hole_dealt_up": 0,
+            "index": 3,
+            "name": "river"
+          }
+        ],
+        "uses_community_board": true,
+        "variant": "LimitHoldem"
+      },
+      {
+        "betting_structure": "PotLimit",
+        "cards_on_board": 5,
+        "cards_per_player": 4,
+        "deck_size": 52,
+        "family": "Omaha",
+        "is_stud_family": false,
+        "ranks_ace_low": false,
+        "street_count": 4,
+        "streets": [
+          {
+            "bet_tier": "Small",
+            "burn_first": false,
+            "community_dealt": 0,
+            "hole_dealt": 4,
+            "hole_dealt_up": 0,
+            "index": 0,
+            "name": "preflop"
+          },
+          {
+            "bet_tier": "Small",
+            "burn_first": true,
+            "community_dealt": 3,
+            "hole_dealt": 0,
+            "hole_dealt_up": 0,
+            "index": 1,
+            "name": "flop"
+          },
+          {
+            "bet_tier": "Big",
+            "burn_first": true,
+            "community_dealt": 1,
+            "hole_dealt": 0,
+            "hole_dealt_up": 0,
+            "index": 2,
+            "name": "turn"
+          },
+          {
+            "bet_tier": "Big",
+            "burn_first": true,
+            "community_dealt": 1,
+            "hole_dealt": 0,
+            "hole_dealt_up": 0,
+            "index": 3,
+            "name": "river"
+          }
+        ],
+        "uses_community_board": true,
+        "variant": "PLO"
+      },
+      {
+        "betting_structure": "FixedLimit { small_bet: 0, big_bet: 0, raise_cap: 3 }",
+        "cards_on_board": 0,
+        "cards_per_player": 7,
+        "deck_size": 52,
+        "family": "StudHi",
+        "is_stud_family": true,
+        "ranks_ace_low": false,
+        "street_count": 5,
+        "streets": [
+          {
+            "bet_tier": "Small",
+            "burn_first": false,
+            "community_dealt": 0,
+            "hole_dealt": 3,
+            "hole_dealt_up": 1,
+            "index": 0,
+            "name": "3rd"
+          },
+          {
+            "bet_tier": "Small",
+            "burn_first": false,
+            "community_dealt": 0,
+            "hole_dealt": 1,
+            "hole_dealt_up": 1,
+            "index": 1,
+            "name": "4th"
+          },
+          {
+            "bet_tier": "Big",
+            "burn_first": false,
+            "community_dealt": 0,
+            "hole_dealt": 1,
+            "hole_dealt_up": 1,
+            "index": 2,
+            "name": "5th"
+          },
+          {
+            "bet_tier": "Big",
+            "burn_first": false,
+            "community_dealt": 0,
+            "hole_dealt": 1,
+            "hole_dealt_up": 1,
+            "index": 3,
+            "name": "6th"
+          },
+          {
+            "bet_tier": "Big",
+            "burn_first": false,
+            "community_dealt": 0,
+            "hole_dealt": 1,
+            "hole_dealt_up": 0,
+            "index": 4,
+            "name": "7th"
+          }
+        ],
+        "uses_community_board": false,
+        "variant": "StudHi"
+      },
+      {
+        "betting_structure": "FixedLimit { small_bet: 0, big_bet: 0, raise_cap: 3 }",
+        "cards_on_board": 0,
+        "cards_per_player": 7,
+        "deck_size": 52,
+        "family": "Razz",
+        "is_stud_family": true,
+        "ranks_ace_low": true,
+        "street_count": 5,
+        "streets": [
+          {
+            "bet_tier": "Small",
+            "burn_first": false,
+            "community_dealt": 0,
+            "hole_dealt": 3,
+            "hole_dealt_up": 1,
+            "index": 0,
+            "name": "3rd"
+          },
+          {
+            "bet_tier": "Small",
+            "burn_first": false,
+            "community_dealt": 0,
+            "hole_dealt": 1,
+            "hole_dealt_up": 1,
+            "index": 1,
+            "name": "4th"
+          },
+          {
+            "bet_tier": "Big",
+            "burn_first": false,
+            "community_dealt": 0,
+            "hole_dealt": 1,
+            "hole_dealt_up": 1,
+            "index": 2,
+            "name": "5th"
+          },
+          {
+            "bet_tier": "Big",
+            "burn_first": false,
+            "community_dealt": 0,
+            "hole_dealt": 1,
+            "hole_dealt_up": 1,
+            "index": 3,
+            "name": "6th"
+          },
+          {
+            "bet_tier": "Big",
+            "burn_first": false,
+            "community_dealt": 0,
+            "hole_dealt": 1,
+            "hole_dealt_up": 0,
+            "index": 4,
+            "name": "7th"
+          }
+        ],
+        "uses_community_board": false,
+        "variant": "Razz"
+      }
+    ]
+  },
+  "epic": "DECON-05"
+}

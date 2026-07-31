@@ -1,0 +1,796 @@
+{
+  "behavior": "profiles",
+  "data": {
+    "archetypes": [
+      {
+        "label": "tight-passive",
+        "play_style": "TightPassive",
+        "profile": {
+          "betting_strategy": {
+            "aggression_factor": 25,
+            "bluff_frequency": 5,
+            "check_raise_frequency": 3,
+            "preferred_bet_sizes": [
+              "1/2"
+            ]
+          },
+          "description": "Plays strong hands only; rarely bluffs or raises without a strong holding.",
+          "name": "tight_passive",
+          "playbook": {
+            "entries": {
+              "6": {
+                "position_ranges": {
+                  "default": {
+                    "actions": {}
+                  },
+                  "ranges": {
+                    "BB": {
+                      "actions": {
+                        "open_raise": "22+, A2s+, K8s+, Q9s+, ATo+",
+                        "three_bet": "QQ+, AKs"
+                      }
+                    },
+                    "BTN": {
+                      "actions": {
+                        "open_raise": "88+, ATs+, KJs+, QJs, AJo+, KQo",
+                        "three_bet": "QQ+, AKs, AKo"
+                      }
+                    },
+                    "CO": {
+                      "actions": {
+                        "open_raise": "TT+, AQs+, AQo+",
+                        "three_bet": "QQ+, AKs"
+                      }
+                    },
+                    "HJ": {
+                      "actions": {
+                        "open_raise": "QQ+, AKs, AKo",
+                        "three_bet": "KK+"
+                      }
+                    },
+                    "LJ": {
+                      "actions": {
+                        "open_raise": "QQ+, AKs, AKo",
+                        "three_bet": "KK+"
+                      }
+                    },
+                    "SB": {
+                      "actions": {
+                        "open_raise": "TT+, AQs+, AQo+",
+                        "three_bet": "QQ+, AKs"
+                      }
+                    }
+                  }
+                },
+                "positional_betting": {
+                  "betting": {},
+                  "default": {
+                    "aggression_factor": 25,
+                    "bluff_frequency": 5,
+                    "check_raise_frequency": 3,
+                    "preferred_bet_sizes": [
+                      "1/2"
+                    ]
+                  }
+                }
+              },
+              "9": {
+                "position_ranges": {
+                  "default": {
+                    "actions": {}
+                  },
+                  "ranges": {
+                    "BB": {
+                      "actions": {
+                        "open_raise": "22+, A2s+, K2s+, Q8s+, J8s+, T7s+, 97s+, A2o+, K8o+, Q9o+",
+                        "three_bet": "QQ+, AKs, AKo"
+                      }
+                    },
+                    "BTN": {
+                      "actions": {
+                        "open_raise": "22+, A2s+, K7s+, Q8s+, J7s+, T8s+, 97s+, 87s, A7o+, KTo+, QJo",
+                        "three_bet": "QQ+, AJs+, KQs, AQo+"
+                      }
+                    },
+                    "CO": {
+                      "actions": {
+                        "open_raise": "55+, A8s+, K9s+, Q9s+, JTs, T9s, 98s, ATo+, KJo+",
+                        "three_bet": "QQ+, AQs+, AKo"
+                      }
+                    },
+                    "EP": {
+                      "actions": {
+                        "open_raise": "99+, AJs+, KQs, AQo+",
+                        "three_bet": "QQ+, AKs, AKo"
+                      }
+                    },
+                    "HJ": {
+                      "actions": {
+                        "open_raise": "77+, A9s+, KTs+, QTs+, JTs, ATo+, KJo+",
+                        "three_bet": "QQ+, AQs+, AKo"
+                      }
+                    },
+                    "LJ": {
+                      "actions": {
+                        "open_raise": "88+, ATs+, KJs+, QJs, AJo+, KQo",
+                        "three_bet": "QQ+, AKs, AKo"
+                      }
+                    },
+                    "SB": {
+                      "actions": {
+                        "open_raise": "33+, A3s+, K8s+, Q9s+, J9s+, T9s, A7o+, KTo+, QJo",
+                        "three_bet": "JJ+, AQs+, AQo+"
+                      }
+                    },
+                    "UTG": {
+                      "actions": {
+                        "open_raise": "JJ+, AKs, AKo",
+                        "three_bet": "KK+"
+                      }
+                    },
+                    "UTGP1": {
+                      "actions": {
+                        "open_raise": "TT+, AQs+, KQs, AKo",
+                        "three_bet": "QQ+, AKs"
+                      }
+                    }
+                  }
+                },
+                "positional_betting": {
+                  "betting": {},
+                  "default": {
+                    "aggression_factor": 25,
+                    "bluff_frequency": 5,
+                    "check_raise_frequency": 3,
+                    "preferred_bet_sizes": [
+                      "1/2"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "range_strategy": {
+            "call_three_bet": "QQ, AKs",
+            "open_raise": "QQ+, AKs",
+            "postflop_cbet_frequency": 30,
+            "three_bet": "KK+"
+          },
+          "style": "tight_passive"
+        }
+      },
+      {
+        "label": "loose-aggressive",
+        "play_style": "LooseAggressive",
+        "profile": {
+          "betting_strategy": {
+            "aggression_factor": 75,
+            "bluff_frequency": 35,
+            "check_raise_frequency": 20,
+            "preferred_bet_sizes": [
+              "2/3",
+              "1/1"
+            ]
+          },
+          "description": "Wide ranges, frequent bets and bluffs — puts maximum pressure on opponents.",
+          "name": "loose_aggressive",
+          "playbook": {
+            "entries": {
+              "6": {
+                "position_ranges": {
+                  "default": {
+                    "actions": {}
+                  },
+                  "ranges": {
+                    "BB": {
+                      "actions": {
+                        "open_raise": "22+, A2s+, K2s+, Q6s+, J7s+, T7s+, A2o+, K7o+, Q8o+",
+                        "three_bet": "QQ+, AQs+, A5s, A4s, AQo+"
+                      }
+                    },
+                    "BTN": {
+                      "actions": {
+                        "open_raise": "22+, A2s+, K5s+, Q7s+, J7s+, T7s+, 97s+, 87s, A6o+, K9o+, QTo+",
+                        "three_bet": "QQ+, AJs+, KQs, A5s, A4s, AQo+"
+                      }
+                    },
+                    "CO": {
+                      "actions": {
+                        "open_raise": "22+, A7s+, K8s+, Q8s+, J8s+, T8s+, 98s, A9o+, KTo+",
+                        "three_bet": "QQ+, AJs+, KQs, AQo+"
+                      }
+                    },
+                    "HJ": {
+                      "actions": {
+                        "open_raise": "44+, A9s+, K9s+, Q9s+, J9s+, T9s, ATo+, KJo+",
+                        "three_bet": "QQ+, AJs+, AQo+"
+                      }
+                    },
+                    "LJ": {
+                      "actions": {
+                        "open_raise": "55+, ATs+, KJs+, QJs, JTs, AJo+, KQo",
+                        "three_bet": "QQ+, AQs+, AKo"
+                      }
+                    },
+                    "SB": {
+                      "actions": {
+                        "open_raise": "22+, A2s+, K7s+, Q8s+, J8s+, A5o+, KTo+",
+                        "three_bet": "JJ+, AJs+, KQs, A5s, AQo+"
+                      }
+                    }
+                  }
+                },
+                "positional_betting": {
+                  "betting": {
+                    "BB": {
+                      "aggression_factor": 68,
+                      "bluff_frequency": 33,
+                      "check_raise_frequency": 25,
+                      "preferred_bet_sizes": [
+                        "2/3",
+                        "1/1"
+                      ]
+                    },
+                    "BTN": {
+                      "aggression_factor": 80,
+                      "bluff_frequency": 40,
+                      "check_raise_frequency": 25,
+                      "preferred_bet_sizes": [
+                        "2/3",
+                        "1/1"
+                      ]
+                    },
+                    "CO": {
+                      "aggression_factor": 72,
+                      "bluff_frequency": 36,
+                      "check_raise_frequency": 22,
+                      "preferred_bet_sizes": [
+                        "2/3",
+                        "1/1"
+                      ]
+                    },
+                    "HJ": {
+                      "aggression_factor": 68,
+                      "bluff_frequency": 33,
+                      "check_raise_frequency": 20,
+                      "preferred_bet_sizes": [
+                        "2/3",
+                        "1/1"
+                      ]
+                    },
+                    "LJ": {
+                      "aggression_factor": 65,
+                      "bluff_frequency": 30,
+                      "check_raise_frequency": 18,
+                      "preferred_bet_sizes": [
+                        "2/3",
+                        "1/1"
+                      ]
+                    },
+                    "SB": {
+                      "aggression_factor": 70,
+                      "bluff_frequency": 35,
+                      "check_raise_frequency": 20,
+                      "preferred_bet_sizes": [
+                        "2/3",
+                        "1/1"
+                      ]
+                    }
+                  },
+                  "default": {
+                    "aggression_factor": 75,
+                    "bluff_frequency": 35,
+                    "check_raise_frequency": 20,
+                    "preferred_bet_sizes": [
+                      "2/3",
+                      "1/1"
+                    ]
+                  }
+                }
+              },
+              "9": {
+                "position_ranges": {
+                  "default": {
+                    "actions": {}
+                  },
+                  "ranges": {
+                    "BB": {
+                      "actions": {
+                        "open_raise": "22+, A2s+, K2s+, Q8s+, J8s+, T7s+, 97s+, A2o+, K8o+, Q9o+",
+                        "three_bet": "QQ+, AKs, AKo"
+                      }
+                    },
+                    "BTN": {
+                      "actions": {
+                        "open_raise": "22+, A2s+, K7s+, Q8s+, J7s+, T8s+, 97s+, 87s, A7o+, KTo+, QJo",
+                        "three_bet": "QQ+, AJs+, KQs, AQo+"
+                      }
+                    },
+                    "CO": {
+                      "actions": {
+                        "open_raise": "55+, A8s+, K9s+, Q9s+, JTs, T9s, 98s, ATo+, KJo+",
+                        "three_bet": "QQ+, AQs+, AKo"
+                      }
+                    },
+                    "EP": {
+                      "actions": {
+                        "open_raise": "99+, AJs+, KQs, AQo+",
+                        "three_bet": "QQ+, AKs, AKo"
+                      }
+                    },
+                    "HJ": {
+                      "actions": {
+                        "open_raise": "77+, A9s+, KTs+, QTs+, JTs, ATo+, KJo+",
+                        "three_bet": "QQ+, AQs+, AKo"
+                      }
+                    },
+                    "LJ": {
+                      "actions": {
+                        "open_raise": "88+, ATs+, KJs+, QJs, AJo+, KQo",
+                        "three_bet": "QQ+, AKs, AKo"
+                      }
+                    },
+                    "SB": {
+                      "actions": {
+                        "open_raise": "33+, A3s+, K8s+, Q9s+, J9s+, T9s, A7o+, KTo+, QJo",
+                        "three_bet": "JJ+, AQs+, AQo+"
+                      }
+                    },
+                    "UTG": {
+                      "actions": {
+                        "open_raise": "JJ+, AKs, AKo",
+                        "three_bet": "KK+"
+                      }
+                    },
+                    "UTGP1": {
+                      "actions": {
+                        "open_raise": "TT+, AQs+, KQs, AKo",
+                        "three_bet": "QQ+, AKs"
+                      }
+                    }
+                  }
+                },
+                "positional_betting": {
+                  "betting": {},
+                  "default": {
+                    "aggression_factor": 75,
+                    "bluff_frequency": 35,
+                    "check_raise_frequency": 20,
+                    "preferred_bet_sizes": [
+                      "2/3",
+                      "1/1"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "range_strategy": {
+            "call_three_bet": "TT+, AQs+",
+            "open_raise": "22+, AT+, 54s+",
+            "postflop_cbet_frequency": 75,
+            "three_bet": "QQ+, AKs, AQs"
+          },
+          "style": "loose_aggressive"
+        }
+      },
+      {
+        "label": "game-theory-optimal",
+        "play_style": "Gto",
+        "profile": {
+          "betting_strategy": {
+            "aggression_factor": 50,
+            "bluff_frequency": 33,
+            "check_raise_frequency": 15,
+            "preferred_bet_sizes": [
+              "1/3",
+              "1/1"
+            ]
+          },
+          "description": "Balanced frequencies informed by GTO solver output; unexploitable at equilibrium.",
+          "name": "gto",
+          "playbook": {
+            "entries": {
+              "6": {
+                "position_ranges": {
+                  "default": {
+                    "actions": {}
+                  },
+                  "ranges": {
+                    "BB": {
+                      "actions": {
+                        "open_raise": "22+, A2s+, K2s+, Q8s+, J8s+, T7s+, 97s+, A2o+, K8o+, Q9o+, J9o+",
+                        "three_bet": "QQ+, AQs+, AKo"
+                      }
+                    },
+                    "BTN": {
+                      "actions": {
+                        "open_raise": "22+, A2s+, K9s+, Q9s+, J8s+, T8s+, 98s, A8o+, KTo+",
+                        "three_bet": "QQ+, AJs+, KQs, AQo+"
+                      }
+                    },
+                    "CO": {
+                      "actions": {
+                        "open_raise": "66+, A9s+, KTs+, QTs+, JTs, T9s, ATo+, KJo+",
+                        "three_bet": "QQ+, AQs+, AKo"
+                      }
+                    },
+                    "HJ": {
+                      "actions": {
+                        "open_raise": "88+, ATs+, KJs+, QJs, AJo+, KQo",
+                        "three_bet": "QQ+, AKs, AKo"
+                      }
+                    },
+                    "LJ": {
+                      "actions": {
+                        "open_raise": "TT+, AQs+, KQs, AQo+",
+                        "three_bet": "QQ+, AKs"
+                      }
+                    },
+                    "SB": {
+                      "actions": {
+                        "open_raise": "33+, A4s+, K9s+, Q9s+, J9s+, T9s, A8o+, KJo+",
+                        "three_bet": "JJ+, AJs+, KQs, AQo+"
+                      }
+                    }
+                  }
+                },
+                "positional_betting": {
+                  "betting": {
+                    "BB": {
+                      "aggression_factor": 50,
+                      "bluff_frequency": 30,
+                      "check_raise_frequency": 20,
+                      "preferred_bet_sizes": [
+                        "1/3",
+                        "1/1"
+                      ]
+                    },
+                    "BTN": {
+                      "aggression_factor": 60,
+                      "bluff_frequency": 38,
+                      "check_raise_frequency": 18,
+                      "preferred_bet_sizes": [
+                        "1/3",
+                        "1/1"
+                      ]
+                    },
+                    "CO": {
+                      "aggression_factor": 52,
+                      "bluff_frequency": 33,
+                      "check_raise_frequency": 15,
+                      "preferred_bet_sizes": [
+                        "1/3",
+                        "1/1"
+                      ]
+                    },
+                    "HJ": {
+                      "aggression_factor": 48,
+                      "bluff_frequency": 30,
+                      "check_raise_frequency": 13,
+                      "preferred_bet_sizes": [
+                        "1/3",
+                        "1/1"
+                      ]
+                    },
+                    "LJ": {
+                      "aggression_factor": 45,
+                      "bluff_frequency": 28,
+                      "check_raise_frequency": 12,
+                      "preferred_bet_sizes": [
+                        "1/3",
+                        "1/1"
+                      ]
+                    },
+                    "SB": {
+                      "aggression_factor": 50,
+                      "bluff_frequency": 33,
+                      "check_raise_frequency": 14,
+                      "preferred_bet_sizes": [
+                        "1/3",
+                        "1/1"
+                      ]
+                    }
+                  },
+                  "default": {
+                    "aggression_factor": 50,
+                    "bluff_frequency": 33,
+                    "check_raise_frequency": 15,
+                    "preferred_bet_sizes": [
+                      "1/3",
+                      "1/1"
+                    ]
+                  }
+                }
+              },
+              "9": {
+                "position_ranges": {
+                  "default": {
+                    "actions": {}
+                  },
+                  "ranges": {
+                    "BB": {
+                      "actions": {
+                        "open_raise": "22+, A2s+, K2s+, Q8s+, J8s+, T7s+, 97s+, A2o+, K8o+, Q9o+",
+                        "three_bet": "QQ+, AKs, AKo"
+                      }
+                    },
+                    "BTN": {
+                      "actions": {
+                        "open_raise": "22+, A2s+, K7s+, Q8s+, J7s+, T8s+, 97s+, 87s, A7o+, KTo+, QJo",
+                        "three_bet": "QQ+, AJs+, KQs, AQo+"
+                      }
+                    },
+                    "CO": {
+                      "actions": {
+                        "open_raise": "55+, A8s+, K9s+, Q9s+, JTs, T9s, 98s, ATo+, KJo+",
+                        "three_bet": "QQ+, AQs+, AKo"
+                      }
+                    },
+                    "EP": {
+                      "actions": {
+                        "open_raise": "99+, AJs+, KQs, AQo+",
+                        "three_bet": "QQ+, AKs, AKo"
+                      }
+                    },
+                    "HJ": {
+                      "actions": {
+                        "open_raise": "77+, A9s+, KTs+, QTs+, JTs, ATo+, KJo+",
+                        "three_bet": "QQ+, AQs+, AKo"
+                      }
+                    },
+                    "LJ": {
+                      "actions": {
+                        "open_raise": "88+, ATs+, KJs+, QJs, AJo+, KQo",
+                        "three_bet": "QQ+, AKs, AKo"
+                      }
+                    },
+                    "SB": {
+                      "actions": {
+                        "open_raise": "33+, A3s+, K8s+, Q9s+, J9s+, T9s, A7o+, KTo+, QJo",
+                        "three_bet": "JJ+, AQs+, AQo+"
+                      }
+                    },
+                    "UTG": {
+                      "actions": {
+                        "open_raise": "JJ+, AKs, AKo",
+                        "three_bet": "KK+"
+                      }
+                    },
+                    "UTGP1": {
+                      "actions": {
+                        "open_raise": "TT+, AQs+, KQs, AKo",
+                        "three_bet": "QQ+, AKs"
+                      }
+                    }
+                  }
+                },
+                "positional_betting": {
+                  "betting": {
+                    "BB": {
+                      "aggression_factor": 50,
+                      "bluff_frequency": 30,
+                      "check_raise_frequency": 20,
+                      "preferred_bet_sizes": [
+                        "1/3",
+                        "1/1"
+                      ]
+                    },
+                    "BTN": {
+                      "aggression_factor": 60,
+                      "bluff_frequency": 38,
+                      "check_raise_frequency": 18,
+                      "preferred_bet_sizes": [
+                        "1/3",
+                        "1/1"
+                      ]
+                    },
+                    "CO": {
+                      "aggression_factor": 52,
+                      "bluff_frequency": 33,
+                      "check_raise_frequency": 15,
+                      "preferred_bet_sizes": [
+                        "1/3",
+                        "1/1"
+                      ]
+                    },
+                    "EP": {
+                      "aggression_factor": 42,
+                      "bluff_frequency": 26,
+                      "check_raise_frequency": 10,
+                      "preferred_bet_sizes": [
+                        "1/3",
+                        "1/1"
+                      ]
+                    },
+                    "HJ": {
+                      "aggression_factor": 47,
+                      "bluff_frequency": 30,
+                      "check_raise_frequency": 13,
+                      "preferred_bet_sizes": [
+                        "1/3",
+                        "1/1"
+                      ]
+                    },
+                    "LJ": {
+                      "aggression_factor": 44,
+                      "bluff_frequency": 28,
+                      "check_raise_frequency": 11,
+                      "preferred_bet_sizes": [
+                        "1/3",
+                        "1/1"
+                      ]
+                    },
+                    "SB": {
+                      "aggression_factor": 48,
+                      "bluff_frequency": 30,
+                      "check_raise_frequency": 13,
+                      "preferred_bet_sizes": [
+                        "1/3",
+                        "1/1"
+                      ]
+                    },
+                    "UTG": {
+                      "aggression_factor": 38,
+                      "bluff_frequency": 22,
+                      "check_raise_frequency": 8,
+                      "preferred_bet_sizes": [
+                        "1/3",
+                        "1/1"
+                      ]
+                    },
+                    "UTGP1": {
+                      "aggression_factor": 40,
+                      "bluff_frequency": 24,
+                      "check_raise_frequency": 9,
+                      "preferred_bet_sizes": [
+                        "1/3",
+                        "1/1"
+                      ]
+                    }
+                  },
+                  "default": {
+                    "aggression_factor": 50,
+                    "bluff_frequency": 33,
+                    "check_raise_frequency": 15,
+                    "preferred_bet_sizes": [
+                      "1/3",
+                      "1/1"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "range_strategy": {
+            "call_three_bet": "JJ+, AQs+",
+            "open_raise": "QQ+, JJ:0.95, TT:0.8, AKs, AQs, AJs:0.7, AKo, AQo:0.85, KQs:0.9",
+            "postflop_cbet_frequency": 50,
+            "three_bet": "QQ+, AKs"
+          },
+          "style": "gto"
+        }
+      },
+      {
+        "label": "tight-aggressive",
+        "play_style": "TightAggressive",
+        "profile": {
+          "betting_strategy": {
+            "aggression_factor": 70,
+            "bluff_frequency": 20,
+            "check_raise_frequency": 15,
+            "preferred_bet_sizes": [
+              "2/3",
+              "1/1"
+            ]
+          },
+          "description": "Selective hand selection with maximum postflop aggression — the baseline winning style.",
+          "name": "tight_aggressive",
+          "range_strategy": {
+            "call_three_bet": "JJ+, AQs+",
+            "open_raise": "JJ+, AQs+, KQs, AKo",
+            "postflop_cbet_frequency": 65,
+            "three_bet": "QQ+, AKs"
+          },
+          "style": "tight_aggressive"
+        }
+      },
+      {
+        "label": "loose-passive",
+        "play_style": "LoosePassive",
+        "profile": {
+          "betting_strategy": {
+            "aggression_factor": 15,
+            "bluff_frequency": 3,
+            "check_raise_frequency": 2,
+            "preferred_bet_sizes": [
+              "1/2"
+            ]
+          },
+          "description": "Wide hand selection with passive betting — the classic calling station archetype.",
+          "name": "loose_passive",
+          "range_strategy": {
+            "call_three_bet": "TT+, AJs+",
+            "open_raise": "22+, AKs-A2s, KTs+, QTs+, J9s+, T8s+, 98s, ATo+, KTo+",
+            "postflop_cbet_frequency": 15,
+            "three_bet": "QQ+, AKs"
+          },
+          "style": "loose_passive"
+        }
+      },
+      {
+        "label": "maniac",
+        "play_style": "Maniac",
+        "profile": {
+          "betting_strategy": {
+            "aggression_factor": 90,
+            "bluff_frequency": 55,
+            "check_raise_frequency": 30,
+            "preferred_bet_sizes": [
+              "1/1",
+              "2/1"
+            ]
+          },
+          "description": "Extreme aggressor — bets and raises relentlessly with a very high bluff frequency.",
+          "name": "maniac",
+          "range_strategy": {
+            "call_three_bet": "88+, ATs+",
+            "open_raise": "22+, AT+, 54s+",
+            "postflop_cbet_frequency": 90,
+            "three_bet": "TT+, AQs, AQo+, KQs"
+          },
+          "style": "maniac"
+        }
+      },
+      {
+        "label": "by-the-book",
+        "play_style": "Abc",
+        "profile": {
+          "betting_strategy": {
+            "aggression_factor": 65,
+            "bluff_frequency": 0,
+            "check_raise_frequency": 5,
+            "preferred_bet_sizes": [
+              "2/3"
+            ]
+          },
+          "description": "By-the-book play — bets strong hands and folds weak ones with no deception or bluffing.",
+          "name": "abc",
+          "range_strategy": {
+            "call_three_bet": "QQ, AKs",
+            "open_raise": "QQ+, AKs, AKo",
+            "postflop_cbet_frequency": 60,
+            "three_bet": "AA, KK"
+          },
+          "style": "abc"
+        }
+      },
+      {
+        "label": "short-stack specialist",
+        "play_style": "ShortStackNinja",
+        "profile": {
+          "betting_strategy": {
+            "aggression_factor": 95,
+            "bluff_frequency": 45,
+            "check_raise_frequency": 40,
+            "preferred_bet_sizes": [
+              "1/1",
+              "2/1"
+            ]
+          },
+          "description": "Push-or-fold strategy optimized for short stack situations — all-in or nothing.",
+          "name": "short_stack_ninja",
+          "range_strategy": {
+            "call_three_bet": "",
+            "open_raise": "77+, ATs+, KQs, AJo+, KQo",
+            "postflop_cbet_frequency": 100,
+            "three_bet": "AA, KK, QQ"
+          },
+          "style": "short_stack_ninja"
+        }
+      }
+    ],
+    "description": "The named play-style archetypes, dumped in full. Behaviour is data, not code: a new personality is a new set of these parameters, never a new decision procedure. The concrete serialization shape here is the original's; a rebuild owns its own schema and need only carry the same parameters."
+  },
+  "epic": "DECON-11"
+}

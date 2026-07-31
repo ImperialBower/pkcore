@@ -1,0 +1,51 @@
+{
+  "behavior": "derivations",
+  "data": {
+    "description": "Each statistic is a ratio of occurrences to opportunities. A player with no opportunities has NO RATE -- absent, not zero. Conflating 'never raised in 100 chances' with 'never had a chance' is a real modelling error, so the absence must survive into the result.",
+    "players": [
+      {
+        "confidence": "Medium",
+        "derived": {
+          "preflop_raise": 0.17,
+          "three_bet": 0.075,
+          "voluntarily_put_money_in_pot": 0.24,
+          "went_to_showdown_rate": 0.18,
+          "won_at_showdown_rate": 0.6111111111111112
+        },
+        "label": "a player with 100 hands recorded",
+        "raw_counters": {
+          "hands_dealt": 100,
+          "hands_voluntarily_played": 24,
+          "preflop_raise_count": 17,
+          "preflop_raise_opportunities": 100,
+          "three_bet_count": 3,
+          "three_bet_opportunities": 40,
+          "went_to_showdown": 18,
+          "won_at_showdown": 11
+        }
+      },
+      {
+        "confidence": "Low",
+        "derived": {
+          "preflop_raise": null,
+          "three_bet": null,
+          "voluntarily_put_money_in_pot": null,
+          "went_to_showdown_rate": null,
+          "won_at_showdown_rate": null
+        },
+        "label": "a player with no hands recorded",
+        "raw_counters": {
+          "hands_dealt": 0,
+          "hands_voluntarily_played": 0,
+          "preflop_raise_count": 0,
+          "preflop_raise_opportunities": 0,
+          "three_bet_count": 0,
+          "three_bet_opportunities": 0,
+          "went_to_showdown": 0,
+          "won_at_showdown": 0
+        }
+      }
+    ]
+  },
+  "epic": "DECON-12"
+}

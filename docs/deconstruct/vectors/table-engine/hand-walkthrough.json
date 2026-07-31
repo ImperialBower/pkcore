@@ -1,0 +1,69 @@
+{
+  "behavior": "hand-walkthrough",
+  "data": {
+    "board": "K♠ K♣ 9♦ 8♠ 4♥",
+    "chip_total": 1200,
+    "deal_order_note": "burn, flop x3, burn, turn, burn, river",
+    "deck_top_in_deal_order": "3♣ K♠ K♣ 9♦ 3♥ 8♠ 3♦ 4♥",
+    "description": "One complete hand played from an explicitly fixed deck -- no random generator is involved, so this vector binds no shuffle algorithm. The event log is the ordered, append-only record of everything that happened, and is sufficient on its own to reconstruct the hand.",
+    "ending_stacks": [
+      {
+        "chips": 800,
+        "handle": "Deep",
+        "seat": 0
+      },
+      {
+        "chips": 400,
+        "handle": "Short",
+        "seat": 1
+      }
+    ],
+    "event_log": [
+      "Table <identity-0> is now open",
+      "Player <identity-1> is seated at Seat 0",
+      "Seat 0 is dealt 7♦ 2♣",
+      "Player <identity-2> is seated at Seat 1",
+      "Seat 1 is dealt A♠ A♥",
+      "Seat 0 puts in Small Blind of 50",
+      "Action to Seat 0",
+      "Seat 1 puts in Big Blind of 100",
+      "Action to Seat 0",
+      "Seat 0 goes all in with 1000",
+      "Action to Seat 1",
+      "Seat 1 goes all in with 200",
+      "Action to Seat 0",
+      "Brings in 1200",
+      "Pot size is 1200",
+      "Flop is K♠ 9♦ K♣",
+      "Turn is 8♠",
+      "River is 4♥",
+      "End Hand",
+      "Brings in 0",
+      "Pot size is 1200",
+      "Close out the hand with a 1200 pot",
+      "Seat 1 wins main pot of 400",
+      "Seat 0 wins side pot of 800",
+      "Table reset for next hand",
+      "Muck player 1's cards: A♠ A♥",
+      "Take player 1's cards: A♠ A♥",
+      "Muck player 0's cards: 7♦ 2♣",
+      "Take player 0's cards: 7♦ 2♣",
+      "Muck cards: K♠ 8♠ 4♥ 9♦ K♣",
+      "Deck passes audit"
+    ],
+    "settled_cleanly": true,
+    "starting_stacks": [
+      {
+        "chips": 1000,
+        "handle": "Deep",
+        "seat": 0
+      },
+      {
+        "chips": 200,
+        "handle": "Short",
+        "seat": 1
+      }
+    ]
+  },
+  "epic": "DECON-06"
+}
