@@ -27,21 +27,37 @@ const DEFAULT_OUT: &str = "docs/perf/results";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let command = args.first().map_or("run", String::as_str);
+    let (command, rest) = split_args(&args);
 
     match command {
         "list" => {
             list();
             ExitCode::SUCCESS
         }
-        "run" => run(&args[1..]),
-        "report" => report(&args[1..]),
+        "run" => run(rest),
+        "report" => report(rest),
         other => {
             eprintln!("unknown command: {other}");
             eprintln!("usage: perf [list|run|report]");
             ExitCode::FAILURE
         }
     }
+}
+
+/// Splits parsed argv (already stripped of `argv[0]`) into the subcommand
+/// name and its trailing arguments.
+///
+/// Bare invocation — an empty `args` — defaults `command` to `"run"` with an
+/// empty tail. That default exists precisely so `perf` with no arguments
+/// behaves like `perf run`; naively slicing `&args[1..]` to compute the tail
+/// panics on a zero-length slice for exactly that case ("range start index 1
+/// out of range for slice of length 0"), which is the one path the default
+/// was supposed to support. `args.get(1..).unwrap_or(&[])` returns an empty
+/// slice instead.
+fn split_args(args: &[String]) -> (&str, &[String]) {
+    let command = args.first().map_or("run", String::as_str);
+    let rest = args.get(1..).unwrap_or(&[]);
+    (command, rest)
 }
 
 fn list() {
@@ -61,6 +77,24 @@ fn list() {
 fn flag<'a>(args: &'a [String], name: &str) -> Option<&'a str> {
     let index = args.iter().position(|a| a == name)?;
     args.get(index + 1).map(String::as_str)
+}
+
+/// The pkcore cargo features actually compiled into this binary.
+///
+/// This is what makes `RunMeta.features` — and so `docs/perf/RESULTS.md`'s
+/// "Features:" line — trustworthy: it reflects `cfg!` at build time rather
+/// than a value the caller has to remember to pass in. A hardcoded `vec![]`
+/// here previously reported every run as `pure-kernel`, including runs of a
+/// binary built with `--features "equity sim"`.
+fn active_features() -> Vec<String> {
+    let mut features = Vec::new();
+    if cfg!(feature = "equity") {
+        features.push("equity".to_string());
+    }
+    if cfg!(feature = "sim") {
+        features.push("sim".to_string());
+    }
+    features
 }
 
 fn run(args: &[String]) -> ExitCode {
@@ -98,7 +132,7 @@ fn run(args: &[String]) -> ExitCode {
         }
     }
 
-    let mut run = RunMeta::capture("native", vec![], None, utc);
+    let mut run = RunMeta::capture("native", active_features(), None, utc);
     run.label = label;
 
     let results = Results {
@@ -194,5 +228,55 @@ fn summarize(results: &Results) {
             ),
             None => println!("{:<32} {:>4} {:?}", sample.name, "-", sample.status),
         }
+    }
+}
+
+#[cfg(test)]
+#[allow(non_snake_case)]
+mod perf__bin_tests {
+    use super::*;
+
+    /// Regression test for the bare-invocation panic: `perf` with zero
+    /// arguments used to crash with "range start index 1 out of range for
+    /// slice of length 0" because `main` sliced `&args[1..]` on an empty
+    /// `Vec`. Bare invocation must default to `run` with no trailing
+    /// arguments, not panic.
+    #[test]
+    fn split_args_handles_bare_invocation_without_panicking() {
+        let args: Vec<String> = Vec::new();
+        let (command, rest) = split_args(&args);
+        assert_eq!(command, "run");
+        assert!(rest.is_empty(), "expected no trailing args, got {rest:?}");
+    }
+
+    #[test]
+    fn split_args_slices_off_an_explicit_subcommand() {
+        let args = vec!["report".to_string(), "--dir".to_string(), "x".to_string()];
+        let (command, rest) = split_args(&args);
+        assert_eq!(command, "report");
+        assert_eq!(rest, ["--dir".to_string(), "x".to_string()]);
+    }
+
+    #[test]
+    fn split_args_handles_a_bare_subcommand_with_no_trailing_args() {
+        let args = vec!["list".to_string()];
+        let (command, rest) = split_args(&args);
+        assert_eq!(command, "list");
+        assert!(rest.is_empty());
+    }
+
+    /// The regression this replaces: `RunMeta.features` hardcoded to
+    /// `vec![]` regardless of which pkcore cargo features the binary was
+    /// actually built with, so `docs/perf/RESULTS.md` reported every run —
+    /// including ones built with `--features "equity sim"` — as
+    /// `pure-kernel`. This assertion is only as strong as the feature set
+    /// `cargo test` compiles this binary with, but it fails immediately
+    /// under `cargo test --features "equity sim"` (part of `make
+    /// perf-check`) if the hardcoded-empty-vec bug ever comes back.
+    #[test]
+    fn active_features_reflects_the_compiled_in_cargo_features() {
+        let features = active_features();
+        assert_eq!(features.contains(&"equity".to_string()), cfg!(feature = "equity"));
+        assert_eq!(features.contains(&"sim".to_string()), cfg!(feature = "sim"));
     }
 }

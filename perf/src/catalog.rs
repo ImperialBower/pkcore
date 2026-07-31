@@ -14,8 +14,10 @@ use pkcore::arrays::HandRanker;
 use pkcore::play::board::Board;
 use pkcore::prelude::{Card, Deck, Five, FromStr, Seven};
 
-/// How many distinct hands each workload cycles through. A power of two, so
-/// the modulo in the hot loop compiles to a mask.
+/// How many distinct hands each workload cycles through. Must be a power of
+/// two: the hot loops index with `i & MASK` rather than `i % SAMPLE_HANDS`,
+/// and that mask is only correct when `SAMPLE_HANDS` is a power of two (see
+/// [`MASK`]).
 const SAMPLE_HANDS: usize = 1_024;
 
 /// Stride through the combination space, so the sample spans a wide range of
@@ -237,8 +239,10 @@ fn make_cfr_iters() -> Result<HotFn, PerfError> {
 
 /// Every workload pkcore currently exposes for measurement.
 ///
-/// Phase 1 returns four nano-band workloads, all pure kernel. Phase 2 adds
-/// `eval.seven.eval`, the equity engine's real showdown call.
+/// Returns five nano-band workloads (all pure kernel) plus the `gto.cfr.iters`
+/// macro-band solver workload and the `sim.selfplay.6max` macro-band
+/// self-play workload, both also pure kernel. The `equity` feature adds five
+/// more equity-engine workloads (`equity.*`, `dealeval.*`) when compiled in.
 ///
 /// # Examples
 ///

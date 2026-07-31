@@ -7,81 +7,87 @@ Figures are nanoseconds per operation. `min` is the best estimator of true cost 
 
 **Host:** Apple M1 · 8 cores (4P + 4E)  
 **Features:** pure-kernel  
+**Label:** —  
 **pkcore:** 0.3.2 · **rustc 1.97.1 (8bab26f4f 2026-07-14)**  
-**Taken:** 2026-07-31T15:16:17Z
+**Taken:** 2026-07-31T23:38:55Z
 
 | Workload | Band | threads | median | min | p95 | MAD | checksum | status |
 |---|---|---:|---:|---:|---:|---:|---|---|
-| `eval.five.hand_rank_value` | Nano | — | 12.99 | 12.84 | 17.58 | 0.11 | `512044479` | ok |
-| `eval.seven.hand_rank_value` | Nano | — | 755.68 | 729.61 | 931.19 | 21.97 | `25628021` | ok |
-| `eval.five.or_rank_bits` | Nano | — | 1.95 | 1.95 | 1.98 | 0.00 | `546925699` | ok |
-| `parse.five.from_str` | Nano | — | 506.10 | 504.40 | 540.13 | 1.45 | `54803507` | ok |
+| `eval.five.hand_rank_value` | Nano | — | 13.78 | 13.17 | 20.09 | 0.60 | `512044479` | ok |
+| `eval.seven.hand_rank_value` | Nano | — | 810.63 | 715.64 | 1098.41 | 5.50 | `25628021` | ok |
+| `eval.seven.eval` | Nano | — | 7977.48 | 4562.45 | 16888.50 | 2357.05 | `25628021` | ok |
+| `eval.five.or_rank_bits` | Nano | — | 3.04 | 2.92 | 15.23 | 0.12 | `546925699` | ok |
+| `parse.five.from_str` | Nano | — | 1339.28 | 952.13 | 2451.95 | 272.89 | `54803507` | ok |
+| `gto.cfr.iters` | Macro | — | 1216444.58 | 929315.83 | 1590069.59 | 284732.92 | `100` | ok |
+| `sim.selfplay.6max` | Macro | — | 154336.67 | 127032.29 | 156432.50 | 2095.83 | `80215` | ok |
 
-## aarch64-apple-darwin — native
+## aarch64-apple-darwin — native (all-features)
 
 **Host:** Apple M1 · 8 cores (4P + 4E)  
-**Features:** pure-kernel  
+**Features:** equity, sim  
+**Label:** all-features  
 **pkcore:** 0.3.2 · **rustc 1.97.1 (8bab26f4f 2026-07-14)**  
-**Taken:** 2026-07-31T22:27:18Z
+**Taken:** 2026-07-31T23:41:37Z
 
 | Workload | Band | threads | median | min | p95 | MAD | checksum | status |
 |---|---|---:|---:|---:|---:|---:|---|---|
-| `eval.five.hand_rank_value` | Nano | — | 13.51 | 13.47 | 13.63 | 0.03 | `512044479` | ok |
-| `eval.seven.hand_rank_value` | Nano | — | 744.38 | 737.35 | 762.51 | 3.12 | `25628021` | ok |
-| `eval.seven.eval` | Nano | — | 4835.60 | 4256.59 | 6090.55 | 396.92 | `25628021` | ok |
-| `eval.five.or_rank_bits` | Nano | — | 1.23 | 1.23 | 1.25 | 0.00 | `546925699` | ok |
-| `parse.five.from_str` | Nano | — | 537.76 | 531.27 | 605.05 | 6.18 | `54803507` | ok |
-| `gto.cfr.iters` | Macro | — | 676027.92 | 626460.84 | 700510.83 | 24482.91 | `100` | ok |
-| `equity.exact.hu_flop` | Micro | — | 2388854.00 | 2029250.00 | 2993459.00 | 130417.00 | `990` | ok |
-| `equity.exact.hu_preflop` | Macro | — | 5923671333.00 | 5625536375.00 | 6696903083.00 | 298134958.00 | `1721612` | ok |
-| `equity.mc.three_way` | Micro | — | 97446895.50 | 87190250.00 | 115572625.00 | 4601333.00 | `20367` | ok |
-| `dealeval.hu` | Micro | — | 36040729.00 | 30100959.00 | 51453708.00 | 1537937.50 | `10169` | ok |
-| `dealeval.three_way` | Micro | — | 51430104.50 | 47341500.00 | 64182375.00 | 1705583.50 | `10292` | ok |
-| `sim.selfplay.6max` | Macro | — | 125063.54 | 107622.50 | 142692.08 | 17252.29 | `80215` | ok |
+| `eval.five.hand_rank_value` | Nano | — | 13.25 | 13.21 | 13.55 | 0.03 | `512044479` | ok |
+| `eval.seven.hand_rank_value` | Nano | — | 734.02 | 721.29 | 740.63 | 3.19 | `25628021` | ok |
+| `eval.seven.eval` | Nano | — | 4131.60 | 4119.96 | 4157.89 | 5.38 | `25628021` | ok |
+| `eval.five.or_rank_bits` | Nano | — | 1.23 | 1.23 | 1.23 | 0.00 | `546925699` | ok |
+| `parse.five.from_str` | Nano | — | 525.39 | 522.74 | 594.88 | 2.50 | `54803507` | ok |
+| `gto.cfr.iters` | Macro | — | 698418.75 | 689505.41 | 901075.84 | 8913.34 | `100` | ok |
+| `equity.exact.hu_flop` | Micro | — | 3281562.50 | 2623958.00 | 7216833.00 | 523333.50 | `990` | ok |
+| `equity.exact.hu_preflop` | Macro | — | 5532137250.00 | 5379911625.00 | 6470389375.00 | 152225625.00 | `1721612` | ok |
+| `equity.mc.three_way` | Micro | — | 136487562.50 | 86279417.00 | 237049875.00 | 41601000.00 | `20367` | ok |
+| `dealeval.hu` | Micro | — | 43136271.00 | 25744375.00 | 69450583.00 | 6419229.00 | `10169` | ok |
+| `dealeval.three_way` | Micro | — | 49699063.00 | 39861250.00 | 72840667.00 | 3048792.50 | `10292` | ok |
+| `sim.selfplay.6max` | Macro | — | 110906.88 | 109051.67 | 129284.17 | 1855.21 | `80215` | ok |
 
-## aarch64-apple-darwin — native
+## aarch64-apple-darwin — native (sweep)
 
 **Host:** Apple M1 · 8 cores (4P + 4E)  
-**Features:** pure-kernel  
+**Features:** equity, sim  
+**Label:** sweep  
 **pkcore:** 0.3.2 · **rustc 1.97.1 (8bab26f4f 2026-07-14)**  
-**Taken:** 2026-07-31T22:28:15Z
+**Taken:** 2026-07-31T23:42:31Z
 
 | Workload | Band | threads | median | min | p95 | MAD | checksum | status |
 |---|---|---:|---:|---:|---:|---:|---|---|
-| `eval.five.hand_rank_value` | Nano | 1 | 13.34 | 13.28 | 14.97 | 0.04 | `512044479` | ok |
-| `eval.five.hand_rank_value` | Nano | 4 | 13.32 | 13.30 | 13.51 | 0.01 | `512044479` | ok |
-| `eval.five.hand_rank_value` | Nano | 8 | 13.33 | 13.25 | 13.46 | 0.05 | `512044479` | ok |
-| `eval.seven.hand_rank_value` | Nano | 1 | 745.13 | 740.04 | 761.70 | 1.81 | `25628021` | ok |
-| `eval.seven.hand_rank_value` | Nano | 4 | 747.09 | 737.76 | 758.38 | 2.32 | `25628021` | ok |
-| `eval.seven.hand_rank_value` | Nano | 8 | 747.42 | 739.15 | 759.57 | 3.63 | `25628021` | ok |
-| `eval.seven.eval` | Nano | 1 | 4441.94 | 4115.64 | 8173.72 | 317.53 | `25628021` | ok |
-| `eval.seven.eval` | Nano | 4 | 4681.79 | 4657.11 | 5409.91 | 15.69 | `25628021` | ok |
-| `eval.seven.eval` | Nano | 8 | 5996.76 | 4695.46 | 10515.70 | 637.96 | `25628021` | ok |
-| `eval.five.or_rank_bits` | Nano | 1 | 2.90 | 2.86 | 3.54 | 0.03 | `546925699` | ok |
-| `eval.five.or_rank_bits` | Nano | 4 | 2.87 | 2.86 | 6.32 | 0.00 | `546925699` | ok |
-| `eval.five.or_rank_bits` | Nano | 8 | 2.89 | 2.86 | 3.77 | 0.03 | `546925699` | ok |
-| `parse.five.from_str` | Nano | 1 | 1242.57 | 989.05 | 1412.16 | 82.66 | `54803507` | ok |
-| `parse.five.from_str` | Nano | 4 | 895.24 | 796.92 | 1051.56 | 88.32 | `54803507` | ok |
-| `parse.five.from_str` | Nano | 8 | 996.33 | 797.30 | 1059.03 | 49.96 | `54803507` | ok |
-| `gto.cfr.iters` | Macro | 1 | 984189.17 | 957006.25 | 1036778.75 | 27182.92 | `100` | ok |
-| `gto.cfr.iters` | Macro | 4 | 1256324.17 | 996946.67 | 1310796.67 | 54472.50 | `100` | ok |
-| `gto.cfr.iters` | Macro | 8 | 1518704.17 | 1365803.34 | 1650099.16 | 121959.59 | `100` | ok |
-| `equity.exact.hu_flop` | Micro | 1 | 18721604.50 | 16534125.00 | 22839250.00 | 1092312.50 | `990` | ok |
-| `equity.exact.hu_flop` | Micro | 4 | 7528979.00 | 5426583.00 | 16977041.00 | 1378916.50 | `990` | ok |
-| `equity.exact.hu_flop` | Micro | 8 | 6866729.00 | 4463292.00 | 11605583.00 | 1401917.00 | `990` | ok |
-| `equity.exact.hu_preflop` | Macro | 1 | 19025384208.00 | 18671917792.00 | 40841502792.00 | 353466416.00 | `1721612` | ok |
-| `equity.exact.hu_preflop` | Macro | 4 | 8958255834.00 | 8857443375.00 | 9363646416.00 | 100812459.00 | `1721612` | ok |
-| `equity.exact.hu_preflop` | Macro | 8 | 5566328125.00 | 5422343417.00 | 5660562875.00 | 70427291.00 | `1721612` | ok |
-| `equity.mc.three_way` | Micro | 1 | 317117166.50 | 293062542.00 | 385022542.00 | 465395.50 | `20367` | ok |
-| `equity.mc.three_way` | Micro | 4 | 150623625.00 | 143946000.00 | 163081292.00 | 2759083.50 | `20367` | ok |
-| `equity.mc.three_way` | Micro | 8 | 89251062.50 | 77981000.00 | 102467917.00 | 3548000.00 | `20367` | ok |
-| `dealeval.hu` | Micro | 1 | 109707021.00 | 96893000.00 | 113948625.00 | 298896.00 | `10169` | ok |
-| `dealeval.hu` | Micro | 4 | 51682041.50 | 48029084.00 | 59331959.00 | 2657000.00 | `10169` | ok |
-| `dealeval.hu` | Micro | 8 | 34364729.00 | 30205875.00 | 55973041.00 | 2742770.50 | `10169` | ok |
-| `dealeval.three_way` | Micro | 1 | 164694396.00 | 145269792.00 | 180390583.00 | 1498041.50 | `10292` | ok |
-| `dealeval.three_way` | Micro | 4 | 79418250.00 | 71781042.00 | 87329125.00 | 3167500.00 | `10292` | ok |
-| `dealeval.three_way` | Micro | 8 | 46594999.50 | 41097750.00 | 57373584.00 | 1855874.50 | `10292` | ok |
-| `sim.selfplay.6max` | Macro | 1 | 118119.16 | 103120.00 | 158559.58 | 14289.16 | `80215` | ok |
-| `sim.selfplay.6max` | Macro | 4 | 95555.83 | 93552.08 | 96831.25 | 801.26 | `80215` | ok |
-| `sim.selfplay.6max` | Macro | 8 | 82398.96 | 81932.29 | 96893.12 | 466.67 | `80215` | ok |
+| `eval.five.hand_rank_value` | Nano | 1 | 24.67 | 24.42 | 35.01 | 0.16 | `512044479` | ok |
+| `eval.five.hand_rank_value` | Nano | 4 | 24.74 | 24.32 | 29.93 | 0.35 | `512044479` | ok |
+| `eval.five.hand_rank_value` | Nano | 8 | 25.34 | 24.29 | 31.83 | 1.03 | `512044479` | ok |
+| `eval.seven.hand_rank_value` | Nano | 1 | 1369.08 | 1232.56 | 1743.91 | 23.63 | `25628021` | ok |
+| `eval.seven.hand_rank_value` | Nano | 4 | 1762.63 | 1433.67 | 2003.30 | 26.30 | `25628021` | ok |
+| `eval.seven.hand_rank_value` | Nano | 8 | 1962.32 | 1284.85 | 3672.06 | 181.13 | `25628021` | ok |
+| `eval.seven.eval` | Nano | 1 | 7726.19 | 5426.18 | 10075.01 | 1573.23 | `25628021` | ok |
+| `eval.seven.eval` | Nano | 4 | 6324.72 | 5380.47 | 9588.25 | 678.27 | `25628021` | ok |
+| `eval.seven.eval` | Nano | 8 | 6331.32 | 5372.44 | 7469.77 | 37.80 | `25628021` | ok |
+| `eval.five.or_rank_bits` | Nano | 1 | 1.87 | 1.87 | 1.92 | 0.00 | `546925699` | ok |
+| `eval.five.or_rank_bits` | Nano | 4 | 1.87 | 1.87 | 1.89 | 0.00 | `546925699` | ok |
+| `eval.five.or_rank_bits` | Nano | 8 | 1.87 | 1.87 | 1.89 | 0.00 | `546925699` | ok |
+| `parse.five.from_str` | Nano | 1 | 783.42 | 779.05 | 811.32 | 2.32 | `54803507` | ok |
+| `parse.five.from_str` | Nano | 4 | 787.87 | 667.33 | 963.11 | 6.52 | `54803507` | ok |
+| `parse.five.from_str` | Nano | 8 | 588.09 | 579.32 | 678.78 | 8.74 | `54803507` | ok |
+| `gto.cfr.iters` | Macro | 1 | 715377.50 | 712447.91 | 782277.08 | 2929.59 | `100` | ok |
+| `gto.cfr.iters` | Macro | 4 | 712937.50 | 694373.33 | 743487.50 | 12951.67 | `100` | ok |
+| `gto.cfr.iters` | Macro | 8 | 784450.41 | 735653.75 | 802642.09 | 9827.09 | `100` | ok |
+| `equity.exact.hu_flop` | Micro | 1 | 9601083.50 | 9529333.00 | 10221917.00 | 43500.00 | `990` | ok |
+| `equity.exact.hu_flop` | Micro | 4 | 4618041.50 | 3306750.00 | 6313750.00 | 756104.50 | `990` | ok |
+| `equity.exact.hu_flop` | Micro | 8 | 7975729.50 | 5316625.00 | 14082334.00 | 1718854.50 | `990` | ok |
+| `equity.exact.hu_preflop` | Macro | 1 | 16414722416.00 | 15508965583.00 | 23763691042.00 | 290645917.00 | `1721612` | ok |
+| `equity.exact.hu_preflop` | Macro | 4 | 16958822875.00 | 11009896834.00 | 22165508625.00 | 2059393959.00 | `1721612` | ok |
+| `equity.exact.hu_preflop` | Macro | 8 | 16582542250.00 | 15893010000.00 | 16764107208.00 | 181564958.00 | `1721612` | ok |
+| `equity.mc.three_way` | Micro | 1 | 738337937.50 | 651887333.00 | 821625250.00 | 32224833.00 | `20367` | ok |
+| `equity.mc.three_way` | Micro | 4 | 302988687.50 | 239357667.00 | 412488458.00 | 18287813.00 | `20367` | ok |
+| `equity.mc.three_way` | Micro | 8 | 269768583.00 | 240999375.00 | 388461167.00 | 11236395.50 | `20367` | ok |
+| `dealeval.hu` | Micro | 1 | 245217584.00 | 223726542.00 | 285072833.00 | 9081083.50 | `10169` | ok |
+| `dealeval.hu` | Micro | 4 | 106091500.00 | 66645167.00 | 136377708.00 | 17211416.50 | `10169` | ok |
+| `dealeval.hu` | Micro | 8 | 99540562.50 | 75553334.00 | 142461000.00 | 2753521.00 | `10169` | ok |
+| `dealeval.three_way` | Micro | 1 | 393245770.50 | 349896625.00 | 425002125.00 | 12791042.00 | `10292` | ok |
+| `dealeval.three_way` | Micro | 4 | 159778812.50 | 114480125.00 | 204836791.00 | 9125062.50 | `10292` | ok |
+| `dealeval.three_way` | Micro | 8 | 150864666.50 | 109624625.00 | 305711792.00 | 13664708.00 | `10292` | ok |
+| `sim.selfplay.6max` | Macro | 1 | 247348.55 | 191532.71 | 270854.38 | 23505.83 | `80215` | ok |
+| `sim.selfplay.6max` | Macro | 4 | 250084.38 | 206618.55 | 267273.96 | 17189.59 | `80215` | ok |
+| `sim.selfplay.6max` | Macro | 8 | 302221.66 | 207386.67 | 322706.25 | 20484.59 | `80215` | ok |
 

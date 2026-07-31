@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "run": {
-    "utc": "2026-07-31T15:16:17Z",
+    "utc": "2026-07-31T23:38:55Z",
     "target": "aarch64-apple-darwin",
     "runtime": "native",
     "host": {
@@ -13,7 +13,8 @@
     "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
     "pkcore": "0.3.2",
     "features": [],
-    "rayon_threads": null
+    "rayon_threads": null,
+    "label": null
   },
   "samples": [
     {
@@ -21,11 +22,12 @@
       "band": "nano",
       "inner_iters": 100000,
       "trials": 30,
+      "rayon_threads": null,
       "ns_per_op": {
-        "min": 12.8375,
-        "median": 12.99292,
-        "p95": 17.57792,
-        "mad": 0.11416499999999985
+        "min": 13.16917,
+        "median": 13.775,
+        "p95": 20.08875,
+        "mad": 0.6037450000000009
       },
       "checksum": 512044479,
       "status": "ok",
@@ -36,11 +38,28 @@
       "band": "nano",
       "inner_iters": 10000,
       "trials": 30,
+      "rayon_threads": null,
       "ns_per_op": {
-        "min": 729.6083,
-        "median": 755.6812500000001,
-        "p95": 931.1875,
-        "mad": 21.972900000000095
+        "min": 715.6416,
+        "median": 810.6312,
+        "p95": 1098.4084,
+        "mad": 5.495800000000031
+      },
+      "checksum": 25628021,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.seven.eval",
+      "band": "nano",
+      "inner_iters": 10000,
+      "trials": 30,
+      "rayon_threads": null,
+      "ns_per_op": {
+        "min": 4562.4542,
+        "median": 7977.48335,
+        "p95": 16888.5,
+        "mad": 2357.0520500000002
       },
       "checksum": 25628021,
       "status": "ok",
@@ -51,11 +70,12 @@
       "band": "nano",
       "inner_iters": 100000,
       "trials": 30,
+      "rayon_threads": null,
       "ns_per_op": {
-        "min": 1.94542,
-        "median": 1.94792,
-        "p95": 1.975,
-        "mad": 0.0010450000000000736
+        "min": 2.91708,
+        "median": 3.043125,
+        "p95": 15.235,
+        "mad": 0.12041999999999997
       },
       "checksum": 546925699,
       "status": "ok",
@@ -66,13 +86,46 @@
       "band": "nano",
       "inner_iters": 10000,
       "trials": 30,
+      "rayon_threads": null,
       "ns_per_op": {
-        "min": 504.4,
-        "median": 506.10204999999996,
-        "p95": 540.1292,
-        "mad": 1.4541499999999985
+        "min": 952.1333,
+        "median": 1339.2771,
+        "p95": 2451.9459,
+        "mad": 272.88750000000005
       },
       "checksum": 54803507,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "gto.cfr.iters",
+      "band": "macro",
+      "inner_iters": 100,
+      "trials": 5,
+      "rayon_threads": null,
+      "ns_per_op": {
+        "min": 929315.83,
+        "median": 1216444.58,
+        "p95": 1590069.59,
+        "mad": 284732.92000000004
+      },
+      "checksum": 100,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "sim.selfplay.6max",
+      "band": "macro",
+      "inner_iters": 200,
+      "trials": 5,
+      "rayon_threads": null,
+      "ns_per_op": {
+        "min": 127032.29,
+        "median": 154336.665,
+        "p95": 156432.5,
+        "mad": 2095.834999999992
+      },
+      "checksum": 80215,
       "status": "ok",
       "message": null
     }

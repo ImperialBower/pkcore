@@ -74,7 +74,9 @@ fn make_selfplay_6max() -> Result<HotFn, PerfError> {
 
     Ok(Box::new(move |iters: u32| {
         let Ok((table, bots)) = six_max_table() else {
-            return 0;
+            // Must not be 0 — see the `Err(_) => u64::MAX` arm below, which
+            // reserves 0 for exactly this reason.
+            return u64::MAX;
         };
         let mut sim = SimTable::with_rule_based(table, bots).with_seed(SEED);
 

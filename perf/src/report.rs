@@ -42,12 +42,21 @@ pub fn render(runs: &[Results]) -> String {
             _ => format!("{} cores", run.run.host.cores),
         };
 
-        let _ = writeln!(out, "## {} — {}", run.run.target, run.run.runtime);
+        match &run.run.label {
+            Some(label) => {
+                let _ = writeln!(out, "## {} — {} ({label})", run.run.target, run.run.runtime);
+            }
+            None => {
+                let _ = writeln!(out, "## {} — {}", run.run.target, run.run.runtime);
+            }
+        }
         let _ = writeln!(out);
+        let label_line = run.run.label.as_deref().unwrap_or("—");
         let _ = writeln!(
             out,
             "**Host:** {} · {cores}  \n\
              **Features:** {features}  \n\
+             **Label:** {label_line}  \n\
              **pkcore:** {} · **{}**  \n\
              **Taken:** {}",
             run.run.host.cpu, run.run.pkcore, run.run.rustc, run.run.utc
@@ -125,5 +134,36 @@ mod perf__report_tests {
     fn render_handles_no_runs() {
         let markdown = render(&[]);
         assert!(markdown.contains("No results"));
+    }
+
+    /// `RESULTS.md` commits several runs for the same target and date (e.g.
+    /// the pure-kernel run and an all-features run taken minutes apart); the
+    /// timestamp alone does not read as a difference at a glance. The label
+    /// must show up both in the section heading, so scanning the table of
+    /// contents distinguishes them, and in the metadata block.
+    #[test]
+    fn render_distinguishes_labelled_runs_in_the_heading_and_metadata() {
+        let mut labelled = fixture();
+        labelled.run.label = Some("all-features".to_string());
+
+        let markdown = render(&[labelled]);
+        assert!(
+            markdown.contains("## aarch64-apple-darwin — native (all-features)"),
+            "label missing from heading: {markdown}"
+        );
+        assert!(
+            markdown.contains("**Label:** all-features"),
+            "label missing from metadata: {markdown}"
+        );
+    }
+
+    #[test]
+    fn render_shows_no_label_placeholder_when_absent() {
+        let markdown = render(&[fixture()]);
+        assert!(markdown.contains("**Label:** —"), "expected placeholder: {markdown}");
+        assert!(
+            markdown.contains("## aarch64-apple-darwin — native\n"),
+            "unlabelled heading should carry no suffix: {markdown}"
+        );
     }
 }

@@ -99,8 +99,18 @@ mod perf__sweep_tests {
         assert_eq!(threads, vec![Some(1), Some(4), Some(8)]);
     }
 
-    /// Pool size must not change the answer. This is the guard that catches a
-    /// parallel workload whose reduction is order-dependent.
+    /// Pool size must not change a *serial* workload's answer — a sanity
+    /// check on the sweep machinery itself (pool construction, `install`,
+    /// and result plumbing). `counting_workload` has no parallel iterator,
+    /// so this test cannot catch a parallel workload whose reduction is
+    /// order-dependent; it only proves the harness does not corrupt a
+    /// checksum in transit.
+    ///
+    /// The actual cross-thread-count checksum-stability evidence for every
+    /// genuinely parallel workload in the catalog is
+    /// `docs/perf/results/aarch64-apple-darwin-sweep-2026-07-31.json`: all 12
+    /// workloads' checksums agree across all three pool sizes (36 samples,
+    /// zero disagreements).
     #[test]
     fn sweep_yields_one_checksum_across_all_pool_sizes() {
         let samples = sweep(&counting_workload(), 0, 2, 100);

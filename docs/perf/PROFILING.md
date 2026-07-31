@@ -74,9 +74,9 @@ Decomposing the call against the same 1,024-hand sample:
 The cause is that `Five` does not override two `Pile` trait defaults, and both
 allocate:
 
-- `are_unique()` (`src/lib.rs:724`) calls `self.to_vec()` — a heap allocation —
+- `are_unique()` (`src/lib.rs:787`) calls `self.to_vec()` — a heap allocation —
   then does an O(n²) scan over the result.
-- `contains_blank()` → `contains()` (`src/lib.rs:793`) calls `self.to_vec()`
+- `contains_blank()` → `contains()` (`src/lib.rs:856`) calls `self.to_vec()`
   **again**.
 
 So every five-card evaluation pays two heap allocations and two frees before
@@ -229,10 +229,11 @@ arithmetic, not a measurement:* `Five::sort()` → `sort_in_place()`
 (`src/arrays/five.rs:253-280`) takes a branch, on any non-wheel hand, that
 calls `self.cards().frequency_weighted()` (`src/cards.rs:360`), which builds
 a `HashMap<Rank, Cards>` via `map_by_rank()` (`cards.rs:535`) — a heap
-allocation. That is exactly the allocation shape `DEFECT_005` named
-("`Cards::frequency_weighted` heap allocations") as a known hot path, but
-`DEFECT_005`'s fix only touched `is_dealt()` (`are_unique()`/
-`contains_blank()`); it never touched `sort()`. Both
+allocation. That is exactly the allocation shape
+`docs/superpowers/plans/2026-06-11_SIDEQUEST_speedup_turneval.md` named
+("`Cards::frequency_weighted` heap allocations", see "Allocation traffic"
+above) as a known hot path, but `DEFECT_005`'s fix only touched `is_dealt()`
+(`are_unique()`/`contains_blank()`); it never touched `sort()`. Both
 `Seven::hand_rank_value()` and `Seven::hand_rank_value_and_hand()` loop over
 the same 21 permutations calling the same (now-fixed) `Five::hand_rank_value()`
 internally, so that inner loop benefited equally in both paths — the
@@ -353,12 +354,28 @@ Median ns/op by thread count, with the ratios that answer "did 4 beat 1" and
 
 (Ratios above 1.0x mean the higher thread count was faster.)
 
-**The nano non-parallel workloads are flat**, as expected —
+**Three of the five nano workloads are flat** —
 `eval.five.hand_rank_value`, `eval.seven.hand_rank_value`, and
-`eval.five.or_rank_bits` contain no rayon parallel iterator, and the sweep
-does not move their numbers. This is a useful negative control: it says the
-sweep isn't injecting a spurious effect into things that have no parallelism
-to exploit.
+`eval.five.or_rank_bits` contain no rayon parallel iterator, and their numbers
+barely move across thread counts. The other two nano workloads do **not**
+hold flat despite being equally serial: `parse.five.from_str` moves 1.39x
+(4t vs 1t) and `eval.seven.eval` moves 0.78x (8t vs 4t). That rules out
+reading the three flat rows as a clean "no spurious effect" negative control —
+a control is supposed to hold for the whole class it represents, and two of
+five members of this one visibly move.
+
+The cause is `perf/src/sweep.rs:83`
+(`pool.install(|| measure_labeled(workload, warmup, trials, inner_iters,
+Some(threads)))`), which wraps the *entire* timed region — not just any
+parallel work the workload itself does — inside the scoped pool's `install`.
+That relocates the timed call onto one of that pool's worker threads instead
+of the thread that would run it unswept, for every workload, parallel or not.
+**Sweep numbers are therefore not directly comparable to the unswept
+`perf-native`/`perf-native-all` figures for any workload** — only
+same-sweep, cross-thread-count comparisons within this table are safe to
+read. The three flat rows above are flat because their per-op cost is small
+enough that worker-thread relocation noise sits below their own measurement
+noise, not because the sweep harness is proven inert.
 
 **The genuinely parallel workloads — `equity.exact.*`, `equity.mc.*`,
 `dealeval.*` — all show 4 threads clearly beating 1** (2.0x-2.5x), which is

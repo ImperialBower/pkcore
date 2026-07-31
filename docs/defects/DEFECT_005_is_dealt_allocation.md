@@ -10,9 +10,13 @@
 > Severity note: no result was ever wrong, so this is not a correctness defect.
 > It is rated Medium on the performance axis because the affected code is the
 > innermost loop of the entire library — every equity enumeration, every
-> self-play showdown, and every solver iteration paid it. Measured at 7.9x on
-> `eval.five.hand_rank_value` and 2.7x on `eval.seven.hand_rank_value`
-> (medians, `make perf-native`, Apple M1).
+> self-play showdown, and every solver iteration paid it, though not equally:
+> the 7.9x/2.7x figures below are for the rank-only fast path
+> (`hand_rank_value`), and callers that go through the winning-hand path
+> instead (the equity engine's real showdown call) see a substantially
+> smaller estimated gain — see "Scope of the speedup" under Results. Measured
+> at 7.9x on `eval.five.hand_rank_value` and 2.7x on
+> `eval.seven.hand_rank_value` (medians, `make perf-native`, Apple M1).
 >
 > This report is the reference case for the performance-severity guidance in
 > `.claude/skills/defect-report/SKILL.md`, which was amended off the back of
@@ -185,6 +189,30 @@ where it is provably correct.
 `is_dealt` itself went from 98.31 ns to 4.64 ns. The two controls do not call
 `is_dealt` and were expected not to move; that they came in at exactly 1.00x
 confirms the measurement isolates what it claims to.
+
+### Scope of the speedup
+
+The 7.9x/2.7x figures above are for the **rank-only** fast path
+(`Five::hand_rank_value` / `Seven::hand_rank_value` — the functions this fix
+touches directly, via `is_dealt`). They do not describe every caller equally.
+
+The equity engine's own showdown call — `Eval::from(Seven)`, reached from
+`exact_enumerate` and `sample_once` in `src/analysis/equity/engine.rs:171,238`
+— goes through a different function, `Seven::hand_rank_value_and_hand()`,
+which also carries the winning `Five` hand through the same 21-permutation
+loop and additionally calls `.sort().clean()` once on it: an allocation this
+fix does not touch. Measured directly (`docs/perf/PROFILING.md`, "Phase 2
+findings", Finding 1), that engine path (`eval.seven.eval`) costs roughly
+5.25-5.5x more than `eval.seven.hand_rank_value`, the rank-only figure this
+report's table uses.
+
+Arithmetic from that gap — **labelled here as arithmetic, not a
+measurement**, per `PROFILING.md`'s own caveat — suggests the engine's real
+call improved only **~1.2-1.3x** from this fix, not 2.7x: the untouched
+`sort().clean()` allocation dominates the engine path's total and dilutes the
+fixed portion's contribution. A `perf-profile WORKLOAD=eval.seven.eval` run
+would confirm or refute the estimate. Until then, treat "equity computation
+got 2.7x faster" as an unsupported extrapolation from this report's numbers.
 
 ---
 
