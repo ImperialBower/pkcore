@@ -1,0 +1,213 @@
+{
+  "schema": 1,
+  "run": {
+    "utc": "2026-07-31T22:27:18Z",
+    "target": "aarch64-apple-darwin",
+    "runtime": "native",
+    "host": {
+      "cpu": "Apple M1",
+      "cores": 8,
+      "p_cores": 4,
+      "e_cores": 4
+    },
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+    "pkcore": "0.3.2",
+    "features": [],
+    "rayon_threads": null,
+    "label": "all-features"
+  },
+  "samples": [
+    {
+      "name": "eval.five.hand_rank_value",
+      "band": "nano",
+      "inner_iters": 100000,
+      "trials": 30,
+      "rayon_threads": null,
+      "ns_per_op": {
+        "min": 13.46959,
+        "median": 13.505205,
+        "p95": 13.62959,
+        "mad": 0.02583000000000002
+      },
+      "checksum": 512044479,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.seven.hand_rank_value",
+      "band": "nano",
+      "inner_iters": 10000,
+      "trials": 30,
+      "rayon_threads": null,
+      "ns_per_op": {
+        "min": 737.3458,
+        "median": 744.38125,
+        "p95": 762.5083,
+        "mad": 3.1249500000000126
+      },
+      "checksum": 25628021,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.seven.eval",
+      "band": "nano",
+      "inner_iters": 10000,
+      "trials": 30,
+      "rayon_threads": null,
+      "ns_per_op": {
+        "min": 4256.5875,
+        "median": 4835.6021,
+        "p95": 6090.55,
+        "mad": 396.9229499999997
+      },
+      "checksum": 25628021,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.five.or_rank_bits",
+      "band": "nano",
+      "inner_iters": 100000,
+      "trials": 30,
+      "rayon_threads": null,
+      "ns_per_op": {
+        "min": 1.225,
+        "median": 1.2275,
+        "p95": 1.25333,
+        "mad": 0.0010449999999999626
+      },
+      "checksum": 546925699,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "parse.five.from_str",
+      "band": "nano",
+      "inner_iters": 10000,
+      "trials": 30,
+      "rayon_threads": null,
+      "ns_per_op": {
+        "min": 531.2708,
+        "median": 537.7625,
+        "p95": 605.0458,
+        "mad": 6.181200000000047
+      },
+      "checksum": 54803507,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "gto.cfr.iters",
+      "band": "macro",
+      "inner_iters": 100,
+      "trials": 5,
+      "rayon_threads": null,
+      "ns_per_op": {
+        "min": 626460.84,
+        "median": 676027.92,
+        "p95": 700510.83,
+        "mad": 24482.909999999916
+      },
+      "checksum": 100,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "equity.exact.hu_flop",
+      "band": "micro",
+      "inner_iters": 1,
+      "trials": 30,
+      "rayon_threads": null,
+      "ns_per_op": {
+        "min": 2029250.0,
+        "median": 2388854.0,
+        "p95": 2993459.0,
+        "mad": 130417.0
+      },
+      "checksum": 990,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "equity.exact.hu_preflop",
+      "band": "macro",
+      "inner_iters": 1,
+      "trials": 5,
+      "rayon_threads": null,
+      "ns_per_op": {
+        "min": 5625536375.0,
+        "median": 5923671333.0,
+        "p95": 6696903083.0,
+        "mad": 298134958.0
+      },
+      "checksum": 1721612,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "equity.mc.three_way",
+      "band": "micro",
+      "inner_iters": 1,
+      "trials": 30,
+      "rayon_threads": null,
+      "ns_per_op": {
+        "min": 87190250.0,
+        "median": 97446895.5,
+        "p95": 115572625.0,
+        "mad": 4601333.0
+      },
+      "checksum": 20367,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "dealeval.hu",
+      "band": "micro",
+      "inner_iters": 1,
+      "trials": 30,
+      "rayon_threads": null,
+      "ns_per_op": {
+        "min": 30100959.0,
+        "median": 36040729.0,
+        "p95": 51453708.0,
+        "mad": 1537937.5
+      },
+      "checksum": 10169,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "dealeval.three_way",
+      "band": "micro",
+      "inner_iters": 1,
+      "trials": 30,
+      "rayon_threads": null,
+      "ns_per_op": {
+        "min": 47341500.0,
+        "median": 51430104.5,
+        "p95": 64182375.0,
+        "mad": 1705583.5
+      },
+      "checksum": 10292,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "sim.selfplay.6max",
+      "band": "macro",
+      "inner_iters": 200,
+      "trials": 5,
+      "rayon_threads": null,
+      "ns_per_op": {
+        "min": 107622.5,
+        "median": 125063.54,
+        "p95": 142692.085,
+        "mad": 17252.289999999994
+      },
+      "checksum": 80215,
+      "status": "ok",
+      "message": null
+    }
+  ]
+}

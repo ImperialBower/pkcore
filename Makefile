@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf perf-native perf-report perf-profile perf-check
+.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf perf-native perf-report perf-profile perf-check perf-build-all perf-native-all perf-sweep
 
 # Default target
 default: ayce
@@ -347,9 +347,31 @@ perf-profile: $(PERF_BIN)
 	fi
 	samply record $(PERF_BIN) run $(WORKLOAD) --trials 50 --stdout
 
+PERF_BIN_ALL := perf/target/release/perf
+
+# Build the perf runner with every workload feature enabled.
+perf-build-all:
+	cd perf && cargo build --release --features "equity sim"
+
+# Measure everything, all features on. Labelled so it sits alongside the
+# pure-kernel run from `make perf-native` rather than overwriting it.
+perf-native-all: perf-build-all
+	PKCORE_VERSION=$(PKCORE_VERSION) $(PERF_BIN_ALL) run \
+		--label all-features \
+		--utc "$$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+# Rayon pool-size sweep over the parallel workloads (design Section 5).
+perf-sweep: perf-build-all
+	PKCORE_VERSION=$(PKCORE_VERSION) $(PERF_BIN_ALL) run \
+		--sweep --label sweep \
+		--utc "$$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
 # Lint and test the perf crate. It sits outside `make ayce`, so this keeps it
 # from rotting.
 perf-check:
 	cd perf && cargo fmt --check
 	cd perf && cargo clippy --all-targets -- -D warnings
+	cd perf && cargo clippy --all-targets --features "equity sim" -- -D warnings
+	cd perf && cargo build --bins --features "equity sim"
 	cd perf && cargo test
+	cd perf && cargo test --features "equity sim"

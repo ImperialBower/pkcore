@@ -14,11 +14,13 @@
 //!   --iters N        override the per-workload inner iteration count
 //!   --stdout         print JSON instead of writing a file
 //!   --label NAME     tag the results file, so same-day runs do not collide
+//!   --sweep          measure each workload at 1, 4 and 8 rayon threads
 
 use pkcore_perf::catalog::catalog;
 use pkcore_perf::report::render;
 use pkcore_perf::results::{Results, RunMeta};
 use pkcore_perf::runner::{Sample, default_trials, measure};
+use pkcore_perf::sweep::sweep;
 use std::process::ExitCode;
 
 const DEFAULT_OUT: &str = "docs/perf/results";
@@ -69,6 +71,7 @@ fn run(args: &[String]) -> ExitCode {
     let trials_override: Option<u32> = flag(args, "--trials").and_then(|v| v.parse().ok());
     let iters_override: Option<u32> = flag(args, "--iters").and_then(|v| v.parse().ok());
     let to_stdout = args.iter().any(|a| a == "--stdout");
+    let do_sweep = args.iter().any(|a| a == "--sweep");
 
     let selected: Vec<_> = catalog()
         .into_iter()
@@ -86,8 +89,13 @@ fn run(args: &[String]) -> ExitCode {
         let trials = trials_override.unwrap_or(default_count);
         let iters = iters_override.unwrap_or(workload.inner_iters);
 
-        eprintln!("measuring {} ({trials} trials x {iters})", workload.name);
-        samples.push(measure(workload, warmup, trials, iters));
+        if do_sweep {
+            eprintln!("sweeping {} ({trials} trials x {iters})", workload.name);
+            samples.extend(sweep(workload, warmup, trials, iters));
+        } else {
+            eprintln!("measuring {} ({trials} trials x {iters})", workload.name);
+            samples.push(measure(workload, warmup, trials, iters));
+        }
     }
 
     let mut run = RunMeta::capture("native", vec![], None, utc);
@@ -174,10 +182,17 @@ fn summarize(results: &Results) {
     for sample in &results.samples {
         match sample.ns_per_op {
             Some(stats) => println!(
-                "{:<32} {:>10.2} ns/op (min {:.2}, p95 {:.2}, MAD {:.2})",
-                sample.name, stats.median, stats.min, stats.p95, stats.mad
+                "{:<32} {:>4} {:>12.2} ns/op (min {:.2}, p95 {:.2}, MAD {:.2})",
+                sample.name,
+                sample
+                    .rayon_threads
+                    .map_or_else(|| "-".to_string(), |t| format!("{t}t")),
+                stats.median,
+                stats.min,
+                stats.p95,
+                stats.mad
             ),
-            None => println!("{:<32} {:?}", sample.name, sample.status),
+            None => println!("{:<32} {:>4} {:?}", sample.name, "-", sample.status),
         }
     }
 }
