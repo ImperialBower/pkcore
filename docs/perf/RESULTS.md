@@ -10,10 +10,10 @@ Figures are nanoseconds per operation. `min` is the best estimator of true cost 
 **pkcore:** 0.3.2 · **rustc 1.97.1 (8bab26f4f 2026-07-14)**  
 **Taken:** 2026-07-31T15:16:17Z
 
-| Workload | Band | median | min | p95 | MAD | checksum | status |
-|---|---|---:|---:|---:|---:|---|---|
-| `eval.five.hand_rank_value` | Nano | 12.99 | 12.84 | 17.58 | 0.11 | `512044479` | ok |
-| `eval.seven.hand_rank_value` | Nano | 755.68 | 729.61 | 931.19 | 21.97 | `25628021` | ok |
-| `eval.five.or_rank_bits` | Nano | 1.95 | 1.95 | 1.98 | 0.00 | `546925699` | ok |
-| `parse.five.from_str` | Nano | 506.10 | 504.40 | 540.13 | 1.45 | `54803507` | ok |
+| Workload | Band | threads | median | min | p95 | MAD | checksum | status |
+|---|---|---:|---:|---:|---:|---:|---|---|
+| `eval.five.hand_rank_value` | Nano | — | 12.99 | 12.84 | 17.58 | 0.11 | `512044479` | ok |
+| `eval.seven.hand_rank_value` | Nano | — | 755.68 | 729.61 | 931.19 | 21.97 | `25628021` | ok |
+| `eval.five.or_rank_bits` | Nano | — | 1.95 | 1.95 | 1.98 | 0.00 | `546925699` | ok |
+| `parse.five.from_str` | Nano | — | 506.10 | 504.40 | 540.13 | 1.45 | `54803507` | ok |
 

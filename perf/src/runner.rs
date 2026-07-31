@@ -34,6 +34,11 @@ pub struct Sample {
     pub inner_iters: u32,
     /// Number of timed trials (excludes warm-up).
     pub trials: u32,
+    /// Rayon pool size this sample was measured under, where the driver set
+    /// one. `None` means the workload is not parallel, or the pool was left at
+    /// rayon's default.
+    #[serde(default)]
+    pub rayon_threads: Option<usize>,
     /// Nanoseconds per operation. `None` unless `status` is [`Status::Ok`].
     pub ns_per_op: Option<Stats>,
     /// The workload's integer checksum. `None` unless `status` is
@@ -65,10 +70,7 @@ pub fn default_trials(band: Band) -> (u32, u32) {
     }
 }
 
-/// Measures one workload.
-///
-/// Never panics and never propagates an error: a failed setup becomes a
-/// [`Status::Error`] sample so one bad workload cannot abort a whole run.
+/// Measures one workload, leaving the rayon pool size unrecorded.
 ///
 /// # Examples
 ///
@@ -78,16 +80,45 @@ pub fn default_trials(band: Band) -> (u32, u32) {
 ///
 /// let sample = measure(&counting_workload(), 1, 3, 100);
 /// assert_eq!(sample.status, Status::Ok);
-/// assert_eq!(sample.checksum, Some(4950));
+/// assert_eq!(sample.rayon_threads, None);
+/// ```
+#[must_use]
+pub fn measure(workload: &Workload, warmup: u32, trials: u32, inner_iters: u32) -> Sample {
+    measure_labeled(workload, warmup, trials, inner_iters, None)
+}
+
+/// Measures one workload, recording the rayon pool size it ran under.
+///
+/// The caller is responsible for actually installing that pool — this only
+/// records the number, so that a sweep's samples are self-describing.
+///
+/// Never panics and never propagates an error: a failed setup becomes a
+/// [`Status::Error`] sample so one bad workload cannot abort a whole run.
+///
+/// # Examples
+///
+/// ```
+/// use pkcore_perf::runner::{Status, measure_labeled};
+/// use pkcore_perf::workload::counting_workload;
+///
+/// let sample = measure_labeled(&counting_workload(), 1, 3, 100, Some(4));
+/// assert_eq!(sample.rayon_threads, Some(4));
 /// ```
 #[must_use]
 #[allow(clippy::cast_precision_loss)] // nanos -> f64; timings never reach 2^53
-pub fn measure(workload: &Workload, warmup: u32, trials: u32, inner_iters: u32) -> Sample {
+pub fn measure_labeled(
+    workload: &Workload,
+    warmup: u32,
+    trials: u32,
+    inner_iters: u32,
+    rayon_threads: Option<usize>,
+) -> Sample {
     let base = Sample {
         name: workload.name.to_string(),
         band: workload.band,
         inner_iters,
         trials,
+        rayon_threads,
         ns_per_op: None,
         checksum: None,
         status: Status::Ok,
@@ -226,5 +257,33 @@ mod perf__runner_tests {
         let json = serde_json::to_string(&sample).expect("serializes");
         let back: Sample = serde_json::from_str(&json).expect("deserializes");
         assert_eq!(sample, back);
+    }
+
+    #[test]
+    fn measure_labeled_records_the_thread_count() {
+        let sample = measure_labeled(&counting_workload(), 1, 3, 100, Some(4));
+        assert_eq!(sample.rayon_threads, Some(4));
+        assert_eq!(sample.status, Status::Ok);
+    }
+
+    #[test]
+    fn measure_leaves_the_thread_count_unset() {
+        let sample = measure(&counting_workload(), 1, 3, 100);
+        assert_eq!(sample.rayon_threads, None);
+    }
+
+    /// Phase 1 wrote result files with no `rayon_threads` key. Those files are
+    /// committed and `perf report` still has to read them.
+    #[test]
+    fn sample_deserializes_without_a_thread_count() {
+        let json = r#"{
+            "name": "eval.five.or_rank_bits", "band": "nano",
+            "inner_iters": 1000, "trials": 3,
+            "ns_per_op": {"min": 1.9, "median": 2.0, "p95": 2.1, "mad": 0.0},
+            "checksum": 42, "status": "ok", "message": null
+        }"#;
+        let sample: Sample = serde_json::from_str(json).expect("deserializes");
+        assert_eq!(sample.rayon_threads, None);
+        assert_eq!(sample.checksum, Some(42));
     }
 }

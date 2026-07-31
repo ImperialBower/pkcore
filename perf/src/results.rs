@@ -80,6 +80,11 @@ pub struct RunMeta {
     pub features: Vec<String>,
     /// Rayon pool size, where the run configured one.
     pub rayon_threads: Option<usize>,
+    /// Optional run label, e.g. `"post-fix"`. Distinguishes two runs taken on
+    /// the same day for the same target, which would otherwise collide on
+    /// filename and silently overwrite one another.
+    #[serde(default)]
+    pub label: Option<String>,
 }
 
 impl RunMeta {
@@ -108,6 +113,7 @@ impl RunMeta {
             pkcore: std::env::var("PKCORE_VERSION").unwrap_or_else(|_| "unknown".to_string()),
             features,
             rayon_threads,
+            label: None,
         }
     }
 }
@@ -127,27 +133,33 @@ impl Results {
     /// Current schema version.
     pub const SCHEMA: u32 = 1;
 
-    /// The conventional filename for this run: `<target>-<date>.json`.
+    /// The conventional filename for this run: `<target>[-<label>]-<date>.json`.
     ///
     /// The time-of-day portion of `utc` is dropped so the name stays free of
-    /// colons, which are not portable in filenames.
+    /// colons, which are not portable in filenames. Without a label, two runs
+    /// on the same day for the same target collide — pass one whenever a run
+    /// is meant to sit alongside another rather than replace it.
     ///
     /// # Examples
     ///
     /// ```
     /// use pkcore_perf::results::{Results, RunMeta};
     ///
-    /// let results = Results {
+    /// let mut results = Results {
     ///     schema: Results::SCHEMA,
-    ///     run: RunMeta::capture("native", vec![], None, "2026-07-30T18:04:11Z".into()),
+    ///     run: RunMeta::capture("native", vec![], None, "2026-07-31T18:04:11Z".into()),
     ///     samples: vec![],
     /// };
-    /// assert!(results.filename().ends_with("-2026-07-30.json"));
+    /// results.run.label = Some("post-fix".into());
+    /// assert!(results.filename().contains("post-fix"));
     /// ```
     #[must_use]
     pub fn filename(&self) -> String {
         let date = self.run.utc.split('T').next().unwrap_or("undated");
-        format!("{}-{date}.json", self.run.target)
+        match &self.run.label {
+            Some(label) => format!("{}-{label}-{date}.json", self.run.target),
+            None => format!("{}-{date}.json", self.run.target),
+        }
     }
 }
 
@@ -201,5 +213,32 @@ mod perf__results_tests {
         assert!(meta.rustc.starts_with("rustc"));
         assert_eq!(meta.features, vec!["equity".to_string()]);
         assert_eq!(meta.rayon_threads, Some(8));
+    }
+
+    #[test]
+    fn filename_includes_the_label_when_present() {
+        let mut results = Results {
+            schema: Results::SCHEMA,
+            run: RunMeta::capture("native", vec![], None, "2026-07-31T18:04:11Z".to_string()),
+            samples: vec![],
+        };
+        results.run.label = Some("post-fix".to_string());
+
+        let name = results.filename();
+        assert!(name.contains("post-fix"), "got {name}");
+        assert!(name.ends_with("-2026-07-31.json"), "got {name}");
+    }
+
+    #[test]
+    fn filename_omits_the_label_when_absent() {
+        let results = Results {
+            schema: Results::SCHEMA,
+            run: RunMeta::capture("native", vec![], None, "2026-07-31T18:04:11Z".to_string()),
+            samples: vec![],
+        };
+        assert_eq!(
+            results.filename(),
+            format!("{}-2026-07-31.json", crate::target_triple())
+        );
     }
 }

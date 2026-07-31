@@ -13,6 +13,7 @@
 //!   --trials N       override the per-band trial count
 //!   --iters N        override the per-workload inner iteration count
 //!   --stdout         print JSON instead of writing a file
+//!   --label NAME     tag the results file, so same-day runs do not collide
 
 use pkcore_perf::catalog::catalog;
 use pkcore_perf::report::render;
@@ -64,6 +65,7 @@ fn run(args: &[String]) -> ExitCode {
     let filter = args.first().filter(|a| !a.starts_with("--")).cloned();
     let out_dir = flag(args, "--out").unwrap_or(DEFAULT_OUT).to_string();
     let utc = flag(args, "--utc").unwrap_or("1970-01-01T00:00:00Z").to_string();
+    let label = flag(args, "--label").map(str::to_string);
     let trials_override: Option<u32> = flag(args, "--trials").and_then(|v| v.parse().ok());
     let iters_override: Option<u32> = flag(args, "--iters").and_then(|v| v.parse().ok());
     let to_stdout = args.iter().any(|a| a == "--stdout");
@@ -88,9 +90,12 @@ fn run(args: &[String]) -> ExitCode {
         samples.push(measure(workload, warmup, trials, iters));
     }
 
+    let mut run = RunMeta::capture("native", vec![], None, utc);
+    run.label = label;
+
     let results = Results {
         schema: Results::SCHEMA,
-        run: RunMeta::capture("native", vec![], None, utc),
+        run,
         samples,
     };
 

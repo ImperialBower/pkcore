@@ -55,26 +55,27 @@ pub fn render(runs: &[Results]) -> String {
         let _ = writeln!(out);
         let _ = writeln!(
             out,
-            "| Workload | Band | median | min | p95 | MAD | checksum | status |"
+            "| Workload | Band | threads | median | min | p95 | MAD | checksum | status |"
         );
-        let _ = writeln!(out, "|---|---|---:|---:|---:|---:|---|---|");
+        let _ = writeln!(out, "|---|---|---:|---:|---:|---:|---:|---|---|");
 
         for sample in &run.samples {
             let checksum = sample.checksum.map_or_else(|| "—".to_string(), |c| format!("`{c}`"));
             let status = format!("{:?}", sample.status).to_lowercase();
+            let threads = sample.rayon_threads.map_or_else(|| "—".to_string(), |t| t.to_string());
 
             match sample.ns_per_op {
                 Some(stats) => {
                     let _ = writeln!(
                         out,
-                        "| `{}` | {:?} | {:.2} | {:.2} | {:.2} | {:.2} | {checksum} | {status} |",
+                        "| `{}` | {:?} | {threads} | {:.2} | {:.2} | {:.2} | {:.2} | {checksum} | {status} |",
                         sample.name, sample.band, stats.median, stats.min, stats.p95, stats.mad
                     );
                 }
                 None => {
                     let _ = writeln!(
                         out,
-                        "| `{}` | {:?} | — | — | — | — | {checksum} | {status} |",
+                        "| `{}` | {:?} | {threads} | — | — | — | — | {checksum} | {status} |",
                         sample.name, sample.band
                     );
                 }
