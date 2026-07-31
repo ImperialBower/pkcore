@@ -6,6 +6,7 @@
 
 use crate::workload::{Band, HotFn, PerfError, Workload};
 use itertools::Itertools;
+use pkcore::analysis::eval::Eval;
 use pkcore::arrays::HandRanker;
 use pkcore::prelude::{Card, Deck, Five, FromStr, Seven};
 
@@ -93,6 +94,21 @@ fn make_seven_hand_rank_value() -> Result<HotFn, PerfError> {
     }))
 }
 
+/// `Eval::from(Seven)` — the call the equity engine makes per showdown, which
+/// goes through `hand_rank_value_and_hand` rather than the rank-only fast path
+/// that `eval.seven.hand_rank_value` measures. The gap between the two
+/// workloads is the cost of also materialising the winning five-card hand.
+fn make_seven_eval() -> Result<HotFn, PerfError> {
+    let hands = seven_sample()?;
+    Ok(Box::new(move |iters: u32| {
+        let mut acc: u64 = 0;
+        for i in 0..iters as usize {
+            acc = acc.wrapping_add(u64::from(Eval::from(hands[i & MASK]).hand_rank.value));
+        }
+        acc
+    }))
+}
+
 fn make_five_or_rank_bits() -> Result<HotFn, PerfError> {
     let hands = five_sample()?;
     Ok(Box::new(move |iters: u32| {
@@ -142,15 +158,15 @@ fn make_five_from_str() -> Result<HotFn, PerfError> {
 
 /// Every workload pkcore currently exposes for measurement.
 ///
-/// Phase 1 returns four nano-band workloads, all pure kernel.
+/// Phase 1 returns four nano-band workloads, all pure kernel. Phase 2 adds
+/// `eval.seven.eval`, the equity engine's real showdown call.
 ///
 /// # Examples
 ///
 /// ```
 /// use pkcore_perf::catalog::catalog;
 ///
-/// assert_eq!(catalog().len(), 4);
-/// assert!(catalog().iter().all(|w| w.features.is_empty()));
+/// assert!(catalog().iter().any(|w| w.name == "eval.seven.eval"));
 /// ```
 #[must_use]
 pub fn catalog() -> Vec<Workload> {
@@ -168,6 +184,13 @@ pub fn catalog() -> Vec<Workload> {
             inner_iters: 10_000,
             features: &[],
             make: make_seven_hand_rank_value,
+        },
+        Workload {
+            name: "eval.seven.eval",
+            band: Band::Nano,
+            inner_iters: 10_000,
+            features: &[],
+            make: make_seven_eval,
         },
         Workload {
             name: "eval.five.or_rank_bits",
@@ -193,17 +216,48 @@ mod perf__catalog_tests {
     use crate::runner::{Status, measure};
 
     #[test]
-    fn catalog_contains_the_four_nano_workloads() {
-        let names: Vec<&str> = catalog().iter().map(|w| w.name).collect();
+    fn catalog_contains_the_nano_workloads_in_order() {
+        let nano: Vec<&str> = catalog()
+            .iter()
+            .filter(|w| w.band == Band::Nano)
+            .map(|w| w.name)
+            .collect();
         assert_eq!(
-            names,
+            nano,
             vec![
                 "eval.five.hand_rank_value",
                 "eval.seven.hand_rank_value",
+                "eval.seven.eval",
                 "eval.five.or_rank_bits",
                 "parse.five.from_str",
             ]
         );
+    }
+
+    #[test]
+    fn catalog_includes_the_equity_engines_real_eval_path() {
+        let names: Vec<&str> = catalog().iter().map(|w| w.name).collect();
+        assert!(
+            names.contains(&"eval.seven.eval"),
+            "eval.seven.eval missing; got {names:?}"
+        );
+    }
+
+    /// `Eval::from(Seven)` must agree with `Seven::hand_rank_value` on the same
+    /// hands — if it did not, the two workloads would not be comparable and the
+    /// ratio between them would be meaningless.
+    #[test]
+    fn seven_eval_agrees_with_seven_hand_rank_value() {
+        use pkcore::analysis::eval::Eval;
+        use pkcore::arrays::HandRanker;
+
+        for hand in seven_sample().expect("sample builds").iter().take(64) {
+            assert_eq!(
+                Eval::from(*hand).hand_rank.value,
+                hand.hand_rank_value(),
+                "disagreement on {hand}"
+            );
+        }
     }
 
     #[test]
