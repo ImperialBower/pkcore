@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "run": {
+    "utc": "2026-07-31T13:26:39Z",
+    "target": "aarch64-apple-darwin",
+    "runtime": "native",
+    "host": {
+      "cpu": "Apple M1",
+      "cores": 8,
+      "p_cores": 4,
+      "e_cores": 4
+    },
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+    "pkcore": "0.3.2",
+    "features": [],
+    "rayon_threads": null
+  },
+  "samples": [
+    {
+      "name": "eval.five.hand_rank_value",
+      "band": "nano",
+      "inner_iters": 100000,
+      "trials": 30,
+      "ns_per_op": {
+        "min": 101.85,
+        "median": 102.61458,
+        "p95": 103.05042,
+        "mad": 0.07999500000000381
+      },
+      "checksum": 512044479,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.seven.hand_rank_value",
+      "band": "nano",
+      "inner_iters": 10000,
+      "trials": 30,
+      "ns_per_op": {
+        "min": 2058.3084,
+        "median": 2061.91875,
+        "p95": 2069.1125,
+        "mad": 2.887499999999818
+      },
+      "checksum": 25628021,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.five.or_rank_bits",
+      "band": "nano",
+      "inner_iters": 100000,
+      "trials": 30,
+      "ns_per_op": {
+        "min": 1.94417,
+        "median": 1.949165,
+        "p95": 1.97417,
+        "mad": 0.0012550000000000061
+      },
+      "checksum": 546925699,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "parse.five.from_str",
+      "band": "nano",
+      "inner_iters": 10000,
+      "trials": 30,
+      "ns_per_op": {
+        "min": 499.9083,
+        "median": 500.68335,
+        "p95": 505.5583,
+        "mad": 0.512500000000017
+      },
+      "checksum": 54803507,
+      "status": "ok",
+      "message": null
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf
+.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf perf-native perf-report perf-profile perf-check
 
 # Default target
 default: ayce
@@ -317,3 +317,39 @@ coverage-open: coverage
 		exit 1; \
 	fi
 
+
+# ---------------------------------------------------------------------------
+# Performance harness (docs/superpowers/specs/2026-07-30-kernel-performance-
+# harness-design.md). The perf crate is its own workspace root, so these
+# targets cd into perf/ rather than using the root cargo invocation.
+# ---------------------------------------------------------------------------
+PKCORE_VERSION := $(shell grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+PERF_BIN := perf/target/release/perf
+
+$(PERF_BIN):
+	cd perf && cargo build --release
+
+# Measure the pure kernel on this host and write a results file.
+perf-native: $(PERF_BIN)
+	PKCORE_VERSION=$(PKCORE_VERSION) $(PERF_BIN) run \
+		--utc "$$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+# Regenerate docs/perf/RESULTS.md from every committed results file.
+perf-report: $(PERF_BIN)
+	$(PERF_BIN) report
+
+# Profile one workload with samply. Requires: cargo install samply
+# Usage: make perf-profile WORKLOAD=eval.seven.hand_rank_value
+perf-profile: $(PERF_BIN)
+	@if [ -z "$(WORKLOAD)" ]; then \
+		echo "usage: make perf-profile WORKLOAD=<name>  (see: $(PERF_BIN) list)"; \
+		exit 1; \
+	fi
+	samply record $(PERF_BIN) run $(WORKLOAD) --trials 50 --stdout
+
+# Lint and test the perf crate. It sits outside `make ayce`, so this keeps it
+# from rotting.
+perf-check:
+	cd perf && cargo fmt --check
+	cd perf && cargo clippy --all-targets -- -D warnings
+	cd perf && cargo test
