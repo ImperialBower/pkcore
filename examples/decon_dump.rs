@@ -12,6 +12,21 @@
 //! cargo run --example decon_dump --features equity,bot-profiles,hand-histories,player-stats
 //! ```
 
+// This file is one long series of data-shaping blocks: each extractor reads a
+// behavior out of the library and writes it as JSON. The per-epic functions
+// are necessarily long because the data they emit is long, and splitting them
+// further would scatter a single vector's definition across several places.
+// The numeric casts are all on small, bounded values (seat indices, sample
+// counts) feeding display or ratio arithmetic.
+#![allow(
+    clippy::too_many_lines,
+    clippy::cast_possible_truncation,
+    clippy::cast_precision_loss,
+    clippy::needless_pass_by_value,
+    clippy::single_match_else,
+    clippy::format_push_string
+)]
+
 use pkcore::SuitShift;
 use pkcore::analysis::class::HandRankClass;
 use pkcore::analysis::equity::{EquityOptions, EquityRequest, PlayerSpec};
