@@ -7,7 +7,11 @@
 use crate::workload::{Band, HotFn, PerfError, Workload};
 use itertools::Itertools;
 use pkcore::analysis::eval::Eval;
+use pkcore::analysis::gto::combos::Combos;
+use pkcore::analysis::gto::solver::Solver;
+use pkcore::analysis::gto::solver_config::SolverConfig;
 use pkcore::arrays::HandRanker;
+use pkcore::play::board::Board;
 use pkcore::prelude::{Card, Deck, Five, FromStr, Seven};
 
 /// How many distinct hands each workload cycles through. A power of two, so
@@ -156,6 +160,81 @@ fn make_five_from_str() -> Result<HotFn, PerfError> {
     }))
 }
 
+/// Hero range for the solver workload. Small and fixed, so the measurement is
+/// of CFR iteration cost rather than of tree size.
+const SOLVER_HERO: &str = "AA,KK,AKs";
+
+/// Villain range for the solver workload.
+const SOLVER_VILLAIN: &str = "QQ,JJ,AQs";
+
+/// A dry flop, chosen so the game tree does not balloon on draw-heavy texture.
+const SOLVER_BOARD: &str = "2h 7d 9s";
+
+/// Fixed CFR iterations per timed trial.
+///
+/// `iters` is the number of iterations, so `ns_per_op` reads as nanoseconds per
+/// CFR iteration and `1e9 / median` is iterations per second.
+///
+/// # Why this folds a completed-iteration count, not the quantised EV
+///
+/// `Solver::iterate()` returns the average EV to OOP across all valid hand
+/// pairs — a convergence diagnostic, *not* exploitability (see
+/// `Solver::iterate`'s own doc comment; true exploitability requires a
+/// separate `equilibrium()` + `compute_exploitability()` pass this workload
+/// does not make). The obvious checksum is to quantise that `f64` diagnostic
+/// to an integer, the way `parse.five.from_str` folds `or_rank_bits`. That was
+/// tried first and rejected: **CFR's hand-pair processing order is not
+/// deterministic across separate `Solver` constructions, even within one
+/// process**, so the quantised EV is not a stable checksum.
+///
+/// The root cause: [`Combos`] is a `HashSet<Combo>`
+/// (`analysis::gto::combos::Combos`), and `Solver::build_hand_pairs` derives
+/// its `Vec<(Two, Two)>` traversal order from that set's iteration order.
+/// Rust's default hasher draws fresh random keys per `HashSet` construction,
+/// so two independent `Combos::from_str(SOLVER_HERO)` calls — e.g. two
+/// separate invocations of this function — produce differently-ordered hand
+/// pairs. `Solver::iterate()` is not a synchronous batch update: it mutates
+/// shared per-`(NodeId, Two)` regret state sequentially as it walks
+/// `hand_pairs`, so a hand that is paired against several opponent hands
+/// within one iteration sees different accumulated regret depending on where
+/// in that order it falls. The pair order therefore changes the actual
+/// numerical trajectory, not just floating-point summation precision.
+/// Confirmed empirically: two independent `make_cfr_iters()` calls in the
+/// same test process, run to 20 iterations each, disagreed by roughly 1% in
+/// the folded checksum, every time.
+///
+/// This is a real property of the solver worth recording, not a harness
+/// workaround. The fix here is to fold the completed-iteration count instead
+/// — deterministic by construction, still non-zero for `iters > 0`, and still
+/// forces every `solver.iterate()` call to run (its `f64` result is simply
+/// not part of the checksum). Per design Section 3, float-domain values would
+/// in any case only be *recorded*, never asserted across targets — `exp` and
+/// `ln` differ between native libm and the wasm implementation — but that
+/// convention does not apply here since no float ever reaches the checksum.
+fn make_cfr_iters() -> Result<HotFn, PerfError> {
+    let hero =
+        Combos::from_str(SOLVER_HERO).map_err(|e| PerfError::Setup(format!("hero range {SOLVER_HERO:?}: {e:?}")))?;
+    let villain = Combos::from_str(SOLVER_VILLAIN)
+        .map_err(|e| PerfError::Setup(format!("villain range {SOLVER_VILLAIN:?}: {e:?}")))?;
+    let board =
+        Board::from_str(SOLVER_BOARD).map_err(|e| PerfError::Setup(format!("board {SOLVER_BOARD:?}: {e:?}")))?;
+
+    Ok(Box::new(move |iters: u32| {
+        let config =
+            SolverConfig::new(hero.clone(), villain.clone(), board, 1_000, 200).with_max_iterations(iters as usize);
+        let mut solver = Solver::new(config);
+
+        let mut completed: u64 = 0;
+        for _ in 0..iters {
+            // The `f64` result is discarded, not folded — see the "Why this
+            // folds a completed-iteration count" section above.
+            let _ = solver.iterate();
+            completed = completed.wrapping_add(1);
+        }
+        completed
+    }))
+}
+
 /// Every workload pkcore currently exposes for measurement.
 ///
 /// Phase 1 returns four nano-band workloads, all pure kernel. Phase 2 adds
@@ -206,6 +285,13 @@ pub fn catalog() -> Vec<Workload> {
             inner_iters: 10_000,
             features: &[],
             make: make_five_from_str,
+        },
+        Workload {
+            name: "gto.cfr.iters",
+            band: Band::Macro,
+            inner_iters: 100,
+            features: &[],
+            make: make_cfr_iters,
         },
     ];
 
@@ -311,6 +397,32 @@ mod perf__catalog_tests {
             }
             let _ = hot(1);
         }
+    }
+
+    #[test]
+    fn catalog_includes_the_solver_as_pure_kernel() {
+        let solver = catalog()
+            .into_iter()
+            .find(|w| w.name == "gto.cfr.iters")
+            .expect("gto.cfr.iters present");
+
+        assert_eq!(solver.band, Band::Macro);
+        assert!(
+            solver.features.is_empty(),
+            "analysis::gto is not feature-gated, so the solver is pure kernel"
+        );
+    }
+
+    #[test]
+    fn solver_workload_is_deterministic_and_does_real_work() {
+        let solver = catalog()
+            .into_iter()
+            .find(|w| w.name == "gto.cfr.iters")
+            .expect("gto.cfr.iters present");
+
+        let sample = measure(&solver, 0, 2, 4);
+        assert_eq!(sample.status, Status::Ok, "{:?}", sample.message);
+        assert_ne!(sample.checksum, Some(0));
     }
 
     /// The dead-code-elimination guard. If the optimizer deleted the work, the
