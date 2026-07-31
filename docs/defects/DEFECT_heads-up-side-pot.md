@@ -1,6 +1,6 @@
 # Defect: Heads-Up Showdown Splits Full Pot, Ignoring Side Pots and Uncalled Bets
 
-**File:** `docs/DEFECT_heads-up-side-pot.md`
+**File:** `docs/defects/DEFECT_heads-up-side-pot.md`
 **Date:** 2026-04-27
 **Severity:** Critical
 **Status:** Fixed (uncommitted on `splitter` branch)

@@ -27,7 +27,7 @@ commitments to be silently excluded from each other's pot layers.
 Both bugs are fixed in this release.
 
 Full diagnosis, root-cause analysis, and the discovery sequence are
-recorded in [`docs/DEFECT_heads-up-side-pot.md`](../DEFECT_heads-up-side-pot.md);
+recorded in [`docs/defects/DEFECT_heads-up-side-pot.md`](../DEFECT_heads-up-side-pot.md);
 the broader process insights are captured in the new
 [`docs/LESSONS_LEARNED.md`](../LESSONS_LEARNED.md).
 
@@ -200,7 +200,7 @@ the public API; documented here for reviewers.
 
 ### New docs
 
-- **[`docs/DEFECT_heads-up-side-pot.md`](../DEFECT_heads-up-side-pot.md)** —
+- **[`docs/defects/DEFECT_heads-up-side-pot.md`](../DEFECT_heads-up-side-pot.md)** —
   full defect report: symptom (with the user-supplied YAML), the
   correct-distribution math, root cause for both bugs, the as-implemented
   fix, tests added, coverage gap analysis, prevention notes,
@@ -289,7 +289,7 @@ plus the `rig_deck` helper),
 assertion).
 
 **Documentation (4 files, 2 new + 1 prior + 1 rename):**
-`docs/DEFECT_heads-up-side-pot.md` *(new, +391)*,
+`docs/defects/DEFECT_heads-up-side-pot.md` *(new, +391)*,
 `docs/LESSONS_LEARNED.md` *(new, +102)*,
 `docs/RELEASE_0.0.51.md` *(prior release notes, +594)*,
 `docs/ANALYSIS_Player_Tyoes.md → docs/ANALYSIS_Player_Types.md`

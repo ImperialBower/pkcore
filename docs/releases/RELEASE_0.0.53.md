@@ -173,7 +173,7 @@ without needing a side index.
 
 | File | What changed |
 |------|-------------|
-| `docs/DEFECT_heads-up-side-pot.md` | "Follow-ups" section rewritten to reflect that all three originally-deferred coverage gaps (cell-based parallel tests, three-way-asymmetric tied edge case, downstream audit) closed in `v0.0.52` before tagging. |
+| `docs/defects/DEFECT_heads-up-side-pot.md` | "Follow-ups" section rewritten to reflect that all three originally-deferred coverage gaps (cell-based parallel tests, three-way-asymmetric tied edge case, downstream audit) closed in `v0.0.52` before tagging. |
 
 ---
 
@@ -200,7 +200,7 @@ without needing a side index.
 `data/hands/pkarena0-session_2026-04-28.yaml` *(new — user-reported pkarena0 session that surfaced the `set_blinds` mid-hand defect)*
 
 **Docs (3 files, +565 / −9 lines):**
-`docs/RELEASE_0.0.52.md` *(new)*, `docs/RELEASE_AUDIT_0.0.52.md` *(new)*, `docs/DEFECT_heads-up-side-pot.md` (+28 / −9)
+`docs/RELEASE_0.0.52.md` *(new)*, `docs/RELEASE_AUDIT_0.0.52.md` *(new)*, `docs/defects/DEFECT_heads-up-side-pot.md` (+28 / −9)
 
 **Manifests (1 file):**
 `Cargo.toml` (version bump 0.0.52 → 0.0.53)

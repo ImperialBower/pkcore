@@ -36,6 +36,15 @@ marathon_failure.yaml
 
 graphify-out/
 .claude/dog-mode
+.claude/scheduled_tasks.lock
+
+# The global gitignore excludes `.claude/` wholesale, which silently drops this
+# repo's project-local skills (defect-report, audit-release, release-notes).
+# They encode this project's conventions and belong in version control, so
+# re-include the directory — git cannot re-include a path whose parent
+# directory is excluded, hence the directory line before the contents line.
+!.claude/
+!.claude/skills/**
 
 # PokerBench dataset (EPIC-43): downloaded at eval time, not committed.
 # Tiny vendored samples live under src/pokerbench/fixtures/ instead.

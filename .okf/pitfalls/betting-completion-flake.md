@@ -34,4 +34,4 @@ heads-up hands via `SimTable::run_n_hands` with **unseeded**
 
 # Citations
 
-[1] [DEFECT_exploit_smoke_flake](https://github.com/ImperialBower/pkcore/blob/main/docs/DEFECT_exploit_smoke_flake.md)
+[1] [DEFECT_exploit_smoke_flake](https://github.com/ImperialBower/pkcore/blob/main/docs/defects/DEFECT_exploit_smoke_flake.md)
