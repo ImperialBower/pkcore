@@ -7,6 +7,7 @@
 pub mod catalog;
 #[cfg(feature = "equity")]
 pub mod catalog_equity;
+pub mod catalog_sim;
 pub mod report;
 pub mod results;
 pub mod runner;

@@ -212,6 +212,8 @@ pub fn catalog() -> Vec<Workload> {
     #[cfg(feature = "equity")]
     workloads.extend(crate::catalog_equity::equity_workloads());
 
+    workloads.extend(crate::catalog_sim::sim_workloads());
+
     workloads
 }
 
