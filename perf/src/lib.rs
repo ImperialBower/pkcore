@@ -9,6 +9,7 @@ pub mod report;
 pub mod results;
 pub mod runner;
 pub mod stats;
+pub mod sweep;
 pub mod workload;
 
 /// The target triple this binary was compiled for, captured at build time.

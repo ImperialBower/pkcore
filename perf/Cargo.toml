@@ -13,6 +13,7 @@ description = "Cross-target performance harness for the pkcore domain kernel. No
 [dependencies]
 pkcore = { path = "..", default-features = false }
 itertools = "0.14"
+rayon = "1.11"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
