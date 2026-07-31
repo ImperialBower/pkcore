@@ -46,28 +46,62 @@ to publish:
   `Cards::frequency_weighted` heap allocations — 21 times per seven-card
   evaluation, all discarded. Watch for that shape recurring elsewhere.
 
-## Open questions from the Phase 1 baseline
+## Finding: `is_dealt()` dominates hand evaluation
 
-The first native run (`docs/perf/RESULTS.md`, 2026-07-31) raised two questions
-that reading the code suggests answers to but only a profile can settle. Both
-are candidates for the Phase 5 samply pass.
+The Phase 1 baseline (`docs/perf/RESULTS.md`, 2026-07-31) showed
+`eval.five.hand_rank_value` at ~102 ns against 1.95 ns for `or_rank_bits`.
+Profiling settled why, and the answer was not the one the code reading first
+suggested.
 
-1. **Why is `eval.five.hand_rank_value` ~102 ns when `or_rank_bits` is 1.95 ns?**
-   `Five::hand_rank_value` (`src/arrays/five.rs:215`) is already the
-   allocation-free fast path — no `sort().clean()`. The suspect is
-   `not_unique()` → `find_in_products()` (`src/arrays/five.rs:117`), a binary
-   search over a 4,888-entry `PRODUCTS` table: roughly twelve serially
-   dependent loads with an inherently unpredictable branch pattern. Canonical
-   Cactus-Kev replaces exactly this with a perfect-hash `find_fast()`. Only
-   paired-or-better hands take the path, which is consistent with the flat
-   `unique_rank` lookup being fast.
+**~95% of `Five::hand_rank_value` is a precondition check, not evaluation.**
+Decomposing the call against the same 1,024-hand sample:
 
-2. **`eval.seven.hand_rank_value` costs 20.15x `eval.five.hand_rank_value`.**
-   Seven-card evaluation tries 21 five-card permutations, so a 20.15x ratio
-   means the fast path is saving on the order of 4%. This is the first actual
-   measurement of the win claimed in
-   `docs/superpowers/plans/2026-06-11_SIDEQUEST_speedup_turneval.md`, which
-   recorded at the time that "no benchmarks exist to measure any of this".
+| Component | ns/op |
+|---|---:|
+| `is_dealt` | **98.31** |
+| &nbsp;&nbsp;`.are_unique` | 51.56 |
+| &nbsp;&nbsp;`.contains_blank` | 39.01 |
+| `is_flush` | 2.27 |
+| `unique_rank(or_rank_bits)` | 2.39 |
+| `not_unique` (binary search) | 23.12 |
+| `or_rank_bits` (floor) | 2.21 |
+| **`hand_rank_value` (total)** | **102.95** |
+
+The cause is that `Five` does not override two `Pile` trait defaults, and both
+allocate:
+
+- `are_unique()` (`src/lib.rs:724`) calls `self.to_vec()` — a heap allocation —
+  then does an O(n²) scan over the result.
+- `contains_blank()` → `contains()` (`src/lib.rs:793`) calls `self.to_vec()`
+  **again**.
+
+So every five-card evaluation pays two heap allocations and two frees before
+any evaluation happens. A samply profile of `eval.five.hand_rank_value`
+corroborates this independently: **48% of samples land in
+`libsystem_malloc.dylib`**, with a further 4.6% in `libsystem_platform`
+(memcpy/memset).
+
+This also explains the seven-card figure. `Seven::hand_rank_value`
+(`src/arrays/seven.rs:171`) is a plain loop over 21 five-card permutations with
+no algorithmic fast path, so it inherits the cost 21 times over: 21 x 98.31 =
+2,064 ns of pure precondition checking against a measured seven-card total of
+2,061.92 ns. That accounts for essentially the whole number, and it explains why
+the fast path in
+`docs/superpowers/plans/2026-06-11_SIDEQUEST_speedup_turneval.md` only bought
+~4% — it optimized around the edges of a function whose first statement
+allocates twice.
+
+The actual Cactus-Kev work is roughly 16 ns amortized.
+
+**A hypothesis that was wrong, recorded because it was expensive-looking and
+plausible:** `not_unique()` → `find_in_products()` (`src/arrays/five.rs:117`)
+is a binary search over a 4,888-entry `PRODUCTS` table where canonical
+Cactus-Kev uses a perfect hash. It measures 23.12 ns and only paired-or-better
+hands take it (50.6% of the sample), so it is ~12 ns amortized — real, but a
+distant second. Optimizing it first would have been effort spent on 12% of the
+problem.
+
+Reproduce the decomposition with `perf/examples/diag_is_dealt.rs`.
 
 A third, harness-side caveat: every nano-band hot loop indexes with
 `i % hands.len()`. Because `hands.len()` is a runtime value the compiler cannot
