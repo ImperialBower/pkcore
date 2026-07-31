@@ -48,17 +48,35 @@ pub fn sweep(workload: &Workload, warmup: u32, trials: u32, inner_iters: u32) ->
 /// once per process and so could not sweep. Work started inside `install` uses
 /// this pool, including pkcore's own parallel iterators — which holds only
 /// because `perf` and `pkcore` resolve to the same rayon version.
+///
+/// # Examples
+///
+/// ```
+/// use pkcore_perf::sweep::run_at;
+/// use pkcore_perf::workload::counting_workload;
+///
+/// let sample = run_at(&counting_workload(), 0, 1, 10, 1);
+/// assert_eq!(sample.rayon_threads, Some(1));
+/// ```
 #[must_use]
 pub fn run_at(workload: &Workload, warmup: u32, trials: u32, inner_iters: u32, threads: usize) -> Sample {
     let pool = match rayon::ThreadPoolBuilder::new().num_threads(threads).build() {
         Ok(pool) => pool,
         Err(e) => {
-            let mut sample = measure_labeled(workload, 0, 0, inner_iters, Some(threads));
-            sample.status = Status::Error;
-            sample.message = Some(format!("could not build a {threads}-thread pool: {e}"));
-            sample.ns_per_op = None;
-            sample.checksum = None;
-            return sample;
+            // Built directly rather than routed through `measure_labeled`: the
+            // pool failed to build, so the workload's own (possibly
+            // expensive) setup must not run on this path.
+            return Sample {
+                name: workload.name.to_string(),
+                band: workload.band,
+                inner_iters,
+                trials: 0,
+                rayon_threads: Some(threads),
+                ns_per_op: None,
+                checksum: None,
+                status: Status::Error,
+                message: Some(format!("could not build a {threads}-thread pool: {e}")),
+            };
         }
     };
 
