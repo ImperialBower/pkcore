@@ -1,0 +1,61 @@
+{
+  "behavior": "set-algebra",
+  "data": {
+    "aces_removed": {
+      "contains_ace_of_spades": false,
+      "remaining_count": 48,
+      "removed": "A♠ A♥ A♦ A♣"
+    },
+    "census": {
+      "distinct_2_card_hands": 169,
+      "distinct_5_card_hands": 7462,
+      "possible_unique_holdem_hup_matchups": 1624350,
+      "unique_2_card_hands": 1326,
+      "unique_5_card_hands": 2598960,
+      "unique_non_pocket_pairs": 1248,
+      "unique_pocket_pairs": 78,
+      "unique_suited_2_card_hands": 312
+    },
+    "deck_size": 52,
+    "description": "Card collections are ordered and deduplicated; difference removes members; the deck-composition census is a fixed property of a 52-card deck.",
+    "frequency_census": {
+      "flush": {
+        "distinct": 1277,
+        "unique": 5108
+      },
+      "four_of_a_kind": {
+        "distinct": 156,
+        "unique": 624
+      },
+      "full_house": {
+        "distinct": 156,
+        "unique": 3744
+      },
+      "high_card": {
+        "distinct": 1277,
+        "unique": 1302540
+      },
+      "one_pair": {
+        "distinct": 2860,
+        "unique": 1098240
+      },
+      "straight": {
+        "distinct": 10,
+        "unique": 10200
+      },
+      "straight_flush": {
+        "distinct": 10,
+        "unique": 40
+      },
+      "three_of_a_kind": {
+        "distinct": 858,
+        "unique": 54912
+      },
+      "two_pair": {
+        "distinct": 858,
+        "unique": 123552
+      }
+    }
+  },
+  "epic": "DECON-01"
+}

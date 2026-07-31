@@ -1,0 +1,589 @@
+{
+  "behavior": "kuhn-equilibrium",
+  "data": {
+    "alpha_range": {
+      "maximum": "1/3",
+      "minimum": "0"
+    },
+    "analytic_family": [
+      {
+        "alpha": "0.000000",
+        "label": "alpha = 0 (lower bound)",
+        "strategy": [
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "1.000000"
+              },
+              {
+                "action": "Bet",
+                "probability": "0.000000"
+              }
+            ],
+            "card": "Jack",
+            "context": "first player, opening",
+            "info_set": "J[]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "1.000000"
+              },
+              {
+                "action": "Bet",
+                "probability": "0.000000"
+              }
+            ],
+            "card": "Queen",
+            "context": "first player, opening",
+            "info_set": "Q[]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "1.000000"
+              },
+              {
+                "action": "Bet",
+                "probability": "0.000000"
+              }
+            ],
+            "card": "King",
+            "context": "first player, opening",
+            "info_set": "K[]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "0.666667"
+              },
+              {
+                "action": "Bet",
+                "probability": "0.333333"
+              }
+            ],
+            "card": "Jack",
+            "context": "second player, facing a check",
+            "info_set": "J[Check]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "1.000000"
+              },
+              {
+                "action": "Bet",
+                "probability": "0.000000"
+              }
+            ],
+            "card": "Queen",
+            "context": "second player, facing a check",
+            "info_set": "Q[Check]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "0.000000"
+              },
+              {
+                "action": "Bet",
+                "probability": "1.000000"
+              }
+            ],
+            "card": "King",
+            "context": "second player, facing a check",
+            "info_set": "K[Check]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "1.000000"
+              },
+              {
+                "action": "Call",
+                "probability": "0.000000"
+              }
+            ],
+            "card": "Jack",
+            "context": "second player, facing a bet",
+            "info_set": "J[Bet]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "0.666667"
+              },
+              {
+                "action": "Call",
+                "probability": "0.333333"
+              }
+            ],
+            "card": "Queen",
+            "context": "second player, facing a bet",
+            "info_set": "Q[Bet]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "0.000000"
+              },
+              {
+                "action": "Call",
+                "probability": "1.000000"
+              }
+            ],
+            "card": "King",
+            "context": "second player, facing a bet",
+            "info_set": "K[Bet]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "1.000000"
+              },
+              {
+                "action": "Call",
+                "probability": "0.000000"
+              }
+            ],
+            "card": "Jack",
+            "context": "first player, facing a check-then-bet",
+            "info_set": "J[Check, Bet]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "0.666667"
+              },
+              {
+                "action": "Call",
+                "probability": "0.333333"
+              }
+            ],
+            "card": "Queen",
+            "context": "first player, facing a check-then-bet",
+            "info_set": "Q[Check, Bet]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "0.000000"
+              },
+              {
+                "action": "Call",
+                "probability": "1.000000"
+              }
+            ],
+            "card": "King",
+            "context": "first player, facing a check-then-bet",
+            "info_set": "K[Check, Bet]"
+          }
+        ]
+      },
+      {
+        "alpha": "0.166667",
+        "label": "alpha = 1/6 (midpoint)",
+        "strategy": [
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "0.833333"
+              },
+              {
+                "action": "Bet",
+                "probability": "0.166667"
+              }
+            ],
+            "card": "Jack",
+            "context": "first player, opening",
+            "info_set": "J[]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "1.000000"
+              },
+              {
+                "action": "Bet",
+                "probability": "0.000000"
+              }
+            ],
+            "card": "Queen",
+            "context": "first player, opening",
+            "info_set": "Q[]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "0.500000"
+              },
+              {
+                "action": "Bet",
+                "probability": "0.500000"
+              }
+            ],
+            "card": "King",
+            "context": "first player, opening",
+            "info_set": "K[]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "0.666667"
+              },
+              {
+                "action": "Bet",
+                "probability": "0.333333"
+              }
+            ],
+            "card": "Jack",
+            "context": "second player, facing a check",
+            "info_set": "J[Check]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "1.000000"
+              },
+              {
+                "action": "Bet",
+                "probability": "0.000000"
+              }
+            ],
+            "card": "Queen",
+            "context": "second player, facing a check",
+            "info_set": "Q[Check]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "0.000000"
+              },
+              {
+                "action": "Bet",
+                "probability": "1.000000"
+              }
+            ],
+            "card": "King",
+            "context": "second player, facing a check",
+            "info_set": "K[Check]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "1.000000"
+              },
+              {
+                "action": "Call",
+                "probability": "0.000000"
+              }
+            ],
+            "card": "Jack",
+            "context": "second player, facing a bet",
+            "info_set": "J[Bet]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "0.666667"
+              },
+              {
+                "action": "Call",
+                "probability": "0.333333"
+              }
+            ],
+            "card": "Queen",
+            "context": "second player, facing a bet",
+            "info_set": "Q[Bet]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "0.000000"
+              },
+              {
+                "action": "Call",
+                "probability": "1.000000"
+              }
+            ],
+            "card": "King",
+            "context": "second player, facing a bet",
+            "info_set": "K[Bet]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "1.000000"
+              },
+              {
+                "action": "Call",
+                "probability": "0.000000"
+              }
+            ],
+            "card": "Jack",
+            "context": "first player, facing a check-then-bet",
+            "info_set": "J[Check, Bet]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "0.500000"
+              },
+              {
+                "action": "Call",
+                "probability": "0.500000"
+              }
+            ],
+            "card": "Queen",
+            "context": "first player, facing a check-then-bet",
+            "info_set": "Q[Check, Bet]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "0.000000"
+              },
+              {
+                "action": "Call",
+                "probability": "1.000000"
+              }
+            ],
+            "card": "King",
+            "context": "first player, facing a check-then-bet",
+            "info_set": "K[Check, Bet]"
+          }
+        ]
+      },
+      {
+        "alpha": "0.333333",
+        "label": "alpha = 1/3 (upper bound)",
+        "strategy": [
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "0.666667"
+              },
+              {
+                "action": "Bet",
+                "probability": "0.333333"
+              }
+            ],
+            "card": "Jack",
+            "context": "first player, opening",
+            "info_set": "J[]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "1.000000"
+              },
+              {
+                "action": "Bet",
+                "probability": "0.000000"
+              }
+            ],
+            "card": "Queen",
+            "context": "first player, opening",
+            "info_set": "Q[]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "0.000000"
+              },
+              {
+                "action": "Bet",
+                "probability": "1.000000"
+              }
+            ],
+            "card": "King",
+            "context": "first player, opening",
+            "info_set": "K[]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "0.666667"
+              },
+              {
+                "action": "Bet",
+                "probability": "0.333333"
+              }
+            ],
+            "card": "Jack",
+            "context": "second player, facing a check",
+            "info_set": "J[Check]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "1.000000"
+              },
+              {
+                "action": "Bet",
+                "probability": "0.000000"
+              }
+            ],
+            "card": "Queen",
+            "context": "second player, facing a check",
+            "info_set": "Q[Check]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Check",
+                "probability": "0.000000"
+              },
+              {
+                "action": "Bet",
+                "probability": "1.000000"
+              }
+            ],
+            "card": "King",
+            "context": "second player, facing a check",
+            "info_set": "K[Check]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "1.000000"
+              },
+              {
+                "action": "Call",
+                "probability": "0.000000"
+              }
+            ],
+            "card": "Jack",
+            "context": "second player, facing a bet",
+            "info_set": "J[Bet]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "0.666667"
+              },
+              {
+                "action": "Call",
+                "probability": "0.333333"
+              }
+            ],
+            "card": "Queen",
+            "context": "second player, facing a bet",
+            "info_set": "Q[Bet]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "0.000000"
+              },
+              {
+                "action": "Call",
+                "probability": "1.000000"
+              }
+            ],
+            "card": "King",
+            "context": "second player, facing a bet",
+            "info_set": "K[Bet]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "1.000000"
+              },
+              {
+                "action": "Call",
+                "probability": "0.000000"
+              }
+            ],
+            "card": "Jack",
+            "context": "first player, facing a check-then-bet",
+            "info_set": "J[Check, Bet]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "0.333333"
+              },
+              {
+                "action": "Call",
+                "probability": "0.666667"
+              }
+            ],
+            "card": "Queen",
+            "context": "first player, facing a check-then-bet",
+            "info_set": "Q[Check, Bet]"
+          },
+          {
+            "actions": [
+              {
+                "action": "Fold",
+                "probability": "0.000000"
+              },
+              {
+                "action": "Call",
+                "probability": "1.000000"
+              }
+            ],
+            "card": "King",
+            "context": "first player, facing a check-then-bet",
+            "info_set": "K[Check, Bet]"
+          }
+        ]
+      }
+    ],
+    "description": "The toy game's equilibrium is known analytically, which is why it validates a solver far more strongly than any sampled number could. The equilibrium is a FAMILY parameterised by a single value between 0 and 1/3. Within it, several frequencies are uniquely determined regardless of the parameter, and the first player's king bet rate is always exactly three times the jack bluff rate.",
+    "determined_frequencies": {
+      "first_player_bets_a_queen": "0",
+      "first_player_calls_with_a_king": "1",
+      "first_player_folds_a_jack": "1",
+      "second_player_bets_a_king_after_a_check": "1",
+      "second_player_bluffs_a_jack_after_a_check": "1/3",
+      "second_player_calls_a_jack": "0",
+      "second_player_calls_a_king": "1",
+      "second_player_calls_with_a_queen": "1/3"
+    },
+    "game_value_decimal": "-0.055556",
+    "game_value_to_first_player": "-1/18",
+    "solved": {
+      "exploitability": "0.000950615",
+      "iterations": 200000,
+      "note": "Regret-matching self-play converges toward the analytic answer. The AVERAGE strategy converges, not the final one. This figure is informative: a rebuild must converge, but need not match this value."
+    },
+    "structural_relation": "first player's king bet rate = 3 x jack bluff rate"
+  },
+  "epic": "DECON-13"
+}

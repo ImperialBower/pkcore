@@ -1,0 +1,245 @@
+{
+  "behavior": "ladder-divergence",
+  "data": {
+    "adjacent_pairs_compared": 1286,
+    "description": "Evidence, extracted by running the original, that its ace-to-five ladder does NOT implement the canonical lowball comparison. The ladder orders hands lexicographically ascending from the LOWEST card, whereas lowball compares from the HIGHEST card downward. The wheel is still correctly the nut low, and hands sharing a lowest card are ordered correctly among themselves, so the error only shows across families -- which is why round-trip replay testing never caught it. This file exists so a rebuilder does not reproduce the defect.",
+    "examples": [
+      {
+        "note": "By the canonical rule the first hand is the stronger low, but the source assigns it the worse (higher) ordinal.",
+        "stronger_low_ranks": [
+          6,
+          5,
+          4,
+          3,
+          2
+        ],
+        "stronger_original_ordinal": 496,
+        "weaker_low_ranks": [
+          7,
+          4,
+          3,
+          2,
+          1
+        ],
+        "weaker_original_ordinal": 3
+      },
+      {
+        "note": "By the canonical rule the first hand is the stronger low, but the source assigns it the worse (higher) ordinal.",
+        "stronger_low_ranks": [
+          7,
+          5,
+          4,
+          3,
+          2
+        ],
+        "stronger_original_ordinal": 497,
+        "weaker_low_ranks": [
+          7,
+          6,
+          3,
+          2,
+          1
+        ],
+        "weaker_original_ordinal": 18
+      },
+      {
+        "note": "By the canonical rule the first hand is the stronger low, but the source assigns it the worse (higher) ordinal.",
+        "stronger_low_ranks": [
+          7,
+          6,
+          4,
+          3,
+          2
+        ],
+        "stronger_original_ordinal": 504,
+        "weaker_low_ranks": [
+          7,
+          6,
+          5,
+          2,
+          1
+        ],
+        "weaker_original_ordinal": 82
+      },
+      {
+        "note": "By the canonical rule the first hand is the stronger low, but the source assigns it the worse (higher) ordinal.",
+        "stronger_low_ranks": [
+          7,
+          6,
+          5,
+          3,
+          2
+        ],
+        "stronger_original_ordinal": 532,
+        "weaker_low_ranks": [
+          7,
+          6,
+          5,
+          4,
+          1
+        ],
+        "weaker_original_ordinal": 286
+      },
+      {
+        "note": "By the canonical rule the first hand is the stronger low, but the source assigns it the worse (higher) ordinal.",
+        "stronger_low_ranks": [
+          7,
+          6,
+          5,
+          4,
+          3
+        ],
+        "stronger_original_ordinal": 826,
+        "weaker_low_ranks": [
+          8,
+          4,
+          3,
+          2,
+          1
+        ],
+        "weaker_original_ordinal": 4
+      },
+      {
+        "note": "By the canonical rule the first hand is the stronger low, but the source assigns it the worse (higher) ordinal.",
+        "stronger_low_ranks": [
+          8,
+          5,
+          4,
+          3,
+          2
+        ],
+        "stronger_original_ordinal": 498,
+        "weaker_low_ranks": [
+          8,
+          6,
+          3,
+          2,
+          1
+        ],
+        "weaker_original_ordinal": 19
+      },
+      {
+        "note": "By the canonical rule the first hand is the stronger low, but the source assigns it the worse (higher) ordinal.",
+        "stronger_low_ranks": [
+          8,
+          6,
+          4,
+          3,
+          2
+        ],
+        "stronger_original_ordinal": 505,
+        "weaker_low_ranks": [
+          8,
+          6,
+          5,
+          2,
+          1
+        ],
+        "weaker_original_ordinal": 83
+      },
+      {
+        "note": "By the canonical rule the first hand is the stronger low, but the source assigns it the worse (higher) ordinal.",
+        "stronger_low_ranks": [
+          8,
+          6,
+          5,
+          3,
+          2
+        ],
+        "stronger_original_ordinal": 533,
+        "weaker_low_ranks": [
+          8,
+          6,
+          5,
+          4,
+          1
+        ],
+        "weaker_original_ordinal": 287
+      },
+      {
+        "note": "By the canonical rule the first hand is the stronger low, but the source assigns it the worse (higher) ordinal.",
+        "stronger_low_ranks": [
+          8,
+          6,
+          5,
+          4,
+          3
+        ],
+        "stronger_original_ordinal": 827,
+        "weaker_low_ranks": [
+          8,
+          7,
+          3,
+          2,
+          1
+        ],
+        "weaker_original_ordinal": 25
+      },
+      {
+        "note": "By the canonical rule the first hand is the stronger low, but the source assigns it the worse (higher) ordinal.",
+        "stronger_low_ranks": [
+          8,
+          7,
+          4,
+          3,
+          2
+        ],
+        "stronger_original_ordinal": 511,
+        "weaker_low_ranks": [
+          8,
+          7,
+          5,
+          2,
+          1
+        ],
+        "weaker_original_ordinal": 89
+      },
+      {
+        "note": "By the canonical rule the first hand is the stronger low, but the source assigns it the worse (higher) ordinal.",
+        "stronger_low_ranks": [
+          8,
+          7,
+          5,
+          3,
+          2
+        ],
+        "stronger_original_ordinal": 539,
+        "weaker_low_ranks": [
+          8,
+          7,
+          5,
+          4,
+          1
+        ],
+        "weaker_original_ordinal": 293
+      },
+      {
+        "note": "By the canonical rule the first hand is the stronger low, but the source assigns it the worse (higher) ordinal.",
+        "stronger_low_ranks": [
+          8,
+          7,
+          5,
+          4,
+          3
+        ],
+        "stronger_original_ordinal": 833,
+        "weaker_low_ranks": [
+          8,
+          7,
+          6,
+          2,
+          1
+        ],
+        "weaker_original_ordinal": 110
+      }
+    ],
+    "misordered_pairs": 329,
+    "worked_example": {
+      "correct": "A six low always beats a seven low.",
+      "hand_a": "6-5-4-3-2 (a six low)",
+      "hand_b": "7-4-3-2-A (a seven low)",
+      "original_behavior": "assigns the six low ordinal 496 and the seven low ordinal 3, making the seven low win."
+    }
+  },
+  "epic": "DECON-03"
+}

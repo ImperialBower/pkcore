@@ -1,0 +1,59 @@
+{
+  "behavior": "pot-odds",
+  "data": {
+    "cases": [
+      {
+        "breakeven_equity": "0.333333",
+        "note": "half-pot bet",
+        "pot": 100,
+        "profitable_at_30_percent": false,
+        "profitable_at_40_percent": true,
+        "profitable_at_50_percent": true,
+        "ratio": "0.333333",
+        "to_call": 50
+      },
+      {
+        "breakeven_equity": "0.500000",
+        "note": "pot-sized bet",
+        "pot": 100,
+        "profitable_at_30_percent": false,
+        "profitable_at_40_percent": false,
+        "profitable_at_50_percent": true,
+        "ratio": "0.500000",
+        "to_call": 100
+      },
+      {
+        "breakeven_equity": "0.200000",
+        "note": "quarter-pot bet",
+        "pot": 200,
+        "profitable_at_30_percent": true,
+        "profitable_at_40_percent": true,
+        "profitable_at_50_percent": true,
+        "ratio": "0.200000",
+        "to_call": 50
+      },
+      {
+        "breakeven_equity": "0.250000",
+        "note": "one-third-pot bet",
+        "pot": 150,
+        "profitable_at_30_percent": true,
+        "profitable_at_40_percent": true,
+        "profitable_at_50_percent": true,
+        "ratio": "0.250000",
+        "to_call": 50
+      },
+      {
+        "breakeven_equity": "0.200000",
+        "note": "small bet",
+        "pot": 100,
+        "profitable_at_30_percent": true,
+        "profitable_at_40_percent": true,
+        "profitable_at_50_percent": true,
+        "ratio": "0.200000",
+        "to_call": 25
+      }
+    ],
+    "description": "Pot odds express the price being laid on a call. The break-even equity is the share of the pot a hand must win to make calling neutral: to_call / (pot + to_call)."
+  },
+  "epic": "DECON-09"
+}

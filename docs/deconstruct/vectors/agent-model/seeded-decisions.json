@@ -1,0 +1,26 @@
+{
+  "behavior": "seeded-decisions",
+  "data": {
+    "description": "INFORMATIVE, NOT NORMATIVE for the recorded actions. What IS normative is the property: two runs from the same seed, against the same situation and profile, produce the same action. That property is what makes agent-driven simulation reproducible and therefore usable for research. The specific actions depend on the original's random generator, so a rebuild must demonstrate the property with its own cases rather than match these.",
+    "normative_property": "same seed + same situation + same profile => same action",
+    "runs": [
+      {
+        "action": "Call",
+        "profile": "tight-aggressive",
+        "repeat_action": "Call",
+        "reproducible": true,
+        "seat": 0,
+        "seed": 7
+      },
+      {
+        "action": "Call",
+        "profile": "tight-aggressive",
+        "repeat_action": "Call",
+        "reproducible": true,
+        "seat": 0,
+        "seed": 42
+      }
+    ]
+  },
+  "epic": "DECON-11"
+}

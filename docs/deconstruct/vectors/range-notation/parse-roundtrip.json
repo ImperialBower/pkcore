@@ -1,0 +1,59 @@
+{
+  "behavior": "parse-roundtrip",
+  "data": {
+    "description": "Range notation is a comma-separated list of hand classes. The '+' operator means 'this class and every stronger class in its family'. Classes are listed sorted here so the vector is order-independent.",
+    "ranges": [
+      {
+        "class_count": 1,
+        "classes": [
+          "AA"
+        ],
+        "input": "AA"
+      },
+      {
+        "class_count": 1,
+        "classes": [
+          "QQ+"
+        ],
+        "input": "QQ+"
+      },
+      {
+        "class_count": 1,
+        "classes": [
+          "AKs"
+        ],
+        "input": "AKs"
+      },
+      {
+        "class_count": 1,
+        "classes": [
+          "AJo+"
+        ],
+        "input": "AJo+"
+      },
+      {
+        "class_count": 2,
+        "classes": [
+          "AKs",
+          "QQ+"
+        ],
+        "input": "QQ+, AKs"
+      },
+      {
+        "class_count": 1,
+        "classes": [
+          "22+"
+        ],
+        "input": "22+"
+      },
+      {
+        "class_count": 1,
+        "classes": [
+          "AT+"
+        ],
+        "input": "AT+"
+      }
+    ]
+  },
+  "epic": "DECON-04"
+}

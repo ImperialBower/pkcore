@@ -1,0 +1,27 @@
+{
+  "behavior": "legal-actions",
+  "data": {
+    "description": "The set of actions available to a seat depends on whether there is a live bet to answer, whether the seat still has chips, and whether it is still in the hand. A seat that cannot act offers no actions at all rather than a no-op.",
+    "situations": [
+      {
+        "legal_actions": [
+          "Fold",
+          "Call",
+          "Raise(200)",
+          "AllIn"
+        ],
+        "note": "Calling is available and checking is not, because there is a live bet.",
+        "seat": 0,
+        "situation": "first to act before the flop, facing the big blind",
+        "to_call": 100
+      },
+      {
+        "legal_actions": [],
+        "note": "An all-in seat has nothing left to decide, so no action is legal.",
+        "seat": 0,
+        "situation": "a seat that is already all-in"
+      }
+    ]
+  },
+  "epic": "DECON-06"
+}

@@ -1,0 +1,89 @@
+{
+  "behavior": "exact",
+  "data": {
+    "cases": [
+      {
+        "board": "Q♠ J♦ 2♣",
+        "hero": "A♠ A♥",
+        "method": "Exact",
+        "note": "aces against kings on a dry flop",
+        "runouts_evaluated": 990,
+        "seats": [
+          {
+            "equity": "0.900000",
+            "seat": 0,
+            "sole_win_cases": 891,
+            "tie": "0.000000",
+            "tied_cases": 0,
+            "win": "0.900000"
+          },
+          {
+            "equity": "0.100000",
+            "seat": 1,
+            "sole_win_cases": 99,
+            "tie": "0.000000",
+            "tied_cases": 0,
+            "win": "0.100000"
+          }
+        ],
+        "villain": "K♦ K♣"
+      },
+      {
+        "board": "J♠ T♠ 2♥",
+        "hero": "A♠ K♠",
+        "method": "Exact",
+        "note": "big draw against an overpair",
+        "runouts_evaluated": 990,
+        "seats": [
+          {
+            "equity": "0.560606",
+            "seat": 0,
+            "sole_win_cases": 555,
+            "tie": "0.000000",
+            "tied_cases": 0,
+            "win": "0.560606"
+          },
+          {
+            "equity": "0.439394",
+            "seat": 1,
+            "sole_win_cases": 435,
+            "tie": "0.000000",
+            "tied_cases": 0,
+            "win": "0.439394"
+          }
+        ],
+        "villain": "Q♥ Q♦"
+      },
+      {
+        "board": "K♠ J♦ 2♣ 7♥ 3♠",
+        "hero": "A♠ A♥",
+        "method": "Exact",
+        "note": "a completed board — one runout, so certainty",
+        "runouts_evaluated": 1,
+        "seats": [
+          {
+            "equity": "0.000000",
+            "seat": 0,
+            "sole_win_cases": 0,
+            "tie": "0.000000",
+            "tied_cases": 0,
+            "win": "0.000000"
+          },
+          {
+            "equity": "1.000000",
+            "seat": 1,
+            "sole_win_cases": 1,
+            "tie": "0.000000",
+            "tied_cases": 0,
+            "win": "1.000000"
+          }
+        ],
+        "villain": "K♦ K♣"
+      }
+    ],
+    "count_conformance": "exact",
+    "description": "Exact equity: every remaining board runout is enumerated, so the answer is certain rather than estimated. The case counts are exact integers and must match. The equity fractions may differ in their last places because summation order is free, so compare them within a small tolerance. Note 'equity' folds split pots in fractionally, which is why win + tie is greater than or equal to equity.",
+    "fraction_conformance": "within 1e-6"
+  },
+  "epic": "DECON-09"
+}

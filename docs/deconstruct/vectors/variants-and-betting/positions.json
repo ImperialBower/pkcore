@@ -1,0 +1,202 @@
+{
+  "behavior": "positions",
+  "data": {
+    "description": "Position is derived from a seat's clockwise offset from the button. Only tables of 2, 3, 4, 5, 6, and 9 seats are defined; other sizes have no position mapping. Note that heads-up is special: the button is also the small blind.",
+    "tables": [
+      {
+        "button_seat": 0,
+        "seat_count": 2,
+        "seats": [
+          {
+            "position": "BTN",
+            "seat": 0
+          },
+          {
+            "position": "BB",
+            "seat": 1
+          }
+        ],
+        "supported": true
+      },
+      {
+        "button_seat": 0,
+        "seat_count": 3,
+        "seats": [
+          {
+            "position": "BTN",
+            "seat": 0
+          },
+          {
+            "position": "SB",
+            "seat": 1
+          },
+          {
+            "position": "BB",
+            "seat": 2
+          }
+        ],
+        "supported": true
+      },
+      {
+        "button_seat": 0,
+        "seat_count": 4,
+        "seats": [
+          {
+            "position": "BTN",
+            "seat": 0
+          },
+          {
+            "position": "SB",
+            "seat": 1
+          },
+          {
+            "position": "BB",
+            "seat": 2
+          },
+          {
+            "position": "UTG",
+            "seat": 3
+          }
+        ],
+        "supported": true
+      },
+      {
+        "button_seat": 0,
+        "seat_count": 5,
+        "seats": [
+          {
+            "position": "BTN",
+            "seat": 0
+          },
+          {
+            "position": "SB",
+            "seat": 1
+          },
+          {
+            "position": "BB",
+            "seat": 2
+          },
+          {
+            "position": "UTG",
+            "seat": 3
+          },
+          {
+            "position": "CO",
+            "seat": 4
+          }
+        ],
+        "supported": true
+      },
+      {
+        "button_seat": 0,
+        "seat_count": 6,
+        "seats": [
+          {
+            "position": "BTN",
+            "seat": 0
+          },
+          {
+            "position": "SB",
+            "seat": 1
+          },
+          {
+            "position": "BB",
+            "seat": 2
+          },
+          {
+            "position": "LJ",
+            "seat": 3
+          },
+          {
+            "position": "HJ",
+            "seat": 4
+          },
+          {
+            "position": "CO",
+            "seat": 5
+          }
+        ],
+        "supported": true
+      },
+      {
+        "button_seat": 0,
+        "seat_count": 7,
+        "seats": [
+          {
+            "position": null,
+            "seat": 0
+          },
+          {
+            "position": null,
+            "seat": 1
+          },
+          {
+            "position": null,
+            "seat": 2
+          },
+          {
+            "position": null,
+            "seat": 3
+          },
+          {
+            "position": null,
+            "seat": 4
+          },
+          {
+            "position": null,
+            "seat": 5
+          },
+          {
+            "position": null,
+            "seat": 6
+          }
+        ],
+        "supported": false
+      },
+      {
+        "button_seat": 0,
+        "seat_count": 9,
+        "seats": [
+          {
+            "position": "BTN",
+            "seat": 0
+          },
+          {
+            "position": "SB",
+            "seat": 1
+          },
+          {
+            "position": "BB",
+            "seat": 2
+          },
+          {
+            "position": "UTG",
+            "seat": 3
+          },
+          {
+            "position": "UTGP1",
+            "seat": 4
+          },
+          {
+            "position": "EP",
+            "seat": 5
+          },
+          {
+            "position": "LJ",
+            "seat": 6
+          },
+          {
+            "position": "HJ",
+            "seat": 7
+          },
+          {
+            "position": "CO",
+            "seat": 8
+          }
+        ],
+        "supported": true
+      }
+    ]
+  },
+  "epic": "DECON-05"
+}

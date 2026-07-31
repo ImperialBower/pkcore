@@ -1,0 +1,1922 @@
+{
+  "behavior": "category-bands",
+  "data": {
+    "bands": [
+      {
+        "best_value": 1,
+        "category": "StraightFlush",
+        "count": 10,
+        "worst_value": 10
+      },
+      {
+        "best_value": 11,
+        "category": "FourOfAKind",
+        "count": 156,
+        "worst_value": 166
+      },
+      {
+        "best_value": 167,
+        "category": "FullHouse",
+        "count": 156,
+        "worst_value": 322
+      },
+      {
+        "best_value": 323,
+        "category": "Flush",
+        "count": 1277,
+        "worst_value": 1599
+      },
+      {
+        "best_value": 1600,
+        "category": "Straight",
+        "count": 10,
+        "worst_value": 1609
+      },
+      {
+        "best_value": 1610,
+        "category": "ThreeOfAKind",
+        "count": 858,
+        "worst_value": 2467
+      },
+      {
+        "best_value": 2468,
+        "category": "TwoPair",
+        "count": 858,
+        "worst_value": 3325
+      },
+      {
+        "best_value": 3326,
+        "category": "Pair",
+        "count": 2860,
+        "worst_value": 6185
+      },
+      {
+        "best_value": 6186,
+        "category": "HighCard",
+        "count": 1277,
+        "worst_value": 7462
+      }
+    ],
+    "class_runs": [
+      {
+        "category": "StraightFlush",
+        "class": "RoyalFlush",
+        "from": 1,
+        "to": 1
+      },
+      {
+        "category": "StraightFlush",
+        "class": "KingHighStraightFlush",
+        "from": 2,
+        "to": 2
+      },
+      {
+        "category": "StraightFlush",
+        "class": "QueenHighStraightFlush",
+        "from": 3,
+        "to": 3
+      },
+      {
+        "category": "StraightFlush",
+        "class": "JackHighStraightFlush",
+        "from": 4,
+        "to": 4
+      },
+      {
+        "category": "StraightFlush",
+        "class": "TenHighStraightFlush",
+        "from": 5,
+        "to": 5
+      },
+      {
+        "category": "StraightFlush",
+        "class": "NineHighStraightFlush",
+        "from": 6,
+        "to": 6
+      },
+      {
+        "category": "StraightFlush",
+        "class": "EightHighStraightFlush",
+        "from": 7,
+        "to": 7
+      },
+      {
+        "category": "StraightFlush",
+        "class": "SevenHighStraightFlush",
+        "from": 8,
+        "to": 8
+      },
+      {
+        "category": "StraightFlush",
+        "class": "SixHighStraightFlush",
+        "from": 9,
+        "to": 9
+      },
+      {
+        "category": "StraightFlush",
+        "class": "FiveHighStraightFlush",
+        "from": 10,
+        "to": 10
+      },
+      {
+        "category": "FourOfAKind",
+        "class": "FourAces",
+        "from": 11,
+        "to": 22
+      },
+      {
+        "category": "FourOfAKind",
+        "class": "FourKings",
+        "from": 23,
+        "to": 34
+      },
+      {
+        "category": "FourOfAKind",
+        "class": "FourQueens",
+        "from": 35,
+        "to": 46
+      },
+      {
+        "category": "FourOfAKind",
+        "class": "FourJacks",
+        "from": 47,
+        "to": 58
+      },
+      {
+        "category": "FourOfAKind",
+        "class": "FourTens",
+        "from": 59,
+        "to": 70
+      },
+      {
+        "category": "FourOfAKind",
+        "class": "FourNines",
+        "from": 71,
+        "to": 82
+      },
+      {
+        "category": "FourOfAKind",
+        "class": "FourEights",
+        "from": 83,
+        "to": 94
+      },
+      {
+        "category": "FourOfAKind",
+        "class": "FourSevens",
+        "from": 95,
+        "to": 106
+      },
+      {
+        "category": "FourOfAKind",
+        "class": "FourSixes",
+        "from": 107,
+        "to": 118
+      },
+      {
+        "category": "FourOfAKind",
+        "class": "FourFives",
+        "from": 119,
+        "to": 130
+      },
+      {
+        "category": "FourOfAKind",
+        "class": "FourFours",
+        "from": 131,
+        "to": 142
+      },
+      {
+        "category": "FourOfAKind",
+        "class": "FourTreys",
+        "from": 143,
+        "to": 154
+      },
+      {
+        "category": "FourOfAKind",
+        "class": "FourDeuces",
+        "from": 155,
+        "to": 166
+      },
+      {
+        "category": "FullHouse",
+        "class": "AcesOverKings",
+        "from": 167,
+        "to": 167
+      },
+      {
+        "category": "FullHouse",
+        "class": "AcesOverQueens",
+        "from": 168,
+        "to": 168
+      },
+      {
+        "category": "FullHouse",
+        "class": "AcesOverJacks",
+        "from": 169,
+        "to": 169
+      },
+      {
+        "category": "FullHouse",
+        "class": "AcesOverTens",
+        "from": 170,
+        "to": 170
+      },
+      {
+        "category": "FullHouse",
+        "class": "AcesOverNines",
+        "from": 171,
+        "to": 171
+      },
+      {
+        "category": "FullHouse",
+        "class": "AcesOverEights",
+        "from": 172,
+        "to": 172
+      },
+      {
+        "category": "FullHouse",
+        "class": "AcesOverSevens",
+        "from": 173,
+        "to": 173
+      },
+      {
+        "category": "FullHouse",
+        "class": "AcesOverSixes",
+        "from": 174,
+        "to": 174
+      },
+      {
+        "category": "FullHouse",
+        "class": "AcesOverFives",
+        "from": 175,
+        "to": 175
+      },
+      {
+        "category": "FullHouse",
+        "class": "AcesOverFours",
+        "from": 176,
+        "to": 176
+      },
+      {
+        "category": "FullHouse",
+        "class": "AcesOverTreys",
+        "from": 177,
+        "to": 177
+      },
+      {
+        "category": "FullHouse",
+        "class": "AcesOverDeuces",
+        "from": 178,
+        "to": 178
+      },
+      {
+        "category": "FullHouse",
+        "class": "KingsOverAces",
+        "from": 179,
+        "to": 179
+      },
+      {
+        "category": "FullHouse",
+        "class": "KingsOverQueens",
+        "from": 180,
+        "to": 180
+      },
+      {
+        "category": "FullHouse",
+        "class": "KingsOverJacks",
+        "from": 181,
+        "to": 181
+      },
+      {
+        "category": "FullHouse",
+        "class": "KingsOverTens",
+        "from": 182,
+        "to": 182
+      },
+      {
+        "category": "FullHouse",
+        "class": "KingsOverNines",
+        "from": 183,
+        "to": 183
+      },
+      {
+        "category": "FullHouse",
+        "class": "KingsOverEights",
+        "from": 184,
+        "to": 184
+      },
+      {
+        "category": "FullHouse",
+        "class": "KingsOverSevens",
+        "from": 185,
+        "to": 185
+      },
+      {
+        "category": "FullHouse",
+        "class": "KingsOverSixes",
+        "from": 186,
+        "to": 186
+      },
+      {
+        "category": "FullHouse",
+        "class": "KingsOverFives",
+        "from": 187,
+        "to": 187
+      },
+      {
+        "category": "FullHouse",
+        "class": "KingsOverFours",
+        "from": 188,
+        "to": 188
+      },
+      {
+        "category": "FullHouse",
+        "class": "KingsOverTreys",
+        "from": 189,
+        "to": 189
+      },
+      {
+        "category": "FullHouse",
+        "class": "KingsOverDeuces",
+        "from": 190,
+        "to": 190
+      },
+      {
+        "category": "FullHouse",
+        "class": "QueensOverAces",
+        "from": 191,
+        "to": 191
+      },
+      {
+        "category": "FullHouse",
+        "class": "QueensOverKings",
+        "from": 192,
+        "to": 192
+      },
+      {
+        "category": "FullHouse",
+        "class": "QueensOverJacks",
+        "from": 193,
+        "to": 193
+      },
+      {
+        "category": "FullHouse",
+        "class": "QueensOverTens",
+        "from": 194,
+        "to": 194
+      },
+      {
+        "category": "FullHouse",
+        "class": "QueensOverNines",
+        "from": 195,
+        "to": 195
+      },
+      {
+        "category": "FullHouse",
+        "class": "QueensOverEights",
+        "from": 196,
+        "to": 196
+      },
+      {
+        "category": "FullHouse",
+        "class": "QueensOverSevens",
+        "from": 197,
+        "to": 197
+      },
+      {
+        "category": "FullHouse",
+        "class": "QueensOverSixes",
+        "from": 198,
+        "to": 198
+      },
+      {
+        "category": "FullHouse",
+        "class": "QueensOverFives",
+        "from": 199,
+        "to": 199
+      },
+      {
+        "category": "FullHouse",
+        "class": "QueensOverFours",
+        "from": 200,
+        "to": 200
+      },
+      {
+        "category": "FullHouse",
+        "class": "QueensOverTreys",
+        "from": 201,
+        "to": 201
+      },
+      {
+        "category": "FullHouse",
+        "class": "QueensOverDeuces",
+        "from": 202,
+        "to": 202
+      },
+      {
+        "category": "FullHouse",
+        "class": "JacksOverAces",
+        "from": 203,
+        "to": 203
+      },
+      {
+        "category": "FullHouse",
+        "class": "JacksOverKings",
+        "from": 204,
+        "to": 204
+      },
+      {
+        "category": "FullHouse",
+        "class": "JacksOverQueens",
+        "from": 205,
+        "to": 205
+      },
+      {
+        "category": "FullHouse",
+        "class": "JacksOverTens",
+        "from": 206,
+        "to": 206
+      },
+      {
+        "category": "FullHouse",
+        "class": "JacksOverNines",
+        "from": 207,
+        "to": 207
+      },
+      {
+        "category": "FullHouse",
+        "class": "JacksOverEights",
+        "from": 208,
+        "to": 208
+      },
+      {
+        "category": "FullHouse",
+        "class": "JacksOverSevens",
+        "from": 209,
+        "to": 209
+      },
+      {
+        "category": "FullHouse",
+        "class": "JacksOverSixes",
+        "from": 210,
+        "to": 210
+      },
+      {
+        "category": "FullHouse",
+        "class": "JacksOverFives",
+        "from": 211,
+        "to": 211
+      },
+      {
+        "category": "FullHouse",
+        "class": "JacksOverFours",
+        "from": 212,
+        "to": 212
+      },
+      {
+        "category": "FullHouse",
+        "class": "JacksOverTreys",
+        "from": 213,
+        "to": 213
+      },
+      {
+        "category": "FullHouse",
+        "class": "JacksOverDeuces",
+        "from": 214,
+        "to": 214
+      },
+      {
+        "category": "FullHouse",
+        "class": "TensOverAces",
+        "from": 215,
+        "to": 215
+      },
+      {
+        "category": "FullHouse",
+        "class": "TensOverKings",
+        "from": 216,
+        "to": 216
+      },
+      {
+        "category": "FullHouse",
+        "class": "TensOverQueens",
+        "from": 217,
+        "to": 217
+      },
+      {
+        "category": "FullHouse",
+        "class": "TensOverJacks",
+        "from": 218,
+        "to": 218
+      },
+      {
+        "category": "FullHouse",
+        "class": "TensOverNines",
+        "from": 219,
+        "to": 219
+      },
+      {
+        "category": "FullHouse",
+        "class": "TensOverEights",
+        "from": 220,
+        "to": 220
+      },
+      {
+        "category": "FullHouse",
+        "class": "TensOverSevens",
+        "from": 221,
+        "to": 221
+      },
+      {
+        "category": "FullHouse",
+        "class": "TensOverSixes",
+        "from": 222,
+        "to": 222
+      },
+      {
+        "category": "FullHouse",
+        "class": "TensOverFives",
+        "from": 223,
+        "to": 223
+      },
+      {
+        "category": "FullHouse",
+        "class": "TensOverFours",
+        "from": 224,
+        "to": 224
+      },
+      {
+        "category": "FullHouse",
+        "class": "TensOverTreys",
+        "from": 225,
+        "to": 225
+      },
+      {
+        "category": "FullHouse",
+        "class": "TensOverDeuces",
+        "from": 226,
+        "to": 226
+      },
+      {
+        "category": "FullHouse",
+        "class": "NinesOverAces",
+        "from": 227,
+        "to": 227
+      },
+      {
+        "category": "FullHouse",
+        "class": "NinesOverKings",
+        "from": 228,
+        "to": 228
+      },
+      {
+        "category": "FullHouse",
+        "class": "NinesOverQueens",
+        "from": 229,
+        "to": 229
+      },
+      {
+        "category": "FullHouse",
+        "class": "NinesOverJacks",
+        "from": 230,
+        "to": 230
+      },
+      {
+        "category": "FullHouse",
+        "class": "NinesOverTens",
+        "from": 231,
+        "to": 231
+      },
+      {
+        "category": "FullHouse",
+        "class": "NinesOverEights",
+        "from": 232,
+        "to": 232
+      },
+      {
+        "category": "FullHouse",
+        "class": "NinesOverSevens",
+        "from": 233,
+        "to": 233
+      },
+      {
+        "category": "FullHouse",
+        "class": "NinesOverSixes",
+        "from": 234,
+        "to": 234
+      },
+      {
+        "category": "FullHouse",
+        "class": "NinesOverFives",
+        "from": 235,
+        "to": 235
+      },
+      {
+        "category": "FullHouse",
+        "class": "NinesOverFours",
+        "from": 236,
+        "to": 236
+      },
+      {
+        "category": "FullHouse",
+        "class": "NinesOverTreys",
+        "from": 237,
+        "to": 237
+      },
+      {
+        "category": "FullHouse",
+        "class": "NinesOverDeuces",
+        "from": 238,
+        "to": 238
+      },
+      {
+        "category": "FullHouse",
+        "class": "EightsOverAces",
+        "from": 239,
+        "to": 239
+      },
+      {
+        "category": "FullHouse",
+        "class": "EightsOverKings",
+        "from": 240,
+        "to": 240
+      },
+      {
+        "category": "FullHouse",
+        "class": "EightsOverQueens",
+        "from": 241,
+        "to": 241
+      },
+      {
+        "category": "FullHouse",
+        "class": "EightsOverJacks",
+        "from": 242,
+        "to": 242
+      },
+      {
+        "category": "FullHouse",
+        "class": "EightsOverTens",
+        "from": 243,
+        "to": 243
+      },
+      {
+        "category": "FullHouse",
+        "class": "EightsOverNines",
+        "from": 244,
+        "to": 244
+      },
+      {
+        "category": "FullHouse",
+        "class": "EightsOverSevens",
+        "from": 245,
+        "to": 245
+      },
+      {
+        "category": "FullHouse",
+        "class": "EightsOverSixes",
+        "from": 246,
+        "to": 246
+      },
+      {
+        "category": "FullHouse",
+        "class": "EightsOverFives",
+        "from": 247,
+        "to": 247
+      },
+      {
+        "category": "FullHouse",
+        "class": "EightsOverFours",
+        "from": 248,
+        "to": 248
+      },
+      {
+        "category": "FullHouse",
+        "class": "EightsOverTreys",
+        "from": 249,
+        "to": 249
+      },
+      {
+        "category": "FullHouse",
+        "class": "EightsOverDeuces",
+        "from": 250,
+        "to": 250
+      },
+      {
+        "category": "FullHouse",
+        "class": "SevensOverAces",
+        "from": 251,
+        "to": 251
+      },
+      {
+        "category": "FullHouse",
+        "class": "SevensOverKings",
+        "from": 252,
+        "to": 252
+      },
+      {
+        "category": "FullHouse",
+        "class": "SevensOverQueens",
+        "from": 253,
+        "to": 253
+      },
+      {
+        "category": "FullHouse",
+        "class": "SevensOverJacks",
+        "from": 254,
+        "to": 254
+      },
+      {
+        "category": "FullHouse",
+        "class": "SevensOverTens",
+        "from": 255,
+        "to": 255
+      },
+      {
+        "category": "FullHouse",
+        "class": "SevensOverNines",
+        "from": 256,
+        "to": 256
+      },
+      {
+        "category": "FullHouse",
+        "class": "SevensOverEights",
+        "from": 257,
+        "to": 257
+      },
+      {
+        "category": "FullHouse",
+        "class": "SevensOverSixes",
+        "from": 258,
+        "to": 258
+      },
+      {
+        "category": "FullHouse",
+        "class": "SevensOverFives",
+        "from": 259,
+        "to": 259
+      },
+      {
+        "category": "FullHouse",
+        "class": "SevensOverFours",
+        "from": 260,
+        "to": 260
+      },
+      {
+        "category": "FullHouse",
+        "class": "SevensOverTreys",
+        "from": 261,
+        "to": 261
+      },
+      {
+        "category": "FullHouse",
+        "class": "SevensOverDeuces",
+        "from": 262,
+        "to": 262
+      },
+      {
+        "category": "FullHouse",
+        "class": "SixesOverAces",
+        "from": 263,
+        "to": 263
+      },
+      {
+        "category": "FullHouse",
+        "class": "SixesOverKings",
+        "from": 264,
+        "to": 264
+      },
+      {
+        "category": "FullHouse",
+        "class": "SixesOverQueens",
+        "from": 265,
+        "to": 265
+      },
+      {
+        "category": "FullHouse",
+        "class": "SixesOverJacks",
+        "from": 266,
+        "to": 266
+      },
+      {
+        "category": "FullHouse",
+        "class": "SixesOverTens",
+        "from": 267,
+        "to": 267
+      },
+      {
+        "category": "FullHouse",
+        "class": "SixesOverNines",
+        "from": 268,
+        "to": 268
+      },
+      {
+        "category": "FullHouse",
+        "class": "SixesOverEights",
+        "from": 269,
+        "to": 269
+      },
+      {
+        "category": "FullHouse",
+        "class": "SixesOverSevens",
+        "from": 270,
+        "to": 270
+      },
+      {
+        "category": "FullHouse",
+        "class": "SixesOverFives",
+        "from": 271,
+        "to": 271
+      },
+      {
+        "category": "FullHouse",
+        "class": "SixesOverFours",
+        "from": 272,
+        "to": 272
+      },
+      {
+        "category": "FullHouse",
+        "class": "SixesOverTreys",
+        "from": 273,
+        "to": 273
+      },
+      {
+        "category": "FullHouse",
+        "class": "SixesOverDeuces",
+        "from": 274,
+        "to": 274
+      },
+      {
+        "category": "FullHouse",
+        "class": "FivesOverAces",
+        "from": 275,
+        "to": 275
+      },
+      {
+        "category": "FullHouse",
+        "class": "FivesOverKings",
+        "from": 276,
+        "to": 276
+      },
+      {
+        "category": "FullHouse",
+        "class": "FivesOverQueens",
+        "from": 277,
+        "to": 277
+      },
+      {
+        "category": "FullHouse",
+        "class": "FivesOverJacks",
+        "from": 278,
+        "to": 278
+      },
+      {
+        "category": "FullHouse",
+        "class": "FivesOverTens",
+        "from": 279,
+        "to": 279
+      },
+      {
+        "category": "FullHouse",
+        "class": "FivesOverNines",
+        "from": 280,
+        "to": 280
+      },
+      {
+        "category": "FullHouse",
+        "class": "FivesOverEights",
+        "from": 281,
+        "to": 281
+      },
+      {
+        "category": "FullHouse",
+        "class": "FivesOverSevens",
+        "from": 282,
+        "to": 282
+      },
+      {
+        "category": "FullHouse",
+        "class": "FivesOverSixes",
+        "from": 283,
+        "to": 283
+      },
+      {
+        "category": "FullHouse",
+        "class": "FivesOverFours",
+        "from": 284,
+        "to": 284
+      },
+      {
+        "category": "FullHouse",
+        "class": "FivesOverTreys",
+        "from": 285,
+        "to": 285
+      },
+      {
+        "category": "FullHouse",
+        "class": "FivesOverDeuces",
+        "from": 286,
+        "to": 286
+      },
+      {
+        "category": "FullHouse",
+        "class": "FoursOverAces",
+        "from": 287,
+        "to": 287
+      },
+      {
+        "category": "FullHouse",
+        "class": "FoursOverKings",
+        "from": 288,
+        "to": 288
+      },
+      {
+        "category": "FullHouse",
+        "class": "FoursOverQueens",
+        "from": 289,
+        "to": 289
+      },
+      {
+        "category": "FullHouse",
+        "class": "FoursOverJacks",
+        "from": 290,
+        "to": 290
+      },
+      {
+        "category": "FullHouse",
+        "class": "FoursOverTens",
+        "from": 291,
+        "to": 291
+      },
+      {
+        "category": "FullHouse",
+        "class": "FoursOverNines",
+        "from": 292,
+        "to": 292
+      },
+      {
+        "category": "FullHouse",
+        "class": "FoursOverEights",
+        "from": 293,
+        "to": 293
+      },
+      {
+        "category": "FullHouse",
+        "class": "FoursOverSevens",
+        "from": 294,
+        "to": 294
+      },
+      {
+        "category": "FullHouse",
+        "class": "FoursOverSixes",
+        "from": 295,
+        "to": 295
+      },
+      {
+        "category": "FullHouse",
+        "class": "FoursOverFives",
+        "from": 296,
+        "to": 296
+      },
+      {
+        "category": "FullHouse",
+        "class": "FoursOverTreys",
+        "from": 297,
+        "to": 297
+      },
+      {
+        "category": "FullHouse",
+        "class": "FoursOverDeuces",
+        "from": 298,
+        "to": 298
+      },
+      {
+        "category": "FullHouse",
+        "class": "TreysOverAces",
+        "from": 299,
+        "to": 299
+      },
+      {
+        "category": "FullHouse",
+        "class": "TreysOverKings",
+        "from": 300,
+        "to": 300
+      },
+      {
+        "category": "FullHouse",
+        "class": "TreysOverQueens",
+        "from": 301,
+        "to": 301
+      },
+      {
+        "category": "FullHouse",
+        "class": "TreysOverJacks",
+        "from": 302,
+        "to": 302
+      },
+      {
+        "category": "FullHouse",
+        "class": "TreysOverTens",
+        "from": 303,
+        "to": 303
+      },
+      {
+        "category": "FullHouse",
+        "class": "TreysOverNines",
+        "from": 304,
+        "to": 304
+      },
+      {
+        "category": "FullHouse",
+        "class": "TreysOverEights",
+        "from": 305,
+        "to": 305
+      },
+      {
+        "category": "FullHouse",
+        "class": "TreysOverSevens",
+        "from": 306,
+        "to": 306
+      },
+      {
+        "category": "FullHouse",
+        "class": "TreysOverSixes",
+        "from": 307,
+        "to": 307
+      },
+      {
+        "category": "FullHouse",
+        "class": "TreysOverFives",
+        "from": 308,
+        "to": 308
+      },
+      {
+        "category": "FullHouse",
+        "class": "TreysOverFours",
+        "from": 309,
+        "to": 309
+      },
+      {
+        "category": "FullHouse",
+        "class": "TreysOverDeuces",
+        "from": 310,
+        "to": 310
+      },
+      {
+        "category": "FullHouse",
+        "class": "DeucesOverAces",
+        "from": 311,
+        "to": 311
+      },
+      {
+        "category": "FullHouse",
+        "class": "DeucesOverKings",
+        "from": 312,
+        "to": 312
+      },
+      {
+        "category": "FullHouse",
+        "class": "DeucesOverQueens",
+        "from": 313,
+        "to": 313
+      },
+      {
+        "category": "FullHouse",
+        "class": "DeucesOverJacks",
+        "from": 314,
+        "to": 314
+      },
+      {
+        "category": "FullHouse",
+        "class": "DeucesOverTens",
+        "from": 315,
+        "to": 315
+      },
+      {
+        "category": "FullHouse",
+        "class": "DeucesOverNines",
+        "from": 316,
+        "to": 316
+      },
+      {
+        "category": "FullHouse",
+        "class": "DeucesOverEights",
+        "from": 317,
+        "to": 317
+      },
+      {
+        "category": "FullHouse",
+        "class": "DeucesOverSevens",
+        "from": 318,
+        "to": 318
+      },
+      {
+        "category": "FullHouse",
+        "class": "DeucesOverSixes",
+        "from": 319,
+        "to": 319
+      },
+      {
+        "category": "FullHouse",
+        "class": "DeucesOverFives",
+        "from": 320,
+        "to": 320
+      },
+      {
+        "category": "FullHouse",
+        "class": "DeucesOverFours",
+        "from": 321,
+        "to": 321
+      },
+      {
+        "category": "FullHouse",
+        "class": "DeucesOverTreys",
+        "from": 322,
+        "to": 322
+      },
+      {
+        "category": "Flush",
+        "class": "AceHighFlush",
+        "from": 323,
+        "to": 815
+      },
+      {
+        "category": "Flush",
+        "class": "KingHighFlush",
+        "from": 816,
+        "to": 1144
+      },
+      {
+        "category": "Flush",
+        "class": "QueenHighFlush",
+        "from": 1145,
+        "to": 1353
+      },
+      {
+        "category": "Flush",
+        "class": "JackHighFlush",
+        "from": 1354,
+        "to": 1478
+      },
+      {
+        "category": "Flush",
+        "class": "TenHighFlush",
+        "from": 1479,
+        "to": 1547
+      },
+      {
+        "category": "Flush",
+        "class": "NineHighFlush",
+        "from": 1548,
+        "to": 1581
+      },
+      {
+        "category": "Flush",
+        "class": "EightHighFlush",
+        "from": 1582,
+        "to": 1595
+      },
+      {
+        "category": "Flush",
+        "class": "SevenHighFlush",
+        "from": 1596,
+        "to": 1599
+      },
+      {
+        "category": "Straight",
+        "class": "AceHighStraight",
+        "from": 1600,
+        "to": 1600
+      },
+      {
+        "category": "Straight",
+        "class": "KingHighStraight",
+        "from": 1601,
+        "to": 1601
+      },
+      {
+        "category": "Straight",
+        "class": "QueenHighStraight",
+        "from": 1602,
+        "to": 1602
+      },
+      {
+        "category": "Straight",
+        "class": "JackHighStraight",
+        "from": 1603,
+        "to": 1603
+      },
+      {
+        "category": "Straight",
+        "class": "TenHighStraight",
+        "from": 1604,
+        "to": 1604
+      },
+      {
+        "category": "Straight",
+        "class": "NineHighStraight",
+        "from": 1605,
+        "to": 1605
+      },
+      {
+        "category": "Straight",
+        "class": "EightHighStraight",
+        "from": 1606,
+        "to": 1606
+      },
+      {
+        "category": "Straight",
+        "class": "SevenHighStraight",
+        "from": 1607,
+        "to": 1607
+      },
+      {
+        "category": "Straight",
+        "class": "SixHighStraight",
+        "from": 1608,
+        "to": 1608
+      },
+      {
+        "category": "Straight",
+        "class": "FiveHighStraight",
+        "from": 1609,
+        "to": 1609
+      },
+      {
+        "category": "ThreeOfAKind",
+        "class": "ThreeAces",
+        "from": 1610,
+        "to": 1675
+      },
+      {
+        "category": "ThreeOfAKind",
+        "class": "ThreeKings",
+        "from": 1676,
+        "to": 1741
+      },
+      {
+        "category": "ThreeOfAKind",
+        "class": "ThreeQueens",
+        "from": 1742,
+        "to": 1807
+      },
+      {
+        "category": "ThreeOfAKind",
+        "class": "ThreeJacks",
+        "from": 1808,
+        "to": 1873
+      },
+      {
+        "category": "ThreeOfAKind",
+        "class": "ThreeTens",
+        "from": 1874,
+        "to": 1939
+      },
+      {
+        "category": "ThreeOfAKind",
+        "class": "ThreeNines",
+        "from": 1940,
+        "to": 2005
+      },
+      {
+        "category": "ThreeOfAKind",
+        "class": "ThreeEights",
+        "from": 2006,
+        "to": 2071
+      },
+      {
+        "category": "ThreeOfAKind",
+        "class": "ThreeSevens",
+        "from": 2072,
+        "to": 2137
+      },
+      {
+        "category": "ThreeOfAKind",
+        "class": "ThreeSixes",
+        "from": 2138,
+        "to": 2203
+      },
+      {
+        "category": "ThreeOfAKind",
+        "class": "ThreeFives",
+        "from": 2204,
+        "to": 2269
+      },
+      {
+        "category": "ThreeOfAKind",
+        "class": "ThreeFours",
+        "from": 2270,
+        "to": 2335
+      },
+      {
+        "category": "ThreeOfAKind",
+        "class": "ThreeTreys",
+        "from": 2336,
+        "to": 2401
+      },
+      {
+        "category": "ThreeOfAKind",
+        "class": "ThreeDeuces",
+        "from": 2402,
+        "to": 2467
+      },
+      {
+        "category": "TwoPair",
+        "class": "AcesAndKings",
+        "from": 2468,
+        "to": 2478
+      },
+      {
+        "category": "TwoPair",
+        "class": "AcesAndQueens",
+        "from": 2479,
+        "to": 2489
+      },
+      {
+        "category": "TwoPair",
+        "class": "AcesAndJacks",
+        "from": 2490,
+        "to": 2500
+      },
+      {
+        "category": "TwoPair",
+        "class": "AcesAndTens",
+        "from": 2501,
+        "to": 2511
+      },
+      {
+        "category": "TwoPair",
+        "class": "AcesAndNines",
+        "from": 2512,
+        "to": 2522
+      },
+      {
+        "category": "TwoPair",
+        "class": "AcesAndEights",
+        "from": 2523,
+        "to": 2533
+      },
+      {
+        "category": "TwoPair",
+        "class": "AcesAndSevens",
+        "from": 2534,
+        "to": 2544
+      },
+      {
+        "category": "TwoPair",
+        "class": "AcesAndSixes",
+        "from": 2545,
+        "to": 2555
+      },
+      {
+        "category": "TwoPair",
+        "class": "AcesAndFives",
+        "from": 2556,
+        "to": 2566
+      },
+      {
+        "category": "TwoPair",
+        "class": "AcesAndFours",
+        "from": 2567,
+        "to": 2577
+      },
+      {
+        "category": "TwoPair",
+        "class": "AcesAndTreys",
+        "from": 2578,
+        "to": 2588
+      },
+      {
+        "category": "TwoPair",
+        "class": "AcesAndDeuces",
+        "from": 2589,
+        "to": 2599
+      },
+      {
+        "category": "TwoPair",
+        "class": "KingsAndQueens",
+        "from": 2600,
+        "to": 2610
+      },
+      {
+        "category": "TwoPair",
+        "class": "KingsAndJacks",
+        "from": 2611,
+        "to": 2621
+      },
+      {
+        "category": "TwoPair",
+        "class": "KingsAndTens",
+        "from": 2622,
+        "to": 2632
+      },
+      {
+        "category": "TwoPair",
+        "class": "KingsAndNines",
+        "from": 2633,
+        "to": 2643
+      },
+      {
+        "category": "TwoPair",
+        "class": "KingsAndEights",
+        "from": 2644,
+        "to": 2654
+      },
+      {
+        "category": "TwoPair",
+        "class": "KingsAndSevens",
+        "from": 2655,
+        "to": 2665
+      },
+      {
+        "category": "TwoPair",
+        "class": "KingsAndSixes",
+        "from": 2666,
+        "to": 2676
+      },
+      {
+        "category": "TwoPair",
+        "class": "KingsAndFives",
+        "from": 2677,
+        "to": 2687
+      },
+      {
+        "category": "TwoPair",
+        "class": "KingsAndFours",
+        "from": 2688,
+        "to": 2698
+      },
+      {
+        "category": "TwoPair",
+        "class": "KingsAndTreys",
+        "from": 2699,
+        "to": 2709
+      },
+      {
+        "category": "TwoPair",
+        "class": "KingsAndDeuces",
+        "from": 2710,
+        "to": 2720
+      },
+      {
+        "category": "TwoPair",
+        "class": "QueensAndJacks",
+        "from": 2721,
+        "to": 2731
+      },
+      {
+        "category": "TwoPair",
+        "class": "QueensAndTens",
+        "from": 2732,
+        "to": 2742
+      },
+      {
+        "category": "TwoPair",
+        "class": "QueensAndNines",
+        "from": 2743,
+        "to": 2753
+      },
+      {
+        "category": "TwoPair",
+        "class": "QueensAndEights",
+        "from": 2754,
+        "to": 2764
+      },
+      {
+        "category": "TwoPair",
+        "class": "QueensAndSevens",
+        "from": 2765,
+        "to": 2775
+      },
+      {
+        "category": "TwoPair",
+        "class": "QueensAndSixes",
+        "from": 2776,
+        "to": 2786
+      },
+      {
+        "category": "TwoPair",
+        "class": "QueensAndFives",
+        "from": 2787,
+        "to": 2797
+      },
+      {
+        "category": "TwoPair",
+        "class": "QueensAndFours",
+        "from": 2798,
+        "to": 2808
+      },
+      {
+        "category": "TwoPair",
+        "class": "QueensAndTreys",
+        "from": 2809,
+        "to": 2819
+      },
+      {
+        "category": "TwoPair",
+        "class": "QueensAndDeuces",
+        "from": 2820,
+        "to": 2830
+      },
+      {
+        "category": "TwoPair",
+        "class": "JacksAndTens",
+        "from": 2831,
+        "to": 2841
+      },
+      {
+        "category": "TwoPair",
+        "class": "JacksAndNines",
+        "from": 2842,
+        "to": 2852
+      },
+      {
+        "category": "TwoPair",
+        "class": "JacksAndEights",
+        "from": 2853,
+        "to": 2863
+      },
+      {
+        "category": "TwoPair",
+        "class": "JacksAndSevens",
+        "from": 2864,
+        "to": 2874
+      },
+      {
+        "category": "TwoPair",
+        "class": "JacksAndSixes",
+        "from": 2875,
+        "to": 2885
+      },
+      {
+        "category": "TwoPair",
+        "class": "JacksAndFives",
+        "from": 2886,
+        "to": 2896
+      },
+      {
+        "category": "TwoPair",
+        "class": "JacksAndFours",
+        "from": 2897,
+        "to": 2907
+      },
+      {
+        "category": "TwoPair",
+        "class": "JacksAndTreys",
+        "from": 2908,
+        "to": 2918
+      },
+      {
+        "category": "TwoPair",
+        "class": "JacksAndDeuces",
+        "from": 2919,
+        "to": 2929
+      },
+      {
+        "category": "TwoPair",
+        "class": "TensAndNines",
+        "from": 2930,
+        "to": 2940
+      },
+      {
+        "category": "TwoPair",
+        "class": "TensAndEights",
+        "from": 2941,
+        "to": 2951
+      },
+      {
+        "category": "TwoPair",
+        "class": "TensAndSevens",
+        "from": 2952,
+        "to": 2962
+      },
+      {
+        "category": "TwoPair",
+        "class": "TensAndSixes",
+        "from": 2963,
+        "to": 2973
+      },
+      {
+        "category": "TwoPair",
+        "class": "TensAndFives",
+        "from": 2974,
+        "to": 2984
+      },
+      {
+        "category": "TwoPair",
+        "class": "TensAndFours",
+        "from": 2985,
+        "to": 2995
+      },
+      {
+        "category": "TwoPair",
+        "class": "TensAndTreys",
+        "from": 2996,
+        "to": 3006
+      },
+      {
+        "category": "TwoPair",
+        "class": "TensAndDeuces",
+        "from": 3007,
+        "to": 3017
+      },
+      {
+        "category": "TwoPair",
+        "class": "NinesAndEights",
+        "from": 3018,
+        "to": 3028
+      },
+      {
+        "category": "TwoPair",
+        "class": "NinesAndSevens",
+        "from": 3029,
+        "to": 3039
+      },
+      {
+        "category": "TwoPair",
+        "class": "NinesAndSixes",
+        "from": 3040,
+        "to": 3050
+      },
+      {
+        "category": "TwoPair",
+        "class": "NinesAndFives",
+        "from": 3051,
+        "to": 3061
+      },
+      {
+        "category": "TwoPair",
+        "class": "NinesAndFours",
+        "from": 3062,
+        "to": 3072
+      },
+      {
+        "category": "TwoPair",
+        "class": "NinesAndTreys",
+        "from": 3073,
+        "to": 3083
+      },
+      {
+        "category": "TwoPair",
+        "class": "NinesAndDeuces",
+        "from": 3084,
+        "to": 3094
+      },
+      {
+        "category": "TwoPair",
+        "class": "EightsAndSevens",
+        "from": 3095,
+        "to": 3105
+      },
+      {
+        "category": "TwoPair",
+        "class": "EightsAndSixes",
+        "from": 3106,
+        "to": 3116
+      },
+      {
+        "category": "TwoPair",
+        "class": "EightsAndFives",
+        "from": 3117,
+        "to": 3127
+      },
+      {
+        "category": "TwoPair",
+        "class": "EightsAndFours",
+        "from": 3128,
+        "to": 3138
+      },
+      {
+        "category": "TwoPair",
+        "class": "EightsAndTreys",
+        "from": 3139,
+        "to": 3149
+      },
+      {
+        "category": "TwoPair",
+        "class": "EightsAndDeuces",
+        "from": 3150,
+        "to": 3160
+      },
+      {
+        "category": "TwoPair",
+        "class": "SevensAndSixes",
+        "from": 3161,
+        "to": 3171
+      },
+      {
+        "category": "TwoPair",
+        "class": "SevensAndFives",
+        "from": 3172,
+        "to": 3182
+      },
+      {
+        "category": "TwoPair",
+        "class": "SevensAndFours",
+        "from": 3183,
+        "to": 3193
+      },
+      {
+        "category": "TwoPair",
+        "class": "SevensAndTreys",
+        "from": 3194,
+        "to": 3204
+      },
+      {
+        "category": "TwoPair",
+        "class": "SevensAndDeuces",
+        "from": 3205,
+        "to": 3215
+      },
+      {
+        "category": "TwoPair",
+        "class": "SixesAndFives",
+        "from": 3216,
+        "to": 3226
+      },
+      {
+        "category": "TwoPair",
+        "class": "SixesAndFours",
+        "from": 3227,
+        "to": 3237
+      },
+      {
+        "category": "TwoPair",
+        "class": "SixesAndTreys",
+        "from": 3238,
+        "to": 3248
+      },
+      {
+        "category": "TwoPair",
+        "class": "SixesAndDeuces",
+        "from": 3249,
+        "to": 3259
+      },
+      {
+        "category": "TwoPair",
+        "class": "FivesAndFours",
+        "from": 3260,
+        "to": 3270
+      },
+      {
+        "category": "TwoPair",
+        "class": "FivesAndTreys",
+        "from": 3271,
+        "to": 3281
+      },
+      {
+        "category": "TwoPair",
+        "class": "FivesAndDeuces",
+        "from": 3282,
+        "to": 3292
+      },
+      {
+        "category": "TwoPair",
+        "class": "FoursAndTreys",
+        "from": 3293,
+        "to": 3303
+      },
+      {
+        "category": "TwoPair",
+        "class": "FoursAndDeuces",
+        "from": 3304,
+        "to": 3314
+      },
+      {
+        "category": "TwoPair",
+        "class": "TreysAndDeuces",
+        "from": 3315,
+        "to": 3325
+      },
+      {
+        "category": "Pair",
+        "class": "PairOfAces",
+        "from": 3326,
+        "to": 3545
+      },
+      {
+        "category": "Pair",
+        "class": "PairOfKings",
+        "from": 3546,
+        "to": 3765
+      },
+      {
+        "category": "Pair",
+        "class": "PairOfQueens",
+        "from": 3766,
+        "to": 3985
+      },
+      {
+        "category": "Pair",
+        "class": "PairOfJacks",
+        "from": 3986,
+        "to": 4205
+      },
+      {
+        "category": "Pair",
+        "class": "PairOfTens",
+        "from": 4206,
+        "to": 4425
+      },
+      {
+        "category": "Pair",
+        "class": "PairOfNines",
+        "from": 4426,
+        "to": 4645
+      },
+      {
+        "category": "Pair",
+        "class": "PairOfEights",
+        "from": 4646,
+        "to": 4865
+      },
+      {
+        "category": "Pair",
+        "class": "PairOfSevens",
+        "from": 4866,
+        "to": 5085
+      },
+      {
+        "category": "Pair",
+        "class": "PairOfSixes",
+        "from": 5086,
+        "to": 5305
+      },
+      {
+        "category": "Pair",
+        "class": "PairOfFives",
+        "from": 5306,
+        "to": 5525
+      },
+      {
+        "category": "Pair",
+        "class": "PairOfFours",
+        "from": 5526,
+        "to": 5745
+      },
+      {
+        "category": "Pair",
+        "class": "PairOfTreys",
+        "from": 5746,
+        "to": 5965
+      },
+      {
+        "category": "Pair",
+        "class": "PairOfDeuces",
+        "from": 5966,
+        "to": 6185
+      },
+      {
+        "category": "HighCard",
+        "class": "AceHigh",
+        "from": 6186,
+        "to": 6678
+      },
+      {
+        "category": "HighCard",
+        "class": "KingHigh",
+        "from": 6679,
+        "to": 7007
+      },
+      {
+        "category": "HighCard",
+        "class": "QueenHigh",
+        "from": 7008,
+        "to": 7216
+      },
+      {
+        "category": "HighCard",
+        "class": "JackHigh",
+        "from": 7217,
+        "to": 7341
+      },
+      {
+        "category": "HighCard",
+        "class": "TenHigh",
+        "from": 7342,
+        "to": 7410
+      },
+      {
+        "category": "HighCard",
+        "class": "NineHigh",
+        "from": 7411,
+        "to": 7444
+      },
+      {
+        "category": "HighCard",
+        "class": "EightHigh",
+        "from": 7445,
+        "to": 7458
+      },
+      {
+        "category": "HighCard",
+        "class": "SevenHigh",
+        "from": 7459,
+        "to": 7462
+      }
+    ],
+    "description": "Every five-card hand receives an integer rank. 1 is the strongest hand and 7462 the weakest; lower is stronger. Value 0 is an out-of-band sentinel meaning 'no hand'. The nine categories occupy contiguous, non-overlapping bands.",
+    "no_hand_sentinel": 0,
+    "strongest_value": 1,
+    "weakest_value": 7462
+  },
+  "epic": "DECON-02"
+}

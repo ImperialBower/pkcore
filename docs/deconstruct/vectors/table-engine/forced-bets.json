@@ -1,0 +1,94 @@
+{
+  "behavior": "forced-bets",
+  "data": {
+    "description": "Blind posting and who acts first before the flop. Heads-up is the special case: the button posts the small blind and acts first before the flop, then acts last on every later street.",
+    "tables": [
+      {
+        "big_blind": 100,
+        "first_to_act_preflop": 0,
+        "label": "heads-up: the button is also the small blind",
+        "pot_after_posting": 0,
+        "seat_count": 2,
+        "seats": [
+          {
+            "chips": 950,
+            "handle": "Button",
+            "seat": 0
+          },
+          {
+            "chips": 900,
+            "handle": "Opponent",
+            "seat": 1
+          }
+        ],
+        "small_blind": 50
+      },
+      {
+        "big_blind": 100,
+        "first_to_act_preflop": 0,
+        "label": "three-handed",
+        "pot_after_posting": 0,
+        "seat_count": 3,
+        "seats": [
+          {
+            "chips": 1000,
+            "handle": "Button",
+            "seat": 0
+          },
+          {
+            "chips": 950,
+            "handle": "Small",
+            "seat": 1
+          },
+          {
+            "chips": 900,
+            "handle": "Big",
+            "seat": 2
+          }
+        ],
+        "small_blind": 50
+      },
+      {
+        "big_blind": 100,
+        "first_to_act_preflop": 3,
+        "label": "six-handed",
+        "pot_after_posting": 0,
+        "seat_count": 6,
+        "seats": [
+          {
+            "chips": 1000,
+            "handle": "Button",
+            "seat": 0
+          },
+          {
+            "chips": 950,
+            "handle": "Small",
+            "seat": 1
+          },
+          {
+            "chips": 900,
+            "handle": "Big",
+            "seat": 2
+          },
+          {
+            "chips": 1000,
+            "handle": "UTG",
+            "seat": 3
+          },
+          {
+            "chips": 1000,
+            "handle": "Middle",
+            "seat": 4
+          },
+          {
+            "chips": 1000,
+            "handle": "Cutoff",
+            "seat": 5
+          }
+        ],
+        "small_blind": 50
+      }
+    ]
+  },
+  "epic": "DECON-06"
+}

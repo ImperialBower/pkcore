@@ -1,0 +1,118 @@
+{
+  "behavior": "side-pots",
+  "data": {
+    "description": "Layered side pots. When players are all-in for different amounts the pot divides into layers capped at each all-in level, and each layer is contested only by the players who paid into it. Tied winners chop each layer separately. Chips one player committed beyond what anyone matched are returned, not awarded.",
+    "scenarios": [
+      {
+        "board": "A♥ A♦ A♣ A♠ K♥",
+        "chips_after": 800,
+        "chips_before": 800,
+        "chips_conserved": true,
+        "ending_stacks": [
+          {
+            "chips": 100,
+            "handle": "Short",
+            "seat": 0
+          },
+          {
+            "chips": 200,
+            "handle": "Mid",
+            "seat": 1
+          },
+          {
+            "chips": 500,
+            "handle": "Deep",
+            "seat": 2
+          }
+        ],
+        "label": "three-way asymmetric all-in, all three hands tied",
+        "note": "Four aces on the board means everyone plays the board, so all three tie. The 100-cap layer chops three ways, the 100-to-200 layer chops two ways, and the 200-to-500 remainder was never matched so it returns. Every seat must end at exactly its starting stack.",
+        "settled_cleanly": true,
+        "starting_stacks": [
+          {
+            "chips": 100,
+            "handle": "Short",
+            "seat": 0
+          },
+          {
+            "chips": 200,
+            "handle": "Mid",
+            "seat": 1
+          },
+          {
+            "chips": 500,
+            "handle": "Deep",
+            "seat": 2
+          }
+        ]
+      },
+      {
+        "board": "A♥ A♦ A♣ A♠ K♥",
+        "chips_after": 1200,
+        "chips_before": 1200,
+        "chips_conserved": true,
+        "ending_stacks": [
+          {
+            "chips": 1000,
+            "handle": "Deep",
+            "seat": 0
+          },
+          {
+            "chips": 200,
+            "handle": "Short",
+            "seat": 1
+          }
+        ],
+        "label": "heads-up all-in, mismatched stacks, hands tied",
+        "note": "Both play the board and tie. The main pot is capped at the short stack and splits evenly; the deep stack's unmatched excess returns to it. Both end where they started.",
+        "settled_cleanly": true,
+        "starting_stacks": [
+          {
+            "chips": 1000,
+            "handle": "Deep",
+            "seat": 0
+          },
+          {
+            "chips": 200,
+            "handle": "Short",
+            "seat": 1
+          }
+        ]
+      },
+      {
+        "board": "K♠ K♣ 9♦ 8♠ 4♥",
+        "chips_after": 1200,
+        "chips_before": 1200,
+        "chips_conserved": true,
+        "ending_stacks": [
+          {
+            "chips": 800,
+            "handle": "Deep",
+            "seat": 0
+          },
+          {
+            "chips": 400,
+            "handle": "Short",
+            "seat": 1
+          }
+        ],
+        "label": "heads-up all-in, the short stack wins outright",
+        "note": "The short stack wins the main pot only. The deep stack's unmatched excess is returned rather than awarded to the winner -- chips nobody could match were never truly in play.",
+        "settled_cleanly": true,
+        "starting_stacks": [
+          {
+            "chips": 1000,
+            "handle": "Deep",
+            "seat": 0
+          },
+          {
+            "chips": 200,
+            "handle": "Short",
+            "seat": 1
+          }
+        ]
+      }
+    ]
+  },
+  "epic": "DECON-07"
+}

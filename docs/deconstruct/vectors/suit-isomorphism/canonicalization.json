@@ -1,0 +1,27 @@
+{
+  "behavior": "canonicalization",
+  "data": {
+    "description": "A heads-up matchup is canonicalized into a higher/lower ordering so that a matchup and its mirror share one representative. Presenting the same two holdings in either order must yield the same canonical form.",
+    "matchups": [
+      {
+        "canonical_higher": "A♠ K♠",
+        "canonical_lower": "Q♥ Q♦",
+        "input_first": "A♠ K♠",
+        "input_second": "Q♥ Q♦"
+      },
+      {
+        "canonical_higher": "A♠ K♠",
+        "canonical_lower": "Q♥ Q♦",
+        "input_first": "Q♥ Q♦",
+        "input_second": "A♠ K♠"
+      },
+      {
+        "canonical_higher": "A♠ A♥",
+        "canonical_lower": "7♦ 2♣",
+        "input_first": "7♦ 2♣",
+        "input_second": "A♠ A♥"
+      }
+    ]
+  },
+  "epic": "DECON-10"
+}
