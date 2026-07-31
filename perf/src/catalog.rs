@@ -19,6 +19,15 @@ const SAMPLE_HANDS: usize = 1_024;
 /// to spread out and small enough to stay cheap.
 const STRIDE: usize = 97;
 
+/// Index mask for the hot loops. `i & MASK` is a single `and` instruction,
+/// where `i % hands.len()` is a real division the compiler cannot eliminate
+/// because the length is a runtime value. At ~20-40 cycles on this host that
+/// division was a meaningful fraction of a nano-band measurement.
+///
+/// Correct only because `SAMPLE_HANDS` is a power of two and every sample
+/// builder returns exactly that many hands — both asserted in the tests.
+const MASK: usize = SAMPLE_HANDS - 1;
+
 /// Builds a deterministic spread of five-card hands.
 fn five_sample() -> Result<Vec<Five>, PerfError> {
     let hands: Vec<Five> = Deck::as_vec()
@@ -67,7 +76,7 @@ fn make_five_hand_rank_value() -> Result<HotFn, PerfError> {
     Ok(Box::new(move |iters: u32| {
         let mut acc: u64 = 0;
         for i in 0..iters as usize {
-            acc = acc.wrapping_add(u64::from(hands[i % hands.len()].hand_rank_value()));
+            acc = acc.wrapping_add(u64::from(hands[i & MASK].hand_rank_value()));
         }
         acc
     }))
@@ -78,7 +87,7 @@ fn make_seven_hand_rank_value() -> Result<HotFn, PerfError> {
     Ok(Box::new(move |iters: u32| {
         let mut acc: u64 = 0;
         for i in 0..iters as usize {
-            acc = acc.wrapping_add(u64::from(hands[i % hands.len()].hand_rank_value()));
+            acc = acc.wrapping_add(u64::from(hands[i & MASK].hand_rank_value()));
         }
         acc
     }))
@@ -89,7 +98,7 @@ fn make_five_or_rank_bits() -> Result<HotFn, PerfError> {
     Ok(Box::new(move |iters: u32| {
         let mut acc: u64 = 0;
         for i in 0..iters as usize {
-            acc = acc.wrapping_add(u64::from(hands[i % hands.len()].or_rank_bits()));
+            acc = acc.wrapping_add(u64::from(hands[i & MASK].or_rank_bits()));
         }
         acc
     }))
@@ -121,7 +130,7 @@ fn make_five_from_str() -> Result<HotFn, PerfError> {
     Ok(Box::new(move |iters: u32| {
         let mut acc: u64 = 0;
         for i in 0..iters as usize {
-            let parsed = Five::from_str(&texts[i % texts.len()]);
+            let parsed = Five::from_str(&texts[i & MASK]);
             acc = acc.wrapping_add(match parsed {
                 Ok(five) => u64::from(five.or_rank_bits()),
                 Err(_) => 1,
@@ -207,6 +216,19 @@ mod perf__catalog_tests {
                 workload.name
             );
         }
+    }
+
+    /// The hot loops index with `& MASK` rather than `% len`, which is only
+    /// correct if the sample length is exactly `MASK + 1` and a power of two.
+    #[test]
+    fn sample_length_is_the_power_of_two_the_mask_assumes() {
+        assert!(
+            SAMPLE_HANDS.is_power_of_two(),
+            "SAMPLE_HANDS must be a power of two for the mask index"
+        );
+        assert_eq!(MASK, SAMPLE_HANDS - 1);
+        assert_eq!(five_sample().expect("sample builds").len(), SAMPLE_HANDS);
+        assert_eq!(seven_sample().expect("sample builds").len(), SAMPLE_HANDS);
     }
 
     /// Smoke test: every workload's setup succeeds and one iteration runs.
