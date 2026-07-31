@@ -153,6 +153,22 @@ impl Pile for Six {
         unimplemented!("Six cannot be added; they represent a fixed length collection.")
     }
 
+    /// Same comparison as [`Pile::are_unique`]'s default, but over the backing
+    /// array rather than a `Vec`.
+    ///
+    /// The default calls `to_vec()`, which allocates. `is_dealt` calls this on
+    /// every evaluation, so the default's allocation dominated hand evaluation
+    /// entirely — see `docs/perf/PROFILING.md`.
+    fn are_unique(&self) -> bool {
+        !(1..self.0.len()).any(|i| self.0[i..].contains(&self.0[i - 1]))
+    }
+
+    /// Allocation-free counterpart to [`Pile::contains_blank`]'s default,
+    /// which reaches it through `contains` and so calls `to_vec()`.
+    fn contains_blank(&self) -> bool {
+        self.0.contains(&Card::BLANK)
+    }
+
     fn card_at(self, _index: usize) -> Option<Card> {
         unimplemented!("Six is a fixed-length collection; use `.cards().card_at(index)` for positional access")
     }
@@ -199,6 +215,19 @@ mod arrays__six_tests {
     use super::*;
     use crate::analysis::class::HandRankClass;
     use crate::analysis::name::HandRankName;
+
+    /// See `docs/perf/PROFILING.md`: the `Pile::is_dealt` default allocates
+    /// twice via `to_vec`, which dominated hand evaluation.
+    #[test]
+    fn is_dealt_does_not_allocate() {
+        let hand = Six::from(CARDS);
+        assert!(hand.is_dealt());
+
+        let (dealt, allocations) = crate::alloc_probe::count_allocs(|| hand.is_dealt());
+
+        assert!(dealt);
+        assert_eq!(allocations, 0, "Six::is_dealt made {allocations} heap allocation(s)");
+    }
 
     const CARDS: [Card; 6] = [
         Card::ACE_DIAMONDS,

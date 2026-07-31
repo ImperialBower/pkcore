@@ -87,6 +87,22 @@ impl Pile for Three {
         unimplemented!("Three cannot be added; they represent a fixed length collection.")
     }
 
+    /// Same comparison as [`Pile::are_unique`]'s default, but over the backing
+    /// array rather than a `Vec`.
+    ///
+    /// The default calls `to_vec()`, which allocates. `is_dealt` calls this on
+    /// every evaluation, so the default's allocation dominated hand evaluation
+    /// entirely — see `docs/perf/PROFILING.md`.
+    fn are_unique(&self) -> bool {
+        !(1..self.0.len()).any(|i| self.0[i..].contains(&self.0[i - 1]))
+    }
+
+    /// Allocation-free counterpart to [`Pile::contains_blank`]'s default,
+    /// which reaches it through `contains` and so calls `to_vec()`.
+    fn contains_blank(&self) -> bool {
+        self.0.contains(&Card::BLANK)
+    }
+
     fn card_at(self, _index: usize) -> Option<Card> {
         unimplemented!("Three is a fixed 3-card hand; use `.cards().card_at(index)` for positional access")
     }
@@ -145,6 +161,19 @@ mod arrays__three_tests {
 
     /// <https://www.youtube.com/watch?v=vjM60lqRhPg />
     const THE_FLOP: [Card; 3] = [Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS];
+
+    /// See `docs/perf/PROFILING.md`: the `Pile::is_dealt` default allocates
+    /// twice via `to_vec`, which dominated hand evaluation.
+    #[test]
+    fn is_dealt_does_not_allocate() {
+        let flop = Three::from(THE_FLOP);
+        assert!(flop.is_dealt());
+
+        let (dealt, allocations) = crate::alloc_probe::count_allocs(|| flop.is_dealt());
+
+        assert!(dealt);
+        assert_eq!(allocations, 0, "Three::is_dealt made {allocations} heap allocation(s)");
+    }
 
     #[test]
     fn display() {

@@ -1571,6 +1571,22 @@ impl Pile for Two {
         unimplemented!("Two cannot be added; they represent a fixed length collection.")
     }
 
+    /// Same comparison as [`Pile::are_unique`]'s default, but over the backing
+    /// array rather than a `Vec`.
+    ///
+    /// The default calls `to_vec()`, which allocates. `is_dealt` calls this on
+    /// every evaluation, so the default's allocation dominated hand evaluation
+    /// entirely — see `docs/perf/PROFILING.md`.
+    fn are_unique(&self) -> bool {
+        !(1..self.0.len()).any(|i| self.0[i..].contains(&self.0[i - 1]))
+    }
+
+    /// Allocation-free counterpart to [`Pile::contains_blank`]'s default,
+    /// which reaches it through `contains` and so calls `to_vec()`.
+    fn contains_blank(&self) -> bool {
+        self.0.contains(&Card::BLANK)
+    }
+
     fn card_at(self, _index: usize) -> Option<Card> {
         unimplemented!("Two is a fixed 2-card hand; use `.first()`/`.second()`, or `.cards().card_at(index)`")
     }
@@ -1775,6 +1791,19 @@ mod arrays__two_tests {
     /// **ASIDE** The book is out as
     /// [The Official Dictionary of Poker: Second Edition](https://www.amazon.com/Official-Dictionary-Poker-Second-ebook/dp/B00KJMP6B2?ref_=ast_author_mpb)
     const BIG_SLICK: [Card; 2] = [Card::ACE_DIAMONDS, Card::KING_HEARTS];
+
+    /// See `docs/perf/PROFILING.md`: the `Pile::is_dealt` default allocates
+    /// twice via `to_vec`, which dominated hand evaluation.
+    #[test]
+    fn is_dealt_does_not_allocate() {
+        let hole = Two::from(BIG_SLICK);
+        assert!(hole.is_dealt());
+
+        let (dealt, allocations) = crate::alloc_probe::count_allocs(|| hole.is_dealt());
+
+        assert!(dealt);
+        assert_eq!(allocations, 0, "Two::is_dealt made {allocations} heap allocation(s)");
+    }
 
     /// The test fn with the exact same name as the function it's testing is my Happy Path
     /// tests. It should just work simple

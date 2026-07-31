@@ -299,6 +299,23 @@ impl Pile for Five {
         unimplemented!("Five cannot be added; it's a fixed 5-card hand")
     }
 
+    /// Same comparison as [`Pile::are_unique`]'s default, but over the backing
+    /// array rather than a `Vec`.
+    ///
+    /// The default calls `to_vec()`, which allocates. `is_dealt` calls this on
+    /// every `hand_rank_value`, and `Seven::hand_rank_value` calls that 21
+    /// times per evaluation, so the default's allocation dominated hand
+    /// evaluation entirely — see `docs/perf/PROFILING.md`.
+    fn are_unique(&self) -> bool {
+        !(1..self.0.len()).any(|i| self.0[i..].contains(&self.0[i - 1]))
+    }
+
+    /// Allocation-free counterpart to [`Pile::contains_blank`]'s default,
+    /// which reaches it through `contains` and so calls `to_vec()`.
+    fn contains_blank(&self) -> bool {
+        self.0.contains(&Card::BLANK)
+    }
+
     fn card_at(self, _index: usize) -> Option<Card> {
         unimplemented!("Five is a fixed 5-card hand; use `.cards().card_at(index)` for positional access")
     }
@@ -406,6 +423,29 @@ mod arrays__five_tests {
         Card::JACK_DIAMONDS,
         Card::TEN_DIAMONDS,
     ];
+
+    /// `hand_rank_value` is the innermost loop of every showdown in the
+    /// library, so it must not touch the heap. Both branches are covered: the
+    /// flat `unique_rank` lookup a flush takes, and the `not_unique` binary
+    /// search a paired hand takes.
+    #[rstest]
+    #[case("A♠ K♠ Q♠ J♠ T♠")]
+    #[case("A♠ A♦ K♠ K♦ Q♠")]
+    #[case("7♣ 7♦ 7♥ 2♠ 3♠")]
+    fn hand_rank_value_does_not_allocate(#[case] text: &str) {
+        let hand = Five::from_str(text).unwrap();
+
+        // Warm the lookup tables outside the counted region.
+        let expected = hand.hand_rank_value();
+
+        let (actual, allocations) = crate::alloc_probe::count_allocs(|| hand.hand_rank_value());
+
+        assert_eq!(actual, expected);
+        assert_eq!(
+            allocations, 0,
+            "Five::hand_rank_value({text}) made {allocations} heap allocation(s)"
+        );
+    }
 
     #[test]
     fn from_2and3() {

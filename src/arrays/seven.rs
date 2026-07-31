@@ -208,6 +208,22 @@ impl Pile for Seven {
         unimplemented!("Seven cannot be added; they represent a fixed length collection.")
     }
 
+    /// Same comparison as [`Pile::are_unique`]'s default, but over the backing
+    /// array rather than a `Vec`.
+    ///
+    /// The default calls `to_vec()`, which allocates. `is_dealt` calls this on
+    /// every evaluation, so the default's allocation dominated hand evaluation
+    /// entirely — see `docs/perf/PROFILING.md`.
+    fn are_unique(&self) -> bool {
+        !(1..self.0.len()).any(|i| self.0[i..].contains(&self.0[i - 1]))
+    }
+
+    /// Allocation-free counterpart to [`Pile::contains_blank`]'s default,
+    /// which reaches it through `contains` and so calls `to_vec()`.
+    fn contains_blank(&self) -> bool {
+        self.0.contains(&Card::BLANK)
+    }
+
     fn card_at(self, _index: usize) -> Option<Card> {
         unimplemented!("Seven is a fixed 7-card hand; use `.cards().card_at(index)` for positional access")
     }
@@ -264,6 +280,40 @@ mod arrays__seven_tests {
     use crate::analysis::class::HandRankClass;
     use crate::analysis::name::HandRankName;
     use crate::util::data::TestData;
+
+    /// A seven-card showdown is the single hottest operation in the library —
+    /// it runs once per player per hand in equity enumeration, self-play, and
+    /// the solver — and it evaluates 21 five-card permutations, so any
+    /// allocation on the path is paid 21 times over.
+    #[test]
+    fn hand_rank_value_does_not_allocate() {
+        let hand = Seven::from(CARDS);
+
+        // Warm the lookup tables outside the counted region.
+        let expected = hand.hand_rank_value();
+
+        let (actual, allocations) = crate::alloc_probe::count_allocs(|| hand.hand_rank_value());
+
+        assert_eq!(actual, expected);
+        assert_eq!(
+            allocations, 0,
+            "Seven::hand_rank_value made {allocations} heap allocation(s)"
+        );
+    }
+
+    /// `is_dealt` is the validity precondition every fixed-size hand type
+    /// shares, and its `Pile` default allocates twice. Callers such as
+    /// `the_nuts` invoke it per candidate hand.
+    #[test]
+    fn is_dealt_does_not_allocate() {
+        let hand = Seven::from(CARDS);
+        assert!(hand.is_dealt());
+
+        let (dealt, allocations) = crate::alloc_probe::count_allocs(|| hand.is_dealt());
+
+        assert!(dealt);
+        assert_eq!(allocations, 0, "Seven::is_dealt made {allocations} heap allocation(s)");
+    }
 
     const CARDS: [Card; 7] = [
         Card::ACE_DIAMONDS,
