@@ -288,7 +288,7 @@ it is quoted:
 
 **(a) CFR results are not reproducible run to run — this is the solver, not
 the harness.** `Combos` wraps a `HashSet<Combo>` (`src/analysis/gto/combos.rs:14`).
-`Solver::build_hand_pairs` (`solver.rs:1086-1095`) iterates that set to build
+`Solver::build_hand_pairs` (`solver.rs:1085`) iterates that set to build
 the ordered `Vec<(Two, Two)>` that `iterate()` walks. `Solver::iterate()`
 (`solver.rs:772-797`) is not a synchronous batch update: it loops over the
 pairs sequentially, mutating shared `&mut self.regrets` / `&mut
@@ -367,24 +367,34 @@ that actually parallelizes (`par_bridge`/`into_par_iter` over runouts or
 samples in `engine.rs`).
 
 **8 threads also beat 4 threads, on every one of those same workloads**
-(a further 1.1x-1.7x). This is the interesting result: `sweep.rs`'s own
-module doc comment names the E-core-slowdown scenario ("if 8-thread is
-slower than 4-thread, that is the E-core effect, not a bug") as one plausible
-outcome on this 4P+4E M1. **That is not what happened here.** For these
-embarrassingly-parallel workloads, whose per-item cost is microseconds to
-milliseconds, the four extra E-cores contributed net-positive throughput
-rather than dragging the average down. Record this as the actual finding,
-not the predicted one: on this host, at these workload sizes, going to 8
-threads was never worse than 4.
+(a further 1.1x-1.7x). This is the interesting result: this task's own brief
+flagged the possibility that 8 threads could be *slower* than 4 on this
+4P+4E M1, reasoning from the E-core-throughput disparity the design document
+describes in Section 5
+(`docs/superpowers/specs/2026-07-30-kernel-performance-harness-design.md`) —
+macOS may schedule rayon's worker threads onto E-cores at roughly a third of
+P-core throughput. Neither `sweep.rs`'s own module doc comment nor the design
+document actually states a directional 8-vs-4 prediction; both describe
+run-to-run *variance* from core assignment ("two identical runs can differ by
+30%"), not an expected ordering. **Whatever the source, that concern is not
+what happened here.** For these embarrassingly-parallel workloads, whose
+per-item cost is microseconds to milliseconds, the four extra E-cores
+contributed net-positive throughput rather than dragging the average down.
+Record this as the actual finding, not the anticipated one: on this host, at
+these workload sizes, going to 8 threads was never worse than 4.
 
 **`gto.cfr.iters` is the counter-example, and it explains itself:** it got
 monotonically *slower* as the pool grew — 984 µs/iter at 1 thread, up to
 1519 µs/iter at 8 (≈ 1.5x slower). This matches Finding 3: `Solver::iterate()`
 is strictly sequential, with no parallel iterator inside it, so there is no
-work for extra rayon workers to steal — a bigger pool only adds idle-worker
-overhead. Its row in the sweep table should not be read as "CFR scaling"; it
-is included only because `--sweep` applies uniformly to whatever workloads a
-run selects, not just the ones with something to gain from it.
+work for extra rayon workers to steal. The likely mechanism — not profiled in
+this task, so treat as a lead rather than a confirmed cause — is that a
+bigger pool means more idle rayon workers spin-polling for work that never
+arrives, contending for shared cache and memory bandwidth on this
+single-socket M1 rather than doing anything useful. Its row in the sweep
+table should not be read as "CFR scaling"; it is included only because
+`--sweep` applies uniformly to whatever workloads a run selects, not just the
+ones with something to gain from it.
 
 `sim.selfplay.6max` shows a small, monotonic improvement (1.24x at 4 threads,
 a further 1.16x at 8) despite Task 6 establishing that `SimTable` makes no
