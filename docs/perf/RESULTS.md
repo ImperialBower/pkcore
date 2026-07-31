@@ -8,12 +8,12 @@ Figures are nanoseconds per operation. `min` is the best estimator of true cost 
 **Host:** Apple M1 · 8 cores (4P + 4E)  
 **Features:** pure-kernel  
 **pkcore:** 0.3.2 · **rustc 1.97.1 (8bab26f4f 2026-07-14)**  
-**Taken:** 2026-07-31T13:26:39Z
+**Taken:** 2026-07-31T15:16:17Z
 
 | Workload | Band | median | min | p95 | MAD | checksum | status |
 |---|---|---:|---:|---:|---:|---|---|
-| `eval.five.hand_rank_value` | Nano | 102.61 | 101.85 | 103.05 | 0.08 | `512044479` | ok |
-| `eval.seven.hand_rank_value` | Nano | 2061.92 | 2058.31 | 2069.11 | 2.89 | `25628021` | ok |
-| `eval.five.or_rank_bits` | Nano | 1.95 | 1.94 | 1.97 | 0.00 | `546925699` | ok |
-| `parse.five.from_str` | Nano | 500.68 | 499.91 | 505.56 | 0.51 | `54803507` | ok |
+| `eval.five.hand_rank_value` | Nano | 12.99 | 12.84 | 17.58 | 0.11 | `512044479` | ok |
+| `eval.seven.hand_rank_value` | Nano | 755.68 | 729.61 | 931.19 | 21.97 | `25628021` | ok |
+| `eval.five.or_rank_bits` | Nano | 1.95 | 1.95 | 1.98 | 0.00 | `546925699` | ok |
+| `parse.five.from_str` | Nano | 506.10 | 504.40 | 540.13 | 1.45 | `54803507` | ok |
 
