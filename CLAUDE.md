@@ -1,6 +1,11 @@
 # Claude Instructions for pkcore
 
-These instructions guide Claude to generate code that aligns with our project standards for testing, documentation, and code quality.
+These instructions guide Claude to generate code that aligns with our project
+standards for testing, documentation, and code quality.
+
+Everything here is what the codebase *cannot* tell you on its own. Anything
+derivable by reading the code, the manifest, or `--help` has deliberately been
+left out — read the repo for that.
 
 ## Project Roadmap
 
@@ -8,222 +13,72 @@ The long-term vision for this library — including the poker table service, web
 
 ## Testing Requirements
 
-### Unit Tests
+Stricter than Rust norms — both kinds of test are required, not just one:
+
 - **Every public function must have at least one unit test** covering the happy path
-- **Every public struct/enum must have tests** that validate construction, methods, and trait implementations
-- Unit tests should be placed in a `#[cfg(test)]` module at the end of the file or in a `tests/` directory
-- Test names should be descriptive and follow the pattern: `test_<function_or_struct_name>_<scenario>`
-- Include edge cases, error conditions, and boundary conditions
-- Use `assert!`, `assert_eq!`, and `assert_ne!` macros effectively
-
-### Doc Tests
+- **Every public struct/enum must have tests** validating construction, methods, and trait implementations
 - **Every public function and method must include at least one doc test** demonstrating basic usage
-- Doc tests should be included in the doc comment (`///`) using triple backticks with `rust` syntax highlighting
-- Doc tests must compile and run successfully
-- Doc tests should show the most common usage pattern
-- If a function can fail, include a doc test that shows success cases
-- Doc tests should be runnable with `cargo test --doc`
+- Include edge cases, error conditions, and boundary conditions
 
-### Example Structure
-```rust
-/// Brief description of what this function does.
-///
-/// Longer explanation of behavior, parameters, and return values.
-///
-/// # Panics
-/// Panics if the condition X is violated.
-///
-/// # Errors
-/// Returns `Err` if the operation fails due to reason Y.
-///
-/// # Examples
-/// ```
-/// use pkcore::your_module::your_function;
-/// let result = your_function(42);
-/// assert_eq!(result, Ok(expected_value));
-/// ```
-pub fn your_function(param: Type) -> Result<ReturnType, ErrorType> {
-    // implementation
-}
+### Test naming and placement — differs from the Rust default
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn your_function_happy_path() {
-        let result = your_function(42);
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn your_function_edge_case() {
-        let result = your_function(0);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn your_function_boundary() {
-        // Test boundary conditions
-        let result = your_function(u32::MAX);
-        assert!(result.is_ok());
-    }
-}
-```
-
-## Documentation Requirements
-
-### For Functions
-- **Brief summary**: First line should be a concise, single-sentence description
-- **Detailed explanation**: Explain what the function does, why it exists, when to use it, and any important caveats
-- **Parameters**: Document all parameters with their types, ranges, and expected behavior
-- **Return value**: Clearly explain what is returned and under what conditions
-- **Errors**: Document all possible error cases using `# Errors` section with explanation
-- **Panics**: Document if the function can panic using `# Panics` section
-- **Examples**: Include `# Examples` with working doc test code that demonstrates usage
-- **Safety**: Use `# Safety` section if the function is `unsafe`, explaining why it's unsafe and how to use safely
-
-### For Structs and Enums
-- **Brief description**: Explain the purpose and role of the type in the system
-- **Fields**: Document each field with its purpose and expected invariants
-- **Examples**: Show common construction and usage patterns
-- **Trait implementations**: Explain behavior of implemented traits if non-obvious
-- Include examples showing how to construct and interact with the type
-
-### For Modules
-- **Module-level documentation**: Each module file should start with a module-level doc comment explaining its purpose
-- Example: `//! Handles poker hand ranking and comparison logic.`
-- Include examples of common usage patterns for the module
-
-### For Crate Root (lib.rs)
-- **Comprehensive overview**: Explain the crate's purpose and main concepts
-- **Module organization**: Link to key modules and their purposes
-- **Quick start guide**: Show how to get started with the crate
-- **Examples**: Provide complete working examples of common tasks
+- **No `test_` prefix on test function names.** Name the function after the
+  behaviour: `hand_rank_value_does_not_allocate`, not
+  `test_hand_rank_value`.
+- Test modules are named `<path>__<type>_tests` — e.g. `arrays__five_tests`,
+  `casino__table__position_tests`.
+- Each test module carries `#[allow(non_snake_case)]` paired with
+  `#[cfg(test)]`, because the double-underscore module name is not snake case.
+- **Colocate tests in a `#[cfg(test)]` module in the same file** rather than a
+  separate `tests/` directory. Integration tests under `tests/` are the
+  exception, not the default.
 
 ## Code Quality Standards
 
-### Naming Conventions
-- Use clear, descriptive names for functions, variables, and types
-- Use `snake_case` for functions, variables, and module names
-- Use `PascalCase` for types, structs, enums, and traits
-- Avoid single-letter variable names except for loop indices (i, j, k)
-- Use full words in variable names (e.g., `cards` instead of `c`, `rank` instead of `r`)
-
 ### Error Handling
+
 - **Never use `unwrap()`, `expect()`, or `panic!()` in library code**
-- It's acceptable to use these in tests if testing, but not in production code
+- Acceptable in tests; not in production code
 - Prefer `Result<T, E>` over `Option<T>` for operations that can fail with meaningful errors
-- Create custom error types for domain-specific errors
-- Implement `std::error::Error` for custom error types
-- Document all error cases clearly
-- Use `?` operator for error propagation in library code
+- Create custom error types for domain-specific errors, and implement `std::error::Error` for them
+- Use `?` for error propagation in library code
+
+### Naming
+
+- Avoid single-letter variable names except loop indices (i, j, k)
+- Use full words: `cards` not `c`, `rank` not `r`
 
 ### Trait Implementations
-- Implement `Display` for user-facing types (those that will be shown to users)
+
+- Implement `Display` for user-facing types
 - Implement `Debug` for all public types
-- Implement `Default` for types that have a sensible default value
+- Implement `Default` for types with a sensible default
 - Implement `Clone` and `Copy` when semantically appropriate
-- Document non-obvious trait behavior in the trait implementation
+- Document non-obvious trait behaviour at the implementation
 
 ### Code Organization
+
 - Keep functions focused and single-purpose
 - Extract complex logic into well-named helper functions
 - Group related functions and types in logical modules
 - Use visibility modifiers (`pub`, `pub(crate)`, private) appropriately
 
-## Rust-Specific Guidelines
+## Commands you would not guess
 
-### Working with References
-- Prefer `&T` (borrowing) over `T` (taking ownership) when possible
-- Use `&mut T` only when mutation is needed
-- Document borrowing requirements in function documentation
-- Consider lifetime requirements for complex references
-
-### Performance Considerations
-- Avoid unnecessary cloning; use references when possible
-- Use `&[T]` for slices instead of `&Vec<T>`
-- Pre-allocate collections with `with_capacity()` when size is known
-- Document performance characteristics for expensive operations
-
-### Type Safety
-- Use type-safe abstractions instead of primitive types when semantically meaningful
-- Use enums instead of strings for fixed sets of values
-- Leverage Rust's type system to prevent invalid states at compile time
-
-## Checklist for Code Generation
-
-Before accepting or suggesting code:
-- ✓ Does the function have comprehensive doc comments with `# Examples`?
-- ✓ Are there unit tests covering happy path, edge cases, and error conditions?
-- ✓ Are there doc tests in the doc comments that compile and run?
-- ✓ Are all error cases handled and documented?
-- ✓ Does the code avoid `unwrap()`, `expect()`, and `panic!()` in library code?
-- ✓ Are edge cases and boundary conditions covered in tests?
-- ✓ Is the code readable and maintainable?
-- ✓ Are all public APIs documented with examples?
-- ✓ Do tests run successfully with `cargo test`?
-- ✓ Do doc tests pass with `cargo test --doc`?
-- ✓ Does the code follow naming conventions?
-- ✓ Are trait implementations documented if behavior is non-obvious?
-
-## Testing Commands
+`cargo test` and `cargo build` work as normal. These do not:
 
 ```bash
-# Run all tests
-cargo test
-
-# Run doc tests only
-cargo test --doc
-
-# Run tests with output
-cargo test -- --nocapture
-
-# Run specific test
-cargo test test_function_name
-
-# Run tests with specific number of threads
-cargo test -- --test-threads=1
-
-# Run tests matching a pattern
-cargo test function_name
+make ayce           # the full local gate: fmt, clippy, test, docs
+make check-purity   # assert no rusqlite/zstd/termion/dotenvy leak into
+                    # --no-default-features (the domain-kernel gate)
+make perf-check     # fmt + clippy + test the standalone perf/ crate, which
+                    # sits OUTSIDE the workspace and is not covered by `ayce`
+make perf-native    # measure the kernel, write docs/perf/results/
 ```
 
-## Common Patterns to Use
-
-### Result Type for Fallible Operations
-```rust
-pub fn operation(param: Type) -> Result<ReturnType, ErrorType> {
-    // implementation
-}
-```
-
-### Option Type for Optional Values
-```rust
-pub fn find_value(key: &str) -> Option<Value> {
-    // implementation
-}
-```
-
-### Custom Error Type
-```rust
-#[derive(Debug)]
-pub enum MyError {
-    InvalidInput(String),
-    NotFound,
-}
-
-impl std::fmt::Display for MyError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match self {
-            MyError::InvalidInput(msg) => write!(f, "Invalid input: {}", msg),
-            MyError::NotFound => write!(f, "Not found"),
-        }
-    }
-}
-
-impl std::error::Error for MyError {}
-```
+`perf/` is its own workspace root (empty `[workspace]` table in its
+`Cargo.toml`). Run its cargo commands from inside `perf/`, never from the repo
+root.
 
 ## Knowledge Base & Agent Automation (OKF)
 
@@ -231,14 +86,3 @@ impl std::error::Error for MyError {}
 - System documentation, architecture maps, and schemas live in the `.okf/` directory.
 - Rules & Extension: For specific automated upkeep patterns and verification constraints, Claude must read and conform to `.okf/index.md` before executing project-wide refactors.
 - Validation Gate: Always execute `/okf:validate .okf --strict` to verify link mapping integrity before declaring a documentation task complete.
-
-## References
-
-- [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/)
-- [Rust Book - Error Handling](https://doc.rust-lang.org/book/ch09-00-error-handling.html)
-- [Rust by Example: Documentation](https://doc.rust-lang.org/rust-by-example/meta/doc.html)
-- [Writing Unsafe Rust](https://doc.rust-lang.org/book/ch19-01-unsafe-rust.html)
-- [Effective Rust](https://effective-rust.dev/)
-- [Open Knowledge Format (OKF)](https://okf.org/)
-  - [OKF Skills](https://github.com/scaccogatto/okf-skills)
-
