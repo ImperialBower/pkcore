@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
       # Deterministic checker (no LLM): keeps the .okf/ knowledge bundle
       # conformant with the OKF v0.1 spec (frontmatter parseable, non-empty
       # `type`, strict: warnings fail too).
