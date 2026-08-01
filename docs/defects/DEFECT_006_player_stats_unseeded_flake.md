@@ -5,7 +5,7 @@
 **Severity:** Medium
 **Status:** Fixed
 **Introduced in:** `5a11e4c9` (2026-04-26) — the commit that added the test; became fixable at `ec7a21c3` (2026-05-16) and was missed by that sweep
-**Fixed in:** branch `perf` (pending commit at time of writing)
+**Fixed in:** `53998229` (2026-08-01, branch `perf`) — the same commit carries this report
 
 > Severity note: no production code was ever wrong and no result was ever
 > incorrect. This is rated Medium under "regression in test suite" — the defect
