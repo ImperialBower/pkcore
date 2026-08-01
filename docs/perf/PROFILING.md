@@ -306,8 +306,8 @@ specified: the EV is real signal, but it is not stable enough, across fresh
 constructions, for a smoke-test checksum to key off.
 
 **(b) The board is degenerate — this number is for a phantom river, not a
-real 5-card board.** `SOLVER_BOARD = "2h 7d 9s"` (`perf/src/catalog.rs:171`)
-is three cards, but `Solver::new` (`catalog.rs:225`) is the **river**
+real 5-card board.** `SOLVER_BOARD = "2h 7d 9s"` (`perf/src/catalog.rs:173`)
+is three cards, but `Solver::new` (`catalog.rs:227`) is the **river**
 constructor — so `turn` and `river` are `Card::default()` (blank/undealt),
 not real cards. The solver still runs and produces deterministic-per-run,
 real CFR work, but every iteration is converging on a 3-card-plus-two-blanks

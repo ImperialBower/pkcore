@@ -93,7 +93,7 @@ fn make_selfplay_6max() -> Result<HotFn, PerfError> {
                 acc
             }
             // Must not be 0: the harness's dead-code guard asserts
-            // checksum != Some(0) (see catalog.rs:152's `Err(_) => 1` for the
+            // checksum != Some(0) (see catalog.rs:158's `Err(_) => 1` for the
             // same reasoning). Because SEED is fixed, a run_n_hands failure
             // is deterministic — every trial would agree on the same
             // checksum, so folding 0 here would read as Status::Ok with a
