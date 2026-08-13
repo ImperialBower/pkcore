@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+_Nothing yet._
+
+## [0.3.3] - 2026-08-12
+
+Documentation, packaging, and release-automation release. **No library API,
+behavior, or wire-format changes** — the only source edit is a doc-comment
+correction and the new example is additive, so existing consumers upgrade with no
+work.
+
+Releases are now automated: pushing a `vX.Y.Z` tag builds a GitHub Release
+carrying this file's section for that version, the commit log since the previous
+tag, and coverage measured on the tagged commit. A tag whose version has no
+section here fails the release loudly rather than publishing thin notes — which
+is why the previously missing `[0.3.1]` and `[0.3.2]` sections were written for
+this release. Publishing to crates.io remains a deliberate manual `cargo publish`;
+no automation touches the registry.
+
+### Added
+
+- **OKF knowledge bundle (`.okf/`)** — 25 concepts covering services, schemas, data
+  assets, and pitfalls, including the Stud Hi and Razz rules. The directory is not
+  in `Cargo.toml`'s `exclude` list, so it ships inside the published crate: a
+  downstream consumer or agent gets the context without cloning the repository.
+  A CI job (`make validate-okf`) runs a deterministic, non-LLM conformance check
+  against the OKF v0.1 spec, so the bundle that ships is a valid one.
+- **Security advisories are now scanned on pull requests**, not only on a weekly
+  schedule and on pushes touching the Cargo manifests. Dependabot and fork PRs
+  push to a fork, where the previous `push` trigger never fired in this
+  repository — so a dependency bump could reach `main` unscanned. Advisory checks
+  run via `cargo deny check advisories` against the RustSec database.
+- **Coverage is reported on every PR** (`cargo-llvm-cov`, the same engine as
+  `make coverage`), uploaded as an artifact and summarized in the run. It is a
+  report, not a gate: no threshold can fail a build. Note the figure understates
+  reality here, since `--doctests` requires nightly and this crate pins stable —
+  so the many doc tests this project mandates do not count toward it.
+- **`decon_dump` example** — golden-vector dumper for the `/deconstruct`
+  regeneration pack (`docs/deconstruct/`). It exercises the equity engine, the
+  hand-history YAML round-trip and replay, bot profiles, and player stats, so it
+  declares `required-features = ["equity", "bot-profiles", "hand-histories",
+  "player-stats"]` and deliberately does not build under `--no-default-features`.
+
+### Fixed
+
+- **Crate-root docs claimed `Card` is represented internally as a `u8`.** It is a
+  `u32`. Documentation only — no code, behavior, or wire format was affected.
+
+## [0.3.2] - 2026-07-20
+
 EPIC-50 Phase 3: the `Principal` identity seam. A pure, additive newtype that lets
 the future `pkgate` gateway name *who* is acting without the domain kernel learning
 what a token is. Authentication stays entirely at the transport edge; constructing a
@@ -32,6 +80,33 @@ what a token is. Authentication stays entirely at the transport edge; constructi
 - **`serde::{Serialize, Deserialize}` on `GameType` and `GamePhase`** — needed by
   `SessionView`; also makes good on the `GameType` wire-stability promise in
   `lib.rs`.
+
+## [0.3.1] - 2026-07-18
+
+EPIC-26a: `StatsRegistry` becomes transportable. The registry can now cross a
+process or network boundary and be rebuilt into an observationally equal value on
+the other side — the mechanism a future gateway or batch analytics job needs to
+move accumulated player stats without re-ingesting hands.
+
+### Added
+
+- **`Serialize` / `Deserialize` on `StatsRegistry`.** Only the per-player stats
+  travel. The optional persistence backend (`player-stats-persistence`) is
+  deliberately skipped — a live trait object has no meaningful wire form — so a
+  deserialized registry arrives store-less and persistence stays an explicit
+  `StatsRegistry::with_store` opt-in on the receiving side. This keeps transport
+  and storage as separate decisions rather than smuggling one inside the other.
+- **`StatsRegistry::insert(id, stats) -> Option<PlayerStats>`** — row-level
+  reconstruction that bypasses ingestion, returning the previous stats for that
+  `Uuid` if any. This is the path for rebuilding a registry from precomputed
+  rows: loaded from a database, produced by a batch aggregation, or received one
+  player at a time across a boundary. The `bot` module's tests moved from an
+  internal `insert_for_test` helper to this public method.
+- **`FromIterator<(Uuid, PlayerStats)> for StatsRegistry`** — bulk reconstruction,
+  so a registry can be `collect()`ed directly from any iterator of rows.
+
+These additions are backward compatible: no existing public item changed shape,
+and ingestion behavior is unaffected.
 
 ## [0.3.0] - 2026-07-17
 
@@ -425,6 +500,10 @@ on the wire, and `replay` behavior is unaffected by the new metadata. Driven by
 `ImperialBower/pkdealer` EPIC-40 Phase 4 (arena recorder agent-fidelity
 annotations).
 
+[0.3.3]: https://github.com/ImperialBower/pkcore/compare/v0.3.2...v0.3.3
+[0.3.2]: https://github.com/ImperialBower/pkcore/compare/v0.3.1...v0.3.2
+[0.3.1]: https://github.com/ImperialBower/pkcore/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/ImperialBower/pkcore/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/ImperialBower/pkcore/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/ImperialBower/pkcore/compare/v0.1.8...v0.2.0
 [0.1.3]: https://github.com/ImperialBower/pkcore/releases/tag/v0.1.3

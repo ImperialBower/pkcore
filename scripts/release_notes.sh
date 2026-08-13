@@ -92,14 +92,27 @@ main() {
     return 1
   fi
 
-  local version prev count
+  local version prev count target
   version=$(derive_version "$tag")
 
   local changelog
   changelog=$(extract_changelog "$version") || return 1
 
-  prev=$(previous_ref "$tag")
-  count=$(git rev-list --no-merges --count "${prev}..${tag}")
+  # Resolve what the commit range ends at. In CI the tag exists (it was just
+  # pushed), but `make release-notes` is meant to PREVIEW notes before tagging,
+  # and every git call below fails on a tag that does not exist yet — emitting
+  # a "fatal: ambiguous argument" into the middle of the release body while
+  # still exiting 0, because this script deliberately runs without `set -e`.
+  # Falling back to HEAD makes the preview show exactly what the real tag will,
+  # assuming it is cut from the current commit.
+  if git rev-parse --verify --quiet "${tag}^{commit}" >/dev/null 2>&1; then
+    target="$tag"
+  else
+    target="HEAD"
+  fi
+
+  prev=$(previous_ref "$target")
+  count=$(git rev-list --no-merges --count "${prev}..${target}") || return 1
 
   printf '%s\n\n' "$changelog"
 
@@ -108,7 +121,7 @@ main() {
   [ -n "$cov" ] && printf '%s\n\n' "$cov"
 
   printf '<details><summary>All commits since %s (%s)</summary>\n\n' "$prev" "$count"
-  commit_list "$prev" "$tag"
+  commit_list "$prev" "$target"
   printf '\n</details>\n'
 }
 

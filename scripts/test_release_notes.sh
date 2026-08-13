@@ -99,11 +99,32 @@ assert_contains "body has collapsed commits" "<details>"     "$body"
 assert_contains "body names previous tag"    "since v0.2.1"  "$body"
 
 # The fail-loudly contract: a tag with no changelog section must exit non-zero.
-if main v0.3.2 >/dev/null 2>&1; then
-  echo "  FAIL v0.3.2 (no changelog section) exits non-zero"; fail=$((fail+1))
+#
+# Uses a version that will never be released. This originally used v0.3.2, which
+# genuinely had no CHANGELOG section at the time — but that was a DEFECT in the
+# repo, not an invariant, and writing the missing section broke this test. A test
+# that asserts on a flaw makes the flaw load-bearing. v9.9.9 stays true forever.
+# `main` calls extract_changelog before previous_ref, so it returns early and
+# never asks git about the nonexistent tag.
+if main v9.9.9 >/dev/null 2>&1; then
+  echo "  FAIL v9.9.9 (no changelog section) exits non-zero"; fail=$((fail+1))
 else
-  echo "  ok   v0.3.2 (no changelog section) exits non-zero"; pass=$((pass+1))
+  echo "  ok   v9.9.9 (no changelog section) exits non-zero"; pass=$((pass+1))
 fi
+
+echo "main (preview before the tag exists)"
+# `make release-notes` previews notes BEFORE tagging, so main must tolerate a tag
+# that is not yet a git ref. This assertion is deliberately chosen to hold in BOTH
+# states: before v0.3.3 is tagged, target falls back to HEAD and previous_ref
+# resolves v0.3.2; after it is tagged, target is the tag and previous_ref still
+# resolves v0.3.2. Asserting on the transient "tag missing" state instead would
+# pin a temporary condition — the mistake that broke the v0.3.2 assertion above.
+preview=$(main v0.3.3 2>/dev/null)
+assert_contains "preview names previous tag" "since v0.3.2" "$preview"
+case "$preview" in
+  *fatal:*) echo "  FAIL preview contains no git error"; fail=$((fail+1)) ;;
+  *)        echo "  ok   preview contains no git error"; pass=$((pass+1)) ;;
+esac
 
 echo
 echo "passed: $pass  failed: $fail"

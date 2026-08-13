@@ -316,18 +316,23 @@ assert_contains "region coverage is 9.99%"    " 9.99% "   "$table"
 assert_contains "carries the doc-test caveat" "Doc tests excluded" "$table"
 
 echo "main"
-# v0.3.0 deliberately, NOT v0.3.2: CHANGELOG.md has no [0.3.1] or [0.3.2]
-# section (verified), so main would correctly fail on those tags.
 body=$(main v0.3.0 2>/dev/null)
 assert_contains "body has changelog prose"   "EPIC-36"       "$body"
 assert_contains "body has collapsed commits" "<details>"     "$body"
 assert_contains "body names previous tag"    "since v0.2.1"  "$body"
 
 # The fail-loudly contract: a tag with no changelog section must exit non-zero.
-if main v0.3.2 >/dev/null 2>&1; then
-  echo "  FAIL v0.3.2 (no changelog section) exits non-zero"; fail=$((fail+1))
+#
+# CORRECTED 2026-08-12. This originally used v0.3.2, which genuinely had no
+# CHANGELOG section at the time — but that was a DEFECT in the repo, not an
+# invariant. Writing the missing [0.3.1] and [0.3.2] sections promptly broke
+# this test. A test that asserts on a flaw makes the flaw load-bearing; pick a
+# version that can never exist instead. `main` calls extract_changelog before
+# previous_ref, so it returns early and never asks git about the missing tag.
+if main v9.9.9 >/dev/null 2>&1; then
+  echo "  FAIL v9.9.9 (no changelog section) exits non-zero"; fail=$((fail+1))
 else
-  echo "  ok   v0.3.2 (no changelog section) exits non-zero"; pass=$((pass+1))
+  echo "  ok   v9.9.9 (no changelog section) exits non-zero"; pass=$((pass+1))
 fi
 ```
 
@@ -584,6 +589,27 @@ Adds make release-notes for local preview against the same script."
 ```
 
 ---
+
+## Post-Implementation Amendments
+
+Changes made after the plan was executed and reviewed. The code is authoritative;
+these notes record why it diverged from the task text above.
+
+1. **`main` resolves a `target` ref before building the commit range.** As
+   originally written, `main` used `$tag` directly for `previous_ref`,
+   `rev-list --count`, and `commit_list` — all of which fail on a tag that does
+   not exist yet. Since `make release-notes` exists specifically to preview notes
+   *before* tagging, that was the common case: git emitted `fatal: ambiguous
+   argument` into the middle of the release body while the script still exited 0
+   (no `set -e`). `main` now falls back to `HEAD` when the tag is not yet a ref.
+   Covered by two assertions (total 21).
+
+2. **The fail-loudly assertion moved from `v0.3.2` to `v9.9.9`.** See the inline
+   comment in Task 3's test block. It had pinned a repo defect as an invariant.
+
+3. **`derive_version` / `is_prerelease` are called by the workflow**, not
+   reimplemented inline; `previous_ref` gained `--match 'v[0-9]*'`. Both from the
+   final whole-branch review.
 
 ## Post-Implementation: Live Verification
 
