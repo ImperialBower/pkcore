@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf
+.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes
 
 # Default target
 default: ayce
@@ -36,6 +36,7 @@ help:
 	@echo "  make deny            - Run full cargo-deny checks"
 	@echo "  make audit           - Run advisory-only security audit"
 	@echo "  make validate-okf    - Check .okf/ knowledge bundle conformance (OKF v0.1, strict)"
+	@echo "  make release-notes   - Preview release notes for TAG=vX.Y.Z"
 	@echo ""
 	@echo "WebAssembly:"
 	@echo "  make check-wasm         - Check the library compiles for wasm32-unknown-unknown"
@@ -316,4 +317,13 @@ coverage-open: coverage
 		echo "Open $$COV_PATH manually."; \
 		exit 1; \
 	fi
+
+# Preview the release notes a tag would produce, without tagging anything.
+# Same script the Release workflow runs, so local and CI cannot drift (P9j.4).
+release-notes:
+	@if [ -z "$(TAG)" ]; then \
+		echo "Usage: make release-notes TAG=v0.3.2"; \
+		exit 1; \
+	fi
+	@./scripts/release_notes.sh "$(TAG)"
 

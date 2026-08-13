@@ -1,0 +1,91 @@
+name: Release
+
+# Loose glob on purpose. A stricter pattern is more precise only if GitHub's
+# filter quantifiers behave as expected, and matches NOTHING if they do not —
+# which would mean tags silently produce no run, indistinguishable from a
+# queueing delay. Version shape is validated in a step that can report an error.
+on:
+  push:
+    tags: ['v[0-9]*']
+
+# Least privilege that can create a release. The workflow never writes to the
+# repo: no CHANGELOG mutation, no commits, no pushes.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      # fetch-depth: 0 is REQUIRED. The default shallow checkout (depth 1) makes
+      # `git describe` and `git log <prev>..<tag>` fail outright.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Cheap validation BEFORE the ~10-minute coverage run. A missing CHANGELOG
+      # entry is the likeliest failure (it depends on a human renaming
+      # [Unreleased] before tagging); failing here costs seconds, not minutes.
+      - name: Validate tag and changelog
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          source ./scripts/release_notes.sh
+          version=$(derive_version "$TAG")
+          case "$version" in
+            [0-9]*.[0-9]*.[0-9]*) ;;
+            *) echo "::error::Tag '$TAG' is not vMAJOR.MINOR.PATCH."; exit 1 ;;
+          esac
+          ./scripts/release_notes.sh "$TAG" > /dev/null
+
+      - name: Read toolchain from rust-toolchain.toml
+        id: toolchain
+        run: |
+          version=$(grep '^channel' rust-toolchain.toml | tr -d ' "' | cut -d= -f2)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ steps.toolchain.outputs.version }}
+          components: llvm-tools-preview, rust-src
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-llvm-cov
+
+      # Coverage is re-run rather than pulled from the basic.yaml artifact:
+      # cross-workflow fetching must handle "run never happened" and "artifact
+      # expired at 90 days", and re-running proves the number belongs to this
+      # exact commit. `cargo llvm-cov` runs the suite, so a failing test fails
+      # this step and no release is created.
+      - name: Measure coverage
+        run: |
+          cargo llvm-cov --all-features --no-report
+          cargo llvm-cov report --lcov --output-path lcov.info
+          cargo llvm-cov report --html
+          cargo llvm-cov report --summary-only > coverage-summary.txt
+          tar -czf coverage-html.tar.gz -C target/llvm-cov html
+
+      # Body goes to a FILE, never an inline argument: tag names and changelog
+      # prose both contain characters that must not reach the shell unquoted.
+      - name: Build release notes
+        env:
+          TAG: ${{ github.ref_name }}
+        run: ./scripts/release_notes.sh "$TAG" coverage-summary.txt > release-body.md
+
+      - name: Create release
+        env:
+          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          source ./scripts/release_notes.sh
+          prerelease=""
+          if is_prerelease "$TAG"; then prerelease="--prerelease"; fi
+          # gh release create has no overwrite flag: if a release already exists
+          # for this tag, it errors rather than overwriting. Deleting a release
+          # stays a deliberate act.
+          gh release create "$TAG" \
+            --title "$TAG" \
+            --notes-file release-body.md \
+            $prerelease \
+            coverage-html.tar.gz \
+            lcov.info

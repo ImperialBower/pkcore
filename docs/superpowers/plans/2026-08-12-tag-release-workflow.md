@@ -92,9 +92,20 @@ else echo "  ok   plain is not prerelease"; pass=$((pass+1)); fi
 
 echo "extract_changelog"
 assert_contains "0.3.0 returns EPIC-36 prose" "EPIC-36" "$(extract_changelog 0.3.0)"
-# Dots must be literal, not regex wildcards.
-out=$(extract_changelog "0X3X0" 2>/dev/null) || true
-assert_eq "0X3X0 matches nothing" "" "$out"
+# Dots must be literal, not regex wildcards. Searching for "0.3.0" must NOT
+# match "## [0X3X0]" — it would if the dots stayed unescaped. This needs a
+# controlled file: no real CHANGELOG.md heading collides with a wildcard-
+# expanded version, so real data alone cannot demonstrate the bug.
+#
+# CORRECTED 2026-08-12 after task review. The original version of this test
+# searched FOR "0X3X0", which contains no dots and so returns empty whether
+# or not escaping happens — the suite passed identically with `gsub` deleted.
+# A test that passes with and without the code under test is not a test.
+tmp=$(mktemp)
+printf '## [0X3X0]\nBOOM should not be captured\n\n## [9.9.9]\nother\n' > "$tmp"
+out=$(extract_changelog "0.3.0" "$tmp" 2>/dev/null) || true
+rm -f "$tmp"
+assert_eq "dots are literal, not wildcards" "" "$out"
 # Missing version must fail, not return empty silently.
 if extract_changelog "9.9.9" >/dev/null 2>&1; then
   echo "  FAIL missing version exits non-zero"; fail=$((fail+1))
@@ -142,16 +153,18 @@ is_prerelease() {
   esac
 }
 
-# Print the CHANGELOG.md section for a version, exit 1 if absent.
-# The version's dots are escaped so "0.3.0" cannot match "0X3X0".
+# Print the changelog section for a version, exit 1 if absent.
+# The version's dots are escaped so "0.3.0" cannot match "## [0X3X0]".
+# The file argument exists so the test harness can point this at a controlled
+# fixture and actually prove that escaping works; production callers omit it.
 extract_changelog() {
-  local version="$1" section
+  local version="$1" file="${2:-CHANGELOG.md}" section
   section=$(awk -v ver="$version" '
     BEGIN { gsub(/\./, "\\.", ver) }
     $0 ~ "^## \\[" ver "\\]" { capture = 1; next }
     capture && /^## \[/ { exit }
     capture { print }
-  ' CHANGELOG.md | sed '/./,$!d')
+  ' "$file" | sed '/./,$!d')
 
   if [ -z "$(printf '%s' "$section" | tr -d '[:space:]')" ]; then
     echo "::error::CHANGELOG.md has no section for ${version}. Rename '## [Unreleased]' to '## [${version}] - $(date +%Y-%m-%d)', commit, then delete and re-push the tag." >&2
