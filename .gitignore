@@ -18,6 +18,11 @@ Cargo.lock
 # Added by the author
 .env
 /mutants.out
+
+# cargo-llvm-cov: `cargo llvm-cov report --lcov` writes here by default (the CI
+# coverage job and any local run). The HTML report lands under /target, already
+# ignored above.
+/lcov.info
 marathon_failure.yaml
 
 graphify-out/
