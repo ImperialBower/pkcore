@@ -19,7 +19,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [beta, stable, 1.94.1]
+        # 'pinned' resolves to rust-toolchain.toml's channel inside the
+        # composite action, so bumping the pin moves this matrix with it — the
+        # literal version that used to live here had no drift guard, and this
+        # matrix is the ONLY job running `cargo test` on the pinned toolchain.
+        rust: [beta, stable, pinned]
+# If re-enabled, restore the per-step env override on the `cargo test` step:
+#   env:
+#     RUSTFLAGS: ${{matrix.rustflags}} ${{env.RUSTFLAGS}}
 #        include:
 #          - rust: nightly
 #            rustflags: --cfg thiserror_nightly_testing
@@ -27,14 +34,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@v1
+      - uses: ./.github/actions/rust-toolchain
         with:
           toolchain: ${{matrix.rust}}
           components: rust-src
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --all
-        env:
-          RUSTFLAGS: ${{matrix.rustflags}} ${{env.RUSTFLAGS}}
 
   clippy:
     name: Clippy
@@ -43,14 +48,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - name: Read toolchain from rust-toolchain.toml
-        id: toolchain
-        run: |
-          version=$(grep '^channel' rust-toolchain.toml | tr -d ' "' | cut -d= -f2)
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-      - uses: dtolnay/rust-toolchain@v1
+      - uses: ./.github/actions/rust-toolchain
         with:
-          toolchain: ${{ steps.toolchain.outputs.version }}
           components: clippy, rust-src
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy -- -Dclippy::all -Dclippy::pedantic
@@ -76,14 +75,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
-      - name: Read toolchain from rust-toolchain.toml
-        id: toolchain
-        run: |
-          version=$(grep '^channel' rust-toolchain.toml | tr -d ' "' | cut -d= -f2)
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-      - uses: dtolnay/rust-toolchain@v1
+      - uses: ./.github/actions/rust-toolchain
         with:
-          toolchain: ${{ steps.toolchain.outputs.version }}
           components: rustfmt, rust-src
       - run: cargo fmt --all -- --check
 
@@ -108,14 +101,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
-      - name: Read toolchain from rust-toolchain.toml
-        id: toolchain
-        run: |
-          version=$(grep '^channel' rust-toolchain.toml | tr -d ' "' | cut -d= -f2)
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-      - uses: dtolnay/rust-toolchain@v1
+      - uses: ./.github/actions/rust-toolchain
         with:
-          toolchain: ${{ steps.toolchain.outputs.version }}
           components: rust-src
       - uses: Swatinem/rust-cache@v2
       # Full test run with default features off: compiles lib, tests, AND
@@ -164,14 +151,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
-      - name: Read toolchain from rust-toolchain.toml
-        id: toolchain
-        run: |
-          version=$(grep '^channel' rust-toolchain.toml | tr -d ' "' | cut -d= -f2)
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-      - uses: dtolnay/rust-toolchain@v1
+      - uses: ./.github/actions/rust-toolchain
         with:
-          toolchain: ${{ steps.toolchain.outputs.version }}
           components: llvm-tools-preview, rust-src
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@cargo-llvm-cov
@@ -216,14 +197,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
-      - name: Read toolchain from rust-toolchain.toml
-        id: toolchain
-        run: |
-          version=$(grep '^channel' rust-toolchain.toml | tr -d ' "' | cut -d= -f2)
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-      - uses: dtolnay/rust-toolchain@v1
+      - uses: ./.github/actions/rust-toolchain
         with:
-          toolchain: ${{ steps.toolchain.outputs.version }}
           targets: wasm32-unknown-unknown
           components: rust-src
       - uses: Swatinem/rust-cache@v2

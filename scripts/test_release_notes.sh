@@ -76,6 +76,34 @@ else
 fi
 rm -f "$tmp"
 
+echo "changelog_for_tag"
+# Prerelease tags (v1.1.0-rc1) will usually have NO section of their own:
+# keep-a-changelog keeps in-progress notes under '## [Unreleased]' until the
+# FINAL release renames it. So a prerelease falls back to [Unreleased] instead
+# of failing — the old failure's error advice (rename [Unreleased] to the rc
+# version) would have consumed the section the final tag needs.
+tmp=$(mktemp)
+printf '## [Unreleased]\n- upcoming work\n\n## [1.0.0]\n- shipped\n\n[1.0.0]: https://example.com/v1.0.0\n' > "$tmp"
+assert_eq "final tag uses its own section" "- shipped" \
+  "$(changelog_for_tag v1.0.0 "$tmp" 2>/dev/null)"
+assert_eq "prerelease falls back to Unreleased" "- upcoming work" \
+  "$(changelog_for_tag v1.1.0-rc1 "$tmp" 2>/dev/null)"
+printf '## [Unreleased]\n- pending\n\n## [1.1.0-rc1]\n- rc specific\n' > "$tmp"
+assert_eq "prerelease prefers its exact section" "- rc specific" \
+  "$(changelog_for_tag v1.1.0-rc1 "$tmp" 2>/dev/null)"
+printf '## [1.0.0]\n- shipped\n' > "$tmp"
+if changelog_for_tag v2.0.0-rc1 "$tmp" >/dev/null 2>&1; then
+  echo "  FAIL prerelease with neither section exits non-zero"; fail=$((fail+1))
+else
+  echo "  ok   prerelease with neither section exits non-zero"; pass=$((pass+1))
+fi
+if changelog_for_tag v2.0.0 "$tmp" >/dev/null 2>&1; then
+  echo "  FAIL final tag never falls back to Unreleased"; fail=$((fail+1))
+else
+  echo "  ok   final tag never falls back to Unreleased"; pass=$((pass+1))
+fi
+rm -f "$tmp"
+
 echo "previous_ref"
 assert_eq "tag before v0.3.2" "v0.3.1" "$(previous_ref v0.3.2)"
 # v0.0.1 is the oldest of this repo's 55 tags (verified) and is the ONLY tag
@@ -136,6 +164,16 @@ if main v9.9.9 >/dev/null 2>&1; then
   echo "  FAIL v9.9.9 (no changelog section) exits non-zero"; fail=$((fail+1))
 else
   echo "  ok   v9.9.9 (no changelog section) exits non-zero"; pass=$((pass+1))
+fi
+
+# A prerelease of an UNRELEASED version must build notes (from [Unreleased])
+# rather than fail. Exit code only: the section's PROSE is transient, but the
+# section itself always exists — keep-a-changelog keeps '## [Unreleased]' as a
+# standing header, and extract_changelog's guard accepts its placeholder text.
+if main v9.9.9-rc1 >/dev/null 2>&1; then
+  echo "  ok   v9.9.9-rc1 builds notes from [Unreleased]"; pass=$((pass+1))
+else
+  echo "  FAIL v9.9.9-rc1 builds notes from [Unreleased]"; fail=$((fail+1))
 fi
 
 echo "main (preview before the tag exists)"

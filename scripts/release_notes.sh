@@ -45,6 +45,32 @@ extract_changelog() {
   printf '%s\n' "$section"
 }
 
+# CHANGELOG section for a tag. Final tags require an exact version section.
+# Prerelease tags (v1.2.3-rc1) prefer an exact section but fall back to
+# '## [Unreleased]': keep-a-changelog keeps in-progress notes there until the
+# FINAL release renames it, so an rc usually has no section of its own.
+# Demanding one made every rc fail — and the old error's advice (rename
+# [Unreleased] to the rc version) would consume the section the final tag
+# needs, breaking THAT release too.
+changelog_for_tag() {
+  local tag="$1" file="${2:-CHANGELOG.md}" version section
+  version=$(derive_version "$tag")
+  if section=$(extract_changelog "$version" "$file" 2>/dev/null); then
+    printf '%s\n' "$section"
+    return 0
+  fi
+  if is_prerelease "$tag"; then
+    if section=$(extract_changelog Unreleased "$file" 2>/dev/null); then
+      printf '%s\n' "$section"
+      return 0
+    fi
+    echo "::error::CHANGELOG.md has neither a [${version}] nor a non-empty [Unreleased] section. Prerelease notes come from '## [Unreleased]' — add one (do NOT rename it to the rc version; the final release needs it), commit, then delete and re-push the tag." >&2
+    return 1
+  fi
+  # Re-run unsuppressed so the operator sees extract_changelog's guidance.
+  extract_changelog "$version" "$file"
+}
+
 # The tag preceding $1, or the root commit when $1 is the first tag.
 # Requires full history — a shallow checkout makes this fail.
 previous_ref() {
@@ -109,11 +135,10 @@ main() {
     return 1
   fi
 
-  local version prev count target
-  version=$(derive_version "$tag")
+  local prev count target
 
   local changelog
-  changelog=$(extract_changelog "$version") || return 1
+  changelog=$(changelog_for_tag "$tag") || return 1
 
   # Resolve what the commit range ends at. In CI the tag exists (it was just
   # pushed), but `make release-notes` is meant to PREVIEW notes before tagging,

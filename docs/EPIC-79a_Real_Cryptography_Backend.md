@@ -1,6 +1,6 @@
-# EPIC-01: Real Cryptography Backend for pkcore-mp
+# EPIC-79a: Real Cryptography Backend for pkcore-mp
 
-**Repo:** `pkcore-mp` (touches `pktable`; no changes to `pkcore` / `tricktaking`)
+**Repo:** `pkcore-mp` — the spike; the productionized sibling crate ships as `pkmental` (see EPIC-79's naming note). Touches `pktable`; no changes to `pkcore` / `tricktaking`.
 **Status:** Proposed
 **Depends on:** `CardCrypto` / `Coordinator` trait boundary (shipped), `PlaintextCrypto` mock (shipped), `pktable` relay/client/qrtable demos (shipped), `mp-toy` lesson-plan crate (companion reference)
 

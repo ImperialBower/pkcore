@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes
+.PHONY: clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes
 
 # Default target
 default: ayce
@@ -19,9 +19,10 @@ help:
 	@echo "  make build_test      - Clean, build, nextest, and doc tests"
 	@echo "  make fmt             - Format code"
 	@echo "  make clippy          - Run clippy linter"
+	@echo "  make actionlint      - Lint GitHub Actions workflow files"
 	@echo "  make create_docs     - Build documentation"
 	@echo "  make docs            - Build docs and open in browser"
-	@echo "  make ayce            - Run fmt, build_test, clippy, and docs"
+	@echo "  make ayce            - Run fmt, actionlint, build_test, clippy, and docs"
 	@echo "  make help            - Display this help message"
 	@echo ""
 	@echo "Nightly:"
@@ -187,9 +188,21 @@ docs: create_docs
 # Target-specific exports propagate to every prerequisite recipe (build,
 # nextest, doc tests, clippy), so warnings become hard errors exactly like
 # the GitHub Actions job. Standalone targets (e.g. `make test`) stay lenient.
+# Lint GitHub Actions workflow files (auto-discovers .github/workflows/).
+# Not a cargo tool — install with `brew install actionlint`, or see
+# https://github.com/rhysd/actionlint#installation for other options.
+# Missing tool = skip with a warning so `make ayce` works on machines without
+# it; an actual lint failure still fails the build.
+actionlint:
+	@if command -v actionlint >/dev/null 2>&1; then \
+		actionlint; \
+	else \
+		echo "WARNING: actionlint not installed — skipping workflow lint. Please install it: https://github.com/rhysd/actionlint#installation"; \
+	fi
+
 ayce: export RUSTFLAGS := -Dwarnings
 ayce: export CARGO_INCREMENTAL := 0
-ayce: fmt build_test clippy create_docs
+ayce: fmt actionlint build_test clippy create_docs
 
 # Install required tools
 install-tools:
