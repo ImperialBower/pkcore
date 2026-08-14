@@ -25,12 +25,16 @@ is_prerelease() {
 
 # Print the CHANGELOG.md section for a version, exit 1 if absent.
 # The version's dots are escaped so "0.3.0" cannot match "0X3X0".
+# The file's LAST section has no following '## [' heading, so capture must
+# also stop at the trailing link-reference block ('[1.0.0]: https://...') —
+# otherwise those refs leak into the notes and defeat the empty-section guard.
 extract_changelog() {
   local version="$1" file="${2:-CHANGELOG.md}" section
   section=$(awk -v ver="$version" '
     BEGIN { gsub(/\./, "\\.", ver) }
     $0 ~ "^## \\[" ver "\\]" { capture = 1; next }
     capture && /^## \[/ { exit }
+    capture && /^\[[^]]*\]: / { exit }
     capture { print }
   ' "$file" | sed '/./,$!d')
 
@@ -52,12 +56,25 @@ previous_ref() {
   fi
 }
 
-# Markdown bullets for commits in (from, to]. Merge commits are dropped:
+# Rev range covering (from, to] — except when 'from' is the root commit
+# (no parent), where 'from..to' would EXCLUDE the root itself and silently
+# drop the initial commit from the first tag's notes. Full history of 'to'
+# is the correct range in that case.
+commit_range() {
+  local from="$1" to="$2"
+  if git rev-parse --verify --quiet "${from}^" >/dev/null 2>&1; then
+    printf '%s..%s' "$from" "$to"
+  else
+    printf '%s' "$to"
+  fi
+}
+
+# Markdown bullets for the commits in commit_range. Merge commits are dropped:
 # they would duplicate the commits they bring in. Subjects are printed
 # verbatim — some in this repo's history are long or malformed, which is
 # accurate reporting, not something to paper over.
 commit_list() {
-  git log --no-merges --pretty='- %h %s' "$1..$2"
+  git log --no-merges --pretty='- %h %s' "$(commit_range "$1" "$2")"
 }
 
 # Markdown table from `cargo llvm-cov report --summary-only` output.
@@ -112,7 +129,7 @@ main() {
   fi
 
   prev=$(previous_ref "$target")
-  count=$(git rev-list --no-merges --count "${prev}..${target}") || return 1
+  count=$(git rev-list --no-merges --count "$(commit_range "$prev" "$target")") || return 1
 
   printf '%s\n\n' "$changelog"
 

@@ -288,7 +288,10 @@ mutants-diff:
 	git diff main..HEAD > /tmp/pkcore-diff.txt
 	cargo mutants --in-diff /tmp/pkcore-diff.txt
 
-# Generate HTML code coverage report using cargo-llvm-cov
+# Generate HTML code coverage report using cargo-llvm-cov.
+# `--all-features` matches CI (basic.yaml coverage job and release.yml), which
+# instruments feature-gated code (equity, generators, ...) — without it the
+# local number permanently disagrees with the CI number.
 coverage:
 	@if ! cargo llvm-cov --version >/dev/null 2>&1; then \
 		echo "cargo-llvm-cov is not installed."; \
@@ -302,7 +305,7 @@ coverage:
 			exit 1; \
 		fi; \
 	fi
-	cargo llvm-cov --html
+	cargo llvm-cov --all-features --html
 	@echo "Coverage report: target/llvm-cov/html/index.html"
 
 # Generate HTML coverage report and open in browser

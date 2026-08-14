@@ -60,6 +60,21 @@ if extract_changelog "9.9.9" >/dev/null 2>&1; then
 else
   echo "  ok   missing version exits non-zero"; pass=$((pass+1))
 fi
+# The file's LAST section has no following '## [' heading to stop the capture,
+# so the trailing link-reference block ('[1.0.0]: https://...') must be
+# excluded explicitly — and must not count as content for the fail-loudly
+# guard when the section is otherwise empty.
+tmp=$(mktemp)
+printf '## [1.0.0]\n- real content\n\n[1.0.0]: https://example.com/v1.0.0\n[0.9.0]: https://example.com/v0.9.0\n' > "$tmp"
+assert_eq "last section excludes link refs" "- real content" \
+  "$(extract_changelog 1.0.0 "$tmp" 2>/dev/null)"
+printf '## [1.0.0]\n\n[1.0.0]: https://example.com/v1.0.0\n' > "$tmp"
+if extract_changelog "1.0.0" "$tmp" >/dev/null 2>&1; then
+  echo "  FAIL empty last section fails despite link refs"; fail=$((fail+1))
+else
+  echo "  ok   empty last section fails despite link refs"; pass=$((pass+1))
+fi
+rm -f "$tmp"
 
 echo "previous_ref"
 assert_eq "tag before v0.3.2" "v0.3.1" "$(previous_ref v0.3.2)"
@@ -69,9 +84,18 @@ assert_eq "tag before v0.3.2" "v0.3.1" "$(previous_ref v0.3.2)"
 root=$(git rev-list --max-parents=0 HEAD | tail -1)
 assert_eq "no predecessor falls back to root" "$root" "$(previous_ref v0.0.1)"
 
+echo "commit_range"
+# Git's 'A..B' EXCLUDES A — correct between tags, wrong when A is the root
+# commit itself: the first tag's notes would silently drop the initial commit.
+assert_eq "between tags uses exclusive .." "v0.3.1..v0.3.2" "$(commit_range v0.3.1 v0.3.2)"
+assert_eq "from the root spans full history" "v0.0.1" "$(commit_range "$root" v0.0.1)"
+
 echo "commit_list"
 listed=$(commit_list v0.3.1 v0.3.2)
 assert_contains "includes a known subject" "Principal identity seam" "$listed"
+root_short=$(git rev-parse --short "$root")
+assert_contains "first-tag list includes the root commit" "- $root_short " \
+  "$(commit_list "$root" v0.0.1)"
 assert_eq "every line is a markdown bullet" "" \
   "$(printf '%s\n' "$listed" | grep -cv '^- ' | sed 's/^0$//')"
 
@@ -91,8 +115,10 @@ assert_contains "region coverage is 9.99%"    " 9.99% "   "$table"
 assert_contains "carries the doc-test caveat" "Doc tests excluded" "$table"
 
 echo "main"
-# v0.3.0 deliberately, NOT v0.3.2: CHANGELOG.md has no [0.3.1] or [0.3.2]
-# section (verified), so main would correctly fail on those tags.
+# v0.3.0: an old released tag with distinctive changelog prose (EPIC-36) to
+# assert on. Nothing else is special about it — [0.3.1] and [0.3.2] have
+# sections too (added 2026-08). The missing-section case is covered by the
+# v9.9.9 test below.
 body=$(main v0.3.0 2>/dev/null)
 assert_contains "body has changelog prose"   "EPIC-36"       "$body"
 assert_contains "body has collapsed commits" "<details>"     "$body"
