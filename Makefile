@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf
+.PHONY: clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes
 
 # Default target
 default: ayce
@@ -19,9 +19,10 @@ help:
 	@echo "  make build_test      - Clean, build, nextest, and doc tests"
 	@echo "  make fmt             - Format code"
 	@echo "  make clippy          - Run clippy linter"
+	@echo "  make actionlint      - Lint GitHub Actions workflow files"
 	@echo "  make create_docs     - Build documentation"
 	@echo "  make docs            - Build docs and open in browser"
-	@echo "  make ayce            - Run fmt, build_test, clippy, and docs"
+	@echo "  make ayce            - Run fmt, actionlint, build_test, clippy, and docs"
 	@echo "  make help            - Display this help message"
 	@echo ""
 	@echo "Nightly:"
@@ -36,6 +37,7 @@ help:
 	@echo "  make deny            - Run full cargo-deny checks"
 	@echo "  make audit           - Run advisory-only security audit"
 	@echo "  make validate-okf    - Check .okf/ knowledge bundle conformance (OKF v0.1, strict)"
+	@echo "  make release-notes   - Preview release notes for TAG=vX.Y.Z"
 	@echo ""
 	@echo "WebAssembly:"
 	@echo "  make check-wasm         - Check the library compiles for wasm32-unknown-unknown"
@@ -186,9 +188,21 @@ docs: create_docs
 # Target-specific exports propagate to every prerequisite recipe (build,
 # nextest, doc tests, clippy), so warnings become hard errors exactly like
 # the GitHub Actions job. Standalone targets (e.g. `make test`) stay lenient.
+# Lint GitHub Actions workflow files (auto-discovers .github/workflows/).
+# Not a cargo tool — install with `brew install actionlint`, or see
+# https://github.com/rhysd/actionlint#installation for other options.
+# Missing tool = skip with a warning so `make ayce` works on machines without
+# it; an actual lint failure still fails the build.
+actionlint:
+	@if command -v actionlint >/dev/null 2>&1; then \
+		actionlint; \
+	else \
+		echo "WARNING: actionlint not installed — skipping workflow lint. Please install it: https://github.com/rhysd/actionlint#installation"; \
+	fi
+
 ayce: export RUSTFLAGS := -Dwarnings
 ayce: export CARGO_INCREMENTAL := 0
-ayce: fmt build_test clippy create_docs
+ayce: fmt actionlint build_test clippy create_docs
 
 # Install required tools
 install-tools:
@@ -287,7 +301,10 @@ mutants-diff:
 	git diff main..HEAD > /tmp/pkcore-diff.txt
 	cargo mutants --in-diff /tmp/pkcore-diff.txt
 
-# Generate HTML code coverage report using cargo-llvm-cov
+# Generate HTML code coverage report using cargo-llvm-cov.
+# `--all-features` matches CI (basic.yaml coverage job and release.yml), which
+# instruments feature-gated code (equity, generators, ...) — without it the
+# local number permanently disagrees with the CI number.
 coverage:
 	@if ! cargo llvm-cov --version >/dev/null 2>&1; then \
 		echo "cargo-llvm-cov is not installed."; \
@@ -301,7 +318,7 @@ coverage:
 			exit 1; \
 		fi; \
 	fi
-	cargo llvm-cov --html
+	cargo llvm-cov --all-features --html
 	@echo "Coverage report: target/llvm-cov/html/index.html"
 
 # Generate HTML coverage report and open in browser
@@ -316,4 +333,13 @@ coverage-open: coverage
 		echo "Open $$COV_PATH manually."; \
 		exit 1; \
 	fi
+
+# Preview the release notes a tag would produce, without tagging anything.
+# Same script the Release workflow runs, so local and CI cannot drift (P9j.4).
+release-notes:
+	@if [ -z "$(TAG)" ]; then \
+		echo "Usage: make release-notes TAG=v0.3.2"; \
+		exit 1; \
+	fi
+	@./scripts/release_notes.sh "$(TAG)"
 

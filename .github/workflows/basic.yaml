@@ -19,7 +19,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        rust: [beta, stable, 1.94.1]
+        # 'pinned' resolves to rust-toolchain.toml's channel inside the
+        # composite action, so bumping the pin moves this matrix with it — the
+        # literal version that used to live here had no drift guard, and this
+        # matrix is the ONLY job running `cargo test` on the pinned toolchain.
+        rust: [beta, stable, pinned]
+# If re-enabled, restore the per-step env override on the `cargo test` step:
+#   env:
+#     RUSTFLAGS: ${{matrix.rustflags}} ${{env.RUSTFLAGS}}
 #        include:
 #          - rust: nightly
 #            rustflags: --cfg thiserror_nightly_testing
@@ -27,14 +34,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@v1
+      - uses: ./.github/actions/rust-toolchain
         with:
           toolchain: ${{matrix.rust}}
           components: rust-src
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --all
-        env:
-          RUSTFLAGS: ${{matrix.rustflags}} ${{env.RUSTFLAGS}}
 
   clippy:
     name: Clippy
@@ -43,14 +48,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      - name: Read toolchain from rust-toolchain.toml
-        id: toolchain
-        run: |
-          version=$(grep '^channel' rust-toolchain.toml | tr -d ' "' | cut -d= -f2)
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-      - uses: dtolnay/rust-toolchain@v1
+      - uses: ./.github/actions/rust-toolchain
         with:
-          toolchain: ${{ steps.toolchain.outputs.version }}
           components: clippy, rust-src
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy -- -Dclippy::all -Dclippy::pedantic
@@ -76,14 +75,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
-      - name: Read toolchain from rust-toolchain.toml
-        id: toolchain
-        run: |
-          version=$(grep '^channel' rust-toolchain.toml | tr -d ' "' | cut -d= -f2)
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-      - uses: dtolnay/rust-toolchain@v1
+      - uses: ./.github/actions/rust-toolchain
         with:
-          toolchain: ${{ steps.toolchain.outputs.version }}
           components: rustfmt, rust-src
       - run: cargo fmt --all -- --check
 
@@ -108,14 +101,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
-      - name: Read toolchain from rust-toolchain.toml
-        id: toolchain
-        run: |
-          version=$(grep '^channel' rust-toolchain.toml | tr -d ' "' | cut -d= -f2)
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-      - uses: dtolnay/rust-toolchain@v1
+      - uses: ./.github/actions/rust-toolchain
         with:
-          toolchain: ${{ steps.toolchain.outputs.version }}
           components: rust-src
       - uses: Swatinem/rust-cache@v2
       # Full test run with default features off: compiles lib, tests, AND
@@ -147,20 +134,71 @@ jobs:
       - name: Kernel purity gate (no-default-features)
         run: make check-purity
 
+  # Coverage is a REPORT, not a gate: no `--fail-under-*` threshold is passed, so
+  # this job never goes red over a coverage dip. It uses cargo-llvm-cov — the same
+  # engine as `make coverage` — so the number in CI is the number you reproduce
+  # locally. (cargo-tarpaulin was considered and rejected: its default ptrace
+  # engine is Linux-only, so it could not run on a maintainer's macOS box, and a
+  # second tool would report a second, permanently-disagreeing number.)
+  #
+  # CAVEAT: doc tests are NOT counted. `cargo llvm-cov --doctests` needs nightly,
+  # and this job runs on the pinned stable toolchain. Since CLAUDE.md mandates a
+  # doc test per public function, the reported figure UNDERSTATES real coverage —
+  # read it as a floor, and don't chase it with redundant unit tests.
+  coverage:
+    name: Coverage (report-only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/rust-toolchain
+        with:
+          components: llvm-tools-preview, rust-src
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      # `--all-features` is safe on a bare checkout even though two artifacts are
+      # absent here: `generated/bcm.zst` is gitignored (~403 MB) and its APIs
+      # degrade to `Err(BcmUnavailable)`, and the `generators` feature's
+      # `UNIQUE_HANDS` reads its ungenerated file through `unwrap_or_default()`
+      # and yields an empty set. Neither panics, so neither fails the run.
+      #
+      # Instrument and run the suite ONCE — `--no-report` retains the raw profile
+      # data — then render both formats from that same data below. Invoking
+      # `--lcov` and `--html` separately would re-run the whole suite twice.
+      - name: Run instrumented test suite
+        run: cargo llvm-cov --all-features --no-report
+      - name: Render lcov + HTML reports
+        run: |
+          cargo llvm-cov report --lcov --output-path lcov.info
+          cargo llvm-cov report --html
+      # Surfaces the per-file table on the run's Summary tab, so the number is
+      # readable without downloading and unzipping the artifact.
+      - name: Publish summary
+        run: |
+          {
+            echo '### Coverage (doc tests excluded — see workflow comment)'
+            echo ''
+            echo '```'
+            cargo llvm-cov report --summary-only
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-${{ github.run_id }}
+          path: |
+            lcov.info
+            target/llvm-cov/html
+          if-no-files-found: error
+
   wasm:
     name: WASM build
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
-      - name: Read toolchain from rust-toolchain.toml
-        id: toolchain
-        run: |
-          version=$(grep '^channel' rust-toolchain.toml | tr -d ' "' | cut -d= -f2)
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-      - uses: dtolnay/rust-toolchain@v1
+      - uses: ./.github/actions/rust-toolchain
         with:
-          toolchain: ${{ steps.toolchain.outputs.version }}
           targets: wasm32-unknown-unknown
           components: rust-src
       - uses: Swatinem/rust-cache@v2

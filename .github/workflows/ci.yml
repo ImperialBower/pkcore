@@ -7,15 +7,15 @@ on:
     branches: [main]
 
 jobs:
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo test
-
+  # There is deliberately NO plain `cargo test` job here. Basic Checks' `test`
+  # matrix already runs `cargo test --all` on beta, stable, AND the pin from
+  # rust-toolchain.toml, all under RUSTFLAGS=-Dwarnings — a strict superset of what a
+  # stable-only, warnings-permitted run proves, so the job that used to live
+  # here could never fail while that matrix passed. It was one full compile of
+  # the crate on every PR for no additional signal.
+  #
+  # Every job below earns its place by covering something that matrix does not:
+  # a non-default feature, an #[ignore]d suite, or the packaged-crate build.
   pokerbench:
     name: PokerBench feature (EPIC-43)
     runs-on: ubuntu-latest

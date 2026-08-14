@@ -18,6 +18,17 @@ Cargo.lock
 # Added by the author
 .env
 /mutants.out
+
+# cargo-llvm-cov: `cargo llvm-cov report --lcov` writes here by default (the CI
+# coverage job and any local run). The HTML report lands under /target, already
+# ignored above. coverage-summary.txt, coverage-html.tar.gz, and release-body.md
+# are additional root-level outputs from the release workflow's coverage and
+# release-notes steps (see .github/workflows/release.yml), runner-only today
+# but ignored so reproducing those steps locally doesn't leave untracked noise.
+/lcov.info
+/coverage-summary.txt
+/coverage-html.tar.gz
+/release-body.md
 marathon_failure.yaml
 
 graphify-out/

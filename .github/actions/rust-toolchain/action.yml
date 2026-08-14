@@ -1,0 +1,49 @@
+name: Rust toolchain
+description: >
+  Install a Rust toolchain via dtolnay/rust-toolchain. With no `toolchain`
+  input — or the literal 'pinned' — the channel is read from
+  rust-toolchain.toml. This is the ONLY place that file is parsed in CI:
+  every job that previously inlined the grep/tr/cut one-liner goes through
+  here, so a format tweak to rust-toolchain.toml is validated once, not six
+  times, and the pinned version cannot drift between jobs.
+inputs:
+  toolchain:
+    description: >
+      Explicit channel (stable, beta, 1.95.0). Default 'pinned' resolves from
+      rust-toolchain.toml.
+    required: false
+    default: pinned
+  components:
+    description: Comma-separated rustup components to install.
+    required: false
+    default: ''
+  targets:
+    description: Comma-separated additional compilation targets.
+    required: false
+    default: ''
+outputs:
+  version:
+    description: The channel actually installed.
+    value: ${{ steps.resolve.outputs.version }}
+runs:
+  using: composite
+  steps:
+    - name: Resolve toolchain channel
+      id: resolve
+      shell: bash
+      # env indirection instead of inline ${{ }} interpolation keeps the input
+      # out of shell-injection reach (github.blog workflow-injection guidance).
+      env:
+        TOOLCHAIN_INPUT: ${{ inputs.toolchain }}
+      run: |
+        if [ "$TOOLCHAIN_INPUT" = "pinned" ]; then
+          version=$(grep '^channel' rust-toolchain.toml | tr -d ' "' | cut -d= -f2)
+        else
+          version="$TOOLCHAIN_INPUT"
+        fi
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+    - uses: dtolnay/rust-toolchain@v1
+      with:
+        toolchain: ${{ steps.resolve.outputs.version }}
+        components: ${{ inputs.components }}
+        targets: ${{ inputs.targets }}
