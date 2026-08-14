@@ -159,21 +159,7 @@ impl Pile for Four {
         unimplemented!("Four cannot be added; it's a fixed 4-card hand")
     }
 
-    /// Same comparison as [`Pile::are_unique`]'s default, but over the backing
-    /// array rather than a `Vec`.
-    ///
-    /// The default calls `to_vec()`, which allocates. `is_dealt` calls this on
-    /// every evaluation, so the default's allocation dominated hand evaluation
-    /// entirely — see `docs/perf/PROFILING.md`.
-    fn are_unique(&self) -> bool {
-        !(1..self.0.len()).any(|i| self.0[i..].contains(&self.0[i - 1]))
-    }
-
-    /// Allocation-free counterpart to [`Pile::contains_blank`]'s default,
-    /// which reaches it through `contains` and so calls `to_vec()`.
-    fn contains_blank(&self) -> bool {
-        self.0.contains(&Card::BLANK)
-    }
+    impl_pile_uniqueness_checks!();
 
     fn card_at(self, _index: usize) -> Option<Card> {
         unimplemented!("Four is a fixed 4-card hand; use `.cards().card_at(index)` for positional access")

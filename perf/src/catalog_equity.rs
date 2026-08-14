@@ -76,17 +76,23 @@ fn three_way_request() -> EquityRequest {
 
 /// Builds the timed closure that folds the integer win and tie counts across
 /// every seat, for one already-built request.
+///
+/// A `compute()` failure is a [`PerfError::Run`], never silently skipped: an
+/// earlier version used `if let Ok(...)` with no else arm, so a request that
+/// started failing produced a stable checksum of 0 and an absurdly fast
+/// timing that the runner reported as `Status::Ok`.
 fn hot_closure(request: EquityRequest) -> HotFn {
     Box::new(move |iters: u32| {
         let mut acc: u64 = 0;
         for _ in 0..iters {
-            if let Ok(report) = request.compute() {
-                for player in &report.players {
-                    acc = acc.wrapping_add(player.wins).wrapping_add(player.ties);
-                }
+            let report = request
+                .compute()
+                .map_err(|e| PerfError::Run(format!("equity compute failed: {e:?}")))?;
+            for player in &report.players {
+                acc = acc.wrapping_add(player.wins).wrapping_add(player.ties);
             }
         }
-        acc
+        Ok(acc)
     })
 }
 
@@ -192,6 +198,7 @@ pub fn equity_workloads() -> Vec<Workload> {
             band: Band::Micro,
             inner_iters: 1,
             features: &["equity"],
+            parallel: true,
             make: make_hu_flop,
         },
         Workload {
@@ -199,6 +206,7 @@ pub fn equity_workloads() -> Vec<Workload> {
             band: Band::Macro,
             inner_iters: 1,
             features: &["equity"],
+            parallel: true,
             make: make_hu_preflop,
         },
         Workload {
@@ -206,6 +214,7 @@ pub fn equity_workloads() -> Vec<Workload> {
             band: Band::Micro,
             inner_iters: 1,
             features: &["equity"],
+            parallel: true,
             make: make_three_way,
         },
         Workload {
@@ -213,6 +222,7 @@ pub fn equity_workloads() -> Vec<Workload> {
             band: Band::Micro,
             inner_iters: 1,
             features: &["equity"],
+            parallel: true,
             make: make_dealeval_hu,
         },
         Workload {
@@ -220,6 +230,7 @@ pub fn equity_workloads() -> Vec<Workload> {
             band: Band::Micro,
             inner_iters: 1,
             features: &["equity"],
+            parallel: true,
             make: make_dealeval_three_way,
         },
     ]

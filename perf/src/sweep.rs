@@ -140,10 +140,11 @@ mod perf__sweep_tests {
             band: Band::Nano,
             inner_iters: 1,
             features: &[],
+            parallel: true,
             make: || {
                 Ok(Box::new(|_iters: u32| {
                     OBSERVED.store(rayon::current_num_threads(), Ordering::SeqCst);
-                    1
+                    Ok(1)
                 }))
             },
         };

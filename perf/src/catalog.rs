@@ -36,7 +36,22 @@ const STRIDE: usize = 97;
 const MASK: usize = SAMPLE_HANDS - 1;
 
 /// Builds a deterministic spread of five-card hands.
-fn five_sample() -> Result<Vec<Five>, PerfError> {
+///
+/// Public so the Criterion and Divan example benches (`perf/benches/`) can
+/// measure the exact same hand set the custom harness measures — otherwise
+/// the three figures would not be comparable.
+///
+/// # Errors
+///
+/// Returns [`PerfError::Setup`] if the deck cannot yield the full sample.
+///
+/// # Examples
+///
+/// ```
+/// let hands = pkcore_perf::catalog::five_sample().expect("sample builds");
+/// assert!(hands.len().is_power_of_two());
+/// ```
+pub fn five_sample() -> Result<Vec<Five>, PerfError> {
     let hands: Vec<Five> = Deck::as_vec()
         .into_iter()
         .combinations(5)
@@ -56,7 +71,21 @@ fn five_sample() -> Result<Vec<Five>, PerfError> {
 }
 
 /// Builds a deterministic spread of seven-card hands.
-fn seven_sample() -> Result<Vec<Seven>, PerfError> {
+///
+/// Public for the same reason as [`five_sample`]: the example benches must
+/// measure the same hands as the custom harness.
+///
+/// # Errors
+///
+/// Returns [`PerfError::Setup`] if the deck cannot yield the full sample.
+///
+/// # Examples
+///
+/// ```
+/// let hands = pkcore_perf::catalog::seven_sample().expect("sample builds");
+/// assert!(hands.len().is_power_of_two());
+/// ```
+pub fn seven_sample() -> Result<Vec<Seven>, PerfError> {
     let hands: Vec<Seven> = Deck::as_vec()
         .into_iter()
         .combinations(7)
@@ -85,7 +114,7 @@ fn make_five_hand_rank_value() -> Result<HotFn, PerfError> {
         for i in 0..iters as usize {
             acc = acc.wrapping_add(u64::from(hands[i & MASK].hand_rank_value()));
         }
-        acc
+        Ok(acc)
     }))
 }
 
@@ -96,7 +125,7 @@ fn make_seven_hand_rank_value() -> Result<HotFn, PerfError> {
         for i in 0..iters as usize {
             acc = acc.wrapping_add(u64::from(hands[i & MASK].hand_rank_value()));
         }
-        acc
+        Ok(acc)
     }))
 }
 
@@ -111,7 +140,7 @@ fn make_seven_eval() -> Result<HotFn, PerfError> {
         for i in 0..iters as usize {
             acc = acc.wrapping_add(u64::from(Eval::from(hands[i & MASK]).hand_rank.value));
         }
-        acc
+        Ok(acc)
     }))
 }
 
@@ -122,7 +151,7 @@ fn make_five_or_rank_bits() -> Result<HotFn, PerfError> {
         for i in 0..iters as usize {
             acc = acc.wrapping_add(u64::from(hands[i & MASK].or_rank_bits()));
         }
-        acc
+        Ok(acc)
     }))
 }
 
@@ -130,11 +159,9 @@ fn make_five_from_str() -> Result<HotFn, PerfError> {
     let hands = five_sample()?;
     let texts: Vec<String> = hands.iter().map(ToString::to_string).collect();
 
-    // Validate the round-trip at setup time. Without this, a Display/FromStr
-    // mismatch would make every parse in the hot loop fail — and because the
-    // error arm still folds a non-zero value into the checksum, the harness's
-    // dead-code guard would pass while timing the error path instead of the
-    // parser.
+    // Validate the round-trip at setup time, so a Display/FromStr mismatch
+    // is a setup error before any timing starts rather than a run error
+    // discovered mid-measurement.
     for (text, expected) in texts.iter().zip(hands.iter()) {
         match Five::from_str(text) {
             Ok(parsed) if parsed.or_rank_bits() == expected.or_rank_bits() => {}
@@ -155,10 +182,15 @@ fn make_five_from_str() -> Result<HotFn, PerfError> {
             let parsed = Five::from_str(&texts[i & MASK]);
             acc = acc.wrapping_add(match parsed {
                 Ok(five) => u64::from(five.or_rank_bits()),
-                Err(_) => 1,
+                Err(e) => {
+                    return Err(PerfError::Run(format!(
+                        "Five::from_str({:?}) failed mid-measurement: {e:?}",
+                        texts[i & MASK]
+                    )));
+                }
             });
         }
-        acc
+        Ok(acc)
     }))
 }
 
@@ -176,6 +208,15 @@ const SOLVER_BOARD: &str = "2h 7d 9s";
 ///
 /// `iters` is the number of iterations, so `ns_per_op` reads as nanoseconds per
 /// CFR iteration and `1e9 / median` is iterations per second.
+///
+/// The [`Solver`] is built once, at setup, outside the timed region. An
+/// earlier version constructed it inside the hot closure, so every trial
+/// timed (construction + N iterations) / N — a figure that changed with
+/// `--iters` and made warmup meaningless. Trials now keep iterating the same
+/// solver, exactly the way a real `solve()` run accumulates regret state.
+/// The per-iteration cost is stable across that accumulation, and the
+/// checksum (a completed-iteration count, see below) does not depend on
+/// solver state at all.
 ///
 /// # Why this folds a completed-iteration count, not the quantised EV
 ///
@@ -221,10 +262,15 @@ fn make_cfr_iters() -> Result<HotFn, PerfError> {
     let board =
         Board::from_str(SOLVER_BOARD).map_err(|e| PerfError::Setup(format!("board {SOLVER_BOARD:?}: {e:?}")))?;
 
+    // Built here — game tree, regret accumulator, hand pairs, showdown map —
+    // so none of that construction is ever inside the timed region.
+    let config = SolverConfig::new(hero, villain, board, 1_000, 200);
+    let solver = std::cell::RefCell::new(Solver::new(config));
+
     Ok(Box::new(move |iters: u32| {
-        let config =
-            SolverConfig::new(hero.clone(), villain.clone(), board, 1_000, 200).with_max_iterations(iters as usize);
-        let mut solver = Solver::new(config);
+        let mut solver = solver
+            .try_borrow_mut()
+            .map_err(|_| PerfError::Run("solver already borrowed; hot closure re-entered".to_string()))?;
 
         let mut completed: u64 = 0;
         for _ in 0..iters {
@@ -233,7 +279,7 @@ fn make_cfr_iters() -> Result<HotFn, PerfError> {
             let _ = solver.iterate();
             completed = completed.wrapping_add(1);
         }
-        completed
+        Ok(completed)
     }))
 }
 
@@ -260,6 +306,7 @@ pub fn catalog() -> Vec<Workload> {
             band: Band::Nano,
             inner_iters: 100_000,
             features: &[],
+            parallel: false,
             make: make_five_hand_rank_value,
         },
         Workload {
@@ -267,6 +314,7 @@ pub fn catalog() -> Vec<Workload> {
             band: Band::Nano,
             inner_iters: 10_000,
             features: &[],
+            parallel: false,
             make: make_seven_hand_rank_value,
         },
         Workload {
@@ -274,6 +322,7 @@ pub fn catalog() -> Vec<Workload> {
             band: Band::Nano,
             inner_iters: 10_000,
             features: &[],
+            parallel: false,
             make: make_seven_eval,
         },
         Workload {
@@ -281,6 +330,7 @@ pub fn catalog() -> Vec<Workload> {
             band: Band::Nano,
             inner_iters: 100_000,
             features: &[],
+            parallel: false,
             make: make_five_or_rank_bits,
         },
         Workload {
@@ -288,6 +338,7 @@ pub fn catalog() -> Vec<Workload> {
             band: Band::Nano,
             inner_iters: 10_000,
             features: &[],
+            parallel: false,
             make: make_five_from_str,
         },
         Workload {
@@ -295,6 +346,7 @@ pub fn catalog() -> Vec<Workload> {
             band: Band::Macro,
             inner_iters: 100,
             features: &[],
+            parallel: false,
             make: make_cfr_iters,
         },
     ];

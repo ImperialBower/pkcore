@@ -66,43 +66,62 @@ fn six_max_table() -> Result<(Table, Vec<(u8, BotProfile)>), PerfError> {
     Ok((table, bots))
 }
 
+/// Sessions prebuilt at setup, outside the timed region. The default macro
+/// protocol is 1 warmup + 5 trials, so 16 leaves headroom for a `--trials`
+/// override; a run that exhausts the pool falls back to building in the
+/// timed region (see the closure body).
+const PREBUILT_SESSIONS: usize = 16;
+
+/// Builds one fresh, identically-seeded session.
+fn build_session() -> Result<SimTable, PerfError> {
+    let (table, bots) = six_max_table()?;
+    Ok(SimTable::with_rule_based(table, bots).with_seed(SEED))
+}
+
 /// `iters` is the number of hands per trial, not a repeat count — a macro-band
 /// workload measures nanoseconds per hand.
+///
+/// Every trial needs a *fresh* session: a session carries the deal state
+/// forward, so reusing one would give each trial different hands and a
+/// different checksum — instant `Status::Nondeterministic`. An earlier
+/// version therefore rebuilt the table inside the timed closure, timing
+/// session construction along with the hands. The sessions are now prebuilt
+/// at setup into a pool the closure pops from, so the timed region is hands
+/// only for any run that stays within [`PREBUILT_SESSIONS`] calls.
 fn make_selfplay_6max() -> Result<HotFn, PerfError> {
-    // Build once here so a broken table is a setup error.
-    six_max_table()?;
+    let mut sessions = Vec::with_capacity(PREBUILT_SESSIONS);
+    for _ in 0..PREBUILT_SESSIONS {
+        sessions.push(build_session()?);
+    }
+    let pool = std::cell::RefCell::new(sessions);
 
     Ok(Box::new(move |iters: u32| {
-        let Ok((table, bots)) = six_max_table() else {
-            // Must not be 0 — see the `Err(_) => u64::MAX` arm below, which
-            // reserves 0 for exactly this reason.
-            return u64::MAX;
+        let prebuilt = pool
+            .try_borrow_mut()
+            .map_err(|_| PerfError::Run("session pool already borrowed; hot closure re-entered".to_string()))?
+            .pop();
+        let mut sim = match prebuilt {
+            Some(session) => session,
+            // Pool exhausted (a --trials override beyond PREBUILT_SESSIONS):
+            // build in place. This puts one construction inside the timed
+            // region for those extra trials — a small, visible bias, not a
+            // failure.
+            None => build_session()?,
         };
-        let mut sim = SimTable::with_rule_based(table, bots).with_seed(SEED);
 
-        match sim.run_n_hands(iters as usize) {
-            Ok(result) => {
-                let mut acc = result.hands_played as u64;
-                // Sort by seat so the fold is order-independent regardless of
-                // the HashMap's iteration order.
-                let mut nets: Vec<(u8, i64)> = result.net_chips.iter().map(|(k, v)| (*k, *v)).collect();
-                nets.sort_unstable();
-                for (seat, net) in nets {
-                    acc = acc.wrapping_add(u64::from(seat)).wrapping_add(net.unsigned_abs());
-                }
-                acc
-            }
-            // Must not be 0: the harness's dead-code guard asserts
-            // checksum != Some(0) (see catalog.rs:158's `Err(_) => 1` for the
-            // same reasoning). Because SEED is fixed, a run_n_hands failure
-            // is deterministic — every trial would agree on the same
-            // checksum, so folding 0 here would read as Status::Ok with a
-            // legitimate-looking result instead of surfacing as a broken
-            // simulation. u64::MAX cannot collide with a real session's
-            // checksum (hands_played + per-seat seat/net_chips folds) and
-            // reads unambiguously as "this did not run."
-            Err(_) => u64::MAX,
+        let result = sim
+            .run_n_hands(iters as usize)
+            .map_err(|e| PerfError::Run(format!("run_n_hands({iters}) failed: {e:?}")))?;
+
+        let mut acc = result.hands_played as u64;
+        // Sort by seat so the fold is order-independent regardless of the
+        // HashMap's iteration order.
+        let mut nets: Vec<(u8, i64)> = result.net_chips.iter().map(|(k, v)| (*k, *v)).collect();
+        nets.sort_unstable();
+        for (seat, net) in nets {
+            acc = acc.wrapping_add(u64::from(seat)).wrapping_add(net.unsigned_abs());
         }
+        Ok(acc)
     }))
 }
 
@@ -122,6 +141,7 @@ pub fn sim_workloads() -> Vec<Workload> {
         band: Band::Macro,
         inner_iters: 200,
         features: &[],
+        parallel: false,
         make: make_selfplay_6max,
     }]
 }

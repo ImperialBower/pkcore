@@ -137,7 +137,13 @@ pub fn measure_labeled(
     };
 
     for _ in 0..warmup {
-        let _ = hot(inner_iters);
+        if let Err(err) = hot(inner_iters) {
+            return Sample {
+                status: Status::Error,
+                message: Some(err.to_string()),
+                ..base
+            };
+        }
     }
 
     let mut timings: Vec<f64> = Vec::with_capacity(trials as usize);
@@ -146,8 +152,19 @@ pub fn measure_labeled(
 
     for _ in 0..trials {
         let start = Instant::now();
-        let checksum = hot(inner_iters);
+        let result = hot(inner_iters);
         let elapsed = start.elapsed();
+
+        let checksum = match result {
+            Ok(checksum) => checksum,
+            Err(err) => {
+                return Sample {
+                    status: Status::Error,
+                    message: Some(err.to_string()),
+                    ..base
+                };
+            }
+        };
 
         match first_checksum {
             None => first_checksum = Some(checksum),
@@ -211,6 +228,7 @@ mod perf__runner_tests {
             band: Band::Nano,
             inner_iters: 10,
             features: &[],
+            parallel: false,
             make: || Err(PerfError::Setup("no cards".to_string())),
         };
 
@@ -222,6 +240,53 @@ mod perf__runner_tests {
         assert_eq!(sample.message, Some("workload setup failed: no cards".to_string()));
     }
 
+    /// A hot closure that fails mid-run must surface as `Status::Error`, not
+    /// as a fast, legitimate-looking `Ok` sample. Before `HotFn` returned a
+    /// `Result`, a failing workload could only signal this with a sentinel
+    /// checksum — deterministic, so it read as a clean measurement.
+    #[test]
+    fn measure_reports_error_when_the_hot_loop_fails() {
+        let breaking = Workload {
+            name: "test.breaking",
+            band: Band::Nano,
+            inner_iters: 10,
+            features: &[],
+            parallel: false,
+            make: || {
+                Ok(Box::new(|_iters: u32| {
+                    Err(PerfError::Run("engine refused".to_string()))
+                }))
+            },
+        };
+
+        let sample = measure(&breaking, 0, 3, 10);
+
+        assert_eq!(sample.status, Status::Error);
+        assert!(sample.ns_per_op.is_none());
+        assert!(sample.checksum.is_none());
+        assert_eq!(sample.message, Some("workload run failed: engine refused".to_string()));
+    }
+
+    /// The warmup pass must also surface hot-loop failures; otherwise a
+    /// workload that only fails on its first call would abort the timed
+    /// trials with no explanation.
+    #[test]
+    fn measure_reports_error_when_warmup_fails() {
+        let breaking = Workload {
+            name: "test.breaking_warmup",
+            band: Band::Nano,
+            inner_iters: 10,
+            features: &[],
+            parallel: false,
+            make: || Ok(Box::new(|_iters: u32| Err(PerfError::Run("cold start".to_string())))),
+        };
+
+        let sample = measure(&breaking, 1, 3, 10);
+
+        assert_eq!(sample.status, Status::Error);
+        assert_eq!(sample.message, Some("workload run failed: cold start".to_string()));
+    }
+
     #[test]
     fn measure_flags_a_nondeterministic_workload() {
         use std::cell::Cell;
@@ -231,11 +296,12 @@ mod perf__runner_tests {
             band: Band::Nano,
             inner_iters: 10,
             features: &[],
+            parallel: false,
             make: || {
                 let counter = Cell::new(0u64);
                 Ok(Box::new(move |_iters: u32| {
                     counter.set(counter.get() + 1);
-                    counter.get()
+                    Ok(counter.get())
                 }))
             },
         };

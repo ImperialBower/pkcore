@@ -26,18 +26,24 @@ pub enum Band {
     Macro,
 }
 
-/// A failure during workload setup, outside the timed region.
+/// A failure during workload setup or inside the hot loop.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PerfError {
     /// Setup could not build the workload's inputs. Carries a human-readable
     /// reason.
     Setup(String),
+    /// The hot closure itself failed mid-measurement. Carries a
+    /// human-readable reason. The runner turns this into a
+    /// [`crate::runner::Status::Error`] sample, so a broken workload can
+    /// never publish a legitimate-looking timing.
+    Run(String),
 }
 
 impl Display for PerfError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             PerfError::Setup(msg) => write!(f, "workload setup failed: {msg}"),
+            PerfError::Run(msg) => write!(f, "workload run failed: {msg}"),
         }
     }
 }
@@ -45,7 +51,12 @@ impl Display for PerfError {
 impl std::error::Error for PerfError {}
 
 /// The timed closure. Takes an iteration count, returns an integer checksum.
-pub type HotFn = Box<dyn Fn(u32) -> u64>;
+///
+/// The `Result` is the error channel the first design lacked: without it, a
+/// failing workload had to either swallow the error (publishing a fast,
+/// meaningless timing as `Ok`) or fold a magic sentinel value into the
+/// checksum that only a reader of the source could recognise. Both happened.
+pub type HotFn = Box<dyn Fn(u32) -> Result<u64, PerfError>>;
 
 /// One measurable unit of work.
 pub struct Workload {
@@ -58,7 +69,11 @@ pub struct Workload {
     pub inner_iters: u32,
     /// pkcore cargo features this workload requires. Empty means pure kernel.
     pub features: &'static [&'static str],
-    /// Fallible setup returning the infallible hot closure.
+    /// Whether the workload's hot path fans out over a rayon pool. Only
+    /// parallel workloads are worth sweeping across pool sizes; sweeping a
+    /// serial workload just measures the same thing three times.
+    pub parallel: bool,
+    /// Fallible setup returning the hot closure.
     pub make: fn() -> Result<HotFn, PerfError>,
 }
 
@@ -72,7 +87,7 @@ pub struct Workload {
 ///
 /// let workload = counting_workload();
 /// let hot = (workload.make)().expect("setup succeeds");
-/// assert_eq!(hot(5), 10);
+/// assert_eq!(hot(5), Ok(10));
 /// ```
 #[doc(hidden)]
 #[must_use]
@@ -82,13 +97,14 @@ pub fn counting_workload() -> Workload {
         band: Band::Nano,
         inner_iters: 1_000,
         features: &[],
+        parallel: false,
         make: || {
             Ok(Box::new(|iters: u32| {
                 let mut acc: u64 = 0;
                 for i in 0..u64::from(iters) {
                     acc = acc.wrapping_add(i);
                 }
-                acc
+                Ok(acc)
             }))
         },
     }
@@ -104,7 +120,7 @@ mod perf__workload_tests {
         let workload = counting_workload();
         let hot = (workload.make)().expect("setup succeeds");
         // 0 + 1 + 2 + 3 + 4 = 10
-        assert_eq!(hot(5), 10);
+        assert_eq!(hot(5), Ok(10));
     }
 
     #[test]
@@ -120,6 +136,7 @@ mod perf__workload_tests {
         assert_eq!(workload.name, "test.counting");
         assert_eq!(workload.band, Band::Nano);
         assert!(workload.features.is_empty());
+        assert!(!workload.parallel);
     }
 
     #[test]
@@ -141,5 +158,7 @@ mod perf__workload_tests {
     fn perf_error_displays_its_message() {
         let err = PerfError::Setup("bad hand".to_string());
         assert_eq!(err.to_string(), "workload setup failed: bad hand");
+        let err = PerfError::Run("engine refused".to_string());
+        assert_eq!(err.to_string(), "workload run failed: engine refused");
     }
 }
