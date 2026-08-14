@@ -1,4 +1,5 @@
 {
+  "outputStyle": "ELI5",
   "permissions": {
     "allow": [
       "Bash(find /Users/gaoler/src/github.com/folkengine/pkcore/src/analysis/store -type f -name \"*.rs\" -exec wc -l {} +)",
@@ -79,7 +80,8 @@
       "Bash(echo \"exit: $?\")",
       "Bash(curl -s https://crates.io/api/v1/crates/pkcore)",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d['crate']['max_version'], [v['num'] for v in d.get\\('versions',[]\\)][:6]\\)\")",
-      "Bash(echo \"--- purity grep exit: $? \\(1 = clean\\) ---\")"
+      "Bash(echo \"--- purity grep exit: $? \\(1 = clean\\) ---\")",
+      "Read(//Users/christoph/src/github.com/ImperialBower/mp/imperialbower-mp/**)"
     ]
   }
 }

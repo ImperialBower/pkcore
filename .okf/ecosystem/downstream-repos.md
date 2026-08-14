@@ -25,7 +25,9 @@ the audit targets of the [release audit](/processes/release-audit.md):
 * `pkodds` — equity gRPC service (EPIC-41); pkcore publishes first,
   pkodds depends on the released crate.
 * `pkmental` — Mental Poker spike (EPIC-79), generalizing card-game
-  concerns beyond poker.
+  concerns beyond poker. Repo not yet created; the spike workspace
+  (`pkcore-mp`, `tricktaking`, `mp-toy`, `pktable`) is archived at
+  `docs/files/mentalpoker/` in pkcore.
 
 # Caveat
 

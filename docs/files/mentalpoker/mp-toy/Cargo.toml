@@ -1,0 +1,12 @@
+[package]
+name = "mp-toy"
+version = "0.0.1"
+edition = "2021"
+description = "Deliberately insecure, small-number mental-poker exercises. Companion to the lesson plan. NEVER use for anything real."
+
+[features]
+default = []
+# `cargo test` runs against YOUR implementations (the todo!()s you fill in).
+# `cargo test --features solutions` runs the reference solutions, so you can
+# check that the tests themselves are sound, or peek when stuck.
+solutions = []

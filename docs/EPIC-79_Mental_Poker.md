@@ -56,11 +56,18 @@ dependencies on today. That asymmetry drives the architecture below.
 This is a spike. Nothing here is shipped in pkcore; the table records
 *design* maturity and the decisions a future implementation epic must
 resolve. Rows marked **Prototyped** were built and tested as a throwaway
-`pkcore-mp` spike (`docs/files/mentalpoker/`) — a swappable `CardCrypto` /
-`Coordinator` skeleton with a mock backend and a passing two-seat deal/reveal
-round. That spike validates the design; the `pkmental` crate productionizes
-it. (On naming: the spike is `pkcore-mp`; the shipped sibling crate is
-`pkmental`, matching the `pk*` convention of `pkdealer` / `pkspectator`.)
+`pkcore-mp` spike (`docs/files/mentalpoker/pkcore-mp/`) — a swappable
+`CardCrypto` / `Coordinator` skeleton with a mock backend and a passing
+two-seat deal/reveal round. That spike validates the design; the `pkmental`
+crate productionizes it. (On naming: the spike is `pkcore-mp`; the shipped
+sibling crate is `pkmental`, matching the `pk*` convention of `pkdealer` /
+`pkspectator`.)
+
+*Consolidation note (2026-08-14):* the full exploration workspace —
+`pkcore-mp`, `tricktaking`, `mp-toy`, and `pktable` — was archived into
+`docs/files/mentalpoker/` from the temporary `ImperialBower/mp` holding
+repo; see that directory's `README.md` for crate roles and the known gap
+(`pktable`'s three demo binaries were lost in packaging).
 
 | Component | Status |
 |---|---|
@@ -77,7 +84,7 @@ it. (On naming: the spike is `pkcore-mp`; the shipped sibling crate is
 | Verifiable-shuffle proof scheme (proof vs. argument) | **Decision pending** |
 | Transport (relay vs. gossip vs. chain) | **Decision pending** |
 | Dropout / forfeiture recovery model | **Decision pending** |
-| Card-game generalization (`GameRules` / `tricktaking`) | **Designed** (prototyped in sibling repo) |
+| Card-game generalization (`GameRules` / `tricktaking`) | **Designed** (prototype archived at `docs/files/mentalpoker/tricktaking/`) |
 | QR-code state / transport | **Exploratory** (experimental idea only) |
 | Settlement (real-money escrow) | **Out of scope (see Non-Goals)** |
 
@@ -196,7 +203,7 @@ unlocks only when its owner adds theirs. `InProcCoordinator` is one shared
 append-only log with per-reader cursors (architecture #1). Together they let
 the entire game loop be wired and tested before any real curve arithmetic
 exists; the real backend swaps in with zero engine or transport changes. See
-`docs/files/mentalpoker/{lib.rs,round.rs,README.md}`.
+`docs/files/mentalpoker/pkcore-mp/{src/lib.rs,tests/round.rs,README.md}`.
 
 ### Crate-location split (orthogonal to topology)
 
@@ -633,7 +640,7 @@ not modified by this spike.
 | `Cargo.toml` | feature-gate pattern (`bot-profiles`, `hand-histories`, `equity`) the future `mental-log` gate would follow |
 | `ROADMAP.md` | the pkcore → pkdealer sibling-repo pattern `pkmental` mirrors |
 | `docs/ANALYSIS_Mental_Poker.md` | source analysis this EPIC distills |
-| `docs/files/mentalpoker/` | the `pkcore-mp` reference-harness spike (`lib.rs`, `card.rs`, `round.rs`, `Cargo.toml`, `README.md`) that `pkmental` Phase 1 productionizes |
+| `docs/files/mentalpoker/` | the archived exploration workspace: `pkcore-mp/` (the reference-harness spike `pkmental` Phase 1 productionizes), `tricktaking/`, `mp-toy/`, and `pktable/` — see its `README.md` |
 
 ---
 
@@ -748,8 +755,8 @@ review-based, not build-based.
   `Streets::from_event_log` (`src/hand_history.rs:1673`),
   `DECK_ARRAY` (`src/deck.rs:13`), `Card::as_u32` (`src/card.rs:131`),
   `Visibility` (`src/play/visibility.rs:28`).
-- The `pkcore-mp` spike it cites lives at `docs/files/mentalpoker/` and its
-  two-seat round passes (`two_seat_deal_and_reveal`,
+- The `pkcore-mp` spike it cites lives at `docs/files/mentalpoker/pkcore-mp/`
+  and its two-seat round passes (`two_seat_deal_and_reveal`,
   `coordinator_orders_and_chains_events`).
 - No `cargo` build/test step applies to pkcore — there are no code changes.
 

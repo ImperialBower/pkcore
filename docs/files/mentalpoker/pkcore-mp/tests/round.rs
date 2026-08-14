@@ -11,7 +11,10 @@ const SEAT0: Seat = 0;
 const SEAT1: Seat = 1;
 
 /// Build a fully masked, shuffled deck for the given aggregate key.
-fn masked_shuffled_deck(crypto: &PlaintextCrypto, agg: &std::collections::BTreeSet<Seat>) -> Vec<PlainMasked> {
+fn masked_shuffled_deck(
+    crypto: &PlaintextCrypto,
+    agg: &std::collections::BTreeSet<Seat>,
+) -> Vec<PlainMasked> {
     // Step 1: encode + mask all 52 cards.
     let mut deck: Vec<PlainMasked> = Vec::with_capacity(52);
     for c in pkcore_mp::card::DECK_ARRAY {
@@ -142,7 +145,8 @@ fn coordinator_orders_and_chains_events() {
 
     let crypto = PlaintextCrypto::new();
     let agg = crypto.aggregate(&[SEAT0, SEAT1]);
-    let masked = crypto.mask(&agg, &crypto.encode(pkcore_mp::card::DECK_ARRAY[0]).unwrap()).0;
+    let masked =
+        crypto.mask(&agg, &crypto.encode(pkcore_mp::card::DECK_ARRAY[0]).unwrap()).0;
     let token = crypto.reveal_token(&SEAT1, &SEAT1, &masked);
 
     let e0 = Rc::new(SignedEvent {

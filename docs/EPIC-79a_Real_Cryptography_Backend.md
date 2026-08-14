@@ -1,8 +1,8 @@
 # EPIC-79a: Real Cryptography Backend for pkcore-mp
 
-**Repo:** `pkcore-mp` — the spike; the productionized sibling crate ships as `pkmental` (see EPIC-79's naming note). Touches `pktable`; no changes to `pkcore` / `tricktaking`.
+**Repo:** `pkcore-mp` — the spike; the productionized sibling crate ships as `pkmental` (see EPIC-79's naming note). Touches `pktable`; no changes to `pkcore` / `tricktaking`. Spike code archived at `docs/files/mentalpoker/` (consolidated 2026-08-14).
 **Status:** Proposed
-**Depends on:** `CardCrypto` / `Coordinator` trait boundary (shipped), `PlaintextCrypto` mock (shipped), `pktable` relay/client/qrtable demos (shipped), `mp-toy` lesson-plan crate (companion reference)
+**Depends on:** `CardCrypto` / `Coordinator` trait boundary (archived), `PlaintextCrypto` mock (archived), `pktable` relay/client/qrtable demos (verified pre-archive, but the three binary sources were lost in packaging — recover or rewrite before Phase 2), `mp-toy` lesson-plan crate (companion reference)
 
 ---
 

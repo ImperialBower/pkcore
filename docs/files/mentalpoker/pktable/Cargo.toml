@@ -1,0 +1,24 @@
+[package]
+name = "pktable"
+version = "0.0.1"
+edition = "2021"
+description = "Relay + terminal client skeleton for distributed (mental-poker) play. std-only; mock crypto from pkcore-mp."
+
+[dependencies]
+pkcore-mp = { path = "../pkcore-mp" }
+# QR transport (pinned for older toolchains; bump freely on modern rustc)
+qrcode = { version = "=0.13.0", default-features = false }
+rqrr = "=0.6.0"
+image = { version = "=0.24.9", default-features = false, features = ["png"] }
+
+[[bin]]
+name = "relay"
+path = "src/bin/relay.rs"
+
+[[bin]]
+name = "client"
+path = "src/bin/client.rs"
+
+[[bin]]
+name = "qrtable"
+path = "src/bin/qrtable.rs"
