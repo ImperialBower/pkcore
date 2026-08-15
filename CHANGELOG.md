@@ -9,6 +9,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _Nothing yet._
 
+## [0.3.5] - 2026-08-14
+
+Performance-harness release. **No public API or wire-format changes** — one
+real hand-evaluation speedup, everything else is a standalone `perf/` crate
+and test/doc reorganization.
+
+### Added
+
+- **Standalone `perf/` crate** — a cross-target performance harness (Criterion
+  and Divan comparison benches, nano-band pure-kernel workloads, macro
+  workloads for equity enumeration/Monte Carlo, 6-max bot self-play, and the
+  CFR solver, plus a sweep-aware runner and report generator). Not part of
+  the published `pkcore` crate; lives and builds independently.
+- **Test-only heap-allocation probe** (`src/lib.rs`, `#[cfg(test)]` only) —
+  a thread-local counting global allocator used to assert zero-allocation
+  claims exactly instead of relying on flaky timing thresholds.
+
+### Fixed
+
+- **`is_dealt`/uniqueness checks on fixed-size card arrays (`Five`, `Six`,
+  `Seven`, etc.) allocated on every call.** `Pile::are_unique` and
+  `contains_blank` both called `to_vec()`, so every `hand_rank_value` paid
+  two heap allocations before evaluating anything — `Seven::hand_rank_value`
+  paid it 21 times. The array types now override both to compare over the
+  backing `[Card; N]` directly. Five-card eval: 102.6 → 13.0 ns (7.9x).
+  Seven-card eval: 2061.9 → 755.7 ns (2.7x). All workload checksums
+  unchanged — this is a speed fix, not a behavior change.
+
+### Changed
+
+- **`docs/BUGFIX_short_blind_call_target.md` renamed to
+  `docs/defects/DEFECT_001_BUGFIX_short_blind_call_target.md`**, as part of
+  numbering defect reports sequentially under `docs/defects/`. Comment
+  references in `src/casino/table.rs`, `src/casino/table/actions.rs`, and
+  `src/casino/table_celled.rs` updated to match.
+- **`tests/player_stats_consistency.rs` RNG seed pinned** — the test was
+  observed failing in ~0.6% of unseeded runs (12/2000); documented as
+  `docs/defects/DEFECT_006`.
+
+## [0.3.4] - 2026-08-14
+
+Documentation-only release. **No library API, behavior, or wire-format
+changes.**
+
+### Changed
+
+- **EPIC-79 Mental Poker spike workspace consolidated** into
+  `docs/files/mentalpoker/` — the `mp-toy`, `pkcore-mp`, `pktable`, and
+  `tricktaking` crates now live together under one directory with their own
+  `Cargo.toml`/`README.md` files, instead of loose files at the top level of
+  `docs/files/mentalpoker/`.
+
 ## [0.3.3] - 2026-08-12
 
 Documentation, packaging, and release-automation release. **No library API,
