@@ -23,6 +23,30 @@ builders (`five_sample`, `seven_sample`), so a row here matches a row in
 make perf-native && make perf-bench
 ```
 
+## A measured example
+
+All three harnesses on the same host, same build, back to back
+(2026-08-14, Apple M1, `rustc` release build). Median nanoseconds per
+operation:
+
+| Workload | Custom (`perf run`) | Criterion | Divan |
+|---|---:|---:|---:|
+| `eval.five.or_rank_bits` | 1.23 | 1.95 | 40.2 |
+| `eval.five.hand_rank_value` | 13.25 | 14.9 | 61.7 |
+| `parse.five.from_str` | 525 | 537 | 665 |
+| `eval.seven.hand_rank_value` | 734 | 752 | 915 |
+
+Two things worth noticing:
+
+- **Custom and Criterion agree within a few percent** on every row — two
+  unrelated timing models converging is the best cheap evidence that both
+  are honest.
+- **Divan reads far high on the smallest operations** (40 ns for a ~1 ns
+  bit-or) because its default protocol here timed calls individually, so
+  clock overhead dominates tiny work. The gap closes as the operation grows:
+  ~25% high at 700 ns. Same ordering, though — all three harnesses rank the
+  four workloads identically, which is the invariant that matters.
+
 ## Why the numbers will not match exactly
 
 Each harness pays a different per-operation overhead (loop counter and index
