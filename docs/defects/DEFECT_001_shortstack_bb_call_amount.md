@@ -3,7 +3,7 @@
 **Versions affected:** 0.0.48 – 0.0.54  
 **Reverted in:** 0.0.55  
 **Files changed:** `src/casino/table_no_cell.rs`, `src/casino/table.rs`  
-**Cross-reference:** `docs/BUGFIX_short_blind_call_target.md`
+**Cross-reference:** `docs/defects/DEFECT_001_BUGFIX_short_blind_call_target.md`
 
 ---
 
@@ -11,7 +11,7 @@
 
 This document originally framed the 0.0.48 change as the *fix* for an over-call bug. After review, that framing was incorrect — the 0.0.48 change applied a non-standard rule interpretation that violated TDA Rule 41 and Robert's Rules of Poker. The 0.0.48 behavior was reverted in 0.0.55. This doc is preserved as historical record of the misinterpretation.
 
-The current correct behavior is described in `docs/BUGFIX_short_blind_call_target.md`. **Do not use the rule statement below as authoritative** — it represents the rejected interpretation.
+The current correct behavior is described in `docs/defects/DEFECT_001_BUGFIX_short_blind_call_target.md`. **Do not use the rule statement below as authoritative** — it represents the rejected interpretation.
 
 ---
 
@@ -23,7 +23,7 @@ When the BB goes all-in for less than the configured blind (e.g. 60 of 100), oth
 - Chips committed beyond the all-in cap form a **side pot** (BB-ineligible) when ≥ 2 players contributed at that level.
 - If only one player committed beyond the all-in cap, the excess is **uncalled** and returned to that player.
 
-This is the universal rule used at WSOP, WPT, and every regulated cardroom. See `docs/BUGFIX_short_blind_call_target.md` for the worked scenarios and chip-conservation math.
+This is the universal rule used at WSOP, WPT, and every regulated cardroom. See `docs/defects/DEFECT_001_BUGFIX_short_blind_call_target.md` for the worked scenarios and chip-conservation math.
 
 ---
 
@@ -82,4 +82,4 @@ When introducing a behavioral change that flips an existing test's assertion, sc
 
 The 0.0.55 fix is a two-line revert at the table level. The lower layers (`act_forced_bet`, `act_blind_or_all_in`) were always correct — they correctly return the actual posted amount, which is used for the event log entry. The bug was purely in the table-level call-target assignment, which should reflect the *rule-derived* target (configured BB) rather than the *physically-posted* value.
 
-See `docs/BUGFIX_short_blind_call_target.md` for the full corrected design and the chip-conservation regression tests added alongside the revert.
+See `docs/defects/DEFECT_001_BUGFIX_short_blind_call_target.md` for the full corrected design and the chip-conservation regression tests added alongside the revert.

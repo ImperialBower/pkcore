@@ -472,9 +472,9 @@ here; these are verified, not vibes:
   to preserve the invariant (`:3560-3583`). A 1,000-hand marathon exercises it
   in CI (NLHE only — the variant caveat of Part II stands).
 - **The defect docs map to living regression tests.**
-  `DEFECT_heads-up-side-pot.md` → four tests in `tests/split_pots.rs`
+  `DEFECT_003_heads_up_side_pot.md` → four tests in `tests/split_pots.rs`
   (`:219, :285, :339, :403`) plus the `heads_up_is_symmetric` guard;
-  `BUGFIX_short_blind_call_target.md` → six `short_bb`/`short_blind` tests
+  `DEFECT_001_BUGFIX_short_blind_call_target.md` → six `short_bb`/`short_blind` tests
   across both engines. (`EPIC-DEFECT-Minraise.md` is a title-only stub, but its
   behavior is covered: `act_raise` pre-validates before mutating, with a
   no-state-corruption regression test.) This defect→doc→test discipline is

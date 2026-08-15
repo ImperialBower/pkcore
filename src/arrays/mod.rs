@@ -32,6 +32,34 @@ macro_rules! impl_hand_ranker_sort_and_permutation {
     };
 }
 
+/// Implements the two `Pile` checks that are identical across every fixed-size
+/// card array (`Two` through `Seven`): `are_unique` and `contains_blank`, both
+/// allocation-free over the backing array.
+///
+/// The trait defaults call `to_vec()`, which allocates. `is_dealt` calls both
+/// on every evaluation — and `Seven::hand_rank_value` evaluates 21 five-card
+/// permutations per call — so the defaults' allocation dominated hand
+/// evaluation entirely; see `docs/perf/PROFILING.md`. One macro rather than
+/// six pasted copies, so the next fix to either check lands everywhere at
+/// once.
+macro_rules! impl_pile_uniqueness_checks {
+    () => {
+        /// Same comparison as [`Pile::are_unique`]'s default, but over the
+        /// backing array rather than a `Vec`. Shared via
+        /// `impl_pile_uniqueness_checks!` in `arrays/mod.rs`.
+        fn are_unique(&self) -> bool {
+            !(1..self.0.len()).any(|i| self.0[i..].contains(&self.0[i - 1]))
+        }
+
+        /// Allocation-free counterpart to [`Pile::contains_blank`]'s default,
+        /// which reaches it through `contains` and so calls `to_vec()`.
+        /// Shared via `impl_pile_uniqueness_checks!` in `arrays/mod.rs`.
+        fn contains_blank(&self) -> bool {
+            self.0.contains(&Card::BLANK)
+        }
+    };
+}
+
 pub mod five;
 pub mod four;
 pub mod hole_cards;

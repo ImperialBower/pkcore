@@ -1571,6 +1571,8 @@ impl Pile for Two {
         unimplemented!("Two cannot be added; they represent a fixed length collection.")
     }
 
+    impl_pile_uniqueness_checks!();
+
     fn card_at(self, _index: usize) -> Option<Card> {
         unimplemented!("Two is a fixed 2-card hand; use `.first()`/`.second()`, or `.cards().card_at(index)`")
     }
@@ -1775,6 +1777,19 @@ mod arrays__two_tests {
     /// **ASIDE** The book is out as
     /// [The Official Dictionary of Poker: Second Edition](https://www.amazon.com/Official-Dictionary-Poker-Second-ebook/dp/B00KJMP6B2?ref_=ast_author_mpb)
     const BIG_SLICK: [Card; 2] = [Card::ACE_DIAMONDS, Card::KING_HEARTS];
+
+    /// See `docs/perf/PROFILING.md`: the `Pile::is_dealt` default allocates
+    /// twice via `to_vec`, which dominated hand evaluation.
+    #[test]
+    fn is_dealt_does_not_allocate() {
+        let hole = Two::from(BIG_SLICK);
+        assert!(hole.is_dealt());
+
+        let (dealt, allocations) = crate::alloc_probe::count_allocs(|| hole.is_dealt());
+
+        assert!(dealt);
+        assert_eq!(allocations, 0, "Two::is_dealt made {allocations} heap allocation(s)");
+    }
 
     /// The test fn with the exact same name as the function it's testing is my Happy Path
     /// tests. It should just work simple

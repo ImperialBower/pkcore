@@ -87,6 +87,8 @@ impl Pile for Three {
         unimplemented!("Three cannot be added; they represent a fixed length collection.")
     }
 
+    impl_pile_uniqueness_checks!();
+
     fn card_at(self, _index: usize) -> Option<Card> {
         unimplemented!("Three is a fixed 3-card hand; use `.cards().card_at(index)` for positional access")
     }
@@ -145,6 +147,19 @@ mod arrays__three_tests {
 
     /// <https://www.youtube.com/watch?v=vjM60lqRhPg />
     const THE_FLOP: [Card; 3] = [Card::NINE_CLUBS, Card::SIX_DIAMONDS, Card::FIVE_HEARTS];
+
+    /// See `docs/perf/PROFILING.md`: the `Pile::is_dealt` default allocates
+    /// twice via `to_vec`, which dominated hand evaluation.
+    #[test]
+    fn is_dealt_does_not_allocate() {
+        let flop = Three::from(THE_FLOP);
+        assert!(flop.is_dealt());
+
+        let (dealt, allocations) = crate::alloc_probe::count_allocs(|| flop.is_dealt());
+
+        assert!(dealt);
+        assert_eq!(allocations, 0, "Three::is_dealt made {allocations} heap allocation(s)");
+    }
 
     #[test]
     fn display() {

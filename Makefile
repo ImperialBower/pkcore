@@ -1,4 +1,4 @@
-.PHONY: clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes
+.PHONY: clean build test build_test fmt clippy actionlint create_docs ayce default help docs test-nightly clippy-nightly nightly tree tree-duplicates deny audit unused-deps install-tools watch install-watch check-wasm check-purity generate-hups-bin test-debug-json nextest heavy marathon mutants mutants-diff coverage coverage-open ci ci-fresh pokerbench-data validate-okf release-notes perf-build perf-native perf-report perf-profile perf-check perf-build-all perf-native-all perf-sweep perf-bench
 
 # Default target
 default: ayce
@@ -343,3 +343,83 @@ release-notes:
 	fi
 	@./scripts/release_notes.sh "$(TAG)"
 
+# ---------------------------------------------------------------------------
+# Performance harness (docs/superpowers/specs/2026-07-30-kernel-performance-
+# harness-design.md). The perf crate is its own workspace root, so these
+# targets cd into perf/ rather than using the root cargo invocation.
+# ---------------------------------------------------------------------------
+PKCORE_VERSION := $(shell grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+PERF_BIN := perf/target/release/perf
+PERF_TARGET_DIR_ALL := target/all-features
+PERF_BIN_ALL := perf/$(PERF_TARGET_DIR_ALL)/release/perf
+
+# Phony, not a file target keyed on $(PERF_BIN): a bare `$(PERF_BIN):` rule
+# with no prerequisites only reruns `cargo build` when the binary file is
+# absent, so any perf/src edit was silently ignored by perf-native,
+# perf-report, and perf-profile once the binary existed once. `cargo build`
+# already does its own cheap up-to-date check; let it, rather than relying on
+# make's file-timestamp tracking to decide whether a rebuild is needed.
+.PHONY: perf-build
+perf-build:
+	cd perf && cargo build --release
+
+# Measure the pure kernel on this host and write a results file.
+perf-native: perf-build
+	PKCORE_VERSION=$(PKCORE_VERSION) $(PERF_BIN) run \
+		--utc "$$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+# Regenerate docs/perf/RESULTS.md from every committed results file.
+perf-report: perf-build
+	$(PERF_BIN) report
+
+# Profile one workload with samply. Requires: cargo install samply
+# Usage: make perf-profile WORKLOAD=eval.seven.hand_rank_value
+# Uses the all-features binary: its catalog is a superset of the pure-kernel
+# one, so every workload in docs/perf/RESULTS.md — including equity.* and
+# dealeval.* — is profilable. The pure-kernel binary's catalog omits them,
+# and `perf run <name>` inside samply then dies with "no workload matched".
+perf-profile: perf-build-all
+	@if [ -z "$(WORKLOAD)" ]; then \
+		echo "usage: make perf-profile WORKLOAD=<name>  (see: $(PERF_BIN_ALL) list)"; \
+		exit 1; \
+	fi
+	samply record $(PERF_BIN_ALL) run $(WORKLOAD) --trials 50 --stdout
+
+# Build the perf runner with every workload feature enabled, into a distinct
+# target directory from the pure-kernel build. Previously both builds shared
+# perf/target/release, so `perf-build-all` silently overwrote the pure-kernel
+# binary; a later `perf-native` (or `perf-report`, or `perf-profile`) would
+# then run the all-features binary under the pure-kernel label, writing
+# results whose `features` did not match what actually produced them.
+perf-build-all:
+	cd perf && cargo build --release --target-dir $(PERF_TARGET_DIR_ALL) --features "equity sim"
+
+# Measure everything, all features on. Labelled so it sits alongside the
+# pure-kernel run from `make perf-native` rather than overwriting it.
+perf-native-all: perf-build-all
+	PKCORE_VERSION=$(PKCORE_VERSION) $(PERF_BIN_ALL) run \
+		--label all-features \
+		--utc "$$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+# Rayon pool-size sweep over the parallel workloads (design Section 5).
+perf-sweep: perf-build-all
+	PKCORE_VERSION=$(PKCORE_VERSION) $(PERF_BIN_ALL) run \
+		--sweep --label sweep \
+		--utc "$$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+# The same nano workloads under Criterion and Divan, for side-by-side
+# comparison with the custom harness (`make perf-native`). Educational, not a
+# gate — see docs/perf/HARNESS_COMPARISON.md.
+perf-bench:
+	cd perf && cargo bench --bench criterion
+	cd perf && cargo bench --bench divan
+
+# Lint and test the perf crate. It sits outside `make ayce`, so this keeps it
+# from rotting.
+perf-check:
+	cd perf && cargo fmt --check
+	cd perf && cargo clippy --all-targets -- -D warnings
+	cd perf && cargo clippy --all-targets --features "equity sim" -- -D warnings
+	cd perf && cargo build --bins --features "equity sim"
+	cd perf && cargo test
+	cd perf && cargo test --features "equity sim"

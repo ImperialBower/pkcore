@@ -397,6 +397,69 @@ pub mod ranks;
 pub mod suit;
 pub mod util;
 
+/// Test-only heap-allocation probe.
+///
+/// Hand evaluation is the innermost loop of equity enumeration, self-play, and
+/// the solver, so a stray allocation there is a real defect rather than a style
+/// issue — a single `Vec` round-trip costs more than the entire Cactus-Kev
+/// lookup it wraps. Timing assertions would be flaky; counting allocations is
+/// exact, so the array types assert that property directly.
+///
+/// The counter is thread-local, so tests running in parallel cannot perturb
+/// each other, and both cells are const-initialised so that touching them from
+/// inside the allocator cannot itself allocate and recurse.
+#[cfg(test)]
+pub(crate) mod alloc_probe {
+    use std::alloc::{GlobalAlloc, Layout, System};
+    use std::cell::Cell;
+
+    thread_local! {
+        static COUNT: Cell<usize> = const { Cell::new(0) };
+        static COUNTING: Cell<bool> = const { Cell::new(false) };
+    }
+
+    /// A pass-through allocator that tallies allocations on threads that have
+    /// opted in via [`count_allocs`].
+    pub(crate) struct Probe;
+
+    unsafe impl GlobalAlloc for Probe {
+        unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+            if COUNTING.try_with(Cell::get).unwrap_or(false) {
+                let _ = COUNT.try_with(|c| c.set(c.get().saturating_add(1)));
+            }
+            unsafe { System.alloc(layout) }
+        }
+
+        unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+            unsafe { System.dealloc(ptr, layout) }
+        }
+
+        unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
+            if COUNTING.try_with(Cell::get).unwrap_or(false) {
+                let _ = COUNT.try_with(|c| c.set(c.get().saturating_add(1)));
+            }
+            unsafe { System.realloc(ptr, layout, new_size) }
+        }
+    }
+
+    /// Runs `f`, returning its value alongside the number of heap allocations
+    /// it made on the calling thread.
+    ///
+    /// Warm any lazily-initialised statics the closure touches *before*
+    /// calling this, or their one-time setup will be counted.
+    pub(crate) fn count_allocs<T>(f: impl FnOnce() -> T) -> (T, usize) {
+        COUNT.with(|c| c.set(0));
+        COUNTING.with(|c| c.set(true));
+        let value = f();
+        COUNTING.with(|c| c.set(false));
+        (value, COUNT.with(Cell::get))
+    }
+}
+
+#[cfg(test)]
+#[global_allocator]
+static ALLOC_PROBE: alloc_probe::Probe = alloc_probe::Probe;
+
 // region CONSTANTS
 
 /// See Cactus Kev's explanation of [unique vs. distinct](https://suffe.cool/poker/evaluator.html)

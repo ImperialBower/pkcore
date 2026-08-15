@@ -416,7 +416,7 @@ impl TableCelled {
             } else if seat.player.chips.count() < to_call {
                 // Caller cannot cover the full call target — go all-in for partial.
                 // Side pots and uncalled-bet returns at showdown reconcile the difference
-                // (see docs/BUGFIX_short_blind_call_target.md).
+                // (see docs/defects/DEFECT_001_BUGFIX_short_blind_call_target.md).
                 let total_bet = seat.player.act_all_in()?;
                 total_bet.saturating_sub(seat_bet)
             } else {

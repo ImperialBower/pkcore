@@ -4,9 +4,12 @@
 //! verifies that the resulting per-player VPIP rates land in the range you
 //! would expect for each [`BotProfile`] style.  This is a smoke test that
 //! styles are *actually differentiated* by the rule-based decider — not a
-//! regression test on exact ratios.  Bands are deliberately loose to absorb
-//! the thread-local RNG variability that `RuleBasedDecider` introduces
-//! (see Unit B's regression-test discussion).
+//! regression test on exact ratios.  Bands are deliberately loose so the
+//! test reads as a differentiation check rather than a golden-value lock.
+//!
+//! The self-play session is pinned to a fixed seed (see
+//! [`STATS_CONSISTENCY_SEED`]); `RuleBasedDecider` is probabilistic, so an
+//! unseeded session is a fresh statistical sample every run.
 
 use pkcore::analysis::player_stats::StatsRegistry;
 use pkcore::bot::profile::BotProfile;
@@ -19,17 +22,33 @@ use uuid::Uuid;
 /// busts inside `HANDS`. `RuleBasedDecider` sizes raises as a fraction of the
 /// pot, and the pot can grow multiplicatively across a multi-bet sequence
 /// (3-bet, 4-bet, 5-bet across multiple streets), so a single big-pot loss
-/// can swing tens to hundreds of millions even at deep stacks. Conservative
-/// styles (`tight_passive`, `loose_passive`) reliably survive; loose
-/// aggressive styles (`loose_aggressive`, `maniac`) sometimes bust early —
-/// `vpip_if_seasoned` treats their early exit as "no opinion" rather than
-/// a test failure.
+/// can swing tens to hundreds of millions even at deep stacks. Stack depth
+/// therefore lowers the bust rate but cannot bound it, which is why this test
+/// pins a seed rather than relying on deep stacks alone.
 const STARTING_CHIPS: usize = 1_000_000_000;
 const SMALL_BLIND: usize = 50;
 const BIG_BLIND: usize = 100;
 const HANDS: usize = 100;
 /// Minimum hands a survivor must see for their VPIP to be assertion-worthy.
 const MIN_HANDS_FOR_SURVIVOR_ASSERTION: u64 = 30;
+
+/// Fixed seed for both self-play sessions in this file.
+///
+/// `RuleBasedDecider` draws from a thread-local RNG by default, so an unseeded
+/// session is a fresh statistical sample on every run. Style *ordering* is
+/// robust, but *survival* is not: in a small fraction of samples enough bots
+/// bust early that a survivor threshold goes unmet, and the test fails on an
+/// RNG outlier rather than a real regression. This flaked on CI's
+/// "Optional features" job, which runs the suite twice and so doubles the
+/// exposure. `SimTable::with_seed` routes the deck shuffle *and* every decider
+/// draw through one `SmallRng`, making the session reproducible — the same fix
+/// `EXPLOIT_SMOKE_SEED` applies in `exploitative_play_smoke.rs`.
+///
+/// A sweep of seeds `0..64` showed all 64 play the full `HANDS` hands with
+/// correct style ordering; they differ only in who busts. Seed 0 is the
+/// smallest where every asserted style survives all `HANDS` hands, so each
+/// assertion below is live rather than skipped.
+const STATS_CONSISTENCY_SEED: u64 = 0;
 
 /// Bot styles seated at the table, in seat order.
 fn styles() -> Vec<(&'static str, BotProfile)> {
@@ -64,7 +83,7 @@ fn vpip_differentiates_styles_after_self_play() {
         .map(|(i, (_, p))| (u8::try_from(i).expect("six seats fits u8"), p.clone()))
         .collect();
 
-    let mut sim = SimTable::with_stats_registry(table, bots, StatsRegistry::new());
+    let mut sim = SimTable::with_stats_registry(table, bots, StatsRegistry::new()).with_seed(STATS_CONSISTENCY_SEED);
     let result = sim.run_n_hands(HANDS).expect("session must complete");
     assert!(
         result.hands_played * 2 >= HANDS,
@@ -76,10 +95,12 @@ fn vpip_differentiates_styles_after_self_play() {
     assert!(!stats.is_empty(), "registry should hold per-player stats");
 
     // Returns Some(vpip) for any seated player who survived long enough for
-    // a stable read; None otherwise. Aggressive styles (`loose_aggressive`,
-    // `maniac`) may bust before reaching the threshold when a multi-bet pot
-    // war drains their stack in a single hand — we treat early exit as
-    // "no opinion," not a test failure.
+    // a stable read; None otherwise. Under STATS_CONSISTENCY_SEED every style
+    // below survives all HANDS hands, so this never returns None today. It is
+    // kept as a guard for the one thing the seed can't pin: a future `rand`
+    // upgrade shifting the `SmallRng` stream. If that happens an aggressive
+    // style busting early reads as "no opinion" here, and the test still
+    // fails loudly via `survivors_checked` if *every* style drops out.
     let vpip_if_seasoned = |style: &str| -> Option<f64> {
         let (_, uuid) = style_to_uuid.iter().find(|(n, _)| *n == style)?;
         let ps = stats.get(*uuid)?;
@@ -94,9 +115,9 @@ fn vpip_differentiates_styles_after_self_play() {
     let tight_passive =
         vpip_if_seasoned("tight_passive").expect("tight_passive should survive 100 hands at deep stacks");
 
-    // EPIC-26 design rationale: tight_passive plays modestly. Bands are
-    // deliberately wide to absorb thread-local RNG variability — this is a
-    // differentiation smoke test, not a regression on exact ratios.
+    // EPIC-26 design rationale: tight_passive plays modestly. The band is
+    // deliberately wide — this is a differentiation smoke test, not a
+    // regression on exact ratios. (Seed 0 reads ~0.09, well clear of 0.45.)
     assert!(
         tight_passive < 0.45,
         "tight_passive VPIP should be modest, got {tight_passive:.3}"
@@ -145,7 +166,10 @@ fn registry_records_one_hand_per_active_seat() {
         (2_u8, BotProfile::loose_aggressive()),
     ];
 
-    let mut sim = SimTable::with_stats_registry(table, bots, StatsRegistry::new());
+    // Seeded for the same reason as the session above: this asserts every seat
+    // was dealt every hand, which silently breaks if a bot busts mid-session
+    // (the other two stay funded, so the run continues without them).
+    let mut sim = SimTable::with_stats_registry(table, bots, StatsRegistry::new()).with_seed(STATS_CONSISTENCY_SEED);
     let result = sim.run_n_hands(25).expect("session must complete");
 
     let stats = sim.stats().expect("registry attached");

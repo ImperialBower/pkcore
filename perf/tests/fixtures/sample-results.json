@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "run": {
+    "utc": "2026-07-30T18:04:11Z",
+    "target": "aarch64-apple-darwin",
+    "runtime": "native",
+    "host": { "cpu": "Apple M1", "cores": 8, "p_cores": 4, "e_cores": 4 },
+    "rustc": "rustc 1.94.1",
+    "pkcore": "0.3.2",
+    "features": [],
+    "rayon_threads": null
+  },
+  "samples": [
+    {
+      "name": "eval.five.hand_rank_value",
+      "band": "nano",
+      "inner_iters": 100000,
+      "trials": 30,
+      "ns_per_op": { "min": 4.1, "median": 4.3, "p95": 4.9, "mad": 0.1 },
+      "checksum": 1234567890,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.seven.hand_rank_value",
+      "band": "nano",
+      "inner_iters": 10000,
+      "trials": 30,
+      "ns_per_op": { "min": 88.0, "median": 91.5, "p95": 99.2, "mad": 1.4 },
+      "checksum": 987654321,
+      "status": "ok",
+      "message": null
+    }
+  ]
+}

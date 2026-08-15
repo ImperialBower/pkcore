@@ -36,4 +36,4 @@ commitments. Evidence arrives as session YAML — see
 
 # Citations
 
-[1] [DEFECT_heads-up-side-pot](https://github.com/ImperialBower/pkcore/blob/main/docs/DEFECT_heads-up-side-pot.md)
+[1] [DEFECT_003_heads_up_side_pot](https://github.com/ImperialBower/pkcore/blob/main/docs/defects/DEFECT_003_heads_up_side_pot.md)

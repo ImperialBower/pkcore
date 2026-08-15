@@ -1,6 +1,6 @@
 # Defect: Bot Raise-War Escalation Under Equity-Based Decisions
 
-**File:** `docs/DEFECT_bot-escalation.md`  
+**File:** `docs/defects/DEFECT_002_bot_escalation.md`  
 **Date:** 2026-04-23  
 **Severity:** High  
 **Status:** Fixed  

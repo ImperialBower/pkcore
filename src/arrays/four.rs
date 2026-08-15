@@ -159,6 +159,8 @@ impl Pile for Four {
         unimplemented!("Four cannot be added; it's a fixed 4-card hand")
     }
 
+    impl_pile_uniqueness_checks!();
+
     fn card_at(self, _index: usize) -> Option<Card> {
         unimplemented!("Four is a fixed 4-card hand; use `.cards().card_at(index)` for positional access")
     }
@@ -226,6 +228,24 @@ impl TryFrom<Cards> for Four {
 #[allow(non_snake_case)]
 mod arrays__four_tests {
     use super::*;
+
+    /// See `docs/perf/PROFILING.md`: the `Pile::is_dealt` default allocates
+    /// twice via `to_vec`, which dominated hand evaluation.
+    #[test]
+    fn is_dealt_does_not_allocate() {
+        let hand = Four([
+            Card::ACE_DIAMONDS,
+            Card::ACE_CLUBS,
+            Card::KING_DIAMONDS,
+            Card::KING_CLUBS,
+        ]);
+        assert!(hand.is_dealt());
+
+        let (dealt, allocations) = crate::alloc_probe::count_allocs(|| hand.is_dealt());
+
+        assert!(dealt);
+        assert_eq!(allocations, 0, "Four::is_dealt made {allocations} heap allocation(s)");
+    }
 
     #[test]
     fn from_twos() {

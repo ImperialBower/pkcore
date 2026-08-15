@@ -631,7 +631,7 @@ war — each bot raises every action until one is all-in, collapsing chip stacks
 in a few hands. The gate `raise_roll < aggr.max(0.5)` introduces variance:
 with GTO's 50% gate, two bots have only a 25% chance of both raising on the
 next action, 6.25% on the one after that — geometrically decaying escalation.
-See `docs/DEFECT_bot-escalation.md`.
+See `docs/defects/DEFECT_002_bot_escalation.md`.
 
 **Decision when no bet is outstanding (equity path):**
 

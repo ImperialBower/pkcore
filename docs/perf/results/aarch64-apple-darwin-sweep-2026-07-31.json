@@ -1,0 +1,600 @@
+{
+  "schema": 1,
+  "run": {
+    "utc": "2026-07-31T23:42:31Z",
+    "target": "aarch64-apple-darwin",
+    "runtime": "native",
+    "host": {
+      "cpu": "Apple M1",
+      "cores": 8,
+      "p_cores": 4,
+      "e_cores": 4
+    },
+    "rustc": "rustc 1.97.1 (8bab26f4f 2026-07-14)",
+    "pkcore": "0.3.2",
+    "features": [
+      "equity",
+      "sim"
+    ],
+    "rayon_threads": null,
+    "label": "sweep"
+  },
+  "samples": [
+    {
+      "name": "eval.five.hand_rank_value",
+      "band": "nano",
+      "inner_iters": 100000,
+      "trials": 30,
+      "rayon_threads": 1,
+      "ns_per_op": {
+        "min": 24.41834,
+        "median": 24.671455,
+        "p95": 35.00792,
+        "mad": 0.16145999999999994
+      },
+      "checksum": 512044479,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.five.hand_rank_value",
+      "band": "nano",
+      "inner_iters": 100000,
+      "trials": 30,
+      "rayon_threads": 4,
+      "ns_per_op": {
+        "min": 24.31708,
+        "median": 24.73979,
+        "p95": 29.925,
+        "mad": 0.35187499999999794
+      },
+      "checksum": 512044479,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.five.hand_rank_value",
+      "band": "nano",
+      "inner_iters": 100000,
+      "trials": 30,
+      "rayon_threads": 8,
+      "ns_per_op": {
+        "min": 24.29375,
+        "median": 25.33917,
+        "p95": 31.83292,
+        "mad": 1.03167
+      },
+      "checksum": 512044479,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.seven.hand_rank_value",
+      "band": "nano",
+      "inner_iters": 10000,
+      "trials": 30,
+      "rayon_threads": 1,
+      "ns_per_op": {
+        "min": 1232.5625,
+        "median": 1369.07915,
+        "p95": 1743.9125,
+        "mad": 23.63334999999995
+      },
+      "checksum": 25628021,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.seven.hand_rank_value",
+      "band": "nano",
+      "inner_iters": 10000,
+      "trials": 30,
+      "rayon_threads": 4,
+      "ns_per_op": {
+        "min": 1433.6667,
+        "median": 1762.6291999999999,
+        "p95": 2003.3041,
+        "mad": 26.302099999999996
+      },
+      "checksum": 25628021,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.seven.hand_rank_value",
+      "band": "nano",
+      "inner_iters": 10000,
+      "trials": 30,
+      "rayon_threads": 8,
+      "ns_per_op": {
+        "min": 1284.8542,
+        "median": 1962.31665,
+        "p95": 3672.0583,
+        "mad": 181.12710000000004
+      },
+      "checksum": 25628021,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.seven.eval",
+      "band": "nano",
+      "inner_iters": 10000,
+      "trials": 30,
+      "rayon_threads": 1,
+      "ns_per_op": {
+        "min": 5426.1833,
+        "median": 7726.18955,
+        "p95": 10075.0125,
+        "mad": 1573.23135
+      },
+      "checksum": 25628021,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.seven.eval",
+      "band": "nano",
+      "inner_iters": 10000,
+      "trials": 30,
+      "rayon_threads": 4,
+      "ns_per_op": {
+        "min": 5380.4667,
+        "median": 6324.71875,
+        "p95": 9588.2459,
+        "mad": 678.27295
+      },
+      "checksum": 25628021,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.seven.eval",
+      "band": "nano",
+      "inner_iters": 10000,
+      "trials": 30,
+      "rayon_threads": 8,
+      "ns_per_op": {
+        "min": 5372.4375,
+        "median": 6331.32495,
+        "p95": 7469.7667,
+        "mad": 37.79584999999997
+      },
+      "checksum": 25628021,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.five.or_rank_bits",
+      "band": "nano",
+      "inner_iters": 100000,
+      "trials": 30,
+      "rayon_threads": 1,
+      "ns_per_op": {
+        "min": 1.86667,
+        "median": 1.871875,
+        "p95": 1.92333,
+        "mad": 0.0012499999999999734
+      },
+      "checksum": 546925699,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.five.or_rank_bits",
+      "band": "nano",
+      "inner_iters": 100000,
+      "trials": 30,
+      "rayon_threads": 4,
+      "ns_per_op": {
+        "min": 1.86708,
+        "median": 1.870835,
+        "p95": 1.88709,
+        "mad": 0.0012449999999999406
+      },
+      "checksum": 546925699,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "eval.five.or_rank_bits",
+      "band": "nano",
+      "inner_iters": 100000,
+      "trials": 30,
+      "rayon_threads": 8,
+      "ns_per_op": {
+        "min": 1.86667,
+        "median": 1.87208,
+        "p95": 1.88583,
+        "mad": 0.0020799999999999708
+      },
+      "checksum": 546925699,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "parse.five.from_str",
+      "band": "nano",
+      "inner_iters": 10000,
+      "trials": 30,
+      "rayon_threads": 1,
+      "ns_per_op": {
+        "min": 779.05,
+        "median": 783.41875,
+        "p95": 811.3208,
+        "mad": 2.3229499999999916
+      },
+      "checksum": 54803507,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "parse.five.from_str",
+      "band": "nano",
+      "inner_iters": 10000,
+      "trials": 30,
+      "rayon_threads": 4,
+      "ns_per_op": {
+        "min": 667.325,
+        "median": 787.86875,
+        "p95": 963.1125,
+        "mad": 6.52290000000005
+      },
+      "checksum": 54803507,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "parse.five.from_str",
+      "band": "nano",
+      "inner_iters": 10000,
+      "trials": 30,
+      "rayon_threads": 8,
+      "ns_per_op": {
+        "min": 579.3208,
+        "median": 588.08545,
+        "p95": 678.7792,
+        "mad": 8.741700000000037
+      },
+      "checksum": 54803507,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "gto.cfr.iters",
+      "band": "macro",
+      "inner_iters": 100,
+      "trials": 5,
+      "rayon_threads": 1,
+      "ns_per_op": {
+        "min": 712447.91,
+        "median": 715377.5,
+        "p95": 782277.08,
+        "mad": 2929.5899999999674
+      },
+      "checksum": 100,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "gto.cfr.iters",
+      "band": "macro",
+      "inner_iters": 100,
+      "trials": 5,
+      "rayon_threads": 4,
+      "ns_per_op": {
+        "min": 694373.33,
+        "median": 712937.5,
+        "p95": 743487.5,
+        "mad": 12951.670000000042
+      },
+      "checksum": 100,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "gto.cfr.iters",
+      "band": "macro",
+      "inner_iters": 100,
+      "trials": 5,
+      "rayon_threads": 8,
+      "ns_per_op": {
+        "min": 735653.75,
+        "median": 784450.41,
+        "p95": 802642.09,
+        "mad": 9827.089999999967
+      },
+      "checksum": 100,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "equity.exact.hu_flop",
+      "band": "micro",
+      "inner_iters": 1,
+      "trials": 30,
+      "rayon_threads": 1,
+      "ns_per_op": {
+        "min": 9529333.0,
+        "median": 9601083.5,
+        "p95": 10221917.0,
+        "mad": 43500.0
+      },
+      "checksum": 990,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "equity.exact.hu_flop",
+      "band": "micro",
+      "inner_iters": 1,
+      "trials": 30,
+      "rayon_threads": 4,
+      "ns_per_op": {
+        "min": 3306750.0,
+        "median": 4618041.5,
+        "p95": 6313750.0,
+        "mad": 756104.5
+      },
+      "checksum": 990,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "equity.exact.hu_flop",
+      "band": "micro",
+      "inner_iters": 1,
+      "trials": 30,
+      "rayon_threads": 8,
+      "ns_per_op": {
+        "min": 5316625.0,
+        "median": 7975729.5,
+        "p95": 14082334.0,
+        "mad": 1718854.5
+      },
+      "checksum": 990,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "equity.exact.hu_preflop",
+      "band": "macro",
+      "inner_iters": 1,
+      "trials": 5,
+      "rayon_threads": 1,
+      "ns_per_op": {
+        "min": 15508965583.0,
+        "median": 16414722416.0,
+        "p95": 23763691042.0,
+        "mad": 290645917.0
+      },
+      "checksum": 1721612,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "equity.exact.hu_preflop",
+      "band": "macro",
+      "inner_iters": 1,
+      "trials": 5,
+      "rayon_threads": 4,
+      "ns_per_op": {
+        "min": 11009896834.0,
+        "median": 16958822875.0,
+        "p95": 22165508625.0,
+        "mad": 2059393959.0
+      },
+      "checksum": 1721612,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "equity.exact.hu_preflop",
+      "band": "macro",
+      "inner_iters": 1,
+      "trials": 5,
+      "rayon_threads": 8,
+      "ns_per_op": {
+        "min": 15893010000.0,
+        "median": 16582542250.0,
+        "p95": 16764107208.0,
+        "mad": 181564958.0
+      },
+      "checksum": 1721612,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "equity.mc.three_way",
+      "band": "micro",
+      "inner_iters": 1,
+      "trials": 30,
+      "rayon_threads": 1,
+      "ns_per_op": {
+        "min": 651887333.0,
+        "median": 738337937.5,
+        "p95": 821625250.0,
+        "mad": 32224833.0
+      },
+      "checksum": 20367,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "equity.mc.three_way",
+      "band": "micro",
+      "inner_iters": 1,
+      "trials": 30,
+      "rayon_threads": 4,
+      "ns_per_op": {
+        "min": 239357667.0,
+        "median": 302988687.5,
+        "p95": 412488458.0,
+        "mad": 18287813.0
+      },
+      "checksum": 20367,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "equity.mc.three_way",
+      "band": "micro",
+      "inner_iters": 1,
+      "trials": 30,
+      "rayon_threads": 8,
+      "ns_per_op": {
+        "min": 240999375.0,
+        "median": 269768583.0,
+        "p95": 388461167.0,
+        "mad": 11236395.5
+      },
+      "checksum": 20367,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "dealeval.hu",
+      "band": "micro",
+      "inner_iters": 1,
+      "trials": 30,
+      "rayon_threads": 1,
+      "ns_per_op": {
+        "min": 223726542.0,
+        "median": 245217584.0,
+        "p95": 285072833.0,
+        "mad": 9081083.5
+      },
+      "checksum": 10169,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "dealeval.hu",
+      "band": "micro",
+      "inner_iters": 1,
+      "trials": 30,
+      "rayon_threads": 4,
+      "ns_per_op": {
+        "min": 66645167.0,
+        "median": 106091500.0,
+        "p95": 136377708.0,
+        "mad": 17211416.5
+      },
+      "checksum": 10169,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "dealeval.hu",
+      "band": "micro",
+      "inner_iters": 1,
+      "trials": 30,
+      "rayon_threads": 8,
+      "ns_per_op": {
+        "min": 75553334.0,
+        "median": 99540562.5,
+        "p95": 142461000.0,
+        "mad": 2753521.0
+      },
+      "checksum": 10169,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "dealeval.three_way",
+      "band": "micro",
+      "inner_iters": 1,
+      "trials": 30,
+      "rayon_threads": 1,
+      "ns_per_op": {
+        "min": 349896625.0,
+        "median": 393245770.5,
+        "p95": 425002125.0,
+        "mad": 12791042.0
+      },
+      "checksum": 10292,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "dealeval.three_way",
+      "band": "micro",
+      "inner_iters": 1,
+      "trials": 30,
+      "rayon_threads": 4,
+      "ns_per_op": {
+        "min": 114480125.0,
+        "median": 159778812.5,
+        "p95": 204836791.0,
+        "mad": 9125062.5
+      },
+      "checksum": 10292,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "dealeval.three_way",
+      "band": "micro",
+      "inner_iters": 1,
+      "trials": 30,
+      "rayon_threads": 8,
+      "ns_per_op": {
+        "min": 109624625.0,
+        "median": 150864666.5,
+        "p95": 305711792.0,
+        "mad": 13664708.0
+      },
+      "checksum": 10292,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "sim.selfplay.6max",
+      "band": "macro",
+      "inner_iters": 200,
+      "trials": 5,
+      "rayon_threads": 1,
+      "ns_per_op": {
+        "min": 191532.71,
+        "median": 247348.545,
+        "p95": 270854.375,
+        "mad": 23505.829999999987
+      },
+      "checksum": 80215,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "sim.selfplay.6max",
+      "band": "macro",
+      "inner_iters": 200,
+      "trials": 5,
+      "rayon_threads": 4,
+      "ns_per_op": {
+        "min": 206618.545,
+        "median": 250084.375,
+        "p95": 267273.96,
+        "mad": 17189.58500000002
+      },
+      "checksum": 80215,
+      "status": "ok",
+      "message": null
+    },
+    {
+      "name": "sim.selfplay.6max",
+      "band": "macro",
+      "inner_iters": 200,
+      "trials": 5,
+      "rayon_threads": 8,
+      "ns_per_op": {
+        "min": 207386.665,
+        "median": 302221.665,
+        "p95": 322706.25,
+        "mad": 20484.58500000002
+      },
+      "checksum": 80215,
+      "status": "ok",
+      "message": null
+    }
+  ]
+}

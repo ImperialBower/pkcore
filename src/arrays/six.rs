@@ -153,6 +153,8 @@ impl Pile for Six {
         unimplemented!("Six cannot be added; they represent a fixed length collection.")
     }
 
+    impl_pile_uniqueness_checks!();
+
     fn card_at(self, _index: usize) -> Option<Card> {
         unimplemented!("Six is a fixed-length collection; use `.cards().card_at(index)` for positional access")
     }
@@ -199,6 +201,19 @@ mod arrays__six_tests {
     use super::*;
     use crate::analysis::class::HandRankClass;
     use crate::analysis::name::HandRankName;
+
+    /// See `docs/perf/PROFILING.md`: the `Pile::is_dealt` default allocates
+    /// twice via `to_vec`, which dominated hand evaluation.
+    #[test]
+    fn is_dealt_does_not_allocate() {
+        let hand = Six::from(CARDS);
+        assert!(hand.is_dealt());
+
+        let (dealt, allocations) = crate::alloc_probe::count_allocs(|| hand.is_dealt());
+
+        assert!(dealt);
+        assert_eq!(allocations, 0, "Six::is_dealt made {allocations} heap allocation(s)");
+    }
 
     const CARDS: [Card; 6] = [
         Card::ACE_DIAMONDS,
