@@ -1,0 +1,384 @@
+{
+  "behavior": "razz-ordering",
+  "data": {
+    "canonical_ladder_head": [
+      {
+        "low_ranks_high_to_low": [
+          5,
+          4,
+          3,
+          2,
+          1
+        ],
+        "original_ordinal": 1,
+        "position": 1
+      },
+      {
+        "low_ranks_high_to_low": [
+          6,
+          4,
+          3,
+          2,
+          1
+        ],
+        "original_ordinal": 2,
+        "position": 2
+      },
+      {
+        "low_ranks_high_to_low": [
+          6,
+          5,
+          3,
+          2,
+          1
+        ],
+        "original_ordinal": 10,
+        "position": 3
+      },
+      {
+        "low_ranks_high_to_low": [
+          6,
+          5,
+          4,
+          2,
+          1
+        ],
+        "original_ordinal": 46,
+        "position": 4
+      },
+      {
+        "low_ranks_high_to_low": [
+          6,
+          5,
+          4,
+          3,
+          1
+        ],
+        "original_ordinal": 166,
+        "position": 5
+      },
+      {
+        "low_ranks_high_to_low": [
+          6,
+          5,
+          4,
+          3,
+          2
+        ],
+        "original_ordinal": 496,
+        "position": 6
+      },
+      {
+        "low_ranks_high_to_low": [
+          7,
+          4,
+          3,
+          2,
+          1
+        ],
+        "original_ordinal": 3,
+        "position": 7
+      },
+      {
+        "low_ranks_high_to_low": [
+          7,
+          5,
+          3,
+          2,
+          1
+        ],
+        "original_ordinal": 11,
+        "position": 8
+      },
+      {
+        "low_ranks_high_to_low": [
+          7,
+          5,
+          4,
+          2,
+          1
+        ],
+        "original_ordinal": 47,
+        "position": 9
+      },
+      {
+        "low_ranks_high_to_low": [
+          7,
+          5,
+          4,
+          3,
+          1
+        ],
+        "original_ordinal": 167,
+        "position": 10
+      },
+      {
+        "low_ranks_high_to_low": [
+          7,
+          5,
+          4,
+          3,
+          2
+        ],
+        "original_ordinal": 497,
+        "position": 11
+      },
+      {
+        "low_ranks_high_to_low": [
+          7,
+          6,
+          3,
+          2,
+          1
+        ],
+        "original_ordinal": 18,
+        "position": 12
+      },
+      {
+        "low_ranks_high_to_low": [
+          7,
+          6,
+          4,
+          2,
+          1
+        ],
+        "original_ordinal": 54,
+        "position": 13
+      },
+      {
+        "low_ranks_high_to_low": [
+          7,
+          6,
+          4,
+          3,
+          1
+        ],
+        "original_ordinal": 174,
+        "position": 14
+      },
+      {
+        "low_ranks_high_to_low": [
+          7,
+          6,
+          4,
+          3,
+          2
+        ],
+        "original_ordinal": 504,
+        "position": 15
+      },
+      {
+        "low_ranks_high_to_low": [
+          7,
+          6,
+          5,
+          2,
+          1
+        ],
+        "original_ordinal": 82,
+        "position": 16
+      },
+      {
+        "low_ranks_high_to_low": [
+          7,
+          6,
+          5,
+          3,
+          1
+        ],
+        "original_ordinal": 202,
+        "position": 17
+      },
+      {
+        "low_ranks_high_to_low": [
+          7,
+          6,
+          5,
+          3,
+          2
+        ],
+        "original_ordinal": 532,
+        "position": 18
+      },
+      {
+        "low_ranks_high_to_low": [
+          7,
+          6,
+          5,
+          4,
+          1
+        ],
+        "original_ordinal": 286,
+        "position": 19
+      },
+      {
+        "low_ranks_high_to_low": [
+          7,
+          6,
+          5,
+          4,
+          2
+        ],
+        "original_ordinal": 616,
+        "position": 20
+      },
+      {
+        "low_ranks_high_to_low": [
+          7,
+          6,
+          5,
+          4,
+          3
+        ],
+        "original_ordinal": 826,
+        "position": 21
+      },
+      {
+        "low_ranks_high_to_low": [
+          8,
+          4,
+          3,
+          2,
+          1
+        ],
+        "original_ordinal": 4,
+        "position": 22
+      },
+      {
+        "low_ranks_high_to_low": [
+          8,
+          5,
+          3,
+          2,
+          1
+        ],
+        "original_ordinal": 12,
+        "position": 23
+      },
+      {
+        "low_ranks_high_to_low": [
+          8,
+          5,
+          4,
+          2,
+          1
+        ],
+        "original_ordinal": 48,
+        "position": 24
+      }
+    ],
+    "description": "Ace-to-five lowball. Aces play low; straights and flushes do NOT count against a low hand, so the nut low is the wheel 5-4-3-2-A. THE NORMATIVE RULE IS THE CANONICAL ONE: compare two lows by their highest card first, then the next highest, and so on; the hand that runs out lower wins. 'canonical_position' is that rule applied to all 1287 unpaired rank-sets, 1 being the nut low. 'original_ordinal' is what the source assigns, recorded as evidence only -- see ladder-divergence and spec decision SD-02. A rebuild must reproduce canonical_position, NOT original_ordinal.",
+    "hands": [
+      {
+        "canonical_low_key": [
+          5,
+          4,
+          3,
+          2,
+          1
+        ],
+        "canonical_position": 1,
+        "hand": "5♠ 4♥ 3♦ 2♣ A♠",
+        "note": "the wheel — the nut low",
+        "original_class": "WHEEL",
+        "original_ordinal": 1
+      },
+      {
+        "canonical_low_key": [
+          6,
+          4,
+          3,
+          2,
+          1
+        ],
+        "canonical_position": 2,
+        "hand": "6♠ 4♥ 3♦ 2♣ A♠",
+        "note": "six-four low",
+        "original_class": "RAZZ_A2346",
+        "original_ordinal": 2
+      },
+      {
+        "canonical_low_key": [
+          6,
+          5,
+          4,
+          3,
+          2
+        ],
+        "canonical_position": 6,
+        "hand": "6♠ 5♥ 4♦ 3♣ 2♠",
+        "note": "six-five low",
+        "original_class": "RAZZ_23456",
+        "original_ordinal": 496
+      },
+      {
+        "canonical_low_key": [
+          7,
+          5,
+          4,
+          3,
+          2
+        ],
+        "canonical_position": 11,
+        "hand": "7♠ 5♥ 4♦ 3♣ 2♠",
+        "note": "seven-five low",
+        "original_class": "RAZZ_23457",
+        "original_ordinal": 497
+      },
+      {
+        "canonical_low_key": [
+          8,
+          6,
+          4,
+          3,
+          2
+        ],
+        "canonical_position": 30,
+        "hand": "8♠ 6♥ 4♦ 3♣ 2♠",
+        "note": "eight-six low",
+        "original_class": "RAZZ_23468",
+        "original_ordinal": 505
+      },
+      {
+        "canonical_low_key": [
+          5,
+          4,
+          3,
+          2,
+          1
+        ],
+        "canonical_position": 1,
+        "hand": "5♠ 4♠ 3♠ 2♠ A♠",
+        "note": "the wheel, all one suit — a flush does not count against a low",
+        "original_class": "WHEEL",
+        "original_ordinal": 1
+      },
+      {
+        "canonical_low_key": [
+          13,
+          12,
+          11,
+          10,
+          1
+        ],
+        "canonical_position": 1279,
+        "hand": "A♠ K♥ Q♦ J♣ T♠",
+        "note": "broadway — a terrible low",
+        "original_class": "RAZZ_ATJQK",
+        "original_ordinal": 495
+      },
+      {
+        "canonical_low_key": null,
+        "canonical_position": null,
+        "hand": "A♠ A♥ 3♦ 2♣ 4♠",
+        "note": "paired — does not qualify as a low in this path",
+        "original_class": "RAZZ_AA432",
+        "original_ordinal": 3928
+      }
+    ],
+    "no_low_sentinel": 0,
+    "nut_low_position": 1,
+    "unpaired_low_hands": 1287
+  },
+  "epic": "DECON-03"
+}

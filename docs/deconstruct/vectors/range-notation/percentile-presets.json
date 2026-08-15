@@ -1,0 +1,72 @@
+{
+  "behavior": "percentile-presets",
+  "data": {
+    "description": "Named percentile ranges. 'concrete_holdings' is the number of the 1326 possible two-card holdings the range covers, which is what makes the percentage label meaningful.",
+    "presets": [
+      {
+        "class_count": 2,
+        "classes": [
+          "AK",
+          "QQ+"
+        ],
+        "concrete_holdings": 22,
+        "label": "2.5%",
+        "notation": "QQ+, AK",
+        "share_of_all_holdings": "0.0166"
+      },
+      {
+        "class_count": 2,
+        "classes": [
+          "AQ+",
+          "TT+"
+        ],
+        "concrete_holdings": 22,
+        "label": "5%",
+        "notation": "TT+, AQ+",
+        "share_of_all_holdings": "0.0166"
+      },
+      {
+        "class_count": 4,
+        "classes": [
+          "44+",
+          "AJ+",
+          "KJs",
+          "KQ"
+        ],
+        "concrete_holdings": 42,
+        "label": "10%",
+        "notation": "44+, AJ+, KQ, KJs",
+        "share_of_all_holdings": "0.0317"
+      },
+      {
+        "class_count": 3,
+        "classes": [
+          "22+",
+          "54s+",
+          "AT+"
+        ],
+        "concrete_holdings": 26,
+        "label": "20%",
+        "notation": "22+, AT+, 54s+",
+        "share_of_all_holdings": "0.0196"
+      },
+      {
+        "class_count": 6,
+        "classes": [
+          "22+",
+          "43s+",
+          "A2s+",
+          "A7o+",
+          "AT+",
+          "T9+"
+        ],
+        "concrete_holdings": 58,
+        "label": "33%",
+        "notation": "22+, AT+, A2s+, A7o+, T9+, 43s+",
+        "share_of_all_holdings": "0.0437"
+      }
+    ],
+    "total_possible_holdings": 1326
+  },
+  "epic": "DECON-04"
+}

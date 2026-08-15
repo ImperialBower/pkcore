@@ -1,0 +1,232 @@
+{
+  "behavior": "best-of-n",
+  "data": {
+    "description": "Ranking more than five cards means choosing the best five. Seven cards yield exactly 21 five-card subsets; the strongest wins.",
+    "five_card_subsets_of_seven": 21,
+    "five_card_subsets_of_six": 6,
+    "hands": [
+      {
+        "best_five": "A♠ K♠ Q♠ J♠ T♠",
+        "category": "StraightFlush",
+        "class": "RoyalFlush",
+        "seven_cards": "A♠ K♠ Q♠ J♠ T♠ 2♥ 3♦",
+        "value": 1
+      },
+      {
+        "best_five": "A♠ A♥ K♠ K♦ Q♥",
+        "category": "TwoPair",
+        "class": "AcesAndKings",
+        "seven_cards": "A♠ A♥ K♦ K♠ Q♥ Q♦ 2♣",
+        "value": 2468
+      },
+      {
+        "best_five": "5♠ 5♥ 5♦ 5♣ 9♣",
+        "category": "FourOfAKind",
+        "class": "FourFives",
+        "seven_cards": "9♣ 6♦ 5♥ 5♠ 8♠ 5♦ 5♣",
+        "value": 124
+      },
+      {
+        "best_five": "J♣ 9♦ 8♣ 7♥ 6♥",
+        "category": "HighCard",
+        "class": "JackHigh",
+        "seven_cards": "2♠ 7♥ 9♦ J♣ 4♠ 6♥ 8♣",
+        "value": 7272
+      }
+    ],
+    "seven_card_permutation_table": [
+      [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      [
+        0,
+        1,
+        2,
+        3,
+        5
+      ],
+      [
+        0,
+        1,
+        2,
+        3,
+        6
+      ],
+      [
+        0,
+        1,
+        2,
+        4,
+        5
+      ],
+      [
+        0,
+        1,
+        2,
+        4,
+        6
+      ],
+      [
+        0,
+        1,
+        2,
+        5,
+        6
+      ],
+      [
+        0,
+        1,
+        3,
+        4,
+        5
+      ],
+      [
+        0,
+        1,
+        3,
+        4,
+        6
+      ],
+      [
+        0,
+        1,
+        3,
+        5,
+        6
+      ],
+      [
+        0,
+        1,
+        4,
+        5,
+        6
+      ],
+      [
+        0,
+        2,
+        3,
+        4,
+        5
+      ],
+      [
+        0,
+        2,
+        3,
+        4,
+        6
+      ],
+      [
+        0,
+        2,
+        3,
+        5,
+        6
+      ],
+      [
+        0,
+        2,
+        4,
+        5,
+        6
+      ],
+      [
+        0,
+        3,
+        4,
+        5,
+        6
+      ],
+      [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      [
+        1,
+        2,
+        3,
+        4,
+        6
+      ],
+      [
+        1,
+        2,
+        3,
+        5,
+        6
+      ],
+      [
+        1,
+        2,
+        4,
+        5,
+        6
+      ],
+      [
+        1,
+        3,
+        4,
+        5,
+        6
+      ],
+      [
+        2,
+        3,
+        4,
+        5,
+        6
+      ]
+    ],
+    "six_card_permutation_table": [
+      [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      [
+        0,
+        1,
+        2,
+        3,
+        5
+      ],
+      [
+        0,
+        1,
+        2,
+        4,
+        5
+      ],
+      [
+        0,
+        1,
+        3,
+        4,
+        5
+      ],
+      [
+        0,
+        2,
+        3,
+        4,
+        5
+      ],
+      [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    ]
+  },
+  "epic": "DECON-02"
+}

@@ -1,11 +1,27 @@
 name: Security audit
 on:
+  # A new advisory can land against a dependency nobody touched, so the cron is
+  # the only trigger that catches those. The push/PR triggers cut the dwell time
+  # for advisories introduced by a dependency change.
   schedule: # Every Sunday at 1 AM
     - cron: '0 1 * * 0'
+  # Any branch, filtered to dependency-relevant files: this repo carries
+  # long-lived branches with no open PR (harden, perf), and a Cargo.lock bump
+  # pushed to one would otherwise go unscanned until a PR finally opens — the
+  # cron only checks out the default branch. A branch WITH an open PR gets
+  # scanned twice (push + pull_request); that duplication is accepted as the
+  # cost of covering the no-PR case.
   push:
     paths:
       - '**/Cargo.toml'
       - '**/Cargo.lock'
+      - '.github/workflows/audit.yml'
+  # Unfiltered so the scan is a per-PR status check rather than a detached
+  # commit status, and so fork PRs are covered (their pushes happen in the
+  # fork, where this repo's push trigger cannot fire). Dependabot does NOT
+  # need this trigger: it pushes its dependabot/cargo/* branches to THIS
+  # repo, so the push trigger above scans them directly.
+  pull_request:
 
 jobs:
   security_audit:

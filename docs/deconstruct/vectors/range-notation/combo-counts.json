@@ -1,0 +1,87 @@
+{
+  "behavior": "combo-counts",
+  "data": {
+    "classes": [
+      {
+        "canonical": "AA",
+        "combinations": 6,
+        "is_offsuit": false,
+        "is_pair": true,
+        "is_suited": false,
+        "notation": "AA"
+      },
+      {
+        "canonical": "KK",
+        "combinations": 6,
+        "is_offsuit": false,
+        "is_pair": true,
+        "is_suited": false,
+        "notation": "KK"
+      },
+      {
+        "canonical": "22",
+        "combinations": 6,
+        "is_offsuit": false,
+        "is_pair": true,
+        "is_suited": false,
+        "notation": "22"
+      },
+      {
+        "canonical": "AKs",
+        "combinations": 4,
+        "is_offsuit": false,
+        "is_pair": false,
+        "is_suited": true,
+        "notation": "AKs"
+      },
+      {
+        "canonical": "AKo",
+        "combinations": 12,
+        "is_offsuit": true,
+        "is_pair": false,
+        "is_suited": false,
+        "notation": "AKo"
+      },
+      {
+        "canonical": "AK",
+        "combinations": 16,
+        "is_offsuit": false,
+        "is_pair": false,
+        "is_suited": false,
+        "notation": "AK"
+      },
+      {
+        "canonical": "T9s",
+        "combinations": 4,
+        "is_offsuit": false,
+        "is_pair": false,
+        "is_suited": true,
+        "notation": "T9s"
+      },
+      {
+        "canonical": "72o",
+        "combinations": 12,
+        "is_offsuit": true,
+        "is_pair": false,
+        "is_suited": false,
+        "notation": "72o"
+      },
+      {
+        "canonical": "JTs",
+        "combinations": 4,
+        "is_offsuit": false,
+        "is_pair": false,
+        "is_suited": true,
+        "notation": "JTs"
+      }
+    ],
+    "description": "A hand class names a pair of ranks plus a suitedness qualifier. The number of concrete two-card holdings in a class follows from the deck: 6 for a pair, 4 suited, 12 offsuit, 16 unqualified.",
+    "expected": {
+      "offsuit": 12,
+      "pair": 6,
+      "suited": 4,
+      "unqualified": 16
+    }
+  },
+  "epic": "DECON-04"
+}

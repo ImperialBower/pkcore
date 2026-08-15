@@ -1,68 +1,111 @@
-# pkcore-mp
+# Mental-poker spike archive
 
-A swappable **mental-poker** layer for [`pkcore`](https://github.com/ImperialBower/pkcore),
-implementing the deal/reveal mechanics of the Barnett–Smart protocol behind two
-traits so the poker engine, the cryptography, and the deployment topology stay
-independent.
+The consolidated output of the distributed / mental-poker exploration
+(EPIC-79), archived here 2026-08-14 from the temporary `ImperialBower/mp`
+holding repo. Four crates, all built and test-verified before packaging.
+The through-line: **serverless card games with cryptographic fairness** — a
+replicated state machine over a signed hash-chained event log, with the
+Barnett–Smart mental-poker protocol supplying the deck.
 
-- **`CardCrypto`** — the verifiable *l*-out-of-*l* threshold masking scheme
-  (`keygen` / `mask` / `remask` / `unmask`) plus a verifiable shuffle. Swap the
-  impl to change security/curve without touching the engine.
-- **`Coordinator`** — transport + total ordering of the signed event log. Each
-  architecture (in-proc, relay, mesh, state channel, chain) is one impl.
-
-The **engine boundary**: pkcore only ever sees a plaintext `Card` (returned by
-`CardCrypto::decode` once a card is fully unmasked) and an `Action`. Ciphertexts
-and proofs are verified at the node boundary and never enter the transition
-function — so `pkcore`'s evaluation/analysis code is untouched by crypto.
-
-## What ships
-
-| Item | Role |
-|------|------|
-| `PlaintextCrypto` | Mock `CardCrypto`. Cards in the clear, but models the *l*-out-of-*l* padlock accounting faithfully (you need every seat's token to read a card). |
-| `InProcCoordinator` | Mock `Coordinator` (architecture #1): one shared append-only log, per-reader cursor. |
-| `tests/round.rs` | Two-seat round: keygen → mask → shuffle ×N → deal hole cards (reveal-to-one) → reveal board (reveal-to-all) → deck-integrity + threshold assertions. |
+This directory is documentation, not code pkcore builds: `docs/*` is in the
+manifest's `exclude` list and none of these crates are cargo targets. Each
+crate keeps its own `Cargo.toml` so it can be lifted out wholesale when its
+production repo is created.
 
 ```
-$ cargo test
-seat0 hole: 2h 6s
-seat1 hole: 7d Th
-board: 5s Js 7s Qd Jd
-test two_seat_deal_and_reveal ... ok
-test coordinator_orders_and_chains_events ... ok
+docs/files/mentalpoker/
+├── README.md      ← this file
+├── pkcore-mp/     the trait boundary + mocks           (2 tests)
+├── tricktaking/   shared trick-taking engine           (9 tests)
+├── mp-toy/        lesson-plan exercise crate           (22 tests)
+└── pktable/       relay + terminal + QR transports     (⚠ binaries lost — see below)
 ```
 
-## Toolchain note
+## The crates and how they relate
 
-The default build uses a **local `Card` stub** so the crate compiles on older
-toolchains (verified on rustc 1.75). Real `pkcore` requires **Rust ≥ 1.94.1 /
-edition 2024**, so its dependency is gated behind the `pkcore` feature:
+**`pkcore-mp`** is the keystone: two traits that keep the poker engine, the
+cryptography, and the deployment topology independent. `CardCrypto` wraps the
+Barnett–Smart VTMF (mask/remask/staged-unmask + verifiable shuffle);
+`Coordinator` wraps transport and total ordering of the event log. Ships with
+mock impls (`PlaintextCrypto`, `InProcCoordinator`) that model the protocol's
+*accounting* faithfully — the l-out-of-l threshold, the staged hole-card
+reveal — with cards in the clear. The engine boundary is the design: pkcore
+only ever sees plaintext `Card`s; crypto is verified outside the transition
+function. This is the spike that `pkmental` (EPIC-79 Phase 1) productionizes.
 
-```bash
-cargo test                      # local Card stub (any recent rustc)
-cargo test --features pkcore    # real pkcore::card::Card  (needs rustc >= 1.94.1)
-```
+**`pktable`** proves the machinery over real transports. Its `src/lib.rs`
+(the pure `GameState` fold over `WireEvent`s, plus the `'|'`-separated wire
+format and FNV chain fold) is intact. Three binaries were declared and
+demo-verified before packaging — `relay` (TCP bulletin board), `client`
+(full protocol node), and `qrtable` (every event crosses between seats as a
+rendered-then-decoded QR image) — with verified runs of a full heads-up hand
+over TCP and the same hand over 32 optically round-tripped QR codes.
 
-`src/card.rs` re-exports `pkcore::card::Card` and `pkcore::deck::DECK_ARRAY`
-under the feature, and a matching stub (same 52-card ordering) otherwise. The
-rest of the crate is written against `card::Card` and never branches on it.
+> **⚠ Known gap:** `pktable/src/bin/{relay,client,qrtable}.rs` did not
+> survive the packaging into `ImperialBower/mp` — the `[[bin]]` targets are
+> declared in its `Cargo.toml` but the sources are missing, so the crate does
+> not build as archived and the QR/TCP demos exist only as prose in
+> `pktable/README.md`. The `qrcode`/`rqrr`/`image` dependencies belong to the
+> missing `qrtable` binary. EPIC-79a Phase 2 is written against these
+> binaries; they must be recovered or rewritten.
 
-## Next steps toward a real game
+**`tricktaking`** answers the "beyond poker" question: a shared engine for
+bridge/spades/hearts/euchre owning follow-suit, trump resolution, and lead
+rotation, with per-game hooks for bidding and scoring. Its `engine.rs` holds
+the generic `GameRules` trait — the seam the whole card-game family shares —
+and `view_for`, the hidden-information projection the crypto layer realizes.
+Uses its own ace-high `Card`; real integration maps to `cardpack` (0.7.0 —
+note pkcore is on 0.6.9, the version-alignment prerequisite EPIC-79 names).
 
-1. **Real crypto backend.** Implement `CardCrypto` over arkworks with a
-   Bayer–Groth shuffle argument (see `geometryxyz/mental-poker`). `MaskedCard`
-   becomes an ElGamal ciphertext (two curve points); proofs replace the `()`s;
-   thread an `rng: &mut impl RngCore` through `keygen`/`mask`/`remask`/`shuffle`/
-   `reveal_token`.
-2. **Engine glue.** Replace the local `Action` with
-   `pkcore::casino::dealer::DealerAction`, and feed each `decode`d `Card` into
-   `pkcore`'s `TableNoCell` (flipping the slot's `Visibility` to `Up`). Keep the
-   transition function crypto-free.
-3. **Real transport.** Add a `RelayCoordinator` / `ChannelCoordinator`
-   (architectures #3 / #5); make `publish` / `next_event` async, sign the
-   `SignedEvent` envelope (ed25519), and hash-chain `prev_hash` for real.
-4. **Liveness.** Add the timeout + forfeiture path where a `ToSeat`/`ToAll`
-   reveal stalls because a required seat went offline.
+**`mp-toy`** is the learning companion to
+[`docs/LESSON_PLAN-mental_poker_crypto.md`](../../LESSON_PLAN-mental_poker_crypto.md):
+six modules of fill-in-the-`todo!()` exercises (deliberately insecure small
+numbers) building the whole protocol — groups, DH + breaking it, ElGamal,
+threshold, sigma protocols, Fiat–Shamir — with reference solutions behind
+`--features solutions`. Its API maps ~1:1 onto `CardCrypto` by design.
 
-Licensed under MIT OR Apache-2.0, matching pkcore.
+## Companion documents (canonical copies live in `docs/`)
+
+The holding repo's two documents were consolidated earlier and renumbered;
+the copies in this repo's `docs/` are canonical:
+
+| In the holding repo | Canonical location here |
+|---|---|
+| `EPIC-01_Real_Cryptography_Backend.md` | [`docs/EPIC-79a_Real_Cryptography_Backend.md`](../../EPIC-79a_Real_Cryptography_Backend.md) |
+| `mental-poker-crypto-lesson-plan.md` | [`docs/LESSON_PLAN-mental_poker_crypto.md`](../../LESSON_PLAN-mental_poker_crypto.md) |
+
+Parent design docs: [`docs/EPIC-79_Mental_Poker.md`](../../EPIC-79_Mental_Poker.md)
+(the spike/decision-gate EPIC) and
+[`docs/ANALYSIS_Mental_Poker.md`](../../ANALYSIS_Mental_Poker.md) (the source
+analysis).
+
+## Verification status (at packaging, rustc 1.75 / edition 2021)
+
+| Crate | `cargo test` | Notes |
+|---|---|---|
+| pkcore-mp | 2/2 pass | round + coordinator tests |
+| tricktaking | 9/9 pass | incl. full hand through the generic engine |
+| mp-toy | 22/22 with `--features solutions`; 22 `todo!` failures by default (intended) | exercise crate |
+| pktable | lib compiles; demos were verified by execution | **binaries now missing** — not reproducible from this archive |
+
+Everything was kept dependency-free (pure std) for old-toolchain
+portability; the QR pins in `pktable/Cargo.toml` exist only for that reason
+and can be bumped on a modern rustc.
+
+## Where each crate goes from here
+
+- **`pkcore-mp` → `pkmental`** (new sibling repo, EPIC-79 Phase 1): real
+  `pkcore` dependency re-exporting `Card`/`DECK_ARRAY` (deleting the
+  `Card(u8)` stub in `src/card.rs`), edition 2024 / MSRV aligned with pkcore,
+  an `rng: &mut impl RngCore` threaded through `CardCrypto`, docs and tests
+  to house standards.
+- **`pktable`** → `pkmental`'s workspace binaries, after the missing bins
+  are recovered or rewritten.
+- **`tricktaking`** → its own repo (prototyped at
+  `github.com/ImperialBower/tricktaking`); not poker, stays out of pkcore.
+- **`mp-toy`** → travels with the lesson plan wherever that lands; never a
+  production dependency (it is `todo!()`-based by design).
+
+pkcore itself takes **no code** from this archive — per EPIC-79's crate-split
+decision, the only future in-pkcore work is the feature-gated `mental-log`
+envelope.

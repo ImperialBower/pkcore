@@ -55,6 +55,10 @@ variant engine and bot/AI tracks. Open `docs/EPIC-NN_*.md` for the status table.
 See [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md). Highest-signal:
 - 🤖 Library-code panics in the HUP/SQL layer (`unwrap`/`assert_eq!`/`todo!()`) violate the project's no-panic house rule.
 - 🤖 Widespread missing doc tests on `Deck`, `Board`, and `casino/table.rs` public APIs.
+- Evaluator perf: SIMD/lookup-table opportunities in the eval hot path —
+  5-item TODO ladder (Eytzinger/perfect-hash `PRODUCTS`, bitmask deck,
+  SIMD batch eval) in
+  [`docs/ANALYSIS_SIMD_Opportunities.md`](ANALYSIS_SIMD_Opportunities.md) §4.
 
 ## GitHub issues (open)
 

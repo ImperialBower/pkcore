@@ -1,0 +1,51 @@
+{
+  "behavior": "eight-or-better",
+  "data": {
+    "description": "The eight-or-better qualifier: a low hand qualifies only with five unpaired cards all ranked eight or lower. The wheel is the nut.",
+    "hands": [
+      {
+        "class": "Wheel",
+        "hand": "5♠ 4♥ 3♦ 2♣ A♠",
+        "low_bits": 31,
+        "note": "the wheel — the nut eight-or-better low",
+        "qualifies": true
+      },
+      {
+        "class": "NoLow",
+        "hand": "8♠ 6♥ 4♦ 3♣ 2♠",
+        "low_bits": 174,
+        "note": "eight-six-four-three-deuce — qualifies",
+        "qualifies": true
+      },
+      {
+        "class": "NoLow",
+        "hand": "8♠ 7♥ 6♦ 5♣ 4♠",
+        "low_bits": 248,
+        "note": "eight-seven low — qualifies",
+        "qualifies": true
+      },
+      {
+        "class": "NoLow",
+        "hand": "9♠ 6♥ 4♦ 3♣ 2♠",
+        "low_bits": null,
+        "note": "nine-high — does NOT qualify",
+        "qualifies": false
+      },
+      {
+        "class": "NoLow",
+        "hand": "A♠ A♥ 4♦ 3♣ 2♠",
+        "low_bits": null,
+        "note": "paired — does NOT qualify",
+        "qualifies": false
+      },
+      {
+        "class": "NoLow",
+        "hand": "A♠ K♥ Q♦ J♣ T♠",
+        "low_bits": null,
+        "note": "broadway — does NOT qualify",
+        "qualifies": false
+      }
+    ]
+  },
+  "epic": "DECON-03"
+}

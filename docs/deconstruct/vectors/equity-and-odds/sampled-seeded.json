@@ -1,0 +1,27 @@
+{
+  "behavior": "sampled-seeded",
+  "data": {
+    "convergence_expectation": "sampled equity approaches the exact answer as samples increase",
+    "description": "INFORMATIVE, NOT NORMATIVE. When the runout space is too large to enumerate, equity is sampled. A fixed seed makes a result reproducible regardless of scheduling or parallelism, which is the normative property. The specific figures below depend on the original's random generator, so a rebuild must NOT be expected to match them -- it must show that its own fixed seed reproduces its own result, and that sampled answers converge on the exact ones.",
+    "normative_property": "a fixed seed reproduces the same result within one implementation",
+    "runs": [
+      {
+        "board": "(none — before the flop)",
+        "hero_equity": "0.8105",
+        "method": "MonteCarlo",
+        "samples": 20000,
+        "seed": 7,
+        "villain_equity": "0.1895"
+      },
+      {
+        "board": "(none — before the flop)",
+        "hero_equity": "0.8103",
+        "method": "MonteCarlo",
+        "samples": 20000,
+        "seed": 42,
+        "villain_equity": "0.1898"
+      }
+    ]
+  },
+  "epic": "DECON-09"
+}

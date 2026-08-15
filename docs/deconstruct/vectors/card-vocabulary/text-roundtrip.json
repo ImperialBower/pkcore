@@ -1,0 +1,107 @@
+{
+  "behavior": "text-roundtrip",
+  "data": {
+    "collections": [
+      {
+        "canonical": "A♠ K♠ Q♠ J♠ T♠",
+        "count": 5,
+        "input": "A♠ K♠ Q♠ J♠ T♠",
+        "parses": true
+      },
+      {
+        "canonical": "A♠ K♠ Q♠ J♠ T♠",
+        "count": 5,
+        "input": "As Ks Qs Js Ts",
+        "parses": true
+      },
+      {
+        "canonical": "2♣ 3♦ 4♥ 5♠ 7♣",
+        "count": 5,
+        "input": "2c 3d 4h 5s 7c",
+        "parses": true
+      }
+    ],
+    "description": "Card and multi-card text forms parse and re-render canonically. Both letter and glyph suit notations are accepted on input; output is canonical.",
+    "single_cards": [
+      {
+        "canonical_glyph": "A♠",
+        "canonical_letter": "AS",
+        "input": "AS",
+        "parses": true
+      },
+      {
+        "canonical_glyph": "A♠",
+        "canonical_letter": "AS",
+        "input": "A♠",
+        "parses": true
+      },
+      {
+        "canonical_glyph": "A♠",
+        "canonical_letter": "AS",
+        "input": "as",
+        "parses": true
+      },
+      {
+        "canonical_glyph": "K♠",
+        "canonical_letter": "KS",
+        "input": "Ks",
+        "parses": true
+      },
+      {
+        "canonical_glyph": "K♠",
+        "canonical_letter": "KS",
+        "input": "K♠",
+        "parses": true
+      },
+      {
+        "canonical_glyph": "2♣",
+        "canonical_letter": "2C",
+        "input": "2c",
+        "parses": true
+      },
+      {
+        "canonical_glyph": "2♣",
+        "canonical_letter": "2C",
+        "input": "2♣",
+        "parses": true
+      },
+      {
+        "canonical_glyph": "T♦",
+        "canonical_letter": "TD",
+        "input": "Td",
+        "parses": true
+      },
+      {
+        "canonical_glyph": "T♦",
+        "canonical_letter": "TD",
+        "input": "T♦",
+        "parses": true
+      },
+      {
+        "canonical_glyph": "9♥",
+        "canonical_letter": "9H",
+        "input": "9h",
+        "parses": true
+      },
+      {
+        "canonical_glyph": "9♥",
+        "canonical_letter": "9H",
+        "input": "9♥",
+        "parses": true
+      },
+      {
+        "canonical_glyph": "Q♣",
+        "canonical_letter": "QC",
+        "input": "Qc",
+        "parses": true
+      },
+      {
+        "canonical_glyph": "J♦",
+        "canonical_letter": "JD",
+        "input": "J♦",
+        "parses": true
+      }
+    ]
+  },
+  "epic": "DECON-01"
+}

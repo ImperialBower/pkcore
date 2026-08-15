@@ -1,0 +1,16 @@
+[package]
+name = "pkcore-mp"
+version = "0.0.1"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Mental-poker (Barnett-Smart) crypto + coordination layer for pkcore."
+
+[features]
+default = []
+# To build against the real pkcore (Rust >= 1.94.1): place the pkcore repo as
+# a sibling directory, uncomment the dependency below, and change this line to
+#   pkcore = ["dep:pkcore"]
+pkcore = []
+
+[dependencies]
+# pkcore = { path = "../pkcore", optional = true, default-features = false }

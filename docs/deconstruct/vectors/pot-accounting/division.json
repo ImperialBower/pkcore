@@ -1,0 +1,115 @@
+{
+  "behavior": "division",
+  "data": {
+    "description": "Splitting a pot among tied winners. Chip conservation is absolute: the shares always sum to the pot. When the pot does not divide evenly the remainder goes to the LAST shares. WHICH RECIPIENT IS 'LAST' IS UNSPECIFIED in the original and diverges from the canonical casino rule of awarding the odd chip to the first player left of the button — see spec decision SD-03.",
+    "divisions": [
+      {
+        "conserves_chips": true,
+        "pot": 1000,
+        "remainder": 0,
+        "shares": [
+          1000
+        ],
+        "sum_of_shares": 1000,
+        "winners": 1
+      },
+      {
+        "conserves_chips": true,
+        "pot": 1000,
+        "remainder": 0,
+        "shares": [
+          500,
+          500
+        ],
+        "sum_of_shares": 1000,
+        "winners": 2
+      },
+      {
+        "conserves_chips": true,
+        "pot": 1000,
+        "remainder": 1,
+        "shares": [
+          333,
+          333,
+          334
+        ],
+        "sum_of_shares": 1000,
+        "winners": 3
+      },
+      {
+        "conserves_chips": true,
+        "pot": 1000,
+        "remainder": 0,
+        "shares": [
+          250,
+          250,
+          250,
+          250
+        ],
+        "sum_of_shares": 1000,
+        "winners": 4
+      },
+      {
+        "conserves_chips": true,
+        "pot": 11,
+        "remainder": 2,
+        "shares": [
+          3,
+          4,
+          4
+        ],
+        "sum_of_shares": 11,
+        "winners": 3
+      },
+      {
+        "conserves_chips": true,
+        "pot": 11,
+        "remainder": 1,
+        "shares": [
+          5,
+          6
+        ],
+        "sum_of_shares": 11,
+        "winners": 2
+      },
+      {
+        "conserves_chips": true,
+        "pot": 100,
+        "remainder": 1,
+        "shares": [
+          33,
+          33,
+          34
+        ],
+        "sum_of_shares": 100,
+        "winners": 3
+      },
+      {
+        "conserves_chips": true,
+        "pot": 7,
+        "remainder": 3,
+        "shares": [
+          1,
+          2,
+          2,
+          2
+        ],
+        "sum_of_shares": 7,
+        "winners": 4
+      },
+      {
+        "conserves_chips": true,
+        "pot": 0,
+        "remainder": 0,
+        "shares": [
+          0,
+          0,
+          0
+        ],
+        "sum_of_shares": 0,
+        "winners": 3
+      }
+    ]
+  },
+  "epic": "DECON-07"
+}

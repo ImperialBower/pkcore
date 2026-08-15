@@ -1,7 +1,7 @@
 [package]
 name = "pkcore"
 description = "Prototype core poker library."
-version = "0.3.2"
+version = "0.3.4"
 rust-version = "1.94.1"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
@@ -102,6 +102,14 @@ uuid = { version = "1.22", features = ["serde", "v4", "v5", "js"] }
 [[example]]
 name = "calc"
 required-features = ["equity"]
+
+# Golden-vector dumper for the /deconstruct regeneration pack
+# (docs/deconstruct/). Exercises the equity engine, hand-history YAML
+# round-trip + replay, bot profiles, and player stats, so it must not build
+# under `--no-default-features`.
+[[example]]
+name = "decon_dump"
+required-features = ["equity", "bot-profiles", "hand-histories", "player-stats"]
 
 # Storage-backed tools: SQLite HUP store + zstd binary card map (audit II.11 /
 # P7). Without `store`, `rusqlite`/`Sqlable`/`HUPResult` DB methods / BCM

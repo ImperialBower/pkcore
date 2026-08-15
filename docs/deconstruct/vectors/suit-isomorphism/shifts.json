@@ -1,0 +1,80 @@
+{
+  "behavior": "shifts",
+  "data": {
+    "description": "Two situations that differ only by a relabelling of suits have identical equity. Rotating every suit in a holding by the same step therefore produces an equity-equivalent holding. This is the compression that makes exhaustive matchup analysis tractable.",
+    "holdings": [
+      {
+        "class": "AS KS",
+        "distinct_rotations": 4,
+        "holding": "A♠ K♠",
+        "returns_to_start": true,
+        "rotation_cycle": [
+          "A♠ K♠",
+          "A♣ K♣",
+          "A♦ K♦",
+          "A♥ K♥"
+        ]
+      },
+      {
+        "class": "AS KH",
+        "distinct_rotations": 4,
+        "holding": "A♠ K♥",
+        "returns_to_start": true,
+        "rotation_cycle": [
+          "A♠ K♥",
+          "A♣ K♠",
+          "A♦ K♣",
+          "A♥ K♦"
+        ]
+      },
+      {
+        "class": "7D 2C",
+        "distinct_rotations": 4,
+        "holding": "7♦ 2♣",
+        "returns_to_start": true,
+        "rotation_cycle": [
+          "7♦ 2♣",
+          "7♥ 2♦",
+          "7♠ 2♥",
+          "7♣ 2♠"
+        ]
+      },
+      {
+        "class": "QH QD",
+        "distinct_rotations": 4,
+        "holding": "Q♥ Q♦",
+        "returns_to_start": true,
+        "rotation_cycle": [
+          "Q♥ Q♦",
+          "Q♠ Q♥",
+          "Q♠ Q♣",
+          "Q♦ Q♣"
+        ]
+      }
+    ],
+    "matchup_universe_size": 1624350,
+    "suit_rotation": [
+      {
+        "shift_down": "S",
+        "shift_up": "D",
+        "suit": "C"
+      },
+      {
+        "shift_down": "C",
+        "shift_up": "H",
+        "suit": "D"
+      },
+      {
+        "shift_down": "D",
+        "shift_up": "S",
+        "suit": "H"
+      },
+      {
+        "shift_down": "H",
+        "shift_up": "C",
+        "suit": "S"
+      }
+    ]
+  },
+  "epic": "DECON-10"
+}

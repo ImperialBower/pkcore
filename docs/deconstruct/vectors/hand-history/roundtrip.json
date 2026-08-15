@@ -1,0 +1,44 @@
+{
+  "behavior": "roundtrip",
+  "data": {
+    "board": "K♠ K♣ 9♦ 8♠ 4♥",
+    "deck_consumption_order": "hole cards clockwise from the button, then burn+flop, burn+turn, burn+river",
+    "description": "A hand record must survive a round trip: serialize it, read it back, and serialize again -- the text is stable and the reparsed record is structurally equal to the original. The concrete serialization syntax below is the original's; a rebuild owns its own schema (see SD-10). What is normative is the INFORMATION and the round-trip property.",
+    "format_version": 1,
+    "recorded_deck": "3♣ K♠ K♣ 9♦ 3♥ 8♠ 3♦ 4♥ Q♠ J♠ T♠ 9♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 2♥ A♦ K♦ Q♦ J♦ T♦ 8♦ 6♦ 5♦ 4♦ 2♦ A♣ Q♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 4♣",
+    "results": [
+      {
+        "best_hand": "K♠ K♣ 9♦ 8♠ 7♦",
+        "net": -200.0,
+        "outcome": "Win",
+        "pot_won": 800.0,
+        "seat": 0
+      },
+      {
+        "best_hand": "A♠ A♥ K♠ K♣ 9♦",
+        "net": 200.0,
+        "outcome": "Win",
+        "pot_won": 400.0,
+        "seat": 1
+      }
+    ],
+    "roundtrip": {
+      "reparses": true,
+      "structurally_equal": true,
+      "text_is_stable": true
+    },
+    "seats": [
+      {
+        "hole_cards": "7♦ 2♣",
+        "seat": 0,
+        "starting_stack": 1000.0
+      },
+      {
+        "hole_cards": "A♠ A♥",
+        "seat": 1,
+        "starting_stack": 200.0
+      }
+    ]
+  },
+  "epic": "DECON-08"
+}

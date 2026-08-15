@@ -1,0 +1,47 @@
+{
+  "behavior": "weighted",
+  "data": {
+    "classes": [
+      {
+        "class": "AA",
+        "combinations_in_class": 6,
+        "frequency": 1.0,
+        "in_range": true
+      },
+      {
+        "class": "AJo",
+        "combinations_in_class": 12,
+        "frequency": 0.25,
+        "in_range": true
+      },
+      {
+        "class": "AKs",
+        "combinations_in_class": 4,
+        "frequency": 0.75,
+        "in_range": true
+      },
+      {
+        "class": "KK",
+        "combinations_in_class": 6,
+        "frequency": 1.0,
+        "in_range": true
+      },
+      {
+        "class": "QQ",
+        "combinations_in_class": 6,
+        "frequency": null,
+        "in_range": false
+      },
+      {
+        "class": "T9s",
+        "combinations_in_class": 4,
+        "frequency": 0.5,
+        "in_range": true
+      }
+    ],
+    "description": "A weighted range plays a hand class only part of the time. A class absent from the range has NO frequency, which is different from a frequency of zero: the first says nothing was specified, the second says it was specified as never. The effective number of holdings a class contributes is its combination count times its frequency.",
+    "effective_holdings": "20.00",
+    "rendered_range": "AA, AKs:0.75, AJo:0.25, KK, T9s:0.5"
+  },
+  "epic": "DECON-04"
+}
