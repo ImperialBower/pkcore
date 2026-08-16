@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.6] - 2026-08-16
+## [0.4.0] - 2026-08-16
 
 ### Fixed
 
@@ -94,9 +94,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **`TableSnapshot::raises_this_street`** (new public field). Additive for code
-  that builds snapshots via `TableSnapshot::from_table`; struct-literal
-  construction must add the field.
+- **BREAKING — `TableSnapshot::raises_this_street`** (new public field). Code
+  that builds snapshots via `TableSnapshot::from_table` is unaffected;
+  struct-literal construction must add the field. This is a source-breaking
+  change to a public type, which is why this release is `0.4.0` and not a patch.
 - **Every error-absorbing fallback removed** from the drivers, tests and
   examples that hid DEFECT_007 for three months: the AllIn/Check fallback in
   `tests/bot_marathon.rs` and in all five game families in
@@ -109,7 +110,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Eight-handed Seven-Card Stud stalls.** Eight players need 56 cards for seven
   streets and a 52-card deck cannot supply them, so `end_hand` returns
-  `PKError::ActionNotFinished`. Real stud deals a shared community river card in
+  `PKError::ActionIsntFinished`. Real stud deals a shared community river card in
   this case. Seven seats and fewer are unaffected. Surfaced while extending the
   DEFECT_007 harness; a dealing gap, not a betting one, and not fixed here.
 
@@ -656,6 +657,9 @@ on the wire, and `replay` behavior is unaffected by the new metadata. Driven by
 `ImperialBower/pkdealer` EPIC-40 Phase 4 (arena recorder agent-fidelity
 annotations).
 
+[0.4.0]: https://github.com/ImperialBower/pkcore/compare/v0.3.5...v0.4.0
+[0.3.5]: https://github.com/ImperialBower/pkcore/compare/v0.3.4...v0.3.5
+[0.3.4]: https://github.com/ImperialBower/pkcore/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/ImperialBower/pkcore/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/ImperialBower/pkcore/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/ImperialBower/pkcore/compare/v0.3.0...v0.3.1
