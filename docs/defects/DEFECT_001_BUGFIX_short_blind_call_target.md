@@ -3,9 +3,9 @@
 **File:** `docs/defects/DEFECT_001_BUGFIX_short_blind_call_target.md`
 **Date:** 2026-04-28
 **Severity:** High (chip-conservation-adjacent — pot sizes wrong, raise validation incorrect)
-**Status:** Fix in progress
+**Status:** Fixed — verified still in place at 0.3.6 (2026-08-15)
 **Versions affected:** 0.0.48 – 0.0.54
-**Fixed in:** 0.0.55 (PR pending)
+**Fixed in:** `2902e331` (2026-04-28), first released in `v0.0.55`
 **Files changed:** `src/casino/table.rs`, `src/casino/table_no_cell.rs`, `docs/defects/DEFECT_001_shortstack_bb_call_amount.md`
 
 ---

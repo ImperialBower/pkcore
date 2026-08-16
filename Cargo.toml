@@ -238,6 +238,12 @@ required-features = ["bot-profiles", "hand-histories", "player-stats-persistence
 name = "exploitative_play_smoke"
 required-features = ["bot-profiles", "player-stats"]
 
+# DEFECT_004 regression: `SimTable` must play every betting street to
+# completion. Uses `ExploitativeDecider`, which lives behind `player-stats`.
+[[test]]
+name = "sim_street_completion"
+required-features = ["bot-profiles", "player-stats"]
+
 [[test]]
 name = "training_integration"
 required-features = ["bot-training"]

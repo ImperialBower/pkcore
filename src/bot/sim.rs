@@ -49,6 +49,20 @@ use crate::analysis::player_stats::StatsRegistry;
 #[cfg(feature = "player-stats")]
 use crate::hand_history::{HandHistory, PlayerSnapshot};
 
+/// Backstop on the number of actions [`SimTable::run_street`] will play in one
+/// betting street.
+///
+/// `DEFECT_004`: this replaces a `bots.len() * 8` cap that ordinary deep-stacked
+/// play exceeded. It is *not* the termination condition — `run_street` stops as
+/// soon as an iteration fails to advance the table — so this only bounds a
+/// sequence that keeps making legal progress. A street cannot do that
+/// indefinitely, because every raise must increase the bet and stacks are
+/// finite; but the bound is not tight (a minimum-raise war at very deep stacks
+/// grows the bet linearly), so the value is chosen to sit far above anything
+/// the shipped deciders produce rather than at a provable maximum. Reaching it
+/// is an error, never a silent truncation.
+const MAX_STREET_ACTIONS: usize = 10_000;
+
 // ── ActionCounts ──────────────────────────────────────────────────────────────
 
 /// Per-seat counts of each action type over one or more hands.
@@ -745,7 +759,7 @@ impl SimTable {
         self.table.deal_cards_to_seats()?;
 
         // Preflop
-        self.run_street(actions);
+        self.run_street(actions)?;
         if self.table.is_game_over() {
             return Ok(());
         }
@@ -753,7 +767,7 @@ impl SimTable {
         // Flop
         self.table.bring_it_in()?;
         self.table.deal_flop()?;
-        self.run_street(actions);
+        self.run_street(actions)?;
         if self.table.is_game_over() {
             return Ok(());
         }
@@ -761,7 +775,7 @@ impl SimTable {
         // Turn
         self.table.bring_it_in()?;
         self.table.deal_turn()?;
-        self.run_street(actions);
+        self.run_street(actions)?;
         if self.table.is_game_over() {
             return Ok(());
         }
@@ -769,25 +783,48 @@ impl SimTable {
         // River
         self.table.bring_it_in()?;
         self.table.deal_river()?;
-        self.run_street(actions);
+        self.run_street(actions)?;
 
         Ok(())
     }
 
     /// Runs one betting street to completion, recording each action taken.
-    fn run_street(&mut self, actions: &mut HashMap<u8, ActionCounts>) {
-        let max_iterations = self.bots.len() * 8;
-
-        for _ in 0..max_iterations {
+    ///
+    /// `DEFECT_004`: this used to stop after `bots.len() * 8` actions — 16 in a
+    /// heads-up game — and fall through *silently* with the street unfinished.
+    /// Sixteen actions is not a runaway; it is ordinary deep-stacked poker. Two
+    /// bots raising each other roughly double the bet each time, so a 100-chip
+    /// blind reaches millions inside the cap with the action still live. The
+    /// table was left mid-raise and the next call, `bring_it_in()`, reported
+    /// `ActionIsntFinished` — two steps from the cause, which is why the defect
+    /// read as a rare non-deterministic flake for three months.
+    ///
+    /// Termination is now based on **progress**, not on a count of actions:
+    /// every accepted action appends to the table's event log, so an iteration
+    /// that leaves the log unchanged is a genuine stall and errors immediately,
+    /// at its source, with the diagnostic attached. [`MAX_STREET_ACTIONS`] is a
+    /// backstop for a pathological but *advancing* sequence, and hitting it is
+    /// an error too — never a silent truncation.
+    ///
+    /// # Errors
+    ///
+    /// `PKError::ActionIsntFinished` when the street cannot be completed: no bot
+    /// is registered for the seat to act, the engine refused the action so the
+    /// table did not advance, or the backstop was reached.
+    fn run_street(&mut self, actions: &mut HashMap<u8, ActionCounts>) -> Result<(), PKError> {
+        for _ in 0..MAX_STREET_ACTIONS {
             if self.table.seats.is_betting_complete() || self.table.is_game_over() {
-                break;
+                return Ok(());
             }
 
             let seat = self.table.next_to_act();
 
-            // Find the bot index for this seat (skip if no bot registered).
+            // No bot registered for this seat: nobody can act, so the street can
+            // never complete. Previously a `continue`, which burned iterations
+            // against the cap and then fell through as if the street had ended.
             let Some(bot_idx) = self.bots.iter().position(|(s, _, _)| *s == seat) else {
-                continue;
+                self.dump_stall("no bot registered for the seat to act");
+                return Err(PKError::ActionIsntFinished);
             };
 
             // Build snapshot. When a stats registry is attached, route through
@@ -817,44 +854,54 @@ impl SimTable {
                 self.bots[bot_idx].2.decide(&profile, &snapshot)
             };
 
-            // Apply and record (borrows self.table mutably).
+            // Apply and record (borrows self.table mutably). Every accepted
+            // action appends at least one entry to the event log; `apply_action`
+            // logs a warning and leaves the table untouched when the engine
+            // rejects the reconciled action. So the log length is the progress
+            // signal, and it is the engine's own rather than a reconstruction.
+            let log_len_before = self.table.event_log.len();
             let counts = actions.entry(seat).or_default();
             self.apply_action(seat, action, counts);
+
+            if self.table.event_log.len() == log_len_before {
+                self.dump_stall("the engine refused the action and the table did not advance");
+                return Err(PKError::ActionIsntFinished);
+            }
         }
 
-        // STALL DIAGNOSTIC (investigation aid for the rare CI flake where
-        // `bring_it_in()` returns `ActionIsntFinished`). If we exited the
-        // action loop with betting still incomplete and the hand not over,
-        // dump the state that caused it. Eprintln so cargo test surfaces it
-        // under the failing test's captured stderr.
-        if !self.table.seats.is_betting_complete() && !self.table.is_game_over() {
-            let street = match self.table.board.len() {
-                0 => "preflop",
-                3 => "flop",
-                4 => "turn",
-                5 => "river",
-                _ => "unknown",
-            };
-            eprintln!(
-                "[pkcore::sim] STALL run_street exhausted {max_iterations} iterations on {street} \
-                 (board_len={}, button={}, next_to_act={})",
-                self.table.board.len(),
-                self.table.button,
-                self.table.next_to_act(),
-            );
-            for (i, seat) in self.table.seats.0.iter().enumerate() {
-                if seat.is_empty() {
-                    continue;
-                }
-                eprintln!(
-                    "[pkcore::sim] STALL   seat {i} ({}): state={:?} chips={} bet={} chips_in_play={}",
-                    seat.player.handle,
-                    seat.player.state,
-                    seat.player.chips,
-                    seat.player.bet,
-                    seat.player.chips_in_play,
-                );
+        self.dump_stall("exhausted the MAX_STREET_ACTIONS backstop while still advancing");
+        Err(PKError::ActionIsntFinished)
+    }
+
+    /// Dumps the betting state behind a stalled street to stderr, so a failing
+    /// run names its own cause instead of surfacing two calls later.
+    ///
+    /// `DEFECT_004`: this diagnostic existed but ran on a silent fall-through, so
+    /// it printed and then the run carried on into a misleading error. It is now
+    /// attached to the error paths that actually stop the street.
+    fn dump_stall(&self, reason: &str) {
+        let street = match self.table.board.len() {
+            0 => "preflop",
+            3 => "flop",
+            4 => "turn",
+            5 => "river",
+            _ => "unknown",
+        };
+        eprintln!(
+            "[pkcore::sim] STALL run_street could not complete {street}: {reason} \
+             (board_len={}, button={}, next_to_act={})",
+            self.table.board.len(),
+            self.table.button,
+            self.table.next_to_act(),
+        );
+        for (i, seat) in self.table.seats.0.iter().enumerate() {
+            if seat.is_empty() {
+                continue;
             }
+            eprintln!(
+                "[pkcore::sim] STALL   seat {i} ({}): state={:?} chips={} bet={} chips_in_play={}",
+                seat.player.handle, seat.player.state, seat.player.chips, seat.player.bet, seat.player.chips_in_play,
+            );
         }
     }
 

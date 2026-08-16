@@ -41,6 +41,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the per-street raise-cap count, and wrote the wrong verb to the event log,
   which replay then reproduced faithfully.
 
+- **`SimTable` silently truncated long betting streets**
+  ([DEFECT_004](docs/defects/DEFECT_004_exploit_smoke_flake.md)). `run_street`
+  stopped after `bots.len() * 8` actions — 16 heads-up — and fell through with
+  no return value and the street unfinished. Sixteen actions is ordinary
+  deep-stacked poker: two bots raising each other roughly double the bet each
+  time, so a 100-chip blind reaches millions inside the cap with the action
+  still live. The table was left mid-raise and the *next* call,
+  `bring_it_in()`, reported `PKError::ActionIsntFinished` — two steps from the
+  cause, which is why this read as a rare non-deterministic flake for three
+  months.
+
+  `run_street` now returns `Result` and terminates on **progress** rather than
+  on a count: every accepted action appends to the event log, so an iteration
+  that leaves it unchanged is a genuine stall and errors at its source with the
+  diagnostic attached. `MAX_STREET_ACTIONS` (10,000) remains only as a backstop
+  against a pathological but advancing sequence, and reaching it is an error
+  too. A seat with no registered bot — previously a `continue` that burned
+  iterations and then fell through — now errors, because nobody can act and the
+  street can never complete.
+
+  Reproduced deterministically at 15 of the first 2,000 `SimTable::with_seed`
+  seeds (0.75%), on all four streets, with zero chip-conservation failures. The
+  three root causes the defect report suspected, all in the betting state
+  machine, were wrong; `is_betting_complete()` was correct every time.
+
 - **`Table::act_bet` recorded the wrong raise increment** when a bet already
   stood: it passed the absolute amount to `set_raise_increment` where
   `act_raise` passes the delta, and did not count the re-open toward the
@@ -56,6 +81,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `BettingStructure` functions the engine validates against, so a decider and
   `Table::validate_raise` cannot disagree. `raise_bounds()` returning `None` is
   the single "no voluntary raise is legal" signal, whatever the reason.
+- **`tests/sim_street_completion.rs`** — pins the 15 seeds that reproduced
+  DEFECT_004, asserts chip conservation on each, and carries the full
+  2,000-seed sweep as an `#[ignore]`d test to re-run after any change to the
+  betting state machine or the sim's street loop.
 - **`tests/bot_action_legality.rs`** — four regression harnesses (No-Limit,
   Pot-Limit, Fixed-Limit, Seven-Card Stud), 25 seeds × 120 hands each, that
   assert every `apply_action` result instead of absorbing failures, **and**
