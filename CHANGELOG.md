@@ -11,9 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **`RuleBasedDecider` emitted illegal bets and raises**
   ([DEFECT_007](docs/defects/DEFECT_007_decider_subminimum_raise.md)). Two
-  distinct defects, both of which made `BotProfile::decide` return actions
-  `Table::apply_action` rejects — so pkcore's own bots did not compose with
-  `PokerSession::run_hand`, which propagates the failure with `?`.
+  defects made `BotProfile::decide` return actions `Table::apply_action`
+  rejects — so pkcore's own bots did not compose with `PokerSession::run_hand`,
+  which propagates the failure with `?`.
   - `sized_raise_to` and `sized_bet_amount` clamped the result with
     `.min(state.my_chips)`. That is a **unit error**: `my_chips` is the stack
     *behind*, while a raise-to is measured against `current_bet`, which
@@ -30,6 +30,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   they do when no legal raise exists (all-in for a value raise, fold or check
   for a bluff, fall through otherwise).
 
+- **`RuleBasedDecider` returned `Bet` where the rule is `Raise`**, on the
+  big-blind option and anywhere else a standing bet was already matched. The
+  decider branched on `to_call` ("do I owe chips") where the rule turns on
+  `current_bet` ("is the betting open"); `Table::legal_actions` has always
+  advertised `Raise` for that state. Unlike the two above, the engine *accepted*
+  it, so no acceptance-based test could see it — but applying the same amount as
+  a `Bet` rather than a `Raise` set `raise_increment` to the absolute amount
+  instead of the delta (**doubling the next player's minimum re-raise**), skipped
+  the per-street raise-cap count, and wrote the wrong verb to the event log,
+  which replay then reproduced faithfully.
+
+- **`Table::act_bet` recorded the wrong raise increment** when a bet already
+  stood: it passed the absolute amount to `set_raise_increment` where
+  `act_raise` passes the delta, and did not count the re-open toward the
+  per-street raise cap. Identical behaviour for opening bets (`self.bet == 0`),
+  the documented use; corrected for every other input. The latent half of the
+  defect above, and a bug for any caller, not just pkcore's bots.
+
 ### Added
 
 - **`TableSnapshot` betting-legality surface** — `my_committed()`,
@@ -40,7 +58,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the single "no voluntary raise is legal" signal, whatever the reason.
 - **`tests/bot_action_legality.rs`** — four regression harnesses (No-Limit,
   Pot-Limit, Fixed-Limit, Seven-Card Stud), 25 seeds × 120 hands each, that
-  assert every `apply_action` result instead of absorbing failures.
+  assert every `apply_action` result instead of absorbing failures, **and**
+  check every `Bet`/`Raise` against the action *kind* `legal_actions`
+  advertises. Acceptance alone is too weak a bar: the engine accepts a `Bet`
+  where the rule is `Raise` and corrupts the betting ladder without erroring.
 
 ### Changed
 

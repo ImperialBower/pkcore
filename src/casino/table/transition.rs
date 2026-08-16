@@ -260,6 +260,71 @@ mod transition_surface_tests {
         }
     }
 
+    /// Three seats limped to the big blind, who now has the option: `to_call`
+    /// is 0 but a bet of one big blind already stands.
+    fn nlh_at_big_blind_option() -> (Table, u8) {
+        let mut t = nlh_at_utg();
+        let utg = t.next_to_act();
+        t.act_call(utg).expect("utg calls");
+        let small_blind = t.next_to_act();
+        t.act_call(small_blind).expect("sb completes");
+        let big_blind = t.next_to_act();
+        (t, big_blind)
+    }
+
+    /// `DEFECT_007`: `legal_actions` is explicit that re-opening an already
+    /// matched bet is a `Raise`, never a `Bet`. This pins the reason — the two
+    /// are not interchangeable, and a caller that sends the wrong one corrupts
+    /// the betting ladder without being rejected.
+    #[test]
+    fn act_bet_over_a_standing_bet_matches_act_raise() {
+        let (table, big_blind) = nlh_at_big_blind_option();
+        assert_eq!(0, table.to_call(big_blind), "fixture: the option, not a call");
+        assert_eq!(100, table.bet, "fixture: one big blind stands");
+
+        let mut as_bet = table.clone();
+        as_bet.apply_action(big_blind, PlayerAction::Bet(200)).expect("bet");
+
+        let mut as_raise = table.clone();
+        as_raise
+            .apply_action(big_blind, PlayerAction::Raise(200))
+            .expect("raise");
+
+        assert_eq!(as_raise.bet, as_bet.bet, "both put 200 on the table");
+        assert_eq!(
+            as_raise.raise_increment, as_bet.raise_increment,
+            "the increment is the delta over the standing bet (100), not the absolute amount"
+        );
+        assert_eq!(
+            as_raise.min_raise(),
+            as_bet.min_raise(),
+            "an inflated increment doubles the next player's minimum re-raise"
+        );
+        assert_eq!(
+            as_raise.raises_this_street, as_bet.raises_this_street,
+            "re-opening a matched bet is a raise and must count toward the per-street cap"
+        );
+    }
+
+    /// The opening-bet path is unchanged: with no bet standing the increment is
+    /// the absolute amount, because the delta over zero is the amount.
+    #[test]
+    fn act_bet_opening_the_betting_records_the_full_amount_as_the_increment() {
+        let mut t = nlh_at_utg();
+        t.act_call(t.next_to_act()).expect("utg calls");
+        t.act_call(t.next_to_act()).expect("sb completes");
+        t.act_check(t.next_to_act()).expect("bb checks");
+        t.bring_it_in().expect("sweep");
+        t.deal_flop().expect("flop");
+        t.seats.reset_state_in_hand();
+
+        let actor = t.next_to_act();
+        assert_eq!(0, t.bet, "fixture: the betting is open");
+        t.apply_action(actor, PlayerAction::Bet(300)).expect("open for 300");
+        assert_eq!(300, t.raise_increment);
+        assert_eq!(300, t.bet);
+    }
+
     // ── Stud/razz: voluntary betting after the forced bring-in ────────────────
 
     /// A 3-handed fixed-limit stud table (ante 2, bring-in 5, small bet 20, big

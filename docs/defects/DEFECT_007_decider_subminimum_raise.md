@@ -44,7 +44,43 @@ defect hides behind the same guard. Both are fixed; the sections marked
    This one had never been observed because no harness ran bots at a Fixed-Limit
    table without an error-absorbing fallback.
 
-### First reproduction, from the new harness
+4. **A third defect the engine silently *accepts*: `Bet` where the rule is
+   `Raise`.** `to_call == 0` does not mean the betting is open. On the big-blind
+   option a bet already stands and the actor has merely matched it, so
+   re-opening is a `Raise`. `Table::legal_actions` says so in as many words:
+
+   ```rust
+   } else if let Some((min_raise_to, _)) = raise_bounds {
+       // Big-blind option: the live bet is already matched, so re-opening
+       // it is a Raise rather than a Bet.
+       actions.push(PlayerAction::Raise(min_raise_to));
+   }
+   ```
+
+   The decider branched only on `to_call`, so it returned `Bet`. `Table::act_bet`
+   accepts it, which is why no harness — including the new fallback-free ones —
+   caught it by watching for errors. The damage is silent. Applying the *same*
+   amount by the two routes leaves the table in two different states:
+
+   | After the action | `Bet(200)` | `Raise(200)` (correct) |
+   |---|---|---|
+   | `bet` | 200 | 200 |
+   | `raise_increment` | **200** | 100 |
+   | `min_raise()` | **200** | 100 |
+   | `raises_this_street` | **0** | 1 |
+   | event log | `Bet(2, 200)` | `Raise(2, 200)` |
+
+   So the next player's minimum re-raise is doubled (they must go to 400 instead
+   of 300), the Fixed-Limit cap does not count the action, and hand histories
+   record the wrong verb — which a replay then reproduces faithfully.
+
+   The engine half is a latent bug for any caller, not just the bot:
+   `act_bet` passed the **absolute** amount to `set_raise_increment`, where
+   `act_raise` passes the delta over the standing bet. The two agree only when
+   `self.bet == 0`, which is the intended use — so the fix is a no-op on the
+   intended path and a correction everywhere else.
+
+### First reproductions, from the new harness
 
 ```
 FixedLimit hand 0 seat 0: engine rejected Raise(300)
@@ -52,6 +88,16 @@ FixedLimit hand 0 seat 0: engine rejected Raise(300)
 ```
 
 `Raise(300)` is exactly `min_raise_to`, and still illegal: the cap was full.
+
+The third defect needed a different kind of assertion — acceptance is too weak a
+bar when the engine accepts the wrong thing. Checking the action *kind* against
+`legal_actions` surfaces it in three of the four families at once:
+
+```
+stud hand 12:       seat 2 returned Bet(20),   engine advertises [Check, Raise(20), AllIn]
+FixedLimit hand 21: seat 3 returned Bet(250),  engine advertises [Check, Raise(250), AllIn]
+NoLimit hand 66:    seat 8 returned Bet(6400), engine advertises [Check, Raise(6400), AllIn]
+```
 
 ### Out of scope, recorded here
 
@@ -248,6 +294,38 @@ fn sized_raise_to<R: rand::Rng + ?Sized>(
 `Table::act_bet` validates it through the very same `validate_raise` — so it
 shares the window rather than carrying its own `.max(big_blind)` floor.
 
+### 3. The opening amount is wrapped in the variant the engine advertises
+
+```rust
+fn voluntary_open(state: &TableSnapshot, amount: usize) -> PlayerAction {
+    if state.current_bet == 0 {
+        PlayerAction::Bet(amount)
+    } else {
+        PlayerAction::Raise(amount)
+    }
+}
+```
+
+All four `to_call == 0` sites route through it. Branching on `current_bet`
+rather than `to_call` is the whole fix: `to_call` answers "do I owe chips",
+`current_bet` answers "is the betting open", and only the second one selects
+the variant.
+
+### 4. `act_bet` records the increment as a delta
+
+```rust
+self.set_raise_increment(seat_number, amount.saturating_sub(self.bet));
+if self.bet > 0 {
+    // Re-opening an already-matched bet is a raise however it is spelled,
+    // so it counts toward the per-street cap.
+    self.raises_this_street = self.raises_this_street.saturating_add(1);
+}
+```
+
+Identical to the old behaviour when `self.bet == 0` — the documented use — and
+correct when it is not. This closes the hole for any third-party caller, not
+just for pkcore's bots.
+
 The original proposal, kept for the record:
 
 ```rust
@@ -347,12 +425,20 @@ pkcore's own drivers carry equivalent workarounds; see Coverage Gap.
 | `src/bot/table_snapshot.rs` | `raise_bounds_match_the_table` | Snapshot window agrees with the engine. |
 | `src/bot/table_snapshot.rs` | `raise_bounds_is_none_when_the_stack_cannot_cover_the_minimum` | Infeasible-by-stack. |
 | `src/bot/table_snapshot.rs` | `raise_bounds_is_none_when_the_fixed_limit_cap_is_reached` | Infeasible-by-cap — the second defect. |
-| `tests/bot_action_legality.rs` | four `*_bots_never_return_an_action_the_engine_rejects` | No-Limit, Pot-Limit, Fixed-Limit and Stud, 25 seeds × 120 hands each, **no fallback** — every `apply_action` result asserted. |
+| `src/bot/decider.rs` | `decide_re_opens_with_a_raise_not_a_bet_on_the_big_blind_option` | The third defect: variant, not amount. |
+| `src/bot/decider.rs` | `decide_opens_with_a_bet_when_no_bet_stands` | The converse — the opening-bet path still uses `Bet`. |
+| `src/casino/table/transition.rs` | `act_bet_over_a_standing_bet_matches_act_raise` | Why the two are not interchangeable: increment, `min_raise`, and cap count must agree. |
+| `src/casino/table/transition.rs` | `act_bet_opening_the_betting_records_the_full_amount_as_the_increment` | The delta fix is a no-op on the intended path. |
+| `tests/bot_action_legality.rs` | four `*_bots_never_return_an_action_the_engine_rejects` | No-Limit, Pot-Limit, Fixed-Limit and Stud, 25 seeds × 120 hands each, **no fallback** — every `apply_action` result asserted, **and** every `Bet`/`Raise` checked against the *kind* `legal_actions` advertises. |
 
 The property test and the four integration tests are the important ones: they
 are properties over the boundary rather than single cases, and all four
 integration tests failed before the fix (No-Limit on the stack ceiling,
-Fixed-Limit on the cap).
+Fixed-Limit on the cap, three of the four on the `Bet`/`Raise` variant).
+
+The variant check was verified by reverting `voluntary_open` to always return
+`Bet` and confirming the harness fails — an assertion that has never been seen
+to fail is not yet a regression test.
 
 ---
 
@@ -407,6 +493,12 @@ never for the region where what they compute cannot exist.
   comfortable stack depths.
 - **Cover every betting structure, not just the default one.** The Fixed-Limit
   cap defect was invisible while only No-Limit was exercised without a fallback.
+- **"The engine accepted it" is not the invariant.** The third defect passed
+  every acceptance check ever written, because `act_bet` accepts a `Bet` where
+  the rule is `Raise` and then quietly corrupts the betting ladder. Assert
+  against the *advertised* action, not merely against the absence of an error.
+- **Verify a new assertion by breaking the fix.** An assertion that has never
+  been observed to fail is a claim, not a test.
 
 ---
 
@@ -415,7 +507,9 @@ never for the region where what they compute cannot exist.
 | File | Change |
 |------|--------|
 | `src/bot/table_snapshot.rs` | New `raises_this_street` field; new `my_committed`, `my_total_chips`, `min_raise_to`, `max_raise_to`, `raise_bounds` methods |
-| `src/bot/decider.rs` | `sized_raise_to` and `sized_bet_amount` return `Option<usize>` and clamp into `raise_bounds()`; all eight call sites handle `None` explicitly |
+| `src/bot/decider.rs` | `sized_raise_to` and `sized_bet_amount` return `Option<usize>` and clamp into `raise_bounds()`; all eight call sites handle `None` explicitly; new `voluntary_open` picks `Bet` vs `Raise` from `current_bet` |
+| `src/casino/table/actions.rs` | `act_bet` records the increment as a delta over the standing bet and counts a re-open toward the per-street raise cap |
+| `src/casino/table/transition.rs` | Two tests pinning why `Bet` and `Raise` are not interchangeable |
 | `tests/bot_action_legality.rs` | New — four fallback-free harnesses, one per betting shape |
 | `tests/bot_marathon.rs` | Fallback removed; rejection now dumps and panics |
 | `tests/replay_consistency.rs` | Fallback removed in all five game families |
@@ -429,6 +523,13 @@ a struct literal must add `raises_this_street`. Code that builds snapshots the
 normal way — `TableSnapshot::from_table` — is unaffected. Deciders that size
 their own raises should switch to `snapshot.raise_bounds()`; the fields they
 were reading are all still present and unchanged.
+
+`Table::act_bet` behaves differently for one input class: an amount sent while a
+bet already stands. It previously set `raise_increment` to the absolute amount
+and skipped the raise-cap count; it now sets the delta and counts. Opening bets —
+the documented use, where `self.bet == 0` — are byte-identical. Callers relying
+on the old behaviour were relying on a bug; the correct call for that state is
+`act_raise`, which `legal_actions` has always advertised.
 
 ---
 

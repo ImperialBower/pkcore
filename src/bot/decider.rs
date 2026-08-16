@@ -269,11 +269,11 @@ impl RuleBasedDecider {
                 // for the same DEFECT_002 reason a bluff-raise does not shove.
                 let value_threshold = strategy.effective_value_threshold();
                 if equity > value_threshold {
-                    sized_bet_amount(state, strategy, rng).map_or(PlayerAction::AllIn, PlayerAction::Bet)
+                    sized_bet_amount(state, strategy, rng).map_or(PlayerAction::AllIn, |n| voluntary_open(state, n))
                 } else if !state.phase.is_preflop() {
                     let bluff_roll: f64 = rng.random();
                     if bluff_roll < strategy.bluff_frequency.as_f64() {
-                        sized_bet_amount(state, strategy, rng).map_or(PlayerAction::Check, PlayerAction::Bet)
+                        sized_bet_amount(state, strategy, rng).map_or(PlayerAction::Check, |n| voluntary_open(state, n))
                     } else {
                         PlayerAction::Check
                     }
@@ -318,12 +318,12 @@ impl RuleBasedDecider {
                 // DEFECT_007: hole cards are unknown here, so an unsizeable bet
                 // checks rather than shoving on no information.
                 if roll < bet_threshold {
-                    sized_bet_amount(state, strategy, rng).map_or(PlayerAction::Check, PlayerAction::Bet)
+                    sized_bet_amount(state, strategy, rng).map_or(PlayerAction::Check, |n| voluntary_open(state, n))
                 } else if !state.phase.is_preflop() {
                     let bluff_rate = strategy.bluff_frequency.as_f64();
                     let roll_bluff: f64 = rng.random();
                     if roll_bluff < bluff_rate {
-                        sized_bet_amount(state, strategy, rng).map_or(PlayerAction::Check, PlayerAction::Bet)
+                        sized_bet_amount(state, strategy, rng).map_or(PlayerAction::Check, |n| voluntary_open(state, n))
                     } else {
                         PlayerAction::Check
                     }
@@ -745,6 +745,27 @@ fn sized_raise_to<R: rand::Rng + ?Sized>(
 /// through — so it shares the window and the same infeasibility case. The
 /// old `.max(big_blind).min(my_chips)` pair could produce an amount below
 /// the minimum for the same reason `sized_raise_to` could.
+/// Wraps a voluntary opening amount in the variant the engine advertises.
+///
+/// `DEFECT_007`: `to_call == 0` does not mean the betting is open. On the
+/// big-blind option a bet already stands and this seat has merely matched it,
+/// so re-opening is a **`Raise`**, not a **`Bet`** —
+/// [`Table::legal_actions`](crate::casino::table::Table::legal_actions) says so
+/// in as many words.
+///
+/// `Table::act_bet` accepts either, which is why this never surfaced as a
+/// rejection, but the two are not interchangeable: a `Bet` records its
+/// *absolute* amount as the raise increment rather than the delta over the
+/// standing bet (doubling the next player's minimum re-raise), does not count
+/// toward the per-street raise cap, and writes the wrong event to the log.
+fn voluntary_open(state: &TableSnapshot, amount: usize) -> PlayerAction {
+    if state.current_bet == 0 {
+        PlayerAction::Bet(amount)
+    } else {
+        PlayerAction::Raise(amount)
+    }
+}
+
 fn sized_bet_amount<R: rand::Rng + ?Sized>(
     state: &TableSnapshot,
     strategy: &BettingStrategy,
@@ -895,6 +916,89 @@ mod bot__decider_tests {
                 }
             }
         }
+    }
+
+    /// Three seats limped to the big blind, who now has the option: `to_call`
+    /// is 0 but a bet of one big blind already stands.
+    fn big_blind_option() -> (Table, u8) {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("C".to_string(), 10_000)),
+        ]);
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        let utg = table.determine_utg();
+        table.act_call(utg).unwrap();
+        let small_blind = table.next_to_act();
+        table.act_call(small_blind).unwrap();
+        let big_blind = table.next_to_act();
+        (table, big_blind)
+    }
+
+    /// `DEFECT_007` (third instance): `to_call == 0` does not mean the betting is
+    /// open. On the big-blind option a bet already stands, so re-opening it is a
+    /// `Raise`; `Table::legal_actions` advertises exactly that and never a `Bet`.
+    /// The two are not interchangeable — see
+    /// `act_bet_over_a_standing_bet_matches_act_raise` in the table's own tests.
+    #[test]
+    fn decide_re_opens_with_a_raise_not_a_bet_on_the_big_blind_option() {
+        let (table, big_blind) = big_blind_option();
+        assert_eq!(0, table.to_call(big_blind), "fixture: the option, not a call");
+        assert!(table.bet > 0, "fixture: a bet already stands");
+
+        let snap = TableSnapshot::from_table(&table, big_blind);
+        for profile in BotProfile::default_profiles() {
+            for seed in 0..40u64 {
+                let mut rng = SmallRng::seed_from_u64(seed);
+                let action = RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng);
+                assert!(
+                    !matches!(action, PlayerAction::Bet(_)),
+                    "{} returned {action:?} on the big-blind option; \
+                     the engine advertises {:?}",
+                    profile.name,
+                    table.legal_actions(big_blind)
+                );
+            }
+        }
+    }
+
+    /// The opening-bet path is unaffected: with no bet standing, `Bet` is still
+    /// the right variant and `Raise` would be wrong.
+    #[test]
+    fn decide_opens_with_a_bet_when_no_bet_stands() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 10_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 10_000)),
+        ]);
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        table.act_call(table.determine_utg()).unwrap();
+        table.act_check(table.next_to_act()).unwrap();
+        table.bring_it_in().unwrap();
+        table.deal_flop().unwrap();
+        table.seats.reset_state_in_hand();
+
+        let actor = table.next_to_act();
+        assert_eq!(0, table.bet, "fixture: the betting is open on the flop");
+
+        let snap = TableSnapshot::from_table(&table, actor);
+        let mut saw_a_bet = false;
+        for profile in BotProfile::default_profiles() {
+            for seed in 0..40u64 {
+                let mut rng = SmallRng::seed_from_u64(seed);
+                let action = RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng);
+                assert!(
+                    !matches!(action, PlayerAction::Raise(_)),
+                    "{} returned {action:?} with no bet standing",
+                    profile.name
+                );
+                saw_a_bet |= matches!(action, PlayerAction::Bet(_));
+            }
+        }
+        assert!(saw_a_bet, "fixture should produce at least one opening bet");
     }
 
     #[test]

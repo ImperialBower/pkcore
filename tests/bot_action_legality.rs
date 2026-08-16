@@ -17,11 +17,36 @@
 //! not a step).
 
 use pkcore::bot::profile::BotProfile;
+use pkcore::casino::action::PlayerAction;
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::session::PokerSession;
 use pkcore::casino::table::{Player, Seat, Seats, Table};
 use rand::SeedableRng;
 use rand::rngs::SmallRng;
+
+/// Asserts the bot chose an aggressive action of a *kind* the engine advertises.
+///
+/// Acceptance alone is too weak a bar. `Table::act_bet` accepts a `Bet` where
+/// `legal_actions` says `Raise` (the big-blind option) and then records the
+/// wrong raise increment, so the hand plays on with a corrupted betting ladder
+/// and nothing ever errors. This checks the variant, which is what
+/// `legal_actions` is actually promising.
+///
+/// Only `Bet` and `Raise` are checked. `Call` is deliberately excluded:
+/// `apply_action` documents that it degrades a `Call` to a `Check` when the bet
+/// is already matched, so a `Call` outside `legal_actions` is intended.
+fn assert_action_kind_is_advertised(table: &Table, seat: u8, action: PlayerAction, context: &str) {
+    let legal = table.legal_actions(seat);
+    let advertised = match action {
+        PlayerAction::Bet(_) => legal.iter().any(|a| matches!(a, PlayerAction::Bet(_))),
+        PlayerAction::Raise(_) => legal.iter().any(|a| matches!(a, PlayerAction::Raise(_))),
+        _ => true,
+    };
+    assert!(
+        advertised,
+        "{context}: seat {seat} returned {action:?}, but the engine advertises {legal:?}"
+    );
+}
 
 /// The betting structures a bot can be sat down at. Each has its own legality
 /// rules, so each is its own exposure surface for DEFECT_007-shaped bugs.
@@ -80,6 +105,7 @@ fn run_without_fallback(structure: Structure, seed: u64, hands: usize) {
             let min_raise_to = session.table.min_raise_to();
             let bounds = session.table.raise_bounds(seat);
 
+            assert_action_kind_is_advertised(&session.table, seat, action, &format!("{structure:?} hand {hand}"));
             assert!(
                 session.apply_action(seat, action).is_ok(),
                 "{structure:?} hand {hand} seat {seat}: engine rejected {action:?} \
@@ -130,6 +156,7 @@ fn run_stud_without_fallback(seed: u64, hands: usize) {
             let min_raise_to = session.table.min_raise_to();
             let bounds = session.table.raise_bounds(seat);
 
+            assert_action_kind_is_advertised(&session.table, seat, action, &format!("stud hand {hand}"));
             assert!(
                 session.apply_action(seat, action).is_ok(),
                 "stud hand {hand} seat {seat}: engine rejected {action:?} \
