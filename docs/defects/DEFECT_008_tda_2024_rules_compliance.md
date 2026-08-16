@@ -301,27 +301,41 @@ The formula itself is correct and doctested (`:155` asserts 1200 for `pot=1000,
 current_bet=100`). There is simply no pre-flop branch that substitutes notional full
 blinds for the actual short or dead ones, and no caller supplies one.
 
+**Half of 54-B is already satisfied.** Measured on a live table (`tests/tda_conformance.rs`,
+Ex 2 setup — PLO 100/200 with a 100-chip big blind), `act_forced_bets` leaves
+`table.bet = 200` even though the big blind could only post 100 and is all-in. So the
+*bet-to-call* term already ignores the shortfall exactly as 54-B requires. Only the
+**pot** term is wrong: it carries the 200 actually collected rather than the 300 that
+full blinds would represent.
+
 ### Symptom
 
-Both TDA worked examples, PLO 100/200, first player to act:
+Both TDA worked examples, PLO 100/200, first player to act. Measured values, not
+derived — `table.bet` and `effective_pot()` were read from a constructed table:
 
 | | Actual pot | `current_bet` | `call_amount` | pkcore `pot_max` | TDA | Shortfall |
 |---|---|---|---|---|---|---|
 | **Ex 1** — dead SB, BB posts 200 | 200 | 200 | 200 | `200+200+200` = **600** | 700 | −100 |
-| **Ex 2** — SB 100, BB short 100 | 200 | 100 | 100 | `100+200+100` = **400** | 700 | −300 |
+| **Ex 2** — SB 100, BB short 100 | 200 | 200 | 200 | `200+200+200` = **600** | 700 | −100 |
 
-Computed the TDA way — assuming full blinds, so `pot = 100 + 200 = 300` and
-`current_bet = 200` — both give `200 + 300 + 200 = 700`.
+Computed the TDA way — assuming full blinds, so `pot = 100 + 200 = 300` — both give
+`200 + 300 + 200 = 700`.
+
+Note the two examples converge on the same wrong answer for the same reason, and the
+shortfall in each case is exactly the amount of blind that never reached the pot: 100.
+That is the whole defect in one sentence — **the pot-limit maximum is short by the
+unposted portion of the blinds.**
 
 The consequence is one-directional and therefore quiet: the engine only ever offers a
-maximum that is too *small*. No illegal bet is accepted, so nothing errors; a legal
-bet is simply unavailable. In Ex 2 the ceiling is 43% of its true value.
+maximum that is too *small*. No illegal bet is accepted, so nothing errors; a legal bet
+is simply unavailable.
 
 ### Fix sketch
 
-Pre-flop, derive the pot-limit inputs from `ForcedBets` rather than from collected
-chips: substitute the full small and big blind for whatever was actually posted, and
-use the full big blind as `current_bet` when the posted big blind is short. Post-flop
+Narrower than it first appears, because `current_bet` is already right. Pre-flop, the
+pot term handed to `max_raise` should be the pot *as if full blinds were posted* —
+i.e. add back the difference between `ForcedBets`' small and big blind and what each
+blind actually contributed. Post-flop
 is already correct per 54-C and must keep using the actual pot, so the substitution
 must be gated on `self.phase.is_preflop()` (`src/casino/table.rs:744`).
 
@@ -589,11 +603,21 @@ at the wrong altitude, not that the fixes are safe.
 
 ## Prevention
 
-- **Add a TDA conformance test module.** The parsed ruleset in `tda_parsed` carries the
-  Illustration Addendum worked examples with their expected numbers — the 700 pot-limit
-  bets of 54-B, the 300 minimum re-raise of 47 Example 1, the 250 of 43 Example 2.
-  Those are ready-made table-driven assertions with a citable authority, and three of
-  them already pass, which makes the module honest rather than aspirational from day one.
+- **A TDA conformance test module — done, `tests/tda_conformance.rs`.** The Illustration
+  Addendum publishes its worked examples with expected numbers — the 700 pot-limit bet
+  of 54-B, the 300 minimum re-raise of 47 Example 1, the 250 of 43 Example 2 — so they
+  are table-driven assertions backed by an external authority that cannot drift with
+  pkcore. As landed: **5 conformant tests pass**, and **4 assert the TDA answer for
+  D8-1 through D8-4 and are `#[ignore]`d** with their finding id, so CI stays green
+  while the defects stay recorded in executable form. Un-`ignore` each as it is fixed.
+  D8-5 has no test — the predicate does not exist, so any assertion naming it would not
+  compile.
+
+  Writing it immediately paid for itself: the harness **corrected this report**. D8-3
+  was originally written up as yielding 400 in TDA Example 2 on the reasoning that a
+  short blind lowers `current_bet`. The live table says otherwise — `table.bet` is
+  already 200 — so the real answer is 600 and the defect is half the size first
+  claimed. That correction came from running the test, not from reading the code again.
 
 - **Cite the rule in the code.** Where a function encodes a TDA rule, name it in the
   doc comment as `TDA 2024 Rule NN`. `completion_raise_to`
@@ -648,29 +672,50 @@ belong in `pkdealer/docs/defects`:
 
 ## Verification
 
-No test suite was executed for this report — every finding is from source reading, and
-`Status: Open` reflects that nothing has been fixed. Before acting on any finding,
-confirm the citations still point where they claim:
+`Status: Open` — nothing has been fixed. What *has* landed is
+`tests/tda_conformance.rs`, which turns D8-1 through D8-4 into executable assertions.
+
+D8-1 through D8-4 are reproduced by that harness. D8-5 and D8-6 remain source-reading
+findings: D8-5 is an absence that cannot be asserted against, and D8-6 is unreachable
+until an event model exists.
 
 ```bash
 cd /Users/christoph/src/github.com/ImperialBower/pkcore
 git rev-parse --short HEAD                                   # expect 90d60e70 or later
 
-sed -n '84,101p'  src/casino/cashier/chips.rs                # D8-1 divvy_up remainder
-sed -n '231,234p' src/analysis/case_eval.rs                  # D8-1 ascending winners
-sed -n '337,347p' src/casino/table/actions.rs                # D8-2 raise_bounds
-sed -n '655,665p' src/casino/table/actions.rs                # D8-2 increment update
-sed -n '165,172p' src/games/betting_structure.rs             # D8-3 pot-limit ceiling
-sed -n '479,486p' src/casino/table.rs                        # D8-4 occupied-seat walk
-sed -n '231,236p' src/games/betting_structure.rs             # D8-6 cap_reached
+# The four reproducible findings. Expect 4 failures, one per finding.
+cargo test --test tda_conformance -- --include-ignored
 
+# Default run: the 5 conformant assertions pass, the 4 defects are skipped.
+cargo test --test tda_conformance
+
+# Citations for the findings the harness cannot hold.
+sed -n '231,236p' src/games/betting_structure.rs             # D8-6 cap_reached
 rg -c 'substantial_action' src/                              # D8-5: expect no matches
 
 cargo test                                                    # expect green — see Coverage Gap
 ```
 
-The last two lines are the point of this report: a clean `cargo test` alongside a
-`substantial_action` count of zero is the whole finding in miniature.
+Observed at `90d60e70` on 2026-08-16:
+
+```text
+running 9 tests
+test rule_20_a_odd_chip_goes_to_the_first_seat_left_of_the_button ... FAILED   # D8-1  left: 2  right: 5
+test rule_32_dead_button_assigns_blinds_by_position_not_occupancy ... FAILED   # D8-4  left: 3  right: 4
+test rule_47_a_player_who_already_acted_may_not_reraise_a_short_all_in ... FAILED   # D8-2
+test rule_54_b_short_blind_must_not_shrink_the_preflop_pot_limit_maximum ... FAILED # D8-3  left: 700  right: 600
+test rule_43_ex1_min_reraise_is_the_last_increment_not_the_total ... ok
+test rule_43_ex2_short_all_in_does_not_raise_the_minimum ... ok
+test rule_47_ex1_min_reraise_after_cumulative_short_all_ins ... ok
+test rule_48_raise_cap_applies_only_to_fixed_limit ... ok
+test rule_54_c_pot_limit_maximum_uses_the_actual_pot_postflop ... ok
+
+test result: FAILED. 5 passed; 4 failed
+```
+
+The final `cargo test` line is still the point of this report: the full suite is green
+while four TDA rules are demonstrably broken and `substantial_action` does not exist.
+That gap between "green" and "correct" is what the harness exists to close.
 
 ---
 

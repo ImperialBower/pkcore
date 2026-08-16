@@ -218,6 +218,14 @@ required-features = ["hand-histories", "bot-profiles"]
 name = "bot_action_legality"
 required-features = ["hand-histories", "bot-profiles"]
 
+# DEFECT_008 conformance harness: worked examples from the TDA 2024 Illustration
+# Addendum. Deliberately carries NO `required-features` — it exercises only the
+# core table and betting-structure API and must keep building under
+# `--no-default-features`. Four assertions are `#[ignore]`d as known defects
+# (D8-1..D8-4): `cargo test --test tda_conformance -- --include-ignored`.
+[[test]]
+name = "tda_conformance"
+
 [[test]]
 name = "pkarena0_session"
 required-features = ["hand-histories", "bot-profiles"]
