@@ -391,7 +391,18 @@ impl Table {
             }
         }
         let remaining = self.seats.act_bet(seat_number, amount)?;
-        self.set_raise_increment(seat_number, amount);
+        // DEFECT_007: the increment is the delta over whatever already stood,
+        // matching `act_raise`. Identical to `amount` on the intended path (an
+        // opening bet, where `self.bet` is 0). It differs only when a caller
+        // sends `Bet` where `legal_actions` advertises `Raise` — the big-blind
+        // option — and there the absolute amount inflated `raise_increment`,
+        // silently doubling the next player's minimum re-raise.
+        self.set_raise_increment(seat_number, amount.saturating_sub(self.bet));
+        if self.bet > 0 {
+            // Re-opening an already-matched bet is a raise however it is
+            // spelled, so it counts toward the per-street cap.
+            self.raises_this_street = self.raises_this_street.saturating_add(1);
+        }
         self.bet = amount;
         self.log(TableAction::Bet(seat_number, amount));
         self.log(TableAction::ActionTo(self.next_to_act()));

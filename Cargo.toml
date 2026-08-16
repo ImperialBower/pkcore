@@ -1,7 +1,7 @@
 [package]
 name = "pkcore"
 description = "Prototype core poker library."
-version = "0.3.5"
+version = "0.4.0"
 rust-version = "1.94.1"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
@@ -211,6 +211,13 @@ required-features = ["hand-histories", "bot-profiles"]
 name = "bot_marathon"
 required-features = ["hand-histories", "bot-profiles"]
 
+# DEFECT_007 regression harness: every bot action must be legal across all four
+# betting shapes. Needs `bot-profiles` for the shipped profiles and the session
+# driver that `hand-histories` pulls in.
+[[test]]
+name = "bot_action_legality"
+required-features = ["hand-histories", "bot-profiles"]
+
 [[test]]
 name = "pkarena0_session"
 required-features = ["hand-histories", "bot-profiles"]
@@ -229,6 +236,12 @@ required-features = ["bot-profiles", "hand-histories", "player-stats-persistence
 
 [[test]]
 name = "exploitative_play_smoke"
+required-features = ["bot-profiles", "player-stats"]
+
+# DEFECT_004 regression: `SimTable` must play every betting street to
+# completion. Uses `ExploitativeDecider`, which lives behind `player-stats`.
+[[test]]
+name = "sim_street_completion"
 required-features = ["bot-profiles", "player-stats"]
 
 [[test]]

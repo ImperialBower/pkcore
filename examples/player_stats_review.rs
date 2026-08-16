@@ -161,7 +161,12 @@ fn run_one_hand(
     while let Some(seat) = session.next_actor() {
         let profile = &profiles[seat as usize];
         let action = profile.decide(&session.table, seat, rng);
-        let _ = session.apply_action(seat, action);
+        // DEFECT_007: a discarded error would leave `seat` still to act, so
+        // `next_actor` returns it again and the loop spins forever.
+        if let Err(e) = session.apply_action(seat, action) {
+            eprintln!("    !! seat {seat} returned {action:?}, rejected by the engine: {e}");
+            return None;
+        }
     }
 
     let board_str = session.table.board.to_string();

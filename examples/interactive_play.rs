@@ -389,7 +389,12 @@ fn run_street(
             let profile = &profiles[(seat as usize) - 1];
             let action = profile.decide(table, seat, rng);
             let desc = action_desc(table, seat, action);
-            let _ = table.apply_action(seat, action);
+            // DEFECT_007: surface a rejected bot action instead of silently
+            // dropping it — a discarded error leaves the seat still to act and
+            // the printed description a lie about what happened.
+            if let Err(e) = table.apply_action(seat, action) {
+                eprintln!("    !! seat {seat} returned {action:?}, rejected by the engine: {e}");
+            }
             desc
         };
 

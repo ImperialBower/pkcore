@@ -3,10 +3,10 @@
 **File:** `docs/defects/DEFECT_003_heads_up_side_pot.md`
 **Date:** 2026-04-27
 **Severity:** Critical
-**Status:** Fixed (uncommitted on `splitter` branch)
+**Status:** Fixed — verified still in place at 0.3.6 (2026-08-15)
 **Reported by:** pkarena0-web hand history (`pkarena0-hand-015`)
 **Introduced in:** `aededd6` (initial `TableNoCell` implementation, 2026-04-09) for `table_no_cell.rs`; `414e974` ("working through showdown") for `table/showdown.rs`. The bug has been latent in both showdown paths since each was first written.
-**Fixed in:** _(pending commit — implemented 2026-04-27, all 8,941 unit/integration + 570 doc tests pass)_
+**Fixed in:** `81908d1c` (2026-04-27), first released in `v0.0.52`. Both halves of the fix are present in the current tree: `heads_up_is_symmetric` in `src/casino/table.rs` and `src/casino/table_celled/showdown.rs`, and the `e.chips >= winner_chip_level` filter in both showdown paths. The four regression tests are in `tests/split_pots.rs`.
 
 ---
 

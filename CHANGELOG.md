@@ -5,9 +5,114 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.0] - 2026-08-16
 
-_Nothing yet._
+### Fixed
+
+- **`RuleBasedDecider` emitted illegal bets and raises**
+  ([DEFECT_007](docs/defects/DEFECT_007_decider_subminimum_raise.md)). Two
+  defects made `BotProfile::decide` return actions `Table::apply_action`
+  rejects — so pkcore's own bots did not compose with `PokerSession::run_hand`,
+  which propagates the failure with `?`.
+  - `sized_raise_to` and `sized_bet_amount` clamped the result with
+    `.min(state.my_chips)`. That is a **unit error**: `my_chips` is the stack
+    *behind*, while a raise-to is measured against `current_bet`, which
+    includes chips the actor already committed this street. The clamp both
+    cancelled the legal-minimum floor (`PKError::InsufficientIncrement`) and
+    under-shoved by the size of the posted blind. The floor was also wrong for
+    Seven-Card Stud, which *completes* a bring-in rather than stepping over it.
+  - Deciders could not honour the Fixed-Limit **raise cap**, because
+    `TableSnapshot` did not carry the per-street raise count. A raise at exactly
+    the minimum was still rejected once the cap was full.
+
+  Both sizing functions now return `Option<usize>` and clamp into
+  `TableSnapshot::raise_bounds()`; all eight call sites state explicitly what
+  they do when no legal raise exists (all-in for a value raise, fold or check
+  for a bluff, fall through otherwise).
+
+- **`RuleBasedDecider` returned `Bet` where the rule is `Raise`**, on the
+  big-blind option and anywhere else a standing bet was already matched. The
+  decider branched on `to_call` ("do I owe chips") where the rule turns on
+  `current_bet` ("is the betting open"); `Table::legal_actions` has always
+  advertised `Raise` for that state. Unlike the two above, the engine *accepted*
+  it, so no acceptance-based test could see it — but applying the same amount as
+  a `Bet` rather than a `Raise` set `raise_increment` to the absolute amount
+  instead of the delta (**doubling the next player's minimum re-raise**), skipped
+  the per-street raise-cap count, and wrote the wrong verb to the event log,
+  which replay then reproduced faithfully.
+
+- **`SimTable` silently truncated long betting streets**
+  ([DEFECT_004](docs/defects/DEFECT_004_exploit_smoke_flake.md)). `run_street`
+  stopped after `bots.len() * 8` actions — 16 heads-up — and fell through with
+  no return value and the street unfinished. Sixteen actions is ordinary
+  deep-stacked poker: two bots raising each other roughly double the bet each
+  time, so a 100-chip blind reaches millions inside the cap with the action
+  still live. The table was left mid-raise and the *next* call,
+  `bring_it_in()`, reported `PKError::ActionIsntFinished` — two steps from the
+  cause, which is why this read as a rare non-deterministic flake for three
+  months.
+
+  `run_street` now returns `Result` and terminates on **progress** rather than
+  on a count: every accepted action appends to the event log, so an iteration
+  that leaves it unchanged is a genuine stall and errors at its source with the
+  diagnostic attached. `MAX_STREET_ACTIONS` (10,000) remains only as a backstop
+  against a pathological but advancing sequence, and reaching it is an error
+  too. A seat with no registered bot — previously a `continue` that burned
+  iterations and then fell through — now errors, because nobody can act and the
+  street can never complete.
+
+  Reproduced deterministically at 15 of the first 2,000 `SimTable::with_seed`
+  seeds (0.75%), on all four streets, with zero chip-conservation failures. The
+  three root causes the defect report suspected, all in the betting state
+  machine, were wrong; `is_betting_complete()` was correct every time.
+
+- **`Table::act_bet` recorded the wrong raise increment** when a bet already
+  stood: it passed the absolute amount to `set_raise_increment` where
+  `act_raise` passes the delta, and did not count the re-open toward the
+  per-street raise cap. Identical behaviour for opening bets (`self.bet == 0`),
+  the documented use; corrected for every other input. The latent half of the
+  defect above, and a bug for any caller, not just pkcore's bots.
+
+### Added
+
+- **`TableSnapshot` betting-legality surface** — `my_committed()`,
+  `my_total_chips()`, `min_raise_to()`, `max_raise_to()` and `raise_bounds()`,
+  each mirroring its `Table` counterpart and derived from the same
+  `BettingStructure` functions the engine validates against, so a decider and
+  `Table::validate_raise` cannot disagree. `raise_bounds()` returning `None` is
+  the single "no voluntary raise is legal" signal, whatever the reason.
+- **`tests/sim_street_completion.rs`** — pins the 15 seeds that reproduced
+  DEFECT_004, asserts chip conservation on each, and carries the full
+  2,000-seed sweep as an `#[ignore]`d test to re-run after any change to the
+  betting state machine or the sim's street loop.
+- **`tests/bot_action_legality.rs`** — four regression harnesses (No-Limit,
+  Pot-Limit, Fixed-Limit, Seven-Card Stud), 25 seeds × 120 hands each, that
+  assert every `apply_action` result instead of absorbing failures, **and**
+  check every `Bet`/`Raise` against the action *kind* `legal_actions`
+  advertises. Acceptance alone is too weak a bar: the engine accepts a `Bet`
+  where the rule is `Raise` and corrupts the betting ladder without erroring.
+
+### Changed
+
+- **BREAKING — `TableSnapshot::raises_this_street`** (new public field). Code
+  that builds snapshots via `TableSnapshot::from_table` is unaffected;
+  struct-literal construction must add the field. This is a source-breaking
+  change to a public type, which is why this release is `0.4.0` and not a patch.
+- **Every error-absorbing fallback removed** from the drivers, tests and
+  examples that hid DEFECT_007 for three months: the AllIn/Check fallback in
+  `tests/bot_marathon.rs` and in all five game families in
+  `tests/replay_consistency.rs`, and `let _ = apply_action(...)` in
+  `examples/bot_selfplay.rs`, `examples/interactive_play.rs` and
+  `examples/player_stats_review.rs`. All now report the rejected action with
+  `to_call` / `min_raise_to` / `raise_bounds` context.
+
+### Known issues
+
+- **Eight-handed Seven-Card Stud stalls.** Eight players need 56 cards for seven
+  streets and a 52-card deck cannot supply them, so `end_hand` returns
+  `PKError::ActionIsntFinished`. Real stud deals a shared community river card in
+  this case. Seven seats and fewer are unaffected. Surfaced while extending the
+  DEFECT_007 harness; a dealing gap, not a betting one, and not fixed here.
 
 ## [0.3.5] - 2026-08-14
 
@@ -552,6 +657,9 @@ on the wire, and `replay` behavior is unaffected by the new metadata. Driven by
 `ImperialBower/pkdealer` EPIC-40 Phase 4 (arena recorder agent-fidelity
 annotations).
 
+[0.4.0]: https://github.com/ImperialBower/pkcore/compare/v0.3.5...v0.4.0
+[0.3.5]: https://github.com/ImperialBower/pkcore/compare/v0.3.4...v0.3.5
+[0.3.4]: https://github.com/ImperialBower/pkcore/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/ImperialBower/pkcore/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/ImperialBower/pkcore/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/ImperialBower/pkcore/compare/v0.3.0...v0.3.1
