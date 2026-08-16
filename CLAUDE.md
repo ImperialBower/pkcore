@@ -63,6 +63,25 @@ Stricter than Rust norms — both kinds of test are required, not just one:
 - Group related functions and types in logical modules
 - Use visibility modifiers (`pub`, `pub(crate)`, private) appropriately
 
+## Changelog and version — required on every change
+
+Every change that touches code is done only when these two are done as well:
+
+1. **Add a `CHANGELOG.md` entry** under `## [Unreleased]`, in the correct
+   Keep a Changelog group (`Added`, `Changed`, `Fixed`, `Removed`,
+   `Deprecated`, `Security`). Describe the behaviour that changed and why, not
+   the diff. Link the EPIC or DEFECT doc when one exists.
+2. **Bump `version` in `Cargo.toml`** by semver:
+   - patch — bug fix, docs, tests, internals with no public API change
+   - minor — new public API, or new behaviour that is backward compatible
+   - major — any breaking change to the public API
+   Then run `cargo build` so `Cargo.lock` picks up the new `pkcore` version,
+   and commit `Cargo.lock` with the change.
+
+Do not skip either step because the change "is small". A pure documentation
+edit that touches no code and no public API is the only exception, and it
+still gets a changelog line if it changes what a user is told.
+
 ## Commands you would not guess
 
 `cargo test` and `cargo build` work as normal. These do not:
