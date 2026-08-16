@@ -101,16 +101,19 @@ fn bot_selfplay_replay_roundtrip() {
         // Run all bot actions. PokerSession::next_actor handles street advancement.
         // If a bot's chosen action is invalid (e.g. insufficient chips at a low
         // stack), fall back to AllIn (when facing a bet) or Check.
+        // DEFECT_007: no AllIn/Check fallback. An action the engine rejects is a
+        // bot defect and must fail the test, not be papered over.
         while let Some(seat) = session.next_actor() {
-            use pkcore::casino::action::PlayerAction;
             let action = profiles[seat as usize].decide(&session.table, seat, &mut rng);
-            if session.apply_action(seat, action).is_err() {
-                let fallback = if session.table.to_call(seat) > 0 {
-                    PlayerAction::AllIn
-                } else {
-                    PlayerAction::Check
-                };
-                let _ = session.apply_action(seat, fallback);
+            if let Err(e) = session.apply_action(seat, action) {
+                panic!(
+                    "hand {hand_num}: seat {seat} returned {action:?}, rejected by the engine: \
+                     {e} (bet={} to_call={} min_raise_to={} raise_bounds={:?})",
+                    session.table.bet,
+                    session.table.to_call(seat),
+                    session.table.min_raise_to(),
+                    session.table.raise_bounds(seat),
+                );
             }
         }
 
@@ -253,16 +256,19 @@ fn flhe_bot_selfplay_replay_roundtrip() {
             })
             .collect();
 
+        // DEFECT_007: no AllIn/Check fallback. An action the engine rejects is a
+        // bot defect and must fail the test, not be papered over.
         while let Some(seat) = session.next_actor() {
-            use pkcore::casino::action::PlayerAction;
             let action = profiles[seat as usize].decide(&session.table, seat, &mut rng);
-            if session.apply_action(seat, action).is_err() {
-                let fallback = if session.table.to_call(seat) > 0 {
-                    PlayerAction::AllIn
-                } else {
-                    PlayerAction::Check
-                };
-                let _ = session.apply_action(seat, fallback);
+            if let Err(e) = session.apply_action(seat, action) {
+                panic!(
+                    "hand {hand_num}: seat {seat} returned {action:?}, rejected by the engine: \
+                     {e} (bet={} to_call={} min_raise_to={} raise_bounds={:?})",
+                    session.table.bet,
+                    session.table.to_call(seat),
+                    session.table.min_raise_to(),
+                    session.table.raise_bounds(seat),
+                );
             }
         }
 
@@ -413,16 +419,19 @@ fn plo_bot_selfplay_replay_roundtrip() {
             })
             .collect();
 
+        // DEFECT_007: no AllIn/Check fallback. An action the engine rejects is a
+        // bot defect and must fail the test, not be papered over.
         while let Some(seat) = session.next_actor() {
-            use pkcore::casino::action::PlayerAction;
             let action = profiles[seat as usize].decide(&session.table, seat, &mut rng);
-            if session.apply_action(seat, action).is_err() {
-                let fallback = if session.table.to_call(seat) > 0 {
-                    PlayerAction::AllIn
-                } else {
-                    PlayerAction::Check
-                };
-                let _ = session.apply_action(seat, fallback);
+            if let Err(e) = session.apply_action(seat, action) {
+                panic!(
+                    "hand {hand_num}: seat {seat} returned {action:?}, rejected by the engine: \
+                     {e} (bet={} to_call={} min_raise_to={} raise_bounds={:?})",
+                    session.table.bet,
+                    session.table.to_call(seat),
+                    session.table.min_raise_to(),
+                    session.table.raise_bounds(seat),
+                );
             }
         }
 
@@ -604,16 +613,19 @@ fn stud_hi_bot_selfplay_replay_roundtrip() {
             })
             .collect();
 
+        // DEFECT_007: no AllIn/Check fallback. An action the engine rejects is a
+        // bot defect and must fail the test, not be papered over.
         while let Some(seat) = session.next_actor() {
-            use pkcore::casino::action::PlayerAction;
             let action = profiles[seat as usize].decide(&session.table, seat, &mut rng);
-            if session.apply_action(seat, action).is_err() {
-                let fallback = if session.table.to_call(seat) > 0 {
-                    PlayerAction::AllIn
-                } else {
-                    PlayerAction::Check
-                };
-                let _ = session.apply_action(seat, fallback);
+            if let Err(e) = session.apply_action(seat, action) {
+                panic!(
+                    "hand {hand_num}: seat {seat} returned {action:?}, rejected by the engine: \
+                     {e} (bet={} to_call={} min_raise_to={} raise_bounds={:?})",
+                    session.table.bet,
+                    session.table.to_call(seat),
+                    session.table.min_raise_to(),
+                    session.table.raise_bounds(seat),
+                );
             }
         }
 
@@ -831,16 +843,19 @@ fn razz_bot_selfplay_replay_roundtrip() {
             })
             .collect();
 
+        // DEFECT_007: no AllIn/Check fallback. An action the engine rejects is a
+        // bot defect and must fail the test, not be papered over.
         while let Some(seat) = session.next_actor() {
-            use pkcore::casino::action::PlayerAction;
             let action = profiles[seat as usize].decide(&session.table, seat, &mut rng);
-            if session.apply_action(seat, action).is_err() {
-                let fallback = if session.table.to_call(seat) > 0 {
-                    PlayerAction::AllIn
-                } else {
-                    PlayerAction::Check
-                };
-                let _ = session.apply_action(seat, fallback);
+            if let Err(e) = session.apply_action(seat, action) {
+                panic!(
+                    "hand {hand_num}: seat {seat} returned {action:?}, rejected by the engine: \
+                     {e} (bet={} to_call={} min_raise_to={} raise_bounds={:?})",
+                    session.table.bet,
+                    session.table.to_call(seat),
+                    session.table.min_raise_to(),
+                    session.table.raise_bounds(seat),
+                );
             }
         }
 

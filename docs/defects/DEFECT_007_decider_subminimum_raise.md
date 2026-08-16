@@ -3,10 +3,64 @@
 **File:** `docs/defects/DEFECT_007_decider_subminimum_raise.md`  
 **Date:** 2026-08-15  
 **Severity:** High  
-**Status:** Open — diagnosed, not yet fixed  
+**Status:** Fixed  
 **Introduced in:** `b44ed88c` (2026-05-15, "More Games (#97)"), released in `v0.0.57`  
-**Fixed in:** —  
+**Fixed in:** branch `bet_defect` (2026-08-15)  
 **Found by:** external consumer (`cardroom`), driving bots through `PokerSession::run_hand`
+
+---
+
+## Correction to the original diagnosis
+
+The report below was written against the observed symptom and is right that the
+two clamps in `sized_raise_to` contradict each other. Reproducing it in a test
+harness showed the cause is **one level deeper**, and that a second, unrelated
+defect hides behind the same guard. Both are fixed; the sections marked
+*(revised)* supersede the original text.
+
+1. **The clamp is a unit error, not just an ordering error.** `current_bet` is a
+   raise-*to* total for the street and includes chips the actor has already
+   committed. `my_chips` is the stack *behind* and excludes them.
+   `.min(state.my_chips)` compares the two directly. The correct ceiling is
+   `my_chips + my_committed` — the actor's whole stack, which is exactly what
+   `Table::max_raise_for` passes to `BettingStructure::max_raise`.
+
+   This matters because the report's own proposed fix keeps `.min(state.my_chips)`
+   as the ceiling. That would still under-shove by the size of the posted blind
+   on every street where the actor has chips in the middle, and the reproduction
+   below is precisely such a case.
+
+2. **The floor is wrong for Seven-Card Stud.** `current_bet + min_raise` is not
+   the minimum when a bring-in below one full bet is in front of the actor; the
+   raise *completes* to one full bet instead. `Table::min_raise_to` routes this
+   through `BettingStructure::completion_raise_to`; the decider hardcoded the
+   step form.
+
+3. **A second defect shares the guard: the Fixed-Limit raise cap.** `TableSnapshot`
+   did not carry `raises_this_street`, so a decider could not tell that the cap
+   was reached and no raise of any size was legal. `Table::raise_bounds` folds
+   *three* reasons a raise can be illegal into one check — cap reached, below the
+   minimum, above the ceiling — and the snapshot only carried enough data for two.
+   This one had never been observed because no harness ran bots at a Fixed-Limit
+   table without an error-absorbing fallback.
+
+### First reproduction, from the new harness
+
+```
+FixedLimit hand 0 seat 0: engine rejected Raise(300)
+    (to_call=250 total_chips=2000 min_raise_to=300 raise_bounds=None)
+```
+
+`Raise(300)` is exactly `min_raise_to`, and still illegal: the cap was full.
+
+### Out of scope, recorded here
+
+Extending the harness to Seven-Card Stud surfaced an unrelated **dealing** gap:
+eight-handed stud needs 56 cards for seven streets and a 52-card deck cannot
+supply them, so the hand stalls and `end_hand` returns `PKError::ActionNotFinished`.
+Real seven-card stud deals a shared community river card in this case. Seven
+seats and fewer are unaffected. Not a betting defect, not fixed here; the stud
+harness is capped at seven seats with a comment pointing back at this note.
 
 ---
 
@@ -141,10 +195,60 @@ The inputs to the correct decision are all in hand; only the ordering is wrong.
 
 ---
 
-## Proposed Fix
+## Fix as applied *(revised)*
 
-Detect the infeasible case explicitly rather than clamping into it. Make the
-sizing function total by letting it report that no legal raise exists:
+The window is computed once, by the snapshot, from the same functions the engine
+validates against — so the decider and `Table::validate_raise` cannot disagree.
+
+### 1. `TableSnapshot` gained the missing data and the derived bounds
+
+```rust
+/// Number of raises already made on the current street. Deciders need this to
+/// honour the Fixed-Limit `raise_cap`.
+pub raises_this_street: u8,
+```
+
+and five methods, each mirroring its `Table` counterpart:
+
+| Method | Mirrors | Why it was needed |
+|---|---|---|
+| `my_committed()` | `player.bet` | The term missing from the ceiling |
+| `my_total_chips()` | `player.total_chip_count()` | The real ceiling in No-Limit |
+| `min_raise_to()` | `Table::min_raise_to` | Completion-aware floor (stud) |
+| `max_raise_to()` | `Table::max_raise_for` | Structure-aware ceiling (pot-limit, fixed-limit) |
+| `raise_bounds()` | `Table::raise_bounds` | Folds in all three illegality reasons |
+
+`raise_bounds()` returning `None` is the single "no voluntary raise is legal"
+signal, whatever the reason.
+
+### 2. The sizing functions became total
+
+```rust
+fn sized_raise_to<R: rand::Rng + ?Sized>(
+    state: &TableSnapshot,
+    strategy: &BettingStrategy,
+    rng: &mut R,
+) -> Option<usize> {
+    let (floor, ceiling) = state.raise_bounds()?;
+    // Fixed-Limit has exactly one legal raise-to, so there is nothing to size.
+    if fixed_limit_increment(state).is_some() {
+        return Some(floor);
+    }
+    let (n, d) = pick_bet_size(strategy, rng);
+    Some(
+        state
+            .current_bet
+            .saturating_add(state.pot.saturating_mul(n) / d)
+            .clamp(floor, ceiling),
+    )
+}
+```
+
+`sized_bet_amount` takes the same shape. An opening bet is a raise-from-zero —
+`Table::act_bet` validates it through the very same `validate_raise` — so it
+shares the window rather than carrying its own `.max(big_blind)` floor.
+
+The original proposal, kept for the record:
 
 ```rust
 /// Returns a legal raise-to target, or `None` when the stack cannot cover
@@ -179,6 +283,10 @@ of the four to state what it does instead. Clamping order alone
 (`.min(my_chips).max(floor)`) is **not** a fix — it would emit a raise larger
 than the stack, trading `InsufficientIncrement` for `ExceedsBettingCap`.
 
+The `Option` return was adopted as written. The body was not: it keeps
+`.min(state.my_chips)` as the ceiling and `current_bet + min_raise` as the
+floor, both of which are wrong for the reasons given under *Correction* above.
+
 ### The behavioural choice this exposes
 
 What replaces the illegal raise is a strategy decision, not a correctness one,
@@ -194,6 +302,18 @@ and it differs per call site:
 
 Whichever is chosen, the minimum bar is that `decide` never returns an action
 `apply_action` will reject.
+
+**As applied**, across all eight call sites:
+
+| Site | `None` behaviour | Reason |
+|---|---|---|
+| Check-raise | fall through to the equity logic | A check-raise the player cannot afford is not an all-in commitment decision |
+| Strong-hand raise | `AllIn` | The whole stack is less than one minimum increment; all-in *is* the raise |
+| Bluff-raise | `Fold` | Shoving a bluff would re-open DEFECT_002's chip-concentration dynamics |
+| Unknown-cards raise | fall through to call/fold | No read strong enough to justify a shove |
+| Value bet | `AllIn` | The intent was to commit chips |
+| Bluff bet | `Check` | Same DEFECT_002 reason as the bluff-raise |
+| Unknown-cards bet ×2 | `Check` | No information to shove on |
 
 ---
 
@@ -212,17 +332,27 @@ pkcore's own drivers carry equivalent workarounds; see Coverage Gap.
 
 ---
 
-## Proposed Regression Tests
+## Regression Tests *(revised — as added)*
 
 | File | Test name | What it verifies |
 |------|-----------|-----------------|
-| `src/bot/decider.rs` | `sized_raise_to_is_none_when_stack_below_minimum` | A snapshot with `my_chips=2400, current_bet=800, min_raise=2400` yields `None`, not `Some(2400)`. |
-| `src/bot/decider.rs` | `decide_never_returns_a_subminimum_raise` | Across every shipped profile and a swept range of `my_chips` spanning the `current_bet + min_raise` boundary, any returned `Raise(n)` satisfies `n >= current_bet + min_raise`. |
-| `src/bot/decider.rs` | `sized_bet_amount_never_below_big_blind` | The `sized_bet_amount` counterpart, with `my_chips` below one big blind. |
-| `tests/bot_marathon.rs` | `marathon_runs_without_the_fallback` | A marathon variant that asserts `apply_action` succeeds instead of absorbing the error — the assertion the current harness gives up. |
+| `src/bot/decider.rs` | `sized_raise_to_never_returns_below_the_minimum` | The floor holds against a short stack that has already posted a blind. |
+| `src/bot/decider.rs` | `sized_raise_to_never_exceeds_the_whole_stack` | The ceiling is `my_chips + my_committed`, and the result *does* exceed `my_chips` — the assertion that pins the unit error. |
+| `src/bot/decider.rs` | `sized_raise_to_is_none_when_no_legal_raise_exists` | Infeasible case returns `None`, not a clamped amount. |
+| `src/bot/decider.rs` | `sized_bet_amount_never_returns_below_the_minimum` | The `sized_bet_amount` counterpart. |
+| `src/bot/decider.rs` | `decide_never_returns_a_raise_the_engine_would_reject` | Property: every shipped profile × stacks swept 900–4000 × 8 seeds; every `Raise`/`Bet` lands inside `raise_bounds()`. |
+| `src/bot/table_snapshot.rs` | `my_committed_counts_chips_already_in_this_street` | The missing term. |
+| `src/bot/table_snapshot.rs` | `my_total_chips_adds_the_live_bet_back_to_the_stack` | `my_chips` ≠ stack. |
+| `src/bot/table_snapshot.rs` | `min_raise_to_matches_the_table` | Snapshot floor agrees with the engine. |
+| `src/bot/table_snapshot.rs` | `raise_bounds_match_the_table` | Snapshot window agrees with the engine. |
+| `src/bot/table_snapshot.rs` | `raise_bounds_is_none_when_the_stack_cannot_cover_the_minimum` | Infeasible-by-stack. |
+| `src/bot/table_snapshot.rs` | `raise_bounds_is_none_when_the_fixed_limit_cap_is_reached` | Infeasible-by-cap — the second defect. |
+| `tests/bot_action_legality.rs` | four `*_bots_never_return_an_action_the_engine_rejects` | No-Limit, Pot-Limit, Fixed-Limit and Stud, 25 seeds × 120 hands each, **no fallback** — every `apply_action` result asserted. |
 
-The second test is the important one: it is a property over the boundary rather
-than a single case, and it fails today for the observed inputs.
+The property test and the four integration tests are the important ones: they
+are properties over the boundary rather than single cases, and all four
+integration tests failed before the fix (No-Limit on the stack ceiling,
+Fixed-Limit on the cap).
 
 ---
 
@@ -250,29 +380,55 @@ never for the region where what they compute cannot exist.
 
 ---
 
-## Prevention
+## Prevention *(revised — as applied)*
 
+- **Every error-absorbing fallback in the repository was removed.** This is the
+  change that matters most: the defect survived three months and two releases
+  because no harness could report it.
+
+  | File | Was | Now |
+  |---|---|---|
+  | `tests/bot_marathon.rs` | AllIn/Check fallback | `dump_and_panic` with `to_call` / `min_raise_to` / `raise_bounds` in the message |
+  | `tests/replay_consistency.rs` ×5 | AllIn/Check fallback in all five game families | `panic!` with the same context |
+  | `examples/bot_selfplay.rs` | `let _ = apply_action(...)` | prints the rejection and exits non-zero |
+  | `examples/interactive_play.rs` | `let _ = apply_action(...)` | prints the rejection |
+  | `examples/player_stats_review.rs` | `let _ = apply_action(...)` | prints and bails — a discarded error here spins forever, because `next_actor` returns the same seat until an action lands |
+
+  All 1000 marathon hands and all five replay families now pass with the
+  fallbacks gone, which is the evidence that no illegal action remains.
+
+- **Derive legality from the engine's own functions, never restate the rule.**
+  Both bugs were the decider carrying its own copy of a rule the engine already
+  owns. `min_raise_to()` now calls `completion_raise_to` and `max_raise_to()`
+  calls `BettingStructure::max_raise` — the exact calls `Table` makes.
 - Make illegal states unrepresentable at the boundary: an `Option` return means
   a caller cannot forward an infeasible raise without deciding what to do.
 - Test sizing functions across the feasibility boundary, not just at
   comfortable stack depths.
-- Treat `let _ = apply_action(...)` as a smell in drivers and examples. It
-  discards genuine engine errors alongside the expected ones, and here it
-  suppressed the only signal this defect produced.
-- Consider asserting the invariant in `decide` itself (debug-only), so a bad
-  action fails loudly at its source rather than at the engine boundary.
+- **Cover every betting structure, not just the default one.** The Fixed-Limit
+  cap defect was invisible while only No-Limit was exercised without a fallback.
 
 ---
 
-## Affected Code
+## Affected Code *(revised — as changed)*
 
 | File | Change |
 |------|--------|
-| `src/bot/decider.rs:683-693` | `sized_raise_to` — floor applied before the stack ceiling; return `Option` and reject the infeasible case |
-| `src/bot/decider.rs:699-706` | `sized_bet_amount` — same clamp-order shape against the big-blind minimum |
-| `src/bot/decider.rs:198,229,241,276` | Raise call sites — guard tests `> current_bet` instead of `>= current_bet + min_raise` |
-| `tests/bot_marathon.rs:164-176` | Fallback absorbs the defect; needs a variant that asserts instead |
-| `examples/bot_selfplay.rs` | `let _ = session.apply_action(...)` discards all errors |
+| `src/bot/table_snapshot.rs` | New `raises_this_street` field; new `my_committed`, `my_total_chips`, `min_raise_to`, `max_raise_to`, `raise_bounds` methods |
+| `src/bot/decider.rs` | `sized_raise_to` and `sized_bet_amount` return `Option<usize>` and clamp into `raise_bounds()`; all eight call sites handle `None` explicitly |
+| `tests/bot_action_legality.rs` | New — four fallback-free harnesses, one per betting shape |
+| `tests/bot_marathon.rs` | Fallback removed; rejection now dumps and panics |
+| `tests/replay_consistency.rs` | Fallback removed in all five game families |
+| `examples/bot_selfplay.rs`, `examples/interactive_play.rs`, `examples/player_stats_review.rs` | `let _ = apply_action(...)` replaced with explicit reporting |
+| `Cargo.toml` | `[[test]] bot_action_legality` with `required-features` |
+
+### API impact
+
+`TableSnapshot` gained a public field, so external code that constructs one with
+a struct literal must add `raises_this_street`. Code that builds snapshots the
+normal way — `TableSnapshot::from_table` — is unaffected. Deciders that size
+their own raises should switch to `snapshot.raise_bounds()`; the fields they
+were reading are all still present and unchanged.
 
 ---
 

@@ -7,7 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Nothing yet._
+### Fixed
+
+- **`RuleBasedDecider` emitted illegal bets and raises**
+  ([DEFECT_007](docs/defects/DEFECT_007_decider_subminimum_raise.md)). Two
+  distinct defects, both of which made `BotProfile::decide` return actions
+  `Table::apply_action` rejects — so pkcore's own bots did not compose with
+  `PokerSession::run_hand`, which propagates the failure with `?`.
+  - `sized_raise_to` and `sized_bet_amount` clamped the result with
+    `.min(state.my_chips)`. That is a **unit error**: `my_chips` is the stack
+    *behind*, while a raise-to is measured against `current_bet`, which
+    includes chips the actor already committed this street. The clamp both
+    cancelled the legal-minimum floor (`PKError::InsufficientIncrement`) and
+    under-shoved by the size of the posted blind. The floor was also wrong for
+    Seven-Card Stud, which *completes* a bring-in rather than stepping over it.
+  - Deciders could not honour the Fixed-Limit **raise cap**, because
+    `TableSnapshot` did not carry the per-street raise count. A raise at exactly
+    the minimum was still rejected once the cap was full.
+
+  Both sizing functions now return `Option<usize>` and clamp into
+  `TableSnapshot::raise_bounds()`; all eight call sites state explicitly what
+  they do when no legal raise exists (all-in for a value raise, fold or check
+  for a bluff, fall through otherwise).
+
+### Added
+
+- **`TableSnapshot` betting-legality surface** — `my_committed()`,
+  `my_total_chips()`, `min_raise_to()`, `max_raise_to()` and `raise_bounds()`,
+  each mirroring its `Table` counterpart and derived from the same
+  `BettingStructure` functions the engine validates against, so a decider and
+  `Table::validate_raise` cannot disagree. `raise_bounds()` returning `None` is
+  the single "no voluntary raise is legal" signal, whatever the reason.
+- **`tests/bot_action_legality.rs`** — four regression harnesses (No-Limit,
+  Pot-Limit, Fixed-Limit, Seven-Card Stud), 25 seeds × 120 hands each, that
+  assert every `apply_action` result instead of absorbing failures.
+
+### Changed
+
+- **`TableSnapshot::raises_this_street`** (new public field). Additive for code
+  that builds snapshots via `TableSnapshot::from_table`; struct-literal
+  construction must add the field.
+- **Every error-absorbing fallback removed** from the drivers, tests and
+  examples that hid DEFECT_007 for three months: the AllIn/Check fallback in
+  `tests/bot_marathon.rs` and in all five game families in
+  `tests/replay_consistency.rs`, and `let _ = apply_action(...)` in
+  `examples/bot_selfplay.rs`, `examples/interactive_play.rs` and
+  `examples/player_stats_review.rs`. All now report the rejected action with
+  `to_call` / `min_raise_to` / `raise_bounds` context.
+
+### Known issues
+
+- **Eight-handed Seven-Card Stud stalls.** Eight players need 56 cards for seven
+  streets and a 52-card deck cannot supply them, so `end_hand` returns
+  `PKError::ActionNotFinished`. Real stud deals a shared community river card in
+  this case. Seven seats and fewer are unaffected. Surfaced while extending the
+  DEFECT_007 harness; a dealing gap, not a betting one, and not fixed here.
 
 ## [0.3.5] - 2026-08-14
 

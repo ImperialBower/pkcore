@@ -195,8 +195,13 @@ impl RuleBasedDecider {
         if state.to_call > 0 && state.checked_this_street {
             let cr_rate = strategy.check_raise_frequency.as_f64();
             if roll < cr_rate {
-                let raise_to = sized_raise_to(state, strategy, rng);
-                if raise_to > state.current_bet {
+                // DEFECT_007: `None` means the stack cannot cover a minimum
+                // raise. Fall through to the equity logic below rather than
+                // shoving — a check-raise the player cannot afford is not an
+                // all-in commitment decision.
+                if let Some(raise_to) = sized_raise_to(state, strategy, rng)
+                    && raise_to > state.current_bet
+                {
                     return PlayerAction::Raise(raise_to);
                 }
             }
@@ -226,9 +231,15 @@ impl RuleBasedDecider {
                     // that two bots with strong hands don't raise each other indefinitely.
                     let raise_roll: f64 = rng.random();
                     if raise_roll < aggr.max(0.5) {
-                        let raise_to = sized_raise_to(state, strategy, rng);
-                        if raise_to > state.current_bet {
-                            return PlayerAction::Raise(raise_to);
+                        // DEFECT_007: with a strong hand and a stack too short
+                        // for a legal raise, all-in *is* the raise — the whole
+                        // stack is less than one minimum increment anyway.
+                        match sized_raise_to(state, strategy, rng) {
+                            Some(raise_to) if raise_to > state.current_bet => {
+                                return PlayerAction::Raise(raise_to);
+                            }
+                            Some(_) => {}
+                            None => return PlayerAction::AllIn,
                         }
                     }
                     PlayerAction::Call
@@ -237,23 +248,32 @@ impl RuleBasedDecider {
                 } else {
                     // Weak hand: bluff-raise or fold.
                     let bluff_roll: f64 = rng.random();
-                    if bluff_roll < strategy.bluff_frequency.as_f64() {
-                        let raise_to = sized_raise_to(state, strategy, rng);
-                        if raise_to > state.current_bet {
-                            return PlayerAction::Raise(raise_to);
-                        }
+                    // DEFECT_007: a bluff that cannot be sized legally folds.
+                    // Converting it to an all-in shove would materially change
+                    // bot behaviour and re-open the chip-concentration dynamics
+                    // recorded in DEFECT_002.
+                    if bluff_roll < strategy.bluff_frequency.as_f64()
+                        && let Some(raise_to) = sized_raise_to(state, strategy, rng)
+                        && raise_to > state.current_bet
+                    {
+                        return PlayerAction::Raise(raise_to);
                     }
                     PlayerAction::Fold
                 }
             } else {
                 // No outstanding bet: value-bet or bluff.
+                //
+                // DEFECT_007: `sized_bet_amount` returns `None` when the stack
+                // cannot cover a legal opening bet. A value bet becomes an
+                // all-in (the intent was to commit chips); a bluff checks,
+                // for the same DEFECT_002 reason a bluff-raise does not shove.
                 let value_threshold = strategy.effective_value_threshold();
                 if equity > value_threshold {
-                    PlayerAction::Bet(sized_bet_amount(state, strategy, rng))
+                    sized_bet_amount(state, strategy, rng).map_or(PlayerAction::AllIn, PlayerAction::Bet)
                 } else if !state.phase.is_preflop() {
                     let bluff_roll: f64 = rng.random();
                     if bluff_roll < strategy.bluff_frequency.as_f64() {
-                        PlayerAction::Bet(sized_bet_amount(state, strategy, rng))
+                        sized_bet_amount(state, strategy, rng).map_or(PlayerAction::Check, PlayerAction::Bet)
                     } else {
                         PlayerAction::Check
                     }
@@ -272,11 +292,14 @@ impl RuleBasedDecider {
                     };
                 }
 
-                if roll < aggr * 0.25 {
-                    let raise_to = sized_raise_to(state, strategy, rng);
-                    if raise_to > state.current_bet {
-                        return PlayerAction::Raise(raise_to);
-                    }
+                // DEFECT_007: no legal raise → fall through to the call/fold
+                // decision below. Hole cards are unknown on this path, so there
+                // is no read strong enough to justify shoving instead.
+                if roll < aggr * 0.25
+                    && let Some(raise_to) = sized_raise_to(state, strategy, rng)
+                    && raise_to > state.current_bet
+                {
+                    return PlayerAction::Raise(raise_to);
                 }
 
                 if roll < aggr {
@@ -292,13 +315,15 @@ impl RuleBasedDecider {
                     aggr
                 };
 
+                // DEFECT_007: hole cards are unknown here, so an unsizeable bet
+                // checks rather than shoving on no information.
                 if roll < bet_threshold {
-                    PlayerAction::Bet(sized_bet_amount(state, strategy, rng))
+                    sized_bet_amount(state, strategy, rng).map_or(PlayerAction::Check, PlayerAction::Bet)
                 } else if !state.phase.is_preflop() {
                     let bluff_rate = strategy.bluff_frequency.as_f64();
                     let roll_bluff: f64 = rng.random();
                     if roll_bluff < bluff_rate {
-                        PlayerAction::Bet(sized_bet_amount(state, strategy, rng))
+                        sized_bet_amount(state, strategy, rng).map_or(PlayerAction::Check, PlayerAction::Bet)
                     } else {
                         PlayerAction::Check
                     }
@@ -677,33 +702,60 @@ fn fixed_limit_increment(state: &TableSnapshot) -> Option<usize> {
 }
 
 /// EPIC-30 Phase 6: computes a raise target ("raise to N total") that's
-/// legal under the current betting structure. For Fixed-Limit, returns
-/// `current_bet + tier_increment` clamped to the player's stack. For
-/// No-Limit / Pot-Limit, preserves the existing pot-fraction logic.
-fn sized_raise_to<R: rand::Rng + ?Sized>(state: &TableSnapshot, strategy: &BettingStrategy, rng: &mut R) -> usize {
-    if let Some(increment) = fixed_limit_increment(state) {
-        return state.current_bet.saturating_add(increment).min(state.my_chips);
+/// legal under the current betting structure, or `None` when **no voluntary
+/// raise of any size is legal** — the stack cannot reach the minimum.
+///
+/// `DEFECT_007`: the previous version clamped with `.min(state.my_chips)`.
+/// That is a unit error as well as a clamp-order error. `my_chips` is the
+/// stack *behind*; a raise-to is measured against `current_bet`, which
+/// includes chips this player already committed this street. The ceiling is
+/// therefore [`TableSnapshot::max_raise_to`], and when it falls below
+/// [`TableSnapshot::min_raise_to`] the correct answer is `None`, not a
+/// clamped-down amount the engine rejects with
+/// [`PKError::InsufficientIncrement`](crate::errors::PKError::InsufficientIncrement).
+///
+/// Returning `Option` rather than substituting silently is deliberate: it
+/// forces each call site to state what it does instead, because the right
+/// substitute differs (all-in for a value raise, fold or call for a bluff).
+fn sized_raise_to<R: rand::Rng + ?Sized>(
+    state: &TableSnapshot,
+    strategy: &BettingStrategy,
+    rng: &mut R,
+) -> Option<usize> {
+    let (floor, ceiling) = state.raise_bounds()?;
+    // Fixed-Limit has exactly one legal raise-to, so there is nothing to size.
+    if fixed_limit_increment(state).is_some() {
+        return Some(floor);
     }
     let (n, d) = pick_bet_size(strategy, rng);
-    state
-        .current_bet
-        .saturating_add(state.pot.saturating_mul(n) / d)
-        .max(state.current_bet.saturating_add(state.min_raise))
-        .min(state.my_chips)
+    Some(
+        state
+            .current_bet
+            .saturating_add(state.pot.saturating_mul(n) / d)
+            .clamp(floor, ceiling),
+    )
 }
 
 /// EPIC-30 Phase 6: computes a bet amount (no current bet to call) that's
-/// legal under the current betting structure. For Fixed-Limit, returns
-/// the tier increment clamped to the player's stack. For No-Limit /
-/// Pot-Limit, preserves the existing pot-fraction logic.
-fn sized_bet_amount<R: rand::Rng + ?Sized>(state: &TableSnapshot, strategy: &BettingStrategy, rng: &mut R) -> usize {
-    if let Some(increment) = fixed_limit_increment(state) {
-        return increment.min(state.my_chips);
+/// legal under the current betting structure, or `None` when no legal
+/// voluntary bet exists.
+///
+/// `DEFECT_007`: an opening bet is a raise-from-zero — `Table::act_bet`
+/// validates it through the very same `validate_raise` an actual raise goes
+/// through — so it shares the window and the same infeasibility case. The
+/// old `.max(big_blind).min(my_chips)` pair could produce an amount below
+/// the minimum for the same reason `sized_raise_to` could.
+fn sized_bet_amount<R: rand::Rng + ?Sized>(
+    state: &TableSnapshot,
+    strategy: &BettingStrategy,
+    rng: &mut R,
+) -> Option<usize> {
+    let (floor, ceiling) = state.raise_bounds()?;
+    if fixed_limit_increment(state).is_some() {
+        return Some(floor);
     }
     let (n, d) = pick_bet_size(strategy, rng);
-    (state.pot.saturating_mul(n) / d)
-        .max(state.big_blind)
-        .min(state.my_chips)
+    Some((state.pot.saturating_mul(n) / d).clamp(floor, ceiling))
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -715,6 +767,8 @@ mod bot__decider_tests {
     use crate::casino::game::ForcedBets;
     use crate::casino::table::{Player, Seat, Seats, Table};
     use crate::games::GamePhase;
+    use rand::SeedableRng;
+    use rand::rngs::SmallRng;
 
     fn make_snapshot(seat: u8) -> TableSnapshot<'static> {
         let seats = Seats::new(vec![
@@ -723,6 +777,124 @@ mod bot__decider_tests {
         ]);
         let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
         TableSnapshot::from_table(&table, seat)
+    }
+
+    /// `DEFECT_007` fixture: `short` starts a heads-up 400/800 hand with
+    /// `short_stack` chips, posts the big blind, and faces a raise to
+    /// `raise_to`. Returns the snapshot from the short stack's perspective.
+    fn short_stack_facing_a_raise(short_stack: usize, raise_to: usize) -> TableSnapshot<'static> {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Deep".to_string(), 100_000)),
+            Seat::new(Player::new_with_chips("Short".to_string(), short_stack)),
+        ]);
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(400, 800));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        table.act_raise(table.determine_utg(), raise_to).unwrap();
+        let actor = table.next_to_act();
+        TableSnapshot::from_table(&table, actor)
+    }
+
+    /// The exact defect: the floor was applied, then `.min(my_chips)` pulled the
+    /// result straight back below it because `my_chips` excludes the posted blind.
+    #[test]
+    fn sized_raise_to_never_returns_below_the_minimum() {
+        let snap = short_stack_facing_a_raise(2_400, 1_600);
+        let mut rng = SmallRng::seed_from_u64(7);
+        let strategy = BotProfile::loose_aggressive().betting_strategy.clone();
+
+        let raise_to = sized_raise_to(&snap, &strategy, &mut rng).expect("a legal raise exists");
+        assert!(
+            raise_to >= snap.min_raise_to(),
+            "raise_to {raise_to} is below the minimum {}",
+            snap.min_raise_to()
+        );
+    }
+
+    /// The ceiling must be the whole stack (behind + already committed), not the
+    /// chips behind. Capping at `my_chips` under-shoves by the posted blind.
+    #[test]
+    fn sized_raise_to_never_exceeds_the_whole_stack() {
+        let snap = short_stack_facing_a_raise(2_400, 1_600);
+        let mut rng = SmallRng::seed_from_u64(7);
+        let strategy = BotProfile::loose_aggressive().betting_strategy.clone();
+
+        let raise_to = sized_raise_to(&snap, &strategy, &mut rng).expect("a legal raise exists");
+        assert!(
+            raise_to <= snap.my_total_chips(),
+            "raise_to {raise_to} exceeds the stack"
+        );
+        assert!(
+            raise_to > snap.my_chips,
+            "a raise-to of {raise_to} should exceed the chips behind ({}) — \
+             the posted blind counts toward it",
+            snap.my_chips
+        );
+    }
+
+    /// When the whole stack cannot reach the minimum, no raise of any size is
+    /// legal and the sizing function must say so rather than clamp into it.
+    #[test]
+    fn sized_raise_to_is_none_when_no_legal_raise_exists() {
+        let snap = short_stack_facing_a_raise(2_000, 1_600);
+        let mut rng = SmallRng::seed_from_u64(7);
+        let strategy = BotProfile::loose_aggressive().betting_strategy.clone();
+
+        assert_eq!(None, snap.raise_bounds(), "fixture should have no legal raise");
+        assert_eq!(None, sized_raise_to(&snap, &strategy, &mut rng));
+    }
+
+    /// The `sized_bet_amount` counterpart: an opening bet is validated against
+    /// the same minimum, so a sub-minimum bet is equally illegal.
+    #[test]
+    fn sized_bet_amount_never_returns_below_the_minimum() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 100_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 100_000)),
+        ]);
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(400, 800));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        let snap = TableSnapshot::from_table(&table, table.next_to_act());
+        let mut rng = SmallRng::seed_from_u64(3);
+        let strategy = BotProfile::tight_passive().betting_strategy.clone();
+
+        let bet = sized_bet_amount(&snap, &strategy, &mut rng).expect("a legal bet exists");
+        assert!(bet >= snap.min_raise_to(), "bet {bet} is below the minimum");
+    }
+
+    /// The property the four call sites exist to uphold: sweep the stack across
+    /// the feasibility boundary for every shipped profile and assert that no
+    /// `Raise` or `Bet` is ever illegal.
+    #[test]
+    fn decide_never_returns_a_raise_the_engine_would_reject() {
+        for profile in BotProfile::default_profiles() {
+            for short_stack in (900..=4_000).step_by(100) {
+                for seed in 0..8u64 {
+                    let snap = short_stack_facing_a_raise(short_stack, 1_600);
+                    let mut rng = SmallRng::seed_from_u64(seed);
+                    let action = RuleBasedDecider::decide_with_rng(&profile, &snap, &mut rng);
+                    match action {
+                        PlayerAction::Raise(n) | PlayerAction::Bet(n) => {
+                            let (min, max) = snap.raise_bounds().unwrap_or_else(|| {
+                                panic!(
+                                    "{} returned {action:?} with stack {short_stack} \
+                                     when no legal raise exists",
+                                    profile.name
+                                )
+                            });
+                            assert!(
+                                n >= min && n <= max,
+                                "{} returned {action:?} outside the legal window \
+                                 [{min}, {max}] with stack {short_stack}",
+                                profile.name
+                            );
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
     }
 
     #[test]

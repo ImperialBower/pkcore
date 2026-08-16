@@ -130,6 +130,11 @@ pub struct TableSnapshot<'a> {
     /// need to size raises differently for Fixed-Limit / Pot-Limit
     /// variants consult this field instead of computing pot fractions.
     pub betting_structure: BettingStructure,
+    /// Number of raises already made on the current street (`DEFECT_007`).
+    /// Deciders need this to honour the Fixed-Limit `raise_cap`; once the cap
+    /// is reached no further raise is legal at any size. No-Limit and Pot-Limit
+    /// are uncapped and ignore it. Sourced from `Table::raises_this_street`.
+    pub raises_this_street: u8,
     /// Bet tier for the *current* street (EPIC-30 Phase 5). Fixed-Limit
     /// variants need this to choose between the small-bet and big-bet
     /// increment; No-Limit / Pot-Limit ignore it. Sourced from
@@ -281,6 +286,7 @@ impl<'a> TableSnapshot<'a> {
             stacks,
             big_blind: table.forced.big_blind,
             betting_structure: table.betting,
+            raises_this_street: table.raises_this_street,
             bet_tier: table.current_bet_tier(),
             checked_this_street,
             dealer_button,
@@ -355,6 +361,164 @@ impl<'a> TableSnapshot<'a> {
         let btn = self.dealer_button?;
         let logical = self.logical_seat?;
         Position::from_seat(logical, btn, self.seat_count)
+    }
+
+    /// Chips this player has **already committed** on the current street.
+    ///
+    /// `DEFECT_007`: [`Self::my_chips`] is the stack *behind*, so it is not
+    /// comparable with [`Self::current_bet`], which is a raise-*to* total for
+    /// the street. This is the difference between the two.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::table_snapshot::TableSnapshot;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+    /// ]);
+    /// let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// table.act_forced_bets().unwrap();
+    /// // Seat 1 posted the big blind.
+    /// assert_eq!(100, TableSnapshot::from_table(&table, 1).my_committed());
+    /// ```
+    #[must_use]
+    pub fn my_committed(&self) -> usize {
+        self.stacks
+            .iter()
+            .find(|info| info.seat == self.seat)
+            .map_or(0, |info| info.bet)
+    }
+
+    /// This player's whole stack — chips behind plus chips already committed
+    /// this street. This is the ceiling an all-in raise-to reaches, and the
+    /// value the engine compares a `Raise(n)` against when deciding whether
+    /// `n` is an all-in (`Table::act_raise`).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::table_snapshot::TableSnapshot;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+    /// ]);
+    /// let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// table.act_forced_bets().unwrap();
+    /// let snap = TableSnapshot::from_table(&table, 1);
+    /// assert_eq!(900, snap.my_chips);          // behind
+    /// assert_eq!(1_000, snap.my_total_chips()); // behind + posted blind
+    /// ```
+    #[must_use]
+    pub fn my_total_chips(&self) -> usize {
+        self.my_chips.saturating_add(self.my_committed())
+    }
+
+    /// Minimum legal raise-*to* total, mirroring
+    /// [`Table::min_raise_to`](crate::casino::table::Table::min_raise_to).
+    ///
+    /// Normally `current_bet + min_raise`; with only a partial forced bet in
+    /// front of the actor (a stud bring-in) the raise *completes* to one full
+    /// increment instead.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::table_snapshot::TableSnapshot;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+    /// ]);
+    /// let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// table.act_forced_bets().unwrap();
+    /// let snap = TableSnapshot::from_table(&table, table.next_to_act());
+    /// assert_eq!(table.min_raise_to(), snap.min_raise_to());
+    /// ```
+    #[must_use]
+    pub fn min_raise_to(&self) -> usize {
+        BettingStructure::completion_raise_to(self.current_bet, self.min_raise)
+    }
+
+    /// Maximum legal raise-*to* total under this table's betting structure —
+    /// the whole stack in No-Limit, the pot clamp in Pot-Limit, the single
+    /// tier step in Fixed-Limit.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::table_snapshot::TableSnapshot;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+    /// ]);
+    /// let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// table.act_forced_bets().unwrap();
+    /// // No-Limit: the ceiling is the actor's entire stack.
+    /// let snap = TableSnapshot::from_table(&table, 1);
+    /// assert_eq!(1_000, snap.max_raise_to());
+    /// ```
+    #[must_use]
+    pub fn max_raise_to(&self) -> usize {
+        self.betting_structure.max_raise(
+            self.pot,
+            self.current_bet,
+            self.my_committed(),
+            self.my_total_chips(),
+            self.bet_tier,
+        )
+    }
+
+    /// The legal raise-to window `[min, max]`, or `None` when **no voluntary
+    /// raise of any size is legal** — either the per-street raise cap has been
+    /// reached, or the stack cannot cover the minimum.
+    ///
+    /// `DEFECT_007`: this is the check a decider must make before returning
+    /// `PlayerAction::Raise`. When it is `None` the only escalating action
+    /// available is `PlayerAction::AllIn`, which the engine always accepts.
+    ///
+    /// Mirrors [`Table::raise_bounds`](crate::casino::table::Table::raise_bounds)
+    /// and folds in the same three reasons a raise can be illegal, so the two
+    /// agree by construction.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bot::table_snapshot::TableSnapshot;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("Deep".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("Short".to_string(), 120)),
+    /// ]);
+    /// let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// table.act_forced_bets().unwrap();
+    /// table.deal_cards_to_seats().unwrap();
+    /// table.act_raise(table.determine_utg(), 500).unwrap();
+    /// // The short stack cannot reach the 900 minimum: no legal raise exists.
+    /// let snap = TableSnapshot::from_table(&table, table.next_to_act());
+    /// assert_eq!(None, snap.raise_bounds());
+    /// ```
+    #[must_use]
+    pub fn raise_bounds(&self) -> Option<(usize, usize)> {
+        if self.betting_structure.cap_reached(self.raises_this_street) {
+            return None;
+        }
+        let min = self.min_raise_to();
+        let max = self.max_raise_to();
+        if min > max { None } else { Some((min, max)) }
     }
 }
 
@@ -442,6 +606,94 @@ mod bot__table_snapshot_tests {
         let snap = TableSnapshot::from_table(&table, 0);
         // Before any raises, min_raise == big_blind
         assert_eq!(snap.big_blind, snap.min_raise);
+    }
+
+    /// `DEFECT_007`: a snapshot's betting bounds must agree with the live table's,
+    /// because the engine validates against the table.
+    fn heads_up_after_a_raise() -> Table {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Alice".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("Bob".to_string(), 1_000)),
+        ]);
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        let utg = table.determine_utg();
+        table.act_raise(utg, 300).unwrap();
+        table
+    }
+
+    #[test]
+    fn my_committed_counts_chips_already_in_this_street() {
+        let table = heads_up_after_a_raise();
+        let raiser = table.determine_utg();
+        let snap = TableSnapshot::from_table(&table, raiser);
+        assert_eq!(300, snap.my_committed());
+    }
+
+    #[test]
+    fn my_total_chips_adds_the_live_bet_back_to_the_stack() {
+        let table = heads_up_after_a_raise();
+        let raiser = table.determine_utg();
+        let snap = TableSnapshot::from_table(&table, raiser);
+        assert_eq!(1_000, snap.my_total_chips());
+        assert_eq!(700, snap.my_chips);
+    }
+
+    #[test]
+    fn min_raise_to_matches_the_table() {
+        let table = heads_up_after_a_raise();
+        let actor = table.next_to_act();
+        let snap = TableSnapshot::from_table(&table, actor);
+        assert_eq!(table.min_raise_to(), snap.min_raise_to());
+    }
+
+    #[test]
+    fn raise_bounds_match_the_table() {
+        let table = heads_up_after_a_raise();
+        let actor = table.next_to_act();
+        let snap = TableSnapshot::from_table(&table, actor);
+        assert_eq!(table.raise_bounds(actor), snap.raise_bounds());
+    }
+
+    /// `DEFECT_007` (second instance): in a capped structure a raise can be
+    /// illegal for a reason that has nothing to do with the stack.
+    #[test]
+    fn raise_bounds_is_none_when_the_fixed_limit_cap_is_reached() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 100_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 100_000)),
+        ]);
+        // small_bet 50, big_bet 100, cap of 2 raises per street.
+        let mut table = Table::limit_holdem_from_seats(seats, 50, 100, 2);
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        table.act_raise(table.next_to_act(), 100).unwrap();
+        table.act_raise(table.next_to_act(), 150).unwrap();
+
+        let actor = table.next_to_act();
+        let snap = TableSnapshot::from_table(&table, actor);
+        assert_eq!(2, snap.raises_this_street);
+        assert_eq!(None, table.raise_bounds(actor), "cap reached on the table");
+        assert_eq!(None, snap.raise_bounds(), "snapshot must agree with the table");
+    }
+
+    #[test]
+    fn raise_bounds_is_none_when_the_stack_cannot_cover_the_minimum() {
+        // Short stack: 120 behind a 100 big blind that has been raised to 500.
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Deep".to_string(), 5_000)),
+            Seat::new(Player::new_with_chips("Short".to_string(), 120)),
+        ]);
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        let utg = table.determine_utg();
+        table.act_raise(utg, 500).unwrap();
+        let short = table.next_to_act();
+        let snap = TableSnapshot::from_table(&table, short);
+        assert_eq!(None, snap.raise_bounds());
+        assert_eq!(table.raise_bounds(short), snap.raise_bounds());
     }
 
     #[test]

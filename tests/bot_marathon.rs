@@ -19,7 +19,6 @@
 //! ```
 
 use pkcore::bot::profile::BotProfile;
-use pkcore::casino::action::PlayerAction;
 use pkcore::casino::game::ForcedBets;
 use pkcore::casino::session::PokerSession;
 use pkcore::casino::table::{Player, Seat, Seats, Table};
@@ -161,18 +160,28 @@ fn bot_marathon__1000_hands_without_error() {
             })
             .collect();
 
-        // Bot action loop with AllIn/Check fallback for invalid actions.
+        // Bot action loop. There is deliberately NO fallback here: a bot that
+        // returns an action the engine rejects is a defect in the bot, and this
+        // is the one place a long, blind-escalating run happens. The AllIn/Check
+        // fallback that used to sit here is what hid DEFECT_007 for three months
+        // and two releases — it turned the harness that would have caught the
+        // defect into the harness that concealed it.
         while let Some(seat) = session.next_actor() {
             let profile = &profiles[seat as usize % profiles.len()];
             let action = profile.decide(&session.table, seat, &mut rng);
-            if session.apply_action(seat, action).is_err() {
-                let fallback = if session.table.to_call(seat) > 0 {
-                    PlayerAction::AllIn
-                } else {
-                    PlayerAction::Check
-                };
-                // Ignore fallback error — the engine handles edge cases gracefully.
-                let _ = session.apply_action(seat, fallback);
+            if let Err(e) = session.apply_action(seat, action) {
+                dump_and_panic(
+                    hand_num,
+                    "apply_action",
+                    format!(
+                        "seat {seat} returned {action:?}, which the engine rejected: {e} \
+                         (to_call={} min_raise_to={} raise_bounds={:?})",
+                        session.table.to_call(seat),
+                        session.table.min_raise_to(),
+                        session.table.raise_bounds(seat),
+                    ),
+                    &collection,
+                );
             }
         }
 

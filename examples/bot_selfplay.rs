@@ -208,7 +208,19 @@ fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl 
 
         let action = profile.decide(&session.table, seat, rng);
         let desc = action_desc(&session.table, seat, action);
-        let _ = session.apply_action(seat, action);
+        // DEFECT_007: `let _ = ...` here discarded genuine engine errors and
+        // suppressed the only signal the sub-minimum-raise defect produced.
+        // A rejected bot action is a bug — say so instead of playing on.
+        if let Err(e) = session.apply_action(seat, action) {
+            eprintln!("    !! seat {seat} returned {action:?}, rejected by the engine: {e}");
+            eprintln!(
+                "       to_call={} min_raise_to={} raise_bounds={:?}",
+                session.table.to_call(seat),
+                session.table.min_raise_to(),
+                session.table.raise_bounds(seat),
+            );
+            std::process::exit(1);
+        }
         let pot_after = session.table.effective_pot();
 
         println!(
