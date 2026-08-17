@@ -3,10 +3,10 @@
 **File:** `docs/defects/DEFECT_009_substantial_action_predicate.md`
 **Date:** 2026-08-16
 **Severity:** Major (structural) — no wrong output of its own; blocks five rules that each govern a correction window
-**Status:** Open — no fix applied. Verified absent by exhaustive search at `3ccc7202` (`main`, 2026-08-16), pkcore `0.4.0`.
+**Status:** **Fixed** in pkcore `0.5.0` on 2026-08-17. Verified absent by exhaustive search at `3ccc7202` (`main`, 2026-08-16), pkcore `0.4.0`.
 **Reported by:** Promoted from `DEFECT_008` finding **D8-5** (TDA 2024 conformance audit)
 **Introduced in:** Never existed. This is an absence from inception, not a regression — no commit removed it and no test ever covered it.
-**Fixed in:** —
+**Fixed in:** pkcore `0.5.0` — `Table::substantial_action`, eleven assertions in `tests/tda_conformance.rs`.
 
 ---
 
@@ -210,6 +210,15 @@ guard. A small private helper called from all six is preferable to six duplicate
 increments, and makes the exclusion of the forced-post paths visible by their
 *not* calling it.
 
+> **As landed (0.5.0):** the choke point already existed. `DEFECT_010` added
+> `record_action_level`, called from exactly those six entry points after their
+> turn guards to stamp the 47-A bet level. This fix widened it rather than
+> adding a second helper: it is now `record_voluntary_action(seat_number,
+> chips)`, taking a private `ChipCommitment` enum (`Chips` / `NoChips`) so
+> clause A's distinction is legible at each call site. One choke point means
+> Rules 36 and 47-A cannot drift apart on what counts as "an action" — which is
+> a stronger guarantee than two helpers kept in step by convention.
+
 ### Reset sites
 
 Both existing boundaries, alongside `raises_this_street`:
@@ -323,14 +332,27 @@ Observed at `3ccc7202` on 2026-08-16: `rg` returns no matches;
 `raises_this_street` appears at exactly the four cited lines; the full suite is
 green.
 
-Exit criteria for the fix:
+### After the fix — pkcore `0.5.0`, 2026-08-17
 
-1. `Table::substantial_action()` exists and is doc-commented with `TDA 2024 Rule 36`.
-2. All eleven Test Plan assertions pass.
-3. `cargo test --test tda_conformance` still green; the Rule 36 assertions join the
-   conformant group.
-4. `rg -c 'substantial_action' src/` returns a non-zero count — the inverse of the
-   check that established this defect.
+```bash
+rg -c 'substantial_action' src/          # non-zero — the inverse of the check above
+cargo test --test tda_conformance        # 23 passed, 3 ignored (D8-1, D8-3, D8-4)
+make ayce                                # 9278 passed, 695 doctests passed
+```
+
+All four exit criteria met:
+
+1. `Table::substantial_action()` exists (`src/casino/table/actions.rs`), is
+   doc-commented with `TDA 2024 Rule 36`, and carries a doc test.
+2. All eleven Test Plan assertions pass, in `tests/tda_conformance.rs`.
+3. `cargo test --test tda_conformance` is green; the Rule 36 assertions joined the
+   conformant group and the harness header no longer lists Rule 36 as uncoverable.
+4. `rg -c 'substantial_action' src/` returns a non-zero count.
+
+Written test-first: the eleven assertions were committed against a predicate that
+did not exist, and the observed RED was thirteen `E0599 no method named
+substantial_action` errors — not an assertion failure. That is the signature of
+this whole class of defect and is worth keeping in the record.
 
 ---
 

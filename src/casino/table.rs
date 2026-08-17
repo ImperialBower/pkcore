@@ -119,6 +119,19 @@ pub struct Table {
     /// ([`reset`](Table::reset)). Used by Fixed-Limit variants to
     /// enforce the per-street raise cap; `NoLimit` and `PotLimit` ignore it.
     pub raises_this_street: u8,
+    /// In-turn voluntary actions taken on the current betting street
+    /// (`DEFECT_009`, TDA 2024 Rule 36). Forced posts — blinds, antes, the
+    /// stud bring-in — do **not** count. Reset alongside
+    /// [`raises_this_street`](Table::raises_this_street) at both the street
+    /// boundary ([`bring_it_in`](Table::bring_it_in)) and the hand boundary
+    /// ([`reset`](Table::reset)). Read only through
+    /// [`substantial_action`](Table::substantial_action).
+    pub actions_this_street: u8,
+    /// The subset of [`actions_this_street`](Table::actions_this_street) that
+    /// put chips in the pot — bet, call, raise and all-in. Checks and folds do
+    /// not. This is the whole content of Rule 36's clause A, which
+    /// `raises_this_street` cannot express because it counts raises only.
+    pub chip_actions_this_street: u8,
 }
 
 impl Table {
@@ -396,6 +409,8 @@ impl Table {
             dealt_hole_cards: HashMap::new(),
             betting,
             raises_this_street: 0,
+            actions_this_street: 0,
+            chip_actions_this_street: 0,
         }
     }
 
@@ -1372,6 +1387,10 @@ impl Table {
         // boundary so Fixed-Limit raise-cap accounting starts fresh on the
         // next street.
         self.raises_this_street = 0;
+        // DEFECT_009 / TDA 2024 Rule 36: substantial action is a property of
+        // the betting round, so it dies with the street.
+        self.actions_this_street = 0;
+        self.chip_actions_this_street = 0;
         self.pot += collected;
         self.log(TableAction::BringItIn(collected));
         self.log(TableAction::PotSize(self.pot));
@@ -1491,6 +1510,9 @@ impl Table {
         // EPIC-30 Phase 2: reset per-street raise counter when starting
         // a fresh hand.
         self.raises_this_street = 0;
+        // DEFECT_009 / TDA 2024 Rule 36: a fresh hand inherits no action count.
+        self.actions_this_street = 0;
+        self.chip_actions_this_street = 0;
         self.phase = GamePhase::NewHand;
         self.dealt_hole_cards.clear();
     }

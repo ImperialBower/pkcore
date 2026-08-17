@@ -3,7 +3,7 @@
 **File:** `docs/defects/DEFECT_008_tda_2024_rules_compliance.md`
 **Date:** 2026-08-16
 **Severity:** Major (4 Major, 2 Minor — no incorrect *pot total*; all findings distribute, size or gate chips wrongly)
-**Status:** Open — no fix applied. All six verified by source reading at `90d60e70` (`main`, 2026-08-16), pkcore `0.4.0`.
+**Status:** Partially fixed. D8-2 fixed in `0.5.0` (`DEFECT_010`), D8-5 in `0.5.0` (`DEFECT_009`); D8-1, D8-3, D8-4 and D8-6 remain open. All six verified by source reading at `90d60e70` (`main`, 2026-08-16), pkcore `0.4.0`.
 **Reported by:** Audit of pkcore against the parsed TDA 2024 ruleset in the sibling `tda_parsed` repo (`tda_2024_online.yaml`)
 **Introduced in:** Not bisected. These are absences and long-standing behaviours, not regressions — no introducing commit was identified, and none of the six has ever had a passing test that later broke.
 **Fixed in:** —
@@ -54,7 +54,7 @@ See [Coverage Gap](#coverage-gap).
 | D8-2 | 47-A | No re-open gate: a player who already acted may re-raise facing a sub-minimum increment | Major | `casino/table/actions.rs:337` — promoted to `DEFECT_010`, **fixed in 0.5.0** |
 | D8-3 | 54-B | Pot-limit pre-flop max uses the actual pot; a dead/short blind shrinks it | Major | `games/betting_structure.rs:170` |
 | D8-4 | 32 | Dead button not implemented — blinds skip to the next occupied seat | Major | `casino/table.rs:479` |
-| D8-5 | 36 | No substantial-action predicate exists; blocks rules 22, 34-A, 35-D, 52-A, 53-B | Major (structural) | absence across `src/` — **promoted to `DEFECT_009`** |
+| D8-5 | 36 | No substantial-action predicate exists; blocks rules 22, 34-A, 35-D, 52-A, 53-B | Major (structural) | absence across `src/` — promoted to `DEFECT_009`, **fixed in 0.5.0** |
 | D8-6 | 48 | Fixed-limit raise cap cannot lift when the event reaches two players | Minor | `games/betting_structure.rs:231` |
 
 Two further deviations are recorded as [Accepted divergences](#accepted-divergences)
@@ -167,7 +167,9 @@ the rule in one testable place.
 > The rule now has one implementation, `Table::is_reopen_gated`, consulted by
 > both `Table::raise_bounds` and `TableSnapshot`, and seven assertions in
 > `tests/tda_conformance.rs` pin it. Three D8-N findings remain open: D8-1,
-> D8-3, D8-4.
+> D8-3, D8-4. The choke point this fix introduced,
+> `record_voluntary_action`, is also where `DEFECT_009` counts substantial
+> action.
 
 **Severity:** Major — permits an illegal action that materially changes hand outcomes.
 
@@ -436,10 +438,17 @@ histories or version the behaviour — see [Prevention](#prevention).
 
 ## D8-5: No substantial-action predicate exists
 
-> **Promoted to [`DEFECT_009_substantial_action_predicate.md`](DEFECT_009_substantial_action_predicate.md) on 2026-08-16.**
+> **Promoted to [`DEFECT_009_substantial_action_predicate.md`](DEFECT_009_substantial_action_predicate.md) on 2026-08-16,
+> and fixed there on 2026-08-17 in pkcore `0.5.0`.**
 > That document supersedes this section: it carries the full predicate design, the
 > increment and reset sites, the eleven-assertion test plan, and the open question
 > about the stud bring-in. The analysis below is retained for the audit record.
+>
+> `Table::substantial_action` now exists, backed by two counters incremented at
+> the same choke point `DEFECT_010` introduced, and eleven assertions in
+> `tests/tda_conformance.rs` pin it. The five rules it unblocks — 22, 34-A, 35-D,
+> 52-A, 53-B — remain unimplemented; each is its own change. Three D8-N findings
+> remain open: D8-1, D8-3, D8-4.
 
 **Severity:** Major (structural) — an absence that blocks five other rules.
 
@@ -627,8 +636,9 @@ at the wrong altitude, not that the fixes are safe.
   pkcore. As landed: **5 conformant tests pass**, and **4 assert the TDA answer for
   D8-1 through D8-4 and are `#[ignore]`d** with their finding id, so CI stays green
   while the defects stay recorded in executable form. Un-`ignore` each as it is fixed.
-  D8-5 has no test — the predicate does not exist, so any assertion naming it would not
-  compile.
+  D8-5 had no test — the predicate did not exist, so any assertion naming it would not
+  compile. `DEFECT_009` closed that in `0.5.0`; eleven Rule 36 assertions are now in
+  the conformant group, and D8-2's seven joined it in `0.5.0`.
 
   Writing it immediately paid for itself: the harness **corrected this report**. D8-3
   was originally written up as yielding 400 in TDA Example 2 on the reasoning that a
@@ -667,7 +677,7 @@ at the wrong altitude, not that the fixes are safe.
 | `src/casino/table.rs:518` | `determine_big_blind` — same walk, offset 2 | D8-4 |
 | `src/casino/table.rs:1463` | `button_up` — index advance (correct; context for D8-4) | D8-4 |
 | `src/games/betting_structure.rs:231` | `cap_reached` — per-street cap only | D8-6 |
-| — | no substantial-action predicate anywhere in `src/` | D8-5 |
+| — | no substantial-action predicate anywhere in `src/` (added in `0.5.0`) | D8-5 |
 
 ---
 
@@ -692,9 +702,10 @@ belong in `pkdealer/docs/defects`:
 `Status: Open` — nothing has been fixed. What *has* landed is
 `tests/tda_conformance.rs`, which turns D8-1 through D8-4 into executable assertions.
 
-D8-1 through D8-4 are reproduced by that harness. D8-5 and D8-6 remain source-reading
-findings: D8-5 is an absence that cannot be asserted against, and D8-6 is unreachable
-until an event model exists.
+D8-1 through D8-4 are reproduced by that harness. D8-6 remains a source-reading
+finding — it is unreachable until an event model exists. D8-5 was a source-reading
+finding for the same reason an absence always is; `DEFECT_009` made it assertable and
+then fixed it.
 
 ```bash
 cd /Users/christoph/src/github.com/ImperialBower/pkcore
@@ -708,7 +719,8 @@ cargo test --test tda_conformance
 
 # Citations for the findings the harness cannot hold.
 sed -n '231,236p' src/games/betting_structure.rs             # D8-6 cap_reached
-rg -c 'substantial_action' src/                              # D8-5: expect no matches
+rg -c 'substantial_action' src/                              # D8-5: no matches at 90d60e70;
+                                                             # non-zero from 0.5.0 onward
 
 cargo test                                                    # expect green — see Coverage Gap
 ```

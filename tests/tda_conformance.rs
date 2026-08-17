@@ -39,12 +39,13 @@
 //!
 //! # Not covered here
 //!
-//! - **Rule 21 (side pots split separately)** — already covered by `tests/split_pots.rs`,
-//!   added for `DEFECT_003`. Not duplicated.
-//! - **Rule 36 (substantial action)** — `DEFECT_008` D8-5. No test is possible: the
-//!   predicate does not exist, so any assertion referencing it fails to compile. The
-//!   absence is verifiable only as `rg -c 'substantial_action' src/` returning zero.
-//!   This is the one finding this harness cannot hold.
+//! Rule 36 (substantial action) was the one finding this harness could not
+//! hold — an absent predicate cannot be asserted against, so any test naming it failed
+//! to *compile*. `DEFECT_009` added `Table::substantial_action`, and the eleven Rule 36
+//! assertions now sit in the conformant group.
+//!
+//! Rule 21 (side pots split separately) is covered by `tests/split_pots.rs`, added for
+//! `DEFECT_003`, and is not duplicated here.
 //!
 //! TDA rules used by permission of the Poker TDA, <http://www.pokertda.com>,
 //! all rights reserved.
@@ -147,9 +148,16 @@ mod tda_2024_conformance {
     /// the minimum raise is still *the last full valid bet or raise of the round* —
     /// not the accumulated total of the short shoves.
     ///
-    /// > Blinds 50-100. Post-flop, A opens betting for the 100 minimum. B goes all in
-    /// > for a total of 125. C calls the 125. D goes all in for 200 total and E calls
-    /// > 200. […] neither B's increment of 25 or D's increment of 75 is by itself a
+    /// ## Scenario Blinds 50-100
+    ///
+    /// - Post-flop
+    ///   - A opens betting for the 100 minimum.
+    ///   - B goes all in for a total of 125
+    ///   - C calls the 125.
+    ///   - D goes all in for 200 total
+    ///   - E calls 200
+    ///
+    /// > Neither B's increment of 25 or D's increment of 75 is by itself a
     /// > full raise, but when added together they total a full raise.
     ///
     /// The published minimum re-raise for the re-opened player is **300**.
@@ -423,6 +431,240 @@ mod tda_2024_conformance {
             !table.is_reopen_gated(a),
             "TDA 47-A is scoped to no-limit and pot-limit; fixed-limit is governed \
              by its own rule and its own raise cap"
+        );
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
+    // TDA Rule 36 — Substantial Action (`DEFECT_009`)
+    //
+    // > Substantial Action is either A) any 2 actions in turn, at least one of
+    // > which puts chips in the pot (i.e. any 2 actions except 2 checks or 2
+    // > folds) or B) any combination of 3 actions in turn (check, bet, raise,
+    // > call, fold). Posted blinds do not count towards SA.
+    //
+    // Eleven assertions: the seven that transcribe the rule's own text and its
+    // stated counter-examples, then four that pin the mechanics the rule
+    // implies — the two reset boundaries, the turn guard, and the bring-in
+    // interpretation.
+    // ───────────────────────────────────────────────────────────────────────
+
+    /// Drives the three-handed pre-flop round to its close and deals the flop,
+    /// leaving the table on a fresh street with the counters cleared. Seat 0 is
+    /// the button and therefore under the gun; seat 1 acts first post-flop.
+    fn three_handed_to_the_flop() -> Table {
+        let mut table = nlhe(&[50_000; 3], 50, 100);
+        let utg = table.next_to_act();
+        table.act_call(utg).expect("UTG calls 100");
+        let sb = table.next_to_act();
+        table.act_call(sb).expect("SB completes to 100");
+        let bb = table.next_to_act();
+        table.act_check(bb).expect("BB checks the option");
+        table.bring_it_in().expect("pre-flop closes");
+        table.deal_flop().expect("flop should deal");
+        table
+    }
+
+    /// **Rule 36, the exclusion clause.** "Posted blinds do not count towards
+    /// SA." A hand where both blinds are up and nobody has voluntarily acted
+    /// has a substantial action of zero.
+    #[test]
+    fn blinds_alone_are_not_substantial_action() {
+        let table = nlhe(&[50_000; 3], 50, 100);
+
+        assert!(
+            !table.substantial_action(),
+            "TDA 36: a posted blind is not an action, so two blinds are not SA"
+        );
+    }
+
+    /// **Rule 36, clause A counter-example.** The rule names two checks as the
+    /// case that is explicitly *not* SA.
+    #[test]
+    fn two_checks_are_not_substantial_action() {
+        let mut table = three_handed_to_the_flop();
+
+        let first = table.next_to_act();
+        table.act_check(first).expect("first checks");
+        let second = table.next_to_act();
+        table.act_check(second).expect("second checks");
+
+        assert!(
+            !table.substantial_action(),
+            "TDA 36 A: 2 actions, neither committing chips, is not SA"
+        );
+    }
+
+    /// **Rule 36, clause A's other counter-example.** Two folds put no chips in
+    /// the pot either.
+    #[test]
+    fn two_folds_are_not_substantial_action() {
+        let mut table = nlhe(&[50_000; 4], 50, 100);
+
+        let utg = table.next_to_act();
+        table.act_fold(utg).expect("UTG folds");
+        let next = table.next_to_act();
+        table.act_fold(next).expect("button folds");
+
+        assert!(
+            !table.substantial_action(),
+            "TDA 36 A: 2 folds commit no chips, so they are not SA"
+        );
+    }
+
+    /// **Rule 36, clause A.** Two actions where one puts chips in the pot.
+    #[test]
+    fn check_then_bet_is_substantial_action() {
+        let mut table = three_handed_to_the_flop();
+
+        let first = table.next_to_act();
+        table.act_check(first).expect("first checks");
+        let second = table.next_to_act();
+        table.act_bet(second, 200).expect("second bets 200");
+
+        assert!(
+            table.substantial_action(),
+            "TDA 36 A: 2 actions, one of which committed chips, is SA"
+        );
+    }
+
+    /// **Rule 36, clause A** reached without an opening bet — the chip action
+    /// is a call, and the action before it is a fold. Clause A cares only that
+    /// *one* of the two moved chips, not which one or that it opened betting.
+    #[test]
+    fn fold_then_call_is_substantial_action() {
+        let mut table = nlhe(&[50_000; 4], 50, 100);
+
+        let utg = table.next_to_act();
+        table.act_fold(utg).expect("UTG folds");
+        let next = table.next_to_act();
+        table.act_call(next).expect("button calls 100");
+
+        assert!(
+            table.substantial_action(),
+            "TDA 36 A: fold + call is 2 actions with one committing chips"
+        );
+    }
+
+    /// **Rule 36, clause B.** Three actions of any kind, with no chips moved at
+    /// all — clause A can never fire here, so this isolates clause B.
+    #[test]
+    fn three_checks_are_substantial_action() {
+        let mut table = three_handed_to_the_flop();
+
+        for _ in 0..3 {
+            let seat = table.next_to_act();
+            table.act_check(seat).expect("check around");
+        }
+
+        assert!(
+            table.substantial_action(),
+            "TDA 36 B: any 3 in-turn actions are SA, chips or no chips"
+        );
+    }
+
+    /// **Rule 36, clause B** again, with the other chipless action. Three folds
+    /// are SA even though two folds are not — the clauses differ only in count.
+    #[test]
+    fn three_folds_are_substantial_action() {
+        let mut table = nlhe(&[50_000; 5], 50, 100);
+
+        for _ in 0..3 {
+            let seat = table.next_to_act();
+            table.act_fold(seat).expect("fold around");
+        }
+
+        assert!(
+            table.substantial_action(),
+            "TDA 36 B: 3 folds are 3 in-turn actions, so SA even with no chips"
+        );
+    }
+
+    /// SA is a property of the current betting round. Closing the street clears
+    /// it, so a new street starts back at zero.
+    #[test]
+    fn substantial_action_resets_at_street_boundary() {
+        let mut table = three_handed_to_the_flop();
+        let first = table.next_to_act();
+        table.act_check(first).expect("first checks");
+        let second = table.next_to_act();
+        table.act_bet(second, 200).expect("second bets 200");
+        assert!(table.substantial_action(), "SA is reached on the flop");
+
+        let third = table.next_to_act();
+        table.act_call(third).expect("third calls");
+        let closer = table.next_to_act();
+        table.act_call(closer).expect("first calls, closing the street");
+        table.bring_it_in().expect("flop closes");
+
+        assert!(
+            !table.substantial_action(),
+            "SA is a per-street question; the street boundary clears it"
+        );
+    }
+
+    /// The hand boundary clears it too, so the next hand cannot inherit the
+    /// previous one's action count.
+    #[test]
+    fn substantial_action_resets_at_hand_boundary() {
+        let mut table = three_handed_to_the_flop();
+        let first = table.next_to_act();
+        table.act_check(first).expect("first checks");
+        let second = table.next_to_act();
+        table.act_bet(second, 200).expect("second bets 200");
+        assert!(table.substantial_action(), "SA is reached on the flop");
+
+        table.reset();
+
+        assert!(
+            !table.substantial_action(),
+            "a new hand starts with no substantial action"
+        );
+    }
+
+    /// Rule 36 counts actions **in turn**. An action pkcore refuses because it
+    /// is out of turn never happened, so it must not move either counter.
+    #[test]
+    fn rejected_out_of_turn_action_does_not_count() {
+        let mut table = nlhe(&[50_000; 3], 50, 100);
+
+        let utg = table.next_to_act();
+        table.act_call(utg).expect("UTG calls — one in-turn chip action");
+
+        let out_of_turn = table.next_to_act() + 1;
+        assert!(
+            table.act_fold(out_of_turn).is_err(),
+            "the seat after the actor cannot act yet"
+        );
+        assert!(
+            table.act_raise(out_of_turn, 300).is_err(),
+            "nor can it raise out of turn"
+        );
+
+        assert!(
+            !table.substantial_action(),
+            "TDA 36: only actions in turn count, so one in-turn call is still \
+             one action and short of both clauses"
+        );
+    }
+
+    /// **Interpretation, not a quotation.** Rule 36 excludes "posted blinds"
+    /// and says nothing about the stud bring-in. The bring-in is structurally a
+    /// forced post and is treated as one throughout pkcore, so it is excluded
+    /// on the same grounds. This test pins that reading so a later one can find
+    /// and challenge it.
+    #[test]
+    fn stud_bring_in_is_not_substantial_action() {
+        let seats = Seats::new(vec![seat("A", 10_000), seat("B", 10_000), seat("C", 10_000)]);
+        // ante 2, bring-in 5, small bet 20, big bet 40.
+        let mut table = Table::stud_hi_from_seats(seats, 2, 5, 20, 40);
+        table.act_forced_bets().expect("antes should post");
+        table.deal_stud_3rd_street().expect("3rd street should deal");
+        table.act_bring_in().expect("bring-in should post");
+
+        assert!(
+            !table.substantial_action(),
+            "the bring-in is a forced post, so it is excluded exactly as a \
+             posted blind is"
         );
     }
 

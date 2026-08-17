@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.0] - 2026-08-16
 
+### Added
+
+- **`Table::substantial_action` — TDA 2024 Rule 36**
+  ([DEFECT_009](docs/defects/DEFECT_009_substantial_action_predicate.md)).
+  Substantial action is the point in a betting round past which an error stops
+  being correctable: two in-turn actions where at least one put chips in the
+  pot, or any three in-turn actions. pkcore had no predicate for it at all,
+  which left five further rules — 22, 34-A, 35-D, 52-A and 53-B, each of which
+  governs a correction window — with no way to be implemented correctly. This
+  change delivers the predicate and its tests only; the five rules it unblocks
+  remain unimplemented and are each their own change.
+
+  Two new public counters on `Table` back it: `actions_this_street` and
+  `chip_actions_this_street`. They are deliberately kept separate from
+  `raises_this_street`, which counts raises for the fixed-limit raise cap and
+  can express neither clause of Rule 36 — merging them would couple the raise
+  cap to five error-correction rules.
+
+  Rule 36's exclusion of posted blinds falls out of where the counting happens:
+  the six voluntary entry points share one choke point, renamed
+  `record_voluntary_action`, and the forced-post paths (`act_forced_bets`,
+  `act_antes`, `act_bring_in`) do not call it. Because that choke point sits
+  after each entry point's turn guard, an action refused as out of turn never
+  counts. **Interpretation, recorded as such:** Rule 36 names posted blinds and
+  says nothing about the stud bring-in; the bring-in is excluded here on the
+  grounds that it is structurally a forced post, and
+  `stud_bring_in_is_not_substantial_action` pins that reading so a later one can
+  find and challenge it.
+
 ### Fixed
 
 - **A player who had already acted could re-raise a short all-in**
@@ -48,6 +77,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `sub_min_all_in_does_not_change_raise_increment`. It asserts that
   `raise_increment` is unchanged and never tested re-opening; the old name
   suggested Rule 47-A's rights gate was covered when it was not.
+- **`tests/tda_conformance.rs` now covers every reproducible finding of the TDA
+  2024 audit.** Rule 36 was previously listed there as the one finding the
+  harness could not hold — an absent predicate cannot be asserted against, so
+  any test naming it failed to *compile* rather than to fail. Eleven Rule 36
+  assertions join the conformant group: the rule's own clauses and its two
+  stated counter-examples, the two reset boundaries, the turn guard, and the
+  bring-in interpretation.
 
 ## [0.4.0] - 2026-08-16
 
