@@ -14,9 +14,11 @@
 //!
 //! 1. **Conformant** — rules pkcore already satisfies. These pin behaviour that is
 //!    correct today so a future change has to argue with the TDA rather than with us.
-//!    Rule 47-A's re-open *rights* gate sits in this group as of `DEFECT_010`; it
-//!    was a known defect until that fix, and its reproducing assertion is now the
-//!    first of seven tests pinning the rule.
+//!    Three rules moved into this group by being fixed rather than by being right all
+//!    along: Rule 47-A's re-open *rights* gate (`DEFECT_010`), Rule 36's
+//!    substantial-action predicate (`DEFECT_009`), and Rule 20's odd chip
+//!    (`DEFECT_011`). Each one's reproducing assertion is still here — it simply
+//!    passes now.
 //! 2. **Known defects** — every one is `#[ignore]`d with its `DEFECT_008` finding id.
 //!    They assert the TDA-correct answer and therefore **fail today, by design**. CI
 //!    stays green; run them on demand:
@@ -668,12 +670,22 @@ mod tda_2024_conformance {
         );
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // Known defects — DEFECT_008. These assert the TDA answer and fail today.
-    // ═══════════════════════════════════════════════════════════════════════
+    // ───────────────────────────────────────────────────────────────────────
+    // TDA Rule 20 — the odd chip (`DEFECT_011`)
+    // ───────────────────────────────────────────────────────────────────────
 
-    /// TDA 20-A ordering, as a reference implementation: among tied winners, the odd
-    /// chip goes to the first seat to the **left of the button**, wrapping.
+    /// Checks the street around for every seat still owed action.
+    fn check_around(table: &mut Table) {
+        while !table.seats.is_betting_complete() {
+            let seat = table.next_to_act();
+            table.act_check(seat).expect("check around");
+        }
+    }
+
+    /// TDA 20-A ordering, as an independent reference implementation: among tied
+    /// winners, the odd chip goes to the first seat to the **left of the button**,
+    /// wrapping. Deliberately written from the rule text rather than by calling
+    /// pkcore, so it cannot drift with the implementation it checks.
     fn tda_20a_first_seat_left_of_button(winners: &[u8], button: u8, seat_count: u8) -> u8 {
         (1..=seat_count)
             .map(|step| (button + step) % seat_count)
@@ -681,40 +693,138 @@ mod tda_2024_conformance {
             .expect("at least one winner must be seated")
     }
 
-    /// **TDA Rule 20-A** — `DEFECT_008` D8-1.
+    /// **TDA Rule 20-A**, driven through a real showdown.
     ///
     /// > Board games with 2 or more high or low hands: the odd chip goes to the
     /// > **first seat left of the button**.
     ///
-    /// `Stack::divvy_up` (`src/casino/cashier/chips.rs:95`) awards the remainder to the
-    /// *last* indices of the winners vector, and `CaseEval::winning_seats`
-    /// (`src/analysis/case_eval.rs:231`) yields seats in ascending order. Composed,
-    /// the odd chip always lands on the highest-numbered winning seat, with no
-    /// reference to the button at all.
+    /// Eight seats, button on **7**, blinds 25/50. Seats 2 and 5 call and everyone
+    /// else folds, so the pot is 25 + 50 + 50 + 50 = **175** — odd on purpose. The
+    /// board is aces full of kings and neither live hand improves on it, so the two
+    /// play the board and tie exactly.
     ///
-    /// With the button on seat 7 and tied winners on seats 2 and 5, TDA awards the odd
-    /// chip to seat 2; pkcore awards it to seat 5.
+    /// 175 splits as 87 and 88. TDA puts the extra chip on the first tied seat left
+    /// of the button, which with the button on 7 is seat **2**.
+    ///
+    /// *Setup note:* the board is stacked into the deck rather than drawn at random,
+    /// because a tie has to be certain for the assertion to mean anything. Burn cards
+    /// are included in the stack so the real dealing path runs unmodified.
     #[test]
-    #[ignore = "DEFECT_008 D8-1: odd chip goes to the highest-numbered winning seat, not first-left-of-button"]
     fn rule_20_a_odd_chip_goes_to_the_first_seat_left_of_the_button() {
         const SEAT_COUNT: u8 = 8;
-        let winners: Vec<u8> = vec![2, 5]; // ascending, as winning_seats() returns
-        let button: u8 = 7;
+        let winners = [2u8, 5u8];
 
-        let shares = Stack::new(101).divvy_up(winners.len());
-        let odd_index = shares
+        let seats = Seats::new((0..SEAT_COUNT).map(|i| seat(&format!("P{i}"), 5_000)).collect());
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(25, 50));
+        table.button = 7;
+        table.act_forced_bets().expect("forced bets should post");
+
+        // Hole cards for every seat; the two winners hold cards that cannot beat or
+        // separate the board.
+        table
+            .inject_hole_cards(&[
+                (0, "2♠ 3♠"),
+                (1, "4♠ 5♠"),
+                (2, "7♦ 8♦"),
+                (3, "6♠ 7♠"),
+                (4, "8♠ 9♠"),
+                (5, "9♣ T♣"),
+                (6, "T♠ J♠"),
+                (7, "Q♠ J♥"),
+            ])
+            .expect("hole cards should inject");
+
+        // burn, flop, burn, turn, burn, river.
+        table.deck = Cards::from_str("2♣ A♠ A♥ A♦ 3♣ K♠ 4♣ K♥").expect("stacked deck");
+
+        // Button 7 of 8 → SB 0, BB 1, UTG 2. Order: 2 3 4 5 6 7 0 1.
+        table.act_call(2).expect("seat 2 calls 50");
+        table.act_fold(3).expect("seat 3 folds");
+        table.act_fold(4).expect("seat 4 folds");
+        table.act_call(5).expect("seat 5 calls 50");
+        table.act_fold(6).expect("seat 6 folds");
+        table.act_fold(7).expect("seat 7 folds");
+        table.act_fold(0).expect("small blind folds");
+        table.act_fold(1).expect("big blind folds the option");
+
+        table.bring_it_in().expect("pre-flop closes");
+        table.deal_flop().expect("flop");
+        check_around(&mut table);
+        table.bring_it_in().expect("flop closes");
+        table.deal_turn().expect("turn");
+        check_around(&mut table);
+        table.bring_it_in().expect("turn closes");
+        table.deal_river().expect("river");
+        check_around(&mut table);
+
+        let before: Vec<usize> = winners
             .iter()
-            .position(|s| s.count() == 51)
-            .expect("one share carries the odd chip");
-        let awarded_to = winners[odd_index];
+            .map(|&s| table.seats.get_seat(s).expect("seat").player.chips)
+            .collect();
+        table.end_hand().expect("hand should end");
+        let gained: Vec<usize> = winners
+            .iter()
+            .enumerate()
+            .map(|(i, &s)| table.seats.get_seat(s).expect("seat").player.chips - before[i])
+            .collect();
 
         assert_eq!(
-            tda_20a_first_seat_left_of_button(&winners, button, SEAT_COUNT),
-            awarded_to,
-            "TDA 20-A: with the button on seat {button}, the odd chip belongs to the \
-             first tied winner to its left"
+            vec![88, 87],
+            gained,
+            "the 175 pot splits 88/87, and TDA 20-A puts the odd chip on seat 2"
+        );
+
+        let odd_index = gained.iter().position(|&g| g == 88).expect("one odd chip");
+        assert_eq!(
+            tda_20a_first_seat_left_of_button(&winners, table.button, SEAT_COUNT),
+            winners[odd_index],
+            "TDA 20-A: with the button on seat 7, the odd chip belongs to the first \
+             tied winner to its left"
         );
     }
+
+    /// **TDA Rule 20-B.** Stud and razz have no button clause — the cards decide.
+    ///
+    /// > Stud, razz, and if 2 or more high or low hands in stud/8: the odd chip goes
+    /// > to the **high card by suit** in the player's 5-card winning hand.
+    ///
+    /// Both seats make the same broadway straight, so they tie. They are separated
+    /// only by the suit of the ace, and spades beats hearts in the bridge ranking the
+    /// TDA uses. The pairing is then swapped between the two seats: if the ordering
+    /// were reading seat numbers rather than cards, the answer would not move.
+    #[test]
+    fn rule_20_b_stud_odd_chip_goes_to_the_high_card_by_suit() {
+        let stud = |seat_one: &str, seat_two: &str| {
+            let seats = Seats::new(vec![seat("A", 10_000), seat("B", 10_000), seat("C", 10_000)]);
+            let mut table = Table::stud_hi_from_seats(seats, 2, 5, 20, 40);
+            table
+                .inject_hole_cards(&[(1, seat_one), (2, seat_two)])
+                .expect("hole cards should inject");
+            table
+        };
+
+        // Seat 1 holds the ace of spades, seat 2 the ace of hearts.
+        let table = stud("A♠ K♦ Q♦ J♦ T♦ 2♣ 3♣", "A♥ K♣ Q♣ J♣ T♣ 2♦ 3♦");
+        assert_eq!(
+            vec![1, 2],
+            table.tda_odd_chip_order(&[1, 2]),
+            "TDA 20-B: the ace of spades outranks the ace of hearts"
+        );
+
+        // Same two hands, swapped between the seats. The answer swaps with them.
+        let table = stud("A♥ K♣ Q♣ J♣ T♣ 2♦ 3♦", "A♠ K♦ Q♦ J♦ T♦ 2♣ 3♣");
+        assert_eq!(
+            vec![2, 1],
+            table.tda_odd_chip_order(&[1, 2]),
+            "TDA 20-B reads the cards, not the seat index — the button is not \
+             consulted in stud at all"
+        );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Known defects — DEFECT_008 D8-3 and D8-4. These assert the TDA answer and
+    // fail today.
+    // ═══════════════════════════════════════════════════════════════════════
 
     /// **TDA Rule 54-B** — `DEFECT_008` D8-3.
     ///

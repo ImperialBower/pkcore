@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.0] - 2026-08-16
+## [0.5.0] - 2026-08-17
 
 ### Added
 
@@ -37,6 +37,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   find and challenge it.
 
 ### Fixed
+
+- **The odd chip in a split pot went to the highest-numbered winning seat**
+  ([DEFECT_011](docs/defects/DEFECT_011_odd_chip_button_order.md), TDA 2024 Rule
+  20). When a pot cannot be divided evenly, Rule 20 names which tied winner takes
+  the remainder: in board games the first seat left of the button, in stud and
+  razz the high card by suit in the winning 5-card hand. pkcore consulted
+  neither. `divvy_up` puts the remainder on the last shares and
+  `CaseEval::winning_seats` returns seats in ascending order; each is correct
+  alone, but composed they hard-coded "highest seat number takes the extra
+  chip". The result was deterministic and button-independent, so it was right
+  only by coincidence — a small, steady positional leak over a session, which is
+  the reason the rule exists.
+
+  Rule 20 now has one implementation, the new pure `casino::tda` module, called
+  by the three payout sites in `Table` and the three in `TableCelled` — the
+  defect was reachable through both showdown paths. `divvy_up` stays domain-free
+  arithmetic and moved there unchanged; `tda::pair_shares` is what decides which
+  seat each share belongs to. Multiple odd chips walk left from the button in
+  order rather than piling onto one seat. `Table::tda_odd_chip_order` is the
+  public, doc-tested entry point.
+
+  **Case C (hi/lo split) is deliberately not implemented**, because it is
+  unreachable: pkcore ships no hi/lo variant and `GameFamily` has no split-pot
+  arm. It is documented where it would live. The stud reading — rank leads, suit
+  breaks the tie, spades over hearts over diamonds over clubs — is an
+  interpretation of "high card by suit" and is pinned by a test that swaps the
+  two hands between seats, so an implementation reading seat numbers instead of
+  cards fails.
 
 - **A player who had already acted could re-raise a short all-in**
   ([DEFECT_010](docs/defects/DEFECT_010_reopen_gate.md), TDA 2024 Rule 47-A).

@@ -21,6 +21,7 @@ use crate::casino::equity::seat_equity::SeatEquity;
 use crate::casino::equity::seatbit::Seatbit;
 use crate::casino::equity::table_equity::TableEquity;
 use crate::casino::game::ForcedBets;
+use crate::casino::tda;
 use crate::casino::winnings::{PotWin, Winnings};
 use crate::games::betting_structure::{BetTier, BettingStructure};
 use crate::games::omaha::OmahaHigh;
@@ -1654,19 +1655,65 @@ impl Table {
         }
     }
 
-    /// Splits `total` chips into `by` roughly equal shares, distributing any
-    /// remainder one chip at a time to the last shares.
-    fn divvy_up(total: usize, by: usize) -> Vec<usize> {
-        match by {
-            0 | 1 => vec![total],
-            _ => {
-                let share = total / by;
-                let remainder = total % by;
-                (0..by)
-                    .map(|i| if i >= by - remainder { share + 1 } else { share })
-                    .collect()
-            }
-        }
+    /// TDA 2024 Rule 20 — the order in which tied winners take odd chips
+    /// (`DEFECT_011`).
+    ///
+    /// > First, odd chips will be broken into the smallest denomination in
+    /// > play. **A)** Board games with 2 or more high or low hands: the odd chip
+    /// > goes to the **first seat left of the button**. **B)** Stud, razz, and if
+    /// > 2 or more high or low hands in stud/8: the odd chip goes to the **high
+    /// > card by suit** in the player's 5-card winning hand.
+    ///
+    /// Returns `winners` sorted by that precedence — best claim first. The
+    /// first clause of the rule does not apply to pkcore: chips are modelled as
+    /// integers, so there is no denomination to break.
+    ///
+    /// The ordering lives here rather than inside the arithmetic split because
+    /// the split has no domain context: it cannot see the button or the cards,
+    /// and should not learn to.
+    ///
+    /// **Case C (hi/lo split — the odd chip in the total pot goes to the high
+    /// side) is not implemented, because it is unreachable.** pkcore ships no
+    /// hi/lo variant; `GameFamily` has no split-pot arm. When one lands, it
+    /// belongs here.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use pkcore::casino::game::ForcedBets;
+    ///
+    /// let seats = Seats::new(
+    ///     (0..8).map(|i| Seat::new(Player::new_with_chips(format!("P{i}"), 5_000))).collect(),
+    /// );
+    /// let mut table = Table::nlh_from_seats(seats, ForcedBets::new(25, 50));
+    ///
+    /// // Button on seat 7: seat 2 is nearer its left than seat 5, so seat 2 leads.
+    /// table.button = 7;
+    /// assert_eq!(vec![2, 5], table.tda_odd_chip_order(&[2, 5]));
+    ///
+    /// // Button on seat 3: the walk wraps, so seat 5 leads and seat 2 follows.
+    /// table.button = 3;
+    /// assert_eq!(vec![5, 2], table.tda_odd_chip_order(&[2, 5]));
+    /// ```
+    #[must_use]
+    pub fn tda_odd_chip_order(&self, winners: &[u8]) -> Vec<u8> {
+        tda::odd_chip_order(winners, self.game.family(), self.button, self.seats.size(), |seat| {
+            self.build_eval_for_seat(seat).hand
+        })
+    }
+
+    /// Splits `total` among tied `winners`, awarding odd chips by TDA 2024
+    /// Rule 20 (`DEFECT_011`). Returns `(seat, share)` pairs.
+    fn tda_shares(&self, total: usize, winners: &[u8]) -> Vec<(u8, usize)> {
+        tda::pair_shares(
+            total,
+            winners,
+            self.game.family(),
+            self.button,
+            self.seats.size(),
+            |seat| self.build_eval_for_seat(seat).hand,
+        )
     }
 
     /// True when every seat that contributed to the pot has the same
@@ -1813,12 +1860,15 @@ impl Table {
 
         let pot = self.pot;
         self.pot = 0;
-        let shares = Table::divvy_up(pot, winners.len());
+        // TDA 2024 Rule 20 (DEFECT_011): the odd chip is placed by button
+        // position, not by seat index. Iteration order below is unchanged so the
+        // event log still reads in seat order; only the amounts move.
+        let shares: HashMap<u8, usize> = self.tda_shares(pot, &winners).into_iter().collect();
 
         let mut results: Vec<PotWin> = Vec::new();
 
-        for (i, &winner_seat) in winners.iter().enumerate() {
-            let share = shares.get(i).copied().unwrap_or(0);
+        for &winner_seat in &winners {
+            let share = shares.get(&winner_seat).copied().unwrap_or(0);
             let hand_result = self.build_eval_for_seat(winner_seat);
 
             let (chips_in_play, player_id, hand_bard) = {
@@ -1927,12 +1977,14 @@ impl Table {
             };
             equity = remaining;
 
-            let shares = Table::divvy_up(total, tied_at_level.len());
+            // TDA 2024 Rule 20 (DEFECT_011) — applied per pot layer, since each
+            // layer is its own split with its own odd chip.
+            let shares: HashMap<u8, usize> = self.tda_shares(total, &tied_at_level).into_iter().collect();
             let is_main_pot = !main_pot_paid;
             main_pot_paid = true;
 
-            for (i, &seat_num) in tied_at_level.iter().enumerate() {
-                let share = shares.get(i).copied().unwrap_or(0);
+            for &seat_num in &tied_at_level {
+                let share = shares.get(&seat_num).copied().unwrap_or(0);
                 if let Some(seat) = self.seats.get_seat_mut(seat_num) {
                     seat.player.chips += share;
                 }
@@ -2025,9 +2077,10 @@ impl Table {
             };
             equity = remaining;
 
-            let shares = Table::divvy_up(total, tied_side.len());
-            for (i, &seat_num) in tied_side.iter().enumerate() {
-                let share = shares.get(i).copied().unwrap_or(0);
+            // TDA 2024 Rule 20 (DEFECT_011).
+            let shares: HashMap<u8, usize> = self.tda_shares(total, &tied_side).into_iter().collect();
+            for &seat_num in &tied_side {
+                let share = shares.get(&seat_num).copied().unwrap_or(0);
                 if let Some(seat) = self.seats.get_seat_mut(seat_num) {
                     seat.player.chips += share;
                 }
@@ -2541,10 +2594,19 @@ mod casino__table_tests {
 
     #[test]
     fn divvy_up_helper() {
-        assert_eq!(vec![100], Table::divvy_up(100, 1));
-        assert_eq!(vec![50, 50], Table::divvy_up(100, 2));
-        assert_eq!(vec![33, 33, 34], Table::divvy_up(100, 3));
-        assert_eq!(vec![100], Table::divvy_up(100, 0));
+        // The arithmetic split now lives in `casino::tda`; what belongs here is
+        // that the *seat* mapping honours TDA Rule 20. `casino__tda_tests`
+        // covers the arithmetic itself.
+        let seats = Seats::new(
+            (0..8)
+                .map(|i| Seat::new(Player::new_with_chips(format!("P{i}"), 5_000)))
+                .collect(),
+        );
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(25, 50));
+        table.button = 7;
+        assert_eq!(vec![(2, 88), (5, 87)], table.tda_shares(175, &[2, 5]));
+        table.button = 3;
+        assert_eq!(vec![(5, 88), (2, 87)], table.tda_shares(175, &[2, 5]));
     }
 
     #[test]

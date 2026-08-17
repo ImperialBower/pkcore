@@ -3,7 +3,7 @@
 **File:** `docs/defects/DEFECT_008_tda_2024_rules_compliance.md`
 **Date:** 2026-08-16
 **Severity:** Major (4 Major, 2 Minor — no incorrect *pot total*; all findings distribute, size or gate chips wrongly)
-**Status:** Partially fixed. D8-2 fixed in `0.5.0` (`DEFECT_010`), D8-5 in `0.5.0` (`DEFECT_009`); D8-1, D8-3, D8-4 and D8-6 remain open. All six verified by source reading at `90d60e70` (`main`, 2026-08-16), pkcore `0.4.0`.
+**Status:** Partially fixed. D8-1 (`DEFECT_011`), D8-2 (`DEFECT_010`) and D8-5 (`DEFECT_009`) all fixed in `0.5.0`; D8-3, D8-4 and D8-6 remain open. All six verified by source reading at `90d60e70` (`main`, 2026-08-16), pkcore `0.4.0`.
 **Reported by:** Audit of pkcore against the parsed TDA 2024 ruleset in the sibling `tda_parsed` repo (`tda_2024_online.yaml`)
 **Introduced in:** Not bisected. These are absences and long-standing behaviours, not regressions — no introducing commit was identified, and none of the six has ever had a passing test that later broke.
 **Fixed in:** —
@@ -50,7 +50,7 @@ See [Coverage Gap](#coverage-gap).
 
 | # | TDA rule | Finding | Severity | Evidence |
 |---|---|---|---|---|
-| D8-1 | 20-A/B/C | Odd chip goes to the highest-numbered winning seat, not first-left-of-button | Major | `cashier/chips.rs:95`, `analysis/case_eval.rs:231` |
+| D8-1 | 20-A/B/C | Odd chip goes to the highest-numbered winning seat, not first-left-of-button | Major | `cashier/chips.rs:95`, `analysis/case_eval.rs:231` — promoted to `DEFECT_011`, **fixed in 0.5.0** |
 | D8-2 | 47-A | No re-open gate: a player who already acted may re-raise facing a sub-minimum increment | Major | `casino/table/actions.rs:337` — promoted to `DEFECT_010`, **fixed in 0.5.0** |
 | D8-3 | 54-B | Pot-limit pre-flop max uses the actual pot; a dead/short blind shrinks it | Major | `games/betting_structure.rs:170` |
 | D8-4 | 32 | Dead button not implemented — blinds skip to the next occupied seat | Major | `casino/table.rs:479` |
@@ -63,6 +63,19 @@ rather than defects.
 ---
 
 ## D8-1: Odd chips are awarded by seat index, not by button position
+
+> **Promoted to [`DEFECT_011_odd_chip_button_order.md`](DEFECT_011_odd_chip_button_order.md) on 2026-08-17,
+> and fixed there the same day in pkcore `0.5.0`.**
+> That document supersedes this section: it carries the fix design, the reason the
+> rule lives in a new pure module rather than on either table, the stud
+> interpretation, and the nine assertions that pin it. The analysis below is
+> retained for the audit record.
+>
+> Rule 20 now has one implementation, `src/casino/tda.rs`, called by the three
+> payout sites in `Table` **and** the three in `TableCelled` — the finding was
+> reachable through both. Cases A and B are implemented; case C (hi/lo) is
+> recorded as unreachable, because pkcore ships no hi/lo variant. Two findings
+> remain open: D8-3 and D8-4.
 
 **Severity:** Major — a wrong payout, bounded at one chip per split pot per layer.
 
@@ -633,9 +646,11 @@ at the wrong altitude, not that the fixes are safe.
   Addendum publishes its worked examples with expected numbers — the 700 pot-limit bet
   of 54-B, the 300 minimum re-raise of 47 Example 1, the 250 of 43 Example 2 — so they
   are table-driven assertions backed by an external authority that cannot drift with
-  pkcore. As landed: **5 conformant tests pass**, and **4 assert the TDA answer for
-  D8-1 through D8-4 and are `#[ignore]`d** with their finding id, so CI stays green
-  while the defects stay recorded in executable form. Un-`ignore` each as it is fixed.
+  pkcore. As landed: **5 conformant tests passed**, and **4 asserted the TDA answer
+  for D8-1 through D8-4 and were `#[ignore]`d** with their finding id, so CI stayed
+  green while the defects stayed recorded in executable form. Un-`ignore` each as it is
+  fixed. Two of the four are now un-ignored and green — D8-2 in `DEFECT_010`, D8-1 in
+  `DEFECT_011` — leaving D8-3 and D8-4 ignored.
   D8-5 had no test — the predicate did not exist, so any assertion naming it would not
   compile. `DEFECT_009` closed that in `0.5.0`; eleven Rule 36 assertions are now in
   the conformant group, and D8-2's seven joined it in `0.5.0`.
@@ -667,6 +682,7 @@ at the wrong altitude, not that the fixes are safe.
 
 | File | Role | Findings |
 |---|---|---|
+| `src/casino/tda.rs` | Rule 20 as pure functions (added in `0.5.0`) | D8-1 |
 | `src/casino/cashier/chips.rs:84` | `Stack::divvy_up` — remainder to the last indices | D8-1 |
 | `src/analysis/case_eval.rs:231` | `CaseEval::winning_seats` — ascending seat order | D8-1 |
 | `src/casino/table_celled/showdown.rs:116` | `divvy_up` call site (heads-up path) | D8-1 |

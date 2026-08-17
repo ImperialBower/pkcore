@@ -8,6 +8,7 @@ pub mod position;
 pub mod state;
 pub mod table;
 pub mod table_celled;
+pub(crate) mod tda;
 pub mod winnings;
 
 pub mod action;
