@@ -289,7 +289,7 @@ mod tda_2024_conformance {
     /// full raise), C calls. A now faces 100 more, which is not a full raise, so TDA
     /// permits only call or fold.
     #[test]
-    #[ignore = "DEFECT_008 D8-2: no re-open gate; a player who already acted can re-raise a short all-in"]
+    #[ignore = "DEFECT_010 (was DEFECT_008 D8-2): no re-open gate; a player who already acted can re-raise a short all-in"]
     fn rule_47_a_player_who_already_acted_may_not_reraise_a_short_all_in() {
         // seats: 0 button/UTG, 1 SB (shove stack), 2 BB.
         let mut table = nlhe(&[50_000, 400, 50_000], 50, 100);

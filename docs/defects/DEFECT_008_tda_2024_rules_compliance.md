@@ -51,10 +51,10 @@ See [Coverage Gap](#coverage-gap).
 | # | TDA rule | Finding | Severity | Evidence |
 |---|---|---|---|---|
 | D8-1 | 20-A/B/C | Odd chip goes to the highest-numbered winning seat, not first-left-of-button | Major | `cashier/chips.rs:95`, `analysis/case_eval.rs:231` |
-| D8-2 | 47-A | No re-open gate: a player who already acted may re-raise facing a sub-minimum increment | Major | `casino/table/actions.rs:337` |
+| D8-2 | 47-A | No re-open gate: a player who already acted may re-raise facing a sub-minimum increment | Major | `casino/table/actions.rs:337` — **promoted to `DEFECT_010`** |
 | D8-3 | 54-B | Pot-limit pre-flop max uses the actual pot; a dead/short blind shrinks it | Major | `games/betting_structure.rs:170` |
 | D8-4 | 32 | Dead button not implemented — blinds skip to the next occupied seat | Major | `casino/table.rs:479` |
-| D8-5 | 36 | No substantial-action predicate exists; blocks rules 22, 34-A, 35-D, 52-A, 53-B | Major (structural) | absence across `src/` |
+| D8-5 | 36 | No substantial-action predicate exists; blocks rules 22, 34-A, 35-D, 52-A, 53-B | Major (structural) | absence across `src/` — **promoted to `DEFECT_009`** |
 | D8-6 | 48 | Fixed-limit raise cap cannot lift when the event reaches two players | Minor | `games/betting_structure.rs:231` |
 
 Two further deviations are recorded as [Accepted divergences](#accepted-divergences)
@@ -156,6 +156,12 @@ the rule in one testable place.
 ---
 
 ## D8-2: No re-open gate — a player who already acted can re-raise a sub-minimum increment
+
+> **Promoted to [`DEFECT_010_reopen_gate.md`](DEFECT_010_reopen_gate.md) on 2026-08-16.**
+> That document supersedes this section: it carries the full fix design (the
+> has-acted predicate already exists as `is_yet_to_act_or_blind`, so only one new
+> field is needed), the test plan, and the downstream impact on bot deciders.
+> The analysis below is retained for the audit record.
 
 **Severity:** Major — permits an illegal action that materially changes hand outcomes.
 
@@ -423,6 +429,11 @@ histories or version the behaviour — see [Prevention](#prevention).
 ---
 
 ## D8-5: No substantial-action predicate exists
+
+> **Promoted to [`DEFECT_009_substantial_action_predicate.md`](DEFECT_009_substantial_action_predicate.md) on 2026-08-16.**
+> That document supersedes this section: it carries the full predicate design, the
+> increment and reset sites, the eleven-assertion test plan, and the open question
+> about the stud bring-in. The analysis below is retained for the audit record.
 
 **Severity:** Major (structural) — an absence that blocks five other rules.
 
