@@ -3,10 +3,58 @@
 **File:** `docs/defects/DEFECT_010_reopen_gate.md`
 **Date:** 2026-08-16
 **Severity:** Major — permits an action the rules forbid, materially changing hand outcomes
-**Status:** Open — no fix applied. Reproduced by an `#[ignore]`d assertion in `tests/tda_conformance.rs:293` at `3ccc7202` (`main`, 2026-08-16), pkcore `0.4.0`.
+**Status:** **Fixed** — 2026-08-16. Reproduced by an `#[ignore]`d assertion in `tests/tda_conformance.rs:293` at `3ccc7202` (`main`, 2026-08-16), pkcore `0.4.0`; that assertion now passes with the `#[ignore]` removed.
 **Reported by:** Promoted from `DEFECT_008` finding **D8-2** (TDA 2024 conformance audit)
 **Introduced in:** Not bisected. The raise-sizing half was hardened by `P9f` (see `src/casino/table.rs:3249`); the rights half was never implemented, so this is an absence rather than a regression.
-**Fixed in:** —
+**Fixed in:** pkcore `0.5.0`
+
+---
+
+## Correction to the fix as originally proposed
+
+The **Fix** section below proposes a field called `bet_faced_when_last_acted`,
+holding the table `bet` the seat faced **before** acting. That value does not
+work. Trace this document's own symptom table with it: A faces 100 (the big
+blind), then raises to 300; the table bet later reaches 400. The gate computes
+`400 − 100 = 300`, which is ≥ the 200 full raise, so it never fires and the
+defect survives untouched.
+
+The value that works is the table `bet` immediately **after** the seat acted —
+300 for A, giving `400 − 300 = 100 < 200` and a gate that fires. Every other
+case in the Test Plan also comes out right under the post-action reading, and
+Rule 47-A's cumulative clause falls out of it for free.
+
+The shipped field is therefore named `Seat::bet_level_when_last_acted` and is
+stamped after the action, not before. The rest of the Fix section — the
+`is_yet_to_act_or_blind` has-acted predicate, the six entry points, the street
+boundary reset, and the placement of the gate inside `raise_bounds` — was
+correct as written and was implemented as described.
+
+## What else the fix had to touch
+
+Two things beyond the plan, both found by the test suite rather than by reading:
+
+1. **`TableSnapshot::raise_bounds` re-derived raise legality** instead of
+   delegating to the table, while its own doc comment claimed the two "agree by
+   construction". They agreed by duplication. Adding the gate to `Table` alone
+   left the bots seeing a raise the engine no longer advertised, and
+   `tests/bot_action_legality.rs` failed with *"seat 2 returned Raise(2900), but
+   the engine advertises [Fold, Call, AllIn]"*. The rule now has one
+   implementation, `Table::is_reopen_gated`, and the snapshot carries its result
+   in as the precomputed `reopen_gated` field. No decider logic changed — the
+   deciders were already consulting `snap.raise_bounds()` correctly; the gate
+   simply was not reaching them.
+
+2. **Scope interpretation.** The gate is restricted to no-limit and pot-limit,
+   because Rule 47-A names only those structures. Fixed-limit has its own
+   half-a-bet rule and its own raise cap, and is deliberately left alone. This
+   is an interpretation, not a quotation, and is pinned by
+   `fixed_limit_is_not_gated_by_rule_47_a` so a later reading can find and
+   challenge it.
+
+**Not** changed: `raise_increment`, `act_all_in`'s increment update, and both
+existing sizing tests. The sizing half was already correct and stayed untouched,
+which was the main risk this fix carried.
 
 ---
 
@@ -258,18 +306,23 @@ show up first.
 
 ## Test Plan
 
-| Test | Asserts |
-|---|---|
-| `rule_47_a_player_who_already_acted_may_not_reraise_a_short_all_in` | **exists**, `#[ignore]`d at `tests/tda_conformance.rs:293` — un-ignore on fix |
-| `player_who_has_not_acted_may_raise_a_short_all_in` | the gate does not over-fire on a seat still to act |
-| `big_blind_option_is_not_gated_by_a_short_all_in` | `Blind(_)` is not "has acted" — the `is_yet_to_act_or_blind` arm |
-| `cumulative_short_all_ins_reopen_for_a_player_who_acted` | 47-A cumulative clause: two shoves totalling a full raise **do** reopen |
-| `full_raise_all_in_reopens_for_a_player_who_acted` | the gate lifts on a genuine full raise |
-| `gate_clears_at_the_street_boundary` | a seat gated on the flop may raise on the turn |
-| existing sizing tests (`:3254`, `:3288`) | must remain green — the fix must not touch sizing |
+All seven shipped in `tests/tda_conformance.rs`, in the **Conformant** group.
 
-The fourth is the one that would catch a fix implemented as "compare against the
-last all-in" rather than "compare against the level last faced".
+| Test | Asserts | Result |
+|---|---|---|
+| `rule_47_a_player_who_already_acted_may_not_reraise_a_short_all_in` | the reproducing case; `#[ignore]` removed | ✅ |
+| `player_who_has_not_acted_may_raise_a_short_all_in` | the gate does not over-fire on a seat still to act | ✅ |
+| `big_blind_option_is_not_gated_by_a_short_all_in` | `Blind(_)` is not "has acted" — the `is_yet_to_act_or_blind` arm | ✅ |
+| `cumulative_short_all_ins_reopen_for_a_player_who_acted` | 47-A cumulative clause: two shoves totalling a full raise **do** reopen | ✅ |
+| `full_raise_all_in_reopens_for_a_player_who_acted` | the gate lifts on a genuine full raise | ✅ |
+| `reopen_gate_clears_at_the_street_boundary` | a seat gated pre-flop is free on the flop | ✅ |
+| `fixed_limit_is_not_gated_by_rule_47_a` | pins the no-limit / pot-limit scoping interpretation | ✅ |
+| existing sizing tests (`:3254`, `:3288`) | remain green — the fix did not touch sizing | ✅ |
+
+The cumulative test is the one that would catch a fix implemented as "compare
+against the last all-in" rather than "compare against the level last acted at" —
+and, as it happens, the one that would have caught the pre-action field this
+document originally proposed.
 
 ---
 

@@ -51,7 +51,7 @@ See [Coverage Gap](#coverage-gap).
 | # | TDA rule | Finding | Severity | Evidence |
 |---|---|---|---|---|
 | D8-1 | 20-A/B/C | Odd chip goes to the highest-numbered winning seat, not first-left-of-button | Major | `cashier/chips.rs:95`, `analysis/case_eval.rs:231` |
-| D8-2 | 47-A | No re-open gate: a player who already acted may re-raise facing a sub-minimum increment | Major | `casino/table/actions.rs:337` — **promoted to `DEFECT_010`** |
+| D8-2 | 47-A | No re-open gate: a player who already acted may re-raise facing a sub-minimum increment | Major | `casino/table/actions.rs:337` — promoted to `DEFECT_010`, **fixed in 0.5.0** |
 | D8-3 | 54-B | Pot-limit pre-flop max uses the actual pot; a dead/short blind shrinks it | Major | `games/betting_structure.rs:170` |
 | D8-4 | 32 | Dead button not implemented — blinds skip to the next occupied seat | Major | `casino/table.rs:479` |
 | D8-5 | 36 | No substantial-action predicate exists; blocks rules 22, 34-A, 35-D, 52-A, 53-B | Major (structural) | absence across `src/` — **promoted to `DEFECT_009`** |
@@ -157,11 +157,17 @@ the rule in one testable place.
 
 ## D8-2: No re-open gate — a player who already acted can re-raise a sub-minimum increment
 
-> **Promoted to [`DEFECT_010_reopen_gate.md`](DEFECT_010_reopen_gate.md) on 2026-08-16.**
+> **Promoted to [`DEFECT_010_reopen_gate.md`](DEFECT_010_reopen_gate.md) on 2026-08-16,
+> and fixed there the same day in pkcore `0.5.0`.**
 > That document supersedes this section: it carries the full fix design (the
 > has-acted predicate already exists as `is_yet_to_act_or_blind`, so only one new
 > field is needed), the test plan, and the downstream impact on bot deciders.
 > The analysis below is retained for the audit record.
+>
+> The rule now has one implementation, `Table::is_reopen_gated`, consulted by
+> both `Table::raise_bounds` and `TableSnapshot`, and seven assertions in
+> `tests/tda_conformance.rs` pin it. Three D8-N findings remain open: D8-1,
+> D8-3, D8-4.
 
 **Severity:** Major — permits an illegal action that materially changes hand outcomes.
 
@@ -713,7 +719,7 @@ Observed at `90d60e70` on 2026-08-16:
 running 9 tests
 test rule_20_a_odd_chip_goes_to_the_first_seat_left_of_the_button ... FAILED   # D8-1  left: 2  right: 5
 test rule_32_dead_button_assigns_blinds_by_position_not_occupancy ... FAILED   # D8-4  left: 3  right: 4
-test rule_47_a_player_who_already_acted_may_not_reraise_a_short_all_in ... FAILED   # D8-2
+test rule_47_a_player_who_already_acted_may_not_reraise_a_short_all_in ... FAILED   # D8-2 — fixed in 0.5.0, now passes
 test rule_54_b_short_blind_must_not_shrink_the_preflop_pot_limit_maximum ... FAILED # D8-3  left: 700  right: 600
 test rule_43_ex1_min_reraise_is_the_last_increment_not_the_total ... ok
 test rule_43_ex2_short_all_in_does_not_raise_the_minimum ... ok

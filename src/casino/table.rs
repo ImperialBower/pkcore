@@ -3281,11 +3281,17 @@ mod casino__table_tests {
             .expect("the re-opened minimum re-raise is accepted");
     }
 
-    // P9f (companion) — a sub-minimum all-in does NOT re-open the betting: a
-    // player who already acted may only call the extra, not re-raise. Confirms
-    // the raise_increment update is gated on "at least a full raise".
+    // P9f (companion) — a sub-minimum all-in leaves `raise_increment` alone,
+    // so the minimum re-raise stays measured from the last *full* raise.
+    //
+    // DEFECT_010 renamed this. It used to be called
+    // `sub_min_all_in_does_not_reopen_min_raise`, which read as though it
+    // covered TDA Rule 47-A's re-open rights gate — it never did, it only
+    // asserts the increment. That misreading is part of why the rights half
+    // went unimplemented for so long; the gate itself is pinned in
+    // `tests/tda_conformance.rs`.
     #[test]
-    fn sub_min_all_in_does_not_reopen_min_raise() {
+    fn sub_min_all_in_does_not_change_raise_increment() {
         let seats = Seats::new(vec![
             Seat::new(Player::new_with_chips("A".to_string(), 10_000)),
             Seat::new(Player::new_with_chips("B".to_string(), 450)),

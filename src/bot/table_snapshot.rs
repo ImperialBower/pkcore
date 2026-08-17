@@ -135,6 +135,15 @@ pub struct TableSnapshot<'a> {
     /// is reached no further raise is legal at any size. No-Limit and Pot-Limit
     /// are uncapped and ignore it. Sourced from `Table::raises_this_street`.
     pub raises_this_street: u8,
+    /// `true` when TDA 2024 Rule 47-A bars this seat from raising: it has
+    /// already acted this street and the wager that came back to it is short
+    /// of a full raise, so only call or fold are open (`DEFECT_010`).
+    ///
+    /// Carried as a precomputed flag because the rule needs per-seat history
+    /// the snapshot does not otherwise hold. Sourced from
+    /// [`Table::is_reopen_gated`], the single implementation of the rule, so a
+    /// decider's view and the engine's view cannot drift.
+    pub reopen_gated: bool,
     /// Bet tier for the *current* street (EPIC-30 Phase 5). Fixed-Limit
     /// variants need this to choose between the small-bet and big-bet
     /// increment; No-Limit / Pot-Limit ignore it. Sourced from
@@ -287,6 +296,7 @@ impl<'a> TableSnapshot<'a> {
             big_blind: table.forced.big_blind,
             betting_structure: table.betting,
             raises_this_street: table.raises_this_street,
+            reopen_gated: table.is_reopen_gated(seat),
             bet_tier: table.current_bet_tier(),
             checked_this_street,
             dealer_button,
@@ -489,8 +499,14 @@ impl<'a> TableSnapshot<'a> {
     /// available is `PlayerAction::AllIn`, which the engine always accepts.
     ///
     /// Mirrors [`Table::raise_bounds`](crate::casino::table::Table::raise_bounds)
-    /// and folds in the same three reasons a raise can be illegal, so the two
-    /// agree by construction.
+    /// and folds in the same four reasons a raise can be illegal — the
+    /// per-street raise cap, a stack that cannot cover the minimum, a minimum
+    /// above the structure ceiling, and the TDA Rule 47-A re-open gate
+    /// (`DEFECT_010`, carried in as [`Self::reopen_gated`]).
+    ///
+    /// The 47-A condition is *not* re-derived here: it needs per-seat history
+    /// the snapshot does not hold, and re-deriving it is precisely how this
+    /// method silently disagreed with the table when the gate was first added.
     ///
     /// # Examples
     ///
@@ -513,6 +529,9 @@ impl<'a> TableSnapshot<'a> {
     /// ```
     #[must_use]
     pub fn raise_bounds(&self) -> Option<(usize, usize)> {
+        if self.reopen_gated {
+            return None;
+        }
         if self.betting_structure.cap_reached(self.raises_this_street) {
             return None;
         }

@@ -5,6 +5,50 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-08-16
+
+### Fixed
+
+- **A player who had already acted could re-raise a short all-in**
+  ([DEFECT_010](docs/defects/DEFECT_010_reopen_gate.md), TDA 2024 Rule 47-A).
+  An all-in totalling less than a full raise does not re-open the betting for a
+  player who has already acted and is not now facing at least a full raise;
+  that player may only call or fold. pkcore enforced the *sizing* half of Rule
+  47-A correctly but had no *rights* half at all: `Table::raise_bounds`
+  consulted only the per-street raise cap and the actor's stack, so it offered
+  a raise the rules forbid. The offered amount was correctly sized, which is
+  why the error never looked wrong in a hand history.
+
+  The rule now has a single implementation, `Table::is_reopen_gated`, consulted
+  by both `Table::raise_bounds` and `TableSnapshot`. It is scoped to no-limit
+  and pot-limit, the only structures Rule 47-A names; fixed-limit keeps its own
+  half-a-bet treatment. Rule 47-A's *cumulative* clause needs no special case:
+  because a seat is measured against the bet level it last acted at rather than
+  against the last individual all-in, two short all-ins that together make a
+  full raise correctly do re-open. The big-blind option is unaffected — a
+  posted blind is not an action.
+
+- **`TableSnapshot::raise_bounds` could disagree with `Table::raise_bounds`.**
+  It re-derived raise legality rather than delegating, while claiming in its
+  own documentation that the two "agree by construction". Adding the Rule 47-A
+  gate to the table alone left the bots seeing a raise the engine no longer
+  advertised, which `tests/bot_action_legality.rs` caught. The 47-A condition
+  is now carried in as the precomputed `TableSnapshot::reopen_gated` field
+  rather than recomputed.
+
+### Changed
+
+- `Seat` gains a public field, `bet_level_when_last_acted`: the table-level bet
+  immediately **after** that seat last voluntarily acted this street. Forced
+  posts do not set it, and it is cleared with `PlayerState` at the street
+  boundary. Construction via `Seat::new` and `Seat::default` is unaffected;
+  code that builds a `Seat` by struct literal must add the field.
+- `TableSnapshot` gains a public field, `reopen_gated`.
+- Test `sub_min_all_in_does_not_reopen_min_raise` is renamed
+  `sub_min_all_in_does_not_change_raise_increment`. It asserts that
+  `raise_increment` is unchanged and never tested re-opening; the old name
+  suggested Rule 47-A's rights gate was covered when it was not.
+
 ## [0.4.0] - 2026-08-16
 
 ### Fixed
@@ -657,6 +701,7 @@ on the wire, and `replay` behavior is unaffected by the new metadata. Driven by
 `ImperialBower/pkdealer` EPIC-40 Phase 4 (arena recorder agent-fidelity
 annotations).
 
+[0.5.0]: https://github.com/ImperialBower/pkcore/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/ImperialBower/pkcore/compare/v0.3.5...v0.4.0
 [0.3.5]: https://github.com/ImperialBower/pkcore/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/ImperialBower/pkcore/compare/v0.3.3...v0.3.4

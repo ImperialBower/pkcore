@@ -292,6 +292,11 @@ impl Seats {
             } else {
                 seat.player.act_bring_it_in()
             };
+            // DEFECT_010: the Rule 47-A re-open gate is a per-street question,
+            // so the recorded level dies with the street. Cleared on the frozen
+            // path too — no further betting happens there, and leaving stale
+            // levels behind would be a trap for any future caller.
+            seat.bet_level_when_last_acted = 0;
             collected += chips;
         }
         Ok(collected)
@@ -307,6 +312,9 @@ impl Seats {
         for seat in &mut self.0 {
             if !seat.is_empty() && seat.is_in_hand() && !seat.is_all_in() {
                 seat.player.state = PlayerState::YetToAct;
+                // DEFECT_010: the re-open level tracks `PlayerState`, so it has
+                // to be cleared wherever the state is forced back to YetToAct.
+                seat.bet_level_when_last_acted = 0;
             }
         }
     }

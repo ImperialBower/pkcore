@@ -14,6 +14,9 @@
 //!
 //! 1. **Conformant** — rules pkcore already satisfies. These pin behaviour that is
 //!    correct today so a future change has to argue with the TDA rather than with us.
+//!    Rule 47-A's re-open *rights* gate sits in this group as of `DEFECT_010`; it
+//!    was a known defect until that fix, and its reproducing assertion is now the
+//!    first of seven tests pinning the rule.
 //! 2. **Known defects** — every one is `#[ignore]`d with its `DEFECT_008` finding id.
 //!    They assert the TDA-correct answer and therefore **fail today, by design**. CI
 //!    stays green; run them on demand:
@@ -226,6 +229,203 @@ mod tda_2024_conformance {
         );
     }
 
+    // ── Rule 47-A, the re-open rights gate (DEFECT_010, fixed) ─────────────
+    //
+    // Rule 47-A carries two obligations: how small a legal re-raise may be
+    // (*sizing*, pinned by `rule_47_ex1_*` and `rule_43_ex2_*` above) and
+    // whether a given player may raise at all (*rights*, pinned here).
+    //
+    // > An all-in wager (or cumulative multiple short all-ins) totaling less
+    // > than a full bet or raise **will not reopen betting for players who
+    // > have already acted and are not facing at least a full bet or raise**
+    // > when the action returns to them.
+    //
+    // The rights half was absent until `DEFECT_010`. `Table::is_reopen_gated`
+    // is now its single implementation; `Table::raise_bounds` and
+    // `TableSnapshot` both consult it.
+
+    /// The published case. A raises to 300 (increment 200), B shoves 400
+    /// (increment 100 — short of a full raise), C calls. A now faces only 100
+    /// more, so TDA permits call or fold and no raise may be offered.
+    ///
+    /// This is the assertion that reproduced `DEFECT_010`.
+    #[test]
+    fn rule_47_a_player_who_already_acted_may_not_reraise_a_short_all_in() {
+        // seats: 0 button/UTG, 1 SB (shove stack), 2 BB.
+        let mut table = nlhe(&[50_000, 400, 50_000], 50, 100);
+
+        let a = table.next_to_act();
+        table.act_raise(a, 300).expect("A raises to 300, increment 200");
+        let b = table.next_to_act();
+        table.act_all_in(b).expect("B shoves 400, increment 100 — short");
+        let c = table.next_to_act();
+        table.act_call(c).expect("C calls 400");
+
+        assert_eq!(a, table.next_to_act(), "action returns to A");
+        assert_eq!(
+            200, table.raise_increment,
+            "the short shove must not move the increment"
+        );
+        assert!(
+            table.raise_bounds(a).is_none(),
+            "TDA 47-A: A already acted and faces 100, short of the 200 full raise — \
+             call or fold only, no raise may be offered"
+        );
+    }
+
+    /// The gate must not over-fire. C has not acted at all when the short
+    /// all-in reaches it, so 47-A does not restrict C — it may raise.
+    #[test]
+    fn player_who_has_not_acted_may_raise_a_short_all_in() {
+        let mut table = nlhe(&[50_000, 400, 50_000], 50, 100);
+
+        let a = table.next_to_act();
+        table.act_raise(a, 300).expect("A raises to 300");
+        let b = table.next_to_act();
+        table.act_all_in(b).expect("B shoves 400 — short");
+
+        let c = table.next_to_act();
+        assert!(
+            !table.is_reopen_gated(c),
+            "TDA 47-A restricts only players who have already acted"
+        );
+        assert!(
+            table.raise_bounds(c).is_some(),
+            "C has not acted this street, so a raise stays available to it"
+        );
+    }
+
+    /// A posted big blind has **not** acted: the option is still to come. The
+    /// gate keys off `PlayerState`, whose `Blind(_)` arm exists for exactly
+    /// this, so a short all-in must not strip the big blind of its option.
+    #[test]
+    fn big_blind_option_is_not_gated_by_a_short_all_in() {
+        // seats: 0 button/UTG, 1 SB, 2 BB. UTG shoves 150 over the 100 blind —
+        // an increment of 50, short of the 100 full raise.
+        let mut table = nlhe(&[150, 50_000, 50_000], 50, 100);
+
+        let utg = table.next_to_act();
+        table.act_all_in(utg).expect("UTG shoves 150 — short");
+        let sb = table.next_to_act();
+        table.act_call(sb).expect("SB calls 150");
+
+        let bb = table.next_to_act();
+        assert!(
+            !table.is_reopen_gated(bb),
+            "TDA 47-A: a posted blind is not an action, so the big blind has not \
+             acted and keeps its option"
+        );
+    }
+
+    /// 47-A's cumulative clause. Two short all-ins that *together* make a full
+    /// raise do re-open the betting for a player who already acted.
+    ///
+    /// This is the assertion that separates a correct fix from one written as
+    /// "compare against the last all-in" — the comparison has to be against
+    /// the level this seat last acted at.
+    #[test]
+    fn cumulative_short_all_ins_reopen_for_a_player_who_acted() {
+        // A raises to 300 (increment 200). B shoves 400 (+100), C shoves 500
+        // (+100). A now faces 200 in total, which is a full raise.
+        let mut table = nlhe(&[50_000, 400, 500], 50, 100);
+
+        let a = table.next_to_act();
+        table.act_raise(a, 300).expect("A raises to 300, increment 200");
+        let b = table.next_to_act();
+        table.act_all_in(b).expect("B shoves 400 — short on its own");
+        let c = table.next_to_act();
+        table.act_all_in(c).expect("C shoves 500 — short on its own");
+
+        assert_eq!(a, table.next_to_act(), "action returns to A");
+        assert_eq!(500, table.bet, "the table bet is now 500");
+        assert!(
+            !table.is_reopen_gated(a),
+            "TDA 47-A cumulative clause: A last acted at 300 and now faces 200, \
+             a full raise, so the betting is re-opened for it"
+        );
+        assert!(
+            table.raise_bounds(a).is_some(),
+            "A may raise again once the shoves cumulatively make a full raise"
+        );
+    }
+
+    /// A genuine full-raise all-in re-opens the betting for everyone, including
+    /// players who already acted. The gate must lift.
+    #[test]
+    fn full_raise_all_in_reopens_for_a_player_who_acted() {
+        // A raises to 300 (increment 200). B shoves 600 — an increment of 300,
+        // comfortably a full raise. C calls.
+        let mut table = nlhe(&[50_000, 600, 50_000], 50, 100);
+
+        let a = table.next_to_act();
+        table.act_raise(a, 300).expect("A raises to 300, increment 200");
+        let b = table.next_to_act();
+        table.act_all_in(b).expect("B shoves 600 — a full raise");
+        let c = table.next_to_act();
+        table.act_call(c).expect("C calls 600");
+
+        assert_eq!(a, table.next_to_act(), "action returns to A");
+        assert!(
+            !table.is_reopen_gated(a),
+            "TDA 47-A applies only to wagers short of a full raise"
+        );
+        assert!(
+            table.raise_bounds(a).is_some(),
+            "a full-raise all-in re-opens the betting for A"
+        );
+    }
+
+    /// The gate is a per-street question. A seat restricted on one street is
+    /// unrestricted on the next, because the recorded level dies with the
+    /// street alongside `PlayerState`.
+    #[test]
+    fn reopen_gate_clears_at_the_street_boundary() {
+        let mut table = nlhe(&[50_000, 400, 50_000], 50, 100);
+
+        let a = table.next_to_act();
+        table.act_raise(a, 300).expect("A raises to 300");
+        let b = table.next_to_act();
+        table.act_all_in(b).expect("B shoves 400 — short");
+        let c = table.next_to_act();
+        table.act_call(c).expect("C calls 400");
+        assert!(table.is_reopen_gated(a), "A is restricted pre-flop");
+
+        table.act_call(a).expect("A calls the extra 100, closing the street");
+        table.bring_it_in().expect("street closes");
+
+        assert!(
+            !table.is_reopen_gated(a),
+            "the restriction dies with the street it was created on"
+        );
+    }
+
+    /// **Interpretation, not a quotation.** Rule 47-A names no-limit and
+    /// pot-limit only. Fixed-limit has its own half-a-bet treatment, so the
+    /// gate is deliberately scoped away from it; this test pins that choice so
+    /// a later reading of the rules can find and challenge it.
+    #[test]
+    fn fixed_limit_is_not_gated_by_rule_47_a() {
+        let seats = Seats::new(vec![seat("A", 50_000), seat("B", 250), seat("C", 50_000)]);
+        // Blinds are derived: small_bet 100 → 50/100.
+        let mut table = Table::limit_holdem_from_seats(seats, 100, 200, 4);
+        table.act_forced_bets().expect("forced bets should post");
+        table.deal_cards_to_seats().expect("cards should deal");
+
+        let a = table.next_to_act();
+        table.act_raise(a, 200).expect("A raises to 200");
+        let b = table.next_to_act();
+        table.act_all_in(b).expect("B shoves 250 — short of a full bet");
+
+        let c = table.next_to_act();
+        table.act_call(c).expect("C calls");
+
+        assert!(
+            !table.is_reopen_gated(a),
+            "TDA 47-A is scoped to no-limit and pot-limit; fixed-limit is governed \
+             by its own rule and its own raise cap"
+        );
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // Known defects — DEFECT_008. These assert the TDA answer and fail today.
     // ═══════════════════════════════════════════════════════════════════════
@@ -271,45 +471,6 @@ mod tda_2024_conformance {
             awarded_to,
             "TDA 20-A: with the button on seat {button}, the odd chip belongs to the \
              first tied winner to its left"
-        );
-    }
-
-    /// **TDA Rule 47-A** — `DEFECT_008` D8-2.
-    ///
-    /// > An all-in wager […] totaling less than a full bet or raise **will not reopen
-    /// > betting for players who have already acted and are not facing at least a full
-    /// > bet or raise** when the action returns to them.
-    ///
-    /// Sizing is handled (see `rule_47_ex1_*` above). The *gate* is not:
-    /// `Table::raise_bounds` (`src/casino/table/actions.rs:337`) consults only the
-    /// raise cap and the stack, and no per-seat has-acted state is tracked, so a
-    /// player who already acted may still re-raise a sub-minimum increment.
-    ///
-    /// Here A raises to 300 (increment 200), B shoves 400 (increment 100 — short of a
-    /// full raise), C calls. A now faces 100 more, which is not a full raise, so TDA
-    /// permits only call or fold.
-    #[test]
-    #[ignore = "DEFECT_010 (was DEFECT_008 D8-2): no re-open gate; a player who already acted can re-raise a short all-in"]
-    fn rule_47_a_player_who_already_acted_may_not_reraise_a_short_all_in() {
-        // seats: 0 button/UTG, 1 SB (shove stack), 2 BB.
-        let mut table = nlhe(&[50_000, 400, 50_000], 50, 100);
-
-        let a = table.next_to_act();
-        table.act_raise(a, 300).expect("A raises to 300, increment 200");
-        let b = table.next_to_act();
-        table.act_all_in(b).expect("B shoves 400, increment 100 — short");
-        let c = table.next_to_act();
-        table.act_call(c).expect("C calls 400");
-
-        assert_eq!(a, table.next_to_act(), "action returns to A");
-        assert_eq!(
-            200, table.raise_increment,
-            "the short shove must not move the increment"
-        );
-        assert!(
-            table.raise_bounds(a).is_none(),
-            "TDA 47-A: A already acted and faces 100, short of the 200 full raise — \
-             call or fold only, no raise may be offered"
         );
     }
 

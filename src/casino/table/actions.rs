@@ -7,6 +7,7 @@ use crate::casino::action::TableAction;
 use crate::casino::state::PlayerState;
 use crate::games::GameFamily;
 use crate::games::GamePhase;
+use crate::games::betting_structure::BettingStructure;
 use crate::games::razz::california::California;
 
 impl Table {
@@ -265,6 +266,7 @@ impl Table {
             return Err(PKError::TableActionOutOfOrder(err));
         }
         let folded_chips = self.seats.act_fold(seat_number)?;
+        self.record_action_level(seat_number);
         self.pot += folded_chips;
         self.log(TableAction::Fold(seat_number));
         self.log(TableAction::BringItIn(folded_chips));
@@ -335,14 +337,80 @@ impl Table {
     /// not a raise and is not represented here.
     #[must_use]
     pub fn raise_bounds(&self, seat_number: u8) -> Option<(usize, usize)> {
+        // TDA 2024 Rule 47-A rights gate (DEFECT_010) — see `is_reopen_gated`.
+        if self.is_reopen_gated(seat_number) {
+            return None;
+        }
+        // validate_raise(min) folds in the remaining reasons a raise could be
+        // illegal (cap reached, min above the structure ceiling because the
+        // stack is short).
         let min = self.min_raise_to();
-        // validate_raise(min) folds every reason a raise could be illegal (cap
-        // reached, min above the structure ceiling because the stack is short)
-        // into one check.
         if self.validate_raise(seat_number, min).is_err() {
             return None;
         }
         Some((min, self.max_raise_for(seat_number)))
+    }
+
+    /// TDA 2024 Rule 47-A — is this seat barred from raising because the
+    /// betting was never re-opened for it?
+    ///
+    /// An all-in (or a run of them) totalling less than a full raise does not
+    /// re-open the betting for a player who has already acted and is not now
+    /// facing at least a full raise. Such a player may only call or fold.
+    ///
+    /// Three properties are worth reading off the implementation:
+    ///
+    /// - **Scoped to no-limit and pot-limit**, because Rule 47-A names only
+    ///   those. Fixed-limit has its own half-a-bet rule and is left alone.
+    /// - **Cumulative for free.** Measuring against the level this seat last
+    ///   acted at — rather than against the last single all-in — means two
+    ///   short all-ins that together make a full raise correctly *do* re-open.
+    ///   That is 47-A's cumulative clause with no extra machinery.
+    /// - **The big-blind option is safe.** `is_yet_to_act_or_blind`'s
+    ///   `Blind(_)` arm means a big blind who has posted but not yet taken the
+    ///   option counts as not having acted, so the gate cannot fire on them.
+    ///
+    /// This is the single implementation of the rule. [`Self::raise_bounds`]
+    /// and [`TableSnapshot::from_table`](crate::bot::table_snapshot::TableSnapshot::from_table)
+    /// both call it, so the engine's view and a bot's view cannot drift.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 50_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 400)),
+    ///     Seat::new(Player::new_with_chips("C".to_string(), 50_000)),
+    /// ]);
+    /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// t.act_forced_bets().unwrap();
+    /// t.deal_cards_to_seats().unwrap();
+    ///
+    /// let a = t.next_to_act();
+    /// t.act_raise(a, 300).unwrap();          // A raises, increment 200
+    /// let b = t.next_to_act();
+    /// t.act_all_in(b).unwrap();              // B shoves 400 — only 100 more
+    /// let c = t.next_to_act();
+    /// t.act_call(c).unwrap();
+    ///
+    /// // A faces 100, short of the 200 full raise: call or fold only.
+    /// assert!(t.is_reopen_gated(a));
+    /// assert_eq!(None, t.raise_bounds(a));
+    /// ```
+    #[must_use]
+    pub fn is_reopen_gated(&self, seat_number: u8) -> bool {
+        if !matches!(self.betting, BettingStructure::NoLimit | BettingStructure::PotLimit) {
+            return false;
+        }
+        let Some(seat) = self.seats.get_seat(seat_number) else {
+            return false;
+        };
+        let has_acted = !seat.is_yet_to_act_or_blind();
+        let facing = self.bet.saturating_sub(seat.bet_level_when_last_acted);
+        has_acted && facing < self.min_raise()
     }
 
     /// Places a bet of `amount` for seat `seat_number`.
@@ -404,6 +472,7 @@ impl Table {
             self.raises_this_street = self.raises_this_street.saturating_add(1);
         }
         self.bet = amount;
+        self.record_action_level(seat_number);
         self.log(TableAction::Bet(seat_number, amount));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(remaining)
@@ -457,6 +526,7 @@ impl Table {
             seat.player.act_call(call_target)?;
             to_call
         };
+        self.record_action_level(seat_number);
         self.log(TableAction::Call(seat_number, actual_added));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(actual_added)
@@ -492,6 +562,7 @@ impl Table {
             return Err(PKError::TableActionOutOfOrder(err));
         }
         let remaining = self.seats.act_check(seat_number)?;
+        self.record_action_level(seat_number);
         self.log(TableAction::Check(seat_number));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(remaining)
@@ -562,6 +633,7 @@ impl Table {
         // Saturating add so a misconfigured raise_cap can't panic via
         // overflow (the cap_reached guard above prevents this anyway).
         self.raises_this_street = self.raises_this_street.saturating_add(1);
+        self.record_action_level(seat_number);
         self.log(TableAction::Raise(seat_number, amount));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(remaining)
@@ -663,6 +735,7 @@ impl Table {
             self.raises_this_street = self.raises_this_street.saturating_add(1);
         }
 
+        self.record_action_level(seat_number);
         self.log(TableAction::AllIn(seat_number, amount));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(amount)
@@ -678,6 +751,29 @@ impl Table {
         let is_all_in = self.seats.get_seat(seat_number).is_some_and(Seat::is_all_in);
         if !is_all_in {
             self.raise_increment = amount;
+        }
+    }
+
+    /// Stamps the seat with the table-level `bet` as it stands **after** the
+    /// voluntary action just applied (`DEFECT_010`, TDA 2024 Rule 47-A).
+    ///
+    /// Called from the six voluntary entry points only — `act_fold`,
+    /// `act_check`, `act_bet`, `act_call`, `act_raise`, `act_all_in` — each
+    /// *after* its turn guard has passed and after `self.bet` is final, so a
+    /// rejected out-of-turn attempt never stamps anything.
+    ///
+    /// The forced-post paths (`act_forced_bets`, `act_antes`, `act_bring_in`)
+    /// deliberately do **not** call this: a posted blind is not an action, so a
+    /// big blind who has not yet exercised the option must not be treated as
+    /// having acted.
+    ///
+    /// Post-action rather than pre-action is the whole point. A player who
+    /// raises to 300 has to be measured against 300 when the action comes back
+    /// to them, not against the 100 they faced before raising.
+    fn record_action_level(&mut self, seat_number: u8) {
+        let level = self.bet;
+        if let Some(seat) = self.seats.get_seat_mut(seat_number) {
+            seat.bet_level_when_last_acted = level;
         }
     }
 }
