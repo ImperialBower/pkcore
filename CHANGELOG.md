@@ -5,6 +5,34 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-08-17
+
+### Fixed
+
+- **A dead-button hand replayed with the wrong turn order**
+  ([DEFECT_014](docs/defects/DEFECT_014_replay_table_size.md), TDA 2024 Rule
+  32). `HandHistory::replay` sized its reconstructed table from the occupied
+  seats and the button alone. Under a dead button the seat that *owes* the
+  small blind can be empty and can sit past both — an 8-seat table with players
+  through seat 6 and the button on seat 6 owes the small blind at seat 7. The
+  rebuilt table held 7 seats, so `seat_offset_from_button` took its modulus
+  against the wrong size and derived the small blind at seat 0. Both blinds and
+  every player's turn shifted, and the first recorded voluntary action came
+  back as `TableActionOutOfOrder`.
+
+  The information was never missing from the record: `act_forced_bet_small_
+  blind` logs `ForcedBetSmallBlind(sb, 0)` with the position even when the
+  blind is dead, so the pre-flop action seats pin the table size. Replay now
+  includes them when sizing the seat array. No recorded format changed and no
+  existing hand history is invalidated — records that predate the dead button
+  size identically, because for them no action seat exceeds the last occupied
+  one.
+
+  Caught by `bot_marathon`, which replays all 1000 hands it plays. The bug was
+  latent for exactly as long as the dead button has existed (`0.5.0`): before
+  it, blinds walked to the next *occupied* seat, an answer that does not depend
+  on the physical table size.
+
 ## [0.5.0] - 2026-08-17
 
 ### Added

@@ -560,9 +560,26 @@ impl HandHistory {
         // eliminated player's position (dead-button scenario).  Without this,
         // `act_forced_bets()` receives an out-of-range button and computes the
         // wrong action order for the street.
+        //
+        // `DEFECT_014`: the array must further be large enough to hold the
+        // seat that *owed* the small blind, which under a dead button (TDA
+        // 2024 Rule 32) can be empty and can sit past both the button and the
+        // last occupied seat. That position is recorded — `act_forced_bet_
+        // small_blind` logs `ForcedBetSmallBlind(sb, 0)` with the position even
+        // when nothing is posted — so the pre-flop action seats pin it. Sizing
+        // without them shortens the array, and `seat_offset_from_button` takes
+        // its modulus against the wrong table size: an 8-seat table rebuilt as
+        // 7 derives the small blind at `(6 + 1) % 7 == 0` rather than seat 7,
+        // shifting both blinds and every player's turn.
         let max_seat = self.players.iter().map(|p| p.seat as usize).max().unwrap_or(0);
         let button_seat = self.table.button.unwrap_or(0) as usize;
-        let table_size = max_seat.max(button_seat) + 1;
+        let max_action_seat = self
+            .streets
+            .as_ref()
+            .and_then(|streets| streets.preflop.as_ref())
+            .and_then(|street| street.actions.iter().map(|a| a.seat as usize).max())
+            .unwrap_or(0);
+        let table_size = max_seat.max(button_seat).max(max_action_seat) + 1;
         let mut seats_vec: Vec<Seat> = (0..table_size).map(|_| Seat::new(Player::default())).collect();
         for p in &self.players {
             seats_vec[p.seat as usize] = Seat::new(Player::new_with_chips(p.name.clone(), p.stack as usize));
@@ -4686,5 +4703,106 @@ hands:
         let after = hh.replay().expect("replay after attach");
         assert_eq!(before.is_consistent, after.is_consistent);
         assert_eq!(before.final_stacks, after.final_stacks);
+    }
+
+    /// Regression test for `DEFECT_014`: a hand played under a dead button
+    /// (TDA 2024 Rule 32) must replay with the same turn order it was played
+    /// with.
+    ///
+    /// The small blind position here is seat 7 — one past the button at seat 6
+    /// and past the highest *occupied* seat, which is also 6. `replay()` sized
+    /// its table from occupied seats and the button alone, so it built a
+    /// 7-seat table and derived the small blind at `(6 + 1) % 7 == 0` instead
+    /// of seat 7. Every blind and therefore every seat's turn shifted, and the
+    /// first recorded voluntary action came back as out of order.
+    #[cfg(feature = "bot-profiles")]
+    #[test]
+    fn dead_small_blind_past_the_last_occupied_seat_replays_in_order() {
+        const YAML: &str = r#"
+- format_version: 1
+  hand:
+    id: dead-button-replay
+    game: holdem
+    timestamp: '0'
+    source: regression
+  table:
+    name: regression
+    seats: 5
+    button: 6
+    stakes:
+      small_blind: 50.0
+      big_blind: 100.0
+    betting_structure:
+      kind: no_limit
+  players:
+  - seat: 0
+    name: gto
+    stack: 1393956.0
+    hole_cards: 6♣ 3♥
+  - seat: 1
+    name: tight_passive
+    stack: 2992725.0
+    hole_cards: A♥ 7♠
+  - seat: 3
+    name: tight_aggressive
+    stack: 997174.0
+    hole_cards: K♥ Q♠
+  - seat: 4
+    name: loose_passive
+    stack: 1621474.0
+    hole_cards: 6♦ 5♦
+  - seat: 6
+    name: abc
+    stack: 994671.0
+    hole_cards: K♦ 9♠
+  streets:
+    preflop:
+      actions:
+      - seat: 7
+        action: post
+        amount: 0.0
+      - seat: 0
+        action: post
+        amount: 100.0
+      - seat: 1
+        action: fold
+      - seat: 3
+        action: raise
+        amount: 200.0
+      - seat: 4
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 0
+        action: fold
+      pot: 100.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: -100.0
+  - seat: 1
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: win
+    net: 100.0
+    pot_won: 300.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+"#;
+
+        let hands: Vec<HandHistory> = serde_yaml_bw::from_str(YAML).expect("hand should deserialize");
+        let result = hands[0]
+            .replay()
+            .expect("a dead-button hand must replay without an out-of-order error");
+        assert!(
+            result.is_consistent,
+            "replayed stacks should match the recorded ones: {:?}",
+            result.final_stacks
+        );
     }
 }
