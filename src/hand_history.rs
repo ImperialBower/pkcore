@@ -4992,6 +4992,7 @@ hands:
     /// The recorded chair count is only useful if it reaches disk, and only
     /// safe if its absence is preserved too — an omitted field must not
     /// deserialize into a bogus size that `replay` would then treat as a floor.
+    #[cfg(feature = "hand-histories")]
     #[test]
     fn a_recorded_chair_count_survives_the_yaml_round_trip() {
         let build = || {
