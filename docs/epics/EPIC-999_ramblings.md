@@ -14,7 +14,7 @@ The reason that they don’t like to have you work on machines that match what y
 
 This tree keeps dropping little flowers on my laptop’s keyboard as I type. This is one of those perfect moments that Spalding Gray talked about.
 
-![Perfect Moment](files/perfect_moment.jpg)
+![Perfect Moment](../files/perfect_moment.jpg)
 
 ## Leet Dev Image Hacks
 

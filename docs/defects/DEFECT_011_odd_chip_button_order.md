@@ -257,7 +257,7 @@ model exists.
 - `docs/defects/DEFECT_003_heads_up_side_pot.md` — the prior pot-distribution defect; its
   side-pot stratification is what makes the per-layer split in this fix meaningful
 - `tda_parsed/tda_2024.yaml` — Rule 20 verbatim
-- `docs/EPIC-00f_Coverage.md` — the Gold Standard framing used in [Coverage Gap](#coverage-gap)
+- `../epics/EPIC-00f_Coverage.md` — the Gold Standard framing used in [Coverage Gap](#coverage-gap)
 
 *TDA rules quoted under permission of the Poker TDA, http://www.pokertda.com, all rights
 reserved.*

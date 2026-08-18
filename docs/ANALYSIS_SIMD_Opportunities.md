@@ -4,8 +4,8 @@
 **Files:** `src/arrays/five.rs`, `src/arrays/seven.rs`, `src/card.rs`,
 `src/cards.rs`, `src/lookups/products.rs`, `src/analysis/equity/engine.rs`,
 `src/analysis/case_evals.rs`
-**Companion docs:** [`EPIC-DEFECT-A_Preflop_Perf.md`](./EPIC-DEFECT-A_Preflop_Perf.md),
-[`EPIC-14_Equity.md`](./EPIC-14_Equity.md),
+**Companion docs:** [`epics/EPIC-DEFECT-A_Preflop_Perf.md`](epics/EPIC-DEFECT-A_Preflop_Perf.md),
+[`epics/EPIC-14_Equity.md`](epics/EPIC-14_Equity.md),
 [`DEPENDENCY_AUDIT.md`](./DEPENDENCY_AUDIT.md)
 
 > **Superseded for tracking (2026-08-07):** the live, re-runnable version of

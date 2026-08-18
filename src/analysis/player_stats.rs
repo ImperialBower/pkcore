@@ -6,9 +6,9 @@
 //! signals how much sample size backs the numbers so consumers can suppress
 //! noisy early-session reads.
 //!
-//! See [`docs/EPIC-26_Player_Stats.md`] for the full design rationale.
+//! See [`docs/epics/EPIC-26_Player_Stats-CLOSED.md`] for the full design rationale.
 //!
-//! [`docs/EPIC-26_Player_Stats.md`]: https://github.com/ImperialBower/pkcore/blob/main/docs/EPIC-26_Player_Stats.md
+//! [`docs/epics/EPIC-26_Player_Stats-CLOSED.md`]: https://github.com/ImperialBower/pkcore/blob/main/docs/epics/EPIC-26_Player_Stats-CLOSED.md
 //!
 //! # Examples
 //!

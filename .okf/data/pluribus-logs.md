@@ -18,10 +18,10 @@ timestamp: '2026-07-22T00:00:00Z'
 
 Pluribus is the Brown/Sandholm multiplayer no-limit hold'em research
 bot; its published hand logs serve as realistic high-level play data.
-The repository's `docs/EPIC_Pluribus.md` tracks what pkcore does with
+The repository's `docs/epics/EPIC_Pluribus.md` tracks what pkcore does with
 them. See the raw README for provenance details before making claims
 about the data.
 
 # Citations
 
-[1] [EPIC_Pluribus](https://github.com/ImperialBower/pkcore/blob/main/docs/EPIC_Pluribus.md)
+[1] [EPIC_Pluribus](https://github.com/ImperialBower/pkcore/blob/main/docs/epics/EPIC_Pluribus.md)

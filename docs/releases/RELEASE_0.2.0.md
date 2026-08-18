@@ -351,7 +351,7 @@ public contract that `pkpy` and hand-history YAML rely on.
 |------|-------------|
 | `docs/AUDIT_Fable_5.md` | The full Fable 5 audit: variant-engine bugs (Part II), domain-kernel purity assessment, P0–P9 action plan. |
 | `docs/DOWNSTREAM_MIGRATION_0.2.0.md` | Exact rename map + per-repo checklist for every ImperialBower consumer of pkcore. |
-| `docs/EPIC-36_Configurable_Bot_Capabilities.md` | Planning doc for configurable bot capabilities. |
+| `../epics/EPIC-36_Configurable_Bot_Capabilities.md` | Planning doc for configurable bot capabilities. |
 | `docs/superpowers/specs/2026-07-06-casino-reorg-design.md` | Design spec for the casino package reorganization. |
 
 ### Updated docs

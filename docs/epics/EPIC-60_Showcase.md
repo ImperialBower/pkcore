@@ -34,10 +34,10 @@ Where the platform stands today (pkcore v0.3.1, `Cargo.toml:4`, commit
   `Cargo.toml:118`–`:128`). Replay determinism is pinned by
   `tests/replay_consistency.rs`.
 - **The method is documented.** 50+ EPIC docs in `docs/` carry the numbered
-  specs the work was driven from; the philosophy lives in `docs/EPIC-00.md`
-  ("your domain is the seed"), `docs/EPIC-00g_Enter_AI.md:48`–`:52` (Rust as
+  specs the work was driven from; the philosophy lives in `EPIC-00.md`
+  ("your domain is the seed"), `EPIC-00g_Enter_AI.md:48`–`:52` (Rust as
   "the best cop on the block" against AI slop), and
-  `docs/EPIC-97_Philosophy.md`.
+  `EPIC-97_Philosophy.md`.
 - **Surface 1 — terminal.** `pktui` is a ratatui client with four modes —
   `play`, `arena`, `replay`, `spectate` — and four variants
   (`pktui/README.md:3`–`:35`). Its engine boundary is deliberately narrow:
@@ -155,7 +155,7 @@ generator into a power tool.* The demo:
    --all-features -- -D warnings`, `cargo build --no-default-features`,
    `cargo check --target wasm32-unknown-unknown --no-default-features` — the
    purity proof in four commands.
-2. **Break it live** (the Gold Standard from `docs/EPIC-00f_Coverage.md`
+2. **Break it live** (the Gold Standard from `EPIC-00f_Coverage.md`
    made theatrical): edit one betting rule in the engine — e.g. the min-raise
    logic exercised by `src/casino/table.rs` — rerun `cargo test`, and watch
    named tests fail with domain-language messages. Revert, green again. The
@@ -163,7 +163,7 @@ generator into a power tool.* The demo:
    edit, every time, in seconds.
 3. **The specs the agent works from:** open `docs/`, show the numbered EPIC
    corpus — the walls the LLM builds inside. Quote
-   `docs/EPIC-00g_Enter_AI.md:48`: the compiler as "the best cop on the
+   `EPIC-00g_Enter_AI.md:48`: the compiler as "the best cop on the
    block."
 
 ### Act II — one kernel, three surfaces (~12 min)
@@ -320,7 +320,7 @@ command and expected outcome, which makes a dry run a test run:
   runbook only chooses two contrasting mappings.
 - pkdealer's committed Grafana dashboard (EPIC-22/24) — extended by EPIC-61,
   not by this epic.
-- `docs/EPIC-00*.md`, `docs/EPIC-97_Philosophy.md` — the quote bank; the
+- `docs/EPIC-00*.md`, `EPIC-97_Philosophy.md` — the quote bank; the
   showcase cites, never restates.
 - The `/presentation` skill — generates the per-act runbook skeletons.
 

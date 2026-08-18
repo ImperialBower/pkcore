@@ -7,8 +7,8 @@
 
 ## Features / EPICs
 
-The `docs/EPIC-*` set is large (52 docs); the active build frontier is the
-variant engine and bot/AI tracks. Open `docs/EPIC-NN_*.md` for the status table.
+The `docs/epics/EPIC-*` set is large (52 docs); the active build frontier is the
+variant engine and bot/AI tracks. Open `docs/epics/EPIC-NN_*.md` for the status table.
 
 **Variant engine (active frontier)**
 - EPIC-29 — Variant Engine Foundation
@@ -45,8 +45,8 @@ variant engine and bot/AI tracks. Open `docs/EPIC-NN_*.md` for the status table.
 
 ## Bugs / Defects
 
-- EPIC-DEFECT-Minraise — "Size of the last raise rule not enforced by TableCelled" (`docs/EPIC-DEFECT-Minraise.md`)
-- EPIC-DEFECT-A — Preflop Perf (`docs/EPIC-DEFECT-A_Preflop_Perf.md`)
+- EPIC-DEFECT-Minraise — "Size of the last raise rule not enforced by TableCelled" (`epics/EPIC-DEFECT-Minraise.md`)
+- EPIC-DEFECT-A — Preflop Perf (`epics/EPIC-DEFECT-A_Preflop_Perf.md`)
 - `TODO DEFECT` in masked matchups — needs triage (`src/arrays/matchups/masked.rs:67`)
 
 ## Tech debt

@@ -84,7 +84,7 @@ For **New Features**: include:
 - The new public type/method/enum with its exact Rust signature (copy from source)
 - A representative usage example — prefer copying from doc tests in the source
 - Any invariants or edge-case semantics (all-in run-out, idempotency, etc.)
-- A cross-reference to the EPIC doc (`docs/EPIC-NN_*.md`) if one exists
+- A cross-reference to the EPIC doc (`docs/epics/EPIC-NN_*.md`) if one exists
 
 For **Infrastructure**: include exact version numbers (old → new) and, for CI changes,
 a snippet of the relevant YAML if it illustrates a non-obvious technique.
@@ -176,7 +176,7 @@ themes. Write for a downstream developer skimming to decide whether to upgrade n
 
 | File | Description |
 |------|-------------|
-| `docs/EPIC-NN_Name.md` | ... |
+| `docs/epics/EPIC-NN_Name.md` | ... |
 
 ### Updated docs
 
@@ -223,7 +223,7 @@ themes. Write for a downstream developer skimming to decide whether to upgrade n
   signature (copy from source, do not paraphrase). Include at least one usage example
   per new public API; prefer examples from doc tests already in the source.
 - **EPIC cross-references:** if the change was part of an EPIC, link the doc stub
-  (`docs/EPIC-NN_Name.md`) in the feature section.
+  (`docs/epics/EPIC-NN_Name.md`) in the feature section.
 - **File counts and line numbers** come from `git diff --stat` output — never estimate.
 - **Test names** come from reading the test module in the changed file — list them
   individually, not as a count.

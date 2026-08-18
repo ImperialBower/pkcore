@@ -30,7 +30,7 @@
 //!
 //!    **This group is currently empty.** All four reproducible `DEFECT_008` findings
 //!    have been fixed and un-`ignore`d. That was the Gold Standard from
-//!    `docs/EPIC-00f_Coverage.md` applied to this audit: when it was written, a fix for
+//!    `docs/epics/EPIC-00f_Coverage.md` applied to this audit: when it was written, a fix for
 //!    any D8-N would have made no existing test fail. Only D8-6 is still open, and it
 //!    is unreachable until a multi-table event model exists — no assertion can hold it.
 //!

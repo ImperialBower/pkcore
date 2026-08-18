@@ -302,7 +302,7 @@ the `pkarena0-web` WASM client without Rust compilation:
 | `docs/FEATURE_BotProfile_HandStrengthDecisions.md` | Feature spec: equity proxy, pot-odds calldown, `open_raise_contains`, `value_threshold` |
 | `docs/defects/DEFECT_002_bot_escalation.md` | Post-mortem: deterministic raise-war escalation under equity-based decisions; probabilistic gate fix |
 | `docs/defects/DEFECT_001_shortstack_bb_call_amount.md` | Post-mortem: short-stack BB setting incorrect call target for other players |
-| `docs/EPIC_FEATURE_wasm_wamr.md` | Planning doc: WASM bot profile integration for `pkarena0-web` |
+| `../epics/EPIC_FEATURE_wasm_wamr.md` | Planning doc: WASM bot profile integration for `pkarena0-web` |
 
 ### Updated docs
 
@@ -352,7 +352,7 @@ the `pkarena0-web` WASM client without Rust compilation:
 `docs/FEATURE_BotProfile_TypeSafety.md` *(new)*,
 `docs/defects/DEFECT_001_shortstack_bb_call_amount.md` *(new)*,
 `docs/defects/DEFECT_002_bot_escalation.md` *(new)*,
-`docs/EPIC_FEATURE_wasm_wamr.md` *(new)*,
+`../epics/EPIC_FEATURE_wasm_wamr.md` *(new)*,
 `ROADMAP.md` *(updated)*
 
 **Manifests (1 file):**  

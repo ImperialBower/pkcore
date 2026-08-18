@@ -55,7 +55,8 @@ tests/            # feature-gated end-to-end, fixture-replay, and heavy tests
 benches/          # criterion benches, harness = false
 examples/         # runnable demos; each declares required-features
 data/             # test fixtures (YAML, CSV, DBs) — excluded from the package
-docs/             # EPICs, release notes, audits, defect reports (see §9)
+docs/             # release notes, audits, defect reports (see §9)
+  epics/          # EPIC-NN_Name.md design docs
 ```
 
 - Single-concept types get flat files (`card.rs`, `suit.rs`); subsystems get
@@ -333,7 +334,7 @@ Working documents live in `docs/` with an uppercase `PREFIX_Title.md` scheme:
 
 | Prefix | Purpose |
 |---|---|
-| `EPIC-NN_Name.md` | Numbered feature epics: `## Context` → `## Status` table |
+| `epics/EPIC-NN_Name.md` | Numbered feature epics: `## Context` → `## Status` table |
 | `RELEASE_X.Y.Z.md` | Release notes per version |
 | `RELEASE_AUDIT_X.Y.Z.md` | Downstream-impact audit paired with each release |
 | `AUDIT_*.md` | Codebase audits; code comments cite their item numbers |

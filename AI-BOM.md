@@ -13,7 +13,7 @@ AI tools used to author this codebase. Not part of the shipped library, but rele
 | Tool | Vendor | Role | Notes |
 |------|--------|------|-------|
 | Claude Code | Anthropic | Primary AI coding assistant | All EPICs from EPIC-18 onward; see [`CLAUDE.md`](./CLAUDE.md) |
-| GitHub Copilot | GitHub / Microsoft | Autocomplete, macro generation | Used for repetitive macro patterns; see [`docs/EPIC-00g_Enter_AI.md`](./docs/EPIC-00g_Enter_AI.md) |
+| GitHub Copilot | GitHub / Microsoft | Autocomplete, macro generation | Used for repetitive macro patterns; see [`docs/epics/EPIC-00g_Enter_AI.md`](docs/epics/EPIC-00g_Enter_AI.md) |
 
 ---
 
@@ -112,9 +112,9 @@ No vendor SDK required — ingested via OTLP into Langfuse/Jaeger.
 | Document | Purpose |
 |----------|---------|
 | [`ROADMAP.md`](./ROADMAP.md) | Full 5-phase vision including LLM agent phases |
-| [`docs/EPIC-00g_Enter_AI.md`](./docs/EPIC-00g_Enter_AI.md) | History of AI tooling adoption |
-| [`docs/EPIC-18_Bot_Playing_Styles.md`](./docs/EPIC-18_Bot_Playing_Styles.md) | Bot profile design |
-| [`docs/EPIC-23_Bot_Agents.md`](./docs/EPIC-23_Bot_Agents.md) | Planned LLM agent clients |
-| [`docs/EPIC-27_Exploitative_Decider.md`](./docs/EPIC-27_Exploitative_Decider.md) | Adaptive decision engine |
-| [`docs/EPIC-28_Profile_Training.md`](./docs/EPIC-28_Profile_Training.md) | Evolutionary training loop |
+| [`docs/epics/EPIC-00g_Enter_AI.md`](docs/epics/EPIC-00g_Enter_AI.md) | History of AI tooling adoption |
+| [`docs/epics/EPIC-18_Bot_Playing_Styles.md`](docs/epics/EPIC-18_Bot_Playing_Styles.md) | Bot profile design |
+| [`docs/epics/EPIC-23_Bot_Agents-CLOSED.md`](./docs/epics/EPIC-23_Bot_Agents-CLOSED.md) | Planned LLM agent clients |
+| [`docs/epics/EPIC-27_Exploitative_Decider-CLOSED.md`](./docs/epics/EPIC-27_Exploitative_Decider-CLOSED.md) | Adaptive decision engine |
+| [`docs/epics/EPIC-28_Profile_Training-CLOSED.md`](./docs/epics/EPIC-28_Profile_Training-CLOSED.md) | Evolutionary training loop |
 | [`src/bot/BOT_MODULE_GUIDE.md`](./src/bot/BOT_MODULE_GUIDE.md) | Bot architecture reference |

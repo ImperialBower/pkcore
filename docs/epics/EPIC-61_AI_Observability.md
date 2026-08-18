@@ -73,7 +73,7 @@ Where AI observability stands today (pkcore v0.3.1 `Cargo.toml:4` @
   commented compose snippet exists in that doc, no code.
 - **The engine below is still dark:** pkcore's own spans (`pkcore.hand` /
   `street` / `action` / `solve` / `equity`) are designed but unimplemented
-  (EPIC-38, `docs/EPIC-38_Observability.md`, Planned — no
+  (EPIC-38, `EPIC-38_Observability.md`, Planned — no
   `src/observability.rs` exists at `c17d230`).
 
 **What this EPIC does NOT do:** no changes to pkcore (EPIC-38 stays its own
@@ -337,7 +337,7 @@ otherwise.
 | `pkdealer/pricing.toml` | `[stakes]` table |
 | `pkdealer/proto/dealer.proto` | *(read-only)* `AgentFidelity`, `SeatInfo` cost/chip fields |
 | `pkdealer/grafana/` dashboard JSON | House Ledger dashboard |
-| `pkcore/docs/EPIC-61_AI_Observability.md` | This contract doc |
+| `EPIC-61_AI_Observability.md` | This contract doc |
 
 ## Reuse (do NOT recreate)
 

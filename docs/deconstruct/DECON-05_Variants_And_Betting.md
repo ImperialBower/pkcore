@@ -493,5 +493,5 @@ positions), and through it DECON-07, DECON-08, DECON-11.
 - `.okf/stud-rules.md`, `.okf/razz-rules.md`, `.okf/plo-rules.md` — the source's
   own prose statement of the stud street layout, the Razz inversions, and the
   Omaha pairing.
-- `docs/EPIC-29_Variant_Engine_Foundation.md` — the source's design record for
+- `../epics/EPIC-29_Variant_Engine_Foundation.md` — the source's design record for
   splitting family from structure.

@@ -71,10 +71,10 @@ the copies in this repo's `docs/` are canonical:
 
 | In the holding repo | Canonical location here |
 |---|---|
-| `EPIC-01_Real_Cryptography_Backend.md` | [`docs/EPIC-79a_Real_Cryptography_Backend.md`](../../EPIC-79a_Real_Cryptography_Backend.md) |
+| `EPIC-01_Real_Cryptography_Backend.md` | [`../../epics/EPIC-79a_Real_Cryptography_Backend.md`](../../epics/EPIC-79a_Real_Cryptography_Backend.md) |
 | `mental-poker-crypto-lesson-plan.md` | [`docs/LESSON_PLAN-mental_poker_crypto.md`](../../LESSON_PLAN-mental_poker_crypto.md) |
 
-Parent design docs: [`docs/EPIC-79_Mental_Poker.md`](../../EPIC-79_Mental_Poker.md)
+Parent design docs: [`../../epics/EPIC-79_Mental_Poker.md`](../../epics/EPIC-79_Mental_Poker.md)
 (the spike/decision-gate EPIC) and
 [`docs/ANALYSIS_Mental_Poker.md`](../../ANALYSIS_Mental_Poker.md) (the source
 analysis).

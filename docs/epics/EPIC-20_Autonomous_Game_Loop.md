@@ -2,7 +2,7 @@
 
 > **This EPIC lives in [pkdealer](https://github.com/ImperialBower/pkdealer).**
 > Full design and implementation details:
-> [`pkdealer/docs/EPIC-20_Autonomous_Game_Loop.md`](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-20_Autonomous_Game_Loop.md)
+> [`EPIC-20_Autonomous_Game_Loop.md`](https://EPIC-20_Autonomous_Game_Loop.md)
 
 ## Summary
 

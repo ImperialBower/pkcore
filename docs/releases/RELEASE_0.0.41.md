@@ -263,12 +263,12 @@ The test matrix MSRV has been updated from `1.91.0` to `1.94.1` to match.
 
 | File | Description |
 |------|-------------|
-| `docs/EPIC-25_Range_Frequencies.md` | Design, implementation notes, and status for range frequency parsing |
-| `docs/EPIC-20_Autonomous_Game_Loop.md` | Stub — points to pkdealer repo; notes `PokerSession` as the pkcore dependency |
-| `docs/EPIC-21_Spectator.md` | Stub — Web Spectator (pkdealer) |
-| `docs/EPIC-22_OTel.md` | Stub — OTel instrumentation (pkdealer) |
-| `docs/EPIC-23_Bot_Agents.md` | Stub — Bot agent clients (pkdealer) |
-| `docs/EPIC-24_Demo.md` | Stub — Demo packaging (pkdealer) |
+| `docs/epics/EPIC-25_Range_Frequencies-CLOSED.md` | Design, implementation notes, and status for range frequency parsing |
+| `../epics/EPIC-20_Autonomous_Game_Loop.md` | Stub — points to pkdealer repo; notes `PokerSession` as the pkcore dependency |
+| `../epics/EPIC-21_Spectator.md` | Stub — Web Spectator (pkdealer) |
+| `../epics/EPIC-22_OTel.md` | Stub — OTel instrumentation (pkdealer) |
+| `docs/epics/EPIC-23_Bot_Agents-CLOSED.md` | Stub — Bot agent clients (pkdealer) |
+| `docs/epics/EPIC-24_Demo-CLOSED.md` | Stub — Demo packaging (pkdealer) |
 | `docs/AUDIT_Claude_Code_max.md` | AI code audit — Claude Code (max effort) |
 | `docs/AUDIT_GPT-5.4.md` | AI code audit — GPT 5.4 |
 | `docs/AUDIT_Gemini_3.1.md` | AI code audit — Gemini 3.1 |

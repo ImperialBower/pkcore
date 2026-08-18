@@ -2,7 +2,7 @@
 
 > **This EPIC lives in [pkdealer](https://github.com/ImperialBower/pkdealer).**
 > Full design and implementation details:
-> [`pkdealer/docs/EPIC-21_Spectator.md`](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-21_Spectator.md)
+> [`EPIC-21_Spectator.md`](https://EPIC-21_Spectator.md)
 
 ## Summary
 
