@@ -7,6 +7,7 @@ use crate::casino::action::TableAction;
 use crate::casino::state::PlayerState;
 use crate::games::GameFamily;
 use crate::games::GamePhase;
+use crate::games::betting_structure::BettingStructure;
 use crate::games::razz::california::California;
 
 impl Table {
@@ -212,7 +213,22 @@ impl Table {
     /// - `PKError::InvalidSeatNumber` if the seat is not found.
     pub fn act_forced_bet_small_blind(&mut self) -> Result<(), PKError> {
         let sb = self.determine_small_blind();
-        let actual = self.seats.act_forced_bet(sb, self.forced.small_blind)?;
+        // TDA 2024 Rule 32 (DEFECT_013): under a dead button the seat that owes
+        // the small blind may be vacant. A dead blind is not posted by anyone —
+        // it is not passed on to the next live player, which is the whole
+        // difference from the cash-game moving-button convention.
+        let actual = if self.is_small_blind_dead() {
+            0
+        } else {
+            self.seats.act_forced_bet(sb, self.forced.small_blind)?
+        };
+        // TDA 2024 Rule 54-B (DEFECT_012): remember what was owed but never
+        // posted, so the pre-flop pot-limit ceiling can assume full blinds. A
+        // dead blind contributes its whole amount here; a short all-in blind
+        // contributes the part it could not cover.
+        self.blind_shortfall = self
+            .blind_shortfall
+            .saturating_add(self.forced.small_blind.saturating_sub(actual));
         self.log(TableAction::ForcedBetSmallBlind(sb, actual));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(())
@@ -226,6 +242,12 @@ impl Table {
     pub fn act_forced_bet_big_blind(&mut self) -> Result<(), PKError> {
         let bb = self.determine_big_blind();
         let actual = self.seats.act_forced_bet(bb, self.forced.big_blind)?;
+        // TDA 2024 Rule 54-B (DEFECT_012). Note `self.bet` below is already
+        // 54-B compliant: the bet to call is the *full* big blind even when the
+        // post fell short. Only the pot term needed fixing.
+        self.blind_shortfall = self
+            .blind_shortfall
+            .saturating_add(self.forced.big_blind.saturating_sub(actual));
         self.bet = self.forced.big_blind;
         self.log(TableAction::ForcedBetBigBlind(bb, actual));
         self.log(TableAction::ActionTo(self.next_to_act()));
@@ -265,6 +287,7 @@ impl Table {
             return Err(PKError::TableActionOutOfOrder(err));
         }
         let folded_chips = self.seats.act_fold(seat_number)?;
+        self.record_voluntary_action(seat_number, ChipCommitment::NoChips);
         self.pot += folded_chips;
         self.log(TableAction::Fold(seat_number));
         self.log(TableAction::BringItIn(folded_chips));
@@ -288,7 +311,9 @@ impl Table {
         };
         let stack = seat.player.total_chip_count();
         self.betting.max_raise(
-            self.effective_pot(),
+            // TDA 2024 Rule 54-B (DEFECT_012): pre-flop this is the pot as if
+            // full blinds had been posted.
+            self.pot_limit_pot(),
             self.bet,
             seat.player.bet,
             stack,
@@ -335,14 +360,80 @@ impl Table {
     /// not a raise and is not represented here.
     #[must_use]
     pub fn raise_bounds(&self, seat_number: u8) -> Option<(usize, usize)> {
+        // TDA 2024 Rule 47-A rights gate (DEFECT_010) — see `is_reopen_gated`.
+        if self.is_reopen_gated(seat_number) {
+            return None;
+        }
+        // validate_raise(min) folds in the remaining reasons a raise could be
+        // illegal (cap reached, min above the structure ceiling because the
+        // stack is short).
         let min = self.min_raise_to();
-        // validate_raise(min) folds every reason a raise could be illegal (cap
-        // reached, min above the structure ceiling because the stack is short)
-        // into one check.
         if self.validate_raise(seat_number, min).is_err() {
             return None;
         }
         Some((min, self.max_raise_for(seat_number)))
+    }
+
+    /// TDA 2024 Rule 47-A — is this seat barred from raising because the
+    /// betting was never re-opened for it?
+    ///
+    /// An all-in (or a run of them) totalling less than a full raise does not
+    /// re-open the betting for a player who has already acted and is not now
+    /// facing at least a full raise. Such a player may only call or fold.
+    ///
+    /// Three properties are worth reading off the implementation:
+    ///
+    /// - **Scoped to no-limit and pot-limit**, because Rule 47-A names only
+    ///   those. Fixed-limit has its own half-a-bet rule and is left alone.
+    /// - **Cumulative for free.** Measuring against the level this seat last
+    ///   acted at — rather than against the last single all-in — means two
+    ///   short all-ins that together make a full raise correctly *do* re-open.
+    ///   That is 47-A's cumulative clause with no extra machinery.
+    /// - **The big-blind option is safe.** `is_yet_to_act_or_blind`'s
+    ///   `Blind(_)` arm means a big blind who has posted but not yet taken the
+    ///   option counts as not having acted, so the gate cannot fire on them.
+    ///
+    /// This is the single implementation of the rule. [`Self::raise_bounds`]
+    /// and [`TableSnapshot::from_table`](crate::bot::table_snapshot::TableSnapshot::from_table)
+    /// both call it, so the engine's view and a bot's view cannot drift.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 50_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 400)),
+    ///     Seat::new(Player::new_with_chips("C".to_string(), 50_000)),
+    /// ]);
+    /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// t.act_forced_bets().unwrap();
+    /// t.deal_cards_to_seats().unwrap();
+    ///
+    /// let a = t.next_to_act();
+    /// t.act_raise(a, 300).unwrap();          // A raises, increment 200
+    /// let b = t.next_to_act();
+    /// t.act_all_in(b).unwrap();              // B shoves 400 — only 100 more
+    /// let c = t.next_to_act();
+    /// t.act_call(c).unwrap();
+    ///
+    /// // A faces 100, short of the 200 full raise: call or fold only.
+    /// assert!(t.is_reopen_gated(a));
+    /// assert_eq!(None, t.raise_bounds(a));
+    /// ```
+    #[must_use]
+    pub fn is_reopen_gated(&self, seat_number: u8) -> bool {
+        if !matches!(self.betting, BettingStructure::NoLimit | BettingStructure::PotLimit) {
+            return false;
+        }
+        let Some(seat) = self.seats.get_seat(seat_number) else {
+            return false;
+        };
+        let has_acted = !seat.is_yet_to_act_or_blind();
+        let facing = self.bet.saturating_sub(seat.bet_level_when_last_acted);
+        has_acted && facing < self.min_raise()
     }
 
     /// Places a bet of `amount` for seat `seat_number`.
@@ -404,6 +495,7 @@ impl Table {
             self.raises_this_street = self.raises_this_street.saturating_add(1);
         }
         self.bet = amount;
+        self.record_voluntary_action(seat_number, ChipCommitment::Chips);
         self.log(TableAction::Bet(seat_number, amount));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(remaining)
@@ -457,6 +549,7 @@ impl Table {
             seat.player.act_call(call_target)?;
             to_call
         };
+        self.record_voluntary_action(seat_number, ChipCommitment::Chips);
         self.log(TableAction::Call(seat_number, actual_added));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(actual_added)
@@ -492,6 +585,7 @@ impl Table {
             return Err(PKError::TableActionOutOfOrder(err));
         }
         let remaining = self.seats.act_check(seat_number)?;
+        self.record_voluntary_action(seat_number, ChipCommitment::NoChips);
         self.log(TableAction::Check(seat_number));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(remaining)
@@ -562,6 +656,7 @@ impl Table {
         // Saturating add so a misconfigured raise_cap can't panic via
         // overflow (the cap_reached guard above prevents this anyway).
         self.raises_this_street = self.raises_this_street.saturating_add(1);
+        self.record_voluntary_action(seat_number, ChipCommitment::Chips);
         self.log(TableAction::Raise(seat_number, amount));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(remaining)
@@ -663,6 +758,7 @@ impl Table {
             self.raises_this_street = self.raises_this_street.saturating_add(1);
         }
 
+        self.record_voluntary_action(seat_number, ChipCommitment::Chips);
         self.log(TableAction::AllIn(seat_number, amount));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(amount)
@@ -680,4 +776,98 @@ impl Table {
             self.raise_increment = amount;
         }
     }
+
+    /// TDA 2024 Rule 36 — **substantial action** (`DEFECT_009`).
+    ///
+    /// > Substantial Action is either **A)** any 2 actions in turn, at least
+    /// > one of which puts chips in the pot (i.e. any 2 actions except 2 checks
+    /// > or 2 folds) or **B)** any combination of 3 actions in turn (check,
+    /// > bet, raise, call, fold). **Posted blinds do not count towards SA.**
+    ///
+    /// SA is the point in a betting round past which an error stops being
+    /// correctable — the boundary condition Rules 22, 34-A, 35-D, 52-A and
+    /// 53-B all key off. It is deliberately kept separate from
+    /// [`raises_this_street`](Table::raises_this_street), which answers a
+    /// different question for a different consumer (the fixed-limit raise cap).
+    ///
+    /// Clause A is written here as "2 actions **and** at least one with chips"
+    /// rather than the rule's own "any 2 actions except 2 checks or 2 folds".
+    /// The two are equivalent — the only chipless actions are the check and the
+    /// fold — and the positive form is directly checkable.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use pkcore::casino::game::ForcedBets;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 10_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 10_000)),
+    ///     Seat::new(Player::new_with_chips("C".to_string(), 10_000)),
+    /// ]);
+    /// let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// table.act_forced_bets().unwrap();
+    /// table.deal_cards_to_seats().unwrap();
+    ///
+    /// // Posted blinds are not actions.
+    /// assert!(!table.substantial_action());
+    ///
+    /// // One in-turn call is one action — short of both clauses.
+    /// let utg = table.next_to_act();
+    /// table.act_call(utg).unwrap();
+    /// assert!(!table.substantial_action());
+    ///
+    /// // A second action, and one of the two committed chips: clause A.
+    /// let sb = table.next_to_act();
+    /// table.act_fold(sb).unwrap();
+    /// assert!(table.substantial_action());
+    /// ```
+    #[must_use]
+    pub fn substantial_action(&self) -> bool {
+        self.actions_this_street >= 3 || (self.actions_this_street >= 2 && self.chip_actions_this_street >= 1)
+    }
+
+    /// Stamps the seat with the table-level `bet` as it stands **after** the
+    /// voluntary action just applied (`DEFECT_010`, TDA 2024 Rule 47-A) and
+    /// counts the action toward substantial action (`DEFECT_009`, TDA 2024
+    /// Rule 36).
+    ///
+    /// Called from the six voluntary entry points only — `act_fold`,
+    /// `act_check`, `act_bet`, `act_call`, `act_raise`, `act_all_in` — each
+    /// *after* its turn guard has passed and after `self.bet` is final, so a
+    /// rejected out-of-turn attempt never stamps anything and never counts.
+    /// That single choke point is what keeps the two rules' definitions of "an
+    /// action" from drifting apart.
+    ///
+    /// The forced-post paths (`act_forced_bets`, `act_antes`, `act_bring_in`)
+    /// deliberately do **not** call this: a posted blind is not an action, so a
+    /// big blind who has not yet exercised the option must not be treated as
+    /// having acted, and Rule 36 excludes posted blinds in as many words. The
+    /// stud bring-in is excluded on the same grounds — that is an
+    /// interpretation, since Rule 36 names blinds only, but the bring-in is
+    /// structurally a forced post and is treated as one throughout pkcore.
+    ///
+    /// Post-action rather than pre-action is the whole point for 47-A. A player
+    /// who raises to 300 has to be measured against 300 when the action comes
+    /// back to them, not against the 100 they faced before raising.
+    fn record_voluntary_action(&mut self, seat_number: u8, chips: ChipCommitment) {
+        let level = self.bet;
+        if let Some(seat) = self.seats.get_seat_mut(seat_number) {
+            seat.bet_level_when_last_acted = level;
+        }
+        self.actions_this_street = self.actions_this_street.saturating_add(1);
+        if chips == ChipCommitment::Chips {
+            self.chip_actions_this_street = self.chip_actions_this_street.saturating_add(1);
+        }
+    }
+}
+
+/// Whether a voluntary action put chips in the pot — the distinction TDA 2024
+/// Rule 36 clause A turns on. A bet, call, raise or all-in commits chips; a
+/// check or a fold does not.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ChipCommitment {
+    Chips,
+    NoChips,
 }

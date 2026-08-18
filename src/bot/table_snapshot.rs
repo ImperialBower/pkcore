@@ -112,7 +112,20 @@ pub struct TableSnapshot<'a> {
     /// This player's hole cards.  Empty if cards have not been dealt yet.
     pub hole_cards: Cards,
     /// Total pot — main pot plus all chips committed this street (swept + live bets).
+    ///
+    /// This is the **real** pot, and the one to use for pot odds. Pot-limit
+    /// sizing does not use it — see [`pot_limit_pot`](Self::pot_limit_pot).
     pub pot: usize,
+    /// The pot a pot-limit ceiling is computed against — TDA 2024 Rule 54-B
+    /// (`DEFECT_012`). Pre-flop this is [`pot`](Self::pot) plus any blind money
+    /// owed but never posted, because the rule says pot calculations assume full
+    /// blinds were posted; from the flop onward it equals [`pot`](Self::pot).
+    ///
+    /// Carried as a precomputed field rather than re-derived, so this snapshot
+    /// and [`Table::raise_bounds`](crate::casino::table::Table::raise_bounds)
+    /// cannot disagree — the failure mode `DEFECT_010` found. Sourced from
+    /// [`Table::pot_limit_pot`](crate::casino::table::Table::pot_limit_pot).
+    pub pot_limit_pot: usize,
     /// Chips needed for this player to call the current bet.
     /// `0` means no bet is outstanding and the player may check.
     pub to_call: usize,
@@ -135,6 +148,15 @@ pub struct TableSnapshot<'a> {
     /// is reached no further raise is legal at any size. No-Limit and Pot-Limit
     /// are uncapped and ignore it. Sourced from `Table::raises_this_street`.
     pub raises_this_street: u8,
+    /// `true` when TDA 2024 Rule 47-A bars this seat from raising: it has
+    /// already acted this street and the wager that came back to it is short
+    /// of a full raise, so only call or fold are open (`DEFECT_010`).
+    ///
+    /// Carried as a precomputed flag because the rule needs per-seat history
+    /// the snapshot does not otherwise hold. Sourced from
+    /// [`Table::is_reopen_gated`], the single implementation of the rule, so a
+    /// decider's view and the engine's view cannot drift.
+    pub reopen_gated: bool,
     /// Bet tier for the *current* street (EPIC-30 Phase 5). Fixed-Limit
     /// variants need this to choose between the small-bet and big-bet
     /// increment; No-Limit / Pot-Limit ignore it. Sourced from
@@ -205,6 +227,7 @@ impl<'a> TableSnapshot<'a> {
 
         let committed: usize = table.seats.0.iter().map(|s| s.player.bet).sum();
         let pot = table.pot + committed;
+        let pot_limit_pot = table.pot_limit_pot();
 
         let my_chips = table.seats.get_seat(seat).map_or(0, |s| s.player.chips);
 
@@ -279,6 +302,7 @@ impl<'a> TableSnapshot<'a> {
             board: table.board.clone(),
             hole_cards,
             pot,
+            pot_limit_pot,
             to_call: table.to_call(seat),
             current_bet: table.bet,
             min_raise: table.min_raise(),
@@ -287,6 +311,7 @@ impl<'a> TableSnapshot<'a> {
             big_blind: table.forced.big_blind,
             betting_structure: table.betting,
             raises_this_street: table.raises_this_street,
+            reopen_gated: table.is_reopen_gated(seat),
             bet_tier: table.current_bet_tier(),
             checked_this_street,
             dealer_button,
@@ -472,7 +497,9 @@ impl<'a> TableSnapshot<'a> {
     #[must_use]
     pub fn max_raise_to(&self) -> usize {
         self.betting_structure.max_raise(
-            self.pot,
+            // TDA 2024 Rule 54-B (DEFECT_012): pot-limit sizes against the
+            // notional full-blind pot pre-flop, not the real one.
+            self.pot_limit_pot,
             self.current_bet,
             self.my_committed(),
             self.my_total_chips(),
@@ -489,8 +516,14 @@ impl<'a> TableSnapshot<'a> {
     /// available is `PlayerAction::AllIn`, which the engine always accepts.
     ///
     /// Mirrors [`Table::raise_bounds`](crate::casino::table::Table::raise_bounds)
-    /// and folds in the same three reasons a raise can be illegal, so the two
-    /// agree by construction.
+    /// and folds in the same four reasons a raise can be illegal — the
+    /// per-street raise cap, a stack that cannot cover the minimum, a minimum
+    /// above the structure ceiling, and the TDA Rule 47-A re-open gate
+    /// (`DEFECT_010`, carried in as [`Self::reopen_gated`]).
+    ///
+    /// The 47-A condition is *not* re-derived here: it needs per-seat history
+    /// the snapshot does not hold, and re-deriving it is precisely how this
+    /// method silently disagreed with the table when the gate was first added.
     ///
     /// # Examples
     ///
@@ -513,6 +546,9 @@ impl<'a> TableSnapshot<'a> {
     /// ```
     #[must_use]
     pub fn raise_bounds(&self) -> Option<(usize, usize)> {
+        if self.reopen_gated {
+            return None;
+        }
         if self.betting_structure.cap_reached(self.raises_this_street) {
             return None;
         }

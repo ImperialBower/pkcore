@@ -1172,7 +1172,8 @@ impl SimTable {
             &ending_stacks,
             "sim_table",
             None,
-        );
+        )
+        .with_table_size(self.table.seats.size() as usize);
 
         if let Some(reg) = self.stats_registry.as_mut() {
             reg.ingest_hand(&hh);

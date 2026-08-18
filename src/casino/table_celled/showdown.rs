@@ -1,5 +1,6 @@
 use crate::PKError;
 use crate::casino::cashier::chips::Stack;
+use crate::casino::tda;
 use crate::casino::winnings::{PotWin, Winnings};
 use crate::prelude::{Eval, Pile, SeatEquity, Seatbit, Seven, TableAction, TableCelled, TableEquity};
 use std::collections::HashMap;
@@ -90,6 +91,30 @@ impl Showdown {
         iter.all(|c| c == first)
     }
 
+    /// TDA 2024 Rule 20 share mapping for `TableCelled` (`DEFECT_011`), keyed by
+    /// seat so each payout loop can keep its own iteration order.
+    ///
+    /// Delegates to [`crate::casino::tda`], which `Table` uses too — the rule
+    /// has one implementation across both table types.
+    fn tda_shares(table: &TableCelled, total: usize, winners: &[u8]) -> HashMap<u8, usize> {
+        tda::pair_shares(
+            total,
+            winners,
+            table.game.family(),
+            table.button.value(),
+            table.seats.size(),
+            |seat| match table.effective_player_cards(seat) {
+                Some(cards) => match Seven::try_from(cards) {
+                    Ok(seven) => Eval::from(seven).hand,
+                    Err(_) => Eval::default().hand,
+                },
+                None => Eval::default().hand,
+            },
+        )
+        .into_iter()
+        .collect()
+    }
+
     fn process_headsup(table: &TableCelled) -> Result<Winnings, PKError> {
         // When contributors put in unequal amounts (mismatched all-ins, or folded
         // players who left chips in the pot), the simple even-split below is
@@ -113,14 +138,17 @@ impl Showdown {
         let _brought_in = table.close_it_out()?;
         table.seats.showdown(table.pot.count())?;
 
-        let shares = table.pot.take().divvy_up(winners.len());
+        // TDA 2024 Rule 20 (DEFECT_011): the odd chip is placed by button
+        // position (or by high card by suit in stud), not by seat index.
+        let pot_total = table.pot.take().count();
+        let shares = Self::tda_shares(table, pot_total, &winners);
 
         let mut results: Vec<PotWin> = Vec::new();
 
-        for (i, winner_seat_number) in winners.iter().enumerate() {
+        for winner_seat_number in &winners {
             if let Some(seat) = table.get_seat_mut(*winner_seat_number) {
-                let player_winnings = shares.get(i).cloned().unwrap_or_default();
-                let winnings_amount = player_winnings.count();
+                let winnings_amount = shares.get(winner_seat_number).copied().unwrap_or_default();
+                let player_winnings = Stack::new(winnings_amount);
 
                 // Award to player's chips
                 let _ = seat.player.chips.wins(player_winnings.clone());
@@ -270,13 +298,15 @@ impl Showdown {
             };
             equity = remaining;
 
-            let shares = Stack::new(total).divvy_up(tied_at_level.len());
+            // TDA 2024 Rule 20 (DEFECT_011) — applied per pot layer, since each
+            // layer is its own split with its own odd chip.
+            let shares = Self::tda_shares(table, total, &tied_at_level);
             let is_main_pot = !main_pot_paid;
             main_pot_paid = true;
 
-            for (i, &seat) in tied_at_level.iter().enumerate() {
-                let share = shares.get(i).cloned().unwrap_or_default();
-                let share_amount = share.count();
+            for &seat in &tied_at_level {
+                let share_amount = shares.get(&seat).copied().unwrap_or_default();
+                let share = Stack::new(share_amount);
 
                 if let Some(s) = table.get_seat_mut(seat) {
                     let _ = s.player.chips.wins(share);
@@ -392,10 +422,11 @@ impl Showdown {
             };
             equity = remaining;
 
-            let shares = Stack::new(total).divvy_up(tied_side.len());
-            for (i, &seat) in tied_side.iter().enumerate() {
-                let share = shares.get(i).cloned().unwrap_or_default();
-                let share_amount = share.count();
+            // TDA 2024 Rule 20 (DEFECT_011).
+            let shares = Self::tda_shares(table, total, &tied_side);
+            for &seat in &tied_side {
+                let share_amount = shares.get(&seat).copied().unwrap_or_default();
+                let share = Stack::new(share_amount);
 
                 if let Some(s) = table.get_seat_mut(seat) {
                     let _ = s.player.chips.wins(share);

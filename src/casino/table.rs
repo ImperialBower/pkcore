@@ -21,6 +21,7 @@ use crate::casino::equity::seat_equity::SeatEquity;
 use crate::casino::equity::seatbit::Seatbit;
 use crate::casino::equity::table_equity::TableEquity;
 use crate::casino::game::ForcedBets;
+use crate::casino::tda;
 use crate::casino::winnings::{PotWin, Winnings};
 use crate::games::betting_structure::{BetTier, BettingStructure};
 use crate::games::omaha::OmahaHigh;
@@ -119,6 +120,30 @@ pub struct Table {
     /// ([`reset`](Table::reset)). Used by Fixed-Limit variants to
     /// enforce the per-street raise cap; `NoLimit` and `PotLimit` ignore it.
     pub raises_this_street: u8,
+    /// In-turn voluntary actions taken on the current betting street
+    /// (`DEFECT_009`, TDA 2024 Rule 36). Forced posts — blinds, antes, the
+    /// stud bring-in — do **not** count. Reset alongside
+    /// [`raises_this_street`](Table::raises_this_street) at both the street
+    /// boundary ([`bring_it_in`](Table::bring_it_in)) and the hand boundary
+    /// ([`reset`](Table::reset)). Read only through
+    /// [`substantial_action`](Table::substantial_action).
+    pub actions_this_street: u8,
+    /// The subset of [`actions_this_street`](Table::actions_this_street) that
+    /// put chips in the pot — bet, call, raise and all-in. Checks and folds do
+    /// not. This is the whole content of Rule 36's clause A, which
+    /// `raises_this_street` cannot express because it counts raises only.
+    pub chip_actions_this_street: u8,
+    /// Blind money owed but never posted this hand — the gap between
+    /// [`forced`](Table::forced) and what the blind seats could actually put up
+    /// (`DEFECT_012`, TDA 2024 Rule 54-B). A short all-in blind contributes its
+    /// shortfall; a dead blind would contribute the whole amount, once
+    /// `DEFECT_008` D8-4 makes dead blinds reachable.
+    ///
+    /// Accumulated by the two blind-posting paths and cleared at the hand
+    /// boundary ([`reset`](Table::reset)) — never at a street boundary, because
+    /// it describes the hand's blinds rather than the current street. Read only
+    /// through [`pot_limit_pot`](Table::pot_limit_pot).
+    pub blind_shortfall: usize,
 }
 
 impl Table {
@@ -396,6 +421,9 @@ impl Table {
             dealt_hole_cards: HashMap::new(),
             betting,
             raises_this_street: 0,
+            actions_this_street: 0,
+            chip_actions_this_street: 0,
+            blind_shortfall: 0,
         }
     }
 
@@ -419,9 +447,30 @@ impl Table {
         start
     }
 
-    /// Returns the number of non-empty (occupied) seats.
-    fn count_occupied_seats(&self) -> usize {
-        self.seats.0.iter().filter(|s| !s.is_empty()).count()
+    /// Returns the number of seats that hold a player, ignoring empty ones.
+    ///
+    /// Distinct from `self.seats.size()`, which counts the physical chairs.
+    /// The gap between the two is what a dead button (TDA 2024 Rule 32) opens
+    /// up, and the reason the two counts drive different rules: blinds are
+    /// derived from positions, while the heads-up rules turn on the head
+    /// count.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    ///
+    /// let live = |name: &str| Seat::new(Player::new_with_chips(name.to_string(), 5_000));
+    /// let seats = Seats::new(vec![live("A"), Seat::default(), live("C")]);
+    /// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    ///
+    /// assert_eq!(3, table.seats.size(), "three chairs");
+    /// assert_eq!(2, table.count_occupied_seats(), "two of them have players");
+    /// ```
+    #[must_use]
+    pub fn count_occupied_seats(&self) -> usize {
+        self.seats.count_occupied() as usize
     }
 
     /// Returns the index of the Nth occupied seat after `start`, wrapping.
@@ -446,11 +495,19 @@ impl Table {
         occupied[idx]
     }
 
-    /// Seat index of the small blind.
+    /// Seat index that **owes** the small blind — TDA 2024 Rule 32
+    /// (`DEFECT_013`).
     ///
-    /// In heads-up (≤2 occupied seats), the button/dealer is the small blind —
-    /// standard heads-up poker rules.  In full-ring play the small blind is the
-    /// first occupied seat clockwise after the button.
+    /// In full-ring play this is the seat one step clockwise of the button **by
+    /// position**, occupied or not. Under a dead button that seat may be
+    /// vacant, in which case the small blind is *dead* and never posted: see
+    /// [`is_small_blind_dead`](Table::is_small_blind_dead). The returned index
+    /// is still the position that owed it, because that is what the pot
+    /// calculation of Rule 54-B needs to know.
+    ///
+    /// In heads-up (≤2 occupied seats) the button/dealer is the small blind per
+    /// Rule 34-B, and the walk to an occupied seat is kept — heads-up has no
+    /// dead blind to model.
     ///
     /// # Examples
     ///
@@ -478,18 +535,81 @@ impl Table {
     #[must_use]
     pub fn determine_small_blind(&self) -> u8 {
         if self.count_occupied_seats() <= 2 {
-            // Heads-up rule: the button/dealer is the small blind.
+            // Heads-up rule (TDA 34-B): the button/dealer is the small blind.
             self.occupied_seat_at_or_after(self.button)
         } else {
-            self.next_occupied_seat_after(self.button, 1)
+            // TDA 32: by position. No walk — an empty seat here means a dead
+            // small blind, which is exactly what the rule asks for.
+            self.seat_offset_from_button(1)
         }
+    }
+
+    /// The seat `offset` steps clockwise of the button **by raw index**,
+    /// wrapping. Unlike [`next_occupied_seat_after`](Table::next_occupied_seat_after)
+    /// this does not skip empty seats, which is the whole point of a dead
+    /// button (TDA 2024 Rule 32).
+    #[must_use]
+    fn seat_offset_from_button(&self, offset: usize) -> u8 {
+        let size = self.seats.0.len();
+        if size == 0 {
+            return 0;
+        }
+        u8::try_from((self.button as usize + offset) % size).unwrap_or(0)
+    }
+
+    /// TDA 2024 Rule 32 — is the small blind **dead** this hand?
+    ///
+    /// True when the seat that owes the small blind is vacant, in which case no
+    /// small blind is posted at all. This is the case Rule 54-B names directly
+    /// ("dead SB, BB posts 200") and the reason a dead button changes pot sizes
+    /// rather than merely changing who pays.
+    ///
+    /// Always false heads-up, where the button is the small blind and is by
+    /// definition occupied.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use pkcore::casino::game::ForcedBets;
+    ///
+    /// let live = |name: &str| Seat::new(Player::new_with_chips(name.to_string(), 5_000));
+    /// // An eliminated player leaves an empty seat behind.
+    /// let gone = || Seat::new(Player::new_with_chips(String::new(), 0));
+    ///
+    /// let seats = Seats::new(vec![live("A"), gone(), gone(), live("D"), live("E")]);
+    /// let mut table = Table::nlh_from_seats(seats, ForcedBets::new(100, 200));
+    ///
+    /// // Button dead on seat 1; the small blind position (seat 2) is empty too.
+    /// table.button = 1;
+    /// assert!(table.is_small_blind_dead());
+    /// assert_eq!(3, table.determine_big_blind(), "the big blind is never dead");
+    ///
+    /// // Button on seat 3: the small blind position (seat 4) has a player.
+    /// table.button = 3;
+    /// assert!(!table.is_small_blind_dead());
+    /// ```
+    #[must_use]
+    pub fn is_small_blind_dead(&self) -> bool {
+        if self.count_occupied_seats() <= 2 {
+            return false;
+        }
+        self.seats
+            .get_seat(self.determine_small_blind())
+            .is_none_or(Seat::is_empty)
     }
 
     /// Seat index of the big blind.
     ///
-    /// In heads-up, the big blind is the only other occupied seat (one step
-    /// after the small blind).  In full-ring play it is two steps after the
-    /// button.
+    /// In full-ring play the big blind position is two steps clockwise of the
+    /// button, and — unlike the small blind — it is **never dead**: if that
+    /// position is vacant the big blind moves on to the first live player after
+    /// it. The 2024 ruleset never names a dead big blind, while Rule 54-B names
+    /// a dead small blind outright, and a hand with no big blind would have no
+    /// bet to call. TDA 2024 Rule 32 (`DEFECT_013`).
+    ///
+    /// In heads-up the big blind is the only other occupied seat, one step after
+    /// the small blind.
     ///
     /// # Examples
     ///
@@ -521,7 +641,9 @@ impl Table {
             let sb = self.occupied_seat_at_or_after(self.button);
             self.next_occupied_seat_after(sb, 1)
         } else {
-            self.next_occupied_seat_after(self.button, 2)
+            // TDA 32: start at the position that owes it, then take the first
+            // live player from there — the big blind is never dead.
+            self.occupied_seat_at_or_after(self.seat_offset_from_button(2))
         }
     }
 
@@ -536,7 +658,9 @@ impl Table {
                 // Heads-up: SB (button) acts first preflop.
                 self.occupied_seat_at_or_after(self.button)
             } else {
-                self.next_occupied_seat_after(self.button, 3)
+                // TDA 32: derived from the big blind rather than counted from
+                // the button, so a dead small blind does not shift the count.
+                self.next_occupied_seat_after(self.determine_big_blind(), 1)
             }
         } else {
             self.next_occupied_seat_after(self.button, 1)
@@ -834,6 +958,51 @@ impl Table {
     pub fn effective_pot(&self) -> usize {
         let committed: usize = self.seats.0.iter().map(|s| s.player.bet).sum();
         self.pot + committed
+    }
+
+    /// The pot a **pot-limit** maximum is computed against — TDA 2024 Rule 54-B
+    /// (`DEFECT_012`).
+    ///
+    /// > Pre-flop **a dead or short all-in blind will not affect pot
+    /// > calculation. All pre-flop pot and re-pot bets will assume full blinds
+    /// > were posted.**
+    ///
+    /// Pre-flop this is [`effective_pot`](Table::effective_pot) plus
+    /// [`blind_shortfall`](Table::blind_shortfall) — the pot as it *would* be if
+    /// every blind had been posted in full. From the flop onward Rule 54-C takes
+    /// over and the actual pot is correct, so this is `effective_pot` unchanged.
+    ///
+    /// The notional pot is deliberately **not** what
+    /// [`effective_pot`](Table::effective_pot) returns and not what a bot should
+    /// use for pot odds: no extra chips exist, and treating them as if they did
+    /// would overstate the price of a call. It exists only to size the
+    /// pot-limit ceiling.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("Button".to_string(), 50_000)),
+    ///     Seat::new(Player::new_with_chips("SmallBlind".to_string(), 50_000)),
+    ///     Seat::new(Player::new_with_chips("ShortBigBlind".to_string(), 100)),
+    /// ]);
+    /// // PLO 100/200 — the big blind can only put up 100 of the 200 owed.
+    /// let mut table = Table::plo_from_seats(seats, (100, 200));
+    /// table.act_forced_bets().unwrap();
+    ///
+    /// assert_eq!(200, table.effective_pot(), "only 200 actually reached the pot");
+    /// assert_eq!(100, table.blind_shortfall, "the big blind is 100 short");
+    /// assert_eq!(300, table.pot_limit_pot(), "TDA 54-B assumes full blinds");
+    /// ```
+    #[must_use]
+    pub fn pot_limit_pot(&self) -> usize {
+        if self.phase.is_preflop() {
+            self.effective_pot().saturating_add(self.blind_shortfall)
+        } else {
+            self.effective_pot()
+        }
     }
 
     /// Number of seats that have a non-zero chip stack (i.e. are still funded).
@@ -1372,6 +1541,10 @@ impl Table {
         // boundary so Fixed-Limit raise-cap accounting starts fresh on the
         // next street.
         self.raises_this_street = 0;
+        // DEFECT_009 / TDA 2024 Rule 36: substantial action is a property of
+        // the betting round, so it dies with the street.
+        self.actions_this_street = 0;
+        self.chip_actions_this_street = 0;
         self.pot += collected;
         self.log(TableAction::BringItIn(collected));
         self.log(TableAction::PotSize(self.pot));
@@ -1491,6 +1664,12 @@ impl Table {
         // EPIC-30 Phase 2: reset per-street raise counter when starting
         // a fresh hand.
         self.raises_this_street = 0;
+        // DEFECT_009 / TDA 2024 Rule 36: a fresh hand inherits no action count.
+        self.actions_this_street = 0;
+        self.chip_actions_this_street = 0;
+        // DEFECT_012 / TDA 2024 Rule 54-B: the shortfall belongs to the hand
+        // whose blinds fell short, so it dies with that hand.
+        self.blind_shortfall = 0;
         self.phase = GamePhase::NewHand;
         self.dealt_hole_cards.clear();
     }
@@ -1632,19 +1811,65 @@ impl Table {
         }
     }
 
-    /// Splits `total` chips into `by` roughly equal shares, distributing any
-    /// remainder one chip at a time to the last shares.
-    fn divvy_up(total: usize, by: usize) -> Vec<usize> {
-        match by {
-            0 | 1 => vec![total],
-            _ => {
-                let share = total / by;
-                let remainder = total % by;
-                (0..by)
-                    .map(|i| if i >= by - remainder { share + 1 } else { share })
-                    .collect()
-            }
-        }
+    /// TDA 2024 Rule 20 — the order in which tied winners take odd chips
+    /// (`DEFECT_011`).
+    ///
+    /// > First, odd chips will be broken into the smallest denomination in
+    /// > play. **A)** Board games with 2 or more high or low hands: the odd chip
+    /// > goes to the **first seat left of the button**. **B)** Stud, razz, and if
+    /// > 2 or more high or low hands in stud/8: the odd chip goes to the **high
+    /// > card by suit** in the player's 5-card winning hand.
+    ///
+    /// Returns `winners` sorted by that precedence — best claim first. The
+    /// first clause of the rule does not apply to pkcore: chips are modelled as
+    /// integers, so there is no denomination to break.
+    ///
+    /// The ordering lives here rather than inside the arithmetic split because
+    /// the split has no domain context: it cannot see the button or the cards,
+    /// and should not learn to.
+    ///
+    /// **Case C (hi/lo split — the odd chip in the total pot goes to the high
+    /// side) is not implemented, because it is unreachable.** pkcore ships no
+    /// hi/lo variant; `GameFamily` has no split-pot arm. When one lands, it
+    /// belongs here.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use pkcore::casino::game::ForcedBets;
+    ///
+    /// let seats = Seats::new(
+    ///     (0..8).map(|i| Seat::new(Player::new_with_chips(format!("P{i}"), 5_000))).collect(),
+    /// );
+    /// let mut table = Table::nlh_from_seats(seats, ForcedBets::new(25, 50));
+    ///
+    /// // Button on seat 7: seat 2 is nearer its left than seat 5, so seat 2 leads.
+    /// table.button = 7;
+    /// assert_eq!(vec![2, 5], table.tda_odd_chip_order(&[2, 5]));
+    ///
+    /// // Button on seat 3: the walk wraps, so seat 5 leads and seat 2 follows.
+    /// table.button = 3;
+    /// assert_eq!(vec![5, 2], table.tda_odd_chip_order(&[2, 5]));
+    /// ```
+    #[must_use]
+    pub fn tda_odd_chip_order(&self, winners: &[u8]) -> Vec<u8> {
+        tda::odd_chip_order(winners, self.game.family(), self.button, self.seats.size(), |seat| {
+            self.build_eval_for_seat(seat).hand
+        })
+    }
+
+    /// Splits `total` among tied `winners`, awarding odd chips by TDA 2024
+    /// Rule 20 (`DEFECT_011`). Returns `(seat, share)` pairs.
+    fn tda_shares(&self, total: usize, winners: &[u8]) -> Vec<(u8, usize)> {
+        tda::pair_shares(
+            total,
+            winners,
+            self.game.family(),
+            self.button,
+            self.seats.size(),
+            |seat| self.build_eval_for_seat(seat).hand,
+        )
     }
 
     /// True when every seat that contributed to the pot has the same
@@ -1791,12 +2016,15 @@ impl Table {
 
         let pot = self.pot;
         self.pot = 0;
-        let shares = Table::divvy_up(pot, winners.len());
+        // TDA 2024 Rule 20 (DEFECT_011): the odd chip is placed by button
+        // position, not by seat index. Iteration order below is unchanged so the
+        // event log still reads in seat order; only the amounts move.
+        let shares: HashMap<u8, usize> = self.tda_shares(pot, &winners).into_iter().collect();
 
         let mut results: Vec<PotWin> = Vec::new();
 
-        for (i, &winner_seat) in winners.iter().enumerate() {
-            let share = shares.get(i).copied().unwrap_or(0);
+        for &winner_seat in &winners {
+            let share = shares.get(&winner_seat).copied().unwrap_or(0);
             let hand_result = self.build_eval_for_seat(winner_seat);
 
             let (chips_in_play, player_id, hand_bard) = {
@@ -1905,12 +2133,14 @@ impl Table {
             };
             equity = remaining;
 
-            let shares = Table::divvy_up(total, tied_at_level.len());
+            // TDA 2024 Rule 20 (DEFECT_011) — applied per pot layer, since each
+            // layer is its own split with its own odd chip.
+            let shares: HashMap<u8, usize> = self.tda_shares(total, &tied_at_level).into_iter().collect();
             let is_main_pot = !main_pot_paid;
             main_pot_paid = true;
 
-            for (i, &seat_num) in tied_at_level.iter().enumerate() {
-                let share = shares.get(i).copied().unwrap_or(0);
+            for &seat_num in &tied_at_level {
+                let share = shares.get(&seat_num).copied().unwrap_or(0);
                 if let Some(seat) = self.seats.get_seat_mut(seat_num) {
                     seat.player.chips += share;
                 }
@@ -2003,9 +2233,10 @@ impl Table {
             };
             equity = remaining;
 
-            let shares = Table::divvy_up(total, tied_side.len());
-            for (i, &seat_num) in tied_side.iter().enumerate() {
-                let share = shares.get(i).copied().unwrap_or(0);
+            // TDA 2024 Rule 20 (DEFECT_011).
+            let shares: HashMap<u8, usize> = self.tda_shares(total, &tied_side).into_iter().collect();
+            for &seat_num in &tied_side {
+                let share = shares.get(&seat_num).copied().unwrap_or(0);
                 if let Some(seat) = self.seats.get_seat_mut(seat_num) {
                     seat.player.chips += share;
                 }
@@ -2519,10 +2750,19 @@ mod casino__table_tests {
 
     #[test]
     fn divvy_up_helper() {
-        assert_eq!(vec![100], Table::divvy_up(100, 1));
-        assert_eq!(vec![50, 50], Table::divvy_up(100, 2));
-        assert_eq!(vec![33, 33, 34], Table::divvy_up(100, 3));
-        assert_eq!(vec![100], Table::divvy_up(100, 0));
+        // The arithmetic split now lives in `casino::tda`; what belongs here is
+        // that the *seat* mapping honours TDA Rule 20. `casino__tda_tests`
+        // covers the arithmetic itself.
+        let seats = Seats::new(
+            (0..8)
+                .map(|i| Seat::new(Player::new_with_chips(format!("P{i}"), 5_000)))
+                .collect(),
+        );
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(25, 50));
+        table.button = 7;
+        assert_eq!(vec![(2, 88), (5, 87)], table.tda_shares(175, &[2, 5]));
+        table.button = 3;
+        assert_eq!(vec![(5, 88), (2, 87)], table.tda_shares(175, &[2, 5]));
     }
 
     #[test]
@@ -3281,11 +3521,17 @@ mod casino__table_tests {
             .expect("the re-opened minimum re-raise is accepted");
     }
 
-    // P9f (companion) — a sub-minimum all-in does NOT re-open the betting: a
-    // player who already acted may only call the extra, not re-raise. Confirms
-    // the raise_increment update is gated on "at least a full raise".
+    // P9f (companion) — a sub-minimum all-in leaves `raise_increment` alone,
+    // so the minimum re-raise stays measured from the last *full* raise.
+    //
+    // DEFECT_010 renamed this. It used to be called
+    // `sub_min_all_in_does_not_reopen_min_raise`, which read as though it
+    // covered TDA Rule 47-A's re-open rights gate — it never did, it only
+    // asserts the increment. That misreading is part of why the rights half
+    // went unimplemented for so long; the gate itself is pinned in
+    // `tests/tda_conformance.rs`.
     #[test]
-    fn sub_min_all_in_does_not_reopen_min_raise() {
+    fn sub_min_all_in_does_not_change_raise_increment() {
         let seats = Seats::new(vec![
             Seat::new(Player::new_with_chips("A".to_string(), 10_000)),
             Seat::new(Player::new_with_chips("B".to_string(), 450)),

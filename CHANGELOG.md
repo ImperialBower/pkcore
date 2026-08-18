@@ -5,6 +5,245 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-08-17
+
+### Added
+
+- **`Seats::count_occupied` and `Table::count_occupied_seats` — how many chairs
+  have a player in them** (`DEFECT_014`). The count existed as a private helper
+  on `Table`; it is now public on both types and sits next to `Seats::size`,
+  which counts the chairs themselves. The two numbers diverge whenever a player
+  is eliminated, and they drive different rules: blinds are derived from
+  *positions* under the dead button of Rule 32, while the heads-up rules of
+  34-B turn on the *head count*. Unlike `count_active_in_hand` it makes no
+  judgement about the hand in progress — a folded or all-in player still
+  occupies their seat.
+
+- **`HandHistory::with_table_size` — record the physical chair count**
+  ([DEFECT_014](docs/defects/DEFECT_014_replay_table_size.md)). `TableInfo.seats`
+  is documented as the total seats at the table but was filled with the *player*
+  count, giving one field two meanings and leaving the chair count unrecorded.
+  It now means chairs and nothing else: `from_table_state` leaves it unset,
+  because it receives a snapshot of the players rather than the table and cannot
+  know, and callers that hold the table chain `.with_table_size(table.seats.size()
+  as usize)` — the same fluent pattern as `with_variant` and
+  `with_betting_structure`. Nothing is lost by the change: the head count is
+  `players.len()` on a record, or the newly public `Table::count_occupied_seats`
+  on a live table.
+
+  `replay` treats a recorded size as a **lower bound** rather than as gospel.
+  Hand histories written before this change carry the smaller player count in
+  that field, so `max` discards it and the `DEFECT_014` inference still applies
+  — every existing record replays exactly as before, and a new call site that
+  forgets to record the size degrades to inference rather than to a wrong table.
+  No behaviour changes today; what changes is that the chair count no longer has
+  to be deduced, which is what a future rule keying on table geometry would
+  need.
+
+- **`Table::substantial_action` — TDA 2024 Rule 36**
+  ([DEFECT_009](docs/defects/DEFECT_009_substantial_action_predicate.md)).
+  Substantial action is the point in a betting round past which an error stops
+  being correctable: two in-turn actions where at least one put chips in the
+  pot, or any three in-turn actions. pkcore had no predicate for it at all,
+  which left five further rules — 22, 34-A, 35-D, 52-A and 53-B, each of which
+  governs a correction window — with no way to be implemented correctly. This
+  change delivers the predicate and its tests only; the five rules it unblocks
+  remain unimplemented and are each their own change.
+
+  Two new public counters on `Table` back it: `actions_this_street` and
+  `chip_actions_this_street`. They are deliberately kept separate from
+  `raises_this_street`, which counts raises for the fixed-limit raise cap and
+  can express neither clause of Rule 36 — merging them would couple the raise
+  cap to five error-correction rules.
+
+  Rule 36's exclusion of posted blinds falls out of where the counting happens:
+  the six voluntary entry points share one choke point, renamed
+  `record_voluntary_action`, and the forced-post paths (`act_forced_bets`,
+  `act_antes`, `act_bring_in`) do not call it. Because that choke point sits
+  after each entry point's turn guard, an action refused as out of turn never
+  counts. **Interpretation, recorded as such:** Rule 36 names posted blinds and
+  says nothing about the stud bring-in; the bring-in is excluded here on the
+  grounds that it is structurally a forced post, and
+  `stud_bring_in_is_not_substantial_action` pins that reading so a later one can
+  find and challenge it.
+
+### Fixed
+
+- **A dead-button hand replayed with the wrong turn order**
+  ([DEFECT_014](docs/defects/DEFECT_014_replay_table_size.md), TDA 2024 Rule
+  32). `HandHistory::replay` sized its reconstructed table from the occupied
+  seats and the button alone. Under a dead button the seat that *owes* the
+  small blind can be empty and can sit past both — an 8-seat table with players
+  through seat 6 and the button on seat 6 owes the small blind at seat 7. The
+  rebuilt table held 7 seats, so `seat_offset_from_button` took its modulus
+  against the wrong size and derived the small blind at seat 0. Both blinds and
+  every player's turn shifted, and the first recorded voluntary action came
+  back as `TableActionOutOfOrder`.
+
+  The information was never missing from the record: `act_forced_bet_small_
+  blind` logs `ForcedBetSmallBlind(sb, 0)` with the position even when the
+  blind is dead, so the pre-flop action seats pin the table size. Replay now
+  includes them when sizing the seat array. No recorded format changed and no
+  existing hand history is invalidated — records that predate the dead button
+  size identically, because for them no action seat exceeds the last occupied
+  one.
+
+  Caught by `bot_marathon`, which replays all 1000 hands it plays. Introduced
+  by the dead button earlier in this same release and never shipped: before it,
+  blinds walked to the next *occupied* seat, an answer that does not depend on
+  the physical table size.
+
+- **A live player paid a blind they did not owe — no dead button**
+  ([DEFECT_013](docs/defects/DEFECT_013_dead_button.md), TDA 2024 Rule 32).
+  Tournament play uses a dead button: the button advances by position and may
+  land on a seat vacated by elimination, and a small blind whose position is
+  empty is simply not posted. pkcore derived both blinds by walking to the next
+  *occupied* seat — the cash-game moving-button convention — so a dead small
+  blind could never occur and somebody always paid. Three consequences from one
+  root: a different player posts, the pot is a small blind too large, and first
+  action pre-flop sits on a different seat.
+
+  The small blind is now derived by **position** and may name an empty seat, in
+  which case `Table::is_small_blind_dead` is true and nothing is posted — the
+  obligation is *not* passed to the next live player, which is the whole
+  difference from the cash-game convention. The big blind walks from its
+  position to the first live player and is never dead. Under-the-gun is derived
+  from the big blind rather than counted from the button, so a dead small blind
+  does not shift who acts first. `TableCelled` carries the identical fix.
+
+  **Interpretation, recorded as such:** Rule 32 is one sentence and never spells
+  out the mechanics. The dead-SB / live-BB asymmetry is read off Rule 54-B,
+  which names a dead SB outright, and off the absence of any rule naming a dead
+  BB — a hand with no big blind would have no bet to call. It is stated at the
+  definition and pinned by tests so it can be challenged rather than
+  rediscovered.
+
+  This completes `DEFECT_012`: `Table::blind_shortfall` absorbs a dead blind
+  through the same path it already used for a short one, with no special case,
+  which makes **TDA 54-B Example 1** ("dead SB, BB posts 200 […] the pot-limit
+  bet for first player to act is 700") reachable and green for the first time.
+
+  With this, `tests/tda_conformance.rs` has **no ignored tests**: every
+  reproducible finding of the TDA 2024 audit passes. Only D8-6 remains recorded
+  and unreachable, pending a multi-table event model.
+
+- **A short blind shrank the pre-flop pot-limit maximum**
+  ([DEFECT_012](docs/defects/DEFECT_012_short_blind_pot_limit.md), TDA 2024 Rule
+  54-B). Pre-flop, pot-limit calculations must assume full blinds were posted; a
+  dead or short all-in blind does not reduce anyone's maximum bet. pkcore sized
+  the ceiling from the chips that physically reached the pot, so in the TDA's own
+  worked example — PLO 100/200 with a big blind that can only post 100 — the
+  first player to act was offered 600 where the rule says 700, short by exactly
+  the blind money that never got posted.
+
+  The failure was one-directional and therefore silent: the engine only ever
+  offered a maximum that was too *small*, so no illegal bet was accepted and
+  nothing errored. A legal bet was simply missing from the menu, which is
+  invisible to a suite that asserts offered actions are *accepted*.
+
+  Half of Rule 54-B was already satisfied — the bet *to call* was already the
+  full big blind regardless of a short post — so only the pot term moved.
+  `Table::pot_limit_pot` is now the single source of the pot a pot-limit ceiling
+  is sized against, backed by a new `Table::blind_shortfall` accumulated where
+  the blinds are posted. It is gated on the pre-flop phase, because Rule 54-C
+  requires later streets to use the actual pot; a test pins that boundary, since
+  an ungated fix would inflate every post-flop maximum for the rest of the hand.
+
+  `TableSnapshot` gains a matching `pot_limit_pot` field so the bots see the
+  ceiling the engine enforces. It is deliberately separate from
+  `TableSnapshot::pot`, which is the real pot and the one to use for pot odds —
+  inflating that would tell a bot chips exist that do not. Carrying it
+  precomputed rather than re-deriving it is the direct lesson of `DEFECT_010`,
+  and an assertion now pins the agreement rather than assuming it.
+
+- **The odd chip in a split pot went to the highest-numbered winning seat**
+  ([DEFECT_011](docs/defects/DEFECT_011_odd_chip_button_order.md), TDA 2024 Rule
+  20). When a pot cannot be divided evenly, Rule 20 names which tied winner takes
+  the remainder: in board games the first seat left of the button, in stud and
+  razz the high card by suit in the winning 5-card hand. pkcore consulted
+  neither. `divvy_up` puts the remainder on the last shares and
+  `CaseEval::winning_seats` returns seats in ascending order; each is correct
+  alone, but composed they hard-coded "highest seat number takes the extra
+  chip". The result was deterministic and button-independent, so it was right
+  only by coincidence — a small, steady positional leak over a session, which is
+  the reason the rule exists.
+
+  Rule 20 now has one implementation, the new pure `casino::tda` module, called
+  by the three payout sites in `Table` and the three in `TableCelled` — the
+  defect was reachable through both showdown paths. `divvy_up` stays domain-free
+  arithmetic and moved there unchanged; `tda::pair_shares` is what decides which
+  seat each share belongs to. Multiple odd chips walk left from the button in
+  order rather than piling onto one seat. `Table::tda_odd_chip_order` is the
+  public, doc-tested entry point.
+
+  **Case C (hi/lo split) is deliberately not implemented**, because it is
+  unreachable: pkcore ships no hi/lo variant and `GameFamily` has no split-pot
+  arm. It is documented where it would live. The stud reading — rank leads, suit
+  breaks the tie, spades over hearts over diamonds over clubs — is an
+  interpretation of "high card by suit" and is pinned by a test that swaps the
+  two hands between seats, so an implementation reading seat numbers instead of
+  cards fails.
+
+- **A player who had already acted could re-raise a short all-in**
+  ([DEFECT_010](docs/defects/DEFECT_010_reopen_gate.md), TDA 2024 Rule 47-A).
+  An all-in totalling less than a full raise does not re-open the betting for a
+  player who has already acted and is not now facing at least a full raise;
+  that player may only call or fold. pkcore enforced the *sizing* half of Rule
+  47-A correctly but had no *rights* half at all: `Table::raise_bounds`
+  consulted only the per-street raise cap and the actor's stack, so it offered
+  a raise the rules forbid. The offered amount was correctly sized, which is
+  why the error never looked wrong in a hand history.
+
+  The rule now has a single implementation, `Table::is_reopen_gated`, consulted
+  by both `Table::raise_bounds` and `TableSnapshot`. It is scoped to no-limit
+  and pot-limit, the only structures Rule 47-A names; fixed-limit keeps its own
+  half-a-bet treatment. Rule 47-A's *cumulative* clause needs no special case:
+  because a seat is measured against the bet level it last acted at rather than
+  against the last individual all-in, two short all-ins that together make a
+  full raise correctly do re-open. The big-blind option is unaffected — a
+  posted blind is not an action.
+
+- **`TableSnapshot::raise_bounds` could disagree with `Table::raise_bounds`.**
+  It re-derived raise legality rather than delegating, while claiming in its
+  own documentation that the two "agree by construction". Adding the Rule 47-A
+  gate to the table alone left the bots seeing a raise the engine no longer
+  advertised, which `tests/bot_action_legality.rs` caught. The 47-A condition
+  is now carried in as the precomputed `TableSnapshot::reopen_gated` field
+  rather than recomputed.
+
+### Changed
+
+- `Seat` gains a public field, `bet_level_when_last_acted`: the table-level bet
+  immediately **after** that seat last voluntarily acted this street. Forced
+  posts do not set it, and it is cleared with `PlayerState` at the street
+  boundary. Construction via `Seat::new` and `Seat::default` is unaffected;
+  code that builds a `Seat` by struct literal must add the field.
+- `TableSnapshot` gains a public field, `reopen_gated`.
+- Test `sub_min_all_in_does_not_reopen_min_raise` is renamed
+  `sub_min_all_in_does_not_change_raise_increment`. It asserts that
+  `raise_increment` is unchanged and never tested re-opening; the old name
+  suggested Rule 47-A's rights gate was covered when it was not.
+- **The three recorded pkarena0 sessions moved to `data/hands/legacy/`**, with a
+  README explaining why. They were played under blinds derived by walking to the
+  next occupied seat; TDA 2024 Rule 32 requires a dead button, which is
+  `DEFECT_008` D8-4 and still open. 115 of their 133 hands have gaps in the
+  seating, so replaying them after that fix will produce different blinds, pots
+  and action order. They are kept as a record of what pkcore did at the version
+  stamped in each file, not as a specification — versioning the blind-derivation
+  behaviour was considered and rejected as a permanent engine cost for a
+  one-time archive. `data/hands/the_hand.yaml` stayed put: it transcribes a real
+  televised hand rather than pkcore output. `tests/pkarena0_session.rs` and
+  `tests/hand_history_legacy_yaml.rs` follow the new paths; both assert format
+  and replay mechanics rather than blind arithmetic.
+
+- **`tests/tda_conformance.rs` now covers every reproducible finding of the TDA
+  2024 audit.** Rule 36 was previously listed there as the one finding the
+  harness could not hold — an absent predicate cannot be asserted against, so
+  any test naming it failed to *compile* rather than to fail. Eleven Rule 36
+  assertions join the conformant group: the rule's own clauses and its two
+  stated counter-examples, the two reset boundaries, the turn guard, and the
+  bring-in interpretation.
+
 ## [0.4.0] - 2026-08-16
 
 ### Fixed
@@ -657,6 +896,7 @@ on the wire, and `replay` behavior is unaffected by the new metadata. Driven by
 `ImperialBower/pkdealer` EPIC-40 Phase 4 (arena recorder agent-fidelity
 annotations).
 
+[0.5.0]: https://github.com/ImperialBower/pkcore/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/ImperialBower/pkcore/compare/v0.3.5...v0.4.0
 [0.3.5]: https://github.com/ImperialBower/pkcore/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/ImperialBower/pkcore/compare/v0.3.3...v0.3.4

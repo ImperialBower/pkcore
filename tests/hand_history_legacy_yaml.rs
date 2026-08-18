@@ -12,7 +12,7 @@
 
 use pkcore::hand_history::{HandCollection, HandHistory};
 
-const PKARENA_SESSION_YAML: &str = include_str!("../data/hands/pkarena0-session_2026-04-15.yaml");
+const PKARENA_SESSION_YAML: &str = include_str!("../data/hands/legacy/pkarena0-session_2026-04-15.yaml");
 const THE_HAND_YAML: &str = include_str!("../data/hands/the_hand.yaml");
 
 #[test]

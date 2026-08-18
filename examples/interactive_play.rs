@@ -231,6 +231,7 @@ fn run_hand(
             &winnings,
             &table.event_log[event_log_start..],
             &ending_stacks,
+            table.seats.size() as usize,
         );
         return (winnings, history);
     }
@@ -253,6 +254,7 @@ fn run_hand(
             &winnings,
             &table.event_log[event_log_start..],
             &ending_stacks,
+            table.seats.size() as usize,
         );
         return (winnings, history);
     }
@@ -275,6 +277,7 @@ fn run_hand(
             &winnings,
             &table.event_log[event_log_start..],
             &ending_stacks,
+            table.seats.size() as usize,
         );
         return (winnings, history);
     }
@@ -298,6 +301,7 @@ fn run_hand(
         &winnings,
         &table.event_log,
         &ending_stacks,
+        table.seats.size() as usize,
     );
     (winnings, history)
 }
@@ -581,6 +585,7 @@ fn build_hand_history(
     winnings: &Winnings,
     event_log: &[pkcore::casino::action::TableAction],
     ending_stacks: &[(u8, usize)],
+    table_size: usize,
 ) -> HandHistory {
     HandHistory::from_table_state(
         hand_num,
@@ -595,6 +600,7 @@ fn build_hand_history(
         RUN_NAME,
         None,
     )
+    .with_table_size(table_size)
 }
 
 // ── Display helpers ───────────────────────────────────────────────────────────

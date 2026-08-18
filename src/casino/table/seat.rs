@@ -31,6 +31,19 @@ pub struct Seat {
     /// `Visibility::Down`); stud-family variants (EPIC-32/33) will use
     /// this field as the source of truth for per-card visibility.
     pub hand: SeatHand,
+    /// Table-level `bet` immediately **after** this seat last voluntarily
+    /// acted on the current street (TDA 2024 Rule 47-A, `DEFECT_010`).
+    ///
+    /// Paired with [`PlayerState`](crate::prelude::PlayerState) it answers
+    /// "is this seat facing at least a full raise since it last acted?", which
+    /// is what decides whether a short all-in re-opens the betting for it.
+    ///
+    /// Post-action, not pre-action: a player who raised to 300 must be
+    /// measured against 300, not against the 100 they faced before raising.
+    /// Forced posts (blinds, antes, the stud bring-in) do not set it.
+    ///
+    /// Reset to `0` alongside `PlayerState::YetToAct` at the street boundary.
+    pub bet_level_when_last_acted: usize,
 }
 
 impl Default for Seat {
@@ -39,6 +52,7 @@ impl Default for Seat {
             player: Player::default(),
             cards: BoxedCards::blanks(2),
             hand: SeatHand::new(0),
+            bet_level_when_last_acted: 0,
         }
     }
 }
@@ -60,6 +74,7 @@ impl Seat {
             player,
             cards: BoxedCards::blanks(2),
             hand: SeatHand::new(0),
+            bet_level_when_last_acted: 0,
         }
     }
 

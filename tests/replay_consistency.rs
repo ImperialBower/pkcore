@@ -146,7 +146,8 @@ fn bot_selfplay_replay_roundtrip() {
             &ending_stacks,
             SOURCE,
             session.shuffled_deck_str.clone(),
-        );
+        )
+        .with_table_size(session.table.seats.size() as usize);
         collection.push(history);
         session.table.button_up();
     }
@@ -302,7 +303,8 @@ fn flhe_bot_selfplay_replay_roundtrip() {
             FLHE_SOURCE,
             session.shuffled_deck_str.clone(),
         )
-        .with_betting_structure(table_betting);
+        .with_betting_structure(table_betting)
+        .with_table_size(session.table.seats.size() as usize);
         collection.push(history);
         session.table.button_up();
     }
@@ -466,7 +468,8 @@ fn plo_bot_selfplay_replay_roundtrip() {
             session.shuffled_deck_str.clone(),
         )
         .with_variant(HandVariant::Omaha)
-        .with_betting_structure(table_betting);
+        .with_betting_structure(table_betting)
+        .with_table_size(session.table.seats.size() as usize);
         collection.push(history);
         session.table.button_up();
     }
@@ -698,7 +701,8 @@ fn stud_hi_bot_selfplay_replay_roundtrip() {
             session.shuffled_deck_str.clone(),
         )
         .with_variant(HandVariant::Stud)
-        .with_betting_structure(table_betting);
+        .with_betting_structure(table_betting)
+        .with_table_size(session.table.seats.size() as usize);
 
         // Attach per-card visibility for each player in dealing order.
         for player in &mut history.players {
@@ -923,7 +927,8 @@ fn razz_bot_selfplay_replay_roundtrip() {
             session.shuffled_deck_str.clone(),
         )
         .with_variant(HandVariant::Razz)
-        .with_betting_structure(table_betting);
+        .with_betting_structure(table_betting)
+        .with_table_size(session.table.seats.size() as usize);
 
         for player in &mut history.players {
             if let Some((_, _, visibility)) = dealing_order_records.iter().find(|(s, _, _)| *s == player.seat) {

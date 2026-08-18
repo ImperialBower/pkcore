@@ -217,7 +217,8 @@ fn bot_marathon__1000_hands_without_error() {
             &ending_stacks,
             SOURCE,
             session.shuffled_deck_str.clone(),
-        );
+        )
+        .with_table_size(session.table.seats.size() as usize);
         collection.push(history);
 
         validate_last_hand(hand_num, &collection);
