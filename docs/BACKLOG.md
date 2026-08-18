@@ -127,13 +127,13 @@ Written down, not committed to. No status table, no work items yet.
 [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
 
 A fresh five-subsystem automated review ran **2026-08-18** and returned
-**11 verified findings**. The four worth fixing first:
+**11 verified findings**. One is fixed; the three worth doing next:
 
-1. 🤖 **`TableCelled::act_raise` underflows on a short all-in** — the validation
-   guard is skipped precisely when `amount < bet`, so plain subtraction
-   underflows: panic in debug, huge `usize` in release, corrupting `min_raise()`
-   for the rest of the street. The sibling `Table::act_raise` already uses
-   `saturating_sub`. One-word fix. (`src/casino/table_celled.rs:600`)
+0. ~~🤖 **`TableCelled::act_raise` underflows on a short all-in**~~ — **FIXED in
+   `0.5.2`**, recorded as [`DEFECT_015`](defects/DEFECT_015_act_raise_all_in_underflow.md).
+   The lasting lesson is in that report: two near-identical `act_raise` bodies
+   exist, and the `DEFECT_007` fix hardened only one of them. Check the sibling
+   whenever you fix a betting action in either.
 2. 🤖 **`SolverCache::cache_key` omits `max_iterations` and `cfr_variant`** — two
    solver configs differing only in iteration count or CFR variant collide on
    one cache file, serving a result solved under different parameters.

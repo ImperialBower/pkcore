@@ -30,6 +30,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `src/lib.rs`, `tests/tda_conformance.rs`, `examples/simple_suit_shift_example.rs`)
   was updated to the new path. No content changed, only location.
 
+### Fixed
+
+- **`TableCelled::act_raise` no longer underflows when a player goes all-in for
+  less than the current bet** ([DEFECT_015](docs/defects/DEFECT_015_act_raise_all_in_underflow.md)).
+  An all-in for less is always legal, so `act_raise` deliberately skips its
+  minimum-raise pre-validation in that case — and that is exactly the case where
+  `amount` is *below* `self.bet`. The increment was then computed with unchecked
+  subtraction, which panicked in debug builds and wrapped to a value near
+  `usize::MAX` in release, corrupting `min_raise()` for the rest of the street.
+  It now uses `saturating_sub`, matching `Table::act_raise`.
+
+  Clamping to zero is the correct answer and not merely the safe one:
+  `set_raise_increment` ignores the value it is handed for an all-in seat, so an
+  all-in for less leaves the street's raise increment where the last *full* raise
+  put it — what TDA 2024 Rule 45 requires. Chip movement was never affected;
+  `Player::act_bet_internal` already computed its own delta with `saturating_sub`.
+
+  The two table implementations had drifted: the sibling `Table::act_raise` was
+  given this same guard on 2026-08-15 by the
+  [DEFECT_007](docs/defects/DEFECT_007_decider_subminimum_raise.md) fix, which did
+  not touch `table_celled.rs`. `TableCelled` is exported from `prelude` and drives
+  `Nubificus` log replay and the `tests/hands.rs` / `tests/split_pots.rs` suites,
+  so the path is reachable by downstream callers.
+
 ## [0.5.0] - 2026-08-17
 
 ### Added
