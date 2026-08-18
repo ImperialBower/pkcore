@@ -121,6 +121,18 @@ in all four cases. Consider a single sweep._
 - The `unimplemented!()` bodies for `Pile::add`/`card_at`/`swap`/`the_nuts` on the fixed-size types are **deliberate**, documented, and covered by `#[should_panic]` tests. Intentional API design — do not "fix" these.
 - `Card::From<u32>` falling back to `Card::BLANK` on invalid input is documented and matches the BLANK-sentinel convention of `Rank::from(char)` and `Suit::from(char)`. Intentional.
 
+### 2026-08-18 — found during `pktui` `0.5.0` integration
+
+_Not from the automated review pass. Surfaced by bumping `pktui` from pkcore
+`0.2.1` to `0.5.0`, which broke a downstream stud rendering test. Both findings
+sit in `src/casino/`, which the 2026-08-18 pass did cover — the pass traced
+showdown and pot math clean, and it is clean; these two defects stop stud hands
+from ever reaching showdown, so nothing in that area was ever exercised._
+
+- [ ] 🤖 **7-card stud and Razz exhaust the deck at 8+ players** — recorded as [`DEFECT_018`](defects/DEFECT_018_stud_deck_exhaustion.md). `deal_stud_street` deals one card per in-hand seat with no deck-budget check; 8 players need 56 cards and 9 need 63, against a 52-card deck. Measured: 2–7 players reach `Stud7th` cleanly, 8 players fail dealing 7th street, 9 players fail dealing 6th — matching the card arithmetic exactly. **Eight-handed stud is a legal table size.** Missing: the standard 7th-street shared community card when the stub is short, and any seat cap on `stud_hi_from_seats` / `razz_from_seats`. Present unchanged in `0.2.1`, `0.3.5`, `0.4.0`, `0.5.0` and the current tree — it was masked until `0.4.0` fixed bot raise legality, because illegal-raise rejections used to fold the field down to 2–5 players before the deck ran dry. (`src/casino/table.rs:1345`, `:1362`, `:285`, `:330`)
+
+- [ ] 🤖 **`PokerSession::next_step` reports a failed deal as `HandComplete`** — recorded as [`DEFECT_019`](defects/DEFECT_019_next_step_swallows_advance_street_error.md). `Err(_) => SessionStep::HandComplete` collapses "no streets remain" together with `NotEnoughCards` and every other mid-hand fault. The caller is then wedged: `next_step()` says complete, `is_hand_complete()` says false, `end_hand()` returns `ActionIsntFinished`, and the pot is stranded with the full field still holding live cards. `SessionStep` has no variant able to express failure. The `Err` arm is uncovered — every existing `next_step` test drives a session where `advance_street` succeeds, so the suite asserts `HandComplete` appears when a hand ends but never that it appears *only* then. This is why `DEFECT_018` went unnoticed for the life of the stud implementation. Suggested: add `SessionStep::Failed(PKError)` (breaking) plus an unwind path that returns committed chips. (`src/casino/session.rs:547`, `:79`, `:645`)
+
 ### 🤖 Reviewed 2026-08-18 and found clean
 
 _Recorded so a later pass does not re-litigate them._
