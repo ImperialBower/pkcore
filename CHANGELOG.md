@@ -5,6 +5,22 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **[EPIC-79b: The Sealed Deck](docs/EPIC-79b_Sealed_Deck.md)** — a design doc,
+  no code. `pkcore` cannot currently hold a card it does not know: `Card` is a
+  transparent `u32`, `Cards` is a set that dedups by value, and
+  `TableAction::Dealt` writes real hole cards into the public `Table::event_log`.
+  The EPIC specifies a `CardSeal` trait whose key lives entirely in the caller,
+  plus `SealedCard<S>` and a `SealedDeck<S>` that shuffles, cuts, burns and
+  deals blind — because every one of those operations is a permutation, and a
+  permutation needs no knowledge. Zero new dependencies; the crypto stays in
+  `pkmental` under [EPIC-79a](docs/EPIC-79a_Real_Cryptography_Backend.md). It
+  builds the first of the three cross-cutting pkcore changes that
+  [EPIC-79](docs/EPIC-79_Mental_Poker.md) designed and never built.
+
 ## [0.5.0] - 2026-08-17
 
 ### Added
