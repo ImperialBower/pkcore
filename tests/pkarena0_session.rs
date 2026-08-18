@@ -1,6 +1,6 @@
 //! Regression tests for the pkarena0 session fixture.
 //!
-//! Uses `data/hands/pkarena0-session_2026-04-15.yaml` — a corrected copy of an
+//! Uses `data/hands/legacy/pkarena0-session_2026-04-15.yaml` — a corrected copy of an
 //! actual game session — to validate three properties:
 //!
 //! 1. Chip conservation: net outcomes sum to zero for every hand.
@@ -15,12 +15,12 @@
 
 use pkcore::hand_history::HandCollection;
 
-const SESSION_YAML: &str = include_str!("../data/hands/pkarena0-session_2026-04-15.yaml");
+const SESSION_YAML: &str = include_str!("../data/hands/legacy/pkarena0-session_2026-04-15.yaml");
 
 /// Session captured by a user reporting "GTO bot is out of chips but keeps
 /// playing". 56 hands, blinds escalate from 50/100 → 400/800, gto's stack
 /// drops to 100 chips for the final hand and goes all-in for less than the SB.
-const SESSION_2026_04_28_YAML: &str = include_str!("../data/hands/pkarena0-session_2026-04-28.yaml");
+const SESSION_2026_04_28_YAML: &str = include_str!("../data/hands/legacy/pkarena0-session_2026-04-28.yaml");
 
 fn load_session() -> HandCollection {
     HandCollection::from_yaml(SESSION_YAML).expect("fixture YAML should parse")

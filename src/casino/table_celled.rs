@@ -507,7 +507,13 @@ impl TableCelled {
     /// - `PKError::InvalidSeatNumber` if the seat number isn't valid.
     pub fn act_forced_bet_small_blind(&self) -> Result<(), PKError> {
         let sb_seat_num = self.determine_small_blind();
-        let actual = self.act_forced_bet(sb_seat_num, self.forced.small_blind)?;
+        // TDA 2024 Rule 32 (DEFECT_013): a dead small blind is posted by nobody
+        // and is not passed on to the next live player.
+        let actual = if self.is_small_blind_dead() {
+            0
+        } else {
+            self.act_forced_bet(sb_seat_num, self.forced.small_blind)?
+        };
         self.log_info(TableAction::ForcedBetSmallBlind(sb_seat_num, actual));
         self.action_to_next();
 
@@ -941,7 +947,10 @@ impl TableCelled {
             let sb = self.occupied_seat_at_or_after(self.button.value());
             self.next_occupied_seat_after(sb, 1)
         } else {
-            self.next_occupied_seat_after(self.button.value(), 2)
+            // TDA 2024 Rule 32 (DEFECT_013): start at the position that owes it,
+            // then take the first live player from there. The big blind is
+            // never dead. Mirrors `Table::determine_big_blind`.
+            self.occupied_seat_at_or_after(self.seat_offset_from_button(2))
         };
         log::trace!("BB seat #{bb_seat} {}", self.get_seat_handle(bb_seat));
         bb_seat
@@ -1046,13 +1055,43 @@ impl TableCelled {
     /// ```
     pub fn determine_small_blind(&self) -> u8 {
         let sb_seat = if self.count_occupied_seats() <= 2 {
-            // Heads-up rule: the button/dealer is the small blind.
+            // Heads-up rule (TDA 34-B): the button/dealer is the small blind.
             self.occupied_seat_at_or_after(self.button.value())
         } else {
-            self.next_occupied_seat_after(self.button.value(), 1)
+            // TDA 2024 Rule 32 (DEFECT_013): by position, no walk. An empty
+            // seat here means a dead small blind. Mirrors
+            // `Table::determine_small_blind`.
+            self.seat_offset_from_button(1)
         };
         log::trace!("SB seat #{sb_seat} {}", self.get_seat_handle(sb_seat));
         sb_seat
+    }
+
+    /// The seat `offset` steps clockwise of the button **by raw index**,
+    /// wrapping, without skipping empty seats — the whole point of a dead
+    /// button (TDA 2024 Rule 32).
+    #[must_use]
+    fn seat_offset_from_button(&self, offset: usize) -> u8 {
+        let size = usize::from(self.seats.size());
+        if size == 0 {
+            return 0;
+        }
+        u8::try_from((self.button.value() as usize + offset) % size).unwrap_or(0)
+    }
+
+    /// TDA 2024 Rule 32 — is the small blind **dead** this hand?
+    ///
+    /// True when the seat owing the small blind is vacant, in which case no
+    /// small blind is posted at all and it is *not* passed to the next live
+    /// player. Always false heads-up, where the button is the small blind.
+    /// Mirrors [`Table::is_small_blind_dead`](crate::casino::table::Table::is_small_blind_dead).
+    #[must_use]
+    pub fn is_small_blind_dead(&self) -> bool {
+        if self.count_occupied_seats() <= 2 {
+            return false;
+        }
+        self.get_seat(self.determine_small_blind())
+            .is_none_or(|seat| seat.is_empty())
     }
 
     /// ```
@@ -1073,7 +1112,9 @@ impl TableCelled {
                 // Heads-up: SB (button) acts first preflop.
                 self.occupied_seat_at_or_after(self.button.value())
             } else {
-                self.next_occupied_seat_after(self.button.value(), 3)
+                // TDA 2024 Rule 32 (DEFECT_013): derived from the big blind, so
+                // a dead small blind does not shift the count.
+                self.next_occupied_seat_after(self.determine_big_blind(), 1)
             }
         } else {
             self.next_occupied_seat_after(self.button.value(), 1)
@@ -1808,6 +1849,81 @@ mod casino__table_celled_tests {
         table.seats.assign(3, seat_3).unwrap();
 
         table
+    }
+
+    /// Six seats, live players on 0, 3, 4 and 5; seats 1 and 2 are vacated by
+    /// elimination. The button has advanced onto seat 1 — a dead button.
+    fn dead_button_table() -> TableCelled {
+        let table = TableCelled::nlh_from_seats(
+            TableCelled::generate_seats(6, GameType::NoLimitHoldem.cards_per_player()),
+            ForcedBets::new(100, 200),
+        );
+        for (index, handle) in [(0, "P0"), (3, "P3"), (4, "P4"), (5, "P5")] {
+            let seat = Seat::new_with_cards(
+                Player::new_with_chips(handle.to_string(), 50_000),
+                BoxedCards::blanks(2),
+            );
+            seat.player.state.set(PlayerState::YetToAct);
+            table.seats.assign(index, seat).unwrap();
+        }
+        table.button.set(1);
+        table
+    }
+
+    /// TDA 2024 Rule 32 — blinds are assigned by **position**. The small blind
+    /// position (seat 2) is vacant, so it is dead and the big blind is the first
+    /// live player from seat 3 on. Walking past both empties would give seat 4.
+    #[test]
+    fn dead_button_assigns_blinds_by_position() {
+        let table = dead_button_table();
+
+        assert_eq!(2, table.determine_small_blind(), "owed by seat 2, occupied or not");
+        assert!(table.is_small_blind_dead(), "seat 2 is vacant");
+        assert_eq!(3, table.determine_big_blind(), "the big blind is never dead");
+    }
+
+    /// A dead small blind is posted by nobody, and is not passed on to the next
+    /// live player. Only the big blind on seat 3 has chips in front of it.
+    #[test]
+    fn dead_small_blind_is_not_posted() {
+        let table = dead_button_table();
+        table.act_forced_bets().unwrap();
+
+        let posted: Vec<(u8, usize)> = (0..table.seats.size())
+            .filter_map(|index| {
+                let bet = table.get_seat(index)?.player.bet.count();
+                (bet > 0).then_some((index, bet))
+            })
+            .collect();
+
+        assert_eq!(
+            vec![(3, 200)],
+            posted,
+            "TDA 32: the big blind on seat 3 posted; the dead small blind on \
+             seat 2 was posted by nobody"
+        );
+        assert_eq!(200, table.bet.get(), "the bet to call is a full big blind");
+    }
+
+    /// Action order follows the blinds, so a dead small blind does not shift
+    /// who acts first.
+    #[test]
+    fn dead_small_blind_leaves_utg_after_the_big_blind() {
+        let table = dead_button_table();
+        assert_eq!(4, table.determine_utg(), "the seat after the big blind on 3");
+    }
+
+    /// The over-correction guard: on a full ring the dead button and the
+    /// cash-game convention agree.
+    #[test]
+    fn full_ring_blinds_are_unchanged_by_the_dead_button() {
+        let table = TableCelled::nlh_from_seats(SeatsCell::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+
+        assert_eq!(0, table.button.value());
+        assert_eq!(1, table.determine_small_blind());
+        assert_eq!(2, table.determine_big_blind());
+        assert_eq!(3, table.determine_utg());
+        assert!(!table.is_small_blind_dead());
     }
 
     #[test]

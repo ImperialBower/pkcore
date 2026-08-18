@@ -38,6 +38,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A live player paid a blind they did not owe — no dead button**
+  ([DEFECT_013](docs/defects/DEFECT_013_dead_button.md), TDA 2024 Rule 32).
+  Tournament play uses a dead button: the button advances by position and may
+  land on a seat vacated by elimination, and a small blind whose position is
+  empty is simply not posted. pkcore derived both blinds by walking to the next
+  *occupied* seat — the cash-game moving-button convention — so a dead small
+  blind could never occur and somebody always paid. Three consequences from one
+  root: a different player posts, the pot is a small blind too large, and first
+  action pre-flop sits on a different seat.
+
+  The small blind is now derived by **position** and may name an empty seat, in
+  which case `Table::is_small_blind_dead` is true and nothing is posted — the
+  obligation is *not* passed to the next live player, which is the whole
+  difference from the cash-game convention. The big blind walks from its
+  position to the first live player and is never dead. Under-the-gun is derived
+  from the big blind rather than counted from the button, so a dead small blind
+  does not shift who acts first. `TableCelled` carries the identical fix.
+
+  **Interpretation, recorded as such:** Rule 32 is one sentence and never spells
+  out the mechanics. The dead-SB / live-BB asymmetry is read off Rule 54-B,
+  which names a dead SB outright, and off the absence of any rule naming a dead
+  BB — a hand with no big blind would have no bet to call. It is stated at the
+  definition and pinned by tests so it can be challenged rather than
+  rediscovered.
+
+  This completes `DEFECT_012`: `Table::blind_shortfall` absorbs a dead blind
+  through the same path it already used for a short one, with no special case,
+  which makes **TDA 54-B Example 1** ("dead SB, BB posts 200 […] the pot-limit
+  bet for first player to act is 700") reachable and green for the first time.
+
+  With this, `tests/tda_conformance.rs` has **no ignored tests**: every
+  reproducible finding of the TDA 2024 audit passes. Only D8-6 remains recorded
+  and unreachable, pending a multi-table event model.
+
+- **A short blind shrank the pre-flop pot-limit maximum**
+  ([DEFECT_012](docs/defects/DEFECT_012_short_blind_pot_limit.md), TDA 2024 Rule
+  54-B). Pre-flop, pot-limit calculations must assume full blinds were posted; a
+  dead or short all-in blind does not reduce anyone's maximum bet. pkcore sized
+  the ceiling from the chips that physically reached the pot, so in the TDA's own
+  worked example — PLO 100/200 with a big blind that can only post 100 — the
+  first player to act was offered 600 where the rule says 700, short by exactly
+  the blind money that never got posted.
+
+  The failure was one-directional and therefore silent: the engine only ever
+  offered a maximum that was too *small*, so no illegal bet was accepted and
+  nothing errored. A legal bet was simply missing from the menu, which is
+  invisible to a suite that asserts offered actions are *accepted*.
+
+  Half of Rule 54-B was already satisfied — the bet *to call* was already the
+  full big blind regardless of a short post — so only the pot term moved.
+  `Table::pot_limit_pot` is now the single source of the pot a pot-limit ceiling
+  is sized against, backed by a new `Table::blind_shortfall` accumulated where
+  the blinds are posted. It is gated on the pre-flop phase, because Rule 54-C
+  requires later streets to use the actual pot; a test pins that boundary, since
+  an ungated fix would inflate every post-flop maximum for the rest of the hand.
+
+  `TableSnapshot` gains a matching `pot_limit_pot` field so the bots see the
+  ceiling the engine enforces. It is deliberately separate from
+  `TableSnapshot::pot`, which is the real pot and the one to use for pot odds —
+  inflating that would tell a bot chips exist that do not. Carrying it
+  precomputed rather than re-deriving it is the direct lesson of `DEFECT_010`,
+  and an assertion now pins the agreement rather than assuming it.
+
 - **The odd chip in a split pot went to the highest-numbered winning seat**
   ([DEFECT_011](docs/defects/DEFECT_011_odd_chip_button_order.md), TDA 2024 Rule
   20). When a pot cannot be divided evenly, Rule 20 names which tied winner takes
@@ -105,6 +168,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `sub_min_all_in_does_not_change_raise_increment`. It asserts that
   `raise_increment` is unchanged and never tested re-opening; the old name
   suggested Rule 47-A's rights gate was covered when it was not.
+- **The three recorded pkarena0 sessions moved to `data/hands/legacy/`**, with a
+  README explaining why. They were played under blinds derived by walking to the
+  next occupied seat; TDA 2024 Rule 32 requires a dead button, which is
+  `DEFECT_008` D8-4 and still open. 115 of their 133 hands have gaps in the
+  seating, so replaying them after that fix will produce different blinds, pots
+  and action order. They are kept as a record of what pkcore did at the version
+  stamped in each file, not as a specification — versioning the blind-derivation
+  behaviour was considered and rejected as a permanent engine cost for a
+  one-time archive. `data/hands/the_hand.yaml` stayed put: it transcribes a real
+  televised hand rather than pkcore output. `tests/pkarena0_session.rs` and
+  `tests/hand_history_legacy_yaml.rs` follow the new paths; both assert format
+  and replay mechanics rather than blind arithmetic.
+
 - **`tests/tda_conformance.rs` now covers every reproducible finding of the TDA
   2024 audit.** Rule 36 was previously listed there as the one finding the
   harness could not hold — an absent predicate cannot be asserted against, so

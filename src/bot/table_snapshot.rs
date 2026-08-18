@@ -112,7 +112,20 @@ pub struct TableSnapshot<'a> {
     /// This player's hole cards.  Empty if cards have not been dealt yet.
     pub hole_cards: Cards,
     /// Total pot — main pot plus all chips committed this street (swept + live bets).
+    ///
+    /// This is the **real** pot, and the one to use for pot odds. Pot-limit
+    /// sizing does not use it — see [`pot_limit_pot`](Self::pot_limit_pot).
     pub pot: usize,
+    /// The pot a pot-limit ceiling is computed against — TDA 2024 Rule 54-B
+    /// (`DEFECT_012`). Pre-flop this is [`pot`](Self::pot) plus any blind money
+    /// owed but never posted, because the rule says pot calculations assume full
+    /// blinds were posted; from the flop onward it equals [`pot`](Self::pot).
+    ///
+    /// Carried as a precomputed field rather than re-derived, so this snapshot
+    /// and [`Table::raise_bounds`](crate::casino::table::Table::raise_bounds)
+    /// cannot disagree — the failure mode `DEFECT_010` found. Sourced from
+    /// [`Table::pot_limit_pot`](crate::casino::table::Table::pot_limit_pot).
+    pub pot_limit_pot: usize,
     /// Chips needed for this player to call the current bet.
     /// `0` means no bet is outstanding and the player may check.
     pub to_call: usize,
@@ -214,6 +227,7 @@ impl<'a> TableSnapshot<'a> {
 
         let committed: usize = table.seats.0.iter().map(|s| s.player.bet).sum();
         let pot = table.pot + committed;
+        let pot_limit_pot = table.pot_limit_pot();
 
         let my_chips = table.seats.get_seat(seat).map_or(0, |s| s.player.chips);
 
@@ -288,6 +302,7 @@ impl<'a> TableSnapshot<'a> {
             board: table.board.clone(),
             hole_cards,
             pot,
+            pot_limit_pot,
             to_call: table.to_call(seat),
             current_bet: table.bet,
             min_raise: table.min_raise(),
@@ -482,7 +497,9 @@ impl<'a> TableSnapshot<'a> {
     #[must_use]
     pub fn max_raise_to(&self) -> usize {
         self.betting_structure.max_raise(
-            self.pot,
+            // TDA 2024 Rule 54-B (DEFECT_012): pot-limit sizes against the
+            // notional full-blind pot pre-flop, not the real one.
+            self.pot_limit_pot,
             self.current_bet,
             self.my_committed(),
             self.my_total_chips(),

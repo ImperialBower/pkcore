@@ -213,7 +213,22 @@ impl Table {
     /// - `PKError::InvalidSeatNumber` if the seat is not found.
     pub fn act_forced_bet_small_blind(&mut self) -> Result<(), PKError> {
         let sb = self.determine_small_blind();
-        let actual = self.seats.act_forced_bet(sb, self.forced.small_blind)?;
+        // TDA 2024 Rule 32 (DEFECT_013): under a dead button the seat that owes
+        // the small blind may be vacant. A dead blind is not posted by anyone —
+        // it is not passed on to the next live player, which is the whole
+        // difference from the cash-game moving-button convention.
+        let actual = if self.is_small_blind_dead() {
+            0
+        } else {
+            self.seats.act_forced_bet(sb, self.forced.small_blind)?
+        };
+        // TDA 2024 Rule 54-B (DEFECT_012): remember what was owed but never
+        // posted, so the pre-flop pot-limit ceiling can assume full blinds. A
+        // dead blind contributes its whole amount here; a short all-in blind
+        // contributes the part it could not cover.
+        self.blind_shortfall = self
+            .blind_shortfall
+            .saturating_add(self.forced.small_blind.saturating_sub(actual));
         self.log(TableAction::ForcedBetSmallBlind(sb, actual));
         self.log(TableAction::ActionTo(self.next_to_act()));
         Ok(())
@@ -227,6 +242,12 @@ impl Table {
     pub fn act_forced_bet_big_blind(&mut self) -> Result<(), PKError> {
         let bb = self.determine_big_blind();
         let actual = self.seats.act_forced_bet(bb, self.forced.big_blind)?;
+        // TDA 2024 Rule 54-B (DEFECT_012). Note `self.bet` below is already
+        // 54-B compliant: the bet to call is the *full* big blind even when the
+        // post fell short. Only the pot term needed fixing.
+        self.blind_shortfall = self
+            .blind_shortfall
+            .saturating_add(self.forced.big_blind.saturating_sub(actual));
         self.bet = self.forced.big_blind;
         self.log(TableAction::ForcedBetBigBlind(bb, actual));
         self.log(TableAction::ActionTo(self.next_to_act()));
@@ -290,7 +311,9 @@ impl Table {
         };
         let stack = seat.player.total_chip_count();
         self.betting.max_raise(
-            self.effective_pot(),
+            // TDA 2024 Rule 54-B (DEFECT_012): pre-flop this is the pot as if
+            // full blinds had been posted.
+            self.pot_limit_pot(),
             self.bet,
             seat.player.bet,
             stack,

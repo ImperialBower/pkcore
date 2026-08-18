@@ -14,22 +14,25 @@
 //!
 //! 1. **Conformant** — rules pkcore already satisfies. These pin behaviour that is
 //!    correct today so a future change has to argue with the TDA rather than with us.
-//!    Three rules moved into this group by being fixed rather than by being right all
+//!    Five rules moved into this group by being fixed rather than by being right all
 //!    along: Rule 47-A's re-open *rights* gate (`DEFECT_010`), Rule 36's
-//!    substantial-action predicate (`DEFECT_009`), and Rule 20's odd chip
-//!    (`DEFECT_011`). Each one's reproducing assertion is still here — it simply
-//!    passes now.
-//! 2. **Known defects** — every one is `#[ignore]`d with its `DEFECT_008` finding id.
-//!    They assert the TDA-correct answer and therefore **fail today, by design**. CI
-//!    stays green; run them on demand:
+//!    substantial-action predicate (`DEFECT_009`), Rule 20's odd chip
+//!    (`DEFECT_011`), Rule 54-B's short-blind pot calculation (`DEFECT_012`) and
+//!    Rule 32's dead button (`DEFECT_013`). Each one's reproducing assertion is
+//!    still here — it simply passes now.
+//! 2. **Known defects** — `#[ignore]`d with their `DEFECT_008` finding id, asserting
+//!    the TDA-correct answer and therefore failing by design, so CI stays green while
+//!    the defect stays recorded in executable form:
 //!
 //!    ```text
 //!    cargo test --test tda_conformance -- --include-ignored
 //!    ```
 //!
-//!    Un-`ignore` each one as its finding is fixed. That is the Gold Standard from
-//!    `docs/EPIC-00f_Coverage.md` applied to this audit: right now a fix for any
-//!    D8-N would make no existing test fail, which is what these close.
+//!    **This group is currently empty.** All four reproducible `DEFECT_008` findings
+//!    have been fixed and un-`ignore`d. That was the Gold Standard from
+//!    `docs/EPIC-00f_Coverage.md` applied to this audit: when it was written, a fix for
+//!    any D8-N would have made no existing test fail. Only D8-6 is still open, and it
+//!    is unreachable until a multi-table event model exists — no assertion can hold it.
 //!
 //! # Adaptations, stated up front
 //!
@@ -54,6 +57,7 @@
 
 #[allow(nonstandard_style)]
 mod tda_2024_conformance {
+    use pkcore::bot::table_snapshot::TableSnapshot;
     use pkcore::prelude::*;
 
     /// A seated player with `chips`.
@@ -670,6 +674,78 @@ mod tda_2024_conformance {
         );
     }
 
+    /// **TDA Rule 54-C**, on a live table rather than on the bare structure.
+    ///
+    /// > Post-flop, all bets are calculated on the **actual** pot.
+    ///
+    /// The same short blind that inflates the pre-flop ceiling must not inflate
+    /// the post-flop one. This is the over-correction guard: 54-B without a
+    /// phase gate would leak the unposted 100 into every later street.
+    #[test]
+    fn rule_54_c_short_blind_does_not_inflate_the_postflop_pot_limit_maximum() {
+        let seats = Seats::new(vec![
+            seat("Button", 50_000),
+            seat("SmallBlind", 50_000),
+            seat("ShortBigBlind", 100),
+        ]);
+        let mut table = Table::plo_from_seats(seats, (100, 200));
+        table.act_forced_bets().expect("forced bets should post");
+        table.deal_cards_to_seats().expect("cards should deal");
+
+        let utg = table.next_to_act();
+        table.act_call(utg).expect("button calls 200");
+        let sb = table.next_to_act();
+        table.act_call(sb).expect("small blind completes to 200");
+
+        table.bring_it_in().expect("pre-flop closes");
+        table.deal_flop().expect("flop should deal");
+
+        // 200 + 200 from the live players, 100 from the short all-in blind.
+        assert_eq!(500, table.effective_pot(), "the real pot after the flop");
+        assert_eq!(
+            500,
+            table.pot_limit_pot(),
+            "TDA 54-C: post-flop the notional-blind substitution is over — the \
+             unposted 100 must not follow the hand onto later streets"
+        );
+
+        let first = table.next_to_act();
+        let (_, max) = table.raise_bounds(first).expect("a pot bet must be available");
+        assert_eq!(
+            500, max,
+            "TDA 54-C: the maximum post-flop bet is the actual pot, not the \
+             pre-flop notional one"
+        );
+    }
+
+    /// The bots must see the same ceiling the engine enforces. `DEFECT_010`
+    /// found `TableSnapshot` re-deriving raise legality instead of delegating,
+    /// and the two disagreed the moment the engine learned a new rule. Rule
+    /// 54-B is exactly that shape again, so it is pinned rather than assumed.
+    #[test]
+    fn bot_snapshot_agrees_with_the_table_on_the_54_b_maximum() {
+        let seats = Seats::new(vec![
+            seat("Button", 50_000),
+            seat("SmallBlind", 50_000),
+            seat("ShortBigBlind", 100),
+        ]);
+        let mut table = Table::plo_from_seats(seats, (100, 200));
+        table.act_forced_bets().expect("forced bets should post");
+        table.deal_cards_to_seats().expect("cards should deal");
+
+        let utg = table.next_to_act();
+        let (_, table_max) = table.raise_bounds(utg).expect("a raise must be available");
+        let snapshot = TableSnapshot::from_table(&table, utg);
+
+        assert_eq!(
+            table_max,
+            snapshot.max_raise_to(),
+            "the advisory surface the bots read must agree with the engine that \
+             enforces it"
+        );
+        assert_eq!(700, snapshot.max_raise_to(), "and both must be the TDA answer");
+    }
+
     // ───────────────────────────────────────────────────────────────────────
     // TDA Rule 20 — the odd chip (`DEFECT_011`)
     // ───────────────────────────────────────────────────────────────────────
@@ -821,10 +897,131 @@ mod tda_2024_conformance {
         );
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // Known defects — DEFECT_008 D8-3 and D8-4. These assert the TDA answer and
-    // fail today.
-    // ═══════════════════════════════════════════════════════════════════════
+    // ───────────────────────────────────────────────────────────────────────
+    // TDA Rule 32 — the dead button (`DEFECT_013`)
+    //
+    // > Tournament play will use a dead button.
+    //
+    // One sentence, and the 2024 ruleset never spells out the mechanics. What
+    // it does do is name a **dead SB** in Rule 54-B's worked example ("dead SB,
+    // BB posts 200") and never once name a dead BB. That asymmetry is the whole
+    // design: the small blind position may be vacant and go unposted, the big
+    // blind is always posted by a live player.
+    // ───────────────────────────────────────────────────────────────────────
+
+    /// Six seats, seats 1 and 2 eliminated, live players on 0, 3, 4 and 5. The
+    /// button has advanced onto seat 1 — a vacated seat, which is what makes it
+    /// a *dead* button.
+    fn dead_button_table() -> Table {
+        let seats = Seats::new(vec![
+            seat("P0", 50_000),
+            empty_seat(), // eliminated
+            empty_seat(), // eliminated
+            seat("P3", 50_000),
+            seat("P4", 50_000),
+            seat("P5", 50_000),
+        ]);
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(100, 200));
+        table.button = 1;
+        table
+    }
+
+    /// **TDA Rule 32.** Blinds are assigned by **position**. The small blind
+    /// position (seat 2) is empty, so it goes unposted and the big blind sits on
+    /// seat 3 — not on seat 4, which is where walking past both empties lands.
+    #[test]
+    fn rule_32_dead_button_assigns_blinds_by_position_not_occupancy() {
+        let table = dead_button_table();
+
+        assert_eq!(
+            2,
+            table.determine_small_blind(),
+            "TDA 32: the small blind is owed by the seat one to the button's \
+             left, whether or not anybody is sitting there"
+        );
+        assert_eq!(
+            3,
+            table.determine_big_blind(),
+            "TDA 32: with the small blind dead on seat 2, the big blind is the \
+             first live player from seat 3 on"
+        );
+    }
+
+    /// A dead small blind is **not posted**. Only the big blind reaches the pot.
+    #[test]
+    fn rule_32_dead_small_blind_is_not_posted() {
+        let mut table = dead_button_table();
+        assert!(table.is_small_blind_dead(), "seat 2 is vacant");
+
+        table.act_forced_bets().expect("forced bets should post");
+
+        assert_eq!(
+            200,
+            table.effective_pot(),
+            "TDA 32: one big blind and nothing else — the small blind is dead"
+        );
+        assert_eq!(200, table.bet, "the bet to call is still a full big blind");
+    }
+
+    /// **TDA Rule 54-B, Example 1** — reachable at last.
+    ///
+    /// > Ex 1: PLO, 100-200 blinds, **dead SB**, BB posts 200. […] the
+    /// > pot-limit bet for first player to act is **700**.
+    ///
+    /// `DEFECT_012` fixed the pot-limit calculation using Example 2 (a *short*
+    /// blind), because Example 1's dead blind could not occur without the dead
+    /// button. It can now, and the same 700 falls out.
+    #[test]
+    fn rule_54_b_ex1_dead_small_blind_does_not_shrink_the_pot_limit_maximum() {
+        let seats = Seats::new(vec![
+            seat("P0", 50_000),
+            empty_seat(),
+            empty_seat(),
+            seat("P3", 50_000),
+            seat("P4", 50_000),
+            seat("P5", 50_000),
+        ]);
+        let mut table = Table::plo_from_seats(seats, (100, 200));
+        table.button = 1;
+        table.act_forced_bets().expect("forced bets should post");
+        table.deal_cards_to_seats().expect("cards should deal");
+
+        assert_eq!(200, table.effective_pot(), "only the big blind reached the pot");
+        assert_eq!(100, table.blind_shortfall, "the whole small blind went unposted");
+        assert_eq!(300, table.pot_limit_pot(), "TDA 54-B assumes full blinds");
+
+        let utg = table.next_to_act();
+        let (_, max) = table.raise_bounds(utg).expect("a pot-limit raise must be available");
+        assert_eq!(
+            700, max,
+            "TDA 54-B Ex 1: a dead small blind must not shrink the maximum"
+        );
+    }
+
+    /// Action order follows the blinds. With the small blind dead, first action
+    /// pre-flop is the seat after the big blind.
+    #[test]
+    fn rule_32_utg_follows_the_big_blind_when_the_small_blind_is_dead() {
+        let mut table = dead_button_table();
+        table.act_forced_bets().expect("forced bets should post");
+        table.deal_cards_to_seats().expect("cards should deal");
+
+        assert_eq!(4, table.determine_utg(), "the seat after the big blind on 3");
+        assert_eq!(4, table.next_to_act(), "and that is who acts first");
+    }
+
+    /// The guard against over-correction: on a full ring the dead button and
+    /// the cash-game convention agree, and nothing about the common case moves.
+    #[test]
+    fn rule_32_full_ring_is_unchanged() {
+        let mut table = nlhe(&[50_000; 6], 100, 200);
+        table.button = 0;
+
+        assert_eq!(1, table.determine_small_blind());
+        assert_eq!(2, table.determine_big_blind());
+        assert_eq!(3, table.determine_utg());
+        assert!(!table.is_small_blind_dead());
+    }
 
     /// **TDA Rule 54-B** — `DEFECT_008` D8-3.
     ///
@@ -837,7 +1034,6 @@ mod tda_2024_conformance {
     /// pot it is handed, and no caller substitutes notional full blinds pre-flop, so a
     /// short big blind shrinks the maximum legal bet.
     #[test]
-    #[ignore = "DEFECT_008 D8-3: pot-limit pre-flop max uses the actual pot; a short blind shrinks it"]
     fn rule_54_b_short_blind_must_not_shrink_the_preflop_pot_limit_maximum() {
         // PLO 100/200, seat 2 is the big blind with only 100 chips — a short post.
         let seats = Seats::new(vec![
@@ -859,41 +1055,6 @@ mod tda_2024_conformance {
             "TDA 54-B Ex 2: the pot-limit maximum assumes full blinds were posted \
              (100 + 200 = 300 pot, 200 current bet, 200 to call), so it is 700 \
              regardless of the big blind being short"
-        );
-    }
-
-    /// **TDA Rule 32** — `DEFECT_008` D8-4.
-    ///
-    /// > Tournament play will use a dead button.
-    ///
-    /// Under a dead button the blinds are assigned by **position**: a small blind
-    /// position that is empty is simply not posted, and the big blind sits one seat
-    /// further on. `Table::determine_small_blind` / `determine_big_blind`
-    /// (`src/casino/table.rs:479`, `:518`) instead walk to the next *occupied* seat,
-    /// which is the moving-button / live-blind convention used in cash games.
-    ///
-    /// Button on seat 1 with seats 1 and 2 eliminated: TDA puts the big blind on
-    /// seat 3 (small blind dead on seat 2). pkcore walks past both empties and returns
-    /// seat 4.
-    #[test]
-    #[ignore = "DEFECT_008 D8-4: dead button not implemented; blinds skip to the next occupied seat"]
-    fn rule_32_dead_button_assigns_blinds_by_position_not_occupancy() {
-        let seats = Seats::new(vec![
-            seat("P0", 50_000),
-            empty_seat(), // eliminated
-            empty_seat(), // eliminated
-            seat("P3", 50_000),
-            seat("P4", 50_000),
-            seat("P5", 50_000),
-        ]);
-        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(100, 200));
-        table.button = 1; // button advanced onto a vacated seat — a dead button
-
-        assert_eq!(
-            3,
-            table.determine_big_blind(),
-            "TDA 32: with the button dead on seat 1, the small blind position (seat 2) \
-             is also empty and goes unposted, putting the big blind on seat 3"
         );
     }
 }

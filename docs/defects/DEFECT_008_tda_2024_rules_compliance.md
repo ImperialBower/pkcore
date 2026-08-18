@@ -3,7 +3,7 @@
 **File:** `docs/defects/DEFECT_008_tda_2024_rules_compliance.md`
 **Date:** 2026-08-16
 **Severity:** Major (4 Major, 2 Minor — no incorrect *pot total*; all findings distribute, size or gate chips wrongly)
-**Status:** Partially fixed. D8-1 (`DEFECT_011`), D8-2 (`DEFECT_010`) and D8-5 (`DEFECT_009`) all fixed in `0.5.0`; D8-3, D8-4 and D8-6 remain open. All six verified by source reading at `90d60e70` (`main`, 2026-08-16), pkcore `0.4.0`.
+**Status:** **Closed except D8-6.** D8-1 (`DEFECT_011`), D8-2 (`DEFECT_010`), D8-3 (`DEFECT_012`), D8-4 (`DEFECT_013`) and D8-5 (`DEFECT_009`) all fixed in `0.5.0`. D8-6 stays recorded and unreachable until a multi-table event model exists. All six verified by source reading at `90d60e70` (`main`, 2026-08-16), pkcore `0.4.0`.
 **Reported by:** Audit of pkcore against the parsed TDA 2024 ruleset in the sibling `tda_parsed` repo (`tda_2024_online.yaml`)
 **Introduced in:** Not bisected. These are absences and long-standing behaviours, not regressions — no introducing commit was identified, and none of the six has ever had a passing test that later broke.
 **Fixed in:** —
@@ -52,8 +52,8 @@ See [Coverage Gap](#coverage-gap).
 |---|---|---|---|---|
 | D8-1 | 20-A/B/C | Odd chip goes to the highest-numbered winning seat, not first-left-of-button | Major | `cashier/chips.rs:95`, `analysis/case_eval.rs:231` — promoted to `DEFECT_011`, **fixed in 0.5.0** |
 | D8-2 | 47-A | No re-open gate: a player who already acted may re-raise facing a sub-minimum increment | Major | `casino/table/actions.rs:337` — promoted to `DEFECT_010`, **fixed in 0.5.0** |
-| D8-3 | 54-B | Pot-limit pre-flop max uses the actual pot; a dead/short blind shrinks it | Major | `games/betting_structure.rs:170` |
-| D8-4 | 32 | Dead button not implemented — blinds skip to the next occupied seat | Major | `casino/table.rs:479` |
+| D8-3 | 54-B | Pot-limit pre-flop max uses the actual pot; a dead/short blind shrinks it | Major | `games/betting_structure.rs:170` — promoted to `DEFECT_012`, **fixed in 0.5.0** |
+| D8-4 | 32 | Dead button not implemented — blinds skip to the next occupied seat | Major | `casino/table.rs:479` — promoted to `DEFECT_013`, **fixed in 0.5.0** |
 | D8-5 | 36 | No substantial-action predicate exists; blocks rules 22, 34-A, 35-D, 52-A, 53-B | Major (structural) | absence across `src/` — promoted to `DEFECT_009`, **fixed in 0.5.0** |
 | D8-6 | 48 | Fixed-limit raise cap cannot lift when the event reaches two players | Minor | `games/betting_structure.rs:231` |
 
@@ -293,6 +293,18 @@ makes multiple short all-ins accumulate correctly per 47-A without any extra mac
 
 ## D8-3: Pot-limit pre-flop maximum uses the actual pot, so a dead or short blind shrinks it
 
+> **Promoted to [`DEFECT_012_short_blind_pot_limit.md`](DEFECT_012_short_blind_pot_limit.md) on 2026-08-17,
+> and fixed there the same day in pkcore `0.5.0`.**
+> That document supersedes this section: it carries the fix design, why the
+> shortfall is stored rather than derived, why the bots get a separate field
+> instead of an adjusted `pot`, and the three assertions that pin it — including
+> the over-correction guard for Rule 54-C. The analysis below is retained for
+> the audit record.
+>
+> `Table::pot_limit_pot` is now the single source of the pot a pot-limit ceiling
+> is sized against, backed by the new `Table::blind_shortfall` and carried to the
+> bots as `TableSnapshot::pot_limit_pot`. One finding remains open: D8-4.
+
 **Severity:** Major — caps a legal bet below its true maximum in PLO.
 
 ### The Poker Rule
@@ -369,6 +381,21 @@ must be gated on `self.phase.is_preflop()` (`src/casino/table.rs:744`).
 ---
 
 ## D8-4: Dead button is not implemented — blinds skip to the next occupied seat
+
+> **Promoted to [`DEFECT_013_dead_button.md`](DEFECT_013_dead_button.md) on 2026-08-17,
+> and fixed there the same day in pkcore `0.5.0`.**
+> That document supersedes this section: it carries the fix design, the
+> dead-SB / live-BB interpretation and the evidence for it, the nine assertions
+> that pin it across both table types, and the measurement of how many archived
+> hands it changes. The analysis below is retained for the audit record.
+>
+> The small blind is now derived by **position** and goes unposted when that
+> seat is vacant; the big blind walks from its position to the first live player
+> and is never dead. `DEFECT_012`'s `blind_shortfall` absorbs a dead blind with
+> no special case, which makes **TDA 54-B Example 1** reachable and green for
+> the first time. The hand-history question this section flagged as needing a
+> decision first was settled by archiving the recorded sessions to
+> `data/hands/legacy/` rather than versioning the behaviour.
 
 **Severity:** Major — changes which players post, the pot size, and the action order.
 
@@ -649,8 +676,9 @@ at the wrong altitude, not that the fixes are safe.
   pkcore. As landed: **5 conformant tests passed**, and **4 asserted the TDA answer
   for D8-1 through D8-4 and were `#[ignore]`d** with their finding id, so CI stayed
   green while the defects stayed recorded in executable form. Un-`ignore` each as it is
-  fixed. Two of the four are now un-ignored and green — D8-2 in `DEFECT_010`, D8-1 in
-  `DEFECT_011` — leaving D8-3 and D8-4 ignored.
+  fixed. **All four are now un-ignored and green** — D8-2 in `DEFECT_010`, D8-1 in
+  `DEFECT_011`, D8-3 in `DEFECT_012`, D8-4 in `DEFECT_013`. The harness has no
+  ignored tests left.
   D8-5 had no test — the predicate did not exist, so any assertion naming it would not
   compile. `DEFECT_009` closed that in `0.5.0`; eleven Rule 36 assertions are now in
   the conformant group, and D8-2's seven joined it in `0.5.0`.
@@ -675,6 +703,10 @@ at the wrong altitude, not that the fixes are safe.
 - **Decide the hand-history question before fixing D8-4.** Changing blind derivation
   changes pot sizes in recorded histories. Whether to migrate stored fixtures or to
   version the behaviour is a decision that should precede the fix, not follow it.
+  **Settled on 2026-08-17, before the fix:** the three recorded pkarena0 sessions were
+  archived to `data/hands/legacy/` with a README, and the behaviour was *not* versioned —
+  a permanent engine cost for a one-time archive. 40 of their 133 hands would post
+  differently under the dead button; none is replayed by any test.
 
 ---
 
@@ -688,7 +720,7 @@ at the wrong altitude, not that the fixes are safe.
 | `src/casino/table_celled/showdown.rs:116` | `divvy_up` call site (heads-up path) | D8-1 |
 | `src/casino/table/actions.rs:337` | `raise_bounds` — sole raise-legality authority | D8-2 |
 | `src/casino/table/actions.rs:660` | `act_all_in` — increment update (correct; context for D8-2) | D8-2 |
-| `src/games/betting_structure.rs:165` | `max_raise` — pot-limit ceiling | D8-3 |
+| `src/games/betting_structure.rs:165` | `max_raise` — pot-limit ceiling (unchanged; the caller was fixed in `0.5.0`) | D8-3 |
 | `src/casino/table.rs:479` | `determine_small_blind` — occupied-seat walk | D8-4 |
 | `src/casino/table.rs:518` | `determine_big_blind` — same walk, offset 2 | D8-4 |
 | `src/casino/table.rs:1463` | `button_up` — index advance (correct; context for D8-4) | D8-4 |
