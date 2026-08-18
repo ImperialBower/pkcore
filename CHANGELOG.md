@@ -32,6 +32,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`OmahaHigh::eval` now enforces Omaha's exactly-two-hole-cards rule**
+  ([DEFECT_017](docs/defects/DEFECT_017_omaha_eval_two_card_rule.md)). It picked
+  two hole cards and then handed seven cards to the unconstrained best-5-of-7
+  evaluator, which is free to ignore both and play the board — legal in Hold'em,
+  illegal in Omaha. A board holding a straight, flush, or quads that the player
+  could not reach with two of their own cards was returned as their hand. `eval`
+  now enumerates the 60 legal 2-from-hand + 3-from-board combinations through
+  the existing `OmahaHigh::permutations`, so every result satisfies
+  `OmahaHigh::is_valid`. The live showdown path was never affected — it already
+  used `permutations` — but `examples/decon_dump.rs` generated the DECON-02
+  golden vectors *for this very rule* through the broken function. Those vectors
+  are regenerated, and a discriminating case (a board royal flush no hole card
+  can reach) is added, since none of the three existing cases could tell the
+  correct implementation from the broken one. The deprecated `Four::omaha_high`
+  keeps the flaw and its doc comment no longer claims `OmahaHigh::eval` was
+  always the sound alternative.
+
+- **`SolverCache` no longer serves one solve's result for a different solve**
+  ([DEFECT_016](docs/defects/DEFECT_016_solver_cache_key_omissions.md)).
+  `cache_key` hashed the fields that describe the *spot* — ranges, board, bet
+  sizings, effective stack, pot — but none of the three that decide how the spot
+  is solved: `max_iterations`, `target_exploitability`, and `cfr_variant`. Two
+  configs differing only in iteration count or update rule produced the same
+  `u64`, so a request for a 100 000-iteration DCFR solve could be answered from
+  disk with a 3-iteration vanilla-CFR result, reported as valid with its own
+  (wrong) exploitability. All three are now hashed; `CfrVariant` gets a
+  discriminant tag plus the IEEE-754 bit patterns of its `alpha` and `beta`
+  exponents, since it cannot derive `Hash`. Existing cache entries written by
+  `0.5.2` or earlier no longer match — they are a miss and a re-solve, not a
+  wrong answer.
+
 - **`TableCelled::act_raise` no longer underflows when a player goes all-in for
   less than the current bet** ([DEFECT_015](docs/defects/DEFECT_015_act_raise_all_in_underflow.md)).
   An all-in for less is always legal, so `act_raise` deliberately skips its

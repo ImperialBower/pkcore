@@ -484,6 +484,11 @@ fn high_hand_ranking() -> usize {
         ("A♠ A♥ K♦ K♠", "Q♠ J♠ T♠ 2♥ 3♦", "board is a broadway flush draw"),
         ("A♠ K♠ 2♥ 3♦", "Q♠ J♠ T♠ 9♠ 8♠", "board is a made flush"),
         ("A♠ A♥ 2♣ 3♦", "A♦ A♣ K♠ K♥ 2♠", "quads on the board"),
+        (
+            "2♣ 3♦ 4♥ 5♦",
+            "A♠ K♠ Q♠ J♠ T♠",
+            "board is a royal flush and no hole card is a spade — the rule's discriminating case: the board does not play, so the answer is a high card",
+        ),
     ];
     let omaha: Vec<Value> = omaha_cases
         .iter()
