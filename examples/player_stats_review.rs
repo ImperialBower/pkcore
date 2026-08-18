@@ -182,19 +182,22 @@ fn run_one_hand(
         })
         .collect();
 
-    Some(HandHistory::from_table_state_with_ids(
-        hand_num,
-        ts_secs,
-        button,
-        &ForcedBets::new(SMALL_BLIND, BIG_BLIND),
-        &player_snapshot,
-        &board_str,
-        &winnings,
-        &session.table.event_log[event_log_start..],
-        &ending_stacks,
-        RUN_NAME,
-        session.shuffled_deck_str.clone(),
-    ))
+    Some(
+        HandHistory::from_table_state_with_ids(
+            hand_num,
+            ts_secs,
+            button,
+            &ForcedBets::new(SMALL_BLIND, BIG_BLIND),
+            &player_snapshot,
+            &board_str,
+            &winnings,
+            &session.table.event_log[event_log_start..],
+            &ending_stacks,
+            RUN_NAME,
+            session.shuffled_deck_str.clone(),
+        )
+        .with_table_size(session.table.seats.size() as usize),
+    )
 }
 
 fn print_hud(registry: &StatsRegistry, id_to_name: &HashMap<Uuid, String>) {

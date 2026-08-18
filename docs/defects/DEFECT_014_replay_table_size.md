@@ -3,10 +3,10 @@
 **File:** `docs/defects/DEFECT_014_replay_table_size.md`
 **Date:** 2026-08-17
 **Severity:** High — every replay of a dead-button hand fails, and the failure surfaces as an out-of-order action rather than as anything naming the real cause.
-**Status:** **Fixed** in pkcore `0.5.1` on 2026-08-17.
+**Status:** **Fixed** in pkcore `0.5.0` on 2026-08-17 — introduced and fixed within the same unreleased version, so no published release ever carried it.
 **Reported by:** `bot_marathon` CI job (`cargo test --test bot_marathon -- --include-ignored`)
 **Introduced in:** `70d047df` — *Fix DEFECT_013: implement the TDA Rule 32 dead button*. Not a pre-existing bug: before that commit, blinds were derived by walking to the next *occupied* seat, an answer that does not depend on the physical table size, so the replay path's undersized seat array was harmless.
-**Fixed in:** pkcore `0.5.1` — `HandHistory::replay` (`src/hand_history.rs:563`).
+**Fixed in:** pkcore `0.5.0` — `HandHistory::replay` (`src/hand_history.rs:563`).
 
 ---
 
@@ -211,13 +211,11 @@ because 1000 random hands eventually deal that seating; it took until hand 15 in
 CI and hand 231 locally, and a shorter or luckier run would have passed. The
 targeted regression test now pins the case deterministically.
 
-The deeper gap is structural and is *not* closed by this fix: `HandHistory` does
-not record the physical table size, so replay infers it. The inference is sound
-today only because the dead small blind's position is always logged. Recording
-the true size — either by correcting `TableInfo.seats` to its documented meaning
-or by adding a field — would remove the inference, at the cost of a public
-builder signature change. That is left as follow-on work and noted here so the
-next reader finds it.
+The deeper gap was structural: `HandHistory` did not record the physical table
+size at all, so replay had to infer it, and the inference is sound only because
+the dead small blind's position happens to always be logged. That gap is now
+closed as follow-on work in the same release — see
+[Follow-on: recording the chair count](#follow-on-recording-the-chair-count).
 
 ---
 
@@ -246,5 +244,89 @@ next reader finds it.
 |------|--------|
 | `src/hand_history.rs` | `HandHistory::replay` includes pre-flop action seats when sizing the reconstructed seat array; comment records why. |
 | `src/hand_history.rs` | New colocated regression test `dead_small_blind_past_the_last_occupied_seat_replays_in_order`. |
-| `CHANGELOG.md` | `0.5.1` **Fixed** entry. |
-| `Cargo.toml` | Version `0.5.0` → `0.5.1`. |
+| `CHANGELOG.md` | `0.5.0` **Fixed** entry. |
+
+---
+
+## Follow-on: Recording the Chair Count
+
+The fix above leaves replay *inferring* the table size. The inference is
+correct, but it is correct only by a coincidence worth removing: the position
+that owes a dead small blind is always logged, so it always appears among the
+action seats. A future rule keying on table geometry, or any change to what
+gets logged, would break it silently.
+
+`TableInfo.seats` should already have held this. It is documented as "Total
+seats at the table (2–10)", but the builder filled it with
+`Some(player_snapshot.len() as u8)` — the head count. One field, two meanings,
+and the number actually needed was never written down. In the failing record it
+reads `seats: 5` while the button sits on seat 6, which is self-contradictory on
+its face.
+
+The field now means chairs and only chairs:
+
+- `HandHistory::from_table_state` leaves it `None`. It receives a snapshot of
+  the players, not the table, so it genuinely cannot know — and a guess is what
+  caused the ambiguity.
+- `HandHistory::with_table_size(usize)` records it, matching the fluent pattern
+  of the two setters beside it (`with_variant`, `with_betting_structure`). All
+  ten in-repo call sites chain it. A required constructor parameter was
+  rejected: `from_table_state_with_ids` already carries eleven arguments under
+  an `#[allow(clippy::too_many_arguments)]`, and a twelfth would break the
+  signature for the sibling repos.
+- The head count is not lost. It is `players.len()` on a record, and on a live
+  table it is `Table::count_occupied_seats` — which existed as a private helper
+  and is now public, delegating to a new `Seats::count_occupied` that sits
+  beside `Seats::size`. The pair reads as intended: `size` counts chairs,
+  `count_occupied` counts chairs with somebody in them.
+
+`replay` treats a recorded size as a **lower bound**, not as gospel:
+
+```rust
+let recorded_size = self.table.seats.map_or(0, |seats| seats as usize);
+let table_size = recorded_size
+    .max(max_seat + 1)
+    .max(button_seat + 1)
+    .max(max_action_seat + 1);
+```
+
+Two properties follow, and both are the point of the lower bound. Records
+written before this change carry the smaller head count in that field, so `max`
+discards it and the inference above still governs — every existing hand history
+replays exactly as it did. And a future call site that forgets `.with_table_size`
+degrades to inference rather than to a wrong table.
+
+**This changes no behaviour today, and the tests say so rather than pretending
+otherwise.** Under the current engine the inference and the recorded value always
+agree, because the dead small blind's position is always logged and any chairs
+past the last one that acted are empty by definition — the big blind's walk lands
+on the same seat either way. `a_recorded_chair_count_replays_the_same_as_an_
+inferred_one` asserts exactly that equality, and
+`trailing_empty_chairs_do_not_move_the_blinds` pins the case where a recorded
+size exceeds the inferred one. What the change buys is that the chair count no
+longer has to be deduced.
+
+### Tests added by the follow-on
+
+| File | Test name | What it verifies |
+|------|-----------|-----------------|
+| `src/casino/table/seats.rs` | `count_occupied_ignores_empty_seats` | `size` counts chairs, `count_occupied` counts the filled ones. |
+| `src/casino/table/seats.rs` | `count_occupied_equals_size_when_every_seat_is_taken` | The two agree on a full table. |
+| `src/casino/table/seats.rs` | `count_occupied_is_zero_for_an_empty_table` | Chairs without players count as none. |
+| `src/casino/table/seats.rs` | `count_occupied_is_zero_for_no_seats` | No chairs at all. |
+| `src/casino/table/seats.rs` | `count_occupied_counts_a_seated_player_with_no_chips` | Occupancy is not activity — a busted player still holds the chair. |
+| `src/hand_history.rs` | `from_table_state_leaves_the_chair_count_unrecorded` | The builder no longer guesses the chair count from the head count. |
+| `src/hand_history.rs` | `with_table_size_records_chairs_not_players` | Nine chairs, two players, both readable. |
+| `src/hand_history.rs` | `with_table_size_saturates_rather_than_wrapping` | An oversized value saturates instead of wrapping to a *smaller* table, which the lower bound would then accept. |
+| `src/hand_history.rs` | `a_recorded_chair_count_survives_the_yaml_round_trip` | The value reaches disk, and an unknown count is omitted rather than written as a guess. |
+| `src/hand_history.rs` | `a_recorded_chair_count_replays_the_same_as_an_inferred_one` | Recording the size changes no outcome. |
+| `src/hand_history.rs` | `trailing_empty_chairs_do_not_move_the_blinds` | A recorded size larger than the inferred one does not shift the blinds. |
+
+### Code affected by the follow-on
+
+| File | Change |
+|------|--------|
+| `src/casino/table/seats.rs` | New public `Seats::count_occupied`. |
+| `src/casino/table.rs` | `Table::count_occupied_seats` made public, delegating to `Seats::count_occupied`. |
+| `src/hand_history.rs` | New `HandHistory::with_table_size`; builder writes `seats: None`; `replay` uses a recorded size as a lower bound. |
+| `src/bot/sim.rs`, `tests/bot_marathon.rs`, `tests/replay_consistency.rs` (4 sites), `examples/interactive_play.rs`, `examples/bot_selfplay.rs`, `examples/player_stats_review.rs`, `examples/decon_dump.rs` | Chain `.with_table_size(...)`; the two example helpers take the size as a parameter. |

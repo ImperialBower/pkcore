@@ -58,6 +58,36 @@ impl Seats {
         u8::try_from(self.0.len()).unwrap_or(0)
     }
 
+    /// Number of seats that hold a player, ignoring empty ones.
+    ///
+    /// This is the companion to [`size`](Seats::size), which counts the
+    /// physical chairs whether or not anybody is in them. The two differ
+    /// whenever a player has been eliminated or a seat was never filled, and
+    /// the difference matters: the dead button of TDA 2024 Rule 32 derives
+    /// blinds from *positions* (`size`) while the heads-up rules of 34-B turn
+    /// on the *head count* (`count_occupied`).
+    ///
+    /// Unlike [`count_active_in_hand`](Seats::count_active_in_hand) this makes
+    /// no judgement about the hand in progress — a player who has folded or is
+    /// all-in still occupies their seat.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats};
+    ///
+    /// let seated = Seat::new(Player::new_with_chips("Alice".to_string(), 5_000));
+    /// let empty = Seat::default();
+    /// let seats = Seats::new(vec![seated, empty.clone(), empty]);
+    ///
+    /// assert_eq!(3, seats.size(), "three chairs");
+    /// assert_eq!(1, seats.count_occupied(), "one of them has a player");
+    /// ```
+    #[must_use]
+    pub fn count_occupied(&self) -> u8 {
+        u8::try_from(self.0.iter().filter(|seat| !seat.is_empty()).count()).unwrap_or(u8::MAX)
+    }
+
     /// Immutable access to a seat by index.
     #[must_use]
     pub fn get_seat(&self, idx: u8) -> Option<&Seat> {
@@ -560,5 +590,53 @@ mod casino__table__seats_tests {
         // Alice (all-in) stays AllIn(200); Bob resets to YetToAct.
         assert_eq!(seats.0[0].player.state, PlayerState::AllIn(200));
         assert_eq!(seats.0[1].player.state, PlayerState::YetToAct);
+    }
+
+    #[test]
+    fn count_occupied_ignores_empty_seats() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+            Seat::default(),
+            Seat::new(Player::new_with_chips("C".to_string(), 1_000)),
+            Seat::default(),
+        ]);
+
+        assert_eq!(4, seats.size(), "chairs");
+        assert_eq!(2, seats.count_occupied(), "chairs with a player in them");
+    }
+
+    #[test]
+    fn count_occupied_equals_size_when_every_seat_is_taken() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+        ]);
+
+        assert_eq!(seats.size(), seats.count_occupied());
+    }
+
+    #[test]
+    fn count_occupied_is_zero_for_an_empty_table() {
+        let seats = Seats::new(vec![Seat::default(), Seat::default()]);
+
+        assert_eq!(2, seats.size());
+        assert_eq!(0, seats.count_occupied());
+    }
+
+    #[test]
+    fn count_occupied_is_zero_for_no_seats() {
+        assert_eq!(0, Seats::new(vec![]).count_occupied());
+    }
+
+    /// A broke player still occupies their chair — `count_occupied` asks who is
+    /// sitting there, not who can still bet.
+    #[test]
+    fn count_occupied_counts_a_seated_player_with_no_chips() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Busted".to_string(), 0)),
+            Seat::default(),
+        ]);
+
+        assert_eq!(1, seats.count_occupied());
     }
 }

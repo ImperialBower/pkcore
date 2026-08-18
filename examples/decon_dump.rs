@@ -1035,7 +1035,8 @@ fn hand_history() -> usize {
         &ending,
         "decon-dump",
         Some(shuffled.clone()),
-    );
+    )
+    .with_table_size(table.seats.size() as usize);
 
     let mut seen: Vec<String> = Vec::new();
     let first = history.to_yaml().unwrap_or_default();

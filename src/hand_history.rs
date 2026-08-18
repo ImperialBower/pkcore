@@ -378,7 +378,16 @@ impl HandHistory {
             },
             table: TableInfo {
                 name: Some(source.to_string()),
-                seats: Some(player_snapshot.len() as u8),
+                // `DEFECT_014`: this field means the number of *chairs*, empty
+                // ones included, and this constructor cannot know it — it gets
+                // a snapshot of the players, not the table. It used to be
+                // filled with the player count, which is a different number
+                // and gave the field two meanings. Left unset here; callers
+                // that hold the table record it with
+                // `HandHistory::with_table_size`. The player count is not lost
+                // — it is `players.len()`, or `Table::count_occupied_seats` on
+                // a live table.
+                seats: None,
                 button: Some(button),
                 stakes: Stakes {
                     small_blind: forced.small_blind as f64,
@@ -458,6 +467,37 @@ impl HandHistory {
     #[must_use]
     pub fn with_variant(mut self, variant: HandVariant) -> Self {
         self.hand.game = variant;
+        self
+    }
+
+    /// Fluent setter for the **physical** table size — the number of chairs,
+    /// empty ones included (`DEFECT_014`).
+    ///
+    /// `from_table_state` cannot know this: it receives a snapshot of the
+    /// players, not the table, so it leaves [`TableInfo::seats`] unset. Record
+    /// it by chaining this with [`Seats::size`][crate::casino::table::Seats::size]:
+    ///
+    /// ```ignore
+    /// let hh = HandHistory::from_table_state(...)
+    ///     .with_table_size(table.seats.size() as usize);
+    /// ```
+    ///
+    /// It matters because blind positions are derived from the chair count
+    /// under a dead button (TDA 2024 Rule 32), so a hand replayed against a
+    /// differently-sized table gets different blinds and a different turn
+    /// order. [`replay`](HandHistory::replay) treats a recorded size as a
+    /// lower bound and still infers one when it is absent, so setting this is
+    /// a correctness improvement rather than a requirement.
+    ///
+    /// The number of seats that hold a *player* is a separate question, and is
+    /// not stored: it is `self.players.len()` on a record, or
+    /// [`Table::count_occupied_seats`][crate::casino::table::Table::count_occupied_seats]
+    /// on a live table.
+    ///
+    /// Values above `u8::MAX` saturate, which no real table reaches.
+    #[must_use]
+    pub fn with_table_size(mut self, size: usize) -> Self {
+        self.table.seats = Some(u8::try_from(size).unwrap_or(u8::MAX));
         self
     }
 
@@ -579,7 +619,18 @@ impl HandHistory {
             .and_then(|streets| streets.preflop.as_ref())
             .and_then(|street| street.actions.iter().map(|a| a.seat as usize).max())
             .unwrap_or(0);
-        let table_size = max_seat.max(button_seat).max(max_action_seat) + 1;
+        // A recorded chair count (`HandHistory::with_table_size`) is the
+        // authority when present, but only as a *lower bound*: records written
+        // before `DEFECT_014` put the player count in this field, a smaller
+        // and different number, and `max` discards those harmlessly. The
+        // inference above therefore stays live as the floor, so a record that
+        // never set the size — or a caller that forgets to — degrades to
+        // inference rather than to a wrong table.
+        let recorded_size = self.table.seats.map_or(0, |seats| seats as usize);
+        let table_size = recorded_size
+            .max(max_seat + 1)
+            .max(button_seat + 1)
+            .max(max_action_seat + 1);
         let mut seats_vec: Vec<Seat> = (0..table_size).map(|_| Seat::new(Player::default())).collect();
         for p in &self.players {
             seats_vec[p.seat as usize] = Seat::new(Player::new_with_chips(p.name.clone(), p.stack as usize));
@@ -2716,6 +2767,91 @@ fn build_replay_result(
 mod tests {
     use super::*;
 
+    /// The `DEFECT_014` dead-button hand, as `bot_marathon` recorded it.
+    ///
+    /// Players sit at seats 0, 1, 3, 4 and 6 of an eight-chair table with
+    /// the button on seat 6, so the small blind is owed by seat 7 — empty,
+    /// therefore dead, and recorded as a zero post. `seats: 5` is the
+    /// old-style player count these records used to carry, kept here so the
+    /// tests exercise a pre-`with_table_size` record.
+    #[cfg(feature = "bot-profiles")]
+    const DEAD_BUTTON_HAND: &str = r#"
+- format_version: 1
+  hand:
+    id: dead-button-replay
+    game: holdem
+    timestamp: '0'
+    source: regression
+  table:
+    name: regression
+    seats: 5
+    button: 6
+    stakes:
+      small_blind: 50.0
+      big_blind: 100.0
+    betting_structure:
+      kind: no_limit
+  players:
+  - seat: 0
+    name: gto
+    stack: 1393956.0
+    hole_cards: 6♣ 3♥
+  - seat: 1
+    name: tight_passive
+    stack: 2992725.0
+    hole_cards: A♥ 7♠
+  - seat: 3
+    name: tight_aggressive
+    stack: 997174.0
+    hole_cards: K♥ Q♠
+  - seat: 4
+    name: loose_passive
+    stack: 1621474.0
+    hole_cards: 6♦ 5♦
+  - seat: 6
+    name: abc
+    stack: 994671.0
+    hole_cards: K♦ 9♠
+  streets:
+    preflop:
+      actions:
+      - seat: 7
+        action: post
+        amount: 0.0
+      - seat: 0
+        action: post
+        amount: 100.0
+      - seat: 1
+        action: fold
+      - seat: 3
+        action: raise
+        amount: 200.0
+      - seat: 4
+        action: fold
+      - seat: 6
+        action: fold
+      - seat: 0
+        action: fold
+      pot: 100.0
+  results:
+  - seat: 0
+    outcome: fold
+    net: -100.0
+  - seat: 1
+    outcome: fold
+    net: 0.0
+  - seat: 3
+    outcome: win
+    net: 100.0
+    pot_won: 300.0
+  - seat: 4
+    outcome: fold
+    net: 0.0
+  - seat: 6
+    outcome: fold
+    net: 0.0
+"#;
+
     // P9j.6 — the owned HandHistoryError's Display/Error/From impls were untested.
     #[cfg(feature = "hand-histories")]
     #[test]
@@ -4718,84 +4854,9 @@ hands:
     #[cfg(feature = "bot-profiles")]
     #[test]
     fn dead_small_blind_past_the_last_occupied_seat_replays_in_order() {
-        const YAML: &str = r#"
-- format_version: 1
-  hand:
-    id: dead-button-replay
-    game: holdem
-    timestamp: '0'
-    source: regression
-  table:
-    name: regression
-    seats: 5
-    button: 6
-    stakes:
-      small_blind: 50.0
-      big_blind: 100.0
-    betting_structure:
-      kind: no_limit
-  players:
-  - seat: 0
-    name: gto
-    stack: 1393956.0
-    hole_cards: 6♣ 3♥
-  - seat: 1
-    name: tight_passive
-    stack: 2992725.0
-    hole_cards: A♥ 7♠
-  - seat: 3
-    name: tight_aggressive
-    stack: 997174.0
-    hole_cards: K♥ Q♠
-  - seat: 4
-    name: loose_passive
-    stack: 1621474.0
-    hole_cards: 6♦ 5♦
-  - seat: 6
-    name: abc
-    stack: 994671.0
-    hole_cards: K♦ 9♠
-  streets:
-    preflop:
-      actions:
-      - seat: 7
-        action: post
-        amount: 0.0
-      - seat: 0
-        action: post
-        amount: 100.0
-      - seat: 1
-        action: fold
-      - seat: 3
-        action: raise
-        amount: 200.0
-      - seat: 4
-        action: fold
-      - seat: 6
-        action: fold
-      - seat: 0
-        action: fold
-      pot: 100.0
-  results:
-  - seat: 0
-    outcome: fold
-    net: -100.0
-  - seat: 1
-    outcome: fold
-    net: 0.0
-  - seat: 3
-    outcome: win
-    net: 100.0
-    pot_won: 300.0
-  - seat: 4
-    outcome: fold
-    net: 0.0
-  - seat: 6
-    outcome: fold
-    net: 0.0
-"#;
+        let yaml = DEAD_BUTTON_HAND;
 
-        let hands: Vec<HandHistory> = serde_yaml_bw::from_str(YAML).expect("hand should deserialize");
+        let hands: Vec<HandHistory> = serde_yaml_bw::from_str(yaml).expect("hand should deserialize");
         let result = hands[0]
             .replay()
             .expect("a dead-button hand must replay without an out-of-order error");
@@ -4804,5 +4865,167 @@ hands:
             "replayed stacks should match the recorded ones: {:?}",
             result.final_stacks
         );
+    }
+
+    /// `DEFECT_014`: `from_table_state` receives a snapshot of the players, not
+    /// the table, so it cannot know the chair count and must leave the field
+    /// unset rather than guess. It used to store the player count there, which
+    /// gave one field two meanings.
+    #[test]
+    fn from_table_state_leaves_the_chair_count_unrecorded() {
+        let hh = HandHistory::from_table_state(
+            1,
+            0,
+            0,
+            &ForcedBets::new(50, 100),
+            &[
+                (0, "Alice".to_string(), 1_000, Some("A♠ K♠".to_string())),
+                (1, "Bob".to_string(), 1_000, Some("Q♥ Q♦".to_string())),
+            ],
+            "",
+            &Winnings::default(),
+            &[],
+            &[(0, 1_000), (1, 1_000)],
+            "test",
+            None,
+        );
+
+        assert_eq!(
+            None, hh.table.seats,
+            "two players say nothing about how many chairs the table has"
+        );
+    }
+
+    /// The chair count and the head count are different numbers, and only the
+    /// first is recorded. The second stays available as `players.len()`.
+    #[test]
+    fn with_table_size_records_chairs_not_players() {
+        let hh = HandHistory::from_table_state(
+            1,
+            0,
+            0,
+            &ForcedBets::new(50, 100),
+            &[
+                (0, "Alice".to_string(), 1_000, Some("A♠ K♠".to_string())),
+                (1, "Bob".to_string(), 1_000, Some("Q♥ Q♦".to_string())),
+            ],
+            "",
+            &Winnings::default(),
+            &[],
+            &[(0, 1_000), (1, 1_000)],
+            "test",
+            None,
+        )
+        .with_table_size(9);
+
+        assert_eq!(Some(9), hh.table.seats, "nine chairs");
+        assert_eq!(2, hh.players.len(), "two of them have players");
+    }
+
+    /// A chair count above `u8::MAX` saturates rather than wrapping to a
+    /// smaller table, because `replay` treats the value as a lower bound and a
+    /// wrapped one would silently shrink the table.
+    #[test]
+    fn with_table_size_saturates_rather_than_wrapping() {
+        let hh = HandHistory::from_table_state(
+            1,
+            0,
+            0,
+            &ForcedBets::new(50, 100),
+            &[(0, "Alice".to_string(), 1_000, None)],
+            "",
+            &Winnings::default(),
+            &[],
+            &[(0, 1_000)],
+            "test",
+            None,
+        )
+        .with_table_size(300);
+
+        assert_eq!(Some(u8::MAX), hh.table.seats);
+    }
+
+    /// `DEFECT_014`: the same dead-button hand as
+    /// `dead_small_blind_past_the_last_occupied_seat_replays_in_order`, but
+    /// with the chair count recorded correctly as 8 rather than left at the
+    /// old player-count value of 5. Both must replay to the same result — the
+    /// recorded size is a lower bound that agrees with the inference, not a
+    /// second source of truth that can disagree with it.
+    #[cfg(feature = "bot-profiles")]
+    #[test]
+    fn a_recorded_chair_count_replays_the_same_as_an_inferred_one() {
+        let with_recorded_size = DEAD_BUTTON_HAND.replace("seats: 5", "seats: 8");
+        assert!(
+            with_recorded_size.contains("seats: 8"),
+            "the fixture should carry an old-style player count to overwrite"
+        );
+
+        let inferred: Vec<HandHistory> = serde_yaml_bw::from_str(DEAD_BUTTON_HAND).expect("fixture should deserialize");
+        let recorded: Vec<HandHistory> =
+            serde_yaml_bw::from_str(&with_recorded_size).expect("fixture should deserialize");
+
+        let inferred = inferred[0].replay().expect("inferred size should replay");
+        let recorded = recorded[0].replay().expect("recorded size should replay");
+
+        assert!(recorded.is_consistent, "recorded-size replay should balance");
+        assert_eq!(
+            inferred.final_stacks, recorded.final_stacks,
+            "recording the chair count must not change the outcome"
+        );
+    }
+
+    /// A chair count larger than anything that acted must not shift the blinds.
+    /// Seats 8 and 9 are empty and never appear in the action, so the big
+    /// blind's walk from the dead small blind at seat 7 lands on seat 0 either
+    /// way.
+    #[cfg(feature = "bot-profiles")]
+    #[test]
+    fn trailing_empty_chairs_do_not_move_the_blinds() {
+        let ten_seats = DEAD_BUTTON_HAND.replace("seats: 5", "seats: 10");
+
+        let hands: Vec<HandHistory> = serde_yaml_bw::from_str(&ten_seats).expect("should deserialize");
+        let result = hands[0].replay().expect("a 10-chair table should replay");
+
+        assert!(result.is_consistent, "{:?}", result.final_stacks);
+    }
+
+    /// The recorded chair count is only useful if it reaches disk, and only
+    /// safe if its absence is preserved too — an omitted field must not
+    /// deserialize into a bogus size that `replay` would then treat as a floor.
+    #[test]
+    fn a_recorded_chair_count_survives_the_yaml_round_trip() {
+        let build = || {
+            HandHistory::from_table_state(
+                1,
+                0,
+                0,
+                &ForcedBets::new(50, 100),
+                &[
+                    (0, "Alice".to_string(), 1_000, Some("A♠ K♠".to_string())),
+                    (1, "Bob".to_string(), 1_000, Some("Q♥ Q♦".to_string())),
+                ],
+                "",
+                &Winnings::default(),
+                &[],
+                &[(0, 1_000), (1, 1_000)],
+                "test",
+                None,
+            )
+        };
+
+        let sized = build().with_table_size(8);
+        let yaml = sized.to_yaml().expect("should serialize");
+        assert!(yaml.contains("seats: 8"), "chair count should be written:\n{yaml}");
+        let back = HandHistory::from_yaml(&yaml).expect("should deserialize");
+        assert_eq!(Some(8), back.table.seats);
+
+        let without_size = build();
+        let yaml = without_size.to_yaml().expect("should serialize");
+        assert!(
+            !yaml.contains("seats:"),
+            "an unknown chair count should be omitted, not guessed:\n{yaml}"
+        );
+        let back = HandHistory::from_yaml(&yaml).expect("should deserialize");
+        assert_eq!(None, back.table.seats);
     }
 }

@@ -447,9 +447,30 @@ impl Table {
         start
     }
 
-    /// Returns the number of non-empty (occupied) seats.
-    fn count_occupied_seats(&self) -> usize {
-        self.seats.0.iter().filter(|s| !s.is_empty()).count()
+    /// Returns the number of seats that hold a player, ignoring empty ones.
+    ///
+    /// Distinct from `self.seats.size()`, which counts the physical chairs.
+    /// The gap between the two is what a dead button (TDA 2024 Rule 32) opens
+    /// up, and the reason the two counts drive different rules: blinds are
+    /// derived from positions, while the heads-up rules turn on the head
+    /// count.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    ///
+    /// let live = |name: &str| Seat::new(Player::new_with_chips(name.to_string(), 5_000));
+    /// let seats = Seats::new(vec![live("A"), Seat::default(), live("C")]);
+    /// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    ///
+    /// assert_eq!(3, table.seats.size(), "three chairs");
+    /// assert_eq!(2, table.count_occupied_seats(), "two of them have players");
+    /// ```
+    #[must_use]
+    pub fn count_occupied_seats(&self) -> usize {
+        self.seats.count_occupied() as usize
     }
 
     /// Returns the index of the Nth occupied seat after `start`, wrapping.

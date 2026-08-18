@@ -5,37 +5,40 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.1] - 2026-08-17
-
-### Fixed
-
-- **A dead-button hand replayed with the wrong turn order**
-  ([DEFECT_014](docs/defects/DEFECT_014_replay_table_size.md), TDA 2024 Rule
-  32). `HandHistory::replay` sized its reconstructed table from the occupied
-  seats and the button alone. Under a dead button the seat that *owes* the
-  small blind can be empty and can sit past both — an 8-seat table with players
-  through seat 6 and the button on seat 6 owes the small blind at seat 7. The
-  rebuilt table held 7 seats, so `seat_offset_from_button` took its modulus
-  against the wrong size and derived the small blind at seat 0. Both blinds and
-  every player's turn shifted, and the first recorded voluntary action came
-  back as `TableActionOutOfOrder`.
-
-  The information was never missing from the record: `act_forced_bet_small_
-  blind` logs `ForcedBetSmallBlind(sb, 0)` with the position even when the
-  blind is dead, so the pre-flop action seats pin the table size. Replay now
-  includes them when sizing the seat array. No recorded format changed and no
-  existing hand history is invalidated — records that predate the dead button
-  size identically, because for them no action seat exceeds the last occupied
-  one.
-
-  Caught by `bot_marathon`, which replays all 1000 hands it plays. The bug was
-  latent for exactly as long as the dead button has existed (`0.5.0`): before
-  it, blinds walked to the next *occupied* seat, an answer that does not depend
-  on the physical table size.
-
 ## [0.5.0] - 2026-08-17
 
 ### Added
+
+- **`Seats::count_occupied` and `Table::count_occupied_seats` — how many chairs
+  have a player in them** (`DEFECT_014`). The count existed as a private helper
+  on `Table`; it is now public on both types and sits next to `Seats::size`,
+  which counts the chairs themselves. The two numbers diverge whenever a player
+  is eliminated, and they drive different rules: blinds are derived from
+  *positions* under the dead button of Rule 32, while the heads-up rules of
+  34-B turn on the *head count*. Unlike `count_active_in_hand` it makes no
+  judgement about the hand in progress — a folded or all-in player still
+  occupies their seat.
+
+- **`HandHistory::with_table_size` — record the physical chair count**
+  ([DEFECT_014](docs/defects/DEFECT_014_replay_table_size.md)). `TableInfo.seats`
+  is documented as the total seats at the table but was filled with the *player*
+  count, giving one field two meanings and leaving the chair count unrecorded.
+  It now means chairs and nothing else: `from_table_state` leaves it unset,
+  because it receives a snapshot of the players rather than the table and cannot
+  know, and callers that hold the table chain `.with_table_size(table.seats.size()
+  as usize)` — the same fluent pattern as `with_variant` and
+  `with_betting_structure`. Nothing is lost by the change: the head count is
+  `players.len()` on a record, or the newly public `Table::count_occupied_seats`
+  on a live table.
+
+  `replay` treats a recorded size as a **lower bound** rather than as gospel.
+  Hand histories written before this change carry the smaller player count in
+  that field, so `max` discards it and the `DEFECT_014` inference still applies
+  — every existing record replays exactly as before, and a new call site that
+  forgets to record the size degrades to inference rather than to a wrong table.
+  No behaviour changes today; what changes is that the chair count no longer has
+  to be deduced, which is what a future rule keying on table geometry would
+  need.
 
 - **`Table::substantial_action` — TDA 2024 Rule 36**
   ([DEFECT_009](docs/defects/DEFECT_009_substantial_action_predicate.md)).
@@ -65,6 +68,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   find and challenge it.
 
 ### Fixed
+
+- **A dead-button hand replayed with the wrong turn order**
+  ([DEFECT_014](docs/defects/DEFECT_014_replay_table_size.md), TDA 2024 Rule
+  32). `HandHistory::replay` sized its reconstructed table from the occupied
+  seats and the button alone. Under a dead button the seat that *owes* the
+  small blind can be empty and can sit past both — an 8-seat table with players
+  through seat 6 and the button on seat 6 owes the small blind at seat 7. The
+  rebuilt table held 7 seats, so `seat_offset_from_button` took its modulus
+  against the wrong size and derived the small blind at seat 0. Both blinds and
+  every player's turn shifted, and the first recorded voluntary action came
+  back as `TableActionOutOfOrder`.
+
+  The information was never missing from the record: `act_forced_bet_small_
+  blind` logs `ForcedBetSmallBlind(sb, 0)` with the position even when the
+  blind is dead, so the pre-flop action seats pin the table size. Replay now
+  includes them when sizing the seat array. No recorded format changed and no
+  existing hand history is invalidated — records that predate the dead button
+  size identically, because for them no action seat exceeds the last occupied
+  one.
+
+  Caught by `bot_marathon`, which replays all 1000 hands it plays. Introduced
+  by the dead button earlier in this same release and never shipped: before it,
+  blinds walked to the next *occupied* seat, an answer that does not depend on
+  the physical table size.
 
 - **A live player paid a blind they did not owe — no dead button**
   ([DEFECT_013](docs/defects/DEFECT_013_dead_button.md), TDA 2024 Rule 32).
