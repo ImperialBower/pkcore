@@ -16,8 +16,8 @@ cost; perf/ crate lives on the `perf` branch, not main) and the criterion
 bench target `benches/preflop_odds.rs` (present, but no stored results
 in-tree). Everything else is **structural** — per-finding tiers are stated in
 each dossier.
-**Companion docs:** [`EPIC-DEFECT-A_Preflop_Perf.md`](./EPIC-DEFECT-A_Preflop_Perf.md),
-[`EPIC-14_Equity.md`](./EPIC-14_Equity.md),
+**Companion docs:** [`epics/EPIC-DEFECT-A_Preflop_Perf.md`](epics/EPIC-DEFECT-A_Preflop_Perf.md),
+[`epics/EPIC-14_Equity.md`](epics/EPIC-14_Equity.md),
 [`DEPENDENCY_AUDIT.md`](./DEPENDENCY_AUDIT.md), perf harness (`perf` branch)
 **Predecessor:** [`ANALYSIS_SIMD_Opportunities.md`](./ANALYSIS_SIMD_Opportunities.md)
 (Aug 2026). Its open TODOs (`TODO-SIMD-1..5`, all unchecked) are carried

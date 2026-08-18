@@ -475,7 +475,7 @@ here; these are verified, not vibes:
   `DEFECT_003_heads_up_side_pot.md` → four tests in `tests/split_pots.rs`
   (`:219, :285, :339, :403`) plus the `heads_up_is_symmetric` guard;
   `DEFECT_001_BUGFIX_short_blind_call_target.md` → six `short_bb`/`short_blind` tests
-  across both engines. (`EPIC-DEFECT-Minraise.md` is a title-only stub, but its
+  across both engines. (`../epics/EPIC-DEFECT-Minraise.md` is a title-only stub, but its
   behavior is covered: `act_raise` pre-validates before mutating, with a
   no-state-corruption regression test.) This defect→doc→test discipline is
   rarer than the test count itself.

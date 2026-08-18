@@ -10,7 +10,7 @@ native app needs *from* pkcore, with zero binding code *in* pkcore.
 `aarch64-apple-ios` / `aarch64-linux-android` static libraries and a
 future downstream repo generates Swift/Kotlin bindings. No WebAssembly
 on this path (the WAMR/WASI track lives separately in
-`docs/EPIC_FEATURE_wasm_wamr.md`). This EPIC is **pkcore-side only**:
+`EPIC_FEATURE_wasm_wamr.md`). This EPIC is **pkcore-side only**:
 it makes the crate *bindable*; the binding crate and the app get their
 own downstream EPIC later.
 
@@ -278,7 +278,7 @@ public fields through FFI would freeze internal layout into the ABI.
 
 **`view` is keyed on `Principal`, not seat index (EPIC-50 dependency).**
 An earlier draft of this sketch took `Option<u8>`. EPIC-50
-(`docs/EPIC-50_Transport_Gateway.md:240-254`) requires
+(`EPIC-50_Transport_Gateway.md:240-254`) requires
 `Option<Principal>` — the `Uuid` newtype already landed at
 `src/casino/principal.rs`. A network client presents an identity, not a
 seat index; the function looks up which seat (if any) that principal
@@ -587,7 +587,7 @@ wrapper — recorded here as the contract the downstream repo consumes:
   visibility rule `SessionView` encodes), EPIC-66 (serialization
   policy).
 - **Blocks:** EPIC-50 Phase 4 (`SessionView::for_principal`,
-  `docs/EPIC-50_Transport_Gateway.md:330-339`) — gated until Phase 2b
+  `EPIC-50_Transport_Gateway.md:330-339`) — gated until Phase 2b
   lands `SessionView`. `Principal` itself already exists
   (`src/casino/principal.rs`), so Phase 2b can consume it today.
 

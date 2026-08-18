@@ -491,7 +491,7 @@ cargo run --features hand-histories --example replay_play
 cargo run --features hand-histories --example replay_play -- generated/session.yaml
 ```
 
-See [`docs/EPIC-19_Bot_Self_Play.md`](docs/EPIC-19_Bot_Self_Play.md) for the
+See [`docs/epics/EPIC-19_Bot_Self_Play-CLOSED.md`](docs/epics/EPIC-19_Bot_Self_Play-CLOSED.md) for the
 full design.
 
 ---

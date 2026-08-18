@@ -30,7 +30,7 @@ targets, check it against the cited cardroom rules first.
 
 # Related
 
-`docs/EPIC-DEFECT-Minraise.md` (title-only stub) flags that the
+`../../docs/epics/EPIC-DEFECT-Minraise.md` (title-only stub) flags that the
 last-raise-size rule was not enforced by `TableCelled` — min-raise
 enforcement has history in both engines.
 

@@ -13,7 +13,7 @@ candidate crypto crates, define the signed-event schema, and lay out a
 phased path with explicit gates the user can approve **before any code
 is written**.
 
-It is grounded entirely in [`docs/ANALYSIS_Mental_Poker.md`](./ANALYSIS_Mental_Poker.md),
+It is grounded entirely in [`docs/ANALYSIS_Mental_Poker.md`](../ANALYSIS_Mental_Poker.md),
 which explores serverless, trustless distributed poker. That analysis
 separates two concerns people conflate when they say "server":
 
@@ -252,7 +252,7 @@ behind a feature gate (e.g. `mental-log`), matching the existing
 a thin transport. Depends on pkcore for the engine and the 52 fixed
 `Card` encodings; depends on `arkworks` for the elliptic-curve and
 zero-knowledge primitives. This mirrors the existing pkcore → **pkdealer**
-sibling-repo pattern in [`ROADMAP.md`](../ROADMAP.md): pkcore owns the
+sibling-repo pattern in [`ROADMAP.md`](../../ROADMAP.md): pkcore owns the
 logic, the sibling owns the transport. The contrast with pkdealer is the
 trust model — pkdealer is a *trusted-server* gRPC dealer; pkmental is
 *trustless / serverless*.
@@ -646,7 +646,7 @@ not modified by this spike.
 
 ## Dependencies
 
-- **Source:** [`docs/ANALYSIS_Mental_Poker.md`](./ANALYSIS_Mental_Poker.md).
+- **Source:** [`docs/ANALYSIS_Mental_Poker.md`](../ANALYSIS_Mental_Poker.md).
 - **Relates to ROADMAP Phase 4** (the distributed platform) as an
   *alternative, trustless* transport model.
 - **Contrast with pkdealer:** pkdealer is the trusted-server gRPC dealer

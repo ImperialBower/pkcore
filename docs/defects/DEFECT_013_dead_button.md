@@ -281,7 +281,7 @@ exists.
   migrated
 - `docs/ANALYSIS_TableCelled_vs_Table.md` — why both table types change together
 - `tda_parsed/tda_2024.yaml` — Rule 32 verbatim, and the absence of any dead-BB rule
-- `docs/EPIC-00f_Coverage.md` — the Gold Standard framing used in [Coverage Gap](#coverage-gap)
+- `../epics/EPIC-00f_Coverage.md` — the Gold Standard framing used in [Coverage Gap](#coverage-gap)
 
 *TDA rules quoted under permission of the Poker TDA, http://www.pokertda.com, all rights
 reserved.*

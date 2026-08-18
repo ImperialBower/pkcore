@@ -4,7 +4,7 @@ use pkcore::prelude::*;
 /// Shows all the unique suit-shifted variants of heads up pair of hands.
 /// Each variant is evaluated as the same strength from an odds perspective.
 ///
-/// See `docs/EPIC-07_Transposition.md` for a detailed description of concept and rationale behind
+/// See `docs/epics/EPIC-07_Transposition.md` for a detailed description of concept and rationale behind
 /// suit shifting.
 ///
 /// ## Using default hand

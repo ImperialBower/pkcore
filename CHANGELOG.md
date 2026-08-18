@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **[EPIC-79b: The Sealed Deck](docs/EPIC-79b_Sealed_Deck.md)** — a design doc,
+- **[EPIC-79b: The Sealed Deck](docs/epics/EPIC-79b_Sealed_Deck.md)** — a design doc,
   no code. `pkcore` cannot currently hold a card it does not know: `Card` is a
   transparent `u32`, `Cards` is a set that dedups by value, and
   `TableAction::Dealt` writes real hole cards into the public `Table::event_log`.
@@ -17,9 +17,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   plus `SealedCard<S>` and a `SealedDeck<S>` that shuffles, cuts, burns and
   deals blind — because every one of those operations is a permutation, and a
   permutation needs no knowledge. Zero new dependencies; the crypto stays in
-  `pkmental` under [EPIC-79a](docs/EPIC-79a_Real_Cryptography_Backend.md). It
+  `pkmental` under [EPIC-79a](docs/epics/EPIC-79a_Real_Cryptography_Backend.md). It
   builds the first of the three cross-cutting pkcore changes that
-  [EPIC-79](docs/EPIC-79_Mental_Poker.md) designed and never built.
+  [EPIC-79](docs/epics/EPIC-79_Mental_Poker.md) designed and never built.
+
+### Changed
+
+- **All 66 `docs/EPIC-*.md` design docs moved to `docs/epics/`** — the `docs/`
+  root was getting crowded with numbered EPICs alongside release notes,
+  audits, and defect reports. Every internal hyperlink (README, ROADMAP,
+  CHANGELOG, AI-BOM, `.okf/` bundle, and doc-comment references in
+  `src/lib.rs`, `tests/tda_conformance.rs`, `examples/simple_suit_shift_example.rs`)
+  was updated to the new path. No content changed, only location.
 
 ## [0.5.0] - 2026-08-17
 

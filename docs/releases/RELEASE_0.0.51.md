@@ -178,7 +178,7 @@ the map from `PlayerSeated` events in its slice (legacy YAMLs without
 
 Gated on the `player-stats` feature (in the default set; opt out via
 `default-features = false`). See
-[`docs/EPIC-26_Player_Stats.md`](../EPIC-26_Player_Stats.md) for the full
+[`docs/epics/EPIC-26_Player_Stats-CLOSED.md`](../epics/EPIC-26_Player_Stats-CLOSED.md) for the full
 design.
 
 #### `PlayerStats`
@@ -505,7 +505,7 @@ is already pulled by `bot-profiles` and `hand-histories`.
 
 | File | Description |
 |------|-------------|
-| `docs/EPIC-26_Player_Stats.md` | Full design + status doc for the EPIC-26 arc; phase-by-phase shipping status, design deviations from spec (eager-load persistence, snapshot-as-source-of-truth identity, defense-in-depth `Position::from_seat` fix), reuse table, verification commands |
+| `docs/epics/EPIC-26_Player_Stats-CLOSED.md` | Full design + status doc for the EPIC-26 arc; phase-by-phase shipping status, design deviations from spec (eager-load persistence, snapshot-as-source-of-truth identity, defense-in-depth `Position::from_seat` fix), reuse table, verification commands |
 | `docs/RELEASE_AUDIT_0.0.51.md` | Pre-softening downstream audit covering `pkpy`, `pknotebook`, `pkdealer`, `pkgto-web`, `pkkuhn-web`, `pkarena0-web`. Six breaking changes audited; only one (`from_table_state` 5-tuple) actually tripped any surveyed downstream — the softening described above eliminates that one |
 
 ### Updated docs
@@ -581,7 +581,7 @@ Numbers from `git diff v0.0.49..HEAD --stat`: **26 tracked files,
 `tests/player_stats_persistence.rs` *(new, +134)*.
 
 **Documentation (3 files, 2 new + 1 updated):**
-`docs/EPIC-26_Player_Stats.md` *(new, +509)*,
+`docs/epics/EPIC-26_Player_Stats-CLOSED.md` *(new, +509)*,
 `docs/RELEASE_AUDIT_0.0.51.md` *(new, +155)*,
 `ROADMAP.md` (+11 / −2).
 

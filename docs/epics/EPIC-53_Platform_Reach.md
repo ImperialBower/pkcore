@@ -54,7 +54,7 @@ cross-target CI.
 - **pkcore already has a secrecy rule this EPIC generalizes.** EPIC-37:
   session snapshots "contain the deck order — i.e., the future… store them
   only in the app's private storage, never transmit them to other
-  players" (`docs/EPIC-37_Mobile_Engine.md`, snapshot section). A bearer
+  players" (`EPIC-37_Mobile_Engine.md`, snapshot section). A bearer
   token is exactly the same kind of secret. One rule covers both.
 - **`Principal` is the shared vocabulary.** Every platform's client ends
   up presenting a token that resolves (EPIC-51) to the same `Principal`
@@ -241,7 +241,7 @@ All items are pgate / mobile-repo; none touch pkcore.
 | *(pgate)* `pkgate_client/src/secure_store.rs` | `SecureStore` trait + impls |
 | *(mobile repo)* Keychain/Keystore `SecureStore` | Mobile storage |
 | *(pgate)* CI workflow | wasm + iOS/Android `cargo check` |
-| `docs/EPIC-37_Mobile_Engine.md` (pkcore) | Snapshot-secrecy rule this EPIC generalizes |
+| `EPIC-37_Mobile_Engine.md` (pkcore) | Snapshot-secrecy rule this EPIC generalizes |
 
 ## Reuse (do NOT recreate)
 
@@ -250,7 +250,7 @@ All items are pgate / mobile-repo; none touch pkcore.
 - EPIC-51's grants and verifiers — `pkgate_client` drives the *client*
   half of the same flows; it does not re-specify them.
 - EPIC-37's UniFFI binding repo + snapshot-secrecy rule
-  (`docs/EPIC-37_Mobile_Engine.md`) — mobile auth rides in that repo and
+  (`EPIC-37_Mobile_Engine.md`) — mobile auth rides in that repo and
   extends that rule; do NOT create a second mobile repo.
 - pkcore's wasm target-gating (`Cargo.toml:128`) — the discipline
   `pkgate_client`'s wasm feature mirrors.

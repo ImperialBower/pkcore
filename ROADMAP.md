@@ -114,31 +114,31 @@ originally planned as a standalone `pkbot` crate)
 
 | Epic | Topic | Status |
 |------|-------|--------|
-| [EPIC-14](docs/EPIC-14_Equity.md) | Hand Equity — pot odds, EV, range equity, weighted ranges | Complete |
-| [EPIC-15](docs/EPIC-15_GTO_Solver.md) | GTO Solver — game tree, CFR, strategy profiles, exploitability | Complete |
-| [EPIC-16](docs/EPIC-16_DCFR.md) | CFR+ and Discounted CFR — faster convergence variants | Complete |
-| [EPIC-17](docs/EPIC-17_Kuhn_Poker.md) | Kuhn Poker — minimal 3-card game, analytical Nash, CFR validator, interactive examples | Complete |
+| [EPIC-14](docs/epics/EPIC-14_Equity.md) | Hand Equity — pot odds, EV, range equity, weighted ranges | Complete |
+| [EPIC-15](docs/epics/EPIC-15_GTO_Solver-CLOSED.md) | GTO Solver — game tree, CFR, strategy profiles, exploitability | Complete |
+| [EPIC-16](docs/epics/EPIC-16_DCFR.md) | CFR+ and Discounted CFR — faster convergence variants | Complete |
+| [EPIC-17](docs/epics/EPIC-17_Kuhn_Poker-CLOSED.md) | Kuhn Poker — minimal 3-card game, analytical Nash, CFR validator, interactive examples | Complete |
 | EPIC-18 | Bot Profiles — `BotProfile`, `Playbook`, `PositionRanges`, `PositionalBetting`; position- and table-size-aware YAML-serializable playing styles | Complete |
 | EPIC-19 | Bot Self-Play — drive `casino::table::Table` with `BotProfile` agents; local simulation without gRPC; YAML hand-history recording and replay | Complete |
-| [EPIC-20](docs/EPIC-20_Autonomous_Game_Loop.md) | *(pkdealer)* Autonomous Game Loop — migrate to `PokerSession`, auto-advance streets | Complete |
-| [EPIC-21](docs/EPIC-21_Spectator.md) | *(pkspectator)* Web Spectator — extracted to standalone [`pkspectator`](https://github.com/ImperialBower/pkspectator) repo; Axum+SSE, gRPC `StreamEvents` subscriber | Complete |
-| [EPIC-22](docs/EPIC-22_OTel.md) | *(pkdealer)* OTel Instrumentation — spans/metrics, Jaeger + Prometheus + Grafana | Complete |
-| [EPIC-23](docs/EPIC-23_Bot_Agents.md) | *(pkdealer)* Bot Agent Clients — random, rule-based (`BotDecider`), Claude LLM | Complete |
-| [EPIC-24](docs/EPIC-24_Demo.md) | *(pkdealer)* Demo Packaging — Docker Compose, `demo.sh`, Grafana dashboards, Langfuse | Complete |
-| [EPIC-25](docs/EPIC-25_Range_Frequencies.md) | Range Frequencies — optional per-combo frequency in range strings (`AA:0.5`) | Complete |
-| [EPIC-26](docs/EPIC-26_Player_Stats.md) | Player Action Tracking & Opponent Insights — `PlayerStats` / `StatsRegistry` keyed by `Uuid`, derived ratios (VPIP/PFR/AF/WTSD/c-bet/...), exposed to `BotDecider` (no behavior change), optional persistence | Complete |
-| [EPIC-27](docs/EPIC-27_Exploitative_Decider.md) | Adaptive Bot Framework — `ExploitativeDecider<D>` wrapper that converts opponent stats into runtime profile deviations; `ExploitConfig` with 8 deviation rules; `SimTable::new_with_registry`; demo + smoke tests | Complete |
-| [EPIC-28](docs/EPIC-28_Profile_Training.md) | Cross-Session Profile Training — `ExploitTrainer` (1+λ)-ES loop tunes `ExploitConfig` parameters against a static field; `bot-training` feature; YAML serialisation for trained configs; `train_exploit_config` example | Complete |
-| [EPIC-29](docs/EPIC-29_Variant_Engine_Foundation.md) | Variant Engine Foundation — `BettingStructure` and `GameFamily` enums; data-driven street descriptors; per-card visibility; optional board; `ForcedBets::AnteAndBringIn`; existing NLHE behavior unchanged | Complete |
-| [EPIC-30](docs/EPIC-30_Limit_Holdem.md) | Fixed-Limit Hold'em — `GameType::LimitHoldem`; small-bet/big-bet street tiers; raise cap; `limit_holdem_from_seats` constructor; FLHE-tuned bot profiles | Complete |
-| [EPIC-31](docs/EPIC-31_Pot_Limit_Omaha.md) | Pot-Limit Omaha (Hi) — wire `OmahaHigh` (from EPIC-09) into showdown; 4-card hole; pot-limit sizing; fix `cards_on_board` for PLO; `plo_from_seats` constructor | Complete |
-| [EPIC-32](docs/EPIC-32_Stud_Hi.md) | Seven-Card Stud Hi — no community board; ante + bring-in (lowest upcard); 5 streets with upcards; action-by-best-visible-hand; fixed-limit small/big-bet tiers; `stud_hi_from_seats` constructor | Complete (replay round-trip deferred to v1.1) |
-| [EPIC-33](docs/EPIC-33_Razz.md) | Razz — A-5 lowball on the Stud engine; bring-in by highest upcard; action by worst visible hand; finishes the integration EPIC-10 left open; `razz_from_seats` constructor | Complete |
-| [EPIC-34](docs/EPIC-34_Variant_Web_Selection.md) | pkarena0-web Variant Selection — surface GameType selector in the web app; per-variant table rendering (no-community for Stud/Razz, 4-card hole for PLO, per-seat upcard reveal); per-variant `BotProfile` bundles | Planned |
-| [EPIC-36](docs/EPIC-36_Configurable_Bot_Capabilities.md) | Configurable Bot Capabilities — graded `decision:` knobs in `BotProfile` YAML wire the pkcore toolbox into one `RuleBasedDecider`; strength measured by arena chips/100 | **Complete** — equity / ranges / pot_odds / exploit wired; `outs` + `preflop_charts` deferred (need villain info the decider never sees — see EPIC corrigendum) |
-| [EPIC-37](docs/EPIC-37_Mobile_Engine.md) | Mobile Engine Embedding — pkcore as the on-device engine for mobile games and solvers: `mobile` umbrella feature, `PokerSession` boundary types (`SessionView`, snapshot/restore), pull-model `SolveJob` over `Solver::iterate()`, iOS/Android `cargo check` in CI; binding via native FFI (UniFFI) in a future downstream repo | Planned |
-| [EPIC-38](docs/EPIC-38_Observability.md) | Framework Observability — pure callback seams (`TableObserver` on the `TableAction` event log, `Table::events_since` pull cursor, `solve_with_progress` / `compute_with_progress`) plus an off-by-default `tracing` facade feature emitting `pkcore.hand`/`street`/`action`/`solve`/`equity` spans that nest under pkdealer's EPIC-22 service spans; no exporter deps in-core | Planned |
-| [EPIC-39](docs/EPIC-39_Decider_Range_Model.md) | Decider Opponent-Range Model — a game-state-derived `villain_range(state) -> Combos` (from position/action, never identity) fed to the equity engine's existing `PlayerSpec::Range`, unblocking the `outs` + `preflop_charts` knobs deferred in EPIC-36 (§5/§6); preserves the no-opponent-awareness invariant | Planned |
+| [EPIC-20](docs/epics/EPIC-20_Autonomous_Game_Loop.md) | *(pkdealer)* Autonomous Game Loop — migrate to `PokerSession`, auto-advance streets | Complete |
+| [EPIC-21](docs/epics/EPIC-21_Spectator.md) | *(pkspectator)* Web Spectator — extracted to standalone [`pkspectator`](https://github.com/ImperialBower/pkspectator) repo; Axum+SSE, gRPC `StreamEvents` subscriber | Complete |
+| [EPIC-22](docs/epics/EPIC-22_OTel.md) | *(pkdealer)* OTel Instrumentation — spans/metrics, Jaeger + Prometheus + Grafana | Complete |
+| [EPIC-23](docs/epics/EPIC-23_Bot_Agents-CLOSED.md) | *(pkdealer)* Bot Agent Clients — random, rule-based (`BotDecider`), Claude LLM | Complete |
+| [EPIC-24](docs/epics/EPIC-24_Demo-CLOSED.md) | *(pkdealer)* Demo Packaging — Docker Compose, `demo.sh`, Grafana dashboards, Langfuse | Complete |
+| [EPIC-25](docs/epics/EPIC-25_Range_Frequencies-CLOSED.md) | Range Frequencies — optional per-combo frequency in range strings (`AA:0.5`) | Complete |
+| [EPIC-26](docs/epics/EPIC-26_Player_Stats-CLOSED.md) | Player Action Tracking & Opponent Insights — `PlayerStats` / `StatsRegistry` keyed by `Uuid`, derived ratios (VPIP/PFR/AF/WTSD/c-bet/...), exposed to `BotDecider` (no behavior change), optional persistence | Complete |
+| [EPIC-27](docs/epics/EPIC-27_Exploitative_Decider-CLOSED.md) | Adaptive Bot Framework — `ExploitativeDecider<D>` wrapper that converts opponent stats into runtime profile deviations; `ExploitConfig` with 8 deviation rules; `SimTable::new_with_registry`; demo + smoke tests | Complete |
+| [EPIC-28](docs/epics/EPIC-28_Profile_Training-CLOSED.md) | Cross-Session Profile Training — `ExploitTrainer` (1+λ)-ES loop tunes `ExploitConfig` parameters against a static field; `bot-training` feature; YAML serialisation for trained configs; `train_exploit_config` example | Complete |
+| [EPIC-29](docs/epics/EPIC-29_Variant_Engine_Foundation.md) | Variant Engine Foundation — `BettingStructure` and `GameFamily` enums; data-driven street descriptors; per-card visibility; optional board; `ForcedBets::AnteAndBringIn`; existing NLHE behavior unchanged | Complete |
+| [EPIC-30](docs/epics/EPIC-30_Limit_Holdem-CLOSED.md) | Fixed-Limit Hold'em — `GameType::LimitHoldem`; small-bet/big-bet street tiers; raise cap; `limit_holdem_from_seats` constructor; FLHE-tuned bot profiles | Complete |
+| [EPIC-31](docs/epics/EPIC-31_Pot_Limit_Omaha-CLOSED.md) | Pot-Limit Omaha (Hi) — wire `OmahaHigh` (from EPIC-09) into showdown; 4-card hole; pot-limit sizing; fix `cards_on_board` for PLO; `plo_from_seats` constructor | Complete |
+| [EPIC-32](docs/epics/EPIC-32_Stud_Hi.md) | Seven-Card Stud Hi — no community board; ante + bring-in (lowest upcard); 5 streets with upcards; action-by-best-visible-hand; fixed-limit small/big-bet tiers; `stud_hi_from_seats` constructor | Complete (replay round-trip deferred to v1.1) |
+| [EPIC-33](docs/epics/EPIC-33_Razz-CLOSED.md) | Razz — A-5 lowball on the Stud engine; bring-in by highest upcard; action by worst visible hand; finishes the integration EPIC-10 left open; `razz_from_seats` constructor | Complete |
+| [EPIC-34](docs/epics/EPIC-34_Variant_Web_Selection.md) | pkarena0-web Variant Selection — surface GameType selector in the web app; per-variant table rendering (no-community for Stud/Razz, 4-card hole for PLO, per-seat upcard reveal); per-variant `BotProfile` bundles | Planned |
+| [EPIC-36](docs/epics/EPIC-36_Configurable_Bot_Capabilities.md) | Configurable Bot Capabilities — graded `decision:` knobs in `BotProfile` YAML wire the pkcore toolbox into one `RuleBasedDecider`; strength measured by arena chips/100 | **Complete** — equity / ranges / pot_odds / exploit wired; `outs` + `preflop_charts` deferred (need villain info the decider never sees — see EPIC corrigendum) |
+| [EPIC-37](docs/epics/EPIC-37_Mobile_Engine.md) | Mobile Engine Embedding — pkcore as the on-device engine for mobile games and solvers: `mobile` umbrella feature, `PokerSession` boundary types (`SessionView`, snapshot/restore), pull-model `SolveJob` over `Solver::iterate()`, iOS/Android `cargo check` in CI; binding via native FFI (UniFFI) in a future downstream repo | Planned |
+| [EPIC-38](docs/epics/EPIC-38_Observability.md) | Framework Observability — pure callback seams (`TableObserver` on the `TableAction` event log, `Table::events_since` pull cursor, `solve_with_progress` / `compute_with_progress`) plus an off-by-default `tracing` facade feature emitting `pkcore.hand`/`street`/`action`/`solve`/`equity` spans that nest under pkdealer's EPIC-22 service spans; no exporter deps in-core | Planned |
+| [EPIC-39](docs/epics/EPIC-39_Decider_Range_Model.md) | Decider Opponent-Range Model — a game-state-derived `villain_range(state) -> Combos` (from position/action, never identity) fed to the equity engine's existing `PlayerSpec::Range`, unblocking the `outs` + `preflop_charts` knobs deferred in EPIC-36 (§5/§6); preserves the no-opponent-awareness invariant | Planned |
 | [FEATURE: Activate Bluff Fields](docs/FEATURE_BotProfile_ActivateBluffFields.md) | Wire `bluff_frequency`, `check_raise_frequency`, `postflop_cbet_frequency` into `RuleBasedDecider` | Complete |
 | [FEATURE: Position-Aware Decisions](docs/FEATURE_BotProfile_PositionAwareDecisions.md) | Route decisions through `Playbook` position-specific `BettingStrategy` | Complete |
 | [FEATURE: BotProfile Type Safety](docs/FEATURE_BotProfile_TypeSafety.md) | `PlayStyle` enum, `Percentage` newtype for frequency fields | Complete |
@@ -156,28 +156,28 @@ variant-aware bot profiles that don't blunder.
 
 The initiative is structured foundation-first:
 
-- [**EPIC-29 — Variant Engine Foundation**](docs/EPIC-29_Variant_Engine_Foundation.md):
+- [**EPIC-29 — Variant Engine Foundation**](docs/epics/EPIC-29_Variant_Engine_Foundation.md):
   introduces `BettingStructure` (no-limit / pot-limit / fixed-limit) as
   **orthogonal** to `GameFamily` (Hold'em / Omaha / Stud / Razz); replaces
   the hardcoded preflop/flop/turn/river `GamePhase` with data-driven street
   descriptors; adds per-card visibility and an optional board model;
   extends `ForcedBets` to cover ante + bring-in. Existing NLHE behavior
   must remain identical after this epic ships.
-- [**EPIC-30 — Fixed-Limit Hold'em**](docs/EPIC-30_Limit_Holdem.md):
+- [**EPIC-30 — Fixed-Limit Hold'em**](docs/epics/EPIC-30_Limit_Holdem-CLOSED.md):
   first variant exercising `BettingStructure`. Same dealing and showdown
   as NLHE; only bet sizes and raise cap differ.
-- [**EPIC-31 — Pot-Limit Omaha (Hi)**](docs/EPIC-31_Pot_Limit_Omaha.md):
+- [**EPIC-31 — Pot-Limit Omaha (Hi)**](docs/epics/EPIC-31_Pot_Limit_Omaha-CLOSED.md):
   wires `OmahaHigh` (the must-use-2 + must-use-3 evaluator from EPIC-09)
   into showdown; 4-card hole; pot-limit bet sizing; fixes the
   `cards_on_board` bug for PLO.
-- [**EPIC-32 — Stud Hi**](docs/EPIC-32_Stud_Hi.md): the structurally
+- [**EPIC-32 — Stud Hi**](docs/epics/EPIC-32_Stud_Hi.md): the structurally
   distinct variant — no community board, ante + bring-in, 5 streets with
   upcards, action by best visible hand, fixed-limit small/big-bet tiers.
   Showdown reuses the existing `Seven::eval` evaluator unchanged.
-- [**EPIC-33 — Razz**](docs/EPIC-33_Razz.md): A-5 lowball on the Stud
+- [**EPIC-33 — Razz**](docs/epics/EPIC-33_Razz-CLOSED.md): A-5 lowball on the Stud
   engine. Bring-in by highest upcard; action by worst visible hand;
   finishes the evaluator integration that EPIC-10 left open.
-- [**EPIC-34 — pkarena0-web Variant Selection**](docs/EPIC-34_Variant_Web_Selection.md):
+- [**EPIC-34 — pkarena0-web Variant Selection**](docs/epics/EPIC-34_Variant_Web_Selection.md):
   exposes all four new variants through the web app — per-`GameType`
   selector, per-family table renderer (no-community for stud-family,
   4-card hole for PLO, per-seat upcard reveal for Stud/Razz), and
@@ -201,7 +201,7 @@ distributed platform (Phase 4). It validates that profiles produce realistic
 play, generates simulation data, and enables automated strategy comparison
 without standing up any infrastructure.
 
-See [`docs/EPIC-19_Bot_Self_Play.md`](docs/EPIC-19_Bot_Self_Play.md) for the
+See [`docs/epics/EPIC-19_Bot_Self_Play-CLOSED.md`](docs/epics/EPIC-19_Bot_Self_Play-CLOSED.md) for the
 full design and implementation status.
 
 ### Current state — working examples
@@ -365,9 +365,9 @@ frequency-annotated range string that feeds into `analyze_gto`.
 
 | Epic | Topic | Status |
 |------|-------|--------|
-| [EPIC-20](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-20_Autonomous_Game_Loop.md) | Autonomous Game Loop — `PokerSession` migration, auto-advance streets/hands, seat resume via `client_secret` | Complete |
-| [EPIC-21](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-21_Spectator.md) | Web Spectator — extracted to [`pkspectator`](https://github.com/ImperialBower/pkspectator); Axum + SSE, gRPC `StreamEvents` subscriber, oval table UI | Complete |
-| [EPIC-22](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-22_OTel.md) | OTel Instrumentation — `tracing` + OTLP spans/metrics, Jaeger + Prometheus + Grafana compose stack | Complete |
+| [EPIC-20](https://docs/epics/EPIC-20_Autonomous_Game_Loop.md) | Autonomous Game Loop — `PokerSession` migration, auto-advance streets/hands, seat resume via `client_secret` | Complete |
+| [EPIC-21](https://docs/epics/EPIC-21_Spectator.md) | Web Spectator — extracted to [`pkspectator`](https://github.com/ImperialBower/pkspectator); Axum + SSE, gRPC `StreamEvents` subscriber, oval table UI | Complete |
+| [EPIC-22](https://docs/epics/EPIC-22_OTel.md) | OTel Instrumentation — `tracing` + OTLP spans/metrics, Jaeger + Prometheus + Grafana compose stack | Complete |
 | [EPIC-23](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-23_Bot_Agents.md) | Bot Agent Clients — random baseline, rule-based (`BotProfile`+`BotDecider`), Claude LLM with `gen_ai.*` spans | Complete |
 | [EPIC-24](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-24_Demo.md) | Demo Packaging — Docker Compose full stack, `demo.sh`, Grafana dashboards, Langfuse, `DEMO.md` | Complete |
 | [EPIC-40 *(pkdealer)*](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-40_Local_LLM_Backend.md) | Local-LLM Backend & Multi-Model Agents — shared `LlmBackend` trait, `pkdealer_agent_ollama`, mock-HTTP backend tests | Complete |
@@ -383,10 +383,10 @@ EPIC-79 horizon.
 
 | Epic | Topic | Status |
 |------|-------|--------|
-| [EPIC-50](docs/EPIC-50_Transport_Gateway.md) | Transport Unification & Gateway Foundation — Connect RPC (or `tonic-web` fallback) on one port with one `Bearer` header; `pkgate_tower` auth middleware; the pkcore `Principal` newtype + `uuid/v5` + `SessionView::for_principal` redaction seam | Planned |
-| [EPIC-51](docs/EPIC-51_Authentication.md) | Authentication — `TokenVerifier` trait; `SharedSecretVerifier` (POC) + `OidcVerifier` (JWKS, any IdP); `sub → Principal` via `Uuid::new_v5`; PKCE/client-credentials/device-code flow matrix; dual Zitadel + Keycloak compose profiles | Planned |
-| [EPIC-52](docs/EPIC-52_Authorization_Session.md) | Authorization & Session Security — `player`/`spectator`/`table:admin` scopes; coarse edge gate + fine in-kernel visibility gate; seat binding to `Principal` (retires `client_secret`); per-principal rate limiting; rustls TLS | Planned |
-| [EPIC-53](docs/EPIC-53_Platform_Reach.md) | Platform Reach — `pkgate_client` tri-platform (native/WASM/mobile) token acquisition & refresh; one secure-storage rule for tokens + snapshots (Keychain/Keystore, in-memory on web); cross-target CI | Planned |
+| [EPIC-50](docs/epics/EPIC-50_Transport_Gateway.md) | Transport Unification & Gateway Foundation — Connect RPC (or `tonic-web` fallback) on one port with one `Bearer` header; `pkgate_tower` auth middleware; the pkcore `Principal` newtype + `uuid/v5` + `SessionView::for_principal` redaction seam | Planned |
+| [EPIC-51](docs/epics/EPIC-51_Authentication.md) | Authentication — `TokenVerifier` trait; `SharedSecretVerifier` (POC) + `OidcVerifier` (JWKS, any IdP); `sub → Principal` via `Uuid::new_v5`; PKCE/client-credentials/device-code flow matrix; dual Zitadel + Keycloak compose profiles | Planned |
+| [EPIC-52](docs/epics/EPIC-52_Authorization_Session.md) | Authorization & Session Security — `player`/`spectator`/`table:admin` scopes; coarse edge gate + fine in-kernel visibility gate; seat binding to `Principal` (retires `client_secret`); per-principal rate limiting; rustls TLS | Planned |
+| [EPIC-53](docs/epics/EPIC-53_Platform_Reach.md) | Platform Reach — `pkgate_client` tri-platform (native/WASM/mobile) token acquisition & refresh; one secure-storage rule for tokens + snapshots (Keychain/Keystore, in-memory on web); cross-target CI | Planned |
 
 ## Showcase & AI-Native Observability Epics
 
@@ -400,8 +400,8 @@ decision-quality telemetry, and the chips-vs-dollars economic join.
 
 | Epic | Topic | Status |
 |------|-------|--------|
-| [EPIC-60](docs/EPIC-60_Showcase.md) | Platform Showcase — three-act presentation (kernel purity gates + break-it-live; one kernel on browser/terminal/service; the arena ledger of rule bots vs LLM bots); version alignment across pktui/pkarena0-web/pkdealer; timed runbooks + fallback recordings | Planned |
-| [EPIC-61](docs/EPIC-61_AI_Observability.md) | AI-Native Observability — GenAI semconv audit & alignment in `LlmBackend` spans; opt-in content capture; `AgentFidelity` clamp/retry metrics; shadow `BotDecider` baseline divergence; `chip_value_micro_usd` economic join (`net_micro_usd`); House Ledger Grafana dashboard; gated Langfuse eval profile | Planned |
+| [EPIC-60](docs/epics/EPIC-60_Showcase.md) | Platform Showcase — three-act presentation (kernel purity gates + break-it-live; one kernel on browser/terminal/service; the arena ledger of rule bots vs LLM bots); version alignment across pktui/pkarena0-web/pkdealer; timed runbooks + fallback recordings | Planned |
+| [EPIC-61](docs/epics/EPIC-61_AI_Observability.md) | AI-Native Observability — GenAI semconv audit & alignment in `LlmBackend` spans; opt-in content capture; `AgentFidelity` clamp/retry metrics; shadow `BotDecider` baseline divergence; `chip_value_micro_usd` economic join (`net_micro_usd`); House Ledger Grafana dashboard; gated Langfuse eval profile | Planned |
 
 ### EPIC Numbering Policy
 

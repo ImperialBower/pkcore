@@ -1,6 +1,6 @@
 # EPIC-28: Cross-Session Profile Training
 
-> **Math tutorial:** [`TUTORIAL_EPIC28_ES_Math.md`](TUTORIAL_EPIC28_ES_Math.md)
+> **Math tutorial:** [`TUTORIAL_EPIC28_ES_Math.md`](../TUTORIAL_EPIC28_ES_Math.md)
 > covers the (1+λ)-ES algorithm, the 1/5 success rule, Box-Muller transform,
 > BB/100 as a noisy fitness signal, and the relationship to CMA-ES — with
 > full references.
@@ -144,7 +144,7 @@ isotropic Gaussian mutation and the **1/5 success rule** for step-size
 adaptation. No external optimiser crate is pulled in — N(0,1) samples come
 from the Box-Muller transform over the `rand` crate's uniform RNG, so the
 training stack stays dependency-free (see
-[`TUTORIAL_EPIC28_ES_Math.md`](TUTORIAL_EPIC28_ES_Math.md) for the full
+[`TUTORIAL_EPIC28_ES_Math.md`](../TUTORIAL_EPIC28_ES_Math.md) for the full
 derivation).
 
 - Parent: `ExploitConfig::default()` (or any supplied baseline) encoded as

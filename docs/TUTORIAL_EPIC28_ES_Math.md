@@ -1,6 +1,6 @@
 # EPIC-28 Math Tutorial: Evolution Strategies and Noisy Optimisation
 
-> Companion to [EPIC-28: Cross-Session Profile Training](EPIC-28_Profile_Training-CLOSED.md).
+> Companion to [EPIC-28: Cross-Session Profile Training](epics/EPIC-28_Profile_Training-CLOSED.md).
 > Accurate as of 2026-07-27, code at commit `e498826` — including the audit
 > II.8/II.9 determinism rework (`f18ee12`): seeded sessions, common random
 > numbers, and the `<=` convergence-check fix.

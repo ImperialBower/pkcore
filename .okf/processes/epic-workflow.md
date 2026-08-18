@@ -1,19 +1,20 @@
 ---
 type: Process
 title: EPIC workflow
-description: Feature work is designed in numbered EPIC documents under docs/, with companion forms for defects, analyses, and tutorials.
+description: Feature work is designed in numbered EPIC documents under docs/epics/, with companion forms for defects, analyses, and tutorials.
 tags: [planning, epics, documentation]
 timestamp: '2026-07-22T00:00:00Z'
 ---
 
 # The convention
 
-All substantial work starts as a numbered design document in `docs/`:
+All substantial work starts as a numbered design document:
 
-* `EPIC-NN_<Name>.md` — the house-style spec: Context, a Status table,
-  Design sketches, phased Work Items, and a Verification block.
+* `docs/epics/EPIC-NN_<Name>.md` — the house-style spec: Context, a
+  Status table, Design sketches, phased Work Items, and a
+  Verification block.
 * Finished epics get a `-CLOSED` suffix appended to the filename.
-* Companion forms share the folder: `DEFECT_<slug>.md` (diagnosed
+* Companion forms live in `docs/`: `DEFECT_<slug>.md` (diagnosed
   bugs), `ANALYSIS_<topic>.md` (deep dives), `TUTORIAL_*.md`,
   `RCA_*.md` (root-cause analyses), and `SIDEQUEST` docs.
 

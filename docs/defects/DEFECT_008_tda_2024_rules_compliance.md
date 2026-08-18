@@ -660,7 +660,7 @@ result than any individual bug:
    raised and no invariant trips. Only an assertion on the exact maximum against a
    known TDA figure would catch it.
 
-This matches the Gold Standard framing in `docs/EPIC-00f_Coverage.md`: a real
+This matches the Gold Standard framing in `../epics/EPIC-00f_Coverage.md`: a real
 behavioural change should make a previously-passing test fail. For all six of these, a
 fix would make *no* existing test fail — which is the signal that the tests are pinned
 at the wrong altitude, not that the fixes are safe.
@@ -808,7 +808,7 @@ That gap between "green" and "correct" is what the harness exists to close.
   side-pot stratification it added is what makes Rule 21 pass this audit
 - `docs/defects/DEFECT_007_decider_subminimum_raise.md` — prior sub-minimum raise
   defect; adjacent to D8-2 but on the decider side rather than the table gate
-- `docs/EPIC-00f_Coverage.md` — the Gold Standard framing used in [Coverage Gap](#coverage-gap)
+- `../epics/EPIC-00f_Coverage.md` — the Gold Standard framing used in [Coverage Gap](#coverage-gap)
 
 *TDA rules quoted under permission of the Poker TDA, http://www.pokertda.com, all
 rights reserved.*

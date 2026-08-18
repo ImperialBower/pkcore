@@ -37,10 +37,10 @@ arena. It is fatal the moment a third party — a spectator process, a relay, an
 observability exporter, an LLM agent's context window — is handed table state.
 
 EPIC-79 named this exact gap. Its §"Three cross-cutting pkcore changes"
-(`docs/EPIC-79_Mental_Poker.md:284`) opens with *"The deck becomes a vector of
+(`EPIC-79_Mental_Poker.md:284`) opens with *"The deck becomes a vector of
 masked cards… a `Card` only materializes after the unmask protocol completes
 for its slot."* That has been **designed and never built** — the EPIC-79 Status
-table (`docs/EPIC-79_Mental_Poker.md:72`) marks the whole line as a spike, and
+table (`EPIC-79_Mental_Poker.md:72`) marks the whole line as a spike, and
 the prototypes live outside the crate in `docs/files/mentalpoker/`.
 
 **This EPIC builds that first change, and only that change.**
@@ -308,7 +308,7 @@ Under any scheme worth using, sealing is randomized: two seals of the ace of
 spades are unequal ciphertexts, so `Eq` on `S::Sealed` proves nothing about
 card distinctness. That property is exactly what a **verifiable shuffle
 argument** exists to prove, and it lives in EPIC-79a
-(`docs/EPIC-79a_Real_Cryptography_Backend.md`). This EPIC records the limit
+(`EPIC-79a_Real_Cryptography_Backend.md`). This EPIC records the limit
 honestly in the doc comment rather than shipping an audit that appears to
 check more than it does.
 
@@ -324,14 +324,14 @@ pub struct PlaintextSeal;
 ```
 
 Same pattern as `PlaintextCrypto` in the archived spike
-(`docs/EPIC-79a_Real_Cryptography_Backend.md:5`). The feature is **off by
+(`EPIC-79a_Real_Cryptography_Backend.md:5`). The feature is **off by
 default** and adds no dependency, so a downstream crate has to opt in by name
 to a thing whose name says it is not secure.
 
 ### `Visibility` and the missing third state
 
 EPIC-79 §"Three cross-cutting pkcore changes" item 2
-(`docs/EPIC-79_Mental_Poker.md:295`) argues the protocol needs *masked*,
+(`EPIC-79_Mental_Poker.md:295`) argues the protocol needs *masked*,
 *known-to-owner*, and *public* where `Visibility`
 (`src/play/visibility.rs:28`) has two. This EPIC does **not** add the third
 variant. `SealedCard` already *is* the masked state, structurally, and adding a
@@ -417,9 +417,9 @@ irreversible blast radius, and this EPIC deliberately stops short of it.
 - [ ] **5a.** `## Implementing `CardSeal` in `pkmental`` section appended here:
       a mapping table from `Sealed` / `Token` / `Error` onto Barnett–Smart
       masked cards, reveal tokens, and Chaum–Pedersen verification failures,
-      cross-referencing `docs/EPIC-79a_Real_Cryptography_Backend.md`.
+      cross-referencing `EPIC-79a_Real_Cryptography_Backend.md`.
 - [ ] **5b.** Flip the EPIC-79 Status row for *"The deck becomes a vector of
-      masked cards"* (`docs/EPIC-79_Mental_Poker.md:284`) to point here.
+      masked cards"* (`EPIC-79_Mental_Poker.md:284`) to point here.
 - [ ] **5c.** `CHANGELOG.md` entry under `## [Unreleased]` → `Added`, and a
       **minor** version bump in `Cargo.toml:4` (new public API, backward
       compatible), then `cargo build` so `Cargo.lock` picks it up.
@@ -487,7 +487,7 @@ for the path, `#[allow(non_snake_case)]` beside `#[cfg(test)]`.
 | `Cargo.toml:22` | `seal-test-double` feature, **not** in `default` |
 | `src/casino/action.rs:90` | Phase 4 — `SealedDealt` / `Revealed` variants |
 | `src/hand_history.rs:1783` | Phase 4 — fold `Revealed` in `from_event_log` |
-| `docs/EPIC-79_Mental_Poker.md:284` | the design note this EPIC implements |
+| `EPIC-79_Mental_Poker.md:284` | the design note this EPIC implements |
 
 ## Reuse (do NOT recreate)
 
@@ -497,7 +497,7 @@ for the path, `#[allow(non_snake_case)]` beside `#[cfg(test)]`.
   an error; do not add a second one.
 - `src/deck.rs:13` — `DECK_ARRAY`. The canonical 52-card ordering is the public
   bijection a real backend maps onto group elements, exactly as EPIC-79
-  observes at `docs/EPIC-79_Mental_Poker.md:293`.
+  observes at `EPIC-79_Mental_Poker.md:293`.
 - `src/casino/action.rs:90` — `TableAction`. Phase 4 extends it; it does not
   get a parallel sealed event enum.
 - `docs/files/mentalpoker/` — the archived `PlaintextCrypto` mock. Read its
@@ -513,7 +513,7 @@ for the path, `#[allow(non_snake_case)]` beside `#[cfg(test)]`.
   added in 0.2.0 for exactly this.
 - **Breaks** nothing. Semver **minor**.
 - **Interacts with EPIC-81.** That EPIC deletes `src/card.rs` and re-exports
-  `Card` from `ckc-rs` (`docs/EPIC-81_Ckc_Rs_Dependency.md:254`). The seal
+  `Card` from `ckc-rs` (`EPIC-81_Ckc_Rs_Dependency.md:254`). The seal
   module must therefore depend only on `Card` as a *type*, never on its `u32`
   representation (`src/card.rs:30`) or its bit filters
   (`src/card.rs:36`–`38`). Enforced by review at Phase 1.

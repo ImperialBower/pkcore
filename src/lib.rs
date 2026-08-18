@@ -285,7 +285,7 @@
 //! In order to speed up the brute force analysis of every possible result of two hands playing
 //! against each other, I came up with the idea of suit-shifting.
 //!
-//! See `docs/EPIC-07_Transposition.md` for a detailed description of concept and rationale behind
+//! See `docs/epics/EPIC-07_Transposition.md` for a detailed description of concept and rationale behind
 //! suit shifting.
 //!
 //! `cargo run --example simple_suit_shift_example`

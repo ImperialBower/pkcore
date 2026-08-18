@@ -5,7 +5,7 @@
 **Context:** pkcore has one criterion bench (`benches/preflop_odds.rs`, two
 functions on `DealEval`), ~20 examples with ad-hoc `Instant::now()` timing whose
 output is never retained, and zero perf jobs in CI.
-`docs/EPIC-DEFECT-A_Preflop_Perf.md` is a 0-byte placeholder. The
+`../../epics/EPIC-DEFECT-A_Preflop_Perf.md` is a 0-byte placeholder. The
 `2026-06-11_SIDEQUEST_speedup_turneval.md` plan optimized the `Five`/`Six`/`Seven`
 rank-only fast paths and parallelized `TurnEval::case_evals` while explicitly
 recording that "no benchmarks exist to measure any of this" — that win is still

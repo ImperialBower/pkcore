@@ -366,7 +366,7 @@ this whole class of defect and is worth keeping in the record.
 - `tests/tda_conformance.rs` — the harness this defect cannot join until fixed
 - `tda_parsed/tda_2024.yaml` — Rule 36 verbatim; `tda_2024_online.yaml` carries
   the audit verdict and the list of blocked rules
-- `docs/EPIC-00f_Coverage.md` — the Gold Standard framing used in Coverage Gap
+- `../epics/EPIC-00f_Coverage.md` — the Gold Standard framing used in Coverage Gap
 
 *TDA rules quoted under permission of the Poker TDA, http://www.pokertda.com, all
 rights reserved.*

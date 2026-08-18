@@ -43,7 +43,7 @@ Where observability stands in pkcore today (v0.2.1, commit `72cbb82`,
   when done. A UI or service driving either has nothing to render meanwhile.
 - **The service layer already does OTel — one floor up.** EPIC-22 (pkdealer,
   **Complete**) instruments `pkdealer_service` with `hand`/`street`/`action`
-  spans at the gRPC boundary (`docs/EPIC-22_OTel.md:9`–`:13`,
+  spans at the gRPC boundary (`EPIC-22_OTel.md:9`–`:13`,
   `ROADMAP.md:124`). Those spans are re-derived from RPC traffic; the engine's
   own transitions are invisible inside them. pkcore emitting its own signals
   lets engine spans nest under service action spans instead of being inferred.
@@ -126,7 +126,7 @@ removal or migration of the existing ~160 `log::` call sites — they stay as-is
 | Solve progress | `SolverProgress` + `solve_with_progress` | ❌ this EPIC |
 | Equity progress | `EquityProgress` + `compute_with_progress` | ❌ this EPIC |
 | Engine spans | `tracing` feature, `pkcore.*` spans | ❌ this EPIC |
-| Service spans / export | pkdealer EPIC-22 (`docs/EPIC-22_OTel.md`) | ✅ downstream |
+| Service spans / export | pkdealer EPIC-22 (`EPIC-22_OTel.md`) | ✅ downstream |
 
 ---
 

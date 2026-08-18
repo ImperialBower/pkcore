@@ -242,7 +242,7 @@ model exists.
 - `docs/defects/DEFECT_011_odd_chip_button_order.md`,
   `docs/defects/DEFECT_009_substantial_action_predicate.md` — sibling promotions
 - TDA 2024 Illustration Addendum — the source of the 700 figure
-- `docs/EPIC-00f_Coverage.md` — the Gold Standard framing used in [Coverage Gap](#coverage-gap)
+- `../epics/EPIC-00f_Coverage.md` — the Gold Standard framing used in [Coverage Gap](#coverage-gap)
 
 *TDA rules quoted under permission of the Poker TDA, http://www.pokertda.com, all rights
 reserved.*

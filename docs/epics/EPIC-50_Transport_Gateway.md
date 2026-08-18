@@ -75,7 +75,7 @@ Where transport and identity stand today:
   module doc is explicit that "the `Card` type itself stays
   visibility-free" (`src/play/visibility.rs:1-6`). Redacting a table view
   *by who is looking* is planned only as EPIC-37's `SessionView::view(viewer)`
-  sketch (`docs/EPIC-37_Mobile_Engine.md:238,250,265`) — `SessionView`
+  sketch (`EPIC-37_Mobile_Engine.md:238,250,265`) — `SessionView`
   and `SeatView` do **not** exist in `src/` yet.
 - **pkcore is transport-pure and must stay so.** No `tonic`, `tower`,
   `axum`, `rustls`, or `jsonwebtoken` appears anywhere in `Cargo.toml`.
@@ -223,7 +223,7 @@ gains `v5` identically.
 
 The authorization rule that lives in pkdealer's `GetStatus` handler today
 (`ROADMAP.md:401-403`) becomes one pure kernel function on EPIC-37's
-planned `SessionView` (`docs/EPIC-37_Mobile_Engine.md:238-265`):
+planned `SessionView` (`EPIC-37_Mobile_Engine.md:238-265`):
 
 ```rust
 impl SessionView {
@@ -238,7 +238,7 @@ impl SessionView {
 ```
 
 Rationale: today EPIC-37's sketch parameterizes redaction by **seat
-number** (`view(viewer: Option<u8>)`, `docs/EPIC-37_Mobile_Engine.md:265`).
+number** (`view(viewer: Option<u8>)`, `EPIC-37_Mobile_Engine.md:265`).
 Keying on **`Principal`** instead makes the rule authorization-correct: a
 network client presents an identity, not a seat index, and the function
 looks up which seat (if any) that principal owns. This is the *fine* tier
@@ -394,7 +394,7 @@ Test naming per house convention (no `test_` prefix; colocated
   — `Principal` wraps this atom; do NOT mint a second id space.
 - `TableAction::PlayerSeated(u8, Uuid)` (`src/casino/table.rs:352`) — the
   existing identity-into-log path; unchanged.
-- EPIC-37's `SessionView`/`SeatView` (`docs/EPIC-37_Mobile_Engine.md:238-265`)
+- EPIC-37's `SessionView`/`SeatView` (`EPIC-37_Mobile_Engine.md:238-265`)
   — redaction extends these; do NOT define a parallel view type.
 - The wire-enum derive/serde-stability pattern (`src/lib.rs:197-212`,
   `src/casino/action.rs:88-90`) — `Principal` matches it.

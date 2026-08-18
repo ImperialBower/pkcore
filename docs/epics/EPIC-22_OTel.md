@@ -2,7 +2,7 @@
 
 > **This EPIC lives in [pkdealer](https://github.com/ImperialBower/pkdealer).**
 > Full design and implementation details:
-> [`pkdealer/docs/EPIC-22_OTel.md`](https://github.com/ImperialBower/pkdealer/blob/main/docs/EPIC-22_OTel.md)
+> [`EPIC-22_OTel.md`](https://EPIC-22_OTel.md)
 
 ## Summary
 

@@ -22,7 +22,7 @@ things I look for is state.
 
 ## Pluribus Struct
 
-The purpose of the [Pluribus struct](pluribus.rs) is to create a place to store the parsed out data from a Pluribus log
+The purpose of the [Pluribus struct](../../src/analysis/nubibus.rs) is to create a place to store the parsed out data from a Pluribus log
 entry. The goal isn't to perform any logic with the data, but simply to store it in a way that makes writing logic code 
 easier. 
 
