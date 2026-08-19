@@ -632,6 +632,75 @@ impl SeatsCell {
         self.0.iter()
     }
 
+    /// Returns the seat that set the current bet level, if the betting is open.
+    ///
+    /// The last aggressor is the seat whose street bet equals `current_bet()`
+    /// *and* whose state is an aggressive one — a blind, bet, raise, re-raise,
+    /// or all-in. Callers are excluded on purpose: a caller matches the level
+    /// without setting it, so action does not restart behind them.
+    ///
+    /// Returns `None` when nobody has put chips in on this street, which is the
+    /// checked-around case where action simply starts under the gun.
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    /// use pkcore::util::data::TestData;
+    ///
+    /// let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
+    ///
+    /// // Nobody has bet yet, so there is no aggressor to act behind.
+    /// assert_eq!(None, seats.last_aggressor());
+    /// ```
+    #[must_use]
+    pub fn last_aggressor(&self) -> Option<u8> {
+        let current_bet = self.current_bet();
+        if current_bet == 0 {
+            return None;
+        }
+
+        for (index, seat_cell) in self.0.iter().enumerate() {
+            let seat = seat_cell.borrow();
+            if seat.is_empty() || seat.player.bet.count() != current_bet {
+                continue;
+            }
+            if matches!(
+                seat.player.state.get(),
+                PlayerState::Blind(_)
+                    | PlayerState::Bet(_)
+                    | PlayerState::Raise(_)
+                    | PlayerState::ReRaise(_)
+                    | PlayerState::AllIn(_)
+            ) {
+                return u8::try_from(index).ok();
+            }
+        }
+
+        None
+    }
+
+    /// Returns the seat number one place clockwise of `seat_number`, wrapping.
+    ///
+    /// Empty seats are not skipped here — `next_to_act` already skips them as it
+    /// walks — so this is only the starting point of that walk.
+    ///
+    /// ```
+    /// use pkcore::prelude::*;
+    /// use pkcore::util::data::TestData;
+    ///
+    /// let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
+    ///
+    /// assert_eq!(1, seats.seat_after(0));
+    /// ```
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
+    pub fn seat_after(&self, seat_number: u8) -> u8 {
+        let count = self.0.len() as u8;
+        if count == 0 {
+            return seat_number;
+        }
+        (seat_number + 1) % count
+    }
+
     /// ```
     /// use pkcore::prelude::*;
     /// use pkcore::util::data::TestData;
@@ -659,11 +728,21 @@ impl SeatsCell {
 
         let current_bet = self.current_bet();
 
+        // Action moves clockwise from whoever set the current bet level, not
+        // from under the gun. The two agree until somebody re-opens the betting
+        // behind a player who sits *earlier* in the under-the-gun order; from
+        // that point on a scan rooted at `utg` hands the action to the wrong
+        // seat. See `DEFECT_022`.
+        let start = match self.last_aggressor() {
+            Some(aggressor) => self.seat_after(aggressor),
+            None => utg,
+        };
+
         // The logic flow is different if we're still waiting for the blinds to act.
         let everyone_has_bet = self.has_everyone_bet();
 
-        for (i, seat) in self.iter_from(utg).enumerate() {
-            let seat_index = utg + i as u8;
+        for (i, seat) in self.iter_from(start).enumerate() {
+            let seat_index = start + i as u8;
             log::trace!("Checking seat #{seat_index} for next to act.");
             let state = &seat.player.state;
 
@@ -697,7 +776,7 @@ impl SeatsCell {
 
         // Edge case where all action is complete for the round, but the bets haven't been
         // brought in.
-        for seat in self.iter_from(utg) {
+        for seat in self.iter_from(start) {
             if seat.is_empty() {
                 continue;
             }
@@ -1200,6 +1279,73 @@ mod casino__table_celled__seats_tests {
             .set(PlayerState::Bet(100));
         let seat = seats.next_to_act(3).unwrap();
         assert_eq!(5, seat);
+    }
+
+    /// `DEFECT_022`: action moves clockwise from the seat that set the current
+    /// bet level, not from under the gun.
+    ///
+    /// The two rules agree while some seat is still `YetToAct`, because the
+    /// `everyone_has_bet` gate holds the under-the-gun scan back. They diverge
+    /// on the *second* trip around, when a re-raise leaves owing seats on both
+    /// sides of the raiser. Here seat 4 re-raises to 2000; seat 3 owes and sits
+    /// earlier in the under-the-gun order, seats 5 and 2 owe and sit later. The
+    /// seat to act is 5. The old scan returned 3 — a seat that had already acted
+    /// on this bet and was not next in turn.
+    #[test]
+    fn next_to_act__starts_clockwise_of_the_raiser() {
+        let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
+
+        seats.act_forced_bet(1, 50).expect("small blind");
+        seats.act_forced_bet(2, 100).expect("big blind");
+
+        // First trip around: seats 3, 4, 5 and the big blind stay in.
+        seats.act_bet(3, 300).expect("seat 3 bets");
+        seats.act_call(4).expect("seat 4 calls");
+        seats.act_call(5).expect("seat 5 calls");
+        seats.act_fold(6).expect("seat 6 folds");
+        seats.act_fold(7).expect("seat 7 folds");
+        seats.act_fold(0).expect("seat 0 folds");
+        seats.act_fold(1).expect("seat 1 folds");
+
+        // The big blind re-opens. Everyone has now acted at least once.
+        assert_eq!(2, seats.next_to_act(3).unwrap());
+        seats.act_raise(2, 900).expect("seat 2 raises");
+
+        assert_eq!(3, seats.next_to_act(3).unwrap());
+        seats.act_call(3).expect("seat 3 calls");
+
+        // Second trip around: seat 4 re-raises from the middle of the field.
+        assert_eq!(4, seats.next_to_act(3).unwrap());
+        seats.act_raise(4, 2000).expect("seat 4 re-raises");
+
+        assert_eq!(Some(4), seats.last_aggressor());
+        assert_eq!(
+            5,
+            seats.next_to_act(3).unwrap(),
+            "action must move clockwise of the raiser, not restart under the gun"
+        );
+    }
+
+    #[test]
+    fn last_aggressor__is_none_when_nobody_has_bet() {
+        let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
+
+        assert_eq!(None, seats.last_aggressor());
+    }
+
+    /// A caller matches the current bet level without setting it, so it must not
+    /// be mistaken for the aggressor — otherwise action would restart behind
+    /// whoever called last rather than behind the raiser.
+    #[test]
+    fn last_aggressor__ignores_a_caller_at_the_same_level() {
+        let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
+
+        seats.act_forced_bet(1, 50).expect("small blind");
+        seats.act_forced_bet(2, 100).expect("big blind");
+        seats.act_bet(3, 300).expect("seat 3 bets");
+        seats.act_call(4).expect("seat 4 calls");
+
+        assert_eq!(Some(3), seats.last_aggressor());
     }
 
     #[test]

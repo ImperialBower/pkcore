@@ -85,23 +85,6 @@ For comprehensive API documentation, run:
 cargo doc --open
 ````
 
-## Performance
-
-Performance is measured by a standalone harness in [`perf/`](perf/)
-and publishes results to [`docs/perf/RESULTS.md`](docs/perf/RESULTS.md).
-
-```shell
-make perf-native      # measure the pure kernel, write docs/perf/results/
-make perf-report      # regenerate docs/perf/RESULTS.md
-make perf-bench       # the same nano workloads under Criterion and Divan
-make perf-check       # lint + test the harness itself
-```
-
-The Criterion and Divan benches exist for comparison of performance techniques,
-and the differences can be seen in the 
-[`docs/perf/HARNESS_COMPARISON.md`](docs/perf/HARNESS_COMPARISON.md). [`docs/perf/PROFILING.md`](docs/perf/PROFILING.md) documents
-the allocation hunt that motivated the harness.
-
 ## Examples
 
 ### The Hand
@@ -493,6 +476,23 @@ cargo run --features hand-histories --example replay_play -- generated/session.y
 
 See [`docs/epics/EPIC-19_Bot_Self_Play-CLOSED.md`](docs/epics/EPIC-19_Bot_Self_Play-CLOSED.md) for the
 full design.
+
+## Performance
+
+Performance is measured by a standalone harness in [`perf/`](perf/)
+and publishes results to [`docs/perf/RESULTS.md`](docs/perf/RESULTS.md).
+
+```shell
+make perf-native      # measure the pure kernel, write docs/perf/results/
+make perf-report      # regenerate docs/perf/RESULTS.md
+make perf-bench       # the same nano workloads under Criterion and Divan
+make perf-check       # lint + test the harness itself
+```
+
+The Criterion and Divan benches exist for comparison of performance techniques,
+and the differences can be seen in the
+[`docs/perf/HARNESS_COMPARISON.md`](docs/perf/HARNESS_COMPARISON.md). [`docs/perf/PROFILING.md`](docs/perf/PROFILING.md) documents
+the allocation hunt that motivated the harness.
 
 ---
 

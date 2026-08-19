@@ -60,3 +60,6 @@ graphify-out/
 # PokerBench dataset (EPIC-43): downloaded at eval time, not committed.
 # Tiny vendored samples live under src/pokerbench/fixtures/ instead.
 /data/pokerbench/
+
+# wasm
+*.wat

@@ -32,6 +32,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Action after a re-raise goes to the correct seat**
+  ([DEFECT_022](docs/defects/DEFECT_022_next_to_act_restarts_under_the_gun.md)).
+  `next_to_act` restarted its scan under the gun on every call instead of moving
+  clockwise from the seat that set the current bet level. The two rules agree
+  until a re-raise leaves players owing chips on *both* sides of the raiser —
+  from there the engine gave the action to a player who had already acted on
+  that bet. Nothing errored: the hand completed and the pot balanced, only the
+  order was wrong, so every later player acted on information they should not
+  have had. Both table engines carried it (`casino::table_celled::TableCelled`
+  and `casino::table::Table`); both are fixed. Seven of the ten thousand real
+  Pluribus hands are affected, plus one recorded arena session in which a
+  player's decision was materially changed — they faced a raise to 5900 instead
+  of the 2333 that was actually standing when their turn came. `last_aggressor`
+  is new public API on both `Seats` types, which is what makes the rule a named,
+  testable concept rather than a loop's starting index.
+
+- **Pluribus replay reads logged amounts as cumulative hand totals**
+  ([DEFECT_021](docs/defects/DEFECT_021_pluribus_cumulative_amounts.md)). The
+  logs record a raise as the player's running total for the whole hand;
+  `act_bet` takes a per-street target. The logged number was passed straight
+  through, so from the flop on each raiser was asked for their earlier-street
+  chips a second time. 291 of the 10 000 corpus hands could not be replayed. The
+  two readings coincide on the first street with action, which is the only shape
+  the unit fixtures had.
+
+- **`Nubificus::act` no longer discards every action `Result`**
+  ([DEFECT_020](docs/defects/DEFECT_020_nubificus_act_discards_results.md)).
+  `act_fold`, `act_call`, and `act_bet` were each called as `let _ = …` and the
+  function returned `Ok(())` unconditionally, so a rejected action vanished and
+  the replay carried on against a table that no longer matched the log. The
+  10 000-hand corpus test asserted success against a call chain that could not
+  report failure. Fixing this is what exposed DEFECT_021 and DEFECT_022; the
+  corpus test now also compares every losing seat's committed chips against the
+  payoff the log records for it, because a misrouted action is not an error and
+  finishes cleanly.
+
 - **`OmahaHigh::eval` now enforces Omaha's exactly-two-hole-cards rule**
   ([DEFECT_017](docs/defects/DEFECT_017_omaha_eval_two_card_rule.md)). It picked
   two hole cards and then handed seven cards to the unconstrained best-5-of-7
