@@ -484,8 +484,23 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
         }
     }
 
-    fn insert_many(_conn: &Connection, _records: Vec<&HUPResult>) -> rusqlite::Result<usize> {
-        unimplemented!("HUPResult::insert_many is not implemented; insert rows individually via `insert()`")
+    /// Inserts every record, skipping those already stored, and returns the
+    /// number of rows actually written.
+    ///
+    /// There is no transaction: a database error on record `n` propagates and
+    /// leaves records `0..n` written, the same as looping over
+    /// [`Sqlable::insert`] by hand. (`DEFECT_023`: this was an unconditional
+    /// `unimplemented!()`.)
+    fn insert_many(conn: &Connection, records: Vec<&HUPResult>) -> rusqlite::Result<usize> {
+        log::debug!("HUPResult::insert_many({} records)", records.len());
+
+        let mut inserted = 0;
+        for record in records {
+            if HUPResult::insert(conn, record)? {
+                inserted += 1;
+            }
+        }
+        Ok(inserted)
     }
 
     fn select(conn: &Connection, key: &SortedHeadsUp) -> Option<HUPResult> {
@@ -921,6 +936,42 @@ mod analysis__store__db__hupresult_tests {
     ///     },
     /// };
     /// ```
+    /// `DEFECT_023`: `insert_many` was an unconditional `unimplemented!()` on a
+    /// public trait method.
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
+    #[test]
+    fn sqlable__insert_many() {
+        let conn = Connect::in_memory_connection().unwrap().connection;
+        HUPResult::create_table(&conn).unwrap();
+        let first = TestData::the_hand_as_hup_result();
+        let second = HUPResult {
+            higher: Bard::from(Two::HAND_AD_TD),
+            lower: Bard::from(Two::HAND_5H_4S),
+            odds: WinLoseDraw {
+                wins: 1_108_295,
+                losses: 595_903,
+                draws: 8_106,
+            },
+        };
+
+        let inserted = HUPResult::insert_many(&conn, vec![&first, &second]).unwrap();
+
+        assert_eq!(2, inserted);
+        // Re-running inserts nothing: `insert` skips records already stored.
+        assert_eq!(0, HUPResult::insert_many(&conn, vec![&first, &second]).unwrap());
+        conn.close().unwrap();
+    }
+
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
+    #[test]
+    fn sqlable__insert_many__empty() {
+        let conn = Connect::in_memory_connection().unwrap().connection;
+        HUPResult::create_table(&conn).unwrap();
+
+        assert_eq!(0, HUPResult::insert_many(&conn, vec![]).unwrap());
+        conn.close().unwrap();
+    }
+
     #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     #[test]
     fn sqlable__insert() {

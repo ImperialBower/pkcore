@@ -145,18 +145,21 @@ A fresh five-subsystem automated review ran **2026-08-18** and returned
 4. 🤖 **`Nubificus::act` discards every action `Result`** — replay drifts out of
    sync with the log it is reproducing, silently. (`src/analysis/nubibus.rs:51`)
 
-Plus a recurring shape worth one sweep: **four public methods whose whole body is
+~~Plus a recurring shape worth one sweep: **four public methods whose whole body is
 `unimplemented!()`** (`SeatsCell::is_seat_all_in`, `TableAction::generate_player_loses`,
-`Shifter::shifts`, `HUPResult::insert_many`) — no callers, no tests, all four
-violate the no-panic house rule.
+`Shifter::shifts`, `HUPResult::insert_many`)~~ — **FIXED** in `0.6.0` as
+[DEFECT_023](defects/DEFECT_023_min_raise_tier_and_panicking_api.md). Three are
+implemented; `Shifter::shifts` reports `PKError::NotImplemented` because nothing
+in the repo records what it was meant to compute.
 
 Longer-standing items:
 
 - 🤖 **Panics in the HUP/SQL layer** — `stmt.query(()).unwrap()` and two
   `assert_eq!`s inside `From` impls. (`src/analysis/store/db/hup.rs`)
-- **`min_raise_for_tier` hardcodes `big_blind = 0`** for No-Limit/Pot-Limit —
-  known, worked around at one call site, never fixed at the source.
-  (`src/games/betting_structure.rs:126`)
+- ~~**`min_raise_for_tier` hardcodes `big_blind = 0`** for No-Limit/Pot-Limit~~ —
+  **FIXED** in `0.6.0` as
+  [DEFECT_023](defects/DEFECT_023_min_raise_tier_and_panicking_api.md). The
+  method now takes `big_blind`, and the `Table::min_raise` route-around is gone.
 - **Self-declared missing tests** — `heads_up.rs:150` and `play/game.rs:345`
   both say so in as many words.
 - 🤖 **Missing doc tests** on `Deck`, `Board`, and the table determiners.

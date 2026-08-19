@@ -87,8 +87,8 @@ impl BettingStructure {
     ///
     /// // Fixed-Limit: ignores last_raise; returns tier increment.
     /// let fl = BettingStructure::FixedLimit { small_bet: 100, big_bet: 200, raise_cap: 3 };
-    /// assert_eq!(100, fl.min_raise_for_tier(0, BetTier::Small));
-    /// assert_eq!(200, fl.min_raise_for_tier(0, BetTier::Big));
+    /// assert_eq!(100, fl.min_raise_for_tier(0, 100, BetTier::Small));
+    /// assert_eq!(200, fl.min_raise_for_tier(0, 100, BetTier::Big));
     /// ```
     #[must_use]
     pub fn min_raise(&self, last_raise: usize, big_blind: usize) -> usize {
@@ -104,8 +104,14 @@ impl BettingStructure {
         }
     }
 
-    /// Tier-aware min-raise for fixed-limit structures. Equivalent to
-    /// [`Self::min_raise`] for No-Limit / Pot-Limit (the tier is ignored).
+    /// Tier-aware min-raise. For `FixedLimit` the tier picks the increment
+    /// and `last_raise` / `big_blind` are ignored; for No-Limit and Pot-Limit
+    /// the tier is ignored and this defers to [`Self::min_raise`].
+    ///
+    /// `big_blind` is required for the No-Limit / Pot-Limit path: on the first
+    /// raise of a street there is no previous raise to match, so the minimum
+    /// is one big blind. (`DEFECT_023`: this argument used to be hardcoded to
+    /// `0`, which reported "no minimum" for every opening raise.)
     ///
     /// # Examples
     ///
@@ -113,17 +119,21 @@ impl BettingStructure {
     /// use pkcore::games::betting_structure::{BettingStructure, BetTier};
     ///
     /// let fl = BettingStructure::FixedLimit { small_bet: 100, big_bet: 200, raise_cap: 3 };
-    /// assert_eq!(100, fl.min_raise_for_tier(0, BetTier::Small));
-    /// assert_eq!(200, fl.min_raise_for_tier(0, BetTier::Big));
+    /// assert_eq!(100, fl.min_raise_for_tier(0, 100, BetTier::Small));
+    /// assert_eq!(200, fl.min_raise_for_tier(0, 100, BetTier::Big));
+    ///
+    /// // No-Limit ignores the tier and follows the big blind / last raise.
+    /// assert_eq!(100, BettingStructure::NoLimit.min_raise_for_tier(0, 100, BetTier::Small));
+    /// assert_eq!(300, BettingStructure::NoLimit.min_raise_for_tier(300, 100, BetTier::Small));
     /// ```
     #[must_use]
-    pub fn min_raise_for_tier(&self, last_raise: usize, tier: BetTier) -> usize {
+    pub fn min_raise_for_tier(&self, last_raise: usize, big_blind: usize, tier: BetTier) -> usize {
         match self {
             BettingStructure::FixedLimit { small_bet, big_bet, .. } => match tier {
                 BetTier::Small => *small_bet,
                 BetTier::Big => *big_bet,
             },
-            _ => self.min_raise(last_raise, 0),
+            _ => self.min_raise(last_raise, big_blind),
         }
     }
 
@@ -336,6 +346,26 @@ mod games__betting_structure__tests {
         assert_eq!(1_300, pl.max_raise(1_000, 200, 100, 5_000, BetTier::Small));
     }
 
+    /// `DEFECT_023`: the No-Limit / Pot-Limit fall-through of
+    /// `min_raise_for_tier` used to hardcode `big_blind = 0`, so the first
+    /// raise of a street (`last_raise == 0`) reported a minimum of `0`.
+    #[test]
+    fn no_limit_min_raise_for_tier_uses_big_blind_on_first_raise() {
+        assert_eq!(
+            100,
+            BettingStructure::NoLimit.min_raise_for_tier(0, 100, BetTier::Small)
+        );
+        assert_eq!(100, BettingStructure::PotLimit.min_raise_for_tier(0, 100, BetTier::Big));
+    }
+
+    #[test]
+    fn no_limit_min_raise_for_tier_uses_last_raise_when_set() {
+        assert_eq!(
+            300,
+            BettingStructure::NoLimit.min_raise_for_tier(300, 100, BetTier::Small)
+        );
+    }
+
     // ---- Fixed-Limit ----
 
     #[test]
@@ -345,8 +375,8 @@ mod games__betting_structure__tests {
             big_bet: 200,
             raise_cap: 3,
         };
-        assert_eq!(100, fl.min_raise_for_tier(999, BetTier::Small));
-        assert_eq!(200, fl.min_raise_for_tier(999, BetTier::Big));
+        assert_eq!(100, fl.min_raise_for_tier(999, 100, BetTier::Small));
+        assert_eq!(200, fl.min_raise_for_tier(999, 100, BetTier::Big));
     }
 
     #[test]

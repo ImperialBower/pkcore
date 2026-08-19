@@ -23,6 +23,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING (within the unreleased `0.6.0`): four public signatures changed to
+  stop lying about failure**
+  ([DEFECT_023](docs/defects/DEFECT_023_min_raise_tier_and_panicking_api.md)).
+  `BettingStructure::min_raise_for_tier` now takes `big_blind` as its second
+  argument; `TableAction::generate_player_loses` returns `Option<TableAction>`;
+  `Shifter::shifts` returns `Result<Vec<HUPResult>, PKError>`; and the
+  `TryFrom<Vec<Card>>` impls for `SevenFiveBCM` and `IndexCardMap` now return
+  `Err(PKError::InvalidCardCount)` instead of `Ok(Self::default())` when the
+  vector is neither 5 nor 7 cards. Callers of the first pass their table's big
+  blind; callers of the last stop receiving all-zero records that look like
+  real data.
+
 - **All 66 `docs/EPIC-*.md` design docs moved to `docs/epics/`** — the `docs/`
   root was getting crowded with numbered EPICs alongside release notes,
   audits, and defect reports. Every internal hyperlink (README, ROADMAP,
@@ -31,6 +43,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   was updated to the new path. No content changed, only location.
 
 ### Fixed
+
+- **`min_raise_for_tier` no longer reports a zero minimum for No-Limit and
+  Pot-Limit**
+  ([DEFECT_023](docs/defects/DEFECT_023_min_raise_tier_and_panicking_api.md)).
+  Its No-Limit / Pot-Limit fall-through called `min_raise(last_raise, 0)`, so on
+  the first raise of a street — where there is no previous raise to match — it
+  returned `0` and enforced no minimum at all. `casino::table::Table::min_raise`
+  had been routing around it since EPIC-30 with a comment; the source is fixed
+  now and the route-around is gone.
+
+- **Four public methods that always panicked now return or report**
+  ([DEFECT_023](docs/defects/DEFECT_023_min_raise_tier_and_panicking_api.md)).
+  `SeatsCell::is_seat_all_in` was `unimplemented!()` for every occupied seat and
+  is now implemented; `TableAction::generate_player_loses` mirrors a
+  `PlayerWins` into a `PlayerLoses` and returns `None` for anything else;
+  `HUPResult::insert_many` inserts each record and returns the count actually
+  written; `Shifter::shifts` reports `PKError::NotImplemented` rather than
+  panicking on a method still to be written.
 
 - **Action after a re-raise goes to the correct seat**
   ([DEFECT_022](docs/defects/DEFECT_022_next_to_act_restarts_under_the_gun.md)).

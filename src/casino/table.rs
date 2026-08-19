@@ -1094,16 +1094,11 @@ impl Table {
         // - `FixedLimit`: returns the small_bet or big_bet for the current
         //   street's bet tier (`current_bet_tier()`).
         //
-        // Note: `BettingStructure::min_raise_for_tier` is buggy for the
-        // NoLimit/PotLimit fallthrough (it hardcodes `big_blind = 0`), so we
-        // explicitly route NoLimit/PotLimit through the original two-arg
-        // method here instead.
-        match self.betting {
-            BettingStructure::FixedLimit { .. } => self
-                .betting
-                .min_raise_for_tier(self.raise_increment, self.current_bet_tier()),
-            _ => self.betting.min_raise(self.raise_increment, self.forced.big_blind),
-        }
+        // DEFECT_023: `min_raise_for_tier` now takes `big_blind`, so a single
+        // call covers every structure — the NoLimit/PotLimit arm no longer
+        // needs to route around a hardcoded zero.
+        self.betting
+            .min_raise_for_tier(self.raise_increment, self.forced.big_blind, self.current_bet_tier())
     }
 
     /// Minimum legal *absolute* raise-to amount (not the delta over the

@@ -1615,7 +1615,7 @@ fn variants_and_betting() -> usize {
         .map(|tier| {
             json!({
                 "tier": format!("{tier:?}"),
-                "fixed_limit_increment": fl.min_raise_for_tier(0, *tier),
+                "fixed_limit_increment": fl.min_raise_for_tier(0, 0, *tier),
             })
         })
         .collect();

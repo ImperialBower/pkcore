@@ -592,11 +592,13 @@ impl SeatsCell {
         count
     }
 
+    /// True when the seat exists, is occupied, and its player is all in.
+    /// A seat number that is not at the table returns `false` rather than
+    /// erroring, matching [`Self::is_seat_in_hand`].
     #[must_use]
     pub fn is_seat_all_in(&self, seat_number: u8) -> bool {
-        if let Some(_seat) = self.get_seat(seat_number) {
-            // Is every other player all in?
-            unimplemented!("is_seat_all_in is not yet implemented")
+        if let Some(seat) = self.get_seat(seat_number) {
+            !seat.is_empty() && seat.is_all_in()
         } else {
             false
         }
@@ -1141,6 +1143,26 @@ mod casino__table_celled__seats_tests {
 
         let all_in = seats.act_all_in(0).unwrap();
         assert_eq!(1_000_000, all_in);
+    }
+
+    /// `DEFECT_023`: `is_seat_all_in` was `unimplemented!()` for every occupied
+    /// seat, so the only input it survived was a seat number that did not exist.
+    #[test]
+    fn is_seat_all_in() {
+        let seats = SeatsCell::try_from(TestData::min_seats()).unwrap();
+
+        assert!(!seats.is_seat_all_in(0));
+
+        seats.act_all_in(0).unwrap();
+
+        assert!(seats.is_seat_all_in(0));
+        assert!(!seats.is_seat_all_in(1));
+    }
+
+    #[test]
+    fn is_seat_all_in__no_such_seat() {
+        let seats = SeatsCell::try_from(TestData::min_seats()).unwrap();
+        assert!(!seats.is_seat_all_in(99));
     }
 
     #[test]
