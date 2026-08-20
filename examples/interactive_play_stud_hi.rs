@@ -45,7 +45,8 @@ fn main() {
         Seat::new(Player::new_with_chips(tag.name.clone(), STARTING_CHIPS)),
         Seat::new(Player::new_with_chips(lp.name.clone(), STARTING_CHIPS)),
     ]);
-    let table = Table::stud_hi_from_seats(seats, ANTE, BRING_IN, SMALL_BET, BIG_BET);
+    let table = Table::stud_hi_from_seats(seats, ANTE, BRING_IN, SMALL_BET, BIG_BET)
+        .expect("two seats is within the stud limit");
 
     let bots: Vec<(u8, BotProfile, Box<dyn BotDecider>)> = vec![
         (0, tag, Box::new(RuleBasedDecider)),

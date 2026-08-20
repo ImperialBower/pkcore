@@ -557,7 +557,8 @@ fn stud_hi_bot_selfplay_replay_roundtrip() {
         STUD_BRING_IN,
         STUD_SMALL_BET,
         STUD_BIG_BET,
-    );
+    )
+    .unwrap();
     let table_betting = table.betting;
     let mut session = PokerSession::new(table);
     let mut rng = rand::rng();
@@ -795,7 +796,8 @@ fn razz_bot_selfplay_replay_roundtrip() {
         RAZZ_BRING_IN,
         RAZZ_SMALL_BET,
         RAZZ_BIG_BET,
-    );
+    )
+    .unwrap();
     let table_betting = table.betting;
     let mut session = PokerSession::new(table);
     let mut rng = rand::rng();

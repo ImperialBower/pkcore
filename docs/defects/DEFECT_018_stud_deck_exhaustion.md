@@ -3,14 +3,14 @@
 **File:** `docs/defects/DEFECT_018_stud_deck_exhaustion.md`
 **Date:** 2026-08-18
 **Severity:** High
-**Status:** Open
+**Status:** Fixed
 **Introduced in:** present since the stud street machine was written (EPIC-32).
 The code arrives in `49f9a6b8` ("Renamed TableNoCell to Table") as a copy, so it
 is inherited rather than authored there; the defect has been reproduced
 unchanged in every published version tested — `0.2.1`, `0.3.5`, `0.4.0`, `0.5.0`
 — and in the working tree at `af43da29` (branch `defect_actraise`), pkcore
 `0.5.4`.
-**Fixed in:** *(unfixed)*
+**Fixed in:** `0.6.0` (branch `defect_actraise`)
 
 ---
 
@@ -150,7 +150,7 @@ looks like the regression, and it is not. Bisecting the *symptom* points at
 
 ---
 
-## Proposed Fix
+## Fix
 
 Two independent changes; the first is required for correctness, the second is
 defence in depth.
@@ -176,20 +176,83 @@ A partial fix worth rejecting: simply returning an error earlier, before dealing
 any card, would remove the torn-table state but would still leave 8-handed stud
 unplayable. The community card is the point.
 
+### What shipped
+
+Both changes landed, plus a third the design did not foresee.
+
+**The community card.** `deal_stud_street` checks the budget *before* dealing
+anything, so the torn-table state is gone as a side effect:
+
+```rust
+// DEFECT_018: at a full table the stub cannot serve everyone on 7th
+// street — eight players need 56 cards from a 52-card deck. The
+// standard rule is that the dealer turns a single face-up community
+// card shared by every remaining player in place of individual down
+// cards. Checked before dealing anything, so the table is never left
+// torn half-way through the street.
+if next_street == GamePhase::Stud7th && in_hand_count > self.deck.len() {
+    let community = self.deck.draw_one()?;
+    self.board.insert(community);
+    self.log(TableAction::DealtRiver(Bard::from(&community)));
+    self.phase = next_street;
+    return Ok(());
+}
+```
+
+**The showdown change the design flagged.** Turning the card is only half the
+fix: `stud_river_case_eval` and `razz_river_case_eval` both gated on
+`seat.cards.is_dealt()`, which is false with six of seven slots filled, so every
+seat would have evaluated to `Eval::default()`. Both now build the seven through
+one shared helper:
+
+```rust
+fn stud_showdown_seven(&self, seat: &Seat) -> Result<Seven, PKError> {
+    let mut cards = seat.cards.cards();
+    cards.insert_all(&self.board);
+    Seven::try_from(cards)
+}
+```
+
+`Cards::from(Vec<Card>)` filters blanks and `Seven::try_from` enforces exactly
+seven, so the `is_dealt()` guard was redundant once the board joined in. With an
+empty board — every table of seven or fewer — this is the seat's seven private
+cards, unchanged.
+
+**The seat cap.** `stud_hi_from_seats` and `razz_from_seats` now return
+`Result<Self, PKError>` and reject more than `Table::MAX_STUD_SEATS` (8) with
+the new `PKError::TooManyPlayers`. Both delegate to a shared
+`stud_family_from_seats`, since they differed only in the `GameType` tag. This
+is a **breaking** signature change; 21 call sites across the crate, its tests
+and its examples were updated. `HandHistory::replay` propagates the error with
+`?`, so a recorded nine-handed stud hand is now reported rather than
+reconstructed as a table that cannot be dealt.
+
+**Not foreseen: the e2e test passes without the showdown fix.**
+`stud_full_table_runs_to_showdown` asserts a non-empty `Winnings`, and chips are
+still awarded when every hand evaluates to a default — the pot goes *somewhere*.
+It passed on the first run with the community card dealt and the evaluation
+still broken. The two `*_river_case_eval_counts_the_community_card` unit tests
+below are what actually pin the fix; they assert no seat evaluates to
+`Eval::default()`. Recorded because the design named the e2e test as "the one
+that matters", and on its own it was not.
+
 ---
 
 ## Tests To Add
 
 | File | Test name | What it verifies |
 |------|-----------|-----------------|
-| `src/casino/table.rs` | `deal_stud_street_seven_players_reaches_seventh_street` | Seven seats, none folding, deal 4th→7th: every call returns `Ok`, every seat holds 7 cards. Pins the largest field that fits without a community card. |
-| `src/casino/table.rs` | `deal_stud_street_eight_players_uses_community_card_on_seventh` | Eight seats, none folding: dealing 7th street succeeds, the board holds exactly one face-up card, and every seat holds 6 private cards. The regression test for the fix. |
-| `src/casino/table.rs` | `stud_hi_from_seats_rejects_more_than_eight_seats` | Nine seats returns an error rather than a table. Same for `razz_from_seats`. |
-| `tests/tda_conformance.rs` | `stud_full_table_runs_to_showdown` | Eight-handed Stud Hi and Razz, every player calling, run through `PokerSession` to a real showdown with a non-empty `Winnings`. The end-to-end proof. |
+| `src/casino/table.rs` | `deal_stud_street_seven_players_reaches_seventh_street` | Seven seats, none folding, deal 4th→7th: every call returns `Ok`, the board stays empty, every seat holds 7 private cards. Pins the largest field that fits without a community card. |
+| `src/casino/table.rs` | `deal_stud_street_eight_players_uses_community_card_on_seventh` | Eight seats, none folding: dealing 7th street succeeds and the board holds exactly one shared card. The regression test for the dealing half. |
+| `src/casino/table.rs` | `stud_river_case_eval_counts_the_community_card` | With the community card out, no in-hand seat evaluates to `Eval::default()`. The regression test for the showdown half — the one the e2e test cannot see. |
+| `src/casino/table.rs` | `razz_river_case_eval_counts_the_community_card` | Same for Razz, which shares the street machine and had the same guard. |
+| `src/casino/table.rs` | `stud_constructors_reject_more_than_eight_seats` | Nine seats returns `PKError::TooManyPlayers` from both `stud_hi_from_seats` and `razz_from_seats`. |
+| `tests/tda_conformance.rs` | `stud_full_table_runs_to_showdown` | Eight-handed Stud Hi and Razz, every player calling, run through `PokerSession` to a real showdown with a non-empty `Winnings`. The end-to-end proof that the hand does not stall. |
 
-The fourth test is the one that matters. It asserts the *positive* outcome — a
-showdown happens and chips are awarded — so it fails if the hand stalls, rather
-than merely checking that no error was returned.
+The e2e test asserts the *positive* outcome — a showdown happens and chips are
+awarded — so it fails if the hand stalls. It does **not** fail if the hands
+evaluate wrongly, which is why the two `case_eval` tests exist alongside it. See
+"Not foreseen" above.
 
 ---
 

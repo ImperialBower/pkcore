@@ -23,6 +23,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING (within the unreleased `0.6.0`): `SessionStep` gained a `Failed`
+  variant and the stud constructors became fallible**
+  ([DEFECT_018](docs/defects/DEFECT_018_stud_deck_exhaustion.md),
+  [DEFECT_019](docs/defects/DEFECT_019_next_step_swallows_advance_street_error.md)).
+  `SessionStep::Failed(PKError)` means every `match` on a `next_step()` result
+  needs a new arm — that cost is the point, since the whole defect was that
+  callers were never made to consider a mid-hand failure. `Table::stud_hi_from_seats`
+  and `Table::razz_from_seats` now return `Result<Self, PKError>`, rejecting
+  more than `Table::MAX_STUD_SEATS` (8) with the new `PKError::TooManyPlayers`.
+  `SessionStep` is now exported from `prelude`, which previously carried
+  `PokerSession` and `SessionView` but not the type `next_step` returns.
+
 - **BREAKING (within the unreleased `0.6.0`): four public signatures changed to
   stop lying about failure**
   ([DEFECT_023](docs/defects/DEFECT_023_min_raise_tier_and_panicking_api.md)).
@@ -43,6 +55,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   was updated to the new path. No content changed, only location.
 
 ### Fixed
+
+- **Eight-handed Seven-Card Stud and Razz are playable**
+  ([DEFECT_018](docs/defects/DEFECT_018_stud_deck_exhaustion.md)). Eight players
+  need 56 cards for seven streets and the deck holds 52, so `deal_stud_street`
+  ran dry on 7th street and the hand stalled with the whole field holding live
+  cards. It now follows the standard rule: when the stub cannot serve everyone,
+  the dealer turns a single face-up community card that every remaining player
+  counts as their seventh. The stud and Razz showdown evaluators were gated on
+  `seat.cards.is_dealt()`, false with six of seven slots filled, so both now
+  build each hand from the seat's private cards plus the board. Nine-handed
+  stud runs dry two streets earlier and no community card can rescue it, so the
+  constructors reject it outright. Present unchanged in `0.2.1` through `0.5.0`;
+  it was masked until `0.4.0` fixed bot raise legality, because illegal-raise
+  rejections used to fold the field down before the deck ran out.
+
+- **A failed deal is reported instead of being disguised as a finished hand**
+  ([DEFECT_019](docs/defects/DEFECT_019_next_step_swallows_advance_street_error.md)).
+  `PokerSession::next_step` collapsed every `advance_street` error into
+  `SessionStep::HandComplete`, which wedged the caller: `next_step()` said
+  complete, `is_hand_complete()` said false, `end_hand()` returned
+  `ActionIsntFinished`, and the pot was stranded. Only "no streets remain" now
+  ends a hand — tested with the new `Table::is_last_street()` helper extracted
+  from `Table::is_game_over` — and everything else surfaces as
+  `SessionStep::Failed(e)`. The new `PokerSession::abort_hand` (and
+  `Table::abort_hand`) unwinds such a hand, returning every committed chip to
+  the stack it came from, logging `TableAction::HandAborted`, and running the
+  same chip audit `end_hand` does.
 
 - **`min_raise_for_tier` no longer reports a zero minimum for No-Limit and
   Pot-Limit**

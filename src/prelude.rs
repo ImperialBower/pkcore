@@ -176,7 +176,7 @@ pub use crate::bot::training::{ExploitTrainer, GenerationRecord, TrainingConfig,
 pub use crate::casino::action::PlayerAction;
 pub use crate::casino::principal::Principal;
 #[cfg(feature = "bot-profiles")]
-pub use crate::casino::session::{PokerSession, SeatView, SessionView};
+pub use crate::casino::session::{PokerSession, SeatView, SessionStep, SessionView};
 
 // bot
 pub use crate::bot::betting_strategy::BettingStrategy;

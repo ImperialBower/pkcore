@@ -96,7 +96,15 @@ Written down, not committed to. No status table, no work items yet.
 
 ## Bugs / Defects
 
-**13 of 14 filed defects are Fixed.** `docs/defects/` is in good shape.
+**All 23 filed defects are resolved** (`DEFECT_001` is a preserved record of a
+rejected rule interpretation, reverted in `0.0.55`). `docs/defects/` is in good
+shape.
+`DEFECT_018` (eight-handed stud exhausted the deck) and `DEFECT_019`
+(`next_step` disguised a failed deal as a finished hand) were documented on
+2026-08-18 but not actually fixed until `0.6.0` — the commit that named them
+changed docs only. Both are fixed now; the one leftover is recorded on
+`DEFECT_019`: `PokerSession::next_actor` still collapses the same failure to
+`None`.
 
 - **D8-6 — fixed-limit raise cap cannot lift at event heads-up** — the only open
   item from the TDA-2024 audit. Recorded and **unreachable until a multi-table

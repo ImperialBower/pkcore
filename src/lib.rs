@@ -582,6 +582,16 @@ pub enum PKError {
     /// with [`SevenFiveBCM::generate_bin`][crate::analysis::store::bcm::binary_card_map::SevenFiveBCM::generate_bin]
     /// and point `PKCORE_75BCM_PATH` at it.
     BcmUnavailable,
+    /// The table has more seats than the variant can deal from one deck.
+    ///
+    /// Seven-Card Stud and Razz deal up to seven cards per player from a
+    /// single 52-card deck, so nine seats cannot reach 6th street and the
+    /// table is undealable before a card is turned. Returned by
+    /// [`Table::stud_hi_from_seats`][crate::casino::table::Table::stud_hi_from_seats]
+    /// and [`Table::razz_from_seats`][crate::casino::table::Table::razz_from_seats]
+    /// rather than deferring the contradiction to the middle of a hand
+    /// (`DEFECT_018`).
+    TooManyPlayers,
     /// The requested operation is recognised but not yet implemented.
     ///
     /// Returned by methods whose behaviour is deliberately unfinished (rather
@@ -649,6 +659,7 @@ impl Display for PKError {
                 &*format!("Chip audit failed: expected {expected} chips, found {actual}")
             }
             PKError::BcmUnavailable => "Binary Card Map data unavailable (set PKCORE_75BCM_PATH)",
+            PKError::TooManyPlayers => "Too many players for this game's deck",
             PKError::NotImplemented => "Operation not yet implemented",
         };
         write!(f, "{msg}")

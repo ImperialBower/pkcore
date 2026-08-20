@@ -3,12 +3,12 @@
 **File:** `docs/defects/DEFECT_019_next_step_swallows_advance_street_error.md`
 **Date:** 2026-08-18
 **Severity:** High
-**Status:** Open
+**Status:** Fixed
 **Introduced in:** `a9f4238f` ("Plan: pkcore 0.0.41 — SessionStep / next_step()
 + EPIC-20 service migration"), the commit that introduced `SessionStep` and
 `next_step`. Reproduced unchanged in `0.2.1`, `0.3.5`, `0.4.0`, `0.5.0`, and in
 the working tree at `af43da29` (branch `defect_actraise`), pkcore `0.5.4`.
-**Fixed in:** *(unfixed)*
+**Fixed in:** `0.6.0` (branch `defect_actraise`)
 
 ---
 
@@ -117,7 +117,7 @@ total, well-typed, and silent.
 
 ---
 
-## Proposed Fix
+## Fix
 
 **Add a failure variant to `SessionStep` and stop discarding the error.**
 
@@ -169,7 +169,73 @@ not currently exist and should land with this fix.
 
 **Fixing this does not fix `DEFECT_018`** — 8-handed stud stays unplayable — but
 it turns a silent wedge into a reported fault, which is the precondition for
-ever noticing the next one.
+ever noticing the next one. Both were fixed together; see
+[`DEFECT_018`](DEFECT_018_stud_deck_exhaustion.md).
+
+### What shipped
+
+All three parts landed as designed above.
+
+`SessionStep::Failed(PKError)` was added, and `next_step` now distinguishes the
+two cases using a new `Table::is_last_street()` helper extracted from
+`Table::is_game_over` — the duplication the design anticipated:
+
+```rust
+return match self.advance_street() {
+    Ok(()) => SessionStep::StreetAdvanced,
+    // `DEFECT_019`: only "no streets remain" ends a hand. Every
+    // other failure — a dry deck above all — is a fault the caller
+    // has to be told about, not a completion.
+    Err(PKError::InvalidAction) if self.table.is_last_street() => SessionStep::HandComplete,
+    Err(e) => SessionStep::Failed(e),
+};
+```
+
+The unwind path the design called for is `Table::abort_hand`, surfaced on the
+session as `PokerSession::abort_hand`. `chips_in_play` is cumulative for the
+hand and already includes whatever sits in `player.bet`, so refunding it and
+zeroing `bet` returns each player to their pre-hand stack exactly once:
+
+```rust
+pub fn abort_hand(&mut self) -> Result<usize, PKError> {
+    let mut refunded = 0;
+    for seat in &mut self.seats.0 {
+        if seat.is_empty() {
+            continue;
+        }
+        let committed = seat.player.chips_in_play;
+        seat.player.chips += committed;
+        seat.player.bet = 0;
+        seat.player.chips_in_play = 0;
+        refunded += committed;
+    }
+    self.pot = 0;
+    self.log(TableAction::HandAborted(refunded));
+    self.reset();
+
+    let actual = self.table_chip_count();
+    if actual != self.hand_chip_total {
+        self.log(TableAction::ChipAuditFailed(self.hand_chip_total, actual));
+        return Err(PKError::ChipAuditFailed { expected: self.hand_chip_total, actual });
+    }
+
+    Ok(refunded)
+}
+```
+
+It ends with the same chip audit `end_hand` runs, so an unwind that loses or
+creates chips is reported rather than silently accepted.
+
+Two supporting changes came with it. `TableAction::HandAborted(usize)` records
+the unwind in the event log — the enum is `#[non_exhaustive]`, so adding it is
+not breaking. And `SessionStep` was added to `prelude`, which had exported
+`PokerSession` and `SessionView` but not the type `next_step` returns; a caller
+now forced to handle a new variant should not have to hunt for the type first.
+
+`PokerSession::next_actor` still collapses a dealing failure to `None`
+(`src/casino/session.rs:450`). Its `Option<u8>` return has no room to express a
+fault, so fixing it means a second signature change that this defect did not
+design. Recorded rather than done.
 
 ---
 
@@ -177,9 +243,16 @@ ever noticing the next one.
 
 | File | Test name | What it verifies |
 |------|-----------|-----------------|
-| `src/casino/session.rs` | `next_step_reports_failure_when_deal_cannot_complete` | A nine-handed stud session driven with no folds yields `SessionStep::Failed(PKError::NotEnoughCards)` rather than `HandComplete`. Pins the variant *and* the underlying error. |
-| `src/casino/session.rs` | `next_step_hand_complete_implies_end_hand_succeeds` | Across Hold'em, Omaha, Stud Hi and Razz: whenever `next_step()` returns `HandComplete`, `end_hand()` returns `Ok`. This is the invariant the defect violates, stated directly. |
+| `src/casino/session.rs` | `next_step_reports_failure_when_deal_cannot_complete` | A session whose stub is emptied mid-hand yields `SessionStep::Failed(PKError::NotEnoughCards)` rather than `HandComplete`. Pins the variant *and* the underlying error. |
+| `src/casino/session.rs` | `next_step_hand_complete_implies_end_hand_succeeds` | Whenever `next_step()` returns `HandComplete`, `end_hand()` returns `Ok`. This is the invariant the defect violates, stated directly. |
 | `src/casino/session.rs` | `next_step_hand_complete_agrees_with_is_hand_complete` | `next_step() == HandComplete` implies `is_hand_complete() == true`. The two signals must never disagree. |
+| `src/casino/session.rs` | `abort_hand_returns_committed_chips` | After a `Failed`, `abort_hand()` refunds exactly what was committed, restores every stack, empties the pot, and creates no chips. |
+| `src/casino/session.rs` | `end_hand_refuses_a_failed_hand` | `end_hand()` returns `ActionIsntFinished` for a hand that failed to deal — the trap the caller used to fall into. |
+
+The first test drives an empty deck rather than the nine-handed stud table the
+design proposed, because [`DEFECT_018`](DEFECT_018_stud_deck_exhaustion.md) now
+rejects a nine-seat stud table at construction. Emptying the stub reaches the
+same code path without depending on a table that can no longer be built.
 
 The second and third tests are the valuable ones. They assert a *relationship
 between existing public methods* rather than a specific scenario, so they hold

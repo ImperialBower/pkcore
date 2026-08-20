@@ -137,7 +137,7 @@ fn run_stud_without_fallback(seed: u64, hands: usize) {
     );
     // ante 2, bring-in 5, small bet 20, big bet 40 against 300-chip stacks —
     // shallow enough that the completion boundary is reached inside a hand.
-    let table = Table::stud_hi_from_seats(seats, 2, 5, 20, 40);
+    let table = Table::stud_hi_from_seats(seats, 2, 5, 20, 40).unwrap();
     let mut session = PokerSession::new(table);
     let mut rng = SmallRng::seed_from_u64(seed);
 

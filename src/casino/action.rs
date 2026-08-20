@@ -133,6 +133,10 @@ pub enum TableAction {
     ClosesTheAction(u8),
     CloseItOut(usize),
     EndHand,
+    /// The hand could not be completed and was unwound: every chip committed
+    /// to it was returned to the stack it came from. Carries the total
+    /// refunded (`DEFECT_019`).
+    HandAborted(usize),
     ResetTable,
     Showdown(u8),
     PlayerMucksCards(u8), // At a showdown one player mucks their cards rather than show them.
@@ -431,6 +435,9 @@ impl Display for TableAction {
             TableAction::DeckPassesAudit => write!(f, "Deck passes audit"),
             TableAction::ChipAuditFailed(expected, actual) => {
                 write!(f, "Chip audit failed: expected {expected} chips, found {actual}")
+            }
+            TableAction::HandAborted(refunded) => {
+                write!(f, "Hand aborted; {refunded} returned to players")
             }
             TableAction::ResetTable => write!(f, "Table reset for next hand"),
         }
