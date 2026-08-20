@@ -657,6 +657,15 @@ mod tda_2024_conformance {
     /// needs 56 individual cards from a 52-card deck, so 7th street is dealt
     /// as a single shared community card. The end-to-end proof: the hand must
     /// reach a real showdown and award chips, not merely avoid an error.
+    ///
+    /// Gated on `bot-profiles` because `casino::session` is
+    /// (`src/casino/mod.rs:16`). This file carries no `required-features` on
+    /// purpose — it is the conformance harness and must run in the bare
+    /// kernel, which `cargo test --no-default-features` checks — so the gate
+    /// goes on the one test that needs a session rather than on the file. The
+    /// dealing and showdown halves of the fix are pinned by ungated unit tests
+    /// in `src/casino/table.rs`, which do run bare.
+    #[cfg(feature = "bot-profiles")]
     #[test]
     fn stud_full_table_runs_to_showdown() {
         for razz in [false, true] {

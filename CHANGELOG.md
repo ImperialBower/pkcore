@@ -56,6 +56,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`stud_full_table_runs_to_showdown` no longer breaks the bare-kernel build**
+  ([DEFECT_018](docs/defects/DEFECT_018_stud_deck_exhaustion.md)). The test used
+  `PokerSession` and `SessionStep` from `prelude`, but `casino::session` is
+  gated on `bot-profiles`, and `tests/tda_conformance.rs` carries no
+  `required-features` on purpose — it is the conformance harness and must
+  compile in the bare kernel. The test is now gated on `bot-profiles`
+  individually, so the other 33 conformance tests keep running under
+  `cargo test --no-default-features`.
+
 - **Eight-handed Seven-Card Stud and Razz are playable**
   ([DEFECT_018](docs/defects/DEFECT_018_stud_deck_exhaustion.md)). Eight players
   need 56 cards for seven streets and the deck holds 52, so `deal_stud_street`
