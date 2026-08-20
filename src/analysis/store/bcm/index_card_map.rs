@@ -110,7 +110,10 @@ impl TryFrom<Vec<Card>> for IndexCardMap {
         match v.len() {
             5 => Ok(IndexCardMap::try_from(Five::try_from(v)?)?),
             7 => Ok(IndexCardMap::try_from(Seven::try_from(v)?)?),
-            _ => Ok(IndexCardMap::default()),
+            // DEFECT_023: anything other than a 5- or 7-card hand is an error.
+            // This arm used to return `Ok(Self::default())`, handing the caller
+            // an all-zero record from a fallible constructor.
+            _ => Err(PKError::InvalidCardCount),
         }
     }
 }
@@ -142,6 +145,24 @@ mod analysis__store__bcm__index_card_map_tests {
         assert_eq!(sut.rank, 1);
         assert_eq!(seven, Seven::from_str(sut.cards.as_str()).unwrap());
         assert_eq!(five, Five::from_str(sut.best.as_str()).unwrap());
+    }
+
+    /// `DEFECT_023`: a vector that is neither 5 nor 7 cards used to return
+    /// `Ok(IndexCardMap::default())` — a plausible-looking all-zero record —
+    /// from a fallible constructor.
+    #[test]
+    fn try_from__vec__wrong_card_count_is_an_error() {
+        let three = vec![
+            Card::from_str("A♠").unwrap(),
+            Card::from_str("K♠").unwrap(),
+            Card::from_str("Q♠").unwrap(),
+        ];
+
+        assert_eq!(Err(PKError::InvalidCardCount), IndexCardMap::try_from(three));
+        assert_eq!(
+            Err(PKError::InvalidCardCount),
+            IndexCardMap::try_from(Vec::<Card>::new())
+        );
     }
 
     /// I don't care about this.

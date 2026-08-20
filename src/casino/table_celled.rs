@@ -597,7 +597,12 @@ impl TableCelled {
         }
         match self.seats.act_raise(seat_number, amount) {
             Ok(remaining) => {
-                self.set_raise_increment(seat_number, amount - self.bet.get())?;
+                // Saturating: an all-in for less bypasses the guard above, so
+                // `amount` can be below the current bet. `set_raise_increment`
+                // ignores the value for an all-in seat, so clamping to zero is
+                // the right answer rather than merely the safe one. Matches
+                // `Table::act_raise` (`src/casino/table/actions.rs`).
+                self.set_raise_increment(seat_number, amount.saturating_sub(self.bet.get()))?;
                 self.bet.set(amount);
                 self.log_info(TableAction::Raise(seat_number, amount));
                 Ok(remaining)
@@ -2496,6 +2501,43 @@ mod casino__table_celled_tests {
         table.act_forced_bets().unwrap();
         // Seat 0 is UTG (button); needs to call the full 100 BB.
         assert_eq!(100, table.to_call(0));
+    }
+
+    /// `DEFECT_015`. A short stack shoving for *less* than the current bet is
+    /// always legal — an all-in for less is never blocked by the minimum-raise
+    /// rule, so `act_raise` deliberately skips its pre-validation guard in that
+    /// case. That left `amount - self.bet` to run on `usize` with `amount`
+    /// smaller than `self.bet`: a panic in debug, a wrapped value in release.
+    ///
+    /// The all-in-for-less must also leave `raise_increment` alone. It is not a
+    /// full raise, so it does not become the new increment for the street
+    /// (TDA 2024 Rule 45 — the increment is what a *full* raise established).
+    #[test]
+    fn act_raise_all_in_for_less_than_bet_does_not_underflow() -> Result<(), PKError> {
+        // Blinds 50/100. The big blind holds only 300 chips in total.
+        let table = three_player_table_with_short_bb(300);
+        table.act_forced_bets()?;
+
+        // UTG (seat 0) raises to 400, so a full raise increment of 300 stands.
+        table.act_raise(0, 400)?;
+        assert_eq!(400, table.bet.get());
+        assert_eq!(300, table.raise_increment.get());
+
+        // The small blind (seat 1) gets out of the way.
+        table.act_fold(1)?;
+
+        // The big blind (seat 2) can only reach 300 — below the 400 bet.
+        let remaining = table.act_raise(2, 300)?;
+        assert_eq!(0, remaining, "the short stack is all in");
+
+        // The increment is untouched: an all-in for less is not a full raise.
+        assert_eq!(
+            300,
+            table.raise_increment.get(),
+            "an all-in for less must not redefine the raise increment"
+        );
+        assert_eq!(300, table.min_raise());
+        Ok(())
     }
 
     // ── Burn card tests ───────────────────────────────────────────────────────

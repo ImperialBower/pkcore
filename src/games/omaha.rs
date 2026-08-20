@@ -3,8 +3,6 @@ use crate::analysis::the_nuts::TheNuts;
 use crate::arrays::HandRanker;
 use crate::arrays::five::Five;
 use crate::arrays::four::Four;
-use crate::arrays::seven::Seven;
-use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::play::board::Board;
@@ -34,15 +32,51 @@ pub struct OmahaHigh {
 }
 
 impl OmahaHigh {
+    /// Returns the best legal Omaha hand this holding makes on `board`.
+    ///
+    /// Omaha requires **exactly two** hole cards and **exactly three** board
+    /// cards — never one, never none. This enumerates all 6 × 10 = 60 legal
+    /// combinations via [`OmahaHigh::permutations`] and returns the strongest.
+    /// A board that is itself a straight, flush, or quads does **not** play:
+    /// if the holding cannot reach it with two of its own cards, it is not
+    /// available. See [`DEFECT_017`].
+    ///
+    /// `board` must be complete (five cards). A shorter board yields
+    /// [`Eval::default`], because a legal Omaha hand needs three board cards
+    /// to choose from and the missing ones evaluate as blanks.
+    ///
+    /// [`DEFECT_017`]: https://github.com/ImperialBower/pkcore/blob/main/docs/defects/DEFECT_017_omaha_eval_two_card_rule.md
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::str::FromStr;
+    /// use pkcore::analysis::name::HandRankName;
+    /// use pkcore::arrays::five::Five;
+    /// use pkcore::games::omaha::OmahaHigh;
+    /// use pkcore::play::board::Board;
+    ///
+    /// // The board is a royal flush, but no hole card is a spade, so the
+    /// // player cannot legally play it.
+    /// let hand = OmahaHigh::from_str("2♣ 3♦ 4♥ 5♦").unwrap();
+    /// let board = Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
+    ///
+    /// let eval = hand.eval(&Board::from(board));
+    ///
+    /// assert_eq!(HandRankName::HighCard, eval.hand_rank.name);
+    /// assert!(hand.is_valid(&board, &eval.hand));
+    /// ```
     #[must_use]
     pub fn eval(&self, board: &Board) -> Eval {
         let mut best_eval = Eval::default();
 
-        for perm in &OMAHA_HAND_PERMUTATIONS {
-            let two = Two::from([self.hand.0[perm[0]], self.hand.0[perm[1]]]);
-            let seven = Seven::from_case_and_board(&two, board);
-
-            let eval = seven.eval();
+        // Every candidate is already a legal 2-from-hand + 3-from-board five,
+        // so the evaluator never gets the chance to play the board. Evaluating
+        // a `Seven` of two hole cards plus the whole board — as this did before
+        // `DEFECT_017` — hands that choice to a best-5-of-7 search that knows
+        // nothing about Omaha.
+        for five in self.permutations(&Five::from(*board)) {
+            let eval = five.eval();
             if eval > best_eval {
                 best_eval = eval;
             }
@@ -155,6 +189,7 @@ impl TryFrom<Cards> for OmahaHigh {
 #[allow(non_snake_case)]
 mod games__omaha_high_tests {
     use super::*;
+    use crate::analysis::name::HandRankName;
 
     /// The hand:
     /// Robl: AS QS QD JC
@@ -215,6 +250,60 @@ mod games__omaha_high_tests {
             assert!(hand.is_valid(&board, &permutation));
         }
         assert_eq!(60, actual.len());
+    }
+
+    // ── eval: the exactly-2-from-hand rule ────────────────────────────────
+
+    #[test]
+    fn eval_ignores_a_board_royal_flush_it_cannot_legally_play() {
+        // No hole card is a spade, so the board's royal flush is unreachable:
+        // a legal Omaha hand plays exactly 2 hole + 3 board, and 2 non-spades
+        // plus 3 spades is not a flush.
+        let hand = OmahaHigh::from_str("2♣ 3♦ 4♥ 5♦").unwrap();
+        let board = Five::from_str("A♠ K♠ Q♠ J♠ T♠").unwrap();
+
+        let eval = hand.eval(&Board::from(board));
+
+        assert!(hand.is_valid(&board, &eval.hand));
+        assert_eq!(HandRankName::HighCard, eval.hand_rank.name);
+    }
+
+    #[test]
+    fn eval_ignores_a_board_straight_it_cannot_legally_play() {
+        // The board is a made straight; the hole cards cannot extend or
+        // reproduce it using two of themselves.
+        let hand = OmahaHigh::from_str("2♣ 2♦ 3♥ 3♦").unwrap();
+        let board = Five::from_str("A♠ K♥ Q♦ J♣ T♠").unwrap();
+
+        let eval = hand.eval(&Board::from(board));
+
+        assert!(hand.is_valid(&board, &eval.hand));
+        assert_ne!(HandRankName::Straight, eval.hand_rank.name);
+    }
+
+    #[test]
+    fn eval_returns_a_hand_of_exactly_two_hole_cards_and_three_board_cards() {
+        let hand = OmahaHigh::from(ROBL_HAND);
+        let board = Five::from(BOARD);
+
+        let eval = hand.eval(&Board::from(board));
+
+        assert_eq!(2, hand.how_many(&eval.hand.cards()));
+        assert_eq!(3, eval.hand.how_many(&board.cards()));
+    }
+
+    #[test]
+    fn eval_agrees_with_the_best_of_permutations() {
+        let hand = OmahaHigh::from(ROBL_HAND);
+        let board = Five::from(BOARD);
+
+        let best = hand
+            .permutations(&board)
+            .iter()
+            .map(HandRanker::eval)
+            .fold(Eval::default(), |acc, e| if e > acc { e } else { acc });
+
+        assert_eq!(best.hand_rank, hand.eval(&Board::from(board)).hand_rank);
     }
 
     #[test]

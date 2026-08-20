@@ -45,24 +45,64 @@ pub struct Nubificus {
 }
 
 impl Nubificus {
+    /// Applies one logged Pluribus action to `table`.
+    ///
     /// # Errors
     ///
-    /// `PKError::InvalidPluribusIndex`
+    /// Returns whatever the underlying [`TableCelled`] action returns —
+    /// typically `PKError::TableActionOutOfOrder` when `seat_to_act` is not the
+    /// seat the table expects, or a betting error when the logged amount is not
+    /// legal in the current state.
+    ///
+    /// A rejected action is not recoverable during replay: the table has
+    /// diverged from the log it is reproducing, so every action after this one
+    /// is applied to a state the log never described. Discarding the error here
+    /// — as this did before `DEFECT_020` — produced a silently wrong hand
+    /// rather than a failed one.
     pub fn act(table: &TableCelled, action: &PluribusEvent, seat_to_act: u8) -> Result<(), PKError> {
         log::trace!("...Nubificus.act({action}, {seat_to_act});)");
-        match action {
-            PluribusEvent::Fold => {
-                let _ = table.act_fold(seat_to_act);
-            }
-            PluribusEvent::Call => {
-                let _ = table.act_call(seat_to_act);
-            }
+
+        let _chips_remaining = match action {
+            PluribusEvent::Fold => table.act_fold(seat_to_act)?,
+            PluribusEvent::Call => table.act_call(seat_to_act)?,
             PluribusEvent::Raise(amount) => {
-                let _ = table.act_bet(seat_to_act, *amount);
+                let target = Self::street_bet_target(table, seat_to_act, *amount)?;
+                table.act_bet(seat_to_act, target)?
             }
-        }
+        };
 
         Ok(())
+    }
+
+    /// Converts a logged Pluribus raise amount into the street bet target
+    /// [`TableCelled::act_bet`] expects.
+    ///
+    /// Pluribus log amounts are **cumulative per-player totals for the whole
+    /// hand**, while `act_bet` takes the bet target for the *current street*.
+    /// On the first street with action the two coincide, which is why this went
+    /// unnoticed; from the flop on they differ by whatever the player already
+    /// put in on earlier streets.
+    ///
+    /// `STATE:154:fr250ffr1150fc/r2050c/r3750c/r6250f` with payoffs
+    /// `3850|-100|0|-3750|0|0` is the worked example: the losing player's
+    /// payoff is exactly `-3750`, his last logged number, not the per-street sum
+    /// `1150 + 2050 + 3750 = 6950`. Read per-street, the same hand asks a
+    /// 10 000-chip stack for 6 950 and then 6 250 more, and the table rightly
+    /// answers `PKError::InsufficientChips`. See `DEFECT_021`.
+    ///
+    /// # Errors
+    ///
+    /// `PKError::InvalidPluribusIndex` if `seat_number` is not an occupied seat.
+    fn street_bet_target(table: &TableCelled, seat_number: u8, logged_amount: usize) -> Result<usize, PKError> {
+        let Some(seat) = table.get_seat(seat_number) else {
+            return Err(PKError::InvalidPluribusIndex);
+        };
+
+        // `chips_in_play` accumulates across the whole hand; `bet` is only the
+        // current street, so their difference is what earlier streets took.
+        let earlier_streets = seat.player.get_chips_in_play().saturating_sub(seat.player.bet.count());
+
+        Ok(logged_amount.saturating_sub(earlier_streets))
     }
 
     /// # Errors
@@ -673,6 +713,78 @@ mod store_pluribus_tests {
     use rstest::rstest;
 
     const LOG: &str = "STATE:27:r200ffcfc/cr850cf/cr1825r3775c/r10000c:Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d/3h7s5c/Qs/6c:-50|-200|-10000|0|0|10250:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd";
+
+    /// `DEFECT_020`: `Nubificus::act` discarded every action `Result`, so a
+    /// rejected action during log replay vanished and the table drifted out of
+    /// sync with the log it is supposed to reproduce.
+    #[test]
+    fn act_propagates_a_rejected_action() {
+        let nubi = Nubificus::from_str(LOG).unwrap();
+        let out_of_turn = nubi.table.next_to_act() + 1;
+
+        let result = Nubificus::act(&nubi.table, &PluribusEvent::Fold, out_of_turn);
+
+        assert!(result.is_err(), "an out-of-turn fold must not report success");
+    }
+
+    #[test]
+    fn act_propagates_a_rejected_raise() {
+        let nubi = Nubificus::from_str(LOG).unwrap();
+        let out_of_turn = nubi.table.next_to_act() + 1;
+
+        let result = Nubificus::act(&nubi.table, &PluribusEvent::Raise(200), out_of_turn);
+
+        assert!(result.is_err(), "an out-of-turn raise must not report success");
+    }
+
+    #[test]
+    fn act_propagates_a_rejected_call() {
+        let nubi = Nubificus::from_str(LOG).unwrap();
+        let out_of_turn = nubi.table.next_to_act() + 1;
+
+        let result = Nubificus::act(&nubi.table, &PluribusEvent::Call, out_of_turn);
+
+        assert!(result.is_err(), "an out-of-turn call must not report success");
+    }
+
+    /// `DEFECT_021`: Pluribus log amounts are cumulative per-hand totals, while
+    /// [`TableCelled::act_bet`] takes a per-street target.
+    ///
+    /// The losing player's payoff is exactly `-3750`, his last logged number.
+    /// Read per-street the same hand asks a 10 000-chip stack for
+    /// `1150 + 2050 + 3750 = 6950` and then 6 250 more, which the table rightly
+    /// refuses.
+    #[test]
+    fn replay_reads_logged_amounts_as_cumulative_totals() {
+        const CUMULATIVE: &str = "STATE:154:fr250ffr1150fc/r2050c/r3750c/r6250f:Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d/3h7s5c/Qs/6c:3850|-100|0|-3750|0|0:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd";
+
+        let nubi = Nubificus::from_str(CUMULATIVE).unwrap();
+
+        assert!(nubi.play_hand().is_ok(), "the hand must replay without a betting error");
+        assert_eq!(3750, nubi.table.get_seat(3).unwrap().player.get_chips_in_play());
+        assert_eq!(100, nubi.table.get_seat(1).unwrap().player.get_chips_in_play());
+    }
+
+    /// `DEFECT_022`: a re-raise used to put the action on the wrong seat, so the
+    /// replay applied logged actions to players who were not next in turn.
+    ///
+    /// On the flop of this hand seat 5 raises to 475, seat 1 calls, and seat 3
+    /// re-raises to 1200. Seat 5 is next in turn and folds. The old order gave
+    /// the fold to seat 1 instead, rotating every later action by one live seat
+    /// and landing seat 3's turn raise of 5200 on seat 5.
+    #[test]
+    fn replay_gives_a_re_raise_the_correct_seat() {
+        const RE_RAISE: &str = "STATE:153:fr200fcfc/ccr475cr1200fc/cr5200f:9dAh|6sJs|Jh3c|7h8h|Td2s|JcQc/5h8sQs/Kc:-50|-1200|0|1725|0|-475:MrBrown|MrBlue|Pluribus|Eddie|MrPink|MrOrange";
+
+        let nubi = Nubificus::from_str(RE_RAISE).unwrap();
+
+        assert!(nubi.play_hand().is_ok(), "the hand must replay without a betting error");
+
+        // Every losing seat committed exactly what the log says it lost.
+        assert_eq!(50, nubi.table.get_seat(0).unwrap().player.get_chips_in_play());
+        assert_eq!(1200, nubi.table.get_seat(1).unwrap().player.get_chips_in_play());
+        assert_eq!(475, nubi.table.get_seat(5).unwrap().player.get_chips_in_play());
+    }
 
     #[test]
     fn log_to_string_vec() {

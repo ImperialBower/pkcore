@@ -23,12 +23,181 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **BREAKING (within the unreleased `0.6.0`): `SessionStep` gained a `Failed`
+  variant and the stud constructors became fallible**
+  ([DEFECT_018](docs/defects/DEFECT_018_stud_deck_exhaustion.md),
+  [DEFECT_019](docs/defects/DEFECT_019_next_step_swallows_advance_street_error.md)).
+  `SessionStep::Failed(PKError)` means every `match` on a `next_step()` result
+  needs a new arm — that cost is the point, since the whole defect was that
+  callers were never made to consider a mid-hand failure. `Table::stud_hi_from_seats`
+  and `Table::razz_from_seats` now return `Result<Self, PKError>`, rejecting
+  more than `Table::MAX_STUD_SEATS` (8) with the new `PKError::TooManyPlayers`.
+  `SessionStep` is now exported from `prelude`, which previously carried
+  `PokerSession` and `SessionView` but not the type `next_step` returns.
+
+- **BREAKING (within the unreleased `0.6.0`): four public signatures changed to
+  stop lying about failure**
+  ([DEFECT_023](docs/defects/DEFECT_023_min_raise_tier_and_panicking_api.md)).
+  `BettingStructure::min_raise_for_tier` now takes `big_blind` as its second
+  argument; `TableAction::generate_player_loses` returns `Option<TableAction>`;
+  `Shifter::shifts` returns `Result<Vec<HUPResult>, PKError>`; and the
+  `TryFrom<Vec<Card>>` impls for `SevenFiveBCM` and `IndexCardMap` now return
+  `Err(PKError::InvalidCardCount)` instead of `Ok(Self::default())` when the
+  vector is neither 5 nor 7 cards. Callers of the first pass their table's big
+  blind; callers of the last stop receiving all-zero records that look like
+  real data.
+
 - **All 66 `docs/EPIC-*.md` design docs moved to `docs/epics/`** — the `docs/`
   root was getting crowded with numbered EPICs alongside release notes,
   audits, and defect reports. Every internal hyperlink (README, ROADMAP,
   CHANGELOG, AI-BOM, `.okf/` bundle, and doc-comment references in
   `src/lib.rs`, `tests/tda_conformance.rs`, `examples/simple_suit_shift_example.rs`)
   was updated to the new path. No content changed, only location.
+
+### Fixed
+
+- **`stud_full_table_runs_to_showdown` no longer breaks the bare-kernel build**
+  ([DEFECT_018](docs/defects/DEFECT_018_stud_deck_exhaustion.md)). The test used
+  `PokerSession` and `SessionStep` from `prelude`, but `casino::session` is
+  gated on `bot-profiles`, and `tests/tda_conformance.rs` carries no
+  `required-features` on purpose — it is the conformance harness and must
+  compile in the bare kernel. The test is now gated on `bot-profiles`
+  individually, so the other 33 conformance tests keep running under
+  `cargo test --no-default-features`.
+
+- **Eight-handed Seven-Card Stud and Razz are playable**
+  ([DEFECT_018](docs/defects/DEFECT_018_stud_deck_exhaustion.md)). Eight players
+  need 56 cards for seven streets and the deck holds 52, so `deal_stud_street`
+  ran dry on 7th street and the hand stalled with the whole field holding live
+  cards. It now follows the standard rule: when the stub cannot serve everyone,
+  the dealer turns a single face-up community card that every remaining player
+  counts as their seventh. The stud and Razz showdown evaluators were gated on
+  `seat.cards.is_dealt()`, false with six of seven slots filled, so both now
+  build each hand from the seat's private cards plus the board. Nine-handed
+  stud runs dry two streets earlier and no community card can rescue it, so the
+  constructors reject it outright. Present unchanged in `0.2.1` through `0.5.0`;
+  it was masked until `0.4.0` fixed bot raise legality, because illegal-raise
+  rejections used to fold the field down before the deck ran out.
+
+- **A failed deal is reported instead of being disguised as a finished hand**
+  ([DEFECT_019](docs/defects/DEFECT_019_next_step_swallows_advance_street_error.md)).
+  `PokerSession::next_step` collapsed every `advance_street` error into
+  `SessionStep::HandComplete`, which wedged the caller: `next_step()` said
+  complete, `is_hand_complete()` said false, `end_hand()` returned
+  `ActionIsntFinished`, and the pot was stranded. Only "no streets remain" now
+  ends a hand — tested with the new `Table::is_last_street()` helper extracted
+  from `Table::is_game_over` — and everything else surfaces as
+  `SessionStep::Failed(e)`. The new `PokerSession::abort_hand` (and
+  `Table::abort_hand`) unwinds such a hand, returning every committed chip to
+  the stack it came from, logging `TableAction::HandAborted`, and running the
+  same chip audit `end_hand` does.
+
+- **`min_raise_for_tier` no longer reports a zero minimum for No-Limit and
+  Pot-Limit**
+  ([DEFECT_023](docs/defects/DEFECT_023_min_raise_tier_and_panicking_api.md)).
+  Its No-Limit / Pot-Limit fall-through called `min_raise(last_raise, 0)`, so on
+  the first raise of a street — where there is no previous raise to match — it
+  returned `0` and enforced no minimum at all. `casino::table::Table::min_raise`
+  had been routing around it since EPIC-30 with a comment; the source is fixed
+  now and the route-around is gone.
+
+- **Four public methods that always panicked now return or report**
+  ([DEFECT_023](docs/defects/DEFECT_023_min_raise_tier_and_panicking_api.md)).
+  `SeatsCell::is_seat_all_in` was `unimplemented!()` for every occupied seat and
+  is now implemented; `TableAction::generate_player_loses` mirrors a
+  `PlayerWins` into a `PlayerLoses` and returns `None` for anything else;
+  `HUPResult::insert_many` inserts each record and returns the count actually
+  written; `Shifter::shifts` reports `PKError::NotImplemented` rather than
+  panicking on a method still to be written.
+
+- **Action after a re-raise goes to the correct seat**
+  ([DEFECT_022](docs/defects/DEFECT_022_next_to_act_restarts_under_the_gun.md)).
+  `next_to_act` restarted its scan under the gun on every call instead of moving
+  clockwise from the seat that set the current bet level. The two rules agree
+  until a re-raise leaves players owing chips on *both* sides of the raiser —
+  from there the engine gave the action to a player who had already acted on
+  that bet. Nothing errored: the hand completed and the pot balanced, only the
+  order was wrong, so every later player acted on information they should not
+  have had. Both table engines carried it (`casino::table_celled::TableCelled`
+  and `casino::table::Table`); both are fixed. Seven of the ten thousand real
+  Pluribus hands are affected, plus one recorded arena session in which a
+  player's decision was materially changed — they faced a raise to 5900 instead
+  of the 2333 that was actually standing when their turn came. `last_aggressor`
+  is new public API on both `Seats` types, which is what makes the rule a named,
+  testable concept rather than a loop's starting index.
+
+- **Pluribus replay reads logged amounts as cumulative hand totals**
+  ([DEFECT_021](docs/defects/DEFECT_021_pluribus_cumulative_amounts.md)). The
+  logs record a raise as the player's running total for the whole hand;
+  `act_bet` takes a per-street target. The logged number was passed straight
+  through, so from the flop on each raiser was asked for their earlier-street
+  chips a second time. 291 of the 10 000 corpus hands could not be replayed. The
+  two readings coincide on the first street with action, which is the only shape
+  the unit fixtures had.
+
+- **`Nubificus::act` no longer discards every action `Result`**
+  ([DEFECT_020](docs/defects/DEFECT_020_nubificus_act_discards_results.md)).
+  `act_fold`, `act_call`, and `act_bet` were each called as `let _ = …` and the
+  function returned `Ok(())` unconditionally, so a rejected action vanished and
+  the replay carried on against a table that no longer matched the log. The
+  10 000-hand corpus test asserted success against a call chain that could not
+  report failure. Fixing this is what exposed DEFECT_021 and DEFECT_022; the
+  corpus test now also compares every losing seat's committed chips against the
+  payoff the log records for it, because a misrouted action is not an error and
+  finishes cleanly.
+
+- **`OmahaHigh::eval` now enforces Omaha's exactly-two-hole-cards rule**
+  ([DEFECT_017](docs/defects/DEFECT_017_omaha_eval_two_card_rule.md)). It picked
+  two hole cards and then handed seven cards to the unconstrained best-5-of-7
+  evaluator, which is free to ignore both and play the board — legal in Hold'em,
+  illegal in Omaha. A board holding a straight, flush, or quads that the player
+  could not reach with two of their own cards was returned as their hand. `eval`
+  now enumerates the 60 legal 2-from-hand + 3-from-board combinations through
+  the existing `OmahaHigh::permutations`, so every result satisfies
+  `OmahaHigh::is_valid`. The live showdown path was never affected — it already
+  used `permutations` — but `examples/decon_dump.rs` generated the DECON-02
+  golden vectors *for this very rule* through the broken function. Those vectors
+  are regenerated, and a discriminating case (a board royal flush no hole card
+  can reach) is added, since none of the three existing cases could tell the
+  correct implementation from the broken one. The deprecated `Four::omaha_high`
+  keeps the flaw and its doc comment no longer claims `OmahaHigh::eval` was
+  always the sound alternative.
+
+- **`SolverCache` no longer serves one solve's result for a different solve**
+  ([DEFECT_016](docs/defects/DEFECT_016_solver_cache_key_omissions.md)).
+  `cache_key` hashed the fields that describe the *spot* — ranges, board, bet
+  sizings, effective stack, pot — but none of the three that decide how the spot
+  is solved: `max_iterations`, `target_exploitability`, and `cfr_variant`. Two
+  configs differing only in iteration count or update rule produced the same
+  `u64`, so a request for a 100 000-iteration DCFR solve could be answered from
+  disk with a 3-iteration vanilla-CFR result, reported as valid with its own
+  (wrong) exploitability. All three are now hashed; `CfrVariant` gets a
+  discriminant tag plus the IEEE-754 bit patterns of its `alpha` and `beta`
+  exponents, since it cannot derive `Hash`. Existing cache entries written by
+  `0.5.2` or earlier no longer match — they are a miss and a re-solve, not a
+  wrong answer.
+
+- **`TableCelled::act_raise` no longer underflows when a player goes all-in for
+  less than the current bet** ([DEFECT_015](docs/defects/DEFECT_015_act_raise_all_in_underflow.md)).
+  An all-in for less is always legal, so `act_raise` deliberately skips its
+  minimum-raise pre-validation in that case — and that is exactly the case where
+  `amount` is *below* `self.bet`. The increment was then computed with unchecked
+  subtraction, which panicked in debug builds and wrapped to a value near
+  `usize::MAX` in release, corrupting `min_raise()` for the rest of the street.
+  It now uses `saturating_sub`, matching `Table::act_raise`.
+
+  Clamping to zero is the correct answer and not merely the safe one:
+  `set_raise_increment` ignores the value it is handed for an all-in seat, so an
+  all-in for less leaves the street's raise increment where the last *full* raise
+  put it — what TDA 2024 Rule 45 requires. Chip movement was never affected;
+  `Player::act_bet_internal` already computed its own delta with `saturating_sub`.
+
+  The two table implementations had drifted: the sibling `Table::act_raise` was
+  given this same guard on 2026-08-15 by the
+  [DEFECT_007](docs/defects/DEFECT_007_decider_subminimum_raise.md) fix, which did
+  not touch `table_celled.rs`. `TableCelled` is exported from `prelude` and drives
+  `Nubificus` log replay and the `tests/hands.rs` / `tests/split_pots.rs` suites,
+  so the path is reachable by downstream callers.
 
 ## [0.5.0] - 2026-08-17
 

@@ -82,6 +82,15 @@
         "hole_cards": "A♠ A♥ 2♣ 3♦",
         "note": "quads on the board",
         "value": 11
+      },
+      {
+        "best_five": "A♠ K♠ Q♠ 5♦ 4♥",
+        "board": "A♠ K♠ Q♠ J♠ T♠",
+        "category": "HighCard",
+        "class": "AceHigh",
+        "hole_cards": "2♣ 3♦ 4♥ 5♦",
+        "note": "board is a royal flush and no hole card is a spade — the rule's discriminating case: the board does not play, so the answer is a high card",
+        "value": 6224
       }
     ],
     "hole_combinations": 6,

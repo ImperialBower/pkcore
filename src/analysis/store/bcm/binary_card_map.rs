@@ -385,7 +385,10 @@ impl TryFrom<Vec<Card>> for SevenFiveBCM {
         match v.len() {
             5 => Ok(SevenFiveBCM::try_from(Five::try_from(v)?)?),
             7 => Ok(SevenFiveBCM::try_from(Seven::try_from(v)?)?),
-            _ => Ok(SevenFiveBCM::default()),
+            // DEFECT_023: anything other than a 5- or 7-card hand is an error.
+            // This arm used to return `Ok(Self::default())`, handing the caller
+            // an all-zero record from a fallible constructor.
+            _ => Err(PKError::InvalidCardCount),
         }
     }
 }
@@ -417,6 +420,24 @@ mod analysis__store__bcm__binary_card_map_tests {
     // wrapper is trivial. Coverage lives in `load_bc_rank_map__missing_file_is_err`
     // (the pure, path-injectable core) instead; the accessor carries a `no_run`
     // doctest.
+
+    /// `DEFECT_023`: a vector that is neither 5 nor 7 cards used to return
+    /// `Ok(SevenFiveBCM::default())` — a plausible-looking all-zero record —
+    /// from a fallible constructor.
+    #[test]
+    fn try_from__vec__wrong_card_count_is_an_error() {
+        let three = vec![
+            Card::from_str("A♠").unwrap(),
+            Card::from_str("K♠").unwrap(),
+            Card::from_str("Q♠").unwrap(),
+        ];
+
+        assert_eq!(Err(PKError::InvalidCardCount), SevenFiveBCM::try_from(three));
+        assert_eq!(
+            Err(PKError::InvalidCardCount),
+            SevenFiveBCM::try_from(Vec::<Card>::new())
+        );
+    }
 
     #[test]
     fn try_from__five() {

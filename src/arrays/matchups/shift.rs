@@ -1,7 +1,7 @@
-use crate::Shifty;
 use crate::analysis::store::db::hup::HUPResult;
 use crate::arrays::matchups::masked::Masked;
 use crate::arrays::matchups::sorted_heads_up::SortedHeadsUp;
+use crate::{PKError, Shifty};
 use std::fmt::{Display, Formatter};
 
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -11,9 +11,29 @@ pub struct Shifter {
 }
 
 impl Shifter {
-    #[must_use]
-    pub fn shifts(&self, _hupr: &HUPResult) -> Vec<HUPResult> {
-        unimplemented!("Shifter::shifts is not yet implemented")
+    /// Resolves each suit-shifted matchup in [`Self::shifts`] to its stored
+    /// [`HUPResult`].
+    ///
+    /// # Errors
+    ///
+    /// Not written yet: always returns [`PKError::NotImplemented`]. It reports
+    /// the gap instead of panicking, matching
+    /// `SortedHeadsUp::hup_result_from_shift`. (`DEFECT_023`: this method used to
+    /// be an unconditional `unimplemented!()`.)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::PKError;
+    /// use pkcore::analysis::store::db::hup::HUPResult;
+    /// use pkcore::arrays::matchups::shift::Shifter;
+    ///
+    /// let shifter = Shifter::default();
+    ///
+    /// assert_eq!(Err(PKError::NotImplemented), shifter.shifts(&HUPResult::default()));
+    /// ```
+    pub fn shifts(&self, _hupr: &HUPResult) -> Result<Vec<HUPResult>, PKError> {
+        Err(PKError::NotImplemented)
     }
 }
 
@@ -94,6 +114,16 @@ mod arrays__matchups__masks__shift_tests {
                 draws: 8106,
             },
         }
+    }
+
+    /// `DEFECT_023`: `Shifter::shifts` was an unconditional `unimplemented!()`
+    /// on a `#[must_use]` public method. Until it is written it reports
+    /// `PKError::NotImplemented`, matching `SortedHeadsUp::hup_result_from_shift`.
+    #[test]
+    fn shifts__reports_not_implemented() {
+        let shifter = Shifter::default();
+
+        assert_eq!(Err(PKError::NotImplemented), shifter.shifts(&hupr()));
     }
 
     #[test]

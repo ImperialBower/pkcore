@@ -72,6 +72,7 @@ use uuid::Uuid;
 ///     SessionStep::PlayerToAct(seat) => { /* player must act */ }
 ///     SessionStep::StreetAdvanced    => { /* emit StreetAdvanced event */ }
 ///     SessionStep::HandComplete      => { /* call end_hand() */ }
+///     SessionStep::Failed(_)         => { /* call abort_hand() */ }
 /// }
 /// # }
 /// ```
@@ -84,6 +85,12 @@ pub enum SessionStep {
     StreetAdvanced,
     /// The hand is over. Call `end_hand()` and emit a `HandEnded` event.
     HandComplete,
+    /// The hand cannot continue: dealing or chip collection failed mid-hand.
+    /// The session is **not** resolvable via
+    /// [`end_hand`](PokerSession::end_hand) — there was no showdown to
+    /// resolve. Call [`abort_hand`](PokerSession::abort_hand) to return each
+    /// player's committed chips and reset the table (`DEFECT_019`).
+    Failed(PKError),
 }
 
 /// A multi-hand game session wrapping a [`Table`].
@@ -544,7 +551,11 @@ impl PokerSession {
         if self.table.seats.is_betting_complete() {
             return match self.advance_street() {
                 Ok(()) => SessionStep::StreetAdvanced,
-                Err(_) => SessionStep::HandComplete,
+                // `DEFECT_019`: only "no streets remain" ends a hand. Every
+                // other failure — a dry deck above all — is a fault the caller
+                // has to be told about, not a completion.
+                Err(PKError::InvalidAction) if self.table.is_last_street() => SessionStep::HandComplete,
+                Err(e) => SessionStep::Failed(e),
             };
         }
         SessionStep::PlayerToAct(self.table.next_to_act())
@@ -582,6 +593,40 @@ impl PokerSession {
     /// ```
     pub fn end_hand(&mut self) -> Result<Winnings, PKError> {
         self.table.end_hand()
+    }
+
+    /// Unwinds a hand that cannot be completed, returning every committed chip
+    /// to the stack it came from and resetting the table.
+    ///
+    /// Call this — never [`end_hand`](PokerSession::end_hand) — after
+    /// [`next_step`](PokerSession::next_step) returns
+    /// [`SessionStep::Failed`]. Returns the total refunded (`DEFECT_019`).
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::ChipAuditFailed`] if the chip count after the unwind does not
+    /// match the total snapshotted when the hand started.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::session::PokerSession;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 1_000)),
+    /// ]);
+    /// let mut session = PokerSession::new(Table::nlh_from_seats(seats, ForcedBets::new(50, 100)));
+    /// session.start_hand().unwrap();
+    ///
+    /// // The blinds are committed; the abort hands them back.
+    /// assert_eq!(150, session.abort_hand().unwrap());
+    /// assert_eq!(2_000, session.table.table_chip_count());
+    /// ```
+    pub fn abort_hand(&mut self) -> Result<usize, PKError> {
+        self.table.abort_hand()
     }
 
     /// Runs a complete hand using the provided action-resolution closure.
@@ -1006,6 +1051,122 @@ mod tests {
 
     // ── next_step() ───────────────────────────────────────────────────────────
 
+    /// `DEFECT_019`: a mid-hand dealing failure used to be reported as
+    /// `HandComplete`, wedging the caller — `end_hand()` then returns
+    /// `ActionIsntFinished` and the pot is stranded with live cards out.
+    #[test]
+    fn next_step_reports_failure_when_deal_cannot_complete() {
+        let mut session = three_player_session();
+        session.start_hand().unwrap();
+
+        // Empty the stub so dealing the flop cannot succeed.
+        let _ = session.table.deck.draw_all();
+
+        // Everyone calls: betting completes and the flop deal is attempted.
+        for _ in 0..3 {
+            if let SessionStep::PlayerToAct(seat) = session.next_step() {
+                session.apply_action(seat, PlayerAction::Call).unwrap();
+            }
+        }
+
+        assert_eq!(SessionStep::Failed(PKError::NotEnoughCards), session.next_step());
+    }
+
+    /// `DEFECT_019`: `Failed` is only useful if the caller can unwind. Every
+    /// chip committed to the dead hand goes back to the stack it came from.
+    #[test]
+    fn abort_hand_returns_committed_chips() {
+        let mut session = three_player_session();
+        let before = session.table.table_chip_count();
+        session.start_hand().unwrap();
+
+        let _ = session.table.deck.draw_all();
+        for _ in 0..3 {
+            if let SessionStep::PlayerToAct(seat) = session.next_step() {
+                session.apply_action(seat, PlayerAction::Call).unwrap();
+            }
+        }
+        assert!(matches!(session.next_step(), SessionStep::Failed(_)));
+        assert!(session.table.pot > 0, "chips should be committed before the abort");
+
+        let refunded = session.abort_hand().unwrap();
+
+        assert_eq!(300, refunded, "three players called 100 each");
+        assert_eq!(
+            before,
+            session.table.table_chip_count(),
+            "no chips created or destroyed"
+        );
+        assert_eq!(0, session.table.pot);
+        for seat in session.table.seats.0.iter() {
+            assert_eq!(0, seat.player.chips_in_play);
+            assert_eq!(10_000, seat.player.chips);
+        }
+    }
+
+    /// `DEFECT_019`: `end_hand` resolves a showdown, so it must refuse a hand
+    /// that never reached one. `abort_hand` is the only legal exit.
+    #[test]
+    fn end_hand_refuses_a_failed_hand() {
+        let mut session = three_player_session();
+        session.start_hand().unwrap();
+
+        let _ = session.table.deck.draw_all();
+        for _ in 0..3 {
+            if let SessionStep::PlayerToAct(seat) = session.next_step() {
+                session.apply_action(seat, PlayerAction::Call).unwrap();
+            }
+        }
+
+        assert_eq!(Err(PKError::ActionIsntFinished), session.end_hand());
+    }
+
+    /// `DEFECT_019`: the invariant the defect violated, stated directly.
+    /// Whenever `next_step()` says the hand is over, `end_hand()` must be able
+    /// to resolve it.
+    #[test]
+    fn next_step_hand_complete_implies_end_hand_succeeds() {
+        let mut session = three_player_session();
+        session.start_hand().unwrap();
+
+        for _ in 0..40 {
+            match session.next_step() {
+                SessionStep::PlayerToAct(seat) => {
+                    session.apply_action(seat, PlayerAction::Call).unwrap();
+                }
+                SessionStep::StreetAdvanced => {}
+                SessionStep::HandComplete => {
+                    assert!(session.end_hand().is_ok(), "HandComplete but end_hand() failed");
+                    return;
+                }
+                SessionStep::Failed(e) => panic!("unexpected failure: {e:?}"),
+            }
+        }
+        panic!("hand never completed");
+    }
+
+    /// `DEFECT_019`: the two completion signals must never disagree.
+    #[test]
+    fn next_step_hand_complete_agrees_with_is_hand_complete() {
+        let mut session = three_player_session();
+        session.start_hand().unwrap();
+
+        for _ in 0..40 {
+            let step = session.next_step();
+            if step == SessionStep::HandComplete {
+                assert!(
+                    session.is_hand_complete(),
+                    "next_step() said HandComplete but is_hand_complete() is false"
+                );
+                return;
+            }
+            if let SessionStep::PlayerToAct(seat) = step {
+                session.apply_action(seat, PlayerAction::Call).unwrap();
+            }
+        }
+        panic!("hand never completed");
+    }
+
     #[test]
     fn fold_gives_hand_complete_immediately() {
         let mut session = two_player_session();
@@ -1048,6 +1209,7 @@ mod tests {
                     break;
                 }
                 SessionStep::HandComplete => panic!("unexpected HandComplete before flop"),
+                SessionStep::Failed(e) => panic!("unexpected failure: {e:?}"),
             }
         }
         assert!(advanced, "StreetAdvanced was never returned");
@@ -1087,6 +1249,7 @@ mod tests {
                 SessionStep::PlayerToAct(s) => {
                     panic!("unexpected PlayerToAct({s}) during all-in run-out");
                 }
+                SessionStep::Failed(e) => panic!("unexpected failure: {e:?}"),
             }
         }
         assert_eq!(street_count, 3, "expected flop+turn+river, got {street_count}");
@@ -1111,6 +1274,7 @@ mod tests {
                     hand_complete = true;
                     break;
                 }
+                SessionStep::Failed(e) => panic!("unexpected failure: {e:?}"),
             }
         }
         assert!(hand_complete, "hand never reached HandComplete");

@@ -96,7 +96,15 @@ Written down, not committed to. No status table, no work items yet.
 
 ## Bugs / Defects
 
-**13 of 14 filed defects are Fixed.** `docs/defects/` is in good shape.
+**All 23 filed defects are resolved** (`DEFECT_001` is a preserved record of a
+rejected rule interpretation, reverted in `0.0.55`). `docs/defects/` is in good
+shape.
+`DEFECT_018` (eight-handed stud exhausted the deck) and `DEFECT_019`
+(`next_step` disguised a failed deal as a finished hand) were documented on
+2026-08-18 but not actually fixed until `0.6.0` — the commit that named them
+changed docs only. Both are fixed now; the one leftover is recorded on
+`DEFECT_019`: `PokerSession::next_actor` still collapses the same failure to
+`None`.
 
 - **D8-6 — fixed-limit raise cap cannot lift at event heads-up** — the only open
   item from the TDA-2024 audit. Recorded and **unreachable until a multi-table
@@ -127,13 +135,13 @@ Written down, not committed to. No status table, no work items yet.
 [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
 
 A fresh five-subsystem automated review ran **2026-08-18** and returned
-**11 verified findings**. The four worth fixing first:
+**11 verified findings**. One is fixed; the three worth doing next:
 
-1. 🤖 **`TableCelled::act_raise` underflows on a short all-in** — the validation
-   guard is skipped precisely when `amount < bet`, so plain subtraction
-   underflows: panic in debug, huge `usize` in release, corrupting `min_raise()`
-   for the rest of the street. The sibling `Table::act_raise` already uses
-   `saturating_sub`. One-word fix. (`src/casino/table_celled.rs:600`)
+0. ~~🤖 **`TableCelled::act_raise` underflows on a short all-in**~~ — **FIXED in
+   `0.5.2`**, recorded as [`DEFECT_015`](defects/DEFECT_015_act_raise_all_in_underflow.md).
+   The lasting lesson is in that report: two near-identical `act_raise` bodies
+   exist, and the `DEFECT_007` fix hardened only one of them. Check the sibling
+   whenever you fix a betting action in either.
 2. 🤖 **`SolverCache::cache_key` omits `max_iterations` and `cfr_variant`** — two
    solver configs differing only in iteration count or CFR variant collide on
    one cache file, serving a result solved under different parameters.
@@ -145,18 +153,21 @@ A fresh five-subsystem automated review ran **2026-08-18** and returned
 4. 🤖 **`Nubificus::act` discards every action `Result`** — replay drifts out of
    sync with the log it is reproducing, silently. (`src/analysis/nubibus.rs:51`)
 
-Plus a recurring shape worth one sweep: **four public methods whose whole body is
+~~Plus a recurring shape worth one sweep: **four public methods whose whole body is
 `unimplemented!()`** (`SeatsCell::is_seat_all_in`, `TableAction::generate_player_loses`,
-`Shifter::shifts`, `HUPResult::insert_many`) — no callers, no tests, all four
-violate the no-panic house rule.
+`Shifter::shifts`, `HUPResult::insert_many`)~~ — **FIXED** in `0.6.0` as
+[DEFECT_023](defects/DEFECT_023_min_raise_tier_and_panicking_api.md). Three are
+implemented; `Shifter::shifts` reports `PKError::NotImplemented` because nothing
+in the repo records what it was meant to compute.
 
 Longer-standing items:
 
 - 🤖 **Panics in the HUP/SQL layer** — `stmt.query(()).unwrap()` and two
   `assert_eq!`s inside `From` impls. (`src/analysis/store/db/hup.rs`)
-- **`min_raise_for_tier` hardcodes `big_blind = 0`** for No-Limit/Pot-Limit —
-  known, worked around at one call site, never fixed at the source.
-  (`src/games/betting_structure.rs:126`)
+- ~~**`min_raise_for_tier` hardcodes `big_blind = 0`** for No-Limit/Pot-Limit~~ —
+  **FIXED** in `0.6.0` as
+  [DEFECT_023](defects/DEFECT_023_min_raise_tier_and_panicking_api.md). The
+  method now takes `big_blind`, and the `Table::min_raise` route-around is gone.
 - **Self-declared missing tests** — `heads_up.rs:150` and `play/game.rs:345`
   both say so in as many words.
 - 🤖 **Missing doc tests** on `Deck`, `Board`, and the table determiners.

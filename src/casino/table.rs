@@ -270,7 +270,7 @@ impl Table {
     ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
     ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
-    /// let t = Table::stud_hi_from_seats(seats, 2, 5, 20, 40);
+    /// let t = Table::stud_hi_from_seats(seats, 2, 5, 20, 40).unwrap();
     /// assert_eq!(GameType::StudHi, t.game);
     /// assert_eq!(2, t.forced.ante);
     /// assert_eq!(5, t.forced.bring_in);
@@ -281,16 +281,51 @@ impl Table {
     /// // Seats pre-allocated for 7 hole cards.
     /// assert_eq!(7, t.seats.get_seat(0).unwrap().cards.len());
     /// ```
-    #[must_use]
-    pub fn stud_hi_from_seats(seats: Seats, ante: usize, bring_in: usize, small_bet: usize, big_bet: usize) -> Self {
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::TooManyPlayers`] if `seats` holds more than
+    /// [`Self::MAX_STUD_SEATS`]. Nine-handed stud needs 54 cards to reach 6th
+    /// street and 63 to reach 7th, against a 52-card deck, so the table could
+    /// never be dealt (`DEFECT_018`).
+    pub fn stud_hi_from_seats(
+        seats: Seats,
+        ante: usize,
+        bring_in: usize,
+        small_bet: usize,
+        big_bet: usize,
+    ) -> Result<Self, PKError> {
+        Self::stud_family_from_seats(seats, GameType::StudHi, ante, bring_in, small_bet, big_bet)
+    }
+
+    /// Largest stud/Razz field a single 52-card deck can serve.
+    ///
+    /// Eight players need 56 individual cards for seven streets, which is why
+    /// [`Self::deal_stud_street`] falls back to a shared 7th-street community
+    /// card at this size. Nine players run dry two streets earlier, and no
+    /// community card can rescue that (`DEFECT_018`).
+    pub const MAX_STUD_SEATS: usize = 8;
+
+    /// Shared body for the two stud-family constructors.
+    fn stud_family_from_seats(
+        seats: Seats,
+        game: GameType,
+        ante: usize,
+        bring_in: usize,
+        small_bet: usize,
+        big_bet: usize,
+    ) -> Result<Self, PKError> {
+        if seats.size() as usize > Self::MAX_STUD_SEATS {
+            return Err(PKError::TooManyPlayers);
+        }
         let forced = ForcedBets::new_with_ante_and_bring_in(0, 0, ante, bring_in);
-        let mut t = Self::from_seats(seats, GameType::StudHi, forced);
+        let mut t = Self::from_seats(seats, game, forced);
         t.betting = BettingStructure::FixedLimit {
             small_bet,
             big_bet,
             raise_cap: 3,
         };
-        t
+        Ok(t)
     }
 
     /// Constructs a Razz table (EPIC-33 Phase 3). Razz is Seven-Card
@@ -315,7 +350,7 @@ impl Table {
     ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
     ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
-    /// let t = Table::razz_from_seats(seats, 2, 5, 20, 40);
+    /// let t = Table::razz_from_seats(seats, 2, 5, 20, 40).unwrap();
     /// assert_eq!(GameType::Razz, t.game);
     /// assert_eq!(2, t.forced.ante);
     /// assert_eq!(5, t.forced.bring_in);
@@ -326,16 +361,19 @@ impl Table {
     /// // Seats pre-allocated for 7 hole cards.
     /// assert_eq!(7, t.seats.get_seat(0).unwrap().cards.len());
     /// ```
-    #[must_use]
-    pub fn razz_from_seats(seats: Seats, ante: usize, bring_in: usize, small_bet: usize, big_bet: usize) -> Self {
-        let forced = ForcedBets::new_with_ante_and_bring_in(0, 0, ante, bring_in);
-        let mut t = Self::from_seats(seats, GameType::Razz, forced);
-        t.betting = BettingStructure::FixedLimit {
-            small_bet,
-            big_bet,
-            raise_cap: 3,
-        };
-        t
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::TooManyPlayers`] if `seats` holds more than
+    /// [`Self::MAX_STUD_SEATS`] (`DEFECT_018`).
+    pub fn razz_from_seats(
+        seats: Seats,
+        ante: usize,
+        bring_in: usize,
+        small_bet: usize,
+        big_bet: usize,
+    ) -> Result<Self, PKError> {
+        Self::stud_family_from_seats(seats, GameType::Razz, ante, bring_in, small_bet, big_bet)
     }
 
     /// Generic table constructor parameterised by [`GameType`] (EPIC-29
@@ -884,6 +922,33 @@ impl Table {
         self.phase.is_river()
     }
 
+    /// True when the current street is the last one the game deals — the
+    /// river for board games, 7th street for the stud family.
+    ///
+    /// Extracted from [`Self::is_game_over`] for `DEFECT_019`, where
+    /// `PokerSession::next_step` needs the same test to tell "no streets
+    /// remain" apart from a genuine dealing failure.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use pkcore::casino::game::ForcedBets;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// // Pre-flop is not the last street.
+    /// assert!(!t.is_last_street());
+    /// ```
+    #[must_use]
+    pub fn is_last_street(&self) -> bool {
+        // EPIC-32 Phase 12: Stud hands end after 7th-street betting.
+        self.is_river() || self.phase == GamePhase::Stud7th
+    }
+
     /// True when the hand is over (≤1 active players, or river betting complete).
     ///
     /// # Examples
@@ -904,9 +969,7 @@ impl Table {
         if self.seats.count_active_in_hand() <= 1 {
             return true;
         }
-        // EPIC-32 Phase 12: Stud hands end after 7th-street betting.
-        let last_street = self.is_river() || self.phase == GamePhase::Stud7th;
-        last_street && self.seats.is_betting_complete()
+        self.is_last_street() && self.seats.is_betting_complete()
     }
 
     // ── Chip helpers ──────────────────────────────────────────────────────────
@@ -1094,16 +1157,11 @@ impl Table {
         // - `FixedLimit`: returns the small_bet or big_bet for the current
         //   street's bet tier (`current_bet_tier()`).
         //
-        // Note: `BettingStructure::min_raise_for_tier` is buggy for the
-        // NoLimit/PotLimit fallthrough (it hardcodes `big_blind = 0`), so we
-        // explicitly route NoLimit/PotLimit through the original two-arg
-        // method here instead.
-        match self.betting {
-            BettingStructure::FixedLimit { .. } => self
-                .betting
-                .min_raise_for_tier(self.raise_increment, self.current_bet_tier()),
-            _ => self.betting.min_raise(self.raise_increment, self.forced.big_blind),
-        }
+        // DEFECT_023: `min_raise_for_tier` now takes `big_blind`, so a single
+        // call covers every structure — the NoLimit/PotLimit arm no longer
+        // needs to route around a hardcoded zero.
+        self.betting
+            .min_raise_for_tier(self.raise_increment, self.forced.big_blind, self.current_bet_tier())
     }
 
     /// Minimum legal *absolute* raise-to amount (not the delta over the
@@ -1130,7 +1188,7 @@ impl Table {
     ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
     ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
     /// ]);
-    /// let mut t = Table::stud_hi_from_seats(seats, 2, 5, 20, 40);
+    /// let mut t = Table::stud_hi_from_seats(seats, 2, 5, 20, 40).unwrap();
     /// t.phase = GamePhase::Stud3rd;
     /// t.bet = 5; // bring-in posted
     /// // Completing the bring-in means raising to the full small bet (20).
@@ -1356,6 +1414,20 @@ impl Table {
         let in_hand_count = (0..seat_count)
             .filter(|&i| u8::try_from(i).is_ok_and(|idx| self.seats.is_seat_in_hand(idx)))
             .count();
+        // DEFECT_018: at a full table the stub cannot serve everyone on 7th
+        // street — eight players need 56 cards from a 52-card deck. The
+        // standard rule is that the dealer turns a single face-up community
+        // card shared by every remaining player in place of individual down
+        // cards. Checked before dealing anything, so the table is never left
+        // torn half-way through the street.
+        if next_street == GamePhase::Stud7th && in_hand_count > self.deck.len() {
+            let community = self.deck.draw_one()?;
+            self.board.insert(community);
+            self.log(TableAction::DealtRiver(Bard::from(&community)));
+            self.phase = next_street;
+            return Ok(());
+        }
+
         self.log(TableAction::DealingXCards(
             u8::try_from(in_hand_count).unwrap_or_default(),
         ));
@@ -1763,8 +1835,8 @@ impl Table {
     fn stud_river_case_eval(&self) -> CaseEval {
         let mut case_eval = CaseEval::new(Cards::default());
         for seat in &self.seats.0 {
-            if seat.is_in_hand() && seat.cards.is_dealt() {
-                match Seven::try_from(seat.cards.cards()) {
+            if seat.is_in_hand() {
+                match self.stud_showdown_seven(seat) {
                     Ok(seven) => case_eval.push(Eval::from(seven)),
                     Err(_) => case_eval.push(Eval::default()),
                 }
@@ -1773,6 +1845,24 @@ impl Table {
             }
         }
         case_eval
+    }
+
+    /// The seven cards a stud-family seat shows down: its private cards plus
+    /// any shared 7th-street community card.
+    ///
+    /// Normally the board is empty and this is simply the seat's seven private
+    /// cards. At a full table the deck cannot deal everyone a seventh card, so
+    /// [`Self::deal_stud_street`] turns one face-up community card instead and
+    /// every remaining player counts it as their seventh (`DEFECT_018`).
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::NotEnoughCards`] or [`PKError::TooManyCards`] if the seat's
+    /// cards plus the board do not total exactly seven.
+    fn stud_showdown_seven(&self, seat: &Seat) -> Result<Seven, PKError> {
+        let mut cards = seat.cards.cards();
+        cards.insert_all(&self.board);
+        Seven::try_from(cards)
     }
 
     /// EPIC-33 Phase 2: builds a per-seat [`CaseEval`] for Razz (A-5
@@ -1785,8 +1875,8 @@ impl Table {
     fn razz_river_case_eval(&self) -> CaseEval {
         let mut case_eval = CaseEval::new(Cards::default());
         for seat in &self.seats.0 {
-            if seat.is_in_hand() && seat.cards.is_dealt() {
-                match Seven::try_from(seat.cards.cards()) {
+            if seat.is_in_hand() {
+                match self.stud_showdown_seven(seat) {
                     Ok(seven) => match Eval::from_seven_razz(&seven) {
                         Ok(eval) => case_eval.push(eval),
                         Err(_) => case_eval.push(Eval::default()),
@@ -2296,6 +2386,71 @@ impl Table {
 
         Ok(winnings)
     }
+
+    /// Unwinds a hand that cannot be completed, returning every committed chip
+    /// to the stack it came from and resetting the table for the next hand.
+    ///
+    /// This is the counterpart to [`Self::end_hand`] for the case where there
+    /// is no showdown to resolve — a dealing failure mid-hand, most often a
+    /// dry deck. `end_hand` cannot serve: it refuses a hand that is not over,
+    /// and a hand that failed to deal never becomes over (`DEFECT_019`).
+    ///
+    /// Returns the total number of chips refunded.
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::ChipAuditFailed`] if the table's chip count after the unwind
+    /// does not match the total snapshotted when the hand started. The refund
+    /// still happens; the error reports that the books do not balance.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use pkcore::casino::game::ForcedBets;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("A".to_string(), 5_000)),
+    ///     Seat::new(Player::new_with_chips("B".to_string(), 5_000)),
+    /// ]);
+    /// let mut t = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+    /// t.act_forced_bets().unwrap();
+    ///
+    /// // The blinds are committed; the abort hands them back.
+    /// assert_eq!(150, t.abort_hand().unwrap());
+    /// assert_eq!(0, t.pot);
+    /// assert_eq!(10_000, t.table_chip_count());
+    /// ```
+    pub fn abort_hand(&mut self) -> Result<usize, PKError> {
+        // `chips_in_play` is cumulative for the hand and already includes
+        // whatever sits in `player.bet`, so refunding it and zeroing `bet`
+        // returns each player to their pre-hand stack exactly once.
+        let mut refunded = 0;
+        for seat in &mut self.seats.0 {
+            if seat.is_empty() {
+                continue;
+            }
+            let committed = seat.player.chips_in_play;
+            seat.player.chips += committed;
+            seat.player.bet = 0;
+            seat.player.chips_in_play = 0;
+            refunded += committed;
+        }
+        self.pot = 0;
+        self.log(TableAction::HandAborted(refunded));
+        self.reset();
+
+        let actual = self.table_chip_count();
+        if actual != self.hand_chip_total {
+            self.log(TableAction::ChipAuditFailed(self.hand_chip_total, actual));
+            return Err(PKError::ChipAuditFailed {
+                expected: self.hand_chip_total,
+                actual,
+            });
+        }
+
+        Ok(refunded)
+    }
 }
 
 impl Display for Table {
@@ -2345,13 +2500,143 @@ mod casino__table_tests {
         Table::plo_from_seats(seats, (50, 100))
     }
 
+    fn make_stud_table(player_count: usize) -> Table {
+        let seats = Seats::new(
+            (0..player_count)
+                .map(|i| Seat::new(Player::new_with_chips(format!("P{i}"), 10_000)))
+                .collect(),
+        );
+        Table::stud_hi_from_seats(seats, 2, 5, 20, 40).unwrap()
+    }
+
+    /// `DEFECT_018`: seven seats is the largest stud field that fits in a
+    /// 52-card deck without help — 7 × 7 = 49.
+    #[test]
+    fn deal_stud_street_seven_players_reaches_seventh_street() {
+        let mut table = make_stud_table(7);
+        table.act_forced_bets().unwrap();
+        table.deal_stud_3rd_street().unwrap();
+
+        for street in [
+            GamePhase::Stud4th,
+            GamePhase::Stud5th,
+            GamePhase::Stud6th,
+            GamePhase::Stud7th,
+        ] {
+            table.deal_stud_street(street).unwrap();
+        }
+
+        assert_eq!(GamePhase::Stud7th, table.phase);
+        assert!(table.board.is_empty(), "no community card is needed at seven seats");
+        for seat in &table.seats.0 {
+            assert!(seat.cards.is_dealt(), "every seat holds seven private cards");
+        }
+    }
+
+    /// `DEFECT_018`: eight seats need 56 cards. The standard rule is a single
+    /// face-up community card on 7th street, shared by everyone.
+    #[test]
+    fn deal_stud_street_eight_players_uses_community_card_on_seventh() {
+        let mut table = make_stud_table(8);
+        table.act_forced_bets().unwrap();
+        table.deal_stud_3rd_street().unwrap();
+
+        for street in [GamePhase::Stud4th, GamePhase::Stud5th, GamePhase::Stud6th] {
+            table.deal_stud_street(street).unwrap();
+        }
+        table.deal_stud_street(GamePhase::Stud7th).unwrap();
+
+        assert_eq!(GamePhase::Stud7th, table.phase);
+        assert_eq!(1, table.board.len(), "exactly one shared 7th-street card");
+    }
+
+    /// `DEFECT_018`: the shared 7th-street card is only a fix if the showdown
+    /// counts it. With six private cards and one community card, every seat
+    /// must still evaluate a real seven-card hand — not `Eval::default()`.
+    #[test]
+    fn stud_river_case_eval_counts_the_community_card() {
+        let mut table = make_stud_table(8);
+        table.act_forced_bets().unwrap();
+        table.deal_stud_3rd_street().unwrap();
+        for street in [
+            GamePhase::Stud4th,
+            GamePhase::Stud5th,
+            GamePhase::Stud6th,
+            GamePhase::Stud7th,
+        ] {
+            table.deal_stud_street(street).unwrap();
+        }
+        assert_eq!(1, table.board.len(), "the fix under test must have fired");
+
+        let case_eval = table.stud_river_case_eval();
+
+        for (i, eval) in case_eval.iter().enumerate() {
+            assert_ne!(
+                Eval::default(),
+                *eval,
+                "seat {i} evaluated to a default hand; the community card was not counted"
+            );
+        }
+    }
+
+    /// `DEFECT_018`: same for Razz, which shares the street machine.
+    #[test]
+    fn razz_river_case_eval_counts_the_community_card() {
+        let seats = Seats::new(
+            (0..8)
+                .map(|i| Seat::new(Player::new_with_chips(format!("P{i}"), 10_000)))
+                .collect(),
+        );
+        let mut table = Table::razz_from_seats(seats, 2, 5, 20, 40).unwrap();
+        table.act_forced_bets().unwrap();
+        table.deal_stud_3rd_street().unwrap();
+        for street in [
+            GamePhase::Stud4th,
+            GamePhase::Stud5th,
+            GamePhase::Stud6th,
+            GamePhase::Stud7th,
+        ] {
+            table.deal_stud_street(street).unwrap();
+        }
+        assert_eq!(1, table.board.len(), "the fix under test must have fired");
+
+        let case_eval = table.razz_river_case_eval();
+
+        for (i, eval) in case_eval.iter().enumerate() {
+            assert_ne!(Eval::default(), *eval, "seat {i} evaluated to a default Razz hand");
+        }
+    }
+
+    /// `DEFECT_018`: nine-handed stud cannot be dealt at all — 9 × 6 = 54
+    /// exceeds the deck before 7th street is even reached. The constructor
+    /// must refuse rather than build an undealable table.
+    #[test]
+    fn stud_constructors_reject_more_than_eight_seats() {
+        let nine = || {
+            Seats::new(
+                (0..9)
+                    .map(|i| Seat::new(Player::new_with_chips(format!("P{i}"), 10_000)))
+                    .collect(),
+            )
+        };
+
+        assert!(matches!(
+            Table::stud_hi_from_seats(nine(), 2, 5, 20, 40),
+            Err(PKError::TooManyPlayers)
+        ));
+        assert!(matches!(
+            Table::razz_from_seats(nine(), 2, 5, 20, 40),
+            Err(PKError::TooManyPlayers)
+        ));
+    }
+
     fn make_three_player_razz_table() -> Table {
         let seats = Seats::new(vec![
             Seat::new(Player::new_with_chips("Alice".to_string(), 10_000)),
             Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
             Seat::new(Player::new_with_chips("Carol".to_string(), 10_000)),
         ]);
-        Table::razz_from_seats(seats, 2, 5, 20, 40)
+        Table::razz_from_seats(seats, 2, 5, 20, 40).unwrap()
     }
 
     fn make_three_player_stud_table() -> Table {
@@ -2361,7 +2646,7 @@ mod casino__table_tests {
             Seat::new(Player::new_with_chips("Carol".to_string(), 10_000)),
         ]);
         // ante 2, bring-in 5, small bet 20, big bet 40.
-        Table::stud_hi_from_seats(seats, 2, 5, 20, 40)
+        Table::stud_hi_from_seats(seats, 2, 5, 20, 40).unwrap()
     }
 
     #[test]
@@ -2445,7 +2730,7 @@ mod casino__table_tests {
             Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
             Seat::new(Player::new_with_chips("Carol".to_string(), 10_000)),
         ]);
-        let mut table = Table::stud_hi_from_seats(seats, 2, 5, 20, 40);
+        let mut table = Table::stud_hi_from_seats(seats, 2, 5, 20, 40).unwrap();
         table.act_forced_bets().unwrap();
         let shorty = table.seats.get_seat(0).unwrap();
         assert_eq!(0, shorty.player.chips, "the whole stack went to the ante");
@@ -2467,7 +2752,7 @@ mod casino__table_tests {
             Seat::new(Player::new_with_chips("Alice".to_string(), 10_000)),
             Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
         ]);
-        let mut table = Table::stud_hi_from_seats(seats, 2, 5, 20, 40);
+        let mut table = Table::stud_hi_from_seats(seats, 2, 5, 20, 40).unwrap();
         table.seats.get_seat_mut(1).unwrap().player.state = PlayerState::Out;
         table.act_antes().unwrap();
         assert_eq!(

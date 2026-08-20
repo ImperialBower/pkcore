@@ -246,7 +246,58 @@ impl Seats {
             .any(|s| !s.is_empty() && s.is_in_hand() && s.is_yet_to_act_or_blind())
     }
 
-    /// Find the next seat that still needs to act, starting the search at `utg`.
+    /// Returns the seat that set the current bet level, if the betting is open.
+    ///
+    /// The last aggressor is the seat whose bet equals `current_bet()` *and*
+    /// whose state is an aggressive one — a blind, bet, raise, re-raise, or
+    /// all-in. Callers are excluded on purpose: a caller matches the level
+    /// without setting it, so action does not restart behind them.
+    ///
+    /// Returns `None` when nobody has put chips in on this street, the
+    /// checked-around case where action simply starts under the gun.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats};
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("Q".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("R".to_string(), 1_000)),
+    /// ]);
+    ///
+    /// assert_eq!(None, seats.last_aggressor());
+    /// ```
+    #[must_use]
+    pub fn last_aggressor(&self) -> Option<u8> {
+        let current_bet = self.current_bet();
+        if current_bet == 0 {
+            return None;
+        }
+
+        for (idx, seat) in self.0.iter().enumerate() {
+            if seat.is_empty() || seat.player.bet != current_bet {
+                continue;
+            }
+            if matches!(
+                seat.player.state,
+                PlayerState::Blind(_)
+                    | PlayerState::Bet(_)
+                    | PlayerState::Raise(_)
+                    | PlayerState::ReRaise(_)
+                    | PlayerState::AllIn(_)
+            ) {
+                return u8::try_from(idx).ok();
+            }
+        }
+
+        None
+    }
+
+    /// Find the next seat that still needs to act.
+    ///
+    /// The search starts clockwise of [`Self::last_aggressor`], falling back to
+    /// `utg` when nobody has bet on this street. See `DEFECT_022`.
     ///
     /// # Errors
     ///
@@ -259,9 +310,18 @@ impl Seats {
         let current_bet = self.current_bet();
         let everyone_has_bet = self.has_everyone_bet();
 
+        // Action moves clockwise from whoever set the current bet level, not
+        // from under the gun. The two agree until a re-raise leaves owing seats
+        // on both sides of the raiser; from there a scan rooted at `utg` hands
+        // the action to a seat that has already acted. See `DEFECT_022`.
+        let start = match self.last_aggressor() {
+            Some(aggressor) => (aggressor as usize + 1) % size,
+            None => utg as usize,
+        };
+
         // First pass: find the next seat needing to act.
         for step in 0..size {
-            let idx = (utg as usize + step) % size;
+            let idx = (start + step) % size;
             let seat = &self.0[idx];
             if seat.is_empty() || !seat.is_in_hand() || seat.is_all_in() {
                 continue;
@@ -282,7 +342,7 @@ impl Seats {
 
         // Fallback: return the first non-empty in-hand seat.
         for step in 0..size {
-            let idx = (utg as usize + step) % size;
+            let idx = (start + step) % size;
             let seat = &self.0[idx];
             if seat.is_empty() || !seat.is_in_hand() || seat.is_all_in() {
                 continue;

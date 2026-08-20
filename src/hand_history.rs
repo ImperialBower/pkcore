@@ -660,10 +660,13 @@ impl HandHistory {
                 }
                 _ => (sb.max(20), bb.max(40)),
             };
+            // DEFECT_018: a recorded stud hand with more than
+            // `Table::MAX_STUD_SEATS` chairs describes a table that cannot be
+            // dealt, so the replay reports it rather than reconstructing it.
             if self.hand.game == HandVariant::Razz {
-                Table::razz_from_seats(seats, ante, bring_in, small_bet, big_bet)
+                Table::razz_from_seats(seats, ante, bring_in, small_bet, big_bet)?
             } else {
-                Table::stud_hi_from_seats(seats, ante, bring_in, small_bet, big_bet)
+                Table::stud_hi_from_seats(seats, ante, bring_in, small_bet, big_bet)?
             }
         } else if self.hand.game == HandVariant::Omaha {
             Table::plo_from_seats(seats, (sb, bb))

@@ -336,7 +336,7 @@ mod transition_surface_tests {
             Seat::new(Player::new_with_chips("Bob".to_string(), 10_000)),
             Seat::new(Player::new_with_chips("Carol".to_string(), 10_000)),
         ]);
-        let mut t = Table::stud_hi_from_seats(seats, 2, 5, 20, 40);
+        let mut t = Table::stud_hi_from_seats(seats, 2, 5, 20, 40).unwrap();
         t.act_forced_bets().expect("antes");
         t.deal_stud_3rd_street().expect("deal 3rd");
         t.act_bring_in().expect("bring-in"); // forced post, like blinds

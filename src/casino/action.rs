@@ -133,6 +133,10 @@ pub enum TableAction {
     ClosesTheAction(u8),
     CloseItOut(usize),
     EndHand,
+    /// The hand could not be completed and was unwound: every chip committed
+    /// to it was returned to the stack it came from. Carries the total
+    /// refunded (`DEFECT_019`).
+    HandAborted(usize),
     ResetTable,
     Showdown(u8),
     PlayerMucksCards(u8), // At a showdown one player mucks their cards rather than show them.
@@ -205,9 +209,39 @@ impl TableAction {
         }
     }
 
+    /// Mirrors a [`TableAction::PlayerWins`] into the matching
+    /// [`TableAction::PlayerLoses`], carrying the seat, player id and hand
+    /// across and dropping the pot-size field the losing variant does not
+    /// carry.
+    ///
+    /// Returns `None` for every other variant — only a win has a loss to
+    /// mirror. (`DEFECT_023`: this method used to be an unconditional
+    /// `unimplemented!()`.)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::bard::Bard;
+    /// use pkcore::casino::action::TableAction;
+    /// use uuid::Uuid;
+    ///
+    /// let id = Uuid::nil();
+    /// let win = TableAction::PlayerWins(3, id, Bard::default(), 500, 1_200);
+    ///
+    /// assert_eq!(
+    ///     Some(TableAction::PlayerLoses(3, id, Bard::default(), 500)),
+    ///     win.generate_player_loses()
+    /// );
+    /// assert_eq!(None, TableAction::Fold(3).generate_player_loses());
+    /// ```
     #[must_use]
-    pub fn generate_player_loses(&self) -> TableAction {
-        unimplemented!("generate_player_loses is not yet implemented")
+    pub fn generate_player_loses(&self) -> Option<TableAction> {
+        match self {
+            TableAction::PlayerWins(seat, player_id, hand, amount, _pot_size) => {
+                Some(TableAction::PlayerLoses(*seat, *player_id, *hand, *amount))
+            }
+            _ => None,
+        }
     }
 
     #[must_use]
@@ -402,14 +436,36 @@ impl Display for TableAction {
             TableAction::ChipAuditFailed(expected, actual) => {
                 write!(f, "Chip audit failed: expected {expected} chips, found {actual}")
             }
+            TableAction::HandAborted(refunded) => {
+                write!(f, "Hand aborted; {refunded} returned to players")
+            }
             TableAction::ResetTable => write!(f, "Table reset for next hand"),
         }
     }
 }
 
 #[cfg(test)]
+#[allow(non_snake_case)]
 mod tests {
     use super::*;
+
+    /// `DEFECT_023`: `generate_player_loses` was an unconditional
+    /// `unimplemented!()` on a `#[must_use]` public method.
+    #[test]
+    fn generate_player_loses__mirrors_a_win() {
+        let id = Uuid::nil();
+        let win = TableAction::PlayerWins(3, id, Bard::default(), 500, 1_200);
+
+        assert_eq!(
+            Some(TableAction::PlayerLoses(3, id, Bard::default(), 500)),
+            win.generate_player_loses()
+        );
+    }
+
+    #[test]
+    fn generate_player_loses__none_when_not_a_win() {
+        assert_eq!(None, TableAction::Fold(3).generate_player_loses());
+    }
 
     #[test]
     fn test_player_action_fold() {

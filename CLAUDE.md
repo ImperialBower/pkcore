@@ -75,8 +75,7 @@ Every change that touches code is done only when these two are done as well:
    - patch — bug fix, docs, tests, internals with no public API change
    - minor — new public API, or new behaviour that is backward compatible
    - major — any breaking change to the public API
-   Then run `cargo build` so `Cargo.lock` picks up the new `pkcore` version,
-   and commit `Cargo.lock` with the change.
+   Then run `cargo build` so `Cargo.lock` picks up the new `pkcore` version.
 
 Do not skip either step because the change "is small". A pure documentation
 edit that touches no code and no public API is the only exception, and it

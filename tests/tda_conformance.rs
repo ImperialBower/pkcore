@@ -653,6 +653,61 @@ mod tda_2024_conformance {
         );
     }
 
+    /// `DEFECT_018`: eight-handed stud is a legal, standard table size. It
+    /// needs 56 individual cards from a 52-card deck, so 7th street is dealt
+    /// as a single shared community card. The end-to-end proof: the hand must
+    /// reach a real showdown and award chips, not merely avoid an error.
+    ///
+    /// Gated on `bot-profiles` because `casino::session` is
+    /// (`src/casino/mod.rs:16`). This file carries no `required-features` on
+    /// purpose — it is the conformance harness and must run in the bare
+    /// kernel, which `cargo test --no-default-features` checks — so the gate
+    /// goes on the one test that needs a session rather than on the file. The
+    /// dealing and showdown halves of the fix are pinned by ungated unit tests
+    /// in `src/casino/table.rs`, which do run bare.
+    #[cfg(feature = "bot-profiles")]
+    #[test]
+    fn stud_full_table_runs_to_showdown() {
+        for razz in [false, true] {
+            let seats = Seats::new((0..8).map(|i| seat(&format!("P{i}"), 10_000)).collect());
+            let table = if razz {
+                Table::razz_from_seats(seats, 2, 5, 20, 40).unwrap()
+            } else {
+                Table::stud_hi_from_seats(seats, 2, 5, 20, 40).unwrap()
+            };
+            let mut session = PokerSession::new(table);
+            session.start_hand().expect("hand should start");
+
+            // Everyone calls every street: the widest possible field reaches
+            // 7th street, which is the condition that exhausts the deck.
+            let mut winnings = None;
+            for _ in 0..400 {
+                match session.next_step() {
+                    SessionStep::PlayerToAct(seat_number) => {
+                        session
+                            .apply_action(seat_number, PlayerAction::Call)
+                            .expect("a call must be legal");
+                    }
+                    SessionStep::StreetAdvanced => {}
+                    SessionStep::HandComplete => {
+                        winnings = Some(session.end_hand().expect("showdown should resolve"));
+                        break;
+                    }
+                    SessionStep::Failed(e) => {
+                        panic!("eight-handed {} stalled: {e:?}", if razz { "razz" } else { "stud" })
+                    }
+                }
+            }
+
+            let winnings = winnings.expect("hand never completed");
+            assert!(
+                !winnings.vec().is_empty(),
+                "eight-handed {} awarded nothing",
+                if razz { "razz" } else { "stud" }
+            );
+        }
+    }
+
     /// **Interpretation, not a quotation.** Rule 36 excludes "posted blinds"
     /// and says nothing about the stud bring-in. The bring-in is structurally a
     /// forced post and is treated as one throughout pkcore, so it is excluded
@@ -662,7 +717,7 @@ mod tda_2024_conformance {
     fn stud_bring_in_is_not_substantial_action() {
         let seats = Seats::new(vec![seat("A", 10_000), seat("B", 10_000), seat("C", 10_000)]);
         // ante 2, bring-in 5, small bet 20, big bet 40.
-        let mut table = Table::stud_hi_from_seats(seats, 2, 5, 20, 40);
+        let mut table = Table::stud_hi_from_seats(seats, 2, 5, 20, 40).unwrap();
         table.act_forced_bets().expect("antes should post");
         table.deal_stud_3rd_street().expect("3rd street should deal");
         table.act_bring_in().expect("bring-in should post");
@@ -872,7 +927,7 @@ mod tda_2024_conformance {
     fn rule_20_b_stud_odd_chip_goes_to_the_high_card_by_suit() {
         let stud = |seat_one: &str, seat_two: &str| {
             let seats = Seats::new(vec![seat("A", 10_000), seat("B", 10_000), seat("C", 10_000)]);
-            let mut table = Table::stud_hi_from_seats(seats, 2, 5, 20, 40);
+            let mut table = Table::stud_hi_from_seats(seats, 2, 5, 20, 40).unwrap();
             table
                 .inject_hole_cards(&[(1, seat_one), (2, seat_two)])
                 .expect("hole cards should inject");

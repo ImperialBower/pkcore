@@ -6,8 +6,9 @@
 //!
 //! # Cache Key
 //!
-//! [`cache_key`] produces a `u64` from the config's hero range, villain range,
-//! board, bet sizings, effective stack, and pot. [`crate::analysis::gto::combos::Combos`] is backed by a
+//! [`cache_key`] produces a `u64` from every field of the config: hero range,
+//! villain range, board, bet sizings, effective stack, pot, and the convergence
+//! controls (max iterations, target exploitability, CFR variant). [`crate::analysis::gto::combos::Combos`] is backed by a
 //! `HashSet`, so its contents are sorted before hashing to guarantee the same
 //! key regardless of iteration order.
 //!
@@ -52,7 +53,7 @@
 //! ```
 
 use crate::analysis::gto::solver::{SolverError, SolverResult};
-use crate::analysis::gto::solver_config::SolverConfig;
+use crate::analysis::gto::solver_config::{CfrVariant, SolverConfig};
 use std::collections::hash_map::DefaultHasher;
 use std::fs;
 use std::hash::{Hash, Hasher};
@@ -69,6 +70,16 @@ use std::path::PathBuf;
 /// - Bet sizings — each street's sizes sorted independently
 /// - Effective stack
 /// - Pot
+/// - Max iterations
+/// - Target exploitability (hashed by IEEE-754 bit pattern)
+/// - CFR variant — a discriminant tag plus, for `Discounted`, the `alpha` and
+///   `beta` bit patterns
+///
+/// Every field of [`SolverConfig`] is hashed. A field that changes the solved
+/// result but not the key would let one config's entry be served for another —
+/// see [`DEFECT_016`].
+///
+/// [`DEFECT_016`]: https://github.com/ImperialBower/pkcore/blob/main/docs/defects/DEFECT_016_solver_cache_key_omissions.md
 ///
 /// Uses [`DefaultHasher`] — stable within a build, suitable for a local disk
 /// cache. A key mismatch across builds is a cache miss, not a correctness
@@ -129,7 +140,36 @@ pub fn cache_key(config: &SolverConfig) -> u64 {
     config.effective_stack.hash(&mut hasher);
     config.pot.hash(&mut hasher);
 
+    // Convergence controls. These do not describe the *spot*, but they do
+    // decide the `SolverResult` that comes back — iteration count, early-stop
+    // threshold, and update rule all move the equilibrium and the reported
+    // exploitability. Omitting them collides a long DCFR solve with a short
+    // vanilla one.
+    config.max_iterations.hash(&mut hasher);
+    config.target_exploitability.to_bits().hash(&mut hasher);
+    hash_cfr_variant(&config.cfr_variant, &mut hasher);
+
     hasher.finish()
+}
+
+/// Feeds a [`CfrVariant`] into `hasher`.
+///
+/// `CfrVariant` cannot derive [`Hash`] because `Discounted` carries `f64`
+/// exponents, so this writes a discriminant tag first — keeping `Vanilla` and
+/// `CfrPlus` apart even though neither has a payload — then the IEEE-754 bit
+/// patterns of `alpha` and `beta`. Bit-pattern hashing means `-0.0` and `0.0`
+/// hash differently despite comparing equal; for a disk cache that is a miss
+/// and a re-solve, never a wrong answer.
+fn hash_cfr_variant(variant: &CfrVariant, hasher: &mut impl Hasher) {
+    match variant {
+        CfrVariant::Vanilla => 0_u8.hash(hasher),
+        CfrVariant::CfrPlus => 1_u8.hash(hasher),
+        CfrVariant::Discounted { alpha, beta } => {
+            2_u8.hash(hasher);
+            alpha.to_bits().hash(hasher);
+            beta.to_bits().hash(hasher);
+        }
+    }
 }
 
 // ── SolverCache ───────────────────────────────────────────────────────────────
@@ -334,7 +374,7 @@ mod tests {
     use super::*;
     use crate::analysis::gto::combos::Combos;
     use crate::analysis::gto::solver::Solver;
-    use crate::analysis::gto::solver_config::{BetSize, BetSizings, SolverConfig};
+    use crate::analysis::gto::solver_config::{BetSize, BetSizings};
     use crate::play::board::Board;
     use std::str::FromStr;
 
@@ -447,7 +487,71 @@ mod tests {
         assert_ne!(cache_key(&config1), cache_key(&config2));
     }
 
+    // The three convergence-control fields below are what `DEFECT_016` closed:
+    // each one changes the `SolverResult` a solve produces, so each one must
+    // change the key. See `docs/defects/DEFECT_016_solver_cache_key_omissions.md`.
+
+    #[test]
+    fn cache_key_different_max_iterations_differs() {
+        let config1 = river_config().with_max_iterations(3);
+        let config2 = river_config().with_max_iterations(100_000);
+        assert_ne!(cache_key(&config1), cache_key(&config2));
+    }
+
+    #[test]
+    fn cache_key_different_cfr_variant_differs() {
+        let config1 = river_config().with_cfr_variant(CfrVariant::Vanilla);
+        let config2 = river_config().with_cfr_variant(CfrVariant::CfrPlus);
+        assert_ne!(cache_key(&config1), cache_key(&config2));
+    }
+
+    #[test]
+    fn cache_key_different_discount_exponents_differ() {
+        let config1 = river_config().with_cfr_variant(CfrVariant::Discounted { alpha: 1.5, beta: 0.0 });
+        let config2 = river_config().with_cfr_variant(CfrVariant::Discounted { alpha: 3.0, beta: 0.0 });
+        assert_ne!(cache_key(&config1), cache_key(&config2));
+    }
+
+    #[test]
+    fn cache_key_different_target_exploitability_differs() {
+        let config1 = river_config().with_target_exploitability(0.1);
+        let config2 = river_config().with_target_exploitability(0.000_1);
+        assert_ne!(cache_key(&config1), cache_key(&config2));
+    }
+
+    #[test]
+    fn cache_key_same_cfr_variant_is_deterministic() {
+        let config = river_config().with_cfr_variant(CfrVariant::Discounted { alpha: 1.5, beta: 0.0 });
+        assert_eq!(cache_key(&config), cache_key(&config));
+    }
+
     // ── SolverCache ───────────────────────────────────────────────────────────
+
+    #[test]
+    fn solver_cache_does_not_serve_a_short_solve_for_a_long_one() {
+        let cache = temp_cache();
+        let short = river_config().with_max_iterations(3);
+        let long = river_config().with_max_iterations(100_000);
+
+        cache.put(&short, &Solver::new(short.clone()).solve()).unwrap();
+
+        // The stored entry answered a different question. Serving it here would
+        // hand back a 3-iteration result to a caller who asked for 100 000.
+        assert!(cache.get(&long).is_none());
+        assert!(cache.get(&short).is_some());
+    }
+
+    #[test]
+    fn solver_cache_does_not_serve_one_cfr_variant_for_another() {
+        let cache = temp_cache();
+        let vanilla = river_config().with_cfr_variant(CfrVariant::Vanilla);
+        let plus = river_config().with_cfr_variant(CfrVariant::CfrPlus);
+
+        cache.put(&vanilla, &Solver::new(vanilla.clone()).solve()).unwrap();
+
+        assert!(cache.get(&plus).is_none());
+        assert!(cache.get(&vanilla).is_some());
+    }
 
     #[test]
     fn test_solver_cache_miss_returns_none() {

@@ -60,9 +60,17 @@ impl Four {
     }
     //endregion
 
-    /// There's a serious flaw in this logic. Omaha requires that you use exactly two of cards
-    /// from the four in your hand, unlike NLHE where you can play with board. The valid, tested
-    /// logic is over in `OmahaHigh::eval()`. This is here for historical reasons and should be
+    /// There's a serious flaw in this logic. Omaha requires that you use exactly two of the cards
+    /// from the four in your hand, unlike NLHE where you can play the board. This method evaluates
+    /// two hole cards plus the whole board as a best-5-of-7, so it will happily play the board and
+    /// return a hand no Omaha player is allowed to make.
+    ///
+    /// Use [`crate::games::omaha::OmahaHigh::eval`] instead. It enumerates the 60 legal
+    /// 2-from-hand + 3-from-board combinations. Note that it carried this same flaw until
+    /// `DEFECT_017` fixed it in 0.5.4 — before that, the two methods were the same wrong logic in
+    /// two places, and this comment pointed at the other copy.
+    ///
+    /// This is kept for historical reasons and is deprecated; it has no callers in the crate.
     #[must_use]
     #[deprecated]
     pub fn omaha_high(&self, board: &Board) -> Eval {

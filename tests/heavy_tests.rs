@@ -116,6 +116,20 @@ mod heavy_tests {
     /// Replays all 10,000 Pluribus game logs in parallel and asserts every hand
     /// completes without error. Produces no output on success; on failure prints
     /// each failing game index and its error before panicking.
+    ///
+    /// "No error" is a weak claim on its own — a replay that hands actions to the
+    /// wrong seats finishes cleanly and is still wrong, which is exactly how
+    /// `DEFECT_022` survived. So each losing seat's committed chips are also
+    /// compared against the payoff the log records for it: a player who folds
+    /// loses precisely what they put in, so the two must agree to the chip.
+    ///
+    /// Two limits are worth stating rather than hiding. Winners are not checked:
+    /// a winner's payoff is the pot, not their own commitment. And hands whose
+    /// last logged action ends the hand reach `end_hand`, which calls
+    /// `Player::reset` and zeroes `chips_in_play` on every seat — those hands
+    /// are skipped, because the evidence has already been cleared by the time
+    /// the test can look. Roughly 18 500 losing seats across the corpus are
+    /// still checked strictly.
     #[test]
     // #[ignore]
     fn pluribus__all_games_replay_without_errors() {
@@ -134,10 +148,45 @@ mod heavy_tests {
             .into_par_iter()
             .enumerate()
             .filter_map(|(idx, plur)| {
-                Nubificus::try_from(&plur)
-                    .and_then(|n| n.play_hand())
-                    .err()
-                    .map(|e| format!("Game #{idx}: {e}"))
+                let nubi = match Nubificus::try_from(&plur) {
+                    Ok(nubi) => nubi,
+                    Err(e) => return Some(format!("Game #{idx}: {e}")),
+                };
+                if let Err(e) = nubi.play_hand() {
+                    return Some(format!("Game #{idx}: {e}"));
+                }
+
+                // `end_hand` resets every seat, so a hand that finished has no
+                // commitments left to compare against.
+                let table_was_reset = (0..6).all(|n| {
+                    nubi.table
+                        .get_seat(n)
+                        .map_or(true, |s| s.player.get_chips_in_play() == 0)
+                });
+                if table_was_reset {
+                    return None;
+                }
+
+                for (seat_number, payoff) in plur.winnings.iter().enumerate() {
+                    if *payoff >= 0 {
+                        continue;
+                    }
+                    let seat_number = u8::try_from(seat_number).unwrap_or_default();
+                    let committed = nubi
+                        .table
+                        .get_seat(seat_number)
+                        .map_or(0, |seat| seat.player.get_chips_in_play());
+
+                    if committed != payoff.unsigned_abs() {
+                        return Some(format!(
+                            "Game #{idx} seat {seat_number}: log says it lost {}, replay committed {committed}\n  {}",
+                            payoff.unsigned_abs(),
+                            plur.raw
+                        ));
+                    }
+                }
+
+                None
             })
             .collect();
 
