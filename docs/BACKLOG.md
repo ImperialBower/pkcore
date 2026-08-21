@@ -1,16 +1,37 @@
 # Backlog
 
-> Refreshed by the `/backlog` skill on **2026-08-18** against `main` @ `73570fe2`,
-> pkcore `0.5.1`. An index of outstanding work aggregated from EPIC docs,
+> Refreshed by the `/backlog` skill on **2026-08-21** against `main` @ `1f49da32`,
+> pkcore `0.6.0` (tagged `v0.6.0` and published to crates.io on 2026-08-19). An index of outstanding work aggregated from EPIC docs,
 > `ROADMAP.md`, defect reports, code comments, the unreleased changelog, and
 > open GitHub issues. Items tagged 🤖 are machine-proposed — review before
 > adopting. Tech-debt detail lives in [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
 >
-> **What changed since the 2026-06-19 pass:** EPIC-19, 23, 25, 26, 27, 28, 30,
-> 31, 33 all closed; the variant initiative (EPIC-29 – EPIC-33) shipped;
-> all 66 EPIC docs moved to `docs/epics/`; 13 of 14 filed defects are fixed.
-> The frontier is no longer the variant engine — it is the **kernel-hardening
-> and platform-reach** block.
+> **What changed since the 2026-08-18 pass:** the `0.5.1` – `0.6.0` defect
+> sweep landed and shipped (`DEFECT_015` – `DEFECT_023`, nine fixes, six
+> breaking signatures). All 23 filed defects are now fixed. No new EPIC work
+> landed. The frontier is unchanged — **kernel-hardening and platform-reach** —
+> but the release has loose ends (see *Release follow-through* below).
+
+---
+
+## Release follow-through (do these first — they are short)
+
+`v0.6.0` is tagged and on crates.io, but the release was not closed out:
+
+1. ~~**Cut `CHANGELOG.md`**~~ — **DONE 2026-08-21.** `## [0.6.0] - 2026-08-19`
+   header and compare link added; `[Unreleased]` is empty again.
+2. **Write `docs/releases/RELEASE_0.6.0.md`** — [`RELEASE_AUDIT_0.6.0.md`](RELEASE_AUDIT_0.6.0.md)
+   opens with *"Release notes: none authored yet."* The audit already lists
+   every breaking change; the notes are a reformat of that table.
+3. **Unbreak downstream** — the audit found two repos that fail to compile on
+   `0.6.0`: **pkpy** (2 production sites) and **pkdealer** (1 production, 1
+   example). `pkgto-web`, `pkkuhn-web`, `pkarena0-web` pass but still pin
+   `0.2.1`/`0.5.0` and need a version bump. Fix list with file:line is in the
+   audit's per-repo sections.
+4. **`PokerSession::next_actor` still swallows failure** — the one leftover
+   from `DEFECT_019`: it collapses the same `advance_street` error to `None`
+   that `next_step` now surfaces as `SessionStep::Failed`. Small, same shape
+   as the fix already made.
 
 ---
 
@@ -96,9 +117,9 @@ Written down, not committed to. No status table, no work items yet.
 
 ## Bugs / Defects
 
-**All 23 filed defects are resolved** (`DEFECT_001` is a preserved record of a
-rejected rule interpretation, reverted in `0.0.55`). `docs/defects/` is in good
-shape.
+**All 23 filed defects are resolved and shipped in `0.6.0`** (`DEFECT_001` is a
+preserved record of a rejected rule interpretation, reverted in `0.0.55`).
+`docs/defects/` is in good shape.
 `DEFECT_018` (eight-handed stud exhausted the deck) and `DEFECT_019`
 (`next_step` disguised a failed deal as a finished hand) were documented on
 2026-08-18 but not actually fixed until `0.6.0` — the commit that named them
@@ -110,11 +131,14 @@ changed docs only. Both are fixed now; the one leftover is recorded on
   item from the TDA-2024 audit. Recorded and **unreachable until a multi-table
   event model exists**, so it is correctly parked, not neglected.
   (`src/games/betting_structure.rs:231`, [`defects/DEFECT_008_tda_2024_rules_compliance.md`](defects/DEFECT_008_tda_2024_rules_compliance.md))
-- **EPIC-DEFECT-Minraise** — "size of the last raise rule not enforced by
-  TableCelled". Predates the DEFECT_0NN series; **verify against the DEFECT_007
-  / DEFECT_010 fixes before working it** — it may already be closed by them.
+- **EPIC-DEFECT-Minraise** — a two-line stub: a title and nothing else. The
+  rule it names (size of the last raise) is enforced and tested by `DEFECT_007`,
+  `DEFECT_010`, `DEFECT_015` and `DEFECT_023`. **Delete the file or rename it
+  `-CLOSED`**; it is not open work.
   ([`epics/EPIC-DEFECT-Minraise.md`](epics/EPIC-DEFECT-Minraise.md))
-- **EPIC-DEFECT-A — Preflop perf** ([`epics/EPIC-DEFECT-A_Preflop_Perf.md`](epics/EPIC-DEFECT-A_Preflop_Perf.md))
+- **EPIC-DEFECT-A — Preflop perf** — a **zero-byte file**. Nothing records what
+  the defect was. Delete it, or write it if you still remember it.
+  ([`epics/EPIC-DEFECT-A_Preflop_Perf.md`](epics/EPIC-DEFECT-A_Preflop_Perf.md))
 - **`TODO DEFECT`, untriaged** (`src/arrays/matchups/masked.rs:67`) — a bare
   marker with no description. Four more `Defect watch` notes sit on the
   `Type1223a–d` suit textures (`src/arrays/matchups/masks/suit_texture.rs:20–23`).
@@ -135,23 +159,26 @@ changed docs only. Both are fixed now; the one leftover is recorded on
 [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
 
 A fresh five-subsystem automated review ran **2026-08-18** and returned
-**11 verified findings**. One is fixed; the three worth doing next:
+**11 verified findings**. Nine of them are now fixed and shipped in `0.6.0`
+as `DEFECT_015` – `DEFECT_023`. Left open from that pass: the `cache_key`
+exhaustive-destructure guard, the one illegal legacy hand in
+`data/hands/legacy/pkarena0-session_2026-04-15.yaml`, `Cards::insert_at`,
+the four `KuhnCfr` `expect()`s, and the dead `Position6MaxPointer` /
+`ActionTracker` types. The record of what was fixed:
 
 0. ~~🤖 **`TableCelled::act_raise` underflows on a short all-in**~~ — **FIXED in
    `0.5.2`**, recorded as [`DEFECT_015`](defects/DEFECT_015_act_raise_all_in_underflow.md).
    The lasting lesson is in that report: two near-identical `act_raise` bodies
    exist, and the `DEFECT_007` fix hardened only one of them. Check the sibling
    whenever you fix a betting action in either.
-2. 🤖 **`SolverCache::cache_key` omits `max_iterations` and `cfr_variant`** — two
-   solver configs differing only in iteration count or CFR variant collide on
-   one cache file, serving a result solved under different parameters.
-   (`src/analysis/gto/solver_cache.rs:97`)
-3. 🤖 **`OmahaHigh::eval` does not enforce the exactly-2-hole-cards rule** — and
-   a doc comment on the deprecated `Four::omaha_high` points readers at it as
-   "the valid, tested logic". It is neither, and it is in `prelude`. Not on the
-   live showdown path. (`src/games/omaha.rs:38`)
-4. 🤖 **`Nubificus::act` discards every action `Result`** — replay drifts out of
-   sync with the log it is reproducing, silently. (`src/analysis/nubibus.rs:51`)
+2. ~~🤖 **`SolverCache::cache_key` omits `max_iterations` and `cfr_variant`**~~ —
+   **FIXED in `0.5.3`**, [`DEFECT_016`](defects/DEFECT_016_solver_cache_key_omissions.md).
+3. ~~🤖 **`OmahaHigh::eval` does not enforce the exactly-2-hole-cards rule**~~ —
+   **FIXED in `0.5.4`**, [`DEFECT_017`](defects/DEFECT_017_omaha_eval_two_card_rule.md).
+4. ~~🤖 **`Nubificus::act` discards every action `Result`**~~ — **FIXED in
+   `0.6.0`**, [`DEFECT_020`](defects/DEFECT_020_nubificus_act_discards_results.md).
+   Fixing it exposed [`DEFECT_021`](defects/DEFECT_021_pluribus_cumulative_amounts.md)
+   and [`DEFECT_022`](defects/DEFECT_022_next_to_act_restarts_under_the_gun.md).
 
 ~~Plus a recurring shape worth one sweep: **four public methods whose whole body is
 `unimplemented!()`** (`SeatsCell::is_seat_all_in`, `TableAction::generate_player_loses`,
@@ -183,10 +210,10 @@ odd chips, and the CFR/equity math. See `TECHNICAL_DEBT.md` for what was traced.
 
 ---
 
-## Unreleased (in `CHANGELOG.md`, awaiting a version cut)
+## Unreleased (in `CHANGELOG.md`)
 
-pkcore is at `0.5.1`. Unreleased carries the EPIC-79b design doc and the
-`docs/epics/` folder move — **documentation only, no code changes**.
+Empty. The `0.6.0` header was cut on 2026-08-21; the tree matches the
+`v0.6.0` tag.
 
 ---
 

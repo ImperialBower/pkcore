@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-08-19
+
 ### Added
 
 - **[EPIC-79b: The Sealed Deck](docs/epics/EPIC-79b_Sealed_Deck.md)** — a design doc,
@@ -1090,6 +1092,7 @@ on the wire, and `replay` behavior is unaffected by the new metadata. Driven by
 `ImperialBower/pkdealer` EPIC-40 Phase 4 (arena recorder agent-fidelity
 annotations).
 
+[0.6.0]: https://github.com/ImperialBower/pkcore/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/ImperialBower/pkcore/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/ImperialBower/pkcore/compare/v0.3.5...v0.4.0
 [0.3.5]: https://github.com/ImperialBower/pkcore/compare/v0.3.4...v0.3.5

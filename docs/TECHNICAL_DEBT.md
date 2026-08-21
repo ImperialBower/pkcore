@@ -7,8 +7,10 @@
 > Standards source: `CLAUDE.md` (no `unwrap()`/`expect()`/`panic!()` in library
 > code; every public fn needs a doc test + unit test).
 >
-> Last refreshed **2026-08-18** against `main` @ `73570fe2`, pkcore `0.5.1`,
-> including a fresh five-subsystem automated review (see the 🤖 section).
+> Last refreshed **2026-08-21** against `main` @ `1f49da32`, pkcore `0.6.0`.
+> The last automated review pass ran 2026-08-18 (see the 🤖 section); nine of
+> its eleven findings shipped as `DEFECT_015` – `DEFECT_023` in `0.6.0`. No
+> new code TODOs since; the census below is unchanged.
 > Marker census in `src/`: 70 `TODO`, of which 11 `TODO RF`, 3 `TODO TD`,
 > 1 `TODO DEFECT`. No `FIXME`, `HACK`, or `XXX` markers remain.
 
@@ -23,6 +25,8 @@ _Sourced from `TODO TD` / `TODO DEFECT` comments in the codebase._
 - [ ] **Suit-texture "defect watch"** — four `Type1223a–d` variants carry a `Defect watch` note, and the module header calls the code "an abomination. No wonder there are so many gaps in it." (`src/arrays/matchups/masks/suit_texture.rs:20–23`, `:36`)
 - [ ] **`BinaryCardMap` has no `Display`** — `TODO: Implement display trait`. House rule asks for `Display` on user-facing types. (`src/analysis/store/bcm/binary_card_map.rs:199`)
 - [ ] **`preflop` example double-inserts** — `TODO TD DEFECT: Still doing double inserts`, plus an error-cast ergonomics gap. (`examples/preflop.rs:210`, `:117`)
+- [ ] **`PokerSession::next_actor` swallows a failed deal** — the `DEFECT_019` leftover. `advance_street().is_err()` collapses to `None`, the same silence `next_step` used to have before it grew `SessionStep::Failed`. A caller cannot tell "hand over" from "deal failed". Suggested: return `Result<Option<u8>, PKError>`, or route through `next_step`. (`src/casino/session.rs:458`, [`DEFECT_019`](defects/DEFECT_019_next_step_swallows_advance_street_error.md))
+- [ ] **Two empty defect EPIC stubs** — `EPIC-DEFECT-Minraise.md` is a bare title (rule now covered by `DEFECT_007`/`010`/`015`/`023`); `EPIC-DEFECT-A_Preflop_Perf.md` is zero bytes. Delete or close both so `ls docs/epics | grep -v CLOSED` stops listing them as open. (`docs/epics/`)
 
 ### Self-declared missing tests
 
