@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **[`docs/releases/RELEASE_0.6.0.md`](docs/releases/RELEASE_0.6.0.md)** — release
+  notes for `0.6.0`, written after the tag. Lists the six breaking signatures,
+  the six behaviour-only changes, and the downstream repos that need edits.
+
 ## [0.6.0] - 2026-08-19
 
 ### Added

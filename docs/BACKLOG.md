@@ -20,9 +20,8 @@
 
 1. ~~**Cut `CHANGELOG.md`**~~ — **DONE 2026-08-21.** `## [0.6.0] - 2026-08-19`
    header and compare link added; `[Unreleased]` is empty again.
-2. **Write `docs/releases/RELEASE_0.6.0.md`** — [`RELEASE_AUDIT_0.6.0.md`](RELEASE_AUDIT_0.6.0.md)
-   opens with *"Release notes: none authored yet."* The audit already lists
-   every breaking change; the notes are a reformat of that table.
+2. ~~**Write `docs/releases/RELEASE_0.6.0.md`**~~ — **DONE 2026-08-21.**
+   [`releases/RELEASE_0.6.0.md`](releases/RELEASE_0.6.0.md).
 3. **Unbreak downstream** — the audit found two repos that fail to compile on
    `0.6.0`: **pkpy** (2 production sites) and **pkdealer** (1 production, 1
    example). `pkgto-web`, `pkkuhn-web`, `pkarena0-web` pass but still pin
