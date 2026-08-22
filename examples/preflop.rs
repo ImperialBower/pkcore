@@ -135,7 +135,7 @@ fn main() {
 fn read_input(conn: &Connection, shus: &mut Vec<SortedHeadsUp>) {
     let now = std::time::Instant::now();
 
-    let i = Terminal::receive_usize("How many runs? ");
+    let i = Terminal::receive_usize("How many runs? ").expect("could not read stdin");
 
     println!("Processing {i} hands.");
 
@@ -149,7 +149,7 @@ fn read_input(conn: &Connection, shus: &mut Vec<SortedHeadsUp>) {
 }
 
 fn calc(shu: &SortedHeadsUp) -> HUPResult {
-    HUPResult::from(shu)
+    HUPResult::try_from(shu).expect("binary card map unavailable")
 }
 
 /// Right now we're doing an optimization of this method. We need to be able to check if the record

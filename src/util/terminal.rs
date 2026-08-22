@@ -12,7 +12,7 @@ use crate::prelude::HoleCards;
 #[cfg(not(target_arch = "wasm32"))]
 use rand::prelude::*;
 #[cfg(not(target_arch = "wasm32"))]
-use std::io::{Write, stdin, stdout};
+use std::io::{BufRead, Write, stdin, stdout};
 #[cfg(all(unix, feature = "terminal"))]
 use termion::input::TermRead;
 #[cfg(all(unix, feature = "terminal"))]
@@ -128,19 +128,28 @@ impl Terminal {
     ///
     /// TODO use [RustyLine](https://github.com/kkawakam/rustyline)
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// If it somehow wigs out on the input.
+    /// [`PKError::InvalidIO`] if stdin cannot be read. Text that is not a
+    /// number reads as `0`.
     #[cfg(not(target_arch = "wasm32"))]
-    #[must_use]
-    #[allow(clippy::expect_used)]
-    pub fn receive_usize(prompt: &str) -> usize {
+    pub fn receive_usize(prompt: &str) -> Result<usize, PKError> {
+        Self::receive_usize_from(&mut stdin().lock(), prompt)
+    }
+
+    /// [`Terminal::receive_usize`] over any reader, so the parsing can be
+    /// tested without a terminal.
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::InvalidIO`] if `reader` fails.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn receive_usize_from<R: BufRead>(reader: &mut R, prompt: &str) -> Result<usize, PKError> {
         print!("{prompt}");
         let _ = stdout().flush();
         let mut input_text = String::new();
-        stdin().read_line(&mut input_text).expect("Failed to receive value");
-        let trimmed = input_text.trim();
-        trimmed.parse::<usize>().unwrap_or_default()
+        reader.read_line(&mut input_text).map_err(|_| PKError::InvalidIO)?;
+        Ok(input_text.trim().parse::<usize>().unwrap_or_default())
     }
 
     /// # Errors
@@ -168,5 +177,46 @@ impl Terminal {
             return Err(PKError::TooManyCards);
         }
         Ok(cards)
+    }
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+#[allow(non_snake_case)]
+mod util__terminal_tests {
+    use super::*;
+    use std::io::{self, BufRead, Cursor, Read};
+
+    struct BrokenStdin;
+
+    impl Read for BrokenStdin {
+        fn read(&mut self, _buf: &mut [u8]) -> io::Result<usize> {
+            Err(io::Error::other("stdin is closed"))
+        }
+    }
+
+    impl BufRead for BrokenStdin {
+        fn fill_buf(&mut self) -> io::Result<&[u8]> {
+            Err(io::Error::other("stdin is closed"))
+        }
+
+        fn consume(&mut self, _amt: usize) {}
+    }
+
+    #[test]
+    fn receive_usize_from__parses_a_number() {
+        assert_eq!(Ok(42), Terminal::receive_usize_from(&mut Cursor::new("42\n"), ""));
+    }
+
+    #[test]
+    fn receive_usize_from__non_number_is_zero() {
+        assert_eq!(Ok(0), Terminal::receive_usize_from(&mut Cursor::new("lots\n"), ""));
+    }
+
+    #[test]
+    fn receive_usize_from__read_error_is_invalid_io() {
+        assert_eq!(
+            Err(PKError::InvalidIO),
+            Terminal::receive_usize_from(&mut BrokenStdin, "")
+        );
     }
 }

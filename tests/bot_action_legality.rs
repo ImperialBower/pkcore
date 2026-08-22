@@ -93,7 +93,7 @@ fn run_without_fallback(structure: Structure, seed: u64, hands: usize) {
             return;
         }
 
-        while let Some(seat) = session.next_actor() {
+        while let Some(seat) = session.next_actor().unwrap() {
             let profile = &profiles[seat as usize % profiles.len()];
             let action = profile.decide(&session.table, seat, &mut rng);
             let to_call = session.table.to_call(seat);
@@ -150,7 +150,7 @@ fn run_stud_without_fallback(seed: u64, hands: usize) {
             return;
         }
 
-        while let Some(seat) = session.next_actor() {
+        while let Some(seat) = session.next_actor().unwrap() {
             let profile = &profiles[seat as usize % profiles.len()];
             let action = profile.decide(&session.table, seat, &mut rng);
             let min_raise_to = session.table.min_raise_to();

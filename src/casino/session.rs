@@ -418,13 +418,22 @@ impl PokerSession {
         self.hand_number > 0 && !matches!(self.table.phase, GamePhase::NewHand)
     }
 
-    /// Returns the seat index of the next player to act, or `None` if the hand
-    /// is complete.
+    /// Returns the seat index of the next player to act, or `Ok(None)` if the
+    /// hand is complete.
     ///
     /// Automatically advances streets when a betting round ends: calls
     /// [`bring_it_in`](Table::bring_it_in) and deals the next board card
     /// (`deal_flop` / `deal_turn` / `deal_river`) before returning the first
     /// actor of the new street.
+    ///
+    /// # Errors
+    ///
+    /// Returns the error from the street advance when the hand cannot
+    /// continue — [`PKError::NotEnoughCards`] if the deck runs dry, above all.
+    /// Only "no streets remain" is a completion; everything else is a fault
+    /// the caller must handle by calling
+    /// [`abort_hand`](PokerSession::abort_hand), never
+    /// [`end_hand`](PokerSession::end_hand) (`DEFECT_019`).
     ///
     /// # Examples
     ///
@@ -444,28 +453,33 @@ impl PokerSession {
     ///     Table::nlh_from_seats(seats, ForcedBets::new(10, 20))
     /// );
     /// session.start_hand().unwrap();
-    /// assert!(session.next_actor().is_some());
+    /// assert!(session.next_actor().unwrap().is_some());
     /// # }
     /// ```
-    pub fn next_actor(&mut self) -> Option<u8> {
+    pub fn next_actor(&mut self) -> Result<Option<u8>, PKError> {
         if self.is_hand_complete() {
-            return None;
+            return Ok(None);
         }
         // Use a `while` loop so that an all-in run-out (all remaining players
         // are AllIn on the flop, say) advances through every remaining street
         // without ever returning a stale actor seat to the caller.
         while self.table.seats.is_betting_complete() {
-            if self.advance_street().is_err() {
-                return None;
+            match self.advance_street() {
+                Ok(()) => {}
+                // `DEFECT_019`: only "no streets remain" ends a hand. Every
+                // other failure — a dry deck above all — is reported, not
+                // collapsed into "hand over".
+                Err(PKError::InvalidAction) if self.table.is_last_street() => return Ok(None),
+                Err(e) => return Err(e),
             }
             if self.is_hand_complete() {
-                return None;
+                return Ok(None);
             }
         }
         if self.table.is_game_over() {
-            return None;
+            return Ok(None);
         }
-        Some(self.table.next_to_act())
+        Ok(Some(self.table.next_to_act()))
     }
 
     /// Applies a [`PlayerAction`] for the given seat.
@@ -496,7 +510,7 @@ impl PokerSession {
     ///     Table::nlh_from_seats(seats, ForcedBets::new(10, 20))
     /// );
     /// session.start_hand().unwrap();
-    /// let seat = session.next_actor().unwrap();
+    /// let seat = session.next_actor().unwrap().unwrap();
     /// assert!(session.apply_action(seat, PlayerAction::Fold).is_ok());
     /// # }
     /// ```
@@ -671,7 +685,7 @@ impl PokerSession {
         F: FnMut(&Table, u8) -> PlayerAction,
     {
         self.start_hand()?;
-        while let Some(seat) = self.next_actor() {
+        while let Some(seat) = self.next_actor()? {
             let action = on_action(&self.table, seat);
             self.apply_action(seat, action)?;
         }
@@ -958,7 +972,7 @@ mod tests {
     fn poker_session_is_hand_complete_after_fold() {
         let mut session = two_player_session();
         session.start_hand().unwrap();
-        let seat = session.next_actor().unwrap();
+        let seat = session.next_actor().unwrap().unwrap();
         session.apply_action(seat, PlayerAction::Fold).unwrap();
         assert!(session.is_hand_complete());
     }
@@ -990,7 +1004,7 @@ mod tests {
         let mut flop_seen = false;
         let max = 20;
         for _ in 0..max {
-            match session.next_actor() {
+            match session.next_actor().unwrap() {
                 None => break,
                 Some(seat) => {
                     if session.table.board.len() >= 3 {
@@ -1033,20 +1047,44 @@ mod tests {
         session.start_hand().unwrap();
 
         // In heads-up, SB (button) acts first preflop. Both go all-in.
-        let seat_a = session.next_actor().unwrap();
+        let seat_a = session.next_actor().unwrap().unwrap();
         session.apply_action(seat_a, PlayerAction::AllIn).unwrap();
-        let seat_b = session.next_actor().unwrap();
+        let seat_b = session.next_actor().unwrap().unwrap();
         session.apply_action(seat_b, PlayerAction::AllIn).unwrap();
 
         // Now both are all-in. next_actor() must return None — the run-out
         // (flop → turn → river) happens internally without surfacing a stale
         // actor to the caller.
-        let actor = session.next_actor();
+        let actor = session.next_actor().unwrap();
         assert!(actor.is_none(), "expected None for all-in run-out, got seat {actor:?}");
 
         // The hand must still be completable.
         let winnings = session.end_hand().unwrap();
         assert!(!winnings.vec().is_empty(), "expected a winner");
+    }
+
+    /// `DEFECT_019` leftover: `next_actor` used to collapse a failed deal to
+    /// `None`, which reads as "hand over" — the same lie `next_step` told
+    /// before it grew `SessionStep::Failed`. A dry deck is a fault the caller
+    /// has to be told about.
+    #[test]
+    fn next_actor_reports_failure_when_deal_cannot_complete() {
+        let mut session = three_player_session();
+        session.start_hand().unwrap();
+
+        // Empty the stub so dealing the flop cannot succeed.
+        let _ = session.table.deck.draw_all();
+
+        // Everyone calls: betting completes and the flop deal is attempted.
+        for _ in 0..3 {
+            let seat = session
+                .next_actor()
+                .unwrap()
+                .expect("a player should be to act preflop");
+            session.apply_action(seat, PlayerAction::Call).unwrap();
+        }
+
+        assert_eq!(Err(PKError::NotEnoughCards), session.next_actor());
     }
 
     // ── next_step() ───────────────────────────────────────────────────────────
@@ -1357,7 +1395,7 @@ mod tests {
         session.start_hand().unwrap();
         session.set_blinds(ForcedBets::new(100, 200));
         // Finish the hand by folding the next actor.
-        let actor = session.next_actor().unwrap();
+        let actor = session.next_actor().unwrap().unwrap();
         session.apply_action(actor, PlayerAction::Fold).unwrap();
         session.end_hand().unwrap();
         // Next hand picks up the deferred blinds.

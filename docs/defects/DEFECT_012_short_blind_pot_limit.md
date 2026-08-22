@@ -227,9 +227,10 @@ Observed at `0.5.0` on 2026-08-17. Before the fix the 54-B test failed with
 `left: 700  right: 600`, and the snapshot-agreement test failed the same way after the
 table alone was fixed.
 
-One `DEFECT_008` finding remains open: **D8-4** (dead button). **D8-6** (fixed-limit
-raise cap at event-heads-up) stays recorded but unreachable until a multi-table event
-model exists.
+At the time of writing one `DEFECT_008` finding remained open, **D8-4** (dead
+button); it was fixed the same day as [`DEFECT_013`](DEFECT_013_dead_button.md).
+**D8-6** (fixed-limit raise cap at event-heads-up) was closed on 2026-08-21 as an
+accepted divergence — unreachable until a multi-table event model exists.
 
 ---
 

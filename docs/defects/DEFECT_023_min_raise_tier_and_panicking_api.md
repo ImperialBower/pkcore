@@ -302,11 +302,21 @@ happens for a seat that isn't there?" — passes and reads as coverage.
   if they are not, and never leave a `pub` method whose only behaviour is a
   panic.
 
-Note that a class of these remains open. `SevenFiveBCM::exists`,
+~~Note that a class of these remains open. `SevenFiveBCM::exists`,
 `SevenFiveBCM::insert_many`, and the `Bard` / `CardsCell` / `Card` bodies are
 still `unimplemented!()`. Some of those are deliberate API design covered by
 `#[should_panic]` tests — `docs/TECHNICAL_DEBT.md` marks which — and the rest
-are the next sweep.
+are the next sweep.~~
+
+**The next sweep ran on 2026-08-21 (`0.7.0`).** Every `unimplemented!()` whose
+message said what the method *should* do was implemented: `CardsCell::swap` /
+`card_at`, `Bard::swap`, `HoleCards::clean`, `SortedHeadsUp::clean`,
+`Board::clean` / `the_nuts`, `Twos::percentage`, `SevenFiveBCM::exists` /
+`insert_many` / `select_all`, `TestData::deck_the_hand_dealable`. What is left
+is the deliberate set — `add` / `card_at` / `swap` on fixed-size hands and
+`the_nuts` on bare card sets, where the trait signature has no error channel
+and the operation has no meaning — each documented and `#[should_panic]`
+tested. `docs/TECHNICAL_DEBT.md` carries the list.
 
 ---
 

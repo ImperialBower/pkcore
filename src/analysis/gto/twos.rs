@@ -352,7 +352,7 @@ impl Twos {
     /// Returns [`Percentage::default`] (zero) if the combo expands to no hands.
     ///
     /// # Examples
-    /// ```no_run
+    /// ```
     /// use pkcore::analysis::gto::combo::Combo;
     /// use pkcore::analysis::gto::twos::Twos;
     ///
@@ -363,13 +363,13 @@ impl Twos {
     /// ```
     #[must_use]
     pub fn percentage(&self, combo: &Combo) -> Percentage {
-        let total = Twos::from(combo).len();
+        let in_combo = Twos::from(combo);
+        let total = in_combo.len();
         if total == 0 {
             return Percentage::default();
         }
-        unimplemented!(
-            "percentage is not yet implemented; count self's twos that fall in `combo`, then divide by `total`"
-        )
+        let number = self.0.iter().filter(|two| in_combo.contains(two)).count();
+        Percentage::new(number, total)
     }
 
     /// Returns a sorted, deduplicated [`Vec<Two>`] in descending order (strongest hand first).
@@ -1223,5 +1223,23 @@ mod arrays__combos__twos_tests {
         assert_eq!(range!(KK+), Twos::from_str("KK AA").unwrap());
 
         assert_eq!(range!(KK+).extend(&range!(73s)), Twos::from_str("73s KK+").unwrap());
+    }
+
+    #[test]
+    fn percentage__all_combos_present_is_100() {
+        let twos = Twos::from(Combo::COMBO_AA);
+        assert!((twos.percentage(&Combo::COMBO_AA).calculate() - 100.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn percentage__half_the_combos_present_is_50() {
+        let all = Twos::from(Combo::COMBO_AA).to_vec();
+        let half = Twos::from(all[..3].to_vec());
+        assert!((half.percentage(&Combo::COMBO_AA).calculate() - 50.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn percentage__empty_range_is_zero() {
+        assert!(Twos::default().percentage(&Combo::COMBO_AA).calculate().abs() < f32::EPSILON);
     }
 }

@@ -68,9 +68,20 @@ pub const DECK_ARRAY: [Card; 52] = [
 pub const POKER_DECK: Deck = Deck(DECK_ARRAY);
 
 impl Deck {
+    /// The card at `index` in the canonical deck order, or `None` past the
+    /// 52nd card.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::deck::Deck;
+    ///
+    /// assert_eq!(Some(Deck::as_vec()[0]), Deck::get(0));
+    /// assert_eq!(None, Deck::get(52));
+    /// ```
     #[must_use]
-    pub fn get(index: usize) -> Card {
-        POKER_DECK.0[index]
+    pub fn get(index: usize) -> Option<Card> {
+        POKER_DECK.0.get(index).copied()
     }
 
     pub fn iter() -> impl Iterator<Item = &'static Card> {
@@ -159,6 +170,12 @@ mod poker_deck_tests {
     fn as_vec_happy_path() {
         let v = Deck::as_vec();
         assert_eq!(v.len(), Deck::len());
-        assert_eq!(v[0], Deck::get(0));
+        assert_eq!(Some(v[0]), Deck::get(0));
+    }
+
+    #[test]
+    fn get__out_of_range_is_none() {
+        assert_eq!(Some(POKER_DECK.0[51]), Deck::get(51));
+        assert_eq!(None, Deck::get(Deck::len()));
     }
 }

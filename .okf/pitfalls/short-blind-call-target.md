@@ -30,9 +30,12 @@ targets, check it against the cited cardroom rules first.
 
 # Related
 
-`../../docs/epics/EPIC-DEFECT-Minraise.md` (title-only stub) flags that the
-last-raise-size rule was not enforced by `TableCelled` — min-raise
-enforcement has history in both engines.
+The last-raise-size rule was once unenforced by `TableCelled` (a title-only
+`EPIC-DEFECT-Minraise` stub recorded it; deleted 2026-08-21). The rule is now
+enforced and tested in both engines — see `../../docs/defects/DEFECT_007_decider_subminimum_raise.md`,
+`DEFECT_010_reopen_gate.md`, `DEFECT_015_act_raise_all_in_underflow.md` and
+`DEFECT_023_min_raise_tier_and_panicking_api.md`. Min-raise enforcement has
+history in both engines; fix both when you fix one.
 
 # Citations
 

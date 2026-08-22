@@ -158,7 +158,7 @@ fn run_one_hand(
         })
         .collect();
 
-    while let Some(seat) = session.next_actor() {
+    while let Some(seat) = session.next_actor().expect("hand cannot continue") {
         let profile = &profiles[seat as usize];
         let action = profile.decide(&session.table, seat, rng);
         // DEFECT_007: a discarded error would leave `seat` still to act, so

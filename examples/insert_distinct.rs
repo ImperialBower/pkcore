@@ -18,7 +18,7 @@ fn main() {
 }
 fn read_input(conn: &Connection, distinct: &mut Vec<Masked>) {
     let mut x = 0usize;
-    let i = Terminal::receive_usize("How many runs? ");
+    let i = Terminal::receive_usize("How many runs? ").expect("could not read stdin");
     println!("Processing {i} hands.");
 
     while x < i {
@@ -31,7 +31,7 @@ fn read_input(conn: &Connection, distinct: &mut Vec<Masked>) {
             continue;
         } else {
             println!("Calculating {}", masked.shu);
-            let hupr = HUPResult::from(&masked.shu);
+            let hupr = HUPResult::try_from(&masked.shu).expect("binary card map unavailable");
             match HUPResult::insert(conn, &hupr) {
                 Ok(_) => {
                     println!("... inserted");

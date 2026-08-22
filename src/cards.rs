@@ -406,8 +406,11 @@ impl Cards {
         }
     }
 
+    /// Inserts `card` at `index`, shifting later cards right. Returns `false`
+    /// (and changes nothing) for a blank card or an `index` past the end;
+    /// `index == len()` appends, as `Vec::insert` does.
     pub fn insert_at(&mut self, index: usize, card: Card) -> bool {
-        if card.contains_blank() {
+        if card.contains_blank() || index > self.len() {
             return false;
         }
 
@@ -975,6 +978,9 @@ impl Pile for Cards {
     /// assert_eq!(cards.to_string(), "A♠ K♠ 9♠ J♠ T♠");
     /// ```
     fn swap(&mut self, index: usize, card: Card) -> Option<Card> {
+        if index >= self.len() {
+            return None;
+        }
         self.0.replace_index(index, card).ok()
     }
 
@@ -1844,6 +1850,24 @@ mod cards_tests {
     fn pile__is_dealt__always_true() {
         assert!(wheel().is_dealt());
         assert!(Cards::default().is_dealt());
+    }
+
+    #[test]
+    fn insert_at__out_of_range_is_false() {
+        let mut cards = Cards::forgiving_from_str("A♠ K♠");
+
+        assert!(!cards.insert_at(3, Card::QUEEN_SPADES));
+        assert_eq!("A♠ K♠", cards.to_string());
+        // `index == len()` is an append, the same as `Vec::insert`.
+        assert!(cards.insert_at(2, Card::QUEEN_SPADES));
+        assert_eq!("A♠ K♠ Q♠", cards.to_string());
+    }
+
+    #[test]
+    fn pile__swap__out_of_range_is_none() {
+        let mut cards = Cards::forgiving_from_str("A♠ K♠");
+        assert_eq!(None, cards.swap(2, Card::QUEEN_SPADES));
+        assert_eq!("A♠ K♠", cards.to_string());
     }
 
     #[test]

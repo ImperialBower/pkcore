@@ -166,7 +166,7 @@ fn bot_marathon__1000_hands_without_error() {
         // fallback that used to sit here is what hid DEFECT_007 for three months
         // and two releases — it turned the harness that would have caught the
         // defect into the harness that concealed it.
-        while let Some(seat) = session.next_actor() {
+        while let Some(seat) = session.next_actor().unwrap() {
             let profile = &profiles[seat as usize % profiles.len()];
             let action = profile.decide(&session.table, seat, &mut rng);
             if let Err(e) = session.apply_action(seat, action) {

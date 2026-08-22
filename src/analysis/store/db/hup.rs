@@ -171,20 +171,25 @@ impl HUPResult {
     ///         &TestData::the_hand_sorted_headsup(),
     ///         &TestData::the_hand_as_wins()
     ///     )
+    ///     .unwrap()
     /// );
     /// ```
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Casting from usize to u64. I'd be impressed if we got hit with this one.
-    #[must_use]
-    pub fn from_sorted_heads_up(shu: &SortedHeadsUp, wins: &Wins) -> Self {
+    /// [`PKError::InconsistentWins`] if the tie count seen from the first
+    /// player differs from the tie count seen from the second. For a genuine
+    /// heads-up `Wins` they are the same events counted twice, so they match;
+    /// a record carrying three-way results does not fit two players.
+    pub fn from_sorted_heads_up(shu: &SortedHeadsUp, wins: &Wins) -> Result<Self, PKError> {
         let (first_wins, first_ties) = wins.wins_for(Win::FIRST);
         let (second_wins, second_ties) = wins.wins_for(Win::SECOND);
 
-        assert_eq!(first_ties, second_ties);
+        if first_ties != second_ties {
+            return Err(PKError::InconsistentWins);
+        }
 
-        HUPResult {
+        Ok(HUPResult {
             higher: shu.higher_as_bard(),
             lower: shu.lower_as_bard(),
             odds: WinLoseDraw {
@@ -192,7 +197,7 @@ impl HUPResult {
                 losses: u64::try_from(second_wins - second_ties).unwrap_or(0),
                 draws: u64::try_from(first_ties).unwrap_or(0),
             },
-        }
+        })
     }
 
     /// # Errors
@@ -373,7 +378,9 @@ impl Display for HUPResult {
 }
 
 #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
-impl From<&SortedHeadsUp> for HUPResult {
+impl TryFrom<&SortedHeadsUp> for HUPResult {
+    type Error = PKError;
+
     /// Clippy doesn't like our higher lower section. Normally, this is a
     /// lint I turn off, but let's do it.
     ///
@@ -398,24 +405,15 @@ impl From<&SortedHeadsUp> for HUPResult {
     /// I've written `SortedHeadsUp.wins()` and tested it, and what do you know, I already have a
     /// test here, that's ignored to validate this calculation. So let's refactor this to leverage
     /// what we've got now.
-    fn from(shu: &SortedHeadsUp) -> Self {
-        let wins = shu.wins().unwrap_or_default();
-
-        let (higher_wins, higher_ties) = wins.wins_for(Win::FIRST);
-        let (lower_wins, lower_ties) = wins.wins_for(Win::SECOND);
-        assert_eq!(higher_ties, lower_ties);
-
-        let ties = u64::try_from(lower_ties).unwrap_or_default();
-
-        HUPResult {
-            higher: shu.higher.bard(),
-            lower: shu.lower.bard(),
-            odds: WinLoseDraw {
-                wins: u64::try_from(higher_wins).unwrap_or_default() - ties,
-                losses: u64::try_from(lower_wins).unwrap_or_default() - ties,
-                draws: u64::try_from(lower_ties).unwrap_or_default(),
-            },
-        }
+    ///
+    /// # Errors
+    ///
+    /// Whatever [`SortedHeadsUp::wins`] reports (the binary card map being
+    /// unavailable, above all), or [`PKError::InconsistentWins`] from
+    /// [`HUPResult::from_sorted_heads_up`].
+    fn try_from(shu: &SortedHeadsUp) -> Result<Self, Self::Error> {
+        let wins = shu.wins()?;
+        HUPResult::from_sorted_heads_up(shu, &wins)
     }
 }
 
@@ -588,8 +586,11 @@ impl Sqlable<HUPResult, SortedHeadsUp> for HUPResult {
         };
 
         let mut r: Vec<HUPResult> = Vec::new();
-        let mut hups = stmt.query(()).unwrap();
-        while let Some(row) = hups.next().unwrap() {
+        let Ok(mut hups) = stmt.query(()) else {
+            log::error!("Error running statement");
+            return r;
+        };
+        while let Ok(Some(row)) = hups.next() {
             let higher: u64 = row.get(1).unwrap_or_default();
             let lower: u64 = row.get(2).unwrap_or_default();
             let higher_wins: u64 = row.get(3).unwrap_or_default();
@@ -1154,5 +1155,43 @@ mod analysis__store__db__hupresult_tests {
             hs.insert(hup);
         }
         hs
+    }
+
+    #[test]
+    fn from_sorted_heads_up__splits_wins_losses_and_draws() {
+        let shu = SortedHeadsUp::new(Two::HAND_AS_KS, Two::HAND_QD_JD);
+        let mut wins = Wins::default();
+        wins.add(Win::FIRST);
+        wins.add(Win::FIRST);
+        wins.add(Win::SECOND);
+        wins.add(Win::FIRST | Win::SECOND);
+
+        let hupr = HUPResult::from_sorted_heads_up(&shu, &wins).unwrap();
+
+        assert_eq!(2, hupr.odds.wins);
+        assert_eq!(1, hupr.odds.losses);
+        assert_eq!(1, hupr.odds.draws);
+    }
+
+    #[test]
+    fn from_sorted_heads_up__rejects_asymmetric_ties() {
+        let shu = SortedHeadsUp::new(Two::HAND_AS_KS, Two::HAND_QD_JD);
+        let mut wins = Wins::default();
+        wins.add(Win::FIRST | Win::SECOND);
+        wins.add(Win::FIRST | Win::THIRD);
+
+        assert_eq!(
+            Err(PKError::InconsistentWins),
+            HUPResult::from_sorted_heads_up(&shu, &wins)
+        );
+    }
+
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
+    #[test]
+    #[ignore = "enumerates every board for the matchup; run explicitly with -- --ignored"]
+    fn try_from__sorted_heads_up() {
+        let shu = SortedHeadsUp::new(Two::HAND_AS_KS, Two::HAND_QD_JD);
+        let hupr = HUPResult::try_from(&shu).unwrap();
+        assert!(hupr.odds.wins > hupr.odds.losses);
     }
 }

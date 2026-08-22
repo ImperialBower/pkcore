@@ -64,7 +64,17 @@ impl From<Masked> for RankMasked {
     }
 }
 
-/// TODO DEFECT:
+/// A [`SortedHeadsUp`] matchup together with the three masks that describe
+/// its shape: the [`SuitTexture`] class, the [`SuitMask`] and the [`RankMask`].
+/// Two matchups with equal masks are suit-shifts of each other and share one
+/// equity, which is what lets the heads-up tables collapse 812k matchups to
+/// their distinct representatives.
+///
+/// This struct carried a bare defect marker (a `TODO` with no text) from 2023-09-15 and no
+/// description. The only record of what it meant is the pair of `#[ignore]`d
+/// tests `defect_type4_1123` / `defect_type4_1123_2` below, which pin the
+/// 24-shift count for `Type1123` and `Type1233` textures. Both pass; the
+/// marker was retired on 2026-08-21 (see `docs/TECHNICAL_DEBT.md`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(rename_all = "PascalCase")]
 pub struct Masked {

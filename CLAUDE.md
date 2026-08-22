@@ -86,7 +86,8 @@ still gets a changelog line if it changes what a user is told.
 `cargo test` and `cargo build` work as normal. These do not:
 
 ```bash
-make ayce           # the full local gate: fmt, clippy, test, docs
+make ayce           # the full local gate: fmt, clippy, test, docs, plus the
+                    # bare-kernel test and per-feature checks CI runs
 make check-purity   # assert no rusqlite/zstd/termion/dotenvy leak into
                     # --no-default-features (the domain-kernel gate)
 make perf-check     # fmt + clippy + test the standalone perf/ crate, which

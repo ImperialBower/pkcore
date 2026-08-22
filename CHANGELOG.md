@@ -7,6 +7,105 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-08-21
+
+### Changed
+
+- **BREAKING: `PokerSession::next_actor` returns `Result<Option<u8>, PKError>`**
+  — the leftover from
+  [DEFECT_019](docs/defects/DEFECT_019_next_step_swallows_advance_street_error.md).
+  It collapsed a failed street advance to `None`, which every caller reads as
+  "hand over": the `while let Some(seat) = session.next_actor()` loop exits,
+  `end_hand()` returns `ActionIsntFinished`, and the pot is stranded — the
+  same wedge `next_step` had before it grew `SessionStep::Failed`. Only "no
+  streets remain" is `Ok(None)` now; a dry deck surfaces as
+  `Err(PKError::NotEnoughCards)`, and the caller unwinds with `abort_hand`.
+  Loop callers become `while let Some(seat) = session.next_actor()? {`.
+  Known downstream call sites: `pkpy` (`src/session.rs` wrapper),
+  `pkarena0-web` (`src/lib.rs`, seven sites), `pkdealer`.
+
+- **BREAKING: five more library panics became honest signatures** — the
+  house-rule sweep `docs/TECHNICAL_DEBT.md` had queued since 2026-06-19.
+  `KuhnCfr::train` returns `Result<(), PKError>` (four `expect()`s on
+  provably-unreachable paths are now `?`); `Deck::get` returns `Option<Card>`
+  instead of indexing out of bounds; `Terminal::receive_usize` returns
+  `Result<usize, PKError>` with `PKError::InvalidIO` on a failed read, and
+  the new `Terminal::receive_usize_from` takes any `BufRead` so it is
+  testable; `HUPResult::from_sorted_heads_up` returns `Result` and the
+  `From<&SortedHeadsUp>` impl is now `TryFrom`, both reporting the new
+  `PKError::InconsistentWins` where an `assert_eq!` used to panic on
+  asymmetric tie counts (reachable: the constructor accepts any `Wins`, and
+  a three-way result makes the sides differ); and the `NAMER` static is a
+  `LazyLock<Option<RNG>>`, with `Name::generate` falling back to
+  `Name::FALLBACK` (`"Nameless Demon"`) instead of panicking on first use.
+  Known downstream call site: `pkkuhn-web` `src/lib.rs` calls `train` twice.
+
+- **`DEFECT_008` closed outright; D8-6 recorded as an accepted divergence**
+  ([DEFECT_008](docs/defects/DEFECT_008_tda_2024_rules_compliance.md)). The
+  fixed-limit raise cap at event-heads-up needs a multi-table event model that
+  does not exist, so there is nothing to fix. Two stale "D8-4 remains open"
+  lines in `DEFECT_008` and `DEFECT_012` now point at `DEFECT_013`, which
+  fixed it. The 2023 `TODO DEFECT` marker on `Masked`
+  (`src/arrays/matchups/masked.rs`) is replaced with a doc comment; its tests
+  pass. No filed defect is open.
+
+### Added
+
+- **`make ayce` now runs the CI kernel job too** — new `make test-kernel`
+  (`cargo test --no-default-features`) and `make check-features` (each
+  feature compiled alone on top of `--no-default-features`), plus the
+  existing `make check-purity`, are part of the gate. `ayce` ran with default
+  features only, so a test written against a feature-gated impl passed it
+  and failed only on GitHub.
+
+- **Nine public methods that only panicked now work** — the "next sweep"
+  [DEFECT_023](docs/defects/DEFECT_023_min_raise_tier_and_panicking_api.md)
+  left behind. Each was a `pub` method whose whole body was
+  `unimplemented!("…")` with a message saying what it *should* do; each now
+  does it, with a unit test that was watched to fail first.
+  `CardsCell::swap` (inherent and `Pile`) and `CardsCell::card_at` borrow the
+  inner `Cards`; `Bard::swap` clears the card at that `DECK`-order index and
+  sets the new one; `HoleCards::clean`, `SortedHeadsUp::clean` and
+  `Board::clean` strip frequency bits from every card they hold;
+  `Board::the_nuts` evaluates every two-card holding against the board and
+  returns them strongest first; `Twos::percentage` counts the range's hands
+  that fall inside a `Combo` (its doc example ran as `no_run` because it
+  panicked — it runs now); `SevenFiveBCM::exists`, `insert_many` and
+  `select_all` mirror the `HUPResult` store; and
+  `TestData::deck_the_hand_dealable` is `Cards::deck_primed` over the dealable
+  fixture. The `#[should_panic]` tests that pinned the old panics are
+  replaced by tests of the behaviour.
+
+### Fixed
+
+- **`Cards::insert_at` no longer panics on an out-of-range index.** It
+  delegated straight to `Vec::insert`; it now returns `false` for
+  `index > len()`, the same channel it already used for a blank card.
+  `index == len()` still appends.
+
+- **`HUPResult::select_all` no longer `unwrap()`s the query.** A SQLite error
+  mid-iteration returns the rows read so far instead of panicking, matching
+  `SevenFiveBCM::select_all`.
+
+- **`Cards::swap` no longer panics on an out-of-range index.** It delegated
+  to `IndexSet::replace_index`, which panics rather than erring, so the
+  `Option<Card>` return never got to say `None`. Found by the
+  `CardsCell::swap` test above; guarded with a bounds check.
+
+### Removed
+
+- **`pkcore::play::actions` (`ActionTracker`, `Actor`, `PlayState`) and
+  `pkcore::play::positions` (`Position6MaxPointer`)** — dead since the
+  `casino::table` engine took over turn order. Nothing in the crate, the
+  examples, the tests, or any sibling repo referenced them, and both carried
+  unguarded indexing and a loop that does not terminate on degenerate input.
+
+- **`docs/epics/EPIC-DEFECT-Minraise.md` and `docs/epics/EPIC-DEFECT-A_Preflop_Perf.md`**
+  — a two-line title stub and a zero-byte file that `ls docs/epics | grep -v
+  CLOSED` kept listing as open work. The min-raise rule the first named is
+  enforced and tested by `DEFECT_007`, `DEFECT_010`, `DEFECT_015` and
+  `DEFECT_023`; nothing records what the second was.
+
 ### Added
 
 - **[`docs/releases/RELEASE_0.6.0.md`](docs/releases/RELEASE_0.6.0.md)** — release
@@ -1098,6 +1197,7 @@ on the wire, and `replay` behavior is unaffected by the new metadata. Driven by
 `ImperialBower/pkdealer` EPIC-40 Phase 4 (arena recorder agent-fidelity
 annotations).
 
+[0.7.0]: https://github.com/ImperialBower/pkcore/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/ImperialBower/pkcore/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/ImperialBower/pkcore/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/ImperialBower/pkcore/compare/v0.3.5...v0.4.0
