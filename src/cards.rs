@@ -975,6 +975,9 @@ impl Pile for Cards {
     /// assert_eq!(cards.to_string(), "A♠ K♠ 9♠ J♠ T♠");
     /// ```
     fn swap(&mut self, index: usize, card: Card) -> Option<Card> {
+        if index >= self.len() {
+            return None;
+        }
         self.0.replace_index(index, card).ok()
     }
 
@@ -1844,6 +1847,13 @@ mod cards_tests {
     fn pile__is_dealt__always_true() {
         assert!(wheel().is_dealt());
         assert!(Cards::default().is_dealt());
+    }
+
+    #[test]
+    fn pile__swap__out_of_range_is_none() {
+        let mut cards = Cards::forgiving_from_str("A♠ K♠");
+        assert_eq!(None, cards.swap(2, Card::QUEEN_SPADES));
+        assert_eq!("A♠ K♠", cards.to_string());
     }
 
     #[test]

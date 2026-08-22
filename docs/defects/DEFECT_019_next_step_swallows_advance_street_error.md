@@ -232,10 +232,19 @@ not breaking. And `SessionStep` was added to `prelude`, which had exported
 `PokerSession` and `SessionView` but not the type `next_step` returns; a caller
 now forced to handle a new variant should not have to hunt for the type first.
 
-`PokerSession::next_actor` still collapses a dealing failure to `None`
+~~`PokerSession::next_actor` still collapses a dealing failure to `None`
 (`src/casino/session.rs:450`). Its `Option<u8>` return has no room to express a
 fault, so fixing it means a second signature change that this defect did not
-design. Recorded rather than done.
+design. Recorded rather than done.~~
+
+**Done in `0.7.0` (2026-08-21).** `next_actor` now returns
+`Result<Option<u8>, PKError>`, mirroring `next_step`: `Ok(None)` only when no
+streets remain, `Err(e)` for everything else. Regression test:
+`next_actor_reports_failure_when_deal_cannot_complete` in
+`src/casino/session.rs`, the `next_actor` twin of the `next_step` test above.
+Breaking for every `while let Some(seat) = session.next_actor()` loop, which
+becomes `session.next_actor()?` — that is the point: the loop could not see the
+fault before.
 
 ---
 

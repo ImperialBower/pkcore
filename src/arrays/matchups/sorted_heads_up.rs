@@ -802,9 +802,10 @@ impl Pile for SortedHeadsUp {
         unimplemented!("SortedHeadsUp is a fixed two-hand comparison, not a card sequence; access the hands directly")
     }
 
-    /// Shoot. Forgot about my frequency mask idea. Still has potential, but later.
+    /// Strips the frequency bits from both holdings. Ordering is unaffected:
+    /// the bits sit above the rank and suit bits, so `higher` stays higher.
     fn clean(&self) -> Self {
-        unimplemented!("clean is not yet implemented for SortedHeadsUp (frequency-mask idea pending)")
+        SortedHeadsUp::new(self.higher.clean(), self.lower.clean())
     }
 
     fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
@@ -1226,4 +1227,17 @@ mod arrays__matchups__sorted_heads_up_tests {
     #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     #[test]
     fn try_from__hup_result() {}
+
+    #[test]
+    fn pile__clean__strips_frequency_bits() {
+        let lower = Two::new(Card::KING_SPADES, Card::KING_HEARTS).unwrap();
+        let flagged = SortedHeadsUp::new(
+            Two::new(Card::ACE_SPADES.frequency_paired(), Card::ACE_HEARTS.frequency_paired()).unwrap(),
+            lower,
+        );
+        let clean = SortedHeadsUp::new(Two::new(Card::ACE_SPADES, Card::ACE_HEARTS).unwrap(), lower);
+
+        assert_ne!(clean, flagged);
+        assert_eq!(clean, flagged.clean());
+    }
 }

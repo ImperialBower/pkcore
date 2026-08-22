@@ -103,7 +103,7 @@ fn bot_selfplay_replay_roundtrip() {
         // stack), fall back to AllIn (when facing a bet) or Check.
         // DEFECT_007: no AllIn/Check fallback. An action the engine rejects is a
         // bot defect and must fail the test, not be papered over.
-        while let Some(seat) = session.next_actor() {
+        while let Some(seat) = session.next_actor().unwrap() {
             let action = profiles[seat as usize].decide(&session.table, seat, &mut rng);
             if let Err(e) = session.apply_action(seat, action) {
                 panic!(
@@ -259,7 +259,7 @@ fn flhe_bot_selfplay_replay_roundtrip() {
 
         // DEFECT_007: no AllIn/Check fallback. An action the engine rejects is a
         // bot defect and must fail the test, not be papered over.
-        while let Some(seat) = session.next_actor() {
+        while let Some(seat) = session.next_actor().unwrap() {
             let action = profiles[seat as usize].decide(&session.table, seat, &mut rng);
             if let Err(e) = session.apply_action(seat, action) {
                 panic!(
@@ -423,7 +423,7 @@ fn plo_bot_selfplay_replay_roundtrip() {
 
         // DEFECT_007: no AllIn/Check fallback. An action the engine rejects is a
         // bot defect and must fail the test, not be papered over.
-        while let Some(seat) = session.next_actor() {
+        while let Some(seat) = session.next_actor().unwrap() {
             let action = profiles[seat as usize].decide(&session.table, seat, &mut rng);
             if let Err(e) = session.apply_action(seat, action) {
                 panic!(
@@ -619,7 +619,7 @@ fn stud_hi_bot_selfplay_replay_roundtrip() {
 
         // DEFECT_007: no AllIn/Check fallback. An action the engine rejects is a
         // bot defect and must fail the test, not be papered over.
-        while let Some(seat) = session.next_actor() {
+        while let Some(seat) = session.next_actor().unwrap() {
             let action = profiles[seat as usize].decide(&session.table, seat, &mut rng);
             if let Err(e) = session.apply_action(seat, action) {
                 panic!(
@@ -851,7 +851,7 @@ fn razz_bot_selfplay_replay_roundtrip() {
 
         // DEFECT_007: no AllIn/Check fallback. An action the engine rejects is a
         // bot defect and must fail the test, not be papered over.
-        while let Some(seat) = session.next_actor() {
+        while let Some(seat) = session.next_actor().unwrap() {
             let action = profiles[seat as usize].decide(&session.table, seat, &mut rng);
             if let Err(e) = session.apply_action(seat, action) {
                 panic!(

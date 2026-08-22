@@ -234,12 +234,11 @@ impl TestData {
         cards!("T♠ 8♣ A♦ 5♦ 6♠ K♠ 4♦ 7♣ 2♥ 3♥ Q♣ 5♣ 6♥ J♦ 4♣ 2♦ 9♣ 6♦ 5♥ 5♠ 8♠")
     }
 
-    /// # Panics
-    ///
-    /// Because of `draw_from_the_bottom`, but this is test data so... ¯\_(ツ)_/¯
+    /// A full 52-card deck with [`TestData::the_hand_cards_dealable`] on top, in
+    /// dealing order, and the rest of the deck behind it.
     #[must_use]
     pub fn deck_the_hand_dealable() -> Cards {
-        unimplemented!("deck_the_hand_dealable is not yet implemented")
+        Cards::deck_primed(&TestData::the_hand_cards_dealable())
     }
 
     /// # Panics
@@ -548,5 +547,15 @@ mod util__data_tests {
 
         assert_eq!(hup.odds.wins as usize, first_wins - first_ties);
         assert_eq!(hup.odds.losses as usize, second_wins - second_ties);
+    }
+
+    #[test]
+    fn deck_the_hand_dealable__is_a_full_deck_primed_with_the_hand() {
+        let deck = TestData::deck_the_hand_dealable();
+        let primed = TestData::the_hand_cards_dealable();
+
+        assert_eq!(52, deck.len());
+        assert!(deck.are_unique());
+        assert_eq!(primed.to_vec().as_slice(), &deck.to_vec()[..primed.len()]);
     }
 }

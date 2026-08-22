@@ -303,8 +303,8 @@ impl Sqlable<SevenFiveBCM, Bard> for SevenFiveBCM {
         )
     }
 
-    fn exists(_conn: &Connection, _record: &Bard) -> bool {
-        unimplemented!("SevenFiveBCM::exists is not implemented; use `select(...).is_some()`")
+    fn exists(conn: &Connection, record: &Bard) -> bool {
+        SevenFiveBCM::select(conn, record).is_some()
     }
 
     fn insert(conn: &Connection, bcm: &SevenFiveBCM) -> rusqlite::Result<bool> {
@@ -317,8 +317,17 @@ impl Sqlable<SevenFiveBCM, Bard> for SevenFiveBCM {
         Ok(true)
     }
 
-    fn insert_many(_conn: &Connection, _records: Vec<&SevenFiveBCM>) -> rusqlite::Result<usize> {
-        unimplemented!("SevenFiveBCM::insert_many is not implemented; insert rows individually via `insert()`")
+    /// Inserts each record in turn and returns how many were written. A
+    /// failure at record `n` leaves records `0..n` written, the same as
+    /// looping over [`Sqlable::insert`] by hand.
+    fn insert_many(conn: &Connection, records: Vec<&SevenFiveBCM>) -> rusqlite::Result<usize> {
+        let mut inserted = 0;
+        for record in records {
+            if SevenFiveBCM::insert(conn, record)? {
+                inserted += 1;
+            }
+        }
+        Ok(inserted)
     }
 
     fn select(conn: &Connection, bc: &Bard) -> Option<SevenFiveBCM> {
@@ -342,10 +351,30 @@ impl Sqlable<SevenFiveBCM, Bard> for SevenFiveBCM {
         Some(bcm)
     }
 
-    fn select_all(_conn: &Connection) -> Vec<SevenFiveBCM> {
-        unimplemented!(
-            "SevenFiveBCM::select_all is not implemented; the BCM table is huge — query specific rows via `select()`"
-        )
+    /// Every row in the table. The production BCM table holds every
+    /// seven-card combination, so on a real store this is a very large
+    /// `Vec`; prefer [`Sqlable::select`] for a single key. Returns an empty
+    /// `Vec` if the statement cannot be prepared or run.
+    fn select_all(conn: &Connection) -> Vec<SevenFiveBCM> {
+        let Ok(mut stmt) = conn.prepare("SELECT bc, best, rank FROM bcm") else {
+            return Vec::new();
+        };
+        let Ok(mut rows) = stmt.query(()) else {
+            return Vec::new();
+        };
+
+        let mut all = Vec::new();
+        while let Ok(Some(row)) = rows.next() {
+            let bc: u64 = row.get(0).unwrap_or_default();
+            let best: u64 = row.get(1).unwrap_or_default();
+            let rank: u16 = row.get(2).unwrap_or_default();
+            all.push(SevenFiveBCM {
+                bc: Bard::from(bc),
+                best: Bard::from(best),
+                rank,
+            });
+        }
+        all
     }
 }
 
@@ -482,5 +511,51 @@ mod analysis__store__bcm__binary_card_map_tests {
 
         assert!(SevenFiveBCM::select(&conn, &TestData::spades_royal_flush_bcm().bc).is_some());
         assert!(SevenFiveBCM::select(&conn, &TestData::spades_king_high_flush_bcm().bc).is_none());
+    }
+
+    fn bcm_conn() -> Connection {
+        let conn = Connect::in_memory_connection().unwrap().connection;
+        SevenFiveBCM::create_table(&conn).unwrap();
+        conn
+    }
+
+    #[test]
+    fn sqlable__exists() {
+        let conn = bcm_conn();
+        let royal = TestData::spades_royal_flush_bcm();
+
+        assert!(!SevenFiveBCM::exists(&conn, &royal.bc));
+        SevenFiveBCM::insert(&conn, &royal).unwrap();
+        assert!(SevenFiveBCM::exists(&conn, &royal.bc));
+    }
+
+    #[test]
+    fn sqlable__insert_many() {
+        let conn = bcm_conn();
+        let royal = TestData::spades_royal_flush_bcm();
+        let king = TestData::spades_king_high_flush_bcm();
+
+        assert_eq!(2, SevenFiveBCM::insert_many(&conn, vec![&royal, &king]).unwrap());
+        assert!(SevenFiveBCM::exists(&conn, &royal.bc));
+        assert!(SevenFiveBCM::exists(&conn, &king.bc));
+    }
+
+    #[test]
+    fn sqlable__select_all() {
+        let conn = bcm_conn();
+        let royal = TestData::spades_royal_flush_bcm();
+        let king = TestData::spades_king_high_flush_bcm();
+        SevenFiveBCM::insert_many(&conn, vec![&royal, &king]).unwrap();
+
+        let all = SevenFiveBCM::select_all(&conn);
+
+        assert_eq!(2, all.len());
+        assert!(all.contains(&royal));
+        assert!(all.contains(&king));
+    }
+
+    #[test]
+    fn sqlable__select_all__empty_table() {
+        assert!(SevenFiveBCM::select_all(&bcm_conn()).is_empty());
     }
 }

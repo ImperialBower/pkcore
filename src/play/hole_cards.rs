@@ -289,7 +289,7 @@ impl Pile for HoleCards {
     }
 
     fn clean(&self) -> Self {
-        unimplemented!("HoleCards clean is not yet implemented; use `.cards().clean()` to strip card metadata")
+        HoleCards(self.0.iter().map(Pile::clean).collect())
     }
 
     fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
@@ -511,5 +511,16 @@ mod play__hold_cards_tests {
         let hands = HoleCards::try_from(cards).unwrap();
 
         assert_eq!(hands, expected);
+    }
+
+    #[test]
+    fn pile__clean__strips_frequency_bits() {
+        let paired = HoleCards::from(vec![
+            Two::new(Card::ACE_SPADES.frequency_paired(), Card::ACE_HEARTS.frequency_paired()).unwrap(),
+        ]);
+        let clean = HoleCards::from(vec![Two::new(Card::ACE_SPADES, Card::ACE_HEARTS).unwrap()]);
+
+        assert_ne!(clean, paired);
+        assert_eq!(clean, paired.clean());
     }
 }

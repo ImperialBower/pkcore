@@ -567,8 +567,14 @@ impl Pile for Bard {
         (*self & card_bard) == card_bard
     }
 
-    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
-        unimplemented!("Bard can't handle this sheit.")
+    /// Positional swap in [`Bard::DECK`] order, the same order `card_at` and
+    /// `to_vec` use: the card at `index` is cleared and `card` is set.
+    /// Returns the card that was cleared, or `None` (changing nothing) if
+    /// `index` is out of range.
+    fn swap(&mut self, index: usize, card: Card) -> Option<Card> {
+        let old = self.card_at(index)?;
+        *self = Bard((self.0 & !Bard::from(old).0) | Bard::from(card).0);
+        Some(old)
     }
 
     fn the_nuts(&self) -> TheNuts {
@@ -935,10 +941,21 @@ mod bard_tests {
     }
 
     #[test]
-    #[should_panic]
-    fn pile__swap__panics() {
+    fn pile__swap__replaces_card_at_index() {
+        let mut bard = Bard::from(Cards::from_str("A♠ K♠").unwrap());
+        let old = bard.card_at(0).unwrap();
+
+        assert_eq!(Some(old), bard.swap(0, Card::QUEEN_SPADES));
+        assert!(!bard.contains(&old));
+        assert!(bard.contains(&Card::QUEEN_SPADES));
+        assert_eq!(2, bard.to_vec().len());
+    }
+
+    #[test]
+    fn pile__swap__out_of_range_is_none() {
         let mut bard = Bard::ACE_SPADES;
-        let _ = bard.swap(0, Card::KING_SPADES);
+        assert_eq!(None, bard.swap(1, Card::KING_SPADES));
+        assert_eq!(Bard::ACE_SPADES, bard);
     }
 
     #[test]

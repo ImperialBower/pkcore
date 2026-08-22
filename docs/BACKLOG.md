@@ -27,10 +27,9 @@
    example). `pkgto-web`, `pkkuhn-web`, `pkarena0-web` pass but still pin
    `0.2.1`/`0.5.0` and need a version bump. Fix list with file:line is in the
    audit's per-repo sections.
-4. **`PokerSession::next_actor` still swallows failure** — the one leftover
-   from `DEFECT_019`: it collapses the same `advance_street` error to `None`
-   that `next_step` now surfaces as `SessionStep::Failed`. Small, same shape
-   as the fix already made.
+4. ~~**`PokerSession::next_actor` still swallows failure**~~ — **DONE
+   2026-08-21**, released in `0.7.0`. It returns `Result<Option<u8>, PKError>`
+   now. Breaking: add it to the downstream fix list in item 3.
 
 ---
 
@@ -116,33 +115,26 @@ Written down, not committed to. No status table, no work items yet.
 
 ## Bugs / Defects
 
-**All 23 filed defects are resolved and shipped in `0.6.0`** (`DEFECT_001` is a
-preserved record of a rejected rule interpretation, reverted in `0.0.55`).
-`docs/defects/` is in good shape.
-`DEFECT_018` (eight-handed stud exhausted the deck) and `DEFECT_019`
-(`next_step` disguised a failed deal as a finished hand) were documented on
-2026-08-18 but not actually fixed until `0.6.0` — the commit that named them
-changed docs only. Both are fixed now; the one leftover is recorded on
-`DEFECT_019`: `PokerSession::next_actor` still collapses the same failure to
-`None`.
+**Every filed defect is closed.** All 23 `DEFECT_0NN` docs are **Fixed**
+(`DEFECT_001` is a preserved record of a rejected rule interpretation,
+reverted in `0.0.55`); `DEFECT_008` was closed outright on 2026-08-21 with
+D8-6 recorded as an accepted divergence. `DEFECT_018` and `DEFECT_019` were
+documented on 2026-08-18 but not fixed until `0.6.0`; the `DEFECT_019`
+leftover (`PokerSession::next_actor`) shipped in `0.7.0`.
 
-- **D8-6 — fixed-limit raise cap cannot lift at event heads-up** — the only open
-  item from the TDA-2024 audit. Recorded and **unreachable until a multi-table
-  event model exists**, so it is correctly parked, not neglected.
-  (`src/games/betting_structure.rs:231`, [`defects/DEFECT_008_tda_2024_rules_compliance.md`](defects/DEFECT_008_tda_2024_rules_compliance.md))
-- **EPIC-DEFECT-Minraise** — a two-line stub: a title and nothing else. The
-  rule it names (size of the last raise) is enforced and tested by `DEFECT_007`,
-  `DEFECT_010`, `DEFECT_015` and `DEFECT_023`. **Delete the file or rename it
-  `-CLOSED`**; it is not open work.
-  ([`epics/EPIC-DEFECT-Minraise.md`](epics/EPIC-DEFECT-Minraise.md))
-- **EPIC-DEFECT-A — Preflop perf** — a **zero-byte file**. Nothing records what
-  the defect was. Delete it, or write it if you still remember it.
-  ([`epics/EPIC-DEFECT-A_Preflop_Perf.md`](epics/EPIC-DEFECT-A_Preflop_Perf.md))
-- **`TODO DEFECT`, untriaged** (`src/arrays/matchups/masked.rs:67`) — a bare
-  marker with no description. Four more `Defect watch` notes sit on the
-  `Type1223a–d` suit textures (`src/arrays/matchups/masks/suit_texture.rs:20–23`).
+Closed-out on 2026-08-21, recorded so nobody re-reports them:
 
----
+- **D8-6 — fixed-limit raise cap cannot lift at event heads-up** — accepted
+  divergence, not a fix. Needs a multi-table event model that does not exist.
+  Reopen as a new `DEFECT_0NN` when it does.
+  ([`defects/DEFECT_008_tda_2024_rules_compliance.md`](defects/DEFECT_008_tda_2024_rules_compliance.md))
+- **`TODO DEFECT` on `Masked`** (`src/arrays/matchups/masked.rs:67`) — a bare
+  2023 marker; the tests named for it pass. Replaced with a doc comment. The
+  four `Defect watch` notes on `Type1223a–d`
+  (`src/arrays/matchups/masks/suit_texture.rs:20–23`) stay as tech debt.
+- **`EPIC-DEFECT-Minraise.md`** (a two-line title stub; the rule is enforced by
+  `DEFECT_007`/`010`/`015`/`023`) and **`EPIC-DEFECT-A_Preflop_Perf.md`** (a
+  zero-byte file) — deleted.
 
 ## Open GitHub issues
 
@@ -153,9 +145,15 @@ changed docs only. Both are fixed now; the one leftover is recorded on
 
 ## Tech debt
 
-70 `TODO` markers in `src/` — 11 `TODO RF`, 3 `TODO TD`, 1 `TODO DEFECT`. No
+70 `TODO` markers in `src/` — 11 `TODO RF`, 3 `TODO TD`, 0 `TODO DEFECT`. No
 `FIXME`/`HACK`/`XXX` remain. Full detail in
 [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
+
+**2026-08-21 sweep (`0.7.0`):** the nine descriptive
+`unimplemented!()` bodies DEFECT_023 called "the next sweep" are implemented and
+tested; `Cards::swap` got a bounds guard. The `unimplemented!()` calls still in
+`src/` are the deliberate `Pile` stubs on fixed-size hands — documented,
+`#[should_panic]`-tested, and not debt unless `Pile` itself is redesigned.
 
 A fresh five-subsystem automated review ran **2026-08-18** and returned
 **11 verified findings**. Nine of them are now fixed and shipped in `0.6.0`

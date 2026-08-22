@@ -3,7 +3,7 @@
 **File:** `docs/defects/DEFECT_008_tda_2024_rules_compliance.md`
 **Date:** 2026-08-16
 **Severity:** Major (4 Major, 2 Minor — no incorrect *pot total*; all findings distribute, size or gate chips wrongly)
-**Status:** **Closed except D8-6.** D8-1 (`DEFECT_011`), D8-2 (`DEFECT_010`), D8-3 (`DEFECT_012`), D8-4 (`DEFECT_013`) and D8-5 (`DEFECT_009`) all fixed in `0.5.0`. D8-6 stays recorded and unreachable until a multi-table event model exists. All six verified by source reading at `90d60e70` (`main`, 2026-08-16), pkcore `0.4.0`.
+**Status:** **Closed** (2026-08-21). D8-1 (`DEFECT_011`), D8-2 (`DEFECT_010`), D8-3 (`DEFECT_012`), D8-4 (`DEFECT_013`) and D8-5 (`DEFECT_009`) all fixed in `0.5.0`. D8-6 is closed as an [accepted divergence](#accepted-divergences): it needs a multi-table event model that does not exist, so there is nothing to fix yet. Reopen it as its own `DEFECT_0NN` when that model lands. All six verified by source reading at `90d60e70` (`main`, 2026-08-16), pkcore `0.4.0`.
 **Reported by:** Audit of pkcore against the parsed TDA 2024 ruleset in the sibling `tda_parsed` repo (`tda_2024_online.yaml`)
 **Introduced in:** Not bisected. These are absences and long-standing behaviours, not regressions — no introducing commit was identified, and none of the six has ever had a passing test that later broke.
 **Fixed in:** —
@@ -303,7 +303,8 @@ makes multiple short all-ins accumulate correctly per 47-A without any extra mac
 >
 > `Table::pot_limit_pot` is now the single source of the pot a pot-limit ceiling
 > is sized against, backed by the new `Table::blind_shortfall` and carried to the
-> bots as `TableSnapshot::pot_limit_pot`. One finding remains open: D8-4.
+> bots as `TableSnapshot::pot_limit_pot`. D8-4 (dead button) was fixed next, as
+> [`DEFECT_013`](DEFECT_013_dead_button.md).
 
 **Severity:** Major — caps a legal bet below its true maximum in PLO.
 
@@ -554,6 +555,12 @@ item in this report: it is small, self-contained, and unblocks five rules.
 
 **Severity:** Minor — affects fixed-limit only, at a specific and rare tournament stage.
 
+> **Disposition (2026-08-21): closed as an accepted divergence, not fixed.** The
+> fix sketch below needs an "event is heads-up" signal that nothing in pkcore or
+> pkdealer can supply today. Reopen as a new `DEFECT_0NN` when a multi-table
+> event model exists. Kept here in full so the reopening starts from the
+> analysis, not from scratch.
+
 ### The Poker Rule
 
 TDA Rule 48:
@@ -608,9 +615,15 @@ occupancy, which would be wrong for a sit-out.
 
 ## Accepted divergences
 
-Recorded so they are not re-reported as defects. Both are deliberate, both are
-defensible for a server-authoritative engine, and both should be a *decision* rather
-than an accident:
+Recorded so they are not re-reported as defects. The first two are deliberate,
+defensible for a server-authoritative engine, and should be a *decision* rather
+than an accident. The third is deferred, not decided:
+
+- **Rule 48 (D8-6, limit raise cap at event-heads-up)** — closed 2026-08-21
+  without a fix. `cap_reached` has no event-level signal and no caller can give
+  it one until a multi-table event model exists. See [D8-6](#d8-6-fixed-limit-raise-cap-cannot-lift-when-the-event-reaches-two-players)
+  for the fix sketch. **Consequence:** the final two players of a fixed-limit
+  event would be capped; no such event can be run today.
 
 - **Rule 53 (action out of turn), Rule 55 (invalid declarations), Rule 52 (incorrect
   bets)** — TDA repairs; pkcore rejects. `act_check` facing a bet returns

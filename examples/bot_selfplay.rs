@@ -181,7 +181,7 @@ fn run_hand(session: &mut PokerSession, profiles: &[BotProfile], rng: &mut impl 
 
     let mut prev_board_len = 0usize;
 
-    while let Some(seat) = session.next_actor() {
+    while let Some(seat) = session.next_actor().expect("hand cannot continue") {
         // Detect street transitions (next_actor advances streets internally).
         let board_len = session.table.board.len();
         if board_len != prev_board_len {

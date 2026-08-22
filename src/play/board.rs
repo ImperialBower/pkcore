@@ -1,5 +1,8 @@
+use crate::analysis::eval::Eval;
 use crate::arrays::five::Five;
+use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
+use crate::arrays::two::Two;
 use crate::card::Card;
 use crate::cards::Cards;
 use crate::cards_cell::CardsCell;
@@ -109,17 +112,33 @@ impl Pile for Board {
     }
 
     fn clean(&self) -> Self {
-        unimplemented!("Board is a fixed 5-card hand; use `.cards().clean()` to strip card metadata")
+        Board {
+            flop: self.flop.clean(),
+            turn: self.turn.clean(),
+            river: self.river.clean(),
+        }
     }
 
     fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
         unimplemented!("Board is a fixed 5-card hand; use `.cards()` for a swappable set")
     }
 
+    /// The best seven-card hand every possible two-card holding makes with
+    /// this board, strongest first — the classic "what is the nuts here?"
+    /// question. Empty for an incomplete board.
     fn the_nuts(&self) -> TheNuts {
-        unimplemented!(
-            "the_nuts is not yet implemented for Board; evaluate the best possible hand through a hand ranker"
-        )
+        if !self.is_dealt() {
+            return TheNuts::default();
+        }
+
+        let mut the_nuts = TheNuts::default();
+
+        for v in self.remaining().combinations(2) {
+            let hole = Two::from(v);
+            the_nuts.push(Eval::from(Seven::from_case_and_board(&hole, self)));
+        }
+        the_nuts.sort_in_place();
+        the_nuts
     }
 
     fn to_vec(&self) -> Vec<Card> {
@@ -297,5 +316,29 @@ mod play_board_tests {
             PKError::TooManyCards,
             Board::try_from(Cards::from_str("AS KS QS JS TS 9S").unwrap()).unwrap_err()
         );
+    }
+
+    #[test]
+    fn pile__clean__strips_frequency_bits() {
+        let board = Board::from_str("A♠ K♠ Q♠ J♠ 9♠").unwrap();
+        let flagged = Board {
+            flop: board.flop,
+            turn: board.turn.frequency_paired(),
+            river: board.river.frequency_tripped(),
+        };
+
+        assert_ne!(board, flagged);
+        assert_eq!(board, flagged.clean());
+    }
+
+    #[test]
+    fn pile__the_nuts__is_the_best_seven_card_hand_over_every_holding() {
+        let nuts = Board::from_str("A♠ K♠ Q♠ J♠ 9♠").unwrap().the_nuts();
+
+        assert!(!nuts.is_empty());
+        let best = nuts.get(0).unwrap();
+        // Cactus Kev rank 1 is the royal flush; it needs the T♠ in hand.
+        assert_eq!(1, best.hand_rank.value);
+        assert!(best.hand.contains(&Card::TEN_SPADES));
     }
 }

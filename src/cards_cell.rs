@@ -266,8 +266,25 @@ impl CardsCell {
         Self::from(cards.sort())
     }
 
-    pub fn swap(&self, _index: usize, _card: Card) -> Option<Card> {
-        unimplemented!("CardsCell::swap is not yet implemented; borrow the inner Cards and swap there")
+    /// Replaces the card at `index` with `card`, returning the card that was
+    /// there. Returns `None` (and changes nothing) if `index` is out of range.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::card::Card;
+    /// use pkcore::cards_cell::CardsCell;
+    /// use pkcore::cards::Cards;
+    /// use std::str::FromStr;
+    ///
+    /// let cards = CardsCell::from(Cards::from_str("A♠ K♠").unwrap());
+    ///
+    /// assert_eq!(Some(Card::KING_SPADES), cards.swap(1, Card::QUEEN_SPADES));
+    /// assert_eq!("A♠ Q♠", cards.to_string());
+    /// assert_eq!(None, cards.swap(5, Card::JACK_SPADES));
+    /// ```
+    pub fn swap(&self, index: usize, card: Card) -> Option<Card> {
+        self.0.borrow_mut().swap(index, card)
     }
 
     /// ```
@@ -402,8 +419,8 @@ impl Pile for CardsCell {
         combined
     }
 
-    fn card_at(self, _index: usize) -> Option<Card> {
-        unimplemented!("CardsCell::card_at is not yet implemented; borrow the inner Cards for positional access")
+    fn card_at(self, index: usize) -> Option<Card> {
+        self.0.borrow().clone().card_at(index)
     }
 
     fn clean(&self) -> Self {
@@ -417,8 +434,8 @@ impl Pile for CardsCell {
         internal.contains(card)
     }
 
-    fn swap(&mut self, _index: usize, _card: Card) -> Option<Card> {
-        unimplemented!("CardsCell::swap is not yet implemented; borrow the inner Cards and swap there")
+    fn swap(&mut self, index: usize, card: Card) -> Option<Card> {
+        CardsCell::swap(self, index, card)
     }
 
     fn the_nuts(&self) -> TheNuts {
@@ -520,10 +537,18 @@ mod cards_cell_tests {
     }
 
     #[test]
-    #[should_panic]
-    fn swap__panics() {
+    fn swap__replaces_card_at_index() {
         let cards = cc!("A♠ K♠");
-        let _ = cards.swap(0, Card::QUEEN_SPADES);
+        let old = cards.swap(1, Card::QUEEN_SPADES);
+        assert_eq!(Some(Card::KING_SPADES), old);
+        assert_eq!("A♠ Q♠", cards.to_string());
+    }
+
+    #[test]
+    fn swap__out_of_range_is_none() {
+        let cards = cc!("A♠ K♠");
+        assert_eq!(None, cards.swap(2, Card::QUEEN_SPADES));
+        assert_eq!("A♠ K♠", cards.to_string());
     }
 
     #[test]
@@ -558,9 +583,9 @@ mod cards_cell_tests {
     }
 
     #[test]
-    #[should_panic]
-    fn pile__card_at__panics() {
-        let _ = cc!("A♠ K♠").card_at(0);
+    fn pile__card_at() {
+        assert_eq!(Some(Card::KING_SPADES), cc!("A♠ K♠").card_at(1));
+        assert_eq!(None, cc!("A♠ K♠").card_at(2));
     }
 
     #[test]
@@ -572,9 +597,10 @@ mod cards_cell_tests {
     }
 
     #[test]
-    #[should_panic]
-    fn pile__swap__panics() {
-        let cards = cc!("A♠ K♠");
-        let _ = cards.swap(0, Card::QUEEN_SPADES);
+    fn pile__swap() {
+        let mut cards = cc!("A♠ K♠");
+        let old = Pile::swap(&mut cards, 0, Card::QUEEN_SPADES);
+        assert_eq!(Some(Card::ACE_SPADES), old);
+        assert_eq!("Q♠ K♠", cards.to_string());
     }
 }
