@@ -1186,6 +1186,7 @@ mod analysis__store__db__hupresult_tests {
         );
     }
 
+    #[cfg(all(feature = "store", not(target_arch = "wasm32")))]
     #[test]
     #[ignore = "enumerates every board for the matchup; run explicitly with -- --ignored"]
     fn try_from__sorted_heads_up() {

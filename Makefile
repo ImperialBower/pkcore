@@ -22,7 +22,9 @@ help:
 	@echo "  make actionlint      - Lint GitHub Actions workflow files"
 	@echo "  make create_docs     - Build documentation"
 	@echo "  make docs            - Build docs and open in browser"
-	@echo "  make ayce            - Run fmt, actionlint, build_test, clippy, and docs"
+	@echo "  make test-kernel     - cargo test --no-default-features (the bare kernel, as CI runs it)"
+	@echo "  make check-features  - cargo check each feature alone on top of --no-default-features"
+	@echo "  make ayce            - Run fmt, actionlint, build_test, test-kernel, check-features, check-purity, clippy, and docs"
 	@echo "  make help            - Display this help message"
 	@echo ""
 	@echo "Nightly:"
@@ -200,9 +202,22 @@ actionlint:
 		echo "WARNING: actionlint not installed — skipping workflow lint. Please install it: https://github.com/rhysd/actionlint#installation"; \
 	fi
 
+# Mirror the CI kernel job. `build_test` runs with default features on, which
+# is how a test written against a feature-gated impl passed `ayce` and failed
+# only on GitHub (2026-08-21). The bare kernel must build and pass its own
+# tests with every default feature off, and each feature must compile alone.
+test-kernel:
+	cargo test --no-default-features
+
+check-features:
+	@for f in hand-histories bot-profiles player-stats player-stats-persistence equity; do \
+		echo "--- cargo check --no-default-features --features $$f --lib --tests"; \
+		cargo check --no-default-features --features $$f --lib --tests || exit 1; \
+	done
+
 ayce: export RUSTFLAGS := -Dwarnings
 ayce: export CARGO_INCREMENTAL := 0
-ayce: fmt actionlint build_test clippy create_docs
+ayce: fmt actionlint build_test test-kernel check-features check-purity clippy create_docs
 
 # Install required tools
 install-tools:

@@ -51,6 +51,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`make ayce` now runs the CI kernel job too** — new `make test-kernel`
+  (`cargo test --no-default-features`) and `make check-features` (each
+  feature compiled alone on top of `--no-default-features`), plus the
+  existing `make check-purity`, are part of the gate. `ayce` ran with default
+  features only, so a test written against a feature-gated impl passed it
+  and failed only on GitHub.
+
 - **Nine public methods that only panicked now work** — the "next sweep"
   [DEFECT_023](docs/defects/DEFECT_023_min_raise_tier_and_panicking_api.md)
   left behind. Each was a `pub` method whose whole body was
