@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/build_epub.sh` — builds `book.epub` from every markdown file in
+  the repo (root files first, then everything under subfolders, excluding
+  build/tool-state dirs like `target/`, `.git/`, `generated/`) via `pandoc`.
+  Passes `--resource-path` covering every input file's own folder so
+  pictures linked with relative paths (e.g. `docs/epics/*.md` pointing at
+  `../files/*.png`) are found and packed into the book.
+
+### Fixed
+
+- `docs/epics/EPIC-06_Preflop.md` — `3dayslater.png` link was missing the
+  `../` back up to `docs/files/`, so the picture never rendered anywhere,
+  not just in the epub build.
+
 ## [0.7.0] - 2026-08-21
 
 ### Changed

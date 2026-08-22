@@ -59,7 +59,7 @@ but had to remove it when the dependencies for the version I was using got pulle
 version 1. I simply didn't have the time to refactor a spike version of the library that suddenly
 didn't work.
 
-![3dayslater.png](files%2F3dayslater.png)
+![3dayslater.png](../files/3dayslater.png)
 
 Fuck it. I got it to work without it. I love this library but it's not what I'm looking for. I
 got it to work via stupider methods #DumbCoder #ThisIsTheWay. See `impl From<Bard> for Cards`
