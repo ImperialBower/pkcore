@@ -120,12 +120,12 @@ all four cases._
 
 #### Other panic paths
 
-- [ ] 🤖 **`Cards::insert_at` panics on an out-of-range index** — delegates straight to `Vec::insert`, which panics when `index > len()`. The method already returns `bool` to signal the blank-card failure, so a graceful path exists and is simply not used for this case; no `# Panics` doc, and the only test uses in-bounds indices. Suggested: return `false` when `index > self.len()`. (`src/cards.rs:409`)
-- [ ] 🤖 **Four `expect()` calls in `KuhnCfr`** — in the public `train()` and the private `cfr()` it calls. The invariants are arguably provable, but the house rule has no unreachability carve-out. Suggested: propagate via `?`, or restructure so the type system enforces the invariant. (`src/games/kuhn.rs:842`, `:944`, `:950`, `:964`)
+- [x] ~~🤖 **`Cards::insert_at` panics on an out-of-range index**~~ — **FIXED in `0.7.0`** (2026-08-21): returns `false` past the end. Original: — delegates straight to `Vec::insert`, which panics when `index > len()`. The method already returns `bool` to signal the blank-card failure, so a graceful path exists and is simply not used for this case; no `# Panics` doc, and the only test uses in-bounds indices. Suggested: return `false` when `index > self.len()`. (`src/cards.rs:409`)
+- [x] ~~🤖 **Four `expect()` calls in `KuhnCfr`**~~ — **FIXED in `0.7.0`** (2026-08-21): `train` returns `Result`, the four are `?`. Original: — in the public `train()` and the private `cfr()` it calls. The invariants are arguably provable, but the house rule has no unreachability carve-out. Suggested: propagate via `?`, or restructure so the type system enforces the invariant. (`src/games/kuhn.rs:842`, `:944`, `:950`, `:964`)
 
 #### Dead code worth deleting
 
-- [ ] 🤖 **`Position6MaxPointer` and `ActionTracker`** — contain unguarded array indexing and a loop that will not terminate on degenerate input, but neither is referenced anywhere else in the crate; `casino::table` drives real games. Reported as cleanup, not as a live bug. Suggested: delete, or add the guards if they are meant to return. (`src/play/positions.rs`, `src/play/actions.rs`)
+- [x] ~~🤖 **`Position6MaxPointer` and `ActionTracker`**~~ — **DELETED in `0.7.0`** (2026-08-21) with their modules `play::actions` and `play::positions`. Original: — contain unguarded array indexing and a loop that will not terminate on degenerate input, but neither is referenced anywhere else in the crate; `casino::table` drives real games. Reported as cleanup, not as a live bug. Suggested: delete, or add the guards if they are meant to return. (`src/play/positions.rs`, `src/play/actions.rs`)
 
 #### Below the confidence bar — recorded, not actioned
 
@@ -160,13 +160,13 @@ _Re-verified against source on 2026-08-18._
 
 #### House-rule violations (panics in library code)
 
-- [ ] 🤖 **`select_all` raw `.unwrap()`** — still live at `src/analysis/store/db/hup.rs:576–577`: `stmt.query(()).unwrap()` and `hups.next().unwrap()` panic if SQLite errors mid-iteration. The `prepare()` call above them *was* hardened since June — these two were missed. Suggested: propagate via `?` and return `Result<Vec<HUPResult>, rusqlite::Error>`.
-- [ ] 🤖 **`from_sorted_heads_up` assert** — `assert_eq!(first_ties, second_ties)` panics on asymmetric tie counters. Suggested: return `Result<Self, PKError>`. (`src/analysis/store/db/hup.rs:185`)
-- [ ] 🤖 **`From<&SortedHeadsUp>` assert** — same assert in a `From` impl panics in production. Suggested: make it `TryFrom`. (`src/analysis/store/db/hup.rs:406`)
+- [x] ~~🤖 **`select_all` raw `.unwrap()`**~~ — **FIXED in `0.7.0`** (2026-08-21): let-else / `while let Ok`. Original: — still live at `src/analysis/store/db/hup.rs:576–577`: `stmt.query(()).unwrap()` and `hups.next().unwrap()` panic if SQLite errors mid-iteration. The `prepare()` call above them *was* hardened since June — these two were missed. Suggested: propagate via `?` and return `Result<Vec<HUPResult>, rusqlite::Error>`.
+- [x] ~~🤖 **`from_sorted_heads_up` assert**~~ — **FIXED in `0.7.0`** (2026-08-21): returns `Result`, `PKError::InconsistentWins`. Original: — `assert_eq!(first_ties, second_ties)` panics on asymmetric tie counters. Suggested: return `Result<Self, PKError>`. (`src/analysis/store/db/hup.rs:185`)
+- [x] ~~🤖 **`From<&SortedHeadsUp>` assert**~~ — **FIXED in `0.7.0`** (2026-08-21): now `TryFrom`, delegating to `from_sorted_heads_up`. Original: — same assert in a `From` impl panics in production. Suggested: make it `TryFrom`. (`src/analysis/store/db/hup.rs:406`)
 - [x] ~~🤖 **`insert_many` is `unimplemented!()`**~~ — **FIXED** in `0.6.0`, recorded as [`DEFECT_023`](defects/DEFECT_023_min_raise_tier_and_panicking_api.md). Implemented as a loop over `insert`, counting the rows actually written. (`src/analysis/store/db/hup.rs:494`)
-- [ ] 🤖 **`NAMER` static `unwrap()`** — `LazyLock` init panics at first use if `RNG::new` fails; the lint is suppressed with `#[allow(clippy::unwrap_used)]`. Suggested: fallback name source, or at minimum a `# Panics` doc. (`src/util/name.rs:6`)
-- [ ] 🤖 **`receive_usize` `expect()`** — public fn panics on stdin read error. Suggested: return `Result<usize, std::io::Error>`. (`src/util/terminal.rs:141`)
-- [ ] 🤖 **`Deck::get` unchecked index** — `POKER_DECK.0[index]` panics out-of-bounds with no `# Panics` doc. Suggested: document the panic and/or add a checked `try_get`. (`src/deck.rs:72`)
+- [x] ~~🤖 **`NAMER` static `unwrap()`**~~ — **FIXED in `0.7.0`** (2026-08-21): `LazyLock<Option<RNG>>` with `Name::FALLBACK`. Original: — `LazyLock` init panics at first use if `RNG::new` fails; the lint is suppressed with `#[allow(clippy::unwrap_used)]`. Suggested: fallback name source, or at minimum a `# Panics` doc. (`src/util/name.rs:6`)
+- [x] ~~🤖 **`receive_usize` `expect()`**~~ — **FIXED in `0.7.0`** (2026-08-21): returns `Result<usize, PKError>`; `receive_usize_from` is the testable core. Original: — public fn panics on stdin read error. Suggested: return `Result<usize, std::io::Error>`. (`src/util/terminal.rs:141`)
+- [x] ~~🤖 **`Deck::get` unchecked index**~~ — **FIXED in `0.7.0`** (2026-08-21): returns `Option<Card>`, with a doc test. Original: — `POKER_DECK.0[index]` panics out-of-bounds with no `# Panics` doc. Suggested: document the panic and/or add a checked `try_get`. (`src/deck.rs:72`)
 
 #### Resolved since the 2026-06-19 pass
 

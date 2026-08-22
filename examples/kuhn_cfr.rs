@@ -81,7 +81,7 @@ fn main() {
     let mut total_iters: u32 = 0;
 
     for &(extra, label) in milestones {
-        cfr.train(extra);
+        cfr.train(extra).expect("Kuhn training cannot fail on valid deals");
         total_iters += extra;
         let avg = cfr.average_strategy();
         let exploit = cfr.exploitability();
@@ -113,7 +113,7 @@ fn main() {
         let needed = iters - (iters / 10).max(if iters == 1 { 0 } else { iters / 10 });
         // Re-train on the fresh cfr2 to hit exactly `iters` total.
         let run = if iters == 1 { 1 } else { iters - iters / 10 };
-        cfr2.train(run);
+        cfr2.train(run).expect("Kuhn training cannot fail on valid deals");
         let exploit = cfr2.exploitability();
         let reduction = if prev_exploit.is_finite() {
             format!("{:.1}%", (1.0 - exploit / prev_exploit) * 100.0)

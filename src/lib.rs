@@ -592,6 +592,9 @@ pub enum PKError {
     /// rather than deferring the contradiction to the middle of a hand
     /// (`DEFECT_018`).
     TooManyPlayers,
+    /// A `Wins` record whose tie counts differ between the two players it is
+    /// being read as — a three-way result fed to a heads-up constructor.
+    InconsistentWins,
     /// The requested operation is recognised but not yet implemented.
     ///
     /// Returned by methods whose behaviour is deliberately unfinished (rather
@@ -660,6 +663,7 @@ impl Display for PKError {
             }
             PKError::BcmUnavailable => "Binary Card Map data unavailable (set PKCORE_75BCM_PATH)",
             PKError::TooManyPlayers => "Too many players for this game's deck",
+            PKError::InconsistentWins => "Wins record is inconsistent: tie counts differ between players",
             PKError::NotImplemented => "Operation not yet implemented",
         };
         write!(f, "{msg}")

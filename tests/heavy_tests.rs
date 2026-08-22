@@ -97,7 +97,7 @@ mod heavy_tests {
     #[test]
     #[ignore]
     fn hup_result__from__sorted_heads_up() {
-        let actual = HUPResult::from(&TestData::the_hand_sorted_headsup());
+        let actual = HUPResult::try_from(&TestData::the_hand_sorted_headsup()).unwrap();
 
         assert_eq!(actual, TestData::the_hand_as_hup_result());
     }
@@ -108,7 +108,7 @@ mod heavy_tests {
     #[ignore]
     fn kuhn_cfr__converges_to_nash_exploitability() {
         let mut cfr = KuhnCfr::new();
-        cfr.train(500_000);
+        cfr.train(500_000).unwrap();
         let exploit = cfr.exploitability().abs();
         assert!(exploit < 0.001, "exploitability after 500k iters: {exploit}");
     }

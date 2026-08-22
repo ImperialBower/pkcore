@@ -149,6 +149,14 @@ Closed-out on 2026-08-21, recorded so nobody re-reports them:
 `FIXME`/`HACK`/`XXX` remain. Full detail in
 [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
 
+**2026-08-21 panic sweep (`0.7.0`):** the nine 🤖 "panics in library code"
+findings are closed — `KuhnCfr::train`, `Deck::get`, `Terminal::receive_usize`,
+`HUPResult::from_sorted_heads_up` / `TryFrom<&SortedHeadsUp>` and `NAMER`
+changed signature; `Cards::insert_at` and `HUPResult::select_all` stopped
+panicking without one; `play::actions` and `play::positions` were deleted.
+No `unwrap()` / `expect()` / `assert!` / unguarded index that the 2026-06-19
+or 2026-08-18 reviews flagged is left in library code.
+
 **2026-08-21 sweep (`0.7.0`):** the nine descriptive
 `unimplemented!()` bodies DEFECT_023 called "the next sweep" are implemented and
 tested; `Cards::swap` got a bounds guard. The `unimplemented!()` calls still in

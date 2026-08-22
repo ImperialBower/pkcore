@@ -191,7 +191,7 @@ fn card_vocabulary() -> usize {
     // The canonical deck, in the library's own order.
     let composition: Vec<Value> = (0..Deck::len())
         .map(|i| {
-            let card = Deck::get(i);
+            let card = Deck::get(i).expect("index is below Deck::len()");
             json!({
                 "index": i,
                 "rank": card.get_rank().to_char().to_string(),
@@ -2011,7 +2011,7 @@ fn equilibrium_solving() -> usize {
 
     // Train the solver and record how close it gets to the known answer.
     let mut cfr = KuhnCfr::new();
-    cfr.train(200_000);
+    cfr.train(200_000).expect("Kuhn training cannot fail on valid deals");
     let exploitability = cfr.exploitability();
 
     n += write_vector(

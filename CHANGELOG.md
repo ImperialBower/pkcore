@@ -24,6 +24,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Known downstream call sites: `pkpy` (`src/session.rs` wrapper),
   `pkarena0-web` (`src/lib.rs`, seven sites), `pkdealer`.
 
+- **BREAKING: five more library panics became honest signatures** — the
+  house-rule sweep `docs/TECHNICAL_DEBT.md` had queued since 2026-06-19.
+  `KuhnCfr::train` returns `Result<(), PKError>` (four `expect()`s on
+  provably-unreachable paths are now `?`); `Deck::get` returns `Option<Card>`
+  instead of indexing out of bounds; `Terminal::receive_usize` returns
+  `Result<usize, PKError>` with `PKError::InvalidIO` on a failed read, and
+  the new `Terminal::receive_usize_from` takes any `BufRead` so it is
+  testable; `HUPResult::from_sorted_heads_up` returns `Result` and the
+  `From<&SortedHeadsUp>` impl is now `TryFrom`, both reporting the new
+  `PKError::InconsistentWins` where an `assert_eq!` used to panic on
+  asymmetric tie counts (reachable: the constructor accepts any `Wins`, and
+  a three-way result makes the sides differ); and the `NAMER` static is a
+  `LazyLock<Option<RNG>>`, with `Name::generate` falling back to
+  `Name::FALLBACK` (`"Nameless Demon"`) instead of panicking on first use.
+  Known downstream call site: `pkkuhn-web` `src/lib.rs` calls `train` twice.
+
 - **`DEFECT_008` closed outright; D8-6 recorded as an accepted divergence**
   ([DEFECT_008](docs/defects/DEFECT_008_tda_2024_rules_compliance.md)). The
   fixed-limit raise cap at event-heads-up needs a multi-table event model that
@@ -55,12 +71,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`Cards::insert_at` no longer panics on an out-of-range index.** It
+  delegated straight to `Vec::insert`; it now returns `false` for
+  `index > len()`, the same channel it already used for a blank card.
+  `index == len()` still appends.
+
+- **`HUPResult::select_all` no longer `unwrap()`s the query.** A SQLite error
+  mid-iteration returns the rows read so far instead of panicking, matching
+  `SevenFiveBCM::select_all`.
+
 - **`Cards::swap` no longer panics on an out-of-range index.** It delegated
   to `IndexSet::replace_index`, which panics rather than erring, so the
   `Option<Card>` return never got to say `None`. Found by the
   `CardsCell::swap` test above; guarded with a bounds check.
 
 ### Removed
+
+- **`pkcore::play::actions` (`ActionTracker`, `Actor`, `PlayState`) and
+  `pkcore::play::positions` (`Position6MaxPointer`)** — dead since the
+  `casino::table` engine took over turn order. Nothing in the crate, the
+  examples, the tests, or any sibling repo referenced them, and both carried
+  unguarded indexing and a loop that does not terminate on degenerate input.
 
 - **`docs/epics/EPIC-DEFECT-Minraise.md` and `docs/epics/EPIC-DEFECT-A_Preflop_Perf.md`**
   — a two-line title stub and a zero-byte file that `ls docs/epics | grep -v

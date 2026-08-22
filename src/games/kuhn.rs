@@ -781,7 +781,7 @@ const DEALS: [(KuhnCard, KuhnCard); 6] = [
 /// use pkcore::games::kuhn::KuhnCfr;
 ///
 /// let mut cfr = KuhnCfr::new();
-/// cfr.train(1000);
+/// cfr.train(1000).unwrap();
 /// let exploit = cfr.exploitability();
 /// assert!(exploit.abs() < 0.05, "exploitability after 1k iters: {exploit}");
 /// ```
@@ -826,23 +826,25 @@ impl KuhnCfr {
     /// use pkcore::games::kuhn::KuhnCfr;
     ///
     /// let mut cfr = KuhnCfr::new();
-    /// cfr.train(500);
-    /// cfr.train(500); // equivalent to train(1000)
+    /// cfr.train(500).unwrap();
+    /// cfr.train(500).unwrap(); // equivalent to train(1000)
     /// assert!(cfr.exploitability().abs() < 0.1);
     /// ```
-    /// # Panics
     ///
-    /// Does not panic in practice; the internal `DEALS` constant contains only
-    /// valid distinct card pairs. The `expect` is unreachable by construction.
-    pub fn train(&mut self, iterations: u32) {
+    /// # Errors
+    ///
+    /// Propagates any error from building or stepping a [`KuhnState`]. None
+    /// can occur in practice — `DEALS` holds only distinct pairs and every
+    /// action comes from `legal_actions()` — but library code reports rather
+    /// than panics, so the `Result` is real rather than an `expect`.
+    pub fn train(&mut self, iterations: u32) -> Result<(), PKError> {
         for _ in 0..iterations {
             for &(c0, c1) in &DEALS {
-                // DEALS contains only distinct pairs; new() cannot fail here.
-                #[allow(clippy::expect_used)]
-                let state = KuhnState::new(c0, c1).expect("DEALS are always valid");
-                self.cfr(&state, 1.0, 1.0);
+                let state = KuhnState::new(c0, c1)?;
+                self.cfr(&state, 1.0, 1.0)?;
             }
         }
+        Ok(())
     }
 
     /// Returns the average strategy accumulated over all training iterations.
@@ -856,7 +858,7 @@ impl KuhnCfr {
     /// use pkcore::games::kuhn::{KuhnCfr, KuhnCard, KuhnHistory, KuhnInfoSet, KuhnAction};
     ///
     /// let mut cfr = KuhnCfr::new();
-    /// cfr.train(10_000);
+    /// cfr.train(10_000).unwrap();
     /// let strategy = cfr.average_strategy();
     ///
     /// // P1 with King always bets after P0 checks — true at every Nash alpha.
@@ -916,7 +918,7 @@ impl KuhnCfr {
     /// use pkcore::games::kuhn::KuhnCfr;
     ///
     /// let mut cfr = KuhnCfr::new();
-    /// cfr.train(100_000);
+    /// cfr.train(100_000).unwrap();
     /// assert!(cfr.exploitability().abs() < 0.005);
     /// ```
     #[must_use]
@@ -933,21 +935,19 @@ impl KuhnCfr {
     /// Terminal payoffs are indexed by `history.len() % 2` for the same reason.
     ///
     /// `p0` and `p1` are each player's reach probability into this node.
-    fn cfr(&mut self, state: &KuhnState, p0: f64, p1: f64) -> f64 {
+    fn cfr(&mut self, state: &KuhnState, p0: f64, p1: f64) -> Result<f64, PKError> {
         if state.is_terminal() {
             // Return the utility for the player whose "turn" this history length
             // implies (len%2=0 → P0, len%2=1 → P1). This keeps utility in the
             // current-player frame throughout the recursion.
             let player = state.history().len() % 2;
-            // Safe: is_terminal() guarantees payoff() succeeds.
-            #[allow(clippy::expect_used)]
-            let payoff = state.payoff().expect("terminal state always has a payoff");
-            return f64::from(payoff[player]);
+            let payoff = state.payoff()?;
+            return Ok(f64::from(payoff[player]));
         }
 
-        // Safe: is_terminal() returned false above.
-        #[allow(clippy::expect_used)]
-        let player = state.current_player().expect("non-terminal has a current player");
+        // A non-terminal state always has a player to act; `None` here would
+        // mean `is_terminal` and `current_player` disagree.
+        let player = state.current_player().ok_or(PKError::InvalidAction)?;
         let info_set = state.info_set(player);
         let actions = state.legal_actions();
         let n = actions.len();
@@ -959,13 +959,11 @@ impl KuhnCfr {
         let mut action_utils = vec![0.0_f64; n];
         let mut node_util = 0.0_f64;
         for (i, &action) in actions.iter().enumerate() {
-            // Safe: `action` came from legal_actions(), so apply() cannot fail.
-            #[allow(clippy::expect_used)]
-            let next = state.apply(action).expect("action came from legal_actions");
+            let next = state.apply(action)?;
             let child_util = if player == 0 {
-                self.cfr(&next, p0 * strategy[i], p1)
+                self.cfr(&next, p0 * strategy[i], p1)?
             } else {
-                self.cfr(&next, p0, p1 * strategy[i])
+                self.cfr(&next, p0, p1 * strategy[i])?
             };
             action_utils[i] = -child_util; // flip to current player's frame
             node_util += strategy[i] * action_utils[i];
@@ -986,7 +984,7 @@ impl KuhnCfr {
             strat[i] += my_reach * strategy[i];
         }
 
-        node_util
+        Ok(node_util)
     }
 
     /// Computes the current (per-iteration) strategy via regret matching.
@@ -1724,10 +1722,15 @@ mod kuhn_tests {
     }
 
     #[test]
+    fn train_reports_ok() {
+        assert!(KuhnCfr::new().train(10).is_ok());
+    }
+
+    #[test]
     fn test_kuhn_cfr_train_reduces_exploitability() {
         let mut cfr = KuhnCfr::new();
         let before = cfr.exploitability().abs();
-        cfr.train(100);
+        cfr.train(100).unwrap();
         let after = cfr.exploitability().abs();
         assert!(after < before, "exploitability should decrease: {before} -> {after}");
     }
@@ -1735,11 +1738,11 @@ mod kuhn_tests {
     #[test]
     fn test_kuhn_cfr_train_is_additive() {
         let mut cfr_once = KuhnCfr::new();
-        cfr_once.train(1000);
+        cfr_once.train(1000).unwrap();
 
         let mut cfr_twice = KuhnCfr::new();
-        cfr_twice.train(500);
-        cfr_twice.train(500);
+        cfr_twice.train(500).unwrap();
+        cfr_twice.train(500).unwrap();
 
         // Both should have the same exploitability (identical computation path)
         let e1 = cfr_once.exploitability().abs();
@@ -1752,7 +1755,7 @@ mod kuhn_tests {
         // King bets strictly more than Jack at any Nash equilibrium
         // (K bets 3*alpha, J bets alpha, so K bet prob = 3 × J bet prob).
         let mut cfr = KuhnCfr::new();
-        cfr.train(10_000);
+        cfr.train(10_000).unwrap();
         let strategy = cfr.average_strategy();
         let jack_info = KuhnInfoSet::new(KuhnCard::Jack, KuhnHistory::new());
         let king_info = KuhnInfoSet::new(KuhnCard::King, KuhnHistory::new());
@@ -1767,7 +1770,7 @@ mod kuhn_tests {
     #[test]
     fn test_kuhn_cfr_converges_queen_never_bets_initially() {
         let mut cfr = KuhnCfr::new();
-        cfr.train(10_000);
+        cfr.train(10_000).unwrap();
         let strategy = cfr.average_strategy();
         let info = KuhnInfoSet::new(KuhnCard::Queen, KuhnHistory::new());
         let probs = strategy.action_probs(&info);
@@ -1778,7 +1781,7 @@ mod kuhn_tests {
     #[test]
     fn test_kuhn_cfr_converges_p1_king_always_bets_after_check() {
         let mut cfr = KuhnCfr::new();
-        cfr.train(10_000);
+        cfr.train(10_000).unwrap();
         let strategy = cfr.average_strategy();
         let info = KuhnInfoSet::new(KuhnCard::King, KuhnHistory::new().push(KuhnAction::Check));
         let probs = strategy.action_probs(&info);
@@ -1793,7 +1796,7 @@ mod kuhn_tests {
     #[test]
     fn test_kuhn_cfr_converges_p1_queen_call_prob_after_bet() {
         let mut cfr = KuhnCfr::new();
-        cfr.train(10_000);
+        cfr.train(10_000).unwrap();
         let strategy = cfr.average_strategy();
         let info = KuhnInfoSet::new(KuhnCard::Queen, KuhnHistory::new().push(KuhnAction::Bet));
         let probs = strategy.action_probs(&info);

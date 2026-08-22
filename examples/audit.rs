@@ -19,7 +19,7 @@ fn main() {
 
 fn read_input(conn: &Connection, distinct: &[Masked]) {
     let mut x = 0usize;
-    let i = Terminal::receive_usize("How many audits? ");
+    let i = Terminal::receive_usize("How many audits? ").expect("could not read stdin");
     println!("Auditing {i} hands.");
 
     while x < i {
@@ -28,7 +28,7 @@ fn read_input(conn: &Connection, distinct: &[Masked]) {
             None => println!("{x} - Not in DB: {}", &masked.shu),
             Some(actual) => {
                 println!("{x} - Auditing: {}", &masked.shu);
-                let expected = HUPResult::from(&masked.shu);
+                let expected = HUPResult::try_from(&masked.shu).expect("binary card map unavailable");
                 if expected == actual {
                     println!("   {} passes!", &masked);
                 } else {
