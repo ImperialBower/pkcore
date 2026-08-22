@@ -7,12 +7,17 @@
 > Standards source: `CLAUDE.md` (no `unwrap()`/`expect()`/`panic!()` in library
 > code; every public fn needs a doc test + unit test).
 >
-> Last refreshed **2026-08-21** against `main` @ `1f49da32`, pkcore `0.6.0`.
+> Last refreshed **2026-08-22** against `main` @ `14245b53`, pkcore `0.7.1`.
 > The last automated review pass ran 2026-08-18 (see the 🤖 section); nine of
-> its eleven findings shipped as `DEFECT_015` – `DEFECT_023` in `0.6.0`. No
-> new code TODOs since; the census below is unchanged.
-> Marker census in `src/`: 70 `TODO`, of which 11 `TODO RF`, 3 `TODO TD`,
-> 1 `TODO DEFECT`. No `FIXME`, `HACK`, or `XXX` markers remain.
+> its eleven findings shipped as `DEFECT_015` – `DEFECT_023` in `0.6.0`, and
+> the panic sweep closed the rest in `0.7.0`. Only documentation and the epub
+> build script have landed since, so nothing below moved.
+> Marker census in `src/` (re-counted 2026-08-22): 70 `TODO`, of which 11
+> `TODO RF` and 3 `TODO TD`. **0 `TODO DEFECT`** — the last one was retired on
+> 2026-08-21. No `FIXME`, `HACK`, or `XXX` markers remain.
+>
+> The automated review pass is now 4 days old and predates `0.7.0`'s signature
+> changes. Ask for a re-run before trusting the 🤖 section as current.
 
 ## Tracked debt
 

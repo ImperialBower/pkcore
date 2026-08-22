@@ -1,35 +1,47 @@
 # Backlog
 
-> Refreshed by the `/backlog` skill on **2026-08-21** against `main` @ `1f49da32`,
-> pkcore `0.6.0` (tagged `v0.6.0` and published to crates.io on 2026-08-19). An index of outstanding work aggregated from EPIC docs,
-> `ROADMAP.md`, defect reports, code comments, the unreleased changelog, and
-> open GitHub issues. Items tagged 🤖 are machine-proposed — review before
-> adopting. Tech-debt detail lives in [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
+> Refreshed by the `/backlog` skill on **2026-08-22** against `main` @ `14245b53`,
+> pkcore `0.7.1` (`0.7.0` tagged and published 2026-08-21). An index of
+> outstanding work aggregated from EPIC docs, `ROADMAP.md`, defect reports,
+> code comments, the unreleased changelog, and open GitHub issues. Items tagged
+> 🤖 are machine-proposed — review before adopting. Tech-debt detail lives in
+> [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
 >
-> **What changed since the 2026-08-18 pass:** the `0.5.1` – `0.6.0` defect
-> sweep landed and shipped (`DEFECT_015` – `DEFECT_023`, nine fixes, six
-> breaking signatures). All 23 filed defects are now fixed. No new EPIC work
-> landed. The frontier is unchanged — **kernel-hardening and platform-reach** —
-> but the release has loose ends (see *Release follow-through* below).
+> **What changed since the 2026-08-21 pass:** `0.7.0` shipped
+> (`next_actor` returns `Result`, five more library panics became honest
+> signatures, `DEFECT_008` closed). Downstream was then bumped: **pkpy,
+> pkdealer (all crates) and pkarena0-web now pin `0.7.0` and have adopted the
+> fallible `next_actor`** — release follow-through item 3 is done except for
+> two stale-but-compiling web repos. Since the release only docs work landed
+> (`scripts/build_epub.sh`, the epub, an EPIC-06 image-link fix), which is what
+> the current `[Unreleased]` section holds at `0.7.1`. **No EPIC work has
+> landed.** The frontier is unchanged — **kernel-hardening and platform-reach**.
 
 ---
 
-## Release follow-through (do these first — they are short)
+## Release follow-through (nearly closed)
 
-`v0.6.0` is tagged and on crates.io, but the release was not closed out:
+`v0.7.0` is tagged and on crates.io. Everything that blocked consumers is done:
 
-1. ~~**Cut `CHANGELOG.md`**~~ — **DONE 2026-08-21.** `## [0.6.0] - 2026-08-19`
-   header and compare link added; `[Unreleased]` is empty again.
+1. ~~**Cut `CHANGELOG.md`**~~ — **DONE 2026-08-21.**
 2. ~~**Write `docs/releases/RELEASE_0.6.0.md`**~~ — **DONE 2026-08-21.**
-   [`releases/RELEASE_0.6.0.md`](releases/RELEASE_0.6.0.md).
-3. **Unbreak downstream** — the audit found two repos that fail to compile on
-   `0.6.0`: **pkpy** (2 production sites) and **pkdealer** (1 production, 1
-   example). `pkgto-web`, `pkkuhn-web`, `pkarena0-web` pass but still pin
-   `0.2.1`/`0.5.0` and need a version bump. Fix list with file:line is in the
-   audit's per-repo sections.
-4. ~~**`PokerSession::next_actor` still swallows failure**~~ — **DONE
-   2026-08-21**, released in `0.7.0`. It returns `Result<Option<u8>, PKError>`
-   now. Breaking: add it to the downstream fix list in item 3.
+3. ~~**Unbreak downstream**~~ — **DONE 2026-08-21/22.** `pkpy`
+   (`src/session.rs:186`), every `pkdealer` crate, and `pkarena0-web`
+   (`src/lib.rs:1371`, with a comment naming the 0.7.0 change) now pin
+   `pkcore = "0.7.0"` and compile against the fallible `next_actor`.
+4. ~~**`PokerSession::next_actor` still swallows failure**~~ — **DONE**, shipped
+   in `0.7.0`.
+
+**Left over (low urgency, nothing is broken):**
+
+- **`pkgto-web` and `pkkuhn-web` still pin `pkcore = "0.2.1"`** — five minor
+  versions behind. They compile, so this is drift, not breakage. `pkkuhn-web`
+  `src/lib.rs` calls `KuhnCfr::train` twice, which became fallible in `0.7.0`,
+  so the bump is a real (small) edit, not a one-line version change.
+- **`docs/releases/RELEASE_0.7.0.md` was never written** — `0.6.0` has one,
+  `0.7.0` does not. `/release-notes` covers it.
+- **No release audit for `0.7.0`** — `docs/RELEASE_AUDIT_0.6.0.md` is the
+  latest. The `0.7.0` breaking changes were verified by hand instead.
 
 ---
 
@@ -49,7 +61,10 @@ Ranked by "designed, unblocked, and nothing has landed yet".
    Delete the private Cactus Kev evaluator copy and depend on `ckc-rs` 0.2,
    re-exporting from existing paths so ~5,700 lines leave `src/` with no
    downstream change. Status as of 2026-08-07: *nothing has landed*. Big
-   line-count win; gated on `ckc-rs` `align` branch readiness.
+   line-count win, but **still blocked, confirmed 2026-08-22**: crates.io
+   publishes `ckc-rs 0.1.18`; `0.2.0` exists only on the local `align` branch
+   (`../ckc-rs` @ `aa66e5c`). Publishing `ckc-rs 0.2.0` is the prerequisite,
+   and it is our own crate — a short unblock if you want this one.
 
 3. **EPIC-39 — Decider Opponent-Range Model** ([`epics/EPIC-39_Decider_Range_Model.md`](epics/EPIC-39_Decider_Range_Model.md))
    Planned. A `villain_range(state) -> Combos` derived from position and action
@@ -217,8 +232,14 @@ odd chips, and the CFR/equity math. See `TECHNICAL_DEBT.md` for what was traced.
 
 ## Unreleased (in `CHANGELOG.md`)
 
-Empty. The `0.6.0` header was cut on 2026-08-21; the tree matches the
-`v0.6.0` tag.
+`Cargo.toml` is at **0.7.1**; `[Unreleased]` holds docs/tooling only:
+
+- **Added** — `scripts/build_epub.sh`, which builds `book.epub` from every
+  markdown file in the repo via `pandoc`.
+- **Fixed** — the `3dayslater.png` link in `docs/epics/EPIC-06_Preflop.md`.
+
+No code change is pending. `0.7.1` can be cut whenever, or absorbed into the
+next feature release.
 
 ---
 
