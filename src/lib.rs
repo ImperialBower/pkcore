@@ -578,7 +578,7 @@ pub enum PKError {
     NotImplemented,
 
     /// EPIC-79b errors
-    SealFailed,     // A scheme could not lock a card.
+    SealFailed, // A scheme could not lock a card.
     RevealRejected, // A token was presented and the scheme said no.
     DuplicateSlot,  // Two cards in one deck claim the same SlotId.
 }

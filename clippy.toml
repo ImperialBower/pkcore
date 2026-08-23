@@ -1,5 +1,5 @@
 # Proper nouns that look like code identifiers to clippy::doc_markdown but aren't.
-doc-valid-idents = ["PokerBench", ".."]
+doc-valid-idents = ["PokerBench", "ElGamal", ".."]
 
 # Format-crate error types must not leak into pkcore's public API — the
 # domain-kernel boundary (AUDIT_Fable_5.md III.2 / P3). Each is stringified into

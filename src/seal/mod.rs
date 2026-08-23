@@ -6,9 +6,8 @@
 //! Wire secrecy is the scheme's job, not this module's. For `PlaintextSeal`, the payload
 //! is literally a `Card` that serializes as "A♠".
 
-// pub mod card_seal;
+pub mod card_seal;
 // pub mod plaintext;
 // pub mod sealed_card;
 // pub mod sealed_deck;
 pub mod slot;
-
