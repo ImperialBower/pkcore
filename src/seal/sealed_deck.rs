@@ -4,8 +4,37 @@ use crate::PKError;
 use crate::seal::card_seal::CardSeal;
 use crate::seal::sealed_card::SealedCard;
 use crate::seal::slot::SlotId;
+use rand::prelude::SliceRandom;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+
+/// The result of auditing a [`SealedDeck`].
+///
+/// # What this cannot check
+///
+/// It counts cards and checks [`SlotId`] uniqueness. It does **not** and
+/// **cannot** check that the payloads are distinct *cards*. Under any scheme
+/// worth using, sealing is randomized: two seals of the ace of spades are
+/// unequal ciphertexts, so equality on `S::Sealed` proves nothing about card
+/// distinctness. That property is exactly what a **verifiable shuffle argument**
+/// exists to prove, and it lives in EPIC-79a, not here.
+///
+/// The limit is recorded in this type rather than hidden behind an audit that
+/// appears to check more than it does.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum DeckAudit {
+    /// The count matches and every [`SlotId`] is unique.
+    Passed,
+    /// The shoe holds a different number of cards than expected.
+    CountMismatch {
+        /// The count the caller expected.
+        expected: usize,
+        /// The count actually found.
+        actual: usize,
+    },
+    /// Two cards carry the same [`SlotId`].
+    DuplicateSlot(SlotId),
+}
 
 /// An ordered shoe of sealed cards.
 ///
@@ -185,6 +214,96 @@ impl<S: CardSeal> SealedDeck<S> {
         }
         Ok(self.cards.drain(..number).collect())
     }
+
+    /// Blind Fisher-Yates.
+    ///
+    /// Mirrors [`Cards::shuffle_in_place_with`][crate::cards::Cards::shuffle_in_place_with]
+    /// so seeded reproducibility works identically for sealed and plaintext
+    /// decks. It reads nothing: a permutation needs no knowledge.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "seal-test-double")] {
+    /// use pkcore::seal::plaintext::PlaintextSeal;
+    /// use pkcore::seal::sealed_deck::SealedDeck;
+    /// use rand::SeedableRng;
+    /// use rand::rngs::SmallRng;
+    ///
+    /// let mut deck = SealedDeck::<PlaintextSeal>::from_sealed(Vec::new()).unwrap();
+    /// deck.shuffle_in_place_with(&mut SmallRng::seed_from_u64(1));
+    /// assert!(deck.is_empty());
+    /// # }
+    /// ```
+    pub fn shuffle_in_place_with<R: rand::Rng + ?Sized>(&mut self, rng: &mut R) {
+        self.cards.shuffle(rng);
+    }
+
+    /// Blind cut at `at`: the shoe rotates so the card at `at` becomes the top.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PKError::InvalidCardIndex`] if `at` is not a position in the
+    /// shoe. A failed cut moves nothing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "seal-test-double")] {
+    /// use pkcore::seal::plaintext::PlaintextSeal;
+    /// use pkcore::seal::sealed_deck::SealedDeck;
+    ///
+    /// let mut deck = SealedDeck::<PlaintextSeal>::from_sealed(Vec::new()).unwrap();
+    /// assert!(deck.cut(0).is_err());
+    /// # }
+    /// ```
+    pub fn cut(&mut self, at: usize) -> Result<(), PKError> {
+        if at >= self.cards.len() {
+            return Err(PKError::InvalidCardIndex);
+        }
+        self.cards.rotate_left(at);
+        Ok(())
+    }
+
+    /// Counts cards and checks [`SlotId`] uniqueness.
+    ///
+    /// See [`DeckAudit`] for what this deliberately cannot check.
+    ///
+    /// `from_sealed` already rejects duplicate slots, so
+    /// [`DeckAudit::DuplicateSlot`] is a belt-and-braces re-check after cards
+    /// have been drawn and returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # #[cfg(feature = "seal-test-double")] {
+    /// use pkcore::seal::plaintext::PlaintextSeal;
+    /// use pkcore::seal::sealed_deck::{DeckAudit, SealedDeck};
+    ///
+    /// let deck = SealedDeck::<PlaintextSeal>::from_sealed(Vec::new()).unwrap();
+    /// assert_eq!(DeckAudit::Passed, deck.audit(0));
+    /// assert_eq!(
+    ///     DeckAudit::CountMismatch { expected: 52, actual: 0 },
+    ///     deck.audit(52)
+    /// );
+    /// # }
+    /// ```
+    #[must_use]
+    pub fn audit(&self, expected: usize) -> DeckAudit {
+        let actual = self.cards.len();
+        if actual != expected {
+            return DeckAudit::CountMismatch { expected, actual };
+        }
+
+        let mut seen: HashSet<SlotId> = HashSet::with_capacity(actual);
+        for card in &self.cards {
+            if !seen.insert(card.slot()) {
+                return DeckAudit::DuplicateSlot(card.slot());
+            }
+        }
+
+        DeckAudit::Passed
+    }
 }
 
 #[cfg(test)]
@@ -194,6 +313,8 @@ mod seal__sealed_deck_tests {
     use super::*;
     use crate::card::Card;
     use crate::seal::plaintext::PlaintextSeal;
+    use rand::SeedableRng;
+    use rand::rngs::SmallRng;
 
     /// Five spades, sealed into slots 0..5 in order.
     fn deck_of_five() -> SealedDeck<PlaintextSeal> {
@@ -282,5 +403,126 @@ mod seal__sealed_deck_tests {
         assert_eq!(5, deck.len());
         let expected: Vec<SlotId> = (0..5).map(SlotId::new).collect();
         assert_eq!(expected, deck.slots().collect::<Vec<_>>());
+    }
+    /// A shuffle is a permutation. The multiset of slots must survive it
+    /// exactly; only the order may change.
+    #[test]
+    fn blind_shuffle_permutes_the_slot_multiset() {
+        let mut deck = deck_of_five();
+        let before: Vec<SlotId> = deck.slots().collect();
+
+        deck.shuffle_in_place_with(&mut SmallRng::seed_from_u64(42));
+
+        let mut before_sorted = before;
+        let mut after_sorted: Vec<SlotId> = deck.slots().collect();
+        before_sorted.sort_unstable();
+        after_sorted.sort_unstable();
+
+        assert_eq!(before_sorted, after_sorted, "a slot appeared or vanished");
+        assert_eq!(5, deck.len());
+    }
+
+    /// Mirrors the guarantee `Cards::shuffle_in_place_with` already gives: one
+    /// seed, one order.
+    #[test]
+    fn blind_shuffle_is_deterministic_for_a_seed() {
+        let mut first = deck_of_five();
+        let mut second = deck_of_five();
+
+        first.shuffle_in_place_with(&mut SmallRng::seed_from_u64(7));
+        second.shuffle_in_place_with(&mut SmallRng::seed_from_u64(7));
+
+        assert_eq!(first.slots().collect::<Vec<_>>(), second.slots().collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn cut_preserves_the_slot_multiset() {
+        let mut deck = deck_of_five();
+        deck.cut(2).expect("2 is in range");
+
+        assert_eq!(
+            vec![
+                SlotId::new(2),
+                SlotId::new(3),
+                SlotId::new(4),
+                SlotId::new(0),
+                SlotId::new(1),
+            ],
+            deck.slots().collect::<Vec<_>>()
+        );
+        assert_eq!(5, deck.len());
+    }
+
+    #[test]
+    fn cut_past_the_end_errors() {
+        let mut deck = deck_of_five();
+        assert_eq!(Err(PKError::InvalidCardIndex), deck.cut(5));
+        assert_eq!(5, deck.len(), "a failed cut moved cards");
+    }
+
+    #[test]
+    fn audit_passes_on_a_correct_deck() {
+        assert_eq!(DeckAudit::Passed, deck_of_five().audit(5));
+    }
+
+    #[test]
+    fn audit_reports_a_count_mismatch() {
+        assert_eq!(
+            DeckAudit::CountMismatch {
+                expected: 52,
+                actual: 5
+            },
+            deck_of_five().audit(52)
+        );
+    }
+
+    /// Pins the documented limit so nobody later mistakes `audit` for a
+    /// distinctness guarantee. The **same card** is sealed into two slots and
+    /// the audit still passes, because proving 52 payloads are 52 *distinct*
+    /// cards is a verifiable-shuffle-argument property and belongs to EPIC-79a.
+    #[test]
+    fn audit_counts_but_does_not_prove_distinctness() {
+        let payload = PlaintextSeal.seal(Card::ACE_SPADES).expect("infallible");
+        let two_aces = vec![
+            SealedCard::<PlaintextSeal>::new(payload, SlotId::new(0)),
+            SealedCard::<PlaintextSeal>::new(payload, SlotId::new(1)),
+        ];
+        let deck = SealedDeck::from_sealed(two_aces).expect("distinct slots");
+        assert_eq!(DeckAudit::Passed, deck.audit(2));
+    }
+
+    #[test]
+    fn sealed_deck_serde_roundtrip() {
+        let deck = deck_of_five();
+        let json = serde_json::to_string(&deck).expect("serialize");
+        let back: SealedDeck<PlaintextSeal> = serde_json::from_str(&json).expect("deserialize");
+
+        assert_eq!(deck.slots().collect::<Vec<_>>(), back.slots().collect::<Vec<_>>());
+        assert_eq!(deck.len(), back.len());
+    }
+
+    /// The container must add no leak of its own: exactly `sealed` and `slot`
+    /// per card, and nothing else.
+    ///
+    /// It does **not** assert the absence of card text. Under `PlaintextSeal`
+    /// the payload *is* a `Card`, and `Card`'s `Serialize` emits the string
+    /// `"A\u{2660}"`. Wire secrecy is the scheme's job; see the module header.
+    #[test]
+    fn sealed_deck_wire_form_carries_only_payload_and_slot() {
+        let json = serde_json::to_string(&deck_of_five()).expect("serialize");
+        let parsed: serde_json::Value = serde_json::from_str(&json).expect("valid json");
+
+        let cards = parsed
+            .get("cards")
+            .and_then(serde_json::Value::as_array)
+            .expect("a cards array");
+        assert_eq!(5, cards.len());
+
+        for card in cards {
+            let object = card.as_object().expect("each card is an object");
+            assert_eq!(2, object.len(), "unexpected field on the wire: {object:?}");
+            assert!(object.contains_key("sealed"));
+            assert!(object.contains_key("slot"));
+        }
     }
 }
