@@ -9,5 +9,5 @@
 pub mod card_seal;
 pub mod plaintext;
 pub mod sealed_card;
-// pub mod sealed_deck;
+pub mod sealed_deck;
 pub mod slot;
