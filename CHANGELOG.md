@@ -35,6 +35,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **[EPIC-79b](docs/epics/EPIC-79b_Sealed_Deck.md) is complete.** Its one
+  unbuilt item — a sealed hand replaying byte-identical to a plaintext one —
+  moved to the new [EPIC-79c: Sealed Seats](docs/epics/EPIC-79c_Sealed_Seats.md)
+  as that EPIC's acceptance test. The test is only meaningful when
+  `S::Sealed != Card`, which needs sealed seats to exist.
 - **`pkcore::seal::null::NullSeal`** — the identity `CardSeal`, always
   available (not feature-gated). `Sealed = Card`, `Token = ()`,
   `Error = Infallible`.

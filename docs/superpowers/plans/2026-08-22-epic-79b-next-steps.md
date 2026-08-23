@@ -15,9 +15,9 @@
 | 0 — plumbing (module, feature, `PKError` variants) | ✅ complete |
 | 1 — `CardSeal`, `SlotId`, `SealedCard<S>`, `PlaintextSeal` | ✅ complete |
 | 2 — `SealedDeck<S>`, blind shuffle/cut/draw, `DeckAudit` | ✅ complete |
-| 3 — `Table` integration | 🔓 **gate opened 2026-08-23** — Option A′ approved, work items 3c–3i written, **not started** |
+| 3 — `Table` integration | ✅ complete — Option A′, `TableOf<S>` + `pub type Table = TableOf<NullSeal>` |
 | 4a–4c — sealed event ledger + reveal seam | ✅ complete |
-| 4d — byte-identical sealed replay | 🔒 gated with Phase 3 |
+| 4d — byte-identical sealed replay | → **moved to [EPIC-79c](../../epics/EPIC-79c_Sealed_Seats.md) Phase 4a** |
 | 5 — handoff and docs | ⬜ **5c done; 5a, 5b, 5d open and unblocked** |
 
 `Cargo.toml` is at **`0.8.0`**. Not tagged, not published.
@@ -80,7 +80,25 @@ EPIC under *How it actually landed*:
    two of pkcore's own integration tests and one example do. Fixed with
    `impl From<&Cards> for SealedDeck<S>`.
 
-### Step 5 — stop, and decide about publishing
+### Step 5 — close EPIC-79b, open EPIC-79c — ✅ done 2026-08-23
+
+EPIC-79b is **complete**. Work item 4d moved out to
+[EPIC-79c: Sealed Seats](../../epics/EPIC-79c_Sealed_Seats.md) as its
+acceptance test.
+
+**Why 4d moved rather than staying open.** The test says a sealed hand replays
+byte-identical to a plaintext one. It could be written today against
+`PlaintextSeal` — and would prove nothing, because `PlaintextSeal::Sealed =
+Card`, so the "sealed" hand *is* the plaintext hand and it passes by definition.
+4d only has meaning when `S::Sealed != Card`, which is exactly what EPIC-79b's
+dealing bound excludes. So it was never waiting on effort; it was waiting on
+sealed **seats**. One orphan item makes a finished EPIC look unfinished.
+
+EPIC-79c opens with a **Phase 0 decide-and-stop**, mirroring EPIC-79b's Phase 3
+gate, because three questions have no answer in the current code: who runs the
+table, where reveal shares live, and whether `Visibility` needs a third state.
+
+### Step 6 — stop, and decide about publishing
 
 After Step 4, EPIC-79b is at a **real stopping point**: everything except
 Phase 4d (sealed replay, needs sealed seats) is done.

@@ -10,6 +10,10 @@
 > crate plugs into. It ships **without** `79a` and does not wait on the EPIC-79
 > decision gate.
 
+> **Status: COMPLETE** — shipped in pkcore `0.8.0` (2026-08-23). Successor:
+> [EPIC-79c: Sealed Seats](./EPIC-79c_Sealed_Seats.md), which carries this
+> EPIC's one unbuilt item (4d) as its acceptance test.
+
 ## Context
 
 `pkcore` today is structurally incapable of holding a card it does not know.
@@ -64,9 +68,11 @@ the prototypes live outside the crate in `docs/files/mentalpoker/`.
 ## Status
 
 Status as of **2026-08-23**, pkcore `0.8.0` (unreleased, untagged).
-**Phases 0–2, 4a–4c and 5 have landed.** Phase 3 is gated no longer: see
-[Option A′](#option-a--the-deck-is-always-sealed-2026-08-23), which supersedes
-the defer recommendation. The plan that built it is
+**COMPLETE.** Every phase has landed in `0.8.0` — 0–2 (the seal module),
+3 (`TableOf<S>` via [Option A′](#option-a--the-deck-is-always-sealed-2026-08-23)),
+4a–4c (the reveal ledger) and 5 (handoff and docs). Work item 4d moved to
+[EPIC-79c](./EPIC-79c_Sealed_Seats.md), where the capability that makes it
+meaningful gets built. The plan that built it is
 [`docs/superpowers/plans/2026-08-22-epic-79b-sealed-deck-phases-0-2.md`](../superpowers/plans/2026-08-22-epic-79b-sealed-deck-phases-0-2.md);
 see [Corrections (2026-08-22)](#corrections-2026-08-22) for three items in this
 document that could not be implemented as written.
@@ -83,7 +89,7 @@ document that could not be implemented as written.
 | Blind-shuffle determinism & permutation tests | **Complete** |
 | `Table` sealed dealing path | **Complete 2026-08-23** — 3a/3b done; **[Option A′](#option-a--the-deck-is-always-sealed-2026-08-23)**: the deck is always `SealedDeck<S>`, `NullSeal` for the no-secrecy case |
 | `TableAction::SealedDealt` / `Revealed` ledger | **Complete** (4a/4b, 2026-08-22) |
-| `HandHistory` replay of a sealed hand | **Partial** — `revealed_hole_cards` seam done (4c); byte-identical replay (4d) 🔒 gated |
+| `HandHistory` replay of a sealed hand | **Complete for this EPIC** — `revealed_hole_cards` seam done (4c); byte-identical replay moved to [EPIC-79c](./EPIC-79c_Sealed_Seats.md) |
 | `pkmental` implementation handoff table | **Complete** (5a, 2026-08-23) — written against `pkmental`'s real `CardCrypto` / Pallas backend |
 | Real cipher / ElGamal backend | **Out of scope** — EPIC-79a |
 
@@ -472,10 +478,13 @@ holder of a `&Table` can read. That — not the deck — is the hole EPIC-70
       This is the seam a sealed hand feeds into `HandHistory::from_table_state`'s
       `player_snapshot` argument. Also pinned: the new variants pass through
       `Streets::from_event_log` without becoming phantom player actions.
-- [ ] **4d.** 🔒 **Gated with Phase 3.** Test: a hand dealt sealed and revealed
-      at showdown produces a `HandHistory` byte-identical to the same hand dealt
-      in the clear. Needs a sealed dealing path on `Table`, which does not
-      exist and is what the Phase 3 gate is about.
+- [→] **4d. Moved to [EPIC-79c](./EPIC-79c_Sealed_Seats.md) Phase 4a**
+      *(2026-08-23).* The test — a sealed hand replaying byte-identical to a
+      plaintext one — is **only meaningful when `S::Sealed != Card`**. It could
+      be written today against `PlaintextSeal`, whose `Sealed = Card`, and would
+      pass by definition while proving nothing. It needs sealed *seats*, so it
+      moves to the EPIC that builds them and serves as that EPIC's acceptance
+      test.
 
 ### Phase 5 — Handoff and docs
 
