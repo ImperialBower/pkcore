@@ -79,9 +79,9 @@ document that could not be implemented as written.
 | `PlaintextSeal` test double, feature-gated off by default | **Complete** |
 | `PKError` seal variants (`#[non_exhaustive]`, non-breaking) | **Complete** |
 | Blind-shuffle determinism & permutation tests | **Complete** |
-| `Table` sealed dealing path | 🔒 Gated — design only, needs approval |
-| `TableAction::SealedDealt` / `Revealed` ledger | Planned (Phase 4) |
-| `HandHistory` replay of a sealed hand | Planned (Phase 4) |
+| `Table` sealed dealing path | 🔒 Gated — options compared 2026-08-22 (3a/3b done); recommendation is to defer, see below |
+| `TableAction::SealedDealt` / `Revealed` ledger | **Complete** (4a/4b, 2026-08-22) |
+| `HandHistory` replay of a sealed hand | **Partial** — `revealed_hole_cards` seam done (4c); byte-identical replay (4d) 🔒 gated |
 | `pkmental` implementation handoff table | Planned (Phase 5) |
 | Real cipher / ElGamal backend | **Out of scope** — EPIC-79a |
 
@@ -395,26 +395,47 @@ it into `Table` (`src/casino/table.rs:93`) propagates `S` through the table,
 the seats, the dealer, and every downstream consumer. That is a large, mostly
 irreversible blast radius, and this EPIC deliberately stops short of it.
 
-- [ ] **3a.** Write the options comparison — generic `Table<S>` vs. a separate
+- [x] **3a.** *(Done 2026-08-22 — see [Phase 3 options comparison](#phase-3-options-comparison-work-item-3a).)* Write the options comparison — generic `Table<S>` vs. a separate
       `SealedTable` vs. type-erasure behind a `dyn` object — with the cost of
       each measured against the existing call sites at
       `src/casino/table.rs:1277`, `:1486`, `:1503`, `:1518`.
-- [ ] **3b.** Present the recommendation. **Stop.**
+- [x] **3b.** *(Done 2026-08-22 — the recommendation is to defer A/B/C and build Phase 4 items 4a–4c first. **Stopped**, awaiting your decision.)* Present the recommendation. **Stop.**
 
 ### Phase 4 — The reveal ledger
 
-- [ ] **4a.** Add `SealedDealt(u8, SlotId)` and `Revealed(u8, SlotId, Card)`
-      to `TableAction` (`src/casino/action.rs:90`). Both carry `SlotId`, a
-      plain `u8` newtype, so **`TableAction` stays non-generic** — the event
-      log never has to know about `S`.
-- [ ] **4b.** `Display` and `description` arms beside `src/casino/action.rs:175`
-      and `:337`. `SealedDealt` renders as *"Seat 3 is dealt a sealed card
+**Re-scoped 2026-08-22** on the strength of the [Phase 3 options
+comparison](#phase-3-options-comparison-work-item-3a). **4a–4c are not blocked
+by the Phase 3 gate** — both new variants carry `SlotId`, a plain `u8` newtype,
+so `TableAction` stays non-generic and nothing here needs a sealed `Table`.
+**4d alone stays gated**, because it needs something that can actually deal
+sealed.
+
+4a–4c shipped 2026-08-22. They close the largest leak in the crate on their
+own: `TableAction::Dealt(u8, Bard)` (`../../src/casino/action.rs:110`) puts
+real hole cards into `Table::event_log`, a `pub Vec<TableAction>` that any
+holder of a `&Table` can read. That — not the deck — is the hole EPIC-70
+(pkdealer collusion detection) exploits.
+
+- [x] **4a.** *(Done 2026-08-22.)* Add `SealedDealt(u8, SlotId)` and
+      `Revealed(u8, SlotId, Card)` to `TableAction`
+      (`../../src/casino/action.rs`). Both carry `SlotId`, so **`TableAction`
+      stays non-generic** — the event log never has to know about `S`. Both are
+      `Copy`, `Ord` and `Hash`, so the enum keeps every derive it had.
+- [x] **4b.** *(Done 2026-08-22.)* `Display` and `commentary` arms, plus
+      `get_seat`. `SealedDealt` renders as *"Seat 3 is dealt a sealed card
       (slot 17)"* — it must not render a card, because it does not have one.
-- [ ] **4c.** Teach `Streets::from_event_log` (`src/hand_history.rs:1783`) to
-      fold `Revealed` events, so a sealed hand replays into the same
-      `HandHistory` shape (`src/hand_history.rs:128`) as a plaintext one.
-- [ ] **4d.** Test: a hand dealt sealed and revealed at showdown produces a
-      `HandHistory` byte-identical to the same hand dealt in the clear.
+      Pinned by `sealed_dealt_renders_a_slot_and_never_a_card`.
+      *(The EPIC called the second method `description`; it is `commentary`.)*
+- [x] **4c.** *(Done 2026-08-22, retargeted — see C5.)*
+      `revealed_hole_cards(log) -> HashMap<u8, Cards>` in
+      `../../src/hand_history.rs`, collecting every `Revealed` event per seat.
+      This is the seam a sealed hand feeds into `HandHistory::from_table_state`'s
+      `player_snapshot` argument. Also pinned: the new variants pass through
+      `Streets::from_event_log` without becoming phantom player actions.
+- [ ] **4d.** 🔒 **Gated with Phase 3.** Test: a hand dealt sealed and revealed
+      at showdown produces a `HandHistory` byte-identical to the same hand dealt
+      in the clear. Needs a sealed dealing path on `Table`, which does not
+      exist and is what the Phase 3 gate is about.
 
 ### Phase 5 — Handoff and docs
 
@@ -428,6 +449,182 @@ irreversible blast radius, and this EPIC deliberately stops short of it.
       **minor** version bump in `Cargo.toml:4` (new public API, backward
       compatible), then `cargo build` so `Cargo.lock` picks it up.
 - [ ] **5d.** `ROADMAP.md` Epics row for EPIC-79b.
+
+---
+
+## Phase 3 options comparison (work item 3a)
+
+**Written 2026-08-22 against `EPIC-79b` @ `39ea3564`. This is analysis only —
+no code, and Phase 3 remains gated.** Work item **3b** is "present the
+recommendation and stop"; that recommendation is at the end of this section.
+
+### Finding 0 — the premise of Phase 3 is wrong
+
+Phase 3 is framed as *"wiring `SealedDeck<S>` into `Table`."* The deck is not
+the problem. `Table` holds cards in **seven** places, and the event log leaks
+more than the deck ever did:
+
+| # | Location | Type | Must it be sealed? |
+|---|---|---|---|
+| 1 | `Table::deck` (`../../src/casino/table.rs:93`) | `Cards` | **Yes** |
+| 2 | `Table::board` (`:94`) | `Cards` | **No** — the board is public by definition |
+| 3 | `Table::muck` (`:95`) | `Cards` | **No** — mucked cards are dead |
+| 4 | `Table::dealt_hole_cards` (`:111`) | `HashMap<u8, BoxedCards>` | **Yes** |
+| 5 | `Seat::cards` (`../../src/casino/table/seat.rs`) | `BoxedCards` | **Yes** |
+| 6 | `Seat::hand` | `SeatHand` | **Yes** |
+| 7 | `Table::event_log` → `TableAction::Dealt(u8, Bard)` (`../../src/casino/action.rs:110`) | `Bard` | **Yes** |
+
+Two of the seven are already fine. That is the good news. The bad news is that
+five must change together — sealing the deck alone buys **nothing**, because
+`deal_cards_to_seats` immediately writes the plaintext into a seat and then
+into a `pub` event log. A `SealedDeck` feeding a plaintext `Seat` is security
+theatre.
+
+**Consequence for all three options below:** the unit of change is not
+`Table::deck`. It is *the card-holding surface of a hand*.
+
+### Finding 1 — one existing operation cannot be done blind at all
+
+`../../src/casino/table.rs:1721`–`:1725` returns the muck to the deck and then
+calls `self.deck.sort_in_place()` before the size audit. Sorting is ordering by
+rank: **knowledge**. A sealed deck has no such method, deliberately
+(see §Design, "Methods deliberately absent").
+
+That is not a blocker — the sort exists to make the audit's set comparison
+stable, and `SealedDeck::audit` counts instead. But it is a behaviour change
+inside `Table`, not a mechanical substitution, and it is the kind of line that
+silently compiles into something weaker if nobody names it first.
+
+### Blast radius, measured
+
+- `Table` is named **383 times across 29 files** in `src/` (excluding the
+  separate `TableCelled` type).
+- `PokerSession` holds `pub table: Table` (`../../src/casino/session.rs`), so
+  anything generic in `Table` is generic in `PokerSession`.
+- `../../src/prelude.rs:115` re-exports `Table`, so `use pkcore::prelude::*`
+  carries it into every consumer.
+- `Table::deck` is a **`pub` field** and is reached from outside its own file —
+  `../../src/casino/session.rs:338` calls `self.table.deck.shuffle_in_place()`.
+- Five public constructors: `nlh_from_seats`, `limit_holdem_from_seats`,
+  `plo_from_seats`, `stud_hi_from_seats`, `razz_from_seats`.
+- `Table` derives `Clone, Debug` — **not** `Serialize`.
+- Downstream call sites naming `Table`: `pkarena0-web` 15, `pkdealer` 5,
+  `pkpy` 1.
+
+---
+
+### Option A — generic `Table<S>`
+
+Thread the scheme parameter through `Table`, `Seats`, `Seat`, `PokerSession`
+and the five constructors.
+
+**For.** One table type. No duplicated betting logic. The type system carries
+the guarantee end to end: a `Table<RealSeal>` cannot be handed a plaintext card
+by accident.
+
+**Against.** `PokerSession<S>` follows immediately, and `PokerSession` is the
+downstream-facing type — it is what `pkpy`, `pkdealer` and `pkarena0-web`
+drive. The `prelude` re-export means every consumer's `Table` becomes
+`Table<_>` and inference has to find `S` from somewhere.
+
+A default type parameter (`pub struct Table<S = ???>`) is the standard
+mitigation and would keep `Table` source-compatible in type position. **It does
+not work here**, because there is no type to default to: today's deck is
+`Cards`, an `IndexSet<Card>`, and `SealedDeck<S>` is an ordered `Vec` with a
+deliberately smaller API. Making `Cards` and `SealedDeck<S>` interchangeable
+means inventing a shared deck trait that `Cards` can satisfy — a second design
+problem, larger than this one, and one that would push knowledge-requiring
+methods (`sort_in_place`, `remove(&card)`, `contains`) into a trait that the
+sealed side must then refuse to implement.
+
+**Cost:** highest. **Reversibility:** poor — the parameter reaches the public
+API of the crate's most-used type.
+
+### Option B — a separate `SealedTable`
+
+A new type beside `Table`, sharing concepts and no code.
+
+**For.** Zero blast radius. `Table`, `PokerSession`, the prelude and all 21
+downstream call sites are untouched. It can ship behind a feature flag and be
+deleted if the design turns out wrong. Reversibility is excellent.
+
+**Against — and this is decisive.** `table.rs` is **3,925 lines**. Betting
+actions, side-pot math, TDA rule enforcement, street transitions, the chip
+audit: all of it would exist twice, or be extracted into a core that neither
+type owns.
+
+**This repository has already paid for that mistake once.**
+[`DEFECT_015`](../defects/DEFECT_015_act_raise_all_in_underflow.md) records the
+lesson in as many words: two near-identical `act_raise` bodies exist —
+`Table` and `TableCelled` — and the `DEFECT_007` fix hardened only one of them.
+A short all-in underflowed in the sibling for two releases. `SealedTable` would
+make that **three** places to forget, in the code path where forgetting costs
+real chips.
+
+**Cost:** medium to write, unbounded to maintain. **Reversibility:** excellent.
+
+### Option C — type erasure behind `dyn`
+
+Keep `Table` non-generic; hold the deck as `Box<dyn SomeSealedDeck>`.
+
+**For.** No parameter anywhere. `Table` keeps its shape.
+
+**Against.** `CardSeal` is **not object-safe**, and cannot be made so without
+gutting it. `reveal(&self, scheme: &S, token: &S::Token) -> Result<Card, S::Error>`
+mentions three associated types. Erasing the deck means erasing `Token` and
+`Error` too — in practice `dyn Any` plus downcasts, which throws away exactly
+the compile-time guarantee this EPIC exists to create. A caller could present a
+token from the wrong scheme and find out at runtime.
+
+Secondary: `Table` derives `Clone`, and `Box<dyn Trait>` is not `Clone` without
+a hand-written `clone_box` seam.
+
+**Cost:** medium. **Value delivered:** low — it produces a sealed-looking table
+whose safety is enforced by runtime checks rather than by the type system.
+
+---
+
+### Recommendation (work item 3b)
+
+**Do not take A, B or C yet. Take the fourth path: finish Phase 4 first, then
+re-ask.**
+
+Findings 0 and 1 say the interesting question is not "which container holds the
+deck" but "what does a hand look like when five card-holding surfaces are
+opaque." Nothing in Phases 0–2 answers that, and all three options above are
+answers to a question we have not yet asked properly.
+
+Phase 4 — the reveal ledger — is the cheapest way to ask it, and **most of it
+is not actually blocked by this gate**:
+
+| Item | Blocked by Phase 3? | Why |
+|---|---|---|
+| **4a** — `TableAction::SealedDealt(u8, SlotId)` / `Revealed(u8, SlotId, Card)` | **No** | Both carry `SlotId`, a plain `u8` newtype. `TableAction` stays non-generic, exactly as the EPIC designed. |
+| **4b** — `Display` / `description` arms | **No** | Pure formatting over 4a's variants. |
+| **4c** — `Streets::from_event_log` folds `Revealed` (`../../src/hand_history.rs:1786`) | **No** | It consumes the variants; it does not need a sealed dealer to exist. |
+| **4d** — a sealed hand replays byte-identical to a plaintext one | **Yes** | Needs something that can actually deal sealed. |
+
+So **4a–4c can be built now**, against the existing plaintext `Table`, and they
+deliver the single largest security win in the EPIC on their own: the event log
+stops being the leak. `TableAction::Dealt(u8, Bard)` at
+`../../src/casino/action.rs:110` puts real hole cards into a `pub
+Vec<TableAction>` that any holder of a `&Table` can read. That — not the deck —
+is the hole EPIC-70 (pkdealer collusion detection) exploits, and it is fixable
+without a single generic parameter.
+
+Building 4a–4c also produces the missing information: once the ledger exists,
+the shape of a sealed hand is concrete rather than hypothetical, and the choice
+between A, B and C can be made against a real call graph.
+
+**If the gate must be resolved today rather than deferred**, the answer is
+**Option A**, on the strength of the `DEFECT_015` precedent alone — a duplicated
+betting engine is a worse long-term liability than a type parameter. But A
+should be entered with the shared-deck-trait problem solved first, not
+discovered halfway through.
+
+**Proposed next action:** re-scope Phase 4 into **4a–4c (unblocked, do now)**
+and **4d (stays gated with Phase 3)**, and revisit this section once the ledger
+lands.
 
 ---
 
@@ -476,6 +673,30 @@ compile.
 
 **Resolved:** `SlotId` gained `Display` (bare number) and
 `pub const fn index(self) -> u8`. The `Debug` impl uses the `Display` impl.
+
+### C5 — work item 4c targeted a function that cannot hold hole cards
+
+**Found 2026-08-22 while building Phase 4.** Item 4c said to teach
+`Streets::from_event_log` (`../../src/hand_history.rs:1786`) to fold `Revealed`
+events "so a sealed hand replays into the same `HandHistory` shape as a
+plaintext one."
+
+`Streets` carries community cards and player **actions**. Hole cards never pass
+through it. They reach a `HandHistory` through the `player_snapshot` argument of
+`HandHistory::from_table_state` (`:242`), which reads `Table::dealt_hole_cards`.
+There is nowhere in `Streets` to fold a revealed hole card *into*.
+
+**Resolved:** 4c is retargeted at the real seam. A new public
+`revealed_hole_cards(log: &[TableAction]) -> HashMap<u8, Cards>` collects every
+`Revealed` event per seat; its output feeds the `player_snapshot` tuples. A
+sealed table has no plaintext `dealt_hole_cards` to read — the values only exist
+once a reveal token is presented, and the event log is the only record of that —
+so this function is the whole bridge.
+
+Two behaviours are pinned that were previously correct only by accident: a seat
+that never reveals is **absent** from the map (different from an empty hand),
+and the new variants pass through `Streets::from_event_log` without becoming
+phantom player actions, because `table_action_to_hand_action` has a catch-all.
 
 ### C4 — generic derives would have added wrong bounds
 

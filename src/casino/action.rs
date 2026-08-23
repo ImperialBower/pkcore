@@ -14,8 +14,10 @@
 //! in a [`TableLog`](crate::casino::table_celled::event::TableLog).
 
 use crate::bard::Bard;
+use crate::card::Card;
 use crate::cards::Cards;
 use crate::prelude::PlayerState;
+use crate::seal::slot::SlotId;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use uuid::Uuid;
@@ -113,6 +115,25 @@ pub enum TableAction {
     DealtRiver(Bard),
     DealtPlayers,
     ForceDealt(u8, Bard),
+    /// EPIC-79b Phase 4: a seat was dealt a card the engine cannot read.
+    ///
+    /// Carries the seat and the card's public [`SlotId`] — never a value. This
+    /// is the sealed counterpart of [`TableAction::Dealt`], which puts real
+    /// hole cards into `Table::event_log`, a `pub Vec<TableAction>` that any
+    /// holder of a `&Table` can read.
+    ///
+    /// `SlotId` is a plain `u8` newtype, so `TableAction` stays non-generic:
+    /// the event log never has to know about the sealing scheme.
+    SealedDealt(u8, SlotId),
+    /// EPIC-79b Phase 4: a previously sealed card was opened, at showdown or
+    /// by its owner.
+    ///
+    /// Carries the seat, the slot that was opened, and the [`Card`] it turned
+    /// out to be. This is the event that lets a sealed hand replay into the
+    /// same [`HandHistory`](crate::hand_history::HandHistory) shape as a hand
+    /// dealt in the clear: the reveal, not the deal, is where a card value
+    /// legitimately enters the public record.
+    Revealed(u8, SlotId, Card),
     BringItIn(usize),
     ActionTo(u8),
     Check(u8),
@@ -177,6 +198,8 @@ impl TableAction {
             TableAction::SidePot(amount) => format!("Side pot {amount}"),
             TableAction::SplitPot(number, size) => format!("{size} split pot between {number} players"),
             TableAction::Dealt(_, bard) => format!("{name} dealt {}", Cards::from(*bard)),
+            TableAction::SealedDealt(_, slot) => format!("{name} dealt a sealed card (slot {slot})"),
+            TableAction::Revealed(_, slot, card) => format!("{name} reveals slot {slot}: {card}"),
             TableAction::DealtFlop(bard) => format!("Flop is {}", Cards::from(*bard)),
             TableAction::DealtTurn(bard) => format!("Turn is {}", Cards::from(*bard)),
             TableAction::DealtRiver(bard) => format!("River is {}", Cards::from(*bard)),
@@ -284,6 +307,8 @@ impl TableAction {
             | TableAction::StudBringInPost(seat, _)
             | TableAction::Dealt(seat, _)
             | TableAction::ForceDealt(seat, _)
+            | TableAction::SealedDealt(seat, _)
+            | TableAction::Revealed(seat, _, _)
             | TableAction::ActionTo(seat)
             | TableAction::Check(seat)
             | TableAction::Bet(seat, _)
@@ -340,6 +365,10 @@ impl Display for TableAction {
     ///
     /// assert_eq!("Seat 1 is dealt A♠ K♠", dealt.to_string())
     /// ```
+    // One arm per variant on a ~60-variant wire enum. Splitting it would put
+    // the rendering of a `TableAction` in more than one place, which is worse
+    // than a long match.
+    #[allow(clippy::too_many_lines)]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TableAction::Pause => write!(f, "Pause"),
@@ -369,6 +398,12 @@ impl Display for TableAction {
             }
             TableAction::DealingXCards(x) => write!(f, "Dealing out {x} cards"),
             TableAction::Dealt(seat, cards) => write!(f, "Seat {seat} is dealt {}", Cards::from(*cards)),
+            TableAction::SealedDealt(seat, slot) => {
+                write!(f, "Seat {seat} is dealt a sealed card (slot {slot})")
+            }
+            TableAction::Revealed(seat, slot, card) => {
+                write!(f, "Seat {seat} reveals slot {slot}: {card}")
+            }
             TableAction::DealtFlop(cards) => write!(f, "Flop is {}", Cards::from(*cards)),
             TableAction::DealtTurn(cards) => write!(f, "Turn is {}", Cards::from(*cards)),
             TableAction::DealtRiver(cards) => write!(f, "River is {}", Cards::from(*cards)),
@@ -448,6 +483,71 @@ impl Display for TableAction {
 #[allow(non_snake_case)]
 mod tests {
     use super::*;
+
+    // ── EPIC-79b Phase 4: the sealed event ledger ────────────────────────
+
+    /// The whole point of `SealedDealt`: it names a slot, never a card.
+    /// `TableAction::Dealt` puts real hole cards into `Table::event_log`, a
+    /// `pub Vec<TableAction>` any holder of a `&Table` can read.
+    #[test]
+    fn sealed_dealt_renders_a_slot_and_never_a_card() {
+        let event = TableAction::SealedDealt(3, SlotId::new(17));
+
+        let rendered = event.to_string();
+        assert_eq!("Seat 3 is dealt a sealed card (slot 17)", rendered);
+        assert!(!rendered.contains('\u{2660}'), "leaked a suit: {rendered}");
+        assert!(!rendered.contains("A"), "leaked a rank: {rendered}");
+    }
+
+    /// The reveal — not the deal — is where a card value legitimately enters
+    /// the public record.
+    #[test]
+    fn revealed_renders_the_slot_and_the_card() {
+        let event = TableAction::Revealed(3, SlotId::new(17), Card::ACE_SPADES);
+        assert_eq!("Seat 3 reveals slot 17: A\u{2660}", event.to_string());
+    }
+
+    #[test]
+    fn sealed_events_report_their_seat() {
+        assert_eq!(Some(3), TableAction::SealedDealt(3, SlotId::new(0)).get_seat());
+        assert_eq!(
+            Some(4),
+            TableAction::Revealed(4, SlotId::new(0), Card::ACE_SPADES).get_seat()
+        );
+    }
+
+    #[test]
+    fn sealed_events_have_no_amount() {
+        assert_eq!(None, TableAction::SealedDealt(3, SlotId::new(0)).get_amount());
+        assert_eq!(
+            None,
+            TableAction::Revealed(3, SlotId::new(0), Card::ACE_SPADES).get_amount()
+        );
+    }
+
+    #[test]
+    fn sealed_dealt_commentary_names_the_slot() {
+        let event = TableAction::SealedDealt(3, SlotId::new(17));
+        assert!(event.commentary("Alice").contains("slot 17"));
+        assert!(!event.commentary("Alice").contains('\u{2660}'));
+    }
+
+    /// `TableAction` is a serialized wire enum. Both new variants must survive
+    /// a round trip, and `TableAction` must stay `Copy` — `SlotId` and `Card`
+    /// are both `Copy`, so adding them costs nothing.
+    #[test]
+    fn sealed_events_survive_a_serde_round_trip() {
+        for event in [
+            TableAction::SealedDealt(3, SlotId::new(17)),
+            TableAction::Revealed(3, SlotId::new(17), Card::ACE_SPADES),
+        ] {
+            let json = serde_json::to_string(&event).expect("serialize");
+            let back: TableAction = serde_json::from_str(&json).expect("deserialize");
+            assert_eq!(event, back);
+            let copied = event;
+            assert_eq!(event, copied);
+        }
+    }
 
     /// `DEFECT_023`: `generate_player_loses` was an unconditional
     /// `unimplemented!()` on a `#[must_use]` public method.

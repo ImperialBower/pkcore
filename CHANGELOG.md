@@ -26,6 +26,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   prove — payload distinctness is a verifiable-shuffle-argument property and
   belongs to EPIC-79a, not here. **Zero new dependencies**; `make check-purity`
   stays green. `Table` is untouched: EPIC-79b Phase 3 is gated.
+- **The event log stops leaking hole cards** ([EPIC-79b](docs/epics/EPIC-79b_Sealed_Deck.md),
+  Phase 4 items 4a–4c). Two new `TableAction` variants — `SealedDealt(u8, SlotId)`
+  and `Revealed(u8, SlotId, Card)` — give a hand a public record that names
+  *which* card moved without saying *what* it is. `TableAction::Dealt(u8, Bard)`
+  puts real hole cards into `Table::event_log`, a `pub Vec<TableAction>` that
+  any holder of a `&Table` can read; these are its sealed counterparts.
+  `SealedDealt` renders as *"Seat 3 is dealt a sealed card (slot 17)"* and has
+  no card to render. Both carry `SlotId`, a plain `u8` newtype, so
+  **`TableAction` stays non-generic** and keeps every derive it had, `Copy`
+  included. Not a breaking change — `TableAction` is `#[non_exhaustive]`.
+- `hand_history::revealed_hole_cards(log) -> HashMap<u8, Cards>` — collects
+  every `Revealed` event per seat, in log order. This is the seam a sealed hand
+  feeds into `HandHistory::from_table_state`'s `player_snapshot`: a sealed table
+  has no plaintext `dealt_hole_cards` to read, because the values only exist
+  once a reveal token is presented and the event log is the only record of that.
+  A seat that never reveals is absent from the map, which is deliberately
+  different from an empty hand.
 - `seal-test-double` feature (**off by default**) exposing `PlaintextSeal`, a
   non-secure `CardSeal` implementation whose payload is the plaintext `Card`.
   It exists to test the plumbing — draw, shuffle, cut, reveal accounting — and

@@ -1916,6 +1916,60 @@ impl Streets {
     }
 }
 
+/// Collects the hole cards a sealed hand put back into the public record.
+///
+/// Walks a [`TableAction`] log and gathers every
+/// [`TableAction::Revealed`] into a per-seat [`Cards`], in log order.
+/// A slot revealed more than once contributes once — `Cards` is a set, and a
+/// second reveal of the same slot is a repeat announcement, not a second card.
+///
+/// # Why this exists, and why it is not part of `Streets::from_event_log`
+///
+/// [`Streets`] carries community cards and player *actions*. Hole cards never
+/// pass through it — they reach a [`HandHistory`] through the
+/// `player_snapshot` argument of
+/// [`HandHistory::from_table_state`], read from `Table::dealt_hole_cards`.
+///
+/// A sealed table has no plaintext `dealt_hole_cards` to read: the values only
+/// exist once someone presents a reveal token, and the *only* record of that is
+/// the event log. This function is that seam. Feed its output into the
+/// `player_snapshot` tuples and a sealed hand serializes to the same
+/// [`HandHistory`] shape as one dealt in the clear.
+///
+/// EPIC-79b Phase 4, work item 4c. See that EPIC's Corrections section (C5)
+/// for why the original target function could not work.
+///
+/// # Examples
+///
+/// ```
+/// use pkcore::card::Card;
+/// use pkcore::casino::action::TableAction;
+/// use pkcore::hand_history::revealed_hole_cards;
+/// use pkcore::seal::slot::SlotId;
+///
+/// let log = vec![
+///     TableAction::SealedDealt(1, SlotId::new(17)),
+///     TableAction::SealedDealt(1, SlotId::new(31)),
+///     TableAction::Fold(2),
+///     TableAction::Revealed(1, SlotId::new(17), Card::ACE_SPADES),
+///     TableAction::Revealed(1, SlotId::new(31), Card::KING_SPADES),
+/// ];
+///
+/// let revealed = revealed_hole_cards(&log);
+/// assert_eq!("A♠ K♠", revealed[&1].to_string());
+/// assert!(!revealed.contains_key(&2));
+/// ```
+#[must_use]
+pub fn revealed_hole_cards(log: &[TableAction]) -> HashMap<u8, Cards> {
+    let mut per_seat: HashMap<u8, Cards> = HashMap::new();
+    for event in log {
+        if let TableAction::Revealed(seat, _slot, card) = event {
+            per_seat.entry(*seat).or_default().insert(*card);
+        }
+    }
+    per_seat
+}
+
 /// Maps a single [`TableAction`] to a [`Action`] for the hand history.
 ///
 /// Returns `None` for non-player-action events (deals, pot bookkeeping, etc.).
@@ -2768,6 +2822,69 @@ fn build_replay_result(
 
 #[cfg(test)]
 mod tests {
+
+    // ── EPIC-79b Phase 4c: the reveal seam ───────────────────────────────
+
+    use crate::bard::Bard;
+    use crate::seal::slot::SlotId;
+
+    fn sealed_log() -> Vec<TableAction> {
+        vec![
+            TableAction::SealedDealt(1, SlotId::new(17)),
+            TableAction::SealedDealt(1, SlotId::new(31)),
+            TableAction::SealedDealt(2, SlotId::new(4)),
+            TableAction::ForcedBetSmallBlind(1, 50),
+            TableAction::Fold(2),
+            TableAction::Revealed(1, SlotId::new(17), Card::ACE_SPADES),
+            TableAction::Revealed(1, SlotId::new(31), Card::KING_SPADES),
+        ]
+    }
+
+    #[test]
+    fn revealed_hole_cards_collects_per_seat_in_log_order() {
+        let revealed = super::revealed_hole_cards(&sealed_log());
+        assert_eq!("A\u{2660} K\u{2660}", revealed[&1].to_string());
+    }
+
+    /// Seat 2 was dealt sealed and folded without revealing. It must not
+    /// appear at all — an absent entry is "nobody saw it", which is different
+    /// from an empty hand.
+    #[test]
+    fn revealed_hole_cards_omits_a_seat_that_never_revealed() {
+        let revealed = super::revealed_hole_cards(&sealed_log());
+        assert!(!revealed.contains_key(&2));
+    }
+
+    /// A slot announced twice is one card, not two.
+    #[test]
+    fn revealed_hole_cards_dedups_a_repeated_reveal() {
+        let log = vec![
+            TableAction::Revealed(1, SlotId::new(17), Card::ACE_SPADES),
+            TableAction::Revealed(1, SlotId::new(17), Card::ACE_SPADES),
+        ];
+        assert_eq!(1, super::revealed_hole_cards(&log)[&1].len());
+    }
+
+    #[test]
+    fn revealed_hole_cards_on_a_plaintext_log_is_empty() {
+        let log = vec![TableAction::Dealt(1, Bard::default()), TableAction::Fold(2)];
+        assert!(super::revealed_hole_cards(&log).is_empty());
+    }
+
+    /// The new variants must pass through `Streets::from_event_log` without
+    /// becoming phantom player actions. `table_action_to_hand_action` has a
+    /// catch-all, so this pins behaviour that is currently correct by accident.
+    #[test]
+    fn sealed_events_do_not_become_hand_history_actions() {
+        let streets = Streets::from_event_log(&sealed_log()).expect("non-empty log");
+        let preflop = streets.preflop.expect("a preflop street");
+        assert_eq!(
+            2,
+            preflop.actions.len(),
+            "only the blind and the fold are actions: {:?}",
+            preflop.actions
+        );
+    }
     use super::*;
 
     /// The `DEFECT_014` dead-button hand, as `bot_marathon` recorded it.
