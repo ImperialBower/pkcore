@@ -15,7 +15,7 @@
 | 0 — plumbing (module, feature, `PKError` variants) | ✅ complete |
 | 1 — `CardSeal`, `SlotId`, `SealedCard<S>`, `PlaintextSeal` | ✅ complete |
 | 2 — `SealedDeck<S>`, blind shuffle/cut/draw, `DeckAudit` | ✅ complete |
-| 3 — `Table` integration | 🔒 **gated**; 3a/3b done, recommendation written, **awaiting a decision** |
+| 3 — `Table` integration | 🔓 **gate opened 2026-08-23** — Option A′ approved, work items 3c–3i written, **not started** |
 | 4a–4c — sealed event ledger + reveal seam | ✅ complete |
 | 4d — byte-identical sealed replay | 🔒 gated with Phase 3 |
 | 5 — handoff and docs | ⬜ **5c done; 5a, 5b, 5d open and unblocked** |
@@ -82,10 +82,19 @@ from a trait definition.
       it at EPIC-79b, noting Phases 0–2 and 4a–4c have landed.
 - [ ] **5d.** Add an EPIC-79b row to the Epics table in `ROADMAP.md`.
 
-### Step 4 — stop, and decide about publishing
+### Step 4 — build Phase 3, Option A′
 
-After Step 3, EPIC-79b is at a **real stopping point**: everything unblocked is
-done, and only the gated Phase 3 decision remains.
+Work items **3c–3i** in the EPIC. Order matters: `NullSeal` (3c) and the
+`SealedDeck` additions (3d) must land and be green before `TableOf<S>` (3e) is
+touched, because 3e is the step with the wide diff.
+
+Land it inside the unreleased `0.8.0`. The CHANGELOG line goes under
+`## [Unreleased]` / `### Changed`, flagged **breaking**.
+
+### Step 5 — stop, and decide about publishing
+
+After Step 4, EPIC-79b is at a **real stopping point**: everything except
+Phase 4d (sealed replay, needs sealed seats) is done.
 
 **You do not need to publish to keep working.** `pkmental` uses
 `pkcore = { path = "../pkcore" }`, so it already sees `0.8.0`. The three
@@ -100,33 +109,40 @@ either.
 
 ---
 
-## The gated decision, waiting for you
+## The Phase 3 decision — RESOLVED 2026-08-23
 
-Phase 3 work items 3a and 3b are done. The full comparison is in the EPIC under
-[Phase 3 options comparison](../../epics/EPIC-79b_Sealed_Deck.md). The short
-version:
+**Option A′: the deck is always sealed.** Full write-up in the EPIC under
+[Option A′](../../epics/EPIC-79b_Sealed_Deck.md). Work items **3c–3i** are
+written and approved; none started.
 
-- **The EPIC's Phase 3 premise is wrong.** `Table` holds cards in **seven**
-  places, not one. Sealing `Table::deck` alone buys nothing, because
-  `deal_cards_to_seats` immediately writes plaintext into a seat and then into
-  a `pub` event log.
-- **Option A (generic `Table<S>`)** — `Table` is named 383 times across 29
-  files; `PokerSession` holds `pub table: Table`, so it becomes generic too. A
-  default type parameter does not rescue it, because there is no type to
-  default to: `Cards` is an `IndexSet<Card>` and `SealedDeck<S>` is an ordered
-  `Vec` with a deliberately smaller API.
-- **Option B (separate `SealedTable`)** — zero blast radius, but duplicates
-  3,925 lines of betting logic. `DEFECT_015` records what that costs: two
-  near-identical `act_raise` bodies exist and the `DEFECT_007` fix hardened only
-  one of them.
-- **Option C (`dyn` erasure)** — dead on arrival. `CardSeal` has three
-  associated types and is not object-safe; erasing it means `dyn Any` and
-  downcasts, which discards the compile-time guarantee the EPIC exists to
-  create.
-- **Recommendation: defer.** 4a–4c already delivered the largest security win
-  without a single generic parameter. Revisit once a sealed hand's shape is
-  concrete. If the gate must be resolved now, **Option A**, entered only after
-  the shared-deck-trait problem is solved.
+The shape:
+
+```rust
+pub struct NullSeal;              // identity seal, always available
+pub struct TableOf<S: CardSeal> { pub deck: SealedDeck<S>, /* ... */ }
+pub type Table = TableOf<NullSeal>;   // 383 existing mentions keep compiling
+```
+
+Why it beats the earlier "defer" call:
+
+- It answers the one objection that sank Option A. There *is* a type to default
+  to — a seal that seals nothing. Source compatibility comes from the **type
+  alias**, not a default type parameter (Rust does not apply those during
+  inference).
+- The deck surface is **8 operations**, not 383. Five already exist on
+  `SealedDeck<S>`; `draw_all` is trivial; only `sort_in_place`/`insert_all`
+  (`table.rs:1721`) and `to_string` (`session.rs:339`) need knowledge, and both
+  move into `impl SealedDeck<NullSeal>` — so the compiler states the invariant.
+- It is **unblocked**. The three open unknowns are all about `reveal`, which
+  happens at the seat. A deck is only shuffled, cut and drawn.
+- The break is **free**. `0.8.0` is unreleased and untagged (`v0.7.0` is the
+  newest tag), and in `0.x` the minor slot is the breaking slot.
+
+It does **not** buy secrecy — seats, board, muck and the event log still hold
+plain `Card`s. It buys the seam, once, while the API is unreleased.
+
+Options B (duplicate `SealedTable`) and C (`dyn` erasure) stay rejected for the
+reasons in the EPIC. Phase 4d stays gated until seats are sealed.
 
 ---
 

@@ -63,8 +63,10 @@ the prototypes live outside the crate in `docs/files/mentalpoker/`.
 
 ## Status
 
-Status as of **2026-08-22**, pkcore `0.8.0`. **Phases 0–2 have landed.**
-Phase 3 stays gated; Phases 4–5 are untouched. The plan that built it is
+Status as of **2026-08-23**, pkcore `0.8.0` (unreleased, untagged).
+**Phases 0–2 and 4a–4c have landed.** Phase 3 is gated no longer: see
+[Option A′](#option-a--the-deck-is-always-sealed-2026-08-23), which supersedes
+the defer recommendation. The plan that built it is
 [`docs/superpowers/plans/2026-08-22-epic-79b-sealed-deck-phases-0-2.md`](../superpowers/plans/2026-08-22-epic-79b-sealed-deck-phases-0-2.md);
 see [Corrections (2026-08-22)](#corrections-2026-08-22) for three items in this
 document that could not be implemented as written.
@@ -79,7 +81,7 @@ document that could not be implemented as written.
 | `PlaintextSeal` test double, feature-gated off by default | **Complete** |
 | `PKError` seal variants (`#[non_exhaustive]`, non-breaking) | **Complete** |
 | Blind-shuffle determinism & permutation tests | **Complete** |
-| `Table` sealed dealing path | 🔒 Gated — options compared 2026-08-22 (3a/3b done); recommendation is to defer, see below |
+| `Table` sealed dealing path | **Approved 2026-08-23, not started** — 3a/3b done; **[Option A′](#option-a--the-deck-is-always-sealed-2026-08-23)**: the deck is always `SealedDeck<S>`, `NullSeal` for the no-secrecy case |
 | `TableAction::SealedDealt` / `Revealed` ledger | **Complete** (4a/4b, 2026-08-22) |
 | `HandHistory` replay of a sealed hand | **Partial** — `revealed_hole_cards` seam done (4c); byte-identical replay (4d) 🔒 gated |
 | `pkmental` implementation handoff table | Planned (Phase 5) |
@@ -388,7 +390,11 @@ in the crate for no behaviour. Revisit at the Phase 3 gate.
       must be reconstructible, and the test asserts the wire form carries
       payloads and slots only.
 
-### Phase 3 — `Table` integration 🔒 GATED
+### Phase 3 — `Table` integration — **gate opened 2026-08-23**
+
+**Approved as [Option A′](#option-a--the-deck-is-always-sealed-2026-08-23)**, scoped to
+`casino::table::Table` and its deck only. The original gate text follows for the
+record.
 
 **Do not start without explicit approval.** `SealedDeck<S>` is generic; wiring
 it into `Table` (`src/casino/table.rs:93`) propagates `S` through the table,
@@ -400,6 +406,29 @@ irreversible blast radius, and this EPIC deliberately stops short of it.
       each measured against the existing call sites at
       `src/casino/table.rs:1277`, `:1486`, `:1503`, `:1518`.
 - [x] **3b.** *(Done 2026-08-22 — the recommendation is to defer A/B/C and build Phase 4 items 4a–4c first. **Stopped**, awaiting your decision.)* Present the recommendation. **Stop.**
+
+**Approved work items (Option A′, added 2026-08-23):**
+
+- [ ] **3c.** Add `NullSeal` in `src/seal/null.rs` — `Sealed = Card`,
+      `Token = ()`, `Error = core::convert::Infallible`. **Not** feature-gated.
+      Unit tests + doc test; module named `seal__null_tests`.
+- [ ] **3d.** Add `SealedDeck::draw_all` (a permutation; mirrors
+      `Cards::draw_all`) and the `impl SealedDeck<NullSeal>` inherent block
+      carrying `sort_in_place` and `insert_all`.
+- [ ] **3e.** Rename `casino::table::Table` → `TableOf<S: CardSeal>` with
+      `pub type Table = TableOf<NullSeal>;` and change `deck: Cards` →
+      `deck: SealedDeck<S>` (`src/casino/table.rs:93`). Keep every other field
+      plain — board, muck, `dealt_hole_cards`, seats and the event log are out
+      of scope here.
+- [ ] **3f.** Re-check the card-injection paths against the loss of `contains`
+      / `remove_all`: `Table::inject_hole_cards` (`src/casino/table.rs:1526`)
+      and `PokerSession` deck priming (`src/casino/session.rs`).
+- [ ] **3g.** Confirm `PokerSession` stays non-generic (`pub table: Table`) and
+      `prelude.rs:115` needs no change.
+- [ ] **3h.** `make ayce` clean; `make check-purity` clean; `make perf-check`
+      to confirm the `IndexSet` → `Vec` deck change costs nothing.
+- [ ] **3i.** `CHANGELOG.md` under `## [Unreleased]`, `### Changed` —
+      **breaking**: `Table::deck` is now `SealedDeck<NullSeal>`.
 
 ### Phase 4 — The reveal ledger
 
@@ -584,7 +613,12 @@ whose safety is enforced by runtime checks rather than by the type system.
 
 ---
 
-### Recommendation (work item 3b)
+### Recommendation (work item 3b) — SUPERSEDED 2026-08-23
+
+> Superseded by [Option A′](#option-a--the-deck-is-always-sealed-2026-08-23).
+> Its "build 4a–4c first" call was carried out and those items have landed; its
+> "defer A/B/C" call no longer holds. Kept for the reasoning, which still
+> stands for Options B and C.
 
 **Do not take A, B or C yet. Take the fourth path: finish Phase 4 first, then
 re-ask.**
@@ -625,6 +659,140 @@ discovered halfway through.
 **Proposed next action:** re-scope Phase 4 into **4a–4c (unblocked, do now)**
 and **4d (stays gated with Phase 3)**, and revisit this section once the ledger
 lands.
+
+### Option A′ — the deck is *always* sealed (2026-08-23)
+
+**This supersedes the Recommendation above.** Option A′ is Option A with the
+blocking objection removed.
+
+Option A was rejected on one specific ground: *"there is no type to default to."*
+That is answered by inverting the question. Do not ask how to make `Cards` and
+`SealedDeck<S>` interchangeable. **Delete the choice.** The deck is a
+`SealedDeck<S>` always, and the no-secrecy case is a seal that seals nothing.
+
+```rust
+/// The identity seal. Always available — not feature-gated.
+/// Solvers, bots, `perf/`, and every existing test run on this.
+pub struct NullSeal;
+
+impl CardSeal for NullSeal {
+    type Sealed = Card;
+    type Token = ();
+    type Error = core::convert::Infallible;
+    // seal is identity; unseal cannot fail
+}
+```
+
+Distinguish it from [`PlaintextSeal`](#plaintextseal--the-test-double-hard-to-reach-on-purpose):
+`PlaintextSeal` is a feature-gated *test double* whose `Token = Card` exists so
+the wrong-token rejection path is testable. `NullSeal` is a shipping type whose
+`Token = ()` and whose `Error = Infallible`, so the compiler knows a reveal can
+never fail. They are not interchangeable and both are wanted.
+
+#### Source compatibility comes from a type alias, not a default parameter
+
+Rust does not apply default type parameters during inference, so
+`Table::new(..)` under `pub struct Table<S = NullSeal>` is ambiguous. A type
+alias has no such problem — it pins `S` before name resolution reaches the
+inherent impls:
+
+```rust
+pub struct TableOf<S: CardSeal> { pub deck: SealedDeck<S>, /* ..unchanged.. */ }
+
+/// The engine as every existing caller knows it.
+pub type Table = TableOf<NullSeal>;
+```
+
+`Table::new(..)`, `Table::default()`, `-> Table` and `impl` blocks written
+against `Table` all continue to resolve. The 383 mentions of `Table` across 29
+files measured in [Blast radius](#blast-radius-measured) are **not** touched by
+the type parameter. `PokerSession` does not become generic either; it keeps
+`pub table: Table`, and a sealed session would use a second alias.
+
+#### The deck surface is 8 operations, not 383
+
+Measured 2026-08-23 against `src/casino/table.rs` and `src/casino/session.rs`
+(`grep -rn '\.deck' src/`, excluding `table_celled`):
+
+| Operation | Call sites | Blind-safe? |
+|---|---|---|
+| `shuffle_in_place`, `shuffle_in_place_with` | `session.rs:338`, `bot/sim.rs:560,565` | ✅ `SealedDeck` has it |
+| `draw_one` | `table.rs:1335,1424,1558,1575,1590` | ✅ has it |
+| `draw(n)` | `table.rs:1560` | ✅ has it |
+| `len` | `table.rs:1423,1725` + tests | ✅ has it |
+| `draw_all` | `session.rs:1076,1101,1121,1152` (tests) | ➕ missing, but a permutation — add it |
+| `insert_all` + `sort_in_place` | `table.rs:1721–1722` (`reset`) | ⚠️ knowledge |
+| `to_string` | `session.rs:339` (`shuffled_deck_str`) | ⚠️ knowledge |
+
+Five of seven already exist on `SealedDeck<S>`. One is trivial to add. That
+leaves **two** genuine design questions, and both have the same clean answer.
+
+#### The two knowledge-requiring operations become type-level facts
+
+Put them in an inherent impl on the concrete type, not on the generic one:
+
+```rust
+impl SealedDeck<NullSeal> {
+    pub fn sort_in_place(&mut self) { /* ... */ }
+    pub fn insert_all(&mut self, cards: &Cards) { /* ... */ }
+}
+```
+
+The compiler then states the invariant this EPIC exists to create: **sorting a
+deck is only possible where there is no secrecy.** This resolves
+[Finding 1](#finding-1--one-existing-operation-cannot-be-done-blind-at-all)
+without a runtime check and without an `unimplemented!()`.
+
+`Table::reset` (`table.rs:1715`) returns the muck to the deck and sorts, so
+under a real seal it needs a different body: request a freshly masked deck from
+the scheme. That is not a workaround — it is how the protocol works. Real
+mental poker re-shuffles and re-masks between hands; it never returns a muck to
+a deck, because doing so would tell every player which masked cards are the
+returned ones.
+
+`PokerSession::shuffled_deck_str` (`session.rs:339`) is a reproducibility
+record. Under `NullSeal` it is unchanged. Under a real seal it records the
+sealed payloads, or nothing.
+
+#### Why this is unblocked *today*
+
+The three unknowns that motivated deferral — who runs the table, whether one
+token opens a card, and what a seat holds at showdown — are all questions about
+**`reveal`**. Reveal happens at the seat. A deck is only ever shuffled, cut and
+drawn, and *a permutation needs no knowledge*. So the deck refactor needs no
+answer from `pkmental` or [EPIC-79a](./EPIC-79a_Real_Cryptography_Backend.md).
+
+#### Cost
+
+- **Breaking:** `pub deck: Cards` becomes `pub deck: SealedDeck<S>`. The alias
+  preserves the type *name*, not the field *type*. In `0.x` semver the minor
+  slot is the breaking slot, and **`0.8.0` is already unreleased and untagged**
+  (`v0.7.0` is the newest tag), so this costs no extra version.
+- **Downstream:** `pkarena0-web` (15 mentions), `pkdealer` (5), `pkpy` (1) — all
+  pinned to `0.7.0`, so none break until they choose to upgrade.
+- **Out of scope:** `TableCelled` keeps `deck: CardsCell`. It does more to its
+  deck (`remove_all`, `take`, `.0.swap`) and `docs/ANALYSIS_TableCelled_vs_Table.md`
+  names `Table` the preferred engine. The two are independent siblings by design.
+- **Semantics:** `Cards` is an `IndexSet<Card>` and dedups by value;
+  `SealedDeck<S>` is an ordered `Vec` keyed by `SlotId`. For a deck the `Vec` is
+  correct and likely faster, but the card-injection paths
+  (`inject_hole_cards`, `table.rs:1526`) must be re-checked against the loss of
+  `contains` / `remove_all`.
+
+#### What it does *not* buy
+
+Secrecy. Seats, the board, the muck, `dealt_hole_cards` and the event log still
+hold plain `Card`s — [Finding 0](#finding-0--the-premise-of-phase-3-is-wrong)
+stands unchanged. Option A′ buys the **seam**: the generic parameter reaches the
+public API once, now, while the API is young and unreleased, instead of a second
+time later. Sealing the remaining surfaces then becomes additive work behind a
+parameter that already exists.
+
+#### Revised recommendation
+
+**Take Option A′.** Scope it to `casino::table::Table` and its deck only, inside
+the unreleased `0.8.0`. Options B and C remain rejected on the grounds recorded
+above. Phase 4d stays gated until seats are sealed.
 
 ---
 
