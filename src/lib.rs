@@ -394,6 +394,7 @@ pub mod pokerbench;
 pub mod prelude;
 pub mod rank;
 pub mod ranks;
+pub mod seal;
 pub mod suit;
 pub mod util;
 
@@ -554,16 +555,7 @@ pub enum PKError {
     TooManyCards,
     TooManyHands,
     InvalidTwo,
-    /// EPIC-30 Phase 3: a raise was attempted on a betting street that has
-    /// already hit its per-street raise cap (used by Fixed-Limit variants
-    /// where typically 3 raises after the opening bet are permitted).
     RaiseCapReached,
-    /// EPIC-30 Phase 3: a raise was attempted to an amount that exceeds
-    /// the maximum permitted by the table's
-    /// [`BettingStructure`][crate::games::betting_structure::BettingStructure]
-    /// — e.g., a FLHE raise that would overshoot the tier increment, or
-    /// a PLO raise that exceeds the pot-limit ceiling. All-in raises
-    /// bypass this check.
     ExceedsBettingCap,
     /// Chip conservation failed at the end of a hand.
     ///
@@ -576,32 +568,19 @@ pub enum PKError {
     },
     /// The Binary Card Map (`generated/bcm.zst`, ~403 MB) could not be loaded —
     /// it is self-generated data that is absent from the published crate.
-    ///
-    /// Returned by BCM-backed APIs ([`SortedHeadsUp::wins`][crate::arrays::matchups::sorted_heads_up::SortedHeadsUp::wins]
-    /// and `StartingHands` case evals) instead of panicking. Generate the file
-    /// with [`SevenFiveBCM::generate_bin`][crate::analysis::store::bcm::binary_card_map::SevenFiveBCM::generate_bin]
-    /// and point `PKCORE_75BCM_PATH` at it.
     BcmUnavailable,
     /// The table has more seats than the variant can deal from one deck.
-    ///
-    /// Seven-Card Stud and Razz deal up to seven cards per player from a
-    /// single 52-card deck, so nine seats cannot reach 6th street and the
-    /// table is undealable before a card is turned. Returned by
-    /// [`Table::stud_hi_from_seats`][crate::casino::table::Table::stud_hi_from_seats]
-    /// and [`Table::razz_from_seats`][crate::casino::table::Table::razz_from_seats]
-    /// rather than deferring the contradiction to the middle of a hand
-    /// (`DEFECT_018`).
+    /// See (`DEFECT_018`).
     TooManyPlayers,
     /// A `Wins` record whose tie counts differ between the two players it is
     /// being read as — a three-way result fed to a heads-up constructor.
     InconsistentWins,
-    /// The requested operation is recognised but not yet implemented.
-    ///
-    /// Returned by methods whose behaviour is deliberately unfinished (rather
-    /// than structurally undefined) so that callers receive a recoverable error
-    /// instead of a panic. Contrast with a `todo!()` body — this variant is the
-    /// non-panicking replacement for one.
     NotImplemented,
+
+    /// EPIC-79b errors
+    SealFailed,     // A scheme could not lock a card.
+    RevealRejected, // A token was presented and the scheme said no.
+    DuplicateSlot,  // Two cards in one deck claim the same SlotId.
 }
 
 impl Display for PKError {
@@ -665,6 +644,9 @@ impl Display for PKError {
             PKError::TooManyPlayers => "Too many players for this game's deck",
             PKError::InconsistentWins => "Wins record is inconsistent: tie counts differ between players",
             PKError::NotImplemented => "Operation not yet implemented",
+            PKError::SealFailed => "Seal failed scheme could not lock card",
+            PKError::RevealRejected => "Reveal rejected scheme said no",
+            PKError::DuplicateSlot => "Duplicate Slot Error Two cards claim the same SlotId",
         };
         write!(f, "{msg}")
     }

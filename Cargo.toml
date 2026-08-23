@@ -54,6 +54,8 @@ player-stats = []
 player-stats-persistence = ["player-stats", "dep:serde_yaml_bw"]
 ## Enables `ExploitConfig` YAML serialisation
 bot-training = ["player-stats", "bot-profiles", "dep:serde_yaml_bw"]
+## Enables the `seal-test-double` module
+seal-test-double = []
 ## Enables the HuggingFace `pokerbench` module.
 pokerbench = []
 ## Enables historical offline generator inputs (e.g. `UNIQUE_HANDS`, the distinct
