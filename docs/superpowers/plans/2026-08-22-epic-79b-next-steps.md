@@ -29,62 +29,37 @@ Session commits: `df1cedb0`, `e3e914b5`, `35aa238c`, `39ea3564`, `393c3cea`,
 
 ## The plan, in order
 
-### Step 1 — un-cut the CHANGELOG
+### Steps 1–3 — ✅ done 2026-08-23
 
-**Why:** `## [0.8.0] - 2026-08-22` was cut mid-EPIC, before Phase 5 was done.
-That is out of step with this repo's own habit — the backlog records that
-`0.6.0`'s header was cut *on release day*. Work landing now would go under a
-version header that was never released, with a date that goes stale.
+- **Step 1.** `CHANGELOG.md`: `## [0.8.0] - 2026-08-22` un-cut, its entries
+  merged back under `## [Unreleased]`, compare link removed. `Cargo.toml` stays
+  at `0.8.0`. Re-cut the header on release day.
+- **Step 2 (5a).** `## Implementing CardSeal in pkmental` written into the EPIC
+  — **against `pkmental`'s real source**, not the paper. It already ships
+  `CardCrypto`, `ElGamalCrypto` over **Pallas**, `MaskedCard`, `RevealToken`
+  and `MpError`.
+- **Step 3 (5b, 5d).** EPIC-79's cross-cutting change 1 now points here.
+  `ROADMAP.md:405–407` gained rows for EPIC-79, 79a and 79b — none existed.
 
-- [ ] In `CHANGELOG.md`, move everything under `## [0.8.0] - 2026-08-22` back
-      under `## [Unreleased]`, and delete the now-empty `[0.8.0]` header.
-- [ ] Delete the compare link
-      `[0.8.0]: https://github.com/ImperialBower/pkcore/compare/v0.7.0...v0.8.0`
-      from the bottom of the file.
-- [ ] **Leave `Cargo.toml` at `0.8.0`.** That is correct — it names the version
-      being built toward, and EPIC work item 5c already claims the bump.
+**Version decision (2026-08-23):** *all* EPIC-79b work ships in **`0.8.0`**,
+including Phase 3's breaking `Table::deck` change. `0.8.0` is unreleased and
+untagged, and in `0.x` the minor slot is the breaking slot.
 
-Re-cut the header on the day you actually publish.
+Two findings from writing 5a that Phase 3 does not need but `pkmental` does:
 
-### Step 2 — Phase 5a: the `pkmental` handoff table
+1. **`CardSeal::Token` is plural.** `RevealToken` is *one player's* partial
+   unmask and the scheme is l-out-of-l, so `Token` binds to
+   `Vec<RevealToken>`. The trait needs no change; the singular name is
+   misleading and is now documented as such.
+2. **`CardSeal::seal` passes no key and no RNG.** `CardCrypto::mask` needs an
+   `AggregateKey` and an `&mut impl RngCore`, so the implementing type must
+   carry both (`RefCell<ChaCha20Rng>`). Legal, but a deliberate choice.
 
-**The item that makes the EPIC pay off.** `CardSeal` exists so `pkmental` can
-implement it, but nothing yet says *how*. Without this, whoever writes the
-Barnett–Smart backend reverse-engineers the intent of three associated types
-from a trait definition.
-
-- [ ] Append a `## Implementing `CardSeal` in `pkmental`` section to
-      `docs/epics/EPIC-79b_Sealed_Deck.md`, mapping:
-
-  | `CardSeal` item | Barnett–Smart counterpart |
-  |---|---|
-  | `type Sealed` | a masked card — an ElGamal ciphertext pair over Ristretto |
-  | `type Token` | a reveal token — the per-player decryption share |
-  | `type Error` | a verification failure — Chaum–Pedersen proof rejection |
-  | `fn seal` | mask a plaintext card under the aggregate public key |
-  | `fn unseal` | combine shares and verify, or reject |
-
-- [ ] Cross-reference [`EPIC-79a_Real_Cryptography_Backend.md`](../../epics/EPIC-79a_Real_Cryptography_Backend.md).
-- [ ] State the two things pkcore deliberately cannot check, so the backend
-      knows they are its job:
-      1. **Payload distinctness** — see `DeckAudit`'s doc comment. Proving 52
-         payloads are 52 distinct cards is a verifiable-shuffle-argument
-         property.
-      2. **Wire secrecy** — `SealedDeck` serializes payloads and slots only; a
-         payload is opaque exactly to the degree the scheme makes it so.
-- [ ] Point at `src/deck.rs:13` (`DECK_ARRAY`) as the canonical 52-card
-      bijection a real backend maps onto group elements.
-
-### Step 3 — Phase 5b and 5d: the two cross-references
-
-- [ ] **5b.** In `docs/epics/EPIC-79_Mental_Poker.md`, find the Status row for
-      *"The deck becomes a vector of masked cards"* (around `:284`) and point
-      it at EPIC-79b, noting Phases 0–2 and 4a–4c have landed.
-- [ ] **5d.** Add an EPIC-79b row to the Epics table in `ROADMAP.md`.
+---
 
 ### Step 4 — build Phase 3, Option A′
 
-Work items **3c–3i** in the EPIC. Order matters: `NullSeal` (3c) and the
+Work items **3c–3j** in the EPIC. Order matters: `NullSeal` (3c) and the
 `SealedDeck` additions (3d) must land and be green before `TableOf<S>` (3e) is
 touched, because 3e is the step with the wide diff.
 

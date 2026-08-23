@@ -402,6 +402,9 @@ decision-quality telemetry, and the chips-vs-dollars economic join.
 |------|-------|--------|
 | [EPIC-60](docs/epics/EPIC-60_Showcase.md) | Platform Showcase — three-act presentation (kernel purity gates + break-it-live; one kernel on browser/terminal/service; the arena ledger of rule bots vs LLM bots); version alignment across pktui/pkarena0-web/pkdealer; timed runbooks + fallback recordings | Planned |
 | [EPIC-61](docs/epics/EPIC-61_AI_Observability.md) | AI-Native Observability — GenAI semconv audit & alignment in `LlmBackend` spans; opt-in content capture; `AgentFidelity` clamp/retry metrics; shadow `BotDecider` baseline divergence; `chip_value_micro_usd` economic join (`net_micro_usd`); House Ledger Grafana dashboard; gated Langfuse eval profile | Planned |
+| [EPIC-79](docs/epics/EPIC-79_Mental_Poker.md) | Mental Poker — trustless dealing without a dealer; six coordinator topologies; the three cross-cutting pkcore refactors (masked deck, three-state visibility, crypto-agnostic engine) | In progress |
+| [EPIC-79a](docs/epics/EPIC-79a_Real_Cryptography_Backend.md) | Real Cryptography Backend — threshold ElGamal over Pallas, Schnorr/Chaum–Pedersen proofs, verifiable shuffle; ships in the sibling [`pkmental`](https://github.com/ImperialBower/pkmental) crate | Planned |
+| [EPIC-79b](docs/epics/EPIC-79b_Sealed_Deck.md) | The Sealed Deck — `pkcore::seal`: `CardSeal` / `SealedCard<S>` / `SealedDeck<S>`, blind shuffle-cut-deal, `SlotId`, redacting `Debug`, `TableAction::SealedDealt`/`Revealed` reveal ledger; zero new dependencies | Phases 0–2, 4a–4c complete; Phase 3 approved (Option A′) |
 
 ### EPIC Numbering Policy
 

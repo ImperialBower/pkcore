@@ -64,7 +64,7 @@ the prototypes live outside the crate in `docs/files/mentalpoker/`.
 ## Status
 
 Status as of **2026-08-23**, pkcore `0.8.0` (unreleased, untagged).
-**Phases 0–2 and 4a–4c have landed.** Phase 3 is gated no longer: see
+**Phases 0–2, 4a–4c and 5 have landed.** Phase 3 is gated no longer: see
 [Option A′](#option-a--the-deck-is-always-sealed-2026-08-23), which supersedes
 the defer recommendation. The plan that built it is
 [`docs/superpowers/plans/2026-08-22-epic-79b-sealed-deck-phases-0-2.md`](../superpowers/plans/2026-08-22-epic-79b-sealed-deck-phases-0-2.md);
@@ -84,7 +84,7 @@ document that could not be implemented as written.
 | `Table` sealed dealing path | **Approved 2026-08-23, not started** — 3a/3b done; **[Option A′](#option-a--the-deck-is-always-sealed-2026-08-23)**: the deck is always `SealedDeck<S>`, `NullSeal` for the no-secrecy case |
 | `TableAction::SealedDealt` / `Revealed` ledger | **Complete** (4a/4b, 2026-08-22) |
 | `HandHistory` replay of a sealed hand | **Partial** — `revealed_hole_cards` seam done (4c); byte-identical replay (4d) 🔒 gated |
-| `pkmental` implementation handoff table | Planned (Phase 5) |
+| `pkmental` implementation handoff table | **Complete** (5a, 2026-08-23) — written against `pkmental`'s real `CardCrypto` / Pallas backend |
 | Real cipher / ElGamal backend | **Out of scope** — EPIC-79a |
 
 ---
@@ -479,16 +479,114 @@ holder of a `&Table` can read. That — not the deck — is the hole EPIC-70
 
 ### Phase 5 — Handoff and docs
 
-- [ ] **5a.** `## Implementing `CardSeal` in `pkmental`` section appended here:
-      a mapping table from `Sealed` / `Token` / `Error` onto Barnett–Smart
-      masked cards, reveal tokens, and Chaum–Pedersen verification failures,
+- [x] **5a.** *(Done 2026-08-23 — see [Implementing `CardSeal` in `pkmental`](#implementing-cardseal-in-pkmental-work-item-5a). Written against `pkmental`'s real source: Pallas curve, `MaskedCard`, `RevealToken`, `MpError`.)* Mapping table from `Sealed` / `Token` / `Error` onto the `CardCrypto` backend,
       cross-referencing `EPIC-79a_Real_Cryptography_Backend.md`.
-- [ ] **5b.** Flip the EPIC-79 Status row for *"The deck becomes a vector of
-      masked cards"* (`EPIC-79_Mental_Poker.md:284`) to point here.
-- [ ] **5c.** `CHANGELOG.md` entry under `## [Unreleased]` → `Added`, and a
-      **minor** version bump in `Cargo.toml:4` (new public API, backward
-      compatible), then `cargo build` so `Cargo.lock` picks it up.
-- [ ] **5d.** `ROADMAP.md` Epics row for EPIC-79b.
+- [x] **5b.** *(Done 2026-08-23.)* EPIC-79's cross-cutting change 1, *"The deck
+      becomes a vector of masked cards"*, now carries a Status paragraph
+      pointing here (`EPIC-79_Mental_Poker.md`).
+- [x] **5c.** *(Done — `Cargo.toml` is at `0.8.0`; entries live under
+      `## [Unreleased]`.)* **All EPIC-79b work ships in `0.8.0`**, including the
+      breaking `Table::deck` change from Phase 3. `0.8.0` is unreleased and
+      untagged, and in `0.x` the minor slot is the breaking slot, so no further
+      bump is needed. The `## [0.8.0]` header was un-cut on 2026-08-23 and is
+      re-cut on release day.
+- [x] **5d.** *(Done 2026-08-23 — `ROADMAP.md:405–407`.)* Epics rows added for
+      EPIC-79, EPIC-79a and EPIC-79b; none existed before.
+
+---
+
+## Implementing `CardSeal` in `pkmental` (work item 5a)
+
+Written 2026-08-23 **against `pkmental`'s real source**, not against the
+Barnett–Smart paper. `pkmental` already defines `CardCrypto`
+(`pkmental/src/crypto/mod.rs:49`) and a working threshold-ElGamal backend
+`ElGamalCrypto` (`pkmental/src/crypto/elgamal.rs:69`) over the **Pallas** curve
+— a prime-order curve, so there is no cofactor to clear. See
+[EPIC-79a](./EPIC-79a_Real_Cryptography_Backend.md) for that work.
+
+`CardSeal` is the *narrow* seam. `CardCrypto` is the *wide* one. `CardSeal` has
+five items; `CardCrypto` has eight associated types and thirteen methods. The
+mapping is deliberately lossy: pkcore only ever needs to seal and unseal.
+
+### The mapping
+
+| `CardSeal` item | `pkmental` counterpart | Notes |
+|---|---|---|
+| `type Sealed` | `elgamal::MaskedCard` | Two Pallas points, `c1 = r·G` and `c2 = M + r·H`. Already `Clone + Copy + Debug + PartialEq + Eq`, so it satisfies `Sealed: Clone + Eq + Debug` as written. |
+| `type Token` | **`Vec<elgamal::RevealToken>`** — *not* a single one | See "The token is plural" below. Each `RevealToken` is one player's `d_i = x_i·c1` plus its DLEQ proof. |
+| `type Error` | `crypto::MpError` | `thiserror`-derived, so it is `core::error::Error`. Its variants hold only `&'static str` and `usize`, so `Send + Sync + 'static` holds. Satisfies the bound unchanged. |
+| `fn seal` | `CardCrypto::encode` then `CardCrypto::mask` | See "Seal needs state pkcore does not pass" below. |
+| `fn unseal` | apply every token to the ciphertext, then `CardCrypto::decode` | `decode` returns `MpError::StillMasked` when tokens are missing — which is exactly the right `unseal` failure. |
+| `SlotId` | the index into `CardCrypto::shuffle`'s `&[MaskedCard]` | Both are positional and both survive a permutation. Nothing to translate. |
+| `DECK_ARRAY` (`src/deck.rs:13`) | the card ↔ group-element bijection | `pkmental` already depends on `pkcore` for exactly this — `Card` and `DECK_ARRAY`, nothing else. |
+
+### The token is plural
+
+This is the one place `CardSeal`'s signature is misleading, and the backend
+author must know it before writing a line.
+
+```rust
+fn unseal(&self, sealed: &Self::Sealed, token: &Self::Token) -> Result<Card, Self::Error>;
+```
+
+The singular name suggests one token opens one card. It does not. `pkmental`'s
+`RevealToken` is documented as *"one player's partial unmask"*, and the scheme
+is **l-out-of-l**: every seated player must contribute a share before the
+ciphertext decodes. A player revealing their own hole card needs a share from
+each *other* player.
+
+So `Token` binds to `Vec<RevealToken>`, and `unseal` must:
+
+1. verify each token's DLEQ proof (reject with `MpError::BadProof`),
+2. fold every `d_i` out of `c2`,
+3. call `decode`, which yields `MpError::StillMasked` if a share was missing.
+
+`CardSeal` does **not** need changing for this — an associated type is free to
+be a collection. But the trait cannot express *how many* shares are required,
+and it cannot tell a caller which share is missing. Both belong to `pkmental`.
+
+### Seal needs state pkcore does not pass
+
+```rust
+fn seal(&self, card: Card) -> Result<Self::Sealed, Self::Error>;
+```
+
+`CardCrypto::mask` needs an `AggregateKey` **and** an `&mut impl RngCore`.
+`CardSeal::seal` passes neither, and takes `&self`, not `&mut self`. So the
+implementing type must carry both:
+
+```rust
+struct PkMentalSeal { agg: AggregateKey, rng: RefCell<ChaCha20Rng> }
+```
+
+That is legal and correct — the scheme instance is the caller's, and pkcore
+never stores it. It is called out here so it is a deliberate choice rather than
+a surprise. The alternative, `seal` = `encode` only (the trivial public mask),
+is **wrong**: it produces a ciphertext everyone can read.
+
+### The two things pkcore deliberately cannot check
+
+Both are `pkmental`'s job. Neither is a gap in this EPIC.
+
+1. **Payload distinctness.** `SealedDeck::audit` counts cards and rejects
+   duplicate `SlotId`s. It cannot prove 52 payloads are 52 *different* cards,
+   because proving that means reading them. That is what
+   `CardCrypto::verify_shuffle` and `ShuffleProof` exist for. See
+   [The audit that cannot be written](#the-audit-that-cannot-be-written).
+2. **Wire secrecy.** `SealedDeck<S>` serializes payloads and slots only. A
+   payload is opaque exactly to the degree `S::Sealed`'s own `Serialize` makes
+   it so. Under `PlaintextSeal` the payload literally serializes as `"A♠"`;
+   under `MaskedCard` it is two curve points. pkcore has no way to tell the
+   difference, and does not try.
+
+### What is *not* mapped, on purpose
+
+`CardCrypto`'s `keygen`, `verify_key`, `aggregate`, `remask`, `verify_mask`,
+`shuffle` and `verify_shuffle` have no `CardSeal` counterpart. They are protocol
+steps between players; pkcore is not a player. A `SealedDeck` shuffles by
+permuting a `Vec` in place (`shuffle_in_place_with`), which is *not* a
+verifiable shuffle and is not claimed to be one. In a real game `pkmental` runs
+the verifiable shuffle and hands pkcore the resulting deck.
 
 ---
 

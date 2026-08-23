@@ -285,8 +285,18 @@ depending on whether you prioritize a smooth migration from today's `Dealer`
 
 Independent of topology, every option needs the same three refactors:
 
-1. **The deck becomes a vector of masked cards.** Today `Deck` holds concrete
-   `Card`s and dealing reveals them. In a mental-poker design a `Card` only
+1. **The deck becomes a vector of masked cards.**
+   **Status 2026-08-23: landed in pkcore `0.8.0` as
+   [EPIC-79b](./EPIC-79b_Sealed_Deck.md).** `pkcore::seal` ships `CardSeal`,
+   `SlotId`, `SealedCard<S>` and `SealedDeck<S>` — a deck that shuffles, cuts
+   and deals blind (Phases 0–2), plus `TableAction::SealedDealt` / `Revealed`
+   so the event log stops leaking hole cards (Phases 4a–4c). Wiring it into
+   `Table` is EPIC-79b Phase 3, approved as *Option A′* — the deck is
+   `SealedDeck<S>` always, with a `NullSeal` identity scheme for solvers and
+   bots. See [Implementing `CardSeal` in `pkmental`](./EPIC-79b_Sealed_Deck.md)
+   for the backend mapping.
+
+   Today `Deck` holds concrete `Card`s and dealing reveals them. In a mental-poker design a `Card` only
    materializes after the unmask protocol completes for its slot, so
    `DealHand` / `DealFlop` / … stop drawing from a local shuffled `Deck` and
    instead trigger reveal-token collection, with the resulting plaintext fed
