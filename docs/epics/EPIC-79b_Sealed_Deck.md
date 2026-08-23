@@ -420,14 +420,25 @@ irreversible blast radius, and this EPIC deliberately stops short of it.
       `deck: SealedDeck<S>` (`src/casino/table.rs:93`). Keep every other field
       plain — board, muck, `dealt_hole_cards`, seats and the event log are out
       of scope here.
-- [ ] **3f.** Re-check the card-injection paths against the loss of `contains`
-      / `remove_all`: `Table::inject_hole_cards` (`src/casino/table.rs:1526`)
-      and `PokerSession` deck priming (`src/casino/session.rs`).
-- [ ] **3g.** Confirm `PokerSession` stays non-generic (`pub table: Table`) and
-      `prelude.rs:115` needs no change.
-- [ ] **3h.** `make ayce` clean; `make check-purity` clean; `make perf-check`
+- [ ] **3f.** Hand-write `Clone` and `Debug` for `TableOf<S>`. **Do not derive
+      them** — see [C4](#c4--generic-derives-would-have-added-wrong-bounds) and
+      condition 3 of [Downstream impact](#downstream-impact-measured-2026-08-23).
+      `NullSeal` would hide a wrong `S: Clone` bound; a real scheme would not.
+- [ ] **3g.** Confirm `PokerSession` stays non-generic (`pub table: Table`,
+      `shuffled_deck_str: Option<String>`) and that `prelude.rs:115` re-exports
+      the **alias**, not `TableOf`. These are conditions 1 and 2 of the
+      downstream impact assessment; breaking either turns a zero-line recompile
+      into a migration for `pkarena0-web` (23 `Table` / 17 `PokerSession`),
+      `pktui` (34 / 12), `pkdealer_service` (10 / 12), `cardroom` (9 / 6) and
+      `pkpy` (2 / 9).
+- [ ] **3h.** `impl Display for SealedDeck<NullSeal>` reproducing `Cards`'
+      format exactly (`src/cards.rs:697` — card strings joined by one space).
+      Condition 4: `PokerSession::start_hand` feeds it to
+      `HandHistory::shuffled_deck`, which `pkdealer_service` and `pkarena0-web`
+      write to YAML. Test that both `Display`s agree on a full deck.
+- [ ] **3i.** `make ayce` clean; `make check-purity` clean; `make perf-check`
       to confirm the `IndexSet` → `Vec` deck change costs nothing.
-- [ ] **3i.** `CHANGELOG.md` under `## [Unreleased]`, `### Changed` —
+- [ ] **3j.** `CHANGELOG.md` under `## [Unreleased]`, `### Changed` —
       **breaking**: `Table::deck` is now `SealedDeck<NullSeal>`.
 
 ### Phase 4 — The reveal ledger
@@ -537,8 +548,10 @@ silently compiles into something weaker if nobody names it first.
 - Five public constructors: `nlh_from_seats`, `limit_holdem_from_seats`,
   `plo_from_seats`, `stud_hi_from_seats`, `razz_from_seats`.
 - `Table` derives `Clone, Debug` — **not** `Serialize`.
-- Downstream call sites naming `Table`: `pkarena0-web` 15, `pkdealer` 5,
-  `pkpy` 1.
+- Downstream call sites naming `Table` (**re-measured 2026-08-23**; the
+  original figures undercounted — `pkdealer` depends on `pkcore` through seven
+  workspace members, not at its root): `pktui` 34, `pkarena0-web` 23,
+  `pkdealer_service` 10, `cardroom` 9, `pkpy` 2.
 
 ---
 
@@ -768,8 +781,10 @@ answer from `pkmental` or [EPIC-79a](./EPIC-79a_Real_Cryptography_Backend.md).
   preserves the type *name*, not the field *type*. In `0.x` semver the minor
   slot is the breaking slot, and **`0.8.0` is already unreleased and untagged**
   (`v0.7.0` is the newest tag), so this costs no extra version.
-- **Downstream:** `pkarena0-web` (15 mentions), `pkdealer` (5), `pkpy` (1) — all
-  pinned to `0.7.0`, so none break until they choose to upgrade.
+- **Downstream:** measured in full below — see
+  [Downstream impact](#downstream-impact-measured-2026-08-23). **22 crates in
+  15 repos** depend on `pkcore`; the expected source change across all of them
+  is **zero lines**.
 - **Out of scope:** `TableCelled` keeps `deck: CardsCell`. It does more to its
   deck (`remove_all`, `take`, `.0.swap`) and `docs/ANALYSIS_TableCelled_vs_Table.md`
   names `Table` the preferred engine. The two are independent siblings by design.
@@ -778,6 +793,107 @@ answer from `pkmental` or [EPIC-79a](./EPIC-79a_Real_Cryptography_Backend.md).
   correct and likely faster, but the card-injection paths
   (`inject_hole_cards`, `table.rs:1526`) must be re-checked against the loss of
   `contains` / `remove_all`.
+
+#### Downstream impact, measured 2026-08-23
+
+Scanned with `find . -name Cargo.toml -not -path '*/target/*' | xargs grep -l '^pkcore ='`
+across every sibling repo under `ImperialBower/`. **22 crates in 15 repos**
+depend on `pkcore`. Workspace members matter here: `pkdealer` has no root
+dependency but **seven** of its `crates/` do, and `pkodds` likewise.
+(`mp/imperialbower-mp/pkcore-mp` matches the grep but is a *feature flag*
+named `pkcore`, not a dependency.)
+
+**How they pin decides whether they break without asking.**
+
+| Pin style | Crates | Breaks when |
+|---|---|---|
+| `path = "../pkcore"` | `pkmental`, `pkmentalold` | **immediately, on save** |
+| `git`, `branch = "main"` / default | `pksrv`, `pkrange` | **on the next merge to `main`** |
+| crates.io `0.7.0` | `pkarena0-web`, `pkpy`, `pktui`, and the seven `pkdealer_*` crates (`agent_boss`, `agent_core`, `agent_rules`, `boss`, `client`, `costsim`, `service`) | only on upgrade |
+| crates.io, older | `cardroom` `0.5.0`, `pkodds_service` `0.1.4`, `pkgto-web` / `pkkuhn-web` `0.2.1`, `exgto` `0.2.0`, `pkkuhn-orig` `0.0.39`, `expkcalc` `0.0.23` | only on upgrade |
+| pinned `=` on a dead branch | `pktest` (`=0.0.17`, branch `dealer`) | never |
+
+**The four that break without warning use none of the affected API.**
+
+| Crate | Uses | `Table` / `.deck` |
+|---|---|---|
+| `pkmental` | `pkcore::card::Card`, `pkcore::deck::DECK_ARRAY` (27 refs) | none |
+| `pkmentalold` | same two (22 refs) | none |
+| `pkrange` | `pkcore::PKError`, `pkcore::rank::Rank` (2 refs) | none |
+| `pksrv` | zero `pkcore` refs in source | none |
+
+**No consumer touches a table's deck.** The grep for `.deck` against a `Table`
+returns nothing across all 22 crates. Every apparent hit is unrelated:
+
+- `PokerSession::shuffled_deck_str` — `pkarena0-web` 8×, `pkdealer_service` 3×,
+  `pkpy` 2×. It is an `Option<String>` and **does not change** under `NullSeal`.
+- `pkpy/src/lib.rs:38` — `pkcore::deck::Deck`, the standalone type.
+- `cardroom` `PerTable`, `pkkuhn-web` `StrategyTable`, `pktui`
+  `shuffled_deck: None` — name collisions.
+
+**`Table` is used by name only**, which is exactly what the type alias
+preserves:
+
+| Crate | `Table` | `PokerSession` | Shape of use |
+|---|---|---|---|
+| `pktui` | 34 | 12 | names in signatures |
+| `pkarena0-web` | 23 | 17 | `use ...table::{Player, Seat, Seats, Table}`, `struct Snapshot { table: Table }`, `fn session_report(table: &Table, ..)`, `Table::nlh_from_seats(..)` |
+| `pkdealer_service` | 10 | 12 | same shapes — `Table::nlh_from_seats(..)`, `fn map_game_phase_to_street(table: &Table)`, `PokerSession::new(table)` |
+| `cardroom` | 9 | 6 | names in signatures |
+| `pkpy` | 2 | 9 | `use pkcore::casino::table::Table as PkTableNoCell` |
+| the other six `pkdealer_*` crates | 0 | 0 | agents and pricing — no table types |
+
+Every one resolves through `pub type Table = TableOf<NullSeal>`.
+`Table::nlh_from_seats` resolves too, because a type alias pins `S` before name
+resolution reaches the inherent impls.
+
+**No wire-format break.** `Table` is `#[derive(Clone, Debug)]` at
+`src/casino/table.rs:83` and does **not** implement `Serialize`. There is no
+persisted table to migrate; `pkarena0-web`'s undo `Snapshot` and
+`pkdealer_service`'s `Arc<Mutex<_>>` state both hold an in-memory clone.
+
+**The one persisted artifact is `HandHistory::shuffled_deck`**
+(`src/hand_history.rs:176`), written to YAML by `pkdealer_service`
+(`main.rs:2000`) and `pkarena0-web`. It is a `String` produced by
+`PokerSession::start_hand` via `self.table.deck.to_string()`
+(`src/casino/session.rs:339`). Two facts keep it safe:
+
+1. `HandHistory::replay` **ignores** it — confirmed at `src/hand_history.rs:2318`,
+   which documents it as analysis-only. No recorded hand replays through it.
+2. It only stays byte-identical if `SealedDeck<NullSeal>`'s `Display` matches
+   `Cards`' — `self.iter().map(Card::to_string).collect::<Vec<_>>().join(" ")`
+   (`src/cards.rs:697`). That is condition 4 below.
+
+**Verdict: the expected downstream source change is zero lines**, provided the
+four conditions below hold. That converts this from a migration into a
+recompile.
+
+##### The four conditions the refactor must meet
+
+1. **The alias ships.** `pub type Table = TableOf<NullSeal>` in
+   `casino::table`, and `prelude.rs:115` re-exports the alias, not `TableOf`.
+2. **`PokerSession` stays non-generic** — `pub table: Table`, and
+   `shuffled_deck_str` stays `Option<String>`. Combined `PokerSession` mentions
+   across consumers: `pkarena0-web` 17, `pkdealer_service` 12, `pktui` 12,
+   `pkpy` 9, `cardroom` 6. Making it generic breaks all five.
+3. **`TableOf<S>` hand-writes `Clone` and `Debug`.** This is correction
+   [C4](#c4--generic-derives-would-have-added-wrong-bounds) reappearing at a new
+   site: `#[derive(Clone)]` on `TableOf<S>` generates
+   `impl<S: CardSeal + Clone>`, which is wrong — the scheme is never stored, so
+   it must not constrain the table. `NullSeal` would hide the bug, because a
+   unit struct is `Clone`; a real scheme that is not `Clone` would expose it
+   later, in the hardest possible place.
+4. **`impl Display for SealedDeck<NullSeal>` reproduces `Cards`' format
+   exactly** — card strings joined by a single space, deck order, no slot ids.
+   Assert it with a test that builds both and compares the strings, so recorded
+   hand histories stay diffable against the `0.7.0` corpus.
+
+##### Two crates to warn, not fix
+
+`pksrv` and `pkrange` track `main` and will pick this up on merge. Neither uses
+the affected API today, but neither has a version pin to protect it from the
+next change either. Worth pinning them to a released version — tracked outside
+this EPIC in `docs/BACKLOG.md`.
 
 #### What it does *not* buy
 

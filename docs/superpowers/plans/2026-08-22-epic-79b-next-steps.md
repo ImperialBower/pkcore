@@ -98,7 +98,8 @@ Phase 4d (sealed replay, needs sealed seats) is done.
 
 **You do not need to publish to keep working.** `pkmental` uses
 `pkcore = { path = "../pkcore" }`, so it already sees `0.8.0`. The three
-crates.io consumers (`pkpy`, `pkdealer`, `pkarena0-web`) pin `0.7.0` and none of
+crates.io consumers (`pkpy`, `pktui`, `pkarena0-web`, seven `pkdealer_*`)
+pin `0.7.0` and none of
 them use `seal`. Publish when a crates.io consumer actually needs the new API —
 most likely when `pkmental` starts implementing `CardSeal`.
 
@@ -137,6 +138,23 @@ Why it beats the earlier "defer" call:
   happens at the seat. A deck is only shuffled, cut and drawn.
 - The break is **free**. `0.8.0` is unreleased and untagged (`v0.7.0` is the
   newest tag), and in `0.x` the minor slot is the breaking slot.
+
+**Downstream impact: zero source lines.** All **22 dependent crates in 15
+repos** were measured 2026-08-23 (full table in the EPIC). Note `pkdealer`
+depends on `pkcore` through **seven workspace members**, not at its root — a
+root-only scan misses them. Nobody touches a table's deck. `Table` is used by
+name only, which the alias preserves, and `Table` does not implement
+`Serialize`, so there is no persisted state to migrate. The four crates that
+pick this up without asking — `pkmental` and `pkmentalold` (path deps), `pksrv`
+and `pkrange` (track `main`) — use only `Card`, `DECK_ARRAY`, `PKError` and
+`Rank`.
+
+That holds **only** if four conditions are met, which are work items 3e–3h:
+the `Table` alias ships, `PokerSession` stays non-generic, `TableOf<S>`
+hand-writes `Clone`/`Debug` instead of deriving them, and
+`SealedDeck<NullSeal>`'s `Display` matches `Cards`' byte for byte — that string
+is persisted as `HandHistory::shuffled_deck` by `pkdealer_service` and
+`pkarena0-web`.
 
 It does **not** buy secrecy — seats, board, muck and the event log still hold
 plain `Card`s. It buys the seam, once, while the API is unreleased.
