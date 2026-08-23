@@ -76,6 +76,8 @@ pub fn default_field() -> Vec<FieldEntry> {
 /// // No assertion — poker variance means any value is possible in 200 hands.
 /// let _ = bb100;
 /// ```
+// `count` is a session tally in the thousands at most.
+#[allow(clippy::cast_precision_loss)]
 #[must_use]
 pub fn evaluate(
     config: &ExploitConfig,
@@ -134,6 +136,8 @@ fn run_session(config: &ExploitConfig, opp_profile: &BotProfile, hands: usize, s
 /// legitimately-losing candidate), it is logged and scored [`NO_RESULT_FITNESS`]
 /// so error-prone configs are selected against (audit II.9 follow-up). A real
 /// result returns the exploit bot's BB/100 for seat 0.
+// Chip counts and hand counts are both far below f64's exact-integer ceiling.
+#[allow(clippy::cast_precision_loss)]
 fn session_bb100(outcome: Result<SimResult, PKError>) -> f64 {
     match outcome {
         Err(e) => {

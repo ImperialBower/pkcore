@@ -7,17 +7,37 @@
 > Standards source: `CLAUDE.md` (no `unwrap()`/`expect()`/`panic!()` in library
 > code; every public fn needs a doc test + unit test).
 >
-> Last refreshed **2026-08-22** against `main` @ `14245b53`, pkcore `0.7.1`.
-> The last automated review pass ran 2026-08-18 (see the 🤖 section); nine of
-> its eleven findings shipped as `DEFECT_015` – `DEFECT_023` in `0.6.0`, and
-> the panic sweep closed the rest in `0.7.0`. Only documentation and the epub
-> build script have landed since, so nothing below moved.
-> Marker census in `src/` (re-counted 2026-08-22): 70 `TODO`, of which 11
-> `TODO RF` and 3 `TODO TD`. **0 `TODO DEFECT`** — the last one was retired on
-> 2026-08-21. No `FIXME`, `HACK`, or `XXX` markers remain.
+> Last refreshed **2026-08-22** (second pass) against `EPIC-79b` @ `39ea3564`,
+> pkcore `0.8.0`. EPIC-79b Phases 0–2 landed; `src/seal/` ships with no `TODO`
+> markers of its own, so the census below is unchanged by it.
+> Marker census in `src/`: 70 `TODO`, of which 11 `TODO RF` and 3 `TODO TD`.
+> **0 `TODO DEFECT`**. No `FIXME`, `HACK`, or `XXX` markers remain.
 >
-> The automated review pass is now 4 days old and predates `0.7.0`'s signature
-> changes. Ask for a re-run before trusting the 🤖 section as current.
+> The last automated review pass ran 2026-08-18 and predates `0.7.0`'s
+> signature changes and `0.8.0`'s new module. Ask for a re-run before trusting
+> the 🤖 section as current — `src/seal/` has never been reviewed by one.
+
+## New this pass — the linting blind spot
+
+**Non-default features are not linted by the local gate.** `make clippy` runs
+`cargo clippy -- -W clippy::pedantic`: default features only, and `-W`, not
+`-D`. `make ayce` exports `RUSTFLAGS := -Dwarnings`, but still only over the
+default feature set. So any code reachable only through a non-default feature
+is invisible to the gate.
+
+That is how sixteen pedantic findings accumulated unnoticed in
+`src/bot/training/` (feature `bot-training`, not in `default`). They were
+fixed on 2026-08-22 and `cargo clippy --all-features -- -D warnings` now
+passes — but the mechanism that hid them is untouched.
+
+- [ ] **Lint non-default features in the gate** — `store`, `terminal`,
+      `pokerbench`, `generators`, `bot-training`, `debug-json` and the new
+      `seal-test-double` all sit in the blind spot. `make check-features`
+      already iterates features for `cargo check`; the cheapest fix is to add
+      a clippy pass on the same loop, or one `cargo clippy --all-features --
+      -D warnings` line in `ayce`. Until then, a feature-gated regression can
+      reach a release. (`Makefile`, the `ayce` and `clippy` targets)
+
 
 ## Tracked debt
 

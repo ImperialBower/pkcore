@@ -1,47 +1,58 @@
 # Backlog
 
-> Refreshed by the `/backlog` skill on **2026-08-22** against `main` @ `14245b53`,
-> pkcore `0.7.1` (`0.7.0` tagged and published 2026-08-21). An index of
-> outstanding work aggregated from EPIC docs, `ROADMAP.md`, defect reports,
-> code comments, the unreleased changelog, and open GitHub issues. Items tagged
-> 🤖 are machine-proposed — review before adopting. Tech-debt detail lives in
-> [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
+> Refreshed by the `/backlog` skill on **2026-08-22** (second pass) against
+> `EPIC-79b` @ `39ea3564`, pkcore **`0.8.0`** (cut, not yet tagged or
+> published). An index of outstanding work aggregated from EPIC docs,
+> `ROADMAP.md`, defect reports, code comments, the unreleased changelog, and
+> open GitHub issues. Items tagged 🤖 are machine-proposed — review before
+> adopting. Tech-debt detail lives in [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
 >
-> **What changed since the 2026-08-21 pass:** `0.7.0` shipped
-> (`next_actor` returns `Result`, five more library panics became honest
-> signatures, `DEFECT_008` closed). Downstream was then bumped: **pkpy,
-> pkdealer (all crates) and pkarena0-web now pin `0.7.0` and have adopted the
-> fallible `next_actor`** — release follow-through item 3 is done except for
-> two stale-but-compiling web repos. Since the release only docs work landed
-> (`scripts/build_epub.sh`, the epub, an EPIC-06 image-link fix), which is what
-> the current `[Unreleased]` section holds at `0.7.1`. **No EPIC work has
-> landed.** The frontier is unchanged — **kernel-hardening and platform-reach**.
+> **What changed since the earlier 2026-08-22 pass:** **EPIC-79b Phases 0–2
+> shipped.** `src/seal/` now holds `CardSeal`, `SlotId`, `SealedCard<S>`,
+> `SealedDeck<S>`, `DeckAudit` and the feature-gated `PlaintextSeal` double —
+> 33 unit tests, 20 doc tests, zero new dependencies, `make check-purity`
+> green, `make ayce` green. Version bumped `0.7.1` → `0.8.0` and the CHANGELOG
+> cut. Separately, sixteen pedantic clippy findings in `src/bot/training/`
+> were fixed, so `cargo clippy --all-features -- -D warnings` passes for the
+> first time. The frontier moves: **the sealed-deck seam exists; what it
+> plugs into does not.**
 
 ---
 
-## Release follow-through (nearly closed)
+## Release follow-through
 
-`v0.7.0` is tagged and on crates.io. Everything that blocked consumers is done:
+`v0.7.0` is on crates.io and every downstream consumer is on it. **`0.8.0` is
+cut in the tree but not released.**
 
-1. ~~**Cut `CHANGELOG.md`**~~ — **DONE 2026-08-21.**
-2. ~~**Write `docs/releases/RELEASE_0.6.0.md`**~~ — **DONE 2026-08-21.**
-3. ~~**Unbreak downstream**~~ — **DONE 2026-08-21/22.** `pkpy`
-   (`src/session.rs:186`), every `pkdealer` crate, and `pkarena0-web`
-   (`src/lib.rs:1371`, with a comment naming the 0.7.0 change) now pin
-   `pkcore = "0.7.0"` and compile against the fallible `next_actor`.
-4. ~~**`PokerSession::next_actor` still swallows failure**~~ — **DONE**, shipped
-   in `0.7.0`.
+Done:
 
-**Left over (low urgency, nothing is broken):**
+1. ~~Cut `CHANGELOG.md` for `0.6.0`~~, ~~write `RELEASE_0.6.0.md`~~,
+   ~~unbreak downstream~~, ~~`next_actor` returns `Result`~~ — all closed
+   2026-08-21/22.
+2. ~~**Cut `CHANGELOG.md` for `0.8.0`**~~ — **DONE 2026-08-22.**
+   `## [0.8.0] - 2026-08-22` header and compare link added; `[Unreleased]` is
+   empty again.
 
-- **`pkgto-web` and `pkkuhn-web` still pin `pkcore = "0.2.1"`** — five minor
-  versions behind. They compile, so this is drift, not breakage. `pkkuhn-web`
-  `src/lib.rs` calls `KuhnCfr::train` twice, which became fallible in `0.7.0`,
-  so the bump is a real (small) edit, not a one-line version change.
-- **`docs/releases/RELEASE_0.7.0.md` was never written** — `0.6.0` has one,
-  `0.7.0` does not. `/release-notes` covers it.
-- **No release audit for `0.7.0`** — `docs/RELEASE_AUDIT_0.6.0.md` is the
-  latest. The `0.7.0` breaking changes were verified by hand instead.
+**Open, in the order they block each other:**
+
+1. **Tag and publish `0.8.0`.** The tree is green (`make ayce`) and the
+   changelog is cut. Nothing blocks it.
+2. **Write `docs/releases/RELEASE_0.7.0.md` and `RELEASE_0.8.0.md`** — `0.6.0`
+   has release notes, `0.7.0` never got any, and `0.8.0` is now also due.
+   `/release-notes` covers both.
+3. **Run `audit-release` for `0.8.0`** — the EPIC's own exit criterion 8 asks
+   for it, and `RELEASE_AUDIT_0.6.0.md` is still the newest audit. `0.8.0` is
+   purely additive (new module, new off-by-default feature, three
+   `#[non_exhaustive]` error variants), so the audit should be short — but
+   short is not the same as skipped.
+4. **`pkgto-web` and `pkkuhn-web` still pin `pkcore = "0.2.1"`** — six minor
+   versions behind now. They compile, so this is drift, not breakage.
+   `pkkuhn-web` `src/lib.rs` calls `KuhnCfr::train` twice, which became
+   fallible in `0.7.0`, so the bump is a real (small) edit.
+5. **`Cargo.lock` is not tracked** in this repo, so exit criterion 8's
+   "regenerate the lockfile" step leaves no artifact in the commit. Worth a
+   decision: track it (normal for a binary-producing workspace) or strike the
+   criterion from future EPIC templates.
 
 ---
 
@@ -49,13 +60,24 @@
 
 Ranked by "designed, unblocked, and nothing has landed yet".
 
-1. **EPIC-79b — The Sealed Deck** ([`epics/EPIC-79b_Sealed_Deck.md`](epics/EPIC-79b_Sealed_Deck.md))
-   The design doc landed 2026-08-18 (`#125`); its own status table says *"Nothing
-   has landed. Every row is honest aspiration."* Adds a `CardSeal` trait,
-   `SealedCard<S>` and `SealedDeck<S>` so the engine can shuffle, cut, burn and
-   deal cards it cannot read. Zero new dependencies — the crypto stays in
-   `pkmental`. This is the first of the three cross-cutting changes
-   [EPIC-79](epics/EPIC-79_Mental_Poker.md) designed and never built.
+1. **EPIC-79b Phase 3 — wire `SealedDeck` into `Table`** 🔒 **GATED**
+   ([`epics/EPIC-79b_Sealed_Deck.md`](epics/EPIC-79b_Sealed_Deck.md))
+   Phases 0–2 shipped 2026-08-22 in `0.8.0`; Phases 4–5 sit behind Phase 3.
+   Phase 3 is **explicitly gated and needs your approval before any code** —
+   `SealedDeck<S>` is generic, and threading `S` through `Table`, the seats,
+   the dealer and every downstream consumer is a large, mostly irreversible
+   blast radius. Work item **3a** is analysis only: compare a generic
+   `Table<S>` against a separate `SealedTable` against type erasure behind a
+   `dyn` object, costed against the existing call sites at
+   `src/casino/table.rs:1277`, `:1486`, `:1503`, `:1518`. **3b** is "present
+   the recommendation and stop." That write-up is the next honest step here,
+   and it is cheap.
+
+   Also open from the same EPIC, and *not* gated: **Phase 4** (the
+   `TableAction::SealedDealt` / `Revealed` reveal ledger) is written as
+   depending on Phase 3, but its types do not — both variants carry `SlotId`,
+   a plain `u8` newtype, so `TableAction` stays non-generic. Worth
+   re-reading before assuming the gate blocks it.
 
 2. **EPIC-81 — pkcore on the ckc-rs kernel** ([`epics/EPIC-81_Ckc_Rs_Dependency.md`](epics/EPIC-81_Ckc_Rs_Dependency.md))
    Delete the private Cactus Kev evaluator copy and depend on `ckc-rs` 0.2,
@@ -161,8 +183,20 @@ Closed-out on 2026-08-21, recorded so nobody re-reports them:
 ## Tech debt
 
 70 `TODO` markers in `src/` — 11 `TODO RF`, 3 `TODO TD`, 0 `TODO DEFECT`. No
-`FIXME`/`HACK`/`XXX` remain. Full detail in
+`FIXME`/`HACK`/`XXX` remain. Unchanged by the EPIC-79b work: `src/seal/` ships
+with no TODO markers of its own. Full detail in
 [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
+
+**2026-08-22 clippy sweep (`0.8.0`):** `cargo clippy --all-features -- -D
+warnings` passes for the first time. Sixteen pedantic findings had accumulated
+in `src/bot/training/` because `make clippy` runs default features only and
+with `-W`, not `-D` — and `bot-training` is not in `default`, so that code was
+never linted by the normal gate. Two were real (a collapsible `if` and a
+`cloned`/`copied`); fourteen were numeric-cast lints now carrying scoped
+`#[allow]`s with reasons. **The gap itself is the finding worth keeping:** any
+non-default feature's code is invisible to `make ayce`'s clippy step. `store`,
+`terminal`, `pokerbench` and `generators` are in the same blind spot and have
+never been checked at `-D`.
 
 **2026-08-21 panic sweep (`0.7.0`):** the nine 🤖 "panics in library code"
 findings are closed — `KuhnCfr::train`, `Deck::get`, `Terminal::receive_usize`,
@@ -232,14 +266,11 @@ odd chips, and the CFR/equity math. See `TECHNICAL_DEBT.md` for what was traced.
 
 ## Unreleased (in `CHANGELOG.md`)
 
-`Cargo.toml` is at **0.7.1**; `[Unreleased]` holds docs/tooling only:
-
-- **Added** — `scripts/build_epub.sh`, which builds `book.epub` from every
-  markdown file in the repo via `pandoc`.
-- **Fixed** — the `3dayslater.png` link in `docs/epics/EPIC-06_Preflop.md`.
-
-No code change is pending. `0.7.1` can be cut whenever, or absorbed into the
-next feature release.
+**Empty.** `## [0.8.0] - 2026-08-22` was cut on 2026-08-22 and carries the
+EPIC-79b seal module, the `seal-test-double` feature, the three `PKError`
+variants, the clippy sweep, `scripts/build_epub.sh` and the EPIC-06 image-link
+fix. `Cargo.toml` is at `0.8.0`. The tag and the crates.io publish have not
+happened — see *Release follow-through*.
 
 ---
 

@@ -7,8 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-08-22
+
 ### Added
 
+- **`pkcore::seal` — a deck the engine cannot read**
+  ([EPIC-79b](docs/epics/EPIC-79b_Sealed_Deck.md), Phases 0–2). A `CardSeal`
+  trait whose keys, tokens and error type all belong to the caller, plus
+  `SealedCard<S>` and `SealedDeck<S>` built on it. The deck shuffles, cuts and
+  deals **blind** — every one of those operations is a permutation, and a
+  permutation needs no knowledge. `SealedCard` is generic over the *scheme*,
+  never over an *instance* of it, so no key is reachable from the struct graph
+  and there is no path from a sealed card to a `Card` that does not pass a
+  caller-supplied scheme and token through `SealedCard::reveal`. `Debug` is
+  hand-written and prints `<sealed>`; there is no `Display`. `SealedDeck` is an
+  ordered `Vec`, not a set, because set semantics require reading card values.
+  `SealedDeck::audit` returns the new `DeckAudit` and documents what it cannot
+  prove — payload distinctness is a verifiable-shuffle-argument property and
+  belongs to EPIC-79a, not here. **Zero new dependencies**; `make check-purity`
+  stays green. `Table` is untouched: EPIC-79b Phase 3 is gated.
+- `seal-test-double` feature (**off by default**) exposing `PlaintextSeal`, a
+  non-secure `CardSeal` implementation whose payload is the plaintext `Card`.
+  It exists to test the plumbing — draw, shuffle, cut, reveal accounting — and
+  never the secrecy. A default build cannot reach it.
+- Three `PKError` variants: `SealFailed`, `RevealRejected`, `DuplicateSlot`.
+  Not a breaking change — `PKError` is `#[non_exhaustive]` as of 0.2.0.
 - `scripts/build_epub.sh` — builds `book.epub` from every markdown file in
   the repo (root files first, then everything under subfolders, excluding
   build/tool-state dirs like `target/`, `.git/`, `generated/`) via `pandoc`.
@@ -18,6 +41,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`cargo clippy --all-features -- -D warnings` passes again.** Sixteen
+  pedantic findings in `src/bot/training/` had accumulated unnoticed, because
+  `make clippy` runs default features only and with `-W`, not `-D` — and
+  `bot-training` is not in `default`, so that code was never linted by the
+  normal gate. Two were real: the parent-update in `Trainer::train` collapsed
+  into an edition-2024 let-chain, and `scores.iter().cloned()` became
+  `.copied()`. The remaining fourteen are numeric-cast lints on conversions
+  that cannot lose data — hand counts and chip totals sit far below f64's
+  2^53 exact-integer ceiling, and `encoding::decode` clamps into `[LO, HI]`
+  before rounding — so each carries a scoped `#[allow]` with the reason. No
+  behaviour changed; `bot::training`'s 19 tests pass unchanged.
 - `docs/epics/EPIC-06_Preflop.md` — `3dayslater.png` link was missing the
   `../` back up to `docs/files/`, so the picture never rendered anywhere,
   not just in the epub build.
@@ -1212,6 +1246,7 @@ on the wire, and `replay` behavior is unaffected by the new metadata. Driven by
 `ImperialBower/pkdealer` EPIC-40 Phase 4 (arena recorder agent-fidelity
 annotations).
 
+[0.8.0]: https://github.com/ImperialBower/pkcore/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/ImperialBower/pkcore/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/ImperialBower/pkcore/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/ImperialBower/pkcore/compare/v0.4.0...v0.5.0

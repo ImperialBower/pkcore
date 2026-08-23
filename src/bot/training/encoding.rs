@@ -37,6 +37,8 @@ pub const HI: [f64; DIM] = [
 /// let v = encode(&ExploitConfig::default());
 /// assert_eq!(v.len(), DIM);
 /// ```
+// `min_hands_*` are hand counts, far below f64's 2^53 exact-integer ceiling.
+#[allow(clippy::cast_precision_loss)]
 #[must_use]
 pub fn encode(c: &ExploitConfig) -> [f64; DIM] {
     [
@@ -73,6 +75,9 @@ pub fn encode(c: &ExploitConfig) -> [f64; DIM] {
 /// assert_eq!(roundtripped.fold_to_cbet_high_threshold,
 ///            original.fold_to_cbet_high_threshold);
 /// ```
+// Every element is clamped into `[LO, HI]` on the line above the casts, so
+// the rounded value is in range and non-negative by construction.
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 #[must_use]
 pub fn decode(p: &[f64; DIM]) -> ExploitConfig {
     let v: [f64; DIM] = std::array::from_fn(|i| p[i].clamp(LO[i], HI[i]));

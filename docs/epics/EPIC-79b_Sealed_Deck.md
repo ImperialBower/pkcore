@@ -63,19 +63,22 @@ the prototypes live outside the crate in `docs/files/mentalpoker/`.
 
 ## Status
 
-Status as of `main` @ `9afddb83`, **2026-08-18**. Nothing has landed. Every row
-below is honest aspiration.
+Status as of **2026-08-22**, pkcore `0.8.0`. **Phases 0–2 have landed.**
+Phase 3 stays gated; Phases 4–5 are untouched. The plan that built it is
+[`docs/superpowers/plans/2026-08-22-epic-79b-sealed-deck-phases-0-2.md`](../superpowers/plans/2026-08-22-epic-79b-sealed-deck-phases-0-2.md);
+see [Corrections (2026-08-22)](#corrections-2026-08-22) for three items in this
+document that could not be implemented as written.
 
 | Component | Status |
 |---|---|
-| `CardSeal` trait (`Sealed` / `Token` / `Error` associated types) | Planned |
-| `SlotId` stable per-card identity | Planned |
-| `SealedCard<S>` + redacting `Debug` | Planned |
-| `SealedDeck<S>` — `draw_one`, `draw`, `cut`, blind shuffle | Planned |
-| `SealedDeck::audit` — cardinality only, distinctness impossible | Planned |
-| `PlaintextSeal` test double, feature-gated off by default | Planned |
-| `PKError` seal variants (`#[non_exhaustive]`, non-breaking) | Planned |
-| Blind-shuffle determinism & permutation tests | Planned |
+| `CardSeal` trait (`Sealed` / `Token` / `Error` associated types) | **Complete** |
+| `SlotId` stable per-card identity | **Complete** |
+| `SealedCard<S>` + redacting `Debug` | **Complete** |
+| `SealedDeck<S>` — `draw_one`, `draw`, `cut`, blind shuffle | **Complete** |
+| `SealedDeck::audit` — cardinality only, distinctness impossible | **Complete** — returns the new `DeckAudit` (see C1) |
+| `PlaintextSeal` test double, feature-gated off by default | **Complete** |
+| `PKError` seal variants (`#[non_exhaustive]`, non-breaking) | **Complete** |
+| Blind-shuffle determinism & permutation tests | **Complete** |
 | `Table` sealed dealing path | 🔒 Gated — design only, needs approval |
 | `TableAction::SealedDealt` / `Revealed` ledger | Planned (Phase 4) |
 | `HandHistory` replay of a sealed hand | Planned (Phase 4) |
@@ -344,43 +347,44 @@ in the crate for no behaviour. Revisit at the Phase 3 gate.
 
 ### Phase 0 — Prerequisites & feature gating
 
-- [ ] **0a.** Add `pub mod seal;` to `src/lib.rs` beside the existing module
+- [x] **0a.** Add `pub mod seal;` to `src/lib.rs` beside the existing module
       block at `src/lib.rs:382`–`398`.
-- [ ] **0b.** Add the `seal-test-double = []` feature to `Cargo.toml:22`
+- [x] **0b.** Add the `seal-test-double = []` feature to `Cargo.toml:22`
       `[features]`; do **not** add it to `default` (`Cargo.toml:29`).
-- [ ] **0c.** Add `SealFailed`, `RevealRejected`, and `DuplicateSlot` to
+- [x] **0c.** Add `SealFailed`, `RevealRejected`, and `DuplicateSlot` to
       `PKError` (`src/lib.rs:509`) with `Display` arms beside
       `src/lib.rs:635`. `PKError` is `#[non_exhaustive]`
       (`src/lib.rs:508`), so this is **not** a breaking change for downstream
       matches.
-- [ ] **0d.** Confirm `cargo build --no-default-features` and
+- [x] **0d.** Confirm `cargo build --no-default-features` and
       `make check-purity` (`Makefile:238`) are both green with the new module.
 
 ### Phase 1 — The types and the seam
 
-- [ ] **1a.** `../../src/seal/card_seal.rs`: the `CardSeal` trait exactly as designed
+- [x] **1a.** `../../src/seal/card_seal.rs`: the `CardSeal` trait exactly as designed
       above, fully doc-commented, with a doc test on the round-trip law.
-- [ ] **1b.** `../../src/seal/slot.rs`: `SlotId` with `Serialize`/`Deserialize`,
+- [x] **1b.** `../../src/seal/slot.rs`: `SlotId` with `Serialize`/`Deserialize`,
       `Display` printing the bare number, and a doc test.
-- [ ] **1c.** `../../src/seal/sealed_card.rs`: `SealedCard<S>`, hand-written `Debug`,
+- [x] **1c.** `../../src/seal/sealed_card.rs`: `SealedCard<S>`, hand-written `Debug`,
       **no** `Display`, `reveal(&self, &S, &S::Token)`.
-- [ ] **1d.** `../../src/seal/plaintext.rs`: `PlaintextSeal`, gated per **0b**.
-- [ ] **1e.** Tests in module `seal__sealed_card_tests` — see Test Plan.
+- [x] **1d.** `../../src/seal/plaintext.rs`: `PlaintextSeal`, gated per **0b**.
+- [x] **1e.** Tests in module `seal__sealed_card_tests` — see Test Plan.
       Runs green under `cargo test --features seal-test-double`.
 
 ### Phase 2 — The blind shoe
 
-- [ ] **2a.** `../../src/seal/sealed_deck.rs`: `SealedDeck<S>` with `from_sealed`,
+- [x] **2a.** `../../src/seal/sealed_deck.rs`: `SealedDeck<S>` with `from_sealed`,
       `len`, `is_empty`, `slots`, `draw_one`, `draw`.
-- [ ] **2b.** `shuffle_in_place_with<R: rand::Rng>` — reuse the seeded pattern
+- [x] **2b.** `shuffle_in_place_with<R: rand::Rng>` — reuse the seeded pattern
       already proven at `src/cards.rs:476`. `rand` is an existing hard
       dependency (`Cargo.toml:73`); nothing new is added.
-- [ ] **2c.** `cut(&mut self, at: usize)`.
-- [ ] **2d.** `audit(&self, expected: usize) -> DeckAudit`, with the
+- [x] **2c.** `cut(&mut self, at: usize)`.
+- [x] **2d.** `audit(&self, expected: usize) -> DeckAudit`, with the
       cannot-check-distinctness limit stated in the doc comment and asserted by
       a test.
-- [ ] **2e.** Tests in module `seal__sealed_deck_tests` — see Test Plan.
-- [ ] **2f.** `serde` round-trip: a serialized `SealedDeck<PlaintextSeal>`
+- [x] **2e.** Tests in module `seal__sealed_deck_tests` — see Test Plan.
+- [x] **2f.** *(split into a round-trip test and a wire-shape test — see C2)*
+      `serde` round-trip: a serialized `SealedDeck<PlaintextSeal>`
       must be reconstructible, and the test asserts the wire form carries
       payloads and slots only.
 
@@ -424,6 +428,62 @@ irreversible blast radius, and this EPIC deliberately stops short of it.
       **minor** version bump in `Cargo.toml:4` (new public API, backward
       compatible), then `cargo build` so `Cargo.lock` picks it up.
 - [ ] **5d.** `ROADMAP.md` Epics row for EPIC-79b.
+
+---
+
+## Corrections (2026-08-22)
+
+Three items in this document could not be implemented as written. Each was
+resolved during Phases 0–2; recorded here so the next reader does not
+re-discover them.
+
+### C1 — `DeckAudit` did not exist
+
+Work item **2d** returned `DeckAudit`, but no such type was anywhere in the
+tree — the only match for the name was `TableAction::DeckPassesAudit`
+(`../../src/casino/action.rs:155`), an event-log variant, not a return type.
+
+**Resolved:** `DeckAudit` is defined in `../../src/seal/sealed_deck.rs` as a
+new public enum — `Passed`, `CountMismatch { expected, actual }`, and
+`DuplicateSlot(SlotId)`.
+
+### C2 — `sealed_deck_serde_roundtrip_carries_no_plaintext` was impossible
+
+The Test Plan asked for a test asserting a serialized `SealedDeck<PlaintextSeal>`
+contains no card shorthand. It always will. `PlaintextSeal::Sealed = Card` by
+design, and `Card`'s hand-written `Serialize` (`../../src/card.rs:343`) emits
+`serialize_newtype_struct("Card", &self.to_string())` — the literal string
+`"A♠"`. The test could not pass without breaking the test double.
+
+**Resolved:** plaintext-freedom on the wire is a property of the **scheme**, not
+of `SealedDeck`. The intent is split in two:
+
+- `sealed_deck_serde_roundtrip` — round-trips a deck and asserts slot order and
+  length survive. Proves the container is transportable.
+- `sealed_deck_wire_form_carries_only_payload_and_slot` — asserts each card on
+  the wire has exactly the keys `sealed` and `slot` and nothing else. Proves the
+  container adds no leak of its own.
+
+The redaction claim keeps its own test on `Debug`
+(`sealed_card_debug_never_prints_a_card`), where it **is** achievable, because
+`Debug` is hand-written.
+
+### C3 — the designed `Debug` impl read a private field
+
+The `Debug` body in the Design section lives in `sealed_card.rs` and wrote
+`self.slot.0`. `SlotId`'s tuple field is private to `slot.rs`, so that does not
+compile.
+
+**Resolved:** `SlotId` gained `Display` (bare number) and
+`pub const fn index(self) -> u8`. The `Debug` impl uses the `Display` impl.
+
+### C4 — generic derives would have added wrong bounds
+
+Not an error in this document, but a trap worth recording. `#[derive(Clone)]` on
+`SealedCard<S>` generates `impl<S: Clone> Clone`, which is wrong: the scheme is
+never stored, and `S::Sealed: Clone` is already guaranteed by `CardSeal`. The
+same applies to `PartialEq`, `Eq` and `Debug` — all four are hand-written.
+`Serialize`/`Deserialize` are derived but carry an explicit `#[serde(bound(…))]`.
 
 ---
 
@@ -480,7 +540,7 @@ for the path, `#[allow(non_snake_case)]` beside `#[cfg(test)]`.
 | `../../src/seal/card_seal.rs` | new — the `CardSeal` trait, the whole seam |
 | `../../src/seal/slot.rs` | new — `SlotId` |
 | `../../src/seal/sealed_card.rs` | new — `SealedCard<S>` + redacting `Debug` |
-| `../../src/seal/sealed_deck.rs` | new — `SealedDeck<S>`, blind ops, `audit` |
+| `../../src/seal/sealed_deck.rs` | new — `SealedDeck<S>`, blind ops, and the new `DeckAudit` type (see C1) |
 | `../../src/seal/plaintext.rs` | new — `PlaintextSeal`, feature-gated |
 | `src/lib.rs:382` | add `pub mod seal;` |
 | `src/lib.rs:509` | three new `PKError` variants (`#[non_exhaustive]`) |
