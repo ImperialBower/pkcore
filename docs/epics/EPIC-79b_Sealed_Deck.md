@@ -138,12 +138,12 @@ The kata: name the Things, state the Requirements, drive out the Logic.
 
 ## Design
 
-New module `src/seal/`, declared alongside the existing modules at
+New module `../../src/seal/`, declared alongside the existing modules at
 `src/lib.rs:382`–`398`.
 
 ### `CardSeal` — the scheme, owned by the caller
 
-`src/seal/card_seal.rs` (new):
+`../../src/seal/card_seal.rs` (new):
 
 ```rust
 /// A card-sealing scheme. `pkcore` defines the shape; the *caller* provides
@@ -187,7 +187,7 @@ test any backend can be run through.
 
 ### `SlotId` — identity without knowledge
 
-`src/seal/slot.rs` (new):
+`../../src/seal/slot.rs` (new):
 
 ```rust
 /// A stable, public handle for one card in a sealed deck.
@@ -206,7 +206,7 @@ information about rank or suit.
 
 ### `SealedCard<S>` — one card nobody has read
 
-`src/seal/sealed_card.rs` (new):
+`../../src/seal/sealed_card.rs` (new):
 
 ```rust
 pub struct SealedCard<S: CardSeal> {
@@ -251,7 +251,7 @@ user-facing rendering of a card nobody has read.
 
 ### `SealedDeck<S>` — the blind shoe
 
-`src/seal/sealed_deck.rs` (new):
+`../../src/seal/sealed_deck.rs` (new):
 
 ```rust
 pub struct SealedDeck<S: CardSeal> {
@@ -314,7 +314,7 @@ check more than it does.
 
 ### `PlaintextSeal` — the test double, hard to reach on purpose
 
-`src/seal/plaintext.rs` (new), behind `#[cfg(any(test, feature = "seal-test-double"))]`:
+`../../src/seal/plaintext.rs` (new), behind `#[cfg(any(test, feature = "seal-test-double"))]`:
 
 ```rust
 /// **NO SECURITY WHATSOEVER.** `Sealed = Card`; the "seal" is the identity
@@ -358,19 +358,19 @@ in the crate for no behaviour. Revisit at the Phase 3 gate.
 
 ### Phase 1 — The types and the seam
 
-- [ ] **1a.** `src/seal/card_seal.rs`: the `CardSeal` trait exactly as designed
+- [ ] **1a.** `../../src/seal/card_seal.rs`: the `CardSeal` trait exactly as designed
       above, fully doc-commented, with a doc test on the round-trip law.
-- [ ] **1b.** `src/seal/slot.rs`: `SlotId` with `Serialize`/`Deserialize`,
+- [ ] **1b.** `../../src/seal/slot.rs`: `SlotId` with `Serialize`/`Deserialize`,
       `Display` printing the bare number, and a doc test.
-- [ ] **1c.** `src/seal/sealed_card.rs`: `SealedCard<S>`, hand-written `Debug`,
+- [ ] **1c.** `../../src/seal/sealed_card.rs`: `SealedCard<S>`, hand-written `Debug`,
       **no** `Display`, `reveal(&self, &S, &S::Token)`.
-- [ ] **1d.** `src/seal/plaintext.rs`: `PlaintextSeal`, gated per **0b**.
+- [ ] **1d.** `../../src/seal/plaintext.rs`: `PlaintextSeal`, gated per **0b**.
 - [ ] **1e.** Tests in module `seal__sealed_card_tests` — see Test Plan.
       Runs green under `cargo test --features seal-test-double`.
 
 ### Phase 2 — The blind shoe
 
-- [ ] **2a.** `src/seal/sealed_deck.rs`: `SealedDeck<S>` with `from_sealed`,
+- [ ] **2a.** `../../src/seal/sealed_deck.rs`: `SealedDeck<S>` with `from_sealed`,
       `len`, `is_empty`, `slots`, `draw_one`, `draw`.
 - [ ] **2b.** `shuffle_in_place_with<R: rand::Rng>` — reuse the seeded pattern
       already proven at `src/cards.rs:476`. `rand` is an existing hard
@@ -476,12 +476,12 @@ for the path, `#[allow(non_snake_case)]` beside `#[cfg(test)]`.
 
 | File | Role |
 |---|---|
-| `src/seal/mod.rs` | new — module root, the "no keys here" doc header |
-| `src/seal/card_seal.rs` | new — the `CardSeal` trait, the whole seam |
-| `src/seal/slot.rs` | new — `SlotId` |
-| `src/seal/sealed_card.rs` | new — `SealedCard<S>` + redacting `Debug` |
-| `src/seal/sealed_deck.rs` | new — `SealedDeck<S>`, blind ops, `audit` |
-| `src/seal/plaintext.rs` | new — `PlaintextSeal`, feature-gated |
+| `../../src/seal/mod.rs` | new — module root, the "no keys here" doc header |
+| `../../src/seal/card_seal.rs` | new — the `CardSeal` trait, the whole seam |
+| `../../src/seal/slot.rs` | new — `SlotId` |
+| `../../src/seal/sealed_card.rs` | new — `SealedCard<S>` + redacting `Debug` |
+| `../../src/seal/sealed_deck.rs` | new — `SealedDeck<S>`, blind ops, `audit` |
+| `../../src/seal/plaintext.rs` | new — `PlaintextSeal`, feature-gated |
 | `src/lib.rs:382` | add `pub mod seal;` |
 | `src/lib.rs:509` | three new `PKError` variants (`#[non_exhaustive]`) |
 | `Cargo.toml:22` | `seal-test-double` feature, **not** in `default` |
@@ -566,6 +566,6 @@ Exit criteria:
    documented limit rather than hiding it.
 6. A default `cargo build` cannot reach `PlaintextSeal`.
 7. Every existing test in the crate passes unchanged; no public item outside
-   `src/seal/` changed signature.
+   `../../src/seal/` changed signature.
 8. `CHANGELOG.md` carries the entry and `Cargo.toml:4` carries the minor bump,
    with `Cargo.lock` regenerated.

@@ -10,7 +10,7 @@ behind a `CardSeal` trait whose key lives entirely in the caller — so shufflin
 cutting and dealing all happen blind, and rank/suit exist only after a reveal
 token is presented.
 
-**Architecture:** A new `src/seal/` module, generic over the *scheme* `S`, never
+**Architecture:** A new `../../../src/seal/` module, generic over the *scheme* `S`, never
 over an *instance* of it. No key, and no `S`, is stored anywhere in the struct
 graph, so no code path turns a `SealedCard` into a `Card` without the caller
 handing in both the scheme and a token. `SealedDeck` is an ordered `Vec`, not a
@@ -37,7 +37,7 @@ feature-gated test double that proves the plumbing, never the secrecy.
 - **Test modules** are named `seal__<file>_tests`, carry
   `#[cfg(test)]` + `#[allow(non_snake_case)]`, live in the same file, and test
   function names carry **no `test_` prefix** (`CLAUDE.md`).
-- **`src/seal/` may depend on `Card` only as a type** — never on its `u32`
+- **`../../../src/seal/` may depend on `Card` only as a type** — never on its `u32`
   representation or bit filters (`src/card.rs:36`–`38`). EPIC-81 will delete
   `src/card.rs` and re-export `Card` from `ckc-rs`.
 - **`PlaintextSeal` must be unreachable in a default build.** Feature
@@ -64,7 +64,7 @@ Work item **2d** says `audit(&self, expected: usize) -> DeckAudit`, but
 `TableAction::DeckPassesAudit` (`src/casino/action.rs:155`), an event-log
 variant, not a return type.
 
-**Resolution:** define `DeckAudit` in `src/seal/sealed_deck.rs` as part of
+**Resolution:** define `DeckAudit` in `../../../src/seal/sealed_deck.rs` as part of
 Task 6. It is a new public type; the EPIC's Key Files table is updated to say so.
 
 ### C2 — `sealed_deck_serde_roundtrip_carries_no_plaintext` is impossible
@@ -92,8 +92,8 @@ ciphertext, and that is where wire secrecy comes from.
 
 ### C3 — the designed `Debug` impl reads a private field
 
-The EPIC's `Debug` body is in `src/seal/sealed_card.rs` and writes
-`self.slot.0`. `SlotId`'s tuple field is private to `src/seal/slot.rs`, so that
+The EPIC's `Debug` body is in `../../../src/seal/sealed_card.rs` and writes
+`self.slot.0`. `SlotId`'s tuple field is private to `../../../src/seal/slot.rs`, so that
 does not compile.
 
 **Resolution:** `SlotId` gets `Display` (bare number) and a
@@ -112,12 +112,12 @@ by the trait. Same for `PartialEq`, `Eq` and `Debug`. All four are hand-written.
 
 | File | Responsibility |
 |---|---|
-| `src/seal/mod.rs` | new — module root; the "no keys here" doc header; re-exports |
-| `src/seal/card_seal.rs` | new — the `CardSeal` trait. The entire seam. |
-| `src/seal/slot.rs` | new — `SlotId`: identity without knowledge |
-| `src/seal/sealed_card.rs` | new — `SealedCard<S>`, redacting `Debug`, `reveal` |
-| `src/seal/sealed_deck.rs` | new — `SealedDeck<S>`, blind ops, `DeckAudit` |
-| `src/seal/plaintext.rs` | new — `PlaintextSeal` test double, feature-gated |
+| `../../../src/seal/mod.rs` | new — module root; the "no keys here" doc header; re-exports |
+| `../../../src/seal/card_seal.rs` | new — the `CardSeal` trait. The entire seam. |
+| `../../../src/seal/slot.rs` | new — `SlotId`: identity without knowledge |
+| `../../../src/seal/sealed_card.rs` | new — `SealedCard<S>`, redacting `Debug`, `reveal` |
+| `../../../src/seal/sealed_deck.rs` | new — `SealedDeck<S>`, blind ops, `DeckAudit` |
+| `../../../src/seal/plaintext.rs` | new — `PlaintextSeal` test double, feature-gated |
 | `src/lib.rs` | modify — `pub mod seal;` at the module block (`:377`–`398`); three `PKError` variants at the end of the enum (before `:605`); three `Display` arms (before `:667`) |
 | `Cargo.toml` | modify — `seal-test-double = []` feature; version `0.7.1` → `0.8.0` |
 | `CHANGELOG.md` | modify — `## [Unreleased]` → `### Added` entry |
@@ -128,7 +128,7 @@ by the trait. Same for `PartialEq`, `Eq` and `Debug`. All four are hand-written.
 ## Task 1: Phase 0 — plumbing (module, feature, errors)
 
 **Files:**
-- Create: `src/seal/mod.rs`
+- Create: `../../../src/seal/mod.rs`
 - Modify: `src/lib.rs` (module block at `:377`–`398`; `PKError` enum ending at `:605`; `Display` match ending at `:667`)
 - Modify: `Cargo.toml` (`[features]` block)
 
@@ -140,7 +140,7 @@ by the trait. Same for `PartialEq`, `Eq` and `Debug`. All four are hand-written.
 
 - [ ] **Step 1: Create the module root**
 
-Create `src/seal/mod.rs`:
+Create `../../../src/seal/mod.rs`:
 
 ```rust
 //! Cards the engine cannot read.
@@ -261,8 +261,8 @@ git add src/seal/mod.rs src/lib.rs Cargo.toml && \
 ## Task 2: Phase 1a/1b — the seam and the slot
 
 **Files:**
-- Create: `src/seal/card_seal.rs`
-- Create: `src/seal/slot.rs`
+- Create: `../../../src/seal/card_seal.rs`
+- Create: `../../../src/seal/slot.rs`
 
 **Interfaces:**
 - Consumes: `crate::card::Card`, `PKError` from Task 1.
@@ -270,7 +270,7 @@ git add src/seal/mod.rs src/lib.rs Cargo.toml && \
   - `trait CardSeal { type Sealed: Clone + Eq + Debug; type Token; type Error: core::error::Error + Send + Sync + 'static; fn seal(&self, card: Card) -> Result<Self::Sealed, Self::Error>; fn unseal(&self, sealed: &Self::Sealed, token: &Self::Token) -> Result<Card, Self::Error>; }`
   - `struct SlotId(u8)` with `SlotId::new(u8) -> SlotId`, `SlotId::index(self) -> u8`, `Display`, `Serialize`, `Deserialize`, and the full ordering/hash derive set.
 
-- [ ] **Step 1: Write `src/seal/slot.rs`**
+- [ ] **Step 1: Write `../../../src/seal/slot.rs`**
 
 `SlotId` has no failure mode, so its unit tests and its doc tests are written
 together with it — there is nothing to drive out test-first except the `Display`
@@ -393,10 +393,10 @@ mod seal__slot_tests {
 - [ ] **Step 2: Run the slot tests**
 
 Run: `cargo test seal__slot`
-Expected: PASS, 6 tests. `src/seal/card_seal.rs` still missing, so the build of
+Expected: PASS, 6 tests. `../../../src/seal/card_seal.rs` still missing, so the build of
 the whole crate is still red — that is expected until Step 3.
 
-- [ ] **Step 3: Write `src/seal/card_seal.rs`**
+- [ ] **Step 3: Write `../../../src/seal/card_seal.rs`**
 
 ```rust
 //! The sealing seam. `pkcore` defines the shape; the caller owns everything else.
@@ -502,7 +502,7 @@ pub trait CardSeal {
 Run: `cargo test --doc seal::card_seal`
 Expected: PASS, 1 doc test. The build is still red on the two remaining missing
 modules; if the doc test cannot run for that reason, temporarily comment out the
-`sealed_card`/`sealed_deck`/`plaintext` lines in `src/seal/mod.rs`.
+`sealed_card`/`sealed_deck`/`plaintext` lines in `../../../src/seal/mod.rs`.
 
 - [ ] **Step 5: Commit (you run this)**
 
@@ -516,8 +516,8 @@ git add src/seal/slot.rs src/seal/card_seal.rs && \
 ## Task 3: Phase 1c/1d — the sealed card and the test double
 
 **Files:**
-- Create: `src/seal/sealed_card.rs`
-- Create: `src/seal/plaintext.rs`
+- Create: `../../../src/seal/sealed_card.rs`
+- Create: `../../../src/seal/plaintext.rs`
 
 **Interfaces:**
 - Consumes: `CardSeal`, `SlotId` (Task 2); `Card`.
@@ -533,7 +533,7 @@ git add src/seal/slot.rs src/seal/card_seal.rs && \
 
 - [ ] **Step 1: Write the failing test first**
 
-Create `src/seal/sealed_card.rs` containing **only** the test module, so the
+Create `../../../src/seal/sealed_card.rs` containing **only** the test module, so the
 first thing that exists is the leak test:
 
 ```rust
@@ -619,7 +619,7 @@ Expected: **FAIL** to compile — `cannot find type SealedCard in this scope`, a
 
 - [ ] **Step 3: Write the test double**
 
-Create `src/seal/plaintext.rs`:
+Create `../../../src/seal/plaintext.rs`:
 
 ```rust
 //! A test double with no security whatsoever.
@@ -741,7 +741,7 @@ mod seal__plaintext_tests {
 - [ ] **Step 4: Write `SealedCard` above its test module**
 
 Insert this **above** the `#[cfg(test)]` block already in
-`src/seal/sealed_card.rs`, keeping the `//! One card nobody has read.` header
+`../../../src/seal/sealed_card.rs`, keeping the `//! One card nobody has read.` header
 line at the very top:
 
 ```rust
@@ -965,7 +965,7 @@ git add src/seal/sealed_card.rs src/seal/plaintext.rs && \
 ## Task 4: Phase 2a — the blind shoe, drawing only
 
 **Files:**
-- Create: `src/seal/sealed_deck.rs`
+- Create: `../../../src/seal/sealed_deck.rs`
 
 **Interfaces:**
 - Consumes: `SealedCard<S>`, `SlotId`, `CardSeal`, `PKError`.
@@ -978,7 +978,7 @@ git add src/seal/sealed_card.rs src/seal/plaintext.rs && \
 
 - [ ] **Step 1: Write the failing tests**
 
-Create `src/seal/sealed_deck.rs` with the header and test module only:
+Create `../../../src/seal/sealed_deck.rs` with the header and test module only:
 
 ```rust
 //! A shoe of cards the engine cannot read.
@@ -1298,7 +1298,7 @@ git add src/seal/sealed_deck.rs && \
 ## Task 5: Phase 2b/2c — blind shuffle and blind cut
 
 **Files:**
-- Modify: `src/seal/sealed_deck.rs`
+- Modify: `../../../src/seal/sealed_deck.rs`
 
 **Interfaces:**
 - Consumes: `SealedDeck<S>` from Task 4.
@@ -1461,7 +1461,7 @@ git add src/seal/sealed_deck.rs && \
 ## Task 6: Phase 2d/2f — the audit that cannot be written, and serde
 
 **Files:**
-- Modify: `src/seal/sealed_deck.rs`
+- Modify: `../../../src/seal/sealed_deck.rs`
 
 **Interfaces:**
 - Consumes: `SealedDeck<S>` from Tasks 4–5.
@@ -1798,7 +1798,7 @@ make ayce
 | 4 | A bad token is an error, never a wrong card | `reveal_with_the_wrong_token_errors` |
 | 5 | The audit limit is pinned, not hidden | `audit_counts_but_does_not_prove_distinctness` |
 | 6 | A default build cannot reach `PlaintextSeal` | Task 3 Step 6, Task 7 Step 2 |
-| 7 | Every existing test passes; no public item outside `src/seal/` changed signature | `make ayce` |
+| 7 | Every existing test passes; no public item outside `../../../src/seal/` changed signature | `make ayce` |
 | 8 | `CHANGELOG.md` entry, `Cargo.toml` minor bump, `Cargo.lock` regenerated | Task 7 Steps 5–6 |
 
 **Not covered here, by design:** exit criterion 8's downstream half. Run the
