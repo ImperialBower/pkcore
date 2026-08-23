@@ -57,14 +57,28 @@ Two findings from writing 5a that Phase 3 does not need but `pkmental` does:
 
 ---
 
-### Step 4 — build Phase 3, Option A′
+### Step 4 — build Phase 3, Option A′ — ✅ done 2026-08-23
 
-Work items **3c–3j** in the EPIC. Order matters: `NullSeal` (3c) and the
-`SealedDeck` additions (3d) must land and be green before `TableOf<S>` (3e) is
-touched, because 3e is the step with the wide diff.
+Work items 3c–3j all landed. `Table` is now:
 
-Land it inside the unreleased `0.8.0`. The CHANGELOG line goes under
-`## [Unreleased]` / `### Changed`, flagged **breaking**.
+```rust
+pub struct TableOf<S: CardSeal> { pub deck: SealedDeck<S>, /* ... */ }
+pub type Table = TableOf<NullSeal>;          // src/casino/table.rs:160
+```
+
+**9,378 tests pass. Clippy pedantic clean.** `PokerSession` never became
+generic; `prelude.rs:115` exports the alias.
+
+Two deviations from the written plan, both improvements — full detail in the
+EPIC under *How it actually landed*:
+
+1. **The readable-deck impl is bounded on `S::Sealed == Card`, not on
+   `NullSeal`.** `table.rs` has one ~2,300-line `impl` block, so a per-method
+   `where` clause beat splitting it. 19 methods carry the bound; the rest stayed
+   generic and untouched.
+2. **One missed break surface:** `table.deck = cards`. No consumer does it, but
+   two of pkcore's own integration tests and one example do. Fixed with
+   `impl From<&Cards> for SealedDeck<S>`.
 
 ### Step 5 — stop, and decide about publishing
 

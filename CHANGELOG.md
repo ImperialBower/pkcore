@@ -7,7 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING: `Table` is now `TableOf<S: CardSeal>`, and its deck is sealed**
+  ([EPIC-79b](docs/epics/EPIC-79b_Sealed_Deck.md), Phase 3, *Option A′*).
+  `Table::deck` changes type from `Cards` to `SealedDeck<S>`. The deck is
+  **always** sealed; the no-secrecy case is `NullSeal`, an identity scheme
+  whose `Error` is `Infallible`. Source compatibility comes from the alias
+  `pub type Table = TableOf<NullSeal>`, so `Table::new(..)`, `-> Table` and
+  every existing signature keep resolving unchanged — only direct assignment
+  to the `pub deck` field needs `(&cards).into()`.
+
+  Operations that need to *read* the deck — `sort_in_place`, `insert_all` and
+  `Display` — are bounded on `S::Sealed == Card`, so the compiler now states
+  the invariant: **a deck you cannot read is a deck you cannot sort**. Nineteen
+  `TableOf` methods carry that bound (the constructors, the dealing paths, and
+  `reset` / `end_hand` / `abort_hand`); everything else stays scheme-agnostic.
+
+  `Clone` and `Debug` on `TableOf<S>` and `SealedDeck<S>` are hand-written, not
+  derived: a derive would add an `S: Clone` / `S: Debug` bound on the *scheme*,
+  which neither type stores.
+
+  Downstream impact was measured across all 22 dependent crates before landing:
+  no consumer touches a table's deck, `Table` is used by name only, and `Table`
+  does not implement `Serialize`, so the expected downstream change is zero
+  source lines.
+
 ### Added
+
+- **`pkcore::seal::null::NullSeal`** — the identity `CardSeal`, always
+  available (not feature-gated). `Sealed = Card`, `Token = ()`,
+  `Error = Infallible`.
+- **`SealedDeck::draw_all`, `shuffle_in_place`, `from_cards`, `insert_all`,
+  `sort_in_place`, `Display` and `From<&Cards>`** — the last five bounded on
+  `S::Sealed == Card`. `Display` reproduces `Cards`' format byte for byte, so
+  recorded `HandHistory::shuffled_deck` strings stay diffable against the
+  `0.7.0` corpus.
 
 - **`pkcore::seal` — a deck the engine cannot read**
   ([EPIC-79b](docs/epics/EPIC-79b_Sealed_Deck.md), Phases 0–2). A `CardSeal`

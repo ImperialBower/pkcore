@@ -1,10 +1,11 @@
 //! The feature-free transition surface: [`Table::legal_actions`] and
 //! [`Table::apply_action`].
 
-use super::Table;
 use crate::PKError;
+use crate::casino::table::TableOf;
+use crate::seal::card_seal::CardSeal;
 
-impl Table {
+impl<S: CardSeal> TableOf<S> {
     /// Returns the [`PlayerAction`](crate::casino::action::PlayerAction)s that are
     /// legal for `seat_id` in the current betting state.
     ///
@@ -182,10 +183,10 @@ impl Table {
 #[cfg(test)]
 #[allow(non_snake_case)]
 mod transition_surface_tests {
-    use super::*;
     use crate::casino::action::PlayerAction;
     use crate::casino::game::ForcedBets;
     use crate::casino::state::PlayerState;
+    use crate::casino::table::Table;
     use crate::casino::table::{Player, Seat, Seats};
 
     /// A 3-handed 50/100 NL table advanced to the first preflop decision (UTG

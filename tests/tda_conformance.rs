@@ -866,7 +866,7 @@ mod tda_2024_conformance {
             .expect("hole cards should inject");
 
         // burn, flop, burn, turn, burn, river.
-        table.deck = Cards::from_str("2♣ A♠ A♥ A♦ 3♣ K♠ 4♣ K♥").expect("stacked deck");
+        table.deck = (&Cards::from_str("2♣ A♠ A♥ A♦ 3♣ K♠ 4♣ K♥").expect("stacked deck")).into();
 
         // Button 7 of 8 → SB 0, BB 1, UTG 2. Order: 2 3 4 5 6 7 0 1.
         table.act_call(2).expect("seat 2 calls 50");

@@ -194,7 +194,7 @@ mod casino__table__split_pot_tests {
         let mut deck = Cards::from_str(top).expect("top cards parse");
         let rest = Cards::deck_minus(&used);
         deck.insert_all(&rest);
-        table.deck = deck;
+        table.deck = (&deck).into();
     }
 
     /// Heads-up showdown with mismatched all-ins and a tied result.

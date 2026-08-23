@@ -1,23 +1,29 @@
 //! Betting-action methods for [`Table`]: the universal [`Table::act`]
 //! regulator and the player-action handlers it dispatches to.
 
-use super::{Seat, Table};
+use super::Seat;
 use crate::PKError;
+use crate::card::Card;
 use crate::casino::action::TableAction;
 use crate::casino::state::PlayerState;
+use crate::casino::table::TableOf;
 use crate::games::GameFamily;
 use crate::games::GamePhase;
 use crate::games::betting_structure::BettingStructure;
 use crate::games::razz::california::California;
+use crate::seal::card_seal::CardSeal;
 
-impl Table {
+impl<S: CardSeal> TableOf<S> {
     /// Universal action regulator: advances the table through whatever step is
     /// needed next.
     ///
     /// # Errors
     ///
     /// Propagates any error from the sub-action called.
-    pub fn act(&mut self) -> Result<(), PKError> {
+    pub fn act(&mut self) -> Result<(), PKError>
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         match self.determine_betting_phase() {
             GamePhase::BettingPreFlop => {
                 if !self.have_posted_blinds() {
@@ -787,7 +793,7 @@ impl Table {
     /// SA is the point in a betting round past which an error stops being
     /// correctable — the boundary condition Rules 22, 34-A, 35-D, 52-A and
     /// 53-B all key off. It is deliberately kept separate from
-    /// [`raises_this_street`](Table::raises_this_street), which answers a
+    /// [`raises_this_street`](crate::casino::table::Table::raises_this_street), which answers a
     /// different question for a different consumer (the fixed-limit raise cap).
     ///
     /// Clause A is written here as "2 actions **and** at least one with chips"

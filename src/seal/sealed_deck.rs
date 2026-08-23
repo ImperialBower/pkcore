@@ -1,6 +1,8 @@
 //! A shoe of cards the engine cannot read.
 
 use crate::PKError;
+use crate::card::Card;
+use crate::cards::Cards;
 use crate::seal::card_seal::CardSeal;
 use crate::seal::sealed_card::SealedCard;
 use crate::seal::slot::SlotId;
@@ -38,7 +40,7 @@ pub enum DeckAudit {
 
 /// An ordered shoe of sealed cards.
 ///
-/// # Why a `Vec` and not a [`Cards`][crate::cards::Cards]
+/// # Why a `Vec` and not [`Cards`]
 ///
 /// `Cards` wraps an `IndexSet<Card>` and therefore dedups by *value*. Deduping
 /// requires reading. A sealed deck cannot be a set; it is an ordered list, and
@@ -74,6 +76,24 @@ pub enum DeckAudit {
 #[serde(bound(serialize = "S::Sealed: Serialize", deserialize = "S::Sealed: Deserialize<'de>"))]
 pub struct SealedDeck<S: CardSeal> {
     cards: Vec<SealedCard<S>>,
+}
+
+/// Hand-written rather than derived: `#[derive(Clone)]` would add `S: Clone`,
+/// and `S` is the scheme, which a deck never stores.
+impl<S: CardSeal> Clone for SealedDeck<S> {
+    fn clone(&self) -> Self {
+        SealedDeck {
+            cards: self.cards.clone(),
+        }
+    }
+}
+
+/// Hand-written for the same reason. Payloads render through
+/// [`SealedCard`]'s `Debug`, which redacts.
+impl<S: CardSeal> core::fmt::Debug for SealedDeck<S> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("SealedDeck").field("cards", &self.cards).finish()
+    }
 }
 
 impl<S: CardSeal> SealedDeck<S> {
@@ -265,6 +285,53 @@ impl<S: CardSeal> SealedDeck<S> {
         Ok(())
     }
 
+    /// Shuffles blind with the thread-local RNG.
+    ///
+    /// Mirrors [`Cards::shuffle_in_place`](crate::cards::Cards::shuffle_in_place).
+    /// A permutation, so it needs no knowledge.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::cards::Cards;
+    /// use pkcore::seal::null::NullSeal;
+    /// use pkcore::seal::sealed_deck::SealedDeck;
+    ///
+    /// let mut deck = SealedDeck::<NullSeal>::from_cards(&Cards::deck());
+    /// deck.shuffle_in_place();
+    /// assert_eq!(52, deck.len());
+    /// ```
+    pub fn shuffle_in_place(&mut self) {
+        self.shuffle_in_place_with(&mut rand::rng());
+    }
+
+    /// Draws every card, leaving the deck empty.
+    ///
+    /// A permutation, so it needs no knowledge. Mirrors
+    /// [`Cards::draw_all`](crate::cards::Cards::draw_all).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::card::Card;
+    /// use pkcore::seal::null::NullSeal;
+    /// use pkcore::seal::sealed_card::SealedCard;
+    /// use pkcore::seal::sealed_deck::SealedDeck;
+    /// use pkcore::seal::slot::SlotId;
+    ///
+    /// let mut deck = SealedDeck::<NullSeal>::from_sealed(vec![
+    ///     SealedCard::new(Card::ACE_SPADES, SlotId::new(0)),
+    ///     SealedCard::new(Card::KING_SPADES, SlotId::new(1)),
+    /// ])?;
+    ///
+    /// assert_eq!(2, deck.draw_all().len());
+    /// assert!(deck.is_empty());
+    /// # Ok::<(), pkcore::PKError>(())
+    /// ```
+    pub fn draw_all(&mut self) -> Vec<SealedCard<S>> {
+        std::mem::take(&mut self.cards)
+    }
+
     /// Counts cards and checks [`SlotId`] uniqueness.
     ///
     /// See [`DeckAudit`] for what this deliberately cannot check.
@@ -306,12 +373,147 @@ impl<S: CardSeal> SealedDeck<S> {
     }
 }
 
+/// Operations that need to *read* the deck, and so exist only where there is no
+/// secrecy to keep.
+///
+/// The bound is `S::Sealed == Card`: the payload *is* a plain card, so there is
+/// nothing to read that was not already readable. This is the invariant of
+/// [EPIC-79b] stated as a type-level fact rather than a runtime check — a
+/// `SealedDeck<S>` for a real scheme has no `sort_in_place`, no `insert_all`
+/// and no `Display`, because performing any of them would mean reading cards
+/// nobody is allowed to read.
+///
+/// [`NullSeal`](crate::seal::null::NullSeal) and `PlaintextSeal`
+/// both satisfy it; a threshold-`ElGamal` scheme does not.
+///
+/// [EPIC-79b]: https://github.com/ImperialBower/pkcore/blob/main/docs/epics/EPIC-79b_Sealed_Deck.md
+impl<S: CardSeal<Sealed = Card>> SealedDeck<S> {
+    /// Builds a deck from plain cards, labelling them `SlotId(0..n)` in order.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::cards::Cards;
+    /// use pkcore::seal::null::NullSeal;
+    /// use pkcore::seal::sealed_deck::SealedDeck;
+    ///
+    /// let deck = SealedDeck::<NullSeal>::from_cards(&Cards::deck());
+    /// assert_eq!(52, deck.len());
+    /// ```
+    #[must_use]
+    pub fn from_cards(cards: &Cards) -> Self {
+        let sealed = cards
+            .iter()
+            .enumerate()
+            .map(|(index, card)| SealedCard::new(*card, SlotId::new(u8::try_from(index).unwrap_or(u8::MAX))))
+            .collect();
+        SealedDeck { cards: sealed }
+    }
+
+    /// Returns cards to the deck, giving each the lowest unused [`SlotId`].
+    ///
+    /// Mirrors [`Cards::insert_all`](crate::cards::Cards::insert_all) for the
+    /// muck-return in `Table::reset`. A deck holds at most 256 cards because
+    /// `SlotId` wraps a `u8`; anything past that is not inserted. Poker decks
+    /// are 52.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::card::Card;
+    /// use pkcore::cards::Cards;
+    /// use pkcore::seal::null::NullSeal;
+    /// use pkcore::seal::sealed_deck::SealedDeck;
+    ///
+    /// let mut deck = SealedDeck::<NullSeal>::from_cards(&Cards::default());
+    /// deck.insert_all(&Cards::from(vec![Card::ACE_SPADES]));
+    /// assert_eq!(1, deck.len());
+    /// ```
+    pub fn insert_all(&mut self, cards: &Cards) {
+        let mut used: HashSet<SlotId> = self.cards.iter().map(SealedCard::slot).collect();
+        for card in cards.iter() {
+            let Some(free) = (0..=u8::MAX).map(SlotId::new).find(|slot| !used.contains(slot)) else {
+                return;
+            };
+            used.insert(free);
+            self.cards.push(SealedCard::new(*card, free));
+        }
+    }
+
+    /// Sorts the deck into the same order as
+    /// [`Cards::sort_in_place`](crate::cards::Cards::sort_in_place), each card
+    /// keeping its [`SlotId`].
+    ///
+    /// Duplicate payloads — which a blind deck cannot rule out — keep their
+    /// relative order and follow the sorted run.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::cards::Cards;
+    /// use pkcore::seal::null::NullSeal;
+    /// use pkcore::seal::sealed_deck::SealedDeck;
+    ///
+    /// let mut cards = Cards::deck();
+    /// let mut deck = SealedDeck::<NullSeal>::from_cards(&cards);
+    /// deck.sort_in_place();
+    /// cards.sort_in_place();
+    /// assert_eq!(cards.to_string(), deck.to_string());
+    /// ```
+    pub fn sort_in_place(&mut self) {
+        let mut canonical = Cards::default();
+        for sealed in &self.cards {
+            canonical.insert(*sealed.payload());
+        }
+        canonical.sort_in_place();
+
+        let mut remaining = std::mem::take(&mut self.cards);
+        let mut sorted = Vec::with_capacity(remaining.len());
+        for card in canonical.iter() {
+            if let Some(position) = remaining.iter().position(|sealed| sealed.payload() == card) {
+                sorted.push(remaining.remove(position));
+            }
+        }
+        sorted.append(&mut remaining);
+        self.cards = sorted;
+    }
+}
+
+/// Renders the deck exactly as [`Cards`] does — card strings joined by one
+/// space, in deck order, with no slot ids.
+///
+/// Load-bearing: `PokerSession::start_hand` feeds this string to
+/// `HandHistory::shuffled_deck`, which pkdealer and pkarena0-web persist to
+/// YAML. Bounded on `S::Sealed == Card`, because rendering a real payload
+/// would mean reading it.
+impl<S: CardSeal<Sealed = Card>> std::fmt::Display for SealedDeck<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let rendered = self
+            .cards
+            .iter()
+            .map(|sealed| sealed.payload().to_string())
+            .collect::<Vec<String>>()
+            .join(" ");
+
+        write!(f, "{rendered}")
+    }
+}
+
+/// Builds a readable deck from plain cards. The ergonomic form of
+/// [`SealedDeck::from_cards`], for the deck-stacking idiom `table.deck = cards.into()`.
+impl<S: CardSeal<Sealed = Card>> From<&Cards> for SealedDeck<S> {
+    fn from(cards: &Cards) -> Self {
+        SealedDeck::from_cards(cards)
+    }
+}
+
 #[cfg(test)]
 #[allow(non_snake_case)]
 #[allow(clippy::expect_used)]
 mod seal__sealed_deck_tests {
     use super::*;
     use crate::card::Card;
+    use crate::seal::null::NullSeal;
     use crate::seal::plaintext::PlaintextSeal;
     use rand::SeedableRng;
     use rand::rngs::SmallRng;
@@ -524,5 +726,91 @@ mod seal__sealed_deck_tests {
             assert!(object.contains_key("sealed"));
             assert!(object.contains_key("slot"));
         }
+    }
+
+    #[test]
+    fn draw_all_empties_the_deck() {
+        let mut deck = null_deck();
+        assert_eq!(52, deck.draw_all().len());
+        assert!(deck.is_empty());
+        assert!(deck.draw_all().is_empty());
+    }
+
+    #[test]
+    fn from_cards_labels_slots_in_order() {
+        let deck = SealedDeck::<NullSeal>::from_cards(&Cards::deck());
+        assert_eq!(52, deck.len());
+        assert_eq!(
+            (0..52).map(SlotId::new).collect::<Vec<_>>(),
+            deck.slots().collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn null_display_matches_cards_display() {
+        let cards = Cards::deck();
+        let deck = SealedDeck::<NullSeal>::from_cards(&cards);
+        assert_eq!(cards.to_string(), deck.to_string());
+    }
+
+    #[test]
+    fn null_sort_in_place_matches_cards_sort_in_place() {
+        let mut cards = Cards::deck();
+        let mut deck = SealedDeck::<NullSeal>::from_cards(&cards);
+        deck.shuffle_in_place_with(&mut rand::rng());
+
+        deck.sort_in_place();
+        cards.sort_in_place();
+
+        assert_eq!(cards.to_string(), deck.to_string());
+    }
+
+    #[test]
+    fn null_sort_in_place_keeps_every_slot() {
+        let mut deck = null_deck();
+        deck.shuffle_in_place_with(&mut rand::rng());
+        deck.sort_in_place();
+
+        let mut slots = deck.slots().collect::<Vec<_>>();
+        slots.sort_unstable();
+        assert_eq!((0..52).map(SlotId::new).collect::<Vec<_>>(), slots);
+    }
+
+    #[test]
+    fn insert_all_fills_the_lowest_free_slots() {
+        let mut deck = null_deck();
+        let returned = deck.draw(2).expect("52 cards available");
+        assert_eq!(50, deck.len());
+
+        let muck: Cards = returned.iter().map(|sealed| *sealed.payload()).collect();
+        deck.insert_all(&muck);
+
+        assert_eq!(52, deck.len());
+        let mut slots = deck.slots().collect::<Vec<_>>();
+        slots.sort_unstable();
+        assert_eq!((0..52).map(SlotId::new).collect::<Vec<_>>(), slots);
+    }
+
+    #[test]
+    fn reset_round_trip_restores_the_canonical_deck() {
+        let canonical = {
+            let mut cards = Cards::deck();
+            cards.sort_in_place();
+            cards.to_string()
+        };
+
+        let mut deck = null_deck();
+        deck.shuffle_in_place_with(&mut rand::rng());
+        let drawn = deck.draw(5).expect("52 cards available");
+        let muck: Cards = drawn.iter().map(|sealed| *sealed.payload()).collect();
+
+        deck.insert_all(&muck);
+        deck.sort_in_place();
+
+        assert_eq!(canonical, deck.to_string());
+    }
+
+    fn null_deck() -> SealedDeck<NullSeal> {
+        SealedDeck::<NullSeal>::from_cards(&Cards::deck())
     }
 }

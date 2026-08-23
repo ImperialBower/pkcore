@@ -31,6 +31,9 @@ use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
 use crate::play::visibility::Visibility;
+use crate::seal::card_seal::CardSeal;
+use crate::seal::null::NullSeal;
+use crate::seal::sealed_deck::SealedDeck;
 use crate::{PKError, Pile};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -80,8 +83,7 @@ pub enum VisibleHandMode {
 /// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 /// assert_eq!(2, table.seats.size());
 /// ```
-#[derive(Clone, Debug)]
-pub struct Table {
+pub struct TableOf<S: CardSeal> {
     pub id: Uuid,
     pub name: String,
     pub game: GameType,
@@ -90,7 +92,7 @@ pub struct Table {
     pub seats: Seats,
     /// Current dealer button position (0-based seat index).
     pub button: u8,
-    pub deck: Cards,
+    pub deck: SealedDeck<S>,
     pub board: Cards,
     pub muck: Cards,
     pub pot: usize,
@@ -146,7 +148,79 @@ pub struct Table {
     pub blind_shortfall: usize,
 }
 
-impl Table {
+/// The engine as every existing caller knows it: no secrecy, no ceremony.
+///
+/// `TableOf<S>` is generic over the *scheme*, never over an instance of it, so
+/// a real seal changes what a deck payload is without changing the betting
+/// engine. `NullSeal` is the identity scheme, so `Table` behaves exactly as it
+/// did before [EPIC-79b] Phase 3. The alias — not a default type parameter —
+/// is what keeps every existing `Table::new(..)` and `-> Table` resolving.
+///
+/// [EPIC-79b]: https://github.com/ImperialBower/pkcore/blob/main/docs/epics/EPIC-79b_Sealed_Deck.md
+pub type Table = TableOf<NullSeal>;
+
+/// Hand-written rather than derived. `#[derive(Clone)]` on a generic struct
+/// adds `S: Clone`, and `S` is the *scheme*, which this table never stores, so
+/// it must not constrain it.
+impl<S: CardSeal> Clone for TableOf<S> {
+    fn clone(&self) -> Self {
+        TableOf {
+            id: self.id,
+            name: self.name.clone(),
+            game: self.game,
+            forced: self.forced,
+            phase: self.phase,
+            seats: self.seats.clone(),
+            button: self.button,
+            deck: self.deck.clone(),
+            board: self.board.clone(),
+            muck: self.muck.clone(),
+            pot: self.pot,
+            bet: self.bet,
+            raise_increment: self.raise_increment,
+            event_log: self.event_log.clone(),
+            hand_chip_total: self.hand_chip_total,
+            dealt_hole_cards: self.dealt_hole_cards.clone(),
+            betting: self.betting,
+            raises_this_street: self.raises_this_street,
+            actions_this_street: self.actions_this_street,
+            chip_actions_this_street: self.chip_actions_this_street,
+            blind_shortfall: self.blind_shortfall,
+        }
+    }
+}
+
+/// Hand-written for the same reason as [`Clone`]: a derive would add `S: Debug`.
+/// The deck renders through [`SealedDeck`]'s own `Debug`, which redacts.
+impl<S: CardSeal> core::fmt::Debug for TableOf<S> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Table")
+            .field("id", &self.id)
+            .field("name", &self.name)
+            .field("game", &self.game)
+            .field("forced", &self.forced)
+            .field("phase", &self.phase)
+            .field("seats", &self.seats)
+            .field("button", &self.button)
+            .field("deck", &self.deck)
+            .field("board", &self.board)
+            .field("muck", &self.muck)
+            .field("pot", &self.pot)
+            .field("bet", &self.bet)
+            .field("raise_increment", &self.raise_increment)
+            .field("event_log", &self.event_log)
+            .field("hand_chip_total", &self.hand_chip_total)
+            .field("dealt_hole_cards", &self.dealt_hole_cards)
+            .field("betting", &self.betting)
+            .field("raises_this_street", &self.raises_this_street)
+            .field("actions_this_street", &self.actions_this_street)
+            .field("chip_actions_this_street", &self.chip_actions_this_street)
+            .field("blind_shortfall", &self.blind_shortfall)
+            .finish()
+    }
+}
+
+impl<S: CardSeal> TableOf<S> {
     /// Constructs a No-Limit Hold'em table from an existing `Seats`.
     ///
     /// The deck is initialised as a standard 52-card deck with any cards
@@ -166,7 +240,10 @@ impl Table {
     /// assert_eq!(0, t.pot);
     /// ```
     #[must_use]
-    pub fn nlh_from_seats(seats: Seats, forced: ForcedBets) -> Self {
+    pub fn nlh_from_seats(seats: Seats, forced: ForcedBets) -> Self
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         Self::from_seats(seats, GameType::NoLimitHoldem, forced)
     }
 
@@ -203,7 +280,10 @@ impl Table {
     /// ));
     /// ```
     #[must_use]
-    pub fn limit_holdem_from_seats(seats: Seats, small_bet: usize, big_bet: usize, raise_cap: u8) -> Self {
+    pub fn limit_holdem_from_seats(seats: Seats, small_bet: usize, big_bet: usize, raise_cap: u8) -> Self
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         let forced = ForcedBets::new(small_bet / 2, small_bet);
         let mut t = Self::from_seats(seats, GameType::LimitHoldem, forced);
         t.betting = BettingStructure::FixedLimit {
@@ -244,7 +324,10 @@ impl Table {
     /// assert_eq!(4, t.seats.get_seat(0).unwrap().cards.len());
     /// ```
     #[must_use]
-    pub fn plo_from_seats(seats: Seats, blinds: (usize, usize)) -> Self {
+    pub fn plo_from_seats(seats: Seats, blinds: (usize, usize)) -> Self
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         let forced = ForcedBets::new(blinds.0, blinds.1);
         Self::from_seats(seats, GameType::PLO, forced)
     }
@@ -294,7 +377,10 @@ impl Table {
         bring_in: usize,
         small_bet: usize,
         big_bet: usize,
-    ) -> Result<Self, PKError> {
+    ) -> Result<Self, PKError>
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         Self::stud_family_from_seats(seats, GameType::StudHi, ante, bring_in, small_bet, big_bet)
     }
 
@@ -314,7 +400,10 @@ impl Table {
         bring_in: usize,
         small_bet: usize,
         big_bet: usize,
-    ) -> Result<Self, PKError> {
+    ) -> Result<Self, PKError>
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         if seats.size() as usize > Self::MAX_STUD_SEATS {
             return Err(PKError::TooManyPlayers);
         }
@@ -372,7 +461,10 @@ impl Table {
         bring_in: usize,
         small_bet: usize,
         big_bet: usize,
-    ) -> Result<Self, PKError> {
+    ) -> Result<Self, PKError>
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         Self::stud_family_from_seats(seats, GameType::Razz, ante, bring_in, small_bet, big_bet)
     }
 
@@ -402,7 +494,10 @@ impl Table {
     /// assert_eq!(GameType::NoLimitHoldem, t.game);
     /// ```
     #[must_use]
-    pub fn from_seats(mut seats: Seats, game: GameType, forced: ForcedBets) -> Self {
+    pub fn from_seats(mut seats: Seats, game: GameType, forced: ForcedBets) -> Self
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         let id = Uuid::new_v4();
         let mut event_log = Vec::new();
         event_log.push(TableAction::TableOpen(id));
@@ -440,7 +535,7 @@ impl Table {
         let name = format!("{game} Table");
         let betting = game.betting();
 
-        Table {
+        TableOf {
             id,
             name,
             game,
@@ -448,7 +543,7 @@ impl Table {
             phase: GamePhase::NewHand,
             seats,
             button: 0,
-            deck,
+            deck: SealedDeck::from_cards(&deck),
             board: Cards::default(),
             muck: Cards::default(),
             pot: 0,
@@ -1312,7 +1407,10 @@ impl Table {
     ///
     /// - `PKError::NotEnoughCards` if the deck is empty.
     /// - `PKError::InvalidSeatNumber` if the seat is not found.
-    pub fn deal_card_to_seat(&mut self, seat_number: u8) -> Result<bool, PKError> {
+    pub fn deal_card_to_seat(&mut self, seat_number: u8) -> Result<bool, PKError>
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         self.deal_card_to_seat_with_visibility(seat_number, Visibility::Down)
     }
 
@@ -1331,8 +1429,11 @@ impl Table {
         &mut self,
         seat_number: u8,
         visibility: Visibility,
-    ) -> Result<bool, PKError> {
-        let card = self.deck.draw_one()?;
+    ) -> Result<bool, PKError>
+    where
+        S: CardSeal<Sealed = Card>,
+    {
+        let card = *self.deck.draw_one()?.payload();
         self.log(TableAction::Dealt(seat_number, Bard::from(&card)));
         let seat = self.seats.get_seat_mut(seat_number).ok_or(PKError::InvalidSeatNumber)?;
         seat.cards.deal(card)?;
@@ -1348,7 +1449,10 @@ impl Table {
     ///
     /// - `PKError::NotEnoughCards` if the deck runs dry.
     /// - `PKError::InvalidSeatNumber` if a seat lookup fails.
-    pub fn deal_stud_3rd_street(&mut self) -> Result<(), PKError> {
+    pub fn deal_stud_3rd_street(&mut self) -> Result<(), PKError>
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         let seat_count = self.seats.size() as usize;
         let button = self.button;
         // 2 down + 1 up = 3 cards per seat.
@@ -1400,7 +1504,10 @@ impl Table {
     /// - `PKError::InvalidAction` if `next_street` is not a stud-street
     ///   phase or not advanceable (e.g. calling with `Stud3rd`).
     /// - `PKError::NotEnoughCards` if the deck runs dry.
-    pub fn deal_stud_street(&mut self, next_street: GamePhase) -> Result<(), PKError> {
+    pub fn deal_stud_street(&mut self, next_street: GamePhase) -> Result<(), PKError>
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         let next_idx = next_street.stud_street_index().ok_or(PKError::InvalidAction)?;
         let streets = self.game.streets();
         let descriptor = streets.get(next_idx as usize).ok_or(PKError::InvalidAction)?;
@@ -1421,7 +1528,7 @@ impl Table {
         // cards. Checked before dealing anything, so the table is never left
         // torn half-way through the street.
         if next_street == GamePhase::Stud7th && in_hand_count > self.deck.len() {
-            let community = self.deck.draw_one()?;
+            let community = *self.deck.draw_one()?.payload();
             self.board.insert(community);
             self.log(TableAction::DealtRiver(Bard::from(&community)));
             self.phase = next_street;
@@ -1462,7 +1569,10 @@ impl Table {
     /// t.deal_cards_to_seats().unwrap();
     /// assert!(t.seats.are_dealt());
     /// ```
-    pub fn deal_cards_to_seats(&mut self) -> Result<(), PKError> {
+    pub fn deal_cards_to_seats(&mut self) -> Result<(), PKError>
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         let cards_per = self.game.cards_per_player() as usize;
         let seat_count = self.seats.size() as usize;
         let button = self.button;
@@ -1553,13 +1663,16 @@ impl Table {
     /// # Errors
     ///
     /// - `PKError::NotEnoughCards`
-    pub fn deal_flop(&mut self) -> Result<(), PKError> {
+    pub fn deal_flop(&mut self) -> Result<(), PKError>
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         self.phase = GamePhase::DealFlop;
-        let burn = self.deck.draw_one()?;
+        let burn = *self.deck.draw_one()?.payload();
         self.muck.insert(burn);
         let flop = self.deck.draw(3)?;
         for card in flop {
-            self.board.insert(card);
+            self.board.insert(*card.payload());
         }
         self.log(TableAction::DealtFlop(Bard::from(self.board.clone())));
         Ok(())
@@ -1570,11 +1683,14 @@ impl Table {
     /// # Errors
     ///
     /// - `PKError::NotEnoughCards`
-    pub fn deal_turn(&mut self) -> Result<(), PKError> {
+    pub fn deal_turn(&mut self) -> Result<(), PKError>
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         self.phase = GamePhase::DealTurn;
-        let burn = self.deck.draw_one()?;
+        let burn = *self.deck.draw_one()?.payload();
         self.muck.insert(burn);
-        let turn = self.deck.draw_one()?;
+        let turn = *self.deck.draw_one()?.payload();
         self.board.insert(turn);
         self.log(TableAction::DealtTurn(Bard::from(&turn)));
         Ok(())
@@ -1585,11 +1701,14 @@ impl Table {
     /// # Errors
     ///
     /// - `PKError::NotEnoughCards`
-    pub fn deal_river(&mut self) -> Result<(), PKError> {
+    pub fn deal_river(&mut self) -> Result<(), PKError>
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         self.phase = GamePhase::DealRiver;
-        let burn = self.deck.draw_one()?;
+        let burn = *self.deck.draw_one()?.payload();
         self.muck.insert(burn);
-        let river = self.deck.draw_one()?;
+        let river = *self.deck.draw_one()?.payload();
         self.board.insert(river);
         self.log(TableAction::DealtRiver(Bard::from(&river)));
         Ok(())
@@ -1712,7 +1831,10 @@ impl Table {
 
     /// Resets the table for a new hand: mucks cards, resets states, returns
     /// all cards to the deck, and sorts.
-    pub fn reset(&mut self) {
+    pub fn reset(&mut self)
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         self.log(TableAction::ResetTable);
         self.muck_cards_in_play();
         self.seats.reset_state();
@@ -2358,7 +2480,10 @@ impl Table {
     ///
     /// - `PKError::ActionIsntFinished` if the hand is not yet over.
     /// - `PKError::Fubar` if no players are in hand.
-    pub fn end_hand(&mut self) -> Result<Winnings, PKError> {
+    pub fn end_hand(&mut self) -> Result<Winnings, PKError>
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         self.log(TableAction::EndHand);
         if !self.is_game_over() {
             return Err(PKError::ActionIsntFinished);
@@ -2421,7 +2546,10 @@ impl Table {
     /// assert_eq!(0, t.pot);
     /// assert_eq!(10_000, t.table_chip_count());
     /// ```
-    pub fn abort_hand(&mut self) -> Result<usize, PKError> {
+    pub fn abort_hand(&mut self) -> Result<usize, PKError>
+    where
+        S: CardSeal<Sealed = Card>,
+    {
         // `chips_in_play` is cumulative for the hand and already includes
         // whatever sits in `player.bet`, so refunding it and zeroing `bet`
         // returns each player to their pre-hand stack exactly once.
@@ -2453,7 +2581,7 @@ impl Table {
     }
 }
 
-impl Display for Table {
+impl<S: CardSeal> Display for TableOf<S> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Table: {} [{}]", self.name, self.id)?;
         writeln!(f, "Game: {:?}", self.game)?;

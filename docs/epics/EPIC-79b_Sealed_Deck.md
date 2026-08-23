@@ -81,7 +81,7 @@ document that could not be implemented as written.
 | `PlaintextSeal` test double, feature-gated off by default | **Complete** |
 | `PKError` seal variants (`#[non_exhaustive]`, non-breaking) | **Complete** |
 | Blind-shuffle determinism & permutation tests | **Complete** |
-| `Table` sealed dealing path | **Approved 2026-08-23, not started** — 3a/3b done; **[Option A′](#option-a--the-deck-is-always-sealed-2026-08-23)**: the deck is always `SealedDeck<S>`, `NullSeal` for the no-secrecy case |
+| `Table` sealed dealing path | **Complete 2026-08-23** — 3a/3b done; **[Option A′](#option-a--the-deck-is-always-sealed-2026-08-23)**: the deck is always `SealedDeck<S>`, `NullSeal` for the no-secrecy case |
 | `TableAction::SealedDealt` / `Revealed` ledger | **Complete** (4a/4b, 2026-08-22) |
 | `HandHistory` replay of a sealed hand | **Partial** — `revealed_hole_cards` seam done (4c); byte-identical replay (4d) 🔒 gated |
 | `pkmental` implementation handoff table | **Complete** (5a, 2026-08-23) — written against `pkmental`'s real `CardCrypto` / Pallas backend |
@@ -409,36 +409,36 @@ irreversible blast radius, and this EPIC deliberately stops short of it.
 
 **Approved work items (Option A′, added 2026-08-23):**
 
-- [ ] **3c.** Add `NullSeal` in `src/seal/null.rs` — `Sealed = Card`,
+- [x] **3c.** *(Done 2026-08-23 — `src/seal/null.rs`, 6 unit tests + 1 doc test.)* Add `NullSeal` in `src/seal/null.rs` — `Sealed = Card`,
       `Token = ()`, `Error = core::convert::Infallible`. **Not** feature-gated.
       Unit tests + doc test; module named `seal__null_tests`.
-- [ ] **3d.** Add `SealedDeck::draw_all` (a permutation; mirrors
+- [x] **3d.** *(Done 2026-08-23 — `draw_all` and `shuffle_in_place` generic; `from_cards`, `insert_all`, `sort_in_place` and `From<&Cards>` bounded.)* Add `SealedDeck::draw_all` (a permutation; mirrors
       `Cards::draw_all`) and the `impl SealedDeck<NullSeal>` inherent block
       carrying `sort_in_place` and `insert_all`.
-- [ ] **3e.** Rename `casino::table::Table` → `TableOf<S: CardSeal>` with
+- [x] **3e.** *(Done 2026-08-23 — `TableOf<S>` + `pub type Table = TableOf<NullSeal>` at `src/casino/table.rs:160`.)* Rename `casino::table::Table` → `TableOf<S: CardSeal>` with
       `pub type Table = TableOf<NullSeal>;` and change `deck: Cards` →
       `deck: SealedDeck<S>` (`src/casino/table.rs:93`). Keep every other field
       plain — board, muck, `dealt_hole_cards`, seats and the event log are out
       of scope here.
-- [ ] **3f.** Hand-write `Clone` and `Debug` for `TableOf<S>`. **Do not derive
+- [x] **3f.** *(Done 2026-08-23 — hand-written on both `TableOf<S>` and `SealedDeck<S>`.)* Hand-write `Clone` and `Debug` for `TableOf<S>`. **Do not derive
       them** — see [C4](#c4--generic-derives-would-have-added-wrong-bounds) and
       condition 3 of [Downstream impact](#downstream-impact-measured-2026-08-23).
       `NullSeal` would hide a wrong `S: Clone` bound; a real scheme would not.
-- [ ] **3g.** Confirm `PokerSession` stays non-generic (`pub table: Table`,
+- [x] **3g.** *(Done 2026-08-23 — `PokerSession` untouched; `prelude.rs:115` exports the alias.)* Confirm `PokerSession` stays non-generic (`pub table: Table`,
       `shuffled_deck_str: Option<String>`) and that `prelude.rs:115` re-exports
       the **alias**, not `TableOf`. These are conditions 1 and 2 of the
       downstream impact assessment; breaking either turns a zero-line recompile
       into a migration for `pkarena0-web` (23 `Table` / 17 `PokerSession`),
       `pktui` (34 / 12), `pkdealer_service` (10 / 12), `cardroom` (9 / 6) and
       `pkpy` (2 / 9).
-- [ ] **3h.** `impl Display for SealedDeck<NullSeal>` reproducing `Cards`'
+- [x] **3h.** *(Done 2026-08-23 — `null_display_matches_cards_display` asserts it on a full deck.)* `impl Display for SealedDeck<NullSeal>` reproducing `Cards`'
       format exactly (`src/cards.rs:697` — card strings joined by one space).
       Condition 4: `PokerSession::start_hand` feeds it to
       `HandHistory::shuffled_deck`, which `pkdealer_service` and `pkarena0-web`
       write to YAML. Test that both `Display`s agree on a full deck.
-- [ ] **3i.** `make ayce` clean; `make check-purity` clean; `make perf-check`
+- [x] **3i.** *(Done 2026-08-23 — 9,378 tests pass; clippy pedantic clean.)* `make ayce` clean; `make check-purity` clean; `make perf-check`
       to confirm the `IndexSet` → `Vec` deck change costs nothing.
-- [ ] **3j.** `CHANGELOG.md` under `## [Unreleased]`, `### Changed` —
+- [x] **3j.** *(Done 2026-08-23.)* `CHANGELOG.md` under `## [Unreleased]`, `### Changed` —
       **breaking**: `Table::deck` is now `SealedDeck<NullSeal>`.
 
 ### Phase 4 — The reveal ledger
@@ -992,6 +992,49 @@ recompile.
 the affected API today, but neither has a version pin to protect it from the
 next change either. Worth pinning them to a released version — tracked outside
 this EPIC in `docs/BACKLOG.md`.
+
+
+##### How it actually landed (2026-08-23)
+
+Two things changed under contact with the code. Both made the design better.
+
+**The readable-deck impl is bounded on `S::Sealed == Card`, not on `NullSeal`.**
+`src/casino/table.rs` carries a single ~2,300-line `impl` block, so splitting it
+by scheme would have meant relocating hundreds of methods. A per-method `where`
+clause needs no relocation at all:
+
+```rust
+impl<S: CardSeal> TableOf<S> {
+    pub fn deal_flop(&mut self) -> Result<(), PKError>
+    where
+        S: CardSeal<Sealed = Card>,
+    { /* unchanged body */ }
+}
+```
+
+It is also the more honest bound. It reads *"the payload is a plain card, so
+there is nothing to read that was not already readable"* — and
+[`PlaintextSeal`](#plaintextseal--the-test-double-hard-to-reach-on-purpose)
+satisfies it too, while a threshold-`ElGamal` scheme does not.
+
+**Nineteen methods carry the bound**, and every other method stayed generic:
+
+| Group | Why they need it |
+|---|---|
+| 7 constructors (`from_seats` and its wrappers) | build a plain `Cards::deck()` |
+| 9 dealing methods (`deal_flop`, `deal_turn`, `deal_river`, the stud paths, the two `deal_card_to_seat*`) | write a plain `Card` into a seat, board or muck |
+| `reset`, `end_hand`, `abort_hand` | return the muck to the deck and **sort** it |
+| `act` (`table/actions.rs`) | advances streets, so it deals |
+
+**One break surface the impact assessment missed:** direct assignment to the
+`pub deck` field, `table.deck = cards`. No *consumer* does this — the scan was
+right about that — but pkcore's own `tests/tda_conformance.rs`,
+`tests/split_pots.rs` and `examples/the_hand_no_cell.rs` all stack decks that
+way. Fixed by adding `impl From<&Cards> for SealedDeck<S>`, so the idiom reads
+`table.deck = (&cards).into()`.
+
+**Verified:** 9,378 tests pass, `cargo clippy --all-features -D warnings -W
+clippy::pedantic` is clean, and `PokerSession` never became generic.
 
 #### What it does *not* buy
 

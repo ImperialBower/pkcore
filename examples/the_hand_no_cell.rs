@@ -76,7 +76,7 @@ fn the_hand_table() -> Table {
 
     // Inject the pre-ordered deck so cards deal in the documented order.
     // With Table, `deck` is a plain public field — no wrapper needed.
-    table.deck = Cards::deck_primed(&TestData::the_hand_cards_dealable());
+    table.deck = (&Cards::deck_primed(&TestData::the_hand_cards_dealable())).into();
 
     table
 }

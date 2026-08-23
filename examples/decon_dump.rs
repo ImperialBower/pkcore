@@ -728,7 +728,7 @@ fn rigged_table(seats_spec: &[(&str, usize, &str)], top: &str) -> Table {
         std::process::exit(1);
     };
     deck.insert_all(&Cards::deck_minus(&used_cards));
-    table.deck = deck;
+    table.deck = (&deck).into();
     table
 }
 
