@@ -125,54 +125,29 @@ pub struct Table {
     /// enforce the per-street raise cap; `NoLimit` and `PotLimit` ignore it.
     pub raises_this_street: u8,
     /// In-turn voluntary actions taken on the current betting street
-    /// (`DEFECT_009`, TDA 2024 Rule 36). Forced posts — blinds, antes, the
-    /// stud bring-in — do **not** count. Reset alongside
+    /// (`DEFECT_009`, TDA 2024 Rule 36). Forced posts such as blinds, antes, and the
+    /// stud bring-in, do **not** count. Reset alongside
     /// [`raises_this_street`](Table::raises_this_street) at both the street
     /// boundary ([`bring_it_in`](Table::bring_it_in)) and the hand boundary
     /// ([`reset`](Table::reset)). Read only through
     /// [`substantial_action`](Table::substantial_action).
     pub actions_this_street: u8,
     /// The subset of [`actions_this_street`](Table::actions_this_street) that
-    /// put chips in the pot — bet, call, raise and all-in. Checks and folds do
+    /// put chips in the pot: bet, call, raise and all-in. Checks and folds do
     /// not. This is the whole content of Rule 36's clause A, which
     /// `raises_this_street` cannot express because it counts raises only.
     pub chip_actions_this_street: u8,
-    /// Blind money owed but never posted this hand — the gap between
+    /// Blind money owed but never posted this hand; the gap between
     /// [`forced`](Table::forced) and what the blind seats could actually put up
     /// (`DEFECT_012`, TDA 2024 Rule 54-B). A short all-in blind contributes its
     /// shortfall; a dead blind would contribute the whole amount, once
     /// `DEFECT_008` D8-4 makes dead blinds reachable.
     ///
     /// Accumulated by the two blind-posting paths and cleared at the hand
-    /// boundary ([`reset`](Table::reset)) — never at a street boundary, because
+    /// boundary ([`reset`](Table::reset)), never at a street boundary, because
     /// it describes the hand's blinds rather than the current street. Read only
     /// through [`pot_limit_pot`](Table::pot_limit_pot).
     pub blind_shortfall: usize,
-}
-
-/// A six-handed No Limit Hold'em table with 50/100 blinds, every seat empty
-/// and a full sorted deck — the shape used by demos, doc examples, and quick
-/// experiments.
-///
-/// Mirrors the default the retired `TableCelled` engine used, which
-/// EPIC-83 Phase 3 removes.
-impl Default for Table {
-    fn default() -> Self {
-        let seats = Seats::new(
-            (0..6)
-                .map(|_| {
-                    Seat::new_with_cards(
-                        Player::default(),
-                        BoxedCards::blanks(GameType::NoLimitHoldem.cards_per_player() as usize),
-                    )
-                })
-                .collect(),
-        );
-        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
-        table.id = Uuid::default();
-        table.name = "Default No Limit Hold'em Table".to_string();
-        table
-    }
 }
 
 impl Table {
@@ -2844,6 +2819,31 @@ impl Table {
         }
 
         Ok(refunded)
+    }
+}
+
+/// A six-handed No Limit Hold'em table with 50/100 blinds, every seat empty
+/// and a full sorted deck. Used by demos, doc examples, and quick
+/// experiments.
+///
+/// Mirrors the default the retired `TableCelled` engine used, which
+/// EPIC-83 Phase 3 removes.
+impl Default for Table {
+    fn default() -> Self {
+        let seats = Seats::new(
+            (0..6)
+                .map(|_| {
+                    Seat::new_with_cards(
+                        Player::default(),
+                        BoxedCards::blanks(GameType::NoLimitHoldem.cards_per_player() as usize),
+                    )
+                })
+                .collect(),
+        );
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.id = Uuid::default();
+        table.name = "Default No Limit Hold'em Table".to_string();
+        table
     }
 }
 
