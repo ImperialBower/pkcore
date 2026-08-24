@@ -10,7 +10,7 @@ use crate::arrays::six::Six;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
 use crate::play::stages::turn_eval::TurnEval;
-use crate::prelude::TableCelled;
+use crate::prelude::{Table, TableCelled};
 use crate::{Card, Cards, PKError, Pile, TheNuts};
 use std::fmt::{Display, Formatter};
 use wincounter::results::WinResults;
@@ -709,17 +709,9 @@ impl Display for Game {
     }
 }
 
-impl TryFrom<TableCelled> for Game {
-    type Error = PKError;
-
-    fn try_from(table: TableCelled) -> Result<Self, Self::Error> {
-        Ok(Game {
-            hands: HoleCards::from(table.seats),
-            board: Board::try_from(table.board)?,
-        })
-    }
-}
-
+/// Kept alive only for the celled `Showdown`
+/// (`src/casino/table_celled/showdown.rs`), which EPIC-83 Phase 3 deletes
+/// along with this impl.
 impl TryFrom<&TableCelled> for Game {
     type Error = PKError;
 
@@ -728,6 +720,46 @@ impl TryFrom<&TableCelled> for Game {
             hands: HoleCards::from(table.seats.clone()),
             board: Board::try_from(table.board.clone())?,
         })
+    }
+}
+
+impl TryFrom<&Table> for Game {
+    type Error = PKError;
+
+    /// Delegates to [`Table::build_game`], which is the single definition of
+    /// how a table's board and in-hand hole cards become a [`Game`].
+    ///
+    /// Replaced `TryFrom<TableCelled>` / `TryFrom<&TableCelled>` in EPIC-83.
+    ///
+    /// # Errors
+    ///
+    /// Propagates whatever [`Table::build_game`] returns — chiefly
+    /// [`PKError::NotEnoughCards`] when the table has no board yet. A [`Game`]
+    /// needs at least a flop, so convert on or after the flop.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use pkcore::play::game::Game;
+    ///
+    /// let mut table = Table::nlh_from_seats(
+    ///     Seats::new(vec![
+    ///         Seat::new(Player::new_with_chips("Ann".to_string(), 1_000)),
+    ///         Seat::new(Player::new_with_chips("Bo".to_string(), 1_000)),
+    ///     ]),
+    ///     ForcedBets::new(50, 100),
+    /// );
+    /// table.act_forced_bets().unwrap();
+    /// table.deal_cards_to_seats().unwrap();
+    /// table.deal_flop().unwrap();
+    ///
+    /// let game = Game::try_from(&table).unwrap();
+    /// assert_eq!(2, game.hands.len());
+    /// ```
+    fn try_from(table: &Table) -> Result<Self, Self::Error> {
+        table.build_game()
     }
 }
 
@@ -1099,7 +1131,7 @@ mod play__game_tests {
 
     #[test]
     fn try_from__table() {
-        let table = TestData::min_table();
+        let table = TestData::min_table_celled();
         table.deal_cards_to_seats().expect("WOOPSIE!!!");
 
         table.act_forced_bets().expect("forced bets should post");
@@ -1116,7 +1148,7 @@ mod play__game_tests {
         assert_eq!(1, table.next_to_act());
         let _ = table.act_check(1).unwrap();
 
-        let game = Game::try_from(table.clone()).unwrap();
+        let game = Game::try_from(&table).unwrap();
 
         let flop_eval = FlopEval::try_from(game.clone()).unwrap();
         let fe_gus = flop_eval.eval_for_player(1).unwrap();
@@ -1131,12 +1163,12 @@ mod play__game_tests {
         assert_eq!(2185, fe_daniel.hand_rank.value);
 
         table.deal_turn().expect("No turn");
-        let game = Game::try_from(table.clone()).unwrap();
+        let game = Game::try_from(&table).unwrap();
 
         game.turn_display_odds().unwrap();
 
         table.deal_river().expect("No turn");
-        let game = Game::try_from(table.clone()).unwrap();
+        let game = Game::try_from(&table).unwrap();
 
         game.river_display_results();
 
@@ -1171,5 +1203,33 @@ mod play__game_tests {
         assert_eq!(31, player1_outs.len());
         assert_eq!(13, player2_outs.len());
         assert_eq!(1, outs.longest_player());
+    }
+
+    // ── EPIC-83: Game from the plain Table ───────────────────────────────────
+
+    #[test]
+    fn game_try_from_table_carries_board_and_hole_cards() {
+        use crate::casino::game::ForcedBets;
+        use crate::casino::table::{Player, Seat, Seats, Table};
+
+        let mut table = Table::nlh_from_seats(
+            Seats::new(vec![
+                Seat::new(Player::new_with_chips("Ann".to_string(), 1_000)),
+                Seat::new(Player::new_with_chips("Bo".to_string(), 1_000)),
+            ]),
+            ForcedBets::new(50, 100),
+        );
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        table.deal_flop().unwrap();
+
+        let game = Game::try_from(&table).unwrap();
+
+        assert_eq!(
+            table.build_game().unwrap(),
+            game,
+            "the conversion is exactly `build_game`"
+        );
+        assert_eq!(2, game.hands.len(), "one hand per seat");
     }
 }

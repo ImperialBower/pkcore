@@ -68,14 +68,16 @@ executes the stated plan.
 
 | Component | Status |
 |---|---|
-| Phase 0 — cross-family `From` bridges | Planned |
-| Phase 1 — `Dealer` on `Table` | Planned |
-| Phase 1 — `Manager` on `Table` | Planned |
-| Phase 1 — `Game` / `TableEquity` / eval stages on `Table` | Planned |
-| Phase 2 — port the 12 `nubibus` dependencies onto `Table` | Planned |
-| Phase 2 — `TryFrom<&Pluribus> for Table` | Planned |
-| Phase 2 — `From<&Table> for pkstate::PKState` | Planned |
-| Phase 2 — `nubibus` + test fixtures on `Table` | Planned |
+| Phase 0 — cross-family bridges | **Complete** (`table_decelled`, 2026-08-23) |
+| Phase 1 — `Dealer` on `Table` | **Complete** (`table_decelled`, 2026-08-23) |
+| Phase 1 — `Manager` on `Table` | **Complete** (`table_decelled`, 2026-08-23) |
+| Phase 1 — `Game` / `TableEquity` / eval stages on `Table` | **Complete** (`table_decelled`, 2026-08-23) |
+| Phase 2 — port the `nubibus` dependencies onto `Table` | **Complete** (`table_decelled`, 2026-08-23) |
+| Phase 2 — `TryFrom<&Pluribus> for Table` | **Complete** (`table_decelled`, 2026-08-23) |
+| Phase 2 — `From<&Table> for pkstate::PKState` | **Complete** (`table_decelled`, 2026-08-24) |
+| Phase 2 — `nubibus` on `Table` (30/30 tests) | **Complete** (`table_decelled`, 2026-08-23) |
+| Phase 2 — `util::data` fixtures on `Table` | **Complete** (`table_decelled`, 2026-08-23) |
+| Phase 2 — Pluribus corpus check live again (`heavy_tests`) | **Complete** (`table_decelled`, 2026-08-24) |
 | Phase 3 — relocate surviving support types | Planned |
 | Phase 3 — delete the celled family | Planned |
 | Phase 3 — docs, prelude, ROADMAP, version bump | Planned |
@@ -132,7 +134,7 @@ The rules this retirement must obey:
 
 ## Design
 
-### Phase 0 — cross-family `From` bridges
+### Phase 0 — cross-family bridges
 
 There is **no** conversion between the two families today. Grepping
 `impl From<&SeatCell>`, `impl From<&SeatsCell> for Seats`, and
@@ -144,24 +146,45 @@ hand-rewrite of its call site.
 `src/casino/table/seats.rs` (additions):
 
 ```rust
-impl From<&crate::casino::player::Player> for Player {
-    /// Snapshots a celled player into a plain one, reading every `Cell`
-    /// exactly once. Lossless: the field sets are 1:1.
-    fn from(celled: &crate::casino::player::Player) -> Self { /* … */ }
+// src/casino/table/player.rs — lossless, the field sets are 1:1
+impl From<&crate::casino::player::Player> for Player { /* … */ }
+
+// src/casino/table/seat.rs — NOT a `From`: see the seat-index note below
+impl Seat {
+    pub fn from_seat_cell(cell: &SeatCell, seat_index: u8) -> Self { /* … */ }
 }
 
-impl From<&SeatCell> for Seat { /* borrow(), convert player, default hand */ }
-impl From<&SeatsCell> for Seats { /* map the ring */ }
+// src/casino/table/seats.rs — supplies each index from the ring position
+impl From<&SeatsCell> for Seats { /* … */ }
 ```
 
-The bridges are **temporary scaffolding**, born to die in Phase 3. Marking them
-`#[deprecated(note = "removed with TableCelled in EPIC-83 Phase 3")]` makes the
-compiler list every remaining migration site as a warning — a free checklist.
+**Why `Seat` is not a `From`.** The plain `Seat` carries
+`hand: SeatHand` (`src/casino/table/seat.rs:33`), and `SeatHand::new(seat)`
+(`src/play/seat_hand.rs:64`) requires the seat's ring index. The celled `Seat`
+(`src/casino/table_celled/seats/seat.rs:7`) has only `player` and `cards` — no
+index. A `From<&SeatCell>` would therefore have to stamp `SeatHand::new(0)` on
+every seat, silently mislabelling every seat but the first. Ring position is
+what decides the button and the blinds, so that is not a cosmetic error.
 
-One asymmetry to note: plain `Seat` carries a `hand: SeatHand` field
-(`src/casino/table/seat.rs:33`) that celled `Seat` lacks. The bridge fills it
-with `SeatHand::default()`; callers that need a real evaluated hand must derive
-it, and the bridge's doc comment says so.
+Making the index an explicit parameter pushes the requirement to the one caller
+that actually knows it: `From<&SeatsCell> for Seats`, walking the ring with
+`enumerate()`. The test `seat_from_seat_cell_stamps_the_seat_index` pins it.
+
+The bridges are **temporary scaffolding**, born to die in Phase 3. Their doc
+comments say so.
+
+An earlier draft proposed marking them
+`#[deprecated(note = "removed with TableCelled in EPIC-83 Phase 3")]` to get a
+free compiler checklist of migration sites. **That does not work here.**
+`make ayce` exports `RUSTFLAGS := -Dwarnings` (`Makefile:218`), so a deprecation
+warning is a hard build error — every Phase 1 call site would fail the gate. The
+EPIC's Work Items are the checklist instead.
+
+One more asymmetry: plain `Seat` also carries `bet_level_when_last_acted`
+(`src/casino/table/seat.rs:46`), the TDA Rule 47-A reopen tracker. The celled
+family has no counterpart, so the bridge starts it at `0` — correct for a seat
+that has not yet acted this street, which is the only state a freshly converted
+seat can be in.
 
 ### Phase 1 — `Dealer` on `Table`
 
@@ -193,16 +216,19 @@ forbids. Making them `&mut self` is the correctness win, not a side effect.
 `Dealer` also calls three celled-only methods. All three are trivial, and the
 `Table` primitives they need already exist:
 
-| Celled method | Body | `Table` port |
+| Celled method | Body | Resolution |
 |---|---|---|
-| `act_new_hand` (`table_celled.rs:551`) | set phase, log | set `self.phase`, push `TableAction::NewHand` |
-| `act_shuffle_deck` (`table_celled.rs:631`) | set phase, shuffle, log | same, over `self.deck` |
-| `act_button_move` (`table_celled.rs:391`) | `button.up()`, log | `Table::button_up` (`src/casino/table.rs:1708`) + log |
+| `act_new_hand` (`table_celled.rs:551`) | set phase, log | **port** — set `self.phase`, push `TableAction::NewHand`. `Table::reset` (`src/casino/table.rs:1745`) also lands on `NewHand`, but it mucks, returns cards to the deck, and audits — far more than `Dealer::start_hand` wants. |
+| `act_shuffle_deck` (`table_celled.rs:631`) | set phase, shuffle, log | **port** — `Cards::shuffle_in_place` (`src/cards.rs:469`) already exists. |
+| `act_button_move` (`table_celled.rs:391`) | `button.up()`, log | **no port needed** — `Table::button_up` (`src/casino/table.rs:1708`) already increments with wraparound and logs `TableAction::MoveButton`. `Dealer` calls it directly. |
 
-Two more `Dealer` calls are **delegations, not ports**: `table.get_seat(n)` and
-`table.is_betting_complete()` already exist on `Seats`
-(`src/casino/table/seats.rs:93` and `:206`). Add thin `Table` methods that
-forward to `self.seats`, matching how the celled engine exposed them.
+`Dealer` also calls `table.get_seat(n)` and `table.is_betting_complete()`.
+An earlier draft proposed thin `Table` forwarders for these. **Dropped.**
+`TableCelled::is_betting_complete` (`table_celled.rs:1293`) is itself a bare
+one-line delegation to `self.seats`, `Table::seats` is already a public field,
+and `Table` carries 70 methods before adding any. Call sites read
+`table.seats.get_seat(n)` and `table.seats.is_betting_complete()` instead —
+honest about where the state lives, and no new public API.
 
 ### Phase 1 — the conversion impls
 
@@ -306,79 +332,106 @@ impl From<&Seats> for HoleCards { /* … */ }
 
 ## Work Items
 
-Boxes stay unchecked; the `## Status` table above is the live signal, per the
-convention in `docs/epics/EPIC-81_Ckc_Rs_Dependency.md`.
+Boxes are checked as work lands; the `## Status` table above is the canonical
+signal. (`docs/epics/EPIC-81_Ckc_Rs_Dependency.md` leaves its boxes unchecked,
+but this EPIC is a long mechanical sweep where per-item progress is the point.)
 
 ### Phase 0 — Bridges
 
-- [ ] **0a.** Add `From<&casino::player::Player> for casino::table::player::Player`
-      in `src/casino/table/player.rs`. Test: `player_from_celled_preserves_chips`.
-- [ ] **0b.** Add `From<&SeatCell> for Seat` in `src/casino/table/seat.rs`,
-      documenting the `SeatHand::default()` fill. Test:
-      `seat_from_seat_cell_defaults_hand`.
-- [ ] **0c.** Add `From<&SeatsCell> for Seats` in `src/casino/table/seats.rs`.
-      Test: `seats_from_seats_cell_preserves_ring_order`.
-- [ ] **0d.** Mark all three `#[deprecated(note = "removed with TableCelled in
-      EPIC-83 Phase 3")]`, so remaining call sites surface as warnings.
-- [ ] **0e.** `make ayce` green. (Deprecation warnings are expected here and are
-      allowed to fail `-Dwarnings` only inside `#[allow]`-scoped call sites.)
+- [x] **0a.** Add `From<&casino::player::Player> for casino::table::player::Player`
+      in `src/casino/table/player.rs:44`. Tests:
+      `player_from_celled_preserves_chips`,
+      `player_from_celled_preserves_identity_and_state`,
+      `player_from_celled_does_not_default_the_state`.
+- [x] **0b.** Add `Seat::from_seat_cell(&SeatCell, u8)` in
+      `src/casino/table/seat.rs:60` — **not** a `From` impl; see the Design
+      note. Tests: `seat_from_seat_cell_carries_player_and_cards`,
+      `seat_from_seat_cell_stamps_the_seat_index`,
+      `seat_from_seat_cell_starts_bet_level_at_zero`.
+- [x] **0c.** Add `From<&SeatsCell> for Seats` in `src/casino/table/seats.rs:28`.
+      Tests: `seats_from_seats_cell_preserves_ring_order`,
+      `seats_from_seats_cell_numbers_each_seat_hand`.
+- [x] **0d.** ~~Mark all three `#[deprecated]`.~~ **Dropped** — `make ayce`
+      exports `RUSTFLAGS := -Dwarnings` (`Makefile:218`), so this would turn
+      every Phase 1 call site into a build failure. The Work Items are the
+      checklist instead.
+- [x] **0e.** `cargo test --all-features` exit 0 (736 doc tests pass); `cargo fmt --check` clean.
 
 ### Phase 1 — Move the callers that need no new behaviour
 
-- [ ] **1a.** Add `Table::get_seat`, `Table::get_seat_mut`,
-      `Table::is_betting_complete` forwarding to `self.seats`
-      (`src/casino/table/seats.rs:93`, `:206`).
-- [ ] **1b.** Port `act_new_hand`, `act_shuffle_deck`, `act_button_move` onto
-      `Table`, reusing `Table::button_up` (`src/casino/table.rs:1708`). Tests:
-      one per method asserting phase and the logged `TableAction`.
-- [ ] **1c.** `Dealer.table: Table` (`src/casino/dealer.rs:166`); flip the six
+- [ ] **1a.** ~~Add `Table::get_seat` / `get_seat_mut` / `is_betting_complete`
+      forwarders.~~ **Dropped** — `seats` is already a public field and the
+      celled originals were bare delegations. Migrate call sites to
+      `table.seats.*` instead. See the Design note.
+- [x] **1b.** Port `act_new_hand` and `act_shuffle_deck` onto `Table`. Tests:
+      one per method asserting the phase and the logged `TableAction`.
+      `act_button_move` needs no port — `Dealer` calls the existing
+      `Table::button_up` (`src/casino/table.rs:1708`).
+- [x] **1c.** `Dealer.table: Table` (`src/casino/dealer.rs:166`); flip the six
       mutating methods to `&mut self`; update `Dealer::new:180` and
       `Dealer::from_table:201`. All 31 existing `Dealer` tests must pass.
-- [ ] **1d.** `Manager.tables: HashMap<Uuid, Table>` (`src/casino/manager.rs:8`),
+- [x] **1d.** `Manager.tables: HashMap<Uuid, Table>` (`src/casino/manager.rs:8`),
       with `new_table:38`, `get_table:120`, `remove_table:124`.
-- [ ] **1e.** Replace `TryFrom<TableCelled>`/`TryFrom<&TableCelled> for Game`
+- [x] **1e.** Replace `TryFrom<TableCelled>`/`TryFrom<&TableCelled> for Game`
       (`src/play/game.rs:712`, `:723`) with `TryFrom<&Table>`, delegating to
       `Table::build_game` (`src/casino/table.rs:1783`).
-- [ ] **1f.** Retarget `FlopEval` (`src/play/stages/flop_eval.rs:291`),
+- [x] **1f.** Retarget `FlopEval` (`src/play/stages/flop_eval.rs:291`),
       `TurnEval` (`turn_eval.rs:247`), `RiverEval` (`river_eval.rs:125`) to
       `&Table`.
-- [ ] **1g.** Retarget `From<&TableCelled> for TableEquity`
+- [x] **1g.** Retarget `From<&TableCelled> for TableEquity`
       (`src/casino/equity/table_equity.rs:291`) to `&Table`, dropping the
       per-seat `.borrow()`.
-- [ ] **1h.** Move `examples/game_state_demo.rs:18` to `Table`, replacing
+- [x] **1h.** Move `examples/game_state_demo.rs:18` to `Table`, replacing
       `get_game_state`/`GameState` with direct field reads.
-- [ ] **1i.** `CHANGELOG.md` entry under `## [Unreleased]` → `### Changed`,
+- [x] **1i-a.** *(unplanned)* The plain family was missing API the celled one
+      had. Added, each test-first: `Seats::iter`, `Seats::iter_mut`,
+      `Seats::assign`, `Seats::MAX_NUMBER_SEATS` (`src/casino/table/seats.rs`),
+      `Seat::new_with_cards` (`src/casino/table/seat.rs`), and
+      `impl Default for Table` (`src/casino/table.rs`). These are permanent —
+      unlike the Phase 0 bridges, they outlive `TableCelled`.
+- [x] **1i-b.** *(unplanned)* `Dealer::event_log` returns `&[TableAction]`
+      instead of `&TableLog`. A second public break, alongside the
+      `&self` → `&mut self` one.
+- [x] **1i-c.** *(unplanned)* `TryFrom<&TableCelled> for Game` is kept alive as
+      scaffolding for the celled `Showdown`
+      (`src/casino/table_celled/showdown.rs`); it dies in Phase 3.
+- [x] **1i.** `CHANGELOG.md` entry under `## [Unreleased]` → `### Changed`,
       naming the `Dealer` `&self` → `&mut self` break. No version bump yet.
-- [ ] **1j.** `make ayce` green.
+- [x] **1j.** Gate green: 9,316 lib tests, 721 doc tests, clippy clean, fmt clean.
 
 ### Phase 2 — Port what `nubibus` needs, then move it
 
-- [ ] **2a.** Port the four `commentary_*` methods (`table_celled.rs:680`, `:693`,
+- [x] **2a.** Port the four `commentary_*` methods (`table_celled.rs:680`, `:693`,
       `:707`, `:720`) onto `Table` over its `Vec<TableAction>`. Tests: assert the
       exact rendered strings the celled tests assert today.
-- [ ] **2b.** Port `eval_flop_display:1171`, `eval_turn_display:1194`,
+- [x] **2b.** Port `eval_flop_display:1171`, `eval_turn_display:1194`,
       `eval_river_display:1210`, routing through `Table::build_game`.
-- [ ] **2c.** Port `determine_betting_phase:871`, `is_betting_started:1297`,
+- [x] **2c.** Port `determine_betting_phase:871`, `is_betting_started:1297`,
       `get_seat_handle:1241`.
-- [ ] **2d.** Port `determine_hand_equity:1010` behind its existing feature gate.
-- [ ] **2e.** Port `TryFrom<&Pluribus>` (`table_celled.rs:1581`) to `Table`.
+- [x] **2d.** ~~Port `determine_hand_equity`.~~ **Dropped** — `nubibus` never
+      calls it, nor `determine_street_equity` / `determine_ceiling`. They die
+      with `TableCelled` in Phase 3 unless a caller appears.
+- [x] **2e.** Port `TryFrom<&Pluribus>` (`table_celled.rs:1581`) to `Table`.
       The largest single item in the EPIC.
 - [ ] **2f.** Port `From<&Table> for pkstate::PKState` and
       `From<Table> for pkstate::PKState` (`table_celled.rs:1632`, `:1822`), and
       correct the stale doc comments at `table_celled.rs:1517` and
       `src/bard.rs:341`.
-- [ ] **2g.** `Nubibus.table: Table` (`src/analysis/nubibus.rs:43`); restructure
+- [x] **2g.** `Nubibus.table: Table` (`src/analysis/nubibus.rs:43`); restructure
       `Nubibus::act:62` and `street_bet_target:96` for `&mut`. **All 15 nubibus
       tests must pass unchanged** — they are the acceptance test for Phase 2.
-- [ ] **2h.** Port the `util/data.rs` fixtures: `min_table:356`,
-      `the_hand_table:368`, `split_pot_table:389`,
-      `split_pot_table_with_blinds:407`. This needs a `Table::nlh_primed`
-      equivalent of `table_celled.rs:178`.
+- [x] **2h.** Ported `util/data.rs` fixtures. `Table::nlh_primed` added.
+      The celled originals are renamed `*_celled` so Phase 3 is pure deletion.
+      `split_pot_table*` and `preroll_*` are **not** ported — only celled tests
+      use them, and they die with `TableCelled`.
+      Needed `TestData::rotated_for_plain_deal` — see corrigendum item 7.
 - [ ] **2i.** Move `util::commentary_action_to` (`src/util/mod.rs:51`) to
       `&Table`.
-- [ ] **2j.** Move `examples/the_hand.rs` to `Table`. Compare its output against
-      `examples/the_hand_no_cell.rs` — they should now be near-identical, which
-      is itself evidence the port is faithful.
+- [x] **2j.** *(revised)* `examples/the_hand.rs` needs **no port** —
+      `examples/the_hand_no_cell.rs` already is it, on `Table`. Comparing their
+      output is what exposed corrigendum item 7. Phase 3 deletes `the_hand.rs`
+      and renames the `_no_cell` twin into its place. Added the missing
+      plain-engine assertions to `tests/hands.rs` instead.
 - [ ] **2k.** `CHANGELOG.md` entry. `make ayce` green.
 
 ### Phase 3 — Delete
@@ -435,11 +488,12 @@ The existing suite is the safety net: **2,033 tests** in `src/`.
 | `nubibus`'s 15 existing tests | **The Phase 2 acceptance gate.** A real Pluribus hand log replays identically on `Table`. If these pass, the port is faithful. |
 | `Dealer`'s 31 existing tests | Seating, hand lifecycle, and action legality survive the `&mut self` conversion. |
 | `player_from_celled_preserves_chips` | The Phase 0 bridge reads every `Cell` losslessly. |
-| `seat_from_seat_cell_defaults_hand` | The bridge's one lossy field is explicit, not accidental. |
+| `seat_from_seat_cell_stamps_the_seat_index` | Each seat carries its own ring index, not a defaulted `0`. Ring position drives button and blinds. |
+| `seat_from_seat_cell_starts_bet_level_at_zero` | The one field with no celled counterpart is explicit, not accidental. |
+| `seats_from_seats_cell_numbers_each_seat_hand` | The ring supplies each index, since `Seat` cannot derive it. |
 | `seats_from_seats_cell_preserves_ring_order` | Seat ordering — which drives button and blind position — is unchanged. |
 | `table_act_new_hand_sets_phase_and_logs` | Ported `act_new_hand` matches the celled original. |
 | `table_act_shuffle_deck_sets_phase_and_logs` | Ditto for `act_shuffle_deck`. |
-| `table_act_button_move_advances_and_logs` | Ditto for `act_button_move`. |
 | `table_commentary_*` (4 tests) | Rendered strings match the celled originals character for character. |
 | `table_try_from_pluribus_*` | Table construction from a log header matches `table_celled.rs:1581`. |
 | Phase 3d audit tests | One new `Table` test per uncovered assertion among the 105 tests being deleted. |
@@ -498,8 +552,7 @@ belongs in the corrigendum.
 - **Preserves:** every `Table`, `Seats`, `Seat`, and plain-`Player` signature.
   `CardsCell`, `Stack`, `BintCell`. `TableLog`'s API (the type relocates, its
   surface does not change).
-- **Adds:** 18 methods on `Table` (3 ported and 3 delegated in Phase 1, 12
-  ported in Phase 2); `TryFrom<&Pluribus> for Table`;
+- **Adds:** 14 methods on `Table` (2 ported in Phase 1, 12 ported in Phase 2); `TryFrom<&Pluribus> for Table`;
   `From<&Table> for pkstate::PKState`; `From<&Seats>` for `Boxes` and
   `HoleCards`.
 - **Breaks:** `Dealer`'s six mutating methods move from `&self` to `&mut self`.
@@ -567,3 +620,175 @@ Exit criteria:
 8. The `audit-release` skill reports `pkdealer`, `pknotebook`, `pkgto-web`,
    `pkkuhn-web`, and `pkarena0-web` unaffected, and `pkpy` covered by the Phase 4
    PR.
+
+---
+
+## Implementation corrigendum
+
+*Opened during Phase 1. Deltas are recorded as they are found, not at the end.*
+
+### 1. `do_ready` now actually readies a folded player
+
+The celled `Dealer::do_ready` set state through `PlayerStateCell::set`
+(`src/casino/state.rs:123`), which consulted `PlayerState::can_given` and
+**silently refused** an illegal transition. From `Fold`, `Ready` is refused — so
+the celled `do_ready` returned `Ok` while leaving the player on `Fold`.
+
+The plain engine validates at the action level instead; its `Player` assigns
+state directly everywhere (see `src/casino/table/seats.rs:633`). So the ported
+`do_ready` genuinely sets `Ready` — which is what the method's name promises and
+what the existing test's own comment expects.
+
+The existing `do_ready__player_folded` asserted only `result.is_ok()`, so it
+passed under both behaviours and could not catch the change. Added
+`do_ready_moves_a_folded_player_all_the_way_to_ready` (`src/casino/dealer.rs`)
+to pin it.
+
+The companion site `set_funded_players_to_yet_to_act` is **not** affected:
+`can_given` returns `true` for every transition into `YetToAct`
+(`src/casino/state.rs:407`), so the guard it replaced never refused anything.
+
+### 2. `Cards` equality cannot see order
+
+A first attempt at the `act_shuffle_deck` test asserted
+`assert_ne!(sorted_deck, shuffled_deck)` — and failed. `Cards` wraps an
+`IndexSet` (`src/cards.rs:35`) with a derived `PartialEq`, so `==` is **set**
+equality: two decks holding the same 52 cards compare equal whatever their
+order. The type's own doc says "Cards should be saved in order", so order is
+meaningful to the domain but invisible to `==`.
+
+Out of scope to change here, but any test asserting a reordering must compare
+`Vec<Card>` sequences.
+`act_shuffle_deck_reorders_the_deck_but_keeps_every_card` does that.
+
+### 3. Phase 1 grew a "missing plain API" sub-task
+
+The EPIC assumed the plain family was feature-complete and only the *table* had
+gaps. It was not: `Seats` had no `iter`, `iter_mut`, `assign`, or
+`MAX_NUMBER_SEATS`; `Seat` had no `new_with_cards`; `Table` had no `Default`.
+Each was needed to move `Dealer`, and each was added test-first. See Work Item
+1i-a. Phase 2 should expect more of the same.
+
+### Phase status summary
+
+| Phase | Status | Notes |
+|---|---|---|
+| 0 (bridges) | Shipped | `#[deprecated]` dropped — see Design |
+| 1 (easy callers) | Shipped | grew items 1i-a … 1i-c |
+| 2 (nubibus port) | Shipped | grew items 4, 5, 6, 7, 8 |
+| 3 (delete) | Planned | |
+| 4 (pkpy) | Planned | |
+
+### 4. `reset_state` clears more on the plain engine — and two tests depended on that
+
+`Table::end_hand` resets the table before its chip audit
+(`src/casino/table.rs`), and plain `Seats::reset_state`
+(`src/casino/table/seats.rs:643`) calls `Player::reset`, which zeroes
+`chips_in_play`. The celled `SeatsCell::reset_state`
+(`src/casino/table_celled/seats.rs:833`) called `player.state.reset()` —
+**state only** — so `chips_in_play` survived the hand as a de-facto audit
+record.
+
+Two `nubibus` regression tests read that record:
+`replay_reads_logged_amounts_as_cumulative_totals` and
+`replay_gives_a_re_raise_the_correct_seat` (`DEFECT_021` / `DEFECT_022`). Both
+failed on `Table` with every seat reading `0`.
+
+**The replay itself was correct.** Probing the final stacks on the
+`DEFECT_022` hand gave `9950, 8800, 10000, 11725, 10000, 9525` against the
+log's payoffs of `-50|-1200|0|1725|0|-475` — exact, seat for seat. Only the
+measurement was gone.
+
+The plain behaviour is the right one: the next hand must start from zero. So
+both tests now assert **final stacks against the log's payoffs** via a new
+`assert_payoffs` helper. That is strictly stronger than the old assertion — it
+pins what each seat committed *and* what it won, and it is what the two DEFECTs
+were really about.
+
+The same change was needed in `tests/heavy_tests.rs`, which had a guard reading
+*"`end_hand` resets every seat, so a hand that finished has no commitments left
+to compare against"* and returned early when all commitments were zero. Under
+plain semantics that guard would fire on **every completed hand**, silently
+checking nothing across the whole corpus. It now compares final stacks too.
+
+### 5. `Table` gained `Eq` / `PartialEq`
+
+`Nubificus` derives `Eq`/`PartialEq`, which `TableCelled` supported and `Table`
+did not. Added to `Table`'s derives — parity, not new scope. Pinned by
+`a_cloned_table_equals_its_original_until_something_changes`, which compares a
+*clone*: every `Player::new*` mints a fresh `Uuid`, so two independently built
+tables are never equal, and should not be.
+
+### 6. `TryFrom<&Pluribus> for Table` lives in `nubibus.rs`
+
+The celled version sat in `table_celled.rs`. The port lives beside `Pluribus`
+in `src/analysis/nubibus.rs` instead: it is a log-replay concern, and
+`table.rs` is already past 4,400 lines. The magic `10_000` stake became
+`Pluribus::STARTING_STACK`.
+
+### 7. The two engines deal from different seats — and only the plain one is right
+
+The biggest find of the EPIC, surfaced by comparing `examples/the_hand.rs`
+(celled) against `examples/the_hand_no_cell.rs` (plain) on the same hand.
+
+Both agreed on the pot (2,000,150) and on the winning hand (quad fives), but
+**not on who won it**: the celled run credited seat 3 (Gus Hansen, the real
+winner), the plain run credited seat 4 (Daniel Negreanu).
+
+Cause:
+
+| Engine | Deal starts at | Code |
+|---|---|---|
+| `TableCelled` | the button itself | `DrainableBintCell::new_with_value(seats, capacity, button)` |
+| `Table` | one seat left of the button | `(button as usize + 1 + step) % seat_count` |
+
+**`Table` is correct** — poker deals to the button's left. `TableCelled` deals
+to the button first, which is a rules bug it has always had. Because the
+stacked test decks in `src/util/data.rs` were written against that bug, running
+them on `Table` rotates every hand by one seat: Negreanu was dealt Hansen's
+5♦ 5♣ and duly won with them.
+
+Resolution: `TestData::rotated_for_plain_deal` (`src/util/data.rs`) rotates each
+dealing pass left by one when building a plain fixture, so the same seats get
+the same cards. `min_table` and `the_hand_table` both use it.
+
+Two new integration tests pin it: `the_hand_completes_on_the_plain_table` and
+`the_hand_gus_wins_on_the_plain_table` (`tests/hands.rs`). Before this, the
+plain engine had **no test asserting the winner of any full hand** —
+`the_hand_no_cell.rs` walks the whole hand but asserts nothing. That gap is why
+the divergence survived this long.
+
+**Follow-up for Phase 3:** `examples/the_hand.rs` needs no port. Its module doc
+already calls `the_hand_no_cell.rs` "a direct parallel — same game logic, same
+assertions" on `Table`. Phase 3 deletes `the_hand.rs` and renames
+`the_hand_no_cell.rs` to take its place.
+
+### 8. The Pluribus replay stops at an all-in, and the logs carry half chips
+
+Rewriting the `heavy_tests` corpus check (item 4) to compare **final stacks**
+turned two pre-existing facts into visible failures. Neither is an EPIC-83
+regression; both were invisible while the old check was dead.
+
+**a. A hand that ends in an all-in is never resolved.** Roughly thirty logs end
+`...r10000c///` — an all-in, a call, and then nothing. `Nubificus::play_hand`
+is driven purely by logged actions, and dealing the next street happens in
+`do_action`. With no action left to deal against, the board never runs out,
+`Table::is_game_over` stays false, `end_hand` never runs, and the pot is never
+awarded. The winner's stack reads `0`.
+
+The replay is not wrong about anything it did; it simply stops early. Fixing it
+means teaching the driver to run the board out when every remaining player is
+all-in — a `Nubificus` feature, not a `Table` one, and out of scope here. The
+test now checks such hands with the older losing-seat commitment assertion,
+which is still meaningful for them.
+
+**b. Split pots are logged to half a chip, and the parser was dropping them.**
+Payoff fields like `-50|-525|0|287.5|0|287.5` exist in the corpus.
+`Pluribus::parse_isizes` did `raw.parse::<isize>().unwrap_or(0)`, so every
+half-chip payoff was read as `0` — a winner of 287.5 was recorded as having
+broken even. It now falls back to the integer part, truncating toward zero.
+
+That leaves a genuine half chip of ambiguity: a pot chopped 287.5 / 287.5 is
+paid out as 288 / 287 under TDA Rule 20, and which seat gets the odd chip is a
+rule, not a rounding. So the test allows one chip of slack — and only when the
+raw payoff field contains a decimal point.

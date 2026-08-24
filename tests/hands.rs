@@ -15,7 +15,7 @@ mod hands__the_hand_tests {
     /// Drives the table through the complete hand and returns it ready for
     /// assertions.  Mirrors the helper functions in `examples/the_hand.rs`.
     fn run_the_hand() -> Result<(TableCelled, Winnings), PKError> {
-        let table = TestData::the_hand_table();
+        let table = TestData::the_hand_table_celled();
 
         // ── setup ──────────────────────────────────────────────────────────────
         table.act_forced_bets()?;
@@ -87,6 +87,84 @@ mod hands__the_hand_tests {
         // (`PlayerWinsMainPot` / `PlayerWinsSidePot`). Mismatched all-ins
         // route to multiway, so accept any of the three.
         let gus_won = table.event_log.entries().iter().any(|e| match e {
+            TableAction::PlayerWins(seat, _, _, _, _)
+            | TableAction::PlayerWinsMainPot(seat, _)
+            | TableAction::PlayerWinsSidePot(seat, _) => *seat == 3,
+            _ => false,
+        });
+        assert!(gus_won, "expected a win event for seat 3 (Gus Hansen)");
+    }
+
+    // ── EPIC-83: the same hand on the plain `Table` engine ───────────────────
+
+    /// The same replay, driven through `&mut Table`.
+    ///
+    /// `examples/the_hand_no_cell.rs` walks this hand on `Table` but asserts
+    /// nothing, so until now no test pinned the *winner* on the plain engine.
+    fn run_the_hand_on_table() -> Result<(Table, Winnings), PKError> {
+        let mut table = TestData::the_hand_table();
+
+        table.act_forced_bets()?;
+        table.deal_cards_to_seats()?;
+
+        // ── preflop ────────────────────────────────────────────────────────────
+        table.act_bet(3, 2100)?;
+        table.act_raise(4, 5000)?;
+        table.act_fold(5)?;
+        table.act_fold(6)?;
+        table.act_fold(7)?;
+        table.act_fold(0)?;
+        table.act_fold(1)?;
+        table.act_fold(2)?;
+        table.act_call(3)?;
+        table.bring_it_in()?;
+
+        // ── flop ───────────────────────────────────────────────────────────────
+        table.deal_flop()?;
+        table.act_check(3)?;
+        table.act_bet(4, 8_000)?;
+        table.act_raise(3, 26_000)?;
+        table.act_call(4)?;
+        table.bring_it_in()?;
+
+        // ── turn ───────────────────────────────────────────────────────────────
+        table.deal_turn()?;
+        table.act_bet(3, 24_000)?;
+        table.act_call(4)?;
+        table.bring_it_in()?;
+
+        // ── river ──────────────────────────────────────────────────────────────
+        table.deal_river()?;
+        table.act_check(3)?;
+        table.act_bet(4, 65_000)?;
+        table.act_all_in(3)?;
+        table.act_call(4)?;
+
+        let winnings = table.end_hand()?;
+
+        Ok((table, winnings))
+    }
+
+    #[test]
+    fn the_hand_completes_on_the_plain_table() {
+        let result = run_the_hand_on_table();
+        assert!(result.is_ok(), "the_hand failed: {:?}", result.err());
+    }
+
+    /// Gus Hansen (seat 3, 5♦ 5♣) makes quad fives on 9♣ 6♦ 5♥ 5♠ 8♠ and beats
+    /// Daniel Negreanu's sixes full. The plain engine must agree.
+    #[test]
+    fn the_hand_gus_wins_on_the_plain_table() {
+        let (table, winnings) = run_the_hand_on_table().expect("hand should complete");
+
+        println!("\n=== Event Log ===");
+        for action in &table.event_log {
+            println!("{action}");
+        }
+
+        assert!(!winnings.is_empty(), "winnings should not be empty");
+
+        let gus_won = table.event_log.iter().any(|e| match e {
             TableAction::PlayerWins(seat, _, _, _, _)
             | TableAction::PlayerWinsMainPot(seat, _)
             | TableAction::PlayerWinsSidePot(seat, _) => *seat == 3,

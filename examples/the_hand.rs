@@ -25,7 +25,7 @@ use std::str::FromStr;
 fn main() -> Result<(), PKError> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-    let table = TestData::the_hand_table();
+    let table = TestData::the_hand_table_celled();
 
     setup(&table)?;
     let preflop_pot = preflop(&table)?;

@@ -1,4 +1,4 @@
-use crate::prelude::{SeatEquity, Seatbit, TableCelled};
+use crate::prelude::{SeatEquity, Seatbit, Table, TableCelled};
 use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display, Formatter};
 use std::sync::OnceLock;
@@ -288,6 +288,35 @@ impl Display for TableEquity {
     }
 }
 
+/// Per-seat equity weights for a plain [`Table`], mirroring the celled
+/// conversion below. Seats with no chips in play are skipped entirely; seats
+/// that have chips in play but are out of the hand get a default `Seatbit`, so
+/// their chips still count toward the pot without claiming a share of it.
+///
+/// Replaces `From<&TableCelled>` when EPIC-83 Phase 3 lands.
+impl From<&Table> for TableEquity {
+    fn from(table: &Table) -> Self {
+        let mut v: Vec<SeatEquity> = Vec::new();
+
+        for (index, seat) in table.seats.iter().enumerate() {
+            if seat.player.chips_in_play > 0 {
+                let seatbit = if seat.is_in_hand() {
+                    Seatbit::from(index)
+                } else {
+                    Seatbit::default()
+                };
+                v.push(SeatEquity::new(seat.player.chips_in_play, seatbit));
+            }
+        }
+
+        if v.is_empty() {
+            TableEquity::default()
+        } else {
+            TableEquity::new(v)
+        }
+    }
+}
+
 impl From<&TableCelled> for TableEquity {
     fn from(table: &TableCelled) -> Self {
         let mut v: Vec<SeatEquity> = Vec::new();
@@ -316,6 +345,29 @@ impl From<&TableCelled> for TableEquity {
 mod casino__equity__table_equity_tests {
     use super::*;
     use crate::prelude::Seatbit;
+
+    // ── EPIC-83: equity from the plain Table ─────────────────────────────────
+
+    #[test]
+    fn table_equity_from_table_counts_only_seats_with_chips_in_play() {
+        use crate::casino::game::ForcedBets;
+        use crate::casino::table::{Player, Seat, Seats, Table};
+
+        let mut table = Table::nlh_from_seats(
+            Seats::new(vec![
+                Seat::new(Player::new_with_chips("Ann".to_string(), 1_000)),
+                Seat::new(Player::new_with_chips("Bo".to_string(), 1_000)),
+                Seat::default(),
+            ]),
+            ForcedBets::new(50, 100),
+        );
+        table.act_forced_bets().unwrap();
+
+        let equity = TableEquity::from(&table);
+
+        // Only the two blinds have chips in play; the empty seat has none.
+        assert_eq!(2, equity.len());
+    }
 
     #[test]
     fn test_seat_equities_new_sorts_and_consolidates_matching_chip_counts() {

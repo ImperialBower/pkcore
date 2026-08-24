@@ -30,6 +30,8 @@ use crate::games::{GameFamily, GamePhase, GameType};
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
+use crate::play::stages::flop_eval::FlopEval;
+use crate::play::stages::turn_eval::TurnEval;
 use crate::play::visibility::Visibility;
 use crate::{PKError, Pile};
 use std::collections::HashMap;
@@ -37,6 +39,7 @@ use std::fmt::{Display, Formatter};
 use uuid::Uuid;
 
 mod actions;
+mod pkstate_interop;
 mod player;
 mod seat;
 mod seats;
@@ -80,7 +83,7 @@ pub enum VisibleHandMode {
 /// let table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
 /// assert_eq!(2, table.seats.size());
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Table {
     pub id: Uuid,
     pub name: String,
@@ -146,7 +149,66 @@ pub struct Table {
     pub blind_shortfall: usize,
 }
 
+/// A six-handed No Limit Hold'em table with 50/100 blinds, every seat empty
+/// and a full sorted deck — the shape used by demos, doc examples, and quick
+/// experiments.
+///
+/// Mirrors `TableCelled::default()` (`src/casino/table_celled.rs:1539`), which
+/// EPIC-83 Phase 3 removes.
+impl Default for Table {
+    fn default() -> Self {
+        let seats = Seats::new(
+            (0..6)
+                .map(|_| {
+                    Seat::new_with_cards(
+                        Player::default(),
+                        BoxedCards::blanks(GameType::NoLimitHoldem.cards_per_player() as usize),
+                    )
+                })
+                .collect(),
+        );
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+        table.id = Uuid::default();
+        table.name = "Default No Limit Hold'em Table".to_string();
+        table
+    }
+}
+
 impl Table {
+    /// A No Limit Hold'em table whose deck is replaced by `dealt`, in order.
+    ///
+    /// This is how a *known* hand is set up — a replayed hand history, or a
+    /// fixture that must produce a specific board. Every deal comes off
+    /// `dealt` from the top, so the caller controls exactly which cards land
+    /// where, burn cards included.
+    ///
+    /// Ported from `TableCelled::nlh_primed` by EPIC-83.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::cards::Cards;
+    /// use pkcore::casino::game::ForcedBets;
+    /// use pkcore::casino::table::{Player, Seat, Seats, Table};
+    /// use pkcore::prelude::Forgiving;
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("Ann".to_string(), 1_000)),
+    ///     Seat::new(Player::new_with_chips("Bo".to_string(), 1_000)),
+    /// ]);
+    /// let primed = Cards::forgiving_from_str("A♠ K♠ Q♠ J♠");
+    ///
+    /// let table = Table::nlh_primed(seats, &primed, ForcedBets::new(50, 100));
+    ///
+    /// assert_eq!(4, table.deck.len(), "only the primed cards are in the deck");
+    /// ```
+    #[must_use]
+    pub fn nlh_primed(seats: Seats, dealt: &Cards, forced: ForcedBets) -> Self {
+        let mut table = Table::nlh_from_seats(seats, forced);
+        table.deck = dealt.clone();
+        table
+    }
+
     /// Constructs a No-Limit Hold'em table from an existing `Seats`.
     ///
     /// The deck is initialised as a standard 52-card deck with any cards
@@ -1282,6 +1344,318 @@ impl Table {
         self.event_log.iter().filter(|a| *a == action).count()
     }
 
+    // ── Hand setup ────────────────────────────────────────────────────────────
+
+    /// Marks the start of a new hand.
+    ///
+    /// Only the phase and the ledger entry — the table is *not* cleaned up
+    /// here. [`reset`](Table::reset) is the method that mucks cards, returns
+    /// them to the deck, and audits it; callers that need both run `reset`
+    /// first.
+    ///
+    /// Ported from `TableCelled::act_new_hand` by EPIC-83.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    /// use pkcore::games::GamePhase;
+    ///
+    /// let mut table = Table::default();
+    /// table.act_new_hand();
+    ///
+    /// assert_eq!(GamePhase::NewHand, table.phase);
+    /// ```
+    pub fn act_new_hand(&mut self) {
+        self.phase = GamePhase::NewHand;
+        self.log(TableAction::NewHand);
+    }
+
+    /// Shuffles the deck in place and records it.
+    ///
+    /// Ported from `TableCelled::act_shuffle_deck` by EPIC-83.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    /// use pkcore::games::GamePhase;
+    ///
+    /// let mut table = Table::default();
+    /// let dealt_before = table.deck.len();
+    ///
+    /// table.act_shuffle_deck();
+    ///
+    /// assert_eq!(GamePhase::ShuffleNewDeck, table.phase);
+    /// assert_eq!(dealt_before, table.deck.len(), "shuffling loses no cards");
+    /// ```
+    pub fn act_shuffle_deck(&mut self) {
+        self.phase = GamePhase::ShuffleNewDeck;
+        self.deck.shuffle_in_place();
+        self.log(TableAction::ShuffleDeck);
+    }
+
+    /// The handle of the player at `seat_number`, or an empty string when the
+    /// seat does not exist.
+    ///
+    /// Used to render event-log entries, which name players rather than seat
+    /// numbers. Ported from `TableCelled::get_seat_handle` by EPIC-83.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    ///
+    /// let table = Table::default();
+    /// assert_eq!(String::default(), table.get_seat_handle(99), "no such seat");
+    /// ```
+    #[must_use]
+    pub fn get_seat_handle(&self, seat_number: u8) -> String {
+        self.seats
+            .get_seat(seat_number)
+            .map(|seat| seat.player.handle.clone())
+            .unwrap_or_default()
+    }
+
+    /// True once any player still in the hand has chips committed this street.
+    ///
+    /// Distinct from [`Seats::is_betting_complete`](crate::casino::table::Seats::is_betting_complete),
+    /// which asks whether the round is *over*. This asks whether it has begun.
+    ///
+    /// Ported from `TableCelled::is_betting_started` by EPIC-83.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    ///
+    /// let table = Table::default();
+    /// assert!(!table.is_betting_started(), "nobody has bet yet");
+    /// ```
+    #[must_use]
+    pub fn is_betting_started(&self) -> bool {
+        self.seats.iter().any(|seat| seat.is_in_hand() && seat.player.bet > 0)
+    }
+
+    // ── Street evaluation ─────────────────────────────────────────────────────
+    //
+    // Ported from `TableCelled` by EPIC-83. Each street has a pair: one that
+    // returns a `Result` for callers that handle failure, and a `_display`
+    // twin that prints and logs the error instead, for REPLs and replays.
+
+    /// Evaluates the flop for every seat still in the hand.
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::NotEnoughCards`] before the flop is out.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    ///
+    /// let table = Table::default();
+    /// assert!(table.eval_flop().is_err(), "no flop has been dealt");
+    /// ```
+    pub fn eval_flop(&self) -> Result<FlopEval, PKError> {
+        FlopEval::try_from(self)
+    }
+
+    /// Prints [`eval_flop`](Table::eval_flop), logging instead of failing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    ///
+    /// // Never panics, even with nothing to evaluate.
+    /// Table::default().eval_flop_display();
+    /// ```
+    pub fn eval_flop_display(&self) {
+        match self.eval_flop() {
+            Ok(eval) => println!("{eval}"),
+            Err(error) => log::error!("Failed to FlopEval from table: {error}"),
+        }
+    }
+
+    /// Evaluates the turn for every seat still in the hand.
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::NotEnoughCards`] before the turn is out.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    ///
+    /// assert!(Table::default().eval_turn().is_err());
+    /// ```
+    pub fn eval_turn(&self) -> Result<TurnEval, PKError> {
+        TurnEval::try_from(self)
+    }
+
+    /// Prints [`eval_turn`](Table::eval_turn), logging instead of failing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    ///
+    /// Table::default().eval_turn_display();
+    /// ```
+    pub fn eval_turn_display(&self) {
+        match self.eval_turn() {
+            Ok(eval) => println!("{eval}"),
+            Err(error) => log::error!("Failed to TurnEval from table: {error}"),
+        }
+    }
+
+    /// Ranks every seat's hand on the complete board.
+    ///
+    /// # Errors
+    ///
+    /// [`PKError::NotEnoughCards`] before the river is out.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    ///
+    /// assert!(Table::default().eval_river().is_err());
+    /// ```
+    pub fn eval_river(&self) -> Result<CaseEval, PKError> {
+        Game::try_from(self)?.river_case_eval()
+    }
+
+    /// Prints the river results, logging instead of failing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    ///
+    /// Table::default().eval_river_display();
+    /// ```
+    pub fn eval_river_display(&self) {
+        match Game::try_from(self) {
+            Ok(game) => game.river_display_results(),
+            Err(error) => log::error!("Failed to create game from table: {error}"),
+        }
+    }
+
+    // ── Commentary ────────────────────────────────────────────────────────────
+    //
+    // Presentation over the event ledger, ported from `TableCelled` by
+    // EPIC-83. Every entry that names a seat is rendered with that player's
+    // handle rather than a bare seat number.
+
+    /// Who is on the clock, in words.
+    ///
+    /// Returns `"All players have acted"` once the round is complete, and an
+    /// empty string when the seat on the clock does not exist.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    ///
+    /// let table = Table::default();
+    /// // Every seat is empty, so nobody has action left to give. The seat
+    /// // still exists, so this is "complete", not "no such seat".
+    /// assert_eq!("All players have acted", table.commentary_action_to());
+    /// ```
+    #[must_use]
+    pub fn commentary_action_to(&self) -> String {
+        let action_to = self.next_to_act();
+        match self.seats.get_seat(action_to) {
+            Some(seat) if !self.seats.is_betting_complete() => {
+                format!("Action to Seat {} {}", action_to, seat.player.handle)
+            }
+            Some(_) => "All players have acted".to_string(),
+            None => String::default(),
+        }
+    }
+
+    /// Prints every event in the ledger, one per line, naming players.
+    ///
+    /// A debugging aid — it writes to stdout rather than returning a string.
+    /// Use [`commentary_last`](Table::commentary_last) to capture one line.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    ///
+    /// let mut table = Table::default();
+    /// table.act_new_hand();
+    /// table.commentary_dump(); // prints "--- New Hand"
+    /// ```
+    pub fn commentary_dump(&self) {
+        for event in &self.event_log {
+            println!("--- {}", self.render_event(event));
+        }
+    }
+
+    /// The most recent event, rendered.
+    ///
+    /// Empty when the ledger is empty.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    ///
+    /// let mut table = Table::default();
+    /// table.act_new_hand();
+    ///
+    /// assert_eq!("New Hand", table.commentary_last());
+    /// ```
+    #[must_use]
+    pub fn commentary_last(&self) -> String {
+        self.event_log
+            .last()
+            .map(|event| self.render_event(event))
+            .unwrap_or_default()
+    }
+
+    /// The most recent event that was a *player* action, as
+    /// `"<handle> <action>"`.
+    ///
+    /// Skips dealer events (shuffles, deals, button moves), so it answers
+    /// "what did somebody last do?" rather than "what last happened?".
+    /// `None` when no player has acted yet.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    ///
+    /// let mut table = Table::default();
+    /// table.act_shuffle_deck(); // a dealer event, not a player action
+    ///
+    /// assert_eq!(None, table.commentary_last_player_action());
+    /// ```
+    #[must_use]
+    pub fn commentary_last_player_action(&self) -> Option<String> {
+        let action = self.event_log.iter().rev().find(|action| action.is_player_action())?;
+        let seat_number = action.get_seat()?;
+        let seat = self.seats.get_seat(seat_number)?;
+        Some(format!("{} {}", seat.player.handle, action))
+    }
+
+    /// Renders one event, substituting the acting player's handle when the
+    /// event names a seat that exists.
+    fn render_event(&self, event: &TableAction) -> String {
+        match event
+            .get_seat()
+            .and_then(|seat_number| self.seats.get_seat(seat_number))
+        {
+            Some(seat) => event.commentary(&seat.player.handle),
+            None => event.to_string(),
+        }
+    }
+
     // ── Logging ───────────────────────────────────────────────────────────────
 
     fn log(&mut self, action: TableAction) {
@@ -1294,7 +1668,26 @@ impl Table {
             .any(|a| matches!(a, TableAction::ForcedBetSmallBlind(_, _)))
     }
 
-    fn determine_betting_phase(&self) -> GamePhase {
+    /// Which betting round the board says we are on.
+    ///
+    /// Derived purely from how many community cards are out, so it answers
+    /// "where is this hand?" even for a table rebuilt from a log, where
+    /// `phase` may not have been set. Anything other than 0/3/4/5 cards means
+    /// the hand is past betting, so it reports `Showdown`.
+    ///
+    /// Made public by EPIC-83 for the Pluribus replay path.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    /// use pkcore::games::GamePhase;
+    ///
+    /// let table = Table::default();
+    /// assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
+    /// ```
+    #[must_use]
+    pub fn determine_betting_phase(&self) -> GamePhase {
         match self.board.len() {
             0 => GamePhase::BettingPreFlop,
             3 => GamePhase::BettingFlop,
@@ -2471,8 +2864,10 @@ impl Display for Table {
 #[allow(non_snake_case)]
 mod casino__table_tests {
     use super::*;
+    use crate::arrays::three::Three;
     use crate::casino::game::ForcedBets;
     use crate::casino::state::PlayerState;
+    use crate::prelude::Forgiving;
 
     fn make_two_player_table() -> Table {
         let seats = Seats::new(vec![
@@ -3922,4 +4317,309 @@ mod casino__table_tests {
     }
 
     // endregion Razz
+
+    // region EPIC-83 — ported from TableCelled
+
+    #[test]
+    fn a_cloned_table_equals_its_original_until_something_changes() {
+        // `TableCelled` derived `Eq`/`PartialEq`; `Table` needs them for
+        // parity, because `Nubificus` derives equality through its table.
+        // Compare a clone rather than two fresh builds — every `Player::new*`
+        // mints a new `Uuid`, so two independently built tables are never
+        // equal, and should not be.
+        let table = Table::nlh_primed(
+            Seats::new(vec![
+                Seat::new(Player::new_with_chips("Ann".to_string(), 1_000)),
+                Seat::new(Player::new_with_chips("Bo".to_string(), 1_000)),
+            ]),
+            &cards!("A♠ K♠ Q♠ J♠"),
+            ForcedBets::new(50, 100),
+        );
+
+        let copy = table.clone();
+        assert_eq!(table, copy);
+
+        let mut moved_on = table.clone();
+        moved_on.pot += 100;
+        assert_ne!(table, moved_on, "a changed pot is a real difference");
+    }
+    #[test]
+    fn nlh_primed_deals_from_the_stacked_deck_in_order() {
+        // Priming the deck is how a replayed hand forces known cards out.
+        let primed = cards!("A♠ K♠ Q♠ J♠");
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Ann".to_string(), 1_000)),
+            Seat::new(Player::new_with_chips("Bo".to_string(), 1_000)),
+        ]);
+
+        let mut table = Table::nlh_primed(seats, &primed, ForcedBets::new(50, 100));
+
+        assert_eq!(4, table.deck.len(), "the deck is exactly what we primed");
+        table.deal_card_to_seat(0).unwrap();
+        assert_eq!(
+            Card::ACE_SPADES,
+            table
+                .seats
+                .get_seat(0)
+                .unwrap()
+                .cards
+                .cards()
+                .iter()
+                .next()
+                .copied()
+                .unwrap(),
+            "the first primed card goes out first"
+        );
+    }
+
+    /// A two-handed table dealt out to `street` ("flop" / "turn" / "river").
+    fn table_dealt_to(street: &str) -> Table {
+        let mut table = make_two_player_table();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        table.deal_flop().unwrap();
+        if street != "flop" {
+            table.deal_turn().unwrap();
+        }
+        if street == "river" {
+            table.deal_river().unwrap();
+        }
+        table
+    }
+
+    #[test]
+    fn eval_flop_evaluates_the_dealt_flop() {
+        let table = table_dealt_to("flop");
+
+        let eval = table.eval_flop().unwrap();
+
+        assert_eq!(Three::try_from(table.board.clone()).unwrap(), eval.board);
+    }
+
+    #[test]
+    fn eval_turn_evaluates_the_dealt_turn() {
+        let table = table_dealt_to("turn");
+
+        let eval = table.eval_turn().unwrap();
+
+        assert_eq!(Game::try_from(&table).unwrap(), eval.game);
+    }
+
+    #[test]
+    fn eval_river_evaluates_the_complete_board() {
+        let table = table_dealt_to("river");
+
+        let case_eval = table.eval_river().unwrap();
+
+        assert_eq!(2, case_eval.len(), "one ranked hand per seat");
+    }
+
+    #[test]
+    fn eval_flop_errors_before_the_flop_is_dealt() {
+        let table = make_two_player_table();
+
+        assert!(table.eval_flop().is_err());
+    }
+
+    #[test]
+    fn eval_display_helpers_survive_a_table_with_no_board() {
+        // They log the error rather than propagating it, so the contract is
+        // simply that they never panic.
+        let table = make_two_player_table();
+
+        table.eval_flop_display();
+        table.eval_turn_display();
+        table.eval_river_display();
+    }
+
+    #[test]
+    fn commentary_action_to_names_the_seat_on_the_clock() {
+        let mut table = make_two_player_table();
+        table.act_forced_bets().unwrap();
+
+        let line = table.commentary_action_to();
+
+        let expected = format!("Action to Seat {} ", table.next_to_act());
+        assert!(line.starts_with(&expected), "got: {line}");
+    }
+
+    #[test]
+    fn commentary_action_to_reports_a_finished_round() {
+        // Heads-up: once one player folds only one is left in the hand, so
+        // there is no more action to give.
+        let mut table = make_two_player_table();
+        table.act_forced_bets().unwrap();
+        let on_the_clock = table.next_to_act();
+        table.act_fold(on_the_clock).unwrap();
+
+        assert_eq!("All players have acted", table.commentary_action_to());
+    }
+
+    #[test]
+    fn commentary_last_renders_the_most_recent_event() {
+        let mut table = make_two_player_table();
+        table.act_new_hand();
+
+        assert_eq!(
+            TableAction::NewHand.to_string(),
+            table.commentary_last(),
+            "a seatless event renders as itself"
+        );
+    }
+
+    #[test]
+    fn commentary_last_is_empty_for_a_table_with_no_events() {
+        let mut table = make_two_player_table();
+        table.event_log.clear();
+
+        assert_eq!(String::default(), table.commentary_last());
+    }
+
+    #[test]
+    fn commentary_last_player_action_names_the_player() {
+        let mut table = make_two_player_table();
+        table.act_forced_bets().unwrap();
+        let seat = table.next_to_act();
+        let handle = table.get_seat_handle(seat);
+        table.act_fold(seat).unwrap();
+
+        let line = table
+            .commentary_last_player_action()
+            .expect("a fold is a player action");
+
+        assert!(line.starts_with(&handle), "got: {line}");
+    }
+
+    #[test]
+    fn commentary_last_player_action_is_none_before_anyone_acts() {
+        // Posting blinds is a forced bet, not a voluntary player action.
+        let mut table = make_two_player_table();
+        table.act_new_hand();
+        table.act_forced_bets().unwrap();
+
+        assert_eq!(None, table.commentary_last_player_action());
+    }
+
+    #[test]
+    fn determine_betting_phase_reads_the_board_length() {
+        let mut table = make_two_player_table();
+        assert_eq!(GamePhase::BettingPreFlop, table.determine_betting_phase());
+
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        table.deal_flop().unwrap();
+        assert_eq!(GamePhase::BettingFlop, table.determine_betting_phase());
+
+        table.deal_turn().unwrap();
+        assert_eq!(GamePhase::BettingTurn, table.determine_betting_phase());
+
+        table.deal_river().unwrap();
+        assert_eq!(GamePhase::BettingRiver, table.determine_betting_phase());
+    }
+
+    #[test]
+    fn get_seat_handle_names_the_seated_player() {
+        let table = make_two_player_table();
+
+        assert_eq!("Alice", table.get_seat_handle(0));
+    }
+
+    #[test]
+    fn get_seat_handle_is_empty_for_a_seat_that_does_not_exist() {
+        let table = make_two_player_table();
+
+        assert_eq!(String::default(), table.get_seat_handle(99));
+    }
+
+    #[test]
+    fn is_betting_started_is_false_before_any_chips_go_in() {
+        let table = make_two_player_table();
+
+        assert!(!table.is_betting_started());
+    }
+
+    #[test]
+    fn is_betting_started_is_true_once_the_blinds_are_posted() {
+        let mut table = make_two_player_table();
+
+        table.act_forced_bets().unwrap();
+
+        assert!(table.is_betting_started());
+    }
+
+    #[test]
+    fn default_is_a_six_handed_no_limit_holdem_table() {
+        let table = Table::default();
+
+        assert_eq!(GameType::NoLimitHoldem, table.game);
+        assert_eq!(6, table.seats.size());
+        assert_eq!(50, table.forced.small_blind);
+        assert_eq!(100, table.forced.big_blind);
+    }
+
+    #[test]
+    fn default_starts_with_a_full_deck_and_an_empty_board() {
+        let table = Table::default();
+
+        assert_eq!(52, table.deck.len());
+        assert!(table.board.is_empty());
+        assert_eq!(0, table.pot);
+        assert_eq!(0, table.bet);
+    }
+
+    #[test]
+    fn act_new_hand_sets_the_phase() {
+        let mut table = make_two_player_table();
+        table.phase = GamePhase::Showdown;
+
+        table.act_new_hand();
+
+        assert_eq!(GamePhase::NewHand, table.phase);
+    }
+
+    #[test]
+    fn act_new_hand_logs_the_action() {
+        let mut table = make_two_player_table();
+
+        table.act_new_hand();
+
+        assert!(table.event_log.contains(&TableAction::NewHand));
+    }
+
+    #[test]
+    fn act_shuffle_deck_sets_the_phase() {
+        let mut table = make_two_player_table();
+
+        table.act_shuffle_deck();
+
+        assert_eq!(GamePhase::ShuffleNewDeck, table.phase);
+    }
+
+    #[test]
+    fn act_shuffle_deck_logs_the_action() {
+        let mut table = make_two_player_table();
+
+        table.act_shuffle_deck();
+
+        assert!(table.event_log.contains(&TableAction::ShuffleDeck));
+    }
+
+    #[test]
+    fn act_shuffle_deck_reorders_the_deck_but_keeps_every_card() {
+        // `Cards` wraps an `IndexSet`, so `==` is set equality and cannot see
+        // order. Compare the ordered sequences instead.
+        let mut table = make_two_player_table();
+        let before: Vec<Card> = table.deck.iter().copied().collect();
+
+        table.act_shuffle_deck();
+        let after: Vec<Card> = table.deck.iter().copied().collect();
+
+        let (mut sorted_before, mut sorted_after) = (before.clone(), after.clone());
+        sorted_before.sort_unstable();
+        sorted_after.sort_unstable();
+        assert_eq!(sorted_before, sorted_after, "exactly the same cards");
+        assert_ne!(before, after, "in a different order");
+    }
+
+    // endregion EPIC-83
 }

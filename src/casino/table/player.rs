@@ -41,6 +41,38 @@ pub struct Player {
     pub state: PlayerState,
 }
 
+/// Snapshots an interior-mutable [`CelledPlayer`](crate::casino::player::Player)
+/// into a plain one, reading each `Cell` exactly once. Lossless — the two field
+/// sets are 1:1.
+///
+/// Migration scaffolding for EPIC-83; removed with `TableCelled` in Phase 3.
+impl From<&crate::casino::player::Player> for Player {
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::player::Player as CelledPlayer;
+    /// use pkcore::casino::table::Player;
+    ///
+    /// let celled = CelledPlayer::new_with_chips("Alice".to_string(), 1_000);
+    /// let plain = Player::from(&celled);
+    ///
+    /// assert_eq!("Alice", plain.handle);
+    /// assert_eq!(1_000, plain.chips);
+    /// assert_eq!(1_000, plain.withdrawn);
+    /// ```
+    fn from(celled: &crate::casino::player::Player) -> Self {
+        Player {
+            id: celled.id,
+            handle: celled.handle.clone(),
+            chips: celled.chips.count(),
+            bet: celled.bet.count(),
+            chips_in_play: celled.chips_in_play.get(),
+            withdrawn: celled.withdrawn.get(),
+            state: celled.state.get(),
+        }
+    }
+}
+
 impl Default for Player {
     fn default() -> Self {
         Player {
@@ -592,6 +624,7 @@ impl Display for Player {
 #[allow(non_snake_case)]
 mod casino__table__player_tests {
     use super::*;
+    use crate::casino::player::Player as CelledPlayer;
     use crate::casino::state::PlayerState;
 
     #[test]
@@ -746,5 +779,55 @@ mod casino__table__player_tests {
         let mut p = Player::new("Broke".to_string());
         let result = p.act_blind_or_all_in(100);
         assert_eq!(Err(PKError::InsufficientChips), result);
+    }
+
+    // ── EPIC-83 Phase 0: cross-family bridge ─────────────────────────────────
+
+    /// Builds a celled player with every chip counter set to a distinct value,
+    /// so a field swapped for another in the conversion is visible.
+    fn celled_fixture() -> CelledPlayer {
+        let celled = CelledPlayer::new_with_chips("Bridge".to_string(), 1_000);
+        // Move 400 out of the stack and into the round bet, so `chips` (600),
+        // `bet` (400), `chips_in_play` (250) and `withdrawn` (1_000) are all
+        // distinct — a conversion that crosses two fields cannot pass.
+        celled.bet.add_to(celled.chips.bet(400).unwrap());
+        celled.chips_in_play.set(250);
+        celled.state.set(PlayerState::Call(400));
+        celled
+    }
+
+    #[test]
+    fn player_from_celled_preserves_chips() {
+        let celled = celled_fixture();
+
+        let plain = Player::from(&celled);
+
+        assert_eq!(celled.chips.count(), plain.chips);
+        assert_eq!(celled.bet.count(), plain.bet);
+        assert_eq!(celled.chips_in_play.get(), plain.chips_in_play);
+        assert_eq!(celled.withdrawn.get(), plain.withdrawn);
+    }
+
+    #[test]
+    fn player_from_celled_preserves_identity_and_state() {
+        let celled = celled_fixture();
+
+        let plain = Player::from(&celled);
+
+        assert_eq!(celled.id, plain.id);
+        assert_eq!(celled.handle, plain.handle);
+        assert_eq!(celled.state.get(), plain.state);
+    }
+
+    #[test]
+    fn player_from_celled_does_not_default_the_state() {
+        // `Player::default()` uses `PlayerState::Out`. A conversion that forgot
+        // to carry `state` would silently produce `Out` and pass a laxer test.
+        let celled = celled_fixture();
+
+        let plain = Player::from(&celled);
+
+        assert_ne!(PlayerState::Out, plain.state);
+        assert_eq!(PlayerState::Call(400), plain.state);
     }
 }

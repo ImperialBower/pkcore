@@ -25,7 +25,137 @@ use std::fmt::{Display, Formatter};
 #[derive(Clone, Debug, Eq, PartialEq, Default)]
 pub struct Seats(pub Vec<Seat>);
 
+/// Snapshots an interior-mutable
+/// [`SeatsCell`](crate::casino::table_celled::seats::SeatsCell) into a plain
+/// [`Seats`] ring, preserving order.
+///
+/// Ring position is what decides the button and the blinds, so each seat is
+/// converted with its own index — see
+/// [`Seat::from_seat_cell`](super::Seat::from_seat_cell), which cannot derive
+/// that index on its own.
+///
+/// Migration scaffolding for EPIC-83; removed with `TableCelled` in Phase 3.
+impl From<&crate::casino::table_celled::seats::SeatsCell> for Seats {
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::player::Player as CelledPlayer;
+    /// use pkcore::casino::table::Seats;
+    /// use pkcore::casino::table_celled::seats::SeatsCell;
+    /// use pkcore::casino::table_celled::seats::seat::Seat as CelledSeat;
+    ///
+    /// let celled = SeatsCell::new(vec![
+    ///     CelledSeat::new(CelledPlayer::new_with_chips("Ann".to_string(), 100)),
+    ///     CelledSeat::new(CelledPlayer::new_with_chips("Bo".to_string(), 200)),
+    /// ]);
+    ///
+    /// let seats = Seats::from(&celled);
+    ///
+    /// assert_eq!(2, seats.size());
+    /// assert_eq!("Ann", seats.0[0].player.handle);
+    /// assert_eq!(1, seats.0[1].hand.seat());
+    /// ```
+    fn from(celled: &crate::casino::table_celled::seats::SeatsCell) -> Self {
+        Seats(
+            celled
+                .iter()
+                .enumerate()
+                .map(|(index, cell)| Seat::from_seat_cell(cell, u8::try_from(index).unwrap_or(u8::MAX)))
+                .collect(),
+        )
+    }
+}
+
+/// Builds a ring from player names, in order.
+///
+/// The entry point for replaying a hand history, which names its players
+/// before it says anything about their stacks.
+impl From<Vec<String>> for Seats {
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Seats;
+    ///
+    /// let seats = Seats::from(vec!["Ann".to_string(), "Bo".to_string()]);
+    ///
+    /// assert_eq!(2, seats.size());
+    /// assert_eq!("Bo", seats.0[1].player.handle);
+    /// ```
+    fn from(handles: Vec<String>) -> Self {
+        Seats(handles.into_iter().map(Seat::from).collect())
+    }
+}
+
 impl Seats {
+    /// The largest ring a table supports, matching the celled `SeatsCell`.
+    pub const MAX_NUMBER_SEATS: u8 = 10;
+
+    /// Walks the ring in seat order.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats};
+    ///
+    /// let seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("Ann".to_string(), 100)),
+    ///     Seat::new(Player::new_with_chips("Bo".to_string(), 200)),
+    /// ]);
+    ///
+    /// assert_eq!(2, seats.iter().count());
+    /// ```
+    pub fn iter(&self) -> std::slice::Iter<'_, Seat> {
+        self.0.iter()
+    }
+
+    /// Walks the ring in seat order, allowing each seat to be changed.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::state::PlayerState;
+    /// use pkcore::casino::table::{Player, Seat, Seats};
+    ///
+    /// let mut seats = Seats::new(vec![
+    ///     Seat::new(Player::new_with_chips("Ann".to_string(), 100)),
+    /// ]);
+    ///
+    /// for seat in seats.iter_mut() {
+    ///     seat.player.state = PlayerState::Fold;
+    /// }
+    ///
+    /// assert_eq!(PlayerState::Fold, seats.0[0].player.state);
+    /// ```
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, Seat> {
+        self.0.iter_mut()
+    }
+
+    /// Puts `seat` at `seat_number`, returning whoever was there.
+    ///
+    /// # Errors
+    ///
+    /// - [`PKError::TableFull`] when `seat_number` is past the end of the ring.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::{Player, Seat, Seats};
+    ///
+    /// let mut seats = Seats::new(vec![Seat::default(), Seat::default()]);
+    /// let arriving = Seat::new(Player::new_with_chips("Ann".to_string(), 100));
+    ///
+    /// let leaving = seats.assign(1, arriving).unwrap();
+    ///
+    /// assert!(leaving.is_empty());
+    /// assert_eq!("Ann", seats.0[1].player.handle);
+    /// ```
+    pub fn assign(&mut self, seat_number: usize, seat: Seat) -> Result<Seat, PKError> {
+        if seat_number >= self.size() as usize {
+            return Err(PKError::TableFull);
+        }
+        Ok(std::mem::replace(&mut self.0[seat_number], seat))
+    }
+
     /// Wraps the given seats.
     ///
     /// # Examples
@@ -594,8 +724,11 @@ impl Display for Seats {
 #[allow(non_snake_case)]
 mod casino__table__seats_tests {
     use super::*;
+    use crate::casino::player::Player as CelledPlayer;
     use crate::casino::state::PlayerState;
     use crate::casino::table::Player;
+    use crate::casino::table_celled::seats::SeatsCell;
+    use crate::casino::table_celled::seats::seat::Seat as CelledSeat;
 
     #[test]
     fn seats_size() {
@@ -698,5 +831,104 @@ mod casino__table__seats_tests {
         ]);
 
         assert_eq!(1, seats.count_occupied());
+    }
+
+    #[test]
+    fn seats_iter_walks_the_ring_in_order() {
+        let seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Ann".to_string(), 100)),
+            Seat::new(Player::new_with_chips("Bo".to_string(), 200)),
+        ]);
+
+        let handles: Vec<&str> = seats.iter().map(|s| s.player.handle.as_str()).collect();
+
+        assert_eq!(vec!["Ann", "Bo"], handles);
+    }
+
+    #[test]
+    fn seats_iter_mut_can_change_every_seat() {
+        let mut seats = Seats::new(vec![
+            Seat::new(Player::new_with_chips("Ann".to_string(), 100)),
+            Seat::new(Player::new_with_chips("Bo".to_string(), 200)),
+        ]);
+
+        for seat in seats.iter_mut() {
+            seat.player.state = PlayerState::Fold;
+        }
+
+        assert!(seats.0.iter().all(|s| s.player.state == PlayerState::Fold));
+    }
+
+    #[test]
+    fn seats_assign_replaces_and_returns_the_old_seat() {
+        let mut seats = Seats::new(vec![Seat::default(), Seat::default()]);
+        let incoming = Seat::new(Player::new_with_chips("Ann".to_string(), 100));
+
+        let old = seats.assign(1, incoming).unwrap();
+
+        assert!(old.is_empty(), "the seat that was there is handed back");
+        assert_eq!("Ann", seats.0[1].player.handle);
+        assert!(seats.0[0].is_empty(), "other seats untouched");
+    }
+
+    #[test]
+    fn seats_assign_past_the_end_is_an_error() {
+        let mut seats = Seats::new(vec![Seat::default()]);
+
+        let result = seats.assign(5, Seat::default());
+
+        assert_eq!(Err(PKError::TableFull), result);
+    }
+
+    #[test]
+    fn seats_max_number_seats_is_ten() {
+        assert_eq!(10, Seats::MAX_NUMBER_SEATS);
+    }
+
+    #[test]
+    fn seats_from_names_builds_the_ring_in_order() {
+        let seats = Seats::from(vec!["Ann".to_string(), "Bo".to_string()]);
+
+        assert_eq!(2, seats.size());
+        assert_eq!("Ann", seats.0[0].player.handle);
+        assert_eq!("Bo", seats.0[1].player.handle);
+    }
+
+    // ── EPIC-83 Phase 0: cross-family bridge ─────────────────────────────────
+
+    fn celled_ring() -> SeatsCell {
+        SeatsCell::new(vec![
+            CelledSeat::new(CelledPlayer::new_with_chips("Ann".to_string(), 100)),
+            CelledSeat::new(CelledPlayer::new_with_chips("Bo".to_string(), 200)),
+            CelledSeat::new(CelledPlayer::new_with_chips("Cy".to_string(), 300)),
+        ])
+    }
+
+    #[test]
+    fn seats_from_seats_cell_preserves_ring_order() {
+        // Ring order decides the button and the blinds, so a conversion that
+        // reordered seats would silently corrupt every hand.
+        let celled = celled_ring();
+
+        let seats = Seats::from(&celled);
+
+        assert_eq!(3, seats.size());
+        assert_eq!("Ann", seats.0[0].player.handle);
+        assert_eq!("Bo", seats.0[1].player.handle);
+        assert_eq!("Cy", seats.0[2].player.handle);
+        assert_eq!(100, seats.0[0].player.chips);
+        assert_eq!(300, seats.0[2].player.chips);
+    }
+
+    #[test]
+    fn seats_from_seats_cell_numbers_each_seat_hand() {
+        // Each `SeatHand` must carry its own ring position, not index 0.
+        let celled = celled_ring();
+
+        let seats = Seats::from(&celled);
+
+        assert_eq!(0, seats.0[0].hand.seat());
+        assert_eq!(1, seats.0[1].hand.seat());
+        assert_eq!(2, seats.0[2].hand.seat());
     }
 }

@@ -1,11 +1,11 @@
 use crate::PKError;
-use crate::prelude::{ForcedBets, SeatsCell, TableCelled};
+use crate::prelude::{ForcedBets, Seats, Table};
 use std::collections::HashMap;
 use uuid::Uuid;
 
 #[allow(dead_code)]
 pub struct TableManager {
-    pub tables: HashMap<Uuid, TableCelled>,
+    pub tables: HashMap<Uuid, Table>,
     pub event_queue: Vec<TableEvent>,
 }
 
@@ -34,8 +34,8 @@ impl TableManager {
         }
     }
 
-    pub fn create_table(&mut self, seats: SeatsCell, forced_bets: ForcedBets) -> Uuid {
-        let table = TableCelled::nlh_from_seats(seats, forced_bets);
+    pub fn create_table(&mut self, seats: Seats, forced_bets: ForcedBets) -> Uuid {
+        let table = Table::nlh_from_seats(seats, forced_bets);
         let id = table.id;
         self.tables.insert(id, table);
         id
@@ -58,57 +58,57 @@ impl TableManager {
     fn handle_event(&mut self, event: &TableEvent) -> Result<(), PKError> {
         match *event {
             TableEvent::ActBet { table_id, seat, amount } => {
-                if let Some(table) = self.tables.get(&table_id) {
+                if let Some(table) = self.tables.get_mut(&table_id) {
                     table.act_bet(seat, amount)?;
                 }
             }
             TableEvent::ActRaise { table_id, seat, amount } => {
-                if let Some(table) = self.tables.get(&table_id) {
+                if let Some(table) = self.tables.get_mut(&table_id) {
                     table.act_raise(seat, amount)?;
                 }
             }
             TableEvent::ActCall { table_id, seat } => {
-                if let Some(table) = self.tables.get(&table_id) {
+                if let Some(table) = self.tables.get_mut(&table_id) {
                     table.act_call(seat)?;
                 }
             }
             TableEvent::ActCheck { table_id, seat } => {
-                if let Some(table) = self.tables.get(&table_id) {
+                if let Some(table) = self.tables.get_mut(&table_id) {
                     table.act_check(seat)?;
                 }
             }
             TableEvent::ActFold { table_id, seat } => {
-                if let Some(table) = self.tables.get(&table_id) {
+                if let Some(table) = self.tables.get_mut(&table_id) {
                     table.act_fold(seat)?;
                 }
             }
             TableEvent::ActAllIn { table_id, seat } => {
-                if let Some(table) = self.tables.get(&table_id) {
+                if let Some(table) = self.tables.get_mut(&table_id) {
                     table.act_all_in(seat)?;
                 }
             }
             TableEvent::DealCards { table_id } => {
-                if let Some(table) = self.tables.get(&table_id) {
+                if let Some(table) = self.tables.get_mut(&table_id) {
                     table.deal_cards_to_seats()?;
                 }
             }
             TableEvent::DealFlop { table_id } => {
-                if let Some(table) = self.tables.get(&table_id) {
+                if let Some(table) = self.tables.get_mut(&table_id) {
                     table.deal_flop()?;
                 }
             }
             TableEvent::DealTurn { table_id } => {
-                if let Some(table) = self.tables.get(&table_id) {
+                if let Some(table) = self.tables.get_mut(&table_id) {
                     table.deal_turn()?;
                 }
             }
             TableEvent::DealRiver { table_id } => {
-                if let Some(table) = self.tables.get(&table_id) {
+                if let Some(table) = self.tables.get_mut(&table_id) {
                     table.deal_river()?;
                 }
             }
             TableEvent::EndHand { table_id } => {
-                if let Some(table) = self.tables.get(&table_id) {
+                if let Some(table) = self.tables.get_mut(&table_id) {
                     table.end_hand()?;
                 }
             }
@@ -117,11 +117,11 @@ impl TableManager {
     }
 
     #[must_use]
-    pub fn get_table(&self, id: Uuid) -> Option<&TableCelled> {
+    pub fn get_table(&self, id: Uuid) -> Option<&Table> {
         self.tables.get(&id)
     }
 
-    pub fn remove_table(&mut self, id: Uuid) -> Option<TableCelled> {
+    pub fn remove_table(&mut self, id: Uuid) -> Option<Table> {
         self.tables.remove(&id)
     }
 }

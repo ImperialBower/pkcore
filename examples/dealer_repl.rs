@@ -33,7 +33,7 @@ use clap::Parser;
 use clap_repl::ClapEditor;
 use pkcore::casino::dealer::{Dealer, DealerAction, DealerError};
 use pkcore::casino::game::ForcedBets;
-use pkcore::casino::player::Player;
+use pkcore::casino::table::Player;
 use reedline::{DefaultPrompt, DefaultPromptSegment, FileBackedHistory};
 
 // ── Commands ─────────────────────────────────────────────────────────────────
@@ -347,7 +347,9 @@ fn handle(dealer: &mut Dealer, command: Command) {
 
         Command::Log => {
             println!("{}", "─".repeat(60));
-            println!("{}", dealer.event_log());
+            for action in dealer.event_log() {
+                println!("{action}");
+            }
             println!("{}", "─".repeat(60));
         }
 
@@ -382,8 +384,8 @@ fn print_action_to(dealer: &Dealer) {
     let seat = dealer.next_to_act();
     let pot = dealer.pot();
     print!("  Action to seat {seat}");
-    if let Some(s) = dealer.table.get_seat(seat) {
-        print!(" ({})  chips: {}", s.player.handle, s.player.chips.count());
+    if let Some(s) = dealer.table.seats.get_seat(seat) {
+        print!(" ({})  chips: {}", s.player.handle, s.player.chips);
     }
     println!("  pot: {pot}");
 }
@@ -391,14 +393,10 @@ fn print_action_to(dealer: &Dealer) {
 fn print_chips(dealer: &Dealer) {
     println!("{}", "─".repeat(40));
     for i in 0..dealer.table.seats.size() {
-        if let Some(seat) = dealer.table.get_seat(i)
+        if let Some(seat) = dealer.table.seats.get_seat(i)
             && !seat.is_empty()
         {
-            println!(
-                "  Seat {i}  {}  →  {} chips",
-                seat.player.handle,
-                seat.player.chips.count()
-            );
+            println!("  Seat {i}  {}  →  {} chips", seat.player.handle, seat.player.chips);
         }
     }
     println!("{}", "─".repeat(40));

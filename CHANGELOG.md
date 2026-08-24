@@ -9,6 +9,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Cross-family conversion bridges from the interior-mutable `TableCelled`
+  types to the plain `Table` ones, so callers can be migrated one at a time
+  ([EPIC-83](docs/epics/EPIC-83_Table_Decelled.md) Phase 0):
+  `From<&casino::player::Player> for casino::table::Player`,
+  `Seat::from_seat_cell(&SeatCell, u8)`, and
+  `From<&SeatsCell> for casino::table::Seats`.
+  Seat conversion takes the ring index as an explicit argument rather than
+  being a `From` impl: the celled `Seat` carries no seat number, but the plain
+  one's `SeatHand` needs it, and defaulting it to `0` would mislabel every seat
+  but the first — which would corrupt button and blind positions. These bridges
+  are temporary and are removed together with `TableCelled` in Phase 3.
+- Plain-family API the celled family already had, needed to move callers off
+  `TableCelled` ([EPIC-83](docs/epics/EPIC-83_Table_Decelled.md) Phase 1):
+  `Seats::iter`, `Seats::iter_mut`, `Seats::assign`, `Seats::MAX_NUMBER_SEATS`,
+  `Seat::new_with_cards`, and `impl Default for Table` (a six-handed NLHE table
+  with 50/100 blinds). Unlike the Phase 0 bridges these are permanent.
+- `Table::act_new_hand` and `Table::act_shuffle_deck`, ported from
+  `TableCelled` (EPIC-83 Phase 1). `act_button_move` was not ported —
+  `Table::button_up` already does the same thing.
+- `TryFrom<&Table> for Game`, `TryFrom<&Table>` for `FlopEval` / `TurnEval` /
+  `RiverEval`, and `From<&Table> for TableEquity`, alongside the existing
+  celled conversions (EPIC-83 Phase 1).
+- Street evaluation, commentary, and hand-setup methods on `Table`, ported from
+  `TableCelled` ([EPIC-83](docs/epics/EPIC-83_Table_Decelled.md) Phase 2):
+  `eval_flop` / `eval_turn` / `eval_river` and their `_display` twins,
+  `commentary_action_to` / `commentary_dump` / `commentary_last` /
+  `commentary_last_player_action`, `get_seat_handle`, `is_betting_started`, and
+  `nlh_primed` (a table whose deck is replaced by a known, stacked one).
+  `Table::determine_betting_phase` became public. `Table` also gained `Eq` /
+  `PartialEq`, which `TableCelled` already had.
+- `TryFrom<&Pluribus> for Table` (`src/analysis/nubibus.rs`), so a Pluribus hand
+  log rebuilds as a playable plain table. The fixed 10,000-chip stake is now
+  named `Pluribus::STARTING_STACK` instead of an inline literal.
+- `From<&Table>` / `From<Table>` for `pkstate::PKState`, in the new
+  `casino::table::pkstate_interop` module — with the eight tests the celled
+  conversion never had.
+- `From<String> for casino::table::Seat` and `From<Vec<String>> for
+  casino::table::Seats`, for building a ring from player names alone.
 - `scripts/build_epub.sh` — builds `book.epub` from every markdown file in
   the repo (root files first, then everything under subfolders, excluding
   build/tool-state dirs like `target/`, `.git/`, `generated/`) via `pandoc`.
@@ -16,7 +54,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pictures linked with relative paths (e.g. `docs/epics/*.md` pointing at
   `../files/*.png`) are found and packed into the book.
 
+### Changed
+
+- **BREAKING: `Dealer` now owns a `casino::table::Table` instead of a
+  `TableCelled`** ([EPIC-83](docs/epics/EPIC-83_Table_Decelled.md) Phase 1).
+  Because the plain engine mutates through `&mut self` rather than through
+  interior mutability, six methods changed from `&self` to `&mut self`:
+  `seat_player`, `seat_player_at`, `remove_player`, `act`, `do_ready`, and
+  `set_funded_players_to_yet_to_act`. Callers holding a shared `Dealer`
+  reference across one of these calls will no longer compile — which is the
+  point: those were exactly the aliased mutations the celled design allowed.
+  `Dealer::seat_player` and `seat_player_at` now take a
+  `casino::table::Player`, and `Dealer::event_log` returns `&[TableAction]`
+  instead of `&TableLog`.
+- **`Dealer::do_ready` now actually readies a folded player.** The celled
+  engine routed the state change through `PlayerStateCell::set`, which silently
+  refused the `Fold` → `Ready` transition and left the player folded while
+  still returning `Ok`. The plain engine sets it, which is what the method
+  says it does. Pinned by
+  `do_ready_moves_a_folded_player_all_the_way_to_ready`.
+- `TableManager` stores `Table` rather than `TableCelled`; `create_table` takes
+  `Seats` (EPIC-83 Phase 1).
+- `Nubificus` (the Pluribus log replayer) now drives a `casino::table::Table`.
+  `play_hand`, `play_hand_display`, and `do_action` take `&mut self`, and
+  `Nubificus::act` takes `&mut Table`
+  ([EPIC-83](docs/epics/EPIC-83_Table_Decelled.md) Phase 2). All 30 replay
+  tests pass unchanged in substance.
+- `TestData::min_table` and `TestData::the_hand_table` now return a plain
+  `Table`. The interior-mutable originals are still available as
+  `min_table_celled` / `the_hand_table_celled` until `TableCelled` is removed.
+- `Util::commentary_action_to` takes a `&Table`.
+- `examples/game_state_demo.rs` reads state straight off `Table`'s public
+  fields instead of through the celled-only `get_game_state()` / `GameState`
+  wrapper, which EPIC-83 Phase 3 removes.
+
 ### Fixed
+
+- **Stacked test decks now deal to the right seats on `Table`.** The two engines
+  start dealing from different seats: `TableCelled` deals to the button first,
+  while `Table` deals one seat to its left — which is the actual poker rule, so
+  `Table` is the correct one. Every stacked fixture in `src/util/data.rs` had
+  been written against the celled behaviour, so replaying one on `Table`
+  rotated the whole hand by a seat. In "The Hand" that handed Daniel Negreanu
+  the 5♦ 5♣ that Gus Hansen actually held, and with it the pot.
+  `TestData::rotated_for_plain_deal` re-orders each dealing pass so both engines
+  seat the same cards. Pinned by two new integration tests,
+  `the_hand_completes_on_the_plain_table` and
+  `the_hand_gus_wins_on_the_plain_table` (`tests/hands.rs`) — before these, no
+  test asserted the winner of a complete hand on the plain engine at all.
+  ([EPIC-83](docs/epics/EPIC-83_Table_Decelled.md))
+- `tests/heavy_tests.rs` checks the Pluribus corpus again. It compared each
+  seat's `chips_in_play` after the hand, but `Table::end_hand` clears that when
+  it resets for the next hand — so its "nothing to compare" guard would have
+  fired on every completed hand, silently checking nothing. Hands the replay
+  resolves now have every seat's final stack compared against the log's
+  payoffs, winners included; hands the replay leaves unfinished keep the older
+  losing-seat commitment check.
+  ([EPIC-83](docs/epics/EPIC-83_Table_Decelled.md))
+- **`Pluribus` no longer reads a split-pot payoff as zero.** The corpus records
+  chopped pots to half a chip (`112.5`), and `parse_isizes` used a bare
+  `isize` parse with an `unwrap_or(0)` fallback, so a player who won 112.5
+  was recorded as having broken even. It now falls back to the integer part,
+  truncating toward zero.
+  ([EPIC-83](docs/epics/EPIC-83_Table_Decelled.md))
+- `Nubificus::do_action` no longer prints the whole table to stdout on every
+  street change during a non-display replay. The three `println!` calls were
+  outside the `display` guard, so batch replays such as the 10,000-hand
+  corpus test spewed three table renderings per hand.
+  ([EPIC-83](docs/epics/EPIC-83_Table_Decelled.md))
+- `Dealer::do_ready` actually readies a folded player; see **Changed**.
 
 - `docs/epics/EPIC-06_Preflop.md` — `3dayslater.png` link was missing the
   `../` back up to `docs/files/`, so the picture never rendered anywhere,

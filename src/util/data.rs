@@ -12,11 +12,13 @@ use crate::arrays::two::Two;
 use crate::bard::Bard;
 use crate::cards_cell::CardsCell;
 use crate::casino::player::Player;
+use crate::casino::table::Player as PlainPlayer;
+use crate::casino::table::Seat as PlainSeat;
 use crate::casino::table_celled::seats::seat::Seat;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
-use crate::prelude::{BoxedCards, ForcedBets, Forgiving, PlayerState, SeatsCell, TableCelled};
+use crate::prelude::{BoxedCards, ForcedBets, Forgiving, PlayerState, Seats, SeatsCell, Table, TableCelled};
 use crate::{Card, Cards, Pile};
 use std::str::FromStr;
 use wincounter::win::Win;
@@ -344,6 +346,53 @@ impl TestData {
         Vec::from(&TestData::the_hand_players()[2..5])
     }
 
+    /// Re-orders a stacked dealing list built for `TableCelled` so the plain
+    /// [`Table`] deals the same cards to the same seats.
+    ///
+    /// The two engines start dealing from different seats. `TableCelled` begins
+    /// **at** the button (`src/casino/table_celled.rs`, via
+    /// `DrainableBintCell::new_with_value(.., button)`); `Table` begins **one
+    /// seat to its left** (`(button + 1 + step) % seat_count`), which is the
+    /// actual poker rule. Each dealing pass therefore rotates left by one; the
+    /// burn and board cards that follow the hole cards are untouched.
+    #[must_use]
+    fn rotated_for_plain_deal(dealable: &Cards, seat_count: usize, cards_per: usize) -> Cards {
+        let all: Vec<Card> = dealable.iter().copied().collect();
+        let hole_count = seat_count * cards_per;
+        let mut out: Vec<Card> = Vec::with_capacity(all.len());
+
+        for pass in 0..cards_per {
+            let start = pass * seat_count;
+            let end = (start + seat_count).min(all.len());
+            let mut slice: Vec<Card> = all[start..end].to_vec();
+            slice.rotate_left(1);
+            out.extend(slice);
+        }
+        out.extend_from_slice(&all[hole_count.min(all.len())..]);
+
+        Cards::from(out)
+    }
+
+    /// The same roster as [`the_hand_players`](TestData::the_hand_players), as
+    /// plain [`Table`] seats.
+    ///
+    /// Derived from the celled roster through the EPIC-83 bridge so the list
+    /// of players lives in exactly one place. Phase 3 inverts this: the plain
+    /// roster becomes the original and the celled one goes away.
+    #[must_use]
+    pub fn the_hand_players_plain() -> Vec<PlainSeat> {
+        TestData::the_hand_players()
+            .iter()
+            .map(|seat| PlainSeat::new_with_cards(PlainPlayer::from(&seat.player), seat.cards.clone()))
+            .collect()
+    }
+
+    /// The three seats [`min_table`](TestData::min_table) uses.
+    #[must_use]
+    pub fn min_players_plain() -> Vec<PlainSeat> {
+        Vec::from(&TestData::the_hand_players_plain()[2..5])
+    }
+
     /// cargo run --example calc -- -d "A♦ Q♣ 6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"
     ///
     /// ```shell
@@ -353,7 +402,7 @@ impl TestData {
     /// Player #3 45.4% (45.13%/0.29%) [618604/4035]
     /// ```
     #[must_use]
-    pub fn min_table() -> TableCelled {
+    pub fn min_table_celled() -> TableCelled {
         // Layout: [hole×6] [burn1] [flop×3] [burn2] [turn] [burn3] [river]
         // Burns 2♦ 3♦ 4♦ are arbitrary cards not in hole cards or the board.
         let primed = cards!("A♦ 5♦ 6♠ Q♣ 5♣ 6♥ 2♦ 9♣ 6♦ 5♥ 3♦ 5♠ 4♦ 8♠");
@@ -365,10 +414,37 @@ impl TestData {
     }
 
     #[must_use]
-    pub fn the_hand_table() -> TableCelled {
+    pub fn the_hand_table_celled() -> TableCelled {
         TableCelled::nlh_primed(
             SeatsCell::new(TestData::the_hand_players()),
             &CardsCell::from(Cards::deck_primed(&TestData::the_hand_cards_dealable())),
+            ForcedBets::new(50, 100),
+        )
+    }
+
+    /// The three-handed fixture above, on the plain [`Table`] engine.
+    ///
+    /// EPIC-83: the `_celled` twin above goes away with `TableCelled`.
+    #[must_use]
+    pub fn min_table() -> Table {
+        // Layout: [hole×6] [burn1] [flop×3] [burn2] [turn] [burn3] [river]
+        // Burns 2♦ 3♦ 4♦ are arbitrary cards not in hole cards or the board.
+        let primed = cards!("A♦ 5♦ 6♠ Q♣ 5♣ 6♥ 2♦ 9♣ 6♦ 5♥ 3♦ 5♠ 4♦ 8♠");
+        let primed = TestData::rotated_for_plain_deal(&primed, 3, 2);
+        Table::nlh_primed(
+            Seats::new(TestData::min_players_plain()),
+            &Cards::deck_primed(&primed),
+            ForcedBets::new(50, 100),
+        )
+    }
+
+    /// "The Hand" fixture on the plain [`Table`] engine.
+    #[must_use]
+    pub fn the_hand_table() -> Table {
+        let primed = TestData::rotated_for_plain_deal(&TestData::the_hand_cards_dealable(), 8, 2);
+        Table::nlh_primed(
+            Seats::new(TestData::the_hand_players_plain()),
+            &Cards::deck_primed(&primed),
             ForcedBets::new(50, 100),
         )
     }

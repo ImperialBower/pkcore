@@ -2135,7 +2135,7 @@ mod casino__table_celled_tests {
 
     #[test]
     fn deal_cards_to_seats() {
-        let table = TestData::min_table();
+        let table = TestData::min_table_celled();
         assert!(!table.seats_are_dealt());
 
         table.deal_cards_to_seats().expect("WOOPSIE!!!");
@@ -2173,7 +2173,7 @@ mod casino__table_celled_tests {
     #[test]
     fn end_hand_resets_seats() {
         // Setup a minimal table and deal a hand
-        let table = TestData::min_table();
+        let table = TestData::min_table_celled();
 
         table.seats.set_eligible_to_yet_to_act();
         table.act_new_hand();

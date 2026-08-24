@@ -57,7 +57,7 @@ fn main() {
 
     // let seats = Table::generate_seats(6, 2);
     // let forced = ForcedBets::new(50, 100);
-    let table = TestData::the_hand_table();
+    let table = TestData::the_hand_table_celled();
 
     let prompt = DefaultPrompt {
         left_prompt: DefaultPromptSegment::Basic("table".to_owned()),

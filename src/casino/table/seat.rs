@@ -58,6 +58,48 @@ impl Default for Seat {
 }
 
 impl Seat {
+    /// Snapshots an interior-mutable
+    /// [`SeatCell`](crate::casino::table_celled::seats::seat_cell::SeatCell)
+    /// into a plain `Seat`.
+    ///
+    /// Deliberately **not** a `From` impl: the celled `Seat` carries no seat
+    /// index, but [`SeatHand`] needs one. A blind `From` would stamp every
+    /// seat with index `0`. The caller — normally
+    /// [`Seats::from`](super::Seats) walking the ring — supplies it.
+    ///
+    /// `bet_level_when_last_acted` starts at `0`; the celled family has no
+    /// counterpart to carry over.
+    ///
+    /// Migration scaffolding for EPIC-83; removed with `TableCelled` in Phase 3.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::player::Player as CelledPlayer;
+    /// use pkcore::casino::table::Seat;
+    /// use pkcore::casino::table_celled::seats::seat::Seat as CelledSeat;
+    /// use pkcore::casino::table_celled::seats::seat_cell::SeatCell;
+    ///
+    /// let player = CelledPlayer::new_with_chips("Robin".to_string(), 750);
+    /// let cell = SeatCell::new(CelledSeat::new(player));
+    ///
+    /// let seat = Seat::from_seat_cell(&cell, 4);
+    ///
+    /// assert_eq!("Robin", seat.player.handle);
+    /// assert_eq!(750, seat.player.chips);
+    /// assert_eq!(4, seat.hand.seat());
+    /// ```
+    #[must_use]
+    pub fn from_seat_cell(cell: &crate::casino::table_celled::seats::seat_cell::SeatCell, seat_index: u8) -> Self {
+        let celled = cell.borrow();
+        Seat {
+            player: Player::from(&celled.player),
+            cards: celled.cards.clone(),
+            hand: SeatHand::new(seat_index),
+            bet_level_when_last_acted: 0,
+        }
+    }
+
     /// Creates a seat for `player` with two blank card slots.
     ///
     /// # Examples
@@ -73,6 +115,34 @@ impl Seat {
         Seat {
             player,
             cards: BoxedCards::blanks(2),
+            hand: SeatHand::new(0),
+            bet_level_when_last_acted: 0,
+        }
+    }
+
+    /// Creates a seat for `player` holding `cards`.
+    ///
+    /// The companion to [`new`](Seat::new), which allocates blank slots
+    /// instead. Like `new`, the `SeatHand` is numbered `0`; callers that need
+    /// a real ring index set it after seating.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::arrays::sliced::BoxedCards;
+    /// use pkcore::casino::table::{Player, Seat};
+    /// use pkcore::prelude::Forgiving;
+    ///
+    /// let player = Player::new_with_chips("Sam".to_string(), 500);
+    /// let seat = Seat::new_with_cards(player, BoxedCards::forgiving_from_str("A♠ K♦"));
+    ///
+    /// assert_eq!(2, seat.cards.len());
+    /// ```
+    #[must_use]
+    pub fn new_with_cards(player: Player, cards: BoxedCards) -> Self {
+        Seat {
+            player,
+            cards,
             hand: SeatHand::new(0),
             bet_level_when_last_acted: 0,
         }
@@ -125,6 +195,25 @@ impl Seat {
     }
 }
 
+/// Seats a player by name, with no chips and blank cards.
+///
+/// The shape a hand history gives you: names, but no stack until the log says
+/// what it was. Mirrors the celled `Seat::from(String)`.
+impl From<String> for Seat {
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Seat;
+    ///
+    /// let seat = Seat::from("Ann".to_string());
+    /// assert_eq!("Ann", seat.player.handle);
+    /// assert_eq!(0, seat.player.chips);
+    /// ```
+    fn from(handle: String) -> Self {
+        Seat::new(Player::new(handle))
+    }
+}
+
 impl Display for Seat {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if self.is_empty() {
@@ -139,6 +228,10 @@ impl Display for Seat {
 #[allow(non_snake_case)]
 mod casino__table__seat_tests {
     use super::*;
+    use crate::casino::player::Player as CelledPlayer;
+    use crate::casino::table_celled::seats::seat::Seat as CelledSeat;
+    use crate::casino::table_celled::seats::seat_cell::SeatCell;
+    use crate::prelude::Forgiving;
 
     #[test]
     fn seat_new() {
@@ -152,5 +245,72 @@ mod casino__table__seat_tests {
     fn seat_default_is_empty() {
         let seat = Seat::default();
         assert!(seat.is_empty());
+    }
+
+    #[test]
+    fn seat_new_with_cards_holds_the_given_cards() {
+        let player = Player::new_with_chips("Dealt".to_string(), 500);
+
+        let seat = Seat::new_with_cards(player, boxed!("A♠ K♦"));
+
+        assert_eq!(boxed!("A♠ K♦"), seat.cards);
+        assert_eq!("Dealt", seat.player.handle);
+    }
+
+    #[test]
+    fn seat_new_with_cards_accepts_blank_slots() {
+        // `Dealer::new` builds an empty ring this way.
+        let seat = Seat::new_with_cards(Player::default(), BoxedCards::blanks(2));
+
+        assert!(seat.is_empty());
+        assert_eq!(2, seat.cards.len());
+    }
+
+    #[test]
+    fn seat_from_a_name_seats_a_chipless_player() {
+        let seat = Seat::from("Ann".to_string());
+
+        assert_eq!("Ann", seat.player.handle);
+        assert_eq!(0, seat.player.chips, "a name alone buys no chips");
+        assert!(!seat.is_empty());
+    }
+
+    // ── EPIC-83 Phase 0: cross-family bridge ─────────────────────────────────
+
+    fn celled_seat_cell(handle: &str, chips: usize) -> SeatCell {
+        let player = CelledPlayer::new_with_chips(handle.to_string(), chips);
+        SeatCell::new(CelledSeat::new_with_cards(player, boxed!("A♠ K♦")))
+    }
+
+    #[test]
+    fn seat_from_seat_cell_carries_player_and_cards() {
+        let cell = celled_seat_cell("Bridge", 2_500);
+
+        let seat = Seat::from_seat_cell(&cell, 0);
+
+        assert_eq!("Bridge", seat.player.handle);
+        assert_eq!(2_500, seat.player.chips);
+        assert_eq!(boxed!("A♠ K♦"), seat.cards);
+    }
+
+    #[test]
+    fn seat_from_seat_cell_stamps_the_seat_index() {
+        // The celled `Seat` has no seat index, so the caller must supply it.
+        // A conversion that defaulted to `SeatHand::new(0)` would mislabel
+        // every seat but the first.
+        let cell = celled_seat_cell("Bridge", 2_500);
+
+        let seat = Seat::from_seat_cell(&cell, 5);
+
+        assert_eq!(5, seat.hand.seat());
+    }
+
+    #[test]
+    fn seat_from_seat_cell_starts_bet_level_at_zero() {
+        let cell = celled_seat_cell("Bridge", 2_500);
+
+        let seat = Seat::from_seat_cell(&cell, 3);
+
+        assert_eq!(0, seat.bet_level_when_last_acted);
     }
 }
