@@ -8,7 +8,7 @@ use crate::arrays::seven::Seven;
 use crate::arrays::six::Six;
 use crate::card::Card;
 use crate::play::game::Game;
-use crate::prelude::{Cards, Table, TableCelled, TheNuts};
+use crate::prelude::{Cards, Table, TheNuts};
 use log::trace;
 use rayon::prelude::*;
 use std::fmt::{Display, Formatter};
@@ -257,15 +257,6 @@ impl TryFrom<&Table> for TurnEval {
     /// Propagates from [`Game::try_from`] (an unreadable board) or from this
     /// stage's own `TryFrom<Game>` (a board on the wrong street).
     fn try_from(table: &Table) -> Result<Self, Self::Error> {
-        let game = Game::try_from(table)?;
-        TurnEval::try_from(&game)
-    }
-}
-
-impl TryFrom<&TableCelled> for TurnEval {
-    type Error = PKError;
-
-    fn try_from(table: &TableCelled) -> Result<Self, Self::Error> {
         let game = Game::try_from(table)?;
         TurnEval::try_from(&game)
     }

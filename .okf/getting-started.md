@@ -20,7 +20,7 @@ the code — start here, then follow links only into what you need.
 | What the crate is and its feature flags | [pkcore crate](/crate.md) |
 | A specific source module | [modules index](/modules/index.md) |
 | How the pieces layer together | [architecture layers](/architecture/layers.md) |
-| Why there are two table engines | [Table vs TableCelled](/architecture/table-vs-tablecelled.md) |
+| Why there used to be two table engines | [Table vs TableCelled](/architecture/table-vs-tablecelled.md) |
 | How work is planned and tracked | [EPIC workflow](/processes/epic-workflow.md) |
 | Testing and lint conventions | [testing conventions](/processes/testing-conventions.md) |
 | What depends on pkcore downstream | [downstream repos](/ecosystem/downstream-repos.md) |

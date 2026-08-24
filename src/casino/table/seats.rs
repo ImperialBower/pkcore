@@ -8,8 +8,8 @@ use std::fmt::{Display, Formatter};
 
 /// The collection of seats at a `Table`, backed by a plain `Vec`.
 ///
-/// Replaces `Seats(Box<[SeatCell]>)` where `SeatCell(RefCell<Seat>)` required
-/// runtime borrow-checking. Mutation here goes through `&mut self` instead.
+/// No `RefCell` in sight: mutation goes through `&mut self` and the borrow
+/// checker rather than through runtime borrow-checking.
 ///
 /// # Examples
 ///
@@ -24,47 +24,6 @@ use std::fmt::{Display, Formatter};
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq, Default)]
 pub struct Seats(pub Vec<Seat>);
-
-/// Snapshots an interior-mutable
-/// [`SeatsCell`](crate::casino::table_celled::seats::SeatsCell) into a plain
-/// [`Seats`] ring, preserving order.
-///
-/// Ring position is what decides the button and the blinds, so each seat is
-/// converted with its own index — see
-/// [`Seat::from_seat_cell`](super::Seat::from_seat_cell), which cannot derive
-/// that index on its own.
-///
-/// Migration scaffolding for EPIC-83; removed with `TableCelled` in Phase 3.
-impl From<&crate::casino::table_celled::seats::SeatsCell> for Seats {
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::player::Player as CelledPlayer;
-    /// use pkcore::casino::table::Seats;
-    /// use pkcore::casino::table_celled::seats::SeatsCell;
-    /// use pkcore::casino::table_celled::seats::seat::Seat as CelledSeat;
-    ///
-    /// let celled = SeatsCell::new(vec![
-    ///     CelledSeat::new(CelledPlayer::new_with_chips("Ann".to_string(), 100)),
-    ///     CelledSeat::new(CelledPlayer::new_with_chips("Bo".to_string(), 200)),
-    /// ]);
-    ///
-    /// let seats = Seats::from(&celled);
-    ///
-    /// assert_eq!(2, seats.size());
-    /// assert_eq!("Ann", seats.0[0].player.handle);
-    /// assert_eq!(1, seats.0[1].hand.seat());
-    /// ```
-    fn from(celled: &crate::casino::table_celled::seats::SeatsCell) -> Self {
-        Seats(
-            celled
-                .iter()
-                .enumerate()
-                .map(|(index, cell)| Seat::from_seat_cell(cell, u8::try_from(index).unwrap_or(u8::MAX)))
-                .collect(),
-        )
-    }
-}
 
 /// Builds a ring from player names, in order.
 ///
@@ -87,7 +46,7 @@ impl From<Vec<String>> for Seats {
 }
 
 impl Seats {
-    /// The largest ring a table supports, matching the celled `SeatsCell`.
+    /// The largest ring a table supports.
     pub const MAX_NUMBER_SEATS: u8 = 10;
 
     /// Walks the ring in seat order.
@@ -724,11 +683,8 @@ impl Display for Seats {
 #[allow(non_snake_case)]
 mod casino__table__seats_tests {
     use super::*;
-    use crate::casino::player::Player as CelledPlayer;
     use crate::casino::state::PlayerState;
     use crate::casino::table::Player;
-    use crate::casino::table_celled::seats::SeatsCell;
-    use crate::casino::table_celled::seats::seat::Seat as CelledSeat;
 
     #[test]
     fn seats_size() {
@@ -892,43 +848,5 @@ mod casino__table__seats_tests {
         assert_eq!(2, seats.size());
         assert_eq!("Ann", seats.0[0].player.handle);
         assert_eq!("Bo", seats.0[1].player.handle);
-    }
-
-    // ── EPIC-83 Phase 0: cross-family bridge ─────────────────────────────────
-
-    fn celled_ring() -> SeatsCell {
-        SeatsCell::new(vec![
-            CelledSeat::new(CelledPlayer::new_with_chips("Ann".to_string(), 100)),
-            CelledSeat::new(CelledPlayer::new_with_chips("Bo".to_string(), 200)),
-            CelledSeat::new(CelledPlayer::new_with_chips("Cy".to_string(), 300)),
-        ])
-    }
-
-    #[test]
-    fn seats_from_seats_cell_preserves_ring_order() {
-        // Ring order decides the button and the blinds, so a conversion that
-        // reordered seats would silently corrupt every hand.
-        let celled = celled_ring();
-
-        let seats = Seats::from(&celled);
-
-        assert_eq!(3, seats.size());
-        assert_eq!("Ann", seats.0[0].player.handle);
-        assert_eq!("Bo", seats.0[1].player.handle);
-        assert_eq!("Cy", seats.0[2].player.handle);
-        assert_eq!(100, seats.0[0].player.chips);
-        assert_eq!(300, seats.0[2].player.chips);
-    }
-
-    #[test]
-    fn seats_from_seats_cell_numbers_each_seat_hand() {
-        // Each `SeatHand` must carry its own ring position, not index 0.
-        let celled = celled_ring();
-
-        let seats = Seats::from(&celled);
-
-        assert_eq!(0, seats.0[0].hand.seat());
-        assert_eq!(1, seats.0[1].hand.seat());
-        assert_eq!(2, seats.0[2].hand.seat());
     }
 }

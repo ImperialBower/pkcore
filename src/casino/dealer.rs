@@ -1,6 +1,6 @@
 //! # Dealer
 //!
-//! The [`Dealer`] manages a single [`TableCelled`]: seating players, running hands from
+//! The [`Dealer`] manages a single [`Table`]: seating players, running hands from
 //! shuffle through showdown, and routing every player action through the table's
 //! validation layer so that illegal moves are caught and reported rather than
 //! panicked on.
@@ -77,7 +77,7 @@ impl DealerAction {
 /// Errors the [`Dealer`] can return.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DealerError {
-    /// The underlying [`TableCelled`] returned a [`PKError`].
+    /// The underlying [`Table`] returned a [`PKError`].
     TableError(PKError),
     /// The action is not legal in the current phase.
     IllegalAction {
@@ -127,7 +127,7 @@ impl From<PKError> for DealerError {
 
 // ── Dealer ───────────────────────────────────────────────────────────────────
 
-/// Manages a single [`TableCelled`]: seating players, running hands from shuffle
+/// Manages a single [`Table`]: seating players, running hands from shuffle
 /// through showdown, and routing every player action through the table's
 /// validation layer so that illegal moves are caught and reported rather
 /// than panicked on.

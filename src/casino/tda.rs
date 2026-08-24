@@ -1,10 +1,9 @@
-//! TDA 2024 rule primitives shared by both table implementations.
+//! TDA 2024 rule primitives.
 //!
-//! [`Table`](crate::casino::table::Table) and
-//! [`TableCelled`](crate::casino::table_celled::TableCelled) each own a
-//! showdown path, and a rule implemented twice is a rule that can be fixed
-//! once. Everything here is pure: it takes the facts a rule turns on and
-//! returns the answer, so it can be tested without building a table at all.
+//! Everything here is pure: it takes the facts a rule turns on and returns the
+//! answer, so it can be tested without building a table at all. The module
+//! predates EPIC-83, when a rule had to be implemented once for two engines;
+//! the separation still earns its keep as a testable rule layer.
 //!
 //! TDA rules used by permission of the Poker TDA, <http://www.pokertda.com>,
 //! all rights reserved.

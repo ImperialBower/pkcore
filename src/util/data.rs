@@ -10,15 +10,12 @@ use crate::arrays::seven::Seven;
 use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::bard::Bard;
-use crate::cards_cell::CardsCell;
-use crate::casino::player::Player;
-use crate::casino::table::Player as PlainPlayer;
-use crate::casino::table::Seat as PlainSeat;
-use crate::casino::table_celled::seats::seat::Seat;
+use crate::casino::table::Player;
+use crate::casino::table::Seat;
 use crate::play::board::Board;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
-use crate::prelude::{BoxedCards, ForcedBets, Forgiving, PlayerState, Seats, SeatsCell, Table, TableCelled};
+use crate::prelude::{BoxedCards, ForcedBets, Forgiving, Seats, Table};
 use crate::{Card, Cards, Pile};
 use std::str::FromStr;
 use wincounter::win::Win;
@@ -243,104 +240,96 @@ impl TestData {
         Cards::deck_primed(&TestData::the_hand_cards_dealable())
     }
 
-    /// # Panics
+    /// The eight players of "The Hand", seated in order, holding nothing.
     ///
-    /// Because of `CardsCell` usage, but this is test data so... ¯\_(ツ)_/¯
+    /// The roster lives here and nowhere else;
+    /// [`the_hand_seats`](TestData::the_hand_seats) is the same eight with
+    /// their cards.
     #[must_use]
     pub fn the_hand_players() -> Vec<Seat> {
-        let doyle_brunson = Seat {
-            player: Player::new_with_chips("Doyle Brunson".to_string(), 1_000_000),
-            cards: BoxedCards::blanks(2),
-        };
-        let eli_elezra = Seat {
-            player: Player::new_with_chips("Eli Elezra".to_string(), 1_000_000),
-            cards: BoxedCards::blanks(2),
-        };
-        let antonio_esfandiari = Seat {
-            player: Player::new_with_chips("Antonio Esfandari".to_string(), 1_000_000),
-            cards: BoxedCards::blanks(2),
-        };
-        let gus_hansen = Seat {
-            player: Player::new_with_chips("Gus Hansen".to_string(), 1_000_000),
-            cards: BoxedCards::blanks(2),
-        };
-        let daniel_negreanu = Seat {
-            player: Player::new_with_chips("Daniel Negreanu".to_string(), 1_000_000),
-            cards: BoxedCards::blanks(2),
-        };
-        let cory_zeidman = Seat {
-            player: Player::new_with_chips("Cory Zeidman".to_string(), 1_000_000),
-            cards: BoxedCards::blanks(2),
-        };
-        let barry_greenstein = Seat {
-            player: Player::new_with_chips("Barry Greenstein".to_string(), 1_000_000),
-            cards: BoxedCards::blanks(2),
-        };
-        let amnon_filippi = Seat {
-            player: Player::new_with_chips("Amnon Filippi".to_string(), 1_000_000),
-            cards: BoxedCards::blanks(2),
-        };
         vec![
-            doyle_brunson,
-            eli_elezra,
-            antonio_esfandiari,
-            gus_hansen,
-            daniel_negreanu,
-            cory_zeidman,
-            barry_greenstein,
-            amnon_filippi,
+            Seat::new_with_cards(
+                Player::new_with_chips("Doyle Brunson".to_string(), 1_000_000),
+                BoxedCards::blanks(2),
+            ),
+            Seat::new_with_cards(
+                Player::new_with_chips("Eli Elezra".to_string(), 1_000_000),
+                BoxedCards::blanks(2),
+            ),
+            Seat::new_with_cards(
+                Player::new_with_chips("Antonio Esfandari".to_string(), 1_000_000),
+                BoxedCards::blanks(2),
+            ),
+            Seat::new_with_cards(
+                Player::new_with_chips("Gus Hansen".to_string(), 1_000_000),
+                BoxedCards::blanks(2),
+            ),
+            Seat::new_with_cards(
+                Player::new_with_chips("Daniel Negreanu".to_string(), 1_000_000),
+                BoxedCards::blanks(2),
+            ),
+            Seat::new_with_cards(
+                Player::new_with_chips("Cory Zeidman".to_string(), 1_000_000),
+                BoxedCards::blanks(2),
+            ),
+            Seat::new_with_cards(
+                Player::new_with_chips("Barry Greenstein".to_string(), 1_000_000),
+                BoxedCards::blanks(2),
+            ),
+            Seat::new_with_cards(
+                Player::new_with_chips("Amnon Filippi".to_string(), 1_000_000),
+                BoxedCards::blanks(2),
+            ),
         ]
     }
 
-    /// # Panics
-    ///
-    /// Because of `CardsCell` usage, but this is test data so... ¯\_(ツ)_/¯
+    /// The eight players of "The Hand", each already holding the two cards
+    /// they held on the night.
     #[must_use]
     pub fn the_hand_seats() -> Vec<Seat> {
-        let doyle_brunson = Seat {
-            player: Player::new_with_chips("Doyle Brunson".to_string(), 1_000_000),
-            cards: boxed!("T♠ 2♥"),
-        };
-        let eli_elezra = Seat {
-            player: Player::new_with_chips("Eli Elezra".to_string(), 1_000_000),
-            cards: boxed!("8♠ 3♥"),
-        };
-        let antonio_esfandiari = Seat {
-            player: Player::new_with_chips("Antonio Esfandari".to_string(), 1_000_000),
-            cards: boxed!("A♦ Q♣"),
-        };
-        let gus_hansen = Seat {
-            player: Player::new_with_chips("Gus Hansen".to_string(), 1_000_000),
-            cards: boxed!("5♦ 5♣"),
-        };
-        let daniel_negreanu = Seat {
-            player: Player::new_with_chips("Daniel Negreanu".to_string(), 1_000_000),
-            cards: boxed!("6♠ 6♥"),
-        };
-        let cory_zeidman = Seat {
-            player: Player::new_with_chips("Cory Zeidman".to_string(), 1_000_000),
-            cards: boxed!("K♠ J♦"),
-        };
-        let barry_greenstein = Seat {
-            player: Player::new_with_chips("Barry Greenstein".to_string(), 1_000_000),
-            cards: boxed!("4♣ 4♦"),
-        };
-        let amnon_filippi = Seat {
-            player: Player::new_with_chips("Amnon Filippi".to_string(), 1_000_000),
-            cards: boxed!("7♣ 2♣"),
-        };
         vec![
-            doyle_brunson,
-            eli_elezra,
-            antonio_esfandiari,
-            gus_hansen,
-            daniel_negreanu,
-            cory_zeidman,
-            barry_greenstein,
-            amnon_filippi,
+            Seat::new_with_cards(
+                Player::new_with_chips("Doyle Brunson".to_string(), 1_000_000),
+                boxed!("T♠ 2♥"),
+            ),
+            Seat::new_with_cards(
+                Player::new_with_chips("Eli Elezra".to_string(), 1_000_000),
+                boxed!("8♠ 3♥"),
+            ),
+            Seat::new_with_cards(
+                Player::new_with_chips("Antonio Esfandari".to_string(), 1_000_000),
+                boxed!("A♦ Q♣"),
+            ),
+            Seat::new_with_cards(
+                Player::new_with_chips("Gus Hansen".to_string(), 1_000_000),
+                boxed!("5♦ 5♣"),
+            ),
+            Seat::new_with_cards(
+                Player::new_with_chips("Daniel Negreanu".to_string(), 1_000_000),
+                boxed!("6♠ 6♥"),
+            ),
+            Seat::new_with_cards(
+                Player::new_with_chips("Cory Zeidman".to_string(), 1_000_000),
+                boxed!("K♠ J♦"),
+            ),
+            Seat::new_with_cards(
+                Player::new_with_chips("Barry Greenstein".to_string(), 1_000_000),
+                boxed!("4♣ 4♦"),
+            ),
+            Seat::new_with_cards(
+                Player::new_with_chips("Amnon Filippi".to_string(), 1_000_000),
+                boxed!("7♣ 2♣"),
+            ),
         ]
     }
 
+    /// [`the_hand_seats`](TestData::the_hand_seats) as a ring.
+    #[must_use]
+    pub fn the_hand_dealt_seats() -> Seats {
+        Seats::new(TestData::the_hand_seats())
+    }
+
+    /// The three seats [`min_table`](TestData::min_table) uses, holding nothing.
     #[must_use]
     pub fn min_players() -> Vec<Seat> {
         Vec::from(&TestData::the_hand_players()[2..5])
@@ -373,26 +362,6 @@ impl TestData {
         Cards::from(out)
     }
 
-    /// The same roster as [`the_hand_players`](TestData::the_hand_players), as
-    /// plain [`Table`] seats.
-    ///
-    /// Derived from the celled roster through the EPIC-83 bridge so the list
-    /// of players lives in exactly one place. Phase 3 inverts this: the plain
-    /// roster becomes the original and the celled one goes away.
-    #[must_use]
-    pub fn the_hand_players_plain() -> Vec<PlainSeat> {
-        TestData::the_hand_players()
-            .iter()
-            .map(|seat| PlainSeat::new_with_cards(PlainPlayer::from(&seat.player), seat.cards.clone()))
-            .collect()
-    }
-
-    /// The three seats [`min_table`](TestData::min_table) uses.
-    #[must_use]
-    pub fn min_players_plain() -> Vec<PlainSeat> {
-        Vec::from(&TestData::the_hand_players_plain()[2..5])
-    }
-
     /// cargo run --example calc -- -d "A♦ Q♣ 6♠ 6♥ 5♦ 5♣" -b "9♣ 6♦ 5♥ 5♠ 8♠"
     ///
     /// ```shell
@@ -401,30 +370,8 @@ impl TestData {
     /// Player #2 16.7% (16.43%/0.29%) [225186/4035]
     /// Player #3 45.4% (45.13%/0.29%) [618604/4035]
     /// ```
-    #[must_use]
-    pub fn min_table_celled() -> TableCelled {
-        // Layout: [hole×6] [burn1] [flop×3] [burn2] [turn] [burn3] [river]
-        // Burns 2♦ 3♦ 4♦ are arbitrary cards not in hole cards or the board.
-        let primed = cards!("A♦ 5♦ 6♠ Q♣ 5♣ 6♥ 2♦ 9♣ 6♦ 5♥ 3♦ 5♠ 4♦ 8♠");
-        TableCelled::nlh_primed(
-            SeatsCell::new(TestData::min_players()),
-            &CardsCell::from(Cards::deck_primed(&primed)),
-            ForcedBets::new(50, 100),
-        )
-    }
-
-    #[must_use]
-    pub fn the_hand_table_celled() -> TableCelled {
-        TableCelled::nlh_primed(
-            SeatsCell::new(TestData::the_hand_players()),
-            &CardsCell::from(Cards::deck_primed(&TestData::the_hand_cards_dealable())),
-            ForcedBets::new(50, 100),
-        )
-    }
-
-    /// The three-handed fixture above, on the plain [`Table`] engine.
-    ///
-    /// EPIC-83: the `_celled` twin above goes away with `TableCelled`.
+    /// A three-handed table with a stacked deck: Antonio, Gus and Daniel,
+    /// a 9♣ 6♦ 5♥ 5♠ 8♠ board, and the burns in between.
     #[must_use]
     pub fn min_table() -> Table {
         // Layout: [hole×6] [burn1] [flop×3] [burn2] [turn] [burn3] [river]
@@ -432,7 +379,7 @@ impl TestData {
         let primed = cards!("A♦ 5♦ 6♠ Q♣ 5♣ 6♥ 2♦ 9♣ 6♦ 5♥ 3♦ 5♠ 4♦ 8♠");
         let primed = TestData::rotated_for_plain_deal(&primed, 3, 2);
         Table::nlh_primed(
-            Seats::new(TestData::min_players_plain()),
+            Seats::new(TestData::min_players()),
             &Cards::deck_primed(&primed),
             ForcedBets::new(50, 100),
         )
@@ -443,15 +390,13 @@ impl TestData {
     pub fn the_hand_table() -> Table {
         let primed = TestData::rotated_for_plain_deal(&TestData::the_hand_cards_dealable(), 8, 2);
         Table::nlh_primed(
-            Seats::new(TestData::the_hand_players_plain()),
+            Seats::new(TestData::the_hand_players()),
             &Cards::deck_primed(&primed),
             ForcedBets::new(50, 100),
         )
     }
 
-    /// # Panics
-    ///
-    /// Because of `CardsCell` usage, but this is test data so... ¯\_(ツ)_/¯
+    /// The three seats [`min_table`](TestData::min_table) uses, with cards.
     #[must_use]
     pub fn min_seats() -> Vec<Seat> {
         Vec::from(&TestData::the_hand_seats()[2..5])
@@ -462,148 +407,29 @@ impl TestData {
         Vec::from(&TestData::the_hand_seats()[2..6])
     }
 
-    pub fn split_pot_table(cards: &CardsCell) -> TableCelled {
-        let rich = Seat {
-            player: Player::new_with_chips("Rich Man".to_string(), 10_000),
-            cards: boxed!("Q♦ Q♣"),
-        };
-        let poor = Seat {
-            player: Player::new_with_chips("Poor Man".to_string(), 5_000),
-            cards: boxed!("A♠ A♥"),
-        };
-        let average = Seat {
-            player: Player::new_with_chips("Average Person".to_string(), 9_000),
-            cards: boxed!("4♣ 4♦"),
-        };
-        let seats = SeatsCell::new(vec![rich, poor, average]);
-
-        TableCelled::nlh_primed(seats, cards, ForcedBets::new(50, 100))
-    }
-
-    pub fn split_pot_table_with_blinds(cards: &CardsCell) -> TableCelled {
-        let small = Seat {
-            player: Player::new_with_chips("Small Blind".to_string(), 6_000),
-            cards: boxed!("2♦ 7♣"),
-        };
-        let big = Seat {
-            player: Player::new_with_chips("Big Blind".to_string(), 7_000),
-            cards: boxed!("3♦ 8♣"),
-        };
-        let rich = Seat {
-            player: Player::new_with_chips("Rich Man".to_string(), 10_000),
-            cards: boxed!("Q♦ Q♣"),
-        };
-        let poor = Seat {
-            player: Player::new_with_chips("Poor Man".to_string(), 5_000),
-            cards: boxed!("A♠ A♥"),
-        };
-        let average = Seat {
-            player: Player::new_with_chips("Average Person".to_string(), 9_000),
-            cards: boxed!("4♣ 4♦"),
-        };
-        let seats = SeatsCell::new(vec![rich, small, big, poor, average]);
-
-        TableCelled::nlh_primed(seats, cards, ForcedBets::new(50, 100))
-    }
-
-    /// # Panics
+    /// Three stacks of different sizes, each already holding its cards, on a
+    /// deck stacked to run out `cards`.
     ///
-    /// Will crash if the created table can't do forced bets.
+    /// | Seat | Name           | Stack  | Holds |
+    /// |------|----------------|--------|-------|
+    /// | 0    | Rich Man       | 10,000 | Q♦ Q♣ |
+    /// | 1    | Poor Man       |  5,000 | A♠ A♥ |
+    /// | 2    | Average Person |  9,000 | 4♣ 4♦ |
+    ///
+    /// Three unequal stacks all-in is the shortest route to a side pot, which
+    /// is what the fixture exists to exercise.
     #[must_use]
-    pub fn preroll_split_pot_with_blinds(index: &str) -> TableCelled {
-        let table = TestData::split_pot_table_with_blinds(&cc!(index));
+    pub fn split_pot_table(cards: &Cards) -> Table {
+        let seats = Seats::new(vec![
+            Seat::new_with_cards(Player::new_with_chips("Rich Man".to_string(), 10_000), boxed!("Q♦ Q♣")),
+            Seat::new_with_cards(Player::new_with_chips("Poor Man".to_string(), 5_000), boxed!("A♠ A♥")),
+            Seat::new_with_cards(
+                Player::new_with_chips("Average Person".to_string(), 9_000),
+                boxed!("4♣ 4♦"),
+            ),
+        ]);
 
-        table.act_forced_bets().expect("forced bets should post");
-
-        assert_eq!(3, table.next_to_act());
-
-        table
-    }
-
-    /// # Panics
-    ///
-    /// This being a test class I am OK with using expects.
-    #[must_use]
-    pub fn preroll_split_pot_with_blinds__to_completion(index: &str) -> TableCelled {
-        let table = TestData::preroll_split_pot_with_blinds(index);
-
-        table.act_all_in(3).expect("seat 3 should be able to go all-in");
-        table.act_all_in(4).expect("seat 4 should be able to go all-in");
-        table.act_all_in(0).expect("seat 0 should be able to go all-in");
-        table.act_fold(1).expect("seat 1 should be able to fold");
-        table.act_fold(2).expect("seat 2 should be able to fold");
-
-        assert_eq!(PlayerState::Bet(9_000), table.get_seat(0).unwrap().player.state.get());
-
-        assert!(table.is_betting_complete());
-        assert!(!table.is_game_over());
-        table.bring_it_in().expect("flop should be dealt");
-
-        table.deal_flop().expect("flop should be dealt");
-        assert!(table.is_betting_complete());
-        assert!(!table.is_game_over());
-        table.bring_it_in().expect("flop should be dealt");
-
-        table.deal_turn().expect("turn should be dealt");
-        assert!(table.is_betting_complete());
-        assert!(!table.is_game_over());
-        table.bring_it_in().expect("flop should be dealt");
-
-        table.deal_river().expect("river should be dealt");
-        assert!(table.is_betting_complete());
-        assert!(table.is_game_over());
-
-        table
-    }
-
-    /// Builds a 4-player `TableCelled` for the BB-over-contributes-and-folds scenario:
-    ///
-    /// | Seat | Name | Stack | Role |
-    /// |------|------|-------|------|
-    /// | 0    | BTN  | 70    | Button |
-    /// | 1    | SB   | 80    | Small Blind (50) |
-    /// | 2    | BB   | 600   | Big Blind (100) — will fold |
-    /// | 3    | UTG  | 30    | UTG — holds A♠ A♥ |
-    ///
-    /// BB's 100-chip blind contribution exceeds the max active stack (SB = 80), so
-    /// 20 chips become `Seatbit::NONE` dead money when BB folds after over-contributing.
-    pub fn bb_folds_over_contribution_table(cards: &CardsCell) -> TableCelled {
-        let btn = Seat {
-            player: Player::new_with_chips("BTN".to_string(), 70),
-            cards: boxed!("7♦ 2♣"),
-        };
-        let sb = Seat {
-            player: Player::new_with_chips("SB".to_string(), 80),
-            cards: boxed!("8♦ 3♣"),
-        };
-        let bb = Seat {
-            player: Player::new_with_chips("BB".to_string(), 600),
-            cards: boxed!("9♠ 4♦"),
-        };
-        let utg = Seat {
-            player: Player::new_with_chips("UTG".to_string(), 30),
-            cards: boxed!("A♠ A♥"),
-        };
-        // BTN=0, SB=1, BB=2, UTG=3; button at seat 0.
-        let seats = SeatsCell::new(vec![btn, sb, bb, utg]);
-        TableCelled::nlh_primed(seats, cards, ForcedBets::new(50, 100))
-    }
-
-    /// Returns the BB-over-contributes-and-folds table with forced bets already posted
-    /// and the board pre-rolled.  The table is ready for pre-flop action starting at UTG.
-    ///
-    /// Board: K♣ Q♥ J♠ T♦ 6♦ (no card conflicts with any pre-set hole card).
-    ///
-    /// # Panics
-    ///
-    /// Panics if forced bets fail to post (test fixture, not library code).
-    #[must_use]
-    pub fn preroll_bb_folds_over_contribution() -> TableCelled {
-        // Layout: [burn1] [flop×3] [burn2] [turn] [burn3] [river]
-        // Burns 2♥ 3♥ 4♥ do not conflict with any hole card or board card.
-        let table = TestData::bb_folds_over_contribution_table(&cc!("2♥ K♣ Q♥ J♠ 3♥ T♦ 4♥ 6♦"));
-        table.act_forced_bets().expect("forced bets should post");
-        table
+        Table::nlh_primed(seats, cards, ForcedBets::new(50, 100))
     }
 }
 

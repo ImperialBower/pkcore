@@ -1,7 +1,7 @@
 use crate::games::GamePhase;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
-use crate::prelude::{BoxedCards, Card, Cards, ForcedBets, Seats, Table, TableLog};
+use crate::prelude::{BoxedCards, Card, Cards, ForcedBets, Seats, Table};
 use crate::util::Util;
 use crate::util::terminal::Terminal;
 use crate::{PKError, Pile, Plurable};
@@ -49,7 +49,7 @@ impl Nubificus {
     ///
     /// # Errors
     ///
-    /// Returns whatever the underlying [`TableCelled`] action returns —
+    /// Returns whatever the underlying [`Table`] action returns —
     /// typically `PKError::TableActionOutOfOrder` when `seat_to_act` is not the
     /// seat the table expects, or a betting error when the logged amount is not
     /// legal in the current state.
@@ -75,7 +75,7 @@ impl Nubificus {
     }
 
     /// Converts a logged Pluribus raise amount into the street bet target
-    /// [`TableCelled::act_bet`] expects.
+    /// [`Table::act_bet`] expects.
     ///
     /// Pluribus log amounts are **cumulative per-player totals for the whole
     /// hand**, while `act_bet` takes the bet target for the *current street*.
@@ -315,11 +315,6 @@ impl Nubificus {
             }
         }
         Ok(())
-    }
-
-    pub fn pop(&mut self) -> TableLog {
-        println!("boop!");
-        TableLog::default()
     }
 
     /// # Errors
@@ -915,7 +910,7 @@ mod store_pluribus_tests {
     }
 
     /// `DEFECT_021`: Pluribus log amounts are cumulative per-hand totals, while
-    /// [`TableCelled::act_bet`] takes a per-street target.
+    /// [`Table::act_bet`] takes a per-street target.
     ///
     /// The losing player's payoff is exactly `-3750`, his last logged number.
     /// Read per-street the same hand asks a 10 000-chip stack for

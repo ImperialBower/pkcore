@@ -10,7 +10,7 @@ use crate::arrays::six::Six;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
 use crate::play::stages::turn_eval::TurnEval;
-use crate::prelude::{Table, TableCelled};
+use crate::prelude::Table;
 use crate::{Card, Cards, PKError, Pile, TheNuts};
 use std::fmt::{Display, Formatter};
 use wincounter::results::WinResults;
@@ -709,20 +709,6 @@ impl Display for Game {
     }
 }
 
-/// Kept alive only for the celled `Showdown`
-/// (`src/casino/table_celled/showdown.rs`), which EPIC-83 Phase 3 deletes
-/// along with this impl.
-impl TryFrom<&TableCelled> for Game {
-    type Error = PKError;
-
-    fn try_from(table: &TableCelled) -> Result<Self, Self::Error> {
-        Ok(Game {
-            hands: HoleCards::from(table.seats.clone()),
-            board: Board::try_from(table.board.clone())?,
-        })
-    }
-}
-
 impl TryFrom<&Table> for Game {
     type Error = PKError;
 
@@ -1131,7 +1117,7 @@ mod play__game_tests {
 
     #[test]
     fn try_from__table() {
-        let table = TestData::min_table_celled();
+        let mut table = TestData::min_table();
         table.deal_cards_to_seats().expect("WOOPSIE!!!");
 
         table.act_forced_bets().expect("forced bets should post");

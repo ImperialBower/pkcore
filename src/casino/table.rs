@@ -1,10 +1,11 @@
-//! The primary `&mut self` poker table engine.
+//! The poker table engine.
 //!
-//! Uses traditional Rust mutability instead of the interior mutability
-//! (`Cell`, `RefCell`, `BintCell`, `CardsCell`, …) of its teaching/benchmark
-//! twin [`TableCelled`](crate::casino::table_celled::TableCelled). The two
-//! implementations are functionally equivalent and exist so they can be
-//! compared ergonomically and in benchmarks.
+//! Mutation goes through `&mut self`, so the borrow checker — not a runtime
+//! `RefCell` — decides who may change the table and when.
+//!
+//! Until EPIC-83 this sat beside `TableCelled`, an interior-mutability twin
+//! built on `Cell` / `RefCell` / `BintCell` / `CardsCell`. That engine is gone;
+//! `docs/ANALYSIS_TableCelled_vs_Table.md` is the retrospective.
 
 use crate::analysis::case_eval::CaseEval;
 use crate::analysis::eval::Eval;
@@ -153,7 +154,7 @@ pub struct Table {
 /// and a full sorted deck — the shape used by demos, doc examples, and quick
 /// experiments.
 ///
-/// Mirrors `TableCelled::default()` (`src/casino/table_celled.rs:1539`), which
+/// Mirrors the default the retired `TableCelled` engine used, which
 /// EPIC-83 Phase 3 removes.
 impl Default for Table {
     fn default() -> Self {
@@ -2152,8 +2153,8 @@ impl Table {
 
     /// Builds a [`Game`] from the current board and in-hand seat hole cards.
     ///
-    /// Useful for invoking analysis (flop/turn/river evaluation) without the
-    /// `TryFrom<&Table>` infrastructure that [`Table`](crate::casino::table_celled::TableCelled) provides.
+    /// Useful for invoking analysis (flop/turn/river evaluation) without going
+    /// through the `TryFrom<&Table>` conversions.
     ///
     /// # Errors
     ///
@@ -2868,6 +2869,7 @@ mod casino__table_tests {
     use crate::casino::game::ForcedBets;
     use crate::casino::state::PlayerState;
     use crate::prelude::Forgiving;
+    use crate::util::data::TestData;
 
     fn make_two_player_table() -> Table {
         let seats = Seats::new(vec![
@@ -4622,4 +4624,207 @@ mod casino__table_tests {
     }
 
     // endregion EPIC-83
+
+    // region EPIC-83 Phase 3 — tests inherited from the retired `TableCelled`
+    //
+    // Each of these covers behaviour `Table` has and no `Table` test asserted.
+    // They are ports, not new claims: the celled originals are listed in the
+    // EPIC-83 Phase 3d audit.
+
+    /// Six seats, live players on 0, 3, 4 and 5; seats 1 and 2 are vacated by
+    /// elimination. The button has advanced onto seat 1 — a dead button.
+    fn make_dead_button_table() -> Table {
+        let mut table = Table::nlh_from_seats(Seats::new(vec![Seat::default(); 6]), ForcedBets::new(100, 200));
+        for (index, handle) in [(0, "P0"), (3, "P3"), (4, "P4"), (5, "P5")] {
+            let mut player = Player::new_with_chips(handle.to_string(), 50_000);
+            player.state = PlayerState::YetToAct;
+            table.seats.assign(index, Seat::new(player)).unwrap();
+        }
+        table.button = 1;
+        table
+    }
+
+    /// TDA 2024 Rule 32 — blinds are assigned by **position**. The small blind
+    /// position (seat 2) is vacant, so it is dead and the big blind is the
+    /// first live player from seat 3 on. Walking past both empties would give
+    /// seat 4.
+    #[test]
+    fn dead_button_assigns_blinds_by_position() {
+        let table = make_dead_button_table();
+
+        assert_eq!(2, table.determine_small_blind(), "owed by seat 2, occupied or not");
+        assert!(table.is_small_blind_dead(), "seat 2 is vacant");
+        assert_eq!(3, table.determine_big_blind(), "the big blind is never dead");
+    }
+
+    /// A dead small blind is posted by nobody, and is not passed on to the next
+    /// live player. Only the big blind on seat 3 has chips in front of it.
+    #[test]
+    fn dead_small_blind_is_not_posted() {
+        let mut table = make_dead_button_table();
+        table.act_forced_bets().unwrap();
+
+        let posted: Vec<(u8, usize)> = (0..table.seats.size())
+            .filter_map(|index| {
+                let bet = table.seats.get_seat(index)?.player.bet;
+                (bet > 0).then_some((index, bet))
+            })
+            .collect();
+
+        assert_eq!(
+            vec![(3, 200)],
+            posted,
+            "TDA 32: the big blind on seat 3 posted; the dead small blind on \
+             seat 2 was posted by nobody"
+        );
+        assert_eq!(200, table.bet, "the bet to call is a full big blind");
+    }
+
+    /// Action order follows the blinds, so a dead small blind does not shift
+    /// who acts first.
+    #[test]
+    fn dead_small_blind_leaves_utg_after_the_big_blind() {
+        let table = make_dead_button_table();
+
+        assert_eq!(4, table.determine_utg(), "the seat after the big blind on 3");
+    }
+
+    /// The over-correction guard: on a full ring the dead button and the
+    /// cash-game convention agree.
+    #[test]
+    fn full_ring_blinds_are_unchanged_by_the_dead_button() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_seats()), ForcedBets::new(50, 100));
+
+        assert_eq!(0, table.button);
+        assert_eq!(1, table.determine_small_blind());
+        assert_eq!(2, table.determine_big_blind());
+        assert_eq!(3, table.determine_utg());
+        assert!(!table.is_small_blind_dead());
+    }
+
+    /// A freshly built table holds a whole deck and nothing else.
+    #[test]
+    fn nlh_from_seats_holds_a_full_deck_and_an_empty_board() {
+        let table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
+
+        assert_eq!("No Limit Hold'em Table", table.name);
+        assert_eq!(GameType::NoLimitHoldem, table.game);
+        assert_eq!(8, table.seats.size());
+        assert_eq!(0, table.button);
+        assert_eq!(3, table.next_to_act());
+        assert_eq!(52, table.deck.len());
+        assert_eq!(0, table.board.len());
+        assert_eq!(0, table.muck.len());
+        assert_eq!(0, table.pot);
+    }
+
+    /// One card, one seat — the primitive `deal_cards_to_seats` is built from.
+    #[test]
+    fn deal_card_to_seat_deals_a_single_card_to_a_single_seat() {
+        let mut table = Table::nlh_from_seats(Seats::new(TestData::the_hand_players()), ForcedBets::new(50, 100));
+
+        // The bool answers "is this seat fully dealt now?", which one card
+        // out of two is not.
+        assert!(!table.deal_card_to_seat(1).unwrap());
+
+        assert_eq!(1, table.seats.get_seat(1).unwrap().cards.number_of_dealt_cards());
+        assert_eq!(51, table.deck.len(), "the card came off the deck");
+        for seat_number in [0, 2, 3, 4, 5, 6, 7] {
+            assert_eq!(
+                0,
+                table.seats.get_seat(seat_number).unwrap().cards.number_of_dealt_cards(),
+                "seat {seat_number} was not dealt to"
+            );
+        }
+    }
+
+    /// A second hand on a sparse ring deals only to the seats that are in it.
+    /// The celled original is `deal_cards_to_seats_second_hand_sparse_six_seat_table`.
+    #[test]
+    fn deal_cards_to_seats_on_a_second_hand_only_deals_to_occupied_seats() {
+        let mut seats = Seats::new(vec![Seat::default(); 6]);
+        for (index, handle) in [(0, "Alice"), (3, "Bob")] {
+            seats
+                .assign(index, Seat::new(Player::new_with_chips(handle.to_string(), 10_000)))
+                .unwrap();
+        }
+        let mut table = Table::nlh_from_seats(seats, ForcedBets::new(50, 100));
+
+        table.seats.set_eligible_to_yet_to_act();
+        table.act_new_hand();
+        // `act_forced_bets` is what snapshots `hand_chip_total`, so `end_hand`
+        // cannot balance its books without it.
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        table.act_fold(table.next_to_act()).unwrap();
+        assert!(table.is_game_over());
+        table.end_hand().unwrap();
+
+        table.seats.set_eligible_to_yet_to_act();
+        table.act_new_hand();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+
+        let dealt: Vec<usize> = (0..6)
+            .map(|index| table.seats.get_seat(index).unwrap().cards.number_of_dealt_cards())
+            .collect();
+
+        assert_eq!(vec![2, 0, 0, 2, 0, 0], dealt);
+    }
+
+    /// `end_hand` hands the cards back before the next hand starts.
+    #[test]
+    fn end_hand_leaves_every_seat_without_cards() {
+        let mut table = TestData::min_table();
+
+        table.seats.set_eligible_to_yet_to_act();
+        table.act_new_hand();
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        assert!(table.seats.are_dealt(), "the hand was dealt");
+
+        while table.seats.active_in_hand().len() > 1 {
+            let next = table.next_to_act();
+            table.act_fold(next).unwrap();
+        }
+        assert!(table.is_game_over());
+        table.end_hand().unwrap();
+
+        for seat_number in 0..table.seats.size() {
+            assert_eq!(
+                0,
+                table.seats.get_seat(seat_number).unwrap().cards.number_of_dealt_cards(),
+                "seat {seat_number} still holds cards after end_hand"
+            );
+        }
+    }
+
+    /// Acting out of turn is refused, and named as such.
+    #[test]
+    fn act_bet_out_of_turn_is_rejected_as_out_of_order() {
+        let mut table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+
+        let result = table.act_bet(1, 200);
+
+        assert!(
+            matches!(result, Err(PKError::TableActionOutOfOrder(_))),
+            "expected TableActionOutOfOrder, got {result:?}"
+        );
+    }
+
+    #[test]
+    fn act_all_in_out_of_turn_is_rejected_as_out_of_order() {
+        let mut table = Table::nlh_from_seats(Seats::new(TestData::min_seats()), ForcedBets::new(50, 100));
+        table.act_forced_bets().unwrap();
+
+        let result = table.act_all_in(1);
+
+        assert!(
+            matches!(result, Err(PKError::TableActionOutOfOrder(_))),
+            "expected TableActionOutOfOrder, got {result:?}"
+        );
+    }
+
+    // endregion EPIC-83 Phase 3
 }

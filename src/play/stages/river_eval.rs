@@ -12,7 +12,7 @@ use crate::analysis::eval::Eval;
 use crate::arrays::HandRanker;
 use crate::arrays::seven::Seven;
 use crate::play::game::Game;
-use crate::prelude::{Table, TableCelled};
+use crate::prelude::Table;
 use std::fmt::{Display, Formatter};
 use wincounter::results::WinResults;
 use wincounter::wins::Wins;
@@ -135,14 +135,6 @@ impl TryFrom<&Table> for RiverEval {
     /// Propagates from [`Game::try_from`] (an unreadable board) or from this
     /// stage's own `TryFrom<Game>` (a board on the wrong street).
     fn try_from(table: &Table) -> Result<Self, Self::Error> {
-        RiverEval::try_from(Game::try_from(table)?)
-    }
-}
-
-impl TryFrom<&TableCelled> for RiverEval {
-    type Error = PKError;
-
-    fn try_from(table: &TableCelled) -> Result<Self, Self::Error> {
         RiverEval::try_from(Game::try_from(table)?)
     }
 }

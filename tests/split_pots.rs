@@ -2,8 +2,14 @@
 mod casino__table_split_pot_tests {
     use pkcore::prelude::*;
 
-    fn preroll(index: &str) -> TableCelled {
-        let table = TestData::split_pot_table(&cc!(index));
+    /// Three unequal stacks, all-in pre-flop, board run out by hand.
+    ///
+    /// Ported from the retired `TableCelled` suite (EPIC-83 Phase 3d). It is
+    /// the only test that walks a side-pot hand street by street with the
+    /// caller driving each deal, which is what `Nubificus` does when it
+    /// replays a log.
+    fn preroll(index: &str) -> Table {
+        let mut table = TestData::split_pot_table(&cards!(index));
 
         assert_eq!(46, table.deck.len());
 
@@ -16,45 +22,41 @@ mod casino__table_split_pot_tests {
         table.act_all_in(1).expect("seat 1 should be able to go all-in");
         table.act_all_in(2).expect("seat 2 should be able to go all-in");
 
-        assert_eq!(PlayerState::Bet(9_000), table.get_seat(0).unwrap().player.state.get());
+        // All three shoved their whole stack, so nobody has action left.
+        //
+        // The celled engine clamped Rich Man's all-in to 9,000 — the largest
+        // stack that could call him — and left him holding 1,000 with action
+        // still to give. `Table` takes the full 10,000 and returns the
+        // uncalled 1,000 at showdown, which is the TDA behaviour and the one
+        // its own uncalled-excess tests already pin.
+        assert_eq!(0, table.seats.count_players_with_action_to_give());
+        assert!(table.seats.is_betting_complete());
 
-        assert_eq!(1, table.seats.count_players_with_action_to_give());
-        assert!(table.is_betting_complete());
-
-        table.bring_it_in().expect("flop should be dealt");
-
-        assert_eq!(PlayerState::Bet(9_000), table.get_seat(0).unwrap().player.state.get());
+        table.bring_it_in().expect("bets should be brought in");
 
         table.deal_flop().expect("flop should be dealt");
-
-        assert_eq!(PlayerState::Bet(9_000), table.get_seat(0).unwrap().player.state.get());
-        assert_eq!(1, table.seats.count_players_with_action_to_give());
-        assert!(!table.is_game_over());
-        assert!(table.is_betting_complete());
+        assert!(!table.is_game_over(), "three seats are still in the hand");
+        assert!(table.seats.is_betting_complete(), "everyone is all-in");
 
         table.deal_turn().expect("turn should be dealt");
-        assert_eq!(PlayerState::Bet(9_000), table.get_seat(0).unwrap().player.state.get());
         assert!(!table.is_game_over());
-        assert!(table.is_betting_complete());
+        assert!(table.seats.is_betting_complete());
 
         table.deal_river().expect("river should be dealt");
-        assert_eq!(PlayerState::Bet(9_000), table.get_seat(0).unwrap().player.state.get());
-        assert!(table.is_betting_complete());
-        assert!(table.is_game_over());
+        assert!(table.seats.is_betting_complete());
+        assert!(table.is_game_over(), "the river closes the hand");
 
         table
     }
 
-    /// Winning scenarios:
-    ///
-    /// -
     #[test]
     fn deals_to_river_after_preflop_all_ins__rich_man() {
-        let table = preroll(
+        let mut table = preroll(
             "K♠ Q♠ Q♥ Q♣ J♠ A♦ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣",
         );
 
         let winnings = table.end_hand().expect("hand should end successfully");
+
         assert!(
             !winnings.is_empty(),
             "winnings should not be empty after a completed hand"
@@ -63,61 +65,40 @@ mod casino__table_split_pot_tests {
 
     #[test]
     fn deals_to_river_after_preflop_all_ins__average() {
-        let table = preroll(
+        let mut table = preroll(
             "4♠ Q♠ 8♠ 4♥ J♠ A♣ A♦ T♠ K♠ 9♠ 7♠ 6♠ 5♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣",
         );
 
         let winnings = table.end_hand().expect("hand should end successfully");
+
         assert!(
             !winnings.is_empty(),
             "winnings should not be empty after a completed hand"
         );
     }
 
+    /// The short stack takes the main pot and the deep stack takes the side
+    /// pot, so the hand must produce two separate wins.
     #[test]
     fn deals_to_river_after_preflop_all_ins__poor_man_then_rich() {
-        let table = preroll(
+        let mut table = preroll(
             "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ 3♠ 2♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 8♣ 7♣ 6♣ 5♣ 3♣ 2♣",
         );
 
-        // Verify chips in play for each seat before resolving the hand
-        let s0_chips_in_play = table.get_seat(0).unwrap().player.get_chips_in_play();
-        let s1_chips_in_play = table.get_seat(1).unwrap().player.get_chips_in_play();
-        let s2_chips_in_play = table.get_seat(2).unwrap().player.get_chips_in_play();
-
-        // Expectations derived from the simulated actions in `preroll`:
-        // - Seat 0 (Rich Man) bet 9_000 into play
-        // - Seat 1 (Poor Man) went all-in with 5_000
-        // - Seat 2 (Average Person) went all-in with 9_000
-        assert_eq!(s0_chips_in_play, 9_000, "Seat 0 chips_in_play");
-        assert_eq!(s1_chips_in_play, 5_000, "Seat 1 chips_in_play");
-        assert_eq!(s2_chips_in_play, 9_000, "Seat 2 chips_in_play");
+        // Derived from the actions `preroll` replays: each seat shoved its
+        // whole stack.
+        assert_eq!(10_000, table.seats.get_seat(0).unwrap().player.chips_in_play);
+        assert_eq!(5_000, table.seats.get_seat(1).unwrap().player.chips_in_play);
+        assert_eq!(9_000, table.seats.get_seat(2).unwrap().player.chips_in_play);
 
         let winnings = table.end_hand().expect("hand should end successfully");
 
-        assert!(!table.event_log.entries().is_empty(), "event log should have entries");
-        // Two separate pot wins: Poor Man takes the main pot, Rich Man takes the side pot.
+        assert!(!table.event_log.is_empty(), "event log should have entries");
         assert!(winnings.len() >= 2, "split pot should produce at least two pot wins");
-    }
-
-    #[test]
-    fn plus_blinds() {
-        let table = TestData::preroll_split_pot_with_blinds__to_completion(
-            "K♠ Q♠ A♦ J♠ A♣ T♠ 9♠ 8♠ 7♠ 6♠ 5♠ 4♠ K♥ Q♥ J♥ T♥ 9♥ 8♥ 7♥ 6♥ 5♥ 4♥ 3♥ 2♥ K♦ J♦ T♦ 9♦ 8♦ 7♦ 6♦ 5♦ 3♦ 2♦ K♣ J♣ T♣ 9♣ 6♣ 5♣ 3♣ 2♣",
-        );
-
-        // Two equal stacks (seats 0 and 4 at 9_000), one short stack (seat 3 at 5_000),
-        // and two separate folded-blind NONE entries (50 and 100) — four equity groups.
-        // NONE entries are intentionally kept separate so winnings() counts each
-        // as an independent contributor rather than a single combined pool.
-        let equity = table.determine_hand_equity();
-        assert_eq!(4, equity.len(), "expected four equity groups");
-        assert_eq!(9_000, equity.ceiling(), "ceiling should be the short-stack threshold");
-
-        let winnings = table.end_hand().expect("hand should end successfully");
-        assert!(
-            !winnings.is_empty(),
-            "winnings should not be empty after a completed hand"
+        assert_eq!(
+            24_000,
+            table.table_chip_count(),
+            "every chip is accounted for, Rich Man's uncalled 1,000 included"
         );
     }
 }

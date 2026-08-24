@@ -28,3 +28,43 @@ mechanics, and because there was essentially a fork between the two versions of 
 and maintainability of the code by a factor of two. 
 
 In the end, Table left TableCelled in the dust, which is why we are pouring one out for our homey today.
+
+---
+
+## The autopsy
+
+`TableCelled` was removed by [EPIC-83](epics/EPIC-83_Table_Decelled.md) on
+2026-08-24. Some numbers for the headstone:
+
+| | |
+|---|---|
+| Lines deleted | 6,654 |
+| Files deleted | 8 (`table_celled.rs`, `table_celled/` × 6, `player.rs`) |
+| Public methods that existed only on the celled side | 44 |
+| Tests deleted | 123 (109 unit, 14 integration) |
+| Tests written to cover what those actually asserted | 13 |
+
+Three things turned up on the way out that are worth keeping:
+
+1. **It had been dealing to the wrong seat all along.** `TableCelled` started
+   dealing *at* the button; poker deals to the button's **left**. Nobody
+   noticed because the stacked test fixtures had been written against the bug,
+   so both engines agreed with their own tests and with nothing else. Running
+   "The Hand" on each is what caught it — the celled engine gave Gus Hansen the
+   pot, the plain engine gave it to Daniel Negreanu, who had been dealt
+   Hansen's 5♦ 5♣.
+
+2. **The fork cost more than the cells did.** The `RefCell` overhead was never
+   the problem. The problem was 44 methods with no twin and every rule needing
+   two homes. A twin implementation is only a safety net if something actually
+   compares their outputs, and for four months nothing did.
+
+3. **Generics were not the way out.** The EPIC opened by asking whether one
+   generic body could serve both. It could not: the trait would have had to
+   abstract over `&self` versus `&mut self`, which is the whole difference
+   between the two designs. Hiding it would have defeated the point.
+
+The teaching value survives in
+[`ANALYSIS_TableCelled_vs_Table.md`](ANALYSIS_TableCelled_vs_Table.md), which
+is kept for exactly that reason.
+

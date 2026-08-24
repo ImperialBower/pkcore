@@ -1,9 +1,8 @@
 //! [`Player`] — the plain-field player used by [`Table`](super::Table).
 //!
 //! Mutable state (chips, bet, player state) is stored as ordinary fields, so
-//! mutation requires `&mut self`. Compare with the interior-mutability
-//! [`crate::casino::player::Player`], which the
-//! [`TableCelled`](crate::casino::table_celled::TableCelled) engine uses.
+//! mutation requires `&mut self`. EPIC-83 retired the interior-mutability
+//! twin this used to sit beside.
 
 use crate::casino::state::PlayerState;
 use crate::{Agency, PKError};
@@ -12,9 +11,6 @@ use uuid::Uuid;
 
 /// A poker player whose mutable state is stored as plain fields instead of
 /// `Cell`/`RefCell` wrappers.
-///
-/// Compare with [`crate::casino::player::Player`] which achieves mutation
-/// through interior mutability so that `&self` methods can alter state.
 ///
 /// # Examples
 ///
@@ -39,38 +35,6 @@ pub struct Player {
     /// support the profit/loss calc `chips + chips_in_play - withdrawn`.
     pub withdrawn: usize,
     pub state: PlayerState,
-}
-
-/// Snapshots an interior-mutable [`CelledPlayer`](crate::casino::player::Player)
-/// into a plain one, reading each `Cell` exactly once. Lossless — the two field
-/// sets are 1:1.
-///
-/// Migration scaffolding for EPIC-83; removed with `TableCelled` in Phase 3.
-impl From<&crate::casino::player::Player> for Player {
-    /// # Examples
-    ///
-    /// ```
-    /// use pkcore::casino::player::Player as CelledPlayer;
-    /// use pkcore::casino::table::Player;
-    ///
-    /// let celled = CelledPlayer::new_with_chips("Alice".to_string(), 1_000);
-    /// let plain = Player::from(&celled);
-    ///
-    /// assert_eq!("Alice", plain.handle);
-    /// assert_eq!(1_000, plain.chips);
-    /// assert_eq!(1_000, plain.withdrawn);
-    /// ```
-    fn from(celled: &crate::casino::player::Player) -> Self {
-        Player {
-            id: celled.id,
-            handle: celled.handle.clone(),
-            chips: celled.chips.count(),
-            bet: celled.bet.count(),
-            chips_in_play: celled.chips_in_play.get(),
-            withdrawn: celled.withdrawn.get(),
-            state: celled.state.get(),
-        }
-    }
 }
 
 impl Default for Player {
@@ -180,36 +144,119 @@ impl Player {
         self.chips + self.bet
     }
 
+    /// Still in the hand and not folded or sitting out. All-in counts.
+    ///
+    /// ```
+    /// use pkcore::casino::table::Player;
+    /// use pkcore::prelude::PlayerState;
+    ///
+    /// let mut p = Player::new_with_chips("Ann".to_string(), 500);
+    /// assert!(p.is_active());
+    ///
+    /// p.state = PlayerState::Fold;
+    /// assert!(!p.is_active());
+    /// ```
     #[must_use]
     pub fn is_active(&self) -> bool {
         self.state.is_active()
     }
 
+    /// All chips are in front of the player, none left behind.
+    ///
+    /// The chip test stands beside the state test because a player can be
+    /// felted by a call or a blind without the state ever being set to
+    /// `AllIn`.
+    ///
+    /// ```
+    /// use pkcore::casino::table::Player;
+    ///
+    /// let mut p = Player::new_with_chips("Bo".to_string(), 500);
+    /// assert!(!p.is_all_in());
+    ///
+    /// p.act_all_in().unwrap();
+    /// assert!(p.is_all_in());
+    /// ```
     #[must_use]
     pub fn is_all_in(&self) -> bool {
         self.state.is_all_in() || (self.chips == 0 && self.bet > 0)
     }
 
+    /// Holding cards this hand — has not folded and is not out.
+    ///
+    /// ```
+    /// use pkcore::casino::table::Player;
+    /// use pkcore::prelude::PlayerState;
+    ///
+    /// let mut p = Player::new_with_chips("Cy".to_string(), 500);
+    /// assert!(p.is_in_hand());
+    ///
+    /// p.state = PlayerState::Fold;
+    /// assert!(!p.is_in_hand());
+    /// ```
     #[must_use]
     pub fn is_in_hand(&self) -> bool {
         self.state.is_in_hand()
     }
 
+    /// Sitting out — not dealt in at all this hand.
+    ///
+    /// ```
+    /// use pkcore::casino::table::Player;
+    /// use pkcore::prelude::PlayerState;
+    ///
+    /// let mut p = Player::new_with_chips("Di".to_string(), 500);
+    /// assert!(!p.is_out());
+    ///
+    /// p.state = PlayerState::Out;
+    /// assert!(p.is_out());
+    /// ```
     #[must_use]
     pub fn is_out(&self) -> bool {
         self.state.is_out()
     }
 
+    /// Broke: no stack and nothing in front. Distinct from
+    /// [`is_all_in`](Player::is_all_in), where the chips are still live in the
+    /// pot.
+    ///
+    /// ```
+    /// use pkcore::casino::table::Player;
+    ///
+    /// assert!(Player::new("Ed".to_string()).is_tapped_out());
+    /// assert!(!Player::new_with_chips("Fi".to_string(), 1).is_tapped_out());
+    /// ```
     #[must_use]
     pub fn is_tapped_out(&self) -> bool {
         self.chips == 0 && self.bet == 0
     }
 
+    /// Ready for a fresh hand: yet to act, nothing bet, nothing committed.
+    ///
+    /// ```
+    /// use pkcore::casino::table::Player;
+    ///
+    /// let mut p = Player::new_with_chips("Gia".to_string(), 500);
+    /// assert!(p.is_clear());
+    ///
+    /// p.act_bet(100).unwrap();
+    /// assert!(!p.is_clear());
+    /// ```
     #[must_use]
     pub fn is_clear(&self) -> bool {
         self.state.is_yet_to_act() && self.bet == 0 && self.chips_in_play == 0
     }
 
+    /// Has chips in front of them on this street.
+    ///
+    /// ```
+    /// use pkcore::casino::table::Player;
+    ///
+    /// let mut p = Player::new_with_chips("Hal".to_string(), 500);
+    /// assert!(!p.has_bet());
+    ///
+    /// p.act_bet(100).unwrap();
+    /// assert!(p.has_bet());
+    /// ```
     #[must_use]
     pub fn has_bet(&self) -> bool {
         self.bet > 0
@@ -624,7 +671,6 @@ impl Display for Player {
 #[allow(non_snake_case)]
 mod casino__table__player_tests {
     use super::*;
-    use crate::casino::player::Player as CelledPlayer;
     use crate::casino::state::PlayerState;
 
     #[test]
@@ -779,55 +825,5 @@ mod casino__table__player_tests {
         let mut p = Player::new("Broke".to_string());
         let result = p.act_blind_or_all_in(100);
         assert_eq!(Err(PKError::InsufficientChips), result);
-    }
-
-    // ── EPIC-83 Phase 0: cross-family bridge ─────────────────────────────────
-
-    /// Builds a celled player with every chip counter set to a distinct value,
-    /// so a field swapped for another in the conversion is visible.
-    fn celled_fixture() -> CelledPlayer {
-        let celled = CelledPlayer::new_with_chips("Bridge".to_string(), 1_000);
-        // Move 400 out of the stack and into the round bet, so `chips` (600),
-        // `bet` (400), `chips_in_play` (250) and `withdrawn` (1_000) are all
-        // distinct — a conversion that crosses two fields cannot pass.
-        celled.bet.add_to(celled.chips.bet(400).unwrap());
-        celled.chips_in_play.set(250);
-        celled.state.set(PlayerState::Call(400));
-        celled
-    }
-
-    #[test]
-    fn player_from_celled_preserves_chips() {
-        let celled = celled_fixture();
-
-        let plain = Player::from(&celled);
-
-        assert_eq!(celled.chips.count(), plain.chips);
-        assert_eq!(celled.bet.count(), plain.bet);
-        assert_eq!(celled.chips_in_play.get(), plain.chips_in_play);
-        assert_eq!(celled.withdrawn.get(), plain.withdrawn);
-    }
-
-    #[test]
-    fn player_from_celled_preserves_identity_and_state() {
-        let celled = celled_fixture();
-
-        let plain = Player::from(&celled);
-
-        assert_eq!(celled.id, plain.id);
-        assert_eq!(celled.handle, plain.handle);
-        assert_eq!(celled.state.get(), plain.state);
-    }
-
-    #[test]
-    fn player_from_celled_does_not_default_the_state() {
-        // `Player::default()` uses `PlayerState::Out`. A conversion that forgot
-        // to carry `state` would silently produce `Out` and pass a laxer test.
-        let celled = celled_fixture();
-
-        let plain = Player::from(&celled);
-
-        assert_ne!(PlayerState::Out, plain.state);
-        assert_eq!(PlayerState::Call(400), plain.state);
     }
 }

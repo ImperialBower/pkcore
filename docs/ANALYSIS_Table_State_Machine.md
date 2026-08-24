@@ -217,10 +217,11 @@ Alongside these procedural guards, `casino::state` defines a **pure transition
 algebra** on `PlayerState` — `can_given(σ, σ′)` (legal succession for one
 player), `can_given_against(σ, σ′, σ_other)` (legality relative to an
 opponent), and `can_act_after(σ, σ_other)` (relative ordering) — a declarative
-statement of the same rules. The `&mut self` `Table` enforces legality through
-the four layers above; the algebra is the checked-transition backbone of the
-`PlayerStateCell` / `TableCelled` variant (see
-[`ANALYSIS_TableCelled_vs_Table.md`](./ANALYSIS_TableCelled_vs_Table.md)).
+statement of the same rules. `Table` enforces legality through the four layers
+above and consults the algebra where a rule is easier stated than walked. It
+was also the checked-transition backbone of the retired `PlayerStateCell` /
+`TableCelled` variant, which set state through `can_given` on every write —
+see [`ANALYSIS_TableCelled_vs_Table.md`](./ANALYSIS_TableCelled_vs_Table.md).
 
 ### Layer 4 — Conservation
 
@@ -325,7 +326,7 @@ audits over chips and cards that convert any residual sequencing error into an
 explicit failure at settlement. Per-action legality is enforced eagerly, but
 macro-step *sequencing* is cooperative — `deal_flop()` does not verify the
 phase; the `act()` regulator and the quiescence guards provide ordering, and
-the I1/I3 audits are the safety net beneath them. This is the same split the
-two engines embody: `TableCelled` validates transitions per-cell as they
-happen; `Table` validates outcomes per-hand and makes each entry point
-fail-atomic.
+the I1/I3 audits are the safety net beneath them. This is the split the two
+engines used to embody: the retired `TableCelled` validated transitions
+per-cell as they happened; `Table` validates outcomes per-hand and makes each
+entry point fail-atomic. Only the second survives ([EPIC-83](epics/EPIC-83_Table_Decelled.md)).

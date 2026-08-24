@@ -1,4 +1,4 @@
-use crate::prelude::{SeatEquity, Seatbit, Table, TableCelled};
+use crate::prelude::{SeatEquity, Seatbit, Table};
 use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display, Formatter};
 use std::sync::OnceLock;
@@ -293,7 +293,7 @@ impl Display for TableEquity {
 /// that have chips in play but are out of the hand get a default `Seatbit`, so
 /// their chips still count toward the pot without claiming a share of it.
 ///
-/// Replaces `From<&TableCelled>` when EPIC-83 Phase 3 lands.
+/// Replaced `From<&TableCelled>` in EPIC-83 Phase 3.
 impl From<&Table> for TableEquity {
     fn from(table: &Table) -> Self {
         let mut v: Vec<SeatEquity> = Vec::new();
@@ -306,29 +306,6 @@ impl From<&Table> for TableEquity {
                     Seatbit::default()
                 };
                 v.push(SeatEquity::new(seat.player.chips_in_play, seatbit));
-            }
-        }
-
-        if v.is_empty() {
-            TableEquity::default()
-        } else {
-            TableEquity::new(v)
-        }
-    }
-}
-
-impl From<&TableCelled> for TableEquity {
-    fn from(table: &TableCelled) -> Self {
-        let mut v: Vec<SeatEquity> = Vec::new();
-
-        for (i, seat_cell) in table.seats.iter().enumerate() {
-            let seat = seat_cell.borrow();
-            if seat.player.get_chips_in_play() > 0 {
-                if seat.is_in_hand() {
-                    v.push(SeatEquity::new(seat.player.get_chips_in_play(), Seatbit::from(i)));
-                } else {
-                    v.push(SeatEquity::new(seat.player.get_chips_in_play(), Seatbit::default()));
-                }
             }
         }
 

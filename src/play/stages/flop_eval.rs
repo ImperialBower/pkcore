@@ -5,7 +5,7 @@ use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
-use crate::prelude::{Table, TableCelled};
+use crate::prelude::Table;
 use crate::{PKError, Pile};
 use wincounter::results::WinResults;
 use wincounter::wins::Wins;
@@ -301,14 +301,6 @@ impl TryFrom<&Table> for FlopEval {
     /// Propagates from [`Game::try_from`] (an unreadable board) or from this
     /// stage's own `TryFrom<Game>` (a board on the wrong street).
     fn try_from(table: &Table) -> Result<Self, Self::Error> {
-        FlopEval::try_from(Game::try_from(table)?)
-    }
-}
-
-impl TryFrom<&TableCelled> for FlopEval {
-    type Error = PKError;
-
-    fn try_from(table: &TableCelled) -> Result<Self, Self::Error> {
         FlopEval::try_from(Game::try_from(table)?)
     }
 }

@@ -78,9 +78,9 @@ executes the stated plan.
 | Phase 2 — `nubibus` on `Table` (30/30 tests) | **Complete** (`table_decelled`, 2026-08-23) |
 | Phase 2 — `util::data` fixtures on `Table` | **Complete** (`table_decelled`, 2026-08-23) |
 | Phase 2 — Pluribus corpus check live again (`heavy_tests`) | **Complete** (`table_decelled`, 2026-08-24) |
-| Phase 3 — relocate surviving support types | Planned |
-| Phase 3 — delete the celled family | Planned |
-| Phase 3 — docs, prelude, ROADMAP, version bump | Planned |
+| Phase 3 — relocate surviving support types | **Complete** (`table_decelled`, 2026-08-24) — `TableLog` deleted, not moved; see corrigendum 9 |
+| Phase 3 — delete the celled family | **Complete** (`table_decelled`, 2026-08-24) |
+| Phase 3 — docs, prelude, ROADMAP, version bump | **Complete** (`table_decelled`, 2026-08-24) |
 | `pkpy` companion PR (`Dealer` → `&mut self`) | Planned |
 
 ---
@@ -359,7 +359,7 @@ but this EPIC is a long mechanical sweep where per-item progress is the point.)
 
 ### Phase 1 — Move the callers that need no new behaviour
 
-- [ ] **1a.** ~~Add `Table::get_seat` / `get_seat_mut` / `is_betting_complete`
+- [x] **1a.** ~~Add `Table::get_seat` / `get_seat_mut` / `is_betting_complete`
       forwarders.~~ **Dropped** — `seats` is already a public field and the
       celled originals were bare delegations. Migrate call sites to
       `table.seats.*` instead. See the Design note.
@@ -413,7 +413,7 @@ but this EPIC is a long mechanical sweep where per-item progress is the point.)
       with `TableCelled` in Phase 3 unless a caller appears.
 - [x] **2e.** Port `TryFrom<&Pluribus>` (`table_celled.rs:1581`) to `Table`.
       The largest single item in the EPIC.
-- [ ] **2f.** Port `From<&Table> for pkstate::PKState` and
+- [x] **2f.** Port `From<&Table> for pkstate::PKState` and
       `From<Table> for pkstate::PKState` (`table_celled.rs:1632`, `:1822`), and
       correct the stale doc comments at `table_celled.rs:1517` and
       `src/bard.rs:341`.
@@ -425,48 +425,48 @@ but this EPIC is a long mechanical sweep where per-item progress is the point.)
       `split_pot_table*` and `preroll_*` are **not** ported — only celled tests
       use them, and they die with `TableCelled`.
       Needed `TestData::rotated_for_plain_deal` — see corrigendum item 7.
-- [ ] **2i.** Move `util::commentary_action_to` (`src/util/mod.rs:51`) to
+- [x] **2i.** Move `util::commentary_action_to` (`src/util/mod.rs:51`) to
       `&Table`.
 - [x] **2j.** *(revised)* `examples/the_hand.rs` needs **no port** —
       `examples/the_hand_no_cell.rs` already is it, on `Table`. Comparing their
       output is what exposed corrigendum item 7. Phase 3 deletes `the_hand.rs`
       and renames the `_no_cell` twin into its place. Added the missing
       plain-engine assertions to `tests/hands.rs` instead.
-- [ ] **2k.** `CHANGELOG.md` entry. `make ayce` green.
+- [x] **2k.** `CHANGELOG.md` entry. `make ayce` green.
 
 ### Phase 3 — Delete
 
-- [ ] **3a.** Add `From<&Seats> for Boxes` in `src/arrays/sliced.rs`, replacing
+- [x] **3a.** Add `From<&Seats> for Boxes` in `src/arrays/sliced.rs`, replacing
       `From<&SeatsCell> for Boxes:769`.
-- [ ] **3b.** Add `From<&Seats> for HoleCards` in `src/play/hole_cards.rs`,
+- [x] **3b.** Add `From<&Seats> for HoleCards` in `src/play/hole_cards.rs`,
       replacing `From<SeatsCell> for HoleCards:232`.
-- [ ] **3c.** Move `TableLog` (`table_celled/event.rs:13`) to
+- [x] **3c.** Move `TableLog` (`table_celled/event.rs:13`) to
       `src/casino/table_log.rs` with its 4 tests; update `src/casino/action.rs`,
       `src/casino/dealer.rs`, `examples/the_hand_no_cell.rs`.
-- [ ] **3d.** **Test-coverage audit before deletion.** For each of
+- [x] **3d.** **Test-coverage audit before deletion.** For each of
       `table_celled.rs` (42 tests), `table_celled/seats.rs` (34),
       `showdown.rs` (8), `seats/seat.rs` (2), `casino/player.rs` (19): list every
       assertion, confirm a `Table`-side test covers it, and write one where it
       does not. **Nothing is deleted until this list is empty.**
-- [ ] **3e.** Delete `src/casino/table_celled.rs`, the whole
+- [x] **3e.** Delete `src/casino/table_celled.rs`, the whole
       `src/casino/table_celled/` tree, and `src/casino/player.rs`. Remove their
       `mod` declarations.
-- [ ] **3f.** Remove the Phase 0 deprecated bridges — their last callers are gone.
-- [ ] **3g.** Prune `src/prelude.rs`: lines `54` (`GameState`), `55`
+- [x] **3f.** Remove the Phase 0 deprecated bridges — their last callers are gone.
+- [x] **3g.** Prune `src/prelude.rs`: lines `54` (`GameState`), `55`
       (`TableCelled`), `56` (`TableLog` — repoint), `57` (`SeatsCell`), `58`
       (`SeatCell`), `116` (`HandResult`), `117` (`Showdown`).
-- [ ] **3h.** Rewrite `docs/ANALYSIS_TableCelled_vs_Table.md` as a retrospective:
+- [x] **3h.** Rewrite `docs/ANALYSIS_TableCelled_vs_Table.md` as a retrospective:
       why the twin existed, what it taught, why it was retired, and what the
       measured divergence was. Keep the interior-mutability explanation — it is
       good teaching material that outlives the code.
-- [ ] **3i.** Update `src/casino/table.rs`'s module doc, which still calls
+- [x] **3i.** Update `src/casino/table.rs`'s module doc, which still calls
       `TableCelled` its "teaching/benchmark twin."
-- [ ] **3j.** Update `ROADMAP.md` and `docs/ANALYSIS_Table_State_Machine.md:222`,
+- [x] **3j.** Update `ROADMAP.md` and `docs/ANALYSIS_Table_State_Machine.md:222`,
       `:329`, which cross-reference the celled engine.
-- [ ] **3k.** Fold the working notes into `docs/DIARY_TableCelled_RIP.md`.
-- [ ] **3l.** Bump `Cargo.toml` `0.7.1` → `0.8.0`; run `cargo build` so
+- [x] **3k.** Fold the working notes into `docs/DIARY_TableCelled_RIP.md`.
+- [x] **3l.** Bump `Cargo.toml` `0.7.1` → `0.8.0`; run `cargo build` so
       `Cargo.lock` picks it up. Finalise the `## [Unreleased]` block.
-- [ ] **3m.** `make ayce` and `make check-purity` green. Run the
+- [x] **3m.** `make ayce` and `make check-purity` green. Run the
       `audit-release` skill against downstream repos.
 
 ### Phase 4 — Downstream
@@ -496,7 +496,7 @@ The existing suite is the safety net: **2,033 tests** in `src/`.
 | `table_act_shuffle_deck_sets_phase_and_logs` | Ditto for `act_shuffle_deck`. |
 | `table_commentary_*` (4 tests) | Rendered strings match the celled originals character for character. |
 | `table_try_from_pluribus_*` | Table construction from a log header matches `table_celled.rs:1581`. |
-| Phase 3d audit tests | One new `Table` test per uncovered assertion among the 105 tests being deleted. |
+| Phase 3d audit tests | One new `Table` test per uncovered assertion among the 123 tests being deleted. Thirteen were needed — see corrigendum 10. |
 | `examples/the_hand.rs` vs `the_hand_no_cell.rs` | Output convergence — independent evidence the port is faithful. |
 
 **Gold-standard check** (`EPIC-00f_Coverage.md`): this EPIC is a *behaviour-
@@ -676,7 +676,7 @@ Each was needed to move `Dealer`, and each was added test-first. See Work Item
 | 0 (bridges) | Shipped | `#[deprecated]` dropped — see Design |
 | 1 (easy callers) | Shipped | grew items 1i-a … 1i-c |
 | 2 (nubibus port) | Shipped | grew items 4, 5, 6, 7, 8 |
-| 3 (delete) | Planned | |
+| 3 (delete) | Shipped | grew item 9 |
 | 4 (pkpy) | Planned | |
 
 ### 4. `reset_state` clears more on the plain engine — and two tests depended on that
@@ -792,3 +792,75 @@ That leaves a genuine half chip of ambiguity: a pot chopped 287.5 / 287.5 is
 paid out as 288 / 287 under TDA Rule 20, and which seat gets the odd chip is a
 rule, not a rounding. So the test allows one chip of slack — and only when the
 raw payoff field contains a decimal point.
+
+### 9. `TableLog` was deleted, not relocated
+
+Work item 3c planned to move `TableLog` from `table_celled/event.rs` to
+`src/casino/table_log.rs`. It was deleted instead.
+
+`TableLog` is `TableLog(RefCell<Vec<TableAction>>)` — the exact pattern this
+EPIC exists to retire — and after Phase 2 it had **no real caller**. Its only
+remaining mention in library code was `Nubificus::pop`, which printed `"boop!"`
+and returned `TableLog::default()`; nothing called that either. `Table` keeps
+its history in a plain `event_log: Vec<TableAction>`, and `TableAction` itself
+already lived in `casino::action`, shared by both engines.
+
+Relocating it would have preserved dead code in a new file. Both are gone.
+
+Three further deletions the EPIC did not list, each dead for the same reason:
+
+- **`casino::state::PlayerStateCell`** — a `Cell<PlayerState>` used only by the
+  celled `Player`. Its one unit test, `set`, only exercised
+  `PlayerState::can_given`, which `agency__can_given` and `can_given` already
+  cover directly.
+- **`Nubificus::pop`** — the debug stub above.
+- **Six `TestData` fixtures** — `split_pot_table_with_blinds`,
+  `preroll_split_pot_with_blinds`, `preroll_split_pot_with_blinds__to_completion`,
+  `bb_folds_over_contribution_table`, `preroll_bb_folds_over_contribution`, and
+  the `_plain` / `_celled` twin pairs. Every caller was a celled test.
+  `split_pot_table` was ported rather than dropped, because it is the only
+  fixture that produces a three-way side pot.
+
+### 10. What the Phase 3d audit actually found
+
+Of the 123 tests that died with the celled family — 109 unit tests in the
+deleted files, 14 integration tests in `tests/hands.rs` and
+`tests/split_pots.rs` — **13** covered behaviour `Table` has and no `Table`
+test asserted. Those were ported (see the CHANGELOG
+Added entry). The rest fall into three groups:
+
+| Group | Count (approx.) | Disposition |
+|---|---|---|
+| A `Table` test already asserts the same thing | ~68 | Dropped |
+| Tests a doc test on the plain method already covers | ~29 | Dropped |
+| Tests of API that does not exist on `Table` | 13 | Dropped with the API |
+
+The third group is worth naming, because the methods went with the engine:
+`determine_hand_equity`, `determine_street_equity`,
+`determine_street_equity_possible`, `determine_round_equity`, `cards_snapshot`,
+`iter_from`, `x_highest_bet`, `get_seat_number_from_handle`,
+`first_yet_to_act`, `all_players_have_acted`, `count_cards_in_play`,
+`is_seat_all_in`, and `cards_string`. `Table` reaches the same answers through
+`compute_hand_equity`, `From<&Table> for TableEquity`, and the `Seats` ring
+methods; none of the thirteen had a caller outside the celled tree.
+
+### 11. The two engines sized an all-in differently — and again the plain one is right
+
+Porting the celled split-pot suite (`tests/split_pots.rs`) surfaced a second
+behavioural divergence, the same shape as item 7.
+
+Three seats — 10,000 / 5,000 / 9,000 — all shove pre-flop. The celled engine
+**clamped** the 10,000 stack's all-in to 9,000, the largest stack that could
+call it, leaving that player holding 1,000 and still owing action. The plain
+engine takes the whole 10,000 and returns the uncalled 1,000 at showdown.
+
+`Table` is right. Returning uncalled excess at showdown is what TDA 2024
+prescribes, it is what the plain engine's existing
+`table_short_bb_uncalled_excess_returned_to_sole_caller` and
+`heads_up_short_winner_excess_returned_to_deep_stack` already pin, and clamping
+at bet time loses the information that the player was all-in.
+
+The ported tests assert the plain figures (`chips_in_play` of
+10,000 / 5,000 / 9,000, nobody left with action) and add a chip-conservation
+check the celled originals did not have: 24,000 chips in, 24,000 chips out.
+
