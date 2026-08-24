@@ -1,7 +1,7 @@
 [package]
 name = "pkcore"
 description = "Prototype core poker library."
-version = "0.8.1"
+version = "0.8.0"
 rust-version = "1.94.1"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
@@ -10,7 +10,7 @@ repository = "https://github.com/ImperialBower/pkcore.git"
 homepage = "https://github.com/ImperialBower/pkcore"
 keywords = ["poker", "holdem", "omaha", "equity", "cards"]
 categories = ["games", "algorithms", "simulation"]
-exclude = [".github/workflows/*", "data/*", "docs/*", "benches/*", "examples/*", "generated/hups.db", "generated/old/*", "generated/kuhn-repl-history", "proto/*", "scripts/*", ".gitignore", "Cargo.lock", ".claude", "CLAUDE.md", "DIARY.md", "marathon_failure.yaml", "perf/*"]
+exclude = [".github/workflows/*", "data/*", "docs/*", "benches/*", "examples/*", "generated/hups.db", "generated/old/*", "generated/kuhn-repl-history", "proto/*", "scripts/*", ".gitignore", "Cargo.lock", ".claude", "CLAUDE.md", "DIARY.md", "marathon_failure.yaml", "perf/*", "*.epub"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

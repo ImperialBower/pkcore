@@ -27,6 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     written for the celled engine are one seat off.
   - `end_hand` clears `chips_in_play` on every seat. Post-hand commitments must
     be read as final stacks instead.
+- `*.epub` from the published package. `scripts/build_epub.sh` writes
+  `pkcore-vX.Y.Z.epub` to the repo root and the file is committed, so `cargo
+  publish` packaged it. An epub is already zip-compressed, so it did not shrink
+  in the `.crate`: it alone was ~8 MiB of a 12.8 MiB package against crates.io's
+  10 MiB ceiling, and the upload died mid-stream with an HTTP/2 `STREAM_CLOSED`.
+  The package is now ~5 MiB.
 - `Nubificus::pop`, which printed `boop!` and returned an empty log. It had no
   callers.
 - The EPIC-83 Phase 0 migration bridges — `From<&casino::player::Player>`,
