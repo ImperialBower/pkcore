@@ -1,9 +1,8 @@
 //! [`Player`] — the plain-field player used by [`Table`](super::Table).
 //!
 //! Mutable state (chips, bet, player state) is stored as ordinary fields, so
-//! mutation requires `&mut self`. Compare with the interior-mutability
-//! [`crate::casino::player::Player`], which the
-//! [`TableCelled`](crate::casino::table_celled::TableCelled) engine uses.
+//! mutation requires `&mut self`. EPIC-83 retired the interior-mutability
+//! twin this used to sit beside.
 
 use crate::casino::state::PlayerState;
 use crate::{Agency, PKError};
@@ -12,9 +11,6 @@ use uuid::Uuid;
 
 /// A poker player whose mutable state is stored as plain fields instead of
 /// `Cell`/`RefCell` wrappers.
-///
-/// Compare with [`crate::casino::player::Player`] which achieves mutation
-/// through interior mutability so that `&self` methods can alter state.
 ///
 /// # Examples
 ///
@@ -148,36 +144,119 @@ impl Player {
         self.chips + self.bet
     }
 
+    /// Still in the hand and not folded or sitting out. All-in counts.
+    ///
+    /// ```
+    /// use pkcore::casino::table::Player;
+    /// use pkcore::prelude::PlayerState;
+    ///
+    /// let mut p = Player::new_with_chips("Ann".to_string(), 500);
+    /// assert!(p.is_active());
+    ///
+    /// p.state = PlayerState::Fold;
+    /// assert!(!p.is_active());
+    /// ```
     #[must_use]
     pub fn is_active(&self) -> bool {
         self.state.is_active()
     }
 
+    /// All chips are in front of the player, none left behind.
+    ///
+    /// The chip test stands beside the state test because a player can be
+    /// felted by a call or a blind without the state ever being set to
+    /// `AllIn`.
+    ///
+    /// ```
+    /// use pkcore::casino::table::Player;
+    ///
+    /// let mut p = Player::new_with_chips("Bo".to_string(), 500);
+    /// assert!(!p.is_all_in());
+    ///
+    /// p.act_all_in().unwrap();
+    /// assert!(p.is_all_in());
+    /// ```
     #[must_use]
     pub fn is_all_in(&self) -> bool {
         self.state.is_all_in() || (self.chips == 0 && self.bet > 0)
     }
 
+    /// Holding cards this hand — has not folded and is not out.
+    ///
+    /// ```
+    /// use pkcore::casino::table::Player;
+    /// use pkcore::prelude::PlayerState;
+    ///
+    /// let mut p = Player::new_with_chips("Cy".to_string(), 500);
+    /// assert!(p.is_in_hand());
+    ///
+    /// p.state = PlayerState::Fold;
+    /// assert!(!p.is_in_hand());
+    /// ```
     #[must_use]
     pub fn is_in_hand(&self) -> bool {
         self.state.is_in_hand()
     }
 
+    /// Sitting out — not dealt in at all this hand.
+    ///
+    /// ```
+    /// use pkcore::casino::table::Player;
+    /// use pkcore::prelude::PlayerState;
+    ///
+    /// let mut p = Player::new_with_chips("Di".to_string(), 500);
+    /// assert!(!p.is_out());
+    ///
+    /// p.state = PlayerState::Out;
+    /// assert!(p.is_out());
+    /// ```
     #[must_use]
     pub fn is_out(&self) -> bool {
         self.state.is_out()
     }
 
+    /// Broke: no stack and nothing in front. Distinct from
+    /// [`is_all_in`](Player::is_all_in), where the chips are still live in the
+    /// pot.
+    ///
+    /// ```
+    /// use pkcore::casino::table::Player;
+    ///
+    /// assert!(Player::new("Ed".to_string()).is_tapped_out());
+    /// assert!(!Player::new_with_chips("Fi".to_string(), 1).is_tapped_out());
+    /// ```
     #[must_use]
     pub fn is_tapped_out(&self) -> bool {
         self.chips == 0 && self.bet == 0
     }
 
+    /// Ready for a fresh hand: yet to act, nothing bet, nothing committed.
+    ///
+    /// ```
+    /// use pkcore::casino::table::Player;
+    ///
+    /// let mut p = Player::new_with_chips("Gia".to_string(), 500);
+    /// assert!(p.is_clear());
+    ///
+    /// p.act_bet(100).unwrap();
+    /// assert!(!p.is_clear());
+    /// ```
     #[must_use]
     pub fn is_clear(&self) -> bool {
         self.state.is_yet_to_act() && self.bet == 0 && self.chips_in_play == 0
     }
 
+    /// Has chips in front of them on this street.
+    ///
+    /// ```
+    /// use pkcore::casino::table::Player;
+    ///
+    /// let mut p = Player::new_with_chips("Hal".to_string(), 500);
+    /// assert!(!p.has_bet());
+    ///
+    /// p.act_bet(100).unwrap();
+    /// assert!(p.has_bet());
+    /// ```
     #[must_use]
     pub fn has_bet(&self) -> bool {
         self.bet > 0

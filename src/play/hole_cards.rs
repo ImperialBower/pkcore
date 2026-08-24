@@ -8,7 +8,7 @@ use crate::arrays::three::Three;
 use crate::arrays::two::Two;
 use crate::cards::Cards;
 use crate::play::board::Board;
-use crate::prelude::SeatsCell;
+use crate::prelude::Seats;
 use crate::util::Util;
 use crate::{Card, PKError, Pile, Plurable, TheNuts};
 use itertools::Itertools;
@@ -229,12 +229,26 @@ impl fmt::Display for HoleCards {
     }
 }
 
-impl From<SeatsCell> for HoleCards {
-    fn from(seats: SeatsCell) -> Self {
+/// Every seat's hole cards, in ring order.
+///
+/// A seat that is not in the hand contributes `Two::default()` rather than
+/// being skipped, so index `n` is always seat `n`.
+impl From<&Seats> for HoleCards {
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::play::hole_cards::HoleCards;
+    /// use pkcore::util::data::TestData;
+    ///
+    /// let hands = HoleCards::from(&TestData::the_hand_dealt_seats());
+    ///
+    /// assert_eq!(8, hands.len());
+    /// ```
+    fn from(seats: &Seats) -> Self {
         let mut hands = HoleCards::with_capacity(seats.size() as usize);
         for seat in seats.iter() {
             if seat.is_in_hand() {
-                hands.push(Two::try_from(seat.borrow().cards.as_slice()).unwrap_or_default());
+                hands.push(Two::try_from(seat.cards.as_slice()).unwrap_or_default());
             } else {
                 hands.push(Two::default());
             }
@@ -495,10 +509,10 @@ mod play__hold_cards_tests {
 
     #[test]
     fn from__seats() {
-        let seats = SeatsCell::try_from(TestData::the_hand_seats()).unwrap();
+        let seats = TestData::the_hand_dealt_seats();
         let expected = "[T♠ 2♥, 8♠ 3♥, A♦ Q♣, 5♦ 5♣, 6♠ 6♥, K♠ J♦, 4♦ 4♣, 7♣ 2♣]";
 
-        let hands = HoleCards::from(seats);
+        let hands = HoleCards::from(&seats);
 
         assert_eq!(expected, hands.to_string());
     }

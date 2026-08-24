@@ -1,11 +1,9 @@
-//! Seat- and table-level equity vocabulary shared by both table engines.
+//! Seat- and table-level equity vocabulary.
 //!
 //! [`Seatbit`] is a bitmask identifying a set of seats; [`SeatEquity`] holds
 //! one seat's win/tie counts for an equity calculation; [`TableEquity`]
-//! aggregates them across the table. These types are used by
-//! [`Table`](crate::casino::table::Table) and
-//! [`TableCelled`](crate::casino::table_celled::TableCelled) alike, as well
-//! as the analysis layer.
+//! aggregates them across the table. Used by
+//! [`Table`](crate::casino::table::Table) and by the analysis layer.
 
 pub mod seat_equity;
 pub mod seatbit;

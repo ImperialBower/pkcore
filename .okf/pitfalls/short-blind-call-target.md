@@ -30,7 +30,7 @@ targets, check it against the cited cardroom rules first.
 
 # Related
 
-The last-raise-size rule was once unenforced by `TableCelled` (a title-only
+The last-raise-size rule was once unenforced by the retired `TableCelled` (a title-only
 `EPIC-DEFECT-Minraise` stub recorded it; deleted 2026-08-21). The rule is now
 enforced and tested in both engines — see `../../docs/defects/DEFECT_007_decider_subminimum_raise.md`,
 `DEFECT_010_reopen_gate.md`, `DEFECT_015_act_raise_all_in_underflow.md` and

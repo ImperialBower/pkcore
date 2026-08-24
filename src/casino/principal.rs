@@ -7,7 +7,7 @@
 //! verifies nothing.
 //!
 //! The wrapped value is the same [`Uuid`] that already identifies a
-//! [`Player`](crate::casino::player::Player) and keys `StatsRegistry`, so a
+//! [`Player`](crate::casino::table::Player) and keys `StatsRegistry`, so a
 //! `Principal` drops into the existing seating, stats, and hand-history
 //! machinery without a second identity space.
 use serde::{Deserialize, Serialize};

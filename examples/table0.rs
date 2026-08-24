@@ -57,7 +57,7 @@ fn main() {
 
     // let seats = Table::generate_seats(6, 2);
     // let forced = ForcedBets::new(50, 100);
-    let table = TestData::the_hand_table();
+    let mut table = TestData::the_hand_table();
 
     let prompt = DefaultPrompt {
         left_prompt: DefaultPromptSegment::Basic("table".to_owned()),
@@ -75,7 +75,6 @@ fn main() {
     rl.repl(|command| {
         match command {
             SampleCommand::Status => {
-                println!("{}", table.get_game_state());
                 println!("{table}");
             }
             SampleCommand::Deck => {

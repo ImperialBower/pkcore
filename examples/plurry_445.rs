@@ -12,7 +12,7 @@ fn main() {
     // let plur = "STATE:193:r225fcffc/ccc/ccc/ccc:2s7d|7c9c|KcQs|2dQh|9h9s|Ac8d/5cKhJh/As/7s:-50|-225|500|0|-225|0:Eddie|MrOrange|Bill|MrBlue|Pluribus|MrPink";
     let plur = "STATE:46:r225fffr1050fr2525r10000f:KcAh|9d3h|QcAs|8s2d|4h8c|ThQs:2625|-100|-2525|0|0|0:MrBrown|Pluribus|MrBlue|MrBlonde|MrWhite|MrPink";
 
-    let nubi = Nubificus::from_str(plur).unwrap();
+    let mut nubi = Nubificus::from_str(plur).unwrap();
     println!("{nubi}");
     nubi.play_hand_display().expect("play hand display should succeed");
 }

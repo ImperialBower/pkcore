@@ -1,67 +1,63 @@
 use pkcore::prelude::*;
 
-/// This example demonstrates how to use the `get_game_state()` function
-/// to retrieve and display the current state of a poker game.
+/// Shows how to read a snapshot of a hand in progress straight off the
+/// [`Table`].
 ///
-/// The GameState provides a snapshot of all relevant game information including:
-/// - Table details (ID, name, game type)
-/// - Current phase of the game
-/// - Button position and next player to act
-/// - Pot size and current bet
-/// - Board cards
-/// - Player counts
-/// - Blind structure
+/// The celled engine exposed this through a `get_game_state()` method that
+/// packed everything into a `GameState` struct. `Table` keeps the same
+/// information in plain public fields, so no wrapper type is needed — read
+/// what you want, when you want it. EPIC-83 removed the wrapper.
+///
+/// What a table tells you:
+/// - identity: `id`, `name`, `game`
+/// - where the hand is: `phase`, `button`, `next_to_act()`
+/// - the money: `pot`, `bet`, `forced`
+/// - the cards: `board`, `deck`
+/// - the people: `seats`
 fn main() {
-    println!("=== GameState Demo ===\n");
+    println!("=== Table State Demo ===\n");
 
-    // Create a default 6-handed No Limit Hold'em table
-    let table = TableCelled::default();
+    // A default 6-handed No Limit Hold'em table.
+    let mut table = Table::default();
 
-    // Get and display the initial game state
     println!("Initial State:");
-    let state = table.get_game_state();
-    println!("{}", state);
+    println!("{table}");
 
-    // Access individual fields for custom logic
     println!("\n--- Individual Field Access ---");
-    println!("Table Name: {}", state.table_name);
-    println!("Game Type: {:?}", state.game_type);
-    println!("Current Phase: {}", state.phase);
-    println!("Button Position: Seat {}", state.button_position);
-    println!("Next to Act: Seat {}", state.next_to_act);
-    println!("Blinds: {}", state.forced_bets);
+    println!("Table Name: {}", table.name);
+    println!("Game Type: {:?}", table.game);
+    println!("Current Phase: {}", table.phase);
+    println!("Button Position: Seat {}", table.button);
+    println!("Next to Act: Seat {}", table.next_to_act());
+    println!("Blinds: {}", table.forced);
     println!(
         "Players: {} active out of {} total",
-        state.active_players, state.total_players
+        table.seats.count_active_in_hand(),
+        table.seats.count_occupied()
     );
 
-    // Simulate some game actions
     println!("\n=== Simulating Game Progress ===\n");
 
-    // Shuffle and post blinds
     table.act_shuffle_deck();
     let _ = table.act_forced_bets();
 
     println!("After Forced Bets:");
-    let state_after_bets = table.get_game_state();
-    println!("{}", state_after_bets);
+    println!("{table}");
 
-    // You can use GameState for decision making
-    if state_after_bets.pot_size > 0 {
+    if table.pot > 0 {
         println!("\n✓ Blinds have been posted!");
-        println!("  Pot now contains {} chips", state_after_bets.pot_size);
+        println!("  Pot now contains {} chips", table.pot);
     }
 
-    if state_after_bets.current_bet > 0 {
-        println!("  Current bet to call: {} chips", state_after_bets.current_bet);
+    if table.bet > 0 {
+        println!("  Current bet to call: {} chips", table.bet);
     }
 
-    // GameState is useful for:
-    // - Logging game progress
-    // - Making AI decisions based on game state
-    // - Debugging game flow
-    // - Saving/restoring game state
-    // - Displaying game state to players
+    // Reading state straight off the table is useful for:
+    // - logging game progress
+    // - making AI decisions
+    // - debugging game flow
+    // - showing the table to players
 
     println!("\n=== Demo Complete ===");
 }

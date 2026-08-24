@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::fs::File;
 
-use crate::prelude::TableCelled;
+use crate::prelude::Table;
 use std::io::{self, BufRead};
 use std::path::Path;
 use std::str::Utf8Error;
@@ -48,7 +48,24 @@ impl Util {
         }
     }
 
-    pub fn commentary_action_to(table: &TableCelled) {
+    /// Prints the last player action and who is on the clock, with blank
+    /// lines around it.
+    ///
+    /// A REPL convenience over [`Table::commentary_last_player_action`] and
+    /// [`Table::commentary_action_to`]. EPIC-83 retargeted it from
+    /// `TableCelled`; it has no callers in this repo and is a candidate for
+    /// removal in Phase 3.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::casino::table::Table;
+    /// use pkcore::util::Util;
+    ///
+    /// // Prints; never panics, even on an untouched table.
+    /// Util::commentary_action_to(&Table::default());
+    /// ```
+    pub fn commentary_action_to(table: &Table) {
         println!();
         if let Some(action) = table.commentary_last_player_action() {
             println!("{action}");

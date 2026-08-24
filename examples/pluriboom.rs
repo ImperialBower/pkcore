@@ -45,7 +45,7 @@ fn main() -> Result<(), PKError> {
             .into_par_iter()
             .enumerate()
             .filter(
-                |(idx, plur)| match Nubificus::try_from(plur).and_then(|n| n.play_hand()) {
+                |(idx, plur)| match Nubificus::try_from(plur).and_then(|mut n| n.play_hand()) {
                     Ok(_) => false,
                     Err(e) => {
                         eprintln!("Game #{idx} failed: {e}");

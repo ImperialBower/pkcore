@@ -3,4 +3,4 @@
 Cross-cutting structure and recorded design decisions.
 
 * [Layers](layers.md) - How pkcore sits under services, agents, and web apps.
-* [Table vs TableCelled](table-vs-tablecelled.md) - Why two table engines exist and which to use.
+* [Table vs TableCelled](table-vs-tablecelled.md) - Why two table engines existed, and why only Table remains.

@@ -1,6 +1,6 @@
 //! # Dealer
 //!
-//! The [`Dealer`] manages a single [`TableCelled`]: seating players, running hands from
+//! The [`Dealer`] manages a single [`Table`]: seating players, running hands from
 //! shuffle through showdown, and routing every player action through the table's
 //! validation layer so that illegal moves are caught and reported rather than
 //! panicked on.
@@ -10,7 +10,7 @@
 //! ```rust
 //! use pkcore::casino::dealer::Dealer;
 //! use pkcore::casino::game::ForcedBets;
-//! use pkcore::casino::player::Player;
+//! use pkcore::casino::table::Player;
 //!
 //! let mut dealer = Dealer::new(ForcedBets::new(50, 100), 6);
 //!
@@ -21,12 +21,12 @@
 //! ```
 
 use crate::PKError;
+use crate::casino::action::TableAction;
 use crate::casino::game::ForcedBets;
-use crate::casino::player::Player;
-use crate::casino::table_celled::TableCelled;
-use crate::casino::table_celled::event::TableLog;
-use crate::casino::table_celled::seats::SeatsCell;
-use crate::casino::table_celled::seats::seat::Seat;
+use crate::casino::table::Player;
+use crate::casino::table::Seat;
+use crate::casino::table::Seats;
+use crate::casino::table::Table;
 use crate::casino::winnings::Winnings;
 use crate::prelude::{BoxedCards, PlayerState};
 use std::fmt;
@@ -77,7 +77,7 @@ impl DealerAction {
 /// Errors the [`Dealer`] can return.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DealerError {
-    /// The underlying [`TableCelled`] returned a [`PKError`].
+    /// The underlying [`Table`] returned a [`PKError`].
     TableError(PKError),
     /// The action is not legal in the current phase.
     IllegalAction {
@@ -127,7 +127,7 @@ impl From<PKError> for DealerError {
 
 // ── Dealer ───────────────────────────────────────────────────────────────────
 
-/// Manages a single [`TableCelled`]: seating players, running hands from shuffle
+/// Manages a single [`Table`]: seating players, running hands from shuffle
 /// through showdown, and routing every player action through the table's
 /// validation layer so that illegal moves are caught and reported rather
 /// than panicked on.
@@ -152,7 +152,7 @@ impl From<PKError> for DealerError {
 /// ```rust
 /// use pkcore::casino::dealer::Dealer;
 /// use pkcore::casino::game::ForcedBets;
-/// use pkcore::casino::player::Player;
+/// use pkcore::casino::table::Player;
 ///
 /// let mut dealer = Dealer::new(ForcedBets::new(50, 100), 6);
 ///
@@ -163,7 +163,7 @@ impl From<PKError> for DealerError {
 /// ```
 pub struct Dealer {
     /// The table being managed.
-    pub table: TableCelled,
+    pub table: Table,
     /// `true` once `start_hand` has been called and the hand is in progress.
     hand_in_progress: bool,
 }
@@ -175,20 +175,20 @@ impl Dealer {
     ///
     /// # Panics
     ///
-    /// Panics if `seats` is 0 or greater than [`SeatsCell::MAX_NUMBER_SEATS`].
+    /// Panics if `seats` is 0 or greater than [`Seats::MAX_NUMBER_SEATS`].
     #[must_use]
     pub fn new(forced: ForcedBets, seat_count: u8) -> Self {
         assert!(
-            seat_count > 0 && seat_count <= SeatsCell::MAX_NUMBER_SEATS,
+            seat_count > 0 && seat_count <= Seats::MAX_NUMBER_SEATS,
             "seats must be 1–10"
         );
         // Build the requested number of truly empty seats (nil UUID → is_empty() == true).
-        let seats = SeatsCell::new(
+        let seats = Seats::new(
             (0..seat_count)
                 .map(|_| Seat::new_with_cards(Player::default(), BoxedCards::blanks(2)))
                 .collect(),
         );
-        let table = TableCelled::nlh_from_seats(seats, forced);
+        let table = Table::nlh_from_seats(seats, forced);
         Dealer {
             table,
             hand_in_progress: false,
@@ -198,7 +198,7 @@ impl Dealer {
     /// Creates a `Dealer` wrapping an existing `Table` that has already been
     /// set up (e.g. from a [`pkstate::PKState`] snapshot).
     #[must_use]
-    pub fn from_table(table: TableCelled) -> Self {
+    pub fn from_table(table: Table) -> Self {
         Dealer {
             table,
             hand_in_progress: false,
@@ -212,9 +212,9 @@ impl Dealer {
     /// # Errors
     ///
     /// - [`DealerError::TableFull`] — no empty seats remain.
-    pub fn seat_player(&self, player: Player) -> Result<u8, DealerError> {
-        let seat = Seat::new_with_cards(player, BoxedCards::blanks(2));
-        seat.player.state.set(PlayerState::Out);
+    pub fn seat_player(&mut self, player: Player) -> Result<u8, DealerError> {
+        let mut seat = Seat::new_with_cards(player, BoxedCards::blanks(2));
+        seat.player.state = PlayerState::Out;
 
         let seat_number = self
             .table
@@ -238,16 +238,16 @@ impl Dealer {
     ///
     /// - [`DealerError::TableError`]`(`[`PKError::TableFull`]`)` — seat is already occupied.
     /// - [`DealerError::TableError`]`(`[`PKError::InvalidSeatNumber`]`)` — seat number is out of range.
-    pub fn seat_player_at(&self, player: Player, seat_number: u8) -> Result<(), DealerError> {
-        if let Some(existing) = self.table.get_seat(seat_number) {
+    pub fn seat_player_at(&mut self, player: Player, seat_number: u8) -> Result<(), DealerError> {
+        if let Some(existing) = self.table.seats.get_seat(seat_number) {
             if !existing.is_empty() {
                 return Err(DealerError::TableError(PKError::TableFull));
             }
         } else {
             return Err(DealerError::TableError(PKError::InvalidSeatNumber));
         }
-        let seat = Seat::new_with_cards(player, BoxedCards::blanks(2));
-        seat.player.state.set(PlayerState::Out);
+        let mut seat = Seat::new_with_cards(player, BoxedCards::blanks(2));
+        seat.player.state = PlayerState::Out;
         self.table
             .seats
             .assign(seat_number as usize, seat)
@@ -262,7 +262,7 @@ impl Dealer {
     ///
     /// - [`DealerError::IllegalAction`] — cannot remove a player mid-hand.
     /// - [`DealerError::TableError`]`(`[`PKError::InvalidSeatNumber`]`)` — seat number is out of range.
-    pub fn remove_player(&self, seat_number: u8) -> Result<Player, DealerError> {
+    pub fn remove_player(&mut self, seat_number: u8) -> Result<Player, DealerError> {
         if self.hand_in_progress {
             return Err(DealerError::IllegalAction {
                 action: DealerAction::Fold { seat: seat_number },
@@ -304,8 +304,7 @@ impl Dealer {
             .seats
             .iter()
             .enumerate()
-            .filter_map(|(i, sc)| {
-                let seat = sc.borrow();
+            .filter_map(|(i, seat)| {
                 if seat.is_empty() || !seat.is_in_hand() || seat.player.is_tapped_out() {
                     return None;
                 }
@@ -336,12 +335,12 @@ impl Dealer {
     /// Because `determine_small_blind` and `determine_big_blind` now skip empty
     /// seats, we only need to move the button to any occupied seat — the table
     /// will correctly find the next two occupied seats for SB and BB.
-    fn advance_button_to_occupied(&self, occupied: &[u8]) {
+    fn advance_button_to_occupied(&mut self, occupied: &[u8]) {
         let size = self.table.seats.size();
         // Move button forward until it lands on an occupied seat.
         for _ in 0..size {
-            self.table.act_button_move();
-            let btn = self.table.button.value();
+            self.table.button_up();
+            let btn = self.table.button;
             if occupied.contains(&btn) {
                 return;
             }
@@ -446,9 +445,9 @@ impl Dealer {
     /// - [`DealerError::HandAlreadyOver`] — the hand is finished.
     /// - [`DealerError::IllegalAction`] — the action is not legal right now.
     /// - [`DealerError::TableError`] — a table operation failed.
-    pub fn act(&self, action: DealerAction) -> Result<(), DealerError> {
+    pub fn act(&mut self, action: DealerAction) -> Result<(), DealerError> {
         if let DealerAction::Ready { seat } = action {
-            if self.table.get_seat(seat).is_some_and(|s| s.is_in_hand()) {
+            if self.table.seats.get_seat(seat).is_some_and(Seat::is_in_hand) {
                 return Err(DealerError::HandInProgress);
             }
             return self.do_ready(seat).map(|_| ());
@@ -479,7 +478,7 @@ impl Dealer {
 
     // ── Private action helpers ────────────────────────────────────────────────
 
-    fn do_bet(&self, seat: u8, amount: usize) -> Result<(), DealerError> {
+    fn do_bet(&mut self, seat: u8, amount: usize) -> Result<(), DealerError> {
         self.validate_is_active(seat, DealerAction::Bet { seat, amount })?;
         if amount == 0 {
             return Err(DealerError::IllegalAction {
@@ -505,7 +504,7 @@ impl Dealer {
             })
     }
 
-    fn do_call(&self, seat: u8) -> Result<(), DealerError> {
+    fn do_call(&mut self, seat: u8) -> Result<(), DealerError> {
         self.validate_is_active(seat, DealerAction::Call { seat })?;
         self.table
             .act_call(seat)
@@ -516,12 +515,12 @@ impl Dealer {
             })
     }
 
-    fn do_check(&self, seat: u8) -> Result<(), DealerError> {
+    fn do_check(&mut self, seat: u8) -> Result<(), DealerError> {
         self.validate_is_active(seat, DealerAction::Check { seat })?;
         // A check is only valid when there is no outstanding bet to call.
-        let current_bet = self.table.bet.get();
-        if let Some(s) = self.table.get_seat(seat)
-            && s.player.bet.count() < current_bet
+        let current_bet = self.table.bet;
+        if let Some(s) = self.table.seats.get_seat(seat)
+            && s.player.bet < current_bet
         {
             return Err(DealerError::IllegalAction {
                 action: DealerAction::Check { seat },
@@ -537,14 +536,14 @@ impl Dealer {
             })
     }
 
-    fn do_raise(&self, seat: u8, amount: usize) -> Result<(), DealerError> {
+    fn do_raise(&mut self, seat: u8, amount: usize) -> Result<(), DealerError> {
         self.validate_is_active(seat, DealerAction::Raise { seat, amount })?;
-        if amount <= self.table.bet.get() {
+        if amount <= self.table.bet {
             return Err(DealerError::IllegalAction {
                 action: DealerAction::Raise { seat, amount },
                 reason: format!(
                     "Raise amount {amount} must be greater than the current bet {}",
-                    self.table.bet.get()
+                    self.table.bet
                 ),
             });
         }
@@ -564,8 +563,8 @@ impl Dealer {
     /// - [`DealerError::PlayerIsTappedOut`] — player in `seat` has 0 chips.
     /// - [`DealerError::HandInProgress`] — player in `seat` is active in a hand that is currently in progress.
     /// - [`DealerError::IllegalAction`] — player in `seat` is in an unexpected state that is not Ready or Out.
-    pub fn do_ready(&self, seat: u8) -> Result<Player, DealerError> {
-        match self.table.get_seat(seat) {
+    pub fn do_ready(&mut self, seat: u8) -> Result<Player, DealerError> {
+        match self.table.seats.get_seat_mut(seat) {
             None => Err(DealerError::NoSuchSeat),
             Some(s) if s.is_empty() => Err(DealerError::EmptySeat),
             Some(s) if s.player.is_tapped_out() => Err(DealerError::PlayerIsTappedOut),
@@ -575,13 +574,17 @@ impl Dealer {
             //     Ok(s.player.clone())
             // },
             Some(s) => {
-                s.player.state.set(PlayerState::Ready);
+                // The celled engine routed this through `PlayerStateCell::set`,
+                // which silently refused an illegal transition. The plain
+                // engine validates at the action level instead — the guards in
+                // the arms above are that validation.
+                s.player.state = PlayerState::Ready;
                 Ok(s.player.clone())
             }
         }
     }
 
-    fn do_all_in(&self, seat: u8) -> Result<(), DealerError> {
+    fn do_all_in(&mut self, seat: u8) -> Result<(), DealerError> {
         self.validate_is_active(seat, DealerAction::AllIn { seat })?;
         self.table
             .act_all_in(seat)
@@ -592,7 +595,7 @@ impl Dealer {
             })
     }
 
-    fn do_fold(&self, seat: u8) -> Result<(), DealerError> {
+    fn do_fold(&mut self, seat: u8) -> Result<(), DealerError> {
         self.validate_is_active(seat, DealerAction::Fold { seat })?;
         self.table
             .act_fold(seat)
@@ -607,7 +610,7 @@ impl Dealer {
 
     /// Confirms `seat` belongs to an active player who is still in the hand.
     fn validate_is_active(&self, seat: u8, action: DealerAction) -> Result<(), DealerError> {
-        match self.table.get_seat(seat) {
+        match self.table.seats.get_seat(seat) {
             None => Err(DealerError::IllegalAction {
                 action,
                 reason: format!("Seat {seat} does not exist"),
@@ -640,7 +643,7 @@ impl Dealer {
 
     /// Returns a reference to the full event log.
     #[must_use]
-    pub fn event_log(&self) -> &TableLog {
+    pub fn event_log(&self) -> &[TableAction] {
         &self.table.event_log
     }
 
@@ -653,14 +656,14 @@ impl Dealer {
     /// Returns the current pot size.
     #[must_use]
     pub fn pot(&self) -> usize {
-        self.table.pot.count()
+        self.table.pot
     }
 
     /// Returns the chip count for a specific seat, or `None` if the seat is
     /// empty or out of range.
     #[must_use]
     pub fn chips_at(&self, seat: u8) -> Option<usize> {
-        self.table.get_seat(seat).map(|s| s.player.chips.count())
+        self.table.seats.get_seat(seat).map(|s| s.player.chips)
     }
 
     /// Sets all seated players with chips to [`PlayerState::YetToAct`] when no hand is running.
@@ -677,29 +680,31 @@ impl Dealer {
     /// ```rust
     /// use pkcore::casino::dealer::Dealer;
     /// use pkcore::casino::game::ForcedBets;
-    /// use pkcore::casino::player::Player;
+    /// use pkcore::casino::table::Player;
     /// use pkcore::prelude::PlayerState;
     ///
-    /// let dealer = Dealer::new(ForcedBets::new(50, 100), 2);
+    /// let mut dealer = Dealer::new(ForcedBets::new(50, 100), 2);
     /// dealer.seat_player(Player::new_with_chips("Alice".to_string(), 1_000)).unwrap();
     /// dealer.seat_player(Player::new_with_chips("Bob".to_string(), 1_000)).unwrap();
     ///
     /// dealer.set_funded_players_to_yet_to_act().unwrap();
     ///
-    /// assert_eq!(dealer.table.get_seat(0).unwrap().player.state.get(), PlayerState::YetToAct);
-    /// assert_eq!(dealer.table.get_seat(1).unwrap().player.state.get(), PlayerState::YetToAct);
+    /// assert_eq!(PlayerState::YetToAct, dealer.table.seats.get_seat(0).unwrap().player.state);
+    /// assert_eq!(PlayerState::YetToAct, dealer.table.seats.get_seat(1).unwrap().player.state);
     /// ```
-    pub fn set_funded_players_to_yet_to_act(&self) -> Result<(), DealerError> {
+    pub fn set_funded_players_to_yet_to_act(&mut self) -> Result<(), DealerError> {
         if self.hand_in_progress {
             return Err(DealerError::HandInProgress);
         }
 
-        for seat_cell in self.table.seats.iter() {
-            let seat = seat_cell.borrow();
+        for seat in self.table.seats.iter_mut() {
             if seat.is_empty() || seat.player.is_tapped_out() {
                 continue;
             }
-            seat.player.state.set(PlayerState::YetToAct);
+            // `PlayerState::can_given` (src/casino/state.rs:407) returns true
+            // for every transition into `YetToAct`, so the celled guard this
+            // replaces never refused anything here.
+            seat.player.state = PlayerState::YetToAct;
         }
         Ok(())
     }
@@ -724,10 +729,9 @@ impl fmt::Display for Dealer {
 mod casino__dealer_tests {
     use super::*;
     use crate::casino::game::ForcedBets;
-    use crate::casino::player::Player;
 
     fn two_player_dealer() -> Dealer {
-        let dealer = Dealer::new(ForcedBets::new(50, 100), 6);
+        let mut dealer = Dealer::new(ForcedBets::new(50, 100), 6);
         dealer
             .seat_player(Player::new_with_chips("Alice".to_string(), 10_000))
             .unwrap();
@@ -738,7 +742,7 @@ mod casino__dealer_tests {
     }
 
     fn six_player_dealer() -> Dealer {
-        let dealer = Dealer::new(ForcedBets::new(50, 100), 6);
+        let mut dealer = Dealer::new(ForcedBets::new(50, 100), 6);
         for i in 0..6 {
             dealer
                 .seat_player(Player::new_with_chips(format!("Player {i}"), 10_000))
@@ -756,7 +760,7 @@ mod casino__dealer_tests {
 
     #[test]
     fn seat_player__success() {
-        let dealer = Dealer::new(ForcedBets::new(50, 100), 6);
+        let mut dealer = Dealer::new(ForcedBets::new(50, 100), 6);
         let seat = dealer
             .seat_player(Player::new_with_chips("Alice".to_string(), 5_000))
             .unwrap();
@@ -765,16 +769,16 @@ mod casino__dealer_tests {
 
     #[test]
     fn seat_player_at__success() {
-        let dealer = Dealer::new(ForcedBets::new(50, 100), 6);
+        let mut dealer = Dealer::new(ForcedBets::new(50, 100), 6);
         dealer
             .seat_player_at(Player::new_with_chips("Alice".to_string(), 5_000), 3)
             .unwrap();
-        assert!(dealer.table.get_seat(3).is_some_and(|s| !s.is_empty()));
+        assert!(dealer.table.seats.get_seat(3).is_some_and(|s| !s.is_empty()));
     }
 
     #[test]
     fn seat_player_at__seat_taken_returns_error() {
-        let dealer = Dealer::new(ForcedBets::new(50, 100), 6);
+        let mut dealer = Dealer::new(ForcedBets::new(50, 100), 6);
         dealer
             .seat_player_at(Player::new_with_chips("Alice".to_string(), 5_000), 0)
             .unwrap();
@@ -810,29 +814,23 @@ mod casino__dealer_tests {
 
     #[test]
     fn act_before_hand_started_returns_error() {
-        let dealer = two_player_dealer();
+        let mut dealer = two_player_dealer();
         let err = dealer.act(DealerAction::Check { seat: 0 }).unwrap_err();
         assert_eq!(DealerError::HandNotStarted, err);
     }
 
     #[test]
     fn act_ready_before_hand_started_calls_do_ready() {
-        let dealer = two_player_dealer();
+        let mut dealer = two_player_dealer();
         let result = dealer.act(DealerAction::Ready { seat: 0 });
         assert!(result.is_ok());
     }
 
     #[test]
     fn act_ready_rejects_player_in_hand() {
-        let dealer = two_player_dealer();
+        let mut dealer = two_player_dealer();
         let seat_in_hand: u8 = 0;
-        dealer
-            .table
-            .get_seat(seat_in_hand)
-            .unwrap()
-            .player
-            .state
-            .set(PlayerState::YetToAct);
+        dealer.table.seats.get_seat_mut(seat_in_hand).unwrap().player.state = PlayerState::YetToAct;
 
         let err = dealer.act(DealerAction::Ready { seat: seat_in_hand }).unwrap_err();
         assert_eq!(DealerError::HandInProgress, err);
@@ -840,7 +838,7 @@ mod casino__dealer_tests {
 
     #[test]
     fn act_ready_before_hand_started_returns_ready_specific_error() {
-        let dealer = two_player_dealer();
+        let mut dealer = two_player_dealer();
         let err = dealer.act(DealerAction::Ready { seat: 42 }).unwrap_err();
         assert_eq!(DealerError::NoSuchSeat, err);
     }
@@ -862,7 +860,7 @@ mod casino__dealer_tests {
         let target = dealer.next_to_act();
         dealer.act(DealerAction::Fold { seat: target }).unwrap();
         // The folded seat is no longer in the hand
-        let seat = dealer.table.get_seat(target).unwrap();
+        let seat = dealer.table.seats.get_seat(target).unwrap();
         assert!(!seat.is_in_hand());
     }
 
@@ -905,7 +903,7 @@ mod casino__dealer_tests {
 
     #[test]
     fn do_ready__no_such_seat() {
-        let dealer = two_player_dealer();
+        let mut dealer = two_player_dealer();
         // Seat 10 is out of range (6-seat table)
         let err = dealer.do_ready(10).unwrap_err();
         assert_eq!(DealerError::NoSuchSeat, err);
@@ -913,7 +911,7 @@ mod casino__dealer_tests {
 
     #[test]
     fn do_ready__empty_seat() {
-        let dealer = two_player_dealer();
+        let mut dealer = two_player_dealer();
         // Seat 5 is empty (only 2 players seated in 6-seat table)
         let err = dealer.do_ready(5).unwrap_err();
         assert_eq!(DealerError::EmptySeat, err);
@@ -921,7 +919,7 @@ mod casino__dealer_tests {
 
     #[test]
     fn do_ready__player_tapped_out() {
-        let dealer = Dealer::new(ForcedBets::new(50, 100), 6);
+        let mut dealer = Dealer::new(ForcedBets::new(50, 100), 6);
         // Seat a player with 0 chips (tapped out)
         dealer
             .seat_player(Player::new_with_chips("Broke Bob".to_string(), 0))
@@ -932,10 +930,10 @@ mod casino__dealer_tests {
 
     #[test]
     fn do_ready__player_active() {
-        let dealer = two_player_dealer();
+        let mut dealer = two_player_dealer();
         // Manually set a player to an active state (YetToAct means they're in the hand)
-        let seat_0 = dealer.table.get_seat(0).unwrap();
-        seat_0.player.state.set(PlayerState::YetToAct);
+        let seat_0 = dealer.table.seats.get_seat_mut(0).unwrap();
+        seat_0.player.state = PlayerState::YetToAct;
         // Now trying to check readiness should fail because they're active
         assert!(seat_0.player.is_active(), "Player should be active");
         let err = dealer.do_ready(0).unwrap_err();
@@ -944,7 +942,7 @@ mod casino__dealer_tests {
 
     #[test]
     fn do_ready__player_ready() {
-        let dealer = two_player_dealer();
+        let mut dealer = two_player_dealer();
         // Players are seated and in Ready state by default
         let result = dealer.do_ready(0);
         assert!(result.is_ok());
@@ -952,24 +950,40 @@ mod casino__dealer_tests {
 
     #[test]
     fn do_ready__player_out() {
-        let dealer = two_player_dealer();
+        let mut dealer = two_player_dealer();
         // Set a player to Out state
-        let seat_0 = dealer.table.get_seat(0).unwrap();
-        seat_0.player.state.set(PlayerState::Out);
+        let seat_0 = dealer.table.seats.get_seat_mut(0).unwrap();
+        seat_0.player.state = PlayerState::Out;
         let result = dealer.do_ready(0);
         assert!(result.is_ok());
     }
 
     #[test]
     fn do_ready__player_folded() {
-        let dealer = two_player_dealer();
+        let mut dealer = two_player_dealer();
         // Manually set a player to Fold state without running a hand
-        let seat_0 = dealer.table.get_seat(0).unwrap();
-        seat_0.player.state.set(PlayerState::Fold);
+        let seat_0 = dealer.table.seats.get_seat_mut(0).unwrap();
+        seat_0.player.state = PlayerState::Fold;
         // After folding, player is not active but also not in Ready or Out state
         // The do_ready method's catch-all clause should return Ok
         let result = dealer.do_ready(0);
         assert!(result.is_ok(), "folded player should pass do_ready check");
+    }
+
+    #[test]
+    fn do_ready_moves_a_folded_player_all_the_way_to_ready() {
+        // EPIC-83 behaviour delta. The celled engine set this state through
+        // `PlayerStateCell::set`, which consulted `PlayerState::can_given` and
+        // silently refused Fold -> Ready, leaving the player on `Fold`. The
+        // plain engine assigns directly, so the player actually becomes
+        // `Ready` — which is what `do_ready` says it does, and what the caller
+        // (a player sitting in for the next hand) needs.
+        let mut dealer = two_player_dealer();
+        dealer.table.seats.get_seat_mut(0).unwrap().player.state = PlayerState::Fold;
+
+        dealer.do_ready(0).unwrap();
+
+        assert_eq!(PlayerState::Ready, dealer.table.seats.get_seat(0).unwrap().player.state);
     }
 
     #[test]
@@ -1067,7 +1081,7 @@ mod casino__dealer_tests {
         dealer.start_hand().unwrap();
 
         let dealt_counts: Vec<usize> = (0..6)
-            .map(|i| dealer.table.get_seat(i).unwrap().cards.number_of_dealt_cards())
+            .map(|i| dealer.table.seats.get_seat(i).unwrap().cards.number_of_dealt_cards())
             .collect();
 
         assert_eq!(vec![2, 0, 0, 2, 0, 0], dealt_counts);
@@ -1123,7 +1137,7 @@ mod casino__dealer_tests {
 
     #[test]
     fn set_funded_players_to_yet_to_act_sets_only_eligible_players() {
-        let dealer = Dealer::new(ForcedBets::new(50, 100), 4);
+        let mut dealer = Dealer::new(ForcedBets::new(50, 100), 4);
         dealer
             .seat_player_at(Player::new_with_chips("Alice".to_string(), 10_000), 0)
             .unwrap();
@@ -1131,16 +1145,16 @@ mod casino__dealer_tests {
             .seat_player_at(Player::new_with_chips("Bob".to_string(), 0), 1)
             .unwrap();
 
-        dealer.table.get_seat(0).unwrap().player.state.set(PlayerState::Out);
-        dealer.table.get_seat(1).unwrap().player.state.set(PlayerState::Out);
+        dealer.table.seats.get_seat_mut(0).unwrap().player.state = PlayerState::Out;
+        dealer.table.seats.get_seat_mut(1).unwrap().player.state = PlayerState::Out;
 
         dealer.set_funded_players_to_yet_to_act().unwrap();
 
         assert_eq!(
             PlayerState::YetToAct,
-            dealer.table.get_seat(0).unwrap().player.state.get()
+            dealer.table.seats.get_seat(0).unwrap().player.state
         );
-        assert_eq!(PlayerState::Out, dealer.table.get_seat(1).unwrap().player.state.get());
+        assert_eq!(PlayerState::Out, dealer.table.seats.get_seat(1).unwrap().player.state);
     }
 
     #[test]

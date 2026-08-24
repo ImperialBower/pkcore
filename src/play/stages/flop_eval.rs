@@ -5,7 +5,7 @@ use crate::arrays::five::Five;
 use crate::arrays::three::Three;
 use crate::play::game::Game;
 use crate::play::hole_cards::HoleCards;
-use crate::prelude::TableCelled;
+use crate::prelude::Table;
 use crate::{PKError, Pile};
 use wincounter::results::WinResults;
 use wincounter::wins::Wins;
@@ -288,10 +288,19 @@ impl TryFrom<Game> for FlopEval {
     }
 }
 
-impl TryFrom<&TableCelled> for FlopEval {
+impl TryFrom<&Table> for FlopEval {
     type Error = PKError;
 
-    fn try_from(table: &TableCelled) -> Result<Self, Self::Error> {
+    /// Evaluates the table's current street by routing through [`Game`].
+    ///
+    /// Added alongside the celled conversion by EPIC-83; the celled one goes
+    /// with `TableCelled` in Phase 3.
+    ///
+    /// # Errors
+    ///
+    /// Propagates from [`Game::try_from`] (an unreadable board) or from this
+    /// stage's own `TryFrom<Game>` (a board on the wrong street).
+    fn try_from(table: &Table) -> Result<Self, Self::Error> {
         FlopEval::try_from(Game::try_from(table)?)
     }
 }
@@ -376,5 +385,45 @@ mod play__stages__flop_eval_tests {
         assert_eq!(990, sut.case_evals.len());
         assert_eq!(&(931, 16), sut.results.v.get(0).unwrap()); // D
         assert_eq!(&(43, 16), sut.results.v.get(1).unwrap());
+    }
+
+    // ── EPIC-83: eval stages from the plain Table ────────────────────────────
+
+    /// A two-handed NLHE table dealt out to `street`.
+    fn table_at(street: &str) -> crate::casino::table::Table {
+        use crate::casino::game::ForcedBets;
+        use crate::casino::table::{Player, Seat, Seats, Table};
+
+        let mut table = Table::nlh_from_seats(
+            Seats::new(vec![
+                Seat::new(Player::new_with_chips("Ann".to_string(), 1_000)),
+                Seat::new(Player::new_with_chips("Bo".to_string(), 1_000)),
+            ]),
+            ForcedBets::new(50, 100),
+        );
+        table.act_forced_bets().unwrap();
+        table.deal_cards_to_seats().unwrap();
+        table.deal_flop().unwrap();
+        if street != "flop" {
+            table.deal_turn().unwrap();
+        }
+        if street == "river" {
+            table.deal_river().unwrap();
+        }
+        table
+    }
+
+    #[test]
+    fn flopeval_try_from_table_evaluates_that_table() {
+        let table = table_at("flop");
+
+        let eval = FlopEval::try_from(&table).unwrap();
+
+        assert_eq!(
+            Three::try_from(table.board.clone()).unwrap(),
+            eval.board,
+            "the flop it evaluated is the table's flop"
+        );
+        assert_eq!(2, eval.hands.len(), "one hand per seat");
     }
 }

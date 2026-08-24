@@ -18,7 +18,7 @@ fn main() -> Result<(), PKError> {
 
     nubi.table.eval_flop_display();
 
-    let game = Game::try_from(nubi.table)?;
+    let game = Game::try_from(&nubi.table)?;
     let fe = FlopEval::try_from(game.clone())?;
 
     // println!("{game}");

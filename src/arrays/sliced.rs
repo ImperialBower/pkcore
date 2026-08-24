@@ -1,7 +1,7 @@
 use crate::PKError;
 use crate::card::Card;
 use crate::cards_cell::CardsCell;
-use crate::prelude::{SeatsCell, TheNuts};
+use crate::prelude::{Seats, TheNuts};
 use crate::util::terminal::Terminal;
 use crate::{Cards, Forgiving, Pile};
 use std::fmt::Display;
@@ -766,15 +766,23 @@ impl Display for Boxes {
     }
 }
 
-impl From<&SeatsCell> for Boxes {
-    fn from(seats: &SeatsCell) -> Self {
-        Boxes::from(
-            seats
-                .borrow_all()
-                .iter()
-                .map(|seat_cell| seat_cell.borrow().cards.clone())
-                .collect::<Vec<_>>(),
-        )
+/// Every seat's hole cards, in ring order, empty seats included.
+///
+/// The box at index `n` belongs to seat `n`, so the shape is preserved even
+/// where nobody is sitting — callers index by seat number.
+impl From<&Seats> for Boxes {
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::arrays::sliced::Boxes;
+    /// use pkcore::util::data::TestData;
+    ///
+    /// let boxes = Boxes::from(&TestData::the_hand_dealt_seats());
+    ///
+    /// assert_eq!(8, boxes.len());
+    /// ```
+    fn from(seats: &Seats) -> Self {
+        Boxes::from(seats.iter().map(|seat| seat.cards.clone()).collect::<Vec<_>>())
     }
 }
 
