@@ -7,10 +7,10 @@
 > Standards source: `CLAUDE.md` (no `unwrap()`/`expect()`/`panic!()` in library
 > code; every public fn needs a doc test + unit test).
 >
-> Last refreshed **2026-08-22** (second pass) against `EPIC-79b` @ `39ea3564`,
-> pkcore `0.8.0`. EPIC-79b Phases 0–2 landed; `src/seal/` ships with no `TODO`
-> markers of its own, so the census below is unchanged by it.
-> Marker census in `src/`: 70 `TODO`, of which 11 `TODO RF` and 3 `TODO TD`.
+> Last refreshed **2026-08-25** against `EPIC-79b` @ `1821d866`, pkcore
+> `0.9.0`. EPIC-79b is COMPLETE and `main` (0.8.0, EPIC-83) is merged in, so
+> `TableCelled` is gone and took its markers with it.
+> Marker census in `src/`: 63 `TODO`, of which 10 `TODO RF` and 3 `TODO TD`.
 > **0 `TODO DEFECT`**. No `FIXME`, `HACK`, or `XXX` markers remain.
 >
 > The last automated review pass ran 2026-08-18 and predates `0.7.0`'s
@@ -32,11 +32,24 @@ passes — but the mechanism that hid them is untouched.
 
 - [ ] **Lint non-default features in the gate** — `store`, `terminal`,
       `pokerbench`, `generators`, `bot-training`, `debug-json` and the new
-      `seal-test-double` all sit in the blind spot. `make check-features`
-      already iterates features for `cargo check`; the cheapest fix is to add
-      a clippy pass on the same loop, or one `cargo clippy --all-features --
-      -D warnings` line in `ayce`. Until then, a feature-gated regression can
-      reach a release. (`Makefile`, the `ayce` and `clippy` targets)
+      `seal-test-double` all sit in the blind spot. **Verified 2026-08-25:
+      `cargo clippy --all-features --lib -- -D warnings` passes clean**, so
+      adding that single line to the `ayce` chain closes the hole today with
+      no code changes. Until then, a feature-gated regression can reach a
+      release. (`Makefile`, the `ayce` and `clippy` targets)
+
+- [ ] **Decide what pedantic means inside `#[cfg(test)]`** — surfaced by the
+      check above. `src/lib.rs:1` sets `#![warn(clippy::pedantic,
+      clippy::unwrap_used, clippy::expect_used)]` crate-wide, but `CLAUDE.md`
+      explicitly permits `unwrap`/`expect` in tests. So
+      `cargo clippy --all-features --all-targets` reports **~2 059 warnings, of
+      which ~1 782 are `unwrap_used`/`expect_used` inside test modules** — pure
+      noise under our own rules, and it is what stops the gate from covering
+      test and example targets at all. The fix is a policy call:
+      `#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]` in
+      `src/lib.rs`, after which the ~277 real warnings (51 `float_cmp`, 45
+      `doc_markdown`, 25 `uninlined_format_args`, 22 `collapsible_if`, …)
+      become a finite, fixable list. (`src/lib.rs:1`)
 
 
 ## Tracked debt

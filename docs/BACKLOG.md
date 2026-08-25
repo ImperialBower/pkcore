@@ -1,34 +1,29 @@
 # Backlog
 
-> **STALE as of 2026-08-25.** `0.8.0` was released from `main` carrying
-> [EPIC-83](epics/EPIC-83_Table_Decelled.md) (the `TableCelled` retirement), and
-> `main` was then merged into this branch. The EPIC-79b work below is
-> renumbered to `0.9.0`, and every "tag and publish `0.8.0`" item is already
-> done. Re-run `/backlog` to refresh.
-
-> Refreshed by the `/backlog` skill on **2026-08-22** (second pass) against
-> `EPIC-79b` @ `39ea3564`, pkcore **`0.8.0`** (cut, not yet tagged or
-> published). An index of outstanding work aggregated from EPIC docs,
-> `ROADMAP.md`, defect reports, code comments, the unreleased changelog, and
-> open GitHub issues. Items tagged 🤖 are machine-proposed — review before
-> adopting. Tech-debt detail lives in [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
+> Refreshed by the `/backlog` skill on **2026-08-25** against `EPIC-79b`
+> @ `1821d866`, pkcore **`0.9.0`** (unreleased, untagged). An index of
+> outstanding work aggregated from EPIC docs, `ROADMAP.md`, defect reports,
+> code comments, the unreleased changelog, and open GitHub issues. Items
+> tagged 🤖 are machine-proposed — review before adopting. Tech-debt detail
+> lives in [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
 >
-> **What changed since the earlier 2026-08-22 pass:** **EPIC-79b Phases 0–2
-> shipped.** `src/seal/` now holds `CardSeal`, `SlotId`, `SealedCard<S>`,
-> `SealedDeck<S>`, `DeckAudit` and the feature-gated `PlaintextSeal` double —
-> 33 unit tests, 20 doc tests, zero new dependencies, `make check-purity`
-> green, `make ayce` green. Version bumped `0.7.1` → `0.8.0` and the CHANGELOG
-> cut. Separately, sixteen pedantic clippy findings in `src/bot/training/`
-> were fixed, so `cargo clippy --all-features -- -D warnings` passes for the
-> first time. The frontier moves: **the sealed-deck seam exists; what it
-> plugs into does not.**
+> **What changed since 2026-08-22:** `0.8.0` was **tagged and released** from
+> `main` carrying [EPIC-83](epics/EPIC-83_Table_Decelled.md) — `TableCelled` is
+> gone and there is one betting engine again. `main` was then merged into this
+> branch, and [EPIC-79b](epics/EPIC-79b_Sealed_Deck.md) closed **COMPLETE**:
+> every phase landed, including the Phase 3 gate (opened 2026-08-23) that makes
+> `Table` an alias for `TableOf<NullSeal>` with a `SealedDeck<S>`. That work is
+> staged for **`0.9.0`**, which is cut in `Cargo.toml` but not tagged or
+> published. The successor is
+> [EPIC-79c](epics/EPIC-79c_Sealed_Seats.md) — sealed *seats*.
 
 ---
 
 ## Release follow-through
 
-`v0.7.0` is on crates.io and every downstream consumer is on it. **`0.8.0` is
-cut in the tree but not released.**
+`v0.8.0` is **tagged and on crates.io**. **`0.9.0` is cut in `Cargo.toml` but
+not tagged or published**, and it carries a breaking change (`Table` is now
+`TableOf<NullSeal>`, `Table::deck` is a `SealedDeck<S>`).
 
 Done:
 
@@ -36,29 +31,68 @@ Done:
    ~~unbreak downstream~~, ~~`next_actor` returns `Result`~~ — all closed
    2026-08-21/22.
 2. ~~**Cut `CHANGELOG.md` for `0.8.0`**~~ — **DONE 2026-08-22.**
-   `## [0.8.0] - 2026-08-22` header and compare link added; `[Unreleased]` is
-   empty again.
+3. ~~**Tag and publish `0.8.0`**~~ — **DONE.** `v0.8.0` exists.
 
 **Open, in the order they block each other:**
 
-1. **Tag and publish `0.8.0`.** The tree is green (`make ayce`) and the
-   changelog is cut. Nothing blocks it.
-2. **Write `docs/releases/RELEASE_0.7.0.md` and `RELEASE_0.8.0.md`** — `0.6.0`
-   has release notes, `0.7.0` never got any, and `0.8.0` is now also due.
-   `/release-notes` covers both.
-3. **Run `audit-release` for `0.8.0`** — the EPIC's own exit criterion 8 asks
-   for it, and `RELEASE_AUDIT_0.6.0.md` is still the newest audit. `0.8.0` is
-   purely additive (new module, new off-by-default feature, three
-   `#[non_exhaustive]` error variants), so the audit should be short — but
-   short is not the same as skipped.
-4. **`pkgto-web` and `pkkuhn-web` still pin `pkcore = "0.2.1"`** — six minor
-   versions behind now. They compile, so this is drift, not breakage.
+1. **Write `docs/releases/RELEASE_0.7.0.md` and `RELEASE_0.8.0.md`** —
+   `docs/releases/` stops at `RELEASE_0.6.0.md`. Both are pure documentation
+   over tags that already exist; `/release-notes` does the diffing.
+   *Cheap, unblocked, and the oldest open item on this list.*
+2. **Run `audit-release` for `0.8.0`** — `RELEASE_AUDIT_0.6.0.md` is still the
+   newest audit, and `0.8.0` retired `TableCelled`, which is exactly the kind
+   of removal a downstream audit exists to catch.
+3. **Cut `0.9.0` when EPIC-79c scope is settled** — the `[Unreleased]` block is
+   large and breaking. Do not tag until the seat work either lands or is
+   explicitly deferred to `0.10.0`.
+4. **`pkgto-web` and `pkkuhn-web` still pin `pkcore = "0.2.1"`** — seven minor
+   versions behind. They compile, so this is drift, not breakage.
    `pkkuhn-web` `src/lib.rs` calls `KuhnCfr::train` twice, which became
    fallible in `0.7.0`, so the bump is a real (small) edit.
-5. **`Cargo.lock` is not tracked** in this repo, so exit criterion 8's
-   "regenerate the lockfile" step leaves no artifact in the commit. Worth a
-   decision: track it (normal for a binary-producing workspace) or strike the
-   criterion from future EPIC templates.
+5. **`Cargo.lock` is not tracked** in this repo, so the EPIC exit criterion
+   "regenerate the lockfile" leaves no artifact in the commit. Worth a
+   decision: track it, or strike the criterion from future EPIC templates.
+
+---
+
+## Quick wins — small, self-contained, unblocked
+
+Verified against the tree on **2026-08-25**. Each is an afternoon or less and
+touches nothing an EPIC is waiting on.
+
+1. **Lint non-default features in `make ayce`.** `make clippy` runs
+   `cargo clippy -- -W clippy::pedantic` — default features only, and `-W`, not
+   `-D`. Every non-default feature (`bot-training`, `pokerbench`, `generators`,
+   `debug-json`, `seal-test-double`) is invisible to the gate; that is how
+   sixteen findings accumulated in `src/bot/training/` unnoticed.
+   **`cargo clippy --all-features --lib -- -D warnings` passes clean today**,
+   so adding that one line to the `ayce` chain closes the hole with no
+   code changes. Do *not* use `--all-targets`: `src/lib.rs` carries
+   `#![warn(clippy::unwrap_used, clippy::expect_used)]` crate-wide, and test
+   modules legitimately use both, so `--all-targets` reports ~2 000 warnings of
+   which ~1 780 are `unwrap`/`expect` in tests. Silencing those needs a
+   `#![cfg_attr(test, allow(...))]` decision first — a separate item.
+   (`Makefile`, the `ayce` and `clippy` targets)
+2. **Fill in the `# Errors` sections in `src/analysis/nubibus.rs`.** Four
+   public fallible fns carry a bare `TODO: Fill in errors`, and `boop` says
+   `I'm not actually sure`. Every error they can return is visible in the body
+   — each is a `?` on a `Table` action. Documentation only, no behaviour
+   change. (`src/analysis/nubibus.rs:141`, `:154`, `:170`, `:190`, and `boop`
+   at `:120`)
+3. **Write `docs/releases/RELEASE_0.7.0.md` and `RELEASE_0.8.0.md`.** Both tags
+   exist; `/release-notes` does the diffing. See *Release follow-through*.
+4. **Retire the `expect("TODO: panic message")` idiom.** 35 occurrences, but
+   only three are live: `examples/insert_distinct.rs:51`, a test at
+   `src/arrays/matchups/masked.rs:979`, and a doc comment at
+   `src/arrays/matchups/sorted_heads_up.rs:568`. The other ~30 sit in
+   `examples/retired/`, which is where the copy-paste keeps coming from —
+   delete the directory or give the calls real messages.
+5. **Give `SevenFiveBCM` a `Display` impl.** `TODO: Implement display trait`;
+   the house rule asks for `Display` on user-facing types. The struct is three
+   fields (`bc`, `best`, `rank`). (`src/analysis/store/bcm/binary_card_map.rs:199`)
+6. **Test `PreflopRowHash`.** `TODO: Write tests!!!` on a `HashMap` wrapper with
+   `add` / `contains_key` / lookups — the cheapest of the self-declared missing
+   tests. (`src/analysis/store/heads_up.rs:150`)
 
 ---
 
@@ -66,24 +100,17 @@ Done:
 
 Ranked by "designed, unblocked, and nothing has landed yet".
 
-1. **EPIC-79b Phase 3 — wire `SealedDeck` into `Table`** 🔒 **GATED**
-   ([`epics/EPIC-79b_Sealed_Deck.md`](epics/EPIC-79b_Sealed_Deck.md))
-   Phases 0–2 shipped 2026-08-22 in `0.8.0`; Phases 4–5 sit behind Phase 3.
-   Phase 3 is **explicitly gated and needs your approval before any code** —
-   `SealedDeck<S>` is generic, and threading `S` through `Table`, the seats,
-   the dealer and every downstream consumer is a large, mostly irreversible
-   blast radius. Work item **3a** is analysis only: compare a generic
-   `Table<S>` against a separate `SealedTable` against type erasure behind a
-   `dyn` object, costed against the existing call sites at
-   `src/casino/table.rs:1277`, `:1486`, `:1503`, `:1518`. **3b** is "present
-   the recommendation and stop." That write-up is the next honest step here,
-   and it is cheap.
-
-   Also open from the same EPIC, and *not* gated: **Phase 4** (the
-   `TableAction::SealedDealt` / `Revealed` reveal ledger) is written as
-   depending on Phase 3, but its types do not — both variants carry `SlotId`,
-   a plain `u8` newtype, so `TableAction` stays non-generic. Worth
-   re-reading before assuming the gate blocks it.
+1. **EPIC-79c — sealed seats** ([`epics/EPIC-79c_Sealed_Seats.md`](epics/EPIC-79c_Sealed_Seats.md))
+   EPIC-79b is **COMPLETE** — all phases, including the Phase 3 gate opened
+   2026-08-23. `Table` is now `TableOf<S: CardSeal>` with `Table =
+   TableOf<NullSeal>` as the source-compatible alias, and the reveal ledger
+   (`TableAction::SealedDealt` / `Revealed`) landed with it. What remains
+   unsealed is everything on the *player* side: `Seat::cards`,
+   `Table::dealt_hole_cards`, `Seat::hand`. That is EPIC-79c, and it has an
+   alternative framing worth reading first,
+   [`EPIC-79c-alt`](epics/EPIC-79c-alt_Sealed_Seats_via_Table_Modes.md)
+   (table *modes* instead of another generic parameter). **Pick between the
+   two before writing code** — same trap the Phase 3 gate was built for.
 
 2. **EPIC-81 — pkcore on the ckc-rs kernel** ([`epics/EPIC-81_Ckc_Rs_Dependency.md`](epics/EPIC-81_Ckc_Rs_Dependency.md))
    Delete the private Cactus Kev evaluator copy and depend on `ckc-rs` 0.2,
@@ -188,9 +215,10 @@ Closed-out on 2026-08-21, recorded so nobody re-reports them:
 
 ## Tech debt
 
-70 `TODO` markers in `src/` — 11 `TODO RF`, 3 `TODO TD`, 0 `TODO DEFECT`. No
-`FIXME`/`HACK`/`XXX` remain. Unchanged by the EPIC-79b work: `src/seal/` ships
-with no TODO markers of its own. Full detail in
+63 `TODO` markers in `src/` — 10 `TODO RF`, 3 `TODO TD`, 0 `TODO DEFECT`. No
+`FIXME`/`HACK`/`XXX` remain. Down from 70 on 2026-08-22: the `TableCelled`
+retirement took its markers with it. `src/seal/` ships with none of its own.
+Full detail in
 [`docs/TECHNICAL_DEBT.md`](TECHNICAL_DEBT.md).
 
 **2026-08-22 clippy sweep (`0.8.0`):** `cargo clippy --all-features -- -D
@@ -272,11 +300,10 @@ odd chips, and the CFR/equity math. See `TECHNICAL_DEBT.md` for what was traced.
 
 ## Unreleased (in `CHANGELOG.md`)
 
-**Empty.** `## [0.8.0] - 2026-08-22` was cut on 2026-08-22 and carries the
-EPIC-79b seal module, the `seal-test-double` feature, the three `PKError`
-variants, the clippy sweep, `scripts/build_epub.sh` and the EPIC-06 image-link
-fix. `Cargo.toml` is at `0.8.0`. The tag and the crates.io publish have not
-happened — see *Release follow-through*.
+**Large and breaking.** `[Unreleased]` carries the EPIC-79b Phase 3 change
+(`Table` → `TableOf<S>`, sealed deck, hand-written `PartialEq`/`Clone`/`Debug`,
+`TryFrom<&TableOf<S>>`) plus the EPIC-83 alignment merged from `main`.
+`Cargo.toml` is at `0.9.0`; no `v0.9.0` tag and no publish.
 
 ---
 
