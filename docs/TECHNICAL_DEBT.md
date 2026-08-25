@@ -46,7 +46,8 @@ of the `CLAUDE.md` rule that every public fn carries a unit test._
 
 ### Missing `# Errors` documentation
 
-- [ ] **`analysis/nubibus.rs`** — four public fallible fns carry a bare `TODO: Fill in errors` in place of the `# Errors` section clippy-pedantic expects. (`src/analysis/nubibus.rs:81`, `:93`, `:108`, `:144`)
+- [x] ~~**`analysis/nubibus.rs`**~~ — **DONE 2026-08-25** in `0.8.1`. `ff`, `play_hand`, `play_hand_display` and `do_action` now name the `PKError` variants a Pluribus replay can fail on, and say that replay stops at the first rejected action without rewinding the queue. `boop` was the fifth placeholder (`I'm not actually sure`) and is now documented as it behaves. **Left open below.** (`src/analysis/nubibus.rs`)
+- [ ] **`Nubificus::boop` discards a replay error** — `let _ = self.ff(1, true);` means a diverged replay returns `Ok(())`. Same swallowed-error shape `DEFECT_020` closed on `Nubificus::act`; only caller is `examples/pluripop.rs`. Documented in `0.8.1`, not fixed. (`src/analysis/nubibus.rs:112`)
 
 ### Refactor backlog (`TODO RF`)
 

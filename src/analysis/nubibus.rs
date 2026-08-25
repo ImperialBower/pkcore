@@ -107,7 +107,10 @@ impl Nubificus {
 
     /// # Errors
     ///
-    /// I'm not actually sure.
+    /// Never returns an error today. Its one fallible call — [`Self::ff`] — has
+    /// its result discarded, so a replay that diverges reads as success. The
+    /// `Result` is kept because propagating is the intended fix, the same
+    /// swallowed-error shape `DEFECT_020` closed on [`Nubificus::act`].
     pub fn boop(&mut self) -> Result<(), PKError> {
         let _ = self.ff(1, true);
         match self.queue.pop_front() {
@@ -118,7 +121,14 @@ impl Nubificus {
 
     /// # Errors
     ///
-    /// TODO: Fill in errors
+    /// - Whatever [`Table::act`] propagates while advancing the table —
+    ///   `PKError::NotEnoughCards` when the deck cannot cover the street, and
+    ///   any error from posting blinds, dealing, or ending the hand.
+    /// - Whatever [`Self::do_action`] returns for the first replayed action the
+    ///   table rejects.
+    ///
+    /// Replay stops at that action. The queue is not rewound, so the table and
+    /// the log have diverged and the remaining actions are not applied.
     pub fn ff(&mut self, number_of_actions: usize, display: bool) -> Result<(), PKError> {
         self.table.act()?;
 
@@ -135,7 +145,11 @@ impl Nubificus {
 
     /// # Errors
     ///
-    /// TODO: Fill in errors
+    /// - `PKError::NotEnoughCards` or `PKError::InvalidSeatNumber` from
+    ///   [`Table::deal_cards_to_seats`] when the hand has not been dealt yet.
+    /// - Whatever [`Table::act`] propagates while advancing the table.
+    /// - Whatever [`Self::do_action`] returns for the first logged action the
+    ///   table rejects; the actions after it are not applied.
     pub fn play_hand(&mut self) -> Result<(), PKError> {
         if !self.table.seats.are_dealt() {
             self.table.deal_cards_to_seats()?;
@@ -150,7 +164,12 @@ impl Nubificus {
 
     /// # Errors
     ///
-    /// TODO: Fill in errors
+    /// The same set as [`Self::play_hand`]: dealing errors from
+    /// [`Table::deal_cards_to_seats`], anything [`Table::act`] propagates, and
+    /// the first rejected action from [`Self::do_action`].
+    ///
+    /// Output already written to stdout is not withdrawn, so a failed replay
+    /// leaves a partial transcript on screen.
     pub fn play_hand_display(&mut self) -> Result<(), PKError> {
         log::trace!("Nubibus.play_hand_display()");
         if !self.table.seats.are_dealt() {
@@ -186,7 +205,15 @@ impl Nubificus {
 
     /// # Errors
     ///
-    /// TODO: Fill in errors
+    /// - `PKError::InvalidPluribusIndex` if the seat the table says is next to
+    ///   act is not an occupied seat.
+    /// - Whatever the matching [`Table`] action rejects the logged move with —
+    ///   typically `PKError::TableActionOutOfOrder` when the log and the table
+    ///   disagree about who acts, or `PKError::InsufficientChips` on a raise
+    ///   the stack cannot cover.
+    ///
+    /// See [`Nubificus::act`] for why a rejected action ends the replay instead
+    /// of being skipped.
     #[allow(clippy::too_many_lines)]
     pub fn do_action(&mut self, action: &PluribusEvent, display: bool) -> Result<(), PKError> {
         let seat_to_act = self.table.next_to_act();
