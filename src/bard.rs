@@ -338,7 +338,7 @@ impl Bard {
         format!("{}\n{self}", Bard::GUIDE)
     }
 
-    /// Created for the `From<&Table> for pkstate::PKState` implementation.
+    /// Converts this `Bard` into a `cardpack` [`BasicPile`], or `None` when blank.
     #[must_use]
     pub fn to_pile(&self) -> Option<BasicPile> {
         let s = Cards::from(*self).to_string();

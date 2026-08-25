@@ -1,7 +1,7 @@
 [package]
 name = "pkcore"
 description = "Prototype core poker library."
-version = "0.8.2"
+version = "0.8.3"
 rust-version = "1.94.1"
 edition = "2024"
 authors = ["electronicpanopticon <gaoler@electronicpanopticon.com>"]
@@ -69,7 +69,6 @@ indexmap = { version = "2.12", features = ["rayon"] }
 itertools = "0.14"
 log = "0.4"
 percent-encoding = "2.3"
-pkstate = "0.1.2"
 rand = "0.9"
 random_name_generator = "0.3.6" 
 rayon = "1.11.0"
