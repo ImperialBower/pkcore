@@ -105,17 +105,35 @@ impl Nubificus {
         Ok(logged_amount.saturating_sub(earlier_streets))
     }
 
+    /// Replays the next queued action and consumes it.
+    ///
+    /// The action is only dropped from the queue once the table has accepted
+    /// it, so a failed replay leaves the offending action at the front for
+    /// inspection.
+    ///
     /// # Errors
     ///
-    /// Never returns an error today. Its one fallible call — [`Self::ff`] — has
-    /// its result discarded, so a replay that diverges reads as success. The
-    /// `Result` is kept because propagating is the intended fix, the same
-    /// swallowed-error shape `DEFECT_020` closed on [`Nubificus::act`].
+    /// Whatever [`Self::ff`] returns for the action — see there for the
+    /// `PKError` variants a rejected replay produces.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::Nubificus;
+    /// use std::str::FromStr;
+    ///
+    /// let log = "STATE:27:r200ffcfc/cr850cf/cr1825r3775c/r10000c:Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d/3h7s5c/Qs/6c:-50|-200|-10000|0|0|10250:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd";
+    /// let mut nubificus = Nubificus::from_str(log)?;
+    /// let queued = nubificus.queue.len();
+    ///
+    /// nubificus.boop()?;
+    ///
+    /// assert_eq!(queued - 1, nubificus.queue.len());
+    /// # Ok::<(), pkcore::PKError>(())
+    /// ```
     pub fn boop(&mut self) -> Result<(), PKError> {
-        let _ = self.ff(1, true);
-        match self.queue.pop_front() {
-            Some(_) | None => {}
-        }
+        self.ff(1, true)?;
+        let _ = self.queue.pop_front();
         Ok(())
     }
 
@@ -914,6 +932,53 @@ mod store_pluribus_tests {
         let result = Nubificus::act(&mut nubi.table, &PluribusEvent::Fold, out_of_turn);
 
         assert!(result.is_err(), "an out-of-turn fold must not report success");
+    }
+
+    /// `boop` discarded the `Result` of `ff`, so a replay that the table
+    /// rejected still returned `Ok(())` — the same swallowed-error shape
+    /// `DEFECT_020` closed on `Nubificus::act`.
+    #[test]
+    fn boop_propagates_a_rejected_action() {
+        let mut nubi = Nubificus::from_str(LOG).unwrap();
+        // A raise far past the starting stack; the table must refuse it.
+        nubi.queue.push_front(PluribusEvent::Raise(1_000_000));
+
+        let result = nubi.boop();
+
+        assert!(result.is_err(), "a replay the table refused must not report success");
+    }
+
+    #[test]
+    fn boop_leaves_a_rejected_action_at_the_front_of_the_queue() {
+        let mut nubi = Nubificus::from_str(LOG).unwrap();
+        nubi.queue.push_front(PluribusEvent::Raise(1_000_000));
+        let queued = nubi.queue.len();
+
+        let _ = nubi.boop();
+
+        assert_eq!(queued, nubi.queue.len(), "a failed replay must not consume the action");
+        assert_eq!(Some(&PluribusEvent::Raise(1_000_000)), nubi.queue.front());
+    }
+
+    #[test]
+    fn boop_consumes_one_accepted_action() {
+        let mut nubi = Nubificus::from_str(LOG).unwrap();
+        let queued = nubi.queue.len();
+
+        nubi.boop().unwrap();
+
+        assert_eq!(queued - 1, nubi.queue.len());
+    }
+
+    #[test]
+    fn boop_replays_the_whole_logged_hand() {
+        let mut nubi = Nubificus::from_str(LOG).unwrap();
+
+        while !nubi.queue.is_empty() {
+            nubi.boop().unwrap();
+        }
+
+        assert_payoffs(&nubi, &[-50, -200, -10_000, 0, 0, 10_250]);
     }
 
     #[test]

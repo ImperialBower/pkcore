@@ -47,7 +47,7 @@ of the `CLAUDE.md` rule that every public fn carries a unit test._
 ### Missing `# Errors` documentation
 
 - [x] ~~**`analysis/nubibus.rs`**~~ — **DONE 2026-08-25** in `0.8.1`. `ff`, `play_hand`, `play_hand_display` and `do_action` now name the `PKError` variants a Pluribus replay can fail on, and say that replay stops at the first rejected action without rewinding the queue. `boop` was the fifth placeholder (`I'm not actually sure`) and is now documented as it behaves. **Left open below.** (`src/analysis/nubibus.rs`)
-- [ ] **`Nubificus::boop` discards a replay error** — `let _ = self.ff(1, true);` means a diverged replay returns `Ok(())`. Same swallowed-error shape `DEFECT_020` closed on `Nubificus::act`; only caller is `examples/pluripop.rs`. Documented in `0.8.1`, not fixed. (`src/analysis/nubibus.rs:112`)
+- [x] ~~**`Nubificus::boop` discards a replay error**~~ — **FIXED 2026-08-25** in `0.8.2`, recorded as [`DEFECT_024`](defects/DEFECT_024_boop_swallows_replay_error.md). `ff` now propagates with `?`, and the action leaves `queue` only after the table accepts it, so a rejected action stays at the front. Four regression tests, one of which replays the whole logged hand through `boop` and checks the payoffs. Last of the swallowed-error family [`DEFECT_020`](defects/DEFECT_020_nubificus_act_discards_results.md) opened. (`src/analysis/nubibus.rs:112`)
 
 ### Refactor backlog (`TODO RF`)
 
