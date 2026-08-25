@@ -1,19 +1,21 @@
-# Analysis: `TableCelled` vs. `Table` — Interior Mutability vs. `&mut self`
+# Retrospective: `TableCelled` vs. `Table` — Interior Mutability vs. `&mut self`
 
-**Date:** April 2026  
-**Files:** `src/casino/table_celled.rs`, `src/casino/table.rs`  
-**Examples:** `examples/the_hand.rs`, `examples/the_hand_no_cell.rs`
+**Written:** April 2026 · **Closed:** August 2026 ([EPIC-83](epics/EPIC-83_Table_Decelled.md))
+**Status:** `TableCelled` no longer exists. This document is kept as the record
+of why it did, what it taught, and what retiring it actually cost.
 
-> **Naming update (July 2026):** the casino package reorganization finished
-> what the `TableNoCell` → `Table` rename started. The companion structs
-> dropped their suffixes (`PlayerNoCell`/`SeatNoCell`/`SeatsNoCell` →
-> `casino::table::{Player, Seat, Seats}`), the shared vocabulary types
-> (`Position`, `Winnings`, `Seatbit`, `SeatEquity`, `TableEquity`,
-> `TableAction`) moved out of `table_celled` to casino-level modules, and
-> `table.rs` was split into a `table/` directory. Unmarked prelude names
-> (`Player`, `Seat`, `Seats`, `Table`) now consistently mean the primary
-> `&mut self` engine; the celled family is reachable via `casino::player` and
-> `casino::table_celled` paths. Code excerpts below predate the reorganization.
+> **Naming history.** `TableNoCell` became `Table` in the July 2026 casino
+> reorganization; the companions dropped their suffixes
+> (`PlayerNoCell`/`SeatNoCell`/`SeatsNoCell` → `casino::table::{Player, Seat,
+> Seats}`) and the shared vocabulary types (`Position`, `Winnings`, `Seatbit`,
+> `SeatEquity`, `TableEquity`, `TableAction`) moved to casino-level modules.
+> EPIC-83 then deleted `casino::table_celled` and `casino::player` outright, so
+> the paths in the code excerpts below no longer resolve. They are quoted as
+> they stood.
+
+Everything from **Background** to **Recommendation** is the analysis as written
+while both engines were alive. It has not been rewritten to hide what it got
+right or wrong. The verdict is at the end, under **What actually happened**.
 
 ---
 
@@ -372,14 +374,80 @@ runtime `RefCell` panics under aliased borrows.
 
 ---
 
+## What actually happened
+
+The **Recommendation** above hedged: *"neither design is universally
+superior."* Four months of carrying both proved the hedge wrong for this
+codebase, for a reason the analysis did not anticipate.
+
+### The cost was not performance. It was the fork.
+
+Neither `RefCell` overhead nor `&mut self` friction decided this. What decided
+it was that **every rule had to be written twice**. `TableCelled` had 83 public
+methods against `Table`'s 70; 44 of them existed only on the celled side. Every
+TDA rule, every defect fix, every new street had two homes, and the two drifted.
+
+`docs/analysis/DEFECT_022` is the shape of the problem: a rule fixed on one
+engine and not the other looks fine in the test suite, because each engine has
+its own tests.
+
+### One divergence was a real, silent bug
+
+EPIC-83 found that the two engines **dealt from different seats**.
+`TableCelled` started at the button; `Table` started one seat to its left.
+Poker deals to the button's left, so `Table` was right and `TableCelled` had
+been wrong for its entire life.
+
+Nobody noticed because the stacked test fixtures had been written against the
+celled behaviour, so both engines "passed". Running the same hand on both is
+what exposed it: on "The Hand", the celled engine credited Gus Hansen (correct
+by accident of the fixture) and the plain engine credited Daniel Negreanu — who
+had been dealt Hansen's 5♦ 5♣.
+
+The fix was `TestData::rotated_for_plain_deal`, and the lesson is that **a twin
+implementation is only a safety net if you actually compare their outputs.** For
+four months nothing did.
+
+### The generics idea did not survive contact
+
+The EPIC opened by asking whether one generic body — `TableOf<S: SeatStore>` —
+could serve both. It could not, at any honest price: 44 celled-only methods and
+two different mutation disciplines meant the trait would have had to abstract
+over `&self` versus `&mut self`, which is the entire difference between the two
+designs. Making the difference invisible was the opposite of the point.
+
+### What the celled design was actually good at
+
+The teaching value above stands, and is why this document survives its subject:
+
+- It makes Rust's mutability rules visible **by contrast**. You cannot really
+  see what `&mut self` buys you until you have read the same engine written
+  without it.
+- It is a working, non-trivial example of `Cell` / `RefCell` at scale — with
+  the failure mode (aliased `borrow_mut` panicking at runtime instead of
+  failing to compile) demonstrated rather than described.
+- It genuinely was easier to write. Interior mutability removed real friction
+  during early development. The debt came later.
+
+### The honest summary
+
+`TableCelled` was a good idea that stayed one implementation too long. Its
+value was in what it taught while it was being written; its cost was
+proportional to how long it was kept afterwards.
+
+---
+
 ## Files
 
 | Purpose | Path |
 |---|---|
-| Interior mutability version | `src/casino/table_celled.rs` |
-| Traditional mutability version | `src/casino/table.rs` |
-| Interior mutability example | `examples/the_hand.rs` |
-| Traditional mutability example | `examples/the_hand_no_cell.rs` |
-| Showdown logic (for `TableCelled`) | `src/casino/table_celled/showdown.rs` |
-| Player with interior mutability | `src/casino/player.rs` |
-| Player without interior mutability | `src/casino/table.rs` (`PlayerNoCell`) |
+| The surviving engine | `src/casino/table.rs` |
+| Its seat/player family | `src/casino/table/{player,seat,seats}.rs` |
+| The example | `examples/the_hand.rs` |
+| The retirement | [`EPIC-83`](epics/EPIC-83_Table_Decelled.md) |
+| The eulogy | [`DIARY_TableCelled_RIP.md`](DIARY_TableCelled_RIP.md) |
+
+Deleted by EPIC-83: `src/casino/table_celled.rs`,
+`src/casino/table_celled/` (`seats.rs`, `showdown.rs`, `event.rs`, `result.rs`,
+`seats/seat.rs`, `seats/seat_cell.rs`), and `src/casino/player.rs` —
+6,654 lines in all, plus `PlayerStateCell` from `src/casino/state.rs`.

@@ -88,6 +88,17 @@ impl<S: CardSeal> Clone for SealedDeck<S> {
     }
 }
 
+/// Hand-written for the same reason as [`Clone`]: a derive would add
+/// `S: PartialEq` on the scheme. Two decks are equal when they hold the same
+/// payloads in the same slots, in the same order.
+impl<S: CardSeal> PartialEq for SealedDeck<S> {
+    fn eq(&self, other: &Self) -> bool {
+        self.cards == other.cards
+    }
+}
+
+impl<S: CardSeal> Eq for SealedDeck<S> {}
+
 /// Hand-written for the same reason. Payloads render through
 /// [`SealedCard`]'s `Debug`, which redacts.
 impl<S: CardSeal> core::fmt::Debug for SealedDeck<S> {
@@ -388,6 +399,26 @@ impl<S: CardSeal> SealedDeck<S> {
 ///
 /// [EPIC-79b]: https://github.com/ImperialBower/pkcore/blob/main/docs/epics/EPIC-79b_Sealed_Deck.md
 impl<S: CardSeal<Sealed = Card>> SealedDeck<S> {
+    /// The deck in dealing order, top card first.
+    ///
+    /// Only a readable scheme can hand out plain `Card`s, so this sits in the
+    /// `Sealed = Card` block alongside `sort_in_place` and `Display`. A deck
+    /// you cannot read is a deck you cannot walk.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::cards::Cards;
+    /// use pkcore::seal::null::NullSeal;
+    /// use pkcore::seal::sealed_deck::SealedDeck;
+    ///
+    /// let deck = SealedDeck::<NullSeal>::from_cards(&Cards::deck());
+    /// assert_eq!(52, deck.iter().count());
+    /// ```
+    pub fn iter(&self) -> impl Iterator<Item = &Card> + '_ {
+        self.cards.iter().map(SealedCard::payload)
+    }
+
     /// Builds a deck from plain cards, labelling them `SlotId(0..n)` in order.
     ///
     /// # Examples
@@ -517,6 +548,41 @@ mod seal__sealed_deck_tests {
     use crate::seal::plaintext::PlaintextSeal;
     use rand::SeedableRng;
     use rand::rngs::SmallRng;
+
+    // region EPIC-83 alignment — equality and ordered reads
+
+    #[test]
+    fn two_decks_built_from_the_same_cards_are_equal() {
+        let cards = Cards::deck();
+
+        let left = SealedDeck::<NullSeal>::from_cards(&cards);
+        let right = SealedDeck::<NullSeal>::from_cards(&cards);
+
+        assert_eq!(left, right);
+    }
+
+    #[test]
+    fn a_cut_deck_no_longer_equals_the_original() {
+        let mut cut = SealedDeck::<NullSeal>::from_cards(&Cards::deck());
+        let original = cut.clone();
+
+        cut.cut(17).expect("17 is inside a 52-card deck");
+
+        assert_ne!(original, cut, "a cut changes the order, and order counts");
+    }
+
+    #[test]
+    fn iter_walks_the_deck_in_dealing_order() {
+        let cards = Cards::deck();
+
+        let deck = SealedDeck::<NullSeal>::from_cards(&cards);
+
+        let walked: Vec<Card> = deck.iter().copied().collect();
+        let expected: Vec<Card> = cards.iter().copied().collect();
+        assert_eq!(expected, walked);
+    }
+
+    // endregion EPIC-83 alignment
 
     /// Five spades, sealed into slots 0..5 in order.
     fn deck_of_five() -> SealedDeck<PlaintextSeal> {

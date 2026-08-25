@@ -1,7 +1,7 @@
 ---
 type: Rust Module
 title: Casino
-description: Game orchestration — the Table and TableCelled engines, Dealer, Cashier, and PokerSession.
+description: Game orchestration — the Table engine, Dealer, Cashier, and PokerSession.
 resource: https://github.com/ImperialBower/pkcore/tree/main/src/casino
 tags: [table, dealer, session, game-loop]
 timestamp: '2026-07-22T00:00:00Z'
@@ -14,19 +14,20 @@ pot management, and payouts.
 
 # Key types
 
-* `casino::table::Table` — the primary table engine with plain value
-  semantics. Supports deck injection for deterministic tests, exposes
-  `is_betting_complete()`, and builds finished hands via `build_game()`.
-* `casino::table_celled::TableCelled` — the earlier interior-mutability
-  engine. See [Table vs TableCelled](/architecture/table-vs-tablecelled.md)
-  for why both exist and which to choose.
+* `casino::table::Table` — the table engine, with plain value semantics.
+  Supports deck injection for deterministic tests, exposes
+  `seats.is_betting_complete()`, and builds finished hands via
+  `build_game()`. Its seat family is `casino::table::{Seats, Seat, Player}`
+  and its event log is a plain `Vec<TableAction>`. The earlier
+  interior-mutability engine `TableCelled` was removed in August 2026 — see
+  [Table vs TableCelled](/architecture/table-vs-tablecelled.md).
 * `Dealer` — drives street progression and dealing.
 * `Cashier` — chip accounting, pots, side pots, and `winnings` payouts.
 * `PokerSession` — multi-hand session state; `PokerSession::view()`
   produces `SessionView` / `SeatView` read-model snapshots (re-exported
   in the prelude) for spectator and transport layers.
-* Supporting types: `position` (seat positions), `player`, `action`,
-  `state`, `manager`, `principal`, and per-seat `equity`.
+* Supporting types: `position` (seat positions), `action`, `state`,
+  `manager`, `principal`, and per-seat `equity`.
 
 # Design note
 

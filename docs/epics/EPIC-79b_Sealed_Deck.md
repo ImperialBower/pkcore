@@ -10,7 +10,7 @@
 > crate plugs into. It ships **without** `79a` and does not wait on the EPIC-79
 > decision gate.
 
-> **Status: COMPLETE** — shipped in pkcore `0.8.0` (2026-08-23). Successor:
+> **Status: COMPLETE** — lands in pkcore `0.9.0`. Successor:
 > [EPIC-79c: Sealed Seats](./EPIC-79c_Sealed_Seats.md), which carries this
 > EPIC's one unbuilt item (4d) as its acceptance test.
 
@@ -67,8 +67,10 @@ the prototypes live outside the crate in `docs/files/mentalpoker/`.
 
 ## Status
 
-Status as of **2026-08-23**, pkcore `0.8.0` (unreleased, untagged).
-**COMPLETE.** Every phase has landed in `0.8.0` — 0–2 (the seal module),
+Status as of **2026-08-25**, pkcore `0.9.0` (unreleased, untagged). `0.8.0`
+went to [EPIC-83](./EPIC-83_Table_Decelled.md) and was merged into this branch
+on 2026-08-25; this work is renumbered to `0.9.0` behind it.
+**COMPLETE.** Every phase has landed — 0–2 (the seal module),
 3 (`TableOf<S>` via [Option A′](#option-a--the-deck-is-always-sealed-2026-08-23)),
 4a–4c (the reveal ledger) and 5 (handoff and docs). Work item 4d moved to
 [EPIC-79c](./EPIC-79c_Sealed_Seats.md), where the capability that makes it

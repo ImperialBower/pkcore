@@ -13,7 +13,7 @@ fn main() -> Result<(), PKError> {
         Terminal::pause("boop> ")?;
         println!();
         nubi.boop()?;
-        println!("{}", nubi.table.get_game_state());
+        println!("{}", nubi.table);
 
         if nubi.table.is_game_over() {
             println!("Game over!");

@@ -50,12 +50,6 @@ pub use crate::casino::equity::seatbit::Seatbit;
 pub use crate::casino::equity::table_equity::TableEquity;
 pub use crate::casino::game::ForcedBets;
 pub use crate::casino::state::*;
-pub use crate::casino::table_celled;
-pub use crate::casino::table_celled::GameState;
-pub use crate::casino::table_celled::TableCelled;
-pub use crate::casino::table_celled::event::TableLog;
-pub use crate::casino::table_celled::seats::SeatsCell;
-pub use crate::casino::table_celled::seats::seat_cell::SeatCell;
 pub use crate::cc;
 pub use crate::deck;
 pub use crate::deck::Deck;
@@ -113,8 +107,6 @@ pub use crate::casino::dealer::Dealer;
 pub use crate::casino::manager::TableManager;
 pub use crate::casino::position::Positions;
 pub use crate::casino::table::{Player, Seat, Seats, Table};
-pub use crate::casino::table_celled::result::HandResult;
-pub use crate::casino::table_celled::showdown::Showdown;
 pub use crate::casino::winnings::{PotWin, Winnings};
 
 // analysis/store

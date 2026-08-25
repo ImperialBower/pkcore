@@ -404,8 +404,9 @@ decision-quality telemetry, and the chips-vs-dollars economic join.
 | [EPIC-61](docs/epics/EPIC-61_AI_Observability.md) | AI-Native Observability — GenAI semconv audit & alignment in `LlmBackend` spans; opt-in content capture; `AgentFidelity` clamp/retry metrics; shadow `BotDecider` baseline divergence; `chip_value_micro_usd` economic join (`net_micro_usd`); House Ledger Grafana dashboard; gated Langfuse eval profile | Planned |
 | [EPIC-79](docs/epics/EPIC-79_Mental_Poker.md) | Mental Poker — trustless dealing without a dealer; six coordinator topologies; the three cross-cutting pkcore refactors (masked deck, three-state visibility, crypto-agnostic engine) | In progress |
 | [EPIC-79a](docs/epics/EPIC-79a_Real_Cryptography_Backend.md) | Real Cryptography Backend — threshold ElGamal over Pallas, Schnorr/Chaum–Pedersen proofs, verifiable shuffle; ships in the sibling [`pkmental`](https://github.com/ImperialBower/pkmental) crate | Planned |
-| [EPIC-79b](docs/epics/EPIC-79b_Sealed_Deck.md) | The Sealed Deck — `pkcore::seal`: `CardSeal` / `SealedCard<S>` / `SealedDeck<S>`, blind shuffle-cut-deal, `SlotId`, redacting `Debug`, `TableAction::SealedDealt`/`Revealed` reveal ledger; zero new dependencies | Complete (0.8.0) |
+| [EPIC-79b](docs/epics/EPIC-79b_Sealed_Deck.md) | The Sealed Deck — `pkcore::seal`: `CardSeal` / `SealedCard<S>` / `SealedDeck<S>`, blind shuffle-cut-deal, `SlotId`, redacting `Debug`, `TableAction::SealedDealt`/`Revealed` reveal ledger; zero new dependencies | Complete (0.9.0) |
 | [EPIC-79c](docs/epics/EPIC-79c_Sealed_Seats.md) | Sealed Seats — seal `Seat::cards` / `SeatHand` / `dealt_hole_cards` so a scheme with `Sealed != Card` can deal, bet and reach showdown; carries EPIC-79b's byte-identical sealed-replay test as its acceptance criterion | Proposed |
+| [EPIC-83](docs/epics/EPIC-83_Table_Decelled.md) | Table Decelled — retire the interior-mutable `TableCelled` engine and leave exactly one, `casino::table::Table`; port the 44 celled-only methods, `TryFrom<&Pluribus>`, `nubibus` and the `util::data` fixtures onto it | Complete (0.8.0) |
 
 ### EPIC Numbering Policy
 

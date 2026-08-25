@@ -1,5 +1,9 @@
 # Update Log
 
+## 2026-08-24
+* **Update**: Rewrote the [Table vs TableCelled](/architecture/table-vs-tablecelled.md) decision record — EPIC-83 deleted `TableCelled`, `SeatsCell`, `SeatCell`, `TableLog`, `GameState`, `Showdown`, `HandResult`, `casino::player::Player`, and `PlayerStateCell`, leaving `casino::table::Table` as the only engine. Records the two behaviours that changed with it: dealing starts one seat left of the button, and `end_hand` clears `chips_in_play`.
+* **Update**: Trimmed the celled engine from [casino](/modules/casino.md), [getting started](/getting-started.md), [architecture index](/architecture/index.md), and [short blind call target](/pitfalls/short-blind-call-target.md).
+
 ## 2026-07-22
 * **Creation**: Added the [Stud rules](/stud-rules.md) and [Razz rules](/razz-rules.md) root concepts (companions to [PLO rules](/plo-rules.md)) covering the EPIC-32/33 stud-family engine — street tables, ante + bring-in, visible-hand action order, and the A-5 lowball evaluator; registered both in the root [index](/index.md).
 * **Update**: Restored the full bundle after an accidental working-tree reset deleted everything except the data and pitfalls groups; all concepts rebuilt verbatim.

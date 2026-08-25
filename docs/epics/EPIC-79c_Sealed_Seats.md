@@ -2,7 +2,7 @@
 
 **Repo:** `pkcore`. Sibling backend work lives in [`pkmental`](https://github.com/ImperialBower/pkmental).
 **Status:** Proposed
-**Depends on:** [EPIC-79b](./EPIC-79b_Sealed_Deck.md) Phases 0–3 (complete, pkcore `0.8.0`)
+**Depends on:** [EPIC-79b](./EPIC-79b_Sealed_Deck.md) Phases 0–3 (complete, pkcore `0.9.0`)
 **Blocks:** nothing yet — this is the last pkcore-side refactor before a real backend can play a hand.
 
 ---
@@ -187,7 +187,7 @@ scheme: pkcore is not a player.
 
 ## 8. Reuse (do NOT recreate)
 
-Everything below already exists and ships in `0.8.0`.
+Everything below already exists and ships in `0.9.0`.
 
 | Thing | Where |
 |---|---|

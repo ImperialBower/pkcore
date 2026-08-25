@@ -1,10 +1,10 @@
 use crate::games::GamePhase;
 use crate::play::board::Board;
 use crate::play::hole_cards::HoleCards;
-use crate::prelude::{TableCelled, TableLog};
+use crate::prelude::{BoxedCards, Card, Cards, ForcedBets, Seats, Table};
 use crate::util::Util;
 use crate::util::terminal::Terminal;
-use crate::{PKError, Plurable};
+use crate::{PKError, Pile, Plurable};
 use regex::Regex;
 use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
@@ -40,7 +40,7 @@ mod color {
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Nubificus {
     pub pluribus: Pluribus,
-    pub table: TableCelled,
+    pub table: Table,
     pub queue: VecDeque<PluribusEvent>,
 }
 
@@ -49,7 +49,7 @@ impl Nubificus {
     ///
     /// # Errors
     ///
-    /// Returns whatever the underlying [`TableCelled`] action returns —
+    /// Returns whatever the underlying [`Table`] action returns —
     /// typically `PKError::TableActionOutOfOrder` when `seat_to_act` is not the
     /// seat the table expects, or a betting error when the logged amount is not
     /// legal in the current state.
@@ -59,7 +59,7 @@ impl Nubificus {
     /// is applied to a state the log never described. Discarding the error here
     /// — as this did before `DEFECT_020` — produced a silently wrong hand
     /// rather than a failed one.
-    pub fn act(table: &TableCelled, action: &PluribusEvent, seat_to_act: u8) -> Result<(), PKError> {
+    pub fn act(table: &mut Table, action: &PluribusEvent, seat_to_act: u8) -> Result<(), PKError> {
         log::trace!("...Nubificus.act({action}, {seat_to_act});)");
 
         let _chips_remaining = match action {
@@ -75,7 +75,7 @@ impl Nubificus {
     }
 
     /// Converts a logged Pluribus raise amount into the street bet target
-    /// [`TableCelled::act_bet`] expects.
+    /// [`Table::act_bet`] expects.
     ///
     /// Pluribus log amounts are **cumulative per-player totals for the whole
     /// hand**, while `act_bet` takes the bet target for the *current street*.
@@ -93,14 +93,14 @@ impl Nubificus {
     /// # Errors
     ///
     /// `PKError::InvalidPluribusIndex` if `seat_number` is not an occupied seat.
-    fn street_bet_target(table: &TableCelled, seat_number: u8, logged_amount: usize) -> Result<usize, PKError> {
-        let Some(seat) = table.get_seat(seat_number) else {
+    fn street_bet_target(table: &Table, seat_number: u8, logged_amount: usize) -> Result<usize, PKError> {
+        let Some(seat) = table.seats.get_seat(seat_number) else {
             return Err(PKError::InvalidPluribusIndex);
         };
 
         // `chips_in_play` accumulates across the whole hand; `bet` is only the
         // current street, so their difference is what earlier streets took.
-        let earlier_streets = seat.player.get_chips_in_play().saturating_sub(seat.player.bet.count());
+        let earlier_streets = seat.player.chips_in_play.saturating_sub(seat.player.bet);
 
         Ok(logged_amount.saturating_sub(earlier_streets))
     }
@@ -122,7 +122,12 @@ impl Nubificus {
     pub fn ff(&mut self, number_of_actions: usize, display: bool) -> Result<(), PKError> {
         self.table.act()?;
 
-        for action in self.queue.iter().take(number_of_actions) {
+        // `PluribusEvent` is `Copy`, so take a snapshot of the actions to
+        // replay before handing `&mut self` to `do_action`. The celled engine
+        // could iterate and mutate at once; the plain one cannot, and that is
+        // the borrow checker doing its job.
+        let actions: Vec<PluribusEvent> = self.queue.iter().take(number_of_actions).copied().collect();
+        for action in &actions {
             self.do_action(action, display)?;
         }
         Ok(())
@@ -131,7 +136,7 @@ impl Nubificus {
     /// # Errors
     ///
     /// TODO: Fill in errors
-    pub fn play_hand(&self) -> Result<(), PKError> {
+    pub fn play_hand(&mut self) -> Result<(), PKError> {
         if !self.table.seats.are_dealt() {
             self.table.deal_cards_to_seats()?;
         }
@@ -146,7 +151,7 @@ impl Nubificus {
     /// # Errors
     ///
     /// TODO: Fill in errors
-    pub fn play_hand_display(&self) -> Result<(), PKError> {
+    pub fn play_hand_display(&mut self) -> Result<(), PKError> {
         log::trace!("Nubibus.play_hand_display()");
         if !self.table.seats.are_dealt() {
             self.table.deal_cards_to_seats()?;
@@ -183,12 +188,12 @@ impl Nubificus {
     ///
     /// TODO: Fill in errors
     #[allow(clippy::too_many_lines)]
-    pub fn do_action(&self, action: &PluribusEvent, display: bool) -> Result<(), PKError> {
+    pub fn do_action(&mut self, action: &PluribusEvent, display: bool) -> Result<(), PKError> {
         let seat_to_act = self.table.next_to_act();
         let handle_to_act = self.table.get_seat_handle(seat_to_act);
         log::debug!("...Nubificus.do_action() {handle_to_act} Seat {seat_to_act} is next to act: {action}");
 
-        Nubificus::act(&self.table, action, seat_to_act)?;
+        Nubificus::act(&mut self.table, action, seat_to_act)?;
 
         log::debug!(
             "......{}",
@@ -255,9 +260,11 @@ impl Nubificus {
         } else {
             log::trace!("......is_game_over() == false");
             match betting_phase {
-                GamePhase::BettingPreFlop if self.table.is_betting_complete() => {
+                GamePhase::BettingPreFlop if self.table.seats.is_betting_complete() => {
                     log::trace!("......betting_phase == GamePhase::BettingPreFlop && betting is complete");
-                    println!("{}", self.table);
+                    if display {
+                        println!("{}", self.table);
+                    }
                     self.table.act()?;
                     if display {
                         println!(
@@ -272,9 +279,11 @@ impl Nubificus {
                         println!(); // TODO: why the spacing issues?
                     }
                 }
-                GamePhase::BettingFlop if self.table.is_betting_complete() => {
+                GamePhase::BettingFlop if self.table.seats.is_betting_complete() => {
                     log::trace!("......betting_phase == GamePhase::BettingFlop && betting is complete");
-                    println!("{}", self.table);
+                    if display {
+                        println!("{}", self.table);
+                    }
                     self.table.act()?;
                     if display {
                         println!(
@@ -288,9 +297,11 @@ impl Nubificus {
                         self.table.eval_turn_display();
                     }
                 }
-                GamePhase::BettingTurn if self.table.is_betting_complete() => {
+                GamePhase::BettingTurn if self.table.seats.is_betting_complete() => {
                     log::trace!("......betting_phase == GamePhase::BettingTurn && betting is complete");
-                    println!("{}", self.table);
+                    if display {
+                        println!("{}", self.table);
+                    }
                     self.table.act()?;
                     log::debug!("Board: {}", self.table.board);
                     if display {
@@ -304,11 +315,6 @@ impl Nubificus {
             }
         }
         Ok(())
-    }
-
-    pub fn pop(&mut self) -> TableLog {
-        println!("boop!");
-        TableLog::default()
     }
 
     /// # Errors
@@ -344,12 +350,74 @@ impl FromStr for Nubificus {
     }
 }
 
+/// Rebuilds the hand a Pluribus log describes as a playable [`Table`].
+///
+/// A log gives player names, hole cards, the board, and the actions — but not
+/// a deck. So the deck is *stacked*: hole cards first, then each street's
+/// cards, with a burn card slipped in before the flop, turn, and river. The
+/// burns come from cards the log never mentions, so which ones they are cannot
+/// affect any hand. Without them the deck runs dry, because `deal_flop`,
+/// `deal_turn`, and `deal_river` each burn one.
+///
+/// Every seat is staked to 10,000 — the Pluribus experiment's fixed stack —
+/// and the button sits on the last seat, which makes seat 0 the small blind.
+///
+/// Ported from `TryFrom<&Pluribus> for TableCelled` by EPIC-83. Lives here
+/// rather than in `casino::table` to keep the log-replay concern next to
+/// [`Pluribus`].
+impl TryFrom<&Pluribus> for Table {
+    type Error = PKError;
+
+    fn try_from(pluribus: &Pluribus) -> Result<Self, Self::Error> {
+        let mut seats = Seats::from(pluribus.players.clone());
+        for seat in seats.iter_mut() {
+            seat.player.chips = Pluribus::STARTING_STACK;
+            seat.cards = BoxedCards::blanks(2);
+        }
+
+        let hole_cards = pluribus.hole_cards.cards();
+        let board_cards = pluribus.board.cards();
+        let unseen = Cards::deck_minus(&(hole_cards.clone() + board_cards.clone()));
+        let mut burns = unseen.into_iter();
+
+        let board: Vec<Card> = board_cards.into_iter().collect();
+        let mut stacked: Vec<Card> = hole_cards.into_iter().collect();
+
+        if board.len() >= 3 {
+            stacked.push(burns.next().ok_or(PKError::NotEnoughCards)?);
+            stacked.extend_from_slice(&board[0..3]);
+        }
+        if board.len() >= 4 {
+            stacked.push(burns.next().ok_or(PKError::NotEnoughCards)?);
+            stacked.push(board[3]);
+        }
+        if board.len() >= 5 {
+            stacked.push(burns.next().ok_or(PKError::NotEnoughCards)?);
+            stacked.push(board[4]);
+        }
+
+        let mut table = Table::nlh_primed(
+            seats,
+            &Cards::from(stacked),
+            ForcedBets::new(Pluribus::SMALL_BLIND, Pluribus::BIG_BLIND),
+        );
+
+        table.button = table.seats.size().saturating_sub(1);
+        for seat_number in 0..table.seats.size() {
+            table.deal_card_to_seat(seat_number)?;
+            table.deal_card_to_seat(seat_number)?;
+        }
+
+        Ok(table)
+    }
+}
+
 impl TryFrom<Pluribus> for Nubificus {
     type Error = PKError;
 
     fn try_from(pluribus: Pluribus) -> Result<Self, Self::Error> {
         let queue = pluribus.actions.clone();
-        let table = TableCelled::try_from(&pluribus)?;
+        let table = Table::try_from(&pluribus)?;
         Ok(Nubificus { pluribus, table, queue })
     }
 }
@@ -394,9 +462,22 @@ pub struct Pluribus {
 impl Pluribus {
     pub const SMALL_BLIND: usize = 50;
     pub const BIG_BLIND: usize = 100;
+    /// Every seat in the Pluribus experiment started each hand with a fixed
+    /// 10,000-chip stack, so a rebuilt table stakes everyone to the same.
+    pub const STARTING_STACK: usize = 10_000;
 
     fn parse_isizes(s: &str) -> Vec<isize> {
-        s.split('|').map(|raw| raw.parse::<isize>().unwrap_or(0)).collect()
+        s.split('|')
+            .map(|raw| {
+                // Split pots are logged to half a chip (`287.5`). A plain
+                // `isize` parse rejects those and used to report the payoff as
+                // `0`, hiding a real win. Fall back to the integer part, which
+                // truncates toward zero exactly as the chip does.
+                raw.parse::<isize>()
+                    .or_else(|_| raw.split('.').next().unwrap_or(raw).parse::<isize>())
+                    .unwrap_or(0)
+            })
+            .collect()
     }
 
     /// I have a theory that the divider between rounds isn't needed. That we can just take
@@ -714,41 +795,122 @@ mod store_pluribus_tests {
 
     const LOG: &str = "STATE:27:r200ffcfc/cr850cf/cr1825r3775c/r10000c:Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d/3h7s5c/Qs/6c:-50|-200|-10000|0|0|10250:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd";
 
+    /// Asserts each seat's final stack is its starting stack plus the payoff
+    /// the log records for it.
+    ///
+    /// Reads the outcome from the stacks rather than from `chips_in_play`,
+    /// which `Table::end_hand` clears when it resets for the next hand.
+    fn assert_payoffs(nubi: &Nubificus, payoffs: &[isize]) {
+        for (seat_number, payoff) in payoffs.iter().enumerate() {
+            let seat = nubi.table.seats.get_seat(u8::try_from(seat_number).unwrap()).unwrap();
+            let expected = usize::try_from(isize::try_from(Pluribus::STARTING_STACK).unwrap() + payoff).unwrap();
+            assert_eq!(
+                expected, seat.player.chips,
+                "seat {seat_number} ({}) should end on {expected}",
+                seat.player.handle
+            );
+        }
+    }
+
+    // ── EPIC-83: rebuilding the hand on the plain Table ──────────────────────
+
+    #[test]
+    fn table_from_pluribus_seats_every_named_player() {
+        let pluribus = Pluribus::from_str(LOG).unwrap();
+
+        let table = Table::try_from(&pluribus).unwrap();
+
+        assert_eq!(6, table.seats.size());
+        let handles: Vec<&str> = table.seats.iter().map(|seat| seat.player.handle.as_str()).collect();
+        assert_eq!(vec!["Eddie", "Bill", "Pluribus", "MrWhite", "Gogo", "Budd"], handles);
+    }
+
+    #[test]
+    fn table_from_pluribus_stakes_every_seat_to_ten_thousand() {
+        let pluribus = Pluribus::from_str(LOG).unwrap();
+
+        let table = Table::try_from(&pluribus).unwrap();
+
+        for seat in table.seats.iter() {
+            assert_eq!(10_000, seat.player.chips, "{}", seat.player.handle);
+        }
+    }
+
+    #[test]
+    fn table_from_pluribus_deals_the_logged_hole_cards() {
+        // The log reads `Qc4h|Tc9c|8sAs|...`, seat by seat.
+        let pluribus = Pluribus::from_str(LOG).unwrap();
+
+        let table = Table::try_from(&pluribus).unwrap();
+
+        assert_eq!(
+            "Q♣ 4♥",
+            table.seats.get_seat(0).unwrap().cards.to_string(),
+            "seat 0 holds what the log says"
+        );
+        assert_eq!("T♣ 9♣", table.seats.get_seat(1).unwrap().cards.to_string());
+    }
+
+    #[test]
+    fn table_from_pluribus_puts_the_button_on_the_last_seat() {
+        // Pluribus logs are six-handed with the button fixed at seat 5, which
+        // makes seat 0 the small blind.
+        let pluribus = Pluribus::from_str(LOG).unwrap();
+
+        let table = Table::try_from(&pluribus).unwrap();
+
+        assert_eq!(5, table.button);
+    }
+
+    #[test]
+    fn table_from_pluribus_leaves_the_logged_board_on_top_of_the_deck() {
+        // Board `3h7s5c/Qs/6c` must still be dealable, with burn cards
+        // interleaved, or the streets run out of cards.
+        let pluribus = Pluribus::from_str(LOG).unwrap();
+        let mut table = Table::try_from(&pluribus).unwrap();
+
+        table.deal_flop().unwrap();
+        table.deal_turn().unwrap();
+        table.deal_river().unwrap();
+
+        assert_eq!("3♥ 7♠ 5♣ Q♠ 6♣", table.board.to_string());
+    }
+
     /// `DEFECT_020`: `Nubificus::act` discarded every action `Result`, so a
     /// rejected action during log replay vanished and the table drifted out of
     /// sync with the log it is supposed to reproduce.
     #[test]
     fn act_propagates_a_rejected_action() {
-        let nubi = Nubificus::from_str(LOG).unwrap();
+        let mut nubi = Nubificus::from_str(LOG).unwrap();
         let out_of_turn = nubi.table.next_to_act() + 1;
 
-        let result = Nubificus::act(&nubi.table, &PluribusEvent::Fold, out_of_turn);
+        let result = Nubificus::act(&mut nubi.table, &PluribusEvent::Fold, out_of_turn);
 
         assert!(result.is_err(), "an out-of-turn fold must not report success");
     }
 
     #[test]
     fn act_propagates_a_rejected_raise() {
-        let nubi = Nubificus::from_str(LOG).unwrap();
+        let mut nubi = Nubificus::from_str(LOG).unwrap();
         let out_of_turn = nubi.table.next_to_act() + 1;
 
-        let result = Nubificus::act(&nubi.table, &PluribusEvent::Raise(200), out_of_turn);
+        let result = Nubificus::act(&mut nubi.table, &PluribusEvent::Raise(200), out_of_turn);
 
         assert!(result.is_err(), "an out-of-turn raise must not report success");
     }
 
     #[test]
     fn act_propagates_a_rejected_call() {
-        let nubi = Nubificus::from_str(LOG).unwrap();
+        let mut nubi = Nubificus::from_str(LOG).unwrap();
         let out_of_turn = nubi.table.next_to_act() + 1;
 
-        let result = Nubificus::act(&nubi.table, &PluribusEvent::Call, out_of_turn);
+        let result = Nubificus::act(&mut nubi.table, &PluribusEvent::Call, out_of_turn);
 
         assert!(result.is_err(), "an out-of-turn call must not report success");
     }
 
     /// `DEFECT_021`: Pluribus log amounts are cumulative per-hand totals, while
-    /// [`TableCelled::act_bet`] takes a per-street target.
+    /// [`Table::act_bet`] takes a per-street target.
     ///
     /// The losing player's payoff is exactly `-3750`, his last logged number.
     /// Read per-street the same hand asks a 10 000-chip stack for
@@ -758,11 +920,16 @@ mod store_pluribus_tests {
     fn replay_reads_logged_amounts_as_cumulative_totals() {
         const CUMULATIVE: &str = "STATE:154:fr250ffr1150fc/r2050c/r3750c/r6250f:Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d/3h7s5c/Qs/6c:3850|-100|0|-3750|0|0:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd";
 
-        let nubi = Nubificus::from_str(CUMULATIVE).unwrap();
+        let mut nubi = Nubificus::from_str(CUMULATIVE).unwrap();
 
         assert!(nubi.play_hand().is_ok(), "the hand must replay without a betting error");
-        assert_eq!(3750, nubi.table.get_seat(3).unwrap().player.get_chips_in_play());
-        assert_eq!(100, nubi.table.get_seat(1).unwrap().player.get_chips_in_play());
+
+        // EPIC-83: the celled engine left `chips_in_play` standing after the
+        // hand, so this used to read commitments straight off the seats. The
+        // plain engine clears it in `reset()` — correctly, since the next hand
+        // must start from zero. Assert the log's own payoffs instead, which is
+        // a stronger check: it pins what each seat committed *and* what it won.
+        assert_payoffs(&nubi, &[3850, -100, 0, -3750, 0, 0]);
     }
 
     /// `DEFECT_022`: a re-raise used to put the action on the wrong seat, so the
@@ -776,14 +943,13 @@ mod store_pluribus_tests {
     fn replay_gives_a_re_raise_the_correct_seat() {
         const RE_RAISE: &str = "STATE:153:fr200fcfc/ccr475cr1200fc/cr5200f:9dAh|6sJs|Jh3c|7h8h|Td2s|JcQc/5h8sQs/Kc:-50|-1200|0|1725|0|-475:MrBrown|MrBlue|Pluribus|Eddie|MrPink|MrOrange";
 
-        let nubi = Nubificus::from_str(RE_RAISE).unwrap();
+        let mut nubi = Nubificus::from_str(RE_RAISE).unwrap();
 
         assert!(nubi.play_hand().is_ok(), "the hand must replay without a betting error");
 
-        // Every losing seat committed exactly what the log says it lost.
-        assert_eq!(50, nubi.table.get_seat(0).unwrap().player.get_chips_in_play());
-        assert_eq!(1200, nubi.table.get_seat(1).unwrap().player.get_chips_in_play());
-        assert_eq!(475, nubi.table.get_seat(5).unwrap().player.get_chips_in_play());
+        // Every seat ends exactly where the log says it should. If a re-raise
+        // landed on the wrong seat, these stacks would not line up.
+        assert_payoffs(&nubi, &[-50, -1200, 0, 1725, 0, -475]);
     }
 
     #[test]
@@ -811,6 +977,29 @@ mod store_pluribus_tests {
         let actual = Pluribus::parse_isizes(Pluribus::parse_string(LOG).unwrap().index(4));
 
         assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn parse_isizes_keeps_a_split_pots_half_chip_payoff() {
+        // A chopped pot is logged to half a chip. Reading `112.5` as `0` would
+        // report a winner as having broken even.
+        let actual = Pluribus::parse_isizes("112.5|-225|0|112.5|0|0");
+
+        assert_eq!(vec![112, -225, 0, 112, 0, 0], actual);
+    }
+
+    #[test]
+    fn parse_isizes_truncates_a_half_chip_loss_toward_zero() {
+        let actual = Pluribus::parse_isizes("-287.5|287.5");
+
+        assert_eq!(vec![-287, 287], actual);
+    }
+
+    #[test]
+    fn parse_isizes_still_reads_nonsense_as_zero() {
+        let actual = Pluribus::parse_isizes("|abc|1x2");
+
+        assert_eq!(vec![0, 0, 0], actual);
     }
 
     #[test]

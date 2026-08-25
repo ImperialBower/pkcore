@@ -8,10 +8,10 @@
 //! re-export `crate::bot::player_action::PlayerAction`). It has no feature
 //! requirement — the transition surface is a feature-free kernel boundary.
 //!
-//! [`TableAction`] is the event-log entry type. Both engines record hand
-//! history as a sequence of `TableAction`s — [`Table`](crate::casino::table::Table)
-//! in a plain `Vec`, [`TableCelled`](crate::casino::table_celled::TableCelled)
-//! in a [`TableLog`](crate::casino::table_celled::event::TableLog).
+//! [`TableAction`] is the event-log entry type.
+//! [`Table`](crate::casino::table::Table) records hand history as a plain
+//! `Vec<TableAction>`. EPIC-83 retired the interior-mutable `TableLog` that
+//! the second engine used to keep alongside it.
 
 use crate::bard::Bard;
 use crate::card::Card;
@@ -72,10 +72,8 @@ impl std::fmt::Display for PlayerAction {
 /// An entry in a table's event log — everything that happens during a hand,
 /// from `TableOpen` through `ResetTable`.
 ///
-/// Both engines record hand history as a sequence of these:
-/// [`Table`](crate::casino::table::Table) in its `event_log: Vec<TableAction>`
-/// field, [`TableCelled`](crate::casino::table_celled::TableCelled) in a
-/// [`TableLog`](crate::casino::table_celled::event::TableLog).
+/// [`Table`](crate::casino::table::Table) records hand history as a sequence
+/// of these, in its `event_log: Vec<TableAction>` field.
 ///
 /// # Examples
 ///
@@ -623,7 +621,7 @@ mod tests {
         assert_eq!("AllIn", PlayerAction::AllIn.to_string());
     }
 
-    // Moved with TableAction from table_celled::event.
+    // Moved here with `TableAction` when the celled event log was retired.
     #[test]
     fn is_result() {
         assert!(TableAction::PlayerWins(0, Uuid::nil(), Bard::default(), 100, 200).is_result());

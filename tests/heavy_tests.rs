@@ -123,13 +123,25 @@ mod heavy_tests {
     /// compared against the payoff the log records for it: a player who folds
     /// loses precisely what they put in, so the two must agree to the chip.
     ///
-    /// Two limits are worth stating rather than hiding. Winners are not checked:
-    /// a winner's payoff is the pot, not their own commitment. And hands whose
-    /// last logged action ends the hand reach `end_hand`, which calls
-    /// `Player::reset` and zeroes `chips_in_play` on every seat — those hands
-    /// are skipped, because the evidence has already been cleared by the time
-    /// the test can look. Roughly 18 500 losing seats across the corpus are
-    /// still checked strictly.
+    /// EPIC-83 split the check in two, because the plain engine clears more
+    /// state than the celled one did and the single old check went dead:
+    ///
+    /// - **Hands the replay finished.** `end_hand` has run, so every seat's
+    ///   final stack is compared against `STARTING_STACK + payoff` — winners
+    ///   included. This is the stronger of the two, and it covers exactly the
+    ///   hands the celled-era check used to skip.
+    /// - **Hands the replay left unfinished.** A log that ends `...r10000c///`
+    ///   records an all-in and a call and then stops: there are no further
+    ///   actions to drive the board out, so `Nubificus` never reaches
+    ///   `end_hand` and no pot is awarded. Final stacks say nothing there, so
+    ///   the older check still applies — each losing seat's committed chips
+    ///   must equal the loss the log records for it.
+    ///
+    /// One tolerance is deliberate. The corpus records split pots to half a
+    /// chip (`...|287.5|...`); the parser truncates to `isize`, so a finished
+    /// hand whose raw payoff field carries a decimal point is allowed to land
+    /// one chip either side of the parsed figure. That is the log's rounding,
+    /// not the replay's.
     #[test]
     // #[ignore]
     fn pluribus__all_games_replay_without_errors() {
@@ -148,7 +160,7 @@ mod heavy_tests {
             .into_par_iter()
             .enumerate()
             .filter_map(|(idx, plur)| {
-                let nubi = match Nubificus::try_from(&plur) {
+                let mut nubi = match Nubificus::try_from(&plur) {
                     Ok(nubi) => nubi,
                     Err(e) => return Some(format!("Game #{idx}: {e}")),
                 };
@@ -156,33 +168,47 @@ mod heavy_tests {
                     return Some(format!("Game #{idx}: {e}"));
                 }
 
-                // `end_hand` resets every seat, so a hand that finished has no
-                // commitments left to compare against.
-                let table_was_reset = (0..6).all(|n| {
-                    nubi.table
-                        .get_seat(n)
-                        .map_or(true, |s| s.player.get_chips_in_play() == 0)
-                });
-                if table_was_reset {
-                    return None;
-                }
+                // `end_hand` calls `Player::reset`, which zeroes
+                // `chips_in_play` on every seat. So an all-zero ring means the
+                // hand resolved; anything left in play means the replay ran
+                // out of logged actions mid-hand.
+                let hand_resolved = nubi
+                    .table
+                    .seats
+                    .iter()
+                    .all(|seat| seat.player.chips_in_play == 0);
+
+                // Field 4 of the raw record is the payoff list. A decimal
+                // point there means a split pot the parser had to truncate.
+                let payoffs_are_rounded = plur.raw.split(':').nth(4).is_some_and(|field| field.contains('.'));
 
                 for (seat_number, payoff) in plur.winnings.iter().enumerate() {
-                    if *payoff >= 0 {
-                        continue;
-                    }
                     let seat_number = u8::try_from(seat_number).unwrap_or_default();
-                    let committed = nubi
-                        .table
-                        .get_seat(seat_number)
-                        .map_or(0, |seat| seat.player.get_chips_in_play());
+                    let Some(seat) = nubi.table.seats.get_seat(seat_number) else {
+                        continue;
+                    };
 
-                    if committed != payoff.unsigned_abs() {
-                        return Some(format!(
-                            "Game #{idx} seat {seat_number}: log says it lost {}, replay committed {committed}\n  {}",
-                            payoff.unsigned_abs(),
-                            plur.raw
-                        ));
+                    if hand_resolved {
+                        let expected = isize::try_from(Pluribus::STARTING_STACK).unwrap_or_default() + payoff;
+                        let actual = isize::try_from(seat.player.chips).unwrap_or_default();
+                        let slack = isize::from(payoffs_are_rounded);
+
+                        if (actual - expected).abs() > slack {
+                            return Some(format!(
+                                "Game #{idx} seat {seat_number}: log says it ends on {expected}, replay ended on {actual}\n  {}",
+                                plur.raw
+                            ));
+                        }
+                    } else if *payoff < 0 {
+                        let committed = seat.player.chips_in_play;
+
+                        if committed != payoff.unsigned_abs() {
+                            return Some(format!(
+                                "Game #{idx} seat {seat_number}: log says it lost {}, replay committed {committed}\n  {}",
+                                payoff.unsigned_abs(),
+                                plur.raw
+                            ));
+                        }
                     }
                 }
 

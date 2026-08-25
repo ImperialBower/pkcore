@@ -1,5 +1,11 @@
 # Backlog
 
+> **STALE as of 2026-08-25.** `0.8.0` was released from `main` carrying
+> [EPIC-83](epics/EPIC-83_Table_Decelled.md) (the `TableCelled` retirement), and
+> `main` was then merged into this branch. The EPIC-79b work below is
+> renumbered to `0.9.0`, and every "tag and publish `0.8.0`" item is already
+> done. Re-run `/backlog` to refresh.
+
 > Refreshed by the `/backlog` skill on **2026-08-22** (second pass) against
 > `EPIC-79b` @ `39ea3564`, pkcore **`0.8.0`** (cut, not yet tagged or
 > published). An index of outstanding work aggregated from EPIC docs,
