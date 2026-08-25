@@ -63,5 +63,3 @@ graphify-out/
 
 # wasm
 *.wat
-
-generated/
