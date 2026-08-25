@@ -11,5 +11,4 @@ pub mod winnings;
 
 pub mod action;
 pub mod principal;
-#[cfg(feature = "bot-profiles")]
 pub mod session;

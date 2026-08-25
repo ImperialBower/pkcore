@@ -7,7 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `PKError::TableNotFound`, returned when a `TableManager` event names a table
+  the manager does not hold. The enum is `#[non_exhaustive]`, so the new
+  variant is not a breaking change for downstream `match` arms.
+
 ### Fixed
+
+- `TableManager::handle_event` matched every event with
+  `if let Some(table) = self.tables.get_mut(&table_id)`, so an event queued
+  against an unknown table id was dropped and `process_events` still returned
+  `Ok(())`. The manager did nothing and reported success — the same swallowed-
+  error shape as `DEFECT_020`/`DEFECT_024`. Lookup now goes through a
+  `table_mut` helper that returns `PKError::TableNotFound`, so a stale or wrong
+  table id surfaces at the caller instead of vanishing.
 
 - `Nubificus::boop` discarded the `Result` of `Nubificus::ff`, so a Pluribus
   replay the table rejected still returned `Ok(())` and the caller stepped on
@@ -20,6 +34,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on silently now stops at the action that failed.
 
 ### Changed
+
+- `casino::session` (`PokerSession`, `SessionStep`, `SessionView`, `SeatView`)
+  is no longer gated behind the `bot-profiles` feature, in `casino::mod`, in
+  `prelude`, and in the `tda_conformance` test suite. The gate was vestigial:
+  `bot-profiles` only adds `serde_yaml_bw`, and the session runner never
+  serializes to YAML — it depends on `Table`, `PlayerAction` and `serde`, all
+  of which are unconditional. The multi-hand runner is now part of the bare
+  domain kernel and builds under `--no-default-features`, and
+  `tda_conformance::stud_full_table_runs_to_showdown` runs bare with the rest
+  of the harness. Purely additive for existing callers.
 
 - The five public fallible methods on `analysis::nubibus::Nubificus` —
   `boop`, `ff`, `play_hand`, `play_hand_display` and `do_action` — now document
