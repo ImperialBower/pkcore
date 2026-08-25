@@ -5,6 +5,32 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- `Nubificus::boop` discarded the `Result` of `Nubificus::ff`, so a Pluribus
+  replay the table rejected still returned `Ok(())` and the caller stepped on
+  to the next action against a table that had drifted out of sync with its log.
+  This is the last of the swallowed-error family `DEFECT_020` opened
+  ([DEFECT_024](docs/defects/DEFECT_024_boop_swallows_replay_error.md)). `boop`
+  now propagates, and it consumes the action from `queue` only after the table
+  accepts it, so a rejected action stays at the front for inspection.
+  `examples/pluripop.rs` is the only caller; a stepped replay that used to run
+  on silently now stops at the action that failed.
+
+### Changed
+
+- The five public fallible methods on `analysis::nubibus::Nubificus` —
+  `boop`, `ff`, `play_hand`, `play_hand_display` and `do_action` — now document
+  what they actually fail on. Their `# Errors` sections were placeholders
+  (`TODO: Fill in errors`, and `I'm not actually sure` on `boop`), so a caller
+  had no way to know which `PKError` variants to expect from a Pluribus replay.
+  `boop` is documented as it behaves: it discards the result of `ff`, so a
+  diverged replay currently reads as success — the same swallowed-error shape
+  `DEFECT_020` closed on `Nubificus::act`. Documentation only; no behaviour
+  changed.
+
 ## [0.8.0] - 2026-08-24
 
 ### Removed

@@ -105,20 +105,48 @@ impl Nubificus {
         Ok(logged_amount.saturating_sub(earlier_streets))
     }
 
+    /// Replays the next queued action and consumes it.
+    ///
+    /// The action is only dropped from the queue once the table has accepted
+    /// it, so a failed replay leaves the offending action at the front for
+    /// inspection.
+    ///
     /// # Errors
     ///
-    /// I'm not actually sure.
+    /// Whatever [`Self::ff`] returns for the action — see there for the
+    /// `PKError` variants a rejected replay produces.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use pkcore::prelude::Nubificus;
+    /// use std::str::FromStr;
+    ///
+    /// let log = "STATE:27:r200ffcfc/cr850cf/cr1825r3775c/r10000c:Qc4h|Tc9c|8sAs|Qh7c|JcQd|5h5d/3h7s5c/Qs/6c:-50|-200|-10000|0|0|10250:Eddie|Bill|Pluribus|MrWhite|Gogo|Budd";
+    /// let mut nubificus = Nubificus::from_str(log)?;
+    /// let queued = nubificus.queue.len();
+    ///
+    /// nubificus.boop()?;
+    ///
+    /// assert_eq!(queued - 1, nubificus.queue.len());
+    /// # Ok::<(), pkcore::PKError>(())
+    /// ```
     pub fn boop(&mut self) -> Result<(), PKError> {
-        let _ = self.ff(1, true);
-        match self.queue.pop_front() {
-            Some(_) | None => {}
-        }
+        self.ff(1, true)?;
+        let _ = self.queue.pop_front();
         Ok(())
     }
 
     /// # Errors
     ///
-    /// TODO: Fill in errors
+    /// - Whatever [`Table::act`] propagates while advancing the table —
+    ///   `PKError::NotEnoughCards` when the deck cannot cover the street, and
+    ///   any error from posting blinds, dealing, or ending the hand.
+    /// - Whatever [`Self::do_action`] returns for the first replayed action the
+    ///   table rejects.
+    ///
+    /// Replay stops at that action. The queue is not rewound, so the table and
+    /// the log have diverged and the remaining actions are not applied.
     pub fn ff(&mut self, number_of_actions: usize, display: bool) -> Result<(), PKError> {
         self.table.act()?;
 
@@ -135,7 +163,11 @@ impl Nubificus {
 
     /// # Errors
     ///
-    /// TODO: Fill in errors
+    /// - `PKError::NotEnoughCards` or `PKError::InvalidSeatNumber` from
+    ///   [`Table::deal_cards_to_seats`] when the hand has not been dealt yet.
+    /// - Whatever [`Table::act`] propagates while advancing the table.
+    /// - Whatever [`Self::do_action`] returns for the first logged action the
+    ///   table rejects; the actions after it are not applied.
     pub fn play_hand(&mut self) -> Result<(), PKError> {
         if !self.table.seats.are_dealt() {
             self.table.deal_cards_to_seats()?;
@@ -150,7 +182,12 @@ impl Nubificus {
 
     /// # Errors
     ///
-    /// TODO: Fill in errors
+    /// The same set as [`Self::play_hand`]: dealing errors from
+    /// [`Table::deal_cards_to_seats`], anything [`Table::act`] propagates, and
+    /// the first rejected action from [`Self::do_action`].
+    ///
+    /// Output already written to stdout is not withdrawn, so a failed replay
+    /// leaves a partial transcript on screen.
     pub fn play_hand_display(&mut self) -> Result<(), PKError> {
         log::trace!("Nubibus.play_hand_display()");
         if !self.table.seats.are_dealt() {
@@ -186,7 +223,15 @@ impl Nubificus {
 
     /// # Errors
     ///
-    /// TODO: Fill in errors
+    /// - `PKError::InvalidPluribusIndex` if the seat the table says is next to
+    ///   act is not an occupied seat.
+    /// - Whatever the matching [`Table`] action rejects the logged move with —
+    ///   typically `PKError::TableActionOutOfOrder` when the log and the table
+    ///   disagree about who acts, or `PKError::InsufficientChips` on a raise
+    ///   the stack cannot cover.
+    ///
+    /// See [`Nubificus::act`] for why a rejected action ends the replay instead
+    /// of being skipped.
     #[allow(clippy::too_many_lines)]
     pub fn do_action(&mut self, action: &PluribusEvent, display: bool) -> Result<(), PKError> {
         let seat_to_act = self.table.next_to_act();
@@ -887,6 +932,53 @@ mod store_pluribus_tests {
         let result = Nubificus::act(&mut nubi.table, &PluribusEvent::Fold, out_of_turn);
 
         assert!(result.is_err(), "an out-of-turn fold must not report success");
+    }
+
+    /// `boop` discarded the `Result` of `ff`, so a replay that the table
+    /// rejected still returned `Ok(())` — the same swallowed-error shape
+    /// `DEFECT_020` closed on `Nubificus::act`.
+    #[test]
+    fn boop_propagates_a_rejected_action() {
+        let mut nubi = Nubificus::from_str(LOG).unwrap();
+        // A raise far past the starting stack; the table must refuse it.
+        nubi.queue.push_front(PluribusEvent::Raise(1_000_000));
+
+        let result = nubi.boop();
+
+        assert!(result.is_err(), "a replay the table refused must not report success");
+    }
+
+    #[test]
+    fn boop_leaves_a_rejected_action_at_the_front_of_the_queue() {
+        let mut nubi = Nubificus::from_str(LOG).unwrap();
+        nubi.queue.push_front(PluribusEvent::Raise(1_000_000));
+        let queued = nubi.queue.len();
+
+        let _ = nubi.boop();
+
+        assert_eq!(queued, nubi.queue.len(), "a failed replay must not consume the action");
+        assert_eq!(Some(&PluribusEvent::Raise(1_000_000)), nubi.queue.front());
+    }
+
+    #[test]
+    fn boop_consumes_one_accepted_action() {
+        let mut nubi = Nubificus::from_str(LOG).unwrap();
+        let queued = nubi.queue.len();
+
+        nubi.boop().unwrap();
+
+        assert_eq!(queued - 1, nubi.queue.len());
+    }
+
+    #[test]
+    fn boop_replays_the_whole_logged_hand() {
+        let mut nubi = Nubificus::from_str(LOG).unwrap();
+
+        while !nubi.queue.is_empty() {
+            nubi.boop().unwrap();
+        }
+
+        assert_payoffs(&nubi, &[-50, -200, -10_000, 0, 0, 10_250]);
     }
 
     #[test]
