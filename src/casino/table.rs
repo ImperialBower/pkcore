@@ -40,7 +40,6 @@ use std::fmt::{Display, Formatter};
 use uuid::Uuid;
 
 mod actions;
-mod pkstate_interop;
 mod player;
 mod seat;
 mod seats;

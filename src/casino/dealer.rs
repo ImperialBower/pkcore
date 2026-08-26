@@ -196,7 +196,7 @@ impl Dealer {
     }
 
     /// Creates a `Dealer` wrapping an existing `Table` that has already been
-    /// set up (e.g. from a [`pkstate::PKState`] snapshot).
+    /// set up (e.g. restored from a [`crate::hand_history::HandHistory`]).
     #[must_use]
     pub fn from_table(table: Table) -> Self {
         Dealer {

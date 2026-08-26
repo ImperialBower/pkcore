@@ -595,6 +595,12 @@ pub enum PKError {
     /// A `Wins` record whose tie counts differ between the two players it is
     /// being read as — a three-way result fed to a heads-up constructor.
     InconsistentWins,
+    /// A `TableManager` event named a table id that is not in the manager.
+    ///
+    /// Returned by `TableManager::process_events` rather than skipping the
+    /// event silently — a queued event for an unknown table is a caller bug,
+    /// not a no-op.
+    TableNotFound,
     /// The requested operation is recognised but not yet implemented.
     ///
     /// Returned by methods whose behaviour is deliberately unfinished (rather
@@ -653,6 +659,7 @@ impl Display for PKError {
                 &*format!("Table Action Out of Order Error: {table_action}")
             }
             PKError::TableFull => "Table Full Error",
+            PKError::TableNotFound => "Table Not Found Error",
             PKError::TooManyCards => "Too Many Cards Error",
             PKError::TooManyHands => "Too Many Hands Error",
             PKError::InvalidTwo => "Invalid Two Error",

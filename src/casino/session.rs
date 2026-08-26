@@ -9,13 +9,9 @@
 //! - **Batch** (`run_hand`) — for CLI tools and bot simulations where the full hand
 //!   can run to completion synchronously.
 //!
-//! This module requires the **`bot-profiles`** feature flag.
-//!
 //! # Examples
 //!
 //! ```
-//! # #[cfg(feature = "bot-profiles")]
-//! # {
 //! use pkcore::casino::action::PlayerAction;
 //! use pkcore::casino::game::ForcedBets;
 //! use pkcore::casino::session::PokerSession;
@@ -31,7 +27,6 @@
 //! // Run a hand where the first actor always folds.
 //! let winnings = session.run_hand(|_table, _seat| PlayerAction::Fold).unwrap();
 //! assert_eq!(session.hand_number, 1);
-//! # }
 //! ```
 
 use crate::PKError;
@@ -53,8 +48,6 @@ use uuid::Uuid;
 /// # Examples
 ///
 /// ```
-/// # #[cfg(feature = "bot-profiles")]
-/// # {
 /// use pkcore::casino::action::PlayerAction;
 /// use pkcore::casino::game::ForcedBets;
 /// use pkcore::casino::session::{PokerSession, SessionStep};
@@ -74,7 +67,6 @@ use uuid::Uuid;
 ///     SessionStep::HandComplete      => { /* call end_hand() */ }
 ///     SessionStep::Failed(_)         => { /* call abort_hand() */ }
 /// }
-/// # }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SessionStep {
@@ -102,8 +94,6 @@ pub enum SessionStep {
 /// # Examples
 ///
 /// ```
-/// # #[cfg(feature = "bot-profiles")]
-/// # {
 /// use pkcore::casino::action::PlayerAction;
 /// use pkcore::casino::game::ForcedBets;
 /// use pkcore::casino::session::PokerSession;
@@ -117,7 +107,6 @@ pub enum SessionStep {
 ///     Table::nlh_from_seats(seats, ForcedBets::new(5, 10))
 /// );
 /// assert_eq!(session.hand_number, 0);
-/// # }
 /// ```
 pub struct PokerSession {
     /// The underlying game table.
@@ -143,8 +132,6 @@ impl PokerSession {
     /// # Examples
     ///
     /// ```
-    /// # #[cfg(feature = "bot-profiles")]
-    /// # {
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
     /// use pkcore::casino::table::{Player, Seat, Seats, Table};
@@ -157,7 +144,6 @@ impl PokerSession {
     ///     Table::nlh_from_seats(seats, ForcedBets::new(10, 20))
     /// );
     /// assert_eq!(session.hand_number, 0);
-    /// # }
     /// ```
     #[must_use]
     pub fn new(table: Table) -> Self {
@@ -182,8 +168,6 @@ impl PokerSession {
     /// # Examples
     ///
     /// ```
-    /// # #[cfg(feature = "bot-profiles")]
-    /// # {
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
     /// use pkcore::casino::table::{Player, Seat, Seats, Table};
@@ -196,7 +180,6 @@ impl PokerSession {
     ///     Table::nlh_from_seats(seats, ForcedBets::new(50, 100))
     /// );
     /// assert_eq!(session.forced_at_hand_start().small_blind, 50);
-    /// # }
     /// ```
     #[must_use]
     pub fn forced_at_hand_start(&self) -> ForcedBets {
@@ -217,8 +200,6 @@ impl PokerSession {
     /// # Examples
     ///
     /// ```
-    /// # #[cfg(feature = "bot-profiles")]
-    /// # {
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
     /// use pkcore::casino::table::{Player, Seat, Seats, Table};
@@ -232,7 +213,6 @@ impl PokerSession {
     /// );
     /// session.set_blinds(ForcedBets::new(100, 200));
     /// assert_eq!(session.table.forced.big_blind, 200);
-    /// # }
     /// ```
     pub fn set_blinds(&mut self, forced: ForcedBets) {
         if self.is_hand_in_progress() {
@@ -251,8 +231,6 @@ impl PokerSession {
     /// # Examples
     ///
     /// ```
-    /// # #[cfg(feature = "bot-profiles")]
-    /// # {
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
     /// use pkcore::casino::table::{Player, Seat, Seats, Table};
@@ -266,7 +244,6 @@ impl PokerSession {
     /// );
     /// let busted = session.eliminate_busted();
     /// assert_eq!(busted, vec![1]);
-    /// # }
     /// ```
     pub fn eliminate_busted(&mut self) -> Vec<u8> {
         self.table.eliminate_busted()
@@ -277,8 +254,6 @@ impl PokerSession {
     /// # Examples
     ///
     /// ```
-    /// # #[cfg(feature = "bot-profiles")]
-    /// # {
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
     /// use pkcore::casino::table::{Player, Seat, Seats, Table};
@@ -291,7 +266,6 @@ impl PokerSession {
     ///     Table::nlh_from_seats(seats, ForcedBets::new(10, 20))
     /// );
     /// assert_eq!(session.count_funded(), 2);
-    /// # }
     /// ```
     #[must_use]
     pub fn count_funded(&self) -> usize {
@@ -312,8 +286,6 @@ impl PokerSession {
     /// # Examples
     ///
     /// ```
-    /// # #[cfg(feature = "bot-profiles")]
-    /// # {
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
     /// use pkcore::casino::table::{Player, Seat, Seats, Table};
@@ -328,7 +300,6 @@ impl PokerSession {
     /// session.start_hand().unwrap();
     /// assert_eq!(session.hand_number, 1);
     /// assert!(session.table.seats.are_dealt());
-    /// # }
     /// ```
     pub fn start_hand(&mut self) -> Result<(), PKError> {
         if let Some(pending) = self.pending_forced.take() {
@@ -362,8 +333,6 @@ impl PokerSession {
     /// # Examples
     ///
     /// ```
-    /// # #[cfg(feature = "bot-profiles")]
-    /// # {
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
@@ -378,7 +347,6 @@ impl PokerSession {
     /// );
     /// session.start_hand().unwrap();
     /// assert!(!session.is_hand_complete());
-    /// # }
     /// ```
     #[must_use]
     pub fn is_hand_complete(&self) -> bool {
@@ -394,8 +362,6 @@ impl PokerSession {
     /// # Examples
     ///
     /// ```
-    /// # #[cfg(feature = "bot-profiles")]
-    /// # {
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
@@ -411,7 +377,6 @@ impl PokerSession {
     /// assert!(!session.is_hand_in_progress());
     /// session.start_hand().unwrap();
     /// assert!(session.is_hand_in_progress());
-    /// # }
     /// ```
     #[must_use]
     pub fn is_hand_in_progress(&self) -> bool {
@@ -438,8 +403,6 @@ impl PokerSession {
     /// # Examples
     ///
     /// ```
-    /// # #[cfg(feature = "bot-profiles")]
-    /// # {
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
@@ -454,7 +417,6 @@ impl PokerSession {
     /// );
     /// session.start_hand().unwrap();
     /// assert!(session.next_actor().unwrap().is_some());
-    /// # }
     /// ```
     pub fn next_actor(&mut self) -> Result<Option<u8>, PKError> {
         if self.is_hand_complete() {
@@ -495,8 +457,6 @@ impl PokerSession {
     /// # Examples
     ///
     /// ```
-    /// # #[cfg(feature = "bot-profiles")]
-    /// # {
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
@@ -512,7 +472,6 @@ impl PokerSession {
     /// session.start_hand().unwrap();
     /// let seat = session.next_actor().unwrap().unwrap();
     /// assert!(session.apply_action(seat, PlayerAction::Fold).is_ok());
-    /// # }
     /// ```
     pub fn apply_action(&mut self, seat: u8, action: PlayerAction) -> Result<(), PKError> {
         self.table.apply_action(seat, action)
@@ -539,8 +498,6 @@ impl PokerSession {
     /// # Examples
     ///
     /// ```
-    /// # #[cfg(feature = "bot-profiles")]
-    /// # {
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::{PokerSession, SessionStep};
@@ -556,7 +513,6 @@ impl PokerSession {
     /// session.start_hand().unwrap();
     /// // Preflop always starts with a player to act.
     /// assert!(matches!(session.next_step(), SessionStep::PlayerToAct(_)));
-    /// # }
     /// ```
     pub fn next_step(&mut self) -> SessionStep {
         if self.is_hand_complete() {
@@ -587,8 +543,6 @@ impl PokerSession {
     /// # Examples
     ///
     /// ```
-    /// # #[cfg(feature = "bot-profiles")]
-    /// # {
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
@@ -603,7 +557,6 @@ impl PokerSession {
     /// );
     /// let winnings = session.run_hand(|_t, _s| PlayerAction::Fold).unwrap();
     /// assert!(!winnings.vec().is_empty());
-    /// # }
     /// ```
     pub fn end_hand(&mut self) -> Result<Winnings, PKError> {
         self.table.end_hand()
@@ -660,8 +613,6 @@ impl PokerSession {
     /// # Examples
     ///
     /// ```
-    /// # #[cfg(feature = "bot-profiles")]
-    /// # {
     /// use pkcore::casino::action::PlayerAction;
     /// use pkcore::casino::game::ForcedBets;
     /// use pkcore::casino::session::PokerSession;
@@ -678,7 +629,6 @@ impl PokerSession {
     /// let winnings = session.run_hand(|_table, _seat| PlayerAction::Call).unwrap();
     /// assert!(!winnings.vec().is_empty());
     /// assert_eq!(session.hand_number, 1);
-    /// # }
     /// ```
     pub fn run_hand<F>(&mut self, mut on_action: F) -> Result<Winnings, PKError>
     where
