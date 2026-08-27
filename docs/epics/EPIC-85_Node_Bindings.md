@@ -3,8 +3,9 @@
 > **Provenance.** First drafted as `EPIC-84_JavaScript_Bindings.md` on branch
 > `EPIC-79b` (commit `0afbf08c`, 2026-08-25). Moved to `main` and renumbered
 > **85** on 2026-08-26 because `EPIC-84` is also claimed by
-> `EPIC-84_Sealed_Table_Cardpack.md`. Facts, line numbers, and versions were
-> refreshed against `main` @ `89313e53` (pkcore `0.9.0`) on the move. Delete
+> `EPIC-84_Sealed_Table_Cardpack.md`. Facts, cited line numbers, and versions were
+> refreshed against `main` @ `89313e53` (pkcore `0.9.0`) on the move, and
+> re-checked after a `/critique` pass on 2026-08-27. Delete
 > the branch copy when `EPIC-79b` merges.
 
 ## Context
@@ -34,9 +35,9 @@ only mentions are this doc's own first draft and
 `wasm-bindgen` hello-world with no pkcore in it (`pkwasm/Cargo.toml:1-9`).
 
 pkpy itself just finished migrating onto `pkcore` 0.8.0
-(pkpy commit `7365950`, "Migrate to pkcore 0.8.0 (Table cell-type removal)";
-pkpy still pins `pkcore = "0.8.0"` at `pkpy/Cargo.toml:14`, while pkcore
-`main` is at `0.9.0`, `Cargo.toml:4`),
+(pkpy commit `7365950`, "Migrate to pkcore 0.8.0 (Table cell-type removal)",
+then bumped to pin `pkcore = "0.9.0"` at `pkpy/Cargo.toml:14` in commit
+`c86d518`, 2026-08-27, matching pkcore `main`'s `0.9.0`, `Cargo.toml:4`),
 which tracks this repo's own [EPIC-83](EPIC-83_Table_Decelled.md): the entire
 interior-mutability `TableCelled` family — `TableCelled`, `GameState`,
 `SeatsCell`, `SeatCell`, the celled `Seat`, `Showdown`, `HandResult`,
@@ -46,7 +47,7 @@ its `&mut self` family: `Player` (`src/casino/table/player.rs:23-35`), `Seat`,
 `Seats`, driven by `Dealer` (`src/casino/dealer.rs:164-171`).
 
 That matters here because pkpy predates EPIC-83 and still carries a **second,
-parallel** copy of the table API — `pkpy/src/table_no_cell.rs:1-232` — named
+parallel** copy of the table API — `pkpy/src/table_no_cell.rs:1-231` — named
 `PlayerNoCell` / `SeatNoCell` / `SeatsNoCell` / `TableNoCell`
 (`pkpy/src/table_no_cell.rs:16,70,115,177`) purely to distinguish it from the
 now-deleted celled `Table` the rest of `pkpy/src/lib.rs` used to bind. A
@@ -95,8 +96,9 @@ names.
 | `Winnings` / `PotWin` / showdown results | Planned |
 | TypeScript type definitions (`.d.ts`, generated) | Planned |
 | npm packaging + prebuilt-binary CI matrix | Planned |
-| GTO solver bindings | 🔒 Deferred — see Context |
-| Kuhn Poker toy-game bindings | 🔒 Deferred — see Context |
+| GTO solver bindings | **Deferred** — see Context |
+| Kuhn Poker toy-game bindings | **Deferred** — see Context |
+| `PokerSession` / `PlayerAction` / `SessionStep` | Planned (Phase 3) |
 
 ---
 
@@ -130,16 +132,21 @@ names.
   defaults: `pkcore` chip counts and pot sizes are `usize`
   (`src/casino/table/player.rs:28-35`: `chips`, `bet`, `chips_in_play`,
   `withdrawn` are all `usize`), which has no native JS/napi-rs equivalent.
-  napi-rs maps `u32` cleanly to a JS `number`; `u64`/`usize` requires either a
-  documented truncation to `u32` (fine for realistic chip stacks, wrong at the
-  edges) or `BigInt` (exact, more friction for callers). This EPIC picks the
-  mapping per type in [Design](#design) rather than blanket one way.
+  napi-rs maps `u32` cleanly to a JS `number`, and also maps `i64` to a plain
+  JS `number` — *"Return `i64` will be treated as JavaScript number, not
+  BigInt"* (napi.rs docs, `concepts/values`, checked 2026-08-27) — exact up to
+  2⁵³. `u64` alone becomes `BigInt`. So the rule is: **`usize` → `i64` →
+  `number`** for every chip, bet, and pot field (no poker stack reaches 2⁵³;
+  an `as u32` cast would wrap silently at 4,294,967,295 with no error). Small
+  counts that are `u8`/`u32` in `pkcore` (seat indices, seat counts) stay
+  `u32`. Nothing in v1 needs `BigInt`.
 - Errors surface as native JS `Error` (or a subclassed `PkError`), not
   Python-style string-formatted exceptions — pkpy's `dealer_err`
   (`pkpy/src/lib.rs:2829-2831`) does `PyValueError::new_err(format!("{e:?}"))`;
-  the JS binding should carry the `DealerError` variant as a structured
+  the JS binding carries the `DealerError` variant as a structured
   `.code`/`.reason` on the thrown error instead of a debug-formatted string,
-  since JS callers conventionally branch on error shape.
+  since JS callers conventionally branch on error shape. This is a **v1
+  requirement**, not a follow-on — see `dealer_err` in [Design](#design).
 - Async is out of scope for v1: every bound method is synchronous, matching
   pkpy (`Dealer::act` and friends are plain `&mut self` calls, not `async fn`
   anywhere in `pkcore`). `napi-rs`'s `AsyncTask`/`ThreadsafeFunction` machinery
@@ -156,10 +163,11 @@ names.
 | `casino::table::Seat` | `SeatNoCell` (`pkpy/src/table_no_cell.rs:70`) | `Seat` class |
 | `casino::table::Seats` | `SeatsNoCell` (`pkpy/src/table_no_cell.rs:115`) | `Seats` class |
 | `casino::dealer::Dealer` | `Dealer` (`pkpy/src/lib.rs:2827`) | `Dealer` class |
-| `casino::dealer::DealerAction` | inline `use` per method (`pkpy/src/lib.rs:2879` etc.) | `DealerAction` tagged union / builder |
+| `casino::dealer::DealerAction` | one method per action (`pkpy/src/lib.rs:2887-2927`, `bet`…`ready`) | `DealerAction` tagged union / builder |
 | `casino::game::ForcedBets` | `ForcedBets` (`pkpy/src/lib.rs:2275`) | `ForcedBets` class |
 | `casino::action::TableAction` + event log | `TableAction` (`pkpy/src/lib.rs:2686`) + `TableLog` (`pkpy/src/lib.rs:2762`, a `Vec<TableAction>` wrapper as of this repo's 0.8.0 migration) | `TableAction` union + `EventLog` (or plain `TableAction[]`) |
 | `casino::winnings::{Winnings, PotWin}` | `Winnings` / `PotWin` (`pkpy/src/lib.rs:2647,2616`) | `Winnings` / `PotWin` classes |
+| `casino::session::{PokerSession, PlayerAction, SessionStep}` (`src/casino/session.rs:111`, `run_hand` at `:633`) | `PokerSession` / `PlayerAction` / `SessionStep` (`pkpy/src/session.rs:139,17,89`; 21 tests in `pkpy/tests/test_session.py`) | `PokerSession` class + `PlayerAction` / `SessionStep` unions |
 | `card::Card`, `cards::Cards`, `rank::Rank`, `suit::Suit` | `Card`, `Cards`, `Rank`, `Suit` | same, 1:1 |
 | `analysis::eval::Eval`, `analysis::hand_rank::HandRank` | `Eval`, `HandRank` | same, 1:1 |
 | `analysis::gto::*` (`Solver`, `Combo`, …) | bound (`pkpy/src/lib.rs:5-14`) | ❌ deferred, follow-on EPIC |
@@ -184,8 +192,9 @@ pknode/
     lib.rs              # #[napi] module root, mirrors pkpy/src/lib.rs's shape
     table.rs             # Table / Player / Seat / Seats / ForcedBets
     dealer.rs             # Dealer / DealerAction / event log
+    session.rs            # PokerSession / PlayerAction / SessionStep
     eval.rs                # Card / Cards / Rank / Suit / Eval / HandRank / Board / HoleCards
-  __test__/              # ava or vitest, mirrors pkpy/tests/*.py
+  __test__/              # node --test (built in, zero deps), mirrors pkpy/tests/*.py
   index.d.ts              # generated by napi-rs's TS codegen, checked in
 ```
 
@@ -202,8 +211,8 @@ pub struct Player(pub(crate) PkPlayer);
 #[napi]
 impl Player {
     #[napi(constructor)]
-    pub fn new(handle: String, chips: u32) -> Self {
-        Player(PkPlayer::new_with_chips(handle, chips as usize))
+    pub fn new(handle: String, chips: i64) -> Self {
+        Player(PkPlayer::new_with_chips(handle, chips.max(0) as usize))
     }
 
     #[napi(getter)]
@@ -211,10 +220,10 @@ impl Player {
         self.0.handle.clone()
     }
 
-    /// Truncates at u32::MAX; see Scope for the usize→JS mapping rationale.
+    /// usize → i64 → JS number (exact below 2^53); see Scope.
     #[napi]
-    pub fn chips(&self) -> u32 {
-        self.0.chips as u32
+    pub fn chips(&self) -> i64 {
+        self.0.chips as i64
     }
 
     #[napi]
@@ -242,7 +251,7 @@ impl Table {
 
 This is the same one-line-delegation discipline pkpy already uses (compare
 `pkpy/src/lib.rs:2475-2477`'s `chips()`/`total_chips()`/`chips_in_play()` — the
-JS binding differs only in the `usize → u32` cast this EPIC's Scope section
+JS binding differs only in the `usize → i64` cast this EPIC's Scope section
 calls out explicitly, and in napi-rs's `#[napi(constructor)]`/`#[napi(getter)]`
 /`#[napi(factory)]` attributes standing in for PyO3's `#[new]`/`#[getter]`/
 `#[staticmethod]`.
@@ -267,22 +276,31 @@ impl Dealer {
     }
 
     #[napi]
-    pub fn bet(&mut self, seat: u32, amount: u32) -> napi::Result<()> {
+    pub fn bet(&mut self, seat: u32, amount: i64) -> napi::Result<()> {
         self.0
-            .act(DealerAction::Bet { seat: seat as u8, amount: amount as usize })
+            .act(DealerAction::Bet { seat: seat as u8, amount: amount.max(0) as usize })
             .map_err(dealer_err)
     }
 }
 
+/// `.code` is the `DealerError` variant name; `.reason` is its Debug form.
+/// napi-rs's `Error::new(status, reason)` is the only hook available, so the
+/// variant name is carried in a custom status via `napi::Error::new` (or, if
+/// the status type proves too narrow, a `#[napi(object)] PkError` thrown via
+/// `Env::throw_error` with `code`) — pick one in Phase 3 item 5 and pin it
+/// with `dealer_error_shape`.
 fn dealer_err(e: pkcore::casino::dealer::DealerError) -> napi::Error {
-    napi::Error::from_reason(format!("{e:?}"))
+    let code = format!("{e:?}");
+    let code = code.split(['(', ' ', '{']).next().unwrap_or("DealerError").to_string();
+    napi::Error::new(napi::Status::GenericFailure, format!("{code}: {e:?}"))
 }
 ```
 
-`dealer_err`'s v1 shape matches pkpy's `dealer_err`
-(`pkpy/src/lib.rs:2829-2831`) exactly — a debug-formatted string — with the
-structured-error upgrade named in Scope tracked as a Phase 4 item, not a v1
-blocker.
+`dealer_err` deliberately does **not** copy pkpy's `dealer_err`
+(`pkpy/src/lib.rs:2829-2831`, a bare `format!("{e:?}")`). Scope requires a
+`.code` a JS caller can branch on, so it is a v1 requirement bound to Phase 3
+item 5 and tested by `dealer_error_shape`. The sketch above is the minimum
+shape; the exact napi mechanism for attaching `code` is settled in item 5.
 
 ---
 
@@ -297,11 +315,17 @@ blocker.
 - [ ] **0b.** Add `napi = "3"`, `napi-derive = "3"`, `napi-build = "2"`
       (3.12.2 / 3.6.3 / 2.4.1 on crates.io, 2026-08-26); `build.rs` calling
       `napi_build::setup()`; confirm `napi build --platform` produces a loadable
-      `.node` addon for the local platform.
+      `.node` addon for the local platform. **Also confirm** that
+      `#[napi] pub struct Player(pub(crate) PkPlayer);` (tuple struct) compiles
+      as a class — napi.rs's class docs only show named-field structs. If it
+      does not, every sketch in [Design](#design) becomes
+      `pub struct Player { inner: PkPlayer }` and `self.0` becomes `self.inner`.
 - [ ] **0c.** `package.json` with `"name"`, a `napi` config block (per
       `napi-rs`'s CLI scaffold), and `"version"` set to match the `pkcore`
       dependency version — the same rule as `pkpy/CLAUDE.md`. Add an equivalent
-      `CLAUDE.md` to `pknode` stating it.
+      `CLAUDE.md` to `pknode` stating it. License: `MIT OR Apache-2.0`, matching
+      `pkpy/Cargo.toml:6` (pkpy switched from GPL in commit `c86d518`,
+      2026-08-27); ship `LICENSE-MIT` + `LICENSE-APACHE` as pkpy does.
 - [ ] **0d.** `make`-equivalent scripts (`npm run build`, `npm test`) mirroring
       `pkpy/Makefile`'s `build`/`test`/`clippy`/`fmt` targets.
 
@@ -310,9 +334,12 @@ blocker.
 - [ ] **1.** Bind `Card`, `Cards`, `Rank`, `Suit` 1:1 with pkpy's classes of the
       same name as the reference shape; test: round-trip a `Cards` string
       through `parse`/`to_string` (mirrors pkpy's `Card`/`Cards` tests).
-- [ ] **2.** Bind `Eval`, `HandRank`, `Board`, `HoleCards`; test: evaluate a
-      known 7-card hand and assert the `HandRank` matches pkpy's own test
-      fixture for the same cards (cross-binding parity check).
+- [ ] **2.** Bind `Eval`, `HandRank`, `Board`, `HoleCards`; test: evaluate
+      THE HAND's seven cards `6♠ 6♥ 9♣ 6♦ 5♥ 5♠ 8♠` and assert
+      `handRank.value === 271` and the best five is `6♠ 6♥ 6♦ 5♠ 5♥` — the
+      values `pkcore`'s own `from__seven` test pins at
+      `src/analysis/eval.rs:383-390` (cross-binding parity check against the
+      kernel, not against pkpy, which asserts no `HandRank` value).
 
 ### Phase 2 — Table engine
 
@@ -325,27 +352,33 @@ blocker.
 
 - [ ] **5.** Bind `Dealer` and every `DealerAction` variant as either a tagged
       union or per-action methods (`bet`/`call`/`check`/`raiseTo`/`allIn`/
-      `fold`/`ready`, mirroring `pkpy/src/lib.rs:2874-2917`'s one-method-per-
+      `fold`/`ready`, mirroring `pkpy/src/lib.rs:2887-2927`'s one-method-per-
       action shape); test: play one hand end-to-end (seat two players,
       `startHand`, act through to `endHand`) and assert `Winnings` sums to the
       starting chip total (the same chip-conservation invariant `pkcore`'s own
-      `hand_chip_total` field polices, `src/casino/table.rs:107-111`).
+      `hand_chip_total` field polices, `src/casino/table.rs:107-111`). Settle
+      the `.code` mechanism for `dealer_err` here and add `dealer_error_shape`.
 - [ ] **6.** Bind `TableAction` and the event log accessor (`Dealer.eventLog()`
       returning `TableAction[]`, no `TableLog` wrapper class needed in JS —
       arrays are native).
+- [ ] **7.** Bind `PokerSession`, `PlayerAction`, `SessionStep`
+      (`src/casino/session.rs:111`, `run_hand` at `:633`) mirroring
+      `pkpy/src/session.rs:139,17,89`. `run_hand` takes a callback; in JS that
+      is a plain synchronous `(step) => PlayerAction` function passed through
+      napi-rs's `JsFunction`/`Function` — still no async. Test: port one of
+      `pkpy/tests/test_session.py`'s 21 cases (a scripted heads-up hand that
+      reaches showdown).
 
 ### Phase 4 — Packaging, CI, docs
 
-- [ ] **7.** Wire napi-rs's standard GitHub Actions cross-compile matrix
+- [ ] **8.** Wire napi-rs's standard GitHub Actions cross-compile matrix
       (linux-x64/arm64, darwin-x64/arm64, win32-x64) producing
       `optionalDependencies` per-platform packages, the napi-rs analogue of
       `pkpy/.github/workflows/publish.yml`'s per-target `maturin-action` matrix.
-- [ ] **8.** Generate and check in `index.d.ts` via napi-rs's TypeScript
+- [ ] **9.** Generate and check in `index.d.ts` via napi-rs's TypeScript
       codegen; add a `tsc --noEmit` CI check against it.
-- [ ] **9.** README + one runnable example mirroring `pkpy/demo.py`
+- [ ] **10.** README + one runnable example mirroring `pkpy/demo.py`
       (`pkpy/demo.py:1-`) — seat two players, play a hand, print the result.
-- [ ] **10.** Decide and document the structured-error upgrade named in Scope
-      (`DealerError` → `{code, reason}` instead of a debug-formatted string).
 
 ### Deferred (follow-on EPIC, not this one)
 
@@ -363,9 +396,10 @@ blocker.
 
 - `card_round_trip` — parse a `Cards` string, `toString()` it back, assert
   equality (Phase 1).
-- `eval_matches_pkpy_fixture` — evaluate a fixed 7-card hand in `pknode` and
-  assert the `HandRank` matches the value pkpy's own test suite asserts for
-  the same cards — a cross-binding correctness pin (Phase 1).
+- `eval_matches_kernel_fixture` — evaluate `6♠ 6♥ 9♣ 6♦ 5♥ 5♠ 8♠` (THE HAND)
+  in `pknode` and assert `handRank.value === 271`, the value `pkcore`'s
+  `from__seven` test pins at `src/analysis/eval.rs:383-390` — a binding-vs-
+  kernel correctness pin (Phase 1).
 - `heads_up_table_seat_count` — `Table.nlhFromSeats` with two seats, assert
   `seatCount() === 2` (Phase 2).
 - `full_hand_chip_conservation` — seat two players, run a hand start to
@@ -373,8 +407,11 @@ blocker.
   (Phase 3; mirrors the invariant `pkcore::Table::hand_chip_total` exists to
   police, `src/casino/table.rs:107-111`).
 - `dealer_error_shape` — trigger an illegal action (e.g. bet after fold),
-  assert the thrown error carries a recognizable `DealerError` variant name,
-  not just an opaque string (Phase 4, once item 10 lands).
+  assert the thrown error's `.code` is the `DealerError` variant name and
+  `.reason` is non-empty (Phase 3, item 5).
+- `session_scripted_hand` — drive `PokerSession.runHand` with a scripted
+  callback to showdown; assert the returned `Winnings` conserve chips
+  (Phase 3, item 7).
 
 ## Key Files (proposed, in the new `pknode` repo)
 
@@ -391,6 +428,7 @@ blocker.
 - `pkpy/src/lib.rs` and `pkpy/src/session.rs` — the reference binding shape.
   Every pkpy method this EPIC's Design section shows is a direct model, not a
   fresh design; port the *method inventory*, not just the type names.
+  `session.rs` is bound in Phase 3 item 7, not just referenced.
 - `pkcore::casino::table::{Table, Player, Seat, Seats}` and
   `pkcore::casino::dealer::{Dealer, DealerAction, DealerError}` — bind these
   directly; do not re-derive table logic in JS or Rust glue code.
@@ -429,8 +467,9 @@ npx tsc --noEmit          # index.d.ts type-checks
 
 Exit criteria:
 
-1. `full_hand_chip_conservation` and `eval_matches_pkpy_fixture` both pass —
-   the engine behaves identically to pkpy's, not just compiles.
+1. `full_hand_chip_conservation`, `eval_matches_kernel_fixture`, and
+   `dealer_error_shape` all pass — the engine matches the kernel's own pinned
+   values, not just compiles.
 2. `npm install pknode` on a clean machine with no Rust toolchain succeeds via a
    prebuilt platform binary (Phase 4 CI matrix proven on all five targets).
 3. `pkcore`, `pkpy`, and every other existing consumer remain unaffected —
