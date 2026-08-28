@@ -294,8 +294,6 @@ impl Dealer {
             });
         }
 
-        println!("Dealer.start_hand() called. Current table state:\n{}", self.table);
-
         self.set_funded_players_to_yet_to_act()?;
 
         // Collect seat numbers of players who can actually be dealt into the hand.
