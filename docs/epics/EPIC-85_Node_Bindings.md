@@ -106,12 +106,12 @@ names.
 |---|---|
 | `pkcore.js` repo scaffold (napi-rs crate + `package.json`) | **Complete** — 2026-08-27 |
 | Card & eval primitives (`Card`, `Cards`, `Rank`, `Suit`, `Eval`, `HandRank`) | **Complete** — 2026-08-27, 11 tests |
-| `Board`, `HoleCards` | Planned |
+| `Board`, `HoleCards`, `Two` | **Complete** — 2026-08-28, 6 tests |
 | Table engine (`Table`, `Player`, `Seat`, `Seats`, `ForcedBets`) | **Complete** — 2026-08-27, 10 tests |
 | `Winnings` / `PotWin` / `SeatEquity` | **Complete** — 2026-08-27, populated and asserted by item 5 |
 | `Dealer` + `DealerAction` + `TableAction` event log | **Complete** — 2026-08-27, 5 tests |
-| TypeScript type definitions (`.d.ts`, generated) | **Complete** — 2026-08-27, committed + `tsc --noEmit` clean |
-| npm packaging + prebuilt-binary CI matrix | Planned |
+| TypeScript type definitions (`.d.ts`, generated) | **Complete** — 2026-08-28, committed, `tsc` + staleness gate in CI |
+| npm packaging + prebuilt-binary CI matrix | **Complete** — 2026-08-28, rehearsed locally; not yet tagged |
 | GTO solver bindings | **Deferred** — see Context |
 | Kuhn Poker toy-game bindings | **Deferred** — see Context |
 | `PokerSession` / `PlayerAction` / `SessionStep` | **Complete** — 2026-08-27, 6 tests (`run_hand` intentionally unbound) |
@@ -396,8 +396,12 @@ rather than the N-API status. Phase 3 item 5 only has to apply it to
       `HandRank.name`/`.class` are exposed as strings (`"FullHouse"`,
       `"SixesOverFives"`) rather than as bound enums; a JS caller compares
       strings, and `HandRankClass` has too many variants to be worth a class.
-- [ ] **2b.** Bind `Board` and `HoleCards` (split out of item 2 — the eval
+- [x] **2b.** Bind `Board` and `HoleCards` (split out of item 2 — the eval
       fixture did not need them, and `Game` is the type that consumes them).
+      **Done 2026-08-28**, 6 tests. `Two` came with them: `HoleCards` is a
+      `Vec<Two>`, so it cannot be read without one. `Board` exposes
+      `flop`/`turn`/`river` plus `turnCards()`; `HoleCards` parses every
+      player's hand at once (`"6♠ 6♥ 5♦ 5♣"`) or is built with `push`.
 
 ### Phase 2 — Table engine
 
@@ -468,14 +472,43 @@ rather than the N-API status. Phase 3 item 5 only has to apply it to
 
 ### Phase 4 — Packaging, CI, docs
 
-- [ ] **8.** Wire napi-rs's standard GitHub Actions cross-compile matrix
+- [x] **8.** Wire napi-rs's standard GitHub Actions cross-compile matrix
       (linux-x64/arm64, darwin-x64/arm64, win32-x64) producing
       `optionalDependencies` per-platform packages, the napi-rs analogue of
       `pkcore.py/.github/workflows/publish.yml`'s per-target `maturin-action` matrix.
-- [ ] **9.** Generate and check in `index.d.ts` via napi-rs's TypeScript
-      codegen; add a `tsc --noEmit` CI check against it.
-- [ ] **10.** README + one runnable example mirroring `pkcore.py/demo.py`
+      **Done 2026-08-28**: `pkcore.js/.github/workflows/publish.yml`, five build
+      jobs on a `v*` tag then one publish job running
+      `napi create-npm-dirs` → `napi artifacts` → `napi pre-publish -t npm` →
+      `npm publish --provenance`.
+      The whole assembly was **rehearsed locally** (real darwin-arm64 addon plus
+      four stubs) before shipping, which caught two things a first draft would
+      have got wrong:
+      1. `napi pre-publish --skip-optional-publish` **skips** the per-platform
+         packages — the opposite of what is wanted, since the root package is
+         only a loader that reaches them through `optionalDependencies`.
+      2. `actions/download-artifact` nests each artifact in its own directory;
+         `napi artifacts` needs them flat, so `merge-multiple: true` is required.
+      Also confirmed: `napi artifacts` **errors** if any configured target is
+      missing, so a failed matrix leg stops the release rather than publishing a
+      partial set. `aarch64-unknown-linux-gnu` needs `--use-napi-cross` because
+      `pkcore` pulls in rusqlite and zstd, which compile C.
+- [x] **9.** Generate and check in `index.d.ts` via napi-rs's TypeScript
+      codegen; add a `tsc --noEmit` CI check against it. **Done 2026-08-28**
+      in `ci.yml`, plus one step the item did not ask for and needs: a
+      `git diff --exit-code` on `index.js`/`index.d.ts` after the build. `tsc`
+      only proves the committed types are *valid*, not that they still *match*
+      the addon; the diff catches a signature change nobody rebuilt. Rust doc
+      comments carry through into the `.d.ts`, so the published types are
+      documented for free.
+- [x] **10.** README + one runnable example mirroring `pkcore.py/demo.py`
       (`pkcore.py/demo.py:1-`) — seat two players, play a hand, print the result.
+      **Done 2026-08-28**: `pkcore.js/demo.mjs`, run with `npm run demo`.
+      Sections mirror `demo.py`: ranks/suits, cards, evaluating THE HAND,
+      building a table, playing a hand to showdown, and the event log.
+      Writing it caught a factual error in its own commentary — Hansen's quad
+      fives (rank 124) beat Negreanu's sixes full (271); the draft said
+      Negreanu won. The engine was right and the prose was wrong, which is the
+      argument for a demo that prints real numbers rather than asserting none.
 
 ### Deferred (follow-on EPIC, not this one)
 
