@@ -100,13 +100,13 @@ names.
 | Card & eval primitives (`Card`, `Cards`, `Rank`, `Suit`, `Eval`, `HandRank`) | **Complete** — 2026-08-27, 11 tests |
 | `Board`, `HoleCards` | Planned |
 | Table engine (`Table`, `Player`, `Seat`, `Seats`, `ForcedBets`) | **Complete** — 2026-08-27, 10 tests |
-| `Winnings` / `PotWin` / `SeatEquity` | **Complete** — 2026-08-27, surface only until item 5 |
-| `Dealer` + `DealerAction` + event log | Planned |
+| `Winnings` / `PotWin` / `SeatEquity` | **Complete** — 2026-08-27, populated and asserted by item 5 |
+| `Dealer` + `DealerAction` + `TableAction` event log | **Complete** — 2026-08-27, 5 tests |
 | TypeScript type definitions (`.d.ts`, generated) | **Complete** — 2026-08-27, committed + `tsc --noEmit` clean |
 | npm packaging + prebuilt-binary CI matrix | Planned |
 | GTO solver bindings | **Deferred** — see Context |
 | Kuhn Poker toy-game bindings | **Deferred** — see Context |
-| `PokerSession` / `PlayerAction` / `SessionStep` | Planned (Phase 3) |
+| `PokerSession` / `PlayerAction` / `SessionStep` | **Complete** — 2026-08-27, 6 tests (`run_hand` intentionally unbound) |
 
 ---
 
@@ -417,7 +417,7 @@ rather than the N-API status. Phase 3 item 5 only has to apply it to
 
 ### Phase 3 — Dealer & event log
 
-- [ ] **5.** Bind `Dealer` and every `DealerAction` variant as either a tagged
+- [x] **5.** Bind `Dealer` and every `DealerAction` variant as either a tagged
       union or per-action methods (`bet`/`call`/`check`/`raiseTo`/`allIn`/
       `fold`/`ready`, mirroring `pkcore.py/src/lib.rs:2887-2927`'s one-method-per-
       action shape); test: play one hand end-to-end (seat two players,
@@ -425,16 +425,38 @@ rather than the N-API status. Phase 3 item 5 only has to apply it to
       starting chip total (the same chip-conservation invariant `pkcore`'s own
       `hand_chip_total` field polices, `src/casino/table.rs:107-111`). Settle
       the `.code` mechanism for `dealer_err` here and add `dealer_error_shape`.
-- [ ] **6.** Bind `TableAction` and the event log accessor (`Dealer.eventLog()`
+      **Done 2026-08-27**, 5 tests. `dealer_error_shape` pins three real codes:
+      `HandNotStarted` before `startHand`, and `IllegalAction` for both a
+      non-existent seat and an under-minimum raise.
+      One trap worth knowing: **`Dealer.isHandInProgress()` stays `true` until
+      `endHand()` runs**, so it is the wrong loop terminator and a naive
+      `while (isHandInProgress())` dies with `HandAlreadyOver`. The signal that
+      actually flips when river betting closes is `table.isGameOver()`. Recorded
+      in `pkcore.js/CLAUDE.md`.
+- [x] **6.** Bind `TableAction` and the event log accessor (`Dealer.eventLog()`
       returning `TableAction[]`, no `TableLog` wrapper class needed in JS —
-      arrays are native).
-- [ ] **7.** Bind `PokerSession`, `PlayerAction`, `SessionStep`
+      arrays are native). **Done 2026-08-27.** `TableAction` exposes
+      `kind` / `seat` / `amount`, the shape `pkcore.py` settled on
+      (`pkcore.py/src/lib.rs:2691,2739,2744`) — but `kind` is read off the
+      `Debug` form rather than pkcore.py's forty-arm match, so a new `pkcore`
+      variant appears in JS without a change here. Opening a table is itself the
+      first logged event (`TableOpen`), so the log is never empty.
+- [x] **7.** Bind `PokerSession`, `PlayerAction`, `SessionStep`
       (`src/casino/session.rs:111`, `run_hand` at `:633`) mirroring
-      `pkcore.py/src/session.rs:139,17,89`. `run_hand` takes a callback; in JS that
-      is a plain synchronous `(step) => PlayerAction` function passed through
-      napi-rs's `JsFunction`/`Function` — still no async. Test: port one of
-      `pkcore.py/tests/test_session.py`'s 21 cases (a scripted heads-up hand that
-      reaches showdown).
+      `pkcore.py/src/session.rs:139,17,89`. **Done 2026-08-27**, 6 tests.
+      **`run_hand` is deliberately NOT bound, reversing this item's original
+      sketch.** The plan said to pass a JS callback through napi-rs's
+      `Function`. That is unsafe here: `run_hand` holds `&mut self` on the
+      session while it calls back into JS, and nothing stops that callback from
+      re-entering the same session object — two `&mut` to one object, which is
+      undefined behaviour. napi-rs does not guard class methods against
+      re-entrancy. JS drives the loop instead:
+      `startHand` / `nextActor` / `applyAction` / `endHand`. `nextActor()`
+      already deals each street and returns `null` when betting closes, so the
+      JS loop is a three-liner and reads better than a callback would. Recorded
+      in `pkcore.js/CLAUDE.md` so nobody "restores" the callback later.
+      `SessionStep` exposes `kind` / `seat` / `error`; `PlayerAction` is six
+      static factories with `kind` and `amount` getters.
 
 ### Phase 4 — Packaging, CI, docs
 
@@ -473,12 +495,13 @@ rather than the N-API status. Phase 3 item 5 only has to apply it to
   `endHand`, assert `sum(winnings) + sum(remaining stacks) === starting total`
   (Phase 3; mirrors the invariant `pkcore::Table::hand_chip_total` exists to
   police, `src/casino/table.rs:107-111`).
-- `dealer_error_shape` — trigger an illegal action (e.g. bet after fold),
-  assert the thrown error's `.code` is the `DealerError` variant name and
-  `.reason` is non-empty (Phase 3, item 5).
-- `session_scripted_hand` — drive `PokerSession.runHand` with a scripted
-  callback to showdown; assert the returned `Winnings` conserve chips
-  (Phase 3, item 7).
+- `dealer_error_shape` — trigger an illegal action, assert the thrown error's
+  `.code` is the `DealerError` variant name and `.message` is non-empty
+  (Phase 3, item 5). **Passing:** pins `HandNotStarted` and `IllegalAction`.
+- `session_scripted_hand` — drive `PokerSession` to showdown with a scripted
+  JS loop (not a callback — see item 7); assert the returned `Winnings`
+  conserve chips (Phase 3, item 7). **Passing**, plus a fold-out variant that
+  asserts the pot is exactly the two blinds and the hand ends pre-flop.
 
 ## Key Files (proposed, in the new `pkcore.js` repo)
 
