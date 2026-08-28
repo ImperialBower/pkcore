@@ -96,8 +96,9 @@ names.
 
 | Component | Status |
 |---|---|
-| `pkcore.js` repo scaffold (napi-rs crate + `package.json`) | Planned |
-| Card & eval primitives (`Card`, `Cards`, `Rank`, `Suit`, `Eval`, `HandRank`, `Board`, `HoleCards`) | Planned |
+| `pkcore.js` repo scaffold (napi-rs crate + `package.json`) | **Complete** — 2026-08-27 |
+| Card & eval primitives (`Card`, `Cards`, `Rank`, `Suit`, `Eval`, `HandRank`) | **Complete** — 2026-08-27, 11 tests |
+| `Board`, `HoleCards` | Planned |
 | Table engine (`Table`, `Player`, `Seat`, `Seats`, `ForcedBets`) | Planned |
 | `Dealer` + `DealerAction` + event log | Planned |
 | `Winnings` / `PotWin` / showdown results | Planned |
@@ -291,24 +292,35 @@ impl Dealer {
     }
 }
 
-/// `.code` is the `DealerError` variant name; `.reason` is its Debug form.
-/// napi-rs's `Error::new(status, reason)` is the only hook available, so the
-/// variant name is carried in a custom status via `napi::Error::new` (or, if
-/// the status type proves too narrow, a `#[napi(object)] PkError` thrown via
-/// `Env::throw_error` with `code`) — pick one in Phase 3 item 5 and pin it
-/// with `dealer_error_shape`.
-fn dealer_err(e: pkcore::casino::dealer::DealerError) -> napi::Error {
-    let code = format!("{e:?}");
-    let code = code.split(['(', ' ', '{']).next().unwrap_or("DealerError").to_string();
-    napi::Error::new(napi::Status::GenericFailure, format!("{code}: {e:?}"))
+/// `.code` is the `DealerError` variant name; `.message` is its Debug form.
+///
+/// The status type is `String`, not the default `Status`. This is the whole
+/// trick, and it is load-bearing: `napi::Error<S>` is generic over its status
+/// (`napi-3.12.2/src/error.rs:30`), and napi-rs passes `status.as_ref()`
+/// straight to `napi_create_error` as the JS error `code`
+/// (`error.rs:1573,1597`). The default `napi::Error` is `Error<Status>`, whose
+/// `as_ref()` can only ever be a fixed N-API name such as `"InvalidArg"` — it
+/// cannot carry a domain code at all.
+fn dealer_err(e: pkcore::casino::dealer::DealerError) -> napi::Error<String> {
+    let debug = format!("{e:?}");
+    let code = debug.split(['(', ' ', '{']).next().unwrap_or("DealerError").to_string();
+    napi::Error::new(code, debug)
 }
 ```
 
+Note the return type spelled out in full at every call site
+(`-> Result<(), napi::Error<String>>`, never a type alias): the `#[napi]` macro
+matches the literal token `Result<..>` to detect a fallible method, and an alias
+compiles as a *returned class* with an `ObjectFinalize` error. See Phase 0 item
+0b.
+
 `dealer_err` deliberately does **not** copy pkcore.py's `dealer_err`
 (`pkcore.py/src/lib.rs:2829-2831`, a bare `format!("{e:?}")`). Scope requires a
-`.code` a JS caller can branch on, so it is a v1 requirement bound to Phase 3
-item 5 and tested by `dealer_error_shape`. The sketch above is the minimum
-shape; the exact napi mechanism for attaching `code` is settled in item 5.
+`.code` a JS caller can branch on. **The mechanism is proven, not proposed:**
+the identical `pk_err` helper already ships in `pkcore.js/src/lib.rs` and
+`parse_error_shape` asserts a parse failure throws `code === "InvalidCardIndex"`
+rather than the N-API status. Phase 3 item 5 only has to apply it to
+`DealerError`.
 
 ---
 
@@ -316,39 +328,68 @@ shape; the exact napi mechanism for attaching `code` is settled in item 5.
 
 ### Phase 0 — Repo & toolchain scaffold
 
-- [ ] **0a.** Create the `pkcore.js` repository; `Cargo.toml` with
+- [x] **0a.** Create the `pkcore.js` repository; `Cargo.toml` with
       `name = "pkcore-js"`, `crate-type =
-      ["cdylib"]` and a `pkcore = { version = "0.9", features = ["store"] }`
+      ["cdylib"]` and a `pkcore = { version = "0.9.0", features = ["store"] }`
       dependency, mirroring `pkcore.py/Cargo.toml:11-14` (pkcore.py pins `store` too —
-      native keeps it; wasm could not).
-- [ ] **0b.** Add `napi = "3"`, `napi-derive = "3"`, `napi-build = "2"`
-      (3.12.2 / 3.6.3 / 2.4.1 on crates.io, 2026-08-26); `build.rs` calling
-      `napi_build::setup()`; confirm `napi build --platform` produces a loadable
-      `.node` addon for the local platform. **Also confirm** that
-      `#[napi] pub struct Player(pub(crate) PkPlayer);` (tuple struct) compiles
-      as a class — napi.rs's class docs only show named-field structs. If it
-      does not, every sketch in [Design](#design) becomes
-      `pub struct Player { inner: PkPlayer }` and `self.0` becomes `self.inner`.
-- [ ] **0c.** `package.json` with `"name": "pkcore"`, a `napi` config block (per
+      native keeps it; wasm could not). **Done 2026-08-27.** `store` pulls
+      rusqlite/zstd/termion into the addon; the release `.node` is ~2 MB debug,
+      and the embedded HUP cache is the reason a wasm build was never viable.
+- [x] **0b.** Add `napi = "3"`, `napi-derive = "3"`, `napi-build = "2"`;
+      `build.rs` calling `napi_build::setup()`. **Done 2026-08-27** with
+      `napi 3.12.2` / `napi-derive 3.6.3` / `napi-build 2.4.1` and
+      `@napi-rs/cli 3.8.6`; `napi build --platform` produces a loadable
+      `pkcore.darwin-arm64.node`.
+      **Tuple structs are confirmed to work as `#[napi]` classes** — the
+      SUSPECTED risk in the earlier critique is closed. `pub struct Card(PkCard);`
+      compiles and behaves exactly like the PyO3 shape, so every sketch in
+      [Design](#design) stands as written.
+      Two things napi.rs does not document, both proven in the build and both
+      recorded in `pkcore.js/CLAUDE.md`:
+      1. `snake_case` becomes `camelCase` automatically (`is_dealt` → `isDealt`,
+         `pkcore_version` → `pkcoreVersion`). No `js_name` needed except for
+         JS-reserved shapes such as `toString`.
+      2. The `#[napi]` macro detects a fallible method by matching the **literal
+         token** `Result<..>` in the signature. A type alias
+         (`type PkResult<T> = Result<T, napi::Error<String>>`) is treated as a
+         returned class and fails with a confusing
+         `the trait bound ...: ObjectFinalize is not satisfied`. Fallible
+         bindings must spell the type out.
+- [x] **0c.** `package.json` with `"name": "pkcore"`, a `napi` config block (per
       `napi-rs`'s CLI scaffold), and `"version"` set to match the `pkcore`
       dependency version — the same rule as `pkcore.py/CLAUDE.md`. Add an equivalent
       `CLAUDE.md` to `pkcore.js` stating it. License: `MIT OR Apache-2.0`, matching
       `pkcore.py/Cargo.toml:6` (pkcore.py switched from GPL in commit `c86d518`,
       2026-08-27); ship `LICENSE-MIT` + `LICENSE-APACHE` as pkcore.py does.
-- [ ] **0d.** `make`-equivalent scripts (`npm run build`, `npm test`) mirroring
+      **Done 2026-08-27.** The lockstep rule is enforced by a test, not just
+      prose: `pkcoreVersion()` reads `CARGO_PKG_VERSION` and the suite asserts
+      it equals `package.json`'s `version`, so a drift fails `npm test`.
+- [x] **0d.** `make`-equivalent scripts (`npm run build`, `npm test`) mirroring
       `pkcore.py/Makefile`'s `build`/`test`/`clippy`/`fmt` targets.
+      **Done 2026-08-27:** `build`, `build:debug`, `test`, `typecheck`.
+      `index.js` and `index.d.ts` are committed (a `.gitignore` note says why);
+      `*.node` is not.
 
 ### Phase 1 — Card & eval primitives
 
-- [ ] **1.** Bind `Card`, `Cards`, `Rank`, `Suit` 1:1 with pkcore.py's classes of the
+- [x] **1.** Bind `Card`, `Cards`, `Rank`, `Suit` 1:1 with pkcore.py's classes of the
       same name as the reference shape; test: round-trip a `Cards` string
       through `parse`/`to_string` (mirrors pkcore.py's `Card`/`Cards` tests).
-- [ ] **2.** Bind `Eval`, `HandRank`, `Board`, `HoleCards`; test: evaluate
+      **Done 2026-08-27.** One deviation from pkcore.py, forced by the platform:
+      PyO3's `#[classattr]` (`Rank.ACE`) has no napi-rs equivalent, so rank and
+      suit constants are static factories (`Rank.ace()`, `Suit.spades()`).
+- [x] **2.** Bind `Eval` and `HandRank`; test: evaluate
       THE HAND's seven cards `6♠ 6♥ 9♣ 6♦ 5♥ 5♠ 8♠` and assert
       `handRank.value === 271` and the best five is `6♠ 6♥ 6♦ 5♠ 5♥` — the
       values `pkcore`'s own `from__seven` test pins at
       `src/analysis/eval.rs:383-390` (cross-binding parity check against the
       kernel, not against pkcore.py, which asserts no `HandRank` value).
+      **Done 2026-08-27**, all four values pinned and passing.
+      `HandRank.name`/`.class` are exposed as strings (`"FullHouse"`,
+      `"SixesOverFives"`) rather than as bound enums; a JS caller compares
+      strings, and `HandRankClass` has too many variants to be worth a class.
+- [ ] **2b.** Bind `Board` and `HoleCards` (split out of item 2 — the eval
+      fixture did not need them, and `Game` is the type that consumes them).
 
 ### Phase 2 — Table engine
 
