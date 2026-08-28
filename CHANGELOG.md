@@ -5,7 +5,7 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.9.1] - 2026-08-28
 
 ### Added
 
@@ -14,6 +14,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   variant is not a breaking change for downstream `match` arms.
 
 ### Fixed
+
+- `Dealer::start_hand` printed the entire table to stdout on every hand
+  (`println!("Dealer.start_hand() called. ...")`). Library code must not write
+  to stdout: the dump appeared in any host process that ran a hand, including
+  the Python and Node bindings, where it is unavoidable noise a caller cannot
+  switch off. The line is removed; nothing else about `start_hand` changes, and
+  the same information is already available through
+  `Dealer::event_log` and `Table`'s `Display`. Found while building the Node
+  binding ([EPIC-85](docs/epics/EPIC-85_Node_Bindings.md)).
 
 - `TableManager::handle_event` matched every event with
   `if let Some(table) = self.tables.get_mut(&table_id)`, so an event queued
