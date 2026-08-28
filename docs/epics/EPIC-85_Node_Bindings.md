@@ -99,10 +99,10 @@ names.
 | `pkcore.js` repo scaffold (napi-rs crate + `package.json`) | **Complete** — 2026-08-27 |
 | Card & eval primitives (`Card`, `Cards`, `Rank`, `Suit`, `Eval`, `HandRank`) | **Complete** — 2026-08-27, 11 tests |
 | `Board`, `HoleCards` | Planned |
-| Table engine (`Table`, `Player`, `Seat`, `Seats`, `ForcedBets`) | Planned |
+| Table engine (`Table`, `Player`, `Seat`, `Seats`, `ForcedBets`) | **Complete** — 2026-08-27, 10 tests |
+| `Winnings` / `PotWin` / `SeatEquity` | **Complete** — 2026-08-27, surface only until item 5 |
 | `Dealer` + `DealerAction` + event log | Planned |
-| `Winnings` / `PotWin` / showdown results | Planned |
-| TypeScript type definitions (`.d.ts`, generated) | Planned |
+| TypeScript type definitions (`.d.ts`, generated) | **Complete** — 2026-08-27, committed + `tsc --noEmit` clean |
 | npm packaging + prebuilt-binary CI matrix | Planned |
 | GTO solver bindings | **Deferred** — see Context |
 | Kuhn Poker toy-game bindings | **Deferred** — see Context |
@@ -393,10 +393,27 @@ rather than the N-API status. Phase 3 item 5 only has to apply it to
 
 ### Phase 2 — Table engine
 
-- [ ] **3.** Bind `ForcedBets`, `Player`, `Seat`, `Seats`, `Table` per
+- [x] **3.** Bind `ForcedBets`, `Player`, `Seat`, `Seats`, `Table` per
       [Design](#design); test: build a heads-up `Table` via
       `Table.nlhFromSeats`, assert `seatCount() === 2`.
-- [ ] **4.** Bind `Winnings`, `PotWin`.
+      **Done 2026-08-27**, 10 tests. The `usize → i64` rule is pinned by a test
+      that gives a player 8,000,000,000 chips and asserts the number comes back
+      exact — an `as u32` cast would have wrapped it. A second test asserts a
+      negative stack floors at 0, since JS has no unsigned integer and a caller
+      can always hand the binding one. Both go through one `chips(i64) -> usize`
+      helper rather than a cast at each call site.
+      Two API notes: `Seats` is built either from `Seats.fromNames(names, stack)`
+      (wrapping `pkcore`'s own `From<Vec<String>>`) or chair by chair with
+      `new Seats()` + `push`. Enum-valued fields (`Table.phase`,
+      `Player.state`) are exposed as their `Debug` strings, not as bound enums.
+- [x] **4.** Bind `Winnings`, `PotWin`.
+      **Done 2026-08-27**, plus `SeatEquity`, which `PotWin` cannot be read
+      without. `Seatbit`'s `u16` mask is flattened to a plain seat-index array
+      (`potWin.seats` → `[0]`, or `[0, 2]` for a split). `Winnings` has **no**
+      `total()`: summing pots is one line of JS and this crate keeps all
+      arithmetic in `pkcore`. Only the class surface is asserted so far — a
+      populated `Winnings` needs `Dealer.endHand`, so the real assertion is
+      `full_hand_chip_conservation` in item 5.
 
 ### Phase 3 — Dealer & event log
 
