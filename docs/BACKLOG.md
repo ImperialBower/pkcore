@@ -16,6 +16,11 @@
 > (`scripts/build_epub.sh`, the epub, an EPIC-06 image-link fix), which is what
 > the current `[Unreleased]` section holds at `0.7.1`. **No EPIC work has
 > landed.** The frontier is unchanged — **kernel-hardening and platform-reach**.
+>
+> **Added by hand since that pass (not a `/backlog` refresh):**
+> [EPIC-87 — Pluribus-Format Hand Export](epics/EPIC-87_Pluribus_Export.md),
+> registered 2026-08-29 against `main` @ `28f214d`, pkcore `0.9.1`. The rest of
+> this document still reflects the 2026-08-22 state and is due a refresh.
 
 ---
 
@@ -81,6 +86,20 @@ Ranked by "designed, unblocked, and nothing has landed yet".
    (`SessionView`, snapshot/restore), pull-model `SolveJob`, iOS/Android
    `cargo check` in CI.
 
+6. **EPIC-87 — Pluribus-Format Hand Export** ([`epics/EPIC-87_Pluribus_Export.md`](epics/EPIC-87_Pluribus_Export.md))
+   Drafted 2026-08-29, nothing landed. Gives `pkcore` the writer it has never
+   had for the Pluribus log format — `Unumable`, the write half of the
+   read-only `Plurable` trait (`src/lib.rs:977`). The payoff is not the
+   exporter: round-tripping `data/pluribus/raw` turns **10,000 archived hands
+   into 10,000 self-checking assertions**, which is the regression suite the
+   replay engine has never had. `DEFECT_020`, `DEFECT_021` and `DEFECT_022`
+   all survived because replay produces no output anyone can diff. Also
+   settles the untested street-divider theory at
+   `src/analysis/nubibus.rs:528-530`. Unblocked, self-contained, and adds no
+   dependency and no feature flag — kernel-safe. One open decision inside it:
+   8 corpus hands split a pot to half a chip, which `Pluribus.winnings:
+   Vec<isize>` cannot represent (see the EPIC's Design section).
+
 ### Deferred slices of closed EPICs
 
 - **EPIC-32 residual** — Stud Hi is Complete *except* hand-history replay
@@ -123,8 +142,10 @@ Written down, not committed to. No status table, no work items yet.
 - **[EPIC_FEATURE — WAMR](epics/EPIC_FEATURE_wasm_wamr.md)** — WebAssembly Micro
   Runtime support. Status: Proposal.
 - **[EPIC_Pluribus](epics/EPIC_Pluribus.md)** — the `Nubibus` module; Pluribus
-  hand-log analysis. Partially built (`src/analysis/nubibus.rs`), undocumented
-  errors — see tech debt.
+  hand-log **import** and replay. Partially built (`src/analysis/nubibus.rs`),
+  undocumented errors — see tech debt. The export half is now specified
+  separately as [EPIC-87](epics/EPIC-87_Pluribus_Export.md), which is designed
+  rather than idea-stage and is listed under *Ship-ready next* above.
 
 ---
 
